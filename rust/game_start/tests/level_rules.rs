@@ -22,10 +22,10 @@ fn a_level_issues_its_own_wall_charges() {
     let n = json::parse(&game_start::files::level_text("mousehole.json")).unwrap().get("scenarios").get("roomClear").get("wallCharges").num().expect("the clinic issues wall charges");
     let mut p = Play::mission("mousehole.json", "?levelFile=mousehole.json&roomclear&squad4", &Opts::default());
     assert_eq!(carried(&p), n, "staged");
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     assert_eq!(carried(&p), n, "restarted with none spent");
     p.g.wall_charge.carried = Some(1.0);
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     assert_eq!(carried(&p), n, "restarted with some spent");
     game::wallcharge::wall_charge_raise_carried(&mut p.g, n + 4.0);
     game::issue::issue_stage(&mut p.g);
@@ -46,7 +46,7 @@ fn a_levels_own_cards_are_worn_over_the_kit_this_machine_keeps() {
     let bare = changed("hall.json", "bare", &|l| { let Json::Obj(s, _) = member(l, "scenarios") else { panic!() }; s.retain(|(k, _)| k != "issue"); });
     // what each teammate's hands hold first, and the bags' counts, as the men stand
     let worn = |p: &Play| -> Vec<String> { p.mates().iter().map(|&m| format!("{:?}", p.g.fa[p.g.gd[m].weapon].def)).collect() };
-    let at = |file: &std::path::Path, squad: &str| -> Vec<String> { let mut p = Play::mission(file.to_str().unwrap(), &format!("?roomclear&{squad}"), &Opts::default()); let a = worn(&p); game::game::game_restart_encounter(&mut p.g); assert_eq!(worn(&p), a, "{squad}: a restart stages the same cards"); a };
+    let at = |file: &std::path::Path, squad: &str| -> Vec<String> { let mut p = Play::mission(file.to_str().unwrap(), &format!("?roomclear&{squad}"), &Opts::default()); let a = worn(&p); game::savestate::control::restart(&mut p.g); assert_eq!(worn(&p), a, "{squad}: a restart stages the same cards"); a };
     let plain = at(&bare, "squad4");
     assert!(plain.iter().all(|w| *w == plain[0]), "the plain issue is one gun: {plain:?}");
     for (squad, n) in [("squad4", 4), ("squad=3", 3), ("squad=2", 2), ("squad=1", 1)] {
@@ -139,7 +139,7 @@ fn a_storm_is_cut_by_the_levels_own_roofs() {
     let gusts: Vec<String> = p.g.wind.all.iter().filter_map(|s| p.g.tab.wind_wind_source[*s].door).map(|d| p.g.dr[d].def.name.clone()).collect();
     assert!(gusts.iter().any(|n| n == "fire_exit"), "the warehouse's doors with a gust: {gusts:?}");
     drop(p);
-    for level in ["office.json", "block.json", "bazaar.json"] { let mut p = Play::level(level, false, &o); p.run(0.1); assert!(!p.g.weather.own, "{level} keeps the office's roofs, or a still night"); if level == "bazaar.json" { assert_eq!(game::weather::weather_rain_rate(&p.g), 0.0); } }
+    for level in ["office.json", "block.json", "bazaar.json"] { let mut p = Play::level(level, false, &o); p.run(0.1); assert!(!p.g.weather.own, "{level} keeps the office's roofs, or a still night"); if level == "bazaar.json" { assert_eq!(p.g.weather.rain_rate, 0.0); } }
 }
 
 /// THE RULE ("wear, paths in the ground … can all tell a story for how people walk through the level"): the map a level's floors are worn by is worn along every way of it and at every threshold, and
@@ -200,4 +200,13 @@ fn a_levels_leaves_are_made_of_their_paint() {
     is("killhouse.json", "plain", "Wood plain", "");          // a row that says wood for numbers inside
     let one = changed("killhouse.json", "enamel", &|l| *member(l, "name") = Json::Str("white-roof".into()));
     is(one.to_str().unwrap(), "Enamel", "Enamel", "");        // a row with one word: every leaf, the ones with old paint too
+}
+
+/// A level file's most (game::levelfit, what `faults.rs` holds it to) is what the game's lists have room for.
+#[test]
+fn a_level_may_have_what_the_game_has_room_for() {
+    let c = game::levelfit::level_caps();
+    for (name, most, room) in [("doors", c.doors, sim::doors_cap(0)), ("things", c.things, sim::props_cap(0)), ("parts", c.parts, sim::props_cap(3)), ("lamps", c.lamps, sim::lights::ROWS)] {
+        assert_eq!(most, room as f64, "{name}");
+    }
 }

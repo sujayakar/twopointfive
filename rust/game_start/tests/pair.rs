@@ -1,4 +1,4 @@
-//! THE SILENT PARTNER'S WORDS (rust/game_rules/src/spotted, pairorders, silent `posture_word`, guards `say`): what the squad line says while a
+//! THE SILENT PARTNER'S WORDS (rust/game_rules/src/teammates/spotted.rs, pairorders, silent `posture_word`, guards `say`): what the squad line says while a
 //! defender is onto him, and what he says when he has finished a blown job by hand. The partner is on in the page where a quiet mission brings a
 //! squad, and with `?pair`.
 use game::game::GuardState;
@@ -57,7 +57,7 @@ fn the_squad_line_says_low_and_contact_while_they_last() {
         assert_eq!(word(&mut p), "SILENT · low", "seed {s}: a suspicious man 10 m off: {}", p.roll());
         // (his first round in their ears makes it 'SILENT · compromised', silent's own word from then on: 'contact' is what stands until it)
         let mut seen = Vec::new();
-        for _ in 0..60 { pin(&mut p, t1, GuardState::Alert, 1.0); p.g.gd[t1].foe = Some(game::game::Foe::Player); p.g.gd[t1].last_seen_t = p.g.time; p.frame(); let w = word(&mut p); if !seen.contains(&w) { seen.push(w); } }
+        for _ in 0..60 { pin(&mut p, t1, GuardState::Alert, 1.0); p.g.gd[t1].foe = Some(p.g.pl[p.g.player].ch); p.g.gd[t1].last_seen_t = p.g.time; p.frame(); let w = word(&mut p); if !seen.contains(&w) { seen.push(w); } }
         assert!(seen.iter().any(|w| w == "SILENT · contact"), "seed {s}: an alert man has eyes on Sam and the word went {seen:?}: {}", p.roll());
     }
 }
@@ -263,9 +263,9 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     let mut newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(0);
     let (mut down, mut noises) = (None, Vec::new());
     for _ in 0..(60 * 8) {
-        if p.g.gd[t1].state != GuardState::Dead && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
+        if !game::condition::down(&p.g, p.g.gd[t1].ch) && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
         p.frame();
-        if down.is_none() && p.g.gd[t1].state == GuardState::Dead { down = Some(p.time()); }
+        if down.is_none() && game::condition::down(&p.g, p.g.gd[t1].ch) { down = Some(p.time()); }
         for e in p.g.events.iter().filter(|e| e.serial > newest && e.kind == game::director::EventKind::Prop) { noises.push(*e); }
         newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(newest).max(newest);
         if down.map_or(false, |d| p.time() - d > 3.0) { break; }

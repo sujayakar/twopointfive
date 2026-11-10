@@ -1,6 +1,6 @@
 //! The types of `squadsmoke`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -24,17 +24,6 @@ pub struct SQUADSMOKE {
     pub again_secs: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SquadsmokeModSQUADSMOKELOGItem {
-    pub t: f64,
-    pub who: String,
-    pub from: V3,
-    pub at: V3,
-    pub land: V3,
-    pub rest: V3,
-    pub left: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SquadArcTo {
     pub from: V3,
@@ -47,24 +36,12 @@ pub struct SquadSmokeThrower {
     pub gd: GuardId,
     pub from: V3,
     pub sol: crate::throwables::ThrowSolution,
-    pub rest: V3,
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadsmokeMod {
-    /// (src/game/squadsmoke.ts:57 states)
     pub states: JsMap<PlayerId, crate::squadsmoke::State>,
-    /// (src/game/squadsmoke.ts:60 SQUADSMOKE_LOG)
-    pub squadsmoke_log: Vec<crate::squadsmoke::SquadsmokeModSQUADSMOKELOGItem>,
-}
-impl SquadsmokeMod {
-    pub fn blank() -> Self {
-        SquadsmokeMod {
-            states: JsMap::new(),
-            squadsmoke_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -74,5 +51,4 @@ pub struct SquadsmokeStats {
     pub thrown: i32,
 }
 
-/// (src/game/squadsmoke.ts:39 SQUADSMOKE: a table nothing writes)
 pub fn squadsmoke() -> crate::squadsmoke::SQUADSMOKE { crate::squadsmoke::SQUADSMOKE { order_key: String::from("KeyH"), speed: 9.0, near_m: 1.0, floor_m: 0.035, clear_h: alloc::vec![0.07, 0.3], roll_k: 0.061, hand_ahead: 0.35, hand_up: 1.3, head_drop: 0.3, again_secs: 1.2 } }

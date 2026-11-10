@@ -1,13 +1,12 @@
 //! The types of `wallreact`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Breach {
     pub key: String,
     pub wall: f64,
-    pub c0: [f64; 2],
     pub u: [f64; 2],
     pub n: [f64; 2],
     pub lo: f64,
@@ -16,7 +15,6 @@ pub struct Breach {
     pub half: f64,
     pub into: Option<WallreactBreachId>,
     pub walk: bool,
-    pub t: f64,
     pub cause: crate::wallreact::BreachCause,
     pub who: f64,
     pub blast_by: Option<f64>,
@@ -34,17 +32,6 @@ pub enum BreachCause {
     Load,
     Reset,
     Collapse,
-}
-impl BreachCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BreachCause::Blast => "blast",
-            BreachCause::Fire => "fire",
-            BreachCause::Load => "load",
-            BreachCause::Reset => "reset",
-            BreachCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -79,7 +66,7 @@ pub struct Pend {
     pub who: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallReact {
     pub breaches: Vec<WallreactBreachId>,
     pub queue: Vec<crate::wallbreak::LevelChange>,
@@ -88,63 +75,19 @@ pub struct WallReact {
     pub flood_all: Option<Vec<f64>>,
     pub minds: JsMap<GuardId, JsMap<WallreactBreachId, crate::wallreact::Mind>>,
     pub watching: JsMap<GuardId, WallreactBreachId>,
-    pub last: f64,
-    pub last_ev: f64,
-    pub last_sweep: f64,
+    #[is(-1.0)] pub last: f64,
+    #[is(-1.0)] pub last_ev: f64,
+    #[is(-1.0)] pub last_sweep: f64,
     pub moved_t: JsMap<GuardId, f64>,
     pub unsub: bool,
 }
-impl WallReact {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        WallReact {
-            breaches: Vec::new(),
-            queue: Vec::new(),
-            stale: false,
-            pend: Vec::new(),
-            flood_all: None,
-            minds: JsMap::new(),
-            watching: JsMap::new(),
-            last: -1.0,
-            last_ev: -1.0,
-            last_sweep: -1.0,
-            moved_t: JsMap::new(),
-            unsub: false,
-        }
-    }
-}
-impl Default for WallReact { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WALLREACTDEBUG {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WALLREACTTEST {
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum WallReactHeadGd {
-    Guard(GuardId),
-    Sam,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallReactManKnowsHow {
     Heard,
     Saw,
     Told,
     Made,
-}
-impl WallReactManKnowsHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactManKnowsHow::Heard => "heard",
-            WallReactManKnowsHow::Saw => "saw",
-            WallReactManKnowsHow::Told => "told",
-            WallReactManKnowsHow::Made => "made",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -177,30 +120,12 @@ pub enum WallReactReconsider {
     Moved,
     Later,
 }
-impl WallReactReconsider {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactReconsider::Fine => "fine",
-            WallReactReconsider::Moved => "moved",
-            WallReactReconsider::Later => "later",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WallReactReconsider10 {
     Fine,
     Moved,
     Later,
-}
-impl WallReactReconsider10 {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactReconsider10::Fine => "fine",
-            WallReactReconsider10::Moved => "moved",
-            WallReactReconsider10::Later => "later",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -209,15 +134,6 @@ pub enum WallReactShift {
     Moved,
     Later,
 }
-impl WallReactShift {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactShift::Fine => "fine",
-            WallReactShift::Moved => "moved",
-            WallReactShift::Later => "later",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WallReactOpMove {
@@ -225,31 +141,12 @@ pub enum WallReactOpMove {
     Moved,
     Later,
 }
-impl WallReactOpMove {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactOpMove::Fine => "fine",
-            WallReactOpMove::Moved => "moved",
-            WallReactOpMove::Later => "later",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallreactMod {
-    /// (src/game/wallreact.ts:102 WALLREACT_LOG)
     pub wallreact_log: Vec<String>,
-    /// (src/game/wallreact.ts:152)
     pub wall_react: crate::wallreact::WallReact,
-}
-impl WallreactMod {
-    pub fn blank() -> Self {
-        WallreactMod {
-            wallreact_log: Vec::new(),
-            wall_react: crate::wallreact::WallReact::blank(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -270,14 +167,6 @@ pub struct WallreactStats {
     pub openings: i32,
 }
 
-/// (src/game/wallreact.ts:106 WALLREACT_DEBUG: a table nothing writes)
-pub fn wallreact_debug() -> crate::wallreact::WALLREACTDEBUG { crate::wallreact::WALLREACTDEBUG {  } }
-
-/// (src/game/wallreact.ts:107 WALLREACT_TEST: a table nothing writes)
-pub fn wallreact_test() -> crate::wallreact::WALLREACTTEST { crate::wallreact::WALLREACTTEST {  } }
-
-/// (src/game/wallreact.ts:137 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/wallreact.ts:137 CHEST)
 pub const CHEST: f64 = 1.1;

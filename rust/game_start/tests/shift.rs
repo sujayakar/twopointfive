@@ -1,4 +1,4 @@
-//! SHIFT WITH THE SQUAD'S KEY GIVES WHAT THE KEY GIVES (rust/game_rules/src/autopilot `quick`, planmode `plan_goal`; the maintainer, 11-08: "i think shift Q on a
+//! SHIFT WITH THE SQUAD'S KEY GIVES WHAT THE KEY GIVES (rust/game_rules/src/entries/autopilot.rs `quick`, planmode `plan_goal`; the maintainer, 11-08: "i think shift Q on a
 //! point should just move the squad there, should match what regular Q does. you should need to open the radial menu to get covering a point").
 //!
 //! One function answers what the key means: a plain tap gives it to everyone, Shift gives the same to the part `goal_men` picks. Every press here goes through
@@ -168,8 +168,8 @@ fn every_kind_of_target_gets_the_same_order() {
         assert_eq!(shifted.order.as_deref(), Some("work"), "seed {s}: on a thing to work");
         { let p = by_box(s); let all = men(&p); let b = breaker(&p); let near = names(&p, &nearer_pair(&p, &all, [b[0], b[2]])); assert!(!shifted.who.is_empty() && shifted.who.iter().all(|w| near.contains(w)), "seed {s}: on a thing, {:?} of the nearer pair {near:?}", shifted.who); }
         // a hostage, on a rescue with two teammates: a place on the floor to the squad's key
-        let rescue = |seed: u32| { let mut p = Play::mission("consulate.json", "?levelFile=consulate.json&rescue&squad=2", &Opts { seed, ..Default::default() }); p.sam_unhurt(); p.run(0.5); let h = p.g.rescue.hostages[0]; let a = p.at(h); p.sam_put([a[0], a[1] + 2.5]); p.run(0.5); p };
-        let (key, shifted) = both("a hostage", s, &rescue, &|p| { let a = p.at(p.g.rescue.hostages[0]); on_floor(a) }, &|t| matches!(t, OrderTarget::Floor(f) if f.thing.is_none()));
+        let rescue = |seed: u32| { let mut p = Play::mission("consulate.json", "?levelFile=consulate.json&rescue&squad=2", &Opts { seed, ..Default::default() }); p.sam_unhurt(); p.run(0.5); let h = p.g.staged.captives[0]; let a = p.at(h); p.sam_put([a[0], a[1] + 2.5]); p.run(0.5); p };
+        let (key, shifted) = both("a hostage", s, &rescue, &|p| { let a = p.at(p.g.staged.captives[0]); on_floor(a) }, &|t| matches!(t, OrderTarget::Floor(f) if f.thing.is_none()));
         assert_eq!(key.order.as_deref(), Some("move"), "seed {s}: on a hostage");
         assert_eq!(shifted.order, key.order, "seed {s}: on a hostage");
         assert_eq!(shifted.who.len(), 1, "seed {s}: on a hostage, half of two");
@@ -292,7 +292,7 @@ fn more_taps_part_the_squad_down() {
         p.cursor_on(on_floor(spots[2]));
         p.run(0.2);
         assert_eq!(tap(&mut p, true), None, "seed {s}: nobody is free");
-        assert!(p.log().iter().any(|l| l.contains("nobody's free")), "seed {s}: and the squad says so");
+        assert!(p.said.iter().any(|l| l.text.contains("nobody's free")), "seed {s}: and the squad says so");
     }
 }
 

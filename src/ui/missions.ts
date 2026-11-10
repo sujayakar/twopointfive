@@ -122,7 +122,7 @@ export function openMissions(opts: MissionsOpts): MissionsScreen {
   const fTeam = fact('Team'), fDef = fact('Defenders'), fLean = fact('Approach'), fLevel = fact('Level');
   fDef.parentElement!.style.display = 'none';   // (how many are inside is a mystery. No screen draws this cell: it stands empty only while the page's written walk, tools/qa/cards-page.ts, counts it)
   // THE SETTINGS, every row by the one loop below: its label, a button per choice, the line that says what the lit one does. A row is made the first time the desk names it, and its buttons stay
-  // (a button a mission does not offer is put away): the Way in row has one for every way the longest list on this screen names, and Dealt
+  // (a button a mission does not offer is put away): the Way in row has one for every way the longest list on this screen names
   const setting = new Map<string, SettingEls>();
   const settingEls = (s: Setting): SettingEls => { const had = setting.get(s.key); if (had) return had;
     const r = el('div', ROW_CLASS[s.key] ?? 'mdiff mlever'); if (!ROW_CLASS[s.key]) r.setAttribute('data-lever', s.key);
@@ -131,7 +131,7 @@ export function openMissions(opts: MissionsOpts): MissionsScreen {
     const add = (id: string, label: string) => { const b = el('button', 'dbtn') as HTMLButtonElement; b.type = 'button'; b.textContent = label; b.setAttribute(BUTTON_ATTR[s.key] ?? 'data-rung', id); b.onclick = (e?: Event) => { e?.preventDefault?.(); S.set(s.key, id); }; btns.set(id, b); r.insertBefore(b, note); return b; };
     r.appendChild(note); sheet.appendChild(r);
     const E: SettingEls = { el: r, note, btns, add }; setting.set(s.key, E);
-    if (s.key === 'way') { const most = Math.max(0, ...list.map(m => m.ways.length)); for (let k = 1; k <= most; k++) add(String(k), 'Dealt'); add('any', 'Dealt'); }
+    if (s.key === 'way') { const most = Math.max(0, ...list.map(m => m.ways.length)); for (let k = 1; k <= most; k++) add(String(k), ''); }
     return E; };
   const paintSetting = (s: Setting) => { const E = settingEls(s), offered = new Set<string>();
     E.el.className = `${ROW_CLASS[s.key] ?? 'mdiff mlever'}${s.live ? '' : ' na'}${s.moved ? ' moved' : ''}`; (E.el as HTMLElement & { style: { display: string } }).style.display = s.shown ? '' : 'none';
@@ -248,11 +248,11 @@ export function missionsReopenAsked(): boolean { let asked = false; try { asked 
 interface Plan { min: [number, number]; max: [number, number];
   /** the same file as the map sheet's model (ui/planArt.ts): its ground, what stands on it back to front, its lamps */ art: PlanArt;
   /** where the team starts, [x, z], by the mission's kind (a room clear: one per way in, the level's own first; 'solo' = the level's own spawn) */ starts: Record<string, number[][]>;
-  /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — rust/game_rules/src/issue raises the bag to it at staging); 0 = none */ issued: number;
+  /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — rust/game_rules/src/outfit/issue.rs raises the bag to it at staging); 0 = none */ issued: number;
   /** the block in which the level's file ISSUES the squad its own kit (scenarios.issue: every staging wears the issue cards with its fields written over them, whatever this machine keeps), as its text; '' = none */ kit: string;
   /** per way in (the level's own first), whether the file says where the team stands for the Team & kit picture (scenarios.kitView.ways — ui/kitView.ts) */ kv: boolean[];
   /** what the place asks of a kit, counted off the file (the Team & kit step's brief — ui/kitBrief.ts): doors found locked · those of them that are steel · the rescue's hostages */ needs: PlaceNeeds;
-  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (rust/game_rules/src/rescue), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
+  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (rust/game_rules/src/missions/rescue), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
 export interface PlaceNeeds { locked: number; steel: number; hostages: number; /** the map marks where the team goes in (a quiet mission's has no mark) */ marked: boolean }
 interface PlanData extends ArtData { scenarios?: { roomClear?: { wallCharges?: unknown; team?: { sam?: number[] }; starts?: { sam?: number[] }[] }; nightBreach?: { team?: { sam?: number[] } }; rescue?: { team?: { sam?: number[] }; hostages?: unknown; side?: { door?: unknown } }; issue?: { members?: unknown }; kitView?: { ways?: { door?: unknown; span?: unknown }[] } }; mission?: { playerSpawn?: number[] } }
 const OFFICE = 'office.json';
@@ -302,19 +302,19 @@ export function issuedWalls(file: string): Promise<number> { return planOf(file)
  *  carries what — the same fetch, once per file */
 export function issuedKit(file: string): Promise<string> { return planOf(file).then(P => P?.kit ?? ''); }
 /** what this mission's place asks of a kit, AS THE MISSION IS STAGED (null: the file did not come) — the same fetch, once per file. The hostages are a rescue's, and
- *  a rescue finds its side door unlocked (rust/game_rules/src/rescue); the mark is the one the map sheet draws for this kind of mission */
+ *  a rescue finds its side door unlocked (rust/game_rules/src/missions/rescue); the mark is the one the map sheet draws for this kind of mission */
 export function placeNeeds(m: Mission): Promise<PlaceNeeds | null> { const kind = m.kind, rescue = kind === 'rescue';
   return planOf(m.level).then(P => (P ? { locked: P.needs.locked - (rescue && P.sideLocked ? 1 : 0), steel: P.needs.steel - (rescue && P.sideSteel ? 1 : 0), hostages: rescue ? P.needs.hostages : 0, marked: (P.starts[kind] ?? []).length > 0 } : null)); }
 /** which of this level file's ways in have a Team & kit picture staged for them (none: the file has no scenarios.kitView block, or did not come) — the same fetch,
  *  once per file. No file = a mission on the BUNDLED office (its entry names no level): the block of its own file, levels/office.json */
 export function kitViewWays(file?: string): Promise<boolean[]> { return planOf(file ?? OFFICE).then(P => P?.kv ?? []); }
 const PLAN_W = 40, PLAN_D = 28;   // the canvas's proportions: the levels' footprint today (a plan of another shape is fitted inside it)
-/** where the team starts, for the map sheet: the mission's kind and the way in picked (0 / 1 = the level's own, k = its k-th, −1 = dealt: every way, hollow) */
+/** where the team starts, for the map sheet: the mission's kind and the way in picked (0 / 1 = the level's own, k = its k-th) */
 interface PlanMark { kind: string; way: number }
-/** the starts a mark shows: the one of the way in picked, or (dealt, and more than one way) every one of them */
-function startPts(P: Plan, mark?: PlanMark): { pts: number[][]; dealt: boolean } {
-  const S = mark ? P.starts[mark.kind] ?? [] : [], dealt = !!mark && mark.way < 0 && S.length > 1;
-  return { dealt, pts: dealt ? S : S.slice(Math.min(S.length - 1, Math.max(0, (mark?.way ?? 0) - 1))).slice(0, 1) };
+/** the starts a mark shows: the one of the way in picked */
+function startPts(P: Plan, mark?: PlanMark): number[][] {
+  const S = mark ? P.starts[mark.kind] ?? [] : [];
+  return S.slice(Math.min(S.length - 1, Math.max(0, (mark?.way ?? 0) - 1))).slice(0, 1);
 }
 /** A CARD'S PICTURE: the mission's key art, composed ahead of time (ui/menuStills.ts; `data-still` on the canvas says it is one; nothing is marked on it:
  *  the way in is on the map sheet) — and, where no picture came (the one-file build, a mission newer than the pictures), the menu's own drawn model of the
@@ -344,10 +344,10 @@ function drawPlan(cv: HTMLCanvasElement, file: string, thumb: boolean, mark?: Pl
     if (cv.getAttribute('data-level') !== file || cv.getAttribute('data-mark') !== (mark ? `${mark.kind}|${mark.way}` : '')) return;   // (another row was highlighted while this one loaded)
     if (!thumb) cv.style.display = P ? '' : 'none'; if (!P) return;
     // the place as a model — the level's own boxes tilted as the game sees them, walls cut, ground as flat fills, a 10 m scale at the foot (ui/planArt.ts)
-    // THE START: the page's accent, its third and last use — a dot where the team stands for the way in picked; dealt = a ring at every way
-    const { pts, dealt } = startPts(P, mark);
+    // THE START: the page's accent, its third and last use — a dot where the team stands for the way in picked
+    const pts = startPts(P, mark);
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-    drawSheet(g, cv.width, cv.height, P.art, [P.min[0], P.min[1], P.max[0], P.max[1]], Object.values(P.starts).flat(), pts, dealt, small);   // (small: a card's picture, and the tiles' own sheet — a third the size of the old one)
+    drawSheet(g, cv.width, cv.height, P.art, [P.min[0], P.min[1], P.max[0], P.max[1]], Object.values(P.starts).flat(), pts, small);   // (small: a card's picture, and the tiles' own sheet — a third the size of the old one)
   };
   return planOf(file).then(paint);
 }

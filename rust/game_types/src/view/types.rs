@@ -1,4 +1,4 @@
-//! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/view).
+//! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/tick/view).
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -117,7 +117,7 @@ pub struct RailsView {
     pub arrow: Option<V3>,
     /// the player's own men on the floor, by their characters' ids: the big line keeps clear of them
     pub line_men: Vec<f64>,
-    /// the actions that work now (rails.ts ACTS). An action not here is locked, and the HUD names no key of it
+    /// the actions that work now. An action not here is locked, and the HUD names no key of it
     pub open: Vec<String>,
     /// the verbs the interaction key offers rows of. (None: every row)
     pub rows: Option<Vec<String>>,
@@ -129,8 +129,6 @@ pub struct RailsView {
     pub teaches_hold: bool,
     /// no teammate shows an aiming laser on this mission
     pub no_lasers: bool,
-    /// nobody on the floor is the player: where the view looks. (None: he is on the floor)
-    pub sky: Option<V3>,
 }
 
 /// the lesson that is live on the mission that is up
@@ -452,8 +450,7 @@ impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles
 /// WHAT A SEAT'S HUD IS TOLD OF THE GAME AS A TICK LEFT IT: a section for each kind of thing a HUD words. Nothing in it is kept by the game.
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TickView {
-    /// (None: a show runs)
-    pub mission: Option<crate::view::MissionView>,
+    pub mission: crate::view::MissionView,
     /// the lesson that is live. (None: none is)
     pub lesson: Option<crate::view::LessonView>,
     /// the radio strip, oldest first
@@ -488,8 +485,6 @@ pub struct TickView {
     pub plan: crate::view::PlanView,
     /// the run is live (no show, no menu's game, not over)
     pub live: bool,
-    /// a quiet mission's words for its room, its holder, its thing and its ways out
-    pub quiet: Option<crate::view::QuietView>,
     /// his own list: what the key would do now, and the things it could be done to
     pub interact: crate::view::InteractView,
     /// the alarm's stage (None: calm)
@@ -721,8 +716,6 @@ pub struct CardRow {
     pub changed: bool,
     /// he carries it and the mission has no use for it
     pub idle: bool,
-    /// how many of it the mission hands him, where that is more than he carries
-    pub lent: f64,
     /// why the step to the value before (after) is refused; empty: it is not
     pub less: String,
     pub more: String,
@@ -740,7 +733,7 @@ pub struct CardRow {
     /// the guns the slot could hold
     pub picks: Vec<crate::view::CardPick>,
 }
-impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, lent: 0.0, less: String::new(), more: String::new(), can: false, icon: String::new(), noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
+impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, less: String::new(), more: String::new(), can: false, icon: String::new(), noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
 
 /// pouches, full and in all
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
@@ -938,11 +931,11 @@ pub struct StartRow {
     pub unplayed: bool,
     /// cut from the lists (its own address still finds it)
     pub off_list: bool,
-    /// the player packs for it, though it is a lesson
-    pub packs: bool,
     /// it is played with the kit as issued
     pub as_issued: bool,
     pub lesson: bool,
+    /// two can play it
+    pub two: bool,
     /// the levels' ways in, by name (none: it has one)
     pub ways: Vec<String>,
     /// the short list's row of it, and its one line (empty: not on the short list)
@@ -966,6 +959,49 @@ pub struct StartView {
     pub playing: bool,
     /// the row a visit that names none and has started none opens on: the short list's first
     pub first: String,
+}
+
+/// a mission as its row of the table has it, for who reads the rows themselves and draws no card. What a row does not say is empty
+#[derive(Clone, Debug, Default, ToBytes)]
+pub struct MissionRow {
+    pub id: String,
+    pub title: String,
+    /// "solo" for the plain solo night, else its scenario's kind
+    pub kind: String,
+    pub squad: f64,
+    /// the group it is under
+    pub group: String,
+    /// its level's file
+    pub level: String,
+    /// the hour it is always started in
+    pub hour: String,
+    pub place: String,
+    pub blurb: String,
+    /// a lesson's: where we are and why, and what it teaches
+    pub scene: String,
+    pub teaches: Vec<String>,
+    /// it deploys at its own size and no other: what the other sizes say
+    pub only: String,
+    /// how many hold it
+    pub defenders: f64,
+    /// they are in squads
+    pub squads: bool,
+    /// its level's ways in, by name (none: it has one)
+    pub ways: Vec<String>,
+    /// nobody has balanced it
+    pub untuned: bool,
+    /// cut from the lists
+    pub off_list: bool,
+    /// the short list's one line of it
+    pub line: String,
+    /// the address that is this row
+    pub link: String,
+}
+
+/// every mission there is: the plain solo night, then the tables in their order
+#[derive(Clone, Debug, Default, ToBytes)]
+pub struct MissionsView {
+    pub rows: Vec<crate::view::MissionRow>,
 }
 
 /// a mission's sheet
@@ -1205,16 +1241,6 @@ pub struct PlanView {
     pub others: Vec<crate::view::SeatPlan>,
 }
 
-/// a quiet mission's own words
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct QuietView {
-    pub place: String,
-    pub holder: String,
-    pub thing: String,
-    pub outs: String,
-    pub bare: String,
-}
-
 /// what sort of thing the key is about
 #[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
 pub enum ThingKind { #[default] Cam, Guard, Breaker, Door, Light, Body, Objective, Held, Wall, Switch, Charge, Cancel }
@@ -1299,8 +1325,6 @@ pub struct InteractView {
     pub more: f64,
     /// the selector is open: he holds the key and the list is its rows
     pub open: bool,
-    /// the panel is the corner's three things (a tour's puppet keeps the list as it was)
-    pub corner: bool,
     /// (None: no thing, or a row about none)
     pub ring: Option<crate::view::ThingRing>,
     pub dots: Vec<crate::view::ThingDot>,

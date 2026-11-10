@@ -7,7 +7,7 @@
 //     already down in the yard.
 // THE SENTENCE NOBODY COULD SAY OF ANOTHER LEVEL is the station's own (the road ends in a hole in the mountain with a gun truck's lamps in front of it, and the
 // only way off the road is the station's gate). What this mission adds to it: the player is behind the truck with them when the first rounds come in.
-// FIVE BEATS, one new thing at a time (rust/game_rules/src/rails locks the rest; rust/game_rules/src/script_tut_team stages the road):
+// FIVE BEATS, one new thing at a time (rust/game_rules/src/missions/rails.rs locks the rest; rust/game_rules/src/missions/script_tut_team.rs stages the road):
 //   the road      pinned behind the two pickups. Zoom out until all four are in the picture; the squad throws its smoke; the squad's key on the yard moves
 //                 them through the gate, and he goes with them.
 //   the gate      the roadblock comes down the road for the gate, and five rifles hold it.
@@ -16,8 +16,8 @@
 //   the last room the same two keys on the bunkhouse's door; then he calls them to him once more and walks them back to the trucks.
 // Nobody of the squad is lost (rails.respawn). He can be: a checkpoint stands at each beat's first step.
 import type { Vec3 } from '../../src/math/vec';
-import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATERIALS, SKY_ROOMS as R, YARD_IN, YARD_MARK, TEA_DOOR, PASS_DOOR, BUNK_DOOR, TRUCKS_MARK, ROAD_BACK } from './tunnel-station';
+import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
+import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATERIALS, STATION_ROOMS as R, YARD_IN, YARD_MARK, TEA_DOOR, PASS_DOOR, BUNK_DOOR, TRUCKS_MARK, ROAD_BACK } from './tunnel-station';
 
 export const NAME = 'tut-team';
 export const MATERIALS = STATION_MATERIALS;

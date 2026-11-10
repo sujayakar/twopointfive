@@ -28,11 +28,11 @@ BORROWED = ['orders', 'door_tools', 'work', 'wall_charge', 'hover', 'interactabl
 # THE SEATS' OWN MACHINERY: the functions that may name the nineteen through a shared game, because they are how a seat is found or
 # built, or answer about every seat at once (in a game of one seat, "the seat on the game" is their short way to say "the only seat")
 KEEP = {
-    'seats/p_01.rs': ['men', 'set_of_game', 'all_down', 'host_man', 'man_by_id', 'view_of_id', 'faced_man', 'faced_view', 'view_of_body', 'view_of', 'orders_of'],
-    'cmd/p_01.rs': ['seat_man'],      # the man of ANY seat by its id: from the game where it stands, from where it is kept
+    'tick/seats.rs': ['men', 'set_of_game', 'all_down', 'host_man', 'man_by_id', 'view_of_id', 'faced_man', 'faced_view', 'view_of_body', 'view_of', 'orders_of'],
+    'tick/cmd.rs': ['seat_man'],      # the man of ANY seat by its id: from the game where it stands, from where it is kept
 }
 # the crates whose callers the compiler is asked for, in the order they build
-CRATES = ['game_rules', 'game', 'game_start', 'game_run']
+CRATES = ['game_rules', 'game', 'game_start']
 
 def read(p): return open(p, encoding='utf-8').read()
 def write(p, t): open(p, 'w', encoding='utf-8').write(t)

@@ -1,5 +1,5 @@
 // THE DEBUGGER, on a page that draws a game it does not hold (ui/panel.ts; backslash): every number of the rules a person may turn, found by its name and turned while the game plays
-// (rust/game_run knobs.rs), then the renderer's pages (ui/graphicspanel.ts) and the look's, with its takes (ui/lookpanel.ts); on a networked game's page, its connection (ui/netrows.ts).
+// (rust/game_start/src/host/knobs.rs), then the renderer's pages (ui/graphicspanel.ts) and the look's, with its takes (ui/lookpanel.ts); on a networked game's page, its connection (ui/netrows.ts).
 import type { Engine } from '../engine';
 import type { GltfCharacter } from '../anim/gltf';
 import type { FollowCamera } from './camera';
@@ -61,7 +61,7 @@ function skyOf(game: DrawGame): SkyTurns {
     setMoon: o => { C.moon(o.k ?? NaN, o.elev ?? NaN, o.bearing ?? NaN); game.tell(); },
   };
 }
-/** THE ROWS OF THE GAME'S NUMBERS: laid out from the module's list (game_run shown.rs), a section each. What a row was turned to stays on this machine if the row says so (machine.ts keptRows reads it at a start). */
+/** THE ROWS OF THE GAME'S NUMBERS: laid out from the module's list (game_start host/shown.rs), a section each. What a row was turned to stays on this machine if the row says so (machine.ts keptRows reads it at a start). */
 function shownRows(panel: Panel, game: DrawGame, secs: Map<string, HTMLElement>): void {
   const rows = game.shown(); let at = -1, now: Float64Array = new Float64Array(0);
   const read = (i: number): number => { if (at !== game.ticks) { at = game.ticks; now = game.shownNow(); } return now[i]; };
@@ -72,7 +72,7 @@ function shownRows(panel: Panel, game: DrawGame, secs: Map<string, HTMLElement>)
     panel.advanced = was;
   });
 }
-/** THE ACTIONS: drawn from the module's list (game_run actions.rs), and each a command. A row names no action here. */
+/** THE ACTIONS: drawn from the module's list (game_start host/actions.rs), and each a command. A row names no action here. */
 function actionRows(panel: Panel, game: DrawGame, secs: Map<string, HTMLElement>): void {
   const act = (name: string, value: number, word: string): void => { game.commands.act(name, value, word); game.tell(); };
   let at = -1, now = game.actions(); const rows = (): ActionRow[] => { if (at !== game.ticks) { at = game.ticks; now = game.actions(); } return now; };

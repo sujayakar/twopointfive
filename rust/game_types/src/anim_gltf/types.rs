@@ -1,6 +1,6 @@
 //! The types of `anim_gltf`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -44,12 +44,10 @@ pub struct MeshData {
     pub mat_sel: Vec<f32>,
     pub indices: Vec<u32>,
     pub vertex_count: f64,
-    pub joints_are_u16: bool,
     pub bbox_min: V3,
     pub bbox_max: V3,
     pub part: Option<Vec<u8>>,
     pub mat_index: Option<Vec<u8>>,
-    pub material_names: Option<Vec<String>>,
 }
 impl Default for MeshData {
     fn default() -> Self {
@@ -61,12 +59,10 @@ impl Default for MeshData {
             mat_sel: Vec::new(),
             indices: Vec::new(),
             vertex_count: 0.0,
-            joints_are_u16: false,
             bbox_min: [0.0; 3],
             bbox_max: [0.0; 3],
             part: None,
             mat_index: None,
-            material_names: None,
         }
     }
 }
@@ -81,9 +77,7 @@ pub enum MeshDataJoints {
 pub struct CastVariant {
     pub name: String,
     pub side: crate::anim_gltf::CastSide,
-    pub parts: Vec<String>,
     pub mask: f64,
-    pub tris: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -93,21 +87,10 @@ pub enum CastSide {
     Defender,
     Responder,
 }
-impl CastSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CastSide::Civilian => "civilian",
-            CastSide::Operator => "operator",
-            CastSide::Defender => "defender",
-            CastSide::Responder => "responder",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CastInfo {
     pub parts: Vec<String>,
-    pub part_tris: Vec<f64>,
     pub variants: Vec<AnimGltfCastVariantId>,
 }
 
@@ -115,7 +98,6 @@ pub struct CastInfo {
 pub struct GltfCharacter {
     pub nodes: Vec<crate::anim_gltf::GltfNode>,
     pub order: Vec<f64>,
-    pub roots: Vec<f64>,
     pub skin: crate::anim_gltf::SkinData,
     pub mesh: AnimGltfMeshDataId,
     pub clips: JsMap<String, ClipId>,
@@ -130,18 +112,8 @@ pub struct AnimGltfModNvgBitsValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AnimGltfMod {
-    /// (src/anim/gltf.ts:33 nvgBits)
     pub nvg_bits: JsMap<AnimGltfCastInfoId, crate::anim_gltf::AnimGltfModNvgBitsValue>,
-    /// (src/anim/gltf.ts:44 suitBits)
     pub suit_bits: JsMap<AnimGltfCastInfoId, f64>,
-}
-impl AnimGltfMod {
-    pub fn blank() -> Self {
-        AnimGltfMod {
-            nvg_bits: JsMap::new(),
-            suit_bits: JsMap::new(),
-        }
-    }
 }

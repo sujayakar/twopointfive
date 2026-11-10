@@ -1,4 +1,4 @@
-//! THE KIT'S COLUMN (`view.kit`, rust/game_rules/src/kit `kit_view`): what a HUD is told of what a man carries, held to what the game says he carries and to the keys a player presses.
+//! THE KIT'S COLUMN (`view.kit`, rust/game_rules/src/outfit/kit `kit_view`): what a HUD is told of what a man carries, held to what the game says he carries and to the keys a player presses.
 use game::game::SlotKind;
 use game::view::{KitSlot, KitThing, KitView};
 use game::weapons::WeaponId;
@@ -231,7 +231,7 @@ fn a_card_without_the_light_has_no_lamp_to_work() {
         game::kit::kit_mission(&mut p.g, hand);
         assert!(game::kit::kit_set(&mut p.g, 0.0, game::kit::KitField::Light, &game::kit::KitValue::Bool(false)), "seed {}: the card took no such row", seed);
         game::kit::kit_mission(&mut p.g, None);
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.frame();
         p.sam_takes_his_rifle();
         p.run(0.8);
@@ -250,7 +250,7 @@ fn a_card_without_the_light_has_none_in_a_room_clear() {
     let mut p = Play::level("kit-yard.json", false, &Opts::default());
     p.sam_unhurt();
     assert!(game::kit::kit_set(&mut p.g, 0.0, game::kit::KitField::Light, &game::kit::KitValue::Bool(false)), "the card took no such row");
-    let spec = game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: 4.0, level: None, seed: None };
+    let spec = game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: 4.0, level: None, seed: None };
     if let Some(why) = game::scenario_run::start_scenario(&mut p.g, &spec) { panic!("refused: {}", why); }
     p.frame();
     let pl = p.g.player;
@@ -284,10 +284,7 @@ fn the_big_slot_is_told_with_the_door_that_offers_it() {
         assert!(b.offered, "seed {}: beside the shut door at {:?}, and nothing is offered: {:?}", seed, door, p.g.nearby.iter().map(|r| r.verb).collect::<Vec<_>>());
         p.sam_put(far); p.run(0.3);
         assert!(!kit(&p).big.unwrap().offered, "seed {}: no door by him, and the row is lit", seed);
-        // a tour shows no kit of its own, and a game with no big slot has no row
-        p.g.touring = true;
-        assert!(kit(&p).big.is_none(), "seed {}", seed);
-        p.g.touring = false;
+        // a game with no big slot has no row
         p.g.k.bigslot.on = false;
         assert!(kit(&p).big.is_none(), "seed {}", seed);
     }

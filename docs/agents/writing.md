@@ -14,12 +14,12 @@ carry the voice of these notes into the game. They run noun first with no contra
 | text | where it is written | how it is read |
 |---|---|---|
 | a lesson's lines and cards | `tools/levels/tut-*.ts`, written out to `levels/tut-*.json` as `line`, `after`, `explain` | `lesson_line`, then `capsPlain` in `src/ui/tabcard.ts` |
-| a mission's row: `blurb`, `scene`, `teaches`, `only`, `place` | `src/scene/scenarioList.ts`, again in `rust/game_types/src/scene_scenario_list/types.rs` | `src/ui/loadbrief.ts`, `start_list` |
+| a mission's row: `blurb`, `scene`, `teaches`, `only`, `place` | `rust/game_types/src/scene_scenario_list/rows.rs` | `src/ui/loadbrief.ts`, `start_list` |
 | the objective | `mission::objective` and the modules it asks | the view |
-| a row beside what Sam can use | `interact_view`, `player/p_07.rs` | the view |
+| a row beside what Sam can use | `interact_view`, `player/interactables.rs` | the view |
 | squad rows and answers | `orders/`, `orders/rows/`, `doortools/` (`squad.md`) | the view |
 | spoken lines | `rust/game_types/src/dialogue/types.rs` and each rule's own tables (`dialogue.md`) | the view |
-| menus, the kit's walkthrough | `src/ui/`, for instance `kitGuide.ts` | the page |
+| menus | `src/ui/`, for instance `startpage.ts` | the page |
 | what a key is called | `src/host/keymap.ts` | `keyText`, `capsPlain` |
 
 `tools/qa/writing-check.ts` and `tools/qa/mystery-check.ts` are the checks; `tools/qa/lessonwords.ts` writes a token out for them.
@@ -30,7 +30,7 @@ carry the voice of these notes into the game. They run noun first with no contra
 the start of a sentence, so it may open one ("[X] on the wall"), which no other key does.
 
 **A move the keys can change is a token**, so write the sentence around it. There are four: {grab him}, {grab him from behind}, {knock him out} and {take him out}, with any words for
-"him" ({grab the near guard}). A capital inside the braces begins a sentence. `token_line` in `lesson/` writes them out by the keys the build has: "press [Space] to grab him",
+"him" ({grab the near guard}). A capital inside the braces begins a sentence. `token_line` in `lesson.rs` writes them out by the keys the build has: "press [Space] to grab him",
 "right-click to knock him out". Read the line aloud each way it can come out, and never spell the grab's key yourself. The same list stands in `tools/qa/lessonwords.ts`; change both.
 
 **Each kind of text has a job:**
@@ -125,7 +125,7 @@ is not said. The bans stand as `CLAUDE.md` says: no compass word, no digit above
 ## To change it
 
 - **A lesson's line or card:** its `tools/levels/tut-*.ts`, then `bun run tools/levels/export.ts <name>`. Then `bun run tools/qa/writing-check.ts`.
-- **A mission row:** `src/scene/scenarioList.ts` and `rust/game_types/src/scene_scenario_list/types.rs`, both. No check compares the two; their words agree today.
+- **A mission row:** `rust/game_types/src/scene_scenario_list/rows.rs`. The checks read it off the module, so make that first.
 - **A rule in the check:** `faults` in `tools/qa/writing-check.ts`. Its `BEFORE` and `AFTER` lists are what the rules must catch and pass; `WRITING_BREAK=1` reads the old sentences as a level's.
 - **A spoken line:** `dialogue.md`, To change it.
 - **Whatever you change:** read each changed line aloud as the player reads it, keys drawn and tokens written out. Then have a second reader who did not write it do the same before calling it

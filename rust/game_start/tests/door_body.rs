@@ -11,10 +11,11 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
     let door = game::doors::doors_by_name(&p.g, "breakroom_n").expect("the office's break room door");
     assert!(game::doors::door_latched(&p.g, door), "the staging is wrong: the door stands open");
     let gd = p.g.guards[0];
-    for o in p.g.guards.clone().into_iter().skip(1) { let m = &mut p.g.gd[o]; (m.hold, m.pinned, m.dazzled_until) = (true, true, 1e9); }
+    for o in p.g.guards.clone().into_iter().skip(1) { let m = &mut p.g.gd[o]; (m.hold, m.pinned, p.g.cond[m.ch].blind_until) = (true, true, 1e9); }
     p.sam_put(sam);
     let at = p.sam_at();
-    p.g.puppet = Some(game::game::GamePuppet { goal: Some([at[0], 0.0, at[1]]), aim: Some([27.5, 1.2, 11.3]), ..game::game::GamePuppet::default() });
+    p.walk_keys_to(Some(at));
+    p.g.hand_at = Some([27.5, 1.2, 11.3]);
     let c = p.g.gd[gd].ch;
     let (x, z) = (27.5, 11.3);
     p.g.ch[c].pos = [x, 0.0, z];
@@ -23,7 +24,7 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
     (p.g.ch[c].body_yaw, p.g.ch[c].aim_yaw) = (yaw, yaw);
     let t0 = p.g.time;
     let m = &mut p.g.gd[gd];
-    (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, m.dazzled_until, m.pinned, m.hold, m.foe) = (GuardState::Alert, 1.0, 0.0, 0.3, Some([at[0], 0.0, at[1]]), t0 - 1.0, -1.0, false, false, Some(game::game::Foe::Player));
+    (m.state, m.awareness, m.react_t, p.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, p.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) = (GuardState::Alert, 1.0, 0.0, 0.3, Some([at[0], 0.0, at[1]]), t0 - 1.0, -1.0, false, false, Some(p.g.pl[p.g.player].ch));
     m.path.clear();
     m.path_goal = None;
     let (mut first, mut last_shot, mut opened, mut spell, mut worst) = (None, t0, false, 0.0f64, 0.0f64);

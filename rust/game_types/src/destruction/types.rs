@@ -1,9 +1,9 @@
 //! The types of `destruction`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// which CHAOS row a rate cap reads, live at each take (destruction.ts:235): puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
+/// which CHAOS row a rate cap reads, live at each take: puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum RateCapN {
     Puff,
@@ -11,7 +11,7 @@ pub enum RateCapN {
     Knock,
     Decal,
 }
-/// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes (glassbreak.ts:219), Bars (winbars.ts:80), Snow (snowBlast.ts:119)
+/// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes, Bars, Snow
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum BlastListener {
     Glass,
@@ -19,14 +19,13 @@ pub enum BlastListener {
     Snow,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Destruction {
     pub debris: crate::debris::Debris,
-    pub walls: alloc::boxed::Box<crate::wallbreak::WallBreak>,
+    #[is(alloc::boxed::Box::new(crate::wallbreak::WallBreak::blank()))] pub walls: alloc::boxed::Box<crate::wallbreak::WallBreak>,
     pub edge_look: crate::edge_look::EdgeLook,
     pub furn: crate::furnblast::Furniture,
     pub breaks: crate::break_table::Breaks,
-    pub show_chaos: Option<f64>,
     pub heat: Vec<f32>,
     pub hw: f64,
     pub hh: f64,
@@ -34,19 +33,19 @@ pub struct Destruction {
     pub cells: Vec<Vec<f64>>,
     pub hidden: JsMap<crate::Num, f64>,
     pub tiles_down: JsSet<String>,
-    pub last_tile_t: f64,
+    #[is(-100.0)] pub last_tile_t: f64,
     pub tile_count: f64,
     pub broke: JsSet<FixtureId>,
     pub fixture_count: f64,
-    pub last_fixture_t: f64,
+    #[is(-100.0)] pub last_fixture_t: f64,
     pub roofs: JsMap<crate::Num, f64>,
     pub target_of_box: JsMap<crate::Num, FixtureId>,
-    pub caps: crate::destruction::DestructionCaps,
+    #[is(crate::destruction::DestructionCaps { puff: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Puff }, paper: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Paper }, knock: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Knock }, decal: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Decal } })] pub caps: crate::destruction::DestructionCaps,
     pub puffs_this_frame: f64,
     pub free_knocks: f64,
-    pub serial: f64,
-    pub w: f64,
-    pub cs: f64,
+    #[is(1.0)] pub serial: f64,
+    #[is(40.0)] pub w: f64,
+    #[is(1.0)] pub cs: f64,
     pub knocks: f64,
     pub any_heat: bool,
     pub thuds_this_frame: f64,
@@ -54,53 +53,12 @@ pub struct Destruction {
     pub blast_listeners: Vec<crate::destruction::BlastListener>,
     pub pall_at: Vec<f64>,
 }
-impl Destruction {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Destruction {
-            debris: crate::debris::Debris::blank(),
-            walls: alloc::boxed::Box::new(crate::wallbreak::WallBreak::blank()),
-            edge_look: crate::edge_look::EdgeLook::blank(),
-            furn: crate::furnblast::Furniture::blank(),
-            breaks: crate::break_table::Breaks::blank(),
-            show_chaos: None,
-            heat: Vec::new(),
-            hw: 0.0,
-            hh: 0.0,
-            items: JsMap::new(),
-            cells: Vec::new(),
-            hidden: JsMap::new(),
-            tiles_down: JsSet::new(),
-            last_tile_t: -100.0,
-            tile_count: 0.0,
-            broke: JsSet::new(),
-            fixture_count: 0.0,
-            last_fixture_t: -100.0,
-            roofs: JsMap::new(),
-            target_of_box: JsMap::new(),
-            caps: crate::destruction::DestructionCaps { puff: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Puff }, paper: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Paper }, knock: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Knock }, decal: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Decal } },
-            puffs_this_frame: 0.0,
-            free_knocks: 0.0,
-            serial: 1.0,
-            w: 40.0,
-            cs: 1.0,
-            knocks: 0.0,
-            any_heat: false,
-            thuds_this_frame: 0.0,
-            dust_queue: Vec::new(),
-            blast_listeners: Vec::new(),
-            pall_at: Vec::new(),
-        }
-    }
-}
-impl Default for Destruction { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Destructible {
     pub i: f64,
     pub kind: crate::destruction::DKind,
     pub box_: BoxId,
-    pub flags0: f64,
     pub mate: Option<f64>,
     pub target: Option<FixtureId>,
     pub group: Option<Vec<f64>>,
@@ -115,18 +73,6 @@ pub enum DKind {
     Binder,
     Tv,
 }
-impl DKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DKind::Screen => "screen",
-            DKind::Paper => "paper",
-            DKind::Housing => "housing",
-            DKind::Clutter => "clutter",
-            DKind::Binder => "binder",
-            DKind::Tv => "tv",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DestructionCaps {
@@ -136,23 +82,12 @@ pub struct DestructionCaps {
     pub decal: crate::destruction::RateCap,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RateCap {
     pub ts: Vec<f64>,
     pub head: f64,
-    pub n: crate::destruction::RateCapN,
+    #[is(crate::destruction::RateCapN::Puff)] pub n: crate::destruction::RateCapN,
 }
-impl RateCap {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RateCap {
-            ts: Vec::new(),
-            head: 0.0,
-            n: crate::destruction::RateCapN::Puff,
-        }
-    }
-}
-impl Default for RateCap { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DestructionDustQueueItem {
@@ -161,12 +96,6 @@ pub struct DestructionDustQueueItem {
     pub scale: f64,
     pub surf: crate::scene_materials::Surf,
     pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ChaosTune {
-    pub chaos: Option<f64>,
-    pub debris_impulses: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -182,16 +111,6 @@ pub enum DestructionTakeK {
     Puff,
     Knock,
     Decal,
-}
-impl DestructionTakeK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DestructionTakeK::Paper => "paper",
-            DestructionTakeK::Puff => "puff",
-            DestructionTakeK::Knock => "knock",
-            DestructionTakeK::Decal => "decal",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -214,22 +133,6 @@ pub struct DestructionWallsForOpts {
     pub power: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DestructionTestImpulseKind {
-    Bang,
-    Thud,
-    Impact,
-}
-impl DestructionTestImpulseKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DestructionTestImpulseKind::Bang => "bang",
-            DestructionTestImpulseKind::Thud => "thud",
-            DestructionTestImpulseKind::Impact => "impact",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DestructionBurstHit {
     pub index: Option<f64>,
@@ -249,17 +152,9 @@ pub struct DestructionPallEmitR {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DestructionMod {
-    /// (src/game/destruction.ts:189 DESTR_LOG)
     pub destr_log: Vec<String>,
-}
-impl DestructionMod {
-    pub fn blank() -> Self {
-        DestructionMod {
-            destr_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -294,17 +189,8 @@ pub struct DestructionStats {
     pub destr_fixtures_refused: i32,
 }
 
-/// (src/game/destruction.ts:152 PALL_DIRS: a table nothing writes)
 pub fn pall_dirs() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [0.7071, 0.7071], [0.0, 1.0], [-0.7071, 0.7071], [-1.0, 0.0], [-0.7071, -0.7071], [0.0, -1.0], [0.7071, -0.7071]] }
 
-/// (src/game/destruction.ts:153 CHAOS_DEFAULTS: a table nothing writes)
-pub fn chaos_defaults() -> crate::knobs::ChaosK { crate::knobs::ChaosK::page() }
-
-/// (src/game/destruction.ts:154 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.chaos";
-
-/// (src/game/destruction.ts:187 LANE_MARK: a table nothing writes)
 pub fn lane_mark() -> JsMap<String, crate::destruction::LaneMark> { { let mut t = JsMap::new(); t.set(String::from("dent"), crate::destruction::LaneMark { look: 0.0, r: [0.036, 0.045], s: [0.7, 0.9] }); t.set(String::from("shred"), crate::destruction::LaneMark { look: 1.0, r: [0.06, 0.075], s: [0.85, 0.85] }); t.set(String::from("crack"), crate::destruction::LaneMark { look: 2.0, r: [0.085, 0.11], s: [0.9, 0.9] }); t } }
 
-/// (src/game/destruction.ts:194 ROOF_RAYS: a table nothing writes)
 pub fn roof_rays() -> Vec<[f64; 2]> { alloc::vec![[0.0, 0.0], [0.29, 0.0], [-0.29, 0.0], [0.0, 0.29], [0.0, -0.29]] }

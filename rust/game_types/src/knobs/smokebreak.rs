@@ -33,7 +33,7 @@ pub struct SmokebreakK {
     pub breath: SmokebreakKBreath,
     /// what the smoke scatters: a blue grey (the solver's `tint`, the puff's colour)
     #[k([0.72, 0.76, 0.86])] pub color: V3,
-    /// m: the mouth off the head joint, ahead and down (snowBreath.ts's own two numbers)
+    /// m: the mouth off the head joint, ahead and down
     #[k(0.1)] pub mouth_ahead: f64,
     #[k(0.075)] pub mouth_down: f64,
 }

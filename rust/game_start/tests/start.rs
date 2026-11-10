@@ -39,7 +39,7 @@ fn a_level_stands_as_its_file_has_it() {
 /// A mission started from the words of its address, as the page starts one: the row of the mission list that owns the level lays its hour, the
 /// link's fog of war goes on, and the mission is staged. The same level with the mission alone started on it stays at the hour a game is made at.
 /// A FAILURE MEANS: the game no longer reads an address's words itself (`game::query`), or a start from them stopped laying what the row says
-/// before it stages the mission (rowset.ts, hours.ts, scenarioRun.ts startFromQuery).
+/// before it stages the mission.
 #[test]
 fn a_mission_starts_from_its_link_as_the_page_starts_it() {
     use game::hours::HourId;
@@ -53,7 +53,7 @@ fn a_mission_starts_from_its_link_as_the_page_starts_it() {
 
 /// Three of the game's levels that between them hold every kind of record beyond a plain floor: they stand, and what the file says is on the floor.
 /// A FAILURE MEANS: the start stopped making something a level file says (a round thing, a box's shape and its trim, a
-/// civilian, a camera, a laser, a keypad, the vents, the daylight), or stopped standing such a level at all. (That what it makes stays what it made is the gate's `start` rows' to hold:
+/// civilian, a camera, a laser, a keypad, the vents), or stopped standing such a level at all. (That what it makes stays what it made is the gate's `start` rows' to hold:
 /// this only holds that it is made.)
 #[test]
 fn what_a_level_file_says_is_on_the_floor() {
@@ -70,9 +70,9 @@ fn what_a_level_file_says_is_on_the_floor() {
     let f = p.floor();
     assert!(f.round > 0 && f.boxes == 435, "the long hall's round things (and no box added or lost for them): {:?}", f);
     drop(p);
-    // the office: two civilians, three cameras, two lasers and a keypad, six vents, a daylight
+    // the office: two civilians, three cameras, two lasers and a keypad, six vents
     let mut p = Play::level("office.json", false, &plain);
-    assert_eq!(p.floor(), Floor { boxes: p.floor().boxes, round: p.floor().round, shaped: 22, trim: 28, civilians: 2, cameras: 3, lasers: 2, keypads: 1, vents: 6, daylight: true });
+    assert_eq!(p.floor(), Floor { boxes: p.floor().boxes, round: p.floor().round, shaped: 22, trim: 28, civilians: 2, cameras: 3, lasers: 2, keypads: 1, vents: 6 });
     p.run(1.0);
 }
 
@@ -80,7 +80,7 @@ fn what_a_level_file_says_is_on_the_floor() {
 /// list names it): a level the game ships can no longer start in Rust. Or, on the last line, the reader has stopped refusing what it cannot carry.
 #[test]
 fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
-    use game_start::{files, json, level};
+    use game_start::{faults, files, json};
     let dir = files::root().join("levels");
     let mut n = 0;
     for e in std::fs::read_dir(&dir).unwrap() {
@@ -89,31 +89,25 @@ fn every_level_file_is_read_whole_and_a_stranger_is_refused() {
         if !name.ends_with(".json") { continue; }
         let data = json::parse(&std::fs::read_to_string(&p).unwrap()).unwrap_or_else(|e| panic!("{}: {}", name, e));
         if !data.has("boxes") { continue; }   // (a file of the folder that is not a level: the lint's list)
-        let lacks = std::panic::catch_unwind(|| level::lacks_of(&data)).unwrap_or_else(|_| panic!("{} could not be read (the reader's own words are above)", name));
-        assert!(lacks.is_empty(), "{} is not carried whole: {:?}", name, lacks);
+        assert_eq!(faults::of(&data), [""; 0], "{} has faults", name);
         n += 1;
     }
     assert!(n >= 30, "levels/ holds the game's level files ({} read)", n);
-    // a file from a later reader, and a record with a member the game's type has no field for
-    let mut later = json::parse(&files::level_text("kit-yard.json")).unwrap();
-    if let json::Json::Obj(m, _) = &mut later {
-        let beam = json::obj(vec![("kind", json::s("laser")), ("id", json::s("beam")), ("from", json::nums(&[0.0, 1.0, 0.0])), ("to", json::nums(&[1.0, 1.0, 0.0])), ("colour", json::s("red"))]);
-        for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(3.0); } if k == "devices" { *v = json::arr(vec![beam.clone()]); } }
-    }
-    let lacks = level::lacks_of(&later);
-    assert!(lacks.iter().any(|l| l.starts_with("version")), "a file of another version is named: {:?}", lacks);
-    assert!(lacks.iter().any(|l| l == "devices[0].colour"), "a member no field takes is named by its place: {:?}", lacks);
-    // a file of the version before, whose round things are four slabs: refused by its version, and told the command
-    let mut old = json::parse(&files::level_text("kit-yard.json")).unwrap();
-    if let json::Json::Obj(m, _) = &mut old { for (k, v) in m.iter_mut() { if k == "version" { *v = json::n(1.0); } } }
-    let lacks = std::panic::catch_unwind(|| level::lacks_of(&old)).unwrap_or_else(|_| panic!("a file of version 1 could not be read"));
-    assert!(lacks.iter().any(|l| l.starts_with("version 1") && l.contains("round-convert")), "a file of version 1 is named, with the command: {:?}", lacks);
-    // …and of a record the loader reads by hand, and at the top of the file
-    let mut grown = json::parse(&files::level_text("kit-yard.json")).unwrap();
+    let kit_yard = || json::parse(&files::level_text("kit-yard.json")).unwrap();
+    // a file from a later reader; a file of the version before, whose round things are four slabs: refused by its version, and told the command
+    let mut later = kit_yard();
+    later.set_member("version", json::n(3.0));
+    assert!(faults::of(&later).iter().any(|f| f.starts_with("version")));
+    later.set_member("version", json::n(1.0));
+    assert!(faults::of(&later).iter().any(|f| f.starts_with("version") && f.contains("round-convert")));
+    // a member the game has no reading of, in a record, in a device, at the top of the file: named by its place, and nothing else
+    let mut grown = kit_yard();
+    let beam = json::obj(vec![("kind", json::s("laser")), ("id", json::s("beam")), ("from", json::nums(&[0.0, 1.0, 0.0])), ("to", json::nums(&[1.0, 1.0, 0.0])), ("colour", json::s("red"))]);
+    grown.set_member("devices", json::arr(vec![beam]));
+    grown.set_member("elevators", json::arr(vec![]));
     if let json::Json::Obj(m, _) = &mut grown {
-        m.push(("elevators".to_string(), json::arr(vec![])));
-        for (k, v) in m.iter_mut() { if k == "doors" { if let json::Json::Arr(d) = v { if let json::Json::Obj(door, _) = &mut d[0] { door.push(("auto".to_string(), json::b(true))); } } } }
+        for (k, v) in m.iter_mut() { if k == "doors" { if let json::Json::Arr(d) = v { d[0].set_member("auto", json::b(true)); } } }
     }
-    let lacks = level::lacks_of(&grown);
-    assert_eq!(lacks, ["doors[0].auto", "elevators"], "what a file gained since the reader was written is named, and nothing else");
+    let places: Vec<String> = faults::of(&grown).iter().map(|f| f.split(": ").next().unwrap().to_string()).collect();
+    assert_eq!(places, ["doors[0].auto", "devices[0].colour", "elevators"]);
 }

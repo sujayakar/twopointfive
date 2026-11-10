@@ -109,7 +109,7 @@ fn diceMeanRadiance(P: vec3f) -> vec3f {
 // read samples a full probe spacing off the surface along its normal so the trilinear footprint cannot straddle the wall it is ON; but a face that looks BACK at the surface
 // the ray came from — the back of a carton or a shelf board a hand's width off the wall being shaded, the underside of a bottom shelf over the floor — has only that much
 // air in front of it, and a full spacing along its normal lands beyond that wall: in the room next door. Lit storage read straight through the partition onto the back of
-// every carton on the manager's shelves, and the office wall behind the unit glowed in the dark (playtest 08-12, docs/internal/render-defects-0812.md §3). Two rules,
+// every carton on the manager's shelves, and the office wall behind the unit glowed in the dark (playtest 08-12). Two rules,
 // no rays: (1) the offset never carries the read past the plane of (P0, N0) — that plane IS a wall (or floor) between Ph and everything behind it; (2) the trilinear
 // footprint of the point read: any lattice neighbour whose cell centre lies behind that plane collapses onto the read point's own cell centre on that axis, and if that
 // centre itself lies behind the plane (a wall off the metre lattice) the read steps to the first cell centre on P0's side. Identical to the plain read wherever the hit

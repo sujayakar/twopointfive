@@ -1,12 +1,11 @@
 //! The types of `frag`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastReport {
     pub at: V3,
-    pub who: f64,
     pub hits: Vec<crate::frag::BlastHit>,
     pub killed: f64,
     pub finished: f64,
@@ -19,12 +18,9 @@ pub struct BlastReport {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastHit {
     pub id: f64,
-    pub name: String,
     pub team: crate::teams::Team,
-    pub d: f64,
     pub exposed: f64,
     pub result: crate::frag::BlastResult,
-    pub down: Option<bool>,
     pub behind: Option<crate::frag::BlastHitBehind>,
 }
 
@@ -35,29 +31,11 @@ pub enum BlastResult {
     Shielded,
     Stunned,
 }
-impl BlastResult {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BlastResult::Wounded => "wounded",
-            BlastResult::Killed => "killed",
-            BlastResult::Shielded => "shielded",
-            BlastResult::Stunned => "stunned",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BlastHitBehind {
     Door,
     Cover,
-}
-impl BlastHitBehind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BlastHitBehind::Door => "door",
-            BlastHitBehind::Cover => "cover",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -83,16 +61,6 @@ pub enum GlassView {
     Wary,
     Counted,
     Whole,
-}
-impl GlassView {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassView::Blown => "blown",
-            GlassView::Wary => "wary",
-            GlassView::Counted => "counted",
-            GlassView::Whole => "whole",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -177,12 +145,6 @@ pub struct FragModTORNValue {
     pub doors: Vec<DoorId>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FragModTORNValueDoorsItem {
-    pub off: bool,
-    pub box_: BoxId,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct RollOn {
     pub at: V3,
@@ -251,30 +213,10 @@ pub struct OwnBangE {
     pub who: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FragMarksItem {
-    pub at: V3,
-    pub left: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum WindUp {
     Own,
     Arc,
-}
-impl WindUp {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WindUp::Own => "own",
-            WindUp::Arc => "arc",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Free {
-    pub b: crate::frag::DefBook,
-    pub c: crate::frag::Carrier,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -284,52 +226,17 @@ pub enum FragThrowAt {
     Arc,
     Busy,
 }
-impl FragThrowAt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FragThrowAt::Thrown => "thrown",
-            FragThrowAt::Own => "own",
-            FragThrowAt::Arc => "arc",
-            FragThrowAt::Busy => "busy",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LandsSol {
-    pub land: V3,
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FragMod {
-    /// (src/game/frag.ts:210 FRAG_LOG)
     pub frag_log: Vec<crate::frag::BlastReport>,
-    /// (src/game/frag.ts:213 FRAG_WHY)
     pub frag_why: JsMap<String, f64>,
-    /// (src/game/frag.ts:268 WALLS_FOR)
     pub walls_for: Option<crate::frag::FragModWALLSFORValue>,
-    /// (src/game/frag.ts:281 TORN)
     pub torn: Option<crate::frag::FragModTORNValue>,
-    /// (src/game/frag.ts:449 warned)
     pub warned: JsMap<GuardId, f64>,
-    /// (src/game/frag.ts:450 books)
     pub books: Option<Vec<crate::frag::Live>>,
-    /// (src/game/frag.ts:820 defBooks)
     pub def_books: Option<crate::frag::DefBook>,
-}
-impl FragMod {
-    pub fn blank() -> Self {
-        FragMod {
-            frag_log: Vec::new(),
-            frag_why: JsMap::new(),
-            walls_for: None,
-            torn: None,
-            warned: JsMap::new(),
-            books: None,
-            def_books: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -352,11 +259,4 @@ pub struct FragStats {
     pub stunned: i32,
 }
 
-/// (src/game/frag.ts:269 NO_WALLS: a table nothing writes)
-pub fn no_walls() -> Vec<crate::wallbreak::WallOpening> { Vec::new() }
-
-/// (src/game/frag.ts:533 LOOK_RINGS: a table nothing writes)
-pub fn look_rings() -> Vec<f64> { alloc::vec![1.6, 2.5, 3.5, 4.5, 5.0, 6.25] }
-
-/// (src/game/frag.ts:835 SHOUTS: a table nothing writes)
 pub fn shouts() -> Vec<String> { alloc::vec![String::from("frag out!"), String::from("grenade out!"), String::from("fire in the hole!")] }

@@ -1,4 +1,4 @@
-//! THE FRACTURE PATTERN'S POLYGONS (src/game/glassPattern.ts gpFragments, gpHull, gpClipRect, gpPolyArea, gpDicePoly, gpDiceKey): what a pane's sites cut it
+//! THE FRACTURE PATTERN'S POLYGONS: what a pane's sites cut it
 //! into, as convex polygons in the pane's own (u along it, v up). glass.rs holds the hashes and which piece a point is in; this file holds what each piece IS.
 //! No state: every answer is the sites' and the frame's. common.wgsl keeps the shader's copy of the half glass.rs holds.
 //!
@@ -33,7 +33,7 @@ pub const F_BOTTOM: usize = 0;
 pub const F_RIGHT: usize = 1;
 pub const F_TOP: usize = 2;
 pub const F_LEFT: usize = 3;
-/// glassPattern.ts GP_REMAINDER: the uncut sheet past chord 2 of a pane that has not run
+/// The uncut sheet past chord 2 of a pane that has not run
 pub const REMAINDER: i32 = -2;
 
 /// a polygon with what made each edge (edge k runs from corner k to corner k + 1)
@@ -51,7 +51,7 @@ fn isect(a: Pt, b: Pt, nx: f64, ny: f64, d: f64) -> Pt {
     let t = da / (da - db);
     (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t)
 }
-/// glassPattern.ts clip: Sutherland–Hodgman against the half-plane n·p ≤ d
+/// Sutherland–Hodgman against the half-plane n·p ≤ d
 pub fn clip(g: &Poly, nx: f64, ny: f64, d: f64) -> Poly {
     let mut o = NO_POLY;
     if g.n < 3 {
@@ -129,7 +129,7 @@ const S_V: usize = 1;
 const S_ROT: usize = 2;
 const S_RZ: usize = 7;
 
-/// glassPattern.ts gpRegion: site i's territory, its power cell clipped to the pane
+/// Site i's territory, its power cell clipped to the pane
 fn region(d: &[f64], ns: usize, i: usize, hu: f64, hv: f64) -> Poly {
     let mut g = rect(hu, hv);
     let a = &d[i * G_SITE..i * G_SITE + G_SITE];

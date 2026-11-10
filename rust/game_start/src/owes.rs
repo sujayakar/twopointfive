@@ -81,7 +81,7 @@ impl Owes {
     }
     fn sam_owes(&mut self, g: &mut Game, t: f64) {
         let pl = g.player;
-        let (p, down) = (g.ch[g.pl[pl].ch].pos, g.pl[pl].down);
+        let (p, down) = (g.ch[g.pl[pl].ch].pos, game::condition::down(g, g.pl[pl].ch));
         self.on_the_level("Sam", p, t);
         if !number(p) { return; }
         if let (Some(was), false) = (self.sam, down) { if flat(was, p) > POP { self.fault("popped", "Sam", t, format!("{:.2} m in a tick", flat(was, p))); } }
@@ -91,7 +91,7 @@ impl Owes {
     fn men_owe(&mut self, g: &mut Game, t: f64) {
         for gd in g.guards.clone() {
             let (c, who) = (g.gd[gd].ch, g.gd[gd].callsign.clone());
-            let (p, up) = (g.ch[c].pos, g.gd[gd].state != GuardState::Dead);
+            let (p, up) = (g.ch[c].pos, !game::condition::down(g, g.gd[gd].ch));
             self.on_the_level(&who, p, t);
             if !number(p) { continue; }
             let (speed, aware) = (g.gd[gd].speed, g.gd[gd].awareness);
@@ -122,7 +122,7 @@ impl Owes {
     }
     /// a teammate, or a hostage, down by one of the team
     fn by_the_team(&self, g: &Game, gd: GuardId) -> bool {
-        if g.gd[gd].team != Team::Operative && !g.rescue.hostages.contains(&gd) { return false; }
+        if g.gd[gd].team != Team::Operative && !g.staged.captives.contains(&gd) { return false; }
         let k = g.gd[gd].killer_id;
         k == game::consts::PLAYER_ID || g.guards.iter().any(|&x| g.gd[x].team == Team::Operative && g.ch[g.gd[x].ch].id == k)
     }
@@ -132,14 +132,14 @@ impl Owes {
         let Some(a) = game::orders::squad_orders_of(g, &seat, gd).map(|a| &g.tab.orders_assignment[a]) else { return (false, false); };
         let h = &g.gd[gd];
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
-        let blind = h.dazzled_until > t || h.stagger_until > t;
+        let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;
         let off_it = !a.arrived && a.post.is_some_and(|q| flat(p, q) > 0.6);
-        (h.state != GuardState::Dead && off_it && !fighting && !blind, a.there == "stopped short")
+        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there == "stopped short")
     }
     fn overlaps(&mut self, g: &Game, t: f64) {
         let mut team: Vec<(usize, [f64; 3])> = Vec::new();
         team.push((usize::MAX, g.ch[g.pl[g.player].ch].pos));
-        for (i, &gd) in g.guards.iter().enumerate() { if g.gd[gd].team == Team::Operative && g.gd[gd].state != GuardState::Dead { team.push((i, g.ch[g.gd[gd].ch].pos)); } }
+        for (i, &gd) in g.guards.iter().enumerate() { if g.gd[gd].team == Team::Operative && !game::condition::down(g, g.gd[gd].ch) { team.push((i, g.ch[g.gd[gd].ch].pos)); } }
         for a in 0..team.len() { for b in a + 1..team.len() {
             let key = (team[a].0, team[b].0);
             let at = self.pairs.iter().position(|p| p.0 == key);
@@ -172,7 +172,7 @@ impl Owes {
         if e != 0.0 && e != 1.0 && e != 2.0 { self.fault("alarm", "the floor", t, format!("level {}", e)); }
         if e == 0.0 && clock != -1.0 { self.fault("alarm", "the floor", t, format!("level 0 with a clock at {}", clock)); }
         if e > 0.0 && !(clock > 0.0) { self.fault("alarm", "the floor", t, format!("level {} with no clock", e)); }
-        if e < 2.0 && !g.quiet_utility { for &gd in &g.guards { if g.gd[gd].state != GuardState::Dead && (g.gd[gd].leader.is_some() || g.gd[gd].post.is_some()) { let w = g.gd[gd].callsign.clone(); self.fault("lockdown duty", &w, t, format!("a leader or a post at level {}", e)); } } }
+        if e < 2.0 { for &gd in &g.guards { if !game::condition::down(g, g.gd[gd].ch) && (g.gd[gd].leader.is_some() || g.gd[gd].post.is_some()) { let w = g.gd[gd].callsign.clone(); self.fault("lockdown duty", &w, t, format!("a leader or a post at level {}", e)); } } }
     }
     fn tracers_owe(&mut self, g: &Game, t: f64) {
         let pool = &g.tracers;

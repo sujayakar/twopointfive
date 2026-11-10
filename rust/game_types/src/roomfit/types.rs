@@ -33,7 +33,6 @@ pub struct Watchable {
     pub w: f64,
     pub key: String,
     pub yaw: f64,
-    pub dist: f64,
     pub way: bool,
 }
 
@@ -47,14 +46,9 @@ pub struct RoomfitStats {
     pub moved: i32,
 }
 
-/// (src/game/roomfit.ts:81 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/roomfit.ts:81 CHEST)
 pub const CHEST: f64 = 1.1;
 
-/// (src/game/roomfit.ts:81 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/roomfit.ts:83 COMPASS: a table nothing writes)
-pub fn compass_table() -> Vec<String> { alloc::vec![String::from("south"), String::from("south-east"), String::from("east"), String::from("north-east"), String::from("north"), String::from("north-west"), String::from("west"), String::from("south-west")] }

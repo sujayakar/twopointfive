@@ -814,7 +814,7 @@
     { "id": "box_0701", "floor": "f0", "group": "lived.yard_west", "c": [8.9, 0.032, 8.25], "h": [2.6500000000000004, 0.0020000000000000018, 0.04], "yaw": -1.5707963267948966, "material": "whitewash", "flags": ["NoShadow"] },
     { "id": "box_0702", "floor": "f0", "group": "lived.yard_west", "c": [11.1, 0.032, 8.25], "h": [2.6500000000000004, 0.0020000000000000018, 0.04], "yaw": -1.5707963267948966, "material": "whitewash", "flags": ["NoShadow"] },
     { "id": "box_0703", "floor": "f0", "group": "lived.yard_west", "c": [6.9, 0.032, 9.45], "h": [1.4500000000000002, 0.0020000000000000018, 0.04], "yaw": -1.5707963267948966, "material": "whitewash", "flags": ["NoShadow"] },
-    { "id": "box_0704", "floor": "f0", "group": "lived.yard_west", "c": [10.3, 0.51, 12.12], "h": [0.5, 0.030000000000000027, 0.02], "material": "paintBlue" },
+    { "id": "box_0704", "floor": "f0", "group": "lived.yard_west", "c": [10.3, 0.51, 12.12], "h": [0.23, 0.030000000000000027, 0.02], "material": "paintBlue" },
     { "id": "box_0705", "floor": "f0", "group": "lived.yard_west", "c": [9.75, 0.32, 12.12], "h": [0.32, 0.32, 0.02], "material": "rubber" },
     { "id": "box_0706", "floor": "f0", "group": "lived.yard_west", "c": [10.85, 0.32, 12.12], "h": [0.32, 0.32, 0.02], "material": "rubber" },
     { "id": "box_0707", "floor": "f0", "group": "lived.yard_west", "c": [10.8, 0.9199999999999999, 12.12], "h": [0.03, 0.019999999999999962, 0.14], "material": "iron" },
@@ -1143,7 +1143,7 @@
         { "name": "the tea stall wicket", "door": "gate_w", "x": 4, "z": 21.75, "out": [-1, 0] }
       ],
       "patrols": [["laneW", "laneE", "boom", "east", "clerk"], ["laneW", "laneE", "boom", "east", "yard", "south"], ["laneW", "laneE", "boom", "south", "clerk", "yard"]],
-      "needs": { "coffee": { "name": "the kettle in the boom hut", "pos": [6.2, 0, 19.1], "face": -1.5707963267948966 }, "smoke": { "name": "the east gate", "pos": [35.3, 0, 15.9], "face": 3.141592653589793 } }
+      "needs": { "coffee": { "name": "the kettle in the boom hut", "pos": [6.2, 0, 19.1], "face": -1.5707963267948966 }, "smoke": { "name": "the road gate", "pos": [35.3, 0, 15.9], "face": 3.141592653589793 } }
     },
     "kitView": {
       "ways": [

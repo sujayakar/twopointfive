@@ -14,7 +14,7 @@
 //                  millimetre, `fixes` and `fixMax` the corrections, `records` the records a look played (mean), `ms` what one cost
 //   --no-ahead     (the red path of that) the look ahead plays no record
 //   --why          with --predict: every clean look that was off by a millimetre or more, a line each on stderr (where, by how much, his state)
-// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, watchOk, watchOff, watchFirst (the whole game's word, watched: src/net/words.ts foldWhole), sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
+// Prints one line: MPBOT {seat, confirmed, heard, wordsOk, bad, word, sent, holds, skips, margin, lead, moved, shots, bye, stoodMs, tickMs}. Exit 0 = it walked its ticks.
 // (`moved`: the length of the way its man went, m, tick by tick.)
 import { NET, type WireCmd } from '../../src/net/wire.ts';
 import { NetClient } from '../../src/net/client.ts';
@@ -73,7 +73,7 @@ function hands(S: Stood): WireCmd {
   return c;
 }
 function report(code: number): never {
-  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', watchOk: client.watchOk, watchOff: client.watchOff, watchFirst: client.watchFirst, sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
+  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
     moved: +walked.toFixed(3), shots, bye: client.bye, state: client.state, stoodMs: Math.round(stoodMs), tickMs: tickN ? +(tickMs / tickN).toFixed(2) : 0,
     ...(PREDICT ? { ahead: { first: seen.first, firstMoved: seen.gameMoved, n: seen.n, mean: seen.n ? +(seen.sum / seen.n).toFixed(4) : 0, max: +seen.max.toFixed(4), exact: seen.exact, unfree: seen.unfree, clean: seen.clean, cleanMean: seen.clean ? +(seen.cleanSum / seen.clean).toFixed(4) : 0, cleanMax: +seen.cleanMax.toFixed(4), cleanExact: seen.cleanExact, worst: seen.worst, fixes: fore.fixes, fixMax: +fore.fixMax.toFixed(4), records: seen.looks ? +(seen.recs / seen.looks).toFixed(1) : 0, ms: +fore.ms.toFixed(2) } } : {}) }));
   process.exit(code);
@@ -121,7 +121,7 @@ const loop = setInterval(() => {
   //  server has him, and nothing but the state word can say so)
   const n = client.walk({ step: (cmds: WireCmd[]) => { const t = client.confirmed; heldBy[t] = client.heldRun;
     if (BREAK && !broke && t >= 90) { broke = true; const i = Math.max(0, client.seat), c = cmds[i]; cmds[i] = { ...c, k: c.k.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; }
-    S.step(cmds); if (PREDICT) met(S, t); }, word: () => S.word(), watch: () => S.watch() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
+    S.step(cmds); if (PREDICT) met(S, t); }, word: () => S.word() }, Math.min(8, want - client.confirmed));   // (never past the tick asked for: two bots' last words are held against each other)
   if (n) { { const p = S.ahead(seatN(), []).at; if (at) walked += Math.hypot(p[0] - at[0], p[2] - at[2]); at = [p[0], p[1], p[2]]; } led(); }
   if (n) { tickMs += performance.now() - a; tickN += n; }
   if (PREDICT && due > 0) { lookAhead(S); if (!n) led(); }

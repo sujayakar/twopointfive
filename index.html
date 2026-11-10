@@ -23,7 +23,7 @@
     html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: var(--h-mono); color: var(--h-ink); }
     #app { position: fixed; inset: 0; }
     canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
-    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
+    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames) and the interaction panel, which sits to the
        right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
     #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
     #hud { font: 11px/1.35 var(--h-mono); white-space: pre; color: var(--h-ink); text-shadow: var(--h-shadow); max-height: calc(100vh / var(--tz, 1) - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
@@ -61,23 +61,12 @@
     #interact .it.cont { margin-top: -3px; border-top-color: transparent; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 1px; }
     #interact .it.cont .what { height: 0; }
     #interact .it.cont .what em:empty { display: none; }
-    #interact.open .it { border-color: rgba(var(--h-edge),0.4); }
-    #interact.open .it.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-    #interact.open .it.primary::before { width: 3px; background: var(--h-acc-hi); }
-    #interact .selhint { margin: 0 0 5px 2px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--h-soft); }
-    #interact .it.k-cancel { padding-top: 3px; padding-bottom: 4px; background: rgba(var(--h-plate),0.6); border-color: rgba(var(--h-edge),0.3); }
-    #interact .it.k-cancel .opt { margin-top: 0; color: var(--h-soft); } #interact .it.k-cancel kbd { background: rgba(var(--h-edge),0.3); color: var(--h-hi); }
-    #interact .it.k-cancel.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.4); } #interact .it.k-cancel.primary::before { background: var(--h-hi); box-shadow: 0 0 6px rgba(0,0,0,0.5); } #interact .it.k-cancel.primary kbd { background: var(--h-hi); color: var(--h-on); }
     #interact.corner { width: 230px; } #interact .it.one { margin-bottom: 3px; padding: 3px 8px 4px 8px; } #interact .it.one .opt, #interact .it.one .hint { margin-top: 0; } #interact .it.one .hint + .hint, #interact .it.one .opt + .hint { margin-top: 3px; }   /* the corner as three things (ui/corner.ts, HANDRING.corner): a block under no heading … */
     #interact .it.one.primary kbd { background: var(--h-acc); } #interact .it.one.primary.far kbd { background: var(--h-faint); } #interact .it.one.off .opt { color: var(--h-faint); } #interact .it.one.off kbd { background: var(--h-faint); }   /* … its lit line's key as a row's was, a line that cannot be given now faint */
     #interact .it.sec { margin-bottom: 6px; border-color: rgba(var(--h-edge),0.55); } #interact .it.sec .what { color: var(--h-acc); } #interact .it.sec .opt { color: var(--h-ink); } #interact .it.sec .what + .opt { margin-top: 3px; } #interact .it.sec > .opt:first-child { margin-top: 0; } #interact .it.sec.done .opt { color: var(--h-hi); } #interact .it.sec.failed .opt { color: #f0a090; }   /* … under the objective's section (the stage's colours as the top line had them) */
     #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(var(--h-edge),0.45); background: rgba(var(--h-plate),0.5); }
     #interact .prog b { display: block; width: 0; height: 100%; background: var(--h-ink); }
     #interact .it.k-door .prog b { background: #bfe6ff; }
-    #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: var(--h-dim); }
-    /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
-    body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 4px); }
-    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 190px); } }
     /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
        thin sand mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
        click it to type; ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
@@ -209,7 +198,6 @@
     body.onrails #log { bottom: var(--raillog, 30px); transition: bottom .18s ease-out; } body.onrails #log .rx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* (the net's rows stay under a tutorial mission's line: three of them, one line each, never up over it — and when the line is at the bottom edge, clear of your men, they stand just above it: ui/railclear.ts) */
     #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
     #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: normal; text-align: center; text-wrap: balance; width: max-content; max-width: max(320px, calc(100vw / var(--tz, 1) - 860px)); }
-    body.skyseat #railprompt .line { max-width: calc(86vw / var(--tz, 1)); }   /* (the kit panel owns the lower left 400 px: a long line breaks in two beside it; in the sky seat there is no kit panel) */
     #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
     #railprompt .note { padding: 5px 14px 4px; background: var(--h-acc); color: var(--h-on); border-radius: 4px; font: 700 17px/1.2 var(--h-head); letter-spacing: 0.03em; } #railprompt .note:empty { display: none; } #railprompt .line:empty { display: none; }   /* (a tap the step refused: what to do instead, under the line) */
     #railprompt .note kbd { min-width: 16px; padding: 1px 6px 0; margin: 0 2px; background: var(--h-on); color: var(--h-acc); font-size: 15px; box-shadow: none; top: 0; }
@@ -235,7 +223,6 @@
     @keyframes railcardin { from { opacity: 0; } to { opacity: 1; } }
     @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(calc(14px + var(--railshift, 0px) + var(--railman, 0px))) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(calc(var(--railshift, 0px) + var(--railman, 0px))); } }   /* (the line comes in where it stands: a ring's step and the step to the bottom edge clear of your men — ui/railclear.ts — are in both ends) */
     @media (max-width: 900px) { #railprompt .line { font-size: 20px; white-space: normal; text-align: center; } #railprompt .line.watch { font-size: 17px; } #railprompt kbd { font-size: 18px; } }
-    body.skyseat #equip, body.skyseat #meters { display: none !important; }
     /* a tutorial mission: the place its one line points at is a ring that beats, not a small diamond */
     body.onrails .objmark { transform: translate(-50%, -50%); }
     body.onrails .objmark i { width: 26px; height: 26px; border-width: 3px; border-radius: 50%; transform: none; box-shadow: 0 0 10px rgba(0,0,0,0.7), inset 0 0 6px rgba(0,0,0,0.5); animation: railbeat 1.05s ease-out infinite; }
@@ -270,7 +257,6 @@
     #checkpoint { position: absolute; right: 14px; top: 10px; font: 700 11px/1 var(--h-head); letter-spacing: 0.26em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
     #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
     #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
-    body.touring #checkpoint { display: none; }
     .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
     .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
     .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
@@ -540,32 +526,10 @@
     #missions .mrow > .vpips .vico { width: 11px; height: 11px; }
     #missions .mrow > .vpips .vmarks { height: 4px; gap: 1px; } #missions .mrow > .vpips .v1 { font-size: 6px; line-height: 4px; } #missions .mrow > .vpips .vall { width: 6px; height: 1px; }
     #missions .mrow > .vpips.none { opacity: 0.6; }
-    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw / var(--tz, 1)); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(var(--h-plate),0.62), rgba(var(--h-plate),0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(var(--h-edge),0.2); }
-    #caption.on { opacity: 1; }
-    /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
-       there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
-    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 600 10px/1 var(--h-head); letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
-    #timeline.on { display: flex; }
-    body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
-    #timeline .seg { position: relative; min-width: 0; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
-    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: var(--h-shadow); }
-    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: var(--h-acc); }
-    #timeline .seg.done { border-top-color: rgba(var(--h-edge),0.7); color: rgba(var(--h-edge),0.75); }
-    #timeline .seg.done b { width: 100% !important; opacity: 0; }
-    #timeline .seg.cur { color: var(--h-hi); }
-    #timeline .seg:hover { color: #fff; border-top-color: rgba(var(--h-edge),0.9); }
-    body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
     #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
     body.blinded #bubbles, body.blinded .bubble, body.blinded .marker { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
     #blind { position: absolute; inset: 0; background: #f4f6f2; opacity: 0; pointer-events: none; z-index: 4; }   /* a stun canister in the player's eyes (game/samstun.ts, overlay.ts): the picture whites out and clears */
-    .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
-    .bar.top { top: 0; } .bar.bot { bottom: 0; }
-    body.touring .bar { height: 7.5%; }
-    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the tour's letterbox / fades (a caption points at the light meter) */
-    body.touring #equip .cond.god { display: none; }   /* the tour runs in god mode; no need to say so on screen */
-    body.touring #caption { top: calc(7.5% + 22px); }
-    #caption .cap { font: 600 20px/1.25 var(--h-font); color: var(--h-hi); text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
-    #caption .sub { margin-top: 8px; font: 13px/1.45 var(--h-font); color: var(--h-ink); text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+    #meters, #equip, #log { z-index: 7; }   /* the HUD stays above the fades */
     /* ?kitview (host/kitguard.ts): the page as a picture in the kit screen's frame — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
     /* the orders ring at the cursor (ui/cmdring.ts — a prototype, ?cmd): a wedge a digit, the lit one filled, a row that cannot be given greyed */
@@ -661,9 +625,9 @@
        in the bright ink, the fight's red and the wary yellow as over a head */
     .bubble.net { max-width: none; white-space: nowrap; background: rgba(var(--h-plate),0.86); } .bubble.net::after { display: none; }
     .bubble.net.calm { color: var(--h-hi); border-color: rgba(var(--h-edge),0.7); }
-    .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the caption card / the interaction panel */
+    .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the interaction panel */
     .bubble.below::after { bottom: auto; top: -5px; transform: translateX(-50%) rotate(225deg); }
-    #bubbles, .bubble { z-index: 9; }   /* above the tour's caption card and letterbox (z 8-ish) — a line being said is the thing to read */
+    #bubbles, .bubble { z-index: 9; }   /* a line being said is the thing to read */
   </style>
 </head>
 <body>
@@ -678,9 +642,7 @@
     <div id="tabcard"></div>
     <div id="alarm"></div>
     <div id="checkpoint"><b></b>CHECKPOINT</div>
-    <div id="caption"></div>
-      <div id="timeline"></div>
-    <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>
+    <div id="blind"></div><div id="veil"></div>
     <div id="panel" class="hidden"></div>
     <div id="loading">loading…</div>
     <div id="menu"></div>

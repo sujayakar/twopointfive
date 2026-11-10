@@ -68,7 +68,7 @@ id! {
     SeatId,
     /// RtLight: g.tab.light
     LightId,
-    /// Fixture: g.tab.sim_lightshome_fixture
+    /// Fixture: g.tab.fixture
     FixtureId,
     /// CameraRt: g.tab.devices_camera_rt
     CameraRtId,
@@ -183,9 +183,6 @@ impl<I: Id, T> Tab<I, T> {
     }
     pub fn len(&self) -> usize {
         self.rows.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.rows.is_empty()
     }
     /// every ID, in the order made
     pub fn ids(&self) -> impl Iterator<Item = I> {

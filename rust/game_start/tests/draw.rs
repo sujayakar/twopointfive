@@ -164,7 +164,7 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
         hidden
     };
     p.run(2.0);
-    let then = game_start::moment::Moment::of(&p.g);
+    let then = game::savestate::control::Moment::of(&p.g);
     d.take(&p.g, want::smoke);
     let early = agree(&d, &p, "two seconds in");
     let ways = |d: &Drawn| { let n = |bit: u32| d.smoke.bricks.iter().map(|b| b.open.iter().map(|w| (w & (bit * 0x0101_0101)).count_ones()).sum::<u32>()).sum::<u32>(); [n(1), n(2), n(4), n(8)] };
@@ -208,7 +208,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let mut first = Vec::new();
     for _ in 0..300 { p.frame_shown(|p| { d.take(&p.g, want::events); first = told(&d); }); if !first.is_empty() { break; } }
     assert_eq!(first.len(), 1, "the can's own event");
-    let began = game_start::moment::Moment::of(&p.g);
+    let began = game::savestate::control::Moment::of(&p.g);
     // (the tick that began it, put back: as its host keeps it, with nothing left to say)
     p.g = began.stands(p.g.sim);
     p.g.out.clear();
@@ -217,7 +217,7 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     let at_once = told(&d);
     assert!(at_once.len() == 1 && at_once[0].2 == first[0].2, "put back at the tick it began: {at_once:?}");
     p.run(4.0);
-    let then = game_start::moment::Moment::of(&p.g);
+    let then = game::savestate::control::Moment::of(&p.g);
     let of = lets(&p);
     p.run(3.0);
     p.g = then.stands(p.g.sim);
@@ -233,6 +233,84 @@ fn a_game_put_back_tells_what_lets_smoke_out() {
     assert_eq!(told(&d), again, "the same tick told again");
     p.frame_shown(|p| d.take(&p.g, want::events));
     assert!(told(&d).is_empty(), "the tick after: {:?}", told(&d));
+}
+
+/// THE RULE: what sounds for as long as it goes on is told as it stands, every tick and at the first of a game put back: a fire that burns, a can that pours with its age and what it has left; one that
+/// is over is told no more. No event begins or ends one.
+/// A FAILURE MEANS: after a load a can pours or a fire burns in silence, or hisses on where there is none.
+#[test]
+fn what_goes_on_is_heard_as_it_stands() {
+    let mut p = Play::level("pass.json", false, &Opts::default());
+    p.g.god_mode = true;
+    p.run(0.2);
+    let mut d = Drawn::default();
+    let heard = |d: &Drawn, name: &str| d.events.lasting.iter().filter(|l| d.events.names[l.name as usize] == name).map(|l| (l.id, l.at, if l.age.is_nan() { -1.0 } else { l.age }, if l.left.is_nan() { -1.0 } else { l.left })).collect::<Vec<_>>();
+    d.take(&p.g, want::events);
+    let fires = heard(&d, "fireBed");
+    assert!(!fires.is_empty() && heard(&d, "smokeHiss").is_empty(), "the pass has a brazier that burns, and no can: {fires:?}");
+    let [x, z] = p.sam_at();
+    game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Smoke, [x + 1.0, 0.0, z]);
+    let mut events = Vec::new();
+    let mut step = |p: &mut Play, d: &mut Drawn, n: usize| for _ in 0..n { p.frame_shown(|p| d.take(&p.g, want::events)); events.extend(d.events.sounds.iter().map(|s| d.events.names[s.name as usize].clone())); };
+    step(&mut p, &mut d, 300);
+    let at = heard(&d, "smokeHiss");
+    assert!(at.len() == 1 && at[0].2 > 1.0 && (at[0].2 + at[0].3 - 32.0).abs() < 0.1, "the can, its age and what it has left: {at:?}");
+    let then = game::savestate::control::Moment::of(&p.g);
+    step(&mut p, &mut d, 32 * 60);
+    assert!(heard(&d, "smokeHiss").is_empty() && heard(&d, "fireBed").len() == fires.len(), "burnt out, and the brazier burns on");
+    assert!(events.iter().any(|n| n == "smokePop") && !events.iter().any(|n| n == "smokeHiss" || n == "fireBed"), "told by events: {events:?}");
+    p.g = then.stands(p.g.sim);
+    d.cut();
+    d.take(&p.g, want::events);
+    assert_eq!(heard(&d, "smokeHiss"), at, "put back, and the can is not heard as it stood");
+    assert_eq!(heard(&d, "fireBed"), fires);
+    drop(p);
+    // what hums in the office's rooms, off its own file: with the mains out the wind alone
+    let mut p = office(5);
+    p.run(0.2);
+    let hums = |p: &Play, d: &mut Drawn| { d.take(&p.g, want::events); ["hum", "servers", "buzz", "wind"].map(|n| heard(d, n).len()) };
+    let mut d = Drawn::default();
+    assert_eq!(hums(&p, &mut d), [1, 1, 2, 2]);
+    game::lighting::set_blackout(&mut p.g, 9.0, game::lighting::SetBlackoutCause::Ocp);
+    p.run(0.1);
+    assert_eq!(hums(&p, &mut d), [0, 0, 0, 2], "with the mains out");
+}
+
+/// THE RULE: the game's smoke has a color by its bricks: dust's where a blast threw it, a can's grey everywhere else, less of it where the two mix; and a game put back has it as it stood.
+/// A FAILURE MEANS: a wall's dust hangs grey after a load.
+#[test]
+fn the_smoke_keeps_its_color() {
+    let mut p = office(5);
+    p.sam_unhurt();
+    p.run(0.2);
+    let mut d = Drawn::default();
+    let [x, z] = p.sam_at();
+    let dyes = |d: &Drawn| d.smoke.bricks.iter().map(|b| b.dye).collect::<Vec<_>>();
+    let can = game::smoke_types::SmokeEmitter { pos: [x, 0.2, z], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 4.0, ..Default::default() };
+    game::smoke_types::smoke_system_like_emit(&mut p.g, &can);
+    p.run(1.5);
+    d.take(&p.g, want::smoke);
+    assert!(!dyes(&d).is_empty() && dyes(&d).iter().all(|w| *w == 0), "a can's smoke has no color of its own: {:x?}", dyes(&d));
+    let dust = game::smoke_types::SmokeEmitter { tint: Some([0.8, 0.6, 0.4]), ..can.clone() };
+    game::smoke_types::smoke_system_like_emit(&mut p.g, &dust);
+    p.run(1.0);
+    d.take(&p.g, want::smoke);
+    let mixed = dyes(&d);
+    let blue = mixed.iter().map(|w| w >> 24).max().unwrap();
+    assert!(mixed.iter().all(|w| w & 255 == 0) && (10..153).contains(&blue), "dust let into a can's smoke, at most part of it: {mixed:x?}");
+    assert!(mixed.iter().all(|w| (w >> 24) >= (w >> 16 & 255) && (w >> 16 & 255) >= (w >> 8 & 255)), "its color is the dust's: {mixed:x?}");
+    let then = game::savestate::control::Moment::of(&p.g);
+    p.run(6.0);
+    d.take(&p.g, want::smoke);
+    assert!(dyes(&d).iter().filter(|w| **w != 0).count() > mixed.iter().filter(|w| **w != 0).count(), "the smoke that spread took its color along: {:x?}", dyes(&d));
+    p.g = then.stands(p.g.sim);
+    d.cut();
+    game::sense::smoke_ways(&mut p.g);
+    d.take(&p.g, want::smoke);
+    assert_eq!(dyes(&d), mixed, "put back, and its color is not as it stood");
+    // (a source that still lets out is told again in its color)
+    d.take(&p.g, want::events);
+    assert!(d.events.sources.iter().any(|s| s.tint == [0.8, 0.6, 0.4]) && d.events.sources.iter().any(|s| s.tint[0].is_nan()), "{:?}", d.events.sources.iter().map(|s| s.tint).collect::<Vec<_>>());
 }
 
 /// THE RULE: a source says whether the game holds its smoke, and the game holds what it says.

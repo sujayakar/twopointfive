@@ -463,7 +463,7 @@ impl DoorsAsk for Play {
     fn left(&self) -> (f64, f64, f64) { (self.g.door_tools.charges, self.g.door_tools.bangs, self.g.door_tools.frags) }
     fn carries(&mut self, charges: f64, bangs: f64) { self.g.door_tools.charges = charges; self.g.door_tools.bangs = bangs; }
     fn struck(&self, gd: GuardId) -> bool { self.g.gd[gd].down_kind == Some(game::game::DownKind::Struck) }
-    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].stagger_until }
+    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn frame_at(&self, d: DoorId) -> [f64; 2] { let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
     fn keep_broken(&self, d: DoorId) -> bool { game::doors::door_lock_broken(&self.g, d) }
     fn leaf_put_shut(&mut self, d: DoorId) {
@@ -489,7 +489,7 @@ impl DoorsAsk for Play {
     fn leaf_angle(&self, d: DoorId) -> f64 { game::doors::door_angle(&self.g, d) }
     fn leaf_vel(&self, d: DoorId) -> f64 { game::doors::door_vel(&self.g, d) }
     fn leaf_stays(&mut self, d: DoorId) { game::doors::door_set_quiet_t(&mut self.g, d, -3600.0); }
-    fn restarted(&mut self) { game::game::game_restart_encounter(&mut self.g); }
+    fn restarted(&mut self) { game::savestate::control::restart(&mut self.g); }
     fn any_op(&self) -> bool { !self.g.door_tools.ops.is_empty() }
     fn fire_lasts(&self) -> f64 { self.g.k.fireline.fire_s }
     fn doors(&self) -> Vec<DoorId> { self.g.doors.list.clone() }
@@ -609,31 +609,31 @@ impl DoorsAsk for Play {
     fn rescue_t0(&self) -> f64 { self.g.rescue.t0 }
     fn rescue_clock(&self) -> f64 { self.g.rescue.resolve }
     fn rescue_lost(&self) -> Option<bool> { self.g.rescue.result.as_ref().map(|r| r.state == game::rescue::RescueResultState::Lost) }
-    fn rescue_men(&self) -> Vec<GuardId> { self.g.rescue.hostiles.clone() }
-    fn rescue_hostages(&self) -> Vec<GuardId> { self.g.rescue.hostages.clone() }
+    fn rescue_men(&self) -> Vec<GuardId> { self.g.staged.foes.clone() }
+    fn rescue_hostages(&self) -> Vec<GuardId> { self.g.staged.captives.clone() }
     fn rescue_blind(&self) -> f64 { self.g.rescue.blind_rounds }
     fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
     fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
         let k = &mut self.g.k.rescue;
         (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
-        game::rescue::rescue_restage(&mut self.g);
+        game::savestate::control::restart(&mut self.g);
     }
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
-    fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
-    fn room_cleared(&self, id: &str) -> bool { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
-    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
+    fn room_cleared(&self, id: &str) -> bool { self.g.staged.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
+    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.staged.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn gun_on(&self, gd: GuardId) -> Option<GuardId> { self.g.fight.ops.iter().map(|&o| &self.g.tab.roomfight_op[o]).find(|o| o.gd == gd).and_then(|o| o.tgt) }
     fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64) {
         self.pin_man(foe, at, yaw, GuardState::Patrol, 0.0);
         let t = self.g.time;
-        self.g.gd[foe].dazzled_until = t + 9.0;
+        self.g.cond[self.g.gd[foe].ch].blind_until = t + 9.0;
         self.g.gd[foe].god = true;
         for o in self.g.fight.ops.clone() { self.g.tab.roomfight_op[o].ready_at = t + 1.0; }
         self.g.fight.hot_t = t;
         for m in self.mates() { let c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
     }
-    fn blind_now(&mut self, gd: GuardId) { self.g.gd[gd].dazzled_until = self.g.time + 9.0; }
+    fn blind_now(&mut self, gd: GuardId) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + 9.0; }
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         let o = game::orders::GiveOpts { men: Some(men.to_vec()), ..game::orders::GiveOpts::default() };
@@ -722,8 +722,8 @@ impl DoorsAsk for Play {
         c.vel[0].hypot(c.vel[2]) > 0.3 && c.vel[0] * (w[0] - c.pos[0]) + c.vel[2] * (w[2] - c.pos[2]) < 0.0
     }
     fn leaves_gone_round(&self) -> f64 { self.g.doors.rounds }
-    fn blind_secs(&self, m: GuardId) -> f64 { (self.g.gd[m].dazzled_until - self.g.time).max(0.0) }
-    fn fold_secs(&self, m: GuardId) -> f64 { (self.g.gd[m].stagger_until - self.g.time).max(0.0) }
+    fn blind_secs(&self, m: GuardId) -> f64 { (self.g.cond[self.g.gd[m].ch].blind_until - self.g.time).max(0.0) }
+    fn fold_secs(&self, m: GuardId) -> f64 { (self.g.cond[self.g.gd[m].ch].fold_until - self.g.time).max(0.0) }
     fn is_staff(&mut self, m: GuardId) { self.g.gd[m].team = game::teams::Team::Guard; }
     fn entry_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_pods_as_were(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn shallow_pods(&mut self, d: DoorId, side: f64, n: f64) -> Vec<[f64; 2]> { game::doortools::door_tools_shallow_pods(&mut self.g, d, side, Some(n)).iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
@@ -773,10 +773,10 @@ impl DoorsAsk for Play {
             c.smoke = n;
             if n > 0.0 { (c.frags, c.charges) = (0.0, 0.0); }   // (the pouches: room made for it, as the card's own row asks)
         }
-        game::game::game_restart(&mut self.g, None);
+        game::game::game_restart(&mut self.g);
     }
-    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
-    fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (p.down, p.hits_left) }
+    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, Some(&o)); }
+    fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (self.g.cond[p.ch].down, p.hits_left) }
     fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
     fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
     fn rescue_jobs(&self) -> usize { self.g.rescue.flow.jobs.len() }
@@ -795,7 +795,7 @@ impl DoorsAsk for Play {
         self.g.ch[c].muzzle = [from[0], 1.35, from[1]];
         let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
         let o = game::combat::FireOpts { spread: Some(spread), weapon: Some(def), steady: Some(true), blind: None };
-        game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o));
+        game::combat::fire_weapon(&mut self.g, c, at, Some(&o));
     }
     fn shotgun_rule(&mut self) -> (f64, f64, bool, Vec<bool>) {
         let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
@@ -851,7 +851,7 @@ impl DoorsAsk for Play {
     fn lane_half(&self, along: f64) -> f64 { let (ff, fl) = (&self.g.k.friendlyfire, &self.g.k.fireline); ff.body_m + fl.clear_m + along * ff.cone_k * fl.spread }
     fn sam_rounds(&self) -> f64 { self.g.fa[self.g.pl[self.g.player].rifle].shots_fired }
     fn file_place(&self, gd: GuardId) -> Option<f64> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].follow) }
-    fn sam_clicks(&mut self) { let pl = self.g.player; self.g.pl[pl].fire_cd = 0.0; self.press(game_start::play::Button::Left); }
+    fn sam_clicks(&mut self) { let pl = self.g.player; self.g.arms[self.g.pl[pl].ch].fire_cd = 0.0; self.press(game_start::play::Button::Left); }
     fn in_doorway(&self, d: DoorId, at: [f64; 2]) -> bool { let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); a > -0.05 && a < self.door_w(d) + 0.05 && o.abs() < 0.3 }
     fn in_sweep(&self, d: DoorId, at: [f64; 2]) -> bool { game::doors::door_swing_sweeps(&game::doors::doors_swing_of(&self.g, d), at[0], at[1], Some(BODY_R)) }
     fn from_handle(&self, d: DoorId, at: [f64; 2]) -> f64 { let f = game::guards::frame_of(&self.g, d); let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); ((a - (f.w - HANDLE_IN)).powi(2) + o * o).sqrt() }

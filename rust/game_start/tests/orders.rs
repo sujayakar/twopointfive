@@ -1,4 +1,4 @@
-//! AN ORDER WRITTEN AS A MODULE (rust/game_rules/src/orders/rows/): tests that stand a scene, give the order by the menu's own call and hold what
+//! AN ORDER WRITTEN AS A MODULE (rust/game_rules/src/squad_orders/orders/rows/): tests that stand a scene, give the order by the menu's own call and hold what
 //! the squad does. README.md beside this crate says how such a test is written; each holds a rule over three seeds, each seed another scene.
 use game::orders::Who;
 use game_start::play::{dist, nudge, Opts, Play};

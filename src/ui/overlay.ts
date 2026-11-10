@@ -1,4 +1,4 @@
-// DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
+// DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line.
 import { railClear, type Box } from './railclear';
 import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/drawpage.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
@@ -37,8 +37,6 @@ export class Overlay implements HudLike {
   private soundLab = document.querySelector('#meters .sound .lab') as HTMLElement; private floorKey = '';   // 'SOUND · carpet': what your feet are on, dim, after the label (view.marks.floor)
   private peak = 0; private peakT = 0; private drawnT = 0;
   private log = document.getElementById('log')!; private logKey = '';
-  private captionEl = document.getElementById('caption')!; private captionKey = '';
-  private tlEl = document.getElementById('timeline')!; private tlKey = ''; private tlFill: HTMLElement | null = null;
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
@@ -63,23 +61,7 @@ export class Overlay implements HudLike {
   readonly plan = new PlanFloor(this.traj);
   /** the player's own man made easy to find (ui/findring.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
-  /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
-  setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null) {
-    if (!ch) { if (this.tlKey) { this.tlKey = ''; this.tlEl.className = ''; this.tlEl.innerHTML = ''; this.tlFill = null; } return; }
-    const key = ch.list.length + '|' + ch.i;
-    if (key !== this.tlKey) {
-      this.tlKey = key; const total = ch.list.reduce((s, c) => s + c.dur, 0) || 1;
-      this.tlEl.innerHTML = ch.list.map((c, k) => `<div class="seg${k < ch.i ? ' done' : k === ch.i ? ' cur' : ''}" title="${k + 1}. ${c.title}" style="flex:${(c.dur / total * 100).toFixed(2)} 1 0"><b></b><span>${c.title}</span></div>`).join('');
-      this.tlEl.className = 'on'; this.tlFill = this.tlEl.querySelector('.seg.cur b');
-    }
-    if (this.tlFill) this.tlFill.style.width = `${(ch.frac * 100).toFixed(1)}%`;
-  }
-  setCaption(text: string, sub: string) {
-    const key = text + '|' + sub + (KEYMAP.rev ? `|k${KEYMAP.rev}` : ''); if (key === this.captionKey) return; this.captionKey = key;
-    this.captionEl.className = text ? 'on' : '';
-    if (text) this.captionEl.innerHTML = `<div class="cap">${keyText(text)}</div>${sub ? `<div class="sub">${keyText(sub)}</div>` : ''}`;
-  }
-  private wish: HTMLElement; private wishKey = '';   // rust/game_rules/src/aimweight: the dot on what the reticle snapped to while the circle (where the gun points) is still swinging onto it
+  private wish: HTMLElement; private wishKey = '';   // rust/game_rules/src/sam/aimweight.rs: the dot on what the reticle snapped to while the circle (where the gun points) is still swinging onto it
   private reticle: HTMLElement; private ring: HTMLElement; private ringKey = -1;   // the ring on the marker F acts on; ring: progress round it (Interactable.progress — a lock being picked, the drive coming out)
   private hint: HTMLElement; private hintKey = '';                                  // the one word beside the ring: the 40 mm's too-close warning (HE40_SHORT)
   private aimPx = 16; private aimStyled = false;                                     // the aim ring's eased diameter under the aim model (px), and whether its inline size / tint are on it (taken off again for the interaction ring / the model off)
@@ -92,8 +74,7 @@ export class Overlay implements HudLike {
   private alarmEl = document.getElementById('alarm')!; private alarmKey = '';       // alarm stage under it (hidden at calm)
   private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game.view.marks.blind) — absent on a page without the element
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (HudPage.saved: the page's save controller, written / loaded) — absent on a page without the element
-  private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (rust/game_rules/src/rails prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (rust/game_rules/src/missions/rails.rs prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
   /** a tutorial mission's card is up (host/drawpage.ts holds the world still under it) */
   get cardUp(): boolean { return this.card.up; }
@@ -183,7 +164,7 @@ export class Overlay implements HudLike {
       if (it.kind === 'cam' && camMarked) { el.style.display = 'none'; return; }   // (a stuck camera carries its lens mark: no extra dot)
       el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(var(--h-acc-rgb),0.8)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
-    // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)
+    // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means)
     const hv = I.ring;
     let styled = false, wishKey = '';
     // Beside the ring: nothing but the 40 mm's too-close warning (a WARNING, not a prompt: the arc the 40 mm would fly is shorter than its arming distance, said before the click). The
@@ -216,8 +197,8 @@ export class Overlay implements HudLike {
     if (styled !== this.aimStyled) { this.aimStyled = styled; if (!styled) { const st = this.reticle.style; st.width = st.height = st.opacity = st.borderWidth = ''; this.aimPx = 16; } }   // (the class rules again for the interaction ring / the model off)
     // interaction panel (top-left): the rows Space can do, the highlighted one lit; open (Space held) it says so and grows its cancel row
     { const ia = this.deriveInteractions(V);
-      this.setInteractions(ia.rows, ia.primary, ia.more, ia.open, ia.hint, ia.cancel); }
-    // light + sound meters (bottom-left): how lit you are (the GPU light meter) and how much noise you are making (peak-hold marker)
+      this.setInteractions(ia.rows, ia.primary); }
+    // light + sound meters (bottom-left): how lit you are (the game's light meter) and how much noise you are making (peak-hold marker)
     const v = M.light;
     this.lightFill.style.width = `${(v * 100).toFixed(0)}%`; this.lightNum.textContent = src.page.debug ? `${(v * 100) | 0}  E ${M.irradiance.toFixed(3)}` : `${(v * 100) | 0}`;
     this.meters.classList.toggle('hot', v > 0.55);
@@ -235,7 +216,7 @@ export class Overlay implements HudLike {
       if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => `<span class="rx${m.kind === 'heard' ? ' heard old' : m.age > 5 ? ' old' : ''}"><b>${m.kind === 'heard' ? 'HEARD' : '·)) RADIO'}</b>${clean(m.text)}</span>`).join('') + said.map(t => `<span class="rx said">${clean(t)}</span>`).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
-    // A TUTORIAL MISSION (rust/game_rules/src/rails): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the
+    // A TUTORIAL MISSION (rust/game_rules/src/missions/rails.rs): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const frame = V.lesson?.rails ?? null, rail = frame?.prompt ?? null;
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
@@ -252,7 +233,6 @@ export class Overlay implements HudLike {
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
       if (rail && railNote !== this.railNote) { this.railNote = railNote; const n = this.railEl.querySelector?.('.note'), l = this.railEl.querySelector?.('.line') as HTMLElement | null;
         if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
-      const sky = !!frame?.sky; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
       const on = !!frame; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
     // …and the line stays clear of your own men (ui/railclear.ts): with the view led up the screen, or in a short window, it lay over the player and his
     // partner. Where it lies is measured once a line (offsets are the layout's: no transform, no animation in them). With a ring up it is at home: the
@@ -285,9 +265,8 @@ export class Overlay implements HudLike {
     { // the checkpoint tag: up for a couple of seconds after a save / load, keyed so the DOM is touched only on change
       const key = src.page.saved;
       if (key !== this.ckKey && this.ckEl) { this.ckKey = key; this.ckEl.className = key ? 'on' : ''; if (key) this.ckEl.innerHTML = `<b></b>${key}`; } }
-    const op = V.mission?.pos ?? null;
-    const skySeat = !!frame?.sky;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
-    const far = op ? v3.distXZ(op, src.at(V.me) ?? op) : 0, od = op ? (skySeat || frame?.arrow ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
+    const op = V.mission.pos;
+    const far = op ? v3.distXZ(op, src.at(V.me) ?? op) : 0, od = op ? (frame?.arrow ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = V.stage === 'drive' && hv?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
     if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on)
@@ -307,7 +286,7 @@ export class Overlay implements HudLike {
       if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
       el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
       el.style.left = `${mx0.toFixed(1)}px`; el.style.top = `${my0.toFixed(1)}px`;
-      (el.lastChild as HTMLElement).textContent = skySeat || turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
+      (el.lastChild as HTMLElement).textContent = turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
       }
     }
     this.cmdRing.update(V, cam, w, h, tz);
@@ -353,25 +332,23 @@ export class Overlay implements HudLike {
     const E = this.reachEls; ring(E.kill, R?.kill ?? 0); ring(E.hurt, R?.hurt ?? 0); ring(E.stun, R?.stun ?? 0);
   }
 
-  /** Interaction panel: `rows` top to bottom, `primary` = index of the highlighted row (what a Space tap does / letting go performs; -1: none), `more` = how
-   *  many were left off the end, `open` = the selector is open (Space held: index.html #interact.open — the frame brightens, a header says let go to act,
-   *  the cancel row is among the rows). The DOM is rebuilt only when the rows' text / reach / kind change; the distance and the progress bar are patched in
-   *  place every frame. Hidden when there is nothing to list or a menu card is up. update() feeds it from the game's rows (deriveInteractions). */
-  setInteractions(rows: InteractRow[], primary = -1, more = 0, open = false, hint = '', cancel = 'cancel — let go, do nothing') {
+  /** Interaction panel: `rows` top to bottom, `primary` = index of the highlighted row (what a Space tap does; -1: none). The DOM is rebuilt only when the
+   *  rows' text / reach / kind change; the distance and the progress bar are patched in place every frame. Hidden when there is nothing to list or a menu
+   *  card is up. update() feeds it from the game's rows (deriveInteractions). */
+  setInteractions(rows: InteractRow[], primary = -1) {
     this.cornerObj = rows.some(r => r.sec) && !this.menuEl.classList.contains('on');   // (the objective is drawn here this frame: update()'s line at the top says nothing)
     if (!rows.length || this.menuEl.classList.contains('on')) { if (this.iaKey) { this.iaKey = ''; this.iaEl.className = ''; this.iaEl.textContent = ''; this.iaLive = []; } return; }
-    const key = rows.map(r => r.sec ? `sec|${r.label}|${r.stage ?? ''}|${r.label || r.note ? 1 : 0}` : `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.gone ? '~' : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}${r.one ? 'o' : ''}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}#${KEYMAP.rev}`;
+    const key = rows.map(r => r.sec ? `sec|${r.label}|${r.stage ?? ''}|${r.label || r.note ? 1 : 0}` : `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.gone ? '~' : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}${r.one ? 'o' : ''}`).join('\n') + `#${primary}#${KEYMAP.rev}`;
     if (key !== this.iaKey) {
       this.iaKey = key;
       const soft = (o: InteractRow['opts'][number]) => `<div class="hint${o.gone ? ' lost' : ''}${o.tone ? ` t-${o.tone}` : ''}">${o.gone ? `<s>${esc(keyText(o.text))}</s>` : esc(keyText(o.text))}</div>`;   // (a line no key gives; a squad man down: struck)
-      this.iaEl.innerHTML = (open ? `<div class="selhint">${esc(keyText(hint))}</div>` : '') + rows.map((r, i) =>
-        r.kind === 'cancel' ? `<div class="it k-cancel${i === primary ? ' primary' : ''}"><div class="opt"><kbd>×</kbd>${esc(keyText(cancel))}</div></div>`
-        : r.sec ? `<div class="it sec${r.stage ? ` ${esc(r.stage)}` : ''}">${r.label || r.note ? `<div class="what"><span>${esc(r.label)}</span><em></em></div>` : ''}<div class="opt"></div></div>`   // (ui/corner.ts: the objective — its words and its clock are set below, in place)
+      this.iaEl.innerHTML = rows.map((r, i) =>
+        r.sec ? `<div class="it sec${r.stage ? ` ${esc(r.stage)}` : ''}">${r.label || r.note ? `<div class="what"><span>${esc(r.label)}</span><em></em></div>` : ''}<div class="opt"></div></div>`   // (ui/corner.ts: the objective — its words and its clock are set below, in place)
         : r.one ? `<div class="it one k-${r.kind}${i === primary ? ' primary' : ''}${r.inReach ? '' : ' far'}${r.off ? ' off' : ''}">${r.opts.length ? r.opts.map(o => o.key ? `<div class="opt"><kbd>${esc(keyCap(o.key).toUpperCase())}</kbd>${esc(keyText(o.text))}</div>` : soft(o)).join('') : `<div class="what"><span>${esc(keyText(r.label))}</span><em></em></div>`}${r.progress !== undefined ? '<div class="prog"><b></b></div>' : ''}</div>`   // (… and a block under no heading)
         : `<div class="it k-${r.kind}${i === primary ? ' primary' : ''}${r.inReach ? '' : ' far'}${r.off ? ' off' : ''}${r.cont ? ' cont' : ''}${r.tone ? ` t-${r.tone}` : ''}">${r.cont ? '<div class="what"><em></em></div>' : `<div class="what"><span>${esc(r.label)}</span><em></em></div>`}`
         + r.opts.map((o, j) => o.key ? `<div class="opt${j === 0 && /^space$/i.test(o.key) ? ' verb' : ''}${o.tone ? ` t-${o.tone}` : ''}"><kbd>${esc(keyCap(o.key).toUpperCase())}</kbd>${esc(keyText(o.text))}</div>` : soft(o)).join('')   // (.verb: the row's own Space verb — lit only on the highlighted row; the hint keys under it, LMB / E, are always live and never dimmed)
-        + (r.progress !== undefined ? '<div class="prog"><b></b></div>' : '') + '</div>').join('') + (more > 0 ? `<div class="more">+${more} more</div>` : '');
-      this.iaEl.className = (open ? 'on open' : 'on') + (rows.some(r => r.one || r.sec) ? ' corner' : '');
+        + (r.progress !== undefined ? '<div class="prog"><b></b></div>' : '') + '</div>').join('');
+      this.iaEl.className = 'on' + (rows.some(r => r.one || r.sec) ? ' corner' : '');
       const blocks = [...this.iaEl.querySelectorAll('.it')] as HTMLElement[];
       this.iaLive = rows.map((_, i) => { const el = blocks[i]; return { em: el.querySelector('.what em') as HTMLElement, bar: el.querySelector('.prog b') as HTMLElement | null, d: '', p: '', txt: rows[i].sec ? el.querySelector('.opt') as HTMLElement | null : null, t: '' }; });
     }
@@ -383,18 +360,17 @@ export class Overlay implements HudLike {
     });
   }
 
-  /** What the panel lists this frame: the list as the view has it, with the word an empty tap left; under the corner (`interact.corner`) reduced to its three things (ui/corner.ts). */
-  deriveInteractions(V: TickView): { rows: InteractRow[]; primary: number; more: number; open: boolean; hint?: string; cancel?: string } {
+  /** What the panel lists this frame: the list as the view has it, with why his last press did nothing, reduced to the corner's three things (ui/corner.ts). */
+  deriveInteractions(V: TickView): { rows: InteractRow[]; primary: number } {
     const I = V.interact, rows: InteractRow[] = I.rows.map((r: ListRow) => ({ kind: r.kind, label: r.label, opts: r.opts, inReach: r.inReach, off: r.off, dist: r.dist ?? undefined, progress: r.progress ?? undefined, cont: r.cont }));
-    // (the key tapped with no row to give: said here for a moment, where his rows come up, with how far off a door a step short is; the view says while it is up, and a step into reach, or away, takes it down)
-    { const E = V.empty; if (E && !rows.length) rows.push({ kind: E.kind, label: E.word, opts: [], inReach: false, off: false, dist: E.dist ?? undefined }); }
-    if (I.corner) {   // (ui/corner.ts: the objective, his key's line, the squad key's line, and what the block and a door's heading said that it would lose: a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
-      const S = V.squad, shut = locked(V, 'menu'), quick = S?.quick ?? null;
-      const men: InteractRow['opts'] = (S?.mates ?? []).map(M => ({ key: '', text: `${S!.picked ? (M.addressed ? '▸ ' : '· ') : ''}${M.name} · ${M.doing}`, tone: M.pair ?? undefined, gone: M.down }));
-      const squad: InteractRow[] = S ? [{ kind: 'objective', label: '', opts: [...men, ...(shut ? [] : S.notes), ...(quick ? [quick] : [])], inReach: true, off: false }] : [];
-      const C = cornerRows(rows, I.lit, squad, V.lesson?.rails?.prompt ? '' : objectiveWords(V), V.corner.filter(o => !o.key || (!!S && !shut)), V.stage);
-      return { rows: C.rows, primary: C.primary, more: 0, open: false }; }
-    return { rows, primary: I.lit, more: I.more, open: I.open, hint: `let go to do it · wheel / ↑↓ chooses · ${{ tab: 'Tab', esc: 'Esc' }[V.look.back]} backs out` };   // (up as a ring the panel's list is the list at rest)
+    // (a press that did nothing: said for a moment as a greyed row of its own after his rows, with how far off a door a step short is; the view says while it is up, and a step into reach, or away, takes an empty tap's down)
+    { const E = V.empty; if (E) rows.push({ kind: E.kind, label: E.word, opts: [], inReach: false, off: false, dist: E.dist ?? undefined }); }
+    // (ui/corner.ts: the objective, his key's line, the squad key's line, and what the block and a door's heading said that it would lose: a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
+    const S = V.squad, shut = locked(V, 'menu'), quick = S?.quick ?? null;
+    const men: InteractRow['opts'] = (S?.mates ?? []).map(M => ({ key: '', text: `${S!.picked ? (M.addressed ? '▸ ' : '· ') : ''}${M.name} · ${M.doing}`, tone: M.pair ?? undefined, gone: M.down }));
+    const squad: InteractRow[] = S ? [{ kind: 'objective', label: '', opts: [...men, ...(shut ? [] : S.notes), ...(quick ? [quick] : [])], inReach: true, off: false }] : [];
+    const C = cornerRows(rows, I.lit, squad, V.lesson?.rails?.prompt ? '' : objectiveWords(V), V.corner.filter(o => !o.key || (!!S && !shut)), V.stage);
+    return { rows: C.rows, primary: C.primary };
   }
 
 
@@ -410,7 +386,7 @@ export class Overlay implements HudLike {
 
 function esc(t: string): string { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 /** The aim ring's diameter (CSS px) for a cone of `spread` rad (± half per axis: the cone is spread wide) at `dist` metres: that width over the metres one CSS pixel
- *  covers at the camera's look-at depth, clamped 10‥`cap` (60; rust/game_rules/src/aimcost hands `ringPx` while moving costs the shot). Pure. */
+ *  covers at the camera's look-at depth, clamped 10‥`cap` (60; rust/game_rules/src/sam/aimcost.rs hands `ringPx` while moving costs the shot). Pure. */
 export function aimRingPx(spread: number, dist: number, cam: { distance: number; fov: number }, viewH: number, cap = 60): number {
   const mPerCssPx = 2 * cam.distance * Math.tan(cam.fov / 2) / Math.max(200, viewH);
   return clamp(spread * dist / Math.max(mPerCssPx, 1e-4), 10, Math.max(10, cap));

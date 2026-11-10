@@ -1,35 +1,20 @@
 //! The types of `squadnet`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadNet {
     pub rows: Vec<crate::squadnet::NetRow>,
     /// (counts: in no bytes)
     #[bytes(skip)]
-    pub stats: crate::squadnet::SquadNetStats,
+    #[is(crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 })] pub stats: crate::squadnet::SquadNetStats,
     pub down: Vec<String>,
     pub seeded: bool,
     pub click_due: bool,
     pub down_due: bool,
-    pub last_t: f64,
+    #[is(-1.0)] pub last_t: f64,
 }
-impl SquadNet {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        SquadNet {
-            rows: Vec::new(),
-            stats: crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 },
-            down: Vec::new(),
-            seeded: false,
-            click_due: false,
-            down_due: false,
-            last_t: -1.0,
-        }
-    }
-}
-impl Default for SquadNet { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NetRow {
@@ -51,7 +36,6 @@ pub struct SquadNetStats {
 
 #[derive(Clone, Debug, Default)]
 pub struct WhyWords {
-    pub row: String,
     pub ack: String,
 }
 
@@ -66,8 +50,3 @@ pub struct InFloodREntriesItem {
     pub door: DoorId,
 }
 
-/// (src/game/squadnet.ts:134 NET_ROW)
-pub const NET_ROW: f64 = 26.0;
-
-/// (src/game/squadnet.ts:137 NET_INSET)
-pub const NET_INSET: f64 = 0.15;

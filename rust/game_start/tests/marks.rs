@@ -288,3 +288,28 @@ fn a_leaf_wears_the_level_s_paint_from_its_first_moment() {
         assert_eq!(p.g.tab[ch.box_].stuff, word, "a piece is made of something else than the leaf");
     }
 }
+
+/// A COUNTED ROUND THAT LAID NO MARK (a muzzle pressed through the wall lays none) adopts no other mark and throws nothing; one that laid its own takes that.
+#[test]
+fn a_counted_round_with_no_mark_adopts_none_and_throws_nothing() {
+    let mut p = office(5);
+    p.run(0.2);
+    let wall = p.g.engine.world.statics[0];
+    let at = [20.0, 1.3, 15.0];
+    decals_add(&mut p.g, DecalKind::Bullet, at, [0.0, 0.0, 1.0], None, None);
+    marks_settle(&mut p.g);
+    let n = count(&p);
+    let thrown = |p: &Play| p.g.out.iter().filter(|e| matches!(e, game::out_events::OutEvent::ParticlesEmit(..))).count();
+    let kind = |p: &Play| mark_set(&p.g).unwrap().list[n - 1].kind;
+    p.g.destr.walls.wear.on = true;
+    p.g.out.clear();
+    game::wallwear::wall_wear_round(&mut p.g, wall, game::scene_materials::Surf::Drywall, 1.0, 1.0, 0.3, [at[0] + 1.0, at[1], at[2]], [0.0, 0.0, -1.0]);
+    marks_settle(&mut p.g);
+    assert_eq!((count(&p), kind(&p)), (n, DecalKind::Bullet), "a round with no mark of its own took one");
+    assert_eq!(thrown(&p), 0, "a round with no mark threw something");
+    assert!(mark_set(&p.g).unwrap().wear.cells.is_empty(), "a round with no mark was filed under its cell");
+    // (the control: the same round where its mark lies)
+    game::wallwear::wall_wear_round(&mut p.g, wall, game::scene_materials::Surf::Drywall, 1.0, 1.0, 0.3, at, [0.0, 0.0, -1.0]);
+    marks_settle(&mut p.g);
+    assert_eq!(kind(&p), DecalKind::Damage, "a round where its mark lies did not take it");
+}

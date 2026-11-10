@@ -17,7 +17,7 @@
 //   · A CLICK OFF THE LARGE MAP PUTS IT BACK (the maintainer, 10-23: "clicking outside the map should close it"): large, the sheet reads as a card laid
 //     over the step, and a card is left by a click beside it. That click does nothing else: the kit under the sheet does not take it. KITBRIEF.outside,
 //     `?mapout=0` = as it was (a click on the map, M, Esc, Enter or Space).
-//   · THE COUNTS ARE THE MISSION'S AS STAGED, not the file's alone: a rescue finds its side door unlocked (rust/game_rules/src/rescue), so it is not counted there.
+//   · THE COUNTS ARE THE MISSION'S AS STAGED, not the file's alone: a rescue finds its side door unlocked (rust/game_rules/src/missions/rescue), so it is not counted there.
 //   · THE SWITCH: KITBRIEF.on — on in the page, `?kitbrief=0` = the step as it was (the name alone). UI only: nothing in the game reads it, and
 //     it is mounted only by the one starting page (ui/startpage.ts).
 // Plain DOM and one style block, injected once. Nothing at module level uses another module's exports.

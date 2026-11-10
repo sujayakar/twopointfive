@@ -1,8 +1,7 @@
-//! WHAT IS THROWN OR DROPPED, IN THE AIR AND ON THE FLOOR (src/game/throwables.ts Throwables.update) — a can, a grenade, a magazine, a gun out of a dying
+//! WHAT IS THROWN OR DROPPED, IN THE AIR AND ON THE FLOOR — a can, a grenade, a magazine, a gun out of a dying
 //! hand, for one tick: it ages, falls, meets the walls, the leaves and the furniture by a ray from its middle, bounces, hands the furniture a share of
 //! what it lost, and comes to rest on a floor or on a chair's seat; lying on a thing that has moved, it looks under itself and drops.
 //!
-//! STATEMENT FOR STATEMENT, as doors.rs, props.rs and slabs.rs are. tools/qa/item-ident.ts and the missions of tools/qa/rust-check.ts hold the two together.
 //!
 //! WHAT IS STATE. A thing's own numbers are the `items` part of the game's block (state.rs), laid out as the furniture's are (props.rs says why): a
 //! column a number, as narrow as its values, the truths bits of one word, hot before cold, every column whole vectors on a 16-byte boundary. THE ROWS
@@ -21,6 +20,7 @@
 //! of that row, lists nothing of it, and returns HOST with the row: the host names the mistake. Nothing of play is such a question: a pane of glass
 //! is judged here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), a ray of no length meets
 //! nothing, and no length is too long.
+use game_types::knobs::Knobs;
 use crate::lines::{ray_rule, ray_things, RAY_HOST};
 use crate::maths::{atan2, hypot2, hypot3, round_half_up};
 use crate::state::state;
@@ -81,7 +81,7 @@ pub struct Items {
 }
 const _: () = assert!(size_of::<Items>() == 16 + 20 * CAP * 8 + 6 * CAP * 4);
 const _: () = assert!(offset_of!(Items, px) % 16 == 0 && offset_of!(Items, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/itemshome.ts ITEM_F64 and ITEM_U32 name them the same)
+/// the columns in their order
 pub const COLS: [usize; 26] = [
     offset_of!(Items, px),
     offset_of!(Items, py),
@@ -113,7 +113,7 @@ pub const COLS: [usize; 26] = [
 
 // ---- WHAT THE HOST HANDS IN AND TAKES BACK FOR ONE WALK (scratch)
 // in: the frame's dt · the row to start at (the walk goes down from it) · whether the host has a rule for panes · whether the ground may be lying snow
-// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture (throwables.ts RIFLE_ITEM.propShare)
+// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture
 pub const P_DT: usize = 0;
 pub const P_FROM: usize = 1;
 pub const P_ASK: usize = 2;
@@ -184,20 +184,6 @@ pub fn addr(table: u32) -> usize {
         _ => 0,
     }
 }
-/// 0 = rows · 1 = the hand-over's length · 2 = events the list holds · 3 = doubles an event · 4 = roofs a walk is handed · 13 = the part's length in bytes · 100 + k = where
-/// column k of the part starts (COLS)
-pub fn cap(table: u32) -> usize {
-    match table {
-        0 => CAP,
-        1 => NPAR,
-        2 => MAX_EVENTS,
-        3 => EV,
-        4 => MAX_ROOFS,
-        13 => size_of::<Items>(),
-        k if k >= 100 && ((k - 100) as usize) < COLS.len() => COLS[(k - 100) as usize],
-        _ => 0,
-    }
-}
 
 // ---- throwables.ts's own numbers (tools/qa/rust-check.ts reads both sources and is red where one differs)
 const PI: f64 = core::f64::consts::PI;
@@ -235,7 +221,7 @@ fn over(rec: &[f64], q: usize, x: f64, z: f64) -> bool {
     let (px, pz) = (x - rec[q + R_C], z - rec[q + R_C + 2]);
     js_abs(cs * px - sn * pz) <= rec[q + R_H] && js_abs(sn * px + cs * pz) <= rec[q + R_H + 2]
 }
-/// snowBog.ts snowBogAt: HOW BOGGY THE GROUND IS where a thing touched down at (x, y, z), 0‥1 (0 = a floor). Up on something, only snow that stands or
+/// HOW BOGGY THE GROUND IS where a thing touched down at (x, y, z), 0‥1 (0 = a floor). Up on something, only snow that stands or
 /// caps as high bogs; at the ground, nothing under a roof does, and a thin lay over the spot says how much: trodden, old, or bare. The statics that
 /// are snow are named by the world's table `snow`; where each is and how it is turned are its own row's.
 fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
@@ -303,13 +289,13 @@ fn things(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     }
     Some((out[0], out[1], out[2], out[3], world(d.w).thing_live[r as usize * TL] as usize))
 }
-/// Throwables.ray: the closest hit among the statics and the leaves (collision.ts raycast) and the furniture: how far, the face's normal, and the id
+/// Throwables.ray: the closest hit among the statics and the leaves and the furniture: how far, the face's normal, and the id
 /// of the thing of furniture PLUS ONE (0: a wall, a floor, a leaf)
 #[allow(clippy::too_many_arguments)]
-fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax: f64) -> Option<(f64, f64, f64, f64, usize)> {
+fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax: f64, tune: &Knobs) -> Option<(f64, f64, f64, f64, usize)> {
     let mut out = [0.0f64; 4];
     d.rays += 1.0;
-    let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out);
+    let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out, tune);
     if k == RAY_HOST {
         d.host = true; // (a ray that is no number: lines.rs ray_rule)
         return None;
@@ -344,7 +330,7 @@ fn list(n: &mut usize, kind: f64, row: usize, a: f64, p0: f64, p1: f64, p2: f64,
 
 /// Throwables.update for the rows PAR[P_FROM] down to 0 of the game in slot `g`, over world `w` (which stands with the game's own leaves and its
 /// furniture in it). → DONE · HOST (row PAR[P_ROW]: nothing of it written) · WRONG.
-pub fn update(g: usize, w: usize) -> u32 {
+pub fn update(g: usize, w: usize, tune: &Knobs) -> u32 {
     let c = &mut state(g).items;
     let p = par();
     p[P_EVENTS] = 0.0;
@@ -429,7 +415,7 @@ pub fn update(g: usize, w: usize) -> u32 {
                 let il = 1.0 / len;
                 let (d0, d1, d2) = (m0 * il, m1 * il, m2 * il);
                 // sphere-vs-box CCD from the centre ray: contact happens radius/cos(incidence) before the centre would hit
-                let mut hit = hit_of(&mut d, px, py, pz, d0, d1, d2, len + radius * 3.5);
+                let mut hit = hit_of(&mut d, px, py, pz, d0, d1, d2, len + radius * 3.5, tune);
                 if d.host {
                     break;
                 }

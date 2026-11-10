@@ -1,0 +1,16 @@
+pub use ::game_types::kit::types;
+pub use types::*;
+pub mod slots;
+pub use slots::*;
+pub mod loadouts;
+pub use loadouts::*;
+pub mod rows;
+pub use rows::*;
+pub mod issued;
+pub use issued::*;
+pub mod card;
+pub use card::*;
+pub mod team;
+pub use team::*;
+pub use slots::slot_amount;
+pub use slots::slot_put;

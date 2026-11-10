@@ -1,6 +1,6 @@
 //! The types of `digin`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -15,22 +15,6 @@ pub enum Phase {
     ToDoor,
     Wedge,
     ToCover,
-}
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Set => "set",
-            Phase::Idle => "idle",
-            Phase::Shut => "shut",
-            Phase::Haul => "haul",
-            Phase::Think => "think",
-            Phase::ToRoom => "toRoom",
-            Phase::ToProp => "toProp",
-            Phase::ToDoor => "toDoor",
-            Phase::Wedge => "wedge",
-            Phase::ToCover => "toCover",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -72,24 +56,13 @@ pub struct Man {
     pub stalls: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum Cue {
     Kick,
     Scrape,
     Radio,
     Shout,
     Tried,
-}
-impl Cue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Cue::Kick => "kick",
-            Cue::Scrape => "scrape",
-            Cue::Radio => "radio",
-            Cue::Shout => "shout",
-            Cue::Tried => "tried",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -136,30 +109,15 @@ pub struct StFix {
     pub at: V3,
     pub t: f64,
     pub room: Option<RoomfightRoomId>,
-    pub heard: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DiginModDIGINLOGItem {
-    pub t: f64,
-    pub who: String,
     pub what: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DiginModDIGINSHUT {
-    pub home: f64,
-    pub held: f64,
-    pub again: f64,
-    pub more: f64,
-    pub left: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NUMMAX {
-    pub wedges: f64,
-    pub pace: f64,
-    pub reach_m: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -171,7 +129,6 @@ pub struct ListenersItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HeardBy {
-    pub gd: Option<GuardId>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -187,41 +144,17 @@ pub struct CoverSpot {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct GatherTo {
-    pub room: RoomfightRoomId,
-    pub spot: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DigInWedgedItem {
-    pub door: DoorId,
-    pub at: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct DigInRefuge {
     pub spot: V3,
     pub door: Option<DoorId>,
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DiginMod {
-    /// (src/game/digin.ts:189 DIGIN_LOG)
     pub digin_log: Vec<crate::digin::DiginModDIGINLOGItem>,
-    /// (src/game/digin.ts:192 DIGIN_SHUT)
-    pub digin_shut: crate::digin::DiginModDIGINSHUT,
-    /// (src/game/digin.ts:220 states)
+    #[is(crate::digin::DiginModDIGINSHUT { })] pub digin_shut: crate::digin::DiginModDIGINSHUT,
     pub states: Option<crate::digin::St>,
-}
-impl DiginMod {
-    pub fn blank() -> Self {
-        DiginMod {
-            digin_log: Vec::new(),
-            digin_shut: crate::digin::DiginModDIGINSHUT { home: 0.0, held: 0.0, again: 0.0, more: 0.0, left: 0.0 },
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -247,7 +180,6 @@ pub struct DiginStats {
     pub steady: i32,
     pub tried: i32,
     pub deep: i32,
-    pub gathered: i32,
     pub gather_lost: i32,
     pub refuge: i32,
     pub lane_moved: i32,
@@ -270,23 +202,8 @@ pub struct DiginStats {
     pub wedged_away: i32,
 }
 
-/// (src/game/digin.ts:163 DIGIN_DEFAULTS: a table nothing writes)
 pub fn digin_defaults() -> crate::knobs::DiginK { crate::knobs::DiginK::page() }
 
-/// (src/game/digin.ts:194 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.digin";
-
-/// (src/game/digin.ts:195 KEPT: a table nothing writes)
-pub fn kept() -> [String; 15] { [String::from("on"), String::from("stay"), String::from("cover"), String::from("brace"), String::from("doors"), String::from("radio"), String::from("deep"), String::from("far"), String::from("learn"), String::from("gather"), String::from("steady"), String::from("holdSet"), String::from("refuge"), String::from("keeper"), String::from("shutOpen")] }
-
-/// (src/game/digin.ts:196 KEPT_NUM: a table nothing writes)
-pub fn kept_num() -> [String; 3] { [String::from("wedges"), String::from("pace"), String::from("reachM")] }
-
-/// (src/game/digin.ts:197 NUM_MAX: a table nothing writes)
-pub fn num_max() -> crate::digin::NUMMAX { crate::digin::NUMMAX { wedges: 3.0, pace: 3.0, reach_m: 60.0 } }
-
-/// (src/game/digin.ts:639 HAUL_NEAR)
 pub const HAUL_NEAR: f64 = 0.9;
 
-/// (src/game/digin.ts:639 HOME_REACH)
 pub const HOME_REACH: f64 = 1.2;

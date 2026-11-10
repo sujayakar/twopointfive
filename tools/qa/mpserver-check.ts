@@ -12,6 +12,8 @@
 //                 server stalls a second and lets its clock slip the seat's records are in time again · a watcher that joins late over a socket that drops
 //                 messages still gets every tick in order · a fifth watcher, a client of no named build and a watcher's "lost" are turned away
 //   settings      the host's settings are in the game: a start with a command and one without are two games, the same start twice is one, and an address's difficulty is the game's
+//   one part      two games played alike, a server's and a client's, but for ONE part of the client's: a chair's place, a thing thrown, a man's mind, a seat's aim. Each
+//                 rings on the first state word, and is told to the server; where nothing differs nothing rings
 //   stood         the server stood its game and answers /health as `waiting`, no tick run
 //   same fight    a seated client and a watcher walk 1200 ticks and every state word (one each half second) is the server's; the seat's man moved and fired
 //   late joiner   a watcher that connects six seconds in is sent the run so far and ends on the same words
@@ -28,9 +30,6 @@
 //                 first record went out, before the game had; held against the game once it reached the same tick, the looks were right to the bar below;
 //                 the game they left is still the server's (the line above); what a look cost is printed. Under MPSERVER_BREAK the second client's look
 //                 plays no record, and this line must FAIL too
-//   every part    those two clients also hold the word of EVERY PART of the game against the server's on every word tick (src/net/words.ts foldWhole, which a
-//                 client only counts and never takes for an alarm): both had it on every one. Under MPSERVER_BREAK the first client's parts with its state
-//                 word, and this line must FAIL too
 //   worse way     the queue a worse connection is made of (src/net/delay.ts, with a die this check throws): all zero = straight through; under jitter nothing
 //                 passes the message in front of it; a lost message is late by a round trip and the resend's wait, and holds the ones behind it; a stall holds everything to its end,
 //                 what was on its way too, and one taken back is over at once; a handler that throws loses its own message and strands none behind it
@@ -82,7 +81,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
   const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NetClient } = await import(`${ROOT}/src/net/client.ts`), { NET, netText } = await import(`${ROOT}/src/net/wire.ts`);
   let now = 0, threw = '';
   const counter = () => ({ n: 0, step() { this.n++; }, word() { return String(this.n); } });
-  const game = counter(), S = new NetServer({ now: () => now, step: () => game.step(), word: () => game.word(), ended: () => null }, { game: 'g', build: 'b1', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 1, commands: '' }, seatKeys: ['k'] });
+  const game = counter(), S = new NetServer({ now: () => now, step: () => game.step(), word: () => game.word(), ended: () => null }, { game: 'g', build: 'b1', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 1, kept: '' }, seatKeys: ['k'] });
   type Link = { conn: { send(t: string): number; close(): void }; C: InstanceType<typeof NetClient>; pump(): void };
   const links: Link[] = [];
   /** a client and its connection: what it sends reaches the server at once, what the server sends is read at the next pump; `drop` = the socket takes this send or not */
@@ -121,19 +120,29 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 }
 
 // ---- the host's settings: games stood here from starts that differ in them alone
-{ const { Commands } = await import(`${ROOT}/src/draw/commands.ts`), { commandText } = await import(`${ROOT}/src/net/start.ts`), M = await import('../mp/stand.ts');
-  const C = new Commands(); C.difficulty(1); const hard = commandText(C.take()), idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
-  const gameOf = async (search: string, commands?: string): Promise<string> => { const G = await M.standStart(M.freshStart({ search, seed: 7, commands })); for (let i = 0; i < 30; i++) G.step([idle, idle]); return `${G.word()} ${G.watch()}`; };
-  const AT = '?roomclear&squad4&seats=2', told = await gameOf(AT, hard), again = await gameOf(AT, hard), bare = await gameOf(AT, ''), plain = await gameOf(AT), word = (d: string): string => M.freshStart({ search: `${AT}&difficulty=${d}`, seed: 7 }).commands;
-  const ok = told === again && told !== bare && plain === bare, addressed = word('hard') === hard && word('standard') === '';
-  line(ok && addressed, `settings: a game with the host's command for Hard and one without are two games, the same start twice is one${ok ? '' : ` (NO: ${told} · ${again} · ${bare} · ${plain})`}; with no commands handed over, the address's difficulty is the game's${addressed ? '' : ' (NO)'}`); }
+{ const M = await import('../mp/stand.ts');
+  const hard = '{"hard":true}', idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
+  const gameOf = async (search: string, kept?: string): Promise<string> => { const G = await M.standStart(M.freshStart({ search, seed: 7, kept })); for (let i = 0; i < 30; i++) G.step([idle, idle]); return G.word(); };
+  const AT = '?roomclear&squad4&seats=2', told = await gameOf(AT, hard), again = await gameOf(AT, hard), bare = await gameOf(AT, ''), plain = await gameOf(AT), word = await gameOf(`${AT}&difficulty=hard`), over = await gameOf(`${AT}&difficulty=standard`, hard);
+  const ok = told === again && told !== bare && plain === bare, addressed = word === told && over === bare;
+  line(ok && addressed, `settings: a game on what the host keeps of Hard and one without are two games, the same start twice is one${ok ? '' : ` (NO: ${told} · ${again} · ${bare} · ${plain})`}; the address's difficulty is the game's, and over what is kept${addressed ? '' : ` (NO: ${word} · ${over})`}`); }
+
+// ---- one part of a game differs on one machine alone: a server and its client in this process, each with a game of its own (what moves a part's word is the game's own test's: rust/game_start words.rs)
+{ const M = await import('../mp/stand.ts'), { NetServer } = await import('../../src/net/server.ts'), { NetClient } = await import('../../src/net/client.ts'), { NET } = await import('../../src/net/wire.ts');
+  const start = M.freshStart({ search: '?roomclear&squad4', seed: 7 }), rang: string[] = [], quiet: string[] = [];
+  for (const part of ['', 'tab.props_prop', 'tab.item', 'dr', 'gd', 'seats.aim_point']) {
+    const A = await M.standStart(start), B = await M.standStart(start, BREAK ? '' : part); let now = 1000; const inbox: string[] = [];
+    const S = new NetServer({ now: () => now, step: c => A.step(c), word: () => A.word(), ended: () => null }, { game: 'g', build: '', start, seatKeys: ['k'] }), conn = { send: (t: string) => { inbox.push(t); return 1; }, close() { /* */ } }, C = new NetClient(t => S.message(conn, t), { game: 'g', build: '', key: 'k' });
+    C.hello(); C.ready(); for (let i = 0; i < 70; i++) { now += 1000 / NET.hz; S.advance(); while (inbox.length) C.message(inbox.shift()!, now); C.walk({ step: c => B.step(c), word: () => B.word() }, 1e9); }
+    (C.bad?.t === NET.wordEvery - 1 && S.lost === 1 ? rang : !C.bad && S.lost === 0 && C.wordsOk === 2 ? quiet : []).push(part || 'none'); }
+  line(quiet.join() === 'none' && rang.length === 5, `one part: one part of a client's game another than the server's rings on the first state word, and the server is told (${rang.join(', ')}); ${quiet.join(', ')} of them rings nothing`); }
 
 // ---- the processes
 type Proc = { stdout: ReadableStream; stderr: ReadableStream; exited: Promise<number>; kill(): void };
 const spawn = (cmd: string[], env: Record<string, string> = {}): Proc => Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe', cwd: ROOT, env: { ...process.env, ...env } }) as unknown as Proc;
 const text = (s: ReadableStream) => new Response(s).text();
 interface Ahead { first: number; firstMoved: boolean; n: number; mean: number; max: number; exact: number; unfree: number; clean: number; cleanMean: number; cleanMax: number; cleanExact: number; worst: { t: number; mm: number; records: number; near: number } | null; fixes: number; fixMax: number; records: number; ms: number }
-interface BotOut { ahead?: Ahead; names?: string[]; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; watchOk?: number; watchOff?: number; watchFirst?: number | null; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
+interface BotOut { ahead?: Ahead; names?: string[]; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
 async function bot(port: number, extra: string[]): Promise<BotOut | null> {
   const p = spawn([process.execPath, 'run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${port}`, '--game', 'check', ...extra]);
   const [out, err] = await Promise.all([text(p.stdout), text(p.stderr), p.exited]);
@@ -164,7 +173,7 @@ const h0 = await up(PORT);
 if (!h0) { srv.kill(); console.log(`mpserver-check: the server did not come up: ${(await srvErr).trim().split('\n').slice(-3).join(' / ')}`); process.exit(2); }
 line(h0.state === 'waiting' && h0.tick === 0 && h0.seats.length === 1 && h0.seats[0] === false, `stood: the server stood its game and answers /health — ${h0.state}, tick ${h0.tick}, ${h0.seats.length} seat${h0.seats.length === 1 ? '' : 's'}, build ${h0.build || '(none)'}`);
 
-{ const B = h0.build as string, wrongKey = await knock(PORT, { k: 'hello', proto: 1, build: B, game: 'check', key: 'not-a-key' }), wrongGame = await knock(PORT, { k: 'hello', proto: 1, build: B, game: 'another' }), wrongWire = await knock(PORT, { k: 'hello', proto: 99, build: B, game: 'check' }), wrongBuild = await knock(PORT, { k: 'hello', proto: 1, build: 'not-this-build', game: 'check' });
+{ const { NET } = await import('../../src/net/wire.ts'), B = h0.build as string, wrongKey = await knock(PORT, { k: 'hello', proto: NET.proto, build: B, game: 'check', key: 'not-a-key' }), wrongGame = await knock(PORT, { k: 'hello', proto: NET.proto, build: B, game: 'another' }), wrongWire = await knock(PORT, { k: 'hello', proto: 99, build: B, game: 'check' }), wrongBuild = await knock(PORT, { k: 'hello', proto: NET.proto, build: 'not-this-build', game: 'check' });
   const ok = wrongKey.startsWith('bye: no seat') && wrongGame.startsWith('bye: this server runs another') && wrongWire.startsWith('bye: this server speaks') && (!h0.build || wrongBuild.startsWith('bye: this game is on build'));
   const still = await health(PORT);
   line(ok && still?.state === 'waiting' && still.tick === 0, `refused: a wrong seat key ("${wrongKey}"), another game's id ("${wrongGame}"), another wire ("${wrongWire}")${h0.build ? ` and another build ("${wrongBuild}")` : ''} are each told why and let go; the server still waits at tick ${still?.tick}`); }
@@ -222,7 +231,7 @@ gone = false;   // (the stand-in control plane knows this game again)
   line(h3.seats.length === 2 && clean(one, N2) && clean(two, N2) && one!.word === two!.word && one!.seat === 0 && two!.seat === 1 && one!.moved > 1 && two!.moved > 1 && L3.length === 2 && L3.every(l => l.own > 0),
     `two seats: a room clear of two players, each client in its own seat${h3.seats.length === 2 ? '' : ` (the server stood ${h3.seats.length} seat)`}: over ${N2} ticks the first, 60 to 100 ms away, matched ${one?.wordsOk ?? 0} of ${N2 / 30} state words${one?.bad ? ` (FIRST DIFFERENT after tick ${one.bad.t})` : ''} and the second ${two?.wordsOk ?? 0}${two?.bad ? ` (first different after tick ${two.bad.t})` : ''}; they end on ${one?.word}${one && two && one.word !== two.word ? ` ≠ ${two.word}` : ''}; their men went ${one?.moved ?? 0} m and ${two?.moved ?? 0} m; the server ran ${L3.map(l => l.own).join(' and ')} ticks on the seats' own records`);
   const { cleanName, netText, netParse, NET } = await import('../../src/net/wire.ts'), { NetServer } = await import('../../src/net/server.ts'), over = (n: unknown): string => cleanName((netParse(netText({ n })) as { n: unknown }).n), got: string[] = [];
-  const raw = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, commands: '' }, seatKeys: ['a', 'b'] });
+  const raw = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, kept: '' }, seatKeys: ['a', 'b'] });
   raw.message({ send: t => { got.push(t); return 1; }, close() { /* */ } }, JSON.stringify({ k: 'hello', proto: NET.proto, build: '', game: 'g', key: 'b', name: NAME2 }));
   const told = got.map(t => JSON.parse(t) as { k: string; names?: string[] }).filter(m => m.k === 'state').pop()?.names, none = [7, null, ' \n\t ', '\u3164\u2800', '...'].every(n => cleanName(n) === '');
   const cleaned = JSON.stringify(told) === JSON.stringify(['', NAMES[1]]) && none && cleanName('<b>x</b>') === '<b>x</b>' && cleanName('a\u200bb\u202e') === 'ab' && ['nan', 'inf', 'Ada', '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'].every(n => over(n) === n);
@@ -230,7 +239,7 @@ gone = false;   // (the stand-in control plane knows this game again)
     `names: each seat's player's name reaches both clients, as cleaned, a hello written by hand too${cleaned ? '' : ' (NO)'}: the first heard ${JSON.stringify(one?.names ?? null)}, the second ${JSON.stringify(two?.names ?? null)} (wanted ${JSON.stringify(NAMES)})`);
   // (a seat that became another's: the server asks about a key no seat has, and who sits on the old one is told)
   { type Got = { k: string; code?: string; seat?: number }; const heard = new Map<string, Got[]>(), met = (key: string): string => (heard.get(key) ?? []).filter(m => m.k === 'welcome' || m.k === 'bye').map(m => m.k === 'bye' ? `bye ${m.code}` : `seat ${m.seat}`).join(', ');
-    let asks = 0; const S: InstanceType<typeof NetServer> = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null, ask: async () => { asks++; await sleep(5); S.rekey(['a', 'c']); } }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, commands: '' }, seatKeys: ['a', 'b'] });
+    let asks = 0; const S: InstanceType<typeof NetServer> = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null, ask: async () => { asks++; await sleep(5); S.rekey(['a', 'c']); } }, { game: 'g', build: '', start: { file: 'office.json', words: '?roomclear', seed: 1, seats: 2, kept: '' }, seatKeys: ['a', 'b'] });
     const come = (who: string, key: string) => { const got: Got[] = []; heard.set(who, got); const conn = { send: (t: string) => { got.push(JSON.parse(t) as Got); return 1; }, close() { S.closed(conn); } }; S.message(conn, JSON.stringify({ k: 'hello', proto: NET.proto, build: '', game: 'g', key })); return conn; };
     come('host', 'a'); come('old', 'b'); const before = `${met('old')} (${asks} asked)`; come('new', 'c'); const gone2 = come('gone', 'z'); S.closed(gone2); await sleep(30); come('back', 'b'); await sleep(30);
     line(before === 'seat 1 (0 asked)' && met('host') === 'seat 0' && met('old') === 'seat 1, bye seat' && met('new') === 'seat 1' && met('gone') === '' && met('back') === 'bye seat' && JSON.stringify(S.health().seats) === '[true,true]',
@@ -238,8 +247,6 @@ gone = false;   // (the stand-in control plane knows this game again)
   const A = [one?.ahead, two?.ahead], said = (a: Ahead | undefined) => a ? `moved ${a.first < 0 ? 'NEVER' : a.first === 0 ? 'on the beat of his first record' : `${a.first} beat${a.first === 1 ? '' : 's'} after his first record`}${a.firstMoved ? ' (the game had moved him already)' : ''}, ${a.n} looks held against the game: ${(a.mean * 1000).toFixed(1)} mm off on average, ${(a.max * 1000).toFixed(0)} mm at most, ${a.exact} within a millimetre${a.unfree ? ` (and ${a.unfree} looks walked nothing: his legs were not his own)` : ''}; ${a.clean} of them CLEAN (every record run as sent, his legs his own all the way, nobody within 1.5 m of him): ${a.cleanExact} right to a millimetre, ${(a.cleanMean * 1000).toFixed(1)} mm off on average, ${(a.cleanMax * 1000).toFixed(0)} mm at most${a.worst && a.worst.mm >= 1 ? ` (the worst after tick ${a.worst.t}: ${a.worst.records} records on, the nearest body ${a.worst.near} m off)` : ''}; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm); ${a.records} records a look, ${a.ms} ms each` : 'no look ahead reported';
   line(A.every(a => !!a && a.first >= 0 && a.first <= 1 && !a.firstMoved && a.n >= 20) && A.some(a => a!.clean >= 20) && A.every(a => a!.clean < 10 || a!.cleanExact >= a!.clean * AHEAD_EXACT),
     `ahead: each client's own man by its look ahead — the first (60 to 100 ms away): ${said(A[0])} · the second (beside the server): ${said(A[1])} · the bar: half or more of a client's clean looks right to a millimetre (asked of a client with ten or more; one of the two must have twenty)`);
-  { const W = [one, two], said = (b: BotOut | null | undefined) => b ? `${b.watchOk ?? 0} of ${(b.watchOk ?? 0) + (b.watchOff ?? 0)}${b.watchOff ? ` (FIRST DIFFERENT after tick ${b.watchFirst})` : ''}` : 'no report';
-    line(W.every(b => !!b && (b.watchOk ?? 0) >= N2 / 30 && !b.watchOff), `every part: the word of the whole game, watched beside the state word: the first client had the server's on ${said(one)} word ticks, the second on ${said(two)}`); }
   const c3 = await Promise.race([srv3.exited, sleep(12000).then(() => -1)]); if (c3 === -1) srv3.kill(); }
 
 // ---- a worse connection (src/net/delay.ts): the queue's own rules with a die this check throws, then a seat that plays over a bad one

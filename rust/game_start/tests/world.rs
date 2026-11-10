@@ -26,7 +26,7 @@ fn a_round_through_a_wall_leaves_the_far_hole_then_the_mark_it_wears() {
     // a round fired between two ticks: the marks the next one lays of it, in their order
     let fired = |p: &mut Play, at: [f64; 3]| -> (Vec<Mark>, usize) {
         let (c, had, crossed) = (p.g.pl[p.g.player].ch, mark_set(&p.g).map_or(0, |s| s.serial), p.g.stats.wallpen.crossed);
-        game::combat::fire_weapon(&mut p.g, c, at, true, None);
+        game::combat::fire_weapon(&mut p.g, c, at, None);
         let crossed = (p.g.stats.wallpen.crossed - crossed) as usize;
         p.frame();
         (mark_set(&p.g).map_or(Vec::new(), |s| s.list.iter().filter(|m| m.serial > had && matches!(m.kind, DecalKind::Bullet | DecalKind::Damage)).copied().collect()), crossed)
@@ -65,11 +65,10 @@ fn a_teammate_throwing_the_breaker_gets_the_games_line_and_his_own() {
     let t = game::orders::squad_orders_target_at(&mut p.g, th.face);
     assert_eq!(game::orders::squad_orders_give(&mut p.g, "work", Some(&t), None, None), None, "the order was refused");
     let lines0 = p.said.len();
-    let mut told = std::collections::BTreeSet::new();
-    let mut heard = |p: &Play| for m in &p.g.messages { if m.text.starts_with("breaker thrown") { told.insert(m.serial as u64); } };
-    p.until(40.0, |p| { heard(p); game::sim_lightshome::mains_active(&p.g) }).unwrap_or_else(|| panic!("forty seconds and the mains are on: {}", p.roll()));
-    for _ in 0..300 { p.frame(); heard(&p); }
-    assert_eq!(told.len(), 1, "the game's line, once");
+    p.until(40.0, |p| p.g.light_home.mains.active).unwrap_or_else(|| panic!("forty seconds and the mains are on: {}", p.roll()));
+    let mut thrown = 1;
+    for _ in 0..300 { let was = p.g.light_home.mains.active; p.frame(); if !was && p.g.light_home.mains.active { thrown += 1; } }
+    assert_eq!(thrown, 1, "the mains go once");
     assert_eq!(p.said[lines0..].iter().filter(|l| l.text == "lights out.").count(), 1, "his own line, once");
 }
 
@@ -179,10 +178,10 @@ fn a_man_sees_a_blow_only_along_his_head() {
 fn a_restart_leaves_no_line_on_anybody() {
     let mut p = Play::mission("office.json", "?levelFile=office.json&rescue", &Opts { seed: 1, ..Default::default() });
     p.run(1.0);
-    for gd in p.g.guards.clone() { game::game::game_say(&mut p.g, gd, "still talking", None, Some(true), None); }
+    for gd in p.g.guards.clone() { game::game::game_say(&mut p.g, gd, "still talking", None, Some(true)); }
     p.frame();
     assert!(p.view().bubbles.iter().any(|b| b.text == "still talking"), "the staging is wrong: nothing on the HUD");
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     assert!(p.g.guards.iter().all(|&gd| p.g.gd[gd].bubble.as_ref().map_or(true, |b| b.text != "still talking")), "a line on a man");
     p.frame();
     assert!(!p.view().bubbles.iter().any(|b| b.text == "still talking"), "a line on the HUD");
@@ -247,7 +246,7 @@ fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
 fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
     let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts::default());
     p.run(0.2);
-    let team: Vec<_> = std::iter::once(p.g.pl[p.g.player].ch).chain(p.g.quiet.ops.iter().map(|&m| p.g.gd[m].ch)).collect();
+    let team: Vec<_> = std::iter::once(p.g.pl[p.g.player].ch).chain(p.g.staged.team.iter().map(|&m| p.g.gd[m].ch)).collect();
     assert_eq!(team.len(), 2);
     for &c in &team { assert!(!wears(&p, c, "helmet"), "a quiet mission: a helmet"); }
     drop(p);
@@ -263,28 +262,27 @@ fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
 
 // ---------------------------------------------------------------- the start card's show, and glass in the air
 
-/// THE RULE: a show's fresh encounter has its men on their routes' first marks; once the show has let go, the night's opening stands them where a fresh night does.
-/// A FAILURE MEANS: after the start card's show a man starts on top of the way in.
+/// THE RULE: while nobody plays (the title's reel) the men live their night, and nothing of it is the player's: no game is kept, nothing is counted, nobody speaks to him. The encounter put back is a
+/// fresh night's. CONTROL: the same seconds played are counted.
+/// A FAILURE MEANS: a night begins with what the reel behind the title did, or a man starts on top of the way in.
 #[test]
-fn the_nights_opening_stands_the_men_again_after_a_show() {
+fn a_night_after_the_reel_is_a_fresh_night() {
     let mut p = Play::level("office.json", false, &Opts { seed: 1, ..Default::default() });
     p.run(0.1);
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     let marks: Vec<_> = p.g.guards.iter().map(|&g| p.at(g)).collect();
-    p.g.quiet_utility = true;
-    p.g.touring = true;
-    p.run(5.0);
-    game::game::game_restart_encounter(&mut p.g);
-    for &gd in &p.g.guards.clone() {
-        let (r, at) = (p.g.gd[gd].route, p.at(gd));
-        let first = p.g.tab.route[r].points[0];
-        assert!(dist(at, [first[0], first[2]]) < 0.05, "under the show a man is on his route's first mark");
-    }
-    p.g.quiet_utility = false;
-    p.g.touring = false;
+    (p.g.aside, p.g.player_invisible) = (true, true);
+    p.run(240.0);
+    assert!(p.view().mission.text.is_empty() && p.view().mission.pos.is_none(), "the player is told where to go");
+    assert!(p.g.guards.iter().zip(&marks).any(|(&g, m)| dist(p.at(g), *m) > 3.0), "nobody walked his beat");
+    assert_eq!((p.g.mission.stats.elapsed, p.g.saves.stats.autosaves, p.view().radio.len()), (0.0, 0.0, 0), "the reel was counted, kept or spoken over: {:?}", p.view().radio);
+    (p.g.aside, p.g.player_invisible) = (false, false);
+    game::game::game_restart(&mut p.g);
     p.frame();
     let now: Vec<_> = p.g.guards.iter().map(|&g| p.at(g)).collect();
-    assert!(marks.iter().zip(&now).all(|(a, b)| dist(*a, *b) < 0.05), "a frame after the show let go: {now:?} against a fresh night's {marks:?}");
+    assert!(marks.iter().zip(&now).all(|(a, b)| dist(*a, *b) < 0.05), "a frame after the reel: {now:?} against a fresh night's {marks:?}");
+    p.run(2.0);
+    assert!(p.g.mission.stats.elapsed > 1.9);
 }
 
 /// THE RULE: a game kept while glass is in the air and put back plays on as it did, word for word: the falls are the game's, in its block.
@@ -306,12 +304,12 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
             if game::scene_collision::nav_grid_is_blocked(&p.g, from[0], from[1]) { continue; }
             p.sam_put(from);
             p.run(0.2);
-            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], true, None); p.run(0.1); if game::sim_fallshome::fall_store_waiting(&p.g) > 0.0 { fell = true; break 'panes; } }
+            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], None); p.run(0.1); if game::sim_fallshome::fall_store_waiting(&p.g) > 0.0 { fell = true; break 'panes; } }
         }
     }
     assert!(fell, "the staging is wrong: twelve rounds and no glass in the air");
     let waiting = game::sim_fallshome::fall_store_waiting(&p.g);
-    let kept = game_start::moment::Moment::of(&p.g);
+    let kept = game::savestate::control::Moment::of(&p.g);
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
     assert!(game::sim_fallshome::fall_store_waiting(&p.g) != waiting, "the staging is wrong: nothing landed in two seconds");

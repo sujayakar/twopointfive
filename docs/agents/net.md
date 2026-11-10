@@ -25,7 +25,7 @@ section is what a hosted build keeps on a server, which is also where co-op's ga
 | `src/host/drawnet.ts`, `src/ui/netrows.ts` | `DrawNet`: the page as a client; the debugger's Network page |
 | `tools/mp/server.ts`, `tools/mp/stand.ts`, `tools/mp/runner.ts` | the game server's process; a game with no page; servers as the dev server's children |
 | `tools/mp/lan.ts`, `tools/mp/bot.ts`, `tools/mp/words-diff.ts` | a game by hand on your network; a scripted client; which part two machines differ in |
-| `seats/`, `cmd/`, `walkahead/`, `state_words.rs` | in `rust/game_rules/src/`: each seat's things; a record and its check; the look's walk; a hash a part |
+| `seats.rs`, `cmd.rs`, `walkahead.rs`, `state_words.rs` | in `rust/game_rules/src/`: each seat's things; a record and its check; the look's walk; a hash a part |
 | `rust/game_face/src/net.rs`, `rust/game_draw/src/lead.rs` | the calls a networked host makes; his man drawn ahead |
 
 `PlayerCmd` is in `rust/game_types/src/cmd/`, `SeatSet` and `SeatRef` in `rust/game_types/src/seats/`, the numbers in `CmdcheckK` and `SeatsK`.
@@ -53,10 +53,9 @@ more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody se
 `lead.rs` draws him there. Only his walk and aim are ahead: his rounds, doors, orders and pose, and every other man, are the
 confirmed tick's. Where his legs are not his own (`free` false) or he is down, he is drawn where the game has him. A correction eases off by `FORESEE.ease`; past `FORESEE.snap` it is a cut.
 
-**The words keep two machines honest.** The alarm is the state word (`foldWord`): the die's count and the hash of each part of the game's block, chained, sent
-every `NET.wordEvery` ticks. It leaves out a seat's aim, a man's mind and an order book, so a difference there rings only once it moves something. The first word
-that differs is kept as `bad` and told up as `Lost`; the door closes its socket and the player is told to reload. Beside it goes the word of every part (`foldWhole`
-over `state_words`), counted and never an alarm. `MP_WORDS` and `words-diff.ts` name the part.
+**The words keep two machines honest.** The alarm is the state word (`foldWord`), sent every `NET.wordEvery` ticks: every part of the game (`state_words`), chained
+on the die's count and the block's parts of every tick between. What a machine may honestly differ in is in no part: its field says so (`#[bytes(skip)]`). The first
+word that differs is kept as `bad` and told up as `Lost`; the door closes its socket and the player is told to reload. `MP_WORDS` and `words-diff.ts` name the part.
 
 **A record is checked as it is stepped.** `face_networked` marks every seat `remote`, so `check_cmd` keeps the look-at within `reach` of his man and works the view's
 matrices out again from the pose on every machine.
@@ -81,7 +80,8 @@ old one is told.
 
 **The lobby.** One door: `Lobby.seat`. `games:join` gives an open seat or the one this tab holds (`tabId`, so two windows are two players and a reload is the
 same one). It waits for the server's address and the page goes to `?net=…&netgame=…&netkey=…`. The link is `?join=<code>`. The host hands over the mission's address with
-`squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and his settings as commands (`HOSTED`). Not carried: his kit (both play the kit as issued).
+`squad=4&seats=2` and his difficulty levers (`coopScenario`), a fresh die, and what his machine keeps (`NetStart.kept`, `HOSTED`). Not carried: his kit (both play the
+kit as issued) and the panel's kept rows and picks.
 
 **The control plane** (`cloud/convex/games.ts`). `games:make` counts a runner's live games and writes the new one in one mutation, so the cap holds. Servers beat to
 `/mp/heartbeat`, and `reap` ends a game whose server never answered, went silent, sat idle or grew too old. A runner answers four calls (`cloud/convex/runners.ts`);
@@ -103,7 +103,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
   not tell the players apart is not shown.
 - **A worse connection on purpose.** "can you add something to the debug panel to simulate different network conditions?" A page's numbers are its own and last for the
   tab. A lost packet is a hold, never a hole: on a WebSocket the message and every one behind it wait for the resend (`wayMs`).
-- **Two kinds seat two:** `roomclear` and `nightbreach` (`src/scene/seatkinds.ts`). `seats_refuse` refuses the others, whose rules are written around one commander.
+- **Two kinds seat two:** `roomclear` and `nightbreach` (`seats_kind`; a start row says it as `two`). `seats_refuse` refuses the others, whose rules are written around one commander.
 
 ## To change it
 
@@ -111,7 +111,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 - **A new field in a record:** `WireCmd`, `wireOk`, `recordOf`, `recordTo`, and `RECORD` in `rust/game_face/src/net.rs`, all in one order.
 - **Something per player:** a field of `SeatSet`, in `swap_set`, `set_of_game`, `SeatRef` and both of its makers. A rule that reads it takes `seat: &SeatRef`.
 - **A world rule that says "the player":** ask `men`, `men_up`, `all_down`, `nearest_man` or `faced_man`, or stand the seat with `standing_for`. Add a test to `two_seats.rs`.
-- **A mission for two:** take its rules through for two, then add its kind to both `SEAT_KINDS` and `seat_kinds`.
+- **A mission for two:** take its rules through for two, then add its kind to `seat_kinds`.
 - **Try it on one machine:** `cd cloud && npm ci` once, `bun run dev`, two windows of the page. With no backend, `bun run tools/mp/lan.ts` prints an address for each
   machine. A scripted seat: `bun run tools/mp/bot.ts --key k0`.
 - **Page words:** `?netlag=`, `?netjitter=`, `?netloss=`, `?netpredict=0` are the Network page's rows. `?coop=0` takes co-op off the page.
@@ -171,4 +171,4 @@ lobby asks only for `cloudUrl`. `?cloud=0` is no backend at all for the visit, a
 - The look ahead and a correction judged by two players; how faint the other plan is; the purple, picked by number.
 - A mission ending on a server over the wire; a real socket backing up.
 - Faults: no resync after a word differs, and no reconnect
-  without a reload. `SEAT_KINDS` is written twice.
+  without a reload.

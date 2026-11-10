@@ -40,14 +40,14 @@ fn rounds_past_a_man_pin_him() {
         let (mut crossed, mut down_shots, mut crouched, mut last) = (false, 0, false, p.g.time);
         for k in 0..240 {
             frame_under_fire(&mut p, gd, k);
-            let (sup, ch) = (&p.g.gd[gd].sup, p.g.gd[gd].ch);
+            let (sup, ch) = (&p.g.cond[p.g.gd[gd].ch].sup, p.g.gd[gd].ch);
             crossed |= sup.v >= line;
             let down = sup.down_t > 0.0 || sup.latched;
             crouched |= crossed && down && p.g.ch[ch].anim.crouch_target >= 0.99 && p.g.ch[ch].anim.stance == Stance::LowReady;
             if down { down_shots += his_shots(&p, gd, last); }
             last = p.g.time;
         }
-        assert!(crossed, "seed {s}: four seconds of rounds past him and he is at {}", p.g.gd[gd].sup.v);
+        assert!(crossed, "seed {s}: four seconds of rounds past him and he is at {}", p.g.cond[p.g.gd[gd].ch].sup.v);
         assert!(crouched, "seed {s}: pinned and not crouched with the gun down");
         assert_eq!(down_shots, 0, "seed {s}: rounds left him with his head down");
         drop(p);
@@ -56,9 +56,9 @@ fn rounds_past_a_man_pin_him() {
         let (mut crossed, mut ever_down, mut last, mut shots) = (false, false, p.g.time, 0);
         for k in 0..240 {
             frame_under_fire(&mut p, gd, k);
-            crossed |= p.g.gd[gd].sup.v >= line;
+            crossed |= p.g.cond[p.g.gd[gd].ch].sup.v >= line;
             let ch = p.g.gd[gd].ch;
-            ever_down |= p.g.gd[gd].sup.down_t > 0.0 || p.g.ch[ch].anim.crouch_target >= 0.99;
+            ever_down |= p.g.cond[p.g.gd[gd].ch].sup.down_t > 0.0 || p.g.ch[ch].anim.crouch_target >= 0.99;
             shots += his_shots(&p, gd, last);
             last = p.g.time;
         }
@@ -80,9 +80,9 @@ fn misses_raise_sams_own() {
         p.sam_put([26.0, 11.4]);
         p.frame();
         p.posted_calm(a, [10.0, 11.3], [26.0, 11.4]);
-        p.g.pl[p.g.player].visibility = 0.9;
+        p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.9;
         p.run(0.5);
-        assert_eq!(p.g.pl[p.g.player].sup.v, 0.0, "seed {s}: he stands under nothing yet");
+        assert_eq!(p.g.cond[p.g.pl[p.g.player].ch].sup.v, 0.0, "seed {s}: he stands under nothing yet");
         (p.g.gd[a].state, p.g.gd[a].awareness, p.g.gd[a].last_known) = (GuardState::Alert, 1.0, Some([26.0, 0.0, 11.4]));
         (p.g.gd[a].pinned, p.g.gd[a].hold) = (true, false);
         let (mut peak, mut hits, mut misses, mut add_on_hit) = (0.0_f64, 0, 0, 0);
@@ -90,14 +90,14 @@ fn misses_raise_sams_own() {
         let mut last = p.g.time;
         for _ in 0..(60.0 * 6.0) as usize {
             let pl = p.g.player;
-            p.g.pl[pl].visibility = 0.9; p.g.gd[a].last_seen_t = p.g.time; p.g.pl[pl].hit_flash = 0.0;
-            let before = p.g.pl[pl].sup.v;
+            p.g.shown[p.g.pl[pl].ch].visibility = 0.9; p.g.gd[a].last_seen_t = p.g.time; p.g.pl[pl].hit_flash = 0.0;
+            let before = p.g.cond[p.g.pl[pl].ch].sup.v;
             p.frame();
             if his_shots(&p, a, last) > 0 {
-                if p.g.pl[pl].hit_flash > 0.9 { hits += 1; if p.g.pl[pl].sup.v > before * (2.0_f64).powf(-(1.0 / 60.0) / half) + 1e-9 { add_on_hit += 1; } } else { misses += 1; }
+                if p.g.pl[pl].hit_flash > 0.9 { hits += 1; if p.g.cond[p.g.pl[pl].ch].sup.v > before * (2.0_f64).powf(-(1.0 / 60.0) / half) + 1e-9 { add_on_hit += 1; } } else { misses += 1; }
             }
             last = p.g.time;
-            peak = peak.max(p.g.pl[pl].sup.v);
+            peak = peak.max(p.g.cond[p.g.pl[pl].ch].sup.v);
         }
         assert!(misses >= 1 && peak >= 0.25, "seed {s}: {misses} misses, {hits} hits, peak {peak}");
         assert_eq!(add_on_hit, 0, "seed {s}: a round that found him raised it");

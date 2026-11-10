@@ -1,4 +1,4 @@
-// WHAT THE END CARD SHOWS OF A RUN: the Rust game's answer (rust/game_rules/src/view `debrief_view`), asked once as the card opens and read here by name. The chronicle's
+// WHAT THE END CARD SHOWS OF A RUN: the Rust game's answer (rust/game_rules/src/tick/view `debrief_view`), asked once as the card opens and read here by name. The chronicle's
 // words and counts and the recap are all worked out there: the card lays them out.
 //
 // Nothing under src/view imports the game (tools/qa/view-check.ts).

@@ -1,44 +1,23 @@
 //! The types of `scene_markings`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum MarkFace {
-    #[default] X,
-    X2,
-    Y,
-    Y2,
-    Z,
-    Z2,
-}
-impl MarkFace {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MarkFace::X => "+x",
-            MarkFace::X2 => "-x",
-            MarkFace::Y => "+y",
-            MarkFace::Y2 => "-y",
-            MarkFace::Z => "+z",
-            MarkFace::Z2 => "-z",
-        }
-    }
+    #[word("+x")] #[default] X,
+    #[word("-x")] X2,
+    #[word("+y")] Y,
+    #[word("-y")] Y2,
+    #[word("+z")] Z,
+    #[word("-z")] Z2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum MarkRes {
     Base,
     Fine,
     Coarse,
-}
-impl MarkRes {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MarkRes::Base => "base",
-            MarkRes::Fine => "fine",
-            MarkRes::Coarse => "coarse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -59,29 +38,8 @@ pub struct MarkingDef {
     pub cells: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
-pub struct CellCanvas {
-    pub cells: Vec<u8>,
-    pub w: f64,
-    pub h: f64,
-}
-impl CellCanvas {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        CellCanvas {
-            cells: Vec::new(),
-            w: 0.0,
-            h: 0.0,
-        }
-    }
-}
-impl Default for CellCanvas { fn default() -> Self { Self::blank() } }
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MarkStats {
-    pub texel: f64,
-    pub w: f64,
-    pub h: f64,
     pub f: [f64; 3],
     pub alb: [V3; 3],
     pub mean_l: V3,
@@ -99,20 +57,7 @@ pub struct FACEAXESItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FaceHalf {
-    pub hu: f64,
-    pub hv: f64,
     pub hn: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TexelOfM {
-    pub res: Option<crate::scene_markings::MarkRes>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct FaceAreas {
-    pub areas: Vec<f64>,
-    pub total: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -124,51 +69,21 @@ pub struct MarkWorldRect {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SceneMarkingsMod {
-    /// (src/scene/markings.ts:369 AREA_LIT_MARKS)
     pub area_lit_marks: JsSet<u32>,
 }
-impl SceneMarkingsMod {
-    pub fn blank() -> Self {
-        SceneMarkingsMod {
-            area_lit_marks: JsSet::new(),
-        }
-    }
-}
 
-/// (src/scene/markings.ts:21 MARKING_TEXEL)
 pub const MARKING_TEXEL: f64 = 0.025;
 
-/// (src/scene/markings.ts:23 MAX_CELLS_W)
 pub const MAX_CELLS_W: f64 = 32.0;
 
-/// (src/scene/markings.ts:23 MAX_CELLS_H)
 pub const MAX_CELLS_H: f64 = 32.0;
 
-/// (src/scene/markings.ts:25 MARK_HEAD_ROWS)
-pub const MARK_HEAD_ROWS: f64 = 8.0;
-
-/// (src/scene/markings.ts:25 CELLS_PER_FLOAT)
-pub const CELLS_PER_FLOAT: f64 = 12.0;
-
-/// (src/scene/markings.ts:25 CELLS_PER_ROW)
-pub const CELLS_PER_ROW: f64 = 48.0;
-
-/// (src/scene/markings.ts:26 MARK_TABLE_ROWS)
 pub const MARK_TABLE_ROWS: f64 = 6144.0;
 
-/// (src/scene/markings.ts:30 MARK_FACES: a table nothing writes)
-pub fn mark_faces() -> Vec<String> { alloc::vec![String::from("+x"), String::from("-x"), String::from("+y"), String::from("-y"), String::from("+z"), String::from("-z")] }
-
-/// (src/scene/markings.ts:32 MARK_RES: a table nothing writes)
-pub fn mark_res() -> Vec<String> { alloc::vec![String::from("fine"), String::from("base"), String::from("coarse")] }
-
-/// (src/scene/markings.ts:33 RES_K: a table nothing writes)
 pub fn res_k() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("fine"), 0.5); t.set(String::from("base"), 1.0); t.set(String::from("coarse"), 2.0); t } }
 
-/// (src/scene/markings.ts:50 CELL_CHARS)
 pub const CELL_CHARS: &str = ".abc";
 
-/// (src/scene/markings.ts:53 FACE_AXES: a table nothing writes)
 pub fn face_axes() -> Vec<crate::scene_markings::FACEAXESItem> { alloc::vec![crate::scene_markings::FACEAXESItem { u: [0.0, 0.0, -1.0], v: [0.0, 1.0, 0.0], n: [1.0, 0.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [0.0, 0.0, 1.0], v: [0.0, 1.0, 0.0], n: [-1.0, 0.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [1.0, 0.0, 0.0], v: [0.0, 0.0, -1.0], n: [0.0, 1.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [1.0, 0.0, 0.0], v: [0.0, 0.0, 1.0], n: [0.0, -1.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [1.0, 0.0, 0.0], v: [0.0, 1.0, 0.0], n: [0.0, 0.0, 1.0] }, crate::scene_markings::FACEAXESItem { u: [-1.0, 0.0, 0.0], v: [0.0, 1.0, 0.0], n: [0.0, 0.0, -1.0] }] }

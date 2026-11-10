@@ -1,98 +1,19 @@
 //! The types of `rescueend`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct RescueEnd {
     pub lead: Option<CharId>,
     pub led: bool,
-    pub clear_at: f64,
-}
-impl RescueEnd {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RescueEnd {
-            lead: None,
-            led: false,
-            clear_at: f64::NAN,
-        }
-    }
-}
-impl Default for RescueEnd { fn default() -> Self { Self::blank() } }
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RescueEndSnap {
-    pub lead: Option<f64>,
-    pub clear_at: f64,
-    pub led: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RescueEndRowsRowOver {
-    pub kind: Option<crate::rescueend::RescueEndRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueEndRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl RescueEndRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndRowsRowOverKind::Cam => "cam",
-            RescueEndRowsRowOverKind::Guard => "guard",
-            RescueEndRowsRowOverKind::Breaker => "breaker",
-            RescueEndRowsRowOverKind::Door => "door",
-            RescueEndRowsRowOverKind::Light => "light",
-            RescueEndRowsRowOverKind::Body => "body",
-            RescueEndRowsRowOverKind::Objective => "objective",
-            RescueEndRowsRowOverKind::Held => "held",
-            RescueEndRowsRowOverKind::Wall => "wall",
-            RescueEndRowsRowOverKind::Switch => "switch",
-            RescueEndRowsRowOverKind::Charge => "charge",
-            RescueEndRowsRowOverKind::Cancel => "cancel",
-        }
-    }
+    #[is(f64::NAN)] pub clear_at: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndWon {
     Out,
     Cleared,
-}
-impl RescueEndWon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndWon::Out => "out",
-            RescueEndWon::Cleared => "cleared",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -120,7 +41,7 @@ pub struct RescueEndRows2RowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RescueEndRows2RowOverKind {
     Cam,
     Guard,
@@ -134,22 +55,4 @@ pub enum RescueEndRows2RowOverKind {
     Switch,
     Charge,
     Cancel,
-}
-impl RescueEndRows2RowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndRows2RowOverKind::Cam => "cam",
-            RescueEndRows2RowOverKind::Guard => "guard",
-            RescueEndRows2RowOverKind::Breaker => "breaker",
-            RescueEndRows2RowOverKind::Door => "door",
-            RescueEndRows2RowOverKind::Light => "light",
-            RescueEndRows2RowOverKind::Body => "body",
-            RescueEndRows2RowOverKind::Objective => "objective",
-            RescueEndRows2RowOverKind::Held => "held",
-            RescueEndRows2RowOverKind::Wall => "wall",
-            RescueEndRows2RowOverKind::Switch => "switch",
-            RescueEndRows2RowOverKind::Charge => "charge",
-            RescueEndRows2RowOverKind::Cancel => "cancel",
-        }
-    }
 }

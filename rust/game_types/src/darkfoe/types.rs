@@ -1,6 +1,6 @@
 //! The types of `darkfoe`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -24,33 +24,10 @@ pub struct DarkFoeSpot {
     pub mate: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DarkFoeOf {
-    pub knows: bool,
-    pub word: bool,
-    pub blind: bool,
-    pub ask: f64,
-    pub lit: bool,
-    pub against: f64,
-    pub held: f64,
-    pub blind_for: f64,
-    pub moves: f64,
-    pub since: f64,
-    pub to: Option<V3>,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DarkfoeMod {
-    /// (src/game/darkfoe.ts:77 stateOf)
     pub state_of: JsMap<GuardId, crate::darkfoe::FoeState>,
-}
-impl DarkfoeMod {
-    pub fn blank() -> Self {
-        DarkfoeMod {
-            state_of: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -64,5 +41,4 @@ pub struct DarkfoeStats {
     pub no_spot: i32,
 }
 
-/// (src/game/darkfoe.ts:160 WAY_TRIES)
 pub const WAY_TRIES: f64 = 6.0;

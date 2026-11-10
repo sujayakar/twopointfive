@@ -99,7 +99,7 @@ fn the_hut(s: u32, training: Training) -> (Play, GuardId, [f64; 3], [f64; 2]) {
     let inside = game::doors::doors_side(&p.g, d, p.g.ch[p.g.gd[t].ch].pos);
     let spot = game::doortools::door_pt(&p.g, d, w / 2.0, 2.4, inside, Some(0.0));
     for (i, &o) in men[1..].iter().enumerate() { p.man_stands(o, [4.8 + (i % 4) as f64 * 0.9, 5.8 + (i / 4) as f64 * 0.9]); p.parked(o); }
-    for &o in p.mates().iter() { p.g.gd[o].dazzled_until = 1e9; }
+    for &o in p.mates().iter() { p.g.cond[p.g.gd[o].ch].blind_until = 1e9; }
     p.man_stands(t, [spot[0], spot[2]]);
     let yard = game::doortools::door_pt(&p.g, d, w / 2.0 + 9.0, 6.0, -inside, Some(0.0));
     p.sam_put([yard[0], yard[2]]);
@@ -175,13 +175,14 @@ fn a_rifleman_who_has_given_up_runs_no_matter_what_and_drops_both_guns() {
         for &o in men.iter() { if o != a { p.parked(o); p.man_stands(o, [5.0 + o.0 as f64 % 8.0, 26.0]); } }
         for &o in p.mates().iter() { p.parked(o); }
         p.man_stands(a, [32.0, 4.9]);
-        p.g.gd[a].dazzled_until = 1e9;
+        p.g.cond[p.g.gd[a].ch].blind_until = 1e9;
         p.g.gd[a].heard_up_to = 1e12;
         p.run(0.1);
         p.sam_put([8.6, 13.9]);
         p.run(0.1);
         let door = [33.3, 0.0, 12.0];
-        game::picture::picture_tell(&mut p.g, a, game::picture::Who::Player, door, None);
+        let sam = p.g.pl[p.g.player].ch;
+        game::picture::picture_tell(&mut p.g, a, sam, door, None);
         assert!(game::runner::runner_break(&mut p.g, a), "seed {s}: he would not break");
         let from = p.at(a);
         p.until(25.0, |p| !p.g.guards.contains(&a) || dist(p.at(a), from) > 8.0).unwrap_or_else(|| panic!("seed {s}: 25 s and he has not run: {}", p.why(a)));

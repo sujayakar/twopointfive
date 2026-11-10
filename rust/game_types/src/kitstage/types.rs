@@ -68,7 +68,7 @@ pub struct Planned {
     pub src: Vec<(&'static str, Src)>,
     /// what is wrong with this way, in plain words (empty: it stages)
     pub problems: Vec<String>,
-    /// the set it was planned on (`plan_way`; none: the level itself)
+    /// the set it was planned on (none: the level itself)
     pub set: Option<String>,
 }
 
@@ -104,11 +104,6 @@ pub struct LampAs { pub t: FixtureId, pub intensity: f64, pub emissive: V3 }
 #[derive(Clone, Copy, Debug)]
 pub struct LightAs { pub light: LightId, pub intensity: f64 }
 
-/// The mission as its start left it, before anything of it was staged: the game's own value, its block, and the stage as it then was
-#[derive(Clone)]
-pub struct Base(pub alloc::sync::Arc<(alloc::boxed::Box<crate::game::Game>, Vec<u8>, KitStage)>);
-impl core::fmt::Debug for Base { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { f.write_str("Base") } }
-
 /// THE KIT PICTURE'S STAGE: all a host keeps to hold a game as the picture of the team at its way in. No rule of the game reads it.
 #[derive(Clone, Debug, Default)]
 pub struct KitStage {
@@ -136,8 +131,6 @@ pub struct KitStage {
     pub sunk: Vec<usize>, pub roused_men: u32, pub roused_alarms: u32,
     /// nothing to stage
     pub none: bool,
-    /// what every staging starts from
-    pub base: Option<Base>,
     /// THE WAY IN AS THE ACTS READ IT: the leaf (none: a wall or a gap) · a blank wall · the opening's width · the floor a can or a round has behind the anchor's line · where Sam's frag is aimed and how far in its arc must land · a wall anchor stands blown open
     pub door: Option<DoorId>, pub walled: bool, pub width: f64, pub reach_in: f64, pub frag_m: f64, pub frag_land: f64, pub hole: bool,
     /// the door's face the team is on · the leaf's angle shut and at rest · along the wall toward the stack, out on the team's side, the anchor's middle · which way along the wall the leaf's free edge is
@@ -189,7 +182,7 @@ pub struct Beat {
 }
 /// A beat that is over, as a check reads it
 #[derive(Clone, Debug, Default)]
-pub struct BeatOver { pub n: u32, pub field: &'static str, pub i: u32, pub t: f64, pub phase: &'static str, pub marks: Vec<&'static str>, pub how: &'static str, pub rest: Option<V3>, pub drift: f64 }
+pub struct BeatOver { pub n: u32, pub field: &'static str,   pub phase: &'static str, pub marks: Vec<&'static str>, pub how: &'static str,  }
 /// a teammate's gun on its way in
 #[derive(Clone, Copy, Debug)]
 pub struct GunSwap { pub man: GuardId, pub id: crate::weapons::WeaponId, pub at: f64 }
@@ -198,7 +191,11 @@ pub struct GunSwap { pub man: GuardId, pub id: crate::weapons::WeaponId, pub at:
 pub struct Scan { pub key: Option<GuardId>, pub k: usize, pub from: f64, pub to: f64, pub t0: f64, pub next: f64, pub v: f64, pub on: bool }
 /// loud kit's cost as it last played
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CostSeen { pub field: &'static str, pub i: u32, pub door: bool, pub leaf: f64, pub up: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
+pub struct CostSeen {    pub leaf: f64, pub up: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
+
+/// SAM LED: the place his keys walk him to, the point his hand is on, and whether he is to be down
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Led { pub to: Option<V2>, pub at: Option<V3>, pub low: bool }
 
 /// The director's own state
 #[derive(Clone, Debug)]
@@ -216,7 +213,7 @@ pub struct Acts {
     /// THE HOLD through Sam's frag: the beat it is on for · since when the team is on a knee · each man's knee as it last stood · a row of Sam's has waited for the men since · the beat that has the team down
     pub pin: Option<u32>, pub pin_t: f64, pub kneel_t: f64, pub knees: Vec<(GuardId, f64)>, pub home_t: f64, pub kneel: Option<u32>,
     /// the game's rows as they were, held for a row: FRAG's flee, SAMSTUN's own, the dead lamp's lead
-    pub flee_m: Option<f64>, pub seen_was: Option<bool>, pub lead_was: Option<bool>,
+    pub flee_m: Option<f64>, pub lead_was: Option<bool>,
     /// Sam's weapon light as the game has it · the lit man's beam · the wand's row has the fog of war on for the game · Player.wand as it found it · a teammate's card and what it carried · the load a launcher's row found on the tube
     pub sam_cone: Option<(f64, f64, f64)>, pub beam: Option<V3>, pub fog_up: bool, pub wand_was: bool, pub wand_kit: Option<(GuardId, bool)>, pub tube_was: Option<i32>,
     /// teammates' guns on their way in · each member's colours as the scenario staged him
@@ -239,6 +236,8 @@ pub struct Acts {
     pub life_t: f64, pub life_next: f64, pub life_n: u32, pub life_still: bool, pub life_lamp: Option<LightId>, pub life_hung: bool, pub life_home: V3, pub life_on: Option<bool>, pub life_seen: u32, pub life_cuts: u32,
     /// the cards as last told
     pub cards: Vec<crate::kit::MemberKit>,
+    /// Sam led: what his hand is at until it is let go of (None: his rest)
+    pub led: Option<Led>,
     /// this tick's hand on Sam's own controls, and his cursor
     pub press: Vec<&'static str>, pub clicked: f64, pub cursor: Option<V3>,
     /// FOR THE CHECKS: the last beat over · why the last one asked for did not begin · beats cut · rounds fired · Sam staggered, a teammate dazzled · men the hold put right · the plain restages · a pick waited on
@@ -254,7 +253,7 @@ impl Default for Acts {
             pulled: -1e9, sam_card_due: false, home_men: Vec::new(), hand_due: None, leaf_ask: -1.0, last_end: -1e9,
             vent_at: -1.0, vent_kill: -1.0, step_t: 0.0, step_dt: 0.0,
             pin: None, pin_t: 0.0, kneel_t: 0.0, knees: Vec::new(), home_t: n, kneel: None,
-            flee_m: None, seen_was: None, lead_was: None,
+            flee_m: None, lead_was: None,
             sam_cone: None, beam: None, fog_up: false, wand_was: false, wand_kit: None, tube_was: None,
             swaps: Vec::new(), issued_suit: Vec::new(), issued_trim: Vec::new(),
             walks: Vec::new(), shut_wall: None, shut_own: None, wall_ask: None,
@@ -265,7 +264,7 @@ impl Default for Acts {
             cost_t: n, cost_lamp: None, cost_pool: None, cost_feet: [0.0; 2], cost_n: 0, cost_cuts: 0, cost_last: None,
             life_t: n, life_next: n, life_n: 0, life_still: false, life_lamp: None, life_hung: false, life_home: [0.0; 3], life_on: None, life_seen: 0, life_cuts: 0,
             cards: Vec::new(),
-            press: Vec::new(), clicked: 0.0, cursor: None,
+            led: None, press: Vec::new(), clicked: 0.0, cursor: None,
             last: None, refused: None, cuts: 0, shots: 0, hits_sam: 0, hits_team: 0, pins: 0, restages: 0,
         }
     }

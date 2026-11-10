@@ -8,15 +8,6 @@ pub enum PictureKShow {
     Off,
     Cursor,
 }
-impl PictureKShow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PictureKShow::All => "all",
-            PictureKShow::Off => "off",
-            PictureKShow::Cursor => "cursor",
-        }
-    }
-}
 
 /// the switch and every number of it (UNTUNED by play)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
@@ -58,7 +49,7 @@ pub struct PictureK {
     #[k(0.6)] pub step_after: f64,
     #[k(1.5)] pub step_rest: f64,
     #[k(5.0)] pub step_secs: f64,
-    /// the floor view of one man's picture (ui/pictureviz.ts): 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas
+    /// the floor view of one man's picture: 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas
     #[k(PictureKShow::Off)] pub show: PictureKShow,
     /// the view's reach round the man (m)
     #[k(9.0)] pub show_m: f64,

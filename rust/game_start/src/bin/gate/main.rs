@@ -5,7 +5,7 @@
 //!   gate pin [ROW…]      record the pins again (all, or the rows named) and say which moved; writes pins.txt
 //!   gate breaks          each row of the breaks' table plays unbroken and must PASS; then each of its breaks must FAIL, in its check's own words. exit 0 = all did
 //!   gate long            the quick kind, then the rows that are too slow for it
-//!   gate list            the rows
+//!   gate list            the rows, then the missions no run and no seats row plays
 //!   gate tests [BINARY [TEST]]   the whole native test set (tests.rs); no part of the quick kind
 //!
 //! A row is a line of a child process of this tool (`gate one ROW… [--break=NAME] [--pin]`), because a game is one a process and because a game that panics takes only its own rows with it.
@@ -119,7 +119,8 @@ fn gate(picked: Vec<Row>, whole: bool) -> i32 {
     }
     let share: Vec<String> = kinds.iter().map(|(k, v)| format!("{} {:.0} s", k, v)).collect();
     let passed = order.iter().filter(|n| said.get(*n).is_some_and(|s| s.pass)).count();
-    println!("gate: {} of {} rows pass · {:.1} s (the rows' own seconds: {})", passed, order.len(), t.elapsed().as_secs_f64(), share.join(", "));
+    let words = said.values().filter(|s| s.pass && s.words.contains("only the words moved")).count();
+    println!("gate: {} of {} rows pass · {:.1} s (the rows' own seconds: {}){}", passed, order.len(), t.elapsed().as_secs_f64(), share.join(", "), if words > 0 { format!(" · {} rows' words moved: record them with gate pin", words) } else { String::new() });
     if failed > 0 { 1 } else { 0 }
 }
 
@@ -173,7 +174,9 @@ fn breaks() -> i32 {
     }
     for (k, (n, name, words)) in table.iter().enumerate() {
         let s = &back[&(plain.len() + k)].said[n];
-        if s.pass { wrong += 1; println!("STOOD   {} [{}]: its break did not show", n, name); }
+        // (a word that moved with no figure is no failure: that row passes, and says so)
+        if s.pass && words.starts_with("only the words") && s.words.contains(words) { println!("WORDS   {} [{}]: {}", n, name, s.words); }
+        else if s.pass { wrong += 1; println!("STOOD   {} [{}]: its break did not show", n, name); }
         else if !s.words.contains(words) { wrong += 1; println!("ASTRAY  {} [{}]: it failed without '{}': {}", n, name, words, s.words); }
         else { println!("BROKEN  {} [{}]: {}", n, name, s.words); }
     }
@@ -193,7 +196,7 @@ fn main() {
             if h.join().is_ok() { 0 } else { 2 }
         }
         Some("tests") => tests::run(&a[1..]),
-        Some("list") => { for r in rows::every() { println!("{}", r.name); } 0 }
+        Some("list") => { for r in rows::every() { println!("{}", r.name); } println!("{}", rows::unplayed_line()); 0 }
         Some("long") if a.len() == 1 => long(),
         Some("pin") => pin(pick(rows::every(), &a[1..]), a.len() == 1),
         Some("breaks") if a.len() == 1 => breaks(),

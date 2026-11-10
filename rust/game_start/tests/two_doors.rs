@@ -1,4 +1,4 @@
-//! TWO TEAMS AT NEIGHBORING DOORS (rust/game_rules/src/stackroom/, doorway/): each keeps out of the other's way, and a shut door stays shut until somebody goes through it or works it.
+//! TWO TEAMS AT NEIGHBORING DOORS (rust/game_rules/src/entries/stackroom.rs, doorway/): each keeps out of the other's way, and a shut door stays shut until somebody goes through it or works it.
 use game::doors::{door_latched, doors_by_name};
 use game::ids::DoorId;
 use game::orders::Who;

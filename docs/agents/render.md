@@ -69,8 +69,9 @@ It returns the light in-scattered and what is left of what lies behind.
 **Smoke has two models.** What eyes see through is the game's: half-meter cells in `rust/sim/src/bricks.rs`, stepped ten times a second, the same
 everywhere. What is drawn is `src/smoke/smoke.wgsl`, a GPU solver on sparse 8³ bricks: a coarse lattice (one brick is one game cell) and a fine one
 for gun gas, out of one pool (`smokeGridConfig`). `smokeFrom` hands the grid over where a step was taken, and the solver is **bent toward it** a
-little every step (`SmokeParams`: `bend`, `pull`). Only the game's own share of a cell is measured; a fire's plume or a breath says so in its `K`
-word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame. `SMOKE_LOOK` is how smoke is drawn.
+little every step (`SmokeParams`: `bend`, `pull`), as fast as the gap shows; it thins by the game's law alone. Only the game's own share of a cell is measured;
+a fire's plume or a breath says so in its `K`
+word. After a load or a seek `SmokeSystem.anew` takes the grid whole before the first frame, its color with it (a brick's, two meters square: dust is tan). `SMOKE_LOOK` is how smoke is drawn.
 
 **Eyes.** Buffers hold exposed light. `hourExposure` says what an hour's picture stands for, and every source is drawn at the lesser of its authored
 and its real strength under it (`photometry.ts`). `PlaceField` solves one light level a place from the cache, on `PlaceMap`'s cells. `lookExpoFor`
@@ -88,8 +89,10 @@ Glass: a pane is out of the raster and the trace grid, listed in the info block 
 mirrors, the composite its tint and bend. Outdoors: `skyRadiance` paints the sky; rain is the march and `src/picture/rain.ts`, snow `snowField.ts` and
 `src/picture/snow/`.
 
-**Quality.** `PRESETS` has `high`, `medium`, `low`, `verylow`. At boot `calibrateTick` times the live picture behind the card and `plan` picks a
-preset and scale from `COST`. Then `sample` judges a window a second under `ladderBands`; `ladderAim` is 60, the maintainer's pick. Under the aim with
+**Quality.** `PRESETS` has `high`, `medium`, `low`, `verylow`. At boot `calibrateTick` times the live picture behind the card by the GPU's busy span (the passes'
+sum counts overlaps twice) and `plan` picks a preset and scale from `COST`: a tier is drawn up to `TIER_CUT` under its own start before the tier below is picked, the hop up
+reads the same, and the first window at a tier auto went up to corrects its price for a while (`seen`). Then `sample` judges a window a second under `ladderBands`; `ladderAim`
+is 60, the maintainer's pick. Under the aim with
 the GPU the limit, the scale is cut to what the cost model says lands on target, down to `SCALE_FLOOR`, then the preset drops (`HOLD`). With room,
 `CLIMB` takes a step at a time and undoes it on a bad window. `SHED` drops sharp direct under auto before it takes pixels ("Auto drops it"). `PACED`
 leaves alone a page held to a low rate by something else. `?quality=` pins a tier, `?adapt=0` holds the one it stands on. `EVENPACE` draws at the
@@ -150,7 +153,8 @@ Checks (`bun run tools/qa/checks.ts <name>`): `frame-layout.ts` (the block again
 `quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
 `settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`.
 
-Page scripts (`bun run tools/qa/pages.ts <name>`): `wgsl-compile.cjs`, `keeppage-page.cjs`, `weather-page.cjs`, `smokejump-page.cjs` (after a jump the
+Page scripts (`bun run tools/qa/pages.ts <name>`): `wgsl-compile.cjs`, `keeppage-page.cjs`, `weather-page.cjs`, `smokelife-page.cjs` (the running smoke is the
+game's; `--life` on a card), `smokejump-page.cjs` (after a jump the
 drawn smoke is the game's); the tools `framecap-page.cjs`, `perf-sweep-page.cjs`, `shader-count-page.cjs`.
 
 Native tests in `rust/game_start/tests/`: `draw.rs` (drawing changes nothing of the game; frames stand between ticks), `box_tables.rs`, `fog.rs`,

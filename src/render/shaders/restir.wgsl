@@ -55,7 +55,7 @@
 //                unshadowed weight if several do), their E × V added to S exactly and their hue with it — what the leader path gave a flash, and what the cascades /
 //                gather already do with transients (history-free). Through the reservoirs a stroke of lightning lost a tenth of its floor on the frame it
 //                struck (the pixels whose one fresh draw fell on the moon or a lamp instead) and its second return stroke came through MIS at half height a frame
-//                late (a 13× jump against twenty frames of confidence in its own decayed record): docs/internal/tjank.md §B. U counts them (exact, as ever); the
+//                late (a 13× jump against twenty frames of confidence in its own decayed record). U counts them (exact, as ever); the
 //                denoiser's jump yardstick (U.a) counts them too, so their arrival and departure are light-jumps there; the believed-visible hue Uv does not.
 //     HELD       (the HYBRID estimator, lane v3/direct-quality; ru.cfg.x bits 8‥11 = K, 0 = off: the transient stratum above exactly as it was) — every light with an
 //                OWNER (a character carries it: the guards' torches, Sam's rail / gun light, muzzle flashes and tracer heads — a handful at once) bypasses the reservoirs at
@@ -68,11 +68,11 @@
 //                the cone crossed thin geometry ("the flashlight direct lighting seems like a huge regression now. very noisy and lots of rims" — the maintainer, at high;
 //                ?norestir "looks great"). Static lights (owner 0: panels, lamps, vending fronts, the moon) keep ReSTIR unchanged. Bounded by construction: only the pixels
 //                a held light reaches, ≤ 2K + 2 rays there.
-//     MOTION     (lane fix/direct-motion, docs/internal/direct-motion.md; its three parts are bits of ru.cfg.w, which the host raises on the frames the camera moved; with none up the estimator's
+//     MOTION     (its three parts are bits of ru.cfg.w, which the host raises on the frames the camera moved; with none up the estimator's
 //                arithmetic is the still frame's. Until 2026-11-07 it was a second program, `restirM`). Under CAMERA motion the temporal reuse above flows: a pan of v px a frame
 //                reprojects every pixel to the NEAREST texel ⌊x − v + ½⌋, so at v = 2.44 the whole raster inherits from x − 2 while the picture moved 2.44 — the reservoir pattern
 //                slides 0.44 px a frame across the floor the resolve holds still, and after M frames a lineage was drawn and validated for points up to M × 0.44 px behind the
-//                pixel: 2–7-px blotches crawling under a panning floor and busier penumbra edges (docs/internal/gi-motion.md measured it: ReSTIR calmer than the leader path ×2‥40 at
+//                pixel: 2–7-px blotches crawling under a panning floor and busier penumbra edges (measured: ReSTIR calmer than the leader path ×2‥40 at
 //                rest, ×1.5‥2 noisier under a pan). Three switchable parts, each on ru.mot / cfg.w: (a, 256) STOCHASTIC-BILINEAR reprojection — the texel inherited is one of
 //                the four round the reprojected point, drawn with its bilinear weight from a per-pixel-per-frame hash (a neighbour's spatial tap at pixel q re-derives q's own
 //                pick), each candidate validated by its depth signature exactly as the nearest one was and a rejected one handing its probability to the rest (none valid = no
@@ -363,7 +363,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     tw = prevTexelAt(Pu, P, gxy, dims, true);   // (P: the raster's own point — the motion is measured off it)
     motionPx = mvPx;   // (MOTION: this pixel's own screen motion, px — read before any spatial tap's reprojection reuses mvPx)
     { let pen = rHint(tw.x) > 0.0 || rHint(tw.z) > 0.0; if (pen && penRays) { fresh2Pix = true; } }   // (D: this pixel sat in a penumbra last frame — see penRays above)
-    if ((ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two (docs/internal/direct-motion.md §2)
+    if ((ru.cfg.w & 512u) != 0u) { mCapPix = max(1.0, mCapPix * (1.0 - (1.0 - ru.mot.y) * smoothstep(ru.mot.x, ru.mot.x * MOTION_RAMP, motionPx))); }   // (b) MOTION-SCALED CONFIDENCE: the memory this pixel keeps (and stores) is whole under mot.x px a frame of its own motion and × mot.y past MOTION_RAMP × that — measured, not modelled: at 0.8 px a frame (770 rows) the nearest-texel history is still worth its 20 candidates and any cut costs 10–25 % MORE flow; at 1.4–2 px it is worth about two
     darkSlot = ((tw.y >> 28u) & 7u) | (((tw.w >> 28u) & 7u) << 3u);   // (the two B words' spare bits 28‥30; read before a gone light zeroes its word below)
     if (darkSlot != 0u) { let ns = fwdSlot(darkSlot - 1u); darkSlot = select(ns + 1u, 0u, ns >= 63u); }   // by identity; gone (255) or slot 63 (unrepresentable in 6 bits + none) = none
     if (rValid(tw.y)) { curT[0] = fwdSlot(rSlot(tw.x)); if (curT[0] == 255u || stratumLight(wgLights[min(curT[0], 63u)], hybrid)) { curT[0] = 255u; tw.y = 0u; } }   // (a transient — or, under the hybrid, a carried light — is never adopted below; one held from before that rule counts as gone)
@@ -452,7 +452,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           // keeps its history — the sample's VISIBILITY is exactly as valid as it was, and the MIS below already weighs last frame's target against this frame's, so
           // the estimate follows the light within the frame either way. Cutting M there (the first cut did, symmetrically) rebuilt every reservoir under the panel
           // from one fresh sample twice per flicker period: 1–3-spp penumbrae the shadow filter could neither trust nor clamp, i.e. blotches that pumped with the
-          // tube (docs/internal/tjank.md §A). A cone that swept off the pixel or a lamp that moved still lets go as before.
+          // tube. A cone that swept off the pixel or a lamp that moved still lets go as before.
           var r = pT[c] / pPT[c];
           { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
@@ -518,7 +518,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       // jitter — the reservoir came from the neighbouring texel across a shadow edge, whose visibility is simply not this point's; keeping its confidence at zero
       // weight dilutes the fresh candidate by 1/(M+1) and biased soft shadows DARK by 5–11 %. A fresh candidate that comes back dark, on the other hand, IS this
       // point's information and is stored as a zero-weight reservoir with its M (below): discarding those kept only the lucky samples and biased soft shadows
-      // BRIGHT by 5–35 %. (Measured both ways on the cubicle floor under the panels, docs/internal/p2a-restir.md §3.4.)
+      // BRIGHT by 5–35 %. (Measured both ways on the cubicle floor under the panels.)
       if (valid && VT[c] <= 0.0 && rW(select(tw.y, tw.w, c == 1u)) > 0.0) { valid = false; }
       if (!valid) { Mt[c] = -1.0; }                                 // (−1: no temporal at all)
       // gradient vote: the fresh one-sample estimate vs the temporal one (both estimate the class's visible luminance here)

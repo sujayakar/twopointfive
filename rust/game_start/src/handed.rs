@@ -5,12 +5,13 @@
 //! that may be left out is handed empty.
 use crate::gltf::GltfFile;
 use crate::json;
-use crate::stand::{stand_with, Assets, StartOpts, Stood};
+use crate::host::kept::Kept;
+use crate::stand::{stand, Assets, StartOpts, Stood};
 use alloc::{format, string::String, vec::Vec};
 
 /// the parts a host hands, in order (a host's packer names them by these places)
 pub const PARTS: [&str; 7] = ["the level file's text", "the address's words (empty: none)", "the mannequin's gltf", "the mannequin's buffer", "the cast's gltf (empty: none)", "the look's cast's gltf (empty: none)",
-    "what the host does to the game before it is made (its commands; empty: nothing)"];
+    "what the machine keeps (empty: nothing)"];
 
 /// the parts of a handed run of bytes; an error says what is wrong with the bytes
 pub fn parts(b: &[u8]) -> Result<Vec<&[u8]>, String> {
@@ -27,17 +28,17 @@ pub fn parts(b: &[u8]) -> Result<Vec<&[u8]>, String> {
     Ok(out)
 }
 
-/// STAND A GAME FROM WHAT A HOST HANDED. `host` does the host's commands and its address's words to the game before anything is read (the host's lists: game_run `command`, `words`). `o.link` is the handed address's words (what `o` held of it is not read). A run of bytes that is not a
-/// start's, a text that is not text, or a level file that does not read stops with its reason, as `stand` does for a file it does not carry.
-pub fn stand_handed(b: &[u8], o: &StartOpts, host: &mut dyn FnMut(&mut game::game::Game, &str, &[u8])) -> Stood {
+/// STAND A GAME FROM WHAT A HOST HANDED. `o.link` and `o.kept` are the handed address's words and the handed record (what `o` held of them is not read). A run of bytes that is not a
+/// start's, a text that is not text, a record that is none, or a level file that does not read stops with its reason, as `stand` does for a file it does not carry.
+pub fn stand_handed(b: &[u8], o: &StartOpts) -> Stood {
     let p = parts(b).unwrap_or_else(|e| panic!("a start was handed bytes that are not a start's: {}", e));
     let text = |i: usize| core::str::from_utf8(p[i]).unwrap_or_else(|_| panic!("{} is not text", PARTS[i]));
     let some = |i: usize| if p[i].is_empty() { None } else { Some(GltfFile { text: text(i), bin: None }) };
     let data = json::parse(text(0)).unwrap_or_else(|e| panic!("{}: {}", PARTS[0], e));
     let assets = Assets { mannequin: GltfFile { text: text(2), bin: Some(p[3]) }, cast: some(4), cast_look: some(5) };
     let link = if p[1].is_empty() { None } else { Some(String::from(text(1))) };
-    // (a host that handed commands read its address onto the game by them, with whatever it keeps, so the address's difficulty is not laid over them; one that handed none has not)
-    stand_with(&data, assets, &StartOpts { link, difficulty: p[6].is_empty(), ..o.clone() }, &mut |g| host(g, text(1), p[6]))
+    let kept = Kept::read(text(6)).unwrap_or_else(|e| panic!("{}", e));
+    stand(&data, assets, &StartOpts { link, kept, ..o.clone() })
 }
 
 #[cfg(test)]
@@ -49,7 +50,7 @@ mod tests {
         let b = pack(&[b"{}", b"", b"m", &[1, 2, 3], b"", b"look", b"c"]);
         assert_eq!(parts(&b).unwrap(), [&b"{}"[..], b"", b"m", &[1, 2, 3], b"", b"look", b"c"]);
         assert!(parts(&pack(&[b"{}", b""])).unwrap_err().contains("2 parts"));
-        assert!(parts(&b[..b.len() - 1]).unwrap_err().contains("what the host does"));
+        assert!(parts(&b[..b.len() - 1]).unwrap_err().contains("what the machine keeps"));
         let mut more = b.clone(); more.push(0);
         assert!(parts(&more).unwrap_err().contains("1 bytes follow"));
         assert!(parts(&[1, 0]).is_err());

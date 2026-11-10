@@ -1,6 +1,6 @@
 //! The types of `powerout`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -24,16 +24,6 @@ pub enum Phase {
     Wait,
     There,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Out => "out",
-            Phase::Back => "back",
-            Phase::Wait => "wait",
-            Phase::There => "there",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Man {
@@ -55,14 +45,6 @@ pub enum ManRole {
     #[default] Cover,
     Lever,
 }
-impl ManRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManRole::Cover => "cover",
-            ManRole::Lever => "lever",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PowerOutEvent {
@@ -72,7 +54,7 @@ pub struct PowerOutEvent {
     pub why: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum PowerOutEventWhat {
     #[default] Stay,
     Lost,
@@ -86,24 +68,6 @@ pub enum PowerOutEventWhat {
     Wrecked,
     Restored,
     Overdue,
-}
-impl PowerOutEventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PowerOutEventWhat::Stay => "stay",
-            PowerOutEventWhat::Lost => "lost",
-            PowerOutEventWhat::Home => "home",
-            PowerOutEventWhat::Go => "go",
-            PowerOutEventWhat::There => "there",
-            PowerOutEventWhat::Said => "said",
-            PowerOutEventWhat::Noticed => "noticed",
-            PowerOutEventWhat::Nobody => "nobody",
-            PowerOutEventWhat::Abort => "abort",
-            PowerOutEventWhat::Wrecked => "wrecked",
-            PowerOutEventWhat::Restored => "restored",
-            PowerOutEventWhat::Overdue => "overdue",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -131,106 +95,6 @@ pub struct StateSeenItem {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct CalmSnap {
-    pub hold: bool,
-    pub home: V3,
-    pub watch: f64,
-    pub pt: V3,
-    pub pinned: bool,
-    pub awareness: f64,
-    pub station: V3,
-    pub ev: Vec<f64>,
-    pub want: f64,
-    pub room: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PowerOutSnap {
-    pub since: f64,
-    pub decide_at: f64,
-    pub go_at: f64,
-    pub way_m: f64,
-    pub overdue_at: f64,
-    pub fell: Option<V3>,
-    pub seen: Vec<crate::powerout::PowerOutSnapSeenItem>,
-    pub look_at: f64,
-    pub decided: bool,
-    pub word: bool,
-    pub parties: f64,
-    pub lost: bool,
-    pub men: Vec<crate::powerout::PowerOutSnapMenItem>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PowerOutSnapSeenItem {
-    pub i: f64,
-    pub lit: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PowerOutSnapMenItem {
-    pub i: f64,
-    pub role: crate::powerout::ManRole,
-    pub phase: crate::powerout::Phase,
-    pub goal: V3,
-    pub from: V3,
-    pub watch: Option<V3>,
-    pub tries: f64,
-    pub step_t: f64,
-    pub heard0: f64,
-    pub there_t: f64,
-    pub calm: Option<crate::powerout::CalmSnap>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PowerOutSnapMenItemRole {
-    Cover,
-    Lever,
-}
-impl PowerOutSnapMenItemRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PowerOutSnapMenItemRole::Cover => "cover",
-            PowerOutSnapMenItemRole::Lever => "lever",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum EventWhat {
-    Stay,
-    Lost,
-    Home,
-    Go,
-    There,
-    Said,
-    Noticed,
-    Nobody,
-    Abort,
-    Wrecked,
-    Restored,
-    Overdue,
-}
-impl EventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventWhat::Stay => "stay",
-            EventWhat::Lost => "lost",
-            EventWhat::Home => "home",
-            EventWhat::Go => "go",
-            EventWhat::There => "there",
-            EventWhat::Said => "said",
-            EventWhat::Noticed => "noticed",
-            EventWhat::Nobody => "nobody",
-            EventWhat::Abort => "abort",
-            EventWhat::Wrecked => "wrecked",
-            EventWhat::Restored => "restored",
-            EventWhat::Overdue => "overdue",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct WayTo {
     pub path: Vec<V3>,
     pub l: f64,
@@ -243,15 +107,7 @@ pub struct CoverSpot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PoweroutMod {
-    /// (src/game/powerout.ts:111 STATES)
     pub states: Option<crate::powerout::State>,
-}
-impl PoweroutMod {
-    pub fn blank() -> Self {
-        PoweroutMod {
-            states: None,
-        }
-    }
 }

@@ -1,29 +1,14 @@
 //! The types of `render_lights`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightSet {
     pub lights: Vec<LightId>,
     pub ir: Vec<LightId>,
-    /// (holds nothing: in no bytes)
-    #[bytes(skip)]
-    pub device: crate::Opaque,
-    pub fog_team: crate::render_lights::LightSetFogTeam,
+    #[is(crate::render_lights::LightSetFogTeam { on: false, owners: JsSet::new(), lights: JsSet::new() })] pub fog_team: crate::render_lights::LightSetFogTeam,
 }
-impl LightSet {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        LightSet {
-            lights: Vec::new(),
-            ir: Vec::new(),
-            device: crate::Opaque,
-            fog_team: crate::render_lights::LightSetFogTeam { on: false, owners: JsSet::new(), lights: JsSet::new() },
-        }
-    }
-}
-impl Default for LightSet { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LightSetFogTeam {
@@ -60,7 +45,6 @@ pub struct RtLight {
     pub mark_ref: Option<f64>,
     pub card: bool,
     pub slot: Option<f64>,
-    pub glass_mask: Option<f64>,
     pub fog: Option<f64>,
     pub fog_ghost: Option<f64>,
     pub fog_by: Option<f64>,
@@ -81,15 +65,7 @@ pub struct RtLightSteady {
 pub struct RtLightPortal {
     pub half_wide: f64,
     pub share: f64,
-    pub deep: Option<f64>,
-    pub rims: Option<f64>,
 }
 
-/// (src/render/lights.ts:76 MAX_LIGHTS)
 pub const MAX_LIGHTS: f64 = 64.0;
 
-/// (src/render/lights.ts:83 REACH_BYTES: a table nothing writes)
-pub fn reach_bytes() -> f64 { todo!() }
-
-/// (src/render/lights.ts:85 REACH_VEC4S: a table nothing writes)
-pub fn reach_vec4_s() -> f64 { todo!() }

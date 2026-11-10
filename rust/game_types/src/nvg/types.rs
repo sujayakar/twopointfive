@@ -1,6 +1,6 @@
 //! The types of `nvg`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -9,34 +9,14 @@ pub enum Mode {
     Free,
     Dark,
 }
-impl Mode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Mode::Off => "off",
-            Mode::Free => "free",
-            Mode::Dark => "dark",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Why {
-    #[default] YourLight,
-    YourGoggles,
-    NotCompromised,
+    #[word("your light")] #[default] YourLight,
+    #[word("your goggles")] YourGoggles,
+    #[word("not compromised")] NotCompromised,
     Compromised,
-    NoRule,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::YourLight => "your light",
-            Why::YourGoggles => "your goggles",
-            Why::NotCompromised => "not compromised",
-            Why::Compromised => "compromised",
-            Why::NoRule => "no rule",
-        }
-    }
+    #[word("no rule")] NoRule,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -63,49 +43,12 @@ pub struct Team {
     pub call_due: bool,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct NvgNote {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct NvgState {
-    pub mode: crate::nvg::Mode,
-    pub why: crate::nvg::Why,
-    pub quiet_for: f64,
-    pub men: Vec<crate::nvg::NvgStateMenItem>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NvgStateMenItem {
-    pub gd: GuardId,
-    pub down: bool,
-    pub dark: bool,
-    pub dim: bool,
-    pub black: bool,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NvgMod {
-    /// (src/game/nvg.ts:93 NVG_LOG)
-    pub nvg_log: Vec<crate::nvg::NvgNote>,
-    /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
 }
-impl NvgMod {
-    pub fn blank() -> Self {
-        NvgMod {
-            nvg_log: Vec::new(),
-            teams: None,
-        }
-    }
-}
 
-/// (src/game/nvg.ts:138 LOOK_M: a table nothing writes)
 pub fn look_m() -> Vec<f64> { alloc::vec![2.0, 5.0, 8.0, 12.0, 16.0] }
 
-/// (src/game/nvg.ts:138 TUBE_M)
 pub const TUBE_M: f64 = 8.0;

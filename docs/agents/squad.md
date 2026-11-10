@@ -1,1397 +1,183 @@
 # Squad orders
 
-One of the area files CLAUDE.md indexes. Everything below was moved here word for word from CLAUDE.md on 2026-10-13, in its old order;
-"the bullet above / below" in a bullet means its neighbour there (each block says which lines it was), and a bullet named by its bold
-title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
+How Sam orders his teammates and what they do with it. Door orders are `door-tools.md`, fighting in a room is `team-feel.md`, what the men
+say is `dialogue.md`.
 
-<!-- was CLAUDE.md lines 237–239 -->
-- **The orders menu** (`rust/game_rules/src/orders`, `Game.orders`, `__orders`): `X` or the middle mouse button opens it on what the cursor is on (a door, a spot of floor, nothing),
-  digits 1‥5 pick (1 the target's own order · 2 cover · 3 fall in · 4 hold · 5 a page: 'door tools ▸'), `T` steps who takes it (gold / red / blue / one man), `B` = the first
-  row at once, `F` = the word for an order that waits on Sam. Nothing is ever on a digit above 5. Sam's own digits: 1 pistol · 2 rifle · 3 smoke · 4 stun · 5 frag (`game.ts KIT_ORDER`).
+## What the player gets
 
-<!-- was CLAUDE.md lines 324–327 -->
-- **Log lines on a squad mission name the man** (10-11, off a tape of the compound; each under `WORDS.on` — off = as it read): a unit's cut-off last line is logged
-  under his own callsign (combat.ts killGuard, player.ts: 'Red Two: man down.', never 'guard:', as guards.ts `say` files a unit's line), a defender the PLAYER drops reads
-  'Tango N down' ('guard down — dead' stays for the night watch), and a room clear that ends with Sam down and a teammate still up says 'player down' (it read 'Sam down' until 10-15), on the log and the
-  objective row (roomclear.ts `endSay`; 'team wiped' only when nobody was up). `probes.ts roomclear-ends` holds both sides of the switch.
+- **Two keys.** Q tells the squad to do the obvious thing with whatever the cursor is on. F is the word: it sends whoever is waiting for it.
+- **Tap Q** on floor and they move there, on a door and they stack up, on Sam and they fall in, on one teammate and he alone falls in. No menu opens.
+- **Hold Q** for the ring at the cursor. It carries every order for that thing and stays up after the key comes up. A row they cannot do says why.
+- **Shift + Q** sends part of the squad and leaves the rest on what they were doing. Shift with Q kept down is the ring for that part.
+- **Tap Q twice** on one place (`twice_secs`) and every teammate drops what he has and falls in.
+- Left alone they walk at Sam's pace, stay out of doorways, never shove him, and keep guns on the ways in.
 
-<!-- was CLAUDE.md lines 771–819 -->
-- **Squad orders** (`rust/game_rules/src/orders`, `Game.orders: SquadOrders`, `__orders`; records rebuild/room-clear/orders.md and — the press menu + who takes an order — rebuild/four-squad/orders.md): Sam's LIVE orders to the operative
-  units on his side (any `gd.unit && gd.team === 'operative'` in `Game.guards` — the night breach's pair, or four in two pairs under `?squad4`), a Ready or Not style command menu.
-  NOTHING IS HELD: a PRESS of `X` (or the middle mouse button, `ORDERS.mouseOpens`) puts the menu up on what the CURSOR was on at the press and it STAYS UP, frozen on that target
-  (as a ring on the place itself: the menu is only ever a ring), until a row is picked or it is dismissed (`X` again, Esc, a right click, the cancel row, `'Blur'`, Sam down, the men it was for all down — and THE TRIGGER, below);
-  `open(target) / close() / pick(i)` are the same from code. The target (`targetUnder`: the cursor's own ray, never the auto-aim's snapped `aimPoint`; WHAT IS DRAWN UNDER THE CURSOR FIRST — a teammate's
-  body the ray lands on, else (`ORDERS.doorRay`) a door whose own LEAF is under it or whose DOORWAY it looks through (the ray crosses the doorway's rectangle with nothing of the scene in
-  front and lands within `doorRayReachM`) unless Sam's own body is under it or another door is by the landing point — then what is NEAR the landing point: door within `ORDERS.doorPickM` / teammate / Sam
-  himself, else free floor. Without `doorRay` an open doorway mostly got the floor's menu and a teammate a step from the landing point his own: neither has door rows. `probes.ts doormenu` holds it for
-  every door of every start-card scenario), rows = the `OrderDef`s whose `targets` fit, one that cannot be carried out there (per man `can`, together `valid` → the reason:
-  no nav path, a door locked against Sam on EVERY way — `route()`, which also hands `assign()` waypoints round one that is only on the short way —, no room at the
-  jambs, no line to cover from) GREYED with the reason and refused aloud; a man who alone cannot do his part says so and is left as he was; FIXED digits
-  (`OrderDef.key`: 1 the target's own order, 2 cover, 3 fall in, 4 hold; `register()` deals the first page's 5 and NEVER a digit above `ORDER_DIGITS` 5 — the
-  left hand's reach from WASD, the maintainer's note; a menu with more to offer is in PAGES, Ready or Not's way: a row with `OrderDef.opens` turns the menu
-  to the rows registered with that `page`, dealt 1 up, on the same target and men — Esc or a right click on a page = back a page, X
-  closes from anywhere; digits 6‥9 are eaten and do nothing while a menu is up; `probes.ts orderkeys` walks every menu of every scenario for it); a digit picks its row at once; wheel / ↑↓ move
-  the highlight and Space or THE MIDDLE BUTTON AGAIN gives the highlighted row (button twice = the first row). Everything the menu answers to is taken OUT of the frame's input
-  first while it is up (a digit is not a weapon slot, the wheel not his pace, Esc / Space not the selector's, the right click not the OCP); the frame it OPENS on takes nothing
-  else. THE LEFT BUTTON IS ALWAYS SAM'S TRIGGER: a left click with the menu up puts it away and fires (`ORDERS.clickGives`, off: the click gives the highlighted row instead and
-  fires nothing — an A/B for the maintainer). `B`
-  (`ORDERS.quickKey`) = the target's FIRST row at once with no menu (move there / stack up / fall in — RoN's default command). WHO takes the next order = `orders.who`
-  (`'all'` | a `PairId` | a man's index), shown on the HUD at all times in the element's colour (`Tone` gold / red / blue; `OrderHudRow.tone` → `.t-<tone>` in index.html, `TONE` in
-  the native overlay): `T` steps it — a squad in pairs (`orders.paired`) all (GOLD) → RED → BLUE → all, the one pair all → each living man → all —, `T` with the
-  cursor ON a teammate addresses that man (T on him again = everyone — `whoAfterT(point)` is the one rule, the HUD's T line reads it), a menu OPENED on a teammate is his alone (he goes down: the menu goes), and `ORDERS.wheelElement` (off) makes the wheel step the
-  element as RoN's does instead of the highlight. A door tool given to one pair is worked by that pair (the other pair is left as it was). Orders: `move` (two spots abreast, gun up on the way,
-  'set.'), `stack` (`stackPosts`: a man a jamb on Sam's side, both in file where one jamb has no floor), `cover` (gun on a point / a door from where he stands), `fallIn`
-  (places back along Sam's crumb trail — through the doors he took — at Sam's measured pace + a gain on the gap; a man Sam walks back at steps aside and falls in behind:
-  `aside()`; Sam stopped, a man already near him in plain sight stays put — `nearM / bandM`), `hold` (a stride on from a run). The men take turns acknowledging in a word; a man lowers his muzzle while Sam is in its line. The men are moved through squad.ts `order()` on `Guard.script`
-  from `orders.tick()` (game.ts, after `nightBreach.tick`, before `tacticsTick`); `orders.input()` runs between `updateAim` and `updateInteract`. AN ORDER SETS WHERE A MAN IS
-  AND WHERE HE WATCHES, never when he shoots: the seam for a fight layer = a man whose script somebody ended with state 'alert' is left to the fight AI while his fight is
-  warm (a sighting / a shot heard / the hand-over inside `ORDERS.coldSecs`, or mid-reload — or `orders.fight.engaged(gd)` when a layer sets the `FightLease`; pinned on his
-  post), then taken back. `register(def, before?)` adds a row at the foot (a later part's door tools — refuse in `valid`, never from `issue`; `OrderDef.tick` = its per-frame
-  stages, `newGroup()`);
-  `owners: SquadOwner[]` = drills that move the squad themselves (the night breach: an order while it is stacking / set calls it off, while it is going is refused, once
-  inside recalls — `NightBreach.ownsPair / callOff()`, state `'recalled'`); F there takes the pair back. Inert (a pass over the guard list) with no squad, under any show /
-  `quietUtility` / puppet. The HUD: `game.view.squad` (the Rust game's words, once a tick: `rust/game_rules/src/orders/hud.rs`: who the orders go to, every man and what he is doing, the addressed ones marked, the notes, the corner's) and `orders.quickLine()`, what the quick key would do on what the cursor is on, read by the overlay's `deriveInteractions`. The listed panel of an open menu, its mark in the world and its hint before the key are gone (settled: the ring). THE MENU'S KEY IS GONE TOO, A CHANGE OF PLAY (2026-11-08): the Rust input no longer opens a menu with no ring on `ORDERS.key`, Options and the keymap have no such row, a key kept on it from before is dropped, and a check that wants a menu up asks `O.open` (`tools/qa/squadwords.ts menuKey`). The middle button's road went with it. The knobs `ORDERS.key` and `mouseOpens` are read by nobody. QA: `probes.ts squadorders` (orders-off / menu / move / cover / stack / fallin / one / nightbreach / seams / edges — every order through the
-  harness cursor and one-frame presses) + `probes.ts orderui` (the four: one order to gold / red / blue / one man with no key held, the HUD's words, a door tool to one pair). NOT arbitrated: a Director play program / the QRF scripting an operative who is under one of Sam's orders.
-- **B is the squad's autopilot** (`rust/game_rules/src/autopilot`, `AUTOPILOT.on`, `__autopilot`; ON in the page, `?noautopilot` / Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ the squad picks the entry' = B is the target's first row as it was; OFF in the module and on the frozen stand, `TPS_AUTOPILOT=1` raises it, FROZEN_HOLDS row `AUTOPILOT.on`; in JOURNAL_KNOBS, a recording with no AUTOPILOT table replays with it off; page rebuild/commanding/read-first.md; the maintainer 10-13: '"B" is the "autopilot" mode where the squad does the reasonable thing (and then maybe briefly shows their plan and then fades out), while X is the sweatier mode'). orders.ts `input()` hands the quick key to `autoQuick(g, t)`: floor / nothing / a teammate / a door nobody of the addressed men waits on = the first row, as ever; a door they STAND on a plain 'stack up' at (`DoorTools.waitsOn` → `set`: every man on his mark — a second tap while they walk is 'stack up' again) = they go in by the entry `autoPick` takes, given to the men on the door and nobody else (`GiveOpts.men`); a door something else of theirs waits on (on the word, a held threshold, a charge set or being set) = the word to the men on that door (the pair: its held threshold's word, or its set charge blown by the row); a set charge nobody waits on = blown, never one on a word still gathering (`wordPending`). THE ENTRY (`autoEntries`, the first whose row's `valid` takes it): silent squad → open and clear only (never made loud); an enemy the team has in sight in the room beyond (the fog's picture where it is on, else `fight.teamSees`) and a stun left, or a room nobody has stood in (cleared.ts) and more than `keepBangs` 1 left → bang and clear; else open / kick / pick and clear; none of those and the door known shut → a charge, which is set and WAITS. Never a frag, a wall, or a second door: those are the menu's. THE PLAN: a quick-key row in the order book is stamped `auto` and floorplan.ts draws its men for `showSecs` 4 (the menu's own order: `PLAN.freshSecs` 2.5), the newest thing that names a man deciding; `AUTOPILOT.replan`: doortools.ts `haltAt` (a door found shut — they stop and stack) calls `orders.show(men)` the frame it re-assigns them and they are drawn the same way (`SquadOrders.shows`, picture only, in no digest). The HUD's B line (`autoHint`) is the FIRST choice in the row's words with no path search; the press may fall back. QA: `probes.ts autopilot` (tools/qa/autopilot-check.ts, in `squadorders`; nine lines, both stands; `AUTOPILOT_BREAK=1` fails eight and must): B through the game's input on the office room clear, four and the pair. MEASURED since (10-14): 'Who commands best: the three-hands tally' below. NEVER seen on a GPU, never played; the contact rule is checked with a STAGED sight only; the halt's own call of `show` is not staged (the picture path is, by a direct call).
-- **The plan laid for the word is removed** (2026-11-07, cut with his list): `src/game/planlay.ts` went on both sides, with its check and `tools/qa/command-tally.ts` (which held the solo, `b` and `plan` hands: the last commit with them is the parent of the commit that removed the plan). The word itself stays: a second door and the word sends both in (`F`).
-- **The orders ring on Tab, a PROTOTYPE to play before it is committed to** (`rust/game_rules/src/cmdring`, `CMDRING.on`, drawn by `src/ui/cmdring.ts`; the maintainer, 10-20:
-  "want to play with it in game a bit before we commit to it", and of the one key "yeah I like that!"; the design and what he agreed, with his words:
-  rebuild/commanding/command-mode.md). SWITCH: OFF in the module, OFF in the page, OFF on BOTH stands (no `FROZEN_HOLDS` row: the stands do
-  not differ); `?cmd` on the address or the debugger's tick 'Tab ▸ the orders ring (to try)' puts it on; the table is in the knob registry and the journal
-  (a recording from before the key replays with it off). Off = the build as it was: Tab is nobody's, and the only shared code moved is the quick key's give and
-  its HUD words, now the autopilot's `auto_quick` / `SquadOrders.quickWords` (after it the squadorders, checkpoints and calls families are all green on the frozen stand; on
-  shipped all green but orders-cover, orders-stack, checkpoint-autosave, checkpoint-civilians and calls-rally, each red the same way on the untouched build
-  head of that day). WHAT IT IS: Tab DOWN puts the order
-  menu up as a ring at the cursor (the menu itself: `open` / `turn` / `pick`, so every row, refusal and reason is the menu's; `SquadOrders.cmdRing` beside it
-  holds the ring's middle and the lit wedge; `ringInput` runs ahead of the menu's input; the panel lists no menu while a ring is up, and the menu's own mark
-  in the world is not drawn: its words, who → what, sit under the ring); Tab UP gives the lit wedge. The first page's first wedge is the QUICK KEY'S order, so a tap is B exactly. Held: a digit 1 to 5, or the cursor out of the ring's middle
-  (`flickPx`), lights that wedge; a wedge that opens a page turns the ring to it and lights nothing; the wheel steps who; a left click on a man (his body as T
-  reads it, or his feet inside `manPx`) makes the orders his and starts the ring again, first wedge lit; Esc, or a right click on the first page, gives
-  nothing; a left click on nobody is Sam's trigger and the ring goes. The cursor counts from the ring's middle and only once it has been back there since the
-  ring last changed under it (a page, a digit, a man, a ring opened at the view's edge and stood in by `edgeX` / `edgeY`), so the hand coming back picks
-  nothing on the way. BEFORE THE KEY (`CMDRING.hint`: off in the module and on both stands, raised by the page with the ring, `?nocmdhint` or the debugger's tick
-  'Tab ▸ the ring ▸ a hint at the cursor' leaves it off, and a recording from before the key replays without it; a picture only; the maintainer, 10-20: "we
-  should some visual indication of what type of menu will open when you hit tab on the cursor. this could be a door icon, a wall icon, etc on the cursor"):
-  (REMOVED with the listed panel, under the settled `bareHint`.) `SquadOrders.hintView` named what the cursor is on as the ring would take it (door, wall, man, floor, thing, foe, or the squad itself where the cursor is
-  on nothing an order goes to) and `ui/cmdring.ts updateHint` draws a glyph for it up and right of the cursor (the other way at the view's edge) and the
-  thing's outline on the floor (a doorway's line, a stretch of wall never past the wall's ends, a ring at a man's feet or on the spot; the squad's menu has
-  a glyph alone), in the colour the ring would open in. It is drawn only where the key would open a ring (`ringFree`, shared with `ringInput`: no menu up,
-  Shift not down, nothing the key backs out of instead); with the ring up the glyph sits in its middle and is the ring's own target. Before the key the
-  target is asked again whenever the camera has moved (hover()'s kept answer is dropped), so the outline stays under the cursor. No words are put on the
-  cursor (the panel's line has them). THE RING'S SIZE FOLLOWS THE WINDOW (`CMDRING.ref`, `ringZoom`): the flick, the edge margins, a click near a man's
-  feet and the picture grow together in a window over 1920 × 1080, and `ui/cmdring.ts` puts the ring in the zoomed layer's own pixels (ui/textsize.ts), so
-  the wedge under the cursor is the wedge the game lights; a text size step chosen by hand does not change the ring. HIS OWN HANDS ON THE SAME RING (`CMDRING.hands`, `interact.ts`: off in the module and on both stands, raised by the page with the ring,
-  `?nocmdhands` or the debugger's tick 'Tab ▸ the ring ▸ Space the same way (to try)' leaves Space as it was, and a recording from before the key replays
-  with the list; the maintainer, 10-20: "i'm curious if we can unify some of these squad command interactions with ours. our space menu feels really
-  clumsy today"): Space DOWN over something to choose puts the rows Space already had up as a ring at the cursor at once (`Player.sel.ring`; the
-  highlighted row lit, his colour the HUD's bright), Space UP does the lit row, so a tap is the tap it was. A digit (not his weapon slot while it is up)
-  or the cursor out of the middle lights another row that has a wedge; the wheel and the arrows step the highlight as they did; a right click, a left
-  click (his trigger, never the arm hold's knife), the back key or the window losing the keys give nothing. No quarter second, no cancel row, and his feet
-  are his own (`Player.listOpen` is the one question the feet, the cancel row, the hands and the panel ask: open as a LIST). A wedge's words are the
-  row's up to its dash; the thing's name and the lit row's words in full sit under the ring. The rows, their order, what each does, the sustained verbs and
-  how they stop are untouched. The two rings never stand together (Space under a held squad ring is taken; the squad's key over his is the back key).
-  Not on it: a row past the fifth (the wheel reaches it; nothing is lit), nothing on open floor. ONE GUARD ON THE CLOCK, both rings (`tapSecs` 0.15 s): the
-  cursor lights nothing in the key's first moment, and one already out of the middle by then lights nothing until it has been back, so a tap made with
-  the hand sweeping is still the first wedge; a digit counts from the first frame (`ringOpen` / `ringWant` in `cmdring.ts` are the halves both rings
-  share). Shift held with Tab opens no ring: that is plan mode's toggle (the next bullet). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
-  a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
-  held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
-  throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
-  with the ring on, Tab is not the debug tools' key (`main.ts`). A load, or the tick put off, puts a held ring away
-  (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 17 lines through the game's own input on the office
-  room clear, the check raising the switch itself (22 lines since the tap's own rule, the next bullet); `CMDRING_BREAK=1` (the switch left off) fails 18 of the 22 on both stands (the four that hold are the ones that say 'as it was'). SEEN: the first 17 lines on both
-  stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
-  edge, the lit wedge fills, a tap stacks, a digit and the cursor each light a wedge and the key up gives it, a page turns and lights nothing, a click on a
-  man tints the ring his pair's colour and fires nothing, no console or GPU error) and without it (Tab opens nothing). The hint on the same page, at 960 ×
-  540 and at 2560 × 1440 (text factor 1.33): a glyph and outline for the floor, a man (his pair's colour), a wall, a door and the squad's own menu, none
-  with Shift down, the glyph 15 px of the ring's own up and right of the cursor and the other way at the view's edge, in the ring's middle once the key is
-  down, the cursor 0.8 of the flick out lighting nothing and 1.2 lighting a wedge at both sizes, no console or GPU error. The floor's glyph was redrawn (a
-  pin) after that look and has not been seen. Sam's own ring on the same page (960 × 540, Space pressed for real at a shut door): up on the key, his colour,
-  two wedges, the cursor lighting the second, the key up easing the leaf, Space again stopping it, no console or GPU error. With the ring off the
-  selector probes are all green on the frozen stand; on shipped selector-rows and selector-sustained are red the same way on the untouched build head of
-  that hour. NOT seen on the page: Esc, which
-  there is the pause — a ring held under the pause card going away on the 'Paused' tick is in the check, by the tick alone. A ring opened near the view's top
-  left sits under the squad panel. NEVER seen on a GPU, never played by a hand: whether the hold feels right, whether the ring hides what it is opened on,
-  and whether Sam's aim swinging with the cursor matters are the maintainer's to judge. No tally was run: with the switch off nothing moves, and the ring
-  gives only orders the menu already gave.
-- **A tap of the ring's key opens no ring** (`CMDRING.holdSecs`, 0.2 s, `SquadOrders.cmdPress` in `orders.ts ringInput`; the maintainer after playing
-  the ring, 10-20: "let's focus on just single tab for now (the reworked B equivalent)", "it does feel like a bit of a regression from B on a single
-  playthrough", "we shouldn't open the radial menu on just a single tab press, only after some (very short) delay"). THE RULE: the key going down opens
-  nothing. It remembers what the cursor was on (`cmdPress.t`) and the cursor hint's outline goes as bright as the ring's, so the press is seen to land
-  (`hintView().press`; the glyph stays beside the cursor). Let go inside `holdSecs`, the quick key's own order is given on that thing (`auto_quick`:
-  B's order, word for word, the autopilot's pick included) and no menu was ever up. Still down when the hold is over, the ring goes up for that thing,
-  at the cursor where it now is, and the cursor counts at once (the hold was the wait; `tapSecs` guards a tap only with the hold at 0). WHAT THE TAP
-  NO LONGER LOSES, each a way the first build's tap could differ from B: a ring was opened and shut for it (a flash, and a tap slower than `tapSecs`
-  with the hand moving lit another wedge and gave THAT order); a left click inside it put the ring away and gave nothing (now it is his trigger, and
-  the order still goes); a menu that would not open on the thing gave nothing; Shift down refused the key (his sprint: now only when plan mode is on,
-  whose toggle Shift + the key is, `ringFree`). Another key going down inside the tap never loses it either (Space, the menu's key); only the RING is
-  not put up over a menu, a list or a running verb when the hold ends. SWITCH: the knob is in the ring's own table, so it rides the ring's switch
-  (`?cmd`; both stands off). `holdSecs` 0 = the ring the frame the key goes down, as first built; `journal.ts applyKnobs` sets 0 for a recording whose
-  table has no `holdSecs`, and `ringRestore` clears a press a load finds. WHAT `?cmd` RAISES NOW: the Tab key, its hint and Space's ring, as before;
-  NOT plan mode, which is `?cmd&cmdplan` (with it on, Shift + Tab is the toggle, so a tap made at a sprint orders nothing: the reason it left the
-  default while the single key is being got right). CHECK: `cmdring-check.ts` lines 15 to 19 through the game's own input (a tap held 10 of the 12
-  frames shows no ring, no menu and nothing listed, the hint pressed, and gives 'move' on the key up with no ring ever opened · the cursor swept 330 px
-  with a left click inside the tap, and the menu's key inside another: the order goes to where the key went down · kept down: nothing at 11 frames,
-  then the ring for the spot the key went down on, at the cursor 184 px on, wedge 2 lit by the flick and given on the key up · Shift down orders with
-  plan mode off and toggles that mode with it on · the hold at 0 is the ring at once, and a recording with no `holdSecs` applies 0); `planmode-check`
-  line 2 keeps the key down past the hold. SEEN: 22 of 22 on both stands, one seed; `CMDRING_BREAK=1` fails 18 of 22 on both. NEVER seen on a GPU and
-  never played: whether 0.2 s is the right hold, and whether an order on the key coming UP (not going down, as B's is) is quick enough to feel like B,
-  are the maintainer's to say. No tally run: the switch is off on both stands.
-- **Q is the squad's command key; B gives nothing; Tab is the page's again** (`KEYMAP.qCmd`, `MOVED`, `cmdOnQ()` in `src/host/keymap.ts`; the
-  maintainer, 10-21, once walking into a wall had made the wall hold's key spare: "snapping feels good, we can remove Q", "let's move the squad command
-  button to Q then too", "from tab", "let's unmap B too then", "so it's just Q, and the quick tap should be exactly the same as B, right?"). WHERE IT
-  SITS: on the BOARD, nowhere in the game. `ORDERS.quickKey` is still the code 'KeyB', which every recording, tape and tool writes; the board gives that
-  code off the Q key and gives nothing off the B key (the quick order's row, id `KeyB`, has `['KeyQ']` for its keys in the build). So a tap of Q IS the
-  press B was, by the one read the game has for it: no knob table, no `FROZEN_HOLDS` row, no journal key, and both stands (whose Input has no keyboard)
-  are as they were. The row keeps its id, so a table kept before with the command on another key means what it meant, and its cap in the build's words
-  stays 'B': `keyText` / `keyCap` turn 'B on the blue door', the key card's 'X · B · T · F' and the HUD's cap into the key it is on. No row was added
-  and the wall hold's cap is still 'Q'. ONLY WITH `qFree`: `?qfree=0` (Q the wall's) leaves the command on B. `?bkey` = the command on B for a visit.
-  `?keybinds=0` leaves it on Q (the build's own board). Q NEVER MEANS TWO THINGS: while the command has Q the wall hold does not fall back to Q when
-  walking in is switched off (`freeNow()` ignores `freeWhen`); it then has no key until the player gives it one in Options ▸ Controls, and the walk-in
-  row's line says so. Q GIVEN TO ANOTHER ROW (the wall hold by hand, or a table kept while Q was spare with Reload on it) leaves the command on B, its own code's key, as it
-  was before the move; nothing is kept for that, so it is on Q again when that row moves away, and on no key only when B is held too (`keysNow`). The command put back on B by hand is kept
-  as he set it, like a freed row, and Reset is Q again. THE RING'S KEY (`CMDRING.key`) is the command's own code and no longer Tab: under `?cmd` a tap
-  of Q gives the order as the key comes up (inside `holdSecs`, the one way it differs from the plain key, which gives it as the key goes down), Q kept
-  down opens the ring, and plan mode's toggle (`?cmd&cmdplan`) is Shift + Q. Where the bullets above say Tab for the ring's key, read the command key;
-  `main.ts` gives Tab back to the objectives card and the back key. THE MARK AT THE CURSOR IS GONE (`CMDRING.hint` was a game setting; nothing draws it now, so its debugger toggle, its kept option and `?cmdhint` are removed; the knob's row is read by nobody). HIS QUESTION, whether overlays stay longer after a tap: the plan a quick order draws is the same stamped row either way
-  (`AUTOPILOT.showSecs`, `floorplan.ts showSecsOf`), 4.0 s after the quick key and 4.0 s after a tap by `cmdring-check.ts` line 21; what stayed was
-  that always-on mark under a resting cursor. CHECKS: `tools/qa/qkey-check.ts` (`probes.ts qkey`, families squadorders and player; `QKEY_BREAK=1` =
-  the board as it was, every line fails), 5 of 5 on both stands: the boot and its three words · Q gives 'KeyB', B gives '', no other key moved, the
-  wall hold keyless with the walk-in on or off · the words · his own keys (back on B and kept, Reset, an old table, Q given to another row, 2,563 moves by a
-  die with no key on two rows) · THE GAME on this stand, the room clear with four: the floor, a door, the door again once stacked, the floor, once
-  with the code written straight in and once off the Q key through `host/input.ts`'s own listeners, leave the same four rows to the millisecond
-  (move, stack, bangClear, move) and one run digest, and the B key files nothing. `cmdring-check.ts` 25 of 25 on both stands (lines 20 to 22 are
-  new: Tab gives nothing, the plan's time, the mark with the ring off; `CMDRING_BREAK=1` fails 17) and `planmode-check.ts` 28 of 28 on both.
-  `keybinds-check.ts` asks the wall hold's rule by itself, the command left on B (its boots add `bkey`), 13 of 13 on both stands; the last three
-  lines of `keybinds-page.cjs` were given `bkey` the same way and that page tool was NOT rerun. ON THE PAGE, real keys, headless Chromium on the
-  software adapter, three loads of the four-man room clear with no console or GPU error: plain, Tab and B give nothing, Q down is 'move' in the order
-  book on that frame, no mark at the cursor, the HUD's cap reads Q · `?cmd`, Q down shows the pressed mark and gives nothing, Q up gives 'move', Q kept
-  down opens the ring and gives the lit wedge. NOT DONE: nobody has played it; never seen on a
-  GPU; the Options row was not clicked in a browser.
-- **Q on a door, then F, with one or two teammates** (`DOORTOOLS.wordSmall`, `?wordsmall=0`): the word's key sends a small squad in from a plain
-  stack as it does the four — the rule, its edges and its check are the door tools' bullet "The word sends a small squad in from its stack"
-  (`docs/agents/door-tools.md`). Q on the stacked door again is still the squad's own pick of entry.
-- **A man back from the fight walks for where his order stands: ON IN THE PAGE since 10-22** (`ORDERS.retakeGoal`, `orders.ts tick`; `?retakegoal=0` ·
-  `TPS_RETAKEGOAL=1`; OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, the journal turns it off for a recording from before the key;
-  debugger: Player, doors & props ▸ 'back from a fight: walks for his place'). A find of the code review: back on his order a man is handed the way
-  from where the fight left him, but his goal was left alone, so with the new way straight he walked to a corner of the way he was on before, stood on
-  it, and after `stuckSecs` said he could not get through, his order marked stopped short. On: his goal is the new way's first corner, or his place.
-  It moves walks after a fight, so it is a switch. CHECK: `probes.ts retake` (tools/qa/retake-check.ts, family squadorders; 4 lines, both stands;
-  `RETAKE_BREAK=1` fails the walk line: all four stand at the old corner five to seven metres off their places). The rig writes the corner into each
-  man's way by hand and hands him to the fight by its own seam (`endGuardScript(gd, 'alert')`). NOT measured: how often play meets it; no tally was run
-  with it on; nobody has played it; never seen on a GPU.
-- **A cover's and an arc hold's squad row carry no compass word while the dialogue pass is on** (`orders.ts` the cover order and the hold's arc; no new
-  switch: it follows `WORDS.on`, on in the page, off on the frozen stand). The rows read 'covering west' and 'holding · east' on the HUD, where no
-  compass word belongs, and `orders-cover` pinned it. Now: 'covering <the place watched, by the level's own name>' or 'covering that way'; 'holding ·
-  <the place>' or 'holding' (`dialogue.ts watchedPlace`). With the pass off the rows are as they were. Row words are in no digest. `orders-cover` and
-  `squadplay`'s hold line read the stand; line 3 of `probes.ts retake` asks both ways.
-- **A longer press of Q is the orders ring and it stays up; Shift + Q is plan mode: ON IN THE PAGE since 10-22** (`CMDRING.on`, `stay`,
-  `stayHoldSecs`, `tapNow`, `plan`, `planRts`, `planRun` in `rust/game_rules/src/cmdring`; `ringLatch`, `ringHoldSecs` there; `orders.ts ringInput`,
-  `planmode.ts planShift`; the maintainer, 10-22: "longer press for Q opens up squad, doesn't require holding it", "shift Q for plan mode"). The ring and
-  plan mode are no longer behind `?cmd`. WHAT THE KEY DOES NOW: let go inside the hold it is the quick order, the same order as before, filed as the
-  key comes UP (it was filed as the key went down: a tap's own length later, the price of telling a tap from a hold); kept down `stayHoldSecs` (0.3 s,
-  in place of the 0.2 of the ring that goes with its key) the order menu goes up as a ring at the cursor and STAYS when the key comes up. Left up: a
-  digit 1 to 5 gives its wedge at once (a page's wedge turns the ring), a left click anywhere but on a man gives the lit wedge and is not Sam's
-  trigger (a click with nothing lit, a page just turned, gives nothing), the key again gives the lit wedge, a right click steps a page back or puts
-  the ring away, the back key (Tab on the page; only a ring that stays: one that goes with its key hears Esc alone, as it was built) puts it away,
-  and so do Esc where it reaches the game, the pause and a lost window. Kept down,
-  taken out to a wedge and let go, the key still gives that wedge (`ringLatch`: one rule a second ring can read; Space's own ring is not latched by
-  this change). Plan mode's ring on the right button is not latched. A DIGIT INSIDE THE PRESS (`stayDigit`, on with `stay`, off with it; a read from
-  the squad lessons: for the 0.3 s of the hold a quick "Q, 2" was the rifle's slot and opened its setup): a digit 1 to 5 going down while the key is
-  still down inside its hold puts the ring up at once and gives that digit's wedge; it is never the gun's slot. A tap let go before the digit is
-  still a tap and the digit after it is the gun's; where no ring can go up the digit stays the gun's. `FROZEN_HOLDS` row `CMDRING.stayDigit`
-  (`TPS_QSTAY=1`); a recording with no such key replays with it off; line 8b of `qring`. `tapNow`: a press already up in its own tick (down and up inside one tick, and
-  every one-frame press a headless line makes) is given on that tick, so lines that press the quick key for one frame read as they did. SHIFT + Q
-  toggles plan mode (as `?cmd&cmdplan` had it, Sam parked and the view on the walk keys) EXCEPT out of a sprint (`planRun`): Shift with a walk key down
-  and the mode down is his run, and Q there is the quick order as at a walk; with the mode up Shift + Q leaves it whatever else is down, and so does
-  the back key once nothing nearer is up to back out of, a menu, a ring, a Space list, a running verb or the launcher's arc (`SquadOrders.planBack`,
-  `backFree`, `Game.backable`; the page's own Esc the same way, last in `Game.escape`). SWITCHES: ON in the page; `?qring=0` = the key as it was (its
-  order as it goes down, no ring, no plan mode), `?qstay=0` = the ring only while the key is down, given as it comes up, `?qplan=0` (or `?nocmdplan`)
-  = no plan mode; `?cmd` now only raises Space's own ring (`CMDRING.hands`) beside it. OFF in the module and on the frozen stand: `FROZEN_HOLDS` rows
-  `CMDRING.on` / `tapNow` (`TPS_QRING=1`), `stay` (`TPS_QSTAY=1`), `plan` / `planRts` / `planRun` (`TPS_QPLAN=1`; the last two words need the first). The
-  journal carries the table: a recording with no `stay` / `tapNow` / `planRun` key replays with them off. Debugger: Team feel ▸ 'Tab ▸ the orders ring',
-  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 15 lines; `QRING_BREAK=1`
-  fails 12 on the page's stand and 11 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
-  Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
-  on). A LOADED MEMORY SAVE (a squad on the floor: `savestate.ts loadMem`) puts a ring that stood in it away and plan mode down, he on his feet
-  (`orders.ts loaded`, `planmode.ts planLoaded`; the men's chains go on as saved): brought back, the ring took the next click for a wedge. Line 10b of
-  `qring`, both stands; `QLOAD_BREAK=1` fails it. DRAWN: the status column (`#interact`) goes faint while the ring's words lie over it (`ui/cmdring.ts clear`, `body.ringover`; no switch: a ring
-  put up on a door near that corner was read through the column's plates). DRIVEN ON THE PAGE (headless Chromium, the software adapter, real key and
-  pointer presses, a four, a duo and every new switch off; no console or GPU error): the floor's ring and its throws, the door's ring, its tools and
-  'more', each right click back a ring, plan mode's knee, pan, right drag, a hold and a door's wait off and on, an early word not kept, the word, Tab
-  and the view's ease back. NOT measured: no tally (the play-through's commander presses no key); nobody has played it; never seen on a GPU.
-- **The ring stays on its point; the key on a door is dark until it is live (10-22, from the maintainer's play of the first tutorial mission).**
-  THE RING (`CMDRING.pin`, `cmdring.ts ringPin`, `orders.ts ringUp` / `ringInput`; "radial menu should stick on the point for the action, not move
-  with the camera"): a ring keeps its place over the thing it was opened on (the target's `at`, and where the ring's middle stood from it) as the
-  view moves, still whole inside the view's edge; a cursor the hand has not moved lights no other wedge, so a ring sliding under a cursor at rest
-  changes nothing. ON in the page, `?ringpin=0` = it stays where it was opened on the screen; OFF in the module and on the frozen stand
-  (`FROZEN_HOLDS` `CMDRING.pin`, `TPS_RINGPIN=1`, needs `TPS_QRING=1`); a recording with no `pin` key replays with it off; debugger: Team feel ▸
-  'Tab ▸ the ring ▸ stays on its point'. Line 8c of `probes.ts qring` (he walks with the ring up: it stands within 2 px of its place, lit wedge
-  unchanged, nothing told, a digit still gives), `RINGPIN_BREAK=1` fails it, both stands. Plan mode's ring on the right button is pinned the same
-  way; the ring on E (handring.ts) is not. Its place from its point is the CURSOR's when it came up (not where the view's edge stood it: the edge
-  is asked again every tick, so a ring opened in a corner stays whole in the corner). The game works the place out before the tick's camera step,
-  so the page draws it from the picture's own camera (`ui/cmdring.ts pinned`; the game's `ax` / `ay`, a tick old, still decide the wedge under the
-  cursor). `probes.ts cmdring` asked "at the cursor" some ticks after the key: on the page's stand its lines 1 and 17 now ask that it stands on its
-  point's place (`astray`), and say how far that is from the cursor. Known: the view leads toward the cursor (`camera.ts aimLead`), so the ring
-  shifts a little as the cursor goes out to a wedge; a ring put up right after a fast sweep of the cursor ends some px off it as the view
-  finishes easing (25 px after the check's instant jump; a cursor at rest lights nothing); and it can slide under the weapon panel as he walks. Driven on the real page (headless
-  Chromium, the software adapter): he walked with the ring up and it moved 45 px with the floor, a digit then gave its wedge; never seen on a GPU.
-  THE QUIET PAIR'S MARK FOLLOWS THE SAME RULE (10-22; the maintainer in the pair's tutorial mission, the order just given: "what is F here"): the key
-  a step ahead of a man who waits on the word was lit from the order on (`ready: true`), and its bar ran through the cap, so it read as a key struck
-  out, at a step where the lesson had not taught the word. Now its `ready` is the man's own 'set' (or held for a watcher: the press sends him anyway),
-  so the cap is DARK while he works round and LIT when he is set; `ui/planfloor.ts` draws no bar for `why: 'pair'` (there is no doorway under it); and
-  a lesson that still holds the word shut (`rails.locks('word')`) lists no pair mark at all. No switch of its own: it rides on `PLAN.keyLit` and
-  `RAILS.on`; picture only, no digest moves. `plan-check` line 16 has a second line for it (dark just ordered, lit when set, none under a lesson's
-  lock; both stands), and the pair mission's scripted player fails if the mark is up before its `word` step or not ready at it. Never seen on a GPU.
-  THE KEY'S CAP (`PLAN.keyLit`, `floorplan.ts capOf`, `PlanDoor.ready`, `ui/planfloor.ts`, `.plan .lit` in index.html; "need some indicator on the
-  F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
-  it is ordered, so the cap was on the door at once and looked the same walking or stood. Now every door that waits on the key carries its cap:
-  DARK while its men are still on their way (their feet not on their places, or a fight has them) or while the press would not send it, LIT in
-  their colour once they stand there and the press sends them. A picture only, on on both stands like the rest of `PLAN`; debugger: 'plan ▸ the key on a door is dark until it is live'. Line 6b' of `probes.ts
-  plan`, `KEYLIT_BREAK=1` fails it, both stands. Driven on the real page (the same drive): the cap read near black with a dim F while the four
-  walked to a door, and their colour with a dark F once all four stood. NOT measured; nobody has played either; never seen on a GPU.
-- **Q and F are the squad's only keys; the ring carries every order: ON IN THE PAGE since 10-22** (`CMDRING.only`, `ringSeats` in
-  `rust/game_rules/src/cmdring`; `orders.ts seats`, `ringInput`, `ringView`; `KEYMAP.qOnly`, `DROPPED` in `src/host/keymap.ts`; the maintainer, 10-22: "squad is
-  now just q and f. everything is through the radial menu (which is 1-5? is that sufficient) so we don't need all the other keys"). IS 1 TO 5 ENOUGH:
-  every ring fitted five wedges but two, a floor's (move, cover, fall in, hold, go silent, and throw there on G) and the door tools' (four tools, frag
-  and clear on G, the big slot's tool on H). THE SEATS: a row with a digit keeps its wedge; a row that had a letter of its own takes a spare wedge of
-  its page; where a page has more such rows than spare wedges its last spare wedge is 'more', a ring of the rest seated from wedge 1 (no wedge spare:
-  the last wedge is 'more' and its own row leads the rest, which is what a wall's ring does with 'wall tools' and 'throw there'). A right click on
-  'more' is the page it is the rest of. Left out of a ring: the word's own rows (F gives them). On a place's ring the squad's posture rows (go
-  silent / go loud) come last and only onto a wedge nothing else wants (a floor with no throws to order keeps go silent on 5, which is what the quiet
-  pair's lesson teaches); they never make a 'more', and they are always on the ring opened on Sam himself or on a teammate. A first page's wedge 1 is
-  the quick order's and never a spare. A row that comes or goes under an open ring (a carrier down) re-seats the wedges and puts the light out, so the
-  next click cannot give a row the hand did not light. So a floor's fifth wedge is the throws, the door tools' fifth is
-  frag and clear for a pair and 'more' (the big tool, frag and clear) for the four. 'Wait for my word' has no wedge and never had: the command key
-  stacks them, they wait, and the word or a tool from the ring sends them. WHAT IS NOBODY'S: while a ring is up a row's own letter (G, H, V) is taken
-  and does nothing; the middle button opens no menu; the squad panel lists no key for the menu and none for who. THE BOARD (the page only): the
-  orders menu's row (code 'KeyX') and the who row ('KeyT') have no key, the way the wall hold's has none; the game's reads of both codes stand, so
-  every recording and every headless line that presses them reads as it did, and Options ▸ Controls can put either back on a key. Who an order goes
-  to is the ring's wheel or a click on a man with the ring up, or plan mode's picks. SWITCHES: ON in the page with the ring; `?qonly=0` = the wedges
-  and the letters as they were and X and T back on the board (`?qring=0` the same, with the ring gone). OFF in the module and on the frozen stand:
-  `FROZEN_HOLDS` row `CMDRING.only` (`TPS_QONLY=1`, needs `TPS_QRING=1`); the journal carries the table, a recording with no `only` key replays with
-  it off. Debugger: Team feel ▸ 'Tab ▸ the ring ▸ carries every order'. CHECK: `probes.ts qonly` (tools/qa/qonly-check.ts, family squadorders; 10
-  lines; `QONLY_BREAK=1` fails 8 on the page's stand and 7 on the frozen), both stands; `qkey`'s board line knows the two freed rows. The older ring
-  checks pin `only` off. KNOWN COSTS: a door with a look-under row (a wand carried) has six first-page rows, so its fifth wedge is 'more' holding
-  'door tools' and the look, one ring deeper; a line of words that names the orders key (a lesson's 'X on the ground, then 5') reads 'hold Q …' ('Hold Q …' at the start of a sentence or a line, plain 'Q' after a 'hold' already written, 'Q held' after 'with'; `keymap.ts rebuild` and `keyText`; `qonly`'s board
-  line), but lines that name T (the pairs lesson's three steps, a kit card's note) are not rewritten and are stale while the row has no key, and
-  the Controls list still says 'or the middle mouse button' on a row that reads as no key; THE WORD FREES WHOEVER WAITS (`doortools.ts wordMen`; the maintainer: "pressing F only releases the people blocked on it"): with the orders going to
-  men who are not waiting on it, F goes to the men who are, and the squad block offers the key for them ('F go · blue waiting' where it read 'blue
-  waiting · T, then F'; `squadplay-go` reads the stand: red in, the orders still red's, F sends blue). A press while the chosen men still walk and
-  another pair waits therefore sends the pair that waits. THE PLAN'S KEY MARK FOLLOWS (`floorplan.ts waitsOnKey` asks `wordMen`, not the orders' own
-  men: the door's mark said no key while the key sent them; `probes.ts plan` lines 6c read the stand, red on the page's stand until this). The
-  ring on Sam shows 'fall in' twice (the quick order's wedge and its own); with the quick throw's own switch on (off in the page) G held under a ring
-  still starts Sam's own throw. The older menu's probes (`orders-probes`, `orderui-probes`) pin `only` off in their rigs (`pressorders-probes` did, and went 2026-11-06 with the route it walked: qa.md). NOT measured: no tally; nobody has played it; never
-  seen on a GPU.
-- **Plan mode: a way to look, its own waits, the knee at the radio: ON IN THE PAGE since 10-22** (`rust/game_rules/src/planmode`; three switches, each OFF in
-  the module and on the frozen stand, each needing plan mode). (1) `CMDRING.planLook` (`?planlook=0` · `TPS_PLANLOOK=1`; the maintainer: "you should
-  be able to right click drag on a path and have them check that direction, like door kickers" · "if they're given an angle while not moving, they
-  should probably just cover that" · "we expect squad mates to be very smart on their own and not need micromanaging like this"): a right press
-  dragged `planLookPx` (24, three times a left drag's `planDragPx`: a trackpad's click slides) is an order with a way. Down on the floor: the click's own order, its stop keeps the way (drawn as an arrow), the men cover
-  that way once they stand there (the plain 'cover' order on a point `planLookM` out), and a chain with more stops walks on
-  after `planLookSecs` (phase 'look'). Down on a man, on Sam or on nothing: nobody walks, the man (the picked men) cover that way where they stand, the way measured from
-  where THEY stand to where the button came up. With Shift, off a man who is on a plan: nobody is taken off it and its last floor stop keeps the way
-  (men already stood on their last stop turn now). A stop whose cover every man refuses (a wall at each shoulder) is not waited at.
-  On a door, a thing, a man of the other side, or let go within half a metre: the plain click. A drag never opens the button's ring. (2)
-  `CMDRING.planWaits` (`?planwaits=0` · `TPS_PLANWAITS=1`; "let's also make it possible to add and remove F waits in the plan. and then I think we
-  can change the flow to be that pressing F only releases the people blocked on it"): a left click on a stop (within `planStopPx`) steps its waits
-  instead of picking men. A floor stop: a hold there, on and off. A chain's last door: its threshold wait, on and off. A door with stops after it:
-  both, the threshold's alone, the one after alone, neither. A wait taken off under men stood on it lets them go at once; taken off a door they
-  cannot go through (locked: refused at once, or tried and given up) it is back on with its mark; a hold put on while the men look a way is kept. The word frees only men stood waiting on it: a press while they walk is theirs (the stack's
-  own early word does not get it) and is not kept, and `planLate` keeps nothing. (3) `CMDRING.planKnee` (`?planknee=0` · `TPS_PLANKNEE=1`, needs the
-  view's own switch `planRts`; "plan mode should also show the player taking a knee and talking on the radio, and then camera can decouple from them
-  and move (up to some limit) with wasd and then gently snap back when exiting the mode"): the mode up, he crouches (his real crouch: lower to a
-  round and to an eye), the long gun low, the left hand at the handset (`player.ts`, `anim.radio`); the mode down by any road (the key, a restart with it up, the last man lost: `planTorn`), he stands again if he stood before
-  and there is room; no knee while he is down, drags a body, holds a man, or is in a takedown or a kick (`planKnee`), and the view comes back to him over `planBackSecs` on a smoothstep (`planLook`, `PlanState.back`, in the snapshot) instead of on
-  the follow camera's own damping. The reach was already there (`planPanReachM` from the box of Sam and the men). `FROZEN_HOLDS` rows
-  `CMDRING.planLook` / `planWaits` / `planKnee`; the journal carries them, a recording with none replays with them off. Debugger: Team feel ▸ 'Tab ▸
-  plan mode ▸ a right drag sets where they look' / '… its waits are the plan's own' / '… he takes a knee at the radio'. CHECK: `probes.ts planplus`
-  (tools/qa/planplus-check.ts, family squadorders; 18 lines, the real buttons and keys on the office with four, the view walked to each door first; `PLANPLUS_BREAK=1` fails
-  16), both stands. A door the men do not hold a stack at on a stand (the break room's two on the page's, an old red of `orders-stack`) is passed over
-  for the next and the line says so. KNOWN COSTS: a click on a stop no longer picks the man stood on it (click beside it); a door with its wait off still stops if the entry is
-  refused; the cover a look gives stands until the next order, as any cover does; the knee makes him a smaller target for as long as the mode is up.
-  NOT measured: no tally, one seed; whether men on a path cover an obvious way by themselves was not judged; nobody has played it; never seen on a GPU.
-- **An order's line starts on the leg he is on** (`floorplan.ts wayOf`; picture only, no switch). A way kept from a stride ago starts behind the
-  man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
-  the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
-  `ui/attentionviz.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
-  here (the attention thread's check plays it for its copy). THE KEPT LEGS ARE THE ASKER'S (2026-10-23): `floorplan.legs` was a side table of the game and its search ran on the
-  grid's own tables, so a game drawn and one not drawn differed in the full state hash. Now `floorPlan(g, kept)` takes the asker's own store
-  (`PlanKept`: the overlay's in `ui/planfloor.ts`, a check's own from `planKept()`; with none, nothing is kept past the one ask) and searches with
-  `NavGrid.findPath` (the search's tables are the module's, scratch of the one question: nothing of the grid's is written); the module keeps nothing. `probes.ts plan` line 9 asks every frame, once as he walks and once with
-  his own path set aside so the grid is asked, and holds the run's digest AND its whole state (`stateHash`) equal to the run never asked: red on the
-  code before ("whole state DIFFERS") and with `PLANKEPT_BREAK=1` (the search put back on the grid's own tables), green on both stands. A kept leg is
-  used again only when asked from within 2.5 m of where it was asked (the store is outside the rollback snapshot: a restore leaves it an answer from
-  the other time line). STILL OPEN, not this module's: with the THROW PAGE up `floorPlan` reads `squadthrow.ts squadThrowPlans`, whose `view`
-  question keeps its answer in that module's own table and searches on the game's, so a game drawn and one not drawn still differ in the whole
-  state there (digest equal); line 9 does not play the throw page. Never seen on a GPU.
-- **Plan mode reaches one room, not the level** (`CMDRING.planNear`, `planNearSideM` 6.5 / `planNearAwayM` 4.5 / `planNearBackM` 6;
-  `planmode.ts pan / planNear`; ON in the page with the mode and its RTS view, `?plannear=0`; off in the module and on the frozen stand,
-  `TPS_PLANNEAR=1` beside `TPS_QRING=1 TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan
-  mode ▸ the view stays near you'). The maintainer, 2026-10-23: "balancing plan mode: it's too easy to just play this like an RTS. we should instead
-  make it so you can only move a bounded amount from the player. like maybe the player has to roughly be on screen but can be in a corner. the mental
-  model is that it should be good for clearing one room but not the whole level. and we should design things so there's not always a safe place for
-  the player to hide and command, it's really a situational thing."
-  WAS: the view's point went `planPanReachM` (25 m) outside the box Sam AND the men stand in, so it followed the men down the level. NOW: it stays
-  where SAM IS STILL ON THE SCREEN: a box round him in the camera's own basis, at the camera's own distance 6.5 m to either side, 4.5 m with the view
-  pushed up the screen (he is at the bottom) and 6 m with it pulled down (he is at the top). He is parked while the mode is up, so the box does not
-  move; at an edge the view stops going out and slides along it, and in a corner of the box he is in a corner of the screen (the harness's 1600 x
-  1000 view: his feet 92 px in and 99 px up at the bottom corners, 97 px down at the top). ZOOMED IN the box shrinks with the camera's distance
-  (less 1.4 m kept for his own height at the top edge), so he stays on the screen; ZOOMED OUT it does not grow. A view found outside the box (a
-  file from before, a frame's lock let go) is walked in at twice the pan's speed, never jumped. No mark is drawn for the edge. To plan further
-  on he puts the mode down and walks. NOT HELD where a tutorial frame has taken his feet (rails `move` locked: he cannot walk nearer), so the plan
-  mission (`tut-plan`, led from the gate with no feet) plays as it did: 19 of 19 steps by its scripted player on the page's stand with the rule
-  on. That mission's hall and two gates are 19 m from where he is parked and its guardroom view asks for 5.5 m, so to hold the bound it would
-  have to walk him or move him between its parts, and until it does the lesson teaches a reach the game no longer has (its thread's, and the
-  maintainer's call). SINCE 10-23 IT WALKS HIM (the maintainer's pick, "You walk to each spot, then plan"): three walk steps, his feet from the first
-  of them, and the bound holds there from that step on (`docs/agents/missions.md`, the plan mission's "He walks to three spots"). AND SINCE LATER THAT DAY NOBODY OF HIS IS ON ITS FLOOR (the maintainer: "we should remove the player character"): the mission's seat holds the mode up (`rails.sky.plan`, `RAILS.skyUp`) and the bound does not hold in such a seat at all (`planNear` is false there; the view is boxed by the men and the level's edge), same file, "Nobody of his on the floor". NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
-  the camera's own distance, about 22 m zoomed all the way out), chains already laid (they walk on and the word still frees them wherever they
-  wait) and a mark of the plan outside the view (it is off the screen). CHECK `probes.ts plannear` (9 lines, both stands, one deal: the rule has
-  no die in it; `PLANNEAR_BREAK=1` fails lines 1, 2, 3, 4 and 6 on both): a walk key for five seconds and a second key to the corner; all eight
-  ways out with his feet and head on the screen; the camera at 12 and at 40; the men put 30 m off; the frame's lock and the walk back in; a view
-  filed further out; a right click from a corner and the ease back; the journal; the stands. `planmode-check`'s rig holds the rule off (its lines
-  19 and 21 ask the reach as first built), so `planmode` and `planplus` do not play it. THE LEVEL HALF of his note (no place that is always safe
-  to command from) is not built here: it is level design, for the level skill and the missions. Nobody has played it; never seen on a GPU.
-- **The squad's ring is two rings deep and nothing rides the cursor** (2026-10-23; `CMDRING.flat` / `plainHint`; `cmdring.ts flatSeats`,
-  `FLAT_TOP`, `FLAT_LEFT`; `orders.ts flatRows`, `menuRows`, `seats`, `hintView`, `OrderDef.gone`). The maintainer: "radial menu tree needs some
-  work, way too nested"; "loud and quiet should be an option on squad wheel"; "let's remove the icons on mouse position from squad orders
-  entirely". BOTH: ON in the page (`flat` with `only`), `?ringflat=0` / `?plainhint=0`; off in the module and on the frozen stand,
-  `TPS_RINGFLAT=1` (beside `TPS_QRING=1 TPS_QONLY=1`) / `TPS_PLAINHINT=1`; a tick each in the debugger; a recording from before the keys replays
-  with them off. THE TREE (`flat`): the ring holds every order of the thing under the cursor, never a page. Floor, wall, a thing: 1 what a tap
-  gives · 2 cover that way · 3 fall in · 4 hold position · 5 more (frag there · bang there · a wall charge when the squad carries one · go
-  silent). A door: 1 what a tap gives · 2 cover this door · 3 open and clear · 4 bang and clear · 5 more (charge, or shut that door · clear from
-  outside · shotgun and clear · frag and clear · go silent); fall in and hold position are NOT on a door's ring. The squad's own ring (on a man,
-  on Sam, on nothing): 1 fall in · 4 hold position · 5 go silent. An enemy: no ring, as before. Rules: a row that says what wedge 1 says has no
-  wedge of its own and its digit is wedge 1's (`seats().same`: 3 is still fall in on the squad's own ring; stacked on a door the entry the squad
-  would pick is on 1 only); no ring has one row (a lone left-over sits on wedge 5 itself); a row for kit the squad never carried or a tool this
-  door never takes is not offered (`gone`: a wall charge with none brought, a charge or the big slot's tool on steel, the big slot's tool on an
-  open door), one off only for now stays greyed; the posture row is the last of every second ring and gives up its place first when rows
-  overflow. No key sets loud or quiet, before or now. A TUTORIAL MISSION (rails live) KEEPS THE PAGED TREE: its lines name the old digits
-  ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move — and moved for the first one, whose level takes the flat tree
-  (`lesson.rails.flatRing`, `RAILS.flatRing`, `?railflat=0`: `missions.md`, the last bullet). THE CURSOR (`plainHint`): the outline on the floor of what the
-  key orders on, no glyph beside the cursor or in the ring's middle. AND NO OUTLINE (`CMDRING.bareHint`, later the same day, his play note at
-  a wall with the ring up: "the line and circle are weird, don't need them"): `hintView` answers null, so nothing of the squad's cursor mark is
-  drawn, at rest, with the key down or under a ring; ON in the page, `?barehint=0`; off in the module and on the frozen stand, `TPS_BAREHINT=1`;
-  a tick; the journal; ringflat lines 9 and 9b; `cmdring-check` holds it off in its rig; the Options row "Order mark at the cursor" is not
-  listed while it is on. What a tap orders, and on what, is then only the corner's line on the key. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
-  it is the page's own layer's, which reads the block whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
-  (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
-  both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
-  `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
-  `ui/options.ts` (the hint's words). Nobody has played it; never seen on a GPU.
-- **Plan mode's circles are fainter, and a slider sets them** (2026-10-24; `src/ui/planlook.ts`, `ui/cmdring.ts updatePlan`, index.html
-  `.planmode .pm` / `.pself`; picture only: no stand, no knob table, no recording knows of it; the maintainer, 10-24: "plan mode circles should be
-  fainter -- can you add a slider in the settings and remind me to tweak?"). The circle at each man's feet with plan mode up, and the player's own, is
-  its built strength (0.6 a man's, 0.95 a picked man's and his own) times `--pm-k`, which the layer writes from `planRings()`. THE PAGE OPENS AT 0.4 (the maintainer, 10-25: "I'd tune it to 40% and keep the dotted circles"; it was 0.5)
-  (`PLANLOOK_PAGE`; with nobody picked by hand every man is picked, so what he sees is 0.95 going to 0.38). THE SLIDER is Options > Game >
-  "Plan mode circles", 0 to 100 %, kept on this machine (`twopointsix.planlook`), put back by Reset to defaults; the debugger has the same value
-  ('plan mode ▸ circles, strength'). `?planrings=<0..1>` is a visit's own word and is never kept; `?planrings=1` = as it was built. `window.__planlook`
-  moves it from a page check. CHECK `probes.ts planlook` (family ui; 5 lines, no game stood up, the same on both stands; `PLANLOOK_BREAK=1` asks them
-  of a `?planrings=1` visit: lines 1 and 2 fail) and, on the real page, `PORT=<port> node tools/qa/planlook-page.cjs` (the circles' own computed
-  opacity; the software adapter). NOT SEEN: the right default is the maintainer's to find on his GPU; 0.5 is a first guess.
-- **The wheel with the ring up steps nobody** (2026-10-24; `CMDRING.wheelIdle`, `orders.ts ringInput`). The maintainer, with a recording of the
-  depot: "got into a weird state where my command modes (not plan mode) only selected blue team". The recording has a two-finger scroll with the
-  squad's ring still up. A scroll there stepped who the orders go to (everyone, one pair, the other: "the wheel steps who" in the ring's bullets
-  above is the ring as built), the choice stayed after the ring had gone, only the ring's own caption showed it, and under `only` the who key has
-  no key to step it back. ON: the scroll is still taken out of the frame (it is not his walking pace under the ring) and changes nobody's choice. A
-  click on a man with the ring up is still him, plan mode's picks still choose, and the who key still steps where the player has given it a key.
-  SWITCH: ON in the page (`?wheelidle=0` = the wheel steps who, as built), OFF in the module and on the frozen stand (`TPS_WHEELIDLE=1`); a
-  recording from before the key replays with it off; debugger tick "Tab ▸ the ring ▸ the wheel steps nobody". CHECK: `probes.ts wheelidle` (family
-  squadorders; `tools/qa/wheelidle-check.ts`), six lines on both stands, fed the recording's own twenty wheel records tick for tick: with the switch
-  off they walk everyone, blue, red, everyone, blue and the next tap goes to two men of four; with it on the orders stay everyone's and the tap goes
-  to all four. `WHEELIDLE_BREAK=1` fails lines 1 and 3 on both stands. `cmdring-check` holds the switch off in its rig (its line 7 steps who by the
-  wheel). MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. NOT DONE: nothing on screen outside the ring's
-  caption says the orders are narrowed to a pair or a man, and plan mode put down leaves the orders with whoever was last picked in it. Nobody has
-  played it; no part of it is a picture.
-- **Quick orders are the whole squad's** (2026-10-24; `CMDRING.wholeSquad`, `orders.ts whole()`). The maintainer: "quick Q mode should always do
-  the whole squad. you should only be able to issue commands to parts of the squad in plan mode". ON, with plan mode down, for the player's own
-  squad: `readInput` puts `who` back to everyone each frame however it was left (and the who key steps nobody), `targetUnder` reads a teammate
-  under the cursor as the squad itself (`{ kind: 'none' }` with no `man`: a tap or a ring on him is not his alone), `ringInput` takes a click on a
-  man with the ring up as the ring's own click (it gives the lit wedge where the ring stays; it picks nobody), and `planmode.ts down()` puts the
-  orders back with everyone as the mode goes. IN PLAN MODE nothing changes: a man, a pair or a set is picked by click, box or digit, its order
-  goes to those men, and a chain laid for them keeps them after the mode is down. A caller that names its own men (`give(id, target, who)`: the
-  autopilot, a tutorial's script, a check) is not the player's choice and is untouched. SWITCH: ON in the page with plan mode (`?wholesquad=0` =
-  the choice is stepped and kept outside the mode, as built; `?qonly=0`, the older keys with T back, takes it off too), OFF in the module and on the frozen stand (`TPS_WHOLESQUAD=1`, beside
-  `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan mode ▸ only plan mode picks a part of the squad".
-  CHECK: `probes.ts wholesquad` (family squadorders; `tools/qa/wholesquad-check.ts`), eight lines on plan mode's rig on both stands;
-  `WHOLESQUAD_BREAK=1` fails lines 1 to 5 on both. HELD OFF in the rigs of the checks that step who outside plan mode on purpose: `cmdring-check`,
-  `wheelidle-check`, `orders-probes`, `orderui-probes` (and `pressorders-probes`, deleted 2026-11-06). MEASURED: one deal of the office room clear, squad of four; the rule has no die in it. OPTIONS
-  no longer offers a keyless "who" row on its Controls page while the rule is on (`menus.md`, "Options offers no dead order who control").
-  Nobody has played it; no part of it is a picture.
-- **Plan mode's reach is the same at any zoom** (2026-10-25; `CMDRING.planNearFlat`, `planmode.ts pan`). The maintainer: "max distance for plan
-  mode seems to be based on the zoom level? should be zoom invaraitn". The box `planNear` holds the view's point in (6.5 m to either side of him,
-  4.5 m up the screen, 6 m down it) was scaled by the camera's distance over 21 when zoomed in, so that he stayed on the screen: at the camera's
-  12 the view stopped 3.7 m to the side. ON: the box is its own metres at every zoom, and zoomed in he can be off the screen's edge with the view
-  at the box's. SWITCH: ON in the page with `planNear` (`?plannearflat=0` = the box shrinks as the camera comes in, as built), OFF in the module
-  and on the frozen stand (`TPS_PLANNEARFLAT=1`, beside `TPS_PLANNEAR=1`); a recording from before the key replays with it off; debugger tick
-  "Tab ▸ plan mode ▸ the same reach at any zoom". CHECK: `probes.ts plannearflat` (family squadorders; `tools/qa/plannearflat-check.ts`), four
-  lines on both stands with the camera at 8, 12, 21 and 40; `PLANNEARFLAT_BREAK=1` fails lines 1 and 2. `plannear-check` holds the switch off
-  (its line 3 asks the smaller box zoomed in). MEASURED: one deal of the office room clear. Nobody has played it; never seen on a GPU, and
-  whether he reads as lost off the screen's edge when zoomed in is for the maintainer's eyes.
-- **PLAN MODE IS GONE FROM THE GAME** (2026-10-26). The maintainer: "let's remove plan mode and update the tutorials accordingly"; earlier the
-  same day, of the mode: it "does really slow the tempo of the game and is quite complicated". EVERY BULLET BELOW THAT DESCRIBES THE MODE IS
-  HISTORY: the top-down seat, the picks, the chains and their waits, the knee at the radio, the reach, the digits, the circles and their slider,
-  and the frame's hooks for it are all out of the tree. WHAT IS LEFT of `rust/game_rules/src/planmode` is the goal (`planGoal`, `goalsOn`, `goalMen`,
-  `goalShift`, `goalInput`, `PLAN_STATS`); the file keeps its name because other modules import it. `CMDRING.goals` and `CMDRING.wholeSquad` now
-  hang on `CMDRING.on` (they hung on `CMDRING.plan`): `TPS_GOALS=1` and `TPS_WHOLESQUAD=1` beside `TPS_QRING=1` on a frozen run. With
-  `?goals=0`, Shift + the key is simply the key (it was the mode's toggle). NO SWITCH BRINGS THE MODE BACK: the way back is a revert of the
-  removing commit. Words that no longer do anything, on the page: `?qplan=0`, `?nocmdplan`, `?nocmdrts`, `?planlook`, `?planwaits`, `?planknee`,
-  `?planone`, `?plannear`, `?plannearflat`, `?plandigits`, `?planclear`, `?skyplan`, `?skyup`, `?planwalk`, `?plandown`, `?raildigits`; on a
-  headless run: `TPS_QPLAN`, every `TPS_PLAN*`, `TPS_RAILDIGITS`. Their `FROZEN_HOLDS` rows, knobs, debugger ticks, the Options row 'Plan mode
-  circles' and the `__planlook` hook went with them. ONE WORD FOR EVERY STACK was the mode's (`CMDRING.planOne`) and is the go key's own without
-  it: `doortools.ts goMen` puts every waiting stack on one word (onesignal-check line 1 asks it of the key now). FILES: a recording or a save
-  from a build with the mode carries keys nobody reads (`knobs.ts assignDeep` lays over only the keys the build has; `savestate.ts` never asks for
-  `plan`; `SAVE_VERSION` did not move), asked by `tools/qa/saveplan-check.ts` (probe `saveplan`, family checkpoints; `SAVEPLAN_BREAK=1` fails
-  its line 2). THE FRAME (`rails.ts`, `lesson.ts`): the action `plan`, the flag `plan`, the step key `planLine`, the tests `picked` and
-  `planView`, `rails.sky.plan` and the knobs `skyPlan`, `skyUp`, `planDigits`, `planWalk`, `planDown` are out; the sky seat itself, and
-  `RAILS.shiftTap`, stay. Shift + the key pressed at a sprint on a step that gives the sprint is a goal's where goals are on, and is dropped where
-  they are off (the frozen stand, `?goals=0`), as it was with `planRun` off. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stayed,
-  its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stood on, until
-  2026-11-04: those four stand on `levels/tut-queue.json` now and the file is gone (`docs/agents/missions.md`, 'The plan mode mission is out'). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
-  tutplan (and its page). Checked headless on both stands: see the list in the commit; NEVER SEEN ON A GPU, never played.
-- **The key on a door they are stacked on is 'stack up' again, and the go key is the way in** (2026-10-26; `AUTOPILOT.restack`,
-  `autopilot.ts autoPick` why `'set'`, `orders.ts again`, `RESTACK_LINES`). The maintainer: "let's actually remove that second tap of Q thing.
-  tapping Q just always sends the order, so tapping Q on a door they're stacked up on would just resend the stack up command, which would then have
-  them say ("stacked up" or "we're ready to go" or "we're already stacked up" or something like that)". ON: on a door the men are stacked and SET
-  on, the squad's key gives no entry. Nobody is re-assigned and no order-book row is written; the panel shows Sam's line ("you: … stack up · the
-  door") and one man answers 'stacked up.' or "we're ready to go.", the men and the lines by turns. The HUD's line for the key and the ring's
-  first wedge read 'stack up' there; 'open and clear' keeps a wedge of its own. The same answer is given to a goal asked of the men on their own
-  door (Shift + the key, autopilot `quick`). The way in is the go key (the plain clear, `doortools.ts fromStack`) or a row of the ring. NOT
-  CHANGED: a tap while they still walk is 'stack up' given again, a door they wait on a word at takes the word from the key, and a set charge is
-  blown by it. TWO CASES ARE NOT THE RULE'S (a review's finds, the same day): when some of the men the key speaks to are NOT on that stack (a goal
-  took a pair elsewhere, two fell in) the key is 'stack up' for all of them, given, and the two still on the door do not answer for the rest; and a
-  stack the go key would not take (a pair with `DOORTOOLS.wordSmall` off, a charge on their door) still goes in on the key, as it did, so no stack is
-  left with no key that sends it in. THE SCRIPTED HANDS that went in on the second press ask the squad's pick and press the go key where the key
-  would only be answered: the benchmark's hands-off player (`src/host/handsoff.ts enter`) and the old tally's `enter`, since removed (hands `b` and
-  `plan`); with the rule off they press what they pressed. Their kept numbers (the benchmark's kept seeds, the three-hands tally) were measured
-  on the second press and are NOT re-measured. OFF (`?restack=0`; Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ on a door they are stacked on it is stack up again'): they go in on it,
-  by the plain clear (`AUTOPILOT.plain`, the bullet below) or with `?plainentry=0` too by the entry they pick. Off in the module and on the
-  frozen stand: `TPS_RESTACK=1` beside `TPS_AUTOPILOT=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off. CHECK:
-  `tools/qa/restack-check.ts` (probe `restack`, family squadorders), eight lines on both stands, one deal (the rule has no die); `RESTACK_BREAK=1`
-  fails 1, 2, 3, 5 and 8 on both. On the page: `tools/qa/restack-page.cjs` (the software adapter: the key twice, the go key, and `?restack=0`). autopilot-check, squadnet-check, plainentry-check, cmdring-check and one line of rails-check hold the rule off,
-  because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
-  played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
-  for the go key now (`docs/agents/missions.md`).
-- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `rust/game_rules/src/orders target_under_of`). Found by two
-  tutorial missions the same day (a scripted player headless on the page's stand, and a thread on the real page): the squad's key "on himself", the
-  cursor on his chest and a door a pace behind him, gave that door (a stack) and not fall in. The cursor's ray through his chest lands on the floor
-  some 0.7 m PAST him, and what was near that point was the target (`targetAt`: the door where the point is nearer it than him; plain floor, a
-  'move there', a little further off). Only his feet were himself, and in a corridor his feet are behind the near wall's top from the camera. Both
-  missions ask for the key on himself right after a room is taken, which is beside its door; and since the key on a stacked door is only answered
-  (the bullet above) the wrong read left the squad where it stood. ON: his own body under the cursor, nearer than whatever of the scene the ray
-  lands on, is himself (`{ kind: 'none' }` at his place: fall in). A teammate, a man of the other side or a thing to be worked in front of him is
-  still that (they are asked first), a lesson's ring on the screen is still its place, and the doorway itself, pointed at off his body, is still
-  the door. OFF (`?selfbody=0`; Tab ▸ Squad ▸ 'the cursor on yourself is yourself'): the point past him, as it was. Off in the module and on the
-  frozen stand (`TPS_SELFBODY=1`; a `FROZEN_HOLDS` row); a recording from before the key replays with it off. CHECK: `tools/qa/selfbody-check.ts`
-  (probe `selfbody`, family squadorders), six lines on both stands, one deal (no die in it): he is stood 0.7 m in front of the office's conference
-  door, where the point past his chest is the door and a stack could be given, and the cursor on him is himself and fall in for the four; `SELFBODY_BREAK=1` (the check's cursor put beside him) fails line 2.
-  The Rust game has the rule always on: `?selfbody=0` and the module's `ORDERS.selfBody` no longer reach it. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
-  KNOWN: a player who wants the door directly behind his own body on the screen points at the doorway beside him.
-- **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
-  `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
-  complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we
-  prototype removing plan mode and having shift Q instead add a goal to the squad? like shift Q on a second door will naturally split the squad
-  in two, and F tells all of them to go in. shift Q on a spot to watch automatically has them split up angles". ON: Shift + the key never puts the
-  mode up. A TAP of it gives what the cursor is on to a PART of the squad and leaves the rest on what they were doing; kept down it is the ring,
-  as the key always is. Shift counts down as the key goes down OR as it comes up, and at a run as at a walk: a tap out of a sprint, with men
-  on something, splits them (it sets `planRun`'s reading aside: there is no view to be stopped in). WHO TAKES IT: the men with nothing to do first (no order, or in the file behind him: with nobody on
-  anything that is everyone, and the tap is the key's own order); else the biggest group on one thing gives up half of itself, a whole pair where
-  it holds two (the pair nearer the new thing). A group is a door's men, whoever sent them, or the
-  men of one giving of any other order. ON A DOOR that part stacks on it, and the word's key sends every stack in together: that is the squad of
-  four's own word (`doortools.ts goMen`), nothing new. ON A BARE SPOT of floor, by a wall or not, they MOVE there, as the key gives everyone
-  (since 11-08, the bullet below; it was `cover`, from where they stood). On a door some of them are on already it is the key's order there for those men. On himself it is the key's own order,
-  everyone's. Every group down to one man: nothing is given and the squad says "nobody's free for that." The key WITHOUT Shift is everyone's and
-  one goal, as `wholeSquad` has it. No chain is laid: the men are on plain orders. ON A TUTORIAL MISSION the rule is the frame's action `goal` (`rails.ts ACTS`,
-  `planmode.ts goalsOn` asks `rails.locks('goal')`): Shift + the key is the plain key until a step lists `goal`, a lesson that never lists it
-  keeps the plain key (or its own plan mode) to the end, and on a step that teaches the key kept down (`noTap`) a Shift tap gives nothing, as a
-  plain tap does (`orders.ts tapGive`, the one place a tap is given, asks `rails.tapOff`). The mission that lists it is `tut-queue` (docs/agents/missions.md). It sets aside, for the prototype, the 10-24 rule that only plan mode orders a part of the squad.
-  SWITCH: ON in the page with the mode's machinery (`?goals=0` = Shift + the key is plan mode, as built), OFF in the module and on the frozen
-  stand (`TPS_GOALS=1`, beside `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan mode ▸ no plan
-  mode: Shift + the key adds a goal". CHECK: `probes.ts goals` (family squadorders; `tools/qa/goals-check.ts`), nine lines on both stands on
-  the plan mission's level with its frame off (the guardroom's two doors): the first goal is everyone's, a second door takes one pair, one
-  press of the word starts both entries on one word with men through both doors inside two seconds, the plain key is one goal again, spots
-  part 4, 2 + 2, 2 + 1 + 1 and 1 + 1 + 1 + 1 then refuse, Shift held with nobody on anything is everyone's ring; `GOALS_BREAK=1` fails lines 2 to 6. HELD OFF in the rigs
-  that toggle plan mode with the pair: `planmode-check` (and every check on its rig), `cmdring-check`, `qring-check`, `qonly-check`, and
-  by `&goals=0` on `planlook-page.cjs`. THE PAGE: `PORT=<port> node tools/qa/goals-page.cjs` (headless Chromium, the software adapter: the
-  first goal, the split on a second door, the word, and `?goals=0`).
-  MEASURED: one deal. NOT BUILT: a mark on the floor for who took the goal beyond the order's own plan drawing; a line on the HUD for what
-  Shift + the key would give; the Controls page and the Options rows still name plan mode. Nobody
-  has played it; never seen on a GPU.
-- **The first goal sends half the squad, and the key tapped twice is 'fall in'** (2026-11-02; `CMDRING.goalHalf` in `planmode.ts goalMen`,
-  `CMDRING.twice` in `orders.ts tapGive` / `twiceOn` / `allIn`). The maintainer, passing on a play tester's notes: "double tap Q -> cancel
-  everything and fall in" and "first shift Q should just send half the squad, whoever's closest".
-  GOALHALF: with nobody on anything a goal was everyone's (`how: 'all'`), so only the second Shift + key split the squad. Now a squad with nothing
-  going gives up half of itself by the rule a group on one thing already had: a whole pair where it holds two, the pair nearer what the cursor is
-  on, else the nearer half of its men (`how: 'split'`). The rest stay
-  with him and take the next goal (`'idle'`). One teammate alone is still everyone; the cursor on himself is still everyone. TWO teammates (the
-  default squad): the nearer man goes alone and the next goal is the other's. THREE: the nearer of the whole pair and the odd man (half of an odd
-  squad may be the bigger half: `l.length * 2 <= G.length + 1`, for this case only). The ring kept down
-  with Shift follows, as it asks the same rule: with nothing going it is that half's ring. The fourth tutorial's yard steps still close (two men
-  watching a gate is what each asks); its lines say two of them, and the tutorial's checks follow the
-  rule on each stand (`tutqueue-check` lines 8 and 9, `rails-check`'s goal step with the frame off, `tut-queue-page.cjs`), and the scripted
-  player's frozen arm raises `TPS_GOALHALF` with the goals. With `?goalhalf=0` those two texts still say two while all four turn: the off word
-  is for a comparison, and the lesson has no second wording.
-  TWICE: a plain tap is given as the key comes up, with no wait for a second one (the maintainer's standing rule: "tapping Q just always sends
-  the order"). A second plain tap inside `twiceSecs` (0.4 s of game time) in the same place gives `fallIn` to every teammate in place of the
-  key's order: an order without Shift, so every goal goes with it and a door tool lets its men go. THE SAME PLACE is one of two: the hand has
-  not moved (the cursor within `twicePx`, 24 px of the view, of where it was: what a still cursor reads changes between two taps, a man walking
-  under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that thing's order: a tap
-  put right is not a double tap (a third test, a point within 1.5 m of the first tap's, was in step 1187 and is out). So the first tap's order stands
-  for a moment and its line may be said before 'on you.'. Not half of a pair: a tap with Shift, a tap somewhere else, a tap after the window, a
-  third tap, a tap after a pause or the page losing focus (game time stands still under a pause: `host/loop.ts` hands the first tick after any
-  frozen frame the one-tick code 'Thawed', with `?tabback=0` too, in the tick so that a recording has it; `ringRestore` and a load drop it too). Not
-  said twice: where the first tap was already 'fall in' for them all the second gives nothing. A first tap that was refused still counts: two
-  taps are 'fall in' whatever the first one got. ON A TUTORIAL MISSION only from a step that lists `twice` (`rails.ts` ACTS and `locks`, as the
-  goals ask `goal`), and none does, so the Controls row there does not tell of it either (`ui/options.ts twiceNow`): a first-timer's double press on the fourth tutorial's first door took the four off it, and the next step, which
-  wants a stack on both doors, could not be done (`tutqueue-check` line 10 plays it). The state is one field on the order book (`tapWas`),
-  beside `cmdPress`, so an order book for one seat's men carries its own. THE HANDS-OFF PLAYERS (`host/handsoff.ts`; the old tally is removed)
-  never press the squad's key twice inside the window while the rule is on: their second press is a second try at an order (a wait in their
-  `key`, nothing on the frozen stand).
-  SWITCHES: both ON in the page (`?goalhalf=0`, needs goals; `?qtwice=0`, needs the ring), OFF in the module and on the frozen stand
-  (`TPS_GOALHALF=1` beside `TPS_GOALS=1`; `TPS_QTWICE=1` beside `TPS_QRING=1`), two `FROZEN_HOLDS` rows, two debugger ticks under the ring's,
-  and a recording from before the keys replays with both off (journal.ts). The Controls list's command row says "tap it twice to call everyone
-  back to you" while `twice` is on (`ui/options.ts squadRows`; `probes.ts squadkeys`' twice line). CHECK: `probes.ts halftwice` (family squadorders;
-  `tools/qa/halftwice-check.ts`, on goals-check's rig, which now holds both off for its own lines), twenty-one lines on both stands (H1 to H8,
-  T1 to T12, P); `GOALHALF_BREAK=1` fails H1 to H4, H7 and H8, `QTWICE_BREAK=1` fails T1, T2 and T9 to T11. On the real page:
-  `PORT=<port> node tools/qa/halftwice-page.cjs` (software adapter). MEASURED: one deal. Nobody has played either; never seen on a GPU. NOT
-  BUILT: a hint on the HUD for the double tap; cutting the first tap's spoken line when a second follows.
-- **Shift with the squad's key gives what the key gives; a spot is covered from the wheel** (2026-11-08; A CHANGE OF PLAY, default on, no switch; `rust/game_rules/src/autopilot quick`,
-  `planmode goal_men` / `plan_goal`). The maintainer: "i think shift Q on a point should just move the squad there, should match what regular Q does. you should need to open the radial
-  menu to get covering a point". ONE FUNCTION ANSWERS WHAT THE KEY MEANS: `quick(g, t, men)` over `auto_pick`. A plain tap gives it to everyone (`auto_quick`), Shift gives the same to the
-  part `goal_men` picks (pairs, then who is nearest; the line of sight is out of that rule), and the ring's first wedge for a part is the same call. So on a spot a Shift tap is a `move`,
-  the nearer whole pair, and the others keep what they had; `cover` is a wedge of the ring kept down, that part's alone. WHAT WENT: `quickFor`, `coverFor`, `quick_give` and the wire's call
-  and type for them. THE ONE TARGET WHERE THE TWO KEYS LOG APART: a door one pair stands on and the others do not. The line says 'stack up' both ways, the plain key logs `stack` for all
-  four, and with Shift the men on it answer and nothing is logged, as the 10-26 bullet on a stacked door has it. WHERE THE WORDS AND THE PRESS CAN STILL PART: the hover line is the plain key's and
-  does not read Shift, so it never says who goes (only the ring's caption does); with every group down to one man it says 'move there' and a Shift tap gets "nobody's free for that." instead.
-  THE PART FOR THE WHEEL IS BY NEARNESS TOO, so `cover` may be refused by a pair that stands at a wall ("no line from here."). EVERY SHIFT TAP ON A NEW SPOT takes free men first, then half of the biggest group, down to one man ("nobody's free for that."): the same as before, now for moving. THE FRAME: a new action `ringPart` beside `ring` (`rails.ts ACTS`, Rust `rails_gate`): the key kept down is kept only with Shift down, else it is seen let go and the press is a tap, which on a `noTap` step gives nothing and shows the note; `railsFaults` asks `goal` open beside it. A tap ON HIMSELF is never stopped by `noTap` (`tap_give`): the key on himself always calls them back. THE TUTORIAL: both of `tut-queue`'s gates are the wheel for a part now, and each of its steps ends on the gate it names (docs/agents/missions.md). CHECK: native `rust/game_start/tests/shift.rs`, eight rules on three seeds by the keys (a door nobody
-  is on, a door they are stacked on, a door with a charge set, a bare spot, a spot by a wall, the breaker box, himself, a teammate, a hostage; a foe through `auto_quick` and `plan_goal`; the part; line,
-  first wedge and order; cover from the wheel); run on the rule before this, `every_kind_of_target_gets_the_same_order` fails with `move` against `cover` and the nearer pair's rule with
-  `cover` against `move`. `goals-check` lines 5, 6, 8, 11, 12 and `halftwice-check` H3, H3b; `GOALS_BREAK=1` (2 to 6, 10 to 12) and `GOALRING_BREAK=1` (10 to 12) now take Shift out of the hand, because the two switches are settled rows a write cannot move (`tools/qa/fold.ts`), so those words had gone green; `GOALHALF_BREAK=1` stays red. No tally moved that a soak was run for: not soaked.
-  Nobody has played it; never seen on a GPU.
-- **Shift + the key kept down is the ring for the part that takes the goal: a PROTOTYPE** (2026-10-26; `CMDRING.goalRing`, `planmode.ts
-  goalMen` / `goalRingOn`, `orders.ts ringUp` / `Menu.part` / `partGive`). The maintainer, having played the goals: "okay this feels good.
-  let's make shift-Q long press open the radial menu to append another order too". ON, with `goals`: Shift + the key kept down puts the ring up
-  on what the cursor is on, as ever, but FOR THE MEN A TAP OF IT THERE WOULD HAVE SENT (`goalMen`, the one rule both ask: the men with nothing
-  to do, else half of the biggest group, a whole pair where it holds two; on a door some of them are on already, those men). The ring names
-  them under it ("red → guard side door") and wears their colour, its rows are greyed for THEM, and the wedge picked is theirs alone: the rest
-  stay on what they were doing. Its first wedge is what the tap gives those men (autopilot `quick`): on a door they stack on it, on a door they
-  wait on it is their way in, and on a bare spot they GO there, and 'cover' is a wedge of its own: since 11-08 the only way to have them cover a spot. Every group
-  down to one man: no ring goes up and the squad says "nobody's free for that." With nobody on anything, on himself, or on a teammate under
-  the cursor it is the ring it always was. A ring put away gives nothing and counts no goal. SWITCH: ON in the page with `goals`
-  (`?goalring=0` = kept down it is everyone's ring, as the goals were first built), OFF in the module and on the frozen stand
-  (`TPS_GOALRING=1`, beside `TPS_GOALS=1` and `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan
-  mode ▸ no plan mode ▸ held, the wheel is for that part". CHECK: `probes.ts goals`, lines 10 to 12 (a second door from a stack
-  of four: the ring is one whole pair's, named, nobody told while it is up, its first wedge stacks that pair there and the other pair stays;
-  spots: 'cover' picked has that pair cover it and the other go on, the first wedge on a third sends ONE man there; all singles: no ring, nothing given; the control with the
-  switch off: everyone's ring, no part); `GOALRING_BREAK=1` fails 10 to 12, and `GOALS_BREAK=1` fails them with 2 to 6. MEASURED: one deal.
-  NOT BUILT: the men the ring is for are named on it but not marked on the floor before it goes up; the hover line before the press still
-  says the whole squad. Nobody has played it; never seen on a GPU.
-- **The key never picks a tool: on a stacked door it is the plain clear, as the word's key gives it** (2026-10-26; `AUTOPILOT.plain`,
-  `autopilot.ts autoEntries`). The maintainer, reordering the tutorials: "let's also remove the Q vs. F for deciding how to go through a room. F
-  always just does a basic clear", and a tool is told to the squad "with long press Q". It answers the 10-22 question of what the two keys each
-  do on a stacked squad. ON: the squad's key on a door its men are stacked and SET on sends them in by the plain open and clear, the entry the
-  word's key makes of a stack (`doortools.ts fromStack`), never a stun and never a charge of their own choosing; the HUD's line for the key
-  says 'open and clear'. THE TWO KEYS NOW DIFFER ONLY IN WHO GOES: the key is that door's men, now; the word is everyone who waits, on one
-  word. The word's key is unchanged (it never picked a tool). A stun, a charge or a threshold row is asked for on the ring (the key kept down
-  on the door), and still works on a stack. A tap while they walk to their marks is 'stack up' again, as before. A chain's step and a goal's
-  first wedge ask the same pick (autopilot `quick`), so they are plain too. OPEN, the maintainer has not said: whether a second tap on a stacked door
-  should do nothing at all, leaving the word's key the only way in. SWITCH: ON in the page with the quick key's autopilot (`?plainentry=0` =
-  the entry they pick, as it was), OFF in the module and on the frozen stand (`TPS_PLAINENTRY=1`, beside `TPS_AUTOPILOT=1`); a recording
-  from before the key replays with it off; debugger tick "B ▸ the squad picks the entry ▸ never a tool: always the plain clear". CHECK:
-  `probes.ts plainentry` (family squadorders; `tools/qa/plainentry-check.ts`), six lines on both stands on the office room clear, the squad
-  of four: a room nobody has stood in and three stuns, the pick and the HUD's line are open and clear; the key sends all four in by it and no
-  stun is spent; the word's key gives the same entry; 'bang and clear' given as the ring's row still starts; the control with the rule off
-  picks the stun; the plumbing. `PLAINENTRY_BREAK=1` fails lines 1 and 2. HELD OFF in the rigs that ask the squad's own pick:
-  `autopilot-check`, `squadnet-check`, `onesignal-check` (a chain's men with a can for each door) and one line of `rails-check` (the
-  entry the squad would pick as its window on what the squad knows). MEASURED: one deal. NOT MEASURED: whether a soak or a
-  tour's tally moves on the page's stand (the squad spends fewer stuns when the player taps the key twice). The squad's lines that say WHY
-  it picked a stun are gone with the page's words for them: the key never picks a tool. Nobody has played it; never seen on a GPU.
-- **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
-  picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
-  bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
-  nobody ("nobody to take that order"), no chain is laid. A click on a man, a box, a digit, Shift + either (it adds to the empty set) or 5 for
-  everyone picks again; the mode put down forgets it and comes up with everyone. A TUTORIAL MISSION KEEPS ITS OWN GROUND CLICK (everyone,
-  `planGroundAll`) while its lines name it. SWITCH: ON in the page with the digits (`?planclear=0` = the click picks nobody new, who was picked
-  stays picked), OFF in the module and on the frozen stand (`TPS_PLANCLEAR=1`, beside `TPS_PLANDIGITS=1`); a recording from before the key
-  replays with it off; debugger tick "Tab ▸ plan mode ▸ a click on the ground deselects". CHECK: `probes.ts planclear` (family squadorders;
-  `tools/qa/planclear-check.ts`), seven lines on plan mode's rig on both stands; `PLANCLEAR_BREAK=1` fails lines 1 to 3. `plandigits-check` holds
-  the switch off (its line 4 asks the click as the digits were built). MEASURED: one deal of the office room clear, squad of four; no die in it.
-  Nobody has played it; the unlit circles have never been seen on a GPU.
-- **Plan mode: the digits pick the men** (2026-10-24; `CMDRING.planDigits`, `planmode.ts planInput` / `pickDigit` / `planGroundAll`; the maintainer,
-  10-24: "1 2 3 4 in plan mode should select the appropriate squad members, and 5 selects all of them? and then we should remove clicking on the
-  ground selects all"). With the mode up and no ring or menu up: 1 to 4 pick that man alone in the squad's own order (Red One, Red Two, Blue One,
-  Blue Two; a man keeps his digit when another is down, and a digit with no living man is nothing), Shift + the digit puts him in the picked set or
-  takes him out as a Shift click does, 5 picks everyone, and his digit is drawn up and to the right of each man's circle (`PlanView.men[].n`,
-  `.planmode .pn`). A LEFT CLICK ON BARE GROUND THEN PICKS NOBODY NEW: who was picked stays picked; a click on a man and a box still pick. A digit
-  with the ring's key down is left for the ring (`stayDigit`). ON A TUTORIAL MISSION THE SAME HOLDS since 10-24 (`planGroundAll` no longer asks whether rails are live): mission 2's
-  lines teach the digits and [5] is everyone. The frame dropped the digits there until then, whatever this bullet said; `RAILS.planDigits` lets them
-  through and holds every pick until the mission's pick lesson (`docs/agents/missions.md`, the plan mission's bullet on the digits). ON in the page with the mode (`?plandigits=0` off), OFF in the module and on the frozen stand (`TPS_PLANDIGITS=1`, beside
-  `TPS_QPLAN=1`); a `FROZEN_HOLDS` row; the journal (a recording from before the key replays with it off); a tick ('Tab ▸ plan mode ▸ the digits
-  pick the men'). CHECK `probes.ts plandigits` (family squadorders; 8 lines on plan mode's own rig, both stands, one deal seed 3: the rule has no die
-  in it; `PLANDIGITS_BREAK=1` fails lines 1 to 5). `planmode-check`'s rig holds the switch off: its lines pick by the mouse and ask that a click on
-  nothing is everyone, as the mode was built. NOT PLAYED: whether the drawn digits read as clutter beside the fainter circles; never seen on a GPU.
-- **A held door's key lights when the men say so** (2026-10-23; `PLAN.thrTold`, `floorplan.ts waitsOnKey` / `PlanDoor.ready`; picture only, on on
-  both stands like `PLAN.keyLit`, `?thrtold=0`, a tick in the debugger). Found by the squad's own behaviour work: on a door held from outside the
-  word pressed before the men's "holding · on your word" call cuts their slice of the room short, and the key's cap was lit from the moment their
-  feet were on the jambs. Now that cap is dark until `thr.told`, then lit; the key does what it did. CHECK `tools/qa/plan-check.ts`, the last
-  line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
-  both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
-  word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
-- **The quick key's line is the tick's** (`rust/game_rules/src/orders/shown.rs` `quick`, kept each tick for each seat: the row's words, then ` · ` and what the cursor is on, unless that is nothing and no man; `orders/hud.rs quick_note`, `game.view.squad.quick`: none where the lesson holds `order` back or teaches the ring's hold). The page keeps no pick of its own: `autopilot.ts` `autoPick` / `autoHint` are crossings a tool or the hands-off driver asks. Test `rust/game_start/tests/menu.rs`: on three seeds the line is what the press then gives, on a door, the floor and a teammate. Never seen on a GPU.
-- **What the cursor is on is a read** (`orders.ts hover`, `src/game/under.ts`, `src/view/cursor.ts`; `rust/game_rules/src/view cursor_view`, orders `target_under`; picture
-  only, no switch). The Rust game says what the cursor is on, asked once a cursor, camera and moment of the game, and nothing of it is kept on the order book. Before the first tick (no Rust game
-  standing) `hover()` answers null and `targetAt` / `targetUnder` `{kind:'none'}`, so a check steps once before it asks.
-  What a point or the cursor is on reads the tick's list of things to work, kept every tick for every seat.
-  CHECK `probes.ts cmdring`, the last line: read every frame against never read, digest equal, an answer on most frames, and no field of
-  the order book another value after a read than before it; `HOVERREAD_BREAK=1` (the answer kept on the book) must be red. Never seen on a GPU.
-- **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
-  `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
-  one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
-  the second team threw a flashbang when our guys were already on the inside". WAS: `planmode.ts word()` gave every waiting chain its own entry, each its
-  own order with its own clock — the pair that had to re-form for its throw was seconds behind the other, whose men were inside when the can came.
-  NOW: the entries one press starts (open and clear, bang and clear; two or more) are put on ONE word of the door tools (`doortools.ts oneWord`: the
-  four's own `Word`, run by `wordTick`): nobody makes a sound until every stack on it is formed (`wordStack` at most), the cans go first, a door with no
-  can keeps its leaf shut for the men behind the can beside it, and they all step in together (`wordIn` at most after the first sound). A press that
-  frees ONE door is the entry it always was; a charge the autopilot picks for a door known shut is not on the word; a door that halts at its stack
-  (found locked) drops off it and the other goes on. CHECK: `probes.ts onesignal` (tools/qa/onesignal-check.ts, family squadorders; the plan mission's
-  own level with its frame off, the guardroom, a pair laid on each door through `planOrder`, the word's own key, played with a can a door and with one
-  can to spend), both stands; `PLANONE_BREAK=1` fails line 1. MEASURED (headless, two seeds that play the same, each stand): off, the first men through
-  the two doors are 1.2 to 2.8 s apart (2.8 where one door has no can: its pair is inside 2.5 s before the other's can); on, under 0.2 s apart, nobody
-  through before the last burst, nobody of ours dazzled. KNOWN COSTS: the press now waits for the slower stack — on the guardroom's front door the pair
-  re-forms from a split stack to a file for the throw, about 3 s, and the first man is through 5.7 to 6.6 s after the press on the page's stand (it was
-  1.8 to 3.4 s for the quicker door); the two leaves are shoved up to 0.7 s apart on the page's stand (each lead steps to his own handle). NOT
-  measured: three stacks on one word, a charge beside it, a locked door on it, a squad of two, any tally or digest; nobody has played it; never seen
-  on a GPU.
-- **Plan mode, a prototype** (`rust/game_rules/src/planmode`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
-  requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
-  not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on
-  Shift+Tab'; `?cmd` alone was enough until the maintainer's 10-20 word to get the single key right first, the bullet above); the journal turns it off for a recording from before the key; it needs the ring's own switch. SHIFT+TAB TOGGLES IT, where Tab is
-  free (with a menu, a Space list, a verb or the launcher's arc to back out of, Tab backs out, Shift or no). WHILE IT IS UP THE MOUSE IS THE SQUAD'S:
-  Sam neither fires nor aims (`planAfter`, at the end of `orders.input`, strips both buttons from the tick's copy), and Shift is not his sprint. SAM
-  STANDS AND THE VIEW IS THE HAND'S (the maintainer, 10-20: "your player character is stuck, wasd moves the camera around … it should feel like you're
-  switching into an RTS mode temporarily"): the walk keys are stripped from the tick's copy too and move `plan.look` instead (`planPanMps`, the
-  camera's own basis, no further than `planPanReachM` outside the box he and the men stand in); `Game.followPos()` hands the follow camera that point
-  in his place (`planLook`), with no aim lean (host/loop.ts, tools/qa/headless.ts); his aim point is held as it was when the mode went up
-  (`plan.aim`, written back over `Game.aimPoint` by `planAfter`), so he goes on facing what he faced; the mode put down, the camera eases back to
-  him; a restart or a fresh cast with the mode up starts the view on him again (`planHome`). Every other key is still his. ALL OF THAT, AND THE RIGHT
-  BUTTON'S HOLD BELOW, IS `CMDRING.planRts`: off in the module and on both stands, raised by the page with the mode (`?nocmdrts` = the mode as it
-  was first built: he walks with it up, the view is on him, a right click orders as it goes down), off for a recording from before the key. LEFT
-  BUTTON PICKS: a click on a man (body, or within `manPx` of his feet), Shift click adds or removes him, a drag (past `planDragPx`) boxes men by
-  their feet, a click on nothing is everyone. Everyone, a whole pair and one man are kept as the who key's own `who`; any other set is
-  `plan.pick` (callsigns), which `recipients()` reads ahead of `who` ONLY when the caller names no `who` (`give(id, t)` and the quick key go to the
-  pick; a scenario's `give(id, t, 'all')` never does); T or the ring's click on a man lets it go. RIGHT BUTTON ORDERS, BY STARCRAFT'S RULES: a plain
-  right click is the key's order for those men — the squad's own choice there (`autoPick`, asked whether or not the quick key's switch is on) —
-  and REPLACES the chain those men were on; refused, nothing changes. THE BUTTON IS READ WHEN IT COMES UP (`plan.rmbT`), because KEPT DOWN
-  `planHoldSecs` IT IS THE RING ("long right click opens the radial menu"): `SquadOrders.ringByButton` puts the order menu up as the ring at the
-  cursor for the picked men (`RingState.rmb`: kept up by that button, no tap guard), the button let go gives the lit wedge — the first is the
-  click's own order with its chain (`planOrder`), any other an order by hand — and a left click puts it away. With Shift down the button never
-  opens it. Shift + right click ADDS the stop to the end of each chain those men are on
-  (men picked out of a bigger chain part from it, keeping its stops; a man on no chain starts one). A CHAIN (`PlanChain`: callsigns, stops written
-  down as planlay.ts writes a place, a phase) is given a stop at a time: `go` → at a door `wait` (stacked: `doorTools.waitsOn(...).set`) → the
-  word's key → `in` (the entry the squad picks) → no door order has its men any more → with a stop after it `held` until the word's key, else done
-  (they hold the room, as ever). An entry given up (a lock: back on their marks) is `wait` again. A stop on the floor is no pause; a thing sent to
-  be worked is one, like a room. THE WORD'S KEY (`DOORTOOLS.blowKey`): a chain of the picked men that WAITS takes it ahead of every other reader;
-  a press with men still walking to a chained door is kept for that threshold (`spent`: the mark comes off the plan, and the plan shows
-  `planShowSecs` with the mode down) only when nothing else could want it (no charge set, nobody stood waiting, no plan laid); a press NOBODY took
-  by the end of the door tools' and wall charges' own reads is kept for the next pause (`planLate`, game.ts). An order given any other way (X, the
-  ring, B) takes its men off their chains — but a way in given on the door a chain waits at, or the word, is that chain's word. STATE:
-  `SquadOrders.plan` (per order book), `planSnapshot` / `planRestore` (savestate.ts files it with the switch on; `restoredT` keeps the chains
-  through the fresh cast a load stands up); `PLAN_STATS` is a tally. PICTURE (ui/cmdring.ts `updatePlan`, index.html `.planmode`): a frame round
-  the view and PLAN under it, a circle at each man's feet in his pair's colour (bright: picked), the box, each chain as a broken line from its men
-  through its stops with the key's cap where it is still to be pressed (lit where they wait now); with the view the hand's, Sam's own ring at
-  his feet (solid, gold) and, once the view has left him, a head at the view's edge pointing the way back (`.pself`, `.pe`). CHECK: `bun run tools/qa/planmode-check.ts`
-  (`probes.ts planmode`, family squadorders), 28 lines through real keys and buttons on the room clear with four (18: two rooms chained for one pair; 19 to 27: Sam stands and the view
-  pans, he faces what he faced, the reach, the right button read as it comes up, kept down the ring, its first wedge the click's own order, Shift
-  never opens it, a left click puts it away, the file keeps the view, a restart starts it on him; 28: `planRts` off is the mode as first built);
-  `PLANMODE_BREAK=1` fails 27 of 28 on both stands. LIMITS, as built: a chain's stop is always the first wedge (no other row can be chained); a chained 'fall in' is done at
-  once; the men of a chain are named when it is laid (a man who joins the pick later is not on it); men who part from a chain while it waits at a
-  door go in with the rest on that door's word. With `planRts`: Shift + the button kept down never opens the ring (a chained stop is the first
-  wedge's); Sam cannot fire, walk or turn while the mode is up and time is not slowed, so the mode is a risk taken (slowed time on easier modes is
-  the maintainer's open call); a throw key pressed with the mode up throws at the aim he held. SEEN: on the page with the software adapter at
-  960 × 540, real keys and mouse, no console or GPU errors — the first build's keys, and on 10-20 the RTS's: D and A moved the view and Sam stood
-  (his mark went to the view's edge and came back), the cursor swept the view and he did not turn, a right click ordered as the button came up, the
-  button kept down put the ring up and its second wedge gave 'cover', the view was walked to a door off his screen with W and A and the ring let go
-  there laid the stack as a chain with its key's cap, the mode down brought the view back and he walked. Never seen on a GPU, never played, and no
-  tally has been run with it: whether chains beat B is not measured.
-- **Who commands best: the three-hands tally** went with the laid plan (2026-11-07), and nothing reruns its numbers.
-- **'Move there' fits the room** (`rust/game_rules/src/roomfit` over `rust/game_rules/src/roomread`; `ROOMFIT.on` DEFAULT ON, `?noroomfit` / the table by name = orders.ts `spotsAt`'s line abreast
-  exactly as it was; record rebuild/squad-spots/read-first.md). `roomRead(g, p, reach, hint)` = the STATELESS read both this and a room clear can take: the floor shared with a
-  point (a flood that stops at door frames, gap lines and passage mouths — finer than cleared.ts's rooms) and its WAYS out (cover.ts's openings: which side the space is on, the floor
-  beyond, `farKnown` by cleared.ts, shut / locked). orders.ts 'move' asks `fitSpots(g, at, n, face, sam, bodies, held)`: the ways weighted (near · uncleared over known · open over shut
-  over locked · the side Sam faced) + long uncleared floor as sectors → each man a THING TO WATCH and a place to watch it from — in sight of it, off the frame and out of every way's
-  funnel, a wall at his back, ≥ `apart` from mates and bodies, nobody in anybody's lane; a second gun only on uncleared ways; spare men watch the longest run; ONE man stands on the
-  point itself. `null` (no room for them) = the old line. `Assignment.fit` carries it: the watch is taken up within `watchInM` of the mark, the row reads 'in position · on the <door>
-  door', arrival is by his feet (a watch the fight AI holds him off does not keep the order 'moving'), and `fitTick` re-looks once a second ONLY when the known rooms / the doors /
-  a mate's watch changed — the gun moves to a heavier unwatched threat, the feet never. No dice, nothing saved (an Assignment is not in a checkpoint), no panel rows. Frozen digests pin
-  it off (threshold-probes.ts, nvg-probes.ts). A HALL'S LENGTH (10-11, the missions goal's hall level): a way stands for a long run of floor only where it lies ACROSS the run (`sectorAcross` 0.5 = the cosine by which it must face back up it; 0 = any way near the bearing, as first shipped — a hall with doors down its sides then got four guns on doors and none on its length), and a run past `sectorFarM` 10 m in a room the team has stood in counts `sectorFarK` 0.7, not `knownK` 0.35. QA: `probes.ts roomfit` (rooms over every level × 2 / 3 / 4 men, cleared, hall, walk, off; in `all-quick`; on the shipped stand the lived-in rooms leave less floor out of the funnels and a man's first third of a second off the mark is 0.07‥0.08 m (the same with `TPS_UNSEEN=0`: not the sneak rule; which shipped row it is was not chased) — the bars say so), `bun run tools/qa/roomfit-map.ts
-  [--level f] [--men n] [--at x,z]` (the plan as ASCII, fitted against abreast), `node tools/qa/roomfit-look.cjs` (the real page headless: both, a still each).
+## Where the code is
 
-<!-- was CLAUDE.md lines 990–1108 -->
-- **'Fall in' puts no two men on one spot** (`ORDERS.fileSpread`, `fileApart` 0.9, `fileTight` 0.75: ON in the page — `?filespread=0` — OFF in the module and on the frozen stand,
-  `TPS_FILESPREAD=1`; a `FROZEN_HOLDS` row, a recording or a run tape from before the key replays with it off (journal.ts `applyKnobs`); Tab ▸ Player, doors & props ▸ 'fall in: no two
-  places on one spot'). Found by the wall charge's own check on block-squads: Sam put down at (13.6, 10.3) with no trail behind him, Blue One's and Blue Two's fall-in goals came out
-  0.25 m apart beside door `m_w`, both read 'arrived', and they shoved each other for as long as he stood there. WHY: the file's places run straight back from Sam past the end of his
-  crumb trail (`slot(back)`), so with a wall behind him several places CLAMP where the floor stops; with the doorway manners on (the page) the rear man is 'standing on a mate'
-  (`onTop`), so he is sent on to his exact place, a quarter metre from the other's. The level's door swings only changed the walk in. THE RULE (orders.ts `apartSlot`, asked only with
-  Sam stopped, the place not one the doorway manners have just moved off a door's lane and not one along Sam's own wall): a place within `fileApart` of where a man AHEAD of him in the file — or a teammate on a post — will stand, with
-  nothing solid between, is dealt again at the nearest clear floor (doorway.ts `doorwayClearNear`: off every door frame and lane) — in Sam's sight first, else in sight of the place
-  itself, else both asked again with a bare body's width (`fileTight`) between places, and where the floor has none of it the man STOPS SHORT: where he stands, once he is within 1.5 m
-  of the place, a body's room from the others and off the frames. One point per assignment, kept while his place and theirs stand, so he walks to it once; a deal that found no floor
-  is not searched again for a second. No dice, nothing saved (an Assignment is not in a checkpoint), no words. `bun run tools/qa/filespread-check.ts [--verbose]` (`probes.ts
-  filespread`, in family `squadorders`; both stands — it raises the manners itself; `FILESPREAD_BREAK=1` must fail): the found case off (2 still moving after twenty seconds, 1 pair of
-  places on one spot) and on (nobody moving, no two places within 0.85 m, everybody arrived, nobody further from Sam), then Sam put down on the start and in the held rooms of four
-  squad levels — shipped stand, 19 places: men still moving 10 → 2, places on one spot 8 → 0, dealt again at 12, every file that stood still without the rule stands still with it
-  (9 of 9); frozen stand 9 → 3, 4 → 0, 11 of 11. IT ACTS IN TRAINING 6 at 0:11 (the two squad sound replays are held against it: `replay-at.ts public/assets/replays/train-pairs.json.gz
-  --at 50 --rerun`, and `train-orders` `--at 106`). KNOWN: the two men still moving at compound-four (17.83, 15.92) are one of them walked ≤ 1.8 m by the cover's own step
-  (`COVER.step`) onto an open door, not a jostle; places 0.65–0.7 m apart still shuffled, which is why `fileTight` is 0.75; 'stopped' is Sam's measured pace at or under 0.3 m/s (`samStopped`), so a Sam
-  creeping at about that pace flips the rule on and off; a man ahead's goal can be a corner of his walk in, not yet his place; a Sam who walks back over his own short trail gets a file bunched round him with the rule or without (the places are the trail's). MEASURED (shipped stand, scripted commander, rule on against off, block-squads / compound / depot / the office room clear four × seeds 1–8, no error or stall): 14 of 32 run digests equal, won 19 both, teammates up 54 against 49 of 128 — not a difference at that size. `probes.ts wallkeep`'s count of nav-cell crossings in its quiet re-reads on block-squads reads 1 with the rule (3 before it). `unseen-probes.ts follow` fires its one test shot with `FRIENDS.lowReady` held off: that walk turns Sam back on his own file, and whether a teammate stood in his line (so the round never left: red on the office with the rule or without, on records only with it) was where the file happened to stand. Never seen on a GPU or played by anybody.
-- **A step aside is never into a doorway** (`ORDERS.asideClear`, 10-26: ON in the page — `?asideclear=0` — OFF in the module and on the frozen stand, `TPS_ASIDECLEAR=1`; a
-  `FROZEN_HOLDS` row, the three pin lists; journal: a recording whose ORDERS row has no such key replays with it off; Tab ▸ Player, doors & props ▸ 'fall in: no stepping aside into
-  a doorway'). Found on compound-four as shipped (seed 1, the scripted commander): Sam walked along the office's wall past the open door `c_n`, a man of his file stood beside it,
-  and `aside()` ("Sam is walking AT him: a spot `asideOff` off his line, the side he is on first") answered a spot IN the doorway, in the leaf's swing. The rest rule is not asked of
-  a man who is stepping aside, so he stood there for as long as Sam worked at the leaf across his way. THE RULE (orders.ts `aside`): a spot in a doorway's opening or a leaf's swing
-  (`inFrame` or doorway.ts `doorwayInWay`) is not taken: the other side of Sam's line, then a shoulder's width either side; no clear spot = he is not stepping aside and goes on to
-  his place in the file (the spot he was already stepping to is kept while it is fresh, `asideHold`). The side he is stepping to stays his first side, so a spot at a swing's edge does
-  not send him back and forth across Sam's line. No dice, nothing saved, no words. `bun run tools/qa/asideclear-check.ts [--verbose]` (`probes.ts asideclear`, in family
-  `squadorders`; both stands — it raises the manners itself; `ASIDECLEAR_BREAK=1` must fail, 3 rows red on either stand): the spots round every door of three squad levels — shipped
-  stand 4179 of 31269 in a doorway's way with the rule off, 0 with it on, none moved off a clear spot (frozen 5616 of 33552 → 0); the found case staged (one man by `c_n`, Sam
-  walked along the wall for eight seconds): shipped stand he stands still in the doorway 353 of 480 frames with the rule off, 0 with it on (frozen 103 → 0). MEASURED on the
-  build of 10-26, compound-four as shipped, eight seeds: 6 taken and 2 wiped with the rule and without (wins 144 to 331 s against 132 to 312 s; teammates up after a win 15 of 24
-  against 8 of 24) — eight seeds do not tell those apart, and seed 1 is no faster. With `TPS_ASIDECLEAR=0` every seed's tally is the build's as it was. KNOWN: with the rule he may cross in front of Sam to the far side of his line where the near side is a doorway. NOT THIS RULE'S: the same run's
-  other man on his mark in a doorway (`yard_sw`, up to 34 s) is the harness's Sam going back and forth 2.6 cm a frame between his goal and a step off his men's line
-  (playthrough.ts `offLine`), which the squad reads as a walk at 1.5 m/s — staged with a Sam who walks through that door and stands, all four men rest clear of it. Headless only:
-  never seen on a GPU, nobody has played it.
-- **A stack's file with no room to pass fills from its far end** (`ORDERS.fileQueue`, 10-27: ON in the page — `?filequeue=0` — OFF in the module and on the frozen stand,
-  `TPS_FILEQUEUE=1`; a `FROZEN_HOLDS` row, the three pin lists; journal: a recording whose ORDERS row has no such key replays with it off; Tab ▸ Player, doors & props ▸ 'stack: a
-  tight file fills from its far end'). Found in a replay of the maintainer's on compound-four as shipped (re-run on its own build, matched step for step): the team inside the
-  garage, 'stack up' on its forecourt door `g_e`, 'clear from outside' five seconds on. The stack's marks run along the wall into the lane between the parked car and the wall, a
-  man wide. `pair()` deals the marks for the least walk, so the nearest man got the mark by the door: he stood in the lane's mouth and the two bound for the marks beyond pushed
-  him down it at a tenth of a metre a second (the doorway gate lets a man 'go anyway' after its patience, there is no floor to go round, and men who inch are never 'stuck') —
-  twenty seconds of three men edging along a wall, and again when the next order moved every mark a step. THE RULE (orders.ts `fileCross`, asked by `pair()` of a stack's deal
-  only): marks within `fileQueueGap` (1.3 m) of each other are one file; a file is TIGHT where one of its marks has no free floor `DOORMANNERS.roundOut` to either side of the
-  line to its neighbour; in a tight file a deal costs `fileQueueCost` (500) for each pair of men where one would have to get past the other (the other's mark lies on his walk to
-  his own, and the other is on it first). That is less than splitting a pair (1000) and more than the guns' order in the file (`GUNROLES.fileCost` 400): in a tight file the
-  order the men come in beats the order of their guns. No tight file = nothing is priced and the deal is the very same. No dice, nothing saved, no words; counted in
-  `STACK_OWN.queue`. `bun run tools/qa/filequeue-check.ts [--verbose]` (`probes.ts filequeue`, in family `squadorders`; both stands — it raises the manners itself and deals the
-  face the men are on; `FILEQUEUE_BREAK=1` must fail): the found case staged with the four where the replay had them, 30 s — frozen stand all four on their marks after 29.7 s
-  with the rule off, 3.9 s with it on; with 'clear from outside' 5.2 s after the stack never in 30 s off, 0.8 s on (shipped stand 17.9 → 5.2 s, never → 3.3 s); nobody is pushed
-  off a mark he had with the rule on; and every door and face of three squad levels with a stack for four (92 stacks, 11 with a tight file on the frozen stand, 17 on the
-  shipped): where no file is tight the deal is the same. On the replay itself, the rule raised at the order's frame: all four on their marks 4.7 s after 'stack up' and about
-  a second after 'clear from outside' (as played: twenty seconds and more of shuffling). KNOWN: how long the jam lasts without the rule swings widely with small changes (8 to
-  45 s over the staged runs), and no one newer rule was found to cause it. NOT measured: whole missions with and without the rule. Headless only: never seen on a GPU, nobody
-  has played it.
-- **A teammate walks round a chair that stands by a door** (`ORDERS.propRound`, 10-27: ON in the page — `?propround=0` — OFF in the module and on the frozen stand,
-  `TPS_PROPROUND=1`; a `FROZEN_HOLDS` row, the three pin lists; journal: a recording whose ORDERS row has no such key replays with it off; Tab ▸ Player, doors & props ▸
-  'teammates walk round chairs'). Found in a replay of the maintainer's on compound-four as shipped (re-run on its own build, matched step for step): a chair of the lived-in
-  rooms stood a stride and a half short of the sala's side door `a_s`, on the straight way to it. The walk grid is the statics alone, so one man's way ran through the chair; his
-  body shoved it ahead of him into the doorway, where it stood pinned against the jamb, and the next man walked on the spot against it for four and a half seconds until a third
-  pushed it through (props.ts: a thing that cannot yield pushes the man back). THE RULE (orders.ts `propPenalty` and `propWay`, asked by guards.ts `goTo`): a teammate's way pays
-  `propRoundCost` (6) times over for every cell within `propRoundPad` (0.25 m) of the circle of a movable thing that stands within `propRoundDoor` (2.5 m) of a door's frame, as
-  it stands when the way is laid. The plain way is searched first, as ever; the way round is taken only where it is no more than `propRoundMore` (2 m) the longer AND crosses the
-  very doors the plain way does (orders vet a man's PLAIN way — which doors, which rooms — so a chair must never send him through another door), and where there is none he
-  walks into the thing as before: a chair in a doorway is still pushed through. The cell he stands on is never dear. ONLY A MAN AT THE TEAM'S WALK (teampace.ts `teamAtWalk`: no entry's pace, no step of the room fight's,
-  no leave to run, no grenade he is running from, nobody in his sights; a follower closing up is walking — so with `TEAMPACE` off, or outside the room fight, the rule is
-  off), NEVER A MAN A DRILL HAS TAKEN (`owners`), never an enemy. A thing farther than the reach from every door is
-  not priced: shoved, it does no harm, and the men's ways there are as they were. No dice, nothing saved, no words. `bun run tools/qa/propround-check.ts [--verbose]`
-  (`probes.ts propround`, in family `squadorders`; both stands — it raises the lived-in rooms and the team's walk itself; `PROPROUND_BREAK=1` must fail, five red lines): the
-  found case staged with that chair where the replay had it — frozen stand the chair shoved 0.71 m with the rule off, 0.00 m on, the man there at 1.8 s and 2.0 s; shipped stand
-  1.05 m and 0.00 m, 1.8 s and 1.9 s; the chair square in the doorway is pushed through (beyond the door at 2.9 s, shipped 4.3 s); of 96 ways laid for the four to every door of
-  the level 64 pass a movable thing by a door and 56 are taken round it, none that passes none differs, none is not laid, over the two metres or by other doors; a hostile, a
-  man with the fight's pace, a drill's man and a chair on open floor three metres from any door get the plain way. On the replay itself, the rule raised 4 s before: the chair moves 0.21 m
-  (as played 2.80 m) and the second man is beyond the door at 261.9 s (as played 265.6 s). WHAT IT COST TO LEARN: priced everywhere and for every teammate, the rule lost the
-  night breach drill its room on nine seeds of twelve (the plain way: none of twelve) — come to the stack by another way the thrower stands a centimetre off, and the drill's
-  can clears the jamb by under two centimetres (breach.ts: nobody has widened that); hence the drill's men keep the plain way. HELD OFF in two probes on every stand
-  (`tools/qa/holds.ts WAYS_AS_THEY_WERE`: `filespread`, `noshove`): each stages a jam by the ways the men used to walk and reads the jam with its own rule off as its proof, and with
-  the men coming another way that jam does not happen (the lines that show their mends are as they were). MEASURED, headless: `playthrough.ts --scn compound-four --cap 420` on the shipped stand, seeds 1 to 24 — 17 taken with the rule and 17
-  without, four seeds changing hands, two each way (run on the rule before its last two narrowings: the same doors, no man with leave to run). The night breach drill's
-  twelve seeds, an order given and taken back first: all twelve cleared with both men up. `squadorders` on both stands, `threshold` and `rails` on the shipped: no line
-  red that is not red with the rule held off. The page and the shipped stand read the same tables (`shipped-page.cjs`, compound). KNOWN: the pad is thinner than a body, so a thing may still be brushed; a thing
-  already in a doorway is pushed, not cleared; the orders' own estimates of a walk (who is nearest a mark) are of the plain way and can be off by the two metres; a thing shoved
-  from farther than the reach can still end up by a door, where the next man goes round it. Never seen on a GPU; nobody has played it.
-- **No floor and no stopping short: he holds, he is never sent into a mate** (`ORDERS.fileHold`, 10-13: ON in the page — `?filehold=0` — OFF in the module and on the
-  frozen stand, `TPS_FILEHOLD=1`; a `FROZEN_HOLDS` row, the pin lists; journal: a recording whose ORDERS row has no such key replays with it off). Found by
-  `filespread` line 3 on the shipped stand, room-clear-four's storage corner (Sam at (33.00, 7.03)): the spread found no floor for Blue Two's place, he was 0.5 m
-  from Blue One's place so could not stop short (the bar is `fileApart`), and `apartSlot` handed him the place as it fell, 0.40 m from Blue One's: both still
-  moving for as long as Sam stood (0.27 m each in 5 s). On: within 1.5 m of that place and off every frame and lane he holds where he stands (asked live, never
-  kept), and where a mate's place is nearer him than `fileTight` the held point is the step straight away from it (then a little either side) that makes it
-  `fileTight`, or as much of it as the floor has, 5 cm at a time; further off than 1.5 m he walks on toward the place as before. Only `apartSlot`'s two 'no
-  floor' returns changed. Measured there: 2 moving, places 0.40 m apart → 0 moving, places 0.70 m and bodies 0.66 m apart. `probes.ts filespread`, both stands,
-  `FILEHOLD_BREAK=1` (the corner is STAGED for the frozen stand, whose men never walk into it: doors stay, the storage door stood open, the two put in the
-  pocket; and line 3's 19 places). One level, one corner, no seeds (the stand is fixed). Never seen on a GPU, never played.
-- **Teammates falling in never shove you** (`rust/game_rules/src/noshove`, `NOSHOVE.on`: ON in the page — `?noshove=0` — OFF in the module and on the frozen stand,
-  `TPS_NOSHOVE=1`, a `FROZEN_HOLDS` row, in the knob registry and a journal's tables: a recording from before the key replays with it off; off = the build as
-  it was; the maintainer's yes of 10-21 to a card from the team pace work). THE FLAW, reproduced before anything was changed: a man walking to his place
-  under 'fall in' was as solid to the player as an enemy (player.ts `keepOffGuards`: "you are the one who yields"), so one whose place lay on the player's far
-  side walked into him and shouldered him aside — 0.22 to 0.81 m staged on room-clear-four, 0.23 m on the compound (room taken through k_p, 'fall in' with the
-  player stood inside) — and orders.ts, which reads the player's pace off the ground he covers, took the shove for a WALK: the file's places moved (stopped /
-  not stopped flips `clearBack`), and the man keeping the room's other door walked 0.54 m out of "his way" (`aside()` comes before the keep).
-  TWO HALVES, each with its own key under the switch. `round`: a man of the player's own under 'fall in', on his order's legs (`fallingInYields`: `post === null`
-  and a script — the fight's own moves, a man on any other order, a man running from a live grenade (`fragRunning`: that leg is run through the same
-  walker under a borrowed script) and every enemy are as they were), is the one who yields, in squad.ts `runGuardScript` after
-  his step (`noShoveKeep`): his own step never takes him nearer the player than `ring` 0.6 (or than he already stood) — where a ray from the player's shin to
-  the side finds `ring` + his radius of floor he walks ROUND, the side his way already lies on (square on: his right), else the other; his order's place
-  itself inside the ring: he STOPS SHORT at it; no room either side (a passage, a doorway): `through` on, he squeezes past as a man in a narrow doorway always
-  did and the player is not moved, `through` off he stops short and waits; left standing inside the player's keep-off (a restart, a load, an enemy who shoved
-  the player onto him) he steps back out at `back` 1.2 m/s; a corner of his way that lies under the player is skipped for the next (or for his place) where
-  that is a straight walk, and one he cannot cut he waits for. HELD SHORT HE STANDS: `noShoveKeep` answers true and the walker zeroes his pace, so his legs
-  do not cycle on the spot and followPath's stuck side-step is not woken (the review of 10-21 found him walking on the spot at 2.2 m/s). The player's side
-  (`keepOffGuards`, and `keepHeldOffGuards` for the pair with a man in his arm): such a man never moves him — only what his OWN legs closed on the man this
-  update is taken back (`noShoveBack`, measured from where he would stand had his legs not moved: a walk past a follower's shoulder stays AT the keep-off and
-  the man is not made to step back), so he still cannot walk through a follower. `own`: every push `keepOffGuards` gives him, from anybody, is written down for the frame
-  (`Player.shoved` / `shovedT` / `shovedFrom`, set and read inside one update: no save holds them), and orders.ts `tick` reads his pace and heading off
-  `noShoveOwn`: a frame nobody moved him in reads as it always did (a harness that walks him by small teleports still reads as a walk); one a man did reads
-  the step his own legs took inside that update, less what the men took back of it (the part of their shove that runs against his step, no more than
-  they gave) — a standing player shoved reads 0, a walk into a man who stands reads 0, sliding round one reads the ground covered, and what a door leaf did to him since the last tick is not his walking either (the compound's case: the leaf pushed him back each frame
-  and the first cut read THAT as 1.8 m/s). Not touched: the trail's crumbs, the sneak's and the unseen squad's own reads of him, `playerGroundVel` (what a
-  watcher sees of him is still the ground he covers). Tab ▸ Team feel: 'teammates ▸ never shove you falling in', '… go round you', '… a shove is not you
-  walking', '… squeeze past in a tight place'. CHECK `tools/qa/noshove-check.ts` (`probes.ts noshove`, family `squadorders`; 12 lines, each rule line
-  played off AND on, green on both stands; `NOSHOVE_BREAK=1` fails 11 of the 12 on both, the journal line apart): the found case staged small (off 0.22 m and
-  a pace read of 1.7 m/s → on 0.000 m and 0.00, the man round him); the walk from 2.5 m square on and a foot off his line with `ORDERS.nearM` held off
-  (off 0.25 / 0.81 m → on 0.000, round him and in his place); a 1.2 m passage (squeezes past, 0.000 m; `through` off: held at the ring for the whole
-  take, his legs at 0.00 m/s and the stuck side-step woken 0 times); his place under the player (the mover asked directly: at the ring); set down on top
-  of each other (he steps out, the player stays); the player walked at a follower (no nearer than 0.55 m) and past one's shoulder (0.550 m, the man made
-  to step back on 0 frames; off 0.52); a teammate on a 'move' order through the standing player (still shouldered 0.44 m — he is not falling in —
-  pace read 0.00 against 2.0 to 2.6 off, the follower in the line of the shove still against 0.84 m off); the arithmetic; THE COMPOUND'S KEEPER, which is
-  the shipped stand's case (the frozen entry walks nobody across him, said so by the line): off 0.23 m and the keeper 0.54 m off his spot on his own legs,
-  `own` alone the player shoved and the keeper's legs still, on 0.003 m and nobody's legs. `roomkeep-check.ts`'s wider bar for a shoved player
-  (`ORDERS.asideOff`) is no longer reached with the rule on. THE PAGE: `tools/qa/noshove-page.cjs` (the real bundle in headless Chromium on the software adapter, `PORT=… node tools/qa/noshove-page.cjs` against a dev server: the page opens with the
-  switch on, the standing player moved 0 m and the man went round him no nearer than 0.58 m; `?noshove=0`: off, 0.227 m; no page error).
-  MEASURED 10-21: switch off = the build as it was, 21 of 21 run digests equal on EACH stand (`PT_DIGEST=1 playthrough.ts --seeds 1`, the page's stand with
-  `TPS_NOSHOVE=0`). On against off on the page's stand, 21 scenarios x seeds 1 and 2 (the tool's own player; its JSON carries `noshove`): 31 of the 42 runs
-  are the same run (the rule never fired), 11 differ; men up 64 of 148 on, 66 off; ends the same (21 taken, 13 wiped, 5 lost, 3 rescued); smells 147 on,
-  141 off (twitch 114 / 111, unaware 24 / 23, block 3 / 1 — one of the new blocks names a man on his fall-in mark 0.87 m from a stopped player, one a man on
-  a door order: two seeds do not say whether that is the rule); a follower was turned round the player on 198 frames, a shove kept out of his pace on 724,
-  never held short or squeezed past. The tour and the soak were NOT run. NOT SEEN, NOT PLAYED: nothing of this on a GPU; nobody has watched a man walk round the player
-  (his body still faces his next corner while his feet go round: a side-step that may read stiff) or squeeze through him in a passage; `ring`, `back` and
-  the squeeze-or-wait call are first numbers. STILL AS IT WAS, for whoever takes it up: a teammate walking to a mark on ANY OTHER order shoulders the player
-  (only his pace is no longer read off it), and a teammate the fight has moving.
-- **The file's further back off a doorway ends with the floor** (`ORDERS.backEnd`, 10-13: ON in the page — `?backend=0` — OFF in the module and on the frozen
-  stand, `TPS_BACKEND=1`; a `FROZEN_HOLDS` row, the pin lists; journal: a recording whose ORDERS row has no such key replays with it off). Found by
-  `ordereddoor-round` on the shipped stand ("the four fall in round by the corridor, and are with Sam": Blue One stood at the server door, 8.9 m off, marked
-  arrived). Sam stood at (27.5, 11.4) with no trail, 'behind him' pointing into the manager's open door: `slot()` stops where the floor ends, in that frame,
-  however far back it is asked, so `clearBack` added its full 2.4 m for every man after the first and each man inherited the one ahead's (file distances
-  1.3 / 4.8 / 8.3 / 11.8 m), and the 'near enough already' band (file distance + `bandM`) took a man 8.86 m off in plain sight for one in his place. On:
-  `clearBack` stops adding the moment 0.3 m further back moves the place by under a centimetre (file distances 1.3 / 2.4 / 3.5 / 4.6 m there). NO PLACE MOVES
-  by the key (once further back stops moving `slot()` it never moves it again: the count only went on to its eighth step on the same spot) — only the number,
-  which the near band, `unseenWallSlot` and `sneakFollow` read (those two get the shorter file distance in that one case, which no check stages:
-  `unseen-probes.ts wall` on the shipped stand prints the same with the key on and off, `sneak-stand` is green). Measured there, the fall in from the
-  server room at 14 s: Red One 2.9 · Red Two 3.6 · Blue One 8.9 · Blue Two 4.4 m → 2.9 · 3.6 · 4.4 · 5.2 m, all arrived, nobody moving.
-  `probes.ts ordereddoor-round`, both stands, `BACKEND_BREAK=1` (the far man is STAGED for the frozen stand, whose men shoulder the manager's leaf shut and
-  so never show it: the order given from the server room, the men then put in the corridor with the last 8 m off, the leaf held open; and a control that no
-  place differs by the key). One level, one door, no seeds (the stand is fixed). Never seen on a GPU, never played.
-- **A stack refused only for Sam's own body says so** (`ORDERS.inWay`, 10-13: ON in the page — `?inway=0` — OFF in the module and on the frozen stand,
-  `TPS_INWAY=1`; a `FROZEN_HOLDS` row, the pin lists, a debugger toggle; journal: a recording whose ORDERS row has no such key replays with it off). The
-  owner, on 'stack up' refused while HE stood on a stack place in a tight bay: "they should tell you you're in the way". `orders.ts noRoomWords(plain, ask)`:
-  on a 'no room' refusal the very ask is asked once more with Sam left out (`samOut`, the own-mark rule's second ask: every maker reads `samPlace`); places
-  for every man that way = the one thing on the door is him, and the man says `IN_WAY_WORDS` ("you're in the way.", the one place the string lives) — the
-  order's answer, the spoken line and the menu's greyed word alike. Asked at the stack's `valid` / `issue` and the door tools' `stackable` / threshold
-  issue (`doortools.ts`). WORDS ONLY: nothing is dealt from the second ask, the makers' counters (`STACK_OWN`, `DOORMANNERS_STATS`, `STACKROOM_STATS`,
-  `GLASSPEN_STATS`), `leafOutGave` and the memos the makers fill (`stackroom.ts stackRoomBookKeep`: the floors a first reading takes off the leaves as they
-  stand; the shots asked through glass) are put back, no die is thrown; no order is taken or refused by the key and no place moves. NOT built, on purpose: stacking anyway with a
-  man held back; giving the order again when he steps off. Not covered: 'no room to stand off.' (the charge's stand-off reads Sam's body directly, not
-  `samPlace`) still says that with Sam on a stand-off mark; the second ask does not
-  ask `reach` or the lock, so a door he steps off of can still answer "can't get there."; the shorter line's bubble is up a sixth of a second less. `probes.ts stack-inway` (family `inway`, `tools/qa/inway-probes.ts`), both stands,
-  `INWAY_BREAK=1` fails on both: the barracks' sg_w from the gallery, Sam on the last of the four places → refused, "Red One: you're in the way."; Sam
-  stepped off → taken, a man dealt the place he stood on; the compound's hall_n (no room for four, Sam 6+ m off or stood in front of it) → 'no room on
-  that door.'; key off → 'no room on that door.' at sg_w; every man's order, door, place and position the same key on and off (0.000000 m); the second ask
-  leaves counters, run digest and die as they stood; and COLD, on a game that has never asked that door, the words differ by the key and nothing else
-  does (a tripwire: sg_w is shut and has no glass, so the memo restores read the same there with or without them). Two stagings (one level, one door each), seed 1, no run tally. Nobody has seen or played it; never seen on a GPU.
-- **A walk tries a door nobody has tried** (`ORDERS.walkTries`, 10-13: ON in the page — `?walktries=0` — OFF in the module and on the frozen stand,
-  `TPS_WALKTRIES=1`; a `FROZEN_HOLDS` row, the pin lists, a debugger toggle; journal: a recording whose ORDERS row has no such key replays with it off).
-  Acts only where `DOORTOOLS.testDoor` is on. The fault: 'move there' to a spot whose only way in is a door locked or wedged against the team was refused
-  at once with the door's name ("store door is locked.", the menu's row greyed with it) — `orders.ts route` reads the real lock, and told the player of
-  one no hand had been on, where the door orders learn a door at its handle. Now `route` hands back the door a lock refusal is about and the face the
-  way comes to it by (`lock`: a field more, nothing else of the way-round search is touched); `walkTry` asks `doorTools.untried` of it, and for 'move'
-  alone an untried one is no refusal: `walkStacks` deals the men whose way runs at it that door's stack marks (`stackPostsWait`, as 'stack up'), they
-  walk there on their 'move' (`Assignment.tries`), and `doortools.ts walkTried` has the man on the jamb try the handle as he comes onto his mark: locked
-  → the halt's own line ("locked. holding on it — your call." / "wedged from inside. …", `shutSaid`, shared with `haltAt`), the log's 'tried' /
-  'halted' / 'end: found shut' under `move <door>`, the men left the plain stack a halted door order leaves (`stackLeft`, shared with `plainStack`;
-  'stacked · <door> · locked'), and `haltBack` now steps halted WALKERS back from another pair's charge as it does a halted entry; it turns (he says
-  the stack's own "it's not locked."), or the leaf came open → `orders.ts walkOn` asks the walk again as a fresh order would be asked: the next
-  untried door on the way gets its own marks and its own try (a review run had the handback walk both men through a second, untried lock), a refusal
-  (a known door, no way, no room) is said by one man and they stop where they stand ('stopped short'), else each man is handed the 'move' he was
-  given. One try per face of a door whoever's order sent the walkers; the halt and the handback are a group of their own (`newGroup`: nobody
-  else's 'set.' waits on them); a walker reads 'moving' until the try; a walker sent off to throw keeps `tries` in `squadthrow.ts`'s `back` copy. Back on his walk after a mate has tried the door (the team knows it shut), he is sent to his stack mark and nothing is said or counted again; a group with a man still carrying `tries` calls no 'set.' (a second review's two finds, 10-14; the first has a check line, the second is read only).
-  The team knows from then on and the same order is refused and greyed as before. As they were: a door the team knows, one Sam's ring opens, an open
-  door, a spot with another way in, and EVERY OTHER order that asks `reach` (stack, the door tools' stack and stand-off, work a thing, the wall
-  charge, the pair orders, throws, shutdoor: they would walk a man through the leaf) — those still refuse with the door's name untried; fall in is not
-  touched. Known and left: no room to stack on that door → 'no room on that door.' (the stack's refusal, on a 'move'); the refusal names the door on
-  the way the lock search found, which is the one walked to; a lead stopped short of his mark tries it from where he stands; a second cast is left
-  out; the silent squad's stand-in for the move row (`pairorders.ts pairDark`) asks `reach` and still names an untried lock (out of this mend's
-  reach, left). `probes.ts move-walktries` (family `walktries`, `tools/qa/walktries-probes.ts`, 23 lines, sets `testDoor` itself), both stands,
-  (11-06: its 'held' line is red on the page's stand by a row, a walk's try never made while a round is held on a man: `docs/agents/qa.md`, THE TWELFTH.)
-  `WALKTRIES_BREAK=1` fails on both (14 lines): the office's manager door from the corridor, the pair → key off refused "manager door is locked." and
-  greyed; key on taken, row live, walked ~20 m at no more than a plain move's 2.00 m/s, one handle tried, the line said once, both stacked within
-  2.6 m of the frame on the corridor's side and still, then refused and greyed; the four with red alone sent (blue does not move); the Mousehole's
-  store door wedged BY HAND, the four ("wedged from inside. holding on it — your call."); open door, known door and Sam's key the same key on and off
-  (0.00 m); twice the same (0.000000 m); the journal. Staged since the review: the door unlocked, and opened from inside, two seconds into the walk
-  (the move completes; one try and "it's not locked." once; an open leaf is not tried); two locks on the way (the pair in the storage room, its door
-  hand-locked, its key on the ring mid-walk: the manager's door gets its own try, nobody in the room at any frame); 'hold position' mid-walk (no try
-  after, nothing left on the men); the jamb's man down (his mate tries); the four with blue ordered meanwhile (a 'set.' each); `testDoor` off with the
-  key on (the key-off words); 'no room on that door.' FORCED (the makers' answer for that door stubbed to none — no real door here has no room for
-  a walk: Sam on a mark only has the marks dealt again). UNSTAGED: a real throw order mid-walk (the hand-back is staged by hand); a mixed order whose plain movers arrive before the try; a lead who stopped short tries from where he stands (as a stack's lead does); a lead stopped short; a refusal at the handback; two
-  orders' walkers on one door. `orders-edges`' line 'move there through a door locked against Sam is refused with the door named' went red on the
-  shipped stand (it found no refused door) and now asks with the key held off: it is the refusal itself, read against the ring. Two levels, three doors, one seed, no run tally. Nobody has seen or played it;
-  never seen on a GPU; the level's own wedges (a defender's) were not staged.
-- **An ordered walk keeps off lit floor that an uncleared room can see** (`rust/game_rules/src/seenwalk`, `SEENWALK.on`: ON in the page, `?seenwalk=0`; off in the
-  module and on the frozen stand, `TPS_SEENWALK=1`; panel 'walk ▸ keeps off lit floor in view'; the table is in the journal, a recording from before it
-  replays with it off). Found at the glasshouse (the squad's walk to a door went past lit glass); the maintainer, asked whether to build a rule for
-  glass, 10-16: "can that just work with the regular visibility systems? men will consider themselves visible in that condition". So NO RULE FOR GLASS: a
-  block of floor is dear to the walker when it is LIT (the place's own steady light on the meter's scale, `calmtorch.ts placeLight`, at or over `litAt`
-  0.1, the sneak's own bar) and IN VIEW (a sight line, `segmentBlocked`: glass passes it, a wall or a leaf stops it, to where somebody might stand in a
-  room nobody of the team has been in — `cleared.ts unknownEyes`, a point every 2 m of its floor — inside a guard's reach of a man that lit,
-  `guards.ts eyeReach`). Asked in `orders.ts route()` AFTER the lanes (`laneWay`: the lanes' own way is found exactly as before, then this one of the
-  way they left him): the way round is taken only by the doors the short way takes, at no lock, through no more uncleared room and no more than half a metre more lane, at
-  most `long` 1.35 times as long + 1 m (of the way the lanes left him, so on top of their own 1.6), and `less` 1.5 m or more the less in view. WHOSE
-  WALKS: every walk that router finds but a menu's question — an order's, a man back on his order, the marks a door tool, a wall charge, a rescue or a
-  search walks its men to (assigned through the same router, as the lanes are), and the walk the throw planner reads of it (`squadthrow.ts walkLine`).
-  The room he is ordered INTO counts as a room that can see him until it is cleared, so the last metres to an open door bend to its wall. No such way: the way as it was — an order is never refused and a
-  mark never moved for it; a spot the player points at is his order, only the way to it is weighed. Where the walk was dark already, or every room in
-  reach is known, nothing is asked. MEASURED (shipped stand, one man's walk from the squad's start to both faces of every door, seven levels, 223
-  walks): 47 take another way; metres of walk on such floor 1204 → 1049; the office floor 188 → 153 (6 of 14), the barracks 469 → 407 (22 of 54), the
-  depot 245 → 208 (8 of 26), the block 133 → 121 (7 of 31), the warehouse 56 → 48 (4 of 40), the compound 41 → 41. AT THE GLASSHOUSE ITSELF NOTHING
-  CHANGES: the forecourt is lit and in view of the glazed rooms wall to wall (10 m of the 18.5 m walk to the front door) and there is no dark way to a
-  door in a glass wall — that stays the level's lesson. COST: asked when a walk is begun and by the throw planner when it plans a walk; a route asked cold is 2 to 10 ms on
-  average with the rule against under 1 without, 26 ms the worst seen (the office floor; a shared cloud core), paid on the tick an order is given. A
-  block is read once a tick and shared by every walk asked that tick (the men of one order). NOTHING IS KEPT PAST THE TICK, on purpose: the picture asks
-  walks too (the throw planner's drawn plan) and what is drawn must never decide what the game reads; `seenReset` on a restart and a checkpoint loaded.
-  The throw planner with its page open (shipped, both kinds asked every tick for 90 ticks of each of 17 targets on the office floor, 35 at the
-  barracks): it asked the rule 10 and 48 times in all; its mean time a tick 1.64 → 1.46 ms and 1.07 → 1.03 ms, the worst tick 55 → 42 ms and 100 → 91
-  ms (its own cold flood; no cost of the rule's to be seen in it).
-  Check: `probes.ts seenwalk` (family orders; `SEENWALK_BREAK=1` fails seven lines), both stands: the way; the same BY HAND with none of the rule's
-  own price (the meter at each half metre, a line from every floor cell of every uncleared room: 19.2 m lit and in view → 11.0); a man walking it
-  (26.1 m with 16.5 in view → 28.0 m with 8.9), and the same walk to the bit, 879 ticks, with the picture asking walks of its own between the
-  ticks; nothing lit / every room known = the way as it was; the glasshouse's forecourt (and the rule was asked
-  of it); journal and boot; what is read is kept for the tick and no longer (read again with a door moved, the clock moved, a reset), the same way each time. NOT DONE: it reads where a defender MIGHT stand, never where one is (that is `sneak.ts sneakWalk`'s, for the silent pair); men following Sam
-  are not routed by it; Sam's own lit state is his. Never seen on a GPU; nobody has played it: whether a way a third
-  longer for 8 m less in view is the bargain a loud squad should take is the maintainer's to say (`long`, `less`).
-- **A man on his stack mark is walked round, not into** (`DOORMANNERS.ownPlace`, rust/game_rules/src/doorway `doorwayGate`; 10-13). A stack's second-rank man reached his
-  mark first, the man bound for the wall place beyond it walked into him and shoved him onto that place, and the two stood on each other's marks. Now a friend
-  within `ownM` (0.45 m) of the mark his order gave him is a standing man whatever his last steps say, a corner is put beside him when the walker's way goes on
-  past, and the gate is also asked on the last `ownEndM` (2.5 m) of a walk to an order's mark that ends by a door (there it looks at nothing but such a mate).
-  The round is at the plain rule's distance (`round`): at half a metre it put two men head-on in the barracks passage. ON in the page under the doorway manners
-  (`?nodoormanners` takes the whole table off; Tab ▸ 'doors ▸ round a man on his mark', kept per machine); the frozen stand has it with the manners raised
-  (`QA_DOORMANNERS=1`); off = the gate as it was; a recording from before the key replays with it off. QA: `bun run tools/qa/stack-furniture-check.ts` (it
-  raises the door rules itself; the played line: no man short of his mark, no more men a metre off with the furniture rule on than off) — ALL PASS on both
-  stands, and red on the shipped stand before the mend (5 men a metre off against 4); `OWNPLACE_BREAK=1` is red on the SHIPPED stand only: on the frozen stand
-  the marks put no mate in the way, so the break stays green there (a gap, known). Also run on the join, both stands: `stackroom-check --walk`, `stack-own`,
-  `stack-back`, `doorway-step`, `stack-marks`, `lived-stack`, `filespread`, `rearwatch`, `roomkeep`, `openhand`, `doorlook`, `own-can` (green but `filespread`
-  on shipped, red at room-clear-four before the mend too). NOT MEASURED: no play-through tally was run for it. Never played, never seen on a GPU.
-- **The squad row's word for a follower is latched** (a display mend, no switch, the same on both stands; `orders.ts followWord` / `shownThere`, `ORDERS.wordFarM` 2.0, `wordHoldS` 2.5 game seconds; both 0 = as it was). The fault: the row printed `arrived` (0.8 m off a place dealt again in 0.5 m jumps), so 'with you' / 'falling in' flipped about every 0.2 s on every man while Sam walked: 586 flips in 152 s on the floodlit yard tape 033934. Now on when in place, off only past `wordFarM` or after `wordHoldS` out of place; `A.arrived` is untouched and the latch is a module `WeakMap` (not on the saved / digested state), read by `statusOf` and the replay trace's `ord`.
-  Check: `probes.ts foursquad-follow`'s line 'the squad row on a walk' (10 s, four men: word changes 0/0/0/0 frozen, 0/0/1/1 shipped, against 35‥59 flips a man of the bare bit), `FOLLOWWORD_BREAK=1` must fail (it does, both stands). 1.5 m / 0.5 s was tried first and let 4‥7 changes through (a walking file is out of place up to 1.7 s / 1.7 m at a time). Run digests equal before and after on both stands. The page on the software adapter (`?roomclear&squad4`, a scripted 15.5 m walk): 2/2/2/2 word changes against 40‥52 flips of the bit. Never seen on a GPU; not replayed against the tape itself.
-- **A rear man with no door behind him watches a way in, not a wall** (`cover.ts COVER.rearRead` over `roomfit.ts watchablesAt`: ON in the page — `?rearread=0` — OFF in the module and on the
-  frozen stand, `TPS_REARREAD=1`; a `FROZEN_HOLDS` row, a recording from before the key replays with it off; Tab ▸ Player & weapons ▸ Player, doors & props ▸ 'rear men watch a way in, not a wall'; the maintainer, 10-13, on the
-  floodlit yard: "weird that these guys are covering a wall"). A spare man (`Assignment.spare`: a stack's rear men, a wall charge's stand-off rear — wallcharge.ts `spareRear` —, the mate
-  covering a teammate who works a thing) whom the cover's deal gives no opening watches 'the rear' = the way he came (`A.from`). At a door stack that is the approach; at a mark with NO DOOR
-  (`!A.door`) it was the spot he stood on when the order was given: at a wall-charge stand-off four metres from the yard wall, his gun and weapon light rested on the wall. With the rule,
-  once within `rearReadIn` 1 m of his mark, he takes the heaviest thing roomfit's read of the floor round him offers within `rearReadM` 14 m (`readRear`: a door or gate nobody of ours has
-  been beyond, else the longest run of open floor; in his sight, no teammate in the line), a thing another rear man already has is left to him where the floor has a second
-  (`rearReadDeg` 35 apart BY ITS BEARING FROM THIS MAN'S OWN FEET — two ways in only when all but the same bearing —, else both share it; a mate's read older than a re-read and a half holds nothing back), re-read once a second and kept through anything not `rearReadSticky` 1.3 × heavier; his gun rests `rearLook` 6 m along it. Nothing found = the
-  old rule. A rear man WITH a door (every door stack) is never read, so stacks are as they were. Where he looks, never when he shoots; no dice; nothing saved (an Assignment is not in a
-  checkpoint). `bun run tools/qa/rearread-check.ts [--verbose]` (`probes.ts rearread`, also under `cover` and `wallcharge`; both stands; `REARREAD_BREAK=1` must fail): floodlit, a charge on
-  the guard room's west wall — off, the south rear man's line meets the yard wall at 4.6 m; on, it is on the foot gate with 30 m open; two rear men on one side take the gate and the east
-  run, 107° apart; a plain stack on the front door stands and watches the same on and off.
-  MEASURED (shipped stand, the scripted wall commander `PT_WALL=1 PT_WALLOUTER=1`, 12 seeds, rule on against off, no error or stall): Mousehole from the yard won 12 both,
-  teammates up 46 against 40 of 48 (no two runs alike); the floodlit yard won 12 both, 32 against 32 (the same count on every seed) — not a difference at that size. With no wall charge played
-  (compound-four, the office room clear four × seeds 1–4) the run digests are equal on and off, 8 of 8. Never seen on a GPU or played by anybody.
-- **A man walking backwards on the door behind, let go of, keeps his way while he turns** (`cover.ts COVER.backTurn`: `turnFrom` / `turnOut` / `unturn`. ON in the page — `?backturn=0` —
-  OFF in the module and on the frozen stand, `FROZEN_HOLDS` row, word `TPS_BACKTURN=1`; a Tab row 'a rear man turns round on his way'; a recording from before the key replays with it
-  off). THE FAULT: the rear man of a file walks backwards with his gun on the opening behind (the runner's strafe). When the deal lets go of that opening (a wall in its line, a mate has
-  it, Sam turned the file round) the order's own pose is 'walk forward', and a man walks forward along his BODY, still turned to the rear: a quarter of a metre back the way he came, a
-  hook, three quarters of a second gone. THE RULE: from the let-go (a dropped job, or a kept gun's time up) his feet keep the path (strafe), his body turns to the corner of his path
-  he is walking to, his gun carried in front of it, until the body is within `backTurnBody` (cosine 0.7) of that way or `backTurnSecs` 1 are up; stood, run on over `backOut`, or not
-  posed for a frame, it ends; dealt a new opening meanwhile he meets it as a man walking backwards (backKeep holds him the same way); taken by an order that does not leave him free,
-  a daze or the knob going off, his script is given back as a job's is. Seen on the registry walk, beside the doorway rule that walks a man round an open leaf. CHECK
-  `tools/qa/backturn-check.ts` (`probes.ts backturn`, family cover; `BACKTURN_BREAK=1` fails on both stands): the registry walk with four, rule off then on. MEASURED 10-17, one walk
-  per stand, headless: shipped 42 let-goes with the body turned, 5.16 m walked against the path (worst 0.42) → 35 let-goes, 0.09 m (worst 0.03), path made in the 0.8 s after 0.44 →
-  1.19 m; frozen stand with the switch raised 2.76 m → 0.02 m, 0.66 → 1.08 m. The walk's stuck man-frames (0.65 % off, 0.73 % on, shipped) are a rear man stood ON his own place over
-  6.5 m behind a stopped Sam at three stops, with the rule or without: the file's length, not this. NOT DONE: a new opening within `twist` of his way while his body is 45 to 90
-  degrees off it lets him walk forward (a small hook left); the man run on over `backOut` turns as he did. Never seen on a GPU, nobody has played it.
-- **Teammates throw a frag or a stun canister on order** (`rust/game_rules/src/squadthrow`, `SQUADTHROW.on`: ON in the page — `?nosquadthrow` = no such rows — OFF in the module and on the frozen
-  stand, `TPS_SQUADTHROW=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off; Tab ▸ Squad ▸ 'teammates throw frag / stun
-  on order'; the maintainer, 10-13: "would be nice to be able to instruct teammates to throw frags/stuns"). Until here a teammate's grenade left his hand only inside a door order. THE KEYS: X on
-  a spot of FLOOR, **G** (the floor menu's row 'throw · frag N · bang N ▸', `throwThere`, a page: `OrderDef.hotKey` = `FRAG.orderKey`, no digit of the first page taken), then **1** = 'frag there'
-  (`fragThere`) / **2** = 'bang there' (`stunThere`; the order menu's one word for this can is BANG — the door rows' 'bang, then go in', the spoken 'bang out!' / 'no bangs left.' — see dialogue.md); Esc / right click = back a page. Nothing held, no digit above 2 on the page. WHO THROWS: of the men the menu goes to (T's pick as ever), the
-  nearest to the spot with a hand free — not setting a charge, at a lock, working a thing or changing a magazine (`handsBusy`) — and an arc that brings the thing to REST on it — squadsmoke.ts's own tests, exported for this (`squadHandFree`, `squadArcTo`; a frag's run past its landing
-  is `SQUADTHROW.fragRollK` 0.04, measured: where the fuse found it was 0.11 m from the spot on average, 0.30 m at most, over throws of 3‥12 m) — and not inside `againSecs` 1.2 of his last
-  throw. Nobody else answers: the rows are `free` and `only` the thrower's, so a stack, a hold or a drill is left as it was (and where one of them has a throw from where he stands, nobody walks). THE COUNT is the door tools' own bag
-  (`g.doorTools.frags` / `.bangs`, `take()`), the one the squad block already shows; nothing is spent on a refusal. THE THROW is the door tools' own: a frag on `FRAG.orderFuse` from the hand, a
-  canister on `flashFuse` from where it lands, the quick toss, 'frag out!' / 'bang out!', and it goes off by the game's own road under the thrower's id (frag.ts `blast`, combat.ts
-  `detonateStun`), so it does to the player what it does to anybody. SENSE, asked when the menu is read and again as the order is given: none left ('no frags left.' / 'no frags in this kit.' /
-  'no bangs left.'), no arc for anybody addressed ('no throw from here.'), and A FRAG IS NEVER THROWN ONTO ITS OWN — the player, any teammate still breathing (the thrower too; a man down wounded or out cold where he lies), a rescue's hostage, the
-  man to take alive or a civilian within `FRAG.woundM` + 1 m, with a line, of where it would rest or of the spot asked for = the row greyed naming who ('you are in it.' / 'Red Two is in it.' /
-  'hostages. no frag.'; with the dialogue pass on, anybody else unarmed 'a civilian is in it. no frag.': not a hostage). A STUN is the player's call: never refused for its own side, but its row NAMES who of ours it would catch (' · too close: you, Red One': `detonateStun`'s own tests asked
-  with each reach `slackM` 1 m long, so it may over-warn). A SILENT squad: both rows are silent.ts `LOUD_ROWS` (marked ' · LOUD'; giving one takes the squad out of silent). The squad block
-  names the throw for `shownSecs` 2.5 ('Red Two · frag out'); the order is on `orders.log` under its own id. G ON A DOOR's menu is still that door's frag row, G again with the throw page up is eaten (it never falls through to a quick throw), and the frozen stand's G quick throw
-  is not also taken by the press (`player.throwEaten`). State per Game in a WeakMap (each man's last throw, what the block shows, the stun row's warning), no dice, not in a checkpoint (none is
-  written with a unit on the floor). `bun run tools/qa/squadthrow-check.ts` (`probes.ts squadthrow`, also inside family `squadorders`; both stands — it raises the switch itself;
-  `SQUADTHROW_BREAK=1` must fail); `tools/qa/orderkeys-probes.ts` walks a page whose opener sits on a letter. NOT built: a throw at a DOOR or through one (the door tools' 'frag and clear' / 'bang
-  and clear' are that), smoke (squadsmoke.ts has its own row), any defender's answer to it beyond what a blast already does. Never seen on a GPU or
-  played by anybody.
-- **A teammate fires a 40 mm grenade on order** (`rust/game_rules/src/squad40`, `SQUAD40.on`: on in the page, `?nosquad40` off; off in the module and on the frozen stand, `TPS_SQUAD40=1` raises it; Team feel
-  'teammates fire 40 mm on order'; the maintainer on the gear screen, 10-19: "should be symmetric between self and teammates (e.g. 40mm should work for squad)"). Until here the launcher's
-  high-explosive round was the player's alone. THE KEYS: X on a spot of FLOOR, **G** (the throws' page), then **3** = '40 mm there · N left' (`shellThere`; the row that opens the page then reads
-  'throw · frag N · bang N · 40 mm N ▸'). With the throws' switch off there is no page and so no row. THE ROW IS THERE ONLY WHILE A
-  TEAMMATE'S CARD BROUGHT A ROUND: kit.ts `kitStage` hands `squad40Stage` each man's `MemberKit.shells` at every staging; with none carried nothing is kept for the Game, nothing is registered
-  and a run digests as before on either stand. The card's own row (and slots.json's `who` / `maxPerMan` for `shell40`) is the kit screen's; `squad40Here()` is what a card asks ('does a
-  teammate's 40 mm work in this build': the switch on and not broken — as `wallHere()` is the wall charge's). THE COUNT IS EACH MAN'S OWN, not a bag: a round rides in the pouch of the man whose
-  tube it goes down, a man down takes his with him, and the row and the squad block ('40 mm N') show what the men on their feet carry. WHO FIRES: of the men the menu goes to, one with a round,
-  a long gun in his hands whose weapons.ts row has the launcher (`launcher !== false`, not a pistol, not a shotgun: his sidearm up = no shot), a hand free (`squadHandFree`, squadthrow.ts
-  `handsBusy`), `LAUNCHER40.cd` since his last, and A SHOT: he40.ts `shellSolve` from his tube (0.55 m ahead of him toward the spot, 1.35 m up or 0.3 under his head) goes off within `nearM` 1.2
-  of the spot having flown `HE40.armM` + `armSlack` 0.5 — the solve stops on the player, a civilian, a hostage, the man to take alive (= no shot: a round in flight stops on them) and on a man
-  of the other side the player can see (= it goes off on HIM, if armed there). To the plan a TEAMMATE in the line is a body too (the round in flight would pass him: nobody fires through a friend's back). A man whose gun is on the spot is asked first, then the
-  nearest. HE POINTS IT FIRST: a man whose gun is UP (a fight, or an order with it at his shoulder) and whose `aimYaw` is within
-  `aimRad` 0.2 of the spot fires on the frame of the pick and keeps what he was doing (the fight too); anybody else is turned to it — lent from his order by squadthrow.ts `squadLend` (only a
-  man `mayWalk` passes: no drill, door tool or fight has him), an assignment under the row's id with the spot as `watch`, the round when his gun is on it (up `raiseSecs` 0.35 at least) and the floor still says yes (`aimSecs`
-  2 at most), then `squadHandBack`. NOBODY WALKS FOR IT. THE ROUND is he40.ts `fireShell` and nothing else — the same fuze, the same frag.ts `blast` on whoever stands in it, the player too —
-  under the firer's id; he calls 'forty out!'; the squad block names it for `shownSecs` ('Red Two · 40 mm out'); the order is on `orders.log` under its own id. SENSE, asked as the menu is read
-  and again as the round goes, nothing spent on a refusal: 'no 40 mm left.' · 'none with them.' (the men addressed carry none, another man does) · 'not ready.' (the men who carry one have no
-  launcher in a free hand, a tube still open, or are not ours to turn) · 'too close to arm.' · 'no shot from here.' · NEVER ONTO ITS OWN — anybody of ours with a line inside `FRAG.woundM` +
-  `reachSlack` 0.5 of where it goes off OR of the spot it is sent at (a man of the other side it would stop on may have stepped out of its line; squadthrow.ts `squadFragCatches` with its new
-  `burst` argument: nobody is counted on to duck a round that goes off as it lands, the player included — no 'too close: you' call as a frag has) = refused by name, the frag row's own words
-  with 'no 40 mm.' for 'no frag.'; a man whose round would have one of ours in it is passed over for the next man with a shot (read in the code only: the office has no place to stage it).
-  The menu's re-reads are kept 0.3 s per asker (the row's two questions); the picture keeps nothing: a drawn frame writes no state. A SILENT squad:
-  the row is one of silent.ts `LOUD_ROWS` and holdfire.ts `LIFT_ORDERS`. THE PICTURE: ui/squadthrowviz.ts draws `squad40Plans` (who fires, the arc, where it goes off, the burst's two radii) for
-  the highlighted row and while a man turns (`SQUAD40.draw`). squadthrow.ts changed for it, behaviour as it was: `handsBusy` / `mayWalk` exported, the walk's borrow-and-return lifted out as
-  `squadLend` / `squadHandBack` (which now takes the walk-back policy), the floor-order log line as `squadLogRow`, `fragIn` takes a reach. `bun run tools/qa/squad40-check.ts` (`probes.ts squad40`, also inside `squadorders`; 22 lines, both stands — it raises the switch and
-  gives a teammate's card its rounds itself, raising the pouches table's most-a-teammate for the run; `SQUAD40_BREAK=1` breaks the order in the module and must fail). On the page: `PORT=5199 node tools/qa/squad40-page.cjs` (a dev server on that port; the software adapter: the page as it opens with a
-  round staged by `__squad40.stage` — X, G, 3 and the man fires — and the same under `?nosquad40`). Measured once, headless,
-  the office with the four holding by the start: the row was live on 23 of 811 floor spots (594 no shot, 192 too close) — indoors it is a round for a hall or a yard. KNOWN, left as it is: a body the fog hides is not in the plan (it is not in the player's own reticle either), so a round can go off on a man nobody saw, short of the spot; in contact only a
-  man whose gun is already on the spot fires (the fight is not asked to give a man up: 'not ready.'); a turn that ends in a refusal has already taken a silent squad loud (as a walk to a throw
-  does). NOT built: the 40 mm row of a TEAMMATE's card and the pouches table that lets him carry one (the kit screen's: until then no card in the page brings a round, and the row is never there); a teammate's
-  ring airfoil or sticky camera on order (the tube and the borrow are here; each needs its own solve and sense), a walk to a shot, any defender's answer beyond what a blast does. Nobody has
-  seen it on a GPU or played it.
-- **A door an enemy opens is looked at** (`ROOMFIGHT.doorEars`, on; `doorLookSecs` 3.5; Team feel 'team ▸ looks at a door an enemy opens' / 'door look ▸ s', kept per machine; off = nobody
-  turns for a door, as it was; pinned off in threshold-probes.ts's identity and the nvg digests; the barricaded rooms goal's trace of the compound on hard, once its garage door `g_e` opened
-  outward: a defender pulled it from outside, stood at its jamb three seconds and shot three of four in the back — the man kept on that door had no line to the jamb, the man with a line never
-  turned). roomfight.ts `hear`: a `'door'` event under a hostile unit's HAND (a boot is its own kind), within 9 m of a teammate — by path and loudness as a footfall is heard
-  (`hearPath`), at a lower bar (0.05 against 0.12: a leaf moving in his sight is seen as much as heard) — with a line from his eye to the doorway a hand's width his side of the middle of
-  the opening, sets `Op.doorBy` (the door, who, when, the point); `cue()` then looks at it ONLY IF THE LEAF HAS COME OPEN (off its latch and more than 0.1 rad round: a rattle, a pick, a
-  wedge going in, a leaf slammed to or latched turn nobody) and turns him to that doorway for `doorLookSecs` after his own beat, ONCE PER OPENING (the cue is used up; the leaf's next noise
-  off its stop starts nothing; the steps' look does not take a door look's point) — EVERY such man (the steps' look is one man's), only with nobody else to turn to (a shot or a mate's
-  call takes it over), never a man on his way to a door's mark or through it, a man holding a dealt arc only inside it, and A GUN AN ORDER HAS ON ANOTHER DOOR KEEPS IT (arrived, not
-  `spare`, his `watch` on his order's own door: a stack's jamb men, a threshold's, a door he was told to cover) while a freer man can look — with none, the one of them with the least
-  turn looks and the rest keep their door. Where he looks, never when he shoots — but a look is a turn like any other: his weapon light comes on by the light rule, and the man who
-  opened it is no surprise to him. KNOWN: a man an entry left on a room's other door (`otherDoorM`, `lastOut`) is free by this rule; two doors opened inside one look take every free gun
-  to the second. No dice, no state in a checkpoint (an Op is not saved); a recording from before the key replays with it off. MEASURED (the rule as it stands, after its review; shipped stand, scripted commander, rule on against off, won · teammates up, no error or stall in any run): the compound on hard, 24 seeds, 11 · 22
-  against 10 · 12 of 96 (teammates killed by the man at that door 24 against 36, by anybody 74 against 84); hard, 12 seeds, of 48: barracks 7 · 17 against 5 · 15, block-squads 6 · 13 both run
-  for run, the depot 12 · 34 against 10 · 28, the warehouse 9 · 20 against 4 · 8 — four neighbours 34 against 25 won of 48, 84 against 64 up of 192; the compound on standard 4 · 7
-  against 4 · 8 (the rule as first cut — any door noise, no one-look rule, door guns not kept — read much the same: the compound 11 · 18 against 11 · 13). `bun run tools/qa/doorlook-check.ts` (`probes.ts doorlook`, in family `roomfight`; both stands; the compound's `g_e`: every man with a line has his gun on the doorway
-  inside a second and a half, the man with no line, a door a teammate works and a leaf that stays shut turn nobody, the leaf's second noise starts no look again, the look ends by itself;
-  `DOORLOOK_BREAK=1` must fail). Never played by anybody.
-- **Four teammates in two pairs** (`NIGHTBREACH.squad` 2 | 4, default 2 = the pair build exactly as it was; `?squad4[=seed]` = the room clear with four + fog, native
-  `--squad4 [seed]`, Tab ▸ Sandbox ▸ 'night breach ▸ teammates'; record rebuild/four-squad/men.md): nightbreach.ts `SQUAD4` = Red One / Red Two /
-  Blue One / Blue Two, each man's pair IN DATA (`Guard.unit.pair: PairId` via `UnitOpts.pair`) and in his suit (tint / tint2 — untuned, never seen rendered). Red is
-  the FIRST pair = `NightBreach.drillOps` (the F drill's two; callOff / the hand-over touch only them); Blue stands by on a goal-less script until ordered.
-  **`SquadOrders.men(sel)` is THE one place to ask for men**: `'all'` | `'red'` | `'blue'` | roster number | a Guard → living men in roster order (`{down: true}` = all);
-  `pairOf(gd)`, `pairs()`; `Who` accepts a pair (T steps all → red → blue: the *Squad orders* bullet). Every order is generic over n: follow = a file
-  1.3 / 2.4 / 3.5 / 4.6 m back, pairs adjacent; move = ranks of two; stack = a file per jamb (`StackPost.group` 0 latch / 1 hinge / 2 second rank or `rearPosts`,
-  `lead` = the man AT a jamb), places Sam or a teammate outside the order already holds on that door skipped (a pair / a man sent to a door the others hold files in
-  behind them — only with more than two on the roster); `pair(men, spots, groups)` deals 3–4 men exhaustively with a 1000 m price per pair split across files.
-  doortools: behind a bang the far-jamb file stands a place back; entry alternates jambs — first two to the plan's deep pods, the next two to near points inside the
-  entry wall (`pods(d, side, n)`), a man with no pod stays outside (`outside ·` beat); CLEAR FROM OUTSIDE by three or more = the pair's own choreography for TWO (the
-  lead + his pair's man slice from the lead's jamb) and the rest `DoorOp.rear`, on down that wall facing out (the far jamb is in the room's near corner's line through
-  the open door: four slicing from both jambs lost 3–4 men a run where the pair lost none); a dead lead's place goes to the nearest mark, not the roster's first.
-  BUDGETS: ten characters (`SQUAD4_BUDGET`, `UnitOpts.budget` lifts spawnUnit's 8 up to skinning's 16); the proxy table still holds 8, so while a night breach is up
-  game.ts draws the LIVING first once more than 8 are drawn (bodies lose shadow / reflection proxies first; with all ten up the last two defenders spawned go
-  without); steady lights 63 of 64 by spawnUnit's count; the PROBE's 32 queries a frame: nine units' meters + lines would be 35, so with more than 8 guards the
-  smoke lines of men not hostile to Sam are not asked (29 measured headless, fog's ≤ 6 on top are the first dropped); fog of war took FIVE eyes (seven in the page since 10-24: `FOG.eyes`, `docs/agents/stealth.md`; the room is `FOG_EYES`, the
-  kernel's two arrays carry the literal). QA: `probes.ts foursquad` (off / stage / follow / stack / clear — incl. charge, outside, lanes — / drill / budget).
-  THE PAIRS APART (all behind `orders.big` = more than two men; the pair build is untouched — `probes.ts pairs-off`): `orders.give(id, t, who, { onWord })`; a door order
-  goes to the side of the door THE MEN can reach without crossing the room (`forMen` → `sideFor`: penalised nav paths per face; else Sam's side — a pair-aware menu
-  should ask `forMen` before greying a row); `Assignment.shy` = a door the walk to a mark goes ROUND, not through (stacks and door tools set it); HOLD by a pair deals
-  ARCS (`holdArcs`: the ways out of where they stand split between the two, gun and weapon light up along each, a door within `holdDoorM` watched instead; a man told
-  alone keeps the old hold) and the room fight does the rest unordered; a posted gun (`LANE_ORDERS`) comes down while a man of the OTHER pair is in its line.
-  doortools: THE WORD — order `'go'` (registered only for the four; `doorTools.go(who)`): everything waiting among the addressed men goes together — a pair on a plain
-  stack (→ an open-and-clear from its marks, `fromStack`), a tool given `onWord` (phase `'ready'`, 'ready on your word · …'), a pair held outside, a charge set or still being set (blown) —
-  loud ones first, the quiet doors shoved on one frame after (`wordTick`, `wordStack` / `wordIn` caps); the order is ONLY the waiting men's (`OrderDef.only`: the rest keep
-  their order, and a drill that owns them is not asked to let go); pairs stacked on both faces of one door: Sam's face goes; a bang on a word spares every order on it; two pairs into one room get pods apart
-  (`podsApart`); a tool on a door the other pair is plain-stacked on makes that pair STEP BACK to rear security, its order still `'stack'` (`holders / stepBacks /
-  makeRoom`); a charge is refused with a teammate behind the door or with a holder who cannot stand off, and one of ours beyond a blown door is dazzled, never
-  knocked down. QA: `probes.ts pairs` (off / side / hold / go / tool / lanes); page rebuild/four-squad/pairs.md in the project files.
-  THE FOUR FROM THE KEYS (the press menu + the pairs on one tree; guide rebuild/four-squad/play.md; all behind `orders.big`): the word is the menu's **F row** (`OrderDef.hotKey`: its key shown, no
-  digit) on a floor menu and on Sam's / a teammate's own, under its own header (`OrderDef.head` = `WORD_HEAD`; its label names who of the menu's men is waiting;
-  `listed` keeps it off a DOOR's menu, where F is 'wait for my word', though give('go') still fits a door target; with that row up F IS the row — greyed, it is
-  refused and the menu goes away, the press never reaching the trigger or the drill) AND **F** with no menu (`DOORTOOLS.wordOnKey`, default on — off, the row is digit 5 of those menus:
-  `doorTools.input` gives `'go'` to the men the orders go to while anything of theirs is waiting — a set charge of theirs goes with it, and the press is left in the
-  frame for a breach drill of theirs that is set / stacking, so one F sends both; nothing of theirs waiting = F as before: a set charge — unless it is on a word
-  still waiting for the other pair (`onPendingWord`: swallowed) — else the drill, which never gets the press as its 'stack up' within `wordTap` of a word or while
-  its pair is on a door order: a second tap does not pull red out of its entry); a door tool is given ON THE WORD by the **'wait for my word' row** of the door's TOOLS page (WITH `PLANLAY.on`, THE PAGE, THIS IS NOW TWO PRESSES: a row
-  picked with it on is LAID and nobody walks; F sends the plan — they walk, stack and wait — and F again is the word; men already stacked go on the one F.
-  What follows is the switch off, `?noplanlay` / `TPS_PLANLAY=0`, and the frozen stand. See 'X is where the plan is laid' above) (digit 5
-  `ORDERS.waitKey`, or F `ORDERS.waitAlt` — on the door's first page F turns to the tools with the row already on —, or the highlight + Space: it flips
-  `Menu.onWord`, which is the menu's and survives a step back a page; the menu stays up, the `OrderDef.onWord` rows —
-  open and clear, bang and clear, and the threshold page's three (its opener on the tools page says '· on my word: ON') — read 'wait · …' and are given with `{ onWord: true }`; off again on every new menu; only on a door); the menu
-  greys and words its rows for the MEN's face of the door (`Menu.menSide` ← `sideFor`, asked when the menu opens and again only when `Menu.sideKey` changes — the
-  men, or one of them or Sam crossing to the door's other face — never on the `refreshSecs` re-read; the header says '· far side' when it is not Sam's); bang and
-  clear is refused with a teammate behind the door, like the charge; an order's `notes` (its `Row`) may return keyed lines (`Note`): the squad block shows '[F] go · red + blue
-  waiting' or 'blue waiting · T, then F', 'word given · waiting for blue', and says 'F blows it' of a set charge only while F would.
-  A cursor on a door picks it only where the camera can SEE the doorway (a wall in front hides its foot: point at the visible part, or turn the camera).
-  QA: `probes.ts squadplay` (go / wait / try / side / key / off — every order a one-frame press, nothing held). (2026-11-07: the `squadplay` family is
-  DELETED: it pressed the old menu's T, X and B keys, and the ring is the only way in.)
+In `rust/game_rules/src/`, with types and numbers under the same names in `rust/game_types/src/` and its `knobs/`:
 
-<!-- was CLAUDE.md lines 2550–2563 -->
-- **A teammate works a thing** (`rust/game_rules/src/workthings`, `Game.work: WorkThings`; `WORK.on` — on in the page, `?noworkthings` = as it was; the frozen stand holds it off,
-  `TPS_WORKTHINGS=1`): the orders' menu opened on the BREAKER (its own panel under the cursor, or the floor at its foot on its own side of
-  the wall: `rust/game_rules/src/orders target_under` and `target_at`, which read the tick's list of things to work, kept every tick for every seat) or on the MISSION'S THING once the objective is to take it (stage 'drive': the rack's drive, a quiet mission's thing in its holder)
-  is a floor target carrying `thing: WorkThing` (`at` = the cell a man stands on to work it, `standFor`, re-read once a second), and `workRows` puts its own order
-  (`'work'`, digit 1: 'throw the breaker' / 're-arm the mains' / 'pull the drive' / 'take <thing>') where 'move there' is — so B and the button twice give it. `only`:
-  the nearest man who can get there works it, his partner (the other of his pair) covers from a mark behind him on a plain 'move' with `spare` eyes, everybody else is
-  left as he was. The worker's `tick`: on the stand cell, squared to it, a clear line → hand out (`workHand` ← game.ts handsOnDoors → the door-hand layer) → after
-  `handSecs` + `breakerSecs` (the mission's thing: DRIVE_SECS) Sam's own effect (`Game.setBlackout(86400, 'hand')` / `endBlackout` / mission.ts `drivePulled`), a word,
-  then a plain 'hold' with his back to it. A man the orders stop short (his mark moved to his feet) never works it from there; the fight takes him and gives him back
-  (hand off, clock over). With the switch on lighting.ts neither hands a TEAMMATE the 'check the breaker' errand nor lets one re-arm it by standing there (`workNotHis`). Nor (`WORK.posted`, on with the switch; false = as it was; `workStaysPut`) is that errand handed to a man who cannot leave where he stands — held, pinned or on a script, so every defender of a room clear: he radioed "power's out — checking the breaker" and stood there. It goes to the nearest man who can walk it, or to nobody; never asked under a show.
-  THE ERRAND STANDS AT THE PANEL'S OWN FACE (`WORK.ownFace`, on with the switch; false = as it was; `breakerErrand(g)`, asked by lighting.ts `setBlackout` and `breakerResetNear`, so handwork.ts `leverStand` follows): lighting.ts sent the man to a spot at a fixed offset from the panel and re-armed the mains for anyone inside a bare 1.3 m of another, right only where the panel hangs facing the way the office's does — on the relay station (panel on the compound wall, facing in) the spot is in the wall, one patrol set re-armed it from OUTSIDE the wall and the other never did. Now the fixed spot is kept wherever a man has floor there and a line to the panel (walls only, door leaves out: the office and every level it worked on are the same man, time and place), else the errand goes to `standFor`'s cell in front of the panel's real face with the reach measured from there; and the re-arm always wants nothing solid between his chest and the panel. A recording from before the key replays with it off. `probes.ts work-face` (the fault shown with the rule off on both relay patrol sets, the office unmoved, every level file with a breaker swept: the spot moves exactly where the fixed one is no floor or has no line; `WORKFACE_BREAK=1` must fail).
-  A MAN AT HIS THING PASSES OVER A MAN HE MAY NOT SHOOT (`WORK.heldPass`, on with the switch; false = as it was; `workPasses(g, gd, h)`, asked by roomfight.ts where it picks a teammate's target and in `cue()` — a mate's call, a footfall, a look already standing — beside `pairPasses`): with the squad's fire held (silent.ts `silentHoldsRound`: the silent order, the sneak, the hold nobody has lifted, which is the page's own state until the team is found) and a defender who has noticed nobody in his sight, the man sent kept his muzzle on that man, the room fight turned his chest to him, the order turned it back to the panel, and the thing was never worked for as long as the hold stood (seen as `work-breaker` red on the shipped stand once a deal stood a defender in view of the office's panel). Now, stood on the spot his thing is worked from (`atThing`: arrived, within 0.45 m of the stand), that man is not his target and neither a mate's call nor his footfalls turn him: he works the thing, and a man who covers him has the defender (a man sent alone turns his back on him: that is the order). The frame `silentHoldsRound` no longer holds his round (the man is alert or searching or past the `noticed` bar, the hold is lifted) it is false and the fight has him as ever, the hand coming off. NOT passed, by design: a man held only by spotted.ts's rule (suspicious, or roused and no danger yet) or only for a pane in the way (`silentHoldsGlass`) — he has noticed something, the gun stays on him, and the thing waits. A door an enemy opens in his sight is still looked at. On the walk there nothing changes. With the key on `silentHoldsRound` is asked in the target pick for the man at his thing, so the holds' own `held` counts rise there. A recording from before the key replays with it off. `probes.ts work-held` on both stands (the fault shown with the key off: 45 s at the panel, muzzle on the man, mains on; key on: mains out, no round, the cover's gun on the man for every frame the hand is out, the hand out once; the same with the man's footfalls in their ears; the man made to notice with the hand out is the worker's target and is shot; `WORKHELD_BREAK=1` must fail). Measured on the office's room clear, one seed, the breaker only: a drive or a charge (several seconds of hand) was not staged. Nobody has seen or played it; nothing here was drawn on a GPU.
-  SAM'S OWN ROW AT THE BREAKER TAKES THE PANEL'S OWN FACE TOO (`WORK.samFace`, on with the switch, so `?noworkthings` puts it off and the frozen stand holds it off, `TPS_WORKTHINGS=1`; false = as it was; `samPanelPoint(g, from)`, asked by player.ts `buildInteractables` for his row and by lighting.ts `ocp` for the pistol's OCP at it; 10-29, from play on the two charges: stood at the panel in the hall, only the squad's 'throw the breaker' was on offer). player.ts asked for a clear line to a point 0.18 m toward -z of the panel's mark: right where the panel faces that way or hangs on a wall that runs that way, inside the wall where it faces +z. Now that line is asked first, as before, and only where it is blocked the line to a point 5 cm off the panel's real face, from in front of that face (the far side of its wall is still not the breaker). Swept headless over every level file with a breaker, Sam stood in front of the panel, the plain night: 43 of 57 offered the row before and offer it the same; 14 never did and do now (defuse and defuse-gwot, glasshouse, gwot-yard, kit-yard, mousehole and mousehole-gwot, quiet-yard, sneak-lab, train-orders, tut-kit, tut-road, tut-sky, tut-team). A recording without the key replays with it off (journal.ts). QA: `probes.ts samface` (tools/qa/samface-check.ts, both stands, it raises the work switch itself; `SAMFACE_BREAK=1` must fail). Never seen on a GPU, never played; the OCP's own press is not driven by the check, only the point it asks for.
-  A FOLLOWER IS NOT LEFT STANDING ON THE WALK OF THE MAN WHO COMES TO THE BREAKER (`WORK.offWalk`, `walkM` 2.5, on with the switch; false = as it was; `workComing(g, gd, h)`, asked by sneak.ts `sneakFollow` and by spotted.ts `hide`; 10-18, from a replay of play on lights out as two, hard: the partner threw the breaker on order, 'fall in' came 1.2 s later, Sam walked on past the man sent to the panel, and the partner — the sneak's follower, 'holding. it's lit and he's looking.' — waited 4 m from the panel for that man's back, ON that man's walk, for five seconds until the man reached him: 'he's made me! contact!', the alarm 11.8 s after the throw; a headless re-run of the tape matched the page to 0.01 m and named the rule). True of a defender who carries the mains errand (lighting.ts `task.kind 'breaker'`, said on the net: 'power's out — checking the breaker') and is walking it (suspicious, his route's end the errand's own spot: not a patrol leg he has yet to leave, not a noise he turned off to) when the teammate is within `walkM` of what is left of that walk — where the man stands, the corners of his route still ahead, the errand's spot — with nothing solid between him and it. For THAT man, while Sam is going on (Sam moving, or the follower not yet at his place), the follower does not wait short of a stretch the man is looking at, does not keep him as a remembered looker, does not back off down the way he is coming (sneak.ts: he crosses after Sam, as low as Sam), and is not stood still by spotted.ts's freeze (he is still on a knee whenever the man has a line to him). Once the man is past him (the walk left no longer passes within `walkM`) every one of those rules is his again: on the tape's run he then knelt still 2 to 3 m off while the man went by, and followed on. NOT changed: a suspicious man on any other business; ANOTHER man's eyes on the stretch, or the line of a shut door Sam is at (those waits stand); Sam stood still on the walk with the follower at his place (the back-off and the freeze are his as before); a partner POSTED at the panel (he holds there until moved: the maintainer's call of 10-13 stands). KNOWN, not built: the crossing follows Sam's steps whatever they do — a trail that runs up the man's own route meets him head on (it is Sam's lead; on the tape he passed 2.0 m off); no hysteresis at `walkM`; the same hole stands for any suspicious man who walks to a noise where the follower waits (a claim for the sneak's owner; since mended behind `SNEAK.noiseWalk`, team-feel.md). Measured headless, the men's own senses (nobody dazzled, Sam not kept dark), one seed, the level's own mission, Sam moved along the taped way at 1.4 m/s: key off, still on the walk 2.6 s (frozen stand with SNEAK and SPOTTED raised) / 3.5 s (shipped), the man alert at 11.2 / 11.7 s; key on, nobody roused, the man put the mains back at 16.0 s, the follower passed 2.0 m from him in the dark and ended at Sam's shoulder, low on 581 of the 585 frames of that walk, fastest 1.45 m/s. The tape re-run with the key raised by hand: the partner crossed at 40.9 s, passed 2.5 m from the man, the man re-armed the mains and went back to his patrol, nobody alert up to 61 s (past the point the re-run parts from the tape the page's GPU reads are served stale: an indication, not a proof). QA `probes.ts work-walk` (six lines, green on both stands, the neighbours' `sneak`, `spotted`, `pair`, `pairup`, `lights-out`, `journal`, `shipped` families green beside it; `WORKWALK_BREAK=1` fails three of them). A recording from before the key replays with it off (journal.ts). Nothing drawn on a GPU, never played.
-  A job on a thing of the RUN's (`drive`) ends with no word when the run ends under the man's hand (Sam down: `tick` asks `g.player.down` ahead of `moot`, whose "it's already gone." would be false of a thing still in its holder); a breaker job goes on, the mains being the level's.
-  No save slice (a checkpoint is refused with a unit on the floor); a recording without the table replays with it off (journal.ts). QA: `probes.ts workthings`
-  (work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-off (deleted 2026-11-06 with the off side: qa.md) / work-harness). A pose layer reads `workHand(g, c)` (where and when: the
-  thing's face point, its normal, weight) and `workJob(g, c)` (what: verb `breakerOff | breakerOn | drive`, seconds in, seconds it takes) — reads only; the pose is not this file's.
-- **Since 2026-11-08 what the plan, the throws and the rings list is the Rust game's** (`view.plan`, `view.throws`, `view.ring`, `view.hand`: `rust/game_rules/src/view/plan.rs`, `throws.rs`, `rings.rs`; `src/game/floorplan.ts` keeps only the `PLAN` table, and `src/ui/planfloor.ts`, `squadthrowviz.ts`, `cmdring.ts` read the view). Older bullets below name `floorPlan`, `waitsOnKey`, `squadThrowPlans`, `ringView`: their rules are those files' now.  nobody has seen any of it on a GPU.
-- **The squad's plan is drawn on the floor** (`src/game/floorplan.ts` = WHAT, `src/ui/planfloor.ts` = the drawing, index.html `.plan …` = the look; `PLAN.on` ON on every stand — it is picture only —
-  Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
-  `floorPlan(g)` ONLY READS: the squad's assignments as they stand (`orders.of(gd)`), each man's own nav path (`gd.path` from `gd.pathI` where `gd.pathGoal` is this order's and the path runs
-  to it, else the nav grid's answer kept ≤ `reaskSecs` in the ASKER'S own store (`PlanKept`, since 2026-10-23: the module keeps nothing; see 'An order's line starts on the leg he is on'); no way on the floor = nothing drawn, never a line through a wall), the
-  open menu's men, and the books of whatever waits on the key. Per living teammate WITH A MARK (`Assignment.post`, or the order's own `goal` a step off it with no `via`: the unasked cover's
-  step; a follower has none and is not drawn): walking = the dotted WAY feet → corners (`via`) → mark, a dashed ring at the mark with his two-character tag IN it (`planTag`: 'R1'), the fan
-  he WILL watch; standing (his feet within 0.45 m of the mark — not `A.arrived`, which also wants his gun round) = the ring filled, the tag UNDER it, the fan along his gun AS IT POINTS
-  (`aimYaw`: the cover's deal, a fitted watch, the rear watch all show), a hair line to his order's door while his gun is on it (to any other watched point only while the order is fresh);
-  taken off his order by the fight (`yieldT` ≥ 0) = the mark alone; on a man under the order (`script.over`) = all of it, dim. An order under `freshSecs` 2.5 old is drawn at full strength
-  with a ring at each man's feet (WHO); the menu up rings the men its orders go to, and the one whose menu it is in gold (`FloorPlan.you`, `.py`; his word 10-13: 'when hitting x we should have the player with a gold circle'). Every ring is a 48-point floor circle (`RING_N`; 14 showed corners on his screen). Colours = the man's pair (`.t-red` / `.t-blue`, gold for a mixed door, the HUD's green for a squad with
-  no pairs). NOTHING OF AN ENEMY: a man whose order took its mark from a foe (`Assignment.foe`: the quiet pair's take / watch) is listed only while the team's fog has that foe seen and
-  never with a watch; a watched point is drawn only where it is the order's own door, the room fit's, or the player's own point (cover / move / hold) — a door tool's 'threat first' writes
-  a SENSED place into `A.watch`; a new writer of `A.watch` / `A.post` that reads an enemy must keep to that. `doors` = everything WAITING ON THE PLAYER'S KEY — `waitsOnKey` REPEATS, as a
-  reader, the press rules of files that are other goals': doortools.ts (`waiting4` + `thresholdHeld` + `set` + `input`: the word to what the addressed men have waiting, else the nearest free
-  set charge; the pair's word takes its set charges too; a charge on a word already given is nobody's), wallcharge.ts (`set` + `input`: it has the press first where its charge is nearer
-  Sam than any door's) and the room clear's drill stacked (`nightBreach.state === 'set'`) — a rule changed there must be changed here, and plan-check's key lines (F pressed where the bar
-  has no key: nothing goes; where it has: it goes) are the tripwire. Drawn as a bar across the doorway (along a wall charge's wall), dashed, and solid with the key (`DOORTOOLS.blowKey`'s
-  letter; filled for a charge) on the one the key pressed NOW would send; none while Sam is down. PER SEAT, for a second player: `who` and a door's `now`; `men` are the squad's. Hidden
-  under body.breaching / attract / blinded (nothing asked then). A TEAMMATE'S THROW (`PLAN.throws`, `FloorPlan.throws: PlanThrow[]`;
-  Tab row 'plan ▸ a teammate's throw'): squadthrow.ts's own reader `squadThrowPlans(g)` drawn in the plan's marks — a filled ring under the thrower, his walk dotted to a ring
-  where he will throw from (only if his order's way is not already drawn), the arc dashed through the air and on along the floor (the reader's arc ends at the first bounce, 2 m short on the check's throw: floorplan adds the last leg), a ring where it comes to rest and, for a frag, a faint ring at
-  `FRAG.lethalM` round it; fainter while it is only OFFERED (the throw page up), full once ordered, gone when the thing leaves his hand (a throw from where he stands is listed
-  only while offered). While the plan draws them `planDrawsThrows()` is true and `ui/squadthrowviz.ts` (the throw order's own stopgap picture) draws nothing — its one clause;
-  `PLAN.throws` or `PLAN.on` off hands the picture back to it. ONLY IN THE ORDER MODE (`PLAN.menuOnly`, ON on every stand — picture only; `?planalways` / Tab row 'plan ▸ only with the order menu up' = for as long as the
-  orders stand, as it was; his word 10-13: 'they should only show when you're in the mode after pressing x. in normal gameplay they shouldn't show up'): with no
-  menu up (`FloorPlan.mode` false) `men` holds only a man whose assignment is since an order the ORDER BOOK was given inside `freshSecs` (`S.log`: a module's own
-  re-assign is no order and shows nothing), aged from that order and faded out by planfloor; `doors` (the key) and an ordered throw are NOT held back — a prompt and
-  a grenade, not the plan. The diamond with a distance in his shot is the mission's objective mark (ui/overlay.ts `.objmark`), the small ring the aim reticle: not
-  the plan's. plan-check 1‥10 run with it off, 11‥16 with it on, 17 is the rule. THE TWO OTHER READERS OF THE KEY (10-13): the rescue's entry held for its second word (`g.rescue.entry` with `gate.go` false, `active`, no `result`:
-  a bar on each live op's door from the first F on; `now` only where the press gets PAST the pair, a set wall or door charge, the door tools' word and the drill —
-  rescue.ts reads the key LAST) and the quiet pair's mark (`g.pair.waiting()`: `why: 'pair'`, no door — a 0.6 m bar `PLAN.pairBarM` ahead of the waiting man's feet
-  across his gun's line, the key on it; pairorders.ts reads the key FIRST, so while a man waits on the mark no door's bar has the key). The pair's bar is at OUR
-  man's feet, never at the man he waits on. NOT here: enemies, time; the rescue's FIRST F (it stacks them: an order, not a wait). QA: `probes.ts plan` (tools/qa/plan-check.ts, also under `squadorders`; both stands; `PLAN_BREAK=1` must fail; its last lines
-  = asked every frame, the run's digest is the same; the pair's drill) and, on the real page (software adapter, starts its own dev server), `node tools/qa/plan-look.cjs [--q '<query>']
-  [--name n]` = nine stills (given / walking / on marks / menu / stack given / stacked + the bar / a throw offered / the throw ordered / off)
-  with the SVG's counts beside each. Never seen on a GPU.
-  **A MAN WITH NO THROW WALKS TO ONE** (`SQUADTHROW.walk`, on with the switch; Tab ▸ Squad ▸ 'throw order ▸ a man walks to a throw' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md); off = such a spot is 'no throw from here.' as above; a
-  recording whose SQUADTHROW table has no `walk` replays with it off; the maintainer, 10-13: "it would be good to have the squad move to do a throw (and maybe visualize who's doing it and the path
-  on the ground?)"). Only where NOBODY addressed has a throw from where he stands: `walkSpot` floods the nav grid out from the men who may be walked (`mayWalk`: no drill owns him, not in a door
-  tool's or a wall charge's op, not in a fight — 'alert', the fight AI's lease, or the room fight's gun on a man (`fight.opOf(gd).tgt`) —, not a stack's or stand-off's rear man (`Assignment.spare`), his order none / move / stack / cover / hold / fall in) — 4-neighbour, ≤ `walkM` 12 m COUNTED IN GRID STEPS, never through a door leaf where it stands nor a room the squad
-  has not been in (and the way the ORDERS' own router would then walk him is asked the same: `wayOk`) — and takes the first cell `minM`‥`maxM` from the spot with a clear line at head height AND from the hand to the spot's floor, an arc that also holds from 0.3 m to each side
-  (he stops within a stride of his mark), no own man in a frag's reach of the spot or of where it rests (the thrower judged where he WILL stand), and a walk the orders' own `reach` allows; ≤ `tries` 12 arcs a search, the answer kept
-  `keepSecs` 0.4 — the menu's and the order's kept apart from the picture's, so what is drawn never decides what the game reads — (0.2 ms an arc, 1‥2 arcs a search on the office and 32 at most; the check bounds a search by its ARCS — `tries` × 5 — and only prints the time: a wall clock is the machine's). GIVEN, he is `assign`ed that post UNDER THE ROW'S OWN ID ('moving to throw.', HUD 'moving to throw · frag');
-  the row's `tick` (`walkTick`) throws once he is there, turned and has an arc from where he really stands (asked again; none = one more search, twice, then 'no throw from here.'), every refusal
-  asked again at the hand; THE CAN IS TAKEN AT THE THROW, so an order that takes him mid-walk (any `assign` not this walk's: swept in `squadThrowKey`) or `walkSecs` 16 running out spends nothing.
-  THROWN, HE GOES BACK (`SQUADTHROW.back`; off = he holds where he threw), in an order group of his own: fall in = the fall-in order given him again, move / stack / cover / hold = that assignment at the mark he left — unless it was shared and no man he shared it with still holds it (the stack gone in without him: a hold at the mark he left) —, else a hold where he stood. A frag is refused AT THE HAND, nothing spent, if one of ours has stepped into its reach meanwhile ('you are in it.'). A frag's own
-  reach rule means a walked frag is thrown from 9‥11.5 m with a straight line; a stun walk is usually a short hop to a line. Teammates never run to it (the team's pace). THE PICTURE
-  (`SQUADTHROW.draw`; `squadThrowPlans(g): SquadThrowPlan[]` = {gd, from, points, land, kind, preview?, walk?} — one `preview` entry while the throw page is up on a spot with a throw row highlighted (that row's throw and no other: what is drawn is what the next pick gives), one live entry per walk until the thing leaves the hand — drawn by `src/ui/squadthrowviz.ts` on the overlay's `#traj` SVG in the thrower's pair colour: a ring at his
-  feet, his walk dashed, a small ring where he will throw from, the arc, a ring where it comes to rest and, for a frag, a dotted ring at `FRAG.lethalM` and a fainter one at `FRAG.woundM`; no words; a floor-plan drawer may
-  read the same export instead). (its check read the listed menu's pages and is gone); squadthrow-check.ts pins `walk` off (it asks about throws from where a man stands). On the real page: `THROW=1 PORT=<dev server> node tools/qa/page-look.cjs <outDir> four='…&roomclear&squad4&freshstart=0'` (the throw page, the walk and the throw, a still each; `__squadthrow`). KNOWN: a walked frag is a long lob, so indoors it is often refused where a stun is not; a man in a fight, owned by a drill or keeping the rear is never the one walked, so a squad all busy says 'no throw from here.'. The drawing has been seen only on the software adapter.
-- **A man works his throw out; a frag is thrown where the men can duck; a frag near the player is his call** (`SQUADTHROW.lob` / `.duck` / `.samCall`,
-  three keys under the throw order's switch, each ON in the module like `walk` and inert on the frozen stand, where `SQUADTHROW.on` is held off —
-  `TPS_SQUADTHROW=1` raises all of it; `?throwlob=0` = the straight arc or nothing as it was, and the other two off with it; `?throwduck=0`; `?samcall=0`;
-  Tab ▸ Squad ▸ 'throw order ▸ a man works his throw out' / '▸ frag where men can duck' / '▸ a frag near you is your call' (ROWS TAKEN OFF THE PANEL 2026-11-07, their switches ruled settled: menus.md); a recording
-  whose SQUADTHROW table has no `lob` replays with the three off; squadthrow-check.ts's rig pins `lob` off, so the older throw / walk / plan checks ask
-  what they asked). The maintainer, 10-15: "ordering your squad to throw a grenade is still pretty useless. they should figure out how to throw to a
-  spot". WHAT IT WAS, measured headless on the shipped stand, the office with the four holding by Sam, 270 floor spots 2.5‥15 m from him: a frag at a
-  spot he could SEE was refused 88 % of the time ('you are in it.': a frag reaches `FRAG.woundM + 1` = 9 m and he is in the room), usable 11 %; over all
-  the floor, no throw 67 %. THE THREE RULES. `lob` (`rust/game_rules/src/throwplan`): `throwFlight` is the item pool's own step (throwables.ts `update`: two
-  half steps, the swept ray, the bounce, the safety floor) and the fuse's own rule (a frag's from the hand, a canister's from first contact, `maxAir`)
-  flown from a hand at a velocity to where it GOES OFF, moving nothing and throwing no die — KEPT APART from throwables.ts (the gear goal's file): a
-  change to how a thrown thing flies runs `probes.ts squadthrow-lob`, whose first line throws twelve for real against the forecast. `throwTo` tries a
-  man's throws at a spot — straight at `lobPaces` (the solver's 7.5 m/s, 10, 5), then at up to `lobWalls` walls within `lobWallM` of the spot
-  (`throwWalls`; `lobBankPaces`), each only with a line from his hand — and takes the one that goes off nearest it: within `lobNearM` 1.5, no more than
-  `lobUpM` over its floor, nothing solid between, and STILL by it when flown at each of `lobSteps` (1/120, 1/40: the page steps at the display's rate,
-  the forecast at a sixtieth). `squadThrowPlan`'s order: the straight arc from where a man stands · a worked-out throw from where a man stands · a walk
-  to the straight arc · a walk to a worked-out throw (`walkSpot`'s second flood: `lobCells` cells with a line from the hand to over the spot or to a
-  wall by it, the same throw holding a step to each side) — and under `lob` the first that is CLEAN (a frag that catches nobody of ours, the thrower
-  where he will stand; the player is the row's own question); nothing clean = the first found, and the row is refused by name as before. A search
-  flies `lobSims` 48 throws at most (+ half for the men where they stand), its answer kept `lobKeepSecs` 1 s; a walker comes to a stand `settleSecs`
-  0.5 before his throw is asked for again (a walking man's hand is lower: three walks in forty ended 'no throw from here.' before this), re-flies the
-  throw he walked for from where his hand now is, and turns to the way it leaves his hand. `duck`: the squad already steps off its own frag
-  (frag.ts `fragFlee`); `fragClears` asks `fleeSpot` — the same function, the squad's pace, `duckSecs` 0.5 of the fuse in hand, `duckThrowSecs` more
-  for the thrower, later for a man far from the hand — BEFORE the throw: a man whose dealt spot the burst has no line to is not 'in it'. Never inside
-  `duckMinM` 5 (what it kills at + 1), never to a spot within `duckApartM` 1 of another of ours or of another man's spot, only with `FRAG.fleeWise`
-  on (so inert on the frozen stand unless that is raised too), and a cell thrown from on the strength of it must hold at eight steps round it; a walker
-  who stops short of such floor looks again instead of calling it off. `samCall`: a frag that reaches the player and nobody else of ours is thrown and
-  the row reads ' · too close: you' (never inside `duckMinM` of him: refused as before). The frag verdict is kept 0.3 s for the menu's and picture's
-  per-frame re-reads (`squadFragCatches(…, kept)`), never for the order's own ask nor the hand's. MEASURED (headless, never on a GPU, nobody has
-  played it): the check's office lattice, 661 spots — a frag nobody of ours is caught by 90 → 161 (shipped; 133 frozen, where `duck` is inert), a stun
-  210 → 221, none lost; frags ONLY the duck rule allows, ordered and thrown for real with the team mortal, 30 spots a level on the office, the depot
-  and the barracks (scratch runs, one deal each): 88 of 90 thrown (two called off at the hand, by a mate's name), 0 of ours killed, 1 WOUNDED — a
-  thrower whose real flee was dealt, with the thing still in the air, a corner hidden from where frag.ts `rollOn` guessed it would rest and open to
-  where it did (the forecast here knew: worst 0.15 m between forecast and burst over the 88; 60 stuns, worst 0.11 m). Two earlier passes of the same
-  120 found three other wounds, each closed by a rule above (a mate pushed out of cover by a man ducking to his corner → `duckApartM`; throwers
-  stopped a stride off their floor → the eight steps, the stand, the second look; a thrower inside 4 m → `duckMinM`).
-  COST: 3.8 ms a search that finds nothing, worst 43 ms on a loaded machine (48 flights), at most once a `lobKeepSecs` for a spot. NOT DONE, on
-  purpose: nobody opens a shut door for a throw (a room behind shut doors is still 'no throw from here.': the door orders' ground); a hidden mate is
-  not held behind his cover while it burns (frag.ts lets a man on an order walk); the real flee runs from `rollOn`'s guess, not from this forecast
-  (the wound above: a claim for the gear goal — let an ordered frag carry where it will go off). SINCE (10-15, on the build that carries the gear
-  goal's `FRAG.restProps` / `fleeApart` / `fleeOnto`, `?nofleemates`): the duck forecast asks `fleeSpot` as the deal does — of the man himself
-  (`who`) and with the deal's own list of the floor his mates have a claim to (frag.ts `fleeMates`; `?nofleemates` = the forecast as it was). Two men
-  forecast to one corner is still a refusal (`duckApartM`: the deal tells men in the order they hear it, which the forecast does not know); the list
-  is read from where the men stand NOW, so a thrower forecast at a far post is judged again at the hand, as before. The same 90 frags again
-  (scratch runs): 88 thrown (two walkers on the depot called it off at the hand, aloud), 0 killed, 0 WOUNDED, worst 0.35 m forecast to burst; the lattice 90 → 163 shipped (133 frozen, as it was). `bun run tools/qa/squadthrow-lob-check.ts` (`probes.ts squadthrow-lob`, in `squadthrow` /
-  `squadorders`; both stands; `SQUADTHROW_LOB_BREAK=1` fails six of its eight lines on both). THE ROW ASKS WHAT THE SEARCH ASKED (10-15, under `lob`): the row is
-  the thrower's alone (`only`), and asked of him alone the search was another one — its count of flights not shared — so it could come back with a
-  throw that catches a mate where the squad's caught nobody: a clean throw refused by a mate's name. `only` now leaves the men it was asked of
-  (`State.asked`), the row's question goes to them first and stands when it still names him and catches nobody; else he is asked alone, as before.
-  The two answers are kept apart (the kept slot's name ends '1' for one man): before, each put the other out, so every opening of the page and
-  every refresh of it (orders.ts `refreshSecs`, one a second — not every frame) searched two or three times over (measured headless: ten openings
-  of the page on one worked spot 1,110 flights → 37). On the build with `FRAG.wallFlee` the lattice
-  reads frag 84 → 147 of 661 shipped (walls a burst opens are no cover: fewer spots anybody may throw at, with the rule or without).
-- **Esc is only the pause; Tab backs out** (`rust/game_rules/src/backkey`, `BACKKEY.tab`; the maintainer, 10-17: "esc is overloaded -- exiting out of menus as well as
-  going to pause. maybe we make tab exit out of menus and esc is always pause?"). SWITCH: ON in the page (`?tabback=0` = Esc backs out first and pauses only
-  with nothing to back out of, as it did), OFF in the module and on the frozen stand (`TPS_TABBACK=1`); the table is in the knob registry and the journal,
-  and a recording from before the key replays with it off. WHAT ESC BACKED OUT OF, and Tab does now: the squad's order menu (a page of it: back to the first
-  page), the open Space list, a running sustained verb (the leaf being eased, the pick, the choke, the drive), the launcher's held arc. In the tick the back
-  key is a press like any other (`backTake` in orders.ts with the menu up, `backHit` in interact.ts and player.ts); an Escape that reaches the tick still
-  backs out, so the harness's presses and an older tape's hold. ON THE PAGE no Escape reaches the tick with the rule on: main.ts takes the press out of the
-  frame's keys and toggles the pause, so no recording holds it. `'Paused'`: a key let go under the pause card would act on the tick play comes back (the
-  list does its row, the launcher sends its round), so with the rule on the loop (`host/loop.ts`) hands the first tick after a frozen frame the one-tick code
-  `'Paused'`, as Input hands it `'Blur'`: interact.ts shuts a held list with its press spent, player.ts lets go of a held arc unsent. It is a press in the
-  tick's keys: a recording carries it, a replay does the same, and nothing of the game changes between ticks for it (the start card is a frozen frame too:
-  a run's first tick holds one, and it is nothing to that tick). The order menu and a running verb are still there after the pause. THE OBJECTIVES CARD
-  (`ui/tabcard.ts`) has the key whenever there is nothing to back out of (`Game.backable`, which counts a verb that cannot be taken back, the knife in the
-  hold and the breaker's lever, for the half second it runs).
-  WHAT SHOWS: the order menu's line and the Space list's line name `tab` where they named `esc`; Options ▸ Controls gains a Tab row under Esc. NOT TOUCHED:
-  the screens outside the fight (the pause card and its options, the mission list, team and kit: Esc is still back there), the showcases (Esc ends one),
-  a focused field of the debugger (Esc lets go of it). Check: `tabback` (family `orders`; each of the four staged as play stages it, rule on and off, then
-  the pause under `stepFrame` with Space let go under the card, the same keys tick by tick as a replay gives them, the switch in a recording;
-  `TABBACK_BREAK=1`), both stands. Never seen on a GPU.
-- **The throw page's picture writes nothing of the game's** (2026-10-23; `squadThrowPlans(g, V)`, `SquadThrowKept` / `squadThrowKept()` in
-  rust/game_rules/src/squadthrow; `Collision.aside` and `NavGrid.aside` in rust/game_rules/src/scene_collision). The page's preview is a whole search (flights, walks, who a
-  frag would catch). It kept its answer in `squadthrow.states` (the 'v' slot) and looked with the game's own tables, so a game drawn and the same game
-  not drawn differed in whole state, run digest equal. Now the preview is asked ASIDE: its kept answer, its verdict of who is caught and the walk
-  search's marks live in the asker's store (ui/squadthrowviz.ts keeps one a game, the floor plan's `PlanKept.throws` carries one; a store asked of another game starts empty; with none handed in nothing
-  is kept and every ask is a whole search), the rays and path searches run on the asker's tables (`Collision.aside` swaps the query stamps, the segment
-  scratch, the cos / sin cache and the walk grid's search tables, and holds off the sound routes' cache: `SoundPaths.asking`), the walks the orders are
-  asked about are kept in the store too (`SquadOrders.askAside` swaps `reached`), the duck's memo (`duckMates`) is put back as it was, and two answers OF
-  THE TICK that other modules keep by game (`frag.WALLS_FOR`, `seenwalk.shared`, named in `TICK_KEPT`) stand aside while it asks and are put back. Not a switch: the picture is the same (the check's `same`
-  line) and no run digest moves. CHECK: `bun run tools/qa/throwview-check.ts` (probe `throwview`, family squadthrow), both stands,
-  `THROWVIEW_BREAK=1` must fail `state` and `ask`: a frag and a stun, worked-out throws on and off, one seed; lines state (two games, thirty frames of
-  the page), ask (ONE game with a fight on and the men shifted about, 150 frames: the state hashed before and after each ask, the module variables
-  looked at — before the mend an ask wrote `orders.reached` on 4 to 11 of them), none, same, plan (the floor plan asked on its own store), kept (1 or
-  2 searches in the thirty frames with a store, 30 with none). One break for all the swaps: it does not prove each apart; the sound cache and the
-  duck memo were mended from a review's reading and were never seen writing in a run. A NEW cache a
-  search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
-  `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
-  menu up: the bullet below says what a read is now. Never seen in a page.
-- **The cursor's pick, read for the picture, writes nothing of the game's** (no switch: nothing a player reads, and the run digest never moved).
-  What the HUD's lines and the ring's hint read every frame is the Rust game's answer to what the cursor is on, and asking changes nothing. CHECK: the native test
-  `rust/game_start/tests/cursor.rs` (`any_cursor_is_answered_and_pointing_changes_nothing`); the page's half is the last line of `probes.ts cmdring`. Never seen in a page.
-- **The squad reaches you, and the quick key says why** (`rust/game_rules/src/squadnet`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
-  drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
-  Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
-  there.', and 'clear' means clear." Three rules from that pick, a fourth found while building it and a fifth from his first play note, a switch each, all ON in the page and OFF in the
-  module and on the frozen stand.
-  FAR LINES (`SQUADNET.on`, `?squadnet=0`, `TPS_SQUADNET=1`): a bubble was drawn only over a head on the screen, so a teammate's line said two
-  rooms off was said to nobody. With the rule his bubble is drawn NEAR YOU (`SQUADNET.near` × the view's shorter side from you, toward where he
-  is on the screen; about the middle of the view while you are off it yourself: the plan's camera, a man watched) as `↙ Red One: stacked up.`,
-  class `bubble net` + his tone, one row, each further line a row higher, never under a HUD card. `say()` asks `squadNet.line()` for a click
-  when his head (`guards.ts headOf`, the point and the `onScreen` test the HUD draws by) is off the screen: `'radio'` at `SQUADNET.click`, rate
-  `clickRate` 1.3 so that it is not the defenders' net's squelch (cues.ts, rate 1), once a frame. A teammate whose state turns `dead` is a row of
-  its own on `squadNet.rows` (`Red Two is down.`, 5 s, drawn over where he fell while that is on the screen and near you otherwise) with the
-  same voice louder and at rate 0.55: there is no voice of its own for it in `audio/sfx.ts` yet, that is the sound work's to make. Nothing
-  writes a `Guard.bubble`: the run with it on is the run with it off by digest (the check holds it). A man already down when a run starts or a
-  checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
-  then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
-  AT THE EDGE (`SQUADNET.edge`, `?netedge=0`, `TPS_NETEDGE=1`): his note on playing the first rule, "the off screen 'red two: moving' is nice,
-  but it should be more towards the edge of the screen". `ui/netplace.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
-  with the rule, where the straight way from you (the middle of the view while you are off it) to the man leaves the view, `SQUADNET.edgeIn`
-  (0.04 of the view's shorter side, a slider under Tab ▸ 'Squad net') inside the border with the line's own box kept whole, or at him where
-  he is inside that; off, `near` out from you and up a row from a taken one, as it was. Where you stand out by the border yourself the way is
-  laid from a point 0.15 of the shorter side further in, so a man past your border does not put the line on you and it does not jump as his
-  bearing crosses straight up. A spot that lies on something moves ALONG THE BORDER it is at, the nearest free place first: up or down a row
-  at a side border; at the top or the bottom a row or two in (two men off the same way read as a list), then sideways. What it keeps clear
-  of: the far lines already drawn, the HUD's cards, and with the rule your own figure (a box about it) and the objective's mark (its diamond
-  and metres, read off the mark's own element). A teammate behind the eye's plane (far down the screen with the view zoomed in) was dropped
-  with no line though the net had clicked: with the rule he is called at the edge his way (off: dropped, as it was). The page's alone: no run
-  reads it. A man-down row off the screen goes by it too. NOT SEEN: any of it on a GPU or in play; the objective's mark and a far line
-  together; a line for a man behind the eye; a view zoomed by the text size setting. A line whose edge place is under a wide card can end
-  several rows or a line's width from where the way to him leaves the view.
-  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`; since the key never picks a tool the row carries no reason: the words below are the history, and the page's `whyWords` is gone): the reason came when the autopilot's pick on a door the men wait
-  on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
-  answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; autopilot `quick` passes it):
-  `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` / `banging it. i see one in there.` · `they're saving
-  the last bang` / `going in. i'm saving the last bang.` (`AutoPick.kept`: an unknown room opened plain because `AUTOPILOT.keepBangs` holds
-  the last stun) · `they can't open it` / `we can't open it. setting a charge.` (the press only: the HUD's line asks no lock). A plain open, a
-  silent squad and a stack say nothing more; no press waits. The answer changes a bubble's length, so a run with it on is not the run with it
-  off by digest once such a line is said.
-  CLEAR (`SQUADNET.clear`, `?honestclear=0`, `TPS_HONESTCLEAR=1`): the lead's call at an entry's end (`doortools.ts`, a room of the room clear's
-  own) goes through `roomCall()`: `<room> clear.` only with nobody standing in it AND a search that was not cut short (`RoomSearch.left` under
-  `DOORTOOLS.deadCells`, the search's own bar for floor no man could see); `<room>'s quiet. we didn't see all of it.` (`bunks are quiet. …` for
-  a name in the plural) with a search cut short and no enemy of the room in the team's sight; nothing with one in sight, or one standing on
-  floor they saw (as before: nothing was said there). An entry with no search of its own (open floor) is called as it was. The floor counted is
-  the room fight's flood, the name and who stands inside are the room clear's own rectangle: two models of a room, not reconciled here.
-  EVERY ENTRY ENDS WITH A CALL (`SQUADNET.endCall`, `?endcall=0`, `TPS_ENDCALL=1`): the lead called only a room of the room clear's own list,
-  so an entry into any other room (the office's conference room, a hall, every room of a mission with no list) ended with nothing said. With
-  the rule, at the same place in `doortools.ts`: a lead who stands in no room of the list calls the listed room the entry's own points are in;
-  with none there either he calls the room fight's flood with no name through `squadnet.ts plainCall()`: `room clear.` / `room's quiet. we
-  didn't see all of it.` by `roomCall`'s own rule (who stands inside is `inFlood()`: the flood's cells and the room's own doorways, a man who
-  has dropped his gun left out as in the named call), and of open floor (`openFloor`, which nobody searches) `clear so far.` unless an enemy
-  on it is in the team's sight. Sam's own squad only (`g.orders.sams`): the response team runs the same door orders as a cast of its own and
-  says none of it. The same test now guards the far lines' click in `guards.ts say()`: before it, the response team's lines clicked the
-  squad's net (7 clicks over two of its entries with no squad on the floor). It adds a line where there was none, so a run with it on is not
-  the run with it off by digest once one is said; off is the build as it was (seeds 1–4, two entries each, both stands, against the build
-  head it was merged on). The pre-existing named call has no such guard: a response team that ends an entry in a listed room of a room clear
-  would call it by name, as it did before any of this (not seen, not changed here).
-  (2026-11-07: `squadnet-why` is DELETED: the squad picks no entry, the command is the door's first row, so no reason is given.)
-  CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · end · net · off; `end` runs under `doortools` too;
-  `SQUADNET_BREAK=1` fails all five; `net` holds where a far line is put by `netPlace`: eight ways out, you out by the border, a spot under a card or on another line, 960 placings none off the view), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
-  41. It reads what a man SAID off his bubble, a frame at a time. MEASURED on the office (the squad of four, the quick key's own pick, the
-  defenders of the room beyond left as dealt, every switch on): entries into the room clear's four listed rooms, seeds 1–4 on the shipped
-  stand, 16 of 16 called by name (all `clear`; floor unseen 0 or 1 cell, under the bar); entries into the conference room, which is on no
-  list, seeds 1–8: 8 of 8 silent before the rule (shipped stand) and 8 of 8 `room clear.` with it (each stand). So on the office the honest call changes
-  nothing a player would hear, and the fourth rule is what he hears. A COUNT THIS FILE CARRIED WAS WRONG: an earlier pass read 24 of 60
-  entries into listed rooms as ending with no call. It counted rows of the message log, and `say()` files a row only for a man off the
-  screen or in the fog, so every call made in view was missed. NOT MEASURED: any level but the office; a live entry onto open floor (`clear
-  so far.` is held as words only); a mission with no room list (rescue, the quiet missions as two), where every entry now takes the
-  no-name call. ON THE PAGE (`PORT=<port> node
-  tools/qa/squadnet-look.cjs <dir>`, software adapter): the far lines and the down row are read off the HUD's own elements with where they lie
-  against you and against the man; `ENTRY=1` in front of it drives an entry into the conference room and read `↑ Red Two: room clear.` as a
-  far line near you (the lead off the screen; read before the edge rule), counted once, no page or console errors. THE EDGE, read the same way
-  on a 960 by 540 view: with the squad off the bottom of the view two lines sat at the bottom edge, one a row in from the other (712, 494 and
-  673, 468; rule off 655, 386 and 638, 419, about 100 px from you), and the man-down row at 679, 494 (off: 658, 425); with the squad off the
-  bottom left corner, where the kit card stands, the two sat side by side on the bottom edge to the right of the card (303, 494 and 489, 494;
-  off 535, 333 and 533, 303). No page or console errors either way. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
-  man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
-  the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
-  hint does not ask the lock, so it shows the open it will not do).
-- **The silent partner's words (2026-11-07).** The squad line says 'SILENT · low' with a suspicious man about and 'SILENT · contact' once an alert man has them (`spotted_word`, read by `silent posture_word`), as it did before the TypeScript tick went; 'SILENT · compromised' still wins. Seen where the partner is on: a quiet mission with a squad, and `?pair`. Native: `rust/game_start/tests/pair.rs`, red before.
-- **Each seat's squad line (2026-11-08).** The partner's rule (`spotted_tick`) runs for every seat's men, so in a game of two the second player's line says 'SILENT · low' and 'SILENT · contact' too, and his men slip, cover and call as the first player's do. No switch. Check: `tests/pair.rs in_a_game_of_two_each_squad_line_says_low_for_its_own_men` (three seeds, each seat in turn; red for the second seat before). Nobody has played it, and two people have never played a silent squad.
-- **Two lines a man says in one frame are both shown (2026-11-07; every man in every game).** `guards say` used to overwrite the bubble, so of "he's down. on you." and the fight's "tango down." in one frame the player saw only the second. The later line now waits on `bubble_next` and comes up a second on (`bubble_tick`); the log row and everything else of the line happen when it is said. A line of a LATER frame still replaces the bubble at once. No switch; `hold` before and after on three squad levels is in the Rust goal's report for this. Never seen on a GPU, never played.
-- **A squad throw is one plan (2026-11-07; `squadthrow/plan.rs ThrowPlan`).** Who throws it, from where, whom it would catch and the walk to it are worked out once and kept on the open menu; the row's
-  `only`, `valid` and `label`, the picture and the order read that one. What is cheap (the nearest man's straight throw, whom it catches) is asked each time; a throw somebody has to work out or walk to
-  is searched again when one of ours comes into another half metre of floor, and by the menu's own reading. A press makes the kept throw again as things are, the same man and spot, and searches only if
-  it no longer goes off. With no menu up nothing outlives the frame. Before, up to a second could stand between what was shown and what was thrown (4 of 337 presses differed, never in the man). No
-  switch. CHECK: native, `rust/game_start/tests/throw.rs`, six levels by two seeds: shown is given, 70 presses of 70 (66 of 66 before: not a fault mended; two simpler forms failed it, 33 of 84 and 7 of
-  76). Never seen on a GPU, never played.
-- **Is this way seen has one answer** (2026-11-08; `pairorders pair_orders_stalk`, `sneak seen_along`). The way to a man's back is priced and read by the sneak's own eye (`sneak_walk`,
-  `sneak_walk_cost`) whether `PAIRUP.on` is thrown or not: the second test of the floor (`front`, `frontM`, `coneM`, `coneLit`) is gone. A quiet mission always threw the switch, so the page
-  plays as it did; only `?pairorders` alone changes: its row now names who has him ("waiting · Tango 1 is facing this way") and dark floor 2.1 to 3.6 m in front of a man no longer reads as seen.
-  A way round is a way: on the office's placement 10 the man faces the aisle door, the floor behind him is dark, and the partner goes round by the corridor door and sets up, so `pair-mark`'s last
-  line ("the only way lies across his eyes") stages a place where it does not. Check: `tests/pair.rs a_way_across_his_eyes_is_waited_on_by_one_eye`, `a_dark_way_round_is_a_way`, one seed each. Never seen on a GPU.
-- **A 40 mm shell is one plan (2026-11-08; `squad40/p_01.rs plan` → `ShellPlan`).** The man, his shot and why it may not be given are asked each time they are wanted (0.016 ms with one carrier) by the row's
-  `only` and `valid`, the order and, once a frame while its row is lit, by the menu (`follow` → `states[seat].plan`), which is what is drawn. Gone: the answers two askers kept for 0.3 s each. A change of
-  play only where one of those was stale; no switch. CHECK: native, `rust/game_start/tests/orders.rs the_shell_shown_is_the_shell_given`, three seeds. Never seen on a GPU, never played.
-- **The squad covers what it passes, walking or sent** (2026-11-08; `cover/p_02.rs`, `orders/p_05.rs`). The maintainer, of The pass: "men are walking past the breach looking away from it", and of the orders: he expects "that the squad mostly covers angles intelligently by themselves". FOUR CHANGES, no switch. (1) ANY man
-  whose order names nothing for him to watch and no door to be at is dealt an opening (`cover_eyes_free`) on the walk to his mark, and on it under fall in, hold and move there (`Is::LooksAbout` in the order's row: a man at work on a thing faces it); it was only a man falling in, or holding. (2) A man is IN an opening when his feet are in its frame, not when he is within 0.9 m of its middle: a file
-  going by along the wall no longer takes it out of the deal. (3) A man left with nothing, within 3 m of an open way onto floor the team has not been on, has his gun on it as he goes by, whoever else has it. (4) A man on his mark weighs his watch again when there is a new way, a hole just blown.
-  CHECK: native, `rust/game_start/tests/passing.rs`, staged from that case on The pass, three seeds. Sent past the hole, a man within 2 m of it has his gun within 60 degrees of it for all or nearly all the frames (before: two in five, and half of them with his gun over 90 degrees off); the fall in past it has a gun on
-  it the whole way (so it did before: the scene holds it). MEASURED (`missions`, which now counts it), thirteen room clears, 24 seeds, 624 runs: of the time an open way onto unknown floor is within 4 m of a man with a line to it, a gun is on it 57 % before and 65 % after on standard, 60 and 65 on hard; squad up 560 and
-  552 of 1248, 516 and 533; enemies left 462 and 417 of 2328, 564 and 496; cleared 162 and 169 of 312, 146 and 165. By mission it is mixed: the killhouse and the hall lose men, the barracks, mousehole and block keep more. NOT DONE: a man with a friend in his line to it still looks where he goes. NOT SEEN: never on a
-  GPU, never played.
+| module | what it does |
+|---|---|
+| `orders/` | the book: targets, the menu, giving an order, each man walked and posed. `orders/ring.rs` is the ring's input, `orders/tick.rs` the tick |
+| `orders/rows/` | every order: a file, a `Row` |
+| `cmdring.rs`, `ringlone.rs` | the ring's arithmetic: which wedge the cursor lights, which row sits on it, a ring with one row |
+| `autopilot.rs` | a tap: `auto_pick`, `quick` |
+| `planmode.rs` | Shift: `goal_men` says who takes it. There is no plan mode |
+| `pairorders.rs`, `pairup.rs` | quiet orders for one partner, and the switch that raises them with `sneak/` |
+| `squadthrow/`, `squadsmoke.rs`, `squad40.rs` | frag and stun, smoke, a 40 mm shell on order |
+| `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
+| `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
+| `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
+| `squadcast.rs` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
+
+The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
+block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the game asks for, `KeyB` (`?bkey` leaves it on B).
+
+## How it works
+
+**A target** (`OrderTarget`) is `Floor`, `Door`, `None` (Sam, or `man`: a teammate) or `Foe`. `target_under_of` reads the cursor's ray: what is drawn
+under it wins, and a door counts by the doorway the ray looks through.
+
+**The book** is `SquadOrders`, one a seat, read as `g.orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
+`row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
+`Assignment`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
+
+**The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
+(`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
+`flick_px` out. `ring_latch` gives it as the key comes up pointing at one; otherwise the ring stays until a click, the key again or a digit. A right
+click steps back. Tab or Esc puts it away.
+
+**The ring is flat** (`squad_orders_flat_rows`): every page's rows in one list, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
+tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door: cover, open and clear, bang and clear), and the rest fill up behind
+a last wedge, more. Only a tutorial can ask for pages (`squad_orders_flat_ring`).
+
+**Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
+`can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
+sent together on one way, then one man assents. A refusal is said by the man it is about, and "nobody's free for that." by the nearest (`say_why`).
+
+**The tick** (`squad_orders_tick`) runs after the door tools, `rear_watch_tick`, `cover_tick` and `pair_orders_tick`. For each man: give way to the
+fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted.rs` and `fireline.rs` may
+take his gun or feet, the muzzle drops off Sam, and `order` writes it all. When the last man of a `group` arrives he says "set."
+
+**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_whole`: no key picks a pair), unless the cursor is on one teammate or
+Shift picks a part. `goal_men` decides: the man under the cursor; everyone, on Sam himself; the men already on that door; with nothing going, half
+(`goal_half`: a whole pair if it can, else the nearer men); else the free men; else half of the biggest group. Nobody to spare says so (`GOAL_NONE`).
+`roster_of` makes the team: one or two men are one pair, three or four are Red and Blue (`unit.pair`). `squad_orders_men` is where to ask for men. In
+a game of two, `deal_seats` deals them out, and each seat has its own men (`in_seat`), book and share (`seat_share`).
+
+**A way** (`squad_orders_route`) goes round doors locked against Sam's keys, rooms nobody has been in (`cleared_rooms_dear_for`, `round_cap`), lanes,
+and lit floor an uncleared room can see (`seenwalk.rs`). His steps go round furniture (`prop_way`). A door nobody has tried is walked up to and tried
+(`squad_orders_walk_try`).
+
+### The orders
+
+| row | what it does |
+|---|---|
+| `movethere` | a place and a watch each that fit the room (`fit_spots`), or the line abreast (`squad_orders_spots_at`), dealt for the least walk (`squad_orders_pair`) |
+| `stack` | marks on the door (`door-tools.md`), the back men spare for the rear (`squad_orders_spare_rear`) |
+| `cover` | stays where he is, aiming at it |
+| `fallin` | a place in the file, nearer men first, three or more by pairs (`fall_in_cmp`) |
+| `hold` | stops a stride on; in a squad of three or more the men share out the ways in (`squad_orders_hold_arcs`) |
+| `go`, `pairgo`, `thrword` | the word for a stack, a mark or a held door. F: `pair_orders_input`, then `door_tools_input` |
+| `openclear`, `bangclear`, `charge`, `fragclear`, `bigclear`, `threshold`, `held`, `tools` | the door's tools (`door-tools.md`) |
+| `shutdoor` | in the charge's place on an open door: the shortest walk shuts it (`plan`, `why_not_shut`), then back to the file if he came from it (`finish`) |
+| `wand` | a shut door, a man with a wand, a fog: he kneels and looks (`pick`, `tick`), then holds by it (`settle`) |
+| `work` | in move's place on the breaker or the mission's thing (`work_things_keep`): the nearest works it, another covers him (`work_things_issue`) |
+| `throwopen`, `fragthere`, `stunthere` | one plan (`ThrowPlan`): the nearest man with a throw onto the spot, else the shortest walk to one (`walk_spot`). A frag that catches our own is refused |
+| `smokethere` | only with cans issued (`squad_smoke_stage`): the nearest man with an arc |
+| `shell40` | a man with a launcher up, a round and a shot (`ShellPlan`) turns and fires (`turn_tick`). No rounds, no row |
+| `silent`, `loud` | the whole squad, one in the other's place (`silent.rs`) |
+| `pairmark`, `pairtake`, `pairwatch`, `pairdark` | below |
+| `wallrow`, `walltools` | wall charge (`destruction.md`) |
+
+**One partner.** The pair rows are up only with one teammate and `k.pair.on` (`pair_orders_up`); a quiet mission with a squad raises that through
+`pair_up_apply`. "Take him on your mark" sends him round to the man's back to wait for F, "take him now" needs no word, "watch him" holds fire until
+the man notices (`pair_holds_round`), "hold in the dark" looks for dark floor (`pair_orders_dark_spot`). A job not done in `take_secs` is called off
+by the man himself.
+
+**The answer.** A refused order is said by one man and changes nothing (`squad_orders_why_not`). An accepted one is answered by one man, in turn. A
+tap on a door they stand stacked on is answered and moves nobody (`squad_orders_again`). The block shows each man's `going`, then `there`
+(`squad_orders_status_of`); a follower's word is latched (`squad_orders_follow_word`). `orders.log` keeps what was ordered.
+
+**How it ends.** Another order replaces it, and a job that finishes hands him a plain hold or the file. A man stopped short of his mark for
+`stuck_secs` takes where he stands as his mark. If that is a metre or more off he says "can't get through." and his group calls no "set."
+`squad_orders_drop` lets go of a dead man or one a drill takes (`mission::has`). In a fight the AI has him, a posted man pinned to his post
+(`set_pinned`); `cold_secs` after he last saw or heard anything, never mid-reload, he walks back by his order's route.
+
+### The file
+
+**His place** is on Sam's trail (`squad_orders_crumb`, `squad_orders_slot`), each man further back. When Sam stops: no place stays in a doorway
+(`squad_orders_clear_back`), no two men share a spot (`squad_orders_apart_slot`), a man near enough stays put (`near_m`), and nobody is left in a
+frame or a leaf's sweep (`squad_orders_rest_clear`). Sam walking at a man moves him `aside_off` off the line (`squad_orders_aside`). A man far from
+his place goes round unknown rooms or by the doors Sam took (`squad_orders_round_rooms`, `squad_orders_trail_way`).
+
+**Pace** (`teampace.rs`). To a mark he goes at Sam's walk, slower if Sam walks after him from behind, faster if Sam is ahead of him and bound for the
+same mark (`team_walk_of`). A follower closes at `follow_k` of Sam's walk and runs only while Sam sprints (`team_follow`). At `run_at` his gun goes
+low. A run needs a reason (`RunWhy`): a grenade, cover (`team_dash`), following, a mission's order (`team_told`). A man bound for a stack stays under
+the run (`door_brisk`). `sneak/` and `unseen.rs` cap all of it while the squad is quiet.
+
+**Sam is not pushed.** A man under fall in yields (`falling_in_yields`): he goes round, stops short or squeezes past (`no_shove_keep`). Sam is put
+back only by what his own legs closed on him (`no_shove_back`). `walkahead.rs` is a networked client's guess at its own man: `net.md`.
+
+### Covering without being told
+
+**`cover/`** lists the level's openings (`cover_build`: doors and gaps) and every `deal_secs` deals free men one each (`cover_deal`). A man is free if
+his order names nothing to watch and no door, on the walk to any mark and on the mark under `Is::LooksAbout` (`cover_eyes_free`), or if it left him
+spare (`cover_spare`). Nearer weighs more, a shut door less, one under Sam's gun or a posted man's little (`sam_k`, `held_k`). A dealt man moves his
+gun and not his feet (`cover_pose_for`). One man steps aside to see through an open door nobody has a line into (`cover_step_deal`), and his mark
+stays. A man with nothing dealt him turns to floor of his room that nobody of the team has looked over (`unlooked_by`), off the record `look_over` keeps:
+a mark a cell within 11 m of whoever has it in his eyes.
+
+**`rearwatch.rs`** keeps a stack's back man on the way behind it (`rear_watch_tick`, `rear_ways`). With no door behind, he watches a way in
+(`cover_read_rear`). On an entry of three or more he goes in last (`rear_last`). As the squad leaves a taken room one man keeps its other door, then
+follows last (`room_keep_tick`, `room_kept`, `room_secs`).
+
+## Rules that hold
+
+- **A tap always sends.** Passed on by the maintainer: "tapping Q just always sends the order".
+- **Nothing above 5.** "it's hard to hit numbers bigger than 5 when left hand is on wasd".
+- **Shift gives what the key gives.** "i think shift Q on a point should just move the squad there, should match what regular Q does. you should need
+  to open the radial menu to get covering a point".
+- **Shift splits.** "shift Q on a second door will naturally split the squad in two, and F tells all of them to go in", and the note the maintainer
+  passed on: "first shift Q should just send half the squad, whoever's closest".
+- **Two taps.** "double tap Q -> cancel everything and fall in".
+- **They think for themselves.** "we expect squad mates to be very smart on their own and not need micromanaging like this". "men are walking past the
+  breach looking away from it" is why any walk to a mark is dealt cover. And: "weird that these guys are covering a wall".
+- **A teammate has what Sam has.** "should be symmetric between self and teammates (e.g. 40mm should work for squad)".
+- **Sam sets the pace.** "maybe we do something where if you're walking with the squad but behind them, they slow down to let you catch up (and match
+  your speed when you're ahead of them?)". And to a door: "weird really fast squad movement / sprinting that didn't make sense".
+- **An enemy the picture hides is no target and gives nothing away** (`pair_orders_is_foe`, `in_the_way`).
+
+## To change it
+
+- **A number:** `rust/game_types/src/knobs/`; `?knob.cmdring.twice_secs=0.6` turns one. Words: `?qtwice=0`, `?goalhalf=0`, `?doorbrisk=0`,
+  `?pacing=0`, `?nosquadthrow`. `?squad=4` is the team's size.
+- **A new order:** a file in `orders/rows/` with `pub const ORDER: Row`, a line in `rows!` in its `mod.rs`, and its row on the menu: `rows::def` in
+  `squad_orders_new`, or `list` from its `frame`. What other rules need to know of it goes in `Is`.
+- **A place on the ring:** `flat_top` and `flat_left` in `cmdring.rs`.
+- **What a tap means:** `auto_pick`. The HUD's word reads the same pick (`auto_hint`).
+- **A man's mark:** `squad_orders_assign`, never his script, or the route and the status are left behind.
+
+## What holds it
+
+Native tests in `rust/game_start/tests/`:
+
+| file | what it holds |
+|---|---|
+| `order_keys.rs` | move, hold, cover, fall in, a stacked door, a man back from the fight |
+| `orders.rs`, `menu.rs`, `refused.rs` | every row's order and words; one row however often listed; what they refuse |
+| `goal_keys.rs`, `shift.rs`, `two_seats.rs` | Shift on every target, the part's ring, two taps, the second seat |
+| `rings.rs`, `squad.rs` | what a seat is told of its ring, plan and block |
+| `partner.rs`, `partner_sneak.rs`, `pair.rs` | the partner's orders; two pairs, one word |
+| `throw.rs`, `throw_walk.rs`, `throws.rs`, `squad_smoke.rs` | the throw shown is the one given, a walked throw, a shell, smoke |
+| `rooms_held.rs` | cover keeps its angle, an order under fire stands, shutting a door |
+| `held_team.rs`, `men_by_sam.rs` | the team's pace, going round Sam and a chair |
+| `corners.rs` | a squad that follows looks over the whole room |
+| `held_cover.rs`, `passing.rs`, `taken.rs` | openings dealt, cover on the walk, an order taken away |
+
+`squadkeys-check.ts` (a `tools/qa/checks.ts` row) holds the controls list to the keys.
+
+## Not seen
+
+How the ring, the file and the plan on the floor look and feel has been checked by numbers only,. `who_key`, and a menu with no ring, still stand in
+`squad_orders_input`; no key on the page reaches them.

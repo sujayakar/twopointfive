@@ -62,7 +62,7 @@ fn the_rack_errand_goes_to_the_nearest_man_free_to_go() {
     game::player::start_grab(&mut p.g, k, None);
     p.until(1.5, |p| p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).unwrap_or_else(|| panic!("he was not taken"));
     p.g.gd[n].script = Some(game::game::GuardScript::default());
-    p.g.gd[r].unit = Some(game::game::UnitInfo { name: String::from("a unit"), spawned_at: 0.0, light: true, pair: None, seat: None });
+    p.g.gd[r].unit = Some(game::game::UnitInfo { light: true, pair: None, seat: None });
     game::mission::send_rack_check(&mut p.g);
     assert!(!p.on_errand(k) && !p.on_errand(n) && !p.on_errand(r), "held, scripted, a unit: errands {} {} {}", p.on_errand(k), p.on_errand(n), p.on_errand(r));
     p.g.gd[n].script = None;
@@ -92,7 +92,7 @@ fn pistol_at_the_far_wall(p: &mut Play) {
     p.run(0.7);
     let c = p.g.pl[pl].ch;
     let at = p.sam_at();
-    game::combat::fire_weapon(&mut p.g, c, [at[0], 1.0, at[1] - 3.0], true, None);
+    game::combat::fire_weapon(&mut p.g, c, [at[0], 1.0, at[1] - 3.0], None);
     p.run(0.05);
 }
 

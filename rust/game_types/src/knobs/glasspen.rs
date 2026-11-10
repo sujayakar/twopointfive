@@ -31,11 +31,11 @@ pub struct GlasspenK {
     /// A LOAD OF SHOT: a pellet meeting a pane within shellR (m) of a mark its own shell already made there adds no mark of its own (the shell rule, above);
     ///  0 = every pellet its own impact, hole and jet (the probes' red path — not the old behaviour, which lives behind the glass parts' own switches)
     #[k(0.04)] pub shell_r: f64,
-    /// GLASS IS NOT COVER (shotThroughGlass below; orders.ts stackPosts): a place by a door is no place to stack when at least this many of the floor lattice's
+    /// GLASS IS NOT COVER: a place by a door is no place to stack when at least this many of the floor lattice's
     ///  points beyond that door have a line of FIRE to a man stood there that crosses a pane, for a round of stackEnergy (a rifle's: the worst gun he may meet); 0 = the rule off
     #[k(3.0)] pub stack_eyes: f64,
     #[k(1.0)] pub stack_energy: f64,
     #[k(0.75)] pub stack_least_k: f64,
-    /// our energy → the fracture model's impact unit (its 1 = one pistol round square on: rebuild/glass/fracture.md)
+    /// our energy → the fracture model's impact unit (its 1 = one pistol round square on)
     #[k(2.0)] pub fracture_k: f64,
 }

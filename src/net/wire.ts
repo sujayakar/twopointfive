@@ -1,11 +1,11 @@
 // THE WIRE OF A NETWORKED GAME (two-player co-op: a game server with authority, src/net/server.ts, and its clients, src/net/client.ts). What travels is the
 // INPUT TIMELINE, never the state: the game plays the same fight to the bit from its start and its seats' records on every machine (tools/qa/mpclient-page.cjs holds a
 // Chromium page to a bun server state word by state word), so the server decides which record each seat's tick ran on and tells everybody; a state word
-// (words.ts foldWord: the game's own words, chained) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (numtext.ts).
+// (words.ts foldWord: every part of the game) twice a second is the alarm. Messages are JSON text over a WebSocket, numbers to the bit (numtext.ts).
 //   A RECORD ON THE WIRE (WireCmd) is what a player's hand did, minus what the game works out again for a seat it does not trust (rust/game_rules cmd: the eye, the forward, both
 //   view matrices, from the look-at, the angles, the distance and the lens). EVERY seat of a networked game is such a seat on EVERY machine — the server and each
 //   client, a client's own seat too — so one working makes the view everywhere and about a hundred bytes travel a tick, not a kilobyte.
-//   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, the host's commands), which every machine
+//   WHAT A GAME IS STOOD FROM rides the welcome: a START (start.ts: the level's file, the address's words, the die, the seats, what the host's machine keeps), which every machine
 //   hands the game's own start in the module.
 // Host-neutral: no DOM, no bun, no game.
 import { numWord, wordNum } from './numtext';
@@ -20,7 +20,7 @@ import type { NetStart } from './start';
  *  and `slipAt` how far behind the server lets its game's clock slip instead. `tapeChunk`: ticks a message when a joiner is sent the run so far. `watchers`: the
  *  most connections with no seat. `maxText`: the longest message a server reads from a client (a record is a few hundred characters). `retryMs`: how long a
  *  server waits on a backed-up connection that never says it has drained before it tries the run so far again. */
-export const NET = { proto: 1, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
+export const NET = { proto: 2, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
 /** A PLAYER'S NAME AS IT MAY TRAVEL AND BE SHOWN (Hello.name, State.names; src/host/myname.ts): text with something to read in it — a letter, a digit or a
  *  picture — no control characters, no format characters but the two joiners a script or an emoji is written with (no direction overrides, no zero
  *  width space), none of the letters that draw as nothing, its spaces single, at most NET.nameMax characters as a reader counts them. Anything else — no
@@ -96,10 +96,10 @@ export type ToServer = Hello | Ready | In | Lost;
 /** the answer to a hello: the seat (−1 a watcher) of how many, what to stand the game from, and how many ticks have run (they follow, as `tape` messages) */
 export interface Welcome { k: 'welcome'; proto: number; game: string; build: string; seat: number; seats: number; hz: number; start: NetStart; tick: number; state: NetState; }
 /** tick `t` as it ran: each seat's record (0 = the seat's record of the tick before with its edges off), and every `wordEvery` ticks the state word after it */
-export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; /** with `w`: the word of every part of the game (words.ts foldWhole), watched and never an alarm */ v?: string; }
+export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; }
 /** a stretch of the run for whoever is behind (a joiner; a connection that was backed up): ticks `from` on, each as a Tick's `c` (and `w` where the tick carried
  *  one). A stretch may begin before the tick its reader is due: he passes over what he has */
-export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string; v?: string }[]; }
+export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string }[]; }
 /** how your records are arriving: when tick `t` ran the server held `l` of yours for later ticks (under NET.lead: send sooner; over NET.leadMax: later) */
 export interface Pace { k: 'pace'; t: number; l: number; }
 /** `names`: each seat's player's name as his client last said it ('' = none), kept when he leaves */

@@ -5,11 +5,10 @@
 export interface ReplayNote { id: string; r: number; t: number; n: number; pos: [number, number] | null; text: string; at: string; }
 
 /** the floor as a drawing: every solid thing between knee and head height as a turned rectangle — [x, z, half-width, half-depth, yaw°, kind] with kind 0 = a wall
- *  (floor to above head height), 1 = low (furniture, cover), 2 = glass — and the doors' hinges */
+ *  (floor to above head height), 1 = low (furniture, cover), 2 = glass */
 export interface ReplayMap {
   bounds: [number, number, number, number];
   boxes: number[];
-  doors: { name: string; hinge: [number, number]; dir: number; width: number }[];
 }
 
 /** m:ss.s */

@@ -13,13 +13,13 @@ use game_derive::Knobs;
 ///   · YOUR card has the suppressor, light and goggles rows a teammate's always had, and they are what you deploy with: a suppressor taken off is the same
 ///     gun with a bare muzzle (the pick's own bare row: gunslots.ts PICKS), no light is a dead L, no goggles a dead N;
 ///   · sponge rounds are a count like any other: NONE as issued, and a quiet or solo mission hands you `lend` of them over your card, as it hands its
-///     cameras (kit.ts kitPlayer) — so a stealth run starts with the five it always had and a loud one with none;
+///     cameras — so a stealth run starts with the five it always had and a loud one with none;
 ///   · the card's own row of sets is one reset (the squad's row of kits is the one list of named kits: ui/loadout.ts shows it at every team size).
 /// What a gun is good at is drawn on its tile (ui/gunStats.ts: four bars read off its weapons.ts row).
 /// Off (the module, the frozen stand, `?nokittree`): the card of the build before, row for row — a teammate's one Suppressor row for both his guns, your
 /// guns always suppressed, five sponge rounds with every launcher, the two rows of sets. `KITTREE_BREAK=1` (tools/qa/kittree-check.ts): the rows of the
 /// build before under a raised switch.
-/// It rides on the two gun slots' card (gunslots.ts GUNSLOTS, kit.ts BIGSLOT): with either off the card is the build before's too.
+/// It rides on the two gun slots' card: with either off the card is the build before's too.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct KittreeK {
     /// … and what a quiet or solo mission hands you over your card (what every launcher carried before the switch)

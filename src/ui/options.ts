@@ -23,6 +23,7 @@ import { VOLUME_DEFAULTS } from '../audio/mixlaw';   // (the mixer's levels on a
 import type { Engine } from '../engine';
 import type { AudioEngine } from '../audio/audio';
 import { visitTier, type Quality, type QualityName } from './quality';
+import { RENDER_PASSES } from '../gpu/timer';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 /** WHAT THE SCREEN SETS OF A GAME, whoever holds it: each reads as the game is set now, and is set by being written */
@@ -50,49 +51,44 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it and look around its end, then press Q or step away to let go';
 const E_WHAT = 'Holster or draw';
-/** the empty hands' own slot (rust/game_rules/src/handslot; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
+/** the empty hands' own slot (rust/game_types/src/handslot; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
 const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away what you\'re holding, then press a number to draw again'];
-/** the action key's row and the whistle's while his own actions are a ring that stays (rust/game_rules/src/handring): the list's wheel is gone, the whistle is a wedge */
+/** the action key's row and the whistle's while his own actions are a ring that stays (rust/game_types/src/knobs/handring.rs): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
-/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (rust/game_rules/src/cmdring `wholeSquad`: the key steps
+/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (rust/game_rules/src/squad_orders/cmdring.rs `wholeSquad`: the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. */
 const WHO_WHAT = 'Who takes the next order', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => !keysOf('KeyT').length;
-/** THE SQUAD'S KEYS AS THE PAGE HAS THEM (rust/game_rules/src/cmdring `only`: the command key and the word's are the squad's only keys, and the wheel carries every
- *  order). The command key's row says both of its presses and the word's row says what the word does. Neither letter of the wheel (H and G: with a wheel
- *  up the letters are nobody's, with nothing up they give nothing) is listed.
- *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: nothing else picks a part of it) the list has
- *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
- *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
- *  squad, and the who row's words as they were */
+/** THE SQUAD'S KEYS AS THE PAGE HAS THEM (rust/game_rules/src/squad_orders/cmdring.rs `only`: the command key and the word's are the squad's only keys, and the wheel carries every
+ *  order). The command key's row says both of its presses and the word's row says what the word does.
+ *  The sprint key with the command key gives one more thing to a part of the squad (nothing else picks a part of it): that press is a row of its own, both caps following their
+ *  keys, and the who key, which then steps nobody anywhere, says so. The codes are written in the words (Shift, B): the list names the keys as they are bound. */
 const CMD_WHAT = 'Order the squad', CMD_TAP = 'tap it to give the usual order where your cursor is', CMD_HOLD = 'hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click', CMD_SMALL = `${CMD_TAP}. ${CMD_HOLD}`;
-/** … and with the key tapped twice being 'fall in' (rust/game_rules/src/cmdring `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
+/** … and with the key tapped twice being 'fall in' (rust/game_rules/src/squad_orders/cmdring.rs `twice`; `?qtwice=0` = the row's words as they were) the command key's row says so */
 const CMD_TWICE = `${CMD_TAP}. tap it twice to call everyone back to you. ${CMD_HOLD}`;
 const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
 const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set';
 type KeyRow = [string[], string, string?];
 /** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
-export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, twice = false): KeyRow[] {
-  if (!only) return rows;
+export function squadRows(rows: KeyRow[], twice = false): KeyRow[] {
   return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
-    return k === 'H' || k === 'G' ? [] : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
+    return k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], [['Shift', 'B'], PART_WHAT, PART_SMALL]] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
-/** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: rust/game_rules/src/rails `twice`) */
+/** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: rust/game_rules/src/missions/rails.rs `twice`) */
 const twiceNow = () => deps?.game.fallIn ?? true;
 const listNow = () => `${whoRowGone()} ${twiceNow()}`;
-const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
-/** the sprint's row while Shift in a crouch is a fast crouch walk (rust/game_rules/src/player CROUCHRUN): what the same key does crouched, and that it is heard
+const SPRINT_WHAT = 'Sprint';
+/** the sprint's row while Shift in a crouch is a fast crouch walk (rust/game_rules/src/sam/player CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
 export const sprintSmall = (): string | undefined => "hold it while you're crouched to stay low and move faster, but it's louder than walking";
 export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
     [['Shift'], SPRINT_WHAT],
-    [['C'], 'Crouch'],
-    [['Wheel'], PACE_WHAT, 'slower is quieter'],
+    [['C'], 'Crouch', 'slower and quiet'],
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
     [['Ctrl', 'Mouse'], 'Orbit the camera'],
     [['Ctrl', 'Wheel'], 'Zoom'],
@@ -122,15 +118,13 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['B'], 'The usual order for that spot, at once'],
     [['T'], WHO_WHAT, 'everyone, red, blue or one teammate'],
     [['F'], 'Go', 'tells a waiting squad to go, and blows a charge the squad set'],
-    [['H'], 'With the orders up: the big tool on a door, smoke on the floor'],
-    [['G'], 'With the orders up: frag and clear'],
   ] },
   { group: 'Game', rows: [
     [['Esc'], 'Pause'],
     [['F5'], 'Save'],
     [['Enter'], 'Go back to the last checkpoint when you\'re down'],
     [['Shift', 'Enter'], 'Restart the mission'],
-    [['F7'], 'Keep a replay of the last five minutes'],
+    [['F7'], 'Keep a replay of this run'],
     [['`'], 'The debugger', 'every knob in the build'],
   ] },
 ];
@@ -202,7 +196,7 @@ function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; wallp
 /** a page held silent (`?mute`, or the automation profile's kept flag: host/drawpage.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
 function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.game.hints, ...(pressKept !== null ? { wallpress: pressKept } : {}) })); } catch { /* no store */ } }
-/** the wall taken without Q (rust/game_rules/src/wallsnap `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
+/** the wall taken without Q (rust/game_rules/src/stealth/wallsnap.rs `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
 
 /** the page hands the live objects over (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
@@ -305,6 +299,7 @@ function render(S: Screen) {
     sec(body, 'Quality');
     seg(body, 'Graphics quality', TIERS, cur, v => { if (v === 'auto') quality.setAuto(); else quality.pin(v); }, () => TIERS.find(t => t.v === cur())?.line ?? '');
     const live = el('div', 'op-info'); body.appendChild(live); paints.push(() => { live.textContent = displayNote(); });
+    { const again = () => { if (!live.isConnected) return; live.textContent = displayNote(); setTimeout(again, 400); }; setTimeout(again, 400); }   // (a tier picked here draws its own frames after the click: the line follows them)
     range(body, 'Render resolution', 50, 100, 5, () => Math.round(G.renderScale * 100), v => { const auto = quality.auto; if (auto) quality.pin(quality.current); G.renderScale = v / 100; if (auto) S.paint(); }, v => `${v.toFixed(0)} %`,
       'This is the percentage of the tier\'s full resolution that the scene is rendered at before it\'s upscaled to the window. Edges stay clean down to about 60 %. Under Auto, moving this pins the current tier.');
     flip(body, 'Hold frame rate', () => quality.adaptive, v => { quality.adaptive = v; },
@@ -367,7 +362,7 @@ export function walkInNow(): boolean {
  *  dashed — a click puts on a key, and writes the row's words to suit */
 function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
-/** THE GUN'S SETUP (rust/game_rules/src/slotsetup), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
+/** THE GUN'S SETUP (rust/game_rules/src/outfit/slotsetup.rs), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
 const SETUP_SMALL: Record<string, string> = { Z: 'the gun\'s key again, then 1', L: 'the gun\'s key again, then 3', '1': 'again: its setup', '2': 'again: its setup' };
 const SETUP_ROW: Record<string, string> = { Z: 'KeyZ', L: 'KeyL' };
@@ -382,13 +377,12 @@ function controls(body: HTMLElement, host: KeyHost) {
   body.addEventListener?.('mousedown', (e: Event) => { if (keyWaiting() && !(e.target as HTMLElement | null)?.closest?.('.op-key')) { keyStop(); host.paint(); } });
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
-    const tabbed: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Pause on your objectives and your squad, and back'] as typeof r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (the objectives card; rust/game_rules/src/backkey: the key Esc gave up)
-    const geared = tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (rust/game_rules/src/player TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
-    const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
+    const tabbed: typeof g.rows = g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Pause on your objectives and your squad, and back'] as typeof r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (the objectives card; rust/game_rules/src/sam/backkey.rs: the key Esc gave up)
+    const low = sprintSmall(), paced = !low ? tabbed : tabbed.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, true, true, twiceNow()) : rows) {
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT ? WHO_DEAD : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
-      if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: rust/game_rules/src/cmdring wholeSquad)
+      if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: rust/game_rules/src/squad_orders/cmdring.rs wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, wallLine(what), host, seen)); });
       const w = el('div', 'op-what', wallLine(what)), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || SETUP_SMALL[caps[0]] ? el('small', '', wallLine(small())) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
@@ -399,13 +393,14 @@ function controls(body: HTMLElement, host: KeyHost) {
   }
 }
 
-/** the Graphics tab's live line: tier (and whether Auto chose it), internal → output resolution, GPU milliseconds and what that is in frames per second */
+/** the Graphics tab's live line: tier (and whether Auto chose it), internal → output resolution, and, once the tier has drawn a few frames of its own, the GPU milliseconds of one and what
+ *  that is in frames per second */
 export function displayNote(): string {
   if (!deps) return '';
   const { engine, quality } = deps;
-  const gpu = engine.timer?.unionMs?.() ?? 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
+  const gpu = quality.measured ? engine.timer?.unionMs?.(RENDER_PASSES) ?? 0 : 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
   const res = engine.width && engine.outWidth ? `${engine.width}×${engine.height} rendered → ${engine.outWidth}×${engine.outHeight} shown` : '';
-  const tier = quality.auto ? `Auto is running ${quality.current}${/^(auto|calibrat)/.test(quality.lastChange ?? '') ? ' — ' + quality.lastChange : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
+  const tier = quality.auto ? `Auto is running ${quality.current[0].toUpperCase()}${quality.current.slice(1)}.${quality.calibrating ? ' It’s measuring your machine.' : /^calibrat/.test(quality.lastChange ?? '') && quality.calibNote ? ` ${quality.calibNote}` : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
   return [tier, res, gpu > 0.5 ? `GPU ${gpu.toFixed(1)} ms a frame (≈ ${fps.toFixed(0)} fps of headroom)` : ''].filter(Boolean).join(' · ');
 }
 /** Auto's calibration has just settled under an open screen: its line and the tier's button follow */

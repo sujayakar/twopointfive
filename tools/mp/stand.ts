@@ -6,31 +6,29 @@ import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WireCmd, Outcome } from '../../src/net/wire.ts';
 import type { Ahead } from '../../src/net/foresee.ts';
-import { commandBytes, commandText, startWhy, type NetStart } from '../../src/net/start.ts';
+import { startWhy, type NetStart } from '../../src/net/start.ts';
 import { NetGame, type NetFace } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
-import { Commands } from '../../src/draw/commands.ts';
-import { machineBefore } from '../../src/host/machine.ts';
+import { toolDesk, toolModule } from '../desk.ts';
 import { characterFiles, pack } from '../blitz/start-pack.ts';
-import { faceHere } from '../blitz/face-build.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
-/** what whoever makes a game says of it: the page's address for the mission, the die, and what the host has set before the game is made (its commands' bytes as base64; none said: what
- *  the address itself says of it, on a machine that keeps nothing) */
-export interface StartSetup { search: string; seed: number; commands?: string }
+/** what whoever makes a game says of it: the page's address for the mission, the die, and what the host's machine keeps (its one text; none said: nothing, and the
+ *  address itself says what it says) */
+export interface StartSetup { search: string; seed: number; kept?: string }
+/** a game is of a mission: the game says whether the words name one */
+const namesNone = (s: NetStart): string => toolDesk().kind(s.words) ? '' : `the words ${s.words.slice(0, 60)} name no mission`;
 export function freshStart(setup: StartSetup): NetStart {
-  const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json', C = new Commands();
-  if (setup.commands === undefined) machineBefore(q, named, C);
-  const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? commandText(C.take()) };
-  const why = startWhy(start); if (why) throw new Error(`the setup: ${why}`);
+  const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json';
+  const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), kept: setup.kept ?? '' };
+  const why = startWhy(start) || namesNone(start); if (why) throw new Error(`the setup: ${why}`);
   return start;
 }
 
 interface StartFace extends NetFace { face_start(p: number, n: number, slot: number, seed: number, seats: number, flags: number): number; face_reserve(n: number): void; face_show_seat(h: number, seat: number): void; face_panic_ptr(): number; face_panic_len(): number }
 /** `face_start`'s: the rows that dress the picture are up, on a page and so on every machine of a game */
 const DRESS = 1;
-let MODULE: WebAssembly.Module | null = null;
 
 /** every call of the face: a trap (a panic, the stack run out) is thrown as the panic's words */
 function guarded(raw: Record<string, unknown>, memory: WebAssembly.Memory): StartFace {
@@ -47,8 +45,8 @@ export interface Stood {
   readonly seats: number; readonly ticks: number;
   /** one tick on the seats' records, the state word folded after it */
   step(cmds: WireCmd[]): void;
-  /** the chained state word after the last tick (src/net/words.ts) · the whole game's word after the last word tick (null before the first) */
-  word(): string; watch(): string | null;
+  /** the state word after the last tick (src/net/words.ts) */
+  word(): string;
   /** how the mission ended, by the game's own verdict: null while it is being played */
   ended(): Outcome | null;
   /** which seat this machine shows: nothing a tick reads */
@@ -57,21 +55,24 @@ export interface Stood {
   ahead(seat: number, cmds: WireCmd[]): Ahead;
 }
 
-export async function standStart(start: NetStart): Promise<Stood> {
-  const why = startWhy(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
+/** `bent`: a check's. This machine's word of the part so named is not the game's, as if that part of its game were another */
+export async function standStart(start: NetStart, bent = ''): Promise<Stood> {
+  const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
-  if (!MODULE) { const file = faceHere(); if (!file) throw new Error('the game\'s module is not built and the checked-in one is of other sources (bun run tools/blitz/face-build.ts)'); MODULE = new WebAssembly.Module(new Uint8Array(readFileSync(file))); }
-  const raw = new WebAssembly.Instance(MODULE).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
-  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), commandBytes(start)]);
+  const raw = new WebAssembly.Instance(toolModule()).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
+  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), new TextEncoder().encode(start.kept)]);
   const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
   const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
   X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);
+  if (bent) { const said = (n: number): Uint8Array => new Uint8Array(memory.buffer, X.face_out_ptr() >>> 0, n), words = X.face_state_words.bind(X);
+    const at = Array.from({ length: X.face_state_n() }, (_, i) => { X.face_state_name(i); return new TextDecoder().decode(said(X.face_out_len() >>> 0).slice()); }).indexOf(bent); if (at < 0) throw new Error(`the game has no part ${bent}`);
+    X.face_state_words = n => { words(n); said(at * 4 + 1)[at * 4] ^= 1; }; }
   const game = new NetGame(X, memory, h), keep = wordsKept();
   game.clear();
   return {
     seats: start.seats, get ticks() { return game.ticks; },
     step(cmds) { game.step(cmds); game.clear(); if (keep && wordTick(game.ticks - 1)) keep(game.ticks, game.whole(true)); },
-    word: () => game.word(), watch: () => game.watch(), ended: () => game.ended(),
+    word: () => game.word(), ended: () => game.ended(),
     show: seat => X.face_show_seat(h, seat),
     ahead: (seat, cmds) => game.ahead(seat, cmds),
   };

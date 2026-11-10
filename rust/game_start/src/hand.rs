@@ -5,9 +5,9 @@ use std::string::{String, ToString};
 use std::vec::Vec;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Place { Nearest, Door, OpenDoor, Sam, At(f64, f64) }
+pub enum Place { Nearest, Ahead, Door, OpenDoor, Sam, At(f64, f64) }
 #[derive(Clone, Debug)]
-pub enum What { Order(String, Place, game::orders::Who), Fire(Place), Can(game::game::ThrowKind, Place), KeyDown(&'static str), KeyUp(&'static str), Point(Place), Press, Release }
+pub enum What { Order(String, Place, game::orders::Who), Fire(Place), Keys(&'static [&'static str]), Can(game::game::ThrowKind, Place), KeyDown(&'static str), KeyUp(&'static str), Point(Place), Press, Release }
 /// `at`: (the frame, what is done, which line of the file it is of); `lines`: the file's lines that do something, as written
 pub struct Hand { pub unhurt: bool, pub at: Vec<(usize, What, usize)>, pub lines: Vec<String> }
 
@@ -17,7 +17,7 @@ pub fn hands_dir() -> std::path::PathBuf { std::path::PathBuf::from(env!("CARGO_
 pub fn read_hand(text: &str, frames: usize) -> Hand {
     let mut h = Hand { unhurt: false, at: Vec::new(), lines: Vec::new() };
     let place = |w: &str| -> Place {
-        match w { "nearest" => Place::Nearest, "door" => Place::Door, "opendoor" => Place::OpenDoor, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, door, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
+        match w { "nearest" => Place::Nearest, "ahead" => Place::Ahead, "door" => Place::Door, "opendoor" => Place::OpenDoor, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, door, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
     };
     for (n, line) in text.lines().enumerate() {
         let line = line.split('#').next().unwrap().trim();
@@ -36,6 +36,9 @@ pub fn read_hand(text: &str, frames: usize) -> Hand {
             ["fire", at] => What::Fire(place(at)),
             ["frag", at] => What::Can(game::game::ThrowKind::Frag, place(at)),
             ["flash", at] => What::Can(game::game::ThrowKind::Flash, place(at)),
+            // (the mission again by the keys: Enter, which does something once he is down or the mission has failed; Shift+Enter, at any time)
+            ["enter"] => What::Keys(&["Enter"]),
+            ["again"] => What::Keys(&["ShiftLeft", "Enter"]),
             _ => bad(),
         };
         h.lines.push(rest.join(" "));
@@ -45,6 +48,7 @@ pub fn read_hand(text: &str, frames: usize) -> Hand {
             match &what {
                 // (the rifle comes up over 0.8 s, the cursor rests 0.3 s on the place, the trigger is down two frames)
                 What::Fire(p) => for (d, x) in [(0, What::KeyDown("Digit2")), (6, What::KeyUp("Digit2")), (48, What::Point(*p)), (66, What::Press), (68, What::Release)] { h.at.push((f + d, x, of)); },
+                What::Keys(ks) => { for k in ks.iter() { h.at.push((f, What::KeyDown(k), of)); } for k in ks.iter() { h.at.push((f + 2, What::KeyUp(k), of)); } }
                 x => h.at.push((f, x.clone(), of)),
             }
             if step == 0 { break; }
@@ -58,7 +62,7 @@ pub fn read_hand(text: &str, frames: usize) -> Hand {
 /// the men standing who are not of Sam's squad, nearest to Sam first
 pub fn others(p: &Play) -> Vec<game::ids::GuardId> {
     let sam = p.sam_at();
-    let mut v: Vec<game::ids::GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative && p.g.gd[gd].state != GuardState::Dead && p.g.gd[gd].down_kind.is_none()).collect();
+    let mut v: Vec<game::ids::GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative && !game::condition::down(&p.g, p.g.gd[gd].ch) && p.g.gd[gd].down_kind.is_none()).collect();
     v.sort_by(|x, y| dist(p.at(*x), sam).partial_cmp(&dist(p.at(*y), sam)).unwrap());
     v
 }
@@ -67,6 +71,12 @@ pub fn place_of(p: &Play, at: Place) -> Option<[f64; 2]> {
         Place::Sam => Some(p.sam_at()),
         Place::At(x, z) => Some([x, z]),
         Place::Nearest => others(p).first().map(|&m| p.at(m)),
+        // (5 metres on from the squad's first man toward the nearest man: a place a man can throw at, and clear of the squad, whichever way the fight has gone)
+        Place::Ahead => {
+            let (him, from) = (p.at(*others(p).first()?), p.at(*p.mates().first()?));
+            let s = (5.0 / dist(from, him).max(1e-6)).min(1.0);
+            Some([from[0] + (him[0] - from[0]) * s, from[1] + (him[1] - from[1]) * s])
+        }
         Place::Door | Place::OpenDoor => {
             // (the way to the nearest man; with nobody left, the door nearest Sam: a door is still worked)
             let him = others(p).first().map(|&m| p.at(m)).unwrap_or_else(|| p.sam_at());
@@ -92,6 +102,6 @@ pub fn act(p: &mut Play, what: &What) -> Result<(), String> {
         What::Point(at) => { let at = place_of(p, *at).ok_or_else(nobody)?; p.point_at(at); Ok(()) }
         What::Press => { p.press(Button::Left); Ok(()) }
         What::Release => { p.release(Button::Left); Ok(()) }
-        What::Fire(_) => unreachable!("read_hand writes a shot out as its keys"),
+        What::Fire(_) | What::Keys(_) => unreachable!("read_hand writes these out as their keys"),
     }
 }

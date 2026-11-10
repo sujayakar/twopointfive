@@ -38,7 +38,7 @@ export class DrawPlay {
   start(own: Pick<Start, 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
     const S = this.walk.start, o: Start = { ...own, level: S.level, words: S.words, seed: S.seed, seats: S.seats }, other = this.walk.other(partsOf(o));
     if (other) throw new TapeRefused(ANOTHER);
-    this.game.commands.take(); this.game.commands.put(S.commands); this.game.start(o); this.game.walked = true; this.hold();
+    this.game.commands.take(); this.game.start({ ...o, kept: S.kept }); this.game.walked = true; this.hold();
   }
   /** what the hand of the next tick will be, read ahead: where the view goes from here (at the tape's end, its last) */
   get next(): Float64Array { return (this.lost ? null : this.ahead()?.hand) ?? this.rows.last; }
@@ -62,7 +62,7 @@ export class DrawPlay {
     if (this.play || said.tick !== this.at) return;
     const tick = said.tick, mine = this.game.mark(said.state !== null && !this.words);
     if (mine.die !== said.die) this.play = { tick, why: `${mine.die} rolls of the die, ${said.die} on the tape` };
-    if (!this.words && (mine.parts !== said.parts || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.parts !== said.parts ? 'the hash of its parts' : 'the hash of its whole state' };
+    if (!this.words && (mine.parts !== said.parts || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.parts !== said.parts ? 'the hash of its block' : 'the hash of every part of it' };
   }
   private stood(said: TapeFigures): void { if (this.play || said.tick !== this.at) return; const why = figuresPart(said, this.game.figures()); if (why) this.play = { tick: said.tick, why }; }
   /** the moment the game stands at is held for a seek back, the crowded ones let go first */

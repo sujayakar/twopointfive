@@ -1,7 +1,7 @@
 //! THE GAME'S DIE as a value a state can hold: the same stream as rust/sim's (it rolls rust/sim's own function), with the derives a cloned
 //! state needs. `simRandom()` in the TypeScript is `g.dice.roll()` here; a die kept on a record (`Civ.dice`) is this type too.
 use crate::bytes::ToBytes;
-use sim::dice::Dice;
+use maths::dice::Dice;
 use alloc::vec::Vec;
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
@@ -15,10 +15,10 @@ impl Die {
     pub const fn new(seed: u32) -> Die {
         Die { n: 0.0, s: seed }
     }
-    /// one draw, uniform in [0, 1)   (dice.ts simRandom / rollOn)
+    /// one draw, uniform in [0, 1)
     pub fn roll(&mut self) -> f64 {
         let mut d = Dice { n: self.n, s: self.s, spare: 0 };
-        let r = sim::dice::roll(&mut d);
+        let r = maths::dice::roll(&mut d);
         self.n = d.n;
         self.s = d.s;
         r
@@ -71,18 +71,3 @@ pub fn keyed(seed: u32, key: u64, time: f64, nth: u32) -> f64 {
     (stir(x) >> 11) as f64 / 9_007_199_254_740_992.0
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    /// A thousand draws folded to one word. tools/qa/dice-check.ts folds the same thousand of src/math/dice.ts to the same word.
-    #[test]
-    fn the_keyed_draw_is_the_pages() {
-        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-        for i in 0..1000u32 {
-            let v = keyed(i.wrapping_mul(2_654_435_761), key_of(&alloc::format!("m::f#{i}"), i % 37), i as f64 / 60.0, i % 5);
-            assert!((0.0..1.0).contains(&v));
-            h = (h ^ v.to_bits()).wrapping_mul(0x0000_0100_0000_01b3);
-        }
-        assert_eq!(h, 0x698f_1e04_1d58_8223, "{h:#x}");
-    }
-}

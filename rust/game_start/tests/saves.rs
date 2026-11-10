@@ -1,27 +1,18 @@
 //! THE SAVE CONTROLLER (game::savestate::control), for a host that keeps games in memory. Here the host keeps a clone of the game and its block, as the page's
 //! module does, and puts one back.
 use game::savestate::control::{self, Do};
-use game_start::moment::Moment;
 use game_start::play::{Opts, Play};
-use std::collections::BTreeMap;
 
-struct Host { p: Play, kept: BTreeMap<String, Moment>, saved: Vec<String>, said: Vec<String>, backs: usize }
+struct Host { p: Play, saved: Vec<String>, said: Vec<String>, backs: usize }
 
 impl Host {
-    fn office(seed: u32) -> Host { Host { p: Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }), kept: BTreeMap::new(), saved: Vec::new(), said: Vec::new(), backs: 0 } }
+    fn office(seed: u32) -> Host { Host { p: Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() }), saved: Vec::new(), said: Vec::new(), backs: 0 } }
     fn frame(&mut self) {
         self.p.frame();
-        match control::tick(&mut self.p.g, 1.0 / 60.0) {
-            Some(Do::Keep { key, .. }) => { self.kept.insert(key.clone(), Moment::of(&self.p.g)); self.saved.push(key); }
-            Some(Do::Back { key }) => {
-                let was = control::abandoned(&self.p.g);
-                self.p.g = self.kept[&key].stands(self.p.g.sim);
-                let told = control::put_back(&mut self.p.g, &key, was);
-                self.said.push(told);
-                self.backs += 1;
-            }
-            Some(Do::Say(words)) => self.said.push(words),
-            None => {}
+        for t in self.p.told.drain(..) {
+            if let Some(key) = t.kept { self.saved.push(key); }
+            if t.back { self.backs += 1; }
+            if let Some(words) = t.said { self.said.push(words); }
         }
     }
     fn run(&mut self, secs: f64) { for _ in 0..(secs * 60.0) as usize { self.frame(); } }
@@ -62,7 +53,7 @@ fn a_restart_begins_with_no_saves() {
     h.run(0.5);
     control::ask_save(&mut h.p.g);
     h.frame();
-    game::game::game_restart(&mut h.p.g, None);
+    game::game::game_restart(&mut h.p.g);
     h.run(0.2);
     assert!(control::timeline(&h.p.g).is_empty(), "the fresh run has the old one's save");
     assert!(control::ask_load(&mut h.p.g, "manual.0").is_some(), "and it can be loaded");
@@ -80,9 +71,30 @@ fn the_ring_rolls_and_a_man_down_saves_nothing() {
     assert_eq!(control::timeline(&h.p.g).len(), n);
     assert_eq!(h.saved.last().unwrap(), "manual.0", "past the ring's end the oldest goes");
     let pl = h.p.g.player;
-    h.p.g.pl[pl].down = true;
+    h.p.g.cond[h.p.g.pl[pl].ch].down = true;
     let before = h.saved.len();
     control::ask_save(&mut h.p.g);
     match control::tick(&mut h.p.g, 1.0 / 60.0) { Some(Do::Say(words)) => assert!(words.starts_with("not saved: "), "{words}"), _ => panic!("a man down was saved, or nothing was said") }
     assert_eq!((h.saved.len(), h.p.g.saves.stats.refused), (before, 1.0));
+}
+
+/// THE RULE: a game that goes back to its run's first step, as one lost to a panic does, still has the saves made after it, and they stay.
+/// A FAILURE MEANS: the first step's game takes itself for a new run and lets every save go, so a second panic has nothing left but the start.
+#[test]
+fn back_at_the_runs_first_step_the_saves_stay() {
+    let mut h = Host::office(5);
+    h.run(0.5);
+    h.p.key_down("F5");
+    h.frame();
+    h.p.key_up("F5");
+    let key = h.saved[0].clone();
+    let of = control::stood(&mut h.p.g);
+    let kept = control::kept_of(of);
+    let (_, first) = kept.iter().find(|(k, _)| k == control::START).expect("the run's first step is kept");
+    let (shelf, new) = (h.p.g.saves.shelf.clone(), first.image.laid(h.p.g.sim));
+    control::over(&mut h.p.g, new);
+    h.p.g.saves.shelf = shelf;
+    h.frame();
+    assert!(h.p.g.saves.shelf.m.has(key.clone()), "the shelf let it go");
+    assert!(control::kept_of(of).iter().any(|(k, _)| *k == key), "the game kept under it is gone");
 }

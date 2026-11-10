@@ -72,7 +72,7 @@ pub unsafe extern "C" fn face_ahead(h: u32, seat: usize, p: *const f64, n: usize
         let wall = pl.wall.as_ref().map(|w| w.n);
         let others = g.guards.iter().chain(g.civilians.iter()).map(|&gd| g.gd[gd].ch).chain(g.seats.iter().map(|&s| g.pl[game::seats::seat(g, s).player].ch));
         let near = others.filter(|&o| o != pl.ch).map(|o| { let p = g.ch[o].pos; game::m::hyp2(p[0] - c.pos[0], p[2] - c.pos[2]) }).fold(f64::INFINITY, f64::min);
-        let mut o: Vec<f64> = vec![c.id, yes(pl.down), c.pos[0], c.pos[1], c.pos[2], c.aim_yaw];
+        let mut o: Vec<f64> = vec![c.id, yes(game::condition::down(g, pl.ch)), c.pos[0], c.pos[1], c.pos[2], c.aim_yaw];
         o.extend([yes(wall.is_some()), wall.map_or(0.0, |n| n[0]), wall.map_or(0.0, |n| n[2]), near]);
         o.extend([yes(a.free), a.pos[0], a.pos[1], a.pos[2], a.aim_yaw, a.follow[0], a.follow[1], a.follow[2]]);
         let at = a.aim.unwrap_or([0.0; 3]);

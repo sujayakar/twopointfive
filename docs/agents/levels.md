@@ -19,18 +19,19 @@ is drawn is `render.md`.
 | `levels/*.json` | the files. `docs/level-format.md` is the reference, member by member |
 | `tools/levels/<name>.ts` | a generator a level; the office's is `tools/levels/lib/officeGen.ts` with `officeScenarios.ts` |
 | `tools/levels/export.ts`, `tools/level-export.ts` | write a file from its generator (the second for the office); `--check` is red on a stale file |
-| `tools/levels/lib/levelData.ts`, `levelLoad.ts`, `caps.ts` | the schema, `KEYS`, `validateLevelData`; the two conversions; the most a level may have |
+| `rust/game_start/src/file.rs`, `records.rs`, `faults.rs` | the format as the game reads it, and the one judge of a file (`judge.ts` asks it) |
+| `tools/levels/lib/levelData.ts`, `levelLoad.ts` | the file's types, the order its `KEYS` are written in; the two conversions |
 | `levelKit.ts`, `gwotKit.ts`, `livedKit.ts`, `livedPieces.ts` | with `officeGen.ts`, the kits: every piece a generator lays |
 | `tools/levels/library.ts`, `docs/library.md`, `library-hall.ts`, `gwot-yard.ts` | the catalogue of every piece and paint, and its two showrooms |
 | `rust/game_start/src/level.rs`, `records.rs`, `passes.rs`, `stand.rs` | the game's reader, its records, what a stand does to boxes, a start's order |
-| `rust/game_start/src/bin/levels.rs` | the native `levels` tool: what a level owes, asked of the game itself |
+| `rust/game_start/src/levels.rs` | the native `levels` tool: what a level owes, asked of the game itself |
 | `tools/qa/level-needs.ts`, `tools/qa/level-lint.ts`, `tools/levels/counts/` | what stands around a file, what reads off a file, the held counts |
 | `tools/qa/map-plan.ts` | a level's plan as an SVG |
 | `src/scene/materials.ts`, `stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, the palette, the men's dress, face marks, shapes |
 
-In `rust/game_rules/src/`: `scene_level/`, `scene_level_data/` and `scene_scenarios/` are the records; `scene_materials/`, `scene_stuff/` and
-`scene_markings/` what a box is and wears; `scene_shapes/` and `scene_cut/` its form; `scene_look/` the men's dress; `scene_scenario_list/` the
-mission rows; `levelfit/` refuses a level too big for the game's lists; `lightswitch/`, `carlamps/` and `hours/` a level's switches, vehicle lamps and
+In `rust/game_rules/src/`: `scene_level/`, `scene_level_data/` and `scene_scenarios.rs` are the records; `scene_materials.rs`, `scene_stuff.rs` and
+`scene_markings.rs` what a box is and wears; `scene_shapes/` and `scene_cut.rs` its form; `scene_look.rs` the men's dress; `scene_scenario_list/` the
+mission rows; `levelfit.rs` refuses a level too big for the game's lists; `lightswitch.rs`, `carlamps.rs` and `hours/` a level's switches, vehicle lamps and
 street lamps. `rust/game_draw/src/traffic.rs` makes the wear map.
 
 ## How it works
@@ -41,9 +42,10 @@ that would share a plane (`layLevelFloor`), words any box without a `does` (`sta
 refuses unless the text loads back to the generator's `Level`, field for field. Then it asks `levels second-way` and `levels sight` (`LEVELASK=0` in
 front skips them for a level in the making).
 
-**File to game.** `stand_with` is the order: `level::load`, `populate_host` (`thin_level`, `bar_level`, `shape_level`, boxes into the world, lamps),
-`game_new`. Box i of the file is static box i. `json.rs` remembers which members were asked for, so `load` panics on any part nobody carries
-(`lacks_of` is that list for a tool). `level_over` and `stood_over` panic on a level over the game's room.
+**File to game.** `stand` is the order: `level::load`, `populate_host` (`thin_level`, `bar_level`, `shape_level`, boxes into the world, lamps),
+`game_new`. Box i of the file is static box i. Every wrong value, and every member nobody
+asked for (`json.rs`), is said by its place, and `load` panics with the list. `faults.rs` is asked of a file, not at a start.
+`level_over` and `stood_over` panic on a level over its room.
 
 **Two tiers at the tail.** A box group `lived.<room>` (or a prop, light or fixture id so named) is furniture; group `dressing` is there only to wreck.
 They come last in their lists, so every other index is the same without them, and the export throws if something kept follows or names one. The game
@@ -60,7 +62,7 @@ hand. A top-level `marks[]` row is a named spot where a person stands to use a t
 **Lights and lamps.** `lights[]` are point, spot or directional; `group` and `mains` say what can put one out, `fixture` names its glowing box.
 `switchables[]` are glowing boxes on a switch. The directional light in group `exterior` is the moon, and an hour's sun goes in at its place.
 `lamps_out` puts out group `exterior` at an hour whose `lamps` is false. No file places a wall switch: `room_light` picks the mains lights a plate
-works. `tools/levels/lib/carLamps.ts` and `carlamps/` find a vehicle's lamps by what the kits write. Guards read the light the picture shows, so a
+works. `tools/levels/lib/carLamps.ts` and `carlamps.rs` find a vehicle's lamps by what the kits write. Guards read the light the picture shows, so a
 lamp moved for the look changes the play.
 
 **Furniture and props.** A fixed thing is plain boxes. A loose thing is a `props[]` row: `kind`, `mass`, `parts`, its footprint fitted by
@@ -70,7 +72,7 @@ no top belongs between. A drawn-only box (`NoShadow`) meets no ray and no foot.
 **Round and shaped things.** `round` on a box makes it a true cylinder about its own y to every eye, ray and foot; `h[0]` equals `h[2]`, with no
 `yaw`, `rot`, `flags` or `shape`. `shape` keeps the plain box to walk on and cuts the picture and every ray: `round` about x or z (a wheel), `arc` (a
 bowed top), `cut` (planes in the box's own frame), `old`, and `with` (trim nobody meets). `shape_level` makes the record with `cut_record`. A box with
-`rot` takes no shape; one with `markings` or `Glass` takes no form. `shapeErrors` has the limits, `?shapes=0` stands the plain boxes, and
+`rot` takes no shape; one with `markings` or `Glass` takes no form. `form_faults` has the limits, `?shapes=0` stands the plain boxes, and
 `tools/levels/lib/carShapes.ts` holds the vehicles'.
 
 **Paint, stuff and does.** A box says two words, and neither comes from the other. `stuff` is how it is drawn (`BoxStuff`). `does` is what it is to a
@@ -80,10 +82,10 @@ else: a mud partition a charge cuts beside a mud shell. `finish` is usually `ski
 
 **The look.** The default kit is `gwotKit.ts`; `gwotPalette.ts` names its paints. `look_dress` is true on any `?levelFile=` but the office and
 `office-*`, and picks the cast (`place_of`). `KEPT`, 0 to 1, is `meta.kept`: how kept the place is, for the picture. A mark on a face is a
-`MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor/` reads. Snow is a level's own, by name
+`MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own, by name
 (`snow_level`).
 
-**Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_box` asks only
+**Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_among` asks only
 height and size: underside from `ceiling_y` less 0.25 m, top at most 0.45 m over, 0.9 m across or more. A drawn slab in that band stops the rain and
 hides the room. The rain reads `MAX_ROOFS` of them. Open sky is no slab.
 
@@ -129,12 +131,12 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
 - **A level:** its generator, `bun run tools/levels/export.ts <name>` (office: `bun run tools/level-export.ts`), commit both, then
   `bun run tools/qa/level-needs.ts <name> --run`.
 - **A new level:** `.claude/skills/level/SKILL.md` has the long order, each need with what went wrong when it was missed. In short: generator; export;
-  counts (`levels sight <name> --write`, also `walked` and `charges`, in `rust/game_start` by `cargo run --release --bin levels --`); a row in both
-  `src/scene/scenarioList.ts` and `rust/game_types/src/scene_scenario_list/types.rs`; `src/audio/setlist.ts`; its picture from `tools/menu-art.ts`;
+  counts (`levels sight <name> --write`, also `walked` and `charges`, in `rust/game_start` by `cargo run --release --bin levels --`); a row in
+  `rust/game_types/src/scene_scenario_list/rows.rs` and the module made; `src/audio/setlist.ts`; its picture from `tools/menu-art.ts`;
   `scenarios.kitView` and `tools/qa/kitview-plan.ts`.
 - **A count moved:** find out why first. `--write` keeps a new one; a line starting `#` in a count file says what was given up.
-- **A new member of the file:** its type and `KEYS` in `levelData.ts`, both directions in `levelLoad.ts`, the field under `rust/game_types/src/`, its
-  line in `records.rs` or `level.rs`, a line in `docs/level-format.md`.
+- **A new member of the file:** the field under `rust/game_types/src/`, its line in `records.rs` or `file.rs`, its rule in `faults.rs`;
+  then its type and `KEYS` in `levelData.ts`, both directions in `levelLoad.ts`, a line in `docs/level-format.md`.
 - **A new piece:** the kit's file, through `pieces`; a line in a showroom; `bun run tools/levels/library.ts --write`.
 - **A new paint:** a row of the palette, its words in `PAINT_STUFF` and `PAINT_DOES`. `GWOT_MATERIALS` is written whole, so its new row makes every
   file wearing it stale.
@@ -145,23 +147,23 @@ asks for a thing by name, and a showroom's line is the call to copy. The hall op
 
 `levels <question> [LEVEL…]` (`LEVELS_BREAK=1` fails each): `stands` (each mission starts, and what it names is on joined floor); `doors`;
 `second-way`; `sight` and `charges` (held by count); `walked` (doors owed by name in `tools/levels/counts/walked/`); `stacks` (by mission: every stack
-mark reaches its door); `names`; `rain`.
+mark reaches its door); `names`; `rain`; `file` (its faults).
 
 `bun run tools/qa/level-needs.ts [name] [--run]` asks the `NEEDS` list (`generator`, `row`, `music`, `lived`, `ground`, `leak`, `key`, `lamps`,
 `roof`, `response` and more): a FAIL is a gap and a NOTE a thing to look at. `--run` adds `export --check`, the lint, `kitview-plan.ts`,
-`floor-order-check.ts` and the `levels` questions. `tools/qa/checks.ts` and `gate` do not run these, so run them after a level changes.
+`floor-order-check.ts` and the `levels` questions, which `gate long` asks of every level.
 
-`bun run tools/qa/level-lint.ts levels/<name>.json` reads the file alone (`levels/<name>.lint.json` holds a reason for an odd thing). In `checks.ts`:
-`ground-pieces-check.ts`, `kit-stores-check.ts`, `palette-check.ts`, `stuff-check.ts`, `floor-order-check.ts`. By hand: `tools/qa/zfight-check.ts`,
+`levels/<name>.lint.json` holds a reason for an odd thing `level-lint.ts` finds. In `checks.ts`: `exports-check.ts`, `level-lint.ts`,
+`ground-pieces-check.ts`, `kit-stores-check.ts`, `palette-check.ts`, `stuff-check.ts`, `floor-order-check.ts`, `zfight-check.ts`. By hand:
 `bun run tools/levels/library.ts --check`.
 
 | native test | what it holds |
 |---|---|
-| `level_rules.rs` | a level's own charges and cards, floor behind furniture, its roofs, its ways, its leaves' paint |
+| `level_rules.rs` | a level's own charges and cards, floor behind furniture, its roofs, its ways, its leaves' paint; `level_caps` is what the game's lists have room for |
+| `level_faults.rs` | what the judge of a file refuses, by its place, and what it takes |
 | `does_and_stages.rs` | no rule reads a color; every file that names a mission stages it |
 | `room_marks.rs` | every room deals marks a man can stand on |
 | `kit_levels.rs` | every way of every `scenarios.kitView` stands |
-| `rust/sim/tests/level_caps.rs` | `caps.ts` is what the game's lists have room for |
 
 ## Not seen
 

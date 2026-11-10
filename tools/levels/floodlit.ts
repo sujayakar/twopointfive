@@ -3,9 +3,9 @@
 // eaves, and the rooms' open windows look straight down it at the gate. The floodlights and every bulb in the building hang on the MAINS; the mains breaker
 // is in the generator shed on the OUTSIDE of the west wall, a short walk from the start to a door with a lamp over it. Throw it (Sam's own row, or the squad's 'work' order
 // on the panel) and the yard is black: the defenders carry no lights and no goggles, the team has goggles. NOBODY COMES TO PUT THE LIGHTS BACK ON: a room
-// clear pins its defenders to their marks (rust/game_rules/src/lighting hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
+// clear pins its defenders to their marks (rust/game_rules/src/air/lighting.rs hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
 // one of the seven holding it (tried, 24 shipped seeds a way) the fight for it is heard, the building's men come out to it, and the team wins 21 of 24 with
-// the lights ON and 22 of 24 with them out — the dark stopped mattering. The trial is rebuild/missions/new/floodlit-shed-held.patch in the project files.
+// the lights ON and 22 of 24 with them out — the dark stopped mattering.
 // What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (there to be
 // seen, not to see by: at 6, over the sky, it took the gate and the middle of the yard past 0.2) and a hurricane lantern in each room (so a man who walks in beside one can
 // still be seen and fought at arm's length: the dark is an edge, not a switch that ends the fight; their strength is the mission's dial, 4.5 with the light
@@ -46,7 +46,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from './lib/level';
-import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
@@ -71,7 +71,7 @@ export const FLOODLIT_START: Vec3 = [9.0, 0, 26.2];
 /** the middle of the gate's opening, chest high: what the window men look at */
 const GATE: Vec3 = [20.0, 1.1, 24.0];
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData). Seven men: guard room 2, hall 2, radio room 2, store 1. The window marks come first in the two window
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData). Seven men: guard room 2, hall 2, radio room 2, store 1. The window marks come first in the two window
  *  rooms, so the authored placement (and most deals) has a man at each window looking down the yard at the gate. */
 export const FLOODLIT_STRUCTURE: StructureData = {
   name: 'floodlit yard',
@@ -109,7 +109,7 @@ export const FLOODLIT_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the main gate has no leaf, and a picture anchored on
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the main gate has no leaf, and a picture anchored on
  *  that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle). So
  *  the way is the door the gate leads to: the building's front door, straight across the yard under its floodlights. The picture hangs no lamp of its own:
  *  the yard's floods are the level's, one of them over this door, and they are lit. */
@@ -163,7 +163,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.wallX(k, 15, 0.48, 3.88, EXT, sw, [], {}, WALL_H);
   K.wallX(k, 19.5, 0.48, 3.88, EXT, sw, [K.doorAt(k, 'shed', 'x', 19.5, 2.4, { exterior: true })], {}, WALL_H);
   K.wallZ(k, 0.6, 15.12, 19.38, EXT, sw, [], {}, WALL_H);
-  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (rust/game_rules/src/lighting stands its man north of the panel)
+  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (rust/game_rules/src/air/lighting.rs stands its man north of the panel)
   K.add(k, { c: [1.6, 0.45, 15.75], h: [0.75, 0.45, 0.4], albedo: [0.5, 0.42, 0.1] });   // the generator set on its skid, against the north wall
   K.add(k, { c: [1.6, 0.94, 15.75], h: [0.5, 0.04, 0.3], albedo: C.black });
   K.add(k, { c: [2.37, 0.6, 15.75], h: [0.015, 0.02, 0.02], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });   // its running lamp
@@ -235,7 +235,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // THE LOCKERS SHADE THE HALL'S LANTERN (the maintainer's pick of 10-16, "Hall lockers"). The lantern stands on the floor in the corner west of them, so with
     // the mains out it lights the guard room's side and a wedge towards the front door, and the back wall, the far corner and the radio room's door are black
     // to a bare eye (floodlit-check reads both). That shade, not cover, is all they do to the fight; how much it is worth has moved with the goggles' infrared
-    // light and is in docs/agents/missions.md. Move the lockers or the lantern and the tallies move.
+    // light. Move the lockers or the lantern and the tallies move.
     P.room('east');
     P.poles(22.12, 1.28, 12.05, W, 3, 1.0, 0.07);                                    // the mast's spare sections, on brackets on the west wall
     P.crate(22.5, 12.45, 0.4, 0.1, C.wood, INK.iron, 'batteries');
@@ -247,7 +247,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // out there the ground outside the wall had the sky's even fill and nothing else — no pool, no shadow, the men one grey with the wall (the depot and the
     // pass have thin moons too, and lamps outside). The moon stays (it is what keeps the yard black with the mains out); these go out with the floodlights,
     // so the dark is as dark as it was. A bulkhead lamp on the outer face of each gate post, thrown out and along the wall away from the gate, and one over
-    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (rust/game_rules/src/nvg NVG.darkAt is 0.5 — at 50
+    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (rust/game_rules/src/teammates/nvg.rs NVG.darkAt is 0.5 — at 50
     // the five marks read 0.29‥0.62 and the team stood up half goggled, half bare-eyed), Sam's about 0.3. Nobody in the building has a line to a start mark
     // or to the shed's door. TRIED AND LEFT OUT: a third lamp at the wall's south-west corner to light the team from both sides — it
     // sits 2.6 m from the nearest mark and 5 from Sam's, so any strength that lifts Sam's reading (0.25 → 0.39 at 8) takes the near man over the line (0.53).
@@ -281,7 +281,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     sky: { zenith: [0.007, 0.012, 0.024], horizon: [0.018, 0.024, 0.039] },   // (overcast as its moon is: see the head)
     mission: { serverRoom: { ...FLOODLIT_ROOMS.store.bounds }, entryDoor: 'store', rack: { index: 0, front: rackFront, halfW: 0.33 }, exfilDoor: 'foot_gate', exfilX: 3.5, exfilZ: 21.8, exfilOut: [-1, 0] },
   });
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above. `building` is the whole world so the plan is all zones (first match wins). The yard's packed earth, the shed's floor and the ground outside the
   // wall are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab ('stone') with lino laid in the hall.
   const surfaces: SurfacesData = {

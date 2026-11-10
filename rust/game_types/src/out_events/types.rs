@@ -11,7 +11,6 @@ pub enum OutEvent {
     GameAudioLikeFootstep(crate::out_events::OutGameAudioLikeFootstep),
     GameAudioLikePlay(crate::out_events::OutGameAudioLikePlay),
     GameAudioLikeRain(crate::out_events::OutGameAudioLikeRain),
-    HostApiRestartPicture(crate::out_events::OutHostApiRestartPicture),
     ParticlesEmit(crate::out_events::OutParticlesEmit),
     ParticlesImpulse(crate::out_events::OutParticlesImpulse),
     ParticlesSetHeat(crate::out_events::OutParticlesSetHeat),
@@ -19,9 +18,6 @@ pub enum OutEvent {
     SmokeCansShut,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
-    ClearSnowBlast,
-    ClearSnowMarks,
-    ClearSnowTracks,
     SnowBlast(crate::out_events::OutSnowBlast),
     SmokeSystemLikeRound(crate::out_events::OutSmokeSystemLikeRound),
 }
@@ -51,7 +47,7 @@ pub struct OutGameAudioLikeFootstep {
     pub pos: V3,
     pub loudness: f64,
     pub is_player: bool,
-    pub mat: Option<crate::floor::FloorMat>,
+    pub mat: crate::floor::FloorMat,
 }
 
 #[derive(Clone, Debug)]
@@ -65,11 +61,6 @@ pub struct OutGameAudioLikePlay {
 #[derive(Clone, Debug)]
 pub struct OutGameAudioLikeRain {
     pub level: f64,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutHostApiRestartPicture {
-    pub why: String,
 }
 
 #[derive(Clone, Debug)]
@@ -142,7 +133,6 @@ pub struct OutMessEvicted {
     pub yaw: f64,
     pub rot: Option<Quat>,
     pub mat: Option<crate::break_table::Mat>,
-    pub kind: crate::debris::ChunkKind,
 }
 
 #[derive(Clone, Debug)]
@@ -190,10 +180,8 @@ pub struct OutSnowBlast {
 #[derive(Clone, Debug, Default)]
 pub struct OutPlayOpts {
     pub rate: Option<f64>,
-    pub duration: Option<f64>,
     pub lowpass: Option<f64>,
     pub pan: Option<f64>,
     pub wet: Option<f64>,
-    pub tok: Option<f64>,
 }
 

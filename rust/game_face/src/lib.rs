@@ -1,5 +1,5 @@
 //! THE FACE OF THE GAME: one wasm module a host (the page, the server, a tool) loads, hands a start to, steps a tick at a time, draws and asks. Nothing here decides anything: the game is the
-//! crate `game`, what a host does round a step is `game_run`, what is drawn is `game_draw`.
+//! crate `game`, what a host does round a step is `game_start::host`, what is drawn is `game_draw`.
 //!
 //! C ABI: a pointer and a length are `usize`, a game's number `u32`, a flag `u32`. Each file says its own exports.
 //!
@@ -14,7 +14,7 @@
 //!   face_start(p, n, slot, seed, seats, flags) -> h   a game from a level file's text, the address's words, the character's files and the host's commands (game_start `handed`)
 //!   face_drop(h) · face_slot(h) -> slot       the game and its slot are free again · which of rust/sim's slots it stands in
 //!   face_show_seat(h, seat)                   which seat this machine shows
-//!   face_step(h, dt, flags)                   ONE TICK of every seat on what was handed (hand.rs, net.rs). Flags: 4 VIEW, the host's view of a level on rails · 8 SAVES, the save controller's turn
+//!   face_step(h, dt, flags)                   ONE TICK of every seat on what was handed (hand.rs, net.rs). Flags: 8 SAVES, the save controller's turn
 //!   face_out_clear(h)                         the host has taken what the tick told it
 //!
 //! two games held to each other
@@ -161,12 +161,12 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
-    let stood = game_start::handed::stand_handed(bytes(p, n), &o, &mut |g, words, b| if let Err(why) = game_run::words::at_start(g, words, b) { panic!("face_start: {why}") });
+    let stood = game_start::handed::stand_handed(bytes(p, n), &o);
     put(Held::new(stood.game))
 }
 #[no_mangle]
 pub extern "C" fn face_drop(h: u32) {
-    saves::shelf_off(h, |_| true);
+    saves::shelf_off(h);
     moment::off(h);
     GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
 }
@@ -179,7 +179,6 @@ pub extern "C" fn face_slot(h: u32) -> usize {
 pub extern "C" fn face_show_seat(h: u32, seat: u32) {
     with(h, |x| { let s = x.g.seats[seat as usize]; game::seats::show_seat(&mut x.g, s); });
 }
-pub const VIEW: u32 = 4;
 pub const SAVES: u32 = 8;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
@@ -188,8 +187,7 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     with(h, |x| {
         game::game::game_step_seats(&mut x.g, dt, &cmds);
         saves::dealt(&x.g);
-        if flags & VIEW != 0 { game_run::view(&mut x.g); }
-        if flags & SAVES != 0 { saves::saves(h, x, dt); }
+        if flags & SAVES != 0 { saves::saves(h, x, dt); } else { saves::restart_turn(h, x); }
     });
 }
 /// the host has taken (or does not want) the out events: the list is a step's output and no part of the state, so nothing else empties it

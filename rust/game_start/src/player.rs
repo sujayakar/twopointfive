@@ -22,7 +22,6 @@ use game::view::HostNow;
 
 pub type V3 = [f64; 3];
 
-pub const MOVE: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
 /// the mouse's bits in a hand
 pub const LEFT: u32 = 1;
 pub const RIGHT: u32 = 4;
@@ -120,8 +119,7 @@ impl Player {
                 ahead = Some([pos[0] + dx / d * 6.0, 1.1, pos[2] + dz / d * 6.0]);
                 if over.is_none() {
                     let f = self.ahead.get();
-                    let (a, b) = ((dx * f[0] + dz * f[1]) / d, (dx * -f[1] + dz * f[0]) / d);
-                    for (on, k) in [(a > 0.3827, 0), (b < -0.3827, 1), (a < -0.3827, 2), (b > 0.3827, 3)] { if on { cmd.keys.push(String::from(MOVE[k])); } }
+                    for (on, key) in game::player::walk_keys(pos, [goal[0], goal[2]], [f[0], 0.0, f[1]]).into_iter().zip(game::player::WALK_KEYS) { if on { cmd.keys.push(String::from(key)); } }
                 }
             }
             if self.sprint.get() { cmd.keys.push(String::from("ShiftLeft")); }
@@ -161,7 +159,7 @@ impl Player {
     pub fn t(&self) -> f64 { self.t.get() }
     pub fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
     pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.ch[g.gd[gd].ch].pos) }
-    pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| g.gd[gd].state == game::game::GuardState::Dead) }
+    pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| game::condition::down(g, g.gd[gd].ch)) }
     /// a place of the world on the picture, and is it inside the margins of the picture a hand can point at
     pub fn screen(&self, p: V3) -> (f64, f64, bool) {
         let n = self.now.borrow();
@@ -246,7 +244,6 @@ impl Player {
         self.button(bits, false);
         self.ticks(3).await
     }
-    pub async fn wheel(&self, notches: i32) { for _ in 0..notches.abs() { self.wheel.set(self.wheel.get() + 100.0 * notches.signum() as f64); self.ticks(2).await; } }
     /// the host's view turned, and pulled back
     pub fn turn_view(&self, yaw: f64) { let l = self.lens.get(); self.lens.set([l[0] + yaw, l[1]]); }
     pub fn zoom_view(&self, delta: f64) { let l = self.lens.get(); self.lens.set([l[0], l[1] + delta]); }

@@ -2,12 +2,12 @@
 //! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. Each is the TypeScript's, statement for statement:
 //! the same operands in the same order, so the same doubles, and every pose value stored as the single the TypeScript's Float32Array stores (single.rs).
 //!
-//! What a function works on is handed to it as slices. The animator's layers are layers.rs and ask here; under the row `poses` (src/sim/sim.ts) a character's
+//! What a function works on is handed to it as slices. The animator's layers are layers.rs and ask here; under the row `poses` a character's
 //! poses live in its game's block (poses.rs) and a question is asked of them THERE, with no copy; a pose that is an array of the host's (a function's
 //! scratch) is written onto the BENCH below, asked about, and read back. A call a question still costs more than it saves, so the row is a proof and
 //! not a speed-up: the layers that move here next call these with no crossing at all.
 //!
-//! The lengths and the angles are the game's own (maths.rs): the host asks only where those stand in its `Math` (math/exact.ts EXACT.on).
+//! The lengths and the angles are the game's own (maths.rs): the host asks only where those stand in its `Math`.
 
 use crate::maths::{acos, atan2, cos, hypot3, hypot4, sin};
 use crate::single::{get, put, S};
@@ -18,7 +18,7 @@ pub const MAX_NODES: usize = 128;
 pub const POSES: usize = 4;
 /// singles a node of a local pose: tx ty tz | qx qy qz qw | sx sy sz
 pub const NODE: usize = 10;
-/// A POSE IS TEN COLUMNS, A NODE A ROW (src/anim/skeleton.ts Pose): channel `c` of node `i` is single `c * n + i` of it, `n` = its rows — the nodes
+/// A POSE IS TEN COLUMNS, A NODE A ROW: channel `c` of node `i` is single `c * n + i` of it, `n` = its rows — the nodes
 /// rounded up to whole vectors of four (the rows past the last node are zeros, and stay zeros: nothing here writes them). A column a channel is what
 /// lets a kernel work one channel of four nodes in a step. A pose is handed to a function as EXACTLY its singles, so `n` is their count over NODE.
 #[inline(always)]
@@ -36,8 +36,6 @@ pub struct Bench {
     /// a pose run forward: every node's model-space rotation (x y z w), then every node's origin (x y z)
     pub rot: [f64; MAX_NODES * 4],
     pub pos: [f64; MAX_NODES * 3],
-    /// a question's own numbers, and its answer where that is a few doubles
-    pub args: [f64; ARGS],
     pub pose: [S; POSES * MAX_NODES * NODE],
     pub mask: [S; MAX_NODES],
     /// the rig: every node's parent (−1 = none), and the nodes parents first
@@ -48,7 +46,6 @@ pub struct Bench {
 static mut BENCH: Bench = Bench {
     rot: [0.0; MAX_NODES * 4],
     pos: [0.0; MAX_NODES * 3],
-    args: [0.0; ARGS],
     pose: [S::ZERO; POSES * MAX_NODES * NODE],
     mask: [S::ZERO; MAX_NODES],
     parent: [0; MAX_NODES],
@@ -67,20 +64,6 @@ pub fn bench() -> &'static mut Bench {
 pub fn bench_read() -> &'static Bench {
     unsafe { &*core::ptr::addr_of!(BENCH) }
 }
-/// where a table of the bench is (a byte address): 0 rot · 1 pos · 2 args · 3 pose · 4 mask · 5 parent · 6 order
-pub fn addr(table: u32) -> usize {
-    let b = bench();
-    match table {
-        0 => b.rot.as_ptr() as usize,
-        1 => b.pos.as_ptr() as usize,
-        2 => b.args.as_ptr() as usize,
-        3 => b.pose.as_ptr() as usize,
-        4 => b.mask.as_ptr() as usize,
-        5 => b.parent.as_ptr() as usize,
-        6 => b.order.as_ptr() as usize,
-        _ => 0,
-    }
-}
 
 /// `x || 1` of a length: 1 where it is nothing or no number
 #[inline(always)]
@@ -91,7 +74,6 @@ fn or_one(l: f64) -> f64 {
         l
     }
 }
-/// vec.ts clamp
 #[inline(always)]
 fn clamp(x: f64, a: f64, b: f64) -> f64 {
     if x < a {
@@ -108,9 +90,6 @@ fn abs(x: f64) -> f64 {
     f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
 
-/// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers, the state it keeps between ticks, the hand pass's columns and a
-/// path of keys handed to it: layers.rs)
-pub const ARGS: usize = 1024;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {
@@ -118,7 +97,7 @@ pub struct Rig<'a> {
     pub order: &'a [u32],
 }
 
-/// skeleton.ts blendPose: out = lerp(a, b, w · mask[node]) — `a`, `b` and `out` are places on one store of poses (out may be a's)
+/// Out = lerp(a, b, w · mask[node]) — `a`, `b` and `out` are places on one store of poses (out may be a's)
 /// `in_singles` = the rule POSEMATH.singles (single.rs): the same blend worked in singles, four nodes a step, a rotation's length a plain root.
 pub fn blend(store: &mut [S], a: usize, b: usize, w: f64, mask: Option<&[S]>, out: usize, n: usize, in_singles: bool) {
     let r = rows(n);
@@ -252,7 +231,7 @@ pub fn set_unit(d: &mut [S], i: usize, q: &[f64; 4]) {
     let n = d.len() / NODE;
     store_unit(d, 3 * n + i, n, q[0], q[1], q[2], q[3]);
 }
-/// skeleton.ts rotateLocal: local ← local · q
+/// Local ← local · q
 pub fn rotate_local(d: &mut [S], i: usize, q: &[f64; 4]) {
     let n = d.len() / NODE;
     let o = 3 * n + i;
@@ -261,7 +240,7 @@ pub fn rotate_local(d: &mut [S], i: usize, q: &[f64; 4]) {
     let (x, y, z, w) = (aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx, aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz);
     store_unit(d, o, n, x, y, z, w);
 }
-/// skeleton.ts rotateModel: local ← P⁻¹ · q · P · local, P = the parent's model rotation
+/// Local ← P⁻¹ · q · P · local, P = the parent's model rotation
 pub fn rotate_model(d: &mut [S], i: usize, q: &[f64; 4], parent: &[f64; 4]) {
     let n = d.len() / NODE;
     let o = 3 * n + i;
@@ -275,7 +254,7 @@ pub fn rotate_model(d: &mut [S], i: usize, q: &[f64; 4], parent: &[f64; 4]) {
     let (x, y, z, w) = (pw * m2x + cx * m2w + cy * m2z - cz * m2y, pw * m2y - cx * m2z + cy * m2w + cz * m2x, pw * m2z + cx * m2y - cy * m2x + cz * m2w, pw * m2w - cx * m2x - cy * m2y - cz * m2z);
     store_unit(d, o, n, x, y, z, w);
 }
-/// skeleton.ts setModelRot: node i gets the model-space rotation `rot` outright
+/// Node i gets the model-space rotation `rot` outright
 pub fn set_model_rot(d: &mut [S], i: usize, rot: &[f64; 4], parent: &[f64; 4]) {
     let n = d.len() / NODE;
     let o = 3 * n + i;

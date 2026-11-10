@@ -26,7 +26,7 @@
 // → across the yard and back; a second, tighter one through the duty office (mess hall → o_hall → o_s1 → bunks 3 → s1 → south gallery → h_s).
 // FIRE DOORS: two cross walls with a door in each cut every gallery in three (ng_w, ng_e, sg_w, sg_e), so no straight run of gallery is much longer than eleven
 // metres. Without them the scripted four were shot from both ends of a 23 m gallery walking to their second room (24 seeds, Standard: 10 runs won; with, 15).
-// ELEVEN DEFENDERS IN THREE SQUADS, a wing each and the link (rebuild/enemy-squads/squad-format.md): Charlie the south wing (bunks 5, bunks 3), Bravo the link
+// ELEVEN DEFENDERS IN THREE SQUADS, a wing each and the link (docs/level-format.md): Charlie the south wing (bunks 5, bunks 3), Bravo the link
 // (mess hall, galley), Alpha the north wing (the day room and the post at the north gallery's east end). Six rooms stand EMPTY (wash room, bunks 4, duty office, bunks 1, bunks 2, armoury): behind a shut door
 // an empty room and a held one read the same.
 // The shell is the office's rectangle (outer walls on x 4 / 36, z 4 / 24): the weather's 'indoors' rectangle is typed to it, so the rooms are dry — and so is the
@@ -41,7 +41,7 @@
 // the rooms' numbers as tally bars on the gallery floors. The square stays dark and bare of anything large and pale: a man crossing it must stand out.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
@@ -89,7 +89,7 @@ export const BARRACKS_ROOMS: Record<'galley' | 'hall' | 'duty' | 'bunks1' | 'bun
 // and carton (group `exterior`) were cut by the frame's edges, so they step out.
 const BARRACKS_KITVIEW: KitViewData = { ways: [{ door: 's_end', hide: ['exterior'], roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }, { door: 'k_out', roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }] };
 
-/** what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the yard's and the galleries' own doors,
+/** what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the yard's and the galleries' own doors,
  *  each by the bunk room it is beside */
 const DOOR_NAMES = [{ door: 'n1', name: 'bunks 1 door' }, { door: 'n2', name: 'bunks 2 door' }, { door: 'n12', name: 'bunks 1 to 2 door' }, { door: 'n3', name: 'armoury door' }, { door: 's2', name: 'bunks 4 door' }, { door: 's4', name: 'wash room door' }, { door: 'n_yard', name: 'yard door by bunks 2' }, { door: 's_yard', name: 'yard door by bunks 4' }, { door: 'ng_w', name: 'fire door by bunks 1' }, { door: 'sg_w', name: 'fire door by bunks 3' }, { door: 'sg_e', name: 'fire door by bunks 5' }, { door: 's_end', name: 'outer door by the wash room' }];
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
@@ -639,7 +639,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- what the room clear takes from this level ----------------
   // ELEVEN DEFENDERS, PLACED BY HAND. A room's first `garrison` marks, in the order written, are the men who stand there (placement seed 0, the first staging:
-  // rust/game_rules/src/roomclear place_defenders); the marks after them are only what another seed may deal. THE PROBLEM, in one sentence: two men on a dark post at the north
+  // rust/game_rules/src/missions/roomclear.rs place_defenders); the marks after them are only what another seed may deal. THE PROBLEM, in one sentence: two men on a dark post at the north
   // gallery's east end look across the yard at the lit south gallery — one at the floor in front of the wash room and out through the arch, one square onto
   // bunks 5's door — so the nearest way in, and the door the marker points at, are both walked under guns the team cannot reach from there.
   //   gallery post 2              (31.0, 8.9) THE ARCH MAN: the south gallery from s3's east jamb to s4, the yard's east end, the arch. (32.6, 9.4) THE DOOR MAN:
@@ -654,7 +654,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   //   mess hall 2                 opposite corners, crossing diagonals: every one of the six doors is in somebody's eyes
   //   bunks 3 2                   one gun a door
   //   bunks 5 2                   both on the NORTH side of the room, off the line of the south window: (29.2, 21.4) on the gallery door, (26.4, 21.6) on the wash room's
-  // Squads: a wing each and the link. Alpha = the day room + the post, four men in two rooms, so it has a pair to send (rust/game_rules/src/enemysquads: a squad with fewer than
+  // Squads: a wing each and the link. Alpha = the day room + the post, four men in two rooms, so it has a pair to send (rust/game_rules/src/pursuit/enemysquads: a squad with fewer than
   // two men past one a room only ever barricades); it wedges the day room's east door alone.
   const door = (id: string) => doorDefs.find(d => d.name === id)!;
   /** the point a gun rests on for a door, seen from inside room `r`: the middle of the opening, 0.16 m to the room's side of the wall line, chest high */
@@ -668,7 +668,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const roomClear: StructureData = {
     name: 'the barracks', maxMen: 11,
     team: { sam: START, samYaw: Math.PI, ops: [[37.3, 0, 21.4], [39.1, 0, 21.3], [37.4, 0, 22.8], [38.8, 0, 23.0]], opsYaw: Math.PI },
-    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): the north-west corner, outside the galley's
+    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): the north-west corner, outside the galley's
     // back door. One man holds the galley; the mess hall is behind it, and from the mess both galleries are taken from their closed ends, not across the yard
     starts: [{ sam: [12.6, 0, 2.0], samYaw: -Math.PI / 2, ops: [[14.0, 0, 1.6], [14.0, 0, 2.6], [15.2, 0, 1.6], [15.2, 0, 2.6]], opsYaw: -Math.PI / 2 }],
     rooms: [
@@ -722,7 +722,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           mark(NGAL_E, 29.6, 9.9, 'n_end'),                      // by the pier between the two openings, down the gallery onto the end door
         ] },
     ],
-    // (rebuild/enemy-squads/squad-format.md) who holds what; what a squad does about it is the AI's. Rally = one of its rooms' marks.
+    // (docs/level-format.md) who holds what; what a squad does about it is the AI's. Rally = one of its rooms' marks.
     squads: [
       { id: 'charlie', name: 'Charlie', rooms: ['bunks5', 'bunks3'], rally: [16.2, 0, 22.4] },
       { id: 'bravo', name: 'Bravo', rooms: ['hall', 'galley'], rally: [9.0, 0, 12.9] },
@@ -730,7 +730,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
   };
 
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears). First zone that holds a point wins ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears). First zone that holds a point wins ----------------
   const zone = (id: string, mat: 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass', r: Rect) => ({ id, mat, x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 });
   const surfaces: SurfacesData = {
     building: { x0: X0, x1: X1, z0: Z0, z1: Z1 }, grassEdge: 3.2, inside: 'lino', outside: 'asphalt', verge: 'grass',
@@ -745,7 +745,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the galleries and the bunk rooms: the building's lino)
     ],
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
   const places: PlacesData = { areas: [{ name: 'duty office', bounds: { ...R.duty } }, { name: 'bunks 1', bounds: { ...R.bunks1 } }, { name: 'bunks 2', bounds: { ...R.bunks2 } }, { name: 'armoury', bounds: { ...R.arms } }, { name: 'bunks 4', bounds: { ...R.bunks4 } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'armoury gallery', bounds: { ...R.ngal } }, { name: 'wash room gallery', bounds: { ...R.sgal } }, { name: 'yard', bounds: { ...R.yard } }] };
   return { level, scenarios: { roomClear, places, kitView: BARRACKS_KITVIEW, doorNames: DOOR_NAMES }, groups: trace.groups, surfaces };

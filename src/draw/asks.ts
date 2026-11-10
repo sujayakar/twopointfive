@@ -1,6 +1,6 @@
-// Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.
+// Written by tools/draw/gen.ts from rust/game_start/src/host/desk.rs. To change an ask, change it there.
 import { Writer } from './writer';
-import { readBriefView, readCardView, readPressed, readSheetView, readShortView, readStartView, readTeamView, type BriefView, type CardView, type Pressed, type SheetView, type ShortView, type StartView, type TeamView } from '../view/read';
+import { readBriefView, readCardView, readMissionsView, readPressed, readSheetView, readShortView, readStartView, readTeamView, type BriefView, type CardView, type MissionsView, type Pressed, type SheetView, type ShortView, type StartView, type TeamView } from '../view/read';
 
 /** an answer that is one word: its length, then its bytes */
 const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));
@@ -53,4 +53,10 @@ export class Asks extends Writer {
   brief(search: string): BriefView { this.u32(18); this.text(search); return readBriefView(this.answer(this.take())); }
   /** 1 where the link starts what a page at this address already stands, so that it needs no page load; else 0 */
   same(link: string, page: string): number { this.u32(19); this.text(link); this.text(page); return readNumber(this.answer(this.take())); }
+  /** every mission there is, as its row of the table says it */
+  missions(): MissionsView { this.u32(20); return readMissionsView(this.answer(this.take())); }
+  /** the kind of mission an address starts (empty: none), on the list or not */
+  kind(search: string): string { this.u32(21); this.text(search); return readWord(this.answer(this.take())); }
+  /** where an address that names a row of the short list and nothing to play goes instead (empty: it stays) */
+  pick(search: string): string { this.u32(22); this.text(search); return readWord(this.answer(this.take())); }
 }

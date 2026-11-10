@@ -1,4 +1,4 @@
-//! THE PAR CLOCK IS THE GAME'S (rust/game_rules/src/par): a real level with a `scenarios.par` block, its room clear stood by the Rust start, and
+//! THE PAR CLOCK IS THE GAME'S (rust/game_rules/src/missions/par.rs): a real level with a `scenarios.par` block, its room clear stood by the Rust start, and
 //! the clock read off the game's own record. Each test holds one rule over three seeds beside a control that differs in the one thing the rule is
 //! about. Before the tick kept the clock, the page's TypeScript did, on its copy of the game: nothing here could have been asked of the game at all.
 use game::game::DownBy;
@@ -14,7 +14,6 @@ const SEEDS: [u32; 3] = [1, 2, 3];
 
 /// the kill house with its room clear up and one frame run: the clock is armed by the first tick
 fn stood(seed: u32, seats: u32) -> Play { let mut p = Play::level(LEVEL, true, &Opts { seed, seats, ..Default::default() }); p.frame(); p }
-fn par_lines(p: &Play) -> usize { p.log().iter().filter(|m| m.starts_with("par ▸")).count() }
 
 /// A FAILURE MEANS: the clock runs while nobody has done anything (reading the house from the start line is meant to be free), or it does not
 /// arm on a level that has a par, or it arms on a level that has none.
@@ -142,7 +141,7 @@ fn the_last_defender_down_ends_the_run_with_a_result_said_once() {
             p.order("fallIn", at, Who::All);
             p.run(1.0 + seed as f64);
             let t0 = p.par_started().unwrap_or_else(|| panic!("seed {}: the order started no clock", seed));
-            assert!(p.par_result().is_none() && par_lines(&p) == 0, "seed {}: no result while defenders stand", seed);
+            assert!(p.par_result().is_none(), "seed {}: no result while defenders stand", seed);
             if lose_a_man { let m = p.mates()[0]; p.falls(m, DownBy::Guard); }
             for h in p.hostiles() { p.falls(h, DownBy::Player); }
             p.until(20.0, |p| p.room_clear_end().is_some()).unwrap_or_else(|| panic!("seed {}: every defender is down and the room clear never ended", seed));
@@ -159,8 +158,6 @@ fn the_last_defender_down_ends_the_run_with_a_result_said_once() {
             assert_eq!(r.total, r.secs + r.penalty);
             assert_eq!(r.medal, game::par::medal_of(&d, r.total));
             assert_eq!(r.medal == Medal::Gold, r.next.is_none(), "seed {}: nothing stands above gold", seed);
-            assert_eq!(par_lines(&p), 1, "seed {}: the line is on the log once: {:?}", seed, p.log());
-            assert!(p.log().iter().any(|m| *m == r.line));
             assert_eq!(r.line.contains("lost"), r.lost > 0.0, "seed {}: {:?}", seed, r.line);
             let said = p.objective();
             let medal = if r.medal == Medal::None { String::from("no medal") } else { r.medal.as_str().to_uppercase() };
@@ -168,7 +165,7 @@ fn the_last_defender_down_ends_the_run_with_a_result_said_once() {
             p.run(3.0);
             assert_eq!(p.par_counts(), (1, 1), "seed {}: started once, finished once", seed);
             assert_eq!(p.par_result().map(|x| x.secs), Some(r.secs), "seed {}: the result stands", seed);
-            assert!(par_lines(&p) <= 1, "seed {}: and is not said again (the log keeps five lines: it may have scrolled off)", seed);
+            assert_eq!(p.par_result().map(|x| x.line), Some(r.line.clone()), "seed {}: the result stands as it was", seed);
         }
     }
 }

@@ -1,9 +1,9 @@
 //! The types of `pairorders`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PairOrders {
     pub jobs: JsMap<GuardId, crate::pairorders::Job>,
     pub habit: JsMap<GuardId, [f64; 2]>,
@@ -16,28 +16,7 @@ pub struct PairOrders {
     pub seated: bool,
     pub go_seated: bool,
     pub hands_was: bool,
-    pub lit_cells: JsMap<crate::Num, [f64; 2]>,
 }
-impl PairOrders {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PairOrders {
-            jobs: JsMap::new(),
-            habit: JsMap::new(),
-            glance: JsMap::new(),
-            stood: JsMap::new(),
-            swept: JsMap::new(),
-            dark: JsMap::new(),
-            dark_memo: JsMap::new(),
-            ways: JsMap::new(),
-            seated: false,
-            go_seated: false,
-            hands_was: false,
-            lit_cells: JsMap::new(),
-        }
-    }
-}
-impl Default for PairOrders { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Job {
@@ -66,18 +45,10 @@ pub struct Job {
     pub back_t: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum JobMode {
     #[default] Mark,
     Now,
-}
-impl JobMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            JobMode::Mark => "mark",
-            JobMode::Now => "now",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -109,69 +80,17 @@ pub struct PairOrdersWaysValue {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairordersModPAIRLOGItem {
-    pub t: f64,
     pub what: String,
     /// INVENTED: g.serial() at the push: lesson.ts:113 holds a row as a cursor by identity
     pub serial: u32,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PairOrdersJobOf {
-    pub foe: GuardId,
-    pub mode: crate::pairorders::PairOrdersJobOfMode,
-    pub go: bool,
-    pub set: bool,
-    pub set_said: bool,
-    pub t0: f64,
-    pub born: f64,
-    pub check_t: f64,
-    pub wait_t: f64,
-    pub heel_t: f64,
-    pub going: bool,
-    pub scuffled: bool,
-    pub was_following: bool,
-    pub handed: Option<bool>,
-    pub watcher: Option<GuardId>,
-    pub watch_t: f64,
-    pub seen_t: f64,
-    pub force: bool,
-    pub cue_t: f64,
-    pub cue_by: Option<GuardId>,
-    pub cued: bool,
-    pub back_said: Option<bool>,
-    pub back_t: Option<f64>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum PairOrdersJobOfMode {
-    #[default] Mark,
-    Now,
-}
-impl PairOrdersJobOfMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairOrdersJobOfMode::Mark => "mark",
-            PairOrdersJobOfMode::Now => "now",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum PairOrdersMarkBy {
     Row,
     Hands,
     Api,
-    F,
-}
-impl PairOrdersMarkBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PairOrdersMarkBy::Row => "row",
-            PairOrdersMarkBy::Hands => "hands",
-            PairOrdersMarkBy::Api => "api",
-            PairOrdersMarkBy::F => "F",
-        }
-    }
+    #[word("F")] F,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -182,17 +101,9 @@ pub struct PairOrdersStalk {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PairordersMod {
-    /// (src/game/pairorders.ts:113 PAIR_LOG)
     pub pair_log: Vec<crate::pairorders::PairordersModPAIRLOGItem>,
-}
-impl PairordersMod {
-    pub fn blank() -> Self {
-        PairordersMod {
-            pair_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -211,5 +122,3 @@ pub struct PairordersStats {
     pub anyway: i32,
 }
 
-/// (src/game/pairorders.ts:110 STEADY_BREAK)
-pub const STEADY_BREAK: bool = false;

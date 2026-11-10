@@ -1,19 +1,19 @@
 //! The types of `orders`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
+/// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer. Not kept past the one trial.
 #[derive(Clone, Debug)]
 pub enum MarksKeep {
     Kept { leaf: bool, stack_own: crate::doorway::DoorwayModSTACKOWN, doorway: crate::doorway::DoorwayStats, stackroom: crate::stackroom::StackroomStats, glasspen: crate::glasspen::GlasspenStats, book: crate::stackroom::StackRoomBookKeep },
 }
-/// what one deal of a stack costs in men squeezing past one another (orders.ts fileCross): `file` = each spot's file, `tight` = by a spot's file, is it tight, `l` = man by spot, his walk (0 off a tight file), `cost` = ORDERS.fileQueueCost. Needs no g to price a deal.
+/// what one deal of a stack costs in men squeezing past one another: `file` = each spot's file, `tight` = by a spot's file, is it tight, `l` = man by spot, his walk (0 off a tight file), `cost` = ORDERS.fileQueueCost. Needs no g to price a deal.
 #[derive(Clone, Debug)]
 pub enum FileCross {
     Tight { file: Vec<usize>, tight: Vec<bool>, l: Vec<Vec<f64>>, spots: Vec<V3>, cost: f64 },
 }
-/// a teammate's way, nav.findPath's penalty: a cell of `dear` costs `cost`, any other 1, times what `pen` asks (orders.ts propPenalty). `dear` is by nav.idx; the nav is read from g when priced.
+/// a teammate's way, nav.findPath's penalty: a cell of `dear` costs `cost`, any other 1, times what `pen` asks. `dear` is by nav.idx; the nav is read from g when priced.
 #[derive(Clone, Debug)]
 pub enum PropPenalty {
     Dear { dear: JsSet<crate::Num>, cost: f64, pen: Option<crate::lanes::LanePenalty> },
@@ -28,9 +28,9 @@ pub struct StackPost {
     pub group: Option<f64>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadOrders {
-    pub knobs: crate::knobs::OrdersK,
+    #[is(crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 })] pub knobs: crate::knobs::OrdersK,
     pub defs: Vec<OrdersOrderDefId>,
     /// the row of the table this seat's menu has for an order's id, on the menu or off it (`squad_orders_row`; Rust's own: not on the wire)
     pub made: JsMap<String, OrdersOrderDefId>,
@@ -39,7 +39,7 @@ pub struct SquadOrders {
     pub owners: Vec<crate::orders::SquadOwner>,
     pub posture: Option<crate::orders::SquadOrdersPosture>,
     pub people: Option<crate::orders::SquadOrdersPeople>,
-    pub who: crate::orders::Who,
+    #[is(crate::orders::Who::All)] pub who: crate::orders::Who,
     pub menu: Option<crate::orders::Menu>,
     pub cmd_ring: Option<crate::cmdring::RingState>,
     pub cmd_press: Option<crate::orders::SquadOrdersCmdPress>,
@@ -48,17 +48,17 @@ pub struct SquadOrders {
     pub shows: Vec<crate::orders::SquadOrdersShowsItem>,
     pub asg: JsMap<GuardId, OrdersAssignmentId>,
     pub trail: Vec<V3>,
-    pub back: V3,
-    pub view: crate::orders::SquadOrdersView,
+    #[is([0.0, 0.0, -1.0])] pub back: V3,
+    #[is(crate::orders::SquadOrdersView { input: None, cam: None, canvas: None })] pub view: crate::orders::SquadOrdersView,
     pub esc_used: bool,
     pub ours: JsSet<GuardId>,
     pub acks: f64,
     pub group: f64,
     pub roster: Vec<GuardId>,
     pub sam_p: V3,
-    pub sam_t: f64,
+    #[is(-1.0)] pub sam_t: f64,
     pub sam_v: f64,
-    pub sam_dir: V3,
+    #[is([0.0, 0.0, 1.0])] pub sam_dir: V3,
     pub door_marks: Vec<crate::orders::SquadOrdersDoorMarksItem>,
     pub cast: Option<crate::orders::OtherCast>,
     pub aside_mem: JsMap<GuardId, crate::orders::SquadOrdersAsideMemValue>,
@@ -66,7 +66,7 @@ pub struct SquadOrders {
     pub rest_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersRestOfValue>,
     pub held_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersHeldOfValue>,
     pub short_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersShortOfValue>,
-    pub clear_t: f64,
+    #[is(-1.0)] pub clear_t: f64,
     pub clear_by: Vec<f64>,
     pub apart_of: JsMap<OrdersAssignmentId, crate::orders::SquadOrdersApartOfValue>,
     pub file_hand: f64,
@@ -80,65 +80,9 @@ pub struct SquadOrders {
     pub face_flip: bool,
     pub reached: JsMap<String, crate::orders::SquadOrdersReachedValue>,
 }
-impl SquadOrders {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        SquadOrders {
-            knobs: crate::knobs::OrdersK { who_key: String::from("KeyT"), quick_key: String::from("KeyB"), wait_key: String::from("Digit5"), wait_alt: String::from("KeyF"), refresh_secs: 1.0, door_pick_m: 1.0, self_m: 1.0, man_m: 0.8, door_ray_pad: 0.08, door_ray_reach_m: 3.0, floor_snap_m: 1.0, jamb_out: 0.55, jamb_past: 0.45, file_gap: 0.9, seam_m: 0.03, work_seen_m: 4.0, follow_back: alloc::vec![1.3, 2.4], crumb: 0.4, trail_m: 10.0, run: 2.2, walk: 1.5, gain: 1.5, near_m: 0.6, band_m: 0.6, word_far_m: 2.0, word_hold_s: 2.5, file_apart: 0.9, file_tight: 0.75, off_door: 0.8, aside_m: 2.6, aside_lane: 0.8, aside_off: 0.95, file_queue_gap: 1.3, file_queue_cost: 500.0, prop_round_pad: 0.25, prop_round_cost: 6.0, prop_round_more: 2.0, prop_round_door: 2.5, aside_hold: 1.5, brisk: 2.0, brisk_in: 1.8, onto: 1.3, entry: 2.2, move_spread: 0.9, cold_secs: 2.5, lane_in: 0.45, lane_out: 0.7, hold_stride: 0.15, stuck_secs: 4.0, hold_group_m: 4.0, hold_door_m: 2.0, cleared_dear: 20.0, round_cap: 0.0, same_near_m: 5.0, same_apart_m: 6.0, same_long: 1.5, trail_reach_m: 3.0, trail_long: 1.5 },
-            defs: Vec::new(),
-            made: JsMap::new(),
-            shown: crate::orders::Shown::default(),
-            owners: Vec::new(),
-            posture: None,
-            people: None,
-            who: crate::orders::Who::All,
-            menu: None,
-            cmd_ring: None,
-            cmd_press: None,
-            tap_was: None,
-            log: Vec::new(),
-            shows: Vec::new(),
-            asg: JsMap::new(),
-            trail: Vec::new(),
-            back: [0.0, 0.0, -1.0],
-            view: crate::orders::SquadOrdersView { input: None, cam: None, canvas: None },
-            esc_used: false,
-            ours: JsSet::new(),
-            acks: 0.0,
-            group: 0.0,
-            roster: Vec::new(),
-            sam_p: [0.0, 0.0, 0.0],
-            sam_t: -1.0,
-            sam_v: 0.0,
-            sam_dir: [0.0, 0.0, 1.0],
-            door_marks: Vec::new(),
-            cast: None,
-            aside_mem: JsMap::new(),
-            back_fix: JsMap::new(),
-            rest_of: JsMap::new(),
-            held_of: JsMap::new(),
-            short_of: JsMap::new(),
-            clear_t: -1.0,
-            clear_by: Vec::new(),
-            apart_of: JsMap::new(),
-            file_hand: 0.0,
-            file_gave: false,
-            sam_out: false,
-            leaf_out_gave: false,
-            glass_at: JsMap::new(),
-            glass_sig: 0.0,
-            fur_in: false,
-            worked: JsMap::new(),
-            face_flip: false,
-            reached: JsMap::new(),
-        }
-    }
-}
-impl Default for SquadOrders { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadOwner {
-    pub name: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -280,8 +224,7 @@ pub struct SquadOrdersLogItem {
     pub who: Vec<String>,
     pub target: String,
     pub auto: Option<bool>,
-    pub laid: Option<bool>,
-    /// INVENTED: g.serial() at the push (orders.ts:881 cuts the front): rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
+    /// INVENTED: g.serial() at the push: rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
     pub serial: u32,
 }
 
@@ -388,22 +331,12 @@ pub struct SquadOrdersReachedValueLock {
     pub side: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum TargetKind {
     None,
     Door,
     Floor,
     Foe,
-}
-impl TargetKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TargetKind::None => "none",
-            TargetKind::Door => "door",
-            TargetKind::Floor => "floor",
-            TargetKind::Foe => "foe",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -426,12 +359,10 @@ pub struct OrderDef {
     pub opens: Option<String>,
     pub listed: Option<Vec<crate::orders::TargetKind>>,
     pub hot_key: Option<String>,
-    pub page_only: Option<bool>,
     pub ack: Option<Vec<String>>,
     pub ack_now: Option<Vec<String>>,
     pub on_word: Option<bool>,
     pub free: Option<bool>,
-    pub head: Option<String>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
 impl Default for OrderDef {
@@ -445,21 +376,13 @@ impl Default for OrderDef {
             opens: None,
             listed: None,
             hot_key: None,
-            page_only: None,
             ack: None,
             ack_now: None,
             on_word: None,
             free: None,
-            head: None,
             stands_in: None,
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum OrderDefLabel {
-    Text(String),
-    Arm1(crate::FnField),
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -516,7 +439,7 @@ pub struct Assignment {
     pub lean: Option<f64>,
     pub fit: Option<crate::roomfit::Fit>,
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
-    /// INVENTED: true at assign and at the unguarded writes made here (orders.ts:1473, :1475, :1640, :2346, :1457, wallreact.ts:587, pairorders.ts:439, :486, rescue.ts:769), not for doorpath.ts:273, :316, which alias s.goal. orders.ts:1519 passes held: !(a.new_leg && the A.goal arm was chosen) and clears it then
+    /// INVENTED: true at assign and at the unguarded writes made here, not for doorpath.ts:273, :316, which alias s.goal. orders.ts:1519 passes held: !(a.new_leg && the A.goal arm was chosen) and clears it then
     pub new_leg: bool,
 }
 
@@ -525,83 +448,6 @@ pub enum Tone {
     Red,
     Blue,
     Gold,
-}
-impl Tone {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Tone::Red => "red",
-            Tone::Blue => "blue",
-            Tone::Gold => "gold",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OrderHudRow {
-    pub kind: crate::orders::OrderHudRowKind,
-    pub label: String,
-    pub opts: Vec<crate::orders::OrderHudRowOptsItem>,
-    pub in_reach: bool,
-    pub off: bool,
-    pub cont: Option<bool>,
-    pub tone: Option<crate::orders::Tone>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum OrderHudRowKind {
-    #[default] Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl OrderHudRowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            OrderHudRowKind::Cam => "cam",
-            OrderHudRowKind::Guard => "guard",
-            OrderHudRowKind::Breaker => "breaker",
-            OrderHudRowKind::Door => "door",
-            OrderHudRowKind::Light => "light",
-            OrderHudRowKind::Body => "body",
-            OrderHudRowKind::Objective => "objective",
-            OrderHudRowKind::Held => "held",
-            OrderHudRowKind::Wall => "wall",
-            OrderHudRowKind::Switch => "switch",
-            OrderHudRowKind::Charge => "charge",
-            OrderHudRowKind::Cancel => "cancel",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OrderHudRowOptsItem {
-    pub key: String,
-    pub text: String,
-    pub tone: Option<crate::orders::Tone>,
-    pub gone: Option<bool>,
-    pub lost: Option<crate::deathrecap::LostMan>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OrderHudMenu {
-    pub rows: Vec<crate::orders::OrderHudRow>,
-    pub primary: f64,
-    pub more: f64,
-    pub open: bool,
-    pub hint: String,
-    pub cancel: String,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FightLease {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -622,23 +468,7 @@ pub struct AIM {
     pub upper: crate::character::UpperMode,
 }
 
-#[derive(Clone, Debug)]
-pub enum SquadOrdersRecipientsT {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SquadOrdersRecipientsWho {
-    Num(f64),
-    All,
-    Red,
-    Blue,
-}
-
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum SquadOrdersMenSel {
     Num(f64),
     Guard(GuardId),
@@ -662,14 +492,6 @@ pub struct SquadOrdersSceneHitFirst {
 pub struct SquadOrdersSceneHit {
     pub t: f64,
     pub index: f64,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SquadOrdersGiveWho {
-    Num(f64),
-    All,
-    Red,
-    Blue,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -723,38 +545,6 @@ pub struct SquadOrdersAssignA {
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
 }
 
-#[derive(Clone, Debug)]
-pub enum SquadOrdersMenuTarget {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersHover {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersWhoAfterTPoint {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersStepWhoPoint {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersRingUpG {
     pub men: Vec<GuardId>,
@@ -767,23 +557,12 @@ pub struct SquadOrdersGoalPart {
     pub split: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadOrdersHintViewRing {
-    pub at: V3,
-    pub r: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersSeats {
     pub row: Vec<f64>,
     pub more: f64,
     pub over: Vec<f64>,
     pub same: Vec<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadOrdersOwnMarkFirstAskRetItem {
-    pub pos: V3,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -820,15 +599,6 @@ pub enum SquadOrdersRouteHow {
     Through,
     Mouth,
 }
-impl SquadOrdersRouteHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadOrdersRouteHow::Round => "round",
-            SquadOrdersRouteHow::Through => "through",
-            SquadOrdersRouteHow::Mouth => "mouth",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SquadOrdersRouteLock {
@@ -863,57 +633,6 @@ pub struct SquadOrdersWalkSendT {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SquadOrdersWalkSendOn {
-    pub post: Option<V3>,
-    pub going: String,
-    pub order: String,
-    pub face: Option<f64>,
-    pub there: String,
-    pub t0: Option<f64>,
-    pub follow: Option<f64>,
-    pub watch: Option<V3>,
-    pub door: Option<DoorId>,
-    pub strafe: Option<bool>,
-    pub stance: Option<crate::character::Stance>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub stack_side: Option<f64>,
-    pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub set_line: Option<String>,
-    pub group: Option<f64>,
-    pub set_said: Option<bool>,
-    pub goal: Option<V3>,
-    pub arrived: Option<bool>,
-    pub held_set: Option<bool>,
-    pub held_fire: Option<bool>,
-    pub arr_t: Option<f64>,
-    pub moved_t: Option<f64>,
-    pub light: Option<bool>,
-    pub low: Option<bool>,
-    pub yield_t: Option<f64>,
-    pub face_now: Option<f64>,
-    pub search: Option<bool>,
-    pub search_t: Option<f64>,
-    pub via: Option<Vec<V3>>,
-    pub anchor: Option<V3>,
-    pub mark: Option<V3>,
-    pub mark_t: Option<f64>,
-    pub had: Option<V3>,
-    pub back_n: Option<f64>,
-    pub shy: Option<DoorId>,
-    pub thru: Option<DoorId>,
-    pub via_for: Option<V3>,
-    pub via_t: Option<f64>,
-    pub pace: Option<f64>,
-    pub spare: Option<bool>,
-    pub from: Option<V3>,
-    pub foe: Option<GuardId>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub fit: Option<crate::roomfit::Fit>,
-    pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct SquadOrdersAsked {
     pub why: Option<String>,
     pub lock: Option<crate::orders::SquadOrdersAskedLock>,
@@ -926,33 +645,8 @@ pub struct SquadOrdersAskedLock {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SquadOrdersAskAsideOwn {
-    pub r: Option<JsMap<String, crate::orders::SquadOrdersReachedValue>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadOrdersAskAsideOwnR {
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct SquadOrdersWhoTag {
     pub tag: String,
-    pub one: bool,
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersHoverWordsT {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SquadOrdersMark {
-    pub at: V3,
-    pub text: String,
-    pub tone: Option<crate::orders::Tone>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -962,92 +656,41 @@ pub struct FarOff {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct OrdersMod {
-    /// (src/game/orders.ts:529 FOLLOW_WORD)
     pub follow_word: JsMap<OrdersAssignmentId, crate::orders::OrdersModFOLLOWWORDValue>,
 }
-impl OrdersMod {
-    pub fn blank() -> Self {
-        OrdersMod {
-            follow_word: JsMap::new(),
-        }
-    }
-}
 
-/// (src/game/orders.ts:114 NOWHERE: a table nothing writes)
 pub fn nowhere() -> V3 { [10000000.0, 0.0, 10000000.0] }
 
-/// (src/game/orders.ts:116 OWN_EPS)
 pub const OWN_EPS: f64 = 0.15;
 
-/// (src/game/orders.ts:118 IN_WAY_WORDS)
 pub const IN_WAY_WORDS: &str = "you're in the way.";
 
-/// (src/game/orders.ts:121 FUR_M)
 pub const FUR_M: f64 = 0.12;
 
-/// (src/game/orders.ts:123 BACK_TRIES)
 pub const BACK_TRIES: f64 = 2.0;
 
-/// (src/game/orders.ts:334 WHEEL_STEP)
 pub const WHEEL_STEP: f64 = 60.0;
 
-/// (src/game/orders.ts:336 ORDER_DIGITS)
 pub const ORDER_DIGITS: f64 = 5.0;
 
-/// (src/game/orders.ts:339 COMPASS: a table nothing writes)
-pub fn compass_table() -> Vec<String> { alloc::vec![String::from("south"), String::from("south-east"), String::from("east"), String::from("north-east"), String::from("north"), String::from("north-west"), String::from("west"), String::from("south-west")] }
-
-/// (src/game/orders.ts:425 WORD_HEAD)
-pub const WORD_HEAD: &str = "on your word";
-
-/// (src/game/orders.ts:2629 LOW: a table nothing writes)
 pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::character::Stance::LowReady, upper: crate::character::UpperMode::None } }
 
-/// (src/game/orders.ts:2630 AIM: a table nothing writes)
 pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim } }
 
-/// (src/game/orders.ts:2634 OFF_M)
 pub const OFF_M: f64 = 0.3;
 
-/// (src/game/orders.ts:2634 ROUND_ITER)
 pub const ROUND_ITER: f64 = 30000.0;
 
-/// (src/game/orders.ts:2634 MOUTH_M)
 pub const MOUTH_M: f64 = 0.8;
 
-/// (src/game/orders.ts:2636 SAME_PLUS_M)
 pub const SAME_PLUS_M: f64 = 2.0;
 
-/// (src/game/orders.ts:2637 SAMEWAY_BREAK)
-pub const SAMEWAY_BREAK: bool = false;
-
-/// (src/game/orders.ts:2638 SELFBODY_BREAK)
-pub const SELFBODY_BREAK: bool = false;
-
-/// (src/game/orders.ts:2639 FILEQUEUE_BREAK)
-pub const FILEQUEUE_BREAK: bool = false;
-
-/// (src/game/orders.ts:2640 PROPROUND_BREAK)
-pub const PROPROUND_BREAK: bool = false;
-
-/// (src/game/orders.ts:2662 ASIDECLEAR_BREAK)
-pub const ASIDECLEAR_BREAK: bool = false;
-
-/// (src/game/orders.ts:2663 TRAILDOORS_BREAK)
-pub const TRAILDOORS_BREAK: bool = false;
-
-/// (src/game/orders.ts:2679 ROUND_CAP)
-pub const ROUND_CAP: f64 = 1.6;
-
-/// (src/game/orders.ts:2679 ROUND_PLUS_M)
 pub const ROUND_PLUS_M: f64 = 3.0;
 
-/// (src/game/orders.ts:2681 ROUND_LESS)
 pub const ROUND_LESS: f64 = 0.5;
 
-/// (src/game/orders.ts:2695 DOOR_SAID: a table nothing writes)
 pub fn door_said() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("n"), String::from("north")); t.set(String::from("s"), String::from("south")); t.set(String::from("e"), String::from("east")); t.set(String::from("w"), String::from("west")); t.set(String::from("ne"), String::from("north-east")); t.set(String::from("nw"), String::from("north-west")); t.set(String::from("se"), String::from("south-east")); t.set(String::from("sw"), String::from("south-west")); t.set(String::from("ext"), String::from("outside")); t.set(String::from("breakroom"), String::from("break room")); t.set(String::from("mgr"), String::from("manager's")); t } }
 
 use crate::game::Game;

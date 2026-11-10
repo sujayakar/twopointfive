@@ -1,4 +1,4 @@
-// The GPU smoke simulation (smoke.wgsl has the design; docs/internal/sparse-smoke.md the record): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
+// The GPU smoke simulation (smoke.wgsl has the design): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
 // smoke is, out of one pool. Nothing is placed, refused, recycled, migrated or retired on the CPU — an emitter is handed to the GPU in world coordinates and the GPU makes the bricks it
 // needs. Exposes a SmokeBinding for the renderer. (Until 2026-10 this file was eight 64³ boxes placed by the CPU: git history has them.)
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
@@ -14,7 +14,7 @@ import { sysRandom } from '../math/dice';   // the mixer / the solver draw the S
 import { DUST_DRAW } from './dustTint';
 import { lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
-// WIND (rust/game_rules/src/wind): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
+// WIND (rust/game_rules/src/air/wind.rs): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
 import windForceSrc from './wind_force.wgsl' with { type: 'text' };
 
@@ -25,7 +25,7 @@ export interface SmokeParams {
   /** density × of CANISTER smoke as it is let out, and of everything else — muzzle gas, impact / destruction dust puffs (08-13, the maintainer: at the plumes' 1.6× 'there's way too much that
    *  shows up on bullet impact') */
   densityScale: number; fxDensityScale: number;
-  /** how fast the coarse lattice is bent toward the game's own smoke (smoke.wgsl THE GAME'S SMOKE): × the square of the difference in what a metre and a half of it hides, a second. 0 = not at all */
+  /** how fast the coarse lattice is bent toward the game's own smoke (smoke.wgsl THE GAME'S SMOKE): × the difference in what a metre and a half of it hides, a second. 0 = not at all */
   bend: number;
   /** …and how hard it is drawn toward where the game has more of it, m²/s² */
   pull: number;
@@ -40,7 +40,7 @@ export interface SmokeParams {
    *  between two steps you SEE nothing in it has moved more than this (½: 3.1 cm on the coarse lattice). 0 = never waits in sight. Out of sight the allowance is `sparse.farCells`. */
   calmCells: number;
 }
-export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, stirConf: 2.0, densityScale: 1.3, fxDensityScale: 1.0, bend: 3, pull: 6, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
+export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, stirConf: 2.0, densityScale: 1.3, fxDensityScale: 1.0, bend: 1.5, pull: 6, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
 
 const MAX_EMITTERS = 64, EMITTER_WORDS = 16;
 const SP_HEADER_WORDS = 44, SP_LEVEL_WORDS = 16, SP_DIRTY_WORDS = 64, SP_WINDB_WORDS = 32;
@@ -51,7 +51,7 @@ const MAX_SEALERS = 32, SEAL_BYTES = 16 + MAX_SEALERS * 32, SEAL_MOVE = 0.03, SE
 const MAX_DIRTY = 8;
 const META_STRIDE = 42, A_HEADER = 32, M_HEADER = 16, STAT_WORDS = 64;
 /** the game's smoke, behind the pool's records (smoke.wgsl M_BENT): the head, a word a place of the plan, a row a brick */
-const BENT_HEAD = 16, BENT_PLAN = 512, BENT_ROW = 160, BENT_WORDS = BENT_HEAD + BENT_PLAN * (1 + BENT_ROW);
+const BENT_HEAD = 16, BENT_PLAN = 512, BENT_ROW = 161, BENT_WORDS = BENT_HEAD + BENT_PLAN * (1 + BENT_ROW);
 const LEGACY_PUSH = 25, LINE_MOST = 4 /* m: the longest stretch of a line one emitter carries (push) */, DT_MIN = 1 / 2000, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one step of a brick that waited integrates */, OMEGA_MIN = 1.0, OMEGA_MAX = 1.95, PAIRS_MAX = 16;
 /** steps that take the game's smoke whole, one after another ahead of one frame (each leaves a share of the difference: it is shaded between bricks) */
 const WHOLE_STEPS = 6;
@@ -120,6 +120,7 @@ export class SmokeSystem implements SmokeSystemLike {
   private epoch = 0;           // bumped by anew: a read-back in flight across one is dropped
   private needsReset = true; private needsWipe = true;
   private bentAt = 0; private bentMade = -1; private bentPlan = 0; private bentRows = 0;   // the game's smoke as last handed over: which making of it (−1 = none since the last anew), the places of its plan, the bricks that stand
+  private bentDyed = false;    // …and is any of it colored
   private dirty: { lo: Vec3; hi: Vec3 }[] = []; private bakeAll = false;
   private sealed = new Map<Box, SealPose>();
 
@@ -234,7 +235,7 @@ export class SmokeSystem implements SmokeSystemLike {
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
   budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
   drawing(): boolean { return this.params.enabled && !this.params.frozen && (this.engine.settings.flags & FrameFlags.Smoke) !== 0; }
-  /** A ROUND THROUGH SMOKE (the smoke lab's rows; rust/game_rules/src/combat asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
+  /** A ROUND THROUGH SMOKE (the smoke lab's rows; rust/game_rules/src/guns/combat asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
@@ -250,9 +251,9 @@ export class SmokeSystem implements SmokeSystemLike {
   get queue(): GPUQueue { return this.engine.device.queue; }
   /** THE GAME'S SMOKE, as it lies where the game left it: `rows(buffer, plan, bricks)` sends the plan's words and the bricks' rows to these places (bytes) of the buffer. Asked for when `made`
    *  is another than the one held */
-  bent(made: number, wide: number, deep: number, bricks: number, rows: (buffer: GPUBuffer, plan: number, bricks: number) => void) {
+  bent(made: number, wide: number, deep: number, bricks: number, dyed: () => boolean, rows: (buffer: GPUBuffer, plan: number, bricks: number) => void) {
     if (made === this.bentMade) return;
-    this.bentMade = made; this.bentPlan = Math.min(wide * deep, BENT_PLAN); this.bentRows = bricks;
+    this.bentMade = made; this.bentPlan = Math.min(wide * deep, BENT_PLAN); this.bentRows = bricks; this.bentDyed = dyed();
     this.engine.device.queue.writeBuffer(this.M, this.bentAt * 4, new Uint32Array([wide, deep]));
     rows(this.M, (this.bentAt + BENT_HEAD) * 4, (this.bentAt + BENT_HEAD + BENT_PLAN) * 4);
   }
@@ -260,7 +261,7 @@ export class SmokeSystem implements SmokeSystemLike {
   shutCans() { for (const e of this.emitters) if (e.kind === 'vent' || e.kind === 'canister') e.ttl = Math.min(e.ttl, e.age); }
   /** WHAT IS DRAWN IS ANOTHER MOMENT'S than the game's (a load, a restart, a place sought on a tape, a game joined, the smoke cleared): all of it is let go of, and the game's smoke is taken
    *  whole in the next frame drawn */
-  anew() { this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
+  anew() { this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.bentDyed = false; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
   /** nothing is drawn yet and the game has smoke: the next frame takes it whole, whether or not time goes by in it */
   private whole(): boolean { return this.needsReset && this.bentRows > 0 && this.params.bend > 0 && !this.params.frozen; }
   private again = false; private skipWas = false;
@@ -304,7 +305,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const on = this.params.enabled && this.live() && (!this.needsReset || this.whole());
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
-    this.binding.dusty = DUST_DRAW.on && on && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
+    this.binding.dusty = DUST_DRAW.on && on && (this.bentDyed && this.params.bend > 0 || this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
     if (!on) { this.pushes.length = 0; if (this.stats.pool && this.params.enabled) this.zeroStats(); }   // (switched off the pool still holds what it held, and nothing would read the counts back while the world stands still: they stand, so `dusty` is right the frame it is switched on again)
   }
 
@@ -366,7 +367,7 @@ export class SmokeSystem implements SmokeSystemLike {
     for (const s of this.windNear()) {
       const o = (WIND_HDR_BYTES + n * WIND_SRC_BYTES) / 4;
       if (s.kind === 'storm') {
-        const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, rust/game_rules/src/wind WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
+        const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, rust/game_rules/src/air/wind.rs WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
         for (let k = 0; k < 8; k++) wf[4 + k] = R?.[2 + (k >> 2)]?.[k & 3] ?? 0;
         wf[o] = I[0]; wf[o + 1] = I[1]; wf[o + 2] = I[2]; wf[o + 3] = I[3]; wf[o + 4] = s.dir[0]; wf[o + 5] = s.dir[1]; wf[o + 6] = s.dir[2]; wf[o + 7] = s.speed;
         wf[o + 8] = A[0]; wf[o + 9] = A[1]; wf[o + 10] = A[2]; wf[o + 11] = A[3]; wu[o + 12] = 1;

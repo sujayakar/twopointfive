@@ -3,7 +3,7 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what kind of source an emitter is, for the host's solver (smoke/types.ts:15 SmokeEmitter.kind)
+/// what kind of source an emitter is, for the host's solver
 #[derive(Clone, Copy, Debug, Default)]
 pub enum SmokeEmitterKind {
     #[default] Flash,
@@ -46,7 +46,6 @@ pub struct SmokeEmitter {
     pub lattice: Option<crate::smoke_types::SmokeEmitterLattice>,
     pub confined: Option<bool>,
     pub prio: Option<f64>,
-    pub anchor: Option<V3>,
     pub min_voxels: Option<f64>,
     pub look: Option<bool>,
     /// the game's own smoke holds what it lets out (said as it goes out to the host: out_events)
@@ -59,14 +58,6 @@ pub struct SmokeEmitter {
 pub enum SmokeEmitterMode {
     Burst,
     Jet,
-}
-impl SmokeEmitterMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SmokeEmitterMode::Burst => "burst",
-            SmokeEmitterMode::Jet => "jet",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -86,19 +77,10 @@ pub enum SmokePushLattice {
     Fine,
     Coarse,
 }
-impl SmokePushLattice {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SmokePushLattice::Fine => "fine",
-            SmokePushLattice::Coarse => "coarse",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct WindGpuSource {
     pub kind: crate::smoke_types::WindGpuSourceKind,
-    pub name: String,
     pub pos: V3,
     pub dir: V3,
     pub speed: f64,
@@ -107,9 +89,6 @@ pub struct WindGpuSource {
     pub r0: f64,
     pub d_max: f64,
     pub floor_y: Option<f64>,
-    pub interior: Option<[f64; 4]>,
-    pub annex: Option<[f64; 4]>,
-    pub roofs: Option<Vec<Vec<f64>>>,
     pub field: Option<bool>,
     pub bound: crate::smoke_types::WindGpuSourceBound,
     pub kinds: Option<f64>,
@@ -120,14 +99,6 @@ pub struct WindGpuSource {
 pub enum WindGpuSourceKind {
     #[default] Jet,
     Storm,
-}
-impl WindGpuSourceKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WindGpuSourceKind::Jet => "jet",
-            WindGpuSourceKind::Storm => "storm",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -150,5 +121,4 @@ pub struct SmokeSystemLike {
     pub params: Option<crate::smoke_types::CanisterParams>,
 }
 
-/// (src/smoke/types.ts:56 WIND_GPU_MAX)
 pub const WIND_GPU_MAX: f64 = 8.0;

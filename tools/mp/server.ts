@@ -7,7 +7,7 @@
 //   MP_GAME      the game's id (default 'local')
 //   MP_SETUP     THE SETUP RECORD as JSON, the one a host's page hands the control plane and the control plane hands on:
 //                  scenario  the mission's page address ("?roomclear&squad4", "?rescue&levelFile=consulate.json")       seed  the die, a whole number
-//                  knobs     {commands}: what the host has set before the game is made, as commands' bytes in base64 (none: what the address says)     seats one entry a seat
+//                  knobs     {kept}: what the host's machine keeps, as its one text (none: nothing)     seats one entry a seat
 //                  seatKeys  one key a seat: a player proves his seat with it. As many as the stood game has seats      build, game  as MP_BUILD, MP_GAME
 //                or {start, seatKeys} where whoever made the game already has one
 //   MP_SEATKEYS  the seat keys, comma separated, where the record carries none
@@ -39,17 +39,17 @@ const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'
 let stood: Stood, start: NetStart;
 try {
   const knobs: unknown = asked.knobs ?? {}; if (typeof knobs !== 'object' || knobs === null || Array.isArray(knobs)) throw new Error('the setup\'s knobs are not an object');
-  const { commands, ...other } = knobs as { commands?: unknown };
-  if (Object.keys(other).length) throw new Error(`a host's settings are handed over as commands, not as ${Object.keys(other).join(', ').slice(0, 80)}`);
-  if (commands !== undefined && typeof commands !== 'string') throw new Error('the setup\'s commands are not bytes');
-  start = asked.start ?? freshStart({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), commands });
+  const { kept, ...other } = knobs as { kept?: unknown };
+  if (Object.keys(other).length) throw new Error(`a host's settings are handed over as what it keeps, not as ${Object.keys(other).join(', ').slice(0, 80)}`);
+  if (kept !== undefined && typeof kept !== 'string') throw new Error('what the setup says the host keeps is not a text');
+  start = asked.start ?? freshStart({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), kept });
   stood = await standStart(start);
 } catch (e) { console.error(`server.ts: ${(e as Error).message}`); process.exit(1); }
 const seatsN = stood.seats;
 const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter((k): k is string => typeof k === 'string' && k !== '') : (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
 if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
-const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended(), ...(E.MP_CONTROL ? { ask: () => beat() } : {}) },
+const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), ended: () => stood.ended(), ...(E.MP_CONTROL ? { ask: () => beat() } : {}) },
   { game, build, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat

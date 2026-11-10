@@ -1,7 +1,7 @@
 // PRICE EVERY LEVEL (`?pricelevels` on the look page's address): one address, hands off, and the machine it ran on has said what the look costs it on
 // every level the mission list draws (the maintainer, 11-03: "we'll want to dress up all the levels and check their budget"; 11-02: "the main thing i'm concerned
 // about before merging is performance", "we're going to need to run the tests across more than just the pass"). A level is only ever loaded at boot
-// (scene/scenarioList.ts), so a run is a chain of page loads, as the benchmark's is a page a scene (ui/benchrun.ts): a small record in the tab's own session store
+// (rust/game_types/src/scene_scenario_list), so a run is a chain of page loads, as the benchmark's is a page a scene (ui/benchrun.ts): a small record in the tab's own session store
 // carries the rows measured so far from one page to the next. The last page shows the table in a box with a Copy button, and the whole run is ONE file
 // (price-levels-<date>.json) that leaves by the page's one door (host/savefile.ts): to whoever listens there, and to the browser's downloads where the
 // address that asked says `downloads=1` (the run carries that word). Where neither took it the card says so and holds the file's own text under the table,
@@ -54,11 +54,10 @@
 //   `&pricelive=N` = the world runs to second N before its read (default PRICE.runS; 0 = held pictures only). THE LOOK'S OWN WORDS on the address that asked (`look=walls:0`, `longfoot=0` …) ride on every page
 //   of the run, with the trials this machine's look panel keeps off, as the benchmark carries them (ui/benchrun.ts): the file says which look was priced.
 //   A reload in the middle does not start it again (the page finds its own mark and is a plain mission page); Esc stops a run.
-// THE PAGE'S HALF IS ONE LINE (host/drawpage.ts, before the boot): `if (priceLevelsPage(q)) return;`. Everything else is asked of what the page already puts on `window`
+// THE PAGE'S HALF IS ONE LINE (host/drawpage.ts, once the module answers and before the picture boots): `if (priceLevelsPage(q)) return;`. Everything else is asked of what the page already puts on `window`
 // for its checks (__ready, __engine, __game, __quality, __perfsweep, __boot): this file adds no hook and no state to the game.
-import { listedLevels } from '../scene/scenarioList';
+import { desk } from '../view/desk';
 import { pacer } from '../host/pace';
-import { scenarioQuery } from '../scene/scenarios';
 import { lookTrialsKept } from '../scene/look';
 import { HELD_LADDER_WORD, HELD_WINDOW_WORD, PRICE_ASK_WORDS, PRICE_LEVELS_WORD, PRICE_RUN_WORD } from '../host/runpage';
 import { PRESENT_PASSES, RENDER_PASSES, SURFACE_PASS } from '../gpu/timer';
@@ -71,7 +70,7 @@ const KEY = 'twopointsix.pricelevels';
 export const PRICE_KEY = PRICE_LEVELS_WORD, PRICE_RUN_KEY = PRICE_RUN_WORD;
 /** the render passes, which the GPU's busy span leaves out everywhere on the page · the one of them the look's surface layers are shaded in: its stamp is
  *  printed beside and is inside `all` · and the ones that draw to the display, which `all` leaves out on every machine (gpu/timer.ts has all three and why) */
-const DRAWN = [...RENDER_PASSES], SURFACE = SURFACE_PASS, PRESENTS = [...PRESENT_PASSES];
+const DRAWN = RENDER_PASSES, SURFACE = SURFACE_PASS, PRESENTS = PRESENT_PASSES;
 export const PRICE = {
   /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held. ONE WAY, on every page: the page's loop is held from before its boot and
    *  the mission is played in fixed sixtieths by the page's own scripted step (host/drawpage.ts `__runFrames`), ONE STEP A DISPLAY FRAME, EVERY STEP DRAWN, to exactly
@@ -179,7 +178,8 @@ const clear = (): void => { try { sessionStorage.removeItem(KEY); } catch { /* n
 
 /** THE LEVELS A RUN WALKS: every level a drawn row of the mission list plays on, in the list's order, each with the first row that plays on it */
 export function priceLevels(): { level: string; mission: string; title: string; hour: string; query: string }[] {
-  return listedLevels().map(({ level, rows: [e] }) => ({ level, mission: e.id, title: e.title, hour: e.hour ?? 'night', query: scenarioQuery(e) }));   // (scene/scenarioList.ts: the one answer to which levels the list draws)
+  const drawn = desk().missions().rows.filter(m => m.kind !== 'solo' && !m.offList);
+  return drawn.filter((m, i) => drawn.findIndex(x => x.level === m.level) === i).map(m => ({ level: m.level.replace(/\.json$/, ''), mission: m.id, title: m.title, hour: m.hour || 'night', query: m.link }));
 }
 /** THE LOOK PAGE'S WORDS a run carries: the address's own look word as it was written (the bare `look` where it has none: a run prices the look), the other
  *  words that page reads once at boot, and the trials this machine's look panel keeps off said as the address would say them (scene/look.ts; the benchmark
@@ -212,7 +212,7 @@ export function priceOverruled(search: string, level: string, quality: string, l
   return [...new Set([...asked.keys()])].filter(k => k && !PRICE_ASK_WORDS.includes(k) && k !== PRICE_RUN_KEY && own.has(k) && own.get(k) !== asked.get(k)).map(k => `${k}${asked.get(k) ? `=${asked.get(k)}` : ''} (the pages have ${k}${own.get(k) ? `=${own.get(k)}` : ''})`);
 }
 
-/** THE PAGE'S ONE LINE, before its boot. True = this address asked for a run and the first level's address is loading: boot nothing. False = boot as ever; on a
+/** THE PAGE'S ONE LINE, before its picture boots. True = this address asked for a run and the first level's address is loading: boot nothing. False = boot as ever; on a
  *  level's page of a run under way the page's part of it starts by itself once the page is ready. */
 export function priceLevelsPage(q: URLSearchParams, loc: Location = location): boolean {
   if (q.has(PRICE_KEY) && !q.has(PRICE_RUN_KEY)) {
@@ -239,7 +239,7 @@ export function priceLevelsPage(q: URLSearchParams, loc: Location = location): b
   return false;
 }
 
-// ---- shader programs made, counted from before the device exists (the page's one line runs before its boot)
+// ---- shader programs made, counted from before the device exists (the page's one line runs before its picture boots)
 const made = { n: 0 };
 function countPrograms() {
   const P = typeof GPUDevice === 'function' ? GPUDevice.prototype as unknown as Record<string, (...a: unknown[]) => unknown> : null; if (!P) return;
@@ -250,7 +250,7 @@ function countPrograms() {
 interface PageHooks { __prewarm?: () => boolean; /** the page's warm-up has cleared what it threw in (host/drawpage.ts; undefined: a build without the word) */ __prewarmed?: boolean; __perfrec?: { commit?: string };
   __ready?: Promise<unknown>; __timeScale?: number; __pauseLoop?: boolean; __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean | 'none') => void; __menu?: { isOpen?: boolean }; __game?: { time: number; /** the mission's own word: its stage, whether the alarm is on, and its count of alarm episodes (someone went to alert while nobody was) */ mission?: { stage?: string; alarmOn?: boolean; stats?: { alerts?: number } } };
   __engine?: { width: number; height: number; outWidth: number; outHeight: number; settings: { renderScale: number; sharpDirect?: boolean; maxInternalHeight?: number; gatherThird?: boolean; volQuarter?: boolean }; gpu?: { adapterInfo?: string; adapterFallback?: boolean }; device?: { queue: { onSubmittedWorkDone(): Promise<unknown> } };
-    timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: string[]): number } };
+    timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: readonly string[]): number } };
   __quality?: { label: string; calibrating: boolean; displayHz?: number; displayHzPin?: number; /** the preset standing · auto: it moves by itself · the ladder's switch (the menu's "Hold frame rate") · a preset's rows put on */ current?: string; auto?: boolean; adaptive?: boolean; apply?: (name: string) => void; /** the ladder's sample of a frame (a method of its class: an own one put over it stands in until it is deleted) */ sample?: (dt: number, gpuMs?: number) => void };
   __perfsweep?: { extra?: { id: string; flip(): string | { apply(): () => void } }[] };
   __boot?: { line?: string };

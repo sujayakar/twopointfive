@@ -3,7 +3,7 @@
 import type { WireCmd, Outcome } from './wire';
 import { NET } from './wire';
 import type { Ahead } from './foresee';
-import { NET_WORD_SEED, foldWhole, foldWord, wordTick } from './words';
+import { NET_WORD_SEED, foldWord, wordTick } from './words';
 
 /** a record's numbers, as the module is handed them (rust/game_face net.rs RECORD) */
 const RECORD = 18;
@@ -31,7 +31,7 @@ export function recordTo(N: Float64Array, at: number, w: WireCmd): string {
 export class NetGame {
   /** ticks stepped */
   ticks = 0;
-  private w = NET_WORD_SEED; private wide: string | null = null; private names: string[] | null = null;
+  private w = NET_WORD_SEED; private names: string[] | null = null;
   private enc = new TextEncoder(); private dec = new TextDecoder();
 
   constructor(private readonly X: NetFace, private readonly memory: WebAssembly.Memory, readonly h: number) { X.face_networked(h); }
@@ -51,18 +51,16 @@ export class NetGame {
   step(cmds: readonly WireCmd[]): void {
     const X = this.X, h = this.h;
     cmds.forEach((c, seat) => this.handed([c], (p, n, k, kn) => X.face_record(h, seat, p, n, k, kn)));
-    X.face_step(h, 1 / NET.hz, 0);   // (the saves and a rails level's view are a game of one's)
-    this.w = foldWord(this.w, X.face_die_n(h), this.parts());
-    if (wordTick(this.ticks++)) this.wide = foldWhole(this.whole().words);
+    X.face_step(h, 1 / NET.hz, 0);   // (the saves are a game of one's)
+    this.w = foldWord(foldWord(this.w, [X.face_die_n(h)]), this.parts());
+    if (wordTick(this.ticks++)) this.w = foldWord(this.w, this.whole().words);
   }
   private parts(): Uint32Array { const p = this.X.face_part_hashes(this.X.face_slot(this.h)) >>> 0, n = this.X.face_parts(); return new Uint32Array(this.memory.buffer, p, n); }
   /** what the ticks told their host is let go */
   clear(): void { this.X.face_out_clear(this.h); }
-  /** the chained state word after the last tick */
+  /** the state word after the last tick (words.ts) */
   word(): string { return this.w.toString(36); }
-  /** the WHOLE game's word after the last word tick (null before the first): every machine of the game started it alike, so every part of it is in the word */
-  watch(): string | null { return this.wide; }
-  /** the whole game's words, one a part, with the parts' names; after them the state word's own, as `block.<part>` */
+  /** the whole game's words, one a part; `named`: with the parts' names, and after them what is in the word of every tick, as `block.<part>` */
   whole(named = false): { names: string[]; words: number[] } {
     const X = this.X; X.face_state_words(this.h); const b = this.out().slice(), words = Array.from(new Uint32Array(b.buffer));
     if (!named) return { names: [], words };

@@ -1,6 +1,6 @@
 //! The types of `rearwatch`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -11,7 +11,6 @@ pub struct RearPin {
     pub side: f64,
     pub op: Option<DoorOpId>,
     pub cls: f64,
-    pub t0: f64,
     pub seen_t: f64,
     pub a: OrdersAssignmentId,
     pub going: Option<bool>,
@@ -27,10 +26,6 @@ pub struct RoomKeep {
     pub out_t: f64,
     pub behind: Option<Vec<GuardId>>,
     pub at: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RoomKeepRoom {
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -53,10 +48,6 @@ pub struct BookShutValue {
     pub at: V3,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BookShutValueRoom {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct Group {
     pub op: Option<DoorOpId>,
@@ -77,17 +68,9 @@ pub struct RearWaysItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RearwatchMod {
-    /// (src/game/rearwatch.ts:106 books)
     pub books: JsMap<PlayerId, crate::rearwatch::Book>,
-}
-impl RearwatchMod {
-    pub fn blank() -> Self {
-        RearwatchMod {
-            books: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -104,23 +87,10 @@ pub struct RearwatchStats {
     pub room_far: i32,
 }
 
-/// (src/game/rearwatch.ts:109 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/rearwatch.ts:109 CHEST)
 pub const CHEST: f64 = 1.1;
 
-/// (src/game/rearwatch.ts:110 PRE: a table nothing writes)
-pub fn pre() -> Vec<String> { alloc::vec![String::from("stack"), String::from("ready"), String::from("place"), String::from("standoff"), String::from("armed")] }
-
-/// (src/game/rearwatch.ts:110 GOING: a table nothing writes)
-pub fn going() -> Vec<String> { alloc::vec![String::from("kick"), String::from("toss"), String::from("fuse"), String::from("wait"), String::from("enter")] }
-
-/// (src/game/rearwatch.ts:112 SLOW: a table nothing writes)
-pub fn slow() -> Vec<String> { alloc::vec![String::from("toss"), String::from("fuse"), String::from("wait")] }
-
-/// (src/game/rearwatch.ts:112 FORMED_M)
 pub const FORMED_M: f64 = 1.5;
 
-/// (src/game/rearwatch.ts:239 FALLING)
 pub const FALLING: &str = "falling in";

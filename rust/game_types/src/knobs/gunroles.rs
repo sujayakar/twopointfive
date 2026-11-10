@@ -17,8 +17,8 @@ pub struct GunrolesK {
     #[k(4.0)] pub pistol_near: f64,
     #[k(0.5)] pub pistol_share: f64,
     #[k(0.25)] pub pistol_max: f64,
-    /// the cover's deal: what a far opening is worth to a long gun over a short one, on that deal's scale (cover.ts: a kept opening's `sticky` is 1.2)
+    /// the cover's deal: what a far opening is worth to a long gun over a short one, on that deal's scale
     #[k(0.6)] pub lane_k: f64,
-    /// orders.ts pair: what a room gun standing behind a long gun in the stack costs, in metres of walking (a pair kept in one file is worth 1000)
+    /// What a room gun standing behind a long gun in the stack costs, in metres of walking (a pair kept in one file is worth 1000)
     #[k(400.0)] pub file_cost: f64,
 }

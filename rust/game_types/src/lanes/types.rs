@@ -1,9 +1,9 @@
 //! The types of `lanes`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a walk's price list, nav.findPath's penalty: a cell of the mask costs `dear`, any other 1, or at least the pursuit tactics' price where there is one; a man the rule leaves alone pays the tactics' price alone (lanes.ts priceOf, lanePenalty)
+/// a walk's price list, nav.findPath's penalty: a cell of the mask costs `dear`, any other 1, or at least the pursuit tactics' price where there is one; a man the rule leaves alone pays the tactics' price alone
 #[derive(Clone, Debug)]
 pub enum LanePenalty {
     Dear { m: Vec<u8>, w: f64, dear: f64 },
@@ -18,14 +18,12 @@ pub struct Lane {
     pub at: V3,
     pub dx: f64,
     pub dz: f64,
-    pub t0: f64,
     pub last_t: f64,
     pub until: f64,
     pub weight: f64,
     pub downs: f64,
     pub known: bool,
     pub known_at: f64,
-    pub look_at: f64,
     pub guns: Vec<V3>,
     pub saw: JsMap<GuardId, f64>,
     pub knowers: JsSet<GuardId>,
@@ -56,7 +54,6 @@ pub struct LaneRe {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LaneCan {
-    pub who: f64,
     pub t: f64,
     pub land: V3,
 }
@@ -75,15 +72,6 @@ pub enum FlankPhase {
     #[default] Set,
     Go,
     Walk,
-}
-impl FlankPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FlankPhase::Set => "set",
-            FlankPhase::Go => "go",
-            FlankPhase::Walk => "walk",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -104,14 +92,6 @@ pub struct Peek {
 pub enum PeekPhase {
     #[default] Out,
     Back,
-}
-impl PeekPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PeekPhase::Out => "out",
-            PeekPhase::Back => "back",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -209,7 +189,6 @@ pub struct StateStats {
     pub pin_rounds: f64,
     pub pin_lost: f64,
     pub sets: f64,
-    pub goes: f64,
     pub frags: f64,
     pub frag_lost: f64,
     pub frag_kept: f64,
@@ -230,36 +209,6 @@ pub struct StateNearItem {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct LanesSave {
-    pub serial: f64,
-    pub lanes: Vec<crate::lanes::LanesSaveLanesItem>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LanesSaveLanesItem {
-    pub id: f64,
-    pub from: Vec<f64>,
-    pub at: Vec<f64>,
-    pub t0: f64,
-    pub last_t: f64,
-    pub until: f64,
-    pub weight: f64,
-    pub downs: f64,
-    pub known: bool,
-    pub known_at: f64,
-    pub guns: Vec<Vec<f64>>,
-    pub wedges: Vec<Vec<f64>>,
-    pub round_at: f64,
-    pub stun_at: f64,
-    pub who: Option<Vec<f64>>,
-    pub peek_at: Option<f64>,
-    pub peek_n: Option<f64>,
-    pub peek_part: Option<f64>,
-    pub frag_at: Option<f64>,
-    pub e: Option<f64>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Stepper {
     pub gd: GuardId,
@@ -272,38 +221,10 @@ pub enum FragPlace {
     Edge,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LanesListItem {
-    pub id: f64,
-    pub from: V3,
-    pub at: V3,
-    pub known: bool,
-    pub weight: f64,
-    pub downs: f64,
-    pub cells: f64,
-    pub until: f64,
-    pub push_until: f64,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LanesMod {
-    /// (src/game/lanes.ts:213 states)
     pub states: Option<crate::lanes::State>,
 }
-impl LanesMod {
-    pub fn blank() -> Self {
-        LanesMod {
-            states: None,
-        }
-    }
-}
 
-/// (src/game/lanes.ts:156 LANES_DEFAULTS: a table nothing writes)
-pub fn lanes_defaults() -> crate::knobs::LanesK { crate::knobs::LanesK::page() }
-
-/// (src/game/lanes.ts:220 SIDE)
-pub const SIDE: &str = "hostile";
-
-/// (src/game/lanes.ts:589 SPOT_RING)
 pub const SPOT_RING: f64 = 0.7;

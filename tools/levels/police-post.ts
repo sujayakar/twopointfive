@@ -79,13 +79,13 @@
 // The polish pass (10-10): the lock graph and the ring; the corridor man on every set; the impound; the breaker moved; the generator man's and the man off
 // watch's waits; the tripwire retired; the whole post rebuilt in the GWOT look kit on the same wall lines, blockers and lights.
 //
-// LIMITS IT IS BUILT INSIDE: the world is 40 × 28 m, the wall stands on x 4 / 36, z 4 / 24 and the 4 m outside it is the approach. rust/game_rules/src/needs NEED_SPOTS and
-// rust/game_rules/src/qrf QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
+// LIMITS IT IS BUILT INSIDE: the world is 40 × 28 m, the wall stands on x 4 / 36, z 4 / 24 and the 4 m outside it is the approach. rust/game_rules/src/people/needs.rs NEED_SPOTS and
+// rust/game_rules/src/pursuit/qrf QRF_MARKS are the office's coordinates on this base. In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, levels stands, the scripted solo night); nobody has looked at it on a GPU.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { SurfacesData } from './lib/levelData';
-import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
+import type { LevelScenarios, QuietData, Rect, ResponseData } from './lib/scenarios';
 import { officeKit, normalize3, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from './lib/gwotKit';
 import type { MarkFace, MarkPal } from '../../src/scene/markings';
@@ -112,7 +112,7 @@ export const POST_ROOMS: Record<'cells' | 'armoury' | 'radio' | 'office' | 'corr
 const R = POST_ROOMS;
 /** the level's own names for the floor no spot is in (scenarios.places: a radio line, a checkpoint row and the debrief say WHERE by these — rooms first,
  *  then the yards; a point in two is the first listed). THE MAST and THE IMPOUND are the two a man would say on the radio. */
-/** what a row calls the doors (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the level lists no rooms, so the gates are named by what is behind them
+/** what a row calls the doors (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the level lists no rooms, so the gates are named by what is behind them
  *  (the impound's as RESPONSE names it) and the outbuildings' and the block's own outside doors by what they are */
 const DOOR_NAMES = [{ door: 'gate_e', name: 'impound gate' }, { door: 'gate_n', name: 'motor pool gate' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'side_e', name: 'corridor end door' }, { door: 'store_e', name: 'store back door' }, { door: 'shed_e', name: 'generator shed door' }, { door: 'hut_w', name: 'gate hut door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }];
 const PLACES = { areas: [
@@ -145,7 +145,7 @@ export const POST_ROUTES: PatrolRoute[] = [
   { name: 'generator', keys: [], points: [[21.3, 0, 16.8], [14.0, 0, 20.6], [7.6, 0, 21.4]], wait: [25, 0, 20] },   // (by his own cot: no two men begin on one spot)
   // THE DESK MAN — THE KEYS: behind the counter, at the cabinet, across the room to try the corridor door's handle (he never opens it: tried as desk ↔
   // cells, he came out of that door three metres from the armoury's and looked down the lit end of the corridor at the porch), then out of the front door
-  // for a look at the gate. His is the only ring: the stop by the 'duty' door is what puts a keyed door on his beat (rust/game_rules/src/dialogue keyed_door_on, 2.5 m)
+  // for a look at the gate. His is the only ring: the stop by the 'duty' door is what puts a keyed door on his beat (rust/game_rules/src/speech/dialogue keyed_door_on, 2.5 m)
   // HIS JOB: 25 s facing east over the counter with the front door, the duty door and the bunk-room door in his cone; 14 s at the filing cabinet in the
   // north-west corner with his back to the room (THE GRAB); the handle; the porch
   { name: 'desk', keys: ['post'], points: [[13.7, 0, 16.4], [14.5, 0, 16.4], [14.0, 0, 15.5], [18.3, 0, 15.5], [16.9, 0, 19.8]], wait: [0, 25, 14, 5, 6] },
@@ -191,7 +191,7 @@ export const QUIET: QuietData = {
 /** QUIET_VARIANT=spot,patrolSet,start — CHECKING ONLY: that deal, with level.routes cut down to the one set, written to levels/police-post-v<spot><set><start>.json
  *  (a scratch file, not committed) so the scripted player can be run against one deal. Unset = the committed file: spot 0, start 0, all six routes. */
 const VARIANT = process.env.QUIET_VARIANT ? process.env.QUIET_VARIANT.split(',').map(x => Number(x) || 0) : null;
-/** scenarios.response (rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
+/** scenarios.response (rust/game_rules/src/pursuit/qrf, rust/game_start/tests/response_team.rs): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
  *  stride inside it; yaws are Character yaws (forward = [sin, 0, cos]: Math.PI looks up the plan, toward the building). */
 export const RESPONSE: ResponseData = {
   why: 'A district post with a radio room and an army picket down the road: shots here are heard on a net somebody answers, and the picket walks in by a gate.',
@@ -430,7 +430,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   ceilingPanel(24.5, 22.6, true, 'hut', false, 0.4, 0.4, [4, 3.4, 2.4]);
   switchables[switchables.length - 1].mains = false;                                    // the lantern: the hut is lit through a blackout
 
-  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/game rack_targets: the switchables named rack<rackIndex>_leds) — a tell-tale on each holder ----------------
+  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/tick/game rack_targets: the switchables named rack<rackIndex>_leds) — a tell-tale on each holder ----------------
   grp('objective');
   for (const s of QUIET.spots) { const f = s.front, led = add({ c: [f[0] + 0.2, 1.45, f[2] + 0.006], h: [0.03, 0.012, 0.004], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
     switchables.push({ name: `rack${s.rackIndex}_leds`, boxes: [led], group: 'objective', on: true, baseEmissive: [0.3, 4, 0.6], mains: false }); }
@@ -463,7 +463,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   beacon(22.0, 13.25); beacon(6.8, 22.4);
 
   // ---------------- doors. THE LOCK GRAPH: the four corridor doors of the rooms worth having (the armoury has none) and side_e are on the one key 'post', keyed on the OUTER face ----------------
-  // (keySide is the sign of rust/game_rules/src/doors Doors.side on the face that wants the key: for a leaf in a wall along x hung with closedDir 0 the south face is +1; the
+  // (keySide is the sign of rust/game_rules/src/fittings/doors Doors.side on the face that wants the key: for a leaf in a wall along x hung with closedDir 0 the south face is +1; the
   //  office's leaf is hung the other way round (closedDir π), so its south face is −1; the duty room is SOUTH of the corridor, so its corridor face is −1)
   const X = 0, Z = HALF;   // closedDir: a leaf in a wall that runs along x / along z
   const POST = { locked: true, lock: 'post' } as const;
@@ -499,7 +499,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   const THICK = new Set(['front', 'side_e', 'store_e', 'shed_e', 'hut_w', 'yard_sw']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- devices (rust/game_rules/src/devices): two cameras and the keypad ----------------
+  // ---------------- devices (rust/game_rules/src/stealth/devices.rs): two cameras and the keypad ----------------
   const devices: DeviceDef[] = [
     // over the front door, looking south across the forecourt at the main gate and panning: the lit way in is watched; the west yard and the back never are
     { kind: 'camera', name: 'cam_yard', pos: [16.9, 2.75, 18.68], yaw: 0.35, pitch: -0.35, sweep: [-1.2, 0.6], sweepPeriod: 12, fovDeg: 60, range: 11, mains: true },
@@ -510,7 +510,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   ];
 
   // ---------------- the terminal (the last boxes of the post itself, so that nothing above takes a new number) ----------------
-  // the post's one terminal, on the footlocker between the cots (rust/game_rules/src/doze: a man with a short wait in this room sits to it — the chair is the lived-in room's —
+  // the post's one terminal, on the footlocker between the cots (rust/game_rules/src/people/doze.rs: a man with a short wait in this room sits to it — the chair is the lived-in room's —
   // switches it on, and off again when he gets up). BUILT OFF: the room is as dark as it was until somebody is at it. On the mains like everything else here.
   grp('bunk');
   K.monitor(22.95, 18.18, Math.PI, false, 0.4, true, true);
@@ -762,7 +762,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     mission: { serverRoom: { ...SPOT.area }, entryDoor: SPOT.door, rack: { index: SPOT.rackIndex, front: [...SPOT.front], halfW: SPOT.halfW }, exfilDoor: EXIT.door, exfilX: EXIT.x + 0.6, exfilZ: EXIT.z, exfilOut: [...EXIT.out] },
   };
 
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which step sounds, and how far it carries to their ears) ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which step sounds, and how far it carries to their ears) ----------------
   // The yard is packed earth ('asphalt' is the nearest of the six). The building's beaten floor is 'lino'; the CORRIDOR is poured concrete — 'stone', the
   // loudest floor there is, on the short way: a walking step carries 5.2 m along it — and the commander's rug and the bunk room's are 'carpet' (2 m).
   const surfaces: SurfacesData = {
@@ -777,7 +777,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
       { id: 'motorpool', mat: 'stone', x0: 4, z0: 4, x1: 8.9, z1: 9.2 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the north gate from outside the wall (the second start's side), the motor
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the north gate from outside the wall (the second start's side), the motor
   // pool's two pickups under their canopy behind it.
   const scenarios = !VARIANT ? { quiet: QUIET, places: PLACES, response: RESPONSE, kitView: { ways: [{ door: 'gate_n', ref: [12.5, 1.8], side: 1 }] }, doorNames: DOOR_NAMES } as LevelScenarios : undefined;
   return { level, ...(scenarios ? { scenarios } : {}), groups: trace.groups, surfaces, quiet: QUIET };

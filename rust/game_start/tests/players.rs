@@ -86,11 +86,11 @@ fn a_mans_hue_is_the_same_on_both_screens() {
         let of = |hue: u32| a.iter().filter(|r| r.1 == hue).count();
         assert_eq!((of(1), of(2)), (2, 2), "seed {seed}: a pair of each hue: {a:?}");
         let second = man(&p, 1);
-        p.g.pl[second].down = true;
+        p.g.cond[p.g.pl[second].ch].down = true;
         assert!(!found(&mut p, 0).contains(&(id(&p, 1), 3)) && found(&mut p, 0).len() == 5, "seed {seed}: the second player is down");
         assert_eq!(found(&mut p, 1)[0], (id(&p, 1), 3), "seed {seed}: on his own screen he is where he lies");
         let first = man(&p, 0);
-        p.g.pl[first].down = true;
+        p.g.cond[p.g.pl[first].ch].down = true;
         assert!(found(&mut p, 0).is_empty() && found(&mut p, 1).is_empty(), "seed {seed}: both are down");
     }
 }
@@ -107,7 +107,7 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
             p.sam_unhurt();
             let theirs = p.g.tab.cmd_seat[p.g.seats[1]].cam;
             game::camera::follow_camera_rotate(&mut p.g, theirs, 1.3);
-            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && p.g.gd[m].state != game::game::GuardState::Dead).count();
+            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
             let (had, mut rows, mut rounds) = (up(&p), Vec::new(), 0.0f64);
             for k in 0..1500usize {
                 if k == 60 || k == 780 { let x = if k == 60 { 11.5 } else { 27.5 }; p.seat_stands(0, [x, 12.5]); p.seat_stands(1, [x, 9.5]); }
@@ -146,7 +146,7 @@ fn a_flash_of_either_player_is_the_teams() {
         for (c, seat, player, class) in men {
             let (id, at, had) = (p.g.ch[c].id, p.g.ch[c].pos, p.g.engine.lights.lights.clone());
             let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
-            game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], player, Some(&o)));
+            game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], Some(&o)));
             let of: Vec<f64> = p.g.engine.lights.lights.iter().filter(|l| !had.contains(l) && p.g.tab.light[**l].owner == id).map(|&l| game::render_lights::light_set_fog_class(&p.g, l)).collect();
             assert!(!of.is_empty() && of.iter().all(|&k| k == class), "seed {seed}: the flashes of #{id} are {of:?}, not all {class}");
         }
@@ -174,7 +174,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
         };
         play(&mut p, 0, 100);
         let there = p.words();
-        let kept = game_start::moment::Moment::of(&p.g);
+        let kept = game::savestate::control::Moment::of(&p.g);
         let once = play(&mut p, 100, 90);
         assert!(once[89] != there && p.g.fx_seed > kept.game.fx_seed, "seed {seed}: the staging: nobody fired");
         p.g = kept.stands(p.g.sim);
@@ -188,7 +188,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
 #[test]
 fn a_rescue_refuses_two_players() {
     let mut p = Play::level("office.json", false, &Opts { seed: 5, seats: 2, ..Default::default() });
-    let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Rescue, squad: 2.0, level: None, seed: None });
+    let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Rescue, squad: 2.0, level: None, seed: None });
     assert!(why.is_some_and(|w| !w.is_empty()) && p.g.rescue.result.is_none());
     for _ in 0..30 { frame(&mut p, 0); }
 }

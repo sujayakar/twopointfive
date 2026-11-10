@@ -1,6 +1,6 @@
 //! The types of `wandorder`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -55,27 +55,10 @@ pub enum Issue {
     Arm1(()),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WandOrderJobsItem {
-    pub gd: GuardId,
-    pub door: DoorId,
-    pub side: f64,
-    pub live: bool,
-    pub knelt: bool,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WandorderMod {
-    /// (src/game/wandorder.ts:58 states)
     pub states: JsMap<PlayerId, crate::wandorder::State>,
-}
-impl WandorderMod {
-    pub fn blank() -> Self {
-        WandorderMod {
-            states: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

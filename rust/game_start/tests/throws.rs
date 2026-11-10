@@ -1,4 +1,4 @@
-//! WHAT A SEAT IS TOLD OF ITS MEN'S THROWS (`view.throws`; rust/game_rules/src/view/throws.rs): the page draws this and works out nothing of a throw.
+//! WHAT A SEAT IS TOLD OF ITS MEN'S THROWS (`view.throws`; rust/game_rules/src/tick/view/throws.rs): the page draws this and works out nothing of a throw.
 use game::orders::Who;
 use game::view::{ThrowKind, ThrowLine, Tone as ThrowTone};
 use game_start::play::{dist, nudge, Opts, Play};
@@ -172,7 +172,7 @@ fn a_frag_refused_for_who_is_in_it_says_who() {
         let at = p.at(man);
         let spot = [at[0], 0.0, at[1]];
         let mut says = |hostages: Vec<_>, civilians: Vec<_>| {
-            p.g.rescue.hostages = hostages;
+            p.g.staged.captives = hostages;
             p.g.civilians = civilians;
             game::squadthrow::squad_frag_catches(&mut p.g, spot, spot, None, Some(false), None, None)
         };

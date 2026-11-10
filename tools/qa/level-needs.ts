@@ -13,7 +13,7 @@
 // exit 0 = no FAIL · 1 = a FAIL (a NOTE never fails) · 2 = no such level, or an unknown need to skip
 // WHAT IS ASKED (the word in front is the need's name in the table and in the skill):
 //   generator   the file says which generator wrote it, and that generator is in the tree
-//   mission     a row of scene/scenarioList.ts plays it (a NOTE without one: a yard, a test floor)
+//   mission     a row of the mission list plays it (a NOTE without one: a yard, a test floor)
 //   row         each row's words are there and the length the lists hold them to (place 6‥64; blurb 20‥160, a squad row's 20‥140), it names as many
 //               ways in as the file gives starts, its defenders are the cap's eleven or fewer, and it says `squads` exactly when the file carries defender
 //               squads; a NOTE while it is `untuned`
@@ -39,15 +39,16 @@
 //   moon        one directional light, in `exterior` (the hour's sun goes in at its place)
 //   doorway     no painted band or other wall decal runs across a doorway
 //   roof        no DRAWN slab at ceiling height (the camera cannot see the room under it), and no more roofs than the rain reads (four)
-//   response    a level has a response team only where its file says so (scenarios.response, rust/game_rules/src/qrf). With the block: its `why` is a sentence,
+//   response    a level has a response team only where its file says so (scenarios.response, rust/game_rules/src/pursuit/qrf). With the block: its `why` is a sentence,
 //               and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
 //               below with its reason, or it has not answered (a NOTE). In both is a FAIL. Not asked of a lesson. The block against the built floor,
 //               and a call played through, are rust/game_start/tests/response_team.rs's
 import { resolve } from 'node:path';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { ROOT } from './here.ts';
+import { missionRows } from '../desk.ts';
+import type { MissionRow } from '../../src/view/read';
 import { fitPropFootprint } from '../levels/lib/levelLoad.ts';
-const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { defaultRcConfig } = await import(`${ROOT}/src/render/rc.ts`);
@@ -65,8 +66,7 @@ type Card = Record<string, unknown>;
 interface LevelFile { meta?: { generator?: string }; materials?: Record<string, Paint>; boxes: Box[]; props?: { id: string; x: number; z: number; yaw?: number; half?: number[]; parts?: { off: [number, number, number]; h: [number, number, number]; yaw?: number }[] }[]; lights: Light[]; switchables?: { id: string; group?: string; boxes?: string[]; on?: boolean; baseEmissive?: number[] }[]; doors: Door[]; surfaces?: unknown;
   scenarios?: { roomClear?: { starts?: unknown[]; squads?: unknown[]; wallCharges?: number; rooms?: { name: string; bounds?: Bounds }[] }; rescue?: { room?: { name: string; bounds?: Bounds } };
     quiet?: { starts?: unknown[]; spots?: { place: string; area?: Bounds }[] }; places?: { areas?: { name: string; bounds: Bounds }[] }; lesson?: unknown; kitView?: unknown; response?: { why?: unknown; team?: unknown; raid?: unknown }; issue?: { members: Record<string, Card> } } }
-interface Row { id: string; hour?: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
-  untuned?: boolean; offList?: boolean; defenders?: number; ways?: readonly string[]; squads?: boolean }
+type Row = Pick<MissionRow, 'id' | 'title' | 'kind' | 'squad' | 'level' | 'group' | 'hour' | 'only' | 'place' | 'blurb' | 'untuned' | 'offList' | 'defenders' | 'ways' | 'squads'>;
 /** the tables a level is registered in, as the tree has them (the red path hands a level its own, with every row taken out) */
 interface Tables { music(level: string, kind: string): boolean; still(id: string): boolean; picture(id: string): boolean }
 
@@ -94,10 +94,10 @@ const has = (b: Box, f: string) => !!b.flags?.includes(f);
 const inside = (r: Bounds, x: number, z: number) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 const FILES = new Map<string, LevelFile>();
 const read = (name: string): LevelFile => { let L = FILES.get(name); if (!L) FILES.set(name, L = JSON.parse(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')) as LevelFile); return L; };
-export const rowsOf = (name: string): Row[] => (ALL_MISSIONS as Row[]).filter(e => (e.level ?? 'office.json') === `${name}.json`);
+export const rowsOf = (name: string): Row[] => missionRows().filter(e => e.level === `${name}.json`);
 /** the generator a file names (meta.generator), as a path in the tree */
 const generatorOf = (L: LevelFile) => L.meta?.generator?.match(/[\w./-]+\.ts/)?.[0] ?? null;
-/** the slabs in the rain's roof band (rust/game_rules/src/weather roofs_of: underside from 0.25 m under the ceiling's height, top no more than 0.45 m over it, 0.9 m
+/** the slabs in the rain's roof band (rust/game_rules/src/air/weather.rs roofs_of: underside from 0.25 m under the ceiling's height, top no more than 0.45 m over it, 0.9 m
  *  across both ways) */
 const roofBand = (L: LevelFile) => L.boxes.filter(b => b.c[1] - b.h[1] >= WORLD.ceilingY - 0.25 && b.c[1] + b.h[1] <= WORLD.ceilingY + 0.45 && b.h[0] >= 0.45 && b.h[2] >= 0.45);
 
@@ -207,11 +207,11 @@ export function bareGround(L: LevelFile, starts: number[][] = []): Stretch[] {
  *  (render/rc.ts, `defaultRcConfig`) and reads it, where a ray lands on a face, one probe spacing along that face's normal, blended between the four
  *  probes round that point in plan. A wall is a hand thick: a thing stood against one has faces whose read lands beside or beyond the wall, among
  *  probes that stand in the room behind it. If a lamp lights that room and not this one, the thing can glow with the other room's light (the
- *  manager's shelves against the lit store: docs/agents/render.md, 08-12 and, on a man, 10-20; the maintainer's shots of 10-23 on the shelves again).
+ *  manager's shelves against the lit store, 08-12 and, on a man, 10-20; the maintainer's shots of 10-23 on the shelves again).
  *  THE MEASURE, in plan, from the file alone. A WALL is cut as tools/qa/bouncewalls-check.ts cuts one (casts a shadow, from the floor to the ceiling,
  *  long and thin: a mast or a pillar is not; its numbers are typed again here, and a turned wall is kept here), and the line of a door the file does
  *  not hold open. Between a face and a probe a wall counts a hand's width short of each end, so that a line grazing its end goes round it. A LAMP is a
- *  light of the file that is not the sun or moon and not authored off, and a flat fixture authored on that rust/game_rules/src/game stands an area light in for (a
+ *  light of the file that is not the sun or moon and not authored off, and a flat fixture authored on that rust/game_rules/src/tick/game stands an area light in for (a
  *  ceiling panel, a screen: its brightest channel times its face). A probe is LIT by a lamp in range with no wall between them (a spot too: its
  *  bounce fills the room its cone is in), or by the sky where no roof is over it and the file has a sun or moon; a probe inside a wall is dark. For
  *  every box a ray can land on that is not the building's own (no decal, not glass, no group of STRUCTURE), and every loose prop, a point every `step`
@@ -261,7 +261,7 @@ export function leakReads(L: LevelFile): LeakRead[] {
   type Lamp = { id: string; pos: number[]; range: number; power: number; dir?: number[]; cos: number };
   const lum = (a: number[]) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2], byId = new Map(L.boxes.map(b => [b.id, b]));
   const lamps: Lamp[] = L.lights.filter(l => l.kind !== 'dir' && l.enabled !== false).map(l => ({ id: l.id, pos: l.pos, range: l.range ?? 8, power: l.intensity ?? 1, dir: l.kind === 'spot' ? l.dir : undefined, cos: Math.cos((l.outerDeg ?? 90) * Math.PI / 180) }));
-  for (const s of L.switchables ?? []) { if (s.on !== true || !s.baseEmissive || /^(server_leds|emergency|vehicle)$/.test(s.group ?? '')) continue;   // (rust/game_rules/src/game, the flat fixtures it lights the scene by)
+  for (const s of L.switchables ?? []) { if (s.on !== true || !s.baseEmissive || /^(server_leds|emergency|vehicle)$/.test(s.group ?? '')) continue;   // (rust/game_rules/src/tick/game, the flat fixtures it lights the scene by)
     for (const id of s.boxes ?? []) { const b = byId.get(id); if (!b) continue; const h = [...b.h].sort((p, q) => q - p), power = Math.max(...s.baseEmissive, 1e-3) * 4 * h[0] * h[1];
       if (h[2] <= 0.06 && 4 * h[0] * h[1] >= 0.01) lamps.push({ id: s.id, pos: b.c, range: Math.min(26, Math.max(3, Math.sqrt(power / 0.0015))), power, cos: -1 }); } }
   /** what this lamp gives a point a metre up, walls aside: nothing out of its range, or (`cone`) out of a spot's cone */
@@ -329,7 +329,7 @@ export function facingLights(L: LevelFile): KeyPair[] { const K = KEY, { parted,
 const startsOf = (o: unknown): number[][] => !o || typeof o !== 'object' ? [] : Object.entries(o as Record<string, unknown>).flatMap(([k, v]) =>
   (k === 'sam' || k === 'playerSpawn') && Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number') ? [[v[0] as number, v[2] as number]] : startsOf(v));
 /** NOBODY COMES HERE, ON PURPOSE: the levels with a mission row and no response team, each with why in a few words (the long form is the response
- *  team's two bullets of docs/agents/enemies.md). A level with neither a `scenarios.response` block nor a line here has not answered. `block` and
+ *  team's bullet of docs/agents/enemies.md). A level with neither a `scenarios.response` block nor a line here has not answered. `block` and
  *  `hall` are in neither on purpose: either would suit a team and has none yet, the maintainer's call. */
 export const NOBODY_COMES: Record<string, string> = {
   'quiet-relay': 'a hilltop, nobody within reach, and its wired spot brings its own men', vault: 'private hired guards who call nobody', 'lights-out': 'its one idea is the mains',
@@ -356,16 +356,16 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
   // ---- generator
   say('generator', genThere, gen ? `written by ${gen}${genThere ? '' : ', which is not in the tree'}` : 'the file does not say which generator wrote it (meta.generator)');
   // ---- mission, and each row
-  if (!rows.length) say('mission', 'note', 'no row of scene/scenarioList.ts plays it: nothing below that asks a row is asked');
+  if (!rows.length) say('mission', 'note', 'no row of the mission list plays it: nothing below that asks a row is asked');
   else say('mission', true, rows.map(e => `${e.id}${e.offList ? ' (off the list)' : ''}`).join(', '));
   for (const e of rows) {
     const bad: string[] = [], len = (what: string, s: string | undefined, [lo, hi]: readonly [number, number]) => { if (!s) { if (!e.offList) bad.push(`no \`${what}\``); } else if (s.length < lo || s.length > hi) bad.push(`\`${what}\` is ${s.length} characters, the lists hold it to ${lo}‥${hi}`); };
     len('place', e.place, WORDS.place); len('blurb', e.blurb, e.kind !== 'quiet' ? WORDS.squadBlurb : WORDS.blurb);
-    if ((e.defenders ?? 0) > DEFENDERS_MAX) bad.push(`${e.defenders} defenders, the cap is ${DEFENDERS_MAX}`);
+    if (e.defenders > DEFENDERS_MAX) bad.push(`${e.defenders} defenders, the cap is ${DEFENDERS_MAX}`);
     if (name !== 'office') {
       const starts = e.kind === 'roomclear' ? S.roomClear?.starts?.length ?? 0 : 0, want = starts ? starts + 1 : 0;
-      if ((e.ways?.length ?? 0) !== want) bad.push(`names ${e.ways?.length ?? 0} ways in, the file gives ${want || 'one (no row of ways)'}`);
-      if (e.kind === 'roomclear' && !!e.squads !== !!S.roomClear?.squads?.length) bad.push(e.squads ? '`squads` on the row, no defender squads in the file' : 'defender squads in the file, no `squads` on the row');
+      if (e.ways.length !== want) bad.push(`names ${e.ways.length} ways in, the file gives ${want || 'one (no row of ways)'}`);
+      if (e.kind === 'roomclear' && e.squads !== !!S.roomClear?.squads?.length) bad.push(e.squads ? '`squads` on the row, no defender squads in the file' : 'defender squads in the file, no `squads` on the row');
     }
     say('row', !bad.length, `${e.id}: ${bad.length ? bad.join('; ') : 'words, ways and defenders agree with the file'}`);
     if (e.untuned) say('row', 'note', `${e.id} is marked untuned: nobody has said it plays well`);
@@ -422,7 +422,7 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
     if (R) { const why = typeof R.why === 'string' ? R.why.trim() : '', raid = !!R.raid;
       say('response', why.length > WHY_MIN, `a response team comes here (${typeof R.team === 'string' ? R.team : 'no `team` word'}; it answers ${raid ? 'a squad\'s room clear and nothing else' : 'a quiet night gone loud'}): ${why.length > WHY_MIN ? 'the file says why' : `its \`why\` is not a sentence (over ${WHY_MIN} characters)`}`);
       if (none !== undefined) say('response', false, `NOBODY_COMES says nobody comes here ('${none}') and the file carries a response block: one of the two is stale`);
-      // (rust/game_rules/src/qrf live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
+      // (rust/game_rules/src/pursuit/qrf live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
       if (!(raid ? rows.some(e => e.kind === 'nightbreach' || e.kind === 'roomclear') : name === 'office' || rows.some(e => e.kind === 'quiet')))
         say('response', 'note', `the block answers ${raid ? 'a squad\'s room clear' : 'a quiet night gone loud'} and no row of this level is one (${rows.map(e => `${e.id}: ${e.kind}`).join(', ')}): nobody would ever be called`);
  }
@@ -438,8 +438,8 @@ const OWN: Own[] = [
   { name: 'level-lint', some: l => ['tools/qa/level-lint.ts', ...l.map(n => `levels/${n}.json`), '--quiet'] },
   { name: 'kitview-plan', all: ['tools/qa/kitview-plan.ts', '--quiet'], some: l => ['tools/qa/kitview-plan.ts', ...l, '--quiet'] },
   { name: 'floor-order-check', all: ['tools/qa/floor-order-check.ts'], some: l => ['tools/qa/floor-order-check.ts', ...l.map(n => `${n}.json`)] },
-  // the game's own questions (rust/game_start/src/bin/levels.rs)
-  ...['stands', 'doors', 'second-way', 'sight', 'walked', 'charges', 'names', 'rain'].map(q => ({ name: `levels ${q}`, native: true, all: [q], some: (l: string[]) => [q, ...l] })),
+  // the game's own questions (rust/game_start/src/levels.rs)
+  ...['stands', 'doors', 'second-way', 'sight', 'walked', 'charges', 'names', 'rain', 'file'].map(q => ({ name: `levels ${q}`, native: true, all: [q], some: (l: string[]) => [q, ...l] })),
 ];
 async function runOwn(levels: string[], all: boolean, jobs: number): Promise<Line[]> {
   const cmds: { name: string; args: string[]; native?: boolean }[] = [];
@@ -482,7 +482,7 @@ if (import.meta.main) {
     L.lights.push({ id: 'planted_bulb', kind: 'point', pos: [4.5, 2, 3], group: 'planted', range: 5, intensity: 20 });
     L.lights.push({ id: 'planted_flood_a', kind: 'spot', pos: [30, 3.6, 2], dir: [0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 }, { id: 'planted_flood_b', kind: 'spot', pos: [33, 3.6, 2], dir: [-0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 });   // (two spots that face each other, far from the shelf so that they light nothing of it)
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
-    const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined, offList: undefined };
+    const row: Row = { ...e, id: 'planted-row', place: '', blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: '', offList: false };
     const planted: Tables = { music: () => false, still: () => false, picture: () => false };
     const lines = ask(name, L, [row], planted);
     // (the response need's reds want a block: the same level again with a `why` of one word, under the name of a level NOBODY_COMES holds)

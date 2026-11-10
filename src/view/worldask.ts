@@ -1,5 +1,5 @@
 // THE BOX WORLD, ASKED: is a line stopped, what does a ray meet, how does a sound reach. Whoever steps the game answers (src/host/drawgame.ts in a page): the Rust game
-// is asked of the boxes as they stand, shared, and nothing is proven, kept or changed by a question (rust/game_rules/src/ask WorldAsk). The camera, the sound
+// is asked of the boxes as they stand, shared, and nothing is proven, kept or changed by a question (rust/game_rules/src/world/ask.rs WorldAsk). The camera, the sound
 // and the cursor ask here, and never the page's own copy of the level.
 //
 // Nothing under src/view imports the game (tools/qa/view-check.ts).
@@ -19,7 +19,7 @@ export interface WorldAsk {
   /** the way on the floor from a to b, its corners (null: the floor has none); a search, so whoever asks keeps the answer by its own clock */
   way(a: Vec3, b: Vec3, maxIter: number): Vec3[] | null;
   /** the light that stands on a point, leaving out the carried lamps of `owners`; `steady`: what the place lights, with nothing that passes; `leave`: lamps of the level's own left
-   *  out, by what feeds them (rust/game_rules/src/sim_lightshome ROW_BIT) */
+   *  out, by what feeds them (rust/game_rules/src/air/fixtures.rs ROW_BIT) */
   light(p: Vec3, owners: readonly number[], steady: boolean, leave: number): number;
   /** several questions at once (a page whose own copy answers proves it once for them all) */
   together<T>(f: () => T): T;

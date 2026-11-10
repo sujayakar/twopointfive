@@ -1,5 +1,5 @@
 // The falling SHEET's dynamics — the CPU reference of what render/shaders/particles.wgsl `sheetAir` integrates for the P_SHEET particle kind (a leaf of
-// office paper knocked off a desk by a burst: rust/game_rules/src/destruction). One model, written twice: the shader flies the thousands you see, this file flies the same
+// office paper knocked off a desk by a burst: rust/game_rules/src/breakage/destruction). One model, written twice: the shader flies the thousands you see, this file flies the same
 // equations and is the place the numbers are argued.
 // Keep the two in step: SHEET below = particles.ts KIND_DEFAULTS.sheet's slots (gravity · drag = KT · restitution = KN_LIN · keep = KN_Q · sleepV · fade · FLUT ·
 // TRANS) + the two constants the kind block has no slot for (ANG_DAMP, SPIN_MAX), which particles_common.wgsl repeats.
@@ -38,7 +38,7 @@ export const SHEET = {
 };
 
 // ================================================================== IMPULSES (render/particles.ts Particles.impulse → particles.wgsl applyImpulses; sites in
-// rust/game_rules/src/destruction): a game event — a stun charge going off, a round landing beside settled litter, a body or a boot or a shoved desk thumping the floor —
+// rust/game_rules/src/breakage/destruction): a game event — a stun charge going off, a round landing beside settled litter, a body or a boot or a shoved desk thumping the floor —
 // pushes every live particle of the kinds it names within its radius, and WAKES the ones lying asleep so paper already on the floor goes up again. One record
 // = { pos, radius, strength = the peak Δv (m/s) a SHEET gets at the centre, up = the upward share added to the radial push (leaves LIFT, then flutter down),
 // bias = a direction folded in (the round's travel along the surface it struck), kinds, seed, an optional occlusion eye }. The push on a particle at distance
@@ -55,5 +55,5 @@ export const IMP_RESPONSE = {
   dust:   { gain: 0.7,  upK: 0.3, vMax: 3.0, wake: 0 },      // a puff is shoved along by the air (it never sleeps)
   casing: { gain: 0.3,  upK: 0.5, vMax: 3.5, wake: 0.3 },    // brass is heavy for its size: a short hop, a roll, the twinkle of it turning
   sheet:  { gain: 1.0,  upK: 1.0, vMax: 6.0, wake: 0.12 },   // THE reference kind: strength is quoted as a sheet's Δv at the centre
-  rain:   { gain: 0,    upK: 0,   vMax: 0,   wake: 0 },      // ignored like the spark: a rain drop (rust/game_rules/src/rain_fx) is gone before a push could show, and the impulses leave its ring alone
+  rain:   { gain: 0,    upK: 0,   vMax: 0,   wake: 0 },      // ignored like the spark: a rain drop (src/picture/rain.ts) is gone before a push could show, and the impulses leave its ring alone
 } satisfies Record<string, ImpulseResponse>;

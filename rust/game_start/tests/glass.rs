@@ -14,7 +14,7 @@ const WINDOW: [f64; 3] = [13.65, 1.375, 11.0];
 fn a_pane_broken_before_the_first_frame_goes_as_any_other() {
     let mut p = Play::mission("pass.json", "?levelFile=pass.json&roomclear&squad4", &Opts { seed: 1, ..Default::default() });
     p.g.tab.debris_chunk = Default::default();   // (what the page's stand hands over: the table holds the pieces, and no piece has come off yet)
-    p.g.destr.show_chaos = Some(0.5);
+    (p.g.tune.chaos, p.g.tune.wall_break) = (0.5, false);
     let was = p.g.m.glassbreak.gb_host.hooked;
     game::destruction::destruction_blast(&mut p.g, [WINDOW[0], WINDOW[1], WINDOW[2] - 0.5], Some(game::wallbreak::BlastOpts { radius: Some(2.4), who: Some(game::consts::PLAYER_ID), ..Default::default() }));
     p.run(0.5);

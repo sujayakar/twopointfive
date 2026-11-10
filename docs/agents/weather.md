@@ -24,15 +24,15 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `hours/` | the hours (`hours()`), one laid over the level and taken off, cloud on the light, the sky's light on a man |
-| `weather_kinds/` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
-| `weather/` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `air_trans` |
-| `air_dust/` | the fog's share in each half-meter cell, carried through openings and settling back |
-| `wind/` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
-| `wet/` | who is soaked and who dries; Sam's drips and prints |
-| `fire/` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
-| `moths/` | moths round the lit yard lamps; dress |
-| `snow_bog/`, `render_snow_field/` | how deep snow takes a thing that lands; which box is lying snow, by its word |
-| `snow_blast/`, `snow_tracks/`, `snow_marks/` | only what is told to the picture |
+| `weather_kinds.rs` | the seven kinds (`weather_presets`), which a player may pick (`WEATHER_ROW`), the snow levels (`snow_levels`) |
+| `weather.rs` | what is in force: kind, roofs, storm, strokes, thunder, the wet lot; `hear_path`, `loud_len`, `weather_air_trans` |
+| `air_dust.rs` | the fog's share in each half-meter cell, carried through openings and settling back |
+| `wind.rs` | the sources of moving air: storm, vents, gusts at outside doors, broken windows |
+| `wet.rs` | who is soaked and who dries; Sam's drips and prints |
+| `fire.rs` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
+| `moths.rs` | moths round the lit yard lamps; dress |
+| `snow_bog.rs`, `render_snow_field.rs` | how deep snow takes a thing that lands; which box is lying snow, by its word |
+| `snow_blast.rs`, `snow_marks.rs` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
 Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs`, `bog_of` in `items.rs`, `glow.rs`.
@@ -54,8 +54,8 @@ The page's half reads those rows and writes nothing back:
 ## How it works
 
 **An hour is laid over a level** (`apply_hour`, `put_in`). Night is no record: the level as built. Any other hour puts the moon out, puts a sun in at
-the moon's place in the light list, writes sky, haze and exposure from its `HourDef`, and at midday and on the gray day opens the switch of every
-`exterior` lamp (`lamps_out`). `take_out` puts everything back. `is_daylight` is the drill's day show, false under any hour.
+the moon's place in the light list, gives `told` sky, haze and exposure from its `HourDef`, and at midday and on the gray day opens the switch of every
+`exterior` lamp (`lamps_out`). `take_out` puts everything back.
 
 **Cloud moves light.** A picked kind's `cloud` takes light off the ground (`cloud_sun`), moves what is left from the sun to the sky (`cloud_light`),
 and past half cover spreads the disc and grays both (`under_weather`). `HourState.sun_k` is the sun's one number. A strength set by hand
@@ -81,13 +81,13 @@ other roll.
 
 | what | who reads it | the road |
 |---|---|---|
-| rain's noise | every ear (`hearing_check`, `whistle/`, `roomfight/`…) | `hear_path` stretches a path by `hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
-| fog, dust | men, teammates, civilians, cameras | `air_trans` multiplies into `smoke_between`, so fog blinds by smoke's own thresholds (`sight_gain`) |
+| rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `weather_hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
+| fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense.rs`): `weather_air_trans` over `smoke_between`: fog blinds by smoke's own thresholds (`sight_gain`) |
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
 | sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; `open_rays` keeps by cell which rays reach the sky (`SkyReach`, in no save) |
-| the hour | `darkdoor/`, `calmtorch/`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
-| storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense/`. No other wind reaches a rule |
-| deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan/`, `squadsmoke/` |
+| the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
+| storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`. No other wind reaches a rule |
+| deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan.rs`, `squadsmoke.rs` |
 | the soaked lot | what a round knocks out of it | `surf_at` asks the word's wet row |
 | a fire's lamp | the light meter | a real light, moved by `update_fire` |
 
@@ -102,12 +102,12 @@ air; the picture's air; a fire's flame and plume; moths.
 picture down. This system reads two rows of `DressModDRESS`, `wind` and `moths`, both in the tick, because the moths are boxes of the frame's list. A
 cut (a load, a restart) starts each `src/picture/` part again from the rows.
 
-**Wind.** `wind_new` makes the sources: one storm, each vent, each outside door; a broken window adds one (`glassbreak/`). `wind_update` works each
+**Wind.** `wind_new` makes the sources: one storm, each vent, each outside door; a broken window adds one (`glassbreak.rs`). `wind_update` works each
 one's speed for the tick (ramps, `vent_due`, gusts off `vnoise`) and hands them to the picture's solver. `wind_reroof` cuts the storm by the roofs.
 Fires and moths read `wind_at`.
 
 **Dust and fog indoors.** `rust/sim/src/air.rs` keeps, for each half-meter cell, what share of the open air's fog stands there, only under a picked
-kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `air_trans` walks that
+kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `weather_air_trans` walks that
 field along the line, and `air_dust_send` hands the picture a copy, so what is drawn is what blinds.
 
 **Fire.** A level light whose name starts with a word in `fire.names` is a fire (`is_fire`). `update_fire` flickers and moves its lamp, feeds its
@@ -142,7 +142,7 @@ is made and sets `StoodWith`, the kind locked for that game.
   is never a pick.
 - **Rain drowns small sounds, not loud ones.** A rule that hears asks `hear_path`, never the plain path. The mixer's rain and the ear's mask are one
   number (`rain_bed`).
-- **No kind picked changes no sense.** `hear_mask` and `air_trans` answer exactly 1.
+- **No kind picked changes no sense.** `weather_hear_mask` and `weather_air_trans` answer exactly 1.
 - **A storm is cut by the level's own roofs.** "rain is busted on records office".
 - **Vents are wind.** "for hvac vents, that should model wind which then also influences the smoke solver".
 - **The picture's air is a fluid.** "the nice thing of integrating with the fluid system is that you'll naturally get neat interactions where the wind
@@ -156,13 +156,12 @@ is made and sets `StoodWith`, the kind locked for that game.
 
 ## To change it
 
-- **A number:** `rust/game_types/src/knobs/`: `weather.rs` (`WxSimK`), `wet.rs`, `wind.rs`, `air_dust.rs`, `fire.rs`, `snow_bog.rs`. One that
-  `rust/sim/` reads also has its name in `rust/sim/src/knobs.rs` and its line in `rust/game_rules/src/rustknobs/base.rs`.
+- **A number:** `rust/game_types/src/knobs/`: `weather.rs` (`WxSimK`), `wet.rs`, `wind.rs`, `air_dust.rs`, `fire.rs`, `snow_bog.rs`.
 - **A kind:** its row in `WeatherKindsMod::blank`. A new one is also a word of `WeatherKind`, `weather_kinds()`, `ALL_KINDS`, `WEATHER_ROW` and
   `ScenarioEntryWeather`.
 - **An hour:** its row in `hours()`; a new one also `HourId`, `HOUR_ROW` and `HOURS_OF` in `src/draw/sky.ts`.
 - **A snow level:** its name in `snow_levels()`, its boxes painted by word (the `level` skill).
-- **A rule that hears or sees:** call `hear_path` and multiply by `air_trans`.
+- **A rule that hears or sees:** call `hear_path`, and ask `clear_between` of the air.
 - **A new source of air:** a `WindWhy`, its speed in `wind_update`.
 - **A thing the picture needs:** a row in `rust/game_draw/src/sky.rs` or `winds.rs`, then `tools/draw/gen.ts`, then the reader.
 
@@ -179,12 +178,12 @@ Native tests in `rust/game_start/tests/`:
 | `smoke_said.rs`, `fire_look.rs` | a fire's plume is seen by no man; its hot air reaches the page |
 | `marks.rs`, `kit_stage.rs` | `a_wet_print_dries_by_itself`; `by_day_the_porch_lamp_is_out_with_the_levels_own` |
 
-`hours/`, `wind/` and `fire/` have unit tests beside their code. `levels rain` holds every level: open ground is rained on, ground under a ceiling is
+`hours/`, `wind.rs` and `fire.rs` have unit tests beside their code. `levels rain` holds every level: open ground is rained on, ground under a ceiling is
 not. `gate`'s pins cover `weather` and `sim.weather`. Checks: `bun run tools/qa/checks.ts rainscale`, `rainwalls`, `sunglint` read the shaders' text
 and run no shader. Page script: `bun run tools/qa/pages.ts weather-page` (on the software adapter).
 
 ## Not seen
 
 Everything drawn is the maintainer's to judge on a GPU: a page check here proves only that the rows arrive. No check hears thunder or the rain. No
-native test asks `snow_bog_at` directly; only `gate`'s pins move if a landing changes. Smoke cuts the team's fog of war and weather's fog and dust do
-not (`fogofwar/` does not read `air_trans`), so a teammate may be blind to a man the player is shown.
+native test asks `snow_bog_at` directly; only `gate`'s pins move if a landing changes. The picture's fog of war asks no air: past what the weather's fog
+lets an eye through (about 20 m) the floor is drawn as seen, under the weather's own haze, with nobody on it.

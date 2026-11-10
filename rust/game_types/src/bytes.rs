@@ -24,6 +24,7 @@ impl ToBytes for str { fn w(&self, o: &mut W) { self.len().w(o); o.b.extend_from
 impl ToBytes for String { fn w(&self, o: &mut W) { self.as_str().w(o) } }
 impl<T: ToBytes + ?Sized> ToBytes for &T { fn w(&self, o: &mut W) { (**self).w(o) } }
 impl<T: ToBytes + ?Sized> ToBytes for Box<T> { fn w(&self, o: &mut W) { (**self).w(o) } }
+impl<T: ToBytes + ?Sized> ToBytes for alloc::sync::Arc<T> { fn w(&self, o: &mut W) { (**self).w(o) } }
 impl<T: ToBytes> ToBytes for Option<T> { fn w(&self, o: &mut W) { match self { None => o.b.push(0), Some(x) => { o.b.push(1); x.w(o) } } } }
 impl<T: ToBytes> ToBytes for Vec<T> { fn w(&self, o: &mut W) { self.len().w(o); for x in self { x.w(o) } } }
 impl<T: ToBytes> ToBytes for VecDeque<T> { fn w(&self, o: &mut W) { self.len().w(o); for x in self { x.w(o) } } }

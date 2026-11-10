@@ -28,7 +28,7 @@ export const faceFile = (profile: FaceProfile): string => join(CRATE, `target/wa
 /** the release profile's file */
 export const FACE_WASM = faceFile('release');
 /** the crates the module is made from (tools/qa/rust-rules-check.ts holds this list to the crate's own lock) */
-export const FACE_CRATES = ['prim', 'sim', 'game_derive', 'game_types', 'game_rules', 'game_draw', 'game_run', 'game_start', 'game_face'] as const;
+export const FACE_CRATES = ['prim', 'maths', 'sim', 'game_derive', 'game_types', 'game_rules', 'game_draw', 'game_start', 'game_face'] as const;
 
 /** the checked-in module and the hash of the sources it was built from */
 export const PREBUILT = join(CRATE, 'prebuilt/game_face.wasm'), PREBUILT_SOURCES = join(CRATE, 'prebuilt/SOURCES');

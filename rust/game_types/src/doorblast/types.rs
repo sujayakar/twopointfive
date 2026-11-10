@@ -1,6 +1,6 @@
 //! The types of `doorblast`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -15,16 +15,6 @@ pub struct SlabMet {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SlabSnap {
-    pub x: f64,
-    pub z: f64,
-    pub a: f64,
-    pub side: f64,
-    pub who: f64,
-    pub bits: Option<[f64; 4]>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorBlastReachItem {
     pub d: DoorId,
     pub k: f64,
@@ -36,24 +26,10 @@ pub struct SlabThere {
     pub ask: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StepThereW {
-    pub but: f64,
-    pub ask: f64,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorblastMod {
-    /// (src/game/doorblast.ts:70 DOORBLAST_LOG)
     pub doorblast_log: Vec<String>,
-}
-impl DoorblastMod {
-    pub fn blank() -> Self {
-        DoorblastMod {
-            doorblast_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -72,14 +48,10 @@ pub struct DoorblastStats {
     pub doorshot_demoted: i32,
 }
 
-/// (src/game/doorblast.ts:40 OFF_ANGLE)
 pub const OFF_ANGLE: f64 = 1.5707963267948966;
 
-/// (src/game/doorblast.ts:41 HALF_PI)
 pub const HALF_PI: f64 = 1.5707963267948966;
 
-/// (src/game/doorblast.ts:114 LIFT)
 pub const LIFT: f64 = 0.005;
 
-/// (src/game/doorblast.ts:133 OV: a table nothing writes)
 pub fn ov() -> Vec<i32> { alloc::vec![0; 512] }

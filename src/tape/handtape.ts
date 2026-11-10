@@ -8,15 +8,15 @@
 // the numbers that moved since the step before, each as four bytes where four hold it.
 
 /** `version`: a tape of another one is refused */
-export const HANDTAPE = { magic: 0x31485054, version: 1 };
+export const HANDTAPE = { magic: 0x31485054, version: 2 };
 const START = 1, STEP = 2, ORDER = 3, HANDS = 4, MARK = 5, END = 6, TRY = 7, FIGURES = 8;
 const DT = 1, KEYS = 2, WIDE = 4;
 
 /** a part of a start that is the build's own: what it should be, for a walk to hand over its own and be held to it */
 export interface PartOf { name: string; length: number; hash: number }
 /** what a game was started from */
-export interface TapeStart { build: string; levelName: string; level: Uint8Array; words: string; parts: PartOf[]; seed: number; seats: number; flags: number; commands: Uint8Array }
-/** what the game came to by a tick: rolls made of its die, the hash of its parts' hashes, and the hash of its whole state where that was asked (the dearer one) */
+export interface TapeStart { build: string; levelName: string; level: Uint8Array; words: string; parts: PartOf[]; seed: number; seats: number; flags: number; kept: string }
+/** what the game came to by a tick: rolls made of its die, the hash of its block's parts' hashes, and the hash of every part of it (null: a tape made before every mark had it) */
 export interface TapeMark { tick: number; die: number; parts: number; state: number | null }
 /** WHO STANDS WHERE by a tick, and the rounds the player has fired: what came of the play, whatever the module that played it keeps its state in (a mark's hashes are of one module's own layout) */
 export interface TapeFigures { tick: number; shots: number; men: { id: number; x: number; z: number; down: boolean }[] }
@@ -32,8 +32,8 @@ export function figuresPart(a: TapeFigures, b: TapeFigures): string | null {
   for (const id of men.keys()) return `man ${id} is not on the tape`;
   return null;
 }
-/** ticks between two marks, and between two that have the whole state */
-export const MARKS = { every: 60, whole: 600 };
+/** ticks between two marks */
+export const MARKS = { every: 60 };
 export type TapeRow = { kind: 'step'; tick: number; dt: number; hand: Float64Array; keys: string } | { kind: 'order'; tick: number; bytes: Uint8Array }
   | { kind: 'hands'; tick: number; plan: Uint8Array } | { kind: 'mark'; mark: TapeMark } | { kind: 'figures'; figures: TapeFigures } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
 
@@ -63,7 +63,7 @@ export class HandTape {
   start(s: TapeStart): void {
     this.u8(START); this.text(s.build); this.text(s.levelName); this.bytes(s.level); this.text(s.words); this.u32(s.parts.length);
     for (const p of s.parts) { this.text(p.name); this.u32(p.length); this.u32(p.hash); }
-    this.f64(s.seed); this.u32(s.seats); this.u32(s.flags); this.bytes(s.commands);
+    this.f64(s.seed); this.u32(s.seats); this.u32(s.flags); this.text(s.kept);
   }
   /** one tick's hand, before it is stepped */
   step(dt: number, hand: Float64Array, keys: string): void {
@@ -131,7 +131,7 @@ export class HandWalk {
       if (this.u8() !== START) throw new RangeError();
       const build = this.text(), levelName = this.text(), level = this.bytes(), words = this.text(), parts: PartOf[] = [];
       for (let i = this.u32(); i > 0; i--) parts.push({ name: this.text(), length: this.u32(), hash: this.u32() });
-      this.start = { build, levelName, level, words, parts, seed: this.f64(), seats: this.u32(), flags: this.u32(), commands: this.bytes() };
+      this.start = { build, levelName, level, words, parts, seed: this.f64(), seats: this.u32(), flags: this.u32(), kept: this.text() };
     } catch (e) { if (e instanceof RangeError) throw new TapeRefused('This replay is cut off before it begins.'); throw e; }
   }
 

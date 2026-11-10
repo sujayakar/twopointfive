@@ -27,7 +27,7 @@ pub struct SuppressionK {
     /// × what a COLLEAGUE's round adds to a guard (his own side's fire going past him, from behind and beside: he knows where it is going — it rattles, it does not
     ///  pin; abreast and just-ahead are already nothing by minTravel and by muzzle discipline lowering the rear gun). Sam's rounds on them and theirs on Sam: × 1.
     #[k(0.5)] pub friendly_k: f64,
-    /// temperament (game.ts TEMPERAMENT): how readily each kind of man accrues it — the hard man shrugs off what rattles the nervy one
+    /// temperament: how readily each kind of man accrues it — the hard man shrugs off what rattles the nervy one
     #[k({ let mut t = JsMap::new(); t.set(String::from("steady"), 1.0); t.set(String::from("nervy"), 1.25); t.set(String::from("hard"), 0.8); t })] pub keen: JsMap<String, f64>,
     /// ---- guard reactions (§4.2), all behind tune.suppression
     /// s ≥ flinch: the start (anim), a bark, the next round a beat late, every round wider and the cadence slower while it lasts, no running INTO fire;
@@ -64,6 +64,6 @@ pub struct SuppressionK {
     #[k(2.0)] pub pair_secs: f64,
     #[k(20.0)] pub floor_line_secs: f64,
     /// ---- Sam (§4.3 — the one mechanical effect in this lane; the look and the sound are R4's)
-    /// extra cone on Sam's round per unit of HIS s (radians: dead-on at 0, ± ~2° at full — a torso at 8 m mostly). Not under the tour's puppet: its scripted double-taps land.
+    /// extra cone on Sam's round per unit of HIS s (radians: dead-on at 0, ± ~2° at full — a torso at 8 m mostly).
     #[k(0.07)] pub sam_spread: f64,
 }

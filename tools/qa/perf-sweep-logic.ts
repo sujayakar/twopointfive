@@ -271,7 +271,7 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   skips('one lamp: the second row', /one infrared light burns here/, set(1), 'irLightOne');
   { const p = mk(set(1)); p.start(opts); check(p.active && !why('irLight') && e6.find(x => x.op === 'begin').rows.some((r: any) => r.id === 'irLight' && r.from.irLights === 1 && r.to.irLights === 0), 'one lamp: the first row still runs'); p.stop(); check(L.irCap === Infinity, 'and stopped, the cap is off'); }
   for (const live of [false, true]) { const p = mk(set(5)), all = [...L.ir]; p.start({ ...opts, live });
-    const step = () => { if (live) { L.ir.length = 0; L.ir.push(...all); } };   // (a running game makes its list again every step, rust/game_rules/src/irlight ir_light_tick; a frozen one writes nothing)
+    const step = () => { if (live) { L.ir.length = 0; L.ir.push(...all); } };   // (a running game makes its list again every step, rust/game_rules/src/teammates/irlight.rs ir_light_tick; a frozen one writes nothing)
     const at: { id: string; state: string; said: string; t: number }[] = []; let n = 0, held = true, whole = true;
     const drain = () => { const segs = e6.filter(x => x.op === 'seg'); while (n < segs.length) { const x = segs[n++]; at.push({ id: x.id, state: x.state, said: p.flipped, t: now }); } };
     drain();

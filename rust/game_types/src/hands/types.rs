@@ -21,14 +21,6 @@ pub enum HaulEnd {
     #[default] Head,
     Feet,
 }
-impl HaulEnd {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HaulEnd::Head => "head",
-            HaulEnd::Feet => "feet",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum HaulPhase {
@@ -36,16 +28,6 @@ pub enum HaulPhase {
     Reach,
     Rise,
     Carry,
-}
-impl HaulPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HaulPhase::Set => "set",
-            HaulPhase::Reach => "reach",
-            HaulPhase::Rise => "rise",
-            HaulPhase::Carry => "carry",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -87,32 +69,6 @@ pub enum DoorMoveStage {
     #[default] Hand,
     Swing,
 }
-impl DoorMoveStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorMoveStage::Hand => "hand",
-            DoorMoveStage::Swing => "swing",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum EndDistEnd {
-    Head,
-    Feet,
-}
-impl EndDistEnd {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EndDistEnd::Head => "head",
-            EndDistEnd::Feet => "feet",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LieOfRag {
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CarryRidesC {
@@ -121,18 +77,9 @@ pub struct CarryRidesC {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CarryRidesRag {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LiePinsRag {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct LayLie {
     pub lie: crate::hands::Lie,
     pub yaw: f64,
 }
 
-/// (src/game/hands.ts:165 Y: a table nothing writes)
 pub fn y() -> V3 { [0.0, 1.0, 0.0] }

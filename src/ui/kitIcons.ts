@@ -1,6 +1,6 @@
 // THE KIT'S SILHOUETTES: one small flat drawing per row of a member's card (ui/kitCard.ts) — the gun, a canister, a charge, the goggles — so a card reads as
 // kit laid out on a table and not as a list of words. Each is an inline SVG in the page's own colour (`currentColor`), drawn here from plain shapes on a
-// 64 × 32 board: the game has no art files and these are no more than a sign for the thing. Keyed by the card's field (rust/game_rules/src/kit KitField) and, for the
+// 64 × 32 board: the game has no art files and these are no more than a sign for the thing. Keyed by the card's field (rust/game_rules/src/outfit/kit KitField) and, for the
 // gun, its id. Pure strings: this file imports nothing, and what kind of gun a pick is drawn as is the card's to say (src/view/read.ts CardRow.icon).
 const BOARD = (body: string) => `<svg viewBox="0 0 64 32" aria-hidden="true" focusable="false" fill="currentColor" stroke="none">${body}</svg>`;
 const line = (d: string, w = 1.6) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -25,7 +25,7 @@ const TRIM = '<path d="M20 6l12 6.6L44 6v5.4L32 18l-12-6.6zM20 15l12 6.6L44 15v5
 const WAND = line('M6 25h18c8 0 8-14 16-14h6', 2) + '<path d="M46 7.6h9a1.6 1.6 0 0 1 1.6 1.6v3.6A1.6 1.6 0 0 1 55 14.4h-9z"/><circle cx="58.6" cy="11" r="1.8"/>' + '<path d="M3 20h7a1.6 1.6 0 0 1 1.6 1.6v6.8A1.6 1.6 0 0 1 10 30H3z"/><path d="M4.6 22h4.8v3.4H4.6z" fill="#0a0c0f" opacity="0.55"/>';   // (a cable from a small screen to a lens head)
 const CAM = '<path d="M12 6h4v20h-4z" opacity="0.6"/><path d="M16 9h15a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H16z"/><circle cx="28" cy="16" r="3.4" fill="#0a0c0f" opacity="0.55"/>' + line('M39 12l11-6M40 16h13M39 20l11 6', 1.5);   // (a puck on a wall, its lens, what it watches)
 
-// (the sponge round — rust/game_rules/src/kittree: the 40 mm slug with its foam nose, where the grenade's is one dark piece)
+// (the sponge round — rust/game_types/src/knobs/kittree.rs: the 40 mm slug with its foam nose, where the grenade's is one dark piece)
 const SPONGE = '<path d="M19 9h14v14H19z"/><path d="M33 9h3c4.6 0 8 3.2 8 7s-3.4 7-8 7h-3z" opacity="0.55"/><path d="M15 8h3v16h-3z" opacity="0.6"/>';
 const BY_FIELD: Record<string, string> = { rings: SPONGE, sideCan: SUPPRESSOR, cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, cans: CANS, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, walls: WALL, suit: SUIT, trim: TRIM };
 const BY_GUN: Record<string, string> = { rifle: RIFLE, pistol: PISTOL, shotgun: SHOTGUN };
@@ -56,7 +56,7 @@ const GUN_CAN: Record<string, string> = {
   rifle: '<path d="M52.4 11.6h10a1.2 1.2 0 0 1 1.2 1.2v3.6a1.2 1.2 0 0 1-1.2 1.2H52.4z"/><path d="M54.2 11.6h1.2v6h-1.2z" fill="#0c0b09" opacity="0.5"/>',
   pistol: '<path d="M51 9.4h11.4a1.2 1.2 0 0 1 1.2 1.2v4.8a1.2 1.2 0 0 1-1.2 1.2H51z"/><path d="M52.8 9.4h1.2v7.2h-1.2z" fill="#0c0b09" opacity="0.5"/>',
 };
-// (the big slot's row — rust/game_rules/src/kit BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
+// (the big slot's row — rust/game_rules/src/outfit/kit BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
 const HAMMER = '<path d="M5 7h9v4h2.4v3H14v4H5l-1.4-2.2V9.2z"/><path d="M16 11h3.6l1.4 1.5-1.4 1.5H16z" opacity="0.7"/><path d="M9 18h2.6v-1H52v1c3 0 5.4.8 8 2.6l-1 1.8c-2.4-1.2-4.4-1.8-7-1.8H9z"/><path d="M26 16.4h14v3.6H26z" fill="#0c0b09" opacity="0.4"/>';
 const EMPTY = '<path d="M6 6h52v20H6zM8 8v16h48V8z" fill-rule="evenodd" opacity="0.5"/>';
 const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL };

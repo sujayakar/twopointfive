@@ -13,7 +13,7 @@ const ESC = () => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'E
 
 (async () => {
   const { page, errors, go, step } = await PAGE.open({ timeout: 0, errors: { console: false } });
-  await go(`levelFile=depot.json&roomclear&squad4&paused&quality=${QUALITY}&mute&seed=7&freshstart=0`);
+  await go(`levelFile=depot.json&roomclear&squad4&paused&quality=${QUALITY}&mute&seed=7`);
   await page.evaluate(async () => { await window.__ready; window.__engine.render = () => {}; window.__draw.run(60, [], 'last'); });
   const kept = []; for (let i = 0; i < 3; i++) { kept.push(await page.evaluate(F5)); await step(240); }
   const a = await page.evaluate(SEEN), hand = a.rows.filter(r => r.slot === 'manual');

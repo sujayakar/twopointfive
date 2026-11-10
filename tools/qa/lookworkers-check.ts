@@ -5,54 +5,50 @@
 //   bun run tools/qa/lookworkers-check.ts      exit 0 = all pass, 1 = a FAIL line
 //   LOOKWORKERS_BREAK=1 …   = the workers are handed a text that answers with the NEXT layer's maps: the bytes line must fail
 //   bun run tools/qa/checks.ts lookworkers     (also under `render`)
-// No GPU and no browser; what the page's boot gains is in docs/agents/render.md.
+// No GPU and no browser.
 import { LOOK_WORKERS, LookPool, lookWorkerText, lookWorkersGaveUp, lookWorkersAgain } from '../../src/render/lookWorkers';
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, lookLayer, lookMip } from '../../src/render/lookTex';
 import { GBuffer, lookNeed, lookForget } from '../../src/render/gbuffer';
-import { EXACT } from '../../src/math/exact';
 import { sameMaps as same } from './lookworkers-same';
 
 export async function lookWorkersCheck(): Promise<boolean> {
   let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
   const BREAK = process.env.LOOKWORKERS_BREAK === '1';
-  const G = globalThis as { Worker?: unknown; sessionStorage?: unknown }, W0 = G.Worker, S0 = G.sessionStorage, tab = new Map<string, string>(), on0 = LOOK_WORKERS.on, wait0 = LOOK_WORKERS.waitMs, maths0 = EXACT.on, warn0 = console.warn;
+  const G = globalThis as { Worker?: unknown; sessionStorage?: unknown }, W0 = G.Worker, S0 = G.sessionStorage, tab = new Map<string, string>(), on0 = LOOK_WORKERS.on, wait0 = LOOK_WORKERS.waitMs, warn0 = console.warn;
   const said: string[] = []; console.warn = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };   // (a place that gives its workers up says so once: counted, not printed)
   G.sessionStorage = { getItem: (k: string) => tab.get(k) ?? null, setItem: (k: string, v: string) => { tab.set(k, v); }, removeItem: (k: string) => { tab.delete(k); } };   // (a tab's storage, for the give-up it keeps)
   try {
     const text = await lookWorkerText();
     // ---- the text a worker runs: the worker's own module bundled whole as a plain script, nothing left to fetch
-    check(text.length > 20000 && /\bfunction lookLayer\(/.test(text) && /\bonmessage = /.test(text) && /EXACT\.on = d\.exact/.test(text) && !/^\s*(import|export)[\s{*"']/m.test(text),
-      `a worker's text is render/lookWorkerMain.ts bundled by itself when this was built: ${text.length} characters, the generator and the game's own maths in it, a plain script (no import, no export: a page opened from disk can start it)`);
+    check(text.length > 20000 && /\bfunction lookLayer\(/.test(text) && /\bonmessage = /.test(text) && !/^\s*(import|export)[\s{*"']/m.test(text),
+      `a worker's text is render/lookWorkerMain.ts bundled by itself when this was built: ${text.length} characters, the generator in it, a plain script (no import, no export: a page opened from disk can start it)`);
 
     // ---- the stand: down in the module, so a tool makes its maps as it did; and no pool where there is no Worker
     { const down = (LOOK_WORKERS.on = false, await LookPool.open(4));
       LOOK_WORKERS.on = true; G.Worker = undefined; const none = await LookPool.open(4); G.Worker = W0;
       check(on0 === false && down === null && none === null && lookWorkersGaveUp() === '', `the rule is down in the module (${on0}): no workers for a tool; and with it up where there is no Worker, none either, and nothing given up (the caller makes the layer itself)`); }
 
-    // ---- every layer, made on workers and made here, on the engine's maths and on the game's own (math/exact.ts: the page's)
+    // ---- every layer, made on workers and made here
     LOOK_WORKERS.on = true;
     { const N = LOOK_NAMES.length, wrong = text.replace('lookLayer(d.layer, d.n, d.even)', `lookLayer((d.layer + 1) % ${N}, d.n, d.even)`);
       const layers = LOOK_NAMES.map((_, l) => l), times: string[] = [], bad: string[] = []; let workers = 0, smaller = 0; const sizesOf = Math.log2(LOOK_N) + 1;
-      const sameBytes = (x: Uint8Array, y: Uint8Array | undefined) => { if (!y || x.length !== y.length) return false; for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return true; }; const heres: ReturnType<typeof lookLayer>[][] = [];
-      for (const exact of [false, true]) {
-        EXACT.on = exact;
+      const sameBytes = (x: Uint8Array, y: Uint8Array | undefined) => { if (!y || x.length !== y.length) return false; for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return true; };
+      {
         const pool = await LookPool.open(N, BREAK ? wrong : text);
-        if (!pool) { bad.push('no pool opened (bun has workers: one should)'); continue; }
+        if (!pool) throw new Error('no pool opened (bun has workers: one should)');
         const t0 = performance.now();
         const made = await Promise.all([...layers.map(l => pool.make(l, LOOK_N, true)), ...[0, 8, 15].map(l => pool.make(l, LOOK_N, false))].map(p => p.then(m => m, (e: unknown) => String(e))));
         const tW = performance.now() - t0; workers = pool.size; pool.close();
-        const t1 = performance.now(), here = layers.map(l => lookLayer(l, LOOK_N, true)); heres.push(here);
-        layers.forEach(l => { const m = made[l]; if (typeof m === 'string') bad.push(`${LOOK_NAMES[l]}: ${m}`); else if (!same(m, here[l])) bad.push(`${LOOK_NAMES[l]}${exact ? ' (the game\'s maths)' : ''}`);
+        const t1 = performance.now(), here = layers.map(l => lookLayer(l, LOOK_N, true));
+        layers.forEach(l => { const m = made[l]; if (typeof m === 'string') bad.push(`${LOOK_NAMES[l]}: ${m}`); else if (!same(m, here[l])) bad.push(`${LOOK_NAMES[l]}`);
           else { let a = here[l].a, b = here[l].b, ok = m.sizes.a.length === sizesOf && m.sizes.b.length === sizesOf && m.sizes.a[0] === m.a && m.sizes.b[0] === m.b;   // (its smaller sizes: the page's own lookMip of each, down to one texel)
             for (let n = LOOK_N, k = 1; ok && n > 1; n >>= 1, k++) { a = lookMip(a, n, false); b = lookMip(b, n, true); ok = sameBytes(a, m.sizes.a[k]) && sameBytes(b, m.sizes.b[k]); smaller += 2; }
-            if (!ok) bad.push(`${LOOK_NAMES[l]}'s smaller sizes${exact ? ' (the game\'s maths)' : ''}`); } });
+            if (!ok) bad.push(`${LOOK_NAMES[l]}'s smaller sizes`); } });
         [0, 8, 15].forEach((l, k) => { const m = made[N + k]; if (typeof m === 'string' || !same(m, lookLayer(l, LOOK_N, false))) bad.push(`${LOOK_NAMES[l]} (not evened)`); });
-        times.push(`${exact ? 'the game\'s own maths' : 'the engine\'s maths'}: ${(tW / 1000).toFixed(1)} s on the workers, ${((performance.now() - t1) / 1000).toFixed(1)} s here`);
+        times.push(`${(tW / 1000).toFixed(1)} s on the workers, ${((performance.now() - t1) / 1000).toFixed(1)} s here`);
       }
-      const differ = heres.length === 2 ? layers.filter(l => !same(heres[0][l], heres[1][l])).length : -1;   // (why a worker is told which maths)
-      check(bad.length === 0, `bytes — all ${N} layers, and three as their materials wrote them, are the same maps made on ${workers} workers as made here (both arrays, the tone and the hollow, and the ${smaller} smaller maps a worker hands back with them against the page's own), on either maths${bad.length ? `: NOT ${bad.slice(0, 6).join(', ')}${bad.length > 6 ? ` and ${bad.length - 6} more` : ''}` : ''} · ${times.join(' · ')} · ${differ} of the layers come out differently on the two maths, so a worker is told which${BREAK && wrong === text ? ' · THE BREAK DID NOT APPLY (the text no longer holds the call it swaps)' : ''}`);
+      check(bad.length === 0, `bytes — all ${N} layers, and three as their materials wrote them, are the same maps made on ${workers} workers as made here (both arrays, the tone and the hollow, and the ${smaller} smaller maps a worker hands back with them against the page's own)${bad.length ? `: NOT ${bad.slice(0, 6).join(', ')}${bad.length > 6 ? ` and ${bad.length - 6} more` : ''}` : ''} · ${times.join(' · ')}${BREAK && wrong === text ? ' · THE BREAK DID NOT APPLY (the text no longer holds the call it swaps)' : ''}`);
     }
-    EXACT.on = maths0;
 
     // ---- one layer the generator throws on is refused alone; a worker that cannot start, or never answers, is given up on, said once and remembered
     { const half = await LookPool.open(1, text.replace('const m = lookLayer(', 'if (d.layer === 2) throw new Error("not this one"); const m = lookLayer('));
@@ -84,7 +80,7 @@ export async function lookWorkersCheck(): Promise<boolean> {
       const off = await drive(false), onW = await drive(true), bare = await drive(true, true), n = off.made.split(', ').length;
       check(n >= 7 && off.made === onW.made && off.slots === onW.slots && off.writes === onW.writes && off.men === onW.men && off.writes === bare.writes && off.by.here === n && off.by.workers === 0 && onW.by.workers === n && onW.by.here === 0 && bare.by.here === n && lookWorkersGaveUp() === '',
         `the page's own loop makes ${n} layers (${off.made}) in the same order, into the same slots, as the same ${off.writes.split('|').length} writes of the same bytes with the workers down (${off.by.here} here), up (${onW.by.workers} on workers, ${onW.by.here} here) and up where there is no Worker (${bare.by.here} here)`); }
-  } finally { LOOK_WORKERS.on = on0; LOOK_WORKERS.waitMs = wait0; EXACT.on = maths0; G.Worker = W0; console.warn = warn0; lookWorkersAgain(); G.sessionStorage = S0; }
+  } finally { LOOK_WORKERS.on = on0; LOOK_WORKERS.waitMs = wait0; G.Worker = W0; console.warn = warn0; lookWorkersAgain(); G.sessionStorage = S0; }
 
   console.log(`\nlookworkers-check: ${red ? `${red} FAILED` : 'all passed'}${BREAK ? ' (LOOKWORKERS_BREAK=1: the workers answer with the next layer — this run must fail)' : ''}`);
   return red === 0;

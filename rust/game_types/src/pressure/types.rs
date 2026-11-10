@@ -1,6 +1,6 @@
 //! The types of `pressure`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -30,18 +30,10 @@ pub struct Man {
     pub ear_t: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ManRole {
     #[default] Press,
     Flank,
-}
-impl ManRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManRole::Press => "press",
-            ManRole::Flank => "flank",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -55,7 +47,6 @@ pub struct Press {
     pub set_at: f64,
     pub lone_at: Option<f64>,
     pub sprung: Option<bool>,
-    pub listen_at: f64,
     pub moving: bool,
     pub word_at: f64,
     pub go_at: f64,
@@ -69,15 +60,6 @@ pub enum PressPhase {
     #[default] Go,
     Word,
     Gather,
-}
-impl PressPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PressPhase::Go => "go",
-            PressPhase::Word => "word",
-            PressPhase::Gather => "gather",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -106,15 +88,6 @@ pub enum WarnPhase {
     #[default] Heard,
     Called,
     Over,
-}
-impl WarnPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WarnPhase::Heard => "heard",
-            WarnPhase::Called => "called",
-            WarnPhase::Over => "over",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -253,24 +226,11 @@ pub struct StateStats {
     pub look_off: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PRESSUREHOOKS {
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HookedWhy {
     Push,
     Door,
     Seen,
-}
-impl HookedWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HookedWhy::Push => "push",
-            HookedWhy::Door => "door",
-            HookedWhy::Seen => "seen",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -283,24 +243,6 @@ pub struct Hooked {
 pub struct Target {
     pub t: RoomfightRoomId,
     pub at: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PicketMarksMarksItem {
-    pub pos: V3,
-    pub aim_at: V3,
-    pub drill: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PicketMarksItem {
-    pub pos: V3,
-    pub aim_at: V3,
-    pub drill: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PostPicketRoom {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -328,57 +270,22 @@ pub struct Aim {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PressureMod {
-    /// (src/game/pressure.ts:297 STATES)
     pub states: Option<crate::pressure::State>,
-    /// (src/game/pressure.ts:305 KITTED)
     pub kitted: JsSet<GuardId>,
-    /// (src/game/pressure.ts:335 PICKETS)
-    pub pickets: JsMap<GuardId, RoomfightRoomId>,
-    /// (src/game/pressure.ts:335 PICKET_WENT)
-    pub picket_went: JsSet<GuardId>,
-}
-impl PressureMod {
-    pub fn blank() -> Self {
-        PressureMod {
-            states: None,
-            kitted: JsSet::new(),
-            pickets: JsMap::new(),
-            picket_went: JsSet::new(),
-        }
-    }
 }
 
-/// (src/game/pressure.ts:224 PRESSURE_HOOKS: a table nothing writes)
-pub fn pressure_hooks() -> crate::pressure::PRESSUREHOOKS { crate::pressure::PRESSUREHOOKS {  } }
-
-/// (src/game/pressure.ts:306 ROOM_CELLS)
 pub const ROOM_CELLS: f64 = 500.0;
 
-/// (src/game/pressure.ts:307 STAND_OFF_BAND)
 pub const STAND_OFF_BAND: f64 = 7.0;
 
-/// (src/game/pressure.ts:307 STAND_OFF_TRIES)
 pub const STAND_OFF_TRIES: f64 = 10.0;
 
-/// (src/game/pressure.ts:308 PAIR_WAIT_SECS)
 pub const PAIR_WAIT_SECS: f64 = 6.0;
 
-/// (src/game/pressure.ts:309 CUE_FIRST_SECS)
 pub const CUE_FIRST_SECS: f64 = 1.0;
 
-/// (src/game/pressure.ts:336 PICKET_DOOR_M)
-pub const PICKET_DOOR_M: f64 = 2.5;
-
-/// (src/game/pressure.ts:1001 CALLED_SECS)
 pub const CALLED_SECS: f64 = 30.0;
 
-/// (src/game/pressure.ts:1106 KEPT: a table nothing writes)
-pub fn kept() -> [String; 21] { [String::from("on"), String::from("press"), String::from("flank"), String::from("fallBack"), String::from("second"), String::from("secondKeeps"), String::from("secondSet"), String::from("maxMen"), String::from("keepRoom"), String::from("keeperLeft"), String::from("organiseK"), String::from("gather"), String::from("warned"), String::from("standPress"), String::from("picket"), String::from("byWay"), String::from("wayOut"), String::from("rescueCrew"), String::from("drilled"), String::from("squadDrill"), String::from("sweep")] }
-
-/// (src/game/pressure.ts:1107 LS)
-pub const LS: &str = "twopointsix.pressure";
-
-/// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
 pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::PressureK::page() }

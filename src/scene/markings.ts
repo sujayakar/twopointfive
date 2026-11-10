@@ -1,5 +1,5 @@
 // MARKINGS — object legibility from one or two SIGNIFIERS per object class, made of the same thing the world is made of: rectangles, in 2D, ON a box
-// face (docs/review/legibility.html; the maintainer's ask 08-10: "the monitor looks great but the keyboard doesn't … cardboard boxes are hard to recognize
+// face (the maintainer's ask 08-10: "the monitor looks great but the keyboard doesn't … cardboard boxes are hard to recognize
 // … vending machine"). REPRESENTATION (agreed with the maintainer: image-style authoring, analytic rendering): a marking is a tiny PALETTE-INDEXED
 // BITMAP — W × H ≤ 32 × 32 cells, 2 bits a cell (0 = transparent, 1‥3 = palette entries), each palette entry a MATERIAL (albedo — absolute or × the
 // box's own — roughness, emitted radiance), never a shaded colour, so baked lighting is impossible by construction — laid on a world-space texel
@@ -12,15 +12,14 @@
 // first) — canonical, deterministic, greppable. Readable text / logos would come later as an SDF-glyph atlas add-on to this same table, not now.
 //
 // This file also computes each marking's per-entry COVERAGE FRACTIONS (the mean the shader fades to; area-averaged over the box, the albedo the secondary
-// rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: rust/game_rules/src/game registers a one-sided
-// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams, the bounce and the light meter all see it).
+// rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: rust/game_rules/src/tick/game registers a one-sided
+// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams and the bounce all see it).
 import type { Vec3 } from '../math/vec';
-import { onExact } from '../math/exact';
 
 /** the base world-space texel (m): a key cap, a text bar, an LED are one of these (fine = half, coarse = double) */
 export const MARKING_TEXEL = 0.025;
 export const MAX_MARKS_PER_BOX = 4;
-export const MAX_CELLS_W = 32; export const MAX_CELLS_H = 32; export const MAX_PAL = 3;
+export const MAX_CELLS_W = 32; export const MAX_CELLS_H = 32; 
 /** GPU table: vec4f rows in the tail of BoxWorld.matBuf; a record = MARK_HEAD_ROWS header rows + ceil(W·H / 48) cell rows (12 cells a float, exact small integers) */
 export const MARK_HEAD_ROWS = 8; export const CELLS_PER_FLOAT = 12; export const CELLS_PER_ROW = 48;
 export const MARK_TABLE_ROWS = 6144;   // 96 KB of table (the office packs ≈ 1.5k rows)
@@ -76,43 +75,6 @@ export function palEntry(p: MarkPal): MarkPal {
   return o;
 }
 export const copyMarkings = (ms: readonly MarkingDef[] | undefined): MarkingDef[] | undefined => ms && ms.length ? ms.map(marking) : undefined;
-
-/** every problem with a marking on a box of half extents h — levelData.ts validate calls it per marking */
-export function markingErrors(m: any, h: Vec3, base = MARKING_TEXEL): string[] {
-  const e: string[] = [];
-  const isNum = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
-  const isVec = (v: unknown) => Array.isArray(v) && v.length === 3 && v.every(x => isNum(x) && x >= 0);
-  if (!m || typeof m !== 'object' || Array.isArray(m)) return ['must be an object'];
-  const KEYS_M = ['face', 'res', 'at', 'size', 'pal', 'cells'];
-  for (const k of Object.keys(m)) if (m[k] !== undefined && !KEYS_M.includes(k)) e.push(`unknown key '${k}' (allowed: ${KEYS_M.join(', ')})`);
-  const f = MARK_FACES.indexOf(m.face); if (f < 0) e.push(`face must be one of ${MARK_FACES.join(' ')}`);
-  if (m.res !== undefined && !MARK_RES.includes(m.res)) e.push(`res must be one of ${MARK_RES.join(' ')}`);
-  const okAt = Array.isArray(m.at) && m.at.length === 2 && m.at.every((x: unknown) => Number.isInteger(x));
-  const okSize = Array.isArray(m.size) && m.size.length === 2 && m.size.every((x: unknown) => Number.isInteger(x)) && m.size[0] >= 1 && m.size[0] <= MAX_CELLS_W && m.size[1] >= 1 && m.size[1] <= MAX_CELLS_H;
-  if (!okAt) e.push('at must be [U0, V0] integers'); if (!okSize) e.push(`size must be [W, H] integers, 1‥${MAX_CELLS_W} × 1‥${MAX_CELLS_H}`);
-  const pal = Array.isArray(m.pal) ? m.pal : null;
-  if (!pal || pal.length < 1 || pal.length > MAX_PAL) e.push(`pal must be 1‥${MAX_PAL} entries`);
-  else pal.forEach((p: any, k: number) => {
-    if (!p || typeof p !== 'object') { e.push(`pal[${k}] must be an object`); return; }
-    for (const q of Object.keys(p)) if (p[q] !== undefined && !['albedo', 'mul', 'rough', 'emit'].includes(q)) e.push(`pal[${k}]: unknown key '${q}'`);
-    if (p.albedo !== undefined && !(isVec(p.albedo) && p.albedo.every((x: number) => x <= 1))) e.push(`pal[${k}].albedo must be a Vec3 in [0, 1]`);
-    if (p.mul !== undefined && !(isNum(p.mul) && p.mul >= 0 && p.mul <= 4)) e.push(`pal[${k}].mul must be in [0, 4]`);
-    if (p.albedo !== undefined && p.mul !== undefined) e.push(`pal[${k}]: albedo OR mul, not both`);
-    if (p.rough !== undefined && !(isNum(p.rough) && p.rough >= 0 && p.rough <= 1)) e.push(`pal[${k}].rough must be in [0, 1]`);
-    if (p.emit !== undefined && !isVec(p.emit)) e.push(`pal[${k}].emit must be a Vec3 ≥ 0`);
-  });
-  if (okSize) {
-    const [W, H] = m.size;
-    if (!(Array.isArray(m.cells) && m.cells.length === H && m.cells.every((r: unknown) => typeof r === 'string' && r.length === W))) e.push(`cells must be ${H} strings of ${W} characters (top row first)`);
-    else { const maxIdx = pal ? pal.length : 0; for (const r of m.cells as string[]) for (const ch of r) { const i = CELL_CHARS.indexOf(ch); if (i < 0 || i > maxIdx) { e.push(`cells: character '${ch}' is not one of '${CELL_CHARS.slice(0, maxIdx + 1)}'`); break; } } }
-    if (f >= 0 && okAt) {
-      const t = texelOf(m, base); const { hu, hv } = faceHalf(h, f); const eps = 1e-6;
-      const u0 = m.at[0] * t, v0 = m.at[1] * t, u1 = (m.at[0] + W) * t, v1 = (m.at[1] + H) * t;
-      if (u0 < -hu - eps || u1 > hu + eps || v0 < -hv - eps || v1 > hv + eps) e.push(`the bitmap [${u0.toFixed(3)}, ${v0.toFixed(3)}]‥[${u1.toFixed(3)}, ${v1.toFixed(3)}] m leaves the face (±${hu.toFixed(3)} × ±${hv.toFixed(3)})`);
-    }
-  }
-  return e;
-}
 
 // ------------------------------------------------------------------------------------------------------------------------------------ authoring: the cell canvas + generators
 /** A W × H cell canvas (j = 0 is the BOTTOM row; toRows() prints top first). The procedural kinds draw into one; several shapes on one face region share one. */
@@ -253,7 +215,7 @@ const arc = (cx: number, cy: number, rx: number, ry: number, a0: number, a1: num
 /** THE FIGURES AS A SIGN PAINTER DRAWS THEM: each a few strokes in a box of 0‥1 (y up), drawn at whatever size the stencil is cut (GEN.text, scale 2 and over) */
 const numeral: Record<string, readonly (readonly (readonly [number, number])[])[]> = {};
 export const NUMERAL: Readonly<Record<string, readonly (readonly (readonly [number, number])[])[]>> = numeral;
-onExact(() => { Object.assign(numeral, {   // (made in onExact, not as the module loads: an arc's cos and sin worked out at load are the engine's whatever the maths switch says — math/exact.ts)
+Object.assign(numeral, {
   0: [arc(0.5, 0.5, 0.5, 0.5, 0, 360, 20)],
   1: [[[0.12, 0.72], [0.5, 1], [0.5, 0]], [[0.12, 0], [0.88, 0]]],
   2: [[...arc(0.5, 0.7, 0.5, 0.3, 175, -35, 10), [0, 0], [1, 0]]],
@@ -264,7 +226,7 @@ onExact(() => { Object.assign(numeral, {   // (made in onExact, not as the modul
   7: [[[0, 1], [1, 1], [0.36, 0]]],
   8: [arc(0.5, 0.75, 0.42, 0.25, 0, 360, 16), arc(0.5, 0.26, 0.5, 0.26, 0, 360, 16)],
   9: [[...arc(0.5, 0.7, 0.5, 0.3, 0, 360, 16), ...arc(0.44, 0.5, 0.56, 0.5, 15, -125, 10)]],
-}); });
+});
 /** cells a stencilled text is wide at a scale (its last letter's spare column left off) */
 export const stencilWidth = (text: string, scale = 1) => Math.max(text.length * 6 - 1, 0) * scale;
 const face5 = (rows: string): readonly number[] => rows.split(' ').map(r => parseInt(r.replace(/#/g, '1').replace(/\./g, '0'), 2));
@@ -364,7 +326,7 @@ export function packMarking(out: Float32Array, row: number, m: MarkingDef, st: M
   const [W, H] = m.size; const cb = o + MARK_HEAD_ROWS * 4;
   for (let j = 0; j < H; j++) { const rowStr = m.cells[H - 1 - j]; for (let i = 0; i < W; i++) { const e = CELL_CHARS.indexOf(rowStr[i]); if (e <= 0) continue; const c = j * W + i; out[cb + Math.floor(c / CELLS_PER_FLOAT)] += e << (2 * (c % CELLS_PER_FLOAT)); } }
 }
-/** markings whose emission has been registered as an analytic light (rust/game_rules/src/game): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
+/** markings whose emission has been registered as an analytic light (rust/game_rules/src/tick/game): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
 export const AREA_LIT_MARKS = new WeakSet<MarkingDef>();
 export function faceAreas(h: Vec3): { areas: number[]; total: number } {
   const areas = MARK_FACES.map((_, f) => { const { hu, hv } = faceHalf(h, f); return 4 * hu * hv; });

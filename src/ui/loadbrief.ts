@@ -5,7 +5,7 @@
 //
 // Before this a page whose address names a mission booted behind the old start card (a grey Start, the notes, the whole
 // controls list and the shader count) and the mission began under it the moment the boot was done: a list of keys up for as long as the machine took, gone
-// before it could be read. Now that page shows THE MISSION: its own words off the mission list (scene/scenarioList.ts: the heading it sits under, its title,
+// before it could be read. Now that page shows THE MISSION: its own words off the mission list (the desk's brief: the heading it sits under, its title,
 // the place, the job in one line, the team as deployed, the approach) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
 // drawMissionMap: the place as a model, a 10 m scale, the way in marked; the maintainer on the first cut, which had the mission's picture there: "let's show
 // the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.

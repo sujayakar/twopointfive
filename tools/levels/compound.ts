@@ -1,7 +1,7 @@
 // THE COMPOUND — a walled compound for the four squad, in the Door Kickers mould: a perimeter wall with three ways through it, yard on every side of a main
 // house of eight rooms off one corridor, and three outbuildings (a garage, a shed, a guard hut) the yard has to be crossed past. Eight held rooms, twenty-four
 // leaves, four squads of defenders.
-// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; docs/agents/levels.md the how-to):
 //   bun run map:export compound     → levels/compound.json, with its `scenarios.roomClear` block (rooms + squads) and its footstep `surfaces`
 //   bun run map:check compound      → the kit's one check (validator, lint, structure, squads, nav from every way in, footsteps, start card, seeded runs)
 //   page: ?levelFile=compound.json&roomclear&squad4     (the start card's row 'The compound')
@@ -22,7 +22,7 @@
 //     two approach yards (tried: a man at the sala's window shot the team at the gate, eleven metres off, before a door was touched). FOUR LOOPS inside:
 //     corridor → kitchen → pantry → corridor, corridor → bunk room → back bedroom → corridor, corridor → office → spare room → corridor, corridor → sala →
 //     hall → corridor. Small rooms (the pantry 3 × 5, the hall 3 × 4.3) and two big ones (the sala 8 × 4.3, the garage 6.3 × 5.8).
-//   · FOUR SQUADS, ELEVEN MEN (scenarios.roomClear.squads — scene/scenarios.ts SquadData, rebuild/enemy-squads/squad-format.md): YARD = the shed (FOUR men:
+//   · FOUR SQUADS, ELEVEN MEN (scenarios.roomClear.squads — lib/scenarios.ts SquadData, docs/level-format.md): YARD = the shed (FOUR men:
 //     the guard room) and the garage (one: the bait) — five in two rooms, so the one squad with men to spare, and all four of the shed cross the yard to the
 //     garage when it is hit; GATE = the hut's one man, who stays at his gate (mayLeave false); WEST = the kitchen and the sala, one a room, nobody to spare;
 //     KEEP = the office, the bunk room and the back bedroom, who do not leave (mayLeave false) and may wedge only their corridor doors. Yard 5, gate 1, west 2,
@@ -57,8 +57,8 @@
 //         z 24 +--------+----------------------[ main gate ]+---+-----+
 //                                                 (x 22..25)
 //
-// HOW IT WAS TUNED (the scripted four, Standard, 16 seeds a layout; the record and the 144-seed tallies are in
-// rebuild/enemy-squads/map-compound.md): the first layout (team at the main gate, an open garage bay, a hall open to the corridor, a door on the corridor's east
+// HOW IT WAS TUNED (the scripted four, Standard, 16 seeds a layout):
+// the first layout (team at the main gate, an open garage bay, a hall open to the corridor, a door on the corridor's east
 // end, windows on the sala and the office) left 2 men in 10 standing: two thirds of the defenders run at the first bang, and in open ground they arrive from
 // every side at once. What moved it: the team start by the dark gate (the outbuildings fall first, the house is met from one end), doors instead of open mouths
 // onto the forecourt, no window onto an approach, the back door into a room nobody holds — and the squads a yard apart, so a team that keeps moving meets
@@ -67,7 +67,7 @@
 // LIMITS IT IS BUILT INSIDE (not lifted here): the world is 40 × 28 m (scene/world.ts — the trace grid, the nav grid and the shaders' bounds), so the wall
 // stands on the office's own shell line (x 4 / 36, z 4 / 24) and the 4 m outside it is the team's approach. weather.ts INTERIOR is that same rectangle: it
 // rains OUTSIDE the wall and not in the yard, nobody gets wet in it, and the storm's wind stops at the wall. weather.ts ANNEX (x 1.1..4, z 9.33..12.87: the
-// office's stair tower) is a dry patch on the grass outside the west wall; the west gate is cut south of it. rust/game_rules/src/destruction takes the same rectangle for
+// office's stair tower) is a dry patch on the grass outside the west wall; the west gate is cut south of it. rust/game_rules/src/breakage/destruction takes the same rectangle for
 // "indoors": at chaos above 0 a burst in the YARD can drop a ceiling tile out of the sky and raise drywall dust (the room clear's own chaos setting decides
 // whether that is ever seen). The light list holds 64 with every man's torch in it: the level keeps to a handful of fixtures. With eleven defenders, five of
 // the team and Sam the light probe is asked for more queries a frame than it answers (49 against 32: Sam's own meter is the one dropped) and only the first 8
@@ -84,7 +84,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
 import type { SurfacesData } from './lib/levelData';
-import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from './lib/scenarios';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
@@ -99,7 +99,7 @@ import { lookMarks } from './lookMarks';
 
 const PLAIN_NOTES = 'The compound: a perimeter wall with a lit main gate and two dark side gates, yard all round a main house of eight rooms off one corridor (three outside doors, two open windows, four loops inside), and a garage, a shed and a guard hut across the yard. Eight held rooms, four squads. For the four man squad, who start outside the wall. One floor, box geometry only, the office\'s kit. Regenerate: bun run map:export compound';
 
-/** the men in each held room: eleven, the most a room clear stages (scene/scenarios.ts SQUAD_MAX_MEN) */
+/** the men in each held room: eleven, the most a room clear stages (rust/game_types/src/scene_scenarios SQUAD_MAX_MEN) */
 export const GARRISON: Record<string, number> = {
   shed: 4, garage: 1, hut: 1,        // YARD: the shed 4 + the garage 1 (the guard room and the bait). The hut's one man is a squad of his own, GATE: he stays
   kitchen: 1, sala: 1,               // WEST: 2, one a room, nobody to spare
@@ -122,7 +122,7 @@ export const COMPOUND_ROOMS: Record<'kitchen' | 'pantry' | 'bunk' | 'back' | 'co
   hut: { x0: 26.12, x1: 30.38, z0: 21.12, z1: 23.88 },
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest). This is the start page's first mission, so its
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest). This is the start page's first mission, so its
  *  picture is the first one a player sees. THE WEST GATE is the level's own: the leaf in the mud wall, the stack along the wall north of it, and behind the
  *  wall the west yard — the garden's rows and the cistern. THE NORTH GATE is a bespoke set, and a near copy: on the level the strip behind that gate is 2.26 m
  *  to the house's back wall, 1.92 m of it floor, and a can thrown through the gate wants 2 m (the plan's `inside`). The set is that gate with the house's
@@ -441,7 +441,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'gate_w', hinge: [4.0, 14.32], closedDir: Z, width: 1.16, exterior: true },
     { name: 'gate_n', hinge: [23.82, 4.0], closedDir: X, width: 1.16, exterior: true },
   ];
-  // `exterior` is for the two leaves in the PERIMETER wall only: it is what the game reads as "opens onto the weather" (rust/game_rules/src/wind gives each one a gust by the
+  // `exterior` is for the two leaves in the PERIMETER wall only: it is what the game reads as "opens onto the weather" (rust/game_rules/src/air/wind.rs gives each one a gust by the
   // office's INTERIOR rectangle, which is this wall's own line; a door of the house stands wholly inside that rectangle and would get one blowing an arbitrary
   // way). The house's and the outbuildings' outside doors stand in 0.24 walls like the gates, so their FRAMES are cut the thick way all the same.
   const THICK = new Set(['front', 's_w', 'p_back', 'g_n', 'g_e', 'shed_s', 'shed_e', 'hut_w', 'hut_e', 'yard_sw']);
@@ -805,7 +805,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const roomClear: StructureData = {
     name: 'the compound', maxMen: 11,
     team: TEAM,
-    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): outside the NORTH gate, along the wall east of
+    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): outside the NORTH gate, along the wall east of
     // it. That gate is dark too, and opens on the strip behind the house: the pantry's back door ahead, the shed down the wall to the right, the yard's lamp behind
     starts: [{ sam: [27.0, 0, 2.2], samYaw: -Math.PI / 2, ops: [[28.4, 0, 1.6], [28.4, 0, 2.8], [29.6, 0, 1.6], [29.6, 0, 2.8]], opsYaw: -Math.PI / 2 }],
     rooms: [
@@ -878,11 +878,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'keep', name: 'Keep', rooms: ['office', 'bunk', 'back'], rally: [29.9, 0, 8.3], barricade: ['o_n', 'a_s', 'b_s'], mayLeave: false },   // the east end: they stay, and wedge only their corridor doors
     ],
   };
-  // THE FILE ORDER OF THE ROOMS is the order the objective marker walks them from the west gate (rust/game_rules/src/roomclear: the first still held): THE HOUSE FIRST, the
+  // THE FILE ORDER OF THE ROOMS is the order the objective marker walks them from the west gate (rust/game_rules/src/missions/roomclear.rs: the first still held): THE HOUSE FIRST, the
   // sala leading — the marker stands on what the mission is, and names neither outbuilding (it stood on the shed, the first room of one of the answers).
   // A room's own marks keep their order: the placement is theirs.
   roomClear.rooms = ['sala', 'kitchen', 'office', 'bunk', 'back', 'garage', 'shed', 'hut'].map(id => roomClear.rooms.find(r => r.id === id)!);
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure. The house's four unheld spaces, then the yard's four pieces as the head describes them
   // (first match wins, the structure's rooms before any of these: the west yard's rectangle may run over the garage's wall).
   const places: PlacesData = { areas: [
@@ -892,10 +892,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'alley', bounds: { x0: 33.12, x1: 35.88, z0: 4.12, z1: 23.88 } }, { name: 'alley', bounds: { x0: 30.62, x1: 33.12, z0: 19.12, z1: 23.88 } },
     { name: 'forecourt', bounds: { x0: 10.5, x1: 30.62, z0: 19.12, z1: 23.88 } },
   ] };
-  // what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name)
+  // what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
   const doorNames = [{ door: 'p_back', name: 'pantry back door' }, { door: 'c_n', name: 'spare room door' }, { door: 'hall_n', name: 'corridor-side front hall door' }, { door: 'p_s', name: 'corridor-side pantry door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'gate_n', name: 'back gate' }];
   const scenarios: LevelScenarios = { roomClear, places, kitView: COMPOUND_KITVIEW, doorNames };
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which step sounds, and how far it carries to their ears) ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which step sounds, and how far it carries to their ears) ----------------
   // `building` is everything inside the perimeter wall and its base is the YARD: packed earth, which the six materials have no word for — 'asphalt' is the
   // nearest (hard, a little under lino; 'grass' would hand the team a silent approach the picture does not promise). Over it: the house's tiled floor and the
   // three outbuildings' bare slabs. Outside the wall: the scrub north and west (x or z under 3.2, where the grass slabs are — the team starts on it), asphalt
@@ -941,7 +941,7 @@ const SKIN: Skin = {
     // the two walks outside the walls, trodden darker as the ground at every door is: along the north wall to the back gate, down the west wall to the side gate
     { const fn = T.floorAt(30, 2.2), fw = T.floorAt(2.1, 10); if (fn) M.path([[39.4, 2.3], [26.2, 2.2], [24.25, 3.3]], 0.55, T.tone(fn, 0.8)); if (fw) M.path([[2.2, 4.4], [2.1, 13.2], [3.3, 14.75]], 0.55, T.tone(fw, 0.8)); }
     // the cook fire behind the kitchen: ash on the ground, soot up the wall
-    G.patch(14.2, 5.35, 1.5, 1.2, 'damp', 0.2); G.patch(14.25, 5.4, 0.8, 0.65, 'oil', 0.7, 0.0128); G.skirt('x', 6.5, 13.7, 14.8, -1, 'iron', 1.25, 0.24);
+    G.patch(14.2, 5.35, 1.5, 1.2, 'damp', 0.2); G.patch(14.25, 5.4, 0.8, 0.65, 'oil', 0.7, 0.0128); G.skirt('x', 6.5, 13.7, 14.8, -1, 'iron', 1.25, 0.248);
     // a chalk hopscotch by the front door (thin lines: the one pale thing on this ground)
     { const chalk = T.tone(P.whitewash, 0.85), x = 20.3, s = 0.5; let z = 20.0;
       for (const two of [false, false, true, false, true, false]) { if (two) { M.outline(x - s, z, x, z + s, 0.05, chalk); M.outline(x, z, x + s, z + s, 0.05, chalk); } else M.outline(x - s / 2, z, x + s / 2, z + s, 0.05, chalk); z += s; } }

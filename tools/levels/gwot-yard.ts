@@ -1,7 +1,7 @@
 // GWOT-YARD: the GWOT kit's SHOWROOM (lib/gwotKit.ts) — NOT a level to play for its own sake and not in the missions list. A walled family compound with
 // a two-room guest house, a rendered store, a yard and the road outside, with EVERY piece of the kit stood in it once, so the kit can be exported, linted,
 // looked at once. It has no file of its own now. It is the kit's worked example: a map thread reads this file next to the guide
-// (rebuild/play-style-levels/look/read-first.md) and copies the calls.
+// (docs/library.md, docs/agents/levels.md) and copies the calls.
 //
 //        x 8  10             15.5        20                    32
 //   z 6  ┌────┬──────────────┬───────────┬─────────────────────┐
@@ -14,7 +14,7 @@
 //           stalls ·  hesco      the road: gravel, barriers, a technical
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from './lib/gwotKit';
@@ -156,7 +156,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them
     mission: { serverRoom: { ...STORE }, entryDoor: 's_n', rack: { index: 0, front: [30.9, 1.0, 17.4], halfW: 0.3 }, exfilDoor: 'gate_w', exfilX: 6.5, exfilZ: 14.0, exfilOut: [-1, 0] },   // (out is WEST through gate_w)
   };
-  // ---- what is underfoot (rust/game_rules/src/floor): the six footstep materials have no word for earth — 'asphalt' is the nearest (hard, gritty, carries) — so the yard and the
+  // ---- what is underfoot (rust/game_rules/src/world/floor.rs): the six footstep materials have no word for earth — 'asphalt' is the nearest (hard, gritty, carries) — so the yard and the
   //      road are asphalt, the beaten-earth house floor and the store's slab stone, and the rugs carpet (gwotKit.ts GWOT_SURFACE says which is which)
   const surfaces: SurfacesData = {
     building: { x0: 8, x1: 32, z0: 6, z1: 22 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
@@ -167,6 +167,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'store', mat: 'stone', x0: 24, z0: 16, x1: 32, z1: 22 },
     ],
   };
-  // what a row calls the doors (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the yard has no mission of its own, so this is its one block
+  // what a row calls the doors (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the yard has no mission of its own, so this is its one block
   return { level, scenarios: { doorNames: [{ door: 'nm', name: 'guest room to sleeping room door' }, { door: 'gate_w', name: 'foot gate' }, { door: 'n_w', name: 'guest room door' }, { door: 'n_e', name: 'sleeping room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: trace.groups, surfaces };
 }

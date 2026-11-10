@@ -1,4 +1,4 @@
-// FRAME CAPTURE AND THE RENDERER'S TRACE (docs/agents/render.md, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
+// FRAME CAPTURE AND THE RENDERER'S TRACE (docs/agents/render.md, "To measure").
 //
 // Two things a picture fault needs and a screenshot does not hold:
 //

@@ -3,8 +3,8 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::PRESS | by::WALK`).
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+/// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::LANE | by::SQUAD`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, crate::bytes::ToBytes)]
 pub struct By(pub u32);
 impl core::ops::BitOr for By { type Output = By; fn bitor(self, o: By) -> By { By(self.0 | o.0) } }
 impl By {
@@ -46,31 +46,9 @@ taskers! {
     SQUAD_WORD: "his squad's word", ["his squad has heard and not yet said what it does, or has him going round or looking"];
     LANE: "a covered lane", ["held short of a covered lane, or looking round its corner"];
     DUG: "dug in", ["set on his door"];
-    WALK: "a silent mate", ["walking to the post of a mate who does not answer, nothing learned of the team by it"];
     BREAKER: "the lights", ["out for the lights, or waiting to be sent"];
     SQUAD: "his squad", ["at rest, his squad's call"];
     PRESS: "the press", ["the press has him, or he stays to keep the room it leaves"];
     NEEDS: "a need of his own", ["off for a coffee, a smoke, some water or a stretch"];
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct OwnerModWITNESSESItem {
-    pub rule: f64,
-    pub name: String,
-    pub says: crate::FnField,
-    pub at_read: bool,
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct OwnerMod {
-    /// (src/game/owner.ts:108 WITNESSES)
-    pub witnesses: Vec<crate::owner::OwnerModWITNESSESItem>,
-}
-impl OwnerMod {
-    pub fn blank() -> Self {
-        OwnerMod {
-            witnesses: Vec::new(),
-        }
-    }
-}

@@ -24,8 +24,8 @@ export class GpuTimer {
   lastFrame = new Map<string, number>(); resolved = 0;
   /** The raw begin/end of every stamped pass of that same readback, in ms from the frame's earliest stamp, in encode order. Passes are NOT serialized on
    *  the GPU: Metal runs independent compute passes concurrently when the queue is saturated (the `direct` pass beside the whole cascade chain is the
-   *  normal state at play cadence — docs/internal/p0a-cascades.md), and a pass's end − begin then spans time the GPU spent mostly on another pass. So a
-   *  SUM of per-pass durations (total(), lastFrame summed) double-counts overlapped spans — by 35–55 % of the frame at high / medium in the field —
+   *  normal state at play cadence), and a pass's end − begin then spans time the GPU spent mostly on another pass. So a
+   *  SUM of per-pass durations (lastFrame summed) double-counts overlapped spans — by 35–55 % of the frame at high / medium in the field —
    *  while unionMs() is the wall span the GPU was actually busy with the listed passes. Per-pass numbers stay what they are (fine for a pass measured
    *  with frames serialized; misleading for a small pass that straddled a big one). */
   lastRaw: PassInterval[] = [];
@@ -56,7 +56,7 @@ export class GpuTimer {
   /** Declare that `name` deliberately did no GPU work this frame (a cache resting on its off frame): it counts as having run, at an explicit 0 ms, so the
    *  smoothed `results` average the pass at the rate it really runs at. Do NOT open an empty timed pass for this instead: an empty compute pass never
    *  writes its timestamp pair, the slot keeps whatever ticks an earlier frame left there, and their difference reads as a plausible phantom cost (the
-   *  half-rate cascades read at ~93 % of full rate that way until 08-10 — docs/internal/p0a-cascades.md §4). */
+   *  half-rate cascades read at ~93 % of full rate that way until 08-10). */
   idle(name: string) { if (!this.enabled) return; this.idles.push(name); this.lastSeen.set(name, this.frameNo); }
 
   /** Call after encoding all passes, before submit. */
@@ -105,10 +105,9 @@ export class GpuTimer {
   /** was `name` stamped THIS frame? (a pass that keeps its slot's old timestamps — one skipped for having no work, e.g. particles with nothing alive after a
    *  settings toggle — must not report the last busy frame's cost until the 30-frame expiry: the HUD read a phantom 6.9 ms 'particles' that way, 08-10) */
   ranThisFrame(name: string): boolean { return this.lastSeen.get(name) === this.frameNo; }
-  total(exclude: string[] = []): number { let s = 0; for (const [k, v] of this.results) if (!exclude.includes(k) && this.frameNo - (this.lastSeen.get(k) ?? -99) <= 1) s += v; return s; }
   /** GPU-busy wall span of the last resolved frame over the passes not in `exclude` (ms): the UNION of their raw intervals — what the frame really cost on
    *  the GPU, however the driver overlapped the passes (see lastRaw). Pass the render passes here as everywhere (their stamps span the drawable wait). */
-  unionMs(exclude: string[] = []): number {
+  unionMs(exclude: readonly string[] = []): number {
     const iv = this.lastRaw.filter(r => !exclude.includes(r.name)).map(r => [r.begin, r.end]).sort((a, b) => a[0] - b[0]);
     let total = 0, cs = 0, ce = -1;
     for (const [b, e] of iv) { if (ce < 0) { cs = b; ce = e; } else if (b <= ce) ce = Math.max(ce, e); else { total += ce - cs; cs = b; ce = e; } }

@@ -3,7 +3,7 @@ use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
 /// STEALTH POSES — how Sam carries himself with his hands empty and nobody on to him, posed against Chaos Theory's own clips (the maintainer's clips, cut into
-/// beats: rebuild/takedowns-like-chaos-theory/clips/stealth-moves.md). The PLAYER only; picture and pose only.
+/// beats). The PLAYER only; picture and pose only.
 ///   IDLE    the crouch at a stand, hands empty: both arms hang forward of the knees off the shoulders, elbows a little out, forearms dropping in front of the
 ///           knees, hands open and loose between shin and knee height — and never a held frame: the weight goes foot to foot on a slow cycle (the pelvis a
 ///           centimetre to each side, feet where they were) with the hands drifting.
@@ -11,9 +11,9 @@ use game_derive::Knobs;
 ///           the hip. Read off the feet themselves, so it holds the stride he stopped in.
 ///   RISE    standing up: the hips come up as they always did and the ARMS follow over `riseSecs`, hanging low and forward until the trunk is up. Crouching
 ///           down: the elbows flare for the beat it takes the hands to come forward to the idle's place. Arms only: his trunk and head are the build's.
-///   CREEP   the close-in mode near a man (close.ts): each step of the left foot led by the free (left) hand reaching low and forward. The right hand is
-///           the knife's (close.ts, KIT.close) and the ready tell takes the left when it wants it.
-///   CABLE   the look under a door (wand.ts): OVER the lock work's kneel, and it IS the pose (`bones`, the capsules and his eye go down with what is drawn): he shuffles half a step of pose in,
+///   CREEP   the close-in mode near a man: each step of the left foot led by the free (left) hand reaching low and forward. The right hand is
+///           the knife's and the ready tell takes the left when it wants it.
+///   CABLE   the look under a door: OVER the lock work's kneel, and it IS the pose (`bones`, the capsules and his eye go down with what is drawn): he shuffles half a step of pose in,
 ///           folds the trunk, bows the head below the shoulder line toward the foot of the door, shoulders rounded in, one arm forward and low at the gap, the
 ///           other by the knee. Out with the head first. `anim.lockpick`, wand.ts's rules, lens, clocks and rows are untouched.
 /// One switch, STEALTHPOSE.on — the page: on (`?nostealthpose` = as it was); the frozen harness stand: off (`TPS_STEALTHPOSE=1` on) — and a half for each of

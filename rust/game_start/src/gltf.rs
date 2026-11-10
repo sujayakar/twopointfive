@@ -2,7 +2,7 @@
 //! `src/anim/gltf.ts` `loadGltfCharacter` and `loadGltfCast`, line for line, with the files' bytes handed in (the start reads no file itself).
 //! The rows go where the game keeps them: `g.tab.rig`, `g.tab.clip`, `g.tab.anim_gltf_mesh_data`, `g.tab.anim_gltf_cast_info` / `_cast_variant`.
 use crate::json::{self, Json};
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 use game::anim_gltf::{CastInfo, CastSide, CastVariant, Clip, GltfCharacter, GltfNode, MeshData, MeshDataJoints, SkinData, Track};
 use game::game::Game;
 use game::ids::*;
@@ -13,7 +13,7 @@ use game::js::JsMap;
 #[derive(Clone, Copy)]
 pub struct GltfFile<'a> { pub text: &'a str, pub bin: Option<&'a [u8]> }
 
-/// the material slots a cast face is assigned to (gltf.ts SLOT_NAMES: the order is the id)
+/// the material slots a cast face is assigned to
 pub const SLOT_NAMES: [&str; 11] = ["skin", "cloth_uniform", "cloth_plain", "webbing", "boot", "helmet", "metal_dark", "rubber", "lens", "accent", "eye"];
 pub const CAST_PART_STEP: f64 = 16.0;
 pub const CAST_MAX_PARTS: usize = 32;
@@ -81,9 +81,8 @@ fn num_or(v: &Json, d: f64) -> f64 { v.num().unwrap_or(d) }
 fn v3_or(v: &Json, d: [f64; 3]) -> [f64; 3] { v.v3().unwrap_or(d) }
 
 /// what the mannequin's file gives, before any row is made: a cast shares everything of it but the mesh
-struct Base { nodes: Vec<GltfNode>, order: Vec<f64>, roots: Vec<f64>, skin: SkinData, mesh: MeshData, clips: Vec<Clip>, node_by_name: JsMap<String, f64> }
+struct Base { nodes: Vec<GltfNode>, order: Vec<f64>, skin: SkinData, mesh: MeshData, clips: Vec<Clip>, node_by_name: JsMap<String, f64> }
 
-/// (gltf.ts loadGltfCharacter)
 fn load_base(f: GltfFile) -> Base {
     let o = open(f);
     let g = &o.g;
@@ -123,9 +122,9 @@ fn load_base(f: GltfFile) -> Base {
     let mut md = MeshData {
         positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4],
         joints: if joints_are_u16 { MeshDataJoints::Uint16Array(vec![0; vcount * 4]) } else { MeshDataJoints::Uint8Array(vec![0; vcount * 4]) },
-        mat_sel: vec![0.0; vcount], indices: vec![0; icount], vertex_count: vcount as f64, joints_are_u16,
+        mat_sel: vec![0.0; vcount], indices: vec![0; icount], vertex_count: vcount as f64,
         bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: None,
-        mat_index: Some(vec![0; vcount]), material_names: Some(g.get("materials").items().iter().map(|m| String::from(m.get("name").str().unwrap_or(""))).collect()),
+        mat_index: Some(vec![0; vcount]),
     };
     let (mut vo, mut io) = (0usize, 0usize);
     let mat0 = prims.first().map(|p| p.mat);
@@ -170,11 +169,11 @@ fn load_base(f: GltfFile) -> Base {
         // (a Map: a name met twice keeps its first place and takes the later clip)
         match clips.iter_mut().find(|c| c.name == name) { Some(c) => *c = clip, None => clips.push(clip) }
     }
-    Base { nodes, order, roots, skin, mesh: md, clips, node_by_name }
+    Base { nodes, order, skin, mesh: md, clips, node_by_name }
 }
 
-/// THE CAST's mesh and its parts and variants, over the mannequin's skeleton (gltf.ts loadGltfCast). Refuses anything off the file's contract.
-fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<f64>, Vec<CastVariant>) {
+/// THE CAST's mesh and its parts and variants, over the mannequin's skeleton. Refuses anything off the file's contract.
+fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVariant>) {
     let o = open(f);
     let g = &o.g;
     let base_joint = |name: &str| -> Option<usize> { let mut hit = None; for (k, &node) in base.skin.joints.iter().enumerate() { if base.nodes[node as usize].name == name { hit = Some(k); } } hit };
@@ -194,10 +193,8 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<f64>, Vec<
     for (i, p) in parts.iter().enumerate() { if parts[..i].contains(p) { panic!("cast: part names are not unique"); } }
     struct Prim { pos: Accessor, nrm: Accessor, jn: Accessor, wt: Accessor, idx: Accessor, part: usize, slot: f64 }
     let (mut vcount, mut icount) = (0usize, 0usize);
-    let mut part_tris: Vec<f64> = Vec::new();
     let mut prims: Vec<Prim> = Vec::new();
     for (part, nd) in part_nodes.iter().enumerate() {
-        let mut tris = 0.0;
         for p in g.get("meshes").at(nd.get("mesh").num().unwrap() as usize).get("primitives").items() {
             if num_or(p.get("mode"), 4.0) != 4.0 { panic!("cast: part '{}' has a primitive that is not triangles", parts[part]); }
             if nd.get("skin").num() != Some(0.0) { panic!("cast: part '{}' is not on skin 0", parts[part]); }
@@ -208,15 +205,14 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<f64>, Vec<
             let (pos, nrm, jn, wt, idx) = (acc("POSITION"), acc("NORMAL"), acc("JOINTS_0"), acc("WEIGHTS_0"), o.accessor(p.get("indices").num().unwrap()));
             if pos.comp != 5126 || pos.n != 3 || nrm.comp != 5126 || nrm.n != 3 || jn.n != 4 || wt.n != 4 { panic!("cast: part '{}' has an attribute of the wrong type", parts[part]); }
             if nrm.count != pos.count || jn.count != pos.count || wt.count != pos.count || idx.count % 3 != 0 { panic!("cast: part '{}' has attributes of different lengths, or indices that are not whole triangles", parts[part]); }
-            vcount += pos.count; icount += idx.count; tris += (idx.count / 3) as f64;
+            vcount += pos.count; icount += idx.count;
             prims.push(Prim { pos, nrm, jn, wt, idx, part, slot: slot_of(p.get("material").num()) });
         }
-        part_tris.push(tris);
     }
     let mut md = MeshData {
         positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4], joints: MeshDataJoints::Uint8Array(vec![0; vcount * 4]), mat_sel: vec![0.0; vcount],
-        indices: vec![0; icount], vertex_count: vcount as f64, joints_are_u16: false, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
-        mat_index: None, material_names: None,
+        indices: vec![0; icount], vertex_count: vcount as f64, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
+        mat_index: None,
     };
     let (mut vo, mut io) = (0usize, 0usize);
     for p in prims {
@@ -254,12 +250,12 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<f64>, Vec<
     // (`Object.keys(decl).sort()`: by UTF-16 code units, which for these names is by bytes)
     named.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
     let variants: Vec<CastVariant> = named.into_iter().map(|(name, side, wears)| {
-        let (mut mask, mut tris) = (0i32, 0.0f64);
-        for pn in wears.iter() { let i = parts.iter().position(|p| p == pn).unwrap_or_else(|| panic!("cast: variant '{}' wears '{}', which is not a part", name, pn)); mask |= 1i32.wrapping_shl(i as u32); tris += part_tris[i]; }
+        let mut mask = 0i32;
+        for pn in wears.iter() { let i = parts.iter().position(|p| p == pn).unwrap_or_else(|| panic!("cast: variant '{}' wears '{}', which is not a part", name, pn)); mask |= 1i32.wrapping_shl(i as u32); }
         if mask == 0 { panic!("cast: variant '{}' wears nothing", name); }
-        CastVariant { name, side, parts: wears, mask: (mask as u32) as f64, tris }
+        CastVariant { name, side, mask: (mask as u32) as f64 }
     }).collect();
-    (md, parts, part_tris, variants)
+    (md, parts, variants)
 }
 
 /// THE CHARACTER A GAME STANDS ON, as rows of `g`: the mannequin, or with `cast` the cast's meshes over its skeleton, skin and clips
@@ -272,13 +268,11 @@ pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> R
     for c in base.clips { let name = c.name.clone(); let id = g.tab.clip.push(c); clips.set(name, id); }
     let (mesh, cast) = match dressed {
         None => (g.tab.anim_gltf_mesh_data.push(base.mesh), None),
-        Some((md, parts, part_tris, variants)) => {
+        Some((md, parts, variants)) => {
             let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| g.tab.anim_gltf_cast_variant.push(v)).collect();
-            (g.tab.anim_gltf_mesh_data.push(md), Some(g.tab.anim_gltf_cast_info.push(CastInfo { parts, part_tris, variants })))
+            (g.tab.anim_gltf_mesh_data.push(md), Some(g.tab.anim_gltf_cast_info.push(CastInfo { parts, variants })))
         }
     };
-    g.tab.rig.push(GltfCharacter { nodes: base.nodes, order: base.order, roots: base.roots, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast })
+    g.tab.rig.push(GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast })
 }
 
-#[allow(dead_code)]
-fn unused(_: &str) -> String { format!("") }

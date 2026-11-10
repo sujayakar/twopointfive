@@ -2,10 +2,10 @@
 // like we should just unify everything in the starting page'): what to play, how it is set and what the team carries are ONE page, and one button starts it.
 // Nothing here is a new screen: it is the mission list (ui/missions.ts — the rows, the sheet, Defenders / Hour / Weather) with the loadout screen
 // (ui/loadout.ts — the team's size, the squad kit row, the five slots, the picked member's kit card, Deploy) mounted INSIDE its sheet for the highlighted
-// mission. THE ROWS ARE IN THE LIST'S GROUPS (scene/scenarios.ts MISSION_GROUPS; the maintainer, 10-11: 'can we also reorganize the missions into nicer
+// mission. THE ROWS ARE IN THE LIST'S GROUPS (rust/game_rules/src/missions/start_list GROUPS; the maintainer, 10-11: 'can we also reorganize the missions into nicer
 // groups?'), every mission under exactly one heading and listed once: all the headings are always drawn, each with how many it holds, and only the one the
 // cursor is in shows its rows (ui/missions.ts `fold`) — W S walk every row, crossing a heading opens it, a click on a heading is its first row. Inside a
-// group the short list's missions (scene/picks.ts PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
+// group the short list's missions (rust/game_rules/src/missions/scene_scenario_list PICKS) come first, in play order, each still that pick (below); a fresh visit opens on the short list's
 // first. No way in skips another: there is
 // no straight-in row, no separate Missions button and no separate Start.
 //
@@ -32,7 +32,6 @@ import { desk } from '../view/desk';
 import { menuTheme } from './theme';
 import { mountKitView, type KitViewFrame } from './kitView';
 import { mountKitBrief, type KitBrief } from './kitBrief';
-import { mountKitGuide, type KitGuide } from './kitGuide';
 
 
 const CSS = `
@@ -100,7 +99,7 @@ const CSS = `
 #missions.one .mblurb { max-width: 62ch; margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--m-text); }
 #missions.one .mtip { display: none; }
 #missions.one .mstore { display: none; }
-/* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the levers hang under Difficulty (three, and a fourth while rust/game_rules/src/told's is on) */
+/* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the levers hang under Difficulty (three, and a fourth while rust/game_rules/src/speech/told.rs's is on) */
 #missions.one .mrail { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; padding: 4px 0 14px; }
 #missions.one .mrl { margin: 0 0 8px; font: 600 11px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); }
 #missions.one .mval { flex: 0 0 auto; display: flex; align-items: center; gap: 0; box-sizing: border-box; width: 100%; min-height: 34px; margin: 0; padding: 4px 4px 3px 10px; text-align: left; color: var(--m-text); font: inherit; background: none; border: 0; border-radius: 0; cursor: pointer; }
@@ -201,7 +200,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-pips { flex: 0 0 auto; order: 9; }
 #missions.one #loadout .lo-kit .kc-pips i { border-radius: 0; }
 #missions.one #loadout .lo-kit .kc-pips i.on { background: var(--m-text); }
-/* what the card weighs (rust/game_rules/src/kitload): its two bars on two lines of their own under the pouches, one track under the other, in the head's own column */
+/* what the card weighs (rust/game_rules/src/outfit/kitload.rs): its two bars on two lines of their own under the pouches, one track under the other, in the head's own column */
 #missions.one #loadout .lo-kit .kc-pouch:has(.kc-load:not(.off)) { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
 #missions.one #loadout .lo-kit .kc-load { flex: 0 0 100%; gap: 3px; margin: 0; }
 #missions.one #loadout .lo-kit .kc-bar { justify-content: flex-end; gap: 8px; line-height: 9px; }
@@ -211,7 +210,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-words.refused, #missions.one #loadout .lo-kit .kc-note { display: none; grid-column: auto; grid-row: auto; position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; padding: 0; border: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-words.refused { display: block; color: #e8c15a; background: var(--m-base); z-index: 1; }
 #missions.one #loadout .lo-kit .kc-row { position: static; grid-column: auto; grid-row: auto; grid-template-columns: 48px minmax(0, 1fr); margin: 0; padding: 8px 8px 8px 10px; background: rgba(var(--m-edge),0.06); border: 0; border-left: 3px solid transparent; border-radius: 0; }
-#missions.one #loadout .lo-kit .kc-row[data-field="big"] { grid-column: 1 / -1; grid-template-columns: 112px minmax(0, 1fr); padding-top: 10px; padding-bottom: 10px; }   /* (the big slot — rust/game_rules/src/kit BIGSLOT: the card's last tile, as wide as the card, under the pouches' tiles) */
+#missions.one #loadout .lo-kit .kc-row[data-field="big"] { grid-column: 1 / -1; grid-template-columns: 112px minmax(0, 1fr); padding-top: 10px; padding-bottom: 10px; }   /* (the big slot — rust/game_rules/src/outfit/kit BIGSLOT: the card's last tile, as wide as the card, under the pouches' tiles) */
 #missions.one #loadout .lo-kit .kc-row[data-field="big"] .kc-ico { height: 44px; }
 #missions.one #loadout .lo-kit .kc-row:hover { background: rgba(var(--m-edge),0.12); }
 #missions.one.pane-loadout #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-accent-rgb),0.1); border-left-color: var(--m-accent); }
@@ -226,7 +225,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc:has(.kc-row.refused) .kc-row:not(.refused) > .kc-note { display: none !important; }   /* (a refusal's reason outranks the row pointed at, which outranks the row the keys are on) */
 #missions.one #loadout .lo-kit .kc-sets { grid-column: 1 / 3; grid-row: 1; justify-content: flex-start; align-self: end; margin: 0 0 4px; padding: 0; border: 0; background: none; gap: 2px; }
 #missions.one #loadout .lo-kit .kc.focus .kc-sets.sel { background: none; }
-/* THE CARD AS A TREE (rust/game_rules/src/kittree): each gun is a tile with what it is good at drawn beside its name (ui/kitCard.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
+/* THE CARD AS A TREE (rust/game_types/src/knobs/kittree.rs): each gun is a tile with what it is good at drawn beside its name (ui/kitCard.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
 #missions.one #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] { grid-column: 1 / 3; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { flex: 0 0 auto; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 40%); align-items: center; min-height: 76px; box-sizing: border-box; }
@@ -248,7 +247,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-ico { height: 22px; }
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-label { font-size: 9px; letter-spacing: 0.14em; }
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-val { font-size: 13px; }
-#missions.one #loadout .lo-kit .kc-tree .kc-row.none:not(.lent) .kc-val { color: var(--m-dim); }
+#missions.one #loadout .lo-kit .kc-tree .kc-row.none .kc-val { color: var(--m-dim); }
 #missions.one #loadout .lo-kit .kc-tree .kc-row.fixed .kc-val { color: var(--m-soft); }
 @media (max-width: 1480px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] .kc-kids { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* (three across cuts '40 MM GRENADES' short under about 1400) */
 @media (max-width: 1180px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row, #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: minmax(0, 1fr); } #missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 2; } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1; } #missions.one #loadout .lo-kit .kc-tree .kc-kids { margin-left: 6px; padding-left: 6px; } #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex-basis: 64px; } }
@@ -387,10 +386,8 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   // else (the maintainer, 10-20: "we show the original gear screen before the new one fades in. let's just remove the old one with the figure?"): the column
   // waits EMPTY for the picture and stays empty where there is none.
   const figHost = el('div', 'onefig'); let kview: KitViewFrame | null = null;
-  // THE KIT STEP'S BRIEF AND ITS WALKTHROUGH (ui/kitBrief.ts `?kitbrief=0`, ui/kitGuide.ts `?kitguide=0`): the job, the map and what the place asks stay in
-  // sight over the kit, and a first visit is walked through the step row by row. Both are this page's alone; each is null with its switch off.
-  let kbrief: KitBrief | null = null, kguide: KitGuide | null = null;
-  const guideOn = () => (pane === 'loadout' && L?.open ? L : null);
+  // THE KIT STEP'S BRIEF (ui/kitBrief.ts `?kitbrief=0`): the job, the map and what the place asks stay in sight over the kit. This page's alone; null with its switch off.
+  let kbrief: KitBrief | null = null;
   const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); return; }
     kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, field: s.card?.field() ?? null, worn: s.team.men.map(m => m.worn) }); };   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts)
 
@@ -464,14 +461,14 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     if (L) { squads.set(L.entry.id, L.squad); L.close(); }
     mounted = key;
     const asPick = M.sheet.asPick;   // (played = started AS the short list's row: a team size of the player's own is not it)
-    L = openLoadout(m, { host, keys: () => !shut && pane === 'loadout', key: (code, repeat) => !!kbrief?.key(code, repeat), rest: (code, repeat) => !!kguide?.key(code, repeat), squad: squads.get(m.id) ?? (asSquadSize(m.pickSquad) ?? undefined),   // (a short-list row opens at the ROW's team size — 'you + four' — until a size is picked on the page)
+    L = openLoadout(m, { host, keys: () => !shut && pane === 'loadout', key: (code, repeat) => !!kbrief?.key(code, repeat), squad: squads.get(m.id) ?? (asSquadSize(m.pickSquad) ?? undefined),   // (a short-list row opens at the ROW's team size — 'you + four' — until a size is picked on the page)
      
-      back: toList, ...(opts.coop ? { deployWords: opts.coop.words, deploy: (to: string) => opts.coop!.deploy(to, m) } : {}), onPaint: s => { paintFigure(s); if (s === L) { say(); kguide?.paint(guideOn()); } },   // (key: the map's M, and the keys that put it back while it is large; rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
-      onDeploy: to => { kguide?.deployed(); kview?.close(); kview = null;
+      back: toList, ...(opts.coop ? { deployWords: opts.coop.words, deploy: (to: string) => opts.coop!.deploy(to, m) } : {}), onPaint: s => { paintFigure(s); if (s === L) say(); },   // (key: the map's M, and the keys that put it back while it is large; rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
+      onDeploy: to => { kview?.close(); kview = null;
         if (opts.coop) return;   // (a hosted game is not this list's to remember: the row it opens on, the short list's played marks and the count's 'loading…' are the mission LOADED from here, and a game that could not be made loads nothing — ui/coop.ts says what it is doing in its own line)
         try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
         if (asPick && desk().next(to).now) notePicked(m.pick, m.id); count.textContent = 'loading…'; } });
-    say(); paintTeam(); paintFigure(L); kguide?.paint(guideOn());
+    say(); paintTeam(); paintFigure(L);
     if (pane === 'loadout' && noKit()) { setPane('list'); say(); }   // (onto a mission with no kit step from the kit of another: its rows, not an empty pane)
   };
   /** out of the kit, back on the rows (Esc there, the Mission step): the size picked is kept for the mission */
@@ -494,7 +491,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   M = openMissions({ root: opts.root, list, named: view.named, select: opts.select, first: view.first,   // (a visit that names no row opens on the short list's first, wherever its group stands)
     onPick: onward,
     onPaint: () => { if (ready) onPaint(); },
-    onClose: () => { shut = true; if (L?.open) L.close(); L = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
+    onClose: () => { shut = true; if (L?.open) L.close(); L = null; kview?.close(); kview = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
       if (playerHour !== null) try { M.hour(playerHour); } catch { /* the list is gone */ }   // (the list remembers the PLAYER's hour, not one a short-list row put on)
       setTimeout(() => { const m = document.getElementById?.('menu'), b = m?.classList.contains('on') && !m.hasAttribute('inert') ? m.querySelector?.('.actions button.primary') as HTMLElement | null : null; if (b && !currentMissions()) b.focus?.(); }, 0); } });   // (the card behind has the keys again: Enter is its 'Play ›')
@@ -535,14 +532,12 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   sheet?.appendChild(host);
   if (back) back.textContent = opts.backLabel ?? '‹ Main menu'; if (title) title.textContent = opts.coop?.title ?? 'Play'; count.textContent = '';
   // the two steps, named on the head: where the keys are is the bright one, and a click on the other goes there
-  let stepsBar: HTMLElement | null = null;
-  if (title?.parentElement) { const bar = stepsBar = el('div', 'msteps');
+  if (title?.parentElement) { const bar = el('div', 'msteps');
     for (const [k, words] of [['list', 'Mission'], ['loadout', 'Team & kit']] as [Pane, string][]) { const b = el('button', 'mstep', words); b.setAttribute('type', 'button'); b.setAttribute('data-step', k);
       b.addEventListener('click', () => { if (pane === k) return; if (k === 'list') toList(); else if (!noKit()) onward(); });
       if (steps.length) bar.appendChild(el('span', undefined, '›')); bar.appendChild(b); steps.push([k, b]); }
     title.parentElement.insertBefore(bar, title.nextSibling); }
-  kguide = mountKitGuide(root, kbrief, stepsBar);
-  if (kbrief) kbrief.onChange = () => { if (shut) return; say(); kguide?.paint(guideOn()); };   // (say: the key line names M only where there is a map to open)
+  if (kbrief) kbrief.onChange = () => { if (!shut) say(); };   // (say: the key line names M only where there is a map to open)
   MISSIONS.keysAway = () => !shut && pane === 'loadout' && !!L?.open;
   // THE MOUSE AND THE TWO STEPS. The rail's Team & kit row and the head's step marker step INTO the kit; a click on a mission row steps back out to its
   // briefing; Deploy clicked from the rows is done there and the keys stay where they were. The step is taken AFTER the click has been delivered: the sheet folds when the

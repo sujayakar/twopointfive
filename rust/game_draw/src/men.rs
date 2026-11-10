@@ -10,7 +10,7 @@ use game::m;
 /// bones a man has room for, and men the skinning has room for
 const JOINTS: usize = 64;
 const MOST: usize = 16;
-/// proxies a man (src/scene/boxes.ts CAPS_PER_CHAR)
+/// proxies a man
 const CAPS: usize = 15;
 const SNAP: f64 = 1.5;
 /// a waterline this high is the whole man
@@ -69,6 +69,8 @@ pub struct Men {
     /// drawn with the fog off: everybody
     pub bared: bool,
     pub swaps: Swaps,
+    /// the page says no man is drawn wet, whatever the rain has done to him
+    pub dry_look: bool,
     pub men: Vec<Man>,
     pub insts: Vec<Inst>,
     pub bones: Vec<Bones>,
@@ -112,7 +114,7 @@ impl Men {
         let (side, suit) = dress(g, id);
         let s = game::stature::stature_of(g, id);
         let f3 = |v: [f64; 3]| v.map(|x| x as f32);
-        let wet = g.engine.settings.wet_chars && (c.wet > 0.0 || c.beads > 0.0);
+        let wet = !self.dry_look && (c.wet > 0.0 || c.beads > 0.0);
         let caps = game::character::character_capsules(g, id);
         let x = |p: [f64; 3]| -> [f64; 3] { if s == 1.0 { p } else { core::array::from_fn(|k| c.pos[k] + (p[k] - c.pos[k]) * s) } };
         let at = self.men.len();
@@ -122,7 +124,7 @@ impl Men {
         self.heads.push(f3(head));
         self.men.push(Man {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,
-            dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), head: f3(head), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
+            dry: if !self.dry_look && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), head: f3(head), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
         });
         self.bounds.push(self.men[at].bound);
         // ---- his instance
@@ -206,11 +208,9 @@ fn players(g: &Game) -> impl Iterator<Item = CharId> + '_ { g.seats.iter().map(|
 fn shown(g: &Game, bared: bool) -> Vec<CharId> {
     let all: Vec<CharId> = players(g).chain(g.guards.iter().map(|&gd| g.gd[gd].ch)).chain(game::civilians::civilians_shown(g).iter().map(|&gd| g.gd[gd].ch)).collect();
     let mut drawn = if bared { all } else { game::fogofwar::fog_of_war_filter(g, &all) };
-    // (from the sky nobody on the floor is the player)
-    if game::rails::rails_sky_on(g) { let me = g.pl[game::seats::host_man(g)].ch; drawn.retain(|c| *c != me); }
     // (more men than have a mesh of their own to throw a shadow by: the men down give up their places first)
-    if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
-        let down = |c: &CharId| g.guards.iter().any(|&gd| g.gd[gd].ch == *c && g.gd[gd].state == GuardState::Dead);
+    if drawn.len() > 8 && g.staged.facts.fight {
+        let down = |c: &CharId| g.guards.iter().any(|&gd| g.gd[gd].ch == *c && game::condition::down(g, g.gd[gd].ch));
         drawn.sort_by_key(down);
     }
     drawn
@@ -229,7 +229,7 @@ fn suit(g: &Game, c: CharId, player: bool) -> bool {
     if !g.k.look.on { return false; }
     let quiet = match game::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),
-        None => game::scenario_run::active_scenario(g).map(|a| a == game::scenario_run::ActiveScenario::Quiet),
+        None => g.staged.up.map(|_| g.staged.facts.unseen),
     };
-    quiet != Some(false) && (player || (quiet == Some(true) && game::scenario_run::team_of(g).iter().any(|gd| g.gd[*gd].ch == c)))
+    quiet != Some(false) && (player || (quiet == Some(true) && g.staged.team.iter().any(|gd| g.gd[*gd].ch == c)))
 }

@@ -1,4 +1,4 @@
-//! THE END CARD'S RECORD (rust/game_rules/src/view, `debrief_view`): the rows in words, the counts, the score and the recap come out of the Rust game as one record; the
+//! THE END CARD'S RECORD (rust/game_rules/src/tick/view, `debrief_view`): the rows in words, the counts, the score and the recap come out of the Rust game as one record; the
 //! page lays it out. Each test holds one thing the card says over three seeds beside a control. Before this, the page worked all of it out over its own copy of the chronicle.
 use game::chronicle::{self, ChronCheckpointWhat, ChronDoorKind, ChronKind};
 use game::game::DownKind;
@@ -14,7 +14,7 @@ fn office(seed: u32, seats: u32) -> Play {
 }
 fn card(p: &Play) -> DebriefView { p.debrief_view(0) }
 fn door(p: &Play, name: &str) -> game::ids::DoorId { game::doors::doors_by_name(&p.g, name).unwrap_or_else(|| panic!("the office has no door '{}'", name)) }
-fn man(p: &Play) -> game::ids::GuardId { p.g.guards.iter().copied().find(|&i| p.g.gd[i].state != game::game::GuardState::Dead && p.g.gd[i].civ.is_none()).expect("a man on the floor") }
+fn man(p: &Play) -> game::ids::GuardId { p.g.guards.iter().copied().find(|&i| !game::condition::down(&p.g, p.g.gd[i].ch) && p.g.gd[i].civ.is_none()).expect("a man on the floor") }
 
 /// A FAILURE MEANS: the card calls a door by its id, or the name its level wrote stops reaching the row.
 #[test]
@@ -73,18 +73,18 @@ fn at_the_caps_the_card_still_prices_what_happened() {
     }
 }
 
-/// A FAILURE MEANS: the tour's run writes on the card, or the run does not write on it again once the flag is down.
+/// A FAILURE MEANS: the reel behind the title writes on the card, or the run does not write on it again once somebody plays.
 #[test]
-fn under_the_tour_nothing_lands_on_the_card() {
+fn with_nobody_playing_nothing_lands_on_the_card() {
     for seed in SEEDS {
         let mut p = office(seed, 1);
         p.run(2.0);
-        p.g.quiet_utility = true;
+        p.g.aside = true;
         let (rows, path, loads) = (p.g.chronicle.events.len(), p.g.chronicle.path_n, p.g.chronicle.counts.loads);
         chronicle::chron_checkpoint(&mut p.g, ChronCheckpointWhat::Load, Some("x"));
         p.run(2.0);
         assert_eq!((p.g.chronicle.events.len(), p.g.chronicle.path_n, p.g.chronicle.counts.loads), (rows, path, loads), "seed {}", seed);
-        p.g.quiet_utility = false;
+        p.g.aside = false;
         chronicle::chron_checkpoint(&mut p.g, ChronCheckpointWhat::Load, Some("x"));
         p.run(2.0);
         assert_eq!(p.g.chronicle.counts.loads, loads + 1.0, "seed {}: the flag down, it counts", seed);

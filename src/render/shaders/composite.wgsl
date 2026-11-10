@@ -14,7 +14,7 @@
 @group(1) @binding(12) var reflTex: texture_2d<f32>;      // ray-traced reflections, THE MIRROR (reflect.wgsl outRefl → the shared denoiser's specular client), at 1/frame.rtCfg.w res: what the lobe's rays bring back per texel, filterable (sampled bilinearly) — only read while frame.rtCfg.w > 0
 @group(1) @binding(18) var hiTex: texture_storage_2d<rgba16float, read>;   // … and THE HIGHLIGHTS on the same grid (reflect.wgsl outHi, as the pass wrote it): rgb = the lamps', the panels' and the sun's highlights and a beam's image, a = 0 where the texel holds none, else 1 + the roughness the texel made them with. A storage texture: this stage had no sampled texture left when it was added (one is free since the froxel volume went), and a load is all it is asked
 @group(1) @binding(13) var gMat: texture_2d<f32>;         // the g-buffer's material target: (roughness, metalness) per pixel (the reflections' cutoff fade, the metal step-back, the upsample's tap test)
-// ---- SHARP DIRECT (docs/internal/sharp-direct.md). passes.ts compiles this text TWICE behind a prepended `const SHARP: bool`: false = the fragment composite at the INTERNAL size
+// ---- SHARP DIRECT. passes.ts compiles this text TWICE behind a prepended `const SHARP: bool`: false = the fragment composite at the INTERNAL size
 // exactly as it always was (every `if (SHARP)` folds away); true = the same arithmetic per OUTPUT pixel as a compute kernel (`cs` below, writing hdrOut) with group 0 = the OUTPUT frame block, the
 // g-buffer bindings = the output-size raster, directTex / softTex = the output-size shadowed direct (sharp_direct.wgsl), and everything stochastic — the gather's irradiance + specular, the volumetric
 // march, the reflections — still on its INTERNAL grid: their texel ↔ pixel maps go through the internal size (frame.sharpCfg.xy) and their depth / normal / id guides are read at the output texel
@@ -147,7 +147,7 @@ fn upsampleSpecAny(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
 // tile's representative reflection instead of black (denoise.wgsl radTemporalCore), and THIS pixel is masked by the roughness of its own finish about it (reflK: upsampleHi's .a) — so the polish beside a chair
 // leg reads polish, and the leg reads nothing. The plain bilinear fetch stays in the blend at a hundred-thousandth: where none of the four is this pixel's surface (a thing thinner
 // than a texel) it is the answer, and there is no line where one answer hands over to the other. (The one fetch was
-// chosen when a joint-bilateral made the same picture under TAAU, docs/internal/p4-materials.md §2: true while a pixel was shown at the frame's exposure, not under a place's gain.)
+// chosen when a joint-bilateral made the same picture under TAAU: true while a pixel was shown at the frame's exposure, not under a place's gain.)
 // WHAT THIS DOES NOT REACH: two places in ONE plane (a room's floor running out over the threshold into the sun) are one surface to depth and normal.
 fn upsampleRefl(pixf: vec2f, z: f32, N: vec3f) -> vec3f {
   let rdiv = max(frame.rtCfg.w, 1.0);
@@ -247,13 +247,13 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
 // included (a muzzle flash sets the web alight for its frame — nothing here has a history), evaluated without the receiver cosine but with the pane's own
 // projected area; the STRONGEST is shadow-tested from the face it is on (+ smoke), the rest credited at half, unshadowed (dim by construction) — the dust
 // glow's recipe in fgather.wgsl glassShade, one ray instead of two. Plus the cached bounce arriving on both faces.
-// GLASS BREAKING (rust/game_rules/src/glassbreak; only called under GLASS_BREAK): the crack picture of pane slot k at world point X on it, footprint fp (m per px) — .x = crack line coverage,
-// .y = frost (crushed glass). The lines are the cuts of rust/game_rules/src/glass_pattern themselves (gpCrackAt is this function's CPU reference): the two RADIALS of the sector the point is
+// GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs; only called under GLASS_BREAK): the crack picture of pane slot k at world point X on it, footprint fp (m per px) — .x = crack line coverage,
+// .y = frost (crushed glass). The lines are the cuts of rust/game_rules/src/breakage/glass_pattern.rs themselves (gpCrackAt is this function's CPU reference): the two RADIALS of the sector the point is
 // in — part of the way into the sheet until the pane has run, to the frame after — the CHORDS either side of its piece (the concentric cracks), past the rings of a run pane
 // the sector's branch crack and its dagger's snap, the territory line where two blows' cracks met, a laminated pane's tight web, the crushed crater of a blow too soft to punch
 // it, and the bright chipped RIM of any piece that borders a hole. A tempered pane letting go is crazed through into dice wherever it still stands. Antialiased over the footprint like the stars.
 fn gbLine(d: f32, w: f32, wt: f32) -> f32 { return (1.0 - smoothstep(w * 0.6, w * 1.6, d)) * wt; }
-/** distance to the nearest edge of the dice (rust/game_rules/src/glass_pattern gp_dice_edge: F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
+/** distance to the nearest edge of the dice (rust/game_rules/src/breakage/glass_pattern.rs gp_dice_edge: F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
 fn gbDice(uv: vec2f, grain: f32, seed: u32) -> f32 {
   let p = uv / grain; let ip = vec2i(floor(p));
   var f1 = 1e9; var f2 = 1e9;
@@ -369,7 +369,7 @@ fn paneLight(X: vec3f, n: vec3f) -> vec3f {
   return Ed;
 }
 
-// ---- wet characters (rust/game_rules/src/wet): the clear coat of water over a wet man's pixel ----
+// ---- wet characters (rust/game_rules/src/air/wet.rs): the clear coat of water over a wet man's pixel ----
 // gbuffer.wgsl fsSkin packed the coat's roughness and gain and the bead's normal tilt into the id's low 20 bits (packWet) and raised bit 30 — never on a dry man
 // or with the setting off, so none of this then runs. ONE GGX lobe per light that reaches this cell, scored unshadowed and then dimmed by the direct pass's OWN
 // shadowing here — the ratio of the shadowed irradiance it delivered (Ed) to the unshadowed sum of the same lights, exact wherever one light dominates (a torch
@@ -448,11 +448,11 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
   return L * gain;
 }
 
-// ---- SNOW GLOW (const SNOW_GLOW in the scene prelude: render/frame.ts snowLookConfig.glow ← rust/game_rules/src/weather_kinds SNOW_LOOK.glow; false = every statement of it is dead code) ----
+// ---- SNOW GLOW (const SNOW_GLOW in the scene prelude: render/frame.ts snowLookConfig.glow ← rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.glow; false = every statement of it is dead code) ----
 // The look of light INSIDE lying snow, as an approximation (no scattering is computed): on a snow pixel a lamp's light does not stop at the terminator. It wraps a
 // little past it, what comes through has lost the lamp's own hue and most of its red, and shade on snow leans to blue. PICTURE ONLY, by where it stands: this module
-// is the last word on a primary hit's colour and nothing reads its output back into the lighting (the meter and the probes are probe.wgsl, the bounce is
-// lighting_common.wgsl hitRadiance → common.wgsl directIrradiance; neither is touched, and evalLight is called here as the wet coat above calls it, unchanged).
+// is the last word on a primary hit's colour and nothing reads its output back into the lighting (the bounce is
+// lighting_common.wgsl hitRadiance → common.wgsl directIrradiance, which is not touched, and evalLight is called here as the wet coat above calls it, unchanged).
 // A snow pixel is one whose normal target's alpha is under 1 (gbuffer.wgsl fsBox after snowBox, snow.wgsl fsSnow: 1∕3 = snow, 2∕3 = thin snow at its edge).
 // PER LIGHT that reaches the cell, scored square-on (no receiver cosine) as the wet coat scores it: with c = N·L,
 //   past the terminator (−WRAP < c < 0)  GAIN · ((c + WRAP) ∕ WRAP)²          the wrap: nothing at −WRAP, GAIN at the terminator
@@ -495,7 +495,7 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   for (var i = 0u; i < min(frame.numLights, 64u); i++) {
     // THE LAMP'S OWN RANGE FIRST: evalLight's first exit (common.wgsl evalLightRaw, `dist > li.range`), in its own arithmetic and from the lamp's own three fields,
     // before the reach table is read. Most of a level's lamps are out of range of a snow pixel, and the table's read was what a lamp cost here that gave nothing
-    // (timed 11-05: docs/agents/weather.md, the glow's bullet). The same lamps pass as before: one this line drops, evalLight was about to
+    // (timed 11-05). The same lamps pass as before: one this line drops, evalLight was about to
     if ((lights[i].kind & 255u) != 2u) { let dq = lights[i].pos - P; if (sqrt(dot(dq, dq)) > lights[i].range) { continue; } }   // (255: lightKind's own mask; 2 = directional, which has no range)
     if (!lightReaches(i, P)) { continue; }
     let li = lights[i];
@@ -519,7 +519,7 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   return gS * vis.x + gB * vis.y;
 }
 
-// ---- SNOW SPARKLE (const SNOW_SPARKLE in the scene prelude: render/frame.ts snowLookConfig.sparkle ← rust/game_rules/src/weather_kinds SNOW_LOOK.sparkle; false = every statement of it is dead code) ----
+// ---- SNOW SPARKLE (const SNOW_SPARKLE in the scene prelude: render/frame.ts snowLookConfig.sparkle ← rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.sparkle; false = every statement of it is dead code) ----
 // The maintainer, 10-14, with a still of Red Dead Redemption 2's snow by day: 'rdr2 has some nice "sparkle" on the snow on the ground' (and, of the whole snow
 // look, "overall this should be subtle"). Ice crystals lie in fresh snow with flat faces every way up, and a face is a tiny mirror: it shows the lamp, as a point
 // far brighter than the snow round it, only while its normal is the half vector between the lamp and the eye. PICTURE ONLY, by where it stands (the glow's
@@ -791,7 +791,7 @@ struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 
 @group(1) @binding(15) var<uniform> beams: Beams;
 @group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" until it is live, read only with frame.veilA.z > 0
 @group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; lookExpoGain). A buffer, not a texture: this stage has no sampled texture left. All zeros = no field
-const BEAM_R0 = 0.0022;                           // rust/game_rules/src/combat beam_boxes: the beam's own half-width, m
+const BEAM_R0 = 0.0022;                           // rust/game_rules/src/guns/combat beam_boxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
   if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
   let I = frame.weatherC; let A = frame.weatherD;
@@ -842,9 +842,9 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
   }
   return L;
 }
-/** THE OPEN FIRES over what the pixel shows (rust/game_rules/src/fire; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, the
+/** THE OPEN FIRES over what the pixel shows (rust/game_rules/src/air/fire.rs; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, the
  *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). UNDER THE FOG OF WAR a fire is part of the
- *  place and is drawn as the team last saw it (rust/game_rules/src/fire FIRE.fog says which, a record at a time: wherever it stands, only where the team sees its coals, or
+ *  place and is drawn as the team last saw it (rust/game_rules/src/air/fire.rs FIRE.fog says which, a record at a time: wherever it stands, only where the team sees its coals, or
  *  only where it does not; the fog pass then dims it with the ground it stands on). `c` in, `c` with the fires out. */
 /** how much of this pixel is an open fire's flame or drawn smoke (0‥1; fireOver writes it, the picture's alpha carries 1 − it to the temporal resolve) */
 var<private> fireReact: f32 = 0.0;
@@ -872,7 +872,7 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   }
   return col;
 }
-/** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; rust/game_rules/src/fire FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
+/** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; rust/game_rules/src/air/fire.rs FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
  *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
  *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war
  *  draws only here or only there has its shimmer by the flame's own rule (fireOver). 0 with no fire near the ray. */
@@ -1000,12 +1000,12 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     // glass (FLAG_GLASS): is there a pane between the eye and this pixel's surface? Then what the G-buffer shaded is the TRANSMITTED picture: tinted by every pane
     // crossed, less the share the nearest pane reflects instead (Schlick, at most the physical term); what that pane adds toward the eye — mirror image, glints,
     // dust glow — comes up from the gather's specular field below. All of it was settled above, ahead of the reads.
-    // Rounds that stopped in a pane (rust/game_rules/src/glass glass_hit → a 'glassHit' decal; decals.wgsl glassMarks): the hole, the milky collar and the crack star ON the glass
+    // Rounds that stopped in a pane (rust/game_rules/src/breakage/glass.rs glass_hit → a 'glassHit' decal; decals.wgsl glassMarks): the hole, the milky collar and the crack star ON the glass
     // where the view ray crosses it. Cracked glass and pulverised glass are diffusers: they cut what comes THROUGH (darker against the lit room), mirror more along
     // the crack faces, and light up with whatever falls ON the pane from either side (a torch on the glazing sets the star alight; in the dark it is a dark web
     // against the room behind). The hole itself is just dark. Only under FLAG_DECALS (up while any mark exists), only for pixels on a pane.
     zg = z0; Ng = select(N, N0, moved);         // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless the bend moved the read)
-    var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
+    var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main)
     var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
     if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) {   // SNOW GLOW (snowGlow above): on a snow pixel, the light that wrapped its terminator, and shade that leans to blue — never a man's pixel or a section cap's (one walk of the lights for the glow and the sparkle)
       let sa = snowGlowAmt(textureLoad(gNormal, sPix, 0).a);
@@ -1077,7 +1077,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     let vol = upsampleVol(pix, pin, tT);
     color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u && !sky);
   }
-  if (lv(WX_KINDS) && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, rust/game_rules/src/weather_kinds) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
+  if (lv(WX_KINDS) && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // WEATHER FOG (a kind picked, rust/game_rules/src/air/weather_kinds.rs) along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans); over the void past the lot as over the ground beside it. (The flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
     if (WX_EDGE && !sky) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
       var idg = id; if (moved) { idg = textureLoad(gId, pix, 0).x; }
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));

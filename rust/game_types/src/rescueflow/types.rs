@@ -1,26 +1,15 @@
 //! The types of `rescueflow`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum OpenState {
     #[default] Held,
     Unknown,
     Cleared,
     Hot,
     Looked,
-}
-impl OpenState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            OpenState::Held => "held",
-            OpenState::Unknown => "unknown",
-            OpenState::Cleared => "cleared",
-            OpenState::Hot => "hot",
-            OpenState::Looked => "looked",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -70,56 +59,25 @@ pub enum JobKind {
     #[default] Cover,
     Corridor,
 }
-impl JobKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            JobKind::Cover => "cover",
-            JobKind::Corridor => "corridor",
-        }
-    }
-}
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescueFlow {
-    pub knobs: crate::rescueflow::RescueFlowKnobs,
+    #[is(crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 })] pub knobs: crate::rescueflow::RescueFlowKnobs,
     pub known: Vec<crate::rescueflow::Known>,
     pub jobs: JsMap<GuardId, crate::rescueflow::Job>,
     pub passed: JsSet<String>,
     pub want: JsMap<String, f64>,
-    pub stats: crate::rescueflow::RescueFlowStats,
+    #[is(crate::rescueflow::RescueFlowStats { takes: 0.0, chained: 0.0, corridor: 0.0, overridden: 0.0, hot_holds: 0.0, unmanned: 0.0 })] pub stats: crate::rescueflow::RescueFlowStats,
     pub regions: JsMap<String, RescueflowRegionId>,
     pub mine: JsSet<OrdersAssignmentId>,
     pub sense_at: f64,
     pub turn: f64,
     pub heard: JsSet<u32>,
     pub built: bool,
-    pub room: crate::scene_scenarios::Rect,
+    #[is(crate::scene_scenarios::Rect { x0: 0.0, x1: 0.0, z0: 0.0, z1: 0.0 })] pub room: crate::scene_scenarios::Rect,
     pub corr: Option<crate::rescueflow::RescueFlowCorr>,
     pub came_in: Option<crate::rescueflow::RescueFlowCameIn>,
 }
-impl RescueFlow {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RescueFlow {
-            knobs: crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 },
-            known: Vec::new(),
-            jobs: JsMap::new(),
-            passed: JsSet::new(),
-            want: JsMap::new(),
-            stats: crate::rescueflow::RescueFlowStats { takes: 0.0, chained: 0.0, corridor: 0.0, overridden: 0.0, hot_holds: 0.0, unmanned: 0.0 },
-            regions: JsMap::new(),
-            mine: JsSet::new(),
-            sense_at: 0.0,
-            turn: 0.0,
-            heard: JsSet::new(),
-            built: false,
-            room: crate::scene_scenarios::Rect { x0: 0.0, x1: 0.0, z0: 0.0, z1: 0.0 },
-            corr: None,
-            came_in: None,
-        }
-    }
-}
-impl Default for RescueFlow { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueFlowKnobs {
@@ -167,35 +125,7 @@ pub struct RescueFlowCameIn {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct RescueFlowJobOf {
-    pub kind: crate::rescueflow::RescueFlowJobOfKind,
-    pub opening: String,
-    pub queued: Vec<String>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum RescueFlowJobOfKind {
-    #[default] Cover,
-    Corridor,
-}
-impl RescueFlowJobOfKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueFlowJobOfKind::Cover => "cover",
-            RescueFlowJobOfKind::Corridor => "corridor",
-        }
-    }
-}
-
-/// (src/game/rescueflow.ts:47 FLOW: a table nothing writes)
-pub fn flow() -> crate::rescueflow::RescueFlowKnobs { crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 } }
-
-/// (src/game/rescueflow.ts:68 COLOUR: a table nothing writes)
 pub fn colour() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("unknown"), [1.0, 0.55, 0.08]); t.set(String::from("looked"), [0.6, 0.62, 0.5]); t.set(String::from("hot"), [2.6, 0.12, 0.05]); t.set(String::from("held"), [0.12, 0.5, 1.6]); t.set(String::from("cleared"), [0.1, 1.0, 0.3]); t } }
 
-/// (src/game/rescueflow.ts:69 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/rescueflow.ts:70 NO_ROUTE: a table nothing writes)
-pub fn no_route() -> Vec<crate::scene_scenarios::RouteOpening> { Vec::new() }

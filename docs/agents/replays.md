@@ -30,15 +30,15 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `src/tape/module.ts` | which module this page plays, and `otherModule` |
 | `src/ui/replays.ts`, `src/cloud/tapes.ts` | the list on the title; a hosted build sends what the store holds to its backend |
 | `src/host/fixedstep.ts` | whole ticks a frame: `planTicks` |
-| `rust/sim/src/dice.rs`, `rust/game_rules/src/dice.rs` | the game's die, and its keyed draws |
-| `rust/sim/src/maths.rs`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
-| `rust/game_start/src/moment.rs` | `Moment`: the game as a value and its block, and the one way to put it back |
+| `rust/maths/src/dice.rs`, `rust/game_rules/src/tick/dice.rs` | the game's die, and its keyed draws |
+| `rust/maths/`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
 | `rust/game_face/src/moment.rs` | `face_moment`, `face_moment_back`: a moment for a walk, with the shelf and what was said |
-| `rust/game_face/src/saves.rs` | the shelf of saves, and `face_recover` after a panic |
-| `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back |
-| `rust/game_rules/src/state_words.rs` | the hash of the whole game, a word a part |
+| `rust/game_face/src/saves.rs` | a host's turn of the controller, and `face_recover` after a panic |
+| `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back; `Moment`: the game as a value and its block; `restart` |
+| `rust/game_rules/src/tick/standing.rs` | the men as a stand stands them, and again on a restart |
+| `rust/game_rules/src/tick/state_words.rs` | the hash of the whole game, a word a part |
 
-The numbers of saves are `CkptK` and `SavetimelineK` in `rust/game_types/src/knobs/savestate.rs`. `rollback/` holds only types that nothing uses.
+The numbers of saves are `CkptK` and `SavetimelineK` in `rust/game_types/src/knobs/savestate.rs`.
 
 Tools: `tools/draw/walk.ts` walks a tape with no page and says if it is still the run. `tools/draw/tape-again.ts` plays a tape's hands on this
 checkout and writes a new tape. `tools/draw/tape-make.ts` makes a run from a script. `tools/cloud/pull.ts` reads a hosted build's tapes out of its
@@ -55,12 +55,12 @@ function of the seed, the site's name, the man it is about, the tick and the cou
 again. Each still steps the die, and its count (`face_die_n`) witnesses how many draws a run made.
 
 **The tape** is the bytes of what the module was handed, in order. `TapeStart` holds the level file itself, the address's words, the seed, the seats,
-the commands given before the start, and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order
+what the machine kept (`Kept`'s text), and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order
 (commands), hands (a hands-off player's plan), a mark, figures, a try, an end. A step writes only the numbers that moved, four bytes where four hold
 them. Nothing of the picture is on it.
 
 **Recording.** `DrawGame.step` writes any waiting commands, writes the hand, steps, and every `MARKS.every` ticks writes a mark and figures. A mark is
-the die's count and a hash of the block's parts' hashes. Figures are who stands where, who is down, and the rounds Sam has fired. A try row goes on
+the die's count, a hash of the block's parts' hashes and one of every part's (`state_words`). Figures are who stands where, who is down, and the rounds Sam has fired. A try row goes on
 when the mission's run number changes. A panic, or `TAPE_MOST` bytes, ends the tape.
 
 **Saves are on the tape by being input.** F5 is a key in the hand and a load is a command, and the save controller takes its turn in the step
@@ -81,7 +81,7 @@ are closest. A seek back goes to the moment before the target and plays on unsee
 `face_draw_cut` starts the picture over. `?at=` opens at a tick; Shift+F7 uses it to start at the try that is on.
 
 **A moment and a save.** A `Moment` clones `Game` and copies its block. `face_moment_back` stands exactly there, with the shelf and what was said, so
-the same hands play the same run. A save put back (`back` in `saves.rs`) goes on from now: `serial_next` keeps the later value, so no serial is dealt
+the same hands play the same run. A save put back (`after_step` in `control.rs`) goes on from now: `serial_next` keeps the later value, so no serial is dealt
 twice, and what belongs to the run as it is now carries over (`abandoned`).
 
 **The save controller.** `control::tick` runs after every step and answers `Do::Keep`, `Do::Back` or `Do::Say`. Autosaves and saves by hand are two
@@ -89,6 +89,10 @@ rings, and neither pushes the other out. A request comes from a new stage, a new
 `min_gap_secs`, and lapses after `pending_secs`. `gate` in `control.rs` holds it while anyone is alert, searching or over `aware_max`; `run_no` holds
 a save during a response, with Sam down, after the run or with two players. An autosave followed by an alert inside `regret_secs` is kept but offered
 last.
+
+**A restart.** A restart is the road a load goes. The controller holds the level as it stands before the men (`keep_level`). `control::restart` puts it
+back, writes `Survivors` under the men, runs the stand's own lines (`standing::stand_men`), then writes the switches, the tune and each lens over them.
+Nothing else goes over, so a new field needs no reset line, and one that must outlive a try goes in `Survivors`. Only serials and `event_seq` go on.
 
 **Across builds.** A kept row names the module it was played on (the file's ETag, `src/host/face.ts`). On that module any mark that differs ends the
 run: die, figures or hashes. On another module, or from a file, the hashes mean nothing, because the state may be laid out differently, so only the
@@ -114,7 +118,7 @@ hand numbers, or another character file (`other` in `handtape.ts`).
 
 ## To change it
 
-- **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_run/src/command.rs`), which is on the tape by
+- **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_start/src/host/command.rs`), which is on the tape by
   itself. A call that changes the game any other way makes every walk part.
 - **State:** a field reachable from `Game`, so that a clone and `state_words` have it, or a column of the block. A field left out of the hash says so
   with `#[bytes(skip)]`. A new `static mut` in `rust/sim` or `rust/prim` needs its row in `rust-rules-check.ts`.
@@ -139,6 +143,7 @@ Native tests in `rust/game_start/tests/`:
 | `held_saves.rs` | each thing asks for an autosave once, and none is written while he is compromised |
 | `rounds_and_saves.rs` | a save carries the broken level |
 | `restarts.rs` | a restart equals a fresh staging |
+| `restart.rs` | what an evening keeps, a card reaches its man on every try, every kind of mission starts over as it started |
 | `hosts_agree.rs` | two machines of one game, every part of the state by name |
 | `players.rs` | `a_moment_of_a_game_of_two_put_back_plays_the_same` |
 | `senses.rs`, `draw.rs` | a game put back has the light and smoke of one that never left, and tells the picture so |

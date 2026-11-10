@@ -1,38 +1,19 @@
 //! The types of `glasspen`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum PaneType {
     #[default] Annealed,
     Laminated,
     Tempered,
-}
-impl PaneType {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PaneType::Annealed => "annealed",
-            PaneType::Laminated => "laminated",
-            PaneType::Tempered => "tempered",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PenState {
     pub log: Vec<String>,
     pub rev: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PaneToll {
-    pub type_: crate::glasspen::PaneType,
-    pub n: V3,
-    pub cos: f64,
-    pub take: f64,
-    pub e_out: f64,
-    pub hole: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -79,13 +60,6 @@ pub struct RoundPathSt {
     pub n: V3,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StaticHit2 {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct ShellGlass {
     pub glass: JsMap<crate::Num, Vec<f64>>,
@@ -97,15 +71,6 @@ pub enum ShellMark {
     More,
     First,
 }
-impl ShellMark {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShellMark::Join => "join",
-            ShellMark::More => "more",
-            ShellMark::First => "first",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ArmThroughGlass {
@@ -113,24 +78,10 @@ pub struct ArmThroughGlass {
     pub panes: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ShotPassesPanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlasspenMod {
-    /// (src/game/glasspen.ts:152 states)
     pub states: Option<crate::glasspen::PenState>,
-}
-impl GlasspenMod {
-    pub fn blank() -> Self {
-        GlasspenMod {
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -146,20 +97,5 @@ pub struct GlasspenStats {
     pub shell_joined: i32,
 }
 
-/// (src/game/glasspen.ts:110 OFF_WORD)
-pub const OFF_WORD: &str = "/^(0|off|false|no)$/i";
-
-/// (src/game/glasspen.ts:114 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.glasspen";
-
-/// (src/game/glasspen.ts:186 PANE_TYPES: a table nothing writes)
 pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
 
-/// (src/game/glasspen.ts:191 CROSS)
-pub const CROSS: f64 = 25.0;
-
-/// (src/game/glasspen.ts:191 LEG)
-pub const LEG: f64 = 9.0;
-
-/// (src/game/glasspen.ts:191 MAX_CROSS)
-pub const MAX_CROSS: f64 = 16.0;

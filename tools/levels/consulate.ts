@@ -1,5 +1,5 @@
 // THE CONSULATE — the four's hostage rescue: three hostages at the far end of a floor of rooms the squad has no time to clear, in a room one stack cannot take.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts consulate [--check]   → levels/consulate.json, with its `scenarios.rescue` block
 //   page: ?levelFile=consulate.json&rescue&squad=4
 //
@@ -34,7 +34,7 @@
 // 'Manageable with four' as the depot held it: the corridor and the hall are ≥ 3 m and bare; every door a stack forms on has ≥ 1.9 m of clear floor past a jamb
 // on the side it is taken from; the hostage room's two doors are 11 m apart on one wall (one screen), their stacks out of each other's line.
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
-// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/floor's, the OFFICE's rectangles in code.
+// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/world/floor.rs's, the OFFICE's rectangles in code.
 // LIGHT is the cue and the balance: the lobby, most of the corridor, the records room and the back office are dark (a team in them is hard to see), the rooms that
 // hold a man show him under a panel (visa, kitchen, a dim waiting room, the suite), and the hall's north end — where a stack on the main door stands — is lit.
 // All lit, the scripted four lost more than half their men on the way in; this way round the approach is the team's and the doors are the fight.
@@ -49,7 +49,7 @@
 // from the kitchen's — the level's one decision (a pair on each door) read off the ground. A brass sill lies in every opening, as long as the opening is wide.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
@@ -457,7 +457,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const SIDE: Vec3 = [29.1, 1.1, 17.0];    // … and on the side door, the south half's
   const scenarios: LevelScenarios = {
     rescue: {
-      // the four: the red pair in front, the blue pair a stride behind (rust/game_rules/src/rescue stages team.ops[0..3] in the squad's own order)
+      // the four: the red pair in front, the blue pair a stride behind (rust/game_rules/src/missions/rescue stages team.ops[0..3] in the squad's own order)
       team: { sam: [7.2, 0, 15.4], samYaw: Math.PI / 2, ops: [[5.9, 0, 14.7], [5.9, 0, 16.1], [4.85, 0, 14.7], [4.85, 0, 16.1]], opsYaw: Math.PI / 2 },
       room: { name: "consul's office", where: 'end of the corridor', door: 'suite', bounds: R.suite, lights: 'suite', doorAim: MAIN },
       side: { door: 'suite_side', hold: [29.1, 0, 17.0], from: { door: 'back', bounds: R.back }, pair: true },
@@ -491,11 +491,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       },
     },
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only): the front door the team came in by, from the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only): the front door the team came in by, from the
   // street side (`ref`: the rescue starts them 4.6 m INSIDE it, and from in there the picture looks out). Everything else is measured: the stack falls on the blank
   // wall north of the door, the lobby's two-light window just past its last man.
   scenarios.kitView = { ways: [{ door: 'front', ref: [1, 18.75] }] };
-  // THE FLOOR, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it)
+  // THE FLOOR, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it)
   scenarios.places = { areas: [{ name: "consul's office", bounds: { ...R.suite } }, { name: 'visa office', bounds: { ...R.visa } }, { name: 'records room', bounds: { ...R.records } }, { name: 'waiting room', bounds: { ...R.waiting } }, { name: 'kitchen', bounds: { ...R.kitchen } }, { name: 'back office', bounds: { ...R.back } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'corridor', bounds: { ...R.corridor } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'store', bounds: { ...R.store } }] };
   return { level, scenarios, groups: trace.groups };
 }
@@ -506,7 +506,7 @@ export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;
 /** the carpets' plum. The palette has no paint of this hue (its reds are the depot's and the registry's), so it is a colour of this file's own and only decals
- *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: rust/game_rules/src/doors/paint.rs */
+ *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: rust/game_rules/src/fittings/doors/paint.rs */
 const PLUM: Vec3 = [0.15, 0.035, 0.075];
 const SKIN: Skin = {
   wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: VARNISH, frameIn: VARNISH, dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,

@@ -31,7 +31,7 @@ const GLOSS_GLINT_MAX: f32 = 160.0;  // …and on the analytic glints, which are
 
 // (light / card staging, the RNG and directAtPoint live in gather_common.wgsl — shared with reflect.wgsl — and are prepended by passes.ts)
 
-// STRATIFIED GATHER DIRECTIONS (docs/internal/trace-perf.md §2.10): the gather's k-th ray of K is drawn from STRATUM (k + frame) mod K of the cosine hemisphere —
+// STRATIFIED GATHER DIRECTIONS: the gather's k-th ray of K is drawn from STRATUM (k + frame) mod K of the cosine hemisphere —
 // for the main gather's four rays (azimuth half) × (cos²θ half), each pixel jittering inside its stratum with its own two rnd().
 // Every pixel still covers all K strata every frame (a stratified estimate: the same expectation, never more variance than iid), the rng draws the same COUNT of numbers, but the k-th
 // rays of a whole 8×8 tile now share a stratum, i.e. a quarter of direction space: the lanes of a SIMD group walk more of the same grid cells (the trace lab measured 1.25× on such

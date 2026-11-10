@@ -1,4 +1,4 @@
-//! WHAT THE CURSOR IS ON (rust/game_rules/src/view cursor_view, orders target_under): asked of the game shared, of any seat, by a cursor and a camera as they stand.
+//! WHAT THE CURSOR IS ON (rust/game_rules/src/tick/view cursor_view, orders target_under): asked of the game shared, of any seat, by a cursor and a camera as they stand.
 use game::view::UnderKind;
 use game_start::play::{dist, Opts, Play};
 

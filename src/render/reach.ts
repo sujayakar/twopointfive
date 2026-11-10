@@ -22,8 +22,8 @@
 //    line threading the shared corner of two diagonal wall sub-cells slips through.
 // But the receiving cell is SAMPLED, not covered: five looks per 1 m cell (its centre and four corner sub-cells, SUBS, on the 1/16 m
 // raster), reached if ANY look sees ANY source point. A light that gets into a cell only across a strip lying between those five points
-// is level 0 there — dropped outright by direct / directIrradiance / gloss, a hard cut at that cell's edge. The review (docs/internal/
-// review-2026-08-08.md #17) counted 36 such cells over lights × cells with an exact 3D raycast, nearly all dim ceiling panels two doorways
+// is level 0 there — dropped outright by direct / directIrradiance / gloss, a hard cut at that cell's edge. The review of
+// 08-08 counted 36 such cells over lights × cells with an exact 3D raycast, nearly all dim ceiling panels two doorways
 // off (worst ~40 % of the local unshadowed score at three cells by panel_cubicles_11; the beacons 13–18 % of theirs in a blackout). The
 // one-cell dilation ring (REACH_OPTS.ring) keeps every one of them at level 1 — but on this level 47 % of each mask's footprint was then
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on
@@ -45,7 +45,7 @@ const SUBS: [number, number][] = [[8, 8], [1, 1], [14, 1], [1, 14], [14, 14]];  
 /** All-threes row: the mask of a light that may reach anywhere, at full weight (dynamic lights, the moon). */
 export const REACH_ALL = (() => { const a = new Uint32Array(REACH_ROW_WORDS); a.fill(0xffffffff); return a; })();
 
-/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/doors has it). */
+/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/fittings/doors has it). */
 export interface ReachDoor { hinge: [number, number]; closedDir: number; width: number }
 
 /** Full-height wall raster over the fine grid: 1 = a wall covers (any part of) this sub-cell, 2 = a doorway's gap (open ground, but light
@@ -53,7 +53,7 @@ export interface ReachDoor { hinge: [number, number]; closedDir: number; width: 
 export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] = []): Uint8Array {
   const solid = new Uint8Array(FW * FH);
   for (const d of doors) {   // gaps first, walls after (a jamb post inside the gap's end sub-cell stays a wall)
-    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/doors / level.ts convention)
+    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/fittings/doors / level.ts convention)
     for (let s = 0.03; s < d.width; s += FINE / 2) for (let across = -0.16; across <= 0.16; across += FINE / 2) {   // ± the wall's thickness across the gap
       const x = Math.floor((d.hinge[0] + ux * s - uz * across - WORLD.min[0]) / FINE), z = Math.floor((d.hinge[1] + uz * s + ux * across - WORLD.min[2]) / FINE);
       if (x >= 0 && z >= 0 && x < FW && z < FH) solid[z * FW + x] = 2;

@@ -12,7 +12,7 @@ section! {
         pub stood: u32,
         /// the shown man's id
         pub man: u32,
-        /// where he stands, and where the view follows (him, a man spectated, the squad from the sky)
+        /// where he stands, and where the view follows (him, or a man spectated)
         pub at: [f32; 3],
         pub follow: [f32; 3],
         /// where his aim meets the world
@@ -25,7 +25,7 @@ section! {
         /// the tick cut the view to here: once each time the count moves
         pub cuts: u32,
         pub cut: [f32; 3],
-        /// a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does)
+        /// the kit picture holds the view here: where it looks, and from how far and which way (0: nobody does)
         pub pinned: u32,
         pub pin: [f32; 3],
         pub pin_yaw: f32,
@@ -39,7 +39,7 @@ section! {
         pub target: [f32; 3],
         /// what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it
         pub locks: u32,
-        /// the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view
+        /// the back key is the game's now: it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup)
         pub backs: u32,
         /// saves made of this game so far: moves when there is another
         pub saves: u32,
@@ -75,7 +75,6 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
     let (ch, cam) = (g.pl[pl].ch, &g.tab.camera[g.tab.cmd_seat[seat].cam]);
     let at = g.ch[ch].pos;
     let spectated = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).map(|&gd| g.ch[g.gd[gd].ch].pos) } else { None };
-    let sky = if game::rails::rails_sky_on(g) { g.rails.sky.mid } else { None };
     let mut r = View::ZERO;
     if let Some(host) = g.host_cam {
         let c = &g.tab.camera[host];
@@ -99,14 +98,14 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
     (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
     r.labels = g.show_debug as u32;
     (r.wall_feel, r.wall_press, r.fall_in) = (g.k.wallsnap.on as u32, g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
-    { let s = game::seats::seat(g, seat); r.backs = (s.orders.menu.is_some() || g.pl[pl].launch_held.is_some() || game::interact::backable_interact(g, &s) || g.pl[pl].setup.is_some()) as u32 | (game::director::director_showing(g) as u32) << 1; }
+    { let s = game::seats::seat(g, seat); r.backs = (s.orders.menu.is_some() || g.pl[pl].launch_held.is_some() || game::interact::backable_interact(g, &s) || g.pl[pl].setup.is_some()) as u32; }
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
     out.push(View {
         tick: crate::tick(g),
         stood,
         man: g.ch[ch].id as u32,
         at: f3(at),
-        follow: f3(spectated.or(sky).unwrap_or(at)),
+        follow: f3(spectated.unwrap_or(at)),
         aim: f3(g.aim_point),
         spectating: (g.spectate >= 0.0) as u32,
         peek: cam.peek_offset.map_or([0.0; 3], f3),
@@ -126,7 +125,6 @@ pub fn ended(g: &Game) -> u32 {
     use game::game::MissionStage;
     let (v, m) = (&g.verdict, &g.mission);
     if v.run == Some(m.serial) && v.card_at >= 0.0 { return if g.time < v.card_at { 0 } else { v.res.as_ref().map_or(0, |r| if r.won { 2 } else { 1 }) }; }
-    if g.mission_in_tour { return 0; }
     match m.stage {
         MissionStage::Done => 2,
         MissionStage::Failed if m.down_card_at > 0.0 => 0,

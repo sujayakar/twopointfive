@@ -1,47 +1,7 @@
 //! The types of `scene_scenarios`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
-
-/// a lesson step's done-test, a variant for each `is` of LESSON_TESTS (scenarios.ts LessonTest, lesson.ts). Unknown: an `is` no row has, or a record that would throw; it never passes (lesson.ts passes)
-#[derive(Clone, Debug, ToBytes)]
-pub enum LessonTestKind {
-    Unknown { is: String },
-    In { area: crate::scene_scenarios::Rect },
-    Near { at: V3, r: Option<f64> },
-    Flag { flag: String, value: Option<bool> },
-    Slot { slot: String, drawn: Option<bool> },
-    Pace { below: Option<f64>, above: Option<f64> },
-    Meter { which: String, below: Option<f64>, above: Option<f64> },
-    Stage { stage: String },
-    Door { door: String, state: String },
-    Target { name: String, on: bool },
-    Men { down: Option<f64> },
-    Did { what: String, on: Option<String>, n: Option<f64> },
-    Downed { how: String, n: Option<f64> },
-    Body { area: crate::scene_scenarios::Rect },
-    Calm { route: Option<String> },
-    Loaded,
-    Reload,
-    Launcher { on: String, fired: bool },
-    Burst { n: Option<f64> },
-    Threw { kind: Option<String>, quick: bool, area: Option<crate::scene_scenarios::Rect> },
-    OrderTo { who: String },
-    StackOn { door: String, who: Option<String>, set: bool },
-    PairsOn { doors: Option<f64> },
-    Word { doors: Option<f64> },
-    Taken { room: String },
-    Following,
-    Mate { area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64> },
-    Pair { what: String, n: Option<f64> },
-    Cue { name: String },
-    View { turned: Option<f64>, zoomed: Option<f64>, panned: Option<f64> },
-    Squad { area: crate::scene_scenarios::Rect, n: Option<f64> },
-    Stacks { doors: Vec<String>, n: Option<f64>, set: bool },
-    Watching { at: V3, r: Option<f64>, n: Option<f64> },
-    All { of: Vec<crate::scene_scenarios::LessonTestKind> },
-    Any { of: Vec<crate::scene_scenarios::LessonTestKind> },
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rect {
@@ -69,7 +29,6 @@ pub struct ScenarioMark {
 pub struct NightBreachData {
     pub team: crate::scene_scenarios::TeamStart,
     pub room: Option<String>,
-    pub lights: Option<String>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -126,15 +85,6 @@ pub enum SquadDataTraining {
     Green,
     Mixed,
 }
-impl SquadDataTraining {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadDataTraining::Trained => "trained",
-            SquadDataTraining::Green => "green",
-            SquadDataTraining::Mixed => "mixed",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadArrive {
@@ -167,28 +117,11 @@ pub enum RouteOpeningKind {
     Glass,
     Doorway,
 }
-impl RouteOpeningKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RouteOpeningKind::Door => "door",
-            RouteOpeningKind::Glass => "glass",
-            RouteOpeningKind::Doorway => "doorway",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RouteOpeningSide {
     #[default] Left,
     Right,
-}
-impl RouteOpeningSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RouteOpeningSide::Left => "left",
-            RouteOpeningSide::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -233,7 +166,6 @@ pub struct RescueDataRoom {
     pub where_: Option<String>,
     pub door: String,
     pub bounds: Option<crate::scene_scenarios::Rect>,
-    pub lights: Option<String>,
     pub door_aim: V3,
     pub outside: Option<V3>,
     pub hold: Option<V3>,
@@ -352,7 +284,7 @@ pub struct LessonStep {
     pub menu_line: Option<String>,
     pub page_line: Option<String>,
     pub flat_line: Option<String>,
-    pub done: crate::scene_scenarios::LessonTestKind,
+    pub done: crate::lesson::LessonTest,
     pub hold: Option<f64>,
     pub settle: Option<f64>,
     pub at: Option<V3>,
@@ -380,7 +312,7 @@ impl Default for LessonStep {
             menu_line: None,
             page_line: None,
             flat_line: None,
-            done: crate::scene_scenarios::LessonTestKind::Unknown { is: String::new() },
+            done: crate::lesson::LessonTest::Any { of: Vec::new() },   // (any of nothing: no deed passes it)
             hold: None,
             settle: None,
             at: None,
@@ -434,7 +366,6 @@ pub struct RailsData {
     pub respawn: Option<f64>,
     pub fog: Option<bool>,
     pub waits: Option<crate::scene_scenarios::RailsDataWaits>,
-    pub sky: Option<crate::scene_scenarios::RailsDataSky>,
     pub lasers: Option<bool>,
     pub orders: Option<Vec<String>>,
     pub flat_ring: Option<bool>,
@@ -444,21 +375,6 @@ pub struct RailsData {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsDataWaits {
     pub low: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct RailsDataSky {
-    pub park: V3,
-    pub reach: Option<f64>,
-    pub eye: Option<crate::scene_scenarios::RailsDataSkyEye>,
-    pub low: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct RailsDataSkyEye {
-    pub at: V3,
-    pub yaw: f64,
-    pub fov: Option<f64>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -497,14 +413,6 @@ pub enum IssueCardLoaded {
     Ring,
     He40,
 }
-impl IssueCardLoaded {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            IssueCardLoaded::Ring => "ring",
-            IssueCardLoaded::He40 => "he40",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct IssueData {
@@ -533,7 +441,6 @@ pub struct ResponsePost {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponseData {
-    pub why: String,
     pub site: String,
     pub at: String,
     pub team: String,
@@ -565,179 +472,12 @@ pub struct LevelScenarios {
     pub rescue: Option<crate::scene_scenarios::RescueData>,
     pub places: Option<crate::scene_scenarios::PlacesData>,
     pub quiet: Option<crate::scene_scenarios::QuietData>,
-    pub lesson: Option<crate::scene_scenarios::LessonData>,
+    pub lesson: Option<alloc::sync::Arc<crate::scene_scenarios::LessonData>>,   // (shared: a tick holds the list beside `g` with no copy of it)
     pub par: Option<crate::scene_scenarios::ParData>,
     pub issue: Option<crate::scene_scenarios::IssueData>,
-    pub kit_view: Option<crate::scene_scenarios::KitViewData>,
     pub response: Option<crate::scene_scenarios::ResponseData>,
     pub door_names: Option<Vec<crate::scene_scenarios::LevelScenariosDoorNamesItem>>,
     pub walked: Option<Vec<crate::scene_ways::WayHint>>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewData {
-    pub ways: Vec<crate::scene_scenarios::KitViewWay>,
-    pub sets: Option<JsMap<String, crate::scene_scenarios::KitViewSet>>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewWay {
-    pub door: Option<String>,
-    pub side: Option<f64>,
-    pub pin: Option<crate::scene_scenarios::KitViewWayPin>,
-    pub slots: Option<Vec<Option<[f64; 3]>>>,
-    pub light: Option<crate::scene_scenarios::KitViewLightOver>,
-    pub hide: Option<Vec<String>>,
-    pub hide_paint: Option<Vec<String>>,
-    pub hide_more: Option<Vec<String>>,
-    pub room_lights: Option<f64>,
-    pub span: Option<[[f64; 2]; 2]>,
-    pub kind: Option<crate::scene_scenarios::KitViewWayKind>,
-    pub set: Option<String>,
-    pub ref_: Option<[f64; 2]>,
-    pub hand: Option<crate::scene_scenarios::KitViewWayHand>,
-    pub slot_gap: Option<f64>,
-    pub wall: Option<crate::scene_scenarios::KitViewWayWall>,
-    pub lane: Option<f64>,
-    pub out: Option<f64>,
-    pub inside: Option<f64>,
-    pub pane: Option<crate::scene_scenarios::KitViewWayPane>,
-    pub show: Option<Vec<String>>,
-    pub indoors: Option<bool>,
-    pub keep_lights: Option<Vec<String>>,
-    pub day_lights: Option<Vec<String>>,
-    pub lit_inside: Option<bool>,
-    pub add: Option<crate::scene_scenarios::KitViewWayAdd>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewWayPin {
-    pub yaw: f64,
-    pub pitch: f64,
-    pub dist: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOver {
-    pub porch: Option<crate::scene_scenarios::KitViewLightOverPorch>,
-    pub fill: Option<crate::scene_scenarios::KitViewLightOverFill>,
-    pub room_lights: Option<f64>,
-    pub moon_scale: Option<f64>,
-    pub sky_scale: Option<f64>,
-    pub sam: Option<crate::scene_scenarios::KitViewLightOverSam>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverPorch {
-    pub kind: Option<f64>,
-    pub offset: Option<V3>,
-    pub aim: Option<V3>,
-    pub color: Option<V3>,
-    pub intensity: Option<f64>,
-    pub range: Option<f64>,
-    pub inner_deg: Option<f64>,
-    pub outer_deg: Option<f64>,
-    pub radius: Option<f64>,
-    pub volumetric: Option<f64>,
-    pub broad: Option<bool>,
-    pub fixture: Option<crate::scene_scenarios::KitViewLightOverPorchFixture>,
-    pub day: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverPorchFixture {
-    pub at: V3,
-    pub half: V3,
-    pub glow: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverFill {
-    pub kind: Option<f64>,
-    pub offset: Option<V3>,
-    pub aim: Option<V3>,
-    pub color: Option<V3>,
-    pub intensity: Option<f64>,
-    pub range: Option<f64>,
-    pub inner_deg: Option<f64>,
-    pub outer_deg: Option<f64>,
-    pub radius: Option<f64>,
-    pub volumetric: Option<f64>,
-    pub broad: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewLightOverSam {
-    pub on: Option<bool>,
-    pub intensity: Option<f64>,
-    pub inner_deg: Option<f64>,
-    pub outer_deg: Option<f64>,
-    pub volumetric: Option<f64>,
-    pub aim: Option<V3>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum KitViewWayKind {
-    Door,
-    Wall,
-    Gap,
-}
-impl KitViewWayKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitViewWayKind::Door => "door",
-            KitViewWayKind::Wall => "wall",
-            KitViewWayKind::Gap => "gap",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum KitViewWayHand {
-    Left,
-    Right,
-}
-impl KitViewWayHand {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitViewWayHand::Left => "left",
-            KitViewWayHand::Right => "right",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitViewWayWall {
-    pub face: Option<f64>,
-    pub thickness: Option<f64>,
-    pub top: Option<f64>,
-}
-
-#[derive(Clone, Debug, ToBytes)]
-pub enum KitViewWayPane {
-    Bool(bool),
-    Arm1(crate::scene_scenarios::KitViewWayPaneArm1),
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewWayPaneArm1 {
-    pub box_: String,
-    pub stand: Option<[f64; 3]>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewWayAdd {
-    pub boxes: Option<Vec<crate::scene_level_data::BoxData>>,
-    pub lamps: Option<Vec<crate::scene_level_data::LightData>>,
-    pub laid: Option<bool>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct KitViewSet {
-    pub boxes: Vec<crate::scene_level_data::BoxData>,
-    pub doors: Option<Vec<crate::scene_level_data::DoorData>>,
-    pub lights: Option<Vec<crate::scene_level_data::LightData>>,
-    pub ref_: [f64; 2],
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -746,77 +486,65 @@ pub struct LevelScenariosDoorNamesItem {
     pub name: String,
 }
 
+/// One row of the mission list: which kind, how many teammates, on which level file (the rows: scene_scenario_list). Types and words: the address that is a row is `scenario_query`.
 #[derive(Clone, Debug, Default)]
 pub struct ScenarioEntry {
     pub id: String,
     pub title: String,
-    pub kind: crate::scene_scenarios::ScenarioEntryKind,
+    pub kind: crate::scene_scenarios::MissionKind,
+    /// teammates: the pair or the four (the rescue is the pair's as built); a quiet mission's is nobody or one partner
     pub squad: f64,
+    /// which heading of the list it is under (none: by what it is)
     pub group: Option<crate::scene_scenarios::MissionGroup>,
+    /// it deploys at its own size and no other: the line every other size shows greyed. A design call, not an inability: the level still stages any size from an address
     pub only: Option<String>,
-    pub packs: Option<crate::scene_scenarios::ScenarioEntryPacks>,
+    /// a file under levels/ (none: the office)
     pub level: Option<String>,
+    /// the hour and the weather a visit to it is always started in: they win over the address's, and the sheet draws no row for them. None: the visitor's pick, else the level's own. A weather is one a
+    /// level can be started in, never snow (a level built for snow keeps its own)
     pub hour: Option<crate::hours::HourId>,
     pub weather: Option<crate::scene_scenarios::ScenarioEntryWeather>,
+    /// the room clear's placement seed, a quiet mission's deal pinned (none: dealt on every start)
     pub seed: Option<f64>,
+    /// the one line under the title: the premise
     pub blurb: Option<String>,
+    /// a lesson's opening card: where we are and why, and what it teaches, a short line a thing, five at most (the things, not their keys)
     pub scene: Option<String>,
     pub teaches: Option<Vec<String>>,
+    /// it runs, and nobody has balanced it
     pub untuned: Option<bool>,
+    /// cut from the list: the row stays in its table, so its id, its address, its level file and every check that names it hold; no list draws it, and a cut lesson is nobody's next
     pub off_list: Option<bool>,
+    /// said of it and read by no rule: where it is, which way it leans, how many hold it as it is staged
     pub place: Option<String>,
     pub lean: Option<crate::ui_missions::Lean>,
     pub defenders: Option<f64>,
+    /// the ways in, named: the level's own team start first, then each of its `scenarios.roomClear.starts` in the file's order (none: one way in)
     pub ways: Option<Vec<String>>,
+    /// the level's file names defender squads, so Hard is worded as theirs (none: one pool)
     pub squads: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum ScenarioEntryKind {
+/// what kind of mission it is. A word for lists, cards and addresses: a rule asks the mission that is up what it brings (`g.staged`)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum MissionKind {
     #[default] Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
 }
-impl ScenarioEntryKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ScenarioEntryKind::Nightbreach => "nightbreach",
-            ScenarioEntryKind::Roomclear => "roomclear",
-            ScenarioEntryKind::Rescue => "rescue",
-            ScenarioEntryKind::Quiet => "quiet",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum MissionGroup {
     Clock,
     Tutorial,
     Raids,
     Strongholds,
-    QuietAlone,
-    QuietTwo,
-}
-impl MissionGroup {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionGroup::Clock => "clock",
-            MissionGroup::Tutorial => "tutorial",
-            MissionGroup::Raids => "raids",
-            MissionGroup::Strongholds => "strongholds",
-            MissionGroup::QuietAlone => "quiet-alone",
-            MissionGroup::QuietTwo => "quiet-two",
-        }
-    }
+    #[word("quiet-alone")] QuietAlone,
+    #[word("quiet-two")] QuietTwo,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ScenarioEntryPacks {
-    pub frags: Option<f64>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum ScenarioEntryWeather {
     Clear,
     Overcast,
@@ -825,18 +553,6 @@ pub enum ScenarioEntryWeather {
     Fog,
     Dust,
 }
-impl ScenarioEntryWeather {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ScenarioEntryWeather::Clear => "clear",
-            ScenarioEntryWeather::Overcast => "overcast",
-            ScenarioEntryWeather::Rain => "rain",
-            ScenarioEntryWeather::Downpour => "downpour",
-            ScenarioEntryWeather::Fog => "fog",
-            ScenarioEntryWeather::Dust => "dust",
-        }
-    }
-}
 
-/// (src/scene/scenarios.ts:88 SQUAD_MAX_MEN)
+/// the most men a room clear stages in squads
 pub const SQUAD_MAX_MEN: f64 = 11.0;

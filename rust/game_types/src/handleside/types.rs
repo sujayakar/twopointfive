@@ -1,6 +1,6 @@
 //! The types of `handleside`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -23,16 +23,6 @@ pub enum StPhase {
     Thru,
     Turn,
 }
-impl StPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            StPhase::Go => "go",
-            StPhase::Wait => "wait",
-            StPhase::Thru => "thru",
-            StPhase::Turn => "turn",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Spot {
@@ -46,10 +36,6 @@ pub struct Spot {
 pub struct Face {
     pub stand: Option<crate::handleside::Spot>,
     pub via: Option<[V3; 2]>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HANDLEDEBUG {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -74,7 +60,6 @@ pub struct HandlesideModFacesValue {
 pub struct Ahead {
     pub d: DoorId,
     pub k: usize,
-    pub at: V3,
     pub dist: f64,
 }
 
@@ -87,7 +72,6 @@ pub struct BendA {
 pub struct ToolSpot {
     pub pos: V3,
     pub yaw: f64,
-    pub pull: bool,
     pub far: bool,
 }
 
@@ -98,32 +82,14 @@ pub enum NearStand {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct HandlesideMod {
-    /// (src/game/handleside.ts:69 states)
     pub states: JsMap<GuardId, crate::handleside::St>,
-    /// (src/game/handleside.ts:71 hands)
     pub hands: JsMap<DoorId, GuardId>,
-    /// (src/game/handleside.ts:72 rested)
     pub rested: JsMap<GuardId, crate::handleside::HandlesideModRestedValue>,
-    /// (src/game/handleside.ts:73 lined)
     pub lined: JsMap<GuardId, crate::handleside::HandlesideModLinedValue>,
-    /// (src/game/handleside.ts:78 faces)
     pub faces: JsMap<DoorId, crate::handleside::HandlesideModFacesValue>,
-    /// (src/game/handleside.ts:355 stepped)
     pub stepped: JsMap<GuardId, f64>,
-}
-impl HandlesideMod {
-    pub fn blank() -> Self {
-        HandlesideMod {
-            states: JsMap::new(),
-            hands: JsMap::new(),
-            rested: JsMap::new(),
-            lined: JsMap::new(),
-            faces: JsMap::new(),
-            stepped: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -142,5 +108,3 @@ pub struct HandlesideStats {
     pub tool_posts: i32,
 }
 
-/// (src/game/handleside.ts:66 HANDLE_DEBUG: a table nothing writes)
-pub fn handle_debug() -> crate::handleside::HANDLEDEBUG { crate::handleside::HANDLEDEBUG {  } }

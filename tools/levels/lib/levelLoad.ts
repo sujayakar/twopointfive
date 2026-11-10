@@ -8,8 +8,8 @@
 import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
 import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
-import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
+import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, HumData, MarkData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
 import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
 
@@ -32,14 +32,11 @@ export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: num
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ LevelData → Level
-/** Build the runtime Level from level data. Validates first (throws listing every problem) unless told the caller already has. Every vector is copied:
- *  the game mutates its Level (box flags, scratch routes) and two loads must never share state. */
-export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): Level {
-  if (opts.validate !== false) {
-    const errs = validateLevelData(data);
-    if (errs.length) throw new Error(`level '${data?.name ?? '?'}' (v${(data as any)?.version} vs loader v${LEVEL_DATA_VERSION}): ${errs.length} error(s)\n  ${errs.slice(0, 20).join('\n  ')}${errs.length > 20 ? `\n  … ${errs.length - 20} more` : ''}`);
-  }
-  const mats = new Map(Object.entries(data.materials));   // (own keys only — validate already refused 'constructor' & co. as material names)
+/** what a file calls its errand's room, thing, holder and way out: only what it says */
+const namesOf = (n: NonNullable<Level['mission']['names']>): { names?: typeof n } => { const said = Object.fromEntries(Object.entries(n).filter(([, v]) => v !== undefined)) as typeof n; return Object.keys(said).length ? { names: said } : {}; };
+/** Build the runtime Level from level data, which is a level (judge.ts says where it is none). Every vector is copied: the caller may mutate its Level and two loads never share state. */
+export function loadLevel(data: LevelData): Level {
+  const mats = new Map(Object.entries(data.materials));   // (own keys only: 'constructor' & co. are no material's names)
   const albedoOf = (o: { material?: string; albedo?: Vec3 }): Vec3 => {
     if (o.material === undefined) return V(o.albedo!);
     const m = mats.get(o.material); if (!m) throw new Error(`level '${data.name}': unknown material '${o.material}'`); return V(m.albedo);
@@ -67,7 +64,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     const marks = copyMarkings(b.markings); if (marks) p.marks = marks;   // (through markings.ts marking(): the same structure the generator builds)
     // the finish (Box.rough / metal): the box's own, else its material's; absent both = matte dielectric — nothing written, so a file without finishes loads to
     // the very Level it always did (`metal` is only ever carried as true: false is the default and stays unwritten, as levelToData writes it)
-    Object.assign(p, finishOf(b), saidOf(b));   // (what it is made of — scene/stuff.ts: the box's own word, else its material's; 'plain' is no word, and validate has refused every word a box cannot be)
+    Object.assign(p, finishOf(b), saidOf(b));   // (what it is made of — scene/stuff.ts: the box's own word, else its material's; 'plain' is no word, and a word no box can be is a fault of the file)
     if (b.shape) {   // A SHAPE (scene/shapes.ts): carried on the box as authored — its planes copied, a piece's paint, finish and word resolved as a box's are; given to the box when the level is stood up
       const s = b.shape, sh: BoxShape = { ...formOf(s) };
       if (s.with) sh.with = s.with.map((w): ShapePiece => ({ off: V(w.off), h: V(w.h), ...(w.yaw ? { yaw: w.yaw } : {}), ...(w.material !== undefined || w.albedo !== undefined ? { albedo: albedoOf(w), ...finishOf(w), ...saidOf(w) } : {}), ...formOf(w) }));   // (no paint: the piece wears its box's paint, finish and word — shapes.ts shapeLevel)
@@ -112,32 +109,31 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
   const vents: VentDef[] | undefined = data.vents?.map(v => { const o: VentDef = { name: v.id, pos: V(v.pos), dir: V(v.dir), speed: v.speed, spread: v.spread, reach: v.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (v[k] !== undefined) (o as any)[k] = v[k]; return o; });   // (id → name, floor / notes dropped like a door's; optional fields written iff present)
   const planOf = <T extends RoomClearPlanData>(p: T): Omit<T, 'id'> => { const q = clone(p) as any; delete q.id; return q; };
   const clearPlans: RoomClearPlan[] = data.plans.roomClear.map(p => planOf(p) as RoomClearPlan);
-  // mission: the fixed thread's three objectives back onto Level.mission's shape (validate guaranteed one of each)
+  // mission: the fixed thread's three objectives back onto Level.mission's shape (a level has one of each)
   const ob = <K extends ObjectiveData['kind']>(k: K) => data.mission.objectives.find(o => o.kind === k) as Extract<ObjectiveData, { kind: K }>;
   const reach = ob('reach'), drive = ob('drive'), exfil = ob('exfil');
   const level: Level = {
     boxes, props, lights, switchables,
-    ...(data.daylight ? { daylight: { sun: lightOf(data.daylight.sun), sky: { zenith: V(data.daylight.sky.zenith), horizon: V(data.daylight.sky.horizon) }, groupsOn: [...data.daylight.groupsOn], groupsOff: [...data.daylight.groupsOff], lightsOff: [...data.daylight.lightsOff], haze: data.daylight.haze, exposure: data.daylight.exposure } satisfies DaylightDef } : {}),
     ...(data.plans.breach ? { breach: planOf(data.plans.breach) as BreachPlan } : {}),
     doors,
     devices,
     ...(vents ? { vents } : {}),
+    ...(data.hums ? { hums: data.hums.map((h): HumDef => ({ name: h.id, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
     breaker: { pos: V(data.breaker.pos), boxes: [bx(data.breaker.panel), bx(data.breaker.led)], ...(data.breaker.fumble !== undefined ? { fumble: data.breaker.fumble } : {}) },
     beacons: data.beacons.map(b => ({ pos: V(b.pos), box: bx(b.box) })),
     playerSpawn: V(data.mission.playerSpawn),
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
-    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/director onEnter) — written iff authored, so a level with none loads key for key as before
-    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_rules/src/scene_ways, rust/game_rules/src/director) — written iff the file names any, so a level with none loads key for key as before
+    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/missions/director onEnter) — written iff authored, so a level with none loads key for key as before
+    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_types/src/scene_ways, rust/game_rules/src/missions/director) — written iff the file names any, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
-    mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
+    mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}), ...namesOf({ place: reach.name, thing: drive.name, holder: drive.holder, out: exfil.name }) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
     ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
-    ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: scene/scenarios.ts)
+    ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: lib/scenarios.ts)
   };
-  // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
-  // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
-  // (a file with none: rust/game_rules/src/floor's own office map).
+  // data.surfaces → Level.surfaces, what rust/game_rules/src/world/floor.rs reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
+  // (a file with none: rust/game_rules/src/world/floor.rs's own office map).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   return level;
 }
@@ -179,7 +175,7 @@ export interface LevelToDataOpts {
   /** (not `markTexel` or `kept`: those two are the Level's own and are written from it. Either one in an object passed here is dropped) */
   meta?: Omit<LevelData['meta'], 'markTexel' | 'kept'>;
   /** pass-through for what Level has no slot for yet */
-  volumes?: LevelData['volumes']; connectors?: LevelData['connectors'];
+  volumes?: LevelData['volumes'];
 }
 /** Convert a runtime Level (the procedural generator's, or a loaded one) into level data. Optional fields are written iff the Level had them, so
  *  loadLevel(levelToData(L)) reproduces L key for key; ids are generated deterministically (see boxIdFor) unless supplied. */
@@ -219,7 +215,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (used.has(id)) { let k = 2; while (used.has(`${id}_${k}`)) k++; id = `${id}_${k}`; }
     used.add(id); ids[i] = id;
   }
-  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
+  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/tick/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
   // or on prop boxes) are not authored data: masked here so 'export the level the game is running' works off game.level too. Anything else unknown still throws.
   const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin | BoxFlag.Bar;
   const boxes: BoxData[] = level.boxes.slice(0, n).map((b, i) => {
@@ -276,18 +272,18 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     volumes: level.volumes ? level.volumes.map((v): LevelData['volumes'][number] => ({ id: v.name, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) : clone(opts.volumes ?? []), devices: (level.devices ?? []).map(deviceData),   // (a Level that carried volumes writes them back; one without keeps the pass-through)
     ...(level.marks?.length ? { marks: level.marks.map((m): MarkData => ({ id: m.name, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),
     ...(level.vents ? { vents: level.vents.map((d): VentData => { const v: VentData = { id: d.name, pos: V(d.pos), dir: V(d.dir), speed: d.speed, spread: d.spread, reach: d.reach }; for (const k of ['size', 'period', 'duty', 'phase', 'mains'] as const) if (d[k] !== undefined) (v as any)[k] = d[k]; return v; }) } : {}),
-    connectors: clone(opts.connectors ?? []),
+    ...(level.hums ? { hums: level.hums.map((h): HumData => ({ id: h.name, kind: h.kind, pos: V(h.pos), level: h.level, radius: h.radius, ...(h.mains !== undefined ? { mains: h.mains } : {}) })) } : {}),
+    connectors: [],
     mission: { playerSpawn: V(level.playerSpawn), objectives: [
-      { id: 'reach_room', kind: 'reach', area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
-      { id: 'pull_drive', kind: 'drive', rackIndex: M.rack.index, front: V(M.rack.front), halfW: M.rack.halfW },
-      { id: 'exfil', kind: 'exfil', door: M.exfilDoor, x: M.exfilX, z: M.exfilZ, ...(M.exfilOut ? { out: [M.exfilOut[0], M.exfilOut[1]] as [number, number] } : {}) },
+      { id: 'reach_room', kind: 'reach', ...(M.names?.place !== undefined ? { name: M.names.place } : {}), area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
+      { id: 'pull_drive', kind: 'drive', ...(M.names?.thing !== undefined ? { name: M.names.thing } : {}), ...(M.names?.holder !== undefined ? { holder: M.names.holder } : {}), rackIndex: M.rack.index, front: V(M.rack.front), halfW: M.rack.halfW },
+      { id: 'exfil', kind: 'exfil', ...(M.names?.out !== undefined ? { name: M.names.out } : {}), door: M.exfilDoor, x: M.exfilX, z: M.exfilZ, ...(M.exfilOut ? { out: [M.exfilOut[0], M.exfilOut[1]] as [number, number] } : {}) },
     ] },
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]], ...(level.breaker.fumble !== undefined ? { fumble: level.breaker.fumble } : {}) },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
-    ...(level.daylight ? { daylight: { sun: lightData(level.daylight.sun), sky: { zenith: V(level.daylight.sky.zenith), horizon: V(level.daylight.sky.horizon) }, groupsOn: [...level.daylight.groupsOn], groupsOff: [...level.daylight.groupsOff], lightsOff: [...level.daylight.lightsOff], haze: level.daylight.haze, exposure: level.daylight.exposure } } : {}),
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
-    ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: scene/scenarios.ts)
+    ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: lib/scenarios.ts)
   };
   return data;
 }

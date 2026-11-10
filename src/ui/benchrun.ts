@@ -12,8 +12,7 @@
 //   A RELOAD IN THE MIDDLE DOES NOT START IT AGAIN: a page marks the record as begun on its scene before it plays, and a page that finds its own mark drops the
 //   record and is a plain mission page.
 import { BENCH_SCENES, BENCH_SET, type BenchSceneDef } from '../host/benchScenes';
-import { SCENARIOS, quitSearch } from '../scene/scenarioList';
-import { scenarioQuery } from '../scene/scenarios';
+import { desk } from '../view/desk';
 import { lookPageWord, lookTrialsKept } from '../scene/look';
 import type { BenchLeg, BenchStep, BenchSceneRun, BenchBoot, BenchOpts } from './bench';
 import { SHADER_ROW_WORDS } from './shaderrows';
@@ -42,8 +41,8 @@ const clear = (): void => { try { sessionStorage.removeItem(KEY); } catch { /* n
 /** the address scene `i` is played on: its mission's own, the deal and the die pinned by the scene's seed, its difficulty said, no replay kept, and the scene's
  *  place (that word makes it a run's page: the fight is the benchmark's, not the visitor's, so the page files nothing of it and raises no end card) */
 export function benchSceneSearch(S: BenchSceneDef, i: number, keep: string[] = []): string {
-  const E = SCENARIOS.find(e => e.id === S.scn); if (!E) throw new Error(`no mission '${S.scn}'`);
-  const own = `${scenarioQuery(E).replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${S.seed}`)}&seed=${S.seed}&difficulty=${S.hard ? 'hard' : 'standard'}&nokeep&${BENCH_RUN_KEY}=${i}`;
+  const E = desk().missions().rows.find(e => e.id === S.scn); if (!E) throw new Error(`no mission '${S.scn}'`);
+  const own = `${E.link.replace(/(^|[?&])roomclear(=\d+)?(?=&|$)/, `$1roomclear=${S.seed}`)}&seed=${S.seed}&difficulty=${S.hard ? 'hard' : 'standard'}&nokeep&${BENCH_RUN_KEY}=${i}`;
   const has = new URLSearchParams(own), rest = keep.filter(p => !has.has(p.split('=')[0]));
   return rest.length ? `${own}&${rest.join('&')}` : own;
 }
@@ -53,7 +52,7 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
  *  the fight (an hour, a weather, a difficulty lever, a rule's off switch would make it another fight than the set's). The shader rows on trial are here by
  *  their URL words (ui/shaderrows.ts), with the compile queue's and the shader trim's: a row asked for beside ?bench is what the run was meant to measure, and
  *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. A word that is NOT kept is named in the report (`left`) */
-const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|smokeindirect|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
+const CARRIED = new RegExp(`^(mute|quality|adapt|pipequeue|shadertrim|shaderfold|framecap|smokeindirect|savepic|pace|giveway|flight|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 /** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
  *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
  *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was
@@ -68,9 +67,9 @@ export const carriedWords = (search: string): string[] => search.replace(/^\?/, 
 const flags = (search: string): string[] => { const q = new URLSearchParams(search);
   return [...search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p) || lookWord(p)), ...lookTrialsKept(q)]; };
 /** the report's line for the words of the asked address that no scene was played with (none: no line): the visitor's own flags, so not a mission's words
- *  (quitSearch takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
+ *  (the desk's `leave` takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
 const left = (search: string): string[] => {
-  const own = new URLSearchParams(benchSceneSearch(BENCH_SCENES[0], 0)), kept = new Set(flags(search).map(p => [...new URLSearchParams(p)][0]?.[0])), w = [...new Set([...new URLSearchParams(quitSearch(search)).keys()])].filter(k => k && !own.has(k) && !CARRIED.test(k) && !kept.has(k));   // (kept: the look page's own words, which ride along from that page alone)
+  const own = new URLSearchParams(benchSceneSearch(BENCH_SCENES[0], 0)), kept = new Set(flags(search).map(p => [...new URLSearchParams(p)][0]?.[0])), w = [...new Set([...new URLSearchParams(desk().leave(search)).keys()])].filter(k => k && !own.has(k) && !CARRIED.test(k) && !kept.has(k));   // (kept: the look page's own words, which ride along from that page alone)
   let n = w.length; const line = () => `the scenes were played without ${w.slice(0, n).join(', ')}${n < w.length ? ` and ${w.length - n} more` : ''} from the address the run was asked on`;
   while (n > 1 && line().length > 150) n--;
   return w.length ? [line()] : []; };

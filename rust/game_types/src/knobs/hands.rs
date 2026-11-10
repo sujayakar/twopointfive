@@ -39,7 +39,7 @@ pub struct HandsK {
     /// his pace under it, × his walk · how fast he comes round with it (rad/s: the pins are kinematic and travel at most 2.4 m/s)
     #[k(0.6)] pub carry_pace: f64,
     #[k(5.0)] pub carry_turn: f64,
-    /// how much of his own step and turn its free limbs are taken through with him each frame (ragdoll.ts ride): 0 = none, as it was — the body's damping is against
+    /// how much of his own step and turn its free limbs are taken through with him each frame: 0 = none, as it was — the body's damping is against
     ///  the floor, and every arm, shin and the head stream out behind each stride and turn, 40–75° off the hang · 1 = all of it: they hang off him as off a still man
     #[k(0.85)] pub carry_ride: f64,
     /// laid down: how far off his feet its hips go, on the side he lays it (m)

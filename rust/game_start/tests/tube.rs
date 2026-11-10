@@ -1,4 +1,4 @@
-//! WHAT A GOGGLED MAN IS SHOWN (rust/game_rules/src/nvg, irlight): by the place's own light through the tube, or by the team's infrared floods where that shows too little.
+//! WHAT A GOGGLED MAN IS SHOWN (rust/game_rules/src/teammates/nvg.rs, irlight): by the place's own light through the tube, or by the team's infrared floods where that shows too little.
 use game_start::play::{Opts, Play};
 
 /// THE RULE: however much light a dark place has, a man in it is plain to a goggled teammate who looks at him: the tube shows him by the place's light, or the flood is on.
@@ -16,7 +16,7 @@ fn no_half_dark_place_blinds_a_goggled_man() {
         // (five metres short of the spot and looking along the corridor at it, with nobody who can do anything about him)
         let x = 21.6 + k as f64;
         for _ in 0..150 {
-            for &o in &theirs { let until = p.g.time + 5.0; p.g.gd[o].dazzled_until = until; p.man_stands(o, [4.0, 4.0]); }
+            for &o in &theirs { let until = p.g.time + 5.0; p.g.cond[p.g.gd[o].ch].blind_until = until; p.man_stands(o, [4.0, 4.0]); }
             p.man_stands(mate, [x - 5.0, 14.2]);
             let c = p.g.gd[mate].ch;
             (p.g.ch[c].aim_yaw, p.g.ch[c].body_yaw) = (core::f64::consts::FRAC_PI_2, core::f64::consts::FRAC_PI_2);

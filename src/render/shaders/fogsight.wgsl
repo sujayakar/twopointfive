@@ -1,4 +1,4 @@
-// THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.ts FogSight; rust/game_rules/src/fogofwar rule 4g) — one tiny pass at the head of the frame, only while the full-picture fog is
+// THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.ts FogSight; rust/game_rules/src/stealth/fogofwar rule 4g) — one tiny pass at the head of the frame, only while the full-picture fog is
 // on. For each of the team's eyes and each of FOG_SIGHT_BINS bearings round it: how far that eye's level ray, at its own height, goes before it meets a box —
 // the fog pass's own eye ray (occludedTBoxes with the eye's man's kit skipped), walked to the world's edge. What stands between an eye and a spot depends on the
 // bearing alone, so every pass of the picture can then ask "does the team see this spot" of ANY point in the world for two reads an eye (common.wgsl

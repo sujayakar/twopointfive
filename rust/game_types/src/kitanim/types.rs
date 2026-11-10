@@ -1,6 +1,6 @@
 //! The types of `kitanim`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -12,84 +12,15 @@ pub struct BeatRow {
     pub keep: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ReloadKind {
     #[default] Dry,
     Empty,
     Tactical,
 }
-impl ReloadKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ReloadKind::Dry => "dry",
-            ReloadKind::Empty => "empty",
-            ReloadKind::Tactical => "tactical",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitanimModKITANIMLOGItem {
-    pub t: f64,
-    pub what: crate::kitanim::KitanimModKITANIMLOGItemWhat,
-    pub from: Option<crate::character::KitItem>,
-    pub to: Option<crate::character::KitItem>,
-    pub kind: Option<crate::kitanim::ReloadKind>,
-    pub secs: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum KitanimModKITANIMLOGItemWhat {
-    #[default] Reload,
-    Swap,
-}
-impl KitanimModKITANIMLOGItemWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitanimModKITANIMLOGItemWhat::Reload => "reload",
-            KitanimModKITANIMLOGItemWhat::Swap => "swap",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NoteRow {
-    pub kind: Option<crate::kitanim::ReloadKind>,
-    pub from: Option<crate::character::KitItem>,
-    pub to: Option<crate::character::KitItem>,
-    pub what: crate::kitanim::NoteRowWhat,
-    pub secs: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum NoteRowWhat {
-    #[default] Reload,
-    Swap,
-}
-impl NoteRowWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NoteRowWhat::Reload => "reload",
-            NoteRowWhat::Swap => "swap",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KitLockMaxKIT {
-    pub stow: JsMap<crate::character::KitItem, f64>,
-    pub reach: JsMap<crate::character::KitItem, f64>,
-    pub draw: JsMap<crate::character::KitItem, f64>,
-    pub far: f64,
-    pub swap_k: f64,
-    pub front: Option<crate::kitanim::KitLockMaxKITFront>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KitLockMaxKITFront {
-    pub stow: f64,
-    pub reach: f64,
-    pub draw: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -105,34 +36,12 @@ pub enum KitShowVRifle {
     Hand,
     Slung,
 }
-impl KitShowVRifle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KitShowVRifle::Hand => "hand",
-            KitShowVRifle::Slung => "slung",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct KitReload {
     pub kind: crate::kitanim::ReloadKind,
     pub row: crate::weapons::WeaponDefReload,
     pub beat: crate::character::ReloadBeat,
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
-pub struct KitanimMod {
-    /// (src/game/kitanim.ts:86 KITANIM_LOG)
-    pub kitanim_log: Vec<crate::kitanim::KitanimModKITANIMLOGItem>,
-}
-impl KitanimMod {
-    pub fn blank() -> Self {
-        KitanimMod {
-            kitanim_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -147,5 +56,3 @@ pub struct KitanimStats {
     pub owed: i32,
 }
 
-/// (src/game/kitanim.ts:83 KITANIM_DEFAULTS: a table nothing writes)
-pub fn kitanim_defaults() -> crate::knobs::KitanimK { crate::knobs::KitanimK::page() }

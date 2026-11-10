@@ -1,46 +1,27 @@
 //! The types of `wallbreak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)
+/// who is told of a row of the change feed, on the frame it is filed: WallReact = the game's one WallReact takes the row into its queue
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum ChangeListener {
     WallReact,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum BKind {
     #[default] Wall,
     Cover,
 }
-impl BKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BKind::Wall => "wall",
-            BKind::Cover => "cover",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LevelChangeKind {
     #[default] Door,
     Cover,
     Hole,
     Port,
     Reset,
-}
-impl LevelChangeKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LevelChangeKind::Door => "door",
-            LevelChangeKind::Cover => "cover",
-            LevelChangeKind::Hole => "hole",
-            LevelChangeKind::Port => "port",
-            LevelChangeKind::Reset => "reset",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -50,34 +31,20 @@ pub struct LevelChange {
     pub kind: crate::wallbreak::LevelChangeKind,
     pub cause: crate::wallbreak::LevelChangeCause,
     pub id: f64,
-    pub name: Option<String>,
     pub pos: V3,
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
-    pub sight: bool,
-    pub dead: bool,
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LevelChangeCause {
     #[default] Blast,
     Fire,
     Load,
     Reset,
     Collapse,
-}
-impl LevelChangeCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LevelChangeCause::Blast => "blast",
-            LevelChangeCause::Fire => "fire",
-            LevelChangeCause::Load => "load",
-            LevelChangeCause::Reset => "reset",
-            LevelChangeCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -144,13 +111,6 @@ pub struct Breakable {
     pub hard: Option<bool>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WallsSave {
-    pub v: f64,
-    pub b: Vec<(f64, String, Vec<f64>, Option<f64>)>,
-    pub h: Option<Vec<[f64; 2]>>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AABB {
     pub x0: f64,
@@ -161,7 +121,7 @@ pub struct AABB {
     pub z1: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallBreak {
     pub authored: f64,
     pub serial: f64,
@@ -170,14 +130,8 @@ pub struct WallBreak {
     pub list: Vec<WallbreakBreakableId>,
     pub owner: JsMap<crate::Num, WallbreakBreakableId>,
     pub hidden: JsMap<crate::Num, f64>,
-    pub counter: f64,
+    #[is(1.0)] pub counter: f64,
     pub dirty: bool,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub scratch: Vec<i32>,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub scratch2: Vec<i32>,
     pub fixture_boxes: JsSet<crate::Num>,
     pub ghosts: Vec<f64>,
     pub wear: crate::wallwear::WallWear,
@@ -187,33 +141,6 @@ pub struct WallBreak {
     pub hung_now: Option<crate::wallbreak::WallBreakHungNow>,
     pub hung_gone: JsMap<crate::Num, f64>,
 }
-impl WallBreak {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        WallBreak {
-            authored: 0.0,
-            serial: 0.0,
-            changes: Vec::new(),
-            listeners: Vec::new(),
-            list: Vec::new(),
-            owner: JsMap::new(),
-            hidden: JsMap::new(),
-            counter: 1.0,
-            dirty: false,
-            scratch: alloc::vec![0; 96],
-            scratch2: alloc::vec![0; 96],
-            fixture_boxes: JsSet::new(),
-            ghosts: Vec::new(),
-            wear: crate::wallwear::WallWear::blank(),
-            skins: crate::wallskin::WallSkin::blank(),
-            room: crate::levelfit::BreakRoom::default(),
-            shell_gaps: JsSet::new(),
-            hung_now: None,
-            hung_gone: JsMap::new(),
-        }
-    }
-}
-impl Default for WallBreak { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallBreakHungNow {
@@ -224,20 +151,9 @@ pub struct WallBreakHungNow {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakInventory {
-    pub walls: f64,
-    pub cover: f64,
-    pub wall_m: f64,
-    pub pieces: f64,
-    pub hidden: f64,
-    pub touched: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct WallBreakBreakableAt {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
-    pub surf: crate::scene_materials::Surf,
     pub open: f64,
     pub cells: f64,
     pub hard: Option<bool>,
@@ -259,76 +175,22 @@ pub struct WallBreakRectBox {
     pub h: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallBreakOpenCellsCause {
-    Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-impl WallBreakOpenCellsCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallBreakOpenCellsCause::Blast => "blast",
-            WallBreakOpenCellsCause::Fire => "fire",
-            WallBreakOpenCellsCause::Load => "load",
-            WallBreakOpenCellsCause::Reset => "reset",
-            WallBreakOpenCellsCause::Collapse => "collapse",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakRazeBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakRazeInBudget {
-    pub chunks: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallBreakNoteC {
-    pub dead: bool,
     pub kind: crate::wallbreak::LevelChangeKind,
     pub cause: crate::wallbreak::LevelChangeCause,
-    pub name: Option<String>,
     pub who: f64,
     pub pos: V3,
     pub id: f64,
-    pub sight: bool,
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallBreakNoteCCause {
-    Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-impl WallBreakNoteCCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallBreakNoteCCause::Blast => "blast",
-            WallBreakNoteCCause::Fire => "fire",
-            WallBreakNoteCCause::Load => "load",
-            WallBreakNoteCCause::Reset => "reset",
-            WallBreakNoteCCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct WallBreakPlanBlastItem {
     pub b: WallbreakBreakableId,
     pub cells: Vec<f64>,
-    pub d: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -339,17 +201,9 @@ pub struct WallBreakPlanOfItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallbreakMod {
-    /// (src/game/wallbreak.ts:160 WALL_LOG)
     pub wall_log: Vec<String>,
-}
-impl WallbreakMod {
-    pub fn blank() -> Self {
-        WallbreakMod {
-            wall_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -369,8 +223,4 @@ pub struct WallbreakStats {
     pub nav_opened: i32,
 }
 
-/// (src/game/wallbreak.ts:81 WALLS_DEFAULTS: a table nothing writes)
-pub fn walls_defaults() -> crate::knobs::WallsK { crate::knobs::WallsK::page() }
-
-/// (src/game/wallbreak.ts:162 HIDE)
 pub const HIDE: f64 = 3.0;

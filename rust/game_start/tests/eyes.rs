@@ -1,4 +1,4 @@
-//! A MAN'S LOOK IS LEVEL (rust/game_rules/src/guards/p_04.rs `look_of`): his pose turns his eyes and does not tip them.
+//! A MAN'S LOOK IS LEVEL (rust/game_rules/src/people/guards/feet.rs `look_of`): his pose turns his eyes and does not tip them.
 //!
 //! What this holds. The team and one defender stand four metres apart in one lit room. Before the look was levelled, a man kneeling with his gun
 //! low had his chest pointing at the floor and his look with it, 65 degrees below level: the defender was outside his cone, and the squad that

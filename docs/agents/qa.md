@@ -63,8 +63,10 @@ process a binary. Ask a rule there first; a page script is for what crosses to t
 It plays every mission's start and a few runs,
 each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 a row failed, 64 a wrong word.
 
-- `gate` is the quick kind: rows `start`, `play`, `again`, `save`, `load`, `draw`, `seats`, `par`. `gate save` runs the rows whose name starts with that word.
-- `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player) and `lesson` (the tutorials by a man at the keys).
+- `gate` is the quick kind: rows `start`, `play`, `again`, `save`, `load`, `draw`, `seats`, `par` and `level file`. `gate save` runs the rows whose name starts with that word.
+- `gate long` adds `played` (each room clear, rescue and night breach to its end by the hands-off player), `lesson` (the tutorials by a man at the keys)
+  and `level` (each other question of `levels`).
+- A pin is the figures' word (`game_start::figures`, what play is in plain numbers). Figures moved is play moved, and red; only the parts moved passes and says so.
 - `gate pin [ROW…]` records the pins again and says which moved. `gate breaks` plants each check's fault: the row must pass unbroken, then fail in its check's own words.
 
 **The other programs**, by `cargo run --release --bin <name> --` in `rust/game_start`.
@@ -75,7 +77,7 @@ each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 
 
 **Checks.** `bun run tools/qa/checks.ts [group | name …] [--list]`, groups `picture`, `shaders`, `page`, `menus`, `sound`, `levels`, `words`, `build`. Each is a file run in its
 own process, stopped at `CHECK_CAP` minutes. `BY_HAND` names the files no row runs: the backend's, the
-game server's, `zfight-check.ts`, and those of `tools/draw/` that want the module.
+game server's, and those of `tools/draw/` that want the module.
 
 **Page scripts.** `bun run tools/qa/pages.ts [group | name …] [--list]`, groups `boot`, `play`, `menus`, `coop`, `saves`, `cloud`, `replay`, `all`, and `tools`, whose scripts run
 only by name. It starts one dev server with no backend and runs a script at a time, because a page takes the whole box.
@@ -108,7 +110,7 @@ Playwright's clicks hang on the software adapter: click by script.
 | `?seed=7`, `?quality=verylow`, `?mute`, `?hud` | the die (no word, a random one); a fixed preset; silence; the numbers on screen |
 | `?hard`, `?nofow`, `?noweather`, `?hour=` | difficulty; no fog of war; no weather; the hour |
 | `?cards=0`, `?loadbrief=0`, `?nokit`, `?noreplay`, `?cloud=0`, `?downloads=1` | no card waits; no brief; not this machine's kit cards; no tape; nothing sent; files also download |
-| `?knob.doorthrow.kick_secs=3` | any number of the rules, by name. The short words are `WORDS` in `rust/game_run/src/words.rs` |
+| `?knob.doorthrow.kick_secs=3` | any number of the rules, by name. The short words are `WORDS` in `rust/game_start/src/host/words.rs` |
 | `?playtape=`, `?at=`, `?bench` | a tape's page and the tick to seek to; the benchmark |
 | `?keeppage=0`, `?keeppage=1` | the shell that keeps the GPU device. A driven or `?paused` page is whole. A player's Chrome has the game in the frame `kept-page`, hooks on its `contentWindow` |
 
@@ -132,11 +134,11 @@ heavy features one at a time. F9 records frames, read with `tools/qa/perf-report
 mode, enemies that don't think and unlimited ammunition.
 
 **Saves and what a machine keeps.** A save is a `Moment`: a clone of the whole game in the module's memory, so a reload loses it. Saves by hand and autosaves are two rings, and a fresh run starts with
-none. In `rust/game_rules/src/savestate/`, `run_no` refuses for two players, Sam down, a run over or inside the response team's call, and `gate` there holds an autosave back while anybody is alert,
-searching or above `aware_max`. So a script that sees no autosave may be right. Kept runs are in IndexedDB (`keptStore`).
+none. In `rust/game_rules/src/tick/savestate/`, `run_no` refuses for two players, Sam down, a run over or inside the response team's call, and `gate` there holds an autosave back while
+anybody is alert, searching or above `aware_max`. So a script that sees no autosave may be right. Kept runs are in IndexedDB (`keptStore`).
 
-What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineBefore`, `machineAfter`). A fresh Playwright
-context has none of it, and a person's browser may. An address word wins over what is kept.
+What keeps a page from playing as it did yesterday is `localStorage`: the difficulty, the kit cards, the Cheats, and panel rows that were turned (`machineKept`, `machineAfter`). A fresh Playwright
+context has none of it, and a person's browser may. An address word wins over what is kept (`rust/game_start/src/host/mod.rs`, `lay`), on a native start too.
 
 ## Rules that hold
 

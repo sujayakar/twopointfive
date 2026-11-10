@@ -12,11 +12,11 @@
 //   const T = trainGround();                    the shell: ground, the yard wall, both gates, the moon, a breaker, a beacon
 //   T.hut({ … })                                a room: four walls, a floor, a roof, its doors cut and hung → its inside rect
 //   T.lamp(x, z, name)                          a yard lamp: a 7 m pool of light to walk round
-//   T.G.crates(…) / T.G.sandbags(…) …           the kit's pieces (the guide: rebuild/play-style-levels/look/read-first.md)
+//   T.G.crates(…) / T.G.sandbags(…) …           the kit's pieces (the guide: docs/library.md)
 //   return T.finish({ spawn, routes, mission, scenarios: { quiet, lesson } });
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, PatrolRoute } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
@@ -113,7 +113,7 @@ export function trainGround() {
       mission: o.mission, ...o.level,
     };
     const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
-    // WHAT A ROW CALLS THE GROUND'S TWO GATES (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the one off the track and the one across the ground.
+    // WHAT A ROW CALLS THE GROUND'S TWO GATES (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the one off the track and the one across the ground.
     // A level on this ground that knows a gate by something of its own writes its own row for it, and that row stands; its other rows are kept beside these.
     const own = o.scenarios.doorNames ?? [], gates = [{ door: 'gate_w', name: 'track gate' }, { door: 'gate_e', name: 'far gate' }].filter(g => !own.some(r => r.door === g.door));
     return { level, scenarios: { ...o.scenarios, doorNames: [...gates, ...own] }, groups: trace.groups, surfaces };

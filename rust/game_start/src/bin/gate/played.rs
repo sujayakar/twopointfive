@@ -1,10 +1,11 @@
 //! THE RUNS PLAYED TO THEIR ENDS: `played <id>`, the hands-off player on a mission, and `lesson <id>`, a man at the keys on a tutorial. These are what is left of the play-throughs, the lesson players and the soak.
 use crate::pins::Pins;
-use crate::rows::{hex, mission, say, stand, word_of, Flags, SEED};
+use crate::rows::{held, mission, pin_of, say, stand, Flags, SEED};
 use game::cmd::PlayerCmd;
 use game::game::{Game, GuardState};
-use game::scene_scenarios::ScenarioEntryKind as Kind;
+use game::scene_scenarios::MissionKind as Kind;
 use game::teams::Team;
+use game_start::figures::Track;
 use game_start::hands_off::{End, HandsOff, Plan};
 use game_start::lessons::{tutorials, Lesson};
 use game_start::owes::{self, Owes};
@@ -48,7 +49,7 @@ fn nothing_from_the_third(g: &Game, cmd: &mut PlayerCmd) {
 
 /// the middle of the wall nearest a man and more than a jump from him, a metre or more in from its face along its length
 fn into_a_wall(g: &mut Game) {
-    let man = g.guards.iter().copied().find(|&x| g.gd[x].team == Team::Operative && g.gd[x].state != GuardState::Dead).expect("a man of the team");
+    let man = g.guards.iter().copied().find(|&x| g.gd[x].team == Team::Operative && !game::condition::down(g, g.gd[x].ch)).expect("a man of the team");
     let at = g.ch[g.gd[man].ch].pos;
     let far = |q: [f64; 3]| game::m::hyp2(q[0] - at[0], q[2] - at[2]);
     let walls = g.col.boxes.iter().map(|&b| &g.tab.boxes[b]).filter(|b| b.h[1] > 0.8 && b.c[1] < 1.5 && far(b.c) > 2.0).map(|b| b.c);
@@ -60,9 +61,9 @@ fn into_a_wall(g: &mut Game) {
 /// the run, as a reader reads it
 fn words_of_the_run(g: &Game, end: Option<End>, t: f64, orders: u32, o: &Owes) -> String {
     let mates: Vec<_> = g.guards.iter().filter(|&&x| g.gd[x].team == Team::Operative).collect();
-    let up = mates.iter().filter(|&&&x| g.gd[x].state != GuardState::Dead).count();
-    let down = g.guards.iter().filter(|&&x| g.gd[x].team != Team::Operative && g.gd[x].state == GuardState::Dead).count();
-    let sam = if g.pl[g.player].down { "Sam down" } else { "Sam up" };
+    let up = mates.iter().filter(|&&&x| !game::condition::down(g, g.gd[x].ch)).count();
+    let down = g.guards.iter().filter(|&&x| g.gd[x].team != Team::Operative && game::condition::down(g, g.gd[x].ch)).count();
+    let sam = if game::condition::down(g, g.pl[g.player].ch) { "Sam down" } else { "Sam up" };
     let end = end.map_or("no end", |e| e.as_str());
     let medal = game::par::par_result_now(g).map_or(String::new(), |r| if r.medal == game::par::Medal::None { String::from("no medal · ") } else { format!("{} · ", r.medal.as_str()) });
     format!("{} {:.1} s · {} · {} of {} up · {} down · {} orders · {}{}", end, t, sam, up, mates.len(), down, orders, medal, o.line())
@@ -78,32 +79,24 @@ pub fn played_row(name: &str, id: &str, pins: &Pins, f: Flags) {
     // (Sam cannot go down, the page's own switch: or most runs stop with him, in a few seconds, and hold nothing of the floor)
     p.g.god_mode = true;
     let mut h = HandsOff::new(p.g.seats[0], Plan { seed: SEED, cap: CAP, ..Default::default() });
-    let (mut o, mut series) = (Owes::new(), Vec::new());
+    let (mut o, mut track) = (Owes::new(), Track::default());
     for i in 0..TICKS {
         if h.over() { break; }
         if f.breaks("deaf") { p.played_by(&mut Marred { him: &mut h, mar: deaf }); } else { p.played_by(&mut Marred { him: &mut h, mar: as_he_is }); }
         if f.breaks("wall") && i == WALL_AT { into_a_wall(&mut p.g); }
         o.tick(&mut p.g);
-        if i % 60 == 59 { series.push(word_of(&p.words())); }
+        if i % 60 == 59 { track.second(&p.g); }
     }
     let line = words_of_the_run(&p.g, h.end(), h.t(), h.given(), &o);
     if f.pin {
-        println!("pin\tline\t{}\t{}", name, line);
-        println!("pin\tseries\t{}\t{}", name, hex(&series));
+        pin_of(name, &track, &p.words(), Some(&line), false);
         return say(name, t.elapsed().as_secs_f64(), &[], "");
     }
     let mut fail: Vec<String> = o.faults.iter().map(|x| format!("{} {} at {:.1} s, {} times: {}", x.who, x.kind, x.t, x.times, x.words)).collect();
     if h.end().is_none() { fail.push(format!("he is still playing: {}", line)); }
-    match pins.lines.get(name) {
-        None => fail.push(String::from("no pin: `gate pin` records it")),
-        Some(was) if was != &line => fail.push(format!("the pinned line was '{}', and now it is '{}' (pins.txt)", was, line)),
-        _ => {}
-    }
-    match pins.series.get(name) {
-        Some(was) if was != &series => fail.push(format!("the run parts from its pin in second {} (pins.txt)", was.iter().zip(&series).position(|(a, b)| a != b).unwrap_or(was.len().min(series.len())) + 1)),
-        _ => {}
-    }
-    say(name, t.elapsed().as_secs_f64(), &fail, &line);
+    let (moved, note) = held(name, &track, &p.words(), Some(&line), pins, f);
+    fail.extend(moved);
+    say(name, t.elapsed().as_secs_f64(), &fail, &if note.is_empty() { line } else { format!("{} · {}", line, note) });
 }
 
 /// THE TUTORIAL IS PLAYED BY A MAN AT THE KEYS: every step goes by on its deed, the run ends, and it owes what a run owes.

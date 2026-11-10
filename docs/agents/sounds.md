@@ -9,7 +9,7 @@ with what he hears is `enemies.md`; how a replay plays is `replays.md`; the rain
 - A sound comes from a place. Through open air it is clear; round a corner it comes out of the doorway, dulled; behind a shut door it is duller
   still; through solid wall only the low part gets through. A big bare room rings more than a small one.
 - What is underfoot changes a step: carpet and grass scuff, hard floors click, and the rules hear that step at the same level.
-- A rolling chair sounds for as long as it rolls. Rain has a bed.
+- A rolling chair, a fire, a pouring can and what hums in a room sound for as long as they go on, after a load too. Rain has a bed.
 - The score follows how roused the defenders are. Each level has two pieces of its own; the main menu has the theme alone.
 - Options has four volumes.
 
@@ -19,23 +19,23 @@ The rules' half, in `rust/`:
 
 | module | what it does |
 |---|---|
-| `audio_iface/` | the calls a rule makes: `game_audio_like_play`, `game_audio_like_footstep`, `game_audio_like_rain`; `PlayOpts` |
-| `out_events/` | what a tick tells its host (`OutEvent`) |
-| `floor/` | what is underfoot; `tread`, one footfall for the mixer and the hearing rule alike |
-| `scene_collision/` | `sound_paths_propagate` for the rules, `heard_shared_by` for a question that changes nothing, `Propagation` |
+| `audio_iface.rs` | the calls a rule makes: `game_audio_like_play`, `game_audio_like_footstep`, `game_audio_like_rain`; `PlayOpts` |
+| `out_events.rs` | what a tick tells its host (`OutEvent`) |
+| `floor.rs` | what is underfoot; `tread`, one footfall for the mixer and the hearing rule alike |
+| `scene_collision.rs` | `sound_paths_propagate` for the rules, `heard_shared_by` for a question that changes nothing, `Propagation` |
 | `rust/sim/src/hear.rs` | the two halves of a sound's path: `direct` and `route` |
-| `ask/` | `hear_kept`, the mixer's question, reached by `face_hear` in `rust/game_face/src/ask.rs` |
-| `game/` (`p_05.rs`) | `game_roll_tick` and `game_on_prop_event`: furniture's noise, the chair's voice |
-| `rust/game_draw/src/events.rs` | the rows the page reads: `Sound`, `Footfall`, `Roll`, `Heard`; `tension` for the score |
+| `ask.rs` | `hear_kept`, the mixer's question, reached by `face_hear` in `rust/game_face/src/ask.rs` |
+| `game/restart.rs` | `game_roll_tick` and `game_on_prop_event`: furniture's noise, the chair's voice |
+| `rust/game_draw/src/events.rs` | the rows the page reads: `Sound`, `Footfall`, `Lasting`, `Heard`; `tension` for the score |
 
 The page's half, in `src/audio/` unless it says:
 
 | file | what it does |
 |---|---|
-| `audio.ts` | `AudioEngine`, the mixer: the budget, followed voices, hums, the room; `SFX_TABLE`, `SFX_WARM` |
+| `audio.ts` | `AudioEngine`, the mixer: the budget, held voices (`LASTING`), the room; `SFX_TABLE`, `SFX_WARM` |
 | `mixlaw.ts` | the law for one placed voice, read by the mixer and the sounds page; the default volumes |
 | `backend.ts`, `webaudio.ts` | what plays a buffer: `AudioBackend`, `WebAudioBackend`, `masterChain`, the rain bed |
-| `loops.ts`, `floors.ts` | room hums and the canister's hiss as data; `FLOOR`, which sample and how bright |
+| `loops.ts`, `floors.ts` | what hums in a room (`AMBIENCE`) and the canister's hiss as data; `FLOOR`, which sample and how bright |
 | `sfx.ts`, `synth.ts` | the sound table (`buildSfx`, `SfxName`, `HEARD`) and its instruments (`Voice`) |
 | `sfxWas.ts`, `sfxAlt.ts` | the older table, frozen (`WAS_IN_GAME`); other takes to choose from (`altTake`) |
 | `music.ts`, `pieces.ts`, `setlist.ts` | the score's sequencer (`Music`), its pieces (`PIECES`), each level's list (`SETLISTS`) |
@@ -65,7 +65,7 @@ row once (`Played`), so a tick run again does not sound twice, and calls `AudioE
   shut (`SOUND_SEAL` in `rust/sim/src/doors.rs`).
 
 `carry` is what the rules take from it. Whole glass stops a sound and a hole lets it through, where the level's pane rule is up. Rules ask through
-`hear_path` in `weather/`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:
+`hear_path` in `weather.rs`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:
 no weather, and one search a tick between two cells of the floor. Both come to the same two calls of `sim::hear`.
 
 **The mixer's law** (`mixlaw.ts`, `AudioEngine.play`). From `muffle` and `pathLen`: a low-pass (`cutoffOf`), less gain (`occludedGain`), more reverb
@@ -75,15 +75,16 @@ the costly panner to what is near or loud.
 **The budget.** A placed one-shot quieter at the ear than `CULL_LEVEL` is not played. At most `MAX_POSITIONAL` are alive: a louder newcomer takes the
 quietest one's place. Loops and placeless sounds are outside this. Pitch jitter comes from `sysRandom`, never the game's die.
 
-**The room.** Four times a second `AudioEngine.update` casts rays round the listener; their mean length sizes the reverb, and loops are re-aimed along their
-paths. The listener is the view's place (`ear` in `src/host/drawpage.ts`).
+**The room.** Four times a second `AudioEngine.update` casts rays round the listener; their mean length sizes the reverb (little of it where the game's roofs say it is
+outdoors), and held voices are re-aimed along their paths, at once where the game has jumped. The listener is the view's place (`ear` in `src/host/drawpage.ts`).
 
-**Loops.** Room hums (`AMBIENCE_OFFICE`, `ambienceLoop`) on the ambience bus. The canister's hiss, made by the mixer when asked for `smokeHiss` (`HISS`).
-The rain bed: `weather_rain_bed`, sent as `Heard.rain` each tick. A followed voice, the chair: `game_roll_tick` measures a chair's real movement, so a pinned
-chair is silent, and sends one `PlayOpts::ChairRoll` with a token; the mixer then asks the `Roll` row each frame where it is and how hard it goes (`FollowSrc`,
-`followGain`). `MAX_FOLLOW` and `FOLLOW_SECS` bound it. The roll files no event; a rolling chair's scrape plays no `propScrape` but still files one.
+**What lasts.** A sound that goes on is told as it stands, never by an event: a `Lasting` row every tick, and at the first of a game put back, for a can that pours
+(`smokeHiss`, with its age and what it has left), a fire that burns (`fireBed`), a chair that rolls (`game_roll_tick` measures its real movement, so a pinned one is
+silent) and what hums in the level's rooms (its `hums`, off with the mains). `AudioEngine.lasting` holds one looping voice a row: the nearest `MAX_LASTING`, the hums
+over and above. A row gone fades out; a clock that stands still, or frames that stop coming, is silence. So a load, a seek and a join are heard as they stand. The rain
+bed is `Heard.rain`, each tick. A roll files no event for men; a rolling chair's scrape plays no `propScrape` but still files one.
 
-**Floors.** `floor_of` asks the level's `surfaces` block, or the office's own map. `tread` multiplies a step's level by `loud` and hands the mixer that level
+**Floors.** `floor_of` asks the level's `surfaces` block, or the office's own map. `tread` (and `footfall`, for a step no man hears) multiplies a step's level by `loud` and hands the mixer that level
 and the material. The mixer picks `footHard` or `footSoft` by `hard` and nudges the rate.
 
 **The table.** Each row of `buildSfx` is one voice with its own seed and no other input, so it is the same on every boot, in any order. Most are built with
@@ -94,7 +95,7 @@ and the material. The mixer picks `footHard` or `footSoft` by `hard` and nudges 
 **The score.** `Music` schedules sixteenths on the audio clock, off its own die. Its `intensity` is `Heard.tension`, 0 to 1: the most roused defender, or what
 the alarm and the mains say; a teammate counts only while he is in a fight of his own. The theme is `Music.tick`. A `Piece` is data plus a `tick`, played
 through `Hands`, with `levels` setting pad, sub and bass by intensity. The kit and strings are rendered once (`struckAt`, `tunedAt`). Which piece:
-`audio.scoreSet`, said once at boot from the address (`setlistOfQuery`: level, then mission kind). Play opens on the list's first piece. After `MUSIC.minutes`
+`audio.scoreSet`, said once at boot from the address (`setlistOf`: level, then the kind the desk says). Play opens on the list's first piece. After `MUSIC.minutes`
 the next takes over at the end of a four-bar phrase while the floor is calm, or at twice that whatever the floor is doing. `audio.scoreMenu` holds the theme
 while the title is up.
 
@@ -153,9 +154,10 @@ Native tests in `rust/game_start/tests/`; `p.sounds` in `play.rs` is every sound
 | `weather.rs`, `guns_and_debris.rs` | `rain_masks_a_sound`, `debris_is_heard_where_it_lands` |
 | `pair.rs` | `a_man_hears_the_other_sides_chair_and_door_and_not_his_own` |
 | `the_grab.rs`, `kit.rs` | the sounds of a gun taken off a man; a refusal is `deny` |
-| `hud.rs` | the word for the floor underfoot; `floor/` has tests of its own |
+| `hud.rs` | the word for the floor underfoot; `floor.rs` has tests of its own |
 
-`bun run tools/qa/checks.ts sound` runs three: `gunfire-table-check.ts` (the three tables), `sfxwarm-check.ts` (a voice made alone is the same voice, in another
+`bun run tools/qa/checks.ts sound` runs four: `lasting-check.ts` (the mixer holds what goes on; `LASTING_BREAK=1`), `gunfire-table-check.ts` (the three tables),
+`sfxwarm-check.ts` (a voice made alone is the same voice, in another
 order, at two rates) and `sound-takes-check.ts` (every take neither silent nor clipped and another sound; a tune that changes nothing is the table's voice
 sample for sample). The red paths are `GUNFIRE_BREAK=1`, `SFXWARM_BREAK=1` and `TAKES_BREAK=1`.
 
@@ -167,8 +169,3 @@ The one check on the score is `level-needs.ts`'s row. No test asks for `tension`
 ## Not seen
 
 No check hears anything: numbers hold the takes and pieces, and nobody in the cloud has heard one. The lanes' card has been seen only on the software adapter.
-
-Faults that stand:
-- Every level gets the office's hums at the office's places (`setupAmbience`), and the room's outdoors test is the office's outline (`update`).
-- `fireBed` is one voice asked for every `bed_secs`, longer than the voice, so the bed has gaps. `FOLLOW_LOOPS` names it, but only the chair asks to be followed.
-- `floorAt` is never set on the mixer, so a footfall with no material (a civilian's) always plays the hard sample.

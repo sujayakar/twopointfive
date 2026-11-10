@@ -1,9 +1,9 @@
 //! The types of `squadthrow`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes (squadthrow.ts Lob.clean)
+/// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes
 #[derive(Clone, Debug)]
 pub enum LobClean {
     Plan { kind: crate::squadthrow::SquadThrowKind, at: V3 },
@@ -14,14 +14,6 @@ pub enum LobClean {
 pub enum SquadThrowKind {
     #[default] Frag,
     Stun,
-}
-impl SquadThrowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadThrowKind::Frag => "frag",
-            SquadThrowKind::Stun => "stun",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -264,44 +256,6 @@ pub struct StateShown {
     pub text: String,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct StateCaught {
-    pub key: String,
-    pub t: f64,
-    pub who: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct StateKeptValue {
-    pub key: String,
-    pub t: f64,
-    pub th: Option<crate::squadthrow::SquadThrower>,
-    pub line: Option<Vec<V3>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptCol {
-    pub s: Option<crate::squadthrow::SquadThrowKeptColS>,
-    pub q: Option<crate::squadthrow::SquadThrowKeptColQ>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptColS {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptColQ {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptOrders {
-    pub r: Option<crate::squadthrow::SquadThrowKeptOrdersR>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadThrowKeptOrdersR {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadThrowKeptDuck {
     pub gd: GuardId,
@@ -343,57 +297,27 @@ pub struct LobLim {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadthrowModSQUADTHROWLOGItem {
-    pub t: f64,
-    pub kind: crate::squadthrow::SquadThrowKind,
     pub who: String,
-    pub from: V3,
-    pub at: V3,
-    pub land: V3,
     pub rest: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum Word {
     Frag,
     Bang,
 }
-impl Word {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Word::Frag => "frag",
-            Word::Bang => "bang",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum None {
-    NoBangsLeft,
-    NoFragsInThisKit,
-    NoFragsLeft,
-}
-impl None {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            None::NoBangsLeft => "no bangs left.",
-            None::NoFragsInThisKit => "no frags in this kit.",
-            None::NoFragsLeft => "no frags left.",
-        }
-    }
+    #[word("no bangs left.")] NoBangsLeft,
+    #[word("no frags in this kit.")] NoFragsInThisKit,
+    #[word("no frags left.")] NoFragsLeft,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum RowOf {
     FragThere,
     StunThere,
-}
-impl RowOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RowOf::FragThere => "fragThere",
-            RowOf::StunThere => "stunThere",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -437,23 +361,11 @@ pub struct FragCatchesBurst {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadthrowMod {
-    /// (src/game/squadthrow.ts:133 states)
     pub states: JsMap<PlayerId, crate::squadthrow::State>,
-    /// (src/game/squadthrow.ts:159 SQUADTHROW_LOG)
     pub squadthrow_log: Vec<crate::squadthrow::SquadthrowModSQUADTHROWLOGItem>,
-    /// (src/game/squadthrow.ts:201 duckMates)
     pub duck_mates: Option<crate::squadthrow::SquadThrowKeptDuck>,
-}
-impl SquadthrowMod {
-    pub fn blank() -> Self {
-        SquadthrowMod {
-            states: JsMap::new(),
-            squadthrow_log: Vec::new(),
-            duck_mates: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -472,8 +384,5 @@ pub struct SquadthrowStats {
     pub cells: i32,
 }
 
-/// (src/game/squadthrow.ts:117 THROW_PAGE)
 pub const THROW_PAGE: &str = "throw";
 
-/// (src/game/squadthrow.ts:143 TICK_KEPT: a table nothing writes)
-pub fn tick_kept() -> Vec<String> { alloc::vec![String::from("frag.WALLS_FOR"), String::from("seenwalk.shared")] }

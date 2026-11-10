@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
+import { toolDesk } from '../desk.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
@@ -16,6 +17,7 @@ import { Section, View } from '../../src/draw/sections';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.HANDS_BREAK === '1', args = process.argv.slice(2), trace = args.includes('--trace'), at = args.indexOf('--seeds');
 const seeds = at >= 0 ? args[at + 1].split(',').map(Number) : null, only = args.filter((a, i) => !a.startsWith('--') && (at < 0 || i !== at + 1));
 const wasm = faceHere(); if (!wasm) { console.error('hands-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
+toolDesk();   // (a scene's mission is the desk's to name)
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))));
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
@@ -25,8 +27,7 @@ for (const S of BENCH_SCENES.filter(s => !only.length || only.includes(s.id))) f
   const words = `?${benchSceneSearch({ ...S, seed }, 0).replace(/^\?/, '')}`, file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
   const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
   const follow = (): [number, number, number] => { const o = D.at[Section.view] + View.follow; return [D.f[o], D.f[o + 1], D.f[o + 2]]; };
-  if (S.hard) game.commands.difficulty(1);
-  game.start({ level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed });
+  game.start({ level: bytes(file), words, kept: S.hard ? '{"hard":true}' : '', mannequin, mannequinBin, cast, castLook, seed });
   cam.aspect = 1280 / 720; cam.target = follow(); cam.rebuild();
   if (S.god) game.commands.god(1);
   if (!BREAK) game.handsOff({ ...S.plan, seed, cap: S.secs });

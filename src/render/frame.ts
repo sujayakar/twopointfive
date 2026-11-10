@@ -35,7 +35,7 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    704  rigCfg     vec4f              (f[176‥179])  SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 character SELF-shadow in the direct estimators' shadow rays (common.wgsl selfShadowT) · 128 mesh shadows for NEAR receivers only (common.wgsl meshShadowT, MESH_NEAR_M); the bits under 64 are free — the round-cone proxy test is unconditional), yzw free
  *    720  rigCfgB    vec4f              (f[180‥183])  free (the smooth-union and soft-query knobs went 2026-11-07)
  *    736  giCfg      vec4f              (f[184‥187])  four FREE words (the young-history gather rays read them until 2026-11-07; no shader reads them now, the writer below still copies what it is given)
- *    752  weatherE   vec4f              (f[188‥191])  PARTICLE RAIN (rust/game_rules/src/rain_fx, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
+ *    752  weatherE   vec4f              (f[188‥191])  PARTICLE RAIN (src/picture/rain.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
  *    768  weatherF   vec4f              (f[192‥195])  PARTICLE RAIN v2: the drop's PHASE the lattice rain shares with the particles (volumetrics.wgsl rainLight) — x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain; w 0 = the lattice's isotropic sum exactly as it was
  *    784  shadeCfg   vec4f              (f[196‥199])  THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade; the one exposure model's, place_common.wgsl lookExpoFor, and the word composite.wgsl asks before it reads a pixel's place): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = open air's mean radiance from the sky alone (the model's open air until the place field is live), z = spare (the most the rows before the model brought a pixel up), w = open ground's irradiance from the sky alone (luminances; the shoulder's white where the Contrast row says none). Zeros = the picture as it was
  *    800  veilA      vec4f              (f[200‥203])  THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame): xy = 1 ∕ the floor plan the powder's field covers (its width, its depth, m), z = how much of the powder is drawn 0‥1 (0 = none, every statement of it skipped), w = what the sun (or the moon) puts on level ground, as luminance
@@ -56,12 +56,12 @@ export const FRAME_HEAD_BYTES = 928;
 /** at most this many torch bounce cards a frame (cards.wgsl workgroups; fgather.wgsl stages 4 rows each in workgroup memory and keeps the exclusion set in 8 bits) */
 export const MAX_CARDS = 8;
 
-/** What the weather (rust/game_rules/src/weather) hands the frame: everything the volumetric pass needs to draw rain / splashes / the sky flash in the OUTDOOR air. All zero =
+/** What the weather (rust/game_rules/src/air/weather.rs) hands the frame: everything the volumetric pass needs to draw rain / splashes / the sky flash in the OUTDOOR air. All zero =
  *  no weather work anywhere (the shader's first test), which is what ?noweather and every Engine nobody attaches a Weather to get. */
 export interface WeatherFrame {
   /** rain rate 0‥1: the fraction of the drop-column lattice that is falling (0 = dry: the pass skips the whole block) */
   rain: number;
-  /** SNOWFALL 0‥1 on a level built for snow (rust/game_rules/src/weather → rust/game_rules/src/snow_fx: how many flakes the particle layer keeps in the air). Read on the CPU only — it is
+  /** SNOWFALL 0‥1 on a level built for snow (rust/game_rules/src/air/weather.rs → src/picture/snow/fx.ts: how many flakes the particle layer keeps in the air). Read on the CPU only — it is
    *  not in the Frame; with it > 0 `rain` is 0, so no streak, ring or wet ground is drawn anywhere. Absent / 0 = none. */
   snow?: number;
   /** wind shear of the falling streaks: metres sideways per metre of height, x and z (wind speed ÷ fall speed) */
@@ -76,13 +76,13 @@ export interface WeatherFrame {
   interior: [number, number, number, number];
   /** a second, small roofed footprint outside the main one — the west stair tower the QRF comes up (rays ending in it draw no rain; all zero = none) */
   annex: [number, number, number, number];
-  /** WEATHER KINDS (rust/game_rules/src/weather_kinds; absent / 0 = none — the frame as it was): a third and a fourth roof footprint packed x0 z0 x1 z1 in 8 bits each of
+  /** WEATHER KINDS (rust/game_rules/src/air/weather_kinds.rs; absent / 0 = none — the frame as it was): a third and a fourth roof footprint packed x0 z0 x1 z1 in 8 bits each of
    *  0.2 m (packRect), and the fog in the outdoor air in 32 bits (packFog). They ride in the three spare words of cardCfg (.y .z .w): the Frame keeps its size. */
   roofC?: number; roofD?: number; fog?: number;
-  /** PARTICLE RAIN (experiment, rust/game_rules/src/rain_fx): the near-field particle layer's disc — centre x, z, radius (m), and 0‥1 = the share of the LATTICE rain the shader drops
+  /** PARTICLE RAIN (experiment, src/picture/rain.ts): the near-field particle layer's disc — centre x, z, radius (m), and 0‥1 = the share of the LATTICE rain the shader drops
    *  inside it (volumetrics.wgsl rainNearKeep: the streaks / splash rings there are the particles'); all zero = no particle layer, the lattice exactly as it was */
   nearFade: [number, number, number, number];
-  /** PARTICLE RAIN v2: the phase function the lattice's streaks share with the particles' (iso, forward weight, HG g, gain — rust/game_rules/src/rain_fx PRAIN); all zero (w 0) = the isotropic sum as it was */
+  /** PARTICLE RAIN v2: the phase function the lattice's streaks share with the particles' (iso, forward weight, HG g, gain — src/picture/rain.ts PRAIN); all zero (w 0) = the isotropic sum as it was */
   phase?: [number, number, number, number];
 }
 export const noWeather = (): WeatherFrame => ({ rain: 0, shearX: 0, shearZ: 0, wet: 0, flash: [0, 0, 0], rainTop: 4.5, interior: [0, 0, 0, 0], annex: [0, 0, 0, 0], nearFade: [0, 0, 0, 0] });
@@ -137,7 +137,7 @@ export interface FrameParams {
   /** MARKINGS (scene/markings.ts, shaders/markings.wgsl): [base texel in metres — 0 = markings off everywhere (the frame as it was), contrast 0‥1, × the emission of emissive markings,
    *  1 = markings are evaluated at reflection hits too] */
   markCfg: [number, number, number, number];
-  /** SHARP DIRECT (renderer v3 follow-up, docs/internal/sharp-direct.md): [internal width, height, OUTPUT width, height] while the decoupled-resolution path is live this frame —
+  /** SHARP DIRECT (renderer v3 follow-up): [internal width, height, OUTPUT width, height] while the decoupled-resolution path is live this frame —
    *  the g-buffer, the direct light's unshadowed term, the composite and the TAA run at the output size, everything stochastic stays internal and is joint-bilateral upsampled. z = 0 = off:
    *  every pass exactly as it was (composite / taau / particles_draw read the same statements they always did). Both frame uniforms (internal-screen and output-screen) carry the same four. */
   sharpCfg: [number, number, number, number];
@@ -244,7 +244,7 @@ export const reachBinding = { storage: true };
  *  constructor turns it off on adapters whose per-stage budget cannot take scene 6 + reach 1 + mesh 1 + the cascade trace's / probe's 2 = 10 (Chrome on
  *  Metal offers exactly 10); the prelude then declares a stub meshLoad() and the setting is inert (engine.meshShadowsAvailable says which). */
 export const meshBinding = { enabled: true };
-/** GLASS BREAKING (rust/game_rules/src/glassbreak, docs/internal/glassbreak.md): the compile-time switch for its shader reads — the scene prelude's `const GLASS_BREAK` (glassTrace /
+/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): the compile-time switch for its shader reads — the scene prelude's `const GLASS_BREAK` (glassTrace /
  *  glassTransmit passing fallen cells in common.wgsl, the crack network in composite.wgsl). host/drawpage.ts raises it at BOOT from the persisted `tune.glassBreak` before the Engine
  *  builds a pipeline; false = every such statement is dead code the compiler drops — the modules as they were (flag-off identity is hash-proven against main). A page
  *  reload applies a change of the switch to the GPU side. */
@@ -255,18 +255,18 @@ export const glassBreakConfig = { on: false };
  *  mission compiled every program that read one of them a second time (about a third of the programs between the title and a snow level). Now each is a bit of the frame
  *  block's `levelCfg.x` (`LevelSw`, written by writeFrame from these tables) and a shader asks `lv(WX_KINDS)`: the same answer at every use, on every
  *  level, from ONE text. A branch a level does not raise is not taken; it is no longer left out of the program. Nothing in the update reads the word. */
-/** WEATHER KINDS (rust/game_rules/src/weather_kinds, rust/game_rules/src/weather): their shader reads (the level's own roofs and the fog in the outdoor air: common.wgsl wx*, read by
+/** WEATHER KINDS (rust/game_rules/src/air/weather_kinds.rs, rust/game_rules/src/air/weather.rs): their shader reads (the level's own roofs and the fog in the outdoor air: common.wgsl wx*, read by
  *  composite / vol_common / volumetrics / fgather / particles_common). host/drawpage.ts raises it at BOOT when the page is opened with ?weather=<kind>, or
  *  on a level that is not the office's family, or once a game is stood under its own roofs (Weather.levelRoofs) — its own storm reads its own roofs; false = no such statement runs. */
 export const weatherKindConfig = { on: false };
-/** SNOW (rust/game_rules/src/weather_kinds SNOW_LEVELS, rust/game_rules/src/snow_fx): the particle shaders' flake half, `lv(WX_SNOW)` (particles.wgsl rainStep: a flake rides the air,
+/** SNOW (rust/game_rules/src/air/weather_kinds.rs SNOW_LEVELS, src/picture/snow/fx.ts): the particle shaders' flake half, `lv(WX_SNOW)` (particles.wgsl rainStep: a flake rides the air,
  *  flutters, wraps round the view's disc and lands without a splash; particles_draw.wgsl rainFragment: a soft round flake, nothing refracted). host/drawpage.ts raises
  *  it at BOOT on a page whose level is one built for snow; false = no such statement runs. A page is one level for its whole life, so the two never meet. */
 export const snowConfig = { on: false };
-/** THE SNOW'S LOOK (rust/game_rules/src/weather_kinds SNOW_LOOK; picture only): the rows of a page opened on a snow level, raised by host/drawpage.ts at BOOT with snowConfig.
+/** THE SNOW'S LOOK (rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK; picture only): the rows of a page opened on a snow level, raised by host/drawpage.ts at BOOT with snowConfig.
  *  `surface` → the g-buffer module's second writing (render/gbuffer.ts `GBUF_SNOW`: its programs come in two texts and a level picks; no shader asks the level word's SNOW_SURF bit, which says the same to whoever reads the word): the g-buffer shades the snow paint as one surface off the level's snow field and draws its drifts as a mesh
  *  (shaders/snow.wgsl, render/snowField.ts). `wisps` → `lv(SNOW_WISPS)`: the particle shaders' half of the wisps the wind runs over the ground
- *  (rust/game_rules/src/snow_fx). false = no such statement runs. */
+ *  (src/picture/snow/fx.ts). false = no such statement runs. */
 export const snowLookConfig = { surface: false, wisps: false, tracks: false, glow: false, sparkle: false, grains: false, under: false };   // (`grains` → `lv(SNOW_GRAINS)`: the particle shaders' half of the fine grains that ride the air field, render/airField.ts; `tracks` → `lv(SNOW_TRACKS)`: snow.wgsl reads the trail texture; `glow` → `lv(SNOW_GLOW)`: the lighting shaders' wrap on snow pixels; `sparkle` → `lv(SNOW_SPARKLE)`: composite.wgsl's facet flashes on lit fresh snow; `under` → `lv(SNOW_UNDER)`: a flake asks the roofs as one)
 /** the bits of the frame block's `levelCfg.x`, and the names the shaders ask them by (`lv(NAME)`; the scene prelude writes these as its consts, so the two
  *  cannot come to differ) */
@@ -281,7 +281,7 @@ export function levelSwitches(): number {
  *  scene prelude's `const WX_EDGE`. On by default; host/pictureopens.ts lowers it at BOOT for ?nowallfog = the fog classed by the surface point alone, the picture as it was
  *  (composite.wgsl takes wxFogApply, the statement it always had). Read only under WX_KINDS: with no weather picked it is dead code either way. Picture only. */
 export const weatherEdgeConfig = { on: true };
-/** THE WEATHER'S AIR AS A VOLUME (common.wgsl wxAir / wxIndoor, volumetrics.wgsl wxAirMarch; rust/game_rules/src/air_dust): a picked weather's dust / fog is a MEDIUM the
+/** THE WEATHER'S AIR AS A VOLUME (common.wgsl wxAir / wxIndoor, volumetrics.wgsl wxAirMarch; rust/game_rules/src/air/air_dust.rs): a picked weather's dust / fog is a MEDIUM the
  *  volumetric pass marches — thicker the more of it a pixel looks through, lit by the sun / moon with shadow rays and by the sky's light, carried into rooms at
  *  open doors and blown walls — in place of composite.wgsl's flat veil over what counts as outdoors (wxFogApply / wxFogApplySurf). The scene prelude's `const WX_VOL`.
  *  On by default; host/pictureopens.ts lowers it at BOOT for ?flatfog = the veil exactly as it was. Read only under WX_KINDS: with no weather picked it is dead code either way. */
@@ -312,8 +312,7 @@ export const rainWallsConfig = { on: true };
  *  `const BOUNCE_WALLS`: where a man (or a box he carries) is the face read for, or the surface a gather ray left is no wall, the read point is found by short box
  *  rays (stopped short of the nearest box along the normal, its footprint held to the cells it can see, no read where it sees none) — the gather, the gloss /
  *  pane / ray-traced reflections' hit shading, the cache's own probes and a coat's sheen. On by default; host/pictureopens.ts lowers it at BOOT for ?nobouncewalls = every
- *  read as it was. No game table: nothing in the update reads it. NOT mended by it: the light meter (shaders/probe.wgsl) reads the cache AT the man, blended
- *  over the cells around him, and by a lit room's wall some of those cells are the room's. Its cost was never timed on a GPU. */
+ *  read as it was. No game table: nothing in the update reads it. Its cost was never timed on a GPU. */
 export const bounceWallsConfig = { on: true };
 /** WALLS HAVE TWO SIDES, AS ONE RULE FOR EVERY READ OF THE CACHE (render/wallSides.ts; shaders/common.wgsl sideAt, lighting_common.wgsl diceTaps and
  *  diceFacePointBy; the look page's row `walls`). The level's floor plan says which place a point is in, and a read of the radiance cache keeps to the place it is
@@ -330,7 +329,7 @@ export const wallSidesConfig = { on: true };
  *  it outside the g-buffer (the reflection pass: how far a stuff's own `mirrors` stands in for a plain coat's, passes.ts setBeams); `air` = × the haze the frame block carries (engine.ts: the panel's Air row —
  *  the setting itself is the hour's to write). Never seen on a GPU. */
 export const lookConfig = { kept: 0, pressed: 1, bounce: 0.7, air: 1, sky: 1, shade: 0.7, lamps: 1, exposure: null as (() => number | null) | null, puffs: 1, veil: 1, snow: null as (() => boolean) | null, eyes: 1, eyeAt: null as (() => readonly [number, number] | null) | null, doorGaps: null as (() => readonly (readonly [number, number, number, number])[]) | null, nightSky: null as (() => { zenith: ArrayLike<number>; horizon: ArrayLike<number> } | null) | null, fireSmoke: 1, longFoot: 1, walked: 1, fireSnow: 1, rooms: 1, steady: 1, roomBright: 1, order: 1, dark: 1, windows: 1, glare: 0.1, stir: 1, gradeExp: 1, gradeC: 1.35, gradeH: 0, gradeS: 0, gradeSat: 1 };   // (nightSky: the level's own sky as its file has it, a night's on every level but one that is its own day: the page's word, host/drawpage.ts, for render/lookexpo.ts lookNightSkyE while an hour is up · dark: the Eyes open in the dark row, how far past the night's exposure a place under the dim level is shown, × LOOK_EXPO.dark stops · stir: the Stirred smoke row, Game.smokeWake: a man moving through smoke is a body the smoke goes round, with a kick behind him at every stride, and the solver keeps the eddies he sheds turning, smoke.wgsl emBody; 0 = the two soft shoves as the build has them; glare: the Glare outside row, render/lookexpo.ts LOOK_EXPO.out; grade*: the grading rows as the tone map takes them, render/gbuffer.ts lookSync: × the exposure, the contrast, + the highlights' and the shadows' stops, × the saturation)
-//   // (lamps: the panel's Real light values row, how far every source that is not the hour's own goes toward its real strength at that hour, render/photometry.ts; exposure: the page's word for the exposure of the hour that is up against the night's, host/drawpage.ts from rust/game_rules/src/hours, null = a night or nobody says; puffs: the Snow puffs row, × what a boot kicks into the powder's field, rust/game_rules/src/snow_fx bootKicks; veil: the Blowing snow row, × what the wind picks up into it, render/powderField.ts; snow: the page's word for whether snow lies on this level, host/drawpage.ts: no snow, no powder; fireSmoke: the Fire smoke row, rust/game_rules/src/fire FIRE_LOOK_SMOKE; eyes: the Eyes follow Sam row, how far the one exposure model's own eye goes to the place he stands in, render/lookexpo.ts; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
+//   // (lamps: the panel's Real light values row, how far every source that is not the hour's own goes toward its real strength at that hour, render/photometry.ts; exposure: the page's word for the exposure of the hour that is up against the night's, host/drawpage.ts from rust/game_rules/src/air/hours, null = a night or nobody says; puffs: the Snow puffs row, × what a boot kicks into the powder's field, src/picture/snow/fx.ts bootKicks; veil: the Blowing snow row, × what the wind picks up into it, render/powderField.ts; snow: the page's word for whether snow lies on this level, host/drawpage.ts: no snow, no powder; fireSmoke: the Fire smoke row, rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE; eyes: the Eyes follow Sam row, how far the one exposure model's own eye goes to the place he stands in, render/lookexpo.ts; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
 /** A METAL NEVER MIRRORS THE ROOM BEHIND A WALL (the maintainer, 10-23, the solo night's manager's office: "some weird light leakage on bookshelf? seems like
  *  irradiance cache leak through wall? and showing up in specular?"). A ray-traced reflection shades its hit with the radiance cache read a probe spacing along
  *  the hit's normal. For a hit on a wall that is sound. For a hit on a shelf board, a desk top or the floor within half a cell of a partition the spacing runs
@@ -338,9 +337,8 @@ export const lookConfig = { kept: 0, pressed: 1, bounce: 0.7, air: 1, sky: 1, sh
  *  its mirror; a metal shows all of it (F0 = its paint), so the steel shelving on the office's wall glowed with the storage room's light in the dark. The scene
  *  prelude's `const REFL_WALLS`: a metal's reflection rays take lighting_common.wgsl's walled read (diceWalledPoint: stopped short of the nearest box along the
  *  normal, the footprint held to the cells the point can see, no read where it sees none) at every hit; everything else keeps the read it had. On by default;
- *  host/pictureopens.ts lowers it at BOOT for ?noreflwalls = every read as it was. No game table: nothing in the update reads it, and the light meter (shaders/probe.wgsl)
- *  does not read the reflections. NOT mended by it: the same blend in the DIFFUSE gather's hits (a third as strong by the look's indirect scale, and a metal
- *  keeps under a third of its diffuse), the glossy floors' and the panes' mirror on the presets with no traced reflections, and the meter's own read. Five to
+ *  host/pictureopens.ts lowers it at BOOT for ?noreflwalls = every read as it was. No game table: nothing in the update reads it. NOT mended by it: the same blend in the DIFFUSE gather's hits (a third as strong by the look's indirect scale, and a metal
+ *  keeps under a third of its diffuse), and the glossy floors' and the panes' mirror on the presets with no traced reflections. Five to
  *  eight short box rays more for each ray of a metal pixel: never timed on a GPU. */
 export const reflWallsConfig = { on: true };
 /** SHARP DIRECT'S CAP (shaders/sharp_direct.wgsl, "never more than the lights that reach this cell send unshadowed"): the scene prelude's `const SHARP_CAP`.
@@ -356,8 +354,7 @@ export const sharpCapConfig = { on: true };
  *  follows the shading normal, so a material's relief catches it. Only where the reflection pass makes highlights at all: a finish up to the highlights' own fade
  *  (shaders/common.wgsl RT_HI_FADE, the same on ultra, high and medium; none on low). ON THE LOOK'S PAGE ONLY, on by default there; host/pictureopens.ts lowers it at BOOT for ?nosunglint = every
  *  picture as it was. Without the word the shader's flag is a constant false and its lines are the lines they were, with one empty turn of the shadow
- *  loop; no kernel gains a call site (a call is pasted whole where Windows compiles). No game table: nothing in the update reads a reflection and the light
- *  meter (shaders/probe.wgsl) does not either. COST on the look's page: one shadow ray to the world's top (and a smoke march, in smoke) on the pixels
+ *  loop; no kernel gains a call site (a call is pasted whole where Windows compiles). No game table: nothing in the update reads a reflection. COST on the look's page: one shadow ray to the world's top (and a smoke march, in smoke) on the pixels
  *  inside the sun's highlight. On a flat smooth floor that is all of it or none of it, by where the camera looks; a metal's highlight is wide (a steel
  *  floor passes from most bearings). Never timed, never seen on a GPU. */
 export const sunGlintConfig = { on: true };

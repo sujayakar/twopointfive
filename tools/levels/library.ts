@@ -30,7 +30,7 @@ import { KIT_PALETTE } from './lib/levelKit';
 import { gwotKit, gwotOfOffice } from './lib/gwotKit';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
 import { doesOfName } from '../../src/scene/stuff';
-import { ALL_MISSIONS } from '../../src/scene/scenarioList';
+import { missionRows } from '../desk.ts';
 import { encodePng } from '../qa/png';
 import { livedKit, LIVED_PAINT } from './livedKit';
 import { livedPieces, INK } from './livedPieces';
@@ -87,7 +87,7 @@ building = 'office'; open.length = 0; builtBoxes.set('office', buildOfficeProced
 building = ''; for (const k of KITS) k.stand();                   // a kit no generator stood up still says its pieces
 watchPieces(null);
 levels.sort();
-const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
+const onList = new Set(missionRows().filter(s => !s.offList).map(s => s.level.replace(/\.json$/, '')));
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
 interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; metal?: boolean; sim?: string; surface?: string }
@@ -217,7 +217,7 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
   const parts = props.flatMap(partBoxes), all: DrawBox[] = [...statics.map(b => ({ c: b.c, h: b.h, yaw: b.yaw, albedo: b.albedo, flags: b.flags, emissive: b.emissive, marks: b.marks })), ...parts];
   if (!all.length) return piece;
   const top = (b: DrawBox) => b.c[1] + b.h[1], bottom = (b: DrawBox) => b.c[1] - b.h[1];
-  // what stops a body: a solid from 0.2 m up whose underside is under 1.5 m (the game's own two numbers: rust/game_rules/src/scene_collision)
+  // what stops a body: a solid from 0.2 m up whose underside is under 1.5 m (the game's own two numbers: rust/game_rules/src/world/scene_collision.rs)
   const solid = statics.filter(b => !(b.flags & NS)), inWay = solid.filter(b => top(b) >= 0.2 - 1e-9 && bottom(b) < 1.5);
   const foot = Math.min(...all.map(bottom)), [len, wid] = footprint(all);
   piece.boxes = all;

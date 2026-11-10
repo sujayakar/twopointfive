@@ -22,7 +22,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from './lib/level';
-import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
@@ -47,7 +47,7 @@ export const DEFUSE_START: Vec3 = [20.0, 0, 22.4];
 /** the workshops' bench: its middle on the north wall */
 const BENCH_Z = 7.47, BENCH_D = 0.7, BENCH_TOP = 0.76, WEST_X = 8.5, EAST_X = 31.5;
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
  *  A mark's place implies its facing: a man stands across the room from the door he fears. No breach plan, so no F drill: the team's start is here. */
 export const DEFUSE_STRUCTURE: StructureData = {
   name: 'the house', maxMen: 8,
@@ -88,7 +88,7 @@ export const DEFUSE_STRUCTURE: StructureData = {
 // firing wire down the hall is out of the picture's reach behind it: the set brings the
 // wire, its battery plate, a dead charge and the bench it was built on to the wall the stack stands on, under one warm bulb.
 /** the firing wire's copper. The palette has no paint of this hue, so it is a colour of this file's own and only decals and the kit view's set wear it; the outside door's paint is
- *  this, darker: rust/game_rules/src/doors/paint.rs */
+ *  this, darker: rust/game_rules/src/fittings/doors/paint.rs */
 const COPPER: [number, number, number] = [0.46, 0.21, 0.07];
 const DEFUSE_KITVIEW: KitViewData = {
   sets: { front: { ref: [20.25, 20],
@@ -258,7 +258,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // north wall, and out by the front door to the south
     mission: { serverRoom: { ...R.eroom.bounds }, entryDoor: 'hall_2', rack: { index: 0, front: [25.6, 1.0, 7.5], halfW: 0.3 }, exfilDoor: 'front', exfilX: 20.0, exfilZ: 17.6, exfilOut: [0, 1] },
   });
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above, rect for rect. `building` is the whole world so the plan is all zones (first match wins): outside every zone is the lot's asphalt.
   // The workshops' dark finish is the paint the office lays on its server room's raised floor; here it is a workshop's hard floor, so 'stone'.
   const surfaces: SurfacesData = {

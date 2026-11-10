@@ -1,26 +1,15 @@
 //! The types of `sneak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum Why {
     #[default] Door,
     Near,
     Open,
     Lit,
     Long,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::Door => "door",
-            Why::Near => "near",
-            Why::Open => "open",
-            Why::Lit => "lit",
-            Why::Long => "long",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -30,17 +19,6 @@ pub enum Mode {
     Wait,
     Stand,
     Walk,
-}
-impl Mode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Mode::Cross => "cross",
-            Mode::Back => "back",
-            Mode::Wait => "wait",
-            Mode::Stand => "stand",
-            Mode::Walk => "walk",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -128,14 +106,6 @@ pub struct Feet {
     pub must: Option<bool>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SneakModSNEAKLOGItem {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-    pub at: [f64; 2],
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LINES {
     pub wait: crate::sneak::LINESWait,
@@ -206,38 +176,14 @@ pub struct SneakModKeptLinesValue {
     pub map: JsMap<crate::Num, f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LeafMovedD {
-    pub angle: f64,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SneakMod {
-    /// (src/game/sneak.ts:154 SNEAK_LOG)
-    pub sneak_log: Vec<crate::sneak::SneakModSNEAKLOGItem>,
-    /// (src/game/sneak.ts:188 leafT)
     pub leaf_t: JsMap<DoorId, crate::sneak::SneakModLeafTValue>,
-    /// (src/game/sneak.ts:193 states)
     pub states: Option<crate::sneak::State>,
-    /// (src/game/sneak.ts:199 liveAt)
     pub live_at: Option<crate::sneak::SneakModLiveAtValue>,
-    /// (src/game/sneak.ts:324 cellLit)
     pub cell_lit: Option<JsMap<crate::Num, [f64; 2]>>,
-    /// (src/game/sneak.ts:325 keptLines)
     pub kept_lines: JsMap<GuardId, crate::sneak::SneakModKeptLinesValue>,
-}
-impl SneakMod {
-    pub fn blank() -> Self {
-        SneakMod {
-            sneak_log: Vec::new(),
-            leaf_t: JsMap::new(),
-            states: None,
-            live_at: None,
-            cell_lit: None,
-            kept_lines: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -253,44 +199,26 @@ pub struct SneakStats {
     pub noise_walks: i32,
 }
 
-/// (src/game/sneak.ts:143 SNEAK_DEFAULTS: a table nothing writes)
-pub fn sneak_defaults() -> crate::knobs::SneakK { crate::knobs::SneakK::page() }
-
-/// (src/game/sneak.ts:144 LS)
-pub const LS: &str = "twopointsix.sneak";
-
-/// (src/game/sneak.ts:146 KEPT: a table nothing writes)
-pub fn kept() -> [String; 11] { [String::from("on"), String::from("crouch"), String::from("post"), String::from("trail"), String::from("look"), String::from("stand"), String::from("side"), String::from("door"), String::from("cue"), String::from("patience"), String::from("skill")] }
-
-/// (src/game/sneak.ts:157 LINES: a table nothing writes)
 pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're stood in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for his back."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're stood in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }
 
-/// (src/game/sneak.ts:165 LINES_NOW: a table nothing writes)
 pub fn lines_now() -> crate::sneak::LINESNOW { crate::sneak::LINESNOW { wait: crate::sneak::LINESNOWWait { door: None, near: None, open: Some(String::from("holding in the dark. you're standing in the light.")), lit: None, long: None }, nag: crate::sneak::LINESNOWNag { door: None, near: Some(String::from("he's still facing me. waiting for him to turn.")), open: Some(String::from("you're standing in the light. i'll hold in the dark.")), lit: None, long: None } } }
 
-/// (src/game/sneak.ts:195 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/sneak.ts:251 LOW_Y: a table nothing writes)
 pub fn low_y() -> Vec<f64> { alloc::vec![0.81, 0.98] }
 
-/// (src/game/sneak.ts:251 UP_Y: a table nothing writes)
 pub fn up_y() -> Vec<f64> { alloc::vec![1.27, 1.5] }
 
-/// (src/game/sneak.ts:268 NONE: a table nothing writes)
 pub fn none() -> crate::sneak::Exp { crate::sneak::Exp { seen: false, watched: false, near: false, by: None } }
 
-/// (src/game/sneak.ts:297 MAP_SHORT)
 pub const MAP_SHORT: f64 = 0.05;
 
-/// (src/game/sneak.ts:299 BYEYE_BREAK)
-pub const BYEYE_BREAK: bool = false;
-/// INVENTED: what the eye test is asked about: a spot a man could stand on, or a man's own body (sneak.ts:266 standIn, :284 exposureOf)
+/// INVENTED: what the eye test is asked about: a spot a man could stand on, or a man's own body
 #[derive(Clone, Copy, Debug)]
 pub enum Target { Spot { chest: V3, head: V3 }, Man { c: CharId } }
-/// INVENTED: one defender in a SneakWalk (sneak.ts:352, :362). His `kept` lines stay in g.m.sneak.kept_lines, read by his id
+/// INVENTED: one defender in a SneakWalk. His `kept` lines stay in g.m.sneak.kept_lines, read by his id
 #[derive(Clone, Debug)]
 pub struct SneakWalkMan { pub h: GuardId, pub x: f64, pub z: f64, pub open: crate::guards::Eye, pub looks: Vec<crate::sneak::SneakWalkLook>, pub line: JsMap<crate::Num, f64> }
-/// INVENTED: one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER (sneak.ts:352, :359)
+/// INVENTED: one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER
 #[derive(Clone, Copy, Debug)]
 pub struct SneakWalkLook { pub e: crate::guards::Eye, pub ew: crate::guards::Eye, pub lx: f64, pub lz: f64 }

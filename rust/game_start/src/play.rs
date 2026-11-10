@@ -18,6 +18,14 @@ static ONE_GAME: Mutex<()> = Mutex::new(());
 std::thread_local! { static HOLDS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
 static CHARACTER: OnceLock<files::CharacterFiles> = OnceLock::new();
 
+/// the level file of every room clear of the game's mission list, each once, by name: a new row is here with nothing to write
+pub fn room_clear_files() -> Vec<String> {
+    let mut files: Vec<String> = game::scene_scenario_list::scenarios().into_iter().filter(|e| e.kind == game::scene_scenarios::MissionKind::Roomclear).map(|e| e.level.unwrap_or_else(|| String::from("office.json"))).collect();
+    files.sort();
+    files.dedup();
+    files
+}
+
 /// the host's frame rate: a tick is a sixtieth of a second
 pub const DT: f64 = 1.0 / 60.0;
 
@@ -30,7 +38,7 @@ pub struct Opts {
     pub squad: u32,
     /// how many players (1 or 2): each has a seat, his own man and his share of the squad. The hand's keys and cursor are the first seat's.
     pub seats: u32,
-    /// THE ROWS THAT ONLY DRESS THE PICTURE (game/dress.ts DRESS), as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
+    /// THE ROWS THAT ONLY DRESS THE PICTURE, as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
     /// on any host that draws nothing: a thrown piece is then only its one landing told to the floor, and the pool stays empty.
     pub dress: bool,
     /// a mission the game refuses is said (`Play.refused`) and no stop
@@ -41,7 +49,7 @@ impl Default for Opts { fn default() -> Self { Opts { seed: 1, squad: 4, seats: 
 /// What stands on a level's floor: its boxes (the round things, the boxes that stand shaped and the pieces of trim among them), and who and what
 /// the game made of the file's civilians, devices and vents.
 #[derive(Debug, PartialEq)]
-pub struct Floor { pub boxes: usize, pub round: usize, pub shaped: usize, pub trim: usize, pub civilians: usize, pub cameras: usize, pub lasers: usize, pub keypads: usize, pub vents: usize, pub daylight: bool }
+pub struct Floor { pub boxes: usize, pub round: usize, pub shaped: usize, pub trim: usize, pub civilians: usize, pub cameras: usize, pub lasers: usize, pub keypads: usize, pub vents: usize }
 
 /// a mouse button, by its bit in the Input
 #[derive(Clone, Copy, Debug)]
@@ -60,6 +68,8 @@ pub struct Play {
     pub host: Host,
     /// frames run so far
     pub frames: usize,
+    /// what each step's end told this host (game::savestate::control), until read
+    pub told: Vec<game::savestate::control::Told>,
     /// EVERY LINE A MAN HAS SPOKEN, in order. Read off each man's speech bubble after every frame (`guards::say` writes one for every line it
     /// lets through, whoever asked for it, and none for a line it drops), so a man who speaks twice inside one frame is heard once.
     pub said: Vec<Said>,
@@ -75,6 +85,8 @@ pub struct Play {
     spoke: Vec<(GuardId, f64, String)>,
     /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it). The host's and no part of the game: whoever puts a game back puts this back too
     pub cursor: Option<[f64; 3]>,
+    /// where his walk keys take him (None: nobody holds them)
+    pub legs: Option<[f64; 2]>,
     /// the game's own words where the address's mission was refused (`Opts.may_refuse`)
     pub refused: Option<String>,
     _one: MutexGuard<'static, ()>,
@@ -87,11 +99,11 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
-    let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
+    let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, legs: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -128,7 +140,11 @@ impl Play {
             let (sx, sy, front) = game::camera::follow_camera_project(&mut self.g, self.host.cam, at, w, h, None, None);
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
+        self.hold_legs();
         stand::step(&mut self.g, &self.host, DT);
+        let asked = game::savestate::control::asked(&self.g.out);
+        let told = game::savestate::control::after_step(&mut self.g, DT, asked);
+        if told.kept.is_some() || told.back || told.said.is_some() { self.told.push(told); }
         self.frames += 1;
         show(self);
         let out = core::mem::take(&mut self.g.out);
@@ -262,6 +278,15 @@ impl Play {
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
     pub fn cursor_on(&mut self, at: [f64; 3]) { self.cursor = Some(at); }
+    /// His walk keys toward `to` from here on, as a hand holds them, until he is within a hand's breadth or they are let go of (None).
+    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key); } } }
+    /// …held for the tick to come
+    pub fn hold_legs(&mut self) {
+        let Some(to) = self.legs else { return };
+        let (p, f) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.tab.camera[self.host.cam].forward);
+        let held = if dist([p[0], p[2]], to) > 0.1 { game::player::walk_keys(p, to, f) } else { [false; 4] };
+        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(String::from(key)); } else { i.keys.delete(String::from(key)); } }
+    }
     /// A mouse button goes down and stays down.
     pub fn press(&mut self, b: Button) { let i = &mut self.g.tab.input[self.host.input]; i.buttons = ((i.buttons as u32) | b as u32) as f64; i.clicked = ((i.clicked as u32) | b as u32) as f64; }
     /// …and comes up.
@@ -326,6 +351,12 @@ impl Play {
     }
     /// a man of the list set down at a place: a test of what he sees from there, where walking him is a test of his legs
     pub fn man_stands(&mut self, gd: GuardId, at: [f64; 2]) { let c = self.g.gd[gd].ch; self.g.ch[c].pos[0] = at[0]; self.g.ch[c].pos[2] = at[1]; }
+    /// the way in the room clear that is up stood its team on: 0 the level's own, k its k-th other
+    pub fn way_taken(&self) -> usize { self.g.staged.way as usize }
+    /// where each teammate the mission staged stands (x, z), in the order it staged them
+    pub fn team_at(&self) -> Vec<[f64; 2]> { self.g.staged.team.iter().map(|&m| { let p = self.g.ch[self.g.gd[m].ch].pos; [p[0], p[2]] }).collect() }
+    /// the restart a player presses: the same mission staged again
+    pub fn restaged(&mut self) { game::savestate::control::restart(&mut self.g); }
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
@@ -356,7 +387,7 @@ impl Play {
     /// the men of the other side who are up, nearest `at` first (a room clear's defenders are dealt to their rooms' marks by the die: a test
     /// finds the man at a mark by where he stands)
     pub fn hostiles_by(&self, at: [f64; 2]) -> Vec<GuardId> {
-        let mut v: Vec<GuardId> = self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Hostile && self.g.gd[gd].state != GuardState::Dead).collect();
+        let mut v: Vec<GuardId> = self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Hostile && !game::condition::down(&self.g, self.g.gd[gd].ch)).collect();
         v.sort_by(|a, b| dist(self.at(*a), at).partial_cmp(&dist(self.at(*b), at)).unwrap());
         v
     }
@@ -387,7 +418,7 @@ impl Play {
     /// a place of the floor `off` metres out from the first wall charge's face, on the side it was set from
     pub fn off_the_wall_charge(&self, off: f64) -> [f64; 2] { let w = self.g.tab.wallcharge_set_wall_charge[self.g.wall_charge.set[0]].wall.clone(); let at = game::wallcharge::wall_pt(&self.g, &w, 0.0, off, None); [at[0], at[2]] }
     /// the objective row, as a HUD is given it
-    pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
+    pub fn objective(&self) -> String { self.view().mission.text }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
     pub fn view(&self) -> game::view::TickView { self.view_of(0) }
     /// WHAT A HUD IS TOLD OF ITS CURSOR with the cursor on a point of the world, through the host's camera as it stands (None: the point is not in the picture)
@@ -403,8 +434,6 @@ impl Play {
     }
     /// …and what another player's HUD is told (0 = the first)
     pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
-    /// the lines on the game's log now, oldest first (it keeps the last five)
-    pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
     /// how the room clear ended and when, on the game's clock (None: it is on)
     pub fn room_clear_end(&self) -> Option<(game::roomclear::RoomClearEnd, f64)> { self.g.room_clear.end.map(|e| (e, self.g.room_clear.end_at)) }
     /// the men of the other side who are up
@@ -413,17 +442,17 @@ impl Play {
     pub fn man_fires_at(&mut self, gd: GuardId, at: [f64; 2]) {
         let c = self.g.gd[gd].ch;
         let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
-        game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], false, Some(&o));
+        game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], Some(&o));
     }
     /// A MAN GOES DOWN by combat's own call, in any of its ways (`quiet`: put out with no noise).
     pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), None); }
     /// the player of a seat takes a round's hit from the way `from_dir`, in his own seat, until he has none left (combat's `hit_player`: nobody fired it)
     pub fn seat_goes_down(&mut self, seat: usize) {
         let s = self.g.seats[seat];
-        game::seats::with_seat(&mut self.g, s, &mut |g| { while !g.pl[g.player].down { game::combat::hit_player(g, [1.0, 0.0, 0.0]); } });
+        game::seats::with_seat(&mut self.g, s, &mut |g| { while !game::condition::down(g, g.pl[g.player].ch) { game::combat::hit_player(g, [1.0, 0.0, 0.0]); } });
     }
     /// is a seat's player down
-    pub fn seat_down(&mut self, seat: usize) -> bool { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.pl[g.player].down) }
+    pub fn seat_down(&mut self, seat: usize) -> bool { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| game::condition::down(g, g.pl[g.player].ch)) }
     /// a seat's man's character id
     pub fn seat_id(&mut self, seat: usize) -> f64 { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.ch[g.pl[g.player].ch].id) }
     /// a man's character id
@@ -445,6 +474,7 @@ impl Play {
         self.g.ch[c].vel = [0.0; 3];
         self.g.ch[c].body_yaw = yaw;
         self.g.ch[c].aim_yaw = yaw;
+        self.g.cond[c].down = state == GuardState::Dead;
         let h = &mut self.g.gd[gd];
         (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
@@ -469,7 +499,7 @@ impl Play {
         Floor {
             boxes: g.col.boxes.len(), round: count(&|b| b.round == Some(true)), shaped: count(&|b| b.shaped == Some(true)), trim: count(&|b| b.piece == Some(true)),
             civilians: g.civilians.len(), cameras: g.devices.cameras.len(), lasers: g.devices.lasers.len(), keypads: g.devices.keypads.len(),
-            vents: g.level.vents.as_ref().map_or(0, |v| v.len()), daylight: g.level.daylight.is_some(),
+            vents: g.level.vents.as_ref().map_or(0, |v| v.len()),
         }
     }
 
@@ -482,7 +512,7 @@ impl Play {
     /// Sam is PUT at `at` (the sandbox's own call, `Game.teleportPlayer`): for a test whose staging is a place and not the walk to it.
     pub fn sam_put(&mut self, at: [f64; 2]) { game::game::game_teleport_player(&mut self.g, [at[0], 0.0, at[1]]); }
     /// Can Sam not see: a flash or a blast has his eyes for now.
-    pub fn sam_blind(&self) -> bool { self.g.time < self.g.pl[self.g.player].dazzled_until }
+    pub fn sam_blind(&self) -> bool { self.g.time < self.g.cond[self.g.pl[self.g.player].ch].blind_until }
     /// Every row the orders' table holds, by its id, in the table's order: on the menu or off it.
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
@@ -509,11 +539,11 @@ impl Play {
     /// where he believes his enemy is
     pub fn fix(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].last_known.map(|p| [p[0], p[2]]) }
     /// how lit Sam is, as the light meter has it (0 dark to 1)
-    pub fn sam_light(&self) -> f64 { self.g.pl[self.g.player].visibility }
+    pub fn sam_light(&self) -> f64 { self.g.shown[self.g.pl[self.g.player].ch].visibility }
     /// how fast he is moving over the floor, metres a second
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
     /// Can he not see: a flash or a blast has his eyes for now.
-    pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
+    pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].blind_until }
 
     /// are his hands changing magazine, and how much of it is left, in seconds
     pub fn reloading(&self, gd: GuardId) -> Option<f64> { if game::control::man::changing_magazine(&self.g, gd) { Some(self.g.gd[gd].reload_t) } else { None } }
@@ -523,7 +553,7 @@ impl Play {
     pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; let chamber = rounds.min(1.0); self.g.fa[w].chamber = chamber; self.g.fa[w].mag = Some(rounds - chamber); }
 
     /// Staging: he cannot see for that many seconds.
-    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
+    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
     /// Staging: the gun in his hands is the only one he has.
     pub fn no_second_gun(&mut self, gd: GuardId) { self.g.gd[gd].second = None; }
     /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
@@ -548,14 +578,28 @@ impl Play {
     pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
-    pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
+    pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }
+
+    /// Sam's body: what the readers of a pose below are asked about
+    pub fn sam_body(&self) -> game::ids::CharId { self.g.pl[self.g.player].ch }
+    /// where a joint of that body stands in the world this frame
+    pub fn joint(&self, c: game::ids::CharId, j: game::character::Bone) -> [f64; 3] { *self.g.ch[c].bones.get(j).expect("the joint") }
+    /// every joint of that body, in one order
+    pub fn joints_named(&self, c: game::ids::CharId) -> Vec<(game::character::Bone, [f64; 3])> { let b = &self.g.ch[c].bones; b.keys().into_iter().map(|k| (k, *b.get(k).unwrap())).collect() }
+    /// which way that body faces
+    pub fn body_yaw(&self, c: game::ids::CharId) -> f64 { self.g.ch[c].body_yaw }
+    /// the line of the gun in that body's hands: its muzzle and which way it points
+    pub fn gun_line(&self, c: game::ids::CharId) -> ([f64; 3], [f64; 3]) { (self.g.ch[c].muzzle, self.g.ch[c].gun_dir) }
+    /// tell that body to lean round an edge (-1 to 1; 0 lets it come back), and how far it is shown as leaning now
+    pub fn lean(&mut self, c: game::ids::CharId, by: f64) { self.g.ch[c].anim.lean = by; }
+    pub fn lean_shown(&self, c: game::ids::CharId) -> f64 { self.g.ch[c].anim.lean_sm }
 
     /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }
     /// is he in the stack's stance (set on a door)
     pub fn stacked(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.stance == game::character::Stance::Stack }
     /// is the man on his feet (not dead, not down)
-    pub fn up(&self, gd: GuardId) -> bool { self.g.gd[gd].state != GuardState::Dead && self.g.gd[gd].down_kind.is_none() }
+    pub fn up(&self, gd: GuardId) -> bool { !game::condition::down(&self.g, self.g.gd[gd].ch) && self.g.gd[gd].down_kind.is_none() }
 }
 
 impl Drop for Play { fn drop(&mut self) { HOLDS.with(|h| h.set(false)); } }
