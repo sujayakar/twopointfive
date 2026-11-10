@@ -113,19 +113,10 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
         if w < 0.003 && *f_w <= 0.01 {
             return ran;
         }
-        let (cy, sy) = (cos(yin), sin(yin));
-        let to_world = |m: &[f64; 3]| -> [f64; 3] { [p0[0] + m[0] * cy + m[2] * sy, p0[1] + m[1], p0[2] - m[0] * sy + m[2] * cy] };
-        let to_model = |wp: &[f64; 3]| -> [f64; 3] {
-            let (dx, dz) = (wp[0] - p0[0], wp[2] - p0[2]);
-            [dx * cy - dz * sy, wp[1] - p0[1], dx * sy + dz * cy]
-        };
-        let foot_yaw = |r: &[f64; 4]| -> f64 {
-            let f = q_rotate(r, &AY);
-            atan2(f[0], f[2])
-        };
+        let stands = Stands::at(p0, yin);
         let (mut tl, mut tr, mut ql, mut qr) = (fl, fr, rl, rr);
         if *f_w > 0.01 {
-            let want_p = [to_world(&fl), to_world(&fr)];
+            let want_p = [stands.world(&fl), stands.world(&fr)];
             let want_yaw = [yin + foot_yaw(&rl), yin + foot_yaw(&rr)];
             let relock = w_was <= 0.01 || teleported || dist_xz(&foot[0].p, &want_p[0]) > 0.45 || dist_xz(&foot[1].p, &want_p[1]) > 0.45;
             if relock {
@@ -171,7 +162,7 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
                 }
             }
             let mk = |f: &AnimFoot, rest_p: &[f64; 3], rest_r: &[f64; 4]| -> ([f64; 3], [f64; 4]) {
-                let mp = to_model(&f.p);
+                let mp = stands.model(&f.p);
                 let fw = *f_w;
                 let p = [lerp(rest_p[0], mp[0], fw), lerp(rest_p[1], mp[1], fw), lerp(rest_p[2], mp[2], fw)];
                 let dyaw = wrap_angle((f.yaw - yin) - foot_yaw(rest_r)) * fw;
@@ -223,8 +214,7 @@ struct Feet {
     fr: [f64; 3],
     toe_pose_r: [f64; 3],
     rr: [f64; 4],
-    cy: f64,
-    sy: f64,
+    stands: Stands,
     // feet_wanted: where the pose wants each foot, in the world; and how far it may want one from where it stands before it steps: a stand's small shuffle, a stride's reach
     ankle: [[f64; 3]; 2],
     toe: [[f64; 3]; 2],
@@ -346,38 +336,19 @@ fn without(o: &Feet, i: usize, a: [f64; 3], t: [f64; 3], r: [f64; 4]) -> ([f64; 
 
 /// Both feet as posed, and which way he faces.
 fn feet_as_posed(fk: &Fk, foot_l: usize, foot_r: usize, o: &mut Feet) {
-    let Feet { yin, .. } = *o;
+    let Feet { p0, yin, .. } = *o;
     let (fl, toe_pose_l, rl) = without(o, 0, fk.at(foot_l), fk.at(role(TOE_L)), fk.rot(foot_l));
     let (fr, toe_pose_r, rr) = without(o, 1, fk.at(foot_r), fk.at(role(TOE_R)), fk.rot(foot_r));
-    let (cy, sy) = (cos(yin), sin(yin));
-    *o = Feet { fl, toe_pose_l, rl, fr, toe_pose_r, rr, cy, sy, ..*o };
-}
-
-/// A point of his in the world.
-fn to_world(o: &Feet, m: &[f64; 3]) -> [f64; 3] {
-    let Feet { p0, cy, sy, .. } = *o;
-    [p0[0] + m[0] * cy + m[2] * sy, p0[1] + m[1], p0[2] - m[0] * sy + m[2] * cy]
-}
-
-/// A point of the world in his own axes.
-fn to_model(o: &Feet, wp: &[f64; 3]) -> [f64; 3] {
-    let Feet { p0, cy, sy, .. } = *o;
-    let (dx, dz) = (wp[0] - p0[0], wp[2] - p0[2]);
-    [dx * cy - dz * sy, wp[1] - p0[1], dx * sy + dz * cy]
-}
-
-/// Which way a foot points.
-fn foot_yaw(r: &[f64; 4]) -> f64 {
-    let f = q_rotate(r, &AY);
-    atan2(f[0], f[2])
+    let stands = Stands::at(p0, yin);
+    *o = Feet { fl, toe_pose_l, rl, fr, toe_pose_r, rr, stands, ..*o };
 }
 
 /// Where the pose wants each foot, in the world; and how far it may want one from where it stands before it steps: a stand's small shuffle, a stride's reach.
 fn feet_wanted(o: &mut Feet) {
     let Feet { s, yin, fl, toe_pose_l, rl, fr, toe_pose_r, rr, .. } = *o;
     let (ankle, toe, rot) = ([fl, fr], [toe_pose_l, toe_pose_r], [rl, rr]);
-    let want_p = [to_world(o, &fl), to_world(o, &fr)];
-    let want_toe = [to_world(o, &toe_pose_l), to_world(o, &toe_pose_r)];
+    let want_p = [o.stands.world(&fl), o.stands.world(&fr)];
+    let want_toe = [o.stands.world(&toe_pose_l), o.stands.world(&toe_pose_r)];
     let want_yaw = [yin + foot_yaw(&rl), yin + foot_yaw(&rr)];
     let (swing, lift, turn_at, pivot, lag_cap) = (FEET.swing, FEET.lift, FEET.turn_deg * DEGR, FEET.pivot, FEET.lag_cap_deg * DEGR);
     // how far the pose may want a foot from where it stands before it steps: a stand's small shuffle, a stride's reach
@@ -596,6 +567,6 @@ fn foot_turn(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     let toe_off = q_rotate(&q, &q_rotate(&[-rot[i][0], -rot[i][1], -rot[i][2], rot[i][3]], &sub3(toe[i], ankle[i])));
     let up = if foot[i].swing >= 0.0 { sin(PI * min(1.0, foot[i].swing)) * lift } else { 0.0 };
     shown[i][1] = max(shown[i][1] - up, p0[1] + TOE_FLOOR_Y - toe_off[1]) + up;
-    placed[i] = (to_model(o, &shown[i]), q_mul(&body_back, &q));
+    placed[i] = (o.stands.model(&shown[i]), q_mul(&body_back, &q));
     *o = Feet { shown, placed, ..*o };
 }
