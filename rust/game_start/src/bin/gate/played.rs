@@ -2,7 +2,7 @@
 use crate::pins::Pins;
 use crate::rows::{held, mission, pin_of, say, stand, Flags, SEED};
 use game::cmd::PlayerCmd;
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::scene_scenarios::MissionKind as Kind;
 use game::teams::Team;
 use game_start::figures::Track;

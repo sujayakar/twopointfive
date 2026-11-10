@@ -21,7 +21,7 @@ use core::task::{Context, Waker};
 use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::dice::Die;
-use game::game::{Game, GuardState, InteractableKind, Verb};
+use game::game::{Game, InteractableKind, Verb};
 use game::ids::{DoorId, GuardId, RoomfightRoomId, SeatId};
 use game::orders::OrderTarget;
 use game::roomfight::Entry;

@@ -283,7 +283,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     let pellets = def.pellets;
     let who = g.ch[shooter].id;
 
-    let ff_ours = (is_player || crate::friendlyfire::ff_side(g, sg));
+    let ff_ours = is_player || crate::friendlyfire::ff_side(g, sg) ;
     if ff_ours && !is_player && pel.is_none() {
         let wide = if steady { 0.0 } else { ai_wide(g, &crate::seats::here(g), sg, shooter, &def) };
         let cone = match &pellets { Some(p) => p.cone * 2.0, None => 0.0 };

@@ -58,7 +58,7 @@ pub fn begin(g: &mut Game, k: &KitLink) {
     let way = kitstage::staged_way(g, asks_none);
     let block = k.data.get("scenarios").get("kitView");
     let y = way.and_then(|w| match block.get("ways") { Json::Arr(a) => a.get(w), _ => None });
-    if let (Some(w), Some(y)) = (way, y) {
+    if let (Some(_w), Some(y)) = (way, y) {
         st.over = way_lights(y);
         st.way_room_lights = y.get("roomLights").num();
         g.kit_stage = Some(st);

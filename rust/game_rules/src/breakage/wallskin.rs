@@ -193,7 +193,7 @@ fn wall_skin_backs(g: &mut crate::game::Game, j: f64) -> Vec<crate::wallskin::Se
     let s = g.tab.boxes[g.col.boxes[j as usize]].clone(); let r_ = s.h[0] + s.h[2] + kk.off;
     let mut l: Vec<Seat> = Vec::new();
     if !wall_skin_own(g, j) {
-        for t in (if s.h[0] <= s.h[2] { [0.0, 2.0] } else { [2.0, 0.0] }) {
+        for t in if s.h[0] <= s.h[2] { [0.0, 2.0] } else { [2.0, 0.0] } {
             if 2.0 * s.h[ax(t)] > kk.thick + EPS || s.h[ax(t)] > s.h[1] + EPS { continue; }   // (deeper than a sheet; or thinner up than across: the floor's)
             let mut got: Vec<Seat> = Vec::new(); let (mut sum, mut near, mut first) = ([0.0, 0.0], [1e9, 1e9], [1e9, 1e9]);
             for k in 0..g.destr.walls.skins.solid.len() {

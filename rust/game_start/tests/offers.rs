@@ -104,7 +104,7 @@ fn a_defender_lets_go_of_a_leaf_a_body_has_stopped() {
         let c = p.g.dr[door].frame_centre;
         let man = p.g.tab.roomfight_def[def].gd;
         let mate = p.g.guards.iter().copied().find(|&gd| gd != man && p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd)).unwrap();
-        let mut put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
+        let put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
         let shut = |p: &Play| phase(p, def) == game::digin::Phase::Shut;
         let mut n = 0;
         while !shut(&p) && n < 30 * 60 { put(&mut p); p.frame(); n += 1; }

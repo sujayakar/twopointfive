@@ -4,7 +4,7 @@ use alloc::collections::BTreeMap;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 
 /// a man on the floor, as anybody who reads a run reads him: the players first in their seats' order, then the men, then the civilians

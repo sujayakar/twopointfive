@@ -632,7 +632,7 @@ impl DoorsAsk for Play {
         self.g.gd[foe].god = true;
         for o in self.g.fight.ops.clone() { self.g.tab.roomfight_op[o].ready_at = t + 1.0; }
         self.g.fight.hot_t = t;
-        for m in self.mates() { let c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
+        for m in self.mates() { let _c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
     }
     fn blind_now(&mut self, gd: GuardId) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + 9.0; }
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {

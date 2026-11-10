@@ -42,7 +42,7 @@
 //! NAMES: over the whole floor on a half-metre lattice, what a line calls a spot and what the debrief does is one of the level's own rooms and places, and the middle of each is its own name.
 //!
 //! RAIN (the maintainer: "rain is busted on records office"): ground under open sky is rained on, and ground under the level's ceiling slabs is not.
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 use game_draw::traffic::{door_mid, ways, WayKind};
 use crate::json::{self, Json};

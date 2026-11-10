@@ -251,7 +251,7 @@ fn the_word_is_always_a_plain_entry_and_a_tool_is_asked_for() {
 #[test]
 fn a_man_back_from_the_fight_walks_for_where_his_order_stands() {
     for s in SEEDS {
-        let (mut p, _, at) = stood(s, 4);
+        let (mut p, _, _at) = stood(s, 4);
         hush(&mut p);
         let men = p.men();
         let sam = p.sam_at();
