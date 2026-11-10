@@ -247,7 +247,7 @@ pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             for i in 0..f.held.len() {
                 let u = f.held[i].clone();
                 if crate::director::director_query_alive(g, r, &u) && in_bunk(g, r, &u)? {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                 }
             }
             f.at = 3;
@@ -291,7 +291,7 @@ pub(super) fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b:
         2 => {
             let u = f.u.clone().unwrap();
             if crate::director::director_query_alive(g, r, &u) {
-                crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
             }
             f.at = 3;
             Ok(None)
@@ -497,7 +497,7 @@ pub(super) fn tut_team_break_step(g: &mut crate::game::Game, r: DirectorRunId, b
         }
         2 => {
             for u in squad(g, r) {
-                crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Patrol))?;
+                crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Patrol))?;
             }
             f.at = 3;
             Ok(Some(wait_or(g, r, 2.2, 2)?))
@@ -532,7 +532,7 @@ pub(super) fn tut_team_ordered_step(g: &mut crate::game::Game, r: DirectorRunId,
     match f.at {
         0 => {
             f.at = 1;
-            Ok(Some(crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Signal, None, Some(crate::director::EventFilter::OrderSignal))))
+            Ok(Some(crate::director::director_beat_on(g, r, crate::director::EventViewKind::Signal, None, Some(crate::director::EventFilter::OrderSignal))))
         }
         1 => {
             set_flag(g, r, "broke");
@@ -682,7 +682,7 @@ pub(super) fn tut_team_push_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             5 => {
                 for u in block(g, r, b, false)? {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                 }
                 f.at = 6;
                 return Ok(Some(wait_or(g, r, 4.0, 3)?));

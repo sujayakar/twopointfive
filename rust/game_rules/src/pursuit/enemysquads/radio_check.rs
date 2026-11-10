@@ -1192,11 +1192,11 @@ fn settle(g: &mut crate::game::Game, l: &crate::enemysquads::Looker, d: Roomfigh
     let heard = g.gd[gd].witness.heard.last_shot_t > l.t0 || g.gd[gd].awareness >= 0.85;
     if g.gd[gd].script.is_some() {
         let to = if !roused {
-            crate::squad::EndGuardScriptState::Suspicious
+            crate::game::GuardState::Suspicious
         } else if c.state == crate::game::GuardState::Alert {
-            crate::squad::EndGuardScriptState::Alert
+            crate::game::GuardState::Alert
         } else {
-            crate::squad::EndGuardScriptState::Search
+            crate::game::GuardState::Search
         };
         crate::squad::end_guard_script(g, gd, Some(to));
     }

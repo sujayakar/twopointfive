@@ -268,18 +268,6 @@ pub struct HeldTalk {
     pub speaking: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FreeHeldWhy {
-    Shot,
-    Cancel,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum StartKickTool {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SideKickSpot {
     pub pos: V3,
@@ -409,3 +397,9 @@ pub const EASE_RATE: f64 = 0.55;
 pub const EASE_MAX: f64 = 1.45;
 
 pub const EASE_OFFER: f64 = 0.62;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum FreeHeldWhy {
+    Shot,
+    Cancel,
+}

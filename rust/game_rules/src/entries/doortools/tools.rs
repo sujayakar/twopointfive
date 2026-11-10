@@ -380,7 +380,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     crate::handwork::charge_hands(g, c, j.p, j.n, el, set_secs, hand);
     if g.time - s.t0 < set_secs { return; }
     g.pl[pl].charging = None;
-    if !door_tools_take(g, DoorToolsTakeWhat::Charge) { return; }
+    if !door_tools_take(g, crate::doortools::DoorToolsCan::Charge) { return; }
     g.sets[g.seat].door_tools.sam_spent += 1.0;
     let row = SetCharge { door: d, side: s.side, by: String::from(crate::ownblow::SAM_BY) };
     let id = g.tab.doortools_set_charge.push(row);
@@ -396,7 +396,7 @@ pub(super) fn door_tools_tick_set(g: &mut crate::game::Game) {
         let gone = g.dr[d].leaf.off;
         if gone || is_open(g, d) {
             if let Some(i) = g.sets[g.seat].door_tools.set.iter().position(|x| *x == c) { g.sets[g.seat].door_tools.set.remove(i); }
-            door_tools_refund(g, DoorToolsRefundWhat::Charge);
+            door_tools_refund(g, crate::doortools::DoorToolsCan::Charge);
             if by_sam(g, c) { g.sets[g.seat].door_tools.sam_spent = m::max(0.0, g.sets[g.seat].door_tools.sam_spent - 1.0); }
             let setter = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().find(|&m| g.gd[m].callsign == g.tab.doortools_set_charge[c].by);
             crate::squadnet::team_says(g, setter, if gone { "that door's off its hinges. charge is off." } else { "that door came open. charge is off." });
@@ -560,7 +560,7 @@ pub(super) fn door_tools_to_gun(g: &mut crate::game::Game, op: DoorOpId) -> bool
     avoid.push(g.ch[g.pl[g.player].ch].pos);
     let mark = if hammer { None } else { Some(post_or_pos(g, op, by)) };
     let close = if hammer || crate::kit::kit_big(g, by) == crate::kit::BigKit::Shotgun {
-        Some(if hammer { crate::shotgun::BreachSpotClose::Hammer } else { crate::shotgun::BreachSpotClose::Shotgun })
+        Some(if hammer { crate::kit::BigTool::Hammer } else { crate::kit::BigTool::Shotgun })
     } else { None };
     let sp = match crate::shotgun::breach_spot(g, d, side, Some(&avoid), mark, close) { Some(s) => s, None => return false };
     let silent = crate::silent::squad_silent(g, &crate::seats::here(g));
@@ -730,7 +730,7 @@ fn door_tools_hammer_step(g: &mut crate::game::Game, op: DoorOpId) {
         return;
     }
     if gun.next_t == 0.0 {
-        let by_t = h_t0 + crate::bigkit::big_out_by(g, crate::bigkit::BigOutByKind::Hammer);
+        let by_t = h_t0 + crate::bigkit::big_out_by(g, crate::kit::BigTool::Hammer);
         let next = m::max(t, by_t) + crate::bigkit::big_wind(g);
         with_gun(g, op, |x| x.next_t = next);
         g.tab.doortools_door_op[op].t0 = t;

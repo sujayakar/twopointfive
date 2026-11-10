@@ -18,17 +18,6 @@ fn switch(g: &mut Game, t: FixtureId, v: f64) {
     g.tab.fixture[t].on = v != 0.0;
 }
 fn is_held_seat(p: Phase) -> bool { p != Phase::No && p != Phase::Spent && p != Phase::Stir }
-fn why_word(w: WakeWhy) -> DozeWhy {
-    match w {
-        WakeWhy::Light => DozeWhy::Light,
-        WakeWhy::Alarm => DozeWhy::Alarm,
-        WakeWhy::Noise => DozeWhy::Noise,
-        WakeWhy::Taken => DozeWhy::Taken,
-        WakeWhy::Bump => DozeWhy::Bump,
-        WakeWhy::Net => DozeWhy::Net,
-    }
-}
-
 /// every 5 cm offset inside `pull_m`, nearest first
 fn build_pulls(pull_m: f64) -> Vec<[f64; 2]> {
     let mut v: Vec<[f64; 2]> = Vec::new();
@@ -316,17 +305,17 @@ fn up(g: &mut crate::game::Game, gd: GuardId) {
     g.ch[c].anim.slump = 0.0;
 }
 /// woken: up from this frame and awake for the run. His row is read by `gd` and written back by it.
-fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::WakeWhy, at: Option<&[f64]>) {
+fn wake(g: &mut crate::game::Game, gd: GuardId, why: crate::doze::DozeWhy, at: Option<&[f64]>) {
     let Some(mut d) = g.m.doze.rec.get(gd).copied() else { return };
     left_lit(g, gd);
     up(g, gd);
-    d.why = Some(why_word(why));
+    d.why = Some(why);
     d.woke_at = g.time;
     d.phase = Phase::Spent;
     d.chair = None;
     flush(g, gd, d);
-    if why == WakeWhy::Noise || why == WakeWhy::Light || why == WakeWhy::Bump {
-        let raise = if why == WakeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
+    if why == crate::doze::DozeWhy::Noise || why == crate::doze::DozeWhy::Light || why == crate::doze::DozeWhy::Bump {
+        let raise = if why == crate::doze::DozeWhy::Bump { g.k.doze.bump_aw } else { g.k.doze.wake_aw };
         crate::mind::raise(g, gd, raise, "doze");
         if let Some(at) = at {
             crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doze");
@@ -343,7 +332,7 @@ pub(super) fn doze_deaf(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let (aw, lk, st) = (g.gd[gd].awareness, g.gd[gd].fix_stamp, g.gd[gd].state);
     let hear_k = g.k.doze.hear_k;
     crate::guards::hearing_check(g, gd, Some(hear_k), Some(false), None);
-    if g.gd[gd].awareness > aw || g.gd[gd].fix_stamp != lk || g.gd[gd].state != st { wake(g, gd, WakeWhy::Noise, None); }
+    if g.gd[gd].awareness > aw || g.gd[gd].fix_stamp != lk || g.gd[gd].state != st { wake(g, gd, crate::doze::DozeWhy::Noise, None); }
     g.gd[gd].saw_player_this_frame = false;
     g.gd[gd].saw_foe_this_frame = false;
     true
@@ -399,15 +388,15 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
         }
         if g.tab.props_prop[ch].push_t > d.push + 1e-6 {
             let who = shover_at(g, ch, c);
-            wake(g, gd, WakeWhy::Bump, Some(&who[..]));
+            wake(g, gd, crate::doze::DozeWhy::Bump, Some(&who[..]));
             continue;
         }
         if g.gd[gd].state != crate::game::GuardState::Patrol || g.gd[gd].awareness >= 0.3 {
-            wake(g, gd, WakeWhy::Net, None);
+            wake(g, gd, crate::doze::DozeWhy::Net, None);
             continue;
         }
         if !live(g) || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() || g.gd[gd].body_duty.is_some() || !crate::close::close_has_seat(g, gd) {
-            wake(g, gd, WakeWhy::Alarm, None);
+            wake(g, gd, crate::doze::DozeWhy::Alarm, None);
             continue;
         }
         if d.mon.is_some() {
@@ -474,7 +463,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             if let Some(mon) = d.mon {
                 if g.tab.fixture[mon].broken || !g.tab.fixture[mon].on || (d.t > 1.0 && g.tab.fixture[mon].factor < 0.5) {
                     let at = g.tab.fixture[mon].pos;
-                    wake(g, gd, WakeWhy::Light, Some(&at[..]));
+                    wake(g, gd, crate::doze::DozeWhy::Light, Some(&at[..]));
                     continue;
                 }
                 let at = g.tab.fixture[mon].pos;
@@ -510,7 +499,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
             flush(g, gd, d);
             if d.lit >= g.k.doze.light_secs {
                 let at = lamp_on(g, gd, head);
-                wake(g, gd, WakeWhy::Light, Some(&at[..]));
+                wake(g, gd, crate::doze::DozeWhy::Light, Some(&at[..]));
                 continue;
             }
         }

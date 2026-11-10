@@ -34,7 +34,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
     // the drill's lanes: asked each frame until he commits
     if g_2.phase == GatePhase::Stack || g_2.phase == GatePhase::Wait || g_2.phase == GatePhase::Stacked || g_2.phase == GatePhase::Open || g_2.phase == GatePhase::Slice {
         let lead_row = match (g_2.role, g_2.lead) { (GateRole::Second, Some(l)) => gate_read(g, l), _ => None };
-        let mate = if g_2.role == GateRole::Lead { gate_mate(g, g_2, GateMateRole::Second, gd) } else { None };
+        let mate = if g_2.role == GateRole::Lead { gate_mate(g, g_2, crate::tactics::GateRole::Second, gd) } else { None };
         let going = match lead_row { Some(lg) => lg.phase == GatePhase::Toss || lg.phase == GatePhase::Bang || lg.phase == GatePhase::Cross || (lg.action == GateAction::Toss && lg.thrower == Some(gd)), None => false };
         let can = stuns_of(g, gd) > 0.0
             || (match &mate { Some(mm) => stuns_of(g, mm.gd) > 0.0, None => false })
@@ -75,7 +75,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
         }
         GatePhase::Wait => {   // on the jamb, low, muzzle on the opening, until a second man is stacked behind him or doorWait is up
             stand_gate(g, gd, dt, Some(g_2.face)); g_2.look = Some(inside); g_2.crouch = 0.5;
-            let mate = gate_mate(g, g_2, GateMateRole::Second, gd);
+            let mate = gate_mate(g, g_2, crate::tactics::GateRole::Second, gd);
             let set = match &mate { Some(mm) => mm.g.phase == GatePhase::Stacked, None => false };
             if set || g_2.t >= g.tune.door_wait {
                 g_2.thrower = if stuns_of(g, gd) > 0.0 { Some(gd) } else {
@@ -172,7 +172,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             if there { g_2.slice_t += dt; if g_2.slice_t >= SLICE_DWELL { g_2.slice_i += 1.0; g_2.slice_t = 0.0; } }
             if g_2.slice_i >= g_2.slice_pts.len() as f64 {
                 if g_2.goal_near { release_gate(g, gd, g_2); return true; }
-                let line: &str = if gate_mate(g, g_2, GateMateRole::Second, gd).is_some() {
+                let line: &str = if gate_mate(g, g_2, crate::tactics::GateRole::Second, gd).is_some() {
                     crate::words::wg(g, &"clear as far as I can see — crossing, on me", &"clear as far as I see — crossing, on me")
                 } else { "crossing" };
                 crate::game::game_say(g, gd, line, None, None);

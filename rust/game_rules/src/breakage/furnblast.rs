@@ -398,12 +398,12 @@ fn break_static_in(g: &mut Game, i: f64, ghost: bool, at: V3, shatter: bool, kk:
     }
     let cls = box_class(g, b); let row = furn_break_row(cls);
     let steel = if cls == BreakClass::Metal {
-        let md = if shatter && !(*budget < STEEL_SHEETS_ROOM) { FurnitureSteelMode::Shatter } else { FurnitureSteelMode::Apart };
+        let md = if shatter && !(*budget < STEEL_SHEETS_ROOM) { crate::furnblast::FurnitureMode::Shatter } else { crate::furnblast::FurnitureMode::Apart };
         furniture_steel(g, b, md, dir, i)
     } else { None };
     if let Some(parts) = steel { for p in parts { throw_piece_in(g, p.box_, at, shatter, kk, &row, who, budget, b, Some(p)); } }
     else {
-        let frag_mode = if shatter { FurnitureFragmentsMode::Shatter } else { FurnitureFragmentsMode::Apart };
+        let frag_mode = if shatter { crate::furnblast::FurnitureMode::Shatter } else { crate::furnblast::FurnitureMode::Apart };
         for f in furniture_fragments(g, b, &row, frag_mode) { throw_piece_in(g, f, at, shatter, kk, &row, who, budget, b, None); }
     }
     furniture_chips(g, c, [dir[0], 0.6, dir[2]], b, who, if shatter { 12.0 } else { 5.0 });
@@ -455,7 +455,7 @@ pub(super) fn furniture_hung_goes(g: &mut crate::game::Game, b: BoxId, at: V3, n
     let base = furn_break_row(if box_class(g, b) == BreakClass::Wood { BreakClass::Wood } else { BreakClass::Board });
     let mut row = base.clone(); row.shatter = BreakRowShatter { len: k.len, max: k.max, strips: k.strips };
     let t: V3 = [-n[2], 0.0, n[0]]; let mut left = k.chunks;
-    for f in furniture_fragments(g, b, &row, FurnitureFragmentsMode::Shatter) {
+    for f in furniture_fragments(g, b, &row, crate::furnblast::FurnitureMode::Shatter) {
         let fc = seam_box(g, f).c;
         let s = (fc[0] - at[0]) * t[0] + (fc[2] - at[2]) * t[2];
         let h1 = furniture_hash(g); let h2 = furniture_hash(g); let h3 = furniture_hash(g);
@@ -494,7 +494,7 @@ fn steel_part(g: &mut Game, b: BoxId, l: V3, h: V3) -> BoxId {
     make_piece(g, b, [c[0] + cs * l[0] + sn * l[2], c[1] + l[1], c[2] - sn * l[0] + cs * l[2]], h)
 }
 /// a steel carcass comes apart as sheet on a frame; None = not a carcass. Draws nothing from the stream.
-fn furniture_steel(g: &mut crate::game::Game, b: BoxId, mode: crate::furnblast::FurnitureSteelMode, dir: V3, seed: f64) -> Option<Vec<crate::furnblast::SteelPart>> {
+fn furniture_steel(g: &mut crate::game::Game, b: BoxId, mode: crate::furnblast::FurnitureMode, dir: V3, seed: f64) -> Option<Vec<crate::furnblast::SteelPart>> {
     let h = seam_box(g, b).h;
     if seam_box(g, b).rot.is_some() || m::min_n(&[h[0], h[1], h[2]]) * 2.0 < STEEL_CARCASS_M || m::max_n(&[h[0], h[1], h[2]]) * 2.0 > STEEL_CARCASS_MOST { return None; }
     if !truly(box_does(g, b).steel) { return None; }   // (and painted as one: the class 'metal' is also where every unnamed paint lands)
@@ -502,7 +502,7 @@ fn furniture_steel(g: &mut crate::game::Game, b: BoxId, mode: crate::furnblast::
     let deep: usize = if h[0] <= h[2] { 0 } else { 2 }; let wide: usize = if deep == 0 { 2 } else { 0 };   // the door is on a broad upright face
     let ax: V3 = if deep == 0 { [cs, 0.0, -sn] } else { [sn, 0.0, cs] };
     let sign = if ax[0] * dir[0] + ax[2] * dir[2] > 0.0 { -1.0 } else { 1.0 };   // (the broad face that LOOKS AT the blast is the sheet torn off)
-    if mode == FurnitureSteelMode::Apart {
+    if mode == crate::furnblast::FurnitureMode::Apart {
         let door = steel_on(g, b, deep, sign, 0.012, t);
         let mut dc = seam_box(g, door.box_).c; dc[0] += ax[0] * sign * 0.03; dc[2] += ax[2] * sign * 0.03; seam_box(g, door.box_).c = dc;
         let whole = steel_part(g, b, [0.0, 0.0, 0.0], [h[0], h[1], h[2]]);
@@ -521,12 +521,12 @@ fn cuts(g: &mut Game, n: usize, uneven: f64) -> Vec<f64> {
     c
 }
 /// `b` cut into the boxes it flies as, by its material's row
-fn furniture_fragments(g: &mut crate::game::Game, b: BoxId, row: &crate::furnblast::BreakRow, mode: crate::furnblast::FurnitureFragmentsMode) -> Vec<BoxId> {
+fn furniture_fragments(g: &mut crate::game::Game, b: BoxId, row: &crate::furnblast::BreakRow, mode: crate::furnblast::FurnitureMode) -> Vec<BoxId> {
     let (bh, bc, yaw) = (seam_box(g, b).h, seam_box(g, b).c, seam_box(g, b).yaw);
     let mut ax: [usize; 3] = [0, 1, 2];
     js::sort_by(&mut ax, |p, q| js::or(bh[*q] - bh[*p], *p as f64 - *q as f64));
     let l1 = bh[ax[0]] * 2.0; let l2 = bh[ax[1]] * 2.0;
-    let (len, max, strips) = match mode { FurnitureFragmentsMode::Shatter => (row.shatter.len, row.shatter.max, row.shatter.strips), FurnitureFragmentsMode::Apart => (row.apart.len, row.apart.max, row.apart.strips) };
+    let (len, max, strips) = match mode { crate::furnblast::FurnitureMode::Shatter => (row.shatter.len, row.shatter.max, row.shatter.strips), crate::furnblast::FurnitureMode::Apart => (row.apart.len, row.apart.max, row.apart.strips) };
     let n1 = m::max(1.0, m::min(max, m::round(l1 / len))) as usize;
     let n2 = if l2 >= 0.3 { m::max(1.0, strips) as usize } else { 1 };
     let c1 = cuts(g, n1, row.uneven); let c2 = cuts(g, n2, row.uneven);
@@ -798,16 +798,16 @@ pub(super) fn furniture_reset(g: &mut crate::game::Game) {
     let w = crate::scene_world::world();
     crate::scene_collision::nav_grid_rebake(g, w.min[0], w.min[2], w.max[0], w.max[2]); crate::scene_collision::sound_paths_invalidate(g);
     // the AI was told of every piece that went: it is told the level is back too, unless the walls' own reset has just said so
-    furniture_note_reset(g, FurnitureNoteResetCause::Reset);
+    furniture_note_reset(g, crate::wallbreak::LevelChangeCause::Reset);
 }
 /// one 'reset' row in the walls' change feed, unless its last row already says exactly that at this instant
-fn furniture_note_reset(g: &mut crate::game::Game, cause: crate::furnblast::FurnitureNoteResetCause) {
+fn furniture_note_reset(g: &mut crate::game::Game, cause: crate::wallbreak::LevelChangeCause) {
     let say = match g.destr.walls.changes.last() {
         None => true,
-        Some(l) => l.kind != LevelChangeKind::Reset || l.t != g.time || (cause == FurnitureNoteResetCause::Load && l.cause != LevelChangeCause::Load),
+        Some(l) => l.kind != LevelChangeKind::Reset || l.t != g.time || (cause == crate::wallbreak::LevelChangeCause::Load && l.cause != LevelChangeCause::Load),
     };
     if !say { return; }
     let w = crate::scene_world::world();
-    let c = match cause { FurnitureNoteResetCause::Load => LevelChangeCause::Load, FurnitureNoteResetCause::Reset => LevelChangeCause::Reset };
+    let c = cause;
     crate::wallbreak::wall_break_note(g, &WallBreakNoteC { kind: LevelChangeKind::Reset, cause: c, id: -1.0, pos: [0.0, 0.0, 0.0], rect: [w.min[0], w.min[2], w.max[0], w.max[2]], opened: Vec::new(), walkable: false, who: crate::consts::NOBODY_ID });
 }

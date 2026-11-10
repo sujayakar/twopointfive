@@ -17,12 +17,6 @@ pub struct GunPick {
     pub bare: Option<crate::weapons::WeaponId>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SideHung {
-    Carbine,
-    Sc20k,
-}
-
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct GunslotsStats {

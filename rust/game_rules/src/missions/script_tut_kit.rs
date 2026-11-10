@@ -127,13 +127,13 @@ fn until(id: u32) -> crate::director::Cond {
 
 /// `c.on('bang', filter)`
 fn on_bang(g: &Game, r: DirectorRunId, filter: crate::director::EventFilter) -> crate::director::Cond {
-    crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Bang, None, Some(filter))
+    crate::director::director_beat_on(g, r, crate::director::EventViewKind::Bang, None, Some(filter))
 }
 
 /// `if (c.query.alive(u)) c.release(u, 'alert')`
 fn release_if_alive(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef) -> Result<(), String> {
     if crate::director::director_query_alive(g, r, u) {
-        crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+        crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
     }
     Ok(())
 }

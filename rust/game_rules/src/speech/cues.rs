@@ -682,7 +682,7 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
             }
         }
         Did::FallsBack => {
-            cues_man(g, gd).moved = Some(ManMoved::Fallback);
+            cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Fallback);
             let station = g.tab.roomfight_def[d].station;
             let from = crate::dialogue::place_name(g, station);
             cues_man(g, gd).from = from.clone();
@@ -691,9 +691,9 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
             vars.set(String::from("the"), from);
             cues_cue(g, gd, CueKind::FellBack, Some(&vars));
         }
-        Did::TakesCover => cues_man(g, gd).moved = Some(ManMoved::Cover),
+        Did::TakesCover => cues_man(g, gd).moved = Some(crate::roomfight::DefMoveKind::Cover),
         Did::Plants { fighting } => {
-            if cues_man(g, gd).moved == Some(ManMoved::Fallback) && !fighting {
+            if cues_man(g, gd).moved == Some(crate::roomfight::DefMoveKind::Fallback) && !fighting {
                 let h = cues_at(g, p);
                 let floor = g.time - g.k.cues.man_secs;
                 let row = cues_man(g, gd);

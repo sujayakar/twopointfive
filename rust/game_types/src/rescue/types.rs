@@ -80,12 +80,6 @@ pub struct RescueResult {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum RescueResultState {
-    #[default] Lost,
-    Rescued,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueResultGrade {
     #[default] Failed,
     Clean,
@@ -183,12 +177,6 @@ pub struct RescuePick {
     pub side: Vec<GuardId>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueEndState {
-    Lost,
-    Rescued,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct RescueObjective {
     pub text: String,
@@ -206,3 +194,9 @@ pub const SEARCH_RATE: f64 = 1.3;
 pub const SEARCH_HALF: f64 = 1.75;
 
 pub const CREW_SEEN: f64 = 4.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum RescueResultState {
+    #[default] Lost,
+    Rescued,
+}

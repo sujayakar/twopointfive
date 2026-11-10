@@ -40,10 +40,7 @@ pub fn anim_kick_door(g: &mut crate::game::Game, c: CharId, opts: Option<crate::
         a.kick_t = 0.0;
         a.kick_hit = false;
         a.kick_from = None;
-        a.kick_leg = match opts.and_then(|o| o.leg) {
-            Some(AnimKickDoorOptsLeg::Left) => AnimKickLeg::Left,
-            Some(AnimKickDoorOptsLeg::Right) | None => AnimKickLeg::Right,
-        };
+        a.kick_leg = opts.and_then(|o| o.leg).unwrap_or(AnimKickLeg::Right);
     }
 }
 /// The kick is playing.
@@ -122,7 +119,7 @@ fn blend_masked(g: &mut Game, c: CharId, a: Option<crate::anim_skeleton::Pose>, 
     *mask_of(&mut g.ch[c].anim, k) = mask;
 }
 /// The swap's clock, read off `carry` (`want`: None = undefined, Some(None) = null); not called on a re-bake.
-fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, shoot_t: f64, draw: f64, stow: f64, dt: f64) {
+fn swap_clock(sw: &mut AnimSw, want: Option<Option<crate::guards::InHand>>, swap_lag: f64, shoot_t: f64, draw: f64, stow: f64, dt: f64) {
     match (want, sw.cur) {
         (None, _) => { sw.cur = None; sw.t = -1.0; sw.wait = -1.0; }
         (Some(w), None) => { sw.cur = Some(w); sw.t = -1.0; sw.wait = -1.0; }
@@ -135,7 +132,7 @@ fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, s
                         sw.from = Some(from);
                         sw.to = Some(to);
                         sw.t = 0.0;
-                        sw.dur = if to == AnimCarry::Weapon { draw } else { stow };
+                        sw.dur = if to == crate::guards::InHand::Weapon { draw } else { stow };
                         sw.cur = Some(w);
                         sw.wait = -1.0;
                     }
@@ -565,7 +562,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         a.sw.belt = 0.0;
         if !bake {
             let (draw, stow) = (swap().draw, swap().stow);
-            let want = a.carry.take().map(|v| v.map(|k| match k { CarryKind2::Torch => AnimCarry::Torch, CarryKind2::Weapon => AnimCarry::Weapon }));
+            let want = a.carry.take();
             let (lag, shoot_t) = (a.swap_lag, a.shoot_t);
             swap_clock(&mut a.sw, want, lag, shoot_t, draw, stow, dt);
         }
@@ -840,7 +837,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         let a = &g.ch[c].anim;
         let (rel, aim, tor) = (a.upper_w.relaxed, a.upper_w.aim, a.upper_w.torch);
         let gun = m::max_n(&[rel, aim, w_lg, w_carry * (1.0 - w_st * wl) * (if armed { 1.0 } else { 0.0 })]);
-        let gun_r = m::max_n(&[rel, aim, w_lg]) * (1.0 - w_hd) * (1.0 - w_he) * (1.0 - w_lp) * (1.0 - w_wall_arms) * (1.0 - w_act) * (if a.throw_t >= 0.0 || a.reload_t >= 0.0 || w_strike > 0.0 { 0.0 } else { 1.0 }) * (if a.big_tool.as_ref().map_or(false, |b| b.kind == AnimBigToolKind::Hammer && big_off_tool(b)) { 0.0 } else { 1.0 });
+        let gun_r = m::max_n(&[rel, aim, w_lg]) * (1.0 - w_hd) * (1.0 - w_he) * (1.0 - w_lp) * (1.0 - w_wall_arms) * (1.0 - w_act) * (if a.throw_t >= 0.0 || a.reload_t >= 0.0 || w_strike > 0.0 { 0.0 } else { 1.0 }) * (if a.big_tool.as_ref().map_or(false, |b| b.kind == crate::kit::BigTool::Hammer && big_off_tool(b)) { 0.0 } else { 1.0 });
         anim_hands_pass(g, c, dt, m::max(w_strike, gun), m::max_n(&[w_strike, gun, tor]), gun_r);
         let a = &g.ch[c].anim;
         if a.grip_can && a.grip[1] && a.throw_t < 0.0 {   // a can in the fist
@@ -932,11 +929,11 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn sw(cur: Option<Option<AnimCarry>>, t: f64, wait: f64) -> AnimSw { AnimSw { cur, from: None, to: None, t, dur: 0.0, shown: false, wait, belt: 0.0 } }
+    fn sw(cur: Option<Option<crate::guards::InHand>>, t: f64, wait: f64) -> AnimSw { AnimSw { cur, from: None, to: None, t, dur: 0.0, shown: false, wait, belt: 0.0 } }
     /// The swap's clock, arm by arm. A cur or a want of null is not undefined: they part at the third arm.
     #[test]
     fn swap_clock_beats() {
-        use AnimCarry::{Torch, Weapon};
+        use crate::guards::InHand::{Torch, Weapon};
         let clock = |s: &mut AnimSw, want, shoot_t| swap_clock(s, want, 0.25, shoot_t, 0.6, 0.8, 0.1);
         // want undefined: all gone
         let mut s = sw(Some(Some(Torch)), 0.3, 0.1);

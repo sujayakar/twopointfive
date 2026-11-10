@@ -256,12 +256,6 @@ pub struct DoorsFrameCoords {
     pub off: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorsTornCause {
-    Blast,
-    Fire,
-}
-
 pub const DOORS_PICK_SECS: f64 = 4.2;
 
 pub const DOORS_PICK_LEVEL: f64 = 0.16;

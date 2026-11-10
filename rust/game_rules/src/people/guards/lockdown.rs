@@ -364,7 +364,7 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].unit.is_none() { return false; }
     let Some(i) = g.guards.iter().position(|&x| x == gd) else { return false; };
     crate::seats::each_seat(g, &mut |g| {
-        if g.pl[g.player].holding.as_ref().map(|h| h.g) == Some(gd) { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Cancel); }
+        if g.pl[g.player].holding.as_ref().map(|h| h.g) == Some(gd) { crate::game::game_free_held(g, crate::player::FreeHeldWhy::Cancel); }
         if g.pl[g.player].dragging == Some(gd) { crate::game::game_toggle_drag(g, None); }
         if g.pl[g.player].takedown.as_ref().map(|t| t.g) == Some(gd) { g.pl[g.player].takedown = None; }
     });

@@ -3,7 +3,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::orders::rows::{Is, Row};
 use crate::orders::*;
-use crate::doortools::DoorToolsCanThresholdThenWhat as What;
+use crate::doortools::ThresholdThen as What;
 use crate::doortools::DoorToolsEntryVerb as Verb;
 use alloc::{format, string::String, vec, vec::Vec};
 

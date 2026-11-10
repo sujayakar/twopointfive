@@ -13,7 +13,7 @@ fn nobody_is_sent_where_another_is_going() {
             let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&roomclear&squad4"), &Opts { seed, ..Default::default() });
             p.sam_unhurt();
             p.run(0.5);
-            let men: Vec<_> = p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect();
+            let men: Vec<_> = p.g.guards.iter().copied().filter(|&m| p.g.ch[p.g.gd[m].ch].team == Team::Hostile).collect();
             for (i, &a) in men.iter().enumerate() {
                 let at = p.at(a);
                 for k in 0..4 {

@@ -425,7 +425,7 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
     let mut mark = if is_crack { lane("crack") } else if surf == crate::scene_materials::Surf::Metal { lane("dent") } else if surf == crate::scene_materials::Surf::Fabric { lane("shred") } else { return; };
     if js::to_i32(seam_box(g, box_).flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
     let rj = destruction_hash(g);
-    if !destruction_take(g, DestructionTakeK::Decal) { return; }
+    if !destruction_take(g, crate::destruction::RateCapN::Decal) { return; }
     let attach = if dynamic { Some(box_) } else { None };
     let said = if is_crack { None } else { crate::particle_fx::said_surf(g, Some(box_)) };
     match said {
@@ -501,7 +501,7 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
 
 /// Hide the stack's box and throw its sheets.
 pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, speed: f64, chaos: f64) -> bool {
-    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Paper) { return false; }
+    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, crate::destruction::RateCapN::Paper) { return false; }
     destruction_hide(g, d);
     dlog(g, &alloc::format!("paper {} scattered", d.i));
     let (c, h, albedo) = { let b = seam_box(g, d.box_); (b.c, b.h, b.albedo) };
@@ -572,7 +572,7 @@ fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf:
 
 /// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.
 pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) -> bool {
-    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
+    if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, crate::destruction::RateCapN::Puff) {
         g.stats.destruction.destr_puffs_refused += 1;
         return false;
     }
@@ -581,7 +581,7 @@ pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64
     let by_surf = match surf { crate::scene_materials::Surf::Drywall => 1.0, crate::scene_materials::Surf::Concrete => 0.7, crate::scene_materials::Surf::Fabric => 0.35, _ => 0.5 };
     let dens = k.density * by_surf * m::min(2.0, scale);
     let dir = v3::normalize([n[0], n[1] + 0.25, n[2]]);
-    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
     true
@@ -640,7 +640,7 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
     }
     let ttl = r.ttl * (0.8 + 0.4 * j);
     let density = r.density * gain * m::min(k.max_gain, m::pow(r.radius / radius, 1.5));
-    let e = crate::smoke_types::SmokeEmitter { pos: p, dir: d, speed: r.speed * (0.75 + 0.5 * j), radius, density, temperature: r.temp, ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(r.push), expand: Some(r.expand), attack: Some(0.05), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(1.0), min_voxels: Some(3.0), tint: Some(tint), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: p, dir: d, speed: r.speed * (0.75 + 0.5 * j), radius, density, temperature: r.temp, ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(r.push), expand: Some(r.expand), attack: Some(0.05), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeLattice::Coarse), prio: Some(1.0), min_voxels: Some(3.0), tint: Some(tint), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
     true

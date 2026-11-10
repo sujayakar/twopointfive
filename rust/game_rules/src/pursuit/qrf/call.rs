@@ -17,13 +17,6 @@ fn clip_line(text: &str) -> String {
     s
 }
 
-fn team_of(side: crate::qrf::SideOfTeam) -> crate::teams::Team {
-    match side {
-        crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard,
-        crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile,
-    }
-}
-
 // ---------------------------------------------------------------- the level's own team
 
 /// This level's block, if it has one.
@@ -42,8 +35,8 @@ pub(super) fn raid_over(g: &crate::game::Game) -> bool {
 }
 
 /// The side the team stands on: the shift's, or in a raid the defenders'.
-pub(super) fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
-    if raid(g) { crate::qrf::SideOfTeam::Hostile } else { crate::qrf::SideOfTeam::Guard }
+pub(super) fn side_of_team(g: &crate::game::Game) -> crate::teams::Team {
+    if raid(g) { crate::teams::Team::Hostile } else { crate::teams::Team::Guard }
 }
 
 /// A raid: the men who can call it in.
@@ -259,7 +252,7 @@ pub(super) fn alive(g: &crate::game::Game) -> Vec<GuardId> {
 
 /// Is this man on the defenders' net?
 fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
-    let side = team_of(side_of_team(g));
+    let side = side_of_team(g);
     if g.team(x) != side || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }

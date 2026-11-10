@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 use game::effects::Track;
 use game::game::Game;
 use game::out_events::OutEvent as E;
-use game::smoke_types::{SmokeEmitter, SmokeEmitterLattice, SmokeEmitterMode, SmokePush, SmokePushLattice};
+use game::smoke_types::{SmokeEmitter, SmokeEmitterMode, SmokePush};
 
 /// no number said: the reader's own
 const NONE: f32 = f32::NAN;
@@ -286,7 +286,7 @@ impl Events {
 
     /// a source of smoke, and what it does to the air
     fn source(&mut self, tick: u32, g: &Game, e: &SmokeEmitter) {
-        let lattice = match e.lattice { Some(SmokeEmitterLattice::Fine) => 1, Some(SmokeEmitterLattice::Coarse) => 2, None => 0 };
+        let lattice = match e.lattice { Some(game::smoke_types::SmokeLattice::Fine) => 1, Some(game::smoke_types::SmokeLattice::Coarse) => 2, None => 0 };
         let air = e.speed != 0.0 || e.push.is_some() || e.expand.is_some();
         let push = if air {
             let serial = self.pushes.len() as u32;
@@ -337,7 +337,7 @@ impl Events {
     fn push(&mut self, tick: u32, p: &SmokePush) {
         let serial = self.pushes.len() as u32;
         let (shape, len) = match (p.line, p.body) { (Some(l), _) if l > 0.0 => (1, l), (_, Some(b)) => (2, b), _ => (0, 0.0) };
-        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(SmokePushLattice::Fine) => 1, Some(SmokePushLattice::Coarse) => 2, None => 0 } });
+        self.pushes.push(AirPush { tick, serial, shape, pos: f3(p.pos), vel: along(p.dir, p.speed), dir: f3(p.dir), radius: p.radius as f32, len: len as f32, hard: opt(p.push), expand: NONE, ttl: 0.0, lattice: match p.lattice { Some(game::smoke_types::SmokeLattice::Fine) => 1, Some(game::smoke_types::SmokeLattice::Coarse) => 2, None => 0 } });
     }
 }
 

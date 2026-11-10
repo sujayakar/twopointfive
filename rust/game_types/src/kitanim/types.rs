@@ -22,15 +22,9 @@ pub enum ReloadKind {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct KitShowV {
     pub pistol_in_hand: bool,
-    pub rifle: Option<crate::kitanim::KitShowVRifle>,
+    pub rifle: Option<crate::rig_props::RifleAt>,
     pub held: Option<crate::game::ThrowKind>,
     pub knife: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum KitShowVRifle {
-    Hand,
-    Slung,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

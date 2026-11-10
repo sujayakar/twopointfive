@@ -18,13 +18,6 @@ pub struct GlassBreakViewOf {
     pub size: crate::glassbreak::GlassBlastOpts,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum GlassBreakViewOfKind {
-    #[default] Blown,
-    Wary,
-    Counted,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassBlastOpts {
     pub radius: Option<f64>,
@@ -111,13 +104,6 @@ pub struct GlassbreakModGBHOST {
     pub hooked: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassBreakSeeThroughView {
-    Blown,
-    Wary,
-    Counted,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GlassBreakPaneInfo {
     pub open_fraction: f64,
@@ -140,3 +126,9 @@ pub const GW_FLAGS: f64 = 1.0;
 
 pub const G_GONE: f64 = 1.0;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum GlassBreakViewOfKind {
+    #[default] Blown,
+    Wary,
+    Counted,
+}

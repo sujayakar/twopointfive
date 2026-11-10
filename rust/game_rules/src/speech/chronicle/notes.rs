@@ -694,11 +694,11 @@ pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
     let r = rating_of(score);
     let badges = badges_of(g, &counts);
     let (state, line_state) = if counts.done {
-        (DebriefState::Done, SummaryLineState::Done)
+        (DebriefState::Done, crate::chronicle::DebriefState::Done)
     } else if counts.failed || counts.down {
-        (DebriefState::Down, SummaryLineState::Down)
+        (DebriefState::Down, crate::chronicle::DebriefState::Down)
     } else {
-        (DebriefState::Sofar, SummaryLineState::Sofar)
+        (DebriefState::Sofar, crate::chronicle::DebriefState::Sofar)
     };
     let scored = !crate::verdict::loud_row(g);
     let summary = summary_line(&counts, score, &r.word, &badges, line_state, Some(scored));
@@ -707,7 +707,7 @@ pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
 }
 
 /// The one line the 'copy summary' button puts on the clipboard.
-fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badges: &[crate::chronicle::Badge], state: crate::chronicle::SummaryLineState, scored: Option<bool>) -> String {
+fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badges: &[crate::chronicle::Badge], state: crate::chronicle::DebriefState, scored: Option<bool>) -> String {
     let c = c_2;
     let scored = scored.unwrap_or(true);
     let mut parts: Vec<String> = Vec::new();
@@ -733,7 +733,7 @@ fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badge
         let on: Vec<&str> = badges.iter().filter(|b| b.on).map(|b| b.name.as_str()).collect();
         if !on.is_empty() { parts.push(on.join(", ")); }
     }
-    if state != SummaryLineState::Done { parts.push(String::from(if state == SummaryLineState::Down { "went down" } else { "run so far" })); }
+    if state != crate::chronicle::DebriefState::Done { parts.push(String::from(if state == crate::chronicle::DebriefState::Down { "went down" } else { "run so far" })); }
     if c.sandbox { parts.push(String::from("sandbox flags on")); }
     format!("twopointsix — {}", parts.join(" · "))
 }
@@ -916,15 +916,15 @@ mod tests {
     fn the_summary_line_tells_the_run_and_only_a_scored_run_has_a_grade() {
         let b = crate::knobs::BadgeK::page();
         let a = blank_counts();
-        let so_far = summary_line(&a, 100.0, "GHOST", &badges_for(&b, &a), SummaryLineState::Sofar, None);
+        let so_far = summary_line(&a, 100.0, "GHOST", &badges_for(&b, &a), crate::chronicle::DebriefState::Sofar, None);
         assert!(so_far.starts_with("twopointsix — GHOST 100 · 00:00 · seen 0 · alarms 0") && so_far.contains("never seen") && so_far.ends_with("run so far"), "{}", so_far);
         assert!(!so_far.contains("civilians:") && !so_far.contains("sandbox"), "{}", so_far);
         let mut c = blank_counts();
         c.seen = 1.0; c.civ_seen = 1.0; c.civ_killed = 2.0; c.sandbox = true; c.done = true; c.elapsed = 692.9;
         let badges = badges_for(&b, &c);
-        let scored = summary_line(&c, 3.0, "ASSAULT", &badges, SummaryLineState::Done, None);
+        let scored = summary_line(&c, 3.0, "ASSAULT", &badges, crate::chronicle::DebriefState::Done, None);
         assert!(scored.starts_with("twopointsix — ASSAULT 3 · 11:32") && scored.contains("civilians: saw you 1 · told them 0 · KILLED 2") && scored.ends_with("sandbox flags on"), "{}", scored);
-        let not = summary_line(&c, 0.0, "ASSAULT", &badges, SummaryLineState::Done, Some(false));
+        let not = summary_line(&c, 0.0, "ASSAULT", &badges, crate::chronicle::DebriefState::Done, Some(false));
         assert!(not.starts_with("twopointsix — 11:32") && !not.contains("no kills"), "{}", not);
     }
 }

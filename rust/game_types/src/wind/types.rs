@@ -39,12 +39,6 @@ pub struct WindSource {
     pub heat: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum WindSourceKind {
-    #[default] Jet,
-    Storm,
-}
-
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Wind {
     pub all: Vec<WindWindSourceId>,
@@ -64,3 +58,9 @@ pub struct WindMod {
 pub const DEG: f64 = 0.017453292519943295;
 
 pub fn unit_x() -> V3 { [1.0, 0.0, 0.0] }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum WindSourceKind {
+    #[default] Jet,
+    Storm,
+}

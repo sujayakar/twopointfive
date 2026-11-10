@@ -535,7 +535,7 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         strip: strip.map(|s| crate::character::StripPose { t: s.t, at: None }),
     });
     // where his torch points: up over Sam's arm at the ceiling, wandering with the struggle
-    let torch = crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch;
+    let torch = crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch;
     let tt = time - h.since;
     let yaw_to = g.ch[hc].body_yaw + (if torch { 0.07 * m::sin(tt * 0.9) + 0.04 * m::sin(tt * 2.3 + 1.0) } else { 0.0 });
     g.ch[hc].aim_yaw = v3::approach_angle(g.ch[hc].aim_yaw, yaw_to, 4.0 * dt);

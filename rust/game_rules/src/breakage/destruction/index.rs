@@ -381,18 +381,18 @@ pub(super) fn destruction_hash(g: &mut crate::game::Game) -> f64 {
 }
 
 /// One event out of a cap; a knock-off riding on its group leader's slot is free.
-pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::DestructionTakeK) -> bool {
-    if k == DestructionTakeK::Knock && g.destr.free_knocks > 0.0 {
+pub(super) fn destruction_take(g: &mut crate::game::Game, k: crate::destruction::RateCapN) -> bool {
+    if k == crate::destruction::RateCapN::Knock && g.destr.free_knocks > 0.0 {
         g.destr.free_knocks -= 1.0;
         return true;
     }
     let t = g.time;
     let (caps, knobs) = (&mut g.destr.caps, &g.k.chaos);
     match k {
-        DestructionTakeK::Puff => rate_cap_take(&mut caps.puff, t, knobs),
-        DestructionTakeK::Paper => rate_cap_take(&mut caps.paper, t, knobs),
-        DestructionTakeK::Knock => rate_cap_take(&mut caps.knock, t, knobs),
-        DestructionTakeK::Decal => rate_cap_take(&mut caps.decal, t, knobs),
+        crate::destruction::RateCapN::Puff => rate_cap_take(&mut caps.puff, t, knobs),
+        crate::destruction::RateCapN::Paper => rate_cap_take(&mut caps.paper, t, knobs),
+        crate::destruction::RateCapN::Knock => rate_cap_take(&mut caps.knock, t, knobs),
+        crate::destruction::RateCapN::Decal => rate_cap_take(&mut caps.decal, t, knobs),
     }
 }
 

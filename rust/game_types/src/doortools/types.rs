@@ -493,30 +493,10 @@ pub struct DoortoolsModSKYValue {
     pub open: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsTakeWhat {
-    Frag,
-    Bang,
-    Charge,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsRefundWhat {
-    Frag,
-    Bang,
-    Charge,
-}
-
 #[derive(Clone, Debug)]
 pub enum DoorToolsStackable {
     Text(String),
     Bool(bool),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsBigWord {
-    Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -597,13 +577,6 @@ pub enum DoorToolsIssue {
     Arm1(()),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DoorToolsOrderKind {
-    BangClear,
-    OpenClear,
-    Threshold,
-}
-
 #[derive(Clone, Debug)]
 pub enum DoorToolsOrder {
     Text(String),
@@ -628,12 +601,6 @@ pub enum DoorToolsCanThreshold {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsThresholdThenWhat {
-    Bang,
-    Step,
-}
-
 #[derive(Clone, Debug)]
 pub enum DoorToolsThresholdThenT {
     Floor(crate::orders::OrderTargetFloor),
@@ -646,12 +613,6 @@ pub enum DoorToolsThresholdThenT {
 pub enum DoorToolsThresholdThen {
     Text(String),
     Arm1(()),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsCanThresholdThenWhat {
-    Bang,
-    Step,
 }
 
 #[derive(Clone, Debug)]
@@ -828,3 +789,16 @@ pub const OPEN_RAD: f64 = 0.6;
 pub fn n4() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] }
 
 pub const WORD_LEAD: f64 = 0.15;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ThresholdThen {
+    Bang,
+    Step,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
+pub enum DoorToolsCan {
+    Frag,
+    Bang,
+    Charge,
+}

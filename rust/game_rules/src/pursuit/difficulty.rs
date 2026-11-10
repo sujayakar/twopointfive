@@ -561,16 +561,12 @@ pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String
 }
 
 /// what a level is, in a sentence.
-pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyWordsLevel>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
+pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyNow>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
     let level = match level {
         Some(l) => l,
-        None => match difficulty_now(g) {
-            DifficultyNow::Hard => DifficultyWordsLevel::Hard,
-            DifficultyNow::Standard => DifficultyWordsLevel::Standard,
-            DifficultyNow::Custom => DifficultyWordsLevel::Custom,
-        },
+        None => difficulty_now(g),
     };
-    if level == DifficultyWordsLevel::Custom && levers_mixed(g) {
+    if level == crate::difficulty::DifficultyNow::Custom && levers_mixed(g) {
         return alloc::format!("your own mix: {}", levers_line(g, Some(true)));
     }
     // (squads: a word, or true = one not said which; '' and false = not one)
@@ -579,7 +575,7 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
         Some(DifficultyWordsSquads::Bool(true)) => Some(None),
         _ => None,
     };
-    if let (Some(word), DifficultyWordsLevel::Hard) = (squad_word, level) {
+    if let (Some(word), crate::difficulty::DifficultyNow::Hard) = (squad_word, level) {
         let w = word.and_then(|sq| squad_hard().into_iter().find(|x| x.file == sq || x.structure == sq).map(|x| x.words));
         let at = match word {
             Some(sq) => { let s = structure_of_level(Some(sq)); if s.is_empty() { String::from(sq) } else { s } }
@@ -593,13 +589,13 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
         };
     }
     match level {
-        DifficultyWordsLevel::Standard => String::from("standard: the usual defenders"),
-        DifficultyWordsLevel::Hard => {
+        crate::difficulty::DifficultyNow::Standard => String::from("standard: the usual defenders"),
+        crate::difficulty::DifficultyNow::Hard => {
             let here = g.m.difficulty.here.clone();
             let kit = if hard_at_stuns(g, &here).map_or(false, js::truthy) { ". Here each defender carries a stun charge, and he'll throw it through a door before he comes in" } else { "" };
             alloc::format!("hard: the defenders come at you together and around through a second door, a far room's defenders come as a group, and they stand and fight where they meet you in the open. If they hear you before your first entry, they'll get ready. The last defender in a room will slip out through another door before you reach his door. At the records office, the defenders who come to a lost room will watch its door from out of a flashbang's reach and let you come out to them. On a hostage rescue the captor calls your assault on the radio and his guards act on it. On the night breach the defenders are drilled, half as shaken by a flashbang, and they'll fire blind through the door they were watching{}{}", kit, CONE_TAIL)
         }
-        DifficultyWordsLevel::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
+        crate::difficulty::DifficultyNow::Custom => String::from("custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)"),
     }
 }
 

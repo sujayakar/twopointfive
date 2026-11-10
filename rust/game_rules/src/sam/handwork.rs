@@ -233,7 +233,7 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
         if mv.on {
             if g.light_home.mains.active && !g.light_home.mains.permanent { crate::game::game_end_blackout(g); }
         } else if !g.light_home.mains.active {
-            crate::game::game_set_blackout(g, 86400.0, crate::game::GameSetBlackoutCause::Hand);
+            crate::game::game_set_blackout(g, 86400.0, crate::lighting::SetBlackoutCause::Hand);
         }
     }
     if mv.t >= lever_secs { g.pl[pl].breaker_move = None; }
@@ -260,12 +260,9 @@ pub fn lever_hands(g: &mut crate::game::Game, c_2: CharId, t: f64, dur: f64) {
 }
 
 /// A teammate sent to work a thing: the work pose in the door hand's place, his left working. True = this layer has the hand.
-pub fn team_work_hand(g: &mut crate::game::Game, c_2: CharId, h: Option<crate::handwork::TeamWorkHandH>, kind: Option<crate::handwork::TeamWorkHandKind>, t: Option<f64>, dur: Option<f64>, dir: Option<f64>) -> bool {
+pub fn team_work_hand(g: &mut crate::game::Game, c_2: CharId, h: Option<crate::handwork::TeamWorkHandH>, kind: Option<crate::character::WorkKind>, t: Option<f64>, dur: Option<f64>, dir: Option<f64>) -> bool {
     let Some(h) = h else { return false };
-    let kind = match kind.unwrap_or(TeamWorkHandKind::Lever) {
-        TeamWorkHandKind::Lever => crate::character::WorkKind::Lever,
-        TeamWorkHandKind::Take => crate::character::WorkKind::Take,
-    };
+    let kind = kind.unwrap_or(crate::character::WorkKind::Lever);
     let (t, dur, dir) = (t.unwrap_or(0.0), dur.unwrap_or(1.0), dir.unwrap_or(1.0));
     if h.w > 0.0 {
         let more = WorkAtMore { dir: Some(dir), hand: Some(0.0), keys: None };
@@ -347,27 +344,18 @@ pub fn radio_hand(g: &mut crate::game::Game, gd: GuardId, secs: f64) {
 // ---------------------------------------------------------------- the guard's torch / sidearm swap
 
 /// Once a frame per man before anybody is posed: what the rule has in his gun hand; the animator makes a move of a change.
-pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapFeedHeld>, plain: bool) {
+pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::guards::InHand>, plain: bool) {
     if !plain || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return; }
     let c = g.gd[gd].ch;
     g.ch[c].anim.swap_lag = crate::character::swap().lag * js::rem(g.ch[c].id * 0.6180339887, 1.0);
-    g.ch[c].anim.carry = Some(held.map(|h| match h {
-        SwapFeedHeld::Torch => crate::character::CarryKind2::Torch,
-        SwapFeedHeld::Weapon => crate::character::CarryKind2::Weapon,
-    }));
+    g.ch[c].anim.carry = Some(held);
 }
 
 /// What his gun hand visibly holds this frame: the rule's answer, but for the frames of a swap.
-pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapHeldHeld>) -> Option<crate::handwork::SwapHeld> {
+pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::guards::InHand>) -> Option<crate::guards::InHand> {
     let c = g.gd[gd].ch;
-    let rule = held.map(|h| match h {
-        SwapHeldHeld::Torch => crate::character::AnimCarry::Torch,
-        SwapHeldHeld::Weapon => crate::character::AnimCarry::Weapon,
-    });
-    crate::character::anim_swap_held(g, c, rule).map(|h| match h {
-        crate::character::AnimCarry::Torch => SwapHeld::Torch,
-        crate::character::AnimCarry::Weapon => SwapHeld::Weapon,
-    })
+    let rule = held;
+    crate::character::anim_swap_held(g, c, rule)
 }
 
 /// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark.

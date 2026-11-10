@@ -142,7 +142,7 @@ fn double_over(g: &mut Game, gd: GuardId, from: V3) {
     use crate::game::GuardState;
     let c = g.gd[gd].ch;
     if g.gd[gd].script.is_some() {
-        use crate::squad::EndGuardScriptState as End;
+        use crate::game::GuardState as End;
         let to = match g.gd[gd].state { GuardState::Patrol => End::Suspicious, GuardState::Search => End::Search, GuardState::Alert => End::Alert, _ => End::Suspicious };
         crate::squad::end_guard_script(g, gd, Some(to));
     }

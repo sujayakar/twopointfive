@@ -333,7 +333,7 @@ pub(super) fn tut_road_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
                 let u = f.u.clone().expect("set at 0");
                 if !crate::director::director_query_alive(g, r, &u) { return Ok(None); }
                 if out(g, r) {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
                 f.mode = flag_text(g, r, "gun");
@@ -494,7 +494,7 @@ pub(super) fn tut_road_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                 for m in &f.men {
                     let u = m.u.as_ref().expect("men holds found men only");
                     if crate::director::director_query_alive(g, r, u) {
-                        crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                        crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
                     }
                 }
                 return Ok(None);

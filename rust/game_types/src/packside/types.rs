@@ -42,13 +42,6 @@ pub struct SidePlace {
     pub r: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SideBindWhat {
-    Rifle,
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SideBindDims {
     pub grip: Option<f64>,

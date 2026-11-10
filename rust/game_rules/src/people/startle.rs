@@ -39,7 +39,7 @@ pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
     if g.time < g.m.startle.state_of.get_or_insert_with(gd, blank).until { return false; }
     let c = g.gd[gd].ch;
-    let torch = match torch { Some(t) => t, None => crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch };
+    let torch = match torch { Some(t) => t, None => crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch };
     let (now, p) = (g.time, g.ch[c].pos);
     let s = g.m.startle.state_of.get_mut(gd).unwrap();
     s.torch = torch; s.at = now; s.until = now + secs; s.toward = [at[0], 0.0, at[2]]; s.pre = false; s.choose = false;
@@ -65,7 +65,7 @@ pub(super) fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate:
     let now = g.time;
     if state == crate::game::GuardState::Patrol {
         g.m.startle.state_of.get_or_insert_with(gd, blank).calm_t = now;
-        let carried = crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch;
+        let carried = crate::guards::hand_carry(g, gd) == crate::guards::InHand::Torch;
         let s = g.m.startle.state_of.get_mut(gd).unwrap();
         s.calm_torch = carried; s.by_sight = false; s.pre = false;
         return;

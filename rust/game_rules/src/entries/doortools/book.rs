@@ -104,7 +104,7 @@ pub fn row_stackable(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardI
     }
 }
 /// `canThresholdThen(what, t, men)` as a row's `valid` answers it
-pub fn row_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_can_then(g: &mut Game, what: crate::doortools::ThresholdThen, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     match crate::doortools::door_tools_can_threshold_then(g, what, Some(&ct_of(t)), men) {
         crate::doortools::DoorToolsCanThresholdThen::Text(w) => Err(Some(w)),
         crate::doortools::DoorToolsCanThresholdThen::Bool(true) => Ok(()),
@@ -117,9 +117,9 @@ pub fn row_behind_words(g: &Game, who: String) -> String {
 }
 /// an entry's row: of a door whose jambs are held, what the men on them do; of any other, its own order
 pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
-    use crate::doortools::{DoorToolKind as Kind, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
+    use crate::doortools::{DoorToolKind as Kind, DoorToolsThresholdThen};
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
-        return match crate::doortools::door_tools_threshold_then(g, if bang { DoorToolsThresholdThenWhat::Bang } else { DoorToolsThresholdThenWhat::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
+        return match crate::doortools::door_tools_threshold_then(g, if bang { crate::doortools::ThresholdThen::Bang } else { crate::doortools::ThresholdThen::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
     }
     match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
 }
@@ -169,8 +169,8 @@ pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
 }
 
 /// spend one (false: none left)
-pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorToolsTakeWhat) -> bool {
-    use crate::doortools::DoorToolsTakeWhat as W;
+pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCan) -> bool {
+    use crate::doortools::DoorToolsCan as W;
     door_tools_sync(g);
     if what == W::Frag {
         if g.sets[g.seat].door_tools.frags <= 0.0 { return false; }
@@ -188,8 +188,8 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
 }
 
 /// one back in the bag
-pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::DoorToolsRefundWhat) {
-    use crate::doortools::DoorToolsRefundWhat as W;
+pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCan) {
+    use crate::doortools::DoorToolsCan as W;
     if what == W::Frag {
         g.sets[g.seat].door_tools.frags += 1.0;
         return;

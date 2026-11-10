@@ -30,9 +30,9 @@ pub(super) fn hash01(a: f64, b: f64) -> f64 {
 fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V3, view: crate::frag::GlassView, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let see = match view {
         GlassView::Whole => return fn_(g),
-        GlassView::Blown => crate::glassbreak::GlassBreakSeeThroughView::Blown,
-        GlassView::Wary => crate::glassbreak::GlassBreakSeeThroughView::Wary,
-        GlassView::Counted => crate::glassbreak::GlassBreakSeeThroughView::Counted,
+        GlassView::Blown => crate::glassbreak::GlassBreakViewOfKind::Blown,
+        GlassView::Wary => crate::glassbreak::GlassBreakViewOfKind::Wary,
+        GlassView::Counted => crate::glassbreak::GlassBreakViewOfKind::Counted,
     };
     if !crate::glassbreak::glass_break_live(g) {
         return fn_(g);

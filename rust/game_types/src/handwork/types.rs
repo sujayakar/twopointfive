@@ -59,34 +59,10 @@ pub struct TeamWorkHandH {
     pub w: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum TeamWorkHandKind {
-    Take,
-    Lever,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LeverStand {
     pub yaw: f64,
     pub speed: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SwapFeedHeld {
-    Torch,
-    Weapon,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SwapHeldHeld {
-    Torch,
-    Weapon,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SwapHeld {
-    Torch,
-    Weapon,
 }
 
 pub const WORK_TURN: f64 = 10.0;

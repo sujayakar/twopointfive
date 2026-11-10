@@ -62,7 +62,7 @@ pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir
 /// Hide the static and hand its box to the debris pool with a shove along `dirn`; over the pool's cap it becomes a burst of chips. Its group rides on the same slot.
 pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, chaos: f64, kind: crate::debris::ChunkKind, who: Option<f64>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Knock) { return false; }
+    if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, crate::destruction::RateCapN::Knock) { return false; }
     let b = d.box_;
     let v_k = g.k.chaos.vel_low * (if chaos <= 0.5 { 1.0 } else { 1.0 + (g.k.chaos.vel_high_k - 1.0) * (chaos - 0.5) * 2.0 });
     let hz = v3::normalize([dirn[0], 0.0, dirn[2]]);

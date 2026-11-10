@@ -392,8 +392,8 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                 let can = !busy && !dragging_any && !sprinting && (!crouch || can_stand(g));
                 let far = if can && !reach && g.pl[pl].holding.is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
                 let tool = match far {
-                    Some(t) => Some(t == crate::bigkit::SamBigFar::Shotgun),
-                    None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
+                    Some(t) => Some(t == crate::kit::BigTool::Shotgun),
+                    None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d).map(|t| t == crate::kit::BigTool::Shotgun) } else { None },
                 };
                 if far.is_some() { it.in_reach = true; }
                 if let Some(shotgun) = tool {
@@ -578,7 +578,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         } else if let Some((door, tool)) = g.pl[pl].kick.as_ref().map(|k| (k.door, k.tool.as_ref().map(|t| t.kind))) {
             let base = marker(g, &list, door);
             let text = match tool {
-                Some(crate::game::PlayerKickToolKind::Hammer) => "hammering it…",
+                Some(crate::kit::BigTool::Hammer) => "hammering it…",
                 Some(_) => "on the lock…",
                 None => "kicking it in…",
             };
