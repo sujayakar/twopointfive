@@ -380,17 +380,18 @@ fn kit_shares(tune: &Knobs, er: &mut Errand) {
     let ap = clamp(if front { tune.kit.front.hand_at } else { tune.kit.apex_at }, 0.05, 0.95);
     let sl = clamp(if front { tune.kit.front.sling_at } else { tune.kit.sling_at }, 0.05, ap);
     let (has_from, has_to) = (from.is_some(), to.is_some());
-    let mut hold: Option<KitItem> = None;
-    let (mut stow, mut roll, mut join, mut free) = (0.0, 0.0, 0.0, 0.0);
-    let (mut pole_w, mut grip) = (0.0, 0.0);
-    let mut pole: Option<[f64; 3]> = None;
-    let mut tg = Spot::default();
+    let hold: Option<KitItem> = None;
+    let (stow, roll, join, free) = (0.0, 0.0, 0.0, 0.0);
+    let (pole_w, grip) = (0.0, 0.0);
+    let pole: Option<[f64; 3]> = None;
+    let tg = Spot::default();
     *er = Errand { top, ap, sl, has_from, has_to, hold, stow, roll, join, free, pole_w, grip, pole, tg, ..*er };
 }
 
 /// The item in the fist to where it lives.
 fn put_away(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
-    let Errand { t, t_a, s0, roll0, from, rifle, st, rarc, ap, sl, mut hold, mut stow, mut roll, mut pole_w, mut grip, mut pole, mut tg, .. } = *er;
+    let Errand { t, t_a, s0, roll0, from, rifle, st, rarc, ap, sl, .. } = *er;
+    let (hold, stow, roll, pole_w, grip, pole, tg);
     let (it, u) = (from, t / t_a);
     let hu = if it == RIFLE { clamp(u / ap, 0.0, 1.0) } else { u };
     let (e, s) = (e3(hu), spot(tune, fk, sling, er, it));
@@ -415,7 +416,8 @@ fn put_away(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
 
 /// The empty hand to where the next one lives.
 fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
-    let Errand { t, t_a, t_r, from, to, rifle, st, back, rarc, over, cross, top, has_from, mut pole_w, mut grip, mut pole, mut tg, .. } = *er;
+    let Errand { t, t_a, t_r, from, to, rifle, st, back, rarc, over, cross, top, has_from, .. } = *er;
+    let (pole_w, grip, mut pole, tg);
     let u = (t - t_a) / max(1e-3, t_r - t_a);
     let e = e3(u);
     let sa = if has_from { spot(tune, fk, sling, er, from) } else { st };
@@ -455,7 +457,8 @@ fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand)
 
 /// Up with it into the pose underneath.
 fn bring_up(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
-    let Errand { t, t_r, dur, s0, roll0, re, to, u_r, rifle, st, rarc, ap, sl, mut hold, mut stow, mut roll, mut join, mut free, mut pole_w, mut grip, mut pole, mut tg, .. } = *er;
+    let Errand { t, t_r, dur, s0, roll0, re, to, u_r, rifle, st, rarc, ap, sl, .. } = *er;
+    let (hold, stow, roll, join, free, pole_w, grip, pole, tg);
     let (it, u) = (to, (t - t_r) / max(1e-3, dur - t_r));
     let s = if re { st } else { spot(tune, fk, sling, er, it) };
     let hu = if it == RIFLE && !re { clamp((u - (1.0 - ap)) / ap, 0.0, 1.0) } else { u };
@@ -482,7 +485,8 @@ fn bring_up(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
 
 /// Nothing next: the emptied hand back to the pose underneath.
 fn back_empty(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) {
-    let Errand { t, t_a, dur, from, u_r, st, back, over, top, has_from, mut free, mut pole_w, mut grip, mut pole, mut tg, .. } = *er;
+    let Errand { t, t_a, dur, from, u_r, st, back, over, top, has_from, .. } = *er;
+    let (free, pole_w, grip, pole, tg);
     let u = (t - t_a) / max(1e-3, dur - t_a);
     let e = e3(u);
     let sa = if has_from { spot(tune, fk, sling, er, from) } else { st };
@@ -515,7 +519,7 @@ fn rifle_elbow(er: &mut Errand) {
 fn arm_room(tune: &Knobs, er: &mut Errand) {
     let Errand { t, s_r, la, lb, rifle, free, mut tg, .. } = *er;
     let own = if rifle { clamp(t / 0.12, 0.0, 1.0) * (1.0 - free * free) } else { 0.0 };
-    let mut lie: Option<[f64; 4]> = None;
+    let lie: Option<[f64; 4]> = None;
     if own > 0.0 {
         let r_min = sqrt(max(0.0, la * la + lb * lb - 2.0 * la * lb * cos(tune.kit.elbow_min * PI / 180.0))) * own;
         let dv = sub3(tg.0, s_r);

@@ -114,8 +114,8 @@ fn as_it_struck(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
 fn none_yet(o: &mut Lean) {
     let Lean { trained, .. } = *o;
     let t = clamp(trained, 0.0, 1.0);
-    let (mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz) = (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
-    let (mut stw, mut stn) = (0.0f64, 1.0f64);
+    let (pitch, yaw, roll, hp, hy, drop, sx, sz) = (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
+    let (stw, stn) = (0.0f64, 1.0f64);
     *o = Lean { t, pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn, ..*o };
 }
 
@@ -405,7 +405,7 @@ fn as_moved(an: &Anim, o: &mut Arms) {
     let (at, at_b, _) = poses(an);
     let (lg_w, gaze, fix_l, m, po) = (an.lg.w.x, an.gaze_local, an.hand_fix[0], &an.mvs, &an.mv_po);
     let (rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r) = (m.ts_rel, m.dz_t, m.ts_t, po.stw, po.stn, po.dzw, po.gun, po.gun_p, po.gun_r);
-    let (td, mut arm_l, mut ts_out, mut code) = (rel + TOSS_AFTER, m.arm_l, ts, RAN);
+    let (td, arm_l, ts_out, code) = (rel + TOSS_AFTER, m.arm_l, ts, RAN);
     let (up_l, fore_l, hand_l, sh_l) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(SHOULDER_L));
     *o = Arms { at, at_b, lg_w, gaze, fix_l, rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r, td, arm_l, ts_out, code, up_l, fore_l, hand_l, sh_l, ..*o };
 }

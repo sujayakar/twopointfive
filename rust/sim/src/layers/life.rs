@@ -89,7 +89,7 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
         if w < 0.003 && *f_w <= 0.01 {
             return ran;
         }
-        as_posed(&o);
+        as_posed(&mut o);
         if *f_w > 0.01 {
             spots_wanted(&mut o);
             lock_again(&mut foot, &o);
@@ -231,9 +231,10 @@ fn feet_stand(lf: &mut game_types::character::AnimLife, f_w: &mut f64, o: &mut L
 }
 
 /// The feet put back where they were.
-fn as_posed(o: &Life) {
+fn as_posed(o: &mut Life) {
     let Life { fl, fr, rl, rr, .. } = *o;
-    let (mut tl, mut tr, mut ql, mut qr) = (fl, fr, rl, rr);
+    let (tl, tr, ql, qr) = (fl, fr, rl, rr);
+    *o = Life { tl, ql, tr, qr, ..*o };
 }
 
 /// Where the pose wants each foot, in the world.
@@ -373,7 +374,6 @@ struct Feet {
     toe_down: bool,
     at_floor: bool,
     lifted: bool,
-    v: f64,
     going: bool,
     // ease_off: over the ground: down it holds; let go, what it is off by eases out, critically damped and at no more than a foot's speed. Up and down is always the pose's, eased
     off: [f64; 3],
@@ -468,7 +468,7 @@ fn legs_free(o: &mut Feet) {
 
 /// A foot the stack has, the standing lock taken back out of it.
 fn without(o: &Feet, i: usize, a: [f64; 3], t: [f64; 3], r: [f64; 4]) -> ([f64; 3], [f64; 3], [f64; 4]) {
-    let Feet { at, lock_off, lock_yaw, k, .. } = *o;
+    let Feet { lock_off, lock_yaw, k, .. } = *o;
     let un = q_yaw(-lock_yaw[i] * k);
     let o = lock_off[i];
     let at = [a[0] - o[0] * k, a[1] - o[1] * k, a[2] - o[2] * k];
@@ -532,7 +532,7 @@ fn cycle_under(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
         foot[i].off_yaw = 0.0;
         foot[i].fresh = true;
     }
-    *o = Feet { toe_down, at_floor, lifted, v, going, ..*o };
+    *o = Feet { toe_down, at_floor, lifted, going, ..*o };
 }
 
 /// Where its pivot stood in the last frame's picture: what it holds from now on.
@@ -570,7 +570,7 @@ fn set_down(foot: &mut [AnimStep; 2], i: usize, o: &Feet) {
 
 /// Over the ground: down it holds; let go, what it is off by eases out, critically damped and at no more than a foot's speed. Up and down is always the pose's, eased.
 fn ease_off(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
-    let Feet { dt, v, .. } = *o;
+    let Feet { dt, .. } = *o;
     let (mut off, mut off_v) = (foot[i].off, foot[i].off_v);
     let holds = foot[i].swing < 0.0 && foot[i].down;
     for c in 0..3 {
@@ -638,7 +638,7 @@ fn start_steps(foot: &mut [AnimStep; 2], o: &Feet) {
 /// Nothing off the pose yet.
 fn shown_at_first(o: &mut Feet) {
     let Feet { want_p, .. } = *o;
-    let mut shown = [want_p[0], want_p[1]];
+    let shown = [want_p[0], want_p[1]];
     *o = Feet { shown, ..*o };
 }
 
@@ -671,7 +671,7 @@ fn swing_through(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
 
 /// A foot not down goes no faster than a foot goes, seen from where he stands: what the pose asks past that it comes to by the same easing.
 fn foot_speed(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
-    let Feet { dt, s, p0, p_was, teleported, k, want_p, mut shown, .. } = *o;
+    let Feet { dt, s, p0, p_was, teleported, want_p, mut shown, .. } = *o;
     let free = !(foot[i].swing < 0.0 && foot[i].down);
     if dt > 1e-5 && free && !foot[i].fresh && !teleported {
         let gone = sub3(sub3(shown[i], p0), sub3(foot[i].shown, p_was));
@@ -689,7 +689,7 @@ fn foot_speed(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
 fn body_turn(o: &mut Feet) {
     let Feet { yin, fl, rl, fr, rr, .. } = *o;
     let (body, body_back) = (q_yaw(yin), q_yaw(-yin));
-    let mut placed = [(fl, rl), (fr, rr)];
+    let placed = [(fl, rl), (fr, rr)];
     *o = Feet { body, body_back, placed, ..*o };
 }
 

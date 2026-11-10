@@ -617,7 +617,7 @@ fn bows(d: &mut [S], rig: &Rig, o: &AtWork) {
 
 /// The thing as his hands see it: model -X is his right.
 fn thing(fk: &mut Fk, o: &mut AtWork) {
-    let AtWork { p0, tw_y, tw_p, at, t, dur, kind, dir, keys, nk, done, main, two, n0, sh_full, .. } = *o;
+    let AtWork { p0, tw_y, tw_p, t, dur, kind, dir, keys, nk, done, main, two, n0, sh_full, .. } = *o;
     let un = Untwist::at(fk, tw_y, tw_p, true);
     let p_t = un.un(p0);
     let n_t = normalize(sub3(un.un(add3(p0, n0)), p_t));
