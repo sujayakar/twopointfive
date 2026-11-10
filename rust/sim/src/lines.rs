@@ -347,14 +347,17 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
     };
     s.panes = 0;
     let (foot, top) = if d1 < 0.0 { (b1 - seg.pad, a1 + seg.pad) } else { (a1 - seg.pad, b1 + seg.pad) };
-    if !seg.inside() {
-        let n = seg.cells_round(s);
+    if !seg.goes() {
+        let n = seg.cells_round(s, 0, false);
         return seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32);
     }
     let said = match seg.tilted(s) {
         Some(said) => said,
         None => {
-            let n = seg.cells_along(s);
+            let mut n = seg.cells_along(s);
+            if !seg.inside(&seg.a) || !seg.inside(&seg.b) {
+                n = seg.cells_round(s, n, true);
+            }
             seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32)
         }
     };
@@ -364,7 +367,7 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
     // (the order of one pane is no order; of more it is the old walk's)
     seg.id = s.ask();
     s.panes = 0;
-    let n = seg.cells_round(s);
+    let n = seg.cells_round(s, 0, false);
     seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32)
 }
 
@@ -419,13 +422,16 @@ impl Seg<'_> {
         }
         None
     }
-    /// whether it lies well inside the level, so that its cells can be listed by their columns
+    /// whether it goes anywhere in plan, so that its cells can be listed by their columns
     #[inline(always)]
-    fn inside(&self) -> bool {
-        let (o, a, b, pad) = (self.o, &self.a, &self.b, self.pad);
-        let lxz = sqrt(self.d[0] * self.d[0] + self.d[2] * self.d[2]);
-        let (gx, gz, g0) = (o.w as f64 * o.cs - pad - 0.25, o.h as f64 * o.cs - pad - 0.25, pad + 0.25);
-        lxz > 1e-6 && pad < 0.5 && a[0] > g0 && a[0] < gx && b[0] > g0 && b[0] < gx && a[2] > g0 && a[2] < gz && b[2] > g0 && b[2] < gz
+    fn goes(&self) -> bool {
+        self.pad < 0.5 && sqrt(self.d[0] * self.d[0] + self.d[2] * self.d[2]) > 1e-6
+    }
+    /// whether a point of it lies well inside the level (what stands over the level's edge is filed in the cells along it)
+    #[inline(always)]
+    fn inside(&self, p: &[f64; 3]) -> bool {
+        let (o, g0) = (self.o, self.pad + 0.25);
+        p[0] > g0 && p[0] < o.w as f64 * o.cs - g0 && p[2] > g0 && p[2] < o.h as f64 * o.cs - g0
     }
     /// whether it passes a static whatever lies between: of a kind it was told to pass, or one the question lets it through
     #[inline(always)]
@@ -550,13 +556,18 @@ impl Seg<'_> {
         }
         n
     }
-    /// The cells round each half-metre step of it, each once, in the order the steps come on them. → how many
-    fn cells_round(&self, s: &mut Asking) -> usize {
+    /// The cells round each half-metre step of it (`edge`: of each that is not well inside the level), each once, in the order the steps come on them, after the `n`
+    /// that are listed. → how many
+    fn cells_round(&self, s: &mut Asking, mut n: usize, edge: bool) -> usize {
         let (gw, gh, wi) = (self.o.w as f64, self.o.h as f64, self.o.w as usize);
-        let mut n = 0usize;
         let (mut lx, mut lz) = (f64::NAN, f64::NAN);
         let mut i = 0.0;
         while i <= self.steps {
+            let t = (i / self.steps) * self.len;
+            if edge && self.inside(&[self.a[0] + self.r[0] * t, 0.0, self.a[2] + self.r[2] * t]) {
+                i += 1.0;
+                continue;
+            }
             let (x, z) = self.cell_at(i);
             i += 1.0;
             if x == lx && z == lz {
@@ -862,8 +873,8 @@ pub fn ray_but(w: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, 
 /// …of the world as the question takes it. A box it adds is RAY_EXTRA + its place.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
-    let (o, q) = (w, asking());
     let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
+    let o = w;
     if v.leaves {
         for (i, row) in o.leaf.chunks_exact(REC).enumerate() {
             if !v.but.is_empty() && v.but.contains(&(i as u32)) {
@@ -887,72 +898,15 @@ pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
             }
         }
     }
-    let id = q.ask();
-    let steps = js_ceil(tmax / 0.5) + 1.0;
-    let (cs, gw, gh) = (o.cs, o.w as f64, o.h as f64);
-    let wi = o.w as usize;
-    let mut i = 0.0;
-    // (the sample before this one: the cells round it have been asked)
-    let (mut lx, mut lz) = (f64::NAN, f64::NAN);
-    while i <= steps {
-        let t = (i / steps) * tmax;
-        if t > best + 1.5 {
-            break;
-        }
-        let (x, z) = (floor((a0 + r0 * t) / cs), floor((a2 + r2 * t) / cs));
-        if x != x || z != z {
-            return RAY_HOST; // (a ray that is not a number — or of no finite length, whose samples are none: the caller's mistake, which the host says by name)
-        }
-        // (the cells round this sample lie off the grid on the side the ray is going, or it does not go that way at all: so does every later sample's,
-        //  a sample's cell moving one way only along a ray. Nothing more can be met. Or it goes nowhere in plan: every later sample's cells are the
-        //  first's, whose statics have each been asked the whole ray.)
-        if (r0 >= 0.0 && x - 1.0 >= gw) || (r0 <= 0.0 && x + 1.0 < 0.0) || (r2 >= 0.0 && z - 1.0 >= gh) || (r2 <= 0.0 && z + 1.0 < 0.0) || (i > 0.0 && r0 == 0.0 && r2 == 0.0) {
-            break;
-        }
-        i += 1.0;
-        if x == lx && z == lz {
-            continue;
-        }
-        let mut dz = -1.0;
-        while dz <= 1.0 {
-            let mut dx = -1.0;
-            while dx <= 1.0 {
-                let (cx, cz) = (x + dx, z + dz);
-                dx += 1.0;
-                if !(cx >= 0.0 && cz >= 0.0 && cx < gw && cz < gh) || ((cx - lx).abs() <= 1.0 && (cz - lz).abs() <= 1.0) {
-                    continue;
-                }
-                let c = cz as usize * wi + cx as usize;
-                let (k0, k1) = (o.start[c] as usize, o.start[c + 1] as usize);
-                // (as low and as high as the ray goes before the best so far)
-                let end = a1 + r1 * best;
-                let (foot, top) = if r1 < 0.0 { (end - SEG_PAD, a1 + SEG_PAD) } else { (a1 - SEG_PAD, end + SEG_PAD) };
-                for k in k0..k1 {
-                    let b = o.items[k] as usize;
-                    if o.tall[b][0] > top || o.tall[b][1] < foot || q.stamp[b] == id {
-                        continue;
-                    }
-                    q.stamp[b] = id;
-                    let fl = o.flags[b];
-                    if fl & F_NO_SHADOW != 0 || (!v.open.is_empty() && v.open.contains(&(b as u32))) {
-                        continue;
-                    }
-                    if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
-                        if t < best {
-                            if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t, tune) {
-                                continue;
-                            }
-                            best = t;
-                            bi = b as i32;
-                            bn = (n0, n1, n2);
-                        }
-                    }
-                }
-            }
-            dz += 1.0;
-        }
-        lx = x;
-        lz = z;
+    let ray = Ray { o, v, tune, a: [a0, a1, a2], r: [r0, r1, r2], tmax, ask };
+    let from = (best, bi, bn);
+    let met = match ray.crossed(from) {
+        Some(met) => Ok(met),
+        None => ray.walked(from),
+    };
+    match met {
+        Ok(met) => (best, bi, bn) = met,
+        Err(said) => return said,
     }
     if bi < 0 {
         return RAY_NONE;
@@ -962,6 +916,235 @@ pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
     out[2] = bn.1;
     out[3] = bn.2;
     bi
+}
+
+/// the best a ray has met so far: how far, what, its face's normal
+type Met = (f64, i32, (f64, f64, f64));
+/// A RAY AMONG THE STATICS.
+struct Ray<'a> {
+    o: &'a World,
+    v: &'a Over<'a>,
+    tune: &'a Knobs,
+    a: [f64; 3],
+    r: [f64; 3],
+    tmax: f64,
+    ask: bool,
+}
+impl Ray<'_> {
+    /// static `b` asked, once: what is best now. `first`: of two met at one place, whether this one is the walk's
+    #[inline(always)]
+    fn asked(&self, b: usize, met: &mut Met, first: impl Fn(usize, usize) -> bool) {
+        let (o, a, r) = (self.o, &self.a, &self.r);
+        let fl = o.flags[b];
+        if fl & F_NO_SHADOW != 0 || (!self.v.open.is_empty() && self.v.open.contains(&(b as u32))) {
+            return;
+        }
+        if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a[0], a[1], a[2], r[0], r[1], r[2], &o.rec[b * REC..b * REC + REC], met.0) {
+            if t < met.0 || (t == met.0 && met.1 >= 0 && met.1 < RAY_LEAF && first(b, met.1 as usize)) {
+                if self.ask && fl & F_GLASS != 0 && glass::open(o, b, a[0] + r[0] * t, a[1] + r[1] * t, a[2] + r[2] * t, self.tune) {
+                    return;
+                }
+                *met = (t, b as i32, (n0, n1, n2));
+            }
+        }
+    }
+    /// how many half-metre samples the walk takes, and where each stands in plan
+    #[inline(always)]
+    fn steps(&self) -> f64 {
+        js_ceil(self.tmax / 0.5) + 1.0
+    }
+    #[inline(always)]
+    fn sample(&self, i: f64, steps: f64) -> (f64, f64, f64) {
+        let t = (i / steps) * self.tmax;
+        (t, floor((self.a[0] + self.r[0] * t) / self.o.cs), floor((self.a[2] + self.r[2] * t) / self.o.cs))
+    }
+    /// The statics of the cells it crosses, from its own on, and no others. None: what the walk would meet is the walk's to say (it starts outside the level, or passes a
+    /// static that stands over the level's edge, or two that are tilted).
+    fn crossed(&self, from: Met) -> Option<Met> {
+        let (o, a, r) = (self.o, &self.a, &self.r);
+        let (cs, gw, gh, wi) = (o.cs, o.w as f64, o.h as f64, o.w as usize);
+        let (mut x, mut z) = (floor(a[0] / cs), floor(a[2] / cs));
+        if !(x >= 0.0 && z >= 0.0 && x < gw && z < gh) || !(r[0] - r[0] == 0.0 && r[2] - r[2] == 0.0 && self.tmax - self.tmax == 0.0) {
+            return None;
+        }
+        let q = asking();
+        let id = q.ask();
+        let mut met = from;
+        let first = |b: usize, than: usize| self.before(b, than);
+        let mut visit = |x: f64, z: f64, met: &mut Met| {
+            let c = z as usize * wi + x as usize;
+            // (as low and as high as it goes before the best so far)
+            let end = a[1] + r[1] * met.0;
+            let (foot, top) = if r[1] < 0.0 { (end - SEG_PAD, a[1] + SEG_PAD) } else { (a[1] - SEG_PAD, end + SEG_PAD) };
+            for k in o.start[c] as usize..o.start[c + 1] as usize {
+                let b = o.items[k] as usize;
+                if o.tall[b][0] > top || o.tall[b][1] < foot || q.stamp[b] == id {
+                    continue;
+                }
+                q.stamp[b] = id;
+                self.asked(b, met, first);
+            }
+        };
+        let next = |at: f64, c: f64, way: f64| if way > 0.0 { ((c + 1.0) * cs - at) / way } else if way < 0.0 { (c * cs - at) / way } else { f64::INFINITY };
+        let (mut tx, mut tz) = (next(a[0], x, r[0]), next(a[2], z, r[2]));
+        let (dx, dz) = (if r[0] != 0.0 { cs / r[0].abs() } else { f64::INFINITY }, if r[2] != 0.0 { cs / r[2].abs() } else { f64::INFINITY });
+        let (sx, sz) = (if r[0] > 0.0 { 1.0 } else { -1.0 }, if r[2] > 0.0 { 1.0 } else { -1.0 });
+        let on = |x: f64, z: f64| x >= 0.0 && z >= 0.0 && x < gw && z < gh;
+        visit(x, z, &mut met);
+        loop {
+            let t = if tx < tz { tx } else { tz };
+            if t > met.0 + 0.01 {
+                break;
+            }
+            // (through a corner, or as good as: the cells at both sides of it)
+            if (tx - tz).abs() < 1e-6 {
+                if on(x + sx, z) {
+                    visit(x + sx, z, &mut met);
+                }
+                if on(x, z + sz) {
+                    visit(x, z + sz, &mut met);
+                }
+            }
+            if tx < tz {
+                x += sx;
+                tx += dx;
+            } else {
+                z += sz;
+                tz += dz;
+            }
+            if !on(x, z) {
+                if o.outer.iter().any(|&b| self.passes(b as usize, met.0)) {
+                    return None;
+                }
+                break;
+            }
+            visit(x, z, &mut met);
+        }
+        // a tilted static reaches past the cells it is filed in: it is met where the walk's samples come by those
+        let mut tilted = None;
+        for tl in o.tilted.chunks_exact(5) {
+            let b = tl[0] as usize;
+            if q.stamp[b] == id || !self.passes(b, met.0) {
+                continue;
+            }
+            if tilted.is_some() {
+                return None;
+            }
+            tilted = Some(tl);
+        }
+        if let Some(tl) = tilted {
+            let steps = self.steps();
+            let mut i = 0.0;
+            while i <= steps {
+                let (t, x, z) = self.sample(i, steps);
+                if t > met.0 + 1.5 {
+                    break;
+                }
+                if x >= (tl[1] - 1) as f64 && x <= (tl[2] + 1) as f64 && z >= (tl[3] - 1) as f64 && z <= (tl[4] + 1) as f64 {
+                    self.asked(tl[0] as usize, &mut met, first);
+                    break;
+                }
+                i += 1.0;
+            }
+        }
+        Some(met)
+    }
+    /// whether it comes within the ball round a static before `far`
+    fn passes(&self, b: usize, far: f64) -> bool {
+        let b = &self.o.rec[b * REC..b * REC + REC];
+        let (m0, m1, m2) = (b[R_C] - self.a[0], b[R_C + 1] - self.a[1], b[R_C + 2] - self.a[2]);
+        let rr = neg_up(b[R_H]) + neg_up(b[R_H + 1]) + neg_up(b[R_H + 2]) + SEG_PAD;
+        let s = m0 * self.r[0] + m1 * self.r[1] + m2 * self.r[2];
+        s >= -rr && s <= far + rr && m0 * m0 + m1 * m1 + m2 * m2 - s * s <= rr * rr
+    }
+    /// which of two statics the walk comes on first
+    #[cold]
+    fn before(&self, b: usize, than: usize) -> bool {
+        let o = self.o;
+        let (steps, gw, gh) = (self.steps(), o.w as f64, o.h as f64);
+        let mut i = 0.0;
+        while i <= steps {
+            let (_, x, z) = self.sample(i, steps);
+            for dz in [-1.0, 0.0, 1.0] {
+                for dx in [-1.0, 0.0, 1.0] {
+                    let (cx, cz) = (x + dx, z + dz);
+                    if !(cx >= 0.0 && cz >= 0.0 && cx < gw && cz < gh) {
+                        continue;
+                    }
+                    let c = cz as usize * o.w as usize + cx as usize;
+                    for &k in &o.items[o.start[c] as usize..o.start[c + 1] as usize] {
+                        if k as usize == b || k as usize == than {
+                            return k as usize == b;
+                        }
+                    }
+                }
+            }
+            i += 1.0;
+        }
+        false
+    }
+    /// The walk: the statics of the cells round each half-metre sample.
+    fn walked(&self, from: Met) -> Result<Met, i32> {
+        let (o, tmax) = (self.o, self.tmax);
+        let ([a0, a1, a2], [r0, r1, r2]) = (self.a, self.r);
+        let mut met = from;
+        let q = asking();
+        let id = q.ask();
+        let steps = js_ceil(tmax / 0.5) + 1.0;
+        let (cs, gw, gh) = (o.cs, o.w as f64, o.h as f64);
+        let wi = o.w as usize;
+        let mut i = 0.0;
+        // (the sample before this one: the cells round it have been asked)
+        let (mut lx, mut lz) = (f64::NAN, f64::NAN);
+        while i <= steps {
+            let t = (i / steps) * tmax;
+            if t > met.0 + 1.5 {
+                break;
+            }
+            let (x, z) = (floor((a0 + r0 * t) / cs), floor((a2 + r2 * t) / cs));
+            if x != x || z != z {
+                return Err(RAY_HOST); // (a ray that is not a number — or of no finite length, whose samples are none: the caller's mistake, which the host says by name)
+            }
+            // (the cells round this sample lie off the grid on the side the ray is going, or it does not go that way at all: so does every later sample's,
+            //  a sample's cell moving one way only along a ray. Nothing more can be met. Or it goes nowhere in plan: every later sample's cells are the
+            //  first's, whose statics have each been asked the whole ray.)
+            if (r0 >= 0.0 && x - 1.0 >= gw) || (r0 <= 0.0 && x + 1.0 < 0.0) || (r2 >= 0.0 && z - 1.0 >= gh) || (r2 <= 0.0 && z + 1.0 < 0.0) || (i > 0.0 && r0 == 0.0 && r2 == 0.0) {
+                break;
+            }
+            i += 1.0;
+            if x == lx && z == lz {
+                continue;
+            }
+            let mut dz = -1.0;
+            while dz <= 1.0 {
+                let mut dx = -1.0;
+                while dx <= 1.0 {
+                    let (cx, cz) = (x + dx, z + dz);
+                    dx += 1.0;
+                    if !(cx >= 0.0 && cz >= 0.0 && cx < gw && cz < gh) || ((cx - lx).abs() <= 1.0 && (cz - lz).abs() <= 1.0) {
+                        continue;
+                    }
+                    let c = cz as usize * wi + cx as usize;
+                    let (k0, k1) = (o.start[c] as usize, o.start[c + 1] as usize);
+                    // (as low and as high as the ray goes before the met.0 so far)
+                    let end = a1 + r1 * met.0;
+                    let (foot, top) = if r1 < 0.0 { (end - SEG_PAD, a1 + SEG_PAD) } else { (a1 - SEG_PAD, end + SEG_PAD) };
+                    for k in k0..k1 {
+                        let b = o.items[k] as usize;
+                        if o.tall[b][0] > top || o.tall[b][1] < foot || q.stamp[b] == id {
+                            continue;
+                        }
+                        q.stamp[b] = id;
+                        self.asked(b, &mut met, |_, _| false);
+                    }
+                }
+                dz += 1.0;
+            }
+            lx = x;
+            lz = z;
+        }
+        Ok(met)
+    }
 }
 
 /// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it. A RAY OF NO LENGTH
