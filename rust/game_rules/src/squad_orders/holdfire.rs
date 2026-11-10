@@ -63,7 +63,7 @@ fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     if seat.door_tools.ops.iter().any(|&id| {
         let op = &g.tab.doortools_door_op[id];
         let waits = matches!(op.phase, crate::doortools::Phase::Place | crate::doortools::Phase::Standoff | crate::doortools::Phase::Armed);
-        !op.on_word && !(op.kind == crate::doortools::DoorToolKind::Charge && waits) && op.men.iter().any(|&m| g.gd[m].state != dead)
+        !(op.kind == crate::doortools::DoorToolKind::Charge && waits) && op.men.iter().any(|&m| g.gd[m].state != dead)
     }) {
         return true;
     }
@@ -136,7 +136,7 @@ pub fn hold_fire_order(g: &mut crate::game::Game, id_2: &str, o: Option<crate::h
         lift(g, Some(true));
         return;
     }
-    if !crate::orders::rows::id_is(id_2, crate::orders::Is::LiftsFire) || o.waits == Some(true) || (crate::orders::rows::id_is(id_2, crate::orders::Is::Blows) && o.blown != Some(true)) {
+    if !crate::orders::rows::id_is(id_2, crate::orders::Is::LiftsFire) || (crate::orders::rows::id_is(id_2, crate::orders::Is::Blows) && o.blown != Some(true)) {
         return;
     }
     lift(g, None);

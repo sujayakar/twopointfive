@@ -284,7 +284,6 @@ pub struct Threshold {
     pub out: Option<crate::doortools::ThresholdOut>,
     pub wide: Option<bool>,
     pub early: Option<bool>,
-    pub word_step: Option<bool>,
     pub shut_t: Option<f64>,
 }
 
@@ -406,7 +405,6 @@ pub struct DoorOp {
     pub aim: Option<crate::doortools::DoorToolsDoneItemAim>,
     pub pass: Option<crate::doortools::DoorToolsDoneItemPass>,
     pub beats: Vec<crate::doortools::DoorToolsDoneItemBeatsItem>,
-    pub on_word: bool,
     pub word: Option<WordId>,
     pub hold: f64,
     pub ready_t: f64,
@@ -642,18 +640,6 @@ pub enum DoorToolsThresholdThenT {
 
 #[derive(Clone, Debug)]
 pub enum DoorToolsThresholdThen {
-    Text(String),
-    Arm1(()),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsThenOnWordWhat {
-    Bang,
-    Step,
-}
-
-#[derive(Clone, Debug)]
-pub enum DoorToolsThenOnWord {
     Text(String),
     Arm1(()),
 }

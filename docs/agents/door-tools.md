@@ -87,7 +87,7 @@ such a door as the squad falls in.
 
 **From outside** (`door_tools_to_threshold`; row `threshold.rs`). The lead and the far man take the jambs and the rest are rear men. Only the lead cuts the opening, and he
 leans (`door_tools_pie_set`, `thr_pie_arc`). When it has gone quiet (`thr_min`, `thr_quiet`, `thr_cap`) he says "holding on the door." The rows then read go in, or bang then
-go in (`door_tools_threshold_then`). The word steps in with no can unless `door_tools_then_on_word` asked for one, and waits for the cut (`door_tools_cuts_owe`). Stepping in
+go in (`door_tools_threshold_then`). The word steps in with no can and waits for the cut (`door_tools_cuts_owe`). Stepping in
 uses `door_tools_shallow_pods`, and the room's other doors are held after (`door_tools_hold_doors`). An order with hold off goes on by itself and may throw first
 (`door_tools_can_first`); the ring always gives hold, so that path is the response team's.
 

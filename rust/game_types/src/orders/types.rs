@@ -106,7 +106,6 @@ pub struct Menu {
     pub read_t: f64,
     pub part: Option<Vec<GuardId>>,
     pub page: Option<String>,
-    pub word_row: bool,
     pub men_side: Option<f64>,
     pub side_key: String,
     pub flat: Option<bool>,
@@ -126,7 +125,6 @@ impl Default for Menu {
             read_t: 0.0,
             part: None,
             page: None,
-            word_row: false,
             men_side: None,
             side_key: String::new(),
             flat: None,
@@ -329,7 +327,6 @@ pub enum TargetKind {
 #[derive(Clone, Debug, Default)]
 pub struct GiveOpts {
     pub ack: Option<String>,
-    pub on_word: Option<bool>,
     pub men: Option<Vec<GuardId>>,
 }
 
@@ -348,7 +345,6 @@ pub struct OrderDef {
     pub hot_key: Option<String>,
     pub ack: Option<Vec<String>>,
     pub ack_now: Option<Vec<String>>,
-    pub on_word: Option<bool>,
     pub free: Option<bool>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
@@ -365,7 +361,6 @@ impl Default for OrderDef {
             hot_key: None,
             ack: None,
             ack_now: None,
-            on_word: None,
             free: None,
             stands_in: None,
         }

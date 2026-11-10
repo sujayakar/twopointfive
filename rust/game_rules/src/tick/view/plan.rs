@@ -93,7 +93,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let op = &g.tab.doortools_door_op[o];
         if op.word.is_some() { continue; }
         let held = op.thr.is_some() && op.phase == Phase::Thr;
-        if held || (big && (op.on_word || matches!(op.phase, Phase::Armed | Phase::Standoff | Phase::Place))) {
+        if held || (big && matches!(op.phase, Phase::Armed | Phase::Standoff | Phase::Place)) {
             let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
             let why = if held { WaitWhy::Thr } else if op.kind == crate::doortools::DoorToolKind::Charge { WaitWhy::Charge } else { WaitWhy::Tool };
             let word = men.iter().any(|m| addr.contains(m));
@@ -162,7 +162,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
             let op = &g.tab.doortools_door_op[o];
             op.thr.as_ref().is_some_and(|th| matches!(th.first, Some(crate::doortools::ThresholdFirst::Can | crate::doortools::ThresholdFirst::Burst))) && op.men.iter().any(|m| addr.contains(m))
         });
-        let last = reaches && !any_word && !early && !row_key && !s.menu.as_ref().is_some_and(|m| m.word_row) && t_set.is_empty() && w_set.is_empty();   // … and past them all, to the rescue
+        let last = reaches && !any_word && !early && !row_key && t_set.is_empty() && w_set.is_empty();   // … and past them all, to the rescue
         let drill_now = if any_word { drill_men.iter().any(|m| addr.contains(m)) } else { t_set.is_empty() && w_set.is_empty() };   // (the drill reads the key after them)
         // (every man of it on his place, his feet there: a gun still coming round does not put the cap out, and none taken off it by a fight)
         let set = |men: &[GuardId]| men.iter().all(|&m| {

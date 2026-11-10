@@ -185,7 +185,7 @@ pub(super) fn door_tools_step(g: &mut crate::game::Game, op: DoorOpId) {
     if o!(g, op).thr.is_some() && o!(g, op).phase != Phase::Thr { door_tools_pie_off(g, op); }
     match o!(g, op).phase {
         Phase::Stack => step_stack(g, op, &cx),
-        Phase::Ready => { if !o!(g, op).on_word && o!(g, op).word.is_none() { door_tools_open(g, op); } }
+        Phase::Ready => { if o!(g, op).word.is_none() { door_tools_open(g, op); } }
         Phase::Kick => step_kick(g, op, &cx),
         Phase::Toss => step_toss(g, op, &cx),
         Phase::Fuse => step_fuse(g, op, &cx),
@@ -259,18 +259,11 @@ fn step_stack(g: &mut Game, op: DoorOpId, cx: &Cx) {
         let men = o!(g, op).men.clone();
         if !(tr(o!(g, op).big) && door_tools_big_opens(g, d, &men)) && door_tools_halt_at(g, op) { return; }
     }
-    if o!(g, op).on_word || o!(g, op).word.is_some() {
+    if o!(g, op).word.is_some() {
         o!(g, op).phase = Phase::Ready;
         o!(g, op).hold = 1.0;
         o!(g, op).t0 = t;
         door_tools_beat(g, op, "ready");
-        if o!(g, op).on_word {
-            say(g, lead, "set.");
-            let men = o!(g, op).men.clone();
-            for gd in men {
-                if let Some(a) = o!(g, op).mine.get(gd).copied() { asg!(g, a).there = format!("ready on your word · {}", cx.name); }
-            }
-        }
         return;
     }
     if let Some(gt) = o!(g, op).gate {

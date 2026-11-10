@@ -167,8 +167,6 @@ pub trait DoorsAsk {
     fn squad_rounds(&self) -> f64;
     /// a man is turned to face that place, head and chest, as he stands
     fn turned_to(&mut self, gd: GuardId, at: [f64; 2]);
-    /// a door order given by the menu's call on the word: it waits for it
-    fn order_on_word(&mut self, id: &str, at: [f64; 2], who: game::orders::Who);
     /// the places inside a door order has dealt its men
     fn op_pods(&self, op: DoorOpId) -> Vec<[f64; 2]>;
     /// has his order got his muzzle down
@@ -533,11 +531,6 @@ impl DoorsAsk for Play {
         self.g.ch[c].body_yaw = y;
         self.g.ch[c].aim_yaw = y;
     }
-    fn order_on_word(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) {
-        let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
-        let o = game::orders::GiveOpts { on_word: Some(true), ..game::orders::GiveOpts::default() };
-        if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), Some(&o)) { panic!("'{id}' on the word was refused: {why}"); }
-    }
     fn op_pods(&self, op: DoorOpId) -> Vec<[f64; 2]> { self.g.tab.doortools_door_op[op].pod.values().map(|p| [p.pos[0], p.pos[2]]).collect() }
     fn muzzle_down(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].low) }
     fn light_on(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].light.unwrap_or(false)) }
@@ -707,7 +700,7 @@ impl DoorsAsk for Play {
     }
     fn threshold_given(&mut self, at: [f64; 2]) {
         let (men, t) = (self.men(), game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]));
-        assert!(!matches!(game::doortools::door_tools_threshold(&mut self.g, &men, &t, None, Some(false)), game::doortools::DoorToolsThreshold::Text(_)), "the threshold was refused");
+        assert!(!matches!(game::doortools::door_tools_threshold(&mut self.g, &men, &t, Some(false)), game::doortools::DoorToolsThreshold::Text(_)), "the threshold was refused");
     }
     fn stack_mark(&mut self, d: DoorId) -> Option<(Option<String>, bool)> {
         let name = self.door_name(d);
