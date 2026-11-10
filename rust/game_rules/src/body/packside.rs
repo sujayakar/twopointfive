@@ -103,22 +103,23 @@ fn back_line(line: &[BackPt], xc: f64) -> Vec<BackPt> {
 pub fn side_pitch(g: &Game, p: SidePlace, c: CharId) -> f64 {
     let t = g.k.packside;
     let (Some(back), Some(pivot)) = (g.art.rig[g.ch[c].rig].back.as_ref(), p.pivot) else { return 0.0 };
-    let a = back.chest * 16;
     let len = p.len.unwrap_or(0.8);
     let r = p.r.unwrap_or(0.0) + t.rest;
     let mut th = t.pitch1;
-    let jd = &g.ch[c].skel.joint_data;
-    let d = |i: usize| jd[i] as f64;
+    let skin = |j: usize| crate::anim_skeleton::skeleton_instance_joint(g, &g.ch[c].skel, j).map(f64::from);
+    let chest = skin(back.chest);
+    let mut of = (back.chest, chest);
     let own;
     let strip: &[BackPt] = if pivot[0] <= -REACH { &back.ends[0] } else if pivot[0] >= REACH { &back.ends[1] } else { own = back_line(&back.line, pivot[0]); &own };
     for q in strip {
-        let b = q.j * 16;
+        if q.j != of.0 { of = (q.j, skin(q.j)); }
+        let (d, a) = (&of.1, &chest);
         let x = pivot[0];
-        let wx = d(b) * x + d(b + 4) * q.y + d(b + 8) * q.z + d(b + 12) - d(a + 12);
-        let wy = d(b + 1) * x + d(b + 5) * q.y + d(b + 9) * q.z + d(b + 13) - d(a + 13);
-        let wz = d(b + 2) * x + d(b + 6) * q.y + d(b + 10) * q.z + d(b + 14) - d(a + 14);
-        let yy = d(a + 4) * wx + d(a + 5) * wy + d(a + 6) * wz - pivot[1];
-        let zz = d(a + 8) * wx + d(a + 9) * wy + d(a + 10) * wz - pivot[2];
+        let wx = d[0] * x + d[4] * q.y + d[8] * q.z + d[12] - a[12];
+        let wy = d[1] * x + d[5] * q.y + d[9] * q.z + d[13] - a[13];
+        let wz = d[2] * x + d[6] * q.y + d[10] * q.z + d[14] - a[14];
+        let yy = a[4] * wx + a[5] * wy + a[6] * wz - pivot[1];
+        let zz = a[8] * wx + a[9] * wy + a[10] * wz - pivot[2];
         let rho = m::hyp2(yy, zz);
         if yy > -0.06 || rho > len + 0.04 || rho < r { continue; }
         th = m::min(th, m::atan2(zz, -yy) - m::asin(r / rho));

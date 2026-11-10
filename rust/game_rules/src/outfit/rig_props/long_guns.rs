@@ -397,7 +397,7 @@ fn pack_side(g: &crate::game::Game, c_2: CharId, what: crate::rig_props::PackSid
     let p = pack_side_bind(g, c_2, bind_what)?;
     let ch = g.ch[c_2].rig;
     let chest = g.art.rig[ch].back.as_ref()?.chest;
-    let w = crate::packside::side_skinned(p, &g.ch[c_2].skel.joint_data, chest * 16);
+    let w = crate::packside::side_skinned(p, &crate::anim_skeleton::skeleton_instance_joint(g, &g.ch[c_2].skel, chest), 0);
     Some(Frame { o: w.o, x: w.x, y: w.y, z: w.z })
 }
 

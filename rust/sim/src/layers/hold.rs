@@ -147,12 +147,12 @@ struct Holding {
 
 /// Sam holding a man from behind: the legs sat, sunk and stepped under him, the trunk over the man's back, then both arms by IK on a copy (the left
 /// across his throat, the right the knife's fist or, on a scratch copy cross-faded in, the pistol at his head).
-pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats: bool, man: Option<[f64; 3]>, s_at: Option<[f64; 3]>, tune: &Knobs) -> u32 {
+pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats: bool, man: Option<[f64; 3]>, s_at: Option<[f64; 3]>, tune: &Knobs) -> bool {
     let mut f = Holding { w, dt, beats, man, s_at, ..Holding::default() };
     as_he_is(an, h, &mut f);
     // (read before anything is posed: an answer of 0 leaves the pose as it was handed)
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     // ---- the clocks and shares: nothing here reads the pose
     reach_and_choke(an, tune, &mut f);
@@ -167,11 +167,11 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         hold_trunk(tune, d, rig, &f);
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     // ---- arms on a copy, against the body as it now is
     if !ask_blend(g, f.at, f.at, 1.0, false, f.at_b, n) {
-        return 0;
+        return false;
     }
     let (hh, from, caught, fix) = (&mut hs, &mut an.hd_from, &mut an.hd_caught, &mut an.hd_fix);
     let Some(()) = with_pose(g, f.at_b, |d, rig, _n, fk| {
@@ -192,19 +192,19 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
             }
         }
     }) else {
-        return 0;
+        return false;
     };
     if f.xg > 0.0 {
         // ---- the gun hand: the right arm re-seeded from the aim clip, one rigid turn of that grip onto the wanted bore, the wrist to its station;
         //      on a scratch copy while the knife fist still has a share of the arm
         let p = if f.xg < 1.0 { f.at_c } else { f.at_b };
         if p != f.at_b && !ask_blend(g, f.at_b, f.at_b, 1.0, false, p, n) {
-            return 0;
+            return false;
         }
         // (the clavicle stays the body's)
         ask_mask(&[(role(SHOULDER_R), 1.0, true), (role(SHOULDER_R), 0.0, false)]);
         if !ask_blend(g, p, f.at_aim, 1.0, true, p, n) {
-            return 0;
+            return false;
         }
         with_pose(g, p, |d, rig, _n, fk| {
             fk_run(rig, d, fk.rot, fk.pos);
@@ -213,22 +213,22 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         if p != f.at_b {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
             if !ask_blend(g, f.at_b, p, f.xg, true, f.at_b, n) {
-                return 0;
+                return false;
             }
         }
     }
     arms_mask();
     if !ask_blend(g, f.at, f.at_b, w, true, f.at, n) {
-        return 0;
+        return false;
     }
     if !left_arm_first(g, n, &f) {
-        return 0;
+        return false;
     }
     if !disarm_first(g, n, tune, &f) {
-        return 0;
+        return false;
     }
     hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 
 /// What he and the hold are as the step begins.
@@ -625,18 +625,18 @@ fn disarm_first(g: usize, n: usize, tune: &Knobs, f: &Holding) -> bool {
     true
 }
 /// CharacterAnimator.catchFix's arm: the catch's left hand put back where the hold's own arm had it, after the layers that still move his trunk.
-pub fn catch_arm(g: usize, an: &Anim, x: &AnimHdFix) -> u32 {
+pub fn catch_arm(g: usize, an: &Anim, x: &AnimHdFix) -> bool {
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &ARM_ROLES) {
-            return 0;
+            return false;
         }
         fk_run(rig, d, fk.rot, fk.pos);
         let hl = role(HAND_L);
         let rot = quat::nlerp(fk.rot(hl), x.rot, x.rw);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hl, &v3::lerp3(fk.at(hl), x.tgt, x.w), Some(&x.pole), x.pole_w, Some(&rot), false);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// what the held man's two arms do: each wrist's spot, turn and elbow pole, and each hand's fingers
 #[derive(Clone, Copy, Default)]
@@ -757,12 +757,12 @@ struct BeingHeld {
 /// The held man: the pelvis sunk, hauled, sat and lowered over feet put back where they stood (or stepped after him), the spine arched onto the arm with
 /// his struggle, his breathing and the choke's fight on it, the head pulled back and lolling; then both arms by IK on a copy (the arm hold's set, the
 /// gun hold's, or the two blended for the beat of a change).
-pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats: bool, tune: &Knobs) -> u32 {
+pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats: bool, tune: &Knobs) -> bool {
     let mut f = BeingHeld { w, dt, beats, ..BeingHeld::default() };
     as_held(an, h, &mut f);
     // (read before anything is posed: an answer of 0 leaves the pose as it was handed)
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     struggle(an, tune, &mut f);
     let_down(an, tune, &mut f);
@@ -782,10 +782,10 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
         held_feet(tune, d, rig, fk, &f);
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, f.at, f.at, 1.0, false, f.at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut hs;
     if with_pose(g, f.at_b, |d, rig, _n, fk| {
@@ -796,19 +796,19 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
     })
     .is_none()
     {
-        return 0;
+        return false;
     }
     // (the first frames of the grab: mostly still his own arms; the catch's fling has them before the layer's weight is in)
     arm_share(tune, &mut f);
     arms_mask();
     if !ask_blend(g, f.at, f.at_b, f.w_a, true, f.at, n) {
-        return 0;
+        return false;
     }
     if !disarm_held(g, n, tune, &f) {
-        return 0;
+        return false;
     }
     hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 
 /// What he and the hold are as the step begins.

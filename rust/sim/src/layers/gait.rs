@@ -2,14 +2,14 @@
 use super::*;
 
 /// The trunk's share of MOVES, straight into the pose.
-pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &Knobs) -> u32 {
+pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &Knobs) -> bool {
     let (og, ou, ost, phase, speed, rock, sho, head) = (o.g, o.u, o.st, an.phase, an.speed, an.mvs.rock, an.mvs.sho, an.mvs.head);
     with_pose(g, an.p_a.at as usize, |d, rig, n, _fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         if w < 0.003 {
-            return RAN;
+            return true;
         }
         let (s1, s2, s3, nk, hd) = (role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
         let (mut lean, mut chin, mut sway, mut roll);
@@ -56,27 +56,25 @@ pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool, tune: &K
             turn(d, rig, nk, hq(0.4));
             turn(d, rig, hd, hq(0.6));
         }
-        RAN
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The long gun, trunk half: the run's pumping of the shoulder line taken back out down the spine (about the model's upright, or by the sprint's share
 /// about the trunk's own line), the upper spine bladed toward the gun, the lean, the head set to the stock.
-pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; LC_COUNT]) -> u32 {
+pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; LC_COUNT]) -> bool {
     let (long_steady, c_blade, c_lean, c_hy, c_hp, c_hr) = (an.long_steady, ch[LC_BLADE], ch[LC_LEAN], ch[LC_HEAD_YAW], ch[LC_HEAD_PITCH], ch[LC_HEAD_ROLL]);
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R]) {
-            return 0;
+            return false;
         }
         if w < 0.003 {
-            return RAN;
+            return true;
         }
         let (s1, s2, s3, nk, hd) = (role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
-        let mut ran = RAN;
         let hold = run * clamp(long_steady, 0.0, 1.0) * LONG_STEADY.run_yaw * w;
         if hold > 0.003 {
             fk.part(rig, d, list(FK_ARMS));
-            ran |= ran_list(FK_ARMS);
             let (a, b) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
             // (by the SPRINT's share of the pose: a jog is held as it always was, to the bit)
             let lv = clamp(sprint, 0.0, 1.0);
@@ -132,19 +130,19 @@ pub fn long_body(g: usize, an: &Anim, w: f64, run: f64, sprint: f64, ch: &[f64; 
             turn(d, rig, nk, quat::mul(q_yaw(hy * 0.4), q_pitch(hp * 0.4)));
             turn(d, rig, hd, quat::mul(q_roll(hr), quat::mul(q_yaw(hy * 0.6), q_pitch(hp * 0.6))));
         }
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// Before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), and the
 /// pelvis's share of how a side carries itself: a trained man with a long gun sinks onto bent knees when he moves and most of the walk's bob is taken
 /// out, the feet held where the cycle has them.
-pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64, tune: &Knobs) -> u32 {
+pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64, tune: &Knobs) -> bool {
     let (at, trained, lg_w, aim) = (an.p_a.at as usize, an.trained, an.lg.w.x, an.upper_w.aim);
     let (m, o) = (&mut an.mvs, &mut an.mv_out);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) {
-            return 0;
+            return false;
         }
         let t = clamp(trained, 0.0, 1.0);
         let kk = |p0: f64, p1: f64| lerp(p0, p1, t);
@@ -162,7 +160,6 @@ pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64, tune:
                 m.head *= er;
             }
         }
-        let mut ran = RAN;
         let (lgw, tw) = (clamp(lg_w, 0.0, 1.0), smoothstep(0.5, 1.0, trained));
         spring_step(&mut m.glide, tw * move_w * lgw, 9.0, dt);
         o.g = clamp(m.glide.x, 0.0, 1.0);
@@ -175,33 +172,30 @@ pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64, tune:
             m.hip_y = if finite(m.hip_y) { m.hip_y + (hy - m.hip_y) * (1.0 - exp(-dt / 0.35)) } else { hy };
             let flat = clamp((m.hip_y - hy) * tune.mv.gait.bob * o.g, -0.03, 0.03);
             mv_hips(d, rig, fk, &[0.0, flat - drop, 0.0]);
-            ran |= RAN_ALL;
         } else {
             m.hip_y = f64::NAN;
         }
         o.live = o.g > 0.003 || o.u > 0.003 || o.st > 0.003 || m.rock > 1e-4 || m.sho > 1e-4;
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The stance, body half: the pelvis bladed toward the wall and settled onto soft knees over feet put back exactly where the locomotion has them, the
 /// upper spine countering, a lean spread hips-first with the head levelled back, the stance's own head yaw and chin.
-pub fn stance_body(g: usize, an: &Anim, w: f64, speed: f64, stand: f64) -> u32 {
+pub fn stance_body(g: usize, an: &Anim, w: f64, speed: f64, stand: f64) -> bool {
     let (s_blade, s_squat, s_lean, s_hp, s_hy, press) = (an.st.blade.x, an.st.squat.x, an.st.lean.x, an.st.head_pitch.x, an.st.head_yaw.x, an.stack_press_sm);
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
         let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
         let blade = s_blade * DEGR * w * (1.0 - stand) * lerp(1.0, 0.5, smoothstep(0.3, 1.3, speed));
         let drop = max(0.0, s_squat) * w * (1.0 - stand);
         let replant = abs(blade) > 1e-4 || drop > 1e-4;
-        let mut ran = RAN;
         let (mut fl, mut fr, mut rl, mut rr) = ([0.0; 3], [0.0; 3], [0.0; 4], [0.0; 4]);
         if replant {
             fk.part(rig, d, list(FK_LEGS));
-            ran |= ran_list(FK_LEGS);
             (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
         }
         if abs(blade) > 1e-4 {
@@ -223,54 +217,53 @@ pub fn stance_body(g: usize, an: &Anim, w: f64, speed: f64, stand: f64) -> u32 {
         turn(d, rig, hd, quat::mul(q_yaw(hy * 0.6), q_pitch(-unl * 0.6 + hp * 0.6)));
         if replant {
             fk.part(rig, d, list(FK_LEGS));
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.6, Some(&rl), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.6, Some(&rl), true);
             two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.6, Some(&rr), true);
-            ran |= RAN_ALL;
         }
         if press != 0.0 {
             shift(d, rig, hips, &[-press * w * (1.0 - stand), 0.0, 0.0]);
         }
-        ran
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// CharacterAnimator.jogShape — the run clip as the game shows it: its bounce flattened toward the mean by phase, and at a jog its stride warped shorter at
 /// the feet about the gait's middle. `a`: 0 ph · the clip's pelvis height at the two samples about the phase: 1, 2 · 3 its mean · 4 runK · 5 jogMid
-fn jog_shape(g: usize, at: usize, an: &Anim, ph: f64) -> u32 {
+fn jog_shape(g: usize, at: usize, an: &Anim, ph: f64) -> bool {
     let i0 = (floor(ph * 64.0) as i32 & 63) as usize;
     let (y0, y1, mean, run_k, mid) = (an.jog_hips_y[i0] as f64, an.jog_hips_y[(i0 + 1) & 63] as f64, an.jog_hips_mean, an.run_k, an.jog_mid);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) {
-            return 0;
+            return false;
         }
         let fi = ph * 64.0;
         let fr = fi - floor(fi);
         let hy = y0 * (1.0 - fr) + y1 * fr;
         shift(d, rig, role(HIPS), &[0.0, -(hy - mean) * (1.0 - BOB.keep), 0.0]);
         if !(run_k < 0.999) {
-            return RAN;
+            return true;
         }
         fk.part(rig, d, list(FK_LEGS));
         let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
         let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
         let tgt = |f: &[f64; 3]| -> [f64; 3] { [f[0], f[1] * lerp(1.0, run_k, 0.5), mid + (f[2] - mid) * run_k] };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl), Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl), Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tgt(&fr), Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// CharacterAnimator.sprintShape — the sprint clip as the game shows it: its stride warped at the ankles about the gait's middle, heights eased half way with
 /// it about the ankles' floor, never an ankle so low its toe goes through the floor. `a`: 0 sprintMid · 1 sprintFloorY
-fn sprint_shape(g: usize, at: usize, an: &Anim) -> u32 {
+fn sprint_shape(g: usize, at: usize, an: &Anim) -> bool {
     let (mid, y0) = (an.sprint_mid, an.sprint_floor_y);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[TOE_L, TOE_R]) {
-            return 0;
+            return false;
         }
         let kk = SPRINT_WARP.stride;
         if kk > 0.999 {
-            return RAN;
+            return true;
         }
         fk.part(rig, d, list(FK_LEGS));
         let ky = lerp(1.0, kk, 0.5);
@@ -284,11 +277,11 @@ fn sprint_shape(g: usize, at: usize, an: &Anim) -> u32 {
             }
             [f[0], y, mid + (f[2] - mid) * kk]
         };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl, tl0), Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl, tl0), Some(&knee_pole(&rl)), 0.0, Some(&rl), true);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tgt(&fr, tr0), Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// a clip sampled into a pose as it stands (sampleClip with no copy first: the nodes the clip does not write keep what the pose held)
 fn clip_at(g: usize, at: usize, nodes: usize, clip: f64, t: f64) -> bool {
@@ -342,69 +335,63 @@ pub struct Cycle {
 }
 /// The standing locomotion: the idle, and over it the cycle (the walk, the jog laid on it, or the jog and the sprint laid together), each run shaped as
 /// the game shows it before the blend. The cycle's own poses are left in the scratch poses for the layers that read them.
-pub fn stand_pose(g: usize, an: &Anim, c: &Cycle) -> u32 {
+pub fn stand_pose(g: usize, an: &Anim, c: &Cycle) -> bool {
     let (at, at_b, at_c) = (an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize);
     let (ph, w_idle, w_walk, w_jog, w_sprint) = (c.ph, c.w_idle, c.w_walk, c.w_jog, c.w_sprint);
     let Some(n) = with_pose(g, at, |_d, _rig, n, _fk| n) else {
-        return 0;
+        return false;
     };
     let moving = w_walk + w_jog + w_sprint > 0.001;
-    let mut code = RAN;
     // (the idle is not sampled when the cycle's pose is about to replace all of it)
     if !(moving && 1.0 - w_idle >= 1.0) && !clip_at(g, at, n, c.idle.clip, c.idle.t) {
-        return 0;
+        return false;
     }
     if moving {
-        let mut shaped = |s: u32| {
-            code |= s;
-            s != 0
-        };
         if w_sprint > 0.001 {
-            if !sample_jog(g, at_b, n, c.jog.clip, c.jog.t, ph) || !shaped(jog_shape(g, at_b, an, ph)) {
-                return 0;
+            if !sample_jog(g, at_b, n, c.jog.clip, c.jog.t, ph) || !jog_shape(g, at_b, an, ph) {
+                return false;
             }
-            if !clip_at(g, at_c, n, c.sprint.clip, c.sprint.t) || !shaped(sprint_shape(g, at_c, an)) || !ask_blend(g, at_b, at_c, w_sprint, false, at_b, n) {
-                return 0;
+            if !clip_at(g, at_c, n, c.sprint.clip, c.sprint.t) || !sprint_shape(g, at_c, an) || !ask_blend(g, at_b, at_c, w_sprint, false, at_b, n) {
+                return false;
             }
         } else {
             if !clip_at(g, at_b, n, c.walk.clip, c.walk.t) {
-                return 0;
+                return false;
             }
-            if w_jog > 0.001 && (!sample_jog(g, at_c, n, c.jog.clip, c.jog.t, ph) || !shaped(jog_shape(g, at_c, an, ph)) || !ask_blend(g, at_b, at_c, w_jog, false, at_b, n)) {
-                return 0;
+            if w_jog > 0.001 && (!sample_jog(g, at_c, n, c.jog.clip, c.jog.t, ph) || !jog_shape(g, at_c, an, ph) || !ask_blend(g, at_b, at_c, w_jog, false, at_b, n)) {
+                return false;
             }
         }
         if !ask_blend(g, at, at_b, 1.0 - w_idle, false, at, n) {
-            return 0;
+            return false;
         }
     }
-    code
+    true
 }
 /// The crouch over the stand pose: its idle, the crouch walk's cycle laid on it by how fast he goes, and that laid over the pose by the crouch shown.
-pub fn crouch_pose(g: usize, an: &Anim, w_move: f64, crouch: f64, idle: At, fwd: At) -> u32 {
+pub fn crouch_pose(g: usize, an: &Anim, w_move: f64, crouch: f64, idle: At, fwd: At) -> bool {
     let (at, at_b, at_c) = (an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize);
     let Some(n) = with_pose(g, at, |_d, _rig, n, _fk| n) else {
-        return 0;
+        return false;
     };
     if !(w_move >= 1.0) && !clip_at(g, at_b, n, idle.clip, idle.t) {
-        return 0;
+        return false;
     }
     if w_move > 0.001 && (!clip_at(g, at_c, n, fwd.clip, fwd.t) || !ask_blend(g, at_b, at_c, w_move, false, at_b, n)) {
-        return 0;
+        return false;
     }
     if !ask_blend(g, at, at_b, crouch, false, at, n) {
-        return 0;
+        return false;
     }
-    RAN
+    true
 }
 /// SOFT_KNEE: each leg re-solved toward its own ankle with the hip→ankle reach eased below full extension.
-pub fn soft_knees(g: usize, at: usize, w: f64) -> u32 {
+pub fn soft_knees(g: usize, at: usize, w: f64) -> bool {
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) {
-            return 0;
+            return false;
         }
         fk.part(rig, d, list(FK_LEGS));
-        let mut cur = false;
         for (thigh, shin, foot) in [(role(THIGH_L), role(SHIN_L), role(FOOT_L)), (role(THIGH_R), role(SHIN_R), role(FOOT_R))] {
             let (ph, pk, pa) = (fk.at(thigh), fk.at(shin), fk.at(foot));
             let (l, dd) = (v3::dist(ph, pk) + v3::dist(pk, pa), v3::dist(ph, pa));
@@ -418,27 +405,26 @@ pub fn soft_knees(g: usize, at: usize, w: f64) -> u32 {
             let r_new = r + (r_eased - r) * w;
             let ar = fk.rot(foot);
             let tgt = [ph[0] + (pa[0] - ph[0]) * r_new / r, ph[1] + (pa[1] - ph[1]) * r_new / r, ph[2] + (pa[2] - ph[2]) * r_new / r];
-            two_bone_ik(rig, d, fk.rot, fk.pos, thigh, shin, foot, &tgt, Some(&knee_pole(&ar)), 0.0, Some(&ar), cur);
-            cur = true;
+            two_bone_ik(rig, d, fk.rot, fk.pos, thigh, shin, foot, &tgt, Some(&knee_pole(&ar)), 0.0, Some(&ar), true);
         }
-        RAN | if cur { RAN_ALL } else { ran_list(FK_LEGS) }
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// A run carries its arms close: each hand read in the shoulder line's own frame (to his left along the two shoulder joints,
 /// level; up; forward), its sideways travel drawn in by the run's share of the standing pose, its fore-aft travel lengthened and its front lifted by the
 /// sprint's, and the arm solved to it with the elbow behind him. The hand follows its forearm.
-pub fn run_arms(g: usize, at: usize, w: f64, ws: f64, tune: &Knobs) -> u32 {
+pub fn run_arms(g: usize, at: usize, w: f64, ws: f64, tune: &Knobs) -> bool {
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &ARM_ROLES) {
-            return 0;
+            return false;
         }
         fk.part(rig, d, list(FK_ARMS));
         let (a, b) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
         let (mut lx, mut lz) = (a[0] - b[0], a[2] - b[2]);
         let ll = hypot2(lx, lz);
         if ll < 1e-4 {
-            return RAN | ran_list(FK_ARMS);
+            return true;
         }
         lx /= ll;
         lz /= ll;
@@ -455,26 +441,25 @@ pub fn run_arms(g: usize, at: usize, w: f64, ws: f64, tune: &Knobs) -> u32 {
             let y = h[1] - s[1] + tune.runarms.lift * ws * clamp((fwd - tune.runarms.mid) / tune.runarms.swing, 0.0, 1.0);
             let to = [s[0] + lx * sg * o + fx * f, s[1] + y, s[2] + lz * sg * o + fz * f];
             let pole = [lx * sg * tune.runarms.pole[0] + fx * tune.runarms.pole[2], tune.runarms.pole[1], lz * sg * tune.runarms.pole[0] + fz * tune.runarms.pole[2]];
-            two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, ha, &to, Some(&pole), tune.runarms.pole_w * w, None, right);
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, ha, &to, Some(&pole), tune.runarms.pole_w * w, None, true);
         }
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// The run's stance feet: through each foot's stance window of the sampled phase the toe is put on the floor and carried back at the ground's speed, the
 /// offset it is left holding bled away up the swing.
-pub fn run_plant(g: usize, an: &mut Anim, ph: f64, s: f64, dt: f64, w_run: f64, w_sprint: f64) -> u32 {
+pub fn run_plant(g: usize, an: &mut Anim, ph: f64, s: f64, dt: f64, w_run: f64, w_sprint: f64) -> bool {
     let (jog, sprint, reverse) = (&an.run_gait.jog, &an.run_gait.sprint, an.reverse);
     let mids = [lerp(jog.c_l, sprint.c_l, w_sprint), lerp(jog.c_r, sprint.c_r, w_sprint)];
     let mut plant = [&mut an.plant_l, &mut an.plant_r];
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[TOE_L, TOE_R]) {
-            return 0;
+            return false;
         }
         let dz = if reverse { 1.0 } else { -1.0 } * s * dt;
         fk.part(rig, d, list(FK_LEGS));
         let legs = [(role(THIGH_L), role(SHIN_L), role(FOOT_L), role(TOE_L)), (role(THIGH_R), role(SHIN_R), role(FOOT_R), role(TOE_R))];
-        let mut cur = false;
         for i in 0..2 {
             let (thigh, shin, foot, toe) = legs[i];
             let mut x = ph - mids[i];
@@ -489,17 +474,16 @@ pub fn run_plant(g: usize, an: &mut Anim, ph: f64, s: f64, dt: f64, w_run: f64, 
                 continue;
             }
             let (ap, ar) = (fk.at(foot), fk.rot(foot));
-            two_bone_ik(rig, d, fk.rot, fk.pos, thigh, shin, foot, &[ap[0], ap[1] - (tp[1] - TOE_FLOOR_Y) * w, ap[2] + plant[i].dev], Some(&knee_pole(&ar)), 0.0, Some(&ar), cur);
-            cur = true;
+            two_bone_ik(rig, d, fk.rot, fk.pos, thigh, shin, foot, &[ap[0], ap[1] - (tp[1] - TOE_FLOOR_Y) * w, ap[2] + plant[i].dev], Some(&knee_pole(&ar)), 0.0, Some(&ar), true);
         }
-        RAN | if cur { RAN_ALL } else { ran_list(FK_LEGS) }
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// MOVES.steady: this frame's swing of the crouch cycle (its own sample, the pose at `at_c`, against its own mean) taken out by MV.steady's shares: the
 /// pelvis's roll at the hips with the chest handed the same turn back, a little of the hips' sideways travel, both ankles put back nearer his middle and
 /// the knees swung in over them.
-pub fn steady_layer(g: usize, an: &Anim, w: f64, base: f64, sunk: f64, mean: [f64; 2], tune: &Knobs) -> u32 {
+pub fn steady_layer(g: usize, an: &Anim, w: f64, base: f64, sunk: f64, mean: [f64; 2], tune: &Knobs) -> bool {
     let (mean_roll, mean_x) = (mean[0], mean[1]);
     let roll_now = |fk: &Fk| -> f64 {
         let (a, b) = (fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
@@ -513,7 +497,7 @@ pub fn steady_layer(g: usize, an: &Anim, w: f64, base: f64, sunk: f64, mean: [f6
         fk.part(rig, d, list(FK_LEGS));
         Some((roll_now(fk) - mean_roll, fk.at(role(HIPS))[0] - mean_x))
     }) else {
-        return 0;
+        return false;
     };
     with_pose(g, an.p_a.at as usize, |d, rig, _n, fk| {
         let (hips, foot_l, foot_r) = (role(HIPS), role(FOOT_L), role(FOOT_R));
@@ -539,18 +523,18 @@ pub fn steady_layer(g: usize, an: &Anim, w: f64, base: f64, sunk: f64, mean: [f6
         let (hl, hr) = (smoothstep(0.10, 0.22, yl), smoothstep(0.10, 0.22, yr));
         let (kl, kr) = (1.0 - kn * lerp(tune.mv.steady.knee_low, 1.0, hl) + ko * (1.0 - hl), 1.0 - kn * lerp(tune.mv.steady.knee_low, 1.0, hr) + ko * (1.0 - hr));
         let (pl, pr) = ([ol[0] * kl, ol[1], ol[2]], [or[0] * kr, or[1], or[2]]);
-        two_bone_ik(rig, d, fk.rot, fk.pos, legs[0].0, legs[0].1, foot_l, &al, Some(&pl), 1.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, legs[0].0, legs[0].1, foot_l, &al, Some(&pl), 1.0, Some(&rl), true);
         two_bone_ik(rig, d, fk.rot, fk.pos, legs[1].0, legs[1].1, foot_r, &ar, Some(&pr), 1.0, Some(&rr), true);
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// A crouched man's toes kept out of the floor: the foot joint alone turned about the ankle until the toe is back on the floor, laid away from the knee
 /// along the shin's own heading unless the foot already points somewhere along the ground. The ankle is not moved.
-pub fn toes_up(g: usize, an: &Anim, w: f64) -> u32 {
+pub fn toes_up(g: usize, an: &Anim, w: f64) -> bool {
     with_pose(g, an.p_a.at as usize, |d, rig, n, fk| {
         if !cast(n, &[SHIN_L, FOOT_L, TOE_L, SHIN_R, FOOT_R, TOE_R]) {
-            return 0;
+            return false;
         }
         fk_run(rig, d, fk.rot, fk.pos);
         let floor_y = TOE_FLOOR_Y;
@@ -585,9 +569,9 @@ pub fn toes_up(g: usize, an: &Anim, w: f64) -> u32 {
             let up = if par >= 0 { fk.rot(par as usize) } else { [0.0, 0.0, 0.0, 1.0] };
             set_model_rot(d, foot, &quat::mul(q, fk.rot(foot)), &up);
         }
-        RAN | RAN_ALL
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// A turn's speed toward what is left of it (`err`), never faster than it can stop in and never carried past the point. Answers how
 /// far it goes this step and the speed it has after.
@@ -643,10 +627,10 @@ pub fn turn_weigh(ch: &mut Character, dt: f64, tune: &Knobs) {
 }
 /// A lean round an edge: the trunk rolled about the figure's fore-aft line over the three spine joints, the arms and the gun with it, and the neck and
 /// head brought part of the way back so the eyes stay near level.
-pub fn lean_body(g: usize, an: &mut Anim, dt: f64) -> u32 {
+pub fn lean_body(g: usize, an: &mut Anim, dt: f64) -> bool {
     with_pose(g, an.p_a.at as usize, |d, rig, n, _fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
-            return 0;
+            return false;
         }
         let want = clamp(an.lean, -1.0, 1.0);
         an.lean_sm += (want - an.lean_sm) * min(1.0, LEAN_POSE.rate * dt);
@@ -661,38 +645,37 @@ pub fn lean_body(g: usize, an: &mut Anim, dt: f64) -> u32 {
             turn(d, rig, role(NECK), q_roll(-r * LEAN_POSE.level * 0.5));
             turn(d, rig, role(HEAD), q_roll(-r * LEAN_POSE.level * 0.5));
         }
-        RAN
+        true
     })
-    .unwrap_or(0)
+    .unwrap_or(false)
 }
 /// A one-shot action's clip laid over the finished pose (the animator keeps which clip, its clock and its weight), and a man asleep in his chair slumped
 /// over it.
-pub fn act_pose(g: usize, an: &mut Anim, clip: f64, w: f64, dt: f64) -> u32 {
+pub fn act_pose(g: usize, an: &mut Anim, clip: f64, w: f64, dt: f64) -> bool {
     let (at, at_b, at_rest, t, looped, slump) = (an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize, an.act_t, an.act_loop, an.slump);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &[SPINE3, NECK, HEAD]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     if !sample_on_rest(g, at_rest, at_b, n, clip, t, looped) || !ask_blend(g, at, at_b, w, false, at, n) {
-        return 0;
+        return false;
     }
-    let mut code = RAN;
     if slump > 0.0 || an.slump_w > 0.0 {
         let ds = slump - an.slump_w;
         an.slump_w += if ds > 0.0 { min(ds, dt / 1.6) } else { max(ds, -dt / 0.35) };
         let s = an.slump_w * w;
         if s > 1e-4 {
             let br = sin(t * 1.75);
-            code = with_pose(g, at, |d, rig, _n, fk| {
+            return with_pose(g, at, |d, rig, _n, fk| {
                 fk_run(rig, d, fk.rot, fk.pos);
                 turn(d, rig, role(SPINE3), q_pitch((10.0 + 1.5 * br) * DEGR * s));
                 turn(d, rig, role(NECK), q_pitch(17.0 * DEGR * s));
                 turn(d, rig, role(HEAD), quat::mul(q_pitch((25.0 + br) * DEGR * s), q_roll(8.0 * DEGR * s)));
-                RAN | RAN_ALL
+                true
             })
-            .unwrap_or(0);
+            .unwrap_or(false);
         }
     }
-    code
+    true
 }
 const LC_BLADE: usize = 6;
 const LC_LEAN: usize = 7;
