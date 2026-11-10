@@ -548,7 +548,7 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
         g.sets[g.seat].hand.near_sel = 0;
     }
     g.sets[g.seat].hand.setup = None;
-    crate::orders::squad_orders_loaded(g);
+    crate::orders::squad_orders_let_go(g);
     let label = was.saves.shelf.m.get(String::from(key)).map(|e| e.info.label.clone()).unwrap_or_default();
     g.saves.shelf = was.saves.shelf;
     g.saves.stats = was.saves.stats;
