@@ -15,7 +15,7 @@ fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
 }
 
 /// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.
-fn men_held(g: &mut crate::game::Game) -> f64 {
+fn men_held() -> f64 {
     if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
     m::floor(crate::doors::DOOR_CONTACTS / (crate::game::body_door_particles().len() as f64 + 1.0))
 }
@@ -225,7 +225,7 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &Js
 
 /// Civilians a game holds at once, at most: what a step's hand-over leaves after every other man a game may hold.
 pub fn civ_most(g: &mut crate::game::Game) -> f64 {
-    let held = men_held(g);
+    let held = men_held();
     held - men_most(g, 0.0)
 }
 

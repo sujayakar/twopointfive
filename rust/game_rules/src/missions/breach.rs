@@ -26,14 +26,16 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, y: f64) -> V3 {
 }
 /// The live object (`this.live`): its one home is the drill's own field, which NightBreach writes as play goes.
 fn live_of(g: &mut Game) -> BreachLive { dr!(g).live }
-/// What the pair says in place of the plan's line (WORDS.on and WORDS.guide settled on).
-fn live_text(charge: bool, key: &str, text: &str) -> String {
-    let k = String::from(key);
-    if !charge { if let Some(s) = live_no_charge().get(k.clone()) { return s.clone(); } }
-    if let Some(Some(s)) = live_guide().get(k.clone()) { return s.clone(); }
-    if let Some(s) = live_now().get(k.clone()) { return s.clone(); }
-    if let Some(s) = live_lines().get(k) { return s.clone(); }
-    String::from(text)
+/// What the pair says in place of the plan's line.
+fn live_text<'a>(charge: bool, key: &str, text: &'a str) -> &'a str {
+    match key {
+        "stack1" if !charge => "stack on me — side door. on my boot.",
+        "stack2" if !charge => "set.",
+        "clear1" => "right side — clear. i've got the door.",
+        "clear2" => "left clear.",
+        "roomClear1" => "room clear.",
+        _ => text,
+    }
 }
 /// route() on a list: new waypoints and the order onto the first (`goal: wps[0] ?? null`).
 fn route_on(g: &mut Game, gd: GuardId, wps: &mut Vec<V3>, pts: &[V3], mut patch: OP) {

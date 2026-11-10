@@ -195,9 +195,9 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
             let silent = g.qrf.reason == Some(QrfReason::Silent);
             let text = match mk.as_ref() {
                 None => if silent { String::from("all stations — QRF is thirty seconds out from two-six, coming up the west stairs") }
-                    else { String::from(crate::words::wg(g, &"two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side", &"two-six, QRF is thirty seconds out — coming up the west stairs. check your fire that end")) },
+                    else { String::from("two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side") },
                 Some(mk) => if silent { format!("all stations — {} is thirty seconds out from {}, {}", mk.team, mk.site, mk.coming) }
-                    else { let side = crate::words::wg(g, &"on that side", &"that end"); format!("{}, {} is thirty seconds out — {}. check your fire {}", mk.site, mk.team, mk.coming, side) },
+                    else { format!("{}, {} is thirty seconds out — {}. check your fire on that side", mk.site, mk.team, mk.coming) },
             };
             control(g, &text);
             note(g, "thirty");
@@ -270,7 +270,7 @@ fn arriving(g: &mut crate::game::Game) {
     if count == 0 {
         g.qrf.state = QrfState::Deployed;
         g.qrf.deployed_at = g.time;
-        let text = crate::words::wg(g, &format!("{} — {} is held up, nobody's coming. you're on your own", mk.site, mk.team), &format!("{} — {} is held up, nobody is coming. you are on your own", mk.site, mk.team));
+        let text = format!("{} — {} is held up, nobody's coming. you're on your own", mk.site, mk.team);
         control(g, &text);
         note(g, "nobody");
         return;
@@ -580,11 +580,10 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
                 }
             }
             if n != 0 {
-                let the = crate::words::w(g, &"");
                 let room = crate::dialogue::room_name(g, bp);
                 let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
                 let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
-                let text = format!("{} down in {}{}{}, {}. pushing on", victim, the, room, many, how);
+                let text = format!("{} down in {}{}, {}. pushing on", victim, room, many, how);
                 radio(g, Some(m), &text);
             }
             let what = format!("found:{}", victim);
@@ -953,8 +952,7 @@ fn phase_move(g: &mut crate::game::Game, el: &mut Vec<GuardId>, dt: f64) {
         if t.kind == TargetKind::Room && flat(lp, t.plan.as_ref().unwrap().stack[0]) < 4.0 {
             if !(g.tune.qrf_squad && start_drill(g, el)) { start_stack(g, el); }
         } else if t.kind == TargetKind::Room {
-            let verb = crate::words::wg(g, &"into", &"onto");
-            let text = format!("can't get {} the {} from here — next", verb, t.room);
+            let text = format!("can't get into the {} from here — next", t.room);
             radio(g, Some(lead), &text);
             let when = g.time - RECLEAR_SECS + 30.0;
             g.qrf.cleared.set(t.room.clone(), when);

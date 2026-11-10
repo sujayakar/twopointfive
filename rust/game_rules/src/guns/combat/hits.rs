@@ -532,7 +532,7 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     rig_keys(g, out, n0);
 }
 
-/// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m, and the man it ends on. None: no bore, or the muzzle is against what it meets.
+/// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m. None: no bore, or the muzzle is against what it meets.
 pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId>, civ: Option<bool>) -> Option<crate::combat::LaserReach> {
     let civ = civ.unwrap_or(false);
     let dir = g.ch[c_2].gun_dir;

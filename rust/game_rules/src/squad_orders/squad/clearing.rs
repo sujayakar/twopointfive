@@ -200,8 +200,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         return false;
     }
     if cl!(g).total > clearing_cap(g) {
-        let w = crate::words::wg(g, &"to", &"on");
-        let text = format!("that's long enough — back {} the corridor{}", w, if b.is_some() { ", stay paired" } else { "" });
+        let text = format!("that's long enough — back to the corridor{}", if b.is_some() { ", stay paired" } else { "" });
         clearing_say(g, &text, None);
         clearing_cancel(g);
         return false;
@@ -489,8 +488,7 @@ fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> bool 
     cl!(g).room_i += 1;
     let (more, count, has_b) = { let c = cl!(g); (c.rooms.get(c.room_i).is_some(), c.rooms.len(), c.b.is_some()) };
     if !more {
-        let w = crate::words::wg(g, &"to", &"on");
-        let text = format!("{} — back {} the corridor{}", if count > 1 { "that's the near rooms done" } else { "room done" }, w, if has_b { ", stay paired" } else { "" });
+        let text = format!("{} — back to the corridor{}", if count > 1 { "that's the near rooms done" } else { "room done" }, if has_b { ", stay paired" } else { "" });
         clearing_say(g, &text, None);
         clearing_cancel(g);
         return false;

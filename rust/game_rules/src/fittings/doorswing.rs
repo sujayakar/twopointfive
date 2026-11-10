@@ -514,7 +514,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
         } else {
             None
         };
-        let out_swing = out.as_ref().map_or(0.0, |o| o.swing);
         let mut clear: Option<crate::doorswing::SwingDeal> = None;
         if got.why != SwingWhy::Authored && got.why != SwingWhy::Folds && got.why != SwingWhy::Plan && got.why != SwingWhy::StandsOpen
             && !js::truthy(g.dr[d].def.angle.unwrap_or(0.0)) && opens(g, d, -got.swing)
@@ -530,7 +529,7 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
             }
         }
         let clear_swing = clear.as_ref().map_or(0.0, |c| c.swing);
-        crate::doors::door_set_swing(g, d, got.swing, Some(out_swing), Some(clear_swing));
+        crate::doors::door_set_swing(g, d, got.swing, Some(clear_swing));
         dealt.push(got);
     }
     dealt

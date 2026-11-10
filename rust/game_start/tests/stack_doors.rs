@@ -73,7 +73,7 @@ fn lock_toward_us(s: u32) -> (Play, game::ids::DoorId, [f64; 2]) {
     let d = game::doors::doors_by_name(&p.g, "manager").expect("the manager's door");
     let c = p.g.dr[d].frame_centre;
     let out = [c[0], 0.0, c[2] + 2.0];
-    if !game::doors::doors_pull_face(&mut p.g, d, out) { let s = game::doors::door_swing(&mut p.g, d); game::doors::door_set_swing(&mut p.g, d, -s, None, None); }
+    if !game::doors::doors_pull_face(&mut p.g, d, out) { let s = game::doors::door_swing(&mut p.g, d); game::doors::door_set_swing(&mut p.g, d, -s, None); }
     (p, d, [c[0], c[2]])
 }
 

@@ -63,7 +63,6 @@ pub struct RoomSt {
     pub expected: f64,
     pub second: f64,
     pub at: f64,
-    pub t0: f64,
     pub men: Vec<GuardId>,
     pub bracer: Option<GuardId>,
     pub wedged: f64,
@@ -103,10 +102,6 @@ pub struct StFix {
     pub room: Option<RoomfightRoomId>,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct DiginModDIGINSHUT {
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ListenersItem {
     pub gd: Option<GuardId>,
@@ -135,7 +130,6 @@ pub struct DigInRefuge {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DiginMod {
-    #[is(crate::digin::DiginModDIGINSHUT { })] pub digin_shut: crate::digin::DiginModDIGINSHUT,
     pub states: Option<crate::digin::St>,
 }
 

@@ -815,7 +815,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
         if boot.is_none() && crate::silent::silent_no_boot(g) {
             let text = match stuck {
                 Some(s) => format!("{}. no quiet way in. go loud and we boot it.", s),
-                None => String::from(crate::words::wg(g, &"locked. can't kick it while we're silent.", &"locked. no boot while we are silent.")),
+                None => String::from("locked. can't kick it while we're silent."),
             };
             say(g, lead, &text);
             door_tools_end(g, op, crate::doortools::Ended::SilentNoBoot);

@@ -704,10 +704,6 @@ pub fn pick_hover(g: &mut crate::game::Game) {
     let sel = g.sets[g.seat].hand.near_sel;
     g.sets[g.seat].hand.near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
     let best = g.sets[g.seat].nearby.get(g.sets[g.seat].hand.near_sel as usize).cloned();
-    g.sets[g.seat].use_door = match &best {
-        Some(b) if b.kind == crate::game::InteractableKind::Door && b.in_reach => b.door,
-        _ => None,
-    };
     g.sets[g.seat].hover = best;
 }
 

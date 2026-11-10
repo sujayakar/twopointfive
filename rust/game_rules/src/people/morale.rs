@@ -14,21 +14,21 @@ pub(super) fn morale_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Opt
 }
 
 type Pool = &'static [&'static str];
-/// one kind's lines; `now` is `say` as the writing guide has it
-struct Lines { say: Pool, he: Option<Pool>, they: Option<Pool>, dark: Option<Pool>, lit: Option<Pool>, now: Option<Pool> }
+/// one kind's lines
+struct Lines { say: Pool, he: Option<Pool>, they: Option<Pool>, dark: Option<Pool>, lit: Option<Pool> }
 ///  in the order the object is written: moraleLines walks it
 static LINES: [(LineKind, Lines); 9] = [
-    (LineKind::Duck, Lines { say: &["down! get down!", "get down — stay down!", "heads down!"], he: None, they: None, dark: None, lit: None, now: None }),
+    (LineKind::Duck, Lines { say: &["down! get down!", "get down — stay down!", "heads down!"], he: None, they: None, dark: None, lit: None }),
     (LineKind::Call, Lines { say: &[], dark: Some(&["can't see a thing — somebody get in here!"]), lit: Some(&["right in my room — somebody get in here!"]), he: Some(&["he's coming in — I've got nobody in here!", "anyone on this net? he's right on top of me!"]),
-        they: Some(&["they're coming in — I've got nobody in here!", "anyone on this net? they're right on top of me!"]), now: None }),
-    (LineKind::Again, Lines { say: &["is anybody there? answer me!", "nobody's coming. nobody's coming—", "please — somebody answer!"], he: None, they: None, dark: None, lit: None, now: None }),
-    (LineKind::Out, Lines { say: &["I'm out! I'm out!", "empty — I'm empty!", "I'm dry! changing!"], he: None, they: None, dark: None, lit: None, now: None }),
-    (LineKind::Spent, Lines { say: &["no — no, stay back!", "keep away from me!", "don't — don't come in!"], now: Some(&["no — no, stay back!", "stay away from me!", "don't — don't come in!"]), he: None, they: None, dark: None, lit: None }),
+        they: Some(&["they're coming in — I've got nobody in here!", "anyone on this net? they're right on top of me!"]) }),
+    (LineKind::Again, Lines { say: &["is anybody there? answer me!", "nobody's coming. nobody's coming—", "please — somebody answer!"], he: None, they: None, dark: None, lit: None }),
+    (LineKind::Out, Lines { say: &["I'm out! I'm out!", "empty — I'm empty!", "I'm dry! changing!"], he: None, they: None, dark: None, lit: None }),
+    (LineKind::Spent, Lines { say: &["no — no, stay back!", "stay away from me!", "don't — don't come in!"], he: None, they: None, dark: None, lit: None }),
     (LineKind::Clear, Lines { say: &["breach on my room. I'm alone in here."], he: Some(&["he's breached. I'm on my own in here.", "he's through. holding it on my own."]),
-        they: Some(&["they've breached. I'm on my own in here.", "they're through. holding it on my own."]), dark: None, lit: None, now: None }),
-    (LineKind::Lost, Lines { say: &["they got him! they got him!", "he's down. oh no, he's down.", "we've lost him! what do we do?"], he: None, they: None, dark: None, lit: None, now: None }),
-    (LineKind::Order, Lines { say: &["get up. watch that hole. breathe.", "on your feet. eyes on that hole.", "up. gun on the hole. breathe."], he: None, they: None, dark: None, lit: None, now: None }),
-    (LineKind::Okay, Lines { say: &["okay — okay.", "yeah. yeah, I'm up.", "I'm up. I'm up."], he: None, they: None, dark: None, lit: None, now: None }),
+        they: Some(&["they've breached. I'm on my own in here.", "they're through. holding it on my own."]), dark: None, lit: None }),
+    (LineKind::Lost, Lines { say: &["they got him! they got him!", "he's down. oh no, he's down.", "we've lost him! what do we do?"], he: None, they: None, dark: None, lit: None }),
+    (LineKind::Order, Lines { say: &["get up. watch that hole. breathe.", "on your feet. eyes on that hole.", "up. gun on the hole. breathe."], he: None, they: None, dark: None, lit: None }),
+    (LineKind::Okay, Lines { say: &["okay — okay.", "yeah. yeah, I'm up.", "I'm up. I'm up."], he: None, they: None, dark: None, lit: None }),
 ];
 fn lines_of(kind: LineKind) -> &'static Lines {
     let mut i = 0;
@@ -44,7 +44,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, r
     if !force.unwrap_or(false) && st.bark < g.k.morale.bark_secs { return false; }
     let l = lines_of(kind);
     let mut pool: Vec<&'static str> = Vec::new();
-    pool.extend_from_slice(l.now.unwrap_or(l.say));
+    pool.extend_from_slice(l.say);
     pool.extend_from_slice((if st.dark { l.dark } else { l.lit }).unwrap_or(&[]));
     pool.extend_from_slice((if g.team(gd) != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;

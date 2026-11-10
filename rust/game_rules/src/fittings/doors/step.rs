@@ -605,8 +605,6 @@ impl Step<'_> {
                                     break;
                                 }
                                 self.leaf[i].solid_t += 1.0;
-                                if self.leaf[i].solid_t > SOLID_TRIES - 1.0 {
-                                }
                                 self.leaf[i].angle -= sw * js_min(self.leaf[i].angle * sw, (pen + 0.001) / js_max(0.18, t));
                                 self.leaf[i].vel = 0.0;
                                 self.leaf[i].pull_t = 0.0;
@@ -1018,7 +1016,6 @@ pub fn doors_update(g: &mut Game, dt: f64, contacts: &mut Vec<DoorContact>) {
     let mut heard = ev.iter().peekable();
     for i in 0..n {
         while let Some((_, e)) = heard.next_if(|e| e.0 == i) {
-            door_kept_pos(g, e.door, e.pos);
             doors_sound(g, e.door, e.sound, e.pos, e.who, e.level);
         }
         let (Some(r), Some(handles)) = (&rows[i], placed[i]) else { continue };

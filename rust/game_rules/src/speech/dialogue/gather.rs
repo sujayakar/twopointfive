@@ -176,15 +176,11 @@ pub fn route_name(g: &crate::game::Game, route_i: f64) -> String {
     let route = if route_i >= 0.0 && m::floor(route_i) == route_i { g.level.routes.get(route_i as usize).copied() } else { None };
     if let Some(one) = route.and_then(|r| place_kept_to(g, &g.tab.route[r].points)) { return one; }
     let n = match route { Some(r) => g.tab.route[r].name.clone(), None => String::from("route") };
-    if let Some(s) = route_names().get(n.clone()) { return s.clone(); }
-    if let Some(s) = route_names_now().get(n.clone()) { return s.clone(); }
+    if let Some((_, s)) = ROUTE_NAMES.iter().find(|(id, _)| *id == n) { return String::from(*s); }
     alloc::format!("the {}", n.replace('_', " "))
 }
 pub(super) fn door_name(n: &str) -> String {
-    let key = String::from(n);
-    if let Some(s) = door_names().get(key.clone()) { return s.clone(); }
-    if let Some(Some(s)) = door_names_guide().get(key.clone()) { return s.clone(); }
-    if let Some(s) = door_names_now().get(key) { return s.clone(); }
+    if let Some((_, s)) = DOOR_NAMES.iter().find(|(id, _)| *id == n) { return String::from(*s); }
     alloc::format!("the {} door", n.replace('_', " "))
 }
 fn num_word(n: f64) -> String {
@@ -392,7 +388,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     intel.push(IntelItem { kind: IntelKind::LockdownPosts, text: intel_text(IntelKind::LockdownPosts, t, k), live: lvl >= 2.0 && post_man.is_some(), known: heard_on_net(hs, raised_at) || post_man == Some(gd) });
     intel.push(IntelItem { kind: IntelKind::Routes, text: intel_text(IntelKind::Routes, t, k), live: partner.is_some(), known: true });
     intel.push(IntelItem { kind: IntelKind::Missing, text: intel_text(IntelKind::Missing, t, k), live: missing_man.is_some() && lvl < 2.0, known: missing_man.is_some() });
-    let drive_text = if office { intel_text(IntelKind::Drive, t, k) } else { drive_away_text(t) };
+    let drive_text = if office { intel_text(IntelKind::Drive, t, k) } else { String::from(drive_away_text(t)) };
     let drive_live = g.mission.pulled && g.mission.sweep_at < 0.0 && g.level.errand.told;
     intel.push(IntelItem { kind: IntelKind::Drive, text: drive_text, live: drive_live, known: true });
     if !shift { for it in intel.iter_mut() { it.live = false; } }
@@ -402,16 +398,22 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
 }
 
 // ---------------------------------------------------------------- the picker (pure over a DialogueCtx + the man's Talk state)
-/// `driveAway()[t] ?? driveAway()['*']`
-fn drive_away_text(t: crate::game::Temperament) -> String {
-    let d = drive_away();
-    let own = match t { crate::game::Temperament::Steady => d.steady, crate::game::Temperament::Nervy => d.nervy, crate::game::Temperament::Hard => d.hard };
-    own.or(d.under).unwrap_or_default()
+/// The words for what was taken, off the office.
+fn drive_away_text(t: crate::game::Temperament) -> &'static str {
+    match t {
+        crate::game::Temperament::Hard => "They know it's gone. Somebody's on his way to look.",
+        _ => "They already know it's gone. Somebody's been sent to look.",
+    }
 }
-/// `SHAPE_LEAD[shape]`: `Some("")` is a shape written to take no lead, `None` one with no entry
-fn lead_of_shape(shape: ShapeKey) -> Option<String> {
-    let l = shape_lead();
-    match shape { ShapeKey::Pedant => l.pedant, ShapeKey::Selfown => l.selfown, ShapeKey::Folder => l.folder, ShapeKey::Ramble => l.ramble, ShapeKey::Fan => l.fan, ShapeKey::Stoic => l.stoic, ShapeKey::Con => l.con, ShapeKey::Game => l.game, ShapeKey::Menace => l.menace }
+/// What a voice puts in front of a given fact: nothing at all for a folder (""), None for a voice with no lead of its own.
+fn lead_of_shape(shape: ShapeKey) -> Option<&'static str> {
+    match shape {
+        ShapeKey::Folder => Some(""),
+        ShapeKey::Ramble => Some("—okay— "),
+        ShapeKey::Fan => Some("Oh— and "),
+        ShapeKey::Con => Some("Sir: "),
+        _ => None,
+    }
 }
 /// `!!facts[n]`
 fn hold_fact(f: &DialogueCtxFacts, n: Need) -> bool {
@@ -512,7 +514,7 @@ pub(super) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::Di
         };
         let lead = if shaped.as_deref().map_or(false, |s| !s.is_empty()) { String::new() } else {
             let shape_lead = match sc { Some(x) if ctx.t != crate::game::Temperament::Hard => lead_of_shape(x.shape), _ => None };
-            match shape_lead { Some(s) => s, None => intel_lead(ctx.t, ctx.k) }
+            match shape_lead { Some(s) => String::from(s), None => intel_lead(ctx.t, ctx.k) }
         };
         let fact = run_on(&lead, shaped.as_deref().unwrap_or(it.text.as_str()));
         let Some(text) = expand(&alloc::format!("{}{}", lead, fact), &tokens) else { continue; };
@@ -541,7 +543,7 @@ fn eligible(g: &Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, 
     for (i, l) in lines.iter().enumerate() {
         if !line_matches(l, ctx.k, ctx.band, ctx.t, s, use_t, use_a) || !needs_hold(l, &ctx.facts) { continue; }
         if !allow_said && g.tab.game_talk[talk].said.has(l.id.clone()) { continue; }
-        let said = said_text(&SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: l.bare.clone(), guide: l.guide.clone() }, ctx);
+        let said = said_text(&SaidTextL { text: l.text.clone(), away: l.away.clone(), bare: l.bare.clone() }, ctx);
         let Some(text) = expand(&said, tokens) else { continue; };
         let mut w = l.w.unwrap_or(1.0)
             * (if l.needs.as_ref().map_or(false, |n| !n.is_empty()) { 1.6 } else { 1.0 })

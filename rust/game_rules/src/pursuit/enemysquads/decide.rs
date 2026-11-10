@@ -832,8 +832,7 @@ pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     } else if choice == SquadChoice::Flank {
         for (i, d) in go.iter().enumerate() { send(g, q, *d, SentRole::Flank, Some(&ways[i]), ally, fix.at, lost); }
         let gd0 = g.tab.roomfight_def[go[0]].gd;
-        let word = crate::words::wg(g, &"around", &"round");
-        let line = format!("{}: {} going {} — {}!", q_name, count_word(go.len()), word, if lost { "cut them off" } else { "keep them there" });
+        let line = format!("{}: {} going around — {}!", q_name, count_word(go.len()), if lost { "cut them off" } else { "keep them there" });
         say_radio(g, gd0, &line);
     }
     // whoever stays gets ready: the net's word is what digin.ts acts on

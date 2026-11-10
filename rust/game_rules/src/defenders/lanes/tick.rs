@@ -482,7 +482,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
 }
 ///  the first man sent round says so
 fn round_shout(g: &mut Game, gd: GuardId) {
-    let text = crate::words::wg(g, &"going around — keep them looking your way!", &"going round — keep them looking your way!");
+    let text = "going around — keep them looking your way!";
     say_net(g, gd, text);
     s(g).said_t = g.time;
 }

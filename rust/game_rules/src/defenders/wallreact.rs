@@ -11,7 +11,6 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn char_id(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 fn breaches_of(g: &Game) -> Vec<WallreactBreachId> { g.m.wallreact.wall_react.breaches.clone() }
 fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None) }

@@ -276,7 +276,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     g.fight.blind_rounds += 1.0;
     if !g.fight.drill_said && room_fight_drilled(g) {
         g.fight.drill_said = true;
-        let line = crate::words::wg(g, &"can't see \u{2014} shoot through the doorway!", &"can't see \u{2014} put it down the door!");
+        let line = "can't see \u{2014} shoot through the doorway!";
         crate::game::game_say(g, h, line, None, None);
     }
 }

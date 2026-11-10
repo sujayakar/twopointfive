@@ -29,8 +29,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
         let mut hammer = false;
         for &m in men { if crate::bigkit::carries_hammer(g, m) { hammer = true; break; } }
         if !hammer && crate::doortools::door_tools_known_shut(g, x.door, x.side) {
-            let (now, was) = (String::from("it's wedged. a shell won't open it."), String::from("wedged. no shell shifts it."));
-            return Err(Some(crate::words::wg(g, &now, &was)));
+            return Err(Some(String::from("it's wedged. a shell won't open it.")));
         }
     }
     crate::doortools::row_stackable(g, t, men)

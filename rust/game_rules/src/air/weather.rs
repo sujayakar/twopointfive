@@ -539,7 +539,7 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
             let mut line: &str = &lines[js::rem(g.weather.stats.barks + m::floor(r_line * 2.0), lines.len() as f64) as usize];
             if line.contains("not out in that") {
                 let p = g.ch[g.gd[gd].ch].pos;
-                if !crate::scene_collision::solid_blocked(g, [p[0], 1.9, p[2]], [p[0], 10.9, p[2]], None) { line = crate::words::wg(g, &THUNDER_OUT_GUIDE, &THUNDER_OUT); }   // he is out in it
+                if !crate::scene_collision::solid_blocked(g, [p[0], 1.9, p[2]], [p[0], 10.9, p[2]], None) { line = THUNDER_OUT; }   // he is out in it
             }
             crate::game::game_say(g, gd, line, None, None);
             g.weather.stats.barks += 1.0;

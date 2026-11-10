@@ -58,7 +58,7 @@ pub(super) fn key_up(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardI
     let [lo, hi] = g.k.squads.call_secs;
     let secs = lo + crate::math_dice::roll(g.tab.enemysquads_squad[q].call_die.as_mut().unwrap()) * (hi - lo);
     let now = g.time;
-    g.tab.enemysquads_squad[q].calls.as_mut().unwrap().push(Call { by: m, t0: now, end: now + secs, at, room: room.cloned(), body, eyes: body.is_none() });
+    g.tab.enemysquads_squad[q].calls.as_mut().unwrap().push(Call { by: m, end: now + secs, at, room: room.cloned(), body, eyes: body.is_none() });
     let said = mate(g, m);
     let line = format!("{}: {} — I've got—", name_of(g, q), said);
     on_net(g, m, &line, Some(2.0), None);
@@ -932,8 +932,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
         }
         if there && !seen {
             g.tab.enemysquads_squad[q].sent[i].there = Some(t);
-            let got = crate::words::wg(g, &"we've got", &"we have");
-            let text = format!("{}: in position — {} the door!", name, got);
+            let text = format!("{}: in position — we've got the door!", name);
             crate::game::game_say(g, gd, &text, Some(true), None);
             event(g, q, SquadEventWhat::InPosition, Some(gd));
         } else {

@@ -33,7 +33,6 @@ pub struct EngagementRounds {
     pub guard: Option<f64>,
     pub operative: Option<f64>,
     pub hostile: Option<f64>,
-    pub player: Option<f64>,
     pub civilian: Option<f64>,
 }
 

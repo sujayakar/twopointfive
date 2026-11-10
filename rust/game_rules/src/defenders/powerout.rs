@@ -521,7 +521,7 @@ fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
     }
     let parties = st(g).parties;
     if parties >= g.k.powerout.parties {
-        let line = crate::words::wg(g, &"power's out again — that's no accident. Stay on your doors!", &"power's out again — that's no fault. Stay on your doors!");
+        let line = "power's out again — that's no accident. Stay on your doors!";
         let why = alloc::format!("the lights have gone {} times this fight", js::num_str(parties + 1.0));
         return stay(g, speaker, line, &why, true);
     }

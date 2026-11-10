@@ -521,7 +521,7 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
     if !lands(g, sol.land, wd.at, 2.0) || !own_clear(g, gd, sol.land, Some(true)) || hostage_near(g, sol.land) {
         book!(g).last_t = wd.last_t;
         car!(g, ci).try_at = g.time + 2.0;
-        let line = crate::words::w(g, &"no — holding it!");
+        let line = "no — holding it!";
         crate::game::game_say(g, gd, line, None, None);
         return;
     }
@@ -603,8 +603,7 @@ fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, t
     car!(g, c_2).blocked_t = 0.0;
     car!(g, c_2).bunch_t = 0.0;
     let all = shouts();
-    let now: Vec<String> = all[1..].to_vec();
-    let said = crate::words::w(g, &now);
+    let said: Vec<String> = all[1..].to_vec();
     let len = said.len() as f64;
     let pick = js::rem(m::floor(hash01(id, k) * len), len) as usize;
     crate::game::game_say(g, gd, said[pick].as_str(), None, None);

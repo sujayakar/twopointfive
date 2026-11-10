@@ -140,7 +140,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
     let mut r;
     if first {
         let [a, b] = expect_entries(g, room, m.know);
-        r = RoomSt { room, expected: a, second: b, at: now, t0: m.know_t, men: Vec::new(), bracer: None, wedged: 0.0, cue_at: m::NAN, cues: JsSet::new(), entered_at: m::NAN, ready_at: m::NAN, callout: false };
+        r = RoomSt { room, expected: a, second: b, at: now, men: Vec::new(), bracer: None, wedged: 0.0, cue_at: m::NAN, cues: JsSet::new(), entered_at: m::NAN, ready_at: m::NAN, callout: false };
         if let Some(fix) = state_of(g).fix { if now - fix.t < 20.0 { cue(g, Some(&mut r), Cue::Radio); } }
     } else {
         r = row_of(g, room);
@@ -162,7 +162,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
         let line = one_of(g, crate::dice::Who::Def(d), &["they're coming this way. get ready!", "they're working through the rooms. watch that door!", "that's next door. get set, get set!"]);
         if !shout(g, gd, line, Some(&mut r)) {
             // out of the team's earshot: the room says it on its side's net instead
-            let guide = crate::words::wg(g, &"copy. we'll be ready for them.", &"heard. they'll find this room ready.");
+            let guide = "copy. we'll be ready for them.";
             let line = one_of(g, crate::dice::Who::Def(d), &["we hear it. getting ready for them here.", "copy. we're digging in.", guide]);
             crate::game::game_say(g, gd, line, Some(true), None);
             cue(g, Some(&mut r), Cue::Radio);
@@ -260,8 +260,6 @@ fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::
     if p.is_none() && !or_stay { return false; }
     m.deep = deep;
     m.look = if deep { dp.unwrap().look } else { None };
-    if deep {
-    }
     m.brace = -1.0;
     m.prop = None;
     fear(g, d, *m);
@@ -453,7 +451,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         let pos = pos_of(g, gd);
         state_of(g).called.add(gd);
         state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room });
-        let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"]);
+        let pool = ["contact! they're here. hold your rooms!", "they're on us. watch your doors!"];
         let line = one_of(g, crate::dice::Who::Def(d), &pool);
         crate::game::game_say(g, gd, line, Some(true), None);
         cue_all(g, Cue::Radio);
@@ -808,7 +806,6 @@ pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
         }
     }
     g.m.digin.states = None;
-    g.m.digin.digin_shut = DiginModDIGINSHUT {  };
 }
 
 #[cfg(test)]
