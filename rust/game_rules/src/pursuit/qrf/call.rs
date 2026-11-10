@@ -24,13 +24,6 @@ fn team_of(side: crate::qrf::SideOfTeam) -> crate::teams::Team {
     }
 }
 
-fn word_key(who: crate::picture::Who) -> crate::qrf::QrfWordKey {
-    match who {
-        crate::picture::Who::Guard(x) => crate::qrf::QrfWordKey::Guard(x),
-        crate::picture::Who::Player => crate::qrf::QrfWordKey::Player,
-    }
-}
-
 // ---------------------------------------------------------------- the level's own team
 
 /// This level's block, if it has one.
@@ -282,14 +275,14 @@ pub(super) fn read_net(g: &mut crate::game::Game) {
             if i.how == crate::picture::IdeaHow::Fix { continue; }
             if i.how != crate::picture::IdeaHow::Told && g.time - i.since < g.k.picture.tell_secs { continue; }
             if i.lost { continue; }
-            let key = word_key(i.who);
+            let key = i.who;
             let newer = match g.qrf.word.get(key) { None => true, Some(w) => i.t > w.t + 1e-6 };
             if newer { g.qrf.word.set(key, crate::qrf::QrfWordValue { at: i.at, t: i.t }); }
         }
     }
     for who in g.qrf.word.keys() {
-        if let crate::qrf::QrfWordKey::Guard(x) = who {
-            if crate::condition::down(g, g.gd[x].ch) || !g.guards.contains(&x) { g.qrf.word.delete(who); }
+        if let Some(x) = crate::character::guard_of(g, who) {
+            if crate::condition::down(g, who) || !g.guards.contains(&x) { g.qrf.word.delete(who); }
         }
     }
 }

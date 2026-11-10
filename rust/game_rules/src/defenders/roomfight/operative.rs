@@ -124,7 +124,7 @@ fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
     g.tab.roomfight_op[o].tgt = None;
     g.tab.roomfight_op[o].turn = None;
     g.tab.roomfight_op[o].step = None;
-    let fc = match g.gd[gd].foe { Some(crate::game::Foe::Guard(f)) => Some(g.gd[f].ch), _ => None };
+    let fc = g.gd[gd].foe.filter(|&f| !crate::character::is_player(g, f));
     if let (crate::game::GuardState::Alert, Some(fc)) = (g.gd[gd].state, fc) {
         let muzzle = g.ch[c].muzzle;
         let at = chest_of(g, fc);
@@ -374,7 +374,7 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
         let head = head_of(g, hc);
         if crate::guards::clear_shot(g, c, head) {
             to = head;
-        } else if !crate::coverfire::cover_seen(g, gd, Some(crate::game::Foe::Guard(h)), chest) {
+        } else if !crate::coverfire::cover_seen(g, gd, Some(g.gd[h].ch), chest) {
             g.tab.roomfight_op[o].held_for_line += 1.0;
             g.tab.roomfight_op[o].block_t += dt;
             room_fight_walk_on(g, o);

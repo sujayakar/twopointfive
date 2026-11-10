@@ -53,7 +53,7 @@ fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundL
 
 /// A guard's own hands: the row's spread off the man he is firing at.
 fn ai_wide(g: &crate::game::Game, seat: &crate::seats::SeatRef, sg: Option<GuardId>, shooter: CharId, def: &crate::weapons::WeaponDef) -> f64 {
-    let foe = match sg { Some(s) => crate::teams::foe_char(g, s), None => None };
+    let foe = match sg { Some(s) => g.gd[s].foe, None => None };
     let tc = match foe { Some(c) => c, None => g.pl[seat.player].ch };
     let tv = m::hyp2(g.ch[tc].vel[0], g.ch[tc].vel[2]);
     let range = v3::dist(g.ch[shooter].pos, g.ch[tc].pos);

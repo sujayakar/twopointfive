@@ -676,7 +676,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
         let sight = t - g.gd[gd].last_seen_t;
         let still = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]) < 0.3;
         let hold = crate::roomfight::at_post(g, d);
-        let on_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
+        let on_player = crate::teams::foe_is_player(g, gd);
         let faced_down = |g: &Game| -> Option<PlayerId> {
             let f = crate::seats::faced_man(g, gd);
             if crate::condition::down(g, g.pl[f].ch) { Some(f) } else { None }

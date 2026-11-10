@@ -653,12 +653,6 @@ pub struct GameDoorHandRecsValue {
     pub move_: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, ToBytes)]
-pub enum Foe {
-    Guard(GuardId),
-    Player,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum PairId {
     #[default] Red,
@@ -989,8 +983,8 @@ pub struct Guard {
     #[is(crate::game::GuardState::Patrol)] pub state: crate::game::GuardState,
     pub callsign: String,
     #[is(crate::teams::Team::Guard)] pub team: crate::teams::Team,
-    /// may name a man who has left: a GuardId stays readable, tables never shrink
-    #[is(Some(crate::game::Foe::Player))] pub foe: Option<crate::game::Foe>,
+    /// the man he has in mind: a player's or an AI man. He may be a man who has left: a body stays readable, tables never shrink
+    pub foe: Option<CharId>,
     pub faces: Option<f64>,
     #[is(RouteId(0))] pub route: RouteId,
     pub unit: Option<crate::game::UnitInfo>,
@@ -1265,12 +1259,11 @@ pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
 impl Guard {
-    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
+    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
     pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
         let mut g = Guard::blank();
         g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
         if let Some(t) = team { g.team = t; }
-        if g.team != crate::teams::Team::Guard && g.team != crate::teams::Team::Hostile { g.foe = None; }
         g.keys = keys; g.weapon = weapon; g.talk = talk;
         g
     }

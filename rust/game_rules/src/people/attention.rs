@@ -396,7 +396,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     let pos = g.ch[g.gd[gd].ch].pos;
     if crate::guards::near_known_body(g, pos, Some(4.0)).is_some()
         || g.gd[gd].bubble.as_ref().map_or(false, |b| b.radio && now - b.t < 4.0)
-        || (matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && crate::condition::down(g, g.pl[g.player].ch))
+        || (crate::teams::foe_is_player(g, gd) && crate::condition::down(g, g.pl[g.player].ch))
     {
         return;
     }

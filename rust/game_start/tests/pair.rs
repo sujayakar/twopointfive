@@ -57,7 +57,7 @@ fn the_squad_line_says_low_and_contact_while_they_last() {
         assert_eq!(word(&mut p), "SILENT · low", "seed {s}: a suspicious man 10 m off: {}", p.roll());
         // (his first round in their ears makes it 'SILENT · compromised', silent's own word from then on: 'contact' is what stands until it)
         let mut seen = Vec::new();
-        for _ in 0..60 { pin(&mut p, t1, GuardState::Alert, 1.0); p.g.gd[t1].foe = Some(game::game::Foe::Player); p.g.gd[t1].last_seen_t = p.g.time; p.frame(); let w = word(&mut p); if !seen.contains(&w) { seen.push(w); } }
+        for _ in 0..60 { pin(&mut p, t1, GuardState::Alert, 1.0); p.g.gd[t1].foe = Some(p.g.pl[p.g.player].ch); p.g.gd[t1].last_seen_t = p.g.time; p.frame(); let w = word(&mut p); if !seen.contains(&w) { seen.push(w); } }
         assert!(seen.iter().any(|w| w == "SILENT · contact"), "seed {s}: an alert man has eyes on Sam and the word went {seen:?}: {}", p.roll());
     }
 }

@@ -453,7 +453,7 @@ pub fn cut_to_men(g: &mut crate::game::Game) {
 fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
     let cur = seat_at(g, g.gd[gd].faces);
     let cur_man = crate::cmd::seat_man(g, cur);
-    if matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && !crate::condition::down(g, g.pl[cur_man].ch) { return cur; }
+    if crate::teams::foe_is_player(g, gd) && !crate::condition::down(g, g.pl[cur_man].ch) { return cur; }
     let (mut best, mut bd) = (cur, f64::INFINITY);
     for i in 0..g.seats.len() {
         let s = g.seats[i];
@@ -464,8 +464,16 @@ fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
         if d < bd { bd = d; best = s; }
     }
     if best != cur { g.gd[gd].faces = Some(g.tab.cmd_seat[best].index); }
+    // (the player he fought is down: his eyes go to the one they are on now)
+    if crate::teams::foe_is_player(g, gd) {
+        let c = g.pl[crate::cmd::seat_man(g, best)].ch;
+        crate::mind::foe(g, gd, Some(c), "seats");
+    }
     best
 }
+
+/// that player's man, by his body
+pub fn faced(g: &crate::game::Game, gd: GuardId) -> CharId { g.pl[faced_man(g, gd)].ch }
 
 /// the player an enemy has in mind as the tick stands
 pub fn faced_man(g: &crate::game::Game, gd: GuardId) -> PlayerId {
