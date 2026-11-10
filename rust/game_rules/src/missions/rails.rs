@@ -112,10 +112,6 @@ fn rails_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::RailsDat
     crate::lesson::lesson_data(g).and_then(|l| l.rails.as_ref())
 }
 pub fn rails_live(g: &crate::game::Game) -> bool { rails_data(g).is_some() }
-/// this mission's ring is the flat tree's
-pub fn rails_flat_ring(g: &crate::game::Game) -> bool {
-    rails_data(g).map_or(false, |d| d.flat_ring.unwrap_or(false))
-}
 /// the lesson under the frame and the step that is up
 fn rails_lesson(g: &crate::game::Game) -> Option<crate::rails::RailsLesson> {
     let s = rails_at(g)?;
@@ -242,7 +238,7 @@ fn gate_ok(c: &GateOk, code: &str) -> bool {
             };
         }
     }
-    is_free(code) || has(&c.keys, code) || (c.menu_up && (is_digit(code) || code == "KeyV")) || ((c.hand_up || c.hand_key) && is_digit(code)) || (c.enter && (code == "ShiftLeft" || code == "ShiftRight"))
+    is_free(code) || has(&c.keys, code) || (c.menu_up && is_digit(code)) || ((c.hand_up || c.hand_key) && is_digit(code)) || (c.enter && (code == "ShiftLeft" || code == "ShiftRight"))
 }
 
 /// whatever the step has not unlocked is taken out of the tick
@@ -259,25 +255,25 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
+    let menu_up = g.sets[g.seat].orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
         (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
          i.keys.has(String::from("Enter")) || i.pressed.has(String::from("Enter")) || i.keys.has(String::from("NumpadEnter")) || i.pressed.has(String::from("NumpadEnter")))
     };
     let p = g.player;
-    let hand_up = has(&a, "use") && g.pl[p].sel.open;
+    let hand_up = has(&a, "use") && g.sets[g.seat].hand.sel.open;
     if g.pl[p].holstered && has(&a, "use") && rails_offers(g, "grab") && !rails_shuts(g, "stalk") { buttons |= 1; }
     if menu_up || hand_up { buttons |= 1; }
     if hand_up { buttons |= 4; }
-    let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.pl[p].setup.clone() } else { None };
+    let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.sets[g.seat].hand.setup.clone() } else { None };
     let rows = match &setup { Some(s) => crate::slotsetup::setup_rows(g, p, s.gun), None => Vec::new() };
-    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown.is_none() && g.orders.cmd_ring.is_none() && g.orders.menu.is_none() && {
+    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown.is_none() && g.sets[g.seat].orders.cmd_ring.is_none() && g.sets[g.seat].orders.menu.is_none() && {
         let ik = String::from(crate::consts::INTERACT_KEY);
-        let (down_t, f_held) = (g.pl[p].sel.down_t, g.pl[p].f_held);
+        let (down_t, f_held) = (g.sets[g.seat].hand.sel.down_t, g.sets[g.seat].hand.f_held);
         let i = &g.tab.input[input];
         i.keys.has(ik.clone()) && (down_t >= 0.0 || (i.pressed.has(ik) && !f_held))
-    } && crate::interact::running_verb(g, &crate::seats::here(g)).is_empty() && (!rails_locks(g, "whistle") || crate::interact::choosable(&g.nearby));
+    } && crate::interact::running_verb(g, &crate::seats::here(g)).is_empty() && (!rails_locks(g, "whistle") || crate::interact::choosable(&g.sets[g.seat].nearby));
     let c = GateOk { a: &a, keys, rows, menu_up, hand_up, hand_key, enter };
     let i = &mut g.tab.input[input];
     for k in i.pressed.keys() { if !gate_ok(&c, &k) { i.pressed.delete(k); } }
@@ -344,7 +340,7 @@ pub fn rails_tick(g: &mut crate::game::Game) {
         g.rails.run = Some(g.mission.serial);
         g.rails.answered = -1.0; g.rails.spared.clear();
         g.rails.fresh = 3.0;
-        g.rails.orders_seen = g.orders.log.len() as f64;
+        g.rails.orders_seen = g.sets[g.seat].orders.log.len() as f64;
         rails_clean(g);
         rails_start_program(g);
     } else if g.rails.fresh > 0.0 { g.rails.fresh -= 1.0; }
@@ -352,9 +348,9 @@ pub fn rails_tick(g: &mut crate::game::Game) {
     // (RAILS.cardBeat: the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet)
     if s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
     // every order the player gives is told to the level's program
-    if (g.orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.orders.log.len() as f64; }
-    while g.rails.orders_seen < g.orders.log.len() as f64 {
-        let o = g.orders.log[g.rails.orders_seen as usize].order.clone();
+    if (g.sets[g.seat].orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.sets[g.seat].orders.log.len() as f64; }
+    while g.rails.orders_seen < g.sets[g.seat].orders.log.len() as f64 {
+        let o = g.sets[g.seat].orders.log[g.rails.orders_seen as usize].order.clone();
         rails_note_given(g, &o);
         crate::director::director_signal(g, &alloc::format!("order:{}", o));
         g.rails.orders_seen += 1.0;
@@ -459,8 +455,8 @@ fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>) {
         face: Some(yaw),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
-        going: String::from("holding"),
-        there: String::from("holding"),
+        going: "holding".into(),
+        there: "holding".into(),
         crouch: if low { Some(true) } else { None },
         ..Default::default()
     };
@@ -511,30 +507,24 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     }
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it)
     let menu = if up { seat.orders.menu.as_ref() } else { None };
-    let flat = menu.map_or(false, |x| x.flat.unwrap_or(false));
     let on = menu.map_or(false, |x| t.at.map_or(true, |at| {
         let p = crate::orders::order_target_at(&x.target);
         m::hyp2(p[0] - at[0], p[2] - at[2]) < MENU_M
     }));
-    let ring = if !on { None } else {
-        let x = menu.unwrap();
-        let l = if flat { t.flat_line.as_ref().or(t.menu_line.as_ref()) } else if x.page.is_none() { t.menu_line.as_ref() } else { t.page_line.as_ref().or(t.menu_line.as_ref()) };
-        l.filter(|l| !l.is_empty())
-    };
+    let ring = if on { t.menu_line.as_ref().filter(|l| !l.is_empty()) } else { None };
     let d = g.time - g.rails.tap_t;
     let note = if up && menu.is_none() && d >= 0.0 && d < NOTE_SECS { t.no_tap.as_ref().filter(|l| !l.is_empty()).map(|l| lesson_line(g, l)) } else { None };
     // (the order the step asks for has gone out: the line is what the men are doing. `afterSecs` on, the step asks again)
     let since = g.time - g.rails.gave_t;
     let aft = if up && gave_here && g.k.rails.after_secs > 0.0 && since >= 0.0 && since < g.k.rails.after_secs && g.time - g.rails.gave0 < g.k.rails.after_max { t.after.as_ref().and_then(said_now) } else { None };
-    // (over a flat ring that line stands whatever is open: that ring's line names ONE digit, and with the order out the row on it may be the order's next half)
-    let flat_aft = aft.is_some() && flat;
+    // (that line stands with the ring up as well: the ring's line names ONE digit, and with the order out the row on it may be the order's next half)
     let line = match (ring, &aft) {
-        (Some(r), _) if !flat_aft => lesson_line(g, r),
         (_, Some(a)) => lesson_line(g, a),
+        (Some(r), _) => lesson_line(g, r),
         _ => step_line(),
     };
     // (a line that asks for nothing is drawn as something to watch, with no ring on its place. Never a step's own line that merely names no key)
-    let watch = (ring.is_none() || flat_aft) && (aft.is_some() || (up && cue)) && !names_key(&line);
+    let watch = (ring.is_none() || aft.is_some()) && (aft.is_some() || (up && cue)) && !names_key(&line);
     Some(crate::view::RailPrompt { line, n, of: of_n, note, watch })
 }
 /// what a seat's HUD is told of the frame over this lesson

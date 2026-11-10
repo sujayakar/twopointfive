@@ -284,8 +284,8 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 set_line: None,
                 ..Default::default()
             });
@@ -337,8 +337,8 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
         watch: Some(to),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        going: String::from("turning to fire · 40 mm"),
-        there: String::from("aiming · 40 mm"),
+        going: "turning to fire · 40 mm".into(),
+        there: "aiming · 40 mm".into(),
         set_line: None,
         ..Default::default()
     });
@@ -389,7 +389,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let has = def_listed(g, &crate::seats::here(g), SHELL_THERE);
     let want = brought > 0.0 && def_listed(g, &crate::seats::here(g), crate::squadthrow::THROW_OPEN);
     if has == want { follow(g); return; }
-    if g.orders.menu.is_some() { crate::orders::squad_orders_close(g); }
+    if g.sets[g.seat].orders.menu.is_some() { crate::orders::squad_orders_close(g); }
     if !want { crate::orders::rows::unlist(g, &crate::orders::rows::shell40::ORDER); return; }
     list(g);
 }

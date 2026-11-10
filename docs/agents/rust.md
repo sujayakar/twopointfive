@@ -52,15 +52,15 @@ Each crate is its own cargo workspace and target folder.
 - **A slot.** `crate::owned::Owned` holds state one module reads, of a type declared up in the rules, so that changing it does not rebuild `game_types`:
   `g.ctl`, `g.feel`, `g.mark_set`, `g.ray_grid`.
 - **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
-  of what `rust/sim` steps: doors, men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
+  of what `rust/sim` steps: men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
   its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
-  `sim::state::state_read(g.sim)` and `sim::state::state`, mostly through home modules (`sim_doorshome.rs`).
+  `sim::state::state_read(g.sim)` and `sim::state::state`.
 - **Copies.** The box world (`rust/sim/src/world.rs`) and the smoke's and air's tables are outside the block, made from the game: never state.
 - **A moment** (`Moment`) is `g.clone()` and the block's bytes: a save, a walk of a tape, a recovery. So `Game` clones whole and a block stands in any
   slot.
-- **Seats.** A seat's nineteen things are fields of `Game`, those of the seat that stands there; the others wait in `g.tab.cmd_seat[s].own`
-  (`SeatSet`). In a tick the first seat stands (`on_first_bare`). `with_seat(g, s, &mut |g| …)` changes them over for a pass about another seat. A
-  function holding the game shared takes a `SeatRef` (`seats::seat`, `seats::here`), never `g.orders`. A map kept per seat is keyed by `view_key`.
+- **Seats.** A seat's own things are its row of `g.sets` (`SeatSet`). `g.seat` and `g.player` say which seat a pass is about and its man: in a tick the first
+  (`on_first_bare`), and `with_seat(g, s, &mut |g| …)` moves them for a pass about another. A function holding the game shared takes a `SeatRef` (`seats::seat`,
+  `seats::here`). A map kept per seat is keyed by `view_key`.
 
 ### Derives
 
@@ -108,8 +108,8 @@ next tick opens and panics on a write nobody declared.
 - **A loop over every box, ray or cell, every tick, belongs in `rust/sim` on columns.** The maintainer: "we should also start changing our data
   layout to be more cache and simd friendly". `rust/sim/src/world.rs` is the shape: a row a box, the hot numbers together. A thing with rules of its
   own is one record with its rules beside it (`props.rs`, `guns/throwables/pool.rs`, `rust/sim/src/falls.rs`): the tick was no slower for it.
-- **A part of a game's block has a fixed size** (`MAX_BOXES`, a part's `CAP`), and `door_store_new` refuses a level past its cap by name.
-- **Too many arguments for a call** go through a scratch `static mut` (`IO` in `doors.rs`). Nothing in scratch outlives the call.
+- **A part of a game's block has a fixed size** (`MAX_BOXES`, a part's `CAP`); a level past a cap is refused by name (`doors_new`).
+- **Too many arguments for a call** go through a scratch `static mut` (`ASKING` in `world.rs`). Nothing in scratch outlives the call.
 - **Ask in a batch.** A sight pass hands its eyes over once (`sight_open`, `sight_eye`, `eyes_see`).
 
 ### Build profiles
@@ -147,7 +147,7 @@ and neither side may link the other. Inside the rules:
 - **A module:** a `pub mod` line in `game_types/src/lib.rs` with its `types.rs`; `pub mod` in its system's
   `mod.rs` and its name in that system's `pub use` in `game_rules/src/lib.rs`; a line in `step_seats_on_first`; a test.
 - **A field:** in its type, with `#[is(…)]` where it does not start at its type's own start. It moves its part's word; a new field of `Game`, `Mods`, `Tabs` or `SeatSet` is a new part: `gate pin`.
-  A seat's field also goes in `SeatRef` and `swap_set`.
+  A seat's field also goes in `SeatRef`.
 - **A column:** a field of its part in `rust/sim`, inside its size assert. A new part is a `State` field, a `PARTS` row and a `PART_NAMES` name
   (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
 - **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a

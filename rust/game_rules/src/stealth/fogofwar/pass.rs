@@ -259,7 +259,7 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
         i += 1;
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         let shown = g.fog_of_war.door_recs.get_or_insert_with(d, || crate::fogofwar::FogOfWarDoorRecsValue { shown: angle, ghost: None }).shown;
         if m::abs(angle - shown) <= DOOR_EPS || fog_of_war_door_seen(g, d, shown) {
             g.fog_of_war.door_recs.get_mut(d).unwrap().shown = angle;
@@ -579,7 +579,7 @@ fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) -> boo
     let reach = g.k.fog.squad_doors_m * g.k.fog.squad_doors_m;
     let (fs, ys) = (door_f(), door_y());
     for ai in 0..2 {
-        let turn = if ai != 0 { shown } else if crate::doors::door_off(g, d) { 0.0 } else { crate::doors::door_angle(g, d) };
+        let turn = if ai != 0 { shown } else if g.dr[d].leaf.off { 0.0 } else { g.dr[d].leaf.angle };
         let a = closed + turn;
         let (ux, uz) = (m::cos(a), m::sin(a));
         for fi in 0..3 {
@@ -611,7 +611,7 @@ fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) -> boo
 /// Is this door drawn where the team last saw it rather than where it stands. (FogOfWar.doorHeld)
 pub fn fog_of_war_door_held(g: &crate::game::Game, d: DoorId) -> bool {
     let shown = match g.fog_of_war.door_recs.get(d) { Some(r) => r.shown, None => return false };
-    fog_of_war_active(g) && m::abs(crate::doors::door_angle(g, d) - shown) > DOOR_EPS
+    fog_of_war_active(g) && m::abs(g.dr[d].leaf.angle - shown) > DOOR_EPS
 }
 
 /// The angle the picture has this door at. (FogOfWar.doorShown)
@@ -619,7 +619,7 @@ pub fn fog_of_war_door_shown(g: &crate::game::Game, d: DoorId) -> f64 {
     if let Some(s) = g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
         if fog_of_war_active(g) { return s; }
     }
-    crate::doors::door_angle(g, d)
+    g.dr[d].leaf.angle
 }
 
 /// The door a box in the picture's list is the remembered leaf of. (FogOfWar.doorOfBox)
@@ -645,7 +645,7 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>)
         let d = g.doors.list[i];
         i += 1;
         let (bx_, h0, h1) = { let r = &g.dr[d]; (r.box_, r.handle_boxes[0], r.handle_boxes[1]) };
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         let shown = match g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
             Some(s) if m::abs(angle - s) > DOOR_EPS => s,
             _ => { out.push(bx_.into()); out.push(h0.into()); out.push(h1.into()); continue; }
@@ -664,7 +664,7 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>)
         let q = bx(g, gh[0]);
         q.c = pose.c; q.yaw = pose.yaw; q.flags = flags;
         let had_rot = q.rot.is_some();
-        if crate::doors::door_off(g, d) || had_rot {
+        if g.dr[d].leaf.off || had_rot {
             let (h, marks) = (g.dr[d].leaf_h, g.dr[d].leaf_marks.clone());
             let q = bx(g, gh[0]);
             q.h = h; q.marks = marks; q.rot = None;

@@ -183,9 +183,9 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
     }
     for di in 0..g.doors.list.len() {   // (a door's leaf where it stands, shut or open: the cells under it are not walked)
         let d = g.doors.list[di];
-        if crate::doors::door_off(g, d) { continue; }
+        if g.dr[d].leaf.off { continue; }
         let (hx, hz, closed, width) = { let def = &g.dr[d].def; (def.hinge[0], def.hinge[1], def.closed_dir, def.width) };
-        let th = closed + crate::doors::door_angle(g, d);
+        let th = closed + g.dr[d].leaf.angle;
         let (ux, uz) = (m::cos(th), m::sin(th));
         let mut u = 0.2;
         while u <= width {
@@ -272,7 +272,7 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
 
 /// how many are left in the one bag
 pub(in crate::squad_orders) fn left(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
-    if kind == SquadThrowKind::Frag { g.door_tools.frags } else { g.door_tools.bangs }
+    if kind == SquadThrowKind::Frag { g.sets[g.seat].door_tools.frags } else { g.sets[g.seat].door_tools.bangs }
 }
 
 /// the order menu's one word for this can
@@ -298,8 +298,8 @@ pub(super) fn roll_of(g: &crate::game::Game, kind: crate::squadthrow::SquadThrow
 /// his hands are on something else: a charge, a door's handle or boot, a thing he works, a magazine
 pub(in crate::squad_orders) fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
     use crate::doortools::Phase as DoorPhase;
-    if g.door_tools.ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.lead == gd && (op.phase == DoorPhase::Place || op.phase == DoorPhase::Kick) }) { return true; }
-    if g.wall_charge.ops.iter().any(|&o| { let op = &g.tab.wallcharge_wall_op[o]; op.lead == gd && op.phase == crate::wallcharge::Phase::Place }) { return true; }
+    if g.sets[g.seat].door_tools.ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.lead == gd && (op.phase == DoorPhase::Place || op.phase == DoorPhase::Kick) }) { return true; }
+    if g.sets[g.seat].wall_charge.ops.iter().any(|&o| { let op = &g.tab.wallcharge_wall_op[o]; op.lead == gd && op.phase == crate::wallcharge::Phase::Place }) { return true; }
     let c = g.gd[gd].ch;
     if crate::workthings::work_hand(g, c).is_some() { return true; }
     crate::control::man::changing_magazine(g, gd)

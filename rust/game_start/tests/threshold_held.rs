@@ -33,17 +33,20 @@ fn a_grenade_scatters_a_stack_and_the_door_waits_for_it() {
     for s in SEEDS {
         for frag in [true, false] {
             let (mut p, d, at) = at_the_door(s, 4);
-            p.order_on_word("openClear", at, Who::All);
-            let op = op_of(&mut p, d, s);
-            p.until(40.0, |p| p.op_phase(op) == Phase::Ready || has(p, op, "stacked")).unwrap_or_else(|| panic!("seed {s}: never stacked: {:?}", p.op_beats(op)));
-            p.run(0.5);
+            p.order("stack", at, Who::All);
             let men = p.men();
-            if frag { let f = p.at(p.op_lead(op)); p.frag_lands([f[0], at[1] + 3.2]); }
+            p.until(40.0, |p| men.iter().all(|&m| p.arrived(m))).unwrap_or_else(|| panic!("seed {s}: never stacked: {}", p.roll()));
+            p.run(0.5);
+            let lead = *men.iter().min_by(|a, b| p.from_handle(d, p.at(**a)).partial_cmp(&p.from_handle(d, p.at(**b))).unwrap()).unwrap();
+            let marks: Vec<_> = men.iter().map(|&m| (m, p.post_of(m).unwrap())).collect();
+            if frag { let f = p.at(lead); p.frag_lands([f[0], at[1] + 3.2]); }
             p.run(1.0);
             p.tap("KeyF");
+            let op = op_of(&mut p, d, s);
             let a0 = p.leaf_angle(d);
             p.until(40.0, |p| (p.leaf_angle(d) - a0).abs() > 0.02).unwrap_or_else(|| panic!("seed {s}: frag {frag}: the door never went: {:?}", p.op_beats(op)));
-            assert_eq!(off_marks(&p, &men), Vec::<f64>::new(), "seed {s}: frag {frag}: off his mark as the leaf moved: {:?}", p.op_beats(op));
+            let off: Vec<f64> = marks.iter().map(|&(m, q)| dist(p.at(m), q)).filter(|&x| x > 1.5).collect();
+            assert_eq!(off, Vec::<f64>::new(), "seed {s}: frag {frag}: off his mark as the leaf moved: {:?}", p.op_beats(op));
             assert_eq!(has(&p, op, "the door waits"), frag, "seed {s}: frag {frag}: {:?}", p.op_beats(op));
             assert_eq!(has(&p, op, "the men are back"), frag, "seed {s}: frag {frag}: {:?}", p.op_beats(op));
             assert!(!has(&p, op, "on without"), "seed {s}: {:?}", p.op_beats(op));

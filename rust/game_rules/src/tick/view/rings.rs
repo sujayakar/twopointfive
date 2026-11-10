@@ -22,11 +22,11 @@ pub(super) fn ring_view(g: &Game, seat: &SeatRef) -> Option<RingView> {
         let i = seats.row.get(d).copied().unwrap_or(-1.0);
         if d as f64 == seats.more {
             wedges.push(RingWedge { key: d as f64, text: String::from("more"), off: false, opens: true });
-        } else if m.page.is_none() && !more && d == 1 {
+        } else if !more && d == 1 {
             if said(&m.quick) { wedges.push(RingWedge { key: 1.0, text: m.quick.clone().unwrap(), off: false, opens: false }); }
         } else if i >= 0.0 && (i as usize) < m.rows.len() {
             let at = i as usize;
-            wedges.push(RingWedge { key: d as f64, text: m.words[at].clone(), off: m.why.get(at).is_some_and(said), opens: said(&g.tab.orders_order_def[m.rows[at]].opens) });
+            wedges.push(RingWedge { key: d as f64, text: m.words[at].clone(), off: m.why.get(at).is_some_and(said), opens: false });
         }
     }
     let what = match &m.target {
@@ -56,9 +56,8 @@ fn before_dash(s: &str) -> &str {
 
 /// his own ring, while it is up: a wedge a row on a digit, and the whistle's the last one
 pub(super) fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
-    let pl = &g.pl[seat.player];
-    let r = pl.sel.ring.as_ref()?;
-    if !pl.sel.open { return None; }
+    let r = seat.hand.sel.ring.as_ref()?;
+    if !seat.hand.sel.open { return None; }
     let n = g.k.cmdring.wedges;
     let mut wedges = Vec::new();
     for (i, it) in seat.nearby.iter().take(n as usize).enumerate() {
@@ -71,7 +70,7 @@ pub(super) fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
         wedges.push(RingWedge { key: n, text: String::from("whistle"), off: crate::whistle::whistle_ready_in_of(g, seat) > 0.0, opens: false });
     }
     let lit = if r.whistle.unwrap_or(false) { n }
-        else if seat.hover.as_ref().is_some_and(crate::interact::wedged) && (pl.near_sel as f64) < n { pl.near_sel as f64 + 1.0 }
+        else if seat.hover.as_ref().is_some_and(crate::interact::wedged) && (seat.hand.near_sel as f64) < n { seat.hand.near_sel as f64 + 1.0 }
         else { 0.0 };
     let pin = r.at.map(|at| RingPin { at, ox: r.ox.unwrap_or(0.0), oy: r.oy.unwrap_or(0.0), edge_x: g.k.cmdring.edge_x * r.z, edge_y: g.k.cmdring.edge_y * r.z });
     Some(HandRingView { x: r.ax, y: r.ay, zoom: r.z, lit, wedges, pin })
@@ -80,15 +79,15 @@ pub(super) fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
 /// why a press did nothing, for as long as it is up. An empty tap's word goes sooner, when it is no longer what a tap would say: a step into reach, or away, takes it down
 pub(super) fn empty_view(g: &Game, seat: &SeatRef) -> Option<EmptyView> {
     let pl = &g.pl[seat.player];
-    if g.cond[pl.ch].down || pl.sel.word.is_empty() { return None; }
-    let age = g.time - pl.sel.word_t;
+    if g.cond[pl.ch].down || seat.hand.sel.word.is_empty() { return None; }
+    let age = g.time - seat.hand.sel.word_t;
     if !(age >= 0.0 && age < crate::handring::EMPTY_SHOW_SECS) { return None; }
-    if let Some(kind) = pl.sel.word_kind { return Some(EmptyView { word: pl.sel.word.clone(), kind, dist: None }); }
+    if let Some(kind) = seat.hand.sel.word_kind { return Some(EmptyView { word: seat.hand.sel.word.clone(), kind, dist: None }); }
     if !seat.nearby.is_empty() { return None; }
     let t = crate::interact::empty_thing(g, seat);
-    if crate::interact::empty_word(t.as_ref()) != pl.sel.word { return None; }
+    if crate::interact::empty_word(t.as_ref()) != seat.hand.sel.word { return None; }
     Some(match t {
-        Some(t) => { let far = t.why == crate::handring::empty_why().far.as_str(); EmptyView { word: pl.sel.word.clone(), kind: crate::interact::thing_kind(t.it.kind), dist: if far { Some(t.d) } else { None } } }
-        None => EmptyView { word: pl.sel.word.clone(), kind: ThingKind::Wall, dist: None },
+        Some(t) => { let far = t.why == crate::handring::empty_why().far.as_str(); EmptyView { word: seat.hand.sel.word.clone(), kind: crate::interact::thing_kind(t.it.kind), dist: if far { Some(t.d) } else { None } } }
+        None => EmptyView { word: seat.hand.sel.word.clone(), kind: ThingKind::Wall, dist: None },
     })
 }

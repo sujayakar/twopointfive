@@ -53,7 +53,7 @@ fn the_list_is_the_rows_the_tick_built_and_lights_what_the_key_does() {
         assert!(I.rows.is_empty() && I.lit == -1.0 && I.ring.is_none() && !I.open, "seed {seed}: nothing in reach on the yard: {I:?}");
         at_door(&mut p, door);
         let I = p.view().interact;
-        let hv = p.g.hover.clone().expect("a door a stride away is the highlight");
+        let hv = p.g.sets[p.g.seat].hover.clone().expect("a door a stride away is the highlight");
         assert_eq!(I.rows[0].label, hv.line1, "seed {seed}");
         assert_eq!(I.lit, 0.0, "seed {seed}: what the key would do is the line that is lit: {I:?}");
         assert_eq!(I.rows[0].kind, ThingKind::Door, "seed {seed}");
@@ -70,15 +70,15 @@ fn a_row_out_of_reach_says_how_far_and_the_ring_stands_down_on_a_row_about_no_th
         let (mut p, door) = play(seed);
         at_door(&mut p, door);
         let near = p.view().interact.rows[0].clone();
-        let hv = p.g.hover.clone().unwrap();
+        let hv = p.g.sets[p.g.seat].hover.clone().unwrap();
         assert!(near.in_reach && near.dist.is_none(), "seed {seed}");
-        let Some(row) = p.g.nearby.first_mut() else { panic!("seed {seed}: a row") };
+        let Some(row) = p.g.sets[p.g.seat].nearby.first_mut() else { panic!("seed {seed}: a row") };
         row.in_reach = false;
         let far = p.view().interact.rows[0].clone();
         assert!(!far.in_reach, "seed {seed}");
         let d = far.dist.expect("how far off a row out of reach is");
         assert!(d > 0.0 && d < 3.0, "seed {seed}: a stride from the door: {d}");
-        p.g.hover = Some(game::game::Interactable { kind: game::game::InteractableKind::Charge, ..hv });
+        p.g.sets[p.g.seat].hover = Some(game::game::Interactable { kind: game::game::InteractableKind::Charge, ..hv });
         assert!(p.view().interact.ring.is_none(), "seed {seed}: a charge to blow is on his list wherever he stands: the ring stays the gun's");
     }
 }
@@ -90,19 +90,19 @@ fn the_dots_are_the_ticks_things_and_the_highlight_rings_one() {
         let (mut p, door) = play(seed);
         at_door(&mut p, door);
         let v = p.view();
-        let (dots, things) = (&v.interact.dots, p.g.interactables.iter().filter(|t| t.kind != K::Guard).collect::<Vec<_>>());
+        let (dots, things) = (&v.interact.dots, p.g.sets[p.g.seat].interactables.iter().filter(|t| t.kind != K::Guard).collect::<Vec<_>>());
         assert_eq!(dots.len(), things.len(), "seed {seed}");
         assert!(dots.iter().zip(things.iter()).all(|(d, t)| d.at == t.pos && d.off == t.off && d.kind == game::interact::thing_kind(t.kind)), "seed {seed}");
         assert!(dots.iter().all(|d| d.kind != ThingKind::Guard), "seed {seed}: a living man has his mark, and no dot is sent of him");
         assert_eq!(dots.iter().filter(|d| d.kind == ThingKind::Door).count(), 3, "seed {seed}: the three doors: {dots:?}");
         assert_eq!(dots.iter().filter(|d| d.ringed).count(), 1, "seed {seed}: the door the ring is on, and no other: {dots:?}");
         let ringed = dots.iter().find(|d| d.ringed).unwrap();
-        assert_eq!((ringed.kind, ringed.at), (ThingKind::Door, p.g.hover.as_ref().unwrap().pos), "seed {seed}");
+        assert_eq!((ringed.kind, ringed.at), (ThingKind::Door, p.g.sets[p.g.seat].hover.as_ref().unwrap().pos), "seed {seed}");
         // CONTROL: the highlight gone, no dot is ringed
-        let hv = p.g.hover.take().unwrap();
+        let hv = p.g.sets[p.g.seat].hover.take().unwrap();
         assert!(p.view().interact.dots.iter().all(|d| !d.ringed), "seed {seed}");
         // his own charge on that door, its row lit: the ring stays the gun's, so the door's dot stands
-        p.g.hover = Some(Interactable { kind: K::Charge, ..hv });
+        p.g.sets[p.g.seat].hover = Some(Interactable { kind: K::Charge, ..hv });
         let I = p.view().interact;
         assert!(I.ring.is_none() && I.dots.iter().all(|d| !d.ringed), "seed {seed}: {I:?}");
     }
@@ -117,7 +117,7 @@ fn the_fog_hides_exactly_the_dot_of_the_man_it_hides() {
         let (a, b) = (hs[0], hs[1]);
         p.falls(a, game::game::DownBy::Player); p.falls(b, game::game::DownBy::Player);
         p.run(0.2);
-        let of = |p: &Play, gd| p.g.interactables.iter().find(|t| t.kind == K::Body && t.guard == Some(gd)).map(|t| t.pos);
+        let of = |p: &Play, gd| p.g.sets[p.g.seat].interactables.iter().find(|t| t.kind == K::Body && t.guard == Some(gd)).map(|t| t.pos);
         let (at_a, at_b) = (of(&p, a).expect("the first body has a row"), of(&p, b).expect("the second"));
         p.g.fog_of_war.hidden_chars.clear();
         assert!(p.view().interact.dots.iter().all(|d| !d.hidden), "seed {seed}: nobody is hidden");
@@ -138,14 +138,14 @@ fn a_thing_on_a_man_names_him_and_a_body_stays_at_its_place() {
         let gd = p.hostiles()[0];
         let feet = p.g.ch[p.g.gd[gd].ch].pos;
         let on = |kind| Interactable { kind, guard: Some(gd), pos: [feet[0], feet[1] + 1.35, feet[2]], ..Interactable::default() };
-        p.g.hover = Some(on(K::Guard));
+        p.g.sets[p.g.seat].hover = Some(on(K::Guard));
         let R = p.view().interact.ring.expect("a ring on him");
         assert_eq!(R.man, Some(p.id_of(gd)), "seed {seed}");
         assert!((R.up - 1.35).abs() < 1e-9, "seed {seed}: {R:?}");
-        p.g.hover = Some(on(K::Body));
+        p.g.sets[p.g.seat].hover = Some(on(K::Body));
         let R = p.view().interact.ring.expect("a ring on the body");
         assert!(R.man.is_none() && R.at[1] == feet[1] + 1.35, "seed {seed}: {R:?}");
-        p.g.interactables = vec![on(K::Held), on(K::Body), on(K::Guard)];
+        p.g.sets[p.g.seat].interactables = vec![on(K::Held), on(K::Body), on(K::Guard)];
         let D = p.view().interact.dots;
         assert_eq!(D.len(), 2, "seed {seed}: no dot of a living man");
         assert!(D[0].man == Some(p.id_of(gd)) && (D[0].up - 1.35).abs() < 1e-9 && D[1].man.is_none(), "seed {seed}: {D:?}");

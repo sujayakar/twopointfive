@@ -45,7 +45,7 @@ mod tests {
 
 /// The selector open with his hand on it: a list, or a ring whose key is still down.
 pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
-    let sel = &g.pl[id].sel;
+    let sel = &g.sets[crate::seats::seat_of_man(g, id)].hand.sel;
     sel.open && !sel.ring.as_ref().and_then(|r| r.free).unwrap_or(false)
 }
 

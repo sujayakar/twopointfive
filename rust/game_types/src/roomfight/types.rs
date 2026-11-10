@@ -142,7 +142,7 @@ pub struct Def {
     pub noise_at: Option<V3>,
     pub noise_t: f64,
     pub noise_out: bool,
-    pub last_state: String,
+    pub last_state: crate::game::GuardState,
     pub last_seen: f64,
     pub fix_keep: f64,
     pub pre: bool,

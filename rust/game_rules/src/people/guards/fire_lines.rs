@@ -132,8 +132,8 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
 /// What a keyed door gives away: its keep kicked out, or standing unlocked.
 pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::DoorTamper> {
     if !g.dr[d].def.locked.unwrap_or(false) { return None; }
-    if crate::doors::door_lock_broken(g, d) { return Some(crate::guards::DoorTamper::Forced); }
-    if !crate::doors::door_locked(g, d) { return Some(crate::guards::DoorTamper::Picked); }
+    if g.dr[d].leaf.lock_broken { return Some(crate::guards::DoorTamper::Forced); }
+    if !g.dr[d].leaf.locked { return Some(crate::guards::DoorTamper::Picked); }
     None
 }
 
@@ -150,17 +150,7 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 
             let a = base + da;
             let p: V3 = [bp[0] + m::sin(a) * r, 0.0, bp[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || !crate::scene_collision::nav_grid_walkable(g, foot, p) || crate::scene_collision::segment_blocked(g, [p[0], 1.0, p[2]], [bp[0], 0.4, bp[2]], None, None, None) { continue; }
-            let mut taken = false;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let o = g.guards[i];
-                i += 1;
-                if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
-                if let Some(s) = g.gd[o].body_duty.and_then(|d| d.spot) {
-                    if v3::dist_xz(s, p) < 0.9 { taken = true; break; }
-                }
-            }
-            if !taken { return p; }
+            if !crate::places::taken(g, gd, p, 0.9) { return p; }
         }
     }
     v3::copy(foot)
@@ -179,29 +169,12 @@ fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Optio
             let a = base + da;
             let p: V3 = [bp[0] + m::sin(a) * r, 0.0, bp[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
-            let mut taken = false;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let o = g.guards[i];
-                i += 1;
-                if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
-                if let Some(d) = g.gd[o].body_duty {
-                    if d.stage == crate::game::GuardBodyDutyStage::Fan {
-                        if let Some(s) = d.spot {
-                            if v3::dist_xz(s, p) < 2.5 { taken = true; break; }
-                        }
-                    }
-                }
-            }
-            if taken { continue; }
+            if crate::places::taken(g, gd, p, 2.5) { continue; }
             paths += 1;
             if paths > 12 { return None; }
             let path = match crate::scene_collision::nav_grid_find_path(g, from, p, None, None) { Some(path) if !path.is_empty() => path, _ => continue };
             if v3::dist_xz(path[path.len() - 1], bp) < 4.0 { continue; }
-            let mut l = 0.0;
-            let mut q: V3 = from;
-            for w in path.iter() { l += v3::dist_xz(q, *w); q = *w; }
-            if l < 16.0 { return Some(p); }
+            if crate::places::walk_len(from, &path) < 16.0 { return Some(p); }
         }
     }
     None
@@ -392,7 +365,7 @@ pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
     let mut shut: Vec<BoxId> = Vec::new();
     let list = g.doors.list.clone();
     for d in list {
-        if crate::doors::door_latched(g, d) { shut.push(g.dr[d].box_); }
+        if g.dr[d].leaf.latched { shut.push(g.dr[d].box_); }
     }
     let rd: V3 = [vx / sp, 0.0, vz / sp];
     let mut fix = p;

@@ -224,7 +224,7 @@ export function build() {
     //  The list is the tap's too: an order off it is not given by the key either)
     // (`rows`: the interaction key is never his in this mission, and with a list no row is drawn while that key is locked. Without one the corner of the
     //  screen offered a door's row at every door and "throw it — kill the lights" at the breaker box, for a key that did nothing)
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
     steps: [
       // 1 · TWO DOORS, ONE WORD: the key on one door is everybody's, as he knows it; Shift with the key on the other door parts a pair off to it; the
       // word sends every stack that waits
@@ -256,12 +256,12 @@ export function build() {
       //  a tap, so all four cannot come to one gate. A tap ON HIMSELF still calls them back: the way out when stray taps have left nobody free for the wheel.
       //  EACH STEP ENDS ON THE GATE IT NAMES, by one man (the part is half of the biggest group, and after stray taps that may be one man), so no press leaves him with a line he
       //  cannot finish. The tap on himself at `gateB` calls the road gate's men off too: `split` asks for that gate again, and is done as it comes up where it is still watched)
-      { id: 'gateA', line: 'Hold [Shift] and keep [B] held down on the marked spot by the road gate', flatLine: 'Press [2] to have them watch the road gate', menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
+      { id: 'gateA', line: 'Hold [Shift] and keep [B] held down on the marked spot by the road gate', menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
         explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for part of your squad.\nThey'll take the order you pick, and the others will keep doing what they were doing." },
         allow: ['ringPart'], done: or(watch(WATCH_E, 1), taken('road')), at: WATCH_E },
-      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have them watch the back gate', menuLine: 'Press [2] to have them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
+      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', menuLine: 'Press [2] to have them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
         done: or(watch(WATCH_N, 1), taken('lane')), at: WATCH_N },
-      { id: 'split', line: "Nobody's watching the road gate now, so hold [Shift] and keep [B] held down on its marked spot", flatLine: 'Press [2] to have them watch the road gate', menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
+      { id: 'split', line: "Nobody's watching the road gate now, so hold [Shift] and keep [B] held down on its marked spot", menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
         done: or(watch(WATCH_E, 1), taken('road'), taken('lane')), at: WATCH_E },
       { id: 'hold', line: 'Hold both gates with your squad', done: and(taken('road'), taken('lane')), cue: 'gates' },
     ],

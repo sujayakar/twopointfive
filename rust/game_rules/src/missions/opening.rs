@@ -30,13 +30,7 @@ fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
         Some(path) => path,
         None => return f64::INFINITY,
     };
-    let mut l = 0.0;
-    let mut at = p;
-    for w in path {
-        l += flat(at, w);
-        at = w;
-    }
-    l + flat(at, q)
+    crate::places::walk_len(p, &path) + flat(path.last().copied().unwrap_or(p), q)
 }
 
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route.

@@ -41,8 +41,6 @@ pub struct BigkitStats {
 
 pub const TAIL: f64 = 0.3;
 
-pub const BREAK: bool = false;
-
 pub const MOVE_SLACK: f64 = 1.2;
 
 pub const MOVE_CLEAR: f64 = 0.45;

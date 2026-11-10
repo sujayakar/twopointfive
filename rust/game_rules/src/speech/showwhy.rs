@@ -252,8 +252,8 @@ fn stacks(g: &mut crate::game::Game) {
     let k = g.k.showwhy;
     let t = g.time;
     let mut i = 0;
-    while i < g.door_tools.ops.len() {
-        let op = g.door_tools.ops[i];
+    while i < g.sets[g.seat].door_tools.ops.len() {
+        let op = g.sets[g.seat].door_tools.ops[i];
         i += 1;
         if g.tab.doortools_door_op[op].men.is_empty() {
             continue;

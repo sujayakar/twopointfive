@@ -28,6 +28,5 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    crate::doortools::row_entry(g, false, men, t, on_word)
+    crate::doortools::row_entry(g, false, men, t)
 }

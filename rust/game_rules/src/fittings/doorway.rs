@@ -51,7 +51,7 @@ pub fn in_opening(g: &crate::game::Game, d: DoorId, p: V3, half: Option<f64>) ->
 
 /// `p` where `d`'s leaf swings: inside its arc between its stops, off the opening's own strip.
 fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
-    if crate::doors::door_off(g, d) { return false; }
+    if g.dr[d].leaf.off { return false; }
     let r = rel(g, d, p);
     if r.along >= -0.05 && r.along <= r.f.w + 0.05 && m::abs(r.perp) <= g.k.doormanners.half { return false; }
     if m::hyp2(r.along, r.perp) > r.f.w + g.k.doormanners.sweep { return false; }
@@ -71,7 +71,7 @@ pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
 
 /// Not standing open enough to have a lane: on its hinges and latched, or under `laneAjar`.
 fn no_lane(g: &mut crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && (crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < g.k.doormanners.lane_ajar)
+    !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < g.k.doormanners.lane_ajar)
 }
 
 /// STAND, the lane: the door standing open whose lane `p` is in.
@@ -121,7 +121,7 @@ pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorw
         if flat(p, fc) > g.k.doormanners.lane_m + g.dr[d].def.width { continue; }
         let r = rel(g, d, p);
         let depth = m::abs(r.perp);
-        if depth > g.k.doormanners.lane_m || (depth < g.k.doormanners.lane_strip && (crate::doors::door_off(g, d) || r.perp * crate::doors::door_angle(g, d) <= 0.0)) { continue; }
+        if depth > g.k.doormanners.lane_m || (depth < g.k.doormanners.lane_strip && (g.dr[d].leaf.off || r.perp * g.dr[d].leaf.angle <= 0.0)) { continue; }
         let e = g.k.doormanners.lane_out + g.k.doormanners.lane_flare * depth;
         if r.along < -e || r.along > r.f.w + e { continue; }
         if crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [fc[0], 0.45, fc[2]], None) { continue; }
@@ -156,9 +156,9 @@ pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, take
 
 /// Is the place at (along, perp) of `d`'s frame behind its open leaf.
 fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
-    if crate::doors::door_off(g, d) { return false; }
+    if g.dr[d].leaf.off { return false; }
     let w = g.dr[d].def.width;
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     leaf_cuts(w, angle, along, perp)
 }
 
@@ -193,8 +193,8 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if t - s.leaf_t < stall_secs { return false; }
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_off(g, d) || crate::doors::door_latched(g, d) { continue; }
-        let angle = crate::doors::door_angle(g, d);
+        if g.dr[d].leaf.off || g.dr[d].leaf.latched { continue; }
+        let angle = g.dr[d].leaf.angle;
         if m::abs(angle) < 0.8 || flat(p, g.dr[d].frame_centre) > g.dr[d].def.width + 1.5 { continue; }
         let r = rel(g, d, p);
         let (cx, cz) = (m::cos(angle), m::sin(angle));
@@ -609,7 +609,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let mut door: Option<DoorId> = None;
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.6 || flat(pos, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
+        if g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.6 || flat(pos, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
         if in_opening(g, d, pos, None) { door = Some(d); break; }
     }
     let door = match door {
@@ -700,7 +700,7 @@ pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
 /// front of whatever comes through.
 pub fn before_another_door(g: &crate::game::Game, p: V3, but: DoorId) -> bool {
     for &d in &g.doors.list {
-        if d == but || crate::doors::door_off(g, d) { continue; }
+        if d == but || g.dr[d].leaf.off { continue; }
         let r = rel(g, d, p);
         if m::abs(r.perp) < BEFORE_DEEP && r.along > -BEFORE_WIDE && r.along < r.f.w + BEFORE_WIDE { return true; }
     }
@@ -724,10 +724,10 @@ pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     let (mut shut, mut open) = (false, false);
     for &d in &g.doors.list {
-        if crate::doors::door_off(g, d) { continue; }
+        if g.dr[d].leaf.off { continue; }
         let fc = g.dr[d].frame_centre;
         if v3::dist_xz(p, fc) > g.dr[d].def.width + BRUSH_M { continue; }
-        if !crate::doors::door_latched(g, d) { open = true; continue; }
+        if !g.dr[d].leaf.latched { open = true; continue; }
         let r = rel(g, d, p);
         if m::abs(r.perp) > BRUSH_M || r.along < -BRUSH_M || r.along > r.f.w + BRUSH_M { continue; }
         if means_to_pass(g, gd, d) { return false; }

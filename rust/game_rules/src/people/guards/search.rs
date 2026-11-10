@@ -532,8 +532,8 @@ pub(super) fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed:
                 let mut extra = 0.0;
                 let d = if keyed { None } else { dc.get(crate::Num(ni as f64)).copied() };
                 if let Some(d) = d {
-                    if Some(d) != cur_door && crate::doors::door_latched(g, d) {
-                        if crate::doors::door_locked(g, d) && !crate::doors::door_lock_broken(g, d) {
+                    if Some(d) != cur_door && g.dr[d].leaf.latched {
+                        if g.dr[d].leaf.locked && !g.dr[d].leaf.lock_broken {
                             let at: V3 = [(cx as f64 + 0.5) * cs, 0.0, (cz as f64 + 0.5) * cs];
                             let from_side = crate::doors::doors_side(g, d, at);
                             if from_side == g.dr[d].key_side {
@@ -598,7 +598,7 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     let mut leaf_n: Vec<u8> = vec![0; n];
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if m::abs(crate::doors::door_angle(g, d)) < 0.7 || crate::doors::door_off(g, d) { continue; }
+        if m::abs(g.dr[d].leaf.angle) < 0.7 || g.dr[d].leaf.off { continue; }
         let [hx, hz] = g.dr[d].def.hinge;
         let u = crate::doors::door_dir(g, d);
         let fc = g.dr[d].frame_centre;

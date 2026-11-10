@@ -38,9 +38,9 @@ fn a_write_moves_the_word_of_its_own_part() {
     // (a system's own slot, which only its module can name)
     assert_eq!(moved(&mut p, |g| game::control::set_hold(g, gd, !g.gd[gd].hold, "here")), ["gd", "ctl"]);
     // (a seat's set, of the seat that stands on Game and of the other)
-    assert_eq!(moved(&mut p, |g| g.threat_proximity += 1.0), ["seats.threat_proximity"]);
+    assert_eq!(moved(&mut p, |g| g.sets[g.seat].threat_proximity += 1.0), ["seats.threat_proximity"]);
     let other = p.g.seats[1];
-    assert_eq!(moved(&mut p, |g| game::seats::with_seat(g, other, &mut |g| g.threat_proximity += 1.0)), ["seats.threat_proximity"]);
+    assert_eq!(moved(&mut p, |g| game::seats::with_seat(g, other, &mut |g| g.sets[g.seat].threat_proximity += 1.0)), ["seats.threat_proximity"]);
 }
 
 /// A FAILURE MEANS: a chair or a can nobody is near can stand elsewhere on one machine of a game, and no state word says so.

@@ -162,7 +162,7 @@ fn the_can_comes_to_rest_where_the_view_says() {
         let at = p.sam_at();
         can_in_hand(&mut p, SlotKind::Smoke, [at[0] + 3.0, at[1] + 1.0]);
         let v = p.view().aim.throw.expect("a can in the fist: an arc is up");
-        let (kind, sol) = { let pl = p.g.player; (p.g.pl[pl].held_kind, p.g.pl[pl].throw_preview.clone().unwrap()) };
+        let (kind, sol) = { let pl = p.g.player; (p.g.pl[pl].held_kind, p.g.sets[p.g.seat].hand.throw_preview.clone().unwrap()) };
         let rest = v.rest.expect("a can comes to rest");
         let own = game::frag::rest_of_throw(&mut *p.g, kind, sol.points[0], sol.v0);
         assert_eq!(rest.at.map(f64::to_bits), own.at.map(f64::to_bits), "seed {}: at {:?} and {:?}", seed, rest.at, own.at);
@@ -239,9 +239,10 @@ fn in_a_game_of_two_the_ring_and_the_arc_are_the_seats_own() {
         p.g.pl[first].holstered = false;
         can_in_hand(&mut p, SlotKind::Smoke, [at[0] + 3.0, at[1]]);
         assert!(p.view_of(0).aim.throw.is_some() && p.view_of(1).aim.throw.is_none(), "seed {}", seed);
-        // and the second man's is told to him, whoever stands on the game
-        let sol = p.g.pl[first].throw_preview.clone().unwrap();
-        p.g.pl[second].throw_preview = Some(sol); p.g.pl[second].held_kind = ThrowKind::Smoke; p.g.pl[second].throw_held = true;
+        // and the second man's is told to him, whichever seat `g.seat` names
+        let sol = p.g.sets[game::seats::seat_of_man(&p.g, first)].hand.throw_preview.clone().unwrap();
+        let his = game::seats::seat_of_man(&p.g, second);
+        p.g.sets[his].hand.throw_preview = Some(sol); p.g.pl[second].held_kind = ThrowKind::Smoke; p.g.sets[his].hand.throw_held = true;
         assert!(p.view_of(1).aim.throw.is_some_and(|t| t.rest.is_some()), "seed {}", seed);
     }
 }

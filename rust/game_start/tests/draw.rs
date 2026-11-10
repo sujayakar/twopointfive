@@ -19,7 +19,7 @@ fn drawing_a_game_is_no_part_of_it() {
         (0..240).map(|k| {
             if k == 60 { let at = p.sam_at(); game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Frag, [at[0] + 3.0, 0.0, at[1]]); }
             p.g.god_mode = true;
-            p.frame_shown(|p| if draw { let focus = p.g.aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
+            p.frame_shown(|p| if draw { let focus = p.g.sets[p.g.seat].aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
             p.words()
         }).collect::<Vec<_>>()
     };
@@ -45,7 +45,7 @@ fn watching_a_run_is_no_part_of_it() {
                 game::scene_collision::stands(&mut p.g);
                 d.watch(&p.g);
                 game::scene_collision::unstand(&mut p.g);
-                let focus = p.g.aim_point;
+                let focus = p.g.sets[p.g.seat].aim_point;
                 d.take(&p.g, ALL);
                 d.frame(&p.g, 1.0, focus);
                 let (men, own) = (d.men.men.len(), d.boxes.own_ids().count());
@@ -72,7 +72,7 @@ fn a_frame_between_two_ticks_stands_between_them() {
     p.key_down("KeyW");
     p.run(0.5);
     let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
-    let focus = p.g.aim_point;
+    let focus = p.g.sets[p.g.seat].aim_point;
     d.take(&p.g, ALL);
     d.frame(&p.g, 1.0, focus);
     let before = man(&d, id).expect("Sam is drawn");
@@ -94,7 +94,7 @@ fn nothing_is_drawn_through_a_cut() {
     p.key_down("KeyW");
     p.run(0.5);
     let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
-    let focus = p.g.aim_point;
+    let focus = p.g.sets[p.g.seat].aim_point;
     d.take(&p.g, ALL);
     p.frame_shown(|p| { d.cut(); d.take(&p.g, ALL); d.frame(&p.g, 1.0, focus); });
     let whole = man(&d, id).unwrap();

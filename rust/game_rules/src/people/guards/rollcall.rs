@@ -20,7 +20,7 @@ fn play(g: &mut Game, name: &str, at: V3, vol: f64) {
 fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
-/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the book on Game with one book, his seat's otherwise, asked inside that seat.
+/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the first seat's book with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
     let s = crate::seats::seat_of(g, gd);
@@ -626,7 +626,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
         let k = match &p.room { Some(r) => r.clone(), None => p.door.clone() };
         let dist = v3::dist(g.dr[d].frame_centre, at);
         let tampered = door_tamper(g, d) == Some(DoorTamper::Forced)
-            || (g.dr[d].def.locked == Some(true) && crate::doors::door_noticed(g, d) && g.time - crate::doors::door_noticed_t(g, d) < TAMPER_MEMORY_SECS);
+            || (g.dr[d].def.locked == Some(true) && g.dr[d].leaf.noticed && g.time - g.dr[d].leaf.noticed_t < TAMPER_MEMORY_SECS);
         let inside = match p.bounds.clone() { Some(b) => crate::squad::in_bounds(at, Some(b), None), None => false };
         let r = by_room.get_or_insert_with(k, || RoomRow { plans: Vec::new(), d: f64::INFINITY, tampered: false, inside: false });
         r.plans.push(p);

@@ -238,7 +238,6 @@ pub mod shotgun { pub mod types; pub use types::*; }
 pub mod showwhy { pub mod types; pub use types::*; }
 pub mod shutdoor { pub mod types; pub use types::*; }
 pub mod silent { pub mod types; pub use types::*; }
-pub mod sim_doorshome { pub mod types; pub use types::*; }
 pub mod falls { pub mod types; pub use types::*; }
 pub mod fixtures { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }

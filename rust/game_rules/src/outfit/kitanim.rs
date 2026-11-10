@@ -31,7 +31,7 @@ fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     }
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     if g.pl[p].pending_throw.is_some()
-        || g.pl[p].throw_held
+        || g.sets[g.seat].hand.throw_held
         || crate::character::anim_in_throw(g, c)
         || crate::character::anim_reloading(g, c)
         || crate::weapons::firearm_reloading(g, pistol)
@@ -265,7 +265,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     } else {
         None
     };
-    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
+    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.sets[g.seat].orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
         g.pl[p].kit_owed = -1.0;
         return;
     }

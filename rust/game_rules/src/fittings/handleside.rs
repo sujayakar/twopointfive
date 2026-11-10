@@ -210,14 +210,14 @@ fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already.
 fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
     if g.team(gd) == crate::teams::Team::Civilian { return false; }
-    if crate::doors::door_off(g, d) { return false; }
-    let latched = crate::doors::door_latched(g, d);
+    if g.dr[d].leaf.off { return false; }
+    let latched = g.dr[d].leaf.latched;
     if !latched {
-        let opened = crate::doors::door_angle(g, d) * crate::doors::door_swing(g, d);
+        let opened = g.dr[d].leaf.angle * crate::doors::door_swing(g, d);
         let under = if crate::doors::doors_pull_face(g, d, from) { m::min(g.k.handle.clear, ajar_of(g, d)) } else { ajar_of(g, d) };
         if opened >= under { return false; }
     }
-    if !latched && (crate::doors::door_pull_t(g, d) > 0.0 || crate::doors::door_vel(g, d) * crate::doors::door_swing(g, d) > 0.5) { return false; }
+    if !latched && (g.dr[d].leaf.pull_t > 0.0 || g.dr[d].leaf.vel * crate::doors::door_swing(g, d) > 0.5) { return false; }
     if g.team(gd).ours() {
         let p = seat.player;
         // `new Set([...keys, ...codes])` where he holds codes, else his keys: lent by copy, the stub wants `g` too
@@ -369,9 +369,9 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
         let l = g.m.handleside.lined.get(gd).copied();
         if !wants_hand(g, &crate::seats::here(g), gd, d, pos) {   // it stands open: from the face it opens into he still goes through the half its handle left
             let thru = pull
-                && !crate::doors::door_off(g, d)
-                && !crate::doors::door_latched(g, d)
-                && crate::doors::door_angle(g, d) * crate::doors::door_swing(g, d) < k.ajar + 0.1
+                && !g.dr[d].leaf.off
+                && !g.dr[d].leaf.latched
+                && g.dr[d].leaf.angle * crate::doors::door_swing(g, d) < k.ajar + 0.1
                 && g.team(gd) != crate::teams::Team::Civilian
                 && line_up(g, gd, d, side, f, l, a_);
             if !thru { return false; }
@@ -485,7 +485,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
     let pos = g.ch[c].pos;
     let hd = handle_at(g, d);
     let yaw = m::atan2(hd[0] - pos[0], hd[2] - pos[2]);
-    let open = crate::doors::door_angle(g, d) * crate::doors::door_swing(g, d);
+    let open = g.dr[d].leaf.angle * crate::doors::door_swing(g, d);
     let ajar = ajar_of(g, d);
     let far = flat(pos, hd) > k.reach + 0.05;
     let (phase, t) = { let st = g.m.handleside.states.get(gd).unwrap(); (st.phase, st.t) };
@@ -501,7 +501,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
     }
     // wait: the leaf comes round past him. His hand stays on it while the handle is in his reach and it would not yet carry clear by itself; he walks on once it stands clear.
     if !strafe { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, yaw, 7.0 * dt); }
-    let vel = crate::doors::door_vel(g, d);
+    let vel = g.dr[d].leaf.vel;
     if open < m::min(k.clear, ajar) && !(t > 0.3 && m::abs(vel) < 0.4) && t < k.wait {
         let u = crate::doors::door_dir(g, d);
         let (hinge, width) = (g.dr[d].def.hinge, g.dr[d].def.width);
@@ -673,7 +673,7 @@ pub fn tool_step(g: &mut crate::game::Game, gd: GuardId, pos: V3) -> bool {
 
 /// Is a shut leaf to be stacked on from its latch jamb, whichever jamb a man is nearer.
 pub fn latch_first(g: &mut crate::game::Game, d: DoorId, stack: V3) -> bool {
-    if !crate::doors::door_is_closed(g, d) || crate::doors::door_off(g, d) || !stands(g, stack, Some(true)) { return false; }
+    if !crate::doors::door_is_closed(g, d) || g.dr[d].leaf.off || !stands(g, stack, Some(true)) { return false; }
     let hd = handle_at(g, d);
     !walled(g, hd, stack)
 }

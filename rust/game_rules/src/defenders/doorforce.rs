@@ -67,7 +67,7 @@ fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// A leaf that is a shut door to a man: hung, home in its frame.
 fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && crate::doors::door_is_closed(g, d)
+    !g.dr[d].leaf.off && crate::doors::door_is_closed(g, d)
 }
 
 /// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge.
@@ -253,7 +253,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
         let cf = crate::coverfire::coverfire_on(g, gd);
-        let theirs = match &cf { Some(x) => x.kind == "thru", None => false };
+        let theirs = match &cf { Some(x) => x.kind.is_none(), None => false };
         if theirs && cf.as_ref().unwrap().fired > 0.0 { man!(g, gd).cf_t = time; }
         // a stand or a boot the alert branch has stopped asking about is over: taken up again it starts again
         {
@@ -565,7 +565,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     if gave {
         let pos = g.ch[c].pos;
         crate::marks::kick_scuff(g, d, pos);
-        crate::doors::door_set_noticed(g, d, true);   // (the keep his own side tore out is no puzzle to a colleague on a calm pass later)
+        g.dr[d].leaf.noticed = true;   // (the keep his own side tore out is no puzzle to a colleague on a calm pass later)
     }
     let line = alloc::format!("{} boots {}: {}", g.gd[gd].callsign, g.dr[d].def.name, if gave { "it goes in" } else { "it holds" });
     log(g, &line);

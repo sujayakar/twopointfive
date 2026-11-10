@@ -90,7 +90,7 @@ impl Moments {
     fn tick(&mut self, p: &Play, f: usize) {
         let t = p.time();
         for &d in &p.g.doors.list {
-            let shut = game::doors::door_angle(&p.g, d).abs() < 0.12;
+            let shut = p.g.dr[d].leaf.angle.abs() < 0.12;
             if self.shut.insert(d, shut) == Some(true) && !shut {
                 let c = p.g.dr[d].frame_centre;
                 let by = p.mates().into_iter().filter(|&m| p.up(m)).map(|m| (dist(p.at(m), [c[0], c[2]]), m)).filter(|x| x.0 < 2.0).min_by(|a, b| a.0.partial_cmp(&b.0).unwrap()).map(|x| x.1);

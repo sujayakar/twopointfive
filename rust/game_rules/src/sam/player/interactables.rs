@@ -250,7 +250,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let d = g.doors.list[di];
             di += 1;
             let dp = crate::doors::door_pos(g, d);
-            if crate::doors::door_off(g, d) || m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) > NEARBY_M { continue; }
+            if g.dr[d].leaf.off || m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) > NEARBY_M { continue; }
             let locked_out = crate::doors::doors_locked_out(g, d, p, None);
             let closed = crate::doors::door_is_closed(g, d);
             let mut it = mark(
@@ -281,12 +281,12 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         while di < g.doors.list.len() {
             let d = g.doors.list[di];
             di += 1;
-            if crate::doors::door_off(g, d) { continue; }
+            if g.dr[d].leaf.off { continue; }
             let dp = crate::doors::door_pos(g, d);
             let near = m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) < crate::doors::DOORS_USE_REACH;
             let reach = near && !sprinting;
             let shut = crate::doors::door_is_closed(g, d);
-            let pick = crate::doors::door_pick(g, d);
+            let pick = g.dr[d].leaf.pick;
             let pct_s = format!("{}%", pct(pick));
             let mut it = mark(crate::game::InteractableKind::Door, dp, String::new(), String::from(if reach { "" } else { "step closer" }), reach, false);
             it.door = Some(d);
@@ -323,7 +323,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                 }
             } else if crate::doors::doors_locked_out(g, d, p, Some(&keys)) {
                 let steel = g.dr[d].def.steel == Some(true);
-                it.line1 = if crate::doors::door_rattle_t(g, d) > 0.0 {
+                it.line1 = if g.dr[d].leaf.rattle_t > 0.0 {
                     String::from("door · locked — won't budge")
                 } else if steel {
                     String::from("steel fire door · bolted from the stairs")
@@ -367,9 +367,9 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                     verbs.push(row(&it, crate::game::Verb::Ease, "ease it open — silent", ""));
                 }
             } else {
-                let tail = if crate::doors::door_lock_broken(g, d) {
+                let tail = if g.dr[d].leaf.lock_broken {
                     " · lock kicked in"
-                } else if g.dr[d].def.locked == Some(true) && !crate::doors::door_locked(g, d) {
+                } else if g.dr[d].def.locked == Some(true) && !g.dr[d].leaf.locked {
                     " · picked"
                 } else {
                     ""
@@ -382,7 +382,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                     } else {
                         verbs.push(row(&it, crate::game::Verb::Pull, if toward { "push it shut" } else { "pull it shut" }, ""));
                     }
-                    if m::abs(crate::doors::door_angle(g, d)) < EASE_OFFER {
+                    if m::abs(g.dr[d].leaf.angle) < EASE_OFFER {
                         verbs.push(row(&it, crate::game::Verb::Ease, "ease it open — silent", ""));
                     }
                 }
@@ -564,7 +564,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
         // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
         if let Some(d) = g.pl[pl].picking {
-            let pick = crate::doors::door_pick(g, d);
+            let pick = g.dr[d].leaf.pick;
             let base = marker(g, &list, d);
             rows = vec![running(&base, crate::game::Verb::Pick, &format!("picking… {}%  ·  Space or a step breaks off (the lock keeps it a moment)", pct(pick)), Some(pick))];
         } else if let Some(wd) = g.pl[pl].wanding.as_ref().map(|w| (w.door, w.live)) {
@@ -585,7 +585,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             rows = vec![status(&base, text)];
         } else if let Some(d) = g.pl[pl].easing {
             let base = marker(g, &list, d);
-            let progress = m::abs(crate::doors::door_angle(g, d)) / EASE_MAX;
+            let progress = m::abs(g.dr[d].leaf.angle) / EASE_MAX;
             rows = vec![running(&base, crate::game::Verb::Ease, "easing it open… — Space or a step stops it where it is", Some(progress))];
         } else if drive_t >= 0.0 {
             if let Some(it) = list.iter().find(|x| x.kind == crate::game::InteractableKind::Objective) {
@@ -649,16 +649,16 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             rows = out;
         }
     }
-    g.interactables = list;
+    g.sets[g.seat].interactables = list;
     // The highlight rides the list by key: on the same row if it is still there, else back to the top. A running verb's row is not carried over.
     let mut key = String::new();
     for (i, r) in rows.iter().enumerate() {
         if i > 0 { key.push('|'); }
         key.push_str(&row_key(g, r));
     }
-    if key != g.pl[pl].near_key {
-        g.pl[pl].near_key = key;
-        let keep = match g.hover.clone() {
+    if key != g.sets[g.seat].hand.near_key {
+        g.sets[g.seat].hand.near_key = key;
+        let keep = match g.sets[g.seat].hover.clone() {
             Some(hv) if hv.running != Some(true) => {
                 let want = row_key(g, &hv);
                 let mut at = None;
@@ -669,13 +669,13 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             }
             _ => None,
         };
-        let open = g.pl[pl].sel.open;
-        g.pl[pl].near_sel = match keep {
+        let open = g.sets[g.seat].hand.sel.open;
+        g.sets[g.seat].hand.near_sel = match keep {
             Some(k) if !(rows[k].kind == crate::game::InteractableKind::Charge && k > 0 && !open) => k as i32,
             _ => 0,
         };
     }
-    g.nearby = rows;
+    g.sets[g.seat].nearby = rows;
     pick_hover(g);
     crate::close::close_tick(g);
 }
@@ -700,16 +700,15 @@ fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
 
 /// Game.hover ← the highlighted row, Game.useDoor ← its door if it is a door row in reach
 pub fn pick_hover(g: &mut crate::game::Game) {
-    let pl = g.player;
-    let n = g.nearby.len() as i32;
-    let sel = g.pl[pl].near_sel;
-    g.pl[pl].near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
-    let best = g.nearby.get(g.pl[pl].near_sel as usize).cloned();
-    g.use_door = match &best {
+    let n = g.sets[g.seat].nearby.len() as i32;
+    let sel = g.sets[g.seat].hand.near_sel;
+    g.sets[g.seat].hand.near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
+    let best = g.sets[g.seat].nearby.get(g.sets[g.seat].hand.near_sel as usize).cloned();
+    g.sets[g.seat].use_door = match &best {
         Some(b) if b.kind == crate::game::InteractableKind::Door && b.in_reach => b.door,
         _ => None,
     };
-    g.hover = best;
+    g.sets[g.seat].hover = best;
 }
 
 /// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer
@@ -814,8 +813,8 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
     if g.pl[pl].dragging.is_some() { release_body(g, None); }
     if g.pl[pl].holding.is_some() { free_held(g, crate::player::FreeHeldWhy::Cancel); }
     g.pl[pl].takedown = None;
-    if g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].sel.down_t >= 0.0 {
-        g.pl[pl].f_held = true;
+    if g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].coding.is_some() || g.sets[g.seat].hand.sel.down_t >= 0.0 {
+        g.sets[g.seat].hand.f_held = true;
     }
     g.pl[pl].kick = None;
     g.pl[pl].picking = None;
@@ -825,13 +824,13 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
     crate::bigkit::sam_big_drop(g);
     g.pl[pl].easing = None;
     crate::hands::hands_cancel(g);
-    g.pl[pl].sel.down_t = -1.0;
-    g.pl[pl].sel.open = false;
-    g.pl[pl].sel.ring = None;
+    g.sets[g.seat].hand.sel.down_t = -1.0;
+    g.sets[g.seat].hand.sel.open = false;
+    g.sets[g.seat].hand.sel.ring = None;
     g.ch[c].anim.door_push = None;
     throw_off(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].speed_sm = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];

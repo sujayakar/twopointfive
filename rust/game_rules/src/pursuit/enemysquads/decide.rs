@@ -107,7 +107,6 @@ fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
     }
     run0
 }
-fn path_len(from: V3, path: &[V3]) -> f64 { along(from, path, &mut |_, _| {}) }
 
 /// out on a leg, or about to be sent, so not free to be sent anywhere else: `OWN.squadLeg`
 fn squad_leg_of(g: &crate::game::Game, q: EnemysquadsSquadId, gd: GuardId) -> bool {
@@ -333,7 +332,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
                 let p: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat, 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat];
                 if nav_blocked(g, p[0], p[2]) { continue; }
                 let c = cell_of(g, p);
-                if room_has(g, t, c) || used.iter().any(|u| flat(*u, p) < 1.2) { continue; }
+                if room_has(g, t, c) || (used.iter().any(|u| flat(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
                 let Some(path) = crate::scene_collision::nav_grid_find_path(g, pos, p, Some(6000.0), Some(&mut dear)).filter(|x| !x.is_empty()) else { continue };
                 if flat(path[path.len() - 1], p) > 0.8 { continue; }
                 let mut bad = false;
@@ -350,7 +349,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
     let p0 = crate::scene_collision::nav_grid_find_path(g, pos, at, Some(6000.0), None).filter(|x| !x.is_empty())?;
     let mut mid: JsSet<crate::Num> = JsSet::new();
     let r = 2.0;
-    let l0 = path_len(pos, &p0);
+    let l0 = crate::places::walk_len(pos, &p0);
     if l0 < 12.0 { return None; }
     along(pos, &p0, &mut |p, s| {
         if s < 5.0 || s > l0 - 5.0 { return; }
@@ -366,7 +365,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
         }
     });
     let p1 = crate::scene_collision::nav_grid_find_path(g, pos, at, Some(8000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| -> f64 { let i = nav_idx(g, ix, iz); if mid.has(crate::Num(i)) { 8.0 } else { 1.0 } })).filter(|x| !x.is_empty())?;
-    let l1 = path_len(pos, &p1);
+    let l1 = crate::places::walk_len(pos, &p1);
     if !(l1 <= flank_limit(g, l0)) { return None; }
     let (mut on, mut all) = (0.0, 0.0);
     let mut spots: Vec<V3> = Vec::new();
@@ -374,7 +373,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
         all += 1.0;
         let c = cell_of(g, p);
         if mid.has(crate::Num(c)) { on += 1.0; }
-        if s <= l1 - 6.0 && !nav_blocked(g, p[0], p[2]) && !used.iter().any(|u| flat(*u, p) < 1.2) { spots.push(p); }
+        if s <= l1 - 6.0 && !nav_blocked(g, p[0], p[2]) && !used.iter().any(|u| flat(*u, p) < 1.2) && !crate::places::taken(g, gd, p, 0.9) { spots.push(p); }
     });
     if spots.is_empty() || on / m::max(1.0, all) > 0.35 { return None; }
     Some(Way { spot: spots[spots.len() - 1], door: None, l: l1, path: None, aim: None })
@@ -569,7 +568,7 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
             let p: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat, 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat];
             if nav_blocked(g, p[0], p[2]) { continue; }
             let c = cell_of(g, p);
-            if room_has(g, t, c) || used.iter().any(|u| flat(*u, p) < 1.2) { continue; }
+            if room_has(g, t, c) || (used.iter().any(|u| flat(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
             if ctx_hot(g, &cap_known, &rear, &cap_ajar, p) { continue; }
             let path = crate::scene_collision::nav_grid_find_path(g, pos, p, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| -> f64 {
                 if ctx_hot_cell(g, &cap_known, &rear, &cap_ajar, ix, iz) { 200.0 } else { dear0(g, &x, d_room, ix, iz) }
@@ -907,7 +906,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         let key = stay_key(g, gd, &StayKeyRoom { name: room.name.clone() });
         if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) { continue; }   // (he was told that room is gone)
         let t = g.time + pick(g, crate::dice::Who::Man(gd), reinforce) * own_k(g);
-        let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(flat(p, at), |w| path_len(p, &w));
+        let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(flat(p, at), |w| crate::places::walk_len(p, &w));
         new.push((g.tab.enemysquads_squad[q].due.len(), way / g.tune.guard_chase));
         g.tab.enemysquads_squad[q].due.push(SquadDueItem { gd, at: v3::copy(at), t, room: Some(room.clone()) });
     }
@@ -956,7 +955,7 @@ mod tests_2 {
         let l = along([0.3, 7.0, -1.1], &path, &mut |p, s| seen.push([p[0].to_bits(), p[2].to_bits(), s.to_bits()]));
         assert_eq!(seen.as_slice(), &BITS[..]);
         assert_eq!(l.to_bits(), LEN);
-        assert_eq!(path_len([0.3, 7.0, -1.1], &path).to_bits(), LEN);
+        assert_eq!(crate::places::walk_len([0.3, 7.0, -1.1], &path).to_bits(), LEN);
     }
     #[test]
     fn grown_widens_every_side() {

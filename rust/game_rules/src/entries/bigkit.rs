@@ -26,25 +26,19 @@ fn m870(g: &Game) -> &crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap()
 }
 
-/// `BIGKIT_BREAK=1`, the check's: never on in the game
-pub(super) fn big_broken() -> bool {
-    BREAK
-}
-
 /// The big slot's tool that opens this door from where you stand.
 pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<crate::kit::BigTool> {
     let pid = seat.player;
     let kit = g.pl[pid].big_kit;
-    if !g.k.bigslot.on
-        || kit == crate::kit::BigKit::None
-        || crate::doors::door_off(g, d)
+    if kit == crate::kit::BigKit::None
+        || g.dr[d].leaf.off
         || g.dr[d].def.steel.unwrap_or(false)
         || !crate::doors::door_is_closed(g, d)
         || sam_big_tail(g, &crate::seats::here(g))
     {
         return None;
     }
-    if kit == crate::kit::BigKit::Shotgun && crate::doors::door_locked(g, d) && g.dr[d].lock_id.starts_with("wedge:") {
+    if kit == crate::kit::BigKit::Shotgun && g.dr[d].leaf.locked && g.dr[d].lock_id.starts_with("wedge:") {
         return None;
     }
     match kit {
@@ -73,7 +67,7 @@ fn leg(g: &mut Game, men: &[V3], a: V3, b: V3) -> bool {
 
 /// Where you work it from: the list's first place he can walk to that nobody stands on.
 pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate::kit::BigTool) -> Option<crate::bigkit::SamBigSpot> {
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return None;
     }
     let side = big_side(g, d, &from);
@@ -159,7 +153,7 @@ pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::k
 /// The row from where a stack stands: within reach of the doorway, a tool that opens it, a place he can walk to.
 pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate::kit::BigTool> {
     let pid = g.player;
-    if !g.k.bigslot.on || g.pl[pid].big_kit == crate::kit::BigKit::None {
+    if g.pl[pid].big_kit == crate::kit::BigKit::None {
         return None;
     }
     let door = crate::doors::door_pos(g, d);
@@ -324,6 +318,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
         b.t += dt;
     }
     let pl = &g.pl[pid];
+    let throw_held = g.sets[crate::seats::seat_of_man(g, pid)].hand.throw_held;
     let taken = g.cond[pl.ch].down
         || pl.kick.is_some()
         || pl.holding.is_some()
@@ -336,7 +331,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
         || pl.door_move.is_some()
         || pl.wall.is_some()
         || pl.pending_throw.is_some()
-        || pl.throw_held
+        || throw_held
         || crate::character::anim_in_throw(g, c)
         || crate::handwork::sam_work(g).is_some();
     let over = match &g.ch[c].anim.big_tool {
@@ -402,7 +397,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         let gave = tool!(g, pid).gave.unwrap_or(false);
         let pos = g.ch[c].pos;
         let keys = g.pl[pid].keys.clone();
-        let pull = gave && !crate::doors::door_off(g, d) && crate::doors::door_is_closed(g, d) && !crate::doors::doors_locked_out(g, d, pos, Some(&keys));
+        let pull = gave && !g.dr[d].leaf.off && crate::doors::door_is_closed(g, d) && !crate::doors::doors_locked_out(g, d, pos, Some(&keys));
         if pull {
             let stow = big_stow(g);
             if let Some(end) = tool!(g, pid).moves.as_ref().map(|mv| mv.end) {
@@ -416,7 +411,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         }
         return true;
     }
-    if crate::doors::door_off(g, d) || !crate::doors::door_is_closed(g, d) {
+    if g.dr[d].leaf.off || !crate::doors::door_is_closed(g, d) {
         if now < 0.0 {
             return true; // (his own gun still on its way to its place: nothing of the tool has begun)
         }
@@ -453,13 +448,13 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     if !hammer {
         g.stats.bigkit.sam_shells += 1;
         // (the shell's own rule takes a keep that is locked AND home; anything else shut is the latch's)
-        let lock = crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d);
+        let lock = g.dr[d].leaf.locked && g.dr[d].leaf.latched;
         let side = tool!(g, pid).side;
         let at = crate::shotgun::lock_point(g, d, side);
         let opts = crate::combat::FireOpts { weapon: Some(m870(g).clone()), steady: Some(true), spread: Some(0.0), ..Default::default() };
         crate::combat::fire_weapon(g, c, at, Some(&opts));
         let gave = if lock {
-            !crate::doors::door_locked(g, d)
+            !g.dr[d].leaf.locked
         } else {
             let (pos, id) = (g.ch[c].pos, g.ch[c].id);
             crate::doors::doors_kick_in(g, d, pos, id, Some(true))
@@ -481,8 +476,8 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     g.stats.bigkit.sam_blows += 1;
     if n < tool!(g, pid).need {
         let id = g.ch[c].id;
-        crate::doors::door_set_rattle_t(g, d, 0.6);
-        crate::doors::door_set_last_who(g, d, id);
+        g.dr[d].leaf.rattle_t = 0.6;
+        g.dr[d].leaf.last_who = id;
         let at = crate::doors::door_pos(g, d);
         crate::doors::doors_sound(g, d, crate::doors::DoorSound::Thud, at, id, 1.0);
         let next = now + big_swing(g);
@@ -503,7 +498,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
 
 /// The blows the hammer needs on d from p.
 pub fn hammer_blows(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
-    if crate::doors::door_locked(g, d) && crate::doors::doors_boot_holds(g, d, [p[0], p[1], p[2]]) {
+    if g.dr[d].leaf.locked && crate::doors::doors_boot_holds(g, d, [p[0], p[1], p[2]]) {
         m::max(1.0, g.k.bigslot.swings)
     } else {
         1.0
@@ -517,9 +512,6 @@ pub fn big_side(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
 
 /// The big slot's tool a man carries, for the drawer.
 pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::kit::BigTool> {
-    if !g.k.bigslot.on {
-        return None;
-    }
     let kit = if let Some(pid) = crate::seats::man_by_id(g, c_2.id) {
         g.pl[pid].big_kit
     } else {
@@ -598,8 +590,8 @@ pub(super) fn hammer_blow(g: &mut crate::game::Game, gd: GuardId, d: DoorId, las
     g.stats.bigkit.mate_blows += 1;
     let (pos, id) = (g.ch[c].pos, g.ch[c].id);
     if !last {
-        crate::doors::door_set_rattle_t(g, d, 0.6);
-        crate::doors::door_set_last_who(g, d, id);
+        g.dr[d].leaf.rattle_t = 0.6;
+        g.dr[d].leaf.last_who = id;
         let at = crate::doors::door_pos(g, d);
         crate::doors::doors_sound(g, d, crate::doors::DoorSound::Thud, at, id, 1.0);
         return false;

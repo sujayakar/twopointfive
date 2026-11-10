@@ -692,11 +692,11 @@ pub(in crate::missions) fn director_query_pos_unit(g: &crate::game::Game, r: Dir
 pub(in crate::missions) fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
     let id = director_door_of(g, d)?;
     Ok(QueryDoor {
-        angle: crate::doors::door_angle(g, id),
+        angle: g.dr[id].leaf.angle,
         open: !crate::doors::door_is_closed(g, id),
-        latched: crate::doors::door_latched(g, id),
-        locked: crate::doors::door_locked(g, id),
-        broken: crate::doors::door_lock_broken(g, id),
+        latched: g.dr[id].leaf.latched,
+        locked: g.dr[id].leaf.locked,
+        broken: g.dr[id].leaf.lock_broken,
         swing: crate::doors::door_swing(g, id),
     })
 }

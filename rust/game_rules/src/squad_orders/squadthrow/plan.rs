@@ -24,7 +24,7 @@ pub(in crate::squad_orders) fn forget(g: &mut Game) {
 /// the throw row lit on the open menu: the men it is asked of, the spot, the can
 pub fn lit(g: &Game, seat: &crate::seats::SeatRef) -> Option<(Vec<GuardId>, V3, SquadThrowKind)> {
     let mn = seat.orders.menu.as_ref()?;
-    if !(mn.page.as_deref() == Some(THROW_PAGE) || mn.flat == Some(true)) || !(mn.sel >= 0.0) { return None; }
+    if !(mn.sel >= 0.0) { return None; }
     let crate::orders::OrderTarget::Floor(t) = &mn.target else { return None };
     match g.tab.orders_order_def[*mn.rows.get(mn.sel as usize)?].id.as_str() {
         FRAG_THERE => Some((mn.men.clone(), t.at, SquadThrowKind::Frag)),

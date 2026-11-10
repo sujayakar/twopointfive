@@ -21,7 +21,7 @@ pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId) -> FirearmId {
     f
 }
 
-/// a thing run in the game as this seat has it: with_seat, or as it stands when that seat is already on Game (viewOfBody's "a view handed in is kept")
+/// a thing run in the game as this seat has it: with_seat, or as it stands when the pass is already about that seat
 fn in_seat(g: &mut Game, seat: SeatId, run: &mut dyn FnMut(&mut Game)) {
     if seat == g.seat { run(g); } else { crate::seats::with_seat(g, seat, run); }
 }
@@ -209,8 +209,9 @@ fn sam_hit(g: &mut Game, pl: PlayerId, r: &crate::shotgun::RoundIn) {
     let (c, dir) = (r.c, r.dir);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[pl].hit_flash = 1.0;
-    if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
-    if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
+    let his = crate::seats::seat_of_man(g, pl);
+    if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.sets[his].hand.f_held = true; }
+    if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.sets[his].hand.f_held = true; }
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.9), None);
     if !g.god_mode {
         let seat = crate::seats::seat_of_man(g, pl);

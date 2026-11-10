@@ -70,7 +70,7 @@ impl Me {
     fn counted(&self, n: usize) -> bool { let given = self.orders() > n; if given { self.given.set(self.given.get() + 1); } given }
     fn ops_on(&self, d: DoorId) -> bool { self.seen(|g, s| s.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].door == d)) }
 
-    async fn quick(&self) { let k = self.ask(|g| g.orders.knobs.quick_key.clone()); self.key(&k).await }
+    async fn quick(&self) { let k = self.ask(|g| g.sets[g.seat].orders.knobs.quick_key.clone()); self.key(&k).await }
 
     async fn go(&self, p: V3, max: f64, stop: impl FnMut() -> bool) -> bool { self.p.go(p, max, stop, Walk::default()).await }
 
@@ -143,7 +143,7 @@ impl Me {
     async fn enter(&self, d: DoorId, why: &str) -> bool {
         let set = self.cursor_on(d).await && { let t = self.under(); self.seen(|g, s| game::autopilot::auto_pick(g, s, &t, Some(false), None).why == game::autopilot::AutoPickWhy::Set) };
         if !set { return self.quick_on(d, why).await; }
-        let (n, word) = (self.orders(), self.ask(|g| g.orders.knobs.wait_alt.clone()));
+        let (n, word) = (self.orders(), self.ask(|g| g.k.doortools.blow_key.clone()));
         self.key(&word).await;
         self.say(format!("word · {} ({}) → {}", self.name(d), why, self.order_given(n)));
         self.aim_off();
@@ -196,12 +196,12 @@ impl Me {
         self.say(format!("→ {} himself ({} at home)", self.name(d), h.men.len()));
         let face = out_pt(e, 0.9, 0.0);
         self.go(self.free(face).unwrap_or(face), 60.0, || false).await;
-        let shut = || self.ask(|g| game::doors::door_locked(g, d) && !game::doors::door_lock_broken(g, d) && game::doors::door_angle(g, d).abs() < 0.3);
+        let shut = || self.ask(|g| g.dr[d].leaf.locked && !g.dr[d].leaf.lock_broken && g.dr[d].leaf.angle.abs() < 0.3);
         if shut() {
             // (the highlight walked to the boot by its key, as a hand walks it)
             let end = self.t() + 2.0;
             while self.t() < end && shut() {
-                let on = self.seen(|g, s| s.nearby.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
+                let on = self.seen(|_, s| s.nearby.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
                 self.down(if on { game::consts::INTERACT_KEY } else { "ArrowDown" });
                 if on { self.until(|| !shut(), 2.5).await; break; }
                 self.ticks(3).await;

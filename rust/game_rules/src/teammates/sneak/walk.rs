@@ -13,7 +13,7 @@ fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
 
 /// Was this leaf seen to move inside the settle time? Read at the plan's rate, for the doors Sam is at.
 pub(super) fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let now = g.time;
     match g.m.sneak.leaf_t.get_mut(d) {
         None => { g.m.sneak.leaf_t.set(d, SneakModLeafTValue { a: angle, t: -1e9 }); }

@@ -462,7 +462,7 @@ fn through_a_shut_door(g: &crate::game::Game, from: V3, path: &[V3]) -> bool {
     for &b in path {
         for i in 0..g.doors.list.len() {
             let d = g.doors.list[i];
-            if crate::doors::door_latched(g, d) && crate::guards::crosses_door(g, a, b, d).is_some() { return true; }
+            if g.dr[d].leaf.latched && crate::guards::crosses_door(g, a, b, d).is_some() { return true; }
         }
         a = b;
     }
@@ -499,17 +499,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
             if thin && as_was.is_some() { continue; }
             let open = all && crate::picture::exposed_at(g, gd, p, Some(true)) > 0.15;
             if open && (kept_open.is_some() || (as_was.is_some() && !(kept_thin.is_some() && plans < 8))) { continue; }
-            let mut taken = false;
-            for &o in &g.guards {
-                if o != gd && !crate::condition::down(g, g.gd[o].ch)
-                    && (v3::dist_xz(g.ch[g.gd[o].ch].pos, p) < 0.9
-                        || match g.cond[g.gd[o].ch].sup.cover { Some(cover) => v3::dist_xz(cover, p) < 1.2, None => false })
-                {
-                    taken = true;
-                    break;
-                }
-            }
-            if taken { continue; }
+            if crate::places::taken(g, gd, p, 0.9) { continue; }
             plans += 1;
             if plans > 12 { return cover_fall(kept_open, as_was); }
             let path = match crate::scene_collision::nav_grid_find_path(g, from, p, None, None) {

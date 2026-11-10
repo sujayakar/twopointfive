@@ -95,7 +95,7 @@ pub(super) fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
 
 /// the arc he has up, with where it comes to rest and what it would reach
 fn throw_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<ThrowView> {
-    let sol = g.pl[seat.player].throw_preview.as_ref().filter(|s| s.points.len() > 1)?;
+    let sol = g.sets[seat.id].hand.throw_preview.as_ref().filter(|s| s.points.len() > 1)?;
     let mut world = crate::ask::WorldAsk::try_of(g).ok();
     let rest = world.as_mut().and_then(|w| crate::player::throw_rest(w, seat.player));
     let at = rest.as_ref().map(|r| r.at);

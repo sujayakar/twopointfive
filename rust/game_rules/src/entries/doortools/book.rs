@@ -35,7 +35,7 @@ pub fn off_of(g: &crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
 }
 /// unlatched and swung past OPEN_RAD
 pub fn is_open(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= OPEN_RAD
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= OPEN_RAD
 }
 /// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)
 fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
@@ -115,16 +115,13 @@ pub fn row_can_then(g: &mut Game, what: crate::doortools::ThresholdThen, t: &cra
 pub fn row_behind_words(g: &Game, who: String) -> String {
     if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
 }
-/// `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`
-pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: bool) -> Option<String> {
-    use crate::doortools::{DoorToolKind as Kind, DoorToolsThenOnWord, DoorToolsThresholdThen};
+/// an entry's row: of a door whose jambs are held, what the men on them do; of any other, its own order
+pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
+    use crate::doortools::{DoorToolKind as Kind, DoorToolsThresholdThen};
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
-        if on_word {
-            return match crate::doortools::door_tools_then_on_word(g, if bang { crate::doortools::ThresholdThen::Bang } else { crate::doortools::ThresholdThen::Step }, men, t) { DoorToolsThenOnWord::Text(w) => Some(w), DoorToolsThenOnWord::Arm1(()) => None };
-        }
         return match crate::doortools::door_tools_threshold_then(g, if bang { crate::doortools::ThresholdThen::Bang } else { crate::doortools::ThresholdThen::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
     }
-    match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t, Some(on_word)) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
+    match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
 }
 /// `only` of the two entries: the men holding the threshold, while it is held
 pub fn row_held_or_all(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) } else { men.to_vec() } }
@@ -145,31 +142,30 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     me.bangs = g.k.doortools.bangs;
     me.frags = g.k.frag.squad;
     register(g, rows::def(&rows::tools::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(TOOLS_PAGE)), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::openclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "moving."])), on_word: Some(true), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::bangclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["bang and clear.", "copy, banging it."])), on_word: Some(true), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::openclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "moving."])), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::bangclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["bang and clear.", "copy, banging it."])), ..OrderDef::default() }), None);
     register(g, rows::def(&rows::charge::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["copy.", "on it."])), ..OrderDef::default() }), None);
-    let frag_key = g.k.frag.order_key.clone();
-    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), on_word: Some(true), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), ..OrderDef::default() }), None);
     // the row that stands in for the tools' while the jambs are held. no part registered it (CHANGES-6)
     register(g, rows::def(&rows::held::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(crate::doortools::HELD_PAGE)),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(TOOLS_PAGE) }), ..OrderDef::default() }), None);
     // thrRows writes `this`, and this is not on g yet: it stands there for the call
-    core::mem::swap(&mut g.door_tools, &mut me);
+    core::mem::swap(&mut g.sets[g.seat].door_tools, &mut me);
     door_tools_thr_rows(g);
-    core::mem::swap(&mut g.door_tools, &mut me);
+    core::mem::swap(&mut g.sets[g.seat].door_tools, &mut me);
     me
 }
 
 /// the row of the door held from outside, the one order of that page on the page's switches
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
-    g.door_tools.thr_sig = door_tools_thr_sig_now();
+    g.sets[g.seat].door_tools.thr_sig = door_tools_thr_sig_now();
     for id in [crate::orders::rows::threshold::ORDER.id, crate::doortools::THR_PAGE] {
         crate::orders::squad_orders_unregister(g, id);
     }
     register(g, rows::def(&rows::threshold::ORDER, OrderDef { page: Some(String::from(crate::doortools::TOOLS_PAGE)), targets: vec![K::Door],
-        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
-    g.door_tools.thr_key = None;
+        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+    g.sets[g.seat].door_tools.thr_row = false;
 }
 
 /// spend one (false: none left)
@@ -177,16 +173,16 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
     use crate::doortools::DoorToolsCan as W;
     door_tools_sync(g);
     if what == W::Frag {
-        if g.door_tools.frags <= 0.0 { return false; }
-        g.door_tools.frags -= 1.0;
+        if g.sets[g.seat].door_tools.frags <= 0.0 { return false; }
+        g.sets[g.seat].door_tools.frags -= 1.0;
         return true;
     }
     if what == W::Charge {
-        if g.door_tools.charges <= 0.0 { return false; }
-        g.door_tools.charges -= 1.0;
+        if g.sets[g.seat].door_tools.charges <= 0.0 { return false; }
+        g.sets[g.seat].door_tools.charges -= 1.0;
     } else {
-        if g.door_tools.bangs <= 0.0 { return false; }
-        g.door_tools.bangs -= 1.0;
+        if g.sets[g.seat].door_tools.bangs <= 0.0 { return false; }
+        g.sets[g.seat].door_tools.bangs -= 1.0;
     }
     true
 }
@@ -195,123 +191,116 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
 pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCan) {
     use crate::doortools::DoorToolsCan as W;
     if what == W::Frag {
-        g.door_tools.frags += 1.0;
+        g.sets[g.seat].door_tools.frags += 1.0;
         return;
     }
-    if what == W::Charge { g.door_tools.charges += 1.0; } else { g.door_tools.bangs += 1.0; }
+    if what == W::Charge { g.sets[g.seat].door_tools.charges += 1.0; } else { g.sets[g.seat].door_tools.bangs += 1.0; }
 }
 
 /// a new cast is a fresh run; the rows that hang on the cast dealt again
 pub fn door_tools_sync(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
-    use crate::doortools::{BIG_KEY, BIG_ORDER, TOOLS_PAGE};
+    use crate::doortools::{BIG_ORDER, GoRow, TOOLS_PAGE};
     let (mut i, mut same, mut at) = (0usize, true, 0usize);
     while at < g.guards.len() {
         let gd = g.guards[at];
         at += 1;
         if crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) {
-            if g.door_tools.roster.get(i) != Some(&gd) { same = false; }
+            if g.sets[g.seat].door_tools.roster.get(i) != Some(&gd) { same = false; }
             i += 1;
         }
     }
-    if !same || i != g.door_tools.roster.len() {
-        g.door_tools.roster = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
+    if !same || i != g.sets[g.seat].door_tools.roster.len() {
+        g.sets[g.seat].door_tools.roster = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         door_tools_reset(g);
-        g.door_tools.go_key = None;
-        g.door_tools.thr_key = None;
-        g.door_tools.big_row = None;
+        g.sets[g.seat].door_tools.go_row = None;
+        g.sets[g.seat].door_tools.thr_row = false;
+        g.sets[g.seat].door_tools.big_row = None;
     }
     // a man alone: a fresh Player is his new run
     let player = g.player;
-    if g.door_tools.sam_of != Some(player) {
-        let first = g.door_tools.sam_of.is_none();
-        g.door_tools.sam_of = Some(player);
-        if !first && g.door_tools.roster.is_empty() {
-            g.door_tools.set.clear();
-            g.door_tools.charges += g.door_tools.sam_spent;
+    if g.sets[g.seat].door_tools.sam_of != Some(player) {
+        let first = g.sets[g.seat].door_tools.sam_of.is_none();
+        g.sets[g.seat].door_tools.sam_of = Some(player);
+        if !first && g.sets[g.seat].door_tools.roster.is_empty() {
+            g.sets[g.seat].door_tools.set.clear();
+            g.sets[g.seat].door_tools.charges += g.sets[g.seat].door_tools.sam_spent;
         }
-        if !first { g.door_tools.sam_spent = 0.0; }
+        if !first { g.sets[g.seat].door_tools.sam_spent = 0.0; }
     }
-    let n = g.door_tools.roster.len();
-    let go_key: Option<String> = if n > 2 { Some(g.k.doortools.blow_key.clone()) } else { None };
-    let small = n > 0 && n <= 2;
-    if small && g.door_tools.go_key != Some(Some(String::from("small"))) {
-        g.door_tools.go_key = Some(Some(String::from("small")));
-        let blow = g.k.doortools.blow_key.clone();
-        register(g, rows::def(&rows::go::ORDER, OrderDef { hot_key: Some(blow), targets: vec![K::Floor, K::Door, K::None], listed: Some(Vec::new()), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
-    } else if !small && g.door_tools.go_key != Some(go_key.clone()) {
-        g.door_tools.go_key = Some(go_key.clone());
-        if let Some(key) = &go_key {
-            register(g, rows::def(&rows::go::ORDER, OrderDef { hot_key: Some(key.clone()).filter(|k| !k.is_empty()), targets: vec![K::Floor, K::Door, K::None], listed: Some(vec![K::Floor, K::None]), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
-        } else {
+    let n = g.sets[g.seat].door_tools.roster.len();
+    let go = if n == 0 { GoRow::None } else if n <= 2 { GoRow::Small } else { GoRow::Big };
+    if g.sets[g.seat].door_tools.go_row != Some(go) {
+        g.sets[g.seat].door_tools.go_row = Some(go);
+        if go == GoRow::None {
             crate::orders::squad_orders_unregister(g, crate::orders::rows::go::ORDER.id);
+        } else {
+            let listed = if go == GoRow::Small { Vec::new() } else { vec![K::Floor, K::None] };
+            register(g, rows::def(&rows::go::ORDER, OrderDef { word: true, targets: vec![K::Floor, K::Door, K::None], listed: Some(listed), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
         }
     }
-    if g.door_tools.thr_sig != door_tools_thr_sig_now() {
+    if g.sets[g.seat].door_tools.thr_sig != door_tools_thr_sig_now() {
         door_tools_thr_rows(g);
-        g.door_tools.big_row = None;
+        g.sets[g.seat].door_tools.big_row = None;
     }
     // the big slot's own row, while a man of the squad carries the hammer or the breaching shotgun
     let mut big = false;
-    if g.k.bigslot.on {
-        let mut k = 0;
-        while k < g.door_tools.roster.len() {
-            let m = g.door_tools.roster[k];
-            k += 1;
-            if crate::bigkit::carries_hammer(g, m) || (!crate::condition::down(g, g.gd[m].ch) && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
-                big = true;
-                break;
-            }
+    let mut k = 0;
+    while k < g.sets[g.seat].door_tools.roster.len() {
+        let m = g.sets[g.seat].door_tools.roster[k];
+        k += 1;
+        if crate::bigkit::carries_hammer(g, m) || (!crate::condition::down(g, g.gd[m].ch) && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
+            big = true;
+            break;
         }
     }
-    if Some(big) != g.door_tools.big_row {
-        g.door_tools.big_row = Some(big);
+    if Some(big) != g.sets[g.seat].door_tools.big_row {
+        g.sets[g.seat].door_tools.big_row = Some(big);
         crate::orders::squad_orders_unregister(g, BIG_ORDER);
         if big {
-            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(String::from(BIG_KEY)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
         }
     }
-    let thr_key = match &go_key { None => g.k.doortools.blow_key.clone(), Some(k) => k.clone() };
-    if Some(&thr_key) != g.door_tools.thr_key.as_ref() {
-        g.door_tools.thr_key = Some(thr_key.clone());
-        register(g, rows::def(&rows::thrword::ORDER, OrderDef { page: Some(String::from(crate::doortools::HELD_PAGE)), hot_key: Some(thr_key).filter(|k| !k.is_empty()), targets: vec![K::Door], ..OrderDef::default() }), None);
+    if !g.sets[g.seat].door_tools.thr_row {
+        g.sets[g.seat].door_tools.thr_row = true;
+        register(g, rows::def(&rows::thrword::ORDER, OrderDef { page: Some(String::from(crate::doortools::HELD_PAGE)), word: true, targets: vec![K::Door], ..OrderDef::default() }), None);
     }
 }
 
 /// a fresh run: the counts back, nothing set, nothing under way
 pub fn door_tools_reset(g: &mut crate::game::Game) {
     let mut i = 0;
-    while i < g.door_tools.ops.len() {
-        let op = g.door_tools.ops[i];
+    while i < g.sets[g.seat].door_tools.ops.len() {
+        let op = g.sets[g.seat].door_tools.ops[i];
         i += 1;
         door_tools_defuse(g, op);
         door_tools_off_lock(g, op);
     }
-    g.door_tools.ops.clear();
-    g.door_tools.done.clear();
-    g.door_tools.set.clear();
-    g.door_tools.words.clear();
-    g.door_tools.held.clear();
-    g.door_tools.watches.clear();
-    g.door_tools.tried.clear();
-    g.door_tools.sam_spent = 0.0;
+    g.sets[g.seat].door_tools.ops.clear();
+    g.sets[g.seat].door_tools.done.clear();
+    g.sets[g.seat].door_tools.set.clear();
+    g.sets[g.seat].door_tools.words.clear();
+    g.sets[g.seat].door_tools.held.clear();
+    g.sets[g.seat].door_tools.watches.clear();
+    g.sets[g.seat].door_tools.tried.clear();
+    g.sets[g.seat].door_tools.sam_spent = 0.0;
     let n = g.k.doortools.charges;
-    g.door_tools.charges = crate::seats::seat_share(g, n);
+    g.sets[g.seat].door_tools.charges = crate::seats::seat_share(g, n);
     let n = g.k.doortools.bangs;
-    g.door_tools.bangs = crate::seats::seat_share(g, n);
+    g.sets[g.seat].door_tools.bangs = crate::seats::seat_share(g, n);
     let n = g.k.frag.squad;
-    g.door_tools.frags = crate::seats::seat_share(g, n);
-    g.door_tools.stats = crate::doortools::DoorToolsStats::default();
-    g.door_tools.seen = None;
+    g.sets[g.seat].door_tools.frags = crate::seats::seat_share(g, n);
+    g.sets[g.seat].door_tools.stats = crate::doortools::DoorToolsStats::default();
+    g.sets[g.seat].door_tools.seen = None;
 }
 
 /// nobody came with him: the count is his card's, nothing set, nothing spent
 pub fn door_tools_alone(g: &mut crate::game::Game, n: f64) {
     door_tools_sync(g);
-    if !g.door_tools.roster.is_empty() { return; }
-    g.door_tools.set.clear();
-    g.door_tools.sam_spent = 0.0;
-    g.door_tools.charges = m::max(0.0, m::floor(n));
+    if !g.sets[g.seat].door_tools.roster.is_empty() { return; }
+    g.sets[g.seat].door_tools.set.clear();
+    g.sets[g.seat].door_tools.sam_spent = 0.0;
+    g.sets[g.seat].door_tools.charges = m::max(0.0, m::floor(n));
 }
 
 /// the charge set on this door, if any

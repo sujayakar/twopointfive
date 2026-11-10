@@ -33,7 +33,7 @@ fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed).
 pub(super) fn stands_open(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= k().open
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= k().open
 }
 
 /// The floor the leaf crosses on its way shut from where it stands now, with `pad` m of slack.
@@ -46,7 +46,7 @@ fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f
     let along = px * f.ux + pz * f.uz;
     let t = m::max(0.0, m::min(f.w, along));
     if m::hyp2(px - f.ux * t, pz - f.uz * t) <= pad { return true; }   // on the frame's line: where the leaf comes to
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let th = v3::wrap_angle(m::atan2(pz, px) - g.dr[d].def.closed_dir) * js::or(m::sign(angle), 1.0);
     th >= 0.0 && th <= m::abs(angle)
 }
@@ -115,7 +115,7 @@ fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::s
 
 /// Both faces' places for the leaf as it stands, kept for the frame.
 fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor::Spot>> {
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let key = alloc::format!("{}|{}|{}", js::num_str(g.time), g.dr[d].def.name, js::to_fixed(angle, 3));
     if let Some(hit) = &g.m.shutdoor.spotted {
         if hit.key == key { return hit.spots.clone(); }
@@ -132,13 +132,7 @@ fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
     let at = pos_of(g, gd);
     if flat(at, p) < 0.5 { return flat(at, p); }
     let path = match crate::scene_collision::nav_grid_find_path(g, at, p, None, None) { Some(path) => path, None => return f64::INFINITY };
-    let mut l = 0.0;
-    let mut q = at;
-    for w in path {
-        l += flat(q, w);
-        q = w;
-    }
-    l + flat(q, p)
+    crate::places::walk_len(at, &path) + flat(path.last().copied().unwrap_or(at), p)
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one).
@@ -250,8 +244,8 @@ fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
 
 /// Why these men cannot shut that door (None: one of them can): the row's `valid`.
 pub(super) fn why_not_shut(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> Option<String> {
-    if crate::doors::door_off(g, d) { return Some(String::from("it's off its hinges.")); }
-    if crate::doors::door_latched(g, d) { return Some(String::from("it's shut.")); }
+    if g.dr[d].leaf.off { return Some(String::from("it's off its hinges.")); }
+    if g.dr[d].leaf.latched { return Some(String::from("it's shut.")); }
     if !stands_open(g, d) { return Some(String::from("it's all but shut.")); }
     if contact_through(g, d) { return Some(String::from("contact through that door.")); }
     match plan(g, d, men) {
@@ -272,8 +266,8 @@ fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor
         door: Some(d),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        going: alloc::format!("shutting · {}", name),
-        there: alloc::format!("at · {}", name),
+        going: alloc::format!("shutting · {}", name).into(),
+        there: alloc::format!("at · {}", name).into(),
         ..Default::default()
     };
     crate::orders::squad_orders_assign(g, gd, &a);
@@ -281,7 +275,7 @@ fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor
 
 /// His hand on it: the leaf is pulled to; a leaf somebody propped is let go of.
 fn pull(g: &mut crate::game::Game, d: DoorId, gd: GuardId) {
-    if crate::doors::door_quiet_t(g, d) < 0.0 { crate::doors::door_set_quiet_t(g, d, 0.0); }
+    if g.dr[d].leaf.quiet_t < 0.0 { g.dr[d].leaf.quiet_t = 0.0; }
     let who = g.ch[g.gd[gd].ch].id;
     crate::doors::doors_pull_to(g, d, who);
 }
@@ -297,8 +291,8 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
             post: None,
             follow: Some(99.0),
             face: None,
-            going: String::from("falling in"),
-            there: String::from("with you"),
+            going: "falling in".into(),
+            there: "with you".into(),
             ..Default::default()
         };
         crate::orders::squad_orders_assign(g, gd, &a);
@@ -312,8 +306,8 @@ fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor::Job
         order: String::from(crate::orders::rows::hold::ORDER.id),
         post: Some([p[0], 0.0, p[2]]),
         face: Some(g.ch[c].body_yaw),
-        going: String::from("holding"),
-        there,
+        going: "holding".into(),
+        there: there.into(),
         ..Default::default()
     };
     crate::orders::squad_orders_assign(g, gd, &a);
@@ -343,8 +337,8 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     let d = j.door;
     let p = pos_of(g, gd);
     let t = g.time;
-    if crate::doors::door_off(g, d) { end(g, gd, d, j, Some("door's gone."), false); return; }
-    if crate::doors::door_latched(g, d) {
+    if g.dr[d].leaf.off { end(g, gd, d, j, Some("door's gone."), false); return; }
+    if g.dr[d].leaf.latched {
         if j.phase == JobPhase::Go {
             end(g, gd, d, j, Some("it's shut."), true);
         } else {
@@ -416,14 +410,14 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     // wait: the leaf comes to and the latch catches it. One that somebody stopped is pulled again, a few times, while its way is clear
     if t - j.t > k().latch_cap { end(g, gd, d, j, Some("it won't shut."), false); return; }
-    if !crate::doors::door_closing(g, d) {
+    if !g.dr[d].leaf.closing {
         if t - j.t > k().again && j.pulls < 4.0 && in_the_way(g, d, Some(gd), None).is_none() && clear_of(g, d, p) {
             pull(g, d, gd);
             j.pulls += 1.0;
             j.t = t;
             store(g, gd, j);
         }
-    } else if m::abs(crate::doors::door_angle(g, d)) > k().hand_to && in_the_way(g, d, Some(gd), None).is_none() {
+    } else if m::abs(g.dr[d].leaf.angle) > k().hand_to && in_the_way(g, d, Some(gd), None).is_none() {
         pull(g, d, gd);   // (never against a body it has come to rest on: the leaf settles there, as it does for anybody)
     }
 }

@@ -213,14 +213,14 @@ fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
 
 fn ok_door(g: &Game, door: &str, state: LessonDoorState) -> bool {
     use LessonDoorState as S;
-    use crate::doors::{door_is_closed, door_lock_broken, door_locked, doors_by_name};
+    use crate::doors::{door_is_closed, doors_by_name};
     let Some(d) = doors_by_name(g, door) else { return false };
     match state {
         S::Open => !door_is_closed(g, d),
         S::Shut => door_is_closed(g, d),
-        S::Unlocked => !door_locked(g, d) || door_lock_broken(g, d),
+        S::Unlocked => !g.dr[d].leaf.locked || g.dr[d].leaf.lock_broken,
         S::Charged => crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),
-        S::Broken => door_lock_broken(g, d),
+        S::Broken => g.dr[d].leaf.lock_broken,
     }
 }
 
@@ -471,7 +471,7 @@ pub mod flags {
     pub fn charge_set(seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
     /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach
     pub fn charge_clear(g: &mut crate::game::Game) -> bool {
-        let c = g.wall_charge.set.first().copied();
+        let c = g.sets[g.seat].wall_charge.set.first().copied();
         let at = crate::lesson::lesson_step(g).and_then(|step| step.at);
         let Some(c) = c else { return false };
         if !crate::wallcharge::wall_charge_too_close(g, Some(c)).is_empty() { return false; }
@@ -487,9 +487,9 @@ pub mod flags {
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking.is_some() }
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding.is_some() }
     /// the order menu is up
-    pub fn menu(g: &mut crate::game::Game) -> bool { g.orders.menu.is_some() }
+    pub fn menu(g: &mut crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
     /// his own ring is up, with or without a key down
-    pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.pl[seat.player].sel; sel.open && sel.ring.is_some() }
+    pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.sets[seat.id].hand.sel; sel.open && sel.ring.is_some() }
     /// the squad's posture is SILENT
     pub fn silent(g: &mut crate::game::Game) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
 }
@@ -743,7 +743,7 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
         }
         if s.held_at < 0.0 {
             let p = who(g, &crate::seats::here(g));
-            if g.pl[p].throw_held {
+            if g.sets[crate::seats::seat_of_man(g, p)].hand.throw_held {
                 s.held_at = len;
             }
         }
@@ -762,7 +762,7 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
     }
     for &id in &seat.door_tools.ops {
         let op = &g.tab.doortools_door_op[id];
-        if !s.words.has(op.door) && op.beats.iter().any(|b| b.what == "the word" && b.t > s.t0) {
+        if !s.words.has(op.door) && op.beats.iter().any(|b| b.is == crate::doortools::Beat::Word && b.t > s.t0) {
             s.words.add(op.door);
         }
     }

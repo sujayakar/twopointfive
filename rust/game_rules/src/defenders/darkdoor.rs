@@ -173,10 +173,8 @@ fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mut bl = k.mate_m;
     for &o in near.iter() {
         let from = pos_of(g, o);
-        let Some(path) = crate::scene_collision::nav_grid_find_path(g, from, p, None, None) else { continue };
-        let mut l = 0.0;
-        let mut a = from;
-        for &b in path.iter() { l += flat(a, b); a = b; }
+        let l = crate::places::on_foot(g, from, p);
+        if l == m::INF { continue; }
         if l <= bl { bl = l; best = Some(o); }
     }
     best
@@ -249,7 +247,7 @@ fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::Stands
 
 /// an open doorway: the leaf off its hinges, or standing `openRad` off its frame.
 fn open(g: &mut crate::game::Game, d: DoorId) -> bool {
-    crate::doors::door_off(g, d) || (!crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.darkdoor.open_rad)
+    g.dr[d].leaf.off || (!g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.darkdoor.open_rad)
 }
 
 /// the next doorway on his walk inside `reach` metres of path.

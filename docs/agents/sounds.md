@@ -62,7 +62,7 @@ row once (`Played`), so a tick run again does not sound twice, and calls `AudioE
   the straight distance.
 - Otherwise `route` walks the floor (`find_path`, from listener to source). The sound seems to come from the last waypoint the listener still has a straight
   line to, at the path's whole length (`apparent`). Muffle is 0.35, or 0.85 if a shut leaf lies across the way. A leaf is `sound_seal` while nearly
-  shut (`SOUND_SEAL` in `rust/sim/src/doors.rs`).
+  shut (`SOUND_SEAL` in `doors/step.rs`).
 
 `carry` is what the rules take from it. Whole glass stops a sound and a hole lets it through, where the level's pane rule is up. Rules ask through
 `hear_path` in `weather.rs`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:

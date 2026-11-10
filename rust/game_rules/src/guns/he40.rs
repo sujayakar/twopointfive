@@ -33,7 +33,7 @@ pub fn he40_ready(g: &crate::game::Game, pl: PlayerId) -> bool {
 /// The arc he has up is the launcher's, and too short to arm. (he40.ts previewTooClose)
 pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
     let r = g.pl[pl].rifle;
-    match &g.pl[pl].throw_preview {
+    match &g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview {
         Some(sol) => crate::game::player_rifle_up(g, pl) && crate::weapons::rifle_attachment(g, r) == Some(crate::weapons::RifleAttachment::He40) && !arc_armed(g, sol),
         None => false,
     }

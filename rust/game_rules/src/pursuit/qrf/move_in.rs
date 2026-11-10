@@ -329,17 +329,17 @@ fn deploy(g: &mut crate::game::Game) {
 
 /// Throw a shut (or nearly shut) leaf open away from `by` at a kick's pace, breaking nothing.
 fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
-    use crate::doors::{door_angle, door_pos, door_set_closing, door_set_creak_armed, door_set_last_who, door_set_latched, door_set_quiet_t, door_set_since_bash, door_set_vel, doors_side};
-    if m::abs(door_angle(g, d)) > 1.0 { return; }
+    use crate::doors::{door_pos, doors_side};
+    if m::abs(g.dr[d].leaf.angle) > 1.0 { return; }
     let side = doors_side(g, d, pos_of(g, by));
-    door_set_latched(g, d, false);
-    door_set_closing(g, d, false);
-    door_set_vel(g, d, -side * 7.5);
-    door_set_since_bash(g, d, 0.0);
-    door_set_quiet_t(g, d, -0.5);
-    door_set_creak_armed(g, d, false);
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = -side * 7.5;
+    g.dr[d].leaf.since_bash = 0.0;
+    g.dr[d].leaf.quiet_t = -0.5;
+    g.dr[d].leaf.creak_armed = false;
     let who = char_id(g, by);
-    door_set_last_who(g, d, who);
+    g.dr[d].leaf.last_who = who;
     let at = door_pos(g, d);
     crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
 }
@@ -376,7 +376,7 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
         let up = alive(g);
         let shut = match d {
             None => true,
-            Some(d) => crate::doors::door_off(g, d) || crate::doors::door_latched(g, d) || g.dr[d].def.closer == Some(false) || up.is_empty(),
+            Some(d) => g.dr[d].leaf.off || g.dr[d].leaf.latched || g.dr[d].def.closer == Some(false) || up.is_empty(),
         };
         if shut { g.qrf.door_pulled = true; }
         else {
@@ -710,7 +710,7 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
         for p in ps {
             if let Some(door) = crate::doors::doors_by_name(g, &p.door) {
                 let dc = g.dr[door].frame_centre;
-                d = m::min(d, path_len(g, fix, [dc[0], 0.0, dc[2]]));
+                d = m::min(d, crate::places::on_foot(g, fix, [dc[0], 0.0, dc[2]]));
             }
         }
         if is_in { d = -1.0; }
@@ -732,7 +732,7 @@ pub(super) fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fres
     } else if let Some((k, ps, _)) = best.as_ref() {
         let (mut plan, mut bl) = (&ps[0], f64::INFINITY);
         for p in ps.iter() {
-            let l = path_len(g, from, p.stack[0]);
+            let l = crate::places::on_foot(g, from, p.stack[0]);
             if l < bl { bl = l; plan = p; }
         }
         Target { kind: TargetKind::Room, plan: Some(plan.clone()), room: k.clone(), pos: v3::copy(plan.stack[0]), word: None }
@@ -786,7 +786,7 @@ fn sweep_next(g: &mut crate::game::Game, from: V3, fix: V3) -> Option<crate::qrf
         if flat(from, c) < 3.0 { let t = g.time; g.qrf.cleared.set(p.name.clone(), t); }
         if g.time - g.qrf.cleared.get(p.name.clone()).copied().unwrap_or(-1e9) < RECLEAR_SECS { continue; }
         let start = if g.qrf.fix.is_some() { fix } else { from };
-        let d = path_len(g, start, c);
+        let d = crate::places::on_foot(g, start, c);
         if d < bd {
             bd = d;
             best = Some(crate::qrf::Target { kind: crate::qrf::TargetKind::Point, plan: None, room: p.name, pos: c, word: None });
@@ -823,15 +823,6 @@ fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     }
     out
 }
-
-/// The walk's length from `a` to `b` on the nav grid (Infinity: none).
-fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
-    let (mut l, mut q) = (0.0, a);
-    for r in p { l += flat(q, r); q = r; }
-    l
-}
-
 /// `p` on the floor, or the nearest free point to it.
 pub(super) fn nearest_free(g: &mut crate::game::Game, p: V3) -> Option<V3> {
     if nav_blocked(g, p[0], p[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) } else { Some([p[0], 0.0, p[2]]) }

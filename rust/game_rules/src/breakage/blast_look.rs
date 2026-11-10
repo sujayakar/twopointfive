@@ -50,7 +50,7 @@ fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear();  }
         return;
     }
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     if !g.m.blast_look.state.has(key) {
         if set.is_empty() { return; }
         g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false });
@@ -246,9 +246,9 @@ fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::b
         let sg = m::sign(off);
         let th = g.dr[d].def.closed_dir;
         let into: V3 = [-m::sin(th) * sg, 0.0, m::cos(th) * sg];
-        let slab = if crate::doors::door_off(g, d) { g.dr[d].slab } else { None };
+        let slab = if g.dr[d].leaf.off { g.dr[d].slab } else { None };
         let Some(sl) = slab else {
-            let still = m::abs(crate::doors::door_angle(g, d)) < 0.05 && m::abs(crate::doors::door_vel(g, d)) < 0.01;
+            let still = m::abs(g.dr[d].leaf.angle) < 0.05 && m::abs(g.dr[d].leaf.vel) < 0.01;
             return if still { Some(DoorChargeAt { into, from: at, rest: at }) } else { None };
         };
         let gone = (sl.p[0] - at[0]) * into[0] + (sl.p[2] - at[2]) * into[2];
@@ -272,7 +272,7 @@ fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let seen = state_mut(g).seen.clone();
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     let mut wall: Option<crate::wallcharge::WallSpot> = None;
     for x in seen.iter() {
         if set.contains(&x.c) { continue; }

@@ -72,16 +72,6 @@ pub fn in_bounds(p: V3, b: Option<crate::scene_level::BreachPlanBounds>, pad: Op
         None => false,
     }
 }
-
-/// Metres of nav path from a to b, Infinity if there is none.
-fn path_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    let p = match crate::scene_collision::nav_grid_find_path(g, a, b, None, None) { Some(p) => p, None => return f64::INFINITY };
-    let mut l = 0.0;
-    let mut q = a;
-    for r in p { l += flat(q, r); q = r; }
-    l
-}
-
 /// The lockdown pair's job, not yet at `g.clearing`: the caller puts it there.
 pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::RoomClearPlan>], a: GuardId, b: Option<GuardId>) -> crate::squad::Clearing {
     let mut c = Clearing::blank();
@@ -314,7 +304,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         let d = g.doors.list[at];
         at += 1;
         let how = match crate::guards::door_tamper(g, d) { Some(h) => h, None => continue };
-        if crate::doors::door_noticed(g, d) { continue; }
+        if g.dr[d].leaf.noticed { continue; }
         let forced = how == crate::guards::DoorTamper::Forced;
         let mut by: Option<GuardId> = None;
         let men = if cl!(g).stage == ClearStage::Drill { vec![cl!(g).a] } else { clearing_men(g) };
@@ -328,9 +318,9 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
             if !crate::scene_collision::segment_blocked(g, eye, [spot[0], 1.0, spot[2]], None, None, None) { by = Some(gd); break; }
         }
         let by = match by { Some(by) => by, None => continue };
-        crate::doors::door_set_noticed(g, d, true);
+        g.dr[d].leaf.noticed = true;
         let now = g.time;
-        crate::doors::door_set_noticed_t(g, d, now);
+        g.dr[d].leaf.noticed_t = now;
         let mut line = String::from(if forced { "this one's been forced — someone's through here" } else { "lock's been picked — he's been through here" });
         let mut replanned = false;
         let room = match &g.level.clear_plans {
@@ -377,7 +367,7 @@ fn nearest(g: &mut Game, ps: &[crate::scene_level::RoomClearPlan], at: V3, to: f
     let mut bl = f64::INFINITY;
     if ps.len() > 1 {
         for (i, p) in ps.iter().enumerate() {
-            let l = path_len(g, at, to(p));
+            let l = crate::places::on_foot(g, at, to(p));
             if l < bl { bl = l; best = i; }
         }
     }
@@ -467,7 +457,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
     let mut l = 0.0;
     let mut q = from;
     for w in walk {
-        l += m::min(path_len(g, q, w), flat(q, w) * 3.0);
+        l += m::min(crate::places::on_foot(g, q, w), flat(q, w) * 3.0);
         q = w;
     }
     cl!(g).eta = l / APPROACH_SPEED + 8.0;

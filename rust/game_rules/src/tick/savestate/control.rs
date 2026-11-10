@@ -90,14 +90,14 @@ fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if p.door_move.is_some() { return Some("working a door"); }
     if crate::wallcharge::wall_charge_setting(seat) || p.charging.is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
     if p.kick.is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
-    if p.pending_throw.is_some() || p.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
+    if p.pending_throw.is_some() || seat.hand.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
     if p.launch_held.is_some() { return Some("lining up the launcher"); }
     if crate::weapons::firearm_reloading(g, p.pistol) || crate::weapons::firearm_reloading(g, p.rifle) { return Some("reloading"); }
     if a.nv.is_some() { return Some("flipping his goggles"); }
     if a.big_tool.is_some() { return Some("putting his tool back"); }
     if crate::character::anim_kit_busy(g, p.ch) { return Some("changing what is in his hands"); }
     if g.mission.drive_t >= 0.0 { return Some("taking something"); }
-    if (p.sel.open && !p.sel.ring.as_ref().is_some_and(|r| r.free == Some(true))) || p.sel.down_t >= 0.0 { return Some("choosing an action"); }
+    if (seat.hand.sel.open && !seat.hand.sel.ring.as_ref().is_some_and(|r| r.free == Some(true))) || seat.hand.sel.down_t >= 0.0 { return Some("choosing an action"); }
     None
 }
 
@@ -535,15 +535,14 @@ fn gone(g: &mut Game, key: &str) -> String {
 /// The game kept under `key` stands again: the lines that follow a load, and what the player is told of it.   (Checkpoints.loadMem, after the snapshot is restored)
 pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     // (a ring that merely stood at the save, and a gun's setup that was up, are nothing of the saved moment)
-    let pl = g.player;
-    if g.pl[pl].sel.ring.as_ref().is_some_and(|r| r.free == Some(true)) {
-        let s = &mut g.pl[pl].sel;
+    if g.sets[g.seat].hand.sel.ring.as_ref().is_some_and(|r| r.free == Some(true)) {
+        let s = &mut g.sets[g.seat].hand.sel;
         s.open = false;
         s.ring = None;
         s.down_t = -1.0;
-        g.pl[pl].near_sel = 0;
+        g.sets[g.seat].hand.near_sel = 0;
     }
-    g.pl[pl].setup = None;
+    g.sets[g.seat].hand.setup = None;
     crate::orders::squad_orders_loaded(g);
     let label = was.saves.shelf.m.get(String::from(key)).map(|e| e.info.label.clone()).unwrap_or_default();
     g.saves.shelf = was.saves.shelf;

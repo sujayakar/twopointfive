@@ -13,21 +13,13 @@ const MEMBERS: usize = KIT_MEMBERS as usize;
 /// `ISSUED[i]`
 fn issued_at(i: usize) -> MemberKit { issued().swap_remove(i) }
 fn word_of(k: Thing) -> String { String::from(k.name()) }
-/// `SET_LOADOUT[p]`; only ever asked of the two sets
-fn set_loadout_of(p: KitPreset) -> String { set_loadout().get(String::from(p.as_str())).cloned().expect("the quiet or the loud set") }
-/// smoke, stun of a split: `CAN_MIXES[mix]`
-fn can_mix(mix: CanMix) -> (f64, f64) { let x = can_mixes().get(String::from(mix.as_str())).cloned().expect("a split of six"); (x.smoke, x.stun) }
 /// A tool of DEAL_TOOL as the card holds it
 fn big_kit_of(tool: Thing) -> BigKit {
     match tool { Thing::Shotgun => BigKit::Shotgun, Thing::Hammer => BigKit::Hammer, _ => unreachable!("a tool the deal lends") }
 }
-/// `long(m)` of the tree's rows: the card carries a long gun
+/// The card carries a long gun
 fn long_gun(m: &MemberKit) -> bool { m.weapon != KitWeapon::Pistol }
 
-/// `SLOTS.on`: the getter's `ruleOn`. One variable; the page's value is on the row.
-fn rule_is_on(g: &Game) -> bool { g.k.slots.on }
-/// `BIGSLOT.on`: the getter's `bigOn`
-fn big_is_on(g: &Game) -> bool { g.k.bigslot.on }
 fn team_of(g: &Game) -> f64 { g.m.kit.team }
 fn item<'a>(t: &'a SlotTable, k: Thing) -> Option<&'a SlotItem> { t.items.get(k) }
 /// `t.items[k]?.max[i] ?? d`
@@ -65,44 +57,25 @@ fn table(g: &Game) -> SlotTable { g.k.slots.table.clone() }
 
 // ---------------------------------------------------------------- lines 384 to 460
 
-pub fn stealth_on(g: &crate::game::Game) -> bool { tree_up(g) }
-
 /// A run tape's stealth card put back for its replay
 pub fn kit_stealth_set(g: &mut crate::game::Game, raw: Option<&JsMap<String, crate::kit::KitValue>>) {
     g.m.kit.stealth_you = if raw.is_some() { Some(kit_sanitize(g, 0.0, raw)) } else { None };
 }
 
-/// The loud card as issued, whatever mission the table is for
-fn loud_issue(g: &crate::game::Game) -> crate::kit::MemberKit {
-    let mut m = issued_at(0);
-    if !rule_is_on(g) {
-        let b = built();
-        m.smoke = b.smoke; m.bangs = b.bangs; m.frags = b.frags; m.shells = b.shells;
-    }
-    m
-}
-
 /// What a stealth mission issues you
 pub(super) fn stealth_issue(g: &mut crate::game::Game, h: crate::kit::KitHand) -> crate::kit::MemberKit {
-    if !rule_is_on(g) {
-        let mut m = loud_issue(g);
-        m.rings = m::min(RINGS_MAX, m::max(0.0, h.rings));
-        m.cams = if cam_row(g) { m::min(CAMS_MAX, m::max(0.0, h.cams)) } else { 0.0 };
-        m.wand = h.wand && wand_row(g, None);
-        return m;
-    }
     let mut m = issued_at(0);
     m.smoke = 0.0; m.bangs = 0.0; m.frags = 0.0; m.shells = 0.0;
     let t = table(g);
     m.rings = m::min_n(&[RINGS_MAX, m::max(0.0, h.rings), max_or(&t, Thing::Rings, 0, 0.0)]);
-    m.wand = h.wand && wand_row(g, None);
+    m.wand = h.wand && wand_row(g, 0.0);
     m.cams = if cam_row(g) { m::min_n(&[CAMS_MAX, m::max(0.0, h.cams), max_or(&t, Thing::Cams, 0, 0.0)]) } else { 0.0 };
-    while m.cams > 0.0 && !(cost_of(g, &m, &t) <= pouches_at(&t, 0)) { m.cams -= 1.0; }
-    if !(cost_of(g, &m, &t) <= pouches_at(&t, 0)) { m.wand = false; }
+    while m.cams > 0.0 && !(cost_of(&m, &t) <= pouches_at(&t, 0)) { m.cams -= 1.0; }
+    if !(cost_of(&m, &t) <= pouches_at(&t, 0)) { m.wand = false; }
     for k in [Thing::Smoke, Thing::Bangs, Thing::Smoke, Thing::Bangs] {
         if m.n(k) >= max_or(&t, k, 0, 0.0) { continue; }
         *dealt_mut(&mut m, k) += 1.0;
-        if !(cost_of(g, &m, &t) <= pouches_at(&t, 0)) { *dealt_mut(&mut m, k) -= 1.0; }
+        if !(cost_of(&m, &t) <= pouches_at(&t, 0)) { *dealt_mut(&mut m, k) -= 1.0; }
     }
     m
 }
@@ -113,8 +86,8 @@ fn same_kit(a: &crate::kit::MemberKit, b: &crate::kit::MemberKit) -> bool { alik
 /// The stealth card for a mission
 fn stealth_card(g: &mut crate::game::Game, h: crate::kit::KitHand) -> crate::kit::MemberKit {
     if let Some(you) = g.m.kit.stealth_you.clone() {
-        let fits = if rule_is_on(g) { let t = table(g); cost_of(g, &you, &t) <= pouches_at(&t, 0) } else { true };
-        if fits { return you; }
+        let t = table(g);
+        if cost_of(&you, &t) <= pouches_at(&t, 0) { return you; }
     }
     stealth_issue(g, h)
 }
@@ -137,8 +110,7 @@ fn look(g: &Game, c: &MemberKit) -> MemberKit {
 
 /// The mission the cards are for
 pub fn kit_mission(g: &mut crate::game::Game, h: Option<crate::kit::KitHand>) {
-    let to = match h { Some(x) if stealth_on(g) => Some(x), _ => None };
-    let Some(to) = to else {
+    let Some(to) = h else {
         if g.m.kit.hand.is_some() {
             if let Some(loud) = g.m.kit.loud_you.clone() {
                 stealth_kept(g);
@@ -187,8 +159,8 @@ pub fn hand_of(g: &crate::game::Game) -> Option<crate::kit::KitHand> {
     if js::truthy(rings) || js::truthy(cams) || wand { Some(crate::kit::KitHand { rings, cams, wand }) } else { None }
 }
 
-/// (kit.ts dealing; KITDEAL.on settled on)
-pub(super) fn dealing(g: &crate::game::Game) -> bool { rule_is_on(g) && g.m.kit.kit.on }
+/// The cards are dealt to a team of three or four.
+pub(super) fn dealing(g: &crate::game::Game) -> bool { g.m.kit.kit.on }
 
 /// The teammates' counted things, as one word
 fn deal_word(cards: &[crate::kit::MemberKit]) -> String {
@@ -220,7 +192,7 @@ fn deal_named(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit]) -> boo
 // ---------------------------------------------------------------- lines 463 to 559
 
 /// Five cards as `n` teammates carry them, shared out (kit.ts deal; the check's break word dropped)
-fn deal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64) -> Vec<crate::kit::MemberKit> {
+fn deal(cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64) -> Vec<crate::kit::MemberKit> {
     if n < 3.0 { return cards.to_vec(); }
     let mut out: Vec<MemberKit> = cards.to_vec();
     let keys = dealt();
@@ -237,7 +209,7 @@ fn deal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::k
     for k in bag {
         let mut can: Vec<usize> = Vec::new();
         for &i in men.iter() {
-            if out[i].n(k) < max_or(t, k, i, m::INF) && cost_of(g, &out[i], t) + price_of(g, item(t, k)) <= t.pouches[i] { can.push(i); }
+            if out[i].n(k) < max_or(t, k, i, m::INF) && cost_of(&out[i], t) + price_of(item(t, k)) <= t.pouches[i] { can.push(i); }
         }
         if can.is_empty() { return cards.to_vec(); }
         let mut to = can[0];
@@ -249,8 +221,7 @@ fn deal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::k
     }
     for &i in men.iter() {
         let Some(it) = item(t, Thing::Bangs) else { continue; };
-        if js::truthy(load(&out, i)) || out[i].bangs >= it.max[i] || cost_of(g, &out[i], t) + price_of(g, Some(it)) > t.pouches[i] { continue; }
-        if let Some(sm) = it.squad_max { if squad_has_g(g, &out, Thing::Bangs, n) >= sm { continue; } }
+        if js::truthy(load(&out, i)) || out[i].bangs >= it.max[i] || cost_of(&out[i], t) + price_of(Some(it)) > t.pouches[i] { continue; }
         out[i].bangs += 1.0;
     }
     out
@@ -258,7 +229,7 @@ fn deal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::k
 
 /// Five cards with the tools this team is lent
 fn lend(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64, of: &[crate::kit::MemberKit], mine: bool) -> Vec<crate::kit::MemberKit> {
-    if !big_is_on(g) || n < 3.0 || !lendable(g, of, mine) { return cards.to_vec(); }
+    if n < 3.0 || !lendable(g, of, mine) { return cards.to_vec(); }
     let mut out = cards.to_vec();
     for (at, tool) in deal_tool() {
         let i = at as usize;
@@ -282,7 +253,7 @@ pub(super) fn kit_worn(g: &mut crate::game::Game, n: Option<f64>, cards: Option<
     let cards: Vec<MemberKit> = match cards { Some(c) => c.to_vec(), None => members(g) };
     if !dealing(g) || n < 3.0 { return cards; }
     let t = table(g);
-    let base = if !(g.m.kit.deal_own && is_table) && deal_named(g, &cards) { deal(g, &cards, &t, n) } else { cards.clone() };
+    let base = if !(g.m.kit.deal_own && is_table) && deal_named(g, &cards) { deal(&cards, &t, n) } else { cards.clone() };
     let mine = is_table && !issuing_truthy(g);
     lend(g, &base, &t, n, &cards, mine)
 }
@@ -298,7 +269,7 @@ pub(in crate::outfit) fn kit_issued_shown(g: &mut crate::game::Game, i: f64, n: 
     if i > 0.0 && dealing(g) && n >= 3.0 {
         let cards: Vec<MemberKit> = (0..MEMBERS).map(|j| issued_card(g, j as f64)).collect();
         let t = table(g);
-        let dealt = deal(g, &cards, &t, n);
+        let dealt = deal(&cards, &t, n);
         return lend(g, &dealt, &t, n, &issued(), false).swap_remove(i as usize);
     }
     issued_card(g, i)
@@ -322,26 +293,24 @@ pub(super) fn on_worn<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, i:
         Some(now.iter().enumerate().map(|(j, c)| if j > 0 { with_dealt_of(c, &was[j]) } else { c.clone() }).collect())
     };
     let t = table(g);
-    let own = match &laid { None => true, Some(l) => illegal(g, l, &t, None).is_some() };
+    let own = match &laid { None => true, Some(l) => illegal(l, &t).is_some() };
     let mut kept: Vec<MemberKit> = match laid { Some(l) if !own => l, _ => now };
-    if big_is_on(g) {
-        let leaving = own && !g.m.kit.deal_own && !lendable(g, &was, true);
-        let tools = deal_tool();
-        for j in 0..kept.len() {
-            if !tools.iter().any(|d| d.0 as usize == j) { continue; }
-            let c_bare = kept[j].bare == Some(true);
-            let mark = big_of(&kept[j]) == BigPick::None && (c_bare || big_of(&w[j]) != BigPick::None || leaving);
-            if c_bare == mark { continue; }
-            kept[j].bare = if mark { Some(true) } else { None };
-        }
-        let bare: Vec<MemberKit> = kept.iter().enumerate().map(|(j, c)| {
-            if tools.iter().any(|d| d.0 as usize == j && c.big == big_kit_of(d.1) && !js::truthy(c.walls) && big_of(&was[j]) == BigPick::None) { MemberKit { big: BigKit::None, ..c.clone() } } else { c.clone() }
-        }).collect();
-        let team = team_of(g);
-        let lent = lend(g, &bare, &t, team, &bare, true);
-        // (`lent[j] !== bare[j]` was by identity: lend replaces a card only where its slot stood empty and fills it, so `big` tells)
-        for j in 0..kept.len() { if lent[j].big != bare[j].big { kept[j] = bare[j].clone(); } }
+    let leaving = own && !g.m.kit.deal_own && !lendable(g, &was, true);
+    let tools = deal_tool();
+    for j in 0..kept.len() {
+        if !tools.iter().any(|d| d.0 as usize == j) { continue; }
+        let c_bare = kept[j].bare == Some(true);
+        let mark = big_of(&kept[j]) == BigPick::None && (c_bare || big_of(&w[j]) != BigPick::None || leaving);
+        if c_bare == mark { continue; }
+        kept[j].bare = if mark { Some(true) } else { None };
     }
+    let bare: Vec<MemberKit> = kept.iter().enumerate().map(|(j, c)| {
+        if tools.iter().any(|d| d.0 as usize == j && c.big == big_kit_of(d.1) && !js::truthy(c.walls) && big_of(&was[j]) == BigPick::None) { MemberKit { big: BigKit::None, ..c.clone() } } else { c.clone() }
+    }).collect();
+    let team = team_of(g);
+    let lent = lend(g, &bare, &t, team, &bare, true);
+    // (`lent[j] !== bare[j]` was by identity: lend replaces a card only where its slot stood empty and fills it, so `big` tells)
+    for j in 0..kept.len() { if lent[j].big != bare[j].big { kept[j] = bare[j].clone(); } }
     if own { g.m.kit.deal_own = true; }
     for j in 1..MEMBERS { g.m.kit.kit.members[j] = kept[j].clone(); }
     deal_settle(g);
@@ -362,8 +331,8 @@ fn deal_settle(g: &mut crate::game::Game) -> bool {
     }).collect();
     let mut found: Option<Vec<MemberKit>> = None;
     for cards in layouts {
-        if illegal(g, &cards, &t, None).is_some() { continue; }
-        let dealt = deal(g, &cards, &t, team);
+        if illegal(&cards, &t).is_some() { continue; }
+        let dealt = deal(&cards, &t, team);
         let a = lend(g, &dealt, &t, team, &cards, false);
         let same = deal_word(&a) == word_now && a.iter().enumerate().all(|(j, c)| j == 0 || big_of(c) == big_of(&worn[j]));
         if same { found = Some(cards); break; }
@@ -377,91 +346,38 @@ fn deal_settle(g: &mut crate::game::Game) -> bool {
     true
 }
 
-/// The pouches the teammates who come fill between them
-fn squad_used(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64) -> f64 {
-    let mut s = 0.0;
-    for c in coming(cards, n).iter() { s += cost_of(g, c, t); }
-    s
-}
-
-fn squad_has_g(g: &mut Game, cards: &[MemberKit], k: Thing, n: f64) -> f64 {
-    let mut s = 0.0;
-    for c in coming(cards, n).iter() { s += amount(g, k, c); }
-    s
-}
-
-/// Why five cards are not a legal squad of `n` teammates, or None
-fn illegal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: Option<f64>) -> Option<String> {
-    let n = n.unwrap_or(KIT_MEMBERS - 1.0);
+/// Why five cards are not ones five men may carry, or None
+fn illegal(cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable) -> Option<String> {
     if cards[0].shells > 0.0 && cards[0].weapon != KitWeapon::Rifle { return Some(crate::gear::gear_text("member 0 carries launcher grenades and no FN2000 to fire them")); }
     for i in 0..MEMBERS {
         for k in Thing::ALL {
             let most = max_or(t, k, i, m::INF);
-            let has = amount(g, k, &cards[i]);
+            let has = amount(k, &cards[i]);
             if has > most { return Some(format!("member {} carries {} of \"{}\", over the most he may ({})", i, ns(has), item(t, k).unwrap().id, ns(most))); }
         }
-        let used = cost_of(g, &cards[i], t);
+        let used = cost_of(&cards[i], t);
         if used > t.pouches[i] { return Some(format!("member {} needs {} pouches and has {}", i, ns(used), ns(t.pouches[i]))); }
-        let bigs = big_used(g, &cards[i], t);
+        let bigs = big_used(&cards[i], t);
         let slots = big_slots(t, i);
         if bigs > slots { return Some(format!("member {} carries {} big things and has {} big slot{}", i, ns(bigs), ns(slots), if slots == 1.0 { "" } else { "s" })); }
-    }
-    let squad = squad_used(g, cards, t, n);
-    if let Some(sq) = t.squad { if squad > sq { return Some(format!("the teammates together need {} pouches and the squad has {}", ns(squad), ns(sq))); } }
-    for (k, it) in t.items.iter() {
-        let has = squad_has_g(g, cards, k, n);
-        if let Some(sm) = it.squad_max { if has > sm { return Some(format!("the teammates carry {} of \"{}\", over the most a squad may ({})", ns(has), it.id, ns(sm))); } }
     }
     None
 }
 
 // ---------------------------------------------------------------- lines 561 to 704
 
-/// Member i's card as a set makes it under a table
-pub(super) fn set_card(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset, t: Option<&crate::kit::SlotTable>) -> crate::kit::MemberKit {
-    let tt = match t { Some(tt) if i > 0.0 && dealing(g) => tt, _ => return set_card_base(g, i, p, t) };
-    let base: Vec<MemberKit> = (0..MEMBERS).map(|j| set_card_base(g, j as f64, p, t)).collect();
-    let team = team_of(g);
-    let dealt = deal(g, &base, tt, team);
-    lend(g, &dealt, tt, team, &base, false).swap_remove(i as usize)
-}
-
-/// … in the pair's layout
-fn set_card_base(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset, t: Option<&crate::kit::SlotTable>) -> crate::kit::MemberKit {
-    let mut d = if i == 0.0 { loud_issue(g) } else { kit_default(g, i) };
-    if p == KitPreset::Quiet {
-        if i == 0.0 {
-            let (smoke, stun) = can_mix(CanMix::Smoke);
-            d.weapon = KitWeapon::Pistol; d.smoke = smoke; d.bangs = stun; d.suit = SuitId::Black; d.trim = TrimId::Black;
-        } else {
-            d.weapon = KitWeapon::Pistol; d.suppressed = true; d.light = false; d.nvg = true; d.suit = SuitId::Black; d.trim = TrimId::Black;
-        }
-    }
-    if p == KitPreset::Loud {
-        if i == 0.0 {
-            let (smoke, stun) = can_mix(CanMix::Stun);
-            d.weapon = KitWeapon::Rifle; d.smoke = smoke; d.bangs = stun; d.suit = SuitId::Olive; d.trim = TrimId::Amber;
-        } else {
-            d.weapon = KitWeapon::Rifle; d.suppressed = false; d.light = true; d.nvg = true; d.bangs = m::min(BANGS_MAX, d.bangs + 1.0); d.suit = SuitId::Olive; d.trim = TrimId::Amber;
-        }
-    }
-    let Some(t) = t else { return d; };
-    if p == KitPreset::Issued { return d; }
-    let iu = i as usize;
-    let want = set_loadout_of(p);
-    let l = t.loadouts.iter().find(|l| l.id == want && l.missing.is_empty());
-    let iss = issued_at(iu);
-    for k in [Thing::Smoke, Thing::Bangs, Thing::Frags, Thing::Shells, Thing::Charges] {
-        let n = match l { Some(l) => l.counts[iu].get(k).copied().unwrap_or(0.0), None => amount(g, k, &iss) };
-        put(g, k, &mut d, n, &iss);
-    }
-    home_shells(g, &mut d)
+/// Member i's card as he is issued it and the team deals it
+pub(super) fn issued_dealt(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
+    if i <= 0.0 || !dealing(g) { return issued_at(i as usize); }
+    let (cards, t, team) = (issued(), table(g), team_of(g));
+    let dealt = deal(&cards, &t, team);
+    lend(g, &dealt, &t, team, &cards, false).swap_remove(i as usize)
 }
 
 /// The pouches `n` of one item fill
-pub(super) fn slot_cost(g: &crate::game::Game, item: Thing, n: f64, t: Option<&crate::kit::SlotTable>) -> f64 {
-    let it = match t { Some(t) => self::item(t, item).cloned(), None => self::item(&g.k.slots.table, item).cloned() };
-    pouches_of(g, it.as_ref(), n)
+pub(super) fn slot_cost(g: &crate::game::Game, item: Thing, n: f64) -> f64 {
+    let it = self::item(&g.k.slots.table, item).cloned();
+    pouches_of(it.as_ref(), n)
 }
 
 /// Member i's pouches: used of total, and what fills them
@@ -469,132 +385,89 @@ pub fn kit_cost(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::Member
     let m: MemberKit = match m { Some(m) => m.clone(), None => kit_shown(g, i) };
     let iu = i as usize;
     let t = table(g);
-    let used = cost_of(g, &m, &t);
+    let used = cost_of(&m, &t);
     let total = pouches_at(&t, iu);
-    let big = if big_is_on(g) { Some(crate::kit::KitCostBig { used: big_used(g, &m, &t), total: big_slots(&t, iu) }) } else { None };
-    crate::kit::KitCost { used, total, free: total - used, big }
-}
-
-/// The pouches the teammates who come fill between them, of the squad's total
-pub(super) fn squad_cost(g: &mut crate::game::Game, cards: Option<&[crate::kit::MemberKit]>, n: Option<f64>) -> Option<crate::kit::SquadCost> {
-    let cards: Vec<MemberKit> = match cards { Some(c) => c.to_vec(), None => members(g) };
-    let n = n.unwrap_or(team_of(g));
-    let t = table(g);
-    let total = t.squad?;
-    if !rule_is_on(g) { return None; }
-    let used = squad_used(g, &cards, &t, n);
-    Some(crate::kit::SquadCost { used, total, free: total - used })
+    crate::kit::KitCost { used, total, free: total - used, big: crate::kit::KitCostBig { used: big_used(&m, &t), total: big_slots(&t, iu) } }
 }
 
 /// How many teammates come: asked, or set
 pub fn kit_team(g: &mut crate::game::Game, n: Option<f64>) -> f64 {
     let Some(n) = n else { return team_of(g); };
     g.m.kit.team = m::min(KIT_MEMBERS - 1.0, m::max(0.0, m::round(n)));
-    if rule_is_on(g) {
-        let t = table(g);
-        let team = team_of(g);
-        let mut cards = members(g);   // (nothing the fit calls reads the table's cards: a copy written back is the same)
-        let left = kit_fit_all(g, &mut cards, Some(&t), Some(team));
-        g.m.kit.kit.members = cards;
-        for (i, l) in left.iter().enumerate() {
-            if !l.is_empty() {
-                let head = if t.squad.is_some() { "No room in the squad's pouches" } else { "More than a squad may carry" };
-                g.m.kit.kit_note[i] = format!("{} with this team: {} left behind.", head, l.join(", "));
-            }
-        }
-    }
+    let mut cards = members(g);   // (nothing the fit calls reads the table's cards: a copy written back is the same)
+    kit_fit_all(g, &mut cards);
+    g.m.kit.kit.members = cards;
     team_of(g)
 }
 
 /// The most of a counted row member i may carry
-pub(super) fn slot_max(g: &crate::game::Game, item: Thing, i: f64, own: f64) -> f64 {
-    if rule_is_on(g) { max_or(&g.k.slots.table, item, i as usize, own) } else { own }
+pub(super) fn slot_max(g: &crate::game::Game, item: Thing, i: f64) -> f64 {
+    max_or(&g.k.slots.table, item, i as usize, 0.0)
 }
 
 /// The wall charge has a row on member i's card
 pub(super) fn wall_row(g: &crate::game::Game, i: f64) -> bool {
-    let iu = i as usize;
-    rule_is_on(g) && max_or(&g.k.slots.table, Thing::Walls, iu, 0.0) > 0.0 && (!big_is_on(g) || big_slots(&g.k.slots.table, iu) > 0.0)
+    slot_max(g, Thing::Walls, i) > 0.0 && big_slots(&g.k.slots.table, i as usize) > 0.0
 }
 
 /// Door charges have a row on member i's card
 pub(super) fn charge_row(g: &crate::game::Game, i: f64) -> bool {
-    i > 0.0 || slot_max(g, Thing::Charges, 0.0, CHARGES_MAX) > 0.0
+    slot_max(g, Thing::Charges, i) > 0.0
 }
 
 /// The optical wand has a row on a card
-pub(super) fn wand_row(g: &crate::game::Game, i: Option<f64>) -> bool {
-    let i = i.unwrap_or(0.0) as usize;
-    !rule_is_on(g) || max_or(&g.k.slots.table, Thing::Wand, i, 0.0) > 0.0
+pub(super) fn wand_row(g: &crate::game::Game, i: f64) -> bool {
+    slot_max(g, Thing::Wand, i) > 0.0
 }
 
 /// The sticky cameras have a row on your card
 pub(super) fn cam_row(g: &crate::game::Game) -> bool {
-    !rule_is_on(g) || max_or(&g.k.slots.table, Thing::Cams, 0, 0.0) > 0.0
+    slot_max(g, Thing::Cams, 0.0) > 0.0
 }
 
-fn over(g: &mut Game, k: Thing, cards: &[MemberKit], i: usize) -> bool {
-    let has = amount(g, k, &cards[i]);
+fn over(k: Thing, cards: &[MemberKit], i: usize) -> bool {
+    let has = amount(k, &cards[i]);
     let iss = issued_at(i);
-    has > amount(g, k, &iss)
+    has > amount(k, &iss)
 }
-fn less(g: &mut Game, k: Thing, cards: &mut [MemberKit], i: usize) {
-    let has = amount(g, k, &cards[i]);
-    let iss = issued_at(i);
-    put(g, k, &mut cards[i], has - 1.0, &iss);
+fn less(k: Thing, cards: &mut [MemberKit], i: usize) {
+    let has = amount(k, &cards[i]);
+    put(k, &mut cards[i], has - 1.0);
 }
 /// kitFitAll's `give`: one of what his card added, in TRIM's order
-fn give(g: &mut Game, cards: &mut [MemberKit], t: &SlotTable, i: usize) -> bool {
+fn give(cards: &mut [MemberKit], t: &SlotTable, i: usize) -> bool {
     for k in trim() {
-        if price_of(g, item(t, k)) > 0.0 && over(g, k, cards, i) { less(g, k, cards, i); return true; }
+        if price_of(item(t, k)) > 0.0 && over(k, cards, i) { less(k, cards, i); return true; }
     }
     false
 }
 /// kitFitAll's `giveBig`
-fn give_big(g: &mut Game, cards: &mut [MemberKit], t: &SlotTable, i: usize) -> bool {
+fn give_big(cards: &mut [MemberKit], t: &SlotTable, i: usize) -> bool {
     for k in big_trim() {
-        if item(t, k).and_then(|it| it.big).unwrap_or(false) && over(g, k, cards, i) { less(g, k, cards, i); return true; }
+        if item(t, k).and_then(|it| it.big).unwrap_or(false) && over(k, cards, i) { less(k, cards, i); return true; }
     }
     false
 }
 
 /// Five cards brought inside the rule, in place
-pub fn kit_fit_all(g: &mut crate::game::Game, cards: &mut [crate::kit::MemberKit], t: Option<&crate::kit::SlotTable>, n: Option<f64>) -> Vec<Vec<String>> {
-    let tt: SlotTable = match t { Some(t) => t.clone(), None => table(g) };
-    let t = &tt;
-    let n = n.unwrap_or(KIT_MEMBERS - 1.0);
+pub fn kit_fit_all(g: &mut crate::game::Game, cards: &mut [crate::kit::MemberKit]) -> Vec<Vec<String>> {
+    let t = &table(g);
     let before: Vec<MemberKit> = cards.to_vec();
     home_shells(g, &mut cards[0]);
-    if big_is_on(g) { for (i, c) in cards.iter_mut().enumerate() { big_home(c, i as f64); } }
+    for (i, c) in cards.iter_mut().enumerate() { big_home(c, i as f64); }
     for i in 0..MEMBERS {
         for k in trim() {
                 let most = max_or(t, k, i, m::INF);
-            while amount(g, k, &cards[i]) > most && over(g, k, cards, i) { less(g, k, cards, i); }
+            while amount(k, &cards[i]) > most && over(k, cards, i) { less(k, cards, i); }
         }
-        while cost_of(g, &cards[i], t) > t.pouches[i] && give(g, cards, t, i) {}
-        while big_used(g, &cards[i], t) > big_slots(t, i) && give_big(g, cards, t, i) {}
-    }
-    let last = n as usize;
-    if let Some(sq) = t.squad {
-        while squad_used(g, cards, t, n) > sq {
-            let mut gave = false;
-            for i in (1..=last).rev() { if give(g, cards, t, i) { gave = true; break; } }
-            if !gave { break; }
-        }
-    }
-    for (k, it) in t.items.iter() {
-        let Some(sm) = it.squad_max else { continue; };
-        while squad_has_g(g, cards, k, n) > sm {
-            let mut gave = false;
-            for i in (1..=last).rev() { if over(g, k, cards, i) { less(g, k, cards, i); gave = true; break; } }
-            if !gave { break; }
-        }
+        while cost_of(&cards[i], t) > t.pouches[i] && give(cards, t, i) {}
+        while big_used(&cards[i], t) > big_slots(t, i) && give_big(cards, t, i) {}
     }
     let mut out = Vec::new();
     for (i, c) in cards.iter().enumerate() {
         let mut row = Vec::new();
         for k in Thing::ALL {
-            let n = amount(g, k, &before[i]) - amount(g, k, c);
+            let n = amount(k, &before[i]) - amount(k, c);
             if n > 0.0 {
                 row.push(if matches!(k, Thing::Shotgun | Thing::Wand | Thing::Hammer) { format!("the {}", word_of(k)) } else { format!("{} {}{}", ns(n), word_of(k), plural(n)) });
             }
@@ -606,7 +479,6 @@ pub fn kit_fit_all(g: &mut crate::game::Game, cards: &mut [crate::kit::MemberKit
 
 /// Why member i's card may not become `m`, in the card's words, or None
 pub(super) fn card_why(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Option<String> {
-    if !rule_is_on(g) { return None; }
     let iu = i as usize;
     let you = iu == 0;
     if you && !tubed(g, m) {
@@ -627,8 +499,8 @@ pub(super) fn card_why(g: &mut crate::game::Game, i: f64, m: &crate::kit::Member
     let then = kit_cost(g, i, Some(m));
     let need = then.used - now.used;
     for (k, it) in t.items.iter() {
-        let more = amount(g, k, m) - amount(g, k, &cur);
-        if more > 0.0 && amount(g, k, m) > it.max[iu] {
+        let more = amount(k, m) - amount(k, &cur);
+        if more > 0.0 && amount(k, m) > it.max[iu] {
             let word = word_of(k);
             return Some(if js::truthy(it.max[iu]) { format!("{} {}{} is the most {} may carry", ns(it.max[iu]), word, plural(it.max[iu]), if you { "you" } else { "he" }) } else { format!("the {} is not {} to carry", word, if you { "yours" } else { "his" }) });
         }
@@ -637,27 +509,8 @@ pub(super) fn card_why(g: &mut crate::game::Game, i: f64, m: &crate::kit::Member
         let room = if now.free > 0.0 { format!("only {} free", ns(now.free)) } else { String::from("none free") };
         return Some(format!("needs {}, {} ({} of {} full): give something up first", pouch_words(need), room, ns(now.used), ns(now.total)));
     }
-    if let (Some(tb), Some(nb)) = (then.big, now.big) {
-        if tb.used > nb.used && tb.used > tb.total { return Some(format!("{} big slot is full: one big thing to a man", if you { "your" } else { "his" })); }
-    }
-    let team = team_of(g);
-    if you || i > team { return None; }
-    if let Some(sq) = squad_cost(g, None, None) {
-        if need > 0.0 && sq.used + need > sq.total {
-            let room = if sq.free > 0.0 { format!("only {} free", ns(sq.free)) } else { String::from("none free") };
-            return Some(format!("needs {}, the squad has {} ({} of {} full): take something off a teammate first", pouch_words(need), room, ns(sq.used), ns(sq.total)));
-        }
-    }
-    let now_cards = members(g);
-    for (k, it) in t.items.iter() {
-        let all = squad_has_g(g, &now_cards, k, team);
-        let more = amount(g, k, m) - amount(g, k, &cur);
-        if let Some(sm) = it.squad_max {
-            if more > 0.0 && all + more > sm {
-                let one = sm == 1.0;
-                return Some(format!("{} {}{} to a squad, and a teammate carries {}", if one { String::from("one") } else { ns(sm) }, word_of(k), plural(sm), if one { "it" } else { "them" }));
-            }
-        }
+    if then.big.used > now.big.used && then.big.used > then.big.total {
+        return Some(format!("{} big slot is full: one big thing to a man", if you { "your" } else { "his" }));
     }
     None
 }
@@ -682,24 +535,21 @@ fn loadout_cards(g: &mut crate::game::Game, id_2: &str, looks: Option<&[crate::k
         let names = if ids.is_empty() { String::from("it names none") } else { ids.join(", ") };
         return LoadoutCards::Text(format!("no loadout \"{}\" in the table ({})", id_2, names));
     };
-    let missing = loadout_missing(g, l);
-    if !missing.is_empty() { return LoadoutCards::Text(format!("loadout \"{}\" carries {}, which this build has no row for", id_2, missing.join(", "))); }
     let mut cards: Vec<MemberKit> = Vec::new();
     for i in 0..MEMBERS {
         let mut c = kit_sanitize(g, i as f64, Some(&l.cards[i]));
-        let iss = issued_at(i);
         for k in Thing::ALL {
             let n = l.counts[i].get(k).copied().unwrap_or(0.0);
-            put(g, k, &mut c, n, &iss);
+            put(k, &mut c, n);
         }
         cards.push(wear(c, i, looks));
     }
-    if id_2 == "quiet" && stealth_on(g) {
+    if id_2 == "quiet" {
         let h = match g.m.kit.hand { Some(h) => h, None => quiet_hand(g) };
         let c = stealth_issue(g, h);
         cards[0] = wear(c, 0, looks);
     }
-    match illegal(g, &cards, &t, None) { Some(why) => LoadoutCards::Text(why), None => LoadoutCards::Array(cards) }
+    match illegal(&cards, &t) { Some(why) => LoadoutCards::Text(why), None => LoadoutCards::Array(cards) }
 }
 
 /// The stealth kit where no mission says
@@ -744,13 +594,10 @@ pub(super) fn kit_loadouts(g: &mut crate::game::Game, only: Option<f64>) -> Vec<
         return out;
     }
     let mut out = alloc::vec![crate::kit::KitLoadoutsItem { id: String::from("issued"), name: String::from("As issued") }];
-    if rule_is_on(g) {
-        let t = table(g);
-        for l in t.loadouts.iter() {
-            if !loadout_missing(g, l).is_empty() { continue; }
-            if let LoadoutCards::Text(_) = loadout_cards(g, &l.id, None) { continue; }
-            out.push(crate::kit::KitLoadoutsItem { id: l.id.clone(), name: l.name.clone() });
-        }
+    let t = table(g);
+    for l in t.loadouts.iter() {
+        if let LoadoutCards::Text(_) = loadout_cards(g, &l.id, None) { continue; }
+        out.push(crate::kit::KitLoadoutsItem { id: l.id.clone(), name: l.name.clone() });
     }
     out
 }
@@ -774,13 +621,11 @@ pub(super) fn kit_loadout_of(g: &mut crate::game::Game, only: Option<f64>) -> Op
     None
 }
 
-/// A row is on a card as it stands. Only the TREE's rows carry a `has`: its suppressor
-/// over the long gun (`slot === 'secondary' || long(m)`, :904) and the launcher's three loads (`tubed`, :910). The same fields on a card that is no
-/// tree are rows with no `has`. The row holds no function here, so the game says which card it is: the skeleton's line has no `g`.
+/// A row is on a card as it stands: the suppressor with a long gun, the launcher's loads with a launcher.
 pub(super) fn row_has(g: &crate::game::Game, r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool {
     match r.field {
-        KitField::Suppressed => !tree_up(g) || long_gun(m),
-        KitField::Rings | KitField::Shells | KitField::Cams => !tree_up(g) || tubed(g, m),
+        KitField::Suppressed => long_gun(m),
+        KitField::Rings | KitField::Shells | KitField::Cams => tubed(g, m),
         _ => true,
     }
 }
@@ -789,7 +634,6 @@ pub(super) fn row_has(g: &crate::game::Game, r: &crate::kit::KitRow, m: &crate::
 pub(super) fn row_get(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue {
     let t = |s: &str| KitValue::Text(String::from(s));
     match &r.get {
-        Some(KitRowGet::Mix) => t(mix_of(m).map_or("own", |x| x.as_str())),
         Some(KitRowGet::Big) => t(big_of(m).as_str()),
         Some(KitRowGet::Primary) => {
             if m.weapon == KitWeapon::Pistol { t(crate::gunslots::NO_PRIMARY) } else { KitValue::Text(guns_home(g, m).primary) }
@@ -805,20 +649,15 @@ pub(super) fn row_get(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut cra
             KitField::Shells => KitValue::Num(m.shells),
             KitField::Charges => KitValue::Num(m.charges),
             KitField::Cams => KitValue::Num(m.cams),
-            KitField::Walls => KitValue::Num(m.walls),
             KitField::Suit => t(m.suit.as_str()),
-            KitField::Bare => KitValue::Bool(m.bare == Some(true)),
             KitField::Big => t(m.big.as_str()),
             KitField::Primary => t(&m.primary),
             KitField::Secondary => t(&m.secondary),
             KitField::SideCan => KitValue::Bool(m.side_can),
             KitField::Rings => KitValue::Num(m.rings),
-            KitField::Weapon => t(m.weapon.as_str()),
             KitField::Suppressed => KitValue::Bool(m.suppressed),
             KitField::Nvg => KitValue::Bool(m.nvg),
             KitField::Trim => t(m.trim.as_str()),
-            // (the card has no field `cans`: the skeleton's cans_row has get None where kit.ts:808 has mixOf, so the field stands for its get)
-            KitField::Cans => t(mix_of(m).map_or("own", |x| x.as_str())),
         },
     }
 }
@@ -827,7 +666,7 @@ fn v_num(v: &KitValue) -> f64 { match v { KitValue::Num(n) => *n, _ => unreachab
 fn v_bool(v: &KitValue) -> bool { match v { KitValue::Bool(b) => *b, _ => unreachable!("a yes/no row's value is a boolean") } }
 fn v_text(v: &KitValue) -> &str { match v { KitValue::Text(s) => s.as_str(), _ => unreachable!("a row of words has a word") } }
 
-///  The field stands for the row: 'cans', 'big' and the gun rows write through their own set
+/// A row's value put on a card.
 pub(super) fn row_set(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit, v: &crate::kit::KitValue) {
     match r.field {
         KitField::Smoke => m.smoke = v_num(v),
@@ -838,12 +677,10 @@ pub(super) fn row_set(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut cra
         KitField::Shells => m.shells = v_num(v),
         KitField::Charges => m.charges = v_num(v),
         KitField::Cams => m.cams = v_num(v),
-        KitField::Walls => m.walls = v_num(v),
         KitField::Suit => {
             let w = v_text(v);
             m.suit = [SuitId::Issued, SuitId::Black, SuitId::Grey, SuitId::Navy, SuitId::Olive, SuitId::Jungle, SuitId::Khaki, SuitId::Desert].into_iter().find(|s| s.as_str() == w).expect("a suit's word");
         }
-        KitField::Bare => m.bare = if v_bool(v) { Some(true) } else { None },
         KitField::Big => {
             let w = v_text(v);
             m.walls = if w == "wall" { 1.0 } else { 0.0 };
@@ -852,36 +689,25 @@ pub(super) fn row_set(g: &crate::game::Game, r: &crate::kit::KitRow, m: &mut cra
         KitField::Primary => {
             let w = v_text(v);
             if w == crate::gunslots::NO_PRIMARY { m.weapon = KitWeapon::Pistol; } else { m.primary = String::from(w); m.weapon = KitWeapon::Rifle; }
-            if rule_is_on(g) { home_shells(g, m); }
-            if tree_up(g) { home_cans(g, m); }
+            home_shells(g, m);
         }
         KitField::Secondary => {
             m.secondary = String::from(v_text(v));
-            if tree_up(g) { home_cans(g, m); }
+            home_cans(g, m);
         }
         KitField::SideCan => {
-            if !tree_up(g) || can_choice(g, &m.secondary) { m.side_can = v_bool(v); }
+            if can_choice(g, &m.secondary) { m.side_can = v_bool(v); }
         }
         KitField::Rings => m.rings = v_num(v),
-        KitField::Weapon => {
-            let w = v_text(v);
-            m.weapon = [KitWeapon::Rifle, KitWeapon::Pistol, KitWeapon::Shotgun].into_iter().find(|s| s.as_str() == w).expect("a gun's word");
-        }
         KitField::Suppressed => {
-            if !tree_up(g) || can_choice(g, &m.primary) { m.suppressed = v_bool(v); }
+            if can_choice(g, &m.primary) { m.suppressed = v_bool(v); }
         }
         KitField::Nvg => m.nvg = v_bool(v),
         KitField::Trim => {
             let w = v_text(v);
             m.trim = [TrimId::Issued, TrimId::Black, TrimId::Red, TrimId::Blue, TrimId::Green, TrimId::Amber, TrimId::White].into_iter().find(|s| s.as_str() == w).expect("a trim's word");
         }
-        KitField::Cans => {
-            if let KitValue::Text(w) = v {
-                if let Some(x) = can_mixes().get(w.clone()) { m.smoke = x.smoke; m.bangs = x.stun; }
-            }
-        }
     }
-    if rule_is_on(g) && r.field == KitField::Weapon { home_shells(g, m); }
 }
 
 pub(super) fn up_to(max: f64) -> Vec<f64> {

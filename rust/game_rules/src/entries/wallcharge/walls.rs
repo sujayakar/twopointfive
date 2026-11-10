@@ -291,21 +291,19 @@ pub fn wall_target(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3, 
     }
 }
 
-/// The rows of a wall's menu: the floor's, 'wall tools ▸' on the fifth digit, and the wall tools' own page. The floor's own fifth row comes after it: a digit is the first row's that has it.
+/// The rows on a wall: the floor's, and the wall's own.
 pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> {
     let crate::orders::OrderTarget::Floor(floor) = t else { return rows.to_vec() };
     if floor.wall.is_none() || !wall_charge_on(g) || !seat.wall_charge.seated {
         return rows.to_vec();
     }
-    let direct = g.k.wallcharge.menu == crate::knobs::WallchargeKMenu::Direct;
     let (row, opener) = (seat.wall_charge.row, seat.wall_charge.opener);
     let Some(page) = page else {
-        let (fifth, mut out): (Vec<_>, Vec<_>) = rows.iter().copied().partition(|&d| g.tab.orders_order_def[d].key == Some(5.0));
-        out.push(if direct { row } else { opener });
-        out.extend(fifth);
+        let mut out = rows.to_vec();
+        out.push(opener);
         return out;
     };
-    if page == WALL_PAGE && !direct { vec![row] } else { rows.to_vec() }
+    if page == WALL_PAGE { vec![row] } else { rows.to_vec() }
 }
 
 /// Sam's own row at the foot of a partition his cursor is on.
@@ -320,7 +318,6 @@ pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallChar
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         opens: Some(String::from(WALL_PAGE)),
-        key: Some(5.0),
         ..crate::orders::OrderDef::default()
     }));
     wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER, crate::orders::OrderDef {

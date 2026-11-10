@@ -35,14 +35,14 @@ fn wedge(p: &mut Play, d: DoorId) {
     let name = p.g.dr[d].def.name.clone();
     p.g.dr[d].key_side = side;
     p.g.dr[d].lock_id = format!("wedge:{name}");
-    game::doors::door_set_locked(&mut p.g, d, true);
+    p.g.dr[d].leaf.locked = true;
 }
 fn give(p: &mut Play, id: &str, at: [f64; 2], who: Who) -> Option<String> {
     let t = squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     squad_orders_give(&mut p.g, id, Some(&t), Some(who), None)
 }
-fn shut(p: &Play, d: DoorId) -> bool { game::doors::door_angle(&p.g, d).abs() < 0.05 && game::doors::door_latched(&p.g, d) && !game::doors::door_off(&p.g, d) }
-fn ops_on(p: &Play, d: DoorId) -> usize { p.g.door_tools.ops.iter().filter(|&&o| p.g.tab.doortools_door_op[o].door == d).count() }
+fn shut(p: &Play, d: DoorId) -> bool { p.g.dr[d].leaf.angle.abs() < 0.05 && p.g.dr[d].leaf.latched && !p.g.dr[d].leaf.off }
+fn ops_on(p: &Play, d: DoorId) -> usize { p.g.sets[p.g.seat].door_tools.ops.iter().filter(|&&o| p.g.tab.doortools_door_op[o].door == d).count() }
 /// how many of the squad have gone through to the room's side of the door
 fn across(p: &Play) -> usize { p.mates().iter().filter(|&&m| p.at(m)[1] < 15.85).count() }
 /// the squad's key held on a place until the ring is up: the menu it reads, and the words on the ring's first page
@@ -52,7 +52,7 @@ fn menu_on(p: &mut Play, at: [f64; 2]) -> (game::orders::Menu, Vec<String>) {
     let key = p.g.k.cmdring.key.clone();
     p.key_down(&key);
     p.until(2.0, |p| p.view().ring.is_some()).unwrap_or_else(|| panic!("no ring two seconds after its key went down on {at:?}"));
-    let (m, first) = (p.g.orders.menu.clone().unwrap(), p.view().ring.unwrap().wedges.into_iter().map(|w| w.text).collect());
+    let (m, first) = (p.g.sets[p.g.seat].orders.menu.clone().unwrap(), p.view().ring.unwrap().wedges.into_iter().map(|w| w.text).collect());
     p.key_up(&key);
     p.key_down("Escape");
     p.frame();
@@ -75,9 +75,9 @@ fn an_entry_at_a_door_found_wedged_stops_at_the_handle_and_the_same_row_boots_it
         let (mut p, d, door) = yard(seed);
         wedge(&mut p, d);
         assert_eq!(give(&mut p, "openClear", door, Who::All), None, "seed {seed}");
-        p.until(40.0, |p| p.g.door_tools.stats.halted > 0.0).unwrap_or_else(|| panic!("seed {seed}: 40 s and nobody stopped at the handle: {:?}", p.g.door_tools.stats));
+        p.until(40.0, |p| p.g.sets[p.g.seat].door_tools.stats.halted > 0.0).unwrap_or_else(|| panic!("seed {seed}: 40 s and nobody stopped at the handle: {:?}", p.g.sets[p.g.seat].door_tools.stats));
         p.run(1.0);
-        let st = &p.g.door_tools.stats;
+        let st = &p.g.sets[p.g.seat].door_tools.stats;
         assert_eq!((st.halted, st.kicks), (1.0, 0.0), "seed {seed}: one stop and no boot");
         assert!(shut(&p, d), "seed {seed}: the door is open");
         assert!(p.said.iter().any(|s| s.text.contains("wedged from inside. holding on it")), "seed {seed}: nobody said it: {:?}", p.said.iter().map(|s| &s.text).collect::<Vec<_>>());
@@ -86,14 +86,14 @@ fn an_entry_at_a_door_found_wedged_stops_at_the_handle_and_the_same_row_boots_it
         let (m, _) = menu_on(&mut p, door);
         assert_eq!(word_of(&p, &m, "openClear"), "kick and clear · wedged from inside", "seed {seed}");
         assert_eq!(give(&mut p, "openClear", door, Who::All), None, "seed {seed}");
-        p.until(30.0, |p| !shut(p, d)).unwrap_or_else(|| panic!("seed {seed}: the same row did not boot it: {:?}", p.g.door_tools.stats));
-        assert_eq!((p.g.door_tools.stats.halted, p.g.door_tools.stats.kicks), (1.0, 1.0), "seed {seed}");
+        p.until(30.0, |p| !shut(p, d)).unwrap_or_else(|| panic!("seed {seed}: the same row did not boot it: {:?}", p.g.sets[p.g.seat].door_tools.stats));
+        assert_eq!((p.g.sets[p.g.seat].door_tools.stats.halted, p.g.sets[p.g.seat].door_tools.stats.kicks), (1.0, 1.0), "seed {seed}");
         drop(p);
         // the control: the same order at the same door, not wedged, opens it with nobody stopping
         let (mut p, d, door) = yard(seed);
         assert_eq!(give(&mut p, "openClear", door, Who::All), None, "seed {seed}");
         p.until(30.0, |p| !shut(p, d)).unwrap_or_else(|| panic!("seed {seed}: the open door stayed shut"));
-        assert_eq!((p.g.door_tools.stats.halted, p.g.door_tools.stats.kicks), (0.0, 0.0), "seed {seed}: the control");
+        assert_eq!((p.g.sets[p.g.seat].door_tools.stats.halted, p.g.sets[p.g.seat].door_tools.stats.kicks), (0.0, 0.0), "seed {seed}: the control");
     }
 }
 
@@ -104,12 +104,12 @@ fn a_door_tried_by_a_stack_is_known_and_the_entry_after_it_is_not_stopped() {
         let (mut p, d, door) = yard(seed);
         wedge(&mut p, d);
         assert_eq!(give(&mut p, "stack", door, Who::All), None, "seed {seed}");
-        p.until(30.0, |p| p.g.door_tools.stats.tested > 0.0).unwrap_or_else(|| panic!("seed {seed}: nobody tried the handle"));
+        p.until(30.0, |p| p.g.sets[p.g.seat].door_tools.stats.tested > 0.0).unwrap_or_else(|| panic!("seed {seed}: nobody tried the handle"));
         p.run(1.0);
         assert!(p.said.iter().any(|s| s.text.ends_with("wedged from inside.")), "seed {seed}: {:?}", p.said.iter().map(|s| &s.text).collect::<Vec<_>>());
         assert_eq!(give(&mut p, "openClear", door, Who::All), None, "seed {seed}");
-        p.until(30.0, |p| !shut(p, d)).unwrap_or_else(|| panic!("seed {seed}: the entry did not boot it: {:?}", p.g.door_tools.stats));
-        assert_eq!((p.g.door_tools.stats.halted, p.g.door_tools.stats.kicks), (0.0, 1.0), "seed {seed}");
+        p.until(30.0, |p| !shut(p, d)).unwrap_or_else(|| panic!("seed {seed}: the entry did not boot it: {:?}", p.g.sets[p.g.seat].door_tools.stats));
+        assert_eq!((p.g.sets[p.g.seat].door_tools.stats.halted, p.g.sets[p.g.seat].door_tools.stats.kicks), (0.0, 1.0), "seed {seed}");
     }
 }
 
@@ -120,10 +120,10 @@ fn a_door_held_from_outside_refuses_being_held_again_and_going_in_is_a_second_or
     for seed in SEEDS {
         let (mut p, d, door) = yard(seed);
         assert_eq!(give(&mut p, "thresholdHold", door, Who::All), None, "seed {seed}");
-        p.until(40.0, |p| p.g.door_tools.ops.iter().any(|&o| { let o = &p.g.tab.doortools_door_op[o]; o.door == d && o.thr.is_some() && matches!(o.phase, game::doortools::Phase::Thr) }))
+        p.until(40.0, |p| p.g.sets[p.g.seat].door_tools.ops.iter().any(|&o| { let o = &p.g.tab.doortools_door_op[o]; o.door == d && o.thr.is_some() && matches!(o.phase, game::doortools::Phase::Thr) }))
             .unwrap_or_else(|| panic!("seed {seed}: 40 s and nobody holds the jambs"));
         assert_eq!(across(&p), 0, "seed {seed}");
-        let bangs = p.g.door_tools.bangs;
+        let bangs = p.g.sets[p.g.seat].door_tools.bangs;
         assert_eq!(give(&mut p, "thresholdHold", door, Who::All).as_deref(), Some("already holding it."), "seed {seed}");
         let (m, _) = menu_on(&mut p, door);
         let i = row_ids(&p, &m).iter().position(|r| r == "thresholdHold").unwrap();
@@ -133,7 +133,7 @@ fn a_door_held_from_outside_refuses_being_held_again_and_going_in_is_a_second_or
         assert_eq!(word_of(&p, &m, "openClear"), "go in and clear · no bang", "seed {seed}");
         assert_eq!(give(&mut p, "openClear", door, Who::All), None, "seed {seed}");
         p.until(25.0, |p| across(p) > 0).unwrap_or_else(|| panic!("seed {seed}: 25 s and nobody went in"));
-        assert_eq!(p.g.door_tools.bangs, bangs, "seed {seed}: going in spent a can");
+        assert_eq!(p.g.sets[p.g.seat].door_tools.bangs, bangs, "seed {seed}: going in spent a can");
     }
 }
 
@@ -154,12 +154,12 @@ fn the_squads_posture_is_one_order_for_all_and_waits_behind_more_on_a_door() {
         p.run(0.4);
         let orders = |p: &Play| { let here = game::seats::here(&p.g); p.mates().iter().map(|&m| game::orders::squad_orders_of(&here, m)).collect::<Vec<_>>() };
         let silent = |p: &Play| game::silent::squad_silent(&p.g, &game::seats::here(&p.g));
-        let (before, logged) = (orders(&p), p.g.orders.log.len());
+        let (before, logged) = (orders(&p), p.g.sets[p.g.seat].orders.log.len());
         assert_eq!(give(&mut p, "silent", floor, Who::Num(0.0)), None, "seed {seed}");
         p.run(0.1);
         assert!(silent(&p), "seed {seed}");
         for m in p.mates() { assert!(game::silent::under_silence(&mut p.g, m), "seed {seed}: addressed to one man and {m:?} did not take it"); }
-        assert_eq!(p.g.orders.log.len(), logged, "seed {seed}: it went on the log of the player's orders");
+        assert_eq!(p.g.sets[p.g.seat].orders.log.len(), logged, "seed {seed}: it went on the log of the player's orders");
         assert_eq!(orders(&p), before, "seed {seed}: the posture moved somebody's order");
         let (m, _) = menu_on(&mut p, floor);
         assert_eq!(posture(&row_ids(&p, &m)), (false, true), "seed {seed}: silent, on the floor: {:?}", m.words);

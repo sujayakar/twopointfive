@@ -66,7 +66,7 @@ fn spot_on(g: &crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWo
 pub(super) fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Pick {
     let crate::orders::OrderTarget::Door(t) = t else { return Pick::Text(String::from("not a door.")) };
     let d = t.door;
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return Pick::Text(String::from("no door left."));
     }
     if g.dr[d].def.steel.unwrap_or(false) {
@@ -144,8 +144,8 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
                 door: Some(d),
                 stance: Some(crate::character::Stance::None),
                 upper: Some(crate::character::UpperMode::Aim),
-                going: String::from("off the door"),
-                there,
+                going: "off the door".into(),
+                there: there.into(),
                 set_line: None,
                 ..Default::default()
             },
@@ -163,8 +163,8 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 set_line: None,
                 ..Default::default()
             },
@@ -209,8 +209,8 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
                 stance: crate::character::Stance::None,
                 upper: crate::character::UpperMode::Aim,
             }),
-            going: alloc::format!("wand · {}", words),
-            there: alloc::format!("feeding the wand · {}", words),
+            going: alloc::format!("wand · {}", words).into(),
+            there: alloc::format!("feeding the wand · {}", words).into(),
             set_line: None,
             ..Default::default()
         },
@@ -264,7 +264,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         Some(post) => flat(post, j.stand) > 0.3,
     };
     if short {
-        let line = if g.tab.orders_assignment[a].there == "stopped short" { None } else { Some("can't get on the door.") };
+        let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
         settle(g, gd, &mut j, line, false);
         return;
     }
@@ -304,13 +304,12 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     let what = if j.live { "looking under" } else { "feeding the wand" };
     let there = alloc::format!("{} · {}", what, crate::orders::door_words(g, d));
-    g.tab.orders_assignment[a].there = there;
+    g.tab.orders_assignment[a].there = there.into();
 }
 
 /// The order's row on the menus.
 fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(&crate::orders::rows::wand::ORDER, crate::orders::OrderDef {
-        hot_key: Some(g.k.wand.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
         ..Default::default()
@@ -319,8 +318,8 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 }
 
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
-/// fight or another order has; reads the row's key while a menu lists it. True = the key was the order's (and is eaten).
-pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
+/// fight or another order has.
+pub fn wand_order_frame(g: &mut crate::game::Game) {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     let mut want = false;
     if live(g) {
@@ -333,15 +332,15 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     }
     if !g.m.wandorder.states.has(k) {
         if !want {
-            return false;
+            return;
         }
         g.m.wandorder.states.set(k, State { jobs: JsMap::new() });
     }
-    let listed = g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
+    let listed = g.sets[g.seat].orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     if want && !listed {
-        let after = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
+        let after = g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
         let r = row(g);
-        let before = after.and_then(|i| g.orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
+        let before = after.and_then(|i| g.sets[g.seat].orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
         crate::orders::squad_orders_register(g, r, before.as_deref());
     } else if !want && listed {
         crate::orders::squad_orders_unregister(g, WAND_ORDER);
@@ -373,21 +372,6 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
             }
         }
     }
-    if !want {
-        return false;
-    }
-    if g.orders.menu.is_none() {
-        return false;
-    }
-    let key = g.k.wand.order_key.clone();
-    if !crate::input::input_hit(g, input, &key) {
-        return false;
-    }
-    let i = g.orders.menu.as_ref().unwrap().rows.iter().position(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
-    let Some(i) = i else { return false };
-    g.tab.input[input].pressed.delete(key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
 }
 
 /// His lens as his eye among the fog's, or None while he is not looking: the player's lens by every number, swept over its arc on the game's clock.

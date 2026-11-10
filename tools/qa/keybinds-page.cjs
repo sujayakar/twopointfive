@@ -11,7 +11,7 @@
 //   THE PAGE'S OWN BOARD (host/keymap.ts qFree, the last three lines; all the above run under ?qfree=0): the wall hold's cap is a dashed —, unmarked, its words
 //   say walk into it · a click and Q: the cap is Q, marked, kept; Reset is — again · ?wallpress=0: Q again · ?keybinds=0: a plain —.
 //   Q and F only: the orders menu's cap and the who cap are a dashed —, unmarked · a click and X: the menu's cap is X, marked, kept; Reset is — again.
-//   NO ROW HOLDS A KEY UNSEEN (its own line, the page's own board): every row with a key has its cap on the list; G and H give nothing.
+//   NO ROW HOLDS A KEY UNSEEN (its own line, the page's own board): every row with a key has its cap on the list.
 //   EMPTY HANDS ARE A SLOT (rust/game_types/src/handslot, host/keymap.ts SLOT; the last line): 'Empty hands' heads the kit's rows on a cap that reads backtick, unmarked;
 //   there is no row for E; the debugger's cap reads backslash, unmarked · a click and K: the slot's cap is K, marked, kept; Reset is backtick again.
 // GPU=1, THE GAME: crouch put on K on the screen, over the start card: K crouches him at once, C does nothing; the kit column names the light's new key; a

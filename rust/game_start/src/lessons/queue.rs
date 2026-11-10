@@ -129,7 +129,7 @@ async fn wheel(b: &Bot, id: &str, what: &str, tap_first: bool) {
     b.hold(&["ShiftLeft"], 3.0 / 60.0, || false).await;
     b.down("KeyB");
     b.hold(&["ShiftLeft", "KeyB"], 0.7, || false).await;
-    let (part, up) = b.ask(|g| (g.orders.menu.as_ref().is_some_and(|m| m.part.is_some()), g.orders.menu.is_some()));
+    let (part, up) = b.ask(|g| (g.sets[g.seat].orders.menu.as_ref().is_some_and(|m| m.part.is_some()), g.sets[g.seat].orders.menu.is_some()));
     if !part { b.fail(format!("Shift and the key kept down by {} opened {}", what, if up { "the ring for everyone" } else { "no ring" })).await; }
     let line = b.prompt().map_or(String::new(), |p| p.line);
     if !line.starts_with("Press") { b.fail(format!("the ring is up on the step's spot and the line is still \"{}\"", line)).await; }

@@ -38,18 +38,18 @@ block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the gam
 **A target** (`OrderTarget`) is `Floor`, `Door`, `None` (Sam, or `man`: a teammate) or `Foe`. `target_under_of` reads the cursor's ray: what is drawn
 under it wins, and a door counts by the doorway the ray looks through.
 
-**The book** is `SquadOrders`, one a seat, read as `g.orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
+**The book** is `SquadOrders`, one a seat, its `orders`. `defs` is the menu: `OrderDef` rows with their `targets`, `page`, words of assent, and
 `row`, the `Row` of functions (`can`, `only`, `valid`, `issue`, `tick`, `frame` and more, with the flags in `Is`). `asg` is each man's one
 `Assignment`: `post` is his mark and none means he follows, with `watch`, `door`, `via`, `group` and his status words `going` and `there`.
 
 **The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
 (`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
 `flick_px` out. `ring_latch` gives it as the key comes up pointing at one; otherwise the ring stays until a click, the key again or a digit. A right
-click steps back. Tab or Esc puts it away.
+click turns back from more, or puts it away. So do Tab and Esc.
 
-**The ring is flat** (`squad_orders_flat_rows`): every page's rows in one list, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
+**The ring's rows** (`squad_orders_flat_rows`) are one list: the rows of each tool a listed row opens, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
 tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door: cover, open and clear, bang and clear), and the rest fill up behind
-a last wedge, more. Only a tutorial can ask for pages (`squad_orders_flat_ring`).
+a last wedge, more.
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
 `can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men

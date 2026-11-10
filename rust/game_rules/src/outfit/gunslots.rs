@@ -11,11 +11,6 @@ fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponD
     g.m.weapons.weapons.get(w).unwrap()
 }
 
-/// The check's break path is tooling: BREAK is false in the game.
-pub(super) fn guns_broken() -> bool {
-    BREAK
-}
-
 /// The pick of that id, or None.
 fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)

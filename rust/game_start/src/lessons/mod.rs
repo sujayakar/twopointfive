@@ -259,8 +259,8 @@ impl Bot {
     // ---- doors, things
     pub fn door(&self, name: &str) -> DoorId { self.ask(|g| g.doors.list.iter().copied().find(|&d| g.dr[d].def.name == name)).unwrap_or_else(|| panic!("the script names a door '{}' the level does not have", name)) }
     pub fn closed(&self, d: DoorId) -> bool { self.ask(|g| game::doors::door_is_closed(g, d)) }
-    pub fn locked_door(&self, d: DoorId) -> bool { self.ask(|g| game::doors::door_locked(g, d)) }
-    pub fn angle(&self, d: DoorId) -> f64 { self.ask(|g| game::doors::door_angle(g, d)) }
+    pub fn locked_door(&self, d: DoorId) -> bool { self.ask(|g| g.dr[d].leaf.locked) }
+    pub fn angle(&self, d: DoorId) -> f64 { self.ask(|g| g.dr[d].leaf.angle) }
     pub fn thrown(&self, kind: ItemKind) -> bool { self.ask(|g| g.items.items.iter().any(|&i| g.tab.item[i].kind == kind && !g.tab.item[i].fired)) }
     /// the can in the air, until it has gone off (or `secs`)
     pub async fn landed(&self, kind: ItemKind, secs: f64) {
@@ -351,7 +351,7 @@ impl Bot {
     pub async fn tap(&self, kind: InteractableKind, verb: Verb, aim: Option<V3>) -> bool {
         let has = || self.seen(|_, s| s.nearby.iter().any(|r| r.kind == kind && r.verb == Some(verb) && r.in_reach));
         for _ in 0..60 { if has() { break; } if let Some(p) = aim { self.aim(p); } self.tick().await; }
-        let lit = self.seen(|g, s| s.nearby.get(g.pl[s.player].near_sel.max(0) as usize).map(|r| (r.kind, r.verb)));
+        let lit = self.seen(|_, s| s.nearby.get(s.hand.near_sel.max(0) as usize).map(|r| (r.kind, r.verb)));
         if let (true, Some(l)) = (has(), lit) { if l != (kind, Some(verb)) { self.fail(format!("a tap of the interaction key here does '{}', and the line means '{}'", l.1.map_or("-", |v| v.as_str()), verb.as_str())).await; } }
         self.verb(kind, verb, aim).await
     }

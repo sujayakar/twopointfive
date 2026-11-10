@@ -134,7 +134,7 @@ impl Owes {
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
         let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;
         let off_it = !a.arrived && a.post.is_some_and(|q| flat(p, q) > 0.6);
-        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there == "stopped short")
+        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there.at == game::orders::At::StoppedShort)
     }
     fn overlaps(&mut self, g: &Game, t: f64) {
         let mut team: Vec<(usize, [f64; 3])> = Vec::new();
@@ -157,14 +157,14 @@ impl Owes {
         use game::doors as d;
         for k in 0..g.doors.list.len() {
             let id: DoorId = g.doors.list[k];
-            let (a, name) = (d::door_angle(g, id), &g.dr[id].def.name);
-            if d::door_latched(g, id) && a.abs() > 1e-3 { self.fault("door", name, t, format!("latched at angle {:.4}", a)); }
-            if d::door_locked(g, id) && d::door_lock_broken(g, id) { self.fault("door", name, t, String::from("locked and its lock broken")); }
-            let pick = d::door_pick(g, id);
+            let (a, name) = (g.dr[id].leaf.angle, &g.dr[id].def.name);
+            if g.dr[id].leaf.latched && a.abs() > 1e-3 { self.fault("door", name, t, format!("latched at angle {:.4}", a)); }
+            if g.dr[id].leaf.locked && g.dr[id].leaf.lock_broken { self.fault("door", name, t, String::from("locked and its lock broken")); }
+            let pick = g.dr[id].leaf.pick;
             if !(0.0..=1.0).contains(&pick) { self.fault("door", name, t, format!("pick {}", pick)); }
-            if d::door_off(g, id) { continue; }
+            if g.dr[id].leaf.off { continue; }
             if a < d::door_min_a(g, id) - 1e-6 || a > d::door_max_a(g, id) + 1e-6 { self.fault("door", name, t, format!("angle {:.3} outside [{}, {}]", a, d::door_min_a(g, id), d::door_max_a(g, id))); }
-            if d::door_vel(g, id).abs() > MAX_LEAF_SPEED { self.fault("door", name, t, format!("swinging at {:.1}", d::door_vel(g, id))); }
+            if g.dr[id].leaf.vel.abs() > MAX_LEAF_SPEED { self.fault("door", name, t, format!("swinging at {:.1}", g.dr[id].leaf.vel)); }
         }
     }
     fn alarm_owes(&mut self, g: &Game, t: f64) {

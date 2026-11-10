@@ -38,7 +38,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
             };
             let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
             crate::particle_fx::kick_dust_fx(g, e.door, from);
-            if crate::doors::door_lock_broken(g, e.door) {
+            if g.dr[e.door].leaf.lock_broken {
                 let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
                 crate::particle_fx::lock_splinter_fx(g, e.door, from);
             }
@@ -239,8 +239,8 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     for s in seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].pending_throw = None;
-        g.pl[pl].throw_held = false;
-        g.pl[pl].throw_preview = None;
+        g.sets[s].hand.throw_held = false;
+        g.sets[s].hand.throw_preview = None;
     }
 }
 
@@ -331,7 +331,7 @@ fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId) {
     g.tab.camera[cam].kick = kick;
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
-    crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+    crate::seats::with_seat(g, me, &mut |g| g.sets[g.seat].view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
     crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input));
 }
 

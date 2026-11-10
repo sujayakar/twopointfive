@@ -79,7 +79,7 @@ async fn deed(b: &Bot, id: &str) {
             let secs = b.ask(|g| g.k.handring.hold_secs);
             b.down(game::consts::INTERACT_KEY);
             b.hold(&[game::consts::INTERACT_KEY], secs + 0.1, || false).await;
-            if b.me(|p| p.sel.ring.is_none()) { b.fail(String::from("the interaction key kept down put no ring up")).await; }
+            if b.seen(|_, s| s.hand.sel.ring.is_none()) { b.fail(String::from("the interaction key kept down put no ring up")).await; }
             b.press("Digit5", 0).await;
             let t0 = b.t();
             b.wait(REACT).await;
@@ -189,11 +189,11 @@ async fn deed(b: &Bot, id: &str) {
             let w0 = blown();
             b.press("KeyV", 6).await;
             b.hold(&[game::consts::INTERACT_KEY], 0.6, || false).await;
-            let ring = b.me(|p| p.sel.open);
+            let ring = b.seen(|_, s| s.hand.sel.open);
             b.click(LEFT, Some(b.chest(h))).await;
             b.ticks(20).await;
             if ring || blown() > w0 { b.fail(format!("in the store {} (a whistle would bring the hall's man round to him)", if blown() > w0 { "he whistled" } else { "the interaction key held put the hand's ring up" })).await; }
-            if b.me(|p| p.sel.open) { b.press("Escape", 3).await; }
+            if b.seen(|_, s| s.hand.sel.open) { b.press("Escape", 3).await; }
             b.say(format!("  in the corner: lit {:.2}; {} {:?}, aware {:.2}, {:.1} m off", b.lit(), b.called(h), b.state(h), b.awareness(h), flat(b.pos(), b.man_at(h))));
             b.unseen(n0, h, "coming into the store").await;
         }

@@ -26,8 +26,8 @@ fn charge_set(level: &str, link: &str, seed: u32, wall: [f64; 3], sam: [f64; 2])
     p.sam_put(sam);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, wall, None) { panic!("seed {seed}: the wall charge was refused: {why}"); }
-    p.until(90.0, |p| !p.g.wall_charge.set.is_empty()).unwrap_or_else(|| panic!("seed {seed}: no charge on the wall ({})", p.roll()));
-    let c = p.g.wall_charge.set[0];
+    p.until(90.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty()).unwrap_or_else(|| panic!("seed {seed}: no charge on the wall ({})", p.roll()));
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     (p, c)
 }
 

@@ -26,7 +26,7 @@ const WEATHERS: &[&str] = &["as it is", "clear", "overcast", "rain", "downpour",
 const TRAININGS: &[(&str, &str, game::morale::Training)] = &[("none (an old recording)", "none", game::morale::Training::None), ("by difficulty", "difficulty", game::morale::Training::Difficulty), ("all green", "green", game::morale::Training::Green), ("leader and green", "mixed", game::morale::Training::Mixed), ("all trained", "trained", game::morale::Training::Trained)];
 const NERVES: &[(&str, game::morale::Nerve)] = &[("steady", game::morale::Nerve::Steady), ("normal", game::morale::Nerve::Normal), ("brittle", game::morale::Nerve::Brittle)];
 
-fn aim(g: &Game) -> [f64; 3] { g.aim_point }
+fn aim(g: &Game) -> [f64; 3] { g.sets[g.seat].aim_point }
 fn every_group(g: &Game) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for &t in g.targets.iter() {

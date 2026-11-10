@@ -37,9 +37,6 @@ pub struct PlayerCmdView {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Seat {
     pub index: f64,
-    /// (walked by its own parts: in none of the row's bytes)
-    #[bytes(skip)]
-    pub own: Option<crate::seats::SeatSet>,
     /// (a host's hand, which differs by machine: in no bytes)
     #[bytes(skip)]
     #[is(InputId(0))] pub input: InputId,

@@ -312,25 +312,25 @@ fn rescue_marks(g: &mut crate::game::Game, on: bool) {
     let side = s.as_ref().and_then(|s| s.side.clone());
     let fd = match &s { Some(s) => crate::doors::doors_by_name(g, &s.room.door), None => None };
     let sd = match &side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
-    let mut i = g.orders.door_marks.len();
+    let mut i = g.sets[g.seat].orders.door_marks.len();
     while i > 0 {
         i -= 1;
-        if sd == Some(g.orders.door_marks[i].door) { g.orders.door_marks.remove(i); }
+        if sd == Some(g.sets[g.seat].orders.door_marks[i].door) { g.sets[g.seat].orders.door_marks.remove(i); }
     }
-    g.door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
-    g.door_tools.lights = None;
+    g.sets[g.seat].door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
+    g.sets[g.seat].door_tools.lights = None;
     if !on { return; }
     if let (Some(sd), Some(x)) = (sd, side.as_ref()) {
         if let Some(stack) = x.stack.as_ref().filter(|st| !st.is_empty()) {
             let face = rescue_face_of(g, sd);
-            g.orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
+            g.sets[g.seat].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
                 door: sd, side: face, stack: stack.clone(),
                 standoff: x.standoff.clone().unwrap_or_else(|| stack.clone()),
             });
         }
     }
-    if let Some(d) = fd { g.door_tools.linked.push(d); }
-    if let Some(d) = sd { g.door_tools.linked.push(d); }
+    if let Some(d) = fd { g.sets[g.seat].door_tools.linked.push(d); }
+    if let Some(d) = sd { g.sets[g.seat].door_tools.linked.push(d); }
 }
 
 /// The face of one of the room's doors that is not the room's.
@@ -372,19 +372,19 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     // the hostage room's door shut on its latch (the night leaves it ajar)
     let Some(d) = crate::doors::doors_by_name(g, &s.room.door) else { return Err(String::from("Cannot read properties of undefined (reading 'reset')")); };
     crate::doors::door_reset(g, d);
-    crate::doors::door_set_angle(g, d, 0.0);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_latched(g, d, true);
-    crate::doors::door_set_closing(g, d, false);
+    g.dr[d].leaf.angle = 0.0;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.latched = true;
+    g.dr[d].leaf.closing = false;
     // the side door from the server room: shut, and for the scenario not locked
     let side = match &s.side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
     if let Some(sd) = side {
         crate::doors::door_reset(g, sd);
-        crate::doors::door_set_angle(g, sd, 0.0);
-        crate::doors::door_set_vel(g, sd, 0.0);
-        crate::doors::door_set_latched(g, sd, true);
-        crate::doors::door_set_closing(g, sd, false);
-        crate::doors::door_set_locked(g, sd, false);
+        g.dr[sd].leaf.angle = 0.0;
+        g.dr[sd].leaf.vel = 0.0;
+        g.dr[sd].leaf.latched = true;
+        g.dr[sd].leaf.closing = false;
+        g.dr[sd].leaf.locked = false;
     }
     // the opposition: captor, door man, roamers
     let mut cast: Vec<CastRow> = vec![CastRow { role: Role::Captor, in_room: true, mark: s.captor, name: String::from("Captor") }];
@@ -515,7 +515,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.noise_serial = None;
     g.rescue.alarm_at = f64::NAN;
     g.rescue.way = None;
-    g.rescue.last_order = g.orders.log.last().map(|o| o.serial);
+    g.rescue.last_order = g.sets[g.seat].orders.log.last().map(|o| o.serial);
     let pl = g.player;
     let sam_at = g.k.rescue.sam_at;
     crate::game::game_teleport_player(g, v3::copy(sam_at));

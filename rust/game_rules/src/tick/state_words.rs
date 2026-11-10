@@ -7,7 +7,7 @@ use crate::seats::SeatSet;
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the game's own parts: those that are walked by their own fields, and a seat's set's (which lies in its seat's row), stand elsewhere in the list
-fn own(name: &str) -> bool { !matches!(name, "m" | "engine" | "tab") && !SeatSet::NAMES.contains(&name) }
+fn own(name: &str) -> bool { !matches!(name, "m" | "engine" | "tab" | "sets") && !SeatSet::NAMES.contains(&name) }
 
 /// each word's part, in the words' order
 pub fn state_names() -> Vec<String> {
@@ -23,7 +23,8 @@ pub fn state_names() -> Vec<String> {
 /// `o` and `out` are the caller's to keep, and reach their size once. With the first seat standing, as inside a tick: which seat a machine shows moves no word
 pub fn state_words(g: &mut Game, o: &mut W, out: &mut Vec<u32>) {
     out.clear();
-    crate::seats::on_first_bare(g, &mut |g| crate::seats::parked(g, &mut |g| {
+    crate::seats::on_first_bare(g, &mut |g| {
+        g.sets[g.seat].player = g.player;
         let mut say = |x: &dyn crate::bytes::ToBytes| { o.b.clear(); x.w(o); word(&o.b) };
         g.parts(&mut |name, x| if own(name) { out.push(say(x)); });
         g.m.parts(&mut |_, x| out.push(say(x)));
@@ -32,12 +33,12 @@ pub fn state_words(g: &mut Game, o: &mut W, out: &mut Vec<u32>) {
         // (a part of the sets is one word, whoever many seats there are)
         let at = out.len();
         out.resize(at + SeatSet::NAMES.len(), 0);
-        for s in g.tab.cmd_seat.ids() {
+        for (_, set) in g.sets.iter() {
             let mut k = at;
-            if let Some(set) = &g.tab.cmd_seat[s].own { set.parts(&mut |_, x| { out[k] = out[k].rotate_left(5) ^ say(x); k += 1; }); }
+            set.parts(&mut |_, x| { out[k] = out[k].rotate_left(5) ^ say(x); k += 1; });
         }
         o.b.clear();
-    }));
+    });
 }
 
 /// eight bytes at a time, how many there are first

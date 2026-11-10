@@ -176,9 +176,9 @@ fn the_setups_load_row_steps_to_the_next_load_he_has() {
     let load = |p: &Play| game::weapons::rifle_attachment(&p.g, rf);
     assert_eq!(load(&p), Some(A::Ring));
     tap(&mut p, "Digit2");
-    assert!(p.g.pl[pl].setup.is_some() && load(&p) == Some(A::Ring), "2 opens the setup and moves nothing");
+    assert!(p.g.sets[p.g.seat].hand.setup.is_some() && load(&p) == Some(A::Ring), "2 opens the setup and moves nothing");
     tap(&mut p, "Digit2");
-    assert!(p.g.pl[pl].setup.is_none() && load(&p) == Some(A::He40), "2 again: the next load, and the setup shut");
+    assert!(p.g.sets[p.g.seat].hand.setup.is_none() && load(&p) == Some(A::He40), "2 again: the next load, and the setup shut");
 
     // the cameras, handed over as a mission hands them; the launcher then empty: from the camera to the ring, and from the ring past the 40 mm
     game::stickycam::sticky_issue(&mut p.g, pl, 2.0, None);
@@ -248,7 +248,7 @@ fn in_the_guns_hold_the_buttons_are_a_round_and_the_ocp() {
     let (mut p, man, at) = in_the_guns_hold();
     p.point_at([at[0] + 6.0, at[1]]);
     p.run(0.1);
-    assert!(p.g.aim_target.is_none() && p.g.aim_guard.is_none(), "the staging is wrong: something is under the reticle");
+    assert!(p.g.sets[p.g.seat].aim_target.is_none() && p.g.sets[p.g.seat].aim_guard.is_none(), "the staging is wrong: something is under the reticle");
     let (r0, c0, heard) = (rounds(&p), charge(&p), p.sounds.len());
     click(&mut p, Button::Right);
     assert_eq!(rounds(&p), r0, "the right button: no round");
@@ -256,12 +256,12 @@ fn in_the_guns_hold_the_buttons_are_a_round_and_the_ocp() {
 
     // a light of the room under the reticle
     let eye = p.sam_at();
-    let lamp = p.g.interactables.iter().filter(|i| i.kind == game::game::InteractableKind::Light && i.target.is_some()).map(|i| i.pos).min_by(|a, b| {
+    let lamp = p.g.sets[p.g.seat].interactables.iter().filter(|i| i.kind == game::game::InteractableKind::Light && i.target.is_some()).map(|i| i.pos).min_by(|a, b| {
         let d = |q: &[f64; 3]| (q[0] - eye[0]).hypot(q[2] - eye[1]);
         d(a).partial_cmp(&d(b)).unwrap()
     }).expect("the office has lights");
     p.cursor_on(lamp);
-    p.until(1.0, |p| p.g.aim_target.is_some()).expect("the staging is wrong: the reticle did not snap to the lamp");
+    p.until(1.0, |p| p.g.sets[p.g.seat].aim_target.is_some()).expect("the staging is wrong: the reticle did not snap to the lamp");
     let c0 = charge(&p);
     click(&mut p, Button::Right);
     assert!(charge(&p) < c0, "a lit lamp under the reticle: the charge is spent");
@@ -398,9 +398,9 @@ fn a_charge_on_an_outer_wall_makes_a_hole() {
     p.sam_put(from);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, at, None) { panic!("the wall charge was refused: {why}"); }
-    p.until(60.0, |p| !p.g.wall_charge.set.is_empty()).unwrap_or_else(|| panic!("a minute and no charge is on the wall: {}", p.roll()));
+    p.until(60.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty()).unwrap_or_else(|| panic!("a minute and no charge is on the wall: {}", p.roll()));
     let before = p.g.destr.walls.changes.len();
-    let charge = p.g.wall_charge.set[0];
+    let charge = p.g.sets[p.g.seat].wall_charge.set[0];
     game::wallcharge::wall_charge_blow(&mut p.g, Some(charge), Some(true));
     p.run(0.2);
     assert!(p.g.destr.walls.changes[before..].iter().any(|r| r.kind == game::wallbreak::LevelChangeKind::Hole), "no hole");
@@ -432,9 +432,9 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let d = game::doors::doors_by_name(&p.g, "foot_gate").unwrap();
         let frame_x = p.g.dr[d].frame_centre[0];
         let marks = [[2.8, 22.75], [2.8, 20.75], [2.0, 23.45], [2.0, 20.05]];
-        game::doors::door_set_locked(&mut p.g, d, false);
-        game::doors::door_set_latched(&mut p.g, d, !open);
-        game::doors::door_set_angle(&mut p.g, d, if open { 1.5 } else { 0.0 });
+        p.g.dr[d].leaf.locked = false;
+        p.g.dr[d].leaf.latched = !open;
+        p.g.dr[d].leaf.angle = if open { 1.5 } else { 0.0 };
         for (i, &m) in ours.iter().enumerate() { p.man_stands(m, marks[i]); }
         p.run(0.05);
         for (i, &m) in ours.iter().enumerate() { p.man_stands(m, marks[i]); }
@@ -444,8 +444,8 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let (mut latched, mut swung, mut there) = (true, 0.0f64, Vec::new());
         for _ in 0..(((FUSE + 0.5) * 60.0) as usize) {
             there = ours.iter().map(|&m| (m, p.at(m))).collect();
-            latched &= game::doors::door_latched(&mut p.g, d);
-            swung = swung.max(game::doors::door_angle(&p.g, d).abs());
+            latched &= p.g.dr[d].leaf.latched;
+            swung = swung.max(p.g.dr[d].leaf.angle.abs());
             p.frame();
             if p.g.stats.frag.bursts > bursts0 { break; }
         }

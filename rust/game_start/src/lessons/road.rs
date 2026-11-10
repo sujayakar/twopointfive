@@ -106,9 +106,9 @@ async fn deed(b: &Bot, id: &str) {
         // the rifle's selector: the setup's first row (the rifle's digit again, then 1)
         "auto" => {
             b.press("Digit2", 12).await;
-            if b.me(|p| p.setup.is_none()) { b.fail(String::from("the rifle's key pressed again did not open its setup")).await; }
+            if b.seen(|_, s| s.hand.setup.is_none()) { b.fail(String::from("the rifle's key pressed again did not open its setup")).await; }
             b.press("Digit1", 12).await;
-            if b.step_is("auto") { b.fail(format!("the selector did not move (the hands hold {:?}, its setup is {})", b.me(|p| p.slot), if b.me(|p| p.setup.is_some()) { "up" } else { "shut" })).await; }
+            if b.step_is("auto") { b.fail(format!("the selector did not move (the hands hold {:?}, its setup is {})", b.me(|p| p.slot), if b.seen(|_, s| s.hand.setup.is_some()) { "up" } else { "shut" })).await; }
             if b.me(|p| p.slot) != SlotKind::Rifle { b.fail(format!("the selector's digit took the {:?} into his hands", b.me(|p| p.slot))).await; }
         }
         // off the wall the way the line says: the move keys, square away from it

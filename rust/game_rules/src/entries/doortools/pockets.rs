@@ -441,7 +441,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None);
-        door_tools_end(g, op, "no floor inside");
+        door_tools_end(g, op, crate::doortools::Ended::NoFloorInside);
         return;
     }
     let mut rest: Vec<GuardId> = men.iter().copied().filter(|m| !jamb.contains(m)).collect();
@@ -516,15 +516,6 @@ pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef)
         out.push(format!("charge set · {}{}{}", name, tail, close));
     }
     let ops = seat.door_tools.ops.clone();
-    for &op in &ops {
-        let o = &g.tab.doortools_door_op[op];
-        if o.on_word && o.phase == Phase::Ready {
-            let (men, door) = (o.men.clone(), o.door);
-            let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));
-            let name = crate::orders::door_words(g, door);
-            out.push(format!("{} ready on your word · {}", who, name));
-        }
-    }
     for &op in &ops {
         let o = &g.tab.doortools_door_op[op];
         if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr {

@@ -308,7 +308,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     if !bad.iter().any(|b| *b) { return Some(posts.to_vec()); }
     let mut out = posts.to_vec();
     let (w, c, th) = (g.dr[d].def.width, g.dr[d].frame_centre, g.dr[d].def.closed_dir);
-    let (jamb_out, jamb_past, file_gap) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past, g.orders.knobs.file_gap);
+    let (jamb_out, jamb_past, file_gap) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past, g.sets[g.seat].orders.knobs.file_gap);
     let cell = g.col.nav.cell;
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     for i in 0..out.len() {
@@ -464,9 +464,9 @@ fn far_cells(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<V3> {
 
 /// the leaf stands open: off its hinges, or unlatched and swung
 pub fn stack_view_open(g: &crate::game::Game, d: DoorId) -> bool {
-    if crate::doors::door_off(g, d) { return true; }
-    if crate::doors::door_latched(g, d) { return false; }
-    m::abs(crate::doors::door_angle(g, d)) >= g.k.stackroom.view_ajar
+    if g.dr[d].leaf.off { return true; }
+    if g.dr[d].leaf.latched { return false; }
+    m::abs(g.dr[d].leaf.angle) >= g.k.stackroom.view_ajar
 }
 
 /// how far from the frame's centre a plain stack's mark on this door can be
@@ -547,7 +547,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let s = g.k.stackroom;
     if !stack_view_open(g, d) { return Some(posts.to_vec()); }
     let Some(f) = floor_of(g, d, side) else { return Some(posts.to_vec()) };
-    let (jamb_out, jamb_past) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past);
+    let (jamb_out, jamb_past) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past);
     let (w, c, th) = (g.dr[d].def.width, g.dr[d].frame_centre, g.dr[d].def.closed_dir);
     let far = far_cells(g, d, side);
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
@@ -704,7 +704,7 @@ struct Way { o: DoorId, far: f64, floor: crate::stackroom::Floor, cost: f64 }
 /// (5) a place by a doorway of a room next to the face's own, one the team holds, on that doorway's far face
 fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackroom::Floor, used: &[V3], min_m: f64, shy: bool) -> Option<crate::stackroom::NextRoom> {
     let s = g.k.stackroom;
-    let (jamb_out, jamb_past, file_gap) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past, g.orders.knobs.file_gap);
+    let (jamb_out, jamb_past, file_gap) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past, g.sets[g.seat].orders.knobs.file_gap);
     let cs = g.col.nav.cell;
     let into = floor_of(g, d, -side);
     let mut ways: Vec<Way> = Vec::new();
@@ -736,7 +736,7 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
             if room < 0.0 { continue; }
             let unheld = if js::truthy(room) { !crate::cleared::cleared_rooms_is_known(g, room) } else { !ours.iter().any(|p| on_floor(g, &other, *p)) };   // (held: one of ours has stood in it)
             if unheld { continue; }
-            let latched = crate::doors::door_latched(g, o);
+            let latched = g.dr[o].leaf.latched;
             if latched {
                 let width = g.dr[o].def.width;
                 let at = crate::doortools::door_pt(g, o, width / 2.0, 0.6, s_o, None);

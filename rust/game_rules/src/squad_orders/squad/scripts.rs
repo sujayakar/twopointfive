@@ -523,15 +523,15 @@ fn room_clear_shove(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
     let (d, fling, a) = (row.door.unwrap(), row.plan.fling, row.a);
     let c = g.gd[a].ch;
     let s = js::or(m::sign(fling), -1.0);
-    if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d) < 1.0 {
-        crate::doors::door_set_latched(g, d, false);
-        crate::doors::door_set_closing(g, d, false);
-        let v = crate::doors::door_vel(g, d);
-        crate::doors::door_set_vel(g, d, s * m::max(m::abs(v), m::abs(fling)));
-        crate::doors::door_set_quiet_t(g, d, -1.0);
-        crate::doors::door_set_creak_armed(g, d, false);
+    if !g.dr[d].leaf.off && crate::doors::doors_open_for(g, d) < 1.0 {
+        g.dr[d].leaf.latched = false;
+        g.dr[d].leaf.closing = false;
+        let v = g.dr[d].leaf.vel;
+        g.dr[d].leaf.vel = s * m::max(m::abs(v), m::abs(fling));
+        g.dr[d].leaf.quiet_t = -1.0;
+        g.dr[d].leaf.creak_armed = false;
         let who = g.ch[c].id;
-        crate::doors::door_set_last_who(g, d, who);
+        g.dr[d].leaf.last_who = who;
         let at = crate::doors::door_pos(g, d);
         crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
     }
@@ -646,17 +646,17 @@ pub(super) fn room_clear_tick(g: &mut crate::game::Game, id: RoomClearId, t: f64
                 g.tab.squad_room_clear[id].flung = true;
                 let (p, yaw) = (g.ch[ca].pos, g.ch[ca].body_yaw);
                 let on_it = flat(p, kick_from) < 0.4 && m::abs(v3::wrap_angle(yaw - kick_face)) < 0.35;
-                if m::abs(crate::doors::door_angle(g, d)) < 1.4 {
-                    crate::doors::door_set_latched(g, d, false);
-                    crate::doors::door_set_closing(g, d, false);
-                    crate::doors::door_set_vel(g, d, if on_it { fling } else { fling * 0.32 });
-                    if on_it { crate::doors::door_set_since_bash(g, d, 0.0); }
-                    crate::doors::door_set_quiet_t(g, d, -0.5);
-                    crate::doors::door_set_creak_armed(g, d, false);
+                if m::abs(g.dr[d].leaf.angle) < 1.4 {
+                    g.dr[d].leaf.latched = false;
+                    g.dr[d].leaf.closing = false;
+                    g.dr[d].leaf.vel = if on_it { fling } else { fling * 0.32 };
+                    if on_it { g.dr[d].leaf.since_bash = 0.0; }
+                    g.dr[d].leaf.quiet_t = -0.5;
+                    g.dr[d].leaf.creak_armed = false;
                 }
                 let who = g.ch[ca].id;
-                crate::doors::door_set_last_who(g, d, who);
-                if on_it && !crate::doors::door_off(g, d) {
+                g.dr[d].leaf.last_who = who;
+                if on_it && !g.dr[d].leaf.off {
                     let at = crate::doors::door_pos(g, d);
                     crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
                     crate::marks::kick_scuff(g, d, p);
