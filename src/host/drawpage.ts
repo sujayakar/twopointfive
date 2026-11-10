@@ -85,6 +85,7 @@ import { openStartPage, startPage, startPageWanted } from '../ui/startpage';
 import { RunBooks } from '../ui/runBooks';
 import { watchMissionRows } from '../ui/verdictRows';
 import { KitPage, kitNone } from './kitpage';
+import { ViewSize } from './viewsize';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
 import type { BriefView } from '../view/read';
 import { nextPickOf } from '../ui/picks';
@@ -137,7 +138,7 @@ async function main(): Promise<void> {
   TITLE.coop = () => COOP.on ? coopRows : null;
   // (a game hosted from here stands on this machine's settings; both players play the kit as issued)
   HOSTED.setup = () => ({ kept: machineKept(true) });
-  const canvas = document.getElementById('view') as HTMLCanvasElement;
+  const canvas = document.getElementById('view') as HTMLCanvasElement, size = new ViewSize(canvas);
   // (the Team & kit picture has no HUD)
   if (kitPicture) for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
@@ -209,7 +210,7 @@ async function main(): Promise<void> {
   if (q.get('framecap') === '0') FRAMECAP.on = false;
   if (FRAMECAP.on) watchTextures(gpu.device);   // (a frame capture knows every texture made from here on)
   boot.span('gpu', tGpu); boot.mark('gpu'); startCallClock(gpu.device);
-  let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine);
+  let world!: DrawWorld; const engine = new Engine(gpu, undefined, d => world = new DrawWorld(d, D)), smoke = new SmokeSystem(engine); engine.view = size;
   urlFlagsOnEngine(engine); pictureSolves(q, engine, smoke);
   engine.setParticles(new Particles(engine.device, engine.sceneLayout));
   engine.setSmoke(smoke.binding); engine.afterSubmit.push(() => smoke.afterSubmit());
@@ -229,9 +230,9 @@ async function main(): Promise<void> {
   const made = Promise.all([engine.init({ ...pictureMakes(q), onGroup: group }), timed('smoke', smoke.init()), timed('particles', engine.particles!.init()), timed('materials', engine.gbuffer.needLook()), timed('meshShadows', shadows.init()), timed('skin', engine.gbuffer.prepareSkin(chars.jointsFormat))]);
   made.catch(() => { /* awaited below */ });
   // (while the programs compile: the ticks a run begins with, still, walking and firing)
-  if (!play && !kitPicture && !title) { const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
+  if (!play && !kitPicture && !title) { size.read(); const eye = new FollowCamera(), o = view() + View.follow, none = new Set<string>(), walk = new Set(['KeyW']), w = Math.max(1, size.clientWidth), h = Math.max(1, size.clientHeight);
     eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.aspect = w / h; eye.rebuild();
-    await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, canvas), nextTask); }
+    await game.warm(WARM, (N, i) => sampleHand(N, { keys: i >= WARM / 3 ? walk : none, pressed: none, buttons: i >= WARM * 2 / 3 ? 1 : 0, clicked: 0, wheel: 0, mouseX: w * 0.6, mouseY: h * 0.4 }, eye, size), nextTask); }
   await made;
   boot.span('pipelines', tPipe); boot.mark('pipelines'); boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up'; pipelineProgress.onChange = null; pipeQueue.settle(); engine.warmFirstUse();
   const quality = new Quality(engine, smoke); quality.visit(location.search); pictureOpens(q, engine, quality); quality.onCalibrated = refreshOptions; (window as unknown as { __quality: Quality }).__quality = quality;
@@ -244,7 +245,7 @@ async function main(): Promise<void> {
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
   MUSIC.pieces = MUSIC.byLevel = true; audio.scoreSet = setlistOf(setlistLevel(q.get('levelFile')), desk().kind(location.search) || null);   // (the level's own music)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
-  const hud = kitPicture ? null : new DrawHud(game, ask); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
+  const hud = kitPicture ? null : new DrawHud(game, ask, canvas); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
   deaf = () => audio.hush();
   const settings = settingsOf(game, hud?.overlay); setOptionsDeps({ engine, quality, audio, game: settings });   // (what this machine keeps of the volumes and the wall hold is put on them)
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
@@ -276,7 +277,7 @@ async function main(): Promise<void> {
     const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) { events.stands(); return; }
     engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
   };
-  anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
+  anew(); lens(); size.read(); cam.aspect = Math.max(1, size.clientWidth) / Math.max(1, size.clientHeight); cam.rebuild();
 
   const told = { update: 0, render: 0, tick: 0, draw: 0, hud: 0, frames: 0, fps: 0 }, readout = new Readout({ engine, smoke, quality, adapter: gpu.adapterInfo, men: () => D.n[Section.men], told }, q);
   const ear: Vec3 = [0, 0, 0];
@@ -327,8 +328,8 @@ async function main(): Promise<void> {
     if (thaw) { thaw = false; if (!net) { input.pressed.add('Paused'); input.pressed.add('Thawed'); } }   // (the first tick after a card is told: what was held when it came up is let go unsent, in the tick)
     owed = false;   // (a card asked for another game, and this tick stands it, whatever else holds the world still)
     if (play) { if (!play.tick()) { played.paused = true; if (game.lost) lostWalk(); return; } }
-    else if (net) { if (net.tick(input, cam, canvas, stopped(), told1)) { anew(); lens(); } }
-    else game.step(dt, sampleHand(game.numbersOf(), input, cam, canvas));
+    else if (net) { if (net.tick(input, cam, size, stopped(), told1)) { anew(); lens(); } }
+    else game.step(dt, sampleHand(game.numbersOf(), input, cam, size));
     if (!net) told1();
     const o = view(), reeled = reel.step(dt), spectating = !reeled && D.u[o + View.spectating] !== 0;
     if (reeled) { follow[0] = reeled[0]; follow[1] = reeled[1]; follow[2] = reeled[2]; } else three(follow, o + View.follow);
@@ -363,6 +364,7 @@ async function main(): Promise<void> {
   /** one drawn frame: `dt` seconds of the display's, in whole ticks (`drawn` false: a script's, stepped and not drawn) */
   let beat = -1;   // (the display's own time for this frame, s; -1 = not known)
   const frame = (dt: number, ticks?: number, drawn = true): void => {
+    if (ticks !== undefined) size.read();   // (a script's frame; the page's own loop has read it)
     if (freeCam) { freeCam.frame(dt); bar?.paint(); }
     if (ticks === undefined) pageKeys(); else hud?.tabShow(false);
     if (!sought()) return;
@@ -374,7 +376,7 @@ async function main(): Promise<void> {
     const locks = D.u[view() + View.locks];
     if (input.wheelCtrl) { if (!still && !(locks & 2)) cam.zoom(input.wheelCtrl); input.wheelCtrl = 0; }
     if (input.orbitDX && plan.ticks && !(locks & 1)) cam.rotate(ctrlTurn(input.orbitDX));   // (in a frame's first tick: the next tick's hand looks the way it left the view)
-    cam.frame(); kit?.before(Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight));
+    cam.frame(); kit?.before(Math.max(1, size.clientWidth) / Math.max(1, size.clientHeight));
     for (let i = 0; i < plan.ticks && !game.lost; i++) { if (i) input.endTick(); tick(1 / FIXEDSTEP.hz); }
     if (net?.door.far) { if (plan.ticks) input.endFrame(); return; }   // (ticks nobody sees: the picture stands until the page is level)
     if (play && game.lost) { input.endFrame(); return; }   // (the picture stands as it was: any place before it can be gone back to)
@@ -397,7 +399,7 @@ async function main(): Promise<void> {
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
     game.frame(a, cam.focus); if (!kit) rimsFrom(rims, D); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
-    cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, canvas); } told.hud = performance.now() - tH; laneTape?.drawn?.(); } finally { cam.kickOut(); cam.drawOut(); }
+    cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, size); } told.hud = performance.now() - tH; laneTape?.drawn?.(); } finally { cam.kickOut(); cam.drawOut(); }
     kit?.after(D.u[view() + View.kit], D.u[view() + View.veil]);
     if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
     told.update = t1 - t0; told.render = performance.now() - t1 - told.hud; told.frames++;
@@ -432,12 +434,14 @@ async function main(): Promise<void> {
       const room = pageRoom({ calibrating: quality.calibrating, measuring: measure.active }), away = EVENPACE.giveway && !kit && !quality.calibrating && !measure.active && !measure.rec.recording && !attended();
       if (kit?.rests || held || document.hidden) { afresh(); requestAnimationFrame(loop); return; }
       if (pace.skip(ts, kit ? 60 : !quality.calibrating && !measure.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(loop); return; }
+      size.read();
       const now = performance.now(), raw = (now - last) / 1000; last = now; told.fps = rate.push(now);
       // (a tick is owed by the display's own frames, which are steadier than a clock read in one; a window that gave way is no measure of the machine)
       beat = stamp >= 0 && ts > stamp ? Math.min(1 / 20, (ts - stamp) / 1000) : -1; stamp = ts; const rested = pace.gave !== gave; gave = pace.gave;
       if (quality.early) quality.remeasure();
       if (quality.calibrating) { if (measure.calibrates(engine)) quality.calibrateTick(raw); }
       else if (raw < 0.5 && !rested && !stopped() && !measure.active) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; gpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN; quality.sample(raw, gpuMs); }
+      if (quality.calibrating || !quality.measured || measure.reads || readout.on) engine.timer.ask();
       measure.begins(); cloud?.begins(); reel.frame(raw); frame(Math.min(1 / 20, raw) * ((window as unknown as { __timeScale?: number }).__timeScale ?? 1), undefined, !unseen()); measure.timed(told.update, told.render); cloud?.drawn(raw, gpuMs, rested); gpuMs = NaN; measure.drawn(raw, told.fps);
       if (away || room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(rendered) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
       requestAnimationFrame(loop);

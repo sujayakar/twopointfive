@@ -6,7 +6,7 @@ import type { Vec3 } from '../math/vec';
 import type { HudCam, HudSource } from '../view/hud';
 import type { BubbleView } from '../view/seatview';
 import { NET_ROW, netPlace } from './netplace';
-import type { BubblesLike } from '../host/hud';
+import type { BubblesLike, View } from '../host/hud';
 import { rectZoom, textZoom } from './textsize';
 
 /** the HUD cards a bubble must never sit under (the maintainer's rule): the interaction panel while it is up ('on'), and the kit column,
@@ -28,19 +28,19 @@ export class Bubbles implements BubblesLike {
   /** the cached blocker rects (canvas-relative), the key they were measured under, and when */
   private blockers: DOMRect[] = []; private blockKey = ''; private blockAt = -1e9;
   private blockEls: (HTMLElement | null)[] | null = null;
-  constructor(private root: HTMLElement) {}
+  constructor(private root: HTMLElement, private canvas: HTMLCanvasElement) {}
 
   private make(): HTMLElement { const el = document.createElement('div'); el.className = 'bubble'; el.style.display = 'none'; this.root.appendChild(el); return el; }
 
   /** the rects to dodge this frame: re-measured when a card's class / content or the view's size changed (a cheap string key off the DOM, no layout read), or every BLOCKER_RECHECK_MS */
-  private blockerRects(canvas: HTMLCanvasElement, w: number, h: number): DOMRect[] {
+  private blockerRects(w: number, h: number): DOMRect[] {
     this.blockEls ??= [...BLOCKER_IDS_ON, ...BLOCKER_IDS].map(id => document.getElementById(id));
     let key = `${w}x${h}`;
     for (const e of this.blockEls) key += !e ? '|-' : e.id === 'meters' ? `|${e.className}` : `|${e.className}:${e.childElementCount}:${(e.textContent ?? '').length}`;   // (the meters' numbers move every frame but their card never changes size: its class is key enough)
     const now = performance.now();
     if (key === this.blockKey && now - this.blockAt < BLOCKER_RECHECK_MS) return this.blockers;
     this.blockKey = key; this.blockAt = now;
-    const cr = canvas.getBoundingClientRect(), tz = rectZoom(); const out: DOMRect[] = [];
+    const cr = this.canvas.getBoundingClientRect(), tz = rectZoom(); const out: DOMRect[] = [];
     this.blockEls.forEach((e, i) => {
       if (!e) return;
       if (i < BLOCKER_IDS_ON.length && !e.classList.contains('on')) return;   // (the interaction panel: only while up)
@@ -63,10 +63,10 @@ export class Bubbles implements BubblesLike {
     const x = parseFloat(e.style.left), y = parseFloat(e.style.top); return Number.isFinite(x) && Number.isFinite(y) ? [{ left: x - 26, right: x + 26, top: y - 10, bottom: y + 24 }] : [];
   }
 
-  update(src: HudSource, cam: HudCam, canvas: HTMLCanvasElement) {
-    const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
+  update(src: HudSource, cam: HudCam, view: View) {
+    const tz = textZoom(), w = view.clientWidth / tz, h = view.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
     // screen rects the bubbles must dodge this frame (canvas-relative): the interaction panel while it lists something, the kit column, the meters, the objective line, the radio strip
-    const blockers = this.blockerRects(canvas, w, h);
+    const blockers = this.blockerRects(w, h);
     const V = src.view, net = V.look.net;
     /** draw `el` as bubble `b` over `head` in the tone class `tone`; false = off screen this frame (the caller hides it) */
     const place = (el: HTMLElement, b: BubbleView, head: Vec3): boolean => {

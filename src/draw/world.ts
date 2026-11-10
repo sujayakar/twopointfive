@@ -28,7 +28,7 @@ export class DrawWorld extends BoxWorld {
   /** the lines of light nearest the view, and the dot one ends on (engine.ts `beams`) */
   readonly beams: { list: Box[]; is(b: Box): boolean; airOf(b: Box): Box | null | undefined } = { list: [], is: () => true, airOf: b => { const a = b.owner; return a === 0 ? undefined : a === 1 ? null : this.dot; } };
   private dot = boxOf([0, 0, 0], [0, 0, 0], 0, [0, 0, 0], [0, 0, 0], 0, 0); private lines: Box[] = [];
-  constructor(device: GPUDevice, private D: Drawn) { super(device); }
+  constructor(device: GPUDevice, private D: Drawn) { super(device); this.staticsTold = 0; }
   get count(): number { return this.boxes; }
 
   upload(_between = false, _wait: DrawWait | null = null): void {
@@ -66,6 +66,7 @@ export class DrawWorld extends BoxWorld {
   /** the statics a plan reads: those from `from` to `to` as they stand now */
   private mirror(from: number, to: number, count: number): void {
     const D = this.D, f = D.f, u = D.u, g0 = D.at[Section.geo], m0 = D.at[Section.mat];
+    this.staticsTold++;
     for (let i = count; i < this.statics.length; i++) { this.wall(this.statics[i]); if (stopsSky(this.statics[i].flags)) this.moved++; }
     this.statics.length = Math.min(this.statics.length, count); this.glassStatics.length = 0;
     for (let i = from; i < to; i++) {

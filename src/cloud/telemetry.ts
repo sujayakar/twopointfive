@@ -58,9 +58,10 @@
 //           for one the game went on from — the first `errors` distinct errors and the first `warnings` distinct warnings of a visit; the count of
 //           each rides on the visit's `end`
 //   end     as the page goes: seconds of live play and frames this visit
-// THE GPU'S TIME costs the frame nothing new. The engine already times its passes every frame on an adapter that can (gpu/timer.ts, what the quality ladder
+// THE GPU'S TIME costs the frame nothing new. The engine already times its passes on an adapter that can, a frame in five (gpu/timer.ts, what the quality ladder
 // reads), and host/drawpage.ts already folds a frame's compute passes into one number for that ladder: that number is handed in here, where it is one add into a table
-// of quarter-milliseconds. No query, no readback and no pass is added for it. One frame in `gpuEvery` the per-pass times the engine holds are added up too (a
+// of quarter-milliseconds. No query, no readback and no pass is added for it. (Its `frames` beside the record's own say how many of the
+// frames were read.) One reading in `gpuEvery` (an odd number, for a pass that runs every second frame) the per-pass times the engine holds are added up too (a
 // walk of a couple of dozen numbers, about twice a second), and the record carries each pass's mean — in TWO lists: `passes`, the compute passes the frame's
 // GPU time is the union of, and `render`, the render passes that union leaves out because a render pass's timestamps are not to be trusted on Metal (the
 // first real records had them on top, at twice the frame). An adapter with no timestamp queries has no `gpu`.
@@ -71,7 +72,7 @@ import type { Wire } from './wire';
 
 /** `perfMin`: a tab that is only hidden (it may come back) writes the open stretch of play as a record only once it is this long, s — the first real
  *  visits wrote a record of a tenth of a second at every switch of tabs */
-export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warnings: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32, rungSecs: 0.25, moves: 16 };
+export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warnings: 8, queue: 200, batch: 40, gpuEvery: 7, gpuPasses: 32, rungSecs: 0.25, moves: 16 };
 
 export interface PlayFacts {
   scenario: string;

@@ -76,7 +76,8 @@ the tick; otherwise it is the card. `stopped` is every reason the world holds st
 
 **The HUD works nothing out.** After a tick the host asks `tick_view` for the seat it shows and hands the record to `Overlay.update` and `Bubbles.update`, after the picture is
 drawn, through the camera that drew it. `HudPage` and `pageSay` are the little the page adds. `locked` and `offered` are how a tutorial shuts keys and rows.
-The corner panel is `cornerRows`.
+The corner panel is `cornerRows`. The picture's size in the window is read once, as the frame begins (`host/viewsize.ts`): asked of the canvas after the HUD
+has written the page, it makes the browser lay the page out again.
 
 **The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring.rs` and `interact/`. A tap does the default;
 the key kept down a moment puts the ring up. Let go on a wedge does it; let go in the middle leaves the ring up, and 1 to 5 or a click picks. The whistle is the last wedge of
