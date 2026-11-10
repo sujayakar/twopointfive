@@ -47,9 +47,21 @@ fn on_wall(g: &Game, pl: PlayerId) -> bool {
     }
 }
 
+/// Sam is low, as his squad counts it: by his own key. A knee the work of his hands put him on (a lock, the wand, a body) leaves it as it was before
+pub(in crate) fn sam_low(g: &Game, pl: PlayerId) -> bool { g.pl[pl].crouch && g.pl[pl].knee.map_or(true, |k| k.low) }
+
+/// he goes down on a knee for his work; one already low stays as he is. The squad keeps what it was doing: low with him, sneaking with him, or neither
+pub(in crate) fn kneel(g: &mut Game, pl: PlayerId) {
+    if !g.pl[pl].crouch {
+        let sneaks = sam_sneaks(g, pl) || g.time - state_of(g).sneak_t <= g.k.unseen.linger;
+        g.pl[pl].knee = Some(crate::player::Knee { low: on_wall(g, pl), sneaks });
+    }
+    g.pl[pl].crouch = true;
+}
+
 /// Sam is sneaking: low, on a wall, or with the wheel right down, and not sprinting
 pub fn sam_sneaks(g: &Game, pl: PlayerId) -> bool {
-    !crate::condition::down(g, g.pl[pl].ch) && !g.pl[pl].sprinting && !g.pl[pl].dash && (g.pl[pl].crouch || on_wall(g, pl) || g.pl[pl].pace <= g.k.unseen.pace_at + 1e-6)
+    !crate::condition::down(g, g.pl[pl].ch) && !g.pl[pl].sprinting && !g.pl[pl].dash && ((g.pl[pl].crouch && g.pl[pl].knee.map_or(true, |k| k.sneaks)) || on_wall(g, pl) || g.pl[pl].pace <= g.k.unseen.pace_at + 1e-6)
 }
 
 /// what has given the squad away (None: nothing)
@@ -142,7 +154,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
     g.m.unseen.states.get_mut(pl).unwrap().cue_t = now;   // before the line is said: a read of the row from under `say` must see it, as the TypeScript's would
     g.stats.unseen.cues += 1;
     let sam = lead(g);
-    let low = g.pl[sam].crouch || on_wall(g, sam);
+    let low = sam_low(g, sam) || on_wall(g, sam);
     crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None);
 }
 
@@ -164,7 +176,7 @@ fn off_wall(g: &mut Game, gd: GuardId) -> bool {
 
 fn low_now(g: &mut Game, gd: GuardId) -> bool {
     let pl = lead(g);
-    g.pl[pl].crouch || off_wall(g, gd)
+    sam_low(g, pl) || off_wall(g, gd)
 }
 
 /// he is low because Sam is
@@ -386,6 +398,27 @@ mod tests {
         assert!(sam_sneaks(&mut g, pl));
         g.pl[pl].sprinting = true;
         assert!(!sam_sneaks(&mut g, pl));
+    }
+
+    #[test]
+    fn a_knee_for_work_leaves_him_as_he_was() {
+        // (on his own key, with the wheel right down, off a wall, or just up off it: what he was is what he is counted as)
+        let counted = |f: &dyn Fn(&mut Game, PlayerId)| {
+            let (mut g, pl) = game_with_sam();
+            g.pl[pl].pace = 1.0;
+            g.time = 5.0;
+            f(&mut g, pl);
+            kneel(&mut g, pl);
+            g.pl[pl].pace = 1.0;   // (at his work, and off the wall for it)
+            g.pl[pl].wall = None;
+            assert!(g.pl[pl].crouch);
+            (sam_low(&g, pl), sam_sneaks(&g, pl))
+        };
+        assert_eq!(counted(&|_, _| {}), (false, false), "up before it");
+        assert_eq!(counted(&|g, pl| g.pl[pl].crouch = true), (true, true), "low by his key");
+        assert_eq!(counted(&|g, pl| g.pl[pl].pace = g.k.unseen.pace_at), (false, true), "slow and upright");
+        assert_eq!(counted(&|g, pl| g.pl[pl].wall = Some(crate::player::WallHold::default())), (true, true), "on a wall");
+        assert_eq!(counted(&|g, _| state_of(g).sneak_t = 5.0), (false, true), "a moment ago");
     }
 
     #[test]

@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Hard's drilled defenders: where the mission's men are drilled, under the press's own switch.
+/// Hard's drilled defenders: where the mission's men are drilled, on Hard.
 pub(super) fn drilled_on(g: &crate::game::Game) -> bool {
     g.k.pressure.on && g.k.pressure.drilled && g.staged.facts.drilled
 }
@@ -113,13 +113,8 @@ pub fn room_fight_on(g: &crate::game::Game) -> bool {
     !(show_runs && !crate::rails::rails_live(g))
 }
 
-/// A line of the fight's log, kept to its last few hundred.
-pub(in crate::defenders) fn room_fight_note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd { Some(x) => g.gd[x].callsign.clone(), None => String::from("-") };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: String::from(what) });
-    if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
-}
+/// What a man or a squad of the fight has just done, for who would say it aloud (cues.rs). It lasts the tick.
+pub fn tell_news(g: &mut crate::game::Game, news: News) { g.fight.news.push(news); }
 
 /// `this.ops.find(o => o.gd === gd)`: the first operative's row for this man.
 pub(super) fn op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> {
@@ -252,7 +247,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     }
     let mut i = 0;
     while i < g.fight.ops.len() { let o = g.fight.ops[i]; i += 1; room_fight_tick_op(g, o, dt); }
-    crate::pressure::press_tick(g, dt);
+    crate::pressure::press_tick(g);
     crate::laststand::last_stand_tick(g);
 }
 
@@ -330,7 +325,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
 /// a fresh staging.
 pub fn room_fight_reset(g: &mut crate::game::Game) {
     room_fight_stop(g);
-    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::default();
+    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.stats = RoomFightStats::default();
 }
 
 #[cfg(test)]

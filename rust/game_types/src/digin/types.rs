@@ -111,11 +111,6 @@ pub struct StFix {
     pub room: Option<RoomfightRoomId>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DiginModDIGINLOGItem {
-    pub what: String,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DiginModDIGINSHUT {
 }
@@ -152,7 +147,6 @@ pub struct DigInRefuge {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DiginMod {
-    pub digin_log: Vec<crate::digin::DiginModDIGINLOGItem>,
     #[is(crate::digin::DiginModDIGINSHUT { })] pub digin_shut: crate::digin::DiginModDIGINSHUT,
     pub states: Option<crate::digin::St>,
 }

@@ -597,7 +597,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, back: f64, sa
     let now = g.time;
     let k_ = g.k.sneak;
     let p = g.ch[g.gd[gd].ch].pos;
-    let low = g.pl[g.player].crouch;
+    let low = crate::unseen::sam_low(g, g.player);
     man.t = now;
     man.way = None;
     let plain = Feet { goal: None, speed: low_pace(g, speed0, low), crouch: low, must: None };

@@ -278,18 +278,18 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
         let (bottom, top) = (bc[1] - hy, bc[1] + hy);
         // the men it lies in, or, in nobody, the walking man whose leading foot it is most in the way of
         let (mut ox, mut oz, mut in_n) = (0.0, 0.0, 0.0);
-        let mut deep: Option<(f64, f64, f64)> = None;   // (how far it lies into a man down at its deepest, and the way out of there)
-        let mut under: Vec<V3> = Vec::new();   // (the bones of a man down it lies on)
+        let mut on_body = false;   // (a man down is one of them)
+        let mut bones: Vec<V3> = Vec::new();   // (the bones of the men down at its height)
         let mut best: Option<FootBest> = None;
         for mm in men.iter() {
             if heavy && !mm.body { continue; }
             let fy = mm.pos[1];
             if bottom > fy + (if mm.body { BODY_OVER } else { k.floor }) || top < fy + 0.01 { continue; }
+            if mm.body { bones.push(mm.pos); }
             let here = debris_foot_gap(g, b, mm.pos[0], mm.pos[2], d1x, d1z, e1, e2, if mm.body { BODY_RADIUS } else { k.radius });
             if here.gap < -k.inside {
                 ox -= here.dx * here.gap; oz -= here.dz * here.gap; in_n += 1.0;
-                if mm.body { under.push(mm.pos); }
-                if mm.body && deep.map_or(true, |d| -here.gap > d.0) { deep = Some((-here.gap, here.dx, here.dz)); }
+                on_body |= mm.body;
                 continue;
             }
             let sp = m::hyp2(mm.vel[0], mm.vel[2]);
@@ -301,13 +301,13 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
         }
         if !js::truthy(in_n) && best.is_none() { continue; }
         // (a man down stays where he is: tried as often as a boot tries, it lies there for good, and nobody is left waiting to hear it scrape)
-        if deep.is_some() && foot_n.unwrap_or(0.0) >= k.give_up { continue; }
+        if on_body && foot_n.unwrap_or(0.0) >= k.give_up { continue; }
         let kk = match book.as_mut() {
             Some(bk) => { bk.shoves += 1.0; bk.shoves }
             None => { g.destr.debris.shoves += 1.0; g.destr.debris.shoves }
         };
         let h = |j: f64| hash01(kk * 149.0 + j);
-        let fn_now = if since > 2.0 && deep.is_none() { 1.0 } else { foot_n.unwrap_or(0.0) + 1.0 };
+        let fn_now = if since > 2.0 && !on_body { 1.0 } else { foot_n.unwrap_or(0.0) + 1.0 };
         {
             let ch = &mut g.tab.debris_chunk[c];
             ch.foot_at = Some(ch.age);
@@ -317,17 +317,19 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
         let heft = 1.0 / (1.0 + mass / 4.0);
         let (mut dx, mut dz, mut s);
         let (mut lx, mut lz) = (0.0, 0.0);
-        if js::truthy(in_n) {
+        if on_body {
+            // (off a man down in the one shove: the speed that slides it clear of him against the floor's drag)
+            let f = Footprint { d1x, d1z, e1, e2, hy };
+            let Some((wx, wz, d)) = way_off(g, b, &f, &bones) else { s_.walled += 1.0; continue };
+            dx = wx;
+            dz = wz;
+            s = m::min(k.v_max, m::sqrt(2.0 * k.slide * G * d));
+        } else if js::truthy(in_n) {
             let ol = m::hyp2(ox, oz);
-            match deep {
-                // (his bones may pull all ways at once: then by the deepest)
-                Some((_, wx, wz)) if ol < 0.02 => { dx = wx; dz = wz; }
-                _ if ol < 0.02 => { s_.walled += 1.0; continue; }
-                _ => { dx = ox / ol; dz = oz / ol; }
-            }
+            if ol < 0.02 { s_.walled += 1.0; continue; }
+            dx = ox / ol;
+            dz = oz / ol;
             s = k.off * (0.6 + 0.4 * heft);
-            // (off a man down in the one shove: the speed that slides it his depth against the floor's drag)
-            if let Some((d, _, _)) = deep { s = m::max(s, m::min(k.v_max, m::sqrt(2.0 * k.slide * G * d))); }
         } else {
             // ahead of him and aside: off his line to the side it already lies on (hashed when it lies dead ahead)
             let bb = best.unwrap();
@@ -348,29 +350,19 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
             lz = bb.hit.lz;
             s = m::min(k.v_max, k.base + k.gain * bb.sp * m::max(0.3, toward)) * heft * (0.8 + 0.4 * h(5.0));
         }
-        // not into a wall: along it, or (square on) not at all; the try still counts
+        // not into a wall: along it, or (square on) not at all; the try still counts (a way off a man down is free as found)
         let reach = m::abs(dx * d1x + dz * d1z) * e1 + m::abs(dx * d2x + dz * d2z) * e2 + 0.1;
-        let wall = crate::scene_collision::raycast(g, [bc[0], m::max(bc[1], bottom + 0.03), bc[2]], [dx, 0.0, dz], reach);
+        let wall = if on_body { None } else { crate::scene_collision::raycast(g, [bc[0], m::max(bc[1], bottom + 0.03), bc[2]], [dx, 0.0, dz], reach) };
         if let Some(wl) = wall {
-            if deep.is_some() {
-                // (a boot gives up on a wall. A man down does not stop lying there: off him along it, the way it first took, or it goes back and forth over him)
-                let f = Footprint { d1x, d1z, e1, e2, hy };
-                let Some((ax, az, d, way)) = off_along_wall(g, bc, bottom, wl.n, &f, &under, foot_side) else { s_.walled += 1.0; continue };
-                g.tab.debris_chunk[c].foot_side = Some(way);
-                dx = ax;
-                dz = az;
-                s = m::min(k.v_max, m::sqrt(2.0 * k.slide * G * d));
-            } else {
-                let dn = dx * wl.n[0] + dz * wl.n[2];
-                let (mut tx, mut tz) = (dx - wl.n[0] * dn, dz - wl.n[2] * dn);
-                let tl = m::hyp2(tx, tz);
-                if tl < 0.25 { s_.walled += 1.0; continue; }
-                tx /= tl;
-                tz /= tl;
-                dx = tx;
-                dz = tz;
-                s *= tl;
-            }
+            let dn = dx * wl.n[0] + dz * wl.n[2];
+            let (mut tx, mut tz) = (dx - wl.n[0] * dn, dz - wl.n[2] * dn);
+            let tl = m::hyp2(tx, tz);
+            if tl < 0.25 { s_.walled += 1.0; continue; }
+            tx /= tl;
+            tz /= tl;
+            dx = tx;
+            dz = tz;
+            s *= tl;
         }
         let bound = bound_of(bh);
         let (first_sfx, has_sfx) = {
@@ -383,7 +375,7 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
             ch.w = [0.0, wy + (h(3.0) - 0.5) * 0.6 * s / m::max(0.08, bound), 0.0];
             (ch.sfx.first().cloned(), !ch.sfx.is_empty())
         };
-        if k.scuff > 0.0 && has_sfx && deep.is_none() && g.time - g.destr.debris.scuff_at > 0.12 {
+        if k.scuff > 0.0 && has_sfx && !on_body && g.time - g.destr.debris.scuff_at > 0.12 {
             // a scuff for the ear only (no hearing event: his steps already carry his noise)
             g.destr.debris.scuff_at = g.time;
             let f = first_sfx.unwrap();
@@ -422,22 +414,41 @@ pub(in crate::breakage) fn debris_foot_step(g: &mut crate::game::Game, c_2: Debr
     while s < sub && !g.tab.debris_chunk[c].rest { debris_slide(g, c, h); s += 1; }
 }
 
-/// The way off the bones `under` for a piece held against a wall by them: along the wall, the way it went last (`was`) or else the shorter, if a ray finds it free. The direction, how far it has to go, and which way that is.
-fn off_along_wall(g: &mut Game, bc: V3, bottom: f64, n: V3, f: &Footprint, under: &[V3], was: Option<f64>) -> Option<(f64, f64, f64, f64)> {
-    let (ax, az) = (-n[2], n[0]);
-    let half = m::abs(ax * f.d1x + az * f.d1z) * f.e1 + m::abs(ax * -f.d1z + az * f.d1x) * f.e2;
-    let (mut plus, mut minus) = (0.0, 0.0);
-    for b in under {
-        let t = (b[0] - bc[0]) * ax + (b[2] - bc[2]) * az;
-        plus = m::max(plus, half + BODY_RADIUS + t);
-        minus = m::max(minus, half + BODY_RADIUS - t);
+/// The shortest way off the men down for a piece that lies on one, of sixteen, that it would slide free: its direction, and how far. A way is as long as it takes to come clear of every bone in the piece's
+/// path that way, not only of those it lies on now: so a slide leaves less to slide, and the next is never back over him.
+fn way_off(g: &mut Game, b: AnyBoxId, f: &Footprint, bones: &[V3]) -> Option<(f64, f64, f64)> {
+    let bc = seam_box(g, b).c;
+    let span = |x: f64, z: f64| m::abs(x * f.d1x + z * f.d1z) * f.e1 + m::abs(x * -f.d1z + z * f.d1x) * f.e2;
+    let mut ways: Vec<(f64, f64, f64)> = (0..16).map(|i| {
+        let (c, s) = (m::cos(i as f64 * m::PI / 8.0), m::sin(i as f64 * m::PI / 8.0));
+        let (wx, wz) = (f.d1x * c - f.d1z * s, f.d1x * s + f.d1z * c);
+        let (half, across) = (span(wx, wz) + BODY_RADIUS, span(-wz, wx) + BODY_RADIUS);
+        let mut path: Vec<f64> = bones.iter().map(|b| [b[0] - bc[0], b[2] - bc[2]]).filter(|r| m::abs(r[1] * wx - r[0] * wz) < across).map(|r| r[0] * wx + r[1] * wz).collect();
+        path.sort_by(|a, b| a.total_cmp(b));
+        (wx, wz, path.into_iter().fold(0.0, |d, t| if m::abs(t - d) < half { t + half } else { d }))
+    }).collect();
+    ways.sort_by(|a, b| a.2.total_cmp(&b.2));
+    ways.into_iter().find(|&(wx, wz, d)| slides_free(g, b, f, [wx, wz], d))
+}
+
+/// Would `debris_slide` carry the piece `d` that way: no static, leaf or furniture before its middle, a floor under it all along, and no corner of it in a static it is clear of now.
+fn slides_free(g: &mut Game, b: AnyBoxId, f: &Footprint, way: [f64; 2], d: f64) -> bool {
+    let c0 = seam_box(g, b).c;
+    let from = [c0[0], m::max(c0[1], c0[1] - f.hy + 0.05), c0[2]];
+    let (ray, reach) = ([way[0], 0.0, way[1]], d + m::abs(way[0] * f.d1x + way[1] * f.d1z) * f.e1 + m::abs(way[1] * f.d1x - way[0] * f.d1z) * f.e2);
+    if crate::scene_collision::raycast(g, from, ray, reach).is_some() || crate::props::prop_system_raycast(g, from, ray, reach).is_some() { return false; }
+    let clear = !debris_foot_in(g, b);
+    let n = m::max(1.0, m::ceil(d / 0.15));
+    let mut free = true;
+    let mut k = 1.0;
+    while free && k <= n {
+        let c = [c0[0] + way[0] * d * k / n, c0[1], c0[2] + way[1] * d * k / n];
+        seam_box(g, b).c = c;
+        free = crate::scene_collision::raycast(g, [c[0], c[1] + 0.05, c[2]], [0.0, -1.0, 0.0], 0.05 + f.hy + 0.3).is_some() && !(clear && debris_foot_in(g, b));
+        k += 1.0;
     }
-    let first = match was { Some(w) if w != 0.0 => m::sign(w), _ => if plus <= minus { 1.0 } else { -1.0 } };
-    for way in [first, -first] {
-        let d = if way > 0.0 { plus } else { minus };
-        if crate::scene_collision::raycast(g, [bc[0], m::max(bc[1], bottom + 0.03), bc[2]], [ax * way, 0.0, az * way], half + d + 0.1).is_none() { return Some((ax * way, az * way, d, way)); }
-    }
-    None
+    seam_box(g, b).c = c0;
+    free
 }
 
 /// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.

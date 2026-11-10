@@ -229,7 +229,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     // (game.ts:1720, :1721: the squad's net and the defenders' cues, read off the settled frame. Their books are the same books the rules' own entries
     //  write (a line said, a cue called), so the step that settles them runs where those do, under its row.)
     if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
-    if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
+    let news = core::mem::take(&mut g.fight.news);
+    if g.m.dress.dress.cues { crate::cues::cues_tick(g, &news); }
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
     crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)

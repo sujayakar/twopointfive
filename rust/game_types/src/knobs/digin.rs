@@ -11,18 +11,11 @@ pub struct DiginK {
     ///  FEWER men than today, flashbangs in hand — the men who come to the fight are what kills it between doors
     #[k(false)] pub stay: bool,
     /// REACH (m, on foot): a man whose way to the fight he hears is longer than this cannot join it in time — he holds his room and digs in, whatever the room
-    ///  fight's rally would have rolled; a man nearer than this is the rally's (or a press rule's) to send, as ever. 0 (shipped) = no reach rule: the rally
-    ///  decides for everybody and only the men it leaves at home dig in. MEASURED at 18 m: it claims six men in ten on every level there is (they all sit in one
+    ///  fight's rally would have rolled; a man nearer than this is his squad's to send. 0 (shipped) = no reach rule. MEASURED at 18 m: it claims six men in ten on every level there is (they all sit in one
     ///  32 × 20 m shell), and men kept home are men not on the hunt — the scripted team loses FEWER. It is the knob a press / push rule wants beside it (near men
     ///  go at once, far men get ready, then come): by itself it only takes the hunters away. AS BUILT the way is measured ONCE, when he first hears them, to the
     ///  noise (or the net's fix) that told him: a fight that later moves next door does not release a man judged far, nor claim one judged near
     #[k(0.0)] pub reach_m: f64,
-    /// WITH THE PRESS ON TOO: the man a press leaves to KEEP his room digs in. Off: he does not,
-    ///  from the moment he is left until the fight is reset — he is the press's keeper and nothing more, and its last-man rules send him out by another door when
-    ///  the team's boots reach his. MEASURED (The block, the depot, the records building): the keeper is a man who at standard came hunting; dug in he is behind
-    ///  the one door a stun canister comes through, and costs the team less than the hunter he was. A man the press has left nowhere (no fight he could go to) still digs in, as ever; a man
-    ///  already at his furniture when he is made the keeper carries on with it
-    #[k(true)] pub keeper: bool,
     /// move to a covered spot that holds the door they will come by (off: he turns to that door from where he stands)
     #[k(true)] pub cover: bool,
     /// WHERE HE MAY GO FOR IT: the spot he pushes the furniture from is in HIS OWN ROOM and so is the way to it. 'Behind the prop' is a point 0.7 m past it from

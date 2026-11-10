@@ -4,6 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
+use crate::roomfight::{Did, News, Word};
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
@@ -38,13 +39,10 @@ struct Line {
 }
 /// The new lines, in the written order.
 static LINES: &[Line] = &[
-    Line { kind: CueKind::Help, cls: 1.0, say: &["moving to the fight — {the}", "they're hit {at} — moving to them"], now: None, guide: None },
     Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"], now: None, guide: None },
     Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"], now: None, guide: None },
     Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"], now: None, guide: None },
     Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"], now: None, guide: None },
-    Line { kind: CueKind::StayOurs, cls: 3.0, say: &["they're hit {at} — staying on my door", "shots {at} — staying on my door"], now: Some(&["they're hit {at} — staying on my post", "that was {at} — staying on my post"]), guide: None },
-    Line { kind: CueKind::Stay, cls: 3.0, say: &["shots {at} — holding my room", "heard that, {the} — holding my room"], now: Some(&["that was {at} — holding my post", "heard that, {the} — holding my post"]), guide: None },
     Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"], now: None, guide: None },
     Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"], now: None, guide: None },
     Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"], now: None, guide: None },
@@ -68,8 +66,6 @@ fn gap_of(k: CueKind) -> f64 {
         CueKind::HuntOver => 4.0,
         CueKind::Calm => 4.0,
         CueKind::Still => 6.0,
-        CueKind::Stay => 3.0,
-        CueKind::StayOurs => 3.0,
         _ => 0.0,
     }
 }
@@ -123,34 +119,6 @@ fn fill(line: &str, vars: Option<&JsMap<String, String>>) -> String {
     out.push_str(&line[from..]);
     out
 }
-/// `\s` as the language has it
-fn js_space(c: char) -> bool {
-    matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
-}
-#[derive(Clone, Copy, PartialEq)]
-enum SquadSaid { Hears, Stays, Quiet }
-/// The squad's name, what it did, and whose call it heard, of
-/// `/^\[squads\] (\S+) (hears of them \((\S+?)'s call\)|hears of them|stays on its doors|quiet:)/`.
-fn squads_note(what: &str) -> Option<(&str, SquadSaid, Option<&str>)> {
-    let rest = what.strip_prefix("[squads] ")?;
-    let end = rest.find(js_space)?;
-    if end == 0 { return None; }
-    let (name, rest) = rest.split_at(end);
-    let rest = rest.strip_prefix(' ')?;   // (\S+ cannot give a character back and still meet a space)
-    if let Some(call) = rest.strip_prefix("hears of them (") {
-        // \S+?: the shortest run of at least one non-space that the words follow
-        let mut chars = call.char_indices();
-        while let Some((_, c)) = chars.next() {
-            if js_space(c) { break; }
-            let at = chars.as_str();
-            if at.starts_with("'s call)") { return Some((name, SquadSaid::Hears, Some(&call[..call.len() - at.len()]))); }
-        }
-    }
-    if rest.starts_with("hears of them") { return Some((name, SquadSaid::Hears, None)); }
-    if rest.starts_with("stays on its doors") { return Some((name, SquadSaid::Stays, None)); }
-    if rest.starts_with("quiet:") { return Some((name, SquadSaid::Quiet, None)); }
-    None
-}
 /// A read of the sparse `classT` / `squadT`: past the end or a hole is None.
 fn sparse_get(v: &[Option<f64>], i: usize) -> Option<f64> {
     v.get(i).copied().flatten()
@@ -162,13 +130,10 @@ fn sparse_set(v: &mut Vec<Option<f64>>, i: usize, x: f64) {
 /// `kindT[kind]`, the place of a kind's clock.
 fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
     match k {
-        CueKind::Stay => &mut v.stay,
         CueKind::Calm => &mut v.calm,
         CueKind::Cover => &mut v.cover,
         CueKind::Flinch => &mut v.flinch,
         CueKind::Still => &mut v.still,
-        CueKind::Help => &mut v.help,
-        CueKind::StayOurs => &mut v.stay_ours,
         CueKind::HuntOver => &mut v.hunt_over,
         CueKind::FellBack => &mut v.fell_back,
         CueKind::Planted => &mut v.planted,
@@ -185,13 +150,10 @@ fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
 /// `kinds[kind]`, the place of a kind's tally.
 fn kinds_of(v: &mut CuesKinds, k: CueKind) -> &mut Option<f64> {
     match k {
-        CueKind::Stay => &mut v.stay,
         CueKind::Calm => &mut v.calm,
         CueKind::Cover => &mut v.cover,
         CueKind::Flinch => &mut v.flinch,
         CueKind::Still => &mut v.still,
-        CueKind::Help => &mut v.help,
-        CueKind::StayOurs => &mut v.stay_ours,
         CueKind::HuntOver => &mut v.hunt_over,
         CueKind::FellBack => &mut v.fell_back,
         CueKind::Planted => &mut v.planted,
@@ -212,13 +174,10 @@ fn tail_from(len: usize, n: f64) -> usize {
 }
 fn file_kind(k: CueKind) -> CuesFileKind {
     match k {
-        CueKind::Stay => CuesFileKind::Stay,
         CueKind::Calm => CuesFileKind::Calm,
         CueKind::Cover => CuesFileKind::Cover,
         CueKind::Flinch => CuesFileKind::Flinch,
         CueKind::Still => CuesFileKind::Still,
-        CueKind::Help => CuesFileKind::Help,
-        CueKind::StayOurs => CuesFileKind::StayOurs,
         CueKind::HuntOver => CuesFileKind::HuntOver,
         CueKind::FellBack => CuesFileKind::FellBack,
         CueKind::Planted => CuesFileKind::Planted,
@@ -293,7 +252,6 @@ pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.rows.clear();
     g.cues.bubbles = JsMap::new();
     g.cues.men = JsMap::new();
-    g.cues.last_note = None;
     g.cues.said.clear();
     g.cues.class_t.clear();
     g.cues.squad_t.clear();
@@ -580,7 +538,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
 /// His row of `men`, made the first time he is asked after: the row itself.
 fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
-        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
+        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), covered: false };
         g.cues.men.set(gd, row);
     }
     g.cues.men.get_mut(gd).unwrap()
@@ -592,7 +550,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     let said_t = cues_man(g, gd).said_t;
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || crate::condition::is_blind(g, g.gd[gd].ch) || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
     let own = g.gd[gd].bubble.as_ref().is_some_and(|b| t >= b.t && t - b.t < 1.5);   // he has just said something of his own: that was his word on it,
-    if own && !matches!(kind, CueKind::Help | CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
+    if own && !matches!(kind, CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
     if cues_kind_busy(g, kind) { return false; }   // (the floor has just heard this from somebody)
     *kind_t_of(&mut g.cues.kind_t, kind) = Some(t);
     let cls = line_of(kind).cls;
@@ -628,39 +586,32 @@ fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::condition::is_blind(g, g.gd[gd].ch) && !crate::condition::is_folded(g, g.gd[gd].ch) && !crate::runner::runner_mute(g, gd)
 }
 
-/// Who says a squad's word: the man the note names, else one holding, else the first fit.
-fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<GuardId> {
-    let mut men = Vec::new();
-    for m in crate::enemysquads::squad_men(g, name) {
-        if cues_fit(g, m) { men.push(m); }
-    }
-    if men.is_empty() { return None; }
-    if let Some(&m) = men.iter().find(|&&m| g.gd[m].callsign == by) { return Some(m); }
+/// The men of a squad who can speak for it.
+fn cues_voices(g: &crate::game::Game, squad: EnemysquadsSquadId) -> Vec<GuardId> {
+    g.tab.enemysquads_squad[squad].men.iter().copied().filter(|&m| cues_fit(g, m)).collect()
+}
+/// Who says a squad's word: the man the news names, else one holding, else the first fit.
+fn cues_squad_voice(g: &crate::game::Game, squad: EnemysquadsSquadId, by: Option<GuardId>) -> Option<GuardId> {
+    let men = cues_voices(g, squad);
+    if let Some(m) = by.filter(|m| men.contains(m)) { return Some(m); }
     let holding = men.iter().copied().find(|&m| g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == m && crate::roomfight::at_post(g, d)));
-    Some(holding.unwrap_or(men[0]))
+    holding.or(men.first().copied())
 }
 
 // ---------------------------------------------------------------- once a frame, after everybody has moved
 
-/// Read the fight's notes and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.
-pub fn cues_tick(g: &mut crate::game::Game) {
+/// Hear the fight's news and each defender as he stands, and say what they decided. It reaches `file`, so it moves the clock laststand.ts waits on.
+pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
     let t = g.time;
     if !g.fight.live { return; }
     if t < g.cues.last_t { cues_reset(g); }
     g.cues.last_t = t;
-    // 1 · what the fight's modules noted this frame
-    // (lastNote is a kept copy, found again by its three fields, last match first; not found = from the start, as after the log is emptied)
-    let mut i = match &g.cues.last_note {
-        Some(n) => g.fight.log.iter().rposition(|x| x.t == n.t && x.who == n.who && x.what == n.what).map_or(0, |at| at + 1),
-        None => 0,
-    };
-    while i < g.fight.log.len() {
-        g.cues.last_note = Some(g.fight.log[i].clone());
-        if t - g.fight.log[i].t <= 0.5 {
-            let (who, what) = (g.fight.log[i].who.clone(), g.fight.log[i].what.clone());
-            cues_note(g, &who, &what);
+    // 1 · what the fight's men and squads did this tick
+    for &n in news {
+        match n {
+            News::Man(gd, did) => cues_man_did(g, gd, did),
+            News::Squad(squad, by, word) => cues_squad_word(g, squad, by, word),
         }
-        i += 1;
     }
     // 2 · each defender as he now stands
     let mut di = 0;
@@ -700,27 +651,8 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let at = cues_at(g, p);
             if cues_cue(g, gd, CueKind::Still, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
         }
-        // a loud thing outside his room, and he has not gone: the dice said stay (rallyAt drawn again), or nobody of his side is posted where it came from
-        let (noise_at, noise_out, noise_t, d_rally) = { let row = &g.tab.roomfight_def[d]; (row.noise_at, row.noise_out, row.noise_t, row.rally_at) };
-        if noise_at.is_some() && noise_out && noise_t > cues_man(g, gd).noise_t && cues_man(g, gd).ep < 0.0 && hold { cues_man(g, gd).ep = noise_t; }
-        if cues_man(g, gd).ep >= 0.0 {
-            let m_rally = cues_man(g, gd).rally_at;
-            let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
-            if !hold || t - noise_t > 6.0 {
-                cues_man(g, gd).ep = -1.0;
-            } else if !crate::owner::has(g, gd, crate::owner::by::SQUAD) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
-                && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
-            {
-                let at = cues_at(g, noise_at.unwrap());
-                if cues_cue(g, gd, if drawn_again { CueKind::StayOurs } else { CueKind::Stay }, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
-                cues_man(g, gd).ep = -1.0;
-            }
-        }
-        // (read again: pressKeepsHome above can have written the def's rallyAt to NaN)
-        let (now, rally_now) = (g.gd[gd].state, g.tab.roomfight_def[d].rally_at);
+        let now = g.gd[gd].state;
         let M = cues_man(g, gd);
-        M.noise_t = noise_t;
-        M.rally_at = rally_now;
         M.state = now;
     }
     if g.cues.squelch_due {
@@ -730,88 +662,70 @@ pub fn cues_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// `{sq}` and, where a squad heard another's call, `{ally}`.
-fn squad_vars(sq: &str, ally: Option<&str>) -> JsMap<String, String> {
-    let mut v = JsMap::new();
-    v.set(String::from("sq"), String::from(sq));
-    if let Some(a) = ally { v.set(String::from("ally"), String::from(a)); }
-    v
+/// A squad's word, in the words of a man of it. `{sq}` is its name and `{ally}` whose call it heard.
+fn cues_squad_word(g: &mut crate::game::Game, squad: EnemysquadsSquadId, by: Option<GuardId>, word: Word) {
+    let Some(v) = cues_squad_voice(g, squad, by) else { return };
+    let name = |q: EnemysquadsSquadId| g.tab.enemysquads_squad[q].name.clone();
+    let mut vars = JsMap::new();
+    vars.set(String::from("sq"), name(squad));
+    let mut voices = vec![v];
+    let kind = match word {
+        Word::Hears { ally, waits } => {
+            if let Some(a) = ally { vars.set(String::from("ally"), name(a)); }
+            // (a drilled garrison holding on purpose is the tell that its word comes late: if its voice has just spoken, the next man of the squad says it)
+            if waits { voices.extend(cues_voices(g, squad).into_iter().filter(|&m| m != v)); }
+            match (ally.is_some(), waits) {
+                (false, false) => CueKind::SquadHears,
+                (true, false) => CueKind::SquadCopies,
+                (false, true) => CueKind::SquadWaits,
+                (true, true) => CueKind::SquadCopiesWaits,
+            }
+        }
+        Word::Stays => CueKind::SquadStays,
+        Word::Quiet => CueKind::SquadQuiet,
+    };
+    for m in voices {
+        if cues_cue(g, m, kind, Some(&vars)) { break; }
+    }
 }
 
-/// One note of the fight's log, in the words of the man it is about.
-fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
-    let d = if who == "-" { None } else {
-        g.fight.defs.iter().copied().find(|&d| { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].callsign == who && !crate::condition::down(g, g.gd[gd].ch) })
-    };
-    if let Some((name, said_word, ally)) = squads_note(what) {
-        let Some(v) = cues_squad_voice(g, name, who) else { return; };
-        if said_word == SquadSaid::Hears {
-            let vars = squad_vars(name, Some(ally.unwrap_or("")));
-            if !what.contains("), holds:") {
-                cues_cue(g, v, if ally.is_some() { CueKind::SquadCopies } else { CueKind::SquadHears }, Some(&vars));
-            } else {
-                // (a drilled garrison holding on purpose is the tell that its word comes late: if its voice has just spoken, the next man of the squad says it)
-                let mut voices = vec![v];
-                for x in crate::enemysquads::squad_men(g, name) {
-                    if x != v && cues_fit(g, x) { voices.push(x); }
-                }
-                for m in voices {
-                    if cues_cue(g, m, if ally.is_some() { CueKind::SquadCopiesWaits } else { CueKind::SquadWaits }, Some(&vars)) { break; }
-                }
-            }
-        } else {
-            cues_cue(g, v, if said_word == SquadSaid::Stays { CueKind::SquadStays } else { CueKind::SquadQuiet }, Some(&squad_vars(name, None)));
-        }
-        return;
-    }
-    let Some(d) = d else { return; };
-    let gd = g.tab.roomfight_def[d].gd;
+/// What a defender has done, in his own words.
+fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
+    let Some(d) = crate::roomfight::def_of(g, gd) else { return };
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     cues_man(g, gd);
-    let c = g.gd[gd].ch;
-    if what.starts_with("goes to the fight next door") {
-        let p = g.tab.roomfight_def[d].noise_at.or(g.gd[gd].last_known).unwrap_or(g.ch[c].pos);
-        let at = cues_at(g, p);
-        cues_cue(g, gd, CueKind::Help, Some(&at_vars(&at)));
-    } else if what.starts_with("holds where he ended up") {
-        if g.time - cues_man(g, gd).stood_t > 15.0 {
-            let p = g.ch[c].pos;
-            let at = cues_at(g, p);
-            if cues_cue(g, gd, CueKind::HuntOver, Some(&at_vars(&at))) { cues_man(g, gd).stood_t = g.time; }
-        }
-    } else if what.starts_with("falls back through") || what.starts_with("falls back to his squad") {
-        cues_man(g, gd).moved = Some(ManMoved::Fallback);
-        let station = g.tab.roomfight_def[d].station;
-        let from = crate::dialogue::place_name(g, station);
-        cues_man(g, gd).from = from.clone();
-        cues_man(g, gd).said_t = -100.0;
-        let mut vars = JsMap::new();
-        vars.set(String::from("the"), from);
-        cues_cue(g, gd, CueKind::FellBack, Some(&vars));
-    } else if what.starts_with("takes cover") {
-        cues_man(g, gd).moved = Some(ManMoved::Cover);
-    } else if what.starts_with("plants (") {
-        if cues_man(g, gd).moved == Some(ManMoved::Fallback) && !what.starts_with("plants (contact)") {
-            let p = g.ch[c].pos;
-            let h = cues_at(g, p);
-            let floor = g.time - g.k.cues.man_secs;
-            let row = cues_man(g, gd);
-            row.said_t = m::min(row.said_t, floor);
-            let kind = if h.the == row.from { CueKind::PinnedIn } else { CueKind::Planted };
-            cues_cue(g, gd, kind, Some(&at_vars(&h)));
-        }
-        cues_man(g, gd).moved = None;
-    } else if what.starts_with("surprised ") {
-        cues_cue(g, gd, CueKind::Surprised, None);
-    } else if what.starts_with("flinches:") {
-        cues_cue(g, gd, CueKind::Flinch, None);
-    } else if what.contains("stays to keep his room") {
-        let noise_at = g.tab.roomfight_def[d].noise_at;
-        if g.time - cues_man(g, gd).again_t > g.k.cues.again_secs {
-            if let Some(p) = noise_at {
+    let p = g.ch[g.gd[gd].ch].pos;
+    match did {
+        Did::HoldsWhereHeIs => {
+            if g.time - cues_man(g, gd).stood_t > 15.0 {
                 let at = cues_at(g, p);
-                if cues_cue(g, gd, CueKind::StayOurs, Some(&at_vars(&at))) { cues_man(g, gd).again_t = g.time; }
+                if cues_cue(g, gd, CueKind::HuntOver, Some(&at_vars(&at))) { cues_man(g, gd).stood_t = g.time; }
             }
         }
+        Did::FallsBack => {
+            cues_man(g, gd).moved = Some(ManMoved::Fallback);
+            let station = g.tab.roomfight_def[d].station;
+            let from = crate::dialogue::place_name(g, station);
+            cues_man(g, gd).from = from.clone();
+            cues_man(g, gd).said_t = -100.0;
+            let mut vars = JsMap::new();
+            vars.set(String::from("the"), from);
+            cues_cue(g, gd, CueKind::FellBack, Some(&vars));
+        }
+        Did::TakesCover => cues_man(g, gd).moved = Some(ManMoved::Cover),
+        Did::Plants { fighting } => {
+            if cues_man(g, gd).moved == Some(ManMoved::Fallback) && !fighting {
+                let h = cues_at(g, p);
+                let floor = g.time - g.k.cues.man_secs;
+                let row = cues_man(g, gd);
+                row.said_t = m::min(row.said_t, floor);
+                let kind = if h.the == row.from { CueKind::PinnedIn } else { CueKind::Planted };
+                cues_cue(g, gd, kind, Some(&at_vars(&h)));
+            }
+            cues_man(g, gd).moved = None;
+        }
+        Did::Surprised => { cues_cue(g, gd, CueKind::Surprised, None); }
+        Did::Flinches => { cues_cue(g, gd, CueKind::Flinch, None); }
     }
 }
 
@@ -861,17 +775,6 @@ mod tests {
         assert_eq!(fill("the door—!", None), "the door—!");
     }
 
-    /// A FAILURE MEANS: the squads decide and nobody says so, or a word goes out for a note that did not ask for one.
-    #[test]
-    fn a_squads_note_says_what_it_did_and_whose_call_it_heard() {
-        assert!(squads_note("[squads] Bravo hears of them (Alpha's call), holds: 4 s") == Some(("Bravo", SquadSaid::Hears, Some("Alpha"))));
-        assert!(squads_note("[squads] Bravo hears of them") == Some(("Bravo", SquadSaid::Hears, None)));
-        assert!(squads_note("[squads] Bravo stays on its doors") == Some(("Bravo", SquadSaid::Stays, None)));
-        assert!(squads_note("[squads] Bravo quiet: 3") == Some(("Bravo", SquadSaid::Quiet, None)));
-        assert!(squads_note("[squads] Bravo sends a pair").is_none());
-        assert!(squads_note("holds where he ended up").is_none());
-    }
-
     /// A FAILURE MEANS: a written line ranks otherwise on the net than its own row says: a retreat is outranked by chatter, or chatter takes a retreat's place.
     #[test]
     fn a_lines_words_rank_it_as_its_row_does() {
@@ -900,21 +803,21 @@ mod tests {
         }
     }
 
-    /// A FAILURE MEANS: one kind of cue hushes another (a man staying on his door silences the man holding his room), or the floor says one kind over itself.
+    /// A FAILURE MEANS: one kind of cue hushes another (a man standing down silences the man who has lost them), or the floor says one kind over itself.
     #[test]
     fn a_kind_waits_only_on_itself_and_only_for_its_gap() {
         let mut game = Game::blank();
         let g = &mut game;
-        *kind_t_of(&mut g.cues.kind_t, CueKind::Stay) = Some(10.0);
-        g.time = 12.9;
-        assert!(cues_kind_busy(g, CueKind::Stay));
-        assert!(!cues_kind_busy(g, CueKind::StayOurs));
-        g.time = 13.0;
-        assert!(!cues_kind_busy(g, CueKind::Stay));
-        *kind_t_of(&mut g.cues.kind_t, CueKind::Help) = Some(13.0);
-        assert!(!cues_kind_busy(g, CueKind::Help), "a shout to the men beside him has no gap");
+        *kind_t_of(&mut g.cues.kind_t, CueKind::Calm) = Some(10.0);
+        g.time = 13.9;
+        assert!(cues_kind_busy(g, CueKind::Calm));
+        assert!(!cues_kind_busy(g, CueKind::HuntOver));
+        g.time = 14.0;
+        assert!(!cues_kind_busy(g, CueKind::Calm));
+        *kind_t_of(&mut g.cues.kind_t, CueKind::Flinch) = Some(14.0);
+        assert!(!cues_kind_busy(g, CueKind::Flinch), "a shout at the door has no gap");
         g.time = 9.0;   // (the clock went back: a checkpoint loaded)
-        assert!(!cues_kind_busy(g, CueKind::Stay));
+        assert!(!cues_kind_busy(g, CueKind::Calm));
     }
 
     /// A FAILURE MEANS: the strip tells one piece of news twice in ten seconds because another man said it, or holds a line back from a net that has not said it for longer.

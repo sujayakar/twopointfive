@@ -142,10 +142,9 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     let n0 = old.len();
     let mut kept = Vec::with_capacity(n0);
     for l in old {   // (a few rounds past a man and no more: forgotten in ten seconds)
-        let (weight, until, last_t, known, id, downs) = { let x = &g.tab.lanes_lane[l]; (x.weight, x.until, x.last_t, x.known, x.id, x.downs) };
+        let (weight, until, last_t, known) = { let x = &g.tab.lanes_lane[l]; (x.weight, x.until, x.last_t, x.known) };
         let keep = if weight >= 1.0 { g.time < until } else { g.time - last_t < 10.0 };
         if !keep && !known && weight >= 1.0 { s(g).stats.unknown += 1.0; }
-        if !keep && known { let ago = js::to_fixed(g.time - last_t, 0); note(g, None, &format!("lane {}: forgotten ({} down, last round {} s ago)", id, downs, ago)); }
         if keep { kept.push(l); }
     }
     let n1 = kept.len();
@@ -391,7 +390,6 @@ pub(super) fn back_out(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId) -
     clear_path(g, gd);
     crate::roomfight::run(g, d, spot, None, 0.3, crate::owner::by::LANE);
     if now - s(g).said_t > 4.0 { s(g).said_t = now; say_net(g, gd, "get back — out of their line!"); }
-    note(g, Some(gd), &format!("lane {}: in their line, backs out to ({}, {})", id, js::to_fixed(spot[0], 1), js::to_fixed(spot[2], 1)));
     true
 }
 
@@ -406,16 +404,14 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     if pen.is_none() { return; }
     let (id, l_from, l_at) = { let x = &g.tab.lanes_lane[l]; (x.id, x.from, x.at) };
     let mut ways: Vec<Way> = Vec::new();
-    let mut why = String::new();
     for &gd in at {
         if s(g).flank_of.has(gd) { continue; }   // (already round, set on the lane's other side: he holds it from there)
         let start = pos_of(g, gd);
-        let sign = g.gd[gd].callsign.clone();
         let p = match find_path(g, start, l_from, 8000.0, pen.as_ref()) {
             Some(p) if !p.is_empty() => p,
-            _ => { why.push_str(&format!(" {}: no way;", sign)); continue; }
+            _ => continue,
         };
-        if flat(p[p.len() - 1], l_from) > 2.5 { why.push_str(&format!(" {}: no way to the guns;", sign)); continue; }
+        if flat(p[p.len() - 1], l_from) > 2.5 { continue; }
         let (mut len, mut a, mut show, mut shown, mut pin) = (0.0f64, start, None::<V3>, 0.0f64, false);
         let mut pts: Vec<V3> = Vec::new();
         for &b in p.iter() {
@@ -434,7 +430,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
             a = b;
         }
         let stop = if show.is_some() && pts.len() >= 4 { Some(pts[pts.len() - 3]) } else { None };   // (where he sets: a stride short of where the guns would first have him)
-        if len > g.k.lanes.round_max_m { why.push_str(&format!(" {}: {} m, too far;", sign, js::to_fixed(len, 0))); continue; }
+        if len > g.k.lanes.round_max_m { continue; }
         // where the guns first have him on that way: only the last stretch of it, and round from the lane's own line
         if let Some(show) = show {
             let sd = flat(show, l_from);
@@ -444,14 +440,13 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
             pin = len - shown > g.k.lanes.round_show_m;   // (shown to the guns for longer than a man walks in their sight: a way only as far as where they would first see him)
             let (show_m, pin_show, field, side) = (g.k.lanes.round_show_m, g.k.lanes.pin_show_m, g.k.lanes.field_m, g.k.lanes.round_side_deg);
             if len - shown > m::max(show_m, pin_show) || sd > field + 1.0 || cs > m::cos(side * m::PI / 180.0) {
-                why.push_str(&format!(" {}: {} m, shown the last {} m, {}° round;", sign, js::to_fixed(len, 0), js::to_fixed(len - shown, 0), js::to_fixed(m::acos(m::max(-1.0, m::min(1.0, cs))) * 180.0 / m::PI, 0)));
                 continue;
             }
         }
-        if pin && stop.is_none() { why.push_str(&format!(" {}: no floor to stop on short of their sight;", sign)); continue; }
+        if pin && stop.is_none() { continue; }
         ways.push(Way { gd, cid: char_id_of(g, gd), len, pin, stop });
     }
-    if ways.is_empty() { note(g, None, &format!("lane {}: no way round —{}", id, why)); return; }
+    if ways.is_empty() { return; }
     js::sort_by(&mut ways, |a, b| js::or(a.len - b.len, a.cid - b.cid));
     let mut n = m::min_n(&[g.k.lanes.round_men, ways.len() as f64, m::max(1.0, at.len() as f64 - 1.0), if at.len() >= 4 { 2.0 } else { 1.0 }]);
     // a way that ends at a second angle is taken only if one of the men who stay can fire from the first; else the ways that hide their man to the end
@@ -461,7 +456,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
         let min_m = g.k.lanes.pin_min_m;
         if stepper(g, l, Some(&stay), true, Some(min_m)).is_none() {
             ways.retain(|w| !w.pin);
-            if ways.is_empty() { note(g, None, &format!("lane {}: a way to its other side, but nobody placed to fire from this one —{}", id, why)); return; }
+            if ways.is_empty() { return; }
             n = m::min(n, ways.len() as f64);
         }
     }
@@ -482,14 +477,12 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
             crate::belief::word(g, gd, l_from);
             s(g).stats.round += 1.0;
             if first { round_shout(g, gd); }
-            note(g, Some(gd), &format!("lane {}: goes round, {} m, as far as ({}, {}) on its other side", id, js::to_fixed(len, 0), js::to_fixed(stop[0], 1), js::to_fixed(stop[2], 1)));
             continue;
         }
-        crate::pressure::loose(g, d, l_from);   // (his way stays priced, but nothing here stops him short of the guns he was sent at)
+        crate::roomfight::loose_at(g, d, l_from);   // (his way stays priced, but nothing here stops him short of the guns he was sent at)
         crate::belief::word(g, gd, l_from);
         s(g).stats.round += 1.0;
         if first { round_shout(g, gd); }
-        note(g, Some(gd), &format!("lane {}: goes round, {} m", id, js::to_fixed(len, 0)));
     }
     g.tab.lanes_lane[l].round_at = g.time + g.k.lanes.round_gap;
 }
@@ -503,7 +496,7 @@ fn round_shout(g: &mut Game, gd: GuardId) {
 /// THE CHARGE: a man at a mouth with a stun charge on him and the guns in a throw's reach puts it down the lane
 fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].stun_at = g.time + 2.0;
-    let (id, l_from) = (g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].from);
+    let l_from = g.tab.lanes_lane[l].from;
     for &o in g.guards.iter() {
         if g.gd[o].team == SIDE && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
     }
@@ -540,7 +533,6 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     s(g).stats.stuns += 1.0;
     say_net(g, best, "bang out — on me!");
     s(g).said_t = g.time;
-    note(g, Some(best), &format!("lane {}: a charge down it toward ({}, {})", id, js::to_fixed(land[0], 1), js::to_fixed(land[2], 1)));
 }
 
 /// a stun charge of THEIRS has gone off on a lane's guns with nothing solid between: the lane is theirs for `pushSecs`, and the men on its mouths go
@@ -577,7 +569,6 @@ fn bangs(g: &mut crate::game::Game) {
             if !near {
                 if let Some(can) = g.tab.lanes_lane[l].can {
                     if now - can.t < 4.0 && flat(epos, can.land) < 3.0 {
-                        note(g, None, &format!("lane {}: the charge fell short, nobody goes", id));
                         g.tab.lanes_lane[l].can = None;
                     }
                 }
@@ -602,7 +593,6 @@ fn bangs(g: &mut crate::game::Game) {
                 let fast = g.k.lanes.push_fast;
                 crate::roomfight::run(g, d, to, None, fast, crate::owner::by::LANE);   // (a straight run at where the charge went off: the room fight plants him on the first man he sees)
                 if first { first = false; say_net(g, gd, "they're blind — go, go!"); s(g).said_t = g.time; }
-                note(g, Some(gd), &format!("lane {}: pushes down it behind the charge", id));
             }
         }
     }
@@ -746,7 +736,7 @@ fn stepper(g: &mut crate::game::Game, l: LanesLaneId, skip: Option<&JsSet<GuardI
 /// the men sent round to a lane's other side, twice a second: on his way → SET where the guns would first see him; while one is set its men fire down it in turn
 fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
     use crate::lanes::FlankPhase;
-    let (id, l_from) = (g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].from);
+    let id = g.tab.lanes_lane[l].id;
     let mut set = 0;
     for gd in s(g).flank_of.keys() {
         let mut f = match s(g).flank_of.get(gd) { Some(&f) => f, None => continue };
@@ -789,8 +779,6 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
                 held_on(g, gd, crate::lanes::StateHeldValue { lane: id, t: now, look, aimed: true, at });
             }
             if g.time - s(g).said_t > 2.0 { s(g).said_t = g.time; say_net(g, gd, "set — I've got an angle on them!"); }
-            let at = pos_of(g, gd);
-            note(g, Some(gd), &format!("lane {}: round and set at ({}, {}), {} m from its guns: holds it from this side", id, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1), js::to_fixed(flat(at, l_from), 0)));
             let x = g.tab.lanes_lane[l].pin_at;
             g.tab.lanes_lane[l].pin_at = m::max(x, g.time + 1.5);
         }
@@ -851,16 +839,11 @@ fn pin_start(g: &mut crate::game::Game, l: LanesLaneId) {
     }
     s(g).stats.pins += 1.0;
     g.tab.lanes_lane[l].pin_by = char_id_of(g, gd);
-    note(g, Some(gd), &format!("lane {}: steps to his corner toward ({}, {}) to put fire down it", id, js::to_fixed(pick.to[0], 1), js::to_fixed(pick.to[2], 1)));
 }
 
 ///  the burst is over: said, a magazine started if it is low, and back
-fn pin_done(g: &mut Game, gd: GuardId, l: LanesLaneId, d: RoomfightDefId, fr: crate::lanes::PeekFire, why: &str) {
+fn pin_done(g: &mut Game, gd: GuardId, d: RoomfightDefId) {
     let rounds = g.k.lanes.pin_rounds;
-    let spent = rounds - fr.n;
-    let shots = if js::truthy(spent) { format!(" — {} round{} down it", spent, if spent == 1.0 { "" } else { "s" }) } else { String::new() };
-    let id = g.tab.lanes_lane[l].id;
-    note(g, Some(gd), &format!("lane {}: {}{}{}: back", id, why, shots, if fr.saw { ", they are still on it" } else { "" }));
     let w = g.gd[gd].weapon;
     if crate::weapons::firearm_rounds_ready(g, w) < rounds && g.gd[gd].reload_t < 0.0 { crate::guards::start_reload_beat(g, gd); }
     peek_back(g, gd, d);
@@ -890,12 +873,12 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
         let dd = flat(q0, seen.unwrap_or(g.ch[c].pos));
         if dd < bd { bd = dd; tgt = Some(q); }
     }
-    if fr.t >= 0.0 && g.time - fr.t > g.k.lanes.pin_snap { return pin_done(g, gd, l, d, fr, "his moment at the corner is up"); }   // (a SNAP burst: no longer in their sight than a look is)
+    if fr.t >= 0.0 && g.time - fr.t > g.k.lanes.pin_snap { return pin_done(g, gd, d); }   // (a SNAP burst: no longer in their sight than a look is)
     let tgt = match tgt {
         Some(t) => t,
         None => {
             let give_up = if fr.t >= 0.0 { g.time - fr.line_t > 0.2 } else { !crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) || g.time - p.t > 6.0 };
-            if give_up { pin_done(g, gd, l, d, fr, "no line down it for his fire"); }
+            if give_up { pin_done(g, gd, d); }
             return;
         }
     };
@@ -926,8 +909,8 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
         s(g).stats.pin_rounds += 1.0;
         put_fire(g, gd, fr);
     }
-    if fr.n <= 0.0 { pin_done(g, gd, l, d, fr, "his burst is fired"); }
-    else if !crate::weapons::firearm_can_fire(g, w) && crate::weapons::firearm_rounds_ready(g, w) == 0.0 { pin_done(g, gd, l, d, fr, "dry"); }
+    if fr.n <= 0.0 { pin_done(g, gd, d); }
+    else if !crate::weapons::firearm_can_fire(g, w) && crate::weapons::firearm_rounds_ready(g, w) == 0.0 { pin_done(g, gd, d); }
 }
 ///  the burst, written to the man's row
 fn put_fire(g: &mut Game, gd: GuardId, fr: crate::lanes::PeekFire) {
@@ -1026,14 +1009,12 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
             g.tab.lanes_lane[l].frag_at = g.time + 6.0;
             s(g).frag_no.set(gd, crate::lanes::StateFragNoValue { lane: id, at: was });
         }
-        note(g, Some(gd), &format!("lane {}: {}: back", id, if went { "the grenade is away" } else { "the grenade stayed in his hand" }));
         peek_back(g, gd, d);
         return;
     }
     let at = guns_mid(g, l);
     if g.tab.lanes_lane[l].can.is_some() || g.time < g.tab.lanes_lane[l].push_until || !crate::frag::frag_ready(g, gd, at) {
         g.tab.lanes_lane[l].frag_at = g.time + 2.0;
-        if f.going { note(g, Some(gd), &format!("lane {}: not now for his grenade — back", id)); }
         peek_back(g, gd, d);
         return;
     }
@@ -1063,8 +1044,6 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
         y.pin_at = m::max(y.pin_at, quiet);
         y.stun_at = m::max(y.stun_at, quiet);
         y.round_at = m::max(y.round_at, quiet);
-        let off = flat(pos_of(g, gd), at);
-        note(g, Some(gd), &format!("lane {}: a grenade down it {}, for ({}, {}), {} m off", id, if f.going { "from the edge of its floor" } else { "from behind his corner" }, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1), js::to_fixed(off, 0)));
         return;
     }
     if matches!(r, Some(FragThrowAt::Own) | Some(FragThrowAt::Busy)) { f.own = true; }
@@ -1078,13 +1057,10 @@ fn frag_step_on(g: &mut Game, gd: GuardId, t0: f64, to: &mut V3, f: &mut crate::
         f.k = 0.0;
         clear_path(g, gd);
         crate::roomfight::run(g, d, *to, None, pace, crate::owner::by::LANE);
-        note(g, Some(gd), &format!("lane {}: no arc for his grenade from where he is held — toward its mouth at ({}, {}) for one", id, js::to_fixed(to[0], 1), js::to_fixed(to[2], 1)));
         return;
     }
     if f.going && !f.edge && crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && g.time - t0 < 6.0 { return; }
     if f.own { g.tab.lanes_lane[l].frag_at = g.time + 6.0; } else { s(g).frag_no.set(gd, crate::lanes::StateFragNoValue { lane: id, at }); }   // (one of his own in its reach is no news about the arc: asked again soon)
-    let what = if f.own { String::from("one of his own in his grenade's reach") } else { format!("no arc down it for his grenade{}", if f.going { " as far as the edge of its floor" } else { "" }) };
-    note(g, Some(gd), &format!("lane {}: {} — {}", id, what, if f.going { "back" } else { "stays" }));
     peek_back(g, gd, d);
 }
 /// A LOOK ROUND THE CORNER: of the men this rule holds short of a quiet lane's mouth, the nearest steps to where it opens and looks down it
@@ -1105,8 +1081,6 @@ fn peek_start(g: &mut crate::game::Game, l: LanesLaneId) {
     let fast = g.k.lanes.peek_pace - g.tune.guard_chase;
     crate::roomfight::run(g, d, to, None, fast, crate::owner::by::LANE);
     s(g).stats.peeks += 1.0;
-    let last_t = g.tab.lanes_lane[l].last_t;
-    note(g, Some(best), &format!("lane {}: quiet {} s — steps to its mouth toward ({}, {}) for a look", id, js::to_fixed(g.time - last_t, 0), js::to_fixed(to[0], 1), js::to_fixed(to[2], 1)));
 }
 
 ///  on his way back to where he stood, for pinStep and fragStep. The row is there at every call: only peekStep and lanesReset delete one

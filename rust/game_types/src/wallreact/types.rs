@@ -145,7 +145,6 @@ pub enum WallReactOpMove {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallreactMod {
-    pub wallreact_log: Vec<String>,
     pub wall_react: crate::wallreact::WallReact,
 }
 

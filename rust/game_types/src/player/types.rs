@@ -44,6 +44,13 @@ pub struct HoldAfter {
     pub text: String,
 }
 
+/// His hands' work put him on a knee: how he stood just before it, low and sneaking as his squad counts them
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Knee {
+    pub low: bool,
+    pub sneaks: bool,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Legs {
     pub char: crate::player::LegsChar,

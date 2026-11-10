@@ -250,7 +250,7 @@ async function main(): Promise<void> {
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
-  const reach = new DrawReach(engine, world, gaps);
+  const reach = new DrawReach(engine, world, D, gaps);
   const weather = new WeatherPicture(engine, D, world, engine.particles, smoke);
   audio.outdoors = weather.roofs.outdoors;
 
@@ -406,11 +406,11 @@ async function main(): Promise<void> {
     readout.frame();
   };
   // a page over the whole view (the brief, the start page): the still behind it is drawn until its histories are full, and then not again while it is up
-  let covered = -1; const unseen = (): boolean => { if (settling || quality.measuring || measure.rec.recording || !(brief?.held || startPage())) { covered = -1; return false; } if (covered < 0) covered = told.frames; return told.frames - covered >= 90; };
+  let covered = -1; const unseen = (): boolean => { if (settling || quality.measuring || !quality.measured || measure.rec.recording || !(brief?.held || startPage())) { covered = -1; return false; } if (covered < 0) covered = told.frames; return told.frames - covered >= 90; };
   let last = performance.now(), held = !kitPicture && q.has('paused');
   // THE PAGE'S PACE (host/pace.ts): a frame is not begun while two are still with the GPU, and a fast display's frames between the ladder's are passed over. A tab
   // nobody sees is not drawn; the time it was away is not the game's
-  const pace = pacer(), rate = rateMeter(), rendered = [...RENDER_PASSES]; let resolved = -1, gpuMs = NaN;
+  const pace = pacer(), rate = rateMeter(), rendered = RENDER_PASSES; let resolved = -1, gpuMs = NaN;
   pictureKeepsPace(q);
   /** is somebody at this window? A kept page is asked of the tab's own (a top that refused once is not asked again) */
   let topAsks = true; const attended = (): boolean => { const t = (window as unknown as { __testFocus?: unknown }).__testFocus; if (typeof t === 'boolean') return t; if (topAsks) try { return (window.top ?? window).document.hasFocus(); } catch { topAsks = false; } return true; };

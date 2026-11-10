@@ -4,18 +4,20 @@
 //!   missions diff BEFORE AFTER                                        two kept files side by side: a line for each row that differs, and the sums
 //!
 //! Each mission is stood from its address as a click on its row stands it, Sam unhurt. A commander who is
-//! no tactician gives the squad an order every five seconds: "open and clear" the door nearest the nearest enemy, then "move" onto him, by turns. He is the same for
-//! every build, which is all that is asked of him: a row is for setting beside the same row of another build, never a claim about how hard a mission is.
+//! no tactician gives the squad an order every four to seven seconds, by a die of his own: "open and clear" a door by one of the enemies nearest them, then "move" onto
+//! one, by turns. He is the same for every build, which is all that is asked of him: a row is for setting beside the same row of another build, never a claim about how hard a mission is.
 //! `--played`: no commander; the hands-off player (hands_off.rs) plays it to its end, as the gate's `played` rows have him, 240 seconds at most. He looks, waits and
 //! fights beside his men, so it is slower (a run is some six seconds) and nearer a player's evening. `--secs` is not asked.
 //!
 //! WHAT A ROW SAYS, summed over the seeds: the squad's men up at the end of those staged · enemies left of those staged · floors cleared · when the first of the squad
 //! fell (median, and in how many runs) · when the floor was clear (median) · rounds fired by each side · magazine changes begun by each side · how long open ways onto floor nobody has been on were within 4 m of
 //! a man of the squad, and how much of that a gun of theirs was on them (a second a way) · the enemy man-seconds each
-//! rule of the list had a man. Eight seeds of the seventeen at both difficulties (272 runs) are four minutes on four cores.
+//! rule of the list had a man · how many of the squad's men who fell were shot from behind (120 degrees and more off where they looked) · how many by one of
+//! their own · with `--played`, how many runs did not end with the floor taken. Eight seeds of the seventeen at both difficulties (272 runs) are four minutes on four cores.
 //!
 //! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of the hostage in a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
 //! read eight, and read the sums first.
+use game::dice::Die;
 use game::game::GuardState;
 use game::ids::GuardId;
 use game::orders::Who;
@@ -32,31 +34,47 @@ fn every_mission() -> Vec<String> {
     clears.chain(game::scene_scenario_list::scenarios().into_iter().filter(|e| matches!(e.kind, Nightbreach | Rescue)).map(|e| e.id)).collect()
 }
 
-/// an order every so many frames, the first half a second in
-const ORDER_EVERY: usize = 300;
-const ORDER_FIRST: usize = 30;
 /// the open ways near the squad are counted every so many frames, within so far of a man
 const WAYS_EVERY: usize = 10;
 const WAYS_M: f64 = 4.0;
 
 /// what one run came to
 #[derive(Clone, Debug, Default, PartialEq)]
-struct Run { up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], ways: [f64; 2], had: BTreeMap<String, f64> }
+struct Run { behind: usize, ours: usize, cap: usize, up: usize, squad: usize, left: usize, enemies: usize, fell: Option<f64>, clear: Option<f64>, rounds: [f64; 2], reloads: [u32; 2], ways: [f64; 2], had: BTreeMap<String, f64> }
 
 fn file_of(level: &str) -> String { format!("{level}.json") }
 
 fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
 
-fn order(p: &mut Play, clear: bool) -> bool {
-    let Some(lead) = p.mates().into_iter().find(|&m| p.up(m)) else { return false };
-    let at = p.at(lead);
-    let near = |a: &[f64; 2], b: &[f64; 2], to: [f64; 2]| dist(*a, to).partial_cmp(&dist(*b, to)).unwrap();
-    let Some(man) = enemies(p).into_iter().filter(|&m| p.up(m)).map(|m| p.at(m)).min_by(|a, b| near(a, b, at)) else { return false };
-    let door = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).min_by(|a, b| near(a, b, man));
-    let to = if clear { door.unwrap_or(man) } else { man };
-    let target = game::orders::squad_orders_target_at(&mut p.g, [to[0], 0.0, to[1]]);
-    let _ = game::orders::squad_orders_give(&mut p.g, if clear { "openClear" } else { "move" }, Some(&target), Some(Who::All), None);
-    true
+/// The commander: an order every four to seven seconds, onto one of the three men nearest the squad, "open and clear" the door nearest that man (or the next one) or
+/// "move" onto him, by turns. His die is his own, so two seeds are two fights: on a fixed beat onto the nearest man the seeds of a mission were one fight over again.
+struct Commander { die: Die, next: usize, clear: bool }
+
+impl Commander {
+    fn new(seed: u32) -> Commander { Commander { die: Die::new(0xc0deu32.wrapping_add(seed.wrapping_mul(7919))), next: 30, clear: true } }
+    fn one_of(&mut self, mut v: Vec<[f64; 2]>, to: [f64; 2], n: usize) -> Option<[f64; 2]> {
+        v.sort_by(|a, b| dist(*a, to).partial_cmp(&dist(*b, to)).unwrap());
+        v.truncate(n);
+        let i = (self.die.roll() * v.len() as f64) as usize;
+        v.get(i).copied()
+    }
+    /// false: nobody is left to order, or to be sent at
+    fn order(&mut self, p: &mut Play) -> bool {
+        let Some(lead) = p.mates().into_iter().find(|&m| p.up(m)) else { return false };
+        let men = enemies(p).into_iter().filter(|&m| p.up(m)).map(|m| p.at(m)).collect();
+        let Some(man) = self.one_of(men, p.at(lead), 3) else { return false };
+        let doors = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
+        let to = if self.clear { self.one_of(doors, man, 2).unwrap_or(man) } else { man };
+        let target = game::orders::squad_orders_target_at(&mut p.g, [to[0], 0.0, to[1]]);
+        let _ = game::orders::squad_orders_give(&mut p.g, if self.clear { "openClear" } else { "move" }, Some(&target), Some(Who::All), None);
+        self.clear = !self.clear;
+        true
+    }
+    fn tick(&mut self, p: &mut Play, f: usize) -> bool {
+        if f < self.next { return true; }
+        self.next = f + 240 + (self.die.roll() * 180.0) as usize;
+        self.order(p)
+    }
 }
 
 /// the seconds after which the hands-off player stops
@@ -72,12 +90,15 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
     let mut r = Run { squad: p.mates().len(), enemies: enemies(&p).len(), ..Default::default() };
     let mut was: BTreeMap<u32, (bool, f64)> = BTreeMap::new();
     let t0 = p.time();
+    let mut owes = game_start::owes::Owes::new();
+    let mut commander = Commander::new(seed);
     let mut him = played.then(|| HandsOff::new(p.g.seats[0], Plan { seed, cap: CAP, ..Default::default() }));
     for f in 0..((if played { CAP + 5.0 } else { secs }) * 60.0) as usize {
         match &mut him {
             Some(h) => { if h.over() { break; } p.played_by(h); }
-            None => { if f % ORDER_EVERY == ORDER_FIRST && !order(&mut p, (f / ORDER_EVERY) % 2 == 0) { break; } p.frame(); }
+            None => { if !commander.tick(&mut p, f) { break; } p.frame(); }
         }
+        owes.tick(&mut p.g);
         let t = p.time() - t0;
         if r.fell.is_none() && p.mates().iter().any(|&m| !p.up(m)) { r.fell = Some(t); }
         for m in p.g.guards.clone() {
@@ -92,6 +113,10 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64, played: bool) -> Run {
         if f % WAYS_EVERY == 0 { for (_, on) in p.watched(WAYS_M) { r.ways[0] += WAYS_EVERY as f64 / 60.0; if on { r.ways[1] += WAYS_EVERY as f64 / 60.0; } } }
         if r.clear.is_none() && enemies(&p).into_iter().all(|m| !p.up(m)) { r.clear = Some(t); }
     }
+    let names: Vec<String> = p.mates().iter().map(|&m| p.g.gd[m].callsign.clone()).collect();
+    r.behind = p.recap_deaths().iter().filter(|d| names.contains(&d.name) && d.off.abs() >= 120.0).count();
+    r.ours = owes.friendly as usize;
+    r.cap = him.as_ref().map_or(0, |h| (h.end() != Some(game_start::hands_off::End::Taken)) as usize);
     r.up = p.mates().into_iter().filter(|&m| p.up(m)).count();
     r.left = enemies(&p).into_iter().filter(|&m| p.up(m)).count();
     r
@@ -103,7 +128,7 @@ fn median(mut v: Vec<f64>) -> String {
     format!("{:.1}", v[v.len() / 2])
 }
 
-const HEAD: [&str; 16] = ["level", "difficulty", "runs", "squad up", "squad", "enemies left", "enemies", "cleared", "first fell s", "fell in", "clear s", "rounds squad/enemy", "reloads squad/enemy", "ways s", "ways watched s", "rules man-secs"];
+const HEAD: [&str; 19] = ["level", "difficulty", "runs", "squad up", "squad", "enemies left", "enemies", "cleared", "first fell s", "fell in", "clear s", "rounds squad/enemy", "reloads squad/enemy", "ways s", "ways watched s", "rules man-secs", "behind", "by ours", "not taken"];
 
 fn row(level: &str, hard: bool, runs: &[Run]) -> String {
     let sum = |f: &dyn Fn(&Run) -> f64| runs.iter().map(f).sum::<f64>();
@@ -115,7 +140,7 @@ fn row(level: &str, hard: bool, runs: &[Run]) -> String {
      sum(&|r| r.enemies as f64).to_string(), runs.iter().filter(|r| r.left == 0).count().to_string(), median(fell.clone()), fell.len().to_string(), median(clear),
      format!("{}/{}", sum(&|r| r.rounds[0]), sum(&|r| r.rounds[1])), format!("{}/{}", sum(&|r| r.reloads[0] as f64), sum(&|r| r.reloads[1] as f64)),
      format!("{:.0}", sum(&|r| r.ways[0])), format!("{:.0}", sum(&|r| r.ways[1])),
-     had.iter().map(|(k, v)| format!("{k} {v:.1}")).collect::<Vec<_>>().join(" · ")].join("\t")
+     had.iter().map(|(k, v)| format!("{k} {v:.1}")).collect::<Vec<_>>().join(" · "), sum(&|r| r.behind as f64).to_string(), sum(&|r| r.ours as f64).to_string(), sum(&|r| r.cap as f64).to_string()].join("\t")
 }
 
 /// `1-4,7` as 1 2 3 4 7
@@ -127,7 +152,7 @@ fn seeds_of(word: &str) -> Vec<u32> {
 fn fail(why: &str) -> ! { eprintln!("missions: {why}"); std::process::exit(2) }
 
 /// the columns that are numbers to be added up
-const ADDED: [usize; 8] = [2, 3, 4, 5, 6, 7, 13, 14];
+const ADDED: [usize; 11] = [2, 3, 4, 5, 6, 7, 13, 14, 16, 17, 18];
 
 fn diff(before: &str, after: &str) {
     let read = |f: &str| -> BTreeMap<(String, String), Vec<String>> {

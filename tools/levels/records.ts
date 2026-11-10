@@ -74,7 +74,6 @@ export const RECORDS_START: Vec3 = [13.0, 0, 26.9];
  *  into BOTH (as the office's server ↔ manager door is). The team's marks carry four men: the pair's two first, two more for the four. */
 export const RECORDS_STRUCTURE: StructureData = {
   name: 'records office',
-  wayOut: true,   // (hard only — rust/game_rules/src/defenders/pressure PRESSURE.wayOut: the hunters hold the lost room's doors from back off them)
   team: { sam: RECORDS_START, samYaw: Math.PI, ops: [[12.0, 0, 27.0], [14.0, 0, 27.0], [11.0, 0, 27.0], [15.0, 0, 27.0]], opsYaw: Math.PI },
   // the second way in (ROOMCLEAR.way): the dark west side, on the records room's own outside door instead of the front office's
   starts: [{ sam: [6.4, 0, 8.6], samYaw: Math.PI / 2, ops: [[5.2, 0, 7.6], [5.2, 0, 9.6], [4.0, 0, 7.6], [4.0, 0, 9.6]], opsYaw: Math.PI / 2 }],
