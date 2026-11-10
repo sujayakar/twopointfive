@@ -194,122 +194,161 @@ fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
 }
 /// One thing's step: it ages, falls, meets the walls, the leaves and the furniture by a ray from its middle, bounces, hands the furniture a share of what it lost, and comes to rest on a floor or on a chair's seat; lying on a thing that has moved, it looks under itself and drops.
 fn step(d: &Walk, id: ItemId, it: &mut Item, dt: f64, told: &mut Vec<Told>) {
-    use ::sim::maths::{atan2, hypot2, hypot3, round_half_up};
-    use ::sim::world::{js_abs, js_max, js_min, MAX_THINGS};
     it.age += dt;
     it.life -= dt;
-    let mut fly = true;
     if it.life <= 0.0 {
         told.push(Told::Gone { it: id });
-        fly = false;
-    } else if it.carried == Some(true) {
-        fly = false;   // (in a hand: it goes where the hand goes)
-    } else if it.settled {
-        it.tumble_rate = 0.0;
-        let flat_a = round_half_up(it.tumble / m::PI) * m::PI;
-        it.tumble += (flat_a - it.tumble) * js_min(1.0, dt * 12.0);   // comes to rest lying along its axis (0 or half a turn)
-        fly = false;
-        // resting on a chair seat or a carton: stays put while that thing is still underneath, drops once it has moved out from under it
-        if it.on != 0 && (it.on as usize) <= MAX_THINGS && pose_key(d.w, it.on as usize - 1) != it.on_pose {
-            let under = things(d.w, [it.pos[0], it.pos[1] + 0.05, it.pos[2]], [0.0, -1.0, 0.0], 0.15);
-            if matches!(under, Some((_, _, thing)) if thing + 1 == it.on as usize) {
-                it.on_pose = pose_key(d.w, it.on as usize - 1);
-            } else {
-                it.settled = false;
-                it.on = 0;
-                it.vel = [0.0, 0.0, 0.0];
-                fly = true;
-            }
-        }
+        return;
     }
-    if !fly { return; }
+    if it.carried == Some(true) {   // (in a hand: it goes where the hand goes)
+        return;
+    }
+    if it.settled && lies(d, it, dt) {
+        return;
+    }
     let h = dt / SUB;
     let mut s = 0.0;
     while s < SUB && !it.settled {
         s += 1.0;
-        it.vel[1] -= GRAVITY_NOW * h;
-        let mv = [it.vel[0] * h, it.vel[1] * h, it.vel[2] * h];
-        let len = hypot3(mv[0], mv[1], mv[2]);
-        if len < 1e-6 { continue; }
-        let il = 1.0 / len;
-        let dir = [mv[0] * il, mv[1] * il, mv[2] * il];
-        // sphere against box from the centre ray: contact happens radius/cos(incidence) before the centre would hit
-        let mut hit = hit_of(d, it.pos, dir, len + it.radius * 3.5);
-        let mut back = 0.0;
-        if let Some((t, n, _)) = hit {
-            back = it.radius / js_max(0.3, -(dir[0] * n[0] + dir[1] * n[1] + dir[2] * n[2]));
-            if t - back > len { hit = None; }
-        }
-        if let Some((t, n, prop)) = hit {
-            // place at contact, reflect
-            let t_hit = js_max(0.0, t - back);
-            it.pos = [it.pos[0] + dir[0] * t_hit, it.pos[1] + dir[1] * t_hit, it.pos[2] + dir[2] * t_hit];
-            let vn = it.vel[0] * n[0] + it.vel[1] * n[1] + it.vel[2] * n[2];
-            if vn < 0.0 {
-                if prop != 0 {
-                    // the thing's lost momentum goes into the chair or carton it struck
-                    let j = vn * (1.0 + it.restitution) * (if it.kind == ItemKind::Smoke || it.kind == ItemKind::Frag { 0.35 } else if it.kind == ItemKind::Rifle { d.rifle_share } else { 0.1 });
-                    told.push(Told::Impulse { it: id, thing: prop - 1, at: it.pos, j: [n[0] * j, n[1] * j, n[2] * j] });
-                }
-                let (vn0, vn1, vn2) = (n[0] * vn, n[1] * vn, n[2] * vn);
-                let (vt0, vt1, vt2) = (it.vel[0] - vn0, it.vel[1] - vn1, it.vel[2] - vn2);
-                let speed = -vn;
-                // lying snow under it (0 = none, and the lines below are what they were)
-                let bog = if d.snow.is_some() && n[1] > 0.6 && prop == 0 { bog_at(d, it.pos[0], it.pos[1] - it.radius, it.pos[2]) } else { 0.0 };
-                let f = js_max(0.0, 1.0 - it.friction * (0.5 + 0.5 * js_abs(n[1])));
-                it.vel = [vt0 * f + vn0 * -it.restitution, vt1 * f + vn1 * -it.restitution, vt2 * f + vn2 * -it.restitution];
-                if bog > 0.0 {
-                    // … it keeps little of its slide and of its bounce
-                    let sn = d.snow.as_ref().unwrap();
-                    let up = it.vel[0] * n[0] + it.vel[1] * n[1] + it.vel[2] * n[2];
-                    let (b, sl) = (1.0 - bog * sn.dead, 1.0 - bog * sn.grip);
-                    it.vel = [(it.vel[0] - n[0] * up) * sl + n[0] * (up * b), (it.vel[1] - n[1] * up) * sl + n[1] * (up * b), (it.vel[2] - n[2] * up) * sl + n[2] * (up * b)];
-                }
-                it.spin *= 0.6;
-                it.tumble_rate *= 0.45;
-                it.bounces += 1.0;
-                if hypot2(it.vel[0], it.vel[2]) > 0.3 { it.heading = atan2(it.vel[0], it.vel[2]); }
-                if speed > 0.6 { told.push(Told::Bounce { it: id, speed, at: it.pos, n }); }
-                // settle when slow on an upward-facing surface
-                if n[1] > 0.6 && js_abs(it.vel[1]) < 0.5 && hypot2(it.vel[0], it.vel[2]) < 0.35 + (if bog > 0.0 { bog * d.snow.as_ref().unwrap().stick } else { 0.0 }) {
-                    it.settled = true;
-                    it.on = prop as u32;
-                    it.on_pose = if prop != 0 { pose_key(d.w, prop - 1) } else { 0.0 };
-                    it.vel = [0.0, 0.0, 0.0];
-                    it.spin = 0.0;
-                    it.pos[1] += 0.001;
-                }
-            }
-            it.pos = [it.pos[0] + n[0] * 0.002, it.pos[1] + n[1] * 0.002, it.pos[2] + n[2] * 0.002];
-        } else {
-            it.pos = [it.pos[0] + mv[0], it.pos[1] + mv[1], it.pos[2] + mv[2]];
-        }
-        if it.pos[1] < it.radius {
-            // safety floor
-            let bog = if d.snow.is_some() { bog_at(d, it.pos[0], 0.0, it.pos[2]) } else { 0.0 };
-            it.pos[1] = it.radius;
-            if it.vel[1] < 0.0 {
-                let sp = -it.vel[1];
-                it.vel[1] *= -it.restitution;
-                it.vel[0] *= 0.7;
-                it.vel[2] *= 0.7;
-                if bog > 0.0 {
-                    let sn = d.snow.as_ref().unwrap();
-                    it.vel[1] *= 1.0 - bog * sn.dead;
-                    it.vel[0] *= 1.0 - bog * sn.grip;
-                    it.vel[2] *= 1.0 - bog * sn.grip;
-                }
-                it.bounces += 1.0;
-                if sp > 0.6 { told.push(Told::Bounce { it: id, speed: sp, at: it.pos, n: [0.0, 1.0, 0.0] }); }
-            }
-            if js_abs(it.vel[1]) < 0.5 && hypot2(it.vel[0], it.vel[2]) < 0.35 + (if bog > 0.0 { bog * d.snow.as_ref().unwrap().stick } else { 0.0 }) {
-                it.settled = true;
-                it.vel = [0.0, 0.0, 0.0];
-            }
-        }
-        it.yaw += it.spin * h;
-        it.tumble += it.tumble_rate * h;
+        flies(d, id, it, h, told);
     }
+}
+
+/// Settled, it lies along its axis; on a chair seat or a carton it stays put while that thing is still underneath. False: it drops.
+fn lies(d: &Walk, it: &mut Item, dt: f64) -> bool {
+    use ::sim::maths::round_half_up;
+    use ::sim::world::{js_min, MAX_THINGS};
+    it.tumble_rate = 0.0;
+    let flat_a = round_half_up(it.tumble / m::PI) * m::PI;
+    it.tumble += (flat_a - it.tumble) * js_min(1.0, dt * 12.0);   // (0 or half a turn)
+    let on = it.on as usize;
+    if on == 0 || on > MAX_THINGS || pose_key(d.w, on - 1) == it.on_pose {
+        return true;
+    }
+    let under = things(d.w, [it.pos[0], it.pos[1] + 0.05, it.pos[2]], [0.0, -1.0, 0.0], 0.15);
+    if under.is_some_and(|(_, _, thing)| thing + 1 == on) {
+        it.on_pose = pose_key(d.w, on - 1);
+        return true;
+    }
+    it.settled = false;
+    it.on = 0;
+    it.vel = [0.0, 0.0, 0.0];
+    false
+}
+
+/// A substep in the air: on, or into what is in the way of it.
+fn flies(d: &Walk, id: ItemId, it: &mut Item, h: f64, told: &mut Vec<Told>) {
+    use ::sim::maths::hypot3;
+    it.vel[1] -= GRAVITY_NOW * h;
+    let mv = [it.vel[0] * h, it.vel[1] * h, it.vel[2] * h];
+    let len = hypot3(mv[0], mv[1], mv[2]);
+    if len < 1e-6 { return; }
+    let il = 1.0 / len;
+    let dir = [mv[0] * il, mv[1] * il, mv[2] * il];
+    match meets(d, it, dir, len) {
+        Some((t, n, thing)) => {
+            it.pos = [it.pos[0] + dir[0] * t, it.pos[1] + dir[1] * t, it.pos[2] + dir[2] * t];
+            bounces(d, id, it, n, thing, told);
+            it.pos = [it.pos[0] + n[0] * 0.002, it.pos[1] + n[1] * 0.002, it.pos[2] + n[2] * 0.002];
+        }
+        None => it.pos = [it.pos[0] + mv[0], it.pos[1] + mv[1], it.pos[2] + mv[2]],
+    }
+    if it.pos[1] < it.radius { on_the_ground(d, id, it, told); }
+    it.yaw += it.spin * h;
+    it.tumble += it.tumble_rate * h;
+}
+
+/// What it meets in the next `len`, and how far on it is at contact: a sphere against a box from the centre's ray, so contact is radius/cos(incidence) before the centre would hit.
+fn meets(d: &Walk, it: &Item, dir: V3, len: f64) -> Option<(f64, V3, usize)> {
+    use ::sim::world::js_max;
+    let (t, n, thing) = hit_of(d, it.pos, dir, len + it.radius * 3.5)?;
+    let back = it.radius / js_max(0.3, -(dir[0] * n[0] + dir[1] * n[1] + dir[2] * n[2]));
+    if t - back > len { return None; }
+    Some((js_max(0.0, t - back), n, thing))
+}
+
+/// Into a face whose normal is `n`: what it struck takes its share, it comes off with what is left, and slow enough on a floor it settles.
+fn bounces(d: &Walk, id: ItemId, it: &mut Item, n: V3, thing: usize, told: &mut Vec<Told>) {
+    use ::sim::maths::{atan2, hypot2};
+    use ::sim::world::{js_abs, js_max};
+    let vn = it.vel[0] * n[0] + it.vel[1] * n[1] + it.vel[2] * n[2];
+    if vn >= 0.0 { return; }
+    if thing != 0 {
+        // the thing's lost momentum goes into the chair or carton it struck
+        let j = vn * (1.0 + it.restitution) * share_of(d, it.kind);
+        told.push(Told::Impulse { it: id, thing: thing - 1, at: it.pos, j: [n[0] * j, n[1] * j, n[2] * j] });
+    }
+    let (vn0, vn1, vn2) = (n[0] * vn, n[1] * vn, n[2] * vn);
+    let (vt0, vt1, vt2) = (it.vel[0] - vn0, it.vel[1] - vn1, it.vel[2] - vn2);
+    // lying snow under it (0 = none)
+    let floor = n[1] > 0.6;
+    let bog = if floor && thing == 0 { bog_at(d, it.pos[0], it.pos[1] - it.radius, it.pos[2]) } else { 0.0 };
+    let f = js_max(0.0, 1.0 - it.friction * (0.5 + 0.5 * js_abs(n[1])));
+    it.vel = [vt0 * f + vn0 * -it.restitution, vt1 * f + vn1 * -it.restitution, vt2 * f + vn2 * -it.restitution];
+    if bog > 0.0 {
+        // … it keeps little of its slide and of its bounce
+        let sn = d.snow.as_ref().unwrap();
+        let up = it.vel[0] * n[0] + it.vel[1] * n[1] + it.vel[2] * n[2];
+        let (b, sl) = (1.0 - bog * sn.dead, 1.0 - bog * sn.grip);
+        it.vel = [(it.vel[0] - n[0] * up) * sl + n[0] * (up * b), (it.vel[1] - n[1] * up) * sl + n[1] * (up * b), (it.vel[2] - n[2] * up) * sl + n[2] * (up * b)];
+    }
+    it.spin *= 0.6;
+    it.tumble_rate *= 0.45;
+    if hypot2(it.vel[0], it.vel[2]) > 0.3 { it.heading = atan2(it.vel[0], it.vel[2]); }
+    struck(id, it, -vn, n, told);
+    if floor && slow(d, it, bog) {
+        settles(it);
+        it.on = thing as u32;
+        it.on_pose = if thing != 0 { pose_key(d.w, thing - 1) } else { 0.0 };
+        it.spin = 0.0;
+        it.pos[1] += 0.001;
+    }
+}
+
+/// The safety floor: nothing goes below it.
+fn on_the_ground(d: &Walk, id: ItemId, it: &mut Item, told: &mut Vec<Told>) {
+    let bog = bog_at(d, it.pos[0], 0.0, it.pos[2]);
+    it.pos[1] = it.radius;
+    if it.vel[1] < 0.0 {
+        let sp = -it.vel[1];
+        it.vel[1] *= -it.restitution;
+        it.vel[0] *= 0.7;
+        it.vel[2] *= 0.7;
+        if bog > 0.0 {
+            let sn = d.snow.as_ref().unwrap();
+            it.vel[1] *= 1.0 - bog * sn.dead;
+            it.vel[0] *= 1.0 - bog * sn.grip;
+            it.vel[2] *= 1.0 - bog * sn.grip;
+        }
+        struck(id, it, sp, [0.0, 1.0, 0.0], told);
+    }
+    if slow(d, it, bog) { settles(it); }
+}
+
+/// The share of what it lost that a thing of furniture takes.
+fn share_of(d: &Walk, kind: ItemKind) -> f64 {
+    match kind {
+        ItemKind::Smoke | ItemKind::Frag => 0.35,
+        ItemKind::Rifle => d.rifle_share,
+        _ => 0.1,
+    }
+}
+
+/// A bounce counted, and said if it was hard enough to hear.
+fn struck(id: ItemId, it: &mut Item, speed: f64, n: V3, told: &mut Vec<Told>) {
+    it.bounces += 1.0;
+    if speed > 0.6 { told.push(Told::Bounce { it: id, speed, at: it.pos, n }); }
+}
+
+/// Slow enough to lie where it is; on lying snow a faster one sticks.
+fn slow(d: &Walk, it: &Item, bog: f64) -> bool {
+    let stick = match &d.snow { Some(s) if bog > 0.0 => bog * s.stick, _ => 0.0 };
+    ::sim::world::js_abs(it.vel[1]) < 0.5 && ::sim::maths::hypot2(it.vel[0], it.vel[2]) < 0.35 + stick
+}
+
+fn settles(it: &mut Item) {
+    it.settled = true;
+    it.vel = [0.0, 0.0, 0.0];
 }
 
 /// One tick of the pool: it walks from the newest down, then what the steps told is done in order.
@@ -407,106 +446,160 @@ const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
 
 /// A thrown thing's parts as boxes into this frame's list, each keyed off its serial.
 pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let flag = crate::scene_boxes::box_flag();
-    let dy = flag.dynamic;
-    let dn = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
     let item_key = crate::scene_boxes::mkey().item;
-    let x_axis: V3 = [1.0, 0.0, 0.0];
     for i in 0..g.items.items.len() {
-        let it = g.items.items[i];
-        // (its row, read once)
-        let (p, kind, settled, yaw, tumble, radius, fill, serial) = (g.tab.item[it].pos, g.tab.item[it].kind, g.tab.item[it].settled, g.tab.item[it].yaw, g.tab.item[it].tumble, g.tab.item[it].radius, g.tab.item[it].fill, g.tab.item[it].serial);
+        let it = Shown::of(g, g.items.items[i]);
         let n0 = out.len();
-        let flying = v3::quat::mul(v3::quat::yaw(yaw), v3::quat::axis_angle(x_axis, tumble));
-        match kind {
-            ItemKind::Smoke | ItemKind::Flash => {
-                let (body, band): (V3, V3) = if kind == ItemKind::Flash {
-                    if g.tab.item[it].fired { ([0.03, 0.03, 0.03], [0.12, 0.11, 0.1]) } else { ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66]) }
-                } else {
-                    ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06])
-                };
-                let c0: V3 = if settled { [p[0], p[1] - radius + 0.034, p[2]] } else { v3::copy(p) };
-                out.push(item_box(g, c0, [0.032, 0.032, 0.07], yaw, flying, body, dy).into());
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.045])), [0.034, 0.034, 0.012], yaw, flying, band, dn).into());
-            }
-            ItemKind::Frag => {
-                let f = frag_item();
-                let c0: V3 = if settled { [p[0], p[1] - radius + f.half[0] + 0.002, p[2]] } else { v3::copy(p) };
-                out.push(item_box(g, c0, f.half, yaw, flying, f.body, dy).into());
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.012])), [0.034, 0.034, 0.006], yaw, flying, f.band, dn).into());
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.05])), [0.012, 0.012, 0.014], yaw, flying, f.fuze, dn).into());
-            }
-            ItemKind::Pistol | ItemKind::Torch | ItemKind::Rifle => {
-                // in the air it flips end over end; settled, on its side with that face on the floor
-                let thick = if kind == ItemKind::Pistol { 0.016 } else if kind == ItemKind::Rifle { if fill == 1.0 { sc20_k_item().thick } else { rifle_item().thick } } else { 0.022 };
-                let rot = if settled {
-                    v3::quat::mul(v3::quat::mul(v3::quat::yaw(yaw), v3::quat::axis_angle(x_axis, m::round(tumble / m::PI) * m::PI)), v3::quat::axis_angle([0.0, 0.0, 1.0], m::PI / 2.0))
-                } else {
-                    flying
-                };
-                let c: V3 = if settled { [p[0], p[1] - radius + thick + 0.004, p[2]] } else { v3::copy(p) };
-                let at = |off: V3| -> V3 { v3::add(c, v3::quat::rotate(rot, off)) };
-                if kind == ItemKind::Pistol {
-                    out.push(item_box(g, at([0.0, 0.0, 0.0]), [0.016, 0.026, 0.095], yaw, rot, [0.05, 0.05, 0.055], dy).into());
-                    let grip_rot = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, 108.0 * m::PI / 180.0));
-                    out.push(item_box(g, v3::add(at([0.0, -0.024, -0.045]), v3::quat::rotate(grip_rot, [0.0, 0.0, 0.047])), [0.014, 0.017, 0.047], yaw, grip_rot, [0.05, 0.05, 0.055], dy).into());
-                    if fill > 0.0 {
-                        out.push(item_box(g, at([0.0, 0.0, 0.17]), [0.019, 0.019, 0.075], yaw, rot, [0.09, 0.09, 0.09], dy).into());
-                    }
-                } else if kind == ItemKind::Rifle && fill == 1.0 {
-                    let s = m4_item();
-                    out.push(item_box(g, at([0.0, 0.0, s.hull.z]), s.hull.h, yaw, rot, s.polymer, dy).into());
-                    out.push(item_box(g, at([0.0, 0.0, s.fore.z]), s.fore.h, yaw, rot, s.fore_col, dy).into());
-                    out.push(item_box(g, at([0.0, s.mag.y, s.mag.z]), s.mag.h, yaw, rot, s.metal, dy).into());
-                    out.push(item_box(g, at([0.0, s.optic.y, s.optic.z]), s.optic.h, yaw, rot, s.metal, dn).into());
-                } else if kind == ItemKind::Rifle {
-                    let r = rifle_item();
-                    out.push(item_box(g, at([0.0, 0.0, r.receiver.z]), r.receiver.h, yaw, rot, r.steel, dy).into());
-                    out.push(item_box(g, at([0.0, 0.0, r.fore.z]), r.fore.h, yaw, rot, r.wood, dy).into());
-                    let mag_rot = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, r.mag.cant));
-                    out.push(item_box(g, at([0.0, r.mag.y, r.mag.z]), r.mag.h, yaw, mag_rot, r.wood, dy).into());
-                    out.push(item_box(g, at([0.0, -0.012, r.stock.z]), r.stock.h, yaw, rot, r.steel, dn).into());
-                } else {
-                    out.push(item_box(g, at([0.0, 0.0, 0.0]), [0.022, 0.022, 0.09], yaw, rot, [0.09, 0.09, 0.1], dy).into());
-                    out.push(item_box(g, at([0.0, 0.0, 0.095]), [0.026, 0.026, 0.008], yaw, rot, [0.16, 0.16, 0.15], dn).into());
-                }
-            }
+        match it.kind {
+            ItemKind::Smoke | ItemKind::Flash => can_boxes(g, out, &it),
+            ItemKind::Frag => frag_boxes(g, out, &it),
+            ItemKind::Pistol | ItemKind::Torch | ItemKind::Rifle => gun_boxes(g, out, &it),
             // GEAR.on, settled true on the page: the 40 mm sponge round
-            ItemKind::Ring => {
-                let c: V3 = if settled { [p[0], p[1] - radius + sponge_item().wide + 0.002, p[2]] } else { v3::copy(p) };
-                sponge_boxes(g, out, c, if settled { v3::quat::yaw(yaw) } else { flying }, yaw);
-            }
-            ItemKind::Shell => {
-                let s = shell_item();
-                let c0: V3 = if settled { [p[0], p[1] - radius + s.half[0] + 0.002, p[2]] } else { v3::copy(p) };
-                out.push(item_box(g, c0, s.half, yaw, flying, s.body, dy).into());
-                out.push(item_box(g, v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, s.half[2] * 0.62])), [s.half[0] + 0.001, s.half[1] + 0.001, s.half[2] * 0.4], yaw, flying, s.nose, dn).into());
-            }
-            // a magazine. fill 2: a rifleman's empty thirty; 3: the FN2000's black thirty; 4 to 7: OWN_MAGS; else a pistol's (0 empty, 0 to 1 part full)
-            ItemKind::Mag => {
-                let (box30, box20k) = (fill > 1.0, fill >= 3.0);
-                let own = if fill >= 4.0 { Some(OWN_MAGS[m::min(3.0, fill - 4.0) as usize]) } else { None };
-                let col: V3 = match own {
-                    Some(o) => o.3,
-                    None => if box20k { sc20_k_item().metal } else if box30 { rifle_item().wood } else if fill > 0.0 { [0.09, 0.09, 0.1] } else { [0.06, 0.06, 0.065] },
-                };
-                let hl = match own { Some(o) => o.0, None => if box30 { 0.095 } else { 0.055 } };
-                let hw = match own { Some(o) => o.1, None => if box30 { 0.014 } else { 0.018 } };
-                let th = match own { Some(o) => o.2, None => 0.012 };
-                if settled {
-                    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: [p[0], p[1] + th, p[2]], h: [hw, th, hl], yaw: Some(yaw), albedo: Some(col), flags: Some(dn), ..Default::default() });
-                    out.push(b.into());
-                } else {
-                    let deep = match own { Some(o) => m::max(0.03, o.2), None => 0.03 };
-                    out.push(item_box(g, v3::copy(p), [hw, hl, deep], yaw, flying, col, dn).into());
-                }
-            }
+            ItemKind::Ring => sponge_boxes(g, out, it.middle(sponge_item().wide, 0.002), if it.settled { v3::quat::yaw(it.yaw) } else { it.flying }, it.yaw),
+            ItemKind::Shell => shell_boxes(g, out, &it),
+            ItemKind::Mag => mag_boxes(g, out, &it),
         }
         // motion identity per part: the g-buffer reprojects the flying can through its own last transform, whatever spawned or died around it in the list
-        for k in n0..out.len() {
-            let b = out[k];
-            g.tab.edit(b).mkey = Some(item_key + (js::to_i32(serial) & 8191) as f64 * 8.0 + m::min(7.0, (k - n0) as f64));
+        for (k, b) in out[n0..].iter().enumerate() {
+            g.tab.edit(*b).mkey = Some(item_key + (js::to_i32(it.serial) & 8191) as f64 * 8.0 + m::min(7.0, k as f64));
         }
+    }
+}
+
+/// A thing of the pool as its boxes are laid out: its row, read once.
+struct Shown {
+    kind: ItemKind,
+    p: V3,
+    settled: bool,
+    fired: bool,
+    yaw: f64,
+    tumble: f64,
+    radius: f64,
+    fill: f64,
+    serial: f64,
+    /// How it is turned in the air: end over end.
+    flying: Quat,
+}
+
+impl Shown {
+    fn of(g: &Game, id: ItemId) -> Shown {
+        let it = &g.tab.item[id];
+        let flying = v3::quat::mul(v3::quat::yaw(it.yaw), v3::quat::axis_angle([1.0, 0.0, 0.0], it.tumble));
+        Shown { kind: it.kind, p: it.pos, settled: it.settled, fired: it.fired, yaw: it.yaw, tumble: it.tumble, radius: it.radius, fill: it.fill, serial: it.serial, flying }
+    }
+    /// Its middle: where it is, or lying, half its thickness off the floor and a hair `over`.
+    fn middle(&self, half: f64, over: f64) -> V3 {
+        if self.settled { [self.p[0], self.p[1] - self.radius + half + over, self.p[2]] } else { self.p }
+    }
+    /// A part of it, `off` its middle `c` along the way it is turned.
+    fn part(&self, g: &mut Game, out: &mut Vec<AnyBoxId>, c: V3, off: V3, h: V3, albedo: V3, flags: f64) {
+        out.push(item_box(g, v3::add(c, v3::quat::rotate(self.flying, off)), h, self.yaw, self.flying, albedo, flags).into());
+    }
+}
+
+/// The flags of a part, and of one that casts no shadow.
+fn part_flags() -> [f64; 2] {
+    let flag = crate::scene_boxes::box_flag();
+    [flag.dynamic, (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64]
+}
+
+fn can_boxes(g: &mut Game, out: &mut Vec<AnyBoxId>, it: &Shown) {
+    let [dy, dn] = part_flags();
+    let (body, band): (V3, V3) = match (it.kind, it.fired) {
+        (ItemKind::Flash, true) => ([0.03, 0.03, 0.03], [0.12, 0.11, 0.1]),
+        (ItemKind::Flash, false) => ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66]),
+        _ => ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06]),
+    };
+    let c = it.middle(0.034, 0.0);
+    out.push(item_box(g, c, [0.032, 0.032, 0.07], it.yaw, it.flying, body, dy).into());
+    it.part(g, out, c, [0.0, 0.0, 0.045], [0.034, 0.034, 0.012], band, dn);
+}
+
+fn frag_boxes(g: &mut Game, out: &mut Vec<AnyBoxId>, it: &Shown) {
+    let [dy, dn] = part_flags();
+    let f = frag_item();
+    let c = it.middle(f.half[0], 0.002);
+    out.push(item_box(g, c, f.half, it.yaw, it.flying, f.body, dy).into());
+    it.part(g, out, c, [0.0, 0.0, 0.012], [0.034, 0.034, 0.006], f.band, dn);
+    it.part(g, out, c, [0.0, 0.0, 0.05], [0.012, 0.012, 0.014], f.fuze, dn);
+}
+
+fn shell_boxes(g: &mut Game, out: &mut Vec<AnyBoxId>, it: &Shown) {
+    let [dy, dn] = part_flags();
+    let s = shell_item();
+    let c = it.middle(s.half[0], 0.002);
+    out.push(item_box(g, c, s.half, it.yaw, it.flying, s.body, dy).into());
+    it.part(g, out, c, [0.0, 0.0, s.half[2] * 0.62], [s.half[0] + 0.001, s.half[1] + 0.001, s.half[2] * 0.4], s.nose, dn);
+}
+
+/// A gun or a torch: in the air it flips end over end; settled, it is on its side with that face on the floor.
+fn gun_boxes(g: &mut Game, out: &mut Vec<AnyBoxId>, it: &Shown) {
+    let x_axis: V3 = [1.0, 0.0, 0.0];
+    let [dy, dn] = part_flags();
+    let fn2000 = it.fill == 1.0;
+    let thick = match it.kind {
+        ItemKind::Pistol => 0.016,
+        ItemKind::Rifle if fn2000 => sc20_k_item().thick,
+        ItemKind::Rifle => rifle_item().thick,
+        _ => 0.022,
+    };
+    let yaw = it.yaw;
+    let rot = if it.settled {
+        v3::quat::mul(v3::quat::mul(v3::quat::yaw(yaw), v3::quat::axis_angle(x_axis, m::round(it.tumble / m::PI) * m::PI)), v3::quat::axis_angle([0.0, 0.0, 1.0], m::PI / 2.0))
+    } else {
+        it.flying
+    };
+    let c = it.middle(thick, 0.004);
+    let at = |off: V3| -> V3 { v3::add(c, v3::quat::rotate(rot, off)) };
+    let mut part = |c: V3, h: V3, rot: Quat, albedo: V3, flags: f64| out.push(item_box(g, c, h, yaw, rot, albedo, flags).into());
+    match it.kind {
+        ItemKind::Pistol => {
+            part(at([0.0, 0.0, 0.0]), [0.016, 0.026, 0.095], rot, [0.05, 0.05, 0.055], dy);
+            let grip = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, 108.0 * m::PI / 180.0));
+            part(v3::add(at([0.0, -0.024, -0.045]), v3::quat::rotate(grip, [0.0, 0.0, 0.047])), [0.014, 0.017, 0.047], grip, [0.05, 0.05, 0.055], dy);
+            if it.fill > 0.0 { part(at([0.0, 0.0, 0.17]), [0.019, 0.019, 0.075], rot, [0.09, 0.09, 0.09], dy); }
+        }
+        ItemKind::Rifle if fn2000 => {
+            let s = m4_item();
+            part(at([0.0, 0.0, s.hull.z]), s.hull.h, rot, s.polymer, dy);
+            part(at([0.0, 0.0, s.fore.z]), s.fore.h, rot, s.fore_col, dy);
+            part(at([0.0, s.mag.y, s.mag.z]), s.mag.h, rot, s.metal, dy);
+            part(at([0.0, s.optic.y, s.optic.z]), s.optic.h, rot, s.metal, dn);
+        }
+        ItemKind::Rifle => {
+            let r = rifle_item();
+            part(at([0.0, 0.0, r.receiver.z]), r.receiver.h, rot, r.steel, dy);
+            part(at([0.0, 0.0, r.fore.z]), r.fore.h, rot, r.wood, dy);
+            let mag = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, r.mag.cant));
+            part(at([0.0, r.mag.y, r.mag.z]), r.mag.h, mag, r.wood, dy);
+            part(at([0.0, -0.012, r.stock.z]), r.stock.h, rot, r.steel, dn);
+        }
+        _ => {
+            part(at([0.0, 0.0, 0.0]), [0.022, 0.022, 0.09], rot, [0.09, 0.09, 0.1], dy);
+            part(at([0.0, 0.0, 0.095]), [0.026, 0.026, 0.008], rot, [0.16, 0.16, 0.15], dn);
+        }
+    }
+}
+
+/// A magazine. fill 2: a rifleman's empty thirty; 3: the FN2000's black thirty; 4 to 7: OWN_MAGS; else a pistol's (0 empty, 0 to 1 part full).
+fn mag_boxes(g: &mut Game, out: &mut Vec<AnyBoxId>, it: &Shown) {
+    let [_, dn] = part_flags();
+    let fill = it.fill;
+    let (len, wide, thick, col) = if fill >= 4.0 {
+        OWN_MAGS[m::min(3.0, fill - 4.0) as usize]
+    } else if fill >= 3.0 {
+        (0.095, 0.014, 0.012, sc20_k_item().metal)
+    } else if fill > 1.0 {
+        (0.095, 0.014, 0.012, rifle_item().wood)
+    } else {
+        (0.055, 0.018, 0.012, if fill > 0.0 { [0.09, 0.09, 0.1] } else { [0.06, 0.06, 0.065] })
+    };
+    if it.settled {
+        let p = it.p;
+        let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: [p[0], p[1] + thick, p[2]], h: [wide, thick, len], yaw: Some(it.yaw), albedo: Some(col), flags: Some(dn), ..Default::default() });
+        out.push(b.into());
+    } else {
+        out.push(item_box(g, it.p, [wide, len, m::max(0.03, thick)], it.yaw, it.flying, col, dn).into());
     }
 }
 
