@@ -99,15 +99,6 @@ pub(super) fn suppressed(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let sup = &g.cond[g.gd[gd].ch].sup;
     sup.latched || sup.down_t > 0.0 || sup.v >= g.k.suppression.flinch
 }
-
-/// The length of a route over the floor.
-fn path_len(from: V3, path: &[V3]) -> f64 {
-    let mut len = 0.0;
-    let mut q = from;
-    for &w in path { len += flat(q, w); q = w; }
-    len
-}
-
 /// Points every `step` metres along from → path (the start and the very end included).
 pub(super) fn sample_path(from: V3, path: &[V3], step: Option<f64>) -> Vec<V3> {
     let step = step.unwrap_or(0.3);
@@ -216,7 +207,7 @@ fn last_cover_point(g: &mut crate::game::Game, from: V3, path: &[V3], t: V3, min
 /// The point along from → path where `rem` metres of it remain (the path's end if it is shorter).
 pub(super) fn point_short_of_end(from: V3, path: &[V3], rem: f64) -> V3 {
     let s = sample_path(from, path, Some(0.25));
-    let total = path_len(from, path);
+    let total = crate::places::walk_len(from, path);
     let want = m::max(0.0, total - rem);
     let mut acc = 0.0;
     let mut i = 1;
@@ -486,7 +477,7 @@ pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Opti
         door_idx = Some(cells);
         let from = pos_of(g, gd);
         let plain = crate::scene_collision::nav_grid_find_path(g, from, goal, None, None);
-        let l = match &plain { Some(p) => path_len(pos_of(g, gd), p), None => 10.0 };
+        let l = match &plain { Some(p) => crate::places::walk_len(pos_of(g, gd), p), None => 10.0 };
         door_mult = m::max(DOOR_COST_MIN, 1.0 + 1.5 * l);
     }
     Some(crate::tactics::TacticsPenalty::Cells { w, door_idx, door_mult, avoid })
@@ -578,7 +569,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
             None => crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), None),
         };
         if let Some(path) = path {
-            let len = path_len(pos_of(g, m), &path);
+            let len = crate::places::walk_len(pos_of(g, m), &path);
             if len.is_finite() { routes.push((m, path, len)); }
         }
     }
@@ -640,7 +631,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
             };
             crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), Some(&mut price))
         };
-        let flen = match &fp { Some(p) => path_len(from, p), None => f64::INFINITY };
+        let flen = match &fp { Some(p) => crate::places::walk_len(from, p), None => f64::INFINITY };
         let f_bear = match &fp { Some(p) => entry_bearing(t_pt, from, p, DISC_M), None => p_bear };
         let apart = deg_apart(f_bear, p_bear);
         let flank = match fp {
@@ -747,7 +738,7 @@ mod tests {
         assert_eq!(flat(FROM, T).to_bits(), FLAT);
         assert_eq!(bearing_of(FROM, T).to_bits(), BEARING);
         assert_eq!(deg_apart(2.9, -3.1).to_bits(), DEG_APART);
-        assert_eq!(path_len(FROM, &PATH).to_bits(), PATH_LEN);
+        assert_eq!(crate::places::walk_len(FROM, &PATH).to_bits(), PATH_LEN);
         let s: Vec<f64> = sample_path(FROM, &PATH, None).iter().flat_map(|p| [p[0], p[1], p[2]]).collect();
         assert_eq!(bits(&s), SAMPLE.to_vec());
         assert_eq!(entry_bearing(T, FROM, &PATH, 4.0).to_bits(), ENTRY);

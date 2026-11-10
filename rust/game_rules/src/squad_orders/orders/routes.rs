@@ -66,12 +66,6 @@ fn through(g: &mut Game, from: V3, p: &[V3], d: DoorId) -> bool {
     for &b in p { if crate::guards::crosses_door(g, a, b, d).is_some() { return true; } a = b; }
     false
 }
-/// metres of a walk from `from` by corners
-fn len_from(from: V3, q: &[V3]) -> f64 {
-    let (mut l, mut a) = (0.0, from);
-    for &b in q { l += flat(a, b); a = b; }
-    l
-}
 /// metres of a walk that starts at its first point
 fn len_of(w: &[V3]) -> f64 {
     let mut l = 0.0;
@@ -487,7 +481,7 @@ fn lane_only(g: &mut Game, w: Way<'_>, base: &[V3], pen: Option<Pen<'_>>) -> Opt
         None => crate::doorway::doorway_lane_price_at(g, &mut lanes, x, z),
     }))?;
     if shut(g, w.from, w.ring, &way).is_some() || doors_on(g, w.from, &way).iter().any(|d| !mine.contains(d)) || along_lanes(g, w.from, &way, &mut lanes) > lane_m - 1.0
-        || len_from(w.from, &way) > len_from(w.from, base) * g.k.doormanners.lane_long + 1.0 { return None; }
+        || crate::places::walk_len(w.from, &way) > crate::places::walk_len(w.from, base) * g.k.doormanners.lane_long + 1.0 { return None; }
     if let Some(u) = w.unk {
         let (a, b) = (along(g, w.from, &way, Pen::Dear(u)), along(g, w.from, base, Pen::Dear(u)));
         if a > m::max(OFF_M, b) { return None; }
@@ -517,7 +511,7 @@ fn seen_way(g: &mut Game, w: Way<'_>, now: &[V3], base: &[V3], pen: Option<Pen<'
         let b = along_lanes(g, w.from, now, l);
         if a > b + 0.5 { return None; }
     }
-    if len_from(w.from, &way) > len_from(w.from, now) * long + 1.0 { return None; }
+    if crate::places::walk_len(w.from, &way) > crate::places::walk_len(w.from, now) * long + 1.0 { return None; }
     if let Some(u) = w.unk {
         let (a, b) = (along(g, w.from, &way, Pen::Dear(u)), along(g, w.from, now, Pen::Dear(u)));
         if a > m::max(OFF_M, b) { return None; }
@@ -608,7 +602,7 @@ pub(in crate::squad_orders) fn squad_orders_route(g: &mut crate::game::Game, gd:
         // (a way round far longer than the short way is not worth it, nor one still through unknown floor unless it crosses clearly less of it)
         let round_cap = g.k.orders.round_cap;
         if round_cap > 0.0 && !shut_plain(g) && !round && !(own && !through(g, from, &path, shy.unwrap()))
-            && ((left > OFF_M && left > off_m * ROUND_LESS) || len_from(from, &path) > len_from(from, &plain) * round_cap + ROUND_PLUS_M) {
+            && ((left > OFF_M && left > off_m * ROUND_LESS) || crate::places::walk_len(from, &path) > crate::places::walk_len(from, &plain) * round_cap + ROUND_PLUS_M) {
             return SquadOrdersRoute { how: Some(SquadOrdersRouteHow::Through), ..route_none() };
         }
     }
@@ -782,7 +776,7 @@ pub(super) fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, t
     let path = match find_path(g, from, to, Some(ROUND_ITER), Some(Pen::Dear(&unk))) { Some(p) => p, None => return Vec::new() };
     if along(g, from, &path, Pen::Dear(&unk)) > OFF_M { return Vec::new(); }
     let round_cap = g.k.orders.round_cap;
-    if round_cap > 0.0 && len_from(from, &path) > len_from(from, &plain) * round_cap + ROUND_PLUS_M { return Vec::new(); }   // (nor a way round far longer than the short way)
+    if round_cap > 0.0 && crate::places::walk_len(from, &path) > crate::places::walk_len(from, &plain) * round_cap + ROUND_PLUS_M { return Vec::new(); }   // (nor a way round far longer than the short way)
     all_but_last(&path)
 }
 
@@ -1028,6 +1022,6 @@ mod tests {
     #[test]
     fn a_walk_is_measured_on_the_flat() {
         assert_eq!(len_of(&[[0.0, 9.0, 0.0], [3.0, 0.0, 4.0]]), 5.0);
-        assert_eq!(len_from([0.0, 0.0, 0.0], &[[3.0, 5.0, 4.0], [3.0, 0.0, 5.0]]), 6.0);
+        assert_eq!(crate::places::walk_len([0.0, 0.0, 0.0], &[[3.0, 5.0, 4.0], [3.0, 0.0, 5.0]]), 6.0);
     }
 }

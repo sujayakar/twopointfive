@@ -136,13 +136,7 @@ fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
     let at = pos_of(g, gd);
     if flat(at, p) < 0.5 { return flat(at, p); }
     let path = match crate::scene_collision::nav_grid_find_path(g, at, p, None, None) { Some(path) => path, None => return f64::INFINITY };
-    let mut l = 0.0;
-    let mut q = at;
-    for w in path {
-        l += flat(q, w);
-        q = w;
-    }
-    l + flat(q, p)
+    crate::places::walk_len(at, &path) + flat(path.last().copied().unwrap_or(at), p)
 }
 
 /// Was he taken from Sam's file (or from another door of this order's, taken from the file for that one).

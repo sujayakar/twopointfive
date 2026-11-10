@@ -228,21 +228,12 @@ fn way_to(g: &mut crate::game::Game, from: V3, to: V3) -> Option<crate::powerout
         return Some(WayTo { path: vec![to], l: flat(from, to) });
     }
     let path = crate::scene_collision::nav_grid_find_path(g, from, to, Some(20000.0), None)?;
-    if path.is_empty() {
-        return None;
-    }
-    let mut l = 0.0;
-    let mut w0 = from;
-    for &w in &path {
-        l += flat(w0, w);
-        w0 = w;
-    }
-    if flat(w0, to) > 1.0 { None } else { Some(WayTo { path, l }) }
+    if flat(*path.last()?, to) > 1.0 { return None; }
+    Some(WayTo { l: crate::places::walk_len(from, &path), path })
 }
 
 /// the second man's place: free floor `coverM` short of the lever with a line to it, nearest the way they came; and what he watches from it.
 fn cover_spot(g: &mut crate::game::Game, lever: V3, way: &[V3], from: V3) -> crate::powerout::CoverSpot {
-    let cs = g.col.nav.cell;
     let [r0, r1] = g.k.powerout.cover_m;
     // the point of the way about six metres before its end: where anybody following them would come from
     let mut back = from;
@@ -263,14 +254,7 @@ fn cover_spot(g: &mut crate::game::Game, lever: V3, way: &[V3], from: V3) -> cra
             let a = (k as f64) * m::PI / 6.0;
             k += 1;
             let p: V3 = [lever[0] + m::sin(a) * r, 0.0, lever[2] + m::cos(a) * r];
-            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
-                || crate::scene_collision::nav_grid_is_blocked(g, p[0] + cs, p[2])
-                || crate::scene_collision::nav_grid_is_blocked(g, p[0] - cs, p[2])
-                || crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2] + cs)
-                || crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2] - cs)
-            {
-                continue;
-            }
+            if !crate::places::roomy(g, p) { continue; }
             if crate::scene_collision::segment_blocked(g, [p[0], 1.2, p[2]], [lever[0], 1.2, lever[2]], None, None, None) {
                 continue;
             }

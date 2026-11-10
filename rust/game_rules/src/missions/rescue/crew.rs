@@ -659,10 +659,7 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
         if tried >= 24 { break; }
         let path = match crate::scene_collision::nav_grid_find_path(g, c, k.0, None, None) { Some(path) => path, None => continue };
         if path.is_empty() || v3::dist_xz(path[path.len() - 1], k.0) > 0.8 { continue; }
-        let mut l = 0.0;
-        let mut q = c;
-        for &w in &path { l += v3::dist_xz(q, w); q = w; }
-        if l <= walk * 1.4 && !rescue_crew_legs(g, c, &path, &mut |_g: &mut Game, w: V3| in_rect(w, b)) { return Some(k.0); }
+        if crate::places::walk_len(c, &path) <= walk * 1.4 && !rescue_crew_legs(g, c, &path, &mut |_g: &mut Game, w: V3| in_rect(w, b)) { return Some(k.0); }
     }
     None
 }

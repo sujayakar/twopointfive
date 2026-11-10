@@ -162,17 +162,6 @@ fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }
-
-/// The length of a walk from `from` through `pts`.
-fn walk_len(from: V3, pts: &[V3]) -> f64 {
-    let (mut s, mut a) = (0.0, from);
-    for b in pts {
-        s += m::hyp2(b[0] - a[0], b[2] - a[2]);
-        a = *b;
-    }
-    s
-}
-
 /// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None.
 fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
     let cs = g.col.nav.cell;
@@ -196,7 +185,7 @@ fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, g
         return None;
     }
     let across = walk_of(g, gd, goal).unwrap_or_else(|| vec![goal]);
-    if walk_len(p, &way) > walk_len(p, &across) + g.k.fireline.way_more_m {
+    if crate::places::walk_len(p, &way) > crate::places::walk_len(p, &across) + g.k.fireline.way_more_m {
         return None;
     }
     Some(way)

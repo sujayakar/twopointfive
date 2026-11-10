@@ -6,7 +6,7 @@ pub use game_types::*;
 pub mod tick;
 pub use tick::{audio_iface, camera, cmd, effects, env, game, gpu_device, host_api, input, math_dice, out_events, savestate, seats, standing, sim_men_store, sim_sim, sim_state, state_words, view, walkahead, dice};
 pub mod world;
-pub use world::{ask, floor, levelfit, scene_box_mirror, scene_boxes, scene_collision, scene_cut, scene_level_load, scene_look, scene_marking_defaults, scene_markings, scene_materials, scene_stuff, thinline};
+pub use world::{ask, floor, levelfit, places, scene_box_mirror, scene_boxes, scene_collision, scene_cut, scene_level_load, scene_look, scene_marking_defaults, scene_markings, scene_materials, scene_stuff, thinline};
 pub mod air;
 pub use air::{air_dust, carlamps, fire, hours, lighting, moths, render_frame, render_lights, render_particles, render_reach, render_snow_field, fixtures, smoke_types, snow_blast, snow_bog, snow_marks, weather, weather_kinds, wet, wet_ground, wind};
 pub mod body;

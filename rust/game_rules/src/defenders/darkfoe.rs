@@ -208,17 +208,7 @@ fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
 /// May he stand at `p`: room for his shoulders, his own room, off its doorways, no nearer the trouble, nobody there or sent there.
 fn free(g: &mut Game, d: RoomfightDefId, threat: V3, far: f64, p: V3) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    let (x, z) = (p[0], p[2]);
-    let cs = g.col.nav.cell;
-    if crate::scene_collision::nav_grid_is_blocked(g, x, z)
-        || crate::scene_collision::nav_grid_is_blocked(g, x + cs, z)
-        || crate::scene_collision::nav_grid_is_blocked(g, x - cs, z)
-        || crate::scene_collision::nav_grid_is_blocked(g, x, z + cs)
-        || crate::scene_collision::nav_grid_is_blocked(g, x, z - cs)
-    {
-        return false;
-    }
-    if !in_room(g, d, p) { return false; }
+    if !crate::places::roomy(g, p) || !in_room(g, d, p) { return false; }
     if crate::lanes::lane_known_at(g, gd, Some(p)) { return false; }
     if let Some(room) = g.tab.roomfight_def[d].room {
         if g.tab.roomfight_room[room].entries.iter().any(|e| v3::dist_xz(p, e.at) < 1.2) { return false; }

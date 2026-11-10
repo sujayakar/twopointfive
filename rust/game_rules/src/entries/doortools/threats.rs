@@ -966,7 +966,7 @@ pub(super) fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
                     let from = pos(g, x);
                     let walk = match crate::scene_collision::nav_grid_find_path(g, from, to, None, None) {
                         None => m::INF,
-                        Some(path) => { let (mut l, mut q) = (0.0, from); for r in path.iter().copied() { l += v3::dist_xz(q, r); q = r; } l }
+                        Some(path) => crate::places::walk_len(from, &path),
                     };
                     if walk > doors_walk { gd = None; }
                 }

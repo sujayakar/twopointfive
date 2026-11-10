@@ -173,10 +173,8 @@ fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mut bl = k.mate_m;
     for &o in near.iter() {
         let from = pos_of(g, o);
-        let Some(path) = crate::scene_collision::nav_grid_find_path(g, from, p, None, None) else { continue };
-        let mut l = 0.0;
-        let mut a = from;
-        for &b in path.iter() { l += flat(a, b); a = b; }
+        let l = crate::places::on_foot(g, from, p);
+        if l == m::INF { continue; }
         if l <= bl { bl = l; best = Some(o); }
     }
     best

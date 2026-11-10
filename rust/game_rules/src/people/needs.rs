@@ -95,7 +95,7 @@ fn frac(s: &str) -> f64 {
 /// Metres by path; infinite if there is none.
 fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> f64 {
     let Some(p) = crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) else { return m::INF };
-    path_len(from, &p)
+    crate::places::walk_len(from, &p)
 }
 
 /// The waypoint of his route a trip to `spot` starts from; wp −1 = none.
@@ -400,22 +400,10 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
     log(
         g,
         gd,
-        &format!("{} {} → {} from wp{} ({} m); walks at +{} s", if forced { "SENT" } else { "schedules" }, kind.as_str(), name, wp, js::to_fixed(path_len(pos, &path), 0), lead),
+        &format!("{} {} → {} from wp{} ({} m); walks at +{} s", if forced { "SENT" } else { "schedules" }, kind.as_str(), name, wp, js::to_fixed(crate::places::walk_len(pos, &path), 0), lead),
     );
     true
 }
-
-/// Length of a path, walked from `from`.
-fn path_len(from: V3, p: &[V3]) -> f64 {
-    let mut s = 0.0;
-    let mut prev = from;
-    for q in p.iter() {
-        s += m::hyp2(q[0] - prev[0], q[2] - prev[2]);
-        prev = *q;
-    }
-    s
-}
-
 /// Break the trip off wherever he is; nothing is resumed.
 fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     if !on_trip(g, gd) {
@@ -813,7 +801,7 @@ mod tests {
     fn path_len_bits() {
         let from = [1.25, 0.0, -3.5];
         let path = [[4.75, 0.0, 2.125], [10.1, 1.0, 9.7], [-3.3, 0.0, 0.4]];
-        assert_eq!(path_len(from, &path).to_bits(), BITS);
+        assert_eq!(crate::places::walk_len(from, &path).to_bits(), BITS);
     }
     const BITS: u64 = 0x40401adb95a66fb4;
 }
