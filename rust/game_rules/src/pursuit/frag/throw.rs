@@ -81,9 +81,9 @@ fn step_frag(g: &mut crate::game::Game, _dt: f64) {
     let mut n = 0;
     while n < g.items.items.len() {
         let it = g.items.items[n]; n += 1;
-        if crate::throwables::item_kind(g, it) != crate::throwables::ItemKind::Frag || crate::throwables::item_fired(g, it) { continue; }
+        if g.tab.item[it].kind != crate::throwables::ItemKind::Frag || g.tab.item[it].fired { continue; }
         if g.m.frag.books.as_ref().unwrap().iter().any(|l| l.it == it) { continue; }
-        let who = crate::throwables::item_who(g, it);
+        let who = g.tab.item[it].who;
         let side = if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Guard };
         books_of(g).push(crate::frag::Live {
             it, side, knows: JsMap::new(), shouted: JsSet::new(), flee: JsMap::new(), via: None, flee_at: JsMap::new(),
@@ -101,7 +101,7 @@ fn step_frag(g: &mut crate::game::Game, _dt: f64) {
 fn tick_book(g: &mut Game, i: usize) {
     let it = live!(g, i).it;
     // (the list first: the accessors read a row that a thing off the list no longer has)
-    if !g.items.items.contains(&it) || crate::throwables::item_fired(g, it) || crate::throwables::item_life(g, it) <= 0.0 {
+    if !g.items.items.contains(&it) || g.tab.item[it].fired || g.tab.item[it].life <= 0.0 {
         for gd in live!(g, i).flee.keys() {
             crate::game::guard_set_path(g, gd, Vec::new());
             crate::guards::guard_set_path_goal(g, gd, None);
@@ -110,7 +110,7 @@ fn tick_book(g: &mut Game, i: usize) {
         g.m.frag.books.as_mut().unwrap().remove(i);
         return;
     }
-    let at = crate::throwables::item_pos(g, it);
+    let at = g.tab.item[it].pos;
     let eye_at: V3 = [at[0], at[1] + 0.12, at[2]];
     let wise = rest_of(g, i);
     let dz = wise.at;
@@ -129,7 +129,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let team = g.gd[gd].team;
-    let serial = crate::throwables::item_serial(g, it);
+    let serial = g.tab.item[it].serial;
     let d = m::hyp2(pos[0] - at[0], pos[2] - at[2]);
     if !live!(g, i).knows.has(gd) {
         if d > m::max(g.k.frag.see_m, g.k.frag.flee_m) { return; }
@@ -144,7 +144,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
             let hear_m = if told { g.k.frag.hear_m * 2.0 } else { g.k.frag.hear_m };
             let sees = d <= g.k.frag.see_m && (told || d < 3.0 || m::abs(off) < 1.9) && !crate::scene_collision::segment_blocked(g, head, eye_at, None, None, None);
             let mut hears = false;
-            if !sees && crate::throwables::item_bounces(g, it) > 0.0 && d <= hear_m {
+            if !sees && g.tab.item[it].bounces > 0.0 && d <= hear_m {
                 let pr = crate::scene_collision::sound_paths_propagate(g, eye_at, head, None);
                 hears = pr.muffle < 0.5 && pr.path_len <= hear_m + 1.0;
             }
@@ -176,7 +176,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     }
     let mut keep: Option<crate::game::GuardScript> = None;
     let mut not: Option<V3> = None;
-    let fuse = crate::throwables::item_fuse(g, it);
+    let fuse = g.tab.item[it].fuse;
     {   // on a leg and no ground made for a second: another leg, not that spot
         let cur = flee_of(g, i, gd);
         let time = g.time;
@@ -354,7 +354,7 @@ fn cue_here(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     let head = head_of(g, pc);
     let mut knows = !crate::scene_collision::segment_blocked(g, head, eye_at, None, None, None);
     let it = live!(g, l).it;
-    if !knows && crate::throwables::item_bounces(g, it) > 0.0 {
+    if !knows && g.tab.item[it].bounces > 0.0 {
         let pr = crate::scene_collision::sound_paths_propagate(g, eye_at, head, None);
         knows = pr.muffle < 0.6 && pr.path_len <= g.k.frag.cue_m;
     }
@@ -370,14 +370,14 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
     let pc = g.pl[g.player].ch;
     for i in 0..n {
         let it = live!(g, i).it;
-        if !live!(g, i).cued || crate::throwables::item_fired(g, it) { continue; }
+        if !live!(g, i).cued || g.tab.item[it].fired { continue; }
         let wise = rest_of(g, i);
         let at = wise.at;
         let pos = g.ch[pc].pos;
         if m::hyp2(pos[0] - at[0], pos[2] - at[2]) > g.k.frag.wound_m { continue; }
         let head = head_of(g, pc);
         if exposed_to(g, [at[0], at[1] + g.k.frag.lift, at[2]], pos, head, None) <= 0.0 { continue; }
-        let fuse = crate::throwables::item_fuse(g, it);
+        let fuse = g.tab.item[it].fuse;
         let w = crate::frag::FleeSpotWise { path: wise.path, keep: None, not: None, apart: None };
         let spot = flee_spot(g, crate::frag::FleeSpotC { pos }, at, speed, fuse, Some(m::INF), Some(&w), None);
         if spot.is_some() { return spot; }

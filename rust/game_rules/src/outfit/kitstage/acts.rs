@@ -148,12 +148,12 @@ pub(super) fn tables_back(g: &mut Game, st: &mut KitStage) {
 }
 // ------------------------------------------------------------ cans
 /// the thing thrown has gone off: it says so, or it has left the list, as a thing that has gone off does
-fn item_went(g: &Game, b: &Beat) -> bool { b.item.map_or(false, |i| !g.items.items.contains(&i) || th::item_fired(g, i)) }
-fn cans(g: &Game) -> f64 { g.items.items.iter().filter(|&&i| th::item_kind(g, i) == th::ItemKind::Smoke && th::item_fired(g, i)).count() as f64 }
+fn item_went(g: &Game, b: &Beat) -> bool { b.item.map_or(false, |i| !g.items.items.contains(&i) || g.tab.item[i].fired) }
+fn cans(g: &Game) -> f64 { g.items.items.iter().filter(|&&i| g.tab.item[i].kind == th::ItemKind::Smoke && g.tab.item[i].fired).count() as f64 }
 /// the smoke cans venting are shut: the game's own emitters, and the word to the picture's solver where one was venting
 pub(super) fn shut_cans(g: &mut Game) {
     let mut any = false;
-    for k in 0..g.items.items.len() { let i = g.items.items[k]; if th::item_kind(g, i) == th::ItemKind::Smoke && th::item_fired(g, i) && th::item_emit_t(g, i) > 0.0 { th::item_set_emit_t(g, i, 0.0); any = true; } }
+    for k in 0..g.items.items.len() { let i = g.items.items[k]; if g.tab.item[i].kind == th::ItemKind::Smoke && g.tab.item[i].fired && g.tab.item[i].emit_t > 0.0 { g.tab.item[i].emit_t = 0.0; any = true; } }
     crate::sense::smoke_shut(g);
     if any { crate::out_events::smoke_cans_shut(g); }
 }
@@ -556,9 +556,9 @@ fn thrown_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         if !b.mark_t.is_nan() { return if now - b.mark_t >= K.aftermath { Step::Done } else { Step::On }; }
         if let Some(it) = b.item {
             if let Some(i) = g.items.items.iter().position(|&x| x == it) {
-                if !th::item_fired(g, it) && th::item_bounces(g, it) > 0.0 {
-                    let p = th::item_pos(g, it);
-                    let (settled, fuse) = (th::item_settled(g, it), th::item_fuse(g, it));
+                if !g.tab.item[it].fired && g.tab.item[it].bounces > 0.0 {
+                    let p = g.tab.item[it].pos;
+                    let (settled, fuse) = (g.tab.item[it].settled, g.tab.item[it].fuse);
                     if out_of(st, [p[0], p[2]]) > -K.frag_min || ((settled || fuse < 0.3) && takes_leaf(g, st, p)) || (fuse < 0.3 && reaches_sam(g, p)) {
                         th::throwables_remove_at(g, i as f64);
                         b.marks.push("kept");
@@ -1422,7 +1422,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)
     if b.field == "frags" && b.mark_t.is_nan() && (g.door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
     let mut i = g.items.items.len();
-    while i > 0 { i -= 1; let it = g.items.items[i]; if th::item_kind(g, it) == th::ItemKind::Frag && !th::item_fired(g, it) { th::throwables_remove_at(g, i as f64); } }
+    while i > 0 { i -= 1; let it = g.items.items[i]; if g.tab.item[it].kind == th::ItemKind::Frag && !g.tab.item[it].fired { th::throwables_remove_at(g, i as f64); } }
     if b.man.is_none() { g.pl[pl].launch_held = None; if b.row == Act::Cam { g.pl[pl].cams.clear(); } }
     let info = row(b.row);
     let on_wall = info.team && !g.wall_charge.set.is_empty();
@@ -1435,7 +1435,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
 /// what the last rows left on the floor, off it once it is old: nothing is taken away under the eye
 fn litter(g: &mut Game) {
     let mut i = g.items.items.len();
-    while i > 0 { i -= 1; let it = g.items.items[i]; if th::item_age(g, it) > K.litter { th::throwables_remove_at(g, i as f64); } }
+    while i > 0 { i -= 1; let it = g.items.items[i]; if g.tab.item[it].age > K.litter { th::throwables_remove_at(g, i as f64); } }
     while g.items.items.len() > 5 { th::throwables_remove_at(g, 0.0); }
 }
 fn begin(g: &mut Game, st: &mut KitStage, f0: &'static str) {
@@ -1636,7 +1636,7 @@ pub(in crate::outfit) fn after_step(g: &mut Game, st: &mut KitStage) {
     }
     if let Some(mut b) = st.a.beat.take() {
         if b.item.is_none() { let mut i = g.items.items.len(); while i > 0 { i -= 1; let it = g.items.items[i]; if !b.old.contains(&it) { b.item = Some(it); break; } } }
-        if let Some(it) = b.item { if g.items.items.contains(&it) { b.rest = Some(th::item_pos(g, it)); } else { /* (it has gone: what a row reads of it is that it went off) */ } }
+        if let Some(it) = b.item { if g.items.items.contains(&it) { b.rest = Some(g.tab.item[it].pos); } else { /* (it has gone: what a row reads of it is that it went off) */ } }
         for k in 0..st.order.len() {
             let x = st.order[k];
             if Some(x) != b.man && !st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| w.lane) { b.drift = m::max(b.drift, walk::off_home(g, st, x)); }

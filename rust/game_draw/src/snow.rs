@@ -135,18 +135,15 @@ impl Snow {
     }
 
     fn items(&mut self, g: &Game) {
-        let s = &::sim::state::state_read(g.sim).items;
         for &id in &g.items.items {
             let it = &g.tab.item[id];
-            if it.kept.is_some() { continue; }
-            let r = it.r as usize;
             let mut t = Thing::ZERO;
             (t.kind, t.key) = (1, id.ix() as u32);
-            t.says = (s.flags[r] & ::sim::items::F_SETTLED != 0) as u32 | ((s.on[r] != 0) as u32) << 1;
-            t.c = [s.px[r] as f32, s.py[r] as f32, s.pz[r] as f32];
+            t.says = it.settled as u32 | ((it.on != 0) as u32) << 1;
+            t.c = [it.pos[0] as f32, it.pos[1] as f32, it.pos[2] as f32];
             t.at = [t.c[0], t.c[2]];
-            t.vel = [s.vx[r] as f32, s.vy[r] as f32, s.vz[r] as f32];
-            t.radius = s.radius[r] as f32;
+            t.vel = [it.vel[0] as f32, it.vel[1] as f32, it.vel[2] as f32];
+            t.radius = it.radius as f32;
             self.things.push(t);
         }
     }

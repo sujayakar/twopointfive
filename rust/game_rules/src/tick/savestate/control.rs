@@ -69,8 +69,8 @@ fn unsettled(g: &mut Game) -> Option<String> {
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && !crate::condition::down(g, g.gd[x].ch)) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
     if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }
     for it in g.items.items.clone() {
-        let live = matches!(crate::throwables::item_kind(g, it), crate::throwables::ItemKind::Smoke | crate::throwables::ItemKind::Flash | crate::throwables::ItemKind::Frag) && !crate::throwables::item_fired(g, it);
-        if live || !crate::throwables::item_settled(g, it) { return Some(String::from("a thrown thing is still in the air or on its fuse")); }
+        let live = matches!(g.tab.item[it].kind, crate::throwables::ItemKind::Smoke | crate::throwables::ItemKind::Flash | crate::throwables::ItemKind::Frag) && !g.tab.item[it].fired;
+        if live || !g.tab.item[it].settled { return Some(String::from("a thrown thing is still in the air or on its fuse")); }
     }
     for &x in g.guards.iter().chain(g.civilians.iter()) {
         let c = &g.ch[g.gd[x].ch];

@@ -580,7 +580,7 @@ fn break_prop_in(g: &mut Game, p: PropId, at: V3, fall: f64, who: f64, budget: &
     for c in chunks { let r = &mut g.tab.debris_chunk[c]; if r.on == Some(p) { r.on = None; r.rest = false; r.still_t = 0.0; } }
     let items = g.items.items.clone();
     for it in items { if crate::throwables::item_on(g, it) == Some(p) {   // (a can, a dropped magazine: its own rule only looks again when the prop MOVES)
-        crate::throwables::item_set_on(g, it, None); crate::throwables::item_set_settled(g, it, false); crate::throwables::item_set_vel(g, it, [0.0, 0.0, 0.0]);
+        crate::throwables::item_set_on(g, it, None); g.tab.item[it].settled = false; g.tab.item[it].vel = [0.0, 0.0, 0.0];
     } }
     crate::props::prop_system_remove(g, p); g.destr.furn.gone_props += 1.0; g.stats.furnblast.props_broken += 1;
     crate::scene_collision::sound_paths_invalidate(g);

@@ -385,7 +385,7 @@ pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarr
 pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
     let dropped = g.gd[gd].dropped;
     if let Some(d) = dropped {
-        if crate::throwables::item_kind(g, d) != crate::throwables::ItemKind::Torch {
+        if g.tab.item[d].kind != crate::throwables::ItemKind::Torch {
             if let Some(i) = g.items.items.iter().position(|&x| x == d) {
                 g.items.items.remove(i);
                 g.gd[gd].dropped = None;
@@ -640,9 +640,9 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
     if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {
-            let (yaw, tumble) = (crate::throwables::item_yaw(g, it), crate::throwables::item_tumble(g, it));
+            let (yaw, tumble) = (g.tab.item[it].yaw, g.tab.item[it].tumble);
             let hd: V3 = [m::sin(yaw) * m::cos(tumble), -m::sin(tumble), m::cos(yaw) * m::cos(tumble)];
-            let at = crate::throwables::item_pos(g, it);
+            let at = g.tab.item[it].pos;
             g.tab.light[fl].pos = v3::mad(at, hd, 0.1);
             g.tab.light[fl].dir = hd;
             held = Some(at);
