@@ -15,7 +15,7 @@ fn fineAt(i: u32) -> FineAt {
   a.x = select(X, -Y, t == 1u); a.y = select(select(Y, X, t == 1u), Z, t == 2u); a.z = select(Z, -Y, t == 2u); return a;
 }
 fn fineBone(bone: u32, a: FineAt, x: vec3f, row: u32, person: u32) -> vec3f {
-  let b = a.shape + row + bone * 3u; let l = vec3f(dot(fF(b).xyz, x) + fF(b).w, dot(fF(b + 1u).xyz, x) + fF(b + 1u).w, dot(fF(b + 2u).xyz, x) + fF(b + 2u).w); let p = &pieces[movers[person + bone]]; let d = l - vec3f((*p).r0.w, (*p).r1.w, (*p).r2.w); return (*p).r0.xyz * d.x + (*p).r1.xyz * d.y + (*p).r2.xyz * d.z;
+  let b = a.shape + row + bone * 3u; let l = vec3f(dot(fF(b).xyz, x) + fF(b).w, dot(fF(b + 1u).xyz, x) + fF(b + 1u).w, dot(fF(b + 2u).xyz, x) + fF(b + 2u).w); let p = &pieces[movers[person + bone]]; /* (knees' rows are not quite of length 1: far from the origin that is a metre) */ let k = 1.0 / vec3f(length((*p).r0.xyz), length((*p).r1.xyz), length((*p).r2.xyz)); let d = (l - vec3f((*p).r0.w, (*p).r1.w, (*p).r2.w) * k) * k; return (*p).r0.xyz * d.x + (*p).r1.xyz * d.y + (*p).r2.xyz * d.z;
 }
 fn fineSide(v: u32) -> f32 { return (f32(v) / 254.0 * 2.0 - 1.0) * 1.25; }
 struct FineV { w: vec3f, n: vec3f, col: vec3f, bone: u32 };
@@ -30,7 +30,7 @@ fn fineVertex(a: FineAt, row: u32, all: bool) -> FineV {
   var n = octUnpack(v.z);
   if (kind == 1u) {
     let s = vec3f(fineSide(hi & 255u), fineSide(hi >> 8u), fineSide((v.w >> 16u) & 255u)); let f = min(vec3f(1.0), a.half / max(mn.w * 1.2, 1e-5)); q = s * a.half + q * f; let t = select(mix(1.0 - a.taper, 1.0, sat(s.y * 0.5 + 0.5)), mix(1.0, 1.0 + a.taper, sat(s.y * 0.5 + 0.5)), a.taper < 0.0); q = vec3f(q.x * t, q.y, q.z * t);
-    if (all && (h.y & 16u) != 0u) { n = normalize(n / max(a.half, vec3f(1e-4))); }
+    if (all && (h.y & 16u) != 0u) { n = normalize(n / max(a.half, vec3f(1e-4))); n = normalize(vec3f(n.x, n.y - length(n.xz) * a.half.x * a.taper / (2.0 * a.half.y), n.z)); }
     o.col = vec3f(f32(v.w & 31u) / 31.0, f32((v.w >> 5u) & 63u) / 63.0, f32((v.w >> 11u) & 31u) / 31.0);
   } else { o.col = vec3f(f32(v.w & 255u), f32((v.w >> 8u) & 255u), f32((v.w >> 16u) & 255u)) / 255.0; }
   o.w = a.at + a.x * q.x + a.y * q.y + a.z * q.z; o.n = a.x * n.x + a.y * n.y + a.z * n.z; return o;

@@ -5,8 +5,9 @@ import { F, type Piece, type World } from '../scene/world';
 import { MATERIALS } from '../scene/materials';
 import type { Building } from '../scene/building';
 import { box, cushionBox, drum, round, limb, slab, pack, PLAIN, type Packed, type Shape } from './template';
-import { body, far } from './body';
-import { solid } from '../mesh/made';
+import { body, far, snap } from './body';
+import { normalsOf } from '../mesh/mesh';
+import { solid, lighten } from '../mesh/made';
 
 /** what stands somewhere: a shape, whose box it fits, what it is made of */
 export interface Inst { shape: string; piece: Piece; /** its own box, if it is laid on the piece and is not the piece */ at?: V3; rot?: Rot; half?: V3; taper: number; tint?: V3; moves: boolean; /** whose body (pieces, in order) */ body?: Piece[] }
@@ -20,7 +21,7 @@ const RECIPES: Record<string, () => Shape> = {
 };
 /** a piece that nothing else is like, as a shape of its own */
 function odd(spec: string): Shape {
-  const p = JSON.parse(spec) as Piece, m = Math.max(...p.half), r = Math.min(0.006, Math.min(...p.half) * 0.35), mesh = solid((x, y, z) => far(p, x, y, z, r), p.half.map(v => v + 0.002) as V3, Math.max(0.004, Math.min(0.02, m / 26)), 1, () => 0, () => [1, 1, 1, 1], 0.0005 + m * 0.0006);
+  const p = JSON.parse(spec) as Piece, m = Math.max(...p.half), cell = Math.max(0.0035, Math.min(0.022, Math.min(...p.half) / 2.2, m / 22)), net = solid((x, y, z) => far(p, x, y, z, 0), p.half.map(v => v + 0.002) as V3, cell, 0, () => 0, () => [1, 1, 1, 1], 0); snap(p, net.pos, cell * 0.62); const mesh = lighten({ ...net, nrm: normalsOf(net.pos, net.tri) }, 0.0003 + m * 0.0004); snap(p, mesh.pos, cell * 0.25); mesh.nrm = normalsOf(mesh.pos, mesh.tri);
   return { name: spec.slice(0, 40), kind: PLAIN, mesh };
 }
 export const makeShape = (name: string): Packed => { const s = name.startsWith('odd:') ? odd(name.slice(4)) : RECIPES[name]!(); return { ...pack(s, s.kind === PLAIN ? 24 : s.name === 'body' ? 60 : 12), name }; };
@@ -43,7 +44,7 @@ const LAID: Record<string, { shape: string; a: number; b: number; gap: number; u
 export function makeFine(b: Building): FineScene {
   const w = b.world, insts: Inst[] = [], q = rng(17), used = new Set<string>(), put = (i: Inst) => { insts.push(i); used.add(i.shape); }, plain = (p: Piece) => !(p.flags & (F.GLASS | F.WATER | F.FAR | F.GLOW | F.BEND | F.MESH)) && Math.max(...p.half) < 60;
   // ---- what stands, and what moves by itself
-  const of = new Set(b.people.concat(b.player.body).flatMap(p => p.body)); for (const [list, moves] of [[w.pieces, false], [w.moving, true]] as const) for (const p of list) { if (!plain(p) || of.has(p)) continue; const s = shapeOf(p); if (!s) continue; p.fine = true; put({ shape: s.shape, piece: p, taper: s.taper, moves, ...(s.rot ? { rot: s.rot, half: s.half } : {}) }); }
+  const of = new Set(b.people.concat(b.player.body).flatMap(p => p.body)); for (const [list, moves] of [[w.pieces, false], [w.moving, true]] as const) for (const p of list) { if (!plain(p) || of.has(p) || (moves && p.at[1] < -90 && !p.rig)) continue; const s = shapeOf(p); if (!s) continue; p.fine = true; put({ shape: s.shape, piece: p, taper: s.taper, moves, ...(s.rot ? { rot: s.rot, half: s.half } : {}) }); }
   for (const p of new Set(b.people.concat(b.player.body))) { for (const q2 of p.body) q2.fine = true; put({ shape: 'body', piece: p.body[0]!, taper: 0, moves: true, body: p.body }); }
   // ---- skins
   const grid = new Map<string, Piece[]>(), key = (x: number, y: number, z: number) => `${Math.floor(x / 2)},${Math.floor(y / 2)},${Math.floor(z / 2)}`, solidAt = w.pieces.filter(p => plain(p) && !p.quad && !p.planes?.length && Math.max(...p.half) < 45); for (const p of solidAt) { const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]), lo = p.at.map((v, k) => Math.floor((v - e[k]!) / 2)), hi = p.at.map((v, k) => Math.floor((v + e[k]!) / 2)); for (let x = lo[0]!; x <= hi[0]!; x++) for (let y = lo[1]!; y <= hi[1]!; y++) for (let z = lo[2]!; z <= hi[2]!; z++) { const k = `${x},${y},${z}`; let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(p); } }
