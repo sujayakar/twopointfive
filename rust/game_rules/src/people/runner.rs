@@ -180,15 +180,7 @@ fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
 pub fn runner_break(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || g.m.runner.state_of.has(gd) { return false; }
     let pos = g.ch[g.gd[gd].ch].pos;
-    let mut from = g.gd[gd].last_known.unwrap_or(pos);
-    let mut bd = m::INF;
-    for e in known(g, gd) {
-        let d = flat(e.pos, pos);
-        if d < bd {
-            bd = d;
-            from = e.pos;
-        }
-    }
+    let from = match nearest_foe(&known(g, gd), pos) { Some(n) => n.pos, None => g.gd[gd].last_known.unwrap_or(pos) };
     start(g, gd, from);
     true
 }
@@ -588,6 +580,19 @@ pub fn runner_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
+/// What the stages of a man's run look at this frame.
+#[derive(Clone, Copy)]
+struct RunFrame<'e> {
+    gd: GuardId,
+    c: CharId,
+    pos: V3,
+    dt: f64,
+    stuck: bool,
+    barred: bool,
+    row: Run,
+    e: &'e [Foe],
+}
+
 /// one frame of a man's run
 fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
@@ -596,22 +601,54 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         g.gd[gd].reload_t = -1.0;
         crate::character::anim_cancel_reload(g, c);
     }
-    if run!(g, gd).phase == RunPhase::Say {
-        if !reacts(g, gd) {
-            g.m.runner.state_of.delete(gd);
-            let (rule, now) = (crate::owner::by::RUNNER, g.time);
-            crate::owner::release(g, gd, rule, now);
-            return;
-        }
-        let beat = g.k.runner.beat_secs;
-        let r = run!(g, gd);
-        r.t += dt;
-        if r.t < beat {
-            drive(g, gd);
-            return;
-        }
-        drop(g, gd);
+    if run!(g, gd).phase == RunPhase::Say && !shout_is_over(g, gd, dt) {
+        return;
     }
+    stays_dry_and_calm(g, gd);
+    if g.gd[gd].held.is_some() { return; }
+    let e = known(g, gd);
+    run!(g, gd).t += dt;
+    let pos = g.ch[c].pos;
+    let moving = {
+        let r = run!(g, gd);
+        !r.script.arrived.unwrap_or(false) && r.goal.is_some()
+    };
+    let stuck = stalled(g, gd, pos, moving, dt);
+    let barred = way_ahead_barred(g, gd, &e, moving, dt);
+    let f = RunFrame { gd, c, pos, dt, stuck, barred, row: *run!(g, gd), e: &e };
+    match f.row.phase {
+        RunPhase::Mates => run_to_his_mate(g, f),
+        RunPhase::Out => {
+            if run_for_the_way_out(g, f) { return; }
+        }
+        _ => {
+            if !f.row.is_out { stay_low(g, f); }
+        }
+    }
+    drive(g, gd);
+}
+
+/// The shout lasts a beat, then the drop; false while it goes on, or if he can no longer react and the run is called off.
+fn shout_is_over(g: &mut Game, gd: GuardId, dt: f64) -> bool {
+    if !reacts(g, gd) {
+        g.m.runner.state_of.delete(gd);
+        let (rule, now) = (crate::owner::by::RUNNER, g.time);
+        crate::owner::release(g, gd, rule, now);
+        return false;
+    }
+    let beat = g.k.runner.beat_secs;
+    let r = run!(g, gd);
+    r.t += dt;
+    if r.t < beat {
+        drive(g, gd);
+        return false;
+    }
+    drop(g, gd);
+    true
+}
+
+/// A man on the run has no rounds, no enemy on his mind and no orders to anyone's feet but this file's.
+fn stays_dry_and_calm(g: &mut Game, gd: GuardId) {
     let w = g.gd[gd].weapon;
     g.fa[w].chamber = 0.0;
     g.fa[w].mag = Some(0.0);
@@ -621,139 +658,158 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if g.gd[gd].state != crate::game::GuardState::Patrol { crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner"); }
     crate::mind::set(g, gd, 0.0, "runner");
     crate::mind::foe(g, gd, None, "runner");
-    if g.gd[gd].held.is_some() { return; }
-    let e = known(g, gd);
-    run!(g, gd).t += dt;
-    let (stall_secs, replan_secs, tell_m, mate_secs, gone_secs, retry_secs, ask_wide) = {
-        let k = &g.k.runner;
-        (k.stall_secs, k.replan_secs, k.tell_m, k.mate_secs, k.gone_secs, k.retry_secs, k.ask_wide)
-    };
-    let pos = g.ch[c].pos;
-    let moving = {
-        let r = run!(g, gd);
-        !r.script.arrived.unwrap_or(false) && r.goal.is_some()
-    };
-    {
-        let r = run!(g, gd);
-        if moving && flat(pos, r.at) < 0.5 {
-            r.stall += dt;
-        } else {
-            r.stall = 0.0;
-            r.at = v3::copy(pos);
-        }
+}
+
+/// Is he getting nowhere: on his way but within half a metre of where he last was for `stallSecs`.
+fn stalled(g: &mut Game, gd: GuardId, pos: V3, moving: bool, dt: f64) -> bool {
+    let stall_secs = g.k.runner.stall_secs;
+    let r = run!(g, gd);
+    if moving && flat(pos, r.at) < 0.5 {
+        r.stall += dt;
+    } else {
+        r.stall = 0.0;
+        r.at = v3::copy(pos);
     }
-    let stuck = run!(g, gd).stall >= stall_secs;
-    // the way ahead, looked at every `replanSecs`: an enemy has stepped into it since it was planned
-    let mut barred = false;
+    r.stall >= stall_secs
+}
+
+/// The way ahead, looked at every `replanSecs`: an enemy has stepped into it since it was planned.
+fn way_ahead_barred(g: &mut Game, gd: GuardId, e: &[Foe], moving: bool, dt: f64) -> bool {
+    let replan_secs = g.k.runner.replan_secs;
     let r = run!(g, gd);
     r.plan += dt;
     if r.plan >= replan_secs {
         r.plan = 0.0;
-        barred = moving && !r.bold && way_barred(g, gd, &e);
+        return moving && !r.bold && way_barred(g, gd, e);
     }
-    let row = *run!(g, gd);
-    if row.phase == RunPhase::Mates {
-        let gone_mate = match row.mate { None => true, Some(ma) => !mate_of(g, gd, ma) || !g.guards.contains(&ma) };
-        if gone_mate || stuck || row.t > mate_secs {
-            to_out(g, gd, &e);
-        } else {
-            let mc = g.gd[row.mate.unwrap()].ch;
-            let mp = g.ch[mc].pos;
-            if flat(pos, mp) <= tell_m && {
-                let (a, b) = (head_of(g, c), chest_of(g, mc));
-                !crate::scene_collision::segment_blocked(g, a, b, None, None, None)
-            } {
-                bark(g, gd, LineKind::Mates);
-                tell(g, gd);
-                to_out(g, gd, &e);
-            } else if barred {
-                to_out(g, gd, &e);   // (the enemy is between him and his own: he tells nobody)
-            } else if flat(mp, row.goal.unwrap()) > 1.5 {
-                route(g, gd, mp, &e);
-            }
-        }
-    } else if row.phase == RunPhase::Out {
-        let is_out = outside(g, pos);
-        run!(g, gd).is_out = is_out;
-        if is_out {
-            // (the world's rule, not his: he leaves the floor when no TRUE enemy has a line to him)
-            let eyes: Option<Vec<Foe>> = { let t = foes(g, gd);
-                Some(t.into_iter().filter(|f| line_to(g, *f, pos)).collect()) };
-            let seen = match &eyes {
-                Some(v) => !v.is_empty(),
-                None => e.iter().any(|f| line_to(g, *f, pos)),
-            };
-            {
-                let r = run!(g, gd);
-                r.unseen = if seen { 0.0 } else { r.unseen + dt };
-            }
-            let row = *run!(g, gd);
-            if row.unseen >= gone_secs {
-                gone(g, gd);
-                return;
-            }
-            // out, there, and an enemy's eyes still on him: every `retrySecs` he looks wider for floor nobody has a line to
-            if row.unseen == 0.0 && row.script.arrived.unwrap_or(false) && row.t >= retry_secs {
-                run!(g, gd).t = 0.0;
-                let mut e2 = e.clone();
-                if let Some(v) = &eyes {
-                    for f in v { crate::picture::picture_tell(g, gd, f.who, f.pos, None); }
-                    e2 = known(g, gd);
-                }
-                let fl = flood(g, gd, &e2, Some(ask_wide), None);
-                if let (true, Some(o)) = (fl.hidden, fl.out) {
-                    if flat(o, pos) > 1.0 {
-                        route(g, gd, o, &e2);
-                        run!(g, gd).bold = false;
-                    }
-                }
-            }
-        } else if stuck || row.script.arrived.unwrap_or(false) {
-            let corner = flood(g, gd, &e, None, None).corner;
-            to_low(g, gd, corner, &e);
-        } else if barred {   // (another way out, or the corner, and no try spent)
-            let fl = flood(g, gd, &e, None, None);
-            if !plan_out(g, gd, &e, plan_f(&fl)) {
-                to_low(g, gd, fl.corner, &e);
-            }
-        }
-    } else if !row.is_out {   // low, in his corner or on his way to it
-        if row.script.arrived.unwrap_or(false) && row.face.is_none() {
-            let mut n: Option<Foe> = None;
-            let mut nd = m::INF;
-            for f in &e {
-                let d = flat(f.pos, pos);
-                if d < nd {
-                    nd = d;
-                    n = Some(*f);
-                }
-            }
-            let yaw = match n { Some(n) => v3::yaw_to(n.pos, pos), None => g.ch[c].body_yaw };
-            run!(g, gd).face = Some(yaw);
-        }
-        if barred {
-            run!(g, gd).t = 0.0;
-            let fl = flood(g, gd, &e, None, None);
-            if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 1.0 {
-                route(g, gd, fl.corner, &e);
-                run!(g, gd).face = None;
-            }
-        } else if stuck {
-            route(g, gd, pos, &e);   // (a corner he cannot get to: he stays low where he has got to)
-        } else if run!(g, gd).t >= retry_secs {   // the way out may have come free: he never settles, every look is another run at it
-            run!(g, gd).t = 0.0;
-            let fl = flood(g, gd, &e, None, None);
-            if plan_out(g, gd, &e, plan_f(&fl)) {
-                let r = run!(g, gd);
-                r.phase = RunPhase::Out;
-                r.face = None;
-            } else if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 3.0 {   // (a failed route has written the goal: read it again)
-                route(g, gd, fl.corner, &e);
-                run!(g, gd).face = None;
-            }
+    false
+}
+
+/// To his mate: within earshot he tells him and makes for the way out, as he does when the mate is gone, he is stuck or it has taken too long.
+fn run_to_his_mate(g: &mut Game, f: RunFrame) {
+    let RunFrame { gd, c, pos, stuck, barred, row, e, .. } = f;
+    let gone_mate = match row.mate { None => true, Some(ma) => !mate_of(g, gd, ma) || !g.guards.contains(&ma) };
+    if gone_mate || stuck || row.t > g.k.runner.mate_secs {
+        to_out(g, gd, e);
+        return;
+    }
+    let mc = g.gd[row.mate.unwrap()].ch;
+    let mp = g.ch[mc].pos;
+    if flat(pos, mp) <= g.k.runner.tell_m && can_tell(g, c, mc) {
+        bark(g, gd, LineKind::Mates);
+        tell(g, gd);
+        to_out(g, gd, e);
+    } else if barred {
+        to_out(g, gd, e);   // (the enemy is between him and his own: he tells nobody)
+    } else if flat(mp, row.goal.unwrap()) > 1.5 {
+        route(g, gd, mp, e);
+    }
+}
+
+/// Nothing stands between his mouth and his mate's chest.
+fn can_tell(g: &Game, c: CharId, mc: CharId) -> bool {
+    let (a, b) = (head_of(g, c), chest_of(g, mc));
+    !crate::scene_collision::segment_blocked(g, a, b, None, None, None)
+}
+
+/// On his way out: outside he waits to go unseen; still inside, arrived or stuck sends him to a corner, and a barred way to another way out. True when his frame ends here.
+fn run_for_the_way_out(g: &mut Game, f: RunFrame) -> bool {
+    let RunFrame { gd, pos, stuck, barred, row, e, .. } = f;
+    let is_out = outside(g, pos);
+    run!(g, gd).is_out = is_out;
+    if is_out {
+        return out_of_sight_or_not(g, f);
+    }
+    if stuck || row.script.arrived.unwrap_or(false) {
+        let corner = flood(g, gd, e, None, None).corner;
+        to_low(g, gd, corner, e);
+    } else if barred {   // (another way out, or the corner, and no try spent)
+        let fl = flood(g, gd, e, None, None);
+        if !plan_out(g, gd, e, plan_f(&fl)) {
+            to_low(g, gd, fl.corner, e);
         }
     }
-    drive(g, gd);
+    false
+}
+
+/// Out: he leaves the floor once no TRUE enemy has had a line to him for `goneSecs` (the world's rule, not his). True when he has gone.
+fn out_of_sight_or_not(g: &mut Game, f: RunFrame) -> bool {
+    let RunFrame { gd, pos, dt, .. } = f;
+    let eyes: Vec<Foe> = foes(g, gd).into_iter().filter(|x| line_to(g, *x, pos)).collect();
+    let r = run!(g, gd);
+    r.unseen = if !eyes.is_empty() { 0.0 } else { r.unseen + dt };
+    let row = *r;
+    if row.unseen >= g.k.runner.gone_secs {
+        gone(g, gd);
+        return true;
+    }
+    if row.unseen == 0.0 && row.script.arrived.unwrap_or(false) && row.t >= g.k.runner.retry_secs {
+        look_wider(g, gd, &eyes, pos);
+    }
+    false
+}
+
+/// Out, there, and an enemy's eyes still on him: every `retrySecs` he looks wider for floor nobody has a line to.
+fn look_wider(g: &mut Game, gd: GuardId, eyes: &[Foe], pos: V3) {
+    run!(g, gd).t = 0.0;
+    for x in eyes { crate::picture::picture_tell(g, gd, x.who, x.pos, None); }
+    let e = known(g, gd);
+    let fl = flood(g, gd, &e, Some(g.k.runner.ask_wide), None);
+    if let (true, Some(o)) = (fl.hidden, fl.out) {
+        if flat(o, pos) > 1.0 {
+            route(g, gd, o, &e);
+            run!(g, gd).bold = false;
+        }
+    }
+}
+
+/// The enemy nearest a point; the first of equals.
+fn nearest_foe(e: &[Foe], p: V3) -> Option<Foe> {
+    let mut n: Option<Foe> = None;
+    let mut nd = m::INF;
+    for f in e {
+        let d = flat(f.pos, p);
+        if d < nd {
+            nd = d;
+            n = Some(*f);
+        }
+    }
+    n
+}
+
+/// Low, in his corner or on his way to it: he faces the nearest enemy and never settles; a barred way moves him, and every look is another run at the way out.
+fn stay_low(g: &mut Game, f: RunFrame) {
+    let RunFrame { gd, c, pos, stuck, barred, row, e, .. } = f;
+    if row.script.arrived.unwrap_or(false) && row.face.is_none() {
+        let yaw = match nearest_foe(e, pos) { Some(n) => v3::yaw_to(n.pos, pos), None => g.ch[c].body_yaw };
+        run!(g, gd).face = Some(yaw);
+    }
+    if barred {
+        run!(g, gd).t = 0.0;
+        let fl = flood(g, gd, e, None, None);
+        if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 1.0 {
+            route(g, gd, fl.corner, e);
+            run!(g, gd).face = None;
+        }
+    } else if stuck {
+        route(g, gd, pos, e);   // (a corner he cannot get to: he stays low where he has got to)
+    } else if run!(g, gd).t >= g.k.runner.retry_secs {
+        try_the_way_out_again(g, gd, pos, e);
+    }
+}
+
+/// The way out may have come free: he takes it if so, else moves to a corner that is now much better.
+fn try_the_way_out_again(g: &mut Game, gd: GuardId, pos: V3, e: &[Foe]) {
+    run!(g, gd).t = 0.0;
+    let fl = flood(g, gd, e, None, None);
+    if plan_out(g, gd, e, plan_f(&fl)) {
+        let r = run!(g, gd);
+        r.phase = RunPhase::Out;
+        r.face = None;
+    } else if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 3.0 {   // (a failed route has written the goal: read it again)
+        route(g, gd, fl.corner, e);
+        run!(g, gd).face = None;
+    }
 }
 
 /// out and unseen: a spawned unit leaves the world; a man of the level's own roster stays low where he is

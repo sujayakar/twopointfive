@@ -399,10 +399,7 @@ fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
             f.last_depart_at = t.gap_before;
         }
     } else {
-        let mut d = JsMap::new();
-        d.set(key("who"), text(&g.gd[gd].callsign));
-        d.set(key("kind"), text(t.kind.as_str()));
-        d.set(key("what"), text("cancelled"));
+        let mut d = break_note(g, gd, t.kind, "cancelled");
         d.set(key("why"), text(why));
         d.set(key("phase"), text(t.phase.as_str()));
         let at = g.ch[c].pos;
@@ -516,194 +513,236 @@ fn stand(g: &mut Game, gd: GuardId, dt: f64) {
     g.ch[c].vel = [0.0, 0.0, 0.0];
 }
 
+/// What every stage of a trip shares this frame.
+#[derive(Clone, Copy)]
+struct TripFrame {
+    gd: GuardId,
+    c: CharId,
+    now: f64,
+    dt: f64,
+    pace: f64,
+    look_phase: f64,
+    kind: NeedKind,
+}
+
 /// If a trip owns his feet this frame, run them and return true; false = the branch walks his route.
 pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
     if !on_trip(g, gd) {
         return false;
     }
-    let c = g.gd[gd].ch;
-    let now = g.time;
-    let pace = walk * g.k.needs.pace_k;
-    let look_phase = g.gd[gd].look_phase;
-    let kind = trip!(g, gd).kind;
-    let cs = g.gd[gd].callsign.clone();
+    let f = TripFrame { gd, c: g.gd[gd].ch, now: g.time, dt, pace: walk * g.k.needs.pace_k, look_phase: g.gd[gd].look_phase, kind: trip!(g, gd).kind };
     match trip!(g, gd).phase {
-        TripPhase::Telegraph => {
-            stand(g, gd, dt);
-            g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.9) * 0.45, 2.0, dt);
-            let (depart_at, t0, out_yaw) = {
-                let t = trip!(g, gd);
-                (t.depart_at, t.t0, t.out_yaw)
-            };
-            let to_go = depart_at - now;
-            if !trip!(g, gd).watched {
-                trip!(g, gd).watched = true;
-                crate::character::anim_tell(g, c, crate::character::TellKind::Watch);
-            }
-            let g0 = now - t0 - GLANCE_AT;
-            if g0 > 0.0 && g0 < GLANCE_SECS {
-                let turn = v3::clamp(v3::wrap_angle(out_yaw - g.ch[c].body_yaw), -1.1, 1.1);
-                g.ch[c].anim.look_yaw_extra = turn * m::min_n(&[1.0, g0 / 0.35, (GLANCE_SECS - g0) / 0.45]);
-            } else {
-                g.ch[c].anim.look_yaw_extra = m::sin(look_phase * 1.3) * 0.3;
-            }
-            if !trip!(g, gd).told && to_go <= g.k.needs.say_lead {
-                let mut t = trip!(g, gd).clone();
-                announce(g, gd, &mut t);
-                row!(g, gd).trip = Some(t);
-            }
-            let (told, replied, reply_at) = {
-                let t = trip!(g, gd);
-                (t.told, t.replied, t.reply_at)
-            };
-            if told && !replied && reply_at >= 0.0 && now >= reply_at {
-                let mut t = trip!(g, gd).clone();
-                partner_reply(g, gd, &mut t);
-                row!(g, gd).trip = Some(t);
-            }
-            if !trip!(g, gd).necked && to_go <= g.k.needs.stretch_lead {
-                trip!(g, gd).necked = true;
-                crate::character::anim_tell(g, c, crate::character::TellKind::Neck);
-            }
-            if trip!(g, gd).necked {
-                g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, out_yaw, 2.2 * dt);
-            }
-            if to_go <= 0.0 {
-                {
-                    let t = trip!(g, gd);
-                    t.phase = TripPhase::Going;
-                    t.left_at = now;
-                    t.loop_i = -1.0;
-                }
-                let f = floor(g);
-                f.last_depart_at = m::max(f.last_depart_at, now);
-                clear_stall(g, gd);
-                let spot_pos = trip!(g, gd).spot.pos;
-                crate::guards::go_to(g, gd, spot_pos, Some(true));
-                let mut d = JsMap::new();
-                d.set(key("who"), text(&cs));
-                d.set(key("kind"), text(kind.as_str()));
-                d.set(key("what"), text("left"));
-                d.set(key("to"), text(&trip!(g, gd).spot.name));
-                if g.level.own_places() {
-                    d.set(key("own"), Some(ChronicleDataValue::Num(1.0)));
-                }
-                let at = g.ch[c].pos;
-                crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
-            }
-            true
-        }
-        TripPhase::Going => {
-            let loop_i = trip!(g, gd).loop_i;
-            let goal = if loop_i >= 0.0 { trip!(g, gd).spot.loop_.as_ref().unwrap()[loop_i as usize] } else { trip!(g, gd).spot.pos };
-            crate::guards::go_to(g, gd, goal, None);
-            let arrived = crate::guards::follow_path(g, gd, dt, pace);
-            g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.7) * 0.25, 2.0, dt);
-            g.ch[c].anim.look_yaw_extra = 0.0;
-            if arrived {
-                clear_stall(g, gd);
-                if v3::dist_xz(g.ch[c].pos, goal) > 1.2 {
-                    cancel_trip(g, gd, "no way through");
-                    return true;
-                }
-                let loop_len = trip!(g, gd).spot.loop_.as_ref().map(|l| l.len());
-                if let Some(n) = loop_len {
-                    if loop_i + 1.0 < n as f64 {
-                        if loop_i < 0.0 {
-                            trip!(g, gd).arrived_at = now;
-                        }
-                        let next = {
-                            let t = trip!(g, gd);
-                            t.loop_i += 1.0;
-                            t.spot.loop_.as_ref().unwrap()[t.loop_i as usize]
-                        };
-                        crate::guards::go_to(g, gd, next, Some(true));
-                        return true;
-                    }
-                    let (wp, arrived_at) = {
-                        let t = trip!(g, gd);
-                        t.phase = TripPhase::Returning;
-                        t.dwell_until = now;
-                        (t.wp, t.arrived_at)
-                    };
-                    let back = route_point(g, gd, wp);
-                    crate::guards::go_to(g, gd, back, Some(true));
-                    return true;
-                }
-                let dwell = g.k.needs.dwell.get(kind).copied().unwrap_or(20.0);
-                {
-                    let t = trip!(g, gd);
-                    t.phase = TripPhase::Dwell;
-                    t.arrived_at = now;
-                    t.dwell_until = now + dwell;
-                }
-            } else if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
-                cancel_trip(g, gd, "stuck on the way");
-                return true;
-            }
-            true
-        }
-        TripPhase::Dwell => {
-            stand(g, gd, dt);
-            let face = trip!(g, gd).spot.face;
-            g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, face, 2.5 * dt);
-            g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.5) * 0.3, 2.0, dt);
-            g.ch[c].anim.look_yaw_extra = m::sin(look_phase * 0.8) * 0.35;
-            if now >= trip!(g, gd).dwell_until {
-                trip!(g, gd).phase = TripPhase::Returning;
-                clear_stall(g, gd);
-                let wp = trip!(g, gd).wp;
-                let back = route_point(g, gd, wp);
-                crate::guards::go_to(g, gd, back, Some(true));
-            }
-            true
-        }
-        TripPhase::Returning => {
-            let wp = trip!(g, gd).wp;
-            let goal = route_point(g, gd, wp);
-            crate::guards::go_to(g, gd, goal, None);
-            let arrived = crate::guards::follow_path(g, gd, dt, pace);
-            g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.7) * 0.25, 2.0, dt);
-            g.ch[c].anim.look_yaw_extra = 0.0;
-            if arrived {
-                clear_stall(g, gd);
-                if v3::dist_xz(g.ch[c].pos, goal) > 1.5 {
-                    cancel_trip(g, gd, "no way back");
-                    return true;
-                }
-                let (left_at, arrived_at, dwell_until) = {
-                    let t = trip!(g, gd);
-                    (t.left_at, t.arrived_at, t.dwell_until)
-                };
-                crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
-                {
-                    let r = row!(g, gd);
-                    r.trip = None;
-                    r.trips += 1.0;
-                    r.last_back_at = now;
-                    if let Some(n) = r.needs.iter_mut().find(|x| x.kind == kind) {
-                        n.level = 0.0;
-                    }
-                }
-                let away = m::round(now - left_at);
-                let back = crate::dialogue::needs_lines_table().back;
-                let line = pick_line(g, &back, gd, "back");
-                crate::game::game_say(g, gd, &line, None, None);
-                let mut d = JsMap::new();
-                d.set(key("who"), text(&cs));
-                d.set(key("kind"), text(kind.as_str()));
-                d.set(key("what"), text("back"));
-                d.set(key("away"), Some(ChronicleDataValue::Num(away)));
-                let at = g.ch[c].pos;
-                crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
-                return false;
-            } else if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
-                cancel_trip(g, gd, "stuck coming back");
-                return true;
-            }
-            true
-        }
+        TripPhase::Telegraph => telegraph(g, f),
+        TripPhase::Going => going(g, f),
+        TripPhase::Dwell => dwelling(g, f),
+        TripPhase::Returning => return !coming_back(g, f),
     }
+    true
+}
+
+/// Before he leaves he stands, looks along his way, says it, stretches his neck and turns to go; then he sets off.
+fn telegraph(g: &mut Game, f: TripFrame) {
+    let TripFrame { gd, c, now, dt, look_phase, .. } = f;
+    stand(g, gd, dt);
+    g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.9) * 0.45, 2.0, dt);
+    let (depart_at, t0, out_yaw) = {
+        let t = trip!(g, gd);
+        (t.depart_at, t.t0, t.out_yaw)
+    };
+    let to_go = depart_at - now;
+    if !trip!(g, gd).watched {
+        trip!(g, gd).watched = true;
+        crate::character::anim_tell(g, c, crate::character::TellKind::Watch);
+    }
+    g.ch[c].anim.look_yaw_extra = telegraph_look(g, f, now - t0 - GLANCE_AT, out_yaw);
+    say_it_and_hear_back(g, gd, now, to_go);
+    if !trip!(g, gd).necked && to_go <= g.k.needs.stretch_lead {
+        trip!(g, gd).necked = true;
+        crate::character::anim_tell(g, c, crate::character::TellKind::Neck);
+    }
+    if trip!(g, gd).necked {
+        g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, out_yaw, 2.2 * dt);
+    }
+    if to_go <= 0.0 {
+        set_off(g, f);
+    }
+}
+
+/// Where his eyes go while he waits: one glance along his way out (`g0` seconds into it), else idly about.
+fn telegraph_look(g: &Game, f: TripFrame, g0: f64, out_yaw: f64) -> f64 {
+    if g0 > 0.0 && g0 < GLANCE_SECS {
+        let turn = v3::clamp(v3::wrap_angle(out_yaw - g.ch[f.c].body_yaw), -1.1, 1.1);
+        return turn * m::min_n(&[1.0, g0 / 0.35, (GLANCE_SECS - g0) / 0.45]);
+    }
+    m::sin(f.look_phase * 1.3) * 0.3
+}
+
+/// He says he is going when it is nearly time, and his partner answers when his moment comes.
+fn say_it_and_hear_back(g: &mut Game, gd: GuardId, now: f64, to_go: f64) {
+    if !trip!(g, gd).told && to_go <= g.k.needs.say_lead {
+        let mut t = trip!(g, gd).clone();
+        announce(g, gd, &mut t);
+        row!(g, gd).trip = Some(t);
+    }
+    let (told, replied, reply_at) = {
+        let t = trip!(g, gd);
+        (t.told, t.replied, t.reply_at)
+    };
+    if told && !replied && reply_at >= 0.0 && now >= reply_at {
+        let mut t = trip!(g, gd).clone();
+        partner_reply(g, gd, &mut t);
+        row!(g, gd).trip = Some(t);
+    }
+}
+
+/// He leaves: the floor's gap counts from now, and the chronicle has him gone.
+fn set_off(g: &mut Game, f: TripFrame) {
+    let TripFrame { gd, c, now, kind, .. } = f;
+    let t = trip!(g, gd);
+    t.phase = TripPhase::Going;
+    t.left_at = now;
+    t.loop_i = -1.0;
+    let floor_row = floor(g);
+    floor_row.last_depart_at = m::max(floor_row.last_depart_at, now);
+    clear_stall(g, gd);
+    let spot_pos = trip!(g, gd).spot.pos;
+    crate::guards::go_to(g, gd, spot_pos, Some(true));
+    let mut d = break_note(g, gd, kind, "left");
+    d.set(key("to"), text(&trip!(g, gd).spot.name));
+    if g.level.own_places() {
+        d.set(key("own"), Some(ChronicleDataValue::Num(1.0)));
+    }
+    let at = g.ch[c].pos;
+    crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
+}
+
+/// The chronicle's row of a break: who, which need, and what just happened.
+fn break_note(g: &Game, gd: GuardId, kind: NeedKind, what: &str) -> JsMap<String, Option<ChronicleDataValue>> {
+    let mut d = JsMap::new();
+    d.set(key("who"), text(&g.gd[gd].callsign));
+    d.set(key("kind"), text(kind.as_str()));
+    d.set(key("what"), text(what));
+    d
+}
+
+/// One frame of his walk to `goal`, eyes easy; true when he has got to the end of his path.
+fn walk_on(g: &mut Game, f: TripFrame, goal: V3) -> bool {
+    let TripFrame { gd, c, dt, pace, look_phase, .. } = f;
+    crate::guards::go_to(g, gd, goal, None);
+    let arrived = crate::guards::follow_path(g, gd, dt, pace);
+    g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.7) * 0.25, 2.0, dt);
+    g.ch[c].anim.look_yaw_extra = 0.0;
+    arrived
+}
+
+/// On his way to the place, or round its loop; a path that ends short or a walk that gets nowhere ends the trip.
+fn going(g: &mut Game, f: TripFrame) {
+    let TripFrame { gd, c, dt, .. } = f;
+    let loop_i = trip!(g, gd).loop_i;
+    let goal = if loop_i >= 0.0 { trip!(g, gd).spot.loop_.as_ref().unwrap()[loop_i as usize] } else { trip!(g, gd).spot.pos };
+    if !walk_on(g, f, goal) {
+        if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
+            cancel_trip(g, gd, "stuck on the way");
+        }
+        return;
+    }
+    clear_stall(g, gd);
+    if v3::dist_xz(g.ch[c].pos, goal) > 1.2 {
+        cancel_trip(g, gd, "no way through");
+        return;
+    }
+    reached_a_stop(g, f, loop_i);
+}
+
+/// At the place he stands out his dwell; on a loop he walks to its next point, and from its last one straight back.
+fn reached_a_stop(g: &mut Game, f: TripFrame, loop_i: f64) {
+    let TripFrame { gd, now, kind, .. } = f;
+    let Some(n) = trip!(g, gd).spot.loop_.as_ref().map(|l| l.len()) else {
+        let dwell = g.k.needs.dwell.get(kind).copied().unwrap_or(20.0);
+        let t = trip!(g, gd);
+        t.phase = TripPhase::Dwell;
+        t.arrived_at = now;
+        t.dwell_until = now + dwell;
+        return;
+    };
+    if loop_i + 1.0 < n as f64 {
+        if loop_i < 0.0 {
+            trip!(g, gd).arrived_at = now;
+        }
+        let t = trip!(g, gd);
+        t.loop_i += 1.0;
+        let next = t.spot.loop_.as_ref().unwrap()[t.loop_i as usize];
+        crate::guards::go_to(g, gd, next, Some(true));
+        return;
+    }
+    let t = trip!(g, gd);
+    t.phase = TripPhase::Returning;
+    t.dwell_until = now;
+    head_back(g, gd);
+}
+
+/// He has his break, facing the place's way, until his time is up.
+fn dwelling(g: &mut Game, f: TripFrame) {
+    let TripFrame { gd, c, now, dt, look_phase, .. } = f;
+    stand(g, gd, dt);
+    let face = trip!(g, gd).spot.face;
+    g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, face, 2.5 * dt);
+    g.gd[gd].sweep = v3::damp(g.gd[gd].sweep, m::sin(look_phase * 0.5) * 0.3, 2.0, dt);
+    g.ch[c].anim.look_yaw_extra = m::sin(look_phase * 0.8) * 0.35;
+    if now >= trip!(g, gd).dwell_until {
+        trip!(g, gd).phase = TripPhase::Returning;
+        clear_stall(g, gd);
+        head_back(g, gd);
+    }
+}
+
+/// His path is set for the waypoint he left from.
+fn head_back(g: &mut Game, gd: GuardId) {
+    let wp = trip!(g, gd).wp;
+    let back = route_point(g, gd, wp);
+    crate::guards::go_to(g, gd, back, Some(true));
+}
+
+/// On his way back; true when he is back on his route and the trip is over.
+fn coming_back(g: &mut Game, f: TripFrame) -> bool {
+    let TripFrame { gd, c, dt, .. } = f;
+    let wp = trip!(g, gd).wp;
+    let goal = route_point(g, gd, wp);
+    if !walk_on(g, f, goal) {
+        if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
+            cancel_trip(g, gd, "stuck coming back");
+        }
+        return false;
+    }
+    clear_stall(g, gd);
+    if v3::dist_xz(g.ch[c].pos, goal) > 1.5 {
+        cancel_trip(g, gd, "no way back");
+        return false;
+    }
+    trip_over(g, f);
+    true
+}
+
+/// The trip is done: that need is empty, his rest starts now, and he says he is back.
+fn trip_over(g: &mut Game, f: TripFrame) {
+    let TripFrame { gd, c, now, kind, .. } = f;
+    let left_at = trip!(g, gd).left_at;
+    crate::owner::release(g, gd, crate::owner::by::NEEDS, now);
+    let r = row!(g, gd);
+    r.trip = None;
+    r.trips += 1.0;
+    r.last_back_at = now;
+    if let Some(n) = r.needs.iter_mut().find(|x| x.kind == kind) {
+        n.level = 0.0;
+    }
+    let away = m::round(now - left_at);
+    let back = crate::dialogue::needs_lines_table().back;
+    let line = pick_line(g, &back, gd, "back");
+    crate::game::game_say(g, gd, &line, None, None);
+    let mut d = break_note(g, gd, kind, "back");
+    d.set(key("away"), Some(ChronicleDataValue::Num(away)));
+    let at = g.ch[c].pos;
+    crate::chronicle::chronicle(g, ChronKind::NeedBreak, Some(&d), Some(at));
 }
 
 /// The probes: put a man's need at a level; false if he does not carry that kind.
