@@ -61,7 +61,6 @@ pub struct StructureData {
     pub rooms: Vec<crate::scene_scenarios::StructureRoom>,
     pub starts: Option<Vec<crate::scene_scenarios::TeamStart>>,
     pub max_men: Option<f64>,
-    pub way_out: Option<bool>,
     pub dig_in: Option<bool>,
     pub wall_charges: Option<f64>,
     pub squads: Option<Vec<crate::scene_scenarios::SquadData>>,

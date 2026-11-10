@@ -12,14 +12,14 @@ pub struct Entry {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RoomFight {
-    #[is({ let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t })] pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
+    #[is({ let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], funnel: f64::INFINITY, line: f64::INFINITY }); t })] pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
     pub live: bool,
     #[is(true)] pub blind_fire: bool,
     pub blind_rounds: f64,
     pub defs: Vec<RoomfightDefId>,
     pub ops: Vec<RoomfightOpId>,
     pub log: Vec<crate::roomfight::FightNote>,
-    #[is(crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, rallied: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 })] pub stats: crate::roomfight::RoomFightStats,
+    #[is(crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 })] pub stats: crate::roomfight::RoomFightStats,
     pub rooms: Vec<RoomfightRoomId>,
     pub room_of_cell: JsMap<crate::Num, RoomfightRoomId>,
     #[is(alloc::vec![0; 0])] pub fill_mark: Vec<u8>,
@@ -57,8 +57,6 @@ pub struct FightSkill {
     pub startle: [f64; 2],
     pub daze: [f64; 2],
     pub nerve: [f64; 2],
-    pub rally: [f64; 2],
-    pub rally_chance: f64,
     pub funnel: f64,
     pub line: f64,
 }
@@ -77,7 +75,6 @@ pub struct RoomFightStats {
     pub fell_back: f64,
     pub fall_back_out: f64,
     pub took_cover: f64,
-    pub rallied: f64,
     pub surprised: f64,
     pub broke: f64,
     pub stepped: f64,
@@ -143,8 +140,6 @@ pub struct Def {
     pub nerve: f64,
     pub lost_at: f64,
     pub moved_at: f64,
-    pub rally_at: f64,
-    pub rally_go: bool,
     pub mode: crate::roomfight::DefMode,
     pub move_kind: crate::roomfight::DefMoveKind,
     pub move_t: f64,
@@ -311,7 +306,7 @@ pub struct RoomFightStepToPatch {
     pub over: Option<crate::game::GuardScriptOver>,
 }
 
-pub fn fight_skill() -> JsMap<String, crate::roomfight::FightSkill> { { let mut t = JsMap::new(); t.set(String::from("operative"), crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(String::from("hostile"), crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t } }
+pub fn fight_skill() -> JsMap<String, crate::roomfight::FightSkill> { { let mut t = JsMap::new(); t.set(String::from("operative"), crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], funnel: 0.35, line: 0.5 }); t.set(String::from("hostile"), crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], funnel: f64::INFINITY, line: f64::INFINITY }); t } }
 
 pub const ROOM_MAX_CELLS: f64 = 2400.0;
 

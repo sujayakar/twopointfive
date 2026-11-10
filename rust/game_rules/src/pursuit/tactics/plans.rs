@@ -1017,16 +1017,6 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate:
     };
     let line = if why == crate::tactics::DangerWhy::Rounds {
         alloc::format!("taking rounds through {} — nobody through it, on the wall with me", door)
-    } else if why == crate::tactics::DangerWhy::Press {
-        let named = if own {
-            door.clone()
-        } else {
-            match wrote {
-                Some(w) => w,
-                None => alloc::format!("{} door", dn),
-            }
-        };
-        alloc::format!("they're in there — {}, stack on me, charge first", named)
     } else {
         match victim.as_deref() {
             // (WORDS.doors is settled on)

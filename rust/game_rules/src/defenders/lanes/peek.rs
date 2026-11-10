@@ -201,8 +201,8 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         // with a mate held on it too they go on TOGETHER to where the guns were; a man by himself goes nowhere on it: back to his place
         if !mates.is_empty() {
             say_net(g, gd, "they're off it — move up, together!");
-            for &o in mates.iter() { if let Some(dm) = def_of(g, o) { crate::pressure::loose(g, dm, from); } }
-            crate::pressure::loose(g, d, from);
+            for &o in mates.iter() { if let Some(dm) = def_of(g, o) { crate::roomfight::loose_at(g, dm, from); } }
+            crate::roomfight::loose_at(g, d, from);
         } else {
             say_net(g, gd, "they've moved off it — eyes open!");
             peek_on(g, gd, p);
@@ -456,15 +456,6 @@ pub fn lane_drill(g: &mut crate::game::Game, gd: GuardId, at: V3, far: V3, centr
 pub fn lane_covers(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
     if no_lanes(g) || !live(g) || !mine(g, gd) { return false; }
     !pushing(g, gd) && !flanking(g, gd) && lane_on(g, p, gd).is_some()
-}
-
-/// He stands in a lane his side knows is covered: no place to plant himself.
-pub(in crate::defenders) fn lane_exposed(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.m.lanes.states.is_none() || !live(g) || !mine(g, gd) { return false; }
-    if pushing(g, gd) || flanking(g, gd) { return false; }
-    if no_lanes(g) || close_fight(g, gd) { return false; }
-    let p = pos_of(g, gd);
-    lane_on(g, p, gd).is_some()
 }
 
 /// A new state, the counters kept; every man this file had is let go of first.

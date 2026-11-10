@@ -729,7 +729,7 @@ fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, 
     });
     match w {
         Some(x) => { let to = x.path.as_ref().and_then(|p| p.first().copied()).unwrap_or(x.spot); crate::roomfight::run(g, d, to, x.door, 0.3, crate::owner::by::SQUAD_LEG); }
-        None => crate::pressure::loose(g, d, fix_at),
+        None => crate::roomfight::loose_at(g, d, fix_at),
     }
 }
 fn squad_name(g: &Game, q: EnemysquadsSquadId) -> String { g.tab.enemysquads_squad[q].name.clone() }

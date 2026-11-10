@@ -1327,7 +1327,6 @@ pub struct Tabs {
     pub tactics_plan: Tab<TacticsPlanId, crate::tactics::Plan>,
     pub tactics_danger_rec: Tab<TacticsDangerRecId, crate::tactics::DangerRec>,
     pub lanes_lane: Tab<LanesLaneId, crate::lanes::Lane>,
-    pub pressure_man: Tab<PressureManId, crate::pressure::Man>,
     pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub rescueflow_region: Tab<RescueflowRegionId, crate::rescueflow::Region>,
     pub squad_room_clear: Tab<RoomClearId, crate::squad::RoomClear>,

@@ -517,11 +517,7 @@ fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place: &st
     let mut since = f64::INFINITY;
     let members = g.tab.tactics_plan[plan].members.clone();
     for o in members {
-        let t = match crate::pressure::look_since(g, o) {
-            Some(t) => Some(t),
-            None => crate::enemysquads::squad_look_since(g, o),
-        };
-        let Some(t) = t else {
+        let Some(t) = crate::enemysquads::squad_look_since(g, o) else {
             let moving = crate::words::wg(g, &"going around", &"moving round");
             return format!("{} — coming at {} from {}", moving, who, place);
         };
@@ -814,7 +810,7 @@ mod tests {
         assert_eq!(g.tab.tactics_danger_rec[r].t0, 10.0);
         assert_eq!(g.stats.tactics.dangers, 1);
         // the other side has a row of its own, and the readers tell them apart
-        let other = mark_danger(&mut g, d, Team::Player, DangerWhy::Press, None);
+        let other = mark_danger(&mut g, d, Team::Player, DangerWhy::Drop, None);
         assert_ne!(other, r);
         assert_eq!(danger_at(&mut g, d, Team::Guard), Some(r));
         assert_eq!(danger_at(&mut g, DoorId(4), Team::Guard), None);
