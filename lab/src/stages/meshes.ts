@@ -11,7 +11,7 @@ import drawCode from './meshdraw.wgsl' with { type: 'text' };
 export const RASTER = { tau: 0.5, fixed: 0, cone: true, hide: true, share: true, /** only the heroes, for measuring */ heroes: false, /** what was picked stays, wherever the camera goes */ freeze: false };
 const QUEUE = 1 << 19, MOST = 1 << 17, INDICES = 1 << 24, GROUPS = 256;
 /** indices of what was picked (expand), and what is to be drawn of it (say): first all that was seen at once, then what the second look found */
-const shareCode = `@group(1) @binding(0) var<storage, read> slots: array<vec4f>;
+const shareCode = `@group(1) @binding(0) var<storage, read> slots: array<vec4u>;
 @group(1) @binding(1) var<storage, read_write> n: array<atomic<u32>>;
 @group(1) @binding(2) var<storage, read_write> indices: array<u32>;
 @group(1) @binding(3) var<uniform> part: vec4u;       /* which look, slots and indices at most */
@@ -20,7 +20,7 @@ var<workgroup> base: u32; var<workgroup> span: vec2u;
 @compute @workgroup_size(128) fn expand(@builtin(workgroup_id) g: vec3u, @builtin(local_invocation_index) t: u32, @builtin(num_workgroups) groups: vec3u) {
   if (t == 0u) { span = vec2u(select(0u, atomicLoad(&n[27]), part.x == 1u), min(atomicLoad(&n[24]), part.y)); } let todo = workgroupUniformLoad(&span);
   for (var s = todo.x + g.x; s < todo.y; s += groups.x) {
-    let r = bitcast<vec4u>(slots[s * 4u + 3u]); let c = r.w & 255u; if (t == 0u) { base = atomicAdd(&n[30], c * 3u); } let b = workgroupUniformLoad(&base);
+    let r = slots[s * 4u + 3u]; let c = r.w & 255u; if (t == 0u) { base = atomicAdd(&n[30], c * 3u); } let b = workgroupUniformLoad(&base);
     if (t < c && b + t * 3u + 2u < part.z) { let ix = mrowU(r.y + (t >> 2u))[t & 3u]; for (var k = 0u; k < 3u; k++) { indices[b + t * 3u + k] = (s << 8u) | ((ix >> (8u * k)) & 255u); } }
     workgroupBarrier();
   }
@@ -47,7 +47,7 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
     const reduce = (p: GPUComputePassEncoder) => { hzbViews.forEach((v, i) => { const k = i ? 1 : 0, key = `${i}:${i ? '' : g.texture('depth').label}`; let b = hzbGroups.get(key); if (!b || i === 0) hzbGroups.set(key, b = d.createBindGroup({ layout: hl[k]!, entries: [{ binding: 0, resource: i ? hzbViews[i - 1]! : g.view('depth') }, { binding: 1, resource: v }] })); p.setPipeline(hp[k]!); p.setBindGroup(0, b); p.dispatchWorkgroups(Math.ceil(Math.max(1, hzbSize[0] >> i) / 8), Math.ceil(Math.max(1, hzbSize[1] >> i) / 8)); }); };
     // ---- picking
     const bl = (binding: number, type: GPUBufferBindingType): GPUBindGroupLayoutEntry => ({ binding, visibility: C, buffer: { type } }), pickL = d.createBindGroupLayout({ entries: [bl(0, 'uniform'), bl(1, 'read-only-storage'), bl(2, 'storage'), bl(3, 'read-only-storage'), bl(4, 'storage'), bl(5, 'storage'), bl(6, 'storage'), { binding: 7, visibility: C, texture: { sampleType: 'unfilterable-float' } }] });
-    const pickText = g.prelude() + `@group(1) @binding(0) var<uniform> meshK: MeshK;\n@group(1) @binding(1) var<storage, read> placed: array<u32>;\n@group(1) @binding(2) var<storage, read_write> n: array<atomic<u32>>;\n@group(1) @binding(3) var<storage, read> listA: array<vec2u>;\n@group(1) @binding(4) var<storage, read_write> listB: array<vec2u>;\n@group(1) @binding(5) var<storage, read_write> slots: array<vec4f>;\n@group(1) @binding(6) var<storage, read_write> again: array<vec4u>;\n@group(1) @binding(7) var hzb: texture_2d<f32>;\n` + pickCode, pickM = await compiled(d, 'mesh pick', pickText);
+    const pickText = g.prelude() + `@group(1) @binding(0) var<uniform> meshK: MeshK;\n@group(1) @binding(1) var<storage, read> placed: array<u32>;\n@group(1) @binding(2) var<storage, read_write> n: array<atomic<u32>>;\n@group(1) @binding(3) var<storage, read> listA: array<vec2u>;\n@group(1) @binding(4) var<storage, read_write> listB: array<vec2u>;\n@group(1) @binding(5) var<storage, read_write> slots: array<vec4u>;\n@group(1) @binding(6) var<storage, read_write> again: array<vec4u>;\n@group(1) @binding(7) var hzb: texture_2d<f32>;\n` + pickCode, pickM = await compiled(d, 'mesh pick', pickText);
     const pickLayout = d.createPipelineLayout({ bindGroupLayouts: [g.shared.layout, pickL] }), [seed, round, second] = await Promise.all(['seed', 'round', 'second'].map(entryPoint => d.createComputePipelineAsync({ label: entryPoint, layout: pickLayout, compute: { module: pickM, entryPoint } })));
     const ROUNDS = w.depth, K = Array.from({ length: ROUNDS + 2 }, (_, i) => mk('meshK' + i, 48, GPUBufferUsage.UNIFORM)); let groups: GPUBindGroup[] | null = null;
     const bind = () => groups ??= K.map((k, i) => d.createBindGroup({ layout: pickL, entries: [k, placed, n, lists[i & 1]!, lists[(i & 1) ^ 1]!, slots, again].map((b, binding) => ({ binding, resource: { buffer: b } }) as GPUBindGroupEntry).concat({ binding: 7, resource: hzb!.createView() }) }));
@@ -55,7 +55,7 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
     const shareL = d.createBindGroupLayout({ entries: [bl(0, 'read-only-storage'), bl(1, 'storage'), bl(2, 'storage'), bl(3, 'uniform'), bl(4, 'storage')] }), shareM = await compiled(d, 'mesh share', g.prelude() + shareCode), shareLayout = d.createPipelineLayout({ bindGroupLayouts: [g.shared.layout, shareL] }), [expand, say] = await Promise.all(['expand', 'say'].map(entryPoint => d.createComputePipelineAsync({ label: entryPoint, layout: shareLayout, compute: { module: shareM, entryPoint } })));
     const shareG = [0, 1].map(phase => { const k = mk('shareK' + phase, 16, GPUBufferUsage.UNIFORM); d.queue.writeBuffer(k, 0, new Uint32Array([phase, MOST, INDICES, 0])); return d.createBindGroup({ layout: shareL, entries: [slots, n, indices, k, args].map((b, binding) => ({ binding, resource: { buffer: b } })) }); });
     // ---- drawing
-    const drawL = d.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } }] }), drawM = await compiled(d, 'mesh draw', g.prelude() + '@group(1) @binding(0) var<storage, read> slots: array<vec4f>;\n' + drawCode), drawG = d.createBindGroup({ layout: drawL, entries: [{ binding: 0, resource: { buffer: slots } }] });
+    const drawL = d.createBindGroupLayout({ entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } }] }), drawM = await compiled(d, 'mesh draw', g.prelude() + '@group(1) @binding(0) var<storage, read> slots: array<vec4u>;\n' + drawCode), drawG = d.createBindGroup({ layout: drawL, entries: [{ binding: 0, resource: { buffer: slots } }] });
     const pipe = (entryPoint: string) => d.createRenderPipelineAsync({ label: entryPoint, layout: d.createPipelineLayout({ bindGroupLayouts: [g.shared.layout, drawL] }), vertex: { module: drawM, entryPoint }, fragment: { module: drawM, entryPoint: 'put', targets: [{ format: 'r32uint' }] }, primitive: { topology: 'triangle-list', cullMode: 'back', frontFace: 'ccw' }, depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'greater' } }), [pull, share] = await Promise.all([pipe('pull'), pipe('share')]);
     const most = Math.max(...w.objects.map(o => o.most)); let frames = 0;
     return enc => {
@@ -81,9 +81,11 @@ export async function drawn(lab: Lab): Promise<Drawn> { const u = new Uint32Arra
 /** a method with meshes in it: the stage goes in after the raster, and the first hit learns whose ids these are */
 export function withMeshes<M extends Method>(m: M): M {
   const base = m.stages.bind(m);
-  m.stages = lab => { const out: Stage[] = []; for (const s of base(lab)) { if (s.name === 'first hit' && lab.building.world.meshes) out.push({ ...s, buffers: { ...s.buffers, meshSlots: ['meshSlots', 'array<vec4f>', 'read'] }, code: firstHit(s.code) }); else out.push(s); if (s.name === 'raster' && lab.building.world.meshes) out.push(meshStage(lab, lab.graph)); } return out; };
+  m.stages = lab => { const out: Stage[] = []; for (const s of base(lab)) { if (s.name === 'first hit' && lab.building.world.meshes) out.push({ ...s, buffers: { ...s.buffers, meshSlots: ['meshSlots', 'array<vec4u>', 'read'] }, code: firstHit(s.code) }); else if (s.name === 'resolve' && lab.building.world.meshes) out.push({ ...s, code: resolved(s.code) }); else out.push(s); if (s.name === 'raster' && lab.building.world.meshes) out.push(meshStage(lab, lab.graph)); } return out; };
   return m;
 }
 const firstHit = (code: string) => { const at = '  } else if (a != 0u) {\n'; if (code.split(at).length !== 2) throw new Error('first hit has changed'); return code.replace(at, `  } else if ((a & 0x40000000u) != 0u) {
-    let r = bitcast<vec4u>(meshSlots[((a >> 7u) & 0x7fffffu) * 4u + 3u]); h.piece = r.z >> 11u; h.code = MESH_HIT | ((r.z & 2047u) << mrowU(pieces[h.piece].planes).y) | ((r.w >> 8u) << 7u) | (a & 127u); h.t = 0.25 / (textureLoad(depthT, id.xy, 0) * dot(rd, frame.camFwd.xyz));
-` + at); };
+    let r = meshSlots[((a >> 7u) & 0x7fffffu) * 4u + 3u]; h.piece = r.z >> 11u; h.code = MESH_HIT | ((r.z & 2047u) << mrowU(pieces[h.piece].planes).y) | ((r.w >> 8u) << 7u) | (a & 127u); h.t = 0.25 / (textureLoad(depthT, id.xy, 0) * dot(rd, frame.camFwd.xyz));
+` + at).replace('textureStore(outSurf, id.xy, packPx(h.t, s));', 'var kept = packPx(h.t, s); if ((kept.w & (1u << 26u)) == 0u) { kept.w |= meshKind(h) << 27u; } textureStore(outSurf, id.xy, kept);'); };
+/** what a level lost of its light is taken off there: of the sun, and of all that comes from round about */
+const resolved = (code: string) => { const put = (c: string, from: string, to: string) => { if (c.split(from).length !== 2) throw new Error('resolve has changed: ' + from); return c.replace(from, to); }; return put(put(put(code, 'let s = pxSurf(p); let lt =', 'let s = pxSurf(p); var lost = vec2f(1.0); if (!p.leaf && frame.knobs.x >= 0.0) { lost = meshLost(textureLoad(surf, id.xy, 0).w >> 27u, 2.0 * length(frame.camUp.xyz) / frame.size.y * p.t, V); } let lt ='), 'b *= @tune.bounce; let rv', 'b *= @tune.bounce * lost.y; let rv'), 'var sun = frame.sunE.xyz * vz.a', 'var sun = frame.sunE.xyz * lost.x * vz.a'); };
