@@ -30,9 +30,6 @@ fn state_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doo
     g.m.doorway.states.get_or_insert_with(gd, fresh)
 }
 
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// The two sides whose men keep these manners.
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     matches!(g.team(gd), crate::teams::Team::Ours | crate::teams::Team::Hostile)
@@ -64,7 +61,7 @@ fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
 
 /// The doors whose frames are near enough to `p` for it to be in their way.
 fn frames_by(g: &crate::game::Game, p: V3) -> impl Iterator<Item = DoorId> + '_ {
-    g.doors.list.iter().copied().filter(move |d| flat(p, g.dr[*d].frame_centre) <= g.dr[*d].def.width + 1.0)
+    g.doors.list.iter().copied().filter(move |d| v3::dist_xz(p, g.dr[*d].frame_centre) <= g.dr[*d].def.width + 1.0)
 }
 
 /// STAND: is `p` no place to stand about: in some frame's strip, or where its leaf swings.
@@ -72,15 +69,10 @@ pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
     frames_by(g, p).any(|d| in_opening(g, d, p, None) || in_sweep(g, d, p))
 }
 
-/// Something of the level stands between two floor points at shin height.
-fn walled(g: &crate::game::Game, a: V3, b: V3) -> bool {
-    crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
-}
-
 /// `p` in the lane of `d`'s opening, walls aside: where it is in it.
 fn in_lane(g: &crate::game::Game, d: DoorId, p: V3) -> Option<Rel> {
     let k = &g.k.doormanners;
-    if flat(p, g.dr[d].frame_centre) > k.lane_m + g.dr[d].def.width { return None; }
+    if v3::dist_xz(p, g.dr[d].frame_centre) > k.lane_m + g.dr[d].def.width { return None; }
     let r = rel(g, d, p);
     let depth = m::abs(r.perp);
     let e = k.lane_out + k.lane_flare * depth;
@@ -95,7 +87,7 @@ fn no_lane(g: &crate::game::Game, d: DoorId) -> bool {
 
 /// STAND, the lane: the door standing open whose lane `p` is in.
 pub fn doorway_lane(g: &crate::game::Game, p: V3, but: Option<DoorId>) -> Option<DoorId> {
-    g.doors.list.iter().copied().find(|&d| Some(d) != but && !no_lane(g, d) && in_lane(g, d, p).is_some() && !walled(g, p, g.dr[d].frame_centre))
+    g.doors.list.iter().copied().find(|&d| Some(d) != but && !no_lane(g, d) && in_lane(g, d, p).is_some() && !crate::scene_collision::low_blocked(g, p, g.dr[d].frame_centre))
 }
 
 /// STAND, the lane: nav.findPath's `penalty` for a walk an order gives; `None`: no door standing open onto floor the team has not been on.
@@ -124,7 +116,7 @@ pub fn doorway_lane_price_at(g: &crate::game::Game, price: &mut crate::doorway::
     let dear = open.iter().any(|&d| {
         let Some(r) = in_lane(g, d, p) else { return false };
         let no_leaf_here = g.dr[d].leaf.off || r.perp * g.dr[d].leaf.angle <= 0.0;
-        !(m::abs(r.perp) < strip && no_leaf_here) && !walled(g, p, g.dr[d].frame_centre)
+        !(m::abs(r.perp) < strip && no_leaf_here) && !crate::scene_collision::low_blocked(g, p, g.dr[d].frame_centre)
     });
     let v = if dear { g.k.doormanners.lane_dear } else { 1.0 };
     memo.set(i, v);
@@ -144,9 +136,9 @@ pub fn doorway_off_lane(g: &crate::game::Game, p: V3, from: V3, k: f64, taken: O
         for j in 0..3 + 2 * taken.len() {
             let al = if s > 0.0 { f.w + e + j as f64 * 0.4 } else { -e - j as f64 * 0.4 };
             let q: V3 = [f.hx + f.ux * al + f.nx * r.perp, 0.0, f.hz + f.uz * al + f.nz * r.perp];
-            if nav_blocked(g, q[0], q[2]) || walled(g, p, q) { break; }
+            if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, p, q) { break; }
             if behind_leaf(g, d, al, r.perp) { continue; }
-            if doorway_stand(g, q) || doorway_lane(g, q, None).is_some() || taken.iter().any(|t| flat(*t, q) < g.k.doormanners.lane_apart) { continue; }
+            if doorway_stand(g, q) || doorway_lane(g, q, None).is_some() || taken.iter().any(|t| v3::dist_xz(*t, q) < g.k.doormanners.lane_apart) { continue; }
             return Some(q);
         }
     }
@@ -194,7 +186,7 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let d = g.doors.list[i];
         if g.dr[d].leaf.off || g.dr[d].leaf.latched { continue; }
         let angle = g.dr[d].leaf.angle;
-        if m::abs(angle) < 0.8 || flat(p, g.dr[d].frame_centre) > g.dr[d].def.width + 1.5 { continue; }
+        if m::abs(angle) < 0.8 || v3::dist_xz(p, g.dr[d].frame_centre) > g.dr[d].def.width + 1.5 { continue; }
         let r = rel(g, d, p);
         let (cx, cz) = (m::cos(angle), m::sin(angle));
         let k = v3::clamp(r.along * cx + r.perp * cz, 0.0, r.f.w);
@@ -215,7 +207,7 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The first frame his walk goes through within `reach`.
 fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (pos, 0.0);
     let mut i = g.gd[gd].path_i;
@@ -224,13 +216,13 @@ fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::Door
         let mut best: Option<DoorAhead> = None;
         for n in 0..g.doors.list.len() {
             let d = g.doors.list[n];
-            if flat(pos, g.dr[d].frame_centre) > reach + g.dr[d].def.width { continue; }
+            if v3::dist_xz(pos, g.dr[d].frame_centre) > reach + g.dr[d].def.width { continue; }
             let Some(x) = crate::guards::crosses_door(g, a, b, d) else { continue };
-            let dist = run + flat(a, x.at);
+            let dist = run + v3::dist_xz(a, x.at);
             if dist <= reach && best.map_or(true, |b| dist < b.dist) { best = Some(DoorAhead { d, side: x.side, dist }); }
         }
         if best.is_some() { return best; }
-        run += flat(a, b);
+        run += v3::dist_xz(a, b);
         a = b;
         i += 1;
     }
@@ -262,15 +254,15 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, tu
 
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.
 fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
-    if nav_blocked(g, p[0], p[2]) { return false; }
-    if g.team(gd).ours() && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
+    if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
+    if g.team(gd).ours() && !crate::condition::down(g, g.pl[seat.player].ch) && v3::dist_xz(g.seat_pos(seat), p) < apart { return false; }
     let t = g.time;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
-        if flat(g.ch[g.gd[o].ch].pos, p) < apart { return false; }
+        if v3::dist_xz(g.pos_of(o), p) < apart { return false; }
         let s = match g.m.doorway.states.get(o) { Some(so) if t - so.t <= 0.5 && t >= so.t => so.spot, _ => None };
-        if let Some(s) = s { if flat(s, p) < apart { return false; } }
+        if let Some(s) = s { if v3::dist_xz(s, p) < apart { return false; } }
     }
     true
 }
@@ -278,7 +270,7 @@ fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p
 /// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.
 fn jamb_spot(g: &crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let f = crate::guards::frame_of(g, d);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let (jamb_past, file_gap, jamb_out, apart) = (g.k.doormanners.jamb_past, g.k.doormanners.file_gap, g.k.doormanners.jamb_out, g.k.doormanners.apart);
     let mut best: Option<V3> = None;
     let mut bd = m::INF;
@@ -286,9 +278,9 @@ fn jamb_spot(g: &crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option
         let kf = k as f64;
         for lat in [f.w + jamb_past + kf * file_gap, -(jamb_past + kf * file_gap)] {
             let p: V3 = [f.hx + f.ux * lat + f.nx * side * jamb_out, 0.0, f.hz + f.uz * lat + f.nz * side * jamb_out];
-            let dd = flat(pos, p);
+            let dd = v3::dist_xz(pos, p);
             if dd >= bd || !spot_free(g, &crate::seats::here(g), gd, p, apart) { continue; }
-            if walled(g, pos, p) { continue; }
+            if crate::scene_collision::low_blocked(g, pos, p) { continue; }
             if frames_by(g, p).any(|o| in_opening(g, o, p, Some(0.6)) || in_sweep(g, o, p)) { continue; }
             best = Some(p);
             bd = dd;
@@ -323,12 +315,7 @@ fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) 
 fn on_own(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: Option<GuardId>) -> bool {
     let Some(o) = o else { return false };
     let Some(post) = order_post(g, seat, o) else { return false };
-    flat(g.ch[g.gd[o].ch].pos, post) < g.k.doormanners.own_m
-}
-
-/// `g.col.nav.isBlocked`.
-fn nav_blocked(g: &crate::game::Game, x: f64, z: f64) -> bool {
-    crate::scene_collision::nav_grid_is_blocked(g, x, z)
+    v3::dist_xz(g.pos_of(o), post) < g.k.doormanners.own_m
 }
 
 #[cfg(test)]
@@ -342,7 +329,7 @@ mod tests {
     }
     #[test]
     fn flat_bits_as_the_typescript() {
-        assert_eq!(flat([1.25, 9.0, -3.5], [0.1, -2.0, 7.3]).to_bits(), FLAT_BITS);
+        assert_eq!(v3::dist_xz([1.25, 9.0, -3.5], [0.1, -2.0, 7.3]).to_bits(), FLAT_BITS);
     }
     const LEAF: &[(f64, f64, f64, f64, bool)] = &[(0.9000, 1.5700, 0.2000, 0.6000, false), (0.9000, 1.5700, -0.3000, 0.6000, true), (0.9000, -1.2000, 0.1000, -0.5000, true), (0.9000, 1.2000, 0.1000, -0.5000, false), (1.2000, 0.7000, 0.5000, 0.1000, false), (0.9000, 1.5700, 0.4500, 0.0000, false), (0.9000, 2.0000, -0.4000, 0.3000, true), (0.9000, 0.0000, 0.2000, 0.0000, false), (0.9000, 1.5700, 1.4000, 0.3000, false)];
     const FLAT_BITS: u64 = 0x4025b8dc1b2c73b7;
@@ -404,7 +391,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
                 if foe && side == sgn && !cover { continue; }   // (the face the half-plane calls theirs: only ever under cover)
                 let p: V3 = [f.hx + f.ux * lat + f.nx * side * thru, 0.0, f.hz + f.uz * lat + f.nz * side * thru];
                 if !spot_free(g, &crate::seats::here(g), gd, p, 0.8)
-                    || walled(g, pos, p)
+                    || crate::scene_collision::low_blocked(g, pos, p)
                     || (line && crate::scene_collision::shot_blocked(g, [p[0], 1.4, p[2]], aim_at, None, None)) { continue; }
                 if frames_by(g, p).any(|o| in_opening(g, o, p, None) || (o != door && in_sweep(g, o, p))) { continue; }
                 // never to a spot more exposed to them than the frame he stands in, and the cover pass takes covered floor only
@@ -466,7 +453,7 @@ fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
 /// HE ONLY BRUSHES IT: a leaf on its latch he is against and does not mean to go through. He is put off it, and it stays shut: a door is opened by somebody going through it, or by what
 /// works it (a hand, a boot, a charge).
 pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let (mut shut, mut open) = (false, false);
     for &d in &g.doors.list {
         if g.dr[d].leaf.off { continue; }
@@ -509,7 +496,7 @@ pub fn doorway_clear_near(g: &mut crate::game::Game, p: V3, bad: &mut dyn FnMut(
     let mut by: Vec<(DoorId, Rel)> = Vec::new();
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if !(flat(p, g.dr[d].frame_centre) <= g.dr[d].def.width + 1.0 + clear_m) { continue; }
+        if !(v3::dist_xz(p, g.dr[d].frame_centre) <= g.dr[d].def.width + 1.0 + clear_m) { continue; }
         let at = rel(g, d, p);
         let at = match face { Some(fc) if m::abs(at.perp) <= half => rel(g, d, fc), _ => at };
         by.push((d, at));
@@ -523,13 +510,13 @@ pub fn doorway_clear_near(g: &mut crate::game::Game, p: V3, bad: &mut dyn FnMut(
             let q: V3 = [p[0] + m::sin(a) * r, 0.0, p[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
                 || bad(g, q)
-                || taken.iter().any(|t| flat(*t, q) < apart)
-                || walled(g, p, q) { continue; }
+                || taken.iter().any(|t| v3::dist_xz(*t, q) < apart)
+                || crate::scene_collision::low_blocked(g, p, q) { continue; }
             let mut ok = true;
             let mut far = m::INF;
             for &(d, at) in &by {
                 let rq = rel(g, d, q);
-                far = m::min(far, flat(q, g.dr[d].frame_centre));
+                far = m::min(far, v3::dist_xz(q, g.dr[d].frame_centre));
                 if m::abs(at.perp) > half && rq.perp * at.perp < 0.0 && rq.along > -0.3 && rq.along < rq.f.w + 0.3 { ok = false; break; }
             }
             if ok && far > bs { best = Some(q); bs = far; }

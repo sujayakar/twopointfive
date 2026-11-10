@@ -63,7 +63,7 @@ most z1. A yaw is radians where 0 faces +z and a quarter turn faces +x (forward 
 
 A file also says a few things no rule of the game reads, which `levelToData` writes and the reader asks for: `floors` (at least one, with `id`, `y` and `ceiling`;
 `tools/levels/lib/lint.ts` reads the first ceiling), `connectors` (always an empty list), an `id` on each objective, beacon and plan, an
-`id` on each surface zone, and a `kind` of hide, utility or trigger on each volume.
+`id` on each surface zone, a `kind` of hide, utility or trigger on each volume, and (optional) a `name` on a box.
 
 ### How much a level may hold
 
@@ -90,7 +90,6 @@ index holds without them.
 - `id` text, unique. What every other record names it by.
 - `group` text; default none. The generator's section. The switches above and the kit view's `hide`, `hidePaint`, `hideMore` and `show` go by it, and `carlamps.rs`
   goes by what the kits write. A door's frame is plain boxes in group `doorframe.<id>`.
-- `name` text; default none. A tag on the box. `wallpen.rs` takes a name starting `door_` as a door.
 - `c` V3, the center. `h` V3, half sizes, each at least 0.
 - `yaw` number; default 0. Turn about +y.
 - `rot` four numbers x, y, z, w, a unit quaternion; default none. For a tilted thing. Takes no `markings` and no `shape`.
@@ -436,7 +435,7 @@ A test is a record whose `is` says its kind, and `passes` runs it. Where it says
 | loaded, reload, following | none | he has loaded, is reloading, or all are falling in |
 | launcher | `on`, `fired` | that rifle attachment is up, and has just fired if said |
 | burst | `n` (default 3) | so many rounds in an automatic burst |
-| threw | `kind`, `quick`, `area` | a throw of that kind, and into the area if said |
+| threw | `kind`, `area` | a throw of that kind, and into the area if said |
 | orderTo | `who` | the orders menu is on that man or pair |
 | stackOn | `door`, `who`, `set` | those men are stacked on the door, and arrived if `set` |
 | pairsOn | `doors` | the pairs stand on so many doors |

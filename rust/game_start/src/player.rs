@@ -25,7 +25,6 @@ pub type V3 = [f64; 3];
 pub const LEFT: u32 = 1;
 pub const RIGHT: u32 = 4;
 
-pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 pub fn at(p: V3) -> String { format!("({:.1}, {:.1})", p[0], p[2]) }
 
 /// HOW A SCRIPT'S FEET WALK: the numbers its author played it with
@@ -109,7 +108,7 @@ impl Player {
     }
     /// what he has asked of his hands, on the hand of this tick. `over`: a point his eyes are on whatever the script says, and his feet stop for it
     pub fn hands(&self, g: &Game, cmd: &mut PlayerCmd, over: Option<V3>) {
-        let pos = g.ch[g.pl[game::seats::seat(g, self.seat).player].ch].pos;
+        let pos = g.seat_pos(&game::seats::seat(g, self.seat));
         let mut ahead = None;
         if let Some(goal) = self.goal.get() {
             let (dx, dz) = (goal[0] - pos[0], goal[2] - pos[2]);
@@ -155,8 +154,8 @@ impl Player {
     }
     pub fn seen<R>(&self, f: impl FnOnce(&Game, &game::seats::SeatRef) -> R) -> R { self.ask(|g| f(g, &game::seats::seat(g, self.seat))) }
     pub fn t(&self) -> f64 { self.t.get() }
-    pub fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
-    pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.ch[g.gd[gd].ch].pos) }
+    pub fn pos(&self) -> V3 { self.seen(|g, s| g.seat_pos(s)) }
+    pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.pos_of(gd)) }
     pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| game::condition::down(g, g.gd[gd].ch)) }
     /// a place of the world on the picture, and is it inside the margins of the picture a hand can point at
     pub fn screen(&self, p: V3) -> (f64, f64, bool) {
@@ -256,8 +255,8 @@ impl Player {
     pub fn way_len(&self, a: V3, b: V3) -> f64 {
         let Some(w) = self.way(a, b) else { return f64::INFINITY };
         let (mut l, mut q) = (0.0, a);
-        for p in w { l += flat(q, p); q = p; }
-        l + flat(q, b)
+        for p in w { l += game::v3::dist_xz(q, p); q = p; }
+        l + game::v3::dist_xz(q, b)
     }
     pub fn solid(&self, a: V3, b: V3) -> bool { self.ask(|g| game::scene_collision::solid_blocked(g, [a[0], 1.1, a[2]], [b[0], 1.1, b[2]], None)) }
     /// walk to `p`; false: stopped early (`stop`, `max` seconds, or not getting anywhere after fresh ways)
@@ -267,10 +266,10 @@ impl Player {
         let gone = |r: bool| { self.goal.set(None); self.sprint.set(false); if feet.eyes_on_way { self.look.set(None); } r };
         'afresh: loop {
             let mut path = self.way(self.pos(), p).unwrap_or_default();
-            if path.last().is_none_or(|&l| flat(l, p) > 0.05) { path.push([p[0], 0.0, p[2]]); }
+            if path.last().is_none_or(|&l| game::v3::dist_xz(l, p) > 0.05) { path.push([p[0], 0.0, p[2]]); }
             if let Some(verb) = o.door {
                 if let Some(d) = self.door_on_way(&path) {
-                    if flat(self.pos(), self.ask(|g| g.dr[d].frame_centre)) < 40.0 {
+                    if game::v3::dist_xz(self.pos(), self.ask(|g| g.dr[d].frame_centre)) < 40.0 {
                         let name = self.name(d);
                         let opening: Pin<Box<dyn Future<Output = bool> + '_>> = Box::pin(self.open_door(d, verb));
                         if !opening.await { self.say(format!("  the door {} would not open", name)); return gone(false); }
@@ -283,12 +282,12 @@ impl Player {
             self.sprint.set(o.sprint);
             for (i, &wp) in path.iter().enumerate() {
                 self.goal.set(Some([wp[0], 0.0, wp[2]]));
-                while flat(self.pos(), wp) > if i == last { o.near } else { feet.corner } {
+                while game::v3::dist_xz(self.pos(), wp) > if i == last { o.near } else { feet.corner } {
                     if feet.eyes_on_way { self.look.set(Some([wp[0], 1.1, wp[2]])); }
                     self.tick().await;
                     if stop() || self.t.get() - t0 > left { return gone(false); }
                     let me = self.pos();
-                    if flat(me, mark) > feet.moved || self.busy.get() { mark = me; mark_t = self.t.get(); }
+                    if game::v3::dist_xz(me, mark) > feet.moved || self.busy.get() { mark = me; mark_t = self.t.get(); }
                     else if self.t.get() - mark_t > feet.stuck {
                         // (a mate in a doorway, a chair, the tip of a leaf: a step to one side, then the other, and a fresh way)
                         if again >= feet.tries { return gone(false); }

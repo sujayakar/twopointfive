@@ -23,7 +23,6 @@ pub fn stealth_feed(g: &mut crate::game::Game) {
     let free = !taken
         && !wanding
         && crate::kitanim::kit_in_hand(g, &crate::seats::here(g)).is_none()
-        && g.sets[g.seat].hand.throw_preview.is_none()
-        && !g.sets[g.seat].hand.throw_held;
+        && g.sets[g.seat].hand.throw_preview.is_none();
     g.ch[c].anim.stealth.as_mut().unwrap().free = free;
 }

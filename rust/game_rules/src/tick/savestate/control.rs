@@ -24,8 +24,8 @@ pub enum Do {
 
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
-fn here(g: &Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
-fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
+fn here(g: &Game) -> String { let p = g.player_pos(g.player); crate::chronicle::room_of(g, p) }
+pub fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
@@ -90,14 +90,14 @@ fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     if p.door_move().is_some() { return Some("working a door"); }
     if p.wall_work().is_some() || p.charging().is_some() || p.work_stow.is_some() { return Some("setting a charge"); }
     if p.kick().is_some() || (p.door_kick_tail && crate::character::anim_kicking(g, p.ch)) { return Some("kicking a door"); }
-    if p.pending_throw.is_some() || seat.hand.throw_held || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
+    if p.pending_throw.is_some() || crate::character::anim_in_throw(g, p.ch) { return Some("throwing"); }
     if p.launch_held.is_some() { return Some("lining up the launcher"); }
     if crate::weapons::firearm_reloading(g, p.pistol) || crate::weapons::firearm_reloading(g, p.rifle) { return Some("reloading"); }
     if a.nv.is_some() { return Some("flipping his goggles"); }
     if a.big_tool.is_some() { return Some("putting his tool back"); }
     if crate::character::anim_kit_busy(g, p.ch) { return Some("changing what is in his hands"); }
     if p.taking().is_some() { return Some("taking something"); }
-    if (seat.hand.sel.open && !seat.hand.sel.ring.as_ref().is_some_and(|r| r.free == Some(true))) || seat.hand.sel.down_t >= 0.0 { return Some("choosing an action"); }
+    if (seat.hand.sel.open && !seat.hand.sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true))) || seat.hand.sel.down_t >= 0.0 { return Some("choosing an action"); }
     None
 }
 
@@ -210,7 +210,7 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
     }
     // a body hidden: hauled some way from where it was taken hold of, and let go
     let drags = g.pl[g.player].dragging();
-    let body_at = |g: &Game, gd: GuardId| -> V3 { match g.ch[g.gd[gd].ch].ragdoll { Some(r) => { let x = &g.tab.ragdoll[r].x; [x[0], 0.0, x[2]] } None => g.ch[g.pl[g.player].ch].pos } };
+    let body_at = |g: &Game, gd: GuardId| -> V3 { match g.ch[g.gd[gd].ch].ragdoll { Some(r) => { let x = &g.tab.ragdoll[r].x; [x[0], 0.0, x[2]] } None => g.player_pos(g.player) } };
     if let Some(b) = drags { if g.saves.drag_ref != Some(b) { g.saves.drag_ref = Some(b); g.saves.body_from = Some(body_at(g, b)); } }
     else if let Some(b) = g.saves.drag_ref.take() {
         let at = body_at(g, b);
@@ -522,7 +522,7 @@ fn gone(g: &mut Game, key: &str) -> String {
 /// The game kept under `key` stands again: the lines that follow a load, and what the player is told of it.   (Checkpoints.loadMem, after the snapshot is restored)
 pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     // (a ring that merely stood at the save, and a gun's setup that was up, are nothing of the saved moment)
-    if g.sets[g.seat].hand.sel.ring.as_ref().is_some_and(|r| r.free == Some(true)) {
+    if g.sets[g.seat].hand.sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true)) {
         let s = &mut g.sets[g.seat].hand.sel;
         s.open = false;
         s.ring = None;

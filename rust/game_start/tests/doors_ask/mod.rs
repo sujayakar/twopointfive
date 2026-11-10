@@ -649,7 +649,7 @@ impl DoorsAsk for Play {
     fn door_used(&mut self, d: DoorId, from: [f64; 2], key: bool) {
         let mut keys = game::js::JsSet::new();
         if key { keys.add(self.g.dr[d].lock_id.clone()); }
-        let who = self.g.ch[self.g.pl[self.g.player].ch].id;
+        let who = self.g.player_id(self.g.player);
         game::doors::doors_use(&mut self.g, d, [from[0], 0.0, from[1]], who, Some(&keys));
     }
     fn lock_on(&self, d: DoorId) -> bool { self.g.dr[d].leaf.locked }
@@ -700,7 +700,7 @@ impl DoorsAsk for Play {
     fn no_place_to_stand(&mut self, at: [f64; 2]) -> bool { game::doorway::doorway_stand(&self.g, [at[0], 0.0, at[1]]) || game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
     fn run_along(&mut self, at: [f64; 2], yaw: f64, most: f64) -> f64 { game::scene_collision::raycast(&mut self.g, [at[0], 1.55, at[1]], [yaw.sin(), 0.0, yaw.cos()], most).map_or(most, |h| h.t) }
     fn standoff_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> {
-        game::doortools::door_tools_standoff_posts(&mut self.g, d, side, men.len() as f64, Some(men)).unwrap_or_default().iter().map(|p| [p.pos[0], p.pos[2]]).collect()
+        game::doortools::door_tools_standoff_posts(&mut self.g, d, side, men.len() as f64, men).unwrap_or_default().iter().map(|p| [p.pos[0], p.pos[2]]).collect()
     }
     fn threshold_given(&mut self, at: [f64; 2]) {
         let (men, t) = (self.men(), game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]));
@@ -792,12 +792,12 @@ impl DoorsAsk for Play {
     fn shell_from(&mut self, m: GuardId, from: [f64; 2], at: [f64; 3], spread: f64) {
         let c = self.g.gd[m].ch;
         self.g.ch[c].muzzle = [from[0], 1.35, from[1]];
-        let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
+        let def = self.g.weapon(game::weapons::WeaponId::M870).clone();
         let o = game::combat::FireOpts { spread: Some(spread), weapon: Some(def), steady: Some(true), blind: None };
         game::combat::fire_weapon(&mut self.g, c, at, Some(&o));
     }
     fn shotgun_rule(&mut self) -> (f64, f64, bool, Vec<bool>) {
-        let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
+        let def = self.g.weapon(game::weapons::WeaponId::M870).clone();
         let p = def.pellets.unwrap();
         let mk = |d: &game::weapons::WeaponDef| game::shotgun::Shell { def: d.clone(), i: 0.0, dir: None, men: game::js::JsMap::new(), ends: Vec::new(), glass: game::js::JsMap::new(), late: Vec::new() };
         let (mut a, mut b) = (mk(&def), mk(&def));

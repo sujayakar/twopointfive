@@ -16,7 +16,7 @@ pub(super) fn near_seg(q: V3, a: V3, b: V3) -> f64 {
 }
 
 /// The wall's thickness.
-pub(super) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
+pub(crate) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
     let h = g.tab.boxes[w.box_].h;
     2.0 * (if w.along_x { h[2] } else { h[0] })
 }
@@ -66,7 +66,7 @@ pub(super) fn same_wall(a: &crate::wallcharge::WallSpot, b: &crate::wallcharge::
 }
 
 /// Is the wall charge live in this game right now: the walls' switch, chaos above 0.
-pub(super) fn wall_charge_on(g: &crate::game::Game) -> bool {
+pub(crate) fn wall_charge_on(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
@@ -169,7 +169,7 @@ pub(super) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::Wall
 
 /// The wall at a point: the full-height unrotated wall whose footprint the point is on, a partition or structure with the word for what it is.
 pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<crate::wallcharge::WallSpot> {
-    let from = from.unwrap_or_else(|| g.ch[g.pl[g.player].ch].pos);
+    let from = from.unwrap_or_else(|| g.player_pos(g.player));
     let mut asked = Vec::new();
     let r = wall_at_of(g, at, from, &mut asked);
     sky_kept(g, asked);
@@ -272,7 +272,7 @@ pub fn wall_target(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3, 
     if !wall_charge_on(g) {
         return base.clone();
     }
-    match wall_at_of(g, at, g.ch[g.pl[seat.player].ch].pos, asked) {
+    match wall_at_of(g, at, g.seat_pos(seat), asked) {
         Some(w) => crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor { wall: Some(w), ..floor.clone() }),
         None => base.clone(),
     }
@@ -291,11 +291,6 @@ pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
         return out;
     };
     if page == WALL_PAGE { vec![row] } else { rows.to_vec() }
-}
-
-/// Sam's own row at the foot of a partition his cursor is on.
-pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    wall_charge_sam_rows(g, p, busy, row, offer);
 }
 
 /// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.

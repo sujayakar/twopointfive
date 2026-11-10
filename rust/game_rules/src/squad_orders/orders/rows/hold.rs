@@ -18,7 +18,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let c = g.gd[gd].ch;
         let (p, v, k) = (g.ch[c].pos, g.ch[c].vel, g.k.orders.hold_stride);
         let on: V3 = [p[0] + v[0] * k, 0.0, p[2] + v[2] * k];
-        let ok = !crate::scene_collision::nav_grid_is_blocked(g, on[0], on[2]) && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [on[0], 0.45, on[2]], None);
+        let ok = !crate::scene_collision::nav_grid_is_blocked(g, on[0], on[2]) && !crate::scene_collision::low_blocked(g, p, on);
         posts.push(if ok { on } else { [p[0], 0.0, p[2]] });
     }
     let arcs = if squad_orders_big(g, &crate::seats::here(g)) && men.len() > 1 { Some(squad_orders_hold_arcs(g, &posts)) } else { None };

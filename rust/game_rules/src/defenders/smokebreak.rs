@@ -79,7 +79,7 @@ fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
 pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
     let c = c_2;
     let h = *g.ch[c].bones.get(crate::character::Bone::HandL)?;
-    let e = g.ch[c].bones.get(crate::character::Bone::ForearmL).copied();
+    let e = g.ch[c].bone(crate::character::Bone::ForearmL);
     let k = &g.k.smokebreak;
     let body_yaw = g.ch[c].body_yaw;
     let mut d: V3 = [m::sin(body_yaw), 0.0, m::cos(body_yaw)];
@@ -95,12 +95,6 @@ pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
 
 /// s: how long a thread's source lives, and how often he files the next
 const THREAD_EVERY: f64 = 1.0;
-
-/// `g.smoke.emit`: the real body (a `look` source: nothing to the game's own smoke), then the event for the host's solver.
-fn smoke_emit(g: &mut Game, e: &crate::smoke_types::SmokeEmitter) {
-    crate::smoke_types::smoke_system_like_emit(g, e);
-    crate::out_events::push_smoke_system_like_emit(g, e);
-}
 
 /// One smoking man's frame: everything of the loop's body after he is counted (a `continue` there is a return here).
 fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mut SmokeBreakStats) {
@@ -142,7 +136,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
     if let (Some(tip), true) = (tip, mn.t >= k.flame_at + k.flame) {
         if m::floor(mn.t / THREAD_EVERY) != m::floor((mn.t - dt) / THREAD_EVERY) {
             let b = k.thread;
-            smoke_emit(g, &crate::smoke_types::SmokeEmitter {
+            crate::effects::smoke_emit(g, &crate::smoke_types::SmokeEmitter {
                 pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: THREAD_EVERY, age: 0.0,
                 kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeLattice::Fine),
                 confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
@@ -162,7 +156,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
             let b = k.breath;
             let a = mouth_of(g, c);
             let v = g.ch[c].vel;
-            smoke_emit(g, &crate::smoke_types::SmokeEmitter {
+            crate::effects::smoke_emit(g, &crate::smoke_types::SmokeEmitter {
                 pos: a.pos, dir: [a.dir[0] * b.speed + v[0] * 0.3, a.dir[1] * b.speed, a.dir[2] * b.speed + v[2] * 0.3], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells),
                 density: b.density, temperature: b.temp, ttl: k.out, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), expand: Some(b.expand),
                 attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),

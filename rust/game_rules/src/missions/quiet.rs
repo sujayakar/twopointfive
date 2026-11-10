@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, sync::Arc, vec, vec::Vec};
 
 /// the switches as they stand now
 fn held_now(g: &crate::game::Game) -> crate::quiet::Held {
@@ -120,8 +120,9 @@ fn quiet_mission_stop(g: &mut crate::game::Game) {
 fn quiet_mission_put_back(g: &mut crate::game::Game) {
     quiet_mission_unbench(g);
     if let Some(a) = g.quiet.authored.take() {
-        g.level.player_spawn = a.spawn;
-        g.level.errand = a.errand;
+        let l = Arc::make_mut(&mut g.level);
+        l.player_spawn = a.spawn;
+        l.errand = a.errand;
     }
     quiet_mission_rack(g);
 }
@@ -171,8 +172,9 @@ pub fn quiet_mission_deal(g: &mut crate::game::Game, pin: Option<f64>, seats: f6
     g.quiet.authored = Some(crate::quiet::QuietMissionAuthored { spawn: g.level.player_spawn, errand: g.level.errand.clone() });
     let s = &q.starts[g.quiet.deal.start as usize];
     let p = &q.spots[g.quiet.deal.spot as usize];
-    g.level.player_spawn = [s.sam[0], 0.0, s.sam[2]];
-    g.level.errand = crate::mission::Errand {
+    let l = Arc::make_mut(&mut g.level);
+    l.player_spawn = [s.sam[0], 0.0, s.sam[2]];
+    l.errand = crate::mission::Errand {
         place: p.place.clone(), area: p.area, door: p.door.clone(),
         thing: q.thing.clone().unwrap_or_else(|| String::from("the drive")), holder: p.holder.clone(), index: p.rack_index, front: p.front, half_w: p.half_w, told: p.wired.unwrap_or(false),
         exits: q.exits.clone(),
@@ -214,7 +216,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     let m = match g.staged.team.first().copied() { Some(m) => m, None => return };
     if crate::condition::down(g, g.gd[m].ch) || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return; }
     g.quiet.fall_in = false;
-    let at = g.ch[g.pl[g.player].ch].pos;
+    let at = g.player_pos(g.player);
     let target = crate::orders::squad_orders_target_at(g, at);
     crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
 }

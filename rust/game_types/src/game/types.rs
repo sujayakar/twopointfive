@@ -1,7 +1,7 @@
 //! The types of `game`.
 #![allow(unused_imports)]
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ThrowKind {
@@ -424,7 +424,7 @@ pub struct Game {
     pub rack_targets: Vec<FixtureId>,
     #[is(crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true })] pub tune: crate::game::GameTune,
     pub engine: crate::host_api::HostApi,
-    pub level: crate::scene_level::Level,
+    pub level: Arc<crate::scene_level::Level>,
     #[is(RigId(0))] pub rig: RigId,
     pub smoke: crate::smoke_types::SmokeSystemLike,
     /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
@@ -694,7 +694,6 @@ pub struct Player {
     #[is(2.0)] pub flashbangs: f64,
     #[is(2.0)] pub frags: f64,
     #[is(crate::game::SlotKind::Pistol)] pub slot: crate::game::SlotKind,
-    #[is(crate::game::ThrowKind::Smoke)] pub throw_kind: crate::game::ThrowKind,
     #[is(FirearmId(0))] pub rifle: FirearmId,
     pub has_rifle: bool,
     pub equip_t: f64,
@@ -714,7 +713,6 @@ pub struct Player {
     pub nv: bool,
     pub nv_amount: f64,
     #[is(LightId(0))] pub light: LightId,
-    #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
     /// he is low because his hands' work put him there, not by his own key
     pub knee: Option<crate::player::Knee>,
@@ -906,21 +904,7 @@ pub struct PlayerSel {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlayerSelRing {
-    pub ax: f64,
-    pub ay: f64,
-    pub z: f64,
-    pub t0: f64,
-    pub lit: f64,
-    pub armed: bool,
-    pub free: Option<bool>,
-    pub more: Option<bool>,
-    pub at: Option<V3>,
-    pub ox: Option<f64>,
-    pub oy: Option<f64>,
-    pub mx: Option<f64>,
-    pub my: Option<f64>,
-    pub clear: Option<bool>,
-    pub pt: Option<f64>,
+    pub state: crate::cmdring::RingState,
     pub key: String,
     pub whistle: Option<bool>,
 }
@@ -1299,10 +1283,13 @@ impl Player {
     }
 }
 impl Guard {
-    /// a new path is a new serial
+    /// a new path, even none, is a new serial: what reads a path asks by it whether this is still the one it knew. An edit in place (a point
+    /// taken off or put in) is the same path, and the runner lays back the one it kept with the serial it had
     pub fn set_path(&mut self, path: Vec<V3>) { self.path = path; self.path_serial = self.path_serial.wrapping_add(1); }
     /// no path, and nowhere it was going
-    pub fn drop_path(&mut self) { self.set_path(Vec::new()); self.path_goal = None; self.path_goal_orbit = false; }
+    pub fn drop_path(&mut self) { self.set_path(Vec::new()); self.set_path_goal(None); }
+    /// where his path goes. The standoff asks whether that is its own back-off point: whoever else writes it, by this, says it is not
+    pub fn set_path_goal(&mut self, goal: Option<V3>) { self.path_goal = goal; self.path_goal_orbit = false; }
 }
 impl Game {
     /// whose man he is
@@ -1311,8 +1298,24 @@ impl Game {
     pub fn pos_of(&self, gd: GuardId) -> V3 { self.ch[self.gd[gd].ch].pos }
     /// where a seat's own man stands
     pub fn seat_pos(&self, seat: &crate::seats::SeatRef) -> V3 { self.ch[self.pl[seat.player].ch].pos }
+    /// where a player's man stands
+    pub fn player_pos(&self, p: PlayerId) -> V3 { self.ch[self.pl[p].ch].pos }
+    /// a player's man's body's number
+    pub fn player_id(&self, p: PlayerId) -> f64 { self.ch[self.pl[p].ch].id }
     /// his body's number
     pub fn char_id(&self, gd: GuardId) -> f64 { self.ch[self.gd[gd].ch].id }
+    /// the body's number of a seat's own man
+    pub fn seat_id(&self, seat: &crate::seats::SeatRef) -> f64 { self.ch[self.pl[seat.player].ch].id }
+    /// a gun's row
+    pub fn weapon(&self, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef { self.m.weapons.weapons.get(w).unwrap() }
+    /// a box of the level has moved, come or gone: what was worked out from the boxes is worked out again
+    pub fn boxes_changed(&mut self) { self.engine.world.geom_serial += 1.0; }
+    /// a box by its number in the level's list: none for a number below nought, a part of one or no number
+    pub fn box_at(&self, i: f64) -> Option<BoxId> {
+        let ix = i as usize;
+        if ix as f64 != i { return None; }
+        self.col.boxes.get(ix).copied()
+    }
     /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }

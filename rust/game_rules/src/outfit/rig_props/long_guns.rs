@@ -6,13 +6,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// a joint of his body by name, if this body has it (`c.bones.x`)
-fn bone(g: &Game, c: CharId, k: crate::character::Bone) -> Option<V3> {
-    g.ch[c].bones.get(k).copied()
-}
 /// `c.bones.handR ?? c.muzzle`
 fn hand_or_muzzle(g: &Game, c: CharId) -> V3 {
-    match bone(g, c, crate::character::Bone::HandR) {
+    match g.ch[c].bone(crate::character::Bone::HandR) {
         Some(h) => h,
         None => g.ch[c].muzzle,
     }
@@ -21,14 +17,14 @@ fn hand_or_muzzle(g: &Game, c: CharId) -> V3 {
 fn in_c(cf: Frame, d: V3) -> V3 {
     v3::mad(v3::mad(v3::scale(cf.x, d[0]), cf.y, d[1]), cf.z, d[2])
 }
-/// the identity frame longHold and torchHold apply a group's adj to
-fn unit_frame() -> Frame {
+/// the identity frame a group's adj is applied to
+pub(super) fn unit_frame() -> Frame {
     Frame { o: [0.0, 0.0, 0.0], x: [1.0, 0.0, 0.0], y: [0.0, 1.0, 0.0], z: [0.0, 0.0, 1.0] }
 }
 
 /// The rifle's base place in the back's frame, slung behind or hung in front.
 fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kSlung, front: bool, rest: Option<f64>) -> crate::rig_props::SlungBase {
-    let (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) = (bone(g, c_2, crate::character::Bone::Hips), bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::UpperArmL), bone(g, c_2, crate::character::Bone::UpperArmR), bone(g, c_2, crate::character::Bone::Spine2));
+    let (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) = (g.ch[c_2].bone(crate::character::Bone::Hips), g.ch[c_2].bone(crate::character::Bone::ThighL), g.ch[c_2].bone(crate::character::Bone::ThighR), g.ch[c_2].bone(crate::character::Bone::UpperArmL), g.ch[c_2].bone(crate::character::Bone::UpperArmR), g.ch[c_2].bone(crate::character::Bone::Spine2));
     let joints = match (b_hips, b_thigh_l, b_thigh_r, b_ua_l, b_ua_r, b_spine2) {
         (Some(_), Some(tl), Some(tr), Some(al), Some(ar), Some(_)) => Some((tl, tr, al, ar)),
         _ => None,
@@ -68,7 +64,7 @@ fn slung_base(g: &crate::game::Game, c_2: CharId, p: crate::rig_props::RigSc20kS
 
 /// How far a rifle hanging in front must swing forward to lie over both thighs as posed.
 fn sling_swing(g: &crate::game::Game, c_2: CharId, cf: crate::rig_props::Frame, o: V3, z: V3) -> f64 {
-    let (thigh_l, thigh_r, shin_l, shin_r) = match (bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::ShinL), bone(g, c_2, crate::character::Bone::ShinR)) {
+    let (thigh_l, thigh_r, shin_l, shin_r) = match (g.ch[c_2].bone(crate::character::Bone::ThighL), g.ch[c_2].bone(crate::character::Bone::ThighR), g.ch[c_2].bone(crate::character::Bone::ShinL), g.ch[c_2].bone(crate::character::Bone::ShinR)) {
         (Some(a), Some(b), Some(c), Some(d)) => (a, b, c, d),
         _ => return 0.0,
     };
@@ -149,7 +145,7 @@ pub(super) fn sc20k_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried,
     out.owner = owner_of(g, c_2);
     let fr = sc20k_frame(g, c_2, s, if slung { crate::rig_props::RifleAt::Slung } else { crate::rig_props::RifleAt::Hand }, Some(front), rest);
     let mut gf = fr.g;
-    let hand = bone(g, c_2, crate::character::Bone::HandR);
+    let hand = g.ch[c_2].bone(crate::character::Bone::HandR);
     match (kit, slung, hand) {
         (Some(kd), false, Some(hand)) => {
             gf = kit_gun_frame(g, c_2, hand, KitGunFrameP { adj: s.adj }, gf, kd.roll.unwrap_or(0.0));
@@ -174,26 +170,22 @@ pub(super) fn sc20k_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried,
         None => (s.hull, s.butt, s.mag, s.fore, s.rail, s.optic),
     };
     let bare = g.ch[c_2].gun_look.as_ref().and_then(|l| l.bare_long).unwrap_or(false);
-    sc20k_part(g, out, gf, hull, body, None);
-    sc20k_part(g, out, gf, butt, furn, None);
-    if !no_mag { sc20k_part(g, out, gf, mag, metal, None); }
-    sc20k_part(g, out, gf, s.grip, furn, None);
-    sc20k_part(g, out, gf, fore, furn, None);
-    sc20k_part(g, out, gf, if bare { bare_barrel(s.suppressor) } else { s.suppressor }, metal, None);
-    sc20k_part(g, out, gf, rail, if is_m4 { col.anodised } else { col.dark_metal }, None);
-    sc20k_part(g, out, gf, optic, metal, None);
-    sc20k_part(g, out, gf, s.foregrip, furn, None);
-    sc20k_part(g, out, gf, s.light, col.torch, None);
-    sc20k_part(g, out, gf, s.lens, col.lens_body, Some(lens));
+    seg(g, out, gf, hull, body, None);
+    seg(g, out, gf, butt, furn, None);
+    if !no_mag { seg(g, out, gf, mag, metal, None); }
+    seg(g, out, gf, s.grip, furn, None);
+    seg(g, out, gf, fore, furn, None);
+    seg(g, out, gf, if bare { bare_barrel(s.suppressor) } else { s.suppressor }, metal, None);
+    seg(g, out, gf, rail, if is_m4 { col.anodised } else { col.dark_metal }, None);
+    seg(g, out, gf, optic, metal, None);
+    seg(g, out, gf, s.foregrip, furn, None);
+    seg(g, out, gf, s.light, col.torch, None);
+    seg(g, out, gf, s.lens, col.lens_body, Some(lens));
     if let Some(mm) = m {
-        sc20k_part(g, out, gf, mm.tube, metal, None);
-        sc20k_part(g, out, gf, mm.peq, if black { col.polymer } else { col.fde }, None);
-        sc20k_part(g, out, gf, mm.gl, metal, None);
+        seg(g, out, gf, mm.tube, metal, None);
+        seg(g, out, gf, mm.peq, if black { col.polymer } else { col.fde }, None);
+        seg(g, out, gf, mm.gl, metal, None);
     }
-}
-/// One part of the rifle: seg() at depth 2 with the rifle's tag.
-fn sc20k_part(g: &Game, out: &mut Carried, gf: Frame, part: Seg, albedo: V3, emissive: Option<V3>) {
-    seg(g, out, gf, part, albedo, emissive, Some(SC20K_TAG));
 }
 /// `curOwner = c.id & 0xff`: the character id the boxes being emitted are stamped with
 
@@ -426,7 +418,7 @@ pub fn big_back_of(hips: V3, mid: V3, th_l: V3, th_r: V3, ua_l: V3, ua_r: V3, p:
 pub fn big_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::kit::BigTool, k: f64, out: &mut Carried, rig: Option<crate::rig_props::Rig>, clear: Option<bool>) {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let clear = clear.unwrap_or(false);
-    let (hips, spine2, th_l, th_r, ua_l, ua_r) = match (bone(g, c_2, crate::character::Bone::Hips), bone(g, c_2, crate::character::Bone::Spine2), bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::UpperArmL), bone(g, c_2, crate::character::Bone::UpperArmR)) {
+    let (hips, spine2, th_l, th_r, ua_l, ua_r) = match (g.ch[c_2].bone(crate::character::Bone::Hips), g.ch[c_2].bone(crate::character::Bone::Spine2), g.ch[c_2].bone(crate::character::Bone::ThighL), g.ch[c_2].bone(crate::character::Bone::ThighR), g.ch[c_2].bone(crate::character::Bone::UpperArmL), g.ch[c_2].bone(crate::character::Bone::UpperArmR)) {
         (Some(a), Some(b), Some(c), Some(d), Some(e), Some(f)) => (a, b, c, d, e, f),
         _ => return,
     };
@@ -447,7 +439,7 @@ pub fn big_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::kit::BigTool, 
     };
     let mut gf = on_back;
     if k > 0.0 {
-        if let Some(hand) = bone(g, c_2, crate::character::Bone::HandR) {
+        if let Some(hand) = g.ch[c_2].bone(crate::character::Bone::HandR) {
             if kind == crate::kit::BigTool::Hammer {
                 let h = crate::character::character_hand_frame_r(g, c_2, None);
                 let grip = BIGRIG.hammer.grip;
@@ -462,8 +454,8 @@ pub fn big_boxes(g: &crate::game::Game, c_2: CharId, kind: crate::kit::BigTool, 
         return;
     }
     let (table, col) = (BIGRIG, crate::rig_props::col());
-    seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow(), Some(BIG_TAG));
-    seg_at(g, out, gf, table.hammer.head, None, col.sledge, no_glow(), Some(BIG_TAG));
+    seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow());
+    seg_at(g, out, gf, table.hammer.head, None, col.sledge, no_glow());
 }
 
 /// A man's own long gun let go of for the big slot's tool: on its sling down his front, dark.

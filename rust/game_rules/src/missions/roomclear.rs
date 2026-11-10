@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// `inBounds(p, rect)`: a structure's Rect is the same four numbers as the plan's bounds the squad's function takes
-fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
+pub(super) fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
     crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
 }
 /// `h.state !== 'dead' && !h.fled`
@@ -127,17 +127,13 @@ fn check_garrison_fits(s: &crate::roomclear::CheckStructureS, bad: &mut Vec<Stri
     let men = s.rooms.iter().fold(0.0, |n, r| n + r.garrison);
     let most = crate::scene_scenarios::SQUAD_MAX_MEN;
     match s.max_men.filter(|x| js::truthy(*x)) {
-        // a structure made for more: the staging lifts the four-man squad's budget to fit
-        Some(mm) if men <= m::min(most, mm) => {}
-        Some(mm) if men > 5.0 => {
+        // (a structure that says: the staging lifts the four-man squad's budget to fit)
+        Some(mm) if men > m::min(most, mm) => {
             let more = if mm > most { format!(" and at most {} fit beside the player and the four (sixteen characters are skinned)", js::num_str(most)) } else { String::new() };
             bad.push(format!("{} defenders: the structure's maxMen is {}{}", js::num_str(men), js::num_str(mm), more));
         }
-        _ => {
-            if men > 5.0 {
-                bad.push(format!("{} defenders: only five fit beside the player and the pair (eight characters cast shadows)", js::num_str(men)));
-            }
-        }
+        None if men > 5.0 => bad.push(format!("{} defenders: only five fit beside the player and the pair (eight characters cast shadows)", js::num_str(men))),
+        _ => {}
     }
 }
 
@@ -492,7 +488,7 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     let mut i = 0;
     while i < g.staged.rooms.len() {
         let bounds = g.staged.rooms[i].def.bounds;
-        let c = !g.staged.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.ch[g.gd[*h].ch].pos, bounds));
+        let c = !g.staged.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.pos_of(*h), bounds));
         if c == g.staged.rooms[i].cleared {
             i += 1;
             continue;
@@ -661,6 +657,19 @@ mod tests {
             r.marks.push(mk);
         }
         r
+    }
+
+    /// A FAILURE MEANS: a level may hold more men than it says it was made for (a small one was asked nothing), or one that says nothing more than the pair has room for.
+    #[test]
+    fn a_structure_holds_no_more_men_than_it_says() {
+        let told = |garrison: f64, max_men: Option<f64>| {
+            let mut bad = Vec::new();
+            check_garrison_fits(&crate::roomclear::CheckStructureS { rooms: vec![room("a", garrison, 1)], max_men, ..Default::default() }, &mut bad);
+            !bad.is_empty()
+        };
+        for (garrison, max_men, too_many) in [(4.0, Some(3.0), true), (3.0, Some(3.0), false), (8.0, Some(6.0), true), (8.0, Some(8.0), false), (5.0, None, false), (6.0, None, true), (12.0, Some(99.0), true)] {
+            assert_eq!(told(garrison, max_men), too_many, "{garrison} men in a structure made for {max_men:?}");
+        }
     }
 
     /// A FAILURE MEANS: a room holds the wrong number of men, two on a mark, or a restart deals another fight than the seed says. Seed nothing's first attempt is the level file's own marks in order.

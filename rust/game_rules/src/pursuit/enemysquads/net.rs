@@ -8,12 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// `COUNT[n] ?? n`
-fn count_or_n(n: usize) -> String {
-    match count().get(n) { Some(w) => w.clone(), None => format!("{}", n) }
-}
 fn name_of(g: &Game, q: EnemysquadsSquadId) -> String { g.tab.enemysquads_squad[q].name.clone() }
-fn def_gd(g: &Game, d: RoomfightDefId) -> GuardId { g.tab.roomfight_def[d].gd }
 /// `X.men.some(m => !offNet(m))`: anybody of it answers   (netCheck's answers)
 fn answers(g: &Game, x: EnemysquadsSquadId) -> bool {
     let men = g.tab.enemysquads_squad[x].men.clone();
@@ -23,12 +18,12 @@ fn answers(g: &Game, x: EnemysquadsSquadId) -> bool {
 /// `home(g, Q).find(D => D.gd !== m)?.gd`
 fn home_but(g: &Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
     let h = home(g, q);
-    h.into_iter().map(|d| def_gd(g, d)).find(|&x| x != m)
+    h.into_iter().map(|d| g.tab.roomfight_def[d].gd).find(|&x| x != m)
 }
 /// `home(g, Q)[0]?.gd`
 pub(super) fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
     let h = home(g, q);
-    h.first().map(|&d| def_gd(g, d))
+    h.first().map(|&d| g.tab.roomfight_def[d].gd)
 }
 /// `Q.men.find(m => fit(g, m))`, with one man left out
 fn fit_man(g: &Game, q: EnemysquadsSquadId, but: Option<GuardId>) -> Option<GuardId> {
@@ -306,10 +301,10 @@ fn net_send(g: &mut crate::game::Game, x: EnemysquadsSquadId, who: GuardId, stop
         if one_out || g.tab.enemysquads_squad[q].calls.as_ref().map_or(false, |l| !l.is_empty()) { continue; }
         if own_trouble(g, q) { continue; }
         let h = home(g, q);
-        let free: Vec<RoomfightDefId> = h.iter().copied().filter(|&d| { let m = def_gd(g, d); !g.tab.enemysquads_squad[q].went.iter().any(|s| s.gd == m) }).collect();
+        let free: Vec<RoomfightDefId> = h.iter().copied().filter(|&d| { let m = g.tab.roomfight_def[d].gd; !g.tab.enemysquads_squad[q].went.iter().any(|s| s.gd == m) }).collect();
         let go = goers(g, &free, at, m::min(n, h.len() as f64 - 1.0));
         if (go.len() as f64) < n { continue; }
-        let ds: Vec<f64> = go.iter().map(|&d| dist_xz(g.pos_of(def_gd(g, d)), at)).collect();
+        let ds: Vec<f64> = go.iter().map(|&d| dist_xz(g.pos_of(g.tab.roomfight_def[d].gd), at)).collect();
         let d = m::min_n(&ds);
         if best.as_ref().map_or(true, |b| d < b.2) { best = Some((q, go, d)); }
     }
@@ -320,7 +315,7 @@ fn net_send(g: &mut crate::game::Game, x: EnemysquadsSquadId, who: GuardId, stop
         l.about = Some(x);
         l.all = Some(all);
         l.stops = Some(stops[1..].to_vec());
-        let gd = def_gd(g, d);
+        let gd = g.tab.roomfight_def[d].gd;
         let t = g.time;
         let c = g.tab.enemysquads_squad[bq].rc.as_mut().unwrap();
         c.look.push(l);
@@ -388,7 +383,7 @@ fn asker(g: &Game, x: EnemysquadsSquadId) -> Option<GuardId> {
     for q in squads {
         if q == x { continue; }
         for d in home(g, q) {
-            let m = def_gd(g, d);
+            let m = g.tab.roomfight_def[d].gd;
             let at = g.pos_of(m);
             let dist = if !p.is_empty() { let v: Vec<f64> = p.iter().map(|a| dist_xz(a.at, at)).collect(); m::min_n(&v) } else { 0.0 };
             if dist < bd { bd = dist; best = Some(m); }
@@ -486,7 +481,7 @@ fn nc_stage_idle(g: &mut Game, squads: &[EnemysquadsSquadId]) {
             let text = if busy {
                 format!("{}: {} — stand by", xn, if looking { "still looking" } else { "checking our own" })
             } else if !gone.is_empty() {
-                let who = if gone.len() > 1 { format!("{} of ours", count_or_n(gone.len())) } else { mate(g, gone[0]) };
+                let who = if gone.len() > 1 { format!("{} of ours", super::radio_check::count_word(gone.len())) } else { mate(g, gone[0]) };
                 format!("{}: still nothing from {}", xn, who)
             } else {
                 format!("{}: all up here — nothing more", xn)
@@ -586,8 +581,8 @@ fn nc_stage_asked(g: &mut Game) {
     };
     net_mut(g).done.add(x);
     g.tab.enemysquads_squad[x].trouble = None;
-    let first = def_gd(g, sent.go[0]);
-    let text = format!("{}: nothing from {} — {} moving to their rooms!", name_of(g, sent.q), xn, count_or_n(sent.go.len()));
+    let first = g.tab.roomfight_def[sent.go[0]].gd;
+    let text = format!("{}: nothing from {} — {} moving to their rooms!", name_of(g, sent.q), xn, super::radio_check::count_word(sent.go.len()));
     on_net(g, first, &text, None, None);
     event(g, sent.q, SquadEventWhat::NetLooks, Some(first));
     net_wary(g);
@@ -645,10 +640,10 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
         let d = def_of(g, m);
         let mine = room_of(g, q, p0, Some(1.0));
         let (d, mine) = match (d, mine) { (Some(d), Some(r)) => (d, r), _ => continue };
-        if g.time - g.gd[m].last_seen_t < 1.0 && (noticed(g, m) || glimpse(g, q, m)) {
+        if g.time - g.gd[m].last_seen_t < 1.0 && (roused(g, m) || glimpse(g, q, m)) {
             let p = match crate::belief::eyes_fix_def(g, m) { Some(k) => k, None => g.pos_of(m) };
             let r = match room_of(g, q, p, Some(0.75)) { Some(r) => r, None => mine };
-            if !(noticed(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
+            if !(roused(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
         }
         let (noise, noise_t) = { let x = &g.tab.roomfight_def[d]; (x.noise_at, x.noise_t) };
         if let Some(n) = noise {
@@ -698,7 +693,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         if g.time < due.t { continue; }
         g.tab.enemysquads_squad[q].due.remove(i);
         let h = home(g, q);
-        let d = match h.iter().copied().find(|&x| def_gd(g, x) == due.gd) { Some(d) => d, None => continue };
+        let d = match h.iter().copied().find(|&x| g.tab.roomfight_def[x].gd == due.gd) { Some(d) => d, None => continue };
         if g.tab.enemysquads_squad[q].state != SquadState::Contact { continue; }
         let lost = match due.room.clone() { Some(r) => Some(r), None => g.tab.enemysquads_squad[q].hit_room.clone() };
         let mut up_in = 0usize;
@@ -941,7 +936,7 @@ mod tests {
     use super::*;
     #[test]
     fn a_count_past_the_words_is_its_number() {
-        assert_eq!(count_or_n(2), "two");
-        assert_eq!(count_or_n(7), "7");
+        assert_eq!(super::radio_check::count_word(2), "two");
+        assert_eq!(super::radio_check::count_word(7), "7");
     }
 }

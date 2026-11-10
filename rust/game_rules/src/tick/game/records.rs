@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// INVENTED: THE whole write of a man's path. Every `gd.path = x` of the TypeScript (a new array, even `[]`) is this call: identity readers compare path_serial. An in-place edit (splice, push, index, `length = n`) is not a whole write and does not call it. ONE exception: runner.ts:294 puts the same array back, so it restores path and path_serial together and does not call this
-pub fn guard_set_path(g: &mut crate::game::Game, gd: GuardId, path: Vec<V3>) { let o = &mut g.gd[gd]; o.path = path; o.path_serial = o.path_serial.wrapping_add(1); }
-
 /// A game stands in this slot of rust/sim's.
 pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; g.tab.boxes.stand_in(slot); }
 
@@ -46,7 +43,7 @@ mod tests {
 /// The selector open with his hand on it: a list, or a ring whose key is still down.
 pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.sets[crate::seats::seat_of_man(g, id)].hand.sel;
-    sel.open && !sel.ring.as_ref().and_then(|r| r.free).unwrap_or(false)
+    sel.open && !sel.ring.as_ref().is_some_and(|r| r.state.free == Some(true))
 }
 
 /// Makes a player: his guns first (the field initialisers), then his body.
@@ -71,7 +68,7 @@ pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque,
     g.ch[c].who = crate::character::Who::Player(id);
     g.ch[c].team = crate::teams::Team::Ours;
     let def = g.fa[pistol].def;
-    g.ch[c].muzzle_ahead = g.m.weapons.weapons.get(def).unwrap().muzzle_ahead;
+    g.ch[c].muzzle_ahead = g.weapon(def).muzzle_ahead;
     id
 }
 
@@ -174,7 +171,7 @@ pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     };
     let moved = match g.gd[id].fix_ref {
         None => true,
-        Some(r) => m::hyp2(lk[0] - r[0], lk[2] - r[2]) > 0.5,
+        Some(r) => v3::dist_xz(lk, r) > 0.5,
     };
     if moved { g.gd[id].fix_ref = Some(v3::copy(lk)); g.gd[id].fix_t = now; }
 }
@@ -227,7 +224,7 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     for k in keys { held.add(k); }
     g.gd[id].keys = held;
     // a row the table does not hold panics here, as the TypeScript's throws
-    let row = g.m.weapons.weapons.get(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).unwrap().clone();
+    let row = g.weapon(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).clone();
     let w = crate::weapons::firearm_new(g, &row);
     g.gd[id].weapon = w;
     g.ch[c].muzzle_ahead = row.muzzle_ahead;

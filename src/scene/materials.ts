@@ -54,13 +54,10 @@ export interface Does {
   screen?: true;
   /** lying snow (rust/game_rules/src/air/snow_bog.rs, air_sim, the blast's mouth, and the picture's snow field) */
   snow?: SnowKind;
-  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: rust/game_rules/src/air/weather.rs). Nothing is kept: whoever asks what a round
-   *  knocks out of the lot while the ground is wet is answered from this (doesWet below). Absent = the same wet as dry. As measured: wet tarmac sparks. */
-  wet?: string;
 }
 export interface Material { looks?: true; does?: Does }
 
-/** the tarmac's columns, which lying snow shares (snow is the ground to a round and a blast; and a lot of either, soaked, sparks: as measured) */
+/** the tarmac's columns, which lying snow shares (snow is the ground to a round and a blast, in any weather) */
 const GROUND: Does = { surf: 'concrete', breaks: 'hard', struct: true };
 
 export const MATERIALS = {
@@ -71,7 +68,7 @@ export const MATERIALS = {
   fabric:  { looks: true, does: { surf: 'fabric', breaks: 'soft' } },                             // a seat's cloth, a tarpaulin, a sack, a blanket
   carpet:  { looks: true, does: { surf: 'carpet', breaks: 'hard', struct: true } },               // a fitted carpet, a rug
   grass:   { looks: true, does: { surf: 'carpet', breaks: 'hard', struct: true } },               // a lawn
-  tarmac:  { looks: true, does: { ...GROUND, casing: true, wet: 'unnamed dark' } },               // the car park, a road, a yard's dust and gravel (`casing`: the office's tarmac is dark, and the index's rule was by tone)
+  tarmac:  { looks: true, does: { ...GROUND, casing: true } },                                    // the car park, a road, a yard's dust and gravel (`casing`: the office's tarmac is dark, and the index's rule was by tone)
   plastic: { looks: true, does: { surf: 'plastic', breaks: 'metal' } },                           // a crate, a chair's shell, a jerrycan
   // ---- DRAWN ONLY: the look's other materials. A box drawn as one of these says what it does in another row's word, or nothing
   'mud wall': { looks: true }, plaster: { looks: true }, block: { looks: true }, earth: { looks: true }, gravel: { looks: true }, slab: { looks: true }, sheet: { looks: true },
@@ -92,9 +89,9 @@ export const MATERIALS = {
   frame:        { does: { surf: 'metal', breaks: 'hard', struct: true } },                                                     // a window's frame, an outside door's leaf
   screen:       { does: { surf: 'glass', breaks: 'hard', casing: true, screen: true } },                                       // a dead screen's glass
   plant:        { does: { surf: 'foliage', breaks: 'soft' } },                                                                 // a pot plant, produce, straw
-  snow:          { does: { ...GROUND, snow: 'snow', paper: true, wet: 'unnamed dark' } },                                                           // lying snow, fresh (`paper`: it is pale, and the index's rule was by tone)
-  'packed snow': { does: { ...GROUND, snow: 'snowPacked', wet: 'unnamed dark' } },                                                  // trodden or driven snow
-  'old snow':    { does: { ...GROUND, snow: 'snowOld', wet: 'unnamed dark' } },                                                    // slush, the dirty ring round a cleared patch
+  snow:          { does: { ...GROUND, snow: 'snow', paper: true } },                                                           // lying snow, fresh (`paper`: it is pale, and the index's rule was by tone)
+  'packed snow': { does: { ...GROUND, snow: 'snowPacked' } },                                                                  // trodden or driven snow
+  'old snow':    { does: { ...GROUND, snow: 'snowOld' } },                                                                     // slush, the dirty ring round a cleared patch
   // ---- DONE ONLY: WHAT NOBODY NAMED. A colour that was no paint of any palette was classed by its tone, and these are those classes: how bright (dark,
   // middling, light, pale) and whether a plain grey (a steel cabinet to a blast). 'unnamed' is THE DEFAULT ROW: a box that says nothing takes it
   unnamed:              { does: { surf: 'concrete', breaks: 'metal' } },

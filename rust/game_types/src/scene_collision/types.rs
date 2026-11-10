@@ -44,14 +44,9 @@ impl Default for GridWind {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StaticCollision {
-    pub cells: Vec<Vec<f64>>,
-    #[is(40.0)] pub w: f64,
-    #[is(28.0)] pub h: f64,
-    #[is(1.0)] pub cs: f64,
     pub nav: crate::scene_collision::NavGrid,
     pub sound: crate::scene_collision::SoundPaths,
     pub boxes: Vec<BoxId>,
-    pub tilted_at: Vec<f64>,
     pub dynamic_boxes: Vec<BoxId>,
     pub fire_pass: Option<crate::scene_collision::FirePass>,
 }

@@ -187,7 +187,7 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     let line = alloc::format!("{} — {}", g.gd[x].callsign, text);
     crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
-    let at = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
     crate::chronicle::chron_radio(g, x, text);
 }
@@ -388,9 +388,9 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
 /// Staging: no enemy of theirs stands within `clearM` of this mark.
 pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
-    if crate::seats::men_left(g).into_iter().any(|pl| dist_xz(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
+    if crate::seats::men_left(g).into_iter().any(|pl| dist_xz(g.player_pos(pl), p) < clear_m) { return false; }
     for &x in &g.guards {
-        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && dist_xz(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
+        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && dist_xz(g.pos_of(x), p) < clear_m { return false; }
     }
     true
 }

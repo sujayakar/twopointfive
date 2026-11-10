@@ -143,7 +143,7 @@ pub fn wall_charge_sam_words(g: &crate::game::Game, c_2: WallChargeId) -> String
 /// Would it put HIM down where he stands
 pub fn wall_charge_sam_fatal(g: &crate::game::Game, c_2: WallChargeId) -> bool {
     if g.god_mode { return false; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let at = wall_pt(g, &w, 0.0, 0.0, None);
     let off = wall_off(g, &w, p);
@@ -160,8 +160,8 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
     if let Some(n) = W.carried { if W.brought.unwrap_or(0.0) > 0.0 { out.push(Note { key: String::new(), text: alloc::format!("wall charges {}", n) }); } }
     if W.set.is_empty() { return out; }
     let mark = !crate::pairorders::pair_orders_waiting(g, seat).is_empty();   // (while his partner waits on a mark, the key is the mark first: the note says so)
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
-    let p = g.ch[g.pl[seat.player].ch].pos;
+    let f = crate::doortools::blow_letter(g);
+    let p = g.seat_pos(seat);
     for own in [false, true] {
         let of: Vec<WallChargeId> = W.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
         if of.is_empty() { continue; }
@@ -175,12 +175,12 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
 }
 
 /// With the cursor on a partition and Sam at its foot, the marker and its row
-pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, o: &mut crate::player::Offers) {
     g.sets[g.seat].wall_charge.offered = None;
     g.sets[g.seat].wall_charge.marker = None;
     if !wall_charge_on(g) || !g.sets[g.seat].wall_charge.seated { return; }
     let pl = g.player;
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
+    let f = crate::doortools::blow_letter(g);
     let key = crate::ownblow::blow_key_word(false, &f);
     let sam_wall = g.pl[pl].wall_work().map(|s| s.wall.clone());
     let wall = match sam_wall {
@@ -211,19 +211,11 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
     let line2 = if reach { "" } else if near { "hands full" } else { "step closer" };
     let height = g.k.wallcharge.height;
     let pos = wall_pt(g, &w, 0.0, 0.05, Some(height));
-    let mut it = crate::game::Interactable {
-        kind: crate::game::InteractableKind::Wall,
-        pos,
-        line1: String::from(line1),
-        line2: String::from(line2),
-        in_reach: reach,
-        off: false,
-        ..Default::default()
-    };
+    let mut it = crate::player::mark(crate::game::InteractableKind::Wall, pos, line1, line2, reach);
     if setting {
         it.in_reach = true;
         g.sets[g.seat].wall_charge.marker = Some(it.clone());
-        offer(g, it, Vec::new());
+        o.add(it, Vec::new());
         return;
     }
     if let Some(c) = c {
@@ -231,7 +223,7 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
         let word = crate::ownblow::blow_key_word(key_is, &f);
         let close = wall_charge_close_words(g, Some(c), None);
         it.line2 = alloc::format!("{}  blow the charge{}", word, close);
-        offer(g, it, Vec::new());
+        o.add(it, Vec::new());
         return;
     }
     let mut verbs: Vec<crate::game::Interactable> = Vec::new();
@@ -243,11 +235,10 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
         it.line2 = String::from("a charge is going on it");
     } else if reach && !busy {
         let words = wall_charge_row_words(g, &crate::seats::here(g));
-        let v = row(g, it.clone(), crate::game::Verb::Charge, words, Some(alloc::format!("{}  blows it once set", key)), None);
-        verbs.push(v);
+        verbs.push(crate::player::row(&it, crate::game::Verb::Charge, &words, &alloc::format!("{}  blows it once set", key)));
         g.sets[g.seat].wall_charge.offered = Some(w);
     }
-    offer(g, it, verbs);
+    o.add(it, verbs);
 }
 
 /// The row performed starts it; he stands on it setSecs; a step, a sprint, full hands or another verb breaks it off
@@ -307,23 +298,13 @@ pub fn wall_charge_sam_job(g: &crate::game::Game) -> Option<crate::wallcharge::W
 }
 
 /// The one row while he is at it
-pub fn wall_charge_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, f64) -> crate::game::Interactable) -> crate::game::Interactable {
-    let s = g.pl[g.player].wall_work().cloned().unwrap();
-    let height = g.k.wallcharge.height;
-    let it = match g.sets[g.seat].wall_charge.marker.clone() {
-        Some(it) => it,
-        None => crate::game::Interactable {
-            kind: crate::game::InteractableKind::Wall,
-            pos: wall_pt(g, &s.wall, 0.0, 0.05, Some(height)),
-            line1: String::from(if s.wall.outer == Some(true) { "wall · outer wall" } else { "wall · partition" }),
-            line2: String::new(),
-            in_reach: true,
-            off: false,
-            ..Default::default()
-        },
+pub fn wall_charge_running_row(g: &crate::game::Game) -> crate::game::Interactable {
+    let s = g.pl[g.player].wall_work().unwrap();
+    let it = match &g.sets[g.seat].wall_charge.marker {
+        Some(it) => it.clone(),
+        None => crate::player::mark(crate::game::InteractableKind::Wall, wall_pt(g, &s.wall, 0.0, 0.05, Some(g.k.wallcharge.height)), if s.wall.outer == Some(true) { "wall · outer wall" } else { "wall · partition" }, "", true),
     };
-    let progress = (g.time - s.t0) / g.k.doortools.set_secs;
-    running(g, it, crate::game::Verb::Charge, String::from("setting the charge… — Space or a step breaks it off"), progress)
+    crate::player::running(&it, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some((g.time - s.t0) / g.k.doortools.set_secs))
 }
 
 /// A point's x and z

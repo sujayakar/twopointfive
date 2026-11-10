@@ -195,7 +195,7 @@ fn commands_in(g: &mut Game, t: &Tick) {
     let seats = g.seats.clone();
     let mut checked = Vec::with_capacity(seats.len());
     for (&s, cmd) in seats.iter().zip(&t.cmds) {
-        let near = if g.tab.cmd_seat[s].remote { let pl = crate::cmd::seat_man(g, s); Some(g.ch[g.pl[pl].ch].pos) } else { None };
+        let near = if g.tab.cmd_seat[s].remote { let pl = crate::cmd::seat_man(g, s); Some(g.player_pos(pl)) } else { None };
         checked.push(crate::cmd::check_cmd(g, Some(cmd), near));
     }
     for (&s, cmd) in seats.iter().zip(&checked) { crate::cmd::seat_load(g, s, cmd); }

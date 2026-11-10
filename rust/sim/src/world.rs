@@ -11,6 +11,9 @@ pub const MAX_LIST: usize = 4096;
 pub const GD: usize = 80;
 pub const GW: usize = 64;
 
+/// places for what last stopped a line (a power of two)
+pub const LASTS: usize = 1 << 13;
+
 /// THE SCRATCH OF ONE QUESTION, beside the boxes and no part of them: what it has met already, the cells it walked, the panes and statics it lists. One for
 /// whoever asks (one thread, and no question is asked inside another): so a question READS the boxes (`&World`) and writes nothing that is anybody's.
 pub struct Asking {
@@ -26,8 +29,10 @@ pub struct Asking {
     pub pt: [f64; 2],
     pub stamp_id: u32,
     pub panes: u32,
+    /// what last stopped a line from about here to about there (lines.rs `stopped_by`): a guess, asked first, and never an answer
+    pub last: [u32; LASTS],
 }
-const IDLE: Asking = Asking { stamp: [0; MAX_BOXES], cell_stamp: [0; MAX_CELLS], seg_cells: [0; MAX_CELLS], pane_t: [0.0; MAX_PANES], pane_bi: [0; MAX_PANES], list: [0; MAX_LIST], pt: [0.0; 2], stamp_id: 0, panes: 0 };
+const IDLE: Asking = Asking { stamp: [0; MAX_BOXES], cell_stamp: [0; MAX_CELLS], seg_cells: [0; MAX_CELLS], pane_t: [0.0; MAX_PANES], pane_bi: [0; MAX_PANES], list: [0; MAX_LIST], pt: [0.0; 2], stamp_id: 0, panes: 0, last: [0; LASTS] };
 static mut ASKING: Asking = IDLE;
 /// the scratch of the question in hand
 #[inline(always)]

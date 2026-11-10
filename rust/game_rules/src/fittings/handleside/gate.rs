@@ -140,20 +140,20 @@ fn line_up(g: &mut Game, gd: GuardId, at: Comes, face: Face) -> bool {
     if off_at(g, d, pos) < 0.25 { return false; }
     let on = on_line(g, d, at.side, via, pos);
     let near = g.k.handle.thru_at;
-    if at.ahead.dist < near + 0.4 && flat(pos, on) < near && !walled(g, pos, on) {
+    if at.ahead.dist < near + 0.4 && v3::dist_xz(pos, on) < near && !crate::scene_collision::low_walled(g, pos, on) {
         let seen = g.time;
         g.m.handleside.states.set(gd, St { door: d, side: at.side, spot: on, phase: StPhase::Thru, t: 0.0, seen, way: None, at: None, at_t: None });
         return true;
     }
-    if !walled(g, pos, via[0]) { bend(g, gd, at.ahead, via); }
+    if !crate::scene_collision::low_walled(g, pos, via[0]) { bend(g, gd, at.ahead, via); }
     false
 }
 
 /// His walk through door `d` bent onto the handle half's line; made once.
 fn bend(g: &mut Game, gd: GuardId, a: Ahead, via: [V3; 2]) {
-    let pos = g.ch[g.gd[gd].ch].pos;
-    if flat(pos, via[0]) < 0.3 || off_at(g, a.d, pos) < off_at(g, a.d, via[0]) - 0.05 { return; }
-    let on_it = slice_path(&g.gd[gd].path, g.gd[gd].path_i, a.k + 1).iter().any(|p| flat(*p, via[1]) < 0.2);
+    let pos = g.pos_of(gd);
+    if v3::dist_xz(pos, via[0]) < 0.3 || off_at(g, a.d, pos) < off_at(g, a.d, via[0]) - 0.05 { return; }
+    let on_it = slice_path(&g.gd[gd].path, g.gd[gd].path_i, a.k + 1).iter().any(|p| v3::dist_xz(*p, via[1]) < 0.2);
     if !on_it { walks_by(g, gd, a.k, &via); }
 }
 
@@ -162,7 +162,7 @@ fn takes_handle(g: &mut Game, gd: GuardId, at: Comes, face: Face) -> bool {
     let rest = g.k.handle.rest;
     let Some(h) = face.stand else { rests(g, gd, at.ahead.d, rest); return false };
     let Some(way) = way_to(g, at.pos, h.pos) else {   // no way there, or not yet: round the corner first, and he is asked again in half a second
-        let near = walled(g, at.pos, h.pos);
+        let near = crate::scene_collision::low_walled(g, at.pos, h.pos);
         rests(g, gd, at.ahead.d, if near { 0.5 } else { rest });
         return false;
     };
@@ -201,7 +201,7 @@ fn go(g: &mut Game, man: Asks) -> Option<bool> {
         st(g, gd).way = Some(Vec::new());
     }
     let way = st(g, gd).way.as_mut().unwrap();
-    while way.len() > 1 && flat(pos, way[0]) < 0.3 { way.remove(0); }
+    while way.len() > 1 && v3::dist_xz(pos, way[0]) < 0.3 { way.remove(0); }
     let (left, next) = (way.len(), way.first().copied());
     if left > 1 { step_to(g, gd, next.unwrap(), man.dt, man.speed, man.strafe, Some(true)); return Some(true); }
     if left > 0 && !step_to(g, gd, spot, man.dt, man.speed, man.strafe, None) { return Some(true); }
@@ -218,7 +218,7 @@ fn gets_on(g: &mut Game, man: Asks) -> bool {
     if was.is_some() && t - st.at_t.unwrap() <= 0.6 { return true; }
     st.at = Some([pos[0], 0.0, pos[2]]);
     st.at_t = Some(t);
-    let stalled = was.is_some_and(|at| flat(at, pos) < 0.08);
+    let stalled = was.is_some_and(|at| v3::dist_xz(at, pos) < 0.08);
     !(stalled || t > g.k.handle.go_cap || side_at(g, d, pos) != side)
 }
 
@@ -228,11 +228,11 @@ fn reaches_from(g: &Game, man: Asks) -> bool {
     let pos = g.ch[man.c].pos;
     let k = g.k.handle;
     let f = crate::guards::frame_of(g, d);
-    let close = flat(pos, spot) < 0.3;   // a man of his shoulder to shoulder with him at the jamb: as good as there
+    let close = v3::dist_xz(pos, spot) < 0.3;   // a man of his shoulder to shoulder with him at the jamb: as good as there
     let body = if close { k.body - 0.08 } else { k.body + 0.05 };
-    if side_at(g, d, pos) != side || along_of(&f, pos) < f.w / 2.0 || flat(pos, handle_at(g, d)) > k.far_reach || swept(g, d, pos, body) { return false; }
+    if side_at(g, d, pos) != side || along_of(&f, pos) < f.w / 2.0 || v3::dist_xz(pos, handle_at(g, d)) > k.far_reach || swept(g, d, pos, body) { return false; }
     let r = handle_face(g, d, side);
-    !walled(g, pos, r)
+    !crate::scene_collision::low_walled(g, pos, r)
 }
 
 /// TURN: he faces the handle, and his hand goes on it.
@@ -281,7 +281,7 @@ fn wait(g: &mut Game, man: Asks) -> bool {
 /// His hand stays on a leaf that would not yet carry clear by itself, while its handle is in his reach, or where he works it from further off than that.
 fn hand_stays(g: &Game, d: DoorId, pos: V3) -> bool {
     let k = g.k.handle;
-    let far = flat(pos, handle_at(g, d)) > k.reach + 0.05;
+    let far = v3::dist_xz(pos, handle_at(g, d)) > k.reach + 0.05;
     let (u, hinge, along) = (crate::doors::door_dir(g, d), g.dr[d].def.hinge, g.dr[d].def.width - k.handle_in);
     let (hx, hz) = (hinge[0] + u[0] * along, hinge[1] + u[1] * along);
     opened(g, d) + m::abs(g.dr[d].leaf.vel) / 2.2 < ajar_of(g, d) + 0.05 && (far || m::hyp2(hx - pos[0], hz - pos[2]) < k.reach + 0.1)
@@ -289,7 +289,7 @@ fn hand_stays(g: &Game, d: DoorId, pos: V3) -> bool {
 
 /// He turns to the handle, unless whoever moves him has his facing; how far off it he still is.
 fn faces(g: &mut Game, man: Asks, d: DoorId) -> f64 {
-    let yaw = face_yaw(handle_at(g, d), g.ch[man.c].pos);
+    let yaw = v3::yaw_to(g.ch[man.c].pos, handle_at(g, d));
     if !man.strafe { g.ch[man.c].body_yaw = v3::approach_angle(g.ch[man.c].body_yaw, yaw, 7.0 * man.dt); }
     m::abs(v3::wrap_angle(yaw - g.ch[man.c].body_yaw))
 }
@@ -319,22 +319,22 @@ fn on_line(g: &Game, d: DoorId, side: f64, via: [V3; 2], pos: V3) -> V3 {
 fn walks_by(g: &mut Game, gd: GuardId, k: usize, through: &[V3]) {
     let last = through[through.len() - 1];
     let mut rest = slice_path(&g.gd[gd].path, k, g.gd[gd].path.len());
-    while rest.len() > 1 && flat(rest[0], last) < 0.7 { rest.remove(0); }   // the walk's own first step beyond the frame is this one
+    while rest.len() > 1 && v3::dist_xz(rest[0], last) < 0.7 { rest.remove(0); }   // the walk's own first step beyond the frame is this one
     let mut path = through.to_vec();
     path.extend(rest);
-    crate::game::guard_set_path(g, gd, path);
+    g.gd[gd].set_path(path);
     g.gd[gd].path_i = 0;
 }
 
 /// The first leaf his walk goes through within `look` metres.
 fn ahead(g: &Game, gd: GuardId) -> Option<Ahead> {
     let look = g.k.handle.look;
-    let mut a = g.ch[g.gd[gd].ch].pos;
+    let mut a = g.pos_of(gd);
     let mut len = 0.0;
     let mut k = g.gd[gd].path_i;
     while k < g.gd[gd].path.len() && len < look {
         let b = g.gd[gd].path[k];
-        let seg = flat(a, b);
+        let seg = v3::dist_xz(a, b);
         for i in 0..g.doors.list.len() {
             let d = g.doors.list[i];
             let fc = g.dr[d].frame_centre;
@@ -370,7 +370,7 @@ fn rests(g: &mut Game, gd: GuardId, door: DoorId, secs: f64) {
 
 /// His hand on the leaf from the face it opens into.
 fn pull_open(g: &mut Game, gd: GuardId, d: DoorId) {
-    let who = g.ch[g.gd[gd].ch].id;
+    let who = g.char_id(gd);
     let quiet = crate::silent::silent_ease(g, gd);
     crate::doors::doors_pull(g, d, who, Some(quiet));
 }

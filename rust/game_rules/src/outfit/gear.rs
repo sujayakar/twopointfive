@@ -67,16 +67,12 @@ fn not_followed_by_he(s: &str, _start: usize, end: usize) -> bool {
 
 /// `\b` before a word character. JavaScript's `\w` without the `u` flag is ASCII, and no byte of a multi-byte character is ASCII.
 fn word_starts_here(s: &str, start: usize, _end: usize) -> bool {
-    start == 0 || !is_word_byte(s.as_bytes()[start - 1])
+    start == 0 || !crate::js::is_word(s.as_bytes()[start - 1])
 }
 
 /// `\b…\b` around a run of word characters.
 fn whole_word(s: &str, start: usize, end: usize) -> bool {
-    word_starts_here(s, start, end) && s.as_bytes().get(end).map_or(true, |b| !is_word_byte(*b))
-}
-
-fn is_word_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
+    word_starts_here(s, start, end) && s.as_bytes().get(end).map_or(true, |b| !crate::js::is_word(*b))
 }
 
 #[cfg(test)]

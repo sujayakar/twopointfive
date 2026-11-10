@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn a_door_says_its_written_name_first_and_the_office_says_only_that() {
         let mut g = Game::blank();
-        g.level = level(vec![room("vault", &[("v1", "hall"), ("v2", "yard")]), room("ward", &[("hd", "hall")])], vec![row("v1", "the strong door")]);
+        g.level = level(vec![room("vault", &[("v1", "hall"), ("v2", "yard")]), room("ward", &[("hd", "hall")])], vec![row("v1", "the strong door")]).into();
         let mut door = |name: &str| {
             let mut d = crate::doors::Door::blank();
             d.def.name = name.to_string();

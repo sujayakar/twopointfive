@@ -77,10 +77,7 @@ struct Round {
 /// One man's share of one round.
 fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool, team: crate::teams::Team) {
     if c == r.shooter || Some(c) == r.hit || !g.ch[c].alive || held { return; }
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(&b) => b,
-        None => v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]),
-    };
+    let chest = g.ch[c].bone_or(crate::character::Bone::Chest, 1.1);
     let s = v3::clamp(v3::dot(v3::sub(chest, r.from), r.dir), 0.0, r.t_hit);
     let foe = r.shooter_team.foe_of(team);
     let min_travel = g.k.suppression.min_travel;
@@ -158,9 +155,6 @@ fn lines_of(moment: SupMoment, key: &str) -> &'static [&'static str] {
     &[]
 }
 
-/// A byte JavaScript's `\w` holds (every byte of a non-ASCII character is outside it, as a non-unicode regex sees that character).
-pub(crate) fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
-
 /// `/\b(he|he's|him|his)\b/.test(l)`.
 fn mentions_him(l: &str) -> bool {
     let b = l.as_bytes();
@@ -169,8 +163,8 @@ fn mentions_him(l: &str) -> bool {
         let mut at = 0;
         while at + w.len() <= b.len() {
             if &b[at..at + w.len()] == w
-                && (at == 0 || !is_word(b[at - 1]))
-                && (at + w.len() == b.len() || !is_word(b[at + w.len()]))
+                && (at == 0 || !crate::js::is_word(b[at - 1]))
+                && (at + w.len() == b.len() || !crate::js::is_word(b[at + w.len()]))
             {
                 return true;
             }
@@ -368,10 +362,8 @@ fn pinned_says_so(g: &mut Game, gd: GuardId, friendly: bool) {
 
 /// `gd.path = []; gd.pathGoal = null; gd.stallRef = null`: a whole write of his path (Guard.path_serial), and a goal the standoff did not lay.
 fn clear_walk(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
     let o = &mut g.gd[gd];
-    o.path_goal = None;
-    o.path_goal_orbit = false;
+    o.drop_path();
     o.stall_ref = None;
 }
 
@@ -513,7 +505,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
     let from = g.ch[c].pos;
     let t: V3 = [threat[0], 1.15, threat[2]];
     let d0 = v3::dist_xz(from, threat);
-    let away = m::atan2(from[0] - threat[0], from[2] - threat[2]);
+    let away = v3::yaw_to(threat, from);
     let mut plans: i32 = 0;
     let (displace_min, displace_max, min_travel) = (g.k.suppression.displace_min, g.k.suppression.displace_max, g.k.suppression.min_travel);
     for da in [1.2, -1.2, 0.8, -0.8, 1.65, -1.65, 0.4, -0.4, 0.0, 2.1, -2.1] {

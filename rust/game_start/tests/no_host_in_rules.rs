@@ -13,7 +13,7 @@ const DT: f64 = 1.0 / 60.0;
 fn a_blast_sends_its_particles_out_on_any_host() {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 7, ..Default::default() });
     p.sam_unhurt();
-    let who = p.g.ch[p.g.pl[p.g.player].ch].id;
+    let who = p.g.player_id(p.g.player);
     let spec = game::frag::BlastSpec { who, ..Default::default() };
     game::frag::blast(&mut p.g, [20.0, 0.5, 15.0], &spec);
     let mut told = 0;

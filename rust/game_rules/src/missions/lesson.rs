@@ -11,7 +11,7 @@ use alloc::{format, string::String, vec::Vec};
 // starts and ends on an ASCII character and a non-ASCII byte is no \w, as a non-ASCII unit is none in JavaScript.
 
 /// \b at `i`
-fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::suppression::is_word(b[i - 1])) != (i < b.len() && crate::suppression::is_word(b[i])) }
+fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::js::is_word(b[i - 1])) != (i < b.len() && crate::js::is_word(b[i])) }
 /// the literal `s` at `at`: where it ends
 fn lit(b: &[u8], at: usize, s: &str) -> Option<usize> { if b.get(at..)?.starts_with(s.as_bytes()) { Some(at + s.len()) } else { None } }
 /// `String.replace` of a global pattern: `at` says whether one starts at this byte, where it ends and what it becomes
@@ -133,7 +133,7 @@ fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> 
 }
 
 /// a teammate on his feet
-fn operative_up(g: &Game, x: GuardId) -> bool { g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) }
+pub(crate) fn operative_up(g: &Game, x: GuardId) -> bool { g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) }
 
 /// the one partner of a quiet pair: the first operative unit on his feet
 fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
@@ -164,7 +164,7 @@ fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
         T::In { area } => inside(*area, g.seat_pos(&crate::seats::here(g))),
-        T::Near { at, r } => { let p = g.seat_pos(&crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
+        T::Near { at, r } => { let p = g.seat_pos(&crate::seats::here(g)); v3::dist_xz(p, *at) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = crate::seats::here(g).player; g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
         T::Meter { which, .. } => { let p = crate::seats::here(g).player; let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.shown[g.pl[p].ch].visibility }; band(v, t) }
@@ -183,7 +183,7 @@ fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
         T::Reload => ok_reload(g),
         T::Launcher { on, fired } => ok_launcher(g, *on, *fired),
         T::Burst { n } => ok_burst(g, *n),
-        T::Threw { kind, quick, area } => ok_threw(g, kind.map(LessonThrown::as_str), *quick, *area, s),
+        T::Threw { kind, area } => ok_threw(g, kind.map(LessonThrown::as_str), *area, s),
         T::OrderTo { who } => ok_order_to(g, &crate::seats::here(g), *who),
         T::StackOn { door, who, set } => ok_stack_on(g, door, *who, *set),
         T::PairsOn { doors } => ok_pairs_on(g, &crate::seats::here(g), *doors),
@@ -237,7 +237,7 @@ fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios:
     guards.iter().any(|&x| {
         if !crate::condition::down(g, g.gd[x].ch) || drag == Some(x) { return false; }
         let c = g.gd[x].ch;
-        inside(area, g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[c].pos))
+        inside(area, g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos))
     })
 }
 
@@ -279,14 +279,13 @@ fn ok_burst(g: &Game, n: Option<f64>) -> bool {
     crate::game::player_rifle_up(g, p) && crate::weapons::firearm_automatic(g, r) && g.fa[r].auto_idx >= n.unwrap_or(3.0)
 }
 
-fn ok_threw(g: &Game, k: Option<&str>, quick: bool, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
+fn ok_threw(g: &Game, k: Option<&str>, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
     use crate::chronicle::ChronKind;
-    let from = if quick { s.held_at } else { s.chron0 };
-    if from < 0.0 { return false; }
+    if s.chron0 < 0.0 { return false; }
     let key = area.map_or(String::new(), |a| format!("threw:{}:{},{},{},{}", k.unwrap_or("undefined"), a.x0, a.z0, a.x1, a.z1));
     if area.is_some() && js::truthy(seen_n(s, key.clone())) { return true; }   // (seen once is seen: a frag or a stun can is off the floor the frame after it goes off)
     let len = g.chronicle.events.len();
-    for i in (m::min(from, len as f64) as usize)..len {
+    for i in (m::min(s.chron0, len as f64) as usize)..len {
         let e = &g.chronicle.events[i];
         if e.kind != ChronKind::Thrown || !(k.is_none() || chron_text(e, "kind") == k) { continue; }
         let Some(a) = area else { return true };
@@ -299,7 +298,7 @@ fn ok_threw(g: &Game, k: Option<&str>, quick: bool, area: Option<crate::scene_sc
 fn lying_can(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
     use crate::throwables::ItemKind;
     if k == Some("flash") || k == Some("frag") { return false; }
-    let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
+    let (me, items) = (g.player_id(g.player), g.items.items.clone());
     items.iter().any(|&x| g.tab.item[x].kind == ItemKind::Smoke && g.tab.item[x].fired && g.tab.item[x].who == me && g.tab.item[x].age <= since && inside(a, g.tab.item[x].pos))
 }
 /// a bang of that kind in `a` this frame, not a charge's
@@ -346,9 +345,9 @@ fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 fn ok_mate(g: &Game, seat: &crate::seats::SeatRef, area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64>) -> bool {
     let Some(mate) = partner_of(g) else { return false };
     let (p, s) = (g.pos_of(mate), g.seat_pos(seat));
-    let d = m::hyp2(p[0] - s[0], p[2] - s[2]);
+    let d = v3::dist_xz(p, s);
     area.map_or(true, |a| inside(a, p))
-        && at.map_or(true, |a| m::hyp2(p[0] - a[0], p[2] - a[2]) < r.unwrap_or(1.5))
+        && at.map_or(true, |a| v3::dist_xz(p, a) < r.unwrap_or(1.5))
         && by.map_or(true, |by| d < by)
         && away.map_or(true, |away| d > away)
 }
@@ -386,7 +385,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let hits = men.iter().filter(|&&m| {
         let Some(id) = crate::orders::squad_orders_of(seat, m) else { return false };
         let row = &g.tab.orders_assignment[id];
-        crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
+        crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| v3::dist_xz(w, a) < r)
     }).count();
     hits as f64 >= n.unwrap_or(1.0)
 }
@@ -469,7 +468,7 @@ pub mod flags {
         let Some(at) = at else { return true };
         let wall = g.tab.wallcharge_set_wall_charge[c].wall.clone();
         let p = crate::wallcharge::wall_pt(g, &wall, 0.0, 0.0, None);
-        (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && m::hyp2(p[0] - at[0], p[2] - at[2]) < 4.0
+        (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && v3::dist_xz(p, at) < 4.0
     }
     /// …and one has made its hole this run
     pub fn wall_blown(seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
@@ -675,7 +674,6 @@ fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Optio
         n: JsMap::new(),
         chron: ev,
         chron0: ev,
-        held_at: -1.0,
         last_order,
         last_pair,
         words: JsSet::new(),
@@ -731,12 +729,6 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
         while s.chron < len {
             add(s, format!("chron:{}", g.chronicle.events[s.chron as usize].kind.as_str()));
             s.chron += 1.0;
-        }
-        if s.held_at < 0.0 {
-            let p = crate::seats::here(g).player;
-            if g.sets[crate::seats::seat_of_man(g, p)].hand.throw_held {
-                s.held_at = len;
-            }
         }
     }
     {
@@ -824,7 +816,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     let text = format!("training {}/{} \u{25b8} {}", i as usize + 1, l.steps.len(), said);
     let pos = match man {
         Some(x) => {
-            let p = g.ch[g.gd[x].ch].pos;
+            let p = g.pos_of(x);
             Some([p[0], 1.0, p[2]])
         }
         None => t.at,

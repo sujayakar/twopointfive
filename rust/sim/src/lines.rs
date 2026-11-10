@@ -250,9 +250,9 @@ fn loose_hit(cut: &[f64], b: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
     }
     ray_box_hits(a0, a1, a2, r0, r1, r2, b, len)
 }
-/// …the leaves the question stands with that carry every flag of `need`, and the boxes it adds (which carry none)
+/// …the leaves the question stands with that carry every flag of `need`, and the boxes it adds (which carry none): the first in the way, by its place, or EXTRA
 #[allow(clippy::too_many_arguments)]
-fn dynamic_hit(o: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, need: u32) -> bool {
+fn dynamic_hit(o: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, need: u32) -> Option<u32> {
     let uu = r0 * r0 + r2 * r2;
     let su = sqrt(uu);
     let lu = len * uu;
@@ -262,12 +262,14 @@ fn dynamic_hit(o: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64,
                 continue;
             }
             if loose_hit(&o.cut, row, a0, a1, a2, r0, r1, r2, len, uu, su, lu) {
-                return true;
+                return Some(i as u32);
             }
         }
     }
-    need == 0 && v.extra.chunks_exact(REC).any(|b| loose_hit(v.extra_cut, b, a0, a1, a2, r0, r1, r2, len, uu, su, lu))
+    (need == 0 && v.extra.chunks_exact(REC).any(|b| loose_hit(v.extra_cut, b, a0, a1, a2, r0, r1, r2, len, uu, su, lu))).then_some(EXTRA)
 }
+/// a box the question added
+const EXTRA: u32 = u32::MAX;
 
 /// collision.ts segmentBlockedDynamic, past its length: is the segment crossed by a leaf carrying every flag of `need`
 pub fn leaves_blocked(w: &World, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32) -> bool {
@@ -278,7 +280,7 @@ pub fn leaves_blocked(w: &World, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2
 fn leaves_blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32) -> bool {
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
     let il = 1.0 / len;
-    dynamic_hit(w, v, a0, a1, a2, d0 * il, d1 * il, d2 * il, len, need)
+    dynamic_hit(w, v, a0, a1, a2, d0 * il, d1 * il, d2 * il, len, need).is_some()
 }
 
 /// what the walk was asked beside the segment
@@ -320,9 +322,6 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
     let il = 1.0 / len;
     let (r0, r1, r2) = (d0 * il, d1 * il, d2 * il);
-    if (v.leaves || !v.extra.is_empty()) && dynamic_hit(o, v, a0, a1, a2, r0, r1, r2, len, 0) {
-        return -1;
-    }
     let uu = r0 * r0 + r2 * r2;
     let mut seg = Seg {
         o,
@@ -344,7 +343,21 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
         steps: -floor(-(len / 0.5)) + 1.0,
         panes: ask & ASK_PANES != 0,
         rule: ask & ASK_GLASS != 0,
+        at: last_at(&[a0, a1, a2], &[b0, b1, b2]),
     };
+    let inside = seg.goes() && seg.inside(&seg.a) && seg.inside(&seg.b);
+    let guess = s.last[seg.at];
+    if guess != 0 && seg.stopped_by(guess, inside) {
+        return -1;
+    }
+    if v.leaves || !v.extra.is_empty() {
+        if let Some(leaf) = dynamic_hit(o, v, a0, a1, a2, r0, r1, r2, len, 0) {
+            if leaf != EXTRA {
+                s.last[seg.at] = LAST_LEAF | leaf;
+            }
+            return -1;
+        }
+    }
     s.panes = 0;
     let (foot, top) = if d1 < 0.0 { (b1 - seg.pad, a1 + seg.pad) } else { (a1 - seg.pad, b1 + seg.pad) };
     if !seg.goes() {
@@ -355,7 +368,7 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
         Some(said) => said,
         None => {
             let mut n = seg.cells_along(s);
-            if !seg.inside(&seg.a) || !seg.inside(&seg.b) {
+            if !inside {
                 n = seg.cells_round(s, n, true);
             }
             seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32)
@@ -369,6 +382,19 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
     s.panes = 0;
     let n = seg.cells_round(s, 0, false);
     seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32)
+}
+
+/// what a line was last stopped by, as `Asking::last` keeps it: nothing known, 1 + a static, or this bit and a leaf
+const LAST_LEAF: u32 = 1 << 31;
+/// THE PLACE OF A LINE'S LAST: by the two metres either end is in. Two lines may share one; what stands there is only a guess.
+#[inline(always)]
+fn last_at(a: &[f64; 3], b: &[f64; 3]) -> usize {
+    let mut h = 0u32;
+    for v in [a[0], a[1], a[2], b[0], b[1], b[2]] {
+        h = (h ^ (v * 0.5) as i32 as u32).wrapping_mul(0x9e37_79b1);
+        h ^= h >> 15;
+    }
+    h as usize & (LASTS - 1)
 }
 
 /// A SEGMENT BEING WALKED: its ends, the way along it and its unit direction, what it passes, and the numbers a box is refused by.
@@ -394,6 +420,8 @@ struct Seg<'a> {
     steps: f64,
     panes: bool,
     rule: bool,
+    /// where what last stopped a line like it is kept
+    at: usize,
 }
 impl Seg<'_> {
     /// What the statics of the cells listed say of it: None = it goes on past them all.
@@ -416,6 +444,9 @@ impl Seg<'_> {
                     continue;
                 };
                 if let Some(said) = self.meets(s, bi, span) {
+                    if o.flags[bi] & F_GLASS == 0 {
+                        s.last[self.at] = bi as u32 + 1;
+                    }
                     return Some(said);
                 }
             }
@@ -463,6 +494,37 @@ impl Seg<'_> {
             0 => None,
             said => Some(said),
         }
+    }
+    /// WHAT STOPPED A LINE LIKE IT LAST, ASKED FIRST: most lines asked are asked again the tick after and are stopped by the same wall. True only if the walk would be
+    /// stopped by that box too: a leaf by the walk's own test of it; a plain static if it is in the way and filed in a cell under the line at a point inside it, so that
+    /// the walk comes on it. A pane, a tilted box and a line that leaves the level are the walk's.
+    #[inline(always)]
+    fn stopped_by(&self, guess: u32, inside: bool) -> bool {
+        let (o, a, r) = (self.o, &self.a, &self.r);
+        if guess & LAST_LEAF != 0 {
+            let i = (guess ^ LAST_LEAF) as usize;
+            return self.v.leaves
+                && i < o.leaves()
+                && !self.v.but.contains(&(i as u32))
+                && loose_hit(&o.cut, &o.leaf[i * REC..i * REC + REC], a[0], a[1], a[2], r[0], r[1], r[2], self.len, self.uu, self.su, self.lu);
+        }
+        let bi = guess as usize - 1;
+        if !inside || bi >= o.boxes() || o.flags[bi] & F_GLASS != 0 || self.passes(bi) {
+            return false;
+        }
+        let b = o.row(bi);
+        if (b[R_KIND] as u32) & K_ROT != 0 {
+            return false;
+        }
+        let Some((t0, t1, depth)) = self.span(b) else {
+            return false;
+        };
+        if depth > self.shrink || !(t1 > self.shrink && t0 < self.len - self.shrink) {
+            return false;
+        }
+        let t = js_min(js_max(t0, 0.0), self.len);
+        let c = floor((a[2] + r[2] * t) / o.cs) as usize * o.w as usize + floor((a[0] + r[0] * t) / o.cs) as usize;
+        c + 1 < o.start.len() && o.items[o.start[c] as usize..o.start[c + 1] as usize].contains(&(bi as u32))
     }
     /// The tilted statics, whose cells a plan's columns do not tell: each asked where a half-metre step of the walk would have met its cells.
     fn tilted(&self, s: &mut Asking) -> Option<i32> {

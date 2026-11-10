@@ -136,7 +136,7 @@ fn a_thing_on_a_man_names_him_and_a_body_stays_at_its_place() {
     for seed in SEEDS {
         let (mut p, _) = play(seed);
         let gd = p.hostiles()[0];
-        let feet = p.g.ch[p.g.gd[gd].ch].pos;
+        let feet = p.g.pos_of(gd);
         let on = |kind| Interactable { kind, guard: Some(gd), pos: [feet[0], feet[1] + 1.35, feet[2]], ..Interactable::default() };
         p.g.sets[p.g.seat].hover = Some(on(K::Guard));
         let R = p.view().interact.ring.expect("a ring on him");

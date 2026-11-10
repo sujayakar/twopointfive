@@ -23,7 +23,7 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
     }
     let key = format!(
         "{}|{},{}|{},{}|{},{},{},{}",
-        js::num_str(g.ch[g.gd[gd].ch].id),
+        js::num_str(g.char_id(gd)),
         js::num_str(m::floor(at[0] / cell)), js::num_str(m::floor(at[2] / cell)),
         js::num_str(m::floor(to[0] / cell)), js::num_str(m::floor(to[2] / cell)),
         g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
@@ -108,7 +108,7 @@ fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3])
         let mut room = false;
         for sd in [1.0, -1.0] {
             let q: V3 = [mk[0] + nx * sd * w_, 0.0, mk[2] + nz * sd * w_];
-            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [mk[0], 0.45, mk[2]], [q[0], 0.45, q[2]], None) { room = true; }
+            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mk, q) { room = true; }
         }
         if !room { let r = find(&mut root, i); tight[r] = true; }
     }
@@ -514,5 +514,19 @@ mod tests {
         let f = FileCross::Tight { file: vec![1, 1], tight: vec![false, true], l: vec![vec![1.0, 2.0], vec![0.5, 1.5]], spots, cost: 500.0 };
         assert_eq!(file_cross_cost(&f, &[1, 0]), 500.0);
         assert_eq!(file_cross_cost(&f, &[0, 1]), 0.0);
+    }
+
+    /// Which face of a door a place is on, as the men deal it. A failure means a man on a door's own line is told off to the far face.
+    #[test]
+    fn a_place_on_a_door_s_line_counts_as_its_plus_face() {
+        let mut g = Game::blank();
+        let d = g.dr.push(crate::doors::Door::blank());
+        let mut at = |closed_dir: f64, p: V3| {
+            (g.dr[d].def.closed_dir, g.dr[d].def.hinge) = (closed_dir, [10.0, 5.0]);
+            side_of(&g, d, p)
+        };
+        assert_eq!(at(1.5707963267948966, [9.0, 0.0, 5.0]), 1.0);
+        assert_eq!(at(1.5707963267948966, [11.0, 0.0, 5.0]), -1.0);
+        assert_eq!(at(0.0, [12.0, 0.0, 5.0]), 1.0);
     }
 }

@@ -1,6 +1,6 @@
 //! WHAT THE HUD MARKS AND DRAWS OF THE AIM (rust/game_rules/src/tick/view/marks.rs): which men the fog hides from a seat's team, what stands over each man, the last sightings, the grenades and
 //! the cameras, the meters, the ring and the arc. The HUD reads these and works nothing out; a test here holds what it is told to what the game says.
-use game::game::{GuardState, SlotKind, ThrowKind};
+use game::game::{GuardState, SlotKind};
 use game::view::{HeadTone, RingOn, TickView};
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
@@ -162,7 +162,7 @@ fn the_can_comes_to_rest_where_the_view_says() {
         let at = p.sam_at();
         can_in_hand(&mut p, SlotKind::Smoke, [at[0] + 3.0, at[1] + 1.0]);
         let v = p.view().aim.throw.expect("a can in the fist: an arc is up");
-        let (kind, sol) = { let pl = p.g.player; (p.g.pl[pl].held_kind, p.g.sets[p.g.seat].hand.throw_preview.clone().unwrap()) };
+        let (kind, sol) = { let pl = p.g.player; (game::player::can_in_hand(&p.g, pl).unwrap(), p.g.sets[p.g.seat].hand.throw_preview.clone().unwrap()) };
         let rest = v.rest.expect("a can comes to rest");
         let own = game::frag::rest_of_throw(&mut *p.g, kind, sol.points[0], sol.v0);
         assert_eq!(rest.at.map(f64::to_bits), own.at.map(f64::to_bits), "seed {}: at {:?} and {:?}", seed, rest.at, own.at);
@@ -242,7 +242,7 @@ fn in_a_game_of_two_the_ring_and_the_arc_are_the_seats_own() {
         // and the second man's is told to him, whichever seat `g.seat` names
         let sol = p.g.sets[game::seats::seat_of_man(&p.g, first)].hand.throw_preview.clone().unwrap();
         let his = game::seats::seat_of_man(&p.g, second);
-        p.g.sets[his].hand.throw_preview = Some(sol); p.g.pl[second].held_kind = ThrowKind::Smoke; p.g.sets[his].hand.throw_held = true;
+        p.g.sets[his].hand.throw_preview = Some(sol); p.g.pl[second].slot = SlotKind::Smoke; p.g.pl[second].holstered = false;
         assert!(p.view_of(1).aim.throw.is_some_and(|t| t.rest.is_some()), "seed {}", seed);
     }
 }
@@ -293,7 +293,7 @@ fn who_wears_what_is_the_games_word() {
         for gd in p.hostiles() { assert!(!worn.iter().any(|w| w.man == p.id_of(gd)), "seed {}: a defender is listed", seed); }
         let pl = p.g.player;
         p.g.pl[pl].big_kit = game::kit::BigKit::Hammer;
-        let sam = p.g.ch[p.g.pl[pl].ch].id;
+        let sam = p.g.player_id(pl);
         assert!(p.view().worn.iter().any(|w| w.man == sam && w.big == Some(game::kit::BigTool::Hammer)), "seed {}", seed);
     }
 }

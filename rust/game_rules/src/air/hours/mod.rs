@@ -96,7 +96,7 @@ fn sky_lamp_of(g: &crate::game::Game) -> Option<LightId> {
         i += 1;
         let row = &g.tab.light[l];
         if row.kind != 2.0 || !row.enabled || row.ttl >= 0.0 || row.transient.unwrap_or(false) || !(row.dir[1] < 0.0) { continue; }
-        let intensity = lum(row.color) * row.intensity;
+        let intensity = v3::lum(row.color) * row.intensity;
         if intensity > best { best = intensity; moon = Some(l); }
     }
     moon
@@ -133,7 +133,7 @@ fn cloud_soft(c_2: f64) -> f64 {
 /// Colour c drained toward a deck's grey by w and scaled by k, its luminance otherwise kept.
 fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
     let k = k.unwrap_or(1.0);
-    let l = lum(c_2) / GREY_LUM;
+    let l = v3::lum(c_2) / GREY_LUM;
     let grey = grey();
     [
         (c_2[0] + (l * grey[0] - c_2[0]) * w) * k,
@@ -144,11 +144,11 @@ fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
 
 /// The sky's share of the light on open ground at an hour as authored.
 fn sky_share(d: &crate::hours::HourDef) -> f64 {
-    let zen = lum(d.sky.zenith);
-    let hor = lum(d.sky.horizon);
+    let zen = v3::lum(d.sky.zenith);
+    let hor = v3::lum(d.sky.horizon);
     let mut k = 0.0;
     for q in ::sim::dome::fan().sky.iter() { k += (hor + (zen - hor) * v3::clamp(q.d[1] * 2.5, 0.0, 1.0)) * q.c6[2]; }
-    let s = lum(d.sun.color) * d.sun.intensity * m::max(0.0, m::sin(d.sun.elev_deg * DEG));
+    let s = v3::lum(d.sun.color) * d.sun.intensity * m::max(0.0, m::sin(d.sun.elev_deg * DEG));
     if k + s > 0.0 { k / (k + s) } else { 1.0 }
 }
 
@@ -216,10 +216,6 @@ fn sun_to_cloud(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_mut() else { return };
     st.given = false;
     under_weather(g);
-}
-
-pub fn lum(c_2: V3) -> f64 {
-    0.2126 * c_2[0] + 0.7152 * c_2[1] + 0.0722 * c_2[2]
 }
 
 /// Where the hour's sun stands, as a unit vector.
@@ -332,7 +328,7 @@ fn sky_dome(g: &crate::game::Game) -> crate::hours::SkyStateDome {
 /// The sky's luminance at height y, off the game's sky now or the dome given.
 fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
     let d = match sky { Some(d) => d, None => sky_dome(g) };
-    let (zen, hor) = (lum(d.zenith), lum(d.horizon));
+    let (zen, hor) = (v3::lum(d.zenith), v3::lum(d.horizon));
     let t = v3::clamp(y * 2.5, 0.0, 1.0);
     let below = v3::clamp(-y * 8.0, 0.0, 1.0);
     (hor + (zen - hor) * t) * (1.0 - below) + hor * 0.15 * below
@@ -392,7 +388,7 @@ fn casters(b: &SkyStateBox) -> ::sim::dome::Casters { ::sim::dome::Casters { x0:
 /// What the sky's one directional light puts on a face turned to it.
 fn sun_of(g: &Game, st: &Sky) -> f64 {
     match st.sun {
-        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
+        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => v3::lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
         _ => 0.0,
     }
 }
@@ -419,9 +415,8 @@ pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     reach_fresh(g, st.to_sun);
     let t = casters(&g.m.hours.reach.box_).reach(p, st.to_sun);
     if t <= 0.05 || !crate::scene_collision::segment_blocked(g, p, v3::mad(p, st.to_sun, t), None, None, None) {
-        let n6 = n6();
         for k in 0..6 {
-            let cs = v3::dot(n6[k], st.to_sun);
+            let cs = v3::dot(N6[k], st.to_sun);
             if cs > 0.0 { acc[k] += i_sun * cs; }
         }
     }
@@ -450,7 +445,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let mut leaves: Vec<BoxId> = Vec::new();
     for &db in g.col.dynamic_boxes.iter() {
         let dc = g.tab.boxes[db].c;
-        if m::hyp2(dc[0] - p[0], dc[2] - p[2]) < DOOR_M { leaves.push(db); }
+        if v3::dist_xz(dc, p) < DOOR_M { leaves.push(db); }
     }
     // (a leaf is in a way's way)
     let shut = |d: V3, len: f64| leaves.iter().any(|&db| crate::scene_boxes::ray_box(g, from, d, db.into(), len).is_some_and(|h| h.t >= 0.0));

@@ -130,7 +130,7 @@ fn at_the_handle(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3
     let h = match gate.hs {
         Some(h) => h,
         None => {
-            let pos = g.ch[g.gd[gd].ch].pos;
+            let pos = g.pos_of(gd);
             let h = if crate::doors::doors_pull_face(g, d, pos) { crate::handleside::tool_spot(g, d, gate.side, pos, None) } else { None };
             let h = h.filter(|h| !h.far).map(|h| GateHs { pos: h.pos, yaw: h.yaw });
             gate.hs = Some(h);
@@ -214,7 +214,7 @@ fn slice(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64) {
     let (p, look) = (gate.slice_pts[i], gate.slice_look[i]);
     gate.look = Some(look);
     let pos = g.ch[c].pos;
-    let face_in = m::atan2(look[0] - pos[0], look[2] - pos[2]);
+    let face_in = v3::yaw_to(pos, look);
     let there = step_gate(g, gd, gate, dt, p, SLICE_PACE, Some(face_in));
     if there { gate.slice_t += dt; if gate.slice_t >= SLICE_DWELL { gate.slice_i += 1.0; gate.slice_t = 0.0; } }
     if gate.slice_i >= gate.slice_pts.len() as f64 {
@@ -237,7 +237,7 @@ fn cross(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     let leg = if li >= 0.0 { gate.legs.get(li as usize).copied() } else { None };
     let Some(leg) = leg else {
         let pos = g.ch[c].pos;
-        gate.crossed = side_of(g, d, pos) != gate.side;
+        gate.crossed = crate::handleside::side_at(g, d, pos) != gate.side;
         release_gate(g, gd, gate);
         return;
     };
@@ -251,7 +251,7 @@ fn cross(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     let speed = g.tune.guard_chase;
     let there = step_gate(g, gd, gate, dt, leg, speed, None);
     let pos = g.ch[c].pos;
-    if side_of(g, d, pos) != gate.side { gate.crossed = true; }
+    if crate::handleside::side_at(g, d, pos) != gate.side { gate.crossed = true; }
     if there || dist_xz(g.ch[c].pos, leg) < 0.35 {
         gate.leg_i += 1.0;
         if gate.leg_i >= gate.legs.len() as f64 { return release_gate(g, gd, gate); }

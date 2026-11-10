@@ -118,7 +118,7 @@ impl Sheet {
     fn piece(&self, bh: &Behind, x: &WallSkinLaidValueItem) -> (Option<Bx>, bool) {
         let s = &self.s; let fl = crate::scene_boxes::box_flag();
         let mut p = s.clone();
-        p.flags = ((js::to_i32(s.flags) & !js::to_i32(fl.no_primary)) | js::to_i32(fl.dynamic)) as f64; p.name = Some(String::from("skin"));
+        p.flags = ((js::to_i32(s.flags) & !js::to_i32(fl.no_primary)) | js::to_i32(fl.dynamic)) as f64;
         p.mkey = Some(crate::scene_boxes::mkey().skin + self.j * SLOTS + x.slot);
         if self.marked() { p.cut = Some(self.marked_planes(&x.r)); } else { self.trim(&mut p, &x.r); }
         // (a plain box of the sheet's paint: what the level's stand-up keeps on the authored one is not its)

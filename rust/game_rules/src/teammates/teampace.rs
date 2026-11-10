@@ -54,12 +54,12 @@ fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId
     let post = match crate::orders::squad_orders_of(seat, gd) { Some(a) => g.tab.orders_assignment[a].post, None => None };
     let mark = match post { Some(mark) => mark, None => return own };
     let (near, gap, cos, k, top) = (g.k.teampace.pace_near, g.k.teampace.pace_gap, g.k.teampace.pace_cos, g.k.teampace.k, g.k.pace.max);
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let sam = g.pl[seat.player].ch;
     let s = g.ch[sam].pos;
-    if m::hyp2(p[0] - s[0], p[2] - s[2]) > near { return own; }
-    let dm = m::hyp2(p[0] - mark[0], p[2] - mark[2]);
-    let ds = m::hyp2(s[0] - mark[0], s[2] - mark[2]);
+    if v3::dist_xz(p, s) > near { return own; }
+    let dm = v3::dist_xz(p, mark);
+    let ds = v3::dist_xz(s, mark);
     let (vx, vz) = (g.ch[sam].vel[0], g.ch[sam].vel[2]);
     let v = m::hyp2(vx, vz);
     if ds > dm + gap {
@@ -229,14 +229,14 @@ fn team_dash_now(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, least: 
     let least = least.unwrap_or(g.k.teampace.dash_m);
     let running = running.unwrap_or(false);
     if !team_slow(g, gd) { return false; }
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     d >= least
         && (running || g.time - crate::roomfight::room_fight_hot_of(g, gd) < g.k.teampace.dash_hot)
         && !crate::roomfight::room_fight_engaged(g, gd)
         && !quiet(g, gd)
         && !crate::condition::is_hurt(g, g.gd[gd].ch, None)
         && crate::roomfight::room_fight_room_at(g, p) == crate::roomfight::room_fight_room_at(g, to)
-        && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [to[0], 0.45, to[2]], None)
+        && !crate::scene_collision::low_blocked(g, p, to)
         && (running || crate::picture::exposed_at(g, gd, p, None) >= g.k.teampace.dash_seen)
         && crate::picture::exposed_at(g, gd, to, None) <= 0.0
 }

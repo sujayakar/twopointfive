@@ -111,7 +111,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             let (c, h) = (g.gd[me].ch, g.gd[him].ch);
             let want = crate::character::character_want_body(g, c);
             let (cp, hp) = (g.ch[c].pos, g.ch[h].pos);
-            g.ch[c].body_yaw = v3::approach_angle(want, m::atan2(hp[0] - cp[0], hp[2] - cp[2]), table.face_rate * dt);
+            g.ch[c].body_yaw = v3::approach_angle(want, v3::yaw_to(cp, hp), table.face_rate * dt);
         }
         let time = g.time;
         let Some(r) = ambient_state(g).run.as_mut() else { return; };
@@ -143,7 +143,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
     for i in 0..men.len() {
         for j in (i + 1)..men.len() {
             let (a, b) = (men[i], men[j]);
-            let (pa, pb) = (g.ch[g.gd[a].ch].pos, g.ch[g.gd[b].ch].pos);
+            let (pa, pb) = (g.pos_of(a), g.pos_of(b));
             if v3::dist_xz(pa, pb) > table.pair_m { continue; }
             if crate::scene_collision::solid_blocked(g, [pa[0], 1.4, pa[2]], [pb[0], 1.4, pb[2]], None) { continue; }
             let mut third: Option<GuardId> = None;

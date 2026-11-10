@@ -7,7 +7,7 @@ use game_derive::Knobs;
 /// actions (1-5 with the ring open)", "we can make our actions and squad actions symmetric, where maybe we have some way of showing in the UI … what the
 /// default action might be. or maybe that could be in the top left, which might be fine", "do we need a way to cancel all in progress stuff? tab could be
 /// that for us").
-/// THE RULE. The interaction key's TAP does the default action, as it always did. The key kept down a moment puts his rows up as a ring at the cursor
+/// THE RULE. The interaction key's TAP does the default action, as it always did. The key kept down a moment puts his rows up as a ring on the first of their things, or on him
 /// (interact.ts: the ring cmdring.ts CMDRING.hands drew as a prototype, now standing without the squad's switch — with this rule on, that prototype's
 /// own switch and tick change nothing), and the ring is read by the press rule agreed with the squad ring's owner: let go with the cursor out on a wedge
 /// and that wedge is done; let go in the middle and the ring STAYS with no key held. Standing, a digit 1 to 5 does its wedge at once, a left click does the lit one (and is not his trigger), the key again does the lit

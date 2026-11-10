@@ -70,9 +70,6 @@ fn gap_of(k: CueKind) -> f64 {
 
 // ---------------------------------------------------------------- the file's regular expressions, by hand
 
-fn word_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
 /// the prefix test of a case-blind pattern (bytes: JavaScript's /i folds no non-ASCII letter onto an ASCII one, and the only non-ASCII in a pattern is the dash)
 fn has_head_blind(hay: &[u8], needle: &[u8]) -> bool {
     hay.len() >= needle.len() && hay[..needle.len()].eq_ignore_ascii_case(needle)
@@ -84,7 +81,7 @@ fn pat_hits(p: &Pat, text: &[u8]) -> bool {
     match p {
         Pat::In(s) => has_blind(text, s.as_bytes()),
         Pat::Head(s) => has_head_blind(text, s.as_bytes()),
-        Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(word_byte),
+        Pat::HeadWord(s) => has_head_blind(text, s.as_bytes()) && !text.get(s.len()).copied().is_some_and(js::is_word),
     }
 }
 /// `/^[A-Z][a-z]{1,11}: /`: a row under a squad's name, not a man's callsign.
@@ -103,7 +100,7 @@ fn fill(line: &str, vars: Option<&JsMap<String, String>>) -> String {
     while i < b.len() {
         if b[i] == b'{' {
             let mut j = i + 1;
-            while j < b.len() && word_byte(b[j]) { j += 1; }
+            while j < b.len() && js::is_word(b[j]) { j += 1; }
             if j > i + 1 && j < b.len() && b[j] == b'}' {
                 out.push_str(&line[from..i]);
                 if let Some(v) = vars.and_then(|m| m.get(String::from(&line[i + 1..j]))) { out.push_str(v); }
@@ -220,11 +217,6 @@ fn new_stats() -> crate::cues::CuesStats {
         gap: 0.0,
         full: 0.0,
     }
-}
-
-/// The distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// A new Cues: the field initialisers, nothing more.
@@ -369,7 +361,7 @@ fn cues_ears(g: &crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
-        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.ch[g.pl[pl].ch].pos)); }
+        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.player_pos(pl))); }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -403,12 +395,12 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
     if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done("gap"); }
     let secs = g.k.cues.secs;
     if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done("full"); }
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let mouth: V3 = [p[0], p[1] + 1.2, p[2]];
     let reach = g.k.digin.shout_m;
     let mut reached = false;
     for ear in cues_ears(g) {
-        if flat(mouth, ear) > reach { continue; }
+        if v3::dist_xz(mouth, ear) > reach { continue; }
         let h = crate::weather::hear_path(g, mouth, ear, Some(false));
         if h.path_len < reach * h.carry { reached = true; break; }
     }
@@ -613,10 +605,10 @@ pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
             if cues_cue(g, gd, CueKind::Calm, None) { cues_man(g, gd).stood_t = t; }
         } else if on_player && faced_down(g).is_some() && state == crate::game::GuardState::Alert && !cues_man(g, gd).covered && still && {
             let f = crate::seats::faced_man(g, gd);
-            flat(g.ch[c].pos, g.ch[g.pl[f].ch].pos) < 3.5
+            v3::dist_xz(g.ch[c].pos, g.player_pos(f)) < 3.5
         } {
             let f = crate::seats::faced_man(g, gd);
-            let p = g.ch[g.pl[f].ch].pos;
+            let p = g.player_pos(f);
             let at = cues_at(g, p);
             // (said, or a man beside him has just said it for both)
             if cues_cue(g, gd, CueKind::Cover, Some(&at_vars(&at))) || cues_kind_busy(g, CueKind::Cover) { cues_man(g, gd).covered = true; }
@@ -671,7 +663,7 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
     let Some(d) = crate::roomfight::def_of(g, gd) else { return };
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     cues_man(g, gd);
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     match did {
         Did::HoldsWhereHeIs => {
             if g.time - cues_man(g, gd).stood_t > 15.0 {

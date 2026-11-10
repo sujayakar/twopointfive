@@ -13,7 +13,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub(super) fn line_hit(g: &Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
     let pos = g.ch[ch].pos;
     let vel = g.ch[ch].vel;
-    let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => pos };
+    let h = g.ch[ch].bone(crate::character::Bone::Hips).unwrap_or(pos);
     let tr = ((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2;
     let t = v3::clamp(tr, 0.0, t_max);
     let sam = !mate && crate::seats::man_of(g, Some(ch)).is_some();

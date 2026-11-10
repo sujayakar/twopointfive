@@ -20,17 +20,6 @@ fn set_fix(g: &mut Game, gd: GuardId, at: V3) {
     crate::mind::fix(g, gd, Some([at[0], 0.0, at[2]]), "doorforce");
 }
 
-/// `gd.path = []; gd.pathGoal = null`: a whole write of his path (Guard.path_serial) and no goal, so none the standoff laid.
-fn clear_walk(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    let o = &mut g.gd[gd];
-    o.path_goal = None;
-    o.path_goal_orbit = false;
-}
-
-/// The rule is up: the AI runs.
-fn live(g: &crate::game::Game) -> bool { g.ai_enabled }
-
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load).
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
     let now = g.time;
@@ -124,7 +113,7 @@ fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, se
 /// His ears: a sound that came to him across a shut leaf, or a door's own noise, is word of that door.
 pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, prop: crate::doorforce::DoorForceHearProp) {
     use crate::director::EventKind;
-    if !live(g) || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
+    if !g.ai_enabled || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
     let k = g.k.doorforce;
     let who: f64;
     let horizon: f64;
@@ -204,7 +193,7 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
 pub fn door_force_own_boot(g: &crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
     if e.kind != crate::director::EventKind::Kick { return false; }
     let who = match e.who { Some(w) => w, None => return false };
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let t = match g.m.doorforce.states.as_ref().and_then(|s| s.boots.get(crate::Num(who))) { Some(&t) => t, None => return false };
     if g.time - t > 1.0 { return false; }
     let c = g.gd[gd].ch;
@@ -216,7 +205,7 @@ pub fn door_force_own_boot(g: &crate::game::Game, gd: GuardId, e: crate::game::G
 
 /// Once a frame after the guards: what each man saw and heard fades, a sighting just lost is put behind the leaf it went behind.
 pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
-    if !live(g) { return; }
+    if !g.ai_enabled { return; }
     let (kf, time) = (g.k.doorforce, g.time);
     state_of(g).last_t = time;
     let k = m::exp(-dt / kf.fade_secs * m::log(3.0));
@@ -356,7 +345,7 @@ fn round_for(g: &crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belie
 
 /// The alert branch's hook: the door this man is on, where his gun points and how fast his legs go. None = nothing of the kind.
 pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::DoorForce> {
-    if !live(g) || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
+    if !g.ai_enabled || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
     g.m.doorforce.states.as_ref()?.men.get(gd)?;
     let (kf, time, c) = (g.k.doorforce, g.time, g.gd[gd].ch);
     man!(g, gd).served = time;
@@ -439,7 +428,7 @@ fn boots_it_or_leaves_it(g: &mut Game, gd: GuardId, b: &Belief, pos: V3, dt: f64
     }
     man!(g, gd).kick = Some(Kick { door: d, spot: spot.pos, yaw: spot.yaw, phase: KickPhase::Walk, t0: time, set_t: 0.0 });
     state!(g).kickers.set(d, gd);
-    clear_walk(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     let line = alloc::format!("{} goes to boot {}", g.gd[gd].callsign, g.dr[d].def.name);
     log(g, &line);
@@ -459,7 +448,7 @@ fn lays_rounds_on_it(g: &mut Game, gd: GuardId, b: &Belief, to: Option<V3>, pos:
     if st.n >= kf.rounds { st.n = 0.0; st.fired_t = time; st.next = time + kf.gap_secs; }   // these rounds are through: he listens
     let p = g.k.aim.guard;
     let dist = dist_xz(pos, aim);
-    let on = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
+    let on = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * (match g.gd[gd].skill { Some(sk) => sk.settle_k, None => 1.0 });
     let aim_model = g.tune.aim_model;
     let st = stand!(g, gd);
@@ -493,14 +482,14 @@ fn fires_through_it(g: &mut Game, gd: GuardId, d: DoorId, shot: DoorShot, dt: f6
     let p = g.k.aim.guard;
     let had = crate::weapons::firearm_rounds_ready(g, w);
     let def = g.fa[w].def;
-    if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
+    if g.weapon(def).burst.is_some() {
         let tr = g.arms[g.gd[gd].ch].aim.track;
         g.arms[g.gd[gd].ch].aim.track = lay;   // (his lay on the SPOT for the burst's own cone, and for nothing else: his track on the man is put back)
         crate::guards::burst_trigger(g, gd, dt, aim, ok && armed, ok, None);
         g.arms[g.gd[gd].ch].aim.track = tr;
     } else if ok && armed && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && !crate::guards::round_past_colleague(g, gd, aim, None, None) && crate::weapons::firearm_fire(g, w) {
         let mo = crate::suppression::guard_fire_mods(g, gd);
-        let row = g.m.weapons.weapons.get(def).unwrap();
+        let row = g.weapon(def);
         let (r, cd, jitter) = (row.ai_spread, row.cd, row.cd_jitter);
         let die = crate::dice::draw_of(g, "doorforce::door_force#1", gd);
         g.arms[g.gd[gd].ch].fire_cd = (cd + die * jitter) * mo.gap;
@@ -534,7 +523,7 @@ fn kick_end(g: &mut Game, gd: GuardId, d: DoorId, b: Option<Belief>, why: Option
     let s = state!(g);
     if s.kickers.get(d) == Some(&gd) { s.kickers.delete(d); }
     man!(g, gd).kick = None;
-    clear_walk(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     if !believes {
         if let Some(b) = b { set_fix(g, gd, b.at); }
@@ -569,7 +558,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
             let k = man!(g, gd).kick.as_mut().unwrap();
             k.phase = KickPhase::Set;
             k.set_t = time;
-            clear_walk(g, gd);
+            g.gd[gd].drop_path();
         } else if arrived {
             return kick_end(g, gd, d, b, Some("no way to the spot"), false);
         }
@@ -696,7 +685,7 @@ mod tests {
         row.on = Some(Stand { door: d, ..Stand::default() });
         state_of(g).kickers.set(d, gd);
         g.gd[gd].path = vec![[1.0, 0.0, 1.0]];
-        crate::guards::guard_set_path_goal(g, gd, Some([1.0, 0.0, 1.0]));
+        g.gd[gd].set_path_goal(Some([1.0, 0.0, 1.0]));
         g.gd[gd].stall_ref = Some([1.0, 0.0, 1.0]);
         (gd, b)
     }

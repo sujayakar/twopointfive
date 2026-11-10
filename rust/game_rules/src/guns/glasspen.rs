@@ -8,12 +8,6 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- local helpers
 
-/// `g.level.boxes[bi]`: an index with no box is undefined there, None here. That list and `g.col.boxes` are one array in the TypeScript, and an index is a place in it, not a BoxId
-fn level_box(g: &Game, bi: f64) -> Option<BoxId> {
-    let ix = bi as usize;
-    if ix as f64 != bi { return None; }
-    g.col.boxes.get(ix).copied()
-}
 /// `GLASSPEN.energy[id] ?? GLASSPEN.byClass[cls] ?? GLASSPEN.defaultEnergy`
 fn energy_by(k: &crate::knobs::GlasspenK, id: crate::weapons::WeaponId, cls: Option<crate::weapons::WeaponClass>) -> f64 {
     if let Some(&e) = k.energy.get(String::from(id.as_str())) { return e; }
@@ -24,8 +18,6 @@ fn energy_by(k: &crate::knobs::GlasspenK, id: crate::weapons::WeaponId, cls: Opt
 }
 /// a new state: no log, rev 0
 fn fresh_state() -> PenState { PenState { rev: 0.0 } }
-/// `panesUntouched(g.sim)`: the part's first word. The skeleton's `panes_untouched(b: Opaque)` cannot carry the slot, and the slot is `g.sim`
-fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
 /// the shell rule on one pane's marks, five numbers each: x, y, z, went-through, filed-a-mark
 fn mark_on(mk: &mut Vec<f64>, at: V3, through: bool, r2: f64) -> ShellMark {
     let (mut marks, mut join) = (0, false);
@@ -96,7 +88,7 @@ pub fn reset_glass_pen(g: &mut crate::game::Game) {
     if let Some(s) = g.m.glasspen.states.as_mut() {
         s.rev += 1.0;
     }
-    if !untouched(g) { ::sim::panes::clear_holes(g.sim); }
+    if !crate::glassbreak::glass_break_untouched(g) { ::sim::panes::clear_holes(g.sim); }
 }
 
 /// a number that moves whenever what a round has to pay at any pane may have moved
@@ -176,7 +168,7 @@ pub(super) fn commit_crossings(g: &mut crate::game::Game, cross: &[crate::glassp
 
 /// the round stopped in static `bi`: if that is glass it gets the impact call with the energy it arrived with
 pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy: f64, who: f64, shell: Option<&mut crate::glasspen::ShellGlass>) {
-    let b = level_box(g, bi);
+    let b = g.box_at(bi);
     let sheet = crate::glass::is_sheet(g, b);
     let mark = match shell {
         Some(s) if sheet => shell_mark(g, s, bi, at, false),
@@ -192,7 +184,7 @@ pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy
 
 /// the muzzle already past the glass: what the panes across the arm left the round, filed at the arm's crossing; None: the old rule stands
 pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> {
-    let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&p) => p, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
+    let from = crate::combat::shoulder(g, c_2);
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
     let w = ::sim::pen::arm_walk(&crate::glassbreak::glass_ctx(g), from, mz, dir, energy, &g.k).map(|(e, l)| (e, l.iter().map(crossing).collect::<Vec<PaneCross>>()));

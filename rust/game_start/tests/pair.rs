@@ -114,7 +114,7 @@ fn in_a_game_of_two_each_squad_line_says_low_for_its_own_men() {
 fn a_blown_job_finished_by_hand_ends_in_his_own_words() {
     for s in SEEDS {
         let (mut p, m, t1) = pair(s);
-        let at = p.g.ch[p.g.gd[t1].ch].pos;
+        let at = p.g.pos_of(t1);
         let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at, foe: t1 });
         assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "seed {s}: the order on the man was refused");
         let mut n = 0;
@@ -142,7 +142,7 @@ fn the_hold_on_a_body_ends_with_the_hands() {
     let body = [20.4, 18.1];
     let ((mut p, m, t1), t2) = pair_with_body(10, Some(body));
     let t2 = t2.unwrap();
-    let at = p.g.ch[p.g.gd[t1].ch].pos;
+    let at = p.g.pos_of(t1);
     let t = game::orders::OrderTarget::Foe(game::orders::OrderTargetFoe { at, foe: t1 });
     assert_eq!(game::orders::squad_orders_give(&mut p.g, "pairMark", Some(&t), Some(game::orders::Who::All), None), None, "the order on the man was refused");
     let mut n = 0;
@@ -192,7 +192,7 @@ fn a_way_across_his_eyes_is_waited_on_by_one_eye() {
     for oneeye in [true, false] {
         let west = -std::f64::consts::FRAC_PI_2;
         let (mut p, m, foe) = sent_to_a_back(oneeye, [33.5, 11.3], west);
-        let start = p.g.ch[p.g.gd[m].ch].pos;
+        let start = p.g.pos_of(m);
         let t0 = p.time();
         for _ in 0..60 { p.pin_man(foe, [33.5, 11.3], west, GuardState::Patrol, 0.0); p.frame(); }
         let word = status_of(&mut p, m);
@@ -205,7 +205,7 @@ fn a_way_across_his_eyes_is_waited_on_by_one_eye() {
         }
         assert!(done.is_some(), "switch {oneeye}: he never gave it up");
         assert!(p.lines(m).contains(&"can't get behind him unseen."), "switch {oneeye}: said {:?}", p.lines(m));
-        let end = p.g.ch[p.g.gd[m].ch].pos;
+        let end = p.g.pos_of(m);
         assert!((end[0] - start[0]).hypot(end[2] - start[2]) < 0.5, "switch {oneeye}: he walked {start:?} to {end:?} on a way he could not take");
     }
 }
@@ -224,13 +224,13 @@ fn a_dark_way_round_is_a_way() {
         for _ in 0..(60 * 45) {
             p.pin_man(foe, at, west, GuardState::Patrol, 0.0);
             p.frame();
-            let q = p.g.ch[p.g.gd[m].ch].pos;
+            let q = p.g.pos_of(m);
             if (q[0] - at[0]).hypot(q[2] - at[1]) < 2.6 && q[0] < at[0] { in_front += 1; }
             if game::pairorders::pair_orders_job_of(&p.g, m).map_or(false, |j| j.set) { set = true; break; }
         }
         assert!(set, "switch {oneeye}: he never got there: {} said {:?}", status_of(&mut p, m), p.lines(m));
         assert_eq!(in_front, 0, "switch {oneeye}: frames in front of him inside 2.6 m");
-        let q = p.g.ch[p.g.gd[m].ch].pos;
+        let q = p.g.pos_of(m);
         assert!(q[0] > at[0] && (q[0] - at[0]).hypot(q[2] - at[1]) < 1.6, "switch {oneeye}: set at {q:?}, the man at {at:?}, looking west");
     }
 }
@@ -298,7 +298,7 @@ fn hears(who: impl Fn(&Play, GuardId, GuardId) -> f64, kind: game::director::Eve
     p.run(0.3);
     let m = p.mates()[0];
     let foe = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).expect("a defender");
-    let at = p.g.ch[p.g.gd[foe].ch].pos;
+    let at = p.g.pos_of(foe);
     let yaw = p.g.ch[p.g.gd[foe].ch].body_yaw;
     for _ in 0..5 { p.pin_man(foe, [at[0], at[2]], yaw, GuardState::Patrol, 0.0); p.frame(); }
     let id = who(&p, m, foe);
@@ -315,7 +315,7 @@ fn a_man_hears_the_other_sides_chair_and_door_and_not_his_own() {
     use game::director::EventKind::{Door, Prop};
     for kind in [Prop, Door] {
         let theirs = hears(|p, m, _| p.id_of(m), kind);
-        let sams = hears(|p, _, _| p.g.ch[p.g.pl[p.g.player].ch].id, kind);
+        let sams = hears(|p, _, _| p.g.player_id(p.g.player), kind);
         let nobodys = hears(|_, _, _| 0.0, kind);
         let his_own = hears(|p, _, foe| p.id_of(foe), kind);
         assert!(theirs > 0.05, "{kind:?}: the partner's noise two metres off stirred him {theirs}");

@@ -44,8 +44,8 @@ fn fwd_of(yaw: f64) -> V3 {
 /// Where on the man each move's hands go, off his bones as they stand: the blow's own point, the free hand's.
 pub fn marks(g: &crate::game::Game, by: CharId, vic: CharId, style: crate::character::BlowStyle) -> (V3, Option<V3>) {
     use crate::character::Bone;
-    let neck = g.ch[vic].bones.get(Bone::Neck).copied();
-    let head = g.ch[vic].bones.get(Bone::Head).copied();
+    let neck = g.ch[vic].bone(Bone::Neck);
+    let head = g.ch[vic].bone(Bone::Head);
     marks_of(g.ch[by].pos, g.ch[by].body_yaw, g.ch[vic].pos, g.ch[vic].body_yaw, neck, head, style)
 }
 
@@ -105,7 +105,7 @@ fn fall_way_of(p: V3, yaw: f64, from: Option<V3>, style: crate::character::FallS
     use crate::character::FallStyle;
     let f = fwd_of(yaw);
     let away: V3 = match from {
-        Some(from) if m::hyp2(p[0] - from[0], p[2] - from[2]) > 0.05 => v3::normalize([p[0] - from[0], 0.0, p[2] - from[2]]),
+        Some(from) if v3::dist_xz(p, from) > 0.05 => v3::normalize([p[0] - from[0], 0.0, p[2] - from[2]]),
         _ => f,
     };
     if style == FallStyle::Topple {

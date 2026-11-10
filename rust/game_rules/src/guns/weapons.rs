@@ -36,9 +36,6 @@ mod tests {
     }
 }
 
-/// a row of the table, by the key a gun keeps (`this.def`)
-fn row(g: &Game, def: WeaponId) -> &WeaponDef { g.m.weapons.weapons.get(def).unwrap() }
-
 /// `g.audio.play(sfx, at, vol)`: no options
 fn play(g: &mut Game, sfx: &str, at: V3, vol: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), None) }
 
@@ -55,7 +52,7 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             let p = g.ch[ch].pos;
             play(g, "magOut", p, 0.7);
             if dropped {
-                let h = g.ch[ch].bones.get(crate::character::Bone::HandL).copied().unwrap_or(g.ch[ch].pos);
+                let h = g.ch[ch].bone(crate::character::Bone::HandL).unwrap_or(g.ch[ch].pos);
                 let at = [h[0], m::max(0.3, h[1]), h[2]];
                 let r0 = crate::dice::draw_world(g, "weapons::ev_mag_out#1");
                 let r1 = crate::dice::draw_world(g, "weapons::ev_mag_out#2");
@@ -70,8 +67,8 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             }
             let def = g.fa[id].def;
             // (`fp?.drop !== null`: no plan at all is not null; a plan whose drop is null drops nothing)
-            if dropped && row(g, def).pellets.is_none() && feed.as_ref().map_or(true, |f| f.drop.is_some()) {
-                let h = g.ch[ch].bones.get(crate::character::Bone::HandR).copied().unwrap_or(g.ch[ch].pos);
+            if dropped && g.weapon(def).pellets.is_none() && feed.as_ref().map_or(true, |f| f.drop.is_some()) {
+                let h = g.ch[ch].bone(crate::character::Bone::HandR).unwrap_or(g.ch[ch].pos);
                 let d = g.ch[ch].gun_dir;
                 let at = [h[0] - d[0] * 0.1, m::max(0.3, h[1] - 0.05), h[2] - d[2] * 0.1];
                 let r0 = crate::dice::draw_world(g, "weapons::ev_mag_out#3");
@@ -137,7 +134,7 @@ pub fn firearm_shell_fed(g: &crate::game::Game, id: FirearmId) -> bool {
 pub fn firearm_reload_row(g: &crate::game::Game, id: FirearmId) -> crate::weapons::WeaponDefReload {
     if let Some(b) = g.fa[id].beat { return b; }
     let def = g.fa[id].def;
-    row(g, def).reload
+    g.weapon(def).reload
 }
 
 /// a row being carried: loaded its way, its spares full, the selector on the first mode. A data-only row throws
@@ -157,7 +154,7 @@ pub fn firearm_new(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -
 /// Z: the selector to its next position; ends any AUTO string; returns the new mode
 pub fn firearm_cycle_mode(g: &mut crate::game::Game, id: FirearmId) -> crate::weapons::FireMode {
     let def = g.fa[id].def;
-    let modes = row(g, def).modes.clone();
+    let modes = g.weapon(def).modes.clone();
     let now = g.fa[id].mode;
     // (indexOf's −1, a mode the row does not offer, steps to the first)
     let next = modes.iter().position(|x| *x == now).map_or(0, |i| i + 1) % modes.len();
@@ -171,13 +168,13 @@ pub fn firearm_cycle_mode(g: &mut crate::game::Game, id: FirearmId) -> crate::we
 pub fn firearm_automatic(g: &crate::game::Game, id: FirearmId) -> bool {
     if g.fa[id].mode != FireMode::Auto { return false; }
     let def = g.fa[id].def;
-    row(g, def).auto.is_some()
+    g.weapon(def).auto.is_some()
 }
 
 /// the extra cone the NEXT round of the current AUTO string is drawn with
 pub fn firearm_auto_spread(g: &crate::game::Game, id: FirearmId) -> f64 {
     let def = g.fa[id].def;
-    let auto = row(g, def).auto;
+    let auto = g.weapon(def).auto;
     match auto {
         Some(a) if g.fa[id].mode == FireMode::Auto => m::min(a.spread_cap, a.spread_per_round * g.fa[id].auto_idx),
         _ => 0.0,
@@ -196,14 +193,14 @@ pub fn firearm_auto_idle(g: &mut crate::game::Game, id: FirearmId, dt: f64, trig
     g.fa[id].auto_since += dt;
     if trigger_down { return; }
     let def = g.fa[id].def;
-    let reset_after = row(g, def).auto.map_or(0.0, |a| a.reset_after);
+    let reset_after = g.weapon(def).auto.map_or(0.0, |a| a.reset_after);
     if g.fa[id].auto_since > reset_after { g.fa[id].auto_idx = 0.0; }
 }
 
 /// never runs out of spares
 pub(super) fn firearm_bottomless(g: &crate::game::Game, id: FirearmId) -> bool {
     let def = g.fa[id].def;
-    !row(g, def).spare_mags.is_finite()
+    !g.weapon(def).spare_mags.is_finite()
 }
 
 pub fn firearm_reloading(g: &crate::game::Game, id: FirearmId) -> bool {
@@ -217,8 +214,8 @@ pub fn firearm_rounds_ready(g: &crate::game::Game, id: FirearmId) -> f64 {
 /// rounds gone since the gun was last full
 pub fn firearm_spent(g: &crate::game::Game, id: FirearmId) -> f64 {
     let def = g.fa[id].def;
-    let cap = row(g, def).mag_capacity;
-    let top_up = row(g, def).top_up;
+    let cap = g.weapon(def).mag_capacity;
+    let top_up = g.weapon(def).top_up;
     cap + (if top_up { 1.0 } else { 0.0 }) - firearm_rounds_ready(g, id)
 }
 
@@ -253,8 +250,8 @@ pub fn firearm_fire(g: &mut crate::game::Game, id: FirearmId) -> bool {
 /// the most a seated magazine may hold right now by the row's rule
 pub fn firearm_mag_room(g: &crate::game::Game, id: FirearmId) -> f64 {
     let def = g.fa[id].def;
-    let cap = row(g, def).mag_capacity;
-    let top_up = row(g, def).top_up;
+    let cap = g.weapon(def).mag_capacity;
+    let top_up = g.weapon(def).top_up;
     cap - (if top_up { 0.0 } else { g.fa[id].chamber })
 }
 
@@ -277,7 +274,7 @@ pub fn firearm_start_reload(g: &mut crate::game::Game, id: FirearmId, ev: Option
     let from = if !g.fa[id].spare.is_empty() {
         m::max_n(&g.fa[id].spare)
     } else if bottomless {
-        row(g, def).mag_capacity
+        g.weapon(def).mag_capacity
     } else {
         mag.unwrap_or(0.0)
     };
@@ -333,7 +330,7 @@ fn firearm_feed_shell(g: &mut crate::game::Game, id: FirearmId, port: Option<boo
     let def = g.fa[id].def;
     let tube = g.fa[id].mag.unwrap_or(0.0);
     let to_port = g.fa[id].chamber == 0.0 && (free || (port && tube == 0.0));
-    if !to_port && tube >= row(g, def).mag_capacity { return false; }
+    if !to_port && tube >= g.weapon(def).mag_capacity { return false; }
     if !free && !firearm_bottomless(g, id) {
         let fa = &mut g.fa[id];
         let mut bi: Option<usize> = None;
@@ -358,8 +355,8 @@ fn firearm_feed_shell(g: &mut crate::game::Game, id: FirearmId, port: Option<boo
 pub fn firearm_rearm(g: &mut crate::game::Game, id: FirearmId) {
     firearm_cancel_reload(g, id);
     let def = g.fa[id].def;
-    let cap = row(g, def).mag_capacity;
-    let top_up = row(g, def).top_up;
+    let cap = g.weapon(def).mag_capacity;
+    let top_up = g.weapon(def).top_up;
     let fa = &mut g.fa[id];
     fa.burst = None;
     fa.auto_idx = 0.0;
@@ -411,7 +408,7 @@ pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
             }
             fa.spare.remove(bi)
         } else if bottomless {
-            row(g, def).mag_capacity
+            g.weapon(def).mag_capacity
         } else {
             0.0
         };
@@ -444,7 +441,7 @@ pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
 pub fn pistol_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId {
     let id = match def {
         Some(d) => firearm_new(g, d),
-        None => { let d = row(g, WeaponId::Fiveseven).clone(); firearm_new(g, &d) }
+        None => { let d = g.weapon(WeaponId::Fiveseven).clone(); firearm_new(g, &d) }
     };
     g.fa[id].kind = GunKind::Pistol;
     id
@@ -455,7 +452,7 @@ pub fn rifle_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponD
     let fn2000;
     let def = match def {
         Some(d) => d,
-        None => { fn2000 = row(g, WeaponId::Fn2000).clone(); &fn2000 }
+        None => { fn2000 = g.weapon(WeaponId::Fn2000).clone(); &fn2000 }
     };
     let id = firearm_new(g, def);
     let (rings, shells) = (g.k.launcher.rings, g.k.launcher40.rounds);
@@ -526,7 +523,7 @@ mod tests_2 {
         (f.chamber, f.mag, f.spare.clone(), f.reload_t, f.feed_n, f.feed_port, f.feed_pull, f.shell_t.is_some())
     }
 
-    fn the_row(g: &Game, id: WeaponId) -> WeaponDef { row(g, id).clone() }
+    fn the_row(g: &Game, id: WeaponId) -> WeaponDef { g.weapon(id).clone() }
 
     #[test]
     fn a_new_gun_is_loaded_its_rows_way() {

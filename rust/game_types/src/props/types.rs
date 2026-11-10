@@ -1,7 +1,7 @@
 //! The types of `props`.
 #![allow(unused_imports)]
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PropContact {
@@ -59,7 +59,7 @@ pub struct Prop {
     pub tune: crate::props::KindTune,
     pub home: [f64; 3],
     pub boxes: Vec<BoxId>,
-    pub def: crate::scene_level::PropDef,
+    pub def: Arc<crate::scene_level::PropDef>,
     pub id: f64,
     // where it stands and how it turns; the cos and sin of `yaw` are written where the yaw is written
     pub x: f64,

@@ -18,25 +18,6 @@ pub struct StickyLivePl {
     pub cams: Vec<StickyCamId>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct StickyRowsRowOver {
-    pub kind: Option<crate::game::InteractableKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StickycamMod {

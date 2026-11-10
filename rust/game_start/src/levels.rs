@@ -407,7 +407,7 @@ fn walked(levels: &[String], write: bool) -> Verdicts {
     for level in &levels {
         let data = data_of(level);
         let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
-        if broken { p.g.level.routes.clear(); p.g.level.scenarios = None; }
+        if broken { let l = std::sync::Arc::make_mut(&mut p.g.level); l.routes.clear(); l.scenarios = None; }
         let w = ways(&p.g);
         n_ways += w.list.len();
         if w.lost > 0 { sick.push(format!("{level}: {} with no path", w.lost)); }

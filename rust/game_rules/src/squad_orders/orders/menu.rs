@@ -161,10 +161,13 @@ pub fn squad_orders_team(seat: &crate::seats::SeatRef) -> crate::teams::Team {
 /// The keys a locked door is tried with for them: Sam's ring and the codes he has learned.
 pub fn squad_orders_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> JsSet<String> {
     if let Some(c) = &seat.orders.cast { return c.ring.clone(); }
-    let p = seat.player;
-    let mut out = g.pl[p].keys.clone();
-    for code in g.pl[p].codes.keys() { out.add(code); }
-    out
+    player_ring(g, seat.player)
+}
+/// A player's own ring: his keys, and the codes he has learned.
+pub fn player_ring(g: &Game, p: PlayerId) -> JsSet<String> {
+    let mut ring = g.pl[p].keys.clone();
+    for code in g.pl[p].codes.keys() { ring.add(code); }
+    ring
 }
 
 /// The living men an order would go to: the teammate under the reticle, else `who`.
@@ -425,7 +428,7 @@ pub fn squad_orders_people_near(g: &crate::game::Game, seat: &crate::seats::Seat
         let h = g.guards[i];
         i += 1;
         if !crate::pairorders::pair_orders_is_foe(g, h) { continue; }
-        let d = v3::dist_xz(g.ch[g.gd[h].ch].pos, at);
+        let d = v3::dist_xz(g.pos_of(h), at);
         if d < bd { bd = d; best = Some(h); }
     }
     best.map(|gd| (gd, bd))
@@ -446,7 +449,7 @@ fn pointed(g: &mut Game) {
 /// …asked of the game shared (`asked` = the walls whose sky was asked, for a rule to keep)
 pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let (door_pick_m, man_m, self_m) = (g.k.orders.door_pick_m, g.k.orders.man_m, g.k.orders.self_m);
-    let sam = g.ch[g.pl[seat.player].ch].pos;
+    let sam = g.seat_pos(seat);
     let at: V3 = [p[0], 0.0, p[2]];
     let mut door: Option<DoorId> = None;
     let mut dd = door_pick_m;
@@ -462,14 +465,14 @@ pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &m
     let mut man: Option<GuardId> = None;
     let mut dm = man_m;
     for gd in squad_orders_squad(g, seat) {
-        let x = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
+        let x = v3::dist_xz(g.pos_of(gd), at);
         if !crate::condition::down(g, g.gd[gd].ch) && x < dm { dm = x; man = Some(gd); }
     }
     let ds = v3::dist_xz(sam, at);
     let fo = squad_orders_people_near(g, seat, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
     if let Some((foe, fd)) = fo {
         if !(door.is_some() && dd < fd) && !(man.is_some() && dm < fd) && !(ds < self_m && ds < fd) {
-            let fp = g.ch[g.gd[foe].ch].pos;
+            let fp = g.pos_of(foe);
             return OrderTarget::Foe(OrderTargetFoe { at: [fp[0], 0.0, fp[2]], foe });
         }
     }

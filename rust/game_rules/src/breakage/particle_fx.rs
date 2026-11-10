@@ -43,14 +43,9 @@ fn dust_shipped(k: &crate::particle_fx::ParticleFxModDUST) -> bool {
 
 // ---------------------------------------------------------------- what a hit is made of
 
-/// What a round knocks out of a static: its word's surface, or its word's wet row on the one slab the weather has soaked.
+/// What a round knocks out of a static: its word's surface, in any weather.
 pub fn surf_at(g: &crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
-    let does = g.tab.boxes[b].does;
-    if g.weather.lot == Some(b) {
-        crate::scene_materials::does_wet(g, does).surf
-    } else {
-        crate::scene_materials::does_of(g, does).surf
-    }
+    crate::scene_materials::does_of(g, g.tab.boxes[b].does).surf
 }
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.
@@ -346,7 +341,7 @@ pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapon
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
     let right = v3::scale(f.x, -1.0);
-    let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bones.get(crate::character::Bone::HandR).copied().unwrap_or(muzzle) } else { muzzle };
+    let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bone(crate::character::Bone::HandR).unwrap_or(muzzle) } else { muzzle };
     let port = v3::mad(v3::mad(v3::mad(base, f.z, c.ahead), f.y, c.up), right, c.right);
     let dir = v3::normalize(v3::add(v3::add(v3::scale(right, c.dir[0]), v3::scale(f.y, c.dir[1])), v3::scale(f.z, c.dir[2])));
     let life = g.m.particle_fx.pfx.casing_life;

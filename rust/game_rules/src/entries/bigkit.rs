@@ -23,7 +23,7 @@ fn on_tool(g: &mut Game, pid: PlayerId, f: impl FnOnce(&mut crate::game::PlayerK
 
 /// the row `WEAPONS.m870`; held only for the line that reads it
 fn m870(g: &Game) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap()
+    g.weapon(crate::weapons::WeaponId::M870)
 }
 
 /// The big slot's tool that opens this door from where you stand.
@@ -70,12 +70,12 @@ pub fn sam_big_spot(g: &crate::game::Game, d: DoorId, from: V3, tool: crate::kit
     if g.dr[d].leaf.off {
         return None;
     }
-    let side = big_side(g, d, &from);
+    let side = crate::orders::side_of(g, d, from);
     let men: Vec<V3> = g
         .guards
         .iter()
         .filter(|&&q| !crate::condition::down(g, g.gd[q].ch))
-        .map(|&q| g.ch[g.gd[q].ch].pos)
+        .map(|&q| g.pos_of(q))
         .collect();
     let n0 = crate::doortools::door_pt(g, d, 0.0, 0.0, side, None);
     let n1 = crate::doortools::door_pt(g, d, 0.0, 1.0, side, None);
@@ -318,12 +318,10 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
         b.t += dt;
     }
     let pl = &g.pl[pid];
-    let throw_held = g.sets[crate::seats::seat_of_man(g, pid)].hand.throw_held;
     let taken = g.cond[pl.ch].down
         || pl.hands_full()
         || pl.wall.is_some()
         || pl.pending_throw.is_some()
-        || throw_held
         || crate::character::anim_in_throw(g, c)
         || crate::handwork::sam_work(g).is_some();
     let over = match &g.ch[c].anim.big_tool {
@@ -369,123 +367,100 @@ fn next_at(g: &mut Game, pid: PlayerId, next: f64) {
 /// One frame of the beat: true = over, he has his legs back.
 pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let pid = g.player;
-    let c = g.pl[pid].ch;
     let d = g.pl[pid].kick().unwrap().door;
-    tool!(g, pid).t += dt;
-    {
-        let (now, lead) = (tool!(g, pid).t, tool!(g, pid).lead);
-        // (the kit's errand is over before the wait it was given, or was never the kit's to run)
-        if now < 0.0 && now > dt - lead.unwrap_or(0.0) && !crate::character::anim_kit_busy(g, c) {
-            tool!(g, pid).t = 0.0;
-        }
-    }
-    let now = tool!(g, pid).t;
-    let done = tool!(g, pid).done;
-    if done >= 0.0 {
-        if now < done {
-            return false;
-        }
-        // (broken from the face it opens toward: the same hands pull it open, once the tool is back on him)
-        let gave = tool!(g, pid).gave.unwrap_or(false);
-        let pos = g.ch[c].pos;
-        let keys = g.pl[pid].keys.clone();
-        let pull = gave && !g.dr[d].leaf.off && crate::doors::door_is_closed(g, d) && !crate::doors::doors_locked_out(g, d, pos, Some(&keys));
-        if pull {
-            let stow = big_stow(g);
-            if let Some(end) = tool!(g, pid).moves.as_ref().map(|mv| mv.end) {
-                if now < end + stow {
-                    tool!(g, pid).done = end + stow;
-                    return false;
-                }
-            }
-            let id = g.ch[c].id;
-            crate::doors::doors_use(g, d, pos, id, Some(&keys));
-        }
-        return true;
-    }
+    let now = beat_clock(g, pid, dt);
+    if tool!(g, pid).done >= 0.0 { return beat_over(g, pid, d, now); }
     if g.dr[d].leaf.off || !crate::doors::door_is_closed(g, d) {
-        if now < 0.0 {
-            return true; // (his own gun still on its way to its place: nothing of the tool has begun)
-        }
+        if now < 0.0 { return true; } // (his own gun still on its way to its place: nothing of the tool has begun)
         over(g, pid, 0.15, false);
         return false;
     }
-    let kind = tool!(g, pid).kind;
-    let hammer = kind == crate::kit::BigTool::Hammer;
     if tool!(g, pid).moves.is_some() && !tool!(g, pid).next.is_finite() {
-        // (on his way to the place: the first blow is wound up, the first shell goes, once he stands on it with the tool in his hands)
-        let arrived = tool!(g, pid).moves.as_ref().unwrap().arrived;
-        if !arrived && now >= MOVE_CAP {
-            let spot = g.pl[pid].kick().unwrap().spot;
-            if v3::dist_xz(g.ch[c].pos, spot) < 0.5 {
-                tool!(g, pid).moves.as_mut().unwrap().arrived = true;
-            } else {
-                over(g, pid, 0.0, false);
-                return false;
-            }
-        }
-        if !tool!(g, pid).moves.as_ref().unwrap().arrived {
+        onto_place(g, pid, now);
+        return false;
+    }
+    if now < tool!(g, pid).next { return false; }
+    tool!(g, pid).n += 1.0;
+    if tool!(g, pid).kind == crate::kit::BigTool::Hammer { blow(g, pid, d, now); } else { shell(g, pid, d, now); }
+    false
+}
+/// The beat's clock: it starts early where the kit's errand is over before the wait it was given, or was never the kit's to run.
+fn beat_clock(g: &mut Game, pid: PlayerId, dt: f64) -> f64 {
+    let busy = crate::character::anim_kit_busy(g, g.pl[pid].ch);
+    let x = tool!(g, pid);
+    x.t += dt;
+    if x.t < 0.0 && x.t > dt - x.lead.unwrap_or(0.0) && !busy { x.t = 0.0; }
+    x.t
+}
+/// The tool is done with; a leaf broken from the face it opens toward is pulled open by the same hands, once the tool is back on him.
+fn beat_over(g: &mut Game, pid: PlayerId, d: DoorId, now: f64) -> bool {
+    if now < tool!(g, pid).done { return false; }
+    let c = g.pl[pid].ch;
+    let (pos, id, keys, gave) = (g.ch[c].pos, g.ch[c].id, g.pl[pid].keys.clone(), tool!(g, pid).gave.unwrap_or(false));
+    if !gave || g.dr[d].leaf.off || !crate::doors::door_is_closed(g, d) || crate::doors::doors_locked_out(g, d, pos, Some(&keys)) { return true; }
+    let stow = big_stow(g);
+    if let Some(end) = tool!(g, pid).moves.as_ref().map(|mv| mv.end) {
+        if now < end + stow {
+            tool!(g, pid).done = end + stow;
             return false;
         }
-        let out_by = big_out_by(g, if hammer { crate::kit::BigTool::Hammer } else { crate::kit::BigTool::Shotgun });
-        let next = m::max(now, out_by) + if hammer { big_wind(g) } else { 0.0 };
-        next_at(g, pid, next);
-        return false;
     }
-    if now < tool!(g, pid).next {
-        return false;
+    crate::doors::doors_use(g, d, pos, id, Some(&keys));
+    true
+}
+/// On his way to the place: the first blow is wound up, or the first shell goes, once he stands on it with the tool in his hands.
+fn onto_place(g: &mut Game, pid: PlayerId, now: f64) {
+    if !tool!(g, pid).moves.as_ref().unwrap().arrived {
+        if now < MOVE_CAP { return; }
+        let spot = g.pl[pid].kick().unwrap().spot;
+        if !(v3::dist_xz(g.player_pos(pid), spot) < 0.5) { over(g, pid, 0.0, false); return; }
+        tool!(g, pid).moves.as_mut().unwrap().arrived = true;
     }
-    tool!(g, pid).n += 1.0;
-    let n = tool!(g, pid).n;
-    if !hammer {
-        g.stats.bigkit.sam_shells += 1;
-        // (the shell's own rule takes a keep that is locked AND home; anything else shut is the latch's)
-        let lock = g.dr[d].leaf.locked && g.dr[d].leaf.latched;
-        let side = tool!(g, pid).side;
-        let at = crate::shotgun::lock_point(g, d, side);
-        let opts = crate::combat::FireOpts { weapon: Some(m870(g).clone()), steady: Some(true), spread: Some(0.0), ..Default::default() };
-        crate::combat::fire_weapon(g, c, at, Some(&opts));
-        let gave = if lock {
-            !g.dr[d].leaf.locked
-        } else {
-            let (pos, id) = (g.ch[c].pos, g.ch[c].id);
-            crate::doors::doors_kick_in(g, d, pos, id, Some(true))
-        };
-        if gave && !lock {
-            crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
-        }
-        if gave {
-            on_tool(g, pid, |t| t.gave = Some(true));
-            over(g, pid, TAIL, true);
-        } else if n >= g.k.bigslot.shells {
-            over(g, pid, TAIL, true);
-        } else {
-            let next = now + m870(g).cd;
-            next_at(g, pid, next);
-        }
-        return false;
-    }
+    let kind = tool!(g, pid).kind;
+    let wind = if kind == crate::kit::BigTool::Hammer { big_wind(g) } else { 0.0 };
+    let next = m::max(now, big_out_by(g, kind)) + wind;
+    next_at(g, pid, next);
+}
+/// A shell at the lock. Its own rule takes a keep that is locked AND home; anything else shut is the latch's.
+fn shell(g: &mut Game, pid: PlayerId, d: DoorId, now: f64) {
+    let c = g.pl[pid].ch;
+    g.stats.bigkit.sam_shells += 1;
+    let last = tool!(g, pid).n >= g.k.bigslot.shells;
+    let lock = g.dr[d].leaf.locked && g.dr[d].leaf.latched;
+    let side = tool!(g, pid).side;
+    let at = crate::shotgun::lock_point(g, d, side);
+    let opts = crate::combat::FireOpts { weapon: Some(m870(g).clone()), steady: Some(true), spread: Some(0.0), ..Default::default() };
+    crate::combat::fire_weapon(g, c, at, Some(&opts));
+    let (pos, id) = (g.ch[c].pos, g.ch[c].id);
+    let gave = if lock { !g.dr[d].leaf.locked } else { crate::doors::doors_kick_in(g, d, pos, id, Some(true)) };
+    if gave { door_gave(g, pid, d, !lock); }
+    if gave || last { over(g, pid, TAIL, true); return; }
+    let next = now + m870(g).cd;
+    next_at(g, pid, next);
+}
+/// A blow of the hammer; the last of those it needs takes the door.
+fn blow(g: &mut Game, pid: PlayerId, d: DoorId, now: f64) {
+    let c = g.pl[pid].ch;
+    let (pos, id) = (g.ch[c].pos, g.ch[c].id);
     g.stats.bigkit.sam_blows += 1;
-    if n < tool!(g, pid).need {
-        let id = g.ch[c].id;
+    if tool!(g, pid).n < tool!(g, pid).need {
         g.dr[d].leaf.rattle_t = 0.6;
         g.dr[d].leaf.last_who = id;
         let at = crate::doors::door_pos(g, d);
         crate::doors::doors_sound(g, d, crate::doors::DoorSound::Thud, at, id, 1.0);
         let next = now + big_swing(g);
         next_at(g, pid, next);
-        return false;
+        return;
     }
-    let (pos, id) = (g.ch[c].pos, g.ch[c].id);
     let gave = crate::doors::doors_kick_in(g, d, pos, id, Some(true));
     let pos = g.ch[c].pos;
     crate::marks::kick_scuff(g, d, pos);
-    if gave {
-        on_tool(g, pid, |t| t.gave = Some(true));
-        crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
-    }
+    if gave { door_gave(g, pid, d, true); }
     over(g, pid, TAIL, true);
-    false
+}
+fn door_gave(g: &mut Game, pid: PlayerId, d: DoorId, kicked: bool) {
+    if kicked { crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d); }
+    on_tool(g, pid, |t| t.gave = Some(true));
 }
 
 /// The blows the hammer needs on d from p.
@@ -497,17 +472,12 @@ pub fn hammer_blows(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
     }
 }
 
-/// Which face of d he is on (the lock point's side).
-pub fn big_side(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
-    if crate::doortools::off_of(g, d, [p[0], p[1], p[2]], 1.0) >= 0.0 { 1.0 } else { -1.0 }
-}
-
 /// The big slot's tool a man carries, for the drawer.
 pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::kit::BigTool> {
     let kit = if let Some(pid) = crate::seats::man_by_id(g, c_2.id) {
         g.pl[pid].big_kit
     } else {
-        let gd = g.guards.iter().copied().find(|&q| g.ch[g.gd[q].ch].id == c_2.id)?;
+        let gd = g.guards.iter().copied().find(|&q| g.char_id(q) == c_2.id)?;
         crate::kit::kit_big(g, gd)
     };
     match kit {
@@ -527,7 +497,7 @@ pub(super) fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.gd[gd].slung.as_ref().map_or(false, |s| s.out) {
         let own = g.gd[gd].weapon;
         let def = g.fa[own].def;
-        if g.m.weapons.weapons.get(def).unwrap().pellets.as_ref().map_or(false, |p| p.breach.is_some()) {
+        if g.weapon(def).pellets.as_ref().map_or(false, |p| p.breach.is_some()) {
             return true;
         }
         let (route, c) = (g.gd[gd].route, g.gd[gd].ch);

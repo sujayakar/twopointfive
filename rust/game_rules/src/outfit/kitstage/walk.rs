@@ -10,7 +10,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 pub(super) fn flat(a: V3, p: V2) -> f64 { m::hyp2(a[0] - p[0], a[2] - p[1]) }
-pub(super) fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
 pub(super) fn free(g: &Game, p: V2) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[1]) }
 pub(super) fn v2(p: V3) -> V2 { [p[0], p[2]] }
 pub(super) fn v3(p: V2) -> V3 { [p[0], 0.0, p[1]] }
@@ -32,7 +31,7 @@ pub fn home_of(g: &Game, st: &KitStage, x: GuardId) -> (V2, f64) {
 }
 /// the quiet picture: the partner rests on a knee behind Sam
 pub(super) fn low_at(g: &Game, st: &KitStage, x: GuardId) -> bool { st.quiet && st.mate.is_some() && st.order.first() == Some(&x) && actor(g, st) != Some(x) }
-pub(super) fn off_home(g: &Game, st: &KitStage, x: GuardId) -> f64 { flat(g.ch[g.gd[x].ch].pos, home_of(g, st, x).0) }
+pub(super) fn off_home(g: &Game, st: &KitStage, x: GuardId) -> f64 { flat(g.pos_of(x), home_of(g, st, x).0) }
 pub(super) fn away(g: &Game, st: &KitStage) -> bool { st.order.iter().any(|&x| off_home(g, st, x) > K.home_m) }
 
 /// a teammate to a mark, at a walk, turned to `face`, his gun on `watch` or at the low ready: the squad's own hand-over, which takes him off whatever had him. `strafe`: his chest kept on `face` all the way
@@ -112,7 +111,7 @@ pub(super) fn arriving(g: &Game, st: &KitStage) -> bool {
     let now = g.time;
     if let Some(x) = actor(g, st) { return st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| w.lane && now - w.t0 < K.swap_secs); }
     st.order.iter().any(|&x| st.a.walks.iter().find(|w| w.man == x).map_or(false, |w| {
-        w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.ch[g.gd[x].ch].pos, *w.pts.last().unwrap()) > K.on_slot + 0.1)
+        w.dealt && now - w.t0 < K.swap_secs && (w.k + 1 < w.pts.len() || flat(g.pos_of(x), *w.pts.last().unwrap()) > K.on_slot + 0.1)
     }))
 }
 /// a hand more than two bodies, so that nobody is shouldered
@@ -152,7 +151,7 @@ pub(super) fn rotate(g: &Game, st: &mut KitStage, who: Option<GuardId>) {
         let x = st.order[k];
         if was[k] == x { continue; }
         let t = st.spots[k];
-        let p = v2(g.ch[g.gd[x].ch].pos);
+        let p = v2(g.pos_of(x));
         if x == who {
             let a = pp(p, -K.cut_in, lane_out - out_of(st, p));
             let b = pp(t, K.cut_in, K.lane);
@@ -182,7 +181,7 @@ pub(super) fn sam_hand(g: &mut Game, st: &mut KitStage, cmd: &mut crate::cmd::Pl
     let pl = g.player;
     if led.low && !g.pl[pl].crouch { st.a.press.push("KeyC"); }
     let Some(to) = led.to else { return };
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     if flat(p, to) <= 0.1 { return; }
     for (on, key) in crate::player::walk_keys(p, to, cmd.view.forward).into_iter().zip(crate::player::WALK_KEYS) { if on { cmd.keys.push(alloc::string::String::from(key)); } }
 }
@@ -201,7 +200,7 @@ fn homing_at_hole(g: &Game, st: &mut KitStage) -> bool {
     let (on, act, all) = (K.on_slot + 0.1, actor(g, st), st.a.hole_all);
     let mut men = core::mem::take(&mut st.a.hole_men);
     men.retain(|&x| off_home(g, st, x) > on);
-    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.ch[g.pl[g.player].ch].pos, st.sam) > on);
+    let waiting = men.iter().any(|&x| all || act != Some(x)) || (all && flat(g.player_pos(g.player), st.sam) > on);
     if waiting && st.a.home_t.is_nan() { st.a.home_t = now; }
     if !waiting || now - st.a.home_t >= K.swap_secs + K.home_secs { st.a.hole_all = false; st.a.home_t = f64::NAN; return false; }
     st.a.hole_men = men;

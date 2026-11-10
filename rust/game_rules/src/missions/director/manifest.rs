@@ -71,10 +71,9 @@ pub(in crate::missions) fn program_beat(p: &mut crate::director::ProgramDef, nam
     Ok(())
 }
 
-pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
 /// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.
 pub mod util {
-    pub use super::{dist_xz, yaw_to};
+    pub use crate::v3::{dist_xz, yaw_to};
 }
 
 fn err(out: &mut Vec<LintProblem>, what: String) { out.push(LintProblem { level: LintProblemLevel::Error, what }); }

@@ -10,10 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `c.bones.hips ?? c.pos`
 fn hips_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Hips) {
-        Some(b) => *b,
-        None => g.ch[c].pos,
-    }
+    g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos)
 }
 /// `c.bones.headTop?.[1] ?? c.pos[1] + 1.75`
 fn crown_of(g: &Game, c: CharId) -> f64 {
@@ -126,10 +123,10 @@ pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::Do
 
 /// Where a man stops by a body: `stand` metres short of it, a free cell he can walk to with the body in view.
 fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 {
-    let from = g.ch[g.gd[gd].ch].pos;
+    let from = g.pos_of(gd);
     let reach = crate::scene_collision::nav_grid_find_path(g, from, bp, None, None);
     let foot: V3 = match reach.as_ref().and_then(|r| r.last()) { Some(w) => *w, None => v3::copy(from) };
-    let base = m::atan2(from[0] - bp[0], from[2] - bp[2]);
+    let base = v3::yaw_to(bp, from);
     for da in [0.0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6, 2.3, -2.3, m::PI] {
         for r in [stand, stand + 0.5, m::max(1.0, stand - 0.4)] {
             let a = base + da;
@@ -143,11 +140,11 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 
 
 /// Where a man widens out to from a body: his arm of a fan dealt round it; None = he lets it go where he stands.
 fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Option<V3> {
-    let from = g.ch[g.gd[gd].ch].pos;
+    let from = g.pos_of(gd);
     let k = g.gd[b].body_fan;
     g.gd[b].body_fan = k + 1.0;
     const ARMS: [f64; 6] = [0.0, 2.1, -2.1, 1.05, -1.05, m::PI];
-    let base = m::atan2(from[0] - bp[0], from[2] - bp[2]) + ARMS[js::rem(k, 6.0) as usize];
+    let base = v3::yaw_to(bp, from) + ARMS[js::rem(k, 6.0) as usize];
     let mut paths = 0;
     for da in [0.0, 0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6] {
         for r in [6.0, 7.5, 5.0, 4.5] {
@@ -167,7 +164,7 @@ fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Optio
 
 /// Movement watchdog: true once he has covered less than half a metre in `secs` seconds.
 pub fn not_getting_anywhere(g: &mut crate::game::Game, gd: GuardId, dt: f64, secs: f64) -> bool {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let fresh = match g.gd[gd].stall_ref { None => true, Some(r) => v3::dist_xz(p, r) > 0.5 };
     if fresh {
         g.gd[gd].stall_ref = Some(v3::copy(p));
@@ -484,7 +481,7 @@ fn line_geom_of(from: V3, to: V3, h: V3, y0: f64, y1: f64, vel: V3) -> Option<cr
 pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Option<GuardId>) -> Option<GuardId> {
     let c = g.gd[gd].ch;
     let from = crate::combat::shoulder(g, c);
-    let l = m::hyp2(to[0] - from[0], to[2] - from[2]);
+    let l = v3::dist_xz(to, from);
     if l < 0.01 { return None; }
     let t_max = 1.0 + MUZZLE_PAST_M / l;
     let mut best: Option<GuardId> = None;
@@ -597,11 +594,10 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
     for &s in cands.iter() {
         if failed & (if s < 0.0 { 1 } else { 2 }) != 0 { continue; }
         let Some(cand) = step_that_opens_it(g, w, s) else { continue };
-        crate::game::guard_set_path(g, gd, vec![cand]);
+        g.gd[gd].set_path(vec![cand]);
         let man = &mut g.gd[gd];
         man.path_i = 0;
-        man.path_goal = Some(v3::copy(cand));
-        man.path_goal_orbit = false;
+        man.set_path_goal(Some(v3::copy(cand)));
         man.stall_ref = None;
         man.line_side = if s < 0.0 { -1.0 } else { 1.0 };
         man.line_gain = -1.0;
@@ -701,7 +697,7 @@ fn step_that_opens_it(g: &Game, w: StepLook, s: f64) -> Option<V3> {
     if crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) || !crate::scene_collision::nav_grid_walkable(g, pos, cand) || crate::scene_collision::solid_blocked(g, [pos[0], 0.5, pos[2]], [cand[0], 0.5, cand[2]], None) { return None; }
     let mut fit: V3 = [cand[0], 0.0, cand[2]];
     crate::scene_collision::collide_circle(g, &mut fit, radius, 0.2, 1.5, None);
-    if m::hyp2(fit[0] - cand[0], fit[2] - cand[2]) > 0.02 {
+    if v3::dist_xz(fit, cand) > 0.02 {
         ox = fit[0] - pos[0];
         oz = fit[2] - pos[2];
         let gf = line_geom(g, [from[0] + ox, from[1], from[2] + oz], aim_at, ob);
@@ -712,7 +708,7 @@ fn step_that_opens_it(g: &Game, w: StepLook, s: f64) -> Option<V3> {
     let o2 = ox * ox + oz * oz;
     let walks_into_one = g.guards.iter().any(|&p| {
         if no_colleague(g, gd, p) { return false; }
-        let q = g.ch[g.gd[p].ch].pos;
+        let q = g.pos_of(p);
         let u = v3::clamp(((q[0] - pos[0]) * ox + (q[2] - pos[2]) * oz) / o2, 0.0, 1.0);
         m::hyp2(pos[0] + ox * u - q[0], pos[2] + oz * u - q[2]) < LINE_WALK_CLEAR_M
     });

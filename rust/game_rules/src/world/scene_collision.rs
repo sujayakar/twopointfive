@@ -135,59 +135,30 @@ fn rows_for(g: &Game, r: Option<LampRows>) -> Option<sim::light::Rows> {
 fn handed_back_words(row: &str, why: &str, a: &[f64], b: &[f64]) -> String {
     alloc::format!("{}: the Rust module handed the question back ({}): [{}] → [{}]", row, why, joined(&a[..3]), joined(&b[..3]))
 }
-// ---- StaticCollision: the grid, as the boxes are filed in it
+// ---- StaticCollision: the boxes as they are filed in the floor's grid
 
-/// the box world stood up: the cells from `boxes`, the walk grid baked. `g.col = new(g, …)`: everything of g.col is new, and is built where the bake can ask it.
+/// the box world stood up: `boxes` filed in its grid, the walk grid baked. `g.col = new(g, …)`: everything of g.col is new, and is built where the bake can ask it.
 pub fn new(g: &mut crate::game::Game, boxes: &[BoxId]) -> crate::scene_collision::StaticCollision {
     g.col = StaticCollision::blank();
     g.col.boxes = boxes.to_vec();
     g.tab.boxes.statics(boxes);
     let wd = crate::scene_world::world();
-    g.col.w = wd.grid_w;
-    g.col.h = wd.grid_h;
-    g.col.cs = wd.grid_cell;
-    let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
-    g.col.cells = vec![Vec::new(); (gw * gh) as usize];
+    g.tab.boxes.grid(wd.grid_w as u32, wd.grid_h as u32, wd.grid_cell);
     let skip = js::to_u32(crate::scene_boxes::box_flag().no_shadow) | js::to_u32(crate::scene_boxes::box_flag().dynamic);
-    for (at, &b) in boxes.iter().enumerate() {
-        let (flags, yaw, h, c, tilted) = { let r = &g.tab.boxes[b]; (r.flags, r.yaw, r.h, r.c, r.rot.is_some()) };
-        if js::to_u32(flags) & skip != 0 { continue; }
-        let i = at as f64;
-        let (cs, sn) = (m::abs(m::cos(yaw)), m::abs(m::sin(yaw)));
-        let (ex, ez) = (cs * h[0] + sn * h[2], sn * h[0] + cs * h[2]);
-        let (x0, x1) = (m::max(0.0, m::floor((c[0] - ex) / gc)), m::min(gw - 1.0, m::floor((c[0] + ex) / gc)));
-        let (z0, z1) = (m::max(0.0, m::floor((c[2] - ez) / gc)), m::min(gh - 1.0, m::floor((c[2] + ez) / gc)));
-        let mut z = z0;
-        while z <= z1 {
-            let mut x = x0;
-            while x <= x1 {
-                g.col.cells[(z * gw + x) as usize].push(i);
-                x += 1.0;
-            }
-            z += 1.0;
-        }
-        if tilted && x0 <= x1 && z0 <= z1 {
-            g.col.tilted_at.extend_from_slice(&[i, x0, x1, z0, z1]);
-        }
-    }
-    filed(g);
+    let list: Vec<(u32, [i32; 4])> = (0..).zip(boxes).filter(|(_, b)| js::to_u32(g.tab.boxes[**b].flags) & skip == 0).map(|(i, &b)| (i, foot_cells(g, b))).collect();
+    g.tab.boxes.file(&list);
+    for (i, at) in list { if g.tab.boxes[boxes[i as usize]].rot.is_some() && at[0] <= at[1] && at[2] <= at[3] { g.tab.boxes.file_tilted(i, at); } }
     g.col.nav = nav_grid_new(g);
     g.col.sound = sound_paths_new();
     core::mem::take(&mut g.col)
 }
 
-/// THE CHECK (a build with debug assertions makes it as a tick ends): where the box world is not the boxes, the lists and the cells as they stand
+/// THE CHECK (a build with debug assertions makes it as a tick ends): where the box world is not the boxes and the lists as they stand
 pub fn astray(g: &Game) -> Option<(&'static str, usize)> {
     let t = &g.tab.props_prop;
     let things = g.props.props.iter().map(|&p| (t[p].id as u32, &t[p].boxes[..], [t[p].x, t[p].z, t[p].yaw, t[p].radius]));
-    g.tab.boxes.astray(&g.col.boxes, &g.col.dynamic_boxes, things, &g.col.cells)
+    g.tab.boxes.astray(&g.col.boxes, &g.col.dynamic_boxes, things)
         .or_else(|| world(g).sheets.iter().find(|s| world(g).walked(s.bi as usize) != crate::glassbreak::glass_break_walkable(g, s.bi as f64)).map(|s| ("pane a walker goes through", s.bi as usize)))
-}
-
-/// the grid the rows are asked by is the cells as they stand
-fn filed(g: &mut Game) {
-    let c = &g.col;
-    g.tab.boxes.grid(&c.cells, &c.tilted_at, c.w, c.h, c.cs);
 }
 
 /// a static appended in play: `b` joins the list and is filed in the cells of `footprint`'s plan. → its index.
@@ -195,54 +166,37 @@ pub fn add_static(g: &mut crate::game::Game, b: BoxId, footprint: Option<BoxId>)
     let i = g.col.boxes.len() as f64;
     g.col.boxes.push(b);
     g.tab.boxes.add_static(b);
-    let [x0, x1, z0, z1] = foot_cells(g, footprint.unwrap_or(b));
-    let gw = g.col.w;
-    let mut z = z0;
-    while z <= z1 {
-        let mut x = x0;
-        while x <= x1 {
-            g.col.cells[(z * gw + x) as usize].push(i);
-            x += 1.0;
-        }
-        z += 1.0;
-    }
-    filed(g);
+    let at = foot_cells(g, footprint.unwrap_or(b));
+    g.tab.boxes.file(&[(i as u32, at)]);
     i
 }
 
-/// the cells a static appended over `f` is filed in: x0, x1, z0, z1.
-fn foot_cells(g: &Game, f: BoxId) -> [f64; 4] {
+/// the cells under the plan of `f`: x0, x1, z0, z1.
+fn foot_cells(g: &Game, f: BoxId) -> [i32; 4] {
     let (yaw, h, c) = { let r = &g.tab.boxes[f]; (r.yaw, r.h, r.c) };
-    let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
+    let w = world(g);
+    let (gw, gh, gc) = (w.w as f64, w.h as f64, w.cs);
     let (cs, sn) = (m::abs(m::cos(yaw)), m::abs(m::sin(yaw)));
     let (ex, ez) = (cs * h[0] + sn * h[2], sn * h[0] + cs * h[2]);
     [
-        m::max(0.0, m::floor((c[0] - ex) / gc)),
-        m::min(gw - 1.0, m::floor((c[0] + ex) / gc)),
-        m::max(0.0, m::floor((c[2] - ez) / gc)),
-        m::min(gh - 1.0, m::floor((c[2] + ez) / gc)),
+        m::max(0.0, m::floor((c[0] - ex) / gc)) as i32,
+        m::min(gw - 1.0, m::floor((c[0] + ex) / gc)) as i32,
+        m::max(0.0, m::floor((c[2] - ez) / gc)) as i32,
+        m::min(gh - 1.0, m::floor((c[2] + ez) / gc)) as i32,
     ]
 }
 
 /// how many entries of the cells that is.
 pub fn foot_entries(g: &Game, f: BoxId) -> f64 {
     let [x0, x1, z0, z1] = foot_cells(g, f);
-    m::max(0.0, x1 - x0 + 1.0) * m::max(0.0, z1 - z0 + 1.0)
+    ((x1 - x0 + 1).max(0) * (z1 - z0 + 1).max(0)) as f64
 }
 
-/// the level's list cut back to its first `n`: every later index leaves the cells.
+/// the level's list cut back to its first `n`.
 pub fn truncate_statics(g: &mut crate::game::Game, n: f64) {
     if (g.col.boxes.len() as f64) <= n { return; }
-    cut_cells(&mut g.col.cells, n);
     g.tab.boxes.cut_statics(&g.col.boxes, n as usize);
     g.col.boxes.truncate(n as usize);
-    filed(g);
-}
-/// every index from `n` on leaves the cells, the rest keeping their order
-fn cut_cells(cells: &mut [Vec<f64>], n: f64) {
-    for cell in cells.iter_mut() {
-        cell.retain(|&i| i < n);
-    }
 }
 
 /// the foot of a span as the statics are asked it.
@@ -356,6 +310,10 @@ pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<
 
 /// segmentBlocked with nothing passed: the solid test.
 pub fn solid_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>) -> bool { solid_blocked_over(g, &Over::OWN, a, b, shrink) }
+/// anything solid between two places, a door's leaf too, asked at knee height
+pub fn low_blocked(g: &Game, a: V3, b: V3) -> bool { solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
+/// a wall, a sill or a pane between two places, asked at knee height: the level's statics alone, no door's leaf
+pub fn low_walled(g: &Game, a: V3, b: V3) -> bool { solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
 /// …of the world as the question takes it
 pub fn solid_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>) -> bool { segment_blocked_over(g, over, a, b, shrink, Some(0.0)) }
 
@@ -467,7 +425,7 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     let (mut wx, mut wz, mut low, mut gain, mut full_at) = (0.0, 0.0, 1.0, 0.0, 1.0);
     if let Some(wd) = wind {
         if wd.x != 0.0 || wd.z != 0.0 {
-            let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
+            let (gw, gh, gc) = { let w = world(g); (w.w as f64, w.h as f64, w.cs) };
             let (nx, nz) = (2.0 * m::ceil(gw * gc / 2.0), 2.0 * m::ceil(gh * gc / 2.0));
             if nx * nz <= sim::bricks::MAX_GLOW as f64 {
                 let at = sim::bricks::wind_addr();
@@ -624,10 +582,10 @@ pub fn nav_grid_rebake(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1:
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let pad = 0.34 + cell;
     let mut changed = Vec::new();
-    let cx0 = clampi(m::floor((x0 - pad) / cell), 0.0, nw - 1.0);
-    let cx1 = clampi(m::floor((x1 + pad) / cell), 0.0, nw - 1.0);
-    let cz0 = clampi(m::floor((z0 - pad) / cell), 0.0, nh - 1.0);
-    let cz1 = clampi(m::floor((z1 + pad) / cell), 0.0, nh - 1.0);
+    let cx0 = crate::v3::clamp(m::floor((x0 - pad) / cell), 0.0, nw - 1.0);
+    let cx1 = crate::v3::clamp(m::floor((x1 + pad) / cell), 0.0, nw - 1.0);
+    let cz0 = crate::v3::clamp(m::floor((z0 - pad) / cell), 0.0, nh - 1.0);
+    let cz1 = crate::v3::clamp(m::floor((z1 + pad) / cell), 0.0, nh - 1.0);
     let mut z = cz0;
     while z <= cz1 {
         let mut x = cx0;
@@ -748,8 +706,8 @@ fn nav_grid_nearest_free(g: &Game, gx: f64, gz: f64, wx: Option<f64>, wz: Option
 /// the centre of the walkable cell nearest a world point, or none within reach.
 pub fn nav_grid_nearest_free_point(g: &Game, wx: f64, wz: f64) -> Option<V3> {
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
-    let x = clampi(m::floor(wx / cell), 0.0, nw - 1.0);
-    let z = clampi(m::floor(wz / cell), 0.0, nh - 1.0);
+    let x = crate::v3::clamp(m::floor(wx / cell), 0.0, nw - 1.0);
+    let z = crate::v3::clamp(m::floor(wz / cell), 0.0, nh - 1.0);
     let c = if g.col.nav.blocked[(z * nw + x) as usize] != 0 { nav_grid_nearest_free(g, x, z, Some(wx), Some(wz)) } else { Some([x, z]) };
     c.map(|c| [(c[0] + 0.5) * cell, 0.0, (c[1] + 0.5) * cell])
 }
@@ -769,10 +727,6 @@ pub fn nav_grid_walkable(g: &crate::game::Game, a: V3, b: V3) -> bool {
         i += 1.0;
     }
     true
-}
-
-fn clampi(x: f64, a: f64, b: f64) -> f64 {
-    if x < a { a } else if x > b { b } else { x }
 }
 
 /// the sight line a→b against the level's STATICS alone
@@ -825,10 +779,16 @@ mod tests {
     }
 
     #[test]
-    fn cells_keep_what_a_cut_leaves() {
-        let mut cells = vec![vec![0.0, 5.0, 2.0, 7.0], vec![6.0]];
-        cut_cells(&mut cells, 5.0);
-        assert_eq!(cells, vec![vec![0.0, 2.0], vec![]]);
+    fn cells_hold_what_is_filed_and_keep_what_a_cut_leaves() {
+        let mut b = game_types::boxworld::Boxes::default();
+        let ids: Vec<BoxId> = (0..3).map(|_| b.push(Default::default())).collect();
+        b.statics(&ids);
+        b.grid(2, 1, 1.0);
+        b.file(&[(0, [0, 0, 0, 0]), (1, [0, 1, 0, 0])]);
+        b.file(&[(2, [0, 1, 0, 0])]);
+        assert_eq!((&b.world().start[..], &b.world().items[..]), (&[0, 3, 5][..], &[0, 1, 2, 1, 2][..]));
+        b.cut_statics(&ids, 2);
+        assert_eq!((&b.world().start[..], &b.world().items[..]), (&[0, 2, 3][..], &[0, 1, 1][..]));
     }
 
     #[test]
@@ -850,8 +810,8 @@ mod tests {
 
     #[test]
     fn small_ones() {
-        assert_eq!(clampi(-1.0, 0.0, 3.0), 0.0);
-        assert_eq!(clampi(4.0, 0.0, 3.0), 3.0);
-        assert!(clampi(f64::NAN, 0.0, 3.0).is_nan());
+        assert_eq!(crate::v3::clamp(-1.0, 0.0, 3.0), 0.0);
+        assert_eq!(crate::v3::clamp(4.0, 0.0, 3.0), 3.0);
+        assert!(crate::v3::clamp(f64::NAN, 0.0, 3.0).is_nan());
     }
 }

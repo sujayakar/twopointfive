@@ -125,7 +125,7 @@ fn drip(g: &mut crate::game::Game, c_2: CharId) {
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
     let k = DRIP_FROM[js::rem(n, 5.0) as usize];
-    let Some(b) = g.ch[c_2].bones.get(k).copied() else { return; };
+    let Some(b) = g.ch[c_2].bone(k) else { return; };
     let j = g.m.wet.drip_n * 0.618034;
     let down = match k { crate::character::Bone::Head => -0.12, crate::character::Bone::Hips => -0.05, _ => -0.06 };
     let off: V3 = [m::cos(j * 6.2831853) * 0.09, down, m::sin(j * 6.2831853) * 0.09];
@@ -154,7 +154,7 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
     let prints_left = mem_at(g, c).prints_left;
     if prints_left <= 0.0 || g.ch[c].wet < 0.15 { return; }
     if m::max(0.0, g.weather.rain_now) > 0.001 && open_sky_of(g, c) { return; } // still out in it: the ground is wetter than his soles
-    let bone = |g: &Game, b: Bone| g.ch[c].bones.get(b).copied();
+    let bone = |g: &Game, b: Bone| g.ch[c].bone(b);
     let mut left = left_hint;
     if let (Some(fl), Some(fr)) = (bone(g, Bone::FootL), bone(g, Bone::FootR)) {
         let vel = g.ch[c].vel;

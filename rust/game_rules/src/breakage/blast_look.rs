@@ -25,19 +25,11 @@ const WALL_FLASH_COLOR: V3 = [1.0, 0.62, 0.25];
 /// DESTRUCTION.on && BLAST.on && chaosOf(g) > 0
 fn live(g: &crate::game::Game) -> bool { blast().on && crate::destruction::chaos_of(g) > 0.0 }
 
-fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
-
-/// where a wall charge's borrowed stun burst stands
-fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
-    let y = 0.5 + crate::effects::bang().height;
-    crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y))
-}
-
 /// game.ts update, once a frame after the frame's other boxes: the set charges drawn, a blown one's flash warmed.
 /// NOT a boundary no-op, though it is "look only": a set charge's thirteen boxes are on the FRAME'S LIST (which the fog of war, the listing of the box
 /// world and every table numbered by reach count), and the flash it warms is a light of the engine's list, which the light estimate reads.
 pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_look_tick_raw(g, out);
     crate::fogofwar::fog_of_war_done(g, was);
@@ -144,13 +136,13 @@ fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut
 /// the stun charge's flash a wall charge borrowed (detonateStun lit it this frame where spawnBurst put it); None: none burning there
 fn flash_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
     let b = crate::effects::bang();
-    let mut at = burst_at(g, w);
+    let mut at = crate::blast_feel::burst_at(g, w);
     at[1] += b.light_lift;
     let n = g.engine.lights.lights.len();
     for i in (0..n).rev() {
         let id = g.engine.lights.lights[i];
         let l = &g.tab.light[id];
-        if l.name == "flash" && l.ttl == b.light_duration && near(l.pos, at, 0.06) { return Some(id); }
+        if l.name == "flash" && l.ttl == b.light_duration && crate::blast_feel::near(l.pos, at, 0.06) { return Some(id); }
     }
     None
 }
@@ -197,15 +189,6 @@ fn hash_u(n: f64) -> f64 {
     x as f64
 }
 
-fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
-
-/// is the wall open at the charge (the blast made its hole)? one segment through it at the slab's height
-fn holed(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    let (h, th) = (g.k.wallcharge.height, thick(g, w));
-    let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
-    !crate::scene_collision::solid_blocked(g, a, b, None)
-}
-
 /// the authored stun sparks as they stand, over what they were when the tables were set: count, speed, life, size
 fn scale(g: &crate::game::Game) -> crate::blast_look::BurstOfK {
     let (r, pfx, sp) = (ref_(), g.m.particle_fx.pfx, crate::effects::sparks());
@@ -222,7 +205,7 @@ fn flash_under(g: &crate::game::Game, at: V3, born: bool) -> bool {
         i += 1;
         if g.tab.item[it].kind != t::ItemKind::Flash || (g.tab.item[it].age == 0.0) != born { continue; }
         let p = g.tab.item[it].pos;
-        if near([p[0], p[1] + h, p[2]], at, 0.02) { return true; }
+        if crate::blast_feel::near([p[0], p[1] + h, p[2]], at, 0.02) { return true; }
     }
     false
 }
@@ -277,8 +260,8 @@ fn blast_sparks_of(g: &mut crate::game::Game, at: V3) -> bool {
     for x in seen.iter() {
         if set.contains(&x.c) { continue; }
         let w = g.tab.wallcharge_set_wall_charge[x.c].wall.clone();
-        let p = burst_at(g, &w);
-        if near(p, at, 0.06) { wall = Some(w); break; }
+        let p = crate::blast_feel::burst_at(g, &w);
+        if crate::blast_feel::near(p, at, 0.06) { wall = Some(w); break; }
     }
     let b = blast();
     // STAND-IN: the frame step doorChargeAt leads the leaf by is the host's last (`engine.lastDt`), which is not on the bridge's engine list: the
@@ -346,12 +329,12 @@ fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::
 /// had): one or two frames early. Belongs: a queue row that says which fan, of which wall, and when.
 fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
-    let (b, h, open, k) = (wall_blast_table(), g.k.wallcharge.height, holed(g, w), scale(g));
+    let (b, h, open, k) = (wall_blast_table(), g.k.wallcharge.height, crate::blast_feel::holed(g, w), scale(g));
     let one = BurstOfK { n: 1.0, v: 1.0, l: 1.0, s: 1.0 };
     let n: V3 = if w.along_x { [0.0, 0.0, w.side] } else { [w.side, 0.0, 0.0] };
     // the two ways out: [into the room, only through a wall that gave; back off the face it was set on]
     let mut ways: Vec<(V3, V3, usize)> = vec![(crate::wallcharge::wall_pt(g, w, 0.0, 0.1, Some(h)), n, 1)];
-    if open { let t = thick(g, w); ways.insert(0, (crate::wallcharge::wall_pt(g, w, 0.0, -(t + 0.1), Some(h)), v3::scale(n, -1.0), 0)); }
+    if open { let t = crate::wallcharge::thick(g, w); ways.insert(0, (crate::wallcharge::wall_pt(g, w, 0.0, -(t + 0.1), Some(h)), v3::scale(n, -1.0), 0)); }
     let pale = v3::lerp3(g.tab.boxes[w.box_].albedo, [0.86, 0.85, 0.82], 0.45);
     struct F<'a> { count: &'a [f64], speed: &'a [f64], jit: f64, cone: &'a [f64], tilt: f64, life: f64, life_jit: f64, size: f64, size_jit: f64, aspect: Option<f64> }
     let mut throw = |g: &mut Game, kind: PKind, f: F, color: Option<V3>| {

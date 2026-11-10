@@ -63,19 +63,14 @@ pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props
     Frame { o, x, y, z }
 }
 
-/// A new all-zero adjustment.
-fn zero_adj() -> crate::rig_props::Adj {
-    Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
-}
-
 /// A character's id as the word on his boxes.
-pub(super) fn owner_of(g: &Game, c: CharId) -> f64 {
+pub(crate) fn owner_of(g: &Game, c: CharId) -> f64 {
     (js::to_i32(g.ch[c].id) & 0xff) as f64
 }
 
 /// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed.
 pub fn wrist_tie_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried) {
-    let (Some(a), Some(b)) = (g.ch[c_2].bones.get(crate::character::Bone::HandL).copied(), g.ch[c_2].bones.get(crate::character::Bone::HandR).copied()) else { return };
+    let (Some(a), Some(b)) = (g.ch[c_2].bone(crate::character::Bone::HandL), g.ch[c_2].bone(crate::character::Bone::HandR)) else { return };
     let d = v3::sub(b, a);
     let l = v3::len(d);
     if l > 0.16 {
@@ -99,14 +94,14 @@ pub fn wrist_tie_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried) {
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame.
-pub(super) fn seg(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, name: Option<&str>) {
+pub(super) fn seg(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
-    seg_at(g, out, g_2, s, adj, albedo, emissive, name);
+    seg_at(g, out, g_2, s, adj, albedo, emissive);
 }
 
 /// seg() with the part's adjustment handed in.
-pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, name: Option<&str>) {
+pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
@@ -125,7 +120,6 @@ pub(super) fn seg_at(g: &crate::game::Game, out: &mut Carried, g_2: crate::rig_p
         flags: Some(if lit { crate::rig_props::GLOW_FLAGS } else { crate::rig_props::PROP_FLAGS }),
         owner: Some(owner),
         rot: Some(rot),
-        name: name.map(String::from),
         stuff,
         ..Default::default()
     });
@@ -145,7 +139,7 @@ fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
 
 /// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between.
 pub fn goggles_boxes(g: &crate::game::Game, c_2: CharId, nv: bool, out: &mut Carried, g_2: crate::rig_props::RigGoggles, k: Option<f64>) {
-    let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };
+    let Some(head) = g.ch[c_2].bone(crate::character::Bone::Head) else { return };
     let f = head_flat_forward(g, c_2);
     let (mut fwd, mut up, mut side): (V3, V3, V3) = (f, [0.0, 1.0, 0.0], [f[2], 0.0, -f[0]]);
     if g_2.follow_pitch >= 0.5 {
@@ -242,7 +236,7 @@ mod tests {
     #[test]
     fn no_adjustment_and_a_nothing_of_one_leave_a_frame_as_it_is() {
         let base = frame_from(O, A1, Some(UP));
-        for adj in [None, Some(zero_adj()), Some(Adj { off: [0.0; 3], rot: [1e-5, 0.0, 0.0] })] {
+        for adj in [None, Some(crate::rig_props::adj_none()), Some(Adj { off: [0.0; 3], rot: [1e-5, 0.0, 0.0] })] {
             let f = apply_adj(base, adj);
             assert_eq!((f.o, f.x, f.y, f.z), (base.o, base.x, base.y, base.z));
         }

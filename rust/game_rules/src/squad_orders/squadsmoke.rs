@@ -93,7 +93,7 @@ pub(super) fn squad_arc_to(g: &crate::game::Game, gd: GuardId, at: V3, roll_k: O
     let p = match stood { Some(s) => s, None => pos };
     let d = v3::dist_xz(p, at);
     let a = if d > 1e-3 { t.hand_ahead / d } else { 0.0 };
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied();
+    let head = g.ch[c].bone(crate::character::Bone::Head);
     let up = m::max(0.6, m::min(t.hand_up, match head { Some(h) => h[1] - pos[1] - t.head_drop, None => t.hand_up }));
     let from: V3 = [p[0] + (at[0] - p[0]) * a, p[1] + up, p[2] + (at[2] - p[2]) * a];
     if crate::scene_collision::solid_blocked(g, [p[0], p[1] + up, p[2]], from, None) { return None; }
@@ -117,7 +117,7 @@ pub(super) fn squad_smoke_thrower(g: &crate::game::Game, men: &[GuardId], at: V3
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let mut order: Vec<GuardId> = men.to_vec();
     js::sort_by(&mut order, |a, b| {
-        v3::dist_xz(g.ch[g.gd[*a].ch].pos, at) - v3::dist_xz(g.ch[g.gd[*b].ch].pos, at)
+        v3::dist_xz(g.pos_of(*a), at) - v3::dist_xz(g.pos_of(*b), at)
     });
     for gd in order {
         if !squad_hand_free(g, gd) { continue; }

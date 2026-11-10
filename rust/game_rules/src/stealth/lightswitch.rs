@@ -38,7 +38,7 @@ fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
             let p: V3 = [(m::floor(pos[0] / cs) + dx as f64 + 0.5) * cs, 1.2, (m::floor(pos[2] / cs) + dz as f64 + 0.5) * cs];
             let q = crate::cleared::cleared_rooms_room_at(g, p);
             if !js::truthy(q) { continue; }
-            let d = m::hyp2(p[0] - pos[0], p[2] - pos[2]);
+            let d = v3::dist_xz(p, pos);
             if d < bd && !crate::scene_collision::solid_blocked(g, from, p, None) { bd = d; best = q; }
         }
     }
@@ -66,7 +66,7 @@ fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorId) -
     let (ux, uz) = (n[2], -n[0]);
     let mut fit: V3 = [stand[0], 0.0, stand[2]];
     crate::scene_collision::collide_circle(g, &mut fit, 0.3, 0.2, 1.5, None);
-    if m::hyp2(fit[0] - stand[0], fit[2] - stand[2]) > 0.02 { return None; }
+    if v3::dist_xz(fit, stand) > 0.02 { return None; }
     let mut floor: Option<V3> = None;
     let mut o = 0.0;
     while o <= 0.51 && floor.is_none() {
@@ -325,11 +325,10 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
 }
 
 // ---------------------------------------------------------------- Sam's row and its deed
-fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
 
 /// The plate nearest `pl`'s feet within `r` m that he has a clear line to from his chest.
 fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate::lightswitch::WallSwitch> {
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
     let mut best: Option<WallSwitch> = None;
     let mut bd = r;
@@ -341,41 +340,22 @@ fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate:
 }
 
 /// The NEAREST plate only: a marker from NEARBY_M, the row in reach with the hands free.
-pub fn switch_rows(g: &mut crate::game::Game, pl: PlayerId, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::lightswitch::SwitchRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn switch_rows(g: &mut crate::game::Game, pl: PlayerId, busy: bool, o: &mut crate::player::Offers) {
     let Some(sw) = switch_near(g, pl, crate::player::NEARBY_M) else { return };
-    let near = v3::dist_xz(sw.pos, g.ch[g.pl[pl].ch].pos) < g.k.lightswitch.reach;
-    let reach = near && hands_free(g, pl);
+    let near = v3::dist_xz(sw.pos, g.player_pos(pl)) < g.k.lightswitch.reach;
+    let reach = near && super::stickycam::hands_free(g, pl);
     let lit = switch_lit(g, &sw);
     let line2 = if reach { "" } else if !near { "step closer" } else if g.pl[pl].sprinting { "stop sprinting" } else { "hands full" };
-    let it = crate::game::Interactable {
-        kind: crate::game::InteractableKind::Switch,
-        pos: sw.pos,
-        line1: String::from(if lit { "switch · on" } else { "switch · off" }),
-        line2: String::from(line2),
-        in_reach: reach,
-        off: !lit,
-        progress: None,
-        target: None,
-        door: None,
-        guard: None,
-        verb: None,
-        running: None,
-        close: None,
-        past: None,
-        framed: None,
-    };
-    let rows = if reach && !busy {
-        let (verb, text) = if lit { (crate::game::Verb::LightsOff, "lights off") } else { (crate::game::Verb::LightsOn, "lights on") };
-        vec![row(g, it.clone(), verb, String::from(text), None, None)]
-    } else {
-        Vec::new()
-    };
-    offer(g, it, rows);
+    let it = crate::game::Interactable { off: !lit, ..crate::player::mark(crate::game::InteractableKind::Switch, sw.pos, if lit { "switch · on" } else { "switch · off" }, line2, reach) };
+    let work = if !reach || busy { None }
+        else if lit { Some(crate::player::row(&it, crate::game::Verb::LightsOff, "lights off", "")) }
+        else { Some(crate::player::row(&it, crate::game::Verb::LightsOn, "lights on", "")) };
+    o.add(it, work.into_iter().collect());
 }
 
 /// Space on that row: the plate in reach is worked the way the row said. False = none in reach now, or it already stands that way.
 pub fn switch_act(g: &mut crate::game::Game, pl: PlayerId, verb: crate::game::Verb) -> bool {
-    let sw = if hands_free(g, pl) {
+    let sw = if super::stickycam::hands_free(g, pl) {
         let reach = g.k.lightswitch.reach;
         switch_near(g, pl, reach)
     } else {

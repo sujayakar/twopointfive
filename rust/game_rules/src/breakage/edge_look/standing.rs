@@ -114,7 +114,7 @@ impl Lay<'_> {
         let fl = crate::scene_boxes::box_flag();
         crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
             c: at_c(self.fc, f, u, y, v), h: [a, hb, ht], yaw: Some(self.f_yaw), rot: Some(quat::from_basis(e1, e2, e3)), albedo: Some(albedo),
-            flags: Some((js::to_i32(fl.dynamic) | (if solid { 0 } else { js::to_i32(fl.no_shadow) })) as f64), name: Some(String::from("edge")),
+            flags: Some((js::to_i32(fl.dynamic) | (if solid { 0 } else { js::to_i32(fl.no_shadow) })) as f64),
             mkey: Some(MKEY_LOOK + (key & 0x7fffff) as f64), rough: self.f_rough, stuff: self.p.stuff, does: self.p.does, ..Default::default() })
     }
     /// A plate of what the wall is built on, which is not the wall: a wall that stands by itself shows none.

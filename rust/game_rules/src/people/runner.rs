@@ -151,7 +151,7 @@ fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
 /// start the sequence on this man directly. False = he is not a man of this file's, or it already has him
 pub fn runner_break(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !super::morale::ours(g, gd) || spoken(g, gd) || !super::morale::reacts(g, gd) || g.m.runner.state_of.has(gd) { return false; }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let from = match nearest_foe(&known(g, gd), pos) { Some(n) => n.pos, None => g.gd[gd].last_known.unwrap_or(pos) };
     start(g, gd, from);
     true
@@ -210,7 +210,7 @@ fn flood(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], ask: 
     let (shy, corner_m) = (g.k.runner.shy_m, g.k.runner.corner_m);
     let (cs, wf, hf) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let (wi, hi) = (wf as i64, hf as i64);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let from = crate::scene_collision::nav_grid_nearest_free_point(g, pos[0], pos[2]).unwrap_or(pos);
     let cells = (wi * hi) as usize;
     let mut depth = vec![-1i32; cells];
@@ -283,7 +283,7 @@ fn flood(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], ask: 
 fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::Foe]) -> bool {
     let shy = g.k.runner.shy_m;
     let cs = g.col.nav.cell;
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let mut pen = |_g: &Game, ix: f64, iz: f64| -> f64 {
         let (x, z) = ((ix + 0.5) * cs, (iz + 0.5) * cs);
         for f in e {
@@ -309,17 +309,16 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     let mut free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
     let o = &mut g.gd[gd];
-    o.path = path;
-    o.path_serial = o.path_serial.wrapping_add(1);   // (a new array: readers ask by identity. The man's own count, as every other whole write of his path: a number of the game's counter here could come back to one a reader kept)
+    o.set_path(path);   // (a new array: readers ask by identity. The man's own count, as every other whole write of his path: a number of the game's counter here could come back to one a reader kept)
     o.path_i = 0;
-    o.path_goal = Some(v3::copy(goal)); o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+    o.set_path_goal(Some(v3::copy(goal)));
     o.repath_t = 0.0;
     o.line_side = 0.0;
     p.map_or(false, |p| !p.is_empty())
 }
 /// the mate he runs to: the nearest by the floor, inside `mateM`, of the four nearest by air
 fn pick_mate(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let mate_m = g.k.runner.mate_m;
     let mut best: Option<GuardId> = None;
     let mut bl = mate_m;
@@ -329,14 +328,14 @@ fn pick_mate(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
         let o = g.guards[i];
         i += 1;
         if !mate_of(g, gd, o) { continue; }
-        let d = dist_xz(g.ch[g.gd[o].ch].pos, pos);
+        let d = dist_xz(g.pos_of(o), pos);
         if d <= mate_m { men.push((o, d)); }
     }
     js::sort_by(&mut men, |a, b| a.1 - b.1);
     men.truncate(4);
     for (o, d) in men {
         if d >= bl { break; }
-        let op = g.ch[g.gd[o].ch].pos;
+        let op = g.pos_of(o);
         let p = match crate::scene_collision::nav_grid_find_path(g, pos, op, None, None) { Some(p) if !p.is_empty() => p, _ => continue };
         let l = crate::places::walk_len(pos, &p);
         if l <= bl && (best.is_none() || l < bl) {
@@ -351,7 +350,7 @@ fn pick_mate(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
 fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> bool {
     if e.is_empty() { return false; }
     let (shy, ahead) = (g.k.runner.shy_m, g.k.runner.ahead_m);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let o = &g.gd[gd];
     let mut a = pos;
     let mut left = ahead;
@@ -379,7 +378,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let def = g.fa[g.gd[gd].weapon].def;
     let (kind, suppressed) = {
-        let w = g.m.weapons.weapons.get(def).unwrap();
+        let w = g.weapon(def);
         let kind = match w.drop {
             crate::slotsetup::SetupGun::Pistol => crate::combat::DropFromHandKind::Pistol,
             crate::slotsetup::SetupGun::Rifle => crate::combat::DropFromHandKind::Rifle,
@@ -391,7 +390,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].dropped = Some(item);
     if kind == crate::combat::DropFromHandKind::Rifle {   // (…and the sidearm off his thigh with it: he keeps nothing)
         let dir = g.ch[c].gun_dir;
-        let from = match g.ch[c].bones.get(crate::character::Bone::ThighR) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 0.85, 0.0]) };
+        let from = g.ch[c].bone_or(crate::character::Bone::ThighR, 0.85);
         crate::combat::drop_from_hand(g, c, crate::combat::DropFromHandKind::Pistol, dir, [0.0, 0.0, 0.0], Some(false), Some(true), Some(from));
         run!(g, gd).bare = true;
     }
@@ -416,7 +415,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
         r.phase = RunPhase::Mates;
         r.t = 0.0;
         r.mate = Some(ma);
-        let at = g.ch[g.gd[ma].ch].pos;
+        let at = g.pos_of(ma);
         route(g, gd, at, &e);
     } else {
         to_out(g, gd, &e);
@@ -486,7 +485,7 @@ fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f:
     o.path = path;
     o.path_serial = path_serial;   // (the same array back: its old serial, none dealt)
     o.path_i = path_i;
-    o.path_goal = path_goal; o.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+    o.set_path_goal(path_goal);
     o.repath_t = repath_t;
     o.line_side = line_side;
     false
@@ -500,7 +499,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if !mate_of(g, gd, o) || dist_xz(g.ch[g.gd[o].ch].pos, g.ch[g.gd[gd].ch].pos) > told_m { continue; }
+        if !mate_of(g, gd, o) || dist_xz(g.pos_of(o), g.pos_of(gd)) > told_m { continue; }
         let d = crate::roomfight::def_of(g, o);
         let on_post = match d { Some(_) => crate::roomfight::room_fight_told(g, o, from), None => false };
         if on_post {
@@ -514,7 +513,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
 
 /// what this file's script holds him to this frame
 fn pose(g: &mut crate::game::Game, gd: GuardId) {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let chase = g.tune.guard_chase;
     let fled = g.gd[gd].fled;
     let r = run!(g, gd);
@@ -794,7 +793,7 @@ fn gone(g: &mut crate::game::Game, gd: GuardId) {
         }
         return;
     }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let r = run!(g, gd);
     r.phase = RunPhase::Low;
     r.is_out = true;

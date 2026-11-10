@@ -11,7 +11,6 @@ use alloc::{format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small helpers
 
 fn breaches_of(g: &Game) -> Vec<WallreactBreachId> { g.m.wallreact.wall_react.breaches.clone() }
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None) }
 
 /// `g.seats.some(s => (s.view.wallCharge?.stats.blown ?? 0) > 0)`
 fn any_seat_blown(g: &mut Game) -> bool {
@@ -19,12 +18,6 @@ fn any_seat_blown(g: &mut Game) -> bool {
         if crate::seats::with_seat(g, s, &mut |g| g.sets[g.seat].wall_charge.stats.blown > 0.0) { return true; }
     }
     false
-}
-
-fn wrap(a: f64) -> f64 {
-    let mut a = js::rem(a + m::PI, 2.0 * m::PI);
-    if a <= 0.0 { a += 2.0 * m::PI; }
-    a - m::PI
 }
 
 /// does the plan segment p → q cross the rect inflated by `pad`
@@ -532,7 +525,7 @@ fn wall_react_sees(g: &Game, b: WallreactBreachId, from: V3, yaw: Option<f64>) -
     let (at, n, u, half) = (r.at, r.n, r.u, r.half);
     if dist_xz(from, at) > see_m { return false; }
     if let Some(yaw) = yaw {
-        if m::abs(wrap(v3::yaw_to(from, at) - yaw)) > fov * m::PI / 360.0 { return false; }
+        if m::abs(v3::wrap_angle(v3::yaw_to(from, at) - yaw)) > fov * m::PI / 360.0 { return false; }
     }
     let eye = [from[0], EYE, from[2]];
     let s = if (from[0] - at[0]) * n[0] + (from[2] - at[2]) * n[1] >= 0.0 { 1.0 } else { -1.0 };
@@ -574,7 +567,7 @@ fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: Wa
     let own = if crate::seats::is_man_id(g, by) {
         !team.theirs()
     } else {
-        g.guards.iter().any(|x| g.ch[g.gd[*x].ch].id == by && g.team(*x) == team)
+        g.guards.iter().any(|x| g.char_id(*x) == by && g.team(*x) == team)
     };
     let line = if own {
         if walk { "the wall's down — watch it!" } else { "hole in the wall — watch it!" }
@@ -585,7 +578,7 @@ fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: Wa
     } else {
         "they're shooting through the wall!"
     };
-    say(g, gd, line);
+    crate::game::game_say(g, gd, line, None, None);
 }
 
 fn hears(g: &mut Game, head: V3, src: V3, r: f64) -> bool {
@@ -602,7 +595,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
     let mut known = ours;
     if !known {
         for pl in crate::seats::men_up(g) {
-            let p = g.ch[g.pl[pl].ch].pos;
+            let p = g.player_pos(pl);
             if hears(g, [p[0], EYE, p[2]], src, r) { known = true; break; }
         }
     }
@@ -644,7 +637,7 @@ pub fn wall_react_notice(g: &mut Game) {
                     if !wall_react_sees(g, b, pos, Some(yaw)) { continue; }
                     wall_react_ops_know(g, b);
                     if g.gd[gd].unit.is_some() {
-                        say(g, gd, if g.tab.wallreact_breach[b].walk { "hole in the wall." } else { "gap in the wall — watch it." });
+                        crate::game::game_say(g, gd, if g.tab.wallreact_breach[b].walk { "hole in the wall." } else { "gap in the wall — watch it." }, None, None);
                     }
                     break;
                 }
@@ -813,9 +806,9 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
 fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) {
         if crate::condition::down(g, g.pl[pl].ch) { return None; }
-        return Some(WallReactCharOf { pos: g.ch[g.pl[pl].ch].pos, team: crate::teams::Team::Ours });
+        return Some(WallReactCharOf { pos: g.player_pos(pl), team: crate::teams::Team::Ours });
     }
-    let found = g.guards.iter().copied().find(|x| g.ch[g.gd[*x].ch].id == id_2)?;
+    let found = g.guards.iter().copied().find(|x| g.char_id(*x) == id_2)?;
     if crate::condition::down(g, g.gd[found].ch) { return None; }
     Some(WallReactCharOf { pos: g.pos_of(found), team: g.team(found) })
 }
@@ -876,7 +869,7 @@ fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3) ->
     if g.team(gd).ours() {
         if crate::cleared::cleared_rooms_room_at(g, far) != 0.0 && crate::cleared::cleared_rooms_known_at(g, far) { return None; }
         let squad = crate::seats::team_squad(g, &crate::seats::here(g));
-        if squad.iter().any(|x| *x != gd && !crate::condition::down(g, g.gd[*x].ch) && over(g.pos_of(*x))) || crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && over(g.ch[g.pl[pl].ch].pos)) { return None; }
+        if squad.iter().any(|x| *x != gd && !crate::condition::down(g, g.gd[*x].ch) && over(g.pos_of(*x))) || crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && over(g.player_pos(pl))) { return None; }
     } else {
         let team = g.team(gd);
         for x in g.guards.iter().copied() {
@@ -1111,7 +1104,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (crate::wallreact::Reco
         let pace = g.tune.guard_chase;
         crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, crate::owner::By::NOBODY);
         g.m.wallreact.wall_react.moved_t.set(gd, now);
-        say(g, gd, "cover's gone — moving!");
+        crate::game::game_say(g, gd, "cover's gone — moving!", None, None);
         return (R::Moved, String::from("moved"));
     }
     let r = wall_react_shift(g, gd, threat, pb);
@@ -1139,10 +1132,9 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
     g.cond[man.ch].sup.pinned_t = 0.0;
     g.cond[man.ch].sup.down_t = 0.0;
     g.cond[man.ch].sup.latched = false;
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.set_path_goal(None);
     man.stall_ref = None;
-    crate::game::guard_set_path(g, gd, Vec::new());
+    g.gd[gd].set_path(Vec::new());
     g.m.wallreact.wall_react.moved_t.set(gd, now);
     crate::wallreact::Reconsidered::Moved
 }
@@ -1178,7 +1170,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
     row.mark[0] = at[0];
     row.mark[2] = at[2];
     g.m.wallreact.wall_react.moved_t.set(gd, now);
-    if dist_xz(at, to) > 0.6 { crate::seats::with_seat(g, v, &mut |g| say(g, gd, "moving off the hole.")); }
+    if dist_xz(at, to) > 0.6 { crate::seats::with_seat(g, v, &mut |g| crate::game::game_say(g, gd, "moving off the hole.", None, None)); }
     crate::wallreact::Reconsidered::Moved
 }
 
@@ -1206,7 +1198,7 @@ mod tests {
             (0.0, 0x0000000000000000u64), (1.0, 0x3ff0000000000000), (-1.0, 0xbff0000000000000), (3.2, 0xc008aa5d0eeec096), (-3.2, 0x4008aa5d0eeec096),
             (m::PI, 0x400921fb54442d18), (-m::PI, 0x400921fb54442d18), (7.5, 0x3ff37812aeef4ba0), (-100.25, 0x3fd1fb54442d1840), (1e6, 0xbfd6e254d0ed6540),
         ] {
-            assert_eq!(wrap(a).to_bits(), bits, "wrap({a})");
+            assert_eq!(v3::wrap_angle(a).to_bits(), bits, "v3::wrap_angle({a})");
         }
     }
 

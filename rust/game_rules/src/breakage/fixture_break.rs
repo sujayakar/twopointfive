@@ -132,7 +132,7 @@ fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::
     let mut mk = |g: &mut Game, h: V3, albedo: V3, rough: Option<f64>| -> FrameBoxId {
         let word = crate::scene_stuff::word_for(g, Some(&albedo), None, None);
         let id = crate::scene_boxes::box_kept(g, crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c, h, albedo: Some(albedo), stuff: word.stuff, does: word.does,
-            flags: Some(LOOK), rot: Some(quat::ident()), name: Some(String::from("fixtureLook")), mkey: Some(key + part), rough, ..Default::default() }));
+            flags: Some(LOOK), rot: Some(quat::ident()), mkey: Some(key + part), rough, ..Default::default() }));
         part += 1.0; id
     };
     r.hang = vec![mk(g, [l / 2.0, 0.02, w / 2.0], f.tray, None), mk(g, [l * 0.15, 0.03, m::min(0.06, w * 0.22)], f.cover, None), mk(g, [l / 2.0 - 0.015, 0.003, w / 2.0 - 0.02], f.face, None),

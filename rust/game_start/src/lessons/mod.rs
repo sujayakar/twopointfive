@@ -2,7 +2,8 @@
 //! of doing nothing, and the step must still be up (a line moves on when the thing is done, never on a timer); what a player would do for it (`road.rs` and the rest: one file a tutorial); and the
 //! step must have gone by. After the last: no row of the lesson's on the objective, and the run ends. A script reads the game to time a press and find a thing on the picture, and never reads
 //! which step is up to act beyond what a person reads off the screen. He is as mortal as a player.
-use crate::player::{at, flat, Feet, Player, Script, Scripted, Walk, LEFT, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Feet, Player, Script, Scripted, Walk, LEFT, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
@@ -88,7 +89,7 @@ impl Lesson {
             let moved: Vec<String> = p.ask(|g| g.guards.iter().filter_map(|&x| {
                 let st = g.gd[x].state;
                 match guards.iter_mut().find(|w| w.0 == x) {
-                    Some(w) if w.1 != st => { let s = format!("   {}: {:?} -> {:?} at {}", g.gd[x].callsign, w.1, st, at(g.ch[g.gd[x].ch].pos)); w.1 = st; Some(s) }
+                    Some(w) if w.1 != st => { let s = format!("   {}: {:?} -> {:?} at {}", g.gd[x].callsign, w.1, st, at(g.pos_of(x))); w.1 = st; Some(s) }
                     Some(_) => None,
                     None => { guards.push((x, st)); None }
                 }
@@ -97,8 +98,8 @@ impl Lesson {
             if p.seen(|g, s| game::condition::down(g, g.pl[s.player].ch)) {
                 if down_for == 0.0 {
                     let by = p.ask(|g| g.chronicle.counts.down_by.clone());
-                    let shooter = p.ask(|g| g.guards.iter().find(|&&x| by == g.gd[x].callsign).map(|&x| g.ch[g.gd[x].ch].pos));
-                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| !g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.ch[g.gd[x].ch].pos), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
+                    let shooter = p.ask(|g| g.guards.iter().find(|&&x| by == g.gd[x].callsign).map(|&x| g.pos_of(x)));
+                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| !g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.pos_of(x)), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
                 }
                 down_for += 1.0 / 60.0;
                 if down_for > 2.0 { p.failure(format!("the player went down at {} (mission stage {})", at(p.pos()), p.ask(|g| g.mission.stage.as_str()))); }
@@ -215,11 +216,11 @@ impl Bot {
     pub fn named(&self, names: &[&str]) -> Vec<GuardId> { names.iter().filter_map(|n| self.ask(|g| g.guards.iter().copied().find(|&x| g.gd[x].callsign == *n))).collect() }
     /// his teammates still up
     pub fn squad(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).collect()) }
-    pub fn chest(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([g.ch[c].pos[0], 1.25, g.ch[c].pos[2]]) }) }
-    pub fn head(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]]) }) }
+    pub fn chest(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bone(game::character::Bone::Chest).unwrap_or([g.ch[c].pos[0], 1.25, g.ch[c].pos[2]]) }) }
+    pub fn head(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bone(game::character::Bone::Head).unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]]) }) }
     /// he has a clear line from his head to the man's chest
     pub fn line(&self, x: GuardId) -> bool {
-        let eye = self.seen(|g, s| { let c = g.pl[s.player].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.5, g.ch[c].pos[2]]) });
+        let eye = self.seen(|g, s| { let c = g.pl[s.player].ch; g.ch[c].bone(game::character::Bone::Head).unwrap_or([g.ch[c].pos[0], 1.5, g.ch[c].pos[2]]) });
         let to = self.chest(x);
         !self.ask(|g| game::scene_collision::solid_blocked(g, eye, to, None))
     }
@@ -296,7 +297,7 @@ impl Bot {
             if self.rounds() == 0.0 && !self.reloading() { self.press("KeyR", 1).await; continue; }
             let me = self.pos();
             let list = who.map_or_else(|| self.foes(), |w| w.to_vec());
-            let x = list.into_iter().filter(|&y| self.up(y) && self.line(y)).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me)));
+            let x = list.into_iter().filter(|&y| self.up(y) && self.line(y)).min_by(|&a, &b| dist_xz(self.man_at(a), me).total_cmp(&dist_xz(self.man_at(b), me)));
             let Some(x) = x else { idle().await; continue };
             if self.me(|p| p.slot) == SlotKind::Pistol {
                 // (a round a press, once the gun has come round to the cursor: the aim has weight)
@@ -328,7 +329,7 @@ impl Bot {
         if self.row(kind, verb, aim).await { self.say(format!("  the row: {} > {}", kind.as_str(), verb.as_str())); return true; }
         if kind == InteractableKind::Guard && verb == Verb::Grab && !self.holding() {
             let me = self.pos();
-            let near = self.men().into_iter().filter(|&x| self.up(x) && self.ask(|g| g.gd[x].civ.is_none()) && flat(me, self.man_at(x)) < 4.0).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me)));
+            let near = self.men().into_iter().filter(|&x| self.up(x) && self.ask(|g| g.gd[x].civ.is_none()) && dist_xz(me, self.man_at(x)) < 4.0).min_by(|&a, &b| dist_xz(self.man_at(a), me).total_cmp(&dist_xz(self.man_at(b), me)));
             if let Some(x) = near {
                 for i in 0..300 {
                     if self.holding() { break; }
@@ -359,9 +360,9 @@ impl Bot {
         self.crouch(true).await;
         if let Some(v) = via { self.to(v, 40.0).await; }
         self.to_near(self.behind(x, 1.6), 20.0, 0.25).await;
-        self.nudge(self.behind(x, 0.8), 6.0, || flat(self.pos(), self.man_at(x)) < 0.92).await;
+        self.nudge(self.behind(x, 0.8), 6.0, || dist_xz(self.pos(), self.man_at(x)) < 0.92).await;
         self.ticks(6).await;
-        flat(self.pos(), self.man_at(x)) < 1.05
+        dist_xz(self.pos(), self.man_at(x)) < 1.05
     }
     /// the enemy has not caught him: said by the chronicle and the man's own state
     pub async fn unseen(&self, n0: usize, x: GuardId, place: &str) {

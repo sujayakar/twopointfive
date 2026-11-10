@@ -61,7 +61,7 @@ pub fn wand_turn(g: &mut crate::game::Game, pl: PlayerId, aim: V3, dt: f64) {
 
 /// wandTurn's arithmetic: the pan after this step.
 fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, dt: f64) -> f64 {
-    let mut want = m::atan2(aim[0] - l.pos[0], aim[2] - l.pos[2]) - l.yaw;
+    let mut want = v3::yaw_to(l.pos, aim) - l.yaw;
     want = m::atan2(m::sin(want), m::cos(want));
     want = m::max(-max, m::min(max, want));
     let step = pan_rate * dt;

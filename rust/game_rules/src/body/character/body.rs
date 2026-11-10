@@ -20,34 +20,42 @@ fn ov_set(ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, i: usize, o:
 }
 /// skel.nodePos(node)
 fn node_pos(g: &Game, id: CharId, node: usize) -> V3 { crate::anim_skeleton::skeleton_instance_node_pos(&g.ch[id].skel, node as f64) }
-/// skel.update(pose, world, twists?, ov), the skeleton and the twists out of `g` while `g` is lent: the update reads neither through g
-fn skel_update(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twisted: bool, ov: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
+/// His skeleton out of `g` while `g` is lent, with the twists of his pose if they are laid on: the run forward reads neither through `g`.
+fn skel_lent(g: &mut Game, id: CharId, twisted: bool, f: impl FnOnce(&Game, &mut crate::anim_skeleton::SkeletonInstance, Option<&[crate::anim_skeleton::TwistSpec]>)) {
     let mut sk = core::mem::replace(&mut g.ch[id].skel, crate::anim_skeleton::SkeletonInstance::blank());
     if twisted {
         let tw = core::mem::take(&mut g.ch[id].anim.twists);
-        crate::anim_skeleton::skeleton_instance_update(g, &mut sk, pose, world, Some(&tw), ov);
+        f(g, &mut sk, Some(&tw));
         g.ch[id].anim.twists = tw;
     } else {
-        crate::anim_skeleton::skeleton_instance_update(g, &mut sk, pose, world, None, ov);
+        f(g, &mut sk, None);
     }
     g.ch[id].skel = sk;
 }
-/// skel.update(pose, world, anim.twists)
-fn skel_pose_twisted(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose) {
-    let world = g.ch[id].world;
-    skel_update(g, id, pose, &world, true, None);
+/// A pose of his run forward to be read and no further (another is drawn): no joint of it is skinned.
+fn skel_read_pose(g: &mut Game, id: CharId, pose: crate::anim_skeleton::Pose) {
+    skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_forward(g, sk, pose, tw, None));
 }
 /// skel.update(anim.pose, world, anim.twists, ov)
 fn skel_anim_pose(g: &mut Game, id: CharId, ov: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let (pose, world) = (g.ch[id].anim.pose, g.ch[id].world);
-    skel_update(g, id, pose, &world, true, ov);
+    skel_lent(g, id, true, |g, sk, tw| crate::anim_skeleton::skeleton_instance_update(g, sk, pose, &world, tw, ov));
 }
-/// skel.update(rd.pose, world, null, rd.ov)
-fn skel_rag_pose(g: &mut Game, id: CharId) {
-    let world = g.ch[id].world;
+/// The fallen man's pose run forward under his rag's overrides.
+fn skel_rag_run(g: &mut Game, id: CharId) {
     let rd = g.ch[id].rd.take().unwrap();
-    skel_update(g, id, rd.pose, &world, false, Some(&rd.ov));
+    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_forward(g, sk, rd.pose, None, Some(&rd.ov)));
     g.ch[id].rd = Some(rd);
+}
+/// …and skinned where he lies.
+fn skel_rag_pose(g: &mut Game, id: CharId) {
+    skel_rag_run(g, id);
+    skel_skin(g, id);
+}
+/// What was run forward last, skinned where he stands.
+fn skel_skin(g: &mut Game, id: CharId) {
+    let world = g.ch[id].world;
+    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_skin(g, sk, &world));
 }
 fn same_kind(a: &crate::inhand::InHandWord, b: &crate::inhand::InHandWord) -> bool { core::mem::discriminant(a) == core::mem::discriminant(b) }
 
@@ -99,7 +107,7 @@ pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::
     let rp = crate::anim_skeleton::pose_new(g, nodes);
     crate::anim_skeleton::rest_pose(g, ch, rp);
     let origin = v3::m4::create();
-    skel_update(g, id, rp, &origin, false, None);
+    skel_lent(g, id, false, |g, sk, _| crate::anim_skeleton::skeleton_instance_update(g, sk, rp, &origin, None, None));
     crate::anim_skeleton::pose_done(g, rp);   // (the scratch is dropped)
     let n = g.ch[id].anim.nodes;
     g.ch[id].rest_chest_inv = v3::quat::conj(g.ch[id].skel.global_rot[n.spine3]);
@@ -213,7 +221,7 @@ fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     match g.ch[id].anim.hand_pre {
         Some(hp) => {
             let world = g.ch[id].world;
-            skel_pose_twisted(g, id, hp);
+            skel_read_pose(g, id, hp);
             let (a, b) = (node_pos(g, id, n.hand_r), node_pos(g, id, n.middle1_r));
             g.ch[id].gun_hand = Some([v3::m4::transform_point(&world, a), v3::m4::transform_point(&world, b)]);
         }
@@ -224,7 +232,7 @@ fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     if dt > 1e-5 { g.ch[id].prev_sim = g.ch[id].sim_bones.clone(); }
     match pre {
         Some(pre) => {
-            skel_pose_twisted(g, id, pre);
+            skel_read_pose(g, id, pre);
             let mut m: JsMap<Bone, V3> = JsMap::new();
             character_joints(g, id, &mut m);
             g.ch[id].sim_bones = Some(m);
@@ -429,7 +437,7 @@ pub fn character_joint_under(g: &crate::game::Game, id: CharId, name: &str) -> O
     let k = bone_of(name)?;
     let c = &g.ch[id];
     if let Some(v) = c.sim_bones.as_ref().and_then(|m| m.get(k)) { return Some(*v); }
-    c.bones.get(k).copied()
+    c.bone(k)
 }
 /// The world-space joints off the skeleton's current globals, into `b`. (Character.joints)
 fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
@@ -628,8 +636,9 @@ fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) {
             rd.ov[node].as_mut().unwrap().rot = rot;
         }
     }
-    skel_rag_pose(g, id);
+    skel_rag_run(g, id);
     rag_toes_over_the_floor(g, id, rag_id, &n);
+    skel_skin(g, id);
     character_read_bones(g, id, dt);
 }
 
@@ -640,7 +649,7 @@ fn rag_toes_over_the_floor(g: &mut Game, id: CharId, rag_id: RagdollId, n: &Anim
     // (what last frame turned is looked at afresh, on what the rag has done since)
     let rd = g.ch[id].rd.as_mut().unwrap();
     let (was_l, was_r) = (rd.ov[n.foot_l].take(), rd.ov[n.foot_r].take());
-    if was_l.is_some() || was_r.is_some() { skel_rag_pose(g, id); }
+    if was_l.is_some() || was_r.is_some() { skel_rag_run(g, id); }
     for (foot, toe, ank) in [(n.foot_l, n.toe_l, rg.ank_l), (n.foot_r, n.toe_r, rg.ank_r)] {
         let (a, t) = (node_pos(g, id, foot), node_pos(g, id, toe));
         let v = v3::sub(t, a);
@@ -652,7 +661,7 @@ fn rag_toes_over_the_floor(g: &mut Game, id: CharId, rag_id: RagdollId, n: &Anim
         let q = v3::quat::from_to(v3::normalize(v), v3::normalize([v[0] * out, up, v[2] * out]));
         let rot = v3::quat::mul(q, g.ch[id].skel.global_rot[foot]);   // (all of it in his model, as the skeleton holds it)
         g.ch[id].rd.as_mut().unwrap().ov[foot] = Some(crate::anim_skeleton::NodeOverride { rot, pos: None });
-        skel_rag_pose(g, id);
+        skel_rag_run(g, id);
     }
 }
 
@@ -741,7 +750,7 @@ fn fall_guide_of(rag: &crate::ragdoll::Ragdoll, rg: &crate::ragdoll::RAG, kind: 
     let pv = part_at(rag, rg.pelvis); let nk = part_at(rag, rg.neck);
     let v0 = v3::sub(nk, pv); let v0n = v3::normalize(v0);
     let away: V3 = match from {
-        Some(fr) if m::hyp2(pv[0] - fr[0], pv[2] - fr[2]) > 0.05 => v3::normalize([pv[0] - fr[0], 0.0, pv[2] - fr[2]]),
+        Some(fr) if v3::dist_xz(pv, fr) > 0.05 => v3::normalize([pv[0] - fr[0], 0.0, pv[2] - fr[2]]),
         _ => h,
     };
     let sd: V3 = [f[2] * side, 0.0, -f[0] * side]; let nod_ax: V3 = [f[2], 0.0, -f[0]];   // (up × f: a turn about it takes the top of a thing toward his front)
@@ -962,13 +971,13 @@ pub fn character_inside_body(g: &crate::game::Game, id: CharId, p: V3, crown_pad
     if !c.alive { return false; }
     let top = (match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 }) + crown_pad;
     let bot = c.pos[1] + 0.05;
-    let hips = c.bones.get(Bone::Hips).copied(); let chest = c.bones.get(Bone::Spine2).copied();
+    let hips = c.bone(Bone::Hips); let chest = c.bone(Bone::Spine2);
     let cx = match hips { Some(v) => v[0], None => c.pos[0] }; let cz = match hips { Some(v) => v[2], None => c.pos[2] };
     if p[1] > bot && p[1] < top && m::hyp2(p[0] - cx, p[2] - cz) < 0.28 { return true; }
     if let (Some(chest), Some(hips)) = (chest, hips) {
-        if m::hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12 {
+        if v3::dist_xz(chest, hips) > 0.12 {
             let cb = m::min(hips[1], chest[1]) - 0.12;
-            if p[1] > cb && p[1] < top && m::hyp2(p[0] - chest[0], p[2] - chest[2]) < 0.25 { return true; }
+            if p[1] > cb && p[1] < top && v3::dist_xz(p, chest) < 0.25 { return true; }
         }
     }
     false
@@ -979,11 +988,11 @@ pub fn character_ray_hit(g: &crate::game::Game, id: CharId, ro: V3, rd: V3, tmax
     if !c.alive { return -1.0; }
     let top = match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 };
     let bot = c.pos[1] + 0.05;
-    let hips = c.bones.get(Bone::Hips).copied(); let chest = c.bones.get(Bone::Spine2).copied();
+    let hips = c.bone(Bone::Hips); let chest = c.bone(Bone::Spine2);
     let cx = match hips { Some(v) => v[0], None => c.pos[0] }; let cz = match hips { Some(v) => v[2], None => c.pos[2] };
     let mut t = column_entry(ro, rd, tmax, cx, cz, 0.28, bot, top);
     if let (Some(chest), Some(hips)) = (chest, hips) {
-        if m::hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12 {
+        if v3::dist_xz(chest, hips) > 0.12 {
             let tc = column_entry(ro, rd, tmax, chest[0], chest[2], 0.25, m::min(hips[1], chest[1]) - 0.12, top);
             if tc >= 0.0 && (t < 0.0 || tc < t) { t = tc; }
         }

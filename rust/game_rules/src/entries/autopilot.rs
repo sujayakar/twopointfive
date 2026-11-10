@@ -95,7 +95,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
         return false;
     }
     let no = if p.word {
-        let at = g.ch[g.pl[g.player].ch].pos;
+        let at = g.player_pos(g.player);
         if men.is_some() || crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
             let none = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [at[0], 0.0, at[2]], man: None });
             let opts = crate::orders::GiveOpts { men: to, ack: None };

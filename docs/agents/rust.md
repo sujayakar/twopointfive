@@ -51,6 +51,9 @@ Each crate is its own cargo workspace and target folder.
 - **A module's state.** `g.m.<module>` (a `Mods` field), or a field of `Game` where many read it. Its numbers are `g.k.<table>`.
 - **A slot.** `crate::owned::Owned` holds state one module reads, of a type declared up in the rules, so that changing it does not rebuild `game_types`:
   `g.ctl`, `g.feel`, `g.mark_set`, `g.ray_grid`.
+- **What a game's copies share.** A kept moment is a copy of the game, so what was read once and is not played with stands behind an `Arc`: `g.art`,
+  `g.level`, a piece of furniture's `def`, a box's `marks`, the ray grid. A copy takes the pointer; who writes the level says `Arc::make_mut`. A list that never
+  changes is a function (`sam_lines()`), not a field.
 - **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
   of what `rust/sim` steps: men, lights, weather, smoke, poses, panes. A thing with rules of its own is a record on `Game`,
   its rules beside it. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
@@ -102,7 +105,7 @@ is written by `g.tab.boxes.edit(b)` alone, whose guard writes the box's row as i
 - **`Over`** (`ask.rs`) asks of the level as it would be, changing nothing, through `segment_blocked_over` and its kind.
 - **A host's question** that is no number has no answer, where a rule's panics: `raycast_host`, `way_host`.
 
-A list is said whole where it is made: `statics`, `leaves`, `things`, `grid`. A build with debug assertions makes every row again as a tick ends and
+A list is said whole where it is made: `statics`, `leaves`, `things`; the floor's grid by `grid` and then `file`. A build with debug assertions makes every row again as a tick ends and
 compares (`astray`): a native test, never the module.
 
 ### Performance

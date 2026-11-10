@@ -133,15 +133,15 @@ pub(super) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: 
             while x <= cx + r {
                 let q: V3 = [(x + 0.5) * cs, 0.0, (z + 0.5) * cs];
                 x += 1.0;
-                let dist = m::hyp2(q[0] - pod.pos[0], q[2] - pod.pos[2]);
+                let dist = v3::dist_xz(q, pod.pos);
                 if dist > k.move_m || dist >= bs || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { continue; }
                 let [a, b] = frame(g, q);
                 if b < 0.3 { continue; }
                 if m::abs(a0) > 0.3 && a * a0 < 0.0 { continue; }
                 if m::abs(a) < m::min(m::abs(a0), funnel) { continue; }
-                if out.iter().enumerate().any(|(j, o)| j != i && m::hyp2(o.pos[0] - q[0], o.pos[2] - q[2]) < k.apart) { continue; }
+                if out.iter().enumerate().any(|(j, o)| j != i && v3::dist_xz(o.pos, q) < k.apart) { continue; }
                 if room.is_some() && crate::roomfight::room_fight_room_at(g, q) != room { continue; }
-                if crate::scene_collision::solid_blocked(g, [pod.pos[0], 0.45, pod.pos[2]], [q[0], 0.45, q[2]], None) { continue; }
+                if crate::scene_collision::low_blocked(g, pod.pos, q) { continue; }
                 if entry_points_risk_at(g, q, Some(d), None).is_some() { continue; }
                 if !entry_points_sees(g, q, by, side_of(by_at, by_n, q), true) { continue; }
                 best = Some(q);
@@ -152,26 +152,13 @@ pub(super) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: 
         let Some(best) = best else {
             // it stays where it is: its man can at least hold the opening
             if entry_points_sees(g, pod.pos, by, side_of(by_at, by_n, pod.pos), true) {
-                out[i] = Pod { pos: pod.pos, face: pod.face, watch: Some(watch), moved: false };
+                out[i] = Pod { pos: pod.pos, face: pod.face, watch: Some(watch) };
             }
             continue;
         };
-        out[i] = Pod { pos: best, face: pod.face, watch: Some(watch), moved: true };
+        out[i] = Pod { pos: best, face: pod.face, watch: Some(watch) };
     }
     out
-}
-
-/// A search point taken over a better-seeing one by an uncleared opening: it counts as moved.
-pub(super) fn entry_points_swapped(pod: &mut crate::entrypoints::Pod) {
-    pod.moved = true;
-}
-
-/// A point an entry has just dealt to a man: the tallies.
-pub(super) fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) {
-    let risky = entry_points_risk_at(g, pod.pos, skip, None).is_some();
-    if pod.moved {
-    } else if risky {
-    }
 }
 
 fn opening_shape(g: &Game, o: CoverOpeningId) -> (V3, [f64; 2], f64) {

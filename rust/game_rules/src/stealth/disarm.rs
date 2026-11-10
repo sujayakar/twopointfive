@@ -5,8 +5,6 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
-
 fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
     u * u * (3.0 - 2.0 * u)
@@ -18,7 +16,7 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
     let Some((gd, variant)) = g.pl[pl].holding().map(|h| (h.g, h.variant)) else { return };
     if crate::guards::in_hand(g, gd) != Some(crate::guards::InHand::Weapon) { return; }
     let def = g.fa[g.gd[gd].weapon].def;
-    let (kind, supp) = { let row = g.m.weapons.weapons.get(def).unwrap(); (row.drop, row.suppressed) };
+    let (kind, supp) = { let row = g.weapon(def); (row.drop, row.suppressed) };
     let at = hand_of(g, gd);
     let yaw = v3::yaw_of(g.ch[g.gd[gd].ch].gun_dir);
     let strip = Strip { t: 0.0, kind, supp, at, item: None, rap: variant == crate::character::HoldVariant::Gun, gone: false, yaw };
@@ -118,7 +116,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
 
 fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
+    let hand = g.ch[c].bone(crate::character::Bone::HandR);
     v3::copy(match hand { Some(w) => w, None => v3::add(g.ch[c].pos, [0.0, 1.05, 0.0]) })
 }
 
@@ -162,8 +160,8 @@ fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
 /// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear.
 fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let it = s.item.unwrap();
-    let Some(w) = g.ch[sam].bones.get(crate::character::Bone::HandR).copied() else { return };
-    let tip = g.ch[sam].bones.get(crate::character::Bone::FingerR).copied().unwrap_or(w);
+    let Some(w) = g.ch[sam].bone(crate::character::Bone::HandR) else { return };
+    let tip = g.ch[sam].bone(crate::character::Bone::FingerR).unwrap_or(w);
     let d = v3::sub(tip, w);
     let l = v3::len(d);
     let ahead = g.k.hold.strip.hold[if long(s.kind.as_str()) { 1 } else { 0 }];
@@ -176,7 +174,7 @@ fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let turned = s.yaw - (70.0 * u + 20.0 * v) * DEG;
     g.tab.item[it].heading = turned;
     g.tab.item[it].yaw = turned;
-    g.tab.item[it].tumble = lerp(lerp(pitch[0], pitch[1], u), pitch[2], v) * DEG;
+    g.tab.item[it].tumble = v3::lerp(v3::lerp(pitch[0], pitch[1], u), pitch[2], v) * DEG;
 }
 
 /// Let go of: it falls from where it is with the pair's own motion and a little push out to that man's right; never from inside a wall. The throw's fall is
@@ -305,6 +303,6 @@ mod tests {
         assert_eq!(sstep(0.26, 0.35, 0.9), 1.0);
         assert_eq!(sstep(0.25, 0.75, 0.5), 0.5);
         assert!(sstep(0.2, 0.4, 0.21) < 0.05 && sstep(0.2, 0.4, 0.39) > 0.95, "it starts and ends slowly");
-        assert_eq!((lerp(-40.0, 25.0, 0.0), lerp(-40.0, 25.0, 1.0), lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
+        assert_eq!((v3::lerp(-40.0, 25.0, 0.0), v3::lerp(-40.0, 25.0, 1.0), v3::lerp(-40.0, 40.0, 0.5)), (-40.0, 25.0, 0.0));
     }
 }

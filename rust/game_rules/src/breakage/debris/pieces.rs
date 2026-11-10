@@ -39,10 +39,7 @@ fn face_tilt_of(q: Quat, h: V3, n: V3) -> f64 {
     }
     m::acos(m::min(1.0, m::abs(v3::dot(axes[bi], n))))
 }
-pub(super) fn bound_of(h: V3) -> f64 { m::hyp3(h[0], h[1], h[2]) }
 fn mass_from(h: V3) -> f64 { m::min(6.0, m::max(0.1, h[0] * h[1] * h[2] * 8.0 * 600.0)) }
-
-pub(super) fn is_on(x: Option<bool>) -> bool { x == Some(true) }
 
 /// 0‥1 off an integer (a hash, not a die).
 pub fn hash01(x: f64) -> f64 {
@@ -65,7 +62,7 @@ pub(in crate::breakage) fn debris_moving(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &c in g.destr.debris.list.iter() {
         let ch = &g.tab.debris_chunk[c];
-        if !ch.rest && !is_on(ch.foot) { n += 1.0; }
+        if !ch.rest && ch.foot != Some(true) { n += 1.0; }
     }
     n
 }
@@ -140,7 +137,6 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
         stuff: word.stuff,
         does: word.does,
         flags: Some(crate::scene_boxes::box_flag().dynamic),
-        name: Some(String::from("debris")),
         mkey: Some(crate::scene_boxes::mkey().debris + ((js::to_i32(serial) & 65535) as f64)),
         ..crate::scene_boxes::MakeBoxP::default()
     };
@@ -175,7 +171,7 @@ pub(in crate::breakage) fn debris_clear(g: &mut crate::game::Game) {
 pub(in crate::breakage) fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let list = g.destr.debris.list.clone();
     for c in list {
-        let (b, dress, mate) = { let ch = &g.tab.debris_chunk[c]; (ch.box_, is_on(ch.dress), ch.mate) };
+        let (b, dress, mate) = { let ch = &g.tab.debris_chunk[c]; (ch.box_, ch.dress == Some(true), ch.mate) };
         if dress { g.tab.edit(b).dress = Some(true); }
         out.push(b);
         if let Some(mt) = mate {
@@ -214,7 +210,7 @@ pub(in crate::breakage) fn debris_impulse(g: &mut crate::game::Game, imp: crate:
         let tw = di.tumble * kick.s / m::max(0.08, bound_r(g, b));
         let ch = &mut g.tab.debris_chunk[c];
         if ch.rest { ch.rest = false; ch.on = None; ch.still_t = 0.0; }
-        if is_on(ch.foot) { ch.foot = Some(false); }
+        if ch.foot == Some(true) { ch.foot = Some(false); }
         let mut v = v3::add(ch.v, kick.dv);
         let sp = v3::len(v);
         if sp > di.v_max { v = v3::scale(v, di.v_max / sp); }
@@ -266,7 +262,7 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
         let h = dt / sub as f64;
         let mut s = 0;
         while s < sub && !g.tab.debris_chunk[c].rest {
-            if is_on(g.tab.debris_chunk[c].foot) { debris_slide(g, c, h); } else { debris_step(g, c, h); }
+            if g.tab.debris_chunk[c].foot == Some(true) { debris_slide(g, c, h); } else { debris_step(g, c, h); }
             s += 1;
         }
         let b = g.tab.debris_chunk[c].box_;
@@ -339,7 +335,7 @@ fn bounces(g: &mut Game, c: DebrisChunkId, b: AnyBoxId, hit: &crate::props::Leve
     let n = hit.n;
     let vn = v3::dot(g.tab.debris_chunk[c].v, n);
     if !(vn < 0.0) { return false; }
-    if let Some(p) = hit.thing.filter(|_| !is_on(g.tab.debris_chunk[c].dress)) {
+    if let Some(p) = hit.thing.filter(|_| g.tab.debris_chunk[c].dress != Some(true)) {
         let j = v3::scale(n, vn * 0.4 * mass_of(g, b));
         crate::props::prop_system_apply_impulse(g, p, g.tab[b].c, j, 0.0, None);
     }
@@ -440,7 +436,7 @@ pub(super) fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3,
         ch.w = [0.0, 0.0, 0.0];
         ch.on = on;
         ch.on_pose = on_pose;
-        if is_on(ch.foot) { ch.foot = Some(false); }
+        if ch.foot == Some(true) { ch.foot = Some(false); }
     }
     // sit exactly on the surface under it, and on whatever already lies there
     let (seat, thing) = debris_seat(g, c, false);
@@ -484,7 +480,7 @@ fn pile_top(g: &Game, b: AnyBoxId, surface: f64, seated: bool, rubble: bool) -> 
         .chain(g.destr.edge_look.rubble.iter().filter(|r| rubble && r.t >= r.t_2 && AnyBoxId::Frame(r.box_) != b).map(|r| AnyBoxId::Frame(r.box_))).collect();
     for o in lies {
         let oc = g.tab[o].c;
-        let (ob, oh) = (bound_of(g.tab[o].h), bound_of(g.tab[b].h));
+        let (ob, oh) = (v3::len(g.tab[o].h), v3::len(g.tab[b].h));
         if m::abs(oc[0] - bc[0]) > ob + oh || m::abs(oc[2] - bc[2]) > ob + oh { continue; }
         let theirs = footprint(g, o);
         if oc[1] - theirs.hy > surface + PILE || !footprints_meet(bc, &mine, oc, &theirs) { continue; }
@@ -583,7 +579,7 @@ fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
         let gain = m::min(1.0, s.gain * (0.6 + speed * 0.15));
         crate::audio_iface::game_audio_like_play(g, &s.name, Some(p), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate: s.rate * (0.94 + 0.12 * hash01(serial * 31.0)) }));
     }
-    if !is_on(g.tab.debris_chunk[c].dress) {
+    if g.tab.debris_chunk[c].dress != Some(true) {
         let (time, level, who, ev) = (g.time, g.tab.debris_chunk[c].level, g.tab.debris_chunk[c].who, g.serial());
         g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: p, time, loud: false, level: Some(level), who: Some(who), serial: ev, ..crate::game::GameEvent::default() });
     }
@@ -601,7 +597,7 @@ fn evictable(g: &crate::game::Game, c_2: DebrisChunkId) -> bool {
     ch.rest || ch.foot == Some(true)
 }
 
-fn bound_r(g: &crate::game::Game, b: AnyBoxId) -> f64 { bound_of(g.tab[b].h) }
+fn bound_r(g: &crate::game::Game, b: AnyBoxId) -> f64 { v3::len(g.tab[b].h) }
 
 /// A nominal mass off the volume, clamped.
 fn mass_of(g: &crate::game::Game, b: AnyBoxId) -> f64 { mass_from(g.tab[b].h) }

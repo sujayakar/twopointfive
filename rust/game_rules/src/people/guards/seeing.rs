@@ -6,14 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A bone of a body, or a stand-in where it has none yet (`c.bones.head ?? …`).
-pub(crate) fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => or,
-    }
-}
-
 fn hunting(g: &Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
     st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search
@@ -112,13 +104,13 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
     if let Some(who) = e.who {
         for i in 0..g.guards.len() {
             let x = g.guards[i];
-            if g.ch[g.gd[x].ch].id == who {
+            if g.char_id(x) == who {
                 sh = Some(x);
                 break;
             }
         }
     }
-    let player_pos = g.ch[g.pl[g.player].ch].pos;
+    let player_pos = g.player_pos(g.player);
     if let Some(s) = sh {
         let who = g.gd[s].foe.or_else(|| if g.team(s) == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
         if let Some(who) = who {
@@ -171,7 +163,7 @@ pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guard
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
 pub fn player_ground_vel(g: &mut crate::game::Game) -> V3 {
     let view = crate::seats::view_key(g, &crate::seats::here(g));
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let now = g.time;
     let Some(row) = g.m.guards.ground_track.get_mut(view) else {
         let vel: V3 = [0.0, 0.0, 0.0];
@@ -250,7 +242,7 @@ pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f
 fn gain(g: &Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
     let at = g.ch[w.c].pos;
     let hunts = hunting(g, gd);
-    let moving = motion_sum(g.ch[g.gd[gd].ch].pos, hunts, at, w.vel, w.light, dist);
+    let moving = motion_sum(g.pos_of(gd), hunts, at, w.vel, w.light, dist);
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
     let mut rate = g.tune.detect_rate * m::pow(w.light, 1.5) * crate::guards::dist_term(g, dist) * (if w.low { 0.75 } else { 1.0 }) * moving * v3::clamp((w.smoke - 0.3) / 0.5, 0.0, 1.0) * keen;
     rate *= crate::attention::attention_side_k(g, gd, at) * crate::kitload::load_seen(g, w.c);
@@ -283,9 +275,9 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     let c = g.gd[gd].ch;
     let oc = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.65, 0.0]));
     let look = crate::guards::look_of(g, c);
-    let body = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+    let body = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
     let to = v3::sub(body, eye);
     let dist = v3::len(to);
     if dist > 12.0 {
@@ -303,7 +295,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
         return false;
     }
     let at_feet = match around {
-        Some(n) => m::hyp2(body[0] - pos[0], body[2] - pos[2]) <= n,
+        Some(n) => v3::dist_xz(body, pos) <= n,
         None => false,
     };
     if g.tune.body_light {
@@ -325,7 +317,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
         }
     }
     let c = g.gd[o].ch;
-    let hp = bone_or(g, c, crate::character::Bone::Hips, g.ch[c].pos);
+    let hp = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let at: V3 = [hp[0], m::max(hp[1], 0.12) + 0.22, hp[2]];
     let e = crate::guards::light_estimate_at(g, at, None, None, None);
     let dt = match was {
@@ -344,7 +336,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke?
 pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
-    let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+    let hp = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];
     let trans = crate::sense::clear_between(g, eye, at);
     let b = g.k.body_light;

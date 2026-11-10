@@ -148,7 +148,7 @@ impl GlassAsk for Play {
         h.speed = 0.0;
     }
     fn burst(&mut self, at: [f64; 2]) -> game::frag::BlastReport {
-        let who = self.g.ch[self.g.pl[self.g.player].ch].id;
+        let who = self.g.player_id(self.g.player);
         game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn hit_of(&self, r: &game::frag::BlastReport, gd: GuardId) -> Option<game::frag::BlastHit> { let id = self.id_of(gd); r.hits.iter().find(|h| h.id == id).cloned() }
@@ -185,7 +185,7 @@ pub trait WallAsk {
 
 impl WallAsk for Play {
     fn burst_at(&mut self, at: [f64; 3]) -> game::frag::BlastReport {
-        let (who, lift) = (self.g.ch[self.g.pl[self.g.player].ch].id, self.g.k.frag.lift);
+        let (who, lift) = (self.g.player_id(self.g.player), self.g.k.frag.lift);
         game::frag::blast(&mut self.g, [at[0], at[1] - lift, at[2]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn body_walks(&mut self, from: [f64; 2], to: [f64; 2]) -> [f64; 2] {
