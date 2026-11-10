@@ -1149,40 +1149,6 @@ fn door_tools_standoff_posts_as_were(g: &mut crate::game::Game, d: DoorId, side:
 
 // ------------------------------------------------------------ once a frame
 
-/// the frag row's key with the menu on the page that shows it: true when the press was the row's
-pub fn door_tools_menu_key(g: &mut crate::game::Game, input: InputId) -> bool {
-    let key = g.k.frag.order_key.clone();
-    if g.sets[g.seat].orders.menu.is_none() || !crate::input::input_hit(g, input, &key) {
-        return false;
-    }
-    let rows = g.sets[g.seat].orders.menu.as_ref().unwrap().rows.clone();
-    let Some(i) = rows.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fragclear::ORDER.id) else { return false };
-    press_off(g, input, &key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
-}
-/// the big slot's row on its own key with a door's menu up: on the first page the page is turned and the row given in one press
-pub fn door_tools_big_key(g: &mut crate::game::Game, input: InputId) -> bool {
-    let Some(M) = g.sets[g.seat].orders.menu.as_ref() else { return false };
-    let is_door = matches!(M.target, crate::orders::OrderTarget::Door(_));
-    let rows = M.rows.clone();
-    if !g.sets[g.seat].door_tools.big_row.unwrap_or(false) || !is_door || !crate::input::input_hit(g, input, BIG_KEY) {
-        return false;
-    }
-    let mut i = rows.iter().position(|&d| g.tab.orders_order_def[d].id == BIG_ORDER);
-    if i.is_none() {
-        let Some(o) = rows.iter().position(|&d| g.tab.orders_order_def[d].opens.as_deref() == Some(TOOLS_PAGE)) else { return false };
-        crate::orders::squad_orders_pick(g, Some(o as f64));
-        let now = g.sets[g.seat].orders.menu.as_ref().map(|M| M.rows.clone());
-        i = now.and_then(|rows| rows.iter().position(|&d| g.tab.orders_order_def[d].id == BIG_ORDER));
-        if i.is_none() {
-            return false;
-        }
-    }
-    press_off(g, input, BIG_KEY);
-    crate::orders::squad_orders_pick(g, Some(i.unwrap() as f64));
-    true
-}
 /// Sam's key: the word while anything of the men is waiting on it, else a set charge's trigger; never the drill's 'stack up' as well
 pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
     use crate::nightbreach::{night_breach_drill_ops, night_breach_state, NightBreachState as NB};

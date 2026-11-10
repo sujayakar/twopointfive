@@ -14,12 +14,7 @@ pub struct OrdersK {
     ///  maintainer, 10-21, once the wall hold had left Q: "let's move the squad command button to Q then too", "let's unmap B too then", "so it's just Q, and
     ///  the quick tap should be exactly the same as B"): the board moved, this read did not
     #[k(String::from("KeyB"))] pub quick_key: String,
-    /// press, with the menu up on a door's tools (the squad of four): the door tools given from this page WAIT on the door for the word (a row of its own,
-    ///  toggled — never a key held down). The menu stays up; the rows it changes say so. `waitKey`: the row's digit, on its page (taken only while no order of
-    ///  the page is on it; a digit above ORDER_DIGITS is no key at all — nothing of the menu is up there; a key that is not a digit works and is shown as itself). `waitAlt`: a second key for it — the word's own, so 'on F' is one key to learn: with a DOOR menu up it is
-    ///  'wait for my word' (on the door's first page it turns to the tools with the row already on; on the tools it flips it) and it gives the word everywhere
-    ///  else ('' = none)
-    #[k(String::from("Digit5"))] pub wait_key: String,
+    /// the word's own key: a row on it is not taken by the ring, and the ring leaves the press to the word
     #[k(String::from("KeyF"))] pub wait_alt: String,
     /// the open menu's men, door face and why-nots are re-read this often (game seconds; a path search per man per row each time)
     #[k(1.0)] pub refresh_secs: f64,

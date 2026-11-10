@@ -242,7 +242,7 @@ fn gate_ok(c: &GateOk, code: &str) -> bool {
             };
         }
     }
-    is_free(code) || has(&c.keys, code) || (c.menu_up && (is_digit(code) || code == "KeyV")) || ((c.hand_up || c.hand_key) && is_digit(code)) || (c.enter && (code == "ShiftLeft" || code == "ShiftRight"))
+    is_free(code) || has(&c.keys, code) || (c.menu_up && is_digit(code)) || ((c.hand_up || c.hand_key) && is_digit(code)) || (c.enter && (code == "ShiftLeft" || code == "ShiftRight"))
 }
 
 /// whatever the step has not unlocked is taken out of the tick

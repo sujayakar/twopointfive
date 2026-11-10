@@ -506,7 +506,8 @@ impl DoorsAsk for Play {
     fn menu_opens(&mut self, at: [f64; 2], page: Option<&str>) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
         assert!(game::orders::squad_orders_open(&mut self.g, Some(&t), None, None), "the menu did not open on {at:?}");
-        if page.is_some() { game::orders::squad_orders_turn(&mut self.g, page, None); }
+        self.ring_over_menu();
+        if page.is_some() { game::orders::squad_orders_turn(&mut self.g, page); }
     }
     fn row_key(&self, id: &str) -> Option<f64> { self.g.sets[self.g.seat].orders.menu.as_ref()?.rows.iter().map(|&d| &self.g.tab.orders_order_def[d]).find(|r| r.id == id)?.key }
     fn sam_slot(&self) -> game::game::SlotKind { self.g.pl[self.g.player].slot }

@@ -114,7 +114,7 @@ nearest who `can_answer` comes. A second inside `twice_window` is a search; a ma
 send (`sticky_eyes`); `take_cam` takes one back.
 
 **The wand** is kit (`wand_offered`: carried, under the fog, a door `wand_fits`). `start_wand`, then `wand_through`; `wand_eye` is a wedge past the
-leaf that the cursor turns (`wand_turn`). A teammate looks only by order (`wand_order_key`), his lens sweeping by itself (`mate_wand_eye`).
+leaf that the cursor turns (`wand_turn`). A teammate looks only by order (`wand_order_frame`), his lens sweeping by itself (`mate_wand_eye`).
 
 **Devices** are level data (`docs/level-format.md`). `update_camera` tests a lens by `eye_contact` and `lens_gain`, then `camera_suspect` (a man sent)
 and `camera_alarm` (the floor up). `update_laser` breaks on a stranger's body or a flying item (`body_breaks`, `laser_trip`). A round, the jammer or

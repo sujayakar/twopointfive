@@ -151,6 +151,7 @@ fn no_quick_line_with_a_menu_up() {
         assert!(panel(&p, 0).is_some(), "seed {s}: the floor has a line");
         let t = game::orders::squad_orders_target_at(&mut p.g, [16.0, 0.0, 24.0]);
         game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        p.ring_over_menu();
         p.run(0.1);
         assert_eq!(p.g.sets[p.g.seat].orders.shown.quick, None, "seed {s}: a menu is up");
         assert_eq!(panel(&p, 0), None, "seed {s}: a menu is up");
@@ -173,6 +174,7 @@ fn each_seat_keeps_its_own_quick_line() {
         // the first player's menu takes his line and leaves the second's
         let t = { let at = p.at(p.mates()[0]); game::orders::squad_orders_target_at(&mut p.g, [at[0] + 1.0, 0.0, at[1]]) };
         game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
+        p.ring_over_menu();
         p.run(0.1);
         assert_eq!(panel(&p, 0), None, "seed {s}: his menu is up");
         assert!(panel(&p, 1).is_some(), "seed {s}: the other player has no menu up");

@@ -511,8 +511,8 @@ fn sync(g: &mut crate::game::Game) {
     }
 }
 
-/// Once a frame after the menu's own input: the rows, and G with a floor menu's first page up turns it to the throws. True: the press was the row's.
-pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
+/// Once a frame after the ring's input: the rows in step with the switch, the walks whose man is gone, and what is worked out for an open menu.
+pub fn squad_throw_frame(g: &mut crate::game::Game) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if g.m.squadthrow.states.get(key).map_or(false, |s| !s.walks.is_empty()) {
         let mut at = 0usize;
@@ -530,23 +530,6 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
     // (no menu up, nothing is shown: what was worked out for one, or for the order it gave, goes)
     if g.sets[g.seat].orders.menu.is_none() { if let Some(s) = g.m.squadthrow.states.get_mut(key) { if s.plans.len() > 0 { s.plans.clear(); } } }
     else { follow(g); }
-    let hit_key = g.k.frag.order_key.clone();
-    if g.sets[g.seat].orders.menu.is_none() || !crate::input::input_hit(g, input, &hit_key) {
-        return false;
-    }
-    let page = g.sets[g.seat].orders.menu.as_ref().unwrap().page.clone();
-    if page.as_deref() == Some(THROW_PAGE) {
-        g.tab.input[input].pressed.delete(hit_key);
-        return true;
-    }
-    if page.is_some() {
-        return false;
-    }
-    let i = g.sets[g.seat].orders.menu.as_ref().unwrap().rows.iter().position(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
-    let Some(i) = i else { return false };
-    g.tab.input[input].pressed.delete(hit_key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
 }
 
 #[cfg(test)]

@@ -197,22 +197,6 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
     }
 }
 
-/// The row's key with a menu up that lists it: the press is that row's. True: the press was the row's.
-pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool {
-    let key = squadsmoke().order_key;
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
-    if g.sets[g.seat].orders.menu.is_none() || !g.m.squadsmoke.states.has(view) || !crate::input::input_hit(g, input, &key) { return false; }
-    let id = SMOKE_ORDER;
-    let i = match &g.sets[g.seat].orders.menu {
-        Some(menu) => menu.rows.iter().position(|d| g.tab.orders_order_def[*d].id == id),
-        None => None,
-    };
-    let i = match i { Some(i) => i, None => return false };
-    g.tab.input[input].pressed.delete(key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

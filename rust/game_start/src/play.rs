@@ -274,6 +274,12 @@ impl Play {
 
     // ---- the hand: Sam is moved as a player moves him, through the host's Input
 
+    /// STAGING: the ring up over the menu that is open, where the cursor is, as holding the squad's key puts it up.
+    pub fn ring_over_menu(&mut self) {
+        let (input, at) = (self.host.input, self.g.seat);
+        let r = game::cmdring::ring_open(&mut self.g, input, 800.0, 600.0, 0.0, None);
+        self.g.sets[at].orders.cmd_ring = Some(r);
+    }
     /// The cursor on the place `at` (chest height), held there as the camera moves.
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
