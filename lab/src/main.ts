@@ -10,6 +10,7 @@ import { Teach } from './teach';
 import { Perf } from './perf';
 import { tourStep } from './tour';
 import { type V3, add, mul, sub, dot, clamp, norm } from './math';
+import { lightReport } from './report';
 import { boundsOf } from './scene/world';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T, canvas = $<HTMLCanvasElement>('c'), Q = new URLSearchParams(location.search);
@@ -28,6 +29,7 @@ async function main() {
   const act = { method(m: Method) { method = m; void lab.use(m); paint(); }, level(i: number) { const l = lab.building.levels[i]; if (!l) return; lab.level = i; lab.wantCut = l.cut; lab.camera.want.look = [lab.camera.want.look[0], l.look[1], lab.camera.want.look[2]]; paint(); }, doors(v: number | 'auto') { lab.doorsAuto = v === 'auto'; if (v !== 'auto') for (const d of lab.building.doors) d.want = v; paint(); } };
   (window as never as { teach: Teach }).teach = teach;
   const SCALES = [0.4, 0.46, 0.53, 0.6, 0.67, 0.75, 0.84, 0.92, 1]; let paceMode: 'auto' | '1' | '2' = 'auto', divisor = 1; const perf = new Perf(lab.gpu.info, { mode: '', label: () => `Pace: ${paceMode === 'auto' ? `auto (every ${divisor === 1 ? '' : '2nd '}refresh)` : paceMode === '1' ? 'every refresh' : 'every 2nd refresh'}`, next() { paceMode = paceMode === 'auto' ? '1' : paceMode === '1' ? '2' : 'auto'; } }); (window as never as { perf: Perf }).perf = perf; perf.where = () => `${sceneName} ` + JSON.stringify({ look: lab.camera.look.map(v => +v.toFixed(3)), yaw: +lab.camera.yaw.toFixed(4), pitch: +lab.camera.pitch.toFixed(4), dist: +lab.camera.dist.toFixed(2), hour: +lab.hour.toFixed(2), level: lab.level, cut: lab.cut > 1e8 ? undefined : +lab.cut.toFixed(2), tick: lab.tick, rain: lab.rain, steam: lab.steam, wind: +Math.hypot(...lab.wind).toFixed(2), moon: lab.moon, mains: lab.mains, lamps: lab.lampsMode, groups: lab.lampGroup, smokes: lab.smoke.sources.length, fires: lab.smoke.fires.length, air: +lab.airMs.toFixed(2), bodies: +lab.building.bodies.ms.toFixed(2) }); lab.smooth = !Q.has('bench');
+  perf.more = () => lightReport(lab); (window as never as { lightReport: () => Promise<string> }).lightReport = () => lightReport(lab);
   const row = (id: string, items: [string, () => boolean, () => void][]) => { const el = $(id); el.textContent = ''; for (const [t, on, go] of items) { const b = document.createElement('button'); b.textContent = t; b.className = on() ? 'on' : ''; b.onclick = () => { go(); paint(); }; el.append(b); } };
   function paint() {
     row('hide', [['Hide', () => false, () => { document.body.classList.add('nopanel'); }]]);
