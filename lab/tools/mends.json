@@ -1,0 +1,94 @@
+[
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"mend0",
+"mend1",
+"mend2",
+"mend4",
+"mend7",
+"mend0"
+],
+"paths": 900,
+"name": "garden",
+"dist": 22,
+"hour": 14.0,
+"look": [
+8,
+4,
+1.5
+],
+"pitch": 0.7
+},
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"mend0",
+"mend1",
+"mend2",
+"mend4",
+"mend7",
+"mend0"
+],
+"paths": 900,
+"name": "roof day",
+"dist": 50,
+"hour": 16.0
+},
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"mend0",
+"mend1",
+"mend2",
+"mend4",
+"mend7",
+"mend0"
+],
+"paths": 900,
+"name": "ground day",
+"dist": 34,
+"hour": 15.0,
+"cut": 2.55,
+"look": [
+0,
+0.6,
+0
+],
+"doors": 0.8
+},
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"mend0",
+"mend1",
+"mend2",
+"mend4",
+"mend7",
+"mend0"
+],
+"paths": 900,
+"name": "ground night",
+"dist": 34,
+"hour": 21.5,
+"cut": 2.55,
+"look": [
+0,
+0.6,
+0
+],
+"doors": 0.8
+}
+]
