@@ -38,7 +38,7 @@ export function paver(seed: number): Mesh {
   const r = rng(seed), o = r() * 40, hx = 0.2965, t = 0.014, chip = r() < 0.5, cx = hx * (r() < 0.5 ? -1 : 1), cz = hx * (r() < 0.5 ? -1 : 1), cr = 0.015 + 0.03 * r(), crack = r() < 0.25, ca = r() * 3.14, cd = (r() - 0.5) * 0.25;
   const f: Field = (x, y, z) => { const wear = 0.0025 * (0.5 + fbm3(x * 9 + o, 1, z * 9, 3)); let d = box(x, y + t, z, hx, t, hx, 0.005) + wear * step(-0.02, 0.004, y) * step(hx - 0.03, hx, Math.max(Math.abs(x), Math.abs(z))); if (chip) d = smax(d, cr - Math.hypot(x - cx, (y - 0.004) * 1.6, z - cz) + 0.006 * noise3(x * 70 + o, y * 70, z * 70), 0.003); if (crack) { const q = Math.abs(x * Math.cos(ca) + z * Math.sin(ca) - cd - 0.02 * fbm3(x * 12 + o, 3, z * 12, 3)); d = smax(d, 0.0012 - q + Math.max(0, -y - 0.004) * 0.4, 0.001); } return d; };
   return solid(f, [hx, t * 2, hx], 0.013 * FINE_MADE.k, 2, (x, y, z) => y < -0.01 ? 0 : 0.0007 * fbm3(x * 26 + o, 2, z * 26, 3) + 0.0005 * noise3(x * 110, 5, z * 110 + o) - 0.0012 * step(0.36, 0.55, noise3(x * 60 + o, 7, z * 60)),
-    (x, y, z, _a, ny) => { const b = fbm3(x * 3 + o, 5, z * 3, 3), s = noise3(x * 150 + o, 1, z * 150), p = step(0.36, 0.55, noise3(x * 60 + o, 7, z * 60)), rim = step(hx - 0.035, hx, Math.max(Math.abs(x), Math.abs(z))), v = 0.83 + 0.09 * b + 0.05 * s - 0.15 * p - 0.10 * rim - 0.25 * (1 - clamp01(ny)); return grey(v, 1.0 + 0.6 * b, 1 - 0.4 * p); });
+    (x, y, z, _a, ny) => { const b = fbm3(x * 3 + o, 5, z * 3, 3), s = noise3(x * 150 + o, 1, z * 150), p = step(0.36, 0.55, noise3(x * 60 + o, 7, z * 60)), rim = step(hx - 0.035, hx, Math.max(Math.abs(x), Math.abs(z))), v = 0.83 + 0.09 * b + 0.05 * s - 0.15 * p - 0.10 * rim - 0.25 * (1 - clamp01(ny)); return grey(v + 0.06, 0.45 + 0.3 * b, 1 - 0.4 * p); });
 }
 /** a deck's board, along x: grooves, grain, screws sunk where the joists are; its top at 0 */
 export function board(seed: number, len = 1.92): Mesh {
@@ -48,8 +48,8 @@ export function board(seed: number, len = 1.92): Mesh {
     (x, y, z) => { const g = fbm3(x * 4 + o, y * 60, z * 140, 4), b = noise3(x * 1.1 + o, 0, z * 9), k = step(0.62, 0.8, noise3(x * 5 + o, 9, z * 22)), sc = screws.some(([a, c]) => Math.hypot(x - a, z - c) < 0.0045) ? 1 : 0, v = 0.80 + 0.22 * g + 0.10 * b - 0.35 * k; return sc ? [0.75, 0.76, 0.78, 0.8] : [v, v * 0.90, v * 0.78, 1]; });
 }
 /** a brick's face, painted: 21 by 6.5 cm, 2.2 proud of the wall; it faces +z, its back at 0 */
-export function brick(seed: number, hx = 0.105): Mesh {
-  const r = rng(seed), o = r() * 90, tw = (r() - 0.5) * 0.004, flake = r() < 0.35 ? r() : 0;
+export function brick(seed: number, hx = 0.105, flakes = false): Mesh {
+  const r = rng(seed), o = r() * 90, tw = (r() - 0.5) * 0.004, flake = flakes ? 0.3 + 0.7 * r() : 0;
   const f: Field = (x, y, z) => { const w = 0.0016 * fbm3(x * 30 + o, y * 30, z * 30, 3); return box(x, y, z - 0.011 - tw * x, hx, 0.0325, 0.011, 0.0055) + w + 0.004 * step(0.24, 0.42, noise3(x * 16 + o, y * 22, 3)) * step(0.012, 0.024, z) * 0.5; };
   const bare = (x: number, y: number) => flake ? step(0.22, 0.28, fbm3(x * 14 + o, y * 20, 4, 3) + 0.14 * flake) : 0;
   return solid(f, [hx + 0.005, 0.036, 0.026], 0.0062 * FINE_MADE.k, 1, (x, y, z) => z < 0.004 ? 0 : 0.0004 * noise3(x * 160 + o, y * 160, z * 160) - 0.0006 * bare(x, y),
@@ -60,7 +60,7 @@ export function coping(seed: number, len = 0.9, deep = 0.16, thick = 0.055): Mes
   const r = rng(seed), o = r() * 70, hx = len / 2 - 0.003;
   const f: Field = (x, y, z) => { let d = box(x, y - thick / 2, z, hx, thick / 2, deep, 0.008); d = smax(d, y - thick + 0.10 * Math.abs(z), 0.004); d = smax(d, 0.0045 - Math.hypot(y, Math.abs(z) - deep + 0.022), 0.001); return d + 0.0035 * step(0.16, 0.36, fbm3(x * 9 + o, y * 12, z * 9, 3)) * step(0.02, 0.0, Math.min(hx - Math.abs(x), deep - Math.abs(z))); };
   return solid(f, [hx, thick, deep], 0.013 * FINE_MADE.k, 2, (x, y, z) => 0.0006 * fbm3(x * 30 + o, y * 30, z * 30, 3) - 0.0011 * step(0.36, 0.52, noise3(x * 55 + o, y * 55, z * 55)),
-    (x, y, z, _a, ny) => { const b = fbm3(x * 4 + o, y * 4, z * 4, 3), p = step(0.36, 0.52, noise3(x * 55 + o, y * 55, z * 55)), st = step(0.1, 0.4, noise3(x * 14 + o, 0.3 * y, z * 3)) * (1 - clamp01(ny)); return grey(0.86 + 0.08 * b - 0.16 * p - 0.14 * st, 0.8, 1 - 0.4 * p); });
+    (x, y, z, _a, ny) => { const b = fbm3(x * 4 + o, y * 4, z * 4, 3), p = step(0.36, 0.52, noise3(x * 55 + o, y * 55, z * 55)), st = step(0.1, 0.4, noise3(x * 14 + o, 0.3 * y, z * 3)) * (1 - clamp01(ny)); return grey(0.92 + 0.06 * b - 0.16 * p - 0.12 * st, 0.4, 1 - 0.4 * p); });
 }
 /** a planter's side, cast against boards: so long along x, so high, 7 cm thick; it stands on 0 */
 export function panel(seed: number, high: number, len = 0.6): Mesh {
