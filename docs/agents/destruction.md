@@ -75,7 +75,7 @@ engine.
 `cover_k` go, and a charge within `contact_m` widens its hole to `min_hole`. A man can ask first (`wall_break_would_open`).
 
 **A wall charge.** `wall_at` finds the wall under the point, or its reason in words. `wall_charge_settle` slides the place to floor on both sides.
-Sam's row is `wall_charge_sam_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
+Sam's row is `wall_charge_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
 `Standoff`, `Armed`, `Wait`, `Enter`) by `wall_charge_step`. The count is `carried` where the card (`kit/`) or the level's `wallCharges`
 (`issue_stage`) gave one, else `cost` door charges out of the bag (`wall_charge_price`).
 
