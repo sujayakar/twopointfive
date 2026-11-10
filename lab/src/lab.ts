@@ -72,7 +72,7 @@ export class Lab {
   project(x: V3): [number, number] | null { const c = this.camera.frame(this.graph.output[0] / this.graph.output[1]), v: V3 = [x[0] - c.pos[0], x[1] - c.pos[1], x[2] - c.pos[2]], d = (a: ArrayLike<number>) => v[0] * a[0]! + v[1] * a[1]! + v[2] * a[2]!, q = (a: ArrayLike<number>) => a[0]! ** 2 + a[1]! ** 2 + a[2]! ** 2, z = d(c.fwd); if (z < 0.1) return null; return [d(c.right) / q(c.right) / z * 0.5 + 0.5, 0.5 - d(c.up) / q(c.up) / z * 0.5]; }
   async use(m: Method) {
     if (!this.mapped) { this.mapped = true; this.send(); this.prev = null; await mapLamps(this); await mapJoins(this); this.blocksSaid = await mapBlocks(this, /swift/i.test(this.gpu.info) ? 3 : 8); await this.sway.init(this, this.scene.instRest, this.scene.instData, this.scene.pastLeaves); }
-    if (m.mends !== undefined && m.mends !== this.mends) { this.mends = m.mends; this.blocksSaid = await mapBlocks(this, /swift/i.test(this.gpu.info) ? 3 : 8, this.mends); }
+    if (m.mends !== undefined && m.mends !== this.mends) { this.mends = m.mends; this.blocksSaid = await mapBlocks(this, /swift/i.test(this.gpu.info) ? 3 : 8, this.mends); for (const [n, d] of [['cellsAt', this.litCells.at], ['cellsNorm', this.litCells.normals]] as const) { const b = this.graph.buffers.get(n); if (b) this.gpu.device.queue.writeBuffer(b, 0, d.buffer as ArrayBuffer, 0, Math.min(b.size, d.byteLength)); } }
     if (!this.methods.has(m.name)) { m.signals(this.graph, this); await m.prepare?.(this); const stages = m.stages(this); await this.graph.build(stages); this.methods.set(m.name, { m, stages }); }
     this.current = m.name; m.reset?.(this); return m;
   }
