@@ -139,16 +139,16 @@ pub(super) fn anim_hold_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: 
     let h = an.hold_pose.unwrap_or(an.hd_last);
     let strip_at = an.hold_pose.and_then(|h| h.strip).and_then(|s| s.at);
     let (man, strip_at) = (h.man.map(|p| anim_to_model_p(g, c, p)), strip_at.map(|p| anim_to_model_p(g, c, p)));
-    let (kill, beats) = (h.kill.unwrap_or(show.kill), h.beats.unwrap_or(show.beats));
-    anim_layer(g, c, |s, an, k| ::sim::layers::hold_layer(s, an, w, dt, &h, kill, beats, man, strip_at, k));
+    let beats = h.beats.unwrap_or(show.beats);
+    anim_layer(g, c, |s, an, k| ::sim::layers::hold_layer(s, an, w, dt, &h, beats, man, strip_at, k));
 }
 
 /// The held man, weight w.
 pub(super) fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: f64) {
     let (show, an) = (g.m.character.hold_show, &g.ch[c].anim);
     let h = an.held_pose.unwrap_or(an.he_last);
-    let (kill, beats) = (h.kill.unwrap_or(show.kill), h.beats.unwrap_or(show.beats));
-    anim_layer(g, c, |s, an, k| ::sim::layers::held_layer(s, an, w, dt, &h, kill, beats, k));
+    let beats = h.beats.unwrap_or(show.beats);
+    anim_layer(g, c, |s, an, k| ::sim::layers::held_layer(s, an, w, dt, &h, beats, k));
 }
 
 /// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold.

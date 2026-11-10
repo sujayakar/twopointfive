@@ -70,8 +70,7 @@ pub struct HoldK {
     /// seconds: the reach before he is held · Space held this long on his row starts the choke (arm) / the whip (gun) · of tightening before he goes limp · from the
     ///  pistol coming off his head to it landing behind his ear (the strike arrives AT this instant; Space up sooner and it never does) · E with him in the arm: the
     ///  draw / the holstering — the right hand goes back over his shoulder, changes tools there and comes in with the other (holdLayer, SWAP_RATE), and for this
-    ///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip) · the knife across his throat, from the free hand
-    ///  leaving for his mouth to him let go of (the cut lands HOLD.kill.hit of the way in)
+    ///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip)
     pub secs: HoldKSecs,
     /// ---- Sam, his model space (the man's root sits at [0, 0, dist]; his neck joint stands about [0, 1.43, dist − 0.02], the front of his throat ~7 cm ahead of that)
     /// left wrist: past the middle of the throat to its far side, the forearm's line a finger off the throat — so it lies across it, elbow on his left collarbone
@@ -125,20 +124,6 @@ pub struct HoldK {
     /// halves together: with these the hand stays within 1.5 cm of where it sat on his neck standing, all the way down, and the arm never past 0.91 of its reach —
     /// more sink for the man, or less for Sam, and the arm runs out (the hand slides up off his neck onto his face).
     pub lower: HoldKLower,
-    /// THE KILL FROM THE HOLD (phase 'kill', the arm variant; takedown.ts TAKEDOWN.kill — off, or the gun variant: the phase is drawn as 'held'). Shares of the
-    /// clock (secs.kill): by `wind` Sam's free hand is off the throat and clamped over the man's mouth, his head hauled back onto Sam's shoulder, and the blade is
-    /// set at the far side of his neck; the fist is drawn back across — the throat's middle at `hit` — and on OUT wide to Sam's right by `out`, elbow up (what the
-    /// camera overhead reads); he stands cut for the beat between `hit` and `go`, his hands at his throat; from `go` his knees give and he goes forward and down,
-    /// let down by the hand that has come onto his shoulder, never dropped — and Sam GOES WITH HIM, sinking and bowed over him, on his feet. Both layers follow an
-    /// eased copy of the clock (hdKc / heKc). Let go of, Sam comes up off him at `after` 1/s while he stands still (holdOutRate).
-    /// Sam, his model space: `mouth` → `chest` → `collar` = the left wrist's stations (over his mouth; across his chest for the beat he still stands; on the top
-    /// of his far shoulder as he folds forward out of the arm — the hand that lets him down); `set` → `across` → `wide`
-    /// = the knife fist's path, `low` where it settles after (blade / back as HOLD.knife's); lean° back into the haul · forward over him after, chest yaw° loading
-    /// left · through with the cut, `samSink` m of pelvis over pinned feet, `look`° the head goes down after him.
-    /// The man, his own: `reach` = his wrists FLUNG forward as the hand takes his mouth (left, right — a startle, out of the two men's outline from above, and
-    /// his right arm out from under the blade's way; in at his neck they read as the choke), `clutch` = at his own throat after the cut; chin° / arch° hauled
-    /// back, the head's jolt° [yaw, pitch] as the blade goes across, `sink` / `fwd` m and `hip` / `fold`° as he goes, `hang` as HOLD.lower's.
-    pub kill: HoldKKill,
     /// THE CHOKE'S BEATS, off the clips (takedown.ts TAKEDOWN.chokeBeats; off = the choke as it was) — shares of the eased choke: `clamp` = over which both his hands
     /// come onto the forearm (a quarter second in, where they took 0.8 s), `off` = over which they come OFF it and fall, before the lowering starts (they fell
     /// with it, through it), `tipBy` = over which his head tips `tip`° to the side before it comes forward; eased off, the hands go back the way they came on a
@@ -320,8 +305,7 @@ pub struct HoldKStrip {
 /// seconds: the reach before he is held · Space held this long on his row starts the choke (arm) / the whip (gun) · of tightening before he goes limp · from the
 ///  pistol coming off his head to it landing behind his ear (the strike arrives AT this instant; Space up sooner and it never does) · E with him in the arm: the
 ///  draw / the holstering — the right hand goes back over his shoulder, changes tools there and comes in with the other (holdLayer, SWAP_RATE), and for this
-///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip) · the knife across his throat, from the free hand
-///  leaving for his mouth to him let go of (the cut lands HOLD.kill.hit of the way in)
+///  long the row starts nothing (player.ts swapHold's lockout: no round, no question, no choke, no whip)
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HoldKSecs {
     #[k(0.45)] pub grab: f64,
@@ -329,7 +313,6 @@ pub struct HoldKSecs {
     #[k(2.6)] pub choke: f64,
     #[k(0.6)] pub whip: f64,
     #[k(0.3)] pub swap: f64,
-    #[k(1.3)] pub kill: f64,
 }
 
 /// ---- the knife (the arm variant's right hand; rigProps.knifeBoxes draws it out of the fist's thumb side, edge to the palm): held, the fist rides just ahead of
@@ -383,51 +366,6 @@ pub struct HoldKLower {
     #[k(38.0)] pub sam_lean: f64,
     #[k(0.45)] pub sam_look: f64,
     #[k([0.5, 0.22])] pub sam_arm: [f64; 2],
-}
-
-/// THE KILL FROM THE HOLD (phase 'kill', the arm variant; takedown.ts TAKEDOWN.kill — off, or the gun variant: the phase is drawn as 'held'). Shares of the
-/// clock (secs.kill): by `wind` Sam's free hand is off the throat and clamped over the man's mouth, his head hauled back onto Sam's shoulder, and the blade is
-/// set at the far side of his neck; the fist is drawn back across — the throat's middle at `hit` — and on OUT wide to Sam's right by `out`, elbow up (what the
-/// camera overhead reads); he stands cut for the beat between `hit` and `go`, his hands at his throat; from `go` his knees give and he goes forward and down,
-/// let down by the hand that has come onto his shoulder, never dropped — and Sam GOES WITH HIM, sinking and bowed over him, on his feet. Both layers follow an
-/// eased copy of the clock (hdKc / heKc). Let go of, Sam comes up off him at `after` 1/s while he stands still (holdOutRate).
-/// Sam, his model space: `mouth` → `chest` → `collar` = the left wrist's stations (over his mouth; across his chest for the beat he still stands; on the top
-/// of his far shoulder as he folds forward out of the arm — the hand that lets him down); `set` → `across` → `wide`
-/// = the knife fist's path, `low` where it settles after (blade / back as HOLD.knife's); lean° back into the haul · forward over him after, chest yaw° loading
-/// left · through with the cut, `samSink` m of pelvis over pinned feet, `look`° the head goes down after him.
-/// The man, his own: `reach` = his wrists FLUNG forward as the hand takes his mouth (left, right — a startle, out of the two men's outline from above, and
-/// his right arm out from under the blade's way; in at his neck they read as the choke), `clutch` = at his own throat after the cut; chin° / arch° hauled
-/// back, the head's jolt° [yaw, pitch] as the blade goes across, `sink` / `fwd` m and `hip` / `fold`° as he goes, `hang` as HOLD.lower's.
-#[derive(Clone, Debug, ToBytes, Knobs)]
-pub struct HoldKKill {
-    #[k(0.21)] pub wind: f64,
-    #[k(0.3)] pub hit: f64,
-    #[k(0.48)] pub out: f64,
-    #[k(0.46)] pub go: f64,
-    #[k(7.0)] pub after: f64,
-    #[k([0.07, 1.6, 0.36])] pub mouth: V3,
-    #[k([-0.1, 1.28, 0.36])] pub chest: V3,
-    #[k([0.14, 0.98, 0.5])] pub collar: V3,
-    #[k([0.06, 1.48, 0.29])] pub set: V3,
-    #[k([-0.2, 1.48, 0.33])] pub across: V3,
-    #[k([-0.62, 1.4, 0.04])] pub wide: V3,
-    #[k([-0.34, 1.05, 0.2])] pub low: V3,
-    #[k([0.55, -0.15, 0.8])] pub wide_blade: V3,
-    #[k([-0.2, 0.95, 0.2])] pub wide_back: V3,
-    #[k([-12.0, 20.0])] pub lean: [f64; 2],
-    #[k([16.0, -34.0])] pub yaw: [f64; 2],
-    #[k(0.22)] pub sam_sink: f64,
-    #[k(24.0)] pub look: f64,
-    #[k(alloc::vec![[0.28, 1.28, 0.32], [-0.3, 1.3, 0.34]])] pub reach: Vec<V3>,
-    #[k(alloc::vec![[0.05, 1.41, 0.1], [-0.05, 1.4, 0.11]])] pub clutch: Vec<V3>,
-    #[k(-27.0)] pub chin: f64,
-    #[k(-12.0)] pub arch: f64,
-    #[k([-12.0, -7.0])] pub jolt: [f64; 2],
-    #[k(0.34)] pub sink: f64,
-    #[k(0.08)] pub fwd: f64,
-    #[k(8.0)] pub hip: f64,
-    #[k(36.0)] pub fold: f64,
-    #[k([0.2, 0.2])] pub hang: [f64; 2],
 }
 
 /// THE CHOKE'S BEATS, off the clips (takedown.ts TAKEDOWN.chokeBeats; off = the choke as it was) — shares of the eased choke: `clamp` = over which both his hands

@@ -178,4 +178,3 @@ Native tests in `rust/game_start/tests/`:
 
 - The fog's picture on a GPU: the levels of `dim`, `lit`, `flat` and `edge`, and how a never-seen room should look, are the maintainer's to judge.
 - Whether `attention.rs` and `powerout.rs` read well in play has been checked by numbers only.
-- The knife is dead code: nothing enters the hold's kill, so the knife, since cut, and a lethal blow cannot happen in play.

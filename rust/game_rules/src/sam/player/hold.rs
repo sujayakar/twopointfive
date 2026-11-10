@@ -479,7 +479,6 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
     }
     let has = g.pl[p].holding.is_some();
     let low = if has { 1.0 } else { 0.0 };
-    let kill = has;
     let beats = has;
     let haul = has;
     let h = g.pl[p].holding.clone();
@@ -508,7 +507,6 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         gun_out: Some(h.gun_out),
         gun_pitch: Some(g.ch[c].aim_pitch),
         low: Some(low),
-        kill: Some(kill),
         beats: Some(beats),
         haul: Some(haul),
         strip,
@@ -551,7 +549,6 @@ fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) {
         shot: Some(shot),
         armed: Some(armed),
         low: Some(low),
-        kill: Some(kill),
         beats: Some(beats),
         haul: Some(haul),
         strip: strip.map(|s| crate::character::StripPose { t: s.t, at: None }),

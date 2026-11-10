@@ -36,7 +36,7 @@ mod tests {
     }
 }
 
-/// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a kill or a choke run to its end while he stands idle.
+/// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of the choke or a choke run to its end while he stands idle.
 pub(super) fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
     out_rate(last, speed, busy, g.m.character.hold_show, &g.k.hold)
 }
@@ -330,15 +330,15 @@ mod tests_2 {
     #[test]
     fn hold_out_rate_bits() {
         let hold = crate::knobs::HoldK::page();
-        let show = crate::character::CharacterModHOLDSHOW { kill: true, beats: false };
+        let show = crate::character::CharacterModHOLDSHOW { beats: false };
         let speeds = [0.0, 0.1, 0.3, -0.45, 0.6, 2.0];
-        let pose = |phase, t, kill, beats, variant| HoldPose { phase, t, kill, beats, variant, ..HoldPose::default() };
+        let pose = |phase, t, beats, variant| HoldPose { phase, t, beats, variant, ..HoldPose::default() };
         let cases: [(HoldPose, bool, &[u64; 6]); 5] = [
-            (pose(HoldPhase::Choke, 2.5, None, Some(true), None), false, &OUT_CHOKE_END),
-            (pose(HoldPhase::Choke, 2.5, None, None, None), false, &OUT_CHOKE_SHOW_OFF),
-            (pose(HoldPhase::Choke, 2.3, None, Some(true), None), false, &OUT_CHOKE_EARLY),
-            (pose(HoldPhase::Held, 0.0, Some(true), None, Some(HoldVariant::Gun)), false, &OUT_GUN),
-            (pose(HoldPhase::Held, 0.0, Some(true), None, None), true, &OUT_BUSY),
+            (pose(HoldPhase::Choke, 2.5, Some(true), None), false, &OUT_CHOKE_END),
+            (pose(HoldPhase::Choke, 2.5, None, None), false, &OUT_CHOKE_SHOW_OFF),
+            (pose(HoldPhase::Choke, 2.3, Some(true), None), false, &OUT_CHOKE_EARLY),
+            (pose(HoldPhase::Held, 0.0, None, Some(HoldVariant::Gun)), false, &OUT_GUN),
+            (pose(HoldPhase::Held, 0.0, None, None), true, &OUT_BUSY),
         ];
         for (last, busy, want) in cases {
             for i in 0..6 { assert_eq!(out_rate(last, speeds[i], busy, show, &hold).to_bits(), want[i]); }
