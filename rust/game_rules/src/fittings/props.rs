@@ -315,6 +315,24 @@ fn prop_system_step(g: &mut Game, dt: f64, men: &mut [PropContact], leaves: &[us
     said
 }
 
+/// what a ray through the level meets first
+#[derive(Clone, Copy)]
+pub struct LevelRay {
+    pub t: f64,
+    pub n: V3,
+    /// the thing of furniture it is, where it is not the level itself
+    pub thing: Option<PropId>,
+}
+
+/// the nearest of the statics, the leaves and the furniture along a ray
+pub fn level_ray(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<LevelRay> {
+    let st = crate::scene_collision::raycast(g, ro, rd, tmax);
+    if let Some(h) = prop_system_raycast(g, ro, rd, st.as_ref().map_or(tmax, |s| s.t)) {
+        return Some(LevelRay { t: h.t, n: h.n, thing: Some(h.prop) });
+    }
+    st.map(|s| LevelRay { t: s.t, n: s.n, thing: None })
+}
+
 /// the settle's passes: authoring overlaps (a chair tucked under a table's edge, a bin grazing a desk's corner) are resolved once as the level is stood up, and where a thing comes to stand is its home
 const SETTLE_PASSES: usize = 12;
 const SLEEP_V: f64 = 0.04;

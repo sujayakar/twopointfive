@@ -7,24 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
-/// what `ray` gives back: the prop's hit or the wall's (`prop`: it was a prop's)
-struct RayHit {
-    t: f64,
-    n: V3,
-    prop: bool,
-}
-
-/// the walls first, then the props no further than the wall; a prop's hit wins
-fn ray(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<RayHit> {
-    let st = crate::scene_collision::raycast(g, ro, rd, tmax);
-    let reach = match &st { Some(s) => s.t, None => tmax };
-    let ph = crate::props::prop_system_raycast(g, ro, rd, reach);
-    match ph {
-        Some(h) => Some(RayHit { t: h.t, n: h.n, prop: true }),
-        None => st.map(|s| RayHit { t: s.t, n: s.n, prop: false }),
-    }
-}
-
 /// Where a thing thrown from `from` at `v0` goes off: the item pool's own flight, moving nothing and rolling no die.
 pub fn throw_flight(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind, from: V3, v0: V3, step: Option<f64>) -> crate::throwplan::ThrowFlight {
     let step = step.unwrap_or(1.0 / 60.0);
@@ -56,7 +38,7 @@ pub fn throw_flight(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKi
             let len = v3::len(mv);
             if len < 1e-6 { continue; }
             let dir = v3::scale(mv, 1.0 / len);
-            let mut hit = ray(g, pos, dir, len + radius * 3.5);
+            let mut hit = crate::props::level_ray(g, pos, dir, len + radius * 3.5);
             let mut back = 0.0;
             if let Some(ht) = &hit {
                 back = radius / m::max(0.3, -v3::dot(dir, ht.n));
@@ -70,7 +52,7 @@ pub fn throw_flight(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKi
                     let v_n = v3::scale(nrm, vn);
                     let v_t = v3::sub(vel, v_n);
                     // lying snow under it
-                    let bog = if nrm[1] > 0.6 && !ht.prop { crate::snow_bog::snow_bog_at(g, pos[0], pos[1] - radius, pos[2]) } else { 0.0 };
+                    let bog = if nrm[1] > 0.6 && ht.thing.is_none() { crate::snow_bog::snow_bog_at(g, pos[0], pos[1] - radius, pos[2]) } else { 0.0 };
                     vel = v3::add(v3::scale(v_t, m::max(0.0, 1.0 - friction * (0.5 + 0.5 * m::abs(nrm[1])))), v3::scale(v_n, -restitution));
                     bounces += 1;
                     if land.is_none() { land = Some(v3::copy(pos)); }
