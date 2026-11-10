@@ -802,8 +802,8 @@ impl DoorsAsk for Play {
         let p = def.pellets.unwrap();
         let mk = |d: &game::weapons::WeaponDef| game::shotgun::Shell { def: d.clone(), i: 0.0, dir: None, men: game::js::JsMap::new(), ends: Vec::new(), glass: game::js::JsMap::new(), late: Vec::new() };
         let (mut a, mut b) = (mk(&def), mk(&def));
-        let near = game::shotgun::pellet_drops(&mut self.g, &mut a, None, p.drop_m - 0.5, [1.0, 0.0, 0.0]);
-        let far: Vec<bool> = (0..p.need as usize).map(|_| game::shotgun::pellet_drops(&mut self.g, &mut b, None, p.drop_m + 6.0, [1.0, 0.0, 0.0])).collect();
+        let near = game::shotgun::pellet_drops(&mut self.g, &mut a, CharId(0), p.drop_m - 0.5, [1.0, 0.0, 0.0]);
+        let far: Vec<bool> = (0..p.need as usize).map(|_| game::shotgun::pellet_drops(&mut self.g, &mut b, CharId(0), p.drop_m + 6.0, [1.0, 0.0, 0.0])).collect();
         (p.drop_m, p.need, near, far)
     }
     fn sees_doorway(&mut self, m: GuardId, d: DoorId) -> bool {
@@ -851,7 +851,7 @@ impl DoorsAsk for Play {
     fn lane_half(&self, along: f64) -> f64 { let (ff, fl) = (&self.g.k.friendlyfire, &self.g.k.fireline); ff.body_m + fl.clear_m + along * ff.cone_k * fl.spread }
     fn sam_rounds(&self) -> f64 { self.g.fa[self.g.pl[self.g.player].rifle].shots_fired }
     fn file_place(&self, gd: GuardId) -> Option<f64> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].follow) }
-    fn sam_clicks(&mut self) { let pl = self.g.player; self.g.pl[pl].fire_cd = 0.0; self.press(game_start::play::Button::Left); }
+    fn sam_clicks(&mut self) { let pl = self.g.player; self.g.arms[self.g.pl[pl].ch].fire_cd = 0.0; self.press(game_start::play::Button::Left); }
     fn in_doorway(&self, d: DoorId, at: [f64; 2]) -> bool { let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); a > -0.05 && a < self.door_w(d) + 0.05 && o.abs() < 0.3 }
     fn in_sweep(&self, d: DoorId, at: [f64; 2]) -> bool { game::doors::door_swing_sweeps(&game::doors::doors_swing_of(&self.g, d), at[0], at[1], Some(BODY_R)) }
     fn from_handle(&self, d: DoorId, at: [f64; 2]) -> f64 { let f = game::guards::frame_of(&self.g, d); let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); ((a - (f.w - HANDLE_IN)).powi(2) + o * o).sqrt() }

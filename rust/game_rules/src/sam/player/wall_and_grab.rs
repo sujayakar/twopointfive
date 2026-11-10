@@ -431,7 +431,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     let want = if dir == block_dir {
         0.0
     } else {
-        dir * (if crouch { g.tune.player_crouch } else { WALL_PACE }) * g.puppet.as_ref().and_then(|s| s.walk).unwrap_or(1.0)
+        dir * (if crouch { g.tune.player_crouch } else { WALL_PACE })
     };
     {
         let w = w!(g, p);
@@ -660,7 +660,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         crate::takedown::take_fall(g, gd, td.kind, yes(td.lethal), None);
         let way: V3 = [m::sin(yaw), 0.0, m::cos(yaw)];
         if yes(td.lethal) {
-            crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"));
+            crate::combat::kill_guard(g, gd, way, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), crate::game::With::Knife);
             let now = g.time;
             let victim = g.gd[gd].callsign.clone();
             for i in 0..g.guards.len() {
@@ -672,7 +672,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
                 }
             }
         } else {
-            crate::combat::kill_guard(g, gd, way, Some(true), None, None, None);
+            crate::combat::kill_guard(g, gd, way, Some(true), None, None, crate::game::With::Hand);
         }
         crate::close::close_blow(g, yes(td.lethal));
         let ev = crate::game::GameEvent {
@@ -826,7 +826,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     });
     crate::disarm::disarm_begin(g);
     if let Some(k) = kind { crate::close::close_took(g, gd, crate::close::CloseTookWhat::Grab, k, b0, r0); }
-    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.k.hold.secs.grab);
+    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.k.hold.secs.grab);
     let chest = v3::add(g.ch[gc].pos, [0.0, 1.4, 0.0]);
     crate::disarm::disarm_catch(g, chest);
     let ev = crate::game::GameEvent {

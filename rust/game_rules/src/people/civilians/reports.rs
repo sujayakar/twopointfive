@@ -447,7 +447,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     g.cv[cid].complied = true; g.cv[cid].comply_until = g.time + g.k.civ.comply_min * 60.0;
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
-    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
+    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
     later(g, 0.9, &LaterP { kind: PendKind::ComplyLine, cv: gd, o: None, ..LaterP::default() });
     to_cower(g, gd, true);
     let pos = g.ch[c].pos;
@@ -459,7 +459,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
 }
 
 /// how she went, by whose hand; her state is 'dead' either way
-pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: bool, how: crate::game::DownKind, by: crate::game::DownBy, line: Option<&str>, by_weapon: Option<&str>) {
+pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: bool, how: crate::game::DownKind, by: crate::game::DownBy, with: crate::game::With) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     let now = g.time;
@@ -476,18 +476,17 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
         if dead {
             g.stats.civilians.killed += 1;
             let pl = g.player;
-            let weapon = match (by_weapon, crate::game::player_gun_in_hand(g, pl)) {
-                (Some(w), _) => String::from(w),
-                (None, Some(fa)) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[fa].def).unwrap()),
-                (None, None) => String::from("a round"),
+            let weapon = match (with, crate::game::player_gun_in_hand(g, pl)) {
+                (crate::game::With::Blast(w), _) => String::from(w),
+                (_, Some(fa)) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[fa].def).unwrap()),
+                (_, None) => String::from("a round"),
             };
             let d = data_n(vec![("who", Dv::T(name.clone())), ("label", Dv::T(label.clone())), ("weapon", Dv::T(weapon))]);
             let pos = g.ch[c].pos;
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKilled, ChronCountKey::CivKilled, Some(&d), Some(pos));
         } else {
             g.stats.civilians.ko += 1;
-            let l = line.unwrap_or("");
-            let method = if how == DownKind::Choked { "choke" } else if l.contains("whip") { "whip" } else if l.starts_with("ring") { "ring" } else if l.ends_with("behind the wall when it went") { "charge" } else { "takedown" };
+            let method = with.method(how);
             let d = data_n(vec![("who", Dv::T(name.clone())), ("label", Dv::T(label.clone())), ("method", Dv::T(String::from(method)))]);
             let pos = g.ch[c].pos;
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKO, ChronCountKey::CivKO, Some(&d), Some(pos));
@@ -726,7 +725,7 @@ pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
 /// passing pleasantries, one a floor at a time
 pub(super) fn greetings(g: &mut crate::game::Game) {
     if escalation_of(g) != 0.0 || g.alarm.episode { return; }
-    if crate::sim_lightshome::mains_active(g) { return; }
+    if g.light_home.mains.active { return; }
     let players = crate::seats::men(g);
     if players.iter().any(|p| g.pl[*p].holding.is_some()) { return; }
     let floor_greet_at = floor_of(g).greet_at;

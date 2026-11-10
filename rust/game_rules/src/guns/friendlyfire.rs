@@ -5,11 +5,6 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Is the rule running: no puppet.
-pub(super) fn ff_live(g: &crate::game::Game) -> bool {
-    !g.puppet.is_some()
-}
-
 /// A man of Sam's own side whose body a round of that side can find: living, on his feet.
 pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
@@ -32,7 +27,7 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
 pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<CharId> {
-    if !ff_live(g) || !ff_side(g, Some(self_)) {
+    if !ff_side(g, Some(self_)) {
         return None;
     }
     let mut dx = to[0] - muzzle[0];
@@ -189,14 +184,18 @@ pub fn ff_held(g: &mut crate::game::Game) {
     g.stats.friendlyfire.held += 1;
 }
 
-/// A round of Sam's side has gone into a man of Sam's side: counted.
-pub(super) fn ff_note(g: &mut crate::game::Game, sg: Option<GuardId>, is_player: bool, into_sam: bool) {
-    let s = &mut g.stats.friendlyfire;
-    if is_player {
-        s.sam_on_mate += 1;
-    } else if into_sam {
-        s.mate_on_sam += 1;
-    } else if sg.is_some() {
-        s.mate_on_mate += 1;
+/// Is this body on the players' side: a player's man, or an AI man of a side that is none of their enemies, and no civilian.
+pub(super) fn on_our_side(g: &crate::game::Game, c: CharId) -> bool {
+    match crate::character::guard_of(g, c) {
+        None => true,
+        Some(gd) => g.gd[gd].civ.is_none() && !crate::teams::is_hostile(g, crate::teams::Team::Player, g.gd[gd].team),
     }
+}
+
+/// A round of the players' side has gone into a man of it: counted.
+pub(super) fn ff_note(g: &mut crate::game::Game, shooter: CharId, into: Option<CharId>) {
+    let into_player = into.map_or(false, |c| crate::character::is_player(g, c));
+    let by_player = crate::character::is_player(g, shooter);
+    let s = &mut g.stats.friendlyfire;
+    if by_player { s.sam_on_mate += 1; } else if into_player { s.mate_on_sam += 1; } else { s.mate_on_mate += 1; }
 }

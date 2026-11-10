@@ -5,11 +5,11 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Can a stun show on the player at all: up, no puppet's strings.
+/// Can a stun show on the player at all: up.
 fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
 fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
-    !crate::condition::down(g, g.pl[p].ch) && g.puppet.is_none()
+    !crate::condition::down(g, g.pl[p].ch)
 }
 
 /// Fold the player for `secs`; `dir` = the way the blow came from → him.
@@ -20,7 +20,7 @@ pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     crate::condition::rattle(g, c);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[p].hit_flash = 1.0;
-    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, secs);
+    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, secs);
     fold_cancels(g);
     g.stats.samstun.staggered += 1;
 }
@@ -56,7 +56,7 @@ pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
 /// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.
 pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
-    if !live(g, &crate::seats::here(g)) { return false; }
+    if !live(g, seat) { return false; }
     let p = seat.player;
     now < g.cond[g.pl[p].ch].fold_until
 }
@@ -83,7 +83,7 @@ pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
     let (blind, folded) = crate::condition::stun_pose(g, c, live, at);
     g.pl[p].stun_posed = folded || blind;
     if blind { g.cond[c].sup.v = m::max(g.cond[c].sup.v, man_blind(g, p, None)); }
-    if folded { g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.cond[c].fold_until - g.time); }
+    if folded { g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.cond[c].fold_until - g.time); }
 }
 
 #[cfg(test)]
@@ -166,7 +166,7 @@ mod tests {
         assert!(g.pl[p].stun_posed);
         assert_eq!(g.ch[c].anim.clutch, 1.0);
         assert!(g.ch[c].anim.dazzle.is_none());
-        assert_eq!(g.pl[p].fire_cd, 1.5);
+        assert_eq!(g.arms[g.pl[p].ch].fire_cd, 1.5);
         // blind as well: no clutch, turned away from the flash, and his nerve goes with the blindness
         g.time = 10.7;
         g.cond[g.pl[p].ch].blind_until = 11.0;

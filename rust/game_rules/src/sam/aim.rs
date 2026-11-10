@@ -64,22 +64,22 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
     let pc = g.gd[gd].foe;
-    g.gd[gd].aim.braking = false;
+    g.arms[g.gd[gd].ch].aim.braking = false;
     if !g.tune.aim_model || crate::condition::down(g, g.gd[gd].ch) {
-        aim_state_clear(&mut g.gd[gd].aim);
+        aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         return;
     }
     let Some(pc) = pc else {
-        aim_state_clear(&mut g.gd[gd].aim);
+        aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         return;
     };
     let c_vel = g.ch[c].vel;
     let speed = m::hyp2(c_vel[0], c_vel[2]);
-    let mut a = core::mem::take(&mut g.gd[gd].aim);
+    let mut a = core::mem::take(&mut g.arms[g.gd[gd].ch].aim);
     feed_feet(g, &mut a, speed, dt, p.feet_tau, None);
-    g.gd[gd].aim = a;
+    g.arms[g.gd[gd].ch].aim = a;
     let key = alloc::format!("u{}", js::num_str(g.ch[pc].id));
-    let a = &mut g.gd[gd].aim;
+    let a = &mut g.arms[g.gd[gd].ch].aim;
     if a.tgt_key != key {
         if !a.tgt_key.is_empty() {
             a.track = 0.0;
@@ -95,18 +95,18 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     };
     let brg = m::atan2(trunk[0] - c_pos[0], trunk[2] - c_pos[2]);
     let tvel = if crate::character::is_player(g, pc) { crate::guards::player_ground_vel(g) } else { g.ch[pc].vel };
-    let jumped = feed_target(&mut g.gd[gd].aim, c_pos, trunk, &tvel, dt, p.jump_deg, p.rate_tau);
+    let jumped = feed_target(&mut g.arms[g.gd[gd].ch].aim, c_pos, trunk, &tvel, dt, p.jump_deg, p.rate_tau);
     if g.gd[gd].pinned && g.gd[gd].skill.is_none() {
-        g.gd[gd].aim.track = 1.0;
+        g.arms[g.gd[gd].ch].aim.track = 1.0;
         return;
     }
     let since_seen = g.time - g.gd[gd].last_seen_t;
     let down = crate::teams::foe_down(g, gd);
-    if jumped && g.gd[gd].aim.track > 0.0 {
-        g.gd[gd].aim.track = 0.0;
+    if jumped && g.arms[g.gd[gd].ch].aim.track > 0.0 {
+        g.arms[g.gd[gd].ch].aim.track = 0.0;
     }
     if since_seen > p.mem_secs || down {
-        g.gd[gd].aim.track = 0.0;
+        g.arms[g.gd[gd].ch].aim.track = 0.0;
         return;
     }
     if since_seen >= LOS_NOW {
@@ -117,17 +117,17 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let dist = v3::dist_xz(g.ch[c].pos, g.ch[pc].pos);
     let on_tol = p.on_deg * v3::DEG + m::atan2(0.35, m::max(dist, 0.3));
     let on = g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].react_t <= 0.0 && !crate::control::man::blind(g, gd) && facing_err < on_tol;
-    let cap = if m::max(speed, g.gd[gd].aim.move_sm) > m::min(p.stop_to_shoot, g.k.aimcost.plant_at) { p.moving_track_cap } else { 1.0 };
+    let cap = if m::max(speed, g.arms[g.gd[gd].ch].aim.move_sm) > m::min(p.stop_to_shoot, g.k.aimcost.plant_at) { p.moving_track_cap } else { 1.0 };
     if on {
         let k = match &g.gd[gd].skill {
             Some(s) => s.settle_k,
             None => if g.gd[gd].trained { g.k.trained.settle_k } else { 1.0 },
         };
         let st = crate::aim::SettleTimeP { settle_secs: p.settle_secs, range_ref: p.range_ref, near_k: p.near_k };
-        let a = &mut g.gd[gd].aim;
+        let a = &mut g.arms[g.gd[gd].ch].aim;
         a.track = m::min(cap, a.track + dt / (settle_time(st, dist) * k));
     } else {
-        let a = &mut g.gd[gd].aim;
+        let a = &mut g.arms[g.gd[gd].ch].aim;
         a.track = m::max(0.0, m::min(cap, a.track - p.lose_rate * dt));
     }
 }
@@ -139,12 +139,12 @@ pub fn settle_time(p: crate::aim::SettleTimeP, dist: f64) -> f64 {
 
 /// The first-shot gate; true with the model off.
 pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
-    !g.tune.aim_model || g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
+    !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
 /// The standoff's flank round: are the feet he remembers still enough?
 pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
+    g.arms[g.gd[gd].ch].aim.move_sm <= g.k.aimcost.flank_at
 }
 
 /// `gd.weapon.def.aiSpread`: the row of the gun in his hands.
@@ -172,12 +172,12 @@ fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim
         None => if g.gd[gd].trained { g.k.trained.spread_k } else { 1.0 },
     };
     let hands = (s.base + m::max(0.0, range - s.range_from) * s.range_k) * k;
-    let settle = v3::lerp(p.unsettled_k, 1.0, v3::clamp(g.gd[gd].aim.track, 0.0, 1.0));
-    let tgt = m::min(p.target_move_cap, g.gd[gd].aim.bearing_rate * p.target_move_k);
+    let settle = v3::lerp(p.unsettled_k, 1.0, v3::clamp(g.arms[g.gd[gd].ch].aim.track, 0.0, 1.0));
+    let tgt = m::min(p.target_move_cap, g.arms[g.gd[gd].ch].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
-    let a = core::mem::take(&mut g.gd[gd].aim);
+    let a = core::mem::take(&mut g.arms[g.gd[gd].ch].aim);
     let own = feet_of(g, &a, &c_vel, p.steady_pace) * p.shooter_move_k;
-    g.gd[gd].aim = a;
+    g.arms[g.gd[gd].ch].aim = a;
     crate::aim::GuardTerms { spread: hands * settle + tgt + own + extra }
 }
 
@@ -188,7 +188,7 @@ pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Op
     }
     let t = guard_terms(g, gd, extra);
     let now = g.time;
-    g.gd[gd].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now });
+    g.arms[g.gd[gd].ch].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now });
     crate::combat::FireOpts { spread: Some(t.spread), steady: Some(true), ..Default::default() }
 }
 
@@ -207,8 +207,8 @@ pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
 pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: bool) -> bool {
     let p = g.k.aim.guard;
     let w = g.gd[gd].weapon;
-    let brake = g.tune.aim_model && !g.gd[gd].pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.gd[gd].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.gd[gd].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
-    g.gd[gd].aim.braking = brake;
+    let brake = g.tune.aim_model && !g.gd[gd].pinned && !blocked && dist <= p.shoot_band && g.time - g.gd[gd].last_seen_t < LOS_NOW && g.arms[g.gd[gd].ch].aim.track < 1.0 && g.gd[gd].reload_t < 0.0 && (g.arms[g.gd[gd].ch].fire_cd <= p.brake_lead || g.fa[w].burst.is_some());
+    g.arms[g.gd[gd].ch].aim.braking = brake;
     brake
 }
 
@@ -228,24 +228,24 @@ pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
     let wanted = v3::dist(from, aim_at);
     if flew < m::min(m::max(BORE_FOUL_M, 0.5 * wanted), wanted - 0.6) {
         let pos = g.ch[g.gd[gd].ch].pos;
-        let a = &mut g.gd[gd].aim;
+        let a = &mut g.arms[g.gd[gd].ch].aim;
         a.fouled = match a.fouled {
             Some(f) if v3::dist_xz(f.pos, pos) < 0.5 => Some(crate::aim::AimStateFouled { n: f.n + 1.0, pos: f.pos }),
             _ => Some(crate::aim::AimStateFouled { n: 1.0, pos: v3::copy(pos) }),
         };
     } else {
-        g.gd[gd].aim.fouled = None;
+        g.arms[g.gd[gd].ch].aim.fouled = None;
     }
 }
 
 /// Two rounds running into the frame from where he stands: that spot is no line.
 pub fn bore_fouled(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let f = match g.gd[gd].aim.fouled {
+    let f = match g.arms[g.gd[gd].ch].aim.fouled {
         Some(f) if g.tune.aim_model => f,
         _ => return false,
     };
     if v3::dist_xz(f.pos, g.ch[g.gd[gd].ch].pos) > 0.5 {
-        g.gd[gd].aim.fouled = None;
+        g.arms[g.gd[gd].ch].aim.fouled = None;
         return false;
     }
     f.n >= 2.0
@@ -257,16 +257,16 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let p = g.k.aim.player;
     let c = g.pl[pl].ch;
     if !g.tune.aim_model || crate::condition::down(g, g.pl[pl].ch) {
-        aim_state_clear(&mut g.pl[pl].aim);
+        aim_state_clear(&mut g.arms[g.pl[pl].ch].aim);
         return;
     }
     let gv = crate::guards::player_ground_vel(g);
     let speed = m::hyp2(gv[0], gv[2]);
     let c_vel = g.ch[c].vel;
     let hold = m::min(speed, m::hyp2(c_vel[0], c_vel[2]));
-    let mut a = core::mem::take(&mut g.pl[pl].aim);
+    let mut a = core::mem::take(&mut g.arms[g.pl[pl].ch].aim);
     feed_feet(g, &mut a, speed, dt, p.feet_tau, Some(hold));
-    g.pl[pl].aim = a;
+    g.arms[g.pl[pl].ch].aim = a;
     let tg = match g.aim_guard {
         Some(x) if !crate::condition::down(g, g.gd[x].ch) => Some(x),
         _ => None,
@@ -275,26 +275,26 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let key = if let Some(t) = tg {
         alloc::format!("g{}", js::num_str(g.ch[g.gd[t].ch].id))
     } else if let Some(l) = lt {
-        alloc::format!("l{}", g.tab.sim_lightshome_fixture[l].name)
+        alloc::format!("l{}", g.tab.fixture[l].name)
     } else {
         String::from("free")
     };
-    if key != g.pl[pl].aim.tgt_key {
+    if key != g.arms[g.pl[pl].ch].aim.tgt_key {
         let now = g.time;
-        let back = key == g.pl[pl].aim.last_man && now - g.pl[pl].aim.left_t < 0.35;
-        let was = g.pl[pl].aim.tgt_key.clone();
-        let had = g.pl[pl].aim.track;
+        let back = key == g.arms[g.pl[pl].ch].aim.last_man && now - g.arms[g.pl[pl].ch].aim.left_t < 0.35;
+        let was = g.arms[g.pl[pl].ch].aim.tgt_key.clone();
+        let had = g.arms[g.pl[pl].ch].aim.track;
         if lt.is_some() && !back {
-            g.pl[pl].aim.track = 0.0;
+            g.arms[g.pl[pl].ch].aim.track = 0.0;
         }
         if tg.is_some() && !back {
-            g.pl[pl].aim.track = 0.0;
+            g.arms[g.pl[pl].ch].aim.track = 0.0;
         }
         if back && was.starts_with('l') {
-            let a = &mut g.pl[pl].aim;
+            let a = &mut g.arms[g.pl[pl].ch].aim;
             a.track = m::max(a.track, a.left_track);
         }
-        let a = &mut g.pl[pl].aim;
+        let a = &mut g.arms[g.pl[pl].ch].aim;
         if was.starts_with('l') || was.starts_with('g') && (tg.is_none() || lt.is_some()) {
             a.last_man = was;
             a.left_t = now;
@@ -311,47 +311,47 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
             None => v3::add(g.ch[tc].pos, [0.0, 1.2, 0.0]),
         }
     } else if let Some(l) = lt {
-        g.tab.sim_lightshome_fixture[l].pos
+        g.tab.fixture[l].pos
     } else {
         g.aim_point
     };
     let c_pos = g.ch[c].pos;
     if let Some(tn) = tg {
         let tv = g.ch[g.gd[tn].ch].vel;
-        let a = &mut g.pl[pl].aim;
+        let a = &mut g.arms[g.pl[pl].ch].aim;
         if feed_target(a, c_pos, t, &tv, dt, p.jump_deg, p.rate_tau) && a.track > 0.0 {
             a.track = 0.0;
         }
     } else {
-        let a = &mut g.pl[pl].aim;
+        let a = &mut g.arms[g.pl[pl].ch].aim;
         a.last_bearing = f64::NAN;
         a.bearing_rate = 0.0;
     }
     let cap = if g.pl[pl].sprinting && speed > p.moving_above { p.sprint_cap } else if speed > p.moving_above { p.walk_cap } else { 1.0 };
     let st = crate::aim::SettleTimeP { settle_secs: p.settle_secs, range_ref: p.range_ref, near_k: p.near_k };
     let rate = (if g.pl[pl].crouch { p.crouch_k } else { 1.0 }) / settle_time(st, v3::dist_xz(c_pos, t));
-    let a = &mut g.pl[pl].aim;
+    let a = &mut g.arms[g.pl[pl].ch].aim;
     a.track = m::min(cap, a.track + rate * dt);
 }
 
 /// He has you lined up: his track is past the aim model's first-shot gate.
 pub fn guard_acquired(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
+    g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
-/// Sam's cone under the model and his track: nothing with the model off or under the puppet.
+/// Sam's cone under the model and his track: nothing with the model off.
 pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim {
-    if !g.tune.aim_model || g.puppet.is_some() {
+    if !g.tune.aim_model {
         return crate::aim::PlayerAim { spread: 0.0, track: 1.0, base: 0.0, settle: 1.0, tgt: 0.0, own: 0.0 };
     }
     let p = g.k.aim.player;
     let c = g.pl[pl].ch;
     let base = if g.pl[pl].crouch { p.base_crouch } else { p.base_stand };
-    let track = g.pl[pl].aim.track;
+    let track = g.arms[g.pl[pl].ch].aim.track;
     let settle = v3::lerp(p.unsettled_k, 1.0, v3::clamp(track, 0.0, 1.0));
-    let tgt = m::min(p.target_move_cap, g.pl[pl].aim.bearing_rate * p.target_move_k);
+    let tgt = m::min(p.target_move_cap, g.arms[g.pl[pl].ch].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
-    let own = feet_of(g, &g.pl[pl].aim, &c_vel, p.steady_pace) * p.shooter_move_k;
+    let own = feet_of(g, &g.arms[g.pl[pl].ch].aim, &c_vel, p.steady_pace) * p.shooter_move_k;
     // AIM_HOOKS.playerExternalK as player.ts:258 sets it at load, the only value it ever holds.
     let k = if crate::game::player_braced(g, pl) { g.k.rifle_spread.brace_k } else { 1.0 };
     let kk = if k.is_finite() { m::max(0.0, k) } else { 1.0 };
@@ -362,11 +362,11 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
 pub(super) fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let r = player_aim(g, pl);
-    if !g.tune.aim_model || g.puppet.is_some() {
+    if !g.tune.aim_model {
         return 0.0;
     }
     let now = g.time;
-    g.pl[pl].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now });
+    g.arms[g.pl[pl].ch].aim.last_shot = Some(crate::aim::AimStateLastShot { t: now });
     r.spread
 }
 

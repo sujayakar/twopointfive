@@ -454,7 +454,7 @@ fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bool {
 /// may this man be walked off to a throw: no drill, door tool, wall charge or fight has him, and his order can be handed back
 pub(in crate::squad_orders) fn may_walk(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = crate::orders::squad_orders_of(g, seat, gd);
-    if !seat.orders.owners.is_empty() && crate::orders::nightbreach_owns(g, gd) { return false; }   // (`S.owners.some(o => o.owns(gd))`: the one row there is)
+    if !seat.orders.owners.is_empty() && crate::mission::has(g, gd) { return false; }   // (`S.owners.some(o => o.owns(gd))`: the one row there is)
     if seat.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(&gd)) || seat.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd)) { return false; }
     // (a room fight drives a teammate in 'patrol' with no yield stamp: the man it has a gun on is its `tgt`; a stack's or a stand-off's rear man keeps the squad's back)
     if g.gd[gd].state == crate::game::GuardState::Alert { return false; }
@@ -656,7 +656,7 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
     if !crate::effects::flags().dazzle { return Vec::new(); }
     let pts = stun_pts(rest, at);
     let mut out: Vec<String> = Vec::new();
-    if !crate::condition::down(g, g.pl[g.player].ch) && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[g.player].ch) {
         let c = g.pl[g.player].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
         if stun_in(g, &pts, eye, true) { out.push(String::from("you")); }

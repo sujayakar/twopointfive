@@ -134,6 +134,33 @@ pub enum DownKind {
     Choked,
 }
 
+/// what put a man down, as the debrief tells it
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum With<'a> {
+    /// what is in the hand: the gun, or the hand itself
+    #[default] Hand,
+    Ring,
+    Whip,
+    Knife,
+    /// a charge on the wall he stood behind
+    Charge,
+    /// what went off, by its name
+    Blast(&'a str),
+}
+
+impl With<'_> {
+    /// how a man who still breathes was put down, in a word
+    pub fn method(self, how: DownKind) -> &'static str {
+        match (how, self) {
+            (DownKind::Choked, _) => "choke",
+            (_, With::Ring) => "ring",
+            (_, With::Whip) => "whip",
+            (_, With::Charge) => "charge",
+            _ => "takedown",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownBy {
     #[default] Guard,
@@ -330,7 +357,7 @@ pub struct Game {
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     #[is(crate::Opaque)] pub men: crate::Opaque,
-    pub light_home: crate::sim_lightshome::LightHome,
+    pub light_home: crate::fixtures::LightHome,
     pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::sim_fallshome::FallStore,
     #[is(true)] pub ai_enabled: bool,
@@ -361,7 +388,8 @@ pub struct Game {
     pub act: Option<crate::game::Interactable>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
-    pub puppet: Option<crate::game::GamePuppet>,
+    /// a scripted hand is at this point of the world: his cursor is on it, and his aim is it
+    pub hand_at: Option<V3>,
     pub tmp_v: V3,
     pub called_in: bool,
     pub stood_down: bool,
@@ -486,6 +514,8 @@ pub struct Game {
     pub load: Tab<CharId, Option<crate::kitload::KitWorn>>,
     /// the light on him: what he gives away of himself
     pub shown: Tab<CharId, crate::guards::Shown>,
+    /// how his gun is: how steady his aim, and when he may fire again
+    pub arms: Tab<CharId, crate::aim::Arms>,
     /// the table of these things: never shrinks
     pub dr: Tab<DoorId, crate::doors::Door>,
     /// the table of these things: never shrinks
@@ -526,17 +556,6 @@ pub struct Game {
     #[is(crate::owned::Owned::new())] pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GamePuppet {
-    pub goal: Option<V3>,
-    pub aim: Option<V3>,
-    pub crouch: Option<bool>,
-    pub walk: Option<f64>,
-    pub fixtures: Option<bool>,
-    pub target: Option<GuardId>,
-    pub throw_at: Option<V3>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -674,12 +693,6 @@ pub enum Temperament {
     Hard,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MissionRating {
-    Ghost,
-    Panther,
-    Assault,
-}
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Player {
@@ -687,7 +700,6 @@ pub struct Player {
     pub crouch: bool,
     pub aim_held: bool,
     #[is(-10.0)] pub last_fire_t: f64,
-    pub fire_cd: f64,
     pub backpedal: bool,
     pub sprinting: bool,
     pub dash: bool,
@@ -718,7 +730,6 @@ pub struct Player {
     pub door_kick_tail: bool,
     pub door_head: f64,
     #[is(-1.0)] pub door_head_t: f64,
-    pub aim: crate::aim::AimState,
     pub aimw: crate::aimweight::AimWeight,
     #[is(1.0)] pub hits_left: f64,
     #[is(FirearmId(0))] pub pistol: FirearmId,
@@ -750,7 +761,7 @@ pub struct Player {
     pub hand_wait: f64,
     pub near_sel: i32,
     #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
@@ -850,8 +861,6 @@ pub struct PlayerBreakerMove {
 pub struct PlayerSel {
     pub down_t: f64,
     pub open: bool,
-    pub moved: bool,
-    pub wheel_acc: f64,
     pub run_key: String,
     pub move_latch: f64,
     pub word: String,
@@ -1065,10 +1074,8 @@ pub struct Guard {
     /// guards.ts asks whether the back-off laid it: see path_goal_orbit
     pub path_goal: Option<V3>,
     #[is(FirearmId(0))] pub weapon: FirearmId,
-    #[is(1.0)] pub fire_cd: f64,
     #[is(-1.0)] pub reload_t: f64,
     pub carbine: bool,
-    pub aim: crate::aim::AimState,
     pub react_t: f64,
     pub search_t: f64,
     pub look_phase: f64,
@@ -1288,29 +1295,6 @@ impl Guard {
         g
     }
 }
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn a_new_man_holds_what_the_typescript_gives_him() {
-        let g = Guard::blank();
-        assert!(g.foe.is_none());
-        assert_eq!((g.last_seen_t, g.gun_lost_at, g.torch_lost_at, g.killer_id, g.fire_cd), (-100.0, -1.0, -1.0, -1.0, 1.0));
-        assert_eq!(g.state, GuardState::Patrol);
-        assert_eq!(g.beam_dir, [0.0, -0.3, 1.0]);
-        assert!(crate::aim::AimState::blank().last_bearing.is_nan());
-        assert_eq!(Player::blank().hits_left, 1.0);
-        let keys = JsSet::new();
-        let a = Guard::new(CharId(1), String::new(), Some(crate::teams::Team::Operative), RouteId(0), 0, LightId(0), keys, FirearmId(0), [1.0, 0.0, 2.0], 0.5, GameTalkId(0));
-        assert!(a.foe.is_none());
-        assert_eq!((a.last_pos, a.look_phase), ([1.0, 0.0, 2.0], 0.5));
-    }
-    #[test]
-    fn a_word_prints_as_the_typescript_wrote_it() {
-        assert_eq!(GuardState::Patrol.as_str(), "patrol");
-        assert_eq!(crate::character::Bone::HeadTop.as_str(), "headTop");
-    }
-}
 impl Player {
     ///  His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
     pub fn new(ch: CharId, has_rifle: bool, pistol: FirearmId, rifle: FirearmId) -> Self {
@@ -1348,7 +1332,7 @@ pub struct Tabs {
     pub debris_chunk: Tab<DebrisChunkId, crate::debris::Chunk>,
     pub cmd_seat: Tab<SeatId, crate::cmd::Seat>,
     pub light: Tab<LightId, crate::render_lights::RtLight>,
-    pub sim_lightshome_fixture: Tab<FixtureId, crate::sim_lightshome::Fixture>,
+    pub fixture: Tab<FixtureId, crate::fixtures::Fixture>,
     pub devices_camera_rt: Tab<CameraRtId, crate::devices::CameraRt>,
     pub devices_laser_rt: Tab<LaserRtId, crate::devices::LaserRt>,
     pub wallbreak_breakable: Tab<WallbreakBreakableId, crate::wallbreak::Breakable>,

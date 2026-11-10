@@ -5,17 +5,6 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-// ---- what lights.rs answers: called, as blitz/lights.md's table says
-
-/// EVERY EVENT FROM OUTSIDE: a kind, a fixture where it has one, its numbers. The kind's own answer.
-fn light_in(g: &mut Game, kind: u32, t: Option<FixtureId>, a: f64, b: f64, c: f64, d: f64) -> u32 {
-    let i = match t {
-        Some(t) => g.tab.sim_lightshome_fixture[t].i as usize,
-        None => 0,
-    };
-    ::sim::lights::input(g.sim, kind, i, a, b, c, d)
-}
-
 // ---- the bodies
 
 /// Where a carried light is, given where its lens is drawn: pulled back along from→lens short of a wall or leaf.
@@ -79,9 +68,9 @@ fn their_mains(g: &crate::game::Game, gd: GuardId) -> bool {
 /// The re-arm's gate for one man: a trip he can undo, a few seconds old, and he alive, not held, within reach of the panel's front.
 pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let bp = g.level.breaker.pos;
-    if !(crate::sim_lightshome::mains_active(g)
-        && !crate::sim_lightshome::mains_permanent(g)
-        && g.time - crate::sim_lightshome::mains_since(g) > 3.0
+    if !(g.light_home.mains.active
+        && !g.light_home.mains.permanent
+        && g.time - g.light_home.mains.since > 3.0
         && !crate::condition::down(g, g.gd[gd].ch)
         && g.gd[gd].held.is_none())
     {
@@ -98,7 +87,6 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The mains' clocks and everything that goes with them, each tick, then the rows onto the lamps. The boxes' paint is the picture's.
 pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
-    let time = g.time;
     let mut near: Option<GuardId> = None;
     // the lights' mend (blitz/lights.md): no gate outside the walk, breaker_reset_near holds it
     let mut i = 0;
@@ -111,34 +99,32 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         i += 1;
     }
     let fumble = g.level.breaker.fumble.unwrap_or(2.2);
-    let hand_t = crate::sim_lightshome::mains_fix_t(g) + dt;
-    let ev = ::sim::lights::step(g.sim, time, dt, near.is_some(), fumble);
-    if ev & ::sim::lights::EV_RAN_OUT != 0 {
-        mains_back(g);
-    }
-    if ev & ::sim::lights::EV_HAND != 0 {
+    let hand_t = g.light_home.mains.fix_t + dt;
+    let ev = crate::fixtures::lights_step(g, dt, near.is_some(), fumble);
+    if ev.ran_out { mains_back(g); }
+    if ev.hand {
         let c = g.gd[near.unwrap()].ch;
         crate::handwork::lever_hands(g, c, hand_t, fumble);
     }
-    if ev & ::sim::lights::EV_FIXED != 0 {
+    if ev.fixed {
         crate::game::game_say(g, near.unwrap(), "breaker's back on", Some(true), None);
         mains_back(g);
     }
     // ---- THE PICTURE, FROM THE STATE. Written though the picture is its reader: the fog's memory of a lamp's face reads the boxes' `emissive`.
-    crate::sim_lightshome::light_home_paint(g);
+    crate::fixtures::light_home_paint(g);
     let mut k = 0;
     while k < g.targets.len() {
         let t = g.targets[k];
         k += 1;
-        let f = crate::sim_lightshome::fixture_factor(g, t);
-        if g.tab.sim_lightshome_fixture[t].lens.is_some() { crate::carlamps::car_lamp_paint(g, t); }
-        if g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Breaker {
-            let e: V3 = if crate::sim_lightshome::fixture_broken(g, t) { [0.0, 0.0, 0.0] } else if crate::sim_lightshome::mains_active(g) { [5.0, 0.3, 0.1] } else { [0.3, 4.0, 0.6] };
-            for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes[b].emissive = e; }
+        let f = g.tab.fixture[t].factor;
+        if g.tab.fixture[t].lens.is_some() { crate::carlamps::car_lamp_paint(g, t); }
+        if g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker {
+            let e: V3 = if g.tab.fixture[t].broken { [0.0, 0.0, 0.0] } else if g.light_home.mains.active { [5.0, 0.3, 0.1] } else { [0.3, 4.0, 0.6] };
+            for bi in g.tab.fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes[b].emissive = e; }
             continue;
         }
-        let base = g.tab.sim_lightshome_fixture[t].base_emissive;
-        for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() {
+        let base = g.tab.fixture[t].base_emissive;
+        for bi in g.tab.fixture[t].boxes.clone() {
             let b = g.engine.world.statics[bi as usize];
             g.tab.boxes[b].emissive = [base[0] * f, base[1] * f, base[2] * f];
             g.tab.boxes[b].mark_gain = Some(f);
@@ -148,11 +134,7 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
 
 /// Trip the mains: everything fed from the breaker goes dark, the men get edgy, the nearest goes to check it.
 pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::lighting::SetBlackoutCause) {
-    let took = light_in(g, ::sim::lights::IN_TRIP, None, g.time, seconds, 0.0, 0.0);
-    if took == 0 {
-        return;
-    }
-    let fresh = took == 3;
+    let Some(fresh) = crate::fixtures::mains_trip(g, seconds) else { return };
     let bp = g.level.breaker.pos;
     crate::audio_iface::game_audio_like_play(g, "powerDown", Some(bp), Some(1.0), None);
     crate::audio_iface::game_audio_like_play(g, "powerDown", None, Some(0.35), None);
@@ -217,9 +199,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
 
 /// The mains back, if they were out.
 pub fn end_blackout(g: &mut crate::game::Game) {
-    if light_in(g, ::sim::lights::IN_BACK, None, g.time, 0.0, 0.0, 0.0) != 0 {
-        mains_back(g);
-    }
+    if crate::fixtures::mains_restore(g) { mains_back(g); }
 }
 
 /// The mains have come back (the module has said so): what goes with it.
@@ -248,7 +228,7 @@ pub fn light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate:
         crate::lighting::LightEventCause::Shot => crate::game::GameEventCause::Shot,
         crate::lighting::LightEventCause::Ocp => crate::game::GameEventCause::Ocp,
     };
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
+    let pos = g.tab.fixture[t].pos;
     let time = g.time;
     let serial = g.serial();
     g.events.push(crate::game::GameEvent {
@@ -328,9 +308,9 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
             return;
         }
     };
-    let kind = g.tab.sim_lightshome_fixture[t].kind;
-    let tpos = g.tab.sim_lightshome_fixture[t].pos;
-    if kind == crate::sim_lightshome::FixtureKind::Breaker {
+    let kind = g.tab.fixture[t].kind;
+    let tpos = g.tab.fixture[t].pos;
+    if kind == crate::fixtures::FixtureKind::Breaker {
         let c = g.pl[p].ch;
         let pos = g.ch[c].pos;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
@@ -347,7 +327,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
             crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
             return;
         }
-        if crate::sim_lightshome::mains_active(g) {
+        if g.light_home.mains.active {
             crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
             return;
         }
@@ -358,19 +338,19 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         crate::game::game_set_blackout(g, secs, crate::game::GameSetBlackoutCause::Ocp);
         return;
     }
-    let name = g.tab.sim_lightshome_fixture[t].name.clone();
-    if crate::sim_lightshome::fixture_factor(g, t) <= 0.0 {
+    let name = g.tab.fixture[t].name.clone();
+    if g.tab.fixture[t].factor <= 0.0 {
         return;
     }
     crate::weapons::ocp_use(&mut g.pl[p].ocp);
     let muzzle = g.ch[g.pl[p].ch].muzzle;
     crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
     let until = g.time + g.tune.ocp_duration;
-    light_in(g, ::sim::lights::IN_BLIND, Some(t), until, 0.0, 0.0, 0.0);
-    if kind != crate::sim_lightshome::FixtureKind::Device {
+    g.tab.fixture[t].blind_until = until;
+    if kind != crate::fixtures::FixtureKind::Device {
         crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Ocp), None);
     }
-    let tg = crate::chronicle::FixtureNameTg { name, group: g.tab.sim_lightshome_fixture[t].group.clone() };
+    let tg = crate::chronicle::FixtureNameTg { name, group: g.tab.fixture[t].group.clone() };
     let what = crate::chronicle::fixture_name(&tg);
     crate::chronicle::chron_ocp(g, &what, tpos);
     crate::audio_iface::game_audio_like_play(g, "lightOff", Some(tpos), Some(0.7), None);
@@ -381,8 +361,8 @@ pub fn set_group(g: &mut crate::game::Game, group: &str, on: bool) {
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
-        if g.tab.sim_lightshome_fixture[t].group == group {
-            light_in(g, ::sim::lights::IN_ON, Some(t), if on { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0);
+        if g.tab.fixture[t].group == group {
+            g.tab.fixture[t].on = on;
         }
         i += 1;
     }
@@ -393,11 +373,11 @@ pub fn repair_lights(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
-        light_in(g, ::sim::lights::IN_MEND, Some(t), 0.0, 0.0, 0.0, 0.0);
-        light_in(g, ::sim::lights::IN_BLIND, Some(t), -1.0, 0.0, 0.0, 0.0);
+        g.tab.fixture[t].broken = false;
+        g.tab.fixture[t].blind_until = -1.0;
         i += 1;
     }
-    if crate::sim_lightshome::mains_active(g) {
+    if g.light_home.mains.active {
         crate::game::game_end_blackout(g);
     }
 }

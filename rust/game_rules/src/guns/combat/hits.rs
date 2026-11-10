@@ -99,28 +99,23 @@ pub fn body_hit(g: &mut crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f6
 
 // ---------------------------------------------------------------- a man goes down
 
-/// A man goes down: `how` he went and `by` whose hand; `quiet` is the physical side.
-pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>) {
-    kill_guard_by(g, gd, dir, quiet, how, by, line, None)
-}
-
-/// `kill_guard`, with what did it when that is not the gun in the man's hand (a blast names what went off).
-pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, line: Option<&str>, weapon: Option<&str>) {
+/// A man goes down: `how` he went, `by` whose hand, `with` what; `quiet` is the physical side.
+pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option<bool>, how: Option<crate::game::DownKind>, by: Option<crate::game::DownBy>, with: crate::game::With) {
     use crate::game::{DownBy, DownKind, GuardState};
     let quiet = quiet.unwrap_or(false);
     let how = how.unwrap_or(if quiet { DownKind::Struck } else { DownKind::Shot });
     let by = by.unwrap_or(DownBy::Player);
-    if g.gd[gd].civ.is_some() { crate::civilians::civilian_down(g, gd, dir, quiet, how, by, line, weapon); return; }
+    if g.gd[gd].civ.is_some() { crate::civilians::civilian_down(g, gd, dir, quiet, how, by, with); return; }
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     if crate::rails::rails_spare_2(g, gd) { return; }
     g.gd[gd].script = None;
     let held = crate::guards::in_hand(g, gd);
     if by == DownBy::Player {
         let team = g.gd[gd].team;
-        if !(crate::friendlyfire::ff_live(g) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
+        if !(!crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
             crate::mission::tally(g, if how == DownKind::Shot { crate::mission::TallyK::Kills } else { crate::mission::TallyK::Knockouts });
         }
-        crate::chronicle::chron_down_by(g, gd, how, line, weapon);
+        crate::chronicle::chron_down(g, gd, how, with);
     }
     crate::guards::witness_kill(g, gd, how, by);
     crate::morale::morale_man_down(g, gd);

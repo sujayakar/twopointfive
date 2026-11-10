@@ -9,7 +9,7 @@ use crate::cmd::PlayerCmd;
 use crate::game::{Game, GuardState};
 use crate::ids::*;
 use crate::scene_boxes::{box_flag, MakeBoxP};
-use crate::sim_lightshome::{self as home, light_in, FixtureDef, FixtureDefKind, FixtureKind};
+use crate::fixtures::{self as home, Fixture, FixtureKind};
 use crate::{js, m};
 use alloc::boxed::Box;
 use alloc::string::String;
@@ -122,18 +122,17 @@ pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
 pub(super) fn quiet_inside(g: &mut Game, st: &mut KitStage, k: f64, blade: f64) {
     st.share = k;
     st.a.blade = blade;
-    let li = light_in();
     for a in &st.lit_in {
-        home::light_home_in(g, li.on, Some(a.t), Some(1.0), None, None, None);
-        home::light_home_in(g, li.base, Some(a.t), Some(a.intensity * k), None, None, None);
-        g.tab.sim_lightshome_fixture[a.t].base_emissive = [a.emissive[0] * k, a.emissive[1] * k, a.emissive[2] * k];
+        g.tab.fixture[a.t].on = true;
+        g.tab.fixture[a.t].base_intensity = a.intensity * k;
+        g.tab.fixture[a.t].base_emissive = [a.emissive[0] * k, a.emissive[1] * k, a.emissive[2] * k];
     }
     if let Some(o) = st.inside { let l = &mut g.tab.light[o]; l.intensity = QK.own.intensity * blade; l.peak_intensity = l.intensity; }
 }
 pub(super) fn pool_sync(g: &mut Game, st: &KitStage) {
     let Some(p) = st.pool else { return };
     let i = st.fixture.and_then(|f| g.engine.world.statics.iter().position(|&b| b == f));
-    let row = &mut g.tab.sim_lightshome_fixture[p];
+    let row = &mut g.tab.fixture[p];
     row.boxes = i.map_or(Vec::new(), |i| alloc::vec![i as f64]);
     if st.porch.is_some() { row.light = st.porch; }
 }
@@ -301,8 +300,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     crate::fogofwar::fog_of_war_reset(g);
     let _ = park(g);
     let targets: Vec<FixtureId> = g.targets.clone();
-    let lit0: Vec<FixtureId> = if q { targets.iter().copied().filter(|&t| home::fixture_on(g, t)).collect() } else { Vec::new() };
-    let li = light_in();
+    let lit0: Vec<FixtureId> = if q { targets.iter().copied().filter(|&t| g.tab.fixture[t].on).collect() } else { Vec::new() };
     if room <= 0.0 {
         let list: Vec<LightId> = g.engine.lights.lights.clone();
         let mut groups: Vec<String> = Vec::new();
@@ -311,7 +309,7 @@ fn place(g: &mut Game, st: &mut KitStage) {
     }
     // (by day the way's own lamps are out too, each by its own switch: a restart puts the level's switches back as authored, so every staging)
     if !st.day_out.is_empty() {
-        for &t in &targets { let r = &g.tab.sim_lightshome_fixture[t]; if r.kind == FixtureKind::Analytic && st.day_out.iter().any(|n| *n == r.name) { home::light_home_in(g, li.on, Some(t), Some(0.0), None, None, None); } }
+        for &t in &targets { let r = &g.tab.fixture[t]; if r.kind == FixtureKind::Analytic && st.day_out.iter().any(|n| *n == r.name) { g.tab.fixture[t].on = false; } }
     }
     // (the quiet picture's own lamps: one pool and no other light on the team's side; the room behind the door burns low)
     if q {
@@ -323,14 +321,14 @@ fn place(g: &mut Game, st: &mut KitStage) {
         let wm = plan.wall.back - KIT_PLAN.lit_in;
         let wedge: V3 = [mid[0] + n[0] * wm, KIT_PLAN.lit_y, mid[1] + n[1] * wm];
         for &t in &targets {
-            let r = &g.tab.sim_lightshome_fixture[t];
+            let r = &g.tab.fixture[t];
             let Some(l) = r.light else { continue };
             if r.kind != FixtureKind::Analytic || g.tab.light[l].kind == 2.0 { continue; }
             let (pos, range, name) = (r.pos, g.tab.light[l].range, r.name.clone());
             if out_of(pos) >= plan.wall.back {
-                if home::fixture_on(g, t) && dist(pos, foot) <= range { home::light_home_in(g, li.on, Some(t), Some(0.0), None, None, None); st.out.push(name); }
+                if g.tab.fixture[t].on && dist(pos, foot) <= range { g.tab.fixture[t].on = false; st.out.push(name); }
             } else if lit0.contains(&t) && dist(pos, wedge) <= m::min(range, KIT_PLAN.lit_reach) {
-let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_lightshome_fixture[t].base_emissive);
+let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].base_emissive);
                 st.lit_in.push(LampAs { t, intensity, emissive });
             }
         }
@@ -422,8 +420,8 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     if q {
         for k in 0..st.lit_in.len() {
             let t = st.lit_in[k].t;
-            let Some(l) = g.tab.sim_lightshome_fixture[t].light else { continue };
-            let (on, broken, base) = (home::fixture_on(g, t), home::fixture_broken(g, t), home::fixture_base_intensity(g, t));
+            let Some(l) = g.tab.fixture[t].light else { continue };
+            let (on, broken, base) = (g.tab.fixture[t].on, g.tab.fixture[t].broken, g.tab.fixture[t].base_intensity);
             g.tab.light[l].enabled = on && !broken;
             g.tab.light[l].intensity = base;
             home::light_home_feed(g, l);
@@ -476,13 +474,12 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         if q {
             let c = porch_color;
             let porch = st.porch.unwrap();
-            let mut d = FixtureDef::default();
-            d.name = String::from("kitview_porch"); d.group = String::from("kitview"); d.kind = FixtureDefKind::Analytic; d.pos = g.tab.light[porch].pos; d.light = Some(porch);
+            let mut d = Fixture::blank();
+            d.name = String::from("kitview_porch"); d.group = String::from("kitview"); d.kind = FixtureKind::Analytic; d.pos = g.tab.light[porch].pos; d.light = Some(porch);
             d.base_emissive = [c[0] * porch_glow, c[1] * porch_glow, c[2] * porch_glow];
             d.base_intensity = porch_i;
-            d.on = true; d.disabled_until = -1.0; d.factor = 1.0; d.interactive = true;
-            let p = home::light_home_add(g, &d);
-            home::light_home_in(g, li.authored, Some(p), Some(1.0), None, None, None);
+            d.on = true; d.factor = 1.0; d.interactive = true;
+            let p = home::fixture_add(g, d);
             st.pool = Some(p);
             g.targets.push(p);
             crate::game::game_stand_lights(g);
@@ -549,6 +546,9 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     t.body = m::round(K.body_rate * R * 1000.0) / 1000.0;
     t.body_acc = m::round(K.body_rate * R / K.ramp * 100.0) / 100.0;
     for x in g.staged.team.clone() { g.gd[x].god = true; }
+    // (a flash at the door is there to be seen: the team's own, Sam's too, finds none of them)
+    g.k.samstun.own_seen = false;
+    g.k.flash.own_m = 0.0;
     // (the posing step walked the parked men back inside the world's edge)
     let _ = park(g);
     if !st.still { acts::live(g, st); }
@@ -701,6 +701,7 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
     if st.still { home_men(g, &mut st); }
     else {
         acts::before_step(g, &mut st, cmd);
+        super::walk::sam_hand(g, &mut st, cmd);
         // (Sam's own keys, for this tick; the cursor where the director asked for it)
         for k in st.a.press.drain(..) { cmd.pressed.push(String::from(k)); }
         cmd.clicked = st.a.clicked;
@@ -813,7 +814,7 @@ pub fn open(g: &mut Game, who: u32, field: &str) {
 pub fn cards(g: &mut Game, size: i32) {
     let Some(mut st) = take(g) else { return };
     let size = if (0..=4).contains(&size) && !staged_way_of(g, st.asks_none).fixed { Some(size as u32) } else { None };
-    if let Some(n) = size { if crate::rescue::rescue_up(g) { g.k.rescue.squad = n as f64; } else { g.k.nightbreach.squad = n as f64; } }
+    if let Some(n) = size { (g.k.rescue.squad, g.k.nightbreach.squad) = (n as f64, n as f64); }   // (whichever is up stages so many)
     if size.is_some() { st.size = size; }
     if st.still { st.due = true; } else { super::cards::told(g, &mut st, size); }
     g.kit_stage = Some(st);

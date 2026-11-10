@@ -276,7 +276,7 @@ impl Events {
             let (left, all) = (t::item_emit_t(g, i), game::combat::can_params(g).canister_duration);
             self.goes("smokeHiss", t::item_serial(g, i) as u32, game::v3::add(t::item_pos(g, i), [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
         }
-        let dark = game::sim_lightshome::mains_active(g);
+        let dark = g.light_home.mains.active;
         for (ix, h) in g.level.hums.iter().flatten().enumerate().filter(|(_, h)| !dark || h.mains == Some(false)) { self.goes(h.kind.as_str(), ix as u32, h.pos, h.level, 1.0, [FOREVER; 2], h.radius); }
     }
     fn goes(&mut self, name: &str, id: u32, at: [f64; 3], gain: f64, hard: f64, [age, left]: [f64; 2], reach: f64) {
@@ -345,7 +345,7 @@ impl Events {
 fn tension(g: &Game) -> f64 {
     use game::game::GuardState as S;
     let level = game::guards::escalation_of(g);
-    let mut x = game::m::max(if game::sim_lightshome::mains_active(g) { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
+    let mut x = game::m::max(if g.light_home.mains.active { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
     for &gd in &g.guards {
         let d = &g.gd[gd];
         let own = d.team == game::teams::Team::Operative;

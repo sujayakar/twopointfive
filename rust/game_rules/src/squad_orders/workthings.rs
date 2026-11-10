@@ -19,8 +19,8 @@ fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c,
 fn pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// the mains' two flags, `bo.active` and `bo.permanent`
 fn mains(g: &Game) -> (bool, bool) {
-    let active = crate::sim_lightshome::mains_active(g);
-    let permanent = crate::sim_lightshome::mains_permanent(g);
+    let active = g.light_home.mains.active;
+    let permanent = g.light_home.mains.permanent;
     (active, permanent)
 }
 /// `t.at`, which every arm of the union has
@@ -145,7 +145,7 @@ pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 /// THE TICK'S LIST OF THEM, for the seat standing: read afresh when what places them changes and once a second besides
 pub fn work_things_keep(g: &mut crate::game::Game) {
     let (active, permanent) = mains(g);
-    let drive = g.mission.stage == crate::game::MissionStage::Drive && g.puppet.is_none();
+    let drive = g.mission.stage == crate::game::MissionStage::Drive;
     let live = !(active && permanent);
     let bp = g.level.breaker.pos;
     let rf = g.level.errand.front;

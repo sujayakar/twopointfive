@@ -169,7 +169,7 @@ pub fn take_fall(g: &mut crate::game::Game, gd: GuardId, kind: Option<crate::clo
     use crate::close::CloseKind;
     let style = if how == Some(TakeFallHow::Choke) {
         FallStyle::Sink
-    } else if how == Some(TakeFallHow::Whip) || how == Some(TakeFallHow::Kill) {
+    } else if how == Some(TakeFallHow::Whip) {
         FallStyle::Fold
     } else if kind == Some(CloseKind::Seat) {
         FallStyle::Slump
@@ -218,7 +218,6 @@ pub fn partner_fall(g: &mut crate::game::Game, foe: GuardId, front: bool, mate: 
 
 /// Once a frame: the hold's fallback words, and who breathes: every man and civilian out cold.
 pub fn takedown_tick(g: &mut crate::game::Game) {
-    g.m.character.hold_show.kill = true;
     g.m.character.hold_show.beats = true;
     let mut n: i32 = 0;
     for i in 0..g.guards.len() {
@@ -353,7 +352,7 @@ mod tests {
         assert!(g.ch[c_falling].breathe.is_none() && g.ch[c_killed].breathe.is_none());
         assert_eq!(g.ch[c_struck].breathe.unwrap().breath_hz.to_bits(), g.k.takedown.breath_hz.to_bits());
         assert_eq!(g.stats.takedown.breathing, 2);
-        assert!(g.m.character.hold_show.kill && g.m.character.hold_show.beats);
+        assert!(g.m.character.hold_show.beats);
     }
 
     #[test]

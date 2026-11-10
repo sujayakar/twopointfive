@@ -1,6 +1,6 @@
 //! WHAT A SEAT'S HUD IS TOLD OF ITS OWN KEY AND OF THE FLOOR (`view.interact`, `alarm`, `stage`, `look`; rust/game_rules/src/sam/interact/hud.rs): the overlay draws these and asks nothing of a game.
 use game::game::{Interactable, InteractableKind as K};
-use game::view::{BackKey, ListRow, Stage, ThingKind, TickView};
+use game::view::{BackKey, Stage, ThingKind, TickView};
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
@@ -30,7 +30,6 @@ fn at_door(p: &mut Play, door: [f64; 2]) {
     p.point_at(door);
     p.run(0.2);
 }
-fn labels(rows: &[ListRow]) -> Vec<String> { rows.iter().map(|r| r.label.clone()).collect() }
 
 /// A FAILURE MEANS: a line of a row is parted otherwise than as it was authored: a hint read as a key, a key's other way lost.
 #[test]
@@ -55,25 +54,12 @@ fn the_list_is_the_rows_the_tick_built_and_lights_what_the_key_does() {
         at_door(&mut p, door);
         let I = p.view().interact;
         let hv = p.g.hover.clone().expect("a door a stride away is the highlight");
-        assert!(I.corner, "seed {seed}: no puppet");
         assert_eq!(I.rows[0].label, hv.line1, "seed {seed}");
         assert_eq!(I.lit, 0.0, "seed {seed}: what the key would do is the line that is lit: {I:?}");
         assert_eq!(I.rows[0].kind, ThingKind::Door, "seed {seed}");
         assert!(I.rows[0].in_reach && I.rows[0].dist.is_none() && !I.rows[0].opts.is_empty() && !I.rows[0].opts[0].key.is_empty(), "seed {seed}: {:?}", I.rows[0]);
         let R = I.ring.expect("the ring is on the door");
         assert_eq!((R.kind, R.at), (ThingKind::Door, hv.pos), "seed {seed}");
-        // the whole list, as a puppet keeps it: every row in the tick's order, and the highlight moves with him
-        p.g.puppet = Some(Default::default());
-        let n = p.g.nearby.len();
-        let I = p.view().interact;
-        assert!(!I.corner, "seed {seed}");
-        assert_eq!(labels(&I.rows), p.g.nearby.iter().map(|r| r.line1.clone()).collect::<Vec<_>>(), "seed {seed}");
-        assert!(I.rows.iter().skip(1).all(|r| r.cont == (r.label == I.rows[0].label)), "seed {seed}: rows of one thing are one heading: {:?}", I.rows);
-        if n > 1 {
-            let pl = p.g.player; p.g.pl[pl].near_sel = 1; game::player::pick_hover(&mut p.g);
-            assert_eq!(p.view().interact.lit, 1.0, "seed {seed}: the highlight is the tick's");
-        }
-        p.g.puppet = None;
     }
 }
 

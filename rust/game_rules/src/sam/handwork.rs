@@ -176,7 +176,6 @@ fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
 
 /// What Sam's hands are on, if a verb of his that plants him is running.
 pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
-    if g.puppet.is_some() { return None; }
     let pl = g.player;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
@@ -196,7 +195,6 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
 
 /// The 'breaker' rows: his hand goes to the lever and throws it. True = taken here.
 pub fn breaker_start(g: &mut crate::game::Game, on: bool) -> bool {
-    if g.puppet.is_some() { return false; }
     let pl = g.player;
     if g.pl[pl].breaker_move.is_some() { return true; }
     g.pl[pl].breaker_move = Some(crate::game::PlayerBreakerMove { on, t: 0.0, thrown: false });
@@ -217,7 +215,7 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
         || g.pl[pl].dragging.is_some()
         || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
         || v3::dist_xz(bp, g.ch[c].pos) > 1.6
-        || (crate::sim_lightshome::mains_active(g) && crate::sim_lightshome::mains_permanent(g))
+        || (g.light_home.mains.active && g.light_home.mains.permanent)
     {
         g.pl[pl].breaker_move = None;
         return;
@@ -235,8 +233,8 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
         mv.thrown = true;
         g.pl[pl].breaker_move = Some(mv);
         if mv.on {
-            if crate::sim_lightshome::mains_active(g) && !crate::sim_lightshome::mains_permanent(g) { crate::game::game_end_blackout(g); }
-        } else if !crate::sim_lightshome::mains_active(g) {
+            if g.light_home.mains.active && !g.light_home.mains.permanent { crate::game::game_end_blackout(g); }
+        } else if !g.light_home.mains.active {
             crate::game::game_set_blackout(g, 86400.0, crate::game::GameSetBlackoutCause::Hand);
         }
     }

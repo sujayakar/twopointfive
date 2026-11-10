@@ -412,10 +412,10 @@ pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option
 }
 
 /// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.
-pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<GuardId>, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
+pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, into_man: bool, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let t = now_of(g);
-    if hit_guard.is_some() { g.chronicle.counts.shots_near_men += 1.0; return None; }
+    if into_man { g.chronicle.counts.shots_near_men += 1.0; return None; }
     let mut near = false;
     let mut nearest = String::new();
     {
@@ -448,7 +448,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<Gua
 
 /// A fixture shot out.
 pub fn chron_light_shot(g: &mut crate::game::Game, tg: FixtureId) -> Option<crate::chronicle::ChronEvent> {
-    let row = &g.tab.sim_lightshome_fixture[tg];
+    let row = &g.tab.fixture[tg];
     let name = fixture_name(&FixtureNameTg { name: row.name.clone(), group: row.group.clone() });
     let pos = row.pos;
     live_row_n(g, ChronKind::LightShot, ChronCountKey::LightsShot, row_data(vec![("name", tx(&name))]), Some(pos))
@@ -520,43 +520,23 @@ pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chroni
 }
 
 /// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').
-pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
-    chron_down_by(g, gd, how, line, None)
-}
-
-/// `chron_down`, with what did it when that is not the gun in the hand.
-pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>, by: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
-    use crate::game::DownKind;
-    let l = line.unwrap_or("");
-    let callsign = man_callsign(g, gd);
+pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, with: crate::game::With) -> Option<crate::chronicle::ChronEvent> {
+    use crate::game::{DownKind, With};
+    let who = ("who", tx(&man_callsign(g, gd)));
     let p = man_pos(g, gd);
-    if how == DownKind::Shot {
-        if let Some(w) = by { return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)); }
-        let weapon = if l.starts_with("knife") {
-            String::from("knife")
-        } else {
+    if how != DownKind::Shot { return live_row(g, ChronKind::Ko, row_data(vec![who, ("method", tx(with.method(how)))]), Some(p)); }
+    let weapon = match with {
+        With::Blast(w) => return live_row(g, ChronKind::Kill, row_data(vec![who, ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)),
+        With::Knife => String::from("knife"),
+        _ => {
             let man = crate::seats::man_here(g, &crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
-                Some(gun) => {
-                    crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap())
-                }
+                Some(gun) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()),
                 None => String::from("a round"),
             }
-        };
-        return live_row(g, ChronKind::Kill, row_data(vec![("who", tx(&callsign)), ("weapon", ChronEventDataValue::Text(weapon))]), Some(p));
-    }
-    let method = if how == DownKind::Choked {
-        "choke"
-    } else if l.starts_with("ring") {
-        "ring"
-    } else if l.contains("whip") {
-        "whip"
-    } else if l.ends_with("behind the wall when it went") {
-        "charge"
-    } else {
-        "takedown"
+        }
     };
-    live_row(g, ChronKind::Ko, row_data(vec![("who", tx(&callsign)), ("method", tx(method))]), Some(p))
+    live_row(g, ChronKind::Kill, row_data(vec![who, ("weapon", ChronEventDataValue::Text(weapon))]), Some(p))
 }
 
 /// A body discovered: whose, by whom, found breathing or not.

@@ -3,7 +3,6 @@
 pub use ::game_types::air_dust::types;
 pub use types::*;
 use crate::game::Game;
-use alloc::vec::Vec;
 
 const AIR_CELL: f64 = crate::scene_air_grid::AIR_CELL;
 
@@ -22,11 +21,6 @@ fn rule_args(g: &Game) -> (usize, i32, u32) {
     (c.slot as usize, c.rule_set as i32, c.rule_panes as u32)
 }
 
-/// A step's tale, from the module's scratch: how far the field moved, the steps taken, the lines asked, the open ways the last step found.
-fn said() -> Vec<f64> {
-    crate::sim_weatherhome::wx_out(4.0)
-}
-
 /// The field stands: built now if it is owed.
 pub(super) fn air_dust_ready(g: &mut crate::game::Game) {
     air_dust_ensure(g);
@@ -40,14 +34,14 @@ fn air_dust_on(g: &crate::game::Game) -> bool {
 /// A new one, against the game as it stands; the caller stores it at `g.air_dust`.
 pub fn air_dust_new(g: &mut crate::game::Game) -> crate::air_dust::AirDust {
     let (w, h) = (crate::scene_air_grid::air_w(), crate::scene_air_grid::air_h());
-    let (cap_w, cap_h) = (::sim::weather_cap(2) as f64, ::sim::weather_cap(3) as f64);
+    let (cap_w, cap_h) = (::sim::air::AIR_W as f64, ::sim::air::AIR_H as f64);
     let min = crate::scene_world::world().min;
     if cap_w != w || cap_h != h || AIR_CELL != 0.5 || min[0] != 0.0 || min[2] != 0.0 {
         panic!("the dust's plan is {} × {}, and rust/sim/src/air.rs holds {} × {}", w, h, cap_w, cap_h);
     }
     air(g).s.fill(1.0); // (a block's zeros are no air at all)
     let was = core::mem::replace(&mut g.air_dust, AirDust::blank());
-    if crate::weather::weather_kind(g).is_some() {
+    if g.weather.kind_now.is_some() {
         air_dust_ensure(g);
     }
     core::mem::replace(&mut g.air_dust, was)
@@ -67,22 +61,22 @@ fn air_dust_ensure(g: &mut crate::game::Game) {
 }
 
 /// A tale's count into the book.
-fn air_dust_tally(g: &mut crate::game::Game, t: &[f64]) {
+fn air_dust_tally(g: &mut crate::game::Game, t: &::sim::air::Said) {
     let st = &mut g.air_dust.stats;
-    st.steps += t[1];
-    st.probes += t[2];
-    if t[1] > 0.0 {
-        st.open = t[3]; // (the open ways the last step found: a tick with no step leaves them)
+    st.steps += t.steps;
+    st.probes += t.probes;
+    if t.steps > 0.0 {
+        st.open = t.open; // (the open ways the last step found: a tick with no step leaves them)
     }
 }
 
 /// The field from nothing, in the module: every roofed cell at the leak, every opening asked, then run on until it stands still.
 fn air_dust_build(g: &mut crate::game::Game) {
-    let fog = crate::weather::weather_fog(g);
-    let has = crate::weather::weather_kind(g).is_some() && fog.is_some();
+    let fog = g.weather.fog_spec;
+    let has = g.weather.kind_now.is_some() && fog.is_some();
     let on = has; // (AIRDUST.on is settled true on the page)
     let stamp = ::sim::state::stamp(g.sim);
-    ::sim::air_begin(g.sim, stamp, if on { 1 } else { 0 });
+    ::sim::air_begin(g.sim, stamp, on, &g.weather.roof_rects);
     g.air_dust.drift = 0.0;
     let leak = match (has, fog) {
         (true, Some(f)) => f.leak,
@@ -90,7 +84,7 @@ fn air_dust_build(g: &mut crate::game::Game) {
             if g.air_dust.seeded {
                 g.air_dust.seeded = false;
                 let stamp = ::sim::state::stamp(g.sim);
-                ::sim::air_clear(g.sim, stamp);
+                ::sim::air_clear(g.sim, stamp, &g.weather.roof_rects);
             }
             return;
         }
@@ -98,7 +92,7 @@ fn air_dust_build(g: &mut crate::game::Game) {
     g.air_dust.seeded = true;
     crate::weather::weather_roofs_now(g);
     let stamp = ::sim::state::stamp(g.sim);
-    ::sim::air_seed(g.sim, stamp, leak);
+    ::sim::air_seed(g.sim, stamp, leak, &g.weather.roof_rects);
     g.air_dust.stats.roofed = air_read(g).n_cells;
     g.air_dust.stats.edges = air_read(g).n_edges;
     if on {
@@ -106,8 +100,7 @@ fn air_dust_build(g: &mut crate::game::Game) {
             crate::scene_collision::rule_open(g);
             let (w, set, ask) = rule_args(g);
             let stamp = ::sim::state::stamp(g.sim);
-            ::sim::air_settle(g.sim, stamp, w, set, ask, &g.k);
-            let t = said();
+            let t = ::sim::air_settle(g.sim, stamp, w, set, ask, &g.weather.roof_rects, &g.k);
             air_dust_tally(g, &t);
         });
     }
@@ -124,9 +117,8 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = rule_args(g);
         let stamp = ::sim::state::stamp(g.sim);
-        ::sim::air_update(g.sim, stamp, w, set, ask, dt, &g.k);
-        let t = said();
-        g.air_dust.drift += t[0];
+        let t = ::sim::air_update(g.sim, stamp, w, set, ask, dt, &g.weather.roof_rects, &g.k);
+        g.air_dust.drift += t.moved;
         air_dust_tally(g, &t);
     });
     if g.air_dust.drift > SEND {

@@ -3,7 +3,6 @@
 // no line per man of the squad, no counts of what the squad carries, no alternative under a key's line.
 //
 // This file is the reduction, with no page under it (ui/overlay.ts feeds it the rows it would have listed and draws what comes back).
-// Whether the panel is these three things at all is the view's (`interact.corner`).
 
 import type { ThingKind } from '../view/read';
 

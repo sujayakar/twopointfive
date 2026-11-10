@@ -82,39 +82,28 @@ pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
 
 // ---- private helpers
 
-/// SLOT_AMOUNT[k](m): the table as a call by its key; a key it does not hold panics, as the call of undefined throws.
-pub(super) fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit::MemberKit) -> f64 {
+/// How many of a thing a card carries.
+pub(in crate::outfit) fn amount(g: &Game, k: Thing, m: &MemberKit) -> f64 {
+    let one = |has: bool| if has { 1.0 } else { 0.0 };
     match k {
-        "smoke" => slot_amount::smoke(m),
-        "bangs" => slot_amount::bangs(m),
-        "frags" => slot_amount::frags(m),
-        "shells" => slot_amount::shells(m),
-        "charges" => slot_amount::charges(m),
-        "walls" => slot_amount::walls(m),
-        "shotgun" => slot_amount::shotgun(g, m),
-        "hammer" => slot_amount::hammer(g, m),
-        "cams" => slot_amount::cams(g, m),
-        "rings" => slot_amount::rings(g, m),
-        "wand" => slot_amount::wand(g, m),
-        _ => panic!("SLOT_AMOUNT has no row {}", k),
+        // with the big slot on the shotgun is what is in it, never the gun
+        Thing::Shotgun => one(if g.k.bigslot.on { m.big == BigKit::Shotgun } else { m.weapon == KitWeapon::Shotgun }),
+        Thing::Hammer => one(g.k.bigslot.on && m.big == BigKit::Hammer),
+        Thing::Wand => one(m.wand),
+        Thing::Rings if !tree_up(g) => 0.0,
+        _ => m.n(k),
     }
 }
 
-/// SLOT_PUT[k](m, n, d): the table as a call by its key; `d`, what he is issued, is read by the shotgun alone.
-pub(super) fn slot_put_of(g: &mut crate::game::Game, k: &str, m: &mut crate::kit::MemberKit, n: f64, d: &crate::kit::MemberKit) {
+/// A card put to `n` of a thing; `d` is what he is issued: a shotgun given up is the issued gun again.
+pub(in crate::outfit) fn put(g: &Game, k: Thing, m: &mut MemberKit, n: f64, d: &MemberKit) {
+    let big = |m: &mut MemberKit, tool: BigKit| if n > 0.0 { m.big = tool; } else if m.big == tool { m.big = BigKit::None; };
     match k {
-        "smoke" => slot_put::smoke(m, n),
-        "bangs" => slot_put::bangs(m, n),
-        "frags" => slot_put::frags(m, n),
-        "shells" => slot_put::shells(m, n),
-        "charges" => slot_put::charges(m, n),
-        "walls" => slot_put::walls(m, n),
-        "wand" => slot_put::wand(m, n),
-        "cams" => slot_put::cams(m, n),
-        "rings" => slot_put::rings(m, n),
-        "shotgun" => slot_put::shotgun(g, m, n, d),
-        "hammer" => slot_put::hammer(g, m, n),
-        _ => panic!("SLOT_PUT has no row {}", k),
+        Thing::Wand => m.wand = n > 0.0,
+        Thing::Hammer => if g.k.bigslot.on { big(m, BigKit::Hammer) },
+        Thing::Shotgun if g.k.bigslot.on => big(m, BigKit::Shotgun),
+        Thing::Shotgun => if n > 0.0 { m.weapon = KitWeapon::Shotgun; } else if m.weapon == KitWeapon::Shotgun { m.weapon = d.weapon; },
+        _ => if let Some(had) = m.n_mut(k) { *had = n; },
     }
 }
 
@@ -252,7 +241,7 @@ pub(super) fn guns_home(g: &crate::game::Game, m: &mut crate::kit::MemberKit) ->
 
 /// A loadout's tools this build cannot put on.
 pub(super) fn loadout_missing(g: &crate::game::Game, l: &crate::kit::SlotLoadout) -> Vec<String> {
-    let walls = l.counts.iter().any(|c| c.get(String::from("walls")).copied().unwrap_or(0.0) > 0.0);
+    let walls = l.counts.iter().any(|c| c.get(Thing::Walls).copied().unwrap_or(0.0) > 0.0);
     let mut missing = l.missing.clone();
     if walls && !g.k.slots.on {
         missing.push(String::from("wallCharge"));
@@ -313,9 +302,9 @@ pub(super) fn big_used(g: &mut crate::game::Game, m: &crate::kit::MemberKit, t: 
         return 0.0;
     }
     let mut n = 0.0;
-    for k in slot_amount().keys() {
-        if t.items.get(k.clone()).and_then(|it| it.big).unwrap_or(false) {
-            n += slot_amount_of(g, &k, m);
+    for k in Thing::ALL {
+        if t.items.get(k).and_then(|it| it.big).unwrap_or(false) {
+            n += amount(g, k, m);
         }
     }
     n
@@ -385,9 +374,9 @@ pub(super) fn home_shells(g: &crate::game::Game, m: &mut crate::kit::MemberKit) 
 /// The pouches a card fills.
 pub(super) fn cost_of(g: &mut crate::game::Game, m: &crate::kit::MemberKit, t: &crate::kit::SlotTable) -> f64 {
     let mut used = 0.0;
-    for k in slot_amount().keys() {
-        let n = slot_amount_of(g, &k, m);
-        used += pouches_of(g, t.items.get(k.clone()), n);
+    for k in Thing::ALL {
+        let n = amount(g, k, m);
+        used += pouches_of(g, t.items.get(k), n);
     }
     used
 }
@@ -399,95 +388,6 @@ pub(super) fn coming(cards: &[crate::kit::MemberKit], n: f64) -> Vec<crate::kit:
         return Vec::new();
     }
     cards[1..end].to_vec()
-}
-
-///  How much of each priced thing a card carries.
-pub mod slot_amount {
-    use crate::js;
-    use crate::kit::{BigKit, KitWeapon};
-
-    pub fn smoke(m: &crate::kit::MemberKit) -> f64 { m.smoke }
-
-    pub fn bangs(m: &crate::kit::MemberKit) -> f64 { m.bangs }
-
-    pub fn frags(m: &crate::kit::MemberKit) -> f64 { m.frags }
-
-    pub fn shells(m: &crate::kit::MemberKit) -> f64 { m.shells }
-
-    pub fn charges(m: &crate::kit::MemberKit) -> f64 { m.charges }
-
-    pub fn walls(m: &crate::kit::MemberKit) -> f64 { m.walls }
-
-    /// With the big slot on the shotgun is what is in it, never the gun.
-    pub fn shotgun(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
-        let has = if g.k.bigslot.on { m.big == BigKit::Shotgun } else { m.weapon == KitWeapon::Shotgun };
-        if has { 1.0 } else { 0.0 }
-    }
-
-    pub fn hammer(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
-        if g.k.bigslot.on && m.big == BigKit::Hammer { 1.0 } else { 0.0 }
-    }
-
-    pub fn cams(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
-        if js::truthy(m.cams) { m.cams } else { 0.0 }
-    }
-
-    pub fn rings(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
-        if js::truthy(m.rings) && super::tree_up(g) { m.rings } else { 0.0 }
-    }
-
-    pub fn wand(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
-        if m.wand { 1.0 } else { 0.0 }
-    }
-}
-
-///  How a card is put to `n` of one thing.
-pub mod slot_put {
-    use crate::kit::{BigKit, KitWeapon};
-
-    pub fn smoke(m: &mut crate::kit::MemberKit, n: f64) { m.smoke = n; }
-
-    pub fn bangs(m: &mut crate::kit::MemberKit, n: f64) { m.bangs = n; }
-
-    pub fn frags(m: &mut crate::kit::MemberKit, n: f64) { m.frags = n; }
-
-    pub fn shells(m: &mut crate::kit::MemberKit, n: f64) { m.shells = n; }
-
-    pub fn charges(m: &mut crate::kit::MemberKit, n: f64) { m.charges = n; }
-
-    pub fn walls(m: &mut crate::kit::MemberKit, n: f64) { m.walls = n; }
-
-    pub fn wand(m: &mut crate::kit::MemberKit, n: f64) { m.wand = n > 0.0; }
-
-    pub fn cams(m: &mut crate::kit::MemberKit, n: f64) { m.cams = n; }
-
-    pub fn rings(m: &mut crate::kit::MemberKit, n: f64) { m.rings = n; }
-
-    /// A shotgun given up is the issued gun again (`d`: what he is issued).
-    pub fn shotgun(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit, n: f64, d: &crate::kit::MemberKit) {
-        if g.k.bigslot.on {
-            if n > 0.0 {
-                m.big = BigKit::Shotgun;
-            } else if m.big == BigKit::Shotgun {
-                m.big = BigKit::None;
-            }
-        } else if n > 0.0 {
-            m.weapon = KitWeapon::Shotgun;
-        } else if m.weapon == KitWeapon::Shotgun {
-            m.weapon = d.weapon;
-        }
-    }
-
-    pub fn hammer(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit, n: f64) {
-        if !g.k.bigslot.on {
-            return;
-        }
-        if n > 0.0 {
-            m.big = BigKit::Hammer;
-        } else if m.big == BigKit::Hammer {
-            m.big = BigKit::None;
-        }
-    }
 }
 
 #[cfg(test)]
@@ -582,8 +482,8 @@ mod tests {
 
     #[test]
     fn a_loadout_with_a_wall_charge_is_missing_it_with_the_rule_off() {
-        let mut counts: JsMap<String, f64> = JsMap::new();
-        counts.set(String::from("walls"), 1.0);
+        let mut counts: JsMap<Thing, f64> = JsMap::new();
+        counts.set(Thing::Walls, 1.0);
         let l = SlotLoadout { counts: vec![counts], missing: vec![String::from("x")], ..Default::default() };
         let mut g = game(true, true);
         assert_eq!(loadout_missing(&mut g, &l), vec![String::from("x")]);
@@ -596,20 +496,20 @@ mod tests {
         let d = card();
         let mut g = game(true, true);
         let mut c = card();
-        slot_put::shotgun(&mut g, &mut c, 1.0, &d);
+        put(&g, Thing::Shotgun, &mut c, 1.0, &d);
         assert!(c.big == BigKit::Shotgun && c.weapon == KitWeapon::Rifle);
-        assert_eq!(slot_amount::shotgun(&mut g, &c), 1.0);
-        slot_put::hammer(&mut g, &mut c, 0.0);
+        assert_eq!(amount(&g, Thing::Shotgun, &c), 1.0);
+        put(&g, Thing::Hammer, &mut c, 0.0, &d);
         assert!(c.big == BigKit::Shotgun);
-        slot_put::shotgun(&mut g, &mut c, 0.0, &d);
+        put(&g, Thing::Shotgun, &mut c, 0.0, &d);
         assert!(c.big == BigKit::None);
         g.k.bigslot.on = false;
-        slot_put::shotgun(&mut g, &mut c, 1.0, &d);
+        put(&g, Thing::Shotgun, &mut c, 1.0, &d);
         assert!(c.big == BigKit::None && c.weapon == KitWeapon::Shotgun);
-        slot_put::hammer(&mut g, &mut c, 1.0);
+        put(&g, Thing::Hammer, &mut c, 1.0, &d);
         assert!(c.big == BigKit::None);
-        assert_eq!(slot_amount::hammer(&mut g, &c), 0.0);
-        slot_put::shotgun(&mut g, &mut c, 0.0, &d);
+        assert_eq!(amount(&g, Thing::Hammer, &c), 0.0);
+        put(&g, Thing::Shotgun, &mut c, 0.0, &d);
         assert!(c.weapon == KitWeapon::Rifle);
     }
 
@@ -645,17 +545,17 @@ mod tests {
         let d = card();
         let mut g = game(true, true);
         let mut c = card();
-        for k in slot_put().keys() {
-            if k == "shotgun" || k == "hammer" { continue; }
-            slot_put_of(&mut g, &k, &mut c, 1.0, &d);
+        for k in Thing::ALL {
+            if k == Thing::Shotgun || k == Thing::Hammer { continue; }
+            put(&g, k, &mut c, 1.0, &d);
         }
         assert_eq!((c.smoke, c.bangs, c.frags, c.shells, c.charges, c.walls, c.cams, c.rings), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0));
         assert!(c.wand);
-        slot_put_of(&mut g, "hammer", &mut c, 1.0, &d);
-        assert_eq!(slot_amount_of(&mut g, "hammer", &c), 1.0);
-        slot_put_of(&mut g, "shotgun", &mut c, 1.0, &d);
-        assert_eq!((slot_amount_of(&mut g, "shotgun", &c), slot_amount_of(&mut g, "hammer", &c)), (1.0, 0.0));
-        assert_eq!(slot_amount_of(&mut g, "smoke", &c), 1.0);
-        assert_eq!(slot_amount_of(&mut g, "wand", &c), 1.0);
+        put(&g, Thing::Hammer, &mut c, 1.0, &d);
+        assert_eq!(amount(&g, Thing::Hammer, &c), 1.0);
+        put(&g, Thing::Shotgun, &mut c, 1.0, &d);
+        assert_eq!((amount(&g, Thing::Shotgun, &c), amount(&g, Thing::Hammer, &c)), (1.0, 0.0));
+        assert_eq!(amount(&g, Thing::Smoke, &c), 1.0);
+        assert_eq!(amount(&g, Thing::Wand, &c), 1.0);
     }
 }

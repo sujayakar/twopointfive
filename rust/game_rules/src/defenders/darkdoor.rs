@@ -420,7 +420,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
     if fight == FightWalk::Other { return Some(speed); }
     if act0 == Some(DarkDoorAct::Balk) { return hold(g, gd, dt, speed, fight == FightWalk::Seen); }
     let Some(x) = x else { return Some(speed) };
-    if fight == FightWalk::Seen || crate::sim_lightshome::mains_active(g) { return Some(speed); }
+    if fight == FightWalk::Seen || g.light_home.mains.active { return Some(speed); }
     let now = g.time;
     if let Some(s0) = g.m.darkdoor.state_of.get(gd) { if passes(s0, di, now) { return Some(speed); } }
     let room = crate::cleared::cleared_rooms_room_by(g, x.d, -x.side);
@@ -497,7 +497,7 @@ fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool)
     s.call_t += dt;
     if s.ask >= k.ask_secs {
         s.ask = 0.0;
-        if crate::sim_lightshome::mains_active(g) || !dark_room(g, room).dark {
+        if g.light_home.mains.active || !dark_room(g, room).dark {
             end(g, gd, None);
             return Some(speed);
         }

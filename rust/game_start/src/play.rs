@@ -85,6 +85,8 @@ pub struct Play {
     spoke: Vec<(GuardId, f64, String)>,
     /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it). The host's and no part of the game: whoever puts a game back puts this back too
     pub cursor: Option<[f64; 3]>,
+    /// where his walk keys take him (None: nobody holds them)
+    pub legs: Option<[f64; 2]>,
     /// the game's own words where the address's mission was refused (`Opts.may_refuse`)
     pub refused: Option<String>,
     _one: MutexGuard<'static, ()>,
@@ -101,7 +103,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, legs: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -138,6 +140,7 @@ impl Play {
             let (sx, sy, front) = game::camera::follow_camera_project(&mut self.g, self.host.cam, at, w, h, None, None);
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
+        self.hold_legs();
         stand::step(&mut self.g, &self.host, DT);
         let asked = game::savestate::control::asked(&self.g.out);
         let told = game::savestate::control::after_step(&mut self.g, DT, asked);
@@ -275,6 +278,15 @@ impl Play {
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
     pub fn cursor_on(&mut self, at: [f64; 3]) { self.cursor = Some(at); }
+    /// His walk keys toward `to` from here on, as a hand holds them, until he is within a hand's breadth or they are let go of (None).
+    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key); } } }
+    /// …held for the tick to come
+    pub fn hold_legs(&mut self) {
+        let Some(to) = self.legs else { return };
+        let (p, f) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.tab.camera[self.host.cam].forward);
+        let held = if dist([p[0], p[2]], to) > 0.1 { game::player::walk_keys(p, to, f) } else { [false; 4] };
+        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(String::from(key)); } else { i.keys.delete(String::from(key)); } }
+    }
     /// A mouse button goes down and stays down.
     pub fn press(&mut self, b: Button) { let i = &mut self.g.tab.input[self.host.input]; i.buttons = ((i.buttons as u32) | b as u32) as f64; i.clicked = ((i.clicked as u32) | b as u32) as f64; }
     /// …and comes up.
@@ -348,7 +360,7 @@ impl Play {
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
-    pub fn falls(&mut self, gd: GuardId, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(false), Some(game::game::DownKind::Shot), Some(by), None); }
+    pub fn falls(&mut self, gd: GuardId, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(false), Some(game::game::DownKind::Shot), Some(by), game::game::With::Hand); }
 
     /// A live fragmentation grenade lands at `at` (the sandbox's own call, `Game.dropThrowable`: an armed can as if just thrown from where Sam stands).
     pub fn frag_lands(&mut self, at: [f64; 2]) { game::game::game_drop_throwable(&mut self.g, game::game::ThrowKind::Frag, [at[0], 0.0, at[1]]); }
@@ -433,7 +445,7 @@ impl Play {
         game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], Some(&o));
     }
     /// A MAN GOES DOWN by combat's own call, in any of its ways (`quiet`: put out with no noise).
-    pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), None); }
+    pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), game::game::With::Hand); }
     /// the player of a seat takes a round's hit from the way `from_dir`, in his own seat, until he has none left (combat's `hit_player`: nobody fired it)
     pub fn seat_goes_down(&mut self, seat: usize) {
         let s = self.g.seats[seat];
@@ -470,7 +482,7 @@ impl Play {
     /// Every man of the other side but these is down.
     pub fn drop_all_but(&mut self, keep: &[GuardId]) {
         for gd in self.g.guards.clone() {
-            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); }
+            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
         }
     }
     /// Sam's teammates, in the order the game made them
@@ -567,6 +579,20 @@ impl Play {
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
     pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }
+
+    /// Sam's body: what the readers of a pose below are asked about
+    pub fn sam_body(&self) -> game::ids::CharId { self.g.pl[self.g.player].ch }
+    /// where a joint of that body stands in the world this frame
+    pub fn joint(&self, c: game::ids::CharId, j: game::character::Bone) -> [f64; 3] { *self.g.ch[c].bones.get(j).expect("the joint") }
+    /// every joint of that body, in one order
+    pub fn joints_named(&self, c: game::ids::CharId) -> Vec<(game::character::Bone, [f64; 3])> { let b = &self.g.ch[c].bones; b.keys().into_iter().map(|k| (k, *b.get(k).unwrap())).collect() }
+    /// which way that body faces
+    pub fn body_yaw(&self, c: game::ids::CharId) -> f64 { self.g.ch[c].body_yaw }
+    /// the line of the gun in that body's hands: its muzzle and which way it points
+    pub fn gun_line(&self, c: game::ids::CharId) -> ([f64; 3], [f64; 3]) { (self.g.ch[c].muzzle, self.g.ch[c].gun_dir) }
+    /// tell that body to lean round an edge (-1 to 1; 0 lets it come back), and how far it is shown as leaning now
+    pub fn lean(&mut self, c: game::ids::CharId, by: f64) { self.g.ch[c].anim.lean = by; }
+    pub fn lean_shown(&self, c: game::ids::CharId) -> f64 { self.g.ch[c].anim.lean_sm }
 
     /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }

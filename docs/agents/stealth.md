@@ -23,7 +23,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `fogofwar/`, `peeksight.rs` | who is an eye, who is seen, what is kept as last seen (`picture.rs`: what the renderer is told); the eye moved by a peek |
 | `quietfog.rs`, `told.rs` | the fog lever's rungs on a quiet mission; how much the player is told |
-| `sense.rs`, `sim_lightshome.rs`, `lighting.rs` | smoke; fixtures and the mains' columns; carried lights, the blackout, the jammer |
+| `sense.rs`, `fixtures.rs`, `lighting.rs` | smoke; fixtures and the mains' columns; carried lights, the blackout, the jammer |
 | `lightswitch.rs`, `carlamps.rs`, `powerout.rs` | wall switches; a vehicle's lamps; a garrison's answer to the dark (`enemies.md`) |
 | `interact/`, `handring/` | one key and a ring over the rows `build_interactables` lists |
 | `close.rs`, `stalk.rs`, `takedown.rs`, `disarm.rs` | what Sam can do to a man from where he stands; the creep; blows and falls; the gun out of his hand |
@@ -75,7 +75,7 @@ brighter of chest and head. `light_meter` maps it by `game_visibility_of` and ea
 **The sound meter** is the player's `noise`: the loudest level he has just made, falling away. A noisy rule raises it where it files its event. Only a
 lesson's step reads it; men hear the events.
 
-**Lights.** A fixture is a row of `sim_lightshome` (`FixtureDef`) and every change goes in by `light_home_in`. `shoot_out` breaks one, if `lamp_live`.
+**Lights.** A fixture is a `Fixture` (`g.tab.fixture`), what the level says of it and how it stands, stepped by `lights_step`. `shoot_out` breaks one, if `lamp_live`.
 A round in the breaker ends the power for good; `breaker_start` and `breaker_tick` throw it by hand, and it can be reset. `set_blackout` sends the
 nearest calm man, unless `power_out_rules` gives the walk to a garrison's party. The jammer is the code's OCP (`ocp`): the right button with the
 pistol up, on what the reticle has (`ocpable`). A flashlight dies, a fixture or device goes dark for `ocp_duration`, a breaker in sight trips.
@@ -178,4 +178,3 @@ Native tests in `rust/game_start/tests/`:
 
 - The fog's picture on a GPU: the levels of `dim`, `lit`, `flat` and `edge`, and how a never-seen room should look, are the maintainer's to judge.
 - Whether `attention.rs` and `powerout.rs` read well in play has been checked by numbers only.
-- The knife is dead code: nothing enters the hold's kill, so the knife, since cut, and a lethal blow cannot happen in play.

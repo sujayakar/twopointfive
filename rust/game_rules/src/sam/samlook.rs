@@ -18,15 +18,10 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 {
     t * t * (3.0 - 2.0 * t)
 }
 
-/// An angle brought into -pi..pi.
-fn wrap(a: f64) -> f64 {
-    m::atan2(m::sin(a), m::cos(a))
-}
-
 /// His head is his own to turn.
 fn free(g: &mut crate::game::Game) -> bool {
     let pl = &g.pl[g.player];
-    !g.cond[pl.ch].down && !pl.sprinting && pl.holding.is_none() && pl.takedown.is_none() && pl.kick.is_none() && pl.picking.is_none() && pl.wanding.is_none() && pl.coding.is_none() && pl.wall.is_none() && pl.dragging.is_none() && pl.door_move.is_none() && pl.breaker_move.is_none() && g.puppet.is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
+    !g.cond[pl.ch].down && !pl.sprinting && pl.holding.is_none() && pl.takedown.is_none() && pl.kick.is_none() && pl.picking.is_none() && pl.wanding.is_none() && pl.coding.is_none() && pl.wall.is_none() && pl.dragging.is_none() && pl.door_move.is_none() && pl.breaker_move.is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
 }
 
 /// A man who is onto him, or has him in view this moment with his notice risen.
@@ -46,7 +41,7 @@ fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
     let dz = q[2] - p[2];
     let d = m::hyp2(dx, dz);
     if d > max_m || d < 0.15 { return f64::INFINITY; }
-    if deg < 180.0 && m::abs(wrap(m::atan2(dx, dz) - g.ch[c].aim_yaw)) > deg * m::PI / 180.0 { return f64::INFINITY; }
+    if deg < 180.0 && m::abs(v3::wrap_angle(m::atan2(dx, dz) - g.ch[c].aim_yaw)) > deg * m::PI / 180.0 { return f64::INFINITY; }
     if crate::scene_collision::solid_blocked(g, [p[0], p[1] + 1.2, p[2]], [q[0], q[1] + 1.4, q[2]], None) { return f64::INFINITY; }
     d
 }
@@ -91,7 +86,7 @@ fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let p = g.ch[g.pl[g.player].ch].pos;
     let c = g.gd[gd].ch;
     let q = g.ch[c].pos;
-    let nose = m::cos(wrap(m::atan2(p[0] - q[0], p[2] - q[2]) - g.ch[c].body_yaw));
+    let nose = m::cos(m::atan2(p[0] - q[0], p[2] - q[2]) - g.ch[c].body_yaw);
     let k = g.k.samlook;
     (1.0 - smooth(k.slip_by, k.slip_from, d)) * smooth(k.back_cos[0], k.back_cos[1], nose)
 }
@@ -179,15 +174,4 @@ mod tests {
         assert!(smooth(1.0, 3.0, 1.2) < 0.05, "it starts gently: {}", smooth(1.0, 3.0, 1.2));
         assert!(smooth(1.0, 3.0, 1.5) < smooth(1.0, 3.0, 2.5));
         assert!(smooth(-0.45, -0.1, -0.3) > 0.0 && smooth(-0.45, -0.1, -0.3) < 1.0);
-    }
-
-    #[test]
-    fn an_angle_comes_back_inside_half_a_turn_the_same_way_it_points() {
-        for a in [0.1, 3.5, -7.25, 100.125, m::PI, -m::PI] {
-            let w = wrap(a);
-            assert!(w.abs() <= m::PI, "{a}: {w}");
-            assert!((m::sin(w) - m::sin(a)).abs() < 1e-9 && (m::cos(w) - m::cos(a)).abs() < 1e-9, "{a}: {w}");
-        }
-        assert!((wrap(0.1) - 0.1).abs() < 1e-12);
-    }
-}
+    }}

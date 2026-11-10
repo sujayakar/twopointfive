@@ -93,8 +93,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
         if operative(g, gd) && crate::orders::squad_orders_big(g, &crate::seats::here(g)) { door_tools_dazzle(g, gd, bb, inn); backblast += 1.0; continue; }
         if dist < g.k.doortools.knock_m {
             let dir = v3::normalize([p[0] - fc[0], 0.15, p[2] - fc[2]]);
-            let line = format!("{} down — behind the door when it went", callsign_or(g, gd));
-            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), Some(&line));
+            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Hand);
             knocked += 1.0;
         } else {
             let (s0, s1, stun_m) = (g.k.doortools.stun_secs[0], g.k.doortools.stun_secs[1], g.k.doortools.stun_m);
@@ -139,7 +138,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
 /// the seat's man and the blast: true where it dazzled him   (the closure handed to eachSeat in blowRaw)
 fn blow_seat(g: &mut Game, others: &crate::ask::Over, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bool {
     let pl = g.player;
-    if crate::condition::down(g, g.pl[pl].ch) || g.puppet.is_some() { return false; }
+    if crate::condition::down(g, g.pl[pl].ch) { return false; }
     let p = g.ch[g.pl[pl].ch].pos;
     let far = super::off_of(g, d, p, side) < 0.0;
     let dist = v3::dist_xz(p, fc);

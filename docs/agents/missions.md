@@ -124,7 +124,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
   `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. The gate's `played` rows, `missions.rs` and `coop.rs` find a room clear themselves (`room_clear_files`).
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
 - **A new kind:** `MissionKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, its `Facts`, an arm in `ended`, `going` and `objective`,
-  a tick line in `step_seats_on_first`, and its staging in its own start.
+  a line in `mission_tick`, and its staging in its own start.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
 

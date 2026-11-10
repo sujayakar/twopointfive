@@ -82,9 +82,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
     let c = g.pl[pl].ch;
     let d = g.pl[pl].picking.unwrap();
     let pos = g.ch[c].pos;
-    if g.puppet.is_some() {
-        stop_picking(g);
-    } else if !crate::doors::doors_locked_out(g, d, pos, None) {
+    if !crate::doors::doors_locked_out(g, d, pos, None) {
         stop_picking(g);
     } else {
         let spot = crate::doors::doors_work_spot(g, d, pos, None, None);
@@ -164,7 +162,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
     let mut w = g.pl[pl].wanding.unwrap();
     let d = w.door;
     let pos = g.ch[c].pos;
-    if g.puppet.is_some() || !crate::fogofwar::fog_of_war_active(g) {
+    if !crate::fogofwar::fog_of_war_active(g) {
         stop_wand(g);
     } else if !crate::wand::wand_fits(g, d) || crate::doors::doors_side(g, d, pos) != w.side {
         stop_wand(g);
@@ -578,8 +576,8 @@ pub fn cursor_point(g: &crate::game::Game, cam: CameraId, u: f64, v: f64, ray: c
 
 /// The frame's aim: the cursor's point, the interaction rows, then the reticle's snap to a man or a light.
 pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    let puppet_aim = g.puppet.as_ref().and_then(|p| p.aim);
-    if let Some(aim) = puppet_aim {
+    let hand_at = g.hand_at;
+    if let Some(aim) = hand_at {
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam,aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
         if front {
             g.tab.input[input].mouse_x = sx;
@@ -600,7 +598,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         Some(p) => p,
         None => aim_level(crate::player::AimLevelC { pos: g.ch[me].pos, body_yaw: g.ch[me].body_yaw }),
     };
-    let p = match puppet_aim {
+    let p = match hand_at {
         Some(aim) => v3::copy(aim),
         None => p,
     };
@@ -620,7 +618,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     g.aim_guard = None;
     g.aim_snap = None;
     g.aim_friend = None;
-    if !g.puppet.as_ref().map_or(false, |p| !p.fixtures.unwrap_or(false)) {
+    if hand_at.is_none() {
         let mut i = 0;
         while i < g.interactables.len() {
             let it = &g.interactables[i];
@@ -638,7 +636,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if d >= best_px {
                 continue;
             }
-            let on = d < reach || hit_index.map_or(false, |x| g.tab.sim_lightshome_fixture[target].boxes.contains(&x));
+            let on = d < reach || hit_index.map_or(false, |x| g.tab.fixture[target].boxes.contains(&x));
             if !on && Some(target) != kept {
                 continue;
             }
@@ -653,7 +651,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend(g, gd) {
             continue;
         }
         let com = chest_or(g, gd, 1.2);
@@ -687,14 +685,12 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if !(t >= 0.0 && t < best_t + 0.5) {
                 continue;
             }
-            if crate::friends::friend_on_ray(g, gd) {
+            if crate::friends::friend(g, gd) {
                 if t < friend_t {
                     friend_t = t;
                     g.aim_friend = Some(gd);
                 }
-                if crate::friends::friend_no_snap(g, gd) {
-                    continue;
-                }
+                continue;
             }
             g.aim_guard = Some(gd);
             g.aim_target = None;
@@ -705,7 +701,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if guard != friend {
                 if friend_t >= best_t {
                     g.aim_friend = None;
-                } else if crate::friends::friend_no_snap(g, friend) {
+                } else {
                     g.aim_guard = None;
                     g.aim_target = lit;
                     g.aim_snap = lit_at;
@@ -719,7 +715,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         g.aim_snap = None;
     }
     if let Some(snap) = g.aim_snap {
-        if puppet_aim.is_none() {
+        if hand_at.is_none() {
             g.aim_point = v3::copy(snap);
         }
     }

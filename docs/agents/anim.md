@@ -146,8 +146,10 @@ Native tests in `rust/game_start/tests/`:
 | `held_takedown.rs`, `the_grab.rs` | a blow lands inside its takedown, a choke lowers a man to the floor |
 | `kit.rs` | what a player's hands do, which carriage a gun shows |
 | `draw.rs` | drawing changes nothing, and what is drawn between two ticks stands between them |
+| `poses.rs` | what a player sees of a pose: feet that stay, a step that lands, a hand on its rifle, a lean that comes back, limbs in their limits, no jump in a frame, a fall that lies still |
 
-Unit tests stand beside the code (`swap_clock_beats`, `blend_is_the_typescripts_bits`, `a_blast_leaves_a_man_hurt_and_writes_his_stamp`). `gate`'s pins move when a pose moves what the game reads.
+Unit tests stand beside the code (`swap_clock_beats`, `a_blend_goes_from_one_pose_to_the_other_by_its_weight`, `a_blast_leaves_a_man_hurt_and_writes_his_stamp`).
+`gate`'s pins move when a pose moves what the game reads.
 Rows of `tools/qa/checks.ts`: `cast-probes.ts`, `charmats-probes.ts`, `sdfrig-probes.ts`, `frame-layout.ts`. By hand: `tools/chars/check_cast.py`.
 No script of `tools/qa/pages.ts` is this system's own.
 

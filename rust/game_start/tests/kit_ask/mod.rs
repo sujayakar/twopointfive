@@ -12,7 +12,7 @@ pub trait KitAsk {
     fn gun_comes_round_at_once(&mut self, gd: GuardId);
     /// A door's leaf left standing at `angle` (radians from shut), settled and off the latch.
     fn leaf_left_at(&mut self, d: DoorId, angle: f64);
-    /// Sam stands on his spot, walking back to it if pushed off, his gun on `aim` (the sandbox's puppet).
+    /// Sam stands on his spot, walking back to it if pushed off, his gun on `aim`.
     fn sam_holds_his_spot(&mut self, aim: [f64; 2]);
     /// Every man but `gd` held on his post, deaf and blind.
     fn all_but_held(&mut self, gd: GuardId);
@@ -23,11 +23,11 @@ pub trait KitAsk {
 
     /// Nobody can see or hear Sam (the sandbox's ghost): for a test that is not about the senses.
     fn sam_a_ghost(&mut self);
-    /// Sam crouches or stands by the puppet's word, staying where he is.
+    /// Sam crouches or stands, staying where he is.
     fn sam_low(&mut self, low: bool);
-    /// Sam is driven toward `goal` by the sandbox's puppet, as if his keys were held that way.
+    /// Sam's walk keys take him toward `goal`.
     fn sam_walks_to(&mut self, goal: [f64; 2], low: bool);
-    /// The puppet's strings let go.
+    /// His walk keys are let go of.
     fn sam_stops(&mut self);
     /// The man is sent straight for `goal` at `speed` by a script of his own, blind to all else.
     fn man_walks_to(&mut self, gd: GuardId, from: [f64; 2], goal: [f64; 2], speed: f64);
@@ -403,12 +403,12 @@ impl KitAsk for Play {
         let sam = self.sam_at();
         let t0 = self.g.time;
         let m = &mut self.g.gd[gd];
-        (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
+        (m.state, m.awareness, m.react_t, self.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
             (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(self.g.pl[self.g.player].ch));
         m.path.clear();
         m.path_goal = None;
     }
-    fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.gd[gd].fire_cd = 0.0; }
+    fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.arms[self.g.gd[gd].ch].fire_cd = 0.0; }
     fn leaf_left_at(&mut self, d: DoorId, angle: f64) {
         use game::doors::*;
         door_set_angle(&mut self.g, d, angle);
@@ -420,7 +420,8 @@ impl KitAsk for Play {
     }
     fn sam_holds_his_spot(&mut self, aim: [f64; 2]) {
         let at = self.sam_at();
-        self.g.puppet = Some(game::game::GamePuppet { goal: Some([at[0], 0.0, at[1]]), aim: Some([aim[0], 1.2, aim[1]]), ..game::game::GamePuppet::default() });
+        self.walk_keys_to(Some(at));
+        self.g.hand_at = Some([aim[0], 1.2, aim[1]]);
     }
     fn all_but_held(&mut self, gd: GuardId) {
         for o in self.g.guards.clone() { if o != gd { let m = &mut self.g.gd[o]; (m.hold, m.pinned, self.g.cond[m.ch].blind_until) = (true, true, 1e9); } }
@@ -435,9 +436,10 @@ impl KitAsk for Play {
     fn sam_a_ghost(&mut self) { self.g.player_invisible = true; }
     fn sam_low(&mut self, low: bool) { let pl = self.g.player; self.g.pl[pl].crouch = low; }
     fn sam_walks_to(&mut self, goal: [f64; 2], low: bool) {
-        self.g.puppet = Some(game::game::GamePuppet { goal: Some([goal[0], 0.0, goal[1]]), crouch: Some(low), ..game::game::GamePuppet::default() });
+        self.sam_low(low);
+        self.walk_keys_to(Some(goal));
     }
-    fn sam_stops(&mut self) { self.g.puppet = None; }
+    fn sam_stops(&mut self) { self.walk_keys_to(None); self.g.hand_at = None; }
     fn man_walks_to(&mut self, gd: GuardId, from: [f64; 2], goal: [f64; 2], speed: f64) {
         let c = self.g.gd[gd].ch;
         let yaw = f64::atan2(goal[0] - from[0], goal[1] - from[1]);
@@ -451,7 +453,7 @@ impl KitAsk for Play {
     }
     fn sam_lunges(&mut self, gd: GuardId) { game::player::start_takedown(&mut self.g, gd, None, None, None); }
     fn sam_grabs(&mut self, gd: GuardId) { game::player::start_grab(&mut self.g, gd, None); }
-    fn step(&mut self, dt: f64) { let _ = game_start::stand::frame(&mut self.g, &self.host, dt); self.frames += 1; }
+    fn step(&mut self, dt: f64) { self.hold_legs(); let _ = game_start::stand::frame(&mut self.g, &self.host, dt); self.frames += 1; }
     fn door_booted(&mut self, d: DoorId, from: [f64; 2]) { game::doors::doors_kick_in(&mut self.g, d, [from[0], 0.0, from[1]], game::consts::PLAYER_ID, None); }
     fn clear_called_at(&mut self, at: [f64; 2], then: [f64; 2]) -> Vec<String> {
         self.sam_put(at);
@@ -748,9 +750,9 @@ impl KitAsk for Play {
     fn beat_on(&self, gd: GuardId) -> f64 { self.g.gd[gd].react_t.max(game::startle::startle_left(&self.g, gd)) }
     fn ring_cone(&self) -> Option<f64> { self.view().aim.ring.and_then(|r| r.cone).map(|c| c.spread) }
     fn lamp_at(&self, at: [f64; 2]) -> (FixtureId, [f64; 3]) {
-        let d = |t: FixtureId| { let p = self.g.tab.sim_lightshome_fixture[t].pos; (p[0] - at[0]).hypot(p[2] - at[1]) };
+        let d = |t: FixtureId| { let p = self.g.tab.fixture[t].pos; (p[0] - at[0]).hypot(p[2] - at[1]) };
         let t = self.g.targets.iter().copied().min_by(|a, b| d(*a).partial_cmp(&d(*b)).unwrap()).expect("a lamp on the level");
-        (t, self.g.tab.sim_lightshome_fixture[t].pos)
+        (t, self.g.tab.fixture[t].pos)
     }
-    fn lamp_out(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_broken(&self.g, t) }
+    fn lamp_out(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].broken }
 }

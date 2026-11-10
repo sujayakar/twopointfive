@@ -790,65 +790,115 @@ mod tests {
     use crate::character::{AnimRlB, ReloadBeat};
 
     fn beat(dur: f64) -> ReloadBeat { ReloadBeat { dur, out: None, in_: None, rack: None, keep: None, hand: None, exact: None } }
-    fn keys(b: ReloadBeat, rack: Option<Option<f64>>) -> ([u64; 6], bool, bool) {
+    fn keys(b: ReloadBeat) -> AnimRlB {
         let mut k = AnimRlB::default();
-        rl_beat_keys(&mut k, &ReloadBeat { rack, ..b });
-        ([k.out.to_bits(), k.in_.to_bits(), k.rack.to_bits(), k.dur.to_bits(), k.keep.to_bits(), k.fresh.to_bits()], k.pull, k.hand)
+        rl_beat_keys(&mut k, &b);
+        k
+    }
+    const EPS: f64 = 1e-9;
+
+    /// How he idles is his own: numbers from 0 to 1, the same each time he is made, and not the next man's.
+    /// A FAILURE MEANS: a room of men breathe and shift their weight together.
+    #[test]
+    fn a_man_does_not_idle_in_step_with_the_next() {
+        let mut sum = 0.0;
+        for seed in 0..200 {
+            let seed = seed as f64;
+            let h = desync_hash(seed, 1.0);
+            assert!((0.0..1.0).contains(&h), "seed {seed}: {h}");
+            assert_eq!(h, desync_hash(seed, 1.0));
+            assert_ne!(h, desync_hash(seed + 1.0, 1.0), "seed {seed}");
+            assert_ne!(h, desync_hash(seed, 2.0), "seed {seed}: his clock and his breath are one number");
+            sum += h;
+        }
+        assert!(m::abs(sum / 200.0 - 0.5) < 0.1, "the numbers lie across the range: their mean is {}", sum / 200.0);
     }
 
-    /// the TypeScript's own bits for desync's `h` (bun, EXACT on)
+    /// A gun's kick differs from round to round.
     #[test]
-    fn desync_hash_bits() {
-        let want: [(f64, [u64; 4]); 5] = [
-            (0.0, [0x3fbfd1d9b7000000, 0x3fdbe3b05c800000, 0x3fbbb788bd000000, 0x3fdb5e6720400000]),
-            (1.0, [0x3fea48ad64a00000, 0x3fe4bbfa4dc00000, 0x3fceb8f5ae800000, 0x3fe43964c1400000]),
-            (7.0, [0x3fe661a595e00000, 0x3fd9106c31400000, 0x3fe88667e3a00000, 0x3feb06a5c0000000]),
-            (1000000000.0, [0x3fda673d08c00000, 0x3fd5439934000000, 0x3fec4335c1a00000, 0x3fe7a5bcf3e00000]),
-            (123456789.0, [0x3feffda55e200000, 0x3fdd121a9ec00000, 0x3fe1802da5400000, 0x3feedf2008c00000]),
-        ];
-        for (seed, bits) in want {
-            for (i, b) in bits.iter().enumerate() { assert_eq!(desync_hash(seed, (i + 1) as f64).to_bits(), *b); }
+    fn each_round_kicks_by_a_number_of_its_own() {
+        for n in 1..500 {
+            let h = round_hash(n as f64);
+            assert!((0.0..1.0).contains(&h), "round {n}: {h}");
+            assert!(m::abs(h - round_hash((n + 1) as f64)) > 1e-3, "rounds {n} and the next kick alike");
         }
     }
 
-    /// the TypeScript's own bits for fire's round hash
+    /// A FAILURE MEANS: a short reload plays its magazine out, in and racked on top of each other.
     #[test]
-    fn round_hash_bits() {
-        for (n, b) in [(0.0, 0u64), (1.0, 0x3fe3c6ef36200000), (3.0, 0x3feb54cda2600000), (1000.0, 0x3fa166b6d0000000)] {
-            assert_eq!(round_hash(n).to_bits(), b);
+    fn a_reloads_beats_come_in_order_with_room_for_each_however_short_it_is() {
+        for dur in [0.1, 0.8, 1.6, 2.4, 6.0] {
+            let k = keys(beat(dur));
+            assert!(k.pull, "dur {dur}: a dry gun is racked");
+            assert!(k.out >= 0.15 - EPS, "dur {dur}: mag out at {}", k.out);
+            assert!(k.in_ >= k.out + 0.6 - EPS, "dur {dur}: mag in at {} after out at {}", k.in_, k.out);
+            assert!(k.rack >= k.in_ + 0.2 - EPS, "dur {dur}: rack at {} after in at {}", k.rack, k.in_);
+            assert!(k.dur >= k.rack + 0.25 - EPS && k.dur >= dur, "dur {dur}: it runs {} and racks at {}", k.dur, k.rack);
+            assert!(k.fresh > k.out && k.fresh < k.in_, "dur {dur}: the new magazine shows at {}", k.fresh);
+            assert_eq!(k.keep, -1.0, "dur {dur}: he keeps no old magazine unless asked to");
         }
+        // a long one spreads out over its own length, and takes no longer than it was asked to
+        let long = keys(beat(6.0));
+        assert!(long.out > 1.0 && long.in_ > 3.0 && long.dur == 6.0, "{} {} {}", long.out, long.in_, long.dur);
     }
 
-    /// the TypeScript's own bits for rlBeat: undefined against null in `rack`, the floors, the exact beat
     #[test]
-    fn rl_beat_bits() {
-        assert_eq!(keys(beat(1.6), None), ([0x3fdba5e353f7ceda, 0x3ff0a3d70a3d70a4, 0x3ff5c28f5c28f5c3, 0x3ff9c28f5c28f5c3, 0xbff0000000000000, 0x3fe78d4fdf3b645a], true, false));
-        assert_eq!(keys(beat(2.4), Some(None)), ([0x3fe4bc6a7ef9db23, 0x3ff8f5c28f5c28f6, 0x400051eb851eb852, 0x4003333333333333, 0xbff0000000000000, 0x3ff1a9fbe76c8b44], false, false));
-        let kept = ReloadBeat { out: Some(0.5), in_: Some(1.6), keep: Some(1.0), hand: Some(true), ..beat(2.4) };
-        assert_eq!(keys(kept, Some(Some(2.0))), ([0x3fe0000000000000, 0x3ff999999999999a, 0x4000000000000000, 0x4003333333333333, 0x3ff0000000000000, 0x3ff2e147ae147ae1], true, true));
-        assert_eq!(keys(beat(0.1), None), ([0x3fc3333333333333, 0x3fe8000000000000, 0x3fee666666666666, 0x3ff3333333333333, 0xbff0000000000000, 0x3fdccccccccccccd], true, false));
-        let exact = ReloadBeat { out: Some(0.2), in_: Some(0.56), exact: Some(true), ..beat(1.1) };
-        assert_eq!(keys(exact, None), ([0x3fc999999999999a, 0x3fe1eb851eb851ec, 0x3ff199999999999a, 0x3ff199999999999a, 0xbff0000000000000, 0x3fd851eb851eb852], false, false));
-        assert_eq!(keys(exact, Some(Some(0.9))), ([0x3fc999999999999a, 0x3fe1eb851eb851ec, 0x3feccccccccccccd, 0x3ff199999999999a, 0xbff0000000000000, 0x3fd851eb851eb852], true, false));
-        assert_eq!(keys(ReloadBeat { hand: Some(true), ..beat(2.0) }, None), ([0x3fe147ae147ae148, 0x3ff4cccccccccccd, 0x3ffb333333333333, 0x4000000000000000, 0xbff0000000000000, 0x3feb020c49ba5e36], true, true));
+    fn a_round_still_chambered_is_no_rack() {
+        let k = keys(ReloadBeat { rack: Some(None), ..beat(1.6) });
+        assert!(!k.pull);
+        assert!(k.dur >= k.in_ + 0.5 - EPS);
+        assert!(keys(beat(1.6)).pull, "with no word on it he racks");
     }
 
-    /// the TypeScript's own bits for the throw's read of its distance: a toss, a hard throw kept from being one, the short overhand, all of it
     #[test]
-    fn throw_by_bits() {
-        let read = |d: f64, s: Option<f64>| { let (a, b) = throw_by_read(2.3, 7.1, 8.0, d, s); (a.to_bits(), b.to_bits()) };
-        assert_eq!(read(1.1, None), (0x3fde9bd37a6f4deb, 0x3ff0000000000000));
-        assert_eq!(read(1.1, Some(9.0)), (0xbff0000000000000, 0));
-        assert_eq!(read(5.3, None), (0xbff0000000000000, 0x3fe5e00000000000));
-        assert_eq!(read(12.0, None), (0xbff0000000000000, 0x3ff0000000000000));
+    fn the_magazine_he_keeps_stays_in_his_hand_between_out_and_in() {
+        for asked in [0.0, 1.0, 9.0] {
+            let k = keys(ReloadBeat { out: Some(0.5), in_: Some(1.6), keep: Some(asked), ..beat(2.4) });
+            assert!(k.keep >= k.out + 0.25 - EPS && k.keep <= k.in_ - 0.4 + EPS, "asked {asked}: stowed at {}", k.keep);
+            assert!(k.fresh > k.keep && k.fresh < k.in_, "asked {asked}: the new one shows at {} after {}", k.fresh, k.keep);
+        }
+        let by_hand = keys(ReloadBeat { hand: Some(true), ..beat(2.0) });
+        assert!(by_hand.hand && by_hand.fresh < keys(beat(2.0)).fresh, "a magazine from the hand shows sooner");
     }
 
-    /// N as the TypeScript writes it, key by key: the pairs are by hand and a swap would compile
+    /// An exact beat is a clip's own times, floors or no floors.
     #[test]
-    fn n_entries_are_the_typescripts() {
-        let want: [(&str, &str); 24] = [("hips", "DEF-hips"), ("spine1", "DEF-spine.001"), ("spine2", "DEF-spine.002"), ("spine3", "DEF-spine.003"), ("neck", "DEF-neck"), ("head", "DEF-head"), ("upperArmL", "DEF-upper_arm.L"), ("forearmL", "DEF-forearm.L"), ("handL", "DEF-hand.L"), ("upperArmR", "DEF-upper_arm.R"), ("forearmR", "DEF-forearm.R"), ("handR", "DEF-hand.R"), ("thighL", "DEF-thigh.L"), ("shinL", "DEF-shin.L"), ("footL", "DEF-foot.L"), ("toeL", "DEF-toe.L"), ("thighR", "DEF-thigh.R"), ("shinR", "DEF-shin.R"), ("footR", "DEF-foot.R"), ("toeR", "DEF-toe.R"), ("shoulderL", "DEF-shoulder.L"), ("shoulderR", "DEF-shoulder.R"), ("middle1R", "DEF-f_middle.01.R"), ("middle1L", "DEF-f_middle.01.L")];
+    fn an_exact_beat_keeps_its_times() {
+        let exact = ReloadBeat { out: Some(0.1), in_: Some(0.2), exact: Some(true), ..beat(1.1) };
+        let k = keys(exact);
+        assert_eq!((k.out, k.in_, k.dur, k.pull, k.rack), (0.1, 0.2, 1.1, false, 1.1));
+        let k = keys(ReloadBeat { rack: Some(Some(0.9)), ..exact });
+        assert_eq!((k.pull, k.rack), (true, 0.9));
+    }
+
+    /// A short throw is a toss from below, unless it is hard; anything else is the overhand, by how far.
+    #[test]
+    fn a_short_throw_is_a_toss_unless_it_is_hard() {
+        let (lo, full, fast) = (2.3, 7.1, 8.0);
+        let read = |d: f64, s: Option<f64>| throw_by_read(lo, full, fast, d, s);
+        let (low, far) = read(1.15, None);
+        assert_eq!((low, far), (0.5, 1.0), "half the toss's reach: half a toss");
+        assert_eq!(read(1.15, Some(fast - 1.0)).0, 0.5, "a slow one is a toss");
+        assert_eq!(read(1.15, Some(fast)).0, -1.0, "a hard one is no toss");
+        assert_eq!(read(1.15, Some(fast)).1, 0.0, "and is the shortest overhand");
+        assert_eq!(read(lo, None).0, -1.0, "at the toss's reach, the overhand");
+        let (a, b, c) = (read(lo + 0.5, None).1, read(5.0, None).1, read(full, None).1);
+        assert!(a > 0.0 && a < b && b < c && c == 1.0, "the overhand grows with the distance: {a} {b} {c}");
+        assert_eq!(read(99.0, None).1, 1.0);
+    }
+
+    /// The pairs are by hand, and a swap would compile: a joint's word names the rig's joint on that side, and no two words name one joint.
+    #[test]
+    fn each_joints_word_names_its_own_side_of_the_rig() {
         let nn = crate::character::n();
-        assert_eq!(n_entries(&nn), want);
+        let e = n_entries(&nn);
+        for (k, name) in e {
+            if k.ends_with('L') { assert!(name.ends_with(".L"), "{k} names {name}"); }
+            if k.ends_with('R') { assert!(name.ends_with(".R"), "{k} names {name}"); }
+        }
+        for (i, a) in e.iter().enumerate() {
+            assert!(e[i + 1..].iter().all(|b| a.1 != b.1), "{} is named twice", a.1);
+        }
     }
 
     /// each end and its ancestors, in the rig's order and no other
@@ -864,47 +914,59 @@ mod tests {
         assert_eq!(fk_list(&rig, &[]), Vec::<i32>::new());
     }
 
-    /// the TypeScript's own bits for stanceOf (bun, EXACT on)
-    #[test]
-    fn stance_of_bits() {
+    /// Two toes of a run clip of n frames: each lowest at its phase and travelling back there.
+    fn toes(left: f64, right: f64, back: f64) -> (Vec<Vec<f64>>, Vec<Vec<f64>>) {
         let n = 37;
-        let mut ty = vec![vec![0.0; n], vec![0.0; n]];
-        let mut tz = vec![vec![0.0; n], vec![0.0; n]];
-        for i in 0..n {
-            let p = i as f64 / n as f64;
-            ty[0][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * p + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 1.0);
-            tz[0][i] = -0.2 * m::cos(2.0 * m::PI * p + 0.3);
-            ty[1][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * (p + 0.52) + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 2.0);
-            tz[1][i] = -0.2 * m::cos(2.0 * m::PI * (p + 0.52) + 0.3);
-        }
+        let wave = |at: f64, f: &dyn Fn(f64) -> f64| -> Vec<f64> { (0..n).map(|i| f(2.0 * m::PI * (i as f64 / n as f64 - at))).collect() };
+        let y = |at: f64| wave(at, &|a| 0.1 - 0.08 * m::cos(a));
+        let z = |at: f64| wave(at, &|a| -back * 0.2 * m::sin(a));
+        (vec![y(left), y(right)], vec![z(left), z(right)])
+    }
+
+    /// A stance is when a foot is at its lowest and going back under him: the run's clock lands his feet by it.
+    /// A FAILURE MEANS: a running man's feet land out of time with the ground going by.
+    #[test]
+    fn a_stance_is_when_a_foot_is_low_and_going_back() {
+        let (ty, tz) = toes(0.2, 0.7, 1.0);
         let s = stance_of(&ty, &tz).unwrap();
-        assert_eq!([s.c.to_bits(), s.c_l.to_bits(), s.c_r.to_bits()], [0x3fcacf914c1bacf8, 0x3fe759f22983759f, 0x3fc83759f2298370]);
+        assert!(m::abs(s.c_l - 0.2) < 0.02, "the left foot's stance is at {}", s.c_l);
+        assert!(m::abs(s.c_r - 0.7) < 0.02, "the right foot's stance is at {}", s.c_r);
+        assert!(m::abs(s.c - 0.2) < 0.02, "the pair's, within a half cycle, is at {}", s.c);
+        // a foot that is low only as it comes forward has no stance, and nor has one that never goes back
+        let (ty, tz) = toes(0.2, 0.7, -1.0);
+        assert!(stance_of(&ty, &tz).is_none());
         let flat = vec![vec![1.0; 4], vec![1.0; 4]];
         assert!(stance_of(&flat, &flat).is_none());
     }
 
-    /// the TypeScript's own bits for sampleJog's closing of the seam: a move and a turn on one node, a turn and a move on two others, a phase past 1
+    /// A loop whose last key misses its first would jump once a cycle: half the gap comes off each end, so the two ends meet.
     #[test]
-    fn jog_seam_close_bits() {
+    fn the_jog_clips_seam_closes_and_touches_nothing_else() {
         use crate::character::AnimJogSeamItem as S;
-        const IN: [u32; 40] = [0x3dcc7576, 0x3f37a4a6, 0x3f7f5bd5, 0x3f4ef99f, 0x3e74fdc7, 0xbee2920a, 0xbf6a89da, 0xbf757c10, 0xbf0cf9ba, 0x3deeb159, 0x3f3a9db7, 0x3f7fa089, 0x3f4c69a7, 0x3e643d41, 0xbeea4225, 0xbf6c3b03, 0xbf743a9b, 0xbf095cd8, 0x3e086dfb, 0x3f3d8946, 0x3f7fd2bd, 0x3f49cae3, 0x3e536c36, 0xbef1e14b, 0xbf6ddb12, 0xbf72e779, 0xbf05b604, 0x3e197969, 0x3f40671e, 0x3f7ff26d, 0x3f471d85, 0x3e428bde, 0xbef96ef0, 0xbf6f69eb, 0xbf7182c2, 0xbf020583, 0x3e2a79bc, 0x3f433708, 0x3f7fff97, 0x3f4461bd];
-        let want: [(f64, u64, [u32; 40]); 2] = [
-            (0.28125, 0xbfcc000000000000, [0x3e296dee, 0x3f36f451, 0x3f7f5bd5, 0x3f4ef99f, 0x3e5e9761, 0xbedffbb7, 0xbf6a89da, 0xbf757c10, 0xbf1af9ba, 0x3deb8e88, 0x3f3a9db7, 0x3f7fa089, 0x3f4c69a7, 0x3e6617b7, 0xbee9cafc, 0xbf6c3b03, 0xbf743a9b, 0xbf08cdec, 0x3e063bc8, 0x3f3d8946, 0x3f7fd2bd, 0x3f49a933, 0x3e55a698, 0xbef1e14b, 0xbf6ddb12, 0xbf733814, 0xbf05d50a, 0x3e197969, 0x3f40671e, 0x3f7ff26d, 0x3f471d85, 0x3e428bde, 0xbef96ef0, 0xbf6f69eb, 0xbf7182c2, 0xbf020583, 0x3e2a79bc, 0x3f433708, 0x3f7fff97, 0x3f4461bd]),
-            (1.75, 0x3fd0000000000000, [0x3ccb6f72, 0x3f386e2c, 0x3f7f5bd5, 0x3f4ef99f, 0x3e874bb0, 0xbee586fb, 0xbf6a89da, 0xbf757c10, 0xbef9f374, 0x3df246da, 0x3f3a9db7, 0x3f7fa089, 0x3f4c69a7, 0x3e621ea3, 0xbeeac8ec, 0xbf6c3b03, 0xbf743a9b, 0xbf09fff4, 0x3e0aefad, 0x3f3d8946, 0x3f7fd2bd, 0x3f49f10e, 0x3e50df14, 0xbef1e14b, 0xbf6ddb12, 0xbf728af3, 0xbf0591c2, 0x3e197969, 0x3f40671e, 0x3f7ff26d, 0x3f471d85, 0x3e428bde, 0xbef96ef0, 0xbf6f69eb, 0xbf7182c2, 0xbf020583, 0x3e2a79bc, 0x3f433708, 0x3f7fff97, 0x3f4461bd]),
-        ];
-        let seam = [
-            S { node: 1.0, d: Some([0.0123, -0.0231, 0.007]), axis: None, ang: None },
-            S { node: 2.0, d: None, axis: Some([0.6, 0.0, 0.8]), ang: Some(0.04) },
-            S { node: 1.0, d: None, axis: Some([0.0, 1.0, 0.0]), ang: Some(0.021) },
-            S { node: 0.0, d: Some([-0.3, 0.1, 0.25]), axis: None, ang: None },
-        ];
-        for (ph, k_bits, out) in want {
-            let k = ph - m::floor(ph) - 0.5;
-            assert_eq!(k.to_bits(), k_bits);
-            let mut d: Vec<f32> = IN.iter().map(|b| f32::from_bits(*b)).collect();
-            jog_seam_close(&mut d, 4, &seam, k);
-            let got: Vec<u32> = d.iter().map(|x| x.to_bits()).collect();
-            assert_eq!(got, out.to_vec());
+        let rows = 3;
+        let start = || -> Vec<f32> {
+            let mut d = vec![0.0f32; 7 * rows];
+            for i in 0..rows { d[6 * rows + i] = 1.0; }
+            d
+        };
+        let (gap, ang) = ([0.2, -0.1, 0.4], 0.3);
+        let seam = [S { node: 1.0, d: Some(gap), axis: None, ang: None }, S { node: 2.0, d: None, axis: Some([0.0, 1.0, 0.0]), ang: Some(ang) }];
+        let at = |k: f64| { let mut d = start(); jog_seam_close(&mut d, rows, &seam, k); d };
+        assert_eq!(at(0.0), start(), "the middle of the loop is the clip's own");
+        let (first, last) = (at(-0.5), at(0.5));
+        for c in 0..3 {
+            let got = (last[c * rows + 1] - first[c * rows + 1]) as f64;
+            assert!(m::abs(got - gap[c]) < 1e-6, "column {c}: the ends part by {got}, the gap is {}", gap[c]);
         }
+        let turn = moves_angle(&first, &last, rows, 2);
+        assert!(m::abs(turn - ang) < 1e-5, "the ends part by a turn of {turn}, the gap is {ang}");
+        for k in 0..7 { assert_eq!(first[k * rows], start()[k * rows], "a node with no seam stays"); }
+    }
+
+    /// the turn between a node's rotation in two poses
+    fn moves_angle(a: &[f32], b: &[f32], rows: usize, node: usize) -> f64 {
+        let q = |d: &[f32]| -> [f64; 4] { let mut o = [0.0; 4]; for c in 0..4 { o[c] = d[(3 + c) * rows + node] as f64; } o };
+        let (x, y) = (q(a), q(b));
+        2.0 * m::acos(m::min(1.0, m::abs(x[0] * y[0] + x[1] * y[1] + x[2] * y[2] + x[3] * y[3])))
     }
 }

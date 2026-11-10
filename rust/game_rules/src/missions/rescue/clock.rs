@@ -95,7 +95,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         if took { rescue_note(g, "act:blocked"); return; }
         g.rescue.executed.add(v);
         let dir = v3::normalize(v3::sub(chest, g.ch[c].muzzle));
-        crate::combat::kill_guard(g, v, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), None);
+        crate::combat::kill_guard(g, v, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), crate::game::With::Hand);
         let o = g.staged.captives.iter().copied().find(|&h| h != v && !crate::condition::down(g, g.gd[h].ch));
         if let Some(o) = o { crate::civilians::hostage_say(g, o, crate::dialogue::HostageMoment::Shot, Some(v)); }
         g.rescue.murmur_at = g.time + 6.0;
@@ -135,7 +135,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         let mut v = mine[0];
         for &b in &mine[1..] {
             let (pa, pb) = (pos_of(g, v), pos_of(g, b));
-            if !(flat(pa, cp) <= flat(pb, cp)) { v = b; }
+            if !(v3::dist_xz(pa, cp) <= v3::dist_xz(pb, cp)) { v = b; }
         }
         let at = chest_of(g, v);
         let def = crate::roomfight::def_of(g, cap);
@@ -272,7 +272,7 @@ pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     }
     if rescue_over(g) || g.rescue.act.is_some() || alive.is_empty() || !g.rescue.secured_at.is_nan() { return; }
     if let Some(n) = g.rescue.noise {
-        if !g.rescue.said.has(String::from("h:entry")) && (crate::squad::in_bounds(n, b, None) || flat(n, rescue_room_point(g, RescueRoomPointWhich::Outside)) < 3.0) {
+        if !g.rescue.said.has(String::from("h:entry")) && (crate::squad::in_bounds(n, b, None) || v3::dist_xz(n, rescue_room_point(g, RescueRoomPointWhich::Outside)) < 3.0) {
             g.rescue.said.add(String::from("h:entry"));
             let h = next_voice(g, &alive);
             let other = alive.iter().copied().find(|&o| o != h);
@@ -317,6 +317,13 @@ fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, w
     });
     rescue_end_act(g);
     if lost { rescue_note(g, &alloc::format!("lost:{}", why)); } else { rescue_note(g, "rescued"); }
+}
+
+/// Its entry's doors, while they are held for the second word, each with the men at it.
+pub fn rescue_waits(g: &crate::game::Game) -> Vec<(DoorId, Vec<GuardId>)> {
+    if !crate::rescue::rescue_up(g) || g.rescue.result.is_some() { return Vec::new(); }
+    let Some(entry) = g.rescue.entry.as_ref().filter(|e| !g.tab.doortools_door_gate[e.gate].go) else { return Vec::new() };
+    entry.ops.iter().filter(|e| e.ended.is_none()).map(|e| { let op = &g.tab.doortools_door_op[e.op]; (op.door, op.men.clone()) }).collect()
 }
 
 /// How it ended, for the run's card.

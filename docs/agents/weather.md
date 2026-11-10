@@ -81,8 +81,8 @@ other roll.
 
 | what | who reads it | the road |
 |---|---|---|
-| rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
-| fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense.rs`): `air_trans` over `smoke_between`, so fog blinds by smoke's own thresholds (`sight_gain`) |
+| rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `weather_hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
+| fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense.rs`): `weather_air_trans` over `smoke_between`: fog blinds by smoke's own thresholds (`sight_gain`) |
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
 | sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; `open_rays` keeps by cell which rays reach the sky (`SkyReach`, in no save) |
 | the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
@@ -107,7 +107,7 @@ one's speed for the tick (ramps, `vent_due`, gusts off `vnoise`) and hands them 
 Fires and moths read `wind_at`.
 
 **Dust and fog indoors.** `rust/sim/src/air.rs` keeps, for each half-meter cell, what share of the open air's fog stands there, only under a picked
-kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `air_trans` walks that
+kind with fog. Open a door and it spreads in (`airdust.diffuse`); a room settles back to the kind's `leak` (`airdust.settle`). `weather_air_trans` walks that
 field along the line, and `air_dust_send` hands the picture a copy, so what is drawn is what blinds.
 
 **Fire.** A level light whose name starts with a word in `fire.names` is a fire (`is_fire`). `update_fire` flickers and moves its lamp, feeds its
@@ -142,7 +142,7 @@ is made and sets `StoodWith`, the kind locked for that game.
   is never a pick.
 - **Rain drowns small sounds, not loud ones.** A rule that hears asks `hear_path`, never the plain path. The mixer's rain and the ear's mask are one
   number (`rain_bed`).
-- **No kind picked changes no sense.** `hear_mask` and `air_trans` answer exactly 1.
+- **No kind picked changes no sense.** `weather_hear_mask` and `weather_air_trans` answer exactly 1.
 - **A storm is cut by the level's own roofs.** "rain is busted on records office".
 - **Vents are wind.** "for hvac vents, that should model wind which then also influences the smoke solver".
 - **The picture's air is a fluid.** "the nice thing of integrating with the fluid system is that you'll naturally get neat interactions where the wind

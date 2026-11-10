@@ -248,15 +248,14 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
 }
 
 /// Was this fixture's switch on in the level as authored.
-pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { g.tab.fixture[t].authored }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.
 pub fn game_stand_lights(g: &mut crate::game::Game) {
     let list: Vec<LightId> = g.engine.lights.lights.clone();
     let targets: Vec<FixtureId> = g.targets.clone();
-    let beacons: Vec<crate::sim_lightshome::BeaconFact> = g.beacons.iter().map(|b| crate::sim_lightshome::BeaconFact { light: b.light, phase: b.phase, target: b.target }).collect();
-    let cones: Vec<crate::sim_lightshome::LightHomeStandConesItem> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; crate::sim_lightshome::LightHomeStandConesItem { light: r.cone, target: r.target, slot: r.slot } }).collect();
-    crate::sim_lightshome::light_home_stand(g, &list, &targets, &beacons, &cones);
+    let cones: Vec<(LightId, FixtureId)> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; (r.cone, r.target) }).collect();
+    crate::fixtures::light_home_stand(g, &list, &targets, &cones);
 }
 
 /// The player's restart, from outside a step: the run's first step stands again with what an evening keeps (savestate/control.rs). In a step it is asked for, and made as the step ends.

@@ -38,9 +38,9 @@ fn guard_of_char(g: &Game, c: CharId) -> Option<GuardId> {
 
 /// Would the old near-is-a-hit rule have broken this fixture on these legs? A count for the checks.
 fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
-    use crate::sim_lightshome::FixtureKind;
-    let kind = g.tab.sim_lightshome_fixture[t].kind;
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
+    use crate::fixtures::FixtureKind;
+    let kind = g.tab.fixture[t].kind;
+    let pos = g.tab.fixture[t].pos;
     let rad = if kind == FixtureKind::Emissive { 0.45 } else if kind == FixtureKind::Breaker { 0.4 } else { 0.3 };
     for s in legs {
         let to_t = v3::sub(pos, s.o);
@@ -166,83 +166,97 @@ fn scan(g: &mut Game, f: &ScanOf, t_hit: f64, c: CharId, own: bool) -> f64 {
     -1.0
 }
 
-/// What a round in a man does, in the shooter's seat: at once for a single round, once the whole pattern has flown for a pellet. (fireWeapon's manDown and samHit, the rows of Shell.late)
-pub(in crate::guns) fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLate) {
-    match *late {
-        crate::shotgun::ShellLate::ManDown { hit_guard, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p } =>
-            man_down(g, hit_guard, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p),
-        crate::shotgun::ShellLate::SamHit { hit_view, sg, dir, hit_p } => sam_hit(g, hit_view, sg, dir, hit_p),
-    }
-}
+/// The man in the arm of the player whose seat this is.
+fn shield_of(g: &Game) -> Option<CharId> { g.pl[g.player].holding.as_ref().map(|h| g.gd[h.g].ch) }
 
-/// The man the round found: where it landed decides, then the sound, whose round it was. (fireWeapon's manDown)
-fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: CharId, is_player: bool, ff_ours: bool, hostage_hit: bool, muzzle: V3, dir: V3, t_hit: f64, hit_p: V3) {
-    use crate::game::{DownBy, DownKind, GuardState};
-    let was_up = !crate::condition::down(g, g.gd[hit_guard].ch);
-    let team = g.gd[hit_guard].team;
-    let foe = match sg { Some(s) => { let st = g.gd[s].team; crate::teams::is_hostile(g, st, team) } None => false };
-    let sign = g.gd[hit_guard].callsign.clone();
-    let by_sign = sg.map(|s| g.gd[s].callsign.clone());
-    let by = by_sign.as_deref().unwrap_or("");
-    let foe_line = if foe { Some(alloc::format!("{} down — {}'s round", sign, by)) } else { None };
-    let own_hit = ff_ours && g.gd[hit_guard].civ.is_none() && !crate::teams::is_hostile(g, crate::teams::Team::Player, team);
-    let line: Option<String> = if foe_line.is_some() {
-        foe_line
-    } else if own_hit && !is_player {
-        Some(alloc::format!("{} down — {}'s round", sign, by))
-    } else {
-        None
-    };
-    let by_who = if is_player { DownBy::Player } else { DownBy::Guard };
-    kill_guard(g, hit_guard, dir, Some(false), Some(DownKind::Shot), Some(by_who), line.as_deref());
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(hit_p), Some(0.8), None);
-    if was_up { g.gd[hit_guard].killer_id = g.ch[shooter].id; }
-    if hostage_hit {
-        if let Some(sh) = sg {
-            if !crate::condition::down(g, g.gd[sh].ch) { crate::guards::hostage_hit_bark(g, sh, hit_guard); }
+/// Whom a round of this man's can find, his enemies first, each with whether he is of the shooter's own side. A man in a player's arm is in front of
+/// him, for anybody's rounds but his; a civilian is found by a player's alone; a teammate and Sam by each other's (friendlyfire).
+fn whom_it_can_find(g: &Game, shooter: CharId, ours: bool) -> Vec<(CharId, bool)> {
+    let by_player = crate::character::is_player(g, shooter);
+    let side = crate::teams::team_of_char(g, shooter);
+    let shield = shield_of(g);
+    let (mut foes, mut own) = (Vec::new(), Vec::new());
+    for pl in crate::seats::men(g) {
+        let c = g.pl[pl].ch;
+        if by_player || crate::condition::down(g, c) { continue; }
+        if crate::teams::is_hostile(g, side, crate::teams::Team::Player) { foes.push((c, false)); } else if ours { own.push((c, true)); }
+    }
+    if let Some(c) = shield.filter(|&c| !by_player && c != shooter && !crate::condition::down(g, c)) { foes.push((c, false)); }
+    for &gd in &g.guards {
+        let c = g.gd[gd].ch;
+        if Some(c) == shield || c == shooter || !g.ch[c].alive || crate::condition::down(g, c) { continue; }
+        if crate::teams::is_hostile(g, side, g.gd[gd].team) {
+            if by_player || !g.gd[gd].god { foes.push((c, false)); }
+        } else if ours && crate::friendlyfire::ff_body(g, gd) {
+            own.push((c, true));
         }
     }
+    if by_player { foes.extend(crate::civilians::civilian_bodies(g).into_iter().map(|cv| (g.gd[cv].ch, false))); }
+    foes.extend(own);
+    foes
 }
 
-/// A round in a player's man: the flinch, the flash, lock work ended, and the hit unless god mode. (fireWeapon's samHit)
-fn sam_hit(g: &mut Game, pl: PlayerId, sg: Option<GuardId>, dir: V3, hit_p: V3) {
-    let c = g.pl[pl].ch;
+/// What a round in a man does: at once for a single round, once the whole pattern has flown for a pellet.
+pub(in crate::guns) fn round_in(g: &mut crate::game::Game, r: &crate::shotgun::RoundIn) {
+    match g.ch[r.c].who {
+        crate::character::Who::Player(pl) => sam_hit(g, pl, r),
+        crate::character::Who::Guard(gd) => man_down(g, gd, r),
+    }
+}
+
+/// The man the round found: where it landed decides, then the sound, whose round it was.
+fn man_down(g: &mut Game, gd: GuardId, r: &crate::shotgun::RoundIn) {
+    use crate::game::{DownBy, DownKind};
+    let was_up = !crate::condition::down(g, r.c);
+    let by_player = crate::character::is_player(g, r.shooter);
+    let sg = if by_player { None } else { guard_of_char(g, r.shooter) };
+    let by_who = if by_player { DownBy::Player } else { DownBy::Guard };
+    kill_guard(g, gd, r.dir, Some(false), Some(DownKind::Shot), Some(by_who), crate::game::With::Hand);
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.8), None);
+    if was_up { g.gd[gd].killer_id = g.ch[r.shooter].id; }
+    if let Some(s) = sg.filter(|_| r.shield) {
+        if !crate::condition::down(g, g.gd[s].ch) { crate::guards::hostage_hit_bark(g, s, gd); }
+    }
+}
+
+/// A round in a player's man: the flinch, the flash, lock work ended, and the hit unless god mode.
+fn sam_hit(g: &mut Game, pl: PlayerId, r: &crate::shotgun::RoundIn) {
+    let (c, dir) = (r.c, r.dir);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[pl].hit_flash = 1.0;
     if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
     if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(hit_p), Some(0.9), None);
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.9), None);
     if !g.god_mode {
         let seat = crate::seats::seat_of_man(g, pl);
         in_seat(g, seat, &mut |g: &mut Game| hit_player(g, dir));
-        let by = sg.map(|s| g.gd[s].callsign.clone());
+        let by = guard_of_char(g, r.shooter).map(|s| g.gd[s].callsign.clone());
         crate::chronicle::chron_hit(g, by.as_deref());
     }
 }
 
 /// A shot-out light: the breaker's blackout, a dark lens's glass, or a fixture gone. (fireWeapon's shootOut)
 fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
-    use crate::sim_lightshome::FixtureKind;
-    let kind = g.tab.sim_lightshome_fixture[t].kind;
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
-    let break_ = crate::sim_lightshome::light_in().break_;
+    use crate::fixtures::FixtureKind;
+    let kind = g.tab.fixture[t].kind;
+    let pos = g.tab.fixture[t].pos;
     if kind == FixtureKind::Breaker {
         crate::render_lights::light_set_flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
         crate::game::game_set_blackout(g, f64::INFINITY, crate::game::GameSetBlackoutCause::Shot);
-        crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
+        g.tab.fixture[t].broken = true;
         crate::particle_fx::breaker_spark_fx(g, pos, muzzle);
         return;
     }
     if crate::carlamps::lamp_glass(g, t) { g.stats.carlamps.shot += 1; }
-    let lens = g.tab.sim_lightshome_fixture[t].lens;
+    let lens = g.tab.fixture[t].lens;
     if crate::carlamps::dead_lamp(g, t) {
-        crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
+        g.tab.fixture[t].broken = true;
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
         return;
     }
-    crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
+    g.tab.fixture[t].broken = true;
     crate::game::game_light_event(g, t, None, None);
     crate::chronicle::chron_light_shot(g, t);
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
@@ -250,22 +264,22 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     if crate::carlamps::lamp_glass(g, t) {
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
     } else if kind != FixtureKind::Device {
-        let boxes = g.tab.sim_lightshome_fixture[t].boxes.clone();
+        let boxes = g.tab.fixture[t].boxes.clone();
         crate::particle_fx::fixture_shatter_fx(g, &crate::particle_fx::FixtureShatterFxT { pos, kind: String::from(kind.as_str()), boxes }, muzzle);
     }
 }
 
 /// `live` of the real-hit search: a target a round can put out.
 fn lamp_live(g: &Game, t: FixtureId) -> bool {
-    !(crate::sim_lightshome::fixture_broken(g, t)
-        || !g.tab.sim_lightshome_fixture[t].interactive
-        || crate::sim_lightshome::fixture_factor(g, t) <= 0.0 && !crate::sim_lightshome::fixture_on(g, t) && !crate::carlamps::lamp_glass(g, t)
+    !(g.tab.fixture[t].broken
+        || !g.tab.fixture[t].interactive
+        || g.tab.fixture[t].factor <= 0.0 && !g.tab.fixture[t].on && !crate::carlamps::lamp_glass(g, t)
         || crate::fire::fire_holds(g, t))
 }
 
 /// `own` of the real-hit search: the breaker's target lists its LED alone, a round into the panel is a round into the breaker.
 fn lamp_own(g: &Game, t: FixtureId) -> Vec<f64> {
-    if g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Breaker { g.level.breaker.boxes.clone() } else { g.tab.sim_lightshome_fixture[t].boxes.clone() }
+    if g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker { g.level.breaker.boxes.clone() } else { g.tab.fixture[t].boxes.clone() }
 }
 
 /// The round itself, the shooter's muzzle to where it stops: what it found, what it broke, what the floor heard.
@@ -273,12 +287,11 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     let is_player = crate::character::is_player(g, shooter);
     use crate::game::GuardState;
     use crate::glasspen::{path_at, seg_at, spent_in_pane};
-    use crate::sim_lightshome::FixtureKind;
+    use crate::fixtures::FixtureKind;
 
     let sg = if is_player { None } else { guard_of_char(g, shooter) };
     if let Some(s) = sg { if g.gd[s].work_stow.is_some() { crate::workstow::stow_fired(g, s); } }
     if !is_player && g.ch[shooter].anim.big_tool.is_some() { crate::bigkit::big_fired(g, shooter); }
-    let sg_team = if is_player { crate::teams::Team::Player } else { match sg { Some(s) => g.gd[s].team, None => crate::teams::Team::Guard } };
     let def: crate::weapons::WeaponDef = match &o.weapon { Some(d) => d.clone(), None => { let f = firearm_of(g, shooter); let id = g.fa[f].def; weapon_row(g, id) } };
     let mut spread = o.spread.unwrap_or(0.0);
     let steady = o.steady.unwrap_or(false);
@@ -286,8 +299,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     let pellets = def.pellets;
     let who = g.ch[shooter].id;
 
-    let ff_on = crate::friendlyfire::ff_live(g);
-    let ff_ours = ff_on && (is_player || crate::friendlyfire::ff_side(g, sg));
+    let ff_ours = (is_player || crate::friendlyfire::ff_side(g, sg));
     if ff_ours && !is_player && pel.is_none() {
         let wide = if steady { 0.0 } else { ai_wide(g, &crate::seats::here(g), sg, shooter, &def) };
         let cone = match &pellets { Some(p) => p.cone * 2.0, None => 0.0 };
@@ -347,9 +359,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
 
     // --- hit scan
     let mut t_hit = 60.0;
-    let mut hit_guard: Option<GuardId> = None;
-    let mut player_hit = false;
-    let mut hit_view: PlayerId = g.player;
+    let mut hit: Option<CharId> = None;
     let mut st0 = crate::scene_collision::raycast(g, muzzle, dir, t_hit).map(st_of);
     if let Some(s) = st0 { t_hit = s.t; }
     let mut st = st0;
@@ -414,83 +424,13 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         }
     }
     let f = ScanOf { pen: pen.as_ref(), shooter, muzzle, dir, st0, arm_panes };
-    let held = g.pl[g.player].holding.as_ref().map(|h| h.g);
-    let mut hostage_hit = false;
-    if through {
-        // into the panel at the muzzle: nobody beyond it
-    } else if is_player {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            let team = g.gd[gd].team;
-            let own = !crate::teams::is_hostile(g, crate::teams::Team::Player, team);
-            if Some(gd) == held || (own && !(ff_on && crate::friendlyfire::ff_body(g, gd))) { continue; }
-            let c = g.gd[gd].ch;
+    if !through {   // (through: into the panel at the muzzle, nobody beyond it)
+        for (c, own) in whom_it_can_find(g, shooter, ff_ours) {
             let t = scan(g, &f, t_hit, c, own);
-            if t >= 0.0 && t < t_hit { t_hit = t; hit_guard = Some(gd); }
-        }
-        for cv in crate::civilians::civilian_bodies(g) {
-            let c = g.gd[cv].ch;
-            let t = scan(g, &f, t_hit, c, false);
-            if t >= 0.0 && t < t_hit { t_hit = t; hit_guard = Some(cv); }
-        }
-    } else {
-        let mut t_h = -1.0;
-        if let Some(h) = held {
-            if !crate::condition::down(g, g.gd[h].ch) && g.gd[h].ch != shooter {
-                let c = g.gd[h].ch;
-                t_h = scan(g, &f, t_hit, c, false);
-            }
-        }
-        let t = if crate::teams::is_hostile(g, sg_team, crate::teams::Team::Player) { let c = g.pl[g.player].ch; scan(g, &f, t_hit, c, false) } else { -1.0 };
-        if t_h >= 0.0 && (t < 0.0 || t_h < t) { t_hit = t_h; hit_guard = held; hostage_hit = true; }
-        else if t >= 0.0 { t_hit = t; player_hit = true; }
-        if g.seats.len() > 1 && crate::teams::is_hostile(g, sg_team, crate::teams::Team::Player) {
-            let mut i = 0;
-            while i < g.seats.len() {
-                let s = g.seats[i];
-                i += 1;
-                let pl = crate::cmd::seat_man(g, s);
-                if pl == g.player || crate::condition::down(g, g.pl[pl].ch) { continue; }
-                let c = g.pl[pl].ch;
-                let to = scan(g, &f, t_hit, c, false);
-                if to >= 0.0 && to < t_hit { t_hit = to; player_hit = true; hit_guard = None; hostage_hit = false; hit_view = pl; }
-            }
-        }
-        let mut i = 0;
-        while i < g.guards.len() {
-            let od = g.guards[i];
-            i += 1;
-            let c = g.gd[od].ch;
-            let team = g.gd[od].team;
-            if Some(od) == held || crate::condition::down(g, g.gd[od].ch) || !g.ch[c].alive || c == shooter || !crate::teams::is_hostile(g, sg_team, team) || g.gd[od].god { continue; }
-            let to = scan(g, &f, t_hit, c, false);
-            if to >= 0.0 && to < t_hit { t_hit = to; hit_guard = Some(od); hostage_hit = false; player_hit = false; }
-        }
-        if ff_ours {
-            let mut i = 0;
-            while i < g.seats.len() {
-                let s = g.seats[i];
-                i += 1;
-                let pl = crate::cmd::seat_man(g, s);
-                if crate::condition::down(g, g.pl[pl].ch) { continue; }
-                let c = g.pl[pl].ch;
-                let t_s = scan(g, &f, t_hit, c, true);
-                if t_s >= 0.0 && t_s < t_hit { t_hit = t_s; player_hit = true; hit_guard = None; hostage_hit = false; hit_view = pl; }
-            }
-            let mut i = 0;
-            while i < g.guards.len() {
-                let od = g.guards[i];
-                i += 1;
-                let c = g.gd[od].ch;
-                if Some(od) == held || c == shooter || !crate::friendlyfire::ff_body(g, od) { continue; }
-                let to = scan(g, &f, t_hit, c, true);
-                if to >= 0.0 && to < t_hit { t_hit = to; hit_guard = Some(od); hostage_hit = false; player_hit = false; }
-            }
+            if t >= 0.0 && t < t_hit { t_hit = t; hit = Some(c); }
         }
     }
-    if let Some(h) = &ph { if hit_guard.is_none() && !player_hit { t_hit = h.t; } }
+    if let Some(h) = &ph { if hit.is_none() { t_hit = h.t; } }
     let hit_p = match &pen { Some(p) => path_at(&p.path, t_hit), None => v3::mad(muzzle, dir, t_hit) };
     let flown = dir;
     if let Some(b) = &bars { crate::winbars::bars_settle(g, b, t_hit, who, lead); }
@@ -501,7 +441,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     }
     // (st, stopped there: the round's end is in that static, not a man, not the panel at the muzzle)
     let st_stop = st.filter(|s| m::abs(t_hit - s.t) < 1e-6);
-    let bare_stop = hit_guard.is_none() && !player_hit && !through;
+    let bare_stop = hit.is_none() && !through;
     if bare_stop { if let Some(s) = st_stop { crate::wallpen::spent_in_wall(g, s.index); } }
     if bare_stop {
         if let Some(s) = st_stop {
@@ -520,8 +460,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         crate::shotgun::pellet_end(p, index, t_hit, at);
     }
     if third {
-        let hit_c = match hit_guard { Some(h) => Some(g.gd[h].ch), None => if player_hit { Some(g.pl[hit_view].ch) } else { None } };
-        crate::suppression::note_round(g, shooter, muzzle, hit_p, hit_c);
+        crate::suppression::note_round(g, shooter, muzzle, hit_p, hit);
     }
     match (&pen, &ph) {
         (Some(p), Some(h)) => { e_k = seg_at(&p.path, h.t).e / e0; }
@@ -551,7 +490,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         }
     }
     // impact flash + sound
-    let blind = match hit_guard { Some(h) => crate::fogofwar::fog_of_war_hidden(g, h), None => false };
+    let blind = hit.and_then(|c| crate::character::guard_of(g, c)).map_or(false, |h| crate::fogofwar::fog_of_war_hidden(g, h));
     if blind { crate::fogofwar::fog_of_war_hush(g); }
     if lead {
         let fl = crate::render_lights::light_set_flash(g, v3::mad(hit_p, dir, -0.05), [1.0, 0.8, 0.5], 1.5, 2.5, 0.05, 0.0);
@@ -567,7 +506,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
             }
         }
     }
-    let flesh = hit_guard.is_some() || player_hit;
+    let flesh = hit.is_some();
     if !flesh && !in_glass && lead { crate::audio_iface::game_audio_like_play(g, "bulletImpact", Some(hit_p), Some(0.8), None); }
     if bare_stop && !in_glass {
         let n = match (ph_met, st) { (Some(h), _) => h.n, (None, Some(s)) => s.n, (None, None) => [0.0, 1.0, 0.0] };
@@ -602,30 +541,16 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         let impact = if flesh { TracerImpact::Flesh } else if st.is_some() || ph.is_some() || through { TracerImpact::Solid } else { TracerImpact::None };
         crate::tracers::tracers_round(g, Some(gun), &def, muzzle, along, far, impact, who, None);
     }
-    if ff_ours {
-        let own_hit = match hit_guard {
-            Some(h) if g.gd[h].civ.is_none() => { let team = g.gd[h].team; !crate::teams::is_hostile(g, crate::teams::Team::Player, team) }
-            _ => false,
-        };
-        if player_hit || own_hit { crate::friendlyfire::ff_note(g, sg, is_player, player_hit); }
-    }
-    let hit_c = hit_guard.map(|h| g.gd[h].ch);
-    if ff_on && is_player && lead { crate::friendlyfire::ff_past(g, muzzle, hit_p, hit_c); }
-    let victim = if player_hit { Some(g.pl[hit_view].ch) } else { hit_c };
-    let was_down = if player_hit { crate::condition::down(g, g.pl[hit_view].ch) } else { match hit_guard { Some(h) => crate::condition::down(g, g.gd[h].ch), None => false } };
-    crate::deathrecap::recap_round(g, victim, was_down, shooter, muzzle, hit_p, &def, o.blind);
-    if let Some(hg) = hit_guard {
-        let late = crate::shotgun::ShellLate::ManDown { hit_guard: hg, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p };
+    if ff_ours && hit.map_or(false, |c| crate::friendlyfire::on_our_side(g, c)) { crate::friendlyfire::ff_note(g, shooter, hit); }
+    if is_player && lead { crate::friendlyfire::ff_past(g, muzzle, hit_p, hit); }
+    let was_down = hit.map_or(false, |c| crate::condition::down(g, c));
+    crate::deathrecap::recap_round(g, hit, was_down, shooter, muzzle, hit_p, &def, o.blind);
+    if let Some(c) = hit {
+        let shield = Some(c) == shield_of(g);
+        let r = crate::shotgun::RoundIn { c, shooter, shield, dir, hit_p };
         match &mut pel {
-            None => run_shell_late(g, &late),
-            Some(p) => { if crate::shotgun::pellet_drops(g, p, Some(hg), t_hit, dir) { p.late.push(late); } }
-        }
-    }
-    if player_hit {
-        let late = crate::shotgun::ShellLate::SamHit { hit_view, sg, dir, hit_p };
-        match &mut pel {
-            None => run_shell_late(g, &late),
-            Some(p) => { if crate::shotgun::pellet_drops(g, p, None, t_hit, dir) { p.late.push(late); } }
+            None => round_in(g, &r),
+            Some(p) => { if crate::shotgun::pellet_drops(g, p, c, t_hit, dir) { p.late.push(r); } }
         }
     }
     // lights: a shot that meets a fixture breaks it
@@ -660,9 +585,9 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
             while i < g.targets.len() {
                 let t = g.targets[i];
                 i += 1;
-                let pos = g.tab.sim_lightshome_fixture[t].pos;
+                let pos = g.tab.fixture[t].pos;
                 if !lamp_live(g, t) || crate::aimcost::legs_near(pos, &legs) > 3.0 { continue; }
-                let kind = g.tab.sim_lightshome_fixture[t].kind;
+                let kind = g.tab.fixture[t].kind;
                 let slack = if kind == FixtureKind::Breaker { 0.08 } else { 0.3 };
                 let boxes: Vec<Option<BoxId>> = lamp_own(g, t).iter().map(|&b| g.engine.world.statics.get(b as usize).copied()).collect();
                 let bare = if kind == FixtureKind::Device { g.k.aimcost.bare_device } else { g.k.aimcost.bare };
@@ -712,7 +637,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         let p = g.player;
         g.pl[p].noise = m::max(g.pl[p].noise, report.level);
         let short = crate::gear::plain_short(&def);
-        crate::chronicle::chron_shot(g, &short, hit_guard, hit_p);
+        crate::chronicle::chron_shot(g, &short, hit.is_some(), hit_p);
     }
 }
 

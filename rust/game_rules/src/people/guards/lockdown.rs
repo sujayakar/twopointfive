@@ -385,7 +385,7 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         k += 1;
         if g.gd[o].foe == Some(g.gd[gd].ch) {
             crate::mind::foe(g, o, None, "guards");
-            crate::aim::aim_state_clear(&mut g.gd[o].aim);
+            crate::aim::aim_state_clear(&mut g.arms[g.gd[o].ch].aim);
         }
         if let Some(s) = g.gd[o].standoff { if g.tab.guards_standoff[s].pair == gd { g.gd[o].standoff = None; } }
         if g.gd[o].body_duty.as_ref().map_or(false, |b| b.body == gd) { g.gd[o].body_duty = None; }

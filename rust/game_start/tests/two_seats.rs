@@ -434,6 +434,24 @@ fn each_player_has_his_own_partner() {
     }
 }
 
+/// THE RULE: a player folded by a blast is folded whoever else is down. A failure means that with his partner down, a rule about him (a grab, a hand on a switch) lets him act while he is folded.
+#[test]
+fn a_player_is_folded_whoever_else_is_down() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let (him, other) = (p.g.pl[man(&p, seat)].ch, p.g.pl[man(&p, 1 - seat)].ch);
+            p.g.cond[him].fold_until = p.g.time + 5.0;
+            let folded = |p: &Play| game::samstun::sam_staggered(&p.g, &game::seats::seat(&p.g, p.g.seats[seat]), None);
+            assert!(folded(&p), "seed {s}: CONTROL: seat {seat}'s man is folded with both up");
+            p.g.cond[other].down = true;
+            assert!(folded(&p), "seed {s}: seat {seat}'s man reads as not folded because the other player is down");
+            p.g.cond[him].down = true;
+            assert!(!folded(&p), "seed {s}: a man who is down shows no stun");
+        }
+    }
+}
+
 /// THE RULE: a camera watches every player in its cone. The player nearest the lens does not hide the other.
 /// A failure means standing behind a camera shields your partner.
 #[test]
@@ -443,7 +461,7 @@ fn a_camera_sees_any_player_in_its_cone() {
             let (mut p, _) = two(s);
             let c = *p.g.devices.cameras.first().expect("the office has a camera");
             let def = p.g.tab.devices_camera_rt[c].def.clone();
-            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let yaw = p.g.tab.devices_camera_rt[c].yaw;
             let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(game::scene_level_data::device_defaults().pitch));
             let m = man(&p, seat);
             for x in p.mates() { p.man_stands(x, [3.5, 3.5]); }
@@ -457,12 +475,12 @@ fn a_camera_sees_any_player_in_its_cone() {
             p.g.shown[p.g.pl[m].ch].visibility = 1.0;
             let dd = game::scene_level_data::device_defaults();
             let half = def.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
-            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let yaw = p.g.tab.devices_camera_rt[c].yaw;
             let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(dd.pitch));
             let e = game::guards::Eye { pos: def.pos, look, range: def.range.unwrap_or(dd.range), half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
             assert!(game::guards::eye_contact(&mut p.g, e, pc, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
             game::devices::update_camera(&mut p.g, c, 1.0 / 60.0, true);
-            let last = game::sim_lightshome::camera_machine_last_seen(&p.g, c);
+            let last = p.g.tab.devices_camera_rt[c].last_seen;
             assert!(last.map_or(false, |l| (l[0] - spot[0]).abs() < 0.1 && (l[2] - spot[2]).abs() < 0.1), "seed {s}: seat {seat}'s man stands at {spot:?} in the cone, the other behind the lens, and the camera last saw {last:?}");
         }
     }

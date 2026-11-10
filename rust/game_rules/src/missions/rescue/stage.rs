@@ -29,12 +29,6 @@ pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
     match written { Some(s) => s, None => crate::orders::door_id_words(g, id_2) }
 }
 
-/// Distance on the floor
-pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
-/// An angle back into -pi..pi
-pub(super) fn wrap(a: f64) -> f64 { m::atan2(m::sin(a), m::cos(a)) }
-
 /// checkRescue's `free`: a man can be stood there. False = the place itself is wrong.
 fn check_free(g: &mut Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
     let mut q: V3 = [p[0], 0.0, p[2]];
@@ -202,7 +196,6 @@ fn rescue_can_start(g: &crate::game::Game) -> Option<String> {
     if let Some(run) = g.director.run {
         if !g.tab.director_run[run].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[run].name)); }
     }
-    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if crate::nightbreach::night_breach_up(g) {
         return Some(String::from(if crate::roomclear::room_clear_scenario_active(g) { "the room clear is staged" } else { "the night breach is staged" }));
     }
@@ -558,17 +551,5 @@ pub(super) fn rescue_place(g: &crate::game::Game) -> String {
     match s.room.where_.as_deref() {
         Some(w) if !w.is_empty() => format!("{}, {}", s.room.name, w),
         _ => s.room.name,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn a_distance_on_the_floor_ignores_height_and_an_angle_comes_back_inside_half_a_turn() {
-        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
-        assert!((wrap(4.0) - (4.0 - 2.0 * m::PI)).abs() < 1e-12);
-        assert!((wrap(-7.5) - (-7.5 + 2.0 * m::PI)).abs() < 1e-12);
-        assert!((wrap(0.3) - 0.3).abs() < 1e-12);
     }
 }

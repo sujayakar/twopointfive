@@ -18,10 +18,10 @@ fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::A
 
 /// Is the floor one the pairs may talk on?
 fn ambient_live(g: &crate::game::Game) -> bool {
-    if !g.ai_enabled || g.aside || g.puppet.is_some() { return false; }
+    if !g.ai_enabled || g.aside { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
-    if crate::sim_lightshome::mains_active(g) { return false; }
+    if g.light_home.mains.active { return false; }
     let men = crate::seats::men(g);
     !men.iter().any(|&p| g.pl[p].holding.is_some() || crate::condition::down(g, g.pl[p].ch))
 }

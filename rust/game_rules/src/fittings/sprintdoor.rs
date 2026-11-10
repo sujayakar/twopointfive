@@ -4,9 +4,9 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 
-/// Is the rule live for this man: not while he is down, nor under the puppet's strings.
+/// Is the rule live for this man: not while he is down.
 fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
-    !pl.down && g.puppet.is_none()
+    !pl.down
 }
 
 /// What his door contact carries this frame: the rule's numbers while he is at a sprint, nothing otherwise.

@@ -92,7 +92,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     let spare = sam.and_then(|s| s.spare).unwrap_or(false);
     crate::seats::each_seat(g, &mut |g: &mut Game| {
         let c = g.pl[g.player].ch;
-        if borrowed || !crate::effects::flags().dazzle || crate::condition::down(g, g.pl[g.player].ch) || g.puppet.is_some() { return; }
+        if borrowed || !crate::effects::flags().dazzle || crate::condition::down(g, g.pl[g.player].ch) { return; }
         let Some((secs, fold)) = flash.takes(g, c, squad(sam_side), spare, g.k.samstun.own_seen) else { return };
         if !(secs > 0.0) { return; }
         crate::samstun::dazzle_player(g, secs, at);

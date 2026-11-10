@@ -620,3 +620,33 @@ fn a_slot_key_on_a_wall_says_what_comes_out_when_he_leaves() {
         assert!(word(&p).is_some_and(|w| w.ends_with(" comes out when you leave the wall")), "seed {s}");
     }
 }
+
+/// THE RULE: the pair run for the door and go over to stacking on it once the lead is within 3.2 m of his mark, on the floor: however high the mark is written and whichever way he comes at it.
+/// A FAILURE MEANS: the pair stop to stack in the wrong room, or run on until the drill's clock gives up, and the go comes long after the player gave it.
+#[test]
+fn the_pair_stack_when_the_lead_is_near_his_mark_on_the_floor() {
+    for s in SEEDS {
+        for high in [0.0, 3.0] {
+            let mut p = night(s, "2");
+            let drill = |p: &Play| p.g.night_breach.drill.as_ref().expect("the drill").clone();
+            let d = drill(&p);
+            p.g.night_breach.drill.as_mut().unwrap().plan.stack[0][1] += high;
+            let (lead, mark) = (p.g.gd[d.a].ch, d.plan.stack[0]);
+            let far = |p: &Play| game::v3::dist_xz(p.g.ch[lead].pos, mark);
+            let start = far(&p);
+            assert!(start > 3.2, "seed {s}: he starts away from his mark: {start}");
+            f(&mut p);
+            let t0 = p.time();
+            let phase = |p: &Play| p.g.night_breach.drill.as_ref().unwrap().phase;
+            let mut last = far(&p);
+            while phase(&p) == game::breach::Phase::Wait || phase(&p) == game::breach::Phase::Approach {
+                assert!(p.time() - t0 < 30.0, "seed {s}: no stack");
+                last = far(&p);
+                p.frame();
+            }
+            assert!(far(&p) < 3.2, "seed {s}, mark {high} m up: stacks {} m from his mark", far(&p));
+            assert!(last >= 3.0, "seed {s}, mark {high} m up: he was already {last} m off a frame before");
+            assert!(p.time() - t0 < 15.0, "seed {s}, mark {high} m up: only the clock let them stack");
+        }
+    }
+}

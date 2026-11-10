@@ -84,34 +84,6 @@ pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>)
     js::or(js::or(a.0 - b.0, pair), a.1 - b.1)
 }
 
-// ------------------------------------------------------------ the night breach's owner
-
-/// owner 'nightbreach'.owns: of four, the drill's are the first pair alone
-pub(in crate::squad_orders) fn nightbreach_owns(g: &crate::game::Game, gd: GuardId) -> bool {
-    crate::nightbreach::night_breach_up(g) && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
-}
-/// owner 'nightbreach'.release: the drill is the pair's, letting go of one man ends it for both
-pub(super) fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
-    if crate::nightbreach::night_breach_up(g) && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
-}
-/// owner 'nightbreach'.status
-pub(super) fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<String> {
-    use crate::nightbreach::NightBreachState as St;
-    if !crate::nightbreach::night_breach_up(g) || !g.staged.team.contains(&gd) { return None; }
-    let state = crate::nightbreach::night_breach_state(g);
-    if !crate::nightbreach::night_breach_drill_ops(g).contains(&gd) {
-        return if state == St::Off { None } else { Some(String::from("standing by")) };
-    }
-    Some(String::from(match state {
-        St::Staged => "waiting",
-        St::Stacking => "stacking · the breach",
-        St::Set => "set · press F to send them in",
-        St::Going | St::Inside => "breaching",
-        St::Clear => "holding the room",
-        _ => "holding",
-    }))
-}
-
 // ------------------------------------------------------------ the class
 
 /// A module that changed these men's plan with nobody asking says so: drawn for a moment.
@@ -161,14 +133,13 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
         s.made.set(id, d);
         s.defs.push(d);
     }
-    // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (its closures are the functions nightbreach_owns, _release, _status)
+    // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (mission::has, lets_go, doing)
     s.owners.push(SquadOwner {  });
     s
 }
 
 /// Is there a squad to order at all (a living operative unit, outside any show).
 pub fn squad_orders_active(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    if g.puppet.is_some() { return false; }
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];

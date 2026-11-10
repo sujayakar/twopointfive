@@ -31,7 +31,6 @@ pub fn checkpoints_load_in_step(g: &mut crate::game::Game, key: &str) -> Option<
 /// Why a save in memory will not go back. `e.snap.game !== g` has no row: MemSave holds no snapshot and the shelf lives on this game.
 pub(super) fn mem_no(g: &Game, run: &str) -> Option<String> {
     if run != g.saves.run_id { return Some(String::from("made in another run")); }
-    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     None
 }
 

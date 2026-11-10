@@ -74,7 +74,6 @@ fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<
     if let Some(r) = g.director.run {
         if !g.tab.director_run[r].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[r].name)); }
     }
-    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if crate::nightbreach::night_breach_up(g) || crate::rescue::rescue_up(g) { return Some(String::from("another scenario is staged")); }
     if g.guards.iter().any(|&x| g.gd[x].unit.is_some()) { return Some(String::from("a spawned unit is already on the floor")); }
     None
@@ -320,7 +319,7 @@ fn quiet_mission_rack(g: &mut crate::game::Game) {
     let n = js::num_str(g.level.errand.index);
     let leds = format!("rack{}_leds", n);
     let glow = format!("rack{}_glow", n);
-    g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.sim_lightshome_fixture[t].name; *name == leds || *name == glow }).collect();
+    g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.fixture[t].name; *name == leds || *name == glow }).collect();
 }
 
 /// the staging, for whoever can take its failure

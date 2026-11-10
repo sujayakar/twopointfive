@@ -161,14 +161,13 @@ fn needs_live(g: &crate::game::Game) -> bool {
     g.tune.needs
         && g.ai_enabled
         && !g.aside
-        && g.puppet.is_none()
         && g.qrf.state == crate::qrf::QrfState::Idle
         && !crate::seats::all_down(g)
 }
 
 /// Would a man leave his route on this floor?
 fn floor_calm(g: &crate::game::Game) -> bool {
-    crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !crate::sim_lightshome::mains_active(g)
+    crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !g.light_home.mains.active
 }
 
 /// Is he calm and free?
@@ -198,7 +197,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.ai_enabled {
         return Some(key("AI off"));
     }
-    if g.aside || g.puppet.is_some() {
+    if g.aside {
         return Some(key("nobody plays"));
     }
     if g.qrf.state != crate::qrf::QrfState::Idle {
@@ -213,7 +212,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if g.alarm.episode {
         return Some(key("an alarm"));
     }
-    if crate::sim_lightshome::mains_active(g) {
+    if g.light_home.mains.active {
         return Some(key("the lights went"));
     }
     let x = &g.gd[gd];

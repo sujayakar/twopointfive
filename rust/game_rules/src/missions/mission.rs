@@ -10,7 +10,7 @@ use alloc::{format, string::String, vec::Vec};
 /// Live: a run is on and it really is the player playing.
 pub fn mission_live(g: &crate::game::Game) -> bool {
     let s = g.mission.stage;
-    !g.aside && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
+    !g.aside && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
 
 /// One more of a counted thing on the run's card, if the run is live.
@@ -60,7 +60,7 @@ fn out_now(g: &crate::game::Game, p: V3) -> bool { g.level.errand.exits.iter().a
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
-    if g.aside || g.puppet.is_some() {
+    if g.aside {
         g.mission.drive_t = -1.0;
         return;
     }
@@ -68,9 +68,8 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let mut i = 0;
         while i < g.rack_targets.len() {
             let t = g.rack_targets[i];
-            if crate::sim_lightshome::fixture_on(g, t) {
-                let on = crate::sim_lightshome::light_in().on;
-                crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
+            if g.tab.fixture[t].on {
+                g.tab.fixture[t].on = false;
             }
             i += 1;
         }
@@ -185,8 +184,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.rack_targets.len() {
         let t = g.rack_targets[i];
-        let on = crate::sim_lightshome::light_in().on;
-        crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
+        g.tab.fixture[t].on = false;
         i += 1;
     }
     crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
@@ -294,6 +292,34 @@ pub fn gun_place(g: &crate::game::Game, gd: GuardId) -> Option<V3> { if crate::m
 
 /// The last warning before a captive dies, as the men at a door have it.
 pub fn last_warning(g: &mut crate::game::Game, d: DoorId) -> bool { !g.staged.captives.is_empty() && crate::rescue::rescue_last_warning(g, d) }
+
+/// A drill of the mission's own has this man, and its orders are not the menu's.
+pub fn has(g: &crate::game::Game, gd: GuardId) -> bool { crate::nightbreach::drill_has(g, gd) }
+
+/// A menu order came for a man of its drill: he is let go of (and with him the pair), or why not.
+pub fn lets_go(g: &mut crate::game::Game, gd: GuardId) -> Option<String> { if crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None } }
+
+/// What a man of its drill is doing, in the menu's words.
+pub fn doing(g: &crate::game::Game, gd: GuardId) -> Option<String> { crate::nightbreach::drill_doing(g, gd) }
+
+/// What of its own waits at a door for the second word: the drill's pair (true), or an entry on the captives' room (false).
+pub fn waits(g: &crate::game::Game) -> Vec<(DoorId, Vec<GuardId>, bool)> {
+    let mut out: Vec<(DoorId, Vec<GuardId>, bool)> = crate::nightbreach::drill_waits(g).map(|(d, men)| (d, men, true)).into_iter().collect();
+    out.extend(crate::rescue::rescue_waits(g).into_iter().map(|(d, men)| (d, men, false)));
+    out
+}
+
+/// A man stood on its floor after the staging joins its foes.
+pub fn adopt(g: &mut crate::game::Game, gd: GuardId, mark: &crate::nightbreach::NightBreachMark) { crate::nightbreach::night_breach_adopt(g, gd, mark); }
+
+/// THE MISSIONS' TICK, each its own while it is up, and the squads its men are in.
+pub(crate) fn mission_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
+    crate::nightbreach::night_breach_tick(g, dt, input, cam);
+    crate::quiet::quiet_mission_tick(g, cam);
+    crate::enemysquads::squads_tick(g);
+    crate::roomclear::room_clear_scenario_tick(g, dt);
+    crate::rescue::rescue_tick(g, dt, input, cam);
+}
 
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
 /// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.

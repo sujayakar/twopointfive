@@ -73,7 +73,7 @@ fn a_rooms_lights_go_by_the_switch_on_its_wall() {
     p.run(0.3);
     let sw = p.switch_near([28.0, 8.0]).expect("the manager's room has a plate");
     let t = sw.targets[0];
-    let lamp = p.g.tab.sim_lightshome_fixture[t].pos;
+    let lamp = p.g.tab.fixture[t].pos;
     let under = [lamp[0], 0.9, lamp[2] + 0.4];
     p.sam_put([sw.stand[0], sw.stand[2]]);
     p.run(0.1);

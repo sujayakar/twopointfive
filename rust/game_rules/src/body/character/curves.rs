@@ -16,27 +16,19 @@ pub fn work_key_beat(k: f64, dur: f64) -> f64 {
 mod tests {
     use super::*;
 
-    /// The TypeScript's own bits: workKeyBeat under bun with EXACT on.
+    /// His fingers go down the code in order, after the hand has got there, and the last is done before the verb is.
     #[test]
-    fn work_key_beat_has_the_typescripts_bits() {
-        let rows: [(f64, f64, u64); 9] = [
-            (0.0, 1.3, 0x3fd599999999999a),
-            (1.0, 1.3, 0x3fe399999999999a),
-            (2.0, 1.3, 0x3fec666666666666),
-            (3.0, 1.3, 0x3ff299999999999a),
-            (0.0, 0.7, 0x3fd0cccccccccccd),
-            (3.0, 2.45, 0x400159999999999a),
-            (1.0, 0.2, 0x3fc999999999999a),
-            (2.0, 0.1, 0x3fc199999999999a),
-            (3.0, 1.0 / 3.0, 0x3fd4444444444444),
-        ];
-        for (k, dur, bits) in rows {
-            assert_eq!(work_key_beat(k, dur).to_bits(), bits, "k {k} dur {dur}");
+    fn a_codes_keys_fall_in_order_inside_the_verb() {
+        for dur in [0.7, 1.3, 2.45] {
+            let beats: Vec<f64> = (0..4).map(|k| work_key_beat(k as f64, dur)).collect();
+            assert!(beats[0] > WORK.key_lead, "dur {dur}: the first key at {}", beats[0]);
+            assert!(beats.windows(2).all(|b| b[1] > b[0]), "dur {dur}: {beats:?}");
+            assert!(beats[3] < dur, "dur {dur}: the last key at {}", beats[3]);
         }
     }
 }
 
-/// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a kill or a choke run to its end while he stands idle.
+/// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a choke run to its end while he stands idle.
 pub(super) fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
     out_rate(last, speed, busy, g.m.character.hold_show, &g.k.hold)
 }
@@ -210,97 +202,102 @@ mod tests_2 {
     use super::*;
     use crate::character::{HoldPhase, HoldPose, HoldVariant, LongStance};
 
-    // The TypeScript's own bits: its functions, copied from character.ts by line, under bun with EXACT.on.
-    const NOD: &[(u64, u64)] = &[(0x0000000000000000, 0x0000000000000000), (0x8000000000000000, 0x0000000000000000), (0x3fa1de69ad42c3ca, 0xbf8d9a1fcb98ebfc), (0xbfb999999999999a, 0xbfb22dc1b9e829a0), (0x3fe0000000000000, 0xbfddd8079749b907), (0x3ff6e6127ff76b8e, 0xbff658d69835d7dd), (0xc00199999999999a, 0xc00152adacf59275)];
-    const SPRING: &[(u64, u64, u64, u64, u64)] = &[(0x3ff0000000000000, 0x4030000000000000, 0x3f91111111111111, 0x3fd4893f273c0608, 0x40024cf2e201ac9e), (0x3ff0000000000000, 0x4030000000000000, 0x3f91111111111111, 0x3fd7b3896ce3dde2, 0x400c08ab87ba8709), (0xbfd999999999999a, 0x4023000000000000, 0x3f81111111111111, 0x3fd9480a8d2417a6, 0x4003914eeb88eedd), (0x3fd0000000000000, 0x403c000000000000, 0x3fa0e5604189374c, 0x3fd9237a997ac267, 0xbff6a5dba049cfef), (0x3fd0000000000000, 0x4018000000000000, 0x0000000000000000, 0x3fd9237a997ac267, 0xbff6a5dba049cfef), (0x4004000000000000, 0x400a666666666666, 0x3fe0000000000000, 0x3ff4aa99afec0db1, 0x40030ab7b1f2586a)];
-    const KEYS: &[[f64; 2]] = &[[0.0, 0.1], [0.13, 1.7], [0.2, -0.4], [0.55, 0.9], [1.1, 0.0]];
-    const CURVE: &[(u64, u64)] = &[(0xbff0000000000000, 0x3fb999999999999a), (0x0000000000000000, 0x3fb999999999999a), (0x3fa999999999999a, 0x3fe50ae219ae7b19), (0x3fc0a3d70a3d70a4, 0x3ffb333333333333), (0x3fc5c28f5c28f5c3, 0x3fdb510de1d8e414), (0x3fc999999999999a, 0xbfd999999999999a), (0x3fd554c985f06f69, 0xbfb6d7f614bd6f44), (0x3fe199999999999a, 0x3feccccccccccccd), (0x3feccccccccccccd, 0x3fd2a0716272483a), (0x3ff199999999999a, 0x0000000000000000), (0x4000000000000000, 0x0000000000000000)];
-    const BUMP: &[(u64, u64)] = &[(0xbfb999999999999a, 0x0000000000000000), (0x3fb999999999999a, 0x0000000000000000), (0x3fc999999999999a, 0x3fe0000000000001), (0x3fd51eb851eb851f, 0x3ff0000000000000), (0x3fe0000000000000, 0x3ff0000000000000), (0x3fe6b851eb851eb8, 0x3fe8811d1271a62a), (0x3feccccccccccccd, 0x3fac5c8c509b3de0), (0x3ff3333333333333, 0x0000000000000000)];
-    const FLAT_PATROLLONG: &[u64] = &[0xbfcf5c28f5c28f5c, 0xbfc47ae147ae147b, 0x3fc0a3d70a3d70a4, 0xc045000000000000, 0x0000000000000000, 0x4034000000000000, 0xc020000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xbfdccccccccccccd, 0xbff0000000000000, 0xbfe0000000000000, 0x3fd6666666666666, 0xbff0000000000000, 0xbfd3333333333333, 0x3fe4cccccccccccd, 0x3ff0000000000000, 0x0000000000000000, 0x3fe0000000000000];
-    const TARGETS_PATROLLONG: &[u64] = &[0xbfcf5c28f5c28f5c, 0xbfc47ae147ae147b, 0x3fc0a3d70a3d70a4, 0xc045000000000000, 0x0000000000000000, 0x4034000000000000, 0xc020000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xbfdccccccccccccd, 0xbff0000000000000, 0xbfe0000000000000, 0x3fd6666666666666, 0xbff0000000000000, 0xbfd3333333333333, 0x3fe4cccccccccccd, 0x3ff0000000000000, 0x0000000000000000, 0x3fe0000000000000];
-    const FLAT_LOWLONG: &[u64] = &[0xbfc51eb851eb851f, 0xbfb5c28f5c28f5c3, 0x3fc999999999999a, 0xc044000000000000, 0x3fa999999999999a, 0x4038000000000000, 0xc024000000000000, 0x4000000000000000, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000, 0xbfe199999999999a, 0xbff0000000000000, 0xbfd6666666666666, 0x3fd999999999999a, 0xbff0000000000000, 0xbfb999999999999a, 0x3fe8000000000000, 0x3fd0000000000000, 0x3fa999999999999a, 0x3ff0000000000000];
-    const TARGETS_LOWLONG: &[u64] = &[0xbfc51eb851eb851f, 0xbfb5c28f5c28f5c3, 0x3fc999999999999a, 0xc044000000000000, 0x3fa999999999999a, 0x4038000000000000, 0xc024000000000000, 0x4000000000000000, 0x0000000000000000, 0x4000000000000000, 0x0000000000000000, 0xbfe199999999999a, 0xbff0000000000000, 0xbfd6666666666666, 0x3fd999999999999a, 0xbff0000000000000, 0xbfb999999999999a, 0x3fe8000000000000, 0x3fd0000000000000, 0x3fa999999999999a, 0x3ff0000000000000];
-    const FLAT_SHOULDER: &[u64] = &[0xbfc3333333333333, 0xbf8eb851eb851eb8, 0x3fd051eb851eb852, 0xc000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0xc042000000000000, 0x4010000000000000, 0xc024000000000000, 0x4018000000000000, 0x401c000000000000, 0xbfe999999999999a, 0xbff0000000000000, 0xbfc999999999999a, 0x3fe3333333333333, 0xbff0000000000000, 0x3fd6666666666666, 0x3fe3333333333333, 0x3fb999999999999a, 0x3fe0000000000000, 0x3ff0000000000000];
-    const TARGETS_SHOULDER: &[u64] = &[0xbfc3333333333333, 0xbf8eb851eb851eb8, 0x3fd051eb851eb852, 0xc000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0xc042000000000000, 0x4010000000000000, 0xc024000000000000, 0x4018000000000000, 0x401c000000000000, 0xbfe999999999999a, 0xbff0000000000000, 0xbfc999999999999a, 0x3fe3333333333333, 0xbff0000000000000, 0x3fd6666666666666, 0x3fe3333333333333, 0x3fb999999999999a, 0x3fe0000000000000, 0x3ff0000000000000];
-    const FLAT_PORTLONG: &[u64] = &[0xbfbd70a3d70a3d71, 0xbfc3333333333333, 0x3fc851eb851eb852, 0x4049000000000000, 0x0000000000000000, 0x4041800000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xbfe6666666666666, 0xbfe999999999999a, 0xbfd3333333333333, 0x3feccccccccccccd, 0xbfe3333333333333, 0x3fb999999999999a, 0x3fe8000000000000, 0x3fe0000000000000, 0x0000000000000000, 0x3fe6666666666666];
-    const TARGETS_PORTLONG: &[u64] = &[0xbfbd70a3d70a3d71, 0xbfc3333333333333, 0x3fc851eb851eb852, 0x4049000000000000, 0x0000000000000000, 0x4041800000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xbfe6666666666666, 0xbfe999999999999a, 0xbfd3333333333333, 0x3feccccccccccccd, 0xbfe3333333333333, 0x3fb999999999999a, 0x3fe8000000000000, 0x3fe0000000000000, 0x0000000000000000, 0x3fe6666666666666];
-    const DELTA_P: [u32; 50] = [0x3e9f8179, 0x3f30c908, 0xbefa9df3, 0x00000000, 0x00000000, 0x3f49d1f2, 0x3d084063, 0xbf4c03b7, 0x00000000, 0x00000000, 0x3f0a55b9, 0xbf279549, 0xbebe4d12, 0x00000000, 0x00000000, 0x3ef80d1b, 0x3f23a93d, 0x3e4f53fc, 0x00000000, 0x00000000, 0x3f1f3ea3, 0xbf2279f4, 0x3f19ac66, 0x00000000, 0x00000000, 0x3e3f1e94, 0xbedda096, 0xbf190244, 0x00000000, 0x00000000, 0x3f160a21, 0x3d088706, 0xbefb929f, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
-    const DELTA_A: [u32; 50] = [0x3f3684ef, 0x3e89360e, 0xbf4832bb, 0x00000000, 0x00000000, 0x3f30c908, 0xbefa9df3, 0xbf107ea2, 0x00000000, 0x00000000, 0x3d084063, 0xbf4c03b7, 0x3e3039ee, 0x00000000, 0x00000000, 0x3f313ce6, 0xbd741d59, 0xbf000fe0, 0x00000000, 0x00000000, 0x3ec6dfb8, 0xbf163dab, 0x3ec929bd, 0x00000000, 0x00000000, 0x3f189b2e, 0xbe6e5839, 0xbf0a7b3b, 0x00000000, 0x00000000, 0x3df61b63, 0xbf45f0bb, 0xbf0cdcef, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
-    const DELTA_B: [u32; 50] = [0x3f18b86e, 0xbf1afe3f, 0xbee18f90, 0x00000000, 0x00000000, 0xbe0139ab, 0xbf446340, 0x3ea5d397, 0x00000000, 0x00000000, 0xbf3ba17b, 0xbe64e5ad, 0x3f4a607a, 0x00000000, 0x00000000, 0xbf09d154, 0xbf053c7b, 0x3ee0f3ba, 0x00000000, 0x00000000, 0xbeb8d0b4, 0x3eea03b3, 0xbf1bbd86, 0x00000000, 0x00000000, 0x3f0a960d, 0x3ef1d222, 0xbf09427e, 0x00000000, 0x00000000, 0xbf091a26, 0xbf0b8cb1, 0x3ec5e32e, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
-    const DELTA_OUT: [u32; 50] = [0x3e751c41, 0x3f30c908, 0xbe8e380d, 0x00000000, 0x00000000, 0x3e905ddb, 0x3d084063, 0xbe7c161e, 0x00000000, 0x00000000, 0x3d85cacc, 0xbf279549, 0x3c4083eb, 0x00000000, 0x00000000, 0x3e9845ea, 0x3f23a93d, 0xbe112cac, 0x00000000, 0x00000000, 0x3e4fc5d9, 0xbf2279f4, 0x3f75f4de, 0x00000000, 0x00000000, 0xbee3ec93, 0xbedda096, 0xbe40f878, 0x00000000, 0x00000000, 0x3f51e3d2, 0x3d088706, 0xbe157ef2, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
-    const OUT_CHOKE_END: [u64; 6] = [0x4004cccccccccccd, 0x4004cccccccccccd, 0x401d4467381d7dc0, 0x402a36113404ea4a, 0x4030000000000000, 0x4030000000000000];
-    const OUT_CHOKE_SHOW_OFF: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
-    const OUT_CHOKE_EARLY: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
-    const OUT_GUN: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
-    const OUT_BUSY: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
-
-    fn f(b: u64) -> f64 { f64::from_bits(b) }
+    const EPS: f64 = 1e-9;
 
     #[test]
-    fn nod_lift_bits() {
-        for &(n, r) in NOD { assert_eq!(nod_lift(f(n)).to_bits(), r); }
+    fn a_nod_shows_as_a_lift_of_the_head_the_same_whichever_way_it_went() {
+        assert!(m::abs(nod_lift(0.0)) < EPS, "no nod: no lift");
+        assert_eq!(nod_lift(0.3), nod_lift(-0.3));
+        assert!(nod_lift(0.5) < nod_lift(0.1) && nod_lift(0.1) < 0.0, "the further he nods, the more it shows: {} {}", nod_lift(0.5), nod_lift(0.1));
     }
 
+    /// Every carriage and sway rides on these: a follower that passed its mark would show as a wobble, and one that went by the frame would change with the machine.
     #[test]
-    fn spring_bits() {
+    fn a_follower_gets_there_without_passing_it_at_any_frame_rate() {
         let mut s = spring_new(Some(0.3));
-        assert_eq!(s.v, 0.0);
-        for &(t, w, dt, r, v) in SPRING {
-            assert_eq!(spring_step(&mut s, f(t), f(w), f(dt)).to_bits(), r);
-            assert_eq!(s.v.to_bits(), v);
-        }
+        assert_eq!((s.x, s.v), (0.3, 0.0));
         assert_eq!(spring_new(None).x, 0.0);
+        let mut last = 0.3;
+        for _ in 0..120 {
+            let x = spring_step(&mut s, 1.0, 16.0, 1.0 / 60.0);
+            assert!(x >= last - EPS && x <= 1.0 + EPS, "it went from {last} to {x}");
+            last = x;
+        }
+        assert!(m::abs(last - 1.0) < 1e-3, "two seconds on it is at {last}");
+        // one long frame or four short ones: the same place and the same speed
+        let (mut one, mut four) = (spring_new(Some(0.0)), spring_new(Some(0.0)));
+        one.v = 2.0;
+        four.v = 2.0;
+        spring_step(&mut one, 1.0, 16.0, 1.0 / 15.0);
+        for _ in 0..4 { spring_step(&mut four, 1.0, 16.0, 1.0 / 60.0); }
+        assert!(m::abs(one.x - four.x) < 1e-9 && m::abs(one.v - four.v) < 1e-9, "{} {} against {} {}", one.x, one.v, four.x, four.v);
+    }
+
+    const KEYS: &[[f64; 2]] = &[[0.0, 0.1], [0.13, 1.7], [0.2, -0.4], [0.55, 0.9], [1.1, 0.0]];
+
+    #[test]
+    fn a_curve_goes_through_its_keys_and_stands_still_outside_them() {
+        for k in KEYS { assert!(m::abs(curve(k[0], KEYS) - k[1]) < EPS, "at {}", k[0]); }
+        assert_eq!(curve(-1.0, KEYS), 0.1);
+        assert_eq!(curve(9.0, KEYS), 0.0);
+        // nothing snaps between keys, and it leaves its first key and comes to its last with no speed
+        let step = 1e-4;
+        let mut t = 0.0;
+        while t < 1.1 {
+            assert!(m::abs(curve(t + step, KEYS) - curve(t, KEYS)) < step * 60.0, "a jump at {t}");
+            t += step;
+        }
+        assert!(m::abs(curve(step, KEYS) - curve(0.0, KEYS)) < 1e-5);
+        assert!(m::abs(curve(1.1 - step, KEYS)) < 1e-5);
     }
 
     #[test]
-    fn curve_bits() {
-        for &(t, r) in CURVE { assert_eq!(curve(f(t), KEYS).to_bits(), r); }
+    fn a_bump_rises_holds_at_one_and_falls_inside_its_window() {
+        let b = |t: f64| bump(t, 0.1, 0.3, 0.6, 0.95);
+        for t in [-1.0, 0.1, 0.95, 2.0] { assert_eq!(b(t), 0.0, "outside at {t}"); }
+        for t in [0.3, 0.45, 0.6] { assert_eq!(b(t), 1.0, "at the top at {t}"); }
+        assert!(b(0.15) < b(0.2) && b(0.2) < b(0.25), "it rises");
+        assert!(b(0.7) > b(0.8) && b(0.8) > b(0.9), "it falls");
     }
 
+    /// Each channel is where a layer reads it, and low he takes the crouch's table. (The crouch's table is the same table at this writing: no shape differs, so the weight moves nothing yet.)
     #[test]
-    fn bump_bits() {
-        for &(t, r) in BUMP { assert_eq!(bump(f(t), 0.1, 0.3, 0.6, 0.95).to_bits(), r); }
-    }
-
-    #[test]
-    fn the_long_table_and_its_targets_bits() {
-        let rows: [(LongStance, &[u64], &[u64]); 4] = [
-            (LongStance::PatrolLong, FLAT_PATROLLONG, TARGETS_PATROLLONG),
-            (LongStance::LowLong, FLAT_LOWLONG, TARGETS_LOWLONG),
-            (LongStance::Shoulder, FLAT_SHOULDER, TARGETS_SHOULDER),
-            (LongStance::PortLong, FLAT_PORTLONG, TARGETS_PORTLONG),
-        ];
-        for (st, flat, targets) in rows {
-            let got: Vec<u64> = long_targets(st, 0.0).iter().map(|x| x.to_bits()).collect();
-            assert_eq!(got, flat);
-            let got: Vec<u64> = long_targets(st, 0.37).iter().map(|x| x.to_bits()).collect();
-            assert_eq!(got, targets);
+    fn a_carriage_is_read_by_its_channels_and_goes_to_the_crouch_table_when_he_is_low() {
+        let c = lc();
+        for st in [LongStance::PatrolLong, LongStance::LowLong, LongStance::Shoulder, LongStance::PortLong] {
+            let (up, down) = (*crate::character::long().get(String::from(st.as_str())).unwrap(), *crate::character::long_crouch().get(String::from(st.as_str())).unwrap());
+            let (a, b) = (long_targets(st, 0.0), long_targets(st, 1.0));
+            assert_eq!((a[c.side as usize], a[c.up as usize], a[c.fwd as usize], a[c.pitch as usize], a[c.yaw as usize], a[c.lean as usize]), (up.side, up.up, up.fwd, up.pitch, up.yaw, up.lean), "{st:?}");
+            assert_eq!((a[c.elbow_r as usize + 1], a[c.elbow_l as usize + 2]), (up.elbow_r[1], up.elbow_l[2]), "{st:?}");
+            assert_eq!((b[c.side as usize], b[c.fwd as usize], b[c.lean as usize]), (down.side, down.fwd, down.lean), "{st:?}");
         }
     }
 
-    #[test]
-    fn pose_delta_bits() {
-        let cols = |c: &[u32; 50]| -> Vec<f32> { c.iter().map(|&b| f32::from_bits(b)).collect() };
-        let (mut p, a, b) = (cols(&DELTA_P), cols(&DELTA_A), cols(&DELTA_B));
-        let only = [1.0f32, 0.0, 0.25];
-        for i in 0..3 {
-            if only[i] as f64 <= 0.0 { continue; }
-            let q = delta_joint(joint_of(&p, 5, i), joint_of(&a, 5, i), joint_of(&b, 5, i), 0.62);
-            for c in 0..7 { p[c * 5 + i] = q[c]; }
-        }
-        let got: Vec<u32> = p.iter().map(|x| x.to_bits()).collect();
-        assert_eq!(got, DELTA_OUT);
-    }
+    fn turn(a: f64) -> [f64; 7] { let q = v3::quat::axis_angle([0.0, 1.0, 0.0], a); [0.0, 0.0, 0.0, q[0], q[1], q[2], q[3]] }
+    fn yaw_of(j: [f32; 7]) -> f64 { 2.0 * m::atan2(j[4] as f64, j[6] as f64) }
 
+    /// A difference of two poses laid on a third: the look layers add a reach to whatever he is doing.
     #[test]
-    fn the_polish_numbers_are_the_pages() {
-        let u = crate::character::hold_polish_up();
-        let h = crate::knobs::HoldK::page();
-        let (a, b): ([f64; 8], [f64; 8]) = (
-            [u.lay_ahead, u.dip, u.back, u.m, u.twist, u.side, u.tip, u.arch],
-            [h.lay_ahead, h.lunge.dip, h.lunge.back, h.sway.m, h.sway.twist, h.apart.side, h.apart.tip, h.yank.arch],
-        );
-        for i in 0..8 { assert_eq!(a[i].to_bits(), b[i].to_bits()); }
+    fn the_difference_of_two_poses_is_laid_on_by_its_weight() {
+        let (mut p, mut a, mut b) = (turn(0.5), turn(0.0), turn(0.8));
+        p[0] = 1.0;
+        a[1] = 2.0;
+        b[1] = 2.5;
+        let at = |w: f64| delta_joint(p, a, b, w);
+        let none = at(0.0);
+        assert!(m::abs(none[0] as f64 - 1.0) < 1e-6 && m::abs(yaw_of(none) - 0.5) < 1e-6, "no weight: the pose as it was: {none:?}");
+        let whole = at(1.0);
+        assert!(m::abs(whole[1] as f64 - 0.5) < 1e-6, "the move is added: {whole:?}");
+        assert!(m::abs(yaw_of(whole) - 1.3) < 1e-5, "and the turn: {}", yaw_of(whole));
+        let half = at(0.5);
+        assert!(m::abs(half[1] as f64 - 0.25) < 1e-6, "half of it");
+        assert!(m::abs(yaw_of(half) - 0.9) < 0.01, "and about half the turn: {}", yaw_of(half));
+        let l = half[3..7].iter().map(|x| (*x as f64) * (*x as f64)).sum::<f64>();
+        assert!(m::abs(l - 1.0) < 1e-5, "a turn stays a turn: {l}");
+        // the two poses' rotations with opposite signs are the same rotation: the short way, not round the long
+        let mut flipped = b;
+        for c in 3..7 { flipped[c] = -flipped[c]; }
+        assert!(m::abs(yaw_of(delta_joint(p, a, flipped, 0.5)) - yaw_of(half)) < 1e-5, "{}", yaw_of(delta_joint(p, a, flipped, 0.5)));
     }
 
     /// A sample into NaNs: the slots it wrote are found, and replay into a pose leaving the rest of it as it stands.
@@ -327,21 +324,26 @@ mod tests_2 {
         add_pose_delta(&mut g, z, z, z, -1.0, &[]);
     }
 
+    /// After a choke run to its end he lets the body go slowly while he stands there; moving, busy, or with a gun, he lets go at once.
+    /// A FAILURE MEANS: a choke ends in a snap back to idle, or a man walks off with his arms still round nobody.
     #[test]
-    fn hold_out_rate_bits() {
+    fn he_lets_go_after_a_choke_slowly_only_while_he_stands_there() {
         let hold = crate::knobs::HoldK::page();
-        let show = crate::character::CharacterModHOLDSHOW { kill: true, beats: false };
-        let speeds = [0.0, 0.1, 0.3, -0.45, 0.6, 2.0];
-        let pose = |phase, t, kill, beats, variant| HoldPose { phase, t, kill, beats, variant, ..HoldPose::default() };
-        let cases: [(HoldPose, bool, &[u64; 6]); 5] = [
-            (pose(HoldPhase::Choke, 2.5, None, Some(true), None), false, &OUT_CHOKE_END),
-            (pose(HoldPhase::Choke, 2.5, None, None, None), false, &OUT_CHOKE_SHOW_OFF),
-            (pose(HoldPhase::Choke, 2.3, None, Some(true), None), false, &OUT_CHOKE_EARLY),
-            (pose(HoldPhase::Held, 0.0, Some(true), None, Some(HoldVariant::Gun)), false, &OUT_GUN),
-            (pose(HoldPhase::Held, 0.0, Some(true), None, None), true, &OUT_BUSY),
-        ];
-        for (last, busy, want) in cases {
-            for i in 0..6 { assert_eq!(out_rate(last, speeds[i], busy, show, &hold).to_bits(), want[i]); }
-        }
+        let show = crate::character::CharacterModHOLDSHOW { beats: false };
+        let at_once = 16.0;
+        let pose = |phase, t, beats, variant| HoldPose { phase, t, beats, variant, ..HoldPose::default() };
+        let rate = |last, speed, busy| out_rate(last, speed, busy, show, &hold);
+        let end_of_choke = 0.95 * hold.secs.choke;
+        let done = pose(HoldPhase::Choke, end_of_choke, Some(true), None);
+        assert_eq!(rate(done, 0.0, false), hold.beats.after, "a choke run to its end, standing still");
+        assert!(hold.beats.after < at_once, "the slow rate is slower than at once");
+        let (a, b, c) = (rate(done, 0.2, false), rate(done, 0.35, false), rate(done, 0.5, false));
+        assert!(hold.beats.after < a && a < b && b < c && c < at_once, "it quickens as he walks off: {a} {b} {c}");
+        assert_eq!(rate(done, 2.0, false), at_once, "walking");
+        assert_eq!(rate(done, -0.35, false), b, "a speed either way is a speed");
+        assert_eq!(rate(pose(HoldPhase::Choke, end_of_choke, None, None), 0.0, false), at_once, "with the beats' show off");
+        assert_eq!(rate(pose(HoldPhase::Choke, 0.5 * hold.secs.choke, Some(true), None), 0.0, false), at_once, "a choke broken off early");
+        assert_eq!(rate(pose(HoldPhase::Held, 0.0, None, Some(HoldVariant::Gun)), 0.0, false), at_once, "held at gunpoint");
+        assert_eq!(rate(done, 0.0, true), at_once, "busy with something else");
     }
 }

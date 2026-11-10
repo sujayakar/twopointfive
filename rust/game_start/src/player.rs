@@ -22,7 +22,6 @@ use game::view::HostNow;
 
 pub type V3 = [f64; 3];
 
-pub const MOVE: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
 /// the mouse's bits in a hand
 pub const LEFT: u32 = 1;
 pub const RIGHT: u32 = 4;
@@ -120,8 +119,7 @@ impl Player {
                 ahead = Some([pos[0] + dx / d * 6.0, 1.1, pos[2] + dz / d * 6.0]);
                 if over.is_none() {
                     let f = self.ahead.get();
-                    let (a, b) = ((dx * f[0] + dz * f[1]) / d, (dx * -f[1] + dz * f[0]) / d);
-                    for (on, k) in [(a > 0.3827, 0), (b < -0.3827, 1), (a < -0.3827, 2), (b > 0.3827, 3)] { if on { cmd.keys.push(String::from(MOVE[k])); } }
+                    for (on, key) in game::player::walk_keys(pos, [goal[0], goal[2]], [f[0], 0.0, f[1]]).into_iter().zip(game::player::WALK_KEYS) { if on { cmd.keys.push(String::from(key)); } }
                 }
             }
             if self.sprint.get() { cmd.keys.push(String::from("ShiftLeft")); }

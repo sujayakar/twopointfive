@@ -480,7 +480,7 @@ pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId)
         crate::belief::word(g, man, known);
         let react = if is_seer { 0.12 } else { 0.2 + crate::dice::draw_of(g, "qrf::to_fight#1", seer) * 0.25 };
         g.gd[man].react_t = react;
-        g.gd[man].fire_cd = m::max(g.gd[man].fire_cd, 0.35);
+        g.arms[g.gd[man].ch].fire_cd = m::max(g.arms[g.gd[man].ch].fire_cd, 0.35);
         g.gd[man].search_t = 0.0;
         let foe = g.gd[seer].foe.unwrap_or(crate::seats::faced(g, man));
         crate::mind::foe(g, man, Some(foe), "qrf");
@@ -634,7 +634,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     g.qrf.perim = Some(Perimeter {
         state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), set_at: -1.0, men: Vec::new(), spawned: 0.0, peeled: 0.0,
     });
-    let lit = if g.targets.iter().any(|t| g.tab.sim_lightshome_fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
+    let lit = if g.targets.iter().any(|t| g.tab.fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
     let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.tune.perimeter_eta), lit);
     control(g, &word);
     crate::lighting::set_group(g, "exterior", true);   // the lot's lamps, all of them: back as authored on a restart
@@ -759,7 +759,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "qrf");
                 crate::mind::set(g, gd, 1.0, "qrf");
                 g.gd[gd].react_t = 0.35;
-                g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, 0.4);
+                g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
                 crate::guards::reset_chase(g, gd);
                 g.qrf.perim.as_mut().unwrap().men[idx].fighting = true;
                 g.gd[gd].witness.alerted_by = Some(crate::game::WitnessAlertedBy::Sight);

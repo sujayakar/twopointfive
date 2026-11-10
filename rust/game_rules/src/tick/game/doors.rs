@@ -194,10 +194,9 @@ fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorCont
     if crate::condition::down(g, g.pl[pl].ch) { return None; }
     let run = crate::sprintdoor::sprint_door_run(g, pl);
     // (DOORWAY.solid, DOORWAY.oneWay: both true on the page)
-    let solid = g.puppet.is_none();
     Some(crate::doors::DoorContact {
         pos: g.ch[pc].pos, radius: 0.34, bash: g.pl[pl].sprinting, who: g.ch[pc].id, quiet: g.pl[pl].crouch && !g.pl[pl].dash,
-        keys: Some(g.pl[pl].keys.clone()), run, solid: Some(solid), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::default()
+        keys: Some(g.pl[pl].keys.clone()), run, solid: Some(true), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::default()
     })
 }
 
@@ -249,9 +248,9 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         }
     }
     if kind == Some(InteractableKind::Breaker) && !crate::handwork::breaker_start(g, verb == Some(Verb::BreakerOn)) {
-        if verb == Some(Verb::BreakerOn) && crate::sim_lightshome::mains_active(g) && !crate::sim_lightshome::mains_permanent(g) {
+        if verb == Some(Verb::BreakerOn) && g.light_home.mains.active && !g.light_home.mains.permanent {
             crate::game::game_end_blackout(g);
-        } else if verb == Some(Verb::BreakerOff) && !crate::sim_lightshome::mains_active(g) {
+        } else if verb == Some(Verb::BreakerOff) && !g.light_home.mains.active {
             crate::game::game_set_blackout(g, 86400.0, GameSetBlackoutCause::Hand);
         }
     }
@@ -408,7 +407,7 @@ fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::Doo
     }
     if let Some(d) = own.and_then(|o| o.blocked_by) {
         let p = &g.pl[pl];
-        if p.sprinting && p.kick.is_none() && p.picking.is_none() && p.coding.is_none() && p.takedown.is_none() && p.holding.is_none() && g.puppet.is_none() {
+        if p.sprinting && p.kick.is_none() && p.picking.is_none() && p.coding.is_none() && p.takedown.is_none() && p.holding.is_none() {
             let u = crate::doors::door_dir(g, d);
             let (pos, vel) = (g.ch[pc].pos, g.ch[pc].vel);
             let into = -(-u[1] * vel[0] + u[0] * vel[2]) * crate::doors::doors_side(g, d, pos);
@@ -420,11 +419,17 @@ fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::Doo
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits are the TypeScript's own, under bun with EXACT.on (the formula of game.ts visibilityOf, with vec.ts clamp)
+
+    /// What the guards and his meter go by: nothing in the dark, all of it in good light, and between them by the log of the light.
+    /// A FAILURE MEANS: the dark does not hide him, or a lamp does not show him.
     #[test]
-    fn visibility_is_the_typescripts_bits() {
-        for (s, f, e, bits) in [(0.37, 0.013, 0.2, 0x3ff0000000000000u64), (0.37, 0.013, 0.0, 0x0000000000000000), (0.5, 0.02, 0.0213, 0x3fa01f1dcedece09)] {
-            assert_eq!(visibility_sum(s, f, e).to_bits(), bits);
-        }
+    fn the_light_meter_reads_nothing_in_the_dark_and_rises_by_the_log_of_the_light_to_one() {
+        let (slope, floor) = (0.37, 0.013);
+        let meter = |e: f64| visibility_sum(slope, floor, e);
+        for e in [0.0, -1.0, floor * 0.5, floor] { assert_eq!(meter(e), 0.0, "{e} of light"); }
+        assert_eq!(meter(1e6), 1.0);
+        let (a, b, c) = (meter(floor * 2.0), meter(floor * 4.0), meter(floor * 8.0));
+        assert!(a > 0.0 && a < 1.0);
+        assert!(m::abs((b - a) - (c - b)) < 1e-12 && b > a, "each doubling of the light adds the same: {a} {b} {c}");
     }
 }
