@@ -75,7 +75,7 @@ const CODE_QUAD = 6u; const CODE_CUT = 15u;
 
 // A BLOCK OF CELLS, in a piece's own frame: one row (cells along x y z, their size), then a word a place (a cell's number + 1), then three rows a cell: depth along x y z and the share of leaves · the tight box's
 // corners · six colors · six normals and how alike they are. A ray goes through it as through fog, and by a die stops where a cell's tight box begins.
-const VOX = 128u; const VOX_CODE = 4096u; var<private> voxDie = 1u;
+const VOX = 128u; const VOX_CODE = 4096u; var<private> voxDie = 1u; /** the cell a ray begins at, which does not shade itself: its row; NOTHING if it begins at none; 0 if that is not known (then what it begins in) */ var<private> voxFrom = 0u;
 fn voxWord(at: u32, i: u32) -> u32 { return bitcast<vec4u>(extra[at + (i >> 2u)])[i & 3u]; }
 struct Vox { t: f32, cell: u32, axis: u32, tau: f32 };
 fn voxWalk(k: u32, o: vec3f, d: vec3f, t0: f32, t1: f32, want: f32) -> Vox {
@@ -86,7 +86,7 @@ fn voxWalk(k: u32, o: vec3f, d: vec3f, t0: f32, t1: f32, want: f32) -> Vox {
     if (w != 0u) {
       let r = bitcast<vec4u>(extra[cells + (w - 1u) * 3u]); let a8 = vec3f(vec3u(r.y, r.y >> 8u, r.y >> 16u) & vec3u(255u)); let z8 = vec3f((vec3u(r.z, r.z >> 8u, r.z >> 16u) & vec3u(255u)) + vec3u(1u)); let lo = (vec3f(c) + a8 / 256.0) * h - half; let hi = (vec3f(c) + z8 / 256.0) * h - half;
       let u = (lo - o) * inv; let z = (hi - o) * inv; let mn = select(min(u, z), select(vec3f(1e9), vec3f(-1e9), (o > lo) & (o < hi)), flat); let mx = select(max(u, z), vec3f(1e9), flat); let ta = max(t, max3(mn)); let tb = min(out, min3(mx));
-      /* (the cell a ray begins at does not shade itself) */ if (tb > ta && !(all(o > lo - 0.004) && all(o < hi + 0.004))) { let sg = length(vec3f(vec3u(r.x, r.x >> 8u, r.x >> 16u) & vec3u(255u)) * (6.4 / 255.0) / (hi - lo) * d); let dep = sg * (tb - ta); if (v.tau + dep >= want) { v.t = ta; v.cell = w; v.axis = select(select(2u, 1u, mn.y >= mn.z), 0u, mn.x >= mn.y && mn.x >= mn.z); return v; } v.tau += dep; }
+      let own = select(cells + (w - 1u) * 3u == voxFrom, all(o > lo - 0.004) && all(o < hi + 0.004), voxFrom == 0u); if (tb > ta && !own) { let sg = length(vec3f(vec3u(r.x, r.x >> 8u, r.x >> 16u) & vec3u(255u)) * (6.4 / 255.0) / (hi - lo) * d); let dep = sg * (tb - ta); if (v.tau + dep >= want) { v.t = ta; v.cell = w; v.axis = select(select(2u, 1u, mn.y >= mn.z), 0u, mn.x >= mn.y && mn.x >= mn.z); return v; } v.tau += dep; }
     }
     t = out; if (e.x <= e.y && e.x <= e.z) { c.x += select(-1, 1, d.x > 0.0); } else if (e.y <= e.z) { c.y += select(-1, 1, d.y > 0.0); } else { c.z += select(-1, 1, d.z > 0.0); } if (any(c < vec3i(0)) || any(c >= n)) { break; }
   }
