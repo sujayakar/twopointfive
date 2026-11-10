@@ -83,7 +83,7 @@ pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]
 /// a man who dropped it and ran is no man of his squad's any more
 pub(super) fn alive(g: &crate::game::Game, gd: GuardId) -> bool { !crate::condition::down(g, g.gd[gd].ch) && !g.gd[gd].fled }
 fn grown(b: crate::scene_scenarios::Rect, m: f64) -> crate::enemysquads::Grown { Grown { x0: b.x0 - m, x1: b.x1 + m, z0: b.z0 - m, z1: b.z1 + m } }
-pub(super) fn room_of(g: &crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Option<f64>) -> Option<crate::scene_scenarios::StructureRoom> {
+pub fn room_of(g: &crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Option<f64>) -> Option<crate::scene_scenarios::StructureRoom> {
     let m = m.unwrap_or(0.0);
     for r in g.tab.enemysquads_squad[q].rooms.iter() {
         let b = if js::truthy(m) { bounds_of(grown(r.bounds, m)) } else { rect_bounds(r.bounds) };
@@ -901,6 +901,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         }
     }
     let Some(room) = room else { return };
+    due_here(g, q, at, room);
     let reinforce = g.k.squads.reinforce;
     let mut new: Vec<(usize, f64)> = Vec::new();   // (each man sent now, and how long his way there takes him)
     for d in home(g, q) {
@@ -919,6 +920,22 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
     let due = &mut g.tab.enemysquads_squad[q].due;
     let last = new.iter().map(|&(i, walk)| due[i].t + walk).fold(0.0, m::max);
     for &(i, walk) in &new { due[i].t += m::min(m::max(0.0, last - walk - due[i].t), TOGETHER_SECS); }
+}
+
+/// Its men on their way to a fight, not off yet: it is here now. A man whose own room it is stays and fights in it; the others are sent here, a man told this room is gone nowhere.
+fn due_here(g: &mut Game, q: EnemysquadsSquadId, at: V3, room: &crate::scene_scenarios::StructureRoom) {
+    let due = core::mem::take(&mut g.tab.enemysquads_squad[q].due);
+    let here = Some(room.clone());
+    let mut kept = Vec::with_capacity(due.len());
+    for mut x in due {
+        let p = pos_of(g, x.gd);
+        let key = stay_key(g, x.gd, &StayKeyRoom { name: room.name.clone() });
+        let gone = !same_room(&x.room, &here) && g.tab.enemysquads_squad[q].stayed.as_ref().is_some_and(|s| s.has(key));
+        if gone || same_room(&room_of(g, q, p, None), &here) { continue; }
+        (x.at, x.room) = (v3::copy(at), here.clone());
+        kept.push(x);
+    }
+    g.tab.enemysquads_squad[q].due = kept;
 }
 
 /// the longest a man waits to be at a fight with his mates and not before them
