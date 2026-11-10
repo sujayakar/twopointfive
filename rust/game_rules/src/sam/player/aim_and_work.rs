@@ -50,6 +50,7 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     if g.dr[d].def.steel.unwrap_or(false) {
         return;
     }
+    crate::unseen::kneel(g, pl);
     release_wall(g);
     if g.pl[pl].dragging.is_some() {
         crate::game::game_toggle_drag(g, None);
@@ -61,7 +62,6 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     g.pl[pl].easing = None;
     crate::wand::wand_drop(g, pl);
     g.pl[pl].picking = Some(d);
-    g.pl[pl].crouch = true;
 }
 
 /// Hands off the tools: the progress stays on the door, he stays on his knee.
@@ -93,7 +93,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, spot.yaw, 12.0 * dt);
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.0, 8.0, dt);
-        g.pl[pl].crouch = true;
+        crate::unseen::kneel(g, pl);
         g.pl[pl].sprinting = false;
         g.pl[pl].backpedal = false;
         g.ch[c].anim.reverse = false;
@@ -127,6 +127,7 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     if !crate::wand::wand_offered(g, pl, d) {
         return;
     }
+    crate::unseen::kneel(g, pl);
     release_wall(g);
     if g.pl[pl].dragging.is_some() {
         crate::game::game_toggle_drag(g, None);
@@ -140,7 +141,6 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     let pos = g.ch[c].pos;
     let side = crate::doors::doors_side(g, d, pos);
     g.pl[pl].wanding = Some(crate::wand::Wanding { door: d, side, t: 0.0, pan: 0.0, live: false, off: 0.0, age: 0.0 });
-    g.pl[pl].crouch = true;
     g.stats.wand.looks += 1;
 }
 
@@ -178,7 +178,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, spot.yaw, 12.0 * dt);
         g.ch[c].aim_yaw = g.ch[c].body_yaw;
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.0, 8.0, dt);
-        g.pl[pl].crouch = true;
+        crate::unseen::kneel(g, pl);
         g.pl[pl].sprinting = false;
         g.pl[pl].backpedal = false;
         g.ch[c].anim.reverse = false;

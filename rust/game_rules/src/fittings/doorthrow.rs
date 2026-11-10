@@ -241,7 +241,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let heard = v3::add(g.ch[g.pl[pl].ch].pos, [0.0, 1.1, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     if s.floor {
-        g.pl[pl].crouch = true;
+        crate::unseen::kneel(g, pl);
     }
     count(g, s);
 }

@@ -779,9 +779,9 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
             return;
         }
     };
+    crate::unseen::kneel(g, pl);
     release_wall(g);
     g.pl[pl].dragging = Some(best);
-    g.pl[pl].crouch = true;
     g.pl[pl].drag_noise_t = 0.3;
     g.pl[pl].drag_stuck_t = 0.0;
     let bc = g.gd[best].ch;
