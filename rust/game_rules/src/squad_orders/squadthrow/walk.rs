@@ -6,16 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// every kind of target carries `at` (the rows here are floor rows; squad40 lends on a floor target)
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(x) => x.at,
-        crate::orders::OrderTarget::Door(x) => x.at,
-        crate::orders::OrderTarget::None(x) => x.at,
-        crate::orders::OrderTarget::Foe(x) => x.at,
-    }
-}
-
 /// a man's `{ ...fields of a lent order }` in another struct of the same shape (Lent.back, Walk.back, the assignment handed to `assign`)
 macro_rules! back_as {
     ($b:expr, $T:path) => {{
@@ -82,9 +72,6 @@ pub(super) fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squa
     let text = format!("{} · {} out", g.gd[gd].callsign, if kind == SquadThrowKind::Frag { "frag" } else { "bang" });
     let t = g.time;
     g.m.squadthrow.states.get_mut(key).unwrap().shown = Some(StateShown { t, text });
-    if kind == SquadThrowKind::Frag {
-    } else {
-    }
     let who_said = g.gd[gd].callsign.clone();
     let log = &mut g.m.squadthrow.squadthrow_log;
     log.push(SquadthrowModSQUADTHROWLOGItem { who: who_said, rest: arc.rest });
@@ -128,7 +115,7 @@ pub(super) fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::
     let key = state_key(g);
     let gd = th.gd;
     let post = th.post.unwrap();
-    let at = target_at(t);
+    let at = t.at();
     let line = walk_line(g, gd, post);
     let lent = squad_lend(g, &crate::seats::here(g), gd, t);
     let last_t = g.time;

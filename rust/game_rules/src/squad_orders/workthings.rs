@@ -2,6 +2,7 @@ pub use ::game_types::workthings::types;
 pub use types::*;
 /// this module's own order
 pub const WORK_ORDER: &str = crate::orders::rows::work::ORDER.id;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -11,22 +12,11 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small local helpers
 
-/// a man's feet
-fn pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// the mains' two flags, `bo.active` and `bo.permanent`
 fn mains(g: &Game) -> (bool, bool) {
     let active = g.light_home.mains.active;
     let permanent = g.light_home.mains.permanent;
     (active, permanent)
-}
-/// `t.at`, which every arm of the union has
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(x) => x.at,
-        crate::orders::OrderTarget::Door(x) => x.at,
-        crate::orders::OrderTarget::None(x) => x.at,
-        crate::orders::OrderTarget::Foe(x) => x.at,
-    }
 }
 /// `v.join(',')`, only ever compared with another such key
 fn join_v3(p: V3) -> String { format!("{},{},{}", p[0], p[1], p[2]) }
@@ -40,9 +30,6 @@ fn thing_target(th: WorkThing) -> crate::orders::OrderTargetFloor {
 }
 
 // ------------------------------------------------------------ the functions
-
-/// Planar distance.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// Where he stands to work a thing on a face: the free nav cell nearest `standM` off it with a clear line.
 fn stand_for(g: &crate::game::Game, face: V3, n: Option<V3>, area: Option<crate::workthings::Area>) -> Option<V3> {
@@ -174,7 +161,7 @@ pub fn work_things_keep(g: &mut crate::game::Game) {
         }
         let mut n: V3 = [0.0, 0.0, 1.0];
         if let Some(st) = stand {
-            let d = js::or(flat(st, rf), 1.0);
+            let d = js::or(dist_xz(st, rf), 1.0);
             n = [(st[0] - rf[0]) / d, 0.0, (st[2] - rf[2]) / d];
         }
         let name = g.level.errand.holder.clone();
@@ -237,7 +224,7 @@ fn work_things_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3)
     let mut best: Option<WorkThing> = None;
     let mut bd = m::INF;
     for th in work_things_things(seat) {
-        let d = flat(th.face, at);
+        let d = dist_xz(th.face, at);
         let wide = th.kind != WorkThingKind::Breaker;
         if d >= (if wide { g.k.work.pick_wide_m } else { g.k.work.pick_m }) || d >= bd { continue; }
         if (at[0] - th.face[0]) * th.n[0] + (at[2] - th.face[2]) * th.n[2] < -(if wide { g.k.work.behind_m } else { g.k.work.behind_panel_m }) { continue; }
@@ -270,13 +257,13 @@ fn work_things_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &cra
 /// Where the man who covers goes: a free spot he can reach behind the man at work (None: none).
 fn work_things_cover_post(g: &mut crate::game::Game, mate: GuardId, th: &crate::workthings::WorkThing) -> Option<V3> {
     let stand = th.stand?;
-    let p = pos(g, mate);
+    let p = g.pos_of(mate);
     let side = js::or(m::sign((p[0] - stand[0]) * th.n[2] - (p[2] - stand[2]) * th.n[0]), 1.0);
     let buddy = g.k.work.buddy_m;
     for k in [side, -side, 0.0] {
         let post = crate::orders::squad_orders_free_spot(g, &crate::seats::here(g), [stand[0] + th.n[0] * buddy + th.n[2] * 0.5 * k, 0.0, stand[2] + th.n[2] * buddy - th.n[0] * 0.5 * k]);
         if let Some(post) = post {
-            if flat(post, stand) > 0.7 && flat(post, stand) < buddy + 1.2 && crate::orders::squad_orders_reach(g, mate, post).is_none() { return Some(post); }
+            if dist_xz(post, stand) > 0.7 && dist_xz(post, stand) < buddy + 1.2 && crate::orders::squad_orders_reach(g, mate, post).is_none() { return Some(post); }
         }
     }
     None
@@ -284,7 +271,7 @@ fn work_things_cover_post(g: &mut crate::game::Game, mate: GuardId, th: &crate::
 
 /// Who it is for: the nearest who can get there, and with more than one addressed his partner if he has a mark to cover from.
 pub(super) fn work_things_pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    let at = target_at(t);
+    let at = t.at();
     let mut able: Vec<GuardId> = Vec::new();
     for &gd in men {
         if crate::orders::squad_orders_reach(g, gd, at).is_none() { able.push(gd); }
@@ -295,7 +282,7 @@ pub(super) fn work_things_pick(g: &mut crate::game::Game, men: &[GuardId], t: &c
     };
     let mut w = able[0];
     for &b in &able[1..] {
-        if flat(pos(g, b), at) < flat(pos(g, w), at) { w = b; }
+        if dist_xz(g.pos_of(b), at) < dist_xz(g.pos_of(w), at) { w = b; }
     }
     let id = crate::orders::squad_orders_pair_of(g, w);
     let mut mate: Option<GuardId> = None;
@@ -324,7 +311,7 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
     work_things_prune(g);
     let mut w = men[0];
     for &b in &men[1..] {
-        if flat(pos(g, b), stand) < flat(pos(g, w), stand) { w = b; }
+        if dist_xz(g.pos_of(b), stand) < dist_xz(g.pos_of(w), stand) { w = b; }
     }
     let to_it = m::atan2(-th.n[0], -th.n[2]);
     let out = m::atan2(th.n[0], th.n[2]);
@@ -346,7 +333,7 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
     g.sets[g.seat].work.jobs.set(w, Job { thing: th.clone(), verb, a, t0: -1.0, last_t: now });
     for &mate in men {
         if mate == w { continue; }
-        let p = pos(g, mate);
+        let p = g.pos_of(mate);
         let post = work_things_cover_post(g, mate, &th);
         if let Some(post) = post {
             let there = format!("covering {}", g.gd[w].callsign);
@@ -404,16 +391,16 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
         return;
     }
     // the orders bring a mark to a man who cannot reach it, and call that arrived: he is not at the thing
-    let far = match g.tab.orders_assignment[a].post { None => true, Some(post) => flat(post, stand) > 0.3 };
+    let far = match g.tab.orders_assignment[a].post { None => true, Some(post) => dist_xz(post, stand) > 0.3 };
     if far {
         let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get to it.") };
         work_things_settle(g, gd, &mut j, line, false);
         return;
     }
-    let p = pos(g, gd);
-    let d_f = js::or(flat(p, th.face), 1.0);
+    let p = g.pos_of(gd);
+    let d_f = js::or(dist_xz(p, th.face), 1.0);
     let on = g.tab.orders_assignment[a].arrived
-        && flat(p, stand) < 0.45
+        && dist_xz(p, stand) < 0.45
         && m::abs(v3::wrap_angle(g.ch[c].body_yaw - g.tab.orders_assignment[a].face.unwrap_or(0.0))) < 0.6
         && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [th.face[0] + (p[0] - th.face[0]) / d_f * 0.2, 1.0, th.face[2] + (p[2] - th.face[2]) / d_f * 0.2], None);
     let low = !on && crate::sneak::sneak_low(g, gd);
@@ -486,7 +473,7 @@ fn work_things_hand_off(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::w
 
 /// Done with it: a word, the hand off, and a plain hold where he stands, his back to the thing if he was at it.
 fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::workthings::Job, line: Option<&str>, turn: bool) {
-    let p = pos(g, gd);
+    let p = g.pos_of(gd);
     work_things_hand_off(g, gd, j);
     g.sets[g.seat].work.jobs.delete(gd);
     if let Some(line) = line { crate::game::game_say(g, gd, line, None, None); }
@@ -538,7 +525,7 @@ fn work_things_job(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: Cha
 fn work_things_at_thing(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let (a, stand) = match seat.work.jobs.get(gd) { Some(j) => (j.a, j.thing.stand), None => return false };
     if !work_things_working(g, seat, gd) || !g.tab.orders_assignment[a].arrived { return false; }
-    match stand { Some(s) => flat(pos(g, gd), s) < 0.45, None => false }
+    match stand { Some(s) => dist_xz(g.pos_of(gd), s) < 0.45, None => false }
 }
 
 /// Is this man working a thing.
@@ -578,12 +565,12 @@ pub fn work_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
         _ => return false,
     };
     if g.gd[h].state != crate::game::GuardState::Suspicious { return false; }
-    let p = pos(g, gd);
+    let p = g.pos_of(gd);
     let n = g.gd[h].path.len();
     let goal = match g.gd[h].path_goal { Some(goal) => goal, None => return false };
-    if flat(goal, end) > 1.0 { return false; }
+    if dist_xz(goal, end) > 1.0 { return false; }
     let walk_m = g.k.work.walk_m;
-    let mut a = pos(g, h);
+    let mut a = g.pos_of(h);
     let mut i = core::cmp::min(g.gd[h].path_i, n);
     while i <= n {
         let b = if i < n { g.gd[h].path[i] } else { end };

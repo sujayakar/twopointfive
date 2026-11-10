@@ -20,10 +20,6 @@ macro_rules! say { ($g:expr, $gd:expr, $key:expr, $($path:ident).+) => {{ let s 
 fn man(g: &mut Game, i: usize) -> GuardId { if i == 0 { dr!(g).a } else { dr!(g).b } }
 /// `H[k]`: undefined past the end.
 fn host(g: &mut Game, k: usize) -> Option<GuardId> { dr!(g).hostiles.get(k).copied() }
-/// `c.bones.<b> ?? v3.add(c.pos, [0, y, 0])`
-fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, y: f64) -> V3 {
-    match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, y, 0.0]) }
-}
 /// The live object (`this.live`): its one home is the drill's own field, which NightBreach writes as play goes.
 fn live_of(g: &mut Game) -> BreachLive { dr!(g).live }
 /// What the pair says in place of the plan's line.
@@ -650,7 +646,7 @@ fn breach_drill_pickable(g: &mut crate::game::Game, i: usize) -> bool {
         if !gone { break; }
         dr!(g).flows[i].q.remove(0);
     }
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.6);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let q = dr!(g).flows[i].q.clone();
     let n = dr!(g).hostiles.len();
     let mut order_ = q.clone();
@@ -660,7 +656,7 @@ fn breach_drill_pickable(g: &mut crate::game::Game, i: usize) -> bool {
         let hk = match host(g, k) { Some(h) => h, None => continue };
         if crate::condition::down(g, g.gd[hk].ch) || g.gd[hk].fled { continue; }
         let ch = g.gd[hk].ch;
-        let chest = bone_or(g, ch, crate::character::Bone::Chest, 1.1);
+        let chest = g.ch[ch].bone_or(crate::character::Bone::Chest, 1.1);
         let energy = crate::glasspen::shot_energy(g, c, None);
         if !crate::scene_collision::shot_blocked(g, eye, chest, Some(0.02), energy) { found = Some(k); break; }
     }
@@ -696,13 +692,13 @@ fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) ->
     if on < 0 { return false; }
     let h = host(g, on as usize).unwrap();
     let ch = g.gd[h].ch;
-    let chest = bone_or(g, ch, crate::character::Bone::Chest, 1.1);
+    let chest = g.ch[ch].bone_or(crate::character::Bone::Chest, 1.1);
     let aim = dr!(g).flows[i].aim;
     set_aim(g, i, [v3::damp(aim[0], chest[0], 16.0, dt), v3::damp(aim[1], chest[1], 16.0, dt), v3::damp(aim[2], chest[2], 16.0, dt)]);
     let due = if dr!(g).flows[i].n == 0.0 { dr!(g).flows[i].since + SETTLE } else { dr!(g).flows[i].next };
     let fa = g.gd[op].weapon;
     if t >= due {
-        let head = bone_or(g, c, crate::character::Bone::Head, 1.6);
+        let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
         let def = g.fa[fa].def;
         let energy = crate::glasspen::shot_energy(g, c, Some(def));
         if crate::scene_collision::shot_blocked(g, head, chest, Some(0.02), energy) {

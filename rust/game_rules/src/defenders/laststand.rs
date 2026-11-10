@@ -1,5 +1,6 @@
 pub use ::game_types::laststand::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -121,9 +122,6 @@ fn new_stats() -> crate::laststand::StateStats {
         stand_t: f64::NAN, set_t: f64::NAN,
     }
 }
-
-/// distance on the floor
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// up, and not broken and run: off the net from his shout on
 fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
@@ -288,7 +286,7 @@ fn tick_moved(g: &mut crate::game::Game) {
         let time = g.time;
         let st = st_of(g);
         let said = st.at.get_mut(d).unwrap();
-        if flat(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
+        if dist_xz(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
         let w = spoken(g, p);
         let free = crate::roomfight::is_loose(g, d);
         let now: Option<&str> = match &w.id { Some(id) => Some(id.as_str()), None => w.spot.as_ref().map(|s| s.name.as_str()) };
@@ -463,7 +461,7 @@ mod tests {
 
     #[test]
     fn flat_is_on_the_floor() {
-        assert_eq!(flat([3.0, 9.0, 0.0], [0.0, -2.0, 4.0]), 5.0);
+        assert_eq!(dist_xz([3.0, 9.0, 0.0], [0.0, -2.0, 4.0]), 5.0);
     }
 
 }

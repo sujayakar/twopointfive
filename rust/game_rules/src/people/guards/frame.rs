@@ -25,14 +25,6 @@ pub(crate) fn head_or_pos(g: &Game, c: CharId) -> V3 {
         None => g.ch[c].pos,
     }
 }
-/// `gd.path = []; gd.pathGoal = null;`: a whole write of both, so their identity words move with them.
-pub(crate) fn clear_path(g: &mut Game, gd: GuardId) {
-    let m = &mut g.gd[gd];
-    m.path = Vec::new();
-    m.path_serial = m.path_serial.wrapping_add(1);
-    m.path_goal = None;
-    m.path_goal_orbit = false;
-}
 /// `gd.speed = damp(gd.speed, 0, rate, dt)`
 pub(crate) fn brake(g: &mut Game, gd: GuardId, rate: f64, dt: f64) {
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, rate, dt);
@@ -111,7 +103,7 @@ fn incapable(g: &mut Game, gd: GuardId, dt: f64) -> bool {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.body_duty = None; m.standoff = None; m.muzzle_down = false; m.saw_player_this_frame = false;
         }
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         crate::character::character_update(g, c, dt);
@@ -216,7 +208,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
     }
     crate::startle::startle_sight(g, gd, prev, seen);
     if prev != g.gd[gd].state {
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         if g.gd[gd].state != St::Suspicious { g.gd[gd].body_duty = None; }
     }

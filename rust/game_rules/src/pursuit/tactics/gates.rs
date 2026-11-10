@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -85,7 +86,7 @@ fn stack(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     let c = g.gd[gd].ch;
     gate.look = Some(inside); gate.crouch = 0.0;
     let spot = gate.spot;
-    let face = if flat(g.ch[c].pos, spot) < 1.2 { Some(gate.face) } else { None };
+    let face = if dist_xz(g.ch[c].pos, spot) < 1.2 { Some(gate.face) } else { None };
     let speed = g.tune.guard_investigate;
     let there = step_gate(g, gd, gate, dt, spot, speed, face);
     if there || gate.t > 5.0 {
@@ -251,7 +252,7 @@ fn cross(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     let there = step_gate(g, gd, gate, dt, leg, speed, None);
     let pos = g.ch[c].pos;
     if side_of(g, d, pos) != gate.side { gate.crossed = true; }
-    if there || flat(g.ch[c].pos, leg) < 0.35 {
+    if there || dist_xz(g.ch[c].pos, leg) < 0.35 {
         gate.leg_i += 1.0;
         if gate.leg_i >= gate.legs.len() as f64 { return release_gate(g, gd, gate); }
     } else if gate.t > 3.5 { return release_gate(g, gd, gate); }

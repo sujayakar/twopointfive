@@ -10,8 +10,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small readers
 /// his row of `defs`, a copy: read again after a call that may have written it
 fn def_of(g: &Game, h: GuardId) -> Def { *g.rescue.defs.get(h).unwrap() }
-fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn pl_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 /// inBounds, for a scenario's Rect
 fn in_rect(p: V3, r: Option<crate::scene_scenarios::Rect>) -> bool {
     crate::squad::in_bounds(p, r.map(|b| crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }), None)
@@ -104,7 +102,7 @@ fn posted_cover(g: &Game, seat: &crate::seats::SeatRef, o: GuardId) -> bool {
 /// The man of `l` in the room nearest the side door.
 fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: DoorId) -> Option<GuardId> {
     let fc = g.dr[sd].frame_centre;
-    let mut inside: Vec<(GuardId, V3)> = l.iter().map(|&o| (o, pos_of(g, o))).filter(|x| in_rect(x.1, sb)).collect();
+    let mut inside: Vec<(GuardId, V3)> = l.iter().map(|&o| (o, g.pos_of(o))).filter(|x| in_rect(x.1, sb)).collect();
     js::sort_by(&mut inside, |a, b| v3::dist_xz(a.1, fc) - v3::dist_xz(b.1, fc));
     inside.first().map(|x| x.0)
 }
@@ -122,7 +120,7 @@ fn rescue_pick(g: &crate::game::Game) -> Option<crate::rescue::RescuePick> {
         let mut is_posted: Vec<GuardId> = Vec::new();
         for &o in &up { if posted(g, &crate::seats::here(g), o) { is_posted.push(o); } }
         let mut first = near(g, &is_posted, sb, sd);
-        if first.is_none() && in_rect(pl_pos(g, &crate::seats::here(g)), sb) {
+        if first.is_none() && in_rect(g.seat_pos(&crate::seats::here(g)), sb) {
             let mut free: Vec<GuardId> = Vec::new();
             for &o in &up { if !posted(g, &crate::seats::here(g), o) { free.push(o); } }
             if free.len() >= 2 { first = near(g, &free, sb, sd); }
@@ -132,7 +130,7 @@ fn rescue_pick(g: &crate::game::Game) -> Option<crate::rescue::RescuePick> {
             let pr = g.gd[first].unit.as_ref().and_then(|u| u.pair);
             let wants_pair = side_data.and_then(|s| s.pair).unwrap_or(false);
             let mate = if wants_pair && pr.is_some() {
-                up.iter().copied().find(|&o| o != first && g.gd[o].unit.as_ref().and_then(|u| u.pair) == pr && in_rect(pos_of(g, o), sb))
+                up.iter().copied().find(|&o| o != first && g.gd[o].unit.as_ref().and_then(|u| u.pair) == pr && in_rect(g.pos_of(o), sb))
             } else { None };
             if let Some(mate) = mate {
                 let mut other = false;
@@ -210,7 +208,7 @@ fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
     rescue_note(g, &format!("clock:{}", why));
     let up: Vec<GuardId> = g.staged.team.iter().copied().filter(|&o| !crate::condition::down(g, g.gd[o].ch)).collect();
     if rescue_mode(g) == RescueMode::Free && !up.is_empty() {
-        let p = pl_pos(g, &crate::seats::here(g));
+        let p = g.seat_pos(&crate::seats::here(g));
         let mut idle: Vec<GuardId> = Vec::new();
         for &o in &up { if !crate::orders::squad_orders_has(&crate::seats::here(g), o) { idle.push(o); } }
         let target = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
@@ -276,7 +274,7 @@ fn rescue_hear(g: &mut crate::game::Game) {
         g.rescue.last_order = o;
         if o.is_some() && hot(g) { rescue_start_clock(g, "order"); }
     }
-    if hot(g) && g.rescue.t0.is_nan() && v3::dist_xz(pl_pos(g, &crate::seats::here(g)), g.k.rescue.sam_at) > 0.6 { rescue_start_clock(g, "move"); }
+    if hot(g) && g.rescue.t0.is_nan() && v3::dist_xz(g.seat_pos(&crate::seats::here(g)), g.k.rescue.sam_at) > 0.6 { rescue_start_clock(g, "move"); }
 }
 
 /// Clock two: who has learned, who is set, the late reaction, the roamers let go.
@@ -488,7 +486,7 @@ fn stand_to(g: &mut Game, h: GuardId) {
 
 /// He goes to a place with a line across the room's door, and says so.
 fn take_the_cross(g: &mut Game, man: &CrewMan, x: V3) {
-    if v3::dist_xz(x, pos_of(g, man.h)) > 0.4 {
+    if v3::dist_xz(x, g.pos_of(man.h)) > 0.4 {
         rescue_crew_move(g, man.f, x, None);
     } else {
         stand_to(g, man.h);
@@ -511,7 +509,7 @@ fn come_in_to_the_room(g: &mut Game, man: &CrewMan) -> bool {
     let s = rescue_data(g).unwrap();
     let dr = crate::doors::doors_by_name(g, &s.room.door);
     let spot = s.door_man.inside.pos;
-    let path = if dr.is_some() { let at = pos_of(g, h); crate::scene_collision::nav_grid_find_path(g, at, spot, None, None) } else { None };
+    let path = if dr.is_some() { let at = g.pos_of(h); crate::scene_collision::nav_grid_find_path(g, at, spot, None, None) } else { None };
     let there = match (&dr, &path) {
         (Some(_), Some(path)) => !path.is_empty() && !(v3::dist_xz(path[path.len() - 1], spot) > 0.8),
         _ => false,
@@ -549,8 +547,8 @@ fn going_in_to_the_room(g: &mut Game, man: &CrewMan, bounds: Option<crate::scene
     let room_door = rescue_data(g).unwrap().room.door;
     let dr = crate::doors::doors_by_name(g, &room_door);
     if let Some(dr) = dr {
-        if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(pos_of(g, h), bounds) {
-            let (at, fc) = (pos_of(g, h), g.dr[dr].frame_centre);
+        if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(g.pos_of(h), bounds) {
+            let (at, fc) = (g.pos_of(h), g.dr[dr].frame_centre);
             if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
                 let who = g.ch[g.gd[h].ch].id;
                 crate::doors::doors_pull_to(g, dr, who);
@@ -558,7 +556,7 @@ fn going_in_to_the_room(g: &mut Game, man: &CrewMan, bounds: Option<crate::scene
         }
     }
     if crate::roomfight::leg_ended(g, man.f, crate::owner::by::MISSION).is_none() { return; }
-    if in_rect(pos_of(g, h), bounds) {
+    if in_rect(g.pos_of(h), bounds) {
         let row = g.rescue.defs.get_mut(h).unwrap();
         row.in_room = true; row.crew = DefCrew::In;
         rescue_note(g, &format!("crew:inside:{}", man.name));
@@ -572,7 +570,7 @@ fn going_in_to_the_room(g: &mut Game, man: &CrewMan, bounds: Option<crate::scene
 fn short_of_his_spot(g: &mut Game, man: &CrewMan) -> bool {
     if !crate::roomfight::at_post(g, man.f) { return false; }
     let Some(spot) = man.d.spot else { return false };
-    let short = v3::dist_xz(pos_of(g, man.h), spot) > 1.2;
+    let short = v3::dist_xz(g.pos_of(man.h), spot) > 1.2;
     if !short { return false; }
     g.rescue.defs.get_mut(man.h).unwrap().crew = DefCrew::Out;
     { let now = g.time; crate::owner::release(g, man.h, crate::owner::by::MISSION, now); }
@@ -670,7 +668,7 @@ fn fires(g: &mut Game, p: V3, pt: V3, out: Option<RoomfightRoomId>, stack: &[V3]
 
 /// A gun on the stack: where he stands if it passes, else a spot he can walk to.
 fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f64) -> Option<V3> {
-    let c = pos_of(g, h);
+    let c = g.pos_of(h);
     let b = rescue_bounds(g);
     let room_door = rescue_data(g).unwrap().room.door;
     let dr = crate::doors::doors_by_name(g, &room_door);
@@ -724,7 +722,7 @@ fn hide_seen(g: &mut Game, p: V3, pt: V3, looks: &[V3]) -> f64 {
 
 /// A roamer out of sight: the floor of his own room seen from the fewest places.
 fn rescue_crew_hide(g: &mut crate::game::Game, h: GuardId, f: RoomfightDefId, p: V3) -> Option<V3> {
-    let c = pos_of(g, h);
+    let c = g.pos_of(h);
     let room = g.tab.roomfight_def[f].room?;
     if g.tab.roomfight_room[room].cells.len() > 900 { return None; }
     let (cell, nav_w) = (g.col.nav.cell, g.col.nav.w);
@@ -780,7 +778,7 @@ fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
     let post = match g.tab.orders_assignment[a].post { Some(post) => post, None => return };
     if !g.tab.orders_assignment[a].via.is_empty() || sb.is_none() { return; }
     let out = match g.rescue.server_out { Some(out) => out, None => return };
-    if !in_rect(pos_of(g, op), sb) || in_rect(post, sb) { return; }
+    if !in_rect(g.pos_of(op), sb) || in_rect(post, sb) { return; }
     let leg = v3::copy(out);
     g.tab.orders_assignment[a].via = vec![leg];
     g.tab.orders_assignment[a].goal = leg;
@@ -789,7 +787,7 @@ fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
 
 /// A man the scenario lets go of where he stands: the order menu's 'cover'.
 fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, door: Option<&str>) {
-    let p = pos_of(g, op);
+    let p = g.pos_of(op);
     let y = match look { Some(look) => v3::yaw_to(p, look), None => g.ch[g.gd[op].ch].body_yaw };
     let watch: V3 = match look {
         Some(look) => [look[0], 1.1, look[2]],
@@ -883,8 +881,8 @@ fn rescue_tick_entry(g: &mut crate::game::Game) {
         rescue_end_entry(g, false);
         return;
     }
-    let theirs = g.staged.foes.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && in_rect(pos_of(g, h), b));
-    let in_room = up.iter().copied().find(|&o| in_rect(pos_of(g, o), b));
+    let theirs = g.staged.foes.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && in_rect(g.pos_of(h), b));
+    let in_room = up.iter().copied().find(|&o| in_rect(g.pos_of(o), b));
     if !theirs && in_room.is_some() {
         rescue_note(g, "clear");
         crate::game::game_say(g, in_room.unwrap(), "room clear — hostages.", None, None);
@@ -911,7 +909,7 @@ fn rescue_search(g: &mut crate::game::Game) {
     let b = rescue_bounds(g);
     let t = g.time;
     let r = match b { Some(r) => r, None => return };
-    let theirs = g.staged.foes.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && in_rect(pos_of(g, h), b));
+    let theirs = g.staged.foes.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && in_rect(g.pos_of(h), b));
     if !theirs {
         for o in g.rescue.search_t.keys() { rescue_searched(g, o); }
         return;
@@ -919,7 +917,7 @@ fn rescue_search(g: &mut crate::game::Game) {
     let ops = g.staged.team.clone();
     for &o in &ops {
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), o);
-        let p = pos_of(g, o);
+        let p = g.pos_of(o);
         let stands = match a {
             Some(a) => {
                 let row = &g.tab.orders_assignment[a];
@@ -1041,17 +1039,17 @@ pub fn rescue_captor(g: &mut crate::game::Game) -> Option<GuardId> {
     let b = rescue_bounds(g);
     let all: Vec<GuardId> = g.staged.captives.iter().copied().filter(|&h| !crate::condition::down(g, g.gd[h].ch)).collect();
     if all.is_empty() { return None; }
-    let held: Vec<V3> = all.iter().map(|&x| pos_of(g, x)).filter(|&p| in_rect(p, b)).collect();
+    let held: Vec<V3> = all.iter().map(|&x| g.pos_of(x)).filter(|&p| in_rect(p, b)).collect();
     let was = g.rescue.cap_by;
     if let (false, Some(w)) = (held.is_empty(), was) {
-        if !crate::condition::down(g, g.gd[w].ch) && g.gd[w].held.is_none() && in_rect(pos_of(g, w), b) { return Some(w); }
+        if !crate::condition::down(g, g.gd[w].ch) && g.gd[w].held.is_none() && in_rect(g.pos_of(w), b) { return Some(w); }
     }
     let mut best: Option<GuardId> = None;
     let mut bd = 1e9;
     if !held.is_empty() {
         for &h in &g.staged.foes {
-            if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || !in_rect(pos_of(g, h), b) { continue; }
-            let at = pos_of(g, h);
+            if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || !in_rect(g.pos_of(h), b) { continue; }
+            let at = g.pos_of(h);
             let dists: Vec<f64> = held.iter().map(|&x| v3::dist_xz(x, at)).collect();
             let d = m::min_n(&dists);
             if d < bd { bd = d; best = Some(h); }

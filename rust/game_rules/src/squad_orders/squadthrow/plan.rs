@@ -128,7 +128,7 @@ pub(in crate::squad_orders) fn row_valid(g: &mut crate::game::Game, men: &[Guard
 
 /// Some: the refusal.
 pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> {
-    let at = crate::orders::rows::at(t);
+    let at = t.at();
     let p = plan_for(g, men, at, kind);
     if let Some(why) = p.refuse {
         return Some(why);

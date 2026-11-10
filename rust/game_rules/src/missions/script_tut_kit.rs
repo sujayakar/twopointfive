@@ -92,7 +92,7 @@ fn flag_truthy(g: &Game, r: DirectorRunId, n: &str) -> bool {
 }
 
 /// `c.flag.gun as string | undefined`
-fn flag_text(g: &Game, r: DirectorRunId, n: &str) -> Option<String> {
+pub(super) fn flag_text(g: &Game, r: DirectorRunId, n: &str) -> Option<String> {
     match g.tab.director_run[r].flags.get(String::from(n)) {
         Some(Some(crate::director::Json::Text(s))) => Some(s.clone()),
         _ => None,
@@ -105,7 +105,7 @@ fn set_flag_text(g: &mut Game, r: DirectorRunId, n: &str, v: &str) {
 }
 
 /// `c.flag.<n> = true`
-fn set_flag_true(g: &mut Game, r: DirectorRunId, n: &str) {
+pub(super) fn set_flag_true(g: &mut Game, r: DirectorRunId, n: &str) {
     g.tab.director_run[r].flags.set(String::from(n), Some(crate::director::Json::Bool(true)));
 }
 
@@ -121,7 +121,7 @@ fn wait(g: &Game, r: DirectorRunId, secs: f64) -> Result<crate::director::Cond, 
 }
 
 /// `c.until(<test id>, label)`
-fn until(id: u32) -> crate::director::Cond {
+pub(super) fn until(id: u32) -> crate::director::Cond {
     crate::director::director_beat_until(crate::director::CondTest::Script { id })
 }
 

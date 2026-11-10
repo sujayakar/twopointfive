@@ -7,6 +7,13 @@ use alloc::{string::String, vec::Vec};
 pub const BONE_ORDER: [Bone; 22] = [Bone::Hips, Bone::Spine2, Bone::Chest, Bone::Neck, Bone::Head, Bone::UpperArmL, Bone::ForearmL, Bone::HandL, Bone::UpperArmR, Bone::ForearmR, Bone::HandR, Bone::ThighL, Bone::ShinL, Bone::FootL, Bone::ToeL, Bone::ThighR, Bone::ShinR, Bone::FootR, Bone::ToeR, Bone::FingerR, Bone::FingerL, Bone::HeadTop];
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Bone { Hips, Spine2, Chest, Neck, Head, UpperArmL, ForearmL, HandL, UpperArmR, ForearmR, HandR, ThighL, ShinL, FootL, ToeL, ThighR, ShinR, FootR, ToeR, FingerR, FingerL, HeadTop }
+impl Character {
+    /// a bone's place, or a place this far over his feet before any pose has written it
+    pub fn bone_or(&self, b: Bone, up: f64) -> V3 {
+        self.bones.get(b).copied().unwrap_or([self.pos[0], self.pos[1] + up, self.pos[2]])
+    }
+}
+
 impl Bone {
     pub const fn as_str(self) -> &'static str {
         match self { Bone::Hips => "hips", Bone::Spine2 => "spine2", Bone::Chest => "chest", Bone::Neck => "neck", Bone::Head => "head", Bone::UpperArmL => "upperArmL", Bone::ForearmL => "forearmL", Bone::HandL => "handL", Bone::UpperArmR => "upperArmR", Bone::ForearmR => "forearmR", Bone::HandR => "handR", Bone::ThighL => "thighL", Bone::ShinL => "shinL", Bone::FootL => "footL", Bone::ToeL => "toeL", Bone::ThighR => "thighR", Bone::ShinR => "shinR", Bone::FootR => "footR", Bone::ToeR => "toeR", Bone::FingerR => "fingerR", Bone::FingerL => "fingerL", Bone::HeadTop => "headTop" }

@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::ask::Over;
 use crate::game::Game;
@@ -77,10 +78,6 @@ fn away(at: V3, feet: V3) -> V3 {
     let l = m::hyp2(d[0], d[2]);
     if l > 1e-3 { v3::normalize([d[0] / l, 0.45, d[2] / l]) } else { [0.0, 1.0, 0.0] }
 }
-/// `char.bones.<bone> ?? char.pos + [0, up, 0]`
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(bone) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
-}
 /// who the kill is down to, as blastRaw says it
 fn down_by(b: &Burst) -> crate::game::DownBy {
     if b.mine { crate::game::DownBy::Player } else if js::truthy(b.who) { crate::game::DownBy::Guard } else { crate::game::DownBy::World }
@@ -130,7 +127,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     if crate::condition::down(g, g.pl[pl].ch) { return; }
-    let head = bone_or(g, c, crate::character::Bone::Head, 1.6);
+    let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let (feet, id) = (g.ch[c].pos, g.ch[c].id);
     let j = judge(g, b, feet, head, id);
     let Some(r) = j.r else { return };
@@ -217,7 +214,7 @@ fn seen_and_heard(g: &mut Game, b: &Burst) {
     crate::audio_iface::game_audio_like_play(g, "stunBang", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.62 }));
     crate::marks::bang_scorch(g, from);
     let ears = g.pl[crate::seats::host_man(g)].ch;
-    let eye = bone_or(g, ears, crate::character::Bone::Head, 1.6);
+    let eye = g.ch[ears].bone_or(crate::character::Bone::Head, 1.6);
     if !crate::condition::down(g, ears) && v3::dist(eye, from) < b.wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
         crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.1 - v3::dist(eye, from) / b.wound, 0.2, 0.7)), None);
     }
@@ -239,7 +236,7 @@ fn lines_before(g: &mut Game, b: &Burst) -> JsMap<crate::Num, f64> {
 }
 fn standing_shows(g: &mut Game, b: &Burst, map: &mut JsMap<crate::Num, f64>, c: CharId, up: f64) {
     if crate::condition::down(g, c) { return; }
-    let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, up), g.ch[c].id);
+    let (feet, head, id) = (g.ch[c].pos, g.ch[c].bone_or(crate::character::Bone::Head, up), g.ch[c].id);
     if v3::dist(b.from, [feet[0], feet[1] + 0.9, feet[2]]) > b.wound { return; }
     let e = exposure(g, b.from, feet, head, Some(GlassView::Blown));
     map.set(crate::Num(id), e);
@@ -259,7 +256,7 @@ fn torn_leaves(g: &mut Game, hung: &[DoorId]) -> Vec<BoxId> {
 /// A man on his feet: killed, wounded or folded by it, or behind something.
 fn touch(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let c = g.gd[gd].ch;
-    let (pos, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
+    let (pos, head, id) = (g.ch[c].pos, g.ch[c].bone_or(crate::character::Bone::Head, 1.65), g.ch[c].id);
     let j = judge(g, b, pos, head, id);
     let Some(r) = j.r else { return };
     let team = g.team(gd);
@@ -413,7 +410,7 @@ fn roll_body(g: &Game, it: RollBody, touch_fuse: Option<f64>, props: bool, high:
             }
             if roll_slow(g, v, bog) { done = true; }
         }
-        let far = match last { None => true, Some(q) => flat(q, p) > 0.25 };
+        let far = match last { None => true, Some(q) => dist_xz(q, p) > 0.25 };
         if touched && far {
             let q: V3 = [p[0], if high { p[1] - it.radius } else { 0.0 }, p[2]];
             last = Some(q);
@@ -520,7 +517,7 @@ fn shoulders(g: &crate::game::Game, a: V3, b: V3, q: V3) -> bool {
 fn open_leaves(g: &crate::game::Game, p: V3, r: f64) -> Vec<Vec<f64>> {
     let mut out: Vec<Vec<f64>> = Vec::new();
     for x in g.doors.list.clone() {
-        if !g.dr[x].leaf.off && m::abs(g.dr[x].leaf.angle) > 0.15 && flat(g.dr[x].frame_centre, p) < r {
+        if !g.dr[x].leaf.off && m::abs(g.dr[x].leaf.angle) > 0.15 && dist_xz(g.dr[x].frame_centre, p) < r {
             let u = crate::doors::door_dir(g, x);
             let (h, w) = (g.dr[x].def.hinge, g.dr[x].def.width);
             out.push(vec![h[0], h[1], h[0] + u[0] * w, h[1] + u[1] * w]);
@@ -543,7 +540,7 @@ fn leaf_dist(l: &[Vec<f64>], x: f64, z: f64) -> f64 {
 
 /// A straight leg a → b comes within fleeDoorLeaf of a leaf, and nearer it than `ref_`.
 fn leg_by_leaf(g: &crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_: f64) -> bool {
-    let r = flat(a, b);
+    let r = dist_xz(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
         let u = if r > 1e-3 { m::min(1.0, t / r) } else { 1.0 };
@@ -715,7 +712,7 @@ fn open_way(g: &crate::game::Game, d: DoorId) -> bool {
 /// His spot is in the mouth of an open doorway.
 pub(super) fn in_mouth(g: &crate::game::Game, p: V3) -> bool {
     for d in g.doors.list.clone() {
-        if open_way(g, d) && flat(g.dr[d].frame_centre, p) < g.k.frag.flee_door_mouth { return true; }
+        if open_way(g, d) && dist_xz(g.dr[d].frame_centre, p) < g.k.frag.flee_door_mouth { return true; }
     }
     false
 }
@@ -743,7 +740,7 @@ fn door_near(g: &Game, k: &DoorDeal, x: f64, z: f64) -> bool {
 }
 /// One straight leg: 0 clear, 1 a step of it is nearer the thing, 2 a leaf stands in it.
 fn door_clear(g: &Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
-    let r = flat(a, b);
+    let r = dist_xz(a, b);
     let mut t = 0.25;
     while t < r + 0.25 {
         let u = if r > 1e-3 { m::min(1.0, t / r) } else { 1.0 };
@@ -775,16 +772,16 @@ fn door_walk(g: &mut Game, k: &DoorDeal, a: V3, p: V3, d: DoorId) -> f64 {
         }
         let cl = door_clear(g, k, q, b, ref_);
         if cl != 0 { return -(cl as f64); }
-        len += flat(q, b);
+        len += dist_xz(q, b);
         q = b;
     }
     if thru { len } else { -1.0 }
 }
 fn door_take(g: &mut Game, k: &mut DoorDeal, goal: V3, p: V3, len: f64, v: bool) {
     let keep = k.wise.keep;
-    let same = match keep { Some(q) => flat(goal, q) < 0.05, None => false };
+    let same = match keep { Some(q) => dist_xz(goal, q) < 0.05, None => false };
     let unknown = if !k.ours || crate::cleared::cleared_rooms_known_at(g, p) { 0.0 } else { g.k.frag.flee_door_new };
-    let sc = 100.0 - len * 2.0 + m::min(flat(p, k.at), 4.0) * 0.2 - unknown + (if same { g.k.frag.flee_keep } else { 0.0 });
+    let sc = 100.0 - len * 2.0 + m::min(dist_xz(p, k.at), 4.0) * 0.2 - unknown + (if same { g.k.frag.flee_keep } else { 0.0 });
     if sc > k.best_s {
         k.best_s = sc;
         k.best = if same { keep } else { Some(goal) };
@@ -800,7 +797,7 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
     let ta = speed / accel;
     let reach = (if tt <= ta { 0.5 * accel * tt * tt } else { speed * (tt - ta / 2.0) }) * g.k.frag.flee_door_in;
     if !(reach > 0.5) { return None; }
-    let d0 = flat(cpos, at);
+    let d0 = dist_xz(cpos, at);
     let path0 = door_off_path(g, cpos[0], cpos[2], &wise.path);
     let leaves = open_leaves(g, cpos, reach + 2.0);
     let ours = match who { None => true, Some(w) => g.team(w).ours() };
@@ -808,9 +805,9 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
     let (most, tries, apart_m) = (g.k.frag.flee_door_most, g.k.frag.flee_door_try, g.k.frag.flee_apart_m);
     let mut open: Vec<DoorId> = Vec::new();
     for d in g.doors.list.clone() {
-        if open_way(g, d) && flat(g.dr[d].frame_centre, cpos) <= reach { open.push(d); }
+        if open_way(g, d) && dist_xz(g.dr[d].frame_centre, cpos) <= reach { open.push(d); }
     }
-    js::sort_by(&mut open, |a, b| flat(g.dr[*a].frame_centre, cpos) - flat(g.dr[*b].frame_centre, cpos));
+    js::sort_by(&mut open, |a, b| dist_xz(g.dr[*a].frame_centre, cpos) - dist_xz(g.dr[*b].frame_centre, cpos));
     let mut asked = 0.0;
     for d in open {
         let fc = g.dr[d].frame_centre;
@@ -827,17 +824,17 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
         for kk in [1.0, -1.0] { for a in [0.4, 0.8, 1.6, 2.4] { for o in [0.7, 1.1] {
             let s = w / 2.0 + a;
             let p: V3 = [fc[0] + ux * s * kk - nx * o * side, 0.0, fc[2] + uz * s * kk - nz * o * side];
-            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || flat(p, at) < d0 - 0.05 { continue; }
-            if let Some(n) = wise.not { if flat(p, n) < 0.8 { continue; } }
+            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || dist_xz(p, at) < d0 - 0.05 { continue; }
+            if let Some(n) = wise.not { if dist_xz(p, n) < 0.8 { continue; } }
             if let Some(ap) = &wise.apart {
-                if ap.go.iter().any(|&q| flat(p, q) < apart_m) || ap.stay.iter().any(|&q| flat(p, q) < apart_m) { continue; }
+                if ap.go.iter().any(|&q| dist_xz(p, q) < apart_m) || ap.stay.iter().any(|&q| dist_xz(p, q) < apart_m) { continue; }
             }
             if exposed_to(g, from, p, [p[0], 1.15, p[2]], None) == 0.0 { spots.push(p); }
         } } }
-        js::sort_by(&mut spots, |a, b| flat(*a, cpos) - flat(*b, cpos));
+        js::sort_by(&mut spots, |a, b| dist_xz(*a, cpos) - dist_xz(*b, cpos));
         let (mut got, mut leafed, mut ways) = (false, false, 0.0);
         for &p in &spots {
-            if ways >= tries || flat(p, cpos) > reach { break; }
+            if ways >= tries || dist_xz(p, cpos) > reach { break; }
             let len = door_walk(g, &k, cpos, p, d);
             if len == -2.0 { leafed = true; }
             if len < 0.0 || len > reach { continue; }
@@ -852,11 +849,11 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
         let tip_n = m::max(0.0, ((h[0] + u[0] * w - fc[0]) * nx + (h[1] + u[1] * w - fc[2]) * nz) * side);
         for mm in [0.65, 1.0] {
             let sp: V3 = [fc[0] + nx * side * (tip_n + mm), 0.0, fc[2] + nz * side * (tip_n + mm)];
-            let l0 = flat(cpos, sp);
+            let l0 = dist_xz(cpos, sp);
             if l0 < g.k.frag.flee_door_via_m || crate::scene_collision::nav_grid_is_blocked(g, sp[0], sp[2]) || !crate::scene_collision::nav_grid_walkable(g, cpos, sp) { continue; }
             let ref_ = leaf_dist(&k.leaves, cpos[0], cpos[2]);
             if door_clear(g, &k, cpos, sp, ref_) != 0 { continue; }
-            if let Some(n) = wise.not { if flat(sp, n) < 0.3 { continue; } }
+            if let Some(n) = wise.not { if dist_xz(sp, n) < 0.3 { continue; } }
             let mut any = false;
             let mut n = 0.0;
             for &p in &spots {

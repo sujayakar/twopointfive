@@ -1,5 +1,6 @@
 pub use ::game_types::doorforce::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -48,9 +49,6 @@ fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorf
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// A line for the panel's log.
 fn log(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
@@ -73,7 +71,7 @@ fn shut(g: &crate::game::Game, d: DoorId) -> bool {
 /// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge.
 fn behind(g: &crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
     let k = g.k.doorforce;
-    if !shut(g, d) || flat(g.dr[d].frame_centre, at) > k.behind_m || flat(g.dr[d].frame_centre, from) > k.reach_m { return false; }
+    if !shut(g, d) || dist_xz(g.dr[d].frame_centre, at) > k.behind_m || dist_xz(g.dr[d].frame_centre, from) > k.reach_m { return false; }
     if crate::doors::doors_side(g, d, from) == crate::doors::doors_side(g, d, at) { return false; }
     let l = crate::doors::doors_frame_coords(g, d, at);
     if l.along < -k.behind_m || l.along > g.dr[d].def.width + k.behind_m { return false; }
@@ -89,7 +87,7 @@ fn door_between(g: &crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<
         let d = g.doors.list[i];
         i += 1;
         if !behind(g, gd, d, from, at) { continue; }
-        let da = flat(g.dr[d].frame_centre, at);
+        let da = dist_xz(g.dr[d].frame_centre, at);
         if da < bd { bd = da; best = Some(d); }
     }
     best
@@ -174,7 +172,7 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
         while i < g.doors.list.len() {
             let x = g.doors.list[i];
             i += 1;
-            if shut(g, x) && flat(g.dr[x].frame_centre, e.pos) < g.dr[x].def.width + 0.3 && behind(g, gd, x, my_pos, maker_pos) { found = Some(x); break; }
+            if shut(g, x) && dist_xz(g.dr[x].frame_centre, e.pos) < g.dr[x].def.width + 0.3 && behind(g, gd, x, my_pos, maker_pos) { found = Some(x); break; }
         }
         d = match found { Some(x) => x, None => return };
         let u = crate::doors::door_dir(g, d);
@@ -460,7 +458,7 @@ fn lays_rounds_on_it(g: &mut Game, gd: GuardId, b: &Belief, to: Option<V3>, pos:
     let st = stand!(g, gd);
     if st.n >= kf.rounds { st.n = 0.0; st.fired_t = time; st.next = time + kf.gap_secs; }   // these rounds are through: he listens
     let p = g.k.aim.guard;
-    let dist = flat(pos, aim);
+    let dist = dist_xz(pos, aim);
     let on = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * (match g.gd[gd].skill { Some(sk) => sk.settle_k, None => 1.0 });
     let aim_model = g.tune.aim_model;
@@ -565,7 +563,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
         crate::guards::go_to(g, gd, kk.spot, None);
         let speed = g.tune.guard_investigate;
         let arrived = crate::guards::follow_path(g, gd, dt, speed);
-        let dist = flat(g.ch[c].pos, kk.spot);
+        let dist = dist_xz(g.ch[c].pos, kk.spot);
         if dist < 0.3 || (arrived && dist < 0.6) {
             let time = g.time;
             let k = man!(g, gd).kick.as_mut().unwrap();
@@ -580,7 +578,7 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
     g.ch[c].vel = [0.0, 0.0, 0.0];
     // on the spot: square to the leaf as the spot was dealt, his eyes on the lock
-    let on_it = flat(g.ch[c].pos, kk.spot) < 0.6;
+    let on_it = dist_xz(g.ch[c].pos, kk.spot) < 0.6;
     if kk.phase == KickPhase::Set {
         if !on_it { return kick_end(g, gd, d, b, Some("he was moved off the spot"), false); }
         let pos = g.ch[c].pos;

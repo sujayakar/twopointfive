@@ -4,6 +4,7 @@
 //!   `back_on`  back on the post he left, as he held it
 //!   `room_fight_plant` (defender.rs)  where he has got to is his post now
 //! Who may take him from it is the owner's list (owner/ `kept`); these only do it.
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -84,13 +85,13 @@ pub(super) fn walked(g: &mut Game, d: RoomfightDefId, dt: f64) -> Option<LegEnd>
     let leg = &mut g.tab.roomfight_def[d].leg;
     leg.step_t = step_t;
     if leg.end.is_some() { return leg.end; }
-    if leg.way.len() > 1 && (flat(at, leg.way[0]) < 1.4 || flat(at, leg.way[1]) < flat(leg.way[0], leg.way[1])) {
+    if leg.way.len() > 1 && (dist_xz(at, leg.way[0]) < 1.4 || dist_xz(at, leg.way[1]) < dist_xz(leg.way[0], leg.way[1])) {
         leg.way.remove(0);
         return walk_on(g, d);
     }
     if arrived && leg.way.len() <= 1 { return Some(LegEnd::Arrived); }
     leg.t += dt;
-    if flat(at, leg.stall_at) > 0.4 { leg.stall_at = at; leg.stall_t = 0.0; } else { leg.stall_t += dt; }
+    if dist_xz(at, leg.stall_at) > 0.4 { leg.stall_at = at; leg.stall_t = 0.0; } else { leg.stall_t += dt; }
     let errand = leg.stays || leg.tries > 0;
     if leg.t > if errand { MOST_ERRAND } else { MOST } { return Some(LegEnd::Nowhere); }
     if leg.stall_t <= STALL { return None; }

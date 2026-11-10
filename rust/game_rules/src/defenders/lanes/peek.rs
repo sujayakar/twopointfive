@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -18,31 +19,11 @@ fn find_lane(g: &Game, id: f64) -> Option<LanesLaneId> {
     st.lanes.iter().copied().find(|&l| g.tab.lanes_lane[l].id == id)
 }
 
-/// A key for a `Set<number>` of cells: JavaScript's Set counts -0 as +0, `Num` goes by the bits.
-fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
-
-fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-/// `gd.path = []; gd.pathGoal = null`
-fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
-/// `g.say(gd, text, true)`
-fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
-/// `g.col.segmentBlocked(a, b)`
-fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
-/// `g.col.solidBlocked(a, b)`
-fn solid_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
 /// `L.guns.every(m => spotSeen(g, eye, m))`
 fn all_spots_seen(g: &Game, l: LanesLaneId, eye: V3) -> bool {
     let guns = g.tab.lanes_lane[l].guns.clone();
     for q in guns { if !spot_seen(g, eye, q) { return false; } }
     true
-}
-///  on his way back to where he stood. The row is there at every call: nothing between peek_step's read and a back() deletes it, and :861 puts it in again first
-fn peek_back(g: &mut Game, gd: GuardId, d: RoomfightDefId) {
-    let now = g.time;
-    let home = { let r = s(g).peek.get_mut(gd).unwrap(); r.phase = crate::lanes::PeekPhase::Back; r.t = now; r.home };
-    clear_path(g, gd);
-    let fast = g.k.lanes.push_fast;
-    crate::roomfight::run(g, d, home, None, fast, crate::owner::by::LANE);
 }
 
 /// A man out for his look, and what he is looking at: fixed for the frame.
@@ -143,8 +124,8 @@ fn off_the_errand(g: &mut Game, gd: GuardId, p: &crate::lanes::Peek, ll: Option<
         return;
     };
     g.tab.lanes_lane[l].frag_at = now + if f.at.is_some() { 6.0 } else { 2.0 };
-    let here = pos_of(g, gd);
-    if still_his_own && !f.going && flat(here, p.home) < 0.5 {
+    let here = g.pos_of(gd);
+    if still_his_own && !f.going && dist_xz(here, p.home) < 0.5 {
         let lane = g.tab.lanes_lane[l].id;
         held_on(g, gd, crate::lanes::StateHeldValue { lane, t: now, look: p.look, aimed: true, at: here });
     }
@@ -152,13 +133,13 @@ fn off_the_errand(g: &mut Game, gd: GuardId, p: &crate::lanes::Peek, ll: Option<
 
 /// On his way back: once there (or the way is done) the look is over, and he is held on the lane again if it stands and he is out of its line.
 fn comes_home(g: &mut Game, gd: GuardId, d: RoomfightDefId, p: &crate::lanes::Peek, ll: Option<LanesLaneId>) {
-    if crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && flat(pos_of(g, gd), p.home) > 0.5 && g.time - p.t < 6.0 { return; }
+    if crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && dist_xz(g.pos_of(gd), p.home) > 0.5 && g.time - p.t < 6.0 { return; }
     peek_off(g, gd);
-    let here = pos_of(g, gd);
+    let here = g.pos_of(gd);
     if lane_on(g, here, gd).is_some() { return; }   // (stopped in the line: the fight's, and the tick's own way out of a line)
     let Some(l) = ll else { return };   // (his own look cleared it: nothing left to hold him on)
     if g.time - g.gd[gd].last_seen_t > 1.0 && crate::roomfight::room_fight_lane_stop(g, gd, p.look) {
-        let (at, now) = (pos_of(g, gd), g.time);
+        let (at, now) = (g.pos_of(gd), g.time);
         let lane = g.tab.lanes_lane[l].id;
         held_on(g, gd, crate::lanes::StateHeldValue { lane, t: now, look: p.look, aimed: true, at });
     }
@@ -167,7 +148,7 @@ fn comes_home(g: &mut Game, gd: GuardId, d: RoomfightDefId, p: &crate::lanes::Pe
 /// His head round the corner ahead of his feet: the look is from his eyes leant `peekLean` toward the mouth (nothing solid between), and from there still once he has his line.
 fn eye_round_the_corner(g: &mut Game, gd: GuardId, p: &mut crate::lanes::Peek) -> V3 {
     let eye = eye_of(g, gd);
-    let here = pos_of(g, gd);
+    let here = g.pos_of(gd);
     let (dx, dz) = (p.to[0] - here[0], p.to[2] - here[2]);
     let dl = m::hyp2(dx, dz);
     if dl > 0.05 && p.line_t < 0.0 {
@@ -193,7 +174,7 @@ fn they_are_still_on_it(g: &mut Game, o: Out, seen: V3) {
     r.peek_part = 0.0;
     r.peek_n += 1.0;
     r.peek_at = now + m::min(most, gap * m::pow(2.0, r.peek_n));
-    if r.guns.len() < 4 && r.guns.iter().all(|&q| flat(q, seen) > 1.5) { r.guns.push([seen[0], 0.0, seen[2]]); }   // (where they stand now: a place to stop is out of that one's sight too)
+    if r.guns.len() < 4 && r.guns.iter().all(|&q| dist_xz(q, seen) > 1.5) { r.guns.push([seen[0], 0.0, seen[2]]); }   // (where they stand now: a place to stop is out of that one's sight too)
     if now - s(g).said_t > 2.0 { s(g).said_t = now; say_net(g, gd, "they're still on it — stay back!"); }
     peek_back(g, gd, d);
 }
@@ -208,10 +189,10 @@ fn every_gun_spot_in_line(g: &Game, l: LanesLaneId, eye: V3) -> bool {
 fn stops_to_look(g: &mut Game, o: Out, p: &mut crate::lanes::Peek) {
     if p.line_t >= 0.0 { return; }
     p.line_t = o.now;
-    p.to = pos_of(g, o.gd);
+    p.to = g.pos_of(o.gd);
     let (line_t, to) = (p.line_t, p.to);
     if let Some(r) = s(g).peek.get_mut(o.gd) { r.line_t = line_t; r.to = to; }
-    clear_path(g, o.gd);
+    g.gd[o.gd].drop_path();
     crate::roomfight::run(g, o.d, to, None, 0.0, crate::owner::by::LANE);
 }
 
@@ -329,14 +310,14 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if flanking(g, gd) || s(g).peek.has(gd) { return false; }
     let sg = g.gd[gd].script.as_ref().and_then(|sc| sc.goal);
     if let (Some(h), Some(sg)) = (s(g).held.get(gd), sg) {
-        if !h.aimed && flat(sg, h.at) < 0.8 { return false; }
+        if !h.aimed && dist_xz(sg, h.at) < 0.8 { return false; }
     }
     let last_look = s(g).look.get(gd).copied().unwrap_or(-100.0);
     if g.time - last_look < 0.2 { return false; }
     let now = g.time;
     s(g).look.set(gd, now);
     if close_fight(g, gd) || crate::control::man::blind(g, gd) || crate::frag::frag_flee(g, gd).is_some() { return false; }
-    let here = in_mask(g, Some(&m), pos_of(g, gd));
+    let here = in_mask(g, Some(&m), g.pos_of(gd));
     let Some(mut first) = ahead(g, &m, gd, here) else { return false };
     if !here {
         if let Some(goal) = g.gd[gd].path_goal {
@@ -352,21 +333,21 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if here {
         if g.time - g.tab.lanes_lane[l].last_t > g.k.lanes.hot_secs {
             let on = along(g, gd, g.k.lanes.ahead_m);
-            if flat(on, lane_from) > flat(pos_of(g, gd), lane_from) - 0.5 { return false; }
+            if dist_xz(on, lane_from) > dist_xz(g.pos_of(gd), lane_from) - 0.5 { return false; }
         }
         if back_out(g, gd, l) { return true; }
     } else {
-        let p = pos_of(g, gd);
+        let p = g.pos_of(gd);
         let shift = g.k.lanes.shift_m;
         if (gun_on(g, l, p, Some(shift)) || crate::doorway::doorway_in_way(g, p)) && back_out(g, gd, l) { return true; }
     }
     if def_of(g, gd).is_none() { return false; }
     if !s(g).due.iter().any(|d| d.gd == gd) {
         let mut look = first;
-        let (p, look_m) = (pos_of(g, gd), g.k.lanes.look_m);
-        if flat(p, first) < look_m {
+        let (p, look_m) = (g.pos_of(gd), g.k.lanes.look_m);
+        if dist_xz(p, first) < look_m {
             let far = along(g, gd, 3.0);
-            look = if flat(p, far) >= look_m { far } else if flat(p, lane_from) >= look_m { lane_from } else { first };
+            look = if dist_xz(p, far) >= look_m { far } else if dist_xz(p, lane_from) >= look_m { lane_from } else { first };
         }
         s(g).due.push(StateDueItem { gd, lane: lane_id, look });
     }
@@ -378,12 +359,12 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The point `m` metres on along his way.
 pub(super) fn along(g: &crate::game::Game, gd: GuardId, m: f64) -> V3 {
-    let mut a = pos_of(g, gd);
+    let mut a = g.pos_of(gd);
     let mut left = m;
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {
         let b = g.gd[gd].path[i];
-        let d = flat(a, b);
+        let d = dist_xz(a, b);
         if d >= left { return [a[0] + (b[0] - a[0]) * left / js::or(d, 1.0), 0.0, a[2] + (b[2] - a[2]) * left / js::or(d, 1.0)]; }
         left -= d;
         a = b;
@@ -403,7 +384,7 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
     if !crate::roomfight::room_fight_lane_stop(g, gd, look) { return; }
     crate::game::guard_set_path(g, gd, Vec::new());
     crate::guards::guard_set_path_goal(g, gd, None);
-    let (p, now) = (pos_of(g, gd), g.time);
+    let (p, now) = (g.pos_of(gd), g.time);
     held_on(g, gd, StateHeldValue { lane, t: now, look, aimed: true, at: p });
     if now - s(g).said_t > 5.0 {
         s(g).said_t = now;
@@ -413,14 +394,14 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
 
 /// The first point of a known lane on the next `aheadM` of his way; `inside`: he stands in one, and None means his way leaves it for good within reach.
 fn ahead(g: &crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Option<V3> {
-    let mut a = pos_of(g, gd);
+    let mut a = g.pos_of(gd);
     let mut left = g.k.lanes.ahead_m;
     let mut was = inside;
     let mut hit: Option<V3> = None;
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() && left > 0.0 {
         let b = g.gd[gd].path[i];
-        let d = flat(a, b);
+        let d = dist_xz(a, b);
         let k = m::max(1.0, m::ceil(m::min(d, left) / 0.35));
         let mut j = 1.0;
         while j <= k {
@@ -437,7 +418,7 @@ fn ahead(g: &crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Option<V
         i += 1;
     }
     if hit.is_some() { return hit; }
-    if inside { Some(pos_of(g, gd)) } else { None }
+    if inside { Some(g.pos_of(gd)) } else { None }
 }
 
 /// He is held short of a lane his side knows is covered, and what wants him (`to`; none = anything) lies at its guns or down it.
@@ -447,7 +428,7 @@ pub fn lane_bars(g: &crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
     let Some(l) = lane_of(g, gd) else { return false };
     let Some(to) = to else { return true };
     let field = g.k.lanes.field_m;
-    if g.tab.lanes_lane[l].guns.iter().any(|m| flat(*m, to) < field + 4.0) { return true; }
+    if g.tab.lanes_lane[l].guns.iter().any(|m| dist_xz(*m, to) < field + 4.0) { return true; }
     let i = cell_at(g, to);
     g.tab.lanes_lane[l].cells.as_ref().map_or(false, |c| c.has(cell_key(i)))
 }
@@ -472,7 +453,7 @@ pub fn lane_known_at(g: &crate::game::Game, gd: GuardId, to: Option<V3>) -> bool
         if !knows(g, l, gd) { continue; }
         let r = &g.tab.lanes_lane[l];
         let Some(cells) = r.cells.as_ref() else { continue };
-        if cells.has(cell_key(i)) || r.guns.iter().any(|m| flat(*m, to) < field + 4.0) { return true; }
+        if cells.has(cell_key(i)) || r.guns.iter().any(|m| dist_xz(*m, to) < field + 4.0) { return true; }
     }
     false
 }
@@ -482,7 +463,7 @@ pub fn lane_door(g: &mut crate::game::Game, gd: GuardId, far: V3, centre: V3, ca
     if no_lanes(g) || !live(g) || !mine(g, gd) || pushing(g, gd) || flanking(g, gd) { return false; }
     let Some(l) = lane_on(g, far, gd) else { return false };
     let bang = g.k.lanes.bang_m;
-    !(can && g.tab.lanes_lane[l].guns.iter().any(|m| flat(*m, centre) < bang + 2.5))
+    !(can && g.tab.lanes_lane[l].guns.iter().any(|m| dist_xz(*m, centre) < bang + 2.5))
 }
 
 /// The two questions tryEngage asked, asked again while the drill has him this side of the doorway. True = the drill lets him go.

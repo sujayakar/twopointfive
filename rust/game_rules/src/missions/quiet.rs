@@ -216,11 +216,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     g.quiet.fall_in = false;
     let at = g.ch[g.pl[g.player].ch].pos;
     let target = crate::orders::squad_orders_target_at(g, at);
-    let why = crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
-    match why {
-        Some(w) => {},
-        None => {},
-    }
+    crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
 }
 
 /// `cam.target = v3.copy(p); cam.desired = v3.copy(cam.target)`: a whole write of `desired` is what Seat.takeCut watches for, here by its serial

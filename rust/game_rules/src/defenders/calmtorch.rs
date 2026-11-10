@@ -115,7 +115,7 @@ pub fn calm_torch_dark(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool 
             }
         }
         if relit {
-            click(g, gd, true);
+            super::darkfoe::click(g, gd);
         }
         return false;
     }
@@ -152,18 +152,10 @@ pub fn calm_torch_dark(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool 
             s.against = 0.0;
             s.held = 0.0;
             let dark = s.dark;
-            click(g, gd, !dark);
+            super::darkfoe::click(g, gd);
             return dark;
         }
     }
     s.dark
 }
 
-/// The switch under his thumb, for the player's ears only: no event is filed, nobody hears it.
-fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on {
-    } else {
-    }
-    let pos = g.ch[g.gd[gd].ch].pos;
-    crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
-}

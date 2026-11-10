@@ -238,7 +238,7 @@ impl Sitting {
     /// The levers this machine keeps, by the words it said: the address's own come last, one for each it names, and a word that is no rung was never kept.
     fn kept_said(&self, g: &Game) -> Vec<(LeverKey, &str)> {
         let boot = Query::parse(self.booted.as_deref().unwrap_or(""));
-        let named = difficulty::levers_now(g).iter().filter(|l| boot.get(&l.param).is_some_and(|w| !w.is_empty())).count();
+        let named = difficulty::levers_now().iter().filter(|l| boot.get(&l.param).is_some_and(|w| !w.is_empty())).count();
         let kept = &self.said[..self.said.len().saturating_sub(named)];
         kept.iter().filter_map(|(k, r)| Some((lever_key(k)?, r.as_str()))).filter(|(k, r)| difficulty::is_rung(g, *k, Some(r))).collect()
     }
@@ -521,7 +521,7 @@ fn lever_rows(g: &mut Game, m: &Mission, link: &str, out: &mut Vec<Setting>) {
     let shown = difficulty::levers_shown(g, Some(&structure));
     let cams_on = quiet && quietfog::quiet_cams(g);
     let quiet_lit = quietfog::quiet_fog(g);
-    for l in difficulty::levers_now(g) {
+    for l in difficulty::levers_now() {
         let live = !m.lesson() && if matches!(l.key, LeverKey::Fog | LeverKey::Told) { fog_on || quiet } else { m.diff_live() };
         let mine = quiet && l.key == LeverKey::Fog;
         let lit: Option<&str> = if mine { Some(quiet_lit.as_str()) } else {

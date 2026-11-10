@@ -38,7 +38,7 @@ pub(in crate::people) fn lock(g: &mut Game, gd: GuardId, c: CharId, staff: bool)
             g.gd[gd].react_t = 1.1;
             g.gd[gd].search_t = 0.0;
             crate::mind::fix(g, gd, Some(spot), "guards");
-            clear_path(g, gd);
+            g.gd[gd].drop_path();
             crate::game::game_say(g, gd, if off { "this door's off its hinges…" } else { "this lock's been kicked in…" }, None, None);
             crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
             break;
