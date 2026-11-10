@@ -20,28 +20,3 @@ pub struct RoomRead {
     pub steps: JsMap<crate::Num, f64>,
     pub ways: Vec<crate::roomread::RoomWay>,
 }
-
-#[derive(Clone, Debug, Default)]
-pub struct SideSignD {
-    pub def: crate::roomread::SideSignDDef,
-}
-
-#[derive(Clone, Debug)]
-pub struct SideSignDDef {
-    pub closed_dir: f64,
-    pub hinge: crate::roomread::SideSignDDefHinge,
-}
-impl Default for SideSignDDef {
-    fn default() -> Self {
-        SideSignDDef {
-            closed_dir: 0.0,
-            hinge: crate::roomread::SideSignDDefHinge::Array(Vec::new()),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum SideSignDDefHinge {
-    Array(Vec<f64>),
-    List([f64; 2]),
-}
