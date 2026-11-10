@@ -16,3 +16,5 @@ What must not be lost
 Where to begin: a second core beside the first. All that stands above asks two questions (`nearest`, `visible` in src/wgsl/scene.wgsl) and reads a surface (`surfaceAt`). Same scenes, same reference, switched by a word; the first is deleted when it loses. Foliage first, since it has the outer levels already (leaf, grid): the missing middle is the twig's own small block of voxels, in the twig's frame, entered by moving the ray. Then shelves (the street), people, smoke. Then a floor patch: pebbles as instances near, relief, then normals and roughness, made from a hash of where it is; the test is that brightness does not move between levels.
 
 What is known already: notes/measured.md. `foot(w, s)` in scene.wgsl is the first piece of it: every stage says how wide its rays are; small things and leaves are met as far as that.
+
+Built and measured since: notes/onelod.md (and what of this page turned out otherwise).

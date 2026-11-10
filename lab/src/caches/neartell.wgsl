@@ -1,1 +1,0 @@
-fn cacheTell(who: u32, x: vec3f, n: vec3f, moves: bool) { if (who >= HITS + SLOTS || moves) { return; } let y = x + n * OFF; let e = cacheEntry(y); if (e.x != NOTHING || e.y > 1u) { return; } hits[who] = vec4u(bitcast<vec3u>(y), octPack(n)); cacheFound(cacheKeyOf(y, e.y), who); }

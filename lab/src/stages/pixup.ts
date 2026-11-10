@@ -15,7 +15,7 @@ export const pixUp = (lab: Lab, w: Weights, name = 'pixels'): UpscalePart => ({ 
   const layer = (n: number, x: (i: number) => string, act: (s: string) => string) => { const [inn, out] = sizes[n]!; return Array.from({ length: out / 4 }, (_, o) => `let ${'abc'[n]}${o} = ${act(`${Array.from({ length: inn }, (_, i) => `W[${at[n]! + i * out / 4 + o}u] * ${x(i)}`).join(' + ')} + W[${at[n]! + inn * out / 4 + o}u]`)};`).join('\n    '); }, c4 = 'xyzw', of = (p: string) => (i: number) => `${p}${i >> 2}.${c4[i & 3]}`;
   // the hand's own text up to where the nine samples are weighed; they are kept, and weighed after
   let code = hand.replace('let v = textureLoad(color, t, 0); let c = ycc(tm(v.rgb));', 'let v = textureLoad(color, t, 0); let c = ycc(tm(v.rgb)); let ki = u32(x + 1 + 3 * (y + 1)); tap[ki] = c; dt[ki] = v.a;')
-    .replace('let w = exp(-dot(d, d) * mix(4.0, 1.2, go)); acc += c * w; wa += w;', 'lw[ki] = -dot(d, d) * mix(4.0, 1.2, go); lo = min(lo, c); hi9 = max(hi9, c); if (x == 0 && y == 0) { off = d; }')
+    .replace('let w = exp(-dot(d, d) * mix(4.0, 1.95, go)); acc += c * w; wa += w;', 'lw[ki] = -dot(d, d) * mix(4.0, 1.95, go); lo = min(lo, c); hi9 = max(hi9, c); if (x == 0 && y == 0) { off = d; }')
     .replace('var prox = 0.0;', 'var prox = 0.0; var tap: array<vec3f, 9>; var dt: array<f32, 9>; var lw: array<f32, 9>; var lo = vec3f(1e9); var hi9 = vec3f(-1e9); var off = vec2f(0.0);')
     .replace('let cur = select(mean, acc / max(wa, 1e-6), wa > 1e-4);', '')
     .replace('let uv = so / od + aux.xy; var o = cur; var n = 0.0;', `let uv = so / od + aux.xy; var n = 0.0; let inside = all(uv > vec2f(0.0)) && all(uv < vec2f(1.0)); let ph = cat(uv, od); let phy = ycc(tm(select(ph, vec4f(0.0), bad4(ph)).rgb)); let my = abs(mean.x) + 0.05; let df = phy - mean; let cm = lim(vec3f(0.0)).x;
@@ -26,8 +26,8 @@ export const pixUp = (lab: Lab, w: Weights, name = 'pixels'): UpscalePart => ({ 
     ${layer(1, of('a'), s => `max(${s}, vec4f(0.0))`)}
     ${layer(2, of('b'), s => `tanh(${s})`)}
     { let dl = array<f32, 9>(${Array.from({ length: 9 }, (_, k) => of('c')(k)).join(', ')}); for (var k = 0; k < 9; k++) { let w = exp(lw[k] + 2.5 * dl[k]); acc += tap[k] * w; wa += w; } }
-    var cur = acc / max(wa, 1e-6); cur = clamp(cur + (cur - mean) * (0.6 * ${of('c')(11)}), lo, hi9); let trust = exp(2.0 * ${of('c')(9)}); let wide = exp(1.5 * ${of('c')(10)}); var o = cur; _ = cm;`)
-    .replace('* 1.1; let dv', '* 1.1 * wide; let dv').replace('/ (n * mix(1.0, 0.55, go) + 1.0)', '/ (n * mix(1.0, 0.55, go) * trust + 1.0)');
+    var cur = acc / max(wa, 1e-6); cur = clamp(cur, lo, hi9); let trust = exp(2.0 * ${of('c')(9)}); let wide = exp(1.5 * ${of('c')(10)}); var o = cur; _ = cm;`)
+    .replace('* 1.1; let dv', '* 1.1 * wide; let dv').replace('/ (n * mix(1.0, 0.33, go) + 1.0)', '/ (n * mix(1.0, 0.33, go) * trust + 1.0)');
   code = 'fn lim1(x: f32) -> f32 { return clamp(x, -3.0, 3.0); }\nfn lim(x: vec3f) -> vec3f { return x; }\n' + code; code = code.replace(' let cm = lim(vec3f(0.0)).x;', '').replace(' _ = cm;', '').replace('fn lim(x: vec3f) -> vec3f { return x; }\n', '');
   if (!code.includes('* trust') || !code.includes('* wide') || !code.includes('lw[ki]') || !code.includes('tap[ki]') || sizes[0]![0] !== IN) throw new Error('the upscaler has changed under the learned hand');
   return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', airD: 'airD' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'], W: [buf, `array<vec4f, ${flat.length / 4}>`, 'uniform'] }, code }] };

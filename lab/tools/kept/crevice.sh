@@ -1,3 +1,0 @@
-#!/bin/sh
-# light at dusk in the gaps of an object, by way of keeping it: sh lab/tools/kept/crevice.sh fruitcrate
-for k in "today" "patch soft=1 tries=4" "patch cell=0.16 coarse=0 spread=1 bits=20 soft=1 tries=4" "patch cell=0.32 coarse=0 spread=1 bits=19 soft=1 tries=4 roam=1 flat=1" "patch cell=0.64 coarse=0 spread=1 bits=18 soft=1 tries=4 roam=1 flat=1" "patch cell=0.64 coarse=0 spread=1 bits=18 soft=1 tries=4 roam=1 flat=1 fine=0.5" "faces" "faces cell=0.16" "faces fine=0.5" "faces direct=0" "near cell=0.25 bits=18" "net direct=1 batch=32768" "paths n=12"; do echo "== $k"; TELL=1 OUT="${OUT:-out}/$(echo "$k" | tr ' =' '__')" node "$(dirname "$0")/../object.cjs" "$@" --parts look --kept "$k"; done; exit 0

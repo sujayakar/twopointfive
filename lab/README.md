@@ -11,11 +11,12 @@ A small WebGPU renderer, from scratch, with no dependencies: one world, one cloc
     node lab/tools/card.cjs lab/tools/poison.json --guards 3           # what the checks cost
 
     node lab/tools/card.cjs lab/tools/detail.json --detail             # how much of the reference's detail is there, by size in pixels, and how far off from dark to bright
-    node lab/tools/kept.cjs lab/tools/kept/last1.json                 # ways of keeping light, against paths, by time, memory and settling (notes/kept.md)
     node lab/tools/card.cjs lab/tools/table.json --table               # the kept light alone, against paths, room by room
     node lab/tools/card.cjs lab/tools/steady.json --steady             # what shimmers, what is off in motion
     node lab/tools/card.cjs lab/tools/steady.json --settle             # frames until right again after a turn, after doors
     node lab/tools/card.cjs lab/tools/leaves.json --leaves             # leaves against the reference, band by band
+    node lab/tools/card.cjs lab/tools/against.json --against       # methods and path tracers against the reference: off in the mean, median, over blocks, times by stage; `maps` draws where
+    sh lab/tools/two.sh <commit> <views> --bench realtime          # an older build and this one in one box
     SCENE=street node lab/tools/card.cjs …                             # any of them in another scene: rooftop, street, forest, pass
     bun run tools/stands.ts                                            # does everything stand on something, is nothing in anything else
 
@@ -32,7 +33,8 @@ The page: `?bench` plays the fixed run and prints it; `?scale=0.75` fixes the re
   - `DenoisePart` signal to quieter signal. `svgf`, `noDenoise`.
   - `UpscalePart` color at render size to picture at output size. `taauUp`, `bilinear`.
 - `src/stages/path.wgsl` The reference: the same pieces, materials, lamps and sky; nothing cached, clamped, reused or filtered.
-- `src/wgsl/scene.wgsl` One kind of piece (box, up to 8 planes, at most one quadric) and the two ray queries, `nearest` and `visible`.
+- `src/wgsl/scene.wgsl` How a ray meets one piece (box, up to 8 planes, at most one quadric, curves) and one leaf.
+- `src/wgsl/rays.wgsl` The two ray queries, `nearest` and `visible`, by one rule: every stage says how wide its ray is (`foot`), and what is smaller than that is met as part of the world's block. `src/scene/blocks.ts` lays the block's cells, `src/blockmap.ts` finds what is in them once, by rays from six sides; `src/stages/cells.wgsl` keeps their light, `src/wgsl/kept.wgsl` reads it. What it is worth, part by part: notes/onelod.md. What an object's levels must say: notes/levels.md.
 - `src/wgsl/cache.wgsl` Light on surfaces: a table keyed by place and facing.
 - `src/bench.ts` Measures, the fixed run, the poisoning, and `capture`: the noisy signals, what is known exactly, and the reference of a view, for training.
 - `src/scene` The world as data. `people.ts` steps people a tick at a time. Everything drawn is a function of (tick, inputs, seed).

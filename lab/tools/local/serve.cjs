@@ -1,0 +1,2 @@
+const http=require('http'),fs=require('fs'),path=require('path');const root=process.argv[2]||'.';
+http.createServer((q,r)=>{const f=path.join(root,decodeURIComponent(q.url.split('?')[0]==='/'?'/index.html':q.url.split('?')[0]));fs.readFile(f,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'content-type':f.endsWith('.html')?'text/html':f.endsWith('.js')?'text/javascript':'application/octet-stream','cache-control':'no-store'});r.end(d);});}).listen(+process.argv[3]||5999);

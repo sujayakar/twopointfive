@@ -134,8 +134,7 @@
   "run": true,
   "tick": 200,
   "hour": 11.5,
-  "wet": 0.4,
-  "stats": true
+  "wet": 0.4
  },
  {
   "w": 1280,

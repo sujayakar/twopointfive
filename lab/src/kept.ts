@@ -1,46 +1,58 @@
-// MEASURE WAYS OF KEEPING LIGHT, against paths followed to the end in the same renderer: the light the gather lands at each pixel (before any filter) and the mirror's, with nothing different but what answers
-// "what lands at x, facing n". Every way in one page, so that what is compared was measured on one machine in one run.
+// MEASURE THE KEPT LIGHT, against paths followed to the end in the same renderer: the light the gather lands at each pixel (before any filter) and the mirror's, with nothing different but what answers
+// "what lands at x, facing n". Ways are words: 'kept' (as shipped), 'kept CELL=0.32 …' (constants of wgsl/cache.wgsl set otherwise), 'paths n=3', 'none'. All in one page, so that what is compared was
+// measured on one machine in one run.
 //   truth   the same gather with paths in place of what is kept, thousands a pixel
 //   error   each way's answer as it stands at an instant (it is frozen while many rays are drawn): mean over pixels of the difference, after 3 × 3; broad: the same in blocks of 24 × 24
 //   boil    the same way at two instants, 60 frames apart
 //   cost    GPU time of a whole frame less that of the same frame with nothing kept and nothing asked, ways taken in turn, several rounds
-//   settle  how far off, so many frames after a door, a lamp, the sun; or after all the light it kept is taken away (cold)
-// The gather's own limit on one ray's light (50) is lifted here, so that what is lost there is not laid to any of them ('paths n=24 exact=1 clamp=1' says how much that is).
+//   settle  how far off, so many frames after doors, a lamp, the blackout, the sun; or after all the light it kept is taken away (cold)
+// The gather's own limit on one ray's light (50) is lifted here, so that what is lost there is not laid to any of them.
 import { Lab, type Method } from './lab';
 import type { Stage } from './graph';
-import { realtime } from './stages/realtime';
-import { keep, type Kept } from './caches/parts';
-import { KNOBS, defaults, type Knob } from './tune';
+import { realtime, noCache, patches, type CachePart, HITS } from './stages/realtime';
 import { Present } from './present';
 import { bench, flicker } from './bench';
 import { pathTracer } from './stages/path';
 import { readTexture } from './gpu';
+import { KNOBS, defaults, type Knob } from './tune';
 import type { V3 } from './math';
+import pathsLib from './stages/cachepaths.wgsl' with { type: 'text' };
 
-export interface View { name: string; w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; tick?: number; doors?: number; groups?: Record<string, number>; moon?: number; lamp?: string; /** light only from these rooms' lamps: how much there is elsewhere is leak */ lit?: string; tune?: Record<string, number> }
-interface Way { spec: string; part: Kept; m: Method; lean: Stage[]; whole: Stage[] }
-const EXACT = 'paths n=24 exact=1', OFF = 'none';
+export interface View { name: string; w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; tick?: number; doors?: number; groups?: Record<string, number>; moon?: number; mains?: boolean; lamp?: string; tune?: Record<string, number> }
+interface Way { spec: string; part: CachePart; m: Method; lean: Stage[]; whole: Stage[] }
+const EXACT = 'paths n=24', none = noCache();
+/** nothing kept, nothing answered: what the frame costs without any of this (the zero is not known to the compiler) */
+const nothing = (): CachePart => ({ ...none, lib: none.lib.replaceAll('var c: Cached; return c;', 'var c: Cached; c.E = vec3f(frame.weather.x * 0.0 + frame.misc2.x * 1e-30) * n; c.n = 1.0; return c;') });
+const paths = (n: number): CachePart => ({ ...none, name: 'paths', lib: `const BOUNCES = ${n}u;\n` + pathsLib });
+const keep = (spec: string): CachePart => { const [kind, ...rest] = spec.split(' '), o = Object.fromEntries(rest.map(r => r.split('=') as [string, string])); return kind === 'none' ? nothing() : kind === 'paths' ? paths(+(o.n ?? 3)) : patches(Object.fromEntries(Object.entries(o).filter(([k]) => /^[A-Z]/.test(k))), rest.length ? '#' + serial++ : ''); };
+let serial = 0; const idOf = (p: CachePart) => p.id ?? '';
+const fill = (lab: Lab, name: string, v: number) => { const b = lab.graph.buffers.get(name); if (b) lab.gpu.device.queue.writeBuffer(b, 0, new Uint32Array(b.size / 4).fill(v)); };
+/** what was asked for while nothing was updated is dropped */
+const thaw = (lab: Lab, p: CachePart) => fill(lab, 'cand' + idOf(p), 0xffffffff);
+/** the light it keeps is gone; where it is kept is not */
+const dim = async (lab: Lab, p: CachePart) => { for (const n of ['cells' + idOf(p), 'fresh' + idOf(p)]) { if (!lab.graph.buffers.has(n)) continue; const a = new Uint32Array(await lab.readBuffer(n)); for (let i = 0; i + 8 <= a.length; i += 8) a[i] = a[i + 1] = a[i + 2] = a[i + 3] = a[i + 7] = 0; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get(n)!, 0, a); } };
+const entries = async (lab: Lab, w: Way) => { if (!w.spec.startsWith('kept')) return { entries: 0, bytes: 0 }; let n = 0; for (const k of new Uint32Array(await lab.readBuffer('keys' + idOf(w.part)))) if (k) n++; let per = 0; for (const b of ['keys', 'cand', 'cells', 'fresh', 'norms', 'spot']) per += (lab.graph.buffers.get(b + idOf(w.part))?.size ?? 0) / (lab.graph.buffers.get('keys' + idOf(w.part))!.size / 4); return { entries: n, bytes: n * per }; };
 const meter = (name: string, buf: string, sig: string): Stage => ({ name, over: 'half', reads: { [sig]: 'src' }, buffers: { sums: [buf, 'array<vec4f>', 'read_write'], meterK: ['meterK', 'vec4u', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = textureDimensions(src); if (id.x >= d.x || id.y >= d.y) { return; } let i = id.y * d.x + id.x; let v = textureLoad(src, id.xy, 0); var a = sums[i]; if (meterK.x == 0u) { a = vec4f(0.0); } if (v.w >= 0.0) { a += vec4f(finite4(vec4f(v.rgb, 0.0), 6e4).rgb, 1.0); } sums[i] = a; }' });
 
 export async function kept(scene = 'rooftop') {
-  const lab = new Lab(); await lab.open(null, scene, null); const present = new Present(lab.gpu); await present.init(); const ways = new Map<string, Way>(), q = lab.gpu.device.queue, idle = () => q.onSubmittedWorkDone(); let frozen = false, live: Kept | null = null; const log: string[] = [];
+  const lab = new Lab(); await lab.open(null, scene, null); const present = new Present(lab.gpu); await present.init(); const ways = new Map<string, Way>(), q = lab.gpu.device.queue, idle = () => q.onSubmittedWorkDone(); let frozen = false, live: CachePart | null = null; const log: string[] = [];
   const mBounce = meter('meter', 'sumBounce', 'bounce'), mMirror = meter('meter', 'sumMirror', 'mirror');
   /** a way, built once */
   const way = async (spec: string): Promise<Way> => {
     let w = ways.get(spec); if (w) { live = w.part; return w; }
-    const part = keep(spec), m = realtime({ name: spec, cache: part, edit: s => { let code = s.code; if (s.name === 'gather') { const fine = / fine=([\d.]+)/.exec(spec); if (fine) code = code.replace('@tune.fine', (+fine[1]!).toFixed(3)); code = code.replace('let Ew = min(L * w.w, vec3f(50.0));', `let Ew = select(vec3f(0.0), min(L * w.w, vec3f(${spec.includes('clamp') ? '50.0' : '3e4'})), hitT >= frame.knobs.x && hitT < frame.knobs.y);`).replace('for (var v = 0u; v < 4u; v++) {', 'hitT = 600.0; for (var v = 0u; v < 4u; v++) {').replace('if (v == 0u) { dist += min(h.t, 12.0); }', 'if (v == 0u) { dist += min(h.t, 12.0); hitT = h.t; }').replace('@compute', 'var<private> hitT: f32;\n@compute'); if (!code.includes('hitT = h.t')) throw new Error('gather has changed'); } return { ...s, code }; } });
+    const part = keep(spec), m = realtime({ name: spec, cache: part, edit: s => { if (s.name !== 'gather') return s; let code = s.code; const fine = / fine=([\d.]+)/.exec(spec); if (fine) code = code.replace('@tune.fine', (+fine[1]!).toFixed(3)); code = code.replace('let Ew = min(L * w.w, vec3f(50.0));', 'let Ew = min(L * w.w, vec3f(3e4));'); if (!code.includes('3e4')) throw new Error('gather has changed'); return { ...s, code }; } });
     lab.uniform('meterK', new Uint32Array(4)); const t0 = performance.now(); await lab.use(m); const e = lab.methods.get(spec)!, whole = e.stages;
     // (what is kept stands still while it is judged)
     for (const s of whole) if (/^cache/.test(s.name)) { const was = s.when; s.when = () => !frozen && (!was || was()); }
-    const cut = whole.findIndex(s => s.name === 'mirror'), need = new Set(['first hit', 'water', 'cache', 'cache claim', 'cache keep', 'foliage', 'gather', 'mirror']), lean = [...whole.filter((s, i) => i < cut + 1 && (need.has(s.name) || !!s.make || /^smoke|raster|loose/.test(s.name))), mBounce, mMirror]; const [W, H] = [960, 540]; lab.buffer('sumBounce', W * H * 16); lab.buffer('sumMirror', W * H * 16); await lab.graph.build(lean);
+    const cut = whole.findIndex(s => s.name === 'mirror'), need = new Set(['first hit', 'water', 'cache', 'cache claim', 'cache keep', 'cells', 'smoke mean', 'gather', 'mirror']), lean = [...whole.filter((s, i) => i < cut + 1 && (need.has(s.name) || !!s.make || /^smoke|raster|loose/.test(s.name))), mBounce, mMirror]; const [W, H] = [960, 540]; lab.buffer('sumBounce', W * H * 16); lab.buffer('sumMirror', W * H * 16); await lab.graph.build(lean);
     e.stages = whole; w = { spec, part, m, lean, whole }; ways.set(spec, w); live = part; log.push(`${spec}: built in ${(performance.now() - t0).toFixed(0)} ms`); return w;
   };
-  const stage = (v: View) => { lab.tune.set(defaults()); for (const [k, x] of Object.entries(v.tune ?? {})) lab.tune[(KNOBS as Record<string, Knob>)[k]!.i] = x; lab.moon = v.moon ?? 1; lab.mains = true; lab.lampGroup = v.groups ?? {}; lab.lampOff.clear(); lab.haze = 0; lab.steam = 0; lab.rain = lab.rainNow = 0; lab.wet = lab.building.place.start.wet; lab.lies = lab.snow = 0; lab.snowfall = lab.snowNow = 0; if (v.tick !== undefined) lab.seek(v.tick); lab.hour = v.hour ?? 15.2; lab.cut = lab.wantCut = v.cut ?? 1e9; const c = lab.camera; Object.assign(c.want, { look: v.look ?? [0, 3, 0], yaw: v.yaw ?? 0.62, pitch: v.pitch ?? 0.94, dist: v.dist ?? 44 }); c.snap(); for (const d of lab.building.doors) d.open = d.want = v.doors ?? 0; lab.pose(); lab.knobs = [0, 1e9, 0, 0]; lab.resize([v.w, v.h], [v.w, v.h]); present.set(lab, true); };
+  const stage = (v: View) => { lab.tune.set(defaults()); for (const [k, x] of Object.entries(v.tune ?? {})) lab.tune[(KNOBS as Record<string, Knob>)[k]!.i] = x; lab.moon = v.moon ?? 1; lab.mains = v.mains ?? true; lab.lampGroup = v.groups ?? {}; lab.lampOff.clear(); lab.haze = 0; lab.steam = 0; lab.rain = lab.rainNow = 0; lab.wet = lab.building.place.start.wet; lab.lies = lab.snow = 0; lab.snowfall = lab.snowNow = 0; if (v.tick !== undefined) lab.seek(v.tick); lab.hour = v.hour ?? 15.2; lab.cut = lab.wantCut = v.cut ?? 1e9; const c = lab.camera; Object.assign(c.want, { look: v.look ?? [0, 3, 0], yaw: v.yaw ?? 0.62, pitch: v.pitch ?? 0.94, dist: v.dist ?? 44 }); c.snap(); for (const d of lab.building.doors) d.open = d.want = v.doors ?? 0; lab.pose(); lab.knobs = [0, 0, 0, 0]; lab.resize([v.w, v.h], [v.w, v.h]); present.set(lab, true); };
   const rays = (n: number) => { lab.tune[KNOBS.rays.i] = n; };
   const draw = async (n: number, stages?: Stage[], each?: (i: number) => void) => { const e = lab.methods.get(lab.current)!, was = e.stages; if (stages) e.stages = stages; for (let i = 0; i < n; i++) { each?.(i); lab.draw(); if (i % 4 === 3) await idle(); } await idle(); e.stages = was; };
   /** the mean of so many frames' light, frozen; thrice the rgb a pixel, and how many of them counted */
   const look = async (w: Way, frames: number, nRays = 8): Promise<{ b: Float32Array; m: Float32Array }> => {
-    const hold = frozen; frozen = true; rays(nRays); lab.graph.timer.on = false; await draw(frames, w.lean, i => lab.uniform('meterK', new Uint32Array([i, 0, 0, 0]))); rays(2); frozen = hold; lab.graph.timer.on = true; if (!hold) await w.part.thaw(lab);
+    const hold = frozen; frozen = true; rays(nRays); lab.graph.timer.on = false; await draw(frames, w.lean, i => lab.uniform('meterK', new Uint32Array([i, 0, 0, 0]))); rays(2); frozen = hold; lab.graph.timer.on = true; if (!hold) thaw(lab, w.part);
     const [hw, hh] = lab.graph.px('half'), n = hw * hh, get = async (name: string) => { const a = new Float32Array(await lab.readBuffer(name)), o = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const c = a[i * 4 + 3]!; for (let k = 0; k < 3; k++) o[i * 3 + k] = c > 0.5 ? a[i * 4 + k]! / c : -1; } return o; };
     return { b: await get('sumBounce'), m: await get('sumMirror') };
   };
@@ -61,25 +73,22 @@ export async function kept(scene = 'rooftop') {
     const [hw, hh] = lab.graph.px('half'), b3 = blur3(a.b, hw, hh), yes = (i: number) => !!T.ok[i], whole = far(b3, T.b3, yes), dark = far(b3, T.b3, i => !!T.ok[i] && T.b3[i * 3]! + T.b3[i * 3 + 1]! + T.b3[i * 3 + 2]! < T.dark), broad = far(blocks(a.b, hw, hh, 24, T.ok), blocks(T.b, hw, hh, 24, T.ok), () => true), mirror = far(blur3(a.m, hw, hh), T.m3, yes), rooms: Record<string, number> = {}; T.rooms.forEach((n, r) => { const q = far(b3, T.b3, i => T.room[i] === r + 1 && !!T.ok[i]); if (q.n > 400) rooms[n] = +q.ratio.toFixed(4); }); const r = (x: number) => +x.toFixed(5);
     return { error: r(whole.mean), median: r(whole.median), rms: r(whole.rms), ratio: r(whole.ratio), stops: r(whole.stops), dark: r(dark.mean), darkRatio: r(dark.ratio), broad: r(broad.mean), broadStops: r(broad.stops), mirror: r(mirror.mean), mirrorRatio: r(mirror.ratio), rooms };
   };
-  let T: Truth | null = null, bins: Truth[] = [], V: View | null = null;
-  const begin = async (v: View, frames = 256) => { V = v; stage(v); T = await truth(frames); bins = []; return { view: v.name, floor: T.floor.mean, floorBroad: T.floorBroad.mean, floorMirror: T.floorMirror.mean, msAFrame: T.ms, size: lab.graph.px('half'), mean: T.b.reduce((a, x) => a + Math.max(0, x), 0) / T.b.length }; };
+  let T: Truth | null = null, V: View | null = null;
+  const begin = async (v: View, frames = 256) => { V = v; stage(v); T = await truth(frames); return { view: v.name, floor: T.floor.mean, floorBroad: T.floorBroad.mean, floorMirror: T.floorMirror.mean, msAFrame: T.ms, size: lab.graph.px('half'), mean: T.b.reduce((a, x) => a + Math.max(0, x), 0) / T.b.length }; };
   /** one way, at rest: built, settled, judged at two instants */
-  const rest = async (spec: string, o: { settle?: number; frames?: number } = {}) => { const w = await way(spec); await lab.use(w.m); lab.frameNo = 0; await w.part.dim(lab); await draw(/^(paths|none)/.test(spec) ? 400 : o.settle ?? 500, w.lean); const a = await look(w, o.frames ?? 96); await draw(60, w.lean); const b = await look(w, o.frames ?? 96), [hw, hh] = lab.graph.px('half'), ok = T!.ok, boil = far(blocks(a.b, hw, hh, 12, ok), blocks(b.b, hw, hh, 12, ok), () => true), now = judge(a, T!), two = judge({ b: mixT(a.b, b.b), m: mixT(a.m, b.m) }, T!); return { spec, family: w.part.family, ...now, two: two.error, boil: +boil.mean.toFixed(5), ...(await w.part.used(lab)) }; };
+  const rest = async (spec: string, o: { settle?: number; frames?: number } = {}) => { const w = await way(spec); await lab.use(w.m); lab.frameNo = 0; await dim(lab, w.part); await draw(/^(paths|none)/.test(spec) ? 400 : o.settle ?? 500, w.lean); const a = await look(w, o.frames ?? 96); await draw(60, w.lean); const b = await look(w, o.frames ?? 96), [hw, hh] = lab.graph.px('half'), ok = T!.ok, boil = far(blocks(a.b, hw, hh, 12, ok), blocks(b.b, hw, hh, 12, ok), () => true), now = judge(a, T!), two = judge({ b: mixT(a.b, b.b), m: mixT(a.m, b.m) }, T!); return { spec, ...now, two: two.error, boil: +boil.mean.toFixed(5), ...(await entries(lab, w)) }; };
   /** GPU time, ways in turn, so many rounds: the mean of 20 frames after 8 */
   const cost = async (specs: string[], nRounds = 3) => {
     const out: Record<string, { all: number[]; passes: Record<string, number> }> = {}; for (let r = 0; r < nRounds; r++) for (const s of r % 2 ? [...specs].reverse() : specs) { const w = await way(s); await lab.use(w.m); const p: Record<string, number> = {}; let n = 0; for (let i = 0; i < 28; i++) { lab.draw(); await idle(); await new Promise(f => setTimeout(f, 0)); if (i >= 8) { n++; for (const [k, x] of lab.graph.timer.last) p[k] = (p[k] ?? 0) + x; } } const sum = Object.values(p).reduce((a, b) => a + b, 0) / n, e = out[s] ??= { all: [], passes: {} }; e.all.push(+sum.toFixed(4)); for (const [k, x] of Object.entries(p)) e.passes[k] = (e.passes[k] ?? 0) + x / n / nRounds; } for (const e of Object.values(out)) for (const k of Object.keys(e.passes)) e.passes[k] = +e.passes[k]!.toFixed(4); return out;
   };
-  /** the same by how far the first ray went: error in each band of hit distance (m) */
-  const BANDS = [0, 0.25, 0.5, 1, 2, 4, 1e9];
-  const bands = async (spec: string, frames = 48) => { const out: { from: number; share: number; error: number; ratio: number; broad: number; floor: number }[] = []; if (!bins.length) { const w = await way(EXACT); await lab.use(w.m); for (let k = 0; k + 1 < BANDS.length; k++) { lab.knobs = [BANDS[k]!, BANDS[k + 1]!, 0, 0]; bins.push(await truth(128, k ? 4 : 60)); } } const w = await way(spec); lab.knobs = [0, 1e9, 0, 0]; await lab.use(w.m); await draw(120, w.lean); const total = T!.b.reduce((a, x) => a + Math.max(0, x), 0); for (let k = 0; k + 1 < BANDS.length; k++) { lab.knobs = [BANDS[k]!, BANDS[k + 1]!, 0, 0]; const q = judge(await look(w, frames), { ...bins[k]!, ok: T!.ok }); out.push({ from: BANDS[k]!, share: +(bins[k]!.b.reduce((a, x) => a + Math.max(0, x), 0) / total).toFixed(4), error: q.error, ratio: q.ratio, broad: q.broad, floor: +bins[k]!.floor.mean.toFixed(5) }); } lab.knobs = [0, 1e9, 0, 0]; return { spec, bands: out }; };
   // ---- after something has changed
   const AT = [1, 2, 4, 8, 16, 32, 64, 128, 240];
-  type How = 'cold' | 'doors' | 'lamp' | 'sun';
-  const before = (how: How) => { const v = V!; stage(v); if (how === 'doors') for (const d of lab.building.doors) d.open = d.want = 0; if (how === 'sun') lab.hour = (v.hour ?? 15) - 1.5; if (how === 'lamp') lab.lampGroup = { ...(v.groups ?? {}), [v.lamp ?? lab.building.place.groups[0]!]: 0 }; lab.pose(); }, after = (how: How) => { const v = V!; stage(v); if (how === 'doors') for (const d of lab.building.doors) { d.open = d.want = 0.85; } lab.pose(); };
+  type How = 'cold' | 'doors' | 'lamp' | 'blackout' | 'sun';
+  const before = (how: How) => { const v = V!; stage(v); if (how === 'doors') for (const d of lab.building.doors) d.open = d.want = 0; if (how === 'sun') lab.hour = (v.hour ?? 15) - 1.5; if (how === 'lamp') lab.lampGroup = { ...(v.groups ?? {}), [v.lamp ?? lab.building.place.groups[0]!]: 0 }; if (how === 'blackout') { lab.mains = true; } lab.pose(); }, after = (how: How) => { const v = V!; stage(v); if (how === 'doors') for (const d of lab.building.doors) { d.open = d.want = 0.85; } if (how === 'blackout') lab.mains = false; lab.pose(); };
   const ends = new Map<string, Truth>();
   const settle = async (spec: string, how: How, frames = 24) => {
     const key = V!.name + how; let E = how === 'cold' ? T! : ends.get(key); if (!E) { after(how); E = await truth(160); ends.set(key, E); }
-    const w = await way(spec); if (how === 'cold') { after(how); await lab.use(w.m); await draw(60, w.lean); await w.part.dim(lab); } else { before(how); await lab.use(w.m); await draw(420, w.lean); }
+    const w = await way(spec); if (how === 'cold') { after(how); await lab.use(w.m); await draw(60, w.lean); await dim(lab, w.part); } else { before(how); await lab.use(w.m); await draw(420, w.lean); }
     const rows: { error: number; broad: number; ratio: number }[] = []; let frame = 0; const start = how === 'cold' ? null : judge(await look(w, frames), E);
     if (how === 'doors') { for (let i = 0; i < 28; i++) { for (const d of lab.building.doors) { d.want = 0.85; d.open = 0.85 * (i + 1) / 28; } lab.pose(); await draw(1, w.lean); } after(how); } else if (how !== 'cold') after(how);
     for (const t of AT) { await draw(t - frame, w.lean); frame = t; const q = judge(await look(w, frames), E); rows.push({ error: q.error, broad: q.broad, ratio: q.ratio }); }
@@ -95,6 +104,6 @@ export async function kept(scene = 'rooftop') {
     return out;
   };
   const drop = (spec: string) => { const w = ways.get(spec); if (!w) return; ways.delete(spec); lab.methods.delete(spec); };
-  return { lab, way: async (s: string) => { await way(s); return log[log.length - 1]; }, begin, rest, cost, bands, settle, picture, wrong, full, drop, info: () => ({ gpu: lab.gpu.info, stamps: lab.gpu.timestamps, storage: lab.gpu.device.limits.maxStorageBuffersPerShaderStage, ...lab.scene.counts }) };
+  return { lab, way: async (s: string) => { await way(s); return log[log.length - 1]; }, begin, rest, cost, settle, picture, wrong, full, drop, info: () => ({ gpu: lab.gpu.info, stamps: lab.gpu.timestamps, storage: lab.gpu.device.limits.maxStorageBuffersPerShaderStage, ...lab.scene.counts }) };
 }
 (globalThis as never as { kept: unknown }).kept = kept;

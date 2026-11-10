@@ -16,8 +16,7 @@
   "tick": 420,
   "method": "realtime",
   "run": false,
-  "name": "fo-near-rt",
-  "stats": true
+  "name": "fo-near-rt"
  },
  {
   "w": 1280,
@@ -36,8 +35,7 @@
   "tick": 420,
   "method": "realtime",
   "run": false,
-  "name": "fo-tree-rt",
-  "stats": true
+  "name": "fo-tree-rt"
  },
  {
   "w": 1280,
@@ -55,7 +53,6 @@
   "samples": 160,
   "tick": 420,
   "method": "realtime",
-  "name": "fo-dusk-rt",
-  "stats": true
+  "name": "fo-dusk-rt"
  }
 ]

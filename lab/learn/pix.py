@@ -31,7 +31,7 @@ def step(p, hist, hn, ctl=None, pix=None):
     lw = -p['ds'] * ((4.0 - 2.8 * go) * torch.exp(sharp))[:, None]
     if pix is not None: lw = lw + pix[:, :9, None]; trust = trust + pix[:, 9:10]; width = width + pix[:, 10:11]
     w = torch.exp(lw); cur = (p['taps'] * w).sum(1) / w.sum(1).clamp(min=1e-6)
-    if pix is not None: lo = p['taps'].amin(1); hi = p['taps'].amax(1); cur = torch.minimum(torch.maximum(cur + (cur - p['mean']) * pix[:, 11:12], lo), hi)
+    if pix is not None: lo = p['taps'].amin(1); hi = p['taps'].amax(1); cur = torch.minimum(torch.maximum(cur + (cur - p['mean']) * pix[:, 11:12] * 0, lo), hi)
     hy, n0 = past(p, hist, hn); n = torch.minimum(n0, (28 - 19 * (mv * .5).clamp(0, 1)) * torch.exp(slow)); ext = (p['sd'] * (2.6 - 1.6 * go) + torch.tensor([.02, .01, .01], device=cur.device).view(1, 3, 1, 1) * p['mean'][:, :1].abs()) * 1.1 * torch.exp(width); dv = hy - p['mean']; k = (dv.abs() / ext.clamp(min=1e-5)).amax(1, keepdim=True); over = k > 1; hc = torch.where(over, p['mean'] + dv / k.clamp(min=1), hy); n = torch.where(over, torch.minimum(n, 28 / (.6 + .4 * k)), n)
     a = ((p['prox'] ** 2 + .02).clamp(0, 1) / (n * (1 - .45 * go) * torch.exp(trust) + 1)).clamp(min=.02); o = torch.where(p['inside'], hc + (cur - hc) * a, cur); n = torch.where(p['inside'], (n + p['prox']).clamp(max=40), torch.full_like(n, .5)); return o, n.clamp(min=.5)
 def about(p, hist, hn):
@@ -64,8 +64,8 @@ def score(net, which):
     r = {}
     with torch.no_grad():
         for s in which:
-            hist, hn = begin(s, 0); e, fl, last = [], [], None
-            for f in range(1, s.n):
+            hist, hn = begin(s, 0); e, fl, last = [], [], None; rounds = 5 if 'still' in s.name else 1
+            for f in list(range(1, s.n)) * rounds:
                 p = frame(s, f); hist, hn = go(net, p, hist, hn, s); d = rel(hist, truth(s, f)); e.append(d.abs().mean().item())
                 if last is not None: fl.append(((d - catmull(last, p['uv'])).abs() * p['inside']).mean().item())
                 last = d
@@ -75,14 +75,18 @@ def show(name, r): print(name, ' '.join(f'{k} {a:.2f}/{b:.2f}' for k, (a, b) in 
 show('by hand, seen   (error %/flicker %)', score(None, train)); show('by hand, unseen', score(None, test))
 def learn(net, minutes, lr, tag):
     opt = torch.optim.Adam(net.parameters(), lr); t0 = time.time(); it = 0; best = 1e9; keep = None; T = minutes * 60
+    states = {}
     while time.time() - t0 < T:
-        s = random.choice(train); n = 7; f0 = random.randrange(0, s.n - n - 1); opt.param_groups[0]['lr'] = lr * max(.05, 1 - (time.time() - t0) / T); loss = 0; hist, hn = begin(s, f0)
-        if f0 and random.random() < .3: hist = hist + torch.randn_like(hist) * .03; hn = hn * random.random()
-        last = None
+        s = random.choice(train); n = 5; opt.param_groups[0]['lr'] = lr * max(.05, 1 - (time.time() - t0) / T); loss = 0; st = states.get(s.name)
+        if st is None or st[0] + n >= s.n:
+            if st is not None and 'still' in s.name and random.random() < .85: st = (0, st[1], st[2])
+            else: f0 = random.randrange(0, s.n - n - 1); hist, hn = begin(s, f0); q = random.random(); st = (f0, hist, hn) if q < .4 else (f0, frame(s, f0)['mean'], torch.full_like(hn, .5)) if q < .8 else (f0, hist + torch.randn_like(hist) * .03, hn * random.random())
+        f0, hist, hn = st; last = None
         for f in range(f0 + 1, f0 + 1 + n):
             p = frame(s, f); hist, hn = go(net, p, hist, hn, s); d = rel(hist, truth(s, f)); loss = loss + d.abs().mean() + .5 * (d[..., 1:] - d[..., :-1]).abs().mean() + .5 * (d[..., 1:, :] - d[..., :-1, :]).abs().mean()
             if last is not None: loss = loss + .5 * ((d - catmull(last, p['uv'])).abs() * p['inside']).mean()
             last = d
+        states[s.name] = (f0 + n, hist.detach(), hn.detach())
         opt.zero_grad(); (loss / n).backward(); torch.nn.utils.clip_grad_norm_(net.parameters(), 1.); opt.step(); it += 1
         if it % 200 == 0:
             r = score(net, train[::4]); m = np.mean([a + b for a, b in r.values()]); print(f'{tag} {it} steps {time.time() - t0:.0f} s, a quarter of the seen: {m:.3f}', flush=True)      # (chosen by what it has seen: the unseen is only for judging)

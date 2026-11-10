@@ -1,6 +1,0 @@
-@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let b = id.x + id.y * LANES; if (b >= BUCKETS) { return; } let w0 = atomicLoad(&buckets[b * WIDTH + 1u]); if (w0 == NOTHING) { return; } atomicStore(&buckets[b * WIDTH + 1u], NOTHING); let w = w0 ^ (pcg(atomicLoad(&buckets[b * WIDTH])) & 0xfffffu); let h = hits[w]; let x = bitcast<vec3f>(h.xyz); let r = f32((h.w & 15u) | (((h.w >> 16u) & 15u) << 4u)) / 255.0 * FAR_R; let near = cacheNear(x);
-  let s = atomicAdd(&buckets[TOTAL], 1u); if (s >= SURFELS) { atomicSub(&buckets[TOTAL], 1u); return; } surfels[3u * s] = vec4f(x, r); surfels[3u * s + 1u] = vec4f(0.0); surfels[3u * s + 2u] = vec4f(0.0, bitcast<f32>((h.w & 0xfff0fff0u) | 1u), 0.0, 0.0);
-  let c = cellSize(near); let lo = vec3i(floor((x - r) / c)); let hi = vec3i(floor((x + r) / c));
-  for (var k = 0u; k < 8u; k++) { let q = select(lo, hi, vec3<bool>((k & 1u) != 0u, (k & 2u) != 0u, (k & 4u) != 0u)); if (((k & 1u) != 0u && hi.x == lo.x) || ((k & 2u) != 0u && hi.y == lo.y) || ((k & 4u) != 0u && hi.z == lo.z)) { continue; } let t = bucketMake(bucketKey(q, near)); if (t == NOTHING) { continue; } let at = atomicAdd(&buckets[t * WIDTH + 2u], 1u); if (at < HOLD) { atomicStore(&buckets[t * WIDTH + 3u + at], s + 1u); } }
-}
