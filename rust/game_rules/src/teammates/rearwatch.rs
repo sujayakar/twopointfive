@@ -460,12 +460,9 @@ fn keeps_it_from_outside(g: &mut Game, key: PlayerId, m: GuardId, squad: &[Guard
     if !(is_open_way(g, od) || g.m.rearwatch.books.get(key).unwrap().shut.has(od)) {
         return None;
     }
-    // (he had it through a door already going: the door tools turned every gun in, so his eyes are made spare again here)
-    if p.going == Some(true) && !spare_of(g, a) {
-        g.tab.orders_assignment[a].spare = Some(true);
-        book!(g, key).pins.get_mut(m).unwrap().raised = Some(true);
-    }
-    if !spare_of(g, a) {
+    // (he had it through a door already going: the door tools turned every gun in, so his eyes are made spare again if he keeps it)
+    let turned_in = p.going == Some(true) && !spare_of(g, a);
+    if !turned_in && !spare_of(g, a) {
         return None;
     }
     if rear_sees(g, post, p.o, p.front).is_some() {
@@ -477,6 +474,10 @@ fn keeps_it_from_outside(g: &mut Game, key: PlayerId, m: GuardId, squad: &[Guard
     let lone = Group { op: p.op, door: p.door, side: p.side, men: vec![m], marks: vec![post], cands: vec![m], going: false };
     if held_by_other(g, &lone, p.o, squad) {
         return None;
+    }
+    if turned_in {
+        g.tab.orders_assignment[a].spare = Some(true);
+        book!(g, key).pins.get_mut(m).unwrap().raised = Some(true);
     }
     if p.out != Some(true) {
         book!(g, key).pins.get_mut(m).unwrap().out = Some(true);
