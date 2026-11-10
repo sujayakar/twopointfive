@@ -346,37 +346,37 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 // ------------------------------------------------------------ the right hand
 
 /// Which rig is in his hands.
-pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
+pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::rig_props::RigWeapon {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
     let rig = g.m.weapons.weapons.get(def).unwrap().rig;
     if g.gd[gd].carbine || rig == WeaponDefRig::Carbine {
-        crate::guards::RigOf::Carbine
+        crate::rig_props::RigWeapon::Carbine
     } else if rig == WeaponDefRig::Sc20k {
-        crate::guards::RigOf::Sc20k
+        crate::rig_props::RigWeapon::Sc20k
     } else {
-        crate::guards::RigOf::Pistol
+        crate::rig_props::RigWeapon::Pistol
     }
 }
 
 /// Which long gun that is; None = the sidearm.
-pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> {
+pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props::LongRig> {
     match rig_of(g, gd) {
-        crate::guards::RigOf::Pistol => None,
-        crate::guards::RigOf::Carbine => Some(crate::guards::LongRigOf::Carbine),
-        crate::guards::RigOf::Sc20k => Some(crate::guards::LongRigOf::Sc20k),
+        crate::rig_props::RigWeapon::Pistol => None,
+        crate::rig_props::RigWeapon::Carbine => Some(crate::rig_props::LongRig::Carbine),
+        crate::rig_props::RigWeapon::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
     }
 }
 
 /// What his state has him carry in the gun hand.
-pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarry {
+pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::InHand {
     use crate::game::GuardState;
     let torch = crate::startle::startle_torch(g, gd)
         || ((g.gd[gd].state == GuardState::Patrol || (g.gd[gd].state == GuardState::Suspicious && crate::whistle::whistle_soft(g, gd)))
             && !g.gd[gd].drawn
-            && rig_of(g, gd) == crate::guards::RigOf::Pistol
+            && rig_of(g, gd) == crate::rig_props::RigWeapon::Pistol
             && !crate::kit::kit_pistol(g, gd));
-    if torch { crate::guards::HandCarry::Torch } else { crate::guards::HandCarry::Weapon }
+    if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon }
 }
 
 /// A living man has the gun knocked out of his hand at the grab again: off the floor and in his fist.
@@ -398,12 +398,8 @@ pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHa
     if g.gd[gd].fled { return None; }
     if g.gd[gd].gun_lost_at >= 0.0 { return None; }
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].civ.is_some() { return None; }
-    match hand_carry(g, gd) {
-        crate::guards::HandCarry::Torch => {
-            if g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0 { None } else { Some(crate::guards::InHand::Torch) }
-        }
-        crate::guards::HandCarry::Weapon => Some(crate::guards::InHand::Weapon),
-    }
+    let carry = hand_carry(g, gd);
+    if carry == crate::guards::InHand::Torch && (g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0) { None } else { Some(carry) }
 }
 
 /// The magazine is empty: he stands there changing it, says so, and the clack plays at him.
@@ -606,8 +602,8 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     if g.ch[c].bones.get(Bone::HandR).is_none() { return None; }
     let mut dir = g.ch[c].gun_dir;
     let rk = rig_of(g, gd);
-    let carbine = rk == RigOf::Carbine;
-    let torch = hand_carry(g, gd) == HandCarry::Torch;
+    let carbine = rk == crate::rig_props::RigWeapon::Carbine;
+    let torch = hand_carry(g, gd) == crate::guards::InHand::Torch;
     let hangs = torch && g.ch[c].alive && torch_low(g, gd);
     if torch && g.ch[c].alive {
         let low = if hangs { Some(crate::rig_props::TorchCarryDirLow { tan: g.k.torch.low_tan, rate: g.k.torch.low_rate }) } else { None };
@@ -618,14 +614,14 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     } else {
         g.gd[gd].beam_dir = v3::copy(dir);
     }
-    let lens = if rk == RigOf::Sc20k {
+    let lens = if rk == crate::rig_props::RigWeapon::Sc20k {
         crate::rig_props::sc20k_light_pose(g, c, None).pos
     } else if crate::kit::kit_pistol(g, gd) && weapon_rig_is_pistol(g, gd) {
         crate::rig_props::rig_light_pose(g, c, None).pos
     } else {
-        let want = if torch { crate::handwork::SwapHeldHeld::Torch } else { crate::handwork::SwapHeldHeld::Weapon };
-        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::handwork::SwapHeld::Torch);
-        let weapon = if carbine { crate::rig_props::RigTorchPosWeapon::Carbine } else { crate::rig_props::RigTorchPosWeapon::Pistol };
+        let want = if torch { crate::guards::InHand::Torch } else { crate::guards::InHand::Weapon };
+        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::guards::InHand::Torch);
+        let weapon = if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol };
         crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(crate::rig_props::rig()), Some(weapon))
     };
     g.tab.light[fl].pos = lens;

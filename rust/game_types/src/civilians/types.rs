@@ -161,17 +161,11 @@ pub struct CivSpots {
 #[derive(Clone, Debug, Default)]
 pub struct SpawnHostageDef {
     pub name: String,
-    pub kind: crate::civilians::SpawnHostageDefKind,
+    pub kind: crate::scene_level::CivilianDefKind,
     pub tint: V3,
     pub tint2: Option<V3>,
     pub pos: V3,
     pub face: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum SpawnHostageDefKind {
-    #[default] Cleaner,
-    Worker,
 }
 
 #[derive(Clone, Debug, Default)]

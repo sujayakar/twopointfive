@@ -602,7 +602,7 @@ impl DoorsAsk for Play {
         self.g.tab.orders_assignment[a].via = vec![c];
         self.g.tab.orders_assignment[a].goal = c;
     }
-    fn fight_has(&mut self, gd: GuardId) { game::squad::end_guard_script(&mut self.g, gd, Some(game::squad::EndGuardScriptState::Alert)); }
+    fn fight_has(&mut self, gd: GuardId) { game::squad::end_guard_script(&mut self.g, gd, Some(game::game::GuardState::Alert)); }
     fn order_waits_on_fight(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].yield_t >= 0.0) }
     fn rescue_log(&self) -> Vec<(f64, String)> { self.g.rescue.log.iter().map(|l| (l.t, l.what.clone())).collect() }
     fn rescue_t0(&self) -> f64 { self.g.rescue.t0 }

@@ -179,11 +179,8 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
 }
 
 /// Let go of the man in Sam's arm at once, no shove.
-pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldWhy) {
-    let why = match why {
-        crate::game::GameFreeHeldWhy::Shot => crate::player::FreeHeldWhy::Shot,
-        crate::game::GameFreeHeldWhy::Cancel => crate::player::FreeHeldWhy::Cancel,
-    };
+pub fn game_free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
+    let why = why;
     crate::player::free_held(g, why);
 }
 
@@ -275,24 +272,16 @@ pub fn game_cut_to_men(g: &mut crate::game::Game) {
 }
 
 ///
-pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
-    let cause = match cause {
-        crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,
-        crate::game::GameSetBlackoutCause::Ocp => crate::lighting::SetBlackoutCause::Ocp,
-        crate::game::GameSetBlackoutCause::Debug => crate::lighting::SetBlackoutCause::Debug,
-        crate::game::GameSetBlackoutCause::Hand => crate::lighting::SetBlackoutCause::Hand,
-    };
+pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::lighting::SetBlackoutCause) {
+    let cause = cause;
     crate::lighting::set_blackout(g, seconds, cause)
 }
 
 pub fn game_end_blackout(g: &mut crate::game::Game) { crate::lighting::end_blackout(g) }
 
 /// `cause` defaults to 'shot' here, as the TypeScript's parameter does.
-pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::game::GameLightEventCause>, sw_at: Option<V3>) {
-    let cause = match cause.unwrap_or(crate::game::GameLightEventCause::Shot) {
-        crate::game::GameLightEventCause::Shot => crate::lighting::LightEventCause::Shot,
-        crate::game::GameLightEventCause::Ocp => crate::lighting::LightEventCause::Ocp,
-    };
+pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::lighting::LightEventCause>, sw_at: Option<V3>) {
+    let cause = cause.unwrap_or(crate::lighting::LightEventCause::Shot);
     crate::lighting::light_event(g, t, Some(cause), sw_at)
 }
 

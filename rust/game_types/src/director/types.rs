@@ -284,21 +284,6 @@ pub struct EventView {
     pub name: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum EventViewKind {
-    #[default] Shot,
-    Bang,
-    Kick,
-    Door,
-    LightOut,
-    GuardShot,
-    Step,
-    Prop,
-    Whistle,
-    Glass,
-    Signal,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub enum Cond {
     Arm0(crate::director::CondArm0),
@@ -333,26 +318,11 @@ impl Default for CondArm2 {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CondArm3 {
-    pub kind: crate::director::CondArm3Kind,
+    pub kind: crate::director::EventViewKind,
     pub name: Option<String>,
     pub filter: Option<crate::director::EventFilter>,
     pub got: Option<crate::director::EventView>,
     pub tick0: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum CondArm3Kind {
-    #[default] Shot,
-    Bang,
-    Kick,
-    Door,
-    LightOut,
-    GuardShot,
-    Step,
-    Prop,
-    Whistle,
-    Glass,
-    Signal,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -530,3 +500,17 @@ pub const MAX_WHEN: f64 = 32.0;
 
 pub const MAX_PASSES: f64 = 8.0;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum EventViewKind {
+    #[default] Shot,
+    Bang,
+    Kick,
+    Door,
+    LightOut,
+    GuardShot,
+    Step,
+    Prop,
+    Whistle,
+    Glass,
+    Signal,
+}

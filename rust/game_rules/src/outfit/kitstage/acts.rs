@@ -421,7 +421,7 @@ fn order_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Stri
     let x = b.man.unwrap();
     let d = the_door(st);
     if b.row == Act::BangOrder {
-        match crate::doortools::door_tools_order(g, crate::doortools::DoorToolsOrderKind::BangClear, &[x], d, st.side, None, None) {
+        match crate::doortools::door_tools_order(g, crate::doortools::DoorToolKind::BangClear, &[x], d, st.side, None, None) {
             crate::doortools::DoorToolsOrder::Text(t) => return Err(t),
             _ => {}
         }
@@ -1109,7 +1109,7 @@ fn big_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), St
     if door_steel(g, d) { return Err(String::from("steel: it holds")); }
     if door_off(g, d) { return Err(String::from("no leaf to break")); }
     let mut q = f;
-    let t = if tool == BigKit::Hammer { crate::bigkit::SamBigSpotTool::Hammer } else { crate::bigkit::SamBigSpotTool::Shotgun };
+    let t = if tool == BigKit::Hammer { crate::kit::BigTool::Hammer } else { crate::kit::BigTool::Shotgun };
     if let Some(sp) = crate::bigkit::sam_big_spot(g, d, f, t) {
         let c = g.dr[d].frame_centre;
         let (dx, dz) = (sp.pos[0] - c[0], sp.pos[2] - c[2]);

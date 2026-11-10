@@ -59,16 +59,6 @@ pub struct Seat {
     pub to: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WakeWhy {
-    Light,
-    Alarm,
-    Noise,
-    Taken,
-    Net,
-    Bump,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DozeMod {

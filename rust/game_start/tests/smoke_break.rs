@@ -56,7 +56,7 @@ fn he_does_not_smoke_on_his_way_or_once_he_is_let_go() {
         p.run(9.0);
         assert_eq!(p.smoke_counts().lit, 1.0, "seed {s}: there, he lights it");
         p.run(4.0);
-        game::squad::end_guard_script(&mut p.g, m, Some(game::squad::EndGuardScriptState::Patrol));
+        game::squad::end_guard_script(&mut p.g, m, Some(game::game::GuardState::Patrol));
         let n = p.smoke_counts().embers;
         p.run(1.5);
         assert_eq!(p.smoke_counts().embers, n, "seed {s}: he goes on glowing, let go");

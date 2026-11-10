@@ -938,12 +938,9 @@ pub(super) fn stand_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, face: 
 }
 
 /// the other man on this doorway for this side, by role (a copy of his gate)
-pub(super) fn gate_mate(g: &mut crate::game::Game, g_2: &crate::tactics::Gate, role: crate::tactics::GateMateRole, except: GuardId) -> Option<crate::tactics::GateMate> {
+pub(super) fn gate_mate(g: &mut crate::game::Game, g_2: &crate::tactics::Gate, role: crate::tactics::GateRole, except: GuardId) -> Option<crate::tactics::GateMate> {
     s(g);
-    let want = match role {
-        GateMateRole::Lead => GateRole::Lead,
-        GateMateRole::Second => GateRole::Second,
-    };
+    let want = role;
     let team = g.tab.tactics_danger_rec[g_2.rec].team;
     let st = g.m.tactics.states.as_ref().unwrap();
     for (o, h) in st.gates.iter() {
@@ -1246,7 +1243,7 @@ pub(super) fn release_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut cra
     }
     if g_2.role == GateRole::Lead && !g_2.crossed && (g_2.phase == GatePhase::Slice || g_2.phase == GatePhase::Done) {
         // looked into and not taken: the man stacked behind him has seen it sliced from a metre away
-        if let Some(mate) = gate_mate(g, g_2, GateMateRole::Second, gd) {
+        if let Some(mate) = gate_mate(g, g_2, crate::tactics::GateRole::Second, gd) {
             if mate.g.phase == GatePhase::Stacked {
                 s(g).gates.delete(mate.gd);
                 let until = g.tab.tactics_danger_rec[rec].until;

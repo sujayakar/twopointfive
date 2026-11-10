@@ -293,7 +293,7 @@ fn who_wears_what_is_the_games_word() {
         let pl = p.g.player;
         p.g.pl[pl].big_kit = game::kit::BigKit::Hammer;
         let sam = p.g.ch[p.g.pl[pl].ch].id;
-        assert!(p.view().worn.iter().any(|w| w.man == sam && w.big == Some(game::bigkit::BigCarried::Hammer)), "seed {}", seed);
+        assert!(p.view().worn.iter().any(|w| w.man == sam && w.big == Some(game::kit::BigTool::Hammer)), "seed {}", seed);
     }
 }
 

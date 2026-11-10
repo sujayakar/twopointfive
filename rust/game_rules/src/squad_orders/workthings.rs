@@ -460,7 +460,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
     let line: String;
     match verb {
         WorkVerb::BreakerOff => {
-            crate::game::game_set_blackout(g, 86400.0, crate::game::GameSetBlackoutCause::Hand);
+            crate::game::game_set_blackout(g, 86400.0, crate::lighting::SetBlackoutCause::Hand);
             line = String::from("lights out.");
         }
         WorkVerb::BreakerOn => {

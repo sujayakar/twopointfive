@@ -171,12 +171,6 @@ pub struct DefCnt {
     pub small: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DefMoveKind {
-    #[default] Cover,
-    Fallback,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DefBurst {
     pub until: f64,
@@ -322,3 +316,9 @@ pub fn room_dx() -> Vec<f64> { alloc::vec![1.0, -1.0, 0.0, 0.0] }
 pub fn room_dz() -> Vec<f64> { alloc::vec![0.0, 0.0, 1.0, -1.0] }
 
 pub const GLASS_LOOK: f64 = 4.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+pub enum DefMoveKind {
+    #[default] Cover,
+    Fallback,
+}

@@ -564,17 +564,17 @@ fn goes_round(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut c
 // ---------------------------------------------------------------- the lines
 
 /// The pool a man draws one of the four moments from: a defender's own, else the staff's.
-fn gun_hold_pool(g: &crate::game::Game, gd: GuardId, kind: crate::gunhold::GunHoldPoolKind) -> Vec<String> {
+fn gun_hold_pool(g: &crate::game::Game, gd: GuardId, kind: crate::gunhold::BarkKind) -> Vec<String> {
     let own = if crate::teams::defender_words(g, gd) { gunhold_defender_lines().get(String::from(kind.as_str())).cloned() } else { None };
     match own {
         Some(own) if !own.is_empty() => own,
         _ => {
             let t = lines();
             match kind {
-                GunHoldPoolKind::Gun => t.gun,
-                GunHoldPoolKind::Shot => t.shot,
-                GunHoldPoolKind::Round => t.round,
-                GunHoldPoolKind::Gone => t.gone,
+                crate::gunhold::BarkKind::Gun => t.gun,
+                crate::gunhold::BarkKind::Shot => t.shot,
+                crate::gunhold::BarkKind::Round => t.round,
+                crate::gunhold::BarkKind::Gone => t.gone,
             }
         }
     }
@@ -587,12 +587,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, k
         return false;
     }
     k.said_t = g.time;
-    let kind = match kind {
-        BarkKind::Shot => GunHoldPoolKind::Shot,
-        BarkKind::Round => GunHoldPoolKind::Round,
-        BarkKind::Gone => GunHoldPoolKind::Gone,
-        BarkKind::Gun => GunHoldPoolKind::Gun,
-    };
+    let kind = kind;
     let pool = gun_hold_pool(g, gd, kind);
     let n = pool.len() as f64;
     let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];

@@ -753,9 +753,8 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     }
     if g.gd[gd].script.is_some() {
         let st = match g.gd[gd].state {
-            crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Patrol,
-            crate::game::GuardState::Search => crate::squad::EndGuardScriptState::Search,
-            _ => crate::squad::EndGuardScriptState::Suspicious,
+            s @ (crate::game::GuardState::Patrol | crate::game::GuardState::Search) => s,
+            _ => crate::game::GuardState::Suspicious,
         };
         crate::squad::end_guard_script(g, gd, Some(st));
     }

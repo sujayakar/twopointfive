@@ -220,10 +220,7 @@ pub fn light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate:
     if crate::carlamps::dead_lamp(g, t) {
         return;
     }
-    let cause = match cause.unwrap_or(crate::lighting::LightEventCause::Shot) {
-        crate::lighting::LightEventCause::Shot => crate::game::GameEventCause::Shot,
-        crate::lighting::LightEventCause::Ocp => crate::game::GameEventCause::Ocp,
-    };
+    let cause = cause.unwrap_or(crate::lighting::LightEventCause::Shot);
     let pos = g.tab.fixture[t].pos;
     let time = g.time;
     let serial = g.serial();
@@ -331,7 +328,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         let muzzle = g.ch[c].muzzle;
         crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
         let secs = g.tune.ocp_duration * 2.5;
-        crate::game::game_set_blackout(g, secs, crate::game::GameSetBlackoutCause::Ocp);
+        crate::game::game_set_blackout(g, secs, crate::lighting::SetBlackoutCause::Ocp);
         return;
     }
     let name = g.tab.fixture[t].name.clone();
@@ -344,7 +341,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let until = g.time + g.tune.ocp_duration;
     g.tab.fixture[t].blind_until = until;
     if kind != crate::fixtures::FixtureKind::Device {
-        crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Ocp), None);
+        crate::game::game_light_event(g, t, Some(crate::lighting::LightEventCause::Ocp), None);
     }
     let tg = crate::chronicle::FixtureNameTg { name, group: g.tab.fixture[t].group.clone() };
     let what = crate::chronicle::fixture_name(&tg);

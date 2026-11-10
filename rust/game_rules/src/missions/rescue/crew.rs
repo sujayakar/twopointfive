@@ -151,7 +151,7 @@ fn rescue_pick(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePick> {
 
 /// One door's order.
 fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, who: &[GuardId], d: DoorId, is_side: bool) {
-    let kind = if g.door_tools.bangs > 0.0 { crate::doortools::DoorToolsOrderKind::BangClear } else { crate::doortools::DoorToolsOrderKind::OpenClear };
+    let kind = if g.door_tools.bangs > 0.0 { crate::doortools::DoorToolKind::BangClear } else { crate::doortools::DoorToolKind::OpenClear };
     let face = rescue_face_of(g, d);
     match crate::doortools::door_tools_order(g, kind, who, d, face, Some(gate), None) {
         crate::doortools::DoorToolsOrder::Text(_) => {}
@@ -364,13 +364,7 @@ fn rescue_defenders(g: &mut crate::game::Game) {
             continue;
         }
         if g.gd[h].script.is_some() {
-            let state = match g.gd[h].state {
-                GuardState::Patrol => crate::squad::EndGuardScriptState::Patrol,
-                GuardState::Suspicious => crate::squad::EndGuardScriptState::Suspicious,
-                GuardState::Alert => crate::squad::EndGuardScriptState::Alert,
-                GuardState::Search => crate::squad::EndGuardScriptState::Search,
-                GuardState::Dead => unreachable!("the dead were passed over at the top of the loop"),
-            };
+            let state = g.gd[h].state;
             crate::squad::end_guard_script(g, h, Some(state));
         }
         crate::control::set_hold(g, h, true, "rescue");

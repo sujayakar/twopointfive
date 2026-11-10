@@ -228,7 +228,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     if kind == FixtureKind::Breaker {
         crate::render_lights::light_set_flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
-        crate::game::game_set_blackout(g, f64::INFINITY, crate::game::GameSetBlackoutCause::Shot);
+        crate::game::game_set_blackout(g, f64::INFINITY, crate::lighting::SetBlackoutCause::Shot);
         g.tab.fixture[t].broken = true;
         crate::particle_fx::breaker_spark_fx(g, pos, muzzle);
         return;

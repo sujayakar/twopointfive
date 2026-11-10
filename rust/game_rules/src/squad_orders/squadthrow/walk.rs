@@ -448,7 +448,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
             return end_walk(g, key, gd, Some(who.as_str()));
         }
     }
-    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang };
+    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsCan::Frag } else { crate::doortools::DoorToolsCan::Bang };
     if !crate::doortools::door_tools_take(g, what) {
         let w = none(kind).as_str();
         return end_walk(g, key, gd, Some(w));

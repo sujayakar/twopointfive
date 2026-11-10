@@ -59,22 +59,6 @@ pub struct Interactable {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum InteractableKind {
-    #[default] Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Verb {
     Push,
@@ -289,7 +273,7 @@ pub struct GameEvent {
     pub weapon: Option<crate::weapons::WeaponId>,
     pub from: Option<V3>,
     pub to: Option<V3>,
-    pub cause: Option<crate::game::GameEventCause>,
+    pub cause: Option<crate::lighting::LightEventCause>,
     pub sw_at: Option<V3>,
     pub blind: Option<bool>,
     pub lure: Option<bool>,
@@ -298,12 +282,6 @@ pub struct GameEvent {
     pub ears: Option<[V3; 2]>,
     /// INVENTED: dealt at birth, what the TypeScript asks by identity (heard sets, Rescue.noise, Def.noise0)
     pub serial: u32,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum GameEventCause {
-    Shot,
-    Ocp,
 }
 
 /// What a game was stood with: its own record, set once at the stand, and the one rules read
@@ -907,7 +885,7 @@ pub struct PlayerKick {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlayerKickTool {
-    pub kind: crate::game::PlayerKickToolKind,
+    pub kind: crate::kit::BigTool,
     pub side: f64,
     pub t: f64,
     pub lead: Option<f64>,
@@ -917,12 +895,6 @@ pub struct PlayerKickTool {
     pub done: f64,
     pub gave: Option<bool>,
     pub moves: Option<crate::game::PlayerKickToolMoves>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum PlayerKickToolKind {
-    #[default] Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -1248,26 +1220,6 @@ pub struct GameNewOpts {
     pub seats: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameFreeHeldWhy {
-    Shot,
-    Cancel,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameSetBlackoutCause {
-    Shot,
-    Ocp,
-    Debug,
-    Hand,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameLightEventCause {
-    Shot,
-    Ocp,
-}
-
 pub const PLAYER_MAX_HITS: f64 = 1.0;
 
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
@@ -1559,4 +1511,20 @@ pub struct Stats {
 mod stands {
     #[test]
     fn a_blank_game_can_be_built() { let g = super::Game::blank(); let _ = g.k.startle.beat; let h = g.clone(); let _ = h.time; }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum InteractableKind {
+    #[default] Cam,
+    Guard,
+    Breaker,
+    Door,
+    Light,
+    Body,
+    Objective,
+    Held,
+    Wall,
+    Switch,
+    Charge,
+    Cancel,
 }

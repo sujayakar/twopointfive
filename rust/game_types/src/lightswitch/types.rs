@@ -49,7 +49,7 @@ pub struct SwitchHand {
 
 #[derive(Clone, Debug, Default)]
 pub struct SwitchRowsRowOver {
-    pub kind: Option<crate::lightswitch::SwitchRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -64,22 +64,6 @@ pub struct SwitchRowsRowOver {
     pub close: Option<crate::close::CloseKind>,
     pub past: Option<bool>,
     pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum SwitchRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 /// the state this module keeps at its top level

@@ -122,8 +122,8 @@ fn turns(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Vec<crate:
     vec![
         crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_PAST }),
         gone(),
-        crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Step, None, Some(heard)),
-        crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Whistle, None, None),
+        crate::director::director_beat_on(g, r, crate::director::EventViewKind::Step, None, Some(heard)),
+        crate::director::director_beat_on(g, r, crate::director::EventViewKind::Whistle, None, None),
     ]
 }
 
@@ -142,7 +142,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                     f.at = NIGHT_ROUND;
                     continue;
                 }
-                let whistle = crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Whistle, None, Some(crate::director::EventFilter::XBelow { x: CROSS_WALL_X }));
+                let whistle = crate::director::director_beat_on(g, r, crate::director::EventViewKind::Whistle, None, Some(crate::director::EventFilter::XBelow { x: CROSS_WALL_X }));
                 f.at = 1;
                 return Ok(Some(crate::director::director_beat_any(vec![whistle, gone()])));
             }
@@ -187,11 +187,11 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 let u = f.u.clone().expect("tut-quiet night: u is set at its start");
                 if got.index == 2.0 { return Ok(None); }
                 if got.index == 1.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
                 if got.index == 3.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Patrol))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Patrol))?;
                     f.at_2 = None;
                     f.at = NIGHT_LOOP;
                     continue;
@@ -208,7 +208,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 let u = f.u.clone().expect("tut-quiet night: u is set at its start");
                 if got.index == 2.0 { return Ok(None); }
                 if got.index == 1.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
                 crate::director::director_beat_say(g, r, &u, "nothing. wind", None)?;
@@ -252,7 +252,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 };
                 if index == 2.0 { return Ok(None); }
                 if index == 1.0 || index == 3.0 {
-                    crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
                 if index == 4.0 {
@@ -262,7 +262,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
                         continue;
                     }
                 }
-                crate::director::director_beat_release(g, r, b, &u, Some(crate::squad::EndGuardScriptState::Patrol))?;
+                crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Patrol))?;
                 f.at_2 = None;
                 f.at = NIGHT_LOOP;
             }

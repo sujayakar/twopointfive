@@ -230,12 +230,8 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
 }
 
 /// a round (or anything else that stars glass) met pane `bi` = glassImpact at energy 1; false if `bi` is not a pane
-pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>, who: f64, cause: Option<crate::glass::GlassHitCause>, quiet: Option<bool>) -> bool {
-    let cause = match cause.unwrap_or(GlassHitCause::Shot) {
-        GlassHitCause::Shot => GlassImpactCause::Shot,
-        GlassHitCause::Bang => GlassImpactCause::Bang,
-        GlassHitCause::Hand => GlassImpactCause::Hand,
-    };
+pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>, who: f64, cause: Option<crate::glass::GlassImpactCause>, quiet: Option<bool>) -> bool {
+    let cause = cause.unwrap_or(crate::glass::GlassImpactCause::Shot);
     glass_impact(g, bi, hit_p, dir, 1.0, who, Some(cause), quiet, None).pane
 }
 
@@ -262,7 +258,7 @@ pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f
             let fv = ((s >> 16) as f64 / 65535.0) * 2.0 - 1.0;
             let anywhere = v3::mad(v3::mad(c, axis, fu * 0.9 * h[wide]), [0.0, 1.0, 0.0], fv * 0.9 * h[1]);   // a point on the pane's face, inside its frame by a tenth
             let p = v3::lerp3(anywhere, q, 0.35);   // pulled a third of the way toward where the blast was nearest
-            glass_hit(g, bi, p, Some(v3::sub(p, at)), who, Some(GlassHitCause::Bang), Some(true));
+            glass_hit(g, bi, p, Some(v3::sub(p, at)), who, Some(crate::glass::GlassImpactCause::Bang), Some(true));
             k += 1.0;
         }
         n += 1.0;

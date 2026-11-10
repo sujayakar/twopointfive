@@ -171,12 +171,6 @@ pub struct QrfWordValue {
     pub t: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SideOfTeam {
-    Guard,
-    Hostile,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum BudgetOf {
     Arm0(crate::qrf::BudgetOfArm0),

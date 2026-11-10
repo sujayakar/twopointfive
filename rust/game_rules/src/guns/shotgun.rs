@@ -99,7 +99,7 @@ pub fn lock_point(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
 }
 
 /// Where the man with the gun stands for d's lock on face `side`. None: no spot has floor and a line.
-pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::shotgun::BreachSpotClose>) -> Option<crate::shotgun::BreachSpot> {
+pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::kit::BigTool>) -> Option<crate::shotgun::BreachSpot> {
     let avoid: &[V3] = avoid.unwrap_or(&[]);
     let at = lock_point(g, d, side);
     let w = g.dr[d].def.width;
@@ -116,14 +116,11 @@ pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Optio
     };
     let mut mine: Option<Option<crate::shotgun::BreachSpot>> = None;
     if let Some(close) = close {
-        let tool = match close {
-            crate::shotgun::BreachSpotClose::Shotgun => crate::bigkit::BigSpotsTool::Shotgun,
-            crate::shotgun::BreachSpotClose::Hammer => crate::bigkit::BigSpotsTool::Hammer,
-        };
+        let tool = close;
         for s in crate::bigkit::big_spots(g, d, side, tool) {
             if crowds(g, avoid, s.pos)
                 || crate::orders::squad_orders_behind_glass(g, d, side, s.pos)
-                || (close == crate::shotgun::BreachSpotClose::Shotgun && across(g, at, avoid, s.pos))
+                || (close == crate::kit::BigTool::Shotgun && across(g, at, avoid, s.pos))
             {
                 continue;
             }

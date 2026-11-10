@@ -634,7 +634,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let a = axis_at(g, flame_h * 0.5, wind);
             let n = m::hyp3(a[2], 1.0, a[3]);
             jets.push(crate::smoke_types::WindGpuSource {
-                kind: crate::smoke_types::WindGpuSourceKind::Jet,
+                kind: crate::wind::WindSourceKind::Jet,
                 pos: mouth.pos,
                 dir: [a[2] / n, 1.0 / n, a[3] / n],
                 speed: w.speed * heat,
@@ -696,7 +696,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     kind: crate::smoke_types::SmokeEmitterKind::Cloud,
                     push: Some(b.push),
                     jitter: Some(b.jitter),
-                    lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
+                    lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
                     look: Some(true), fire: Some(true),
                     tint: Some(l.soot),
                     ..crate::smoke_types::SmokeEmitter::default()
@@ -725,7 +725,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     expand: Some(l.puff_expand),
                     attack: Some(0.06),
                     jitter: Some(0.9),
-                    lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
+                    lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
                     look: Some(true), fire: Some(true),
                     tint: Some(l.soot),
                     ..crate::smoke_types::SmokeEmitter::default()

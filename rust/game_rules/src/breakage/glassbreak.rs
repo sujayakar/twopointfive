@@ -346,12 +346,8 @@ pub fn glass_break_home() -> Option<crate::Opaque> {
 }
 
 /// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass
-pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, view: crate::glassbreak::GlassBreakSeeThroughView, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let kind = match view {
-        GlassBreakSeeThroughView::Blown => GlassBreakViewOfKind::Blown,
-        GlassBreakSeeThroughView::Wary => GlassBreakViewOfKind::Wary,
-        GlassBreakSeeThroughView::Counted => GlassBreakViewOfKind::Counted,
-    };
+pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, view: crate::glassbreak::GlassBreakViewOfKind, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+    let kind = view;
     let was = g.glass_break.view_of.take();
     g.glass_break.view_of = Some(GlassBreakViewOf { kind, from, size });
     crate::scene_collision::glass_viewed(g);

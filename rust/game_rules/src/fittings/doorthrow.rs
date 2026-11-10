@@ -145,7 +145,7 @@ fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
     if g.gd[gd].state == crate::game::GuardState::Patrol {
         if g.gd[gd].script.is_some() {
-            crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Suspicious));
+            crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Suspicious));
         }
         let startle = g.k.doorthrow.startle;
         crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "doorthrow");
@@ -192,10 +192,8 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     }
     if g.gd[gd].script.is_some() {
         let then = match g.gd[gd].state {
-            crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Suspicious,
-            crate::game::GuardState::Search => crate::squad::EndGuardScriptState::Search,
-            crate::game::GuardState::Alert => crate::squad::EndGuardScriptState::Alert,
-            _ => crate::squad::EndGuardScriptState::Suspicious,
+            s @ (crate::game::GuardState::Search | crate::game::GuardState::Alert) => s,
+            _ => crate::game::GuardState::Suspicious,
         };
         crate::squad::end_guard_script(g, gd, Some(then));
     }

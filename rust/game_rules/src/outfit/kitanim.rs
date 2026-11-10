@@ -345,7 +345,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     if let Some(hand) = h {
         v.pistol_in_hand = hand == Some(crate::character::KitItem::Pistol);
         if v.rifle.is_some() {
-            v.rifle = Some(if hand == Some(crate::character::KitItem::Rifle) { crate::kitanim::KitShowVRifle::Hand } else { crate::kitanim::KitShowVRifle::Slung });
+            v.rifle = Some(if hand == Some(crate::character::KitItem::Rifle) { crate::rig_props::RifleAt::Hand } else { crate::rig_props::RifleAt::Slung });
         }
         v.held = if hand == Some(crate::character::KitItem::Can) && !g.pl[p].sprinting { g.pl[p].kit_can } else { None };
         if hand == Some(crate::character::KitItem::Knife) {
@@ -363,7 +363,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
         });
     }
     let rs = crate::character::anim_reload_show(g, c);
-    let long = v.rifle == Some(crate::kitanim::KitShowVRifle::Hand);
+    let long = v.rifle == Some(crate::rig_props::RifleAt::Hand);
     if let Some(rs) = rs {
         let (rifle, pistol) = (g.pl[p].rifle, g.pl[p].pistol);
         if v.pistol_in_hand || (long && g.m.weapons.weapons.get(g.fa[rifle].def).unwrap().pellets.is_none()) {

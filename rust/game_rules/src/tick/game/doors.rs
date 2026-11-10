@@ -249,7 +249,7 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         if verb == Some(Verb::BreakerOn) && g.light_home.mains.active && !g.light_home.mains.permanent {
             crate::game::game_end_blackout(g);
         } else if verb == Some(Verb::BreakerOff) && !g.light_home.mains.active {
-            crate::game::game_set_blackout(g, 86400.0, GameSetBlackoutCause::Hand);
+            crate::game::game_set_blackout(g, 86400.0, crate::lighting::SetBlackoutCause::Hand);
         }
     }
     crate::handwork::breaker_tick(g, dt);

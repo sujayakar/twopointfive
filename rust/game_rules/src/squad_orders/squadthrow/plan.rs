@@ -138,7 +138,7 @@ pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[Guard
         start_walk(g, &mut th, t, kind);
         return None;
     }
-    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang };
+    let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsCan::Frag } else { crate::doortools::DoorToolsCan::Bang };
     if !crate::doortools::door_tools_take(g, what) { return Some(String::from(none(kind).as_str())); }
     let arc = Arc { from: th.from, sol: th.sol, rest: th.rest };
     throw_it(g, th.gd, &arc, kind);

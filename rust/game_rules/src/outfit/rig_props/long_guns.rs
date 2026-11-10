@@ -111,9 +111,9 @@ pub(in crate::outfit) fn sling_rest_want(g: &crate::game::Game, c_2: CharId) -> 
 }
 
 /// The rifle's group frame, in the hands or slung.
-fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::RigSc20k, where_: crate::rig_props::Sc20kFrameWhere, front: Option<bool>, rest: Option<f64>) -> crate::rig_props::Sc20kFrame {
+fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::RigSc20k, where_: crate::rig_props::RifleAt, front: Option<bool>, rest: Option<f64>) -> crate::rig_props::Sc20kFrame {
     let front = front.unwrap_or(false);
-    if where_ == Sc20kFrameWhere::Hand {
+    if where_ == crate::rig_props::RifleAt::Hand {
         let hand = hand_or_muzzle(g, c_2);
         let fr = pistol_frame(g, c_2, hand, PistolFrameP { adj: s.adj }, None);
         return Sc20kFrame { g: fr.g };
@@ -140,14 +140,14 @@ fn bare_barrel(can: crate::rig_props::Seg) -> crate::rig_props::Seg {
 }
 
 /// The rifle's boxes (or its model's), off the right hand or slung, stamped with this man. They are not only a picture: they reach the world's dynamics, which a laser's reach and the cursor's ray read.
-pub(super) fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, s: Option<crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) {
+pub(super) fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>, s: Option<crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::RifleAt>, lens: Option<V3>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) {
     let s: RigSc20k = s.unwrap_or_else(|| crate::rig_props::rig().sc20k);
-    let where_ = where_.unwrap_or(Sc20kBoxesWhere::Hand);
+    let where_ = where_.unwrap_or(crate::rig_props::RifleAt::Hand);
     let lens = lens.unwrap_or([0.0, 0.0, 0.0]);
     let (fit, front, black) = (fit.unwrap_or(false), front.unwrap_or(false), black.unwrap_or(false));
-    let slung = where_ == Sc20kBoxesWhere::Slung;
+    let slung = where_ == crate::rig_props::RifleAt::Slung;
     stamp_owner(g, c_2);
-    let fr = sc20k_frame(g, c_2, s, if slung { Sc20kFrameWhere::Slung } else { Sc20kFrameWhere::Hand }, Some(front), rest);
+    let fr = sc20k_frame(g, c_2, s, if slung { crate::rig_props::RifleAt::Slung } else { crate::rig_props::RifleAt::Hand }, Some(front), rest);
     let mut gf = fr.g;
     let hand = bone(g, c_2, crate::character::Bone::HandR);
     match (kit, slung, hand) {
@@ -155,7 +155,7 @@ pub(super) fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<
             gf = kit_gun_frame(g, c_2, hand, KitGunFrameP { adj: s.adj }, gf, kd.roll.unwrap_or(0.0));
             if fit { gf = fit_frame(gf, gripfit().long); }
             let rifle = kd.rifle.unwrap_or(0.0);
-            if rifle > 0.0 { gf = mix_frame(gf, sc20k_frame(g, c_2, s, Sc20kFrameWhere::Slung, Some(kd.front.unwrap_or(false)), kd.rest).g, rifle); }
+            if rifle > 0.0 { gf = mix_frame(gf, sc20k_frame(g, c_2, s, crate::rig_props::RifleAt::Slung, Some(kd.front.unwrap_or(false)), kd.rest).g, rifle); }
         }
         _ => if fit && !slung { gf = fit_frame(gf, gripfit().long); },
     }
@@ -225,9 +225,9 @@ pub fn sc20k_grip(rig: Option<crate::rig_props::Rig>, fit: Option<bool>) -> crat
 }
 
 /// What the hand pass is told of a long gun in his hands.
-pub fn long_hold(weapon: crate::rig_props::LongHoldWeapon, rig: Option<crate::rig_props::Rig>) -> crate::inhand::InHandWord {
+pub fn long_hold(weapon: crate::rig_props::LongRig, rig: Option<crate::rig_props::Rig>) -> crate::inhand::InHandWord {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
-    let fr = apply_adj(unit_frame(), if weapon == LongHoldWeapon::Sc20k { rig.sc20k.adj } else { rig.carbine.adj });
+    let fr = apply_adj(unit_frame(), if weapon == crate::rig_props::LongRig::Sc20k { rig.sc20k.adj } else { rig.carbine.adj });
     let d = gripfit().long;
     crate::inhand::InHandWord::Long(crate::inhand::InHandWordLong {
         by: v3::scale(v3::mad(v3::mad(v3::scale(fr.x, d[0]), fr.y, d[1]), fr.z, d[2]), -1.0),
@@ -252,7 +252,7 @@ pub fn sc20k_muzzle_ahead(rig: Option<crate::rig_props::Rig>) -> f64 {
 pub fn sc20k_light_pose(g: &mut crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::Sc20kLightPose {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let s = rig.sc20k;
-    let fr = sc20k_frame(g, c_2, s, Sc20kFrameWhere::Hand, None, None).g;
+    let fr = sc20k_frame(g, c_2, s, crate::rig_props::RifleAt::Hand, None, None).g;
     let look = long_look_of(g, c_2, true);
     let (adj, ahead) = match look.as_ref().and_then(|lk| lk.l.lens.map(|lens| (lens, lk.l.lens_ahead))) {
         Some((lens, lens_ahead)) => (lens.adj.map(|a| Adj { off: a.off, rot: a.rot }), lens_ahead.unwrap_or(s.light_ahead)),
@@ -266,7 +266,7 @@ pub fn sc20k_light_pose(g: &mut crate::game::Game, c_2: CharId, rig: Option<crat
 pub fn sc20k_launcher_muzzle(g: &mut crate::game::Game, c_2: CharId, rig: Option<crate::rig_props::Rig>) -> V3 {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let s = rig.sc20k;
-    let fr = sc20k_frame(g, c_2, s, Sc20kFrameWhere::Hand, None, None).g;
+    let fr = sc20k_frame(g, c_2, s, crate::rig_props::RifleAt::Hand, None, None).g;
     let f = apply_adj(fr, s.fore.adj);
     v3::mad(v3::mad(f.o, f.z, s.fore.l1), f.y, -(s.fore.tall + 0.02))
 }
@@ -291,11 +291,11 @@ pub fn rig_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate::rig
 }
 
 /// A guard's light origin along its beam.
-pub fn rig_torch_pos(g: &mut crate::game::Game, c_2: CharId, dir: V3, torch: bool, rig: Option<crate::rig_props::Rig>, weapon: Option<crate::rig_props::RigTorchPosWeapon>) -> V3 {
+pub fn rig_torch_pos(g: &mut crate::game::Game, c_2: CharId, dir: V3, torch: bool, rig: Option<crate::rig_props::Rig>, weapon: Option<crate::rig_props::RigWeapon>) -> V3 {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
-    let weapon = weapon.unwrap_or(RigTorchPosWeapon::Pistol);
-    if weapon == RigTorchPosWeapon::Carbine { return carbine_light_pose(g, c_2, Some(rig)).pos; }
-    if weapon == RigTorchPosWeapon::Sc20k { return sc20k_light_pose(g, c_2, Some(rig)).pos; }
+    let weapon = weapon.unwrap_or(crate::rig_props::RigWeapon::Pistol);
+    if weapon == crate::rig_props::RigWeapon::Carbine { return carbine_light_pose(g, c_2, Some(rig)).pos; }
+    if weapon == crate::rig_props::RigWeapon::Sc20k { return sc20k_light_pose(g, c_2, Some(rig)).pos; }
     let hand = hand_or_muzzle(g, c_2);
     let fr = if torch {
         apply_adj(apply_adj(frame_from(hand, dir, None), rig.torch.adj), rig.torch.lens.adj)
@@ -338,19 +338,19 @@ pub fn torch_carry_want(g: &crate::game::Game, c_2: CharId, tan: Option<f64>) ->
 }
 
 /// How far off his back the big slot's tool rides with his rifle slung under it.
-pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::rig_props::BigClearOfKind, rig: Option<crate::rig_props::Rig>) -> f64 {
+pub fn big_clear_of(g: &crate::game::Game, c_2: CharId, kind: crate::kit::BigTool, rig: Option<crate::rig_props::Rig>) -> f64 {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let p = rig.sc20k.slung;
     let s = slung_base(g, c_2, p, false, None);
     let out = p.off[2] - v3::dot(v3::sub(s.o, s.cf.o), s.cf.z);
     let clear = BIGRIG.clear;
-    (match kind { BigClearOfKind::Hammer => clear.hammer, BigClearOfKind::Shotgun => clear.shotgun }) + (if m::abs(out) < 1e-6 { 0.0 } else { out })
+    (match kind { crate::kit::BigTool::Hammer => clear.hammer, crate::kit::BigTool::Shotgun => clear.shotgun }) + (if m::abs(out) < 1e-6 { 0.0 } else { out })
 }
 
 /// The sizes of the thing the pack-side rule stands at a pack's side.
-fn pack_side_dims(what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
+fn pack_side_dims(what: crate::rig_props::PackSideWhat, rig: Option<crate::rig_props::Rig>) -> crate::rig_props::PackSideDims {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
-    if what == PackSideDimsWhat::Hammer {
+    if what == crate::rig_props::PackSideWhat::Hammer {
         let h = BIGRIG.hammer;
         return PackSideDims {
             grip: Some(h.head_at),
@@ -361,7 +361,7 @@ fn pack_side_dims(what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::r
             len: h.head_at - h.handle.l0,
         };
     }
-    if what == PackSideDimsWhat::Shotgun {
+    if what == crate::rig_props::PackSideWhat::Shotgun {
         let cb = rig.carbine;
         return PackSideDims {
             grip: None,
@@ -387,14 +387,14 @@ fn pack_side_dims(what: crate::rig_props::PackSideDimsWhat, rig: Option<crate::r
 }
 
 /// The pack-side place in the bind space of the mesh he wears, pitched to his back as posed.
-pub fn pack_side_bind(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props::PackSideBindWhat, rig: Option<crate::rig_props::Rig>) -> Option<crate::packside::SidePlace> {
+pub fn pack_side_bind(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props::PackSideWhat, rig: Option<crate::rig_props::Rig>) -> Option<crate::packside::SidePlace> {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let (ch, parts) = (g.ch[c_2].rig, g.ch[c_2].parts);
     let e = crate::packside::pack_of(g, ch, parts)?;
     let (dims_what, side_what) = match what {
-        PackSideBindWhat::Hammer => (PackSideDimsWhat::Hammer, crate::packside::SideBindWhat::Hammer),
-        PackSideBindWhat::Shotgun => (PackSideDimsWhat::Shotgun, crate::packside::SideBindWhat::Shotgun),
-        PackSideBindWhat::Rifle => (PackSideDimsWhat::Rifle, crate::packside::SideBindWhat::Rifle),
+        crate::rig_props::PackSideWhat::Hammer => (crate::rig_props::PackSideWhat::Hammer, crate::rig_props::PackSideWhat::Hammer),
+        crate::rig_props::PackSideWhat::Shotgun => (crate::rig_props::PackSideWhat::Shotgun, crate::rig_props::PackSideWhat::Shotgun),
+        crate::rig_props::PackSideWhat::Rifle => (crate::rig_props::PackSideWhat::Rifle, crate::rig_props::PackSideWhat::Rifle),
     };
     let d = pack_side_dims(dims_what, Some(rig));
     let dims = crate::packside::SideBindDims { grip: d.grip, thick: d.thick, head: d.head, rear: d.rear, top: d.top, len: Some(d.len) };
@@ -405,11 +405,7 @@ pub fn pack_side_bind(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_p
 
 /// …carried into the world by the chest joint's skin matrix.
 fn pack_side(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props::PackSideWhat, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::Frame> {
-    let bind_what = match what {
-        PackSideWhat::Hammer => PackSideBindWhat::Hammer,
-        PackSideWhat::Shotgun => PackSideBindWhat::Shotgun,
-        PackSideWhat::Rifle => PackSideBindWhat::Rifle,
-    };
+    let bind_what = what;
     let p = pack_side_bind(g, c_2, bind_what, rig)?;
     let ch = g.ch[c_2].rig;
     let j = crate::packside::chest_joint(g, ch);
@@ -431,7 +427,7 @@ pub fn big_back_of(hips: V3, mid: V3, th_l: V3, th_r: V3, ua_l: V3, ua_r: V3, p:
 }
 
 /// The big slot's tool on a man: on his back, in his hands, or carried between by `k`.
-pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props::BigBoxesKind, k: f64, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>, clear: Option<bool>) {
+pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::kit::BigTool, k: f64, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>, clear: Option<bool>) {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let clear = clear.unwrap_or(false);
     let (hips, spine2, th_l, th_r, ua_l, ua_r) = match (bone(g, c_2, crate::character::Bone::Hips), bone(g, c_2, crate::character::Bone::Spine2), bone(g, c_2, crate::character::Bone::ThighL), bone(g, c_2, crate::character::Bone::ThighR), bone(g, c_2, crate::character::Bone::UpperArmL), bone(g, c_2, crate::character::Bone::UpperArmR)) {
@@ -439,13 +435,13 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
         _ => return,
     };
     stamp_owner(g, c_2);
-    let side_what = match kind { BigBoxesKind::Hammer => PackSideWhat::Hammer, BigBoxesKind::Shotgun => PackSideWhat::Shotgun };
+    let side_what = match kind { crate::kit::BigTool::Hammer => PackSideWhat::Hammer, crate::kit::BigTool::Shotgun => PackSideWhat::Shotgun };
     let on_back = match pack_side(g, c_2, side_what, Some(rig)) {
         Some(side) => side,
         None => {
             let table = BIGRIG;
-            let p = match kind { BigBoxesKind::Hammer => table.hammer.back, BigBoxesKind::Shotgun => table.shotgun.back };
-            let clear_kind = match kind { BigBoxesKind::Hammer => BigClearOfKind::Hammer, BigBoxesKind::Shotgun => BigClearOfKind::Shotgun };
+            let p = match kind { crate::kit::BigTool::Hammer => table.hammer.back, crate::kit::BigTool::Shotgun => table.shotgun.back };
+            let clear_kind = kind;
             let by = if clear { big_clear_of(g, c_2, clear_kind, Some(rig)) } else { 0.0 };
             let bk = big_back_of(hips, spine2, th_l, th_r, ua_l, ua_r, p, Some(by));
             let x = v3::mad(v3::scale(bk.cf.z, -1.0), bk.z, v3::dot(bk.cf.z, bk.z));
@@ -456,7 +452,7 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
     let mut gf = on_back;
     if k > 0.0 {
         if let Some(hand) = bone(g, c_2, crate::character::Bone::HandR) {
-            if kind == BigBoxesKind::Hammer {
+            if kind == crate::kit::BigTool::Hammer {
                 let h = crate::character::character_hand_frame_r(g, c_2, None);
                 let grip = BIGRIG.hammer.grip;
                 gf = mix_frame(on_back, Frame { o: v3::mad(v3::mad(v3::mad(hand, h.fingers, grip.fwd), h.back, -grip.palm), h.thumb, grip.side), x: v3::cross(h.back, h.thumb), y: h.back, z: h.thumb }, k);
@@ -465,7 +461,7 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
             }
         }
     }
-    if kind == BigBoxesKind::Shotgun {
+    if kind == crate::kit::BigTool::Shotgun {
         carbine_boxes(g, c_2, out, rig.carbine, [0.0, 0.0, 0.0], Some(gf), Some(crate::weapons::GunModelId::M870));
         return;
     }
@@ -475,16 +471,16 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
 }
 
 /// A man's own long gun let go of for the big slot's tool: on its sling down his front, dark.
-pub fn hung_boxes(g: &mut crate::game::Game, c_2: CharId, weapon: crate::rig_props::HungBoxesWeapon, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>, black: Option<bool>) {
+pub fn hung_boxes(g: &mut crate::game::Game, c_2: CharId, weapon: crate::rig_props::LongRig, out: &mut Vec<AnyBoxId>, rig: Option<crate::rig_props::Rig>, black: Option<bool>) {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let black = black.unwrap_or(false);
-    if weapon == HungBoxesWeapon::Sc20k {
+    if weapon == crate::rig_props::LongRig::Sc20k {
         let m4 = rifle_m4(Some(rig));
-        sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Slung), Some([0.0, 0.0, 0.0]), m4, None, Some(false), Some(true), None, Some(black));
+        sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Slung), Some([0.0, 0.0, 0.0]), m4, None, Some(false), Some(true), None, Some(black));
         return;
     }
     stamp_owner(g, c_2);
-    let at = sc20k_frame(g, c_2, rig.sc20k, Sc20kFrameWhere::Slung, Some(true), None).g;
+    let at = sc20k_frame(g, c_2, rig.sc20k, crate::rig_props::RifleAt::Slung, Some(true), None).g;
     carbine_boxes(g, c_2, out, rig.carbine, [0.0, 0.0, 0.0], Some(at), None);
 }
 

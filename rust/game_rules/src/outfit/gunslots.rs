@@ -139,13 +139,13 @@ pub fn side_locked(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The long gun he let go of hangs down his front: its rig, while the sidearm is out.
-pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
+pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::rig_props::LongRig> {
     let s = g.gd[gd].second?;
     if !s.out || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let def = g.fa[s.gun].def;
     match weapon_row(g, def).rig {
-        crate::weapons::WeaponDefRig::Carbine => Some(SideHung::Carbine),
-        crate::weapons::WeaponDefRig::Sc20k => Some(SideHung::Sc20k),
+        crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
+        crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
         _ => None,
     }
 }

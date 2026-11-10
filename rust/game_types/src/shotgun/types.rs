@@ -40,12 +40,6 @@ pub struct ShellEndsItem {
     pub at: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BreachSpotClose {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BreachSpot {
     pub pos: V3,

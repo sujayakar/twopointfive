@@ -1,7 +1,7 @@
 //! THE PANEL'S ACTIONS: what a person does to the game from the debugger that isn't a number, as one list. The page draws a button, a box or a choice from a row and knows none by name; a press is a
 //! command (`Act`), so a tape carries it as it does a turned number.
 use alloc::{format, string::String, vec, vec::Vec};
-use game::game::{Game, GameSetBlackoutCause};
+use game::game::{Game};
 use game::m;
 use game::teams::Team;
 
@@ -132,7 +132,7 @@ fn stand_extra(g: &mut Game, n: f64) {
 }
 
 pub static ACTIONS: &[Action] = &[
-    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, GameSetBlackoutCause::Debug) } },
+    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, game::lighting::SetBlackoutCause::Debug) } },
     Action { name: "smoke", label: "smoke at the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::sense::sense_tool(g, 2.0, &[a[0], a[1] + 0.12, a[2]]); } },
     Action { name: "clearsmoke", label: "clear smoke", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { game::sense::sense_tool(g, 3.0, &[]); } },
     Action { name: "teleport", label: "teleport to the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::game::game_teleport_player(g, a); } },
@@ -143,7 +143,7 @@ pub static ACTIONS: &[Action] = &[
     Action { name: "groupon", label: "a group on", section: "Lights", title: "", takes: Takes::Each(every_group), run: |g, _, w| game::lighting::set_group(g, w, true) },
     Action { name: "groupoff", label: "a group off", section: "Lights", title: "", takes: Takes::Each(every_group), run: |g, _, w| game::lighting::set_group(g, w, false) },
     Action { name: "repair", label: "repair the lights", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_repair_lights(g) },
-    Action { name: "killmains", label: "kill the mains", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_set_blackout(g, f64::INFINITY, GameSetBlackoutCause::Debug) },
+    Action { name: "killmains", label: "kill the mains", section: "Lights", title: "", takes: Takes::Press, run: |g, _, _| game::game::game_set_blackout(g, f64::INFINITY, game::lighting::SetBlackoutCause::Debug) },
     Action { name: "weather", label: "weather kind", section: "Weather", title: "a new page of this address in that weather", takes: Takes::Reload { word: "weather", picks: WEATHERS }, run: |_, _, _| {} },
     Action { name: "strike", label: "lightning now", section: "Weather", title: "", takes: Takes::Press, run: |g, _, _| { game::weather::weather_strike(g, None); } },
     Action { name: "strikeclose", label: "lightning, close (0.4 km)", section: "Weather", title: "", takes: Takes::Press, run: |g, _, _| { game::weather::weather_strike(g, Some(game::weather::WeatherStrikeOpts { dist_km: Some(0.4), ..Default::default() })); } },

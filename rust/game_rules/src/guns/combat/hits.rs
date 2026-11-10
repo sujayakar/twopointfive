@@ -189,7 +189,7 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
     if g.pl[p].hits_left == 0.0 {
         let in_hand = crate::game::player_gun_in_hand(g, p);
         if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
-        if g.pl[p].holding.is_some() { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Shot); }
+        if g.pl[p].holding.is_some() { crate::game::game_free_held(g, crate::player::FreeHeldWhy::Shot); }
         let c = g.pl[p].ch;
         g.cond[g.pl[p].ch].down = true; g.pl[p].sprinting = false; g.pl[p].crouch = false;
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -263,8 +263,8 @@ fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 
 /// What the player carries and wears, as boxes, and the fist's and the figure's words for this frame.
 fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    use crate::kitanim::KitShowVRifle as Rf;
-    use crate::rig_props::{RigOpts, RigOptsRifle};
+    use crate::rig_props::RifleAt as Rf;
+    use crate::rig_props::{RigOpts};
     let p = g.player;
     let c = g.pl[p].ch;
     let busy = g.ch[c].anim.hide_held_item;
@@ -298,10 +298,10 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     g.ch[c].anim.grip_can = held.is_some();
     let big_s = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
     let big_over = rifle == Some(Rf::Slung) && !crate::kitanim::kit_sling_front(g);
-    let is_hammer = big_s == Some(crate::bigkit::BigCarried::Hammer);
+    let is_hammer = big_s == Some(crate::kit::BigTool::Hammer);
     let side = if is_hammer { hammer_side(g, c) } else { None };
     g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
-    let clear = if is_hammer && big_over { crate::rig_props::big_clear_of(g, c, crate::rig_props::BigClearOfKind::Hammer, None) } else { 0.0 };
+    let clear = if is_hammer && big_over { crate::rig_props::big_clear_of(g, c, crate::kit::BigTool::Hammer, None) } else { 0.0 };
     g.ch[c].anim.big_clear = clear;
     let in_hand = !down;
     g.ch[c].in_hand = if !in_hand { None }
@@ -325,7 +325,7 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         holster: Some(!(down && pistol_up)),
         held,
         knife: Some(knife),
-        rifle: rifle.map(|r| match r { Rf::Hand => RigOptsRifle::Hand, Rf::Slung => RigOptsRifle::Slung }),
+        rifle: rifle,
         rifle_black: Some(rifle_black),
         rifle_light: Some(rifle_light),
         kit,
@@ -334,7 +334,7 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         sling_front: if sling { Some(true) } else { None },
         sling_rest,
         nv_k: g.ch[c].anim.nv_shown,
-        big: big_s.map(|b| match b { crate::bigkit::BigCarried::Shotgun => crate::rig_props::RigOptsBig::Shotgun, crate::bigkit::BigCarried::Hammer => crate::rig_props::RigOptsBig::Hammer }),
+        big: big_s,
         big_k: if big_s.is_some() { Some(if down { 0.0 } else { g.ch[c].anim.big_k }) } else { None },
         big_clear: if big_s.is_some() { Some(big_over) } else { None },
         ..Default::default()
@@ -346,7 +346,7 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.
 fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
-    let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideBindWhat::Hammer, None)?;
+    let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideWhat::Hammer, None)?;
     let rig = g.ch[c_2].rig;
     let l = crate::packside::side_local(g, rig, p)?;
     Some(HammerSide { o: l.o, z: l.z })
@@ -362,16 +362,16 @@ fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) 
         None => { guard_kit(g, gd, out, stow); hung_side(g, gd, out); return; }
     };
     let alive = !crate::condition::down(g, g.gd[gd].ch);
-    let side = if big == crate::bigkit::BigCarried::Hammer { hammer_side(g, c) } else { None };
+    let side = if big == crate::kit::BigTool::Hammer { hammer_side(g, c) } else { None };
     g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
     let hang = stow || (alive && g.ch[c].anim.big_tool.is_some() && g.ch[c].anim.hide_held_item);
     guard_kit(g, gd, out, hang);
     let slung_out = g.gd[gd].slung.as_ref().filter(|s| s.out).map(|s| s.own);
-    if let (crate::bigkit::BigCarried::Shotgun, true, Some(own)) = (big, alive, slung_out) {
+    if let (crate::kit::BigTool::Shotgun, true, Some(own)) = (big, alive, slung_out) {
         let def = g.fa[own].def;
         let weapon = match row(g, def).rig {
-            crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::HungBoxesWeapon::Carbine),
-            crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::HungBoxesWeapon::Sc20k),
+            crate::weapons::WeaponDefRig::Carbine => Some(crate::rig_props::LongRig::Carbine),
+            crate::weapons::WeaponDefRig::Sc20k => Some(crate::rig_props::LongRig::Sc20k),
             _ => None,
         };
         match weapon {
@@ -382,7 +382,7 @@ fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) 
     }
     hung_side(g, gd, out);
     let k = if alive { g.ch[c].anim.big_k } else { 0.0 };
-    let kind = match big { crate::bigkit::BigCarried::Shotgun => crate::rig_props::BigBoxesKind::Shotgun, crate::bigkit::BigCarried::Hammer => crate::rig_props::BigBoxesKind::Hammer };
+    let kind = big;
     crate::rig_props::big_boxes(g, c, kind, k, out, None, None);
 }
 
@@ -398,7 +398,7 @@ fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
 fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
     if let Some(own) = crate::gunslots::side_hung(g, gd) {
         let c = g.gd[gd].ch;
-        let w = match own { crate::gunslots::SideHung::Carbine => crate::rig_props::HungBoxesWeapon::Carbine, crate::gunslots::SideHung::Sc20k => crate::rig_props::HungBoxesWeapon::Sc20k };
+        let w = own;
         let black = crate::cast::sneak_suit(g, c);
         crate::rig_props::hung_boxes(g, c, w, out, Some(crate::rig_props::rig()), Some(black));
     }
@@ -406,9 +406,7 @@ fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
 
 /// A man's row without the big slot's tool. `hang`: his own gun is out of his hands.
 fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, hang: bool) {
-    use crate::guards::RigOf;
-    use crate::handwork::{SwapHeld, SwapHeldHeld};
-    use crate::rig_props::{rig, RigOpts, RigOptsRifle, RigOptsWeapon};
+    use crate::rig_props::{rig, RigOpts};
     let c = g.gd[gd].ch;
     g.ch[c].in_hand = None;
     let team = g.team(gd);
@@ -418,7 +416,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     let hr = if has_ho { let mut h = rig().holster; h.out = h.out + ho; Some(h) } else { None };
     let holster_out = if has_ho { Some(ho) } else { None };
     let rk = crate::guards::rig_of(g, gd);
-    let carbine = rk == RigOf::Carbine;
+    let carbine = rk == crate::rig_props::RigWeapon::Carbine;
     if crate::condition::down(g, g.gd[gd].ch) {
         if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None); }
         let dropped = g.gd[gd].dropped;
@@ -428,7 +426,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
         };
         if on_floor && !crate::runner::runner_bare(g, gd) {
             let r = rig();
-            if rk == RigOf::Sc20k {
+            if rk == crate::rig_props::RigWeapon::Sc20k {
                 crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.pistol.slide, grip: r.pistol.grip, suppressor: Some(r.pistol.suppressor) }, None);
             } else {
                 crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
@@ -438,16 +436,16 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     }
     let fl = g.gd[gd].flashlight;
     let rule = crate::guards::in_hand(g, gd);
-    let rule_word = rule.map(|r| match r { crate::guards::InHand::Torch => SwapHeldHeld::Torch, crate::guards::InHand::Weapon => SwapHeldHeld::Weapon });
+    let rule_word = rule;
     let held = crate::handwork::swap_held(g, gd, rule_word);
-    let torch_held = held == Some(SwapHeld::Torch);
-    if rule.is_some() && !torch_held && rk == RigOf::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
+    let torch_held = held == Some(crate::guards::InHand::Torch);
+    if rule.is_some() && !torch_held && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
         crate::handwork::belt_torch(g, c, out);
     }
-    if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == RigOf::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
+    if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
         crate::handwork::belt_torch(g, c, out);
     }
-    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == RigOf::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
+    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == crate::rig_props::RigWeapon::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
     if held.is_none() {
         let r = rig();
         crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
@@ -455,17 +453,17 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     }
     let def = g.fa[g.gd[gd].weapon].def;
     if hang {
-        if rk == RigOf::Sc20k {
+        if rk == crate::rig_props::RigWeapon::Sc20k {
             let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
             let black = crate::cast::sneak_suit(g, c);
-            let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(RigOptsRifle::Slung), sling_front: Some(true), rifle_black: Some(black), ..Default::default() };
+            let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Slung), sling_front: Some(true), rifle_black: Some(black), ..Default::default() };
             crate::rig_props::rig_boxes(g, c, o, out, None);
         } else if crate::kit::kit_pistol(g, gd) && row(g, def).rig == crate::weapons::WeaponDefRig::Pistol {
             let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
             let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), ..Default::default() };
             crate::rig_props::rig_boxes(g, c, o, out, None);
         } else {
-            let o = RigOpts { goggles: false, nv: false, slot: 1.0, light_on: false, is_guard: true, weapon: Some(if carbine { RigOptsWeapon::Carbine } else { RigOptsWeapon::Pistol }), hang: Some(true), holster_out, ..Default::default() };
+            let o = RigOpts { goggles: false, nv: false, slot: 1.0, light_on: false, is_guard: true, weapon: Some(if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol }), hang: Some(true), holster_out, ..Default::default() };
             crate::rig_props::rig_boxes(g, c, o, out, None);
             if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
                 let nv = crate::nvg::nvg_down(g, gd);
@@ -474,12 +472,12 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
         }
         return;
     }
-    if rk == RigOf::Sc20k {
-        g.ch[c].in_hand = Some(crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Sc20k, None));
+    if rk == crate::rig_props::RigWeapon::Sc20k {
+        g.ch[c].in_hand = Some(crate::rig_props::long_hold(crate::rig_props::LongRig::Sc20k, None));
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
         let black = crate::cast::sneak_suit(g, c);
         let light = g.tab.light[fl].enabled;
-        let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(RigOptsRifle::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
+        let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
         crate::rig_props::rig_boxes(g, c, o, out, None);
         free_can(g, gd, out);
         return;
@@ -494,7 +492,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     }
     let ih = !carbine && !torch_held;
     let beam = g.gd[gd].beam_dir;
-    g.ch[c].in_hand = Some(if carbine { crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Carbine, None) }
+    g.ch[c].in_hand = Some(if carbine { crate::rig_props::long_hold(crate::rig_props::LongRig::Carbine, None) }
         else if torch_held { crate::rig_props::torch_hold(beam, None) }
         else { crate::inhand::in_pistol() });
     let light_on = g.tab.light[fl].enabled;
@@ -502,7 +500,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     let o = RigOpts {
         goggles: false, nv: false, slot: 1.0, light_on, is_guard: true,
         torch: Some(torch_held), beam_dir: Some(beam), lens_color: Some(lens),
-        weapon: Some(if carbine { RigOptsWeapon::Carbine } else { RigOptsWeapon::Pistol }),
+        weapon: Some(if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol }),
         in_hand: if ih { Some(true) } else { None },
         holster_out,
         ..Default::default()

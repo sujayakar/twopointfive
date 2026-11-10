@@ -272,22 +272,19 @@ pub fn prop_system_apply_impulse(g: &mut Game, id: PropId, point: V3, j: V3, who
     }
     if thud.unwrap_or(false) {
         let (by, speed) = (js::or(who, p.who), m::hyp2(j[0], j[2]) * p.inv_mass + 1.0);
-        prop_system_noise(g, id, PropSystemNoiseSound::Thud, speed, by, 0.55);
+        prop_system_noise(g, id, crate::props::PropEventSound::Thud, speed, by, 0.55);
     }
 }
 
 /// a noise, rate limited by the thing: a chair along a wall is one scrape and the odd knock
-fn prop_system_noise(g: &mut Game, id: PropId, sound: PropSystemNoiseSound, speed: f64, who: f64, level: f64) {
+fn prop_system_noise(g: &mut Game, id: PropId, sound: crate::props::PropEventSound, speed: f64, who: f64, level: f64) {
     let (time, p) = (g.props.time, &mut g.tab.props_prop[id]);
-    let gap = if sound == PropSystemNoiseSound::Thud { 0.35 } else { 0.8 };
+    let gap = if sound == crate::props::PropEventSound::Thud { 0.35 } else { 0.8 };
     if g.props.muted || time - p.noise_t < gap {
         return;
     }
     p.noise_t = time;
-    let sound = match sound {
-        PropSystemNoiseSound::Thud => PropEventSound::Thud,
-        PropSystemNoiseSound::Scrape => PropEventSound::Scrape,
-    };
+    let sound = sound;
     let e = PropEvent { prop: id, sound, pos: [p.x, m::min(0.6, p.height * 0.5), p.z], who, level: m::min(1.0, level), speed, rolling: p.rolling, roll: None };
     emit(g, e);
 }

@@ -78,7 +78,7 @@ pub enum CloseRmb {
 
 #[derive(Clone, Debug, Default)]
 pub struct CloseRowsRowOver {
-    pub kind: Option<crate::close::CloseRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -93,22 +93,6 @@ pub struct CloseRowsRowOver {
     pub close: Option<crate::close::CloseKind>,
     pub past: Option<bool>,
     pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum CloseRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

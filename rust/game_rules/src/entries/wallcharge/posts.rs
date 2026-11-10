@@ -49,7 +49,7 @@ pub(super) fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
                 let a = g.wall_charge.alone;
                 g.wall_charge.alone = a - 1.0;
                 if !(a > 0.0 && g.door_tools.charges < g.k.doortools.charges) { break; }
-                crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsRefundWhat::Charge);
+                crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsCan::Charge);
             }
         }
         wall_charge_reset(g);
@@ -169,7 +169,7 @@ pub fn wall_charge_take(g: &mut crate::game::Game) -> f64 {
     let p = wall_charge_price(g, &crate::seats::here(g));
     if g.door_tools.charges < p { return -1.0; }
     let mut i = 0.0;
-    while i < p { crate::doortools::door_tools_take(g, crate::doortools::DoorToolsTakeWhat::Charge); i += 1.0; }
+    while i < p { crate::doortools::door_tools_take(g, crate::doortools::DoorToolsCan::Charge); i += 1.0; }
     if g.wall_charge.roster.is_empty() { g.wall_charge.alone += p; }
     p
 }
@@ -182,7 +182,7 @@ pub(super) fn wall_charge_give_back(g: &mut crate::game::Game, c_2: WallChargeId
         if let Some(n) = g.wall_charge.carried { g.wall_charge.carried = Some(n + 1.0); }
     } else {
         let mut i = 0.0;
-        while i < paid { crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsRefundWhat::Charge); i += 1.0; }
+        while i < paid { crate::doortools::door_tools_refund(g, crate::doortools::DoorToolsCan::Charge); i += 1.0; }
         if g.wall_charge.roster.is_empty() { g.wall_charge.alone = m::max(0.0, g.wall_charge.alone - paid); }
     }
 }

@@ -241,7 +241,7 @@ fn arriving(g: &mut crate::game::Game) {
                 None => { let what = format!("spawn-failed:{}:no muster mark", i); note(g, &what); break; }   // (the TypeScript's spawnUnit throws on the missing mark: caught the same way)
             },
         };
-        let team = match side_of_team(g) { crate::qrf::SideOfTeam::Guard => crate::teams::Team::Guard, crate::qrf::SideOfTeam::Hostile => crate::teams::Team::Hostile };
+        let team = side_of_team(g);
         let budget = match budget_of(g) { crate::qrf::BudgetOf::Arm0(b) => Some(b.budget), crate::qrf::BudgetOf::Arm1(_) => None };
         let opts = crate::guards::UnitOpts {
             team, pos: at, yaw: Some(yaw), weapon: Some(crate::weapons::WeaponId::Aks74u), name: Some(format!("{}-{}", mk.tag, i + 1)), light: Some(true),

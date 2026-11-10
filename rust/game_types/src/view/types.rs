@@ -443,7 +443,7 @@ pub struct WornView {
     /// his character's id
     pub man: f64,
     pub goggles: bool,
-    pub big: Option<crate::bigkit::BigCarried>,
+    pub big: Option<crate::kit::BigTool>,
 }
 impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles: false, big: None } } }
 

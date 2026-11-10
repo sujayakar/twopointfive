@@ -286,7 +286,7 @@ fn rescue_clear_cast(g: &mut crate::game::Game) {
     let mut men = g.staged.team.clone();
     men.extend_from_slice(&g.staged.foes);
     for gd in men {
-        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Patrol)); }
+        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Patrol)); }
         crate::guards::despawn_unit(g, gd);
     }
     let hostages = g.staged.captives.clone();
@@ -486,11 +486,8 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
             None => match ["Marta", "Owen", "Ines"].get(i) { Some(n) => String::from(*n), None => format!("Hostage {}", i + 1) },
         };
         let kind = match cd {
-            Some(c) => match c.kind {
-                crate::scene_level::CivilianDefKind::Cleaner => crate::civilians::SpawnHostageDefKind::Cleaner,
-                crate::scene_level::CivilianDefKind::Worker => crate::civilians::SpawnHostageDefKind::Worker,
-            },
-            None => if i == 0 { crate::civilians::SpawnHostageDefKind::Cleaner } else { crate::civilians::SpawnHostageDefKind::Worker },
+            Some(c) => c.kind,
+            None => if i == 0 { crate::scene_level::CivilianDefKind::Cleaner } else { crate::scene_level::CivilianDefKind::Worker },
         };
         let tint = match cd {
             Some(c) => c.tint,

@@ -272,12 +272,6 @@ pub struct WorkPose {
     pub hand: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum CarryKind2 {
-    Torch,
-    Weapon,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HaulPose {
     pub l: V3,
@@ -467,7 +461,7 @@ pub struct Anim {
     pub held_pose: Option<crate::character::HeldPose>,
     pub door_push: Option<crate::character::DoorPush>,
     pub work: Option<crate::character::WorkPose>,
-    pub carry: Option<Option<crate::character::CarryKind2>>,
+    pub carry: Option<Option<crate::guards::InHand>>,
     pub swap_lag: f64,
     pub haul: Option<crate::character::HaulPose>,
     pub long_gun: bool,
@@ -737,12 +731,6 @@ pub struct AnimFootSpot {
     pub yaw: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum AnimCarry {
-    Torch,
-    Weapon,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimLongGrip {
     pub wrist: V3,
@@ -752,7 +740,7 @@ pub struct AnimLongGrip {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AnimBigTool {
-    pub kind: crate::character::AnimBigToolKind,
+    pub kind: crate::kit::BigTool,
     pub t: f64,
     pub equip: f64,
     pub windup: f64,
@@ -761,12 +749,6 @@ pub struct AnimBigTool {
     pub end: f64,
     pub at: V3,
     pub snug: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum AnimBigToolKind {
-    #[default] Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -999,9 +981,9 @@ pub struct AnimWk {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimSw {
-    pub cur: Option<Option<crate::character::AnimCarry>>,
-    pub from: Option<crate::character::AnimCarry>,
-    pub to: Option<crate::character::AnimCarry>,
+    pub cur: Option<Option<crate::guards::InHand>>,
+    pub from: Option<crate::guards::InHand>,
+    pub to: Option<crate::guards::InHand>,
     pub t: f64,
     pub dur: f64,
     pub shown: bool,
@@ -1190,12 +1172,6 @@ pub struct AnimKickFrom {
     pub r_r: Quat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum AnimKickLeg {
-    Left,
-    Right,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AnimHn {
     pub nodes: Vec<Vec<i32>>,
@@ -1239,7 +1215,7 @@ pub struct AnimHdIdle {
     pub upper: crate::character::UpperMode,
     pub long: bool,
     pub crouch: f64,
-    pub carry: Option<Option<crate::character::AnimCarry>>,
+    pub carry: Option<Option<crate::guards::InHand>>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -2363,12 +2339,6 @@ pub struct ThrowTables {
     pub k3: Vec<Vec<(f64, Vec<f64>)>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigReboundKind {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BigOffB {
     pub t: f64,
@@ -2405,13 +2375,7 @@ pub struct AnimFeedClock {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimKickDoorOpts {
-    pub leg: Option<crate::character::AnimKickDoorOptsLeg>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimKickDoorOptsLeg {
-    Left,
-    Right,
+    pub leg: Option<crate::character::AnimKickLeg>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -2662,3 +2626,9 @@ pub fn rag_bones() -> Vec<crate::character::Bone> { alloc::vec![crate::character
 
 /// how a long gun is kept steady on the move
 pub static LONG_STEADY: crate::character::LongSteady = crate::character::LongSteady { tau: 0.5, run_yaw: 0.85 };
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum AnimKickLeg {
+    Left,
+    Right,
+}

@@ -342,7 +342,7 @@ fn nc_beat(g: &mut Game) -> f64 {
 fn nc_idle(g: &mut Game, after: f64) {
     let t = g.time;
     let n = net_mut(g);
-    n.stage = NetCheckStage::Idle; n.about = None; n.caller = None; n.next_at = t + after;
+    n.stage = crate::enemysquads::CheckStage::Idle; n.about = None; n.caller = None; n.next_at = t + after;
 }
 /// `st.squads.filter(answers).length`
 fn answering(g: &Game) -> usize {
@@ -402,7 +402,7 @@ fn sq_of(g: &Game, m: GuardId) -> EnemysquadsSquadId { *the_state(g).of.get(m).u
 fn ask_for(g: &mut Game, x: EnemysquadsSquadId, by: GuardId) {
     let t = g.time;
     let n = net_mut(g);
-    n.stage = NetCheckStage::Asked; n.about = Some(x); n.caller = Some(by); n.t0 = t;
+    n.stage = crate::enemysquads::CheckStage::Asked; n.about = Some(x); n.caller = Some(by); n.t0 = t;
     let q = sq_of(g, by);
     let (qn, xn) = (name_of(g, q), name_of(g, x));
     on_net(g, by, &format!("{}: {}? … {}, sound off", qn, xn, xn), Some(2.0), None);
@@ -416,7 +416,7 @@ fn net_check(g: &mut crate::game::Game) {
         let mut die = check_dice(g, first, Some(0x1b873593u32 as f64));
         let next_at = g.time + (0.5 + 0.5 * crate::math_dice::roll(&mut die)) * g.k.squads.net_every;
         let tick_t = g.time;
-        g.m.enemysquads.states.as_mut().unwrap().nc = Some(NetCheck { next_at, stage: NetCheckStage::Idle, t0: 0.0, caller: None, about: None, done: JsSet::new(), tried: JsMap::new(), queried: JsMap::new(), say: Vec::new(), die, tick_t });
+        g.m.enemysquads.states.as_mut().unwrap().nc = Some(NetCheck { next_at, stage: crate::enemysquads::CheckStage::Idle, t0: 0.0, caller: None, about: None, done: JsSet::new(), tried: JsMap::new(), queried: JsMap::new(), say: Vec::new(), die, tick_t });
     }
     if g.time - net_of(g).tick_t > 1.0 { let b = nc_beat(g); nc_idle(g, b); }
     let t = g.time;
@@ -433,20 +433,20 @@ fn net_check(g: &mut crate::game::Game) {
     let in_fight = squads.iter().any(|&q| { let s = g.tab.enemysquads_squad[q].state; s == SquadState::Contact || s == SquadState::Alerted });
     if in_fight || g.time - last_call < settle_secs {
         let (stage, about) = { let n = net_of(g); (n.stage, n.about) };
-        if let (NetCheckStage::Asked, Some(a)) = (stage, about) { nc_failed(g, a); }
+        if let (crate::enemysquads::CheckStage::Asked, Some(a)) = (stage, about) { nc_failed(g, a); }
         for &x in squads.iter() {
             if g.tab.enemysquads_squad[x].trouble.is_some() && answers(g, x) { g.tab.enemysquads_squad[x].trouble = None; }
         }
         let t = g.time;
         let n = net_mut(g);
-        n.stage = NetCheckStage::Idle; n.about = None; n.caller = None; n.next_at = m::max(n.next_at, t + 5.0);
+        n.stage = crate::enemysquads::CheckStage::Idle; n.about = None; n.caller = None; n.next_at = m::max(n.next_at, t + 5.0);
         return;
     }
     if squads.iter().any(|&q| g.tab.enemysquads_squad[q].calls.as_ref().map_or(false, |l| !l.is_empty())) { return; }
     match net_of(g).stage {
-        NetCheckStage::Idle => nc_stage_idle(g, &squads),
-        NetCheckStage::Called => nc_stage_called(g, &squads),
-        NetCheckStage::Asked => nc_stage_asked(g),
+        crate::enemysquads::CheckStage::Idle => nc_stage_idle(g, &squads),
+        crate::enemysquads::CheckStage::Called => nc_stage_called(g, &squads),
+        crate::enemysquads::CheckStage::Asked => nc_stage_asked(g),
     }
 }
 
@@ -522,7 +522,7 @@ fn nc_stage_idle(g: &mut Game, squads: &[EnemysquadsSquadId]) {
     };
     let t = g.time;
     let n = net_mut(g);
-    n.stage = NetCheckStage::Called; n.t0 = t; n.caller = Some(lead);
+    n.stage = crate::enemysquads::CheckStage::Called; n.t0 = t; n.caller = Some(lead);
     let q = sq_of(g, lead);
     let text = format!("{}: all squads — radio check", name_of(g, q));
     on_net(g, lead, &text, Some(6.0), Some(false));

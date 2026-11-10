@@ -17,18 +17,6 @@ pub struct SPOTSValue {
     pub shoulder: Vec<[f64; 2]>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SamBig {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SamBigSpotTool {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SamBigSpot {
     pub pos: V3,
@@ -37,39 +25,9 @@ pub struct SamBigSpot {
     pub via: Option<V3>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum BigSpotsTool {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SamBigFar {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigEquipKind {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigOutByKind {
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BigCarriedC {
     pub id: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum BigCarried {
-    Shotgun,
-    Hammer,
 }
 
 /// the counters this module keeps for the checks

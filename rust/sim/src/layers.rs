@@ -6,7 +6,7 @@
 //! the bench (`ran_list`), whose rotations and origins the caller reads back.
 use game_types::character::{KICK_IMPACT, KICK_PLANT, LONG_ANCHOR_SIDE_MAX, LONG_PULL_MAX, READY_RATE, READY_REACH, THROW_DUR, THROW_RELEASE, TOE_FLOOR_Y, TOSS_AFTER, TOSS_LOW, TOSS_TOP, WALL_GAIT_REST, WALL_ROOT_OFF, BIGMOVE, BLOW, BOB, CREEP, FEET, GAZE, GAZE_EL, HAND, KNIFE_BLOW, LEAN_POSE, LIFE, LONG_PIVOT, LONG_STEADY, MV2, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, REACH, READY_AZ, READY_BARE, READY_UP, RUN_LINGER, SMOKEARM, SNEAK, SOFT_KNEE, SPRINT_WARP, STEALTH, SWIV_REF_L, SWIV_REF_R, TAKEN, TOSS_HANG, WALL_POSE, WORK};
 use game_types::rig_props::{Adj as RigAdj, SlingFrontHand, BIGRIG, RIG};
-use game_types::character::{Anim, AnimBigTool, AnimBigToolKind, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
+use game_types::character::{Anim, AnimBigTool, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
 use game_types::gunreload::{FeedKey, FeedKeyAt, FeedKeyHow, FeedMarks};
 use game_types::knobs::Knobs;
 use crate::roles::*;
@@ -6318,7 +6318,7 @@ const KNIFE_KEYS: usize = 4;
 /// head back onto the point, then both arms by IK on a copy, whole from the upper arm down.
 pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows: &[f64], at0: [f64; 3], lg: &AnimLongGrip, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
     let (at, at_b, _) = poses(an);
-    let (ham, t, equip, stow, end, snug, windup) = (b.kind == AnimBigToolKind::Hammer, b.t, b.equip, b.stow, b.end, b.snug.unwrap_or(false), b.windup);
+    let (ham, t, equip, stow, end, snug, windup) = (b.kind == game_types::kit::BigTool::Hammer, b.t, b.equip, b.stow, b.end, b.snug.unwrap_or(false), b.windup);
     // (the shotgun is drawn as the carbine it is: its support grip, its group's offset and its stock's rear end)
     let (lg_wrist, lg_fing, lg_back, adj, stock_l0) = (lg.wrist, lg.fingers, lg.back, RIG.carbine.adj.map_or([0.0; 3], |a| a.off), RIG.carbine.stock_top.l0);
     let (speed, clear, fix_l, fix_r, gaze_local) = (an.speed, an.big_clear, an.hand_fix[0], an.hand_fix[1], an.gaze_local);
