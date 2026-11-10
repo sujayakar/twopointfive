@@ -17,7 +17,7 @@ fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().get(String
 
 // ---- the layers of rust/sim (args: their numbers already on the bench)
 
-// ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers.rs gives)
+// ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers gives)
 
 // ---- the crouch's lay
 

@@ -17,9 +17,9 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
     let min = min.unwrap_or(0.0);
     if !(n >= min && n <= max) {
         if min > 0.0 {
-            panic!("posing: {} has {} entries and a layer of the Rust module takes {} to {} (rust/sim/src/layers.rs and knobs.rs hold the lengths)", what, n, min, max);
+            panic!("posing: {} has {} entries and a layer of the Rust module takes {} to {} (rust/sim/src/layers and knobs.rs hold the lengths)", what, n, min, max);
         }
-        panic!("posing: {} has {} entries and a layer of the Rust module takes at most {} (rust/sim/src/layers.rs and knobs.rs hold the lengths)", what, n, max);
+        panic!("posing: {} has {} entries and a layer of the Rust module takes at most {} (rust/sim/src/layers and knobs.rs hold the lengths)", what, n, max);
     }
 }
 
