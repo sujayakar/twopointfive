@@ -106,116 +106,142 @@ fn silent_net(g: &mut crate::game::Game) -> bool {
     request_qrf(g, crate::qrf::QrfReason::Silent)
 }
 
-/// Once a frame from game.ts, after the guards and the alarm.
+/// Once a frame, after the guards and the alarm.
 pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
-    use crate::director::EventKind;
-    use crate::qrf::{QrfReason, QrfState};
+    use crate::qrf::QrfState;
     let rd = raid(g);
-    if rd && raid_over(g) && (g.qrf.state == QrfState::Requested || g.qrf.state == QrfState::Inbound) {
-        note(g, "called-off:the run is over");
-        let log = core::mem::take(&mut g.qrf.log);
-        g.qrf = crate::qrf::Qrf::blank();
-        g.qrf.log = log;
-        return;
-    }
-    // the trigger's memory: gunfire-level reports, each once
-    let mut i = 0;
-    while i < g.events.len() {
+    if rd && raid_over(g) && on_the_road(g) { return call_off(g); }
+    hear_gunfire(g, rd);
+    while !g.qrf.shots_since.is_empty() && g.time - g.qrf.shots_since[0] > GUNFIGHT_WINDOW { g.qrf.shots_since.remove(0); }
+    if g.ai_enabled && has_response(g) { read_net(g); }
+    if g.qrf.state == QrfState::Idle { return before_the_call(g, rd); }
+    // the telegraph (runs on under anything; nothing new is SAID under its flag)
+    let mk = marks_of(g);
+    if g.qrf.state == QrfState::Requested && g.time - g.qrf.requested_at >= ANSWER_SECS { rolling_call(g, mk.as_ref()); }
+    if on_the_road(g) && !g.qrf.said30 && g.qrf.arrive_at - g.time <= CALL30 { thirty_out_call(g, mk.as_ref()); }
+    if on_the_road(g) && g.qrf.arrive_at - g.time <= CALL10 { arriving(g); }
+    if g.qrf.state == QrfState::Arriving && g.time >= g.qrf.arrive_at { deploy(g); }
+    if g.qrf.state == QrfState::Deployed && !g.qrf.everyone_said && g.time - g.qrf.deployed_at > 4.5 { everyone_call(g, mk.as_ref()); }
+    if g.qrf.state == QrfState::Arriving || g.qrf.state == QrfState::Deployed { tick_men(g, dt); }
+}
+
+/// Asked for and not here yet: nobody stands at the muster so far.
+fn on_the_road(g: &crate::game::Game) -> bool {
+    g.qrf.state == crate::qrf::QrfState::Requested || g.qrf.state == crate::qrf::QrfState::Inbound
+}
+
+/// The run is over with the team still to come: it is all forgotten but the log.
+fn call_off(g: &mut crate::game::Game) {
+    note(g, "called-off:the run is over");
+    let log = core::mem::take(&mut g.qrf.log);
+    g.qrf = crate::qrf::Qrf::blank();
+    g.qrf.log = log;
+}
+
+/// The trigger's memory: gunfire-level reports, each once.
+fn hear_gunfire(g: &mut crate::game::Game, rd: bool) {
+    use crate::director::EventKind;
+    for i in 0..g.events.len() {
         let e = g.events[i];
-        i += 1;
         if e.level.unwrap_or(0.0) < 1.0 || (e.kind != EventKind::Shot && e.kind != EventKind::GuardShot) { continue; }
         if g.qrf.heard_events.has(e.serial) { continue; }
         g.qrf.heard_events.add(e.serial);
         if e.kind == EventKind::Shot && !rd {
-            for j in 0..g.guards.len() {
-                let x = g.guards[j];
-                if g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && v3::dist(e.pos, pos_of(g, x)) <= 80.0 {
-                    g.qrf.loud_t = g.time;
-                    break;
-                }
-            }
+            if shift_in_earshot(g, e.pos) { g.qrf.loud_t = g.time; }
         } else if rd {
-            for x in callers(g) {
-                if v3::dist(e.pos, pos_of(g, x)) <= 80.0 {
-                    g.qrf.loud_t = g.time;
-                    if !g.qrf.heard_at.has(x) { let t = g.time; g.qrf.heard_at.set(x, t); }
-                    if g.qrf.raid_t < -1e8 {
-                        g.qrf.raid_t = g.time;
-                        let what = format!("raid-heard:{}", g.gd[x].callsign);
-                        note(g, &what);
-                    }
-                }
-            }
+            callers_hear(g, e.pos);
         }
-        if g.qrf.state == QrfState::Deployed && g.time - g.qrf.deployed_at > SETTLE_IN_SECS { let t = g.time; g.qrf.shots_since.push(t); }
+        if g.qrf.state == crate::qrf::QrfState::Deployed && g.time - g.qrf.deployed_at > SETTLE_IN_SECS { let t = g.time; g.qrf.shots_since.push(t); }
     }
-    while !g.qrf.shots_since.is_empty() && g.time - g.qrf.shots_since[0] > GUNFIGHT_WINDOW { g.qrf.shots_since.remove(0); }
-    if g.ai_enabled && has_response(g) { read_net(g); }
-    if g.qrf.state == QrfState::Idle {
-        if !g.tune.qrf || !live(g) || !g.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
-        if !g.tune.qrf || !live(g) { return; }
-        if rd {
-            if !raid_over(g) && g.time - g.qrf.loud_t < LOUD_MEMORY_SECS && raid_voice(g).is_some() && !request_qrf(g, QrfReason::Gunfire) {
-                g.qrf.raid_t = -1e9;
-                g.qrf.heard_at.clear();
-            }
-            return;
+}
+
+/// A man of the shift, up and in nobody's arm, stands within hearing of that shot.
+fn shift_in_earshot(g: &crate::game::Game, at: V3) -> bool {
+    g.guards.iter().any(|&x| g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && v3::dist(at, pos_of(g, x)) <= 80.0)
+}
+
+/// On a raid each man able to call who hears a round marks when he did, and the first of them starts the raid's clock.
+fn callers_hear(g: &mut crate::game::Game, at: V3) {
+    for x in callers(g) {
+        if !(v3::dist(at, pos_of(g, x)) <= 80.0) { continue; }
+        g.qrf.loud_t = g.time;
+        if !g.qrf.heard_at.has(x) { let t = g.time; g.qrf.heard_at.set(x, t); }
+        if g.qrf.raid_t < -1e8 {
+            g.qrf.raid_t = g.time;
+            let what = format!("raid-heard:{}", g.gd[x].callsign);
+            note(g, &what);
         }
-        if g.tune.qrf_silent && silent_net(g) { return; }
-        if crate::guards::escalation_of(g) < 2.0 { return; }
-        if g.time - g.qrf.loud_t < LOUD_MEMORY_SECS { request_qrf(g, QrfReason::Gunfire); }
-        else if bodies_found(g) >= 2.0 { request_qrf(g, QrfReason::Bodies); }
+    }
+}
+
+/// Nobody has been asked for yet: a raid's callers, the silent net, then gunfire or bodies under an alarm ask for the team.
+fn before_the_call(g: &mut crate::game::Game, rd: bool) {
+    use crate::qrf::QrfReason;
+    if !g.tune.qrf || !live(g) || !g.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
+    if !g.tune.qrf || !live(g) { return; }
+    if rd {
+        if !raid_over(g) && g.time - g.qrf.loud_t < LOUD_MEMORY_SECS && raid_voice(g).is_some() && !request_qrf(g, QrfReason::Gunfire) {
+            g.qrf.raid_t = -1e9;
+            g.qrf.heard_at.clear();
+        }
         return;
     }
-    // the telegraph (runs on under anything; nothing new is SAID under its flag)
-    let mk = marks_of(g);
-    let own = mk.is_some();
-    if g.qrf.state == QrfState::Requested && g.time - g.qrf.requested_at >= ANSWER_SECS {
-        g.qrf.state = QrfState::Inbound;
-        let n = m::min(4.0, if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) });
-        let secs = m::round(g.qrf.arrive_at - g.time);
-        let (n, secs) = (js::num_str(n), js::num_str(secs));
-        let silent = g.qrf.reason == Some(QrfReason::Silent);
-        if !own {
-            let text = if silent { format!("all stations — QRF is rolling to two-six: {} men, west stairwell, {} seconds", n, secs) }
-                else { format!("copy two-six. QRF is rolling — {} men, west stairwell, {} seconds. lock down and hold what you've got", n, secs) };
-            control(g, &text);
-        } else {
-            let mk = mk.as_ref().unwrap();
+    if g.tune.qrf_silent && silent_net(g) { return; }
+    if crate::guards::escalation_of(g) < 2.0 { return; }
+    if g.time - g.qrf.loud_t < LOUD_MEMORY_SECS { request_qrf(g, QrfReason::Gunfire); }
+    else if bodies_found(g) >= 2.0 { request_qrf(g, QrfReason::Bodies); }
+}
+
+/// How many are wanted: what was dealt, or the sandbox's own number.
+fn team_size(g: &crate::game::Game) -> f64 {
+    if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) }
+}
+
+/// The call was asked for long enough ago: the team is rolling, and control says how many, by where and how long.
+fn rolling_call(g: &mut crate::game::Game, mk: Option<&crate::qrf::Marks>) {
+    use crate::qrf::{QrfReason, QrfState};
+    g.qrf.state = QrfState::Inbound;
+    let n = m::min(4.0, team_size(g));
+    let secs = m::round(g.qrf.arrive_at - g.time);
+    let (n, secs) = (js::num_str(n), js::num_str(secs));
+    let silent = g.qrf.reason == Some(QrfReason::Silent);
+    let text = match mk {
+        None => if silent { format!("all stations — QRF is rolling to two-six: {} men, west stairwell, {} seconds", n, secs) }
+            else { format!("copy two-six. QRF is rolling — {} men, west stairwell, {} seconds. lock down and hold what you've got", n, secs) },
+        Some(mk) => {
             let said = format!(" {}.", brief(g));
-            let text = if silent { format!("all stations — {} is rolling to {}: {} men, by {}, {} seconds.{}", mk.team, mk.site, n, mk.name, secs, said) }
-                else { format!("copy {}. {} is rolling — {} men, by {}, {} seconds.{} lock down and hold what you've got", mk.site, mk.team, n, mk.name, secs, said) };
-            control(g, &text);
+            if silent { format!("all stations — {} is rolling to {}: {} men, by {}, {} seconds.{}", mk.team, mk.site, n, mk.name, secs, said) }
+            else { format!("copy {}. {} is rolling — {} men, by {}, {} seconds.{} lock down and hold what you've got", mk.site, mk.team, n, mk.name, secs, said) }
         }
-        note(g, "control");
-    }
-    if (g.qrf.state == QrfState::Inbound || g.qrf.state == QrfState::Requested) && !g.qrf.said30 && g.qrf.arrive_at - g.time <= CALL30 {
-        g.qrf.said30 = true;
-        if g.qrf.arrive_at - g.qrf.requested_at > CALL30 + 5.0 {
-            let silent = g.qrf.reason == Some(QrfReason::Silent);
-            let text = match mk.as_ref() {
-                None => if silent { String::from("all stations — QRF is thirty seconds out from two-six, coming up the west stairs") }
-                    else { String::from("two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side") },
-                Some(mk) => if silent { format!("all stations — {} is thirty seconds out from {}, {}", mk.team, mk.site, mk.coming) }
-                    else { format!("{}, {} is thirty seconds out — {}. check your fire on that side", mk.site, mk.team, mk.coming) },
-            };
-            control(g, &text);
-            note(g, "thirty");
-        }
-    }
-    if (g.qrf.state == QrfState::Inbound || g.qrf.state == QrfState::Requested) && g.qrf.arrive_at - g.time <= CALL10 { arriving(g); }
-    if g.qrf.state == QrfState::Arriving && g.time >= g.qrf.arrive_at { deploy(g); }
-    if g.qrf.state == QrfState::Deployed && !g.qrf.everyone_said && g.time - g.qrf.deployed_at > 4.5 {
-        g.qrf.everyone_said = true;
-        if !g.qrf.men.is_empty() {
-            let text = match mk.as_ref() {
-                None => String::from("all stations — that's the response team on your floor, and that's everyone we've got tonight. make it count"),
-                Some(mk) => format!("all stations — that's {} with you now, and that's everyone we've got tonight. make it count", mk.team),
-            };
-            control(g, &text);
-        }
-    }
-    if g.qrf.state == QrfState::Arriving || g.qrf.state == QrfState::Deployed { tick_men(g, dt); }
+    };
+    control(g, &text);
+    note(g, "control");
+}
+
+/// Thirty seconds out, said once, and only for a team that took longer than that to come.
+fn thirty_out_call(g: &mut crate::game::Game, mk: Option<&crate::qrf::Marks>) {
+    g.qrf.said30 = true;
+    if !(g.qrf.arrive_at - g.qrf.requested_at > CALL30 + 5.0) { return; }
+    let silent = g.qrf.reason == Some(crate::qrf::QrfReason::Silent);
+    let text = match mk {
+        None => if silent { String::from("all stations — QRF is thirty seconds out from two-six, coming up the west stairs") }
+            else { String::from("two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side") },
+        Some(mk) => if silent { format!("all stations — {} is thirty seconds out from {}, {}", mk.team, mk.site, mk.coming) }
+            else { format!("{}, {} is thirty seconds out — {}. check your fire on that side", mk.site, mk.team, mk.coming) },
+    };
+    control(g, &text);
+    note(g, "thirty");
+}
+
+/// The team is in, and control says that's all there is, if anybody came.
+fn everyone_call(g: &mut crate::game::Game, mk: Option<&crate::qrf::Marks>) {
+    g.qrf.everyone_said = true;
+    if g.qrf.men.is_empty() { return; }
+    let text = match mk {
+        None => String::from("all stations — that's the response team on your floor, and that's everyone we've got tonight. make it count"),
+        Some(mk) => format!("all stations — that's {} with you now, and that's everyone we've got tonight. make it count", mk.team),
+    };
+    control(g, &text);
 }
 
 /// T−10: the men exist from here, stood at the muster, the lead's word on the net.
@@ -224,7 +250,7 @@ fn arriving(g: &mut crate::game::Game) {
     g.qrf.state = QrfState::Arriving;
     re_deal(g);
     let mk = marks_of(g).unwrap();
-    let want = if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) };
+    let want = team_size(g);
     let room = room_for(g);
     let n = m::min(want, room);
     let door = marks_door(g, &mk);
@@ -347,77 +373,19 @@ fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
 // ---------------------------------------------------------------- the men, every frame
 /// The element's frame: housekeeping, the door pulled to, the tier outside, the phase, then the scripted men's senses.
 fn tick_men(g: &mut crate::game::Game, dt: f64) {
-    use crate::game::GuardState;
-    use crate::qrf::Phase;
+    use crate::qrf::{Phase, QrfState};
     g.qrf.phase_t += dt;
-    // men taken out of the world from under us: forget them
-    { let guards = &g.guards; g.qrf.men.retain(|x| guards.contains(x)); if let Some(p) = g.qrf.perim.as_mut() { p.men.retain(|r| guards.contains(&r.gd)); } }
+    forget_the_removed(g);
     man_down(g);
-    let mut el: Vec<GuardId> = alive(g);
-    el.retain(|x| !g.qrf.perim.as_ref().map_or(false, |p| p.men.iter().any(|r| r.gd == *x)));
-    // trained: short beats; nobody of theirs talks himself calm
-    let mut all = alive(g);
-    if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if !crate::condition::down(g, g.gd[r.gd].ch) { all.push(r.gd); } } }
-    for x in all {
-        let cap = g.k.trained.react_cap;
-        if !crate::condition::is_blind(g, g.gd[x].ch) && !crate::condition::is_folded(g, g.gd[x].ch) && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
-        if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
-            crate::mind::set_state(g, x, GuardState::Search, "qrf");
-            crate::mind::raise(g, x, HUNT_AWARENESS, "qrf");
-            g.gd[x].search_t = 0.0;
-        }
-        g.gd[x].body_duty = None;
-        g.gd[x].task = None;
-    }
-    // DOORSTAY: the last man through pulls the stair door to, once they are all on the floor and clear of it
-    if g.qrf.state == crate::qrf::QrfState::Deployed && !g.qrf.door_pulled && g.time - g.qrf.deployed_at > 1.5 {
-        let mk = marks_of(g);
-        let d = match mk.as_ref() { Some(k) => marks_door(g, k), None => None };
-        let up = alive(g);
-        let shut = match d {
-            None => true,
-            Some(d) => g.dr[d].leaf.off || g.dr[d].leaf.latched || g.dr[d].def.closer == Some(false) || up.is_empty(),
-        };
-        if shut { g.qrf.door_pulled = true; }
-        else {
-            let d = d.unwrap();
-            let land = crate::doors::doors_pull_face(g, d, mk.as_ref().unwrap().muster[0]);
-            let (mut last, mut ld, mut through) = (None, f64::INFINITY, true);
-            let frame = g.dr[d].frame_centre;
-            for &x in &up {
-                let p = pos_of(g, x);
-                let dd = flat(p, frame);
-                if crate::doors::doors_pull_face(g, d, p) == land || dd < 1.5 { through = false; }
-                if dd < ld { ld = dd; last = Some(x); }
-            }
-            if let (true, Some(l)) = (through, last) {
-                g.qrf.door_pulled = true;
-                if ld < 6.0 {
-                    let who = char_id(g, l);
-                    crate::doors::doors_pull_to(g, d, who);
-                    note(g, "door-to");
-                }
-            }
-        }
-    }
-    if g.qrf.perim.is_some() { tick_perimeter(g, dt); } else if g.qrf.state == crate::qrf::QrfState::Deployed { maybe_perimeter(g); }
+    let mut el = on_the_element(g);
+    stay_on_the_hunt(g);
+    if g.qrf.state == QrfState::Deployed && !g.qrf.door_pulled && g.time - g.qrf.deployed_at > 1.5 { pull_the_door_to(g); }
+    if g.qrf.perim.is_some() { tick_perimeter(g, dt); } else if g.qrf.state == QrfState::Deployed { maybe_perimeter(g); }
     if el.is_empty() {
         if g.qrf.phase != Phase::Fight { drop_drill(g); g.qrf.phase = Phase::Fight; note(g, "wiped"); }
         return;
     }
-    if g.qrf.state == crate::qrf::QrfState::Arriving {   // at the muster: ears open, nothing else
-        let mut seer = None;
-        for &x in &el { if perceive_scripted(g, x, dt) && seer.is_none() { seer = Some(x); } }
-        if let Some(seer) = seer {
-            let no_door = marks_of(g).map_or(true, |k| word(&k.door).is_none());
-            if no_door {
-                note(g, "seen-at-the-muster");
-                deploy(g);
-                to_fight(g, &el, seer);
-            }
-        }
-        return;
-    }
+    if g.qrf.state == QrfState::Arriving { return ears_at_the_muster(g, &el, dt); }
     match g.qrf.phase {
         Phase::File => phase_file(g, &el),
         Phase::Fan => if g.qrf.phase_t > ENTRY_HOLD { pick_target(g, &mut el, true); },
@@ -433,25 +401,101 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
         Phase::Regroup => if g.qrf.phase_t > 1.5 || el.iter().all(|&x| arrived(g, x)) { pick_target(g, &mut el, true); },
         Phase::Landing => {}
     }
-    // the scripted men's senses: eyes on him and all go to the fight, unless still filing with him not close
+    scripted_senses(g, &el, dt);
+}
+
+/// Men taken out of the world from under us are forgotten.
+fn forget_the_removed(g: &mut crate::game::Game) {
+    let guards = &g.guards;
+    g.qrf.men.retain(|x| guards.contains(x));
+    if let Some(p) = g.qrf.perim.as_mut() { p.men.retain(|r| guards.contains(&r.gd)); }
+}
+
+/// The living men who move as the element: not the ones posted outside.
+fn on_the_element(g: &crate::game::Game) -> Vec<GuardId> {
+    let mut el = alive(g);
+    el.retain(|x| !g.qrf.perim.as_ref().map_or(false, |p| p.men.iter().any(|r| r.gd == *x)));
+    el
+}
+
+/// Trained: short beats; nobody of theirs talks himself calm, or takes up a body or a chore.
+fn stay_on_the_hunt(g: &mut crate::game::Game) {
+    use crate::game::GuardState;
+    let mut all = alive(g);
+    if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if !crate::condition::down(g, g.gd[r.gd].ch) { all.push(r.gd); } } }
+    for x in all {
+        let cap = g.k.trained.react_cap;
+        if !crate::condition::is_blind(g, g.gd[x].ch) && !crate::condition::is_folded(g, g.gd[x].ch) && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
+        if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
+            crate::mind::set_state(g, x, GuardState::Search, "qrf");
+            crate::mind::raise(g, x, HUNT_AWARENESS, "qrf");
+            g.gd[x].search_t = 0.0;
+        }
+        g.gd[x].body_duty = None;
+        g.gd[x].task = None;
+    }
+}
+
+/// DOORSTAY: the last man through pulls the stair door to, once they are all on the floor and clear of it.
+fn pull_the_door_to(g: &mut crate::game::Game) {
+    let mk = marks_of(g);
+    let d = mk.as_ref().and_then(|k| marks_door(g, k));
+    let up = alive(g);
+    let open = d.filter(|&d| !(g.dr[d].leaf.off || g.dr[d].leaf.latched || g.dr[d].def.closer == Some(false) || up.is_empty()));
+    let Some(d) = open else { g.qrf.door_pulled = true; return };
+    let land = crate::doors::doors_pull_face(g, d, mk.as_ref().unwrap().muster[0]);
+    let Some((last, ld)) = last_man_through(g, d, land, &up) else { return };
+    g.qrf.door_pulled = true;
+    if ld < 6.0 {
+        let who = char_id(g, last);
+        crate::doors::doors_pull_to(g, d, who);
+        note(g, "door-to");
+    }
+}
+
+/// The man nearest the door and how far off he is, if all of them are past it and clear of its frame.
+fn last_man_through(g: &crate::game::Game, d: DoorId, land: bool, up: &[GuardId]) -> Option<(GuardId, f64)> {
+    let (mut last, mut ld, mut through) = (None, f64::INFINITY, true);
+    let frame = g.dr[d].frame_centre;
+    for &x in up {
+        let p = pos_of(g, x);
+        let dd = flat(p, frame);
+        if crate::doors::doors_pull_face(g, d, p) == land || dd < 1.5 { through = false; }
+        if dd < ld { ld = dd; last = Some(x); }
+    }
+    if through { last.map(|l| (l, ld)) } else { None }
+}
+
+/// At the muster: ears open, nothing else. A man who sees him there takes them all to the fight, where no door stands in the way.
+fn ears_at_the_muster(g: &mut crate::game::Game, el: &[GuardId], dt: f64) {
+    let mut seer = None;
+    for &x in el { if perceive_scripted(g, x, dt) && seer.is_none() { seer = Some(x); } }
+    let Some(seer) = seer else { return };
+    let no_door = marks_of(g).map_or(true, |k| word(&k.door).is_none());
+    if no_door {
+        note(g, "seen-at-the-muster");
+        deploy(g);
+        to_fight(g, el, seer);
+    }
+}
+
+/// The scripted men's senses: eyes on him and all go to the fight, unless still filing with him not close.
+fn scripted_senses(g: &mut crate::game::Game, el: &[GuardId], dt: f64) {
     let mut contact = None;
-    for &x in &el {
+    for &x in el {
         if g.gd[x].script.is_none() { continue; }
         if perceive_scripted(g, x, dt) && contact.is_none() { contact = Some(x); }
     }
-    if let Some(c) = contact {
-        let near = g.qrf.phase != Phase::File || {
-            let foe = match g.gd[c].foe { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
-            flat(pos_of(g, c), foe) < 8.0
-        };
-        if near { to_fight(g, &el, c); }
-        else {
-            g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(near_man_pos(g, c))));
-            g.qrf.fix_t = g.time;
-            g.qrf.cue_rush = true;
-            crate::mind::cap(g, c, 0.84, "qrf");
-        }
-    }
+    let Some(c) = contact else { return };
+    let near = g.qrf.phase != crate::qrf::Phase::File || {
+        let foe = match g.gd[c].foe { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
+        flat(pos_of(g, c), foe) < 8.0
+    };
+    if near { return to_fight(g, el, c); }
+    g.qrf.fix = Some(v3::copy(g.gd[c].last_known.unwrap_or(near_man_pos(g, c))));
+    g.qrf.fix_t = g.time;
+    g.qrf.cue_rush = true;
+    crate::mind::cap(g, c, 0.84, "qrf");
 }
 
 /// The senses updateGuard would have run for a man the runner drives. A noise is a cue; eyes on him is contact (true).
@@ -459,17 +503,53 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
     crate::seats::standing_for(g, m, &mut |g| perceive_here(g, m, dt))
 }
 fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
-    use crate::game::GuardState;
     if !g.ai_enabled { return false; }
+    let ids = ids_of_theirs(g);
+    number_the_events(g);
+    let fix_before = g.gd[m].last_known;
+    hear_all_but_their_own(g, m, &ids);
+    g.gd[m].heard_up_to = g.event_seq;
+    let mut sight = eyes_on_the_player(g, m, dt);
+    if player_at_arms_length(g, m) { sight.seen = true; }
+    if crate::guards::standoff_perceive(g, m, None) { sight.seen = true; }
+    g.gd[m].saw_player_this_frame = sight.seen;
+    g.gd[m].saw_foe_this_frame = sight.seen;
+    if sight.seen { let c = crate::seats::faced(g, m); crate::mind::foe(g, m, Some(c), "qrf"); }
+    if !sight.seen { eyes_on_his_foes(g, m, dt, &mut sight); }
+    if g.gd[m].awareness > g.gd[m].witness.peak_awareness { g.gd[m].witness.peak_awareness = g.gd[m].awareness; }
+    if sight.seen { return true; }
+    if sight.glimpse { return false; }   // (the meter is filling on him: no cue, no clamp)
+    noise_moves_the_fix(g, m, fix_before);
+    let to = v3::clamp(g.gd[m].awareness, HUNT_AWARENESS * 0.85, 0.8);
+    crate::mind::set(g, m, to, "qrf");
+    if g.time - g.gd[m].saw_body_t > 6.0 {
+        if let Some(o) = crate::guards::body_in_view(g, m) { body_found(g, m, o); }
+    }
+    false
+}
+
+/// What his eyes made of it this frame: `seen` is contact; `glimpse` is the meter filling on somebody.
+#[derive(Clone, Copy)]
+struct Sight { seen: bool, glimpse: bool }
+
+/// The characters' ids of the men of the response, the element and the tier outside.
+fn ids_of_theirs(g: &crate::game::Game) -> Vec<f64> {
     let mut ids: Vec<f64> = Vec::new();
     for i in 0..g.qrf.men.len() { ids.push(char_id(g, g.qrf.men[i])); }
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { ids.push(char_id(g, r.gd)); } }
+    ids
+}
+
+/// Every event gets its number, the first time anybody listens for it.
+fn number_the_events(g: &mut crate::game::Game) {
     for i in 0..g.events.len() {
         if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); }
     }
+}
+
+/// His hearing runs on the events less the element's own (and a can of theirs going off where it landed); what it writes on an event (`announced`) is written back.
+fn hear_all_but_their_own(g: &mut crate::game::Game, m: GuardId, ids: &[f64]) {
     let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(g.tab.item[c].pos), _ => None };
-    let fix_before = g.gd[m].last_known;
-    // his hearing runs on the events LESS the element's own; what it writes on an event (`announced`) is on the same object in the TypeScript: written back
     let all = core::mem::take(&mut g.events);
     let mut kept: Vec<usize> = Vec::new();
     let mut lent = Vec::new();
@@ -481,116 +561,116 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     crate::guards::hearing_check(g, m, None, None, None);
     let lent = core::mem::replace(&mut g.events, all);
     for (j, &i) in kept.iter().enumerate() { g.events[i] = lent[j]; }
-    g.gd[m].heard_up_to = g.event_seq;
-    let (mut seen, mut glimpse) = (false, false);
+}
+
+/// His meter fills at that rate on what he sees there and his fix goes to it; a quick rate counts as having seen it.
+fn sighted(g: &mut crate::game::Game, m: GuardId, at: V3, rate: f64, dt: f64) {
+    let t = g.time;
+    let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0);
+    crate::mind::set(g, m, to, "qrf");
+    crate::mind::fix(g, m, Some(v3::copy(at)), "qrf");
+    g.gd[m].sight_pos = v3::copy(at);
+    g.gd[m].sight_t = t;
+    if rate > 0.25 { g.gd[m].last_seen_t = t; }
+}
+
+/// The player in his eye, at a rate that counts: seen once the meter is high enough.
+fn eyes_on_the_player(g: &mut crate::game::Game, m: GuardId, dt: f64) -> Sight {
+    let nothing = Sight { seen: false, glimpse: false };
     let vis = crate::guards::can_see(g, m);
-    if vis.visible {
-        let rate = crate::guards::sight_gain(g, m, vis.dist);
-        if rate > 0.05 {
-            glimpse = true;
-            let t = g.time;
-            let pp = player_pos(g, &crate::seats::here(g));
-            { let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, m, to, "qrf"); }
-            crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
-            g.gd[m].sight_pos = v3::copy(pp);
-            g.gd[m].sight_t = t;
-            if rate > 0.25 { g.gd[m].last_seen_t = t; }
-            seen = g.gd[m].awareness >= 0.85;
-        }
-    }
+    if !vis.visible { return nothing; }
+    let rate = crate::guards::sight_gain(g, m, vis.dist);
+    if !(rate > 0.05) { return nothing; }
+    let pp = player_pos(g, &crate::seats::here(g));
+    sighted(g, m, pp, rate, dt);
+    Sight { seen: g.gd[m].awareness >= 0.85, glimpse: true }
+}
+
+/// The player standing up against him, seen or not: he knows at once.
+fn player_at_arms_length(g: &mut crate::game::Game, m: GuardId) -> bool {
     let pp = player_pos(g, &crate::seats::here(g));
     let gp = pos_of(g, m);
-    if !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
-        crate::mind::set(g, m, 1.0, "qrf");
-        crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
-        g.gd[m].last_seen_t = g.time;
-        seen = true;
-    }
-    if crate::guards::standoff_perceive(g, m, None) { seen = true; }
-    g.gd[m].saw_player_this_frame = seen;
-    g.gd[m].saw_foe_this_frame = seen;
-    if seen { let c = crate::seats::faced(g, m); crate::mind::foe(g, m, Some(c), "qrf"); }
-    // the enemy is whoever is against them on this level, seen by the same eye at the same rate
-    if !seen {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let o = g.guards[i];
-            i += 1;
-            if crate::condition::down(g, g.gd[o].ch) || !g.team(m).foe_of(g.team(o)) || crate::rails::rails_down(g, o) { continue; }
-            let oc = g.gd[o].ch;
-            let vo = crate::guards::can_see_char(g, m, oc);
-            if !vo.visible { continue; }
-            let rate = crate::guards::sight_gain_on(g, m, o, vo.dist);
-            if rate <= 0.05 { continue; }
-            glimpse = true;
-            let t = g.time;
-            let op = g.ch[oc].pos;
-            { let to = v3::clamp(g.gd[m].awareness + rate * dt, 0.0, 1.0); crate::mind::set(g, m, to, "qrf"); }
-            crate::mind::fix(g, m, Some(v3::copy(op)), "qrf");
-            g.gd[m].sight_pos = v3::copy(op);
-            g.gd[m].sight_t = t;
-            if rate > 0.25 { g.gd[m].last_seen_t = t; }
-            if g.gd[m].awareness >= 0.85 {
-                seen = true;
-                crate::mind::foe(g, m, Some(oc), "qrf");
-                g.gd[m].saw_foe_this_frame = true;
-                break;
-            }
+    let close = !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62;
+    if !close { return false; }
+    crate::mind::set(g, m, 1.0, "qrf");
+    crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
+    g.gd[m].last_seen_t = g.time;
+    true
+}
+
+/// The enemy is whoever is against them on this level, seen by the same eye at the same rate; the first he is sure of is his foe.
+fn eyes_on_his_foes(g: &mut crate::game::Game, m: GuardId, dt: f64, sight: &mut Sight) {
+    for i in 0..g.guards.len() {
+        let o = g.guards[i];
+        if crate::condition::down(g, g.gd[o].ch) || !g.team(m).foe_of(g.team(o)) || crate::rails::rails_down(g, o) { continue; }
+        let oc = g.gd[o].ch;
+        let vo = crate::guards::can_see_char(g, m, oc);
+        if !vo.visible { continue; }
+        let rate = crate::guards::sight_gain_on(g, m, o, vo.dist);
+        if rate <= 0.05 { continue; }
+        sight.glimpse = true;
+        let op = g.ch[oc].pos;
+        sighted(g, m, op, rate, dt);
+        if g.gd[m].awareness >= 0.85 {
+            sight.seen = true;
+            crate::mind::foe(g, m, Some(oc), "qrf");
+            g.gd[m].saw_foe_this_frame = true;
+            return;
         }
     }
-    if g.gd[m].awareness > g.gd[m].witness.peak_awareness { g.gd[m].witness.peak_awareness = g.gd[m].awareness; }
-    if seen { return true; }
-    if glimpse { return false; }   // (the meter is filling on him: no cue, no clamp)
-    // a cue: a noise reached his ears THIS frame and put his fix somewhere new: the element's fix follows it
+}
+
+/// A cue: a noise reached his ears this frame and put his fix somewhere new, so the element's fix follows it.
+fn noise_moves_the_fix(g: &mut crate::game::Game, m: GuardId, fix_before: Option<V3>) {
     let (h_last, h_shot, h_kick) = { let h = &g.gd[m].witness.heard; (h.last_t, h.last_shot_t, h.kick) };
-    if let Some(lk) = g.gd[m].last_known {
-        if h_last >= g.time - 1e-6 && fix_before.map_or(true, |f| flat(f, lk) > 1.0) {
-            g.qrf.fix = Some(v3::copy(lk));
-            g.qrf.fix_t = g.time;
-            g.qrf.cue_rush = h_shot >= g.time - 1e-6 || (h_kick > 0.0 && h_last >= g.time - 1e-6);
+    let Some(lk) = g.gd[m].last_known else { return };
+    if h_last >= g.time - 1e-6 && fix_before.map_or(true, |f| flat(f, lk) > 1.0) {
+        g.qrf.fix = Some(v3::copy(lk));
+        g.qrf.fix_t = g.time;
+        g.qrf.cue_rush = h_shot >= g.time - 1e-6 || (h_kick > 0.0 && h_last >= g.time - 1e-6);
+    }
+}
+
+/// A colleague down in his view: found, said once, and they push on.
+fn body_found(g: &mut crate::game::Game, m: GuardId, o: GuardId) {
+    let t = g.time;
+    g.gd[m].saw_body_t = t;
+    let victim = g.gd[o].callsign.clone();
+    let breathing = crate::game::is_breathing(g, o);
+    g.gd[m].witness.saw_body = Some(crate::game::WitnessSawBody { victim: victim.clone(), breathing });
+    let bp = crate::guards::body_pos(g, o);
+    let n = bodies_found_there(g, m, o, bp);
+    if n != 0 {
+        let room = crate::dialogue::room_name(g, bp);
+        let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
+        let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
+        let text = format!("{} down in {}{}, {}. pushing on", victim, room, many, how);
+        radio(g, Some(m), &text);
+    }
+    let what = format!("found:{}", victim);
+    note(g, &what);
+}
+
+/// How many of his side not yet found lie there to be counted: that body, and any within 3 m of it he has a line to.
+fn bodies_found_there(g: &mut crate::game::Game, m: GuardId, o: GuardId, bp: V3) -> usize {
+    let mc = g.gd[m].ch;
+    let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
+    let team = g.team(m);
+    let mut n = 0;
+    for i in 0..g.guards.len() {
+        let x = g.guards[i];
+        if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.team(x) != team { continue; }
+        let take = x == o || {
+            let xp = crate::guards::body_pos(g, x);
+            flat(xp, bp) < 3.0 && !crate::scene_collision::segment_blocked(g, eye, v3::add(xp, [0.0, 0.3, 0.0]), None, None, None)
+        };
+        if take {
+            g.gd[x].found = true;
+            crate::mission::tally(g, crate::mission::TallyK::Bodies);
+            n += 1;
         }
     }
-    { let to = v3::clamp(g.gd[m].awareness, HUNT_AWARENESS * 0.85, 0.8); crate::mind::set(g, m, to, "qrf"); }
-    // a colleague down in his view: found, said once, and they push on
-    if g.time - g.gd[m].saw_body_t > 6.0 {
-        if let Some(o) = crate::guards::body_in_view(g, m) {
-            let t = g.time;
-            g.gd[m].saw_body_t = t;
-            let victim = g.gd[o].callsign.clone();
-            let breathing = crate::game::is_breathing(g, o);
-            g.gd[m].witness.saw_body = Some(crate::game::WitnessSawBody { victim: victim.clone(), breathing });
-            let mc = g.gd[m].ch;
-            let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
-            let bp = crate::guards::body_pos(g, o);
-            let team = g.team(m);
-            let mut n = 0;
-            let mut i = 0;
-            while i < g.guards.len() {
-                let x = g.guards[i];
-                i += 1;
-                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.team(x) != team { continue; }
-                let take = x == o || {
-                    let xp = crate::guards::body_pos(g, x);
-                    flat(xp, bp) < 3.0 && !crate::scene_collision::segment_blocked(g, eye, v3::add(xp, [0.0, 0.3, 0.0]), None, None, None)
-                };
-                if take {
-                    g.gd[x].found = true;
-                    crate::mission::tally(g, crate::mission::TallyK::Bodies);
-                    n += 1;
-                }
-            }
-            if n != 0 {
-                let room = crate::dialogue::room_name(g, bp);
-                let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
-                let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };
-                let text = format!("{} down in {}{}, {}. pushing on", victim, room, many, how);
-                radio(g, Some(m), &text);
-            }
-            let what = format!("found:{}", victim);
-            note(g, &what);
-        }
-    }
-    false
+    n
 }
 
 /// A response man went down since last frame: the nearest of theirs with him in view says so on the net.
