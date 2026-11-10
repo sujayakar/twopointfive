@@ -5,7 +5,8 @@ use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 6] = [1, 2, 3, 4, 5, 6];
 
-/// Two rooms side by side, a defender in each; three of the team stand in a bunch in the west one, in its light, with nothing to see by for a while, so that they do not shoot back.
+/// Two rooms side by side, a defender in each; three of the team in the west one, side by side in its light so that none is in the line to another, with nothing to see by for a while, so that they do not
+/// shoot back. Each of them is stood on his mark again by `stand`, every frame: they are there to be shot at one by one, not to go anywhere.
 fn bunch(seed: u32) -> (Play, GuardId, Vec<GuardId>) {
     let mut s = Scene::new("bunch");
     s.room("west", 10.0, 10.0, 18.0, 16.0).room("east", 18.0, 10.0, 26.0, 16.0);
@@ -18,11 +19,12 @@ fn bunch(seed: u32) -> (Play, GuardId, Vec<GuardId>) {
     p.run(0.5);
     let gd = p.defender_at([16.75, 13.0]);
     let men: Vec<GuardId> = p.mates().into_iter().take(3).collect();
-    for (i, &m) in men.iter().enumerate() {
-        p.man_stands(m, [12.2 + 0.2 * nudge(seed, i as u32), 12.2 + 0.7 * i as f64]);
-        p.blinded(m, 60.0);
-    }
+    stand(&mut p, seed, &men);
+    for &m in &men { p.blinded(m, 60.0); }
     (p, gd, men)
+}
+fn stand(p: &mut Play, seed: u32, men: &[GuardId]) {
+    for (i, &m) in men.iter().enumerate() { if p.up(m) { p.man_stands(m, [12.2 + 0.2 * nudge(seed, i as u32), 11.8 + 1.2 * i as f64]); } }
 }
 
 /// THE RULE: an enemy with three men of the team in front of him drops them one at a time: between one and the next he has to turn his gun and lay it.
@@ -34,6 +36,7 @@ fn a_burst_ends_with_the_man_it_was_at() {
         let (mut p, gd, men) = bunch(s);
         let mut fell: Vec<f64> = Vec::new();
         for _ in 0..(20 * 60) {
+            stand(&mut p, s, &men);
             let up = men.iter().filter(|&&m| p.up(m)).count();
             p.frame();
             let now = men.iter().filter(|&&m| p.up(m)).count();
