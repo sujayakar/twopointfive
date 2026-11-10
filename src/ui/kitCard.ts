@@ -2,10 +2,9 @@
 // an element with data-member="i", 0 = you, 1 to 4 = the teammates — with member i's rows: the two guns as tiles with pop-ups, the rest of the kit as small tiles,
 // the colours, the reset and copy and paste, and the card in one line.
 //
-// POUCHES: the head says how many of the man's pouches are full, as pips and 'n / m', and for a teammate, while the table
-// sets a squad limit, the squad's ('squad 7 / 7': what the four carry between them); every row that spends them opens its line with what it fills now and its rate ('2 pouches · a pouch
+// POUCHES: the head says how many of the man's pouches are full, as pips and 'n / m'; every row that spends them opens its line with what it fills now and its rate ('2 pouches · a pouch
 // each · …'); an arrow whose step has no room is dimmed and, pressed (or A / D), changes nothing and puts the reason on the row in amber until the next
-// press; a row of choices that walked past one with no room says which and why the same way; a set the squad has no room for is dimmed and, pressed, says
+// press; a row of choices that walked past one with no room says which and why the same way; a reset with no room is dimmed and, pressed, says
 // why under the rows.
 //
 // WHAT THE CARD WEIGHS: two bars beside the pouches, mobility and concealment — each
@@ -22,7 +21,7 @@
 // COPY AND PASTE (the maintainer, 10-15: "we should have copy and paste for loadouts"): two buttons at the end of the sets' line and two keys, C and V (the
 // loadout screen hands them over from any of its rows, and takes Ctrl / Cmd with them as the same press). Copy keeps the card as it stands (the desk's, one
 // for the page, until the next copy or the page's next load); Paste puts it on this man — fitted to his own rows, his colours
-// kept, refused with the reason under the rows where the squad has no room. SHOWN, NOT TOLD: Copy is lit on every card that wears the copied kit (a paste
+// kept, refused with the reason under the rows where he has no room. SHOWN, NOT TOLD: Copy is lit on every card that wears the copied kit (a paste
 // there would change nothing, so Paste is dim), the tiles a paste moved flash once, and the roster marks the men who wear it (TeamMan.clip).
 // The two keys go by the LETTER on the key (a mnemonic: C and V sit elsewhere on Dvorak), by its place only where the layout has no Latin letter there.
 //
@@ -139,8 +138,6 @@ const CSS = `
 .kc .kc-note { font-size: 10.5px; color: var(--m-dim); margin-top: 1px; min-height: 14px; }
 .kc .kc-cost { color: var(--m-btn-text); }
 .kc .kc-row.refused .kc-note, .kc .kc-words.refused { color: #f0b76a; }
-.kc .kc-squad { color: var(--m-soft); }
-.kc .kc-squad.full { color: #f3d79a; }
 .kc .kc-set.off { opacity: 0.45; }
 .kc .kc-sets { display: flex; gap: 4px; margin: 8px -6px 0; padding: 5px 6px; border-left: 2px solid transparent; border-radius: 2px; }
 .kc .kc-set { flex: 1 1 0; font: inherit; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 2px; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.6); border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; cursor: pointer; white-space: nowrap; }
@@ -203,9 +200,8 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts): 
   for (const c of ['j j1', 'j j2', 'j j3', 'j j4']) { const b = el('i', c); trimBits.push(b); fig.appendChild(b); }
   const who = el('div', 'kc-who'), title = el('div', 'kc-title', opts.name.title), sub = el('div', 'kc-sub', opts.name.sub);
   // … and his pouches: a pip each, the full ones lit, 'n / m'
-  const pouch = el('div', 'kc-pouch'), pips = el('span', 'kc-pips'), pouchN = el('b', ''), squadN = el('span', 'kc-squad');
-  squadN.title = 'what your teammates carry between them. One more on his card means one fewer on someone else\'s';
-  pouch.append(el('span', '', 'Pouches'), pouchN, squadN, pips); pouch.title = POUCH_TIP;
+  const pouch = el('div', 'kc-pouch'), pips = el('span', 'kc-pips'), pouchN = el('b', '');
+  pouch.append(el('span', '', 'Pouches'), pouchN, pips); pouch.title = POUCH_TIP;
   // … and what the card weighs: a bar each for mobility and concealment — its fill up to the issued card's notch in grey, what the card has
   // gained on the notch in green or lost under it in amber, and the highlighted row outlined: what it takes (drop it and the bar grows to there), or, on a
   // row that carries none, dashed, what one more would take
@@ -238,7 +234,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts): 
     if (slot) { D?.addEventListener?.('pointerdown', shut, true); D?.addEventListener?.('scroll', refit, true); W?.addEventListener?.('resize', refit); }
     else { D?.removeEventListener?.('pointerdown', shut, true); D?.removeEventListener?.('scroll', refit, true); W?.removeEventListener?.('resize', refit); } draw(); };   // (the page scrolled or the window sized under an open pop-up: fitted over the foot again)
   const refit = () => { const p = popAt && guns[popAt]?.pop; if (p) fit(p); };
-  /** the reset pressed: taken, or refused with the reason under the rows (the squad has no room for it as the other cards stand) */
+  /** the reset pressed: taken, or refused with the reason under the rows (no room for it) */
   const press = () => { cur = null; const r = desk().reset(i); if (r.ok) changed(); else { said = { k: null, why: `Reset: ${r.why}` }; draw(); } };
   const guns: Partial<Record<GunSlot, { kids: HTMLElement; pop: HTMLElement; why: HTMLElement }>> = {};
   type Stat = { bar: HTMLElement; fill: HTMLElement; gain: HTMLElement; ref: HTMLElement };
@@ -311,17 +307,15 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts): 
     for (const b of suitBits) { b.style.background = suit ?? ''; b.classList.toggle('issued', !suit); }
     for (const b of trimBits) { b.style.background = trim ?? ''; b.classList.toggle('issued', !trim); }
     title.classList.toggle('changed', view.changed);
-    const c = view.pouches, big = view.big, sq = view.squad; pips.textContent = '';
+    const c = view.pouches, big = view.big; pips.textContent = '';
     for (let n = 0; n < Math.max(c.total, c.used); n++) pips.appendChild(el('i', n < c.used ? 'on' : ''));
     for (let n = 0; n < Math.max(big.total, big.used); n++) pips.appendChild(el('i', n < big.used ? 'big on' : 'big'));   // (his one big slot, a wide pip after the pouches — lit when something rides in it)
     pouchN.textContent = `${c.used} / ${c.total}`;
-    squadN.textContent = sq ? `squad ${sq.used} / ${sq.total}` : '';
     const lit = rowOf(cur), S = lit?.takes ?? null, M = lit?.would ?? null;
     for (const b of bars) { const v = view.load[b.k], r = view.loadIssued[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
       b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
       b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
       b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); }
-    squadN.classList.toggle('full', !!sq && sq.used >= sq.total && c.used < c.total);   // (room in his own pouches and none in the squad's: the squad's count is why his arrows are dimmed, so it is the one lit)
     for (const r of view.rows) { const e = rowEls(r), no = said && said.k === r.field ? said.why : '', count = r.kind === 'count';
       e.row.classList.toggle('none', r.kind !== 'choice' && r.n === 0); e.row.classList.toggle('fixed', r.fixed);   // (a gun made with its suppressor, or one none fits: the tile has no arrows)
       if (e.stats) { e.stats.box.classList.toggle('off', !r.bars.length);   // (what this gun is good at, beside the gun he is issued: the notch)
