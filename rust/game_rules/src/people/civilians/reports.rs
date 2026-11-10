@@ -726,7 +726,7 @@ pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
 /// passing pleasantries, one a floor at a time
 pub(super) fn greetings(g: &mut crate::game::Game) {
     if escalation_of(g) != 0.0 || g.alarm.episode { return; }
-    if crate::sim_lightshome::mains_active(g) { return; }
+    if g.light_home.mains.active { return; }
     let players = crate::seats::men(g);
     if players.iter().any(|p| g.pl[*p].holding.is_some()) { return; }
     let floor_greet_at = floor_of(g).greet_at;

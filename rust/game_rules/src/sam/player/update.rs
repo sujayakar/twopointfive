@@ -201,7 +201,7 @@ fn draw(g: &mut Game, pl: PlayerId) {
 /// updatePlayer's `cursorPitch`: gun pitch onto what the reticle has, else level along the cursor's heading.
 fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId, ap: V3, aim_dist: f64) -> f64 {
     let mut target_y = ap[1] + 0.03;
-    if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.sim_lightshome_fixture[t].pos[1], 0.3, 2.95); }
+    if let Some(t) = seat.aim_target { target_y = v3::clamp(g.tab.fixture[t].pos[1], 0.3, 2.95); }
     else if let Some(gd) = seat.aim_guard {
         target_y = man_aim(g, seat, gd, 1.2)[1];
     }
@@ -212,7 +212,7 @@ fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId,
 
 /// What a round goes at: a fixture under the reticle, a man under the cursor, else level along the heading.
 fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
+    if let Some(t) = seat.aim_target { return v3::copy(g.tab.fixture[t].pos); }
     if let Some(gd) = seat.aim_guard {
         return man_aim(g, seat, gd, 1.25);
     }

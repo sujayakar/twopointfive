@@ -448,7 +448,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<Gua
 
 /// A fixture shot out.
 pub fn chron_light_shot(g: &mut crate::game::Game, tg: FixtureId) -> Option<crate::chronicle::ChronEvent> {
-    let row = &g.tab.sim_lightshome_fixture[tg];
+    let row = &g.tab.fixture[tg];
     let name = fixture_name(&FixtureNameTg { name: row.name.clone(), group: row.group.clone() });
     let pos = row.pos;
     live_row_n(g, ChronKind::LightShot, ChronCountKey::LightsShot, row_data(vec![("name", tx(&name))]), Some(pos))

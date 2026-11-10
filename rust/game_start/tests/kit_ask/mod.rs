@@ -750,9 +750,9 @@ impl KitAsk for Play {
     fn beat_on(&self, gd: GuardId) -> f64 { self.g.gd[gd].react_t.max(game::startle::startle_left(&self.g, gd)) }
     fn ring_cone(&self) -> Option<f64> { self.view().aim.ring.and_then(|r| r.cone).map(|c| c.spread) }
     fn lamp_at(&self, at: [f64; 2]) -> (FixtureId, [f64; 3]) {
-        let d = |t: FixtureId| { let p = self.g.tab.sim_lightshome_fixture[t].pos; (p[0] - at[0]).hypot(p[2] - at[1]) };
+        let d = |t: FixtureId| { let p = self.g.tab.fixture[t].pos; (p[0] - at[0]).hypot(p[2] - at[1]) };
         let t = self.g.targets.iter().copied().min_by(|a, b| d(*a).partial_cmp(&d(*b)).unwrap()).expect("a lamp on the level");
-        (t, self.g.tab.sim_lightshome_fixture[t].pos)
+        (t, self.g.tab.fixture[t].pos)
     }
-    fn lamp_out(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_broken(&self.g, t) }
+    fn lamp_out(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].broken }
 }

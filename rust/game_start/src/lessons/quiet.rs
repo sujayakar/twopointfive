@@ -41,7 +41,7 @@ const ROUTES: [&str; 3] = ["hall", "court", "table"];
 fn man(b: &Bot, route: &str) -> GuardId { b.on_route(route).unwrap_or_else(|| b.men()[ROUTES.iter().position(|r| *r == route).unwrap_or(0)]) }
 fn near(p: f64) -> Walk { Walk::near(p) }
 /// how many times a beam has been broken this run
-fn trips(b: &Bot) -> f64 { b.ask(|g| g.devices.lasers.iter().map(|&l| game::sim_lightshome::laser_machine_trips(g, l)).sum()) }
+fn trips(b: &Bot) -> f64 { b.ask(|g| g.devices.lasers.iter().map(|&l| g.tab.devices_laser_rt[l].trips as f64).sum()) }
 fn rifle_load(b: &Bot) -> Option<RifleAttachment> { let w = b.rifle(); b.ask(|g| game::weapons::rifle_attachment(g, w)) }
 fn tube(b: &Bot) -> (f64, f64) { let w = b.rifle(); b.ask(|g| (g.fa[w].shells, g.fa[w].rings)) }
 /// a clear way from a point a metre up to his head: neither wall nor furniture

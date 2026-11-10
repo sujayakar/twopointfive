@@ -32,7 +32,7 @@ fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::Rad
         r.reply = None;
         r.last_at = -100.0;
         let esc = crate::guards::escalation_of(g);
-        let blackout = crate::sim_lightshome::mains_active(g);
+        let blackout = g.light_home.mains.active;
         let found = found_count(g);
         let r = row(g);
         r.esc = esc;
@@ -101,7 +101,7 @@ pub(super) fn tick_radio(g: &mut crate::game::Game) {
         handler_beat(g, if esc >= 2.0 { crate::dialogue::HandlerBeat::Lockdown } else { crate::dialogue::HandlerBeat::Alarm }, Some(crate::dialogue::RADIO_EDGE_DELAY));
     }
     row(g).esc = esc;
-    let bo = crate::sim_lightshome::mains_active(g);
+    let bo = g.light_home.mains.active;
     if bo && !row(g).blackout {
         handler_beat(g, crate::dialogue::HandlerBeat::Blackout, Some(crate::dialogue::RADIO_EDGE_DELAY));
     }

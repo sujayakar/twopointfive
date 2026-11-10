@@ -394,7 +394,7 @@ impl StealthAsk for Play {
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: Some(th), serial: 0 });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
     }
-    fn mains_out(&self) -> bool { game::sim_lightshome::mains_active(&self.g) }
+    fn mains_out(&self) -> bool { self.g.light_home.mains.active }
     fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Breaker, .. })))) }
     fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].task { Some(game::game::GuardTask::Arm0(k)) => k.pos, _ => panic!("no errand") } }
     fn walks_to_a_sound(&mut self, gd: GuardId, spot: [f64; 3]) {

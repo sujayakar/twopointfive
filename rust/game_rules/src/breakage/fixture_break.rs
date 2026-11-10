@@ -30,12 +30,12 @@ fn h01(x: f64) -> f64 {
     (x >> 8) as f64 / 16777216.0
 }
 
-fn static_box(g: &Game, t: FixtureId) -> Option<BoxId> { let i = *g.tab.sim_lightshome_fixture[t].boxes.first()?; g.engine.world.statics.get(i as usize).copied() }
+fn static_box(g: &Game, t: FixtureId) -> Option<BoxId> { let i = *g.tab.fixture[t].boxes.first()?; g.engine.world.statics.get(i as usize).copied() }
 
 /// 1 = a ceiling panel (the full look), 2 = a lamp with a light of its own (sparks only), 0 = not this lane's.
 fn kind_of(g: &crate::game::Game, t: FixtureId) -> f64 {
-    use crate::sim_lightshome::FixtureKind as K;
-    let (interactive, kind, light, n_boxes) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.interactive, f.kind, f.light, f.boxes.len()) };
+    use crate::fixtures::FixtureKind as K;
+    let (interactive, kind, light, n_boxes) = { let f = &g.tab.fixture[t]; (f.interactive, f.kind, f.light, f.boxes.len()) };
     if !interactive { return 0.0; }
     if kind == K::Analytic { return if light.is_some() { 2.0 } else { 0.0 }; }
     if kind != K::Emissive || n_boxes == 0 { return 0.0; }
@@ -91,7 +91,7 @@ fn state(g: &mut Game) -> &mut State { g.m.fixture_break.state.as_mut().unwrap()
 fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> crate::fixture_break::Rec {
     let f = g.m.fixture_break.fixlook.clone();
     let sb = if kind == 1.0 { static_box(g, t) } else { None };
-    let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.sim_lightshome_fixture[t].pos };
+    let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.fixture[t].pos };
     let seed = (js::to_i32(m::round(c[0] * 100.0) * 73856093.0) ^ js::to_i32(m::round(c[2] * 100.0) * 19349663.0) ^ js::to_i32(m::round(c[1] * 100.0) * 83492791.0)) as f64;
     let scan = state(g).scan;
     let mut r = Rec { t, born, seed, seen: scan, hinge: c, uh: [1.0, 0.0, 0.0], l: 0.0, w: 0.0, th: 0.0, om: 0.0, rest: 0.0, still: false, hang: Vec::new(), pieces: Vec::new(),
@@ -235,7 +235,7 @@ pub fn fixture_break_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, d
     for t in g.targets.clone() {
         let k = match state(g).kind.get(t).copied() { Some(k) => k, None => { let k = kind_of(g, t); state(g).kind.set(t, k); k } };
         if k == 0.0 { continue; }
-        let broken = crate::sim_lightshome::fixture_broken(g, t);
+        let broken = g.tab.fixture[t].broken;
         let was = state(g).prev.get(t).copied(); if was != Some(broken) { state(g).prev.set(t, broken); }
         if let Some(i) = state(g).recs.iter().position(|r| r.t == t) { if broken { state(g).recs[i].seen = scan; } continue; }
         if broken { let n = add(g, t, k, if running && was == Some(false) { now } else { -1e9 }); state(g).recs.push(n); }

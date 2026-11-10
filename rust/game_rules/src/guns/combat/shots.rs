@@ -38,9 +38,9 @@ fn guard_of_char(g: &Game, c: CharId) -> Option<GuardId> {
 
 /// Would the old near-is-a-hit rule have broken this fixture on these legs? A count for the checks.
 fn near_lamp(g: &crate::game::Game, t: FixtureId, legs: &[crate::aimcost::RoundLeg], slack: f64) -> bool {
-    use crate::sim_lightshome::FixtureKind;
-    let kind = g.tab.sim_lightshome_fixture[t].kind;
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
+    use crate::fixtures::FixtureKind;
+    let kind = g.tab.fixture[t].kind;
+    let pos = g.tab.fixture[t].pos;
     let rad = if kind == FixtureKind::Emissive { 0.45 } else if kind == FixtureKind::Breaker { 0.4 } else { 0.3 };
     for s in legs {
         let to_t = v3::sub(pos, s.o);
@@ -222,27 +222,26 @@ fn sam_hit(g: &mut Game, pl: PlayerId, sg: Option<GuardId>, dir: V3, hit_p: V3) 
 
 /// A shot-out light: the breaker's blackout, a dark lens's glass, or a fixture gone. (fireWeapon's shootOut)
 fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
-    use crate::sim_lightshome::FixtureKind;
-    let kind = g.tab.sim_lightshome_fixture[t].kind;
-    let pos = g.tab.sim_lightshome_fixture[t].pos;
-    let break_ = crate::sim_lightshome::light_in().break_;
+    use crate::fixtures::FixtureKind;
+    let kind = g.tab.fixture[t].kind;
+    let pos = g.tab.fixture[t].pos;
     if kind == FixtureKind::Breaker {
         crate::render_lights::light_set_flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
         crate::game::game_set_blackout(g, f64::INFINITY, crate::game::GameSetBlackoutCause::Shot);
-        crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
+        g.tab.fixture[t].broken = true;
         crate::particle_fx::breaker_spark_fx(g, pos, muzzle);
         return;
     }
     if crate::carlamps::lamp_glass(g, t) { g.stats.carlamps.shot += 1; }
-    let lens = g.tab.sim_lightshome_fixture[t].lens;
+    let lens = g.tab.fixture[t].lens;
     if crate::carlamps::dead_lamp(g, t) {
-        crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
+        g.tab.fixture[t].broken = true;
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
         return;
     }
-    crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
+    g.tab.fixture[t].broken = true;
     crate::game::game_light_event(g, t, None, None);
     crate::chronicle::chron_light_shot(g, t);
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
@@ -250,22 +249,22 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     if crate::carlamps::lamp_glass(g, t) {
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
     } else if kind != FixtureKind::Device {
-        let boxes = g.tab.sim_lightshome_fixture[t].boxes.clone();
+        let boxes = g.tab.fixture[t].boxes.clone();
         crate::particle_fx::fixture_shatter_fx(g, &crate::particle_fx::FixtureShatterFxT { pos, kind: String::from(kind.as_str()), boxes }, muzzle);
     }
 }
 
 /// `live` of the real-hit search: a target a round can put out.
 fn lamp_live(g: &Game, t: FixtureId) -> bool {
-    !(crate::sim_lightshome::fixture_broken(g, t)
-        || !g.tab.sim_lightshome_fixture[t].interactive
-        || crate::sim_lightshome::fixture_factor(g, t) <= 0.0 && !crate::sim_lightshome::fixture_on(g, t) && !crate::carlamps::lamp_glass(g, t)
+    !(g.tab.fixture[t].broken
+        || !g.tab.fixture[t].interactive
+        || g.tab.fixture[t].factor <= 0.0 && !g.tab.fixture[t].on && !crate::carlamps::lamp_glass(g, t)
         || crate::fire::fire_holds(g, t))
 }
 
 /// `own` of the real-hit search: the breaker's target lists its LED alone, a round into the panel is a round into the breaker.
 fn lamp_own(g: &Game, t: FixtureId) -> Vec<f64> {
-    if g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Breaker { g.level.breaker.boxes.clone() } else { g.tab.sim_lightshome_fixture[t].boxes.clone() }
+    if g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker { g.level.breaker.boxes.clone() } else { g.tab.fixture[t].boxes.clone() }
 }
 
 /// The round itself, the shooter's muzzle to where it stops: what it found, what it broke, what the floor heard.
@@ -273,7 +272,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     let is_player = crate::character::is_player(g, shooter);
     use crate::game::GuardState;
     use crate::glasspen::{path_at, seg_at, spent_in_pane};
-    use crate::sim_lightshome::FixtureKind;
+    use crate::fixtures::FixtureKind;
 
     let sg = if is_player { None } else { guard_of_char(g, shooter) };
     if let Some(s) = sg { if g.gd[s].work_stow.is_some() { crate::workstow::stow_fired(g, s); } }
@@ -659,9 +658,9 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
             while i < g.targets.len() {
                 let t = g.targets[i];
                 i += 1;
-                let pos = g.tab.sim_lightshome_fixture[t].pos;
+                let pos = g.tab.fixture[t].pos;
                 if !lamp_live(g, t) || crate::aimcost::legs_near(pos, &legs) > 3.0 { continue; }
-                let kind = g.tab.sim_lightshome_fixture[t].kind;
+                let kind = g.tab.fixture[t].kind;
                 let slack = if kind == FixtureKind::Breaker { 0.08 } else { 0.3 };
                 let boxes: Vec<Option<BoxId>> = lamp_own(g, t).iter().map(|&b| g.engine.world.statics.get(b as usize).copied()).collect();
                 let bare = if kind == FixtureKind::Device { g.k.aimcost.bare_device } else { g.k.aimcost.bare };

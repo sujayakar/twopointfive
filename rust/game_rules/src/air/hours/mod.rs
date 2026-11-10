@@ -295,9 +295,8 @@ fn take_out(g: &mut crate::game::Game) {
     let lamps: Vec<(FixtureId, bool)> = st.lamps.iter().map(|(t, was)| (t, *was)).collect();
     let moons = st.moons.clone();
     let sun = st.sun;
-    let on = crate::sim_lightshome::light_in().on;
     for (t, was) in lamps {
-        if !crate::sim_lightshome::fixture_on(g, t) { crate::sim_lightshome::light_home_in(g, on, Some(t), Some(if was { 1.0 } else { 0.0 }), None, None, None); }
+        if !g.tab.fixture[t].on { g.tab.fixture[t].on = was; }
     }
     for l in moons { g.tab.light[l].enabled = true; }
     crate::render_lights::light_set_remove(g, sun);
@@ -315,16 +314,15 @@ fn take_out(g: &mut crate::game::Game) {
 fn lamps_out(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_ref() else { return };
     if st.def.lamps { return; }
-    let off = crate::sim_lightshome::light_in().on;
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
         i += 1;
-        let row = &g.tab.sim_lightshome_fixture[t];
-        if row.group == "exterior" && row.kind != crate::sim_lightshome::FixtureKind::Breaker {
-            let on = crate::sim_lightshome::fixture_on(g, t);
+        let row = &g.tab.fixture[t];
+        if row.group == "exterior" && row.kind != crate::fixtures::FixtureKind::Breaker {
+            let on = g.tab.fixture[t].on;
             hour_row(g).lamps.set(t, on);
-            crate::sim_lightshome::light_home_in(g, off, Some(t), Some(0.0), None, None, None);
+            g.tab.fixture[t].on = false;
         }
     }
 }
