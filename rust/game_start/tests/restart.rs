@@ -193,3 +193,14 @@ fn every_kind_of_mission_starts_over_as_it_started() {
         }
     }
 }
+
+/// THE RULE: the switches a quiet run took are its own: what stood under them is what the next try finds under it.
+/// A FAILURE MEANS: a restart takes the run's own switches for the player's, and they stay on when the run is over.
+#[test]
+fn a_restart_keeps_what_stood_under_the_runs_own_switches() {
+    let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts { seed: 1, ..Default::default() });
+    let was = p.g.quiet.was.expect("a run with a partner holds the switches");
+    assert!(game::savestate::control::restart(&mut p.g));
+    let again = p.g.quiet.was.expect("the run again holds them");
+    assert_eq!((again.pairup, again.silent, again.silent_start), (was.pairup, was.silent, was.silent_start), "what stood under the run");
+}

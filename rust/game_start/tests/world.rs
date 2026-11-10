@@ -181,7 +181,7 @@ fn a_restart_leaves_no_line_on_anybody() {
     for gd in p.g.guards.clone() { game::game::game_say(&mut p.g, gd, "still talking", None, Some(true)); }
     p.frame();
     assert!(p.view().bubbles.iter().any(|b| b.text == "still talking"), "the staging is wrong: nothing on the HUD");
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     assert!(p.g.guards.iter().all(|&gd| p.g.gd[gd].bubble.as_ref().map_or(true, |b| b.text != "still talking")), "a line on a man");
     p.frame();
     assert!(!p.view().bubbles.iter().any(|b| b.text == "still talking"), "a line on the HUD");
@@ -269,7 +269,7 @@ fn a_quiet_mission_wears_the_suit_and_a_loud_one_the_helmet() {
 fn a_night_after_the_reel_is_a_fresh_night() {
     let mut p = Play::level("office.json", false, &Opts { seed: 1, ..Default::default() });
     p.run(0.1);
-    game::game::game_restart_encounter(&mut p.g);
+    game::savestate::control::restart(&mut p.g);
     let marks: Vec<_> = p.g.guards.iter().map(|&g| p.at(g)).collect();
     (p.g.aside, p.g.player_invisible) = (true, true);
     p.run(240.0);

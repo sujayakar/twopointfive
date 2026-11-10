@@ -185,7 +185,7 @@ fn the_hold_ends_when_sam_goes_down() {
 fn the_hold_ends_on_a_restart() {
     for s in SEEDS {
         let (mut p, _) = held(s);
-        game::game::game_restart_encounter(&mut p.g);
+        game::savestate::control::restart(&mut p.g);
         p.run(0.1);
         no_hold_left(&p, s, "a restart");
         let m = p.guard("post");
