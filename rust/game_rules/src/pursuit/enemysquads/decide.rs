@@ -1,4 +1,5 @@
 use super::*;
+use crate::roomfight::{News, Word};
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -89,14 +90,6 @@ pub(super) fn room_of(g: &crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Op
         if crate::squad::in_bounds(p, Some(b), None) { return Some(r.clone()); }
     }
     None
-}
-/// a line of the fight's log
-pub(super) fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd { Some(x) => g.gd[x].callsign.clone(), None => String::from("-") };
-    let t = g.time;
-    let l = &mut g.fight.log;
-    l.push(crate::roomfight::FightNote { t, who, what: format!("[squads] {}", what) });
-    if l.len() > 600 { l.drain(0..200); }
 }
 /// every half metre along a path, its corners included; returns its length
 fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
@@ -235,8 +228,7 @@ pub fn squad_rally(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option
         let mut toward = false;
         let l = along(pos, &path, &mut |q2, _| { if flat(q2, threat) < 2.0 { toward = true; } });
         if toward || l > 30.0 { continue; }
-        let why = format!("{} gives ground to the rally point", g.gd[gd].callsign);
-        event(g, q, SquadEventWhat::Rally, &why, None);
+        event(g, q, SquadEventWhat::Rally, None);
         return Some(p);
     }
     None
@@ -625,8 +617,7 @@ fn hold_ok(g: &mut Game, q: V3, s: f64, l: f64, outside: V3, back: f64, used: &[
 }
 
 /// a row of a squad's timeline, what the other squads heard of it, and the log
-pub(super) fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crate::enemysquads::SquadEventWhat, why: &str, by: Option<GuardId>) {
-    let n = home(g, q).len() as f64;
+pub(super) fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crate::enemysquads::SquadEventWhat, by: Option<GuardId>) {
     let t = g.time;
     let row = SquadEvent { t, what };
     let ev = &mut g.tab.enemysquads_squad[q].events;
@@ -636,8 +627,7 @@ pub(super) fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crat
         if matches!(what, SquadEventWhat::Asks | SquadEventWhat::Looks | SquadEventWhat::CutOff | SquadEventWhat::NetHelp) { g.tab.enemysquads_squad[q].trouble = Some(g.time); }
         else if matches!(what, SquadEventWhat::NoSign | SquadEventWhat::Found | SquadEventWhat::Contact | SquadEventWhat::Said) { g.tab.enemysquads_squad[q].trouble = None; }
     }
-    let line = format!("{} {}: {}", g.tab.enemysquads_squad[q].name, what.as_str(), why);
-    note(g, by, &line);
+    if what == SquadEventWhat::Quiet { crate::roomfight::tell_news(g, News::Squad(q, by, Word::Quiet)); }
     if what == SquadEventWhat::Found { let men = g.tab.enemysquads_squad[q].men.clone(); crate::netquietfeed::net_feed_body(g, by, &men); }
 }
 /// the men who go: nearest the fight first, a man left in every room that had one
@@ -797,44 +787,28 @@ pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     let q_name = squad_name(g, q);
     let ally_name = ally.map(|a| squad_name(g, a));
     let mut choice = SquadChoice::Barricade;
-    let mut why: String;
     let mut go: Vec<RoomfightDefId> = Vec::new();
     let mut ways: Vec<Way> = Vec::new();
     let mut stood_to = false;
-    if g.tab.enemysquads_squad[q].def.may_leave == Some(false) { why = String::from("its men stay in its rooms"); }
-    else if out > 0 { why = String::from("its own men are still out"); }
-    else if spare < 2.0 { why = format!("{} at home in {} room{}: nobody to spare", n, rooms, if rooms > 1 { "s" } else { "" }); }
-    else if there.len() >= 2 { let names: Vec<String> = there.iter().map(|x| squad_name(g, *x)).collect(); why = format!("{} are already out on it", names.join(" and ")); }
-    else if ally.is_some() && ally_up > 0 {
+    let stays = g.tab.enemysquads_squad[q].def.may_leave == Some(false) || out > 0 || spare < 2.0 || there.len() >= 2;
+    if stays {
+        // its men stay in its rooms, or are out already, or there is nobody to spare, or two squads are on it
+    } else if ally.is_some() && ally_up > 0 {
         // somebody to help: a pair goes round; no way round: straight to them; a squad already on its way: this one does the other thing
-        let an = ally_name.clone().unwrap();
         let p = if theirs != Some(SentRole::Flank) { Some(pair(g, &st_net, &h, fix.at, round_to, spare, ally, lost)) } else { None };
         match p {
-            Some((pg, pw)) if pg.len() >= 2 => {
-                choice = SquadChoice::Flank; go = pg; ways = pw;
-                why = if theirs.is_some() { format!("{} is going straight to {}: this pair goes round", squad_name(g, there[0]), an) }
-                    else if lost { format!("{} {} {}: a pair goes round to hold its other door", an, if in_room > 0 { "has one man left in" } else { "has lost" }, room.as_ref().unwrap().name) }
-                    else if ally_up < 2 { format!("{} is down to its last man: a pair goes round behind them", an) }
-                    else { format!("{} has {} up to hold them: a pair goes round", an, ally_up) };
-            }
-            _ => {
-                if theirs == Some(SentRole::Help) { why = format!("{} is already going to {}, and no way round", squad_name(g, there[0]), an); }
-                else {
-                    choice = SquadChoice::Help;
-                    let k = m::min(g.k.squads.help_men, spare);
-                    go = goers(g, &h, fix.at, k);
-                    why = if theirs.is_some() { format!("{} is going round: this one goes straight to {}", squad_name(g, there[0]), an) }
-                        else if ally_up < 2 { format!("{} is down to its last man, and no way round", an) }
-                        else { format!("{} has {} up, and no way round", an, ally_up) };
-                }
+            Some((pg, pw)) if pg.len() >= 2 => { choice = SquadChoice::Flank; go = pg; ways = pw; }
+            _ => if theirs != Some(SentRole::Help) {
+                choice = SquadChoice::Help;
+                let k = m::min(g.k.squads.help_men, spare);
+                go = goers(g, &h, fix.at, k);
             }
         }
     } else if ally.is_some() {
-        let an = ally_name.clone().unwrap();
-        let p = if there.is_empty() && n >= 4 { Some(pair(g, &st_net, &h, fix.at, round_to, spare, ally, lost)) } else { None };
-        match p {
-            Some((pg, pw)) if pg.len() >= 2 => { choice = SquadChoice::Flank; go = pg; ways = pw; why = format!("{} is not answering: a pair goes round to where it was, the rest lock down", an); }
-            _ => { why = format!("{} is not answering{}", an, if there.is_empty() { "" } else { " and men are already out" }); }
+        // nobody of it answers: a pair goes round to where it was, the rest lock down
+        if there.is_empty() && n >= 4 {
+            let (pg, pw) = pair(g, &st_net, &h, fix.at, round_to, spare, ally, lost);
+            if pg.len() >= 2 { choice = SquadChoice::Flank; go = pg; ways = pw; }
         }
     } else {
         // the team heard on open floor, nobody in contact: nobody walks out at a noise he cannot place; every squad gets on its doors with its answer ready
@@ -849,10 +823,8 @@ pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
         }
         g.tab.enemysquads_squad[q].ready = true;
         stood_to = first != Some(q);
-        why = if first == Some(q) { String::from("the noise is nearest its own rooms: it is next") }
-            else { format!("nobody has them in sight{}: on its doors until somebody calls it", match first { Some(x) => format!(" (nearest {})", squad_name(g, x)), None => String::new() }) };
     }
-    if choice != SquadChoice::Barricade && go.len() < 2 { choice = SquadChoice::Barricade; go = Vec::new(); why.push_str(" (nobody free to go)"); }
+    if choice != SquadChoice::Barricade && go.len() < 2 { choice = SquadChoice::Barricade; go = Vec::new(); }
     g.tab.enemysquads_squad[q].state = match choice { SquadChoice::Barricade => SquadState::Barricade, SquadChoice::Flank => SquadState::Flank, SquadChoice::Help => SquadState::Help };
     if choice == SquadChoice::Help {
         for d in &go { send(g, q, *d, SentRole::Help, None, ally, fix.at, lost); }
@@ -865,14 +837,11 @@ pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
         let word = crate::words::wg(g, &"around", &"round");
         let line = format!("{}: {} going {} — {}!", q_name, count_word(go.len()), word, if lost { "cut them off" } else { "keep them there" });
         say_radio(g, gd0, &line);
-        let mut by: JsSet<String> = JsSet::new();
-        for w in &ways { by.add(match w.door { Some(d) => door_name(g, d), None => String::from("the long way") }); }
-        why.push_str(&format!(" (by {})", by.keys().join(" and ")));
     }
     // whoever stays gets ready: the net's word is what digin.ts acts on
     for d in &h { if !go.contains(d) { tell(g, *d, fix.at); } }
     g.tab.enemysquads_squad[q].state0 = Some(choice);
-    if choice == SquadChoice::Barricade && before == Some(SquadChoice::Barricade) { note(g, Some(lead), &format!("{} stays on its doors: {}", q_name, why)); return; }   // (said once)
+    if choice == SquadChoice::Barricade && before == Some(SquadChoice::Barricade) { crate::roomfight::tell_news(g, News::Squad(q, Some(lead), Word::Stays)); return; }   // (said once)
     if choice == SquadChoice::Barricade {
         let line = if stood_to { format!("{}: heard it — on the doors, call it when you see them!", q_name) }
             else if ally.is_some() && ally_up == 0 { format!("{}: {}'s not answering — lock the doors!", q_name, ally_name.as_deref().unwrap()) }
@@ -880,7 +849,7 @@ pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
         say_radio(g, lead, &line);
     }
     let what = match choice { SquadChoice::Barricade => SquadEventWhat::Barricade, SquadChoice::Flank => SquadEventWhat::Flank, SquadChoice::Help => SquadEventWhat::Help };
-    event(g, q, what, &why, Some(lead));
+    event(g, q, what, Some(lead));
 }
 
 /// the door of the room that was hit nearest the place the team was seen or heard, inside 4.5 m
@@ -892,7 +861,7 @@ fn door_at(g: &mut crate::game::Game, room: Option<&crate::scene_scenarios::Stru
     best
 }
 /// a squad that has the team on it: said on the net by a man able to say it, and its men in its other rooms on their way after their own beat
-pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: Option<&crate::scene_scenarios::StructureRoom>, by_drop: Option<bool>, by: Option<GuardId>, words: Option<&crate::enemysquads::ContactWords>) {
+pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: Option<&crate::scene_scenarios::StructureRoom>, by_drop: Option<bool>, by: Option<GuardId>, words: Option<&str>) {
     let by_drop = by_drop.unwrap_or(false);
     let was = g.tab.enemysquads_squad[q].state;
     let fresh = was != SquadState::Contact;
@@ -915,16 +884,9 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
         let net = &mut g.m.enemysquads.states.as_mut().unwrap().net;
         net.push(StateNetItem { t: now, squad: q, at: v3::copy(at), door });
         if net.len() > 40 { net.drain(0..20); }
-        let line = match words { Some(w) => w.say.clone(), None => format!("{}: contact — {}!", q_name, room.map_or("here", |r| r.name.as_str())) };
+        let line = match words { Some(w) => String::from(w), None => format!("{}: contact — {}!", q_name, room.map_or("here", |r| r.name.as_str())) };
         say_radio(g, caller, &line);
-        let head = match words { Some(w) => w.why.clone(), None => String::from(room.map_or("its men", |r| r.name.as_str())) };
-        let chose = match was {
-            SquadState::Hold | SquadState::Contact => String::new(),
-            SquadState::Alerted => String::from(" (before it had said what it would do)"),
-            other => format!(" (it had chosen: {})", other.as_str()),
-        };
-        let met = match door { Some(d) => format!(" · met at {}", door_name(g, d)), None => String::new() };
-        event(g, q, SquadEventWhat::Contact, &format!("{}{}{}", head, chose, met), Some(caller));
+        event(g, q, SquadEventWhat::Contact, Some(caller));
     } else if caller.is_some() && !by_drop {   // (its call went out before anybody had seen by which door: the men who see it now say so to whoever asks next)
         let last = g.m.enemysquads.states.as_ref().unwrap().net.iter().rfind(|c| c.squad == q).map(|c| (c.door.is_none(), c.t));
         if let Some((no_door, t)) = last {
@@ -934,7 +896,7 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
                 if let Some(c) = net.iter_mut().rfind(|c| c.squad == q) { c.door = door; }
             }
         }
-    } else if caller.is_none() && fresh { note(g, None, &format!("{} is in contact and has nobody able to call it", q_name)); }
+    }
     let Some(room) = room else { return };
     let reinforce = g.k.squads.reinforce;
     let mut new: Vec<(usize, f64)> = Vec::new();   // (each man sent now, and how long his way there takes him)

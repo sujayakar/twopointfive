@@ -52,15 +52,6 @@ pub(super) fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice
 /// The point at this height.
 fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 
-/// A line in the file's log, capped, and in the fight's.
-pub(super) fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
-    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { what: String::from(what) });
-    if g.m.digin.digin_log.len() > 400 {
-        g.m.digin.digin_log.drain(0..150);
-    }
-    crate::roomfight::room_fight_note(g, gd, &alloc::format!("dig-in: {}", what));
-}
-
 // ---------------------------------------------------------------- who can hear it
 
 /// Every player who is up and the living teammates, with their ears.
@@ -132,10 +123,8 @@ pub(super) fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate:
         crate::game::game_say(g, gd, text, None, None);
         g.stats.digin.shouts += 1;
         cue(g, r, crate::digin::Cue::Shout);
-        log(g, Some(gd), &alloc::format!("shouts (heard): {}", text));
         return true;
     }
-    log(g, Some(gd), &alloc::format!("shouts (nobody to hear it): {}", text));
     false
 }
 
@@ -529,7 +518,6 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
             g.stats.digin.callouts += 1;
             let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
             crate::game::game_say(g, by, line, Some(true), None);
-            log(g, Some(by), "calls the furniture he hears");
         }
     }
 }
@@ -554,7 +542,6 @@ pub(super) fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &m
     }
     g.stats.digin.braced += 1;
     scrape(g, gd, m, Some(r), Some(true));
-    log(g, Some(gd), &alloc::format!("wedges {}", name));
 }
 
 /// May this door be wedged.
