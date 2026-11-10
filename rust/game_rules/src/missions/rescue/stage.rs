@@ -30,7 +30,7 @@ pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
 fn check_free(g: &Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
     let mut q: V3 = [p[0], 0.0, p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, None);
-    let pushed = m::hyp2(q[0] - p[0], q[2] - p[2]);
+    let pushed = v3::dist_xz(q, p);
     let near = crate::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]);
     let mut prop = None;
     for i in 0..g.props.props.len() {
@@ -40,7 +40,7 @@ fn check_free(g: &Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
         if gap < 0.3 { prop = Some(pr); break; }
     }
     if let Some(pr) = prop { bad.push(format!("{} ({}, {}): standing in {}", what, js::num_str(p[0]), js::num_str(p[2]), g.tab.props_prop[pr].def.name)); }
-    let far = match near { None => true, Some(n) => m::hyp2(n[0] - p[0], n[2] - p[2]) > 0.8 };
+    let far = match near { None => true, Some(n) => v3::dist_xz(n, p) > 0.8 };
     let why = if pushed > 0.15 { format!("in a wall or fixed furniture (pushed {} m out)", js::to_fixed(pushed, 2)) } else if far { String::from("no walkable floor within a step") } else { String::new() };
     if !why.is_empty() { bad.push(format!("{} ({}, {}): {}", what, js::num_str(p[0]), js::num_str(p[2]), why)); }
     why.is_empty()

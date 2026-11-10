@@ -120,7 +120,7 @@ impl Men {
         let at = self.men.len();
         let b = caps.bound;
         let bc = x([b[0], b[1], b[2]]);
-        let head = c.bones.get(game::character::Bone::Head).copied().unwrap_or([c.pos[0], c.pos[1] + 1.6, c.pos[2]]);
+        let head = c.bone_or(game::character::Bone::Head, 1.6);
         self.heads.push(f3(head));
         self.men.push(Man {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,

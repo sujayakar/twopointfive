@@ -59,7 +59,7 @@ struct Told {
 pub fn doorway_gate(g: &mut Game, gd: GuardId, dt: f64, speed: f64) -> Option<f64> {
     if !ours(g, gd) || crate::condition::down(g, g.gd[gd].ch) || !(speed > 0.0) { return Some(speed); }
     remembers(g, gd);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if frames_by(g, pos).any(|d| in_opening(g, d, pos, None)) {   // in an opening: he clears it, whoever stands about
         release(g, gd, false);
         st!(g, gd).held_t = 0.0;
@@ -260,7 +260,7 @@ fn waits(g: &mut Game, w: &Walker) {
     let (spot, door) = (s.spot.unwrap(), s.door.unwrap());
     if aside(g, w, spot) && w.turn {
         let (fc, at) = (g.dr[door].frame_centre, g.ch[w.c].pos);
-        g.ch[w.c].body_yaw = v3::approach_angle(g.ch[w.c].body_yaw, m::atan2(fc[0] - at[0], fc[2] - at[2]), 5.5 * w.dt);
+        g.ch[w.c].body_yaw = v3::approach_angle(g.ch[w.c].body_yaw, crate::v3::yaw_to(at, fc), 5.5 * w.dt);
     }
 }
 
@@ -308,7 +308,7 @@ fn friends(g: &Game, gd: GuardId) -> Vec<FriendsItem> {
 /// Does `o`'s walk go through `d` within reach: metres of walk to the line and the face he comes from.
 fn through(g: &Game, o: GuardId, d: DoorId) -> Option<Through> {
     let reach = g.k.doormanners.reach;
-    let (mut a, mut run) = (g.ch[g.gd[o].ch].pos, 0.0);
+    let (mut a, mut run) = (g.pos_of(o), 0.0);
     let mut i = g.gd[o].path_i;
     while i < g.gd[o].path.len() && run < reach {
         let b = g.gd[o].path[i];

@@ -108,7 +108,7 @@ fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 pub fn cover_eyes_free(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if row.watch.is_some() || row.door.is_some() { return false; }
-    let walking = row.post.map_or(false, |p| v3::dist_xz(g.ch[g.gd[gd].ch].pos, p) > ON_MARK_M);
+    let walking = row.post.map_or(false, |p| v3::dist_xz(g.pos_of(gd), p) > ON_MARK_M);
     walking || crate::orders::rows::is(g, a, crate::orders::Is::LooksAbout)
 }
 
@@ -170,7 +170,7 @@ pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if !row.spare.unwrap_or(false) || row.from.is_none() { return false; }
     match row.post {
-        Some(post) => v3::dist_xz(g.ch[g.gd[gd].ch].pos, post) > g.k.cover.rear_walk_m,
+        Some(post) => v3::dist_xz(g.pos_of(gd), post) > g.k.cover.rear_walk_m,
         None => false,
     }
 }
@@ -711,7 +711,7 @@ fn where_on_the_pin(g: &Game, gd: GuardId, pin: &crate::rearwatch::RearPin) -> O
     if to.is_none() { if let Some(j) = j0 { if !j.off && j.o == o { to = Some(j.to); } } }
     if to.is_none() {
         if let Some(po) = post {
-            if m::hyp2(p[0] - po[0], p[2] - po[2]) < 1.0 { to = crate::rearwatch::rear_sees(g, po, o, pin.front); }
+            if v3::dist_xz(p, po) < 1.0 { to = crate::rearwatch::rear_sees(g, po, o, pin.front); }
         }
     }
     to.or(pin.to)
@@ -1036,7 +1036,7 @@ fn cover_step_spot(g: &Game, gd: GuardId, from: V3, o: CoverOpeningId, bodies: &
         guns.push((sp, [sp[0] + m::sin(sy) * 8.0, 0.0, sp[2] + m::cos(sy) * 8.0]));
     }
     for (mt, j) in g.cover.jobs.iter() {
-        if mt != gd && !j.off { guns.push((g.ch[g.gd[mt].ch].pos, j.to)); }
+        if mt != gd && !j.off { guns.push((g.pos_of(mt), j.to)); }
     }
     let ops: Vec<(V3, f64)> = g.cover.openings.iter().map(|&x| (g.tab.cover_opening[x].at, g.tab.cover_opening[x].half)).collect();
     let mut best: Option<V3> = None;
@@ -1052,7 +1052,7 @@ fn cover_step_spot(g: &Game, gd: GuardId, from: V3, o: CoverOpeningId, bodies: &
             if ops.iter().any(|x| v3::dist_xz(q, x.0) < x.1 + k.step_off_m) { continue; }
             if bodies.iter().any(|&(bc, b)| bc != me && v3::dist_xz(b, q) < 0.8) { continue; }
             if g.cover.steps.iter().any(|(mt, st)| mt != gd && v3::dist_xz(st.q, q) < 0.8) { continue; }
-            if crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None) || crate::scene_collision::solid_blocked(g, [p[0], CHEST, p[2]], [q[0], CHEST, q[2]], None) { continue; }
+            if crate::scene_collision::low_blocked(g, p, q) || crate::scene_collision::solid_blocked(g, [p[0], CHEST, p[2]], [q[0], CHEST, q[2]], None) { continue; }
             if [0.35, 0.7].iter().any(|&f: &f64| {
                 let mx = p[0] + (q[0] - p[0]) * f;
                 let mz = p[2] + (q[2] - p[2]) * f;
@@ -1204,7 +1204,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
         (along > 0.15 && along < len + k.in_m && m::abs(sx * fz - sz * fx) < k.lane_keep) || v3::dist_xz(b, j.to) < k.in_m
     };
     for pl in crate::seats::men_up(g) {
-        if ours(g.ch[g.pl[pl].ch].pos) { return None; }
+        if ours(g.player_pos(pl)) { return None; }
     }
     for mt in crate::seats::team_men(g, &crate::seats::here(g)) {
         if mt != gd && !crate::condition::down(g, g.gd[mt].ch) && ours(g.pos_of(mt)) { return None; }

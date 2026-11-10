@@ -293,7 +293,7 @@ pub fn work_props(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props
     if u < 0.5 || l.t > l.dur + g.k.handwork.stow_secs * 0.8 { return; }
     let right = js::truthy(i.hand);
     let bone = if right { crate::character::Bone::HandR } else { crate::character::Bone::HandL };
-    let Some(h) = g.ch[c_2].bones.get(bone).copied() else { return };
+    let Some(h) = g.ch[c_2].bone(bone) else { return };
     let f = crate::character::character_forward(g, c_2);
     let r: V3 = [-f[2], 0.0, f[0]];
     let s = if i.two { if right { 0.045 } else { -0.045 } } else { 0.0 };
@@ -342,7 +342,7 @@ pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::guards:
 
 /// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark.
 pub fn belt_torch(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props::Carried) {
-    let Some(hp) = g.ch[c_2].bones.get(crate::character::Bone::Hips).copied() else { return };
+    let Some(hp) = g.ch[c_2].bone(crate::character::Bone::Hips) else { return };
     let f = crate::character::character_forward(g, c_2);
     let r: V3 = [-f[2], 0.0, f[0]];
     let spot = crate::inhand::belt_torch().at;

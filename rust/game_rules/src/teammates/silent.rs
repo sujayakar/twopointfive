@@ -133,7 +133,7 @@ pub fn silent_no_cans(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bo
 /// is his gun quiet: by the weapon's own report
 pub fn quiet_gun(g: &crate::game::Game, gd: GuardId) -> bool {
     let def = g.fa[g.gd[gd].weapon].def;
-    let r = &g.m.weapons.weapons.get(def).unwrap().report;
+    let r = &g.weapon(def).report;
     !r.loud && r.level < 1.0
 }
 

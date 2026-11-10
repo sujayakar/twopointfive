@@ -385,13 +385,13 @@ impl HandsOff {
         let seat = game::seats::seat(g, me.seat);
         let pl = &g.pl[seat.player];
         let pos = g.ch[pl.ch].pos;
-        let chest = |gd: GuardId| { let c = g.gd[gd].ch; g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([g.ch[c].pos[0], 1.2, g.ch[c].pos[2]]) };
+        let chest = |gd: GuardId| { let c = g.gd[gd].ch; g.ch[c].bone(game::character::Bone::Chest).unwrap_or([g.ch[c].pos[0], 1.2, g.ch[c].pos[2]]) };
         // (he shoots only a man the fog shows, on the screen, with nothing solid between them and no whole pane, a beat after he shows)
         let eye = [pos[0], 1.45, pos[2]];
         let mut best: Option<(f64, GuardId)> = None;
         for h in g.guards.iter().copied().filter(|&h| g.team(h) == Team::Hostile) {
             if game::condition::down(g, g.gd[h].ch) { self.shown.retain(|s| s.0 != h); continue; }
-            let (c, d) = (chest(h), dist_xz(pos, g.ch[g.gd[h].ch].pos));
+            let (c, d) = (chest(h), dist_xz(pos, g.pos_of(h)));
             if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || game::scene_collision::solid_blocked(g, eye, c, None) { continue; }
             let fresh = !self.shown.iter().any(|s| s.0 == h && t - s.1.last <= 1.0);
             if fresh { self.shown.retain(|s| s.0 != h); let need = REACT * (0.75 + 0.5 * self.die.roll()); self.shown.push((h, Shown { first: t, last: t, need })); }
@@ -408,10 +408,10 @@ impl HandsOff {
         me.hands(g, cmd, best.map(chest));
         // (and not with one of his own in the line)
         let mate_in_line = best.is_some_and(|h| {
-            let (a, b) = (pos, g.ch[g.gd[h].ch].pos);
+            let (a, b) = (pos, g.pos_of(h));
             let l = dist_xz(a, b);
             me.up().into_iter().any(|m| {
-                let p = g.ch[g.gd[m].ch].pos;
+                let p = g.pos_of(m);
                 let along = ((p[0] - a[0]) * (b[0] - a[0]) + (p[2] - a[2]) * (b[2] - a[2])) / l.max(1e-6);
                 along > 0.0 && along < l && dist_xz(p, [a[0] + (b[0] - a[0]) * along / l, 0.0, a[2] + (b[2] - a[2]) * along / l]) < MATE_M
             })

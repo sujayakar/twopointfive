@@ -487,7 +487,7 @@ fn a_blast_kill_is_the_man_who_set_it_off() {
             p.g.pl[other].holstered = true;
             p.g.pl[m].holstered = false;
             let c = p.g.gd[t1].ch;
-            let (who, at) = (p.g.ch[p.g.pl[m].ch].id, p.g.ch[c].pos);
+            let (who, at) = (p.g.player_id(m), p.g.ch[c].pos);
             let n0 = p.g.chronicle.events.len();
             let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
             game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
@@ -513,7 +513,7 @@ fn a_blast_kill_names_what_went_off_with_one_player() {
         p.g.pl[pl].holstered = false;
         assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
         let c = p.g.gd[t1].ch;
-        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let (who, at) = (p.g.player_id(pl), p.g.ch[c].pos);
         let n0 = p.g.chronicle.events.len();
         let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
         game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);
@@ -536,7 +536,7 @@ fn a_civilian_killed_by_a_blast_names_what_went_off() {
         p.g.pl[pl].holstered = false;
         assert!(game::game::player_gun_in_hand(&p.g, pl).is_some(), "seed {s}: CONTROL: a gun in his hand");
         let c = p.g.gd[her].ch;
-        let (who, at) = (p.g.ch[p.g.pl[pl].ch].id, p.g.ch[c].pos);
+        let (who, at) = (p.g.player_id(pl), p.g.ch[c].pos);
         let n0 = p.g.chronicle.events.len();
         let spec = game::frag::BlastSpec { who, name: Some(String::from("grenade")), fx: Some(false), ..Default::default() };
         game::frag::blast(&mut p.g, [at[0] + 0.1, 0.05, at[2]], &spec);

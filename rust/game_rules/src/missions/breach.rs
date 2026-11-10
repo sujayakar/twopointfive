@@ -275,7 +275,7 @@ fn tick_approach(g: &mut Game, t: f64) {
     let (a, b) = (dr!(g).a, dr!(g).b);
     let base = dr!(g).t_run;
     let stack0 = dr!(g).plan.stack[0];
-    if v3::dist_xz(g.ch[g.gd[a].ch].pos, stack0) < 3.2 || t > base + 16.0 {
+    if v3::dist_xz(g.pos_of(a), stack0) < 3.2 || t > base + 16.0 {
         dr!(g).phase = Phase::Stack;
         dr!(g).t_stack = t;
         breach_drill_beat(g, "approach-done");
@@ -622,7 +622,7 @@ fn breach_drill_room_clear(g: &mut crate::game::Game) -> bool {
     let hs = dr!(g).hostiles.clone();
     let mut all_down = true;
     for h in hs.iter().copied() {
-        let gone = crate::condition::down(g, g.gd[h].ch) || g.gd[h].fled || (own && { let p = g.ch[g.gd[h].ch].pos; !breach_drill_inside_room(g, p, -0.3) });
+        let gone = crate::condition::down(g, g.gd[h].ch) || g.gd[h].fled || (own && { let p = g.pos_of(h); !breach_drill_inside_room(g, p, -0.3) });
         if !gone { all_down = false; break; }
     }
     let (a, b) = (dr!(g).a, dr!(g).b);

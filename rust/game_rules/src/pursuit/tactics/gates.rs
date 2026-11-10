@@ -130,7 +130,7 @@ fn at_the_handle(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3
     let h = match gate.hs {
         Some(h) => h,
         None => {
-            let pos = g.ch[g.gd[gd].ch].pos;
+            let pos = g.pos_of(gd);
             let h = if crate::doors::doors_pull_face(g, d, pos) { crate::handleside::tool_spot(g, d, gate.side, pos, None) } else { None };
             let h = h.filter(|h| !h.far).map(|h| GateHs { pos: h.pos, yaw: h.yaw });
             gate.hs = Some(h);
@@ -214,7 +214,7 @@ fn slice(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64) {
     let (p, look) = (gate.slice_pts[i], gate.slice_look[i]);
     gate.look = Some(look);
     let pos = g.ch[c].pos;
-    let face_in = m::atan2(look[0] - pos[0], look[2] - pos[2]);
+    let face_in = v3::yaw_to(pos, look);
     let there = step_gate(g, gd, gate, dt, p, SLICE_PACE, Some(face_in));
     if there { gate.slice_t += dt; if gate.slice_t >= SLICE_DWELL { gate.slice_i += 1.0; gate.slice_t = 0.0; } }
     if gate.slice_i >= gate.slice_pts.len() as f64 {

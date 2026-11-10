@@ -249,7 +249,7 @@ fn fog_of_war_team(g: &mut crate::game::Game) {
     g.engine.lights.fog_team.owners.clear();
     g.engine.lights.fog_team.lights.clear();
     for pl in crate::seats::men(g) {
-        let id = g.ch[g.pl[pl].ch].id;
+        let id = g.player_id(pl);
         let light = g.pl[pl].light;
         g.engine.lights.fog_team.owners.add(crate::Num(id));
         g.engine.lights.fog_team.lights.add(light);
@@ -259,7 +259,7 @@ fn fog_of_war_team(g: &mut crate::game::Game) {
         let gd = g.guards[i];
         i += 1;
         if g.team(gd).ours() {
-            let id = g.ch[g.gd[gd].ch].id;
+            let id = g.char_id(gd);
             let light = g.gd[gd].flashlight;
             g.engine.lights.fog_team.owners.add(crate::Num(id));
             g.engine.lights.fog_team.lights.add(light);
@@ -297,7 +297,7 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
             }
         }
     }
-    let (now, linger, p) = (g.time, g.k.fog.linger, g.ch[g.gd[gd].ch].pos);
+    let (now, linger, p) = (g.time, g.k.fog.linger, g.pos_of(gd));
     let r = g.fog_of_war.recs.get_mut(gd).unwrap();
     r.framed = Some(framed);
     if dead && (seen || fired || framed || (since >= 0.0 && since < m::max(linger, 0.5))) { r.body = true; }
@@ -352,7 +352,7 @@ fn fog_of_war_call_words(g: &crate::game::Game, kind: crate::fogofwar::FogOfWarC
     let side = fog_of_war_side_of(g, p);
     let there = crate::dialogue::place_name(g, p);
     let me = fog_of_war_caller(g);
-    let here_at = g.ch[g.pl[me].ch].pos;
+    let here_at = g.player_pos(me);
     let here = crate::dialogue::place_name(g, here_at);
     let odd = js::to_i32(g.fog_of_war.call_n) & 1 != 0;
     let contact = kind == crate::fogofwar::FogOfWarCallWordsKind::Contact;
@@ -502,7 +502,7 @@ fn fog_of_war_eye_on_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, 
 /// Where a body is looked for: a hand's height over where it lies.
 fn body_at(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
+    let hp = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]]
 }
 

@@ -157,7 +157,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     let held = match g.pl[me].holding() { Some(h) => Some(h.g), None => None };
     if held != Some(gd) {
         // not the man in his arm: in reach and nothing solid between, statics or a leaf
-        let (a, b) = (g.ch[g.pl[me].ch].pos, g.ch[g.gd[gd].ch].pos);
+        let (a, b) = (g.player_pos(me), g.pos_of(gd));
         if v3::dist_xz(a, b) > crate::dialogue::INTERROGATE_REACH || crate::scene_collision::solid_blocked(g, [a[0], 1.0, a[2]], [b[0], 1.0, b[2]], None) { return None; }
     }
     let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
@@ -170,7 +170,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     if pick.kind == Some(crate::dialogue::IntelKind::Door) {
         crate::player::take_key(g, gd, lend_rnd(&mut rnd));
     } else if pick.kind == Some(crate::dialogue::IntelKind::Code) {
-        let at = g.ch[g.gd[gd].ch].pos;
+        let at = g.pos_of(gd);
         if let Some(k) = crate::devices::devices_pad_near(g, at) {
             let _ = crate::devices::learn_code(g, &k.def.name, crate::devices::LearnCodeHow::Told, Some(gd));
         }
@@ -203,7 +203,7 @@ pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { crate::player::t
 pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
     let hit = match g.ch[c_2].ragdoll { Some(r) => crate::ragdoll::ragdoll_take_impact(g, r, None, None), None => 0.0 };
     if hit > 1.4 {
-        let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
+        let at = g.ch[c_2].bone(crate::character::Bone::Spine2).unwrap_or(g.ch[c_2].pos);
         crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
         crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15));
     }

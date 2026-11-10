@@ -232,7 +232,7 @@ pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage) {
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
     st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, moved: 0.0 });
-    st.a.cost_feet = v2(g.ch[g.pl[g.player].ch].pos);
+    st.a.cost_feet = v2(g.player_pos(g.player));
     super::stage::quiet_inside(g, st, 1.0, QK.cost.blade);
     let c = &QK.cost.lamp;
     st.a.cost_lamp = Some(super::stage::hang_lamp(g, "kitview_cost", 0.0, p, [0.0, -1.0, 0.0], c.color, c.intensity, c.range, 0.0, 180.0, c.radius));
@@ -245,7 +245,7 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
     let el = now - st.a.cost_t;
     let a = cost_at(el);
     let pl = g.player;
-    let feet = g.ch[g.pl[pl].ch].pos;
+    let feet = g.player_pos(pl);
     st.a.stow_t = now;
     let mut last = st.a.cost_last.unwrap_or_default();
     last.moved = m::max(last.moved, flat(feet, st.a.cost_feet));
@@ -255,7 +255,7 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
             if let Some(d) = st.door.filter(|&d| !g.dr[d].leaf.off) {
                 g.dr[d].leaf.locked = false;
                 let f = at(st, [0.0, 1.0, 0.0]);
-                let id = g.ch[g.pl[pl].ch].id;
+                let id = g.player_id(pl);
                 crate::doors::doors_crack(g, d, f, id, st.a.step_dt, None, Some(c.swing), Some(c.wide_deg * R));
             }
             if !last.up {
@@ -314,7 +314,7 @@ pub(super) fn life(g: &mut Game, st: &mut KitStage) {
         if !st.a.life_on.unwrap_or(QK.idle.on) { st.a.life_next = f64::NAN; return; }
         if busy || st.a.life_next.is_nan() { st.a.life_next = now + QK.idle.every[st.a.life_n as usize % QK.idle.every.len()]; return; }
         if now < st.a.life_next || (st.a.hi.is_some() && st.a.rest_until - now < QK.idle.out * 2.0 + QK.idle.stay + 0.5) { return; }
-        let sam_p = g.ch[g.pl[g.player].ch].pos;
+        let sam_p = g.player_pos(g.player);
         if off_rest(g, st) || flat(sam_p, st.sam) > K.on_slot || away(g, st) { return; }
         let hung = st.inside.filter(|l| g.engine.lights.lights.contains(l));
         let o = &QK.own;

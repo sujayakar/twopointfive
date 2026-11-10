@@ -29,7 +29,7 @@ fn a_man_who_stays_in_his_rooms_takes_cover_in_them() {
             p.frame();
             for &f in &foes {
                 if game::condition::down(&p.g, p.g.gd[f].ch) || p.g.gd[f].fled { continue; }
-                let q = p.g.ch[p.g.gd[f].ch].pos;
+                let q = p.g.pos_of(f);
                 assert!(q[0] < 33.0, "seed {seed} {hour}: {} is outside at {q:?} and has not fled", p.g.gd[f].callsign);
             }
         }

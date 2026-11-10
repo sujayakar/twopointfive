@@ -16,7 +16,7 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
     let Some((gd, variant)) = g.pl[pl].holding().map(|h| (h.g, h.variant)) else { return };
     if crate::guards::in_hand(g, gd) != Some(crate::guards::InHand::Weapon) { return; }
     let def = g.fa[g.gd[gd].weapon].def;
-    let (kind, supp) = { let row = g.m.weapons.weapons.get(def).unwrap(); (row.drop, row.suppressed) };
+    let (kind, supp) = { let row = g.weapon(def); (row.drop, row.suppressed) };
     let at = hand_of(g, gd);
     let yaw = v3::yaw_of(g.ch[g.gd[gd].ch].gun_dir);
     let strip = Strip { t: 0.0, kind, supp, at, item: None, rap: variant == crate::character::HoldVariant::Gun, gone: false, yaw };
@@ -116,7 +116,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
 
 fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
+    let hand = g.ch[c].bone(crate::character::Bone::HandR);
     v3::copy(match hand { Some(w) => w, None => v3::add(g.ch[c].pos, [0.0, 1.05, 0.0]) })
 }
 
@@ -160,8 +160,8 @@ fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
 /// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear.
 fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let it = s.item.unwrap();
-    let Some(w) = g.ch[sam].bones.get(crate::character::Bone::HandR).copied() else { return };
-    let tip = g.ch[sam].bones.get(crate::character::Bone::FingerR).copied().unwrap_or(w);
+    let Some(w) = g.ch[sam].bone(crate::character::Bone::HandR) else { return };
+    let tip = g.ch[sam].bone(crate::character::Bone::FingerR).unwrap_or(w);
     let d = v3::sub(tip, w);
     let l = v3::len(d);
     let ahead = g.k.hold.strip.hold[if long(s.kind.as_str()) { 1 } else { 0 }];

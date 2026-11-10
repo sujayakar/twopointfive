@@ -456,7 +456,7 @@ fn lays_rounds_on_it(g: &mut Game, gd: GuardId, b: &Belief, to: Option<V3>, pos:
     if st.n >= kf.rounds { st.n = 0.0; st.fired_t = time; st.next = time + kf.gap_secs; }   // these rounds are through: he listens
     let p = g.k.aim.guard;
     let dist = dist_xz(pos, aim);
-    let on = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
+    let on = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - g.ch[c].aim_yaw)) < 0.25 && !g.gd[gd].muzzle_down;
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * (match g.gd[gd].skill { Some(sk) => sk.settle_k, None => 1.0 });
     let aim_model = g.tune.aim_model;
     let st = stand!(g, gd);
@@ -490,14 +490,14 @@ fn fires_through_it(g: &mut Game, gd: GuardId, d: DoorId, shot: DoorShot, dt: f6
     let p = g.k.aim.guard;
     let had = crate::weapons::firearm_rounds_ready(g, w);
     let def = g.fa[w].def;
-    if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
+    if g.weapon(def).burst.is_some() {
         let tr = g.arms[g.gd[gd].ch].aim.track;
         g.arms[g.gd[gd].ch].aim.track = lay;   // (his lay on the SPOT for the burst's own cone, and for nothing else: his track on the man is put back)
         crate::guards::burst_trigger(g, gd, dt, aim, ok && armed, ok, None);
         g.arms[g.gd[gd].ch].aim.track = tr;
     } else if ok && armed && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && !crate::guards::round_past_colleague(g, gd, aim, None, None) && crate::weapons::firearm_fire(g, w) {
         let mo = crate::suppression::guard_fire_mods(g, gd);
-        let row = g.m.weapons.weapons.get(def).unwrap();
+        let row = g.weapon(def);
         let (r, cd, jitter) = (row.ai_spread, row.cd, row.cd_jitter);
         let die = crate::dice::draw_of(g, "doorforce::door_force#1", gd);
         g.arms[g.gd[gd].ch].fire_cd = (cd + die * jitter) * mo.gap;

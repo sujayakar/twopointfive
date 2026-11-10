@@ -17,8 +17,8 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let row = &g.tab.orders_assignment[*a];
         if row.post.is_none() && !men.contains(&gd) { taken.push(row.follow); }
     }
-    let sam = g.ch[g.pl[g.player].ch].pos;
-    let nears: Vec<f64> = men.iter().map(|&m| v3::dist_xz(g.ch[g.gd[m].ch].pos, sam)).collect();
+    let sam = g.player_pos(g.player);
+    let nears: Vec<f64> = men.iter().map(|&m| v3::dist_xz(g.pos_of(m), sam)).collect();
     let pair_ids: Vec<Option<crate::game::PairId>> = men.iter().map(|&m| squad_orders_pair_of(g, m)).collect();
     let many = men.len() > 2;
     let mut sorted: Vec<(GuardId, (f64, f64, Option<crate::game::PairId>))> = Vec::with_capacity(men.len());

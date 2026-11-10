@@ -109,7 +109,7 @@ fn floor_of(g: &mut Game, men: &[GuardId]) -> (crate::scene_scenarios::Structure
     let mut rooms: Vec<crate::scene_scenarios::StructureRoom> = Vec::new();
     let mut of: Vec<String> = Vec::new();
     for &gd in men {
-        let at = g.ch[g.gd[gd].ch].pos;
+        let at = g.pos_of(gd);
         let Some(r) = crate::roomfight::room_fight_room_at(g, at) else { of.push(String::new()); continue };
         let id = alloc::format!("room{}", js::num_str(g.tab.roomfight_room[r].id));
         if !rooms.iter().any(|x| x.id == id) {

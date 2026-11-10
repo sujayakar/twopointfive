@@ -229,8 +229,8 @@ impl Splinter {
         chars.extend(crate::civilians::civilians_shown(g).into_iter().map(|o| g.gd[o].ch));
         for ch in chars {
             let Some(rag) = g.ch[ch].ragdoll.filter(|rag| g.tab.ragdoll[*rag].sleeping) else { continue };
-            let h = g.ch[ch].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[ch].pos);
-            if m::hyp2(h[0] - hx, h[2] - hz) < self.w + 1.2 || m::hyp2(h[0] - rail_at[0], h[2] - rail_at[2]) < rail_l + 0.8 {
+            let h = g.ch[ch].bone(crate::character::Bone::Hips).unwrap_or(g.ch[ch].pos);
+            if m::hyp2(h[0] - hx, h[2] - hz) < self.w + 1.2 || crate::v3::dist_xz(h, rail_at) < rail_l + 0.8 {
                 crate::ragdoll::ragdoll_wake(g, rag);
             }
         }

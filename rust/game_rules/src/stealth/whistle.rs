@@ -81,10 +81,7 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
         ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
-    let at = match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(head) => *head,
-        None => v3::add(pos, [0.0, if g.pl[pl].crouch { 1.05 } else { 1.6 }, 0.0]),
-    };
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, if g.pl[pl].crouch { 1.05 } else { 1.6 }, 0.0]));
     crate::audio_iface::game_audio_like_play(g, "whistle", Some(at), Some(gain), None);
     true
 }
@@ -123,7 +120,7 @@ fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f6
         at += 1;
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         if crate::seats::is_man_id(g, who) && !g.team(gd).theirs() { continue; }
-        let pos = g.ch[g.gd[gd].ch].pos;
+        let pos = g.pos_of(gd);
         if v3::dist(e.pos, pos) > g.k.whistle.horizon { continue; }
         let prop = crate::weather::hear_path(g, src, v3::add(pos, [0.0, 1.5, 0.0]), None);
         let reach = g.k.whistle.reach_k * prop.carry * keen;
@@ -253,7 +250,7 @@ pub fn whistle_patrol_tick(g: &mut crate::game::Game, gd: GuardId) {
         if let Some(at) = glance_at {
             let c = g.gd[gd].ch;
             let pos = g.ch[c].pos;
-            let to = m::atan2(at[0] - pos[0], at[2] - pos[2]);
+            let to = v3::yaw_to(pos, at);
             let max = g.k.whistle.glance_max;
             g.ch[c].anim.look_yaw_extra = v3::clamp(v3::wrap_angle(to - g.ch[c].body_yaw), -max, max);
         }

@@ -1297,6 +1297,8 @@ impl Game {
     pub fn seat_pos(&self, seat: &crate::seats::SeatRef) -> V3 { self.ch[self.pl[seat.player].ch].pos }
     /// where a player's man stands
     pub fn player_pos(&self, p: PlayerId) -> V3 { self.ch[self.pl[p].ch].pos }
+    /// a player's man's body's number
+    pub fn player_id(&self, p: PlayerId) -> f64 { self.ch[self.pl[p].ch].id }
     /// his body's number
     pub fn char_id(&self, gd: GuardId) -> f64 { self.ch[self.gd[gd].ch].id }
     /// the body's number of a seat's own man

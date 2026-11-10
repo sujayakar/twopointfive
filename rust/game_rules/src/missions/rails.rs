@@ -75,7 +75,7 @@ fn squad_post_near(g: &Game, seat: &crate::seats::SeatRef, at: V3) -> bool {
     for gd in rails_squad(g) {
         if let Some(a) = crate::orders::squad_orders_of(seat, gd) {
             if let Some(p) = g.tab.orders_assignment[a].post {
-                if m::hyp2(p[0] - at[0], p[2] - at[2]) < g.k.rails.way_m { return true; }
+                if v3::dist_xz(p, at) < g.k.rails.way_m { return true; }
             }
         }
     }
@@ -420,7 +420,7 @@ fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let d = match rails_data(g) { Some(d) => d, None => return false };
     let respawn = match d.respawn { Some(r) => r, None => return false };
     if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
-    let id = crate::Num(g.ch[g.gd[gd].ch].id);
+    let id = crate::Num(g.char_id(gd));
     if let Some(until) = g.rails.spared.get(id) { if g.time < *until { return true; } }
     let t = g.time + if respawn > 0.0 { respawn } else { g.k.rails.spare_secs };
     g.rails.spared.set(id, t);
@@ -431,7 +431,7 @@ fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 /// is this man on his knee right now, spared
 pub fn rails_is_spared(g: &crate::game::Game, gd: GuardId) -> bool {
-    let id = crate::Num(g.ch[g.gd[gd].ch].id);
+    let id = crate::Num(g.char_id(gd));
     g.rails.spared.get(id).map_or(false, |t| g.time < *t)
 }
 /// the squad's men still up
@@ -509,7 +509,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let menu = if up { seat.orders.menu.as_ref() } else { None };
     let on = menu.map_or(false, |x| t.at.map_or(true, |at| {
         let p = x.target.at();
-        m::hyp2(p[0] - at[0], p[2] - at[2]) < MENU_M
+        v3::dist_xz(p, at) < MENU_M
     }));
     let ring = if on { t.menu_line.as_ref().filter(|l| !l.is_empty()) } else { None };
     let d = g.time - g.rails.tap_t;
@@ -532,8 +532,8 @@ pub(super) fn rails_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s:
     let rd = s.l.rails.as_ref()?;
     let t = step_at(&s.l, s.i);
     let over = crate::lesson::lesson_over(g, seat);
-    let mut line_men: Vec<f64> = rails_squad(g).into_iter().map(|x| g.ch[g.gd[x].ch].id).collect();
-    line_men.push(g.ch[g.pl[seat.player].ch].id);
+    let mut line_men: Vec<f64> = rails_squad(g).into_iter().map(|x| g.char_id(x)).collect();
+    line_men.push(g.seat_id(seat));
     let open = allowed_of(s);
     Some(crate::view::RailsView {
         prompt: rails_prompt(g, seat, s),

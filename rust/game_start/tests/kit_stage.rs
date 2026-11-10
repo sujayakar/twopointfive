@@ -38,11 +38,11 @@ fn flat(a: [f64; 3], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[2] - b[1]
 fn on_their_places(p: &Play, what: &str, tol: f64) {
     let s = st(p);
     let pl = p.g.player;
-    let d = flat(p.g.ch[p.g.pl[pl].ch].pos, s.sam);
+    let d = flat(p.g.player_pos(pl), s.sam);
     assert!(d <= tol, "{}: Sam is {} m off his place", what, d);
     for (k, &x) in s.order.iter().enumerate() {
         let want = match s.mate { Some(m) if k == 0 && s.who == 0 => m, _ => s.spots[k] };
-        let d = flat(p.g.ch[p.g.gd[x].ch].pos, want);
+        let d = flat(p.g.pos_of(x), want);
         assert!(d <= tol, "{}: man {} of the file is {} m off his place", what, k, d);
     }
 }
@@ -262,7 +262,7 @@ fn a_way_with_pieces_lays_them_and_a_way_on_a_set_is_the_set() {
 fn a_picture_staged_again_is_the_same_picture() {
     for (level, words) in [("records.json", "roomclear&squad4"), ("bazaar.json", "quiet&squad=1")] {
         let mut p = stood(level, words);
-        let seen = |p: &Play| (game::hours::told::told(&p.g), p.g.tab.camera.len(), p.g.guards.iter().map(|&x| p.g.ch[p.g.gd[x].ch].pos).collect::<Vec<_>>());
+        let seen = |p: &Play| (game::hours::told::told(&p.g), p.g.tab.camera.len(), p.g.guards.iter().map(|&x| p.g.pos_of(x)).collect::<Vec<_>>());
         let first = seen(&p);
         for tries in 1..=3 {
             kitstage::restage(&mut p.g);

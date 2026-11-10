@@ -6,7 +6,7 @@ use crate::game::{DownBy, DownKind, With};
 pub fn wall_charge_blow(g: &mut Game, c: Option<WallChargeId>, pressed: Option<bool>) -> Option<WallChargeBlow> {
     let c = match c { Some(c) => Some(c), None => wall_charge_nearest(g, None) };
     let pressed = pressed.unwrap_or(true);
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| blown(g, c, pressed))
 }
 
@@ -56,7 +56,7 @@ fn wall_opened(g: &mut Game, w: WallSpot, pressed: bool) -> Blow {
     let breach = if outer && crate::wallbreak::wall_break_adopt(g, w.index) { Some(w.index) } else { None };   // (an outer wall: this blast alone opens it)
     let hung = Some(crate::wallbreak::BlastOptsHung { wall: w.index, r: g.k.wallcharge.hung_m });
     crate::cleared::cleared_rooms_room_at(g, at);   // (the room beyond is named on the floor as it is BEFORE this hole joins two rooms)
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let r = safe_radius(g, &w);
     let near = near_men(g, &w, r);
     let seats_near = near_players(g, &w, r);
@@ -159,7 +159,7 @@ fn player_caught(g: &mut Game, b: &Blow, near: f64) -> f64 {
     if crate::condition::down(g, c) { return 0.0; }
     if near > 0.0 { player_rocked(g, pl, near, b.xz); }
     // (samstun.ts: the blast does to the player what it does to a teammate standing there)
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     if b.beyond(g, p) {
         if b.far(p) < g.k.doortools.stun_m && b.through(g, p) { let secs = g.k.wallshot.ours_secs; crate::samstun::dazzle_player(g, secs, b.inn); }
     } else if near > 0.0 { let secs = b.near_secs(g, p); crate::samstun::dazzle_player(g, secs, b.inn); }

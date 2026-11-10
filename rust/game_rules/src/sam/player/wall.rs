@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, seat: &crate::seats::SeatRef, m: &Option<&mut Legs>) -> V3 {
-    match m { Some(l) => l.char.pos, None => g.ch[g.pl[seat.player].ch].pos }
+    match m { Some(l) => l.char.pos, None => g.seat_pos(seat) }
 }
 fn legs_set_xz(g: &mut Game, m: &mut Option<&mut Legs>, x: f64, z: f64) {
     match m {
@@ -28,7 +28,7 @@ fn legs_set_safe_xz(g: &mut Game, m: &mut Option<&mut Legs>, x: f64, z: f64) {
 fn legs_collide(g: &mut Game, m: &mut Option<&mut Legs>, y1: f64) {
     let (pos, safe) = match m {
         Some(l) => (l.char.pos, l.safe),
-        None => (g.ch[g.pl[g.player].ch].pos, g.pl[g.player].safe),
+        None => (g.player_pos(g.player), g.pl[g.player].safe),
     };
     let mut body = CollideManPl { char: CollideManPlChar { pos }, safe };
     collide_man(g, &mut body, y1);
@@ -292,7 +292,7 @@ fn find_wall(g: &crate::game::Game, quick: Option<bool>, why: Option<&mut crate:
 /// where a sole is drawn this moment (wallSnap `ft`)
 fn foot_at(a: Option<V3>, toe: Option<V3>) -> Option<(V3, f64)> {
     match (a, toe) {
-        (Some(a), Some(toe)) => Some((v3::copy(a), m::atan2(toe[0] - a[0], toe[2] - a[2]))),
+        (Some(a), Some(toe)) => Some((v3::copy(a), v3::yaw_to(a, toe))),
         _ => None,
     }
 }
@@ -414,7 +414,7 @@ pub(super) fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, 
     if !on && !(w.hit_t.unwrap_or(0.0) > 0.0) { return; }
     let gain = if on { g.k.wallsnap.voice_on } else { g.k.wallsnap.voice_off };
     if gain > 0.0 {
-        let at = g.ch[g.pl[g.player].ch].pos;
+        let at = g.player_pos(g.player);
         let rate = if w.kind == Some(WallHoldKind::Stack) { 0.92 } else { 1.0 };
         crate::audio_iface::game_audio_like_play(g, if on { "wallOn" } else { "wallOff" }, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }

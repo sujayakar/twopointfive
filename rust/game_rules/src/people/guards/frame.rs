@@ -13,14 +13,11 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `c.bones.head ?? v3.add(c.pos, [0, 1.65, 0])`
 pub(crate) fn eye_of_char(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Head).copied() {
-        Some(h) => h,
-        None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Head, 1.65)
 }
 /// `c.bones.head ?? c.pos`
 pub(crate) fn head_or_pos(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Head).copied() {
+    match g.ch[c].bone(crate::character::Bone::Head) {
         Some(h) => h,
         None => g.ch[c].pos,
     }
@@ -242,10 +239,10 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
     let Acts { move_speed, mut upper, aim_at, mut crouch, mut duck, .. } = acts;
     if let Some(a) = aim_at {
         let pos = g.ch[c].pos;
-        let yaw_to = m::atan2(a[0] - pos[0], a[2] - pos[2]);
+        let yaw_to = v3::yaw_to(pos, a);
         g.ch[c].aim_yaw = v3::approach_angle(g.ch[c].aim_yaw, yaw_to, 6.0 * dt);
         let gun_y = pos[1] + 1.4;
-        let hd = m::hyp2(a[0] - pos[0], a[2] - pos[2]);
+        let hd = v3::dist_xz(a, pos);
         g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, m::atan2(a[1] - gun_y, m::max(hd, 0.5)), 5.0, dt);
         let off = v3::wrap_angle(g.ch[c].aim_yaw - g.ch[c].body_yaw);
         if move_speed < 0.3 && m::abs(off) > 0.5 { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, g.ch[c].aim_yaw, 5.0 * dt); }

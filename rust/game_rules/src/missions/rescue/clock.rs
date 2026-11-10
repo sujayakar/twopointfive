@@ -9,10 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// where a round at this man goes: his chest bone, else above his feet
 fn chest_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Chest).copied() {
-        Some(b) => b,
-        None => v3::add(g.ch[c].pos, [0.0, 0.6, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Chest, 0.6)
 }
 
 /// the men of a list still on their feet, in the list's order
@@ -219,7 +216,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         let name = hostage_name(g, h);
         if g.rescue.executed.has(h) {
             rescue_note(g, &alloc::format!("executed:{}", callsign));
-        } else if g.staged.foes.iter().any(|&x| g.ch[g.gd[x].ch].id == g.gd[h].killer_id) {
+        } else if g.staged.foes.iter().any(|&x| g.char_id(x) == g.gd[h].killer_id) {
             rescue_note(g, &alloc::format!("killed:{}", callsign));
         } else {
             rescue_note(g, &alloc::format!("teamfire:{}", callsign));
@@ -237,9 +234,9 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
     if crate::condition::down(g, g.pl[pl].ch) { rescue_end(g, crate::rescue::RescueResultState::Lost, "you are down"); return; }
     let b = room(g);
     let pad = if g.rescue.secured_at.is_nan() { 0.0 } else { 0.4 };
-    let theirs = g.staged.foes.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None));
-    let ours = (!crate::condition::down(g, g.pl[pl].ch) && crate::squad::in_bounds(g.ch[g.pl[pl].ch].pos, b, Some(pad)))
-        || g.staged.team.iter().any(|&o| !crate::condition::down(g, g.gd[o].ch) && crate::squad::in_bounds(g.ch[g.gd[o].ch].pos, b, Some(pad)));
+    let theirs = g.staged.foes.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && crate::squad::in_bounds(g.pos_of(h), b, None));
+    let ours = (!crate::condition::down(g, g.pl[pl].ch) && crate::squad::in_bounds(g.player_pos(pl), b, Some(pad)))
+        || g.staged.team.iter().any(|&o| !crate::condition::down(g, g.gd[o].ch) && crate::squad::in_bounds(g.pos_of(o), b, Some(pad)));
     if let Some(how) = crate::rescueend::rescue_end_won(g) {
         let why = if how == crate::rescueend::RescueEndWon::Out {
             alloc::format!("{} of {} hostages out", alive, hs.len())
@@ -249,7 +246,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         rescue_end(g, crate::rescue::RescueResultState::Rescued, &why);
         return;
     }
-    let kept = !g.rescue.secured_at.is_nan() && (!theirs || !g.staged.captives.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)));
+    let kept = !g.rescue.secured_at.is_nan() && (!theirs || !g.staged.captives.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && crate::squad::in_bounds(g.pos_of(h), b, None)));
     if (!theirs && ours) || kept {
         if g.rescue.secured_at.is_nan() {
             g.rescue.secured_at = g.time;
@@ -276,7 +273,7 @@ pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     if !g.rescue.ack_at.is_nan() && g.time >= g.rescue.ack_at {
         g.rescue.ack_at = f64::NAN;
         if !alive.is_empty() && !g.rescue.secured_at.is_nan() {
-            let there: Vec<GuardId> = g.staged.team.iter().copied().filter(|&o| !crate::condition::down(g, g.gd[o].ch) && crate::squad::in_bounds(g.ch[g.gd[o].ch].pos, b, Some(0.4))).collect();
+            let there: Vec<GuardId> = g.staged.team.iter().copied().filter(|&o| !crate::condition::down(g, g.gd[o].ch) && crate::squad::in_bounds(g.pos_of(o), b, Some(0.4))).collect();
             let quiet = there.iter().copied().find(|&o| !g.gd[o].bubble.as_ref().map_or(false, |u| g.time - u.t < u.dur));
             if let Some(by) = quiet.or(there.first().copied()) {
                 let team = crate::dialogue::hostage_lines_table().team;

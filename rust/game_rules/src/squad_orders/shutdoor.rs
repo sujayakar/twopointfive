@@ -55,7 +55,7 @@ fn shut_spot(g: &crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutd
     let hd = handle_of(g, d);
     let ref_ = crate::handleside::pt_of(g, d, w - k().handle_in, 0.2, side);
     let pad = k().body + k().slack;
-    let face = |p: V3| m::atan2(hd[0] - p[0], hd[2] - p[2]);
+    let face = |p: V3| v3::yaw_to(p, hd);
     let mut best: Option<V3> = None;
     let mut bc = f64::INFINITY;
     let mut a = w - 0.5;
@@ -129,7 +129,7 @@ pub(super) fn plan(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> cra
     let mut out: Option<PlanArm1> = None;
     let mut bc = f64::INFINITY;
     let mut why: Option<String> = None;
-    let sam_at = g.ch[g.pl[g.player].ch].pos;
+    let sam_at = g.player_pos(g.player);
     let sam = crate::orders::side_of(g, d, sam_at);
     for &gd in men {
         let want = if from_file(g, &crate::seats::here(g), gd) {
@@ -256,7 +256,7 @@ fn send(g: &mut crate::game::Game, gd: GuardId, d: DoorId, spot: crate::shutdoor
 /// His hand on it: the leaf is pulled to; a leaf somebody propped is let go of.
 fn pull(g: &mut crate::game::Game, d: DoorId, gd: GuardId) {
     if g.dr[d].leaf.quiet_t < 0.0 { g.dr[d].leaf.quiet_t = 0.0; }
-    let who = g.ch[g.gd[gd].ch].id;
+    let who = g.char_id(gd);
     crate::doors::doors_pull_to(g, d, who);
 }
 
@@ -367,7 +367,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         store(g, gd, j);
     }
     let hd = handle_of(g, d);
-    let face = m::atan2(hd[0] - p[0], hd[2] - p[2]);
+    let face = v3::yaw_to(p, hd);
     g.tab.orders_assignment[a].face = Some(face);
     g.tab.orders_assignment[a].watch = None;   // squared up to the handle, the gun off the leaf that is coming
     if j.phase == JobPhase::Shut {

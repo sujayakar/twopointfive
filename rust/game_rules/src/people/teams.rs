@@ -17,7 +17,7 @@ pub fn spoken_name(g: &Game, o: GuardId) -> Option<String> {
 /// The side of the body with this id; the place's own for a stray.
 pub fn team_of_id(g: &Game, id: f64) -> Team {
     if let Some(p) = crate::seats::man_by_id(g, id) { return g.ch[g.pl[p].ch].team; }
-    g.guards.iter().find(|&&x| g.ch[g.gd[x].ch].id == id).map_or(Team::Guard, |&x| g.team(x))
+    g.guards.iter().find(|&&x| g.char_id(x) == id).map_or(Team::Guard, |&x| g.team(x))
 }
 
 /// Is the man he has in mind a player's.

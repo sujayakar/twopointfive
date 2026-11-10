@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small helpers of the context
 
 fn unit_ref_of(g: &Game, gd: GuardId) -> UnitRef {
-    UnitRef { id: g.ch[g.gd[gd].ch].id, callsign: g.gd[gd].callsign.clone() }
+    UnitRef { id: g.char_id(gd), callsign: g.gd[gd].callsign.clone() }
 }
 fn touch(g: &mut Game, b: DirectorLiveBeatId, u: &UnitRef) { g.tab.director_live_beat[b].touched.add(crate::Num(u.id)); }
 
@@ -152,7 +152,7 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsi
         crate::chronicle::chron_radio(g, x, line);
     }
     crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
-    let at = gd.map(|x| { let c = g.gd[x].ch; match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos } });
+    let at = gd.map(|x| { let c = g.gd[x].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) });
     crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
 }
 // ---- world: doors (ts 985)

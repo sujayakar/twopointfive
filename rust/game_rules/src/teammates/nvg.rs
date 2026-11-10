@@ -138,7 +138,7 @@ fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     if let Some(o) = crate::roomfight::room_fight_op_of(g, gd) {
         if let Some(tgt) = g.tab.roomfight_op[o].tgt {
             if !crate::condition::down(g, g.gd[tgt].ch) {
-                let at = g.ch[g.gd[tgt].ch].pos;
+                let at = g.pos_of(tgt);
                 read_at(g, at[0], at[2], false, true, &mut dim, &mut black);
             }
         }

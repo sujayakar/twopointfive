@@ -328,10 +328,7 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
     let c = g.gd[victim].ch;
     let pos = g.ch[c].pos;
     let Some(d) = door_near(g, pos, None) else { return; };
-    let at = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(&b) => b,
-        None => v3::add(pos, [0.0, 1.1, 0.0]),
-    };
+    let at = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pos, [0.0, 1.1, 0.0]));
     let team = g.team(victim);
     let mut seen = false;
     let mut i = 0;

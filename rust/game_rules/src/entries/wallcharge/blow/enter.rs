@@ -55,7 +55,7 @@ fn point_inside(g: &Game, x: &Way, [lat, deep]: [f64; 2], pods: &[Pod]) -> Optio
         for k in [1.0, 0.6, 0.3, -1.0, -0.6, 0.0] {
             for dd in [0.0, 0.6, -0.5, 1.2] {
                 let q = wall_pt(g, &x.w, x.du + lat * k, -(x.tk + m::max(0.8, deep + dd)), None);
-                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [mouth[0], 0.45, mouth[2]], [q[0], 0.45, q[2]], None)
+                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mouth, q)
                     && !(strict && wall_charge_in_frame(g, q, Some(off_frame))) && !pods.iter().any(|p| v3::dist_xz(p.pos, q) < 0.7) { return Some(q); }
             }
         }

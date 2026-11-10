@@ -61,7 +61,7 @@ fn stand_by_checked(g: &Game, lead: V3, taken: &[V3], yaw: f64) -> Result<V3, St
             let q: V3 = [want[0] + m::sin(a) * r, 0.0, want[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
                 || taken.iter().any(|t| v3::dist_xz(*t, q) < 0.9)
-                || crate::scene_collision::solid_blocked(g, [lead[0], 0.45, lead[2]], [q[0], 0.45, q[2]], None)
+                || crate::scene_collision::low_blocked(g, lead, q)
             {
                 continue;
             }

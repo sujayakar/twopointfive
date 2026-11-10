@@ -226,12 +226,12 @@ fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V
         let w = g.pl[pl].wall.as_ref().unwrap();
         (w.along, w.n, w.d, w.lo, w.hi, w.side, w.lean_off, w.serial)
     };
-    let sam = g.ch[g.pl[pl].ch].pos;
+    let sam = g.player_pos(pl);
     let su = sam[0] * t[0] + sam[2] * t[2];
     if state_of(g).hold != Some(wall) {
         let mut sum = 0.0;
         for &o in file {
-            let p = g.ch[g.gd[o].ch].pos;
+            let p = g.pos_of(o);
             sum += p[0] * t[0] + p[2] * t[2] - su;
         }
         let lo = su - w_lo;
@@ -250,7 +250,7 @@ fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V
         s.hold = Some(wall);
         s.sgn = sgn;
     }
-    let c = g.ch[g.gd[gd].ch].pos;
+    let c = g.pos_of(gd);
     let sgn = state_of(g).sgn;
     let u = su - lean_off.unwrap_or(0.0) + sgn * back;
     let r = 0.34;
@@ -267,7 +267,7 @@ fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V
         if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
             continue;
         }
-        if crate::scene_collision::solid_blocked(g, [sam[0], 0.45, sam[2]], [q[0], 0.45, q[2]], None) {
+        if crate::scene_collision::low_blocked(g, sam, q) {
             break;
         }
         if !crate::scene_collision::segment_blocked(g, [q[0], 1.35, q[2]], [q[0] - n[0] * (off - w_d + 0.5), 1.35, q[2] - n[2] * (off - w_d + 0.5)], None, None, None) {
