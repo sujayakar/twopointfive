@@ -6,7 +6,6 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use game::game::{Game, GuardState, MissionStage};
 use game::ids::{DoorId, GuardId};
-use game::teams::Team;
 
 /// metres in a tick nobody walks: more than this with no word for it is a man popping
 const POP: f64 = 1.5;

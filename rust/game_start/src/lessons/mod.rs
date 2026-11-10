@@ -18,7 +18,6 @@ use game::ids::{DoorId, FirearmId, GuardId, OrdersAssignmentId, SeatId};
 use game::m;
 use game::orders::Assignment;
 use game::scene_scenarios::LessonStep;
-use game::teams::Team;
 use game::throwables::ItemKind;
 use game::view::{LessonView, RailPrompt};
 

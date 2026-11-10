@@ -1,7 +1,6 @@
 //! A ROOM WORKED FROM THE THRESHOLD, AND A GRENADE ON A DOOR ORDER: one man cuts it before it is called held, a can goes first once the floor is loud, and an order waits for the men a grenade scattered.
 mod doors_ask;
 use doors_ask::*;
-use game::doortools::Phase;
 use game::game::GuardState;
 use game::ids::*;
 use game::orders::Who;
