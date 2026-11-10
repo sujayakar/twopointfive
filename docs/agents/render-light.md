@@ -97,7 +97,9 @@ drops it first. Over every preset `pictureOpens` lays `MOTION_CALM`: spatial tap
 tree for the first `MESH_MAX_CHARS` men, and shadow rays from near receivers walk it (`meshShadowsNear`). The tree is of what he wears (`wornTree`: the
 whole mesh's, less the parts he has not on, a ray meeting the same triangles in the same order; held by `cast-probes.ts` castTree), and it is made again
 only in a frame a bone of his moved, he changed his clothes or his slot is another man's (castSkip). Timed on an A10 alone: the pass 0.77 to 0.09 ms
-and the frame 0.5 to 1.5 ms less; the picture is bit for bit what it was on the software adapter. `charSelfShadow` makes the direct light's rays test his own body too.
+and the frame 0.5 to 1.5 ms less; the picture is bit for bit what it was on the software adapter. `meshShadowsDirect` (off, a row of the
+panel and of F8: a saving the maintainer is shown) leaves the mesh to the direct light's rays alone. `charSelfShadow` makes the direct light's rays test his
+own body too.
 
 **Openings.** `planOpeningsSteps` finds where a level is open to the sky, and each opening is a light of its own, a portal (`lookOpeningLights`): a
 hole blown in a wall lets daylight in, and a man by it throws a shadow. Openings, wall sides and reach masks run in steps under one allowance a frame
