@@ -17,7 +17,7 @@ import { SKY_ROWS, TROD_ROWS } from './scene/skymap';
 import { layBlocks, blockRows, classOf, type Blocks } from './scene/blocks';
 
 /** how many pieces may yet come to stand (what is left of broken walls), how many may yet move (rubble), and rows kept for the planes and marks of each */
-export const SPARE = { stand: 480, move: 96, rows: 14 } as const;
+export const SPARE = { stand: 480, move: 160, rows: 14 } as const;
 const nowhere = (): Piece => ({ at: [0, -200, 0], rot: [[1, 0, 0], [0, 1, 0], [0, 0, 1]], half: [0, 0, 0], mat: 0, flags: F.NOSHADOW });
 
 export class SceneGpu {
