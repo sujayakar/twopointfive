@@ -26,8 +26,8 @@ fn flags(first: bool) -> Vec<KitValue> {
     vec![KitValue::Bool(first), KitValue::Bool(!first)]
 }
 
-fn row(field: KitField, label: &str, item: Option<&str>, values: Vec<KitValue>) -> KitRow {
-    KitRow { field, label: String::from(label), values, item: item.map(String::from), get: None }
+fn row(field: KitField, label: &str, item: Option<Thing>, values: Vec<KitValue>) -> KitRow {
+    KitRow { field, label: String::from(label), values, item, get: None }
 }
 
 /// `cansRow` as the rows hold it: the skeleton's table has every field but its `get`.
@@ -68,32 +68,9 @@ pub(super) fn value_text(v: &KitValue) -> String {
     }
 }
 
-/// OWN_MAX[k][mate ? 1 : 0].
-fn own_most(k: &str, mate: bool) -> f64 {
-    own_max().get(String::from(k)).expect("OWN_MAX prices every row's thing")[if mate { 1 } else { 0 }]
-}
-
 /// The pick in a card's gun slot: `m[slot]`.
 fn slot_pick(m: &MemberKit, slot: crate::gunslots::GunSlot) -> &str {
     match slot { crate::gunslots::GunSlot::Primary => &m.primary, crate::gunslots::GunSlot::Secondary => &m.secondary }
-}
-
-/// SLOT_AMOUNT[item](m): a row's `item` is always one of its keys.
-fn amount_of(g: &mut Game, item: &str, m: &MemberKit) -> f64 {
-    match item {
-        "smoke" => slot_amount::smoke(m),
-        "bangs" => slot_amount::bangs(m),
-        "frags" => slot_amount::frags(m),
-        "shells" => slot_amount::shells(m),
-        "charges" => slot_amount::charges(m),
-        "walls" => slot_amount::walls(m),
-        "shotgun" => slot_amount::shotgun(g, m),
-        "hammer" => slot_amount::hammer(g, m),
-        "cams" => slot_amount::cams(g, m),
-        "rings" => slot_amount::rings(g, m),
-        "wand" => slot_amount::wand(g, m),
-        _ => panic!("kit: no amount for '{}'", item),
-    }
 }
 
 /// `row.word(v)`: the closures are gone from a row, and its field and the card's owner decide which one it was. A gun slot's is
@@ -162,11 +139,11 @@ fn row_get_member(g: &mut Game, r: &KitRow, at: usize) -> KitValue {
 
 /// Your two counted canister rows, the pouches rule on.
 fn you_can_rows(g: &crate::game::Game) -> Vec<crate::kit::KitRow> {
-    let smoke = slot_max(g, "smoke", 0.0, SMOKE_MAX);
-    let bangs = slot_max(g, "bangs", 0.0, STUN_MAX);
+    let smoke = slot_max(g, Thing::Smoke, 0.0, SMOKE_MAX);
+    let bangs = slot_max(g, Thing::Bangs, 0.0, STUN_MAX);
     vec![
-        row(KitField::Smoke, "Smoke canisters", Some("smoke"), counts(smoke)),
-        row(KitField::Bangs, "Stun canisters", Some("bangs"), counts(bangs)),
+        row(KitField::Smoke, "Smoke canisters", Some(Thing::Smoke), counts(smoke)),
+        row(KitField::Bangs, "Stun canisters", Some(Thing::Bangs), counts(bangs)),
     ]
 }
 
@@ -184,24 +161,24 @@ pub(super) fn mix_of(m: &crate::kit::MemberKit) -> Option<crate::kit::CanMix> {
 fn charge_rows(g: &crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     let mut rows = Vec::new();
     if charge_row(g, i) {
-        let most = slot_max(g, "charges", i, CHARGES_MAX);
-        rows.push(row(KitField::Charges, "Door charges", Some("charges"), counts(most)));
+        let most = slot_max(g, Thing::Charges, i, CHARGES_MAX);
+        rows.push(row(KitField::Charges, "Door charges", Some(Thing::Charges), counts(most)));
     }
     if wall_row(g, i) && !g.k.bigslot.on {
-        let most = slot_max(g, "walls", i, WALLS_MAX);
-        rows.push(row(KitField::Walls, "Wall charges", Some("walls"), counts(most)));
+        let most = slot_max(g, Thing::Walls, i, WALLS_MAX);
+        rows.push(row(KitField::Walls, "Wall charges", Some(Thing::Walls), counts(most)));
     }
     rows
 }
 
 /// The big slot's row offers this thing to member i.
-fn big_can(g: &Game, k: &str, i: f64) -> bool {
+fn big_can(g: &Game, k: Thing, i: f64) -> bool {
     let at = i as usize;
     let on = g.k.slots.on;
     let most = if on {
-        g.k.slots.table.items.get(String::from(k)).and_then(|it| it.max.get(at).copied()).unwrap_or(0.0)
+        g.k.slots.table.items.get(k).and_then(|it| it.max.get(at).copied()).unwrap_or(0.0)
     } else {
-        own_most(k, i != 0.0)
+        k.most(i != 0.0)
     };
     most > 0.0 && (!on || g.k.slots.table.big.get(at).copied().unwrap_or(1.0) > 0.0)
 }
@@ -209,8 +186,8 @@ fn big_can(g: &Game, k: &str, i: f64) -> bool {
 /// The big slot's one row, the last of a man's card.
 fn big_row(g: &mut crate::game::Game, i: f64) -> crate::kit::KitRow {
     let mut values = vec![text_value("none")];
-    if big_can(g, "shotgun", i) { values.push(text_value("shotgun")); }
-    if big_can(g, "hammer", i) { values.push(text_value("hammer")); }
+    if big_can(g, Thing::Shotgun, i) { values.push(text_value("shotgun")); }
+    if big_can(g, Thing::Hammer, i) { values.push(text_value("hammer")); }
     if wall_row(g, i) { values.push(text_value("wall")); }
     KitRow { get: Some(KitRowGet::Big), ..row(KitField::Big, "Big slot", None, values) }
 }
@@ -219,38 +196,38 @@ fn big_row(g: &mut crate::game::Game, i: f64) -> crate::kit::KitRow {
 fn build_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     if g.k.bigslot.on { return build_rows_tree(g, i); }
     if i == 0.0 {
-        let mut rows = vec![row(KitField::Weapon, "Guns", Some("shotgun"), words(&["rifle", "pistol", "shotgun"]))];
+        let mut rows = vec![row(KitField::Weapon, "Guns", Some(Thing::Shotgun), words(&["rifle", "pistol", "shotgun"]))];
         if g.k.slots.on { rows.extend(you_can_rows(g)); } else { rows.push(cans_row_read()); }
-        let frags = slot_max(g, "frags", 0.0, FRAGS_MAX);
-        rows.push(row(KitField::Frags, "Frag grenades", Some("frags"), counts(frags)));
-        let shells = slot_max(g, "shells", 0.0, SHELLS_MAX);
-        rows.push(row(KitField::Shells, "40 mm grenades", Some("shells"), counts(shells)));
+        let frags = slot_max(g, Thing::Frags, 0.0, FRAGS_MAX);
+        rows.push(row(KitField::Frags, "Frag grenades", Some(Thing::Frags), counts(frags)));
+        let shells = slot_max(g, Thing::Shells, 0.0, SHELLS_MAX);
+        rows.push(row(KitField::Shells, "40 mm grenades", Some(Thing::Shells), counts(shells)));
         rows.extend(charge_rows(g, 0.0));
         if cam_row(g) {
-            let cams = slot_max(g, "cams", 0.0, CAMS_MAX);
-            rows.push(row(KitField::Cams, "Sticky cameras", Some("cams"), counts(cams)));
+            let cams = slot_max(g, Thing::Cams, 0.0, CAMS_MAX);
+            rows.push(row(KitField::Cams, "Sticky cameras", Some(Thing::Cams), counts(cams)));
         }
-        if wand_row(g, None) { rows.push(row(KitField::Wand, "Optical wand", Some("wand"), flags(false))); }
+        if wand_row(g, None) { rows.push(row(KitField::Wand, "Optical wand", Some(Thing::Wand), flags(false))); }
         rows.push(suit_row());
         rows.push(trim_row());
         return rows;
     }
     let mut rows = vec![
-        row(KitField::Weapon, "Weapon", Some("shotgun"), words(&["rifle", "pistol", "shotgun"])),
+        row(KitField::Weapon, "Weapon", Some(Thing::Shotgun), words(&["rifle", "pistol", "shotgun"])),
         row(KitField::Suppressed, "Suppressor", None, flags(true)),
         row(KitField::Light, "Weapon light", None, flags(true)),
         row(KitField::Nvg, "Night vision", None, flags(true)),
     ];
-    let bangs = slot_max(g, "bangs", i, BANGS_MAX);
-    rows.push(row(KitField::Bangs, "Stun canisters", Some("bangs"), counts(bangs)));
-    if slot_max(g, "smoke", i, SMOKE_MATE_MAX) > 0.0 {
-        let smoke = slot_max(g, "smoke", i, SMOKE_MATE_MAX);
-        rows.push(row(KitField::Smoke, "Smoke canisters", Some("smoke"), counts(smoke)));
+    let bangs = slot_max(g, Thing::Bangs, i, BANGS_MAX);
+    rows.push(row(KitField::Bangs, "Stun canisters", Some(Thing::Bangs), counts(bangs)));
+    if slot_max(g, Thing::Smoke, i, SMOKE_MATE_MAX) > 0.0 {
+        let smoke = slot_max(g, Thing::Smoke, i, SMOKE_MATE_MAX);
+        rows.push(row(KitField::Smoke, "Smoke canisters", Some(Thing::Smoke), counts(smoke)));
     }
     rows.extend(charge_rows(g, i));
-    let frags = slot_max(g, "frags", i, FRAGS_MAX - 1.0);
-    rows.push(row(KitField::Frags, "Frag grenades", Some("frags"), counts(frags)));
-    if wand_row(g, Some(i)) { rows.push(row(KitField::Wand, "Optical wand", Some("wand"), flags(false))); }
+    let frags = slot_max(g, Thing::Frags, i, FRAGS_MAX - 1.0);
+    rows.push(row(KitField::Frags, "Frag grenades", Some(Thing::Frags), counts(frags)));
+    if wand_row(g, Some(i)) { rows.push(row(KitField::Wand, "Optical wand", Some(Thing::Wand), flags(false))); }
     rows.push(suit_row());
     rows.push(trim_row());
     rows
@@ -318,13 +295,13 @@ fn build_rows_tree(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow>
     let you = i == 0.0;
     let light = by(&base, KitField::Light).unwrap_or_else(|| row(KitField::Light, "Weapon light", None, flags(true)));
     let nvg = by(&base, KitField::Nvg).unwrap_or_else(|| row(KitField::Nvg, "Night vision", None, flags(true)));
-    let rings_most = slot_max(g, "rings", i, own_most("rings", !you));
-    let rings = row(KitField::Rings, "Sponge rounds", Some("rings"), counts(rings_most));
+    let rings_most = slot_max(g, Thing::Rings, i, Thing::Rings.most(!you));
+    let rings = row(KitField::Rings, "Sponge rounds", Some(Thing::Rings), counts(rings_most));
     let shells = match by(&base, KitField::Shells) {
         Some(r) => r,
         None => {
-            let most = if mate_shells(g) { slot_max(g, "shells", i, own_most("shells", true)) } else { 0.0 };
-            row(KitField::Shells, "40 mm grenades", Some("shells"), counts(most))
+            let most = if mate_shells(g) { slot_max(g, Thing::Shells, i, Thing::Shells.most(true)) } else { 0.0 };
+            row(KitField::Shells, "40 mm grenades", Some(Thing::Shells), counts(most))
         }
     };
     let mut out = Vec::new();
@@ -361,8 +338,8 @@ pub fn kit_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
 /// What a row costs member i's pouches as his card stands, and its rate in plain words; null for a row that is no pouch.
 pub(super) fn kit_row_cost(g: &mut crate::game::Game, i: f64, r: &crate::kit::KitRow, m: Option<&crate::kit::MemberKit>) -> Option<crate::kit::KitRowCost> {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
-    let item = r.item.as_ref()?;
-    let it = g.k.slots.table.items.get(item.clone()).cloned();
+    let item = r.item?;
+    let it = g.k.slots.table.items.get(item).cloned();
     if !g.k.slots.on { return None; }
     let it = it?;
     if !js::truthy(price_of(g, Some(&it))) { return None; }
@@ -370,12 +347,12 @@ pub(super) fn kit_row_cost(g: &mut crate::game::Game, i: f64, r: &crate::kit::Ki
     let holds = it.holds.filter(|h| js::truthy(*h));
     let rate = match holds {
         Some(h) if stealth_on(g) => alloc::format!("{} to a pouch", h),
-        _ if item == "wand" => alloc::format!("the wand takes {}", pouch_words(p)),
-        _ if item == "shotgun" => alloc::format!("the shotgun's shells take {}", pouch_words(p)),
+        _ if item == Thing::Wand => alloc::format!("the wand takes {}", pouch_words(p)),
+        _ if item == Thing::Shotgun => alloc::format!("the shotgun's shells take {}", pouch_words(p)),
         _ if p == 1.0 => String::from("a pouch each"),
         _ => alloc::format!("{} pouches each", p),
     };
-    let n = amount_of(g, item, &m);
+    let n = amount(g, item, &m);
     Some(KitRowCost { pouches: slot_cost(g, item, n, None), rate })
 }
 
@@ -785,7 +762,7 @@ pub fn kit_sanitize(g: &mut crate::game::Game, i: f64, raw: Option<&JsMap<String
         if let Some(v) = v.filter(|v| offers(&r.values, v)) {
             put_field(&mut card, r.field, v);
         } else if you && matches!(r.field, KitField::Smoke | KitField::Bangs | KitField::Frags | KitField::Shells) && int(v, 0.0) {
-            put_field(&mut card, r.field, &KitValue::Num(m::min(num(key), own_most(key, false))));
+            put_field(&mut card, r.field, &KitValue::Num(m::min(num(key), Thing::of(key).expect("a counted thing").most(false))));
         }
     }
     if you && int(at("cams"), 1.0) && !cam_row(g) { card.cams = m::min(num("cams"), CAMS_MAX); }
