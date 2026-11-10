@@ -1,1 +1,0 @@
-[{"scene": "rooftop", "frames": {"truth": 320, "rest": 96, "wait": 2500, "settle": 24}, "rest": ["kept"], "views": [{"w": 1280, "h": 720, "tick": 600, "dist": 34, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "lamp": "atrium", "name": "night", "hour": 21.5, "settle": {"lamp": ["kept"], "blackout": ["kept"]}}]}]

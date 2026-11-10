@@ -26,6 +26,13 @@ fn smokeMeets(ro: vec3f, rd: vec3f, t1: f32, cut: f32) -> vec4f {
     t += -log(1.0 - rnd()) / most; if (t >= s.y) { break; } let y = ro + rd * t; let q = smokeSlot(y); if (q == 0u) { continue; } let v = smokeIn(q, y); if (rnd() * most < v.w) { return vec4f(select(vec3f(0.0), v.rgb, max3(v.rgb) > 24.0), t); } }
   return vec4f(0.0);
 }
+/** where the eye's ray is first turned by haze or a room's dust (0: it gets through): as much of it as real time says there is (haze.wgsl) */
+fn airMeets(ro: vec3f, rd: vec3f, t1: f32, cut: f32) -> f32 {
+  let hazy = frame.misc.w * 0.0015 * @tune.haze; let dusty = frame.misc.w * @tune.dust; let most = hazy + dusty; if (most <= 0.0) { return 0.0; } var t = 0.0; let end = min(t1, 260.0);
+  for (var i = 0u; i < 64u; i++) { t += -log(1.0 - rnd()) / most; if (t >= end) { return 0.0; } let x = ro + rd * t; let room = !openAir(x) && x.y <= cut; if (cut < 1e8 && x.y > cut && overCut(x, cut)) { continue; } if (rnd() * most < hazy * exp(-max(x.y + 12.0, 0.0) * 0.045) + select(0.0, dusty, room)) { return t; } }
+  return 0.0;
+}
+fn henyey(mu: f32) -> f32 { let g = 0.5; return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); }
 /** what comes back along a ray: the whole path tracer. `clear0` = it is the eye's, or a mirror's of it */
 fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f32, fp0: f32, most: u32) -> vec3f {
   var ro = ro0; var rd = rd0; var thr = vec3f(1.0); var L = vec3f(0.0); var cut = cut0; var clear = clear0; var depth = depth0; var spread = spread0; var fp = fp0; var wet = false; gCount = 0u;
@@ -34,7 +41,7 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     leafMode = 0u;
     let h = nearest(ro, rd, 1e-3, 2000.0, 0u, cut);
     if (h.gpiece != NOTHING && clear) {           // a pane in the way: some of the paths mirror off it
-      let lp = toLocal(h.gpiece, ro + rd * h.gt); let ng = normalize(toWorld(h.gpiece, localNormal(h.gpiece, h.gcode, lp))); let c = abs(dot(ng, rd)); let F = 0.04 + 0.96 * pow(1.0 - c, 5.0);
+      let lp = toLocal(h.gpiece, ro + rd * h.gt); let ng = normalize(toWorld(h.gpiece, localNormal(h.gpiece, h.gcode, lp))); let c = abs(dot(ng, rd)); let F = 0.04 + 0.96 * pow(sat(1.0 - c), 5.0);
       if (h.gcode != CODE_CUT && rnd() < F) { ro = ro + rd * (h.gt - 1e-3); rd = reflect(rd, ng); cut = 1e9; clear = false; depth += 1u; continue; }
     }
     var gained = vec3f(0.0);
@@ -43,6 +50,12 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
       if (c.w > 0.0) { let x = ro + rd * c.w; if (c.x > 24.0) { L += thr * c.xyz; break; }
         for (var q = 0u; q < 2u; q++) { var d: vec3f; var E: vec3f; var far = 400.0; if (q == 0u) { if (max3(frame.sunE.xyz) <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); E = frame.sunE.xyz; } else { let k = drawLamp(x, vec3f(0.0)); if (k.x < 0.0) { continue; } let a = aimLamp(u32(k.x), x, rnd2()); d = a.dir; E = a.E * k.y; far = a.dist - 0.02; } if (max3(E) > 0.0) { L += thr * E * visible(x, d, 1e-3, far) * (1.0 / (4.0 * PI)); } }
         let u = rnd2(); let z = 1.0 - 2.0 * u.x; let r = sqrt(max(1.0 - z * z, 0.0)); rd = vec3f(r * cos(2.0 * PI * u.y), r * sin(2.0 * PI * u.y), z); ro = x; thr *= 0.99; clear = false; fp = 1.0; spread = 0.02; cut = 1e9; depth += 1u; if (depth > 4u) { let q = clamp(max3(thr), 0.05, 0.95); if (rnd() > q) { break; } thr /= q; } continue; }
+    }
+    if (depth == 0u && b < 2u && frame.misc.w > 0.0) {
+      let t = airMeets(ro, rd, h.t, cut);
+      if (t > 0.0) { let x = ro + rd * t; if (h.gpiece != NOTHING && t > h.gt) { thr *= h.thru; }
+        for (var q = 0u; q < 2u; q++) { var d: vec3f; var E: vec3f; var far = 400.0; if (q == 0u) { if (max3(frame.sunE.xyz) <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); E = frame.sunE.xyz; } else { let k = drawLamp(x, vec3f(0.0)); if (k.x < 0.0) { continue; } let a = aimLamp(u32(k.x), x, rnd2()); d = a.dir; E = a.E * k.y; far = a.dist - 0.02; } if (max3(E) > 0.0) { L += thr * E * visible(x, d, 1e-3, far) * henyey(dot(rd, d)); } }
+        let u = rnd2(); let g = 0.5; let s = (1.0 - g * g) / (1.0 - g + 2.0 * g * u.x); let z = clamp((1.0 + g * g - s * s) / (2.0 * g), -1.0, 1.0); let r = sqrt(max(1.0 - z * z, 0.0)); rd = normalize(basis(rd) * vec3f(r * cos(2.0 * PI * u.y), r * sin(2.0 * PI * u.y), z)); ro = x; clear = false; fp = 1.0; spread = 0.02; cut = 1e9; depth += 1u; continue; }
     }
     if (h.piece == NOTHING) { gained = thr * h.thru * sky(rd); L += gained; break; }
     thr *= h.thru; fp += spread * h.t;
@@ -58,7 +71,7 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     let glossy = s.rough < 0.25;
     gained = thr * lampsAt(s, V, glossy); L += gained;
     if (water) {
-      let c = max(dot(s.n, V), 0.02); let F = 0.02 + 0.98 * pow(1.0 - c, 5.0);
+      let c = max(dot(s.n, V), 0.02); let F = 0.02 + 0.98 * pow(sat(1.0 - c), 5.0);
       if (rnd() < F) { ro = s.x + vec3f(0.0, 0.004, 0.0); rd = reflect(rd, s.n); rd.y = max(rd.y, 0.02); rd = normalize(rd); clear = false; cut = 1e9; depth += 1u; } else { ro = s.x - vec3f(0.0, 0.004, 0.0); rd = refract(rd, s.n, 0.75); wet = true; }
       continue;
     }

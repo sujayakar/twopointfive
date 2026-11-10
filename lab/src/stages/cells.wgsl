@@ -11,7 +11,7 @@ fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var 
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
   let c8 = li >> 3u; let task = li & 7u; let s = wg.x * 8u + c8; var go = s < many.x; let base = min(s, many.x - 1u) * 12u; var n = f32(field[base + 11u] & 255u); if (changes.all.y > 0.5) { n = 0.0; }
   var at = vec4f(0.0); var ext = vec4f(0.0); var cell = NOTHING; var r = vec4u(0u); var r2 = vec4u(0u);
-  if (go) { at = places[2u * s]; ext = places[2u * s + 1u]; cell = s + 1u; r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); }
+  if (go) { at = places[2u * s]; ext = places[2u * s + 1u]; cell = s + 1u; r = extra[BLK_CELLS + (cell - 1u) * 2u]; r2 = extra[BLK_CELLS + (cell - 1u) * 2u + 1u]; }
   let st = steady(at.xyz); if (many.z > 0u) { n = min(n, 6.0); } { let turn = select(3u, 7u, n > 32.0); if (n > 16.0 && st > 0.9 && (wg.x & turn) != (many.y & turn)) { go = false; } }
   let leafy = (r.x >> 31u) != 0u; let S = frame.sunDir.xyz; let sun0 = max3(frame.sunE.xyz) > 0.0; let h = at.w; var out = vec3f(0.0); var way = vec3f(0.0);
   if (go) {

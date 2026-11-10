@@ -17,7 +17,7 @@ fn clipOf(x: vec3f) -> vec4f { let v = x - frame.camPos.xyz; let z = dot(v, fram
 }
 @fragment fn fs(v: V) -> @location(0) vec4f {
   let q = vec2u(v.p.xy / frame.size.zw * frame.size.xy); let t = bitcast<f32>(textureLoad(surf, min(q, vec2u(frame.size.xy) - 1u), 0).x); if (v.t > t + 0.06) { discard; } var a = v.light.a;
-  if (v.kind.x > 0.5) { let r = length(v.uv); let ring = exp(-pow((r - 0.75) * 5.0, 2.0)); let dot0 = exp(-r * r * 9.0) * (1.0 - v.kind.y); a *= max(ring, dot0); }
+  if (v.kind.x > 0.5) { let r = length(v.uv); let ring = exp(-25.0 * (r - 0.75) * (r - 0.75)); let dot0 = exp(-r * r * 9.0) * (1.0 - v.kind.y); a *= max(ring, dot0); }
   else { a *= (1.0 - v.uv.x * v.uv.x) * smoothstep(-1.0, 0.2, v.uv.y) * (1.0 - smoothstep(0.86, 1.0, v.uv.y)); }
   return vec4f(v.light.rgb * a, a);
 }`;

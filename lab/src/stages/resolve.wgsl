@@ -29,14 +29,14 @@ fn upMirror(mirror: texture_2d<f32>, id: vec2u, p: Px, f: vec4u, front: bool) ->
     let u = lightAll(lt); let El = u.rgb + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);
     if (byFormula(p.rough) > 0.0 || car) { let hc = textureLoad(lampC, id.xy, 0); let f0 = select(coatF0(s), flakeF0(s.albedo) * FLAKES, car); Cl = hc.rgb * vz.z + vec3f(1.06, 0.99, 0.87) * f0 / max(lum(f0), 1e-4) * hc.a * vz.y; }
     c += part(2u) * El * select(ma, (m + s.through / PI) * 0.5, p.leaf) + part(3u) * Cl * select(byFormula(p.rough), tv * 0.91, car); if (car) { c += part(4u) * flat / PI * fromWay(rv, 0.85) * flakeF0(s.albedo) * (FLAKES * tv * 0.86); } if (p.leaf) { c += part(4u) * (b.rgb * m * ao.x + bb * s.through / PI * ao.y); } else { c += part(4u) * b.rgb * ma; }
-    if (mir.a >= 0.0) { let k = 1.0 - smoothstep(asksMirror() - 0.07, asksMirror(), p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * (part(5u) * @tune.mirror), select(k, 1.0, p.metal > 0.5)); }
-    else if (f.x == 0u && kept) { let g = coatF0(s); let r = folLight(p.x, reflect(rd, p.n), p.ao.x); c += part(4u) * @tune.bounce * r.rgb / PI * (g + (max(vec3f(1.0 - p.rough), g) - g) * pow(1.0 - nv, 5.0)); }     // a waxy leaf's broad shine: what comes to it from that way
+    if (mir.a >= 0.0) { let k = 1.0 - smoothstep(asksMirror() - 0.07, asksMirror(), p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(sat(1.0 - nv), 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * (part(5u) * @tune.mirror), select(k, 1.0, p.metal > 0.5)); }
+    else if (f.x == 0u && kept) { let g = coatF0(s); let r = folLight(p.x, reflect(rd, p.n), p.ao.x); c += part(4u) * @tune.bounce * r.rgb / PI * (g + (max(vec3f(1.0 - p.rough), g) - g) * pow(sat(1.0 - nv), 5.0)); }     // a waxy leaf's broad shine: what comes to it from that way
     else if (f.x == 0u && p.leaf) { let R = reflect(rd, p.n); let open = sat(lum(b.rgb) / max(lum(skyLod(p.n, 7.0)) * PI, 1e-5)); c += part(4u) * skyLod(R, 4.0) * (open * open * ao.x) * F; }     // a waxy leaf shows the sky, as much of it as reaches here
-    else if (f.x == 0u) { c += part(4u) * b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
+    else if (f.x == 0u) { c += part(4u) * b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(sat(1.0 - nv), 5.0)) * 0.8; }
     else { c += part(4u) * b.rgb / PI * coatF0(s) * 0.6; }
   }
   if (f.x != 0u && part(6u) > 0.0) {                                 // the clear layer: what it lets through, and what it shows
-    let k = f.z >> 24u; let n = octUnpack(f.y); let cv = abs(dot(n, V)); let f0 = select(0.04, 0.02, k == 2u); let F = f0 + (1.0 - f0) * pow(1.0 - cv, 5.0); let x = frame.camPos.xyz + rd * bitcast<f32>(f.x);
+    let k = f.z >> 24u; let n = octUnpack(f.y); let cv = abs(dot(n, V)); let f0 = select(0.04, 0.02, k == 2u); let F = f0 + (1.0 - f0) * pow(sat(1.0 - cv), 5.0); let x = frame.camPos.xyz + rd * bitcast<f32>(f.x);
     var T = unpackRGB(f.z); if (k == 2u) { let w = bitcast<f32>(f.w); T = exp(-WATER_SIGMA * w * 1.15); c = c * T + vec3f(0.010, 0.050, 0.055) * (1.0 - exp(-w * 0.8)) * (lum(frame.sunE.xyz) * max(frame.sunDir.y, 0.0) * 0.25 + lum(skyLod(vec3f(0.0, 1.0, 0.0), 6.0)) * 0.3); T = vec3f(1.0); let L = frame.sunDir.xyz; var nn = n; let hv = normalize(L + V); c += frame.sunE.xyz * ggxD(0.016, sat(dot(nn, hv))) * 0.02 * max(dot(nn, L), 0.0) * 0.25 * lightFirst(textureLoad(lampT, id.xy, 0)).z; }
     c = c * T * (1.0 - F) + max(upMirror(shine, id.xy, p, f, true).rgb, vec3f(0.0));
   }

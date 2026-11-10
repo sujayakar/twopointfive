@@ -1,1 +1,0 @@
-[{"scene": "street", "frames": {"truth": 320, "rest": 96, "wait": 2500, "settle": 24}, "rounds": 3, "cost": ["none", "kept"], "rest": ["none", "kept"], "views": [{"name": "street", "w": 1280, "h": 720, "dist": 27, "look": [0.5, 1, -1.0], "yaw": 0.5, "pitch": 0.72, "hour": 22.2, "cut": 2.5, "tick": 300, "lamp": "store", "settle": {"lamp": ["kept"]}}]}]
