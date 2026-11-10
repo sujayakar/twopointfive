@@ -5,7 +5,7 @@
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = underWater(unpackPx(textureLoad(surf, full, 0), rd), textureLoad(frontT, full, 0), rd); let who = id.y * dim.x + id.x;
   if (p.sky) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }
   if (p.kind == 63u) {                                             // a cut wall: what falls on one side of it or the other
-    rngInit(id.xy, 17u); let n = p.n * select(-1.0, 1.0, rnd() < 0.5); let x = p.x + n * (p.rough + 0.003); let c = cacheRead(x, n, rnd2()); let w0 = who * 2u; if (w0 < HITS) { let wants = cacheWants(x, n, false); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(x), octPack(n)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(x, n, l & 1u, l >> 1u), w0); } } } }
+    rngInit(id.xy, 17u); let n = p.n * select(-1.0, 1.0, rnd() < 0.5); let x = p.x + n * (p.rough + 0.003); askMoves = false; let c = cacheRead(x, n, rnd2()); cacheTell(who * 2u, x, n);
     textureStore(outE, id.xy, vec4f(select(vec3f(0.0), min(c.E + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun, vec3f(50.0)), c.n > 0.0), 4.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
   }
   if (p.leaf && folHas(p.x)) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }          // (a leaf reads its light from the foliage, at every pixel: see resolve)
@@ -21,8 +21,8 @@
       if (miss) { L += thr * skyLod(d, 1.0); break; }
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
-        L += thr * sentBack(q, false, rnd2(), d);
-        let w0 = who * 2u + k; if (k < 2u && w0 < HITS) { let wants = cacheWants(q.x, q.ng, (q.flags & MOVES) != 0u); if (wants != 0u) { hits[w0] = vec4u(bitcast<vec3u>(q.x), octPack(q.ng)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(q.x, q.ng, l & 1u, l >> 1u), w0); } } } }
+        L += thr * sentBack(q, rnd2(), d);
+        if (k < 2u) { cacheTell(who * 2u + k, q.x, q.ng); }
         break;
       }
       let a = returns(q); let y = q.x + q.ng * 0.004;
