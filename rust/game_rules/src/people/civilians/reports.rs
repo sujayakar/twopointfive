@@ -84,12 +84,9 @@ pub(super) fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId,
     let pos = g.cv[cid].cause_pos.unwrap_or(at); let armed = g.cv[cid].armed || cause == Some(CivCause::Body);
     crate::mind::raise(g, o, if armed { 0.8 } else { 0.55 }, "civilians"); crate::belief::word(g, o, pos);
     g.gd[o].body_duty = None; g.gd[o].task = None;
-    g.gd[o].set_path(Vec::new());
-    {
-        g.gd[o].set_path_goal(None);
-        if armed { crate::mind::set_state(g, o, GuardState::Search, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].search_plan = None; g.gd[o].react_t = 0.6; }
-        else { if g.gd[o].state == GuardState::Patrol || g.gd[o].state == GuardState::Suspicious { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; } g.gd[o].react_t = 0.9; }
-    }
+    g.gd[o].drop_path(); g.gd[o].stall_ref = None;
+    if armed { crate::mind::set_state(g, o, GuardState::Search, "civilians"); g.gd[o].search_t = 0.0; g.gd[o].search_plan = None; g.gd[o].react_t = 0.6; }
+    else { if g.gd[o].state == GuardState::Patrol || g.gd[o].state == GuardState::Suspicious { crate::mind::set_state(g, o, GuardState::Suspicious, "civilians"); g.gd[o].search_t = 0.0; } g.gd[o].react_t = 0.9; }
     let now = g.time; crate::game::guard_track_fix(g, o, now);
     let lines = crate::dialogue::civ_lines();
     let pool: Vec<String> = if armed { lines.guard_ack.armed.clone() } else {
