@@ -1334,112 +1334,83 @@ pub fn impact(c: &mut Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: 
     let mut res = Blow { ty: LAMINATED, ..Blow::default() };
     let ty = type_of_pane(c, bi, tune);
     res.ty = if ty == NO_TYPE { LAMINATED } else { ty };
-    let ri = match state_of(c, bi, tune) {
-        Some(r) => r,
-        None => return res,
+    let Some(ri) = state_of(c, bi, tune) else {
+        return res;
     };
     res.live = true;
-    let (u, v, seed, ty) = {
-        let r = pn(c.g).row(ri);
-        let (u, v) = to_uv_in(r, x[0], x[1], x[2]);
-        if open_uv(r, u, v) {
-            res.was_open = true;
-            res.punched = true;
-            return res;
-        }
-        r.hit_n += 1;
-        r.energy += energy;
-        r.damage = js_min(1.0, r.damage + 0.12 * energy);
-        r.who = who;
-        r.last_uv = [u, v];
-        if let Some(d) = dir {
-            if hypot3(d[0], d[1], d[2]) > 1e-6 {
-                r.last_dir = norm3(d);
-            }
-        }
-        (u, v, point_seed(r.key, x[0], x[1], x[2]), r.ty)
-    };
-    if ty == TEMPERED {
-        let r = pn(c.g).row(ri);
-        if r.energy >= tune.glassbreak.break_e.tempered || through == 1 {
-            let started = !dicing(r);
-            start_dice(c, ri, u, v, seed, tune);
-            res.diced = true;
-            res.punched = open_uv(pn(c.g).row(ri), u, v);
-            res.released = if started { 1 } else { 0 };
-            res.cracked = true;
-        }
+    let r = pn(c.g).row(ri);
+    let (u, v) = to_uv_in(r, x[0], x[1], x[2]);
+    if open_uv(r, u, v) {
+        res.was_open = true;
+        res.punched = true;
         return res;
     }
-    if ty == LAMINATED {
-        let r = pn(c.g).row(ri);
-        if classify_row(&r.d, &r.w, u, v) < 0 && add_site(r, u, v, energy, seed, tune) >= 0 {
-            res.cracked = true;
-            return res;
+    r.hit_n += 1;
+    r.energy += energy;
+    r.damage = js_min(1.0, r.damage + 0.12 * energy);
+    r.who = who;
+    r.last_uv = [u, v];
+    if let Some(d) = dir {
+        if hypot3(d[0], d[1], d[2]) > 1e-6 {
+            r.last_dir = norm3(d);
         }
-        let i = nearest_site(r, u, v);
+    }
+    let blow = At { ri, u, v, seed: point_seed(r.key, x[0], x[1], x[2]), energy };
+    match r.ty {
+        TEMPERED => on_tempered(c, &blow, through, &mut res, tune),
+        LAMINATED => on_laminated(c, &blow, &mut res, tune),
+        _ => on_float(c, &blow, through, &mut res, tune),
+    }
+    res
+}
+/// where a blow lands on a pane, the seed of the spot, and how hard
+struct At {
+    ri: usize,
+    u: f64,
+    v: f64,
+    seed: u32,
+    energy: f64,
+}
+impl At {
+    /// the blow counts on the site nearest to it. → whether there is one
+    fn counts_on_nearest(&self, r: &mut Row) -> bool {
+        let i = nearest_site(r, self.u, self.v);
         if i >= 0 {
-            r.e[i as usize] += energy;
+            r.e[i as usize] += self.energy;
             r.hits[i as usize] += 1.0;
         }
-        return res;
+        i >= 0
     }
-    // float glass
+}
+/// Tempered glass: all of it goes to dice, once it has taken enough or a round has gone through.
+fn on_tempered(c: &mut Ctx, b: &At, through: i32, res: &mut Blow, tune: &Knobs) {
+    let r = pn(c.g).row(b.ri);
+    if r.energy >= tune.glassbreak.break_e.tempered || through == 1 {
+        let started = !dicing(r);
+        start_dice(c, b.ri, b.u, b.v, b.seed, tune);
+        res.diced = true;
+        res.punched = open_uv(pn(c.g).row(b.ri), b.u, b.v);
+        res.released = if started { 1 } else { 0 };
+        res.cracked = true;
+    }
+}
+/// Laminated glass: a new star on the uncut sheet, or the blow on the nearest.
+fn on_laminated(c: &mut Ctx, b: &At, res: &mut Blow, tune: &Knobs) {
+    let r = pn(c.g).row(b.ri);
+    if classify_row(&r.d, &r.w, b.u, b.v) < 0 && add_site(r, b.u, b.v, b.energy, b.seed, tune) >= 0 {
+        res.cracked = true;
+        return;
+    }
+    b.counts_on_nearest(r);
+}
+/// Float glass: a star, a piece knocked out, or the whole of it running.
+fn on_float(c: &mut Ctx, b: &At, through: i32, res: &mut Blow, tune: &Knobs) {
+    let (ri, u, v, energy) = (b.ri, b.u, b.v, b.energy);
     let hard = if through >= 0 { through == 1 } else { energy >= tune.glassbreak.punch_e };
-    let mut no_room = false;
-    let fid = {
-        let r = pn(c.g).row(ri);
-        classify_row(&r.d, &r.w, u, v)
-    };
-    if fid >= 0 {
-        // on a piece that is still in: the blow counts on its site, and a hard one knocks the piece out
-        let r = pn(c.g).row(ri);
-        let i = fid as usize / FRAGS_PER_SITE;
-        r.e[i] += energy;
-        r.hits[i] += 1.0;
-        if hard {
-            res.released += knock_out(c, ri, fid as u32, tune);
-        }
-    } else {
-        // on the uncut sheet: a new star if there is room for one
-        let r = pn(c.g).row(ri);
-        let i = add_site(r, u, v, energy, seed, tune);
-        if i >= 0 {
-            res.cracked = true;
-            if hard {
-                res.released += release_crater(c, ri, i as usize, C_HIT, tune);
-            }
-        } else {
-            let j = nearest_site(r, u, v);
-            if j >= 0 {
-                r.e[j as usize] += energy;
-                r.hits[j as usize] += 1.0;
-                no_room = true;
-            }
-        }
-    }
-    let goes = {
-        let r = pn(c.g).row(ri);
-        !run(r) && (r.energy >= tune.glassbreak.break_e.annealed || energy >= tune.glassbreak.run_single_e || (through == 1 && no_room))
-    };
-    if goes {
-        set_run(c, ri, tune);
-        let (open_now, f2) = {
-            let r = pn(c.g).row(ri);
-            (open_uv(r, u, v), classify_row(&r.d, &r.w, u, v))
-        };
-        if hard && !open_now && f2 >= 0 {
-            res.released += knock_out(c, ri, f2 as u32, tune);
-        }
-        let j = if hard {
-            let r = pn(c.g).row(ri);
-            nearest_site(r, u, v)
-        } else {
-            -1
-        };
-        if j >= 0 && tune.glassbreak.run_star > 0.0 {
-            ring_out(c, ri, j as usize, tune);
-        }
+    let no_room = star_or_piece(c, b, hard, res, tune);
+    let r = pn(c.g).row(ri);
+    if !run(r) && (r.energy >= tune.glassbreak.break_e.annealed || energy >= tune.glassbreak.run_single_e || (through == 1 && no_room)) {
+        runs_from(c, b, hard, res, tune);
     }
     let r = pn(c.g).row(ri);
     res.punched = open_uv(r, u, v);
@@ -1449,7 +1420,47 @@ pub fn impact(c: &mut Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: 
     if r.next_think <= 0.0 {
         r.next_think = c.now + tune.glassbreak.think;
     }
-    res
+}
+/// On a piece that is still in, the blow counts on its site, and a hard one knocks the piece out; on the uncut sheet it is a new star if there is room
+/// for one. → there was none
+fn star_or_piece(c: &mut Ctx, b: &At, hard: bool, res: &mut Blow, tune: &Knobs) -> bool {
+    let (ri, u, v) = (b.ri, b.u, b.v);
+    let r = pn(c.g).row(ri);
+    let fid = classify_row(&r.d, &r.w, u, v);
+    if fid >= 0 {
+        let i = fid as usize / FRAGS_PER_SITE;
+        r.e[i] += b.energy;
+        r.hits[i] += 1.0;
+        if hard {
+            res.released += knock_out(c, ri, fid as u32, tune);
+        }
+        return false;
+    }
+    let i = add_site(r, u, v, b.energy, b.seed, tune);
+    if i < 0 {
+        return b.counts_on_nearest(r);
+    }
+    res.cracked = true;
+    if hard {
+        res.released += release_crater(c, ri, i as usize, C_HIT, tune);
+    }
+    false
+}
+/// The pane runs: a hard blow knocks out the piece it made there, and stars the site it is nearest to.
+fn runs_from(c: &mut Ctx, b: &At, hard: bool, res: &mut Blow, tune: &Knobs) {
+    let (ri, u, v) = (b.ri, b.u, b.v);
+    set_run(c, ri, tune);
+    let r = pn(c.g).row(ri);
+    let (open_now, fid) = (open_uv(r, u, v), classify_row(&r.d, &r.w, u, v));
+    if hard && !open_now && fid >= 0 {
+        res.released += knock_out(c, ri, fid as u32, tune);
+    }
+    if hard {
+        let j = nearest_site(pn(c.g).row(ri), u, v);
+        if j >= 0 && tune.glassbreak.run_star > 0.0 {
+            ring_out(c, ri, j as usize, tune);
+        }
+    }
 }
 /// the blow that RUNS a pane breaks its own star out: the rings round the site it landed on follow the crater over the next few frames
 fn ring_out(c: &mut Ctx, ri: usize, j: usize, tune: &Knobs) {
@@ -1577,11 +1588,7 @@ pub fn blast_begin(c: &Ctx, at: [f64; 3]) -> Arrival {
 /// glassbreak.ts blastIn over one sheet of the level. → it took the blow (blast()'s count of panes changed)
 pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius: f64, power: f64, who: f64, tune: &Knobs) -> bool {
     let bi = c.w.sheets[s].bi;
-    let (seq, twin_at) = (arrival.seq, arrival.at);
-    let q = {
-        let o = c.w;
-        nearest_on(rec(o, bi as usize), at)
-    };
+    let q = nearest_on(rec(c.w, bi as usize), at);
     let d = hypot3(q[0] - at[0], q[1] - at[1], q[2] - at[2]);
     if d > radius {
         return false;
@@ -1592,7 +1599,7 @@ pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius
     }
     let had_row = pn(c.g).row_of(bi);
     let prev = match had_row {
-        Some(r) => prev_k(pn(c.g).row(r), seq),
+        Some(r) => prev_k(pn(c.g).row(r), arrival.seq),
         None => 0.0,
     };
     if prev >= kk {
@@ -1602,73 +1609,76 @@ pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius
     if ty == NO_TYPE || (ty == TEMPERED && kk <= tune.glassbreak.blast_dice_k && had_row.is_none()) {
         return false;
     }
-    let ri = match state_of(c, bi, tune) {
-        Some(r) => r,
-        None => return false,
+    let Some(ri) = state_of(c, bi, tune) else {
+        return false;
     };
-    let (away, qu, qv) = {
-        let r = pn(c.g).row(ri);
-        if gone(r) {
-            return false;
-        }
-        set_k(r, seq, kk);
-        let away = if d > 1e-6 { norm3(sub3(q, at)) } else { normal_of(r) };
-        r.last_dir = away;
-        r.who = who;
-        let (qu, qv) = to_uv(r, q[0], q[1], q[2]);
-        r.last_uv = [qu, qv];
-        r.damage = js_min(1.0, r.damage + 0.3 * (kk - prev));
-        (away, qu, qv)
-    };
-    if pn(c.g).row(ri).ty == TEMPERED {
-        let r = pn(c.g).row(ri);
+    let r = pn(c.g).row(ri);
+    if gone(r) {
+        return false;
+    }
+    set_k(r, arrival.seq, kk);
+    let away = if d > 1e-6 { norm3(sub3(q, at)) } else { normal_of(r) };
+    r.last_dir = away;
+    r.who = who;
+    let (qu, qv) = to_uv(r, q[0], q[1], q[2]);
+    r.last_uv = [qu, qv];
+    r.damage = js_min(1.0, r.damage + 0.3 * (kk - prev));
+    if r.ty == TEMPERED {
         if kk > tune.glassbreak.blast_dice_k && !dicing(r) {
             r.energy += 1.0 + 2.0 * kk;
-            let seed = blast_seed(r.key, &twin_at);
+            let seed = blast_seed(r.key, &arrival.at);
             start_dice(c, ri, qu, qv, seed, tune);
             return true;
         }
         return false;
     }
-    {
-        // stars toward the blast: glass.ts crackNear's construction (a hashed point on the face inside its frame by a tenth, pulled a third of the way to the nearest point)
-        let r = pn(c.g).row(ri);
-        let web = r.ty == LAMINATED;
-        let stars_of = |x: f64| if web { 3.0 } else { 1.0 + round_half_up(2.0 * js_min(1.0, x)) };
-        let mut s = blast_seed(r.key, &twin_at);
-        let stars = stars_of(kk) as u32;
-        let had = if prev > 0.0 { stars_of(prev) as u32 } else { 0 };
-        for n in 0..stars {
-            s = (s ^ (s >> 15)).wrapping_mul(0x2C1B_3C6D).wrapping_add(0x297A_2D39);
-            if n < had {
-                continue;
-            }
-            let fu = ((s & 0xffff) as f64 / 65535.0) * 2.0 - 1.0;
-            let fv = ((s >> 16) as f64 / 65535.0) * 2.0 - 1.0;
-            let a = to_world(r, fu * 0.9 * r.hu, fv * 0.9 * r.hv);
-            let m = [lerp(a[0], q[0], 0.35), lerp(a[1], q[1], 0.35), lerp(a[2], q[2], 0.35)];
-            let (pu, pv) = to_uv(r, m[0], m[1], m[2]);
-            if open_uv(r, pu, pv) || classify_row(&r.d, &r.w, pu, pv) >= 0 {
-                continue;
-            }
-            add_site(r, pu, pv, 0.6 + kk, s, tune);
+    stars_toward(r, arrival.at, q, kk, prev, tune);
+    r.energy += if prev > 0.0 { 2.0 * (kk - prev) } else { 1.0 + 2.0 * kk };
+    if r.ty == LAMINATED {
+        if kk > tune.glassbreak.blast_sheet_k {
+            release_sheet(c, ri, away, kk, tune);
         }
-        r.energy += if prev > 0.0 { 2.0 * (kk - prev) } else { 1.0 + 2.0 * kk };
-        if web {
-            if kk > tune.glassbreak.blast_sheet_k {
-                release_sheet(c, ri, away, kk, tune);
-            }
-            return true;
-        }
+        return true;
     }
     if kk > tune.glassbreak.blast_run_k {
         set_run(c, ri, tune);
     }
+    pieces_go(c, ri, at, (qu, qv), kk, tune);
+    let r = pn(c.g).row(ri);
+    if r.next_think <= 0.0 {
+        r.next_think = c.now + tune.glassbreak.think;
+    }
+    true
+}
+/// Stars toward the blast: glass.ts crackNear's construction (a hashed point on the face inside its frame by a tenth, pulled a third of the way to the
+/// nearest point `q`), those a blow of `prev` did not make.
+fn stars_toward(r: &mut Row, twin_at: [f64; 3], q: [f64; 3], kk: f64, prev: f64, tune: &Knobs) {
+    let web = r.ty == LAMINATED;
+    let stars_of = |x: f64| if web { 3.0 } else { 1.0 + round_half_up(2.0 * js_min(1.0, x)) };
+    let mut s = blast_seed(r.key, &twin_at);
+    let stars = stars_of(kk) as u32;
+    let had = if prev > 0.0 { stars_of(prev) as u32 } else { 0 };
+    for n in 0..stars {
+        s = (s ^ (s >> 15)).wrapping_mul(0x2C1B_3C6D).wrapping_add(0x297A_2D39);
+        if n < had {
+            continue;
+        }
+        let fu = ((s & 0xffff) as f64 / 65535.0) * 2.0 - 1.0;
+        let fv = ((s >> 16) as f64 / 65535.0) * 2.0 - 1.0;
+        let a = to_world(r, fu * 0.9 * r.hu, fv * 0.9 * r.hv);
+        let m = [lerp(a[0], q[0], 0.35), lerp(a[1], q[1], 0.35), lerp(a[2], q[2], 0.35)];
+        let (pu, pv) = to_uv(r, m[0], m[1], m[2]);
+        if open_uv(r, pu, pv) || classify_row(&r.d, &r.w, pu, pv) >= 0 {
+            continue;
+        }
+        add_site(r, pu, pv, 0.6 + kk, s, tune);
+    }
+}
+/// Every piece within the blast's reach of its nearest point goes, the near ones first.
+fn pieces_go(c: &mut Ctx, ri: usize, at: [f64; 3], (qu, qv): (f64, f64), kk: f64, tune: &Knobs) {
     let reach = blast_reach(kk);
-    let frags = {
-        let r = pn(c.g).row(ri);
-        frags_of(&r.d, &r.w, r.hu, r.hv)
-    };
+    let r = pn(c.g).row(ri);
+    let frags = frags_of(&r.d, &r.w, r.hu, r.hv);
     for f in frags.list() {
         let r = pn(c.g).row(ri);
         if bit(&r.w, GW_OPEN, f.fid) || bit(&r.w, GW_GOING, f.fid) {
@@ -1683,11 +1693,6 @@ pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius
         }
         queue(c, ri, f.fid, c.now + dd * 0.03, C_BLAST, at, kk);
     }
-    let r = pn(c.g).row(ri);
-    if r.next_think <= 0.0 {
-        r.next_think = c.now + tune.glassbreak.think;
-    }
-    true
 }
 /// metres round a pane's nearest point to a blast of strength k within which its pieces are taken
 #[inline]
