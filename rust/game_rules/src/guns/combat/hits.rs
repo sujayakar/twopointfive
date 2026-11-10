@@ -259,12 +259,11 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let p = g.player;
     let c = g.pl[p].ch;
     let busy = g.ch[c].anim.hide_held_item;
-    let kind_sel = crate::game::player_canister_sel(g, p);
     let pistol_up = crate::game::player_pistol_up(g, p);
     let down = crate::condition::down(g, g.pl[p].ch);
     let sprinting = g.pl[p].sprinting;
-    let held_now: Option<crate::game::ThrowKind> = match kind_sel {
-        Some(ks) if !(down || busy || g.pl[p].holstered || g.pl[p].dragging().is_some() || sprinting) => {
+    let held_now: Option<crate::game::ThrowKind> = match crate::player::can_in_hand(g, p) {
+        Some(ks) if !(down || busy || g.pl[p].dragging().is_some() || sprinting) => {
             if crate::character::anim_in_throw(g, c) {
                 if crate::character::anim_throwing(g, c) {
                     match g.pl[p].pending_throw.as_ref().map(|t| t.kind) {

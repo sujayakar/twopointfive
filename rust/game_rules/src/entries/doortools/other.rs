@@ -297,7 +297,7 @@ fn on_door(g: &mut Game, op: DoorOpId, e: &Entry, gd: GuardId, post: Option<V3>)
     let name = crate::orders::door_words(g, o);
     if let Some(to) = post {
         let r = &mut dop!(g, op);
-        r.pod.set(gd, crate::entrypoints::Pod { pos: to, face: yaw, watch: None, moved: false });
+        r.pod.set(gd, crate::entrypoints::Pod { pos: to, face: yaw, watch: None });
         r.on_pod.delete(gd);
         let d = r.door;
         let (pace, light) = (g.sets[g.seat].orders.knobs.entry, g.sets[g.seat].door_tools.lights.unwrap_or(true));

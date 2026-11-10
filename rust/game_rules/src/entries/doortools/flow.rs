@@ -14,7 +14,7 @@ use crate::v3::dist_xz as flat;
 /// a search's row, shared by the orders in one room
 pub(super) fn search(g: &mut Game, sr: DoortoolsRoomSearchId) -> &mut RoomSearch { &mut g.tab.doortools_room_search[sr] }
 /// a point as this file deals one: `{ pos, face }`
-pub(super) fn pod_at(pos: V3, face: f64) -> crate::entrypoints::Pod { crate::entrypoints::Pod { pos, face, watch: None, moved: false } }
+pub(super) fn pod_at(pos: V3, face: f64) -> crate::entrypoints::Pod { crate::entrypoints::Pod { pos, face, watch: None } }
 
 pub(super) fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 pub(super) fn has_over(g: &Game, gd: GuardId) -> bool { g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some()) }
@@ -317,7 +317,6 @@ pub(super) fn cell_of(g: &Game, at: &JsMap<crate::Num, f64>, x: f64, z: f64) -> 
 
 /// A point dealt to a man, and he is sent there.
 pub(super) fn search_moves(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, gd: GuardId, pod: &mut crate::entrypoints::Pod, going: &str) {
-    crate::entrypoints::entry_points_dealt(g, *pod, None);
     search(g, sr).yaw.delete(gd);
     door_tools_send_on(g, op, gd, pod, going);
 }
@@ -374,7 +373,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         let points = points_for(g, &mut dead, gd);
         let mut ask = Asked { gd, men: &men, mates: JsMap::new(), refused: false };
         match best_point(g, &dead, &points, &mut ask, &mut walks) {
-            Some((c, moved)) => { sent_on(g, op, &dead, gd, c, moved, ask.mates.get(c.i).copied()); return true; }
+            Some(c) => { sent_on(g, op, &dead, gd, c, ask.mates.get(c.i).copied()); return true; }
             None if ask.refused => continue,
             None => return false,
         }
@@ -429,17 +428,16 @@ fn in_room(g: &Game, room: RoomfightRoomId, q: V3) -> bool {
     g.tab.roomfight_room[room].cells.has(crate::Num(c))
 }
 
-/// The best point he may have; or (and that it is in its place) one not much worse that is out of the line of an opening nobody has been beyond.
-fn best_point(g: &mut Game, dead: &Dead, points: &[MoveCand], ask: &mut Asked, walks: &mut Walks) -> Option<(MoveCand, bool)> {
+/// The best point he may have; or one not much worse that is out of the line of an opening nobody has been beyond.
+fn best_point(g: &mut Game, dead: &Dead, points: &[MoveCand], ask: &mut Asked, walks: &mut Walks) -> Option<MoveCand> {
     let top = *points.iter().find(|c| ask.may(g, dead, c, walks))?;
     let clear = points.iter().find(|c| crate::entrypoints::entry_points_risk_at(g, c.p, None, None).is_none() && ask.may(g, dead, c, walks));
-    Some(match clear { Some(c) if c.i != top.i && c.sc >= 0.6 * top.sc => (*c, true), _ => (top, false) })
+    Some(match clear { Some(c) if c.sc >= 0.6 * top.sc => *c, _ => top })
 }
 
 /// He goes on to it, and his partner beside him.
-fn sent_on(g: &mut Game, op: DoorOpId, dead: &Dead, gd: GuardId, c: MoveCand, moved: bool, mate: Option<PointMate>) {
+fn sent_on(g: &mut Game, op: DoorOpId, dead: &Dead, gd: GuardId, c: MoveCand, mate: Option<PointMate>) {
     let mut pod = pod_at([c.p[0], 0.0, c.p[2]], v3::yaw_to(c.p, dead.mid));
-    if moved { crate::entrypoints::entry_points_swapped(&mut pod); }
     let s = search(g, dead.sr);
     s.moves += 1.0;
     s.left_at_move = s.left;
@@ -561,17 +559,12 @@ fn door_tools_pods2(g: &mut crate::game::Game, d: DoorId, side: f64) -> Vec<crat
     out
 }
 
-/// enter: the queue is written, its points dealt, and the word goes
+/// The queue is written, and the word goes.
 fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueueItem>) {
-    let door = g.tab.doortools_door_op[op].door;
-    g.tab.doortools_door_op[op].queue = queue.clone();
-    for q in &queue {
-        crate::entrypoints::entry_points_dealt(g, q.pod, Some(door));
-    }
-    g.tab.doortools_door_op[op].phase = Phase::Enter;
-    g.tab.doortools_door_op[op].t0 = t;
+    let o = &mut g.tab.doortools_door_op[op];
+    (o.queue, o.phase, o.t0) = (queue, Phase::Enter, t);
+    let lead = o.lead;
     door_tools_beat_is(g, op, crate::doortools::Beat::Go, "go");
-    let lead = g.tab.doortools_door_op[op].lead;
     crate::game::game_say(g, lead, "going in.", None, None);
 }
 

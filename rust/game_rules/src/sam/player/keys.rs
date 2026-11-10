@@ -19,7 +19,6 @@ pub(super) fn kit_keys(g: &mut Game, t: Tick) {
     put_away_keys(g, t);
     for (key, slot, kind) in CAN_KEYS {
         if !t.hit(g, key) || throw_count(g, &crate::seats::here(g), kind) <= 0.0 { continue; }
-        if kind != ThrowKind::Frag { g.pl[pl].throw_kind = kind; }
         choose(g, pl, slot);
     }
     guns_changed(g, t, was_in);
