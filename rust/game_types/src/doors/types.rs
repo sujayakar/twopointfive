@@ -1,7 +1,7 @@
 //! The types of `doors`.
 #![allow(unused_imports)]
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorDef {
@@ -194,7 +194,7 @@ pub struct Door {
     pub handle_boxes: Vec<BoxId>,
     pub slab: Option<crate::doors::Slab>,
     pub leaf_h: V3,
-    pub leaf_marks: Option<Vec<crate::scene_markings::MarkingDef>>,
+    pub leaf_marks: Option<Arc<[crate::scene_markings::MarkingDef]>>,
     pub def: crate::doors::DoorDef,
     pub frame_centre: V3,
 }

@@ -55,13 +55,12 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     g.dr[id].leaf_h = leaf_h;
     let flag = crate::scene_boxes::box_flag();
     let steel = def.steel == Some(true);
-    let marks = if steel { None } else { Some(crate::scene_marking_defaults::door_leaf_marks(leaf_h, None)) };
+    let marks = if steel { None } else { Some(crate::scene_marking_defaults::door_leaf_marks(leaf_h, None).into()) };
     let leaf = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP {
         c: [0.0, 0.0, 0.0],
         h: leaf_h,
         albedo: Some(def.albedo.unwrap_or([0.42, 0.3, 0.19])),
         flags: Some(flag.dynamic),
-        name: Some(alloc::format!("door_{}", def.name)),
         rough: Some(if steel { 0.3 } else { 0.55 }),
         metal: if steel { Some(true) } else { None },
         marks,

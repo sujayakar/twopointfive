@@ -131,8 +131,7 @@ fn thing_at(g: &crate::game::Game, index: f64) -> Option<crate::wallpen::ThingAt
     if index >= 1e6 {
         let b = leaf_at(g, index - 1e6)?;
         let bx = &g.tab.boxes[b];
-        let is_door = bx.name.as_deref().unwrap_or("").starts_with("door_");
-        return if !bx.metal.unwrap_or(false) && bx.rot.is_none() && is_door { Some(ThingAt { b, stuff: ThinStuff::Wood }) } else { None };
+        return if !bx.metal.unwrap_or(false) && bx.rot.is_none() { Some(ThingAt { b, stuff: ThinStuff::Wood }) } else { None };
     }
     let b = static_at(g, index)?;
     let stuff = stuff_of(g, index, b)?;

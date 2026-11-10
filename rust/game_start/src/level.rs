@@ -5,7 +5,7 @@
 //! number out of its range) are `faults.rs`, which a level is asked before it is committed, and not at every start.
 use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, Material, Part, ShapeData, ShapePieceData};
 use crate::json::Json;
-use alloc::{string::String, vec, vec::Vec};
+use alloc::{string::String, sync::Arc, vec, vec::Vec};
 use game::game::Game;
 use game::ids::*;
 use game::js::JsMap;
@@ -33,7 +33,7 @@ fn flags_to_bits(names: &[FlagName]) -> f64 {
 
 /// A LIST OF MARKINGS AS IT IS LAID (the structure a generator builds): a list of none is no list, the base size goes unsaid, a colour of its own leaves no multiplier and a multiplier of 1 is none, and a colour
 /// that emits nothing emits none.
-fn laid_markings(ms: Option<Vec<MarkingDef>>) -> Option<Vec<MarkingDef>> {
+fn laid_markings(ms: Option<Vec<MarkingDef>>) -> Option<Arc<[MarkingDef]>> {
     let ms = ms.filter(|ms| !ms.is_empty())?;
     Some(ms.into_iter().map(|m| MarkingDef {
         res: m.res.filter(|&r| r != MarkRes::Base),
@@ -144,7 +144,7 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
         p.emissive = Some(b.emissive.unwrap_or([0.0, 0.0, 0.0]));
         p.flags = Some(flags_to_bits(b.flags.as_deref().unwrap_or(&[])));
         p.rough = paint.rough(&said); p.metal = paint.metal(&said); p.stuff = paint.stuff(&said); p.does = paint.does(&said);
-        p.rot = b.rot; p.round = b.round.filter(|&r| r); p.name = b.name; p.cut_height = b.cut_height;
+        p.rot = b.rot; p.round = b.round.filter(|&r| r); p.cut_height = b.cut_height;
         p.marks = laid_markings(b.markings);
         p.shape = b.shape.map(|s| shape_of(s, &paint));
         ids.push(b.id);
@@ -152,15 +152,15 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     }
     let bx = |id: &str| -> f64 { ids.iter().position(|x| x == id).unwrap_or_else(|| panic!("level '{}': unknown box '{}'", name, id)) as f64 };
     // loose props
-    let props: Vec<PropDef> = f.props.into_iter().map(|p| {
+    let props: Vec<Arc<PropDef>> = f.props.into_iter().map(|p| {
         let parts: Vec<PropPart> = p.parts.into_iter().map(|q| {
             let said = Said::from(&q);
             PropPart { off: q.off, h: q.h, yaw: q.yaw.unwrap_or(0.0), albedo: paint.albedo(&said), stuff: paint.stuff(&said), does: paint.does(&said), marks: laid_markings(q.markings) }
         }).collect();
         let (half, height) = fit_prop_footprint(&parts);
-        PropDef {
+        Arc::new(PropDef {
             kind: p.kind, name: p.name.unwrap_or(p.id), x: p.x, z: p.z, yaw: p.yaw.unwrap_or(0.0), half: p.half.unwrap_or(half), height: p.height.unwrap_or(height), mass: p.mass, parts,
-        }
+        })
     }).collect();
     // lights
     let light_of = |l: LightData| LightDef {
@@ -200,14 +200,14 @@ fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     // the scenarios' block and the footsteps' map: the runtime's own types, as they are written
     level.scenarios = f.scenarios.map(|s| s.kept); level.surfaces = f.surfaces;
     level.script = game::director::level_script_of(&name);   // (a level that carries a script, by the file's name)
-    g.level = level;
+    g.level = Arc::new(level);
     g.m.scene_level_load.level_names = Some(name.clone());
     Loaded { name, boxes }
 }
 
 /// `makeBox`'s argument with nothing said but a place and a size
 pub fn blank_box() -> MakeBoxP {
-    MakeBoxP { c: [0.0; 3], h: [0.0; 3], yaw: None, albedo: None, emissive: None, flags: None, owner: None, cut_height: None, wet_k: None, rot: None, dc: None, dh: None, name: None, rough: None, metal: None, stuff: None, does: None,
+    MakeBoxP { c: [0.0; 3], h: [0.0; 3], yaw: None, albedo: None, emissive: None, flags: None, owner: None, cut_height: None, wet_k: None, rot: None, dc: None, dh: None, rough: None, metal: None, stuff: None, does: None,
         aniso: None, marks: None, mark_gain: None, fog_emit: None, fog_mark: None, mkey: None, cut: None, cut_core: None, cut_glass: None, cut_round: None, cut_arc: None, cut_old: None, cut_core_stuff: None, round: None,
         shape: None, shaped: None, piece: None, of: None, dress: None }
 }

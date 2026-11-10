@@ -176,7 +176,7 @@ impl<'a> Cell<'a> {
     fn box_of(&self, g: &mut Game, at: V3, cut: &Cut, q: Quat, col: V3, serial: f64) -> FrameBoxId {
         let fl = crate::scene_boxes::box_flag();
         let b = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP { c: at, h: cut.h, rot: Some(q), albedo: Some(col), stuff: self.p.stuff, does: self.p.does,
-            flags: Some((js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64), name: Some(String::from("rubble")),
+            flags: Some((js::to_i32(fl.dynamic) | js::to_i32(fl.no_shadow)) as f64),
             mkey: Some(MKEY_LOOK + 8388608.0 + (js::to_i32(serial) & 0x7fffff) as f64), ..Default::default() });
         crate::scene_boxes::box_kept(g, b)
     }

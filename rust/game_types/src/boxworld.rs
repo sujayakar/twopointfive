@@ -1,7 +1,8 @@
 //! THE BOX WORLD: the boxes a level is made of, and their rows as the loops that ask of them read them (the lines, the circles, the searches, the light, the smoke).
 //!
 //! A box is read by anybody (`boxes[b]`) and written in one place, `edit`: what it hands out writes the box's row as it goes, so a question finds the boxes as they stand whoever
-//! asks it and whenever. A row is worked out of its box alone, so the rows are in no bytes.
+//! asks it and whenever. A row is worked out of its box alone, so the rows are in no bytes. The floor's grid is: a piece is filed under the plan of what it broke from, so what is filed
+//! where is not to be had from the boxes.
 //!
 //! WHICH BOXES HAVE A ROW. A static (the level's list, in its order), a leaf (a door's box), a part of the furniture in the level. Every other box (a piece of debris, a skin) has none,
 //! and is written without one.
@@ -126,6 +127,8 @@ pub struct World {
     pub view_at: [f64; 6],
     /// which writing of a static's row this is: no two alike in a process, so a table made from the statics is told by it
     pub wrote: u64,
+    /// …and of how one stands (its place, its size, its turn), for a table that is made of that alone
+    pub stood: u64,
     /// the places of the planes nobody has
     cut_free: Vec<u32>,
     /// which panes a walker goes through, a byte a static
@@ -144,7 +147,10 @@ impl World {
     /// does a walker go through static `bi`, a pane of glass
     pub fn walked(&self, bi: usize) -> bool { self.walk[bi] != 0 }
 
-    fn told(&mut self) { self.wrote = next(); }
+    fn told(&mut self) {
+        self.wrote = next();
+        self.stood = self.wrote;
+    }
     /// `row` of one of the three tables is box `b`
     fn put(&mut self, of: Of, b: &SBox) {
         let (at, list) = match of { Of::Static(i) => (i, 0), Of::Leaf(i) => (i, 1), Of::Part(i) => (i, 2) };
@@ -177,6 +183,7 @@ impl World {
                 to.copy_from_slice(&now);
             }
         } else if had { self.cut_free.push(rows[o + R_CUT] as u32); }
+        let stands = !same(&rows[o..o + R_CUT], &r[..R_CUT]) || (rows[o + R_KIND] as u32 ^ kind) & K_ROT != 0;
         moved |= !same(&rows[o..o + REC], &r);
         rows[o..o + REC].copy_from_slice(&r);
         match list {
@@ -184,7 +191,8 @@ impl World {
                 let back = (crate::v3::clamp(lum(b.albedo), 0.0, 1.0) * 255.0) as u8;
                 moved |= self.flags[at as usize] != flags || self.back[at as usize] != back;
                 (self.flags[at as usize], self.back[at as usize]) = (flags, back);
-                if moved { self.told(); }
+                if moved { self.wrote = next(); }
+                if stands { self.stood = self.wrote; }
             }
             1 => self.leaf_flags[at as usize] = flags,
             _ => {}
@@ -194,6 +202,18 @@ impl World {
     fn give_back(cut_free: &mut Vec<u32>, rows: &[f64]) {
         for r in rows.chunks_exact(REC) { if r[R_KIND] as u32 & K_CUT != 0 { cut_free.push(r[R_CUT] as u32); } }
     }
+}
+/// WHAT IS FILED IN THE CELLS OF A GRID `w` across: cell c holds items[start[c] .. start[c + 1]] of those given, in their order, each in the cells of a plan (x0 x1 z0 z1)
+pub fn filed(w: usize, cells: usize, list: &[(u32, [i32; 4])]) -> (Vec<u32>, Vec<u32>) {
+    let each = |f: &mut dyn FnMut(usize, u32)| for &(i, [x0, x1, z0, z1]) in list { for z in z0..=z1 { for x in x0..=x1 { f(z as usize * w + x as usize, i); } } };
+    // (a cell's own count stands one place on, and is summed up into where it starts)
+    let mut start = alloc::vec![0; cells + 1];
+    each(&mut |c, _| start[c + 1] += 1);
+    for c in 0..cells { start[c + 1] += start[c]; }
+    let mut free = start.clone();
+    let mut items = alloc::vec![0; start[cells] as usize];
+    each(&mut |c, i| { items[free[c] as usize] = i; free[c] += 1; });
+    (start, items)
 }
 /// every double by its bits (a −0 is not a 0)
 fn same(a: &[f64], b: &[f64]) -> bool { a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits()) }
@@ -283,21 +303,40 @@ impl Boxes {
         w.back.truncate(n);
         w.walk.truncate(n);
         w.snow.truncate(n);
+        let mut items = Vec::with_capacity(w.items.len());
+        for c in 1..w.start.len() {
+            let had = core::mem::replace(&mut w.start[c - 1], items.len() as u32) as usize..w.start[c] as usize;
+            items.extend(w.items[had].iter().copied().filter(|&i| (i as usize) < n));
+        }
+        if let Some(end) = w.start.last_mut() { *end = items.len() as u32; }
+        w.items = items;
+        let keep: Vec<i32> = w.tilted.chunks_exact(5).filter(|t| (t[0] as usize) < n).flatten().copied().collect();
+        w.tilted = keep;
         w.told();
     }
-    /// the grid they are filed in: the statics of every cell, the tilted statics, its cells across and deep, a cell's side
-    pub fn grid(&mut self, cells: &[Vec<f64>], tilted: &[f64], w: f64, h: f64, cs: f64) {
+    /// THE GRID THEY ARE FILED IN, with nothing filed: its cells across and deep, a cell's side
+    pub fn grid(&mut self, w: u32, h: u32, cs: f64) {
         let o = &mut self.rows;
-        (o.w, o.h, o.cs) = (w as u32, h as u32, cs);
-        o.start.clear();
+        (o.w, o.h, o.cs) = (w, h, cs);
+        o.start = alloc::vec![0; (w * h) as usize + 1];
         o.items.clear();
-        for c in cells {
-            o.start.push(o.items.len() as u32);
-            o.items.extend(c.iter().map(|&i| i as u32));
-        }
-        o.start.push(o.items.len() as u32);
-        o.tilted = tilted.iter().map(|&v| v as i32).collect();
+        o.tilted.clear();
     }
+    /// …and these statics filed in it, each in the cells of a plan (x0 x1 z0 z1), in their order and after all that were filed before
+    pub fn file(&mut self, list: &[(u32, [i32; 4])]) {
+        let o = &mut self.rows;
+        let (from, more) = filed(o.w as usize, o.start.len() - 1, list);
+        let mut items = Vec::with_capacity(o.items.len() + more.len());
+        for c in 1..from.len() {
+            let had = core::mem::replace(&mut o.start[c - 1], items.len() as u32) as usize..o.start[c] as usize;
+            items.extend_from_slice(&o.items[had]);
+            items.extend_from_slice(&more[from[c - 1] as usize..from[c] as usize]);
+        }
+        *o.start.last_mut().unwrap() = items.len() as u32;
+        o.items = items;
+    }
+    /// …and this one told among the tilted
+    pub fn file_tilted(&mut self, i: u32, [x0, x1, z0, z1]: [i32; 4]) { self.rows.tilted.extend_from_slice(&[i as i32, x0, x1, z0, z1]); }
     /// THE LEAVES are these
     pub fn leaves(&mut self, list: &[BoxId]) {
         for p in self.place.iter_mut() { if matches!(p, Some(Of::Leaf(_))) { *p = None; } }
@@ -348,7 +387,7 @@ impl Boxes {
 
     /// THE CHECK, against the lists as the game has them (a thing's id, its parts, where it stands): the first box that is in a list and not in its place here, or whose row is not
     /// the box as it stands, by what it is and its place
-    pub fn astray<'a>(&self, statics: &[BoxId], leaves: &[BoxId], things: impl Iterator<Item = (u32, &'a [BoxId], [f64; TH])>, cells: &[Vec<f64>]) -> Option<(&'static str, usize)> {
+    pub fn astray<'a>(&self, statics: &[BoxId], leaves: &[BoxId], things: impl Iterator<Item = (u32, &'a [BoxId], [f64; TH])>) -> Option<(&'static str, usize)> {
         let is = |b: BoxId, of: Of| self.place.get(b.ix()).copied().flatten() == Some(of);
         if statics.len() != self.rows.boxes() { return Some(("count of the statics", statics.len())); }
         if leaves.len() != self.rows.leaves() { return Some(("count of the leaves", leaves.len())); }
@@ -363,7 +402,8 @@ impl Boxes {
             (n, at) = (n + 1, at + parts.len() as u32);
         }
         if n != self.rows.things.len() { return Some(("count of the furniture", n)); }
-        if !cells.iter().flatten().map(|&i| i as u32).eq(self.rows.items.iter().copied()) { return Some(("grid", 0)); }
+        if !self.rows.start.is_sorted() || self.rows.start.last().map_or(0, |&n| n as usize) != self.rows.items.len() { return Some(("grid", 0)); }
+        if let Some(i) = self.rows.items.iter().find(|&&i| i as usize >= statics.len()) { return Some(("static the grid names", *i as usize)); }
         let mut w = self.rows.clone();
         for (i, of) in self.place.iter().enumerate().filter_map(|(i, p)| p.map(|p| (i, p))) { w.put(of, &self.of[BoxId::from_ix(i)]); }
         let off = |a: &[f64], b: &[f64]| a.iter().zip(b).position(|(x, y)| x.to_bits() != y.to_bits()).map(|i| i / REC);
@@ -386,7 +426,12 @@ impl Index<BoxId> for Boxes {
     fn index(&self, b: BoxId) -> &SBox { &self.of[b] }
 }
 impl ToBytes for Boxes {
-    fn w(&self, o: &mut W) { self.of.w(o) }
+    fn w(&self, o: &mut W) {
+        self.of.w(o);
+        self.rows.start.w(o);
+        self.rows.items.w(o);
+        self.rows.tilted.w(o);
+    }
 }
 
 /// a box in hand to write: its row is written as this goes

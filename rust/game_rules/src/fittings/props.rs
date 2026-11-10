@@ -12,7 +12,7 @@ use crate::m;
 use crate::v3::V3;
 use ::sim::maths::{cos, exp, hypot2, sin};
 use ::sim::world::{asking, js_abs, js_ceil, js_max, js_min, World, REC, R_C, R_COS, R_H, R_SIN};
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use prim::sqrt;
 pub use ::game_types::props::types;
 pub use types::*;
@@ -64,7 +64,7 @@ fn listed(g: &mut Game) {
 }
 
 /// a thing of furniture made: its record, its part boxes, placed
-fn prop_new(g: &mut Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropId {
+fn prop_new(g: &mut Game, def: &Arc<crate::scene_level::PropDef>, id_2: f64) -> PropId {
     let id = PropId(id_2 as u32);
     let (hx, hz) = (def.half[0], def.half[1]);
     let radius = m::hyp2(hx, hz);
@@ -81,7 +81,6 @@ fn prop_new(g: &mut Game, def: &crate::scene_level::PropDef, id_2: f64) -> PropI
             yaw: Some(0.0),
             albedo: Some(p.albedo),
             flags: Some(crate::scene_boxes::box_flag().dynamic),
-            name: Some(def.name.clone()),
             mkey: Some(crate::scene_boxes::mkey().prop + id_2 * 16.0 + j as f64),
             marks,
             stuff: p.stuff.clone(),
@@ -149,7 +148,7 @@ fn wake(p: &mut Prop) {
 
 /// the furniture of a level made and settled. RETURNS the system; for the settle, which reaches it by `g.props` as every method does, it stands in
 /// `g.props` and the old value is put back, so the caller's `g.props = …` is what keeps it
-pub fn prop_system_new(g: &mut Game, defs: &[crate::scene_level::PropDef]) -> PropSystem {
+pub fn prop_system_new(g: &mut Game, defs: &[Arc<crate::scene_level::PropDef>]) -> PropSystem {
     if defs.len() as f64 > PROP_CAP {
         panic!("a level of {} loose things of furniture: the game holds {}", defs.len(), PROP_CAP);
     }

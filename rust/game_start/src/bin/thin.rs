@@ -248,7 +248,7 @@ fn sheets(t: &mut T, capped: bool) {
         let has = t.p.g.tab.boxes[b].marks.as_ref().is_some_and(|m| !m.is_empty());
         if has { t.reached("sheets marked as authored", 1); }
         if k % 3 != 0 {
-            let mark = drawn.clone().unwrap_or_else(|| vec![Default::default()]);
+            let mark = drawn.clone().unwrap_or_else(|| vec![Default::default()].into());
             t.p.g.tab.boxes.edit(b).marks = Some(mark);
             t.reached("sheets marked here", 1);
         }
