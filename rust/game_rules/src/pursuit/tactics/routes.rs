@@ -64,11 +64,6 @@ pub(super) fn tactics_on(g: &crate::game::Game) -> bool {
     g.tune.tactics && g.ai_enabled
 }
 
-/// The bearing of p about C.
-fn bearing_of(p: V3, c_2: V3) -> f64 {
-    m::atan2(p[0] - c_2[0], p[2] - c_2[2])
-}
-
 /// Two bearings' difference in degrees.
 fn deg_apart(a: f64, b: f64) -> f64 {
     m::abs(v3::wrap_angle(a - b)) / v3::DEG
@@ -153,7 +148,7 @@ fn sector_cells(g: &crate::game::Game, c_2: V3, bearing: f64, r: f64, half_deg: 
             let p: V3 = [(x + 0.5) * cs, 0.0, (z + 0.5) * cs];
             let d = dist_xz(p, c_2);
             let i = crate::scene_collision::nav_grid_idx(g, x, z);
-            if !(d > r || d < 0.75 || g.col.nav.blocked[i as usize] != 0) && deg_apart(bearing_of(p, c_2), bearing) < half_deg {
+            if !(d > r || d < 0.75 || g.col.nav.blocked[i as usize] != 0) && deg_apart(v3::yaw_to(c_2, p), bearing) < half_deg {
                 out.add(crate::Num(i));
             }
             x += 1.0;
@@ -165,12 +160,12 @@ fn sector_cells(g: &crate::game::Game, c_2: V3, bearing: f64, r: f64, half_deg: 
 
 /// The bearing about T at which a walk from → path last comes INTO T's R-disc (his own bearing if he already stands inside it).
 fn entry_bearing(t: V3, from: V3, path: &[V3], r: f64) -> f64 {
-    if dist_xz(from, t) <= r { return bearing_of(from, t); }
+    if dist_xz(from, t) <= r { return v3::yaw_to(t, from); }
     let s = sample_path(from, path, Some(0.25));
-    let mut b = bearing_of(s[s.len() - 1], t);
+    let mut b = v3::yaw_to(t, s[s.len() - 1]);
     let mut i = 0;
     while i + 1 < s.len() {
-        if dist_xz(s[i], t) > r && dist_xz(s[i + 1], t) <= r { b = bearing_of(s[i], t); }
+        if dist_xz(s[i], t) > r && dist_xz(s[i + 1], t) <= r { b = v3::yaw_to(t, s[i]); }
         i += 1;
     }
     b
@@ -719,7 +714,7 @@ mod tests {
     #[test]
     fn the_typescripts_own_bits() {
         assert_eq!(dist_xz(FROM, T).to_bits(), FLAT);
-        assert_eq!(bearing_of(FROM, T).to_bits(), BEARING);
+        assert_eq!(v3::yaw_to(T, FROM).to_bits(), BEARING);
         assert_eq!(deg_apart(2.9, -3.1).to_bits(), DEG_APART);
         assert_eq!(crate::places::walk_len(FROM, &PATH).to_bits(), PATH_LEN);
         let s: Vec<f64> = sample_path(FROM, &PATH, None).iter().flat_map(|p| [p[0], p[1], p[2]]).collect();

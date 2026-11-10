@@ -10,14 +10,12 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::box_flag() }
 /// the box a breakable stands in for
 fn own_box(g: &Game, b: WallbreakBreakableId) -> &crate::scene_boxes::Box { let x = g.tab.wallbreak_breakable[b].box_; &g.tab.boxes[x] }
-/// a static by its place in the level's list: `g.col.boxes[i]` (wallbreak.ts:150, a slot and a key of `owner` are places, not IDs)
-fn at(g: &Game, i: f64) -> BoxId { g.col.boxes[i as usize] }
 fn hide_box(g: &mut Game, b: BoxId) { let mut x = g.tab.boxes.edit(b); x.flags = (js::to_i32(x.flags) | js::to_i32(HIDE)) as f64; }
 fn is_hard(b: &Breakable) -> bool { b.hard == Some(true) }
 fn cell_ix(b: &Breakable, ix: f64, iy: f64, iz: f64) -> usize { ((iy * b.nz + iz) * b.nx + ix) as usize }
 fn zone_of(r: [f64; 4]) -> AABB { AABB { x0: r[0], z0: r[1], x1: r[2], z1: r[3], y0: 0.0, y1: 0.0 } }
 /// the breakable a static index belongs to: an authored box's, or one of its pieces'
-fn owner_of(g: &Game, index: f64) -> Option<WallbreakBreakableId> { g.destr.walls.owner.get(crate::Num(index)).copied() }
+pub(super) fn owner_of(g: &Game, index: f64) -> Option<WallbreakBreakableId> { g.destr.walls.owner.get(crate::Num(index)).copied() }
 fn grid_of(g: &Game, b: WallbreakBreakableId) -> crate::break_table::CellGrid {
     let r = &g.tab.wallbreak_breakable[b];
     crate::break_table::CellGrid { id: r.id, surf: r.surf, nx: r.nx, ny: r.ny, nz: r.nz, yb: r.yb.clone(), open: r.open.clone(), n_open: Some(r.n_open), box_: r.box_ }
@@ -26,7 +24,7 @@ fn word(g: &Game, b: BoxId) -> crate::scene_boxes::WordOf {
     let x = &g.tab.boxes[b];
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff: x.stuff, does: x.does })
 }
-fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
+pub(crate) fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
     let does = g.tab.boxes[b].does;
     crate::scene_materials::does_of(g, does)
 }
@@ -92,7 +90,7 @@ pub fn wall_break_pieces_sure(g: &crate::game::Game) -> f64 {
     let authored = g.destr.walls.authored as usize;
     for i in 0..authored {
         if wall_break_adoptable(g, i as f64) {
-            let bx = at(g, i as f64);
+            let bx = g.col.boxes[i];
             foot = m::max(foot, crate::scene_collision::foot_entries(g, bx));
         }
     }
@@ -181,7 +179,7 @@ pub fn wall_break_breakable_at(g: &crate::game::Game, index: f64) -> Option<crat
 /// Could authored static `index` be taken on as a hard wall: a breaching charge's wall, by shape. (WallBreak.adoptable)
 pub fn wall_break_adoptable(g: &crate::game::Game, index: f64) -> bool {
     if index < 0.0 || index >= g.col.boxes.len() as f64 || index >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(index)) || g.destr.walls.hidden.has(crate::Num(index)) { return false; }
-    let b = at(g, index);
+    let b = g.col.boxes[index as usize];
     let (c, h, yaw, flags, em, rot) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, js::to_i32(x.flags), x.emissive, x.rot.is_some()) };
     let f = flag();
     if (flags & (js::to_i32(f.glass) | js::to_i32(f.no_primary) | js::to_i32(f.no_shadow) | js::to_i32(f.dynamic))) != 0 { return false; }
@@ -204,7 +202,7 @@ pub fn wall_break_adopt(g: &mut crate::game::Game, index: f64) -> bool {
         return had.id == index && had.kind == BKind::Wall && is_hard(had);
     }
     if !wall_break_adoptable(g, index) { return false; }
-    let b = at(g, index);
+    let b = g.col.boxes[index as usize];
     let (c, h, flags0) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.flags) };
     let sx = h[0] * 2.0; let sz = h[2] * 2.0; let cols = wall_break_hard_cols(g, b);
     let nx = if sx >= sz { cols } else { 1.0 }; let nz = if sx >= sz { 1.0 } else { cols }; let n = (nx * 2.0 * nz) as usize;
@@ -232,7 +230,7 @@ pub fn wall_break_work_left(g: &mut crate::game::Game, index: f64, hit_p: V3, di
     let through = through.unwrap_or(0.0);
     let r = if index < 1e6 { owner_of(g, index) } else { None }?;
     if is_hard(&g.tab.wallbreak_breakable[r]) { return None; }
-    let inside = at(g, index);
+    let inside = g.col.boxes[index as usize];
     let [ix, iy, iz] = wall_break_cell_at(g, r, v3::mad(hit_p, dir, 0.02), Some(inside));
     let (c0, first) = work_cell(g, r, ix, iy, iz);
     let first = first?;
@@ -382,9 +380,9 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
     let (bx, flags0, surf, n_open, cells) = { let r = &g.tab.wallbreak_breakable[b]; (r.box_, r.flags0, r.surf, r.n_open, r.open.len() as f64) };
     if n_open == 0.0 {
         g.tab.boxes.edit(bx).flags = flags0;
-        for k in 0..g.tab.wallbreak_breakable[b].live as usize { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = at(g, s); hide_box(g, p); }
+        for k in 0..g.tab.wallbreak_breakable[b].live as usize { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = g.col.boxes[s as usize]; hide_box(g, p); }
         g.tab.wallbreak_breakable[b].live = 0.0;
-        wall_break_bump(g);
+        g.boxes_changed();
         return true;
     }
     let rects = if n_open == cells { Vec::new() } else { wall_break_pieces(g, b, None) };
@@ -397,7 +395,7 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
         let cut = crate::break_table::breaks_ragged(g, &grid, &rects[k][..], h);
         let (albedo, rough, metal, aniso, stuff, does) = { let x = &g.tab.boxes[bx]; (x.albedo, x.rough, x.metal, x.aniso, x.stuff, x.does) };
         if k < g.tab.wallbreak_breakable[b].slots.len() {
-            let p = at(g, g.tab.wallbreak_breakable[b].slots[k]);
+            let p = g.col.boxes[g.tab.wallbreak_breakable[b].slots[k] as usize];
             let had_cut = { let mut x = g.tab.boxes.edit(p); x.c = c; x.h = h; x.flags = flags0; x.cut.is_some() };
             if cut.is_some() || had_cut {
                 let core = if cut.is_some() { crate::break_table::breaks_end_core(surf.as_str(), stuff, albedo) } else { None };
@@ -428,7 +426,7 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
         let c = wall_break_to_world(g, b, studs[j].c); let h = studs[j].h;
         let p;
         if k < g.tab.wallbreak_breakable[b].slots.len() {
-            p = at(g, g.tab.wallbreak_breakable[b].slots[k]);
+            p = g.col.boxes[g.tab.wallbreak_breakable[b].slots[k] as usize];
             let mut x = g.tab.boxes.edit(p);
             x.c = c; x.h = h; x.flags = flags0;
             if x.cut.is_some() { x.cut = None; x.cut_core = None; }
@@ -446,15 +444,12 @@ fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> boo
         x.flags = (js::to_i32(x.flags) | js::to_i32(flag().thin)) as f64;
         x.albedo = v3::copy(studs[j].albedo); x.rough = Some(studs[j].rough); x.metal = Some(studs[j].metal); x.does = Some(studs[j].does);
     }
-    for k in rects.len() + studs.len()..g.tab.wallbreak_breakable[b].slots.len() { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = at(g, s); hide_box(g, p); }
+    for k in rects.len() + studs.len()..g.tab.wallbreak_breakable[b].slots.len() { let s = g.tab.wallbreak_breakable[b].slots[k]; let p = g.col.boxes[s as usize]; hide_box(g, p); }
     g.tab.wallbreak_breakable[b].live = (rects.len() + studs.len()) as f64;
     g.tab.boxes.edit(bx).flags = (js::to_i32(flags0) | js::to_i32(HIDE)) as f64;
-    wall_break_bump(g);
+    g.boxes_changed();
     true
 }
-
-/// The picture's static tables are stale, and the boxes were written in place: say so. (WallBreak.bump)
-pub(super) fn wall_break_bump(g: &mut crate::game::Game) { g.engine.world.geom_serial += 1.0;}
 
 // ------------------------------------------------------------------ opening cells
 /// Opens `cells` of B; the row of the feed, or None when nothing opened or the piece cap refused it. (WallBreak.openCells)

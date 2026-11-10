@@ -250,7 +250,7 @@ fn cam_near(g: &crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> 
 }
 
 /// Nothing in his hands that takes them.
-fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
+pub(super) fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
 
 /// The camera he could take back this frame.
 fn cam_to_take(g: &crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {

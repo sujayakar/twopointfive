@@ -111,7 +111,7 @@ fn walker(g: &Game, gd: GuardId, dt: f64, speed: f64) -> Walker {
     let pos = g.ch[c].pos;
     let s = g.m.doorway.states.get(gd).unwrap();
     let to = match (s.spot, s.door) {
-        (Some(_), Some(d)) => Some(DoorAhead { d, side: s.side, dist: flat(pos, g.dr[d].frame_centre) }),
+        (Some(_), Some(d)) => Some(DoorAhead { d, side: s.side, dist: v3::dist_xz(pos, g.dr[d].frame_centre) }),
         _ => door_ahead(g, gd),
     };
     let goal = g.gd[gd].path_goal;
@@ -128,7 +128,7 @@ fn walker(g: &Game, gd: GuardId, dt: f64, speed: f64) -> Walker {
         by_door: to.is_some() || near_frame(g, pos),
         heading: heading(g, gd, pos),
         goal,
-        goal_left: goal.map_or(m::INF, |pg| flat(pos, pg)),
+        goal_left: goal.map_or(m::INF, |pg| v3::dist_xz(pos, pg)),
     }
 }
 
@@ -141,7 +141,7 @@ fn heading(g: &Game, gd: GuardId, pos: V3) -> [f64; 2] {
 }
 
 fn near_frame(g: &Game, p: V3) -> bool {
-    g.doors.list.iter().any(|d| flat(p, g.dr[*d].frame_centre) <= 2.5)
+    g.doors.list.iter().any(|d| v3::dist_xz(p, g.dr[*d].frame_centre) <= 2.5)
 }
 
 /// The last metres of a walk to an order's own mark by a door: there only a mate standing on HIS mark is anything to him.
@@ -160,7 +160,7 @@ fn eases(g: &mut Game, w: &Walker) {
 fn hears_all(g: &Game, w: &Walker) -> Told {
     let mut told = Told { scale: 1.0, hold: false, patience: g.k.doormanners.patience, by: String::new(), round: None };
     for o in friends(g, w.gd) {
-        let (far, pace) = (flat(w.pos, o.pos), m::hyp2(o.vel[0], o.vel[2]));
+        let (far, pace) = (v3::dist_xz(w.pos, o.pos), m::hyp2(o.vel[0], o.vel[2]));
         let mut say = match w.to { Some(x) => at_frame(g, w, x, &o, far, pace), None => Say::NOTHING };
         if say.scale == 1.0 && !say.hold && !say.mine && !w.waiting {
             match in_front(g, w, &o, far, pace) {
@@ -222,7 +222,7 @@ fn in_front(g: &Game, w: &Walker, o: &FriendsItem, far: f64, pace: f64) -> InFro
     if !w.by_door && !own { return InFront::Nobody; }
     if !own && pace > 0.4 && o.vel[0] * hx + o.vel[2] * hz > 0.3 * pace { return InFront::Follow(gap_k(g, far)); }
     if !(pace < 0.2 || own) { return InFront::Nobody; }
-    if w.goal.is_some_and(|pg| flat(o.pos, pg) < 0.4) { return InFront::Follow(gap_k(g, far)); }   // ON his own place: he stops short
+    if w.goal.is_some_and(|pg| v3::dist_xz(o.pos, pg) < 0.4) { return InFront::Follow(gap_k(g, far)); }   // ON his own place: he stops short
     if w.goal_left > far + 0.8 && far < k.round { InFront::Round(o.pos, far) } else { InFront::Nobody }
 }
 
@@ -234,7 +234,7 @@ fn goes_round(g: &mut Game, w: &Walker, at: V3) {
     let side = if (w.pos[0] - at[0]) * px + (w.pos[2] - at[2]) * pz >= 0.0 { 1.0 } else { -1.0 };
     for s in [side, -side] {
         let by: V3 = [at[0] + px * s * out, 0.0, at[2] + pz * s * out];
-        if nav_blocked(g, by[0], by[2]) || walled(g, w.pos, by) || !spot_free(g, &crate::seats::here(g), w.gd, by, 0.6) { continue; }
+        if crate::scene_collision::nav_grid_is_blocked(g, by[0], by[2]) || crate::scene_collision::low_blocked(g, w.pos, by) || !spot_free(g, &crate::seats::here(g), w.gd, by, 0.6) { continue; }
         let i = g.gd[w.gd].path_i;
         g.gd[w.gd].path.insert(i, by);
         return;
@@ -313,10 +313,10 @@ fn through(g: &Game, o: GuardId, d: DoorId) -> Option<Through> {
     while i < g.gd[o].path.len() && run < reach {
         let b = g.gd[o].path[i];
         if let Some(x) = crate::guards::crosses_door(g, a, b, d) {
-            let dist = run + flat(a, x.at);
+            let dist = run + v3::dist_xz(a, x.at);
             return if dist <= reach { Some(Through { dist, side: x.side }) } else { None };
         }
-        run += flat(a, b);
+        run += v3::dist_xz(a, b);
         a = b;
         i += 1;
     }

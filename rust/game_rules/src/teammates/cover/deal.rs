@@ -38,9 +38,6 @@ fn rear_pin(g: &mut Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::rearwatch::rear_pin_of(g, &crate::seats::here(g), gd))
 }
 
-/// An optional boolean as a condition.
-fn yes(o: Option<bool>) -> bool { o.unwrap_or(false) }
-
 ///  The constructor: the field initialisers, the file's one rear opening, the page's knobs.
 pub fn cover_new(g: &mut Game) -> Cover {
     let mut c = Cover::blank();
@@ -93,15 +90,15 @@ fn cover_build(g: &mut Game) {
 
 /// His order leaves his eyes spare now.
 fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
-    if !yes(g.tab.orders_assignment[a].spare) || g.tab.orders_assignment[a].post.is_none() { return false; }
+    if !g.tab.orders_assignment[a].spare.unwrap_or(false) || g.tab.orders_assignment[a].post.is_none() { return false; }
     if g.tab.orders_assignment[a].from.is_none() { return false; }
-    if rear_pin(g, gd).map_or(false, |p| yes(p.out)) { return true; }
+    if rear_pin(g, gd).map_or(false, |p| p.out.unwrap_or(false)) { return true; }
     let door = g.tab.orders_assignment[a].door;
     for o in crate::seats::team_men(g, &crate::seats::here(g)) {
         if o == gd { continue; }
         if let Some(b) = crate::seats::order_of(g, o) {
             let row = &g.tab.orders_assignment[b];
-            if row.post.is_some() && !yes(row.spare) && row.door == door { return true; }
+            if row.post.is_some() && !row.spare.unwrap_or(false) && row.door == door { return true; }
         }
     }
     false
@@ -145,7 +142,7 @@ fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(Gu
     let same = |o: &crate::roomfit::Watchable, t: &crate::roomfit::Watchable| o.key == t.key || m::abs(v3::wrap_angle(v3::yaw_to(p, o.at) - t.yaw)) < (if o.way && t.way { 0.15 } else { deg });
     let mut theirs: Vec<crate::roomfit::Watchable> = Vec::new();
     for &(mt, b) in list {
-        if mt == gd || !yes(g.tab.orders_assignment[b].spare) { continue; }
+        if mt == gd || !g.tab.orders_assignment[b].spare.unwrap_or(false) { continue; }
         if let Some(r) = g.cover.reads.get(b) {
             if let Some(pk) = &r.pick {
                 if now >= r.t && now - r.t <= k.rear_read_secs + 0.5 { theirs.push(pk.clone()); }
@@ -171,7 +168,7 @@ fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(Gu
 /// A stack's rear man still on the walk to his mark, further out than the last steps.
 pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
-    if !yes(row.spare) || row.from.is_none() { return false; }
+    if !row.spare.unwrap_or(false) || row.from.is_none() { return false; }
     match row.post {
         Some(post) => v3::dist_xz(g.ch[g.gd[gd].ch].pos, post) > g.k.cover.rear_walk_m,
         None => false,
@@ -644,7 +641,7 @@ fn rear_of_a_spare_man(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, gd: G
 /// The point at his back: what he reads of his room from a door-less mark, or else the way he walked to it, or else the door's face behind him.
 fn way_he_came(g: &mut Game, cx: &Cx, gd: GuardId, a: OrdersAssignmentId) -> Option<V3> {
     let k = g.k.cover;
-    let (spare, post, from) = (yes(g.tab.orders_assignment[a].spare), g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].from);
+    let (spare, post, from) = (g.tab.orders_assignment[a].spare.unwrap_or(false), g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].from);
     let (Some(post), Some(from), true) = (post, from, spare) else { return None };
     if cover_walk_only(g, gd, a) { return None; }
     let p = g.pos_of(gd);
@@ -950,7 +947,7 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
         let (post, goal, t0) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].goal, g.tab.orders_assignment[a].t0);
         let may_step = if post.is_none() { sam_stopped(g, gd) } else {
             let row = &g.tab.orders_assignment[a];
-            crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.watch.is_none() && !yes(row.spare) && row.via.is_empty()
+            crate::orders::rows::id_is(&row.order, crate::orders::Is::Holds) && row.watch.is_none() && !row.spare.unwrap_or(false) && row.via.is_empty()
         };
         let placed = post.is_some() || !(k.step_place_m > 0.0) || v3::dist_xz(p, goal) <= k.step_place_m;
         if may_step && still && placed && Some(gd) != rear_man && t - m::max(*g.cover.stood.get(gd).unwrap(), t0) >= k.step_after && t >= g.cover.no_step.get(gd).copied().unwrap_or(0.0) { ready.push(gd); }
@@ -1094,7 +1091,7 @@ fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     if !taken && !j.off && script_aim_is(g, gd, j.aim) {
         let a = crate::seats::order_of(g, gd).unwrap_or(j.a);
         let row = &g.tab.orders_assignment[a];
-        if yes(row.spare) && row.post.is_some() && row.from.is_some() {
+        if row.spare.unwrap_or(false) && row.post.is_some() && row.from.is_some() {
             let t = g.time;
             g.cover.kept.set(gd, CoverKeptValue { j, t });
             return;
@@ -1108,7 +1105,7 @@ fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
 fn cover_release(g: &mut Game, gd: GuardId, j: CoverJob) {
     if g.gd[gd].script.is_none() || crate::condition::down(g, g.gd[gd].ch) { return; }
     let s = g.gd[gd].script.as_mut().unwrap();
-    if j.back && yes(s.strafe) { s.strafe = Some(false); }
+    if j.back && s.strafe.unwrap_or(false) { s.strafe = Some(false); }
     if script_aim_is(g, gd, j.aim) { give_aim_back(g, gd, j.a); }
 }
 
@@ -1125,7 +1122,7 @@ fn give_aim_back(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
 
 /// The deal has let go of a man walking backwards on his opening: from here his feet are turnOut's.
 fn cover_turn_from(g: &mut Game, gd: GuardId, j: CoverJob) {
-    let strafing = g.gd[gd].script.as_ref().map_or(false, |s| yes(s.strafe));
+    let strafing = g.gd[gd].script.as_ref().map_or(false, |s| s.strafe.unwrap_or(false));
     if j.back && strafing && !crate::condition::down(g, g.gd[gd].ch) {
         let t = g.time;
         g.cover.outs.set(gd, CoverOutsValue { j, aim: j.aim, t0: t, t, on: false });
@@ -1174,7 +1171,7 @@ fn cover_unturn(g: &mut Game, gd: GuardId) {
     let o = match g.cover.outs.delete(gd) { Some(o) => o, None => return };
     if g.gd[gd].script.is_none() || crate::condition::down(g, g.gd[gd].ch) { return; }
     let s = g.gd[gd].script.as_mut().unwrap();
-    if yes(s.strafe) { s.strafe = Some(false); }
+    if s.strafe.unwrap_or(false) { s.strafe = Some(false); }
     if o.on && script_aim_is(g, gd, o.aim) { give_aim_back(g, gd, o.j.a); }
 }
 

@@ -1,6 +1,7 @@
 //! The tutorial's quiet mission: what each line asks, through the input only. The mission teaches the page's buttons (left the knife, right the knockout).
 use super::{Bot, Ended, Tutorial};
-use crate::player::{at, flat, Walk, LEFT, RIGHT, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Walk, LEFT, RIGHT, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
@@ -54,7 +55,7 @@ fn clear_to(b: &Bot, from: V3, h: GuardId) -> bool {
 /// he has stood still for `secs`
 async fn stood_still(b: &Bot, x: GuardId, secs: f64, max: f64) -> bool {
     let (mut p, mut since) = (b.man_at(x), b.t());
-    b.until(|| { if flat(b.man_at(x), p) > 0.05 { p = b.man_at(x); since = b.t(); } b.t() - since > secs }, max).await
+    b.until(|| { if dist_xz(b.man_at(x), p) > 0.05 { p = b.man_at(x); since = b.t(); } b.t() - since > secs }, max).await
 }
 
 async fn deed(b: &Bot, id: &str) {
@@ -69,7 +70,7 @@ async fn deed(b: &Bot, id: &str) {
             let look = || { worst.set(worst.get().max(b.lit())); false };
             b.to_by([19.0, 0.0, 17.4], 40.0, Walk::doors(), look).await;
             b.to_by(WHISTLE, 10.0, Walk { near: 0.2, ..Walk::doors() }, look).await;
-            b.say(format!("  along the wall: the most light on him {:.2}; {} {:?}, aware {:.2}, {:.1} m off", worst.get(), b.called(a), b.state(a), b.awareness(a), flat(b.pos(), b.man_at(a))));
+            b.say(format!("  along the wall: the most light on him {:.2}; {} {:?}, aware {:.2}, {:.1} m off", worst.get(), b.called(a), b.state(a), b.awareness(a), dist_xz(b.pos(), b.man_at(a))));
             b.unseen(n0, a, "in the lane").await;
         }
         // the whistle at the mark, a person's beat, then round the near end of the long wall to the lane's side of it, while he comes the long way round on the house's side.
@@ -103,34 +104,34 @@ async fn deed(b: &Bot, id: &str) {
                     let to = [WHISTLE[0] - me[0], WHISTLE[2] - me[2]];
                     let n = { let n = game::m::hyp2(to[0], to[1]); if n > 0.0 { n } else { 1.0 } };
                     let cos = (to[0] * d[0] + to[1] * d[2]) / n;
-                    if flat(me, LOOK) < 0.4 && cos > on_spot { on_spot = cos; looked = Some(me); }
+                    if dist_xz(me, LOOK) < 0.4 && cos > on_spot { on_spot = cos; looked = Some(me); }
                 }
                 on_me = on_me.max(b.lit());
                 let y = b.yaw(a) - game::m::PI / 2.0;
-                (b.scripted(a) && flat(me, SMOKE) < 0.35 && game::m::abs(game::m::atan2(game::m::sin(y), game::m::cos(y))) < 0.3) || b.state(a) == GuardState::Alert || !b.scripted(a)
+                (b.scripted(a) && dist_xz(me, SMOKE) < 0.35 && game::m::abs(game::m::atan2(game::m::sin(y), game::m::cos(y))) < 0.3) || b.state(a) == GuardState::Alert || !b.scripted(a)
             }, 45.0).await;
             b.say(format!("  {} looked from {:?}, his light's cos {:.2}; the most light on the player behind the wall {:.2}", b.called(a), looked.map(at), on_spot, on_me));
             b.say(format!("  {} at his smoke {:.1} s after the whistle ({}, facing {:.2}, {:?})", if there && b.scripted(a) { "he is" } else { "he never got" }, b.t() - t0, at(b.man_at(a)), b.yaw(a), b.state(a)));
             b.unseen(n0, a, "behind the wall").await;
             match looked {
-                Some(from) if on_spot >= 0.96 => { if flat(from, WHISTLE) < 4.0 { b.fail(format!("{} looked from {:.1} m: close enough to read the prints", b.called(a), flat(from, WHISTLE))).await; } }
+                Some(from) if on_spot >= 0.96 => { if dist_xz(from, WHISTLE) < 4.0 { b.fail(format!("{} looked from {:.1} m: close enough to read the prints", b.called(a), dist_xz(from, WHISTLE))).await; } }
                 _ => b.fail(format!("{} did not put his light on the place the whistle came from", b.called(a))).await,
             }
             if !there || !b.scripted(a) { b.fail(format!("{} was not there to be taken ({:?}, at {})", b.called(a), b.state(a), at(b.man_at(a)))).await; }
             b.wait(REACT).await;
             b.to_near([22.75, 0.0, 19.0], 8.0, 0.25).await;
             b.to_near([23.6, 0.0, 17.8], 8.0, 0.25).await;
-            b.say(format!("  on the walk: {} at {}, facing {:.2}, {:?}, {:.1} m off; lit {:.2}", b.called(a), at(b.man_at(a)), b.yaw(a), b.state(a), flat(b.pos(), b.man_at(a)), b.lit()));
+            b.say(format!("  on the walk: {} at {}, facing {:.2}, {:?}, {:.1} m off; lit {:.2}", b.called(a), at(b.man_at(a)), b.yaw(a), b.state(a), dist_xz(b.pos(), b.man_at(a)), b.lit()));
             // his torch has come down for the smoke and he has clicked it off: still the hand's, under his shoulder, and dark
             let low = b.ask(|g| { let c = g.gd[a].ch; g.ch[c].bones.get(game::character::Bone::UpperArmR).map_or(-1.0, |u| u[1] - g.tab.light[g.gd[a].flashlight].pos[1]) });
             let carry = b.ask(|g| game::guards::hand_carry(g, a));
             if b.scripted(a) && (carry != game::guards::InHand::Torch || lit_up(a) || low < 0.2) { b.fail(format!("{} does not smoke with his torch low and switched off ({:?}, {}, {:.2} m under the shoulder)", b.called(a), carry, if lit_up(a) { "lit" } else { "out" }, low)).await; }
-            if !b.close_in(a, Some([25.5, 0.0, 17.75])).await { b.fail(format!("could not get behind the first man ({:.2} m off, he stands at {}, {:?})", flat(b.pos(), b.man_at(a)), at(b.man_at(a)), b.state(a))).await; }
+            if !b.close_in(a, Some([25.5, 0.0, 17.75])).await { b.fail(format!("could not get behind the first man ({:.2} m off, he stands at {}, {:?})", dist_xz(b.pos(), b.man_at(a)), at(b.man_at(a)), b.state(a))).await; }
             b.unseen(n0, a, "coming up behind him").await;
             if !b.scripted(a) { b.fail(format!("{} turned from his smoke as the player came up crouched ({:?})", b.called(a), b.state(a))).await; }
             let q = b.man_at(a);
             if !b.tap(InteractableKind::Guard, Verb::Grab, Some([q[0], 1.35, q[2]])).await { b.fail(String::from("no grab row behind the first man")).await; }
-            if !b.until(|| b.held_fast(), 4.0).await { b.fail(format!("the grab did not take ({:?}; {} {:?}, {:.2} m off)", b.me(|p| p.holding().map(|h| h.phase)), b.called(a), b.state(a), flat(b.pos(), b.man_at(a)))).await; }
+            if !b.until(|| b.held_fast(), 4.0).await { b.fail(format!("the grab did not take ({:?}; {} {:?}, {:.2} m off)", b.me(|p| p.holding().map(|h| h.phase)), b.called(a), b.state(a), dist_xz(b.pos(), b.man_at(a)))).await; }
             b.say(format!("  held {:.1} s after the whistle", b.t() - t0));
         }
         "ask" => {
@@ -194,7 +195,7 @@ async fn deed(b: &Bot, id: &str) {
             b.ticks(20).await;
             if ring || blown() > w0 { b.fail(format!("in the store {} (a whistle would bring the hall's man round to him)", if blown() > w0 { "he whistled" } else { "the interaction key held put the hand's ring up" })).await; }
             if b.seen(|_, s| s.hand.sel.open) { b.press(game::backkey::BACK_KEY, 3).await; }
-            b.say(format!("  in the corner: lit {:.2}; {} {:?}, aware {:.2}, {:.1} m off", b.lit(), b.called(h), b.state(h), b.awareness(h), flat(b.pos(), b.man_at(h))));
+            b.say(format!("  in the corner: lit {:.2}; {} {:?}, aware {:.2}, {:.1} m off", b.lit(), b.called(h), b.state(h), b.awareness(h), dist_xz(b.pos(), b.man_at(h))));
             b.unseen(n0, h, "coming into the store").await;
         }
         // THE RIFLE'S LAUNCHER. The rifle off his back by its own key
@@ -208,7 +209,7 @@ async fn deed(b: &Bot, id: &str) {
             let from = b.pos();
             let q = b.man_at(h);
             b.hold_button(LEFT, [q[0], 1.2, q[2]], 1.5).await;
-            if b.holding() || trips(b) > t0 || flat(b.pos(), from) > 0.1 { b.fail(format!("a left click held on the hall's man took him or walked the player at him (held {}, moved {:.2} m, the beam {})", b.holding(), flat(b.pos(), from), if trips(b) > t0 { "broken" } else { "whole" })).await; }
+            if b.holding() || trips(b) > t0 || dist_xz(b.pos(), from) > 0.1 { b.fail(format!("a left click held on the hall's man took him or walked the player at him (held {}, moved {:.2} m, the beam {})", b.holding(), dist_xz(b.pos(), from), if trips(b) > t0 { "broken" } else { "whole" })).await; }
             b.to_near(NOOK, 10.0, 0.15).await;
             b.take("Digit2").await;
             if !b.ask(|g| game::game::player_rifle_up(g, g.player)) { b.fail(String::from("the rifle's key did not bring it into his hands")).await; }
@@ -235,7 +236,7 @@ async fn deed(b: &Bot, id: &str) {
             b.crouch(true).await;
             b.to_near(SHOT, 10.0, 0.15).await;
             b.ticks(10).await;
-            b.say(format!("  on the doorway's line: lit {:.2}, {:.1} m behind him; he {:?}, aware {:.2}", b.lit(), flat(b.pos(), b.man_at(h)), b.state(h), b.awareness(h)));
+            b.say(format!("  on the doorway's line: lit {:.2}, {:.1} m behind him; he {:?}, aware {:.2}", b.lit(), dist_xz(b.pos(), b.man_at(h)), b.state(h), b.awareness(h)));
             b.unseen(n0, h, "stepping out to the doorway's line").await;
         }
         // the ring let go at the back of his head
@@ -287,7 +288,7 @@ async fn deed(b: &Bot, id: &str) {
             let n0 = b.sightings();
             let sent = b.men().into_iter().find(|&x| b.up(x) && b.ask(|g| matches!(&g.gd[x].task, Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Breaker)));
             let c = sent.unwrap_or_else(|| man(b, "table"));
-            let came = b.until(|| { let q = b.man_at(c); (q[0] > 20.2 && flat(q, [BOX[0], 0.0, BOX[2] - 0.6]) < 1.3) || b.state(c) == GuardState::Alert || !b.up(c) || !b.dark() }, 40.0).await;
+            let came = b.until(|| { let q = b.man_at(c); (q[0] > 20.2 && dist_xz(q, [BOX[0], 0.0, BOX[2] - 0.6]) < 1.3) || b.state(c) == GuardState::Alert || !b.up(c) || !b.dark() }, 40.0).await;
             stood_still(b, c, 0.25, 4.0).await;   // he stops at the box, his back to the room: only then does anything move
             let t0 = b.t();
             if !came || !b.dark() { b.fail(format!("{} {} ({:?}, at {})", b.called(c), if came { "had the mains back in before he could be reached" } else { "did not come to the box" }, b.state(c), at(b.man_at(c)))).await; }
@@ -295,14 +296,14 @@ async fn deed(b: &Bot, id: &str) {
             b.wait(REACT).await;
             b.to_near([21.0, 0.0, 14.15], 8.0, 0.2).await;   // round the end of the niche's wall: he stands a stride on, his back to it
             for _ in 0..8 {   // (he may still be stepping up to the lever)
-                if flat(b.pos(), b.man_at(c)) < 0.8 { break; }
+                if dist_xz(b.pos(), b.man_at(c)) < 0.8 { break; }
                 let q = b.man_at(c);
-                b.nudge([q[0], 0.0, q[2]], 0.4, || flat(b.pos(), b.man_at(c)) < 0.8).await;
+                b.nudge([q[0], 0.0, q[2]], 0.4, || dist_xz(b.pos(), b.man_at(c)) < 0.8).await;
             }
             b.ticks(4).await;
-            b.say(format!("  in reach {:.2} m off, {:.1} s after he got to the box; he {:?}", flat(b.pos(), b.man_at(c)), b.t() - t0, b.state(c)));
+            b.say(format!("  in reach {:.2} m off, {:.1} s after he got to the box; he {:?}", dist_xz(b.pos(), b.man_at(c)), b.t() - t0, b.state(c)));
             b.click(RIGHT, None).await;
-            if !b.until(|| !b.up(c), 4.0).await { b.fail(format!("the right button did not put the man at the box down ({:?}, {:.2} m off)", b.state(c), flat(b.pos(), b.man_at(c)))).await; }
+            if !b.until(|| !b.up(c), 4.0).await { b.fail(format!("the right button did not put the man at the box down ({:?}, {:.2} m off)", b.state(c), dist_xz(b.pos(), b.man_at(c)))).await; }
             if !b.dark() { b.fail(String::from("he had the mains back in before he went down")).await; }
             b.wait(1.0).await;
         }

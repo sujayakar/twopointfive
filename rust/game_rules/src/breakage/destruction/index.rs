@@ -7,11 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 
-/// A word of a box's flags against a mask.
-fn has_flag(flags: f64, mask: i32) -> bool {
-    (js::to_i32(flags) & mask) != 0
-}
-
 /// What a box does, by its word.
 fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
     let word = g.tab.boxes[b].does;
@@ -186,12 +181,12 @@ fn thing_of(g: &Game, b: BoxId, in_fixture: bool) -> Option<DKind> {
     let bf = crate::scene_boxes::box_flag();
     let row = &g.tab.boxes[b];
     let (h, flags) = (row.h, row.flags);
-    if has_flag(flags, js::to_i32(bf.glass) | js::to_i32(bf.no_primary)) || row.piece == Some(true) {
+    if js::has_bits(flags, js::to_i32(bf.glass) | js::to_i32(bf.no_primary)) || row.piece == Some(true) {
         return None;
     }
     let (max_h, min_h, bottom) = (m::max_n(&h), m::min_n(&h), row.c[1] - h[1]);
     let dark = row.emissive[0] + row.emissive[1] + row.emissive[2] == 0.0;
-    let shadowless = has_flag(flags, js::to_i32(bf.no_shadow));
+    let shadowless = js::has_bits(flags, js::to_i32(bf.no_shadow));
     let does = does_of_box(g, b);
     if shadowless && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
         return Some(DKind::Paper);

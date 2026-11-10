@@ -8,9 +8,11 @@ pub const BONE_ORDER: [Bone; 22] = [Bone::Hips, Bone::Spine2, Bone::Chest, Bone:
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Bone { Hips, Spine2, Chest, Neck, Head, UpperArmL, ForearmL, HandL, UpperArmR, ForearmR, HandR, ThighL, ShinL, FootL, ToeL, ThighR, ShinR, FootR, ToeR, FingerR, FingerL, HeadTop }
 impl Character {
+    /// a bone's place, once a pose has written it
+    pub fn bone(&self, b: Bone) -> Option<V3> { self.bones.get(b).copied() }
     /// a bone's place, or a place this far over his feet before any pose has written it
     pub fn bone_or(&self, b: Bone, up: f64) -> V3 {
-        self.bones.get(b).copied().unwrap_or([self.pos[0], self.pos[1] + up, self.pos[2]])
+        self.bone(b).unwrap_or([self.pos[0], self.pos[1] + up, self.pos[2]])
     }
 }
 

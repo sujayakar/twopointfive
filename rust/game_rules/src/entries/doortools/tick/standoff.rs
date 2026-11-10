@@ -31,7 +31,7 @@ fn fixed(g: &mut Game, d: DoorId, side: f64, posts: Option<&[StackPost]>, men: &
 }
 /// The floor at the door that Sam and the men on other orders have.
 fn taken_on(g: &Game, d: DoorId, men: &[GuardId]) -> Vec<V3> {
-    let mut taken = vec![sam_pos(g, &crate::seats::here(g))];
+    let mut taken = vec![g.seat_pos(&crate::seats::here(g))];
     taken.extend(crate::orders::squad_orders_held_on(g, &crate::seats::here(g), d, men, None));
     taken
 }

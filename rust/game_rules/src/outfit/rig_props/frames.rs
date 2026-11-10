@@ -63,13 +63,8 @@ pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props
     Frame { o, x, y, z }
 }
 
-/// A new all-zero adjustment.
-fn zero_adj() -> crate::rig_props::Adj {
-    Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
-}
-
 /// A character's id as the word on his boxes.
-pub(super) fn owner_of(g: &Game, c: CharId) -> f64 {
+pub(crate) fn owner_of(g: &Game, c: CharId) -> f64 {
     (js::to_i32(g.ch[c].id) & 0xff) as f64
 }
 
@@ -241,7 +236,7 @@ mod tests {
     #[test]
     fn no_adjustment_and_a_nothing_of_one_leave_a_frame_as_it_is() {
         let base = frame_from(O, A1, Some(UP));
-        for adj in [None, Some(zero_adj()), Some(Adj { off: [0.0; 3], rot: [1e-5, 0.0, 0.0] })] {
+        for adj in [None, Some(crate::rig_props::adj_none()), Some(Adj { off: [0.0; 3], rot: [1e-5, 0.0, 0.0] })] {
             let f = apply_adj(base, adj);
             assert_eq!((f.o, f.x, f.y, f.z), (base.o, base.x, base.y, base.z));
         }

@@ -6,11 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A bone of a body, if the body has it (the TypeScript's `c.bones.x`).
-fn bone(g: &Game, c: CharId, b: crate::character::Bone) -> Option<V3> {
-    g.ch[c].bones.get(b).copied()
-}
-
 /// Is the shield up: a living man in Sam's arm, Sam on his feet, in any phase of the hold.
 pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let p = seat.player;
@@ -41,8 +36,8 @@ pub(super) fn pair_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Op
     let pc = g.pl[p].ch;
     let hc = g.gd[held].ch;
     let (pc_pos, hc_pos) = (g.ch[pc].pos, g.ch[hc].pos);
-    let sh = bone(g, pc, crate::character::Bone::Hips).unwrap_or(pc_pos);
-    let hh = bone(g, hc, crate::character::Bone::Hips).unwrap_or(hc_pos);
+    let sh = g.ch[pc].bone(crate::character::Bone::Hips).unwrap_or(pc_pos);
+    let hh = g.ch[hc].bone(crate::character::Bone::Hips).unwrap_or(hc_pos);
     let sam: V3 = [sh[0], 0.0, sh[2]];
     let held_axis: V3 = [hh[0], 0.0, hh[2]];
     Some(crate::guards::Pair {
@@ -63,7 +58,7 @@ fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair)
     }
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let eye = bone(g, c, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
     let look = crate::guards::look_of(g, c);
     let (lx, lz) = (look[0], look[2]);
     let pl = g.player;
@@ -75,10 +70,10 @@ fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair)
     let view_m = m::max(STANDOFF_VIEW_M, reach);
     let (hp, pp) = (g.ch[hc].pos, g.ch[pc].pos);
     let points: [V3; 4] = [
-        bone(g, hc, crate::character::Bone::Chest).unwrap_or_else(|| v3::add(hp, [0.0, 1.1, 0.0])),
-        bone(g, hc, crate::character::Bone::Head).unwrap_or_else(|| v3::add(hp, [0.0, 1.6, 0.0])),
-        bone(g, pc, crate::character::Bone::Chest).unwrap_or_else(|| v3::add(pp, [0.0, 1.1, 0.0])),
-        bone(g, pc, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pp, [0.0, 1.6, 0.0])),
+        g.ch[hc].bone(crate::character::Bone::Chest).unwrap_or_else(|| v3::add(hp, [0.0, 1.1, 0.0])),
+        g.ch[hc].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(hp, [0.0, 1.6, 0.0])),
+        g.ch[pc].bone(crate::character::Bone::Chest).unwrap_or_else(|| v3::add(pp, [0.0, 1.1, 0.0])),
+        g.ch[pc].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pp, [0.0, 1.6, 0.0])),
     ];
     for q in points {
         let (tx, ty, tz) = (q[0] - eye[0], q[1] - eye[1], q[2] - eye[2]);
@@ -177,7 +172,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     let pp = g.ch[g.pl[pl].ch].pos;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let eye = bone(g, c, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
     let dist = v3::dist(eye, p.centre);
     let rate = pair_sight_rate(g, gd, &p, dist);
     let in_it = match g.gd[gd].standoff {
@@ -267,7 +262,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
     };
     crate::game::game_say(g, gd, &text, Some(true), None);
     let pos = g.ch[c].pos;
-    let at = bone(g, c, crate::character::Bone::Head).unwrap_or(pos);
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
     if g.time - g.last_sting_t > 8.0 {
         crate::audio_iface::game_audio_like_play(g, "alertSting", None, Some(0.75), None);
@@ -365,9 +360,9 @@ fn axis_measure(from: V3, to: V3, ax: f64, az: f64, y0: f64, y1: f64) -> f64 {
 fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let h = bone(g, c, crate::character::Bone::Hips).unwrap_or(pos);
+    let h = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(pos);
     let y0 = pos[1] + 0.05;
-    let y1 = match bone(g, c, crate::character::Bone::HeadTop) {
+    let y1 = match g.ch[c].bone(crate::character::Bone::HeadTop) {
         Some(top) => top[1],
         None => pos[1] + 1.75,
     };

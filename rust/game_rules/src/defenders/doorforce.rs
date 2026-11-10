@@ -28,9 +28,6 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
     o.path_goal_orbit = false;
 }
 
-/// The rule is up: the AI runs.
-fn live(g: &crate::game::Game) -> bool { g.ai_enabled }
-
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load).
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
     let now = g.time;
@@ -124,7 +121,7 @@ fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, se
 /// His ears: a sound that came to him across a shut leaf, or a door's own noise, is word of that door.
 pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, prop: crate::doorforce::DoorForceHearProp) {
     use crate::director::EventKind;
-    if !live(g) || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
+    if !g.ai_enabled || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
     let k = g.k.doorforce;
     let who: f64;
     let horizon: f64;
@@ -204,7 +201,7 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
 pub fn door_force_own_boot(g: &crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
     if e.kind != crate::director::EventKind::Kick { return false; }
     let who = match e.who { Some(w) => w, None => return false };
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let t = match g.m.doorforce.states.as_ref().and_then(|s| s.boots.get(crate::Num(who))) { Some(&t) => t, None => return false };
     if g.time - t > 1.0 { return false; }
     let c = g.gd[gd].ch;
@@ -216,7 +213,7 @@ pub fn door_force_own_boot(g: &crate::game::Game, gd: GuardId, e: crate::game::G
 
 /// Once a frame after the guards: what each man saw and heard fades, a sighting just lost is put behind the leaf it went behind.
 pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
-    if !live(g) { return; }
+    if !g.ai_enabled { return; }
     let (kf, time) = (g.k.doorforce, g.time);
     state_of(g).last_t = time;
     let k = m::exp(-dt / kf.fade_secs * m::log(3.0));
@@ -356,7 +353,7 @@ fn round_for(g: &crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belie
 
 /// The alert branch's hook: the door this man is on, where his gun points and how fast his legs go. None = nothing of the kind.
 pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::DoorForce> {
-    if !live(g) || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
+    if !g.ai_enabled || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
     g.m.doorforce.states.as_ref()?.men.get(gd)?;
     let (kf, time, c) = (g.k.doorforce, g.time, g.gd[gd].ch);
     man!(g, gd).served = time;

@@ -70,10 +70,9 @@ fn len_of(w: &[V3]) -> f64 {
     for i in 1..w.len() { l += dist_xz(w[i - 1], w[i]); }
     l
 }
-fn on_floor(q: V3) -> V3 { [q[0], 0.0, q[2]] }
 /// `path.slice(0, -1)` on the floor
 fn all_but_last(path: &[V3]) -> Vec<V3> {
-    path[..path.len().saturating_sub(1)].iter().map(|&q| on_floor(q)).collect()
+    path[..path.len().saturating_sub(1)].iter().map(|&q| crate::v3::on_floor(q)).collect()
 }
 
 // ---- workedMarks ----
@@ -641,7 +640,7 @@ fn way_of(g: &Game, s: V3, mid: &[V3], to: V3) -> Option<Vec<V3>> {
 /// `w.slice(1, -1)` on the floor (sameWays's `corners`)
 fn corners(w: &[V3]) -> Vec<V3> {
     if w.len() <= 2 { return Vec::new(); }
-    w[1..w.len() - 1].iter().map(|&q| on_floor(q)).collect()
+    w[1..w.len() - 1].iter().map(|&q| crate::v3::on_floor(q)).collect()
 }
 /// B by A's way: A's own corners and then his own mark: the walk and what it costs him over his own, or None.   (sameWays's `join`)
 fn sw_join(g: &mut Game, ring: &JsSet<String>, b_id: OrdersAssignmentId, mine: &[V3], his: &[V3]) -> Option<(Vec<V3>, f64)> {
@@ -752,7 +751,7 @@ fn squad_orders_by_door(g: &mut crate::game::Game, from: V3, to: V3, d: DoorId, 
     let pen = crate::cleared::cleared_rooms_dear_for(g, from, out, cleared_dear, Some(also));
     let way = find_path(g, from, out, Some(ROUND_ITER), pen.as_ref().map(Pen::Dear))?;
     if through(g, from, &way, d) { return None; }   // (no way to its mouth but out through the door itself: he is as good as inside)
-    let mut via: Vec<V3> = way.iter().map(|&q| on_floor(q)).collect();
+    let mut via: Vec<V3> = way.iter().map(|&q| crate::v3::on_floor(q)).collect();
     if dist_xz(via[via.len() - 1], out) > 0.3 { via.push(out); }
     if !crate::scene_collision::nav_grid_is_blocked(g, inn[0], inn[2]) { via.push(inn); }
     Some(via)
@@ -847,7 +846,7 @@ pub(super) fn squad_orders_trail_way(g: &crate::game::Game, gd: GuardId, slot: V
     let mut i = k;
     while i < j - 1 {
         let (now, next) = (t[i as usize], t[i as usize + 1]);
-        if !crate::scene_collision::nav_grid_walkable(g, a, next) || dist_xz(a, next) > 3.0 { mid.push(on_floor(now)); a = now; }
+        if !crate::scene_collision::nav_grid_walkable(g, a, next) || dist_xz(a, next) > 3.0 { mid.push(crate::v3::on_floor(now)); a = now; }
         i += 1;
     }
     mid

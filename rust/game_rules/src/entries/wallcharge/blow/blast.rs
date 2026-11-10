@@ -75,7 +75,7 @@ fn wall_opened(g: &mut Game, w: WallSpot, pressed: bool) -> Blow {
 fn near_men(g: &Game, w: &WallSpot, r: WallChargeAwayMarksValueR) -> Vec<GuardId> {
     let mut men = g.guards.clone();
     for cv in crate::civilians::civilians_shown(g) { if !men.contains(&cv) { men.push(cv); } }
-    men.retain(|&gd| !crate::condition::down(g, g.gd[gd].ch) && wall_charge_blast_share(g, w, pos_of(g, gd), Some(r), Some(false)) > 0.0);
+    men.retain(|&gd| !crate::condition::down(g, g.gd[gd].ch) && wall_charge_blast_share(g, w, g.pos_of(gd), Some(r), Some(false)) > 0.0);
     men
 }
 /// Each player's share of it there (0: not caught).
@@ -102,7 +102,7 @@ fn report(g: &mut Game, w: &WallSpot, who: f64) {
 /// beyond one that opened, those in line are felled up close and dazzled farther off, and the rest of the room is shocked.
 fn guard_caught(g: &mut Game, b: &Blow, gd: GuardId) {
     if crate::condition::down(g, g.gd[gd].ch) || (b.pressed && g.gd[gd].god) { return; }
-    let p = pos_of(g, gd);
+    let p = g.pos_of(gd);
     let dist = b.far(p);
     if !b.beyond(g, p) {
         if !b.near.contains(&gd) { return; }
@@ -133,12 +133,12 @@ fn guard_caught(g: &mut Game, b: &Blow, gd: GuardId) {
     g.fa[f].burst = None;
 }
 fn killed(g: &mut Game, b: &Blow, gd: GuardId, kind: DownKind, with: With) {
-    crate::combat::kill_guard(g, gd, b.away(pos_of(g, gd)), Some(false), Some(kind), Some(DownBy::Player), with);
+    crate::combat::kill_guard(g, gd, b.away(g.pos_of(gd)), Some(false), Some(kind), Some(DownBy::Player), with);
 }
 /// A civilian in the building is a man on the floor too: at the charge, or behind the wall close up, with the same line.
 fn civilian_caught(g: &mut Game, b: &Blow, cv: GuardId) {
     if crate::condition::down(g, g.gd[cv].ch) || g.gd[cv].god { return; }
-    let p = pos_of(g, cv);
+    let p = g.pos_of(cv);
     if b.beyond(g, p) {
         if b.far(p) < g.k.doortools.knock_m && b.through(g, p) { killed(g, b, cv, DownKind::Struck, With::Charge); }
     } else if b.far(p) < g.k.wallkill.near_m && b.near.contains(&cv) { killed(g, b, cv, DownKind::Shot, With::Hand); }

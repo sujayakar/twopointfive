@@ -38,7 +38,7 @@ fn men_waited_for(g: &mut Game, op: DoorOpId, t: f64) -> bool {
     let fresh = js::truthy(thr!(g, op).tossed) && t - o!(g, op).bang_t < g.k.doortools.entry_cap;
     if out > 0 && !fresh { return men_out(g, op, t); }
     let x = thr!(g, op);
-    if !tr(x.frag_said) { return false; }
+    if !x.frag_said.unwrap_or(false) { return false; }
     x.frag_said = Some(false);
     x.frag_t = None;
     if out > 0 { return false; }
@@ -53,7 +53,7 @@ fn men_out(g: &mut Game, op: DoorOpId, t: f64) -> bool {
         if let Some(since) = x.frag_t { x.hand_w = Some(x.hand_w.unwrap_or(0.0) + m::min(t - since, 0.1)); }
         x.frag_t = Some(t);
         x.hand_t = None;
-        if !tr(x.frag_said) {
+        if !x.frag_said.unwrap_or(false) {
             x.frag_said = Some(true);
             let fled = x.fled.clone();
             fled_said(g, op, fled);
@@ -63,9 +63,9 @@ fn men_out(g: &mut Game, op: DoorOpId, t: f64) -> bool {
     let spent = hand_w(g, op) >= g.k.doortools.thr_hand_wait;
     let x = thr!(g, op);
     x.frag_t = None;
-    if !tr(x.frag_said) { return false; }
+    if !x.frag_said.unwrap_or(false) { return false; }
     x.frag_said = Some(false);
-    let why = if tr(x.hand_done) || spent { "the order's wait is spent" } else { "not waited for" };
+    let why = if x.hand_done.unwrap_or(false) || spent { "the order's wait is spent" } else { "not waited for" };
     let fled = x.fled.clone();
     door_tools_beat(g, op, &format!("on without {} · {}", fled_names(g, &fled), why));
     false
@@ -95,8 +95,8 @@ fn can_for_pocket(g: &mut Game, op: DoorOpId, cx: &Cx, th: GuardId) -> Option<Ca
 fn cans_most(g: &mut Game, op: DoorOpId, t: f64) -> f64 {
     let x = thr!(g, op).clone();
     let r = &o!(g, op);
-    if !tr(r.last_hold) { return m::max(door_tools_thr_cans(g, &crate::seats::here(g), &x), if x.force { 1.0 } else { 0.0 }); }
-    if x.tossed > 0.0 && !tr(x.wide) && t - r.bang_t < g.k.doortools.thr_last_fresh { x.tossed } else { r.last_tossed.unwrap_or(0.0) + 1.0 }
+    if !r.last_hold.unwrap_or(false) { return m::max(door_tools_thr_cans(g, &crate::seats::here(g), &x), if x.force { 1.0 } else { 0.0 }); }
+    if x.tossed > 0.0 && !x.wide.unwrap_or(false) && t - r.bang_t < g.k.doortools.thr_last_fresh { x.tossed } else { r.last_tossed.unwrap_or(0.0) + 1.0 }
 }
 
 /// The door has come shut on them since: shoved, and waited for a moment; then in without.
@@ -117,7 +117,7 @@ fn leaf_shut(g: &mut Game, op: DoorOpId, cx: &Cx, can: &Can) -> bool {
         }
     };
     if t - since < g.k.doortools.frag_way_wait { return true; }
-    say(g, can.th, "the door's in the way — no bang. going in.");
+    crate::game::game_say(g, can.th, "the door's in the way — no bang. going in.", None, None);
     door_tools_beat(g, op, "can held");
     thr!(g, op).shut_t = None;
     door_tools_to_step(g, op);
@@ -126,7 +126,7 @@ fn leaf_shut(g: &mut Game, op: DoorOpId, cx: &Cx, can: &Can) -> bool {
 
 /// A can leaves a hand at the door, and not the lead's while another's will do: waited for in the order's own time, and given to who is there. True: not this tick.
 fn hand_waited_for(g: &mut Game, op: DoorOpId, t: f64, can: &Can) -> bool {
-    if tr(thr!(g, op).hand_done) || !door_tools_own_time(g, op) { thr!(g, op).hand_t = None; return false; }
+    if thr!(g, op).hand_done.unwrap_or(false) || !door_tools_own_time(g, op) { thr!(g, op).hand_t = None; return false; }
     let wait = g.k.doortools.thr_hand_wait;
     let hand = hand_at_door(g, op, can).filter(|&h| h == can.th || hand_w(g, op) < wait);
     let Some(h) = hand else { no_hand(g, op, t, can); return true };
@@ -153,7 +153,7 @@ fn no_hand(g: &mut Game, op: DoorOpId, t: f64, can: &Can) {
             None => {
                 let why = why_no_hand(g, op, lead, can.th);
                 door_tools_beat(g, op, &format!("can waits: no hand at the door {why}"));
-                say(g, lead, "hold the bang — back on the door.");
+                crate::game::game_say(g, lead, "hold the bang — back on the door.", None, None);
             }
             Some(since) => thr!(g, op).hand_w = Some(hand_w(g, op) + m::min(t - since, 2.0 * every)),
         }
@@ -161,13 +161,13 @@ fn no_hand(g: &mut Game, op: DoorOpId, t: f64, can: &Can) {
         if hand_w(g, op) < wait { thr!(g, op).next_t = t + every; return; }
     }
     thr!(g, op).hand_t = None;
-    say(g, lead, if can.first { "nobody on the door — no bang." } else { "nobody on the door — no bang. going in." });
+    crate::game::game_say(g, lead, if can.first { "nobody on the door — no bang." } else { "nobody on the door — no bang. going in." }, None, None);
     if can.first { door_tools_thr_out(g, op, Some("nobody at the door")); return; }
     door_tools_beat(g, op, "no bang · nobody at the door");
     if js::truthy(thr!(g, op).tossed) { o!(g, op).phase = Phase::Wait; } else { door_tools_to_step(g, op); }
 }
 fn why_no_hand(g: &Game, op: DoorOpId, lead: GuardId, th: GuardId) -> String {
-    if !door_tools_thr_at(g, op, th) { return format!("({} {} m off)", g.gd[th].callsign, js::to_fixed(v3::dist_xz(pos_of(g, th), g.dr[o!(g, op).door].frame_centre), 1)); }
+    if !door_tools_thr_at(g, op, th) { return format!("({} {} m off)", g.gd[th].callsign, js::to_fixed(v3::dist_xz(g.pos_of(th), g.dr[o!(g, op).door].frame_centre), 1)); }
     let mut off: Vec<String> = Vec::new();
     for m_ in o!(g, op).men.clone() { if m_ != lead && !door_tools_thr_at(g, op, m_) { off.push(g.gd[m_].callsign.clone()); } }
     format!("but the lead's own ({} not back)", if off.is_empty() { String::from("nobody") } else { off.join(", ") })

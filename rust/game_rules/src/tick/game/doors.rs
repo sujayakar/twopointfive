@@ -7,11 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
-/// a bone of his if it has been baked, else his feet raised by `up`
-fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
-}
-
 /// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated
 pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId]) {
     let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
@@ -40,8 +35,8 @@ pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let pl = if one { g.player } else { let view = crate::seats::view_for(g, gd); crate::cmd::seat_man(g, view) };
         let pc = g.pl[pl].ch;
-        let chest = bone_or(g, pc, Bone::Chest, 1.1);
-        let eye = bone_or(g, g.gd[gd].ch, Bone::Head, 1.65);
+        let chest = g.ch[pc].bone_or(Bone::Chest, 1.1);
+        let eye = g.ch[g.gd[gd].ch].bone_or(Bone::Head, 1.65);
         g.gd[gd].smoke_trans = crate::sense::clear_between(g, eye, chest);
     }
     for &s in seats.iter() {

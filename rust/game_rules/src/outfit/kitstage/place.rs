@@ -144,7 +144,7 @@ fn quiet_lamps(g: &mut Game, st: &mut KitStage, set: &Set, lit: &[FixtureId]) {
         let mut b = g.tab.boxes.edit(b);
         b.flags = (js::to_i32(b.flags) & !np) as f64;
     }
-    if !roofs.is_empty() { box_changed(g); }
+    if !roofs.is_empty() { g.boxes_changed(); }
 }
 
 /// The men as they are stood: the file, its places (Sam's first), the quiet picture's rest places, each body's way to face, and the leaf as it was.

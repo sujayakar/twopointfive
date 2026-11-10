@@ -56,8 +56,6 @@ fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
     let row = g.m.coverfire.states.as_mut().and_then(|s| s.men.get_mut(gd)).and_then(|m| m.chew.as_mut());
     if let Some(cw) = row { f(cw); }
 }
-/// is he up
-fn up_now(g: &Game, who: CharId) -> bool { !crate::condition::down(g, who) && g.ch[who].alive }
 
 // ---------------------------------------------------------------- the module's own
 
@@ -89,16 +87,6 @@ fn bump(g: &mut crate::game::Game, k: crate::coverfire::BumpK) {
     };
     *a += 1.0;
     *b += 1;
-}
-
-/// the engine's half: walls and cover give under rounds
-fn chew_live(g: &crate::game::Game) -> bool {
-    crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
-}
-
-/// is the rule running this frame
-fn live(g: &crate::game::Game) -> bool {
-    g.ai_enabled
 }
 
 /// the state: a clock gone back forgets every man; none yet makes one
@@ -200,7 +188,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
     let mut out: Vec<KnownItem> = Vec::new();
     if let Some(own) = s.men.get(gd) {
         for k in own.know.iter() {
-            if who_passes(who, k.who) && time - k.t <= stale_secs && up_now(g, k.who) {
+            if who_passes(who, k.who) && time - k.t <= stale_secs && crate::picture::up(g, k.who) {
                 out.push(KnownItem { k: *k, call: k.call.unwrap_or(false) });
             }
         }
@@ -214,7 +202,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
             if !k.call.unwrap_or(false)
                 && who_passes(who, k.who)
                 && time - k.t <= call_secs
-                && up_now(g, k.who)
+                && crate::picture::up(g, k.who)
                 && !out.iter().any(|o| o.k.who == k.who && o.k.t >= k.t)
             {
                 out.push(KnownItem { k: *k, call: true });
@@ -261,7 +249,7 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
             }
         }
     }
-    if !chew_live(g) { no(g, "solid"); return None; }
+    if !crate::wallcharge::wall_charge_on(g) { no(g, "solid"); return None; }
     if st.index >= 1e6 { no(g, "door"); return None; }
     let b = match crate::wallbreak::wall_break_breakable_at(g, st.index) {
         Some(b) => b,
@@ -566,7 +554,7 @@ fn keep_the_chews_books(g: &mut Game, w: Weighing, a: &Ask, to: V3, budget: f64)
 
 /// EYES ON, NO LINE: may the round go at `to` anyway, because what blocks it is breakable and worth the rounds
 pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>, to: V3) -> bool {
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let who = match who {
         None => return false,
         Some(who) => who,
@@ -588,7 +576,7 @@ pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>, t
 
 /// NO EYES ON HIM: the fight AI's man lays on the place he knows and fires through what hides it; returns the point his gun is on
 pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
-    if !live(g) { return None; }
+    if !g.ai_enabled { return None; }
     let c = g.gd[gd].ch;
     let foe = g.gd[gd].foe?;
     if crate::teams::foe_down(g, gd)
@@ -668,7 +656,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
 
 /// NOBODY IN HIS SIGHT: the same choice with the room fight's own trigger; true = his gun is on a piece this frame
 pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64, point: &mut dyn FnMut(&mut crate::game::Game, V3) -> f64) -> bool {
-    if !live(g) { return false; }
+    if !g.ai_enabled { return false; }
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     state_of(g);
@@ -768,7 +756,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
 
 /// this frame's sightings copied into what each man knows · the change feed read · this frame's rounds counted on the chews
 pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
-    if !live(g) { return; }
+    if !g.ai_enabled { return; }
     let time = g.time;
     state_of(g).last_t = time;
     what_gave_under_fire(g, time);

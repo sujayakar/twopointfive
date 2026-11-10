@@ -57,7 +57,7 @@ pub(in crate::breakage) fn feel_starts(g: &mut Game, wall: &crate::wallcharge::W
     { let s = stages(g); s.serial += 2.0; }   // (the report's two draws of this half's counter, so the seeds after them are the ones they would be)
     let open = holed(g, wall);
     let n: V3 = if wall.along_x { [0.0, 0.0, wall.side] } else { [wall.side, 0.0, 0.0] };
-    let th = thick(g, wall);
+    let th = crate::wallcharge::thick(g, wall);
     // the ways out of the wall: back off the face it was set on, and, only through a wall that gave, into the room
     let mut faces = Vec::new();
     if open { let o = crate::wallcharge::wall_pt(g, wall, 0.0, -(th + 0.35), Some(0.0)); faces.push(Face { o, d: v3::scale(n, -1.0), mask: 0.0 }); }

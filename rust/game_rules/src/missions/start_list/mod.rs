@@ -59,9 +59,9 @@ impl Mission {
     /// a level built for snow has its own weather: no row is drawn for it and its link carries none
     fn own_weather(&self, g: &Game) -> bool { weather_kinds::snow_level(g, self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
     /// the hour and the weather a row is always started in
-    fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| row_own(e)).and_then(|e| e.hour) }
+    fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.hour) }
     fn row_weather(&self) -> Option<WeatherKind> {
-        let w = self.entry.as_ref().filter(|e| row_own(e)).and_then(|e| e.weather)?;
+        let w = self.entry.as_ref().filter(|e| super::rowset::own(e)).and_then(|e| e.weather)?;
         weather_kinds::WEATHER_ROW.iter().flatten().copied().find(|k| k.as_str() == w.as_str())
     }
     fn kind_word(&self) -> &'static str { self.entry.as_ref().map_or(SOLO_KEY, |e| e.kind.as_str()) }
@@ -69,7 +69,6 @@ impl Mission {
 }
 
 fn lesson_row(e: &ScenarioEntry) -> bool { e.group == Some(MissionGroup::Tutorial) }
-fn row_own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
 /// The plain night, alone: not a scenario, no word but `?solo`.
 fn solo_night() -> Mission {
@@ -207,7 +206,7 @@ impl Default for Sitting {
     }
 }
 
-fn lever_key(word: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == word) }
+pub fn lever_key(word: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == word) }
 
 /// Which way in a mission with `ways` of them takes on an address's word.
 fn way_of_link(ways: usize, word: Option<&str>) -> usize { roomclear::way_taken(roomclear::way_asked(word), ways) }

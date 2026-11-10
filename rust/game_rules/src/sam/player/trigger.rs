@@ -42,7 +42,7 @@ pub(super) fn gun_blocked(g: &mut Game, t: Tick, go: Go, a: Aim) -> bool {
 }
 /// The lock a breaching load would be put to.
 fn breach_at(g: &Game, t: Tick) -> Option<V3> {
-    let row = def_of(g, g.fa[t.rifle].def).pellets.as_ref().and_then(|p| p.breach.clone())?;
+    let row = g.weapon(g.fa[t.rifle].def).pellets.as_ref().and_then(|p| p.breach.clone())?;
     crate::gunwall::breach_aim(g, t.c, row)
 }
 
@@ -63,7 +63,7 @@ pub(super) fn triggers(g: &mut Game, t: Tick, go: Go, a: Aim, blocked: bool, lau
 }
 
 /// The string a gun is firing is kept: the rifle's always, a pistol's if it can fire on automatic.
-fn strings(g: &Game, t: Tick, gun: FirearmId) -> bool { gun == t.rifle || def_of(g, g.fa[gun].def).auto.is_some() }
+fn strings(g: &Game, t: Tick, gun: FirearmId) -> bool { gun == t.rifle || g.weapon(g.fa[gun].def).auto.is_some() }
 
 /// The trigger of the gun he has up: a round if it is pulled and the gun is ready, a click if it is pressed on an empty one.
 fn pull(g: &mut Game, t: Tick, gun: FirearmId, speed: f64) {
@@ -77,7 +77,7 @@ fn pull(g: &mut Game, t: Tick, gun: FirearmId, speed: f64) {
         if pressed { dry_fire(g, c); }
         return;
     }
-    let def = def_of(g, g.fa[gun].def);
+    let def = g.weapon(g.fa[gun].def);
     let (wait, weapon) = (def.auto.as_ref().filter(|_| auto).map_or(def.cd, |r| r.interval), if rifle { Some(def.clone()) } else { None });
     g.arms[c].fire_cd = wait;
     g.pl[pl].last_fire_t = g.time;

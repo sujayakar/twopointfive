@@ -22,8 +22,6 @@ const AXES: [V3; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
 /// `u32(a ^ b)`: both sides to int32, the word back as an unsigned number
 fn xor_u32(a: f64, b: f64) -> f64 { js::to_u32((js::to_i32(a) ^ js::to_i32(b)) as f64) as f64 }
-/// `a | b` of two flag words
-fn flags_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 /// `[0, 1, 2].sort((p, q) => h[p] - h[q])`: the box's axes, thinnest first (stable)
 fn sort_axes(h: V3) -> [usize; 3] {
     let mut ax = [0usize, 1, 2];
@@ -229,7 +227,7 @@ fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who:
     }
     let bx = g.tab.debris_chunk[ch].box_;
     g.tab.edit(bx).rough = Some(0.05);
-    g.tab.edit(bx).flags = flags_or(g.tab[bx].flags, crate::scene_boxes::box_flag().no_shadow);
+    g.tab.edit(bx).flags = js::or_bits(g.tab[bx].flags, crate::scene_boxes::box_flag().no_shadow);
     if let Some(cut) = cut {
         if g.k.shards.cut_body > 0.0 {
             let at = g.tab[bx].c;

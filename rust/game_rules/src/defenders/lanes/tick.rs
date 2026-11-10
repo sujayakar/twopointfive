@@ -17,10 +17,6 @@ fn find_path(g: &Game, a: V3, b: V3, max_iter: f64, pen: Option<&crate::lanes::L
         None => crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), None),
     }
 }
-/// `g.col.segmentBlocked(a, b)`
-pub(super) fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
-/// `g.col.solidBlocked(a, b)`
-pub(super) fn solid_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
 
 /// a cell's number as a key of a lane's floor (a Set has −0 and 0 as one key, `Num` by its bits)
 pub(super) fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
@@ -609,7 +605,7 @@ fn bangs(g: &mut crate::game::Game) {
             if ours {
                 let guns = g.tab.lanes_lane[l].guns.clone();
                 for q in guns {
-                    if dist_xz(epos, q) < b_m && !solid_blocked(g, b, [q[0], 1.5, q[2]]) { near = true; break; }
+                    if dist_xz(epos, q) < b_m && !crate::scene_collision::solid_blocked(g, b, [q[0], 1.5, q[2]], None) { near = true; break; }
                 }
             }
             if !near {
@@ -648,9 +644,9 @@ fn manned_at(g: &Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
     let (pos, near) = (g.ch[c].pos, g.k.lanes.peek_near_m);
     if !g.tab.lanes_lane[l].guns.iter().any(|&q| dist_xz(q, pos) < near) { return None; }
     let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
-    if !seg_blocked(g, eye, head) { return Some(pos); }
+    if !crate::scene_collision::segment_blocked(g, eye, head, None, None, None) { return Some(pos); }
     let chest = g.ch[c].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(pos, [0.0, 1.1, 0.0]));
-    if !seg_blocked(g, eye, chest) { Some(pos) } else { None }
+    if !crate::scene_collision::segment_blocked(g, eye, chest, None, None, None) { Some(pos) } else { None }
 }
 /// one of the other side, on his feet, that `eye` has a line to within `peekNearM` of where a lane's fire came from: a LINE, so the dark never makes a lane clear
 pub(super) fn guns_manned(g: &crate::game::Game, l: LanesLaneId, eye: V3) -> Option<V3> {
@@ -675,12 +671,12 @@ pub(super) fn guns_manned(g: &crate::game::Game, l: LanesLaneId, eye: V3) -> Opt
 /// has he the PLACE round a gun's spot in view: the spot, and all but one at most of a ring of six a man at the spot could stand on
 pub(super) fn spot_seen(g: &crate::game::Game, eye: V3, m: V3) -> bool {
     let c: V3 = [m[0], 1.4, m[2]];
-    if seg_blocked(g, eye, c) { return false; }
+    if crate::scene_collision::segment_blocked(g, eye, c, None, None, None) { return false; }
     let mut miss = 0;
     for k in 0..6 {
         let a = k as f64 * m::PI / 3.0;
         let q: V3 = [m[0] + m::cos(a) * SPOT_RING, 1.4, m[2] + m::sin(a) * SPOT_RING];
-        if !solid_blocked(g, c, q) && seg_blocked(g, eye, q) { miss += 1; if miss > 1 { return false; } }
+        if !crate::scene_collision::solid_blocked(g, c, q, None) && crate::scene_collision::segment_blocked(g, eye, q, None, None, None) { miss += 1; if miss > 1 { return false; } }
     }
     true
 }
@@ -1014,7 +1010,7 @@ fn frag_place(g: &mut crate::game::Game, gd: GuardId, to: V3, s: f64, going: boo
         let d = m::hyp2(dx, dz);
         if s > d { return Some(FragPlace::Edge); }
         b = [c[0] + dx / d * s, 0.0, c[2] + dz / d * s];
-        if crate::scene_collision::nav_grid_is_blocked(g, b[0], b[2]) || solid_blocked(g, [c[0], 1.1, c[2]], [b[0], 1.1, b[2]]) { return None; }
+        if crate::scene_collision::nav_grid_is_blocked(g, b[0], b[2]) || crate::scene_collision::solid_blocked(g, [c[0], 1.1, c[2]], [b[0], 1.1, b[2]], None) { return None; }
     }
     let mask = mask_of(g, gd);
     if in_mask(g, mask.as_deref(), b) { Some(FragPlace::Edge) } else { Some(FragPlace::List(b)) }

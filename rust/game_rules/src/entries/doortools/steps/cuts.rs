@@ -5,7 +5,7 @@ pub(super) fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
     keep_open(g, cx.d);
     door_tools_thr_men(g, op);
     door_tools_thr_watch(g, op);
-    if tr(thr!(g, op).step_owed) && !door_tools_word_owed(g, op) { return; }
+    if thr!(g, op).step_owed.unwrap_or(false) && !door_tools_word_owed(g, op) { return; }
     let jamb = thr!(g, op).jamb.clone();
     jamb_lights(g, op, &jamb, cx.t);
     let sr = o!(g, op).search.flatten();
@@ -55,7 +55,7 @@ fn unseen_of(g: &Game, sr: Option<DoortoolsRoomSearchId>) -> String {
 fn jamb_lights(g: &mut Game, op: DoorOpId, jamb: &[GuardId], t: f64) {
     let light = g.k.doortools.thr_light;
     let job = |g: &Game, m_: GuardId| o!(g, op).mine.get(m_).copied();
-    if light == 1.0 && !jamb.is_empty() && !jamb.iter().any(|&m_| job(g, m_).is_some_and(|a| tr(asg!(g, a).search))) {
+    if light == 1.0 && !jamb.is_empty() && !jamb.iter().any(|&m_| job(g, m_).is_some_and(|a| asg!(g, a).search.unwrap_or(false))) {
         if let Some(a) = job(g, jamb[0]) { if !crate::nvg::nvg_worn(g, jamb[0]) { asg!(g, a).search = Some(true); } }
     }
     // (the one of the two who walks no cuts beside one who does is left dark)
@@ -63,8 +63,8 @@ fn jamb_lights(g: &mut Game, op: DoorOpId, jamb: &[GuardId], t: f64) {
     let lit = match jamb.get(1).copied() { Some(b) if !(slice.get(jamb[0]).is_some_and(|s| s.pie.is_some()) && slice.get(b).is_none()) => Some(b), _ => jamb.first().copied() };
     for &m_ in jamb {
         let Some(a) = job(g, m_) else { continue };
-        if light > 0.0 && !tr(asg!(g, a).search) && Some(m_) == lit && crate::nvg::nvg_black(g, m_) { asg!(g, a).search = Some(true); }
-        if tr(asg!(g, a).search) { asg!(g, a).search_t = Some(t); }
+        if light > 0.0 && !asg!(g, a).search.unwrap_or(false) && Some(m_) == lit && crate::nvg::nvg_black(g, m_) { asg!(g, a).search = Some(true); }
+        if asg!(g, a).search.unwrap_or(false) { asg!(g, a).search_t = Some(t); }
     }
 }
 
@@ -88,7 +88,7 @@ fn walked(g: &mut Game, w: &Walk, gd: GuardId) -> bool {
     let Some(a) = o!(g, op).mine.get(gd).copied() else { return true };
     let pie = sl!(g, op, gd).pie.is_some();
     if pie && pie!(g, op, gd).fin { return true; }
-    let m_ = Man { gd, a, p: pos_of(g, gd), search: asg!(g, a).search, pie, i: sl!(g, op, gd).i as usize };
+    let m_ = Man { gd, a, p: g.pos_of(gd), search: asg!(g, a).search, pie, i: sl!(g, op, gd).i as usize };
     if pie {
         pie!(g, op, gd).begun = true;
         if v3::dist_xz(m_.p, sl!(g, op, gd).pts[m_.i]) < 0.12 { pie!(g, op, gd).on = true; }
@@ -177,7 +177,7 @@ fn step_in(g: &mut Game, w: &Walk, m_: &Man) -> Option<V3> {
     let apart = g.k.doortools.thr_pie_apart;
     let Some(x) = w.jamb.iter().copied().find(|&x| x != gd && !crate::condition::down(g, g.gd[x].ch)) else { return Some(q) };
     let his = o!(g, op).slice.get(x).map(|s| s.pts[s.i as usize]);
-    if v3::dist_xz(pos_of(g, x), q) < apart || his.is_some_and(|x| v3::dist_xz(x, q) < apart) { return None; }
+    if v3::dist_xz(g.pos_of(x), q) < apart || his.is_some_and(|x| v3::dist_xz(x, q) < apart) { return None; }
     Some(q)
 }
 fn middle(looks: &[V3]) -> V3 { looks[looks.len() >> 1] }
@@ -249,7 +249,7 @@ fn cuts_done(g: &mut Game, w: &Walk, m_: &Man) {
 
 /// Somebody in there is about to be shot: no hold, they go.
 fn last_warning_hold(g: &mut Game, op: DoorOpId) {
-    if !tr(o!(g, op).last_hold) {
+    if !o!(g, op).last_hold.unwrap_or(false) {
         o!(g, op).last_hold = Some(true);
         o!(g, op).last_tossed = Some(thr!(g, op).tossed);
         door_tools_beat(g, op, "last warning · no hold");
@@ -266,13 +266,13 @@ fn hold_over(g: &mut Game, op: DoorOpId, cx: &Cx, done: bool) {
     let min = if x.first == Some(ThresholdFirst::Done) { first_min } else { min };
     if !((done && cx.el >= min && cx.t - x.quiet_t >= quiet) || cx.el >= cap) { return; }
     if !x.hold {
-        if !tr(x.step_owed) { door_tools_to_pockets(g, op); }
+        if !x.step_owed.unwrap_or(false) { door_tools_to_pockets(g, op); }
         return;
     }
-    if x.told || tr(x.cut_owed) { return; }
+    if x.told || x.cut_owed.unwrap_or(false) { return; }
     x.told = true;
     door_tools_beat(g, op, "holding · on your word");
-    say(g, cx.lead, "holding on the door.");
+    crate::game::game_say(g, cx.lead, "holding on the door.", None, None);
     for m_ in thr!(g, op).jamb.clone() {
         if let Some(j) = o!(g, op).mine.get(m_).copied() { asg!(g, j).there = format!("holding the threshold on your word · {}", cx.name).into(); }
     }

@@ -6,14 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A bone of a body, or a stand-in where it has none yet (`c.bones.head ?? …`).
-pub(crate) fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => or,
-    }
-}
-
 fn hunting(g: &Game, gd: GuardId) -> bool {
     let st = g.gd[gd].state;
     st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search
@@ -283,9 +275,9 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     let c = g.gd[gd].ch;
     let oc = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.65, 0.0]));
     let look = crate::guards::look_of(g, c);
-    let body = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+    let body = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
     let to = v3::sub(body, eye);
     let dist = v3::len(to);
     if dist > 12.0 {
@@ -325,7 +317,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
         }
     }
     let c = g.gd[o].ch;
-    let hp = bone_or(g, c, crate::character::Bone::Hips, g.ch[c].pos);
+    let hp = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let at: V3 = [hp[0], m::max(hp[1], 0.12) + 0.22, hp[2]];
     let e = crate::guards::light_estimate_at(g, at, None, None, None);
     let dt = match was {
@@ -344,7 +336,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke?
 pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
-    let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+    let hp = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];
     let trans = crate::sense::clear_between(g, eye, at);
     let b = g.k.body_light;

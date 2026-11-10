@@ -20,12 +20,6 @@ use ::sim::world::{Sheet, VIEW_BLOWN, VIEW_GIVES, VIEW_NONE};
 use crate::Num;
 
 // ---------------------------------------------------------------- what the TypeScript reads off an array by a number
-/// `g.level.boxes[bi]`: undefined off the list (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript: the box at place bi
-fn box_at(g: &Game, bi: f64) -> Option<BoxId> {
-    let ix = bi as usize;
-    if ix as f64 != bi { return None; }
-    g.col.boxes.get(ix).copied()
-}
 /// TYPES[t], panes.rs's word for a glass; a word off the list reads laminated (the `??` of impact: no other caller can meet one)
 fn type_word(t: u32) -> PaneType {
     match t { 0 => PaneType::Annealed, 1 => PaneType::Tempered, _ => PaneType::Laminated }
@@ -77,7 +71,7 @@ fn glass_walked(g: &mut Game) {
 fn level_sheets(g: &mut Game) -> Vec<Sheet> {
     let panes = crate::glass::glass_panes(g);
     panes.into_iter().filter_map(|bi| {
-        let b = box_at(g, bi).filter(|&b| crate::glass::is_sheet(g, Some(b)))?;
+        let b = g.box_at(bi).filter(|&b| crate::glass::is_sheet(g, Some(b)))?;
         Some(Sheet { bi: bi as u32, sky: SKY_UNKNOWN, gap: glass_break_door_gap(g, b) })
     }).collect()
 }
@@ -125,7 +119,7 @@ fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment
         let dicing = f.kind == FragmentKind::Clump || f.kind == FragmentKind::Sheet;
         let rate = if dicing { 0.7 } else { 1.25 + 0.3 * crate::debris::hash01(f.key + v.key) };
         crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-        crate::glass::glass_event(g, box_at(g, f.bi).unwrap(), f.centre, 1.0, f.who);
+        crate::glass::glass_event(g, g.box_at(f.bi).unwrap(), f.centre, 1.0, f.who);
     }
     if crate::shards::shards_live(g) {
         g.m.glassbreak.gb_host.hooked += 1.0;
@@ -137,7 +131,7 @@ fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment
 
 /// a pane's frame, for what the host still makes of a fragment
 fn glass_break_geom(g: &crate::game::Game, bi: f64) -> crate::glassbreak::PaneFrame {
-    let box_ = box_at(g, bi).unwrap();
+    let box_ = g.box_at(bi).unwrap();
     let st = row_at(g, bi);
     PaneFrame { key: st.key as f64, u_axis: if st.u_axis == 0 { 0.0 } else { 2.0 }, ht: st.ht, box_ }
 }
@@ -262,7 +256,7 @@ pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<cr
 // ---------------------------------------------------------------- stimuli
 /// THE IMPACT ENTRY POINT: a blow of `energy` met pane `bi` at world x going `dir`: the module files it and answers what the glass did
 pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3>, energy: f64, who: f64, through: Option<bool>) -> crate::glassbreak::GlassImpact {
-    let b = box_at(g, bi);
+    let b = g.box_at(bi);
     let shape = match b { Some(b) => { let r = &g.tab.boxes[b]; Some((r.flags, r.h)) } None => None };
     let is_glass = match shape { Some((flags, _)) => (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0, None => false };
     let thickness = match (is_glass, shape) { (true, Some((_, h))) => 2.0 * m::min(h[0], h[2]), _ => 0.0 };
@@ -383,7 +377,7 @@ fn glass_break_update_gusts(g: &mut crate::game::Game) {
         let src = match src {
             Some(src) => src,
             None => {
-                let box_ = box_at(g, bi).unwrap();
+                let box_ = g.box_at(bi).unwrap();
                 let (yaw, c) = { let b = &g.tab.boxes[box_]; (b.yaw, b.c) };
                 let nrm = normal_on(yaw, if u_axis == 0 { 0.0 } else { 2.0 });
                 let sky = panes::sky_known(&glass_ctx(g), js::to_u32(bi), &g.k);
@@ -429,7 +423,7 @@ fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to
 
 // ---------------------------------------------------------------- queries
 /// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
-fn glass_break_untouched(g: &crate::game::Game) -> bool {
+pub(crate) fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
 
@@ -533,6 +527,6 @@ mod tests {
     #[test]
     fn a_box_off_the_list_is_none() {
         let g = blank();
-        for bi in [-1.0, 0.5, f64::NAN, 1e9] { assert!(box_at(&g, bi).is_none()); }
+        for bi in [-1.0, 0.5, f64::NAN, 1e9] { assert!(g.box_at(bi).is_none()); }
     }
 }

@@ -101,6 +101,21 @@ pub fn len(a: V3) -> f64 {
 pub fn dist(a: V3, b: V3) -> f64 {
     hyp3(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 }
+/// The place on the floor under (or over) a point.
+#[inline]
+pub fn on_floor(a: V3) -> V3 {
+    [a[0], 0.0, a[2]]
+}
+/// How far a colour sends light back.
+#[inline]
+pub fn lum(c: V3) -> f64 {
+    0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+}
+/// What is left over a whole number.
+#[inline]
+pub fn frac(x: f64) -> f64 {
+    x - m::floor(x)
+}
 /// How far apart on the floor.
 #[inline]
 pub fn dist_xz(a: V3, b: V3) -> f64 {

@@ -24,11 +24,6 @@ fn un(x: Option<f64>) -> f64 {
 fn truthy_opt(x: Option<f64>) -> bool {
     x.map_or(false, js::truthy)
 }
-/// `!!x` of an optional boolean.
-#[inline]
-fn yes(x: Option<bool>) -> bool {
-    x == Some(true)
-}
 /// `(w.owed ?? 0) | (input.clicked & 5)`: the buttons kept are a word of bits in a number's clothes.
 #[inline]
 fn owed_with(owed: Option<f64>, clicked: f64) -> f64 {
@@ -62,7 +57,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if crate::gunwall::gun_wall_is(g, c) { return true; }
     if let Some(w) = g.pl[p].wall {
         if w.kind == Some(WallHoldKind::Stack) {
-            if yes(w.lean_want) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
+            if w.lean_want == Some(true) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
                 if un(w.lean) < 1.0 { return false; }
             } else if w.settle >= 1.0 && stack_in_way(g, p, seat.aim_point) {
                 return true;
@@ -127,7 +122,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
     }
     let w0 = g.pl[p].wall.unwrap();
     let was = un(w0.up) > 0.0;
-    let up = if pull || (yes(w0.lean_want) && un(w0.lean) > 0.3) { ws.up_secs } else { m::max(0.0, un(w0.up) - dt) };
+    let up = if pull || (w0.lean_want == Some(true) && un(w0.lean) > 0.3) { ws.up_secs } else { m::max(0.0, un(w0.up) - dt) };
     w!(g, p).up = Some(up);
     if up <= 0.0 {
         let w = w!(g, p);
@@ -160,11 +155,11 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, p: PlayerId, di
     let past = |w: &crate::player::WallHold| { let l = un(w.lean); un(w.lean_dir) * (ws.lean_along + w.lean_more.unwrap_or(0.0)) * l * l * (3.0 - 2.0 * l) };
     if crate::samstun::sam_rooted(g, &crate::seats::here(g), None) { return past(&w); }
     let able = w.kind == Some(WallHoldKind::Stack) && dir != -w.at_edge && !crate::weapons::firearm_reloading(g, g.pl[p].rifle);
-    let still = yes(w.lean_want) || m::abs(w.v) < 0.05;
+    let still = w.lean_want == Some(true) || m::abs(w.v) < 0.05;
     let want = able && still && w.settle >= 1.0 && w.at_edge != 0.0 && steps_out(g, p, &w, lean_aim(g, cam), dt);
     minds_lean(g, p, want, able, dt);
     let w = w!(g, p);
-    let out = yes(w.lean_want);
+    let out = w.lean_want == Some(true);
     w.lean_out_t = Some(if out { un(w.lean_out_t) + dt } else { 0.0 });
     let l = v3::clamp(un(w.lean) + (if out { dt / ws.lean_out } else { -dt / ws.lean_back }), 0.0, 1.0);
     w.lean = Some(l);
@@ -187,7 +182,7 @@ fn lean_aim(g: &Game, cam: CameraId) -> V3 {
 /// keeps out a little longer. Going out, he goes as much further as his gun needs to be clear of the corner.
 fn steps_out(g: &mut Game, p: PlayerId, w: &crate::player::WallHold, at: V3, dt: f64) -> bool {
     let ws = g.k.wallsnap;
-    let (t, n, edge, out) = (w.along, w.n, w.at_edge, yes(w.lean_want));
+    let (t, n, edge, out) = (w.along, w.n, w.at_edge, w.lean_want == Some(true));
     let end = if edge > 0.0 { w.hi } else { w.lo };
     let corner = crate::wallsnap::ws_corner_angle((at[0] * t[0] + at[2] * t[2] - end) * edge, at[0] * n[0] + at[2] * n[2] - w.d);
     let worth = corner.dist >= ws.lean_min_dist - (if out { ws.lean_keep_dist } else { 0.0 })
@@ -276,7 +271,7 @@ fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let ws = g.k.wallsnap;
     let (n, t) = (w0.n, w0.along);
     let po = g.tab.camera[cam].peek_offset.unwrap_or([0.0, 0.0, 0.0]);
-    let out = truthy_opt(w0.lean) || yes(w0.lean_want) || truthy_opt(w0.lean_off);
+    let out = truthy_opt(w0.lean) || w0.lean_want == Some(true) || truthy_opt(w0.lean_off);
     if !out || w0.cam_along.is_none() {
         w!(g, p).cam_along = Some(w0.side * ws.cam_side * (1.0 - w0.peek));
     }

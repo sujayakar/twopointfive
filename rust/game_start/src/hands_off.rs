@@ -6,7 +6,8 @@
 //! through the keys. The beat between a man showing and the first round is rolled on a die of his own.
 //!
 //! He is a script of the one scripted player (`player.rs`).
-use crate::player::{at, flat, Feet, Player, Script, Walk, V3};
+use game::v3::dist_xz;
+use crate::player::{at, Feet, Player, Script, Walk, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
@@ -96,8 +97,8 @@ impl Me {
         let mut post: Option<(f64, V3)> = None;
         for (back, lat) in [(0.9, 4.2), (0.9, -4.2), (0.9, 5.4), (0.9, -5.4), (1.6, 4.8), (1.6, -4.8), (0.9, 3.2), (0.9, -3.2), (2.4, 5.5), (2.4, -5.5)] {
             let Some(p) = self.free(out_pt(e, back, lat)) else { continue };
-            if flat(p, e.at) < 2.8 || flat(p, e.at) > 7.5 || !inn.iter().all(|&q| self.solid(p, q)) { continue; }
-            if self.way_len(gate, p) > flat(gate, p) * 1.5 + 1.0 { continue; }
+            if dist_xz(p, e.at) < 2.8 || dist_xz(p, e.at) > 7.5 || !inn.iter().all(|&q| self.solid(p, q)) { continue; }
+            if self.way_len(gate, p) > dist_xz(gate, p) * 1.5 + 1.0 { continue; }
             let l = self.way_len(me, p);
             if post.is_none_or(|b| l < b.0) { post = Some((l, p)); }
         }
@@ -106,7 +107,7 @@ impl Me {
             for (back, lat) in [(3.4f64, 1.6f64), (3.4, -1.6), (4.4, 1.2), (4.4, -1.2), (2.8, 2.2), (2.8, -2.2), (2.0, 2.8), (2.0, -2.8), (1.3, 3.2), (1.3, -3.2), (5.2, 0.6), (3.6, 0.5), (3.6, -0.5), (2.6, 0.0)] {
                 if lat.abs() < wide { continue; }
                 let Some(p) = self.free(out_pt(e, back, lat)) else { continue };
-                if self.solid(p, gate) || flat(p, e.at) < 2.2 || self.way_len(gate, p) > flat(gate, p) * 1.4 + 0.8 { continue; }
+                if self.solid(p, gate) || dist_xz(p, e.at) < 2.2 || self.way_len(gate, p) > dist_xz(gate, p) * 1.4 + 0.8 { continue; }
                 let l = self.way_len(me, p);
                 if post.is_none_or(|b| l < b.0) { post = Some((l, p)); }
             }
@@ -209,7 +210,7 @@ impl Me {
         if let Some(inn) = self.inside(e) { self.go(inn, 20.0, || !h.held(self)).await; }
         for _ in 0..4 {
             let me = self.pos();
-            let Some(m) = h.men.iter().copied().filter(|&m| !self.dead(m)).min_by(|&a, &b| flat(self.man_at(a), me).total_cmp(&flat(self.man_at(b), me))) else { break };
+            let Some(m) = h.men.iter().copied().filter(|&m| !self.dead(m)).min_by(|&a, &b| dist_xz(self.man_at(a), me).total_cmp(&dist_xz(self.man_at(b), me))) else { break };
             self.go(self.man_at(m), 8.0, || self.dead(m) || self.target.get().is_some()).await;
             self.until(|| self.target.get().is_none(), 6.0).await;
             self.wait(0.3).await;
@@ -289,7 +290,7 @@ impl Me {
                 let path: Vec<V3> = core::iter::once([me[0], 0.0, me[2]]).chain(way).chain(core::iter::once([hp[0], 0.0, hp[2]])).collect();
                 let (mut back, mut p) = (5.0, None);
                 for w in path.windows(2).rev() {
-                    let l = flat(w[0], w[1]);
+                    let l = dist_xz(w[0], w[1]);
                     if l >= back { let k = back / if l > 0.0 { l } else { 1.0 }; p = Some([w[1][0] + (w[0][0] - w[1][0]) * k, 0.0, w[1][2] + (w[0][2] - w[1][2]) * k]); break; }
                     back -= l;
                 }
@@ -390,7 +391,7 @@ impl HandsOff {
         let mut best: Option<(f64, GuardId)> = None;
         for h in g.guards.iter().copied().filter(|&h| g.team(h) == Team::Hostile) {
             if game::condition::down(g, g.gd[h].ch) { self.shown.retain(|s| s.0 != h); continue; }
-            let (c, d) = (chest(h), flat(pos, g.ch[g.gd[h].ch].pos));
+            let (c, d) = (chest(h), dist_xz(pos, g.ch[g.gd[h].ch].pos));
             if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || game::scene_collision::solid_blocked(g, eye, c, None) { continue; }
             let fresh = !self.shown.iter().any(|s| s.0 == h && t - s.1.last <= 1.0);
             if fresh { self.shown.retain(|s| s.0 != h); let need = REACT * (0.75 + 0.5 * self.die.roll()); self.shown.push((h, Shown { first: t, last: t, need })); }
@@ -408,11 +409,11 @@ impl HandsOff {
         // (and not with one of his own in the line)
         let mate_in_line = best.is_some_and(|h| {
             let (a, b) = (pos, g.ch[g.gd[h].ch].pos);
-            let l = flat(a, b);
+            let l = dist_xz(a, b);
             me.up().into_iter().any(|m| {
                 let p = g.ch[g.gd[m].ch].pos;
                 let along = ((p[0] - a[0]) * (b[0] - a[0]) + (p[2] - a[2]) * (b[2] - a[2])) / l.max(1e-6);
-                along > 0.0 && along < l && flat(p, [a[0] + (b[0] - a[0]) * along / l, 0.0, a[2] + (b[2] - a[2]) * along / l]) < MATE_M
+                along > 0.0 && along < l && dist_xz(p, [a[0] + (b[0] - a[0]) * along / l, 0.0, a[2] + (b[2] - a[2]) * along / l]) < MATE_M
             })
         });
         if best.is_some() && !mate_in_line && seat.aim_guard == best && !pl.sprinting { cmd.clicked = (cmd.clicked as u32 | 1) as f64; }
