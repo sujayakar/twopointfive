@@ -8,9 +8,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
 /// A pellet has found a man `t` metres from the muzzle: does it put him down? Booked either way.
-pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, who: Option<GuardId>, t: f64, dir: V3) -> bool {
+pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, c: CharId, t: f64, dir: V3) -> bool {
     let p = s.def.pellets.unwrap();
-    let h = s.men.get_or_insert_with(who, || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
+    let h = s.men.get_or_insert_with(c, || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
     h.n += 1.0;
     h.near = m::min(h.near, t);
     g.stats.shotgun.in_men += 1;
@@ -56,26 +56,10 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         crate::combat::run_shell_late(g, &shell.late[l]);
         l += 1;
     }
-    for (who, h) in shell.men.iter() {
+    for (c, h) in shell.men.iter() {
         if h.down { continue; }
         g.stats.shotgun.peppered += 1;
-        match who {
-            None => {
-                let pl = g.player;
-                let c = g.pl[pl].ch;
-                crate::character::anim_hit(g, c);
-                g.pl[pl].hit_flash = 1.0;
-            }
-            Some(who) => {
-                if crate::condition::down(g, g.gd[who].ch) { continue; }
-                if g.gd[who].civ.is_some() {
-                    let c = g.gd[who].ch;
-                    crate::character::anim_hit(g, c);
-                } else {
-                    crate::launcher::stagger_guard(g, who, h.dir, shooter);
-                }
-            }
-        }
+        crate::flight::struck(g, c, h.dir, shooter);
     }
     g.m.shotgun.shotgun_last.ends = shell.ends.clone();
     g.m.shotgun.shotgun_last.glass = shell.glass.clone();
@@ -262,13 +246,13 @@ mod tests {
         let mut g = Game::blank();
         let mut s = m870_shell(&g);
         let p = s.def.pellets.unwrap();
-        assert!(pellet_drops(&mut g, &mut s, Some(GuardId(0)), p.drop_m, [1.0, 0.0, 0.0]));
-        assert!(!pellet_drops(&mut g, &mut s, Some(GuardId(0)), p.drop_m, [1.0, 0.0, 0.0]));
+        assert!(pellet_drops(&mut g, &mut s, CharId(1), p.drop_m, [1.0, 0.0, 0.0]));
+        assert!(!pellet_drops(&mut g, &mut s, CharId(1), p.drop_m, [1.0, 0.0, 0.0]));
         assert_eq!(g.stats.shotgun.in_men, 2);
         assert_eq!(g.stats.shotgun.dropped, 1);
     }
 
-    /// Past dropM only the need-th pellet of this shell does it; the player (None) keeps his own count, the first dir and the nearest t.
+    /// Past dropM only the need-th pellet of this shell does it; each man keeps his own count, the first dir and the nearest t.
     #[test]
     fn past_drop_range_the_need_th_pellet_drops_him() {
         let mut g = Game::blank();
@@ -277,17 +261,17 @@ mod tests {
         let far = p.drop_m + 5.0;
         let mut n = 1.0;
         while n < p.need {
-            assert!(!pellet_drops(&mut g, &mut s, None, far + n, [n, 0.0, 0.0]));
+            assert!(!pellet_drops(&mut g, &mut s, CharId(0), far + n, [n, 0.0, 0.0]));
             n += 1.0;
         }
-        assert!(!pellet_drops(&mut g, &mut s, Some(GuardId(1)), far, [0.0, 0.0, 1.0]));
-        assert!(pellet_drops(&mut g, &mut s, None, far, [9.0, 0.0, 0.0]));
-        let h = s.men.get(None).unwrap();
+        assert!(!pellet_drops(&mut g, &mut s, CharId(2), far, [0.0, 0.0, 1.0]));
+        assert!(pellet_drops(&mut g, &mut s, CharId(0), far, [9.0, 0.0, 0.0]));
+        let h = s.men.get(CharId(0)).unwrap();
         assert!(h.down);
         assert_eq!(h.n, p.need);
         assert_eq!(h.near, far);
         assert_eq!(h.dir, [1.0, 0.0, 0.0]);
-        let keys: Vec<Option<GuardId>> = s.men.iter().map(|(k, _)| k).collect();
-        assert_eq!(keys, vec![None, Some(GuardId(1))]);
+        let keys: Vec<CharId> = s.men.iter().map(|(k, _)| k).collect();
+        assert_eq!(keys, vec![CharId(0), CharId(2)]);
     }
 }

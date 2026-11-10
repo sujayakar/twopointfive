@@ -15,7 +15,7 @@ pub struct Shell {
     pub def: crate::weapons::WeaponDef,
     pub i: f64,
     pub dir: Option<V3>,
-    pub men: JsMap<Option<GuardId>, crate::shotgun::ShellMenValue>,
+    pub men: JsMap<CharId, crate::shotgun::ShellMenValue>,
     pub ends: Vec<crate::shotgun::ShellEndsItem>,
     pub glass: JsMap<crate::Num, Vec<f64>>,
     pub late: Vec<crate::shotgun::ShellLate>,

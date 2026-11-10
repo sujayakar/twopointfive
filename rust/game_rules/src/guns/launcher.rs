@@ -2,7 +2,6 @@ pub use ::game_types::launcher::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
-use crate::combat::BodyHitContact;
 use crate::flight::Met;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
@@ -147,7 +146,7 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
             r.age += h;
             r.spin += 25.0 * h;
             let bodies = crate::flight::bodies(g, r.shooter);
-            let Some(leg) = crate::flight::leg(g, &b, h, r.pos, &mut r.vel, &bodies, BodyHitContact::Flight { radius: b.radius }) else { continue };
+            let Some(leg) = crate::flight::leg(g, &b, h, r.pos, &mut r.vel, &bodies) else { continue };
             let Some(met) = leg.met else { r.pos = leg.to; continue };
             done = true;
             match met {
@@ -200,92 +199,29 @@ pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
     crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, Some(true));
 }
 
-/// A ring has found a man at `at`: high is out cold, low the stagger, a civilian low a fright, the player a flinch; the ring drops at his feet.
+/// A ring has found a man at `at`: high is out cold, low is struck; the ring drops at his feet.
 fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c: CharId, dir: V3, at: V3) {
-    let by_player = crate::character::is_player(g, r.shooter);
     let neck = match g.ch[c].bones.get(crate::character::Bone::Neck) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.42, 0.0]) };
     let high = at[1] >= neck[1] - g.k.ring.ko_below_neck;
     match crate::character::guard_of(g, c) {
-        None => {
-            crate::character::anim_hit(g, c);
-            play_rate(g, "bodyHit", at, 0.5, 1.1);
-        }
-        Some(gd) if g.gd[gd].civ.is_some() && !high => {
-            crate::character::anim_hit(g, c);
-            let thump = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-            play_rate(g, "bodyHit", thump, 0.55, 1.05);
-            if g.gd[gd].held.is_none() {
-                let back = g.k.ring.stagger_back;
-                let p = g.ch[c].pos;
-                crate::civilians::to_alarmed(g, gd, crate::civilians::CivCause::Noise, [p[0] - dir[0] * back, 0.0, p[2] - dir[2] * back], false);
-            }
-            let level = g.k.ring.hit_noise;
-            thump_at(g, c, level, r.shooter);
-        }
         Some(gd) if high => {
             play_rate(g, "bodyHit", at, 0.6, 0.75);
             let line = match g.gd[gd].civ {
                 Some(cv) => format!("ring to the head — {}, the {}, is out cold. breathing — but a civilian: that costs, and they may find {}", g.cv[cv].name, g.cv[cv].label, g.cv[cv].her),
                 None => format!("ring to the head — {} is out cold", g.gd[gd].callsign),
             };
-            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line));
+            let by = if crate::character::is_player(g, r.shooter) { crate::game::DownBy::Player } else { crate::game::DownBy::Guard };
+            crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(by), Some(&line));
             let level = g.k.ring.ko_noise;
-            thump_at(g, c, level, r.shooter);
+            crate::flight::thump_at(g, c, level, r.shooter);
         }
-        Some(gd) => stagger_guard(g, gd, dir, r.shooter),
+        _ => crate::flight::struck(g, c, dir, r.shooter),
     }
     let drop_at = v3::mad(at, dir, -0.05);
     let vx = -dir[0] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#1", c) - 0.5);
     let vy = 1.0 + crate::dice::draw_body(g, "launcher::ring_hits_character#2", c);
     let vz = -dir[2] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#3", c) - 0.5);
     spend(g, r, drop_at, [vx, vy, vz]);
-}
-
-/// A noise where the man struck stands, laid on whoever sent the thing.
-fn thump_at(g: &mut Game, c: CharId, level: f64, by: CharId) {
-    let (pos, who) = (v3::copy(g.ch[c].pos), g.ch[by].id);
-    crate::flight::noise(g, pos, level, who, None);
-    crate::flight::louder(g, by, level);
-}
-
-/// A ring in the body: he doubles over, rooted, gun down, alert, with a fix back up the ring's line; a yelp and a noise at him. A man held only flinches.
-pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: CharId) {
-    use crate::game::GuardState;
-    if crate::condition::down(g, g.gd[gd].ch) { return; }
-    let c = g.gd[gd].ch;
-    crate::character::anim_hit(g, c);
-    let thump = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-    play_rate(g, "bodyHit", thump, 0.55, 1.05);
-    if g.gd[gd].held.is_some() { return; }
-    if g.gd[gd].script.is_some() {
-        use crate::squad::EndGuardScriptState as End;
-        let to = match g.gd[gd].state { GuardState::Patrol => End::Suspicious, GuardState::Search => End::Search, GuardState::Alert => End::Alert, _ => End::Suspicious };
-        crate::squad::end_guard_script(g, gd, Some(to));
-    }
-    let (stagger, fire_cd, aware, back_m, hit_noise) = (g.k.ring.stagger, g.k.ring.stagger_fire_cd, g.k.ring.stagger_aware, g.k.ring.stagger_back, g.k.ring.hit_noise);
-    crate::condition::fold(g, c, stagger);
-    g.gd[gd].react_t = m::max(g.gd[gd].react_t, stagger);
-    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, fire_cd);
-    let weapon = g.gd[gd].weapon;
-    g.fa[weapon].burst = None;
-    crate::condition::stopped_dead(g, gd);
-    if g.gd[gd].state != GuardState::Alert || g.gd[gd].last_known.is_none() {
-        let p = g.ch[c].pos;
-        let mut back: V3 = [p[0] - dir[0] * back_m, 0.0, p[2] - dir[2] * back_m];
-        if crate::scene_collision::nav_grid_is_blocked(g, back[0], back[2]) {
-            back = match crate::scene_collision::nav_grid_nearest_free_point(g, back[0], back[2]) { Some(q) => q, None => v3::copy(g.ch[c].pos) };
-        }
-        crate::belief::word(g, gd, back);
-    }
-    crate::mind::raise(g, gd, aware, "launcher");
-    if g.ai_enabled { g.gd[gd].witness.heard.small += 1.0; }
-    let all = stagger_lines_table();
-    let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
-    let pool = crate::words::w(g, &now, &all);
-    let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
-    let line = &pool[js::rem(roll, pool.len() as f64) as usize];
-    crate::game::game_say(g, gd, line, None, None);
-    thump_at(g, c, hit_noise, shooter);
 }
 
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this.
