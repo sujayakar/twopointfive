@@ -69,7 +69,8 @@ impl Him {
 pub(super) fn build_interactables(g: &mut Game) {
     let h = Him::of(g);
     let mut o = Offers::default();
-    things::lamps(g, &mut o);
+    let old = core::mem::take(&mut g.sets[g.seat].interactables);
+    things::lamps(g, &mut o, old);
     let rows = if crate::condition::down(g, g.pl[h.pl].ch) { Vec::new() }
         else if g.pl[h.pl].holding().is_some() { men::held(g, &mut o, h) }
         else { around(g, &mut o, h) };

@@ -270,7 +270,7 @@ pub fn doors_locked_out(g: &crate::game::Game, d: DoorId, from: V3, keys: Option
 }
 /// The lock is against you BUT for the key you carry
 pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
-    (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false }) && doors_locked_out(g, d, from, None)
+    doors_locked_out(g, d, from, None) && (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false })
 }
 
 #[cfg(test)]
