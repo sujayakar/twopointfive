@@ -30,7 +30,7 @@ fn classTo(c: u32) -> f32 { return select(select(lim.w, lim.y, c == 1u), lim.x, 
 
 /** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
-  var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
+  var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd); voxDie = pcg(voxDie + rngState + 1u);
   var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;
   let t0 = select(tmin, max(tmin, (cut - ro.y) / rd.y), cut < 1e8 && ro.y > cut && rd.y < -1e-5);
   for (var s = 0u; s < 3u; s++) {
@@ -91,6 +91,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       for (var j = 0u; j < cnt; j++) {
         let k = first + j; let fl = pieces[k].flags; let to = min(tmax, classTo(classOf(fl)));
         if ((fl & NOSHADOW) != 0u || to <= tmin) { continue; }
+        if ((fl & VOX) != 0u) { let p = &pieces[k]; let o = vec3f(dot((*p).r0.xyz, ro) + (*p).r0.w, dot((*p).r1.xyz, ro) + (*p).r1.w, dot((*p).r2.xyz, ro) + (*p).r2.w); let d = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd)); let iv = safeInv(d); let va = (-(*p).half - o) * iv; let vb = ((*p).half - o) * iv; let t0 = max(max3(min(va, vb)), tmin); let t1 = min(min3(max(va, vb)), to); if (t0 < t1) { T *= exp(-voxWalk(k, o, d, t0, t1, 1e9).tau); if (T.y < 0.004) { return vec3f(0.0); } } continue; }
         if (meet(k, ro, rd, tmin, to, 1e9)) {
           if ((fl & (GLASS | WATER)) != 0u) { T *= select(vec3f(0.62, 0.86, 0.9), unpackTint(pieces[k].tint), (fl & GLASS) != 0u); continue; }
           return vec3f(0.0);

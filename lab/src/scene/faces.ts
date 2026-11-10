@@ -7,6 +7,7 @@ export const APART = 0.0015;
 interface Face { p: Piece; i: number; k: number; sign: number; at: V3; n: V3; d: number; u: V3; v: V3; hu: number; hv: number }
 export interface Fight { a: Face; b: Face; gap: number }
 export function facesOf(p: Piece, i: number): Face[] {
+  if (p.vox) return [];
   const out: Face[] = [], q = p.quad, round = q ? [0, 1, 2].map(k => q[k] !== 0) : [false, false, false];
   for (let k = 0; k < 3; k++) {
     if (q && (round[k] || round.every(x => x) || (q[3] !== 0 && k !== 1))) continue;      // a curved side has no plane
@@ -37,7 +38,7 @@ export function freeEdges(pieces: Piece[]): Map<Piece, number> {
   for (const p of pieces) { const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]), m = Math.max(...e); if (m > 24) { big.push(p); continue; } const w = m < 0.5 ? 0 : 1, g = sizes[w]!; for (let x = Math.floor((p.at[0] - e[0]!) / g); x <= Math.floor((p.at[0] + e[0]!) / g); x++) for (let y = Math.floor((p.at[1] - e[1]!) / g); y <= Math.floor((p.at[1] + e[1]!) / g); y++) for (let z = Math.floor((p.at[2] - e[2]!) / g); z <= Math.floor((p.at[2] + e[2]!) / g); z++) { const k = (x + 2048) + 4096 * ((y + 512) + 1024 * (z + 2048)); let l = grids[w]!.get(k); if (!l) grids[w]!.set(k, l = []); l.push(p); } }
   const inside = (p: Piece, x: V3) => { const a = x[0] - p.at[0], b = x[1] - p.at[1], c = x[2] - p.at[2]; for (let k = 0; k < 3; k++) { const r = p.rot[k]!; if (Math.abs(a * r[0] + b * r[1] + c * r[2]) > p.half[k]! + 1e-4) return false; } return true; }, taken = (x: V3, not: Piece) => { for (let w = 0; w < 2; w++) { const l = grids[w]!.get(key(x[0], x[1], x[2], sizes[w]!)); if (l) for (const p of l) if (p !== not && inside(p, x)) return true; } for (const p of big) if (p !== not && inside(p, x)) return true; return false; };
   for (const p of pieces) {
-    if (p.quad || p.planes?.length || p.curves?.length) continue; if (Math.max(...p.half) < 0.16) { out.set(p, 0xfff); continue; } let mask = 0;     // (a small thing's edges are taken as free)
+    if (p.quad || p.planes?.length || p.curves?.length || p.vox) continue; if (Math.max(...p.half) < 0.16) { out.set(p, 0xfff); continue; } let mask = 0;     // (a small thing's edges are taken as free)
     for (let c = 0; c < 3; c++) { const A = (c + 1) % 3, B = (c + 2) % 3; if (Math.min(p.half[A]!, p.half[B]!) < 0.004) continue; for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
       const sa = i ? 1 : -1, sb = j ? 1 : -1, na = mul(p.rot[A]!, sa), nb = mul(p.rot[B]!, sb), mid = add(add(p.at, mul(na, p.half[A]!)), mul(nb, p.half[B]!)); let free = 0; const N = 7;
       for (let t = 0; t < N; t++) { const x = add(mid, mul(p.rot[c]!, p.half[c]! * ((t + 0.5) / N * 2 - 1))); if (!taken(add(x, add(mul(na, D), mul(nb, -D))), p) && !taken(add(x, add(mul(na, -D), mul(nb, D))), p) && !taken(add(x, add(mul(na, D), mul(nb, D))), p)) free++; }

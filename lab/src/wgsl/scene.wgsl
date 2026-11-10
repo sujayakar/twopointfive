@@ -73,6 +73,25 @@ struct Hit { t: f32, piece: u32, code: u32, thru: vec3f, gt: f32, gpiece: u32, g
 var<private> hT: f32; var<private> hCode: u32;
 const CODE_QUAD = 6u; const CODE_CUT = 15u;
 
+// A BLOCK OF CELLS, in a piece's own frame: one row (cells along x y z, their size), then a word a place (a cell's number + 1), then three rows a cell: depth along x y z and the share of leaves · the tight box's
+// corners · six colors · six normals and how alike they are. A ray goes through it as through fog, and by a die stops where a cell's tight box begins.
+const VOX = 128u; const VOX_CODE = 4096u; var<private> voxDie = 1u;
+fn voxWord(at: u32, i: u32) -> u32 { return bitcast<vec4u>(extra[at + (i >> 2u)])[i & 3u]; }
+struct Vox { t: f32, cell: u32, axis: u32, tau: f32 };
+fn voxWalk(k: u32, o: vec3f, d: vec3f, t0: f32, t1: f32, want: f32) -> Vox {
+  var v: Vox; v.cell = 0u; v.tau = 0.0; let at = pieces[k].planes; let head = extra[at]; let n = vec3i(head.xyz); let h = head.w; let half = pieces[k].half; let words = at + 1u; let cells = words + (u32(n.x * n.y * n.z) + 3u) / 4u;
+  let flat = abs(d) < vec3f(1e-9); let inv = 1.0 / select(d, vec3f(1e-9), flat); let ahead = select(vec3f(0.0), vec3f(1.0), d > vec3f(0.0)); var t = t0; var c = clamp(vec3i(floor((o + d * (t + 1e-5) + half) / h)), vec3i(0), n - 1);
+  for (var i = 0u; i < 220u; i++) {
+    if (t >= t1) { break; } let e = select(((vec3f(c) + ahead) * h - half - o) * inv, vec3f(1e9), flat); let out = min(min3(e), t1); let w = voxWord(words, u32(c.x + n.x * (c.y + n.y * c.z)));
+    if (w != 0u) {
+      let r = bitcast<vec4u>(extra[cells + (w - 1u) * 3u]); let a8 = vec3f(vec3u(r.y, r.y >> 8u, r.y >> 16u) & vec3u(255u)); let z8 = vec3f((vec3u(r.z, r.z >> 8u, r.z >> 16u) & vec3u(255u)) + vec3u(1u)); let lo = (vec3f(c) + a8 / 256.0) * h - half; let hi = (vec3f(c) + z8 / 256.0) * h - half;
+      let u = (lo - o) * inv; let z = (hi - o) * inv; let mn = select(min(u, z), select(vec3f(1e9), vec3f(-1e9), (o > lo) & (o < hi)), flat); let mx = select(max(u, z), vec3f(1e9), flat); let ta = max(t, max3(mn)); let tb = min(out, min3(mx));
+      if (tb > ta) { let sg = length(vec3f(vec3u(r.x, r.x >> 8u, r.x >> 16u) & vec3u(255u)) * (6.4 / 255.0) / (hi - lo) * d); let dep = sg * (tb - ta); if (v.tau + dep >= want) { v.t = ta; v.cell = w; v.axis = select(select(2u, 1u, mn.y >= mn.z), 0u, mn.x >= mn.y && mn.x >= mn.z); return v; } v.tau += dep; }
+    }
+    t = out; if (e.x <= e.y && e.x <= e.z) { c.x += select(-1, 1, d.x > 0.0); } else if (e.y <= e.z) { c.y += select(-1, 1, d.y > 0.0); } else { c.z += select(-1, 1, d.z > 0.0); } if (any(c < vec3i(0)) || any(c >= n)) { break; }
+  }
+  return v;
+}
 /** one piece: the overlap of the stays its box, its quadric and its planes allow. Sets hT and hCode */
 fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
   let p = &pieces[k]; let flags = (*p).flags; if ((flags & OPEN) != 0u && cut < OPEN_FLOOR) { return false; }
@@ -83,6 +102,7 @@ fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
   var tn = max3(mn); var tf = min3(mx);
   if (tn >= tf || tf < tmin || tn >= tmax) { return false; }
   var code = select(select(select(5u, 4u, d.z > 0.0), select(3u, 2u, d.y > 0.0), tn == mn.y), select(1u, 0u, d.x > 0.0), tn == mn.x);   // 0 -x 1 +x 2 -y 3 +y 4 -z 5 +z
+  if ((flags & VOX) != 0u) { let a = max(tn, tmin); let b = min(tf, tmax); if (a >= b) { return false; } let v = voxWalk(k, o, d, a, b, -log(1.0 - f32(pcg(voxDie ^ (k * 747796405u)) >> 8u) / 16777217.0)); if (v.cell == 0u) { return false; } hT = v.t; hCode = VOX_CODE + v.cell * 4u + v.axis; return true; }
   // from where the ray enters its box: from far off, a thin round thing's roots are lost in the rounding
   let sh = tn; let e0 = o + d * sh;
   if ((flags & QUAD) != 0u) {

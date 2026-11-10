@@ -11,6 +11,7 @@ fn movedLeaf(i: u32, x: vec3f) -> vec3f {
   let rd = pxRay(id.xy); let ro = frame.camPos.xyz; let px = length(frame.camUp.xyz) * 2.0 / frame.size.w;
   var thru = vec3f(1.0); var front = vec4u(0u); var wetLen = 0.0; var wetN = vec3f(0.0); var wetT = 0.0; var h: Hit; h.piece = NOTHING; h.t = 1900.0; h.thru = vec3f(1.0);
   let a = textureLoad(idT, id.xy, 0).x; let b = textureLoad(idC, id.xy, 0).x;
+  voxDie = pcg(id.x + pcg(id.y + pcg(frame.counts.z + 5u)));
   // the raster says which; where exactly is asked of the piece itself
   if ((a & LEAF_HIT) != 0u) {
     let inst = (a >> 13u) & 0x3ffffu; let I = &insts[inst]; let leaf = (*I).leaf + (a & 8191u); let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w); let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));

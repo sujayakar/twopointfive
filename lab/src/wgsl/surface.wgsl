@@ -76,10 +76,19 @@ fn lean(v: u32) -> vec2f { return ((vec2f(f32(v & 0xffffu), f32(v >> 16u)) - 200
 fn toWorld(k: u32, v: vec3f) -> vec3f { return pieces[k].r0.xyz * v.x + pieces[k].r1.xyz * v.y + pieces[k].r2.xyz * v.z; }
 fn toLocal(k: u32, x: vec3f) -> vec3f { let p = &pieces[k]; return vec3f(dot((*p).r0.xyz, x) + (*p).r0.w, dot((*p).r1.xyz, x) + (*p).r1.w, dot((*p).r2.xyz, x) + (*p).r2.w); }
 
+/** what a cell sends back: its colors and normals from the sides a ray sees, by how much it meets of each */
+fn voxSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
+  let k = h.piece; let p = &pieces[k]; let at = (*p).planes; let n3 = vec3u(extra[at].xyz); let cell = (h.code - VOX_CODE) >> 2u; let axis = (h.code - VOX_CODE) & 3u; let row = at + 1u + (n3.x * n3.y * n3.z + 3u) / 4u + (cell - 1u) * 3u; let r = bitcast<vec4u>(extra[row]); let c = bitcast<vec4u>(extra[row + 1u]); let m = bitcast<vec4u>(extra[row + 2u]);
+  let d = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd)); let a8 = vec3f(vec3u(r.y, r.y >> 8u, r.y >> 16u) & vec3u(255u)); let z8 = vec3f((vec3u(r.z, r.z >> 8u, r.z >> 16u) & vec3u(255u)) + vec3u(1u)); let s3 = vec3f(vec3u(r.x, r.x >> 8u, r.x >> 16u) & vec3u(255u)) / max(z8 - a8, vec3f(0.5)) * d; let w = s3 * s3 / max(dot(s3, s3), 1e-12);
+  var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags & ~15u; s.kind = 18u; s.rough = 0.8; s.f0 = 0.03; s.metal = 0.0; s.glow = vec3f(0.0); s.through = vec3f(0.0); var g = vec3f(0.0); g[axis] = select(1.0, -1.0, d[axis] > 0.0); s.ng = toWorld(k, g);
+  var col = vec3f(0.0); var n = vec3f(0.0); for (var a = 0u; a < 3u; a++) { let plus = d[a] < 0.0; let q = (c[a] >> select(0u, 16u, plus)) & 0xffffu; let v = vec3f(f32(q & 31u) / 31.0, f32((q >> 5u) & 63u) / 63.0, f32(q >> 11u) / 31.0); col += w[a] * v * v; let e = (m[a] >> select(0u, 16u, plus)) & 0xffffu; let l = f32((m.w >> (5u * (a * 2u + select(0u, 1u, plus)))) & 31u) / 31.0; var ax = vec3f(0.0); ax[a] = select(-1.0, 1.0, plus); n += w[a] * (octDec(vec2f(f32(e & 255u), f32(e >> 8u)) / 255.0) * l + ax * 0.02); }
+  s.albedo = min(col, vec3f(0.94)); if ((r.x >> 31u) != 0u) { let u = vec2f(f32(pcg(voxDie ^ cell) >> 8u), f32(pcg(voxDie + cell * 2654435761u) >> 8u)) / 16777216.0; let z = u.x * 2.0 - 1.0; let q = sqrt(max(1.0 - z * z, 0.0)); n = vec3f(q * cos(6.2831853 * u.y), z, q * sin(6.2831853 * u.y)); if (dot(n, d) > 0.0) { n = -n; } s.kind = select(14u, 20u, (r.y >> 24u) != 0u); s.through = leafThrough(s.albedo, s.kind == 20u); let kk = leafKeeps(s.albedo + s.through); s.albedo *= kk; s.through *= kk; s.rough = 0.6; s.ao = vec2f(1.0); }
+  s.n = normalize(toWorld(k, n)); if (dot(s.n, rd) > -0.02) { s.n = normalize(s.n - rd * (dot(s.n, rd) + 0.05)); } return s;
+}
 fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let x = ro + rd * h.t;
   if ((h.piece & LEAF_HIT) != 0u) { return leafSurf(h, x, rd, fp); }
-  let k = h.piece; let p = &pieces[k]; let m = mats[(*p).mat & 255u]; let lp = toLocal(k, x);
+  let k = h.piece; let p = &pieces[k]; if (((*p).flags & VOX) != 0u) { return voxSurf(h, x, rd); } let m = mats[(*p).mat & 255u]; let lp = toLocal(k, x);
   var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags; s.kind = m.kind; s.through = vec3f(0.0);
   if (h.code == CODE_CUT) {                                          // where the section cuts it: pale, and lit as its two sides are (n: across it, rough: how far to either side)
     s.ng = vec3f(0.0, 1.0, 0.0); var half = 1e9; for (var a = 0u; a < 3u; a++) { var e = vec3f(0.0); e[a] = 1.0; let d = toWorld(k, e); if (abs(d.y) < 0.7 && (*p).half[a] < half) { half = (*p).half[a]; s.n = normalize(vec3f(d.x, 0.0, d.z)); } }

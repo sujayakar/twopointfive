@@ -14,7 +14,7 @@ fn thin(k: u32) -> bool { return (pieces[k].flags & OPEN) != 0u; }
 struct F { @location(0) id: u32, @builtin(frag_depth) z: f32 };
 @fragment fn fsFancy(v: V) -> F {
   if (thin(v.id) && inTheWay(v.w, v.p.xy)) { discard; } let rd = camRay((v.p.xy + frame.jitter.xy) / frame.size.xy); var o: F; o.id = v.id + 1u; o.z = 0.0;
-  if (!meet(v.id, frame.camPos.xyz, rd, 1e-3, 4000.0, frame.misc.y)) { discard; } o.z = 0.25 / (hT * dot(rd, frame.camFwd.xyz)); return o;
+  voxDie = pcg(u32(v.p.x) + pcg(u32(v.p.y) + pcg(frame.counts.z + 5u))); if (!meet(v.id, frame.camPos.xyz, rd, 1e-3, 4000.0, frame.misc.y)) { discard; } o.z = 0.25 / (hT * dot(rd, frame.camFwd.xyz)); return o;
 }
 // leaves: a pointed oval of four triangles
 fn leafVertex(vi: u32, at: u32, inst: u32) -> V {
