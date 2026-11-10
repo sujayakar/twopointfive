@@ -19,7 +19,7 @@ fn js_len(s: &str) -> f64 {
 }
 
 /// `g.events.push({ kind: 'prop', pos, time, loud: false, level, who: <Sam's body> })`, and `pl.noise` raised to it: what the room hears of a hold's beat
-fn prop_noise(g: &mut Game, pos: V3, level: f64) {
+pub(super) fn prop_noise(g: &mut Game, pos: V3, level: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
