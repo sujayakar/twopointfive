@@ -823,8 +823,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
             crate::takedown::partner_fall(g, foe, false, Some(gd));
             let c = g.ch[fc].pos;
             let dir = v3::normalize([c[0] - p[0], 0.0, c[2] - p[2]]);
-            let line = format!("{} — {} is out cold", g.gd[gd].callsign, name);
-            crate::combat::kill_guard(g, foe, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), Some(&line));
+            crate::combat::kill_guard(g, foe, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), crate::game::With::Hand);
             g.stats.pairorders.taken += 1;
             let n = format!("down:{} by {}", name, g.gd[gd].callsign);
             pair_orders_note(g, &n);

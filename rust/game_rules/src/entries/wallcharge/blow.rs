@@ -977,8 +977,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
         if !far {   // on the charge's own side: caught or not as he stood when it went (at it, he is killed)
             if !near.iter().any(|&(x, _)| x == gd) { continue; }
             if wk && dist < near_m {
-                let line = format!("{} down — at the charge when it went", callsign_or(g, gd, "a man"));
-                crate::combat::kill_guard_by(g, gd, away_from(p, xz), Some(false), Some(DownKind::Shot), Some(DownBy::Player), Some(&line), Some("wall charge"));
+                crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Shot), Some(DownBy::Player), crate::game::With::Blast("wall charge"));
                 if !ours { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
             } else {
                 let secs = near_secs(g, dist, r.reach);
@@ -998,8 +997,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
             continue;
         }
         if dist < knock_m {
-            let line = format!("{} down — behind the wall when it went", callsign_or(g, gd, "a man"));
-            crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Struck), Some(DownBy::Player), Some(&line));
+            crate::combat::kill_guard(g, gd, away_from(p, xz), Some(false), Some(DownKind::Struck), Some(DownBy::Player), crate::game::With::Charge);
             if !(ours && wk) { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
         } else {
             wall_charge_dazzle(g, gd, v3::lerp(ss[0], ss[1], v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
@@ -1019,8 +1017,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
             let dist = v3::dist_xz(p, xz);
             let struck = if far { has_hole && dist < knock_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { dist < near_m && near.iter().any(|&(x, _)| x == cv) };
             if !struck { continue; }
-            let line = format!("{} down — {} when it went", callsign_or(g, cv, "a civilian"), if far { "behind the wall" } else { "at the charge" });
-            crate::combat::kill_guard(g, cv, away_from(p, xz), Some(false), Some(if far { DownKind::Struck } else { DownKind::Shot }), Some(DownBy::Player), Some(&line));
+            crate::combat::kill_guard(g, cv, away_from(p, xz), Some(false), Some(if far { DownKind::Struck } else { DownKind::Shot }), Some(DownBy::Player), if far { crate::game::With::Charge } else { crate::game::With::Hand });
             knocked += 1.0;
         }
     }
