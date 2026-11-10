@@ -138,7 +138,7 @@ pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, ke
 /// How he is trained, where his pouches are, and the beats of it.
 fn as_he_is(an: &Anim, q: &mut Feed) {
     let (tr, hip_line, bt, fix_l) = (clamp(an.trained, 0.0, 1.0), an.long_gun, an.rl_b, an.hand_fix[0]);
-    *q = Feed { tr, hip_line, bt, fix_l, ..*q };
+    (q.tr, q.hip_line, q.bt, q.fix_l) = (tr, hip_line, bt, fix_l);
 }
 
 /// The gun where the trigger hand has it, the hand where it was, and the trunk's own frame.
@@ -146,7 +146,7 @@ fn as_it_lies(fk: &mut Fk, hand_l: usize, q: &mut Feed) {
     let gun = GunFrame::of(fk);
     let (cur, rot0) = (fk.at(hand_l), fk.rot(hand_l));
     let (left, up, fwd) = trunk_frame(fk);
-    *q = Feed { gun, cur, rot0, left, up, fwd, ..*q };
+    (q.gun, q.cur, q.rot0, q.left, q.up, q.fwd) = (gun, cur, rot0, left, up, fwd);
 }
 
 /// Off a point in the trunk's frame.
@@ -166,7 +166,7 @@ fn hip_line(fk: &mut Fk, q: &mut Feed) {
     } else {
         (left, fwd)
     };
-    *q = Feed { hips, hl, hf, ..*q };
+    (q.hips, q.hl, q.hf) = (hips, hl, hf);
 }
 
 /// Off the hips by the hips' line.
@@ -184,7 +184,7 @@ fn pouch_and_beats(fk: &mut Fk, q: &mut Feed) {
     // the hand: round a thing from its front (fingers across it, palm toward him) · fingers down into the pouch
     let (mf, mb) = (gun.dir(&[-1.0, 0.15, 0.1]), gun.dir(&[0.1, -0.35, 1.0]));
     let (pf, pb) = (v3::mad(v3::mad(v3::scale(up, -0.9), left, -0.3), fwd, 0.1), v3::mad(fwd, left, 0.3));
-    *q = Feed { pouch, r_pole, pole_w, o, i, r, dur, mf, mb, pf, pb, ..*q };
+    (q.pouch, q.r_pole, q.pole_w, q.o, q.i, q.r, q.dur, q.mf, q.mb, q.pf, q.pb) = (pouch, r_pole, pole_w, o, i, r, dur, mf, mb, pf, pb);
 }
 
 /// A gun fed its own way: the hand through its stations (flat on top of the gun, at the pouch or round the magazine), resting where its last work was
@@ -218,7 +218,7 @@ fn keyed_hand(keys: &[FeedKey], d: &mut [S], rig: &Rig, fk: &mut Fk, hand_l: usi
     p.push(max(dur - 0.03, end + 0.02), cur);
     let rot = hand_rot(&fix_l, f.at(t), b.at(t));
     two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &p.at(t), Some(&r_pole), pole_w, Some(&rot), false);
-    *q = Feed { end, ..*q };
+    q.end = end;
 }
 
 /// The fingers, closed as each station has them.
@@ -254,7 +254,7 @@ fn mag_points(marks: &FeedMarks, q: &mut Feed) {
     let off = if fum { tk(q, v3::lerp3(hit, strip, 0.65), v3::scale(MV2.reload.flare.off, 1.0 - tr)) } else { hit };
     let tap_p = if slap { tk(q, v3::mad(mag, gun.up, -MV2.reload.tap * (1.0 - tr)), v3::scale(MV2.reload.flare.tap, 1.0 - tr)) } else { mag };
     let over = v3::mad(v3::mad(pl, gun.bore, -(MV2.reload.fling + 0.1 * (1.0 - tr))), gun.left, 0.04 + 0.05 * (1.0 - tr));
-    *q = Feed { mag, strip, hd, pl, fum, hp, fl, hit, off, tap_p, over, ..*q };
+    (q.mag, q.strip, q.hd, q.pl, q.fum, q.hp, q.fl, q.hit, q.off, q.tap_p, q.over) = (mag, strip, hd, pl, fum, hp, fl, hit, off, tap_p, over);
 }
 
 /// Where the hand is on its way: a magazine with rounds in it goes to the dump pouch on the hip before the hand goes for a fresh one.
@@ -295,7 +295,7 @@ fn mag_path(tune: &Knobs, q: &mut Feed) {
     }
     p.push(dur - 0.03, cur);
     let to = p.at(t);
-    *q = Feed { kp, fr, to, ..*q };
+    (q.kp, q.fr, q.to) = (kp, fr, to);
 }
 
 /// The hand: round the magazine from its front, fingers down into the pouch, hooked on the handle; down at the pouches from the first of them to the last.
@@ -304,7 +304,7 @@ fn mag_turns(marks: &FeedMarks, q: &mut Feed) {
     let (hf_d, hb_d) = (gun.dir(&marks.hf), gun.dir(&marks.hb));
     // (the hand is down at the pouches from the first of them to the last)
     let (hq, hr) = if kp >= 0.0 { (kp - 0.07, fr + 0.1) } else { (hp, hp + 0.12) };
-    *q = Feed { hf_d, hb_d, hq, hr, ..*q };
+    (q.hf_d, q.hb_d, q.hq, q.hr) = (hf_d, hb_d, hq, hr);
 }
 
 /// A line of the hand through it.
