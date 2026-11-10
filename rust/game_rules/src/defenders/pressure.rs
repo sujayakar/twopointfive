@@ -66,97 +66,121 @@ fn team_boots(g: &mut Game, gd: GuardId) -> Option<V3> {
     best
 }
 
+/// Why the last man goes: the place he is going from, and the door not to use.
+#[derive(Clone, Copy)]
+struct Going {
+    why: LastWhy,
+    threat: V3,
+    shut: Option<usize>,
+}
+
 /// the last man up in a room does not die at his post: two of the enemy in view, or the team's boots at one door on a floor gone loud, and after his own beat he gives the room up through another.
 fn last_man(g: &mut Game, d: RoomfightDefId) {
     let gd = gd_of(g, d);
-    let c_ch = g.gd[gd].ch;
-    let mode_free = crate::roomfight::DefMode::Free;
-    // (lostAt ahead of the clock = somebody holds him to his room)
-    let room = df(g, d).room;
-    let ok = crate::roomfight::at_post(g, d) && room.map_or(false, |r| g.tab.roomfight_room[r].cells.len() as f64 <= ROOM_CELLS) && g.gd[gd].held.is_none() && !(df(g, d).lost_at > g.time)
-        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
-        && g.time - df(g, d).moved_at > 6.0 && g.time - state_of(g).tried.get(d).copied().unwrap_or(-100.0) > 6.0 && !state_of(g).outs.iter().any(|o| o.def == d)
-        && {
-            let mut other = false;
-            for i in 0..g.fight.defs.len() {
-                let x = g.fight.defs[i];
-                if x != d && alive(g, x) && df(g, x).room == room && df(g, x).mode != mode_free { other = true; break; }
-            }
-            !other
-        }
-        && !g.gd[gd].stays_in_rooms;
-    if !ok { state_of(g).last.delete(d); return; }
-    let r = room.unwrap();
-    let mut why: Option<LastWhy> = None;
-    let mut threat: V3 = g.gd[gd].sight_pos;
-    let mut shut: Option<usize> = None;
-    if g.gd[gd].state == crate::game::GuardState::Alert && g.time - g.gd[gd].last_seen_t < 1.5 {
-        let mut seen = 0;   // (his own eyes: the game's sight test, and some light on the man)
-        let team = g.team(gd);
-        for i in 0..g.fight.ops.len() {
-            let o = op_gd(g, i);
-            let (ot, oc) = (g.team(o), g.gd[o].ch);
-            if crate::condition::down(g, g.gd[o].ch) || !team.foe_of(ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
-            let vis = crate::guards::can_see_char(g, gd, oc);
-            if vis.visible && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.0 { seen += 1; }
-        }
-        if seen >= 2 { why = Some(LastWhy::Seen); }
-    } else if g.tab.roomfight_room[r].entries.len() > 1 && df(g, d).noise_at.is_some() && g.time - df(g, d).noise_t < g.k.pressure.loud_secs && g.time - g.gd[gd].last_seen_t > 3.0
-        && !(g.k.digin.on && crate::digin::dig_in_set(g, gd)) {   // (a man SET on his door is waiting for exactly those boots: he holds)
-        if !state_of(g).ear.has(d) { state_of(g).ear.set(d, StateEarValue { t: -1.0, i: -1.0, at: -100.0 }); }
-        let mut e = *state_of(g).ear.get(d).unwrap();
-        if g.time - e.t > 0.25 {
-            e.t = g.time;
-            if let Some(p) = team_boots(g, gd) {
-                let mut bi: i32 = -1;
-                let mut bd = 5.0;
-                let n = g.tab.roomfight_room[r].entries.len();
-                for i in 0..n {
-                    let q = flat(g.tab.roomfight_room[r].entries[i].at, p);
-                    if q < bd {
-                        let c = cell_of(g, p);
-                        if !in_cells(g, r, c) { bd = q; bi = i as i32; }
-                    }
-                }
-                if bi >= 0 { e.i = bi as f64; e.at = g.time; }
-            }
-            *state_of(g).ear.get_mut(d).unwrap() = e;
-        }
-        if e.i >= 0.0 && (e.i as usize) < g.tab.roomfight_room[r].entries.len() && g.time - e.at < 3.0 {
-            why = Some(LastWhy::Door);
-            shut = Some(e.i as usize);
-            threat = g.tab.roomfight_room[r].entries[e.i as usize].at;
-        }
-    }
-    let why = match why { Some(w) => w, None => { state_of(g).last.delete(d); return; } };
-    let at = match state_of(g).last.get(d).copied() {
-        Some(at) => at,
-        None => {
-            let range = if why == LastWhy::Seen { g.k.pressure.last_man_secs } else { g.k.pressure.out_secs };
-            let at = g.time + pick(g, crate::dice::Who::Def(d), range);
-            state_of(g).last.set(d, at);
-            return;
-        }
+    if !alone_and_free_to_go(g, d) { state_of(g).last.delete(d); return; }
+    let r = df(g, d).room.unwrap();
+    let Some(going) = why_he_goes(g, d, r) else { state_of(g).last.delete(d); return };
+    let Some(at) = state_of(g).last.get(d).copied() else {
+        let range = if going.why == LastWhy::Seen { g.k.pressure.last_man_secs } else { g.k.pressure.out_secs };
+        let at = g.time + pick(g, crate::dice::Who::Def(d), range);
+        state_of(g).last.set(d, at);
+        return;
     };
     if g.time < at { return; }
     state_of(g).last.delete(d);
-    let c_pos = g.ch[c_ch].pos;
+    let best = best_door_out(g, d, r, going);
+    let chosen: Option<(V3, Option<DoorId>)> = match hooked(g, d, going.threat) {
+        Some(h) => Some(h),
+        None => best.map(|b| (b.0, Some(b.1))),
+    };
+    let now = g.time;
+    state_of(g).tried.set(d, now);   // (whether or not there was a way out: he does not ask again for a while)
+    let Some((spot, door)) = chosen else { return };
+    crate::roomfight::run(g, d, spot, door, 0.3, crate::owner::by::OUT);
+    state_of(g).outs.push(Out { door, def: d, moving: true, plant_t: -1.0, fought: false });
+    if going.why == LastWhy::Seen {
+        crate::game::game_say(g, gd, "too many — I'm out the back!", Some(true), None);
+    } else {
+        crate::game::game_say(g, gd, "they're at the door — I'm out the back!", Some(true), None);
+    }
+}
+
+/// At his post in a small room, alone of his side in it, nobody's arm on him, his wits about him, settled a while. (lostAt ahead of the clock = somebody holds him to his room)
+fn alone_and_free_to_go(g: &mut Game, d: RoomfightDefId) -> bool {
+    let gd = gd_of(g, d);
+    let mode_free = crate::roomfight::DefMode::Free;
+    let room = df(g, d).room;
+    crate::roomfight::at_post(g, d) && room.map_or(false, |r| g.tab.roomfight_room[r].cells.len() as f64 <= ROOM_CELLS) && g.gd[gd].held.is_none() && !(df(g, d).lost_at > g.time)
+        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
+        && g.time - df(g, d).moved_at > 6.0 && g.time - state_of(g).tried.get(d).copied().unwrap_or(-100.0) > 6.0 && !state_of(g).outs.iter().any(|o| o.def == d)
+        && !g.fight.defs.iter().any(|&x| x != d && alive(g, x) && df(g, x).room == room && df(g, x).mode != mode_free)
+        && !g.gd[gd].stays_in_rooms
+}
+
+/// Two of them in his eyes; else the team's boots at one of his room's doors, on a floor gone loud.
+fn why_he_goes(g: &mut Game, d: RoomfightDefId, r: RoomfightRoomId) -> Option<Going> {
+    let gd = gd_of(g, d);
+    if g.gd[gd].state == crate::game::GuardState::Alert && g.time - g.gd[gd].last_seen_t < 1.5 {
+        let threat = g.gd[gd].sight_pos;
+        return if two_of_them_in_his_eyes(g, gd) { Some(Going { why: LastWhy::Seen, threat, shut: None }) } else { None };
+    }
+    if g.tab.roomfight_room[r].entries.len() > 1 && df(g, d).noise_at.is_some() && g.time - df(g, d).noise_t < g.k.pressure.loud_secs && g.time - g.gd[gd].last_seen_t > 3.0
+        && !(g.k.digin.on && crate::digin::dig_in_set(g, gd)) {   // (a man SET on his door is waiting for exactly those boots: he holds)
+        let i = door_the_boots_are_at(g, d, r)?;
+        return Some(Going { why: LastWhy::Door, threat: g.tab.roomfight_room[r].entries[i].at, shut: Some(i) });
+    }
+    None
+}
+
+/// His own eyes: the game's sight test, and some light on the man.
+fn two_of_them_in_his_eyes(g: &mut Game, gd: GuardId) -> bool {
+    let c_ch = g.gd[gd].ch;
+    let mut seen = 0;
+    let team = g.team(gd);
+    for i in 0..g.fight.ops.len() {
+        let o = op_gd(g, i);
+        let (ot, oc) = (g.team(o), g.gd[o].ch);
+        if crate::condition::down(g, g.gd[o].ch) || !team.foe_of(ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
+        let vis = crate::guards::can_see_char(g, gd, oc);
+        if vis.visible && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.0 { seen += 1; }
+    }
+    seen >= 2
+}
+
+/// The door of his room the boots come to him through from outside it, listened for four times a second and believed for three.
+fn door_the_boots_are_at(g: &mut Game, d: RoomfightDefId, r: RoomfightRoomId) -> Option<usize> {
+    let gd = gd_of(g, d);
+    if !state_of(g).ear.has(d) { state_of(g).ear.set(d, StateEarValue { t: -1.0, i: -1.0, at: -100.0 }); }
+    let mut e = *state_of(g).ear.get(d).unwrap();
+    if g.time - e.t > 0.25 {
+        e.t = g.time;
+        if let Some(p) = team_boots(g, gd) {
+            let mut bi: i32 = -1;
+            let mut bd = 5.0;
+            let n = g.tab.roomfight_room[r].entries.len();
+            for i in 0..n {
+                let q = flat(g.tab.roomfight_room[r].entries[i].at, p);
+                if q < bd {
+                    let c = cell_of(g, p);
+                    if !in_cells(g, r, c) { bd = q; bi = i as i32; }
+                }
+            }
+            if bi >= 0 { e.i = bi as f64; e.at = g.time; }
+        }
+        *state_of(g).ear.get_mut(d).unwrap() = e;
+    }
+    if e.i >= 0.0 && (e.i as usize) < g.tab.roomfight_room[r].entries.len() && g.time - e.at < 3.0 { Some(e.i as usize) } else { None }
+}
+
+/// Of his room's doors he can use, the one with the shortest walk to a place beyond it that does not go toward them.
+fn best_door_out(g: &Game, d: RoomfightDefId, r: RoomfightRoomId, going: Going) -> Option<(V3, DoorId, f64)> {
+    let Going { threat, shut, .. } = going;
+    let c_pos = pos_of(g, gd_of(g, d));
     let entries: Vec<crate::roomfight::Entry> = g.tab.roomfight_room[r].entries.clone();
     let mut best: Option<(V3, DoorId, f64)> = None;
     for (i, e) in entries.iter().enumerate() {
         if shut == Some(i) || df(g, d).ev.get(i).map_or(false, |v| *v > 0.3) || flat(e.at, threat) < 3.0 || g.dr[e.door].def.steel.unwrap_or(false) || crate::doors::doors_locked_out(g, e.door, c_pos, None) { continue; }
-        let fr = crate::guards::frame_of(g, e.door);
-        let mut spot: Option<V3> = None;
-        for (depth, lat) in SPOTS {
-            let p: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat * (1.0 + fr.w / 3.2), 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat * (1.0 + fr.w / 3.2)];
-            if is_blocked(g, p[0], p[2]) { continue; }
-            let cell = cell_of(g, p);
-            if in_cells(g, r, cell) { continue; }
-            if someone_at(g, d, p) { continue; }
-            spot = Some(p);
-            break;
-        }
-        let spot = match spot { Some(s) => s, None => continue };
+        let Some(spot) = free_spot_beyond(g, d, r, e) else { continue };
         let path = match crate::scene_collision::nav_grid_find_path(g, c_pos, spot, None, None) { Some(w) if !w.is_empty() => w, _ => continue };
         let (mut l, mut q, mut toward) = (0.0, c_pos, false);
         for w in path {
@@ -167,25 +191,21 @@ fn last_man(g: &mut Game, d: RoomfightDefId) {
         if l > 18.0 || toward || flat(q, spot) > 0.8 { continue; }
         if best.map_or(true, |b| l < b.2) { best = Some((spot, e.door, l)); }
     }
-    let chosen: Option<(V3, Option<DoorId>)> = match hooked(g, d, threat) {
-        Some(h) => Some(h),
-        None => best.map(|b| (b.0, Some(b.1))),
-    };
-    let now = g.time;
-    state_of(g).tried.set(d, now);   // (whether or not there was a way out: he does not ask again for a while)
-    let (spot, door) = match chosen {
-        Some(x) => x,
-        None => {
-            return;
-        }
-    };
-    crate::roomfight::run(g, d, spot, door, 0.3, crate::owner::by::OUT);
-    state_of(g).outs.push(Out { door, def: d, moving: true, plant_t: -1.0, fought: false });
-    if why == LastWhy::Seen {
-        crate::game::game_say(g, gd, "too many — I'm out the back!", Some(true), None);
-    } else {
-        crate::game::game_say(g, gd, "they're at the door — I'm out the back!", Some(true), None);
+    best
+}
+
+/// The first of the spots outside this door that is open floor, off his room and with nobody on it.
+fn free_spot_beyond(g: &Game, d: RoomfightDefId, r: RoomfightRoomId, e: &crate::roomfight::Entry) -> Option<V3> {
+    let fr = crate::guards::frame_of(g, e.door);
+    for (depth, lat) in SPOTS {
+        let p: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat * (1.0 + fr.w / 3.2), 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat * (1.0 + fr.w / 3.2)];
+        if is_blocked(g, p[0], p[2]) { continue; }
+        let cell = cell_of(g, p);
+        if in_cells(g, r, cell) { continue; }
+        if someone_at(g, d, p) { continue; }
+        return Some(p);
     }
+    None
 }
 
 /// a last man out of his room, this frame. True = done with him. `o` is lent by pressTick, out of st.outs for the call.

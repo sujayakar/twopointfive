@@ -47,7 +47,6 @@ fn lane_by_id(g: &mut Game, id: f64) -> Option<LanesLaneId> {
 
 /// once a frame, after the room fight's own tick and before anybody walks
 pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
-    use crate::roomfight::DefMode;
     if !live(g) {
         let busy = match &g.m.lanes.states {
             Some(st) => !st.lanes.is_empty() || !st.held.is_empty() || !st.peek.is_empty() || !st.near.is_empty(),
@@ -59,21 +58,68 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     let k = g.k.lanes;
     if g.time < s(g).t { lanes_reset(g); }   // (the clock has gone back: a load; nothing kept across it but what a restore puts back)
     s(g).t = g.time;
-    if s(g).skip {   // (the events a load put back were read before the file was made)
-        s(g).skip = false;
-        for i in 0..g.events.len() {
-            let key = g.events[i].serial;
-            let st = s(g);
-            st.seen.add(key);
-            st.banged.add(key);
-        }
+    if s(g).skip { events_of_a_load_are_old(g); }
+    plant_the_men_the_gate_stopped(g);
+    note_own_cans_in_the_air(g);
+    read_rounds(g);
+    bangs(g);
+    near_rounds_reach_their_men(g, &k);
+    forget_spent_cans(g);
+    let mut i = 0;
+    while i < s(g).lanes.len() {
+        let l = s(g).lanes[i];
+        i += 1;
+        word_of_a_lane_spreads(g, &k, l);
     }
-    // the men the gate stopped last frame: planted where they stand, gun on the lane's mouth (between frames of walking, never inside a man's own step)
-    if !s(g).due.is_empty() {
-        let due = core::mem::take(&mut s(g).due);
-        for d in due { plant_short(g, d.gd, d.lane, d.look); }
+    forget_lanes_gone_by(g);
+    for gd in s(g).peek.keys() { peek_step(g, gd); }   // (a step only ever ends its own man's row)
+    s(g).tick_t -= dt;
+    if s(g).tick_t > 0.0 { return; }
+    s(g).tick_t = 0.5;
+
+    let mut hi = 0;
+    while let Some(gd) = s(g).held.next_key(&mut hi) {
+        let h = *s(g).held.get(gd).unwrap();
+        see_to_a_held_man(g, &k, gd, h);
     }
-    // (their own charges in the air: a side knows whose can it was that burst)
+    read_one_wedge_again(g);
+    guns_that_went_down_have_moved(g, &k);
+    note_their_posts(g);
+    drop_flanks_of_forgotten_lanes(g);
+    let mut i = 0;
+    while i < s(g).lanes.len() {
+        let l = s(g).lanes[i];
+        i += 1;
+        if !g.tab.lanes_lane[l].known || g.time < g.tab.lanes_lane[l].push_until { continue; }
+        answer_a_lane(g, &k, l);
+    }
+    let mut di = 0;
+    while di < g.fight.defs.len() {
+        let d = g.fight.defs[di];
+        di += 1;
+        get_out_of_the_line(g, &k, d);
+    }
+}
+
+/// The events a load put back were read before the file was made.
+fn events_of_a_load_are_old(g: &mut Game) {
+    s(g).skip = false;
+    for i in 0..g.events.len() {
+        let key = g.events[i].serial;
+        let st = s(g);
+        st.seen.add(key);
+        st.banged.add(key);
+    }
+}
+
+/// The men the gate stopped last frame: planted where they stand, gun on the lane's mouth (between frames of walking, never inside a man's own step).
+fn plant_the_men_the_gate_stopped(g: &mut Game) {
+    let due = core::mem::take(&mut s(g).due);
+    for d in due { plant_short(g, d.gd, d.lane, d.look); }
+}
+
+/// Their own charges in the air: a side knows whose can it was that burst.
+fn note_own_cans_in_the_air(g: &mut Game) {
     let mut ii = 0;
     while ii < g.items.items.len() {
         let it = g.items.items[ii];
@@ -83,141 +129,145 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
             if crate::teams::team_of_id(g, who) == SIDE { s(g).cans.push(it); }
         }
     }
-    read_rounds(g);
-    bangs(g);
-    if !s(g).near.is_empty() {   // rounds that passed a man who had not noticed them: his once his senses have them, nobody's after a beat
-        let near = core::mem::take(&mut s(g).near);
-        let mut kept = Vec::new();
-        for n in near {
-            if !mine(g, n.gd) { continue; }   // (dropped since: the round that dropped him is the one that counts)
-            if roused(g, n.gd, n.t) { cost(g, n.from, n.at, n.gd, false, n.who); continue; }
-            if g.time - n.t < k.react_secs { kept.push(n); }
-        }
-        s(g).near = kept;
+}
+
+/// Rounds that passed a man who had not noticed them: his once his senses have them, nobody's after a beat.
+fn near_rounds_reach_their_men(g: &mut Game, k: &crate::knobs::LanesK) {
+    let near = core::mem::take(&mut s(g).near);
+    let mut kept = Vec::new();
+    for n in near {
+        if !mine(g, n.gd) { continue; }   // (dropped since: the round that dropped him is the one that counts)
+        if roused(g, n.gd, n.t) { cost(g, n.from, n.at, n.gd, false, n.who); continue; }
+        if g.time - n.t < k.react_secs { kept.push(n); }
     }
-    if !s(g).cans.is_empty() {   // (a spent can lies on the floor a minute: it is nobody's bang any more)
-        let cans = core::mem::take(&mut s(g).cans);
-        let mut kept = Vec::new();
-        for it in cans {
-            if !g.tab.item[it].fired && g.items.items.contains(&it) { kept.push(it); }
-        }
-        s(g).cans = kept;
-    }
-    let mut i = 0;
-    while i < s(g).lanes.len() {
-        let l = s(g).lanes[i];
-        i += 1;
-        if !g.tab.lanes_lane[l].known {
-            let mut at = 0;
-            while let Some(o) = g.tab.lanes_lane[l].saw.next_key(&mut at) {
-                let t = *g.tab.lanes_lane[l].saw.get(o).unwrap();
-                if !mine(g, o) { g.tab.lanes_lane[l].saw.delete(o); continue; }   // (cut down before he could act on it or say it)
-                if !fit(g, o) { continue; }
-                if !g.tab.lanes_lane[l].knowers.has(o) && g.time >= t + k.react_secs {
-                    g.tab.lanes_lane[l].knowers.add(o);
-                    s(g).ver += 1.0;
-                }
-                if g.time >= t + k.call_secs { become_known(g, l, o); break; }
+    s(g).near = kept;
+}
+
+/// A spent can lies on the floor a minute: it is nobody's bang any more.
+fn forget_spent_cans(g: &mut Game) {
+    let cans = core::mem::take(&mut s(g).cans);
+    let kept = cans.into_iter().filter(|&it| !g.tab.item[it].fired && g.items.items.contains(&it)).collect();
+    s(g).cans = kept;
+}
+
+/// Each frame of a lane: who saw it comes to know it and says it; a fit man who comes on its bodies learns it; its clocks run out.
+fn word_of_a_lane_spreads(g: &mut Game, k: &crate::knobs::LanesK, l: LanesLaneId) {
+    if !g.tab.lanes_lane[l].known { those_who_saw_it_tell(g, k, l); }
+    // a lane that cost a man nobody lived to tell of: a fit man who comes on the place (the bodies) knows what it means
+    if !g.tab.lanes_lane[l].known && g.tab.lanes_lane[l].weight >= 1.0 {
+        let place = g.tab.lanes_lane[l].at;
+        let mut gi = 0;
+        while gi < g.guards.len() {
+            let o = g.guards[gi];
+            gi += 1;
+            if fit(g, o) && !g.tab.lanes_lane[l].saw.has(o) && sees(g, o, place, k.body_m) {
+                let now = g.time;
+                g.tab.lanes_lane[l].saw.set(o, now);
             }
         }
-        // a lane that cost a man nobody lived to tell of: a fit man who comes on the place (the bodies) knows what it means
-        if !g.tab.lanes_lane[l].known && g.tab.lanes_lane[l].weight >= 1.0 {
-            let place = g.tab.lanes_lane[l].at;
-            let mut gi = 0;
-            while gi < g.guards.len() {
-                let o = g.guards[gi];
-                gi += 1;
-                if fit(g, o) && !g.tab.lanes_lane[l].saw.has(o) && sees(g, o, place, k.body_m) {
-                    let now = g.time;
-                    g.tab.lanes_lane[l].saw.set(o, now);
-                }
-            }
-        }
-        let now = g.time;
-        let x = &mut g.tab.lanes_lane[l];
-        if x.push_until >= 0.0 && now >= x.push_until { x.push_until = -1.0; }
-        if x.can.map_or(false, |c| now - c.t > 5.0) { x.can = None; }
     }
+    let now = g.time;
+    let x = &mut g.tab.lanes_lane[l];
+    if x.push_until >= 0.0 && now >= x.push_until { x.push_until = -1.0; }
+    if x.can.map_or(false, |c| now - c.t > 5.0) { x.can = None; }
+}
+
+/// A man who saw it knows after a beat, and after a longer one puts it on the net.
+fn those_who_saw_it_tell(g: &mut Game, k: &crate::knobs::LanesK, l: LanesLaneId) {
+    let mut at = 0;
+    while let Some(o) = g.tab.lanes_lane[l].saw.next_key(&mut at) {
+        let t = *g.tab.lanes_lane[l].saw.get(o).unwrap();
+        if !mine(g, o) { g.tab.lanes_lane[l].saw.delete(o); continue; }   // (cut down before he could act on it or say it)
+        if !fit(g, o) { continue; }
+        if !g.tab.lanes_lane[l].knowers.has(o) && g.time >= t + k.react_secs {
+            g.tab.lanes_lane[l].knowers.add(o);
+            s(g).ver += 1.0;
+        }
+        if g.time >= t + k.call_secs { return become_known(g, l, o); }
+    }
+}
+
+/// A lane is kept to its time; a few rounds past a man and no more are forgotten in ten seconds.
+fn forget_lanes_gone_by(g: &mut Game) {
     let old = s(g).lanes.clone();
     let n0 = old.len();
-    let mut kept = Vec::with_capacity(n0);
-    for l in old {   // (a few rounds past a man and no more: forgotten in ten seconds)
-        let (weight, until, last_t, known) = { let x = &g.tab.lanes_lane[l]; (x.weight, x.until, x.last_t, x.known) };
-        let keep = if weight >= 1.0 { g.time < until } else { g.time - last_t < 10.0 };
-        if keep { kept.push(l); }
-    }
+    let kept: Vec<LanesLaneId> = old.into_iter().filter(|&l| {
+        let x = &g.tab.lanes_lane[l];
+        if x.weight >= 1.0 { g.time < x.until } else { g.time - x.last_t < 10.0 }
+    }).collect();
     let n1 = kept.len();
     s(g).lanes = kept;
     if n1 != n0 {
         lanes_gone(g);
         remask(g);
     }
-    if !s(g).peek.is_empty() {
-        for gd in s(g).peek.keys() { peek_step(g, gd); }   // (a step only ever ends its own man's row)
-    }
-    s(g).tick_t -= dt;
-    if s(g).tick_t > 0.0 { return; }
-    s(g).tick_t = 0.5;
-    let mut hi = 0;
-    while let Some(gd) = s(g).held.next_key(&mut hi) {
-        let h = *s(g).held.get(gd).unwrap();
-        let def = def_of(g, gd);
-        let keep = mine(g, gd) && lane_by_id(g, h.lane).is_some();
-        let d = match def {
-            Some(d) if keep && !crate::roomfight::is_loose(g, d) => d,
-            _ => { held_off(g, gd); continue; }
-        };
-        let mode = mode_of(g, d);
-        let pos = pos_of(g, gd);
-        if h.aimed {
-            if mode != DefMode::Hold || flat(pos, h.at) > 2.5 { held_off(g, gd); continue; }   // (somebody else has moved him since: no longer this rule's man)
-            // …moved a step all the same onto floor a gun of the lane has, or left in a doorway: out of it again. Never a man set on the lane's other side: his place a step short of their line is the errand's own
-            if fit(g, gd) && !close_fight(g, gd) && !pushing(g, gd) && !flanking(g, gd) && !s(g).flank_of.has(gd) && !s(g).peek.has(gd) && g.time - g.gd[gd].last_seen_t > 1.0 && g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) > 6.0 {
-                if let Some(l) = lane_by_id(g, h.lane) {
-                    if knows(g, l, gd) && (crate::doorway::doorway_stand(g, pos) || gun_on(g, l, pos, Some(k.shift_m))) && !back_out(g, gd, l) {
-                        let now = g.time;
-                        s(g).back_t.set(gd, now);   // (no cover found: asked again in six seconds, not every tick)
-                    }
-                }
-            }
-            continue;
-        }
-        if mode == DefMode::Move {   // (on his way to cover, or sent elsewhere meanwhile: then the gate has him again like anybody)
-            let on_way = match goal_of(g, gd) { Some(sg) => !(flat(sg, h.at) > 0.8), None => false };
-            if !on_way { held_off(g, gd); }
-            continue;
-        }
-        if let Some(row) = s(g).held.get_mut(gd) { row.aimed = true; row.at = v3::copy(pos); }
-        // (backed out to cover and arrived: his gun on the lane's mouth, unless he has a man in his sights, which is the fight's)
-        if fit(g, gd) && g.time - g.gd[gd].last_seen_t > 1.0 {
-            crate::roomfight::room_fight_lane_stop(g, gd, h.look);
-        }
-    }
-    // a lane's floor is kept true to the doors and walls as they stand: one wedge read again each half second, its floor swapped when the last is in
-    let ls: Vec<LanesLaneId> = {
-        let ids = s(g).lanes.clone();
-        ids.into_iter().filter(|&l| { let x = &g.tab.lanes_lane[l]; x.cells.is_some() && x.wedges.len() >= 2 }).collect()
+}
+
+/// Twice a second, a man this rule holds: let go if he is no longer its, moved out of a gun's way if he has strayed into one, his gun put on the mouth once he has got to cover.
+fn see_to_a_held_man(g: &mut Game, k: &crate::knobs::LanesK, gd: GuardId, h: crate::lanes::StateHeldValue) {
+    use crate::roomfight::DefMode;
+    let def = def_of(g, gd);
+    let keep = mine(g, gd) && lane_by_id(g, h.lane).is_some();
+    let d = match def {
+        Some(d) if keep && !crate::roomfight::is_loose(g, d) => d,
+        _ => return held_off(g, gd),
     };
-    if !ls.is_empty() {
-        let st = s(g);
-        let l = ls[js::rem(st.roll, ls.len() as f64) as usize];
-        st.roll += 1.0;
-        let mut r = g.tab.lanes_lane[l].re.take().unwrap_or_else(|| crate::lanes::LaneRe { set: JsSet::new(), i: 0.0 });
-        let wedges = g.tab.lanes_lane[l].wedges.len() as f64;
-        if r.i + 1.0 < wedges {
-            let (from, at) = (g.tab.lanes_lane[l].wedges[r.i as usize], g.tab.lanes_lane[l].wedges[r.i as usize + 1]);
-            let e = lane_e(g, l);
-            wedge(g, &mut r.set, from, at, e);
-            r.i += 2.0;
-        }
-        if r.i + 1.0 >= wedges {
-            g.tab.lanes_lane[l].cells = Some(r.set);
-            if g.tab.lanes_lane[l].known { remask(g); } else { s(g).ver += 1.0; }
-        } else {
-            g.tab.lanes_lane[l].re = Some(r);
+    let mode = mode_of(g, d);
+    let pos = pos_of(g, gd);
+    if h.aimed {
+        if mode != DefMode::Hold || flat(pos, h.at) > 2.5 { return held_off(g, gd); }   // (somebody else has moved him since: no longer this rule's man)
+        return step_out_of_a_guns_way(g, k, gd, h, pos);
+    }
+    if mode == DefMode::Move {   // (on his way to cover, or sent elsewhere meanwhile: then the gate has him again like anybody)
+        let on_way = match goal_of(g, gd) { Some(sg) => !(flat(sg, h.at) > 0.8), None => false };
+        if !on_way { held_off(g, gd); }
+        return;
+    }
+    if let Some(row) = s(g).held.get_mut(gd) { row.aimed = true; row.at = v3::copy(pos); }
+    // (backed out to cover and arrived: his gun on the lane's mouth, unless he has a man in his sights, which is the fight's)
+    if fit(g, gd) && g.time - g.gd[gd].last_seen_t > 1.0 {
+        crate::roomfight::room_fight_lane_stop(g, gd, h.look);
+    }
+}
+
+/// Moved a step all the same onto floor a gun of the lane has, or left in a doorway: out of it again. Never a man set on the lane's other side: that place is the errand's own.
+fn step_out_of_a_guns_way(g: &mut Game, k: &crate::knobs::LanesK, gd: GuardId, h: crate::lanes::StateHeldValue, pos: V3) {
+    if fit(g, gd) && !close_fight(g, gd) && !pushing(g, gd) && !flanking(g, gd) && !s(g).flank_of.has(gd) && !s(g).peek.has(gd)
+        && g.time - g.gd[gd].last_seen_t > 1.0 && g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) > 6.0 {
+        if let Some(l) = lane_by_id(g, h.lane) {
+            if knows(g, l, gd) && (crate::doorway::doorway_stand(g, pos) || gun_on(g, l, pos, Some(k.shift_m))) && !back_out(g, gd, l) {
+                let now = g.time;
+                s(g).back_t.set(gd, now);   // (no cover found: asked again in six seconds, not every tick)
+            }
         }
     }
-    // a gun that made a lane and is down has moved for good
+}
+
+/// A lane's floor is kept true to the doors and walls as they stand: one wedge read again each half second, its floor swapped when the last is in.
+fn read_one_wedge_again(g: &mut Game) {
+    let ls: Vec<LanesLaneId> = s(g).lanes.clone().into_iter().filter(|&l| { let x = &g.tab.lanes_lane[l]; x.cells.is_some() && x.wedges.len() >= 2 }).collect();
+    if ls.is_empty() { return; }
+    let st = s(g);
+    let l = ls[js::rem(st.roll, ls.len() as f64) as usize];
+    st.roll += 1.0;
+    let mut r = g.tab.lanes_lane[l].re.take().unwrap_or_else(|| crate::lanes::LaneRe { set: JsSet::new(), i: 0.0 });
+    let wedges = g.tab.lanes_lane[l].wedges.len() as f64;
+    if r.i + 1.0 < wedges {
+        let (from, at) = (g.tab.lanes_lane[l].wedges[r.i as usize], g.tab.lanes_lane[l].wedges[r.i as usize + 1]);
+        let e = lane_e(g, l);
+        wedge(g, &mut r.set, from, at, e);
+        r.i += 2.0;
+    }
+    if r.i + 1.0 >= wedges {
+        g.tab.lanes_lane[l].cells = Some(r.set);
+        if g.tab.lanes_lane[l].known { remask(g); } else { s(g).ver += 1.0; }
+    } else {
+        g.tab.lanes_lane[l].re = Some(r);
+    }
+}
+
+/// A gun that made a lane and is down has moved for good.
+fn guns_that_went_down_have_moved(g: &mut Game, k: &crate::knobs::LanesK) {
     let mut i = 0;
     while i < s(g).lanes.len() {
         let l = s(g).lanes[i];
@@ -235,49 +285,54 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
         let x = &mut g.tab.lanes_lane[l];
         if cut && x.moved.len() >= x.who.len() { x.until = m::min(x.until, now + k.moved_secs); }
     }
+}
+
+/// The post a man first stood at is his own: the room fight's to defend.
+fn note_their_posts(g: &mut Game) {
     for i in 0..g.fight.defs.len() {
         let d = g.fight.defs[i];
         let (gd, station) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].station);
         let st = s(g);
         if !st.post.has(gd) { st.post.set(gd, v3::copy(station)); }
     }
-    if !s(g).flank_of.is_empty() {   // (the lane forgotten under them)
-        let list: Vec<(GuardId, f64)> = s(g).flank_of.iter().map(|(gd, f)| (gd, f.lane)).collect();
-        for (gd, lane) in list {
-            let stands = match lane_by_id(g, lane) { Some(l) => g.tab.lanes_lane[l].known, None => false };
-            if !stands { s(g).flank_of.delete(gd); }
-        }
+}
+
+/// A man going round a lane forgotten under him has no errand.
+fn drop_flanks_of_forgotten_lanes(g: &mut Game) {
+    let list: Vec<(GuardId, f64)> = s(g).flank_of.iter().map(|(gd, f)| (gd, f.lane)).collect();
+    for (gd, lane) in list {
+        let stands = match lane_by_id(g, lane) { Some(l) => g.tab.lanes_lane[l].known, None => false };
+        if !stands { s(g).flank_of.delete(gd); }
     }
-    let mut i = 0;
-    while i < s(g).lanes.len() {
-        let l = s(g).lanes[i];
-        i += 1;
-        if !g.tab.lanes_lane[l].known || g.time < g.tab.lanes_lane[l].push_until { continue; }
-        let at = held_at(g, l);
-        if g.time >= g.tab.lanes_lane[l].stun_at && !at.is_empty() { stun(g, l, &at); }
-        if g.time >= g.tab.lanes_lane[l].round_at && g.tab.lanes_lane[l].can.is_none() {
-            let st = s(g);
-            let free: Vec<GuardId> = if !st.flank_of.is_empty() { at.iter().copied().filter(|&x| !st.flank_of.has(x)).collect() } else { at.clone() };
-            if free.len() >= 2 { round(g, l, &free); }
-        }
-        if g.tab.lanes_lane[l].frag_at > 0.0 && g.time >= g.tab.lanes_lane[l].frag_at && g.tab.lanes_lane[l].can.is_none() { frag_out(g, l, &at); }
-        if !s(g).flank_of.is_empty() { flank_tick(g, l); }
-        let (peek_at, none, last_t, known_at) = { let x = &g.tab.lanes_lane[l]; (x.peek_at, x.can.is_none(), x.last_t, x.known_at) };
-        if g.time >= peek_at && none && g.time - last_t > k.peek_quiet && g.time - known_at > k.peek_quiet { peek_start(g, l); }
+}
+
+/// What the side does about a known lane, as each comes due: a charge, a way round, a grenade, fire from an angle, a look.
+fn answer_a_lane(g: &mut Game, k: &crate::knobs::LanesK, l: LanesLaneId) {
+    let at = held_at(g, l);
+    if g.time >= g.tab.lanes_lane[l].stun_at && !at.is_empty() { stun(g, l, &at); }
+    if g.time >= g.tab.lanes_lane[l].round_at && g.tab.lanes_lane[l].can.is_none() {
+        let st = s(g);
+        let free: Vec<GuardId> = if !st.flank_of.is_empty() { at.iter().copied().filter(|&x| !st.flank_of.has(x)).collect() } else { at.clone() };
+        if free.len() >= 2 { round(g, l, &free); }
     }
-    // a man standing where a lane's guns have him, rounds still coming down it or the guns in his own sight, and not on his own post: out of the line
-    let mut di = 0;
-    while di < g.fight.defs.len() {
-        let d = g.fight.defs[di];
-        di += 1;
-        let gd = g.tab.roomfight_def[d].gd;
-        if crate::roomfight::on_leg(g, d) || !fit(g, gd) || close_fight(g, gd) || pushing(g, gd) || flanking(g, gd) || s(g).peek.has(gd) || g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) < 6.0 { continue; }
-        let pos = pos_of(g, gd);
-        if crate::roomfight::at_post(g, d) && flat(pos, s(g).post.get(gd).copied().unwrap_or(pos)) < 3.0 { continue; }   // (his own post: the room fight's to defend, not this rule's to move)
-        let l = match lane_on(g, pos, gd) { Some(l) => l, None => continue };
-        if g.time - g.tab.lanes_lane[l].last_t > k.hot_secs && g.time - g.gd[gd].last_seen_t > 1.0 { continue; }
-        back_out(g, gd, l);
-    }
+    if g.tab.lanes_lane[l].frag_at > 0.0 && g.time >= g.tab.lanes_lane[l].frag_at && g.tab.lanes_lane[l].can.is_none() { frag_out(g, l, &at); }
+    if !s(g).flank_of.is_empty() { flank_tick(g, l); }
+    let x = &g.tab.lanes_lane[l];
+    let (peek_at, none, last_t, known_at) = (x.peek_at, x.can.is_none(), x.last_t, x.known_at);
+    if g.time >= peek_at && none && g.time - last_t > k.peek_quiet && g.time - known_at > k.peek_quiet { peek_start(g, l); }
+}
+
+/// A man standing where a lane's guns have him, rounds still coming down it or the guns in his own sight, and not on his own post: out of the line.
+fn get_out_of_the_line(g: &mut Game, k: &crate::knobs::LanesK, d: RoomfightDefId) {
+    let gd = g.tab.roomfight_def[d].gd;
+    if crate::roomfight::on_leg(g, d) || !fit(g, gd) || close_fight(g, gd) || pushing(g, gd) || flanking(g, gd) || s(g).peek.has(gd)
+        || g.time - s(g).back_t.get(gd).copied().unwrap_or(-100.0) < 6.0 { return; }
+    let pos = pos_of(g, gd);
+    // (his own post: the room fight's to defend, not this rule's to move)
+    if crate::roomfight::at_post(g, d) && flat(pos, s(g).post.get(gd).copied().unwrap_or(pos)) < 3.0 { return; }
+    let Some(l) = lane_on(g, pos, gd) else { return };
+    if g.time - g.tab.lanes_lane[l].last_t > k.hot_secs && g.time - g.gd[gd].last_seen_t > 1.0 { return; }
+    back_out(g, gd, l);
 }
 
 /// the men held at a lane's mouths, on their feet and with nobody on them
