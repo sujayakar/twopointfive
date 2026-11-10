@@ -18,7 +18,7 @@ export const pathTracer = (opts: { bounces: number; guided?: boolean; quasi?: bo
     return [clear, { name: 'reference', over: 'output', quasi: opts.quasi !== false, writes: { outHdr: 'hdr' }, buffers: { sums: ['sums', 'array<vec4f>', 'read_write'], pathKnobs: ['pathKnobs', 'vec4u', 'uniform'], ...GUIDE }, code: (opts.edit ?? (c => c))(code) }, bake, ...g]; },
   frame(lab: Lab) {
     const [w, h] = lab.graph.output; lab.buffer('sums', w * h * 16);
-    const c = lab.camera, key = [w, h, lab.tick, lab.hour, lab.cut, lab.lampsMode, ...c.look, c.yaw, c.pitch, c.dist].map(x => typeof x === 'number' ? x.toFixed(5) : x).join(); if (key !== this.key) { this.key = key; this.samples = 0; }
+    const c = lab.camera, key = [w, h, lab.tick, lab.hour, lab.cut, lab.lampsMode, lab.broken, ...c.look, c.yaw, c.pitch, c.dist].map(x => typeof x === 'number' ? x.toFixed(5) : x).join(); if (key !== this.key) { this.key = key; this.samples = 0; }
     lab.uniform('pathKnobs', new Uint32Array([this.samples, opts.bounces, this.samples, opts.guided !== false && this.samples < 64 ? 1 : 0])); this.samples++;
   },
   reset() { this.samples = 0; this.key = ''; },

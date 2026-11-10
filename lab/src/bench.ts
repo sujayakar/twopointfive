@@ -5,6 +5,7 @@
 // All in linear light, relative to the reference's own brightness (so a dark room counts as a bright one does); medians over the picture, so that a few
 // fireflies in the reference do not speak for it. The run's picture has a fingerprint: the same build, card and seed give the same one.
 import { Watch } from './watch';
+import { norm } from './math';
 import { truthStage } from './stages/path';
 import type { Lab, Method } from './lab';
 import type { View } from './shot';
@@ -117,10 +118,10 @@ export async function moving(lab: Lab, m: Method, ref: Method, w: number, h: num
 /** the same in what is shown (0‥255 after exposure and curve), where a dark place counts by what can be seen of it */
 export function shownApart(a: Uint8ClampedArray, b: Uint8ClampedArray, kinds: Uint8Array): ByKind { const n = a.length / 4, v = new Float32Array(n); for (let i = 0; i < n; i++) v[i] = (Math.abs(a[i * 4]! - b[i * 4]!) + Math.abs(a[i * 4 + 1]! - b[i * 4 + 1]!) + Math.abs(a[i * 4 + 2]! - b[i * 4 + 2]!)) / 3; return byKind(v, kinds); }
 export const AFTER = [1, 2, 4, 8, 16, 32, 64, 128, 240];
-export async function converge(lab: Lab, m: Method, ref: Method, w: number, h: number, how: 'turn' | 'doors', paths = 1000): Promise<{ at: Record<string, number[]>; frames: Record<string, number> }> {
+export async function converge(lab: Lab, m: Method, ref: Method, w: number, h: number, how: 'turn' | 'doors' | 'blow', paths = 1000, blow: number[] = []): Promise<{ at: Record<string, number[]>; frames: Record<string, number> }> {
   const idle = () => lab.gpu.device.queue.onSubmittedWorkDone(), c = lab.camera, yaw = c.want.yaw, doors = lab.building.doors.map(d => d.open); await lab.use(m); lab.frameNo = 0; const set = (open: boolean) => { lab.building.doors.forEach((d, i) => { d.open = d.want = open ? 0.85 : 0; void i; }); lab.pose(); };
-  if (how === 'turn') { c.want.yaw = yaw - 0.36; c.snap(); } else set(false); for (let i = 0; i < 160; i++) { lab.draw(); if (i % 4 === 3) await idle(); }
-  if (how === 'turn') for (let i = 0; i < 90; i++) { c.want.yaw += 0.004; c.snap(); lab.draw(); if (i % 4 === 3) await idle(); } else set(true);
+  if (how === 'turn') { c.want.yaw = yaw - 0.36; c.snap(); } else if (how === 'doors') set(false); for (let i = 0; i < (how === 'blow' ? 600 : 160); i++) { lab.draw(); if (i % 4 === 3) await idle(); }
+  if (how === 'turn') for (let i = 0; i < 90; i++) { c.want.yaw += 0.004; c.snap(); lab.draw(); if (i % 4 === 3) await idle(); } else if (how === 'blow') { if (!lab.blow([blow[0]!, blow[1]!, blow[2]!], norm([blow[3]!, blow[4]!, blow[5]!]), blow[6] ?? 1, 1, true)) throw new Error('nothing to blow there'); } else set(true);
   const pics: Float32Array[] = []; for (let i = 1; i <= AFTER[AFTER.length - 1]!; i++) { lab.draw(); await idle(); if (AFTER.includes(i)) pics.push(await picture(lab, m)); } const kinds = await kindsOf(lab, w, h);
   await lab.use(ref); lab.frameNo = 0; for (let i = 0; i < paths; i++) { lab.draw(); if (i % 4 === 3) await idle(); } const t = soft(await picture(lab, ref), w, h); c.want.yaw = yaw; c.snap(); lab.building.doors.forEach((d, i) => { d.open = d.want = doors[i]!; }); lab.pose();
   let mean = 0; for (const x of t) mean += x; const fl = mean / t.length * 0.02 + 1e-5, at: Record<string, number[]> = {}, frames: Record<string, number> = {};

@@ -85,8 +85,8 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     s.ng = vec3f(0.0, 1.0, 0.0); var half = 1e9; for (var a = 0u; a < 3u; a++) { var e = vec3f(0.0); e[a] = 1.0; let d = toWorld(k, e); if (abs(d.y) < 0.7 && (*p).half[a] < half) { half = (*p).half[a]; s.n = normalize(vec3f(d.x, 0.0, d.z)); } }
     s.albedo = vec3f(0.60, 0.59, 0.57); s.rough = min(half, 0.98); s.f0 = 0.04; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 63u; return s; }
   let ln = localNormal(k, h.code, lp); s.ng = normalize(toWorld(k, ln)); s.n = s.ng; if ((s.flags & BEND) != 0u && h.code > 3u && h.code < 6u) { s.n = bent(k, lp, h.code == 5u); if (dot(s.n, -rd) < 0.02) { s.n = normalize(s.n - rd * (0.03 - dot(s.n, -rd))); } }
-  let tint = unpackTint((*p).tint); let tint2 = tint * tint;
-  var base = m.base * tint2; s.rough = m.rough; s.metal = m.metal; s.f0 = m.f0;
+  let tint = unpackTint((*p).tint); let tint2 = tint * tint; let raw = (s.flags & BROKEN) != 0u && h.code > 6u;
+  var base = m.base * tint2; s.rough = m.rough; s.metal = m.metal; s.f0 = m.f0; if (raw) { base = vec3f(0.56, 0.54, 0.51); s.rough = 0.95; s.metal = 0.0; }
   let on = select(frame.weather.z, lamps[(*p).lamp & 63u].on, ((*p).lamp & 255u) != 255u);
   s.glow = vec3f(0.0); if (m.glow > 0.0) { s.glow = m.base * tint2 * (f32((*p).lamp >> 8u) * 0.1 * on); }   // (a glowing piece's seed is its brightness, in tenths)
   if (fp > 0.25) { s.albedo = base; if (m.kind == 7u) { s.albedo = mix(m.base, m.b2, 0.4); if (abs(s.ng.y) < 0.5) { s.glow = vec3f(0.96, 0.80, 0.57) * (frame.knobs.w * 0.063); } } return s; }     // (a tower's lit windows, all together: a fifth of them, on half of the wall)

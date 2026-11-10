@@ -45,7 +45,7 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(15) var smokeTex: texture_3d<f32>;       // the pool's bricks, each with a cell of its neighbours round it: light scattered per unit, and how much smoke per metre
 @group(0) @binding(16) var smokePage: texture_3d<u32>;      // which of them stands where (+ 1)
 
-const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const BEND = 0x20000000u;
+const BROKEN = 128u; const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const BEND = 0x20000000u;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 
 // ---- random numbers: a stream per pixel and frame, the same every run

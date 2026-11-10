@@ -57,6 +57,7 @@ export class Bodies {
   readonly all: Body[] = []; private spare: Body[] = []; ms = 0;
   ripples: Ripples | null = null; constructor(private solid: Solid, private pools: Pool[], private people: Person[]) {}
   add(b: Body, parked = false) { this.all.push(b); if (parked) { b.parked = true; this.spare.push(b); } return b; }
+  drop(b: Body) { const i = this.all.indexOf(b); if (i >= 0) this.all.splice(i, 1); }
   /** send one of those kept for it */
   toss(x: V3, v: V3) { const b = this.spare.shift(); if (!b) return; this.spare.push(b); b.put(x, v, [v[2] * 0.6, 1.5, -v[0] * 0.6]); }
   /** something hits what is first along a ray */

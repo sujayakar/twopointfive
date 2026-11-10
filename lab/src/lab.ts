@@ -2,11 +2,11 @@
 // function of (tick, inputs so far, seed), so a run can be played again exactly and two methods can be shown the same frames.
 import { openGpu, buffer, readTexture, readBuffer, type Gpu } from './gpu';
 import { Graph, type Stage } from './graph';
-import { SceneGpu } from './scenegpu';
+import { SceneGpu, SPARE } from './scenegpu';
 import { Sky, hourOf, type Hour } from './sky';
 import { Camera } from './camera';
 import { makeBuilding, poseDoor, type Building } from './scene/building';
-import type { Piece } from './scene/world';
+import { F, type Piece } from './scene/world';
 import { makeStreet } from './scene/street';
 import { makeForest } from './scene/forest';
 import { makePass } from './scene/pass';
@@ -31,8 +31,10 @@ import { Water } from './water';
 import { defaults, graded, KNOBS } from './tune';
 import { Smoke } from './stages/smoke';
 import { Near } from './scene/near';
-import { mapLamps, lampMapCode } from './lampmap';
-import { mapJoins, joinCode } from './joins';
+import { mapLamps, lampsAgain, lampMapCode } from './lampmap';
+import { mapJoins, joinAgain, joinCode } from './joins';
+import { breach, type Breach } from './scene/breach';
+import { Body } from './scene/rigid';
 
 export const TICK = 1 / 60;
 export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet, forest: makeForest, pass: makePass };
@@ -48,7 +50,7 @@ export class Lab {
   /** the block's cells that keep light (blockmap.ts), and what was found of them */ litCells = { many: 0, at: new Float32Array(8) }; blocksSaid = '';
   methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; /** how much of the moon there is, and is there power */ moon = 1; mains = true; /** how much snow lies, and how hard it falls */ snow = 0; /** what lies with none falling */ lies = 0; snowfall = 0; snowNow = 0; readonly trod = new Uint8Array(TROD.n[0] * TROD.n[1]); rain = 0; rainNow = 0; wet = 0; /** how wet the ground stays with no rain falling */ soaked = 0; steam = 1; lampGroup: Record<string, number> = {}; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
   async open(canvas: HTMLCanvasElement | null, scene = 'rooftop', load: Strain | null = null) {
-    this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? STUDIES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.05, 0, 0], v: [0, 0, 0], radiance: [16000, 11000, 5600], name: 'flash', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
+    this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? STUDIES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < SPARE.move; i++) this.spares.push(this.building.world.add({ at: [0, -100, 0], half: [0.01, 0.01, 0.01], mat: 0, flags: F.MOVES, rig: 'spare' })); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.05, 0, 0], v: [0, 0, 0], radiance: [16000, 11000, 5600], name: 'flash', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.ripples = new Ripples(this.building.pool, this.building.poolTop); this.building.bodies.ripples = this.ripples; this.water = new Water(this.gpu, this.ripples); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex, airRows(this.air.cells), skyMap(this.building.solid, this.building.world.moving), rippleRows(this.ripples));
     this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + blockCode(this.scene.blocks, this.scene.blockRow) + (this.building.world.meshes ? meshed.scene(sceneCode + raysCode, this.scene.meshRow) : sceneCode + raysCode) + keptCode + skyCode(this.scene.skyRow, this.scene.trodRow) + rippleCode(this.ripples, `extra[${this.scene.ripRow}u + (i >> 2u)][i & 3u]`, 'frame.more.w') + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + (this.building.world.meshes ? meshed.surface(surfaceCode) : surfaceCode) + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.graph.buffers.set('pastLeaves', this.scene.pastLeaves); this.scene.openFloor = this.building.place.openFloor; { const t = this.building.player.body.torch; if (t >= 0) { this.building.world.lamps[t]!.at = [0, -60, 0]; this.scene.lampOn[t] = 0; } } this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
@@ -130,9 +132,24 @@ export class Lab {
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
   draw(then?: (e: GPUCommandEncoder, result: GPUTexture) => void) {
     const { m, stages } = this.methods.get(this.current)!; if (this.jittered) { const n = (this.frameNo % 16) + 1, hal = (i: number, b: number) => { let r = 0, k = 1 / b; while (i > 0) { r += (i % b) * k; i = Math.floor(i / b); k /= b; } return r; }; this.jitter = [hal(n, 2) - 0.5, hal(n, 3) - 0.5]; } else this.jitter = [0, 0];
-    const t0 = performance.now(); this.between(); this.smoke.flames(this.time); if (this.playing && this.fog) { const me = this.building.player.body, low = me.drive!.low, f = me.facing; this.uniform('sightK', new Float32Array([me.pos[0], me.pos[1] + 1.62 - 0.45 * low, me.pos[2], 1, f[0], 0, f[2], 0])); } else if (this.graph.buffers.has('sightK')) this.uniform('sightK', new Float32Array(8)); this.send(); m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.sway.run(e, this); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
+    const t0 = performance.now(); this.between(); this.smoke.flames(this.time); if (this.playing && this.fog) { const me = this.building.player.body, low = me.drive!.low, f = me.facing; this.uniform('sightK', new Float32Array([me.pos[0], me.pos[1] + 1.62 - 0.45 * low, me.pos[2], 1, f[0], 0, f[2], 0])); } else if (this.graph.buffers.has('sightK')) this.uniform('sightK', new Float32Array(8)); this.send(); if (this.remap) { this.remap = false; lampsAgain(this); joinAgain(this); } m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.sway.run(e, this); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
     this.gpu.device.queue.submit([e.finish()]); done?.(); this.graph.flip(); this.frameNo++; for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
+  /** how many holes there have been, and where the last were */
+  broken = 0; readonly holes: { at: V3; r: number }[] = []; private readonly spares: Piece[] = []; private rubble: { body: Body; pieces: Piece[] }[] = [];
+  /** blow a hole of about r where a ray from a along d first meets a wall */
+  blow(a: V3, d: V3, r: number, force = 1, clean = false): Breach | null {
+    const b = this.building, w = b.world, far = b.solid.ray(a, d, 80, true); if (far >= 80) return null; const hit: V3 = [a[0] + d[0] * far, a[1] + d[1] * far, a[2] + d[2] * far], k = breach(w, hit, d, r, 7 + this.broken); if (!k || !this.scene.change(k.gone, k.come)) return null;
+    const was = new Set(k.gone); w.pieces = w.pieces.filter(p => !was.has(p)).concat(k.come); b.solid.change(k.gone, k.come); this.near.change(k.gone, k.come); this.air.change(w.pieces, k.lo, k.hi); for (const l of k.lamps) { w.lamps[l]!.on = 0; this.scene.lampOn[l] = 0; }
+    // the rubble: bodies made of what is kept for it (the oldest gives way)
+    let seed = 1 + this.broken; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }, fresh: Piece[] = [];
+    for (const chunk of clean ? [] : k.rubble) { while (this.spares.length < chunk.length) { const old = this.rubble.shift(); if (!old) break; b.bodies.drop(old.body); for (const p of old.pieces) { p.at = [0, -100, 0]; this.spares.push(p); } } if (this.spares.length < chunk.length) break;
+      const ps = chunk.map(c => { const p = this.spares.pop()!; Object.assign(p, { planes: undefined, marks: undefined, tint: undefined, seed: undefined }, c); return p; }), body = new Body(ps, ps[0]!.at, ps[0]!.rot, { dense: 1500, rough: 0.7 }); fresh.push(...ps); this.rubble.push({ body, pieces: ps }); b.bodies.add(body);
+      const out: V3 = [body.x[0] - k.at[0], body.x[1] - k.at[1], body.x[2] - k.at[2]], l = Math.max(0.2, Math.hypot(...out)), q = force * (2.2 + 2.6 * rnd()) * (1.2 - 0.6 * Math.min(1, l / r)); body.v = [0, 1, 2].map(i => k.n[i]! * q + out[i]! / l * 1.1 * rnd() + (i === 1 ? 0.9 * rnd() : 0)) as V3; body.w = [rnd() * 8 - 4, rnd() * 8 - 4, rnd() * 8 - 4]; body.pose(); for (const p of ps) this.prevAt.set(p, { at: p.at, rot: p.rot }); }
+    { const R = b.place.rooms, inRoom = (s: number) => { const x = [0, 1, 2].map(i => k.at[i]! + k.n[i]! * s); return R.some(q => [0, 1, 2].every(i => x[i]! > q[i]! && x[i]! < q[i + 3]!)); }, before = inRoom(-0.3), behind = inRoom(k.thick + 0.3); if (before !== behind && w.openings.length < 32) { w.openings.push({ at: k.at, u: [k.u[0] * r * 0.85, k.u[1] * r * 0.85, k.u[2] * r * 0.85], v: [k.v[0] * r * 0.85, k.v[1] * r * 0.85, k.v[2] * r * 0.85], n: before ? [-k.n[0], -k.n[1], -k.n[2]] : k.n }); this.scene.sendOpenings(); } }
+    if (fresh.length) { this.scene.remade(fresh); for (const s of [0.2, k.thick + 0.5]) this.smoke.puff([0, 1, 2].map(i => k.at[i]! + k.n[i]! * s) as V3, r * 0.9, 16); } for (const o of b.bodies.all) if (o.asleep && Math.hypot(o.x[0] - k.at[0], o.x[1] - k.at[1], o.x[2] - k.at[2]) < r + 1.5) o.wake(); this.broken++; this.holes.unshift({ at: k.at, r }); if (this.holes.length > 4) this.holes.pop(); this.nowPose = new Float64Array(0); this.remap = true; return k;
+  }
+  private remap = false;
   buffer(name: string, bytes: number, usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC) { let b = this.graph.buffers.get(name); if (!b || b.size < bytes) { b = buffer(this.gpu, name, bytes, usage); this.graph.buffers.set(name, b); } return b; }
   uniform(name: string, data: Float32Array | Uint32Array) { const b = this.graph.buffers.get(name) ?? this.buffer(name, Math.max(16, data.byteLength), GPUBufferUsage.UNIFORM); this.gpu.device.queue.writeBuffer(b, 0, data.buffer as ArrayBuffer, data.byteOffset, data.byteLength); return b; }
   read = (signal: string) => readTexture(this.gpu, this.graph.texture(signal)); readBuffer = (name: string) => readBuffer(this.gpu, this.graph.buffers.get(name)!);
