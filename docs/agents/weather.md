@@ -36,7 +36,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `snow_blast.rs` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
-Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs` (with `bog_of`), `glow.rs`.
+Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs` (with `bog_of`), `glow.rs`, `dome.rs`.
 `rust/game_draw/src/` tells the picture: `sky.rs`, `winds.rs`, `fires.rs`, `snow.rs`, `wet.rs`.
 
 The page's half reads those rows and writes nothing back:
@@ -85,7 +85,7 @@ other roll.
 | rain's noise | every ear (`hearing_check`, `whistle.rs`, `roomfight/`…) | `hear_path` stretches a path by `weather_hear_mask`: less under a roof, more after thunder. `loud_len` undoes it when loud |
 | fog, dust | men, teammates, civilians, cameras, the team's fog of war | `clear_between` (`sense.rs`): `weather_air_trans` over `smoke_between`: fog blinds by smoke's own thresholds (`sight_gain`) |
 | lightning | the light meter's stand-in | `stroke_light`, under a picked weather only |
-| sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; `open_rays` keeps by cell which rays reach the sky (`SkyReach`, in no save) |
+| sun, sky, cloud | every question of light | `light_in` adds `sun_light`, `dome_light`; which ways from a place reach the sky is `rust/sim/src/dome.rs`, kept by half metre, in no save |
 | the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
 | storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`. No other wind reaches a rule |
 | deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan.rs`, `squadsmoke.rs` |
