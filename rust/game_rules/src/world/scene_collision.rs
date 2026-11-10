@@ -692,15 +692,7 @@ pub fn way_priced<G: core::ops::Deref<Target = Game>>(g: G, a: V3, b: V3, max_it
     let mut g = g;
     nav_grid_there(&g);
     let (nw, nh, cell) = (g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
-    let mut n = sim::nav::find_priced(world(&g), nw, nh, cell, a[0], a[2], b[0], b[2], js::to_u32(max_iter), &g.k);
-    while n == sim::nav::NEED {
-        for i in 0..sim::nav::need_len() {
-            let c = get_u32(sim::nav::need_addr(), i);
-            let v = price(&mut g, (c % nw as u32) as f64, (c / nw as u32) as f64);
-            put_f64(sim::nav::price_addr(), c as usize, v);
-        }
-        n = sim::nav::resume();
-    }
+    let n = sim::nav::start_priced(world(&g), nw, nh, cell, a[0], a[2], b[0], b[2], js::to_u32(max_iter), &g.k).unwrap_or_else(|| sim::nav::priced(&mut |c| price(&mut g, (c % nw) as f64, (c / nw) as f64)));
     way_of(n, a, b)
 }
 /// …for a host, that asks it of places of its own: one that is no number has no way
