@@ -161,10 +161,13 @@ pub fn squad_orders_team(seat: &crate::seats::SeatRef) -> crate::teams::Team {
 /// The keys a locked door is tried with for them: Sam's ring and the codes he has learned.
 pub fn squad_orders_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> JsSet<String> {
     if let Some(c) = &seat.orders.cast { return c.ring.clone(); }
-    let p = seat.player;
-    let mut out = g.pl[p].keys.clone();
-    for code in g.pl[p].codes.keys() { out.add(code); }
-    out
+    player_ring(g, seat.player)
+}
+/// A player's own ring: his keys, and the codes he has learned.
+pub fn player_ring(g: &Game, p: PlayerId) -> JsSet<String> {
+    let mut ring = g.pl[p].keys.clone();
+    for code in g.pl[p].codes.keys() { ring.add(code); }
+    ring
 }
 
 /// The living men an order would go to: the teammate under the reticle, else `who`.

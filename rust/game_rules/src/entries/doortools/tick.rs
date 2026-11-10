@@ -20,12 +20,14 @@ macro_rules! thr {
     };
 }
 
+mod key;
+pub use key::door_tools_input;
+use key::trigger_free_keyed;
+mod standoff;
+pub use standoff::door_tools_standoff_posts;
+
 // ------------------------------------------------------------ small reads
 
-/// `input.pressed.delete(key)`
-fn press_off(g: &mut Game, input: InputId, key: &str) {
-    g.tab.input[input].pressed.delete(String::from(key));
-}
 fn pos_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     g.ch[c].pos
@@ -72,32 +74,6 @@ fn word_off(g: &mut Game, op: DoorOpId) {
 fn splice_out<T: PartialEq>(list: &mut Vec<T>, x: &T) {
     if let Some(i) = list.iter().position(|y| y == x) {
         list.remove(i);
-    }
-}
-/// `S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men })`
-fn give_go(g: &mut Game, p: V3, men: &[GuardId]) -> Option<String> {
-    let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
-    let opts = crate::orders::GiveOpts { men: Some(men.to_vec()), ..Default::default() };
-    crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&t), None, Some(&opts))
-}
-/// the word's row of the menu that is up: -1 with none (or no menu)
-fn menu_row_word(g: &Game, seat: &crate::seats::SeatRef) -> i32 {
-    let Some(rows) = seat.orders.menu.as_ref().map(|m| m.rows.clone()) else { return -1 };
-    match rows.iter().position(|&d| g.tab.orders_order_def[d].word) {
-        Some(i) => i as i32,
-        None => -1,
-    }
-}
-fn trigger_free_keyed(g: &mut Game) {
-    let set = g.sets[g.seat].door_tools.set.clone();
-    let mut list = Vec::new();
-    for c in set {
-        if !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, &crate::seats::here(g), c) {
-            list.push(c);
-        }
-    }
-    for c in list {
-        door_tools_trigger(g, Some(c));
     }
 }
 
@@ -942,334 +918,9 @@ pub(super) fn door_tools_hand_step(g: &mut crate::game::Game, op: DoorOpId, el: 
     door_tools_opened(g, op);
 }
 
-// ------------------------------------------------------------ the stand-off's marks
-
-/// stackroom.ts's say on a deal of marks
-fn standoff_fix(g: &mut Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, men: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
-    let mut taken = vec![sam_pos(g, &crate::seats::here(g))];
-    taken.extend(crate::orders::squad_orders_held_on(g, &crate::seats::here(g), d, men, None));
-    let min_m = g.k.doortools.backblast_m + 0.2;
-    crate::stackroom::stack_room_fix(g, d, side, posts, &taken, Some(min_m))
-}
-/// n marks in file along the wall, `standoff` metres past a jamb on face `side`, nearest the door first; None: no wall has the floor
-pub fn door_tools_standoff_posts(g: &mut crate::game::Game, d: DoorId, side: f64, n: f64, men: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
-    let men: &[GuardId] = men.unwrap_or(&[]);
-    if !crate::picture::any_idea(g, men) {
-        let was = door_tools_standoff_posts_as_were(g, d, side, n, Some(men), None);
-        return standoff_fix(g, d, side, was.as_deref(), men);
-    }
-    let mut files: Vec<Vec<crate::orders::StackPost>> = Vec::new();
-    let first = door_tools_standoff_posts_as_were(g, d, side, n, Some(men), Some(&mut files));
-    let mut whole: Vec<Vec<crate::orders::StackPost>> = Vec::new();
-    for F in &files {
-        if let Some(fixed) = standoff_fix(g, d, side, Some(F), men) {
-            whole.push(fixed);
-        }
-    }
-    if whole.is_empty() {
-        return standoff_fix(g, d, side, first.as_deref(), men);
-    }
-    let ranked = crate::picture::safest_sets(g, men, &whole);
-    let mut pick = 0usize;
-    for i in ranked {
-        let F = &whole[i];
-        let ok = if men.len() as f64 == n {
-            door_tools_standoff_walk(g, men, d, F).is_none()
-        } else {
-            let mut every = true;
-            for P in F {
-                let mut some = false;
-                for &m in men {
-                    if crate::orders::squad_orders_reach(g, m, P.pos).is_none() {
-                        some = true;
-                        break;
-                    }
-                }
-                if !some {
-                    every = false;
-                    break;
-                }
-            }
-            every
-        };
-        if ok {
-            pick = i;
-            break;
-        }
-    }
-    if pick != 0 {
-        g.stats.picture.moved += 1;
-    }
-    Some(whole.swap_remove(pick))
-}
-/// the side of the file a man stands on, from his facing
-fn stack_side_of(ux: f64, uz: f64, side: f64, fx: f64, fz: f64) -> f64 {
-    if (uz * side) * (-fz) + (-ux * side) * fx >= 0.0 {
-        1.0
-    } else {
-        -1.0
-    }
-}
-/// a file out past one jamb, as far as the floor goes
-fn file_of(g: &mut Game, d: DoorId, side: f64, n: f64, off: f64, dir: f64, front: V3) -> Vec<crate::orders::StackPost> {
-    let (w, th) = (g.dr[d].def.width, g.dr[d].def.closed_dir);
-    let (ux, uz) = (m::cos(th), m::sin(th));
-    let (jamb_out, gap) = (g.k.orders.jamb_out, g.k.orders.file_gap);
-    let mut out = Vec::new();
-    let mut k = 0.0;
-    while k < n {
-        let a = if dir > 0.0 { w + off + k * gap } else { -off - k * gap };
-        let pos = door_pt(g, d, a, jamb_out, side, None);
-        if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) || crate::scene_collision::solid_blocked(g, front, [pos[0], 0.45, pos[2]], None) {
-            break;
-        }
-        let (fx, fz) = (-ux * dir, -uz * dir);
-        out.push(crate::orders::StackPost {
-            pos,
-            face: m::atan2(fx, fz),
-            stack_side: stack_side_of(ux, uz, side, fx, fz),
-            lead: false,
-            group: Some(if dir > 0.0 { 0.0 } else { 1.0 }),
-        });
-        k += 1.0;
-    }
-    out
-}
-/// the marks as the wall deals them: the first file with room (`files`: every such file is also handed back, in that order)
-fn door_tools_standoff_posts_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, n: f64, men: Option<&[GuardId]>, files: Option<&mut Vec<Vec<crate::orders::StackPost>>>) -> Option<Vec<crate::orders::StackPost>> {
-    use crate::orders::StackPost;
-    let mut files = files;
-    let men: &[GuardId] = men.unwrap_or(&[]);
-    let (w, th) = (g.dr[d].def.width, g.dr[d].def.closed_dir);
-    let jamb_out = g.k.orders.jamb_out;
-    let front = door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
-    let (ux, uz) = (m::cos(th), m::sin(th));
-    let standoff = g.k.doortools.standoff.clone();
-    for &off in &standoff {
-        for dir in [1.0, -1.0] {
-            let gap = g.k.orders.file_gap;
-            let mut out: Vec<StackPost> = Vec::new();
-            let mut k = 0.0;
-            while k < n {
-                let a = if dir > 0.0 { w + off + k * gap } else { -off - k * gap };
-                let pos = door_pt(g, d, a, jamb_out, side, None);
-                if crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) || crate::scene_collision::solid_blocked(g, front, [pos[0], 0.45, pos[2]], None) {
-                    break;
-                }
-                let (fx, fz) = (-ux * dir, -uz * dir);
-                out.push(StackPost { pos, face: m::atan2(fx, fz), stack_side: stack_side_of(ux, uz, side, fx, fz), lead: k == 0.0, group: None });
-                k += 1.0;
-            }
-            if out.len() as f64 == n {
-                match files.as_deref_mut() {
-                    None => return Some(out),
-                    Some(fs) => fs.push(out),
-                }
-            }
-        }
-    }
-    if let Some(fs) = files.as_deref() {
-        if !fs.is_empty() {
-            return Some(fs[0].clone());
-        }
-    }
-    if n > 2.0 {
-        for &off in &standoff {
-            let A = file_of(g, d, side, n, off, 1.0, front);
-            let B = file_of(g, d, side, n, off, -1.0, front);
-            let mut na = m::min(A.len() as f64, m::ceil(n / 2.0));
-            let nb = m::min(B.len() as f64, n - na);
-            na = m::min(A.len() as f64, n - nb);
-            let mut out: Vec<StackPost> = Vec::new();
-            let mut k = 0usize;
-            while (k as f64) < m::max(na, nb) {
-                if (k as f64) < na {
-                    out.push(A[k]);
-                }
-                if (k as f64) < nb {
-                    out.push(B[k]);
-                }
-                k += 1;
-            }
-            if (out.len() as f64) < n {
-                let taken: Vec<V3> = out.iter().map(|o| o.pos).collect();
-                let more = crate::orders::squad_orders_rear_posts(g, d, side, n - out.len() as f64, &taken);
-                out.extend(more);
-            }
-            if (out.len() as f64) < n {
-                continue;
-            }
-            out[0].lead = true;
-            return Some(out);
-        }
-    }
-    let authored = g.sets[g.seat].orders.door_marks.iter().find(|M| M.door == d && M.side == side).map(|M| M.standoff.clone());
-    let marks: Option<Vec<V3>> = match authored {
-        Some(st) => {
-            if st.len() as f64 >= n {
-                Some(st[..n as usize].to_vec())
-            } else {
-                None
-            }
-        }
-        None => {
-            let mut taken = vec![sam_pos(g, &crate::seats::here(g))];
-            taken.extend(crate::orders::squad_orders_held_on(g, &crate::seats::here(g), d, men, None));
-            let min_m = g.k.doortools.backblast_m + 0.2;
-            crate::orders::squad_orders_worked_pick(g, d, side, n, &taken, Some(min_m))
-        }
-    };
-    if let Some(marks) = marks {
-        let fc = g.dr[d].frame_centre;
-        let mut out: Vec<StackPost> = Vec::new();
-        for (k, &p) in marks.iter().enumerate() {
-            let face = v3::yaw_to(p, fc);
-            let (fx, fz) = (m::sin(face), m::cos(face));
-            out.push(StackPost { pos: v3::copy(p), face, stack_side: stack_side_of(ux, uz, side, fx, fz), lead: k == 0, group: None });
-        }
-        return Some(out);
-    }
-    let sam = sam_pos(g, &crate::seats::here(g));
-    let held = crate::orders::squad_orders_held_on(g, &crate::seats::here(g), d, men, None);
-    let from = g.k.doortools.backblast_m + 0.4;
-    let hall = crate::orders::squad_orders_hall_places(g, &crate::ask::Over::OWN, d, side, n, from, &mut |_g: &mut Game, q: V3| {
-        v3::dist_xz(sam, q) < 0.7 || held.iter().any(|&h| v3::dist_xz(h, q) < 0.7)
-    });
-    if hall.len() as f64 == n {
-        return Some(
-            hall.iter()
-                .enumerate()
-                .map(|(k, P)| StackPost { pos: P.pos, face: P.face, stack_side: P.stack_side, lead: k == 0, group: None })
-                .collect(),
-        );
-    }
-    None
-}
 
 // ------------------------------------------------------------ once a frame
 
-/// Sam's key: the word while anything of the men is waiting on it, else a set charge's trigger; never the drill's 'stack up' as well
-pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
-    use crate::nightbreach::{night_breach_drill_ops, night_breach_state, NightBreachState as NB};
-    door_tools_sync(g);
-    let key = g.k.doortools.blow_key.clone();
-    if !crate::input::input_hit(g, input, &key) {
-        return;
-    }
-    if crate::condition::down(g, g.pl[g.player].ch) {
-        let set = g.sets[g.seat].door_tools.set.clone();
-        if set.into_iter().any(|c| door_tools_key_is(g, &crate::seats::here(g), c)) {
-            press_off(g, input, &key);
-        }
-        return;
-    }
-    let four = crate::orders::squad_orders_big(g, &crate::seats::here(g));
-    let target = if four { g.sets[g.seat].orders.menu.as_ref().map(|M| M.target.clone()) } else { None };
-    let row = if target.is_some() { menu_row_word(g, &crate::seats::here(g)) } else { -1 };
-    let tap = g.k.doortools.word_tap;
-    if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
-        let i = menu_row_word(g, &crate::seats::here(g));
-        if i >= 0 {
-            press_off(g, input, &key);
-            crate::orders::squad_orders_pick(g, Some(i as f64));
-            return;
-        }
-        if g.time - g.sets[g.seat].door_tools.word_key_t < tap {
-            press_off(g, input, &key);
-            return;
-        }
-        let men = crate::orders::squad_orders_recipients(g, &crate::seats::here(g), None, None);
-        if door_tools_pair_word(g, &men) {
-            press_off(g, input, &key);
-            crate::orders::squad_orders_close(g);
-            return;
-        }
-        let up = g.sets[g.seat].orders.menu.as_ref().map(|M| M.target.clone());
-        let men = match up {
-            Some(t) => crate::orders::squad_orders_recipients(g, &crate::seats::here(g), Some(&t), None),
-            None => door_tools_word_men(g, &crate::seats::here(g)),
-        };
-        if !door_tools_stack_waits(g, &crate::seats::here(g), &men).is_empty() || (g.time - g.sets[g.seat].door_tools.word_key_t >= tap && !door_tools_frag_held(g, &men).is_empty()) {
-            press_off(g, input, &key);
-            let p = sam_pos(g, &crate::seats::here(g));
-            crate::orders::squad_orders_close(g);
-            if give_go(g, p, &men).is_none() {
-                g.sets[g.seat].door_tools.word_key_t = g.time;
-                trigger_free_keyed(g);
-            }
-            return;
-        }
-    }
-    let men: Vec<GuardId> = if four {
-        if row >= 0 {
-            crate::orders::squad_orders_recipients(g, &crate::seats::here(g), target.as_ref(), None)
-        } else {
-            door_tools_word_men(g, &crate::seats::here(g))
-        }
-    } else {
-        Vec::new()
-    };
-    let again = four && g.time - g.sets[g.seat].door_tools.word_key_t >= tap && !door_tools_frag_held(g, &men).is_empty();
-    let waiting = !door_tools_waiting_any(g, &crate::seats::here(g), &men).is_empty() || again;
-    if waiting || row >= 0 {
-        let st = night_breach_state(g);
-        if !(waiting && (st == NB::Set || st == NB::Stacking) && any_shared(&night_breach_drill_ops(g), &men)) {
-            press_off(g, input, &key);
-        }
-        if row >= 0 {
-            crate::orders::squad_orders_pick(g, Some(row as f64));
-        } else {
-            let p = sam_pos(g, &crate::seats::here(g));
-            crate::orders::squad_orders_close(g);
-            give_go(g, p, &men);
-        }
-        if waiting {
-            g.sets[g.seat].door_tools.word_key_t = g.time;
-        }
-        return;
-    }
-    if four {
-        let rec = crate::orders::squad_orders_recipients(g, &crate::seats::here(g), None, None);
-        if door_tools_word_early(g, &rec) {
-            press_off(g, input, &key);
-            crate::orders::squad_orders_close(g);
-            return;
-        }
-    }
-    let set = g.sets[g.seat].door_tools.set.clone();
-    let mut mine = Vec::new();
-    for c in set {
-        if door_tools_key_is(g, &crate::seats::here(g), c) {
-            mine.push(c);
-        }
-    }
-    if !mine.is_empty() {
-        press_off(g, input, &key);
-        let mut free = Vec::new();
-        for c in mine {
-            if !door_tools_on_pending_word(g, &crate::seats::here(g), c) {
-                free.push(c);
-            }
-        }
-        if free.is_empty() {
-            return;
-        }
-        let sam = sam_pos(g, &crate::seats::here(g));
-        let near = nearest_of(g, free, sam);
-        door_tools_trigger(g, near);
-        return;
-    }
-    if (four || !crate::orders::squad_orders_big(g, &crate::seats::here(g)))
-        && night_breach_state(g) == NB::Staged
-        && (g.time - g.sets[g.seat].door_tools.word_key_t < tap || {
-            let drill = night_breach_drill_ops(g);
-            let ops = g.sets[g.seat].door_tools.ops.clone();
-            drill.iter().any(|&m| ops.iter().any(|&o| dop!(g, o).men.contains(&m)))
-        })
-    {
-        press_off(g, input, &key);
-    }
-}
 /// the charge of these nearest `p`: a stable sort by the distance to its door's frame, the first
 fn nearest_of(g: &Game, list: Vec<ChargeId>, p: V3) -> Option<ChargeId> {
     let mut by: Vec<(ChargeId, f64)> = list
@@ -1354,7 +1005,7 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
     door_tools_test_stacks(g);
     door_tools_walk_tried(g);
     for op in g.sets[g.seat].door_tools.watches.clone() {
-        if !door_tools_other_doors(g, op, Some(true), None, None) {
+        if !door_tools_other_doors(g, op, Watched::Held) {
             splice_out(&mut g.sets[g.seat].door_tools.watches, &op);
         }
     }
@@ -1471,14 +1122,5 @@ mod tests {
         let w = vec![String::from("red"), String::from("blue"), String::from("red")];
         assert_eq!(unique_joined(w), "red + blue");
         assert_eq!(unique_joined(Vec::new()), "");
-    }
-    /// Which shoulder is to the wall: it turns over with the way he faces along the door. A failure means a man on a standoff post leans out on the wrong side.
-    #[test]
-    fn a_man_s_stack_side_turns_over_with_the_way_he_faces_along_the_door() {
-        // a door along +x, its +1 face
-        assert_eq!(stack_side_of(1.0, 0.0, 1.0, -1.0, 0.0), 1.0);
-        assert_eq!(stack_side_of(1.0, 0.0, 1.0, 1.0, 0.0), -1.0);
-        assert_eq!(stack_side_of(1.0, 0.0, -1.0, 1.0, 0.0), 1.0);    // the other face
-        assert_eq!(stack_side_of(1.0, 0.0, 1.0, 0.0, 1.0), 1.0);
     }
 }

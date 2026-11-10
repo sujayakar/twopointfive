@@ -290,12 +290,12 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     };
     if let Some(t) = tool {
         let lead = crate::bigkit::sam_big_lead_of(g);
-        let side = crate::bigkit::big_side(g, d, &pos);
+        let side = crate::orders::side_of(g, d, pos);
         let need = crate::bigkit::hammer_blows(g, d, &pos);
         let at = match beside.as_ref().and_then(|s| s.at) {
             Some(at) => at,
             None => {
-                let s = crate::bigkit::big_side(g, d, &pos);
+                let s = crate::orders::side_of(g, d, pos);
                 crate::shotgun::lock_point(g, d, s)
             }
         };
