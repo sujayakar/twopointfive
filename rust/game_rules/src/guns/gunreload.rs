@@ -346,7 +346,7 @@ pub fn feed_starts(def: &crate::weapons::WeaponDef) -> bool {
 }
 
 /// the row's feeding, for the gun that is in his hands
-fn own_of(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::FEEDValue> {
+fn own_of(g: &crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::FEEDValue> {
     let d = g.m.weapons.weapons.get(id_2)?.clone();
     if (d.cls == crate::weapons::WeaponClass::Pistol) != g.ch[c_2].anim.long_gun { feed_of(&d) } else { None }
 }
@@ -357,7 +357,7 @@ fn clock_beat(b: crate::character::AnimFeedClock) -> FeedBeat {
 }
 
 /// what the drawer shows of a reload under way on this man's gun of row `id_2`
-pub fn reload_show(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::ReloadShow> {
+pub fn reload_show(g: &crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId) -> Option<crate::gunreload::ReloadShow> {
     let f = own_of(g, c_2, id_2)?;
     let b = crate::character::anim_feed_clock(g, c_2)?;
     let t = b.t;
@@ -377,7 +377,7 @@ fn sstep(a: f64, b: f64, x: f64) -> f64 {
 }
 
 /// the thing in his support hand this frame, as one box in the fist, appended to `out`
-pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut Vec<AnyBoxId>) {
+pub fn reload_hand_boxes(g: &crate::game::Game, c_2: CharId, id_2: crate::weapons::WeaponId, out: &mut crate::rig_props::Carried) {
     let Some(f) = own_of(g, c_2, id_2) else { return };
     let Some(b) = crate::character::anim_feed_clock(g, c_2) else { return };
     let t = b.t;

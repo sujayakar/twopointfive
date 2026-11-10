@@ -1,5 +1,7 @@
 pub use ::game_types::rig_props::types;
 pub use types::*;
+pub mod carried;
+pub use carried::*;
 pub mod frames;
 pub use frames::*;
 pub mod worn;

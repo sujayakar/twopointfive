@@ -19,7 +19,7 @@ pub const FRAME_BOXES: f64 = 768.0;
 /// a box made to stay: a row of g.tab.boxes for good
 pub fn box_new(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId { g.tab.boxes.push(b) }
 /// a box made for this frame's list: a row freed by boxes_frame_reset is used again, else a new row
-fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
+pub fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     let id = box_kept(g, b);
     g.box_frame_rows.push(id);
     id

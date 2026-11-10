@@ -268,6 +268,8 @@ pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> R
             (g.tab.anim_gltf_mesh_data.push(md), Some(g.tab.anim_gltf_cast_info.push(CastInfo { parts, variants })))
         }
     };
-    g.tab.rig.push(GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast })
+    let mut rig = GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast, back: None };
+    rig.back = game::packside::back_of(g, &rig);
+    g.tab.rig.push(rig)
 }
 
