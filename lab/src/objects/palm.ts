@@ -1,6 +1,6 @@
 // A DATE PALM: a thick stem clad in the stubs of old leaves, wound round it in spirals; a heart of brown fibre; and out of it fronds in a spiral, the young upright in the middle, the old low and hanging, each a keel with
 // narrow stiff leaflets in two rows that stand in a V. Some old fronds have dried; fruit hangs on orange strands.
-// Coarser: two short leaves stand for four leaflets, then one for nine; then five are a frond.
+// Coarser: two short leaves stand for three leaflets, then one for seven; then five are a frond.
 import { type V3, type Rot, add, sub, mul, norm, cross, dot, rng, rotY, apply } from '../math';
 import type { Cluster, Leaf, World } from '../scene/world';
 import { M } from '../scene/materials';
@@ -8,21 +8,21 @@ import type { Made, ObjectKind, Put } from './object';
 const TOP: V3 = [0.10, 2.36, -0.04];
 /** how long a frame is: leaves are kept within 1.2 of its middle, blades within 2.1 */
 const frameOf = (level: number) => level ? 1.62 : 1.25;
-const GREEN: V3 = [0.292, 0.368, 0.215], YELLOW: V3 = [0.405, 0.420, 0.190], DRY: V3 = [0.520, 0.425, 0.285];
+const GREEN: V3 = [0.276, 0.347, 0.205], YELLOW: V3 = [0.390, 0.402, 0.182], DRY: V3 = [0.520, 0.425, 0.285];
 const square = (n: V3, t: V3): V3 => norm(sub(n, mul(t, dot(n, t))));
 /** a frond leaves the heart at `lean` from upright and bends by `bend` more; its leaflets stand up in a V by `vee` (dry ones hang) */
 interface Frond { lean: number; bend: number; long: number; vee: number; pairs: number; leaflet: number; side: number; many: number; age: number }
 const FRONDS: Frond[] = [
-  { lean: 0.08, bend: 0.22, long: 1.30, vee: 1.00, pairs: 50, leaflet: 0.24, side: 0.05, many: 5, age: 0 },
-  { lean: 0.22, bend: 0.46, long: 1.60, vee: 0.75, pairs: 56, leaflet: 0.30, side: -0.06, many: 4, age: 0.06 },
-  { lean: 0.40, bend: 0.66, long: 1.74, vee: 0.62, pairs: 58, leaflet: 0.33, side: 0.08, many: 5, age: 0.15 },
-  { lean: 0.60, bend: 0.82, long: 1.80, vee: 0.55, pairs: 60, leaflet: 0.34, side: -0.10, many: 5, age: 0.28 },
-  { lean: 0.80, bend: 0.94, long: 1.82, vee: 0.48, pairs: 60, leaflet: 0.34, side: 0.06, many: 5, age: 0.40 },
-  { lean: 1.00, bend: 0.98, long: 1.80, vee: 0.42, pairs: 60, leaflet: 0.34, side: 0.12, many: 5, age: 0.55 },
-  { lean: 1.22, bend: 1.02, long: 1.76, vee: 0.34, pairs: 58, leaflet: 0.33, side: -0.08, many: 5, age: 0.70 },
-  { lean: 1.46, bend: 0.98, long: 1.68, vee: 0.26, pairs: 58, leaflet: 0.32, side: 0.10, many: 4, age: 0.85 },
-  { lean: 1.74, bend: 0.80, long: 1.52, vee: 0.12, pairs: 54, leaflet: 0.31, side: -0.12, many: 3, age: 1 },
-  { lean: 2.02, bend: 0.62, long: 1.20, vee: -0.55, pairs: 40, leaflet: 0.26, side: 0.14, many: 3, age: 2 },
+  { lean: 0.08, bend: 0.22, long: 1.30, vee: 1.00, pairs: 38, leaflet: 0.27, side: 0.05, many: 5, age: 0 },
+  { lean: 0.22, bend: 0.46, long: 1.60, vee: 0.75, pairs: 43, leaflet: 0.34, side: -0.06, many: 4, age: 0.06 },
+  { lean: 0.40, bend: 0.66, long: 1.74, vee: 0.62, pairs: 45, leaflet: 0.37, side: 0.08, many: 5, age: 0.15 },
+  { lean: 0.60, bend: 0.82, long: 1.80, vee: 0.55, pairs: 46, leaflet: 0.38, side: -0.10, many: 5, age: 0.28 },
+  { lean: 0.80, bend: 0.94, long: 1.82, vee: 0.48, pairs: 46, leaflet: 0.38, side: 0.06, many: 5, age: 0.40 },
+  { lean: 1.00, bend: 0.98, long: 1.80, vee: 0.42, pairs: 46, leaflet: 0.38, side: 0.12, many: 5, age: 0.55 },
+  { lean: 1.22, bend: 1.02, long: 1.76, vee: 0.34, pairs: 45, leaflet: 0.37, side: -0.08, many: 5, age: 0.70 },
+  { lean: 1.46, bend: 0.98, long: 1.68, vee: 0.26, pairs: 45, leaflet: 0.36, side: 0.10, many: 4, age: 0.85 },
+  { lean: 1.74, bend: 0.80, long: 1.52, vee: 0.12, pairs: 42, leaflet: 0.35, side: -0.12, many: 3, age: 1 },
+  { lean: 2.02, bend: 0.62, long: 1.20, vee: -0.55, pairs: 31, leaflet: 0.29, side: 0.14, many: 3, age: 2 },
 ];
 /** along the keel (outward is +x, the heart is the origin): where it is, its way, its upper side, its left */
 function keel(f: Frond): (q: number) => { at: V3; d: V3; up: V3; left: V3 } {
@@ -45,19 +45,20 @@ const ROWS = FRONDS.map((f, i) => leaflets(f, i));
 const REACH = FRONDS.map((f, i) => { const way = keel(f), ys = [...Array(21).keys()].map(k => way(k / 20).at[1]), tips = ROWS[i]!.flat().map(l => l.root[1] + l.t[1] * l.long); return { lo: Math.min(...ys, ...tips), hi: Math.max(...ys, ...tips) }; });
 const frameAt = (kind: number, level: number) => level ? (REACH[kind]!.lo + REACH[kind]!.hi) / 2 : Math.min(-0.45, REACH[kind]!.lo + 0.03);
 interface Step { bright: V3; big: number }
-const STEPS: Step[] = [{ bright: [1, 1, 1], big: 1 }, { bright: [0.90, 0.882, 0.93], big: 0.935 }, { bright: [0.86, 0.845, 0.875], big: 0.98 }, { bright: [0.845, 0.83, 0.86], big: 1.005 }];
+const STEPS: Step[] = [{ bright: [1, 1, 1], big: 1 }, { bright: [0.868, 0.851, 0.892], big: 0.967 }, { bright: [0.847, 0.832, 0.859], big: 1.03 }, { bright: [0.875, 0.86, 0.89], big: 1.01 }];
 function frond(kind: number, level: number): Cluster {
   const f = FRONDS[kind]!, rows = ROWS[kind]!, way = keel(f), y = frameAt(kind, level), S = frameOf(level), leaves: Leaf[] = [], big = STEPS[level]!.big, put = (at: V3, t: V3, n: V3, size: number, tone: number) => leaves.push({ at: mul(sub(at, [0, y, 0]), 1 / S), t, n: square(n, t), size: size / S, tone }), mean = (v: V3[]) => mul(v.reduce((a, b) => add(a, b), [0, 0, 0] as V3), 1 / v.length);
   if (level === 0) {
     for (const row of rows) for (const l of row) put(add(l.root, mul(l.t, l.long * 0.485)), l.t, l.n, l.long / 2, l.tone);
     // the keel: narrow blades end over end, flat and on edge, thinner to the tip
-    for (let i = 0; i < 9; i++) { const a = 0.10 + 0.86 * i / 9, b = Math.min(0.995, a + 0.86 / 9 * 2.1), p = way(a).at, e = way(b).at, d = sub(e, p), t = norm(d), m = way((a + b) / 2), half = Math.hypot(...d) / 2 * (1 - 0.35 * i / 9); for (const n of [m.up, m.left]) put(add(mul(add(p, e), 0.5), mul(m.up, -0.003)), t, n, half, 0.95); }
+    for (let i = 0; i < 7; i++) { const a = 0.10 + 0.86 * i / 7, b = Math.min(0.995, a + 0.86 / 7 * 1.9), p = way(a).at, e = way(b).at, d = sub(e, p), t = norm(d), m = way((a + b) / 2), half = Math.hypot(...d) / 2 * (1 - 0.35 * i / 7); for (const n of [m.up, m.left]) put(add(mul(add(p, e), 0.5), mul(m.up, -0.003)), t, n, half, 0.95); }
     return { kind: 1, leaves };
   }
-  if (level < 3) { const per = level === 1 ? 4 : 9; for (const row of rows) for (let i = 0; i < row.length; i += per) { const g = row.slice(i, i + per); if (g.length * 2 < per) continue; const root = mean(g.map(l => l.root)), t = norm(mean(g.map(l => l.t))), n = mean(g.map(l => l.n)), long = g.reduce((a, l) => a + l.long, 0) / g.length, tone = g.reduce((a, l) => a + l.tone, 0) / g.length, full = g.length / per;
-    if (level === 1) for (const k of [0.27, 0.73]) put(add(root, mul(t, long * k)), t, n, long * 0.262 * big * Math.sqrt(full), tone); else put(add(root, mul(t, long * 0.5)), t, n, long * 0.54 * big * Math.sqrt(full), tone); }
+  // (by turns they lean a little to either side: turned as the mean of those they stand for, they would all look the same way, and be brighter by lamp for it)
+  if (level < 3) { const per = level === 1 ? 3 : 7; for (const row of rows) for (let i = 0; i < row.length; i += per) { const g = row.slice(i, i + per); if (g.length * 2 < per) continue; const root = mean(g.map(l => l.root)), long = g.reduce((a, l) => a + l.long, 0) / g.length, tone = g.reduce((a, l) => a + l.tone, 0) / g.length, full = Math.sqrt(g.length / per) * big, way1 = mean(g.map(l => l.t));
+    if (level === 1) for (const k of [0, 1]) { const one = g[k ? g.length - 1 : 0]!, t = norm(add(way1, mul(one.t, 0.8))); put(add(root, mul(t, long * [0.26, 0.74][k]!)), t, add(one.n, mul(cross(one.n, t), k === ((i / per) & 1) ? 0.3 : -0.3)), long * 0.226 * full, tone); } else { const t = norm(way1); put(add(root, mul(t, long * 0.5)), t, add(mean(g.map(l => l.n)), mul(cross(mean(g.map(l => l.n)), t), (i / per) % 2 ? 0.5 : -0.5)), long * 0.478 * full, tone); } }
     if (level === 1) for (let i = 0; i < 4; i++) { const m = way(0.16 + 0.2 * i); put(m.at, m.d, m.up, 0.035, 0.9); } }
-  else for (let i = 0; i < 5; i++) { const q = 0.16 + 0.84 * (i + 0.5) / 5, m = way(q), wide = f.leaflet * [0.62, 0.84, 0.82, 0.70, 0.5][i]!; put(m.at, m.d, m.up, wide * big, 0.45); }
+  else for (let i = 0; i < 5; i++) { const q = 0.16 + 0.84 * (i + 0.5) / 5, m = way(q), wide = f.leaflet * 0.925 * [0.62, 0.84, 0.82, 0.70, 0.5][i]!; put(m.at, m.d, m.up, wide * big, 0.45); }
   return { kind: 0, leaves };
 }
 const kept = new WeakMap<World, Map<number, number[]>>(), made = new Map<number, Cluster[]>();
@@ -73,7 +74,7 @@ function stem(p: Put, level: number) {
     // broad where it clasps the stem, narrow where it was cut
     const m = 0.36, e = Math.hypot(1, m), zo = z[0] * o[0] + z[2] * o[2] > 0 ? z : mul(z, -1); p.add({ at: add(add(axis(y), mul(o, g * 0.93)), mul(up, h * 0.45)), half: [w, h, 0.021], mat, tint: c, rot: [cross(up, zo), up, zo], planes: [[[1 / e, m / e, 0], (w * 0.72) / e], [[-1 / e, m / e, 0], (w * 0.72) / e]] });
   } }
-  p.bar([0, 0, 0], [0, 0.085, 0], 0.232, 0.185, mat, mul(BARK, level < 2 ? 0.84 : 0.92)); if (level < 2) p.bar([0, 0.004, 0], [0, 0.030, 0], 0.250, 0.222, mat, mul(BARK, 0.70));
+  p.bar([0, 0, 0], [0, 0.085, 0], 0.218, 0.185, mat, mul(BARK, level < 2 ? 0.84 : 0.92)); if (level < 2) p.bar([0, 0.004, 0], [0, 0.024, 0], 0.238, 0.216, mat, mul(BARK, 0.70));
   // the heart
   const heart = axis(2.24); p.ball(heart, [0.19, 0.20, 0.19], mat, FIBRE); if (level < 3) p.ball(add(heart, [0, 0.12, 0]), [0.11, 0.17, 0.11], mat, mul(FIBRE, 1.08));
 }
@@ -98,8 +99,8 @@ export const palm: ObjectKind = { name: 'palm', title: 'Date palm', make: (): Ma
   name: 'palm', title: 'Date palm', size: [3.6, 3.92, 3.75], on: 'floor', close: { at: [0.2, 2.4, 0.4], far: 5 }, read: 0, moves: { kind: 'sways' }, crowd: 49,
   levels: [
     { shape: 'leaves', error: 0, less: '', put(p) { put(p, 0); } },
-    { shape: 'leaves', error: 0.03, less: 'half of the stubs; two short leaves for four leaflets', put(p) { put(p, 1); } },
-    { shape: 'leaves', error: 0.06, less: 'stubs, the feet of the keels; one leaf for nine leaflets', put(p) { put(p, 2); } },
+    { shape: 'leaves', error: 0.03, less: 'half of the stubs; two short leaves for three leaflets', put(p) { put(p, 1); } },
+    { shape: 'leaves', error: 0.06, less: 'stubs, the feet of the keels; one leaf for seven leaflets', put(p) { put(p, 2); } },
     { shape: 'leaves', error: 0.13, less: 'leaflets: five leaves a frond, along it', put(p) { put(p, 3); } },
   ],
 }) };

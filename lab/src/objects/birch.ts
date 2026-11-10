@@ -54,7 +54,7 @@ function grow(seed: number): Grown {
     for (let j = 0; j < n; j++) { const u = j / n; p = add(p, mul(d, long / n)); pts.push(p); ds.push(d); const down = (0.62 + 0.28 * (1 - k)) * (0.35 + 1.0 * u) / n * 1.5; d = norm(add(add(d, mul([0, -1, 0], down)), mul(side, bend / n))); }
     for (let j = 0; j < n; j++) { const q0 = j / n, q1 = (j + 1) / n, ra = r0 + (0.0022 - r0) * q0, rb = r0 + (0.0022 - r0) * q1, w = Math.max(0, Math.min(1, (ra - 0.0055) / 0.006)); bars.push({ a: pts[j]!, b: pts[j + 1]!, ra, rb, tint: [0, 1, 2].map(c => TWIG[c]! + (WHITE[c]! * 0.90 - TWIG[c]!) * w) as V3, kind: ra > 0.007 ? 'limb' : 'branch' }); }
     // sprays: one at its end, others up its length to both sides and above, each on a short twig
-    const light = Math.max(0, Math.min(1, 0.15 + 0.65 * k)), many = Math.max(1, Math.round(long * 4.2));
+    const light = Math.max(0, Math.min(1, 0.15 + 0.65 * k)), many = Math.max(1, Math.round(long * 3.8));
     const put = (root: V3, y0: V3, s: number, l: number) => { const y = norm(y0); sprays.push({ root, y, kind: y[1] > 0.75 ? 3 : y[1] < -0.2 ? 2 : [0, 1, 4, 0, 1][Math.floor(r() * 5)]!, scale: s, light: l, roll: (r() - 0.5) * 1.3 }); };
     if (long > 0.6) for (let j = 0; j < 2; j++) { const x = n * (0.62 + 0.33 * (j + r()) / 2), e = Math.min(n - 1, Math.floor(x)), at = add(mul(pts[e]!, 1 - x + e), mul(pts[e + 1]!, x - e)); put(at, add(mul(ds[e]!, 0.30), [(r() - 0.5) * 0.4, -0.85, (r() - 0.5) * 0.4]), 0.24 + 0.08 * r(), light - 0.1); }
     put(pts[n]!, add(d, [0, 0.05, 0]), 0.30 + 0.06 * r(), light + 0.15);
@@ -67,7 +67,7 @@ function grow(seed: number): Grown {
 const grown = new Map<number, Grown>(), treeOf = (seed: number): Grown => { let g = grown.get(seed); if (!g) grown.set(seed, g = grow(seed)); return g; };
 // ---- levels
 interface Step { keep: number; twigs: boolean; big: number; bright: number; thin: 'twig' | 'branch' | 'limb' | 'stem'; every: number }
-const STEPS: Step[] = [{ keep: 0, twigs: true, big: 1, bright: 1, thin: 'twig', every: 1 }, { keep: 1, twigs: false, big: 1.04, bright: 0.965, thin: 'twig', every: 1 }, { keep: 4, twigs: false, big: 1.045, bright: 0.95, thin: 'branch', every: 1 }, { keep: 12, twigs: false, big: 1.10, bright: 0.93, thin: 'limb', every: 3 }];
+const STEPS: Step[] = [{ keep: 0, twigs: true, big: 1, bright: 1, thin: 'twig', every: 1 }, { keep: 1, twigs: false, big: 1.04, bright: 0.965, thin: 'twig', every: 1 }, { keep: 4, twigs: false, big: 1.05, bright: 0.985, thin: 'branch', every: 1 }, { keep: 12, twigs: false, big: 1.105, bright: 0.99, thin: 'limb', every: 3 }];
 const ORDER = ['twig', 'branch', 'limb', 'stem'], sprayKinds = KINDS.map(spray), kept = new WeakMap<World, Map<number, number[]>>();
 const clusters = (w: World, level: number): number[] => { let m = kept.get(w); if (!m) kept.set(w, m = new Map()); let l = m.get(level); if (!l) { const s = STEPS[level]!; m.set(level, l = sprayKinds.map(c => { w.clusters.push(cluster(c, s.keep, s.twigs, s.big)); return w.clusters.length - 1; })); } return l; };
 /** what makes it a birch close by: a dark moustache under every limb, lenticels that lie across, bands where the bark peels, dark cracks at the foot */
