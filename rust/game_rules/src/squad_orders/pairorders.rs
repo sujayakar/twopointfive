@@ -616,11 +616,11 @@ fn pair_orders_stage(g: &Game, foe: GuardId) -> V3 {
 }
 
 /// the job ends in words, and he stands where he is
-fn take_off(g: &mut Game, gd: GuardId, foe: GuardId, name: &str, why: &str, line: Option<&str>, aim: bool) {
-    if let Some(l) = line { crate::game::game_say(g, gd, l, None, None); }
+fn take_off(g: &mut Game, me: &Take, why: &str, line: Option<&str>, aim: bool) {
+    if let Some(l) = line { crate::game::game_say(g, me.gd, l, None, None); }
     let n = format!("off:{}", why);
     pair_orders_note(g, &n);
-    if aim { let w = format!("covering {}", name); pair_orders_stand(g, gd, &w, Some(foe)); } else { pair_orders_stand(g, gd, "holding", None); }
+    if aim { let w = format!("covering {}", me.name); pair_orders_stand(g, me.gd, &w, Some(me.foe)); } else { pair_orders_stand(g, me.gd, "holding", None); }
 }
 
 /// sent from Sam's shoulder, he comes back to it
@@ -637,13 +637,20 @@ fn take_rejoin(g: &mut Game, gd: GuardId, was_following: bool) -> bool {
     true
 }
 
-/// parked where he stands, square to the man, with these words on the row (the watched branches of takeTick)
-fn park_on(g: &mut Game, a: OrdersAssignmentId, here: V3, p: V3, c: V3) {
+/// A new post where he is told, with a fresh leg to it and no way round.
+fn new_post(g: &mut Game, a: OrdersAssignmentId, at: V3, face: Option<f64>) {
     let r = &mut asg!(g, a);
-    r.post = Some(here); if r.had == Some(here) { r.had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
-    r.goal = [here[0], 0.0, here[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
+    r.post = Some(at);
+    if r.had == Some(at) { r.had = None; }   // (`had` is asked by value: a mark he had that holds these numbers is not this one, so that one goes; any other stays)
+    r.goal = [at[0], 0.0, at[2]]; r.new_leg = true;   // (a new goal is a new leg, even at the same spot)
     r.via.clear();
-    r.face = Some(v3::yaw_to(p, c));
+    r.face = face;
+}
+
+/// parked where he stands, square to the man
+fn park_on(g: &mut Game, me: &Take) {
+    let c = g.ch[me.fc].pos;
+    new_post(g, me.a, me.here, Some(v3::yaw_to(me.p, c)));
 }
 
 fn set_words(g: &mut Game, a: OrdersAssignmentId, words: String) {
@@ -651,171 +658,46 @@ fn set_words(g: &mut Game, a: OrdersAssignmentId, words: String) {
     asg!(g, a).going = words.into();
 }
 
-/// One man's job, a frame at a time   (PairOrders.takeTick)
+/// One man's take: who is on whom, this frame.
+struct Take {
+    gd: GuardId,
+    a: OrdersAssignmentId,
+    foe: GuardId,
+    was_following: bool,
+    gc: CharId,
+    fc: CharId,
+    /// where he stands: nothing here moves him before the frame's end
+    p: V3,
+    here: V3,
+    name: String,
+    /// his hands are on the man
+    on: bool,
+}
+
+/// One man's job, a frame at a time: it ends if the man is down, had or has noticed; he holds while watched; his hands go on when he is in reach; else the walk to the man's back.
 pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
-    use crate::game::GuardState;
-    let j0 = match g.pair.jobs.get(gd) { Some(j) => *j, None => { pair_orders_stand(g, gd, "holding", None); return; } };
+    let Some(j0) = g.pair.jobs.get(gd).copied() else { pair_orders_stand(g, gd, "holding", None); return };
     let foe = j0.foe;
-    let was_following = j0.was_following;
-    let gc = g.gd[gd].ch;
-    let fc = g.gd[foe].ch;
-    let p = g.ch[gc].pos;   // (the TypeScript's `p` is the live array: nothing below moves him before the frame's end, so this is the same number)
-    let here = floor_of(p);
-    let name = name_of(g, foe);
-    if crate::condition::down(g, g.gd[foe].ch) || !g.guards.contains(&foe) {
-        if j0.handed == Some(true) && g.gd[foe].killer_id == g.ch[gc].id {
-            g.stats.pairup.finishes += 1;
-            let n = format!("finish:{} on {}", g.gd[gd].callsign, name);
-            pair_orders_note(g, &n);
-        }
-        if take_rejoin(g, gd, was_following) { pair_orders_note(g, "off:down"); } else { take_off(g, gd, foe, &name, "down", Some("he's down."), false); }
-        return;
-    }
-    if g.gd[foe].held.is_some() { take_off(g, gd, foe, &name, "held", Some("he's yours."), false); return; }
-    let on = j0.t0 >= 0.0;
-    if !on && (j0.handed == Some(true) || pair_orders_noticed(g, foe)) {
-        if crate::pairup::pair_up(g) && crate::spotted::spotted_take(g, gd, foe) {
-            if job!(g, gd).handed != Some(true) {
-                job!(g, gd).handed = Some(true);
-                let n = format!("blown:{} by {}", g.gd[gd].callsign, name);
-                pair_orders_note(g, &n);
-                let n = format!("handed:{} on {}", g.gd[gd].callsign, name);
-                pair_orders_note(g, &n);
-            }
-            asg!(g, a).crouch = Some(false);
-            set_words(g, a, format!("taking {} by hand", name));
-            return;
-        }
-        if job!(g, gd).handed != Some(true) {
-            let n = format!("blown:{} by {}", g.gd[gd].callsign, name);
-            pair_orders_note(g, &n);
-        }
-        let seen_me = g.gd[foe].foe == Some(g.gd[gd].ch);
-        take_off(g, gd, foe, &name, "blown", Some(if seen_me { "he's seen me!" } else { "he's onto us." }), true);
-        return;
-    }
-    if !on && !pair_orders_quiet(g, &crate::seats::here(g)) { take_off(g, gd, foe, &name, "loud", Some("going loud."), true); return; }
+    let (gc, fc) = (g.gd[gd].ch, g.gd[foe].ch);
+    let p = g.ch[gc].pos;
+    let me = Take { gd, a, foe, was_following: j0.was_following, gc, fc, p, here: floor_of(p), name: name_of(g, foe), on: j0.t0 >= 0.0 };
+    if crate::condition::down(g, g.gd[foe].ch) || !g.guards.contains(&foe) { his_man_is_down(g, &me); return; }
+    if g.gd[foe].held.is_some() { take_off(g, &me, "held", Some("he's yours."), false); return; }
+    if !me.on && (j0.handed == Some(true) || pair_orders_noticed(g, foe)) { blown(g, &me); return; }
+    if !me.on && !pair_orders_quiet(g, &crate::seats::here(g)) { take_off(g, &me, "loud", Some("going loud."), true); return; }
     let d = v3::dist_xz(p, g.ch[fc].pos);
     let behind_him = pair_orders_rear(g, foe, p, None);
     let live = *job!(g, gd);
-    if !on && g.k.spotted.on && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught && !pair_orders_last_paces(g, live, gd) {
-        let by = crate::spotted::spotted_by(g, gd);
-        let tail = match by { Some(b) => format!(" by {}", name_of(g, b)), None => String::new() };
-        let n = format!("blown:{} caught{}", g.gd[gd].callsign, tail);
-        pair_orders_note(g, &n);
-        pair_orders_note(g, "off:caught");
-        let w = match by { Some(b) => format!("covering {}", name_of(g, b)), None => String::from("holding") };
-        pair_orders_stand(g, gd, &w, by);
-        return;
-    }
-    // HE'S WATCHED: he does not go; he says who, stays where he is, and goes the moment that man looks away
-    if live.go && !on && pair_orders_held(g, live, gd) {
-        let now = pair_orders_watcher(g, foe, gd);
-        let w = now.or(job!(g, gd).watcher).unwrap();
-        let wn = name_of(g, w);
-        if now.is_none() {
-            let (seen_t, cued, back_said) = { let r = job!(g, gd); (r.seen_t, r.cued, r.back_said) };
-            if g.time - seen_t > 0.4 && cued && back_said != Some(true) {
-                crate::game::game_say(g, gd, "he'll look back. your call.", None, None);
-                job!(g, gd).back_said = Some(true);
-                let n = format!("lookback:{} by {}", name, wn);
-                pair_orders_note(g, &n);
-            }
-            let t = g.time;
-            job!(g, gd).back_t = Some(t);
-            let c = g.ch[fc].pos;
-            park_on(g, a, here, p, c);
-            set_words(g, a, format!("on {} · {} will look back · press F to go anyway", name, wn));
-            if job!(g, gd).mode == crate::pairorders::JobMode::Now && g.time - job!(g, gd).watch_t > g.k.pair.heel_wait {
-                take_off(g, gd, foe, &name, "watched", Some("someone's watching him. no opening."), false);
-            }
-            return;
-        }
-        if job!(g, gd).watcher.is_none() {
-            let t = g.time;
-            if t - job!(g, gd).seen_t > 2.0 { job!(g, gd).watch_t = t; }
-            let n = format!("watched:{} by {}", name, wn);
-            pair_orders_note(g, &n);
-            if t - job!(g, gd).cue_t > 8.0 {
-                let l = format!("hold. {} has eyes on him.", wn);
-                crate::game::game_say(g, gd, &l, None, None);
-                let r = job!(g, gd);
-                r.cue_t = t;
-                r.cued = true;
-            }
-        }
-        let t = g.time;
-        let r = job!(g, gd);
-        r.watcher = Some(w);
-        r.seen_t = t;
-        let c = g.ch[fc].pos;
-        park_on(g, a, here, p, c);
-        set_words(g, a, format!("on {} · WATCHED by {} · press F to go anyway", name, wn));
-        if job!(g, gd).mode == crate::pairorders::JobMode::Now && g.time - job!(g, gd).watch_t > g.k.pair.heel_wait {
-            take_off(g, gd, foe, &name, "watched", Some("someone's watching him. no opening."), false);
-        }
-        return;
-    }
-    { let t = g.time; let r = job!(g, gd); if r.watcher.is_some() && !r.force && t - r.seen_t < 0.4 { return; } }
-    if job!(g, gd).watcher.is_some() {
-        job!(g, gd).watcher = None;
-        if job!(g, gd).cued { crate::game::game_say(g, gd, "clear. moving.", None, None); }
-        let t = g.time;
-        let r = job!(g, gd);
-        r.cued = false;
-        r.back_said = Some(false);
-        r.born = t;
-        r.wait_t = -1.0;
-        r.heel_t = -1.0;
-        let n = format!("clear:{} on {}", g.gd[gd].callsign, name);
-        pair_orders_note(g, &n);
-        if v3::dist_xz(asg!(g, a).post.unwrap_or(here), here) < 0.05 { asg!(g, a).moved_t = t; asg!(g, a).mark_t = t; }
-    }
-    let fp = g.ch[fc].pos;
-    if job!(g, gd).go && d < g.k.pair.reach + (if on { 0.4 } else { 0.0 }) && (on || behind_him) && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [fp[0], 1.0, fp[2]], None) {
-        if !on {
-            let t = g.time;
-            job!(g, gd).t0 = t;
-            crate::character::anim_strike(g, gc, None, None);
-            crate::takedown::partner_begin(g, gd, foe, false);
-            let n = format!("hands:{} on {}", g.gd[gd].callsign, name);
-            pair_orders_note(g, &n);
-        }
-        if g.k.pair.scuffle > 0.0 && !job!(g, gd).scuffled {
-            job!(g, gd).scuffled = true;
-            let (pos, t, level, serial) = (v3::copy(g.ch[fc].pos), g.time, g.k.pair.scuffle, g.serial());
-            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos, time: t, loud: false, level: Some(level), who: Some(0.0), serial, ..Default::default() });
-        }
-        let to = if d > 0.7 { pair_orders_behind(g, foe) } else { here };
-        let go_pace = g.k.pair.go_pace;
-        let c = g.ch[fc].pos;
-        let r = &mut asg!(g, a);
-        r.post = Some(to); if r.had == Some(to) { r.had = None; }
-        r.goal = [to[0], 0.0, to[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
-        r.via.clear();
-        r.arrived = false;
-        r.pace = Some(go_pace);
-        r.face = Some(v3::yaw_to(p, c));
-        r.crouch = Some(false);
-        if g.time - job!(g, gd).t0 >= g.k.pair.secs {
-            crate::takedown::partner_fall(g, foe, false, Some(gd));
-            let c = g.ch[fc].pos;
-            let dir = v3::normalize([c[0] - p[0], 0.0, c[2] - p[2]]);
-            crate::combat::kill_guard(g, foe, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), crate::game::With::Hand);
-            let n = format!("down:{} by {}", name, g.gd[gd].callsign);
-            pair_orders_note(g, &n);
-            if !take_rejoin(g, gd, was_following) {
-                crate::game::game_say(g, gd, "he's down.", None, None);
-                pair_orders_stand(g, gd, "holding", None);
-            }
-        }
-        return;
-    }
+    if !me.on && g.k.spotted.on && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught && !pair_orders_last_paces(g, live, gd) { caught(g, &me); return; }
+    if live.go && !me.on && pair_orders_held(g, live, gd) { he_is_watched(g, &me); return; }
+    if watcher_just_gone(g, gd) { return; }
+    if job!(g, gd).watcher.is_some() { clear_to_move(g, &me); }
+    if in_reach(g, &me, d, behind_him) { hands_on(g, &me, d); return; }
     if job!(g, gd).t0 >= 0.0 { crate::takedown::partner_cancel(g, gd, foe); }
     job!(g, gd).t0 = -1.0;
     let staging = !job!(g, gd).go;
     if !(staging && job!(g, gd).set) && g.time - job!(g, gd).born > g.k.pair.take_secs {
-        take_off(g, gd, foe, &name, "time", Some("can't get behind him."), false);
+        take_off(g, &me, "time", Some("can't get behind him."), false);
         return;
     }
     if g.time - job!(g, gd).check_t < g.k.pair.stalk_every && asg!(g, a).post.is_some() { return; }
@@ -823,78 +705,263 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     job!(g, gd).check_t = t;
     let want = if staging { pair_orders_stage(g, foe) } else { pair_orders_behind(g, foe) };
     let spot = crate::orders::squad_orders_free_spot(g, &crate::seats::here(g), want).unwrap_or(want);
-    if staging && job!(g, gd).set && behind_him && v3::dist_xz(p, spot) < 0.7 && pair_orders_clear_of(g, here, spot) {
-        let c = g.ch[fc].pos;
-        park_on(g, a, here, p, c);
-        return;
-    }
+    if staging && job!(g, gd).set && behind_him && v3::dist_xz(p, spot) < 0.7 && pair_orders_clear_of(g, me.here, spot) { park_on(g, &me); return; }
     // the way to his back: he WAITS where he is while the only way lies across somebody's eyes, goes when it is clear, and says so if it never is
     let pace = if job!(g, gd).going { g.k.pair.go_pace } else { g.k.pair.pace };
     let way = pair_orders_stalk(g, gd, spot, Some(pace));
-    if (way.exposed && !job!(g, gd).force) || !pair_orders_back_open(g, foe, spot) {
-        let t = g.time;
-        if job!(g, gd).wait_t < 0.0 { job!(g, gd).wait_t = t; }
-        job!(g, gd).set = false;
-        let wait_t = job!(g, gd).wait_t;
-        let force = job!(g, gd).force;
-        let face = if t - wait_t < g.k.pair.steady_face_secs { None } else { Some(v3::yaw_to(p, g.ch[fc].pos)) };
-        let r = &mut asg!(g, a);
-        r.post = Some(here); if r.had == Some(here) { r.had = None; }   // (a NEW ARRAY in `post`'s place: `A.had === A.post`, orders.ts:1472, is an identity: a mark he had that holds THESE numbers is not this one, and `had` is asked by value, so that one goes; any other stays, as the TypeScript's stale one stays. STAND-IN by value)
-        r.goal = [here[0], 0.0, here[2]]; r.new_leg = true;   // (a new array in the TypeScript: squad.ts order takes a new goal OBJECT for a new leg, even at the same spot: Assignment.new_leg)
-        r.via.clear();
-        r.face = face;
-        let words = if !way.exposed || force { format!("waiting · no room at {}'s back", name) }
-            else { match way.by {
-                None => format!("waiting · no way to {} unseen", name),
-                Some(b) if b == foe => format!("waiting · {} is facing this way", name),
-                Some(b) => format!("waiting · {} is looking across the way to {}", name_of(g, b), name),
-            } };
-        set_words(g, a, words);
-        if g.time - wait_t > g.k.pair.stalk_wait {
-            let line = if !way.exposed || force { "no room behind him." } else { "can't get behind him unseen." };
-            take_off(g, gd, foe, &name, "noway", Some(line), false);
+    if (way.exposed && !job!(g, gd).force) || !pair_orders_back_open(g, foe, spot) { waits_for_a_way(g, &me, &way); return; }
+    job!(g, gd).wait_t = -1.0;
+    let stops_here = if staging { set_on_the_stage(g, &me, spot) } else { waits_on_a_glance(g, &me, d) };
+    if !stops_here { walks_on(g, &me, spot, &way); }
+}
+
+/// His man is down: a finish of his own is counted, and he comes back to Sam or stands where he is.
+fn his_man_is_down(g: &mut Game, me: &Take) {
+    if job!(g, me.gd).handed == Some(true) && g.gd[me.foe].killer_id == g.ch[me.gc].id {
+        g.stats.pairup.finishes += 1;
+        let n = format!("finish:{} on {}", g.gd[me.gd].callsign, me.name);
+        pair_orders_note(g, &n);
+    }
+    if take_rejoin(g, me.gd, me.was_following) { pair_orders_note(g, "off:down"); } else { take_off(g, me, "down", Some("he's down."), false); }
+}
+
+/// The man has noticed: his partner takes him by hand if he can, else the job ends with his gun on the man.
+fn blown(g: &mut Game, me: &Take) {
+    let gd = me.gd;
+    if crate::pairup::pair_up(g) && crate::spotted::spotted_take(g, gd, me.foe) {
+        if job!(g, gd).handed != Some(true) {
+            job!(g, gd).handed = Some(true);
+            let n = format!("blown:{} by {}", g.gd[gd].callsign, me.name);
+            pair_orders_note(g, &n);
+            let n = format!("handed:{} on {}", g.gd[gd].callsign, me.name);
+            pair_orders_note(g, &n);
         }
+        asg!(g, me.a).crouch = Some(false);
+        set_words(g, me.a, format!("taking {} by hand", me.name));
         return;
     }
-    job!(g, gd).wait_t = -1.0;
-    if staging {
-        if v3::dist_xz(p, spot) < 0.45 {
-            job!(g, gd).set = true;
-            let c = g.ch[fc].pos;
-            park_on(g, a, here, p, c);
-            set_words(g, a, format!("set on {} · press F to give the mark", name));
-            if !job!(g, gd).set_said {
-                job!(g, gd).set_said = true;
-                crate::game::game_say(g, gd, "set.", None, None);
-                let n = format!("set:{} on {}", g.gd[gd].callsign, name);
-                pair_orders_note(g, &n);
-            }
-            return;
-        }
-        job!(g, gd).set = false;
-        set_words(g, a, format!("moving up on {}", name));
+    if job!(g, gd).handed != Some(true) {
+        let n = format!("blown:{} by {}", g.gd[gd].callsign, me.name);
+        pair_orders_note(g, &n);
+    }
+    let seen_me = g.gd[me.foe].foe == Some(g.gd[gd].ch);
+    take_off(g, me, "blown", Some(if seen_me { "he's seen me!" } else { "he's onto us." }), true);
+}
+
+/// The pair is caught short of the last paces: the job ends with his gun on whoever caught him.
+fn caught(g: &mut Game, me: &Take) {
+    let gd = me.gd;
+    let by = crate::spotted::spotted_by(g, gd);
+    let tail = match by { Some(b) => format!(" by {}", name_of(g, b)), None => String::new() };
+    let n = format!("blown:{} caught{}", g.gd[gd].callsign, tail);
+    pair_orders_note(g, &n);
+    pair_orders_note(g, "off:caught");
+    let w = match by { Some(b) => format!("covering {}", name_of(g, b)), None => String::from("holding") };
+    pair_orders_stand(g, gd, &w, by);
+}
+
+/// HE'S WATCHED: he does not go; he says who, stays where he is, and goes the moment that man looks away. A take on the spot gives up when it has waited too long.
+fn he_is_watched(g: &mut Game, me: &Take) {
+    let gd = me.gd;
+    let now = pair_orders_watcher(g, me.foe, gd);
+    let w = now.or(job!(g, gd).watcher).unwrap();
+    let wn = name_of(g, w);
+    let words = if now.is_none() {
+        will_look_back(g, me, &wn);
+        format!("on {} · {} will look back · press F to go anyway", me.name, wn)
     } else {
-        set_words(g, a, format!("on {}", name));
-        // the last yards, inside his near field, when nobody gave the moment: on the heels of a glance, or after `heelWait` of none, anyway
-        let gl = g.pair.glance.get(foe).copied();
+        eyes_on_him(g, me, w, &wn);
+        format!("on {} · WATCHED by {} · press F to go anyway", me.name, wn)
+    };
+    park_on(g, me);
+    set_words(g, me.a, words);
+    if job!(g, gd).mode == crate::pairorders::JobMode::Now && g.time - job!(g, gd).watch_t > g.k.pair.heel_wait {
+        take_off(g, me, "watched", Some("someone's watching him. no opening."), false);
+    }
+}
+
+/// The watcher has only turned his head: he says so, once, if he had called the watcher.
+fn will_look_back(g: &mut Game, me: &Take, wn: &str) {
+    let gd = me.gd;
+    let (seen_t, cued, back_said) = { let r = job!(g, gd); (r.seen_t, r.cued, r.back_said) };
+    if g.time - seen_t > 0.4 && cued && back_said != Some(true) {
+        crate::game::game_say(g, gd, "he'll look back. your call.", None, None);
+        job!(g, gd).back_said = Some(true);
+        let n = format!("lookback:{} by {}", me.name, wn);
+        pair_orders_note(g, &n);
+    }
+    let t = g.time;
+    job!(g, gd).back_t = Some(t);
+}
+
+/// A man has eyes on him: noted, and called if it has been a while since the last call.
+fn eyes_on_him(g: &mut Game, me: &Take, w: GuardId, wn: &str) {
+    let gd = me.gd;
+    if job!(g, gd).watcher.is_none() {
         let t = g.time;
-        if let Some(gl) = gl {
-            if job!(g, gd).mode == crate::pairorders::JobMode::Now && !job!(g, gd).going && d > g.k.pair.reach && d < g.k.pair.heel_ring && (gl.on || t - gl.end_t > g.k.pair.heel_fresh) {
-                if job!(g, gd).heel_t < 0.0 { job!(g, gd).heel_t = t; }
-                if t - job!(g, gd).heel_t < g.k.pair.heel_wait {
-                    let c = g.ch[fc].pos;
-                    park_on(g, a, here, p, c);
-                    return;
-                }
+        if t - job!(g, gd).seen_t > 2.0 { job!(g, gd).watch_t = t; }
+        let n = format!("watched:{} by {}", me.name, wn);
+        pair_orders_note(g, &n);
+        if t - job!(g, gd).cue_t > 8.0 {
+            let l = format!("hold. {} has eyes on him.", wn);
+            crate::game::game_say(g, gd, &l, None, None);
+            let r = job!(g, gd);
+            r.cue_t = t;
+            r.cued = true;
+        }
+    }
+    let t = g.time;
+    let r = job!(g, gd);
+    r.watcher = Some(w);
+    r.seen_t = t;
+}
+
+/// The watcher looked away less than a moment ago: he holds on a little yet, unless he was told to go anyway.
+fn watcher_just_gone(g: &mut Game, gd: GuardId) -> bool {
+    let t = g.time;
+    let r = job!(g, gd);
+    r.watcher.is_some() && !r.force && t - r.seen_t < 0.4
+}
+
+/// The watcher has gone: he says so if he had called him, and his clocks start over.
+fn clear_to_move(g: &mut Game, me: &Take) {
+    let gd = me.gd;
+    job!(g, gd).watcher = None;
+    if job!(g, gd).cued { crate::game::game_say(g, gd, "clear. moving.", None, None); }
+    let t = g.time;
+    let r = job!(g, gd);
+    r.cued = false;
+    r.back_said = Some(false);
+    r.born = t;
+    r.wait_t = -1.0;
+    r.heel_t = -1.0;
+    let n = format!("clear:{} on {}", g.gd[gd].callsign, me.name);
+    pair_orders_note(g, &n);
+    if v3::dist_xz(asg!(g, me.a).post.unwrap_or(me.here), me.here) < 0.05 { asg!(g, me.a).moved_t = t; asg!(g, me.a).mark_t = t; }
+}
+
+/// Sent, close enough, at the man's back or already on him, and nothing solid between them.
+fn in_reach(g: &mut Game, me: &Take, d: f64, behind_him: bool) -> bool {
+    let (p, fp) = (me.p, g.ch[me.fc].pos);
+    job!(g, me.gd).go && d < g.k.pair.reach + (if me.on { 0.4 } else { 0.0 }) && (me.on || behind_him)
+        && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [fp[0], 1.0, fp[2]], None)
+}
+
+/// His hands go on and stay on, with a scuffle that can be heard, until the seconds it takes are up and the man goes down.
+fn hands_on(g: &mut Game, me: &Take, d: f64) {
+    let gd = me.gd;
+    if !me.on {
+        let t = g.time;
+        job!(g, gd).t0 = t;
+        crate::character::anim_strike(g, me.gc, None, None);
+        crate::takedown::partner_begin(g, gd, me.foe, false);
+        let n = format!("hands:{} on {}", g.gd[gd].callsign, me.name);
+        pair_orders_note(g, &n);
+    }
+    if g.k.pair.scuffle > 0.0 && !job!(g, gd).scuffled {
+        job!(g, gd).scuffled = true;
+        let (pos, t, level, serial) = (v3::copy(g.ch[me.fc].pos), g.time, g.k.pair.scuffle, g.serial());
+        g.events.push(crate::game::GameEvent {
+            kind: crate::director::EventKind::Prop, pos, time: t, loud: false, level: Some(level), who: Some(0.0), serial, ..Default::default()
+        });
+    }
+    let to = if d > 0.7 { pair_orders_behind(g, me.foe) } else { me.here };
+    let go_pace = g.k.pair.go_pace;
+    let c = g.ch[me.fc].pos;
+    new_post(g, me.a, to, Some(v3::yaw_to(me.p, c)));
+    let r = &mut asg!(g, me.a);
+    r.arrived = false;
+    r.pace = Some(go_pace);
+    r.crouch = Some(false);
+    if g.time - job!(g, gd).t0 >= g.k.pair.secs { takes_him_down(g, me); }
+}
+
+/// The man is down, by his hands; he comes back to Sam or holds where he is.
+fn takes_him_down(g: &mut Game, me: &Take) {
+    let gd = me.gd;
+    crate::takedown::partner_fall(g, me.foe, false, Some(gd));
+    let c = g.ch[me.fc].pos;
+    let dir = v3::normalize([c[0] - me.p[0], 0.0, c[2] - me.p[2]]);
+    crate::combat::kill_guard(g, me.foe, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), crate::game::With::Hand);
+    let n = format!("down:{} by {}", me.name, g.gd[gd].callsign);
+    pair_orders_note(g, &n);
+    if !take_rejoin(g, gd, me.was_following) {
+        crate::game::game_say(g, gd, "he's down.", None, None);
+        pair_orders_stand(g, gd, "holding", None);
+    }
+}
+
+/// No way to his back: he waits where he is, says why on the row, and after a while gives up.
+fn waits_for_a_way(g: &mut Game, me: &Take, way: &crate::pairorders::PairOrdersStalk) {
+    let (gd, foe) = (me.gd, me.foe);
+    let t = g.time;
+    if job!(g, gd).wait_t < 0.0 { job!(g, gd).wait_t = t; }
+    job!(g, gd).set = false;
+    let wait_t = job!(g, gd).wait_t;
+    let force = job!(g, gd).force;
+    let face = if t - wait_t < g.k.pair.steady_face_secs { None } else { Some(v3::yaw_to(me.p, g.ch[me.fc].pos)) };
+    new_post(g, me.a, me.here, face);
+    let words = if !way.exposed || force { format!("waiting · no room at {}'s back", me.name) }
+        else { match way.by {
+            None => format!("waiting · no way to {} unseen", me.name),
+            Some(b) if b == foe => format!("waiting · {} is facing this way", me.name),
+            Some(b) => format!("waiting · {} is looking across the way to {}", name_of(g, b), me.name),
+        } };
+    set_words(g, me.a, words);
+    if g.time - wait_t > g.k.pair.stalk_wait {
+        let line = if !way.exposed || force { "no room behind him." } else { "can't get behind him unseen." };
+        take_off(g, me, "noway", Some(line), false);
+    }
+}
+
+/// Waiting on the mark: on his spot he is set and says so, once (true: he stops there); short of it he moves up.
+fn set_on_the_stage(g: &mut Game, me: &Take, spot: V3) -> bool {
+    let gd = me.gd;
+    if v3::dist_xz(me.p, spot) >= 0.45 {
+        job!(g, gd).set = false;
+        set_words(g, me.a, format!("moving up on {}", me.name));
+        return false;
+    }
+    job!(g, gd).set = true;
+    park_on(g, me);
+    set_words(g, me.a, format!("set on {} · press F to give the mark", me.name));
+    if !job!(g, gd).set_said {
+        job!(g, gd).set_said = true;
+        crate::game::game_say(g, gd, "set.", None, None);
+        let n = format!("set:{} on {}", g.gd[gd].callsign, me.name);
+        pair_orders_note(g, &n);
+    }
+    true
+}
+
+/// The last yards, inside his near field, when nobody gave the moment: on the heels of a glance, or after `heel_wait` of none, anyway. True: he waits this frame.
+fn waits_on_a_glance(g: &mut Game, me: &Take, d: f64) -> bool {
+    let gd = me.gd;
+    set_words(g, me.a, format!("on {}", me.name));
+    let gl = g.pair.glance.get(me.foe).copied();
+    let t = g.time;
+    if let Some(gl) = gl {
+        if job!(g, gd).mode == crate::pairorders::JobMode::Now && !job!(g, gd).going && d > g.k.pair.reach && d < g.k.pair.heel_ring
+            && (gl.on || t - gl.end_t > g.k.pair.heel_fresh)
+        {
+            if job!(g, gd).heel_t < 0.0 { job!(g, gd).heel_t = t; }
+            if t - job!(g, gd).heel_t < g.k.pair.heel_wait {
+                park_on(g, me);
+                return true;
             }
         }
-        if d < g.k.pair.heel_ring { job!(g, gd).going = true; }
     }
-    if let Some(post) = asg!(g, a).post {
-        if v3::dist_xz(post, here) < 0.05 { let t = g.time; asg!(g, a).moved_t = t; asg!(g, a).mark_t = t; }
+    if d < g.k.pair.heel_ring { job!(g, gd).going = true; }
+    false
+}
+
+/// On his way to the spot, crouched, by the way the stalk found.
+fn walks_on(g: &mut Game, me: &Take, spot: V3, way: &crate::pairorders::PairOrdersStalk) {
+    if let Some(post) = asg!(g, me.a).post {
+        if v3::dist_xz(post, me.here) < 0.05 { let t = g.time; asg!(g, me.a).moved_t = t; asg!(g, me.a).mark_t = t; }
     }
-    let pace = if job!(g, gd).going { g.k.pair.go_pace } else { g.k.pair.pace };
-    let r = &mut asg!(g, a);
+    let pace = if job!(g, me.gd).going { g.k.pair.go_pace } else { g.k.pair.pace };
+    let r = &mut asg!(g, me.a);
     r.pace = Some(pace);
     r.crouch = Some(true);
     r.face = None;
@@ -904,9 +971,8 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     let n = way.path.len();
     if n > 0 { for q in way.path[..n - 1].iter() { r.via.push(*q); } }
     r.goal = v3::copy(r.via.first().copied().unwrap_or(spot));
-    // (pairorders.ts:486 fills `A.via` with the fresh way's own points and copies the first: every one a new object. orders.ts:1457 then hands
-    //  `A.via[0]` on as the goal, and squad.ts order takes a new goal OBJECT for a new leg even at the same spot, so the man's path is dropped and
-    //  found again from where he stands. Without this word a way searched afresh to the same corner left him on the path of the old one.)
+    // (a fresh way is a new leg even to the same corner, so his path is dropped and found again from where he stands. Without this a way searched afresh to the same corner left
+    // him on the path of the old one.)
     r.new_leg = true;
 }
 
