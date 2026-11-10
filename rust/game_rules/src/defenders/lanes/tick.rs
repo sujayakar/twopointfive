@@ -467,9 +467,10 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
         s(g).flank.set(gd, now + m::min(60.0, len / 2.0 + 10.0));
         let l_from = g.tab.lanes_lane[l].from;
         if let (true, Some(stop)) = (way_pin, stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
-            s(g).flank_of.set(gd, crate::lanes::Flank { lane: id, phase: crate::lanes::FlankPhase::Walk, at: stop, t: now, n: 0.0 });
+            s(g).flank_of.set(gd, crate::lanes::Flank { lane: id, phase: crate::lanes::FlankPhase::Walk, at: stop, t: now });
             clear_path(g, gd);
-            crate::roomfight::run(g, d, stop, None, 0.0, crate::owner::by::LANE);
+            let pace = g.tune.guard_chase;
+            crate::roomfight::send(g, d, crate::roomfight::Leg::errand(stop, pace), crate::owner::by::LANE);
             crate::belief::word(g, gd, l_from);
             if first { round_shout(g, gd); }
             continue;
@@ -744,20 +745,11 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
         if f.phase == FlankPhase::Walk {
             if !flanking(g, gd) { continue; }   // (too long on the way: let go of, the entry gone with it)
             if g.time - g.gd[gd].last_seen_t < 1.0 { s(g).flank_of.delete(gd); s(g).flank.delete(gd); continue; }   // (met one of them on the way: the fight's)
-            if flat(pos_of(g, gd), f.at) > 0.8 {   // not there yet
-                if crate::roomfight::on_leg(g, d) {   // (still walking it, or sent elsewhere meanwhile)
-                    if crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && goal_of(g, gd).map_or(false, |to| flat(to, f.at) < 0.8) { continue; }
-                    s(g).flank_of.delete(gd); s(g).flank.delete(gd);
-                    continue;
-                }
-                if g.time - f.t < 2.0 { continue; }
-                f.n += 1.0;
-                if f.n > 4.0 { s(g).flank_of.delete(gd); s(g).flank.delete(gd); continue; }   // (walked on, a few times, then let go)
-                f.t = g.time;
-                s(g).flank_of.set(gd, f);
-                clear_path(g, gd);
-                crate::roomfight::run(g, d, f.at, None, 0.0, crate::owner::by::LANE);
-                continue;
+            let his = crate::roomfight::sent_to(g, d).is_some_and(|to| flat(to, f.at) < 0.8);   // (or sent elsewhere meanwhile)
+            match crate::roomfight::leg_ended(g, d, crate::owner::by::LANE) {
+                None if his => continue,
+                Some(crate::roomfight::LegEnd::Arrived) if his => {}
+                _ => { s(g).flank_of.delete(gd); s(g).flank.delete(gd); continue; }   // (no way round, or somebody else's)
             }
             s(g).flank.delete(gd);
             let p = pos_of(g, gd);

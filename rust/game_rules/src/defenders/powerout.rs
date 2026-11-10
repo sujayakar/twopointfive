@@ -39,13 +39,6 @@ fn bo_permanent(g: &Game) -> bool {
 fn guard_at(g: &Game, i: f64) -> Option<GuardId> {
     if i < 0.0 { None } else { g.guards.get(i as usize).copied() }
 }
-/// `gd.script.arrived = false` where he has a script
-fn clear_arrived(g: &mut Game, gd: GuardId) {
-    if let Some(s) = g.gd[gd].script.as_mut() {
-        s.arrived = Some(false);
-    }
-}
-
 // ---------------------------------------------------------------- the rule's small questions
 
 /// distance on the floor.
@@ -263,52 +256,10 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, lever: V3, way: &[V3], fro
     CoverSpot { spot: best.unwrap_or(lever), watch: back }
 }
 
-/// how a man holds his post now.
-pub fn calm_of(g: &crate::game::Game, d: RoomfightDefId) -> crate::powerout::Calm {
-    let row = &g.tab.roomfight_def[d];
-    let gd = &g.gd[row.gd];
-    Calm {
-        awareness: gd.awareness,
-        hold: gd.hold,
-        pinned: gd.pinned,
-        station: row.station,
-        home: row.home,
-        room: row.room,
-        ev: row.ev.clone(),
-        watch: row.watch,
-        want: row.want,
-        pt: row.pt,
-    }
-}
-
-/// a leg of the walk: pressure.ts's scripted leg at the pace of a man going to look.
+/// out on the party's errand, at the pace of a man going to look: there, he stands there.
 fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::BREAKER);
-    let gd = g.tab.roomfight_def[d].gd;
-    let speed = g.tune.guard_investigate;
-    crate::squad::order(g, gd, crate::squad::OrderPatch { speed: Some(Some(speed)), ..Default::default() });
-}
-
-/// back on the post he left, as he held it.
-fn settle(g: &mut crate::game::Game, m: &crate::powerout::Man, d: RoomfightDefId) {
-    let word = st(g).word;
-    calm_back(g, d, m.calm.as_ref().unwrap(), word);
-}
-
-/// the post in a kept calm
-fn held_of(c: &crate::powerout::Calm) -> crate::roomfight::Held {
-    crate::roomfight::Held { hold: c.hold, pinned: c.pinned, station: c.station, home: c.home, room: c.room, ev: c.ev.clone(), watch: c.watch, want: c.want, pt: c.pt }
-}
-
-/// a man back on the post he left, as `calm_of` read it there; `wary`: he is not calmed down again.
-pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powerout::Calm, wary: bool) {
-    let gd = g.tab.roomfight_def[d].gd;
-    if g.gd[gd].script.is_some() {
-        let state = if wary { crate::game::GuardState::Suspicious } else { crate::game::GuardState::Patrol };
-        crate::squad::end_guard_script(g, gd, Some(state));
-    }
-    crate::mind::set(g, gd, if wary { m::min(0.45, m::max(c_2.awareness, 0.35)) } else { c_2.awareness }, "powerout");
-    crate::roomfight::back_on(g, d, held_of(c_2), "powerout");
+    let pace = g.tune.guard_investigate;
+    crate::roomfight::send(g, d, crate::roomfight::Leg { stays: true, ..crate::roomfight::Leg::errand(to, pace) }, crate::owner::by::BREAKER);
 }
 
 // ---------------------------------------------------------------- the trip
@@ -367,7 +318,6 @@ fn decide_out(g: &mut crate::game::Game) {
                 continue;
             }
             man(g, at).phase = Phase::Out;
-            man(g, at).tries = 0.0;
             let goal = man(g, at).goal;
             walk(g, d, goal);
             event(g, PowerOutEventWhat::Go, Some(gd), "the lights go again on his way home: he turns back for the lever");
@@ -606,11 +556,8 @@ fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
         goal: lever,
         from: g.tab.roomfight_def[lead.0].station,
         watch: None,
-        tries: 0.0,
-        step_t: -100.0,
         heard0: 0.0,
         there_t: -1.0,
-        calm: None,
     };
     st(g).men.push(lead_man);
     if let Some(second) = &second {
@@ -624,12 +571,9 @@ fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
             goal: c.spot,
             from: g.tab.roomfight_def[second.0].station,
             watch: Some(c.watch),
-            tries: 0.0,
-            step_t: -100.0,
             heard0: 0.0,
             there_t: -1.0,
-            calm: None,
-        };
+            };
         st(g).men.push(cover_man);
     }
     let go_at = g.time + g.k.powerout.beat;
@@ -736,7 +680,6 @@ fn all_back(g: &mut Game) {
         if let Some(xd) = def_of(g, x) {
             if crate::roomfight::on_leg_of(g, xd, crate::owner::by::BREAKER) && man(g, j).phase != Phase::Wait {
                 man(g, j).phase = Phase::Back;
-                man(g, j).tries = 0.0;
                 let from = man(g, j).from;
                 walk(g, xd, from);
             }
@@ -773,15 +716,13 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
     if man(g, i).phase == Phase::Wait {
         return true;
     }
-    let step_t = man(g, i).step_t;
-    let step_t = crate::roomfight::boots(g, gd, step_t);
-    man(g, i).step_t = step_t;
     let role = man(g, i).role;
     let from = man(g, i).from;
     let heard0 = man(g, i).heard0;
     let at_lever = role == ManRole::Lever && man(g, i).phase == Phase::There;
-    if !crate::roomfight::on_leg_of(g, d, crate::owner::by::BREAKER) {
-        // (met on the way: tickMove planted him, roused — its man)
+    let how = crate::roomfight::leg_ended(g, d, crate::owner::by::BREAKER);
+    if matches!(how, Some(crate::roomfight::LegEnd::Contact | crate::roomfight::LegEnd::Taken)) {
+        // (met on the way: the room fight's man)
         event(g, PowerOutEventWhat::Abort, Some(gd), "the room fight has him where he stands");
         return false;
     }
@@ -823,7 +764,6 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
     if man(g, i).phase != Phase::Back && !bo_active(g) {
         // the mains are back: his mate's hand, the trip's own clock, anybody's
         man(g, i).phase = Phase::Back;
-        man(g, i).tries = 0.0;
         walk(g, d, from);
         if role == ManRole::Lever || lever.is_none() {
             let why = alloc::format!("the mains are back {} s after they went: back to their posts", js::to_fixed(g.time - st(g).since, 1));
@@ -831,15 +771,8 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
         }
         return true;
     }
-    let goal = if man(g, i).phase == Phase::Back { from } else { man(g, i).goal };
-    let dist = flat(pos_of(g, gd), goal);
-    let arrived = g.gd[gd].script.as_ref().and_then(|s| s.arrived).unwrap_or(false);
-    let reached = arrived || dist < 0.5 || (man(g, i).phase != Phase::Back && role == ManRole::Lever && crate::lighting::breaker_reset_near(g, gd));
+    let reached = how == Some(crate::roomfight::LegEnd::Arrived) || (man(g, i).phase != Phase::Back && role == ManRole::Lever && crate::lighting::breaker_reset_near(g, gd));
     if man(g, i).phase == Phase::There {
-        // he stands where he was sent (still his leg: the room fight plants a man who has arrived, or stood a second and a half)
-        clear_arrived(g, gd);
-        g.tab.roomfight_def[d].stall_t = 0.0;
-        g.tab.roomfight_def[d].move_t = 0.0;
         let there_t = man(g, i).there_t;
         if role == ManRole::Lever {
             if bo_active(g) && !bo_permanent(g) && g.time - there_t > g.k.powerout.lever_secs {
@@ -864,34 +797,25 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
         }
         if role == ManRole::Cover && (lever.is_none() || man(g, lever.unwrap()).phase == Phase::Back) {
             man(g, i).phase = Phase::Back;
-            man(g, i).tries = 0.0;
             walk(g, d, from);
         }
         return true;
     }
     if !reached {
-        if g.tab.roomfight_def[d].stall_t <= 1.3 && g.tab.roomfight_def[d].move_t <= 8.0 {
-            return true; // on his way
-        }
-        if man(g, i).tries < g.k.powerout.tries {
-            // (the room fight ends a leg at ten seconds, or a second and a half of going nowhere: a longer way is walked in legs, a shut way tried again)
-            man(g, i).tries += 1.0;
-            walk(g, d, goal);
-            return true;
-        }
+        if how.is_none() { return true; } // (on his way)
         if man(g, i).phase == Phase::Back {
-            event(g, PowerOutEventWhat::Abort, Some(gd), "no way back to his post: the room fight plants him where he is");
+            crate::roomfight::stand_here(g, d);
+            event(g, PowerOutEventWhat::Abort, Some(gd), "no way back to his post: he holds where he is");
             return false;
         }
         man(g, i).phase = Phase::Back;
-        man(g, i).tries = 0.0;
         walk(g, d, from);
         event(g, PowerOutEventWhat::Abort, Some(gd), "no way to the breaker: back to his post");
         return true;
     }
     if man(g, i).phase == Phase::Back {
-        let m_ = man(g, i).clone();
-        settle(g, &m_, d);
+        let word = st(g).word;
+        crate::roomfight::back_on(g, d, word, "powerout");
         let why = alloc::format!("back on his post {} s after the lights went", js::to_fixed(g.time - st(g).since, 1));
         event(g, PowerOutEventWhat::Home, Some(gd), &why);
         return false;
@@ -899,9 +823,6 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
     man(g, i).phase = Phase::There;
     let time = g.time;
     man(g, i).there_t = time;
-    clear_arrived(g, gd);
-    g.tab.roomfight_def[d].stall_t = 0.0;
-    g.tab.roomfight_def[d].move_t = 0.0;
     let why = if role == ManRole::Lever {
         alloc::format!("at the lever {} s after the lights went", js::to_fixed(g.time - st(g).since, 1))
     } else {
@@ -965,8 +886,6 @@ fn step_off(g: &mut crate::game::Game, fight: bool) {
     for &i in &goes {
         let gd = man(g, i).gd;
         let d = def_of(g, gd).unwrap();
-        let calm = calm_of(g, d);
-        man(g, i).calm = Some(calm);
         let heard = loud_heard(g, gd);
         man(g, i).heard0 = heard;
         man(g, i).phase = Phase::Out;

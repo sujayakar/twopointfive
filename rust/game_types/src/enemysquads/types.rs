@@ -60,11 +60,10 @@ pub struct Sent {
     pub spot: Option<V3>,
     pub door: Option<DoorId>,
     pub fix_at: V3,
-    pub tries: f64,
-    pub step_t: f64,
     pub t0: f64,
     pub there: Option<f64>,
-    pub way: Option<Vec<V3>>,
+    /// the points he goes by, the last of them where he is sent
+    pub way: Vec<V3>,
     pub aim: Option<V3>,
     pub set_t: Option<f64>,
     pub from: V3,
@@ -169,31 +168,13 @@ pub struct Looker {
     pub spot: V3,
     pub from: V3,
     pub back: bool,
-    pub tries: f64,
-    pub step_t: f64,
     pub t0: f64,
     pub news0: f64,
     pub look_t: Option<f64>,
-    pub calm: crate::enemysquads::Calm,
     pub about: Option<EnemysquadsSquadId>,
     pub all: Option<bool>,
     pub stops: Option<Vec<V3>>,
     pub n: Option<f64>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct Calm {
-    pub state: crate::game::GuardState,
-    pub awareness: f64,
-    pub hold: bool,
-    pub pinned: bool,
-    pub station: V3,
-    pub home: V3,
-    pub room: Option<RoomfightRoomId>,
-    pub ev: Vec<f64>,
-    pub watch: f64,
-    pub want: f64,
-    pub pt: V3,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

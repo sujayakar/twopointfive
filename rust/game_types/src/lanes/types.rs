@@ -64,7 +64,6 @@ pub struct Flank {
     pub phase: crate::lanes::FlankPhase,
     pub at: V3,
     pub t: f64,
-    pub n: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

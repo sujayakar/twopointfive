@@ -45,7 +45,7 @@ pub(super) fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> Roomfi
         glance_to: -1.0, glance_until: -1.0, glance_next, pt: front,
         heard_t: H.last_t, cnt: DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small }, noise_at: None, noise_t: -100.0, noise_out: false,
         last_state: g.gd[gd].state, last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0,
-        mode: DefMode::Hold, move_kind: DefMoveKind::Cover, move_t: 0.0, leg_by: crate::owner::By::NOBODY, came_by: None, stall_at: p, stall_t: 0.0, free_at: 0.0,
+        mode: DefMode::Hold, leg: OnLeg { stall_at: p, step_t: -100.0, ..OnLeg::default() }, free_at: 0.0,
         burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None,
     };
     g.tab.roomfight_def.push(row)
@@ -441,8 +441,7 @@ pub fn took_cover_said(g: &mut crate::game::Game, d: RoomfightDefId) {
 /// a defender on the move: an enemy seen close stops him to fight, or he fights him as he goes, if he is going for cover; there, or going nowhere, he plants.
 fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
-    let arrived0 = match &g.gd[gd].script { Some(x) => x.arrived.unwrap_or(false), None => { room_fight_plant(g, d, false); return; } };
-    g.tab.roomfight_def[d].move_t += dt;
+    if g.gd[gd].script.is_none() { end_leg(g, d, LegEnd::Taken); return; }
     // the man his eyes have (guards/senses), near enough to stop for; never the one he is getting away from
     let from = if g.time < g.tab.roomfight_def[d].bolt_until { g.tab.roomfight_def[d].bolt_from } else { None };
     let reach = g.k.roomfight.move_engage_m;
@@ -453,7 +452,7 @@ fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
         let fc = ct;
         crate::mind::foe(g, gd, Some(ct), "roomfight");
         crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
-        room_fight_plant(g, d, true);
+        end_leg(g, d, LegEnd::Contact);
         crate::mind::set(g, gd, 1.0, "roomfight");
         g.gd[gd].react_t = pick(g, crate::dice::Who::Def(d), s.react);
         let fp = g.ch[fc].pos;
@@ -461,19 +460,24 @@ fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
         return;
     }
     if to_cover { crate::guards::behave::fight_on_the_way(g, gd, dt); }
-    let cp = g.ch[c].pos;
-    let D = &mut g.tab.roomfight_def[d];
-    if flat(cp, D.stall_at) > 0.4 { D.stall_at = cp; D.stall_t = 0.0; } else { D.stall_t += dt; }
-    let (stall, moved) = (D.stall_t, D.move_t);
-    let arrived = g.gd[gd].script.as_ref().map_or(arrived0, |x| x.arrived.unwrap_or(false));
-    if arrived || stall > 1.5 || moved > 10.0 { room_fight_plant(g, d, false); }
+    if let Some(end) = post::walked(g, d, dt) { end_leg(g, d, end); }
 }
+
+/// His leg is over, and how: it is his post now where he has got to, or he stands there on his sender's word.
+fn end_leg(g: &mut Game, d: RoomfightDefId, end: LegEnd) {
+    let leg = &mut g.tab.roomfight_def[d].leg;
+    leg.end = Some(end);
+    if leg.stays && matches!(end, LegEnd::Arrived | LegEnd::Nowhere) { return; }
+    room_fight_plant(g, d, end == LegEnd::Contact);
+}
+/// Where he stands is his post now: an errand that came to nothing.
+pub fn stand_here(g: &mut Game, d: RoomfightDefId) { room_fight_plant(g, d, false); }
 
 /// a man whose way lies down a covered lane stops short of it, his gun on `look`.
 pub(in crate::defenders) fn room_fight_lane_stop(g: &mut crate::game::Game, gd: GuardId, look: V3) -> bool {
     let d = match def_of(g, gd) { Some(d) => d, None => return false };
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return false; }
-    { let D = &mut g.tab.roomfight_def[d]; D.move_kind = DefMoveKind::Fallback; D.came_by = None; }
+    { let D = &mut g.tab.roomfight_def[d]; D.leg.kind = DefMoveKind::Fallback; D.leg.door = None; }
     room_fight_plant(g, d, false);
     if let Some(r) = g.tab.roomfight_def[d].room { let n = g.tab.roomfight_room[r].entries.len(); g.tab.roomfight_def[d].ev = vec![0.0; n]; }
     let pt: V3 = [look[0], 0.0, look[2]];
@@ -501,6 +505,7 @@ fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, fighting: bool
     {
         let def = &mut g.tab.roomfight_def[d];
         def.mode = DefMode::Hold;
+        def.leg.left = None;
         def.station = v3::copy(pos);
         def.room = room;
         if through { def.ev = vec![0.0; n_entries]; }
@@ -510,12 +515,12 @@ fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, fighting: bool
         def.fix_keep = -1.0;
         def.moved_at = time;
     }
-    let came_by = g.tab.roomfight_def[d].came_by;
+    let came_by = g.tab.roomfight_def[d].leg.door;
     let e = match (through, came_by, room) {
         (true, Some(door), Some(r)) => match g.tab.roomfight_room[r].entries.iter().position(|x| x.door == door) { Some(i) => i as f64, None => -1.0 },
         _ => room_fight_entry_toward(g, d, threat),
     };
-    let move_kind = g.tab.roomfight_def[d].move_kind;
+    let move_kind = g.tab.roomfight_def[d].leg.kind;
     if e >= 0.0 && (move_kind == DefMoveKind::Fallback || !through) {
         let def = &mut g.tab.roomfight_def[d];
         def.ev[e as usize] = m::max(def.ev[e as usize], 1.5);
