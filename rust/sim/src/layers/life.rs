@@ -11,10 +11,52 @@ fn sign(x: f64) -> f64 {
         x
     }
 }
+/// What the steps of a man's own life hand on to the ones after them.
+#[derive(Clone, Copy, Default)]
+struct Life {
+    dt: f64,
+    s: f64,
+    crouch_pose: f64,
+    w: f64,
+    w_f: f64,
+    p0: [f64; 3],
+    // as_stands: which way he faces and how low he is
+    yin: f64,
+    cr_t: f64,
+    // own_motion: the root's own motion over the ground: more than half a metre in a frame is a teleport, and the feet lock again where they land
+    teleported: bool,
+    // breathe: the breath, harder after a run
+    b_amp: f64,
+    // feet_of_pose: the feet as the pose has them
+    fl: [f64; 3],
+    fr: [f64; 3],
+    rl: [f64; 4],
+    rr: [f64; 4],
+    // feet_stand: planted in the world while he stands, released into the cycle's feet as he moves off
+    w_was: f64,
+    // spots_wanted: where the pose wants each foot, in the world
+    stands: Stands,
+    want_p: [[f64; 3]; 2],
+    want_yaw: [f64; 2],
+    swing: f64,
+    lift: f64,
+    dist: f64,
+    turn_at: f64,
+    pivot: f64,
+    lag_cap: f64,
+    // lock_offs: both feet locked, and by how much: feet_last reads the stack's feet without this
+    tl: [f64; 3],
+    ql: [f64; 4],
+    tr: [f64; 3],
+    qr: [f64; 4],
+}
+
 /// Breathing, the body's mass on starts and stops, the weight shifting foot to foot at rest, and the standing foot lock: the feet planted in the world
 /// while he stands, each stepping across in a lifted arc when the body has turned or shifted out from over it.
 pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w: f64, w_f: f64, p0: [f64; 3], tune: &Knobs) -> u32 {
-    let (at, yin, cr_t, lf) = (an.p_a.at as usize, an.body_yaw_in, an.cr_t, &mut an.life);
+    let mut o = Life { dt, s, crouch_pose, w, w_f, p0, ..Life::default() };
+    as_stands(an, &mut o);
+    let (at, lf) = (an.p_a.at as usize, &mut an.life);
     let (f_w, f_next, mut foot) = (&mut an.feet.w, &mut an.feet.next, [an.feet.l, an.feet.r]);
     for f in foot.iter_mut() { f.lock_off = [0.0; 3]; f.lock_yaw = 0.0; }
     let code = with_pose(g, at, |d, rig, n, fk| {
@@ -22,52 +64,11 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
             return 0;
         }
         // clocks
-        if !finite(lf.yaw_prev) {
-            lf.yaw_prev = yin;
-        }
-        let yr = if dt > 0.0 { wrap_angle(yin - lf.yaw_prev) / dt } else { 0.0 };
-        lf.yaw_prev = yin;
-        lf.yaw_rate = damp(lf.yaw_rate, clamp(yr, -8.0, 8.0), 8.0, dt);
-        // the root's OWN planar motion: more than half a metre in a frame is a teleport — the feet re-lock where they land
-        let mut teleported = false;
-        if !finite(lf.prev_pos[0]) {
-            lf.prev_pos = p0;
-        } else {
-            let dd = hypot2(p0[0] - lf.prev_pos[0], p0[2] - lf.prev_pos[2]);
-            teleported = dd > 0.5;
-            lf.root_v = if dt > 0.0 && !teleported {
-                damp(lf.root_v, min(dd / dt, 8.0), 14.0, dt)
-            } else if teleported {
-                0.0
-            } else {
-                lf.root_v
-            };
-            lf.prev_pos = p0;
-        }
-        let hb = true;
-        lf.exert = clamp(lf.exert + if s > 3.2 { dt / if hb { tune.hardbreath.chest_up } else { 4.0 } } else { -dt / if hb { tune.hardbreath.chest_down } else { 8.0 } }, 0.0, 1.0);
-        let b_rate = lerp(LIFE.breath_rate, if hb { tune.hardbreath.chest_rate } else { LIFE.breath_rate_run }, lf.exert);
-        let b_amp = lerp(LIFE.breath_amp, if hb { tune.hardbreath.chest_amp } else { LIFE.breath_amp_run }, lf.exert) * lerp(1.0, 0.35, clamp(s / 2.0, 0.0, 1.0)) * LIFE.on;
-        lf.breath = (lf.breath + dt * b_rate * 2.0 * PI) % (2.0 * PI);
-        let accel = if dt > 0.0 { (s - lf.prev_s) / dt } else { 0.0 };
-        lf.prev_s = s;
-        lf.accel = damp(lf.accel, clamp(accel, -12.0, 12.0), 10.0, dt);
-        let t = clamp(-lf.accel * LIFE.mass_gain, -LIFE.mass_back, LIFE.mass_fwd) * LIFE.on;
-        spring_step(&mut lf.mass, t, 9.0, dt);
-        let t = clamp(-abs(lf.accel) * LIFE.mass_dip, -LIFE.mass_dip_max, 0.0) * LIFE.on;
-        spring_step(&mut lf.mass_v, t, 10.0, dt);
-        lf.still_t = if s < 0.12 && abs(lf.yaw_rate) < 0.5 { lf.still_t + dt } else { 0.0 };
-        let resting = if lf.still_t > LIFE.rest_after && LIFE.on > 0.0 && !(cr_t > 0.5) { 1.0 } else { 0.0 };
-        if resting != 0.0 {
-            lf.shift_t -= dt;
-            if lf.shift_t <= 0.0 {
-                lf.shift_side = if lf.shift_side > 0.0 { -1.0 } else { 1.0 };
-                lf.shift_n += 1.0;
-                lf.shift_t = LIFE.shift_min + ((lf.shift_n * 0.618034) % 1.0) * LIFE.shift_span;
-            }
-        }
-        let t = resting * lf.shift_side;
-        spring_step(&mut lf.shift, t, if resting != 0.0 { LIFE.shift_in } else { LIFE.shift_out }, dt);
+        turn_rate(lf, &o);
+        own_motion(lf, &mut o);
+        breathe(lf, tune, &mut o);
+        weight_swings(lf, &o);
+        weight_shifts(lf, &o);
         if w_f < 0.003 {
             *f_w = 0.0;
         }
@@ -75,116 +76,256 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
             return RAN;
         }
         // remember the feet, pose the body, put the feet back
-        let (hips, s1, s2, s3, nk) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK));
         let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
         let legs = list(FK_LEGS);
         fk.part(rig, d, legs);
         let ran = RAN | ran_list(FK_LEGS);
-        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        feet_of_pose(foot_l, foot_r, fk, &mut o);
         if w >= 0.003 {
-            let (br, br2) = (sin(lf.breath), sin(lf.breath - 0.6));
-            let sh = lf.shift.x * w * min(1.0, LIFE.on);
-            let side = LIFE.shift_travel * sh * (1.0 - 0.5 * crouch_pose);
-            let off = [side, lf.mass_v.x * w + 0.004 * b_amp * br * w - abs(sh) * 0.006, lf.mass.x * w * (1.0 - 0.4 * crouch_pose)];
-            shift(d, rig, hips, &off);
-            if abs(sh) > 1e-3 {
-                turn(d, rig, hips, q_roll(-sh * LIFE.hip_drop * DEGR));
-                turn(d, rig, s2, q_roll(sh * LIFE.spine_counter * DEGR));
-                turn(d, rig, nk, q_roll(sh * LIFE.neck_counter * DEGR));
-            }
-            let tip = clamp(lf.accel * LIFE.tip_gain, -LIFE.tip_back, LIFE.tip_fwd) * DEGR * w * (1.0 - 0.5 * crouch_pose) * LIFE.on;
-            if abs(tip) > 1e-4 {
-                turn(d, rig, s1, q_pitch(tip * 0.5));
-                turn(d, rig, s2, q_pitch(tip * 0.3));
-                turn(d, rig, nk, q_pitch(-tip * 0.5));
-            }
-            let bp = b_amp * w * DEGR;
-            turn(d, rig, s2, q_pitch(-0.5 * bp * br));
-            turn(d, rig, s3, q_pitch(-0.4 * bp * br2));
-            turn(d, rig, nk, q_pitch(0.5 * bp * br2));
-            turn(d, rig, role(SHOULDER_L), q_roll(1.0 * 0.9 * bp * br2));
-            turn(d, rig, role(SHOULDER_R), q_roll(-1.0 * 0.9 * bp * br2));
+            body_lives(lf, d, rig, &o);
             fk.part(rig, d, legs);
         }
-        // ---- feet: planted in the WORLD while he stands, released into the cycle's feet as he moves off
-        let standing = if max(s, lf.root_v) < 0.22 && w_f > 0.5 && FEET.on > 0.5 && !(cr_t > 0.0 && cr_t < 1.0) { 1.0 } else { 0.0 };
-        let w_was = *f_w;
-        *f_w = damp(*f_w, standing, if standing != 0.0 { 12.0 } else { 16.0 + 40.0 * lf.root_v }, dt);
+        feet_stand(lf, f_w, &mut o);
         if w < 0.003 && *f_w <= 0.01 {
             return ran;
         }
-        let stands = Stands::at(p0, yin);
-        let (mut tl, mut tr, mut ql, mut qr) = (fl, fr, rl, rr);
+        as_posed(&o);
         if *f_w > 0.01 {
-            let want_p = [stands.world(&fl), stands.world(&fr)];
-            let want_yaw = [yin + foot_yaw(&rl), yin + foot_yaw(&rr)];
-            let relock = w_was <= 0.01 || teleported || dist_xz(&foot[0].p, &want_p[0]) > 0.45 || dist_xz(&foot[1].p, &want_p[1]) > 0.45;
-            if relock {
-                for i in 0..2 {
-                    foot[i].p = want_p[i];
-                    foot[i].yaw = want_yaw[i];
-                    foot[i].swing = -1.0;
-                }
-            }
-            let (swing, lift, dist, turn_at, pivot, lag_cap) = (FEET.swing, FEET.lift, FEET.dist, FEET.turn_deg * DEGR, FEET.pivot, FEET.lag_cap_deg * DEGR);
-            let far_of = |foot: &[AnimFoot; 2], i: usize| -> bool { dist_xz(&foot[i].p, &want_p[i]) > dist || abs(wrap_angle(foot[i].yaw - want_yaw[i])) > turn_at };
+            spots_wanted(&mut o);
+            lock_again(&mut foot, &o);
             for i in 0..2 {
-                if foot[i].swing < 0.0 {
-                    let mut err_yaw = wrap_angle(want_yaw[i] - foot[i].yaw);
-                    if abs(err_yaw) > lag_cap {
-                        foot[i].yaw += sign(err_yaw) * (abs(err_yaw) - lag_cap);
-                        err_yaw = sign(err_yaw) * lag_cap;
-                    }
-                    if abs(err_yaw) > turn_at {
-                        foot[i].yaw += sign(err_yaw) * min(abs(err_yaw) - turn_at, pivot * dt);
-                    }
-                    let my_turn = *f_next == i as f64;
-                    if far_of(&foot, i) && foot[1 - i].swing < 0.0 && (my_turn || !far_of(&foot, 1 - i)) {
-                        foot[i].swing = 0.0;
-                        foot[i].from = foot[i].p;
-                        foot[i].from_yaw = foot[i].yaw;
-                        *f_next = (1 - i) as f64;
-                    }
-                }
-                if foot[i].swing >= 0.0 {
-                    foot[i].swing += dt / swing;
-                    let e = smoothstep(0.0, 1.0, min(1.0, foot[i].swing));
-                    let from = foot[i].from;
-                    let mut p = [lerp(from[0], want_p[i][0], e), lerp(from[1], want_p[i][1], e), lerp(from[2], want_p[i][2], e)];
-                    p[1] = want_p[i][1] + sin(PI * min(1.0, foot[i].swing)) * lift;
-                    foot[i].p = p;
-                    foot[i].yaw = foot[i].from_yaw + wrap_angle(want_yaw[i] - foot[i].from_yaw) * e;
-                    if foot[i].swing >= 1.0 {
-                        foot[i].swing = -1.0;
-                        foot[i].p = want_p[i];
-                        foot[i].yaw = want_yaw[i];
-                    }
-                }
+                foot_holds(f_next, &mut foot, i, &o);
+                foot_swings(&mut foot, i, &o);
             }
-            let mk = |f: &AnimFoot, rest_p: &[f64; 3], rest_r: &[f64; 4]| -> ([f64; 3], [f64; 4]) {
-                let mp = stands.model(&f.p);
-                let fw = *f_w;
-                let p = [lerp(rest_p[0], mp[0], fw), lerp(rest_p[1], mp[1], fw), lerp(rest_p[2], mp[2], fw)];
-                let dyaw = wrap_angle((f.yaw - yin) - foot_yaw(rest_r)) * fw;
-                (p, q_mul(&q_yaw(dyaw), rest_r))
-            };
-            (tl, ql) = mk(&foot[0], &fl, &rl);
-            (tr, qr) = mk(&foot[1], &fr, &rr);
-            // (feet_last reads the stack's feet without this)
-            foot[0].lock_off = sub3(tl, fl);
-            foot[1].lock_off = sub3(tr, fr);
-            foot[0].lock_yaw = wrap_angle((foot[0].yaw - yin) - foot_yaw(&rl)) * *f_w;
-            foot[1].lock_yaw = wrap_angle((foot[1].yaw - yin) - foot_yaw(&rr)) * *f_w;
+            lock_offs(f_w, &mut foot, &mut o);
         }
         // put the feet back: the knee steered over the toes only as far as the feet are LOCKED
-        let pole_w = if cr_t > 0.0 { 0.6 * *f_w * (1.0 - smoothstep(0.0, 1.0, cr_t)) } else { 0.6 * *f_w };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tl, Some(&knee_pole(&ql)), pole_w, Some(&ql), false);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tr, Some(&knee_pole(&qr)), pole_w, Some(&qr), true);
+        let pole_w = if o.cr_t > 0.0 { 0.6 * *f_w * (1.0 - smoothstep(0.0, 1.0, o.cr_t)) } else { 0.6 * *f_w };
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &o.tl, Some(&knee_pole(&o.ql)), pole_w, Some(&o.ql), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &o.tr, Some(&knee_pole(&o.qr)), pole_w, Some(&o.qr), true);
         ran | RAN_ALL
     })
     .unwrap_or(0);
     (an.feet.l, an.feet.r) = (foot[0], foot[1]);
     code
+}
+
+/// Which way he faces and how low he is.
+fn as_stands(an: &Anim, o: &mut Life) {
+    let (yin, cr_t) = (an.body_yaw_in, an.cr_t);
+    *o = Life { yin, cr_t, ..*o };
+}
+
+/// How fast he turns.
+fn turn_rate(lf: &mut game_types::character::AnimLife, o: &Life) {
+    let Life { dt, yin, .. } = *o;
+    if !finite(lf.yaw_prev) {
+        lf.yaw_prev = yin;
+    }
+    let yr = if dt > 0.0 { wrap_angle(yin - lf.yaw_prev) / dt } else { 0.0 };
+    lf.yaw_prev = yin;
+    lf.yaw_rate = damp(lf.yaw_rate, clamp(yr, -8.0, 8.0), 8.0, dt);
+}
+
+/// The root's own motion over the ground: more than half a metre in a frame is a teleport, and the feet lock again where they land.
+fn own_motion(lf: &mut game_types::character::AnimLife, o: &mut Life) {
+    let Life { dt, p0, .. } = *o;
+    let mut teleported = false;
+    if !finite(lf.prev_pos[0]) {
+        lf.prev_pos = p0;
+    } else {
+        let dd = hypot2(p0[0] - lf.prev_pos[0], p0[2] - lf.prev_pos[2]);
+        teleported = dd > 0.5;
+        lf.root_v = if dt > 0.0 && !teleported {
+            damp(lf.root_v, min(dd / dt, 8.0), 14.0, dt)
+        } else if teleported {
+            0.0
+        } else {
+            lf.root_v
+        };
+        lf.prev_pos = p0;
+    }
+    *o = Life { teleported, ..*o };
+}
+
+/// The breath, harder after a run.
+fn breathe(lf: &mut game_types::character::AnimLife, tune: &Knobs, o: &mut Life) {
+    let Life { dt, s, .. } = *o;
+    lf.exert = clamp(lf.exert + if s > 3.2 { dt / tune.hardbreath.chest_up } else { -dt / tune.hardbreath.chest_down }, 0.0, 1.0);
+    let b_rate = lerp(LIFE.breath_rate, tune.hardbreath.chest_rate, lf.exert);
+    let b_amp = lerp(LIFE.breath_amp, tune.hardbreath.chest_amp, lf.exert) * lerp(1.0, 0.35, clamp(s / 2.0, 0.0, 1.0)) * LIFE.on;
+    lf.breath = (lf.breath + dt * b_rate * 2.0 * PI) % (2.0 * PI);
+    *o = Life { b_amp, ..*o };
+}
+
+/// His weight swings as he starts and stops.
+fn weight_swings(lf: &mut game_types::character::AnimLife, o: &Life) {
+    let Life { dt, s, .. } = *o;
+    let accel = if dt > 0.0 { (s - lf.prev_s) / dt } else { 0.0 };
+    lf.prev_s = s;
+    lf.accel = damp(lf.accel, clamp(accel, -12.0, 12.0), 10.0, dt);
+    let t = clamp(-lf.accel * LIFE.mass_gain, -LIFE.mass_back, LIFE.mass_fwd) * LIFE.on;
+    spring_step(&mut lf.mass, t, 9.0, dt);
+    let t = clamp(-abs(lf.accel) * LIFE.mass_dip, -LIFE.mass_dip_max, 0.0) * LIFE.on;
+    spring_step(&mut lf.mass_v, t, 10.0, dt);
+}
+
+/// Standing long enough, he shifts his weight from one leg to the other.
+fn weight_shifts(lf: &mut game_types::character::AnimLife, o: &Life) {
+    let Life { dt, s, cr_t, .. } = *o;
+    lf.still_t = if s < 0.12 && abs(lf.yaw_rate) < 0.5 { lf.still_t + dt } else { 0.0 };
+    let resting = if lf.still_t > LIFE.rest_after && LIFE.on > 0.0 && !(cr_t > 0.5) { 1.0 } else { 0.0 };
+    if resting != 0.0 {
+        lf.shift_t -= dt;
+        if lf.shift_t <= 0.0 {
+            lf.shift_side = if lf.shift_side > 0.0 { -1.0 } else { 1.0 };
+            lf.shift_n += 1.0;
+            lf.shift_t = LIFE.shift_min + ((lf.shift_n * 0.618034) % 1.0) * LIFE.shift_span;
+        }
+    }
+    let t = resting * lf.shift_side;
+    spring_step(&mut lf.shift, t, if resting != 0.0 { LIFE.shift_in } else { LIFE.shift_out }, dt);
+}
+
+/// The feet as the pose has them.
+fn feet_of_pose(foot_l: usize, foot_r: usize, fk: &mut Fk, o: &mut Life) {
+    let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+    *o = Life { fl, fr, rl, rr, ..*o };
+}
+
+/// The body posed: the weight, the hip dropped on the resting side, the breath in the chest.
+fn body_lives(lf: &mut game_types::character::AnimLife, d: &mut [S], rig: &Rig, o: &Life) {
+    let Life { crouch_pose, w, b_amp, .. } = *o;
+    let (hips, s1, s2, s3, nk) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK));
+    let (br, br2) = (sin(lf.breath), sin(lf.breath - 0.6));
+    let sh = lf.shift.x * w * min(1.0, LIFE.on);
+    let side = LIFE.shift_travel * sh * (1.0 - 0.5 * crouch_pose);
+    let off = [side, lf.mass_v.x * w + 0.004 * b_amp * br * w - abs(sh) * 0.006, lf.mass.x * w * (1.0 - 0.4 * crouch_pose)];
+    shift(d, rig, hips, &off);
+    if abs(sh) > 1e-3 {
+        turn(d, rig, hips, q_roll(-sh * LIFE.hip_drop * DEGR));
+        turn(d, rig, s2, q_roll(sh * LIFE.spine_counter * DEGR));
+        turn(d, rig, nk, q_roll(sh * LIFE.neck_counter * DEGR));
+    }
+    let tip = clamp(lf.accel * LIFE.tip_gain, -LIFE.tip_back, LIFE.tip_fwd) * DEGR * w * (1.0 - 0.5 * crouch_pose) * LIFE.on;
+    if abs(tip) > 1e-4 {
+        turn(d, rig, s1, q_pitch(tip * 0.5));
+        turn(d, rig, s2, q_pitch(tip * 0.3));
+        turn(d, rig, nk, q_pitch(-tip * 0.5));
+    }
+    let bp = b_amp * w * DEGR;
+    turn(d, rig, s2, q_pitch(-0.5 * bp * br));
+    turn(d, rig, s3, q_pitch(-0.4 * bp * br2));
+    turn(d, rig, nk, q_pitch(0.5 * bp * br2));
+    turn(d, rig, role(SHOULDER_L), q_roll(1.0 * 0.9 * bp * br2));
+    turn(d, rig, role(SHOULDER_R), q_roll(-1.0 * 0.9 * bp * br2));
+}
+
+/// Planted in the world while he stands, released into the cycle's feet as he moves off.
+fn feet_stand(lf: &mut game_types::character::AnimLife, f_w: &mut f64, o: &mut Life) {
+    let Life { dt, s, w_f, cr_t, .. } = *o;
+    let standing = if max(s, lf.root_v) < 0.22 && w_f > 0.5 && FEET.on > 0.5 && !(cr_t > 0.0 && cr_t < 1.0) { 1.0 } else { 0.0 };
+    let w_was = *f_w;
+    *f_w = damp(*f_w, standing, if standing != 0.0 { 12.0 } else { 16.0 + 40.0 * lf.root_v }, dt);
+    *o = Life { w_was, ..*o };
+}
+
+/// The feet put back where they were.
+fn as_posed(o: &Life) {
+    let Life { fl, fr, rl, rr, .. } = *o;
+    let (mut tl, mut tr, mut ql, mut qr) = (fl, fr, rl, rr);
+}
+
+/// Where the pose wants each foot, in the world.
+fn spots_wanted(o: &mut Life) {
+    let Life { p0, yin, fl, fr, rl, rr, .. } = *o;
+    let stands = Stands::at(p0, yin);
+    let want_p = [stands.world(&fl), stands.world(&fr)];
+    let want_yaw = [yin + foot_yaw(&rl), yin + foot_yaw(&rr)];
+    let (swing, lift, dist, turn_at, pivot, lag_cap) = (FEET.swing, FEET.lift, FEET.dist, FEET.turn_deg * DEGR, FEET.pivot, FEET.lag_cap_deg * DEGR);
+    *o = Life { stands, want_p, want_yaw, swing, lift, dist, turn_at, pivot, lag_cap, ..*o };
+}
+
+/// Newly planted, set down by a teleport or far off, they lock where the pose has them.
+fn lock_again(foot: &mut [AnimFoot; 2], o: &Life) {
+    let Life { teleported, w_was, want_p, want_yaw, .. } = *o;
+    let relock = w_was <= 0.01 || teleported || dist_xz(&foot[0].p, &want_p[0]) > 0.45 || dist_xz(&foot[1].p, &want_p[1]) > 0.45;
+    if relock {
+        for side in 0..2 {
+            foot[side].p = want_p[side];
+            foot[side].yaw = want_yaw[side];
+            foot[side].swing = -1.0;
+        }
+    }
+}
+
+/// Whether a foot is far from where the pose wants it.
+fn astray(o: &Life, foot: &[AnimFoot; 2], i: usize) -> bool {
+    let Life { want_p, want_yaw, dist, turn_at, .. } = *o;
+    dist_xz(&foot[i].p, &want_p[i]) > dist || abs(wrap_angle(foot[i].yaw - want_yaw[i])) > turn_at
+}
+
+/// A planted foot holds its place, turns within what the ankle takes, and starts a step when the pose is far from it and it is its turn.
+fn foot_holds(f_next: &mut f64, foot: &mut [AnimFoot; 2], i: usize, o: &Life) {
+    let Life { dt, want_yaw, turn_at, pivot, lag_cap, .. } = *o;
+    if foot[i].swing < 0.0 {
+        let mut err_yaw = wrap_angle(want_yaw[i] - foot[i].yaw);
+        if abs(err_yaw) > lag_cap {
+            foot[i].yaw += sign(err_yaw) * (abs(err_yaw) - lag_cap);
+            err_yaw = sign(err_yaw) * lag_cap;
+        }
+        if abs(err_yaw) > turn_at {
+            foot[i].yaw += sign(err_yaw) * min(abs(err_yaw) - turn_at, pivot * dt);
+        }
+        let my_turn = *f_next == i as f64;
+        if astray(o, foot, i) && foot[1 - i].swing < 0.0 && (my_turn || !astray(o, foot, 1 - i)) {
+            foot[i].swing = 0.0;
+            foot[i].from = foot[i].p;
+            foot[i].from_yaw = foot[i].yaw;
+            *f_next = (1 - i) as f64;
+        }
+    }
+}
+
+/// A step: through the air and down where the pose wants it.
+fn foot_swings(foot: &mut [AnimFoot; 2], i: usize, o: &Life) {
+    let Life { dt, want_p, want_yaw, swing, lift, .. } = *o;
+    if foot[i].swing >= 0.0 {
+        foot[i].swing += dt / swing;
+        let e = smoothstep(0.0, 1.0, min(1.0, foot[i].swing));
+        let from = foot[i].from;
+        let mut p = [lerp(from[0], want_p[i][0], e), lerp(from[1], want_p[i][1], e), lerp(from[2], want_p[i][2], e)];
+        p[1] = want_p[i][1] + sin(PI * min(1.0, foot[i].swing)) * lift;
+        foot[i].p = p;
+        foot[i].yaw = foot[i].from_yaw + wrap_angle(want_yaw[i] - foot[i].from_yaw) * e;
+        if foot[i].swing >= 1.0 {
+            foot[i].swing = -1.0;
+            foot[i].p = want_p[i];
+            foot[i].yaw = want_yaw[i];
+        }
+    }
+}
+
+/// A foot in his own axes, as far as it is locked.
+fn locked(f_w: &mut f64, o: &Life, f: &AnimFoot, rest_p: &[f64; 3], rest_r: &[f64; 4]) -> ([f64; 3], [f64; 4]) {
+    let Life { yin, stands, .. } = *o;
+    let mp = stands.model(&f.p);
+    let fw = *f_w;
+    let p = [lerp(rest_p[0], mp[0], fw), lerp(rest_p[1], mp[1], fw), lerp(rest_p[2], mp[2], fw)];
+    let dyaw = wrap_angle((f.yaw - yin) - foot_yaw(rest_r)) * fw;
+    (p, q_mul(&q_yaw(dyaw), rest_r))
+}
+
+/// Both feet locked, and by how much: feet_last reads the stack's feet without this.
+fn lock_offs(f_w: &mut f64, foot: &mut [AnimFoot; 2], o: &mut Life) {
+    let Life { yin, fl, fr, rl, rr, .. } = *o;
+    let (tl, ql) = locked(f_w, o, &foot[0], &fl, &rl);
+    let (tr, qr) = locked(f_w, o, &foot[1], &fr, &rr);
+    foot[0].lock_off = sub3(tl, fl);
+    foot[1].lock_off = sub3(tr, fr);
+    foot[0].lock_yaw = wrap_angle((foot[0].yaw - yin) - foot_yaw(&rl)) * *f_w;
+    foot[1].lock_yaw = wrap_angle((foot[1].yaw - yin) - foot_yaw(&rr)) * *f_w;
+    *o = Life { tl, ql, tr, qr, ..*o };
 }
 /// What the steps of the feet hand on to the ones after them. Pairs are the left and the right.
 #[derive(Clone, Copy, Default)]
