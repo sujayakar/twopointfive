@@ -20,7 +20,7 @@ var<private> meshMore = 0u;
 /** the object's level, counted from the finest (1), whatever the width: for measuring what each loses (0 = by the width) */
 var<private> meshObject = 0u; var<private> meshDrawn = false;      /* (and levels as the raster picks them) */
 /** how wide the ray's answer is there, in metres that a level may be off */
-fn meshWide(t: f32) -> f32 { return max(max(meshError, frame.knobs.x), (meshFoot + frame.knobs.y) * footAt(t)); }
+fn meshWide(t: f32) -> f32 { return max(max(meshError, frame.knobs.x), (meshFoot + max(frame.knobs.y, 0.0)) * footAt(t)); }
 /** as far as this a ray does not meet the backs of triangles: it began under them, on a finer level */
 var<private> meshBack = 0.0;
 /** unless told otherwise that is a few times what the level it meets is off */
@@ -60,7 +60,10 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> boo
   }
   if (found) { hT = best; } return found;
 }
-fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { if ((pieces[k].flags & MESH) != 0u) { return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
+/** is this a ray that meets the boxes that stand in for meshes, and not the meshes? (rays = -1; one that has a width: not the reference's, which has none) */
+fn byStand() -> bool { return frame.knobs.y < 0.0 && footW + footS > 0.0; }
+const STAND = 128u;
+fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { if ((pieces[k].flags & STAND) != 0u && !byStand()) { return false; } if ((pieces[k].flags & MESH) != 0u) { if (byStand()) { return false; } return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f { meshAny = true; let T = visiblePieces(ro, rd, tmin, tmax); meshAny = false; return T; }
 
 // ---- what is there
