@@ -281,107 +281,125 @@ fn rescue_hear(g: &mut crate::game::Game) {
 
 /// Clock two: who has learned, who is set, the late reaction, the roamers let go.
 fn rescue_defenders(g: &mut crate::game::Game) {
-    use crate::game::GuardState;
-    use crate::roomfight::DefMode;
     let own = crate::roomfight::room_fight_on(g);
     g.fight.blind_fire = true;
     let hard = own && rescue_crew_on(g);
     if hard && g.rescue.alarm_at.is_nan() && !g.rescue.t0.is_nan() && g.time >= g.rescue.t0 + g.k.rescue.crew_call_secs { rescue_crew_call(g); }
-    let mut i = 0;
-    while i < g.staged.foes.len() {
+    for i in 0..g.staged.foes.len() {
         let h = g.staged.foes[i];
-        i += 1;
-        if crate::condition::down(g, g.gd[h].ch) { continue; }
-        let acting = g.rescue.act.as_ref().map(|a| a.by) == Some(h);
-        let d = def_of(g, h);
-        if hard && d.role != Role::Captor && d.learned.is_nan() && g.time >= g.rescue.alarm_at {
-            g.rescue.defs.get_mut(h).unwrap().learned = g.time;
-            let line = format!("learned:{}", g.gd[h].callsign);
-            rescue_note(g, &line);
-        }
-        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) {
-            g.rescue.defs.get_mut(h).unwrap().learned = g.time;
-            let line = format!("learned:{}", g.gd[h].callsign);
-            rescue_note(g, &line);
-            if g.k.rescue.start == crate::knobs::RescueKStart::Quiet { rescue_start_clock(g, "heard"); }
-        }
-        let d = def_of(g, h);
-        if !d.saw_foe && g.gd[h].saw_foe_this_frame {
-            g.rescue.defs.get_mut(h).unwrap().saw_foe = true;
-            if !d.set {
-                g.gd[h].react_t = m::max(g.gd[h].react_t, g.k.rescue.unset_react);
-                let line = format!("caught:{}", g.gd[h].callsign);
-                rescue_note(g, &line);
-            }
-        }
-        let d = def_of(g, h);
-        if !d.set && !d.learned.is_nan() && g.time >= d.learned + g.k.rescue.set_secs && !crate::control::man::blind(g, h) && g.gd[h].held.is_none() {
-            g.rescue.defs.get_mut(h).unwrap().set = true;
-            let line = format!("set:{}", g.gd[h].callsign);
-            rescue_note(g, &line);
-        }
-        let f: Option<RoomfightDefId> = if own { crate::roomfight::def_of(g, h) } else { None };
-        let crewed = if hard { let mut d = def_of(g, h); rescue_crew(g, h, &mut d, f) } else { false };
-        let d = def_of(g, h);
-        if d.role == Role::Roamer && !crewed {
-            if d.released { continue; }
-            if let Some(f) = f {
-                if crate::roomfight::is_loose(g, f) {
-                    g.rescue.defs.get_mut(h).unwrap().released = true;
-                    let line = format!("released:{}", g.gd[h].callsign);
-                    rescue_note(g, &line);
-                    continue;
-                }
-            }
-            if d.set {
-                g.rescue.defs.get_mut(h).unwrap().released = true;
-                { let now = g.time; crate::owner::release(g, h, crate::owner::by::MISSION, now); }
-                crate::roomfight::loose(g, h, "rescue");
-                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
-                    let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
-                    crate::mind::set_state(g, h, GuardState::Alert, "rescue");
-                    crate::mind::set(g, h, 1.0, "rescue");
-                    g.gd[h].react_t = 0.0;
-                    crate::belief::word(g, h, to);
-                    crate::guards::reset_chase(g, h);
-                }
-                let line = format!("released:{}", g.gd[h].callsign);
-                rescue_note(g, &line);
-                continue;
-            }
-        }
-        if acting { continue; }
-        if own {
-            if let Some(f) = f {
-                if d.in_room {
-                    let now = g.time;
-                    crate::owner::claim(g, h, crate::owner::by::MISSION, now, None);
-                    g.tab.roomfight_def[f].lost_at = now + 1.0;
-                }
-                if !d.set && crate::control::man::blind(g, h) {
-                    g.tab.roomfight_def[f].burst.n = crate::nightbreach::blind().rounds;
-                }
-            }
-            continue;
-        }
-        if g.gd[h].script.is_some() {
-            let state = g.gd[h].state;
-            crate::squad::end_guard_script(g, h, Some(state));
-        }
-        crate::control::set_hold(g, h, true, "rescue");
-        crate::control::set_pinned(g, h, true, "rescue");
-        if g.gd[h].state == GuardState::Patrol && g.gd[h].awareness < 0.3 {
-            let c = g.gd[h].ch;
-            g.ch[c].body_yaw = v3::yaw_to(g.ch[c].pos, d.mark.aim_at);
-        }
-        if d.set && g.ai_enabled {
-            let mut b = d.burst;
-            let fired = crate::nightbreach::blind_turn(g, h, d.k, &mut b, d.mark.aim_at);
-            g.rescue.defs.get_mut(h).unwrap().burst = b;
-            if fired { g.rescue.blind_rounds += 1.0; }
-        }
+        if !crate::condition::down(g, g.gd[h].ch) { defender_turn(g, h, own, hard); }
     }
     if own { g.rescue.blind_rounds = g.fight.blind_rounds; }
+}
+
+/// One defender on his feet, his frame.
+fn defender_turn(g: &mut Game, h: GuardId, own: bool, hard: bool) {
+    let acting = g.rescue.act.as_ref().map(|a| a.by) == Some(h);
+    learns_of_them(g, h, hard);
+    caught_unset(g, h);
+    gets_set(g, h);
+    let f: Option<RoomfightDefId> = if own { crate::roomfight::def_of(g, h) } else { None };
+    let crewed = if hard { let mut d = def_of(g, h); rescue_crew(g, h, &mut d, f) } else { false };
+    let d = def_of(g, h);
+    if d.role == Role::Roamer && !crewed && roamer_let_go(g, h, &d, f) { return; }
+    if acting { return; }
+    if !own {
+        holds_his_mark(g, h, &d);
+        return;
+    }
+    let Some(f) = f else { return };
+    if d.in_room {
+        let now = g.time;
+        crate::owner::claim(g, h, crate::owner::by::MISSION, now, None);
+        g.tab.roomfight_def[f].lost_at = now + 1.0;
+    }
+    if !d.set && crate::control::man::blind(g, h) {
+        g.tab.roomfight_def[f].burst.n = crate::nightbreach::blind().rounds;
+    }
+}
+
+/// He learns of them from the captor's word on a hard floor, or by being on edge himself (which on a quiet start also starts the clock).
+fn learns_of_them(g: &mut Game, h: GuardId, hard: bool) {
+    let d = def_of(g, h);
+    if hard && d.role != Role::Captor && d.learned.is_nan() && g.time >= g.rescue.alarm_at {
+        note_him_learned(g, h);
+    }
+    if def_of(g, h).learned.is_nan() && (g.gd[h].state != crate::game::GuardState::Patrol || g.gd[h].awareness >= 0.3) {
+        note_him_learned(g, h);
+        if g.k.rescue.start == crate::knobs::RescueKStart::Quiet { rescue_start_clock(g, "heard"); }
+    }
+}
+
+/// The moment he learned goes on his row and in the log.
+fn note_him_learned(g: &mut Game, h: GuardId) {
+    g.rescue.defs.get_mut(h).unwrap().learned = g.time;
+    let line = format!("learned:{}", g.gd[h].callsign);
+    rescue_note(g, &line);
+}
+
+/// The first sight of them, and a man not yet set is slow to react to it.
+fn caught_unset(g: &mut Game, h: GuardId) {
+    let d = def_of(g, h);
+    if d.saw_foe || !g.gd[h].saw_foe_this_frame { return; }
+    g.rescue.defs.get_mut(h).unwrap().saw_foe = true;
+    if !d.set {
+        g.gd[h].react_t = m::max(g.gd[h].react_t, g.k.rescue.unset_react);
+        let line = format!("caught:{}", g.gd[h].callsign);
+        rescue_note(g, &line);
+    }
+}
+
+/// Long enough since he learned, and able to, he is set.
+fn gets_set(g: &mut Game, h: GuardId) {
+    let d = def_of(g, h);
+    if !d.set && !d.learned.is_nan() && g.time >= d.learned + g.k.rescue.set_secs && !crate::control::man::blind(g, h) && g.gd[h].held.is_none() {
+        g.rescue.defs.get_mut(h).unwrap().set = true;
+        let line = format!("set:{}", g.gd[h].callsign);
+        rescue_note(g, &line);
+    }
+}
+
+/// A roamer is the mission's until the room fight has loosed him or he is set: then he goes for the last noise, or the room's door. True once he is gone from it.
+fn roamer_let_go(g: &mut Game, h: GuardId, d: &Def, f: Option<RoomfightDefId>) -> bool {
+    if d.released { return true; }
+    if f.is_some_and(|f| crate::roomfight::is_loose(g, f)) {
+        note_him_released(g, h);
+        return true;
+    }
+    if !d.set { return false; }
+    let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
+    g.rescue.defs.get_mut(h).unwrap().released = true;
+    turn_him_loose(g, h, to);
+    let line = format!("released:{}", g.gd[h].callsign);
+    rescue_note(g, &line);
+    true
+}
+
+/// His row says released, and the log.
+fn note_him_released(g: &mut Game, h: GuardId) {
+    g.rescue.defs.get_mut(h).unwrap().released = true;
+    let line = format!("released:{}", g.gd[h].callsign);
+    rescue_note(g, &line);
+}
+
+/// With no room fight running he stays on his mark, looks at what he covers while calm, and once set fires blind when blinded.
+fn holds_his_mark(g: &mut Game, h: GuardId, d: &Def) {
+    if g.gd[h].script.is_some() {
+        let state = g.gd[h].state;
+        crate::squad::end_guard_script(g, h, Some(state));
+    }
+    crate::control::set_hold(g, h, true, "rescue");
+    crate::control::set_pinned(g, h, true, "rescue");
+    if g.gd[h].state == crate::game::GuardState::Patrol && g.gd[h].awareness < 0.3 {
+        let c = g.gd[h].ch;
+        g.ch[c].body_yaw = v3::yaw_to(g.ch[c].pos, d.mark.aim_at);
+    }
+    if d.set && g.ai_enabled {
+        let mut b = d.burst;
+        let fired = crate::nightbreach::blind_turn(g, h, d.k, &mut b, d.mark.aim_at);
+        g.rescue.defs.get_mut(h).unwrap().burst = b;
+        if fired { g.rescue.blind_rounds += 1.0; }
+    }
 }
 
 /// The captor's word on their net.
@@ -409,96 +427,18 @@ fn rescue_crew(g: &mut crate::game::Game, h: GuardId, d: &mut crate::rescue::Def
     crewed
 }
 
-/// rescue_crew's body. Every write goes to the row in `defs`, since what it calls reads the row (cues, crewHides, crewLook): `d` is the row at entry, and nothing here reads a field of it after writing that field.
+/// What the stages of a crewman's turn share: `d` is his row at entry, and nothing here reads a field of it after writing that field.
+struct CrewMan { h: GuardId, d: Def, f: RoomfightDefId, pt: V3, name: String }
+
+/// rescue_crew's body. Every write goes to the row in `defs`, since what it calls reads the row.
 fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> bool {
-    use crate::game::GuardState;
-    use crate::roomfight::DefMode;
     if d.role == Role::Captor || d.crew == DefCrew::Out || d.crew == DefCrew::In { return false; }
-    let f = match f { Some(f) => f, None => return false };
-    let pt = rescue_room_point(g, RescueRoomPointWhich::Outside);
-    let name = g.gd[h].callsign.clone();
-    if d.crew == DefCrew::Empty {
-        if d.in_room || d.released || crate::roomfight::is_loose(g, f) {
-            g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
-            return false;
-        }
-        if !(g.time >= g.rescue.alarm_at + (if d.role == Role::Roamer { 0.8 } else { 1.6 })) { return false; }
-        if !crate::roomfight::at_post(g, f) || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || g.time - g.gd[h].last_seen_t < 2.0 { return false; }
-        let one = g.staged.foes.iter().any(|&o| o != h && !crate::condition::down(g, g.gd[o].ch) && def_of(g, o).crew == DefCrew::Cross);
-        let x = if !(one && d.role == Role::Door) { rescue_crew_cross_spot(g, h, pt, if d.role == Role::Door { 14.0 } else { 9.0 }) } else { None };
-        if let Some(x) = x {
-            if v3::dist_xz(x, pos_of(g, h)) > 0.4 {
-                rescue_crew_move(g, f, x, None);
-            } else {
-                crate::mind::set_state(g, h, GuardState::Alert, "rescue");
-                crate::mind::raise(g, h, 0.92, "rescue");
-            }
-            let noise = g.rescue.noise_serial;
-            let row = g.rescue.defs.get_mut(h).unwrap();
-            row.crew = DefCrew::Cross; row.look = Some(pt); row.spot = Some(x); row.noise0 = noise;
-            rescue_note(g, &format!("crew:cross:{}", name));
-            let line = if d.role == Role::Door {
-                if crate::dialogue::is_office(g) { "off the corridor — I've got your door from the side." } else { "out of the open — I've got your door from the side." }
-            } else {
-                "I can see your door from here — let them stack on it."
-            };
-            say_radio(g, h, line);
-        } else if d.role == Role::Door {
-            let s = rescue_data(g).unwrap();
-            let dr = crate::doors::doors_by_name(g, &s.room.door);
-            let spot = s.door_man.inside.pos;
-            let path = if dr.is_some() { let at = pos_of(g, h); crate::scene_collision::nav_grid_find_path(g, at, spot, None, None) } else { None };
-            let there = match (&dr, &path) {
-                (Some(_), Some(path)) => !path.is_empty() && !(v3::dist_xz(path[path.len() - 1], spot) > 0.8),
-                _ => false,
-            };
-            if !there {
-                g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
-                return false;
-            }
-            rescue_crew_move(g, f, spot, dr);
-            let row = g.rescue.defs.get_mut(h).unwrap();
-            row.crew = DefCrew::Going; row.spot = Some(v3::copy(spot));
-            rescue_note(g, &format!("crew:in:{}", name));
-            say_radio(g, h, "coming in — I've got the door.");
-        } else {
-            let y = rescue_crew_hide(g, h, f, pt);
-            if let Some(y) = y {
-                rescue_crew_move(g, f, y, None);
-            } else {
-                crate::mind::set_state(g, h, GuardState::Alert, "rescue");
-                crate::mind::raise(g, h, 0.92, "rescue");
-            }
-            let noise = g.rescue.noise_serial;
-            let row = g.rescue.defs.get_mut(h).unwrap();
-            row.crew = DefCrew::Wait; row.spot = y; row.noise0 = noise;
-            rescue_note(g, &format!("crew:wait:{}", name));
-            say_radio(g, h, "staying dark — I'll come up behind them.");
-        }
-        return d.role == Role::Roamer;
-    }
+    let Some(f) = f else { return false };
+    let man = CrewMan { h, d, f, pt: rescue_room_point(g, RescueRoomPointWhich::Outside), name: g.gd[h].callsign.clone() };
+    if d.crew == DefCrew::Empty { return answer_the_call(g, &man); }
     let bounds = rescue_bounds(g);
     if d.crew == DefCrew::Going {
-        let room_door = rescue_data(g).unwrap().room.door;
-        let dr = crate::doors::doors_by_name(g, &room_door);
-        if let Some(dr) = dr {
-            if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(pos_of(g, h), bounds) {
-                let (at, fc) = (pos_of(g, h), g.dr[dr].frame_centre);
-                if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
-                    let who = g.ch[g.gd[h].ch].id;
-                    crate::doors::doors_pull_to(g, dr, who);
-                }
-            }
-        }
-        if crate::roomfight::leg_ended(g, f, crate::owner::by::MISSION).is_none() { return false; }
-        if in_rect(pos_of(g, h), bounds) {
-            let row = g.rescue.defs.get_mut(h).unwrap();
-            row.in_room = true; row.crew = DefCrew::In;
-            rescue_note(g, &format!("crew:inside:{}", name));
-        } else {
-            g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
-            rescue_note(g, &format!("crew:short:{}", name));
-        }
+        going_in_to_the_room(g, &man, bounds);
         return false;
     }
     if d.released || crate::roomfight::is_loose(g, f) {
@@ -506,39 +446,162 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         row.released = true; row.crew = DefCrew::Out;
         return false;
     }
-    if d.crew == DefCrew::Cross && crate::roomfight::at_post(g, f) {
-        if let Some(spot) = d.spot {
-            if v3::dist_xz(pos_of(g, h), spot) > 1.2 {
-                g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
-                { let now = g.time; crate::owner::release(g, h, crate::owner::by::MISSION, now); }
-                rescue_note(g, &format!("crew:short:{}", name));
-                return false;
-            }
-        }
-    }
+    if d.crew == DefCrew::Cross && short_of_his_spot(g, &man) { return false; }
     { let now = g.time; crate::owner::claim(g, h, crate::owner::by::MISSION, now, None); }
-    // N !== D.noise0 asks which noise, not where: by its serial
+    // a new noise is asked by which noise, not where: by its serial
     let at_door = match g.rescue.noise {
-        Some(n) => g.rescue.noise_serial != d.noise0 && (v3::dist_xz(n, pt) < 3.0 || in_rect(n, bounds)),
+        Some(n) => g.rescue.noise_serial != d.noise0 && (v3::dist_xz(n, man.pt) < 3.0 || in_rect(n, bounds)),
         None => false,
     };
     if at_door && g.time - g.gd[h].last_seen_t > 2.5 && g.gd[h].held.is_none() && !crate::control::man::blind(g, h) {
-        let row = g.rescue.defs.get_mut(h).unwrap();
-        row.released = true; row.crew = DefCrew::Out;
-        { let now = g.time; crate::owner::release(g, h, crate::owner::by::MISSION, now); }
-        crate::roomfight::loose(g, h, "rescue");
-        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
-            crate::mind::set_state(g, h, GuardState::Alert, "rescue");
-            crate::mind::set(g, h, 1.0, "rescue");
-            g.gd[h].react_t = 0.0;
-            crate::belief::word(g, h, pt);
-            crate::guards::reset_chase(g, h);
-        }
-        rescue_note(g, &format!("crew:behind:{}", name));
-        rescue_note(g, &format!("released:{}", name));
-        say_radio(g, h, "they're on the door — moving up behind!");
+        move_up_behind(g, &man);
     }
     d.role == Role::Roamer
+}
+
+/// A man not yet on the word takes it up, once he is free to: a line on the door, the room, or the dark. True for a roamer who is the crew's now.
+fn answer_the_call(g: &mut Game, man: &CrewMan) -> bool {
+    let (h, d, f) = (man.h, man.d, man.f);
+    if d.in_room || d.released || crate::roomfight::is_loose(g, f) {
+        g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
+        return false;
+    }
+    if !(g.time >= g.rescue.alarm_at + (if d.role == Role::Roamer { 0.8 } else { 1.6 })) { return false; }
+    if !crate::roomfight::at_post(g, f) || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || g.time - g.gd[h].last_seen_t < 2.0 { return false; }
+    let one = g.staged.foes.iter().any(|&o| o != h && !crate::condition::down(g, g.gd[o].ch) && def_of(g, o).crew == DefCrew::Cross);
+    let x = if !(one && d.role == Role::Door) { rescue_crew_cross_spot(g, h, man.pt, if d.role == Role::Door { 14.0 } else { 9.0 }) } else { None };
+    if let Some(x) = x {
+        take_the_cross(g, man, x);
+    } else if d.role == Role::Door {
+        if !come_in_to_the_room(g, man) { return false; }
+    } else {
+        stay_dark(g, man);
+    }
+    d.role == Role::Roamer
+}
+
+/// He stands to where he is.
+fn stand_to(g: &mut Game, h: GuardId) {
+    crate::mind::set_state(g, h, crate::game::GuardState::Alert, "rescue");
+    crate::mind::raise(g, h, 0.92, "rescue");
+}
+
+/// He goes to a place with a line across the room's door, and says so.
+fn take_the_cross(g: &mut Game, man: &CrewMan, x: V3) {
+    if v3::dist_xz(x, pos_of(g, man.h)) > 0.4 {
+        rescue_crew_move(g, man.f, x, None);
+    } else {
+        stand_to(g, man.h);
+    }
+    let noise = g.rescue.noise_serial;
+    let row = g.rescue.defs.get_mut(man.h).unwrap();
+    row.crew = DefCrew::Cross; row.look = Some(man.pt); row.spot = Some(x); row.noise0 = noise;
+    rescue_note(g, &format!("crew:cross:{}", man.name));
+    let line = if man.d.role == Role::Door {
+        if crate::dialogue::is_office(g) { "off the corridor — I've got your door from the side." } else { "out of the open — I've got your door from the side." }
+    } else {
+        "I can see your door from here — let them stack on it."
+    };
+    say_radio(g, man.h, line);
+}
+
+/// The door man with no such place goes inside to his mark, if there is a way to it. False if not: he is out of it.
+fn come_in_to_the_room(g: &mut Game, man: &CrewMan) -> bool {
+    let h = man.h;
+    let s = rescue_data(g).unwrap();
+    let dr = crate::doors::doors_by_name(g, &s.room.door);
+    let spot = s.door_man.inside.pos;
+    let path = if dr.is_some() { let at = pos_of(g, h); crate::scene_collision::nav_grid_find_path(g, at, spot, None, None) } else { None };
+    let there = match (&dr, &path) {
+        (Some(_), Some(path)) => !path.is_empty() && !(v3::dist_xz(path[path.len() - 1], spot) > 0.8),
+        _ => false,
+    };
+    if !there {
+        g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
+        return false;
+    }
+    rescue_crew_move(g, man.f, spot, dr);
+    let row = g.rescue.defs.get_mut(h).unwrap();
+    row.crew = DefCrew::Going; row.spot = Some(v3::copy(spot));
+    rescue_note(g, &format!("crew:in:{}", man.name));
+    say_radio(g, h, "coming in — I've got the door.");
+    true
+}
+
+/// A roamer with no such place hides, or stands to where he is, and waits to come up behind them.
+fn stay_dark(g: &mut Game, man: &CrewMan) {
+    let y = rescue_crew_hide(g, man.h, man.f, man.pt);
+    if let Some(y) = y {
+        rescue_crew_move(g, man.f, y, None);
+    } else {
+        stand_to(g, man.h);
+    }
+    let noise = g.rescue.noise_serial;
+    let row = g.rescue.defs.get_mut(man.h).unwrap();
+    row.crew = DefCrew::Wait; row.spot = y; row.noise0 = noise;
+    rescue_note(g, &format!("crew:wait:{}", man.name));
+    say_radio(g, man.h, "staying dark — I'll come up behind them.");
+}
+
+/// On his way in he pulls the door to behind him; at the end of the leg he is inside, or came up short.
+fn going_in_to_the_room(g: &mut Game, man: &CrewMan, bounds: Option<crate::scene_scenarios::Rect>) {
+    let h = man.h;
+    let room_door = rescue_data(g).unwrap().room.door;
+    let dr = crate::doors::doors_by_name(g, &room_door);
+    if let Some(dr) = dr {
+        if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(pos_of(g, h), bounds) {
+            let (at, fc) = (pos_of(g, h), g.dr[dr].frame_centre);
+            if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
+                let who = g.ch[g.gd[h].ch].id;
+                crate::doors::doors_pull_to(g, dr, who);
+            }
+        }
+    }
+    if crate::roomfight::leg_ended(g, man.f, crate::owner::by::MISSION).is_none() { return; }
+    if in_rect(pos_of(g, h), bounds) {
+        let row = g.rescue.defs.get_mut(h).unwrap();
+        row.in_room = true; row.crew = DefCrew::In;
+        rescue_note(g, &format!("crew:inside:{}", man.name));
+    } else {
+        g.rescue.defs.get_mut(h).unwrap().crew = DefCrew::Out;
+        rescue_note(g, &format!("crew:short:{}", man.name));
+    }
+}
+
+/// Posted, and he never got near the spot he was sent to: the crew has lost him.
+fn short_of_his_spot(g: &mut Game, man: &CrewMan) -> bool {
+    if !crate::roomfight::at_post(g, man.f) { return false; }
+    let Some(spot) = man.d.spot else { return false };
+    let short = v3::dist_xz(pos_of(g, man.h), spot) > 1.2;
+    if !short { return false; }
+    g.rescue.defs.get_mut(man.h).unwrap().crew = DefCrew::Out;
+    { let now = g.time; crate::owner::release(g, man.h, crate::owner::by::MISSION, now); }
+    rescue_note(g, &format!("crew:short:{}", man.name));
+    true
+}
+
+/// They are on the door: he is let go, and comes up behind them.
+fn move_up_behind(g: &mut Game, man: &CrewMan) {
+    let row = g.rescue.defs.get_mut(man.h).unwrap();
+    row.released = true; row.crew = DefCrew::Out;
+    turn_him_loose(g, man.h, man.pt);
+    rescue_note(g, &format!("crew:behind:{}", man.name));
+    rescue_note(g, &format!("released:{}", man.name));
+    say_radio(g, man.h, "they're on the door — moving up behind!");
+}
+
+/// Off the mission's lead and loose in the room fight; unless he already has them in his sights he goes for `to`, at full alert.
+fn turn_him_loose(g: &mut Game, h: GuardId, to: V3) {
+    use crate::game::GuardState;
+    { let now = g.time; crate::owner::release(g, h, crate::owner::by::MISSION, now); }
+    crate::roomfight::loose(g, h, "rescue");
+    if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || g.time - g.gd[h].last_seen_t > 1.0 {
+        crate::mind::set_state(g, h, GuardState::Alert, "rescue");
+        crate::mind::set(g, h, 1.0, "rescue");
+        g.gd[h].react_t = 0.0;
+        crate::belief::word(g, h, to);
+        crate::guards::reset_chase(g, h);
+    }
 }
 
 /// Off his post on the room fight's 'move'.
