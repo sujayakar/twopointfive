@@ -17,7 +17,7 @@ export interface FineScene { insts: Inst[]; shapes: string[] }
 const RECIPES: Record<string, () => Shape> = {
   hard: () => box('hard', 1, 0.005, 0.0004, 0), metal: () => box('metal', 2, 0.0026, 0.0002, 0), cast: () => box('cast', 3, 0.008, 0.0022, 0.004), wood: () => box('wood', 4, 0.006, 0.0012, 0), soft: () => cushionBox(5),
   drum: () => drum('drum', 0.004, 0), pipe: () => drum('pipe', 0.003, 0.004), ball: () => round('ball', 4, 0), limb: () => limb(6), knot: () => round('knot', 4, 0.10), body: () => body(),
-  ...Object.fromEntries([0, 1, 2].flatMap(i => [[`paver${i}`, () => slab(`paver${i}`, 20 + i, 0.003, 0.0008, 0.0012, 'stone')], [`board${i}`, () => slab(`board${i}`, 30 + i, 0.003, 0.0007, 0, 'wood')], [`panel${i}`, () => slab(`panel${i}`, 40 + i, 0.004, 0.0010, 0.0018, 'cast')], [`sheet${i}`, () => slab(`sheet${i}`, 50 + i, 0.003, 0.0012, 0, 'felt')]] as [string, () => Shape][])),
+  ...Object.fromEntries([0, 1, 2].flatMap(i => [[`paver${i}`, () => slab(`paver${i}`, 20 + i, 0.003, 0.0008, 0.0012, 'stone')], [`board${i}`, () => slab(`board${i}`, 30 + i, 0.0025, 0.0004, 0, 'wood')], [`panel${i}`, () => slab(`panel${i}`, 40 + i, 0.004, 0.0010, 0.0018, 'cast')], [`sheet${i}`, () => slab(`sheet${i}`, 50 + i, 0.003, 0.0012, 0, 'felt')]] as [string, () => Shape][])),
 };
 /** a piece that nothing else is like, as a shape of its own */
 function odd(spec: string): Shape {
@@ -54,7 +54,7 @@ export function makeFine(b: Building): FineScene {
     for (let a = 0; a < 3; a++) for (const s of [-1, 1]) {
       const n: V3 = p.rot[a]!.map(v => v * s) as V3, up = n[1] > 0.99, side = Math.abs(n[1]) < 0.01; if (l.up ? !up : !side) continue; const i = (a + 1) % 3, j = (a + 2) % 3, hi = p.half[i]!, hj = p.half[j]!; if (4 * hi * hj < 0.9 || Math.min(hi, hj) < 0.1) continue;
       const long = l.shape === 'board' ? hi < hj : false, [du, dv] = l.shape === 'board' ? (long ? [l.a, l.b] : [l.b, l.a]) : side && Math.abs(p.rot[i]![1]) > 0.9 ? [l.b, l.a] : [l.a, l.b], nu = Math.max(1, Math.round(2 * hi / du)), nv = Math.max(1, Math.round(2 * hj / dv)), su = hi / nu, sv = hj / nv;
-      for (let u = 0; u < nu; u++) for (let v = 0; v < nv; v++) { const cu = -hi + su * (2 * u + 1), cv = -hj + sv * (2 * v + 1), at = [0, 1, 2].map(k => p.at[k]! + n[k]! * (p.half[a]! + 0.002) + p.rot[i]![k]! * cu + p.rot[j]![k]! * cv) as V3; let hidden = 0; for (const [x, y] of [[0, 0], [0.8, 0.8], [-0.8, 0.8], [0.8, -0.8], [-0.8, -0.8]] as const) if (inside([0, 1, 2].map(k => at[k]! + n[k]! * 0.012 + p.rot[i]![k]! * su * x + p.rot[j]![k]! * sv * y) as V3, p)) hidden++; if (hidden >= 1) continue;
+      for (let u = 0; u < nu; u++) for (let v = 0; v < nv; v++) { const cu = -hi + su * (2 * u + 1), cv = -hj + sv * (2 * v + 1), at = [0, 1, 2].map(k => p.at[k]! + n[k]! * (p.half[a]! + 0.002) + p.rot[i]![k]! * cu + p.rot[j]![k]! * cv) as V3; let hidden = 0; for (const [x, y] of [[0, 0], [0.8, 0.8], [-0.8, 0.8], [0.8, -0.8], [-0.8, -0.8]] as const) if (inside([0, 1, 2].map(k => at[k]! + n[k]! * 0.012 + p.rot[i]![k]! * su * x + p.rot[j]![k]! * sv * y) as V3, p)) hidden++; if (hidden >= 4) continue;
         // its own frame: y out of the face; x and z along it
         const X = p.rot[i]!, Z: V3 = [X[1] * n[2] - X[2] * n[1], X[2] * n[0] - X[0] * n[2], X[0] * n[1] - X[1] * n[0]], t = 1 - 0.10 * q(); put({ shape: l.shape + Math.floor(q() * 3), piece: p, at, rot: [X, n, Z], half: [su - l.gap / 2, 0.006, sv - l.gap / 2], taper: 0, tint: [t, t, t], moves: false }); }
     }

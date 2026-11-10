@@ -10,7 +10,7 @@ import lib from './fine.wgsl' with { type: 'text' };
 import pickCode from './pick.wgsl' with { type: 'text' };
 
 export const FINE_RASTER = { tau: 0.5, hide: true, /** what was picked stays */ hold: false };
-const MOST = 1 << 17, INDICES = 1 << 23;
+const MOST = 1 << 17, INDICES = 1 << 22;
 /** a scene's shapes, as they are handed over: made here, in workers, or read from a file */
 export interface Loaded { scene: FineScene; shapes: Map<string, Packed>; /** where each begins */ at: Map<string, number>; rows: number }
 export function load(scene: FineScene, shapes: Packed[]): Loaded { const m = new Map(shapes.map(s => [s.name, s])), at = new Map<string, number>(); let rows = 0; for (const s of shapes) { at.set(s.name, rows); rows += s.data.length / 4; } return { scene, shapes: m, at, rows }; }

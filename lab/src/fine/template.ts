@@ -64,8 +64,8 @@ export function limb(seed: number): Shape {
 }
 /** a flat slab that lies on a face, its top at +half y: a paver, a board, a panel of concrete, a sheet of roofing */
 export function slab(name: string, seed: number, r: number, unevenness: number, pits: number, grain: 'stone' | 'wood' | 'cast' | 'felt'): Shape {
-  const o = rng(seed)() * 90, h: V3 = [0.3, 0.006, 0.3], reach = 0.02; const m = solid((x, y, z) => rbox(x, y, z, h, r) + 0.0015 * step(-0.02, 0, Math.max(Math.abs(x) - h[0], Math.abs(z) - h[2])) * (0.5 + fbm3(x * 12 + o, 1, z * 12, 3)), h, 0.013, 2, (x, y, z) => y < 0 ? 0 : grain === 'wood' ? unevenness * fbm3(x * 5 + o, 0, z * 110, 3) : unevenness * fbm3(x * 24 + o, 0, z * 24, 3) - pits * step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)),
-    (x, y, z) => { const b = fbm3(x * 3 + o, 5, z * 3, 3), p = step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)), v = grain === 'wood' ? 0.86 + 0.26 * fbm3(x * 4 + o, 0, z * 120, 3) : 0.94 + 0.08 * b - (pits > 0 ? 0.12 * p : 0); void y; return [v, v, v, 1]; }, 0.0004);
+  const o = rng(seed)() * 90, h: V3 = [0.3, 0.006, 0.3], reach = 0.02; const m = solid((x, y, z) => rbox(x, y, z, h, r) + (grain === 'wood' ? 0.0005 : 0.0015) * step(-0.02, 0, Math.max(Math.abs(x) - h[0], Math.abs(z) - h[2])) * (0.5 + fbm3(x * 12 + o, 1, z * 12, 3)), h, 0.013, 2, (x, y, z) => y < 0 ? 0 : grain === 'wood' ? unevenness * fbm3(x * 5 + o, 0, z * 110, 3) : unevenness * fbm3(x * 24 + o, 0, z * 24, 3) - pits * step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)),
+    (x, y, z) => { const b = fbm3(x * 3 + o, 5, z * 3, 3), p = step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)), v = grain === 'wood' ? 0.95 + 0.16 * fbm3(x * 4 + o, 0, z * 120, 3) : 0.94 + 0.08 * b - (pits > 0 ? 0.12 * p : 0); void y; return [v, v, v, 1]; }, 0.0004);
   const out = fit(name, m, h, reach); for (let i = 1; i < out.s!.length; i += 3) out.s![i] = Math.max(-1, Math.min(1, m.pos[i]! / h[1])) ; return { ...out, half: h, /* (what is lost there is seen as far as it can be told apart: grain, pits) */ coarse: [plainBox(h, 0.0025, grain === 'wood' ? 0.0045 : 0.006), plainBox(h, 0, grain === 'wood' ? 0.009 : 0.012)] };
 }
 
