@@ -27,7 +27,7 @@ fn hash01(n: f64) -> f64 {
 
 /// The man's own stature (1 for a player's man, and for everybody with no cast loaded).
 fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
-    if crate::seats::man_of(g, Some(c_2)).is_some() { return 1.0; }
+    if crate::character::is_player(g, c_2) { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
     let name = g.tab.anim_gltf_cast_variant[v].name.clone();

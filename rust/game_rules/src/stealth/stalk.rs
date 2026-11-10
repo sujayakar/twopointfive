@@ -183,7 +183,7 @@ fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
+        if !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
             continue;
         }
         let pos = g.ch[g.gd[gd].ch].pos;
@@ -461,7 +461,7 @@ pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
+        if !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
             continue;
         }
         let pos = g.ch[g.gd[gd].ch].pos;
