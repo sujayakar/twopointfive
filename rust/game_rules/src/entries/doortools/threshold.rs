@@ -67,7 +67,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
     // the blast itself is the stun charge's, with nobody on its list
     let spot = door_pt(g, d, w * 0.7, 0.2, into, Some(0.5));
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, spot, [0.0, 0.0, 0.0], Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
-    crate::throwables::item_set_fired(g, it, true);
+    g.tab.item[it].fired = true;
     seam_detonate_stun_nobody(g, it);
     if let Some(ii) = g.items.items.iter().position(|x| *x == it) { g.items.items.remove(ii); }
     let (mut knocked, mut stunned, mut backblast) = (0.0_f64, 0.0_f64, 0.0_f64);

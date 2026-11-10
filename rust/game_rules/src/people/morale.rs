@@ -441,9 +441,9 @@ fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
-        let pos = crate::throwables::item_pos(g, it);
-        if crate::throwables::item_settled(g, it) || crate::throwables::item_who(g, it) == me || flat(pos, hole) > bait_m { continue; }
-        let vel = crate::throwables::item_vel(g, it);
+        let pos = g.tab.item[it].pos;
+        if g.tab.item[it].settled || g.tab.item[it].who == me || flat(pos, hole) > bait_m { continue; }
+        let vel = g.tab.item[it].vel;
         if m::hyp3(vel[0], vel[1], vel[2]) > 0.5 && !crate::scene_collision::segment_blocked(g, eye, pos, None, None, None) { return true; }
     }
     false

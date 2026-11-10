@@ -261,7 +261,7 @@ impl StealthAsk for Play {
     }
     fn shots_heard(&self, gd: GuardId) -> f64 { self.g.gd[gd].witness.heard.shots }
     fn hand_of(&self, gd: GuardId) -> Option<game::guards::InHand> { game::guards::in_hand(&self.g, gd) }
-    fn dropped_gun(&mut self, gd: GuardId) -> Option<(bool, bool)> { let i = self.g.gd[gd].dropped?; Some((game::throwables::item_carried(&self.g, i) == Some(true), game::throwables::item_settled(&mut self.g, i))) }
+    fn dropped_gun(&mut self, gd: GuardId) -> Option<(bool, bool)> { let i = self.g.gd[gd].dropped?; Some((self.g.tab.item[i].carried == Some(true), self.g.tab.item[i].settled)) }
     fn response(&self) -> game::qrf::QrfState { self.g.qrf.state }
     fn response_reason(&self) -> Option<game::qrf::QrfReason> { self.g.qrf.reason }
     fn response_men(&self) -> Vec<GuardId> { self.g.qrf.men.iter().copied().collect() }

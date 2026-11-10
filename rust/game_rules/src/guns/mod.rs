@@ -11,7 +11,6 @@ pub mod gunroles;
 pub mod he40;
 pub mod launcher;
 pub mod shotgun;
-pub mod sim_itemshome;
 pub mod throwables;
 pub mod throwplan;
 pub mod tracers;

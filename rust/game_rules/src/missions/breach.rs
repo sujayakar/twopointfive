@@ -416,11 +416,11 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
 /// tick's 'bang' case: it lands, and goes off on the drill's cue with the guard list being the opposition for the call.
 fn tick_bang(g: &mut Game, t: f64) {
     let it = dr!(g).can.unwrap();
-    let landed = crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it);
+    let landed = g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled;
     if landed && dr!(g).t_land.is_nan() { dr!(g).t_land = t; breach_drill_beat(g, "land"); }
     let (t_land, t_toss) = (dr!(g).t_land, dr!(g).t_toss);
     if (!t_land.is_nan() && t >= t_land + FUSE_AFTER_LAND) || t > t_toss + 2.0 {
-        crate::throwables::item_set_fired(g, it, true);
+        g.tab.item[it].fired = true;
         dr!(g).t_bang = t;
         let hs = dr!(g).hostiles.clone();
         let up: Vec<GuardId> = hs.iter().copied().filter(|h| !crate::condition::down(g, g.gd[*h].ch)).collect();
@@ -447,9 +447,9 @@ fn breach_drill_casualties(g: &mut crate::game::Game, t: f64) -> bool {
         dr!(g).t_done = t;
         breach_drill_beat(g, why);
         if let Some(can) = dr!(g).can {
-            if !crate::throwables::item_fired(g, can) {
-                let fuse = m::min(crate::throwables::item_fuse(g, can), FUSE_AFTER_LAND);
-                crate::throwables::item_set_fuse(g, can, fuse);
+            if !g.tab.item[can].fired {
+                let fuse = m::min(g.tab.item[can].fuse, FUSE_AFTER_LAND);
+                g.tab.item[can].fuse = fuse;
                 breach_drill_beat(g, "can:short-fuse");
             }
         }

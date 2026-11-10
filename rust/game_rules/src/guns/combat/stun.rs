@@ -15,17 +15,17 @@ pub fn flash_fuse(g: &crate::game::Game) -> f64 {
 pub fn detonate_stun(g: &mut crate::game::Game, it: ItemId, borrowed: Option<bool>, sam: Option<crate::combat::DetonateStunSam>) {
     let borrowed = borrowed.unwrap_or(false);
     let raw = sam.map(|s| crate::combat::DetonateStunRawSam { side: s.side, spare: s.spare });
-    let who = crate::throwables::item_who(g, it);
+    let who = g.tab.item[it].who;
     crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| detonate_stun_raw(g, it, borrowed, raw));
 }
 
 /// The burst, the flash and the bang, then who it blinds and folds: the guards, then every seat's man.
 fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam: Option<crate::combat::DetonateStunRawSam>) {
     let b = crate::effects::bang();
-    let p = crate::throwables::item_pos(g, it);
+    let p = g.tab.item[it].pos;
     let at: V3 = [p[0], p[1] + b.height, p[2]];
     let tear = g.k.doorblast.tear_m.stun;
-    let who = crate::throwables::item_who(g, it);
+    let who = g.tab.item[it].who;
     crate::doors::doors_blast(g, at, tear, who);
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
@@ -65,7 +65,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     let side: crate::teams::Team = match g.tab.item[it].side {
         Some(s) => s,
         None => {
-            let who = crate::throwables::item_who(g, it);
+            let who = g.tab.item[it].who;
             if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Player }
         }
     };
