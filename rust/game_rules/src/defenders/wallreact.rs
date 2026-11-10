@@ -31,13 +31,6 @@ fn wrap(a: f64) -> f64 {
     a - m::PI
 }
 
-fn note(g: &mut Game, s: &str) {
-    let line = format!("{} {}", js::to_fixed(g.time, 2), s);
-    let log = &mut g.m.wallreact.wallreact_log;
-    log.push(line);
-    if log.len() > 400 { log.drain(0..200); }
-}
-
 /// does the plan segment p → q cross the rect inflated by `pad`
 fn seg_rect(p: V3, q: V3, r: [f64; 4], pad: f64) -> bool {
     let (x0, z0, x1, z1) = (r[0] - pad, r[1] - pad, r[2] + pad, r[3] + pad);
@@ -363,16 +356,13 @@ fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Optio
     x.at[0] = c0[0] + u[0] * mid;
     x.at[2] = c0[1] + u[1] * mid;
     x.half = (x.hi - x.lo) / 2.0;
-    let (at, half, walk, opening) = (x.at, x.half, x.walk, x.opening);
-    let key = x.key.clone();
+    let (at, half, opening) = (x.at, x.half, x.opening);
     if let Some(op) = opening {
         let o = &mut g.tab.cover_opening[op];
         o.at[0] = at[0];
         o.at[2] = at[2];
         o.half = half;
     }
-    let text = format!("{} {} wall #{} → {} at ({}, {}) {} m {}", row.kind.as_str(), row.cause.as_str(), row.id, key, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1), js::to_fixed(half * 2.0, 1), if walk { "WALK" } else { "port" });
-    note(g, &text);
     Some(b)
 }
 
@@ -501,15 +491,8 @@ fn wall_react_reflood(g: &mut Game, opened: &[f64]) {
         row.ev = ev;
         row.room = Some(room);
     }
-    let ids: Vec<String> = olds.iter().map(|r| format!("{}", g.tab.roomfight_room[*r].id)).collect();
     let mut lived: JsSet<RoomfightRoomId> = JsSet::new();
     for (_, r) in now.iter() { lived.add(*r); }
-    let lives: Vec<String> = lived.keys().iter().map(|r| {
-        let row = &g.tab.roomfight_room[*r];
-        format!("{} ({} cells, {} doors)", row.id, row.cells.len(), row.entries.len())
-    }).collect();
-    let text = format!("rooms {} flooded again → {}", ids.join("+"), lives.join(", "));
-    note(g, &text);
 }
 
 // ================================================================ (b) noticing
@@ -543,12 +526,10 @@ fn wall_react_sees(g: &mut Game, b: WallreactBreachId, from: V3, yaw: Option<f64
     false
 }
 
-fn wall_react_ops_know(g: &mut Game, b: WallreactBreachId, by: &str) {
+fn wall_react_ops_know(g: &mut Game, b: WallreactBreachId) {
     if g.tab.wallreact_breach[b].ops >= 0.0 { return; }
     g.tab.wallreact_breach[b].ops = g.time;
     g.stats.wallreact.learned_ops += 1;
-    let text = format!("the team knows {} ({})", g.tab.wallreact_breach[b].key, by);
-    note(g, &text);
 }
 
 fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: WallReactManKnowsHow) {
@@ -566,8 +547,6 @@ fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: Wa
     minds.get_mut(gd).unwrap().set(b, Mind { ev, line: false, line_t: -1.0, t });
     if how == How::Told { g.stats.wallreact.told += 1; return; }
     g.stats.wallreact.learned_men += 1;
-    let text = format!("{} {} {}", g.gd[gd].callsign, how.as_str(), g.tab.wallreact_breach[b].key);
-    note(g, &text);
     if how == How::Made { return; }
     let at = now + g.k.wallreact.tell_secs;
     g.tab.wallreact_breach[b].tell.push(BreachTellItem { by: gd, at });
@@ -612,7 +591,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
             if hears(g, [p[0], EYE, p[2]], src, r) { known = true; break; }
         }
     }
-    if known { wall_react_ops_know(g, b, if ours { "the player made it" } else { "the player heard it" }); }
+    if known { wall_react_ops_know(g, b); }
     for gd in g.guards.clone() {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let made = char_id(g, gd) == row.who;
@@ -622,8 +601,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
         }
         let team = g.gd[gd].team;
         if team == crate::teams::Team::Operative {
-            let by = format!("{} {} it", g.gd[gd].callsign, if made { "made" } else { "heard" });
-            wall_react_ops_know(g, b, &by);
+            wall_react_ops_know(g, b);
         } else if team != crate::teams::Team::Civilian {
             wall_react_man_knows(g, b, gd, if made { WallReactManKnowsHow::Made } else { WallReactManKnowsHow::Heard });
         }
@@ -643,14 +621,13 @@ pub fn wall_react_notice(g: &mut Game) {
                 if !crate::condition::down(g, g.pl[pl].ch) && wall_react_sees(g, b, pos, Some(yaw)) { saw = true; break; }
             }
             if saw {
-                wall_react_ops_know(g, b, "the player saw it");
+                wall_react_ops_know(g, b);
             } else {
                 for gd in g.guards.clone() {
                     if g.gd[gd].team != Team::Operative || crate::condition::down(g, g.gd[gd].ch) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
                     let (pos, yaw) = { let c = &g.ch[g.gd[gd].ch]; (c.pos, c.aim_yaw) };
                     if !wall_react_sees(g, b, pos, Some(yaw)) { continue; }
-                    let by = format!("{} saw it", g.gd[gd].callsign);
-                    wall_react_ops_know(g, b, &by);
+                    wall_react_ops_know(g, b);
                     if g.gd[gd].unit.is_some() {
                         say(g, gd, if g.tab.wallreact_breach[b].walk { "hole in the wall." } else { "gap in the wall — watch it." });
                     }
@@ -797,13 +774,10 @@ fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
     }
     let best = match best { Some(b) => b, None => { g.m.wallreact.wall_react.watching.delete(gd); return; } };
     let r = &g.tab.wallreact_breach[best];
-    let (at, walk) = (r.at, r.walk);
+    let at = r.at;
     if Some(best) != had {
         g.m.wallreact.wall_react.watching.set(gd, best);
         g.stats.wallreact.watches += 1;
-        let what = format!("watch → the {} at ({}, {})", if walk { "hole" } else { "port" }, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
-        let who = g.gd[gd].callsign.clone();
-        g.fight.log.push(crate::roomfight::FightNote { t: now, who, what });
     }
     pt[0] = at[0];
     pt[2] = at[2];
@@ -1145,12 +1119,8 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
         let pace = g.tune.guard_chase;
         crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, crate::owner::By::NOBODY);
         g.fight.stats.took_cover += 1.0;
-        let who = g.gd[gd].callsign.clone();
-        g.fight.log.push(crate::roomfight::FightNote { t: now, who, what: String::from("his cover is gone: takes cover") });
         g.stats.wallreact.moved_def += 1;
         g.m.wallreact.wall_react.moved_t.set(gd, now);
-        let text = format!("{} (holding) leaves ({}, {}) for ({}, {})", g.gd[gd].callsign, js::to_fixed(c[0], 1), js::to_fixed(c[2], 1), js::to_fixed(to[0], 1), js::to_fixed(to[2], 1));
-        note(g, &text);
         say(g, gd, "cover's gone — moving!");
         return (R::Moved, String::from("moved"));
     }
@@ -1185,8 +1155,6 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
     crate::game::guard_set_path(g, gd, Vec::new());
     g.stats.wallreact.moved_ai += 1;
     g.m.wallreact.wall_react.moved_t.set(gd, now);
-    let text = format!("{} (fighting) shifts to ({}, {})", g.gd[gd].callsign, js::to_fixed(to[0], 1), js::to_fixed(to[2], 1));
-    note(g, &text);
     WallReactShift::Moved
 }
 
@@ -1219,8 +1187,6 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
         None => wall_react_step_out(g, gd, post, threat, 1.2, pb, &taken, Some(true)),
     };
     let to = match to { Some(q) => q, None => { g.stats.wallreact.no_cover += 1; return WallReactOpMove::Later; } };
-    let text = format!("{} ({}) mark ({}, {}) → ({}, {})", g.gd[gd].callsign, g.tab.orders_assignment[a].order, js::to_fixed(post[0], 1), js::to_fixed(post[2], 1), js::to_fixed(to[0], 1), js::to_fixed(to[2], 1));
-    note(g, &text);
     let now = g.time;
     let at = pos_of(g, gd);
     let row = &mut g.tab.orders_assignment[a];

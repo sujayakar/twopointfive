@@ -102,7 +102,7 @@ fn ruled(g: &crate::game::Game) -> Vec<RoomfightDefId> {
     out
 }
 
-/// a line of the timeline and of the fight's own log.
+/// a line of the timeline.
 fn event(g: &mut crate::game::Game, what: crate::powerout::PowerOutEventWhat, gd: Option<GuardId>, why: &str) {
     let who: String = match gd {
         Some(id) => g.gd[id].callsign.clone(),
@@ -110,14 +110,9 @@ fn event(g: &mut crate::game::Game, what: crate::powerout::PowerOutEventWhat, gd
     };
     let t = g.time;
     let s = st(g);
-    s.events.push(PowerOutEvent { t, what, who: who.clone(), why: why.into() });
+    s.events.push(PowerOutEvent { t, what, who, why: why.into() });
     if s.events.len() > 120 {
         s.events.drain(0..40);
-    }
-    let l = &mut g.fight.log;
-    l.push(crate::roomfight::FightNote { t, who, what: alloc::format!("[powerout] {}: {}", what.as_str(), why) });
-    if l.len() > 600 {
-        l.drain(0..200);
     }
 }
 

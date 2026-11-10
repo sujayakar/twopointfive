@@ -249,8 +249,6 @@ fn muzzle_to(g: &mut Game, o: RoomfightOpId, best: Option<GuardId>, sk: &FightSk
             let rel = v3::wrap_angle(v3::yaw_to(cp, bp) - g.ch[c].body_yaw);
             room_fight_speak(g, o, if rel > 0.5 { "contact left." } else if rel < -0.5 { "contact right." } else { "contact front." }, Some(0.4));
         }
-        let text = alloc::format!("eyes on {}", g.gd[b].callsign);
-        room_fight_note(g, Some(gd), &text);
     } else {
         let was = g.tab.roomfight_op[o].tgt;
         let fell = was.map_or(false, |t| crate::condition::down(g, g.gd[t].ch));
@@ -329,7 +327,7 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
         g.tab.roomfight_op[o].line_t += dt;
         g.tab.roomfight_op[o].line_by = Some(g.pl[g.player].ch);
         g.tab.roomfight_op[o].line_at = g.time;
-        room_fight_side_step(g, o, chest, speed, None, None);
+        room_fight_side_step(g, o, chest, speed, None);
         room_fight_let_go(g, o);
         if g.tab.roomfight_op[o].tgt.is_none() { return; }
     }
@@ -358,7 +356,7 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
         room_fight_walk_on(g, o);
         if g.tab.roomfight_op[o].tgt.is_some() {
             let waited = g.tab.roomfight_op[o].wall_t;
-            if room_fight_side_step(g, o, chest, speed, Some(waited), Some("steps aside: his gun is in a wall")) { g.tab.roomfight_op[o].wall_t = 0.0; }
+            if room_fight_side_step(g, o, chest, speed, Some(waited)) { g.tab.roomfight_op[o].wall_t = 0.0; }
         }
         return None;
     }
@@ -423,7 +421,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
         g.tab.roomfight_op[o].line_by = Some(f);
         g.tab.roomfight_op[o].line_at = g.time;
         if crate::character::is_player(g, f) { room_fight_hold_short(g, o); }
-        room_fight_side_step(g, o, to, speed, None, None);
+        room_fight_side_step(g, o, to, speed, None);
         room_fight_let_go(g, o);
         return;
     }
@@ -579,7 +577,6 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
             secs = g.k.roomfight.door_look_secs;
             door = Some(db.door);
             g.tab.roomfight_op[o].door_by = None;
-            room_fight_note(g, Some(gd), "a door has come open in his sight: he looks at it");
         }
     }
     let mut shot_door: Option<DoorId> = None; // last of all: a man in his line, a mate's call, a footfall and a door just opened each come first
@@ -591,7 +588,6 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
             secs = g.k.roomfight.door_look_secs;
             door = Some(ds.door);
             shot_door = Some(ds.door);
-            if look.map_or(true, |l| l.door != Some(ds.door)) { room_fight_note(g, Some(gd), "rounds are coming through a doorway in his sight: he looks at it"); }
         }
     }
     if let Some(w) = who {
@@ -665,8 +661,6 @@ fn room_fight_hold_short(g: &mut crate::game::Game, o: RoomfightOpId) {
     if flat(goal, hp) > flat(p, hp) - 0.3 || !crate::guards::gun_on_lit_man(g, gd) || room_fight_funnel_of(g, p).is_some() { return; }
     if g.time - g.tab.roomfight_op[o].short_seen > 1.0 || g.time < g.tab.roomfight_op[o].short_seen {
         g.tab.roomfight_op[o].short_since = g.time;
-        let text = alloc::format!("holds short of {} in the dark: the player in his line", g.gd[h].callsign);
-        room_fight_note(g, Some(gd), &text);
     }
     g.tab.roomfight_op[o].short_seen = g.time;
     if g.time - g.tab.roomfight_op[o].short_since < g.k.roomfight.hold_short_secs { g.tab.roomfight_op[o].short_t = g.time; }
@@ -695,8 +689,6 @@ fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) {
         }
     }
     let who = match who { Some(w) => w, None => return };
-    let text = alloc::format!("lets {} go (a friend in the line) for {}, who is shooting", g.gd[tgt].callsign, g.gd[who].callsign);
-    room_fight_note(g, Some(gd), &text);
     g.tab.roomfight_op[o].pass = Some(OpPass { h: tgt, until: g.time + 2.0, no_shot: None });
     g.tab.roomfight_op[o].tgt = None;
     g.tab.roomfight_op[o].kept = None;
@@ -716,8 +708,6 @@ fn room_fight_walk_on(g: &mut crate::game::Game, o: RoomfightOpId) {
         Some(s) if s.goal.is_some() && !s.arrived.unwrap_or(false) => {}
         _ => return,
     }
-    let text = alloc::format!("no shot at {} for {} s: walks on", g.gd[tgt].callsign, js::to_fixed(g.tab.roomfight_op[o].block_t, 1));
-    room_fight_note(g, Some(gd), &text);
     room_fight_speak(g, o, "no shot — moving.", Some(3.0));
     g.tab.roomfight_op[o].pass = Some(OpPass { h: tgt, until: g.time + r.no_shot_pass, no_shot: Some(true) });
     g.tab.roomfight_op[o].tgt = None;
@@ -786,8 +776,6 @@ fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spee
             g.tab.roomfight_op[o].step_until = g.time + 1.5;
             g.tab.roomfight_op[o].funnel_t = 0.0;
             g.fight.stats.stepped += 1.0;
-            let text = alloc::format!("steps off {}'s opening", g.dr[d].def.name);
-            room_fight_note(g, Some(gd), &text);
             return;
         }
     }
@@ -795,9 +783,8 @@ fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spee
 }
 
 /// A friend has stood in his line a while (or his own gun is in a wall) and he is planted: a step to the side that opens it. True: he steps.
-fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, speed: f64, waited: Option<f64>, why: Option<&str>) -> bool {
+fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, speed: f64, waited: Option<f64>) -> bool {
     let waited = waited.unwrap_or(g.tab.roomfight_op[o].line_t);
-    let why = why.unwrap_or("steps round a friend in his line");
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
     let sk = skill_operative(g);
@@ -822,7 +809,6 @@ fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, spe
         g.tab.roomfight_op[o].step_until = g.time + 2.0;
         g.tab.roomfight_op[o].line_t = 0.0;
         g.fight.stats.stepped += 1.0;
-        room_fight_note(g, Some(gd), why);
         return true;
     }
     g.tab.roomfight_op[o].step_until = g.time + 1.0;
