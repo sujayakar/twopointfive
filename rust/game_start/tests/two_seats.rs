@@ -406,6 +406,24 @@ fn each_player_has_his_own_partner() {
     }
 }
 
+/// THE RULE: a player folded by a blast is folded whoever else is down. A failure means that with his partner down, a rule about him (a grab, a hand on a switch) lets him act while he is folded.
+#[test]
+fn a_player_is_folded_whoever_else_is_down() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let (him, other) = (p.g.pl[man(&p, seat)].ch, p.g.pl[man(&p, 1 - seat)].ch);
+            p.g.cond[him].fold_until = p.g.time + 5.0;
+            let folded = |p: &Play| game::samstun::sam_staggered(&p.g, &game::seats::seat(&p.g, p.g.seats[seat]), None);
+            assert!(folded(&p), "seed {s}: CONTROL: seat {seat}'s man is folded with both up");
+            p.g.cond[other].down = true;
+            assert!(folded(&p), "seed {s}: seat {seat}'s man reads as not folded because the other player is down");
+            p.g.cond[him].down = true;
+            assert!(!folded(&p), "seed {s}: a man who is down shows no stun");
+        }
+    }
+}
+
 /// THE RULE: a camera watches every player in its cone. The player nearest the lens does not hide the other.
 /// A failure means standing behind a camera shields your partner.
 #[test]
