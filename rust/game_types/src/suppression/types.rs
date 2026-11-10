@@ -24,6 +24,9 @@ pub struct Sup {
     pub pending: Option<crate::suppression::SupMoment>,
     #[is(-100.0)] pub pending_t: f64,
     pub was_pinned: bool,
+    /// getting down where he stands takes him out of the sight of everybody he knows of, and when that was last asked
+    pub hides: bool,
+    #[is(-100.0)] pub hides_t: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]

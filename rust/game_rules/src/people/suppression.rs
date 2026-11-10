@@ -404,7 +404,8 @@ pub(super) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crat
         sup.down_t = m::max(0.0, sup.down_t - dt);
         sup.pinned_t += dt;
     }
-    if g.cond[g.gd[gd].ch].sup.pinned_t > g.k.suppression.displace_after
+    let after = if ducking_hides(g, gd) { g.k.suppression.displace_after } else { OPEN_BEAT };
+    if g.cond[g.gd[gd].ch].sup.pinned_t > after
         && !g.gd[gd].pinned
         && g.gd[gd].standoff.is_none()
         && g.time - g.cond[g.gd[gd].ch].sup.displaced_at > g.k.suppression.displace_cooldown
@@ -427,9 +428,38 @@ pub(super) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crat
             sup_bark(g, gd, SupMoment::Displace, Some(true));
             return HeadDown::Displace;
         }
-        g.cond[g.gd[gd].ch].sup.pinned_t = g.k.suppression.displace_after - 1.5;
+        g.cond[g.gd[gd].ch].sup.pinned_t = after - AGAIN;
     }
     HeadDown::Down
+}
+
+/// GETTING DOWN HIDES HIM where he stands, from everybody he knows of: else he goes for cover, a beat later, if there is any. Asked four times a second.
+fn ducking_hides(g: &mut Game, gd: GuardId) -> bool {
+    let (c, now) = (g.gd[gd].ch, g.time);
+    let t = g.cond[c].sup.hides_t;
+    if now < t || now - t >= 0.25 {
+        let at = g.ch[c].pos;
+        let hides = crate::picture::exposed_at(g, gd, at, Some(true)) <= OPEN;
+        let sup = &mut g.cond[c].sup;
+        (sup.hides, sup.hides_t) = (hides, now);
+    }
+    g.cond[c].sup.hides
+}
+/// how much of a line on him is a line · seconds he is down in the open before he goes · … before he looks for cover again where there was none
+const OPEN: f64 = 0.15;
+const OPEN_BEAT: f64 = 0.35;
+const AGAIN: f64 = 1.5;
+
+/// Rounds have a man at his post pinned and getting down hides him from nobody: where he could shift to, a beat later, if there is somewhere and he has not shifted of late.
+pub fn caught_open(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
+    let sup = &g.cond[g.gd[gd].ch].sup;
+    if sup.pinned_t <= OPEN_BEAT || g.time - sup.displaced_at <= g.k.suppression.displace_cooldown || sup.hides || g.time - sup.hides_t > 0.5 { return None; }
+    let threat = sup.src.filter(|_| g.time - sup.src_t < g.k.suppression.src_memory_secs).or(g.gd[gd].last_known)?;
+    let to = cover_from(g, gd, threat);
+    let now = g.time;
+    let sup = &mut g.cond[g.gd[gd].ch].sup;
+    if to.is_some() { sup.displaced_at = now; (sup.pinned_t, sup.down_t, sup.latched) = (0.0, 0.0, false); } else { sup.pinned_t = OPEN_BEAT - AGAIN; }
+    to
 }
 
 /// The shift is over: hold the spot a few seconds, the first round from there a beat late.

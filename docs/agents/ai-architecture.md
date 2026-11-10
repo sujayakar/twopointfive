@@ -28,9 +28,9 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | a rule's own row | `g.m.morale.state_of`, `g.m.startle.state_of`; `PerMan` in `Rows` of `control/` | what one module keeps of him |
 
 And `guards/frame.rs` (one man's frame), `guards/behave/` (what he does by his state), `guards/looks.rs` (`LOOKS`, where some module has him look),
-`control/man.rs` (what a rule may ask of a man), `control/frag.rs`, `runner.rs`, `morale.rs`, `startle.rs`, `duck.rs` (the rules; their code is in
-`frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.rs`), `squad/` (`order`, `end_guard_script`, `run_guard_script`: a man's own script) and
-`dice.rs`.
+`control/man.rs` (what a rule may ask of a man), `control/frag.rs`, `runner.rs`, `morale.rs`, `startle.rs`, `duck.rs`, `lost.rs`, `open.rs` (the rules;
+their code is in `frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.rs`, `roomfight/`), `squad/` (`order`, `end_guard_script`,
+`run_guard_script`: a man's own script) and `dice.rs`.
 
 ## How it works
 
@@ -63,7 +63,7 @@ news), `foe`. Each takes the writer's name. Anybody can read the fields, and no 
 - A rule whose `Ask` is `GuardScript` is `Stage::Body`, asked in `lent` by `grant_body`, above his own script. His whole body follows that script for
   the tick (`run_lent_script`), and his own waits.
 - A rule whose `Ask` is `TakeCover` is `Stage::Cover`, asked at the top of `alert` by `grant_cover`, so only of a man who is alert with no script and
-  no body rule. He gets down (`TakeCover::down`) or goes crouched to a spot (`TakeCover::to`), gun lowered, firing nothing, hands free to reload. A
+  no body rule. He gets down (`TakeCover::down`), gun lowered, firing nothing, or goes crouched to a spot (`TakeCover::to`), firing as he goes; hands free to reload. A
   blind or staggered man gets down wherever it sends him.
 - A rule whose `Ask` is `LeavePost` is `Stage::Post`, asked by `grant_post` of a defender at his post who can see, once he has looked and reacted. He
   goes on a leg or loose, once: on the leg, his script has him.
