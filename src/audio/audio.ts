@@ -351,7 +351,7 @@ export class AudioEngine implements GameAudioLike {
       else b.setVoice(v.v, { gain: t - this.moved > 0.2 ? 0 : occludedGain(of.gain * near * (trim?.gain ?? 1), h.occ) * kind.gain(of), rate: h.rate * (trim?.rate ?? 1) * kind.rate(of) }, 0.07);
     }
     // environment probe (4×/s): mean free path around the listener → reverb amount; outdoor → less
-    if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0 || this.jumped) this.ask.together(() => {
+    if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0 || this.jumped) {
       let sum = 0; const N = 10, L = this.listener;
       for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; const hit = this.ask.ray(L, [Math.cos(a), 0, Math.sin(a)], 16); sum += hit ? hit.t : 16; }
       const mfp = sum / N, wet = this.outdoors(L[0], L[2]) ? 0.08 : Math.min(0.55, 0.12 + mfp * 0.045);
@@ -362,7 +362,7 @@ export class AudioEngine implements GameAudioLike {
       for (const v of this.voices) if (v.held && !v.dying) { const { of } = v.held, room = LASTING[of.name].room;
         if (of.reach > 0 && v3.dist(v.pos!, L) > of.reach) continue;
         const pr = this.ask.hear(v.pos!, L); b.setVoice(v.v, { pos: pr.apparent, cutoffHz: (room ? 300 : 0) + cutoffOf(pr.muffle), send: room ? undefined : sendOf(pr.muffle, pr.pathLen) }, tc); v.held.occ = pr.muffle; }
-    });
+    }
     void dt;
   }
 

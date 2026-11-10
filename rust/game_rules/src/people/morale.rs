@@ -100,7 +100,7 @@ fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.k.morale.dark_read == crate::knobs::MoraleKDarkRead::Watch { return crate::darkfoe::dark_foe_blind(g, gd); }
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
-    let mut own = |_g: &mut Game, owner: f64| owner == id;
+    let mut own = |_g: &Game, owner: f64| owner == id;
     let chest = chest_of(g, c);
     let a = crate::guards::light_estimate_at(g, chest, Some(&mut own), Some(true), None);
     let head = head_of(g, c);

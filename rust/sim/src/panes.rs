@@ -26,7 +26,7 @@ use crate::lines::{self, ASK_GLASS};
 use crate::maths::{hypot2, hypot3, round_half_up};
 use crate::pattern::{self, clip_rect, frags_of, hull, order_of, poly_area, Dice, Frag, Pt, FRAGS_PER_SITE, MAX_PTS, REMAINDER};
 use crate::state::{state, state_read};
-use crate::world::{js_abs, js_ceil, js_max, js_min, sign_or_one, world, World, GD, GW, REC, R_C, R_COS, R_H, R_SIN};
+use crate::world::{js_abs, js_ceil, js_max, js_min, sign_or_one, Over, World, GD, GW, REC, R_C, R_COS, R_H, R_SIN};
 use core::mem::{offset_of, size_of};
 use prim::{floor, sqrt};
 
@@ -592,10 +592,9 @@ fn tooth(f: &Frag, tune: &Knobs) -> bool {
 }
 
 // ---- one call's business: whose block, whose world, which leaves, what time it is, and what it let go
-pub struct Ctx {
+pub struct Ctx<'a> {
     pub g: usize,
-    pub w: usize,
-    pub set: i32,
+    pub w: &'a World,
     pub now: f64,
     /// a fragment's landing is the simulation's (shards: its switch, and glass breaking live)
     pub shards: bool,
@@ -604,7 +603,7 @@ pub struct Ctx {
     pub out: Vec<LetGo>,
     /// what comes down, and when, in the order it was let go
     pub landings: Vec<falls::Landing>,
-    /// a static's kind moved (a pane a walker now goes through): the caller says so to the copy
+    /// what a walker goes through moved (a pane he now goes through): the caller says so to the box world
     pub wrote: bool,
 }
 /// a fragment, its outline still in its pane's own plane
@@ -615,7 +614,7 @@ pub struct LetGo {
 /// one line as the rule asks it of the statics and the leaves: is something solid across it
 #[inline]
 fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
-    lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2], tune).unwrap_or(true)
+    lines::solid_line(c.w, true, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2], tune).unwrap_or(true)
 }
 
 // ---- which glass a pane is
@@ -623,14 +622,14 @@ fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
 /// geometry once, and kept: statics do not move.
 pub fn sky_side(c: &Ctx, s: usize, tune: &Knobs) -> i32 {
     let (bi, known) = {
-        let h = &world(c.w).sheets[s];
+        let h = &c.w.sheets[s];
         (h.bi as usize, h.sky)
     };
     if known != SKY_UNKNOWN {
         return known;
     }
     let (n, a, hu, b_c) = {
-        let o = world(c.w);
+        let o = c.w;
         let b = rec(o, bi);
         let (cs, sn) = (b[R_COS], b[R_SIN]);
         let wide = b[R_H] >= b[R_H + 2];
@@ -662,7 +661,7 @@ pub fn sky_side(c: &Ctx, s: usize, tune: &Knobs) -> i32 {
 /// which of the level's sheets is static `bi` (they are listed in ascending order)
 #[inline]
 fn sheet_of(o: &World, bi: u32) -> Option<usize> {
-    let (mut lo, mut hi) = (0usize, o.sheet_n as usize);
+    let (mut lo, mut hi) = (0usize, o.sheets.len());
     while lo < hi {
         let m = (lo + hi) / 2;
         let v = o.sheets[m].bi;
@@ -689,7 +688,7 @@ fn over_of(p: &Panes, bi: u32) -> u32 {
 /// The type a pane breaks as when nobody has said. Outside walls are safety glass, a low clerestory strip laminated; inside, a narrow
 /// sidelight is laminated and a partition float; under GLASSREAL.place the pane's own place decides between toughened and float.
 fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64, tune: &Knobs) -> u32 {
-    place_rule(sky_side(c, s, tune) != 0, h0, h1, h2, cy, world(c.w).sheets[s].gap, tune)
+    place_rule(sky_side(c, s, tune) != 0, h0, h1, h2, cy, c.w.sheets[s].gap, tune)
 }
 /// the rule itself, on a pane's sizes, the wall it is in and how far it stands from a door
 pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64, tune: &Knobs) -> u32 {
@@ -706,12 +705,12 @@ pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64, t
 /// The type of static `bi` as it will break, or NONE: it is no sheet of glass
 pub const NO_TYPE: u32 = 9;
 pub fn type_of_pane(c: &Ctx, bi: u32, tune: &Knobs) -> u32 {
-    let s = match sheet_of(world(c.w), bi) {
+    let s = match sheet_of(c.w, bi) {
         Some(s) => s,
         None => return NO_TYPE,
     };
     let (h0, h1, h2, cy) = {
-        let o = world(c.w);
+        let o = c.w;
         let b = rec(o, bi as usize);
         if !thin(b) {
             return NO_TYPE;
@@ -776,9 +775,9 @@ fn state_of(c: &Ctx, bi: u32, tune: &Knobs) -> Option<usize> {
     if ty == NO_TYPE {
         return None;
     }
-    let s = sheet_of(world(c.w), bi)?;
+    let s = sheet_of(c.w, bi)?;
     let exterior = sky_side(c, s, tune) != 0;
-    let o = world(c.w);
+    let o = c.w;
     let b = rec(o, bi as usize);
     let (hb0, hb1, hb2) = (b[R_H], b[R_H + 1], b[R_H + 2]);
     let u_axis: u32 = if hb0 >= hb2 { 0 } else { 2 };
@@ -879,13 +878,13 @@ pub fn fall_of(cx: &Ctx, c: [f64; 3], v: [f64; 3], gravity: f64, reach_k: f64, t
     let d = if reach > 1e-4 { [v[0] * reach_k * t_of(js_max(0.02, c[1])) / reach, 0.0, v[2] * reach_k * t_of(js_max(0.02, c[1])) / reach] } else { [0.0, 0.0, 0.0] };
     let mut out = [0.0; 4];
     if reach > 0.05 {
-        let m = lines::ray_rule(cx.w, c[0], c[1], c[2], d[0], d[1], d[2], reach + 0.05, cx.set, -1, true, &mut out, tune);
+        let m = lines::ray_rule(cx.w, c[0], c[1], c[2], d[0], d[1], d[2], reach + 0.05, -1, true, &mut out, tune);
         if m >= 0 {
             reach = js_max(0.0, out[0] - 0.05);
         }
     }
     let (x, z) = (c[0] + d[0] * reach, c[2] + d[2] * reach);
-    let m = lines::ray_rule(cx.w, x, c[1], z, 0.0, -1.0, 0.0, c[1] + 0.5, cx.set, -1, true, &mut out, tune);
+    let m = lines::ray_rule(cx.w, x, c[1], z, 0.0, -1.0, 0.0, c[1] + 0.5, -1, true, &mut out, tune);
     let h = js_max(0.02, if m >= 0 { out[0] } else { c[1] });
     (t_of(h), [x, c[1] - h, z])
 }
@@ -1577,10 +1576,10 @@ pub fn blast_begin(c: &Ctx, at: [f64; 3]) -> Arrival {
 }
 /// glassbreak.ts blastIn over one sheet of the level. → it took the blow (blast()'s count of panes changed)
 pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius: f64, power: f64, who: f64, tune: &Knobs) -> bool {
-    let bi = world(c.w).sheets[s].bi;
+    let bi = c.w.sheets[s].bi;
     let (seq, twin_at) = (arrival.seq, arrival.at);
     let q = {
-        let o = world(c.w);
+        let o = c.w;
         nearest_on(rec(o, bi as usize), at)
     };
     let d = hypot3(q[0] - at[0], q[1] - at[1], q[2] - at[2]);
@@ -2020,14 +2019,14 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knob
 }
 /// the sheet's numbers for the host: its static · sky · word · gap
 pub fn sheet_count(c: &Ctx) -> u32 {
-    world(c.w).sheet_n
+    c.w.sheets.len() as u32
 }
 pub fn sheet_bi(c: &Ctx, s: usize) -> u32 {
-    world(c.w).sheets[s].bi
+    c.w.sheets[s].bi
 }
 /// is `bi` a sheet the wind should ask of: its face to the sky, or 0
 pub fn sky_known(c: &Ctx, bi: u32, tune: &Knobs) -> i32 {
-    match sheet_of(world(c.w), bi) {
+    match sheet_of(c.w, bi) {
         Some(s) => sky_side(c, s, tune),
         None => 0,
     }
@@ -2123,18 +2122,18 @@ pub fn dice_threshold(g: usize, bi: u32) -> f64 {
 // ---- a window's bar (src/game/winbars.ts, whose TypeScript throws the pieces)
 const F_BAR: u32 = 1 << 19;
 const NO_SHADOW: u32 = crate::world::F_NO_SHADOW;
-/// is static `bi` a window's bar that still stands? (the copy keeps NoShadow of the two bits a broken bar is hidden by)
+/// is static `bi` a window's bar that still stands? (its row keeps NoShadow of the two bits a broken bar is hidden by)
 #[inline]
 fn bar_stands(o: &World, bi: usize) -> bool {
     o.flags[bi] & (F_BAR | NO_SHADOW) == F_BAR
 }
-/// winbars.ts breakBar's first question: bar `bi` goes, unless it is gone already or is no standing bar. `flags`: the box's flags as it stands (the copy keeps a part of them)
+/// winbars.ts breakBar's first question: bar `bi` goes, unless it is gone already or is no standing bar. `flags`: the box's flags as it stands (its row keeps a part of them)
 pub fn bar_take(c: &Ctx, bi: u32, flags: u32) -> bool {
     let p = pn(c.g);
     p.stand();
     let (n, b) = (p.nbars as usize, bi as usize);
     let at = p.bars[..n].iter().position(|r| r[0] >= bi).unwrap_or(n);
-    if (at < n && p.bars[at][0] == bi) || !bar_stands(world(c.w), b) || n >= MAX_BARS {
+    if (at < n && p.bars[at][0] == bi) || !bar_stands(c.w, b) || n >= MAX_BARS {
         return false;
     }
     p.bars.copy_within(at..n, at + 1);
@@ -2145,9 +2144,8 @@ pub fn bar_take(c: &Ctx, bi: u32, flags: u32) -> bool {
 /// what bars a charge at `from` takes: every standing bar with a point of its length inside its reach and nothing solid between, each judged as if the others
 /// were not there. A static and the point each, ascending.
 pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, tune: &Knobs) -> Vec<(u32, [f64; 3])> {
-    let o = world(c.w);
+    let o = c.w;
     let mut near = [0u32; MAX_BARS];
-    let mut was = [0u32; MAX_BARS];
     let mut n = 0usize;
     for bi in 0..statics {
         if !bar_stands(o, bi) || n >= MAX_BARS {
@@ -2162,16 +2160,12 @@ pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, tune: &Kn
     if n == 0 {
         return Vec::new();
     }
-    for i in 0..n {
-        let bi = near[i] as usize;
-        was[i] = o.flags[bi];
-        o.flags[bi] |= NO_SHADOW;
-    }
+    let no_bars = Over { open: &near[..n], ..Over::with(true) };
     let mut took = Vec::new();
     for i in 0..n {
         let bi = near[i] as usize;
         let (cc, h0, h1, h2) = {
-            let b = rec(world(c.w), bi);
+            let b = rec(c.w, bi);
             ([b[R_C], b[R_C + 1], b[R_C + 2]], b[R_H], b[R_H + 1], b[R_H + 2])
         };
         for u in [0.0, 0.6, -0.6] {
@@ -2179,16 +2173,12 @@ pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, tune: &Kn
             if hypot3(from[0] - q[0], from[1] - q[1], from[2] - q[2]) > reach + js_max(h0, h2) {
                 continue;
             }
-            if solid(c, from, q, tune) {
+            if lines::solid_over(c.w, &no_bars, ASK_GLASS, from[0], from[1], from[2], q[0], q[1], q[2], tune).unwrap_or(true) {
                 continue;
             }
             took.push((bi as u32, q));
             break;
         }
-    }
-    let o = world(c.w);
-    for i in 0..n {
-        o.flags[near[i] as usize] = was[i];
     }
     took
 }

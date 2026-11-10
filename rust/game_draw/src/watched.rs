@@ -8,7 +8,7 @@ use game::scene_boxes::Box;
 /// a box of a viewer's own: whether it is an infrared line, and what was noted of it where it is a thin one
 pub struct Watched { pub b: Box, pub line: bool, pub thin: Option<game::thinline::Thin> }
 
-/// the boxes. The world's copy is asked of (a line's end): whoever calls holds the game, and has it proven again
+/// the boxes
 pub fn boxes(g: &Game, bare: bool, tube: bool) -> Vec<Watched> {
     let tube = tube && !game::irlaser::ir_viewer(g);
     if !bare && !tube { return Vec::new(); }

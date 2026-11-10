@@ -48,8 +48,6 @@ fn to_sched(f: GlassShardsFallOf) -> GlassShardsScheduleFall { GlassShardsSchedu
 fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandingFall { t: f.t, pos: f.pos } }
 
 // ---- what the skeleton still cannot do
-/// `b.x` of a Box: the row of a box.
-fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 /// The shards' books.
 pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
@@ -230,20 +228,20 @@ fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who:
         row.dress = Some(true);
     }
     let bx = g.tab.debris_chunk[ch].box_;
-    seam_box(g, bx).rough = Some(0.05);
-    seam_box(g, bx).flags = flags_or(seam_box(g, bx).flags, crate::scene_boxes::box_flag().no_shadow);
+    g.tab.edit(bx).rough = Some(0.05);
+    g.tab.edit(bx).flags = flags_or(g.tab[bx].flags, crate::scene_boxes::box_flag().no_shadow);
     if let Some(cut) = cut {
         if g.k.shards.cut_body > 0.0 {
-            let at = seam_box(g, bx).c;
+            let at = g.tab[bx].c;
             let under = glass_shards_under_albedo(g, at);
             let albedo = if cut.cut.is_some() { cut_face_albedo(g, meta.tint, under, meta.type_, false) } else { plate_albedo(meta.tint, under, meta.type_) };
-            seam_box(g, bx).albedo = albedo;
+            g.tab.edit(bx).albedo = albedo;
         }
-        seam_box(g, bx).cut = cut.cut.clone();
+        g.tab.edit(bx).cut = cut.cut.clone();
         if cut.cut.is_some() {
-            if g.k.shards.cut_edge > 0.0 { let e = edge_colour(meta.tint, g.k.shards.cut_edge); seam_box(g, bx).cut_core = Some(e); }
+            if g.k.shards.cut_edge > 0.0 { let e = edge_colour(meta.tint, g.k.shards.cut_edge); g.tab.edit(bx).cut_core = Some(e); }
             if g.k.shards.cut_see > 0.0 || g.k.shards.cut_rim > 0.0 {
-                seam_box(g, bx).cut_glass = Some(crate::scene_cut::CutGlass { see: g.k.shards.cut_see, rim: g.k.shards.cut_rim, anim: Some(true) });
+                g.tab.edit(bx).cut_glass = Some(crate::scene_cut::CutGlass { see: g.k.shards.cut_see, rim: g.k.shards.cut_rim, anim: Some(true) });
             }
         }
     }
@@ -261,7 +259,7 @@ fn glass_shards_crumbs(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let n = glass_shards_budget(g, clamp_i(m::round(meta.area * 220.0), 3.0, 10.0));
     let bx = g.tab.debris_chunk[c_2].box_;
-    let at = seam_box(g, bx).c;
+    let at = g.tab[bx].c;
     let (mid_life, mid_size) = (g.k.shards.mid_life, g.k.shards.mid_size);
     glass_shards_emit(g, v3::add(at, [0.0, 0.01, 0.0]), [0.0, 1.0, 0.0], n, spray(0.25, 0.8, 1.3, mid_life * 0.7, 0.3, mid_size, 0.5, 1.6, 6.0, 0.2, m::sqrt(meta.area) * 0.4, None, meta.tint), xor_u32(meta.seed, 0xC2B2 as f64));
 }
@@ -273,7 +271,7 @@ pub(in crate::breakage) fn glass_shards_evicted(g: &mut crate::game::Game, c_2: 
 pub(in crate::breakage) fn glass_shards_gone(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if !shards_live(g) || g.tab.debris_chunk[c_2].glass.is_none() { return; }
     let bx = g.tab.debris_chunk[c_2].box_;
-    if seam_box(g, bx).c[1] < -0.5 { return; }
+    if g.tab[bx].c[1] < -0.5 { return; }
     glass_shards_crumbs(g, c_2);
 }
 
@@ -288,7 +286,7 @@ pub(in crate::breakage) fn glass_shards_landed(g: &mut crate::game::Game, c_2: D
         && crate::debris::hash01(serial * 61.0 + 7.0) < p * (if js::truthy(meta.gen_) { 0.6 } else { 1.0 });
     if breaks { g.shards.breaks.push(GlassShardsBreaksItem { c: c_2, speed }); }
     let big = m::min(1.0, meta.area / 0.08);
-    let at = seam_box(g, bx).c;
+    let at = g.tab[bx].c;
     if breaks { glass_shards_sound(g, "glassShatter", at, m::min(1.0, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * crate::debris::hash01(serial * 31.0)); }
     else { glass_shards_sound(g, "glassTinkle", at, m::min(1.0, 0.3 + 0.3 * big + speed * 0.08), (if laminated { 0.55 } else { 1.1 - 0.35 * big }) + 0.2 * crate::debris::hash01(serial * 31.0)); }
     true
@@ -298,16 +296,16 @@ pub(in crate::breakage) fn glass_shards_landed(g: &mut crate::game::Game, c_2: D
 pub(in crate::breakage) fn glass_shards_rested(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
-    let at = seam_box(g, bx).c;
+    let at = g.tab[bx].c;
     let under = glass_shards_under_albedo(g, at);
-    let has_cut = seam_box(g, bx).cut.is_some();
+    let has_cut = g.tab[bx].cut.is_some();
     let albedo = if has_cut { cut_face_albedo(g, meta.tint, under, meta.type_, true) } else { plate_albedo(meta.tint, under, meta.type_) };
-    seam_box(g, bx).albedo = albedo;
+    g.tab.edit(bx).albedo = albedo;
     if has_cut {
-        if let Some(glass) = seam_box(g, bx).cut_glass {
+        if let Some(glass) = g.tab[bx].cut_glass {
             if glass.see > 0.0 && g.k.shards.cut_see_rest > 0.0 {
                 let see = g.k.shards.cut_see_rest;
-                seam_box(g, bx).cut_glass = Some(crate::scene_cut::CutGlass { see, ..glass });
+                g.tab.edit(bx).cut_glass = Some(crate::scene_cut::CutGlass { see, ..glass });
             }
         }
     }
@@ -325,7 +323,7 @@ fn glass_shards_shed(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let n = glass_shards_budget(g, want);
     if n <= 0.0 { return; }
     if meta.poly.is_some() { glass_shards_shed_cut(g, c_2, n); return; }
-    let (bc, bh, yaw, brot) = { let b = &*seam_box(g, bx); (b.c, b.h, b.yaw, b.rot) };
+    let (bc, bh, yaw, brot) = { let b = &g.tab[bx]; (b.c, b.h, b.yaw, b.rot) };
     let rot = brot.unwrap_or_else(|| v3::quat::yaw(yaw));
     let ax = sort_axes(bh);
     let (long, short) = (ax[2], ax[1]);
@@ -350,7 +348,7 @@ fn glass_shards_shed_cut(g: &mut crate::game::Game, c_2: DebrisChunkId, n: f64) 
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
     let p_ = meta.poly.clone().unwrap();
-    let (bc, yaw, brot) = { let b = &*seam_box(g, bx); (b.c, b.yaw, b.rot) };
+    let (bc, yaw, brot) = { let b = &g.tab[bx]; (b.c, b.yaw, b.rot) };
     let rot = brot.unwrap_or_else(|| v3::quat::yaw(yaw));
     let mut len: Vec<f64> = Vec::new();
     let mut per = 0.0;
@@ -383,7 +381,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
     let i = match g.destr.debris.list.iter().position(|c| *c == c_2) { Some(i) => i, None => return };
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let (bx, serial, cv, who) = { let c = &g.tab.debris_chunk[c_2]; (c.box_, c.serial, c.v, c.who) };
-    let (bc, bh, yaw, balbedo, brot) = { let b = &*seam_box(g, bx); (b.c, b.h, b.yaw, b.albedo, b.rot) };
+    let (bc, bh, yaw, balbedo, brot) = { let b = &g.tab[bx]; (b.c, b.h, b.yaw, b.albedo, b.rot) };
     let rot = brot.unwrap_or_else(|| v3::quat::yaw(yaw));
     g.destr.debris.list.remove(i);
     let cut_plate = meta.poly.is_some();
@@ -427,7 +425,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
             if glass_shards_plate(g, pb.box_, vel, w, who, &child, Some(&cut)).is_none() { lost += full; }
         }
     } else {
-        let word = crate::scene_boxes::WordOfB { stuff: seam_box(g, bx).stuff, does: seam_box(g, bx).does };
+        let word = crate::scene_boxes::WordOfB { stuff: g.tab[bx].stuff, does: g.tab[bx].does };
         for jx in 0..n_parts {
             let j = jx as f64;
             let (a0, a1) = (cuts[jx], cuts[jx + 1]);
@@ -464,7 +462,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
 fn level_box_albedo(g: &mut Game, bi: f64) -> V3 {
     let ix = bi as usize;
     let row = if ix as f64 == bi { g.col.boxes.get(ix).copied() } else { None };
-    match row { Some(b) => seam_box(g, b).albedo, None => [0.72, 0.8, 0.82] }
+    match row { Some(b) => g.tab.boxes[b].albedo, None => [0.72, 0.8, 0.82] }
 }
 
 /// A round went through a sheet: the exit spall, and a little litter where the jet comes down.
@@ -478,7 +476,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
     let d = v3::normalize(x.dir_out);
     let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
     let amount = want * fine_size * fine_size;
-    crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::panes::jet(cx, x.exit, d, sp, amount, who, &g.k));
+    crate::glassbreak::glass_break_asking(g, |cx, k| ::sim::panes::jet(cx, x.exit, d, sp, amount, who, k));
     if n > 0.0 {
         let tint = level_box_albedo(g, x.bi);
         g.shards.serial += 1.0;
@@ -651,7 +649,7 @@ pub fn glass_shards_clear(g: &mut crate::game::Game) {
 fn glass_shards_under_albedo(g: &mut crate::game::Game, p: V3) -> V3 {
     let hit = crate::scene_collision::raycast(g, [p[0], p[1] + 0.05, p[2]], [0.0, -1.0, 0.0], p[1] + 0.6);
     let b = match hit { Some(h) if h.index >= 0.0 => g.engine.world.statics.get(h.index as usize).copied(), _ => None };
-    match b { Some(b) => seam_box(g, b).albedo, None => [0.4, 0.4, 0.4] }
+    match b { Some(b) => g.tab.boxes[b].albedo, None => [0.4, 0.4, 0.4] }
 }
 
 /// A line in the tool's log, the last sixty kept.

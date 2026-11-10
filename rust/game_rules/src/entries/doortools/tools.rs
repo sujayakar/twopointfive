@@ -221,17 +221,17 @@ pub(super) fn door_tools_standoff_walk(g: &mut crate::game::Game, men: &[GuardId
 }
 
 /// One man's test for close_words: blow()'s own reach and line, the door's own leaf (which is coming apart) let through.
-fn close_ask(g: &Game, others: &crate::ask::WorldAsk, d: DoorId, side: f64, out: V3, inn: V3, p: V3, who: String, sam: bool, near: &mut Vec<String>, far: &mut Vec<String>) {
+fn close_ask(g: &Game, others: &crate::ask::Over, d: DoorId, side: f64, out: V3, inn: V3, p: V3, who: String, sam: bool, near: &mut Vec<String>, far: &mut Vec<String>) {
     let beyond = off_of(g, d, p, side) < 0.0;
     let dist = flat(p, g.dr[d].frame_centre);
     let (stun_m, backblast_m) = (g.k.doortools.stun_m, g.k.doortools.backblast_m);
     if if sam { dist >= (if beyond { stun_m } else { backblast_m }) } else { dist > stun_m || (!beyond && dist >= backblast_m) } { return; }
-    if !others.line(if beyond { inn } else { out }, [p[0], 1.1, p[2]], crate::ask::Line::Solid) {
+    if !crate::scene_collision::solid_blocked_over(g, others, if beyond { inn } else { out }, [p[0], 1.1, p[2]], None) {
         if beyond { far.push(who); } else { near.push(who); }
     }
 }
 
-/// Who a charge on a door would catch if it went now, as words for the row: the seat's own man and his men, as things stand, of the game shared (the copy of the boxes standing).
+/// Who a charge on a door would catch if it went now, as words for the row: the seat's own man and his men, as things stand, of the game shared.
 pub(super) fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: ChargeId) -> String {
     let c = c_2;
     let (d, side) = (g.tab.doortools_set_charge[c].door, g.tab.doortools_set_charge[c].side);
@@ -240,7 +240,7 @@ pub(super) fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::sea
     let out = door_pt(g, d, width / 2.0, 0.5, side, Some(1.1));
     let inn = door_pt(g, d, width / 2.0, 0.45, into, Some(1.1));
     let (mut near, mut far): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
-    let others = crate::ask::WorldAsk::of(g).over(crate::ask::Over::but_door(g, d));
+    let others = crate::ask::Over::but_door(g, d);
     if !crate::condition::down(g, g.pl[seat.player].ch) {
         let p = g.ch[g.pl[seat.player].ch].pos;
         close_ask(g, &others, d, side, out, inn, p, String::from("you"), true, &mut near, &mut far);
@@ -256,9 +256,8 @@ pub(super) fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::sea
     if !far.is_empty() { w.push_str(&alloc::format!(" · behind the door: {}", far.join(", "))); }
     w
 }
-/// …for a rule that holds the game: the copy of the boxes stood first
-pub fn door_tools_close_words(g: &mut crate::game::Game, c_2: ChargeId) -> String {
-    crate::scene_collision::stands(g);
+/// …of the seat that stands here
+pub fn door_tools_close_words(g: & crate::game::Game, c_2: ChargeId) -> String {
     door_tools_close_words_of(g, &crate::seats::here(g), c_2)
 }
 

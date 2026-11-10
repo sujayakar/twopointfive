@@ -76,7 +76,7 @@ A file also says a few things no rule of the game reads, which `levelToData` wri
 | beacons, cameras, lasers | 32 each | `faults.rs` |
 | lights, switchables, cameras, lasers and the breaker together | 256 | `faults.rs` |
 | light rows, counted at start with beacons, cameras and vehicle lamps | 256 | a start alone |
-| sheets of glass | 256 | a start alone (`PANE_CAP`) |
+| sheets of glass | 256 | a start alone (`MAX_SHEETS`) |
 
 ### What comes last
 
@@ -271,7 +271,7 @@ camera and a laser are light targets too: an OCP knocks them out for a spell, a 
 Glass has no block of its own: a pane is a box with the Glass flag. Its paint is the tint it lets through. `load` makes the box, `glass.rs` keeps its state, and the picture tests
 it apart from the world's boxes. Feet and sound take it as a wall, sight passes through it, and a round, a kick or a bang breaks it. It takes no form, so `shape.with` is the only
 shape it says. A sheet is thin: `is_sheet` asks that the thinner of `h[0]` and `h[2]` is at most `THICK_GLASS_HALF`, and a thicker Glass box is solid glass that does not craze.
-The kit lays panes with `paneX` and `paneZ`. A level's most is `PANE_CAP`.
+The kit lays panes with `paneX` and `paneZ`. A level's most is `MAX_SHEETS`.
 
 ## plans
 

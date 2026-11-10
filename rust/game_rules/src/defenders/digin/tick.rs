@@ -761,7 +761,7 @@ pub(in crate::defenders) fn dig_in_refuge(g: &mut crate::game::Game, def: Roomfi
         };
         let spot = match spot { Some(q) => q, None => continue };
         if !crate::roomfight::room_fight_in_room(g, Some(r.room), spot) { continue; }
-        let mut shy = |_: &mut Game, ix: f64, iz: f64| -> f64 {
+        let mut shy = |_: &Game, ix: f64, iz: f64| -> f64 {
             if m::hyp2((ix + 0.5) * cell - threat[0], (iz + 0.5) * cell - threat[2]) < shy_m { 20.0 } else { 1.0 }
         };
         let path = match crate::scene_collision::nav_grid_find_path(g, pos, spot, Some(6000.0), Some(&mut shy)) { Some(p) if !p.is_empty() => p, _ => continue };

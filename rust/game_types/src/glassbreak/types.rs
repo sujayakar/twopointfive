@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassBreak {
-    pub sheet_list: Option<Vec<f64>>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
     pub gusts: JsMap<crate::Num, WindWindSourceId>,
@@ -120,7 +119,7 @@ pub const NO_TYPE: f64 = 9.0;
 
 pub const NO_OVER: f64 = 3.0;
 
-pub const SKY_UNKNOWN: f64 = 2.0;
+pub const SKY_UNKNOWN: i32 = 2;
 
 pub const GW_FLAGS: f64 = 1.0;
 

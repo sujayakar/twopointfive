@@ -5,6 +5,7 @@ extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
 pub use game_derive::{Blank, Words};
+pub mod boxworld;
 pub mod bytes;
 pub mod ids;
 pub mod js;
@@ -19,9 +20,6 @@ pub const M4_IDENTITY: v3::m4::Mat4 = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0
 /// a type a hand decision has yet to name (see the STOP list)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, ToBytes)]
 pub struct Opaque;
-/// a function stored in a field, until a hand decision makes it an enum
-#[derive(Clone, Copy, Debug, Default, ToBytes)]
-pub struct FnField;
 /// a number used as a key of a Map
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Num(pub f64);
@@ -149,7 +147,6 @@ pub mod lightswitch { pub mod types; pub use types::*; }
 pub mod marks { pub mod types; pub use types::*; }
 pub mod math_dice { pub mod types; pub use types::*; }
 pub mod math_exact { pub mod types; pub use types::*; }
-pub mod math_side { pub mod types; pub use types::*; }
 pub mod mission { pub mod types; pub use types::*; }
 pub mod morale { pub mod types; pub use types::*; }
 pub mod moths { pub mod types; pub use types::*; }
@@ -203,7 +200,6 @@ pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
 pub mod scenario_run { pub mod types; pub use types::*; }
 pub mod scene_air_grid { pub mod types; pub use types::*; }
-pub mod scene_box_mirror { pub mod types; pub use types::*; }
 pub mod scene_boxes { pub mod types; pub use types::*; }
 pub mod scene_collision { pub mod types; pub use types::*; }
 pub mod scene_cut { pub mod types; pub use types::*; }
@@ -245,7 +241,6 @@ pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
 pub mod sneak { pub mod types; pub use types::*; }
-pub mod snow_bog { pub mod types; pub use types::*; }
 pub mod sparks { pub mod types; pub use types::*; }
 pub mod spotted { pub mod types; pub use types::*; }
 pub mod sprintdoor { pub mod types; pub use types::*; }

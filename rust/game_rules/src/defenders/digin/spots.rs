@@ -171,7 +171,7 @@ fn way_round(g: &mut Game, room: RoomfightRoomId, src: V3, e: &crate::roomfight:
         Some(o) => o,
         None => return m::INF,
     };
-    let mut dear = |g: &mut Game, ix: f64, iz: f64| -> f64 {
+    let mut dear = |g: &Game, ix: f64, iz: f64| -> f64 {
         let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
         if g.tab.roomfight_room[room].cells.has(crate::Num(i)) { 30.0 } else { 1.0 }
     };

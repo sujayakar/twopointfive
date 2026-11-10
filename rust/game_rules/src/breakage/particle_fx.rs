@@ -45,7 +45,7 @@ fn dust_shipped(k: &crate::particle_fx::ParticleFxModDUST) -> bool {
 
 /// What a round knocks out of a static: its word's surface, or its word's wet row on the one slab the weather has soaked.
 pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
-    let does = seam_box(g, b).does;
+    let does = g.tab.boxes[b].does;
     if g.weather.lot == Some(b) {
         crate::scene_materials::does_wet(g, does).surf
     } else {
@@ -56,8 +56,8 @@ pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::S
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.
 pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
     let b = b?;
-    let stuff = seam_box(g, b).stuff?;
-    if is_pane(seam_box(g, b).flags) { return None; }
+    let stuff = g.tab.boxes[b].stuff?;
+    if is_pane(g.tab.boxes[b].flags) { return None; }
     surf_of_stuff(stuff)
 }
 
@@ -75,21 +75,21 @@ pub(super) fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLo
         st
     };
     if let Some(said) = said_surf(g, b) {
-        let albedo = seam_box(g, b.unwrap()).albedo;
+        let albedo = g.tab.boxes[b.unwrap()].albedo;
         return crate::particle_fx::HitLook { surf: said, albedo, solid: said == crate::scene_materials::Surf::Glass, said: true };
     }
     if let Some(p) = hit.prop {
         let surf = surf_of_prop(g.tab.props_prop[p].def.kind);
-        let albedo = match g.tab.props_prop[p].boxes.first().copied() { Some(x) => seam_box(g, x).albedo, None => [0.5, 0.5, 0.5] };
+        let albedo = match g.tab.props_prop[p].boxes.first().copied() { Some(x) => g.tab.boxes[x].albedo, None => [0.5, 0.5, 0.5] };
         return crate::particle_fx::HitLook { surf, albedo, solid: false, said: false };
     }
     if leaf {
-        let albedo = match b { Some(x) => seam_box(g, x).albedo, None => [0.42, 0.3, 0.19] };
+        let albedo = match b { Some(x) => g.tab.boxes[x].albedo, None => [0.42, 0.3, 0.19] };
         return crate::particle_fx::HitLook { surf: crate::scene_materials::Surf::Wood, albedo, solid: false, said: false };
     }
     if let Some(st) = st {
-        let surf = if is_pane(seam_box(g, st).flags) { crate::scene_materials::Surf::Glass } else { surf_at(g, st) };
-        let albedo = seam_box(g, st).albedo;
+        let surf = if is_pane(g.tab.boxes[st].flags) { crate::scene_materials::Surf::Glass } else { surf_at(g, st) };
+        let albedo = g.tab.boxes[st].albedo;
         return crate::particle_fx::HitLook { surf, albedo, solid: false, said: false };
     }
     crate::particle_fx::HitLook { surf: crate::scene_materials::Surf::Concrete, albedo: [0.5, 0.5, 0.5], solid: false, said: false }
@@ -225,7 +225,7 @@ pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::Fix
     let b: Option<BoxId> = t.boxes.first().and_then(|&i| js_ix(g.engine.world.statics.len(), i)).map(|i| g.engine.world.statics[i]);
     let (at, spread): (V3, f64) = match b {
         Some(b) => {
-            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
             ([c[0], m::min(c[1] - h[1] - 0.03, 2.9), c[2]], m::min(0.6, m::max(h[0], h[2])))
         }
         None => ([t.pos[0], m::min(t.pos[1], 2.9), t.pos[2]], 0.15),
@@ -384,8 +384,6 @@ pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
 }
 
-/// a box's row, to read and to write through
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A site's record: fields not written are None, and each site writes speed, life and size.
 type Emit = crate::render_particles::EmitOpts;

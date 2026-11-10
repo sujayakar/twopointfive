@@ -533,7 +533,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
         let base = danger_only(g, m, t_pt, &mut pens);
         let path = match &base {
             Some(p) => {
-                let mut price = |_g: &mut Game, ix: f64, iz: f64| pen_at(p, ix, iz);
+                let mut price = |_g: &Game, ix: f64, iz: f64| pen_at(p, ix, iz);
                 crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), Some(&mut price))
             }
             None => crate::scene_collision::nav_grid_find_path(g, from, t_pt, Some(6000.0), None),
@@ -589,7 +589,7 @@ pub(super) fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: 
         let from = pos_of(g, r_gd);
         let base = danger_only(g, r_gd, t_pt, &mut pens);
         let fp = {
-            let mut price = |_g: &mut Game, ix: f64, iz: f64| {
+            let mut price = |_g: &Game, ix: f64, iz: f64| {
                 let b = match &base { Some(p) => pen_at(p, ix, iz), None => 1.0 };
                 m::max(b, if avoid.has(crate::Num(iz * w + ix)) { CORRIDOR_COST } else { 1.0 })
             };

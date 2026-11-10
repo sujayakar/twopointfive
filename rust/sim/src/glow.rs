@@ -25,7 +25,8 @@ use crate::bricks::{LEN, MAX_GLOW, O_GLOW_A, O_GLOW_AT, O_GLOW_LAMPS, O_GLOW_LEF
 use crate::light;
 use crate::lines;
 use crate::maths::{cos, exp, log, sin};
-use crate::world::{js_max, js_min, world_read, World, ASK_HOST, CUT_PLANES, F_GLASS, K_CUT, K_ROT, MAX_BOXES, MAX_LEAVES, REC, R_C, R_COS, R_CUT, R_CUTN, R_H, R_KIND, R_SIN, WORLDS};
+use crate::state::GAMES;
+use crate::world::{js_max, js_min, World, ASK_HOST, F_GLASS, K_ROT, MAX_BOXES, REC, R_C, R_COS, R_H, R_KIND, R_SIN, Seen};
 use prim::{floor, sqrt};
 
 /// the sky of the hour or of the night, by luminance: where its one directional light stands and what that puts on a face turned to it, the dome's top and foot
@@ -37,11 +38,11 @@ pub struct Sky {
     pub horizon: f64,
 }
 /// what a step is told: how many steps a sweep takes, the sky, and the lamps: what the host says of the level's rows (light.rs Rows: the steady ones and
-/// their steady selves) and how many lamps of nobody's fixture it wrote beside them (light.rs LAMPS)
-pub struct K {
+/// their steady selves) and the lamps of nobody's fixture beside them (light.rs LAMP)
+pub struct K<'a> {
     pub sweep: f64,
     pub sky: Sky,
-    pub lamps: usize,
+    pub lamps: &'a [[f64; light::LAMP]],
     pub rows: Option<light::Rows>,
 }
 /// the height the lines go out from (between a standing man's chest and his head: the meter is the brighter of the two), a metre of the plan, and how many of those a square of the smoke grid is across
@@ -119,11 +120,8 @@ struct Cast {
     nx: usize,
     nz: usize,
     to_sun: [f64; 3],
-    wrote: u32,
-    /// the statics it was made from: how many, a word of each one's row, what each takes of the plan
-    boxes: usize,
-    word: [u64; MAX_BOXES],
-    at: [[f32; 4]; MAX_BOXES],
+    /// the statics it was made from, and what each takes of the plan
+    seen: Seen,
 }
 // (all zeros: a table that is not would be in the module's file)
 const NO_RAY: Ray = Ray { cm: 0, to: 0, of: 0, sun: 0 };
@@ -136,15 +134,12 @@ const NO_CAST: Cast = Cast {
     nx: 0,
     nz: 0,
     to_sun: [0.0; 3],
-    wrote: 0,
-    boxes: 0,
-    word: [0; MAX_BOXES],
-    at: [[0.0; 4]; MAX_BOXES],
+    seen: Seen::NONE,
 };
-static mut CASTS: [Cast; WORLDS] = [NO_CAST; WORLDS];
+static mut CASTS: [Cast; GAMES] = [NO_CAST; GAMES];
 #[inline(always)]
-fn cast_of(w: usize) -> &'static mut Cast {
-    unsafe { &mut (*core::ptr::addr_of_mut!(CASTS))[if w < WORLDS { w } else { 0 }] }
+fn cast_of(g: usize) -> &'static mut Cast {
+    unsafe { &mut (*core::ptr::addr_of_mut!(CASTS))[g] }
 }
 
 /// THE WAYS: each line's direction, and what it counts for on each of the six faces (its cosine × its share of the sphere; the shares of a face sum to π)
@@ -201,30 +196,18 @@ fn plan_of(r: &[f64]) -> [f32; 4] {
 fn over(a: &[f32; 4], b: &[f32; 4]) -> bool {
     a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
 }
-/// a word of static `i`'s row: its sixteen numbers, its planes and its flags (what it sends back is read as it is)
-fn word_of(o: &World, i: usize) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325 ^ o.flags[i] as u64;
-    let r = &o.rec[i * REC..(i + 1) * REC];
-    let planes = if r[R_KIND] as u32 & K_CUT != 0 { &o.cut[r[R_CUT] as usize * CUT_PLANES * 4..][..js_min(r[R_CUTN], CUT_PLANES as f64) as usize * 4] } else { &[] };
-    for v in r.iter().chain(planes) {
-        h = (h ^ v.to_bits()).wrapping_mul(0x9e3779b97f4a7c15);
-        h ^= h >> 29;
-    }
-    h
-}
 /// THE TABLE IS OF THE STATICS AS THEY STAND: on another plan or under another sun all of it is made again; where rows differ from those it was made
 /// from, what crosses them
-fn fresh(w: usize, nx: usize, nz: usize, to_sun: Option<[f64; 3]>) -> &'static mut Cast {
-    let (c, o) = (cast_of(w), world_read(w));
+fn fresh(g: usize, w: &World, nx: usize, nz: usize, to_sun: Option<[f64; 3]>) -> &'static mut Cast {
+    let c = cast_of(g);
     // (a world emptied and filled again is another, for what was asked of it while it was empty)
-    if c.nx != nx || c.nz != nz || (c.boxes == 0 && c.wrote != o.wrote) {
+    if c.nx != nx || c.nz != nz || c.seen.empty_of(w) {
         c.nx = nx;
         c.nz = nz;
         c.roof = [0; MAX_HALF];
         c.joined = [0; MAX_GLOW];
         c.cast = [false; MAX_GLOW];
-        c.boxes = 0;
-        c.wrote = o.wrote.wrapping_sub(1);
+        c.seen.forget();
     }
     if let Some(s) = to_sun {
         if c.to_sun != s {
@@ -232,51 +215,31 @@ fn fresh(w: usize, nx: usize, nz: usize, to_sun: Option<[f64; 3]>) -> &'static m
             c.cast = [false; MAX_GLOW];
         }
     }
-    if c.wrote != o.wrote {
-        c.wrote = o.wrote;
-        let n = js_min(o.boxes as f64, MAX_BOXES as f64) as usize;
-        for i in 0..if n > c.boxes { n } else { c.boxes } {
-            let (had, has) = (i < c.boxes, i < n);
-            let word = if has { word_of(o, i) } else { 0 };
-            if had && has && word == c.word[i] {
-                continue;
-            }
-            if had {
-                let r = c.at[i];
-                stale(c, &r);
-            }
-            if has {
-                let r = plan_of(&o.rec[i * REC..(i + 1) * REC]);
-                c.at[i] = r;
-                c.word[i] = word;
-                stale(c, &r);
-            }
-        }
-        c.boxes = n;
-    }
+    let Cast { seen, cast, joined, roof, reach, nx, nz, .. } = c;
+    seen.look(w, |r| plan_of(r).map(f64::from), |r| stale(cast, joined, roof, reach, *nx, *nz, &r.map(|v| v as f32)));
     c
 }
 /// what crosses this rectangle of the plan is to be made again
-fn stale(c: &mut Cast, r: &[f32; 4]) {
-    for m in 0..c.nx * c.nz {
-        if c.cast[m] && over(&c.reach[m], r) {
-            c.cast[m] = false;
+fn stale(cast: &mut [bool; MAX_GLOW], joined: &mut [u8; MAX_GLOW], roof: &mut [u8; MAX_HALF], reach: &[[f32; 4]; MAX_GLOW], nx: usize, nz: usize, r: &[f32; 4]) {
+    for m in 0..nx * nz {
+        if cast[m] && over(&reach[m], r) {
+            cast[m] = false;
         }
-        let (x, z) = ((m % c.nx) as f32 + 0.5, (m / c.nx) as f32 + 0.5);
+        let (x, z) = ((m % nx) as f32 + 0.5, (m / nx) as f32 + 0.5);
         if over(&[x - JOIN, z - JOIN, x + JOIN, z + JOIN], r) {
-            c.joined[m] = 0;
+            joined[m] = 0;
         }
     }
     let lim = |v: f32, n: usize| -> usize { js_min(js_max(floor(v as f64 * 2.0), 0.0), n as f64 * 2.0 - 1.0) as usize };
-    for z in lim(r[1], c.nz)..=lim(r[3], c.nz) {
-        for x in lim(r[0], c.nx)..=lim(r[2], c.nx) {
-            c.roof[z * c.nx * 2 + x] = 0;
+    for z in lim(r[1], nz)..=lim(r[3], nz) {
+        for x in lim(r[0], nx)..=lim(r[2], nx) {
+            roof[z * nx * 2 + x] = 0;
         }
     }
 }
 
 /// the first static a line meets, panes of glass let by: how far, its face's normal, which
-fn first(w: usize, at: [f64; 3], d: [f64; 3], tmax: f64, tune: &Knobs) -> Option<(f64, [f64; 3], usize)> {
+fn first(w: &World, at: [f64; 3], d: [f64; 3], tmax: f64, tune: &Knobs) -> Option<(f64, [f64; 3], usize)> {
     let (mut gone, mut out) = (0.0, [0.0; 4]);
     for _ in 0..8 {
         let a = [at[0] + d[0] * gone, at[1] + d[1] * gone, at[2] + d[2] * gone];
@@ -284,18 +247,18 @@ fn first(w: usize, at: [f64; 3], d: [f64; 3], tmax: f64, tune: &Knobs) -> Option
         if !(left > 0.0) {
             return None;
         }
-        let bi = lines::ray(w, a[0], a[1], a[2], d[0], d[1], d[2], left, -1, false, &mut out, tune);
+        let bi = lines::ray(w, a[0], a[1], a[2], d[0], d[1], d[2], left, false, false, &mut out, tune);
         if bi < 0 {
             return None;
         }
-        if world_read(w).flags[bi as usize] & F_GLASS == 0 {
+        if w.flags[bi as usize] & F_GLASS == 0 {
             return Some((gone + out[0], [out[1], out[2], out[3]], bi as usize));
         }
         gone += out[0] + 0.02;
     }
     None
 }
-fn roof(c: &mut Cast, w: usize, x: f64, z: f64, tune: &Knobs) -> bool {
+fn roof(c: &mut Cast, w: &World, x: f64, z: f64, tune: &Knobs) -> bool {
     let (jx, jz) = (floor(x * 2.0), floor(z * 2.0));
     if !(jx >= 0.0 && jz >= 0.0 && jx < c.nx as f64 * 2.0 && jz < c.nz as f64 * 2.0) {
         return false;
@@ -308,7 +271,7 @@ fn roof(c: &mut Cast, w: usize, x: f64, z: f64, tune: &Knobs) -> bool {
 }
 /// THE METRE A POINT READS: the nearest whose middle it has a clear line to past the statics, each way (its own, the one it leans to, the other, the
 /// corner's); `good` says whether a metre will do at all
-fn metre_of(w: usize, nx: usize, nz: usize, p: [f64; 3], mut good: impl FnMut(usize) -> bool, tune: &Knobs) -> Option<usize> {
+fn metre_of(w: &World, nx: usize, nz: usize, p: [f64; 3], mut good: impl FnMut(usize) -> bool, tune: &Knobs) -> Option<usize> {
     let (ix, iz) = (floor(p[0]), floor(p[2]));
     let (ax, az) = (p[0] - ix - 0.5, p[2] - iz - 0.5);
     let (sx, sz) = (if ax < 0.0 { -1.0 } else { 1.0 }, if az < 0.0 { -1.0 } else { 1.0 });
@@ -322,7 +285,7 @@ fn metre_of(w: usize, nx: usize, nz: usize, p: [f64; 3], mut good: impl FnMut(us
         }
         let m = jz as usize * nx + jx as usize;
         let c = [jx + 0.5, HEIGHT, jz + 0.5];
-        let clear = |a: [f64; 3], b: [f64; 3]| lines::sight_line(w, -1, F_GLASS, a[0], a[1], a[2], b[0], b[1], b[2], tune) == Some(false);
+        let clear = |a: [f64; 3], b: [f64; 3]| lines::sight_line(w, false, F_GLASS, a[0], a[1], a[2], b[0], b[1], b[2], tune) == Some(false);
         if good(m) && clear(p, c) && clear(c, p) {
             return Some(m);
         }
@@ -331,7 +294,7 @@ fn metre_of(w: usize, nx: usize, nz: usize, p: [f64; 3], mut good: impl FnMut(us
 }
 
 /// a metre's lines, followed among the statics
-fn cast(c: &mut Cast, w: usize, m: usize, tune: &Knobs) {
+fn cast(c: &mut Cast, w: &World, m: usize, tune: &Knobs) {
     let (nx, nz) = (c.nx, c.nz);
     let a = [(m % nx) as f64 + 0.5, HEIGHT, (m / nx) as f64 + 0.5];
     let to_sun = c.to_sun;
@@ -405,9 +368,9 @@ fn cast(c: &mut Cast, w: usize, m: usize, tune: &Knobs) {
 }
 
 /// IS A METRE ONE PLACE WITH THE NEXT, along x or along z: the way between them past the statics, panes among them, and no doorway
-fn joined(w: usize, x: f64, z: f64, along_x: bool, tune: &Knobs) -> bool {
+fn joined(w: &World, x: f64, z: f64, along_x: bool, tune: &Knobs) -> bool {
     let clear = |a: [f64; 3], b: [f64; 3]| {
-        let see = |a: [f64; 3], b: [f64; 3]| lines::sight_line(w, -1, 0, a[0], a[1], a[2], b[0], b[1], b[2], tune) == Some(false);
+        let see = |a: [f64; 3], b: [f64; 3]| lines::sight_line(w, false, 0, a[0], a[1], a[2], b[0], b[1], b[2], tune) == Some(false);
         see(a, b) && see(b, a)
     };
     let p = |on: f64, off: f64| if along_x { [x + on, HEIGHT, z + off] } else { [x + off, HEIGHT, z + on] };
@@ -428,34 +391,31 @@ fn joined(w: usize, x: f64, z: f64, along_x: bool, tune: &Knobs) -> bool {
     };
     !(opens(0.0, -1.0) && opens(1.0, 1.0))
 }
-fn join(c: &mut Cast, w: usize, m: usize, tune: &Knobs) {
+fn join(c: &mut Cast, w: &World, m: usize, tune: &Knobs) {
     if c.joined[m] == 0 {
         let (x, z) = ((m % c.nx) as f64 + 0.5, (m / c.nx) as f64 + 0.5);
         c.joined[m] = 4 | if m % c.nx + 1 < c.nx && joined(w, x, z, true, tune) { 1 } else { 0 } | if m / c.nx + 1 < c.nz && joined(w, x, z, false, tune) { 2 } else { 0 };
     }
 }
 /// THE LEVEL OF EVERY PLACE, some rounds of it: each metre under a roof is pulled to its own reading and, hard, to the metres it is one place with. `open` = the open air's
-fn levels(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], new: bool, rounds: usize, open: f64, tune: &Knobs) {
+fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize, open: f64, tune: &Knobs) {
     let (nx, nz) = (c.nx, c.nz);
     for m in 0..nx * nz {
         join(c, w, m, tune);
     }
     let mut way = c.joined;
     // (a leaf across a way that is no doorway's: a gate, a shutter)
-    let o = world_read(w);
-    if set >= 0 {
-        for i in 0..js_min(o.leaves[set as usize] as f64, MAX_LEAVES as f64) as usize {
-            let at = (set as usize * MAX_LEAVES + i) * REC;
-            let r = &o.leaf[at..at + REC];
-            let b = plan_of(r);
-            let lim = |v: f32, n: usize| js_min(js_max(floor(v as f64), 0.0), n as f64 - 1.0) as usize;
-            for z in lim(b[1] - 1.0, nz)..=lim(b[3] + 1.0, nz) {
-                for x in lim(b[0] - 1.0, nx)..=lim(b[2] + 1.0, nx) {
-                    let m = z * nx + x;
-                    for (bit, d) in [(1, [1.0, 0.0, 0.0]), (2, [0.0, 0.0, 1.0])] {
-                        if way[m] & bit != 0 && lines::ray_box_n(&o.cut, x as f64 + 0.5, HEIGHT, z as f64 + 0.5, d[0], d[1], d[2], r, 1.0).is_some() {
-                            way[m] &= !bit;
-                        }
+    for i in 0..w.leaves() {
+        let at = i * REC;
+        let r = &w.leaf[at..at + REC];
+        let b = plan_of(r);
+        let lim = |v: f32, n: usize| js_min(js_max(floor(v as f64), 0.0), n as f64 - 1.0) as usize;
+        for z in lim(b[1] - 1.0, nz)..=lim(b[3] + 1.0, nz) {
+            for x in lim(b[0] - 1.0, nx)..=lim(b[2] + 1.0, nx) {
+                let m = z * nx + x;
+                for (bit, d) in [(1, [1.0, 0.0, 0.0]), (2, [0.0, 0.0, 1.0])] {
+                    if way[m] & bit != 0 && lines::ray_box_n(&w.cut, x as f64 + 0.5, HEIGHT, z as f64 + 0.5, d[0], d[1], d[2], r, 1.0).is_some() {
+                        way[m] &= !bit;
                     }
                 }
             }
@@ -490,9 +450,9 @@ fn levels(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], new: bool, roun
 }
 
 /// the six faces of the meter under the sweep's lamps at a point (None: a line of it is the host's to judge)
-fn lamps_on(w: usize, set: i32, k: &K, p: [f64; 3], tune: &Knobs) -> Option<[f64; 6]> {
-    let (mut acc, mut at) = ([0.0; 6], 0usize);
-    if light::estimate(w, set, k.lamps, p, &light::NO_SHADE, false, k.rows, true, &mut at, &mut acc, tune) == ASK_HOST {
+fn lamps_on(w: &World, k: &K, p: [f64; 3], tune: &Knobs) -> Option<[f64; 6]> {
+    let mut acc = [0.0; 6];
+    if light::estimate(w, k.lamps, p, &light::NO_SHADE, k.rows, &mut acc, tune) == ASK_HOST {
         return None;
     }
     Some(acc)
@@ -502,26 +462,23 @@ fn mean(v: &[f64; 6]) -> f64 {
 }
 
 /// ONE METRE WORKED OUT: what its lines bring of the metres as they are
-fn work(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], m: usize, k: &K, tune: &Knobs) {
+fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, tune: &Knobs) {
     if !c.cast[m] {
         cast(c, w, m, tune);
         unsafe { SWEPT[1] += 1 };
     }
     let a = [(m % c.nx) as f64 + 0.5, HEIGHT, (m / c.nx) as f64 + 0.5];
     // the leaves that hang near enough to be in a line's way
-    let o = world_read(w);
     let (mut near, mut n) = ([0usize; MOST], 0);
-    if set >= 0 {
-        for i in 0..js_min(o.leaves[set as usize] as f64, MAX_LEAVES as f64) as usize {
-            let at = (set as usize * MAX_LEAVES + i) * REC;
-            let (dx, dz) = (o.leaf[at + R_C] - a[0], o.leaf[at + R_C + 2] - a[2]);
-            if dx * dx + dz * dz < NEAR * NEAR && n < MOST {
-                near[n] = at;
-                n += 1;
-            }
+    for i in 0..w.leaves() {
+        let at = i * REC;
+        let (dx, dz) = (w.leaf[at + R_C] - a[0], w.leaf[at + R_C + 2] - a[2]);
+        if dx * dx + dz * dz < NEAR * NEAR && n < MOST {
+            near[n] = at;
+            n += 1;
         }
     }
-    let shut = |p: [f64; 3], d: [f64; 3], tmax: f64| near[..n].iter().any(|&at| lines::ray_box_n(&o.cut, p[0], p[1], p[2], d[0], d[1], d[2], &o.leaf[at..at + REC], tmax).is_some());
+    let shut = |p: [f64; 3], d: [f64; 3], tmax: f64| near[..n].iter().any(|&at| lines::ray_box_n(&w.cut, p[0], p[1], p[2], d[0], d[1], d[2], &w.leaf[at..at + REC], tmax).is_some());
     let s = &k.sky;
     let open = open_air(s) + s.sun * js_max(0.0, s.to_sun[1]);
     let w_ = ways();
@@ -529,7 +486,7 @@ fn work(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], m: usize, k: &K, 
     for (i, r) in c.rays[m].iter().enumerate() {
         let d = w_.d[i];
         let t = r.cm as f64 / 100.0;
-        let back = if r.of == 0 { BARE } else { o.back[r.of as usize - 1] as f64 / 255.0 };
+        let back = if r.of == 0 { BARE } else { w.back[r.of as usize - 1] as f64 / 255.0 };
         // (a line that goes out is followed a leaf's width on: the leaf hangs in the opening's frame or stands open before it)
         let l = if n > 0 && shut(a, d, if r.to >= TO_OUTSIDE { t + 1.0 } else { t }) {
             LEAF / PI * st[O_GLOW_A + m]
@@ -556,7 +513,7 @@ fn work(c: &mut Cast, w: usize, set: i32, st: &mut [f64; LEN], m: usize, k: &K, 
     st[O_GLOW_MEAN + m] = avg;
     st[O_GLOW_UP + m] = f[2];
     st[O_GLOW_MAX + m] = js_max(js_max(js_max(f[0], f[1]), js_max(f[2], f[3])), js_max(f[4], f[5]));
-    if let Some(lamps) = lamps_on(w, set, k, a, tune) {
+    if let Some(lamps) = lamps_on(w, k, a, tune) {
         st[O_GLOW_A + m] = avg + mean(&lamps);
     }
 }
@@ -570,14 +527,14 @@ pub fn down(st: &mut [f64; LEN]) {
     }
 }
 /// ONE STEP over a plan of `nbx` by `nbz` squares of the smoke grid, two metres to a square's side
-pub fn step(w: usize, set: i32, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: &K, tune: &Knobs) {
+pub fn step(g: usize, w: &World, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: &K, tune: &Knobs) {
     let (nx, nz) = (nbx * PER, nbz * PER);
     let n = nx * nz;
     let real = |v: f64| v - v == 0.0 && v >= 0.0;
     if n == 0 || n > MAX_GLOW || !(k.sweep >= 1.0) || !(real(k.sky.sun) && real(k.sky.zenith) && real(k.sky.horizon)) {
         return;
     }
-    let c = fresh(w, nx, nz, Some(k.sky.to_sun));
+    let c = fresh(g, w, nx, nz, Some(k.sky.to_sun));
     let lamps = light::word(k.lamps, k.rows);
     let new = st[O_GLOW_LAMPS] == 0.0;
     // (how many metres are to go at the quick pace; past that, whole sweeps of a new field)
@@ -601,20 +558,20 @@ pub fn step(w: usize, set: i32, st: &mut [f64; LEN], nbx: usize, nbz: usize, k: 
             i = 0;
         }
         if roof(c, w, (i % nx) as f64 + 0.5, (i / nx) as f64 + 0.5, tune) {
-            work(c, w, set, st, i, k, tune);
+            work(c, w, st, i, k, tune);
         }
         i += 1;
     }
-    levels(c, w, set, st, new, LEVELS[young as usize], open_air(&k.sky), tune);
+    levels(c, w, st, new, LEVELS[young as usize], open_air(&k.sky), tune);
 }
 /// THE TABLE MADE BEFORE IT IS ASKED FOR, as a game stands: the lines of every metre under a roof and which metres are one place. No state is in it: a step that finds it
 /// wanting makes what it wants.
-pub fn ready(w: usize, nbx: usize, nbz: usize, to_sun: [f64; 3], tune: &Knobs) {
+pub fn ready(g: usize, w: &World, nbx: usize, nbz: usize, to_sun: [f64; 3], tune: &Knobs) {
     let (nx, nz) = (nbx * PER, nbz * PER);
     if nx * nz == 0 || nx * nz > MAX_GLOW {
         return;
     }
-    let c = fresh(w, nx, nz, Some(to_sun));
+    let c = fresh(g, w, nx, nz, Some(to_sun));
     for m in 0..nx * nz {
         join(c, w, m, tune);
         if !c.cast[m] && roof(c, w, (m % nx) as f64 + 0.5, (m / nx) as f64 + 0.5, tune) {
@@ -635,12 +592,12 @@ pub fn open_air(s: &Sky) -> f64 {
 }
 /// THE FIELD AT A POINT UNDER A ROOF, of the metre it reads (None: it is under the open sky, or no metre
 /// under a roof shows it its middle, or the field was never swept)
-pub fn at(w: usize, st: &[f64; LEN], nbx: usize, nbz: usize, p: [f64; 3], tune: &Knobs) -> Option<Field> {
+pub fn at(g: usize, w: &World, st: &[f64; LEN], nbx: usize, nbz: usize, p: [f64; 3], tune: &Knobs) -> Option<Field> {
     let (nx, nz) = (nbx * PER, nbz * PER);
     if nx * nz == 0 || nx * nz > MAX_GLOW || st[O_GLOW_LAMPS] == 0.0 {
         return None;
     }
-    let c = fresh(w, nx, nz, None);
+    let c = fresh(g, w, nx, nz, None);
     if !roof(c, w, p[0], p[2], tune) {
         return None;
     }

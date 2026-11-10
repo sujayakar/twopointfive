@@ -25,7 +25,7 @@ fn grid(g: &Game) -> &[u16] {
 }
 
 /// May a flood stand on this cell: on the grid, not shut, not a doorway.
-fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
+fn free(g: &Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     if !(x >= 0.0 && z >= 0.0 && x < g.col.nav.w && z < g.col.nav.h) { return false; }
     let i = crate::scene_collision::nav_grid_idx(g, x, z);
     // (`+ 0.0`: a Map's key is the same for −0 and 0, Num's is by bits)

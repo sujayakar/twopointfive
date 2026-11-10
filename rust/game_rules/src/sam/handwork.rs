@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seams: what skeleton 5 cannot give yet
-
-/// A static box's `c`, `h`, `yaw` and whether it has a `rot`. Once a table of Box rows stands, the body is that row's four fields.
-fn seam_box_read(g: &Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
-
 // ---------------------------------------------------------------- private helpers
 
 /// `BoxFlag.a | BoxFlag.b`: the skeleton's flags are numbers.
@@ -158,7 +153,7 @@ fn breaker_face(g: &crate::game::Game, from: V3) -> crate::handwork::BreakerFace
         _ => None,
     };
     if let Some(b) = b {
-        let (bc, bh, yaw, rot) = seam_box_read(g, b);
+        let (bc, bh, yaw, rot) = { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) };
         if !js::truthy(yaw) && !rot && m::min(bh[0], bh[2]) < 0.5 * m::max(bh[0], bh[2]) {
             let n: V3 = if bh[2] < bh[0] { [0.0, 0.0, js::or(m::sign(from[2] - bc[2]), 1.0)] } else { [js::or(m::sign(from[0] - bc[0]), 1.0), 0.0, 0.0] };
             return BreakerFace { p: [bc[0] + n[0] * bh[0], bc[1], bc[2] + n[2] * bh[2]], n };

@@ -322,7 +322,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
             }
         }
         for i in g.tab.roomfight_room[t].cells.keys() { cost.set(i, 40.0); }
-        let mut dear = |g: &mut Game, ix: f64, iz: f64| -> f64 { let i = nav_idx(g, ix, iz); cost.get(crate::Num(i)).copied().unwrap_or(1.0) };
+        let mut dear = |g: &Game, ix: f64, iz: f64| -> f64 { let i = nav_idx(g, ix, iz); cost.get(crate::Num(i)).copied().unwrap_or(1.0) };
         let mut ways: Vec<Way> = Vec::new();
         let mut l0 = f64::INFINITY;   // his shortest way to any door of it, the team's own included
         for e in g.tab.roomfight_room[t].entries.clone() {
@@ -364,7 +364,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
             dx += 1.0;
         }
     });
-    let p1 = crate::scene_collision::nav_grid_find_path(g, pos, at, Some(8000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| -> f64 { let i = nav_idx(g, ix, iz); if mid.has(crate::Num(i)) { 8.0 } else { 1.0 } })).filter(|x| !x.is_empty())?;
+    let p1 = crate::scene_collision::nav_grid_find_path(g, pos, at, Some(8000.0), Some(&mut |g: &Game, ix: f64, iz: f64| -> f64 { let i = nav_idx(g, ix, iz); if mid.has(crate::Num(i)) { 8.0 } else { 1.0 } })).filter(|x| !x.is_empty())?;
     let l1 = crate::places::walk_len(pos, &p1);
     if !(l1 <= flank_limit(g, l0)) { return None; }
     let (mut on, mut all) = (0.0, 0.0);
@@ -398,16 +398,16 @@ fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Known> {
 }
 
 // RoundCtx's closures (`fire`, `hot`, `hotCell`, `lane`): private fns over what they captured
-fn ctx_line(g: &mut Game, a: V3, b: V3, y: f64) -> bool { ctx_line_over(g, &Over::OWN, a, b, y) }
-fn ctx_line_over(g: &mut Game, over: &Over, a: V3, b: V3, y: f64) -> bool { !crate::scene_collision::shot_blocked_over(g, over, [a[0], y, a[2]], [b[0], y, b[2]], None, None) }
+fn ctx_line(g: &Game, a: V3, b: V3, y: f64) -> bool { ctx_line_over(g, &Over::OWN, a, b, y) }
+fn ctx_line_over(g: &Game, over: &Over, a: V3, b: V3, y: f64) -> bool { !crate::scene_collision::shot_blocked_over(g, over, [a[0], y, a[2]], [b[0], y, b[2]], None, None) }
 /// a head or a chest in the line
-fn ctx_fire(g: &mut Game, a: V3, b: V3) -> bool { ctx_line(g, a, b, 1.5) || ctx_line(g, a, b, 1.0) }
+fn ctx_fire(g: &Game, a: V3, b: V3) -> bool { ctx_line(g, a, b, 1.5) || ctx_line(g, a, b, 1.0) }
 /// the line with every leaf out of it
 fn ctx_open(g: &mut Game, a: V3, b: V3) -> bool {
     ctx_line_over(g, &Over::statics(), a, b, 1.5)
 }
 /// a man standing there is in front of one of the guns the side knows of
-fn ctx_hot(g: &mut Game, known: &[Known], rear: &[V3], ajar: &[V3], p: V3) -> bool {
+fn ctx_hot(g: &Game, known: &[Known], rear: &[V3], ajar: &[V3], p: V3) -> bool {
     let (fire_m, soft_m, rear_m) = (g.k.squads.fire_m, g.k.squads.soft_m, g.k.squads.rear_m);
     for k in known { let d = flat(k.p, p); if d < (if k.firm { fire_m } else { soft_m }) && (d < 0.6 || ctx_fire(g, k.p, p)) { return true; } }
     for r in rear { let d = flat(*r, p); if d < rear_m && (d < 0.6 || ctx_fire(g, *r, p)) { return true; } }
@@ -544,7 +544,7 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
     // how far the room is by the plain way, guns or no guns, to the door that way comes in by
     let mut l0 = f64::INFINITY;
     {
-        let p0 = crate::scene_collision::nav_grid_find_path(g, pos, at, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| -> f64 { dear0(g, &x, d_room, ix, iz) }));
+        let p0 = crate::scene_collision::nav_grid_find_path(g, pos, at, Some(6000.0), Some(&mut |g: &Game, ix: f64, iz: f64| -> f64 { dear0(g, &x, d_room, ix, iz) }));
         if let Some(p0) = p0.filter(|p| !p.is_empty()) {
             let mut in_t = false;
             l0 = 0.0;
@@ -570,9 +570,9 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
             let c = cell_of(g, p);
             if room_has(g, t, c) || (used.iter().any(|u| flat(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
             if ctx_hot(g, &cap_known, &rear, &cap_ajar, p) { continue; }
-            let path = crate::scene_collision::nav_grid_find_path(g, pos, p, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| -> f64 {
+            let path = crate::scene_collision::way_priced(&mut *g, pos, p, 6000.0, &mut |g, ix: f64, iz: f64| -> f64 {
                 if ctx_hot_cell(g, &cap_known, &rear, &cap_ajar, ix, iz) { 200.0 } else { dear0(g, &x, d_room, ix, iz) }
-            }));
+            });
             let Some(path) = path.filter(|x| !x.is_empty()) else { continue };
             if flat(path[path.len() - 1], p) > 0.8 { continue; }
             let mut bad = false;

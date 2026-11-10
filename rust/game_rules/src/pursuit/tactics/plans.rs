@@ -494,7 +494,7 @@ fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactic
     let pen = tactics_penalty(g, gd, fix);
     let path = match &pen {
         Some(p) => {
-            let mut price = |_: &mut Game, ix: f64, iz: f64| tactics_penalty_price(p, ix, iz);
+            let mut price = |_: &Game, ix: f64, iz: f64| tactics_penalty_price(p, ix, iz);
             crate::scene_collision::nav_grid_find_path(g, from, fix, Some(6000.0), Some(&mut price))
         }
         None => crate::scene_collision::nav_grid_find_path(g, from, fix, Some(6000.0), None),

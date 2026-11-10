@@ -188,7 +188,7 @@ pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> b
     let b = static_at(g, ix);
     let r = m::max(mouth.lid * 1.7, 0.3);
     let Some(b) = b else { return false };
-    let c = seam_box(g, b).c;
+    let c = g.tab.boxes[b].c;
     if m::hyp2(c[0] - mouth.pos[0], c[2] - mouth.pos[2]) > 0.05 || c[1] > mouth.pos[1] {
         return false;
     }
@@ -279,8 +279,6 @@ fn plain(g: &mut crate::game::Game, t: FixtureId) {
 
 // ---- the one seam: what skeleton 5 still cannot do (notes.md, ## Skeleton) ----
 
-/// A box's row.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {
@@ -444,12 +442,10 @@ mod tests_need_box_rows {
         assert!(fire_struck(&g, t, [1.2, 1.5, 3.0], 1.0));
         assert!(!fire_struck(&g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
         assert!(!fire_struck(&g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
-        g.tab.boxes[id].c = [2.0, 1.0, 3.0];
+        g.tab.boxes.edit(id).c = [2.0, 1.0, 3.0];
         assert!(!fire_struck(&g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
     }
 }
-
-fn seam_box_set_emissive(g: &mut Game, bx: BoxId, e: V3) { g.tab.boxes[bx].emissive = e; }
 
 /// A lamp's place across: where the level hung it, wandering by two sines.
 fn wander_across(hung: f64, wander: f64, rate_a: f64, phase_a: f64, rate_b: f64, phase_b: f64, time: f64) -> f64 {
@@ -614,7 +610,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let bi = g.tab.fixture[t].boxes[b];
             b += 1;
             if let Some(&bx) = g.engine.world.statics.get(bi as usize) {
-                seam_box_set_emissive(g, bx, [glow[0] * ck, glow[1] * ck, glow[2] * ck]);
+                g.tab.boxes.edit(bx).emissive = [glow[0] * ck, glow[1] * ck, glow[2] * ck];
             }
         }
         if moved {

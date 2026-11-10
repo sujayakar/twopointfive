@@ -60,8 +60,8 @@ pub struct Open {
 /// moon) stands elsewhere. Made again from the world, so it is no state: it is on no wire and in no word
 #[derive(Clone, Debug)]
 pub struct SkyReach {
-    /// the box world's count of its statics' writes these were asked at
-    pub wrote: f64,
+    /// which writing of the statics these were asked at
+    pub wrote: u64,
     pub to_sun: V3,
     pub box_: crate::hours::SkyStateBox,
     pub cells: JsMap<crate::Num, Vec<crate::hours::Open>>,
@@ -69,7 +69,7 @@ pub struct SkyReach {
 }
 impl SkyReach {
     /// of no world yet
-    pub fn blank() -> Self { SkyReach { wrote: -1.0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::default(), cells: JsMap::new(), fine: JsMap::new() } }
+    pub fn blank() -> Self { SkyReach { wrote: 0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::default(), cells: JsMap::new(), fine: JsMap::new() } }
 }
 impl Default for SkyReach { fn default() -> Self { Self::blank() } }
 

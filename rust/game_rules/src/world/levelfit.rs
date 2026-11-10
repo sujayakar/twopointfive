@@ -5,6 +5,7 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
+use crate::boxworld::{MAX_BOXES, MAX_CELLS, MAX_CUTS, MAX_ITEMS, MAX_LEAVES, MAX_SHEETS, MAX_THINGS, MAX_TILTED};
 use alloc::{string::String, vec, vec::Vec};
 
 // ---- the terms of the count: called by the bodies below, stubs with no other caller, written here so no refusal panics on an empty stub
@@ -32,7 +33,7 @@ pub fn level_caps() -> crate::levelfit::LevelFit {
         doors: crate::doors::DOOR_CAP as f64,
         things: crate::props::PROP_CAP,
         parts: crate::props::PROP_PARTS,
-        sheets: crate::scene_box_mirror::PANE_CAP,
+        sheets: MAX_SHEETS as f64,
         fixtures: crate::fixtures::FIXTURES as f64,
         cameras: crate::fixtures::CAMERAS as f64,
         lasers: crate::fixtures::LASERS as f64,
@@ -119,11 +120,6 @@ fn grid_count(g: &Game) -> (f64, f64, f64) {
     (g.col.w * g.col.h, entries, g.col.tilted_at.len() as f64 / 5.0)
 }
 
-/// A table of the copy by its name, as `tables[k]` reads: `None` is `undefined`.
-fn table(tables: &JsMap<String, f64>, k: &str) -> Option<f64> {
-    tables.get(String::from(k)).copied()
-}
-
 /// Boxes of the list with this flag up.
 fn flagged(g: &Game, boxes: &[BoxId], flag: f64) -> f64 {
     let mut n = 0.0;
@@ -154,7 +150,7 @@ fn row(what: &str, has: f64, cap: f64) -> crate::levelfit::FitRow {
 }
 
 /// Every count of a stood game against what holds it.
-fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Vec<crate::levelfit::FitRow> {
+fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::levelfit::FitRow> {
     let col = &g_2.col;
     let lv = &g_2.level;
     let counted = crate::levelfit::LevelCountsLevel {
@@ -168,8 +164,6 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &Js
     };
     let big = level_counts(g, &counted);
     let cap = level_caps();
-    let any = js::truthy(table(tables, "boxes").unwrap_or(0.0));
-    let t = |k: &str| -> f64 { if any { table(tables, k).unwrap_or(0.0) } else { f64::INFINITY } };
     let civs = m::max(
         g_2.civilians.as_ref().map_or(0.0, |l| l.len() as f64),
         lv.civilians.as_ref().map_or(0.0, |l| l.len() as f64),
@@ -187,18 +181,17 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &Js
     let cuts = cut_statics(g, &col.boxes);
     let pieces = crate::wallbreak::wall_break_pieces_sure(g);
     let mut rows = vec![
-        row("statics", col.boxes.len() as f64, t("boxes")),
-        row("cells of the floor grid", cells, t("cells")),
-        row("entries of those cells", entries, t("items")),
-        row("tilted statics", tilted, t("tilted")),
-        row("statics that carry a cut record (a cut or a shaped static takes a cut row; so does a piece with a ragged end)", cuts, t("cuts")),
+        row("statics", col.boxes.len() as f64, MAX_BOXES as f64),
+        row("cells of the floor grid", cells, MAX_CELLS as f64),
+        row("entries of those cells", entries, MAX_ITEMS as f64),
+        row("tilted statics", tilted, MAX_TILTED as f64),
+        row("statics that carry a cut record (a cut or a shaped static takes a cut row; so does a piece with a ragged end)", cuts, MAX_CUTS as f64),
         crate::levelfit::FitRow { play: Some(true), ..row("pieces a broken level may stand up (the wall breaker's knob) against the pieces its room in the three tables above surely holds", g.k.walls.max_pieces, pieces) },
-        row("leaves (the doors' list of the leaves' table)", col.dynamic_boxes.len() as f64, t("leaves")),
-        row("boxes of the loose furniture (another list of the leaves' table)", parts, m::min(t("leaves"), cap.parts)),
-        row("loose things of furniture", things, m::min(t("things"), cap.things)),
-        row("glass one line can note (no more than the level's glass)", glass, t("panes")),
-        row("sheets of glass (a row a pane that is no longer whole)", big.sheets, m::min(t("glass"), cap.sheets)),
-        row("sheets of glass (a row a pane a burst's view names)", big.sheets, t("view")),
+        row("leaves (a row a door)", col.dynamic_boxes.len() as f64, MAX_LEAVES as f64),
+        row("boxes of the loose furniture (a row a box)", parts, m::min(MAX_LEAVES as f64, cap.parts)),
+        row("loose things of furniture", things, m::min(MAX_THINGS as f64, cap.things)),
+        row("glass one line can note (no more than the level's glass)", glass, ::sim::world::MAX_PANES as f64),
+        row("sheets of glass (a row a pane that is no longer whole)", big.sheets, cap.sheets),
     ];
     let clumps = clumps_most(g, &lv.boxes);
     rows.push(row("clumps the largest sheet of glass dices into", clumps, if held { ::sim::panes_cap(1) as f64 } else { inf }));
@@ -232,7 +225,10 @@ pub fn civ_most(g: &mut crate::game::Game) -> f64 {
 /// A level the game will not load, said by its name where it has one.
 pub fn level_too_big(g: &crate::game::Game, why: &str) -> String {
     let name = crate::scene_level_load::level_name_of(g);
-    crate::scene_box_mirror::too_big(name.as_deref(), why)
+    match name {
+        Some(n) if !n.is_empty() => alloc::format!("the level '{}' is too big to load: {}", n, why),
+        _ => alloc::format!("this level is too big to load: {}", why),
+    }
 }
 
 /// A fixture's box that lights the room as a flat panel, or nothing: too thick, too small, or a kind of fixture that only glows.
@@ -264,22 +260,20 @@ pub fn level_over(g: &mut crate::game::Game, level: &crate::levelfit::LevelCount
     if over.is_empty() { None } else { Some(level_too_big(g, &over.join(", "))) }
 }
 
-/// The room a level leaves for its pieces: how many more statics, entries of the grid's cells and cut rows the copy holds than the level stands with. Infinity where there is no module.
-pub fn break_room(g: &crate::game::Game, col: &crate::levelfit::StoodCol, tables: &JsMap<String, f64>) -> crate::levelfit::BreakRoom {
-    let boxes = table(tables, "boxes").unwrap_or(0.0);
-    if !js::truthy(boxes) { return crate::levelfit::BreakRoom { boxes: f64::INFINITY, items: f64::INFINITY, cuts: f64::INFINITY }; }
+/// The room a level leaves for its pieces: how many more statics, entries of the grid's cells and cut rows a level may have than this one stands with.
+pub fn break_room(g: &crate::game::Game, col: &crate::levelfit::StoodCol) -> crate::levelfit::BreakRoom {
     let (_, entries, _) = grid_count(g);
     let cut = cut_statics(g, &col.boxes);
     crate::levelfit::BreakRoom {
-        boxes: boxes - col.boxes.len() as f64,
-        items: table(tables, "items").unwrap_or(f64::NAN) - entries,
-        cuts: table(tables, "cuts").unwrap_or(f64::NAN) - cut,
+        boxes: MAX_BOXES as f64 - col.boxes.len() as f64,
+        items: MAX_ITEMS as f64 - entries,
+        cuts: MAX_CUTS as f64 - cut,
     }
 }
 
 /// Why this stood game cannot be played, in words, or nothing: every row of the count not held in play is inside what holds it.
-pub fn stood_over(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Option<String> {
-    let over: Vec<String> = fit_rows(g, g_2, tables).iter()
+pub fn stood_over(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Option<String> {
+    let over: Vec<String> = fit_rows(g, g_2).iter()
         .filter(|r| !r.play.unwrap_or(false) && r.has > r.cap)
         .map(|r| alloc::format!("{} {} ({})", js::num_str(r.has), r.what, js::num_str(r.cap)))
         .collect();

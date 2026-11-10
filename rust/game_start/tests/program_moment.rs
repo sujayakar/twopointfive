@@ -19,7 +19,7 @@ fn stand(id: &str) -> Play {
 fn put_step(p: &mut Play, step: &str) { p.g.lesson.i = game::lesson::lesson_data(&p.g).unwrap().steps.iter().position(|t| t.id == step).unwrap_or_else(|| panic!("no step '{}'", step)) as f64; }
 fn block(g: &Game) -> Vec<u8> { game_start::block::bytes(g.sim).to_vec() }
 /// the game kept stands again in a fresh game's slot, as the page's module puts one back
-fn lay(p: &mut Play, g: &Game, b: &[u8], slot: usize) { p.g = Moment { game: Box::new(g.clone()), block: b.to_vec() }.stands(slot); }
+fn lay(p: &mut Play, g: &Game, b: &[u8], slot: usize) { p.g = Moment { game: Box::new(g.clone()), block: b.to_vec() }.laid(slot); }
 fn words(p: &mut Play) -> Vec<u32> {
     let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
     game::state_words::state_words(&mut p.g, &mut w, &mut out);

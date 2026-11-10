@@ -222,7 +222,7 @@ impl Bot {
     pub fn line(&self, x: GuardId) -> bool {
         let eye = self.seen(|g, s| { let c = g.pl[s.player].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.5, g.ch[c].pos[2]]) });
         let to = self.chest(x);
-        !self.world(|w| w.line(eye, to, game::ask::Line::Solid))
+        !self.ask(|g| game::scene_collision::solid_blocked(g, eye, to, None))
     }
     /// the spot `d` metres straight behind a man, as he faces now
     pub fn behind(&self, x: GuardId, d: f64) -> V3 { let (p, y) = (self.man_at(x), self.yaw(x)); [p[0] - m::sin(y) * d, 0.0, p[2] - m::cos(y) * d] }

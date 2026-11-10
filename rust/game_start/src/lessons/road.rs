@@ -160,7 +160,7 @@ async fn deed(b: &Bot, id: &str) {
             //  line between the two, hide the man)
             let (seen, me, c) = (b.line(x), b.pos(), b.chest(x));
             let zc = c[2] + (me[2] - c[2]) * (c[0] - PLANKS_X) / (c[0] - me[0]);
-            let stand = b.world(|w| w.ray([PLANKS_X - 0.5, 1.2, zc], [1.0, 0.0, 0.0], 1.0).is_some());
+            let stand = b.ask(|g| game::scene_collision::raycast(g, [PLANKS_X - 0.5, 1.2, zc], [1.0, 0.0, 0.0], 1.0).is_some());
             if seen && stand { b.fail(format!("he has a clear line to the man behind the boards from the doorway with the boards standing between them (he is at {}, the player at {})", Bot::at_str(c), Bot::at_str(me))).await; }
             if seen { b.say(String::from("  the boards on the line to him are down (his own rounds at the door): he is shot through the gap")); }
             let r0 = b.rounds();

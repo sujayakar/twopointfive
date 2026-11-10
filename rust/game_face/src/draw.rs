@@ -26,14 +26,10 @@ pub extern "C" fn face_draw_over(h: u32, want: u32) -> *const u32 {
 pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
     super::with(h, |k| { k.drawn.frame(&k.g, a, [x, y, z]); k.drawn.table().as_ptr() })
 }
-/// before a take: the ways of a game just put back's smoke are asked; and what a viewer's picture shows that the game lists nowhere is made of it, and the world's copy,
-/// which was asked, is proven again by whoever asks next
+/// before a take: the ways of a game just put back's smoke are asked; and what a viewer's picture shows that the game lists nowhere is made of it
 fn watch(x: &mut super::Held, want: u32) {
     if want & game_draw::want::smoke != 0 && x.drawn.smoke.unsaid() { game::sense::smoke_ways(&mut x.g); }
-    let watches = x.drawn.watches();
-    if watches { game::scene_collision::stands(&mut x.g); }
     x.drawn.watch(&x.g);
-    if watches { game::scene_collision::unstand(&mut x.g); }
 }
 /// # Safety
 /// `p` names `n` numbers the host wrote into memory from face_alloc.

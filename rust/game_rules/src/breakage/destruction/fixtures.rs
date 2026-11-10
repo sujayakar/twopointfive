@@ -50,7 +50,7 @@ pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir
     for d in near.iter() {
         if d.kind != DKind::Clutter && d.kind != DKind::Binder { continue; }
         let b = d.box_;
-        let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+        let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
         if m::hyp3(c[0] - hit_p[0], (c[1] - hit_p[1]) * 0.7, c[2] - hit_p[2]) > g.k.chaos.knock_reach_m + m::max(h[0], h[2]) { continue; }
         let top = top_of(g, b);
         if crate::scene_collision::solid_blocked(g, v3::mad(hit_p, dir, -0.05), top, None) { continue; }   // (not through the partition the round stopped in)
@@ -79,7 +79,7 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     let c = crate::debris::debris_spawn(g, kind, b, v, w, Some(who), None);
     destruction_hide(g, d);
     if c.is_none() {   
-        let (bc, bh, albedo) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).albedo);
+        let (bc, bh, albedo) = (g.tab.boxes[b].c, g.tab.boxes[b].h, g.tab.boxes[b].albedo);
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, crate::render_particles::EmitOpts {
             speed: 2.5,
             speed_jit: Some(0.7),
@@ -147,7 +147,7 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
         while (k as f64) < n {
             let ix = scratch[k];
             let b = g.col.boxes[ix as usize];
-            let (yaw, bh, bc) = (seam_box(g, b).yaw, seam_box(g, b).h, seam_box(g, b).c);
+            let (yaw, bh, bc) = (g.tab.boxes[b].yaw, g.tab.boxes[b].h, g.tab.boxes[b].c);
             let ac = m::abs(m::cos(yaw));
             let as_ = m::abs(m::sin(yaw));
             let ex = ac * bh[0] + as_ * bh[2];
@@ -318,8 +318,6 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
 
-/// a box's row
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {

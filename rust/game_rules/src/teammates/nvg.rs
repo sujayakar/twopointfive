@@ -94,7 +94,7 @@ fn loud_t(g: &crate::game::Game) -> f64 {
 
 /// The light of the place at a point, nothing carried, as it stands: the tube is the eye, and no eye's habit is in it.
 pub fn nvg_place_light(g: &mut crate::game::Game, p: V3) -> f64 {
-    crate::guards::light_at(g, p, Some(&mut |_: &mut Game, _: f64| true), None, None).0
+    crate::guards::light_at(g, p, Some(&mut |_: &Game, _: f64| true), None, None).0
 }
 
 /// One point of his place: is it dark to the bare eye, and (if `tube`) too dark for the tube.

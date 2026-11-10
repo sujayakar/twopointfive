@@ -10,7 +10,7 @@ use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{cos, hypot2, sin};
 use crate::state::GAMES;
-use crate::world::{js_abs, js_ceil, js_max, js_min, world, K_ROT, MAX_LEAVES, REC, R_C, R_H, R_KIND, R_YAW};
+use crate::world::{js_abs, js_ceil, js_max, js_min, K_ROT, REC, R_C, R_H, R_KIND, R_YAW, World};
 use core::mem::size_of;
 use prim::floor;
 
@@ -172,7 +172,7 @@ impl Air {
         }
     }
     /// Is the way along edge `e` clear of every static
-    fn ask(&self, wo: usize, ask: u32, e: usize, probes: &mut f64, tune: &Knobs) -> bool {
+    fn ask(&self, wo: &World, e: usize, probes: &mut f64, tune: &Knobs) -> bool {
         let i = e >> 1;
         let j = if e & 1 != 0 { i + AIR_W } else { i + 1 };
         let ax = X0 + ((i % AIR_W) as f64 + 0.5) * AIR_CELL;
@@ -181,14 +181,14 @@ impl Air {
         let bz = Z0 + ((j / AIR_W) as f64 + 0.5) * AIR_CELL;
         for y in PROBE_Y.iter() {
             *probes += 1.0;
-            if lines::solid_line(wo, -1, ask, ax, *y, az, bx, *y, bz, tune) != Some(true) && lines::solid_line(wo, -1, ask, bx, *y, bz, ax, *y, az, tune) != Some(true) {
+            if lines::solid_line(wo, false, lines::ASK_GLASS, ax, *y, az, bx, *y, bz, tune) != Some(true) && lines::solid_line(wo, false, lines::ASK_GLASS, bx, *y, bz, ax, *y, az, tune) != Some(true) {
                 return true;
             }
         }
         false
     }
     /// The shut edges asked again, a share of the list a step
-    fn recheck(&mut self, p: &Plan, wo: usize, ask: u32, h: f64, probes: &mut f64, tune: &Knobs) {
+    fn recheck(&mut self, p: &Plan, wo: &World, h: f64, probes: &mut f64, tune: &Knobs) {
         let n = self.n_edges as usize;
         if n == 0 {
             return;
@@ -198,21 +198,20 @@ impl Air {
         for _ in 0..per {
             let e = p.edges[cur] as usize;
             cur = (cur + 1) % n;
-            if self.stat[e] == 0 && self.ask(wo, ask, e, probes, tune) {
+            if self.stat[e] == 0 && self.ask(wo, e, probes, tune) {
                 self.stat[e] = 1;
             }
         }
         self.cur = cur as f64;
     }
     /// Which edges the door leaves stand across, re-read only when a leaf has moved
-    fn leaves(p: &mut Plan, wo: usize, set: i32) {
-        let o = world(wo);
-        let n = if set < 0 { 0 } else { o.leaves[set as usize] as usize };
-        let base = if set < 0 { 0 } else { set as usize * MAX_LEAVES * REC };
+    fn leaves(p: &mut Plan, wo: &World) {
+        let o = wo;
+        let n = o.leaves();
         let rows = &o.leaf;
         let mut sig = n as i32;
         for i in 0..n {
-            let q = base + i * REC;
+            let q = i * REC;
             let rot = (rows[q + R_KIND] as u32) & K_ROT != 0;
             sig = (sig ^ js_round(rows[q + R_C] * 1000.0)).wrapping_mul(16777619);
             sig = (sig ^ js_round(rows[q + R_C + 2] * 1000.0)).wrapping_mul(16777619);
@@ -226,7 +225,7 @@ impl Air {
         p.leaf.fill(0);
         let (w_max, h_max) = ((AIR_W - 1) as f64, (AIR_H - 1) as f64);
         for i in 0..n {
-            let q = base + i * REC;
+            let q = i * REC;
             let (c0, c1, c2, h0, h1, h2) = (rows[q + R_C], rows[q + R_C + 1], rows[q + R_C + 2], rows[q + R_H], rows[q + R_H + 1], rows[q + R_H + 2]);
             let rot = (rows[q + R_KIND] as u32) & K_ROT != 0;
             if rot || c1 - h1 > 1.0 || c1 + h1 < 1.0 {
@@ -330,13 +329,13 @@ impl Air {
         self.n_edges = ne as f64;
     }
     /// …and with the switch on: every opening asked, the leaves read, and run on until it stands still (the level opens with the dust already in its open doorways)
-    pub fn settle(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, said: &mut Said, tune: &Knobs) {
+    pub fn settle(&mut self, p: &mut Plan, wo: &World, said: &mut Said, tune: &Knobs) {
         let n = self.n_edges as usize;
         for q in 0..n {
             let e = p.edges[q] as usize;
-            self.stat[e] = if self.ask(wo, ask, e, &mut said.probes, tune) { 1 } else { 0 };
+            self.stat[e] = if self.ask(wo, e, &mut said.probes, tune) { 1 } else { 0 };
         }
-        Air::leaves(p, wo, set);
+        Air::leaves(p, wo);
         let h = step_secs(tune);
         let mut i = 0;
         while i < 1500 {
@@ -348,15 +347,15 @@ impl Air {
         }
     }
     /// Through the openings as they stand this tick
-    pub fn update(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, dt: f64, said: &mut Said, tune: &Knobs) {
+    pub fn update(&mut self, p: &mut Plan, wo: &World, dt: f64, said: &mut Said, tune: &Knobs) {
         let h = step_secs(tune);
         self.acc += dt;
         let mut n = 0;
         while self.acc >= h && n < 4 {
             n += 1;
             self.acc -= h;
-            self.recheck(p, wo, ask, h, &mut said.probes, tune);
-            Air::leaves(p, wo, set);
+            self.recheck(p, wo, h, &mut said.probes, tune);
+            Air::leaves(p, wo);
             said.steps += 1.0;
             said.moved += self.step_once(p, h, &mut said.open, tune);
         }

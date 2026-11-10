@@ -131,6 +131,8 @@ struct Window { a: usize, b: usize, at: [f64; 2] }
 
 fn cell_at(g: &Game, x: f64, z: f64) -> bool { let n = &g.col.nav; x >= 0.0 && z >= 0.0 && x < n.w * n.cell && z < n.h * n.cell && !game::scene_collision::nav_grid_is_blocked(g, x, z) }
 fn room_at(g: &mut Game, x: f64, z: f64) -> Option<RoomfightRoomId> { if cell_at(g, x, z) { game::roomfight::room_fight_room_at(g, [x, 0.0, z]) } else { None } }
+/// the level with no leaf hung in it: they swing
+fn no_leaves(g: &mut Game) { g.col.dynamic_boxes.clear(); g.tab.boxes.leaves(&[]); }
 fn cells_of(g: &Game, r: RoomfightRoomId) -> BTreeSet<usize> { g.tab.roomfight_room[r].cells.keys().iter().map(|c| c.0 as usize).collect() }
 fn key_of(g: &Game, r: RoomfightRoomId) -> usize { *cells_of(g, r).first().expect("a room has floor") }
 /// a mission staged and let stand: nobody thinks, so everybody is where it put him
@@ -240,10 +242,10 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
             let (Some(a), Some(b)) = (a, b) else { continue };
             if a == b { continue; }
             // the player's own circle and height band taken across the sheet with the sheet gone (a kerb, a lintel or furniture against it stops him)
-            g.tab.boxes[id].c[1] += 100.0; game::scene_collision::wrote(g);
+            g.tab.boxes.edit(id).c[1] += 100.0;
             let mut walks = true; let mut s = -0.7;
             while s <= 0.7 + 1e-6 { let at = if thin_x { [c[0] + s, 0.0, c[2]] } else { [c[0], 0.0, c[2] + s] }; let mut q = at; game::scene_collision::collide_circle(g, &mut q, 0.42, 0.2, 1.7, Some(2.0)); if hyp(q, at) > 0.02 { walks = false; break; } s += 0.1; }
-            g.tab.boxes[id].c[1] = c[1]; game::scene_collision::wrote(g);
+            g.tab.boxes.edit(id).c[1] = c[1];
             if walks { windows.push(Window { a: index[&a], b: index[&b], at: [c[0], c[2]] }); }
             break;
         }
@@ -360,12 +362,11 @@ fn sight(levels: &[String], write: bool) -> Verdicts {
         if men.is_empty() { unjudged.push(level); continue; }
         let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
         stood += 1;
-        p.g.col.dynamic_boxes.clear();   // (the leaves out: they swing)
+        no_leaves(&mut p.g);
         if broken {   // a post in the middle of the first man's line, by a box of the level moved there
             let (a, b) = men[0].1; let half = (hyp(a, b) / 4.0).min(0.8); let id = p.g.col.boxes[0];
-            let x = &mut p.g.tab.boxes[id]; x.c = [(a[0] + b[0]) / 2.0, 1.0, (a[2] + b[2]) / 2.0]; x.h = [half, 1.0, half]; x.yaw = 0.0; x.rot = None; x.flags = 0.0;
+            let mut x = p.g.tab.boxes.edit(id); x.c = [(a[0] + b[0]) / 2.0, 1.0, (a[2] + b[2]) / 2.0]; x.h = [half, 1.0, half]; x.yaw = 0.0; x.rot = None; x.flags = 0.0;
         }
-        game::scene_collision::wrote(&mut p.g);
         let file = held("sight", level);
         let was: HashMap<String, usize> = file.iter().flatten().filter(|l| !l.starts_with('#')).filter_map(|l| { let (n, c) = l.rsplit_once(' ')?; Some((n.to_string(), c.parse().ok()?)) }).collect();
         let mut now: Vec<String> = vec![];
@@ -616,7 +617,7 @@ fn doors(levels: &[String], rows: bool) -> Verdicts {
         let data = data_of(level);
         let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
         let g: &mut Game = &mut p.g;
-        g.col.dynamic_boxes.clear(); game::scene_collision::wrote(g);   // (the frames are measured with no leaf in them)
+        no_leaves(g);   // (the frames are measured with no leaf in them)
         let air = |g: &mut Game, p: V3, d: V3, max: f64| game::scene_collision::raycast(g, p, d, max).map_or(max, |h| h.t);
         let mut bad: Vec<String> = vec![];
         let mut mids: Vec<[f64; 2]> = vec![];

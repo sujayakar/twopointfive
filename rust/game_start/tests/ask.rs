@@ -88,90 +88,80 @@ fn asking_of_a_world_that_is_not_changes_nothing() {
         let over = Over { open: vec![wall as u32], extra: vec![box_], ..Over::but_door(&p.g, d) };
         assert!(!over.plain());
         let before = p.words();
-        let shots = p.g.stats.glasspen.clone();
         for k in 0..48 {
             let th = k as f64 * 0.131;
             let (from, dir) = ([c[0] - 3.0, 1.2, c[2] + 0.4], [th.cos(), 0.0, th.sin()]);
             let to = [from[0] + 9.0 * dir[0], 1.2, from[2] + 9.0 * dir[2]];
             for w in [&over, &Over::OWN, &Over::statics()] {
-                solid_blocked_over(&mut p.g, w, from, to, None);
-                segment_blocked_over(&mut p.g, w, from, to, None, None);
-                shot_blocked_over(&mut p.g, w, from, to, None, None);
+                solid_blocked_over(&p.g, w, from, to, None);
+                segment_blocked_over(&p.g, w, from, to, None, None);
+                shot_blocked_over(&p.g, w, from, to, None, None);
             }
         }
-        p.g.stats.glasspen = shots;   // (a tally of a round's lines asked through panes: no part of the world)
         let after = p.words();
         let parts: Vec<String> = game::state_words::state_names().into_iter().enumerate().filter(|(i, _)| after[*i] != before[*i]).map(|(_, n)| n).collect();
         assert!(parts.is_empty() && after == before, "seed {}: asking moved {:?}", seed, parts);
     }
 }
 
-/// BETWEEN TWO TICKS THE COPY STANDS: a host asks of the game SHARED and is answered as a rule would be. A FAILURE MEANS: the camera, the sound and the HUD are
-/// answered from other boxes than the game's, or a question of theirs proves the level again (what a breach cost the page).
+/// A SOUND'S PATH asked by a host that keeps nothing is the path the men hear by. A FAILURE MEANS: what is heard through a door is not what a guard hears through it.
 #[test]
-fn between_two_ticks_a_question_of_the_game_shared_is_answered_as_a_rules_is() {
-    use game::ask::{Line, WorldAsk};
+fn a_sounds_path_asked_by_a_host_is_the_path_the_men_hear_by() {
     for seed in [1, 2, 3] {
         let mut p = two_rooms(seed);
         let d = p.g.doors.list[0];
         let c = p.g.dr[d].frame_centre;
         for round in 0..2 {
-            if round == 1 { for x in [-1.0, 1.0] { if p.g.dr[d].leaf.angle.abs() < 0.3 { game::doors::doors_kick_in(&mut p.g, d, [c[0] + x, 0.0, c[2]], 0.0, None); p.run(0.4); } } assert!(p.g.dr[d].leaf.angle.abs() > 0.3, "seed {}: the door stands open", seed); }
+            if round == 1 { kick_in(&mut p, d); }
             for k in 0..60 {
                 let th = k as f64 * 0.1047;
                 let (from, dir) = ([c[0] - 3.0, 1.2, c[2] + 0.4], [th.cos(), 0.0, th.sin()]);
                 let to = [from[0] + 9.0 * dir[0], 1.2, from[2] + 9.0 * dir[2]];
-                let (sight, solid, ray, heard) = {
-                    let w = WorldAsk::of(&p.g);
-                    (w.line(from, to, Line::Sight), w.line(from, to, Line::Solid), w.ray(from, dir, 9.0), w.hear(from, to))
-                };
-                let statics = WorldAsk::of(&p.g).over(Over::statics()).line(from, to, Line::Solid);
-                let g = &mut p.g;
-                assert_eq!(sight, game::scene_collision::segment_blocked(g, from, to, None, None, None), "seed {} {}: a line of sight", seed, k);
-                assert_eq!(solid, game::scene_collision::solid_blocked(g, from, to, None), "seed {} {}: a solid line", seed, k);
-                assert_eq!(statics, solid_blocked_over(g, &Over::statics(), from, to, None), "seed {} {}: …of the statics alone", seed, k);
-                let r = game::scene_collision::raycast(g, from, dir, 9.0);
-                assert_eq!(ray.as_ref().map(|h| (h.t.to_bits(), h.index)), r.as_ref().map(|h| (h.t.to_bits(), h.index)), "seed {} {}: a ray", seed, k);
-                let h = game::scene_collision::sound_paths_propagate(g, from, to, Some(false));
+                let heard = game::ask::hear_kept(&p.g, &mut Default::default(), from, to);
+                let h = game::scene_collision::sound_paths_propagate(&mut p.g, from, to, Some(false));
                 assert_eq!((heard.path_len.to_bits(), heard.direct, heard.muffle.to_bits(), heard.apparent), (h.path_len.to_bits(), h.direct, h.muffle.to_bits(), h.apparent), "seed {} {}: a path of sound", seed, k);
             }
         }
     }
 }
-
-/// A FAILURE MEANS: an answer is given from boxes that are not this game's, or not of this moment.
-#[test]
-fn a_question_of_boxes_that_are_not_this_moments_is_refused_by_name() {
-    use game::ask::WorldAsk;
-    let mut p = two_rooms(1);
-    assert!(WorldAsk::try_of(&p.g).is_ok(), "after a tick the copy stands");
-    // a game kept, played past, and put back: the rows in the module are the abandoned moment's
-    let kept = p.g.clone();
-    p.run(0.5);
-    let now = std::mem::replace(&mut p.g, kept);
-    assert_eq!(WorldAsk::try_of(&p.g).err(), Some("the copy is another game's, or another moment's of this one"));
-    game::scene_collision::stands(&mut p.g);
-    assert!(WorldAsk::try_of(&p.g).is_ok(), "stood again, it is this moment's");
-    p.g = now;
-    assert!(WorldAsk::try_of(&p.g).is_err(), "…and no longer the other's");
-    game::scene_collision::stands(&mut p.g);
-    // a static written and said, and a copy put down
-    game::scene_collision::wrote(&mut p.g);
-    assert!(WorldAsk::try_of(&p.g).is_err(), "a debt is not answered over");
-    game::scene_collision::stands(&mut p.g);
-    assert!(WorldAsk::try_of(&p.g).is_ok());
-    game::scene_collision::unstand(&mut p.g);
-    assert_eq!(WorldAsk::try_of(&p.g).err(), Some("no copy of the boxes stands"));
+fn kick_in(p: &mut Play, d: game::ids::DoorId) {
+    let c = p.g.dr[d].frame_centre;
+    for x in [-1.0, 1.0] { if p.g.dr[d].leaf.angle.abs() < 0.3 { game::doors::doors_kick_in(&mut p.g, d, [c[0] + x, 0.0, c[2]], 0.0, None); p.run(0.4); } }
+    assert!(p.g.dr[d].leaf.angle.abs() > 0.3, "the door stands open");
 }
 
-/// THE RULE: a way asked of the game shared is the way a rule of the tick is given, and a question it cannot answer is no way, not a stop. A FAILURE MEANS: the HUD draws a walk the men would not take,
+/// THE RULE: a game kept and put back is asked of its own boxes, as they stood; a box is moved by `edit`, and the next question is of where it stands.
+/// A FAILURE MEANS: after a restart or a rollback a line of sight goes through a wall that is there, or stops at one that isn't.
+#[test]
+fn a_question_is_of_the_boxes_as_they_stand() {
+    let mut p = two_rooms(1);
+    let d = p.g.doors.list[0];
+    let c = p.g.dr[d].frame_centre;
+    let lines = |p: &Play| -> Vec<bool> { (0..48).map(|k| { let th = k as f64 * 0.131; let from = [c[0] - 3.0, 1.2, c[2] + 0.4]; solid_blocked_over(&p.g, &Over::OWN, from, [from[0] + 9.0 * th.cos(), 1.2, from[2] + 9.0 * th.sin()], None) }).collect() };
+    let (kept, shut) = (p.g.clone(), lines(&p));
+    kick_in(&mut p, d);
+    let open = lines(&p);
+    assert_ne!(shut, open, "the scene: a line goes by the open door that didn't by the shut one");
+    let now = std::mem::replace(&mut p.g, kept);
+    assert_eq!((lines(&p), game::scene_collision::astray(&p.g)), (shut, None), "put back, the door is shut");
+    p.g = now;
+    assert_eq!((lines(&p), game::scene_collision::astray(&p.g)), (open.clone(), None), "…and in the game that went on it is open");
+    // every box of the level a storey up: nothing is in the way
+    for b in p.g.col.boxes.clone().into_iter().chain(p.g.col.dynamic_boxes.clone()) { p.g.tab.boxes.edit(b).c[1] += 20.0; }
+    assert_eq!((lines(&p), game::scene_collision::astray(&p.g)), (vec![false; 48], None));
+    // a list changed and not said is told by the check
+    p.g.col.dynamic_boxes.pop();
+    assert_eq!(game::scene_collision::astray(&p.g).map(|a| a.0), Some("count of the leaves"));
+}
+
+/// THE RULE: a way a host asks for is the way a rule is given, and a question it cannot answer is no way, not a stop. A FAILURE MEANS: the HUD draws a walk the men would not take,
 /// or a page's own numbers stop the game. Controls: the door's room with no door shut (a way), a place walled in (none), a place that is no number, a start inside a wall.
 #[test]
-fn a_way_asked_shared_is_the_way_the_tick_is_given() {
+fn a_way_a_host_asks_for_is_the_way_a_rule_is_given() {
     for seed in [1, 2, 3] {
         let mut p = two_rooms(seed);
         let a: game::V3 = [12.0, 0.0, 12.0];
-        let way = |p: &Play, a: game::V3, b: game::V3| game::ask::WorldAsk::of(&p.g).way(a, b, 3000);
+        let way = |p: &Play, a: game::V3, b: game::V3| game::scene_collision::way_host(&p.g, a, b, 3000);
         // a way, through the room
         let b: game::V3 = [16.0, 0.0, 14.5];
         let shared = way(&p, a, b).expect("the room's floor has a way");
