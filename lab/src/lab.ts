@@ -116,7 +116,7 @@ export class Lab {
   pose() {
     const b = this.building, t = this.tick * TICK, on = this.scene?.lampOn; for (const d of b.doors) poseDoor(d);
     const h = hourOf(this.hour, 0.85, Math.max(this.rainNow, 0.85 * this.snowNow), this.moon, this.mains), dark = this.lampsMode === 'on' ? 1 : this.lampsMode === 'off' ? 0 : h.night, inside = this.lampsMode === 'auto' ? Math.max(dark, 0.45) : dark; this.hourNow = h;
-    b.world.lamps.forEach((l, i) => { if (on && l.kind !== 'spot' && l.name !== 'fire' && l.name !== 'flash') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.mains || l.name === 'exit' ? 1 : 0) * (l.name === 'exit' ? 1 : this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
+    b.world.lamps.forEach((l, i) => { if (on && l.name === 'screen') on[i] = this.mains && !this.lampOff.has(i) ? l.on : 0; else if (on && l.kind !== 'spot' && l.name !== 'fire' && l.name !== 'flash') on[i] = l.on * (l.name === 'terrace' || l.name === 'pool' ? dark : l.name === 'blue' ? Math.max(inside, 0.9) : inside) * (this.mains || l.name === 'exit' ? 1 : 0) * (l.name === 'exit' ? 1 : this.lampGroup[l.name] ?? 1) * (this.lampOff.has(i) ? 0 : 1); });
     for (const p of b.people) if (p.torch >= 0) { const l = b.world.lamps[p.torch]!; const chest: V3 = [p.pos[0], p.pos[1] + 1.25, p.pos[2]], to: V3 = [p.torchAt[0] - chest[0], p.torchAt[1] - chest[1], p.torchAt[2] - chest[2]], len = Math.hypot(...to) || 1, dir: V3 = [to[0] / len, to[1] / len, to[2] / len], r = this.near.reach(chest, dir, len + 0.06, this.leaves) - 0.06; l.at = r < len ? [chest[0] + dir[0] * r, chest[1] + dir[1] * r, chest[2] + dir[2] * r] : p.torchAt; l.v = p.torchDir; if (on) on[p.torch] = (p === b.player.body ? b.player.torch : h.night > 0.5 && !this.lampOff.has(p.torch)) ? 1 : 0; } void t;
   }
   /** the frame's numbers to the GPU */
@@ -130,7 +130,7 @@ export class Lab {
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
   /** this frame's numbers, for a study that runs its stages itself */ sendFrame() { this.send(); this.frameNo++; }
-  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); /* where torches are most of the light, what is kept must follow them */ if (this.torches > 0) { let lit = 0; this.building.world.lamps.forEach((l, i) => { if (l.kind !== 'spot' && this.scene.lampOn[i]! > 0.05 && l.at[1] > -20) lit++; }); if (lit < 8) f[KNOBS.keep.i] = Math.min(f[KNOBS.keep.i]!, 48); } return f; } private looked = new Float32Array(32);
+  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); return f; } private looked = new Float32Array(32);
   /** how many torches have a picture of their own this frame */ torches = 0;
   sendMs = 0; private drawnAt = 0;
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
