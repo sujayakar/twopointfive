@@ -1390,9 +1390,6 @@ pub struct Mods {
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
     pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
     pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,

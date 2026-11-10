@@ -44,7 +44,6 @@ pub mod poses;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
-pub mod slabs;
 pub mod snow;
 pub mod state;
 pub mod weather;

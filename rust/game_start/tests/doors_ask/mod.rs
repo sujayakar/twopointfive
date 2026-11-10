@@ -855,7 +855,7 @@ impl DoorsAsk for Play {
     fn in_sweep(&self, d: DoorId, at: [f64; 2]) -> bool { game::doors::door_swing_sweeps(&game::doors::doors_swing_of(&self.g, d), at[0], at[1], Some(BODY_R)) }
     fn from_handle(&self, d: DoorId, at: [f64; 2]) -> f64 { let f = game::guards::frame_of(&self.g, d); let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); ((a - (f.w - HANDLE_IN)).powi(2) + o * o).sqrt() }
     fn door_rows(&self, d: DoorId) -> usize { self.g.nearby.iter().filter(|r| r.door == Some(d)).count() }
-    fn slab_rest(&mut self, d: DoorId, side: f64) -> Option<(bool, f64)> { let s = game::doors::door_slab(&mut self.g, d)?; let at = [s.p[0], s.p[2]]; Some((s.rest, self.off(d, at, side))) }
+    fn slab_rest(&mut self, d: DoorId, side: f64) -> Option<(bool, f64)> { let s = self.g.dr[d].slab?; let at = [s.p[0], s.p[2]]; Some((s.rest, self.off(d, at, side))) }
     fn clear_line(&mut self, a: [f64; 2], b: [f64; 2]) -> bool { !game::scene_collision::segment_blocked(&mut self.g, [a[0], 1.1, a[1]], [b[0], 1.1, b[1]], None, None, None) }
     fn first_over(&self, op: DoorOpId) -> Option<GuardId> { let c = &self.g.tab.doortools_door_op[op].crossed; c.keys().into_iter().min_by(|a, b| c.get(*a).unwrap().partial_cmp(c.get(*b).unwrap()).unwrap()) }
     fn seen_of_room(&mut self, gd: GuardId, at: [f64; 2]) -> f64 {
