@@ -475,7 +475,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
         }
         if dead && g.tune.civilian_kill_fails && crate::mission::mission_live(g) {
             let at = g.time + crate::mission::DOWN_CARD_SECS;
-            g.mission.stage = MissionStage::Failed; g.mission.drive_t = -1.0; g.mission.down_card_at = at;
+            g.mission.stage = MissionStage::Failed; g.mission.down_card_at = at;
         } else if !hostage {
             crate::squadnet::team_says(g, None, if dead { "that was a civilian." } else { "civilian's out. still breathing." });
         }
