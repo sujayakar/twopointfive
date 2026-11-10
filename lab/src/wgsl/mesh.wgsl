@@ -43,9 +43,9 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> boo
       if (ha) { at = ra; atT = ta; continue; } if (hb) { at = rb; atT = tb; continue; }
     } else if (child == 0xffffffffu) {                               // a child (or a few): the last of them now, into its own frame
       let first = (at & 0x7fffffffu) >> 4u; let count = at & 15u; if (count > 1u && sp < MESH_STACK - 2) { stack[sp] = 0x80000000u | (first << 4u) | (count - 1u); stackT[sp] = atT; sp += 1u; }
-      child = first + count - 1u; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
+      let c3 = mrowU(head.z + (first + count - 1u) * 4u + 3u); if ((c3.y >> 31u) == 0u) { child = first + count - 1u; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
       let a = mrowU(c3.x); let b = mrowU(c3.x + 1u); mn = asF(a).xyz; st = asF(b).xyz; recs = b.w; tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, a.w, meshWide(atT) / k); let lv = mrowU(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (bitcast<f32>(lv.x) * k + bitcast<f32>(c3.w) * sc)); }
-      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1u; at = lv.y; continue;
+      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1u; at = lv.y; continue; }
     } else {
       let first = (at & 0x7fffffffu) >> 4u; let vb = mrowU(recs + (first >> 7u)).x;
       for (var t = first; t < first + (at & 15u); t++) {
