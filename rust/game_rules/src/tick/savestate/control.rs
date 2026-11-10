@@ -372,6 +372,7 @@ pub struct Survivors {
     dice: Option<crate::math_dice::SimDice>, sim_dice: ::sim::dice::Dice, fx_seed: f64, roll_seq: f64, event_seq: f64,
     saves_on: bool, stats: crate::game::Stats, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
+    shown: Option<SeatId>, remote: Vec<bool>,
 }
 impl Survivors {
     pub fn of(g: &Game) -> Survivors {
@@ -382,6 +383,7 @@ impl Survivors {
             dice: g.dice.clone(), sim_dice: unsafe { core::ptr::read(&::sim::state::state_read(g.sim).dice) }, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
             saves_on: g.saves.enabled, stats: g.stats.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
+            shown: g.local_seat, remote: g.seats.iter().map(|&s| g.tab.cmd_seat[s].remote).collect(),
         }
     }
     /// what the men's lines read and write on: the tables, the die, the counts and what the host is owed. They go on from here, so this is written once, before them
@@ -393,13 +395,15 @@ impl Survivors {
         ::sim::state::state(g.sim).dice = unsafe { core::ptr::read(&self.sim_dice) };
         (g.stats, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
     }
-    /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses
+    /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses,
+    /// whose hands come from another machine
     fn write_over(&self, g: &mut Game) {
         (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.clear_rooms, g.spectate, g.show_debug, g.aside) = (self.god, self.ai, self.ammo, self.unseen, self.clear_rooms, self.spectate, self.show_debug, self.aside);
         (g.tune, g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.tune.clone(), self.props_on, self.friction, self.fog_on, self.fog_viewer);
         g.saves.enabled = self.saves_on;
         let cams: Vec<_> = g.tab.camera.ids().collect();
         for (c, (d, want)) in cams.into_iter().zip(self.lens.iter()) { g.tab.camera[c].distance = *d; g.tab.camera[c].desired_distance = *want; }
+        for (&s, &remote) in g.seats.iter().zip(&self.remote) { g.tab.cmd_seat[s].remote = remote; }
     }
 }
 /// A step asks for the mission over (Enter once down, Shift+Enter): the step ends first, as a load in a step does
@@ -427,6 +431,7 @@ pub fn restart(g: &mut Game) -> bool {
     crate::game::game_cut_to_men(g);
     g.restart_cut = true;
     g.stats.cleanrestart.restarts += 1;
+    if let Some(s) = was.shown { crate::seats::show_seat(g, s); }
     true
 }
 /// the cards, the notes, the words on them; what is keyed by a man or a player is of the game thrown away, and new men would answer to it
