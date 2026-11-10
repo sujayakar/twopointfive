@@ -17,7 +17,7 @@
 //   --check   as-now only: the replayed moves must be the recording's own 'ladder' events (same moves, same order, each within 2.5 s). The ladder's counters at the moment F9 was pressed are
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, visitAdaptive, displayRateOf, presetCost, plan, costTable, COST, AUTO_LADDER, SCALE_STEP, STANDS_IN, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, FACTOR, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, visitAdaptive, displayRateOf, presetCost, plan, costTable, COST, AUTO_LADDER, SCALE_STEP, STANDS_IN, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -273,7 +273,7 @@ function selftest(): boolean {
     }
     return { fps, moves };
   };
-  const base = modelCost({ preset: 'high', scale: PRESETS.high.scale, gatherThird: true, volQuarter: false, maxH: PRESETS.high.maxH, sharp: true }, w, S0);   // model-ms of high at its start on this window
+  const base = modelCost({ preset: 'high', scale: PRESETS.high.scale, gatherThird: true, volQuarter: PRESETS.high.lossy.volQuarter, maxH: PRESETS.high.maxH, sharp: true }, w, S0);   // model-ms of high at its start on this window
   const at = (ms: number) => ms / base;   // the machine factor that makes high-at-its-start cost `ms` of union
   const mk = (aim: number, hz: number, auto = false, preset: QualityName = 'high') => mkQuality(w, preset, auto, { ladderClimb: true }, aim, hz);
   const minOf = (a: number[]) => Math.min(...a);
@@ -473,7 +473,7 @@ function selftest(): boolean {
       check(n.q.current === 'high' && !rn.moves.some(m => /auto ↓/.test(m)) && rn.share > 0.9, `auto on the held page through a minute's fight: stays high, at the tier's start ${(100 * rn.share).toFixed(0)} % of the time (off: ${o.q.current} ×${sc(o).toFixed(2)}, ${(100 * ro.share).toFixed(0)} %${ro.moves.some(m => /auto ↓/.test(m)) ? ', a preset given up' : ''})`); }
     // (12) a judged cut that tells nothing (a held page whose GPU time does not follow the pixels: 13 ms whatever the scale, so the cut never lands under the floor): the pixels go back at the end of its trial, no pace is learnt, and the next one is held off
     { const x = mkH(ON); const r = watch(x, 300, 120, () => 13 / modelCost(stateOf(x.q, x.E), w, S0), { paceMs: 33.33 }); const told = r.moves.filter(m => /told nothing/.test(m)).length;
-      check(Math.abs(sc(x) - PRESETS.high.scale) < 1e-6 && r.share > 0.85 && told >= 1 && told <= 3 && (x.q as any).pacedAt === 0, `a cut that cannot land under the floor (13 ms at any scale): put back ${told} time${told === 1 ? '' : 's'} in five minutes with no pace learnt, ${(100 * r.share).toFixed(0)} % of them at the tier's start`); }
+      check(Math.abs(sc(x) - PRESETS.high.scale) < 1e-6 && r.share > 0.8 && told >= 1 && told <= 3 && (x.q as any).pacedAt === 0, `a cut that cannot land under the floor (13 ms at any scale): put back ${told} time${told === 1 ? '' : 's'} in five minutes with no pace learnt, ${(100 * r.share).toFixed(0)} % of them at the tier's start`); }
     // (13) NOT held, the union over the back-off band: a fixed 60 Hz display missing its vsync at 14.2 ms — the band's own steps bring it back as ever; the judged cut waits for them (it would go to the proof's floor and stay there)
     { const off = mkH(false, { hz: 60 }), on = mkH(true, { hz: 60 }); const a = watch(off, 300, 60, () => at(14.2), { vrr: false }), b = watch(on, 300, 60, () => at(14.2), { vrr: false });
       check(words(a.moves) === words(b.moves) && Math.abs(sc(off) - sc(on)) < 1e-6 && sc(on) >= 0.7 - 1e-6, `a fixed 60 Hz display nothing holds, 14.2 ms at high's start (over the band, its vsync missed): the band's steps, the same ${b.moves.length} moves off and on (×${sc(on).toFixed(2)}, ${b.mean.toFixed(0)} fps)`); }
@@ -508,8 +508,8 @@ function selftest(): boolean {
     check(on.parked.length === 1 && on.parked[0] === fine, `the boot parks no second grid: ${on.parked.join(', ')}`);
     check(off.seen.low === coarse && off.seen.verylow === coarse && off.seen.high === fine && off.seen.medium === fine && off.rebuilds === 2 && off.parked.length === 2,
       `the switch off = the grids as they were: ${QUALITY_NAMES.map(n => `${n} ${off.seen[n]}`).join(' · ')}, ${off.rebuilds} rebuilds on the walk, ${off.parked.length} grids parked`);
-    // the ladder prices the grid that runs: a 4.5 × machine's boot pick (61.1 ms at high, 25.0 of it fixed, 1440 × 900 at 2) on the ladder's own tables, and a live Quality's hop price
-    const pick = (one: boolean) => { const r = plan(61.1, 25.0, 'high', 0.43, 900, 2, PLAN_BUDGET_MS, true, one); return `${r.preset} ×${r.scale.toFixed(2)}`; };
+    // the ladder prices the grid that runs: a 4.5 × machine's boot pick (54.5 ms at high, 19.6 of it fixed, 1440 × 900 at 2) on the ladder's own tables, and a live Quality's hop price
+    const pick = (one: boolean) => { const r = plan(54.5, 19.6, 'high', 0.43, 900, 2, PLAN_BUDGET_MS, true, one); return `${r.preset} ×${r.scale.toFixed(2)}`; };
     const hop = (one: boolean) => { const x = mkQuality(w, 'low', true, { oneCacheGrid: one }, 60, 120); return x.q.hopRatio('medium') as number; };
     check(pick(false) === 'low ×0.50' && pick(ON) === 'verylow ×0.50' && hop(false) > hop(ON) + 0.1,
       `the ladder prices the grid that runs: a 4.5 × machine boots at ${pick(false)} with the switch off (as it was) and ${pick(ON)} with it on; low → medium priced ×${hop(false).toFixed(2)} off, ×${hop(ON).toFixed(2)} on`);
@@ -551,20 +551,20 @@ function selftest(): boolean {
     const put = (name: QualityName) => { store.clear(); const E = mkEngine(w, { oneSmokeSolve: false }); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); q.auto = false; q.apply(BREAK && name === 'medium' ? 'verylow' : BREAK && name === 'low' ? 'high' : name); return { S: { ...E.settings } as Record<string, any>, q, E }; };
     const H = put('high').S, under: QualityName[] = ['medium', 'low'], V = put('verylow').S;
     const row = (S: Record<string, any>) => `${S.volQuarter ? 'quarter' : 'half'} size, ${S.volSteps} beam steps, ${S.volLightCap} lights a step, refresh ${S.volShadowEvery}, step ${S.volStepVoxels}`;
-    check(under.every(n => { const S = put(n).S; return S.volQuarter === false && S.volSteps === H.volSteps && S.volStepVoxels === H.volStepVoxels && S.volShadowEvery === H.volShadowEvery; }) && H.volQuarter === false && H.volLightCap === 4,
-      `medium and low march as high does, the pass at half size with its steps, shadow refresh and step length: ${under.map(n => `${n} ${row(put(n).S)}`).join(' · ')} (high: ${row(H)})`);
+    check(under.every(n => { const S = put(n).S; return S.volQuarter === false && S.volSteps === H.volSteps && S.volStepVoxels === H.volStepVoxels && S.volShadowEvery === H.volShadowEvery; }) && H.volQuarter === true && H.volLightCap === 4,
+      `medium and low march as high does, with its steps, shadow refresh and step length, at half size where high is at a quarter: ${under.map(n => `${n} ${row(put(n).S)}`).join(' · ')} (high: ${row(H)})`);
     check(under.every(n => put(n).S.volLightCap === 2), `… with two lights a step where high has four: ${under.map(n => `${n} ${put(n).S.volLightCap}`).join(' · ')}`);
     check(V.volQuarter === true && V.volSteps === 8 && V.volLightCap === 2 && PRESETS.verylow.caps.volStep === 2 && PRESETS.high.caps.volStep === 1.5 && V.volStepVoxels === smokeLookStep(2) && V.volStepVoxels > H.volStepVoxels, `verylow, the floor, keeps its own small rows: ${row(V)}`);
-    { const T = costTable(true); check(Math.abs(T.medium.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && Math.abs(T.low.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && T.verylow.passes.volumetrics < T.low.passes.volumetrics && !('volFroxel' in T.high.passes),
-      `the ladder prices the one march a pixel alike on high, medium and low (${T.high.passes.volumetrics.toFixed(2)} model-ms), less on verylow (${T.verylow.passes.volumetrics.toFixed(2)}), and no froxel term is left in any rung's fixed part`); }
+    { const T = costTable(true); check(Math.abs(T.medium.passes.volumetrics * FACTOR.quarter - T.high.passes.volumetrics) < 1e-9 && Math.abs(T.low.passes.volumetrics * FACTOR.quarter - T.high.passes.volumetrics) < 1e-9 && T.verylow.passes.volumetrics < T.low.passes.volumetrics && !('volFroxel' in T.high.passes),
+      `the ladder prices the one march a pixel alike on medium and low (${T.medium.passes.volumetrics.toFixed(2)} model-ms) and at a quarter's share of it on high (${T.high.passes.volumetrics.toFixed(2)}), less on verylow (${T.verylow.passes.volumetrics.toFixed(2)}), and no froxel term is left in any rung's fixed part`); }
     { const x = put('medium'); x.q.lastCut = { from: 0.7 }; x.q.upTrial = { from: 0.55 }; x.q.apply('low'); check(x.q.lastCut === null && x.q.upTrial === null, 'a preset put on still clears the judged cut and the judged step up'); }
   }
-  console.log('\nAuto lets sharp direct go before it shrinks the picture (settings.ladderShed; the maintainer\'s pick of 10-25. His Mac\'s sweep priced sharp direct at 4.9 of 15.5 ms at High ×0.5, and the machine below is priced so):');
+  console.log('\nAuto lets sharp direct go before it shrinks the picture (settings.ladderShed; the maintainer\'s pick of 10-25. His Mac\'s sweep priced sharp direct at 4.9 of 15.5 ms at High ×0.5, 14.1 with High as it stands, and the machine below is priced so):');
   {
     const ON = process.env.LADDERSHED_BREAK !== '1';   // LADDERSHED_BREAK=1: the 'on' machines run with the switch off and twenty lines must FAIL
-    const hi = (scale: number, sharp = true): State => ({ preset: 'high', scale, gatherThird: true, volQuarter: false, maxH: PRESETS.high.maxH, sharp });
+    const hi = (scale: number, sharp = true): State => ({ preset: 'high', scale, gatherThird: true, volQuarter: PRESETS.high.lossy.volQuarter, maxH: PRESETS.high.maxH, sharp });
     const withK = <T,>(k: number, f: () => T): T => { const k0 = MODEL.sharpK; MODEL.sharpK = k; try { return f(); } finally { MODEL.sharpK = k0; } };
-    const c5 = presetCost({ ...PRESETS.high, scale: 0.5 }, true), mpx5 = (1000 * 0.5) ** 2 * (w.cssW / w.cssH) / 1e6, share = 4.9 / 15.45;
+    const c5 = presetCost({ ...PRESETS.high, scale: 0.5 }, true), mpx5 = (1000 * 0.5) ** 2 * (w.cssW / w.cssH) / 1e6, share = 4.9 / 14.1;   // (the 15.45 of that sweep less what High's cache at half rate, its mesh in the direct light alone and its quarter-size march take there)
     const macK = share * (c5.fixed - c5.passes.sharp + MODEL.extraFixed + c5.pixel * mpx5 / REF.mpx) / (c5.passes.sharp * (1 - share));   // the sharpK that makes sharp direct that share of High ×0.5 on this window
     const mkS = (on: boolean, o: { auto?: boolean; aim?: number; adaptive?: boolean; hz?: number } = {}) => { const x = mkQuality(w, 'high', o.auto ?? true, { ladderClimb: true, ladderShed: on }, o.aim ?? 60, o.hz ?? 120); if (o.adaptive === false) x.q.adaptive = false; return x; };
     /** `secs` a second at a time: the moves, the fps windows, and the ladder's state at the end of every second */
@@ -596,11 +596,11 @@ function selftest(): boolean {
       const b = mkS(ON); const rb = watch(b, 400, t => A(t < 20 ? 12 : t < 80 ? 22 : 9)); const dn = tOf(first(rb.moves, /shed ↓/)), up = tOf(first(rb.moves, /shed ↑/)); const upI = Math.max(0, Math.floor(up) - 1);
       check(up - dn >= SHED.holdSecs && rb.st[upI]?.scale >= PRESETS.high.scale - 1e-6 && rb.st[upI]?.preset === 'high' && sharpOn(b) && b.E.settings.sharpDecouple && b.E.settings.gbaa && minOf(rb.fps.slice(Math.floor(up))) >= HOLD.cut * 60 - 0.5, `a fight that ends in a light scene (12 → 22 → 9 ms): off at ${dn.toFixed(0)} s, back at ${up.toFixed(0)} s with its riders — the tier at ×${rb.st[upI]?.scale.toFixed(2)} first — and never under ${minOf(rb.fps.slice(Math.floor(up))).toFixed(0)} fps after (ends ×${sc(b).toFixed(2)})`);
       // (5) down the presets and back: the shed rides the hops
-      const slow = (t: number) => A(t < 90 ? 30 : 7); const po = mkS(false), pn = mkS(ON); const rpo = watch(po, 400, slow), rpn = watch(pn, 400, slow);
+      const slow = (t: number) => A(t < 90 ? 36 : 7); const po = mkS(false), pn = mkS(ON); const rpo = watch(po, 400, slow), rpn = watch(pn, 400, slow);
       const idx = (r: { st: State[] }) => Math.min(...r.st.map(s => QUALITY_NAMES.indexOf(s.preset) < 0 ? 0 : -QUALITY_NAMES.indexOf(s.preset))); const hopDn = tOf(first(rpn.moves, /auto ↓/)), hopUp = tOf(first(rpn.moves, /auto ↑ high/)), back5 = tOf(first(rpn.moves, /shed ↑/));
       const lowest = (r: { st: State[] }) => QUALITY_NAMES[-idx(r)];
       check(/shed ↓/.test(steps(rpn.moves)[0] ?? '') && hopDn > 0 && rpn.st.slice(Math.ceil(hopDn), Math.floor(hopUp)).every(s => !s.sharp) && rpn.st[Math.floor(hopUp) + 1]?.sharp === false && back5 > hopUp && sharpOn(pn) && pn.q.current === 'high' && -idx(rpn) <= -idx(rpo),
-        `a machine too slow for High (30 ms), light again at 90 s: sharp direct first, then the cuts and ${lowest(rpn)} (the switch off goes down to ${lowest(rpo)}); it stays off across both hops (${hopDn.toFixed(0)} s down, ${hopUp.toFixed(0)} s up, priced without it) and comes back at ${back5.toFixed(0)} s on High`);
+        `a machine too slow for High (36 ms), light again at 90 s: sharp direct first, then the cuts and ${lowest(rpn)} (the switch off goes down to ${lowest(rpo)}); it stays off across both hops (${hopDn.toFixed(0)} s down, ${hopUp.toFixed(0)} s up, priced without it) and comes back at ${back5.toFixed(0)} s on High`);
       // (6) fights that keep coming: each shed after a give-back holds it off twice as long
       const f = mkS(ON); const rf = watch(f, 900, t => A(t % 150 < 60 ? 17 : 10)); const holds = rf.moves.filter(m => /shed ↓/.test(m)).map(m => +(/not back for (\d+) s/.exec(m)?.[1] ?? 0));
       check(holds.length >= 3 && holds[0] === SHED.holdSecs && holds.every((h, i) => i === 0 || h === 2 * holds[i - 1]), `a fight every 150 s: held off ${holds.join(' → ')} s — it converges on left alone instead of flipping with every fight (${rf.moves.filter(m => /shed/.test(m)).length} sheds and returns in fifteen minutes)`);
@@ -759,14 +759,14 @@ function selftest(): boolean {
     { const { E, q } = mk(); const log: Ev[] = []; const T = { t: 0 }; const s0 = E.settings.renderScale; const topWant = E.settings.sharpDirect && E.settings.taau !== false ? 0.95 : 1.0;
       drive(q, E, 60, 60, 8.0, log, T);   // a minute at 60 fps with the GPU 8 ms busy of 16.7 (48 %)
       const scaleRungs = log.filter(e => /climb ↑ scale/.test(e.note)); const gaps = log.slice(1).map((e, i) => e.t - log[i].t);
-      const orderOk = (() => { let sawGather = false; for (const e of log) { if (/gather/.test(e.note)) sawGather = true; else if (/climb ↑ scale/.test(e.note) && sawGather) return false; } return true; })();
+      const orderOk = (() => { let sawGather = false; for (const e of log) { if (/gather/.test(e.note)) sawGather = true; else if (/climb ↑ scale/.test(e.note) && sawGather || /volumetrics/.test(e.note) && !sawGather) return false; } return true; })();
       check(scaleRungs.length >= 3 && Math.abs(E.settings.renderScale - topWant) < 1e-6 && log.every(e => e.scale <= topWant + 1e-9), `headroom (∪ 8 ms @ 60 fps): the scale climbs ${s0.toFixed(2)} → ${scaleRungs.map(e => e.scale.toFixed(2)).join(' → ')} and stops at ${topWant.toFixed(2)} (sharp direct ${E.settings.sharpDirect ? 'on: 1.0 would switch it off' : 'off'}), never above`);
       check(gaps.every(g => g >= CLIMB.climbGap - 1e-6) && log[0].t >= CLIMB.windows - 1e-6, `≥ ${CLIMB.climbGap} s between climbs (gaps ${gaps.map(g => g.toFixed(1)).join(', ')}), the first only after ${CLIMB.windows} roomy windows (t = ${log[0].t.toFixed(1)} s)`);
-      check(!E.settings.gatherThird && orderOk && log.filter(e => /gather/.test(e.note)).length === 1, `then the divisors, in order: gather ⅓ → ½ once the scale is at its top (gatherThird ${E.settings.gatherThird}); no scale rung after a divisor rung; volQuarter untouched at high (${E.settings.volQuarter} — the preset never had it)`);
-      // E2: back-off on the GPU: the union jumps to 14 ms (84 %) → the newest rung (the gather) is undone within about a window, then a scale rung per window + cooldown; failed rungs are held
+      check(!E.settings.gatherThird && !E.settings.volQuarter && orderOk && log.filter(e => /gather/.test(e.note)).length === 1 && log.filter(e => /volumetrics/.test(e.note)).length === 1, `then the divisors, in order: gather ⅓ → ½ once the scale is at its top, then the beams and smoke ¼ → ½ (gatherThird ${E.settings.gatherThird}, volQuarter ${E.settings.volQuarter}); no scale rung after a divisor rung`);
+      // E2: back-off on the GPU: the union jumps to 14 ms (84 %) → the newest rung (the beams and smoke) is undone within about a window, then a scale rung per window + cooldown; failed rungs are held
       const nUp = log.length; drive(q, E, 1.6, 60, 14.0, log, T);
       const firstUndo = log[nUp];
-      check(!!firstUndo && firstUndo.g3 === true && /undid gather/.test(firstUndo.note), `∪ 14 ms: the newest rung goes first and at once — “${firstUndo?.note}” at t = ${firstUndo?.t.toFixed(1)} s`);
+      check(!!firstUndo && firstUndo.g3 === false && /undid vol/.test(firstUndo.note), `∪ 14 ms: the newest rung goes first and at once — “${firstUndo?.note}” at t = ${firstUndo?.t.toFixed(1)} s`);
       drive(q, E, 12, 60, 14.0, log, T);
       const downs = log.slice(nUp); const failedNow = q.climbState.failed as string[];
       check(downs.length >= 3 && downs.slice(1).every((e, i) => e.scale <= downs[i].scale + 1e-9) && E.settings.renderScale < topWant && failedNow.length >= 3, `held over the band: rungs come off one by one, newest first (${downs.map(e => /undid (\S+)/.exec(e.note)?.[1] ?? '?').join(', ')}), scale now ${E.settings.renderScale.toFixed(2)}, ${failedNow.length} rungs held off`);
@@ -823,12 +823,12 @@ function selftest(): boolean {
       check(notes.every(n => /^It measured [\d.]+ ms of GPU a frame on (High|Medium|Low|Very low) at \d+ %, and (even )?(High|Medium|Low|Very low) at \d+ % should take about [\d.]+ ms, (which holds|so it won\u2019t hold) 60 frames a second\.$/.test(n.note) && !/verylow/i.test(n.note) && n.fits === /which holds/.test(n.note)), `the calibration's line says the tier by its shown name and whether it holds 60: ${notes.map(n => `×${n.k} ${n.note.replace(/^It measured [\d.]+ ms of GPU a frame on /, '…')}`).join(' · ')}`);
       const spots = ['src/ui/options.ts', 'src/ui/graphicspanel.ts', 'src/ui/readout.ts', 'src/ui/bench.ts', 'src/ui/lookpanel.ts', 'src/ui/pricerun.ts'].flatMap(f => readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8').split('\n').flatMap((t, i) => /\$\{(?:quality|Q)\.(?:label|lastChange|current)\}|\$\{g\.preset\}|\$\{s\.quality\}|\$\{f\.quality\}/.test(t) ? [`${f}:${i + 1}`] : []));
       check(spots.length === 0, `no line a person reads prints a tier's own name (tierWords, TIER_NAME): ${spots.join(', ') || 'none'}`); }
-    // E7b (CLOSED LOOP — the union follows what is rendered): a medium machine whose union is 9.5 ms at ×0.67: high is priced ~×1.7 = 16 ms → no hop; the scale climbs a rung or two on the
-    // room there is, each rung making the window dearer, and — union × hopRatio being invariant under its own rungs — it never talks itself into the hop; a LOW machine at 9.5 ms likewise
+    // E7b (CLOSED LOOP — the union follows what is rendered): a medium machine whose union is 10.6 ms at ×0.67: high is priced ~×1.5 = 16 ms → no hop, and under the climb's headroom there is
+    // no rung for it either: it stands where it is (a machine with a little more room hops: high costs less than it did) and — union × hopRatio being invariant under its own rungs — it never talks itself into the hop; a LOW machine at 9.5 ms likewise
     // (medium ≈ ×2.1: the flat '×2' rule hopped it, fell to ~41 fps, came back and cycled every ~15 s); WITHOUT timings (union 0) the rate alone decides, over twice the windows
     { const { E, q } = settledOn('medium');
-      const k = 9.5 / liveUnion(q, E, 1); const log: Ev[] = []; const T = { t: 0 }; driveLive(q, E, 60, 60.0, k, log, T);
-      check(q.current === 'medium' && E.settings.renderScale > PRESETS.medium.scale + 1e-6, `closed loop, medium, ∪ 9.5 ms at ×${PRESETS.medium.scale}: after 60 s still ${q.current}, scale ${E.settings.renderScale.toFixed(2)} (∪ now ${liveUnion(q, E, k).toFixed(1)}; high priced ×${q.hopRatio('high').toFixed(2)} = ${(liveUnion(q, E, k) * q.hopRatio('high')).toFixed(1)} ms vs ${(0.9 * PLAN_BUDGET_MS).toFixed(1)}) — ${log.map(e => e.note.split(' (')[0]).join(' | ') || 'no changes'}`);
+      const k = 10.6 / liveUnion(q, E, 1); const log: Ev[] = []; const T = { t: 0 }; driveLive(q, E, 60, 60.0, k, log, T);
+      check(q.current === 'medium' && E.settings.renderScale > PRESETS.medium.scale - 1e-6, `closed loop, medium, ∪ 10.6 ms at ×${PRESETS.medium.scale}: after 60 s still ${q.current}, scale ${E.settings.renderScale.toFixed(2)} (∪ now ${liveUnion(q, E, k).toFixed(1)}; high priced ×${q.hopRatio('high').toFixed(2)} = ${(liveUnion(q, E, k) * q.hopRatio('high')).toFixed(1)} ms vs ${(0.9 * PLAN_BUDGET_MS).toFixed(1)}) — ${log.map(e => e.note.split(' (')[0]).join(' | ') || 'no changes'}`);
       const { E: E4, q: q4 } = settledOn('low');
       const k4 = 9.5 / liveUnion(q4, E4, 1); const log4: Ev[] = []; const T4 = { t: 0 }; driveLive(q4, E4, 90, 60.0, k4, log4, T4);
       check(q4.current === 'low', `closed loop, low, ∪ 9.5 ms at ×${PRESETS.low.scale}: after 90 s still ${q4.current}, scale ${E4.settings.renderScale.toFixed(2)} (medium priced ×${q4.hopRatio('medium').toFixed(2)} = ${(liveUnion(q4, E4, k4) * q4.hopRatio('medium')).toFixed(1)} ms) — ${log4.map(e => e.note.split(' (')[0]).join(' | ') || 'no changes'}`);

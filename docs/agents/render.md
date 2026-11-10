@@ -112,7 +112,9 @@ program is in, up to a cap.
   matches something authoritatively on the CPU, we should have a control system that bends the GPU sim towards the CPU state gradually". Detail finer
   than the grid is free: "i'm actually fine with vision being a bit different than the visuals, can be just the brick level stuff".
 - **Smoke stays near High.** "the smoke looks so sick in our game that i'd rather we keep it closer to high but then tradeoff other things in the
-  frame budget". Only `verylow` marches at a quarter, and medium and low take "Per-pixel, two lights a step".
+  frame budget". `verylow` marches at a quarter, and `high` too since the maintainer picked it from stills
+  (the light cache at half rate and the mesh in the direct light's rays alone with it; the climb's last rung gives the half size back); medium and low
+  march at half and take "Per-pixel, two lights a step".
 - **Four presets.** "I think we can just remove ultra entirely".
 - **Past the level's edge is black.** "we should just have black outside the edges of the map, not extend" (`composite.wgsl`).
 - **Compile once, and never in play.** "ideally not needing to recompile for the gear selection screen and levels", "i think we shouldn't do truly
