@@ -1,0 +1,29 @@
+// What a level blocks and sends back, without a GPU: under a sky and two suns. A solid level by its surfaces; a block of cells as fog, each cell lit from its six sides by what its own block lets through.
+import { type V3, add, mul, dot, norm, cross } from '../math';
+import type { Traced } from './trace';
+import type { Block } from './voxels';
+export const SUNS: V3[] = [norm([0.5, 0.75, 0.6]), norm([-0.8, 0.25, -0.3])], SKY = 0.35;
+/** what a ray comes back with: how much it is blocked, and light (what it blocks, sent back) under sky and each sun */
+export interface Looked { a: number; L: V3[] }
+export type Look = (o: V3, d: V3) => Looked;
+const DOME: V3[] = (() => { const out: V3[] = []; for (let i = 0; i < 12; i++) { const z = 1 - (i + 0.5) / 12 * 1.15, r = Math.sqrt(Math.max(0, 1 - z * z)), a = i * 2.39996; out.push([r * Math.cos(a), z, r * Math.sin(a)]); } return out; })();
+/** light on a place that looks to n: the sky by a few rays (the floor gives half of it back), each sun by one */
+const lit = (x: V3, n: V3, clear: (o: V3, d: V3) => number, two: boolean): { E: number; S: number[] } => { let E = 0, w = 0; for (const d of DOME) { const c = dot(n, d); if (c <= 0 && !two) continue; const k = two ? 0.5 : c; w += k; E += k * clear(x, d); } return { E: w ? SKY * E / w * (two ? 1 : 0.5 + 0.5 * n[1]) + (two ? 0 : SKY * 0.3 * (0.5 - 0.5 * n[1])) : SKY * 0.3, S: SUNS.map(s => { const c = dot(n, s); return (two ? 1 : Math.max(0, c)) > 0 ? clear(x, s) * (two ? 1 : c) : 0; }) }; };
+/** what leaves turned every way send along −d of a sun's light, a depth of one (Ross) */
+const ross = (d: V3, s: V3, a: V3, t: V3): V3 => { const b = Math.acos(Math.max(-1, Math.min(1, dot(s, d)))), k = (Math.sin(b) - b * Math.cos(b)) / (3 * Math.PI), c = Math.cos(b) / 3; return [0, 1, 2].map(i => ((a[i]! + t[i]!) * k + t[i]! * c) / 0.5) as V3; };
+export function solidLook(t: Traced): Look {
+  const clear = (o: V3, d: V3) => t.meet(o, d, 50, true).k < 0 ? 1 : 0;
+  return (o, d) => { const m = t.meet(o, d, 1e6); if (m.k < 0) return { a: 0, L: [[0, 0, 0], [0, 0, 0], [0, 0, 0]] }; const s = t.at(m, o, d), l = lit(add(s.x, mul(s.n, 2e-3)), s.n, clear, false), L: V3[] = [mul(s.c, l.E)]; let back: ReturnType<typeof lit> | null = null; if (s.through) { const n2 = mul(s.n, -1); back = lit(add(s.x, mul(n2, 2e-3)), n2, clear, false); L[0] = [0, 1, 2].map(i => s.c[i]! * l.E + s.through![i]! * back!.E) as V3; } SUNS.forEach((_, k) => { L[k + 1] = [0, 1, 2].map(i => s.c[i]! * l.S[k]! + (back ? s.through![i]! * back.S[k]! : 0)) as V3; }); return { a: 1, L }; };
+}
+export function fogLook(b: Block, normals = false): Look {
+  const kept = new Map<number, { E: V3[]; S: V3[][]; sun: number[]; sky: number }>(), AX: V3[] = [[-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1]];
+  /** what each side of a cell sends back; a cell does not shade itself */
+  const keep = (i: number) => { let k = kept.get(i); if (k) return k; const c = b.cells[i]!, mid: V3 = [0, 1, 2].map(a => (c.lo[a]! + c.hi[a]!) / 2) as V3, clear = (o: V3, d: V3) => b.through(o, d, 50, i); const E: V3[] = [], S: V3[][] = []; AX.forEach((ax, s) => { const m = c.norm[s]!, ml = Math.hypot(...m), n = normals && ml > 0.05 ? norm(m) : ax, x: V3 = [0, 1, 2].map(a => ax[a]! > 0 ? c.hi[a]! : ax[a]! < 0 ? c.lo[a]! : mid[a]!) as V3, l = lit(x, n, clear, false); if (normals) for (let q = 0; q < SUNS.length; q++) { const cs = Math.max(0, dot(n, SUNS[q]!)), v = cs > 0 ? l.S[q]! / cs : clear(x, SUNS[q]!); l.S[q] = v * (ml * cs + (1 - ml) * Math.max(0, 0.25 + 0.25 * dot(ax, SUNS[q]!))); } E.push(mul(c.six[s]!, l.E)); S.push(SUNS.map((_, q) => mul(c.six[s]!, l.S[q]!))); }); let sky = 0; for (const d of DOME) sky += clear(mid, d) / DOME.length; kept.set(i, k = { E, S, sun: SUNS.map(s => clear(mid, s)), sky }); return k; };
+  return (o, d) => { let T = 1; const L: V3[] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]; b.walk(o, d, 1e6, (c, tau, _, i) => { const k = 1 - Math.exp(-tau); if (k < 1e-4) return; const q = keep(i), w = [0, 1, 2].map(a => (c.tau[a]! / Math.max(1e-6, c.hi[a]! - c.lo[a]!) * d[a]!) ** 2), sw = w[0]! + w[1]! + w[2]! || 1, g = T * k; if (c.leaf > 0.5) { const a = c.six.reduce((s, x) => add(s, mul(x, 1 / 6)), [0, 0, 0] as V3); for (let e = 0; e < 3; e++) L[0]![e]! += g * (a[e]! + c.through[e]!) * 0.5 * SKY * 1.25 * q.sky; SUNS.forEach((s, j) => { const r = ross(d, s, a, c.through); for (let e = 0; e < 3; e++) L[j + 1]![e]! += g * r[e]! * Math.PI / Math.PI * q.sun[j]!; }); } else for (let a = 0; a < 3; a++) { const s = a * 2 + (d[a]! < 0 ? 1 : 0), f = g * w[a]! / sw; for (let e = 0; e < 3; e++) { L[0]![e]! += f * q.E[s]![e]!; for (let j = 0; j < 2; j++) L[j + 1]![e]! += f * q.S[s]![j]![e]!; } } T *= 1 - k; return T < 0.005; }); return { a: 1 - T, L }; };
+}
+/** THE GAIN: cells shade one another a little too much or too little; from eight ways, under the sky, what the finest sends back over what they do, color by color. Colors are then multiplied by it */
+export function calibrate(b: Block, t: Traced, normals = true): V3 {
+  const S = solidLook(t), G = fogLook(b, normals), mid: V3 = [0, 1, 2].map(a => b.lo[a]! + b.n[a]! * b.h / 2) as V3, R = Math.hypot(...b.n) * b.h / 2, P = [0, 0, 0], Q = [0, 0, 0], N = 26;
+  for (let v = 0; v < 8; v++) { const yaw = v * Math.PI / 4 + 0.3, pitch = v & 1 ? 0.35 : 0.8, c = Math.cos(pitch), back: V3 = [Math.sin(yaw) * c, Math.sin(pitch), Math.cos(yaw) * c], right = norm(cross(mul(back, -1), [0, 1, 0])), up = cross(right, mul(back, -1)); for (let i = 0; i < N * N; i++) { const o = add(add(add(mid, mul(back, R * 3)), mul(right, ((i % N + 0.5) / N * 2 - 1) * R)), mul(up, ((Math.floor(i / N) + 0.5) / N * 2 - 1) * R)), d = mul(back, -1), x = S(o, d), y = G(o, d); for (let e = 0; e < 3; e++) for (let k = 0; k < 3; k++) { P[e]! += x.L[k]![e]!; Q[e]! += y.L[k]![e]!; } } }
+  return [0, 1, 2].map(e => Math.max(0.6, Math.min(1.6, P[e]! / Math.max(1e-9, Q[e]!)))) as V3;
+}

@@ -41,6 +41,8 @@ export class Block {
   }
   /** how much gets through (less what cell `not` keeps) */
   through(o: V3, d: V3, far: number, not = -1): number { let tau = 0; this.walk(o, d, far, (_, x, __, i) => { if (i !== not) tau += x; return tau > 7; }); return Math.exp(-tau); }
+  /** colors times so much */
+  gain(g: V3) { for (const c of this.cells) if (c) { c.six = c.six.map(v => v.map((x, e) => Math.min(0.94, x * g[e]!)) as V3); c.through = c.through.map((x, e) => x * g[e]!) as V3; } }
   /** as the shaders read it (wgsl/scene.wgsl voxWalk): a row of sizes, a word a place, three rows a cell */
   pack(grass = false): Uint32Array {
     const [nx, ny, nz] = this.n, places = Math.ceil(nx * ny * nz / 4) * 4, u = new Uint32Array(4 + places + this.many * 12), f = new Float32Array(u.buffer), oct = (v: V3): number => { const l = Math.abs(v[0]) + Math.abs(v[1]) + Math.abs(v[2]) || 1; let x = v[0] / l, y = v[2] / l; if (v[1] < 0) { const a = (1 - Math.abs(y)) * Math.sign(x || 1), b = (1 - Math.abs(x)) * Math.sign(y || 1); x = a; y = b; } const q = (t: number) => Math.max(0, Math.min(255, Math.round((t * 0.5 + 0.5) * 255))); return q(x) | (q(y) << 8); }, c565 = (v: V3): number => { const s = v.map(t => Math.sqrt(Math.max(0, Math.min(1, t)))); return Math.round(s[0]! * 31) | (Math.round(s[1]! * 63) << 5) | (Math.round(s[2]! * 31) << 11); };
