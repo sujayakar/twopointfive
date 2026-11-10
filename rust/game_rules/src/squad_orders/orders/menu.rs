@@ -246,11 +246,6 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
     now
 }
 
-/// CMDRING.wholeSquad, the player's own squad: every order of his is everyone's.
-pub fn squad_orders_whole(seat: &crate::seats::SeatRef) -> bool {
-    seat.orders.cast.is_none()
-}
-
 /// Who these men are, in a word or two.
 pub fn squad_orders_who_words(g: &crate::game::Game, seat: &crate::seats::SeatRef, men: Option<&[GuardId]>) -> String {
     let own;
@@ -544,7 +539,7 @@ pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam:
 pub fn target_under(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let t = target_under_of(g, seat, now, asked);
     if let OrderTarget::None(x) = &t {
-        if x.man.is_some() && squad_orders_whole(seat) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
+        if x.man.is_some() && squad_orders_sams(seat) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
     }
     t
 }

@@ -1,14 +1,12 @@
 pub use ::game_types::rescueflush::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, vec, vec::Vec};
-
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// A new one: the field initialisers; the constructor only keeps `g` and `R`.
 pub(super) fn rescue_flush_new() -> crate::rescueflush::RescueFlush { RescueFlush::blank() }
@@ -24,11 +22,6 @@ fn rescue_flush_live(g: &crate::game::Game) -> bool {
     crate::rescue::rescue_up(g) && g.rescue.result.is_none() && g.ai_enabled && crate::roomfight::room_fight_on(g)
 }
 
-/// The living hostages, in the list's order.
-fn rescue_flush_alive(g: &crate::game::Game) -> Vec<GuardId> {
-    g.staged.captives.iter().copied().filter(|&h| !crate::condition::down(g, g.gd[h].ch)).collect()
-}
-
 /// He came for her: his wait is `killSecs`.
 pub(super) fn rescue_flush_came(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.flush.sent.has(gd) }
 
@@ -36,7 +29,7 @@ pub(super) fn rescue_flush_came(g: &crate::game::Game, gd: GuardId) -> bool { g.
 fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> f64 {
     let (cb, cv) = (g.gd[by].ch, g.gd[v].ch);
     let (pb, pv) = (g.ch[cb].pos, g.ch[cv].pos);
-    let d = flat(pv, pb);
+    let d = dist_xz(pv, pb);
     if d >= g.k.rescueflush.reach_m { return f64::INFINITY; }
     let e: V3 = [pb[0], 1.5, pb[2]];
     let c = match g.ch[cv].bones.get(crate::character::Bone::Chest) { Some(p) => *p, None => v3::add(pv, [0.0, 0.6, 0.0]) };
@@ -56,7 +49,7 @@ fn has(g: &mut Game, h: GuardId, alive: &[GuardId]) -> f64 {
 /// THE GUN ON HER: the man of theirs with a clear line to a living hostage, nearest to one; `keep` keeps it while it holds for him.
 pub(super) fn rescue_flush_holder(g: &mut crate::game::Game, keep: Option<GuardId>) -> Option<GuardId> {
     if !rescue_flush_live(g) || g.rescue.flush.fell_at.is_nan() { return None; }
-    let alive = rescue_flush_alive(g);
+    let alive = crate::mission::captives_up(g);
     if alive.is_empty() { return None; }
     if let Some(k) = keep { if has(g, k, &alive) < f64::INFINITY { return Some(k); } }
     let (mut who, mut bd) = (None, f64::INFINITY);
@@ -104,17 +97,11 @@ fn way_of(g: &Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V3>, 
     (goal, via, at, door)
 }
 
-/// `h.path = []; h.pathGoal = null`: a new array, so path_serial moves; no goal, so none the standoff laid. (ts:130, ts:195)
-fn clear_path(g: &mut Game, h: GuardId) {
-    let gd = &mut g.gd[h];
-    gd.path = Vec::new(); gd.path_serial = gd.path_serial.wrapping_add(1); gd.path_goal = None; gd.path_goal_orbit = false;
-}
-
 /// Once a frame from rescue.ts tick(), after its defenders() and before its clock().
 pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     if !rescue_flush_live(g) { return; }
     let b = plan_bounds(g);
-    let alive = rescue_flush_alive(g);
+    let alive = crate::mission::captives_up(g);
     if alive.is_empty() || crate::rescue::rescue_noise_at(g).is_none() { return; }
     if g.rescue.flush.fell_at.is_nan() {
         if g.rescue.defs.iter().any(|(h, d)| d.in_room && !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && !g.gd[h].fled) { return; }
@@ -141,13 +128,13 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     let mut walk = 0;
     while let Some(h) = g.rescue.flush.sent.next_key(&mut walk) {
         let Some(mark) = g.rescue.flush.sent.get(h).and_then(|s| s.via.first().copied()) else { continue; };
-        if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || flat(g.ch[g.gd[h].ch].pos, mark) > g.k.rescueflush.at_door_m { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || dist_xz(g.ch[g.gd[h].ch].pos, mark) > g.k.rescueflush.at_door_m { continue; }
         if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { continue; }
         g.rescue.flush.sent.get_mut(h).unwrap().via.remove(0);
         let next = g.rescue.flush.sent.get(h).unwrap().via.first().copied();
         let to = match next { Some(p) => Some(p), None => rescue_flush_point_of(g, Goal::Room, &alive) };
         let Some(to) = to else { continue; };
-        crate::belief::word(g, h, to); clear_path(g, h);
+        crate::belief::word(g, h, to); g.gd[h].drop_path();
         if g.rescue.flush.sent.get(h).unwrap().via.is_empty() {
             let note = format!("flush:through:{}", g.gd[h].callsign);
             crate::rescue::rescue_note(g, &note);
@@ -161,7 +148,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     {
         let g = &*g;
         let n_of = |h: GuardId| g.rescue.flush.sent.get(h).map_or(0.0, |s| s.n);
-        js::sort_by(&mut pool, |&x, &y| js::or(n_of(x) - n_of(y), flat(g.ch[g.gd[x].ch].pos, room) - flat(g.ch[g.gd[y].ch].pos, room)));
+        js::sort_by(&mut pool, |&x, &y| js::or(n_of(x) - n_of(y), dist_xz(g.ch[g.gd[x].ch].pos, room) - dist_xz(g.ch[g.gd[y].ch].pos, room)));
     }
     for h in pool {
         let n = g.rescue.flush.sent.get(h).map_or(0.0, |s| s.n);
@@ -224,7 +211,7 @@ fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::rescuef
     crate::rescue::rescue_let_go(g, h);
     crate::roomfight::loose(g, h, "rescueflush");
     crate::mind::set_state(g, h, crate::game::GuardState::Alert, "rescueflush"); crate::mind::set(g, h, 1.0, "rescueflush"); g.gd[h].react_t = 0.0;
-    crate::belief::word(g, h, at); clear_path(g, h);
+    crate::belief::word(g, h, at); g.gd[h].drop_path();
     crate::guards::reset_chase(g, h);
     let time = g.time;
     g.rescue.flush.sent.set(h, Sent { at: time, n: n + 1.0, via: via.iter().map(|p| v3::copy(*p)).collect() });

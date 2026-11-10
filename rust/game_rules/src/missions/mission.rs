@@ -59,21 +59,12 @@ fn out_now(g: &crate::game::Game, p: V3) -> bool { g.level.errand.exits.iter().a
 
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
 pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
-    use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
+    use crate::game::MissionStage;
     if g.aside {
         g.pl[g.player].taking_over();
         return;
     }
-    if g.mission.pulled {
-        let mut i = 0;
-        while i < g.rack_targets.len() {
-            let t = g.rack_targets[i];
-            if g.tab.fixture[t].on {
-                g.tab.fixture[t].on = false;
-            }
-            i += 1;
-        }
-    }
+    if g.mission.pulled { the_rack_goes_dark(g); }
     if g.mission.sweep_at > 0.0 && g.time >= g.mission.sweep_at {
         g.mission.sweep_at = -1.0;
         send_rack_check(g);
@@ -95,12 +86,32 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
         g.mission.stats.sandbox = true;
     }
     crate::chronicle::tick_chronicle(g);
+    count_alarms_and_sightings(g);
+    // a mission that goes by its own rule has the floor: no stage of the stealth mission moves under it
+    if g.staged.facts.own_rule { return; }
+    match g.mission.stage {
+        MissionStage::Infiltrate => reach_the_area(g),
+        MissionStage::Drive => work_the_drive(g, dt),
+        MissionStage::Exfil => get_out(g),
+        _ => {}
+    }
+}
+
+/// Every fixture of the rack off.
+fn the_rack_goes_dark(g: &mut Game) {
+    for &t in &g.rack_targets {
+        g.tab.fixture[t].on = false;
+    }
+}
+
+/// An alarm counts when it starts; a sighting counts when it is a fresh one after 4 s unseen: an alert guard with eyes on you.
+fn count_alarms_and_sightings(g: &mut Game) {
+    use crate::game::GuardState;
     let any_alert = g.guards.iter().any(|&gd| g.gd[gd].state == GuardState::Alert);
     if any_alert && !g.mission.alarm_on {
         g.mission.stats.alerts += 1.0;
     }
     g.mission.alarm_on = any_alert;
-    // fully detected: an alert guard with eyes on you, counted in episodes (a fresh one after 4 s unseen)
     let by = g.guards.iter().copied().find(|&gd| g.gd[gd].state == GuardState::Alert && g.gd[gd].saw_player_this_frame);
     if let Some(by) = by {
         if g.time - g.mission.spotted_t > 4.0 {
@@ -109,57 +120,68 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
         }
         g.mission.spotted_t = g.time;
     }
-    if g.staged.facts.own_rule {
-        // a mission that goes by its own rule has the floor: no stage of the stealth mission moves under it
-    } else if g.mission.stage == MissionStage::Infiltrate {
-        let p = player_pos(g, &crate::seats::here(g));
-        let (x0, x1, z0, z1) = {
-            let r = &g.level.errand.area;
-            (r.x0, r.x1, r.z0, r.z1)
-        };
-        if p[0] > x0 && p[0] < x1 && p[2] > z0 && p[2] < z1 {
-            let w = g.level.errand.clone();
-            crate::chronicle::chron_objective(g, &format!("reached {}", w.place), None);
-            g.mission.stage = MissionStage::Drive;
-            crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Server, Some(1.2));
-        }
-    } else if g.mission.stage == MissionStage::Drive {
-        let rf = g.level.errand.front;
-        let p = player_pos(g, &crate::seats::here(g));
-        let in_reach = rack_dist(g, p) < crate::consts::DRIVE_REACH;
-        let pl = g.player;
-        let Some(&at_it) = g.pl[pl].taking() else {
-            let asked = match &g.sets[g.seat].act {
-                Some(a) => a.kind == InteractableKind::Objective && a.verb == Some(Verb::Drive),
-                None => false,
-            };
-            if asked {
-                crate::deed::begin(g, crate::game::Deed::Take(0.0));
-                crate::audio_iface::game_audio_like_play(g, "click", Some(rf), Some(0.8), None);
-                crate::audio_iface::game_audio_like_play(g, "magOut", Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
-                let thing = g.level.errand.thing.clone();
-                if !g.mission.hands_on {
-                    g.mission.hands_on = true;
-                    crate::chronicle::chron_objective(g, &format!("hands on {}", thing), Some(rf));
-                }
-            }
-            return;
-        };
-        if !in_reach || g.pl[pl].sprinting {
-            g.pl[pl].taking_over();
-        } else if at_it + dt >= crate::consts::DRIVE_SECS {
-            drive_pulled(g);
-        } else {
-            if let Some(t) = g.pl[pl].taking_mut() { *t += dt; }
-            crate::handwork::drive_hands(g, crate::consts::DRIVE_SECS, false);
-        }
-    } else if g.mission.stage == MissionStage::Exfil {
-        let p = player_pos(g, &crate::seats::here(g));
-        if out_now(g, p) {
-            let by = exit_taken(g, p).map_or_else(|| g.level.errand.outs(), |x| x.name);
-            crate::chronicle::chron_objective(g, &format!("out through {} — mission complete", by), None);
-            g.mission.stage = MissionStage::Done;
-        }
+}
+
+/// Inside the errand's area the drive begins.
+fn reach_the_area(g: &mut Game) {
+    let p = g.seat_pos(&crate::seats::here(g));
+    let (x0, x1, z0, z1) = {
+        let r = &g.level.errand.area;
+        (r.x0, r.x1, r.z0, r.z1)
+    };
+    if p[0] > x0 && p[0] < x1 && p[2] > z0 && p[2] < z1 {
+        let w = g.level.errand.clone();
+        crate::chronicle::chron_objective(g, &format!("reached {}", w.place), None);
+        g.mission.stage = crate::game::MissionStage::Drive;
+        crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Server, Some(1.2));
+    }
+}
+
+/// The pull: begun when he asks, stopped when he leaves it or does something else, done when its time is up.
+fn work_the_drive(g: &mut Game, dt: f64) {
+    let p = g.seat_pos(&crate::seats::here(g));
+    let in_reach = rack_dist(g, p) < crate::consts::DRIVE_REACH;
+    let pl = g.player;
+    let Some(&at_it) = g.pl[pl].taking() else {
+        begin_the_pull_if_asked(g);
+        return;
+    };
+    if !in_reach || g.pl[pl].sprinting {
+        g.pl[pl].taking_over();
+    } else if at_it + dt >= crate::consts::DRIVE_SECS {
+        drive_pulled(g);
+    } else {
+        if let Some(t) = g.pl[pl].taking_mut() { *t += dt; }
+        crate::handwork::drive_hands(g, crate::consts::DRIVE_SECS, false);
+    }
+}
+
+/// He has asked for the drive: the clicks are heard, and the first time it goes in the chronicle.
+fn begin_the_pull_if_asked(g: &mut Game) {
+    use crate::game::{InteractableKind, Verb};
+    let asked = match &g.sets[g.seat].act {
+        Some(a) => a.kind == InteractableKind::Objective && a.verb == Some(Verb::Drive),
+        None => false,
+    };
+    if !asked { return; }
+    let rf = g.level.errand.front;
+    crate::deed::begin(g, crate::game::Deed::Take(0.0));
+    crate::audio_iface::game_audio_like_play(g, "click", Some(rf), Some(0.8), None);
+    crate::audio_iface::game_audio_like_play(g, "magOut", Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
+    let thing = g.level.errand.thing.clone();
+    if !g.mission.hands_on {
+        g.mission.hands_on = true;
+        crate::chronicle::chron_objective(g, &format!("hands on {}", thing), Some(rf));
+    }
+}
+
+/// Out through a way out, the mission is done.
+fn get_out(g: &mut Game) {
+    let p = g.seat_pos(&crate::seats::here(g));
+    if out_now(g, p) {
+        let by = exit_taken(g, p).map_or_else(|| g.level.errand.outs(), |x| x.name);
+        crate::chronicle::chron_objective(g, &format!("out through {} — mission complete", by), None);
+        g.mission.stage = crate::game::MissionStage::Done;
     }
 }
 
@@ -173,12 +195,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     g.mission.pulled = true;
     g.mission.stage = crate::game::MissionStage::Exfil;
     g.mission.sweep_at = if w.told { g.time + 7.0 } else { -1.0 };
-    let mut i = 0;
-    while i < g.rack_targets.len() {
-        let t = g.rack_targets[i];
-        g.tab.fixture[t].on = false;
-        i += 1;
-    }
+    the_rack_goes_dark(g);
     crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::audio_iface::game_audio_like_play(g, "lightOff", Some(rf), Some(0.7), None);
     let pl = g.player;
@@ -335,7 +352,7 @@ fn stage_place(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
         MissionStage::Infiltrate => door_centre(g, &g.level.errand.door),
         MissionStage::Drive => Some(g.level.errand.front),
         // (the nearest of its ways out)
-        MissionStage::Exfil => nearest_exit(g, player_pos(g, seat)).map(|x| door_centre(g, &x.door).unwrap_or_else(|| crate::quiet::exit_point(&x, Some(0.0)))),
+        MissionStage::Exfil => nearest_exit(g, g.seat_pos(seat)).map(|x| door_centre(g, &x.door).unwrap_or_else(|| crate::quiet::exit_point(&x, Some(0.0)))),
         _ => None,
     }
 }
@@ -372,11 +389,6 @@ fn drive_percent(drive_t: f64) -> String {
 /// `g.doors.byName(name)?.frameCentre ?? null`.
 fn door_centre(g: &Game, name: &str) -> Option<V3> {
     crate::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre)
-}
-
-/// `g.player.char.pos`, read where the TypeScript's alias `p` is read.
-fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    g.ch[g.pl[seat.player].ch].pos
 }
 
 #[cfg(test)]

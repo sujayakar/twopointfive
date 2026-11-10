@@ -105,7 +105,7 @@ struct RestirU {
   jitter: vec4f,  // xy = this frame's TAAU jitter in internal px, zw = the previous render's (the reservoir domain is the UNJITTERED pixel centre: traced from there, reprojected from there)
   mot: vec4f,     // MOTION (header; cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
   fwd: array<vec4u, 4>,           // last frame's light slot p → this frame's slot (byte p; 255 = that light is not uploaded this frame)
-  inv: array<vec4u, 4>,           // this frame's slot → last frame's (255 = the light is new this frame)
+  inv: array<vec4u, 4>,           // this frame's slot → last frame's (a byte each: 255 = the light is new this frame; + 64 = its record is last frame's, word for word)
   prevLights: array<Light, 64>,   // last frame's uploaded light records (positions, cones, intensities as they were): the fresh candidate's 'target then'
 };
 @group(2) @binding(0) var<storage, read> resIn: array<vec4u>;          // last frame's reservoirs (temporal stage), 8×8-tiled: x,y = class 0, z,w = class 1 (layout: pack / unpack below); then one belief record per tile (tileRecIndex)
@@ -137,9 +137,10 @@ fn tileDark(bel: vec2u, s: u32) -> bool { return ((bel[s >> 5u] >> (s & 31u)) & 
 
 fn fwdSlot(p: u32) -> u32 { return (ru.fwd[p >> 4u][(p >> 2u) & 3u] >> ((p & 3u) * 8u)) & 255u; }
 fn invByte(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
-/** last frame's slot of the light now in slot s, or 255; and whether its record is last frame's word for word (what it gives a point now is what it gave it then) */
+/** last frame's slot of the light now in slot s, or 255 */
 fn invSlot(s: u32) -> u32 { let b = invByte(s); return select(b & 63u, 255u, b == 255u); }
-fn sameLight(s: u32) -> bool { let b = invByte(s); return (TRY & 1u) != 0u && b != 255u && (b & 64u) != 0u; }
+/** the light in slot s is as it was last frame: what it would send a point then is what it sends it now, and need not be worked out twice (most of a level's lights, most frames) */
+fn sameLight(s: u32) -> bool { let b = invByte(s); return b != 255u && (b & 64u) != 0u; }
 
 // ---- reservoir texel: 64 bits per class + a 12-bit view-depth signature split over the two ----
 //   word A: slot 6 | M 5 | Vq 3 | iu 4 | iv 4 | hint 4 | depth6 6      word B: W f16 | p̂ log-12 | 3 darkSlot (low 3 in class 0's word, high 3 in class 1's) | valid 1 (bit 31)
@@ -447,8 +448,8 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         // a cone that swept off the pixel, a dimmed panel let go at once; a light that did not reach here last frame (the cone just arrived) keeps its confidence
         // (symmetric: a light that JUMPED up — a fluorescent restrike's strokes go 5 % ↔ 100 % frame to frame — is as badly represented by the history as one that dropped;
         // one-sided, the up-strokes came through at half weight for a frame)
-        let as_was = sameLight(curT[c]);   // (then its target here is last frame's, and its power)
-        var lp: Light; if (as_was) { pPT[c] = pT[c]; } else { lp = ru.prevLights[rSlot(twA)]; let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok); }
+        let stood = sameLight(curT[c]); var lp: Light;
+        if (stood) { pPT[c] = pT[c]; } else { lp = ru.prevLights[rSlot(twA)]; let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok); }
         if (pPT[c] > 0.0) {
           // The ratio that cuts confidence is the GEOMETRIC one — each target ÷ its light's power at the time (common.wgsl lightPower: the luminance of the uploaded colour = colour × intensity):
           // a light that only dimmed, brightened or changed hue (a fluorescent's dropout strokes every other frame, a restrike's 5 % ↔ 100 %, the lightning's decay)
@@ -457,7 +458,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           // from one fresh sample twice per flicker period: 1–3-spp penumbrae the shadow filter could neither trust nor clamp, i.e. blotches that pumped with the
           // tube. A cone that swept off the pixel or a lamp that moved still lets go as before.
           var r = pT[c] / pPT[c];
-          if (!as_was) { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
+          if (!stood) { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
@@ -666,9 +667,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
                 if (cs != 255u && qW > 0.0 && qPh > 0.0) {
                   // p̂_c(x_i): the neighbour's light at OUR point now; p̂_i(y_c): our light at ITS point (its stored p̂ is p̂_i(x_i))
                   var tq: array<f32, 2>;   // (both through ONE targetAt call, p̂_c(x_i) first: DXC — Chrome's compiler on Windows — inlines each call it meets)
-                  let known = select(select(select(0.0, pG[c], cs == pickG[c]), pF[c], cs == pickF[c]), pT[c], cs == curT[c] && pT[c] > 0.0);   // (its target here is one this pixel has worked out: the same light at the same point)
-                  if ((TRY & 8u) != 0u) { tq[0] = known; }
-                  for (var q = select(0u, 1u, (TRY & 8u) != 0u && known > 0.0); q < 2u; q++) { tq[q] = targetAt(select(ySlot, cs, q == 0u), select(Pq, P, q == 0u), select(Nq, N, q == 0u), q == 0u); }
+                  for (var q = 0u; q < 2u; q++) { tq[q] = targetAt(select(ySlot, cs, q == 0u), select(Pq, P, q == 0u), select(Nq, N, q == 0u), q == 0u); }
                   let pcx = tq[0]; let piy = tq[1];
                   let Mi = min(rM(qa), mCap);
                   mc += (Mck * yP) / (Mi * piy + Mck * yP + 1e-12) / kf;

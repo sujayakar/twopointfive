@@ -159,7 +159,7 @@ fn lines_of(moment: SupMoment, key: &str) -> &'static [&'static str] {
 }
 
 /// A byte JavaScript's `\w` holds (every byte of a non-ASCII character is outside it, as a non-unicode regex sees that character).
-fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
+pub(crate) fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
 
 /// `/\b(he|he's|him|his)\b/.test(l)`.
 fn mentions_him(l: &str) -> bool {
@@ -269,97 +269,100 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() {
-            let sup = &mut g.cond[g.gd[gd].ch].sup;
-            sup.v = 0.0;
-            sup.kick = 0.0;
-            sup.band = 0.0;
-            sup.was_pinned = false;
-            sup_clear_reactions(sup);
-            continue;
-        }
-        decay(&mut g.cond[g.gd[gd].ch].sup, k, kk);
-        if g.gd[gd].state != crate::game::GuardState::Alert || !reacts(g, gd) { sup_clear_reactions(&mut g.cond[g.gd[gd].ch].sup); }
-        let v = g.cond[g.gd[gd].ch].sup.v;
-        let was = g.cond[g.gd[gd].ch].sup.band;
-        let band = band_of(v, was, g.k.suppression.pinned, g.k.suppression.release, g.k.suppression.flinch);
-        if band > was && was < 1.0 && !reacts(g, gd)
-            && g.gd[gd].script.as_ref().map_or(false, |s| s.flinch == Some(true))
-            && g.tune.suppression
+        one_guards_edges(g, gd, k, kk);
+    }
+}
+
+/// One guard's frame: his scalar decays, a band he has climbed into gets its start and its line, and a held-back line gets its chance.
+fn one_guards_edges(g: &mut Game, gd: GuardId, k: f64, kk: f64) {
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() {
+        let sup = &mut g.cond[g.gd[gd].ch].sup;
+        sup.v = 0.0;
+        sup.kick = 0.0;
+        sup.band = 0.0;
+        sup.was_pinned = false;
+        sup_clear_reactions(sup);
+        return;
+    }
+    decay(&mut g.cond[g.gd[gd].ch].sup, k, kk);
+    if g.gd[gd].state != crate::game::GuardState::Alert || !reacts(g, gd) { sup_clear_reactions(&mut g.cond[g.gd[gd].ch].sup); }
+    let v = g.cond[g.gd[gd].ch].sup.v;
+    let was = g.cond[g.gd[gd].ch].sup.band;
+    let band = band_of(v, was, g.k.suppression.pinned, g.k.suppression.release, g.k.suppression.flinch);
+    if band > was && was < 1.0 && !reacts(g, gd)
+        && g.gd[gd].script.as_ref().map_or(false, |s| s.flinch == Some(true))
+        && g.tune.suppression
+    {
+        start_from_round(g, gd);
+    }
+    if band > was && reacts(g, gd) { climbs_a_band(g, gd, was, band); }
+    if g.cond[g.gd[gd].ch].sup.was_pinned && g.cond[g.gd[gd].ch].sup.v < 0.02 {
+        g.cond[g.gd[gd].ch].sup.was_pinned = false;
+        if reacts(g, gd) && g.gd[gd].state == crate::game::GuardState::Alert
+            && temperament_row(&g.gd[gd].callsign) == Some(crate::game::Temperament::Hard)
         {
-            start_from_round(g, gd);
+            sup_bark(g, gd, SupMoment::Recover, None);
         }
-        if band > was && reacts(g, gd) {
-            let src_id = g.cond[g.gd[gd].ch].sup.src_id;
-            let friendly = !crate::seats::is_man_id(g, src_id) && src_id >= 0.0 && {
-                let team = g.team(gd);
-                let theirs = crate::teams::team_of_id(g, src_id);
-                !team.foe_of(theirs)
+    }
+    if let Some(p) = g.cond[g.gd[gd].ch].sup.pending {
+        let still = reacts(g, gd)
+            && g.time - g.cond[g.gd[gd].ch].sup.pending_t < 2.0
+            && match p {
+                SupMoment::Displace => g.cond[g.gd[gd].ch].sup.cover.is_some(),
+                SupMoment::Pinned => band == 2.0,
+                _ => band >= 1.0,
             };
-            if was < 1.0 {
-                start_from_round(g, gd);
-                g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, g.k.suppression.flinch_delay);
-                if band < 2.0 {
-                    sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Flinch }, None);
-                }
-            }
-            if band == 2.0 {
-                g.cond[g.gd[gd].ch].sup.pinned_at = g.time;
-                g.cond[g.gd[gd].ch].sup.was_pinned = true;
-                let mut other = false;
-                let mut o_i = 0;
-                while o_i < g.guards.len() {
-                    let o = g.guards[o_i];
-                    o_i += 1;
-                    if o != gd
-                        && !crate::condition::down(g, g.gd[o].ch)
-                        && g.time - g.cond[g.gd[o].ch].sup.pinned_at < g.k.suppression.pair_secs
-                        && g.team(o) == g.team(gd)
-                        && !crate::runner::runner_mute(g, o)
-                    {
-                        other = true;
-                        break;
-                    }
-                }
-                if other && !crate::runner::runner_mute(g, gd)
-                    && g.time - g.m.suppression.floor_line_t.unwrap_or(-100.0) > g.k.suppression.floor_line_secs
-                {
-                    let now = g.time;
-                    g.m.suppression.floor_line_t = Some(now);
-                    g.cond[g.gd[gd].ch].sup.bark_t = now;
-                    g.cond[g.gd[gd].ch].sup.bark_was = Some(SupMoment::Pinned);
-                    g.m.suppression.floor_bark_t = Some(now);
-                    let line = if g.team(gd) != crate::teams::Team::Guard { "they've got us pinned!" } else { "he's got us pinned!" };
-                    crate::game::game_say(g, gd, line, Some(true), None);
-                } else {
-                    let force = g.cond[g.gd[gd].ch].sup.bark_was == Some(SupMoment::Flinch) && g.time - g.cond[g.gd[gd].ch].sup.bark_t > 1.5;
-                    sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Pinned }, Some(force));
-                }
-            }
+        if !still {
+            g.cond[g.gd[gd].ch].sup.pending = None;
+        } else {
+            sup_bark(g, gd, p, Some(p == SupMoment::Displace));
         }
-        if g.cond[g.gd[gd].ch].sup.was_pinned && g.cond[g.gd[gd].ch].sup.v < 0.02 {
-            g.cond[g.gd[gd].ch].sup.was_pinned = false;
-            if reacts(g, gd) && g.gd[gd].state == crate::game::GuardState::Alert
-                && temperament_row(&g.gd[gd].callsign) == Some(crate::game::Temperament::Hard)
-            {
-                sup_bark(g, gd, SupMoment::Recover, None);
-            }
+    }
+    g.cond[g.gd[gd].ch].sup.band = band;
+}
+
+/// Into a higher band: the start from calm jolts him and holds his fire, and pinned he says so.
+fn climbs_a_band(g: &mut Game, gd: GuardId, was: f64, band: f64) {
+    let src_id = g.cond[g.gd[gd].ch].sup.src_id;
+    let friendly = !crate::seats::is_man_id(g, src_id) && src_id >= 0.0 && {
+        let team = g.team(gd);
+        let theirs = crate::teams::team_of_id(g, src_id);
+        !team.foe_of(theirs)
+    };
+    if was < 1.0 {
+        start_from_round(g, gd);
+        g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, g.k.suppression.flinch_delay);
+        if band < 2.0 {
+            sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Flinch }, None);
         }
-        if let Some(p) = g.cond[g.gd[gd].ch].sup.pending {
-            let still = reacts(g, gd)
-                && g.time - g.cond[g.gd[gd].ch].sup.pending_t < 2.0
-                && match p {
-                    SupMoment::Displace => g.cond[g.gd[gd].ch].sup.cover.is_some(),
-                    SupMoment::Pinned => band == 2.0,
-                    _ => band >= 1.0,
-                };
-            if !still {
-                g.cond[g.gd[gd].ch].sup.pending = None;
-            } else {
-                sup_bark(g, gd, p, Some(p == SupMoment::Displace));
-            }
-        }
-        g.cond[g.gd[gd].ch].sup.band = band;
+    }
+    if band == 2.0 { pinned_says_so(g, gd, friendly); }
+}
+
+/// Pinned: with another of his side just pinned too, he says it for the floor on the radio, now and then; else his own line.
+fn pinned_says_so(g: &mut Game, gd: GuardId, friendly: bool) {
+    g.cond[g.gd[gd].ch].sup.pinned_at = g.time;
+    g.cond[g.gd[gd].ch].sup.was_pinned = true;
+    let other = g.guards.iter().any(|&o| {
+        o != gd
+            && !crate::condition::down(g, g.gd[o].ch)
+            && g.time - g.cond[g.gd[o].ch].sup.pinned_at < g.k.suppression.pair_secs
+            && g.team(o) == g.team(gd)
+            && !crate::runner::runner_mute(g, o)
+    });
+    if other && !crate::runner::runner_mute(g, gd)
+        && g.time - g.m.suppression.floor_line_t.unwrap_or(-100.0) > g.k.suppression.floor_line_secs
+    {
+        let now = g.time;
+        g.m.suppression.floor_line_t = Some(now);
+        g.cond[g.gd[gd].ch].sup.bark_t = now;
+        g.cond[g.gd[gd].ch].sup.bark_was = Some(SupMoment::Pinned);
+        g.m.suppression.floor_bark_t = Some(now);
+        let line = if g.team(gd) != crate::teams::Team::Guard { "they've got us pinned!" } else { "he's got us pinned!" };
+        crate::game::game_say(g, gd, line, Some(true), None);
+    } else {
+        let force = g.cond[g.gd[gd].ch].sup.bark_was == Some(SupMoment::Flinch) && g.time - g.cond[g.gd[gd].ch].sup.bark_t > 1.5;
+        sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Pinned }, Some(force));
     }
 }
 

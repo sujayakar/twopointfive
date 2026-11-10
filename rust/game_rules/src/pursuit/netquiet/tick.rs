@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -21,28 +22,7 @@ fn kind_index(kind: LineKind) -> f64 {
     KINDS.iter().position(|k| *k == kind).map_or(-1.0, |i| i as f64)
 }
 
-fn pos_of(g: &Game, gd: GuardId) -> V3 {
-    let c = g.gd[gd].ch;
-    g.ch[c].pos
-}
-
-fn id_of(g: &Game, gd: GuardId) -> f64 {
-    let c = g.gd[gd].ch;
-    g.ch[c].id
-}
-
 // ---------------------------------------------------------------- the small questions
-
-/// distance in plan
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
-/// the loud noises his ears have counted
-fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
-    let h = &g.gd[gd].witness.heard;
-    h.shots + h.kick + h.bang
-}
 
 /// a man this file is about at all: a defender or night staff, not a man the mission leads itself
 fn side(g: &crate::game::Game, gd: GuardId) -> bool {
@@ -74,7 +54,7 @@ fn lost_to(g: &crate::game::Game, m: GuardId) -> bool {
 fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::netquiet::Mind {
     if !g.m.netquiet.state_of.has(gd) {
         let (heard_t, cs) = (g.gd[gd].witness.heard.last_t, g.gd[gd].witness.heard.small);
-        let cl = loud_of(g, gd);
+        let cl = g.gd[gd].witness.heard.loud();
         let n = Mind {
             quiet: 0.0,
             asked: JsSet::new(),
@@ -173,7 +153,7 @@ fn quiet_for(g: &mut crate::game::Game, asker: GuardId, silent: &[GuardId], hear
     mind(g, asker);
     let mut fresh: Option<GuardId> = None;
     for &m in silent {
-        let id = id_of(g, m);
+        let id = g.char_id(m);
         let n = mind(g, asker);
         if !n.asked.has(crate::Num(id)) {
             n.asked.add(crate::Num(id));
@@ -250,7 +230,7 @@ pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[Gua
 
 /// the man he has found: the nearest in view he does not know of, else the nearest he does not know of
 fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Option<GuardId> {
-    let at = pos_of(g, finder);
+    let at = g.pos_of(finder);
     let eye: V3 = [at[0], 1.5, at[2]];
     let team = g.team(finder);
     let body_m = g.k.netquiet.body_m;
@@ -262,7 +242,7 @@ fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Optio
         }
         let c = g.gd[o].ch;
         let b = g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[c].pos);
-        let d = flat(b, at);
+        let d = dist_xz(b, at);
         let in_view = d < body_m && !crate::scene_collision::segment_blocked(g, eye, [b[0], 0.3, b[2]], None, None, None);
         let id = g.ch[c].id;
         let knows = mind(g, finder).known.has(crate::Num(id));
@@ -285,7 +265,7 @@ pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &
     let again = mind(g, finder).body_t < 5.0;
     let body = body_of(g, finder, men);
     let id = match body {
-        Some(b) => id_of(g, b),
+        Some(b) => g.char_id(b),
         None => -1.0,
     };
     let team = g.team(finder);
@@ -358,7 +338,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
         return;
     }
     let (fall_seen, fall_unseen, leader_shock) = (g.k.netquiet.fall_seen, g.k.netquiet.fall_unseen, g.k.morale.leader_shock);
-    let id = id_of(g, victim);
+    let id = g.char_id(victim);
     let (v_team, v_ch) = (g.team(victim), g.gd[victim].ch);
     let mut i = 0;
     while i < g.guards.len() {
@@ -394,8 +374,8 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
     let whip_m = g.k.netquiet.whip_m;
     let mut bd = g.k.netquiet.whip_near_m;
     let (small_where, heard_last_t) = (g.gd[gd].witness.heard.small_where, g.gd[gd].witness.heard.last_t);
-    let p = pos_of(g, gd);
-    let me = id_of(g, gd);
+    let p = g.pos_of(gd);
+    let me = g.char_id(gd);
     let team = g.team(gd);
     let lk = g.gd[gd].last_known;
     let rf: Option<V3> = if small && small_where.is_some() {
@@ -412,7 +392,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
         }
     };
     let rf = rf?;
-    if flat(rf, p) > whip_m {
+    if dist_xz(rf, p) > whip_m {
         return None;
     }
     let eye: V3 = [p[0], 1.5, p[2]];
@@ -439,7 +419,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
             continue;
         }
         any = true;
-        let d = flat(pos, rf);
+        let d = dist_xz(pos, rf);
         if d < bd && !crate::scene_collision::segment_blocked(g, eye, [pos[0], 1.0, pos[2]], None, None, None) {
             bd = d;
             best = Some(pos);
@@ -472,7 +452,7 @@ fn arc_at(g: &crate::game::Game, e: &[crate::roomfight::Entry], p: V3) -> crate:
             seen += 1.0;
         }
         yaws.push(m::atan2(q[0] - p[0], q[2] - p[2]));
-        near = m::min(near, flat(q, p));
+        near = m::min(near, dist_xz(q, p));
     }
     if yaws.is_empty() {
         return ArcAt { seen: 0.0, arc: 0.0, yaw: 0.0, near: 0.0 };
@@ -509,7 +489,7 @@ struct Rate {
 fn rate(g: &Game, e: &[crate::roomfight::Entry], from: V3, lim: f64, p: V3) -> Rate {
     let a = arc_at(g, e, p);
     let back: V3 = [p[0] - m::sin(a.yaw) * 1.1, 1.0, p[2] - m::cos(a.yaw) * 1.1];
-    let score = m::min(a.near, 8.0) - 0.35 * flat(p, from) + if crate::scene_collision::segment_blocked(g, [p[0], 1.0, p[2]], back, None, None, None) { 1.5 } else { 0.0 };
+    let score = m::min(a.near, 8.0) - 0.35 * dist_xz(p, from) + if crate::scene_collision::segment_blocked(g, [p[0], 1.0, p[2]], back, None, None, None) { 1.5 } else { 0.0 };
     Rate { p, seen: a.seen, arc: m::max(a.arc, lim), near: a.near, score }
 }
 
@@ -558,7 +538,7 @@ fn low_spot(g: &crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> Option<V3
     let (cs, w) = (g.col.nav.cell, g.col.nav.w);
     let e = g.tab.roomfight_room[r].entries.clone();
     let cells = g.tab.roomfight_room[r].cells.keys();
-    let from = pos_of(g, gd);
+    let from = g.pos_of(gd);
     let here = rate(g, &e, from, lim, [from[0], 0.0, from[2]]);
     let coarse = cells.len() > 400;
     let mouth = !(here.near >= door_m);
@@ -571,7 +551,7 @@ fn low_spot(g: &crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> Option<V3
             continue;
         }
         let p: V3 = [(ix + 0.5) * cs, 0.0, (iz + 0.5) * cs];
-        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || flat(p, from) > max_m || flat(p, from) < 0.75 {
+        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || dist_xz(p, from) > max_m || dist_xz(p, from) < 0.75 {
             continue;
         }
         all.push(rate(g, &e, from, lim, p));
@@ -612,7 +592,7 @@ fn last_kind(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let mut near = false;
     let team = g.team(gd);
     let mate_m = g.k.netquiet.mate_m;
-    let p = pos_of(g, gd);
+    let p = g.pos_of(gd);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -623,8 +603,8 @@ fn last_kind(g: &mut crate::game::Game, gd: GuardId) -> f64 {
         had = true;
         if !lost_to(g, o) {
             up = true;
-            let q = pos_of(g, o);
-            if flat(q, p) < mate_m && !crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], [q[0], 1.5, q[2]], None, None, None) {
+            let q = g.pos_of(o);
+            if dist_xz(q, p) < mate_m && !crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], [q[0], 1.5, q[2]], None, None, None) {
                 near = true;
             }
         }
@@ -646,7 +626,7 @@ fn knows_squad(g: &mut crate::game::Game, gd: GuardId) -> bool {
             continue;
         }
         let known = lost_to(g, o) && {
-            let id = id_of(g, o);
+            let id = g.char_id(o);
             let n = mind(g, gd);
             n.asked.has(crate::Num(id)) || n.known.has(crate::Num(id))
         };
@@ -731,216 +711,194 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
     sync_last_man(g);
 }
 
-/// one man's frame of the tick; a `return` here is the TypeScript loop's `continue`
+/// a man as this frame finds him: hands and wits free, the team in his eyes of late, and his place in the room fight
+#[derive(Clone, Copy)]
+struct Now { ok: bool, eyes: bool, d: Option<RoomfightDefId> }
+
+/// one man's frame of the tick
 fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
-    let k = g.k.netquiet.clone();
     mind(g, gd);
-    let ok = free(g, gd);
-    let eyes = g.time - g.gd[gd].last_seen_t < k.calm_secs;
-    let mut d: Option<RoomfightDefId> = None;
-    for &o in &g.fight.defs {
-        if g.tab.roomfight_def[o].gd == gd {
-            d = Some(o);
-            break;
+    let eyes = g.time - g.gd[gd].last_seen_t < g.k.netquiet.calm_secs;
+    let now = Now { ok: free(g, gd), eyes, d: crate::roomfight::def_of(g, gd) };
+    clocks(g, gd, dt);
+    say_owed(g, gd, now, dt);
+    hear_noise(g, gd, now);
+    let lk = g.gd[gd].last_known;
+    let n = mind(g, gd);
+    n.fx = lk.map_or(f64::NAN, |l| l[0]);
+    n.fz = lk.map_or(f64::NAN, |l| l[2]);
+    whip_on(g, gd, now, dt);
+    // the last man
+    if mind(g, gd).last == NONE { return finds_out(g, gd, now); }
+    if mate_is_back(g, gd, dt) { return; }
+    let last = mind(g, gd).last;
+    if last == SAID {
+        backs_off(g, gd, now);
+    } else if last == BACK {
+        match now.d {
+            None => mind(g, gd).last = DONE,
+            Some(d) => if crate::roomfight::leg_ended(g, d, crate::owner::by::LAST_MAN).is_some() { settle(g, gd, d); }
         }
+    } else if last == LOW {
+        lies_low(g, gd, now, dt);
     }
+}
+
+/// How long since he barked, stood by a body, had news from the net, was calm.
+fn clocks(g: &mut Game, gd: GuardId, dt: f64) {
     let patrol = g.gd[gd].state == crate::game::GuardState::Patrol;
     let n = mind(g, gd);
     n.bark = m::min(n.bark + dt, 60.0);
     n.body_t = m::min(n.body_t + dt, 60.0);
     n.low = false;
     let news = n.quiet + n.asked.len() as f64 + n.known.len() as f64;
-    if news != n.news {
-        n.news = news;
-        n.news_t = 0.0;
-    } else {
-        n.news_t = m::min(n.news_t + dt, 60.0);
-    }
+    n.news_t = if news != n.news { 0.0 } else { m::min(n.news_t + dt, 60.0) };
+    n.news = news;
     n.roused = if patrol { 0.0 } else { m::min(n.roused + dt, 60.0) };
-    // the line owed
+}
+
+/// The line he owes, when its moment comes and nothing keeps him from it; dropped if it waits too long.
+fn say_owed(g: &mut Game, gd: GuardId, now: Now, dt: f64) {
+    let k = g.k.netquiet.clone();
     let n = mind(g, gd);
-    if n.say >= 0.0 {
-        n.say_t -= dt;
-        if n.say_t <= 0.0 {
-            let kind = KINDS.get(n.say as usize).copied().unwrap_or(LineKind::Name);
-            if ok && !eyes && (kind == LineKind::Last || n.bark >= k.bark_secs) {
-                n.say = -1.0;
-                let name = n.say_name.clone();
-                let radio = kind != LineKind::Body || net_up(g, gd, None);
-                speak(g, gd, kind, &name, radio);
-            } else if n.say_t < -k.say_hold {
-                n.say = -1.0;
-            }
-        }
+    if n.say < 0.0 { return; }
+    n.say_t -= dt;
+    if n.say_t > 0.0 { return; }
+    let kind = KINDS.get(n.say as usize).copied().unwrap_or(LineKind::Name);
+    if now.ok && !now.eyes && (kind == LineKind::Last || n.bark >= k.bark_secs) {
+        n.say = -1.0;
+        let name = n.say_name.clone();
+        let radio = kind != LineKind::Body || net_up(g, gd, None);
+        speak(g, gd, kind, &name, radio);
+    } else if n.say_t < -k.say_hold {
+        n.say = -1.0;
     }
-    // the whip: only to a noise HE heard, at the place his ears put it
-    let heard_t = g.gd[gd].witness.heard.last_t;
-    if heard_t > mind(g, gd).heard_t {
-        let heard_small = g.gd[gd].witness.heard.small;
-        let small = heard_small > mind(g, gd).cs;
-        let heard_loud = loud_of(g, gd);
-        let loud = heard_loud > mind(g, gd).cl;
-        let on = whipping(g, gd);
-        if (small || loud) && ok && !eyes && crate::morale::rung_of(g, gd) >= 1.0 && mind(g, gd).last != BACK && !(on && mind(g, gd).whip_held < k.whip_hold) {
-            if let Some(at) = noise_of(g, gd, d, small, loud) {
-                if flat(at, pos_of(g, gd)) > 0.5 {
-                    let n = mind(g, gd);
-                    let swing = !on && !(n.whip_at.is_some() && n.whip_in > 0.0);
-                    if swing {
-                        n.whip_in = k.whip_shift;
-                    }
-                    let moved = match n.whip_at {
-                        Some(w) => flat(at, w) > 1.0,
-                        None => true,
-                    };
-                    if moved {
-                        n.whip_at = Some(at);
-                        n.whip_held = 0.0;
-                    }
-                    n.whip_t = k.whip_secs;
+}
+
+/// A noise HE heard, at the place his ears put it: a shaken man whips his gun to it, and a man lying low is roused by it.
+fn hear_noise(g: &mut Game, gd: GuardId, now: Now) {
+    let (heard_t, heard_small, heard_loud) = { let h = &g.gd[gd].witness.heard; (h.last_t, h.small, g.gd[gd].witness.heard.loud()) };
+    let n = mind(g, gd);
+    if !(heard_t > n.heard_t) { return; }
+    let (small, loud) = (heard_small > n.cs, heard_loud > n.cl);
+    let k = g.k.netquiet.clone();
+    let on = whipping(g, gd);
+    if (small || loud) && now.ok && !now.eyes && crate::morale::rung_of(g, gd) >= 1.0 && mind(g, gd).last != BACK && !(on && mind(g, gd).whip_held < k.whip_hold) {
+        if let Some(at) = noise_of(g, gd, now.d, small, loud) {
+            if dist_xz(at, g.pos_of(gd)) > 0.5 {
+                let n = mind(g, gd);
+                if !on && !(n.whip_at.is_some() && n.whip_in > 0.0) { n.whip_in = k.whip_shift; }
+                if n.whip_at.map_or(true, |w| dist_xz(at, w) > 1.0) {
+                    n.whip_at = Some(at);
+                    n.whip_held = 0.0;
                 }
+                n.whip_t = k.whip_secs;
             }
         }
-        if ok && mind(g, gd).last == LOW && (small || loud) {
-            rouse(g, gd);
-        }
-        let (now_t, now_small) = (g.gd[gd].witness.heard.last_t, g.gd[gd].witness.heard.small);
-        let now_loud = loud_of(g, gd);
-        let n = mind(g, gd);
-        n.heard_t = now_t;
-        n.cs = now_small;
-        n.cl = now_loud;
     }
-    let lk = g.gd[gd].last_known;
+    if now.ok && mind(g, gd).last == LOW && (small || loud) { rouse(g, gd); }
+    let (now_t, now_small) = (g.gd[gd].witness.heard.last_t, g.gd[gd].witness.heard.small);
+    let now_loud = g.gd[gd].witness.heard.loud();
     let n = mind(g, gd);
-    n.fx = lk.map_or(f64::NAN, |l| l[0]);
-    n.fz = lk.map_or(f64::NAN, |l| l[2]);
-    if n.whip_at.is_some() {
-        if n.whip_in > 0.0 {
-            n.whip_in -= dt;
-        } else {
-            n.whip_held += dt;
-            n.whip_t -= dt;
-            if n.whip_t <= 0.0 || eyes || !ok {
-                n.whip_at = None;
-                n.whip_t = 0.0;
-            }
-        }
+    n.heard_t = now_t;
+    n.cs = now_small;
+    n.cl = now_loud;
+}
+
+/// The whip he is in: the shift before it, then as long as it lasts and he has no eyes on them.
+fn whip_on(g: &mut Game, gd: GuardId, now: Now, dt: f64) {
+    let n = mind(g, gd);
+    if n.whip_at.is_none() { return; }
+    if n.whip_in > 0.0 { n.whip_in -= dt; return; }
+    n.whip_held += dt;
+    n.whip_t -= dt;
+    if n.whip_t <= 0.0 || now.eyes || !now.ok {
+        n.whip_at = None;
+        n.whip_t = 0.0;
     }
-    // the last man
-    if n.last == NONE {
-        if !ok || eyes || n.say >= 0.0 {
-            return;
-        }
-        let quiet_none = !js::truthy(n.quiet) && n.known.is_empty();
-        if g.gd[gd].state == crate::game::GuardState::Patrol && quiet_none {
-            return;
-        }
-        let l = last_kind(g, gd);
-        if !js::truthy(l) {
-            return;
-        }
-        if l == 2.0 && !js::truthy(mind(g, gd).quiet) && !knows_squad(g, gd) {
-            // nobody is left, but he cannot know it: roused `calmSecs`, he asks the net himself, and it is the silence after that has him act
-            let n = mind(g, gd);
-            if n.roused >= k.calm_secs && n.bark >= k.bark_secs {
-                speak(g, gd, LineKind::Ask, "", true);
-                mind(g, gd).quiet += 1.0;
-                shock(g, gd, k.unanswered);
-                owe(mind(g, gd), LineKind::Last, "", k.ask_beat);
-            }
-            return;
-        }
+}
+
+/// Is he the last, or alone, as far as he can tell: he asks the net if he cannot know it, and says so when a beat has passed on his news.
+fn finds_out(g: &mut Game, gd: GuardId, now: Now) {
+    let k = g.k.netquiet.clone();
+    let n = mind(g, gd);
+    if !now.ok || now.eyes || n.say >= 0.0 { return; }
+    let quiet_none = !js::truthy(n.quiet) && n.known.is_empty();
+    if g.gd[gd].state == crate::game::GuardState::Patrol && quiet_none { return; }
+    let l = last_kind(g, gd);
+    if !js::truthy(l) { return; }
+    if l == 2.0 && !js::truthy(mind(g, gd).quiet) && !knows_squad(g, gd) {
+        // nobody is left, but he cannot know it: roused `calmSecs`, he asks the net himself, and it is the silence after that has him act
         let n = mind(g, gd);
-        if n.news_t < k.ask_beat {
-            return;
-        }
-        let kind = if l == 2.0 { LineKind::Last } else { LineKind::Alone };
-        let said = n.last_kind == kind_index(kind) && n.bark < 10.0;
-        if !said && n.bark < k.bark_secs {
-            return;
-        }
-        n.last = SAID;
-        n.t = 0.0;
-        if !said {
-            speak(g, gd, kind, "", true);
+        if n.roused >= k.calm_secs && n.bark >= k.bark_secs {
+            speak(g, gd, LineKind::Ask, "", true);
+            mind(g, gd).quiet += 1.0;
+            shock(g, gd, k.unanswered);
+            owe(mind(g, gd), LineKind::Last, "", k.ask_beat);
         }
         return;
     }
-    n.t += dt;
+    let n = mind(g, gd);
+    if n.news_t < k.ask_beat { return; }
+    let kind = if l == 2.0 { LineKind::Last } else { LineKind::Alone };
+    let said = n.last_kind == kind_index(kind) && n.bark < 10.0;
+    if !said && n.bark < k.bark_secs { return; }
+    n.last = SAID;
+    n.t = 0.0;
+    if !said { speak(g, gd, kind, "", true); }
+}
+
+/// A living mate has been with him `calmSecs`: he is up, and his owner's again.
+fn mate_is_back(g: &mut Game, gd: GuardId, dt: f64) -> bool {
+    mind(g, gd).t += dt;
     let lk = last_kind(g, gd);
+    let calm_secs = g.k.netquiet.calm_secs;
     let n = mind(g, gd);
     n.mate_t = if js::truthy(lk) { 0.0 } else { n.mate_t + dt };
-    if n.mate_t >= k.calm_secs {
-        // a living mate has been with him `calmSecs`: up, and his owner's again
-        n.last = NONE;
-        n.t = 0.0;
-        n.mate_t = 0.0;
-        n.spot = None;
-        n.look = None;
-        return;
-    }
-    if n.last == SAID {
-        if n.t < k.last_beat || !ok || eyes {
-            return;
-        }
-        let Some(d) = d else {
-            n.last = DONE;
-            return;
-        };
-        let out = crate::roomfight::is_loose(g, d) && g.gd[gd].script.is_none();
-        if !posted(g, gd, d) && !out {
-            return;
-        }
-        let room = g.tab.roomfight_def[d].room;
-        let to = match room {
-            Some(r) if !g.tab.roomfight_room[r].entries.is_empty() => match low_spot(g, gd, r) {
-                Some(s) => Some(s),
-                None if out => Some(v3::copy(g.tab.roomfight_def[d].station)),
-                None => None,
-            },
-            _ => None,
-        };
-        if let (Some(to), Some(r)) = (to, room) {
-            let e = g.tab.roomfight_room[r].entries.clone();
-            let a = arc_at(g, &e, to);
-            let n = mind(g, gd);
-            n.spot = Some(v3::copy(to));
-            n.yaw = a.yaw;
-            n.arc = a.arc;
-            n.last = BACK;
-            n.t = 0.0;
-            n.whip_at = None;
-            // the room fight's own scripted leg, walked backwards, his gun on the doors
-            let aim = [to[0] + m::sin(a.yaw) * 6.0, 1.1, to[2] + m::cos(a.yaw) * 6.0];
-            crate::roomfight::send(g, d, crate::roomfight::Leg { face: Some(a.yaw), aim: Some(aim), ..crate::roomfight::Leg::to(to, k.back_speed) }, crate::owner::by::LAST_MAN);
-        } else {
-            settle(g, gd, d);
-        }
-        return;
-    }
-    if n.last == BACK {
-        let Some(d) = d else {
-            n.last = DONE;
-            return;
-        };
-        if crate::roomfight::leg_ended(g, d, crate::owner::by::LAST_MAN).is_some() {
-            settle(g, gd, d);
-        }
-        return;
-    }
-    if n.last != LOW {
-        return;
-    }
-    let Some(spot) = n.spot else { return };
-    let Some(d) = d else { return };
-    if !crate::roomfight::at_post(g, d) {
-        return;
-    }
-    if flat(pos_of(g, gd), spot) > 1.0 {
-        settle(g, gd, d);
-    }
-    mind(g, gd).low = ok;
+    if n.mate_t < calm_secs { return false; }
+    n.last = NONE;
+    n.t = 0.0;
+    n.mate_t = 0.0;
+    n.spot = None;
+    n.look = None;
+    true
+}
+
+/// He has said it, and a beat later backs off to a corner of his room from which he sees its doors, walked backwards with his gun on them; none, and it is where he stands.
+fn backs_off(g: &mut Game, gd: GuardId, now: Now) {
+    let k = g.k.netquiet.clone();
+    let n = mind(g, gd);
+    if n.t < k.last_beat || !now.ok || now.eyes { return; }
+    let Some(d) = now.d else { n.last = DONE; return };
+    let out = crate::roomfight::is_loose(g, d) && g.gd[gd].script.is_none();
+    if !posted(g, gd, d) && !out { return; }
+    let room = g.tab.roomfight_def[d].room.filter(|&r| !g.tab.roomfight_room[r].entries.is_empty());
+    let Some(r) = room else { return settle(g, gd, d) };
+    let spot = match low_spot(g, gd, r) {
+        None if out => Some(g.tab.roomfight_def[d].station),
+        s => s,
+    };
+    let Some(to) = spot else { return settle(g, gd, d) };
+    let e = g.tab.roomfight_room[r].entries.clone();
+    let a = arc_at(g, &e, to);
+    let n = mind(g, gd);
+    n.spot = Some(to);
+    n.yaw = a.yaw;
+    n.arc = a.arc;
+    n.last = BACK;
+    n.t = 0.0;
+    n.whip_at = None;
+    let aim = [to[0] + m::sin(a.yaw) * 6.0, 1.1, to[2] + m::cos(a.yaw) * 6.0];
+    crate::roomfight::send(g, d, crate::roomfight::Leg { face: Some(a.yaw), aim: Some(aim), ..crate::roomfight::Leg::to(to, k.back_speed) }, crate::owner::by::LAST_MAN);
+}
+
+/// Low on his spot, his gun on the arc: moved off it, it is where he is now. Nothing seen and nothing heard for `alertSecs`, he is no longer alert; the spot, the crouch and the arc stay.
+fn lies_low(g: &mut Game, gd: GuardId, now: Now, dt: f64) {
+    let k = g.k.netquiet.clone();
+    let (Some(spot), Some(d)) = (mind(g, gd).spot, now.d) else { return };
+    if !crate::roomfight::at_post(g, d) { return; }
+    if dist_xz(g.pos_of(gd), spot) > 1.0 { settle(g, gd, d); }
+    mind(g, gd).low = now.ok;
     // where his eyes are, low on his gun: his look (the one every eye in the game is asked along) once he is down and still, eased
     let c = g.gd[gd].ch;
     if g.ch[c].anim.crouch > k.crouch - 0.15 && g.gd[gd].speed < 0.3 {
@@ -952,14 +910,10 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         n.eye_half += (k.eye_deg * v3::DEG - n.eye_half) * e;
     }
     watch(g, gd);
-    // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert'; the spot, the crouch and the arc stay
-    let alert = g.gd[gd].state == crate::game::GuardState::Alert;
+    if !now.ok { return; }
+    if g.gd[gd].state != crate::game::GuardState::Alert { return wary(g, gd); }
     let long_enough = mind(g, gd).t > k.alert_secs;
-    if alert && ok && long_enough && g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_t) > k.alert_secs && g.gd[gd].awareness < 0.85 {
-        ease(g, gd);
-    } else if !alert && ok {
-        wary(g, gd);
-    }
+    if long_enough && g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_t) > k.alert_secs && g.gd[gd].awareness < 0.85 { ease(g, gd); }
 }
 
 /// on his gun: roused, at the floor's own alert line
@@ -982,7 +936,7 @@ fn wary(g: &mut crate::game::Game, gd: GuardId) {
 
 /// down where he stands, on his gun: the arc as it reads from here
 fn settle(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) {
-    let at = pos_of(g, gd);
+    let at = g.pos_of(gd);
     let p: V3 = [at[0], 0.0, at[2]];
     let entries = g.tab.roomfight_def[d].room.map(|r| g.tab.roomfight_room[r].entries.clone()).filter(|e| !e.is_empty());
     let (arc, yaw) = match entries {

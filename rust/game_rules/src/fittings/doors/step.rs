@@ -8,6 +8,7 @@ use crate::v3::{clamp, V3};
 use alloc::{vec, vec::Vec};
 use ::sim::{collide, world::{asking, js_abs, js_max, js_min, World}};
 use DoorDriveKind::*;
+mod meet;
 
 const SOLID_SLIDE: f64 = 2.2;
 const SOLID_TRIES: f64 = 3.0;
@@ -88,11 +89,33 @@ struct Step<'a> {
     rounds: f64,
 }
 
+/// one leaf's tick: what its stages tell each other
+#[derive(Default)]
+struct Turn {
+    i: usize,
+    /// the way it opens
+    sw: f64,
+    /// a boot or a run has it flying · somebody has eased it further open · it is on its way open
+    kicked: bool,
+    eased: bool,
+    comes: bool,
+    /// a man is on it, has turned it, or presses at it; a key holder was the one; a body lies against it
+    touched: bool,
+    pushed: bool,
+    pressed: bool,
+    key_touched: bool,
+    body_block: bool,
+    /// the way a key holder turns it
+    push_dir: f64,
+    /// one it was closing on pulls it to · a run took it open
+    yank: bool,
+    ran: bool,
+    /// those walking through it, a bit a man, and the contact that last walked it open
+    here: i32,
+    walker: Option<usize>,
+}
+
 impl Step<'_> {
-    /// how it is being driven (all zeros: not)
-    fn drive(&self, i: usize) -> DoorDrive {
-        self.leaf[i].drive.unwrap_or_default()
-    }
     #[inline]
     fn swing(&self, i: usize) -> f64 {
         let l = &self.leaf[i];
@@ -114,7 +137,8 @@ impl Step<'_> {
             self.dr[i].max_auth
         }
     }
-    fn keep(&mut self, i: usize) {
+    /// a leaf found on the far side of its frame is turned back to the side it opens to
+    fn keep_its_side(&mut self, i: usize) {
         if self.leaf[i].angle * self.swing(i) < 0.0 {
             self.leaf[i].angle = clamp(-self.leaf[i].angle, self.min_a(i), self.max_a(i));
             self.leaf[i].vel = -self.leaf[i].vel;
@@ -227,118 +251,12 @@ impl Step<'_> {
         }
     }
 
-    fn walked(&mut self, i: usize, c: usize, dir: f64, lever: f64) {
-        let who = self.con[c].who;
-        let d = self.leaf[i].drive.filter(|d| d.who == who);
-        if d.is_some_and(|d| d.kind == Boot) && self.leaf[i].since_bash < 0.6 {
-            return;
-        }
-        let d = d.filter(|d| d.kind == Body && d.dir == side_of(dir) && d.t <= 2.0 * self.dt + 1e-6 && d.px == d.px);
-        let rate = d.map_or(0.0, |d| js_min(hypot2(self.con[c].pos[0] - d.px, self.con[c].pos[2] - d.pz) / js_max(self.dt, 1e-3) / lever, TURN_RATE));
-        let quiet = self.con[c].quiet;
-        let m = self.man_of(c);
-        self.leaf[i].driven(who, dir, Body, quiet, rate, m);
-    }
-    #[allow(clippy::too_many_arguments)]
-    fn carry(&mut self, c: usize, i: usize, pen: f64, dist: f64, qx: f64, qz: f64, perp: f64) -> bool {
-        let (t_rate, t_slide) = (self.k.rate, self.k.slide);
-        if pen > t_rate * self.dt {
-            return false;
-        }
-        let u = self.dir(i);
-        let (mut nx, mut nz, mut n) = (qx, qz, dist);
-        if n < 1e-4 {
-            let s = side_of(perp);
-            nx = -u.1 * s;
-            nz = u.0 * s;
-            n = 1.0;
-        }
-        let k = (pen + 0.001) / n;
-        let sl = t_slide * self.dt;
-        let (x, z) = (self.con[c].pos[0] + nx * k, self.con[c].pos[2] + nz * k);
-        let r = self.con[c].radius;
-        if self.standable(x + u.0 * sl, z + u.1 * sl, r) {
-            self.con[c].pos[0] = x + u.0 * sl;
-            self.con[c].pos[2] = z + u.1 * sl;
-        } else if self.standable(x, z, r) {
-            self.con[c].pos[0] = x;
-            self.con[c].pos[2] = z;
-        } else {
-            return false;
-        }
-        self.con[c].moved = Some(true);
-        true
-    }
-    #[allow(clippy::too_many_arguments)]
-    fn solid_carry(&mut self, c: usize, i: usize, pen: f64, dist: f64, qx: f64, qz: f64, perp: f64) -> bool {
-        if pen > SOLID_RATE * self.dt {
-            return false;
-        }
-        let (hx, hz, wd) = (self.dr[i].def.hinge[0], self.dr[i].def.hinge[1], self.dr[i].def.width);
-        let u = self.dir(i);
-        let (mut nx, mut nz, mut n) = (qx, qz, dist);
-        if n < 1e-4 {
-            let s = side_of(perp);
-            nx = -u.1 * s;
-            nz = u.0 * s;
-            n = 1.0;
-        }
-        let k = (pen + 0.001) / n;
-        let own = self.con[c].vel.map_or(0.0, |v| js_max(0.0, -(v[0] * u.0 + v[2] * u.1)));
-        let sl = (SOLID_SLIDE + own) * self.dt;
-        let (mut p0, mut p2) = (self.con[c].pos[0] + nx * k + u.0 * sl, self.con[c].pos[2] + nz * k + u.1 * sl);
-        let r = self.con[c].radius;
-        self.settle(&mut p0, &mut p2);
-        let (px, pz) = (p0 - hx, p2 - hz);
-        let t = clamp(px * u.0 + pz * u.1, 0.0, wd);
-        let left = r + self.dr[i].thick / 2.0 - hypot2(px - u.0 * t, pz - u.1 * t);
-        if left > SOLID_SKIN {
-            return false;
-        }
-        self.con[c].pos[0] = p0;
-        self.con[c].pos[2] = p2;
-        true
-    }
-    fn leaf_presses(&self, i: usize) -> bool {
-        let (hx, hz, wd) = (self.dr[i].def.hinge[0], self.dr[i].def.hinge[1], self.dr[i].def.width);
-        let ht = self.dr[i].thick / 2.0;
-        let u = self.dir(i);
-        if self.leaf[i].pull_t > 0.0 {
-            return false;
-        }
-        let passers = self.leaf[i].passers;
-        for c in 0..self.nc {
-            if self.con[c].weak == Some(true) {
-                continue;
-            }
-            let r = self.con[c].radius;
-            let (px, pz) = (self.con[c].pos[0] - hx, self.con[c].pos[2] - hz);
-            let reach = wd + r + 0.1;
-            if px * px + pz * pz > reach * reach {
-                continue;
-            }
-            if self.pass_bit(c) & passers != 0 {
-                continue;
-            }
-            let along = px * u.0 + pz * u.1;
-            if along <= 0.14 || along >= wd + r {
-                continue;
-            }
-            let t = clamp(along, 0.0, wd);
-            let dist = hypot2(px - u.0 * t, pz - u.1 * t);
-            if r + ht - dist > 0.0 {
-                return true;
-            }
-        }
-        false
-    }
-
     /// The leaf where it now stands, and its handles
     fn place(&mut self, i: usize) {
         if self.leaf[i].off {
             return;
         }
-        self.keep(i);
+        self.keep_its_side(i);
         self.leaf[i].vel_seen = self.leaf[i].vel;
         self.leaf[i].angle_seen = self.leaf[i].angle;
         let rt = self.leaf[i].rattle_t;
@@ -350,597 +268,172 @@ impl Step<'_> {
 
     /// the step of door i
     fn door(&mut self, i: usize) {
-        let dt = self.dt;
-        if self.leaf[i].off {
-            self.leaf[i].vel = 0.0;
-            self.leaf[i].latched = false;
-            self.leaf[i].closing = false;
-            if let Some(a) = self.slab[i] {
-                self.leaf[i].angle = a;
+        if self.leaf[i].off { return self.lies_off(i); }
+        self.swept_until_written(i);
+        self.keep_its_side(i);
+        let sw = self.swing(i);
+        self.speed_written(i, sw);
+        let eased = (self.leaf[i].angle - self.leaf[i].angle_seen) * sw > 1e-4;
+        if eased { self.leaf[i].open_t = 0.0; }
+        self.drive_written(i);
+        let kicked = self.leaf[i].since_bash < 0.6;
+        if kicked && !self.leaf[i].latched { self.flies(i); }
+        let comes = self.leaf[i].vel * sw > 0.0 || (self.leaf[i].angle - self.leaf[i].angle_seen) * sw > 1e-4;
+        let mut t = Turn { i, sw, kicked, eased, comes, ..Turn::default() };
+        self.stand_back(&t);
+        self.reach_for(&mut t);
+        self.meets(&mut t);
+        self.hands_clocks(&t);
+        self.swings(&t);
+        self.lock_clocks(i);
+        if let Some(d) = &mut self.leaf[i].drive {
+            d.t += self.dt;
+            if let Some(w) = t.walker.filter(|&w| d.kind == Body && d.who == self.con[w].who) { (d.px, d.pz) = (self.con[w].pos[0], self.con[w].pos[2]); }
+        }
+        self.place(i);
+    }
+    /// off its hinges: it reads as its slab lies
+    fn lies_off(&mut self, i: usize) {
+        let l = &mut self.leaf[i];
+        (l.vel, l.latched, l.closing) = (0.0, false, false);
+        if let Some(a) = self.slab[i] { l.angle = a; }
+    }
+    /// what a key holder's push swept it to is so until somebody writes on it
+    fn swept_until_written(&mut self, i: usize) {
+        let l = &mut self.leaf[i];
+        if l.vel != l.vel_seen || l.angle != l.angle_seen { l.swept = false; }
+    }
+    /// a speed written on it since its last step: a shove on the face it opens toward is a pull; so is one open by a man who stands at that face, and by anybody else it is a push, just now
+    fn speed_written(&mut self, i: usize, sw: f64) {
+        let l = &mut self.leaf[i];
+        if l.vel == l.vel_seen || l.closing || l.latched { return; }
+        if l.vel * sw < 0.0 {
+            if l.angle * sw < SHOVE_OPENS_BELOW {
+                l.vel = -l.vel;
+                l.pull_t = PULL_SECS;
             }
             return;
         }
-        let (hx, hz, wd) = (self.dr[i].def.hinge[0], self.dr[i].def.hinge[1], self.dr[i].def.width);
-        let ht = self.dr[i].thick / 2.0;
-        let sw = self.swing(i);
-        if self.leaf[i].swept && (self.leaf[i].vel != self.leaf[i].vel_seen || self.leaf[i].angle != self.leaf[i].angle_seen) {
-            self.leaf[i].swept = false;
+        if !(l.vel * sw > 0.0) { return; }
+        let (last, d) = (l.last_who, &self.dr[i].def);
+        let by = self.con[..self.nc].iter().find(|k| k.weak != Some(true) && k.who == last);
+        let pulls = by.is_some_and(|k| self.pull_face(i, k.pos[0], k.pos[2]) && hypot2(k.pos[0] - d.hinge[0], k.pos[2] - d.hinge[1]) < d.width + 1.2);
+        let l = &mut self.leaf[i];
+        if pulls { l.pull_t = PULL_SECS; } else { l.open_t = 0.0; }
+    }
+    /// whose drive that writing is: a swing it was given, or a hand turning it
+    fn drive_written(&mut self, i: usize) {
+        let l = &mut self.leaf[i];
+        let pulled = l.pull_t > 0.0;
+        if pulled { l.drive = None; }
+        if l.closing || l.latched || pulled { return; }
+        let (vel, turn) = (l.vel, l.angle - l.angle_seen);
+        let swung = vel != l.vel_seen && vel != 0.0;
+        let drive = l.drive;
+        if swung && self.opening(i, js_sign(vel)) {
+            if drive.is_some_and(|d| d.t == 0.0 && d.kind == Boot) { return; }
+            let m = self.man_last(i);
+            let l = &mut self.leaf[i];
+            l.driven(l.last_who, vel, Swing, false, 0.0, m);
+            return;
         }
-        let mut eased = false;
-        {
-            self.keep(i);
-            if self.leaf[i].vel != self.leaf[i].vel_seen && !self.leaf[i].closing && !self.leaf[i].latched {
-                if self.leaf[i].vel * sw < 0.0 {
-                    if self.leaf[i].angle * sw < SHOVE_OPENS_BELOW {
-                        self.leaf[i].vel = -self.leaf[i].vel;
-                        self.leaf[i].pull_t = PULL_SECS;
-                    }
-                } else if self.leaf[i].vel * sw > 0.0 {
-                    let last = self.leaf[i].last_who;
-                    let mut by = usize::MAX;
-                    for c in 0..self.nc {
-                        if self.con[c].weak != Some(true) && self.con[c].who == last {
-                            by = c;
-                            break;
-                        }
-                    }
-                    if by != usize::MAX && self.pull_face(i, self.con[by].pos[0], self.con[by].pos[2]) && hypot2(self.con[by].pos[0] - hx, self.con[by].pos[2] - hz) < wd + 1.2 {
-                        self.leaf[i].pull_t = PULL_SECS;
-                    } else {
-                        self.leaf[i].open_t = 0.0;
-                    }
-                }
-            }
-            if (self.leaf[i].angle - self.leaf[i].angle_seen) * sw > 1e-4 {
-                self.leaf[i].open_t = 0.0;
-                eased = true;
-            }
+        let rate = js_abs(turn) / js_max(self.dt, 1e-3);
+        let goes_on = drive.is_some_and(|d| d.kind == Hand && d.t < DRIVEN_SECS);
+        if turn != 0.0 && rate >= (if goes_on { 0.5 } else { 1.0 }) * self.k.hand_rate && rate <= TURN_RATE && self.opening(i, js_sign(turn)) {
+            let m = self.man_last(i);
+            let l = &mut self.leaf[i];
+            l.driven(l.last_who, turn, Hand, false, rate, m);
         }
-        {
-            let da = self.leaf[i].angle - self.leaf[i].angle_seen;
-            let pulled = self.leaf[i].pull_t > 0.0;
-            let rate = js_abs(da) / js_max(dt, 1e-3);
-            if pulled && self.leaf[i].drive.is_some() {
-                self.leaf[i].drive = None;
-            }
-            let vel = self.leaf[i].vel;
-            let free = !self.leaf[i].closing && !self.leaf[i].latched && !pulled;
-            if vel != self.leaf[i].vel_seen && vel != 0.0 && free && self.opening(i, js_sign(vel)) {
-                if !(self.leaf[i].drive.is_some() && self.drive(i).t == 0.0 && self.drive(i).kind == Boot) {
-                    let m = self.man_last(i);
-                    let l = &mut self.leaf[i];
-                    l.driven(l.last_who, vel, Swing, false, 0.0, m);
-                }
-            } else if da != 0.0
-                && rate >= (if self.leaf[i].drive.is_some() && self.drive(i).kind == Hand && self.drive(i).t < DRIVEN_SECS { 0.5 } else { 1.0 }) * self.k.hand_rate
-                && rate <= TURN_RATE
-                && free
-                && self.opening(i, js_sign(da))
-            {
-                let m = self.man_last(i);
-                let l = &mut self.leaf[i];
-                    l.driven(l.last_who, da, Hand, false, rate, m);
-            }
+    }
+    /// a kicked leaf moves before anybody meets it, and stops at the first it presses on
+    fn flies(&mut self, i: usize) {
+        let from = self.leaf[i].angle;
+        let to = clamp(from + self.leaf[i].vel * self.dt, self.min_a(i), self.max_a(i));
+        let total = to - from;
+        let n = -floor(-(js_abs(total) / KICK_SUBSTEP));
+        if n <= 1.0 {
+            self.leaf[i].angle = to;
+            return;
         }
-        let kicked = self.leaf[i].since_bash < 0.6;
-        if kicked && !self.leaf[i].latched {
-            let total = clamp(self.leaf[i].angle + self.leaf[i].vel * dt, self.min_a(i), self.max_a(i)) - self.leaf[i].angle;
-            let n = -floor(-(js_abs(total) / KICK_SUBSTEP));
-            if n <= 1.0 {
-                self.leaf[i].angle = clamp(self.leaf[i].angle + self.leaf[i].vel * dt, self.min_a(i), self.max_a(i));
-            } else {
-                let mut k = 0.0;
-                while k < n {
-                    let a0 = self.leaf[i].angle;
-                    self.leaf[i].angle = a0 + total / n;
-                    if self.leaf_presses(i) {
-                        break;
-                    }
-                    k += 1.0;
-                }
-            }
+        let mut k = 0.0;
+        while k < n {
+            self.leaf[i].angle += total / n;
+            if self.leaf_presses(i) { break; }
+            k += 1.0;
         }
-        let (mut touched, mut yank, mut pushed, mut body_block) = (false, false, false, false);
-        let (mut push_dir, mut key_touched) = (0.0, false);
-        let mut here: i32 = 0;
-        let mut pressed = false;
-        let mut ran = false;
-        let mut walker = usize::MAX;
-        let comes = self.leaf[i].vel * sw > 0.0 || (self.leaf[i].angle - self.leaf[i].angle_seen) * sw > 1e-4;
-        // (DOORWAY.solid) he stands back from its swing
-        if self.leaf[i].pull_t > 0.0 && comes && !self.leaf[i].off && !self.leaf[i].latched && self.leaf[i].solid_t <= SOLID_TRIES - 1.0 {
-            for c in 0..self.nc {
-                    if self.con[c].solid != Some(true) || self.con[c].weak == Some(true) {
-                    continue;
-                }
-                let th = self.dr[i].def.closed_dir;
-                let (ax, az) = (cos(th), sin(th));
-                let (cx, cz, r) = (self.con[c].pos[0], self.con[c].pos[2], self.con[c].radius);
-                let (px, pz) = (cx - hx, cz - hz);
-                let a = px * ax + pz * az;
-                let o = sw * (ax * pz - az * px);
-                let rr = wd + r + self.dr[i].thick / 2.0 + SOLID_SKIN;
-                if o <= 0.0 || a < 0.0 || a * a + o * o >= rr * rr {
-                    continue;
-                }
-                let u = self.dir(i);
-                if side_of(u.0 * pz - u.1 * px) != sw {
-                    continue;
-                }
-                let (bx, bz) = (-az * sw, ax * sw);
-                let back = sqrt(rr * rr - a * a) - o;
-                let aside = sqrt(rr * rr - o * o) - a;
-                let way = if self.free(cx + bx * back, cz + bz * back) {
-                    1
-                } else if self.free(cx + ax * aside, cz + az * aside) {
-                    2
-                } else {
-                    0
-                };
-                if way == 0 {
-                    continue;
-                }
-                let (vx, vz) = self.con[c].vel.map_or((0.0, 0.0), |v| (v[0], v[2]));
-                let own = if self.con[c].vel.is_some() { if way == 1 { js_max(0.0, -(bx * vx + bz * vz)) } else { js_max(0.0, -(ax * vx + az * vz)) } } else { 0.0 };
-                let step = js_min(if way == 1 { back } else { aside }, (SOLID_BACK + own) * dt);
-                let (mut p0, mut p2) = if way == 1 { (cx + bx * step, cz + bz * step) } else { (cx + ax * step, cz + az * step) };
-                self.settle(&mut p0, &mut p2);
-                self.con[c].pos[0] = p0;
-                self.con[c].pos[2] = p2;
-            }
+    }
+    /// who is still in it, how long it has been pressed, and whether it is let go of
+    fn hands_clocks(&mut self, t: &Turn) {
+        let dt = self.dt;
+        let l = &mut self.leaf[t.i];
+        l.since_bash += dt;
+        l.passers &= t.here;
+        l.press_t = if t.pressed { l.press_t + dt } else { 0.0 };
+        l.open_t += dt;
+        if l.solid_t > 0.0 { l.solid_t = js_max(0.0, l.solid_t - SOLID_FADE * dt); }
+        if t.yank {
+            l.closing = true;
+            if js_sign(l.angle) * l.vel > -3.0 { l.vel = -js_sign(l.angle) * 3.0; }
+            l.quiet_t = 0.0;
+        } else if t.touched {
+            l.quiet_t = 0.0;
+            l.closing = false;
+        } else if !t.body_block {
+            l.quiet_t += dt;
         }
-        // (DOORWAY.solid) his hand reaches it before his body
-        if self.leaf[i].pull_t <= 0.0
-            && !self.leaf[i].off
-            && self.leaf[i].solid_t <= SOLID_TRIES - 1.0
-            && self.leaf[i].open_t >= DRIVEN_SECS
-            && self.leaf[i].vel * sw <= DRIVEN_VEL
-            && self.leaf[i].angle * sw < js_min(1.35, 0.8 * js_abs(if sw > 0.0 { self.max_a(i) } else { self.min_a(i) }))
-        {
-            for c in 0..self.nc {
-                    if self.con[c].solid != Some(true) || self.con[c].vel.is_none() || self.con[c].bash || self.con[c].quiet || self.con[c].weak == Some(true) {
-                    continue;
-                }
-                let u = self.dir(i);
-                let (r, who) = (self.con[c].radius, self.con[c].who);
-                let (px, pz) = (self.con[c].pos[0] - hx, self.con[c].pos[2] - hz);
-                let along = px * u.0 + pz * u.1;
-                let perp = u.0 * pz - u.1 * px;
-                let side = side_of(perp);
-                let gap = js_abs(perp) - r - self.dr[i].thick / 2.0;
-                if side != sw || gap <= 0.0 || gap > SOLID_REACH || along <= 0.14 || along >= wd {
-                    continue;
-                }
-                if self.leaf[i].locked && self.leaf[i].latched && !self.opens(c, i) && side == self.dr[i].key_side {
-                    continue;
-                }
-                let (vx, vz) = self.con[c].vel.map_or((0.0, 0.0), |v| (v[0], v[2]));
-                let into = -side * (u.0 * vz - u.1 * vx);
-                let sp = hypot2(vx, vz);
-                if into < SOLID_INTO || into < 0.5 * sp {
-                    continue;
-                }
-                let meets = along + (vx * u.0 + vz * u.1) * (gap / into);
-                if meets <= 0.0 || meets >= wd {
-                    continue;
-                }
-                pressed = true;
-                if self.leaf[i].press_t < PRESS_SECS {
-                    continue;
-                }
-                let quiet = self.con[c].quiet;
-                if self.leaf[i].latched || self.rests_to(i) {
-                    self.leaf[i].latched = false;
-                    if self.leaf[i].creak_armed {
-                        self.emit(i, DoorSound::Creak, who, if quiet { 0.12 } else { 0.3 });
-                        self.leaf[i].creak_armed = false;
-                    }
-                }
-                self.leaf[i].vel = sw * js_max(self.leaf[i].vel * sw, if quiet { PULL_VEL_QUIET } else { PULL_VEL });
-                self.leaf[i].closing = false;
-                self.leaf[i].swept = false;
-                self.leaf[i].pull_t = PULL_SECS;
-                touched = true;
-                pushed = true;
-                self.leaf[i].last_who = who;
-            }
-        }
-        for pass in 0..3u32 {
-            for c in 0..self.nc {
-                    let (weak, key, bash, quiet) = (self.con[c].weak == Some(true), self.con[c].key == Some(true), self.con[c].bash, self.con[c].quiet);
-                if (if weak { 2 } else if key { 0 } else { 1 }) != pass {
-                    continue;
-                }
-                let (r, who) = (self.con[c].radius, self.con[c].who);
-                let (vx, vz) = (self.con[c].pos[0] - hx, self.con[c].pos[2] - hz);
-                let reach = wd + r + 0.1;
-                if vx * vx + vz * vz > reach * reach {
-                    continue;
-                }
-                if weak && self.con[c].pos[1] - r > self.dr[i].height {
-                    continue;
-                }
-                let solid = self.con[c].solid == Some(true);
-                for _it in 0..3 {
-                    let u = self.dir(i);
-                    let (px, pz) = (self.con[c].pos[0] - hx, self.con[c].pos[2] - hz);
-                    let along = px * u.0 + pz * u.1;
-                    let perp = u.0 * pz - u.1 * px;
-                    let t = clamp(along, 0.0, wd);
-                    let (qx, qz) = (px - u.0 * t, pz - u.1 * t);
-                    let dist = hypot2(qx, qz);
-                    let pen = r + ht - dist;
-                    if pen <= (if weak { 0.002 } else { 0.0 }) {
-                        break;
-                    }
-                    let bit = if !weak { self.pass_bit(c) } else { 0 };
-                    let man = if !weak {
-                        self.con[c].man = Some(self.man_of(c) as f64);
-                        self.man_of(c)
-                    } else {
-                        0
-                    };
-                    let folded = man & MAN_FOLDED != 0;
-                    if bit & self.leaf[i].passers != 0 {
-                        here |= bit;
-                        break;
-                    }
-                    if self.leaf[i].pull_t > 0.0 && !self.leaf[i].latched && !weak {
-                        if solid && self.leaf[i].solid_t <= SOLID_TRIES - 1.0 {
-                            if side_of(perp) == sw && comes && along > 0.14 && along < wd + r {
-                                if self.solid_carry(c, i, pen, dist, qx, qz, perp) {
-                                    if self.leaf[i].vel * sw > PULL_VEL {
-                                        self.leaf[i].vel = sw * PULL_VEL;
-                                    }
-                                    break;
-                                }
-                                self.leaf[i].solid_t += 1.0;
-                                self.leaf[i].angle -= sw * js_min(self.leaf[i].angle * sw, (pen + 0.001) / js_max(0.18, t));
-                                self.leaf[i].vel = 0.0;
-                                self.leaf[i].pull_t = 0.0;
-                                break;
-                            }
-                        } else {
-                            if bit != 0 {
-                                self.leaf[i].passers |= bit;
-                                here |= bit;
-                            }
-                            break;
-                        }
-                    }
-                    if weak && (self.leaf[i].latched || pushed || kicked || eased || (self.leaf[i].pull_t > 0.0)) {
-                        let k = pen / js_max(dist, 1e-4);
-                        self.con[c].pos[0] += qx * k;
-                        self.con[c].pos[2] += qz * k;
-                        break;
-                    }
-                    // (DOORTHROW) a leaf somebody else drove open toward him
-                    let into = side_of(perp);
-                    let dr = !weak && self.leaf[i].drive.is_some();
-                    let toward = dr && self.drive(i).who != who && self.drive(i).dir == into;
-                    let at_him = toward && !self.drive(i).quiet && (self.drive(i).kind == Boot || self.drive(i).side == 0.0 || self.drive(i).side != (man & MAN_SIDE) as f64);
-                    let met = dr && self.drive(i).hit == who && self.drive(i).t < self.k.again;
-                    if dr && toward && !self.leaf[i].closing && along > 0.14 && along < wd + r {
-                        let vin = into * self.leaf[i].vel * t;
-                        let kind = self.drive(i).kind;
-                        let tier = if kind == Boot {
-                            DoorStrikeTier::Boot
-                        } else if kicked {
-                            DoorStrikeTier::Slam
-                        } else {
-                            DoorStrikeTier::Open
-                        };
-                        let held = !kicked && (kind == Body || kind == Hand);
-                        let fresh = held && self.drive(i).t < DRIVEN_SECS;
-                        let stands = !folded && man & (if tier == DoorStrikeTier::Open { MAN_HELD } else { MAN_BRACED }) == 0;
-                        let min_speed = self.k.min_speed;
-                        if at_him && self.drive(i).hit != who && stands && (if held { fresh && self.drive(i).rate * t >= min_speed } else { vin >= min_speed }) {
-                            let n = if dist > 1e-4 { 1.0 / dist } else { 0.0 };
-                            let dir = if n != 0.0 && n == n { [qx * n, qz * n] } else { [-u.1 * into, u.0 * into] };
-                            let d = self.drive(i);
-                            let floor = tier == DoorStrikeTier::Boot && js_abs(self.leaf[i].angle - d.from) < self.k.floor_rad;
-                            self.con[c].struck = Some(DoorStrike { door: self.ids[i], by: d.who, tier, floor, dir });
-                            if let Some(d) = &mut self.leaf[i].drive { d.hit = who; }
-                            if self.carry(c, i, pen, dist, qx, qz, perp) {
-                                break;
-                            }
-                        } else if (folded || met) && (vin >= 0.2 || fresh) && self.carry(c, i, pen, dist, qx, qz, perp) {
-                            break;
-                        }
-                    }
-                    if weak {
-                        body_block = true;
-                    } else {
-                        touched = true;
-                        if key || !key_touched {
-                            self.leaf[i].last_who = who;
-                        }
-                        if key {
-                            key_touched = true;
-                        }
-                    }
-                    if !weak && !self.opens(c, i) && self.leaf[i].locked && self.leaf[i].latched && side_of(perp) == self.dr[i].key_side && along > 0.14 && along < wd + r {
-                        let k = shove(pen, dt, true) / js_max(dist, 1e-4);
-                        self.con[c].pos[0] += qx * k;
-                        self.con[c].pos[2] += qz * k;
-                        self.con[c].blocked_by = Some(self.ids[i]);
-                        if self.leaf[i].creak_armed && pen > 0.015 {
-                            self.leaf[i].creak_armed = false;
-                            self.rattle(i, who, if quiet { 0.08 } else { 0.12 });
-                        }
-                        break;
-                    }
-                    let limp = folded || met;
-                    let pulling = key && !limp && !bash && self.leaf[i].closing && js_abs(self.leaf[i].angle) > 0.35;
-                    let has_hand = self.con[c].hand.is_some();
-                    let run = self.con[c].run;
-                    let has_run = run.is_some();
-                    if along > 0.14 && along < wd + r {
-                        let sgn = if perp >= 0.0 { -1.0 } else { 1.0 };
-                        let lever = js_max(0.18, t);
-                        let wide = js_min(1.35, 0.8 * js_abs(if sw > 0.0 { self.max_a(i) } else { self.min_a(i) }));
-                        let presses = !weak && !limp && sgn * sw < 0.0 && self.leaf[i].angle * sw < wide && self.leaf[i].open_t >= DRIVEN_SECS && self.leaf[i].vel * sw <= DRIVEN_VEL;
-                        if presses {
-                            pressed = true;
-                            let hauled = bash && !has_hand && self.leaf[i].since_bash > 0.9;
-                            if hauled || self.leaf[i].press_t >= (self.con[c].hand.unwrap_or(PRESS_SECS)) {
-                                if hauled {
-                                    self.leaf[i].latched = false;
-                                    self.leaf[i].vel = sw * (run.map_or(7.5, |r| r.rip));
-                                    self.leaf[i].since_bash = 0.0;
-                                    if has_run {
-                                        self.con[c].ripped = Some(self.ids[i]);
-                                    }
-                                    self.emit(i, DoorSound::Bash, who, run.map_or(1.0, |r| r.rip_level));
-                                } else {
-                                    if self.leaf[i].latched || self.rests_to(i) {
-                                        self.leaf[i].latched = false;
-                                        if self.leaf[i].creak_armed {
-                                            self.emit(i, DoorSound::Creak, who, if quiet { 0.12 } else { 0.3 });
-                                            self.leaf[i].creak_armed = false;
-                                        }
-                                    }
-                                    self.leaf[i].vel = sw * js_max(self.leaf[i].vel * sw, if quiet { PULL_VEL_QUIET } else { PULL_VEL });
-                                }
-                                self.leaf[i].closing = false;
-                                self.leaf[i].swept = false;
-                                self.leaf[i].pull_t = PULL_SECS;
-                                touched = true;
-                                pushed = true;
-                                if key || !key_touched {
-                                    self.leaf[i].last_who = who;
-                                }
-                                if key {
-                                    key_touched = true;
-                                }
-                                if bit != 0 && !(solid && self.leaf[i].solid_t <= SOLID_TRIES - 1.0) {
-                                    self.leaf[i].passers |= bit;
-                                    here |= bit;
-                                }
-                                break;
-                            }
-                        }
-                        // (DoorContact.round) he goes round a leaf standing wide open
-                        if self.con[c].round == Some(true)
-                            && !bash
-                            && !self.leaf[i].latched
-                            && !self.leaf[i].closing
-                            && sgn * sw < 0.0
-                            && self.leaf[i].angle * sw >= wide
-                            && js_abs(self.leaf[i].vel) < ROUND_STILL
-                            && self.leaf[i].open_t >= DRIVEN_SECS
-                        {
-                            if !pressed && self.leaf[i].press_t == 0.0 {
-                                self.rounds += 1.0;
-                            }
-                            pressed = true;
-                            if self.leaf[i].press_t < ROUND_SECS {
-                                self.leaf[i].vel *= 0.5;
-                                let k = shove(pen, dt, true) / js_max(dist, 1e-4);
-                                let sl = ROUND_SLIDE * dt;
-                                self.con[c].pos[0] += qx * k + u.0 * sl;
-                                self.con[c].pos[2] += qz * k + u.1 * sl;
-                                break;
-                            }
-                        }
-                        let max_turn = TURN_RATE * dt;
-                        let raw = sgn * (pen / lever) * 1.05;
-                        let capped = js_abs(raw) > max_turn;
-                        let want = self.leaf[i].angle + (if capped { js_sign(raw) * max_turn } else { raw });
-                        if pulling && js_abs(want) > js_abs(self.leaf[i].angle) {
-                            if bit != 0 {
-                                self.leaf[i].passers |= bit;
-                                here |= bit;
-                            }
-                            yank = true;
-                            break;
-                        }
-                        let against = push_dir != 0.0 && sgn != push_dir;
-                        if !weak && !key && against && !folded && self.opening(i, sgn) {
-                            self.walked(i, c, sgn, lever);
-                            walker = c;
-                        }
-                        if !weak && !key && against {
-                            let k = shove(pen, dt, false) / js_max(dist, 1e-4);
-                            self.con[c].pos[0] += qx * k;
-                            self.con[c].pos[2] += qz * k;
-                            break;
-                        }
-                        let na = clamp(want, self.min_a(i), self.max_a(i));
-                        let moved = na - self.leaf[i].angle;
-                        if js_abs(moved) > 1e-5 {
-                            let to = self.rests_to(i);
-                            if !weak && !folded && self.opening(i, js_sign(moved)) && !(self.leaf[i].drive.is_some() && self.drive(i).who != who && self.drive(i).t == 0.0 && self.drive(i).kind != Body) {
-                                self.walked(i, c, moved, lever);
-                                walker = c;
-                            }
-                            if !weak {
-                                pushed = true;
-                                if key {
-                                    push_dir = sgn;
-                                }
-                                if moved * sw > 0.0 {
-                                    self.leaf[i].open_t = 0.0;
-                                }
-                                self.leaf[i].swept = key && !bash && js_abs(na) < js_abs(self.leaf[i].angle);
-                            }
-                            if self.leaf[i].latched || to {
-                                self.leaf[i].latched = false;
-                                if self.leaf[i].creak_armed && !bash {
-                                    self.emit(i, DoorSound::Creak, who, if quiet { 0.12 } else { 0.3 });
-                                    self.leaf[i].creak_armed = false;
-                                }
-                            }
-                            if bash && !(presses && has_hand) && self.leaf[i].since_bash > 0.9 && js_abs(self.leaf[i].angle) < 1.2 {
-                                let open = has_run && sgn * sw > 0.0;
-                                self.leaf[i].vel = sgn * (if open { run.map_or(7.5, |r| r.bash) } else { 7.5 });
-                                self.leaf[i].since_bash = 0.0;
-                                if open {
-                                    self.con[c].bashed = Some(self.ids[i]);
-                                    self.con[c].bashed_at = Some(self.leaf[i].angle);
-                                    ran = true;
-                                }
-                                self.emit(i, DoorSound::Bash, who, 1.0);
-                            } else if !kicked && !ran {
-                                self.leaf[i].vel = if weak { self.leaf[i].vel * 0.5 } else { self.leaf[i].vel * 0.5 + (moved / js_max(dt, 1e-3)) * 0.5 };
-                            }
-                            self.leaf[i].angle = na;
-                        }
-                        if js_abs(want - na) > 1e-5 && (na == 0.0 || pen > r - STOP_BODY) {
-                            let k = shove(if na == 0.0 { pen } else { pen - js_max(0.0, r - STOP_BODY) }, dt, false) / js_max(dist, 1e-4);
-                            self.con[c].pos[0] += qx * k;
-                            self.con[c].pos[2] += qz * k;
-                            if key && !limp && !bash && !presses && na != 0.0 {
-                                if bit != 0 && !self.leaf[i].latched && js_abs(self.leaf[i].angle) > 0.5 {
-                                    self.leaf[i].passers |= bit;
-                                    here |= bit;
-                                }
-                            }
-                        }
-                        if capped {
-                            break;
-                        }
-                    } else {
-                        // the hinge region, or beyond the tip: a post
-                        if pulling {
-                            if bit != 0 {
-                                self.leaf[i].passers |= bit;
-                                here |= bit;
-                            }
-                            yank = true;
-                            break;
-                        }
-                        let k = shove(pen, dt, false) / js_max(dist, 1e-4);
-                        self.con[c].pos[0] += qx * k;
-                        self.con[c].pos[2] += qz * k;
-                        if key && !limp && !bash && along >= wd && !self.leaf[i].latched && js_abs(self.leaf[i].angle) > 0.5 {
-                            if bit != 0 {
-                                self.leaf[i].passers |= bit;
-                                here |= bit;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        self.leaf[i].since_bash += dt;
-        self.leaf[i].passers &= here;
-        {
-            self.leaf[i].press_t = if pressed { self.leaf[i].press_t + dt } else { 0.0 };
-            self.leaf[i].open_t += dt;
-            if self.leaf[i].solid_t > 0.0 {
-                self.leaf[i].solid_t = js_max(0.0, self.leaf[i].solid_t - SOLID_FADE * dt);
-            }
-        }
-        if yank {
-            self.leaf[i].closing = true;
-            if js_sign(self.leaf[i].angle) * self.leaf[i].vel > -3.0 {
-                self.leaf[i].vel = -js_sign(self.leaf[i].angle) * 3.0;
-            }
-            self.leaf[i].quiet_t = 0.0;
-        } else if touched {
-            self.leaf[i].quiet_t = 0.0;
-            self.leaf[i].closing = false;
-        } else if !body_block {
-            self.leaf[i].quiet_t += dt;
-        }
-        // free swing with friction, limit stops
-        if (!touched || kicked || yank) && !self.leaf[i].latched {
-            if !kicked {
-                self.leaf[i].angle += self.leaf[i].vel * dt;
-            }
+    }
+    /// its free swing with friction, its stops, its closer and its latch
+    fn swings(&mut self, t: &Turn) {
+        let (i, dt) = (t.i, self.dt);
+        if (!t.touched || t.kicked || t.yank) && !self.leaf[i].latched {
+            if !t.kicked { self.leaf[i].angle += self.leaf[i].vel * dt; }
             self.leaf[i].vel *= exp(-2.2 * dt);
-            let (lo, hi) = (self.min_a(i), self.max_a(i));
-            if self.leaf[i].angle >= hi || self.leaf[i].angle <= lo {
-                let lim = if self.leaf[i].angle >= hi { hi } else { lo };
-                self.leaf[i].angle = lim;
-                let vel = self.leaf[i].vel;
-                if lim == 0.0 {
-                    if vel * sw < -2.5 {
-                        self.emit(i, DoorSound::Bang, self.leaf[i].last_who, js_min(1.0, js_abs(vel) / 8.0));
-                    }
-                    if vel * sw < 0.0 {
-                        self.leaf[i].vel = 0.0;
-                    }
-                } else {
-                    if js_abs(vel) > 2.5 {
-                        self.emit(i, DoorSound::Bang, self.leaf[i].last_who, js_min(1.0, js_abs(vel) / 8.0));
-                    }
-                    self.leaf[i].vel = if js_sign(lim) * vel > 0.0 { -vel * 0.25 } else { vel };
-                }
-            }
-            let closing = self.leaf[i].closing;
-            if closing && !body_block {
-                let acc = -self.leaf[i].angle * 5.0 - self.leaf[i].vel * 4.2;
-                self.leaf[i].vel += acc * dt;
-            }
-            if body_block {
-                self.leaf[i].vel *= exp(-12.0 * dt);
-            }
-            if js_abs(self.leaf[i].angle) < 0.012 && js_abs(self.leaf[i].vel) < 0.35 && self.leaf[i].quiet_t > 0.3 && self.leaf[i].passers == 0 {
-                if self.leaf[i].swept && !self.leaf[i].closing {
-                    self.leaf[i].angle = 0.0;
-                    self.leaf[i].vel = 0.0;
-                    self.leaf[i].creak_armed = true;
-                } else {
-                    self.leaf[i].angle = 0.0;
-                    self.leaf[i].vel = 0.0;
-                    self.leaf[i].latched = true;
-                    self.leaf[i].creak_armed = true;
-                    self.leaf[i].closing = false;
-                    self.leaf[i].swept = false;
-                    self.leaf[i].pull_t = 0.0;
-                    self.emit(i, DoorSound::Latch, self.leaf[i].last_who, 0.16);
-                }
-            }
+            self.at_a_stop(t);
+            let l = &mut self.leaf[i];
+            if l.closing && !t.body_block { l.vel += (-l.angle * 5.0 - l.vel * 4.2) * dt; }
+            if t.body_block { l.vel *= exp(-12.0 * dt); }
+            if js_abs(l.angle) < 0.012 && js_abs(l.vel) < 0.35 && l.quiet_t > 0.3 && l.passers == 0 { self.comes_to(i); }
         }
-        if self.leaf[i].quiet_t > 1.2 {
-            self.leaf[i].creak_armed = true;
+        if self.leaf[i].quiet_t > 1.2 { self.leaf[i].creak_armed = true; }
+    }
+    /// at its frame it stops dead, at its far stop it comes back a little; hard enough either bangs
+    fn at_a_stop(&mut self, t: &Turn) {
+        let i = t.i;
+        let (lo, hi) = (self.min_a(i), self.max_a(i));
+        if !(self.leaf[i].angle >= hi || self.leaf[i].angle <= lo) { return; }
+        let lim = if self.leaf[i].angle >= hi { hi } else { lo };
+        let vel = self.leaf[i].vel;
+        self.leaf[i].angle = lim;
+        let hard = if lim == 0.0 { vel * t.sw < -2.5 } else { js_abs(vel) > 2.5 };
+        if hard {
+            self.emit(i, DoorSound::Bang, self.leaf[i].last_who, js_min(1.0, js_abs(vel) / 8.0));
         }
-        // the lock
-        if self.leaf[i].picking {
-            self.leaf[i].picking = false;
-            self.leaf[i].pick_idle = 0.0;
-        } else if self.leaf[i].pick > 0.0 {
-            self.leaf[i].pick_idle += dt;
-            if self.leaf[i].pick_idle > 2.0 {
-                self.leaf[i].pick = js_max(0.0, self.leaf[i].pick - dt / 4.0);
-            }
+        if lim == 0.0 {
+            if vel * t.sw < 0.0 { self.leaf[i].vel = 0.0; }
+        } else if js_sign(lim) * vel > 0.0 {
+            self.leaf[i].vel = -vel * 0.25;
         }
-        if self.leaf[i].rattle_t > 0.0 {
-            self.leaf[i].rattle_t = js_max(0.0, self.leaf[i].rattle_t - dt);
+    }
+    /// shut: on its latch, unless a push only swept it to
+    fn comes_to(&mut self, i: usize) {
+        let l = &mut self.leaf[i];
+        (l.angle, l.vel, l.creak_armed) = (0.0, 0.0, true);
+        if l.swept && !l.closing { return; }
+        (l.latched, l.closing, l.swept, l.pull_t) = (true, false, false, 0.0);
+        self.emit(i, DoorSound::Latch, self.leaf[i].last_who, 0.16);
+    }
+    /// a pick left alone slips back; a rattle and a pull wear off
+    fn lock_clocks(&mut self, i: usize) {
+        let dt = self.dt;
+        let l = &mut self.leaf[i];
+        if l.picking {
+            (l.picking, l.pick_idle) = (false, 0.0);
+        } else if l.pick > 0.0 {
+            l.pick_idle += dt;
+            if l.pick_idle > 2.0 { l.pick = js_max(0.0, l.pick - dt / 4.0); }
         }
-        if self.leaf[i].pull_t > 0.0 {
-            self.leaf[i].pull_t = js_max(0.0, self.leaf[i].pull_t - dt);
-        }
-        if let Some(d) = &mut self.leaf[i].drive {
-            d.t += dt;
-            if walker != usize::MAX && d.kind == Body && d.who == self.con[walker].who {
-                (d.px, d.pz) = (self.con[walker].pos[0], self.con[walker].pos[2]);
-            }
-        }
-        self.place(i);
+        if l.rattle_t > 0.0 { l.rattle_t = js_max(0.0, l.rattle_t - dt); }
+        if l.pull_t > 0.0 { l.pull_t = js_max(0.0, l.pull_t - dt); }
     }
     /// what the game knows of the man who last had door i (handed in; a step that asks where the host saw no rule that could is wrong, and says so)
     fn man_last(&mut self, i: usize) -> i32 {

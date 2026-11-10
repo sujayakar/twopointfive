@@ -216,11 +216,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     g.quiet.fall_in = false;
     let at = g.ch[g.pl[g.player].ch].pos;
     let target = crate::orders::squad_orders_target_at(g, at);
-    let why = crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
-    match why {
-        Some(w) => {},
-        None => {},
-    }
+    crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
 }
 
 /// `cam.target = v3.copy(p); cam.desired = v3.copy(cam.target)`: a whole write of `desired` is what Seat.takeCut watches for, here by its serial
@@ -397,20 +393,35 @@ fn route_named(g: &crate::game::Game, name: &str) -> Option<RouteId> {
 
 /// THE BLOCK AGAINST THE BUILT FLOOR: what the level file's validator cannot say. `g` is a Game stood up on the level, nothing started; the faults, each a line an author can act on
 pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
-    let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.clone()) { Some(q) => q, None => return vec![String::from("the level carries no scenarios.quiet block")] };
+    let Some(q) = g.level.scenarios.as_ref().and_then(|s| s.quiet.clone()) else { return vec![String::from("the level carries no scenarios.quiet block")] };
     let mut out: Vec<String> = Vec::new();
+    check_starts(g, &q, &mut out);
+    let fronts = check_spots(g, &q, &mut out);
+    let outs = check_exits(g, &q, &mut out);
+    check_ways_on_foot(g, &q, &fronts, &outs, &mut out);
+    check_first_sights(g, &q, &mut out);
+    check_needs(g, &q, &mut out);
+    check_civilians_places(g, &q, &mut out);
+    out
+}
+
+/// Each start stands on floor, with the mate a body's room from Sam and a walk to him.
+fn check_starts(g: &mut Game, q: &crate::scene_scenarios::QuietData, out: &mut Vec<String>) {
     for (i, s) in q.starts.iter().enumerate() {
         let w = match s.name.as_deref() { Some(n) if !n.is_empty() => format!("starts[{}] '{}'", i, n), _ => format!("starts[{}]", i) };
-        free(g, &mut out, &format!("{}.sam", w), s.sam);
-        if let Some(mate) = s.mate {
-            if free(g, &mut out, &format!("{}.mate", w), mate) && !crate::scene_collision::nav_grid_walkable(g, s.sam, mate) && !way(g, s.sam, mate) {
-                out.push(format!("{}.mate {} cannot be walked to from sam {}", w, at(mate), at(s.sam)));
-            }
-            if v3::dist_xz(s.sam, mate) < 0.7 {
-                out.push(format!("{}.mate stands on top of sam ({} m): give them a body's room", w, js::to_fixed(v3::dist_xz(s.sam, mate), 2)));
-            }
+        free(g, out, &format!("{}.sam", w), s.sam);
+        let Some(mate) = s.mate else { continue };
+        if free(g, out, &format!("{}.mate", w), mate) && !crate::scene_collision::nav_grid_walkable(g, s.sam, mate) && !way(g, s.sam, mate) {
+            out.push(format!("{}.mate {} cannot be walked to from sam {}", w, at(mate), at(s.sam)));
+        }
+        if v3::dist_xz(s.sam, mate) < 0.7 {
+            out.push(format!("{}.mate stands on top of sam ({} m): give them a body's room", w, js::to_fixed(v3::dist_xz(s.sam, mate), 2)));
         }
     }
+}
+
+/// Each holder's face is in its area and can be stood at. Where a man stands to take each, if he can.
+fn check_spots(g: &Game, q: &crate::scene_scenarios::QuietData, out: &mut Vec<String>) -> Vec<Option<V3>> {
     let mut fronts: Vec<Option<V3>> = Vec::new();
     for (i, p) in q.spots.iter().enumerate() {
         let w = format!("spots[{}] '{}'", i, p.place);
@@ -428,11 +439,16 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
         }
         fronts.push(h.pos);
     }
+    fronts
+}
+
+/// Each exit has floor either side of it and its door by it. The floor a stride past each, if it is free.
+fn check_exits(g: &mut Game, q: &crate::scene_scenarios::QuietData, out: &mut Vec<String>) -> Vec<Option<V3>> {
     let mut outs: Vec<Option<V3>> = Vec::new();
     for (i, x) in q.exits.iter().enumerate() {
         let w = format!("exits[{}] '{}'", i, x.name);
         let p = exit_point(x, Some(0.6));
-        if !free(g, &mut out, &format!("{}: the floor a stride past it", w), p) { outs.push(None); continue; }
+        if !free(g, out, &format!("{}: the floor a stride past it", w), p) { outs.push(None); continue; }
         let inn: V3 = [x.x - x.out[0] * 0.6, 0.0, x.z - x.out[1] * 0.6];
         if crate::scene_collision::nav_grid_is_blocked(g, inn[0], inn[2]) {
             out.push(format!("{}: the floor a stride short of it {} is not free — it cannot be walked out through", w, at(inn)));
@@ -444,9 +460,14 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
         }
         outs.push(Some(p));
     }
+    outs
+}
+
+/// From every start to every holder, and from every holder to every exit, there is a way on foot.
+fn check_ways_on_foot(g: &Game, q: &crate::scene_scenarios::QuietData, fronts: &[Option<V3>], outs: &[Option<V3>], out: &mut Vec<String>) {
     for (i, s) in q.starts.iter().enumerate() {
         for (j, f) in fronts.iter().enumerate() {
-            let f = match *f { Some(f) => f, None => continue };
+            let Some(f) = *f else { continue };
             if !crate::scene_collision::nav_grid_is_blocked(g, s.sam[0], s.sam[2]) && !way(g, s.sam, f) {
                 out.push(format!("no way on foot from starts[{}] {} to spots[{}] '{}' {}", i, at(s.sam), j, q.spots[j].place, at(f)));
             }
@@ -459,47 +480,52 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
             }
         }
     }
-    // no start in the first sight of a man on his route's first waypoint: the eye's reach and a clear line, whichever way he faces
+}
+
+/// No start in the first sight of a man on his route's first waypoint: the eye's reach and a clear line, whichever way he faces.
+fn check_first_sights(g: &Game, q: &crate::scene_scenarios::QuietData, out: &mut Vec<String>) {
     let sets: Vec<Vec<String>> = match q.patrols.as_ref() { Some(p) => p.clone(), None => vec![g.level.routes.iter().map(|&r| g.tab.route[r].name.clone()).collect()] };
     let mut seen: JsSet<String> = JsSet::new();
-    for set in &sets {
-        for name in set {
-            let r = match route_named(g, name) { Some(r) => r, None => continue };
-            let first = match g.tab.route[r].points.first().copied() { Some(p) => p, None => continue };
-            let eye: V3 = [first[0], 1.6, first[2]];
-            for (i, s) in q.starts.iter().enumerate() {
-                for (who, p) in [("sam", Some(s.sam)), ("mate", s.mate)] {
-                    let p = match p { Some(p) => p, None => continue };
-                    let k = format!("{}:{}:{}", name, i, who);
-                    if seen.has(k.clone()) { continue; }
-                    seen.add(k);
-                    let d = v3::dist_xz(eye, p);
-                    if d < FIRST_SIGHT_M && !crate::scene_collision::segment_blocked(g, eye, [p[0], 1.0, p[2]], None, None, None) {
-                        out.push(format!("starts[{}].{} {} is in plain view of '{}' on his first waypoint {}, {} m off — the run would begin seen", i, who, at(p), name, at(first), js::to_fixed(d, 1)));
-                    }
+    for name in sets.iter().flatten() {
+        let Some(r) = route_named(g, name) else { continue };
+        let Some(first) = g.tab.route[r].points.first().copied() else { continue };
+        let eye: V3 = [first[0], 1.6, first[2]];
+        for (i, s) in q.starts.iter().enumerate() {
+            for (who, p) in [("sam", Some(s.sam)), ("mate", s.mate)] {
+                let Some(p) = p else { continue };
+                let k = format!("{}:{}:{}", name, i, who);
+                if seen.has(k.clone()) { continue; }
+                seen.add(k);
+                let d = v3::dist_xz(eye, p);
+                if d < FIRST_SIGHT_M && !crate::scene_collision::segment_blocked(g, eye, [p[0], 1.0, p[2]], None, None, None) {
+                    out.push(format!("starts[{}].{} {} is in plain view of '{}' on his first waypoint {}, {} m off — the run would begin seen", i, who, at(p), name, at(first), js::to_fixed(d, 1)));
                 }
             }
         }
     }
-    if let Some(n) = q.needs.as_ref() {
-        for (k, s) in [("coffee", &n.coffee), ("smoke", &n.smoke), ("water", &n.water), ("stretch", &n.stretch)] {
-            if let Some(s) = s.as_ref() {
-                free(g, &mut out, &format!("needs.{} '{}'", k, s.name), s.pos);
-                if let Some(l) = s.loop_.as_ref() {
-                    for (i, &p) in l.iter().enumerate() { free(g, &mut out, &format!("needs.{}.loop[{}]", k, i), p); }
-                }
-            }
+}
+
+/// The places of a guard's needs are on free floor.
+fn check_needs(g: &mut Game, q: &crate::scene_scenarios::QuietData, out: &mut Vec<String>) {
+    let Some(n) = q.needs.as_ref() else { return };
+    for (k, s) in [("coffee", &n.coffee), ("smoke", &n.smoke), ("water", &n.water), ("stretch", &n.stretch)] {
+        let Some(s) = s.as_ref() else { continue };
+        free(g, out, &format!("needs.{} '{}'", k, s.name), s.pos);
+        if let Some(l) = s.loop_.as_ref() {
+            for (i, &p) in l.iter().enumerate() { free(g, out, &format!("needs.{}.loop[{}]", k, i), p); }
         }
     }
-    let empty: Vec<crate::scene_scenarios::QuietStand> = Vec::new();
-    let phones = q.phones.as_ref().unwrap_or(&empty);
-    let wayouts = q.wayouts.as_ref().unwrap_or(&empty);
-    for (i, s) in phones.iter().enumerate() { free(g, &mut out, &format!("phones[{}] '{}'", i, s.name), s.pos); }
-    for (i, s) in wayouts.iter().enumerate() { free(g, &mut out, &format!("wayouts[{}] '{}'", i, s.name), s.pos); }
+}
+
+/// The civilians' phones and ways out are on free floor, and civilians and those places come together.
+fn check_civilians_places(g: &mut Game, q: &crate::scene_scenarios::QuietData, out: &mut Vec<String>) {
+    let phones = q.phones.as_deref().unwrap_or(&[]);
+    let wayouts = q.wayouts.as_deref().unwrap_or(&[]);
+    for (i, s) in phones.iter().enumerate() { free(g, out, &format!("phones[{}] '{}'", i, s.name), s.pos); }
+    for (i, s) in wayouts.iter().enumerate() { free(g, out, &format!("wayouts[{}] '{}'", i, s.name), s.pos); }
     let civs = g.level.civilians.as_ref().map_or(0, |c| c.len());
     if (!phones.is_empty() || !wayouts.is_empty()) && civs == 0 { out.push(String::from("phones / wayouts are given but the level has no civilians: nobody will use them")); }
     if civs > 0 && wayouts.is_empty() && phones.is_empty() && g.level.routes.is_empty() { out.push(String::from("the level has civilians and gives them no phone, no way out and no guard to run to")); }
-    out
 }
 
 #[cfg(test)]

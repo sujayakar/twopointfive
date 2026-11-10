@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::roomfight::{News, Word};
 use crate::game::Game;
@@ -11,7 +12,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn count_or_n(n: usize) -> String {
     match count().get(n) { Some(w) => w.clone(), None => format!("{}", n) }
 }
-fn pos_of(g: &Game, m: GuardId) -> V3 { g.ch[g.gd[m].ch].pos }
 fn name_of(g: &Game, q: EnemysquadsSquadId) -> String { g.tab.enemysquads_squad[q].name.clone() }
 fn def_gd(g: &Game, d: RoomfightDefId) -> GuardId { g.tab.roomfight_def[d].gd }
 /// `X.men.some(m => !offNet(m))`: anybody of it answers   (netCheck's answers)
@@ -26,7 +26,7 @@ fn home_but(g: &Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
     h.into_iter().map(|d| def_gd(g, d)).find(|&x| x != m)
 }
 /// `home(g, Q)[0]?.gd`
-fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
+pub(super) fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
     let h = home(g, q);
     h.first().map(|&d| def_gd(g, d))
 }
@@ -132,14 +132,14 @@ fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) {
     }
     let ask = lo + g.tab.enemysquads_squad[q].ask_die.as_mut().unwrap().roll() * (hi - lo);
     let d0 = def_of(g, m);
-    let p = pos_of(g, m);
+    let p = g.pos_of(m);
     let from = g.tab.enemysquads_squad[q].rc.as_ref().unwrap().afield.as_ref().and_then(|a| a.get(m)).copied();
     if let Some(f) = from {
-        if flat(p, f) <= 3.0 { g.tab.enemysquads_squad[q].rc.as_mut().unwrap().afield.as_mut().unwrap().delete(m); }
+        if dist_xz(p, f) <= 3.0 { g.tab.enemysquads_squad[q].rc.as_mut().unwrap().afield.as_mut().unwrap().delete(m); }
     }
     let out = {
         let s = &g.tab.enemysquads_squad[q];
-        s.rc.as_ref().unwrap().look.iter().any(|x| x.gd == m) || s.sent.iter().any(|x| x.gd == m) || d0.is_none() || from.map_or(false, |f| flat(p, f) > 3.0)
+        s.rc.as_ref().unwrap().look.iter().any(|x| x.gd == m) || s.sent.iter().any(|x| x.gd == m) || d0.is_none() || from.map_or(false, |f| dist_xz(p, f) > 3.0)
     };
     let at = if alive(g, m) && !out { Some(g.tab.roomfight_def[d0.unwrap()].station) } else { None };
     went_silent(g, q, m, at);
@@ -309,7 +309,7 @@ fn net_send(g: &mut crate::game::Game, x: EnemysquadsSquadId, who: GuardId, stop
         let free: Vec<RoomfightDefId> = h.iter().copied().filter(|&d| { let m = def_gd(g, d); !g.tab.enemysquads_squad[q].went.iter().any(|s| s.gd == m) }).collect();
         let go = goers(g, &free, at, m::min(n, h.len() as f64 - 1.0));
         if (go.len() as f64) < n { continue; }
-        let ds: Vec<f64> = go.iter().map(|&d| flat(pos_of(g, def_gd(g, d)), at)).collect();
+        let ds: Vec<f64> = go.iter().map(|&d| dist_xz(g.pos_of(def_gd(g, d)), at)).collect();
         let d = m::min_n(&ds);
         if best.as_ref().map_or(true, |b| d < b.2) { best = Some((q, go, d)); }
     }
@@ -375,7 +375,7 @@ fn posts(g: &Game, x: EnemysquadsSquadId) -> Vec<Post> {
     for m in men {
         if let Some(d) = def_of(g, m) {
             let s = g.tab.roomfight_def[d].station;
-            if !p.iter().any(|a| flat(a.at, s) < 2.5) { p.push(Post { at: v3::copy(s), m }); }
+            if !p.iter().any(|a| dist_xz(a.at, s) < 2.5) { p.push(Post { at: v3::copy(s), m }); }
         }
     }
     p
@@ -389,8 +389,8 @@ fn asker(g: &Game, x: EnemysquadsSquadId) -> Option<GuardId> {
         if q == x { continue; }
         for d in home(g, q) {
             let m = def_gd(g, d);
-            let at = pos_of(g, m);
-            let dist = if !p.is_empty() { let v: Vec<f64> = p.iter().map(|a| flat(a.at, at)).collect(); m::min_n(&v) } else { 0.0 };
+            let at = g.pos_of(m);
+            let dist = if !p.is_empty() { let v: Vec<f64> = p.iter().map(|a| dist_xz(a.at, at)).collect(); m::min_n(&v) } else { 0.0 };
             if dist < bd { bd = dist; best = Some(m); }
         }
     }
@@ -555,10 +555,10 @@ fn nc_stage_asked(g: &mut Game) {
     let mut p = posts(g, x);
     let mut stops: Vec<V3> = Vec::new();
     let mut who: Option<GuardId> = None;
-    let mut cur: V3 = match caller { Some(c) => pos_of(g, c), None => p.first().map_or([0.0; 3], |a| a.at) };
+    let mut cur: V3 = match caller { Some(c) => g.pos_of(c), None => p.first().map_or([0.0; 3], |a| a.at) };
     while !p.is_empty() && (stops.len() as f64) < g.k.squads.net_stops {
         let from = cur;
-        js::sort_by(&mut p, |a, b| flat(a.at, from) - flat(b.at, from));
+        js::sort_by(&mut p, |a, b| dist_xz(a.at, from) - dist_xz(b.at, from));
         let a = p.remove(0);
         if who.is_none() { who = Some(a.m); }
         cur = a.at;
@@ -641,12 +641,12 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
     let mut by_drop = false;
     for &m in up.iter() {
         if g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m) { continue; }
-        let p0 = pos_of(g, m);
+        let p0 = g.pos_of(m);
         let d = def_of(g, m);
         let mine = room_of(g, q, p0, Some(1.0));
         let (d, mine) = match (d, mine) { (Some(d), Some(r)) => (d, r), _ => continue };
         if g.time - g.gd[m].last_seen_t < 1.0 && (noticed(g, m) || glimpse(g, q, m)) {
-            let p = match crate::belief::eyes_fix_def(g, m) { Some(k) => k, None => pos_of(g, m) };
+            let p = match crate::belief::eyes_fix_def(g, m) { Some(k) => k, None => g.pos_of(m) };
             let r = match room_of(g, q, p, Some(0.75)) { Some(r) => r, None => mine };
             if !(noticed(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
         }
@@ -660,7 +660,7 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
     for &m in men.iter() {
         if alive(g, m) || g.tab.enemysquads_squad[q].fallen.has(m) { continue; }
         g.tab.enemysquads_squad[q].fallen.add(m);
-        let p = pos_of(g, m);
+        let p = g.pos_of(m);
         let r = if g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m) { None } else { room_of(g, q, p, Some(1.0)) };
         if r.is_some() && at.is_none() && g.tab.enemysquads_squad[q].state != SquadState::Contact && !heard_fire(g, q, &up) {
             went_silent(g, q, m, None);
@@ -668,7 +668,7 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
         }
         if r.is_some() && at.is_none() {
             let mut one_home = false;
-            for &x in up.iter() { let xp = pos_of(g, x); if room_of(g, q, xp, Some(1.0)).is_some() { one_home = true; break; } }
+            for &x in up.iter() { let xp = g.pos_of(x); if room_of(g, q, xp, Some(1.0)).is_some() { one_home = true; break; } }
             if one_home { at = Some(p); room = r; by_drop = true; }
         }
     }
@@ -705,7 +705,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         if let Some(l) = &lost {
             for &m in men.iter() {
                 if !alive(g, m) { continue; }
-                let p = pos_of(g, m);
+                let p = g.pos_of(m);
                 if room_of(g, q, p, Some(0.05)).map_or(false, |r| r.id == l.id) { up_in += 1; }   // (`===` of a room: its id, a room is one row of the structure)
             }
         }
@@ -730,7 +730,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         let from = v3::copy(g.tab.roomfight_def[d].station);
         g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, t0: t, ..Sent::default() });
         crate::roomfight::loose_at(g, d, due.at);
-        let (a, b) = (pos_of(g, due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
+        let (a, b) = (g.pos_of(due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));
         let way = match way { Some(w) if !w.is_empty() => format!(" {}", w), _ => String::new() };
         let text = format!("{}: coming to you{} — hold on!", name_of(g, q), way);
@@ -774,7 +774,7 @@ fn tick_news(g: &mut Game, q: EnemysquadsSquadId) {
     let fix = match fix { Some(f) => f, None => return };
     g.tab.enemysquads_squad[q].news_t = m::max(news_t, fix.t);
     let same = match &g.tab.enemysquads_squad[q].fix {
-        Some(old) => if fix.by == FixBy::Net { old.ally == fix.ally } else { flat(old.at, fix.at) < 10.0 },
+        Some(old) => if fix.by == FixBy::Net { old.ally == fix.ally } else { dist_xz(old.at, fix.at) < 10.0 },
         None => false,
     };
     if same && g.tab.enemysquads_squad[q].state != SquadState::Hold && now - g.tab.enemysquads_squad[q].decided_at < g.k.squads.again_secs { return; }
@@ -853,7 +853,7 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
         }
         return;
     }
-    if s.role == SentRole::Look && mode == crate::roomfight::DefMode::Hold && g.time - s.t0 > 6.0 && fit(g, gd) && g.time - g.gd[gd].last_seen_t > 8.0 && { let p = pos_of(g, gd); room_of(g, q, p, Some(1.0)).is_none() } {
+    if s.role == SentRole::Look && mode == crate::roomfight::DefMode::Hold && g.time - s.t0 > 6.0 && fit(g, gd) && g.time - g.gd[gd].last_seen_t > 8.0 && { let p = g.pos_of(gd); room_of(g, q, p, Some(1.0)).is_none() } {
         let mate_back = g.tab.enemysquads_squad[q].sent.iter().enumerate().any(|(j, x)| j != i && x.role == SentRole::Look && x.back == Some(true));
         if !mate_back {
             let text = format!("{}: no sign of them — back on our doors!", name_of(g, q));
@@ -877,9 +877,9 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
         // (somebody stronger has him: he goes on when he is let go, if that is soon)
         if g.time - s.t0 > g.k.squads.hold_secs { g.tab.enemysquads_squad[q].sent.remove(i); return; }
         if crate::roomfight::on_leg(g, d) || crate::owner::kept(g, gd, crate::owner::by::SQUAD_LEG).is_some() || !fit(g, gd) { return; }
-        let here = pos_of(g, gd);
+        let here = g.pos_of(gd);
         let mut way = s.way.clone();
-        if let Some(k) = (0..way.len()).min_by(|&a, &b| flat(way[a], here).total_cmp(&flat(way[b], here))) { way.drain(..k); }
+        if let Some(k) = (0..way.len()).min_by(|&a, &b| dist_xz(way[a], here).total_cmp(&dist_xz(way[b], here))) { way.drain(..k); }
         send_round(g, d, s.spot.unwrap_or(s.from), s.door, way);
         return;
     }

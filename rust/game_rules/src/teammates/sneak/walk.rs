@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -24,8 +25,6 @@ pub(super) fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
     let t = g.m.sneak.leaf_t.get(d).unwrap().t;
     now - t < g.k.sneak.door_settle
 }
-
-pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The sneak is live for the squad this frame; one read a frame.
 pub(super) fn sneak_live(g: &mut crate::game::Game) -> bool {
@@ -88,7 +87,7 @@ pub fn sneak_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
         if r.state != crate::game::GuardState::Suspicious || r.task.is_some() || r.body_duty.is_some() || r.hold || r.held.is_some() { return false; }
         match (r.last_known, r.path_goal) { (Some(l), Some(pg)) => (l, pg), _ => return false }
     };
-    if flat(goal, end) > 1.0 { return false; }
+    if dist_xz(goal, end) > 1.0 { return false; }
     if g.gd[h].path_i >= g.gd[h].path.len() { return false; }
     let sight_t = g.gd[h].sight_t;
     if g.time >= sight_t && g.time - sight_t < g.k.spotted.fresh_secs { return false; }
@@ -147,7 +146,7 @@ pub(super) fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
         if h == gd || crate::condition::down(g, g.gd[h].ch) { continue; }
         if !g.team(h).foe_of(g.team(gd)) { continue; }
         let hc = g.gd[h].ch;
-        if flat(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
+        if dist_xz(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
     }
     out
 }
@@ -296,7 +295,7 @@ pub(super) fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &mut [c
             if r.visible {
                 let lit = lit_at(g, &mut t[k], true);
                 let next = if t.len() - 1 < k + 1 { t.len() - 1 } else { k + 1 };
-                add += eye_rate(g, h, lit, r.dist, keen, None) * m::max(0.4, flat(t[k].p, t[next].p)) / g.k.sneak.cross_pace;
+                add += eye_rate(g, h, lit, r.dist, keen, None) * m::max(0.4, dist_xz(t[k].p, t[next].p)) / g.k.sneak.cross_pace;
             }
             k += 1;
         }
@@ -428,8 +427,8 @@ pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::Sneak
         let a = pts[j - 1];
         let b = pts[j];
         j += 1;
-        let n = m::max(1.0, m::ceil(flat(a, b) / 0.25));
-        let dt = flat(a, b) / n / m::max(0.3, pace);
+        let n = m::max(1.0, m::ceil(dist_xz(a, b) / 0.25));
+        let dt = dist_xz(a, b) / n / m::max(0.3, pace);
         let mut at = 0.0;
         while at < n {
             at += 1.0;

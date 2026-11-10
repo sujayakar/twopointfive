@@ -129,10 +129,10 @@ fn glassShadeX(Pg: vec3f, n: vec3f, V: vec3f, gb: u32) -> GxSpec {
   if (kd > 0.0 && (frame.flags & FLAG_DIRECT) != 0u) {
     var e0 = vec3f(0.0); var e1 = vec3f(0.0); var w0 = 0.0; var w1 = 0.0; var i0 = -1; var i1 = -1;
     var L0 = vec3f(0.0); var L1 = vec3f(0.0); var d0 = 0.0; var d1 = 0.0; var rest = vec3f(0.0);
-    var at = lightsAt(Pg);
-    for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
+    for (var i = 0u; i < nL; i++) {
       let li = wgLights[i];
       if (lightTransient(li)) { continue; }
+      if (!lightReaches(i, Pg)) { continue; }
       let ev = evalLight(li, Pg, vec3f(0.0));
       if (!ev.ok) { continue; }
       let E = ev.E * abs(dot(n, ev.L));

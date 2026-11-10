@@ -2,7 +2,6 @@
 import { Vec3, v3, DEG } from '../math/vec';
 import { makeBuffer } from '../gpu/device';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
-import { WORLD } from '../scene/world';
 import { lightDayK } from './photometry';
 
 /** a light as a level's own list holds it (tools/levels/lib/level.ts takes it from here) */
@@ -96,13 +95,11 @@ export const portalHoleBits = (deep: number | undefined, rims?: number): number 
 export const MAX_LIGHTS = 64;
 const NO_LIGHTS: readonly RtLight[] = [];
 if (MAX_LIGHTS > 64) throw new Error('lights: MAX_LIGHTS > 64 — volumetrics.wgsl keeps its per-ray beam selection in a 64-bit mask (selLo/selHi); widen it first');   // (a WGSL shift by k ≥ 32 wraps: light 70 would alias light 38)
-/** The per-light reach rows (reach.ts) and the lights of each cell ride in ONE uniform binding (scene group binding 12, `array<vec4u, REACH_VEC4S>` in common.wgsl —
- *  a uniform, not a seventh scene storage buffer, so every pipeline stays inside the WebGPU default of 8 storage buffers per stage): MAX_LIGHTS rows ×
- *  REACH_ROW_WORDS u32, then from word REACH_CELLS_AT two words a cell. That caps the block at maxUniformBufferBindingSize's default (64 KB) and needs a 16-byte
- *  multiple (vec4u stride) — 64 × 70 × 4 + 1120 × 8 = 26880 B today; the LightSet constructor refuses anything else so a grid resize / MAX_LIGHTS bump cannot silently break it. */
-export const REACH_CELLS_AT = MAX_LIGHTS * REACH_ROW_WORDS;
-const CELLS = WORLD.gridW * WORLD.gridH;
-export const REACH_BYTES = (REACH_CELLS_AT + CELLS * 2) * 4;
+/** The per-light reach rows (reach.ts) ride in ONE uniform binding (scene group binding 12, `array<vec4u, REACH_VEC4S>` in common.wgsl — a uniform,
+ *  not a seventh scene storage buffer, so every pipeline stays inside the WebGPU default of 8 storage buffers per stage): MAX_LIGHTS rows ×
+ *  REACH_ROW_WORDS u32. That caps the block at maxUniformBufferBindingSize's default (64 KB) and needs a 16-byte multiple (vec4u stride) —
+ *  64 × 70 × 4 = 17920 B today; the LightSet constructor refuses anything else so a grid resize / MAX_LIGHTS bump cannot silently break it. */
+export const REACH_BYTES = MAX_LIGHTS * REACH_ROW_WORDS * 4;
 /** vec4u elements of that uniform array (frame.ts injects it into the scene prelude as REACH_VEC4S) */
 export const REACH_VEC4S = REACH_BYTES / 16;
 
@@ -128,21 +125,7 @@ export function packLight(f: Float32Array, u: Uint32Array, o: number, l: RtLight
 /** the first n words of two buffers, bit for bit. Read signed and kept out of upload()'s body: mask words run past 2^31, and a loop over them inside that long function ran in a slow tier (0.03 ms a frame in the depot) */
 function sameWords(a: Int32Array, b: Int32Array, n: number): boolean { for (let w = 0; w < n; w++) if (a[w] !== b[w]) return false; return true; }
 
-/** THE CELLS A LIGHT CAN GIVE ANYTHING IN (common.wgsl lightsAt): bit `slot` set in the two words of every cell its range comes over and its reach row does not leave
- *  out, cleared in all others. The walk the other way round, every light of a level at every point, spent most of its time on lamps out of range. */
-export function cellsOf(cells: Uint32Array, slot: number, l: { pos: Vec3; range: number; kind: number } | null, row: Uint32Array, rowAt: number): void {
-  const word = slot >> 5, bit = 1 << (slot & 31), not = ~bit;
-  for (let o = word; o < CELLS * 2; o += 2) cells[o] &= not;
-  if (!l) return;
-  const C = WORLD.gridCell, x = l.pos[0] - WORLD.min[0], z = l.pos[2] - WORLD.min[2], r = l.kind === 2 ? Infinity : l.range + 0.01;   // (a directional light has no range)
-  const z0 = Math.max(0, Math.floor((z - r) / C)), z1 = Math.min(WORLD.gridH - 1, Math.floor((z + r) / C));
-  for (let cz = z0; cz <= z1; cz++) {
-    const dz = Math.max(cz * C - z, z - (cz + 1) * C, 0), half = r === Infinity ? r : Math.sqrt(Math.max(0, r * r - dz * dz));
-    const x0 = Math.max(0, Math.floor((x - half) / C)), x1 = Math.min(WORLD.gridW - 1, Math.floor((x + half) / C));
-    for (let cx = x0, ci = cz * WORLD.gridW + x0; cx <= x1; cx++, ci++) if ((row[rowAt + (ci >> 4)] >>> ((ci & 15) * 2)) & 3) cells[ci * 2 + word] |= bit;
-  }
-}
-
+/** two lights' records (packLight's 16 words), bit for bit */
 function sameRecord(a: Uint32Array, at: number, b: Uint32Array, bt: number): boolean { for (let i = 0; i < 16; i++) if (a[at + i] !== b[bt + i]) return false; return true; }
 
 export class LightSet {
@@ -154,9 +137,7 @@ export class LightSet {
   /** the reach buffer's rows as last written, word for word (upload writes the live rows only when they differ from this) */
   private reachSent = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS).fill(0xffffffff);
   /** the reach rows are written whole next frame */
-  forgetSent() { this.reachSent.fill(0xffffffff); this.cellsOfSlots = -1; }
-  /** the lights of each cell, as the buffer holds them after the rows; what each slot's bits were made from (its row as last written, and x, z, range), and how many slots have any (−1 = none made yet) */
-  readonly cells = new Uint32Array(CELLS * 2); private cellsOfSlots = -1; private cellsFrom = new Float64Array(MAX_LIGHTS * 3); private slotLight: RtLight[] = [];
+  forgetSent() { this.reachSent.fill(0xffffffff); }
   private reachDataI = new Int32Array(this.reachData.buffer); private reachSentI = new Int32Array(this.reachSent.buffer);   // the same words read signed, for the compare alone (sameWords)
   private data = new ArrayBuffer(MAX_LIGHTS * 64);
   private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data);
@@ -190,7 +171,7 @@ export class LightSet {
 
   constructor(private device: GPUDevice) {
     this.buf = makeBuffer(device, MAX_LIGHTS * 64, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lights');
-    if (REACH_BYTES > 65536 || REACH_BYTES % 16 !== 0) throw new Error(`lightReach uniform block: MAX_LIGHTS ${MAX_LIGHTS} × REACH_ROW_WORDS ${REACH_ROW_WORDS} and two words a cell, × 4 = ${REACH_BYTES} bytes — it must stay ≤ 65536 (the default maxUniformBufferBindingSize) and a multiple of 16 (array<vec4u> stride); shrink the reach grid (scene/world.ts gridW·gridH → render/reach.ts) or MAX_LIGHTS (render/lights.ts)`);
+    if (REACH_BYTES > 65536 || REACH_BYTES % 16 !== 0) throw new Error(`lightReach uniform block: MAX_LIGHTS ${MAX_LIGHTS} × REACH_ROW_WORDS ${REACH_ROW_WORDS} × 4 = ${REACH_BYTES} bytes — it must stay ≤ 65536 (the default maxUniformBufferBindingSize) and a multiple of 16 (array<vec4u> stride); shrink the reach grid (scene/world.ts gridW·gridH → render/reach.ts) or MAX_LIGHTS (render/lights.ts)`);
     this.reachBuf = makeBuffer(device, REACH_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'lightReach');   // (bindable either way: frame.ts reachBinding picks the layout)
     this.reachData.fill(0xffffffff); device.queue.writeBuffer(this.reachBuf, 0, this.reachData);
   }
@@ -270,27 +251,12 @@ export class LightSet {
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
       this.slotSame[n] = this.slotInv[n] !== 255 && sameRecord(u, o, this.prev32, this.slotInv[n] * 16) ? 1 : 0;
       this.reachData.set(masks?.row(l) ?? REACH_ALL, n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame
-      this.slotLight[n] = l; this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
+      this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
     }
     this.activeCount = n; this.firstTransientSlot = firstT < 0 ? n : firstT;
     this.device.queue.writeBuffer(this.buf, 0, this.data, 0, Math.max(64, n * 64));
-    this.uploadCells(n);
     { const now = this.reachData, sent = this.reachSent, words = n * REACH_ROW_WORDS; const same = sameWords(this.reachDataI, this.reachSentI, words);   // the live slots' rows, only when they are not what the buffer already holds (a light's reach changes when it moves a cell or a door swings; most frames nothing does)
       if (!same) { this.device.queue.writeBuffer(this.reachBuf, 0, now.buffer, 0, words * 4); sent.set(now.subarray(0, words)); } }   // (whole rows of the live slots — a multiple of 4 bytes, all writeBuffer asks; rows past n are never read: the shaders stop at frame.numLights)
     return n;
   }
-  /** the lights of each cell made to the `n` lights just uploaded: a slot's bits again where its light stands elsewhere, has another range or another reach row than they were made from */
-  private uploadCells(n: number): void {
-    const W = REACH_ROW_WORDS, from = this.cellsFrom, first = this.cellsOfSlots < 0; let made = first;
-    if (first) this.cells.fill(0);
-    for (let s = 0; s < n; s++) {
-      const l = this.slotLight[s], range = l.kind === 2 ? -1 : l.range, o = s * 3;
-      if (!first && s < this.cellsOfSlots && from[o] === l.pos[0] && from[o + 1] === l.pos[2] && from[o + 2] === range && this.rowIsSent(s)) continue;
-      from[o] = l.pos[0]; from[o + 1] = l.pos[2]; from[o + 2] = range; cellsOf(this.cells, s, l, this.reachData, s * W); made = true;
-    }
-    for (let s = n; s < this.cellsOfSlots; s++) { cellsOf(this.cells, s, null, this.reachData, 0); made = true; }
-    this.cellsOfSlots = n;
-    if (made) this.device.queue.writeBuffer(this.reachBuf, REACH_CELLS_AT * 4, this.cells);
-  }
-  private rowIsSent(slot: number): boolean { const W = REACH_ROW_WORDS, a = this.reachDataI, b = this.reachSentI; for (let w = slot * W, e = w + W; w < e; w++) if (a[w] !== b[w]) return false; return true; }
 }

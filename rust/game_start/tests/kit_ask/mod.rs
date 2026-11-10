@@ -483,7 +483,7 @@ impl KitAsk for Play {
     fn no_civilians(&mut self) { self.g.tune.civilians = false; self.g.civilians.clear(); }
     fn alone_with_charges(&mut self, n: f64) { game::doortools::door_tools_alone(&mut self.g, n); }
     fn leaf_shut(&mut self, d: DoorId) {
-        use game::doors::*;
+        
         self.g.dr[d].leaf.angle = 0.0;
         self.g.dr[d].leaf.vel = 0.0;
         self.g.dr[d].leaf.latched = true;

@@ -1343,7 +1343,7 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
         return;
     }
     if g.sets[g.seat].door_tools.seen.is_none() {
-        let s = crate::floorseen::floor_seen_new(g);
+        let s = crate::floorseen::floor_seen_new();
         g.sets[g.seat].door_tools.seen = Some(s);
     }
     let roster = g.sets[g.seat].door_tools.roster.clone();

@@ -4,6 +4,7 @@ pub use ::game_types::wandorder::types;
 pub use types::*;
 /// this module's own order
 pub const WAND_ORDER: &str = crate::orders::rows::wand::ORDER.id;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -23,11 +24,6 @@ fn put_job(g: &mut Game, gd: GuardId, j: Job) {
     if let Some(row) = g.m.wandorder.states.get_mut(k).and_then(|st| st.jobs.get_mut(gd)) {
         *row = j;
     }
-}
-
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// Is there a fog to look into. (wandorder.ts live; WAND.on and WAND.mate are settled on)
@@ -91,7 +87,7 @@ pub(super) fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
         if crate::orders::squad_orders_reach(g, gd, spot.pos).is_some() {
             continue;
         }
-        let k = flat(g.ch[g.gd[gd].ch].pos, spot.pos);
+        let k = dist_xz(g.ch[g.gd[gd].ch].pos, spot.pos);
         if k < bd {
             bd = k;
             best = Some(gd);
@@ -261,7 +257,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     // (the orders stopped him short: his mark moved to his feet, and he never looks from there)
     let short = match g.tab.orders_assignment[a].post {
         None => true,
-        Some(post) => flat(post, j.stand) > 0.3,
+        Some(post) => dist_xz(post, j.stand) > 0.3,
     };
     if short {
         let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
@@ -270,7 +266,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     let pos = g.ch[c].pos;
     let on = g.tab.orders_assignment[a].arrived
-        && flat(pos, j.stand) < 0.45
+        && dist_xz(pos, j.stand) < 0.45
         && m::abs(v3::wrap_angle(g.ch[c].body_yaw - j.yaw)) < 0.6
         && crate::doors::doors_side(g, d, pos) == j.side
         && !fought(g, gd, a);

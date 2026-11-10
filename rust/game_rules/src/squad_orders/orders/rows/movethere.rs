@@ -18,20 +18,20 @@ fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("move there")
 
 /// 'move'.can
 fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
-    let at = rows::at(t);
+    let at = t.at();
     if squad_orders_walk_try(g, gd, at).is_some() { return None; }
     squad_orders_reach(g, gd, at)
 }
 /// 'move'.valid: a door nobody has tried is walked up to, where it has room for them
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match squad_orders_walk_stacks(g, men, rows::at(t)) {
+    match squad_orders_walk_stacks(g, men, t.at()) {
         Some(SquadOrdersWalkStacks::Text(w)) => Err(Some(w)),
         _ => Ok(()),
     }
 }
 /// 'move'.issue: a place and a watch each that fit the room, or the line abreast
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let t_at = rows::at(t);
+    let t_at = t.at();
     let pc = g.pl[g.player].ch;
     let sam = g.ch[pc].pos;
     let face = if v3::dist_xz(sam, t_at) > 0.3 { v3::yaw_to(sam, t_at) } else { g.ch[pc].body_yaw };

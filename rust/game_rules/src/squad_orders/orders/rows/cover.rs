@@ -22,7 +22,7 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
 }
 /// 'cover'.issue
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let t_at = rows::at(t);
+    let t_at = t.at();
     let watch: V3 = [t_at[0], 1.1, t_at[2]];
     for &gd in men {
         let p = g.ch[g.gd[gd].ch].pos;

@@ -155,10 +155,12 @@ const SIDE_H: i32 = 70;
 const SIDE_RES: f32 = 2.5;
 const SIDE_UNKNOWN: u32 = 14u;
 const SIDE_DOOR: u32 = 15u;
+fn sideWord(k: u32) -> u32 { if ((TRY & 1u) != 0u) { return bitcast<u32>(boxMat[SIDES_AT + (k >> 2u)][k & 3u]); } return frame.sides[k >> 2u][k & 3u]; }
+fn sideColWord(k: u32) -> u32 { if ((TRY & 1u) != 0u) { return bitcast<u32>(boxMat[SIDES_AT + 1750u + (k >> 5u)][(k >> 3u) & 3u]); } return frame.sideCols[k >> 5u][(k >> 3u) & 3u]; }
 fn sideAt(x: f32, z: f32) -> u32 {
   let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
   if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return SIDE_UNKNOWN; }
-  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u]; let kind = w & 3u;
+  let k = u32(c.y * SIDE_W + c.x); let w = sideWord(k); let kind = w & 3u;
   if (kind == 0u) { return (w >> 2u) & 31u; }
   if (kind == 3u) { return SIDE_DOOR; }   // (a doorway's cell that knows its door's line: every place's to a read of the cache; sideLine reads its line)
   if (kind != 1u) { return SIDE_UNKNOWN; }
@@ -173,13 +175,13 @@ fn sideAt(x: f32, z: f32) -> u32 {
 /// (kind 1) and a doorway's (kind 3: its door's line, or its run's own middle). The sign is the step, in cells, toward the point's own side.
 fn sideLine(c: vec2i, m: vec2f) -> vec2f {
   if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2f(0.0); }
-  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u];
+  let k = u32(c.y * SIDE_W + c.x); let w = sideWord(k);
   if ((w & 1u) == 0u) { return vec2f(0.0); }
   let d = m - ((vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025);
   return vec2f(select(0.0, select(min(d.x, -1e-6), max(d.x, 1e-6), d.x >= 0.0), ((w >> 2u) & 1u) == 1u), select(0.0, select(min(d.y, -1e-6), max(d.y, 1e-6), d.y >= 0.0), ((w >> 8u) & 1u) == 1u));
 }
 /// is cell `c` a doorway's that knows its line (kind 3)
-fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (frame.sides[k >> 2u][k & 3u] & 3u) == 3u; }
+fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (sideWord(k) & 3u) == 3u; }
 /** A SPOT STOOD `d` METRES OFF ITS OWN FACE, IN PLAN (xz; add it to the point): so that the wall a face is of does not stand in the spot's own way. WHAT LOOKS UP IS NOT
  *  STOOD OFF: it has no wall under it to be clear of, and the normal handed here is the shading normal, which on lying snow leans with the drift. At the
  *  foot of a wall such snow leans at the wall, and a step along it ended in the room behind: shown by that room's exposure (a white line along every outer
@@ -1329,7 +1331,7 @@ fn lightMarkRef(li: Light) -> i32 { return select(-1, i32((li.kind >> 11u) & 0x3
 /** the panes (bits, SceneInfo.glass order) light `li` can possibly shine through: its CPU mask for panes 0‥23, every listed pane past that */
 fn lightGlassMask(li: Light) -> u32 { let n = glassCount(); if (n == 0u) { return 0u; } let allN = select(0xffffffffu, (1u << n) - 1u, n < 32u); return ((li.owner >> 8u) | 0xff000000u) & allN; }
 
-struct LightEval { L: vec3f, dist: vec3f, E: vec3f, ok: bool }; // dist.x = distance to light (for shadow ray), dist.y = what evalLight's light is the colour × the receiver's cosine of
+struct LightEval { L: vec3f, dist: vec3f, E: vec3f, ok: bool }; // dist.x = distance to light (for shadow ray)
 
 fn lightWindow(d: f32, range: f32) -> f32 { let x = d / range; let w = clamp(1.0 - x * x * x * x, 0.0, 1.0); return w * w; }
 
@@ -1347,25 +1349,6 @@ fn lightReachLevel(slot: u32, P: vec3f) -> u32 {
   return (reachWord(w) >> ((ci & 15u) * 2u)) & 3u;
 }
 fn lightReaches(slot: u32, P: vec3f) -> bool { return lightReachLevel(slot, P) != 0u; }
-/** THE LIGHTS THAT CAN GIVE P ANYTHING, a bit a slot (lights.ts cellsOf: the light's range comes over P's cell and its reach there is not 0; made on the CPU when a
- *  light moves, is dimmed out or its reach changes). A light that is not in it gives P nothing by evalLight, so a walk over it gives what a walk over
- *  every light gives. Every light with the reach flag off or P off the grid.
- *      var at = lightsAt(P); for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) { … }                 (lowest slot first) */
-fn lightsAt(P: vec3f) -> vec2u {
-  let cx = i32(floor((P.x - WORLD_MIN.x) / GRID_CELL)); let cz = i32(floor((P.z - WORLD_MIN.z) / GRID_CELL));
-  if ((frame.flags & FLAG_REACH_MASK) == 0u || cx < 0 || cz < 0 || cx >= GRID_W || cz >= GRID_H) {
-    let n = min(frame.numLights, 64u);
-    return vec2u(select(0xffffffffu, (1u << (n & 31u)) - 1u, n < 32u), select(select(0xffffffffu, (1u << (n & 31u)) - 1u, n < 64u), 0u, n <= 32u));
-  }
-  let w = REACH_CELLS_AT + u32(cz * GRID_W + cx) * 2u;
-  return vec2u(reachWord(w), reachWord(w + 1u));
-}
-/** the lowest slot left in `at`, which loses it; 64 = none */
-fn nextLight(at: ptr<function, vec2u>) -> u32 {
-  if ((*at).x != 0u) { let i = firstTrailingBit((*at).x); (*at).x &= (*at).x - 1u; return i; }
-  if ((*at).y != 0u) { let i = firstTrailingBit((*at).y); (*at).y &= (*at).y - 1u; return i + 32u; }
-  return 64u;
-}
 
 /// evalLight as the PICTURE takes it: the light's irradiance under the fog's light classes (lightFogK — a torch nobody on the team sees the spot of gives nothing
 /// there). Every pass of the picture asks this one.
@@ -1393,7 +1376,7 @@ fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
   var r: LightEval; r.ok = false; r.E = vec3f(0.0);
   let kind = lightKind(li);
   if (kind == 2u) {
-    r.L = -li.dir; r.dist = vec3f(1e6, 1.0, 0.0);
+    r.L = -li.dir; r.dist = vec3f(1e6, 0.0, 0.0);
     let c = select(max(dot(N, r.L), 0.0), 1.0, all(N == vec3f(0.0)));
     if (c <= 0.0) { return r; }
     r.E = li.color * c; r.ok = true; return r;
@@ -1413,7 +1396,7 @@ fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
   }
   let c = select(max(dot(N, r.L), 0.0), 1.0, all(N == vec3f(0.0)));
   if (c <= 0.0 || att <= 0.0) { return r; }
-  r.E = li.color * (att * c); r.ok = true; r.dist.y = att;
+  r.E = li.color * (att * c); r.ok = true;
   return r;
 }
 
@@ -1422,11 +1405,11 @@ fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
 fn directIrradiance(P: vec3f, N: vec3f, skipOwner: u32, minE: f32, includeTransient: bool) -> vec3f {
   var E = vec3f(0.0);
   let Po = P + N * 0.01;
-  var at = lightsAt(P);
-  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
+  for (var i = 0u; i < frame.numLights; i++) {
     let li = lights[i];
     if (!includeTransient && lightTransient(li)) { continue; }
     if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { continue; }   // (an infrared light likewise, whatever includeTransient says)   // a lamp that is lit only in the fog's picture (lights.ts RtLight.fogGhost) gives the cascades nothing
+    if (!lightReaches(i, P)) { continue; }   // walled off from this cell (reach.ts): neither scored nor traced
     let ev = evalLight(li, P, N);
     if (!ev.ok) { continue; }
     if (max(ev.E.x, max(ev.E.y, ev.E.z)) < minE) { continue; }   // too dim to be worth a ray at a secondary vertex: dropped (half-crediting it unshadowed leaked far panels through walls once their range grew)

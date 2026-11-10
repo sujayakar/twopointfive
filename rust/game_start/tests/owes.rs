@@ -89,7 +89,7 @@ fn every_run_owes() {
 /// A FAILURE MEANS: that kind of fault can happen with nobody told: each row breaks one thing by hand in a run that owed nothing until then.
 #[test]
 fn each_fault_is_said() {
-    use game::doors as d;
+    
     use game::game::{GuardState, MissionStage};
     type Break = fn(&mut Play, game::ids::GuardId);
     let rows: [(&str, Break); 12] = [

@@ -76,8 +76,7 @@ fn discOverlap(a: f32, b: f32, g: f32) -> f32 {
 // the manager's desk-lamp head, cannot be mirrored by any polished floor from up here.)
 fn glossGlints(Po: vec3f, R: vec3f, owner: u32) -> vec3f {
   var G = vec3f(0.0);
-  var at = lightsAt(Po);   // (walled off from this cell — reach.ts — or out of range: no ray needed to know)
-  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
+  for (var i = 0u; i < nL; i++) {
     let li = wgLights[i];
     let kind = lightKind(li);
     if (kind >= 2u || li.radius <= 0.0 || lightTransient(li)) { continue; }   // flashes stay out of anything with history (the direct pass shows them)
@@ -95,6 +94,7 @@ fn glossGlints(Po: vec3f, R: vec3f, owner: u32) -> vec3f {
       if (cd <= 0.0) { continue; }                       // behind the lens
       Le *= max(smoothstep(li.cosOuter, li.cosInner, cd), GLOSS_SPILL);
     }
+    if (!lightReaches(i, Po)) { continue; }              // walled off from this cell (reach.ts): no ray needed to know
     let tmax = dist - li.radius - 0.02;
     if (tmax > 0.0 && occluded(Po, Ld, tmax, owner | ((li.owner & 0xffu) << 8u))) { continue; }   // the same skip rule every shadow ray toward this light uses (its carrier never hides it)
     var tr = 1.0;

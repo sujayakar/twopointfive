@@ -9,16 +9,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// The spot of any target: every arm of the union has `at`.
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(x) => x.at,
-        crate::orders::OrderTarget::Door(x) => x.at,
-        crate::orders::OrderTarget::None(x) => x.at,
-        crate::orders::OrderTarget::Foe(x) => x.at,
-    }
-}
-
 /// The squad's smoke canisters left this run.
 pub fn squad_smoke_left(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     let key = crate::seats::view_key(g, seat);
@@ -155,7 +145,7 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 /// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given.
 pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    let at = target_at(t);
+    let at = t.at();
     let has_cans = match g.m.squadsmoke.states.get(key) { Some(s) => s.cans > 0.0, None => false };
     let th = if has_cans { squad_smoke_thrower(g, men, at) } else { None };
     let th = match th { Some(th) => th, None => return Some(String::from("no throw from here.")) };

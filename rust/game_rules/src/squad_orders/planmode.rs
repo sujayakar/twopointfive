@@ -129,17 +129,6 @@ pub(super) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraI
     }
 }
 
-/// `t.at`, which every kind of target has.
-fn target_at(t: &crate::orders::OrderTarget) -> V3 {
-    use crate::orders::OrderTarget;
-    match t {
-        OrderTarget::Floor(x) => x.at,
-        OrderTarget::Door(x) => x.at,
-        OrderTarget::None(x) => x.at,
-        OrderTarget::Foe(x) => x.at,
-    }
-}
-
 /// `G.every(m => S.of(m)?.door === door)`.
 fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: DoorId) -> bool {
     for &m in men {
@@ -156,7 +145,7 @@ fn every_on_door(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: 
 
 /// The men's mean distance to `t` on the floor.
 fn far(g: &Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> f64 {
-    let at = target_at(t);
+    let at = t.at();
     let mut s = 0.0;
     for &m in men {
         let p = g.ch[g.gd[m].ch].pos;

@@ -66,6 +66,29 @@ fn go_to_plan(g: &Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePe
 
 // ---- the translation ----
 
+/// What the stages of a man's standoff share this tick.
+#[derive(Clone, Copy)]
+struct Standing {
+    gd: GuardId,
+    s: GuardsStandoffId,
+    c: CharId,
+    dt: f64,
+    p: crate::guards::Pair,
+    fs: crate::guards::FlankShot,
+    aim: V3,
+    /// too far from the pair: he jogs
+    far: bool,
+    /// too near the pair: he backs off
+    backing: bool,
+}
+
+/// Where his legs went this tick and where he looks.
+struct Legs {
+    move_: f64,
+    jogging: bool,
+    look_at: V3,
+}
+
 /// The alert branch for a man in the standoff: feet, gun, mouth; his move speed and the point he looks / aims at.
 pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::guards::Pair) -> crate::guards::StandoffAlert {
     let s = g.gd[gd].standoff.unwrap();
@@ -81,7 +104,6 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     }
     g.tab.guards_standoff[s].line_open = fs.ok;
     // --- feet ---
-    let mut move_ = 0.0;
     let far = dist > STANDOFF_MAX_M;
     g.tab.guards_standoff[s].replan_t -= dt;
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
@@ -90,9 +112,41 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     let pace_base = if far || backing { g.tune.guard_investigate } else { g.tune.guard_walk };
     let pace_k = if crate::suppression::flinching(g, gd) { g.k.suppression.standoff_pace_k } else { 1.0 };
     let pace = pace_base * pace_k;
-    if gh.is_some() {
-        // his feet are gunhold.ts's
-    } else if backing {
+    let st = Standing { gd, s, c, dt, p, fs, aim, far, backing };
+    // (with a gun hold his feet are the gun hold's)
+    if gh.is_none() { picks_his_goal(g, st); }
+    g.tab.guards_standoff[s].backing = backing;
+    let legs = match (gh, g.tab.guards_standoff[s].orbit_goal) {
+        (Some(h), _) => Legs { move_: h.move_, jogging: h.run, look_at: h.look.unwrap_or(aim) },
+        (None, Some(goal)) => walks_his_goal(g, st, goal, pace),
+        (None, None) => {
+            g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 6.0, dt);
+            g.ch[c].vel = [0.0, 0.0, 0.0];
+            g.gd[gd].stall_ref = None;
+            Legs { move_: 0.0, jogging: false, look_at: aim }
+        }
+    };
+    let pos = g.ch[c].pos;
+    if !legs.jogging {
+        g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(legs.look_at[0] - pos[0], legs.look_at[2] - pos[2]), 4.0 * dt);
+    }
+    let held = standoff_round(g, st, gh.is_some(), pos);
+    // --- the talking ---
+    if gh.map_or(false, |h| h.quiet) {
+        // on his way round, or running: nothing to say to Sam
+    } else if !fs.ok {
+        let moment = if g.tab.guards_standoff[s].cornered && g.tab.guards_standoff[s].orbit_goal.is_none() { crate::guards::StandoffMoment::Cornered } else { crate::guards::StandoffMoment::NoShot };
+        standoff_bark(g, gd, moment, None, None);
+    } else if held {
+        standoff_bark(g, gd, crate::guards::StandoffMoment::Line, None, None);
+    }
+    crate::guards::StandoffAlert { move_: legs.move_, aim: legs.look_at, crouch: gh.map_or(0.0, |h| h.crouch) }
+}
+
+/// Where he means to stand: back off a man too near; stay on a good line; rest after a stall; else at each replan go on round the pair.
+fn picks_his_goal(g: &mut Game, st: Standing) {
+    let Standing { gd, s, p, fs, backing, .. } = st;
+    if backing {
         if g.tab.guards_standoff[s].replan_t <= 0.0 || g.tab.guards_standoff[s].orbit_goal.is_none() || !g.tab.guards_standoff[s].backing {
             g.tab.guards_standoff[s].replan_t = 0.5;
             let goal = retreat_goal(g, gd, p);
@@ -111,68 +165,62 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         };
         set_goal(g, gd, s, goal);
     }
-    g.tab.guards_standoff[s].backing = backing;
-    let mut jogging = false;
-    let mut look_at = aim;
-    if let Some(h) = gh {
-        move_ = h.move_;
-        jogging = h.run;
-        if let Some(l) = h.look { look_at = l; }
-    } else if let Some(goal) = g.tab.guards_standoff[s].orbit_goal {
-        if backing {
-            // (pathGoal !== S.orbitGoal, of two objects: path_goal_orbit says they are the one object)
-            // (…and the flag is believed only while the goal still holds that point's numbers: a write that slipped past the setter cannot leave it up)
-            if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) {
-                lay_path(g, gd, vec![goal]);
-                g.gd[gd].path_i = 0;
-                g.gd[gd].path_goal = Some(goal);
-                g.gd[gd].path_goal_orbit = true;
-            }
-        } else {
-            go_to(g, gd, goal, None);
-        }
-        let done = if far { follow_path(g, gd, dt, pace) } else { step_along_path(g, gd, dt, pace) };
-        move_ = g.gd[gd].speed;
-        if done {
-            set_goal(g, gd, s, None);
-            g.tab.guards_standoff[s].replan_t = m::min(g.tab.guards_standoff[s].replan_t, 0.25);
-        } else if not_getting_anywhere(g, gd, dt, STANDOFF_STALL_SECS) {
-            set_goal(g, gd, s, None);
-            g.gd[gd].stall_ref = None;
-            g.tab.guards_standoff[s].rest_t = STANDOFF_REST_SECS;
-            g.tab.guards_standoff[s].stalls += 1.0;
-            if js::rem(g.tab.guards_standoff[s].stalls, 2.0) == 0.0 {
-                let so = &mut g.tab.guards_standoff[s];
-                so.side = if so.side > 0.0 { -1.0 } else { 1.0 };
-                so.way = if so.way > 0.0 { -1.0 } else if so.way < 0.0 { 1.0 } else { 0.0 };
-            }
-        } else if far && g.gd[gd].path_i < g.gd[gd].path.len() {
-            // the jog over: the legs have the body, and a leg that turns its back on them he runs looking where he is going
-            jogging = true;
-            let wp = g.gd[gd].path[g.gd[gd].path_i];
-            let pos = g.ch[c].pos;
-            let yaw_path = m::atan2(wp[0] - pos[0], wp[2] - pos[2]);
-            if m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - yaw_path)) > 75.0 * v3::DEG {
-                look_at = [pos[0] + m::sin(yaw_path) * 4.0, aim[1], pos[2] + m::cos(yaw_path) * 4.0];
-            }
+}
+
+/// One step to his goal: there it is done; stalled he rests and, every second time, tries the other way round; on a long leg he looks where he is going.
+fn walks_his_goal(g: &mut Game, st: Standing, goal: V3, pace: f64) -> Legs {
+    let Standing { gd, s, c, dt, aim, far, backing, .. } = st;
+    if backing {
+        // (pathGoal !== S.orbitGoal, of two objects: path_goal_orbit says they are the one object)
+        // (…and the flag is believed only while the goal still holds that point's numbers: a write that slipped past the setter cannot leave it up)
+        if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) {
+            lay_path(g, gd, vec![goal]);
+            g.gd[gd].path_i = 0;
+            g.gd[gd].path_goal = Some(goal);
+            g.gd[gd].path_goal_orbit = true;
         }
     } else {
-        g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 6.0, dt);
-        g.ch[c].vel = [0.0, 0.0, 0.0];
+        go_to(g, gd, goal, None);
+    }
+    let done = if far { follow_path(g, gd, dt, pace) } else { step_along_path(g, gd, dt, pace) };
+    let move_ = g.gd[gd].speed;
+    let mut legs = Legs { move_, jogging: false, look_at: aim };
+    if done {
+        set_goal(g, gd, s, None);
+        g.tab.guards_standoff[s].replan_t = m::min(g.tab.guards_standoff[s].replan_t, 0.25);
+    } else if not_getting_anywhere(g, gd, dt, STANDOFF_STALL_SECS) {
+        set_goal(g, gd, s, None);
         g.gd[gd].stall_ref = None;
+        g.tab.guards_standoff[s].rest_t = STANDOFF_REST_SECS;
+        g.tab.guards_standoff[s].stalls += 1.0;
+        if js::rem(g.tab.guards_standoff[s].stalls, 2.0) == 0.0 {
+            let so = &mut g.tab.guards_standoff[s];
+            so.side = if so.side > 0.0 { -1.0 } else { 1.0 };
+            so.way = if so.way > 0.0 { -1.0 } else if so.way < 0.0 { 1.0 } else { 0.0 };
+        }
+    } else if far && g.gd[gd].path_i < g.gd[gd].path.len() {
+        // the jog over: the legs have the body, and a leg that turns its back on them he runs looking where he is going
+        legs.jogging = true;
+        let wp = g.gd[gd].path[g.gd[gd].path_i];
+        let pos = g.ch[c].pos;
+        let yaw_path = m::atan2(wp[0] - pos[0], wp[2] - pos[2]);
+        if m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - yaw_path)) > 75.0 * v3::DEG {
+            legs.look_at = [pos[0] + m::sin(yaw_path) * 4.0, aim[1], pos[2] + m::cos(yaw_path) * 4.0];
+        }
     }
-    let pos = g.ch[c].pos;
-    if !jogging {
-        g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(look_at[0] - pos[0], look_at[2] - pos[2]), 4.0 * dt);
-    }
-    // --- the round ---
+    legs
+}
+
+/// The round: only on a clear flank and a settled gun, and with muzzle discipline only for the gun hold's free line. Returns that he holds his fire.
+fn standoff_round(g: &mut Game, st: Standing, gun_hold: bool, pos: V3) -> bool {
+    let Standing { gd, c, dt, p, fs, aim, backing, .. } = st;
     g.arms[g.gd[gd].ch].fire_cd -= dt;
     let gun_yaw = crate::character::character_gun_yaw(g, c);
     let facing_err = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - gun_yaw));
     let w = g.gd[gd].weapon;
     g.fa[w].burst = None;
     let held = g.tune.muzzle_discipline
-        && !(gh.is_some() && crate::gunhold::gun_hold_phase(g, gd) == Some(crate::gunhold::Phase::Line) && crate::gunhold::gun_hold_free(g, p));
+        && !(gun_hold && crate::gunhold::gun_hold_phase(g, gd) == Some(crate::gunhold::Phase::Line) && crate::gunhold::gun_hold_free(g, p));
     if g.gd[gd].reload_t >= 0.0 {
         tick_reload_beat(g, gd, dt);
     } else if !held && fs.ok && !backing && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && facing_err < 0.12 && !g.gd[gd].muzzle_down
@@ -190,16 +238,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { start_reload_beat(g, gd); }
     }
     if held { g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, SHIELD_RELEASE_BEAT_MIN + dt); }
-    // --- the talking ---
-    if gh.map_or(false, |h| h.quiet) {
-        // on his way round, or running: nothing to say to Sam
-    } else if !fs.ok {
-        let moment = if g.tab.guards_standoff[s].cornered && g.tab.guards_standoff[s].orbit_goal.is_none() { crate::guards::StandoffMoment::Cornered } else { crate::guards::StandoffMoment::NoShot };
-        standoff_bark(g, gd, moment, None, None);
-    } else if held {
-        standoff_bark(g, gd, crate::guards::StandoffMoment::Line, None, None);
-    }
-    crate::guards::StandoffAlert { move_, aim: look_at, crouch: gh.map_or(0.0, |h| h.crouch) }
+    held
 }
 
 /// why a standoff is over
@@ -612,7 +651,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
     }
     let tactics = crate::tactics::tactics_penalty(g, gd, goal);
     let pen = crate::lanes::lane_penalty(g, gd, tactics.as_ref());
-    let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, &crate::seats::here(g), gd, pen.as_ref()) } else { None };
+    let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, gd, pen.as_ref()) } else { None };
     let mut p = go_to_plan(g, gd, goal, pen.as_ref(), round.as_ref());
     if p.is_none() {
         let u = unstick_begin(g, gd);

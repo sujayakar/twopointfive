@@ -315,6 +315,24 @@ fn prop_system_step(g: &mut Game, dt: f64, men: &mut [PropContact], leaves: &[us
     said
 }
 
+/// what a ray through the level meets first
+#[derive(Clone, Copy)]
+pub struct LevelRay {
+    pub t: f64,
+    pub n: V3,
+    /// the thing of furniture it is, where it is not the level itself
+    pub thing: Option<PropId>,
+}
+
+/// the nearest of the statics, the leaves and the furniture along a ray
+pub fn level_ray(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<LevelRay> {
+    let st = crate::scene_collision::raycast(g, ro, rd, tmax);
+    if let Some(h) = prop_system_raycast(g, ro, rd, st.as_ref().map_or(tmax, |s| s.t)) {
+        return Some(LevelRay { t: h.t, n: h.n, thing: Some(h.prop) });
+    }
+    st.map(|s| LevelRay { t: s.t, n: s.n, thing: None })
+}
+
 /// the settle's passes: authoring overlaps (a chair tucked under a table's edge, a bin grazing a desk's corner) are resolved once as the level is stood up, and where a thing comes to stand is its home
 const SETTLE_PASSES: usize = 12;
 const SLEEP_V: f64 = 0.04;
@@ -479,6 +497,54 @@ fn circle_contact(p: &Prop, cx: f64, cz: f64, r: f64) -> Option<Touch> {
     Some(Touch { nx: cs * nlx + sn * nlz, nz: -sn * nlx + cs * nlz, pen, px: x + cs * qx + sn * qz, pz: z - sn * qx + cs * qz })
 }
 
+/// could a thing meet a circle of `r` about (x, z)
+#[inline(always)]
+fn nears(p: &Prop, x: f64, z: f64, r: f64) -> bool {
+    let (dx, dz) = (p.x - x, p.z - z);
+    let reach = p.radius + r;
+    !(dx * dx + dz * dz > reach * reach)
+}
+
+/// a man against a thing
+#[inline(always)]
+fn man_contact(p: &Prop, man: &PropContact) -> Option<Touch> {
+    let (x, z, r) = (man.pos[0], man.pos[2], man.radius);
+    if nears(p, x, z, r) { circle_contact(p, x, z, r) } else { None }
+}
+
+/// how fast a point of it goes, (rx, rz) from its middle
+#[inline(always)]
+fn speed_at(p: &Prop, rx: f64, rz: f64) -> (f64, f64) {
+    (p.vx + p.w * rz, p.vz - p.w * rx)
+}
+
+/// a knock of `j` along (nx, nz), `arm` from its middle
+#[inline(always)]
+fn knock(p: &mut Prop, j: f64, nx: f64, nz: f64, arm: f64) {
+    p.vx += j * nx * p.inv_mass;
+    p.vz += j * nz * p.inv_mass;
+    p.w += j * arm * p.inv_i;
+}
+
+/// a leaf's footprint, out of the box world's row of it, and the circle round it
+struct Leaf {
+    x: f64,
+    z: f64,
+    hx: f64,
+    hz: f64,
+    cs: f64,
+    sn: f64,
+    r: f64,
+}
+
+impl Leaf {
+    fn of(o: &World, l: usize) -> Leaf {
+        let b = l * REC;
+        let (hx, hz) = (o.leaf[b + R_H], o.leaf[b + R_H + 2]);
+        Leaf { x: o.leaf[b + R_C], z: o.leaf[b + R_C + 2], hx, hz, cs: o.leaf[b + R_COS], sn: o.leaf[b + R_SIN], r: hypot2(hx, hz) } // (cos and sin are kept beside the leaf's yaw by whoever wrote the row)
+    }
+}
+
 /// One step's view of the game: the things' records, the men, the leaves and the frames, and the switches.
 struct Step<'a> {
     t: &'a mut Tab<PropId, Prop>,
@@ -533,9 +599,7 @@ impl Step<'_> {
                 if pa.asleep && pb.asleep && !pa.dirty && !pb.dirty {
                     continue;
                 }
-                let (dx, dz) = (pb.x - pa.x, pb.z - pa.z);
-                let rr = pa.radius + pb.radius;
-                if dx * dx + dz * dz > rr * rr {
+                if !nears(pb, pa.x, pa.z, pa.radius) {
                     continue;
                 }
                 let Some(sat) = sat_with(pb, pa.x, pa.z, pa.cs, pa.sn, pa.hx, pa.hz) else { continue };
@@ -558,7 +622,8 @@ impl Step<'_> {
                 }
                 let (pa, pb) = (&self.t[a], &self.t[b]);
                 let (rax, raz, rbx, rbz) = (sat.px - pa.x, sat.pz - pa.z, sat.px - pb.x, sat.pz - pb.z);
-                let vn = ((pb.vx + pb.w * rbz) - (pa.vx + pa.w * raz)) * nx + ((pb.vz - pb.w * rbx) - (pa.vz - pa.w * rax)) * nz;
+                let ((vax, vaz), (vbx, vbz)) = (speed_at(pa, rax, raz), speed_at(pb, rbx, rbz));
+                let vn = (vbx - vax) * nx + (vbz - vaz) * nz;
                 if vn > -0.05 {
                     continue;
                 }
@@ -575,22 +640,13 @@ impl Step<'_> {
                 let (ca, cb) = (raz * nx - rax * nz, rbz * nx - rbx * nz);
                 let e = js_min(pa.tune.rest, pb.tune.rest);
                 let jn = -(1.0 + e) * vn / (ima + imb + iia * ca * ca + iib * cb * cb);
-                {
-                    let p = &mut self.t[a];
-                    p.vx -= jn * nx * ima;
-                    p.vz -= jn * nz * ima;
-                    p.w -= jn * ca * iia;
+                for (id, j, arm) in [(a, -jn, ca), (b, jn, cb)] {
+                    let p = &mut self.t[id];
+                    knock(p, j, nx, nz, arm);
                     clamp_vel(p);
-                    let q = &mut self.t[b];
-                    q.vx += jn * nx * imb;
-                    q.vz += jn * nz * imb;
-                    q.w += jn * cb * iib;
-                    clamp_vel(q);
+                    p.who = who;
+                    wake(p);
                 }
-                self.t[a].who = who;
-                self.t[b].who = who;
-                wake(&mut self.t[a]);
-                wake(&mut self.t[b]);
                 let (pa, pb) = (&self.t[a], &self.t[b]);
                 if -vlin > 0.9 && self.time - js_max(pa.push_t, pb.push_t) > 0.05 {
                     let lighter = if pa.mass < pb.mass { a } else { b };
@@ -630,7 +686,7 @@ impl Step<'_> {
                     continue;
                 }
                 let (rx, rz) = (sat.px - c.x, sat.pz - c.z);
-                let (vpx, vpz) = (c.vx + c.w * rz, c.vz - c.w * rx);
+                let (vpx, vpz) = speed_at(c, rx, rz);
                 let vn = vpx * nx + vpz * nz;
                 if vn >= 0.0 {
                     continue;
@@ -639,9 +695,7 @@ impl Step<'_> {
                 let cr = rz * nx - rx * nz;
                 let kn = im + ii * cr * cr;
                 let jn = -(1.0 + rest) * vn / kn;
-                c.vx += jn * nx * im;
-                c.vz += jn * nz * im;
-                c.w += jn * cr * ii;
+                knock(c, jn, nx, nz, cr);
                 let (tx, tz) = (-nz, nx);
                 let vt = vpx * tx + vpz * tz;
                 if js_abs(vt) > 1e-4 {
@@ -654,9 +708,7 @@ impl Step<'_> {
                     } else if jt < -lim {
                         jt = -lim;
                     }
-                    c.vx += jt * tx * im;
-                    c.vz += jt * tz * im;
-                    c.w += jt * ct * ii;
+                    knock(c, jt, tx, tz, ct);
                 }
                 clamp_vel(c);
                 if -vlin > 0.8 && self.time - c.push_t > 0.05 {
@@ -670,202 +722,198 @@ impl Step<'_> {
         }
     }
 
-    /// one substep of `h` seconds
+    /// one substep of `h` seconds: they coast, the men push them, they knock together, the leaves and the frames and the statics have them, and the men give back what could not yield
     fn step(&mut self, h: f64) {
         let live = self.live;
         if self.enabled {
-            // 1. it coasts, the floor slows it, and it sleeps
-            let fs = self.friction;
             for &i in live {
-                let c = &mut self.t[i];
-                if c.asleep {
-                    continue;
-                }
-                let cas = c.def.kind == crate::scene_level_data::PropKindName::Chair;
-                let (dec, vis, spin) = if cas { (self.cas.decel, self.cas.visc, self.cas.spin) } else { (c.tune.decel, c.tune.visc, 1.5 * c.tune.decel) };
-                c.x += c.vx * h;
-                c.z += c.vz * h;
-                let yaw = c.yaw + c.w * h;
-                turn(c, yaw);
-                c.dirty = true;
-                let sp = hypot2(c.vx, c.vz);
-                if sp > 0.0 {
-                    let ns = js_max(0.0, sp - dec * fs * h) * exp(-vis * fs * h);
-                    c.vx *= ns / sp;
-                    c.vz *= ns / sp;
-                }
-                let aw = js_abs(c.w);
-                if aw > 0.0 {
-                    let na = js_max(0.0, aw - spin * fs / c.radius * h) * exp(-vis * fs * h);
-                    c.w *= na / aw;
-                }
-                if cas || c.rolling {
-                    let v = if cas { hypot2(c.vx, c.vz) } else { 0.0 };
-                    self.roll_note(i, v);
-                }
-                let c = &mut self.t[i];
-                if sp < SLEEP_V && aw < SLEEP_W {
-                    c.idle += h;
-                    if c.idle > SLEEP_T {
-                        c.asleep = true;
-                        c.vx = 0.0;
-                        c.vz = 0.0;
-                        c.w = 0.0;
-                    }
-                } else {
-                    c.idle = 0.0;
-                }
-                if c.yaw > PI * 4.0 || c.yaw < -PI * 4.0 {
-                    let yaw = c.yaw % (PI * 2.0);
-                    turn(c, yaw);
-                }
+                self.coasts(i, h);
             }
         }
-        // 2. the men push
         for q in 0..self.men.len() {
-            let inv_mc = 1.0 / self.men[q].mass;
             for &i in live {
-                let man = self.men[q];
-                let (cx, cz, cr0) = (man.pos[0], man.pos[2], man.radius);
-                let c = &mut self.t[i];
-                let (dx, dz) = (cx - c.x, cz - c.z);
-                let rr = c.radius + cr0;
-                if dx * dx + dz * dz > rr * rr {
-                    continue;
-                }
-                let Some(cc) = circle_contact(c, cx, cz, cr0) else { continue };
-                let (nx, nz, pen) = (cc.nx, cc.nz, cc.pen);
-                if !self.enabled {
-                    self.men[q].pos[0] += nx * pen;
-                    self.men[q].pos[2] += nz * pen;
-                    continue;
-                }
-                let t = self.time;
-                let fresh = t - c.push_t > 0.25;
-                c.push_t = t;
-                wake(c);
-                let who = man.who;
-                let (im, ii) = (c.inv_mass, c.inv_i);
-                c.who = who;
-                c.dirty = true;
-                let (rx, rz) = (cc.px - c.x, cc.pz - c.z);
-                let (vpx, vpz) = (c.vx + c.w * rz, c.vz - c.w * rx);
-                let vn = (vpx - man.vel[0]) * nx + (vpz - man.vel[2]) * nz;
-                if vn > 0.0 {
-                    let cr = rz * nx - rx * nz;
-                    let kk = im + ii * cr * cr + inv_mc;
-                    let jn = vn / kk;
-                    c.vx -= jn * nx * im;
-                    c.vz -= jn * nz * im;
-                    c.w -= jn * cr * ii;
-                    clamp_vel(c);
-                    let dv = jn * im;
-                    if fresh && dv > 0.7 {
-                        self.noise(i, PropEventSound::Scrape, dv, who, (0.28 * dv) * (if man.quiet { 0.5 } else { 1.0 }));
-                    }
-                }
-                let share = im / (im + inv_mc);
-                let c = &mut self.t[i];
-                c.x -= nx * pen * share;
-                c.z -= nz * pen * share;
-                self.men[q].pos[0] += nx * pen * (1.0 - share);
-                self.men[q].pos[2] += nz * pen * (1.0 - share);
+                self.pushed(q, i);
             }
         }
         if self.enabled {
-            // 3. thing against thing
             self.solve_pairs(true);
-            // 4. the leaves sweep them aside
-            let t = self.time;
             for &l in self.leaves {
-                let o = self.w;
-                let b = l * REC;
-                let (lx, lz, lhx, lhz) = (o.leaf[b + R_C], o.leaf[b + R_C + 2], o.leaf[b + R_H], o.leaf[b + R_H + 2]);
-                let (lcs, lsn) = (o.leaf[b + R_COS], o.leaf[b + R_SIN]); // (kept beside the leaf's yaw by whoever wrote the row)
-                let lr = hypot2(lhx, lhz);
+                let leaf = Leaf::of(self.w, l);
                 for &i in live {
-                    let c = &mut self.t[i];
-                    let (dx, dz) = (c.x - lx, c.z - lz);
-                    let reach = lr + c.radius;
-                    if dx * dx + dz * dz > reach * reach {
-                        continue;
-                    }
-                    let Some(sat) = sat_with(c, lx, lz, lcs, lsn, lhx, lhz) else { continue };
-                    c.x += sat.nx * sat.depth;
-                    c.z += sat.nz * sat.depth;
-                    c.dirty = true;
-                    wake(c);
-                    c.push_t = t;
-                    c.who = 0.0;
-                    let vn = c.vx * sat.nx + c.vz * sat.nz;
-                    let want = js_min(2.0, sat.depth / h * 0.5);
-                    if vn < want {
-                        c.vx += (want - vn) * sat.nx;
-                        c.vz += (want - vn) * sat.nz;
-                    }
+                    self.swept(&leaf, i, h);
                 }
             }
-            // 4b. a door frame guides a shoved thing through
             for f in self.ways {
-                let (fcx, fcz, fux, fuz, half) = (f.cx, f.cz, f.ux, f.uz, f.half);
                 for &i in live {
-                    let c = &mut self.t[i];
-                    if c.asleep || t - c.push_t > 0.12 || c.who == 0.0 {
-                        continue;
-                    }
-                    let (dx, dz) = (c.x - fcx, c.z - fcz);
-                    let (radius, hx, hz) = (c.radius, c.hx, c.hz);
-                    if dx * dx + dz * dz > (half + radius + 0.4) * (half + radius + 0.4) {
-                        continue;
-                    }
-                    let (cs, sn) = (c.cs, c.sn);
-                    let (along, off) = (dx * fux + dz * fuz, -dx * fuz + dz * fux);
-                    let eu = hx * js_abs(cs * fux - sn * fuz) + hz * js_abs(sn * fux + cs * fuz);
-                    let en = hx * js_abs(-cs * fuz - sn * fux) + hz * js_abs(-sn * fuz + cs * fux);
-                    let lim = half - eu - 0.01;
-                    if lim < 0.0 || js_abs(along) > half + 0.05 || js_abs(off) > en + 0.15 {
-                        continue;
-                    }
-                    let over = js_abs(along) - lim;
-                    if over <= 0.0 {
-                        continue;
-                    }
-                    if js_abs(-c.vx * fuz + c.vz * fux) < 0.5 * js_abs(c.vx * fux + c.vz * fuz) {
-                        continue;
-                    }
-                    let kk = js_min(over, DOOR_GUIDE * h) * (if along > 0.0 { -1.0 } else { 1.0 });
-                    c.x += fux * kk;
-                    c.z += fuz * kk;
-                    c.dirty = true;
+                    self.guided(f, i, h);
                 }
             }
-            // 5. the statics, last of what moves a thing
+            // the statics, last of what moves a thing
             for &i in live {
                 if !self.t[i].asleep || self.t[i].dirty {
                     self.solve_statics(i, true);
                 }
             }
         }
-        // 6. what a thing could not yield the man gives back, and a thing found squeezed sheds what he keeps feeding it
         for q in 0..self.men.len() {
             for &i in live {
-                let (cx, cz, cr0) = (self.men[q].pos[0], self.men[q].pos[2], self.men[q].radius);
-                let c = &mut self.t[i];
-                let (dx, dz) = (cx - c.x, cz - c.z);
-                let rr = c.radius + cr0;
-                if dx * dx + dz * dz > rr * rr {
-                    continue;
-                }
-                let Some(cc) = circle_contact(c, cx, cz, cr0) else { continue };
-                self.men[q].pos[0] += cc.nx * cc.pen;
-                self.men[q].pos[2] += cc.nz * cc.pen;
-                if cc.pen > 0.004 {
-                    c.vx *= 0.3;
-                    c.vz *= 0.3;
-                    c.w *= 0.3;
-                }
+                self.gives_back(q, i);
             }
         }
+    }
+
+    /// it coasts, the floor slows it, and it sleeps
+    fn coasts(&mut self, i: PropId, h: f64) {
+        let fs = self.friction;
+        let c = &mut self.t[i];
+        if c.asleep {
+            return;
+        }
+        let cas = c.def.kind == crate::scene_level_data::PropKindName::Chair;
+        let (dec, vis, spin) = if cas { (self.cas.decel, self.cas.visc, self.cas.spin) } else { (c.tune.decel, c.tune.visc, 1.5 * c.tune.decel) };
+        c.x += c.vx * h;
+        c.z += c.vz * h;
+        let yaw = c.yaw + c.w * h;
+        turn(c, yaw);
+        c.dirty = true;
+        let sp = hypot2(c.vx, c.vz);
+        if sp > 0.0 {
+            let ns = js_max(0.0, sp - dec * fs * h) * exp(-vis * fs * h);
+            c.vx *= ns / sp;
+            c.vz *= ns / sp;
+        }
+        let aw = js_abs(c.w);
+        if aw > 0.0 {
+            let na = js_max(0.0, aw - spin * fs / c.radius * h) * exp(-vis * fs * h);
+            c.w *= na / aw;
+        }
+        if cas || c.rolling {
+            let v = if cas { hypot2(c.vx, c.vz) } else { 0.0 };
+            self.roll_note(i, v);
+        }
+        let c = &mut self.t[i];
+        rests(c, sp < SLEEP_V && aw < SLEEP_W, h);
+        if c.yaw > PI * 4.0 || c.yaw < -PI * 4.0 {
+            let yaw = c.yaw % (PI * 2.0);
+            turn(c, yaw);
+        }
+    }
+
+    /// a man walking into it sets it going, each giving way by his weight and its own
+    fn pushed(&mut self, q: usize, i: PropId) {
+        let man = self.men[q];
+        let c = &mut self.t[i];
+        let Some(cc) = man_contact(c, &man) else { return };
+        let (nx, nz, pen) = (cc.nx, cc.nz, cc.pen);
+        if !self.enabled {
+            self.men[q].pos[0] += nx * pen;
+            self.men[q].pos[2] += nz * pen;
+            return;
+        }
+        let fresh = self.time - c.push_t > 0.25;
+        c.push_t = self.time;
+        wake(c);
+        c.who = man.who;
+        c.dirty = true;
+        let (im, inv_mc) = (c.inv_mass, 1.0 / man.mass);
+        let (rx, rz) = (cc.px - c.x, cc.pz - c.z);
+        let (vpx, vpz) = speed_at(c, rx, rz);
+        let vn = (vpx - man.vel[0]) * nx + (vpz - man.vel[2]) * nz;
+        if vn > 0.0 {
+            let cr = rz * nx - rx * nz;
+            let jn = vn / (im + c.inv_i * cr * cr + inv_mc);
+            knock(c, -jn, nx, nz, cr);
+            clamp_vel(c);
+            let dv = jn * im;
+            if fresh && dv > 0.7 {
+                self.noise(i, PropEventSound::Scrape, dv, man.who, (0.28 * dv) * (if man.quiet { 0.5 } else { 1.0 }));
+            }
+        }
+        let share = im / (im + inv_mc);
+        let c = &mut self.t[i];
+        c.x -= nx * pen * share;
+        c.z -= nz * pen * share;
+        self.men[q].pos[0] += nx * pen * (1.0 - share);
+        self.men[q].pos[2] += nz * pen * (1.0 - share);
+    }
+
+    /// a leaf swung into it sweeps it aside
+    fn swept(&mut self, l: &Leaf, i: PropId, h: f64) {
+        let c = &mut self.t[i];
+        if !nears(c, l.x, l.z, l.r) {
+            return;
+        }
+        let Some(sat) = sat_with(c, l.x, l.z, l.cs, l.sn, l.hx, l.hz) else { return };
+        c.x += sat.nx * sat.depth;
+        c.z += sat.nz * sat.depth;
+        c.dirty = true;
+        wake(c);
+        c.push_t = self.time;
+        c.who = 0.0;
+        let vn = c.vx * sat.nx + c.vz * sat.nz;
+        let want = js_min(2.0, sat.depth / h * 0.5);
+        if vn < want {
+            c.vx += (want - vn) * sat.nx;
+            c.vz += (want - vn) * sat.nz;
+        }
+    }
+
+    /// a door frame guides through it a thing somebody is shoving at it
+    fn guided(&mut self, f: &PropSystemDoorwaysItem, i: PropId, h: f64) {
+        let (fux, fuz, half) = (f.ux, f.uz, f.half);
+        let c = &mut self.t[i];
+        if c.asleep || self.time - c.push_t > 0.12 || c.who == 0.0 {
+            return;
+        }
+        let (dx, dz) = (c.x - f.cx, c.z - f.cz);
+        if dx * dx + dz * dz > (half + c.radius + 0.4) * (half + c.radius + 0.4) {
+            return;
+        }
+        let (cs, sn) = (c.cs, c.sn);
+        let (along, off) = (dx * fux + dz * fuz, -dx * fuz + dz * fux);
+        let eu = c.hx * js_abs(cs * fux - sn * fuz) + c.hz * js_abs(sn * fux + cs * fuz);
+        let en = c.hx * js_abs(-cs * fuz - sn * fux) + c.hz * js_abs(-sn * fuz + cs * fux);
+        let lim = half - eu - 0.01;
+        if lim < 0.0 || js_abs(along) > half + 0.05 || js_abs(off) > en + 0.15 {
+            return;
+        }
+        let over = js_abs(along) - lim;
+        let passing = js_abs(-c.vx * fuz + c.vz * fux) >= 0.5 * js_abs(c.vx * fux + c.vz * fuz);
+        if over <= 0.0 || !passing {
+            return;
+        }
+        let by = js_min(over, DOOR_GUIDE * h) * (if along > 0.0 { -1.0 } else { 1.0 });
+        c.x += fux * by;
+        c.z += fuz * by;
+        c.dirty = true;
+    }
+
+    /// what it could not yield the man gives back, and a thing found squeezed sheds what he keeps feeding it
+    fn gives_back(&mut self, q: usize, i: PropId) {
+        let c = &mut self.t[i];
+        let Some(cc) = man_contact(c, &self.men[q]) else { return };
+        self.men[q].pos[0] += cc.nx * cc.pen;
+        self.men[q].pos[2] += cc.nz * cc.pen;
+        if cc.pen > 0.004 {
+            c.vx *= 0.3;
+            c.vz *= 0.3;
+            c.w *= 0.3;
+        }
+    }
+}
+
+/// it goes to sleep once it has been `still` for long enough
+fn rests(c: &mut Prop, still: bool, h: f64) {
+    if !still {
+        c.idle = 0.0;
+        return;
+    }
+    c.idle += h;
+    if c.idle > SLEEP_T {
+        c.asleep = true;
+        c.vx = 0.0;
+        c.vz = 0.0;
+        c.w = 0.0;
     }
 }
 
