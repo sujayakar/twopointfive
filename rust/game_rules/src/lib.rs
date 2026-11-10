@@ -14,7 +14,7 @@ pub use body::{anim_characters, anim_gltf, anim_skeleton, character, packside, p
 pub mod outfit;
 pub use outfit::{cast, char_look, gear, gunlook, gunslots, issue, kit, kitanim, kitload, kitstage, loadout, rig_props, slotsetup, stature};
 pub mod guns;
-pub use guns::{autoreload, combat, fireline, friendlyfire, friends, glasspen, gunreload, gunroles, he40, launcher, shotgun, sim_itemshome, throwables, throwplan, tracers, wallpen, weapons};
+pub use guns::{autoreload, combat, fireline, flight, friendlyfire, friends, glasspen, gunreload, gunroles, he40, launcher, shotgun, sim_itemshome, throwables, throwplan, tracers, wallpen, weapons};
 pub mod sam;
 pub use sam::{aim, aimcost, aimweight, backkey, gunwall, hands, handwork, interact, noshove, ownblow, player, samlook, samstun};
 pub mod stealth;

@@ -1,5 +1,7 @@
 pub use ::game_types::he40::types;
 pub use types::*;
+use crate::combat::BodyHitContact;
+use crate::flight::Met;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -152,24 +154,8 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
     };
     g.shells.push(sh);
     g.stats.he40.fired += 1;
-    crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.6 }));
-    let launch_noise = g.k.he40.launch_noise;
-    let serial = g.serial();
-    let ev = crate::game::GameEvent {
-        kind: crate::director::EventKind::Prop,
-        pos: v3::copy(g.ch[shooter].pos),
-        time: g.time,
-        loud: false,
-        level: Some(launch_noise),
-        who: Some(g.ch[shooter].id),
-        serial,
-        ..Default::default()
-    };
-    g.events.push(ev);
-    let pl = g.player;
-    if shooter == g.pl[pl].ch {
-        g.pl[pl].noise = m::max(g.pl[pl].noise, launch_noise);
-    }
+    let level = g.k.he40.launch_noise;
+    crate::flight::launched(g, shooter, from, 1.0, Some(0.6), level);
     sh
 }
 
@@ -194,77 +180,17 @@ fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: true, met });
 }
 
-/// A dud's velocity coming back off a surface with normal `n`. (he40.ts bounceOff)
-fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
-    let vn = v3::dot(v, n);
-    let v_n = v3::scale(n, vn);
-    let v_t = v3::sub(v, v_n);
-    v3::add(
-        v3::scale(v_t, g.k.he40.keep_tangent),
-        v3::scale(v_n, if vn < 0.0 { -g.k.he40.restitution } else { 1.0 }),
-    )
-}
-
 /// Not armed and stopped: a 'shell' item with what motion is left, and a noise the room hears. (he40.ts dud)
 fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet, noise: Option<f64>, who: Option<f64>) {
     let noise = noise.unwrap_or(g.k.he40.dud_noise);
     let who = who.unwrap_or(0.0);
-    let mut vel = vel;
-    let sp = v3::len(vel);
-    if sp > g.k.he40.spent_speed_max {
-        vel = v3::scale(vel, g.k.he40.spent_speed_max / sp);
-    }
-    let shooter_id = g.ch[sh.shooter].id;
-    let opts = crate::throwables::ThrowablesSpawnOpts {
-        who: Some(shooter_id),
-        heading: Some(v3::yaw_of(vel)),
-        ..Default::default()
-    };
-    let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Shell, v3::copy(at), vel, Some(opts));
-    g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::ShellSkitter);
+    let most = g.k.he40.spent_speed_max;
+    crate::flight::to_item(g, crate::throwables::ItemKind::Shell, sh.shooter, at, vel, most, crate::throwables::ItemBounce::ShellSkitter);
     crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::particle_fx::clack_fx(g, at);
-    if noise > 0.0 {
-        let serial = g.serial();
-        let ev = crate::game::GameEvent {
-            kind: crate::director::EventKind::Prop,
-            pos: [at[0], 0.0, at[2]],
-            time: g.time,
-            loud: false,
-            level: Some(noise),
-            who: Some(who),
-            serial,
-            ..Default::default()
-        };
-        g.events.push(ev);
-    }
+    if noise > 0.0 { crate::flight::noise(g, [at[0], 0.0, at[2]], noise, who, None); }
     g.stats.he40.duds += 1;
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: false, met });
-}
-
-/// One candidate body along a substep's segment, nearest kept. (he40.ts updateShells tryChar)
-fn try_char(
-    g: &mut Game,
-    shooter: CharId,
-    c: CharId,
-    gd: Option<GuardId>,
-    pos: V3,
-    dir: V3,
-    reach: f64,
-    best: &mut f64,
-    hit_c: &mut Option<CharId>,
-    hit_g: &mut Option<GuardId>,
-) {
-    if c == shooter || !g.ch[c].alive {
-        return;
-    }
-    let radius = g.k.he40.radius;
-    let t = crate::combat::body_hit(g, c, pos, dir, reach, Some(crate::combat::BodyHitContact::Flight { radius }));
-    if t >= 0.0 && t < *best {
-        *best = t;
-        *hit_c = Some(c);
-        *hit_g = gd;
-    }
 }
 
 /// Is the fuze armed `t` metres on from what has been flown. (he40.ts updateShells armedAt)
@@ -272,141 +198,81 @@ fn armed_at(flown: f64, t: f64, arm_m: f64) -> bool {
     flown + m::max(0.0, t) >= arm_m
 }
 
-/// One frame of every round in the air: drag and gravity in substeps, the first thing met along each, then a burst or a dud. (he40.ts updateShells)
+/// One frame of every round in the air: armed, it bursts on what it meets; before that it is a dud.
 pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
     let r_k = g.k.he40;
+    let b = ballistics(g);
+    let h = dt / b.substeps;
+    let off = |v: V3, n: V3| crate::flight::bounce(v, n, r_k.restitution, r_k.keep_tangent);
     let mut i = g.shells.len();
     while i > 0 {
         i -= 1;
         let mut done = false;
-        let h = dt / r_k.substeps;
         let mut s = 0.0;
-        while s < r_k.substeps && !done {
+        while s < b.substeps && !done {
             s += 1.0;
             g.shells[i].age += h;
             g.shells[i].spin += 40.0 * h;
-            let k = m::exp(-r_k.drag * h);
-            let v = g.shells[i].vel;
-            g.shells[i].vel = [v[0] * k, v[1] * k - r_k.gravity * h, v[2] * k];
-            let seg = v3::scale(g.shells[i].vel, h);
-            let len = v3::len(seg);
-            if len < 1e-6 {
+            let Shell { pos, mut vel, shooter, .. } = g.shells[i];
+            let bodies = crate::flight::bodies(g, shooter);
+            let leg = crate::flight::leg(g, &b, h, pos, &mut vel, &bodies, BodyHitContact::Flight { radius: b.radius });
+            g.shells[i].vel = vel;
+            let Some(leg) = leg else { continue };
+            let Some(met) = leg.met else {
+                g.shells[i].pos = leg.to;
+                g.shells[i].flown += leg.len;
                 continue;
-            }
-            let dir = v3::scale(seg, 1.0 / len);
-            let reach = len + r_k.radius;
-            let mut best = f64::INFINITY;
-            let mut hit_c: Option<CharId> = None;
-            let mut hit_g: Option<GuardId> = None;
-            let pos = g.shells[i].pos;
-            let shooter = g.shells[i].shooter;
-            let mut w = 0;
-            while w < g.guards.len() {
-                let gd = g.guards[w];
-                w += 1;
-                if !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].team != crate::teams::Team::Operative {
-                    let c = g.gd[gd].ch;
-                    try_char(g, shooter, c, Some(gd), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
-                }
-            }
-            for cv in crate::civilians::civilian_bodies(g) {
-                let c = g.gd[cv].ch;
-                try_char(g, shooter, c, Some(cv), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
-            }
-            for pl in crate::seats::men(g) {
-                if !crate::condition::down(g, g.pl[pl].ch) {
-                    let c = g.pl[pl].ch;
-                    try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
-                }
-            }
-            let st = crate::scene_collision::raycast(g, pos, dir, reach);
-            let ph = crate::props::prop_system_raycast(g, pos, dir, reach);
-            let t_s = match &st {
-                Some(x) => x.t,
-                None => f64::INFINITY,
             };
-            let t_p = match &ph {
-                Some(x) => x.t,
-                None => f64::INFINITY,
+            done = true;
+            // (its path is counted to where its centre stops, as the preview's is)
+            let was = g.shells[i].flown;
+            g.shells[i].flown += match &met {
+                Met::Man(_, t) => *t,
+                Met::Prop(ph) => m::max(0.0, ph.t - b.radius),
+                Met::Static(st) => m::max(0.0, st.t - b.radius),
+                Met::Floor => leg.len,
             };
-            if let Some(c) = hit_c {
-                if best <= t_s && best <= t_p {
-                    // a man
-                    let at = v3::mad(pos, dir, best);
-                    if armed_at(g.shells[i].flown, best, r_k.arm_m) {
-                        g.shells[i].flown += best;
-                        let sh = g.shells[i];
-                        burst(g, sh, v3::mad(at, dir, -r_k.standoff), crate::he40::ShellEndMet::Man);
+            if let Met::Floor = met { g.shells[i].pos = leg.to; }
+            let sh = g.shells[i];
+            let armed = match &met { Met::Man(_, t) => armed_at(was, *t, r_k.arm_m), _ => armed_at(sh.flown, 0.0, r_k.arm_m) };
+            match met {
+                Met::Man(c, t) => {
+                    let at = v3::mad(pos, leg.dir, t);
+                    if armed { burst(g, sh, v3::mad(at, leg.dir, -r_k.standoff), ShellEndMet::Man); } else { dud_hits_character(g, sh, c, leg.dir, at); }
+                }
+                Met::Prop(ph) => {
+                    let hit_p = v3::mad(pos, leg.dir, ph.t);
+                    if armed {
+                        burst(g, sh, v3::mad(hit_p, ph.n, r_k.standoff), ShellEndMet::Prop);
                     } else {
-                        g.shells[i].flown += best;
-                        let sh = g.shells[i];
-                        dud_hits_character(g, sh, c, hit_g, dir, at);
+                        let who = g.ch[shooter].id;
+                        crate::props::prop_system_apply_impulse(g, ph.prop, hit_p, [leg.dir[0] * r_k.prop_j, 0.0, leg.dir[2] * r_k.prop_j], who, Some(true));
+                        crate::marks::chip_mark(g, hit_p, ph.n, Some(crate::marks::Surface2 { box_: ph.box_, dynamic: true }), None);
+                        dud(g, sh, v3::mad(pos, leg.dir, m::max(0.0, ph.t - b.radius)), off(sh.vel, ph.n), ShellEndMet::Prop, None, None);
                     }
-                    done = true;
-                    break;
                 }
-            }
-            if let Some(ph) = ph.as_ref().filter(|_| t_p <= t_s) {
-                // furniture: its path is counted to where its centre stops, as the preview's is
-                g.shells[i].flown += m::max(0.0, t_p - r_k.radius);
-                let hit_p = v3::mad(pos, dir, t_p);
-                if armed_at(g.shells[i].flown, 0.0, r_k.arm_m) {
-                    let sh = g.shells[i];
-                    burst(g, sh, v3::mad(hit_p, ph.n, r_k.standoff), crate::he40::ShellEndMet::Prop);
-                } else {
-                    let who = g.ch[shooter].id;
-                    crate::props::prop_system_apply_impulse(g, ph.prop, hit_p, [dir[0] * r_k.prop_j, 0.0, dir[2] * r_k.prop_j], who, Some(true));
-                    crate::marks::chip_mark(g, hit_p, ph.n, Some(crate::marks::Surface2 { box_: ph.box_, dynamic: true }), None);
-                    let sh = g.shells[i];
-                    let back = bounce_off(g, sh.vel, ph.n);
-                    dud(g, sh, v3::mad(pos, dir, m::max(0.0, t_p - r_k.radius)), back, crate::he40::ShellEndMet::Prop, None, None);
+                Met::Static(st) => {
+                    // a wall, a slab, a leaf, a pane
+                    let hit_p = v3::mad(pos, leg.dir, st.t);
+                    if armed {
+                        burst(g, sh, v3::mad(hit_p, st.n, r_k.standoff), ShellEndMet::Static);
+                    } else {
+                        let surface = crate::marks::static_surface(g, st.index);
+                        crate::marks::chip_mark(g, hit_p, st.n, surface, None);
+                        dud(g, sh, v3::mad(pos, leg.dir, m::max(0.0, st.t - b.radius)), off(sh.vel, st.n), ShellEndMet::Static, None, None);
+                    }
                 }
-                done = true;
-                break;
-            }
-            if let Some(st) = st.as_ref() {
-                // a wall, a slab, a leaf, a pane
-                g.shells[i].flown += m::max(0.0, t_s - r_k.radius);
-                let hit_p = v3::mad(pos, dir, t_s);
-                if armed_at(g.shells[i].flown, 0.0, r_k.arm_m) {
-                    let sh = g.shells[i];
-                    burst(g, sh, v3::mad(hit_p, st.n, r_k.standoff), crate::he40::ShellEndMet::Static);
-                } else {
-                    let surface = crate::marks::static_surface(g, st.index);
-                    crate::marks::chip_mark(g, hit_p, st.n, surface, None);
-                    let sh = g.shells[i];
-                    let back = bounce_off(g, sh.vel, st.n);
-                    dud(g, sh, v3::mad(pos, dir, m::max(0.0, t_s - r_k.radius)), back, crate::he40::ShellEndMet::Static, None, None);
+                Met::Floor => {
+                    let at: V3 = [leg.to[0], b.radius, leg.to[2]];
+                    if armed { burst(g, sh, [at[0], r_k.standoff, at[2]], ShellEndMet::Floor); } else { dud(g, sh, at, off(sh.vel, [0.0, 1.0, 0.0]), ShellEndMet::Floor, None, None); }
                 }
-                done = true;
-                break;
-            }
-            g.shells[i].pos = v3::add(pos, seg);
-            g.shells[i].flown += len;
-            if g.shells[i].pos[1] < r_k.radius {
-                // the ground where no slab is under it
-                let p = g.shells[i].pos;
-                let at: V3 = [p[0], r_k.radius, p[2]];
-                let sh = g.shells[i];
-                if armed_at(sh.flown, 0.0, r_k.arm_m) {
-                    burst(g, sh, [at[0], r_k.standoff, at[2]], crate::he40::ShellEndMet::Floor);
-                } else {
-                    let back = bounce_off(g, sh.vel, [0.0, 1.0, 0.0]);
-                    dud(g, sh, at, back, crate::he40::ShellEndMet::Floor, None, None);
-                }
-                done = true;
-                break;
             }
         }
-        if !done && g.shells[i].age > r_k.life {
+        if !done && g.shells[i].age > b.life {
             // up and out over the lot: gone
             g.stats.he40.gone += 1;
             let sh = g.shells[i];
-            log_end(g, &crate::he40::ShellEnd {
-                flown: sh.flown,
-                armed: sh.flown >= r_k.arm_m,
-                met: crate::he40::ShellEndMet::Air,
-            });
+            log_end(g, &ShellEnd { flown: sh.flown, armed: sh.flown >= r_k.arm_m, met: ShellEndMet::Air });
             done = true;
         }
         if done && i < g.shells.len() {
@@ -416,8 +282,8 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// A round that had not armed has found a man: he folds or flinches, it never wounds, and it drops at his feet. (he40.ts dudHitsCharacter)
-fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2: CharId, gd: Option<GuardId>, dir: V3, at: V3) {
-    let c = c_2;
+fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c: CharId, dir: V3, at: V3) {
+    let gd = crate::character::guard_of(g, c);
     match gd {
         None => {
             crate::character::anim_hit(g, c);
