@@ -22,28 +22,26 @@ fn kind_word(k: SquadThrowKind) -> ThrowKind { if k == SquadThrowKind::Frag { Th
 pub fn throws_view(g: &Game, seat: &crate::seats::SeatRef) -> Vec<ThrowLine> {
     let mut out = Vec::new();
     let key = crate::seats::view_key(g, seat);
-    if g.k.squadthrow.on {
-        if let Some(s) = g.m.squadthrow.states.get(key) {
-            for gd in s.walks.keys() {
-                let w = s.walks.get(gd).unwrap();
-                if w.thrown_t >= 0.0 || crate::condition::down(g, g.gd[w.gd].ch) || crate::orders::squad_orders_of(g, seat, w.gd) != w.a || !g.guards.contains(&w.gd) { continue; }
-                let p = g.ch[g.gd[w.gd].ch].pos;
-                let (mut bi, mut bd) = (0usize, f64::INFINITY);
-                for (i, &q) in w.line.iter().enumerate() { let d = v3::dist_xz(q, p); if d < bd { bd = d; bi = i; } }
-                let walk = if v3::dist_xz(p, w.post) > 0.4 {
-                    let mut way = vec![v3::copy(p)];
-                    if bi + 1 < w.line.len() { way.extend_from_slice(&w.line[bi + 1..]); }
-                    way.push(w.post);
-                    Some(way)
-                } else { None };
-                out.push(line(g, w.gd, kind_word(w.kind), w.post, &w.arc.sol.points, w.arc.rest, walk, false));
-            }
-            if let Some((men, at, kind)) = crate::squadthrow::lit(g, seat) {
-                if let Some(p) = s.plans.get(kind) {
-                    if let (Some(th), None, true, true) = (&p.thrower, &p.refuse, p.at == at, p.men == men) {
-                        let q = g.ch[g.gd[th.gd].ch].pos;
-                        out.push(line(g, th.gd, kind_word(kind), th.post.unwrap_or([q[0], 0.0, q[2]]), &th.sol.points, th.rest, p.walk.clone(), true));
-                    }
+    if let Some(s) = g.m.squadthrow.states.get(key) {
+        for gd in s.walks.keys() {
+            let w = s.walks.get(gd).unwrap();
+            if w.thrown_t >= 0.0 || crate::condition::down(g, g.gd[w.gd].ch) || crate::orders::squad_orders_of(g, seat, w.gd) != w.a || !g.guards.contains(&w.gd) { continue; }
+            let p = g.ch[g.gd[w.gd].ch].pos;
+            let (mut bi, mut bd) = (0usize, f64::INFINITY);
+            for (i, &q) in w.line.iter().enumerate() { let d = v3::dist_xz(q, p); if d < bd { bd = d; bi = i; } }
+            let walk = if v3::dist_xz(p, w.post) > 0.4 {
+                let mut way = vec![v3::copy(p)];
+                if bi + 1 < w.line.len() { way.extend_from_slice(&w.line[bi + 1..]); }
+                way.push(w.post);
+                Some(way)
+            } else { None };
+            out.push(line(g, w.gd, kind_word(w.kind), w.post, &w.arc.sol.points, w.arc.rest, walk, false));
+        }
+        if let Some((men, at, kind)) = crate::squadthrow::lit(g, seat) {
+            if let Some(p) = s.plans.get(kind) {
+                if let (Some(th), None, true, true) = (&p.thrower, &p.refuse, p.at == at, p.men == men) {
+                    let q = g.ch[g.gd[th.gd].ch].pos;
+                    out.push(line(g, th.gd, kind_word(kind), th.post.unwrap_or([q[0], 0.0, q[2]]), &th.sol.points, th.rest, p.walk.clone(), true));
                 }
             }
         }

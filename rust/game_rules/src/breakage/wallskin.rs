@@ -114,7 +114,7 @@ fn ensure(g: &mut Game) {
 
 /// Cells of B have just opened: every sheet lying on it is cut again as this frame's boxes are handed over.
 pub(super) fn wall_skin_opened(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike) {
-    if !g.k.wallskin.on || g.destr.walls.skins.failed { return; }
+    if g.destr.walls.skins.failed { return; }
     for j in wall_skin_skins_of(g, b) { g.destr.walls.skins.dirty.add(crate::Num(j)); }
 }
 
@@ -143,7 +143,7 @@ pub(super) fn wall_skin_update(g: &mut crate::game::Game) {
 
 /// What stands of the cut sheets, into the frame's dynamic list, and the world told which authored boxes to leave out.
 pub(super) fn wall_skin_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let on = g.k.wallskin.on && !g.destr.walls.skins.failed;
+    let on = !g.destr.walls.skins.failed;
     if !on && (!g.destr.walls.skins.cut.is_empty() || !g.destr.walls.skins.dirty.is_empty()) { let f = g.destr.walls.skins.failed; wall_skin_clear(g); g.destr.walls.skins.failed = f; }   // (put down under a standing game: the bands as authored)
     if on && !g.destr.walls.skins.was {   // (raised under a standing game: every wall that has opened is asked again)
         for b in g.destr.walls.list.clone() { if g.tab.wallbreak_breakable[b].open.iter().any(|x| *x != 0) { let bl = crate::edge_look::break_like(g, b); wall_skin_opened(g, &bl); } }

@@ -127,7 +127,7 @@ pub struct WallHold {
     pub peek: f64,
     pub peek_dir: f64,
     pub crouched: bool,
-    pub take_t: Option<f64>,
+    pub take_t: f64,
     pub yaw0: Option<f64>,
     pub yaw_d: Option<f64>,
     pub hit_t: Option<f64>,
@@ -389,10 +389,6 @@ pub const WALL_LOOK: f64 = 0.4363323129985824;
 pub const WALL_PEEK_LOOK: f64 = 0.5235987755982988;
 
 pub const WALL_SHOVE_OFF: f64 = 0.25;
-
-pub const WALL_AWAY_SECS: f64 = 0.25;
-
-pub const WALL_SETTLE: f64 = 0.22;
 
 pub const WALL_PEEK_SECS: f64 = 0.3;
 

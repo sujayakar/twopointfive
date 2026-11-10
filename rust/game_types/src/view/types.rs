@@ -1321,8 +1321,6 @@ pub struct InteractView {
     pub rows: Vec<crate::view::ListRow>,
     /// the highlighted row among them (-1: none)
     pub lit: f64,
-    /// how many were left off the end
-    pub more: f64,
     /// the selector is open: he holds the key and the list is its rows
     pub open: bool,
     /// (None: no thing, or a row about none)

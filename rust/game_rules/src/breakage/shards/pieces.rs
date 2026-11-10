@@ -485,30 +485,17 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
     let want = m::round(g.k.shards.exit_fines * k);
     let n = glass_shards_budget(g, want);
     let (fine_life, fine_size) = (g.k.shards.fine_life, g.k.shards.fine_size);
-    let sound = crate::sim_fallshome::FallSound::GlassTinkle;
-    {
-        if want <= 0.0 { return true; }
-        let d = v3::normalize(x.dir_out);
-        let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
-        let amount = want * fine_size * fine_size;
-        crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::panes::jet(cx, x.exit, d, sp, amount, who, &g.k));
-        if n > 0.0 {
-            let tint = level_box_albedo(g, x.bi);
-            g.shards.serial += 1.0;
-            let seed = xor_u32(m::imul(js::to_i32(g.shards.serial), js::to_i32(2654435761.0)) as f64, 0xE817 as f64);
-            glass_shards_emit(g, v3::mad(x.exit, d, 0.01), d, n, spray(sp, 0.7, 0.3, fine_life, 0.4, fine_size * 0.8, 0.6, 1.3, 50.0, 1.0, 0.01, None, tint), seed);
-        }
-        return true;
-    }
-    if n <= 0.0 { return true; }
+    if want <= 0.0 { return true; }
     let d = v3::normalize(x.dir_out);
     let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
-    let tint = level_box_albedo(g, x.bi);
-    g.shards.serial += 1.0;
-    let seed = xor_u32(m::imul(js::to_i32(g.shards.serial), js::to_i32(2654435761.0)) as f64, 0xE817 as f64);
-    glass_shards_emit(g, v3::mad(x.exit, d, 0.01), d, n, spray(sp, 0.7, 0.3, fine_life, 0.4, fine_size * 0.8, 0.6, 1.3, 50.0, 1.0, 0.01, None, tint), seed);
-    let fall = glass_shards_fall_of(g, x.exit, v3::scale(d, sp * 0.35));
-    glass_shards_schedule(g, to_sched(fall), sound, 0.0, 1.0, n * fine_size * fine_size, who, Some(false));
+    let amount = want * fine_size * fine_size;
+    crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::panes::jet(cx, x.exit, d, sp, amount, who, &g.k));
+    if n > 0.0 {
+        let tint = level_box_albedo(g, x.bi);
+        g.shards.serial += 1.0;
+        let seed = xor_u32(m::imul(js::to_i32(g.shards.serial), js::to_i32(2654435761.0)) as f64, 0xE817 as f64);
+        glass_shards_emit(g, v3::mad(x.exit, d, 0.01), d, n, spray(sp, 0.7, 0.3, fine_life, 0.4, fine_size * 0.8, 0.6, 1.3, 50.0, 1.0, 0.01, None, tint), seed);
+    }
     true
 }
 

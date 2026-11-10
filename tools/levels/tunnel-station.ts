@@ -498,7 +498,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it. The TEA ROOM is where the tunnel's men sit out a storm: rugs and floor cushions round the stove, low
   // tables with the tea on them, the samovar's table, a card table by the window. The KITCHEN is the bread oven, a work table, flour, the water cans. The
   // STORE is what a winter needs: sacks to the beams, fuel, crates, road cones' worth of drums under one dim bulb. The BUNKHOUSE is four cots, a trunk, a felt

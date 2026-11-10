@@ -232,7 +232,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the GLASSHOUSE is benches of seedling trays under the front panes, compost in sacks, a hand cart and
   // the watering drums; the LAB is one long bench with a burner's gas bottle, sample crates and a stool; the OFFICE a desk on a kilim, a chair, the station's
   // tin trunk of ledgers and a wall hanging; the STORE sacks to the roof beams and crates. Nothing stands within 1.1 m of a door's line, on a

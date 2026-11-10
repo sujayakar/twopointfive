@@ -148,7 +148,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // The rooms were furnished when the house was built. This is what the yards and the ground outside were short of: from above the ground is most of the
   // picture, and the courtyard and the dust round the wall were each one sheet. What a household leaves on its ground: a water point with its mud, last
   // night's fire by the bed the watch sleeps on, the generator's fuel and what it drips, a bike against the wall, the drip line under the washing, bricks

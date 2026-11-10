@@ -533,7 +533,7 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     let twist = (crate::dice::draw_body(g, "character::character_ragdollize#2", id) - 0.5) * (if quiet { 0.8 } else { 1.6 });
     let h = v3::normalize([dir[0], 0.0, dir[2]]);
     let pitch_axis: V3 = [h[2], 0.0, -h[0]];
-    let fall = if !quiet && mv_on(g, MvOnK::Fall) { crate::dice::draw_body(g, "character::character_ragdollize#3", id) } else { 0.6 };   // (the one extra draw only with the switch on)
+    let fall = if !quiet { crate::dice::draw_body(g, "character::character_ragdollize#3", id) } else { 0.6 };
     use_shove(g, id, rag, &rg, quiet, fall, f, h, j, twist, pitch_axis);
     clear_fall(g, id);
     // what the mesh drive needs from the moment of death

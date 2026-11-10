@@ -403,7 +403,7 @@ pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 /// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.
 pub fn kit_reload(g: &mut crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
     let c = g.pl[g.player].ch;
-    if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() || !crate::character::anim_kit_hands_on(g, c) {
+    if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() {
         return None;
     }
     // by what the weapon will do: a magazine with rounds in it is kept, an empty one dropped; the slide / handle is run iff nothing is chambered

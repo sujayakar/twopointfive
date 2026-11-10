@@ -212,7 +212,7 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, d
             }
         }
         // the gun's share: the least further step from which the rifle and the start of its round's way are clear
-        if want && ws.lean_gun > 0.0 {
+        if want {
             let c = g.pl[p].ch;
             let k0 = edge * ws.lean_along - w0.lean_off.unwrap_or(0.0);
             let mut need = 0.0;
@@ -270,7 +270,6 @@ pub(super) fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
     let c = g.pl[p].ch;
     let ws = g.k.wallsnap;
     let w0 = g.pl[p].wall.unwrap();
-    if w0.take_t.is_none() { return; }
     let stacked = w0.kind == Some(WallHoldKind::Stack);
     g.ch[c].anim.wall_take = if w0.settle < 1.0 { w0.settle } else { -1.0 };
     g.ch[c].anim.stance_in = if stacked { ws.slow_in * 13.0 / 22.0 } else { ws.slow_in };
@@ -298,7 +297,7 @@ pub(super) fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
 fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
-    if w0.take_t.is_none() || w0.settle < 1.0 { return; }
+    if w0.settle < 1.0 { return; }
     let ws = g.k.wallsnap;
     let (n, t) = (w0.n, w0.along);
     let po = g.tab.camera[cam].peek_offset.unwrap_or([0.0, 0.0, 0.0]);
@@ -344,14 +343,8 @@ fn wall_take_back(g: &mut Game, p: PlayerId, c: CharId, firm: bool, dir: f64, ba
     true
 }
 
-/// `ease` of moveOnWall: the take eases out on its own clock; a hold taken with the switch off is a smoothstep.
-fn wall_ease(s: f64, take_t: Option<f64>, ease_pow: f64) -> f64 {
-    if s < 1.0 {
-        if take_t.is_some() { crate::wallsnap::ws_ease(s, ease_pow) } else { s * s * (3.0 - 2.0 * s) }
-    } else {
-        1.0
-    }
-}
+/// `ease` of moveOnWall: the take eases out on its own clock.
+fn wall_ease(s: f64, ease_pow: f64) -> f64 { if s < 1.0 { crate::wallsnap::ws_ease(s, ease_pow) } else { 1.0 } }
 
 /// One frame on the wall, in place of free movement; false = he has just come off it and the caller moves him as a free man this same frame.
 pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, mz: f64, ml: f64) -> bool {
@@ -364,7 +357,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     let u_lo = w0.lo + BODY_R;
     let u_hi = w0.hi - BODY_R;
     let base = w0.d + BODY_R + WALL_GAP;
-    if w0.kind == Some(WallHoldKind::Stack) && (!crate::game::player_rifle_up(g, p) || !ws.on) {
+    if w0.kind == Some(WallHoldKind::Stack) && !crate::game::player_rifle_up(g, p) {
         let drawn = !g.pl[p].holstered && g.pl[p].dragging.is_none();
         let w = w!(g, p);
         w.kind = None;
@@ -372,7 +365,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
         w.drawn = drawn;
     }
     let w1 = g.pl[p].wall.unwrap();
-    if w1.kind != Some(WallHoldKind::Stack) && wall_stacks(g, w1) && crate::game::player_rifle_up(g, p) {
+    if w1.kind != Some(WallHoldKind::Stack) && crate::game::player_rifle_up(g, p) {
         let w = w!(g, p);
         w.kind = Some(WallHoldKind::Stack);
         w.up = Some(0.0);
@@ -398,7 +391,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     if ml > 0.0 {
         let a = mx * t[0] + mz * t[2];
         away = mx * n[0] + mz * n[2];
-        let wide = ws.on && ws.along_deg > 0.0;
+        let wide = ws.along_deg > 0.0;
         let along = if wide { m::abs(a) >= m::cos(ws.along_deg * v3::DEG) } else { m::abs(a) > 0.2 && m::abs(a) >= m::abs(away) - 0.05 };
         if along { dir = if a > 0.0 { 1.0 } else { -1.0 }; }
         let w = g.pl[p].wall.unwrap();
@@ -410,7 +403,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
         let w = w!(g, p);
         w.away_t = if away > 0.5 { w.away_t + dt } else { 0.0 };
     }
-    let away_limit = if ws.on { if away > 0.82 { ws.away_secs } else { ws.away_diag } } else { WALL_AWAY_SECS };
+    let away_limit = if away > 0.82 { ws.away_secs } else { ws.away_diag };
     if g.pl[p].wall.unwrap().away_t > away_limit {
         wall_step_off(g, mx, mz, ml, WallStepOffHow::Away);
         return false;
@@ -452,9 +445,8 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
         }
     }
     let w2 = g.pl[p].wall.unwrap();
-    let e_prev = wall_ease(w2.settle, w2.take_t, ws.ease_pow);
-    let settle_secs = match w2.take_t { Some(s) => s, None => WALL_SETTLE };
-    let settle = m::min(1.0, w2.settle + dt / settle_secs);
+    let e_prev = wall_ease(w2.settle, ws.ease_pow);
+    let settle = m::min(1.0, w2.settle + dt / w2.take_t);
     w!(g, p).settle = settle;
     if w2.off > 0.0 && settle >= 1.0 {
         let off_want = m::max(0.0, w2.off - 0.8 * dt);
@@ -490,16 +482,16 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     let u_was = g.pl[p].wall.unwrap().u;
     w!(g, p).u = u;
     // onto the plane at that station, then his own collision and the guards have their say
-    let lo = if ws.on { stack_lean(g, dt, cam, p, dir) } else { 0.0 };
+    let lo = stack_lean(g, dt, cam, p, dir);
     let tx = t[0] * (u + lo) + n[0] * stand;
     let tz = t[2] * (u + lo) + n[2] * stand;
     if e_prev < 1.0 {
-        if ws.on && u != u_was {
+        if u != u_was {
             let pos = g.ch[c].pos;
             { let to = [pos[0] + t[0] * (u - u_was), pos[1], pos[2] + t[2] * (u - u_was)]; crate::character::pos_replace(g, c, to); }
         }
         let w3 = g.pl[p].wall.unwrap();
-        let e0 = wall_ease(w3.settle, w3.take_t, ws.ease_pow);
+        let e0 = wall_ease(w3.settle, ws.ease_pow);
         let k = if e0 < 1.0 { (e0 - e_prev) / (1.0 - e_prev) } else { 1.0 };
         let pos = g.ch[c].pos;
         let mut sx = (tx - pos[0]) * k;
@@ -543,7 +535,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     };
     g.tab.camera[cam].peek_offset = offset;
     g.ch[c].anim.look_yaw_extra = -peek_dir * WALL_PEEK_LOOK * e;
-    if ws.on { wall_snap_cam(g, cam, p); }
+    wall_snap_cam(g, cam, p);
     true
 }
 

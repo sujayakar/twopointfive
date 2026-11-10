@@ -150,7 +150,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`: `destruction.rs` (`ChaosK`), `wallbreak.rs` (`WallsK`), `wallcharge.rs` (`WallchargeK`, `WallshotK`,
-  `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one; `?wallskin=0` leaves paint whole.
+  `WallkillK`), and files of the module's name. A panel or `?knob.walls.blast.radius=3` turns one.
 - **What a stuff does:** its `MATERIALS` row in `src/scene/materials.ts` with the twin `does_of` reads (`levels.md`); a toll in `WallpenK`, a `tough`
   row, a `break_row` in `game_types/src/break_table/`.
 - **A new blast:** `blast` if it judges men, else `destruction_blast`, with `who`, `radius`, `power`. Open cells only through `wall_break_open_cells`.

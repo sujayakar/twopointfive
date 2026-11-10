@@ -695,9 +695,6 @@ pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64, t
     if if outside { h1 < 0.4 } else { js_max(h0, h2) < 0.35 } {
         return LAMINATED;
     }
-    if !(1.0 != 0.0) {
-        return if outside { TEMPERED } else { ANNEALED };
-    }
     let foot = cy - h1;
     if foot < tune.glassreal.low_m || (foot < tune.glassreal.door_foot_m && gap <= tune.glassreal.door_m) {
         TEMPERED
@@ -1176,31 +1173,8 @@ fn step_dice(c: &mut Ctx, ri: usize, tune: &Knobs) {
         let r = pn(c.g).row(ri);
         (dice_of(r), r.d[D_T0])
     };
-    if (1.0 != 0.0) {
-        if c.now - t0 >= tune.glassreal.hang {
-            drop_all(c, ri, &d, tune);
-        } else {
-            let r = pn(c.g).row(ri);
-            if r.walkable != 0 {
-                r.walkable = 0;
-                c.wrote = true;
-            }
-        }
-        return;
-    }
-    let order = order_of(&d);
-    let rr = (c.now - t0 - tune.glassbreak.dice_hang) * tune.glassbreak.dice_speed;
-    let mut next = pn(c.g).row(ri).d_next as usize;
-    let mut n = 0.0;
-    let per = tune.glassbreak.clumps_per_frame;
-    while next < order.len() && (order[next].key <= order[next - 1].key + DICE_TIE || (order[next].key <= rr && n < per)) {
-        release_clump(c, ri, &d, order[next], tune);
-        next += 1;
-        n += 1.0;
-        pn(c.g).row(ri).d_next = next as u32;
-    }
-    if next >= order.len() {
-        dice_done(c, ri);
+    if c.now - t0 >= tune.glassreal.hang {
+        drop_all(c, ri, &d, tune);
     } else {
         let r = pn(c.g).row(ri);
         if r.walkable != 0 {

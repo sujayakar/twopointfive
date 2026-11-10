@@ -156,7 +156,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // THE RANGE ROUND THE HOUSE. The house's five rooms have their things; the ground round it had a table, a bench, one line of sandbags and the butts. What a
   // range is made of stands on it now, in the look's own kit (lib/gwotKit.ts, so a tyre and a drum are round): the READY LINE is where a detail waits its
   // turn (ammunition crates by the table, the water can, the drum the empty cases go in, the tyres nobody has carried round to the house yet), the SOUTH side

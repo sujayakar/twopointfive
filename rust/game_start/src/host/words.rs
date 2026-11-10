@@ -8,8 +8,6 @@ use game::query::Query;
 pub enum Says {
     /// `?word=0` (or `off`) sets it to 0
     AtZero,
-    /// `?word` sets it to 0, whatever its value
-    IfThere,
     /// `?word=0` sets it to this: the number it was before its rule
     ZeroIs(f64),
     /// `?word=<a number above 0>` sets it to that, 1 at most
@@ -23,13 +21,6 @@ pub static WORDS: &[Word] = &[
     Word { word: "doorbrisk", knob: "teampace.door_brisk", says: Says::AtZero },
     Word { word: "pacing", knob: "teampace.pacing", says: Says::AtZero },
     Word { word: "wallpress", knob: "wallsnap.press", says: Says::AtZero },
-    Word { word: "wallskin", knob: "wallskin.on", says: Says::AtZero },
-    Word { word: "posesingles", knob: "posemath.singles", says: Says::AtZero },
-    Word { word: "nowallsnap", knob: "wallsnap.on", says: Says::IfThere },
-    Word { word: "noleangun", knob: "wallsnap.lean_gun", says: Says::IfThere },
-    Word { word: "nosquadthrow", knob: "squadthrow.on", says: Says::IfThere },
-    Word { word: "nobigslot", knob: "bigslot.on", says: Says::IfThere },
-    Word { word: "shapes", knob: "shapes.on", says: Says::AtZero },
     Word { word: "doorcost", knob: "doorshot.toll", says: Says::ZeroIs(1.0) },
     Word { word: "firesway", knob: "fire.wander", says: Says::ZeroIs(0.06) },
     Word { word: "firesway", knob: "fire.wander_up", says: Says::ZeroIs(0.04) },
@@ -51,7 +42,6 @@ pub fn apply(g: &mut Game, words: &str) {
     for w in WORDS {
         let v = match w.says {
             Says::AtZero => if matches!(q.get(w.word), Some("0" | "off")) { Some(0.0) } else { None },
-            Says::IfThere => if q.has(w.word) { Some(0.0) } else { None },
             Says::ZeroIs(z) => if q.get(w.word) == Some("0") { Some(z) } else { None },
             Says::Share => q.get(w.word).and_then(|t| t.parse::<f64>().ok()).filter(|n| *n > 0.0).map(|n| n.min(1.0)),
         };
