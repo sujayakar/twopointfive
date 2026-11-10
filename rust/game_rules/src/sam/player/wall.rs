@@ -514,7 +514,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].hands_full()
-        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].hand.throw_held || g.sets[g.seat].orders.menu.is_some()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;
@@ -562,8 +562,7 @@ pub fn throw_rest(g: &Game, pl: PlayerId) -> Option<crate::player::ThrowRest> {
         Some(sol) if !sol.points.is_empty() => (sol.points[0], sol.v0),
         _ => return None,
     };
-    if !(g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
-    let kind = g.pl[pl].held_kind;
+    let kind = can_in_hand(g, pl)?;
     let rest = crate::frag::rest_of_throw(g, kind, from, v0);
     Some(ThrowRest { at: rest.at, path: rest.path })
 }

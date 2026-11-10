@@ -715,6 +715,11 @@ pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: cr
     }
 }
 
+/// the can he has in his hand
+pub fn can_in_hand(g: &crate::game::Game, pl: PlayerId) -> Option<crate::game::ThrowKind> {
+    if g.pl[pl].holstered { None } else { crate::game::player_canister_sel(g, pl) }
+}
+
 /// a thrown thing not yet out of the hand goes back on the belt
 pub(super) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
     match kind {

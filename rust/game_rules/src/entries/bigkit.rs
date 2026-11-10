@@ -318,12 +318,10 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
         b.t += dt;
     }
     let pl = &g.pl[pid];
-    let throw_held = g.sets[crate::seats::seat_of_man(g, pid)].hand.throw_held;
     let taken = g.cond[pl.ch].down
         || pl.hands_full()
         || pl.wall.is_some()
         || pl.pending_throw.is_some()
-        || throw_held
         || crate::character::anim_in_throw(g, c)
         || crate::handwork::sam_work(g).is_some();
     let over = match &g.ch[c].anim.big_tool {
