@@ -119,7 +119,7 @@ pub(super) fn goal_shift(g: &crate::game::Game, seat: &crate::seats::SeatRef, in
 
 /// Once a tick with a squad on the floor and Sam up: where the ring has no hold, the pair adds the goal as the key goes down.
 pub(super) fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    if !(goal_shift(g, &crate::seats::here(g), input) && g.orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
+    if !(goal_shift(g, &crate::seats::here(g), input) && g.sets[g.seat].orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g, &crate::seats::here(g))) {
         return;
     }
     let key = g.k.cmdring.key.clone();

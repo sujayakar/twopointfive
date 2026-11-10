@@ -17,7 +17,7 @@ fn run(shown: usize) -> Vec<Vec<u32>> {
     for k in 0..FRAMES {
         if k == 120 || k == 900 { game::frag::blast(&mut p.g, [20.0, 0.5, 15.0], &game::frag::BlastSpec { who, ..Default::default() }); }
         if k == 180 { p.sam_put([14.6, 15.2]); let _ = game::wallcharge::wall_charge_order(&mut p.g, [12.06, 0.0, 13.78], None); }
-        if !blown { if let Some(&c) = p.g.wall_charge.set.first() { game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true)); blown = true; } }
+        if !blown { if let Some(&c) = p.g.sets[p.g.seat].wall_charge.set.first() { game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true)); blown = true; } }
         p.net_frame(shown);
         if k % EVERY == 0 { out.push(p.words()); }
     }

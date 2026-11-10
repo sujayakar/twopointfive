@@ -517,7 +517,7 @@ impl KitAsk for Play {
     fn sam_mid_blow(&self) -> bool { self.g.pl[self.g.player].takedown.is_some() }
     fn in_the_arm(&self) -> bool { self.g.pl[self.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
     fn breathing(&self, gd: GuardId) -> bool { let c = self.g.gd[gd].ch; game::condition::down(&self.g, self.g.gd[gd].ch) && !self.g.ch[c].alive && matches!(self.g.gd[gd].down_kind, Some(game::game::DownKind::Struck) | Some(game::game::DownKind::Choked)) }
-    fn man_row_in_reach(&self, gd: GuardId) -> Option<bool> { self.g.nearby.iter().chain(self.g.interactables.iter()).find(|r| r.guard == Some(gd)).map(|r| r.in_reach) }
+    fn man_row_in_reach(&self, gd: GuardId) -> Option<bool> { self.g.sets[self.g.seat].nearby.iter().chain(self.g.sets[self.g.seat].interactables.iter()).find(|r| r.guard == Some(gd)).map(|r| r.in_reach) }
     fn wall_between(&mut self, a: [f64; 2], b: [f64; 2]) -> bool {
         game::scene_collision::solid_blocked(&mut self.g, [a[0], 0.5, a[1]], [b[0], 0.5, b[1]], None) && game::scene_collision::solid_blocked(&mut self.g, [a[0], 1.0, a[1]], [b[0], 1.0, b[1]], None)
     }
@@ -539,9 +539,9 @@ impl KitAsk for Play {
     fn sam_rounds(&self) -> f64 { let pl = &self.g.pl[self.g.player]; game::weapons::firearm_rounds_ready(&self.g, pl.pistol) + game::weapons::firearm_rounds_ready(&self.g, pl.rifle) }
     fn sam_charging(&self) -> bool { self.g.pl[self.g.player].charging.is_some() }
     fn two_hands_on_work(&self) -> bool { let c = self.g.pl[self.g.player].ch; self.g.ch[c].anim.wk.two }
-    fn charges_left(&self) -> f64 { self.g.door_tools.charges }
+    fn charges_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.charges }
     fn door_in(&self, d: DoorId) -> bool { game::doors::door_off(&self.g, d) || (!game::doors::door_latched(&self.g, d) && game::doors::door_lock_broken(&self.g, d)) }
-    fn rows(&self) -> Vec<(game::game::InteractableKind, Option<game::game::Verb>)> { self.g.nearby.iter().map(|r| (r.kind, r.verb)).collect() }
+    fn rows(&self) -> Vec<(game::game::InteractableKind, Option<game::game::Verb>)> { self.g.sets[self.g.seat].nearby.iter().map(|r| (r.kind, r.verb)).collect() }
     fn leaf_pt(&self, d: DoorId, along: f64, out: f64) -> [f64; 2] {
         let (th, h, sw) = (self.g.dr[d].def.closed_dir, self.g.dr[d].def.hinge, game::doors::door_swing(&self.g, d));
         let (u, n) = ([th.cos(), th.sin()], [-th.sin() * sw, th.cos() * sw]);

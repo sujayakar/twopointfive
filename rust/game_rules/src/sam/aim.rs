@@ -267,11 +267,11 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let mut a = core::mem::take(&mut g.arms[g.pl[pl].ch].aim);
     feed_feet(g, &mut a, speed, dt, p.feet_tau, Some(hold));
     g.arms[g.pl[pl].ch].aim = a;
-    let tg = match g.aim_guard {
+    let tg = match g.sets[g.seat].aim_guard {
         Some(x) if !crate::condition::down(g, g.gd[x].ch) => Some(x),
         _ => None,
     };
-    let lt = if tg.is_none() { g.aim_target } else { None };
+    let lt = if tg.is_none() { g.sets[g.seat].aim_target } else { None };
     let key = if let Some(t) = tg {
         alloc::format!("g{}", js::num_str(g.ch[g.gd[t].ch].id))
     } else if let Some(l) = lt {
@@ -313,7 +313,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     } else if let Some(l) = lt {
         g.tab.fixture[l].pos
     } else {
-        g.aim_point
+        g.sets[g.seat].aim_point
     };
     let c_pos = g.ch[c].pos;
     if let Some(tn) = tg {

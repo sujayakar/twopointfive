@@ -81,7 +81,7 @@ to rest (`throw_rest`, `rest_of_throw`, which moves nothing) and the burst's rin
 `load_worn` makes the two scores, read against his issue.
 
 **The rows.** `build_interactables` lists what he can do, `update_interact` makes E a tap or the ring (`whistle_wedge` the last wedge), and a tap with
-no row says why (`empty_thing`). So does any other press that did nothing, the trigger, a slot key on a wall and the wall key among them (`refuse`). A row performed is `g.act`.
+no row says why (`empty_thing`). So does any other press that did nothing, the trigger, a slot key on a wall and the wall key among them (`refuse`). A row performed is the seat's `act`.
 
 **His own charges.** `door_tools_sam_rows` and `wall_charge_sam_rows` offer them, `door_tools_sam_tick` and `wall_charge_sam_tick` run the job,
 `update_work_plant` plants him. `sam_stow_tick` puts the gun away first, and the job's clock waits on `sam_stowing`. A step, a sprint or a click ends
@@ -144,7 +144,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 - **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
   ids of the Mk 18 and the Glock 19, and a line written with the old names goes through `gear_text`.
 - **A thing on the card:** `MemberKit`, `SlotTable` in `knobs/kit.rs`, its row in `kit/`, its weight in `knobs/kitload.rs`, its write in `kit_player`.
-- **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads `g.act`. A job that plants him is an arm of `sam_work`. A key: its code in
+- **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads the seat's `act`. A job that plants him is an arm of `sam_work`. A key: its code in
   `update_player`, its row in `KEY_ACTS`.
 - **A new reason his gun cannot fire:** a term of `walled` in `update_player` with its line on a click, and `gun_shut` so that the ring shows the bar.
 - **New state:** nothing to do: a restart throws the whole game away. What must outlive a try goes in `Survivors`.

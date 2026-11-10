@@ -270,7 +270,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
     let seat = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
-    // (a game of one seat, or a view handed in: the seat is already the one on Game, and there is nothing to swap)
+    // (a game of one seat, or a view handed in: the pass is already about that seat)
     let r = if seat == g.seat {
         let pc = g.pl[g.player].ch;
         can_see_char(g, gd, pc)

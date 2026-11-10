@@ -29,11 +29,11 @@ fn main() {
             if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, at, Some(who)) { panic!("run {run}: the charge at {at:?} was refused: {why}"); }
         }
         let want = if both { 2 } else { 1 };
-        if p.until(120.0, |p| p.g.wall_charge.set.len() >= want).is_none() {   // (the defenders can stop them: no wall blast to time on this seed)
-            println!("run {run}: two minutes and {} of {want} on the wall, so nothing to time", p.g.wall_charge.set.len());
+        if p.until(120.0, |p| p.g.sets[p.g.seat].wall_charge.set.len() >= want).is_none() {   // (the defenders can stop them: no wall blast to time on this seed)
+            println!("run {run}: two minutes and {} of {want} on the wall, so nothing to time", p.g.sets[p.g.seat].wall_charge.set.len());
             continue;
         }
-        let set: Vec<_> = p.g.wall_charge.set.clone();
+        let set: Vec<_> = p.g.sets[p.g.seat].wall_charge.set.clone();
         let mut q = vec![];
         for _ in 0..120 { let t = Instant::now(); p.frame(); q.push(ms(t)); }
         // BLASTCOST_PERF=<file>: `perf record` this process from here to the end of the run (the stand is not in it)

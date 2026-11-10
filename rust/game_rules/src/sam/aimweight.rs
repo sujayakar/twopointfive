@@ -77,7 +77,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     }
     let pl = g.player;
     let c = g.pl[pl].ch;
-    let ap = g.aim_point;
+    let ap = g.sets[g.seat].aim_point;
     let pos = g.ch[c].pos;
     let dx = ap[0] - pos[0];
     let dz = ap[2] - pos[2];

@@ -35,7 +35,7 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
     let aim_yaw = g.ch[c_2].aim_yaw;
     let (dx, dz) = (m::sin(aim_yaw), m::cos(aim_yaw));
-    let reach = m::min(g.k.friends.reach_m, m::hyp2(g.aim_point[0] - from[0], g.aim_point[2] - from[2]) + g.k.friends.past_m);
+    let reach = m::min(g.k.friends.reach_m, m::hyp2(g.sets[g.seat].aim_point[0] - from[0], g.sets[g.seat].aim_point[2] - from[2]) + g.k.friends.past_m);
     let mut line = SamsLine { from, dx, dz, reach, best: None, bt: m::INF };
     let mut i = 0;
     while i < g.guards.len() {
@@ -54,8 +54,8 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
 
 /// …or the friend the CURSOR is on, only while the aim is free.
 fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
-    let o = g.aim_friend?;
-    if g.aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
+    let o = g.sets[g.seat].aim_friend?;
+    if g.sets[g.seat].aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
     let chest = bone_or(g, g.gd[o].ch, crate::character::Bone::Chest, 1.2);
     if m::hyp2(chest[0] - from[0], chest[2] - from[2]) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }

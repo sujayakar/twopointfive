@@ -59,5 +59,12 @@ impl Default for SeatSet {
     }
 }
 
+/// a game's seats' sets before it has more than its first
+pub fn sets_new() -> Tab<SeatId, SeatSet> {
+    let mut t = Tab::new();
+    t.push(SeatSet::default());
+    t
+}
+
 pub fn seat_kinds() -> Vec<String> { alloc::vec![String::from("roomclear"), String::from("nightbreach")] }
 

@@ -38,7 +38,7 @@ pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
 }
 fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let n = g.seats.len();
-    // (inside a tick the Game's own fields of a seat's name answer the FIRST seat's, whoever this host shows: seats.ts seatsStand)
+    // (a tick is about the FIRST seat, whoever this host shows: seats.ts seatsStand)
     // (bare: no seat's view is open while the world's own lines run)
     // (the verdict's tick comes last, with the first seat still standing, so the end it latches is the same on every machine: verdict.ts tick)
     // (the tick opens by listing the box world, on every host at the same moment: this tick's rays meet the last tick's boxes and whatever was written since, and
@@ -54,7 +54,7 @@ fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
     crate::render_lights::light_set_update(g, dt);
 }
 
-/// The tick's lines, with the first seat on Game.
+/// The tick's lines, about the first seat.
 fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
@@ -82,7 +82,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats {
         let lens = g.tab.cmd_seat[s].cam;
         let vp = g.tab.camera[lens].view_proj;
-        in_seat(g, s, |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+        in_seat(g, s, |g| g.sets[g.seat].view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
     }
     g.time += dt;
     let now = g.time;
@@ -220,7 +220,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].hit_flash = m::max(0.0, g.pl[pl].hit_flash - dt * 3.0);
-        in_seat(g, s, |g| g.act = None);   // (this frame's Space verb has been read by everyone who reads it)
+        in_seat(g, s, |g| g.sets[g.seat].act = None);   // (this frame's Space verb has been read by everyone who reads it)
     }
     // (game.ts:1720, :1721: the squad's net and the defenders' cues, read off the settled frame. Their books are the same books the rules' own entries
     //  write (a line said, a cue called), so the step that settles them runs where those do, under its row.)
@@ -252,24 +252,24 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
             if g.gd[nr].state == GuardState::Suspicious || g.gd[nr].state == GuardState::Search { t = m::max(t, 0.6 * (1.0 - v3::smoothstep(7.0, 10.0, nd))); }
             let p = g.ch[pc].pos;
             let spots: [V3; 2] = [[p[0], 0.15, p[2]], bone_or(g, pc, Bone::Chest, 1.1)];
-            if g.torch_on_t > g.time { g.torch_on_t = -100.0; }
+            if g.sets[g.seat].torch_on_t > g.time { g.sets[g.seat].torch_on_t = -100.0; }
             let mut i = 0;
             'torch: while i < g.guards.len() {
                 let gd = g.guards[i]; i += 1;
-                if g.time - g.torch_on_t < 1.5 { break; }
+                if g.time - g.sets[g.seat].torch_on_t < 1.5 { break; }
                 let fl = g.gd[gd].flashlight;
                 if crate::condition::down(g, g.gd[gd].ch) || !g.tab.light[fl].enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
                 let (fl_pos, fl_dir) = (g.tab.light[fl].pos, g.tab.light[fl].dir);
                 let cos_o = m::cos(g.tab.light[fl].outer_deg * v3::DEG);
                 for s in spots {
                     let to = v3::sub(s, fl_pos); let d = v3::len(to);
-                    if d < 10.0 && d > 1e-3 && v3::dot(to, fl_dir) / d > cos_o && !crate::scene_collision::segment_blocked(g, fl_pos, s, None, None, None) { g.torch_on_t = g.time; break 'torch; }
+                    if d < 10.0 && d > 1e-3 && v3::dot(to, fl_dir) / d > cos_o && !crate::scene_collision::segment_blocked(g, fl_pos, s, None, None, None) { g.sets[g.seat].torch_on_t = g.time; break 'torch; }
                 }
             }
-            if g.time - g.torch_on_t < 1.5 { t = m::max(t, 0.5); }
+            if g.time - g.sets[g.seat].torch_on_t < 1.5 { t = m::max(t, 0.5); }
         }
     }
-    g.threat_proximity = t; g.ch[pc].anim.deliberate = t;
+    g.sets[g.seat].threat_proximity = t; g.ch[pc].anim.deliberate = t;
 }
 
 /// the muzzle of the stand-in gun in his hands

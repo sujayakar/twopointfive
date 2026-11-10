@@ -24,8 +24,8 @@ fn a_step_lists_the_box_world_itself() {
     p.sam_put([14.6, 15.2]);
     step(&mut p, 1);
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, WALL, None) { panic!("the wall charge was refused: {why}"); }
-    for _ in 0..3600 { step(&mut p, 1); if !p.g.wall_charge.set.is_empty() { break; } }
-    let c = *p.g.wall_charge.set.first().expect("a minute and no charge is on the wall");
+    for _ in 0..3600 { step(&mut p, 1); if !p.g.sets[p.g.seat].wall_charge.set.is_empty() { break; } }
+    let c = *p.g.sets[p.g.seat].wall_charge.set.first().expect("a minute and no charge is on the wall");
     game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
     step(&mut p, 120);
     let at_two_seconds = p.g.tab.frame_boxes.len();

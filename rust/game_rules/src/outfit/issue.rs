@@ -7,5 +7,5 @@ pub fn issue_stage(g: &mut crate::game::Game) -> Option<f64> {
         _ => return None,
     };
     crate::wallcharge::wall_charge_raise_carried(g, n);
-    g.wall_charge.carried
+    g.sets[g.seat].wall_charge.carried
 }

@@ -471,7 +471,7 @@ pub mod flags {
     pub fn charge_set(seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
     /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach
     pub fn charge_clear(g: &mut crate::game::Game) -> bool {
-        let c = g.wall_charge.set.first().copied();
+        let c = g.sets[g.seat].wall_charge.set.first().copied();
         let at = crate::lesson::lesson_step(g).and_then(|step| step.at);
         let Some(c) = c else { return false };
         if !crate::wallcharge::wall_charge_too_close(g, Some(c)).is_empty() { return false; }
@@ -487,7 +487,7 @@ pub mod flags {
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking.is_some() }
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding.is_some() }
     /// the order menu is up
-    pub fn menu(g: &mut crate::game::Game) -> bool { g.orders.menu.is_some() }
+    pub fn menu(g: &mut crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
     /// his own ring is up, with or without a key down
     pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.pl[seat.player].sel; sel.open && sel.ring.is_some() }
     /// the squad's posture is SILENT

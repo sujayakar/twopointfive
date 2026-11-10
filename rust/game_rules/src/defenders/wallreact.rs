@@ -20,7 +20,7 @@ fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, tex
 /// `g.seats.some(s => (s.view.wallCharge?.stats.blown ?? 0) > 0)`
 fn any_seat_blown(g: &mut Game) -> bool {
     for s in g.seats.clone() {
-        if crate::seats::with_seat(g, s, &mut |g| g.wall_charge.stats.blown > 0.0) { return true; }
+        if crate::seats::with_seat(g, s, &mut |g| g.sets[g.seat].wall_charge.stats.blown > 0.0) { return true; }
     }
     false
 }
@@ -1153,8 +1153,8 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let v = crate::seats::view_of(g, gd);
     let a = match crate::seats::with_seat(g, v, &mut |g| crate::orders::squad_orders_of(&crate::seats::here(g), gd)) { Some(a) => a, None => return WallReactOpMove::Fine };
     let post = match g.tab.orders_assignment[a].post { Some(q) => q, None => return WallReactOpMove::Fine };
-    if crate::seats::with_seat(g, v, &mut |g| g.door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
-    if crate::seats::with_seat(g, v, &mut |g| g.wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
+    if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].door_tools.ops.iter().any(|op| g.tab.doortools_door_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
+    if crate::seats::with_seat(g, v, &mut |g| g.sets[g.seat].wall_charge.ops.iter().any(|op| g.tab.wallcharge_wall_op[*op].men.contains(&gd))) { return WallReactOpMove::Fine; }
     if g.tab.orders_assignment[a].order == crate::wallcharge::WALL_ORDER && g.tab.orders_assignment[a].watch.is_some() { return WallReactOpMove::Fine; }
     if g.tab.orders_assignment[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return WallReactOpMove::Later; }
     let q = match wall_react_asks(g, gd, p, post, 1.2) { WallReactAsks::Text(_) => return WallReactOpMove::Fine, WallReactAsks::Arm1(q) => q };

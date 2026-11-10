@@ -308,7 +308,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     if !bad.iter().any(|b| *b) { return Some(posts.to_vec()); }
     let mut out = posts.to_vec();
     let (w, c, th) = (g.dr[d].def.width, g.dr[d].frame_centre, g.dr[d].def.closed_dir);
-    let (jamb_out, jamb_past, file_gap) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past, g.orders.knobs.file_gap);
+    let (jamb_out, jamb_past, file_gap) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past, g.sets[g.seat].orders.knobs.file_gap);
     let cell = g.col.nav.cell;
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
     for i in 0..out.len() {
@@ -547,7 +547,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let s = g.k.stackroom;
     if !stack_view_open(g, d) { return Some(posts.to_vec()); }
     let Some(f) = floor_of(g, d, side) else { return Some(posts.to_vec()) };
-    let (jamb_out, jamb_past) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past);
+    let (jamb_out, jamb_past) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past);
     let (w, c, th) = (g.dr[d].def.width, g.dr[d].frame_centre, g.dr[d].def.closed_dir);
     let far = far_cells(g, d, side);
     let front = crate::doortools::door_pt(g, d, w / 2.0, jamb_out, side, Some(0.45));
@@ -704,7 +704,7 @@ struct Way { o: DoorId, far: f64, floor: crate::stackroom::Floor, cost: f64 }
 /// (5) a place by a doorway of a room next to the face's own, one the team holds, on that doorway's far face
 fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackroom::Floor, used: &[V3], min_m: f64, shy: bool) -> Option<crate::stackroom::NextRoom> {
     let s = g.k.stackroom;
-    let (jamb_out, jamb_past, file_gap) = (g.orders.knobs.jamb_out, g.orders.knobs.jamb_past, g.orders.knobs.file_gap);
+    let (jamb_out, jamb_past, file_gap) = (g.sets[g.seat].orders.knobs.jamb_out, g.sets[g.seat].orders.knobs.jamb_past, g.sets[g.seat].orders.knobs.file_gap);
     let cs = g.col.nav.cell;
     let into = floor_of(g, d, -side);
     let mut ways: Vec<Way> = Vec::new();

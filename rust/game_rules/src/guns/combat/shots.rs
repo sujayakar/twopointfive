@@ -21,7 +21,7 @@ pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId) -> FirearmId {
     f
 }
 
-/// a thing run in the game as this seat has it: with_seat, or as it stands when that seat is already on Game (viewOfBody's "a view handed in is kept")
+/// a thing run in the game as this seat has it: with_seat, or as it stands when the pass is already about that seat
 fn in_seat(g: &mut Game, seat: SeatId, run: &mut dyn FnMut(&mut Game)) {
     if seat == g.seat { run(g); } else { crate::seats::with_seat(g, seat, run); }
 }

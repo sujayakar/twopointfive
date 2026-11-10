@@ -87,7 +87,7 @@ fn a_lock_on_the_face_it_opens_toward_is_picked_and_not_booted() {
         assert!(game::doors::door_locked(&p.g, d), "seed {s}: the staging: not locked");
         assert_eq!(give(&mut p, "openClear", c), None, "seed {s}: refused");
         let mut kicks = 0;
-        p.until(50.0, |p| { kicks += p.g.events.iter().filter(|e| e.kind == game::director::EventKind::Kick && e.time == p.g.time).count(); !game::doors::door_locked(&p.g, d) && p.g.door_tools.stats.picks >= 1.0 }).unwrap_or_else(|| panic!("seed {s}: 50 s and it is not picked: {:?}", p.lines(p.mates()[0])));
+        p.until(50.0, |p| { kicks += p.g.events.iter().filter(|e| e.kind == game::director::EventKind::Kick && e.time == p.g.time).count(); !game::doors::door_locked(&p.g, d) && p.g.sets[p.g.seat].door_tools.stats.picks >= 1.0 }).unwrap_or_else(|| panic!("seed {s}: 50 s and it is not picked: {:?}", p.lines(p.mates()[0])));
         assert_eq!(kicks, 0, "seed {s}: boots");
         assert!(!game::doors::door_lock_broken(&p.g, d) && p.said.iter().any(|l| l.text.contains("opens toward us. picking it")), "seed {s}: keep broken {}, said {:?}", game::doors::door_lock_broken(&p.g, d), p.said.iter().map(|l| l.text.clone()).collect::<Vec<_>>());
     }
@@ -106,6 +106,6 @@ fn a_lock_no_pick_opens_ends_the_order_at_the_door() {
         p.g.dr[d].lock_id = format!("wedge:{}", p.g.dr[d].def.name);
         p.until(40.0, |p| p.said.iter().any(|l| l.text.contains("opens toward us. no boot"))).unwrap_or_else(|| panic!("seed {s}: 40 s and the lead has not said it: {:?}", p.said.iter().map(|l| l.text.clone()).collect::<Vec<_>>()));
         p.run(0.5);
-        assert!(p.g.door_tools.ops.is_empty() && !game::doors::door_lock_broken(&p.g, d) && game::doors::door_locked(&p.g, d), "seed {s}: ops {}, the door gave", p.g.door_tools.ops.len());
+        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty() && !game::doors::door_lock_broken(&p.g, d) && game::doors::door_locked(&p.g, d), "seed {s}: ops {}, the door gave", p.g.sets[p.g.seat].door_tools.ops.len());
     }
 }

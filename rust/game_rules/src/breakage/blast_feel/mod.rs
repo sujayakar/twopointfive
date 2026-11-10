@@ -65,7 +65,7 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     let mut found: Option<usize> = None;
     for (i, c) in seen.iter().enumerate() {
         if set.contains(c) { continue; }   // (a charge is its row: the id is the TypeScript's object)
@@ -101,7 +101,7 @@ fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
         if g.tab.camera[cam].kick.is_some() { g.tab.camera[cam].kick = None; }
         return;
     }
-    let set = g.wall_charge.set.clone();
+    let set = g.sets[g.seat].wall_charge.set.clone();
     if !g.m.blast_feel.state.has(key) && set.is_empty() { if g.tab.camera[cam].kick.is_some() { g.tab.camera[cam].kick = None; } return; }   // (a kick left on the camera by another Game: not this one's to keep)
     if !g.m.blast_feel.loaded { load_feel(g); }
     let time = g.time;

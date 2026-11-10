@@ -337,11 +337,11 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
         }
         g.m.wandorder.states.set(k, State { jobs: JsMap::new() });
     }
-    let listed = g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
+    let listed = g.sets[g.seat].orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     if want && !listed {
-        let after = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
+        let after = g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::hold::ORDER.id);
         let r = row(g);
-        let before = after.and_then(|i| g.orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
+        let before = after.and_then(|i| g.sets[g.seat].orders.defs.get(i + 1)).map(|&d| g.tab.orders_order_def[d].id.clone());
         crate::orders::squad_orders_register(g, r, before.as_deref());
     } else if !want && listed {
         crate::orders::squad_orders_unregister(g, WAND_ORDER);
@@ -376,14 +376,14 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     if !want {
         return false;
     }
-    if g.orders.menu.is_none() {
+    if g.sets[g.seat].orders.menu.is_none() {
         return false;
     }
     let key = g.k.wand.order_key.clone();
     if !crate::input::input_hit(g, input, &key) {
         return false;
     }
-    let i = g.orders.menu.as_ref().unwrap().rows.iter().position(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
+    let i = g.sets[g.seat].orders.menu.as_ref().unwrap().rows.iter().position(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
     let Some(i) = i else { return false };
     g.tab.input[input].pressed.delete(key);
     crate::orders::squad_orders_pick(g, Some(i as f64));

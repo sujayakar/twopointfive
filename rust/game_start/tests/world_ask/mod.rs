@@ -215,7 +215,7 @@ impl WallAsk for Play {
         game::wallcharge::wall_charge_raise_carried(&mut self.g, 2.0);
         let w = game::wallcharge::wall_at(&mut self.g, at, Some([from[0], 0.0, from[1]])).filter(|w| w.ok).ok_or_else(|| String::from("no place for a charge there"))?;
         let spot = game::wallcharge::wall_charge_set_spot(&mut self.g, &w).unwrap_or_else(|| game::wallcharge::wall_pt(&self.g, &w, 0.0, 0.55, None));
-        let n0 = self.g.wall_charge.set.len();
+        let n0 = self.g.sets[self.g.seat].wall_charge.set.len();
         let mut why = String::new();
         for h in [1.0, 1.7, 0.4] {
             let on = game::wallcharge::wall_pt(&self.g, &w, 0.0, 0.0, Some(h));
@@ -227,7 +227,7 @@ impl WallAsk for Play {
             self.frame();
             self.key_up("Space");
             let secs = self.g.k.doortools.set_secs + 1.0;
-            if self.until(secs, |p| p.g.wall_charge.set.len() > n0).is_some() { return Ok(*self.g.wall_charge.set.last().unwrap()); }
+            if self.until(secs, |p| p.g.sets[p.g.seat].wall_charge.set.len() > n0).is_some() { return Ok(*self.g.sets[self.g.seat].wall_charge.set.last().unwrap()); }
             why = String::from("the row was given and no charge is on the wall");
         }
         Err(why)
@@ -542,7 +542,7 @@ impl RescueAsk for Play {
             let a = k as f64 * std::f64::consts::FRAC_PI_4;
             self.sam_put([at[0] + a.sin() * 1.2, at[1] + a.cos() * 1.2]);
             self.run(2.0 / 60.0);
-            if self.g.nearby.iter().any(|r| r.guard == Some(h) && r.verb == Some(verb)) && game::game::game_select_verb(&mut self.g, game::game::InteractableKind::Guard, Some(verb)) {
+            if self.g.sets[self.g.seat].nearby.iter().any(|r| r.guard == Some(h) && r.verb == Some(verb)) && game::game::game_select_verb(&mut self.g, game::game::InteractableKind::Guard, Some(verb)) {
                 self.key_down("Space");
                 self.frame();
                 self.key_up("Space");
@@ -583,7 +583,7 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
     let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
     vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
-        ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.wall_charge.set.len())), ("glass hits", format!("{hits}"))]
+        ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.sets[g.seat].wall_charge.set.len())), ("glass hits", format!("{hits}"))]
 }
 
 /// What a review found
@@ -612,7 +612,7 @@ pub trait ReviewAsk {
 
 impl ReviewAsk for Play {
     fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| self.g.tab.fixture[t].on && self.g.tab.fixture[t].kind != game::fixtures::FixtureKind::Breaker).expect("a lamp lit") }
-    fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
+    fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.sets[self.g.seat].aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
     fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
     fn lamp_disabled(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].blind_until > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {

@@ -262,7 +262,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
     let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     let mut groups: Vec<Group> = Vec::new();
     let mut taken: JsSet<GuardId> = JsSet::new();
-    for op in g.door_tools.ops.clone() {
+    for op in g.sets[g.seat].door_tools.ops.clone() {
         let op_men = g.tab.doortools_door_op[op].men.clone();
         for &m in &op_men {
             taken.add(m);
