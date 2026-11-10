@@ -74,7 +74,7 @@ pub fn sneaking(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.sneak.on &
 /// He is low because Sam is.
 pub fn sneak_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let pl = g.player;
-    g.k.sneak.on && g.pl[pl].crouch && sneaking(g, gd)
+    g.k.sneak.on && crate::unseen::sam_low(g, pl) && sneaking(g, gd)
 }
 
 /// A walk to a mark an order or the level's flow gave him: the pace he keeps to, low.

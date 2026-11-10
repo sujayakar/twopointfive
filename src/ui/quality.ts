@@ -9,6 +9,10 @@ import { smokeLookStep } from '../render/smokeLook';
 
 export type QualityName = 'high' | 'medium' | 'low' | 'verylow';   // (ultra went 2026-11-07: a kept or typed 'ultra' is a name nobody knows, read as no pick)
 export const QUALITY_NAMES: QualityName[] = ['high', 'medium', 'low', 'verylow'];
+/** a tier by the name it is shown by; a tier's own name is for the address, a record and the code */
+export const TIER_NAME: Record<QualityName, string> = { high: 'High', medium: 'Medium', low: 'Low', verylow: 'Very low' };
+/** words made of a tier's own name (a label, a ladder's note), as a person reads them */
+export const tierWords = (text: string): string => text.replace(/\bverylow\b/g, 'very low');
 export const AUTO_LADDER: QualityName[] = ['verylow', 'low', 'medium', 'high'];   // 'verylow' is the rung under low for GPUs
                                                                                     // that cannot hold 30 fps on low even at the resolution floor (an M1-class laptop GPU on a HiDPI panel, by the cost model below)
 const LS_MODE = 'twopointsix.quality', LS_AUTO = 'twopointsix.autoPreset', LS_SCALE = 'twopointsix.autoScaleRel';   // (autoScaleRel since 08-11: the scale is relative to the window's cap now — a value remembered under the old 'autoScale' key meant something else and is left unread)
@@ -368,6 +372,13 @@ export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: n
   return at('verylow', SCALE_FLOOR);
 }
 
+/** the calibration as a sentence for a player: what was measured on which tier, what is picked and what that should take, and whether it holds the rate */
+export function calibWords(c: { gpuMs: number; what: string; on: [QualityName, number]; pick: [QualityName, number]; predicted: number; fits: boolean; target: number }): string {
+  const tier = (t: [QualityName, number]) => `${TIER_NAME[t[0]]} at ${Math.round(t[1] * 100)} %`, ms = (v: number) => v < 100 ? v.toFixed(1) : v.toFixed(0);
+  const hold = c.target > 0 ? `, ${c.fits ? 'which holds' : 'so it won’t hold'} ${c.target.toFixed(0)} frames a second` : '';
+  return `It measured ${ms(c.gpuMs)} ${c.what} on ${tier(c.on)}, and ${c.fits ? '' : 'even '}${tier(c.pick)} should take about ${ms(c.predicted)} ms${hold}.`;
+}
+
 const clamp01 = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 /** document.hidden, unless an automation run says the pane is being pumped anyway (`window.__testVisible`): the headless Browser pane reports hidden
  *  even while it renders, which would keep calibration from ever running under test */
@@ -638,11 +649,11 @@ export class Quality {
     }
     const B = this.bands;   // (an aim plans with the same measure against ITS back-off band (cutBand): what the plan puts on is not cut again at once; the display's rate is rarely known this early, so 120 plans as 120 and the climb gives back what a slower display leaves)
     const r = this.plan(gpuMs, fixedMs, this.current, this.engine.effectiveScale || (this.engine.capScale || 1) * S.renderScale, canvas.clientHeight || 800, dpr, this.cutBand(B));   // (effectiveScale = the true internal / CSS×dpr ratio the sample was rendered at; before the first resize, what the formula will give)
-    const from = `${this.current} ×${S.renderScale.toFixed(2)}`, measuredOn = `${this.current[0].toUpperCase()}${this.current.slice(1)} at ${Math.round(S.renderScale * 100)} %`;
+    const from = `${this.current} ×${S.renderScale.toFixed(2)}`, on: [QualityName, number] = [this.current, S.renderScale];
     if (r.preset !== this.current) this.apply(r.preset);
     S.renderScale = Math.min(this.maxScale, r.scale); this.cooldown = 2.5; this.slow = this.fast = this.starved = this.cruising = 0;
     this.lastChange = `calibrated: measured ${gpuMs.toFixed(1)} ${what} on ${from} → ${r.preset} ×${S.renderScale.toFixed(2)} (${r.predicted.toFixed(1)} ms expected; ${r.note})${B.hold ? ` — holding ${B.target.toFixed(0)} fps: ${this.cutBand(B).toFixed(1)} ms of GPU` : ''}`;
-    const size = (v: number) => `${Math.round(v * 100)} %`; this.calibNote = `It measured ${gpuMs.toFixed(1)} ${what} on ${measuredOn}, and ${r.preset[0].toUpperCase()}${r.preset.slice(1)} at ${size(S.renderScale)} should take about ${r.predicted.toFixed(1)}${B.hold ? `, which holds ${B.target.toFixed(0)} frames a second` : ''}.`;
+    this.calibNote = calibWords({ gpuMs, what, on, pick: [r.preset, S.renderScale], predicted: r.predicted, fits: r.predicted <= this.cutBand(B) + 1e-6, target: B.hold ? B.target : 0 });
     try { localStorage.setItem(LS_AUTO, r.preset); localStorage.setItem(LS_SCALE, String(S.renderScale)); } catch { /* */ }
     this.onCalibrated?.();
   }

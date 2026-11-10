@@ -802,8 +802,8 @@ impl DoorsAsk for Play {
         let p = def.pellets.unwrap();
         let mk = |d: &game::weapons::WeaponDef| game::shotgun::Shell { def: d.clone(), i: 0.0, dir: None, men: game::js::JsMap::new(), ends: Vec::new(), glass: game::js::JsMap::new(), late: Vec::new() };
         let (mut a, mut b) = (mk(&def), mk(&def));
-        let near = game::shotgun::pellet_drops(&mut self.g, &mut a, None, p.drop_m - 0.5, [1.0, 0.0, 0.0]);
-        let far: Vec<bool> = (0..p.need as usize).map(|_| game::shotgun::pellet_drops(&mut self.g, &mut b, None, p.drop_m + 6.0, [1.0, 0.0, 0.0])).collect();
+        let near = game::shotgun::pellet_drops(&mut self.g, &mut a, CharId(0), p.drop_m - 0.5, [1.0, 0.0, 0.0]);
+        let far: Vec<bool> = (0..p.need as usize).map(|_| game::shotgun::pellet_drops(&mut self.g, &mut b, CharId(0), p.drop_m + 6.0, [1.0, 0.0, 0.0])).collect();
         (p.drop_m, p.need, near, far)
     }
     fn sees_doorway(&mut self, m: GuardId, d: DoorId) -> bool {

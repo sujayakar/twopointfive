@@ -485,7 +485,7 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
             note(g, Some(gd), &format!("lane {}: goes round, {} m, as far as ({}, {}) on its other side", id, js::to_fixed(len, 0), js::to_fixed(stop[0], 1), js::to_fixed(stop[2], 1)));
             continue;
         }
-        crate::pressure::loose(g, d, l_from);   // (his way stays priced, but nothing here stops him short of the guns he was sent at)
+        crate::roomfight::loose_at(g, d, l_from);   // (his way stays priced, but nothing here stops him short of the guns he was sent at)
         crate::belief::word(g, gd, l_from);
         s(g).stats.round += 1.0;
         if first { round_shout(g, gd); }

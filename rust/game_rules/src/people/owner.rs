@@ -118,13 +118,13 @@ mod tests {
         claim(g, m, by::RUNNER, 5.0, None);
         assert_eq!(row(g), is(lane | by::RUNNER, 0, 4.0), "the top rule again: its reason, not its time");
         claim(g, m, by::RUNNER, 6.0, Some(1.0));
-        claim(g, m, by::PRESS, 7.0, Some(0.0));
-        assert_eq!(row(g), is(lane | by::RUNNER | by::PRESS, 1, 4.0), "a new rule below the top: the top's reason stands");
+        claim(g, m, by::OUT, 7.0, Some(0.0));
+        assert_eq!(row(g), is(lane | by::RUNNER | by::OUT, 1, 4.0), "a new rule below the top: the top's reason stands");
         release(g, m, by::RUNNER, 8.0);
-        assert_eq!(row(g), is(lane | by::PRESS, 0, 8.0), "the rule below has him from now, at its first reason");
+        assert_eq!(row(g), is(lane | by::OUT, 0, 8.0), "the rule below has him from now, at its first reason");
         claim(g, m, by::NEEDS, 12.0, Some(1.0));
-        assert_eq!(row(g), is(lane | by::PRESS | by::NEEDS, 0, 8.0), "a reason given below the top is not written");
-        release(g, m, by::LANE | by::PRESS | by::NEEDS, 13.0);
+        assert_eq!(row(g), is(lane | by::OUT | by::NEEDS, 0, 8.0), "a reason given below the top is not written");
+        release(g, m, by::LANE | by::OUT | by::NEEDS, 13.0);
         assert_eq!(row(g), is(at_rest, 0, 13.0));
         assert!(has(g, m, by::SQUAD) && !has(g, m, by::FRAG) && has(g, m, By(!0)));
         release(g, m, by::SQUAD, 14.0);

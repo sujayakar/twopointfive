@@ -61,6 +61,7 @@ import { pacer } from '../host/pace';
 import { lookTrialsKept } from '../scene/look';
 import { HELD_LADDER_WORD, HELD_WINDOW_WORD, PRICE_ASK_WORDS, PRICE_LEVELS_WORD, PRICE_RUN_WORD } from '../host/runpage';
 import { PRESENT_PASSES, RENDER_PASSES, SURFACE_PASS } from '../gpu/timer';
+import { tierWords } from './quality';
 import { saveFile, savedWords } from '../host/savefile';
 import { BENCH_SEND_MS, benchView, machineFacts, type BenchMachine, type BenchWent } from './bench';
 import { carriedWords, lookWord } from './benchrun';
@@ -412,7 +413,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   // that stands otherwise (quality=auto was asked for; a build whose ladder does not read `adapt=0`) says so on its row, and its ladder is then at least kept
   // from sampling the held picture, as it takes no sample behind a card
   const Qh = w.__quality, held = !!Qh && Qh.auto === false && Qh.adaptive === false;
-  if (held && c.quality !== 'auto' && Qh!.current !== undefined && Qh!.current !== c.quality) notes.push(`quality ${c.quality} was asked for and is no preset of this page: it stands on ${Qh!.current}, held, and the row is that preset's`);
+  if (held && c.quality !== 'auto' && Qh!.current !== undefined && Qh!.current !== c.quality) notes.push(`quality ${c.quality} was asked for and is no preset of this page: it stands on ${tierWords(String(Qh!.current))}, held, and the row is that preset's`);
   if (!held) notes.push(!Qh || Qh.auto !== false ? 'the quality is not a pinned preset: its ladder was left to settle by itself, so the run\'s pages may stand on different rungs, and its frames are paced to the ladder\'s own rate' : 'the quality ladder\'s switch was on: it may have cut the scale before the picture was held');
   const E = w.__engine!, size = () => `${E.width}×${E.height}@${E.settings.renderScale.toFixed(3)}${E.settings.sharpDirect ? ' sharp' : ''}`;
   const bag = (): Bag => ({ ms: [], gpu: [], all: [], work: [], passes: new Map(), drew: null }), acc = { off: bag(), on: bag() };
@@ -582,11 +583,11 @@ export function priceReport(f: PriceFile): string {
   const oversRun = f.rows.filter(r => r.overRun?.length).map(r => `  ${r.level}: ${r.overRun!.join('; ')}`), apartsRun = f.rows.filter(r => r.runApart?.length).map(r => `  ${r.level}: ${r.runApart!.join('; ')}`);
   // the rungs the pages stood on, in words: one line where they are one, each named where they are not, and said plainly where a ladder was left on
   const rungs = f.rows.map(r => r.rung), loose = rungs.filter(g => g.adaptive !== false).length;
-  const rungWords = [...new Set(rungs.map(g => `${g.preset} ×${g.scale}${g.cap ? `, at most ${g.cap} rows` : ''}, gather at a ${g.gatherThird ? 'third' : 'half'}, volumetrics at a ${g.volQuarter ? 'quarter' : 'half'}, sharp ${g.sharp ? 'on' : 'off'}`))];
+  const rungWords = [...new Set(rungs.map(g => `${tierWords(g.preset)} ×${g.scale}${g.cap ? `, at most ${g.cap} rows` : ''}, gather at a ${g.gatherThird ? 'third' : 'half'}, volumetrics at a ${g.volQuarter ? 'quarter' : 'half'}, sharp ${g.sharp ? 'on' : 'off'}`))];
   const rungLine = !rungs.length ? '' : loose ? `THE QUALITY LADDER WAS LEFT ON on ${loose} of ${rungs.length} pages (see the notes): the pages stood on ${rungWords.length === 1 ? 'one rung' : `${rungWords.length} rungs`} — ${rungWords.join(' | ')}.`
     : rungWords.length === 1 ? `EVERY PAGE stood on its preset's own rows with the quality ladder off: ${rungWords[0]}.` : `THE PAGES STOOD ON ${rungWords.length} RUNGS though the ladder was off: ${rungWords.join(' | ')}.`;
   const waits = f.rows.some(r => spansWait(r.on) || spansWait(r.off));
-  return [`WHAT THE LOOK COSTS, a held picture a level${runs ? ', and the world running' : ''}  ·  ${f.at.slice(0, 16).replace('T', ' ')} UTC${f.commit ? `  ·  build ${f.commit.slice(0, 8)}` : ''}`, `${f.gpu}${f.machine.hz ? `  ·  a ${f.machine.hz} Hz display` : ''}  ·  screen ${f.screen} ×${f.dpr}  ·  asked for quality ${f.quality}, ${f.secs} s a turn  ·  the look page's words: ${f.look.join('&')}`, f.userAgent, '',
+  return [`WHAT THE LOOK COSTS, a held picture a level${runs ? ', and the world running' : ''}  ·  ${f.at.slice(0, 16).replace('T', ' ')} UTC${f.commit ? `  ·  build ${f.commit.slice(0, 8)}` : ''}`, `${f.gpu}${f.machine.hz ? `  ·  a ${f.machine.hz} Hz display` : ''}  ·  screen ${f.screen} ×${f.dpr}  ·  asked for quality ${tierWords(f.quality)}, ${f.secs} s a turn  ·  the look page's words: ${f.look.join('&')}`, f.userAgent, '',
     head, ...lines, '',
     'layers off = the look page with every layer of the look that has a cost of its own put off at once; on = the look page as it opens.',
     'GPU ms     = the GPU\'s busy span over the compute passes, as the page takes it everywhere: a render pass\'s stamps span the wait for the display, so they are left out,',

@@ -360,7 +360,7 @@ impl Play {
     /// where a seat's player stands
     pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
-    pub fn falls(&mut self, gd: GuardId, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(false), Some(game::game::DownKind::Shot), Some(by), None); }
+    pub fn falls(&mut self, gd: GuardId, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(false), Some(game::game::DownKind::Shot), Some(by), game::game::With::Hand); }
 
     /// A live fragmentation grenade lands at `at` (the sandbox's own call, `Game.dropThrowable`: an armed can as if just thrown from where Sam stands).
     pub fn frag_lands(&mut self, at: [f64; 2]) { game::game::game_drop_throwable(&mut self.g, game::game::ThrowKind::Frag, [at[0], 0.0, at[1]]); }
@@ -445,7 +445,7 @@ impl Play {
         game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], Some(&o));
     }
     /// A MAN GOES DOWN by combat's own call, in any of its ways (`quiet`: put out with no noise).
-    pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), None); }
+    pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), game::game::With::Hand); }
     /// the player of a seat takes a round's hit from the way `from_dir`, in his own seat, until he has none left (combat's `hit_player`: nobody fired it)
     pub fn seat_goes_down(&mut self, seat: usize) {
         let s = self.g.seats[seat];
@@ -482,7 +482,7 @@ impl Play {
     /// Every man of the other side but these is down.
     pub fn drop_all_but(&mut self, keep: &[GuardId]) {
         for gd in self.g.guards.clone() {
-            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); }
+            if self.g.gd[gd].team != game::teams::Team::Operative && !keep.contains(&gd) && self.up(gd) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); }
         }
     }
     /// Sam's teammates, in the order the game made them

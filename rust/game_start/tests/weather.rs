@@ -139,3 +139,32 @@ fn a_picked_weather_runs_at_every_hour() {
     p.run(0.5);
     assert!(!p.g.weather.on, "midday with nothing picked: the level's own storm is on");
 }
+
+/// the ticks before a stroke its way is foreseen, with a thunder or more due in them
+const AHEAD: usize = 240;
+/// THE RULE: the way the next stroke shines is known before it comes, off the storm's own die, whatever the die stands at and however many thunders are on their way.
+/// A FAILURE MEANS: the throws of a stroke or of a thunder are not what `weather_next_way` counts, and the picture makes every flash's reach mask in the frame that shows it.
+#[test]
+fn the_next_stroke_is_foreseen() {
+    for die in [1, 4000000000] {
+        let mut p = born("office.json", "&weather=downpour");
+        p.g.weather.die = die;
+        let (mut said, mut strokes, mut thunders) = (std::collections::VecDeque::new(), 0, p.g.weather.stats.thunders);
+        for _ in 0..60 * 90 {
+            let was = p.g.weather.stats.flashes;
+            p.frame();
+            thunders = thunders.max(p.g.weather.stats.thunders);
+            if p.g.weather.stats.flashes > was {
+                let f = p.g.weather.flash.as_ref().expect("a stroke has its light");
+                let shines = Some(p.g.tab.light[f.light].dir);
+                if said.len() >= AHEAD { assert_eq!(said[0], shines, "stroke {strokes} of die {die}, {AHEAD} ticks before"); }
+                assert_eq!(said.back().copied(), Some(shines), "stroke {strokes} of die {die}");
+                strokes += 1;
+                said.clear();
+            }
+            said.push_back(game::weather::weather_next_way(&p.g));
+            if said.len() > AHEAD { said.pop_front(); }
+        }
+        assert!(strokes >= 4 && thunders >= 3.0, "die {die}: {strokes} strokes, {thunders} thunders");
+    }
+}

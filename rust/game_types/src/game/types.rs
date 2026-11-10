@@ -134,6 +134,33 @@ pub enum DownKind {
     Choked,
 }
 
+/// what put a man down, as the debrief tells it
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum With<'a> {
+    /// what is in the hand: the gun, or the hand itself
+    #[default] Hand,
+    Ring,
+    Whip,
+    Knife,
+    /// a charge on the wall he stood behind
+    Charge,
+    /// what went off, by its name
+    Blast(&'a str),
+}
+
+impl With<'_> {
+    /// how a man who still breathes was put down, in a word
+    pub fn method(self, how: DownKind) -> &'static str {
+        match (how, self) {
+            (DownKind::Choked, _) => "choke",
+            (_, With::Ring) => "ring",
+            (_, With::Whip) => "whip",
+            (_, With::Charge) => "charge",
+            _ => "takedown",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DownBy {
     #[default] Guard,
@@ -747,6 +774,8 @@ pub struct Player {
     pub easing: Option<DoorId>,
     pub ease_stall_t: f64,
     pub ease_best: f64,
+    /// he is low because his hands' work put him there, not by his own key
+    pub knee: Option<crate::player::Knee>,
     pub picking: Option<DoorId>,
     pub kick: Option<crate::game::PlayerKick>,
     pub f_held: bool,
@@ -1331,7 +1360,6 @@ pub struct Tabs {
     pub tactics_plan: Tab<TacticsPlanId, crate::tactics::Plan>,
     pub tactics_danger_rec: Tab<TacticsDangerRecId, crate::tactics::DangerRec>,
     pub lanes_lane: Tab<LanesLaneId, crate::lanes::Lane>,
-    pub pressure_man: Tab<PressureManId, crate::pressure::Man>,
     pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub rescueflow_region: Tab<RescueflowRegionId, crate::rescueflow::Region>,
     pub squad_room_clear: Tab<RoomClearId, crate::squad::RoomClear>,

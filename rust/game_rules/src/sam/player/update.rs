@@ -239,6 +239,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let c = g.pl[pl].ch;
     let gun = g.pl[pl].pistol;
     g.pl[pl].pace = 1.0;
+    if !g.pl[pl].crouch && g.pl[pl].dragging.is_none() { g.pl[pl].knee = None; }   // (up again: how he went down is over)
     g.pl[pl].dash = false; g.ch[c].anim.dash = 0.0; g.ch[c].anim.run_ready = false;
     g.tab.camera[cam].peek_offset = None;
     crate::aimweight::aim_weigh_begin(g, pl);
@@ -416,7 +417,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let (lmb, lmb_hit) = (input_lmb(g, input), input_lmb_hit(g, input));
         crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, Some(crate::stalk::StalkKeys { mx, mz, dt }))
     };
-    if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; }
+    if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; g.pl[pl].knee = None; }
     if g.pl[pl].dragging.is_none() && (g.pl[pl].haul.is_some() || g.ch[c].anim.haul.is_some()) { g.pl[pl].haul = None; g.ch[c].anim.haul = None; }
     let stunned = crate::samstun::sam_staggered(g, &crate::seats::here(g), None);
     let rooted = crate::samstun::sam_rooted(g, &crate::seats::here(g), None);

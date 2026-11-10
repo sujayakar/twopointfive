@@ -39,7 +39,7 @@ pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastV
     let cast = g.tab.rig[g.ch[c_2].rig].cast?;
     if let Some(had) = g.m.cast.worn.get(c_2) { return Some(*had); }
     let ops = crate::anim_gltf::cast_side(g, cast, CastSide::Operator);
-    if crate::seats::man_of(g, Some(c_2)).is_some() { g.m.cast.worn.set(c_2, ops[0]); return Some(ops[0]); }
+    if crate::character::is_player(g, c_2) { g.m.cast.worn.set(c_2, ops[0]); return Some(ops[0]); }
     let id = g.ch[c_2].id;
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     let Some(rec) = rec else { let d = defenders(g, cast); return pick(&d, id, 0); };
@@ -70,7 +70,7 @@ pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
         None => g.staged.up.map(|_| g.staged.facts.unseen),
     };
     if k == Some(false) { return false; }
-    if crate::seats::man_of(g, Some(c_2)).is_some() { return true; }
+    if crate::character::is_player(g, c_2) { return true; }
     k == Some(true) && g.staged.team.iter().any(|gd| g.gd[*gd].ch == c_2)
 }
 /// The part mask to draw this man with this frame (0 with no cast loaded).
@@ -86,7 +86,7 @@ pub fn cast_parts(g: &mut Game, c_2: CharId) -> f64 {
     };
     let has = match g.m.cast.has_nvg.get(v) { Some(h) => *h, None => { let h = crate::anim_gltf::cast_goggles(g, cast, vmask, true) != vmask; g.m.cast.has_nvg.set(v, h); h } };
     if !has { return worn0; }
-    let mut boxes = crate::seats::man_of(g, Some(c_2)).is_some();
+    let mut boxes = crate::character::is_player(g, c_2);
     if !boxes { if let Some(gd) = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2) { boxes = crate::nvg::nvg_worn(g, gd); } }
     crate::anim_gltf::cast_goggles(g, cast, worn0, boxes)
 }

@@ -22,7 +22,7 @@ import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybi
 import { VOLUME_DEFAULTS } from '../audio/mixlaw';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { Engine } from '../engine';
 import type { AudioEngine } from '../audio/audio';
-import { visitTier, type Quality, type QualityName } from './quality';
+import { TIER_NAME, visitTier, type Quality, type QualityName } from './quality';
 import { RENDER_PASSES } from '../gpu/timer';
 
 export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
@@ -42,10 +42,10 @@ const LS = 'twopointsix.options';
 
 const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
   { v: 'auto',    label: 'Auto',     line: 'Recommended. It measures this GPU for a couple of seconds, picks the tier and resolution that hold a steady frame rate, and keeps trimming as the scene changes. It never picks Ultra.' },
-  { v: 'verylow', label: 'Very low', line: 'This is for integrated graphics. It renders at half resolution, with one shadow ray per light and more temporal reuse. It\'s grainy in the dark, but it plays.' },
-  { v: 'low',     label: 'Low',      line: 'This is for thin laptops. It uses a lower internal resolution and coarser bounce light, with no ray-traced reflections. The light is still fully dynamic and nothing is baked.' },
-  { v: 'medium',  label: 'Medium',   line: 'You get the same lighting, with the bounce light and the beams computed at reduced resolution and fewer shadow rays. Contact shadows are softer, but most people can\'t tell in motion.' },
-  { v: 'high',    label: 'High',     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
+  { v: 'verylow', label: TIER_NAME.verylow, line: 'This is for integrated graphics. It renders at half resolution, with one shadow ray per light and more temporal reuse. It\'s grainy in the dark, but it plays.' },
+  { v: 'low',     label: TIER_NAME.low,      line: 'This is for thin laptops. It uses a lower internal resolution and coarser bounce light, with no ray-traced reflections. The light is still fully dynamic and nothing is baked.' },
+  { v: 'medium',  label: TIER_NAME.medium,   line: 'You get the same lighting, with the bounce light and the beams computed at reduced resolution and fewer shadow rays. Contact shadows are softer, but most people can\'t tell in motion.' },
+  { v: 'high',    label: TIER_NAME.high,     line: 'This is the intended look, with ray-traced light and shadow, traced bounce light, volumetric beams and smoke, and reflections in polished floors and glass. It\'s the tier the game is tuned on.' },
 ];
 
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
@@ -400,7 +400,7 @@ export function displayNote(): string {
   const { engine, quality } = deps;
   const gpu = quality.measured ? engine.timer?.unionMs?.(RENDER_PASSES) ?? 0 : 0; const fps = gpu > 0.5 ? Math.min(240, 1000 / gpu) : 0;
   const res = engine.width && engine.outWidth ? `${engine.width}×${engine.height} rendered → ${engine.outWidth}×${engine.outHeight} shown` : '';
-  const tier = quality.auto ? `Auto is running ${quality.current[0].toUpperCase()}${quality.current.slice(1)}.${quality.calibrating ? ' It’s measuring your machine.' : /^calibrat/.test(quality.lastChange ?? '') && quality.calibNote ? ` ${quality.calibNote}` : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
+  const tier = quality.auto ? `Auto is running ${TIER_NAME[quality.current]}.${quality.calibrating ? ' It’s measuring your machine.' : /^calibrat/.test(quality.lastChange ?? '') && quality.calibNote ? ` ${quality.calibNote}` : ''}` : `${TIER_NAME[quality.current]} (pinned)`;
   return [tier, res, gpu > 0.5 ? `GPU ${gpu.toFixed(1)} ms a frame (≈ ${fps.toFixed(0)} fps of headroom)` : ''].filter(Boolean).join(' · ');
 }
 /** Auto's calibration has just settled under an open screen: its line and the tier's button follow */

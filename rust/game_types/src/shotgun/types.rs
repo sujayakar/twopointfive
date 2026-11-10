@@ -3,11 +3,15 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a man this shell puts down, settled once the whole pattern has flown: combat.ts fireWeaponRaw's two blocks, run by fire_shell
-#[derive(Clone, Debug)]
-pub enum ShellLate {
-    ManDown { hit_guard: GuardId, sg: Option<GuardId>, shooter: CharId, is_player: bool, ff_ours: bool, hostage_hit: bool, muzzle: V3, dir: V3, t_hit: f64, hit_p: V3 },
-    SamHit { hit_view: PlayerId, sg: Option<GuardId>, dir: V3, hit_p: V3 },
+/// a round in a man; a shell's are settled once the whole pattern has flown
+#[derive(Clone, Copy, Debug)]
+pub struct RoundIn {
+    pub c: CharId,
+    pub shooter: CharId,
+    /// he was the man in a player's arm
+    pub shield: bool,
+    pub dir: V3,
+    pub hit_p: V3,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -15,10 +19,10 @@ pub struct Shell {
     pub def: crate::weapons::WeaponDef,
     pub i: f64,
     pub dir: Option<V3>,
-    pub men: JsMap<Option<GuardId>, crate::shotgun::ShellMenValue>,
+    pub men: JsMap<CharId, crate::shotgun::ShellMenValue>,
     pub ends: Vec<crate::shotgun::ShellEndsItem>,
     pub glass: JsMap<crate::Num, Vec<f64>>,
-    pub late: Vec<crate::shotgun::ShellLate>,
+    pub late: Vec<crate::shotgun::RoundIn>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

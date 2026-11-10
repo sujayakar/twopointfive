@@ -13,13 +13,54 @@ pub enum KitRowGet {
     SlotCan { slot: crate::gunslots::GunSlot },
 }
 
+/// a thing of which a card carries so many, in the order the table lists them
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
+pub enum Thing {
+    #[default] Smoke,
+    Bangs,
+    Frags,
+    Shells,
+    Charges,
+    Walls,
+    Shotgun,
+    Hammer,
+    Cams,
+    Rings,
+    Wand,
+}
+
+impl Thing {
+    pub const ALL: [Thing; 11] = [Thing::Smoke, Thing::Bangs, Thing::Frags, Thing::Shells, Thing::Charges, Thing::Walls, Thing::Shotgun, Thing::Hammer, Thing::Cams, Thing::Rings, Thing::Wand];
+
+    pub fn of(word: &str) -> Option<Thing> { Thing::ALL.into_iter().find(|t| t.as_str() == word) }
+
+    /// what one of it is called, and the most you and a teammate may carry where nothing else limits it
+    const fn row(self) -> (&'static str, [f64; 2]) {
+        match self {
+            Thing::Smoke => ("smoke canister", [6.0, 2.0]),
+            Thing::Bangs => ("stun canister", [4.0, 3.0]),
+            Thing::Frags => ("frag", [3.0, 2.0]),
+            Thing::Shells => ("launcher grenade", [4.0, 1.0]),
+            Thing::Charges => ("door charge", [2.0, 2.0]),
+            Thing::Walls => ("wall charge", [2.0, 2.0]),
+            Thing::Shotgun => ("shotgun", [1.0, 1.0]),
+            Thing::Hammer => ("hammer", [1.0, 1.0]),
+            Thing::Cams => ("sticky camera", [3.0, 0.0]),
+            Thing::Rings => ("sponge round", [5.0, 0.0]),
+            Thing::Wand => ("optical wand", [1.0, 1.0]),
+        }
+    }
+    pub const fn name(self) -> &'static str { self.row().0 }
+    pub const fn most(self, mate: bool) -> f64 { self.row().1[mate as usize] }
+}
+
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SlotTable {
     pub v: f64,
     pub pouches: Vec<f64>,
     pub big: Vec<f64>,
     pub squad: Option<f64>,
-    pub items: JsMap<String, crate::kit::SlotItem>,
+    pub items: JsMap<crate::kit::Thing, crate::kit::SlotItem>,
     pub unknown: Vec<String>,
     pub loadouts: Vec<crate::kit::SlotLoadout>,
 }
@@ -38,7 +79,7 @@ pub struct SlotItem {
 pub struct SlotLoadout {
     pub id: String,
     pub name: String,
-    pub counts: Vec<JsMap<String, f64>>,
+    pub counts: Vec<JsMap<crate::kit::Thing, f64>>,
     pub cards: Vec<JsMap<String, crate::kit::KitValue>>,
     pub missing: Vec<String>,
 }
@@ -120,6 +161,36 @@ pub struct MemberKit {
     pub rings: f64,
 }
 
+impl MemberKit {
+    /// his count of a thing that is counted; none for a tool he has or has not
+    pub fn n_mut(&mut self, k: Thing) -> Option<&mut f64> {
+        Some(match k {
+            Thing::Smoke => &mut self.smoke,
+            Thing::Bangs => &mut self.bangs,
+            Thing::Frags => &mut self.frags,
+            Thing::Shells => &mut self.shells,
+            Thing::Charges => &mut self.charges,
+            Thing::Walls => &mut self.walls,
+            Thing::Cams => &mut self.cams,
+            Thing::Rings => &mut self.rings,
+            Thing::Shotgun | Thing::Hammer | Thing::Wand => return None,
+        })
+    }
+    pub fn n(&self, k: Thing) -> f64 {
+        match k {
+            Thing::Smoke => self.smoke,
+            Thing::Bangs => self.bangs,
+            Thing::Frags => self.frags,
+            Thing::Shells => self.shells,
+            Thing::Charges => self.charges,
+            Thing::Walls => self.walls,
+            Thing::Cams => self.cams,
+            Thing::Rings => self.rings,
+            Thing::Shotgun | Thing::Hammer | Thing::Wand => 0.0,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitHand {
     pub rings: f64,
@@ -164,7 +235,7 @@ pub struct KitRow {
     pub field: crate::kit::KitField,
     pub label: String,
     pub values: Vec<crate::kit::KitValue>,
-    pub item: Option<String>,
+    pub item: Option<crate::kit::Thing>,
     /// A row that reads the card itself
     /// (code: in no bytes)
     #[bytes(skip)]
@@ -457,23 +528,19 @@ pub const STUN_MAX: f64 = 4.0;
 
 pub const SMOKE_MATE_MAX: f64 = 2.0;
 
-pub fn slot_amount() -> JsMap<String, crate::FnField> { { let mut t = JsMap::new(); t.set(String::from("smoke"), crate::FnField); t.set(String::from("bangs"), crate::FnField); t.set(String::from("frags"), crate::FnField); t.set(String::from("shells"), crate::FnField); t.set(String::from("charges"), crate::FnField); t.set(String::from("walls"), crate::FnField); t.set(String::from("shotgun"), crate::FnField); t.set(String::from("hammer"), crate::FnField); t.set(String::from("cams"), crate::FnField); t.set(String::from("rings"), crate::FnField); t.set(String::from("wand"), crate::FnField); t } }
 
-pub fn slot_put() -> JsMap<String, crate::FnField> { { let mut t = JsMap::new(); t.set(String::from("smoke"), crate::FnField); t.set(String::from("bangs"), crate::FnField); t.set(String::from("frags"), crate::FnField); t.set(String::from("shells"), crate::FnField); t.set(String::from("charges"), crate::FnField); t.set(String::from("walls"), crate::FnField); t.set(String::from("wand"), crate::FnField); t.set(String::from("cams"), crate::FnField); t.set(String::from("rings"), crate::FnField); t.set(String::from("shotgun"), crate::FnField); t.set(String::from("hammer"), crate::FnField); t } }
 
-pub fn slot_word() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("smoke"), String::from("smoke canister")); t.set(String::from("bangs"), String::from("stun canister")); t.set(String::from("frags"), String::from("frag")); t.set(String::from("shells"), String::from("launcher grenade")); t.set(String::from("charges"), String::from("door charge")); t.set(String::from("walls"), String::from("wall charge")); t.set(String::from("shotgun"), String::from("shotgun")); t.set(String::from("wand"), String::from("optical wand")); t.set(String::from("cams"), String::from("sticky camera")); t.set(String::from("hammer"), String::from("hammer")); t.set(String::from("rings"), String::from("sponge round")); t } }
 
-pub fn own_max() -> JsMap<String, [f64; 2]> { { let mut t = JsMap::new(); t.set(String::from("smoke"), [6.0, 2.0]); t.set(String::from("bangs"), [4.0, 3.0]); t.set(String::from("frags"), [3.0, 2.0]); t.set(String::from("shells"), [4.0, 1.0]); t.set(String::from("charges"), [2.0, 2.0]); t.set(String::from("walls"), [2.0, 2.0]); t.set(String::from("shotgun"), [1.0, 1.0]); t.set(String::from("wand"), [1.0, 1.0]); t.set(String::from("cams"), [3.0, 0.0]); t.set(String::from("hammer"), [1.0, 1.0]); t.set(String::from("rings"), [5.0, 0.0]); t } }
 
-pub fn trim() -> Vec<String> { alloc::vec![String::from("rings"), String::from("shells"), String::from("smoke"), String::from("frags"), String::from("charges"), String::from("bangs"), String::from("cams"), String::from("wand"), String::from("walls"), String::from("shotgun"), String::from("hammer")] }
+pub fn trim() -> Vec<crate::kit::Thing> { alloc::vec![crate::kit::Thing::Rings, crate::kit::Thing::Shells, crate::kit::Thing::Smoke, crate::kit::Thing::Frags, crate::kit::Thing::Charges, crate::kit::Thing::Bangs, crate::kit::Thing::Cams, crate::kit::Thing::Wand, crate::kit::Thing::Walls, crate::kit::Thing::Shotgun, crate::kit::Thing::Hammer] }
 
-pub fn big_trim() -> Vec<String> { alloc::vec![String::from("hammer"), String::from("shotgun"), String::from("walls")] }
+pub fn big_trim() -> Vec<crate::kit::Thing> { alloc::vec![crate::kit::Thing::Hammer, crate::kit::Thing::Shotgun, crate::kit::Thing::Walls] }
 
 pub fn set_loadout() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("quiet"), String::from("quiet")); t.set(String::from("loud"), String::from("stun")); t } }
 
-pub fn deal_tool() -> Vec<(f64, String)> { alloc::vec![(2.0, String::from("shotgun")), (4.0, String::from("hammer"))] }
+pub fn deal_tool() -> Vec<(f64, crate::kit::Thing)> { alloc::vec![(2.0, crate::kit::Thing::Shotgun), (4.0, crate::kit::Thing::Hammer)] }
 
-pub fn dealt() -> [String; 4] { [String::from("charges"), String::from("bangs"), String::from("frags"), String::from("smoke")] }
+pub fn dealt() -> [crate::kit::Thing; 4] { [crate::kit::Thing::Charges, crate::kit::Thing::Bangs, crate::kit::Thing::Frags, crate::kit::Thing::Smoke] }
 
 pub fn deal_turn() -> Vec<f64> { alloc::vec![1.0, 3.0, 2.0, 4.0] }
 

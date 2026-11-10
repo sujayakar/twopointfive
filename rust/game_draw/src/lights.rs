@@ -37,6 +37,14 @@ section! {
     }
 }
 
+section! {
+    /// a light of the sky's that has not come yet: the way it will shine and how wide it is (none, or the one that is next)
+    pub struct Coming {
+        pub dir: [f32; 3],
+        pub radius: f32,
+    }
+}
+
 const SNAP: f64 = 1.5;
 /// ticks a flash nobody has seen is kept for (the most a frame runs)
 const HELD: u32 = 4;
@@ -47,6 +55,8 @@ pub struct Lights {
     pub bared: bool,
     /// as they are drawn
     pub rows: Vec<Light>,
+    /// what has not come yet
+    pub coming: Vec<Coming>,
     now: Vec<Light>,
     before: Vec<Light>,
     /// the timed lights no frame has shown yet, and for how many ticks
@@ -72,6 +82,8 @@ impl Lights {
             self.unseen.retain(|u| u.1 <= HELD);
             for n in &self.now { if n.ttl >= 0.0 && n.says & 1 != 0 && n.intensity > 0.0 && !self.before.iter().any(|b| b.key == n.key) { self.unseen.push((n.key, 0)); } }
         }
+        self.coming.clear();
+        if let Some(d) = game::weather::weather_next_way(g) { self.coming.push(Coming { dir: d.map(|x| x as f32), radius: game::weather::STROKE_RADIUS as f32 }); }
         let at = self.now.iter().position(|n| n.says & 16 != 0).unwrap_or(self.now.len());
         for (k, s) in spent.into_iter().enumerate() { self.now.insert(at + k, s); }
         if again { return; }

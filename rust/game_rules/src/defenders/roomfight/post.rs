@@ -44,7 +44,6 @@ pub fn send(g: &mut Game, d: RoomfightDefId, leg: Leg, by: By) {
     row.move_t = 0.0;
     row.stall_at = here;
     row.stall_t = 0.0;
-    row.rally_at = f64::NAN;   // (no clock of his own to go next door runs on behind it)
     crate::control::set_pinned(g, gd, false, crate::owner::name_of(by).unwrap_or("roomfight"));
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(leg.to)), speed: Some(Some(leg.pace)), face: Some(leg.face), strafe: Some(Some(leg.face.is_some())), aim_at: Some(leg.aim),
@@ -76,10 +75,39 @@ pub fn loose(g: &mut Game, gd: GuardId, by: &'static str) {
         let row = &mut g.tab.roomfight_def[d];
         row.mode = DefMode::Free;
         row.free_at = now;
-        row.rally_at = f64::NAN;
     }
     crate::control::set_hold(g, gd, false, by);
     crate::control::set_pinned(g, gd, false, by);
+}
+
+/// handed to the fight AI as the stock rally hands a man over: off his post, roused, the fight's place his fix.
+/// LET LOOSE AT A PLACE: roused, the fight there his fix.
+pub fn loose_at(g: &mut Game, d: RoomfightDefId, at: V3) {
+    let gd = g.tab.roomfight_def[d].gd;
+    let now = g.time;
+    loose(g, gd, "roomfight");
+    crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
+    crate::mind::raise(g, gd, 0.92, "roomfight");
+    if now - g.gd[gd].last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
+    crate::game::guard_set_path(g, gd, Vec::new());
+    let man = &mut g.gd[gd];
+    man.path_goal = None; man.path_goal_orbit = false;
+}
+
+/// a man on a scripted leg files his own boots, so the team's ears get them.
+/// a man on a leg files his own boots, so the team's ears get them: `last`, when he last did
+pub fn boots(g: &mut Game, gd: GuardId, last: f64) -> f64 {
+    let speed = g.gd[gd].speed;
+    if speed < 0.4 || g.time - last < (if speed > 2.0 { 0.33 } else { 0.5 }) { return last; }
+    let c = g.gd[gd].ch;
+    let serial = g.serial();
+    let ev = crate::game::GameEvent {
+        kind: crate::director::EventKind::Step, pos: g.ch[c].pos, time: g.time, loud: false,
+        level: Some(if speed > 2.0 { 0.8 } else { 0.4 }), who: Some(g.ch[c].id), serial,
+        ..crate::game::GameEvent::default()
+    };
+    g.events.push(ev);
+    g.time
 }
 
 /// a post as a man held it, kept while he is away from it
@@ -102,7 +130,6 @@ pub fn back_on(g: &mut Game, d: RoomfightDefId, h: Held, by: &'static str) {
     row.want = h.want;
     row.glance_until = -1.0;
     row.fix_keep = -1.0;
-    row.rally_at = f64::NAN;
     row.last_state = state;
     row.last_seen = seen;
     // (his watched point moves in place: a fix that is it moves with it)

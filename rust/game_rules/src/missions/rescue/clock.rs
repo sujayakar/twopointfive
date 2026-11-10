@@ -95,7 +95,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         if took { rescue_note(g, "act:blocked"); return; }
         g.rescue.executed.add(v);
         let dir = v3::normalize(v3::sub(chest, g.ch[c].muzzle));
-        crate::combat::kill_guard(g, v, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), None);
+        crate::combat::kill_guard(g, v, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), crate::game::With::Hand);
         let o = g.staged.captives.iter().copied().find(|&h| h != v && !crate::condition::down(g, g.gd[h].ch));
         if let Some(o) = o { crate::civilians::hostage_say(g, o, crate::dialogue::HostageMoment::Shot, Some(v)); }
         g.rescue.murmur_at = g.time + 6.0;

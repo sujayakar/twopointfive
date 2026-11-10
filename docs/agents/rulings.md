@@ -85,6 +85,8 @@ A ruling that stands on a system's own page is there and not here.
 - "setting up the optical wand should be faster. pretty much just the time for the animation and none of the waiting time with the spinner (which we can probably just
   remove)": `quick_secs`, never before `quick_down`.
 - "should be able to use night vision with wand": `nv_key` runs while `wanding`.
+- "they should probably keep whatever was happening before (like if we were sneaking before they shouldn't stand up)", of the squad when Sam kneels to the
+  wand or a lock: `kneel`, `sam_low`.
 - "having the hands up just doesn't look cool": the creep's arms hang low and go out only by `wide_by`.
 - "sam springs into action for the final grab ... you really want a disarm and then a grab, right?": the strip goes first (`leads`).
 - "sprinting straight into a wall should snap to cover": `wall_ran_on`.

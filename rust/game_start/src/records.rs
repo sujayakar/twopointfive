@@ -15,7 +15,7 @@ json_struct!(game::scene_scenarios::StructureRoom { id: "id", name: "name", boun
 json_words!(game::scene_scenarios::SquadDataTraining { Trained: "trained", Green: "green", Mixed: "mixed" });
 json_struct!(game::scene_scenarios::SquadArrive { door: "door", spawn: "spawn", men: "men" });
 json_struct!(game::scene_scenarios::SquadData { id: "id", name: "name", rooms: "rooms", rally: "rally", barricade: "barricade", may_leave: "mayLeave", training: "training", arrive: "arrive" });
-json_struct!(game::scene_scenarios::StructureData { name: "name", team: "team", rooms: "rooms", starts: "starts", max_men: "maxMen", way_out: "wayOut", dig_in: "digIn", wall_charges: "wallCharges", squads: "squads" });
+json_struct!(game::scene_scenarios::StructureData { name: "name", team: "team", rooms: "rooms", starts: "starts", max_men: "maxMen", dig_in: "digIn", wall_charges: "wallCharges", squads: "squads" });
 json_struct!(game::scene_scenarios::RescueDataRoom { name: "name", where_: "where", door: "door", bounds: "bounds", door_aim: "doorAim", outside: "outside", hold: "hold" } drops { "lights": Option<String> });
 json_struct!(game::scene_scenarios::RescueDataSideFrom { door: "door", bounds: "bounds" });
 json_struct!(game::scene_scenarios::RescueDataSide { door: "door", hold: "hold", from: "from", pair: "pair", stack: "stack", standoff: "standoff" });

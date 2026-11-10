@@ -40,8 +40,8 @@ fn a_charge_files_its_own_rows() {
         let mut p = office(seed, 1);
         let n = card(&p).rows.len();
         let gd = man(&p);
-        chronicle::chron_down(&mut p.g, gd, DownKind::Struck, Some("out cold")).expect("a row");
-        chronicle::chron_down(&mut p.g, gd, DownKind::Struck, Some("down — behind the wall when it went")).expect("a row");
+        chronicle::chron_down(&mut p.g, gd, DownKind::Struck, game::game::With::Hand).expect("a row");
+        chronicle::chron_down(&mut p.g, gd, DownKind::Struck, game::game::With::Charge).expect("a row");
         let rows = card(&p).rows;
         assert!(rows[n].text.ends_with("out cold — the takedown"), "seed {}: {}", seed, rows[n].text);
         assert!(rows[n + 1].text.ends_with("out cold — the wall charge"), "seed {}: {}", seed, rows[n + 1].text);
