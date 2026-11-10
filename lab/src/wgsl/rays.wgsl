@@ -135,6 +135,8 @@ fn cellBox(r: vec4u, lo: vec3f, h: f32) -> CellBox {
   var b: CellBox; let e = h / 256.0; let a = vec3f(vec3u(r.y, r.y >> 8u, r.y >> 16u) & vec3u(255u)); let z = vec3f((vec3u(r.z, r.z >> 8u, r.z >> 16u) & vec3u(255u)) + vec3u(1u));
   b.lo = lo + a * e; b.hi = lo + z * e; b.sigma = vec3f(vec3u(r.x, r.x >> 8u, r.x >> 16u) & vec3u(255u)) * (6.4 / 255.0) / ((z - a) * e); return b;
 }
+/** how thick a cell's contents stand to a ray along them, a metre, q = sigma * rd: leaves in sheets askew of the axes say how far each two of those go together */
+fn cellThick(r: vec4u, q: vec3f) -> f32 { let k = (vec3f(vec3u(r.y >> 25u, r.z >> 24u, (r.y >> 30u) | ((r.z >> 29u) << 2u)) & vec3u(31u)) - 15.0) / 15.0; let s = dot(q, q); return sqrt(max(s + 2.0 * dot(k, q.xxy * q.yzz), 0.05 * s)); }
 /** along a ray from t0 to t1 until it has met `want` of thickness; `lit`: what it is sent is summed. (Before blk.x only leaves are met: the rest is there as it is) */
 fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Blk {
   var o: Blk; o.cell = NOTHING; o.t = t1; o.tau = 0.0; if (BLK_MANY == 0u) { return o; }
@@ -150,7 +152,7 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
     if (cell >= 0x80000000u) { let d = i32(cell & 255u); let e2 = (BLK_LO + vec3f(c) * BRICK + select(vec3f(max(q - d + 1, vec3i(0))), vec3f(min(q + d, vec3i(i32(per)))), rd > vec3f(0.0)) * h - ro) * inv; t = max(t, min(min3(e2), select(1e9, max(blk.y, t), level == 0u))) + 1e-3; continue; }      /* (nothing so many cells round) */
     if (cell != fromCell) {
       let r = extra[BLK_CELLS + (cell - 1u) * 2u]; let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
-      if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = cellShare(r); let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
+      if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = cellShare(r); let qs = B.sigma * rd; let sg = cellThick(r, qs); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, qs / max(length(qs), 1e-6), rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
     }
     t = out + 1e-3;
   }

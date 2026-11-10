@@ -11,7 +11,7 @@ fn sends(s: Surf) -> vec3f { let f = coatF0(s); let r = s.rough; let a = f * (0.
 /** is there nothing that stands for good between two places? */
 fn together(a: vec3f, b: vec3f) -> bool { let d = b - a; let l = length(d); if (l < 0.03) { return true; } lim = vec4f(0.0, 0.0, 0.0, 1e9); leafMode = 2u; let h = nearest(a, d / l, 0.002, l - 0.002, GLASS | WATER | MOVES, 1e9); return h.piece == NOTHING; }
 var<workgroup> firstHit: atomic<u32>; var<workgroup> refAt: vec3f; var<workgroup> joinedTo: atomic<u32>; var<workgroup> total: atomic<u32>;
-var<workgroup> crossed: array<atomic<u32>, 3>; var<workgroup> stopped: array<u32, 64>; var<workgroup> badOf: array<f32, 64>;
+var<workgroup> need: array<f32, 13>; var<workgroup> crossed: array<atomic<u32>, 3>; var<workgroup> stopped: array<u32, 64>; var<workgroup> badOf: array<f32, 64>;
 /** thirteen ways through a cell */
 fn wayOf(i: u32) -> vec3f { let k = i + 14u; return normalize(vec3f(f32(k / 9u) - 1.0, f32((k / 3u) % 3u) - 1.0, f32(k % 3u) - 1.0)); }
 /** a ray through a cell (in its own units, 0 to 1): from where, which way, how far, and how much it counts (by a point in the cell a ray goes where the cell is long) */
@@ -51,11 +51,26 @@ fn tries(i: u32, solid: bool) -> vec2f { if (solid) { return vec2f(1.0 - 0.04 * 
     for (var i = 0u; i < 320u; i++) { let t = through(cell, i); let iv = safeInv(t.d); let u = (p0 - t.o) * iv; let v = (p1 - t.o) * iv; let ta = max(max3(min(u, v)), 0.0); let tb = min(min3(max(u, v)), t.far); if (tb > ta) { got[t.way] += (1.0 - exp(-c.y * length(sg * t.d) * (tb - ta))) * t.w; } if (((stopped[i / 5u] >> (i % 5u)) & 1u) != 0u) { wish[t.way] += t.w; } ws[t.way] += t.w; }
     var sum = 0.0; var sq = 0.0; for (var w = 0u; w < 13u; w++) { let x = (got[w] - wish[w]) / max(ws[w], 1e-6); sum += x; sq += x * x; } bad = abs(sum) / 13.0 + 0.25 * sqrt(sq / 13.0) + 0.002 * (1.0 - c.x);
   } badOf[li] = bad;
+  workgroupBarrier(); var bi = 0u; for (var i = 1u; i < 24u; i++) { if (badOf[i] < badOf[bi]) { bi = i; } }
+  // leaves hang in sheets that stand askew of the axes: how thick the cell is, each of the thirteen ways, as rays found it
+  let sheets = mend && !solid && f32(atomicLoad(&leafy)) > 0.5 * all;
+  if (sheets && li < 13u) {
+    let c = tries(bi, solid); let p0 = select(L, mid - half * c.x, L > vec3f(0.02)); let p1 = select(H, mid + half * c.x, H < vec3f(0.98)); var chord: array<f32, 25>; var wt: array<f32, 25>; var wish = 0.0; var ws = 0.0; var m = 0u;
+    for (var i = li; i < 320u; i += 13u) { let t = through(cell, i); let iv = safeInv(t.d); let u = (p0 - t.o) * iv; let v = (p1 - t.o) * iv; chord[m] = max(min(min3(max(u, v)), t.far) - max(max3(min(u, v)), 0.0), 0.0); wt[m] = t.w; ws += t.w; if (((stopped[i / 5u] >> (i % 5u)) & 1u) != 0u) { wish += t.w; } m++; }
+    var a = 0.0; var b = 12.0; for (var n = 0u; n < 14u; n++) { let k = 0.5 * (a + b); var got = 0.0; for (var j = 0u; j < m; j++) { got += (1.0 - exp(-k * chord[j])) * wt[j]; } if (got < wish) { a = k; } else { b = k; } } need[li] = 0.5 * (a + b);
+  }
   workgroupBarrier(); if (li != 0u || wg.x + most.y >= most.x) { return; }
   var out: array<u32, 8>; if (all < 0.5) { for (var k = 0u; k < 8u; k++) { made[cell * 8u + k] = 0u; } return; }
-  if (mend) { var bi = 0u; for (var i = 1u; i < 24u; i++) { if (badOf[i] < badOf[bi]) { bi = i; } } let c = tries(bi, solid); let p0 = select(L, mid - half * c.x, L > vec3f(0.02)); let p1 = select(H, mid + half * c.x, H < vec3f(0.98)); lo = vec3u(p0 * 256.0); hi = max(lo, vec3u(ceil(p1 * 256.0)) - vec3u(1u)); deep *= c.y; }
+  var tie = vec3u(15u);
+  if (mend) { let c = tries(bi, solid); let p0 = select(L, mid - half * c.x, L > vec3f(0.02)); let p1 = select(H, mid + half * c.x, H < vec3f(0.98)); lo = vec3u(p0 * 256.0); hi = max(lo, vec3u(ceil(p1 * 256.0)) - vec3u(1u)); deep *= c.y;
+    if (sheets) {       /* depth a metre, squared, is a form in the way: its six numbers by least squares, each way by its share */
+      var A: array<array<f32, 7>, 6>; for (var i = 0u; i < 13u; i++) { let d = wayOf(i); let x = array<f32, 6>(d.x * d.x, d.y * d.y, d.z * d.z, 2.0 * d.x * d.y, 2.0 * d.x * d.z, 2.0 * d.y * d.z); let y = need[i] * need[i]; let w = 1.0 / (need[i] + 0.1) / (need[i] + 0.1); for (var p = 0u; p < 6u; p++) { for (var q = 0u; q < 6u; q++) { A[p][q] += w * x[p] * x[q]; } A[p][6] += w * x[p] * y; } }
+      for (var p = 0u; p < 6u; p++) { A[p][p] += 1e-4 * A[p][p] + 1e-6; } for (var p = 0u; p < 6u; p++) { for (var q = p + 1u; q < 6u; q++) { let f = A[q][p] / A[p][p]; for (var k = p; k < 7u; k++) { A[q][k] -= f * A[p][k]; } } }
+      var S: array<f32, 6>; for (var p = 6u; p > 0u; p--) { var v = A[p - 1u][6]; for (var k = p; k < 6u; k++) { v -= A[p - 1u][k] * S[k]; } S[p - 1u] = v / A[p - 1u][p - 1u]; }
+      let s = sqrt(max(vec3f(S[0], S[1], S[2]), vec3f(1e-3))); deep = s * (p1 - p0); tie = vec3u(clamp(vec3f(S[3] / (s.x * s.y), S[4] / (s.x * s.z), S[5] / (s.y * s.z)), vec3f(-1.0), vec3f(1.0)) * 15.0 + 15.5);
+    } }
   let tau = vec3u(clamp(deep * (255.0 / 6.4) + 0.5, vec3f(0.0), vec3f(255.0)));
-  out[0] = tau.x | (tau.y << 8u) | (tau.z << 16u) | (u32(f32(atomicLoad(&leafy)) / all * 255.0) << 24u); out[1] = lo.x | (lo.y << 8u) | (lo.z << 16u) | (select(0u, 1u, atomicLoad(&grass) * 2u > atomicLoad(&leafy)) << 24u); out[2] = hi.x | (hi.y << 8u) | (hi.z << 16u);
+  out[0] = tau.x | (tau.y << 8u) | (tau.z << 16u) | (u32(f32(atomicLoad(&leafy)) / all * 255.0) << 24u); out[1] = lo.x | (lo.y << 8u) | (lo.z << 16u) | (select(0u, 1u, atomicLoad(&grass) * 2u > atomicLoad(&leafy)) << 24u) | (tie.x << 25u) | ((tie.z & 3u) << 30u); out[2] = hi.x | (hi.y << 8u) | (hi.z << 16u) | (tie.y << 24u) | ((tie.z >> 2u) << 29u);
   /* (how much leaf there is, one behind another: lit by how much of it shows) */ { var A = 0.0; for (var a = 0u; a < 3u; a++) { A += f32(atomicLoad(&crossed[a])) / (2.0 * f32(RAYS)) / max(wide[(a + 1u) % 3u] * wide[(a + 2u) % 3u], 1e-3) / 3.0; } out[6] = u32(clamp(A * 256.0, 0.0, 65535.0)); }
   var mean = vec3f(0.0); for (var k = 0u; k < 6u; k++) { mean += vec3f(f32(atomicLoad(&red[k])), f32(atomicLoad(&green[k])), f32(atomicLoad(&blue[k]))); } mean /= all;
   for (var k = 0u; k < 6u; k++) { let c = select(mean, vec3f(f32(atomicLoad(&red[k])), f32(atomicLoad(&green[k])), f32(atomicLoad(&blue[k]))) / max(n[k], 1.0), n[k] > 0.5) / 4095.0; let v = sqrt(c); let w = u32(v.x * 31.0 + 0.5) | (u32(v.y * 63.0 + 0.5) << 5u) | (u32(v.z * 31.0 + 0.5) << 11u); let z = 3u + (k >> 1u); out[z] = out[z] | (w << select(0u, 16u, (k & 1u) == 0u)); }
