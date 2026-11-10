@@ -20,12 +20,6 @@ pub struct DoorBlastReachItem {
     pub k: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SlabThere {
-    pub but: f64,
-    pub ask: f64,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorblastMod {

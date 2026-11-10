@@ -252,7 +252,7 @@ fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::b
         let sg = m::sign(off);
         let th = g.dr[d].def.closed_dir;
         let into: V3 = [-m::sin(th) * sg, 0.0, m::cos(th) * sg];
-        let slab = if crate::doors::door_off(g, d) { crate::doors::door_slab(g, d) } else { None };
+        let slab = if crate::doors::door_off(g, d) { g.dr[d].slab } else { None };
         let Some(sl) = slab else {
             let still = m::abs(crate::doors::door_angle(g, d)) < 0.05 && m::abs(crate::doors::door_vel(g, d)) < 0.01;
             return if still { Some(DoorChargeAt { into, from: at, rest: at }) } else { None };
