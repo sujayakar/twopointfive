@@ -256,6 +256,11 @@ fn drawSpot(x: vec3f, n: vec3f) -> vec2f {
   var W = 0.0; var pick = -1.0; var w0 = 0.0; var u = rnd(); let to = lampsAll(); for (var i = frame.counts.x; i < to; i++) { let w = lampWeight(i, x, n); if (w <= 1e-6) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
+/** what the spots that torches light send x, facing n (seen or not: one of them is drawn, and asked) */
+fn spotLight(x: vec3f, n: vec3f, wide: f32) -> vec3f {
+  if (frame.sunE.w <= 0.0) { return vec3f(0.0); } let l = drawSpot(x, n); if (l.x < 0.0) { return vec3f(0.0); } let g = aimLamp(u32(l.x), x, rnd2()); let e = g.E * (l.y * max(dot(n, g.dir), 0.0)); if (max3(e) <= 1e-5) { return vec3f(0.0); }
+  foot(wide, lampSize(u32(l.x)) / max(g.dist, 0.1)); return min(e, vec3f(60.0)) * visible(x, g.dir, 2e-3, g.dist - 0.04);
+}
 // ================================================================ openings: where the sky is, for rays that should look there
 fn openingPdf(x: vec3f, d: vec3f) -> f32 {
   var p = 0.0; let n = frame.counts.y; if (n == 0u) { return 0.0; }

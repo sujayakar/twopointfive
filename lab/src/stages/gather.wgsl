@@ -22,8 +22,7 @@
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
         L += thr * sentBack(q, rnd2(), d);
-        if (frame.sunE.w > 0.0) {        // (what torches light lights this too, anew each frame: the second bounce of a torch. What is kept knows nothing of it)
-          let y = q.x + q.ng * 0.004; let l = drawSpot(y, q.ng); if (l.x >= 0.0) { let g = aimLamp(u32(l.x), y, rnd2()); let e = g.E * (l.y * max(dot(q.ng, g.dir), 0.0)); if (max3(e) > 1e-5) { foot(wide, lampSize(u32(l.x)) / max(g.dist, 0.1)); L += thr * returns(q) / PI * min(e, vec3f(60.0)) * visible(y, g.dir, 2e-3, g.dist - 0.04) * 1.35; } } }        /* (a third more for the bounces after) */
+        L += thr * returns(q) / PI * spotLight(q.x + q.ng * 0.004, q.ng, wide);        /* (what torches light lights this too, anew each frame: a torch's second bounce. The kept light has those after) */
         if (k < 2u) { cacheTell(who * 2u + k, q.x, q.ng); }
         break;
       }

@@ -129,7 +129,7 @@ export class Lab {
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
   /** this frame's numbers, for a study that runs its stages itself */ sendFrame() { this.send(); this.frameNo++; }
-  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); return f; } private looked = new Float32Array(32);
+  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); /* where torches are most of the light, what is kept must follow them */ if (this.torches > 0) { let lit = 0; this.building.world.lamps.forEach((l, i) => { if (l.kind !== 'spot' && this.scene.lampOn[i]! > 0.05 && l.at[1] > -20) lit++; }); if (lit < 8) f[KNOBS.keep.i] = Math.min(f[KNOBS.keep.i]!, 48); } return f; } private looked = new Float32Array(32);
   /** how many torches have a picture of their own this frame */ torches = 0;
   sendMs = 0; private drawnAt = 0;
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
