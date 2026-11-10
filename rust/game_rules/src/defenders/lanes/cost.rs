@@ -221,19 +221,6 @@ pub(super) fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
 
 pub use crate::roomfight::def_of;
 
-/// A line in the fight's log.
-pub(super) fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd {
-        Some(x) => g.gd[x].callsign.clone(),
-        None => String::from("-"),
-    };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: format!("[lanes] {}", what) });
-    if g.fight.log.len() > 600 {
-        g.fight.log.drain(0..200);
-    }
-}
-
 /// The floor one gun at `from` covers along the line to `at`: nav cells in the wedge with a line of fire from the gun.
 pub(super) fn wedge(g: &mut crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, at: V3, e: Option<f64>) {
     let k = g.k.lanes;
@@ -510,10 +497,6 @@ pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, do
             }
         }
     }
-    if down && g.tab.lanes_lane[l].known {
-        let what = format!("lane {}: another down in it ({})", g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].downs);
-        note(g, Some(man), &what);
-    }
     {
         let r = &mut g.tab.lanes_lane[l];
         r.until = now + k.secs * m::min(3.0, m::max(1.0, r.downs));
@@ -531,10 +514,6 @@ pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, do
         let gone = st.lanes.remove(o);
         lanes_gone(g);
         st!(g).stats.lapsed += 1.0;
-        if g.tab.lanes_lane[gone].known {
-            let what = format!("lane {}: dropped for a newer one", g.tab.lanes_lane[gone].id);
-            note(g, None, &what);
-        }
         if g.tab.lanes_lane[gone].cells.is_some() {
             remask(g);
         }
@@ -658,18 +637,6 @@ pub(super) fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: Guard
     crate::game::game_say(g, who, &line, Some(true), None);
     let now = g.time;
     s(g).said_t = now;
-    let r = &g.tab.lanes_lane[l];
-    let what = format!(
-        "lane {}: called — fire from ({}, {}) down to ({}, {}), {} cells, {} down",
-        r.id,
-        js::to_fixed(r.from[0], 1),
-        js::to_fixed(r.from[2], 1),
-        js::to_fixed(r.at[0], 1),
-        js::to_fixed(r.at[2], 1),
-        r.cells.as_ref().unwrap().len(),
-        r.downs
-    );
-    note(g, Some(who), &what);
 }
 
 /// This frame's rounds (the shot events' own muzzle → impact segments): who of the side they dropped, whom they passed.

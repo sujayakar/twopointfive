@@ -234,8 +234,8 @@ pub trait DoorsAsk {
     fn rescue_on(&mut self, first: f64, second: f64, set: f64);
     /// STAGING: no man abroad to meet the pair, and the door's man inside
     fn rescue_quiet_floor(&mut self);
-    /// the room fight's notes of a man
-    fn fight_notes(&self, name: &str) -> Vec<String>;
+    /// is he on his way out of a room he has given up
+    fn falls_back(&self, name: &str) -> bool;
     /// how long he lines up on her
     fn rescue_aim(&self) -> f64;
     /// STAGING: a flash has his eyes for so long
@@ -618,7 +618,9 @@ impl DoorsAsk for Play {
         (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
         game::savestate::control::restart(&mut self.g);
     }
-    fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
+    fn falls_back(&self, name: &str) -> bool {
+        self.g.fight.defs.iter().any(|&d| { let r = &self.g.tab.roomfight_def[d]; self.g.gd[r.gd].callsign == name && game::roomfight::on_leg(&self.g, d) && r.move_kind == game::roomfight::DefMoveKind::Fallback })
+    }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
     fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
     fn room_cleared(&self, id: &str) -> bool { self.g.staged.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }

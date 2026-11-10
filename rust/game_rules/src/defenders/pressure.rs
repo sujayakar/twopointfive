@@ -19,12 +19,6 @@ fn state_of(g: &mut Game) -> &mut State { g.m.pressure.states.get_or_insert_with
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 fn pick(g: &mut Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_for(g, "pressure::pick#1", who) * (r[1] - r[0]) }
 fn alive(g: &Game, d: RoomfightDefId) -> bool { !crate::condition::down(g, g.gd[g.tab.roomfight_def[d].gd].ch) }
-/// a line in the fight's log, which keeps its last 400 to 600
-fn note(g: &mut Game, gd: GuardId, what: &str) {
-    let note = crate::roomfight::FightNote { t: g.time, who: g.gd[gd].callsign.clone(), what: format!("[pressure] {}", what) };
-    g.fight.log.push(note);
-    if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
-}
 /// the nav grid's cell a point falls in
 fn cell_of(g: &Game, p: V3) -> f64 { let cell = g.col.nav.cell; crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell)) }
 // ---- small reads
@@ -32,7 +26,6 @@ fn df(g: &Game, d: RoomfightDefId) -> &crate::roomfight::Def { &g.tab.roomfight_
 fn gd_of(g: &Game, d: RoomfightDefId) -> GuardId { g.tab.roomfight_def[d].gd }
 fn op_gd(g: &Game, i: usize) -> GuardId { g.tab.roomfight_op[g.fight.ops[i]].gd }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn door_name(g: &Game, door: DoorId) -> String { g.dr[door].def.name.clone() }
 fn in_cells(g: &Game, t: RoomfightRoomId, cell: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(cell)) }
 fn is_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 
@@ -180,12 +173,9 @@ fn last_man(g: &mut Game, d: RoomfightDefId) {
     };
     let now = g.time;
     state_of(g).tried.set(d, now);   // (whether or not there was a way out: he does not ask again for a while)
-    let cause = if why == LastWhy::Seen { String::from("two of them in view") } else { format!("boots at {}", door_name(g, entries[shut.unwrap()].door)) };
     let (spot, door) = match chosen {
         Some(x) => x,
         None => {
-            let what = format!("last man: {}, no way out of room {}", cause, g.tab.roomfight_room[r].id);
-            note(g, gd, &what);
             return;
         }
     };
@@ -196,9 +186,6 @@ fn last_man(g: &mut Game, d: RoomfightDefId) {
     } else {
         crate::game::game_say(g, gd, "they're at the door — I'm out the back!", Some(true), None);
     }
-    let through = match door { Some(x) => format!(" through {}", door_name(g, x)), None => String::new() };
-    let what = format!("last man: {}, gives room {} up{}", cause, g.tab.roomfight_room[r].id, through);
-    note(g, gd, &what);
 }
 
 /// a last man out of his room, this frame. True = done with him. `o` is lent by pressTick, out of st.outs for the call.
@@ -225,16 +212,11 @@ fn tick_out(g: &mut Game, o: &mut Out) -> bool {
         if told > 0 {
             crate::game::game_say(g, gd, "they're right behind me — watch that door!", Some(true), None);
         }
-        let beyond = match o.door { Some(x) => format!(" beyond {}", door_name(g, x)), None => String::new() };
-        let tells = if told > 0 { format!(", tells {}", told) } else { String::new() };
-        let what = format!("last man: plants{}{}", beyond, tells);
-        note(g, gd, &what);
         return false;
     }
     let now = g.time;
     if !o.fought && g.gd[gd].last_seen_t > o.plant_t + 0.2 {
         o.fought = true;
-        note(g, gd, "last man: fights again");
             return true;
     }
     if now - o.plant_t > 90.0 { return true; }

@@ -424,12 +424,6 @@ pub struct StayKeyRoom {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct ContactWords {
-    pub say: String,
-    pub why: String,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct MovedOn {
     pub at: V3,
     pub pair: Vec<GuardId>,

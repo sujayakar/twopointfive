@@ -64,7 +64,6 @@ pub struct Cues {
     pub log: Vec<crate::cues::CuesLogItem>,
     pub bubbles: JsMap<GuardId, crate::cues::Bubble>,
     pub men: JsMap<GuardId, crate::cues::Man>,
-    pub last_note: Option<crate::roomfight::FightNote>,
     #[is(-1.0)] pub last_t: f64,
     pub said: JsMap<String, f64>,
     pub class_t: Vec<Option<f64>>,
