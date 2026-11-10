@@ -26,7 +26,7 @@ fn home_but(g: &Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
     h.into_iter().map(|d| def_gd(g, d)).find(|&x| x != m)
 }
 /// `home(g, Q)[0]?.gd`
-fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
+pub(super) fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
     let h = home(g, q);
     h.first().map(|&d| def_gd(g, d))
 }
