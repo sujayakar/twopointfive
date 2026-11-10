@@ -879,7 +879,7 @@ fn occluded(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
     if (tCell > tmax || cell.x < 0 || cell.y < 0 || cell.x >= GRID_W || cell.y >= GRID_H) { break; }
   }
   if (scene.numCapsules > 0u) {
-    if ((frame.flags & FLAG_MESH_SHADOWS) != 0u) { return meshShadowT(ro, rd, tmax, skipOwner) >= 0.0; }   // characters as their skinned mesh (ultra); else their round-cone proxies
+    if ((frame.flags & FLAG_MESH_SHADOWS) != 0u && (u32(frame.rigCfg.x) & 256u) == 0u) { return meshShadowT(ro, rd, tmax, skipOwner) >= 0.0; }   // characters as their skinned mesh (ultra); else their round-cone proxies
     return occludedCapsules(ro, rd, tmax, skipOwner);
   }
   return false;
