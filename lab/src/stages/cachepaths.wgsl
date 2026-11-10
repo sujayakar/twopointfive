@@ -1,6 +1,6 @@
 // NOTHING IS KEPT: whoever asks what lands somewhere follows a path on from there, BOUNCES surfaces long. For judging what is kept (kept.ts).
 var<private> askMoves: bool = false;
-struct Cached { E: vec3f, sun: f32, n: f32 };
+struct Cached { E: vec3f, sun: f32, torch: vec3f, n: f32 };
 fn cacheRead(x0: vec3f, n0: vec3f, j: vec2f) -> Cached { return follow(x0, n0); }
 fn cacheSmooth(x0: vec3f, n0: vec3f) -> Cached { return follow(x0, n0); }
 fn follow(x0: vec3f, n0: vec3f) -> Cached {

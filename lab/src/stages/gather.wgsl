@@ -22,7 +22,6 @@
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
         L += thr * sentBack(q, rnd2(), d);
-        L += thr * returns(q) / PI * spotLight(q.x + q.ng * 0.004, q.ng, wide, 4u);        /* (what torches light lights this too, anew each frame: a torch's second bounce. The kept light has those after) */
         if (k < 2u) { cacheTell(who * 2u + k, q.x, q.ng); }
         break;
       }
@@ -35,6 +34,6 @@
     }
     let Ew = min(L * w.w, vec3f(50.0)); E += Ew; way += w.xyz * lum(Ew);
   }
-  let sp = spotLight(x, select(p.ng, p.n, p.leaf), px, 12u); E = E / f32(N) + sp; way = way / f32(N) + spotWay * lum(sp);       /* (a torch's first bounce) */
+  let sp = spotLight(x, select(p.ng, p.n, p.leaf), px, 12u); E = E / f32(N) + sp; way = way / f32(N) + spotWay * lum(sp);       /* (what a torch lights, straight from there, anew each frame; what goes on from that is kept, for a little while) */
   textureStore(outE, id.xy, vec4f(E, dist / f32(N))); textureStore(outV, id.xy, vec4f(way, 0.0));
 }
