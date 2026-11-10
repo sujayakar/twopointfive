@@ -80,7 +80,8 @@ The corner panel is `cornerRows`. The picture's size in the window is read once,
 has written the page, it makes the browser lay the page out again.
 
 **The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring.rs` and `interact/`. A tap does the default;
-the key kept down a moment puts the ring up. Let go on a wedge does it; let go in the middle leaves the ring up, and 1 to 5 or a click picks. The whistle is the last wedge of
+the key kept down a moment puts the ring up. Let go on a wedge does it, if it can be done; let go in the middle leaves the ring up, one wedge or five. Then 1 to 5, a click or the key again
+picks, and the back key or the right button puts it away. The whistle is the last wedge of
 his own ring (`whistle_wedge`). The squad's key tapped twice is fall in (`twice`), and Shift with it sends part of the squad.
 
 **The kit column** is `kit_view`, drawn by `drawHandBox`. The gun's digit pressed again opens its setup (`slotsetup.rs`), above the column. On every gun 1 is the selector, 2 the
