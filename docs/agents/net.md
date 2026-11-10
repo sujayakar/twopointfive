@@ -53,10 +53,9 @@ more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody se
 `lead.rs` draws him there. Only his walk and aim are ahead: his rounds, doors, orders and pose, and every other man, are the
 confirmed tick's. Where his legs are not his own (`free` false) or he is down, he is drawn where the game has him. A correction eases off by `FORESEE.ease`; past `FORESEE.snap` it is a cut.
 
-**The words keep two machines honest.** The alarm is the state word (`foldWord`): the die's count and the hash of each part of the game's block, chained, sent
-every `NET.wordEvery` ticks. It leaves out a seat's aim, a man's mind and an order book, so a difference there rings only once it moves something. The first word
-that differs is kept as `bad` and told up as `Lost`; the door closes its socket and the player is told to reload. Beside it goes the word of every part (`foldWhole`
-over `state_words`), counted and never an alarm. `MP_WORDS` and `words-diff.ts` name the part.
+**The words keep two machines honest.** The alarm is the state word (`foldWord`), sent every `NET.wordEvery` ticks: every part of the game (`state_words`), chained
+on the die's count and the block's parts of every tick between. What a machine may honestly differ in is in no part: its field says so (`#[bytes(skip)]`). The first
+word that differs is kept as `bad` and told up as `Lost`; the door closes its socket and the player is told to reload. `MP_WORDS` and `words-diff.ts` name the part.
 
 **A record is checked as it is stepped.** `face_networked` marks every seat `remote`, so `check_cmd` keeps the look-at within `reach` of his man and works the view's
 matrices out again from the pose on every machine.
