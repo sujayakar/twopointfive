@@ -21,7 +21,7 @@
       if (miss) { L += thr * skyLod(d, 1.0); break; }
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
-        L += thr * sentBack(q, rnd2());
+        L += thr * sentBack(q, rnd2(), d);
         if (k < 2u) { cacheTell(who * 2u + k, q.x, q.ng); }
         break;
       }
