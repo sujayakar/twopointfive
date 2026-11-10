@@ -126,6 +126,9 @@ struct Cast {
     asked: [[u64; LAMPS]; MAX_GLOW],
     clear: [[u64; LAMPS]; MAX_GLOW],
     between: [u64; MAX_GLOW],
+    /// which of a metre's lines pass the ball round a leaf near it, and the leaves that is of (a word, 0 = it was not asked)
+    by_leaf: [u128; MAX_GLOW],
+    leaves: [u64; MAX_GLOW],
     /// where each lamp of the list stood (a word)
     stood: [u64; light::MOST],
     /// 0 not asked · 1 the open sky · 2 a roof
@@ -148,6 +151,8 @@ const NO_CAST: Cast = Cast {
     asked: [[0; LAMPS]; MAX_GLOW],
     clear: [[0; LAMPS]; MAX_GLOW],
     between: [0; MAX_GLOW],
+    by_leaf: [0; MAX_GLOW],
+    leaves: [0; MAX_GLOW],
     stood: [0; light::MOST],
     roof: [0; MAX_HALF],
     joined: [0; MAX_GLOW],
@@ -164,9 +169,11 @@ fn cast_of(g: usize) -> &'static mut Cast {
 struct Ways {
     d: [[f64; 3]; RAYS],
     c: [[f64; 6]; RAYS],
+    /// the three faces it counts for at all, and what for
+    on: [[(usize, f64); 3]; RAYS],
     made: bool,
 }
-static mut WAYS: Ways = Ways { d: [[0.0; 3]; RAYS], c: [[0.0; 6]; RAYS], made: false };
+static mut WAYS: Ways = Ways { d: [[0.0; 3]; RAYS], c: [[0.0; 6]; RAYS], on: [[(0, 0.0); 3]; RAYS], made: false };
 fn ways() -> &'static Ways {
     let w = unsafe { &mut *core::ptr::addr_of_mut!(WAYS) };
     if !w.made {
@@ -186,6 +193,12 @@ fn ways() -> &'static Ways {
         for c in w.c.iter_mut() {
             for k in 0..6 {
                 c[k] *= PI / sum[k];
+            }
+        }
+        for (on, c) in w.on.iter_mut().zip(&w.c) {
+            for (axis, on) in on.iter_mut().enumerate() {
+                let k = axis * 2 + (c[axis * 2] <= 0.0) as usize;
+                *on = (k, c[k]);
             }
         }
         w.made = true;
@@ -573,14 +586,18 @@ fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize
     }
 }
 
-/// a word of what stands between a lamp and a metre: the statics and the leaves (none is 0)
-fn between(c: &Cast, w: &World) -> u64 {
-    let mut h = (c.marks.now as u64).wrapping_mul(0x9e3779b97f4a7c15);
+/// a word of the leaves as they stand (none is 0)
+fn leaves(w: &World) -> u64 {
+    let mut h = 0xcbf29ce484222325u64;
     for v in w.leaf.iter().map(|v| v.to_bits()).chain(w.leaf_flags.iter().map(|f| *f as u64)) {
         h = (h ^ v).wrapping_mul(0x9e3779b97f4a7c15);
         h ^= h >> 29;
     }
     h | 1
+}
+/// …and of what stands between a lamp and a metre: the statics too
+fn between(c: &Cast, leaves: u64) -> u64 {
+    (leaves ^ c.marks.now as u64).wrapping_mul(0x9e3779b97f4a7c15) | 1
 }
 /// the list's lamps stand where they stood, or the lines to them are forgotten
 fn stand(c: &mut Cast, set: &light::Set) {
@@ -622,9 +639,16 @@ struct Leaf {
     from: [f64; 3],
     ball: f64,
 }
+/// what a step says of all its metres: the lamps, the words of the leaves and of what stands between a lamp and a metre, and what each shade of a surface sends
+/// back of the light on it (the last: a bare floor)
+struct Now {
+    set: &'static light::Set,
+    leaves: u64,
+    between: u64,
+    back: [f64; 257],
+}
 /// ONE METRE WORKED OUT: what its lines bring of the metres as they are
-#[allow(clippy::too_many_arguments)]
-fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, set: &light::Set, between: u64, tune: &Knobs) {
+fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, now: &Now, tune: &Knobs) {
     if cast(c, w, m, tune) > 0 {
         unsafe { SWEPT[1] += 1 };
     }
@@ -639,40 +663,45 @@ fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, set: &lig
         }
     }
     // (a line that passes wide of the ball round a leaf passes the leaf)
-    let shut = |p: [f64; 3], d: [f64; 3], tmax: f64| {
-        near[..n].iter().any(|l| {
-            let v = [l.from[0] + a[0] - p[0], l.from[1] + a[1] - p[1], l.from[2] + a[2] - p[2]];
-            let t = v[0] * d[0] + v[1] * d[1] + v[2] * d[2];
-            v[0] * v[0] + v[1] * v[1] + v[2] * v[2] - t * t <= l.ball && lines::ray_box_n(&w.cut, p[0], p[1], p[2], d[0], d[1], d[2], &w.leaf[l.at..l.at + REC], tmax).is_some()
-        })
+    let wide = |l: &Leaf, p: [f64; 3], d: [f64; 3]| {
+        let v = [l.from[0] + a[0] - p[0], l.from[1] + a[1] - p[1], l.from[2] + a[2] - p[2]];
+        let t = v[0] * d[0] + v[1] * d[1] + v[2] * d[2];
+        v[0] * v[0] + v[1] * v[1] + v[2] * v[2] - t * t > l.ball
     };
+    let shut = |p: [f64; 3], d: [f64; 3], tmax: f64| near[..n].iter().any(|l| !wide(l, p, d) && lines::ray_box_n(&w.cut, p[0], p[1], p[2], d[0], d[1], d[2], &w.leaf[l.at..l.at + REC], tmax).is_some());
+    let w_ = ways();
+    if c.leaves[m] != now.leaves {
+        c.leaves[m] = now.leaves;
+        c.by_leaf[m] = (0..RAYS).filter(|&i| near[..n].iter().any(|l| !wide(l, a, w_.d[i]))).fold(0, |bits, i| bits | 1 << i);
+    }
+    let by_leaf = c.by_leaf[m];
     let s = &k.sky;
     let open = open_air(s) + s.sun * js_max(0.0, s.to_sun[1]);
-    let w_ = ways();
     let mut f = [0.0; 6];
     for (i, r) in c.rays[m].iter().enumerate() {
         let d = w_.d[i];
-        let t = r.cm as f64 / 100.0;
-        let back = if r.of == 0 { BARE } else { w.back[r.of as usize - 1] as f64 / 255.0 };
         // (a line that goes out is followed a leaf's width on: the leaf hangs in the opening's frame or stands open before it)
-        let l = if n > 0 && shut(a, d, if r.to >= TO_OUTSIDE { t + 1.0 } else { t }) {
+        let l = if by_leaf >> i & 1 != 0 && shut(a, d, r.cm as f64 / 100.0 + if r.to >= TO_OUTSIDE { 1.0 } else { 0.0 }) {
             LEAF / PI * st[O_GLOW_A + m]
         } else {
+            let back = if r.of == 0 { now.back[256] } else { now.back[w.back[r.of as usize - 1] as usize] };
             match r.to {
                 TO_SKY => s.horizon + (s.zenith - s.horizon) * js_min(1.0, d[1] * 2.5),
                 TO_GROUND => GROUND / PI * open,
-                TO_OUTSIDE => back / PI * (s.sun * r.sun as f64 / 255.0 + PI * 0.5 * s.horizon),
+                TO_OUTSIDE => back * (s.sun * r.sun as f64 / 255.0 + PI * 0.5 * s.horizon),
                 TO_DARK => 0.0,
                 to => {
-                    let h = [a[0] + d[0] * (t - 0.02), a[1] + d[1] * (t - 0.02), a[2] + d[2] * (t - 0.02)];
-                    let sun = if r.sun > 0 && s.sun > 0.0 && !(n > 0 && shut(h, s.to_sun, NEAR)) { s.sun * r.sun as f64 / 255.0 } else { 0.0 };
-                    back / PI * (sun + st[O_GLOW_A + to as usize])
+                    let lit = r.sun > 0 && s.sun > 0.0 && (n == 0 || {
+                        let t = r.cm as f64 / 100.0 - 0.02;
+                        !shut([a[0] + d[0] * t, a[1] + d[1] * t, a[2] + d[2] * t], s.to_sun, NEAR)
+                    });
+                    back * (if lit { s.sun * r.sun as f64 / 255.0 } else { 0.0 } + st[O_GLOW_A + to as usize])
                 }
             }
         };
         if l > 0.0 {
-            for (f, c) in f.iter_mut().zip(&w_.c[i]) {
-                *f += l * c;
+            for &(k, c) in &w_.on[i] {
+                f[k] += l * c;
             }
         }
     }
@@ -680,7 +709,7 @@ fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, set: &lig
     st[O_GLOW_MEAN + m] = avg;
     st[O_GLOW_UP + m] = f[2];
     st[O_GLOW_MAX + m] = js_max(js_max(js_max(f[0], f[1]), js_max(f[2], f[3])), js_max(f[4], f[5]));
-    if let Some(lamps) = lamps_on(c, w, set, between, m, a, tune) {
+    if let Some(lamps) = lamps_on(c, w, now.set, now.between, m, a, tune) {
         st[O_GLOW_A + m] = avg + mean(&lamps);
     }
 }
@@ -720,14 +749,18 @@ pub fn step(g: usize, w: &World, st: &mut [f64; LEN], nbx: usize, nbz: usize, k:
     st[O_GLOW_LEFT] = if young && left <= quick { 0.0 } else { left };
     st[O_GLOW_AT] = ((i + per) % n) as f64;
     unsafe { SWEPT = [per, 0] };
-    let (set, between) = (light::set(k.lamps, k.rows), between(c, w));
-    stand(c, set);
+    let leaves = leaves(w);
+    let mut now = Now { set: light::set(k.lamps, k.rows), leaves, between: between(c, leaves), back: [BARE / PI; 257] };
+    for (i, b) in now.back[..256].iter_mut().enumerate() {
+        *b = i as f64 / 255.0 / PI;
+    }
+    stand(c, now.set);
     for _ in 0..per {
         if i >= n {
             i = 0;
         }
         if roof(c, w, (i % nx) as f64 + 0.5, (i / nx) as f64 + 0.5, tune) {
-            work(c, w, st, i, k, set, between, tune);
+            work(c, w, st, i, k, &now, tune);
         }
         i += 1;
     }
