@@ -293,7 +293,6 @@ pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { cra
 
 /// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.
 pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     let me = game_host_seat(g);
     if g.restart_cut {

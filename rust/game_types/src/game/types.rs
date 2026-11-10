@@ -329,7 +329,7 @@ pub struct Game {
     pub events: Vec<crate::game::GameEvent>,
     pub search_probe_n: f64,
     pub time: f64,
-    pub dice: Option<crate::math_dice::SimDice>,
+    pub dice: crate::dice::Draws,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     #[is(crate::Opaque)] pub men: crate::Opaque,
@@ -1386,9 +1386,6 @@ pub struct Mods {
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,
     pub anim_gltf: crate::anim_gltf::AnimGltfMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_sim: crate::sim_sim::SimSimMod,
     pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
     /// (a memo, worked out again from the rig: in no bytes)
     #[bytes(skip)]

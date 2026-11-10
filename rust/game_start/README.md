@@ -144,9 +144,9 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
    markings, a light, a door) go through `read.rs` and `records.rs`, a line a type.
 6. Thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set
    (`passes.rs`; the game's `cut_record`, `box_world_add_static`, `light_from_def`).
-7. The die, seeded before the men are made (the game's `sim_dice_new`).
+7. The seed the game's draws are keyed by, before the men are made: what they are dealt is drawn under it.
 8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: **the game's own
-   constructor, `game_new`** (`rust/game_rules/src/tick/game/stand.rs`).
+9. The moving state at home in the block (`settle`: the pose pool, the smoke grid).
 9. The moving state at home in the block (`settle`: the die, the pose pool, the smoke grid).
 10. With no address, the solo night's card (`kit_solo_stand`). The visit's hour over the level's own night (`apply_hour`).
 11. The host's Input and camera (the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild`).

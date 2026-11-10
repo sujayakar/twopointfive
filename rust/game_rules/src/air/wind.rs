@@ -98,7 +98,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         let r0 = shape(g, CORE_K) * size;
         let bc = v3::mad(v.pos, dir, d_max / 2.0);
         let br = m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) * 1.05 + 0.3;
-        let seed = crate::math_dice::hash_str(&v.name);
+        let seed = crate::dice::hash_str(&v.name);
         let id = g.tab.wind_wind_source.push(WindSource {
             why: WindWhy::Vent,
             base: v.speed,
@@ -136,7 +136,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         base: 0.0,
         on: 1.0,
         gust: 1.0,
-        seed: crate::math_dice::hash_str("storm"),
+        seed: crate::dice::hash_str("storm"),
         vent: None,
         door: None,
         kind: WindSourceKind::Storm,
@@ -193,7 +193,7 @@ fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWin
     let r0 = g.dr[d].def.width * 0.4;
     let pos: V3 = [fc[0] - inward[0] * 0.15, 1.05, fc[2] - inward[2] * 0.15];
     let name = alloc::format!("door:{}", g.dr[d].def.name);
-    let seed = crate::math_dice::hash_str(&name);
+    let seed = crate::dice::hash_str(&name);
     g.tab.wind_wind_source.push(WindSource {
         why: WindWhy::Door,
         base: 0.0,

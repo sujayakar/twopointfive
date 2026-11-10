@@ -209,7 +209,7 @@ pub extern "C" fn face_state_words(h: u32) {
 }
 #[no_mangle]
 pub extern "C" fn face_die_n(h: u32) -> f64 {
-    with(h, |x| sim::state::state(x.g.sim).dice.n)
+    with_ref(h, |x| x.g.dice.n)
 }
 #[no_mangle]
 pub extern "C" fn face_parts() -> usize {

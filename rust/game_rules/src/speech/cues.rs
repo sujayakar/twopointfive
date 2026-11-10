@@ -537,7 +537,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     let n = g.cues.n;
     g.cues.n += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    let pick = js::rem(crate::math_dice::hash_str(&callsign) + n, say.len() as f64) as usize;
+    let pick = js::rem(crate::dice::hash_str(&callsign) + n, say.len() as f64) as usize;
     let text = fill(&say[pick], vars);
     cues_man(g, gd).said_t = t;
     g.cues.stats.cues += 1.0;

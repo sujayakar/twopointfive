@@ -56,7 +56,7 @@ pub(super) fn key_up(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardI
         g.tab.enemysquads_squad[q].call_die = Some(die);
     }
     let [lo, hi] = g.k.squads.call_secs;
-    let secs = lo + crate::math_dice::roll(g.tab.enemysquads_squad[q].call_die.as_mut().unwrap()) * (hi - lo);
+    let secs = lo + g.tab.enemysquads_squad[q].call_die.as_mut().unwrap().roll() * (hi - lo);
     let now = g.time;
     g.tab.enemysquads_squad[q].calls.as_mut().unwrap().push(Call { by: m, end: now + secs, at, room: room.cloned(), body, eyes: body.is_none() });
     let said = mate(g, m);
@@ -130,7 +130,7 @@ fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) {
         let d = check_dice(g, q, Some(0x3c6ef372u32 as f64));
         g.tab.enemysquads_squad[q].ask_die = Some(d);
     }
-    let ask = lo + crate::math_dice::roll(g.tab.enemysquads_squad[q].ask_die.as_mut().unwrap()) * (hi - lo);
+    let ask = lo + g.tab.enemysquads_squad[q].ask_die.as_mut().unwrap().roll() * (hi - lo);
     let d0 = def_of(g, m);
     let p = pos_of(g, m);
     let from = g.tab.enemysquads_squad[q].rc.as_ref().unwrap().afield.as_ref().and_then(|a| a.get(m)).copied();
@@ -334,7 +334,7 @@ fn net_send(g: &mut crate::game::Game, x: EnemysquadsSquadId, who: GuardId, stop
 /// (netCheck's beat)
 fn nc_beat(g: &mut Game) -> f64 {
     let any = the_state(g).squads.iter().any(|&q| { let s = &g.tab.enemysquads_squad[q]; s.wary == Some(true) || s.news_t > -100.0 || s.contact_t > -100.0 });
-    let r = crate::math_dice::roll(&mut net_mut(g).die);
+    let r = net_mut(g).die.roll();
     let k = &g.k.squads;
     k.net_every * (if any { k.check_alert_k } else { 1.0 }) * (1.0 + (r * 2.0 - 1.0) * k.check_jitter)
 }
@@ -414,7 +414,7 @@ fn net_check(g: &mut crate::game::Game) {
     if the_state(g).nc.is_none() {
         let first = the_state(g).squads[0];
         let mut die = check_dice(g, first, Some(0x1b873593u32 as f64));
-        let next_at = g.time + (0.5 + 0.5 * crate::math_dice::roll(&mut die)) * g.k.squads.net_every;
+        let next_at = g.time + (0.5 + 0.5 * die.roll()) * g.k.squads.net_every;
         let tick_t = g.time;
         g.m.enemysquads.states.as_mut().unwrap().nc = Some(NetCheck { next_at, stage: crate::enemysquads::CheckStage::Idle, t0: 0.0, caller: None, about: None, done: JsSet::new(), tried: JsMap::new(), queried: JsMap::new(), say: Vec::new(), die, tick_t });
     }

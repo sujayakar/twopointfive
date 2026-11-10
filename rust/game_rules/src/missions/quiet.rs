@@ -235,7 +235,7 @@ fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::Qui
     let sets = q.patrols.as_ref().map(|p| p.len());
     match g.quiet.pin {
         None => crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } },
-        Some(pin) => pinned_deal(crate::math_dice::mulberry32(pin_seed(pin) as f64), q.starts.len(), q.spots.len(), sets),
+        Some(pin) => pinned_deal(crate::dice::Die(pin_seed(pin) as u32), q.starts.len(), q.spots.len(), sets),
     }
 }
 
@@ -545,7 +545,7 @@ mod tests {
     /// A FAILURE MEANS: a link with a pin does not put a player back on the deal it names: the same pin deals the same, on the lists' own rows, and the patrols' length moves neither of the other two picks.
     #[test]
     fn a_pinned_deal_is_the_same_each_time_and_stays_on_its_lists() {
-        let deal = |pin: f64, s, p, q| { let d = pinned_deal(crate::dice::Die::new(pin_seed(pin) as u32), s, p, q); (d.start, d.spot, d.patrol) };
+        let deal = |pin: f64, s, p, q| { let d = pinned_deal(crate::dice::Die(pin_seed(pin) as u32), s, p, q); (d.start, d.spot, d.patrol) };
         let pins = [7.0, 0.0, -5.0, 2147483648.5, 11.0, 23.0];
         for pin in pins {
             let (a, b, c) = deal(pin, 5, 4, Some(3));

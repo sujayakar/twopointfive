@@ -9,14 +9,8 @@ use alloc::{string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the bench (rust/sim/src/skeleton.rs Bench: its tables are reached directly, no addresses)
 
-/// The module, if it answers a question about a pose of `n` nodes now. The module is linked and its maths are the game's, so only the size can refuse.
-fn bench_for(n: f64, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
-    let _owed = owed.unwrap_or(false);
-    if n > BENCH_NODES {
-        return None;
-    }
-    Some(crate::sim_sim::sim())
-}
+/// The bench has room for a pose of `n` nodes.
+fn bench_holds(n: f64) -> bool { n <= BENCH_NODES }
 
 /// A size a layer of the module is handed at most: one past it is a mistake in the game's own tables, said by name.
 pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
@@ -60,7 +54,7 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
         panic!("posing: a man has {} pose(s) the pose pool had no room for, and a layer is posed only where all of his stand in the module (game/posehome.ts holds the pool's size)", stray);
     }
     let slot = g.sim as f64;
-    if bench_rig(g, ch, Some(true)).is_none() {
+    if !bench_rig(g, ch) {
         panic!("posing: a layer was asked of a rig the module's bench does not hold (anim/skeleton.ts benchRig: the rig's nodes or its order are more than the bench has room for)");
     }
     if g.m.anim_skeleton.layers.roles != Some(ch) {
@@ -163,15 +157,15 @@ pub(super) fn layer_ran(g: &mut crate::game::Game, code: f64, c: CharId) {
     }
 }
 
-/// The module with `ch`'s rig on the bench, written when another was there; None for a rig the bench cannot hold.
-fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Option<crate::sim_sim::SimExports> {
+/// `ch`'s rig on the bench, written when another was there; false: a rig the bench cannot hold.
+fn bench_rig(g: &mut crate::game::Game, ch: RigId) -> bool {
     let n = g.tab.rig[ch].nodes.len();
-    let x = bench_for(n as f64, owed)?;
+    if !bench_holds(n as f64) { return false; }
     if g.m.anim_skeleton.pose_bench.rig != Some(ch) {
         g.m.anim_skeleton.pose_bench.rig = None;
         let rig = &g.tab.rig[ch];
         if rig.order.len() > n {
-            return None;
+            return false;
         }
         let b = ::sim::skeleton::bench();
         for i in 0..n {
@@ -182,11 +176,11 @@ fn bench_rig(g: &mut crate::game::Game, ch: RigId, owed: Option<bool>) -> Option
         }
         ::sim::skeleton::bench_rig(n as u32, rig.order.len() as u32);
         if !::sim::skeleton::bench_rig_ok() {
-            return None;
+            return false;
         }
         g.m.anim_skeleton.pose_bench.rig = Some(ch);
     }
-    Some(x)
+    true
 }
 
 /// A pose written to place `slot` of the bench.
@@ -682,7 +676,7 @@ pub(super) fn layer_clips_fit(g: &mut crate::game::Game, clips: &[ClipId], nodes
 /// Sample clip at time t (seconds, wrapped if loop) into pose (only nodes with tracks are written): a question of the module, or this file's own arithmetic for what it refuses.
 pub(super) fn sample_clip(g: &mut crate::game::Game, clip: ClipId, t: f64, loop_: bool, out: crate::anim_skeleton::Pose) {
     let n = out.nodes as f64;
-    if bench_for(n, None).is_some() {
+    if bench_holds(n) {
         let (at, need) = clip_place(g, clip);
         if at >= 0.0 && need <= n {
             let (slot, place) = lent_at(g, out, 0.0);
@@ -782,7 +776,7 @@ pub(super) fn blend_pose(g: &mut crate::game::Game, a: Option<crate::anim_skelet
     let a = a.unwrap_or(out);
     let n = a.nodes as usize;
     let alike = b.nodes == a.nodes && out.nodes == a.nodes && mask.map_or(true, |k| k.len() == n);
-    if alike && bench_for(n as f64, None).is_some() {
+    if alike && bench_holds(n as f64) {
         if let Some(k) = mask {
             let bn = ::sim::skeleton::bench();
             for i in 0..k.len() {
@@ -1050,7 +1044,7 @@ pub(super) fn pose_fk_new(g: &crate::game::Game, ch: RigId) -> crate::anim_skele
 
 /// Model-space rotation and origin of every node from a local pose, written in place: a question of the module, or this file's own arithmetic for a rig the bench cannot hold.
 pub(super) fn pose_fk_run(g: &mut crate::game::Game, this: &mut crate::anim_skeleton::PoseFK, pose: crate::anim_skeleton::Pose) {
-    if bench_rig(g, this.rig, None).is_some() {
+    if bench_rig(g, this.rig) {
         bench_put_fk(this);
         let (slot, place) = lent_at(g, pose, 0.0);
         known(answer(::sim::skeleton::ask_run(slot, place, -1)));

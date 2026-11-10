@@ -1,20 +1,15 @@
-//! The keyed draws of a game (the data's `dice` says what they are): they step the game's die, so they stand above the data.
+//! The keyed draws of a game (the data's `dice` says what they are), by whom they are about.
 pub use game_types::dice::*;
 use crate::game::Game;
 use crate::ids::*;
-#[cfg(test)] use sim::dice::Dice;
 
 /// A KEYED DRAW for the simulation: uniform in [0, 1), a fixed function of the game's seed, the `site` that asks, the man it is about (`who`: 0
-/// for nobody, else `man`), the tick, and how many times this site has drawn for him this tick. The block's die is still stepped
-/// once a draw, so its count goes on witnessing how many draws a run made; its value is not used.
+/// for nobody, else `man`), the tick, and how many times this site has drawn for him this tick. It is counted, whoever draws it.
 fn draw(g: &mut Game, site: &'static str, who: u32) -> f64 {
-    let old = crate::math_dice::sim_random(g);
-    let Some(d) = g.dice.as_ref() else { return old };   // (no die: the host's stream, as before)
-    let seed = crate::js::to_u32(d.seed);
-    let now = g.time;
+    g.dice.n += 1.0;
     let key = key_of(site, who);
-    let nth = g.keyed.nth(now, key);
-    keyed(seed, key, now, nth)
+    let nth = g.keyed.nth(g.time, key);
+    keyed(g.dice.seed, key, g.time, nth)
 }
 /// WHOM A DRAW IS ABOUT. A draw about a man is his own: it does not move with what other men drew this tick, nor with
 /// the order the men were walked in. A helper that draws (`pick(g, who, range)`) is handed this by its caller.
@@ -64,16 +59,32 @@ pub fn draw_world(g: &mut Game, site: &'static str) -> f64 { draw(g, site, 0) }
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// A die on a record is its word: the same word goes on with the same draws, whatever came before it.
     #[test]
-    fn same_stream_as_sim() {
-        let mut a = Die::new(12345);
-        let mut b = Dice { n: 0.0, s: 12345, spare: 0 };
-        for _ in 0..100 {
-            assert_eq!(a.roll().to_bits(), sim::dice::roll(&mut b).to_bits());
+    fn a_die_is_its_word_and_its_draws_lie_across_the_range() {
+        let (mut d, mut twin, mut sum) = (Die(12345), Die(12345), 0.0);
+        for i in 0..1000 {
+            let r = d.roll();
+            assert!((0.0..1.0).contains(&r), "draw {i}: {r}");
+            assert_eq!(r, twin.roll());
+            sum += r;
         }
-        assert_eq!(a.n, 100.0);
-        let mut c = a;
-        assert_eq!(a.roll().to_bits(), c.roll().to_bits());
+        assert!((sum / 1000.0 - 0.5f64).abs() < 0.05, "the mean of a thousand draws is {}", sum / 1000.0);
+        let mut again = d;
+        assert_eq!(d.roll(), again.roll(), "taken up again from its word");
+        assert_ne!(Die(1).roll(), Die(2).roll(), "another seed is another stream");
+    }
+
+    /// What is dealt by name goes with the name, wherever the game runs.
+    #[test]
+    fn a_name_deals_one_whole_number_of_its_own() {
+        let names = ["", "a", "b", "civdice:Ana", "civdice:Ben", "héllo", "日本語", "🙂x"];
+        for (i, n) in names.iter().enumerate() {
+            let h = hash_str(n);
+            assert_eq!(h, hash_str(n));
+            assert!(h >= 0.0 && h < 4294967296.0 && h == h.floor(), "{n}: {h}");
+            assert!(names[i + 1..].iter().all(|o| hash_str(o) != h), "{n} deals what another does");
+        }
     }
 
     #[test]

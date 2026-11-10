@@ -6,7 +6,7 @@
 //!     compiler or a machine may round as it likes: no `f64::sin` and friends (rust/maths has the game's own), no `mul_add`, no fast-math, no `f32` where the
 //!     TypeScript holds a double.
 //!   · one order. Nothing whose order is not written down: no `HashMap` / `HashSet` iteration, no pointer values as keys, no threads.
-//!   · no world outside. No clock, no random source of its own (the game's die is in its block: dice.rs), no files.
+//!   · no world outside. No clock, no random source of its own, no files.
 //!   · state in one place. What a game keeps here from one call to the next is in its block (state.rs: indices, never addresses); every other `static mut`
 //!     is scratch of one call or a copy the host proves.
 //!
@@ -23,7 +23,6 @@ pub mod air;
 pub mod bricks;
 pub mod clips;
 pub mod collide;
-pub mod dice;
 pub mod falls;
 pub mod fog;
 pub mod glass;
@@ -49,13 +48,6 @@ pub mod state;
 pub mod weather;
 pub mod wind;
 pub mod world;
-
-/// The version of the calls: the rules name the one they were written against (sim_sim).
-pub const ABI: u32 = 34;
-
-pub fn sim_abi() -> u32 {
-    ABI
-}
 
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
 

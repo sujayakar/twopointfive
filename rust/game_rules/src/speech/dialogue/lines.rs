@@ -235,7 +235,7 @@ pub(super) fn run_on(lead: &str, fact: &str) -> String { run_on_text(lead, fact)
 
 /// Four digits off a callsign, the same every night for the same man.
 pub(super) fn badge_of(callsign: &str) -> String {
-    let n = 1000.0 + js::rem(crate::math_dice::hash_str(&format!("badge:{}", callsign)), 9000.0);
+    let n = 1000.0 + js::rem(crate::dice::hash_str(&format!("badge:{}", callsign)), 9000.0);
     format!("{}", n as i64)
 }
 

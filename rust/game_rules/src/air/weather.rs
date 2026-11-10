@@ -70,25 +70,11 @@ const ROOF_PAD: f64 = 0.06;
 /// the panel's button may ask more, and the oldest then goes unheard
 const THUNDERS: usize = 16;
 
-/// the storm's die thrown: mulberry32 over its own word
-fn rnd(w: &mut Weather) -> f64 {
-    let v = throw_of(w.die, 0);
-    w.die = w.die.wrapping_add(DIE_STEP);
-    v
-}
-const DIE_STEP: u32 = 0x6D2B79F5;
-/// what the throw after the next `ahead` will be, the die as it stands
-fn throw_of(die: u32, ahead: u32) -> f64 {
-    let a = die.wrapping_add(DIE_STEP.wrapping_mul(ahead + 1));
-    let mut t = (a ^ (a >> 15)).wrapping_mul(1 | a);
-    t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t)) ^ t;
-    ((t ^ (t >> 14)) as f64) / 4294967296.0
-}
 /// Seconds to the next stroke; the first one of a night comes sooner.
 fn gap(w: &mut Weather, first: bool) -> f64 {
-    if first { return 6.0 + 6.0 * rnd(w); }
+    if first { return 6.0 + 6.0 * w.die.roll(); }
     let mean = v3::clamp(FLASH_MEAN_GAP / m::max(w.storm, 0.05), 8.0, 25.0);
-    mean * (0.5 + rnd(w))
+    mean * (0.5 + w.die.roll())
 }
 fn thunder_push(w: &mut Weather, t: Thunder) {
     if w.thunders.len() >= THUNDERS { w.thunders.remove(0); }
@@ -137,7 +123,7 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
     let l = legacy();
     g.weather.storm = l.storm;
     g.weather.rain_rate = l.rain;
-    g.weather.die = 20260809;
+    g.weather.die = crate::dice::Die(20260809);
     weather_set_roofs(g, &[interior(), annex()]);
     let stood = g.stood;
     let born = match weather_level_kind(g) {
@@ -322,7 +308,7 @@ pub(super) fn weather_snapshot(g: &crate::game::Game) -> crate::weather::Weather
         next_flash_at: g.weather.next_flash_at,
         thunders: g.weather.thunders.clone(),
         last_bark_t: g.weather.last_bark_t,
-        rng: g.weather.die as f64,
+        rng: g.weather.die.0 as f64,
         stats: WeatherSnapStats { flashes: g.weather.stats.flashes, thunders: g.weather.stats.thunders, barks: g.weather.stats.barks },
     }
 }
@@ -351,7 +337,7 @@ pub(super) fn weather_restore(g: &mut crate::game::Game, s: &crate::weather::Wea
     g.weather.thunders.clear();
     for t in thunders { thunder_push(&mut g.weather, t); }
     g.weather.last_bark_t = finite_or(s.last_bark_t, -1e9);
-    if s.rng.is_finite() { g.weather.die = js::to_u32(s.rng); }
+    if s.rng.is_finite() { g.weather.die = crate::dice::Die(js::to_u32(s.rng)); }
     let w = &mut g.weather;
     w.stats.flashes = js::to_i32(s.stats.flashes) as f64;
     w.stats.thunders = js::to_i32(s.stats.thunders) as f64;
@@ -374,16 +360,16 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     if g.weather.flash.is_some() { weather_end_flash(g); }
     // (what was given is a number, what was not is thrown for, in the order the rule has always thrown them)
     let (time, w) = (g.time, &mut g.weather);
-    let bearing = opts.bearing.unwrap_or_else(|| stroke_bearing(rnd(w)));
-    let elev = opts.elev_deg.map_or_else(|| stroke_elev(rnd(w)), |d| d * m::PI / 180.0);
-    let dist = match opts.dist_km { Some(d) => d, None => 0.3 + m::pow(rnd(w), 1.3) * 3.7 * (1.15 - 0.5 * w.storm) };
-    let peak = opts.peak.unwrap_or_else(|| FLASH_PEAK * (0.55 + 0.9 * rnd(w)) * v3::clamp(1.25 - dist * 0.18, 0.45, 1.2));
+    let bearing = opts.bearing.unwrap_or_else(|| stroke_bearing(w.die.roll()));
+    let elev = opts.elev_deg.map_or_else(|| stroke_elev(w.die.roll()), |d| d * m::PI / 180.0);
+    let dist = match opts.dist_km { Some(d) => d, None => 0.3 + m::pow(w.die.roll(), 1.3) * 3.7 * (1.15 - 0.5 * w.storm) };
+    let peak = opts.peak.unwrap_or_else(|| FLASH_PEAK * (0.55 + 0.9 * w.die.roll()) * v3::clamp(1.25 - dist * 0.18, 0.45, 1.2));
     // two return strokes, sometimes a third flicker
-    let amp2 = 0.35 + 0.45 * rnd(w);
+    let amp2 = 0.35 + 0.45 * w.die.roll();
     let mut stroke = Stroke { pulses: vec![StrokePulsesItem { t0: 0.0, amp: 1.0, tau: 0.022 }, StrokePulsesItem { t0: 0.085, amp: amp2, tau: 0.05 }] };
-    if rnd(w) < 0.3 {
-        let t0 = 0.2 + 0.05 * rnd(w);
-        stroke.pulses.push(StrokePulsesItem { t0, amp: 0.25 + 0.25 * rnd(w), tau: 0.03 });
+    if w.die.roll() < 0.3 {
+        let t0 = 0.2 + 0.05 * w.die.roll();
+        stroke.pulses.push(StrokePulsesItem { t0, amp: 0.25 + 0.25 * w.die.roll(), tau: 0.03 });
     }
     thunder_push(w, Thunder { at: time + dist * 1000.0 / SPEED_OF_SOUND, dist_km: dist, bearing, loud: v3::clamp(1.15 - dist * 0.22, 0.25, 1.0) });
     let dir = dir_of(bearing, elev);
@@ -414,7 +400,7 @@ pub fn weather_next_way(g: &Game) -> Option<V3> {
     let ticks = |at: f64| m::max(m::ceil((at - g.time) * 60.0), 1.0);
     let stroke = ticks(w.next_flash_at);
     let before = w.thunders.iter().filter(|t| ticks(t.at) < stroke).count() as u32 * THUNDER_THROWS;
-    Some(dir_of(stroke_bearing(throw_of(w.die, before)), stroke_elev(throw_of(w.die, before + 1))))
+    Some(dir_of(stroke_bearing(w.die.ahead(before)), stroke_elev(w.die.ahead(before + 1))))
 }
 
 /// Once a frame from Game.update: the clock, the strokes, the flash lamp, the thunder due. The frame's numbers are the picture's.
@@ -450,9 +436,9 @@ pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
         if !(g.time >= w.thunders[i].at) { continue; }
         let th = w.thunders.remove(i);
         // (its clap may drown the small noises, and four dice are thrown whoever is listening)
-        let pitch = rnd(w);
+        let pitch = w.die.roll();
         if w.kind_now.is_some() && th.loud > g.k.wx_sim.thunder_loud { w.thunder_until = g.time + g.k.wx_sim.thunder_secs; }
-        let remark = [rnd(w), rnd(w), rnd(w)];
+        let remark = [w.die.roll(), w.die.roll(), w.die.roll()];
         weather_play_thunder(g, th, pitch, remark);
     }
     // ---- the rain bed follows the rate and where the listener stands

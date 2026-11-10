@@ -137,7 +137,7 @@ fn heads(d: &Drawn) -> Result<(), String> {
 pub fn row(name: &str, k: usize, series: &[u32], f: Flags) {
     let t = Instant::now();
     let (mut p, hand) = crate::rows::stand_run(k, SEED);
-    if f.breaks("told") { game::math_dice::sim_random(&mut p.g); }
+    if f.breaks("told") { p.g.dice.n += 1.0; }
     let mut d = Drawn::default();
     d.look(&PAGE_LOOK);
     let mut mirror = Mirror::default();

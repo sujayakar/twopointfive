@@ -355,7 +355,7 @@ pub struct Survivors {
     god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, aside: bool,
     tune: crate::game::GameTune, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
     kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
-    dice: Option<crate::math_dice::SimDice>, sim_dice: ::sim::dice::Dice, fx_seed: f64, roll_seq: f64, event_seq: f64,
+    dice: crate::dice::Draws, fx_seed: f64, roll_seq: f64, event_seq: f64,
     saves_on: bool, stats: crate::game::Stats, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
     shown: Option<SeatId>, remote: Vec<bool>,
@@ -366,7 +366,7 @@ impl Survivors {
             god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, aside: g.aside,
             tune: g.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
             kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
-            dice: g.dice.clone(), sim_dice: unsafe { core::ptr::read(&::sim::state::state_read(g.sim).dice) }, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
+            dice: g.dice, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
             saves_on: g.saves.enabled, stats: g.stats.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
             shown: g.local_seat, remote: g.seats.iter().map(|&s| g.tab.cmd_seat[s].remote).collect(),
@@ -377,8 +377,7 @@ impl Survivors {
         put_cards(g, self.kit.clone());
         g.m.difficulty = self.difficulty.clone();
         g.quiet.pending = self.pending.clone();
-        (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice.clone(), self.fx_seed, self.roll_seq, self.event_seq);
-        ::sim::state::state(g.sim).dice = unsafe { core::ptr::read(&self.sim_dice) };
+        (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice, self.fx_seed, self.roll_seq, self.event_seq);
         (g.stats, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
     }
     /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses,

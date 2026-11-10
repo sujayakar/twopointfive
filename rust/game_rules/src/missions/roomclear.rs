@@ -38,8 +38,7 @@ fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::PlaceD
     let attempt = attempt.unwrap_or(1.0);
     let authored = seed == 0.0 && attempt <= 1.0;
     let word = m::imul(js::to_i32(seed), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(attempt), 0x85EBCA6Bu32 as i32);
-    // the TypeScript's mulberry32(word): crate::dice::Die is the same stream, made and spent in this call
-    let mut die = crate::dice::Die::new(word as u32);
+    let mut die = crate::dice::Die(word as u32);
     for _ in 0..4 {
         die.roll();
     }

@@ -152,7 +152,7 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
         known_bodies: JsSet::new(),
         intel_n: 0,
         vis: 0.0,
-        dice: crate::dice::Die::new(js::to_i32(crate::math_dice::hash_str(&format!("civdice:{}", def.name))) as u32),
+        dice: crate::dice::Die(js::to_i32(crate::dice::hash_str(&format!("civdice:{}", def.name))) as u32),
     };
     let c = g.cv.push(civ);
     g.gd[gd].civ = Some(c);
