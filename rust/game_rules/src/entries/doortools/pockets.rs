@@ -518,15 +518,6 @@ pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef)
     let ops = seat.door_tools.ops.clone();
     for &op in &ops {
         let o = &g.tab.doortools_door_op[op];
-        if o.on_word && o.phase == Phase::Ready {
-            let (men, door) = (o.men.clone(), o.door);
-            let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));
-            let name = crate::orders::door_words(g, door);
-            out.push(format!("{} ready on your word · {}", who, name));
-        }
-    }
-    for &op in &ops {
-        let o = &g.tab.doortools_door_op[op];
         if o.thr.as_ref().is_some_and(|t| t.hold) && o.phase == Phase::Thr {
             let (men, door, told) = (o.men.clone(), o.door, o.thr.as_ref().unwrap().told);
             let who = crate::orders::squad_orders_who_words(g, seat, Some(&men));

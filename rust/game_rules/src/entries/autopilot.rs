@@ -98,7 +98,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
         let at = g.ch[g.pl[g.player].ch].pos;
         if men.is_some() || crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
             let none = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [at[0], 0.0, at[2]], man: None });
-            let opts = crate::orders::GiveOpts { men: to, ack: None, on_word: None };
+            let opts = crate::orders::GiveOpts { men: to, ack: None };
             crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&none), None, Some(&opts))
         } else {
             let who = g.sets[g.seat].orders.who;
@@ -106,7 +106,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
         }
     } else if let Some(id) = &p.id {
         let ack = crate::squadnet::why_words(&p).map(|w| w.ack);
-        let opts = crate::orders::GiveOpts { men: to, ack, on_word: None };
+        let opts = crate::orders::GiveOpts { men: to, ack };
         crate::orders::squad_orders_give(g, id, Some(t), None, Some(&opts))
     } else {
         return false;

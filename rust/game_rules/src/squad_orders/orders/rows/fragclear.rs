@@ -24,9 +24,8 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 
 /// doortools.ts:843 `this.fragNext = true; try { return this.issue('bangClear', …) } finally { this.fragNext = false }`
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
     g.sets[g.seat].door_tools.frag_next = true;
-    let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::BangClear, men, t, Some(on_word));
+    let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::BangClear, men, t);
     g.sets[g.seat].door_tools.frag_next = false;
     match r { crate::doortools::DoorToolsIssue::Text(w) => Some(w), crate::doortools::DoorToolsIssue::Arm1(()) => None }
 }

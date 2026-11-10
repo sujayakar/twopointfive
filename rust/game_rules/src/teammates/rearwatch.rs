@@ -292,9 +292,9 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 marks.push(q);
             }
         }
-        let (door, side, phase, on_word) = {
+        let (door, side, phase) = {
             let r = &g.tab.doortools_door_op[op];
-            (r.door, r.side, r.phase, r.on_word)
+            (r.door, r.side, r.phase)
         };
         if is_pre(phase) {
             let lane = g.tab.doortools_door_op[op].lane.as_ref().map(|l| l.gd);
@@ -312,7 +312,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 }
             }
             // (NO NEW WATCH FOR A MOMENT: an entry given to a stack already on its marks files the men again and goes at once)
-            if phase == crate::doortools::Phase::Stack && !on_word {
+            if phase == crate::doortools::Phase::Stack {
                 let mut formed = true;
                 for &m in &op_men {
                     if crate::condition::down(g, g.gd[m].ch) {
@@ -345,7 +345,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 }
             }
             // (a man let off to step onto his mark has the watch again once he is on it, unless the door then goes at once with no carrying it through)
-            let brief = phase == crate::doortools::Phase::Stack && !on_word && !carries(g, op);
+            let brief = phase == crate::doortools::Phase::Stack && !carries(g, op);
             let mut kept: Vec<GuardId> = Vec::new();
             for &m in &cands {
                 if short_of(g, key, m) {

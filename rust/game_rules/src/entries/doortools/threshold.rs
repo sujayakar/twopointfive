@@ -331,7 +331,7 @@ fn door_tools_thr_far(g: &mut crate::game::Game, op: DoorOpId) -> Option<crate::
 /// is this a threshold order on a hostage room whose captor has given his last warning, and the order's own to time
 pub(super) fn door_tools_last_call(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let r = &o!(g, op);
-    if !(r.kind == DoorToolKind::Threshold && !r.on_word && r.word.is_none() && r.gate.is_none() && r.thr_hold != Some(true)) { return false; }
+    if !(r.kind == DoorToolKind::Threshold && r.word.is_none() && r.gate.is_none() && r.thr_hold != Some(true)) { return false; }
     let d = r.door;
     crate::mission::last_warning(g, d)
 }
@@ -476,7 +476,7 @@ pub fn door_tools_to_threshold(g: &mut crate::game::Game, op: DoorOpId) {
     for x in g.guards.iter().copied() { if !crate::condition::down(g, g.gd[x].ch) && g.gd[x].team == crate::teams::Team::Hostile { up.push(x); } }
     let pod0 = pods.first().map(|p| p.pos);
     let hold = o!(g, op).thr_hold == Some(true);
-    o!(g, op).thr = Some(Threshold { jamb, pods, quiet_t: t, ev_t: t, contact: JsSet::new(), up, down: 0.0, sliced: false, thrower: None, tossed: 0.0, next_t: 0.0, aim: None, from: None, banged: None, handed: false, los_t: 0.0, lit_c: None, tube_c: None, hold, told: false, force: false, hand_w: None, hand_t: None, hand_done: None, fled: None, frag_t: None, frag_said: None, step_owed: None, owed_t: None, cut_owed: None, first: if first { Some(ThresholdFirst::Can) } else { None }, out: if first { Some(out) } else { None }, wide: None, early: None, word_step: None, shut_t: None });
+    o!(g, op).thr = Some(Threshold { jamb, pods, quiet_t: t, ev_t: t, contact: JsSet::new(), up, down: 0.0, sliced: false, thrower: None, tossed: 0.0, next_t: 0.0, aim: None, from: None, banged: None, handed: false, los_t: 0.0, lit_c: None, tube_c: None, hold, told: false, force: false, hand_w: None, hand_t: None, hand_done: None, fled: None, frag_t: None, frag_said: None, step_owed: None, owed_t: None, cut_owed: None, first: if first { Some(ThresholdFirst::Can) } else { None }, out: if first { Some(out) } else { None }, wide: None, early: None, shut_t: None });
     if let Some(p) = pod0 { door_tools_search_of(g, op, Some(p)); }
     o!(g, op).phase = if first { Phase::Pocket } else { Phase::Thr };
     o!(g, op).t0 = t;
@@ -500,7 +500,7 @@ pub fn door_tools_to_threshold(g: &mut crate::game::Game, op: DoorOpId) {
 /// does this door get a can before anybody shows in its opening
 fn door_tools_can_first(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let r = &o!(g, op);
-    if g.k.doortools.thr_first <= 0.0 || g.k.doortools.thr_bangs <= 0.0 || g.sets[g.seat].door_tools.bangs <= 0.0 || r.word.is_some() || r.on_word || r.worded == Some(true) || r.gate.is_some() || r.thr_hold == Some(true) { return false; }
+    if g.k.doortools.thr_first <= 0.0 || g.k.doortools.thr_bangs <= 0.0 || g.sets[g.seat].door_tools.bangs <= 0.0 || r.word.is_some() || r.worded == Some(true) || r.gate.is_some() || r.thr_hold == Some(true) { return false; }
     if crate::silent::silent_no_cans(g, &crate::seats::here(g)) { return false; }
     let (d, side) = (o!(g, op).door, o!(g, op).side);
     let men = o!(g, op).men.clone();
@@ -776,7 +776,7 @@ pub(super) fn door_tools_frag_holds(g: &crate::game::Game, op: DoorOpId) -> bool
     let (d, k) = (r.door, r.kick);
     match r.phase {
         Phase::Stack => match r.gate { None => true, Some(gt) => g.tab.doortools_door_gate[gt].go },
-        Phase::Ready => !r.on_word,
+        Phase::Ready => true,
         Phase::Standoff => door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),
         Phase::Place => { let ran = r.fled.as_ref().map_or(false, |f| f.has(r.lead)); ran && !super::is_open(g, d) }
         Phase::Armed => r.word.is_some() && door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),

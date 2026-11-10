@@ -37,9 +37,8 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
     g.sets[g.seat].door_tools.big_next = true;
-    let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::OpenClear, men, t, Some(on_word));
+    let r = crate::doortools::door_tools_issue(g, crate::doortools::DoorToolKind::OpenClear, men, t);
     g.sets[g.seat].door_tools.big_next = false;
     match r { crate::doortools::DoorToolsIssue::Text(w) => Some(w), crate::doortools::DoorToolsIssue::Arm1(()) => None }
 }

@@ -115,16 +115,13 @@ pub fn row_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdT
 pub fn row_behind_words(g: &Game, who: String) -> String {
     if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
 }
-/// `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`
-pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: bool) -> Option<String> {
-    use crate::doortools::{DoorToolKind as Kind, DoorToolsThenOnWord, DoorToolsThenOnWordWhat, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
+/// an entry's row: of a door whose jambs are held, what the men on them do; of any other, its own order
+pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
+    use crate::doortools::{DoorToolKind as Kind, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
-        if on_word {
-            return match crate::doortools::door_tools_then_on_word(g, if bang { DoorToolsThenOnWordWhat::Bang } else { DoorToolsThenOnWordWhat::Step }, men, t) { DoorToolsThenOnWord::Text(w) => Some(w), DoorToolsThenOnWord::Arm1(()) => None };
-        }
         return match crate::doortools::door_tools_threshold_then(g, if bang { DoorToolsThresholdThenWhat::Bang } else { DoorToolsThresholdThenWhat::Step }, men, Some(&tt_of(t))) { DoorToolsThresholdThen::Text(w) => Some(w), DoorToolsThresholdThen::Arm1(()) => None };
     }
-    match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t, Some(on_word)) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
+    match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
 }
 /// `only` of the two entries: the men holding the threshold, while it is held
 pub fn row_held_or_all(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) } else { men.to_vec() } }
@@ -145,11 +142,11 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     me.bangs = g.k.doortools.bangs;
     me.frags = g.k.frag.squad;
     register(g, rows::def(&rows::tools::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(TOOLS_PAGE)), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::openclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "moving."])), on_word: Some(true), ..OrderDef::default() }), None);
-    register(g, rows::def(&rows::bangclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["bang and clear.", "copy, banging it."])), on_word: Some(true), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::openclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["on it.", "moving."])), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::bangclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["bang and clear.", "copy, banging it."])), ..OrderDef::default() }), None);
     register(g, rows::def(&rows::charge::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["copy.", "on it."])), ..OrderDef::default() }), None);
     let frag_key = g.k.frag.order_key.clone();
-    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), on_word: Some(true), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), ..OrderDef::default() }), None);
     // the row that stands in for the tools' while the jambs are held. no part registered it (CHANGES-6)
     register(g, rows::def(&rows::held::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(crate::doortools::HELD_PAGE)),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(TOOLS_PAGE) }), ..OrderDef::default() }), None);
@@ -168,7 +165,7 @@ pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
         crate::orders::squad_orders_unregister(g, id);
     }
     register(g, rows::def(&rows::threshold::ORDER, OrderDef { page: Some(String::from(crate::doortools::TOOLS_PAGE)), targets: vec![K::Door],
-        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
     g.sets[g.seat].door_tools.thr_key = None;
 }
 
@@ -268,7 +265,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
         g.sets[g.seat].door_tools.big_row = Some(big);
         crate::orders::squad_orders_unregister(g, BIG_ORDER);
         if big {
-            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(String::from(BIG_KEY)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+            register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(String::from(BIG_KEY)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
         }
     }
     let thr_key = match &go_key { None => g.k.doortools.blow_key.clone(), Some(k) => k.clone() };
