@@ -55,7 +55,6 @@ fn on_floor(g: &Game) -> Vec<OnFloor> {
 
 fn xz(p: V3) -> [f64; 2] { [p[0], p[2]] }
 fn head_of(g: &Game, c: CharId) -> V3 { match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) } }
-fn squad_up(g: &Game, gd: GuardId) -> bool { g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) }
 
 /// the man, as a take names him
 fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
@@ -301,7 +300,7 @@ fn heard(g: &mut Game, src: V3) -> bool {
     let a = [src[0], m::max(src[1], 0.9), src[2]];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if squad_up(g, gd) { let c = g.gd[gd].ch; if ear(g, c, a) { return true; } }
+        if crate::lesson::operative_up(g, gd) { let c = g.gd[gd].ch; if ear(g, c, a) { return true; } }
     }
     for pl in crate::seats::men_up(g) { let c = g.pl[pl].ch; if ear(g, c, a) { return true; } }
     false
@@ -347,7 +346,7 @@ fn witness(g: &mut Game) {
             if g.recap.lost[i].saw.is_none() {
                 for j in 0..g.guards.len() {
                     let gd = g.guards[j];
-                    if !squad_up(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
+                    if !crate::lesson::operative_up(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
                     let c = g.gd[gd].ch;
                     if line_to(g, c, at) { g.recap.lost[i].saw = Some(gd); break; }
                 }
@@ -355,7 +354,7 @@ fn witness(g: &mut Game) {
             for &p in &men { if !g.recap.lost[i].players_saw.contains(&p) && player_sees(g, p, at) { g.recap.lost[i].players_saw.push(p); } }
         }
         if age < k.live_beat { continue; }
-        let by = g.recap.lost[i].saw.filter(|&gd| squad_up(g, gd));   // (a witness who has gone down himself since tells nobody)
+        let by = g.recap.lost[i].saw.filter(|&gd| crate::lesson::operative_up(g, gd));   // (a witness who has gone down himself since tells nobody)
         let pl_down = crate::condition::down(g, g.pl[pl].ch);
         let player_saw = g.recap.lost[i].players_saw.iter().any(|&p| !crate::condition::down(g, g.pl[p].ch));   // (…and a player who has gone down since tells nobody either)
         if by.is_none() && !player_saw && !g.recap.lost[i].heard {

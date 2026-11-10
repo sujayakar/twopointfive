@@ -25,7 +25,7 @@ impl Piece {
         let (mut x, mut z, mut n) = (0.0, 0.0, 0.0);
         for &i in &self.part {
             let q = self.pts[i];
-            if other.is_some_and(|o| flat(q, o) < flat(q, p)) { continue; }
+            if other.is_some_and(|o| v3::dist_xz(q, o) < v3::dist_xz(q, p)) { continue; }
             x += q[0]; z += q[2]; n += 1.0;
         }
         v3::yaw_to(p, if n > 0.0 { [x / n, 0.0, z / n] } else { self.mid })
@@ -95,7 +95,7 @@ fn biggest_unseen(g: &Game, f: &Piece) -> Vec<usize> {
 /// The men by how near they are to the piece.
 fn nearest_to(g: &Game, f: &Piece, men: &[GuardId]) -> Vec<GuardId> {
     let step = core::cmp::max(1, f.part.len() / 24);
-    let mut by: Vec<(GuardId, f64)> = men.iter().map(|&who| { let at = pos_of(g, who); (who, f.part.iter().step_by(step).fold(f64::INFINITY, |b, &i| m::min(b, flat(at, f.pts[i])))) }).collect();
+    let mut by: Vec<(GuardId, f64)> = men.iter().map(|&who| { let at = g.pos_of(who); (who, f.part.iter().step_by(step).fold(f64::INFINITY, |b, &i| m::min(b, v3::dist_xz(at, f.pts[i])))) }).collect();
     js::sort_by(&mut by, |a, b| a.1 - b.1);
     by.into_iter().map(|x| x.0).collect()
 }
@@ -104,8 +104,8 @@ fn nearest_to(g: &Game, f: &Piece, men: &[GuardId]) -> Vec<GuardId> {
 fn mouth_of(g: &Game, f: &Piece, lead: GuardId) -> Option<Mouth> {
     let bound = g.k.doortools.flow_bound;
     let mut goal = f.pts[f.part[0]];
-    for &i in &f.part { if flat(f.pts[i], f.mid) < flat(goal, f.mid) { goal = f.pts[i]; } }
-    let from = pos_of(g, lead);
+    for &i in &f.part { if v3::dist_xz(f.pts[i], f.mid) < v3::dist_xz(goal, f.mid) { goal = f.pts[i]; } }
+    let from = g.pos_of(lead);
     let way = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(4000.0), None)?;
     let walk = quarter_steps(from, &way, goal);
     let mut inside = vec![false; f.pts.len()];
@@ -128,7 +128,7 @@ fn mouth_of(g: &Game, f: &Piece, lead: GuardId) -> Option<Mouth> {
 fn quarter_steps(from: V3, way: &[V3], to: V3) -> Vec<(V3, f64)> {
     let (mut out, mut run, mut a) = (Vec::new(), 0.0, from);
     for &b in way.iter().chain([&to]) {
-        let l = flat(a, b);
+        let l = v3::dist_xz(a, b);
         let n = m::max(1.0, m::ceil(l / 0.25));
         let mut j = 1.0;
         while j <= n {
@@ -149,7 +149,7 @@ fn go_in(g: &mut Game, op: DoorOpId, f: &Piece, mouth: Mouth, men: &[GuardId]) -
     let mut squad = Squad { here: Vec::new(), stay: Vec::new() };
     for who in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if crate::condition::down(g, g.gd[who].ch) { continue; }
-        squad.here.push((who, pos_of(g, who)));
+        squad.here.push((who, g.pos_of(who)));
         if !men.contains(&who) { pods_of(g, &crate::seats::here(g), who, &mut squad.stay); }
     }
     let points = points_past(g, f, mouth, &squad);
@@ -186,13 +186,13 @@ fn points_past(g: &mut Game, f: &Piece, mouth: Mouth, squad: &Squad) -> Vec<Poin
         let (x, z) = (p[0] - mouth.at[0], p[2] - mouth.at[2]);
         let (d, fwd) = (m::hyp2(x, z), x * mouth.way[0] + z * mouth.way[1]);
         if if into { d > reach || d < 1.2 || fwd < 0.5 || mouth.far + d > bound + 1.5 } else { d > 2.75 || fwd < -1.0 } { continue; }
-        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || flat(sam, p) < 1.0
-            || squad.here.iter().any(|h| flat(h.1, p) < 1.5) || squad.stay.iter().any(|&q| flat(q, p) < apart)
+        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || v3::dist_xz(sam, p) < 1.0
+            || squad.here.iter().any(|h| v3::dist_xz(h.1, p) < 1.5) || squad.stay.iter().any(|&q| v3::dist_xz(q, p) < apart)
             || crate::scene_collision::segment_blocked(g, eye, [p[0], 1.5, p[2]], None, None, None) { continue; }
         let (mut seen, mut of) = (0.0, 0.0);
         for &i in f.part.iter().step_by(step) {
             of += 1.0;
-            if flat(p, f.pts[i]) <= look_m && !crate::scene_collision::segment_blocked(g, [p[0], 1.55, p[2]], f.pts[i], None, None, None) { seen += 1.0; }
+            if v3::dist_xz(p, f.pts[i]) <= look_m && !crate::scene_collision::segment_blocked(g, [p[0], 1.55, p[2]], f.pts[i], None, None, None) { seen += 1.0; }
         }
         if into && seen * 4.0 < of { continue; }
         let walls = crate::doortools::n4().iter().filter(|&&[dx, dz]| crate::scene_collision::nav_grid_is_blocked(g, p[0] + dx * 0.75, p[2] + dz * 0.75)).count();
@@ -210,7 +210,7 @@ fn pair_of_points(g: &Game, points: &[Point], mouth: Mouth) -> Option<(V3, V3)> 
     let (mut two, mut best) = (None, f64::NEG_INFINITY);
     for (k, a) in points.iter().enumerate() {
         for b in &points[k + 1..] {
-            let l = flat(a.p, b.p);
+            let l = v3::dist_xz(a.p, b.p);
             if l < least { continue; }
             let cos = ((a.p[0] - mouth.at[0]) * (b.p[0] - mouth.at[0]) + (a.p[2] - mouth.at[2]) * (b.p[2] - mouth.at[2])) / m::max(1e-3, a.d * b.d);
             if mouth.into && cos > 0.8 { continue; }
@@ -248,8 +248,8 @@ fn dealt(g: &mut Game, op: DoorOpId, f: &Piece, squad: &Squad, gd: GuardId, men:
             }
         }
     };
-    let (his, other) = (pos_of(g, gd), pos_of(g, mate));
-    if flat(his, a) + flat(other, b) > flat(his, b) + flat(other, a) { core::mem::swap(&mut a, &mut b); }
+    let (his, other) = (g.pos_of(gd), g.pos_of(mate));
+    if v3::dist_xz(his, a) + v3::dist_xz(other, b) > v3::dist_xz(his, b) + v3::dist_xz(other, a) { core::mem::swap(&mut a, &mut b); }
     Ok(vec![(gd, f.pod(a, Some(b))), (mate, f.pod(b, Some(a)))])
 }
 
@@ -274,8 +274,8 @@ fn close_up(g: &mut Game, op: DoorOpId, f: &Piece, lead: GuardId, walks: &mut Wa
     let mut taken: Vec<V3> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&who| !crate::condition::down(g, g.gd[who].ch)).map(|who| where_of(g, who)).collect();
     let mut came: Vec<String> = Vec::new();
     for mm in g.tab.doortools_door_op[op].men.clone() {
-        if mm == lead || crate::condition::down(g, g.gd[mm].ch) || door_tools_in_at(g, op, mm).is_nan() || crate::control::man::blind(g, mm) || has_over(g, mm) { continue; }
-        let (to, at) = (pos_of(g, lead), where_of(g, mm));
+        if mm == lead || crate::condition::down(g, g.gd[mm].ch) || door_tools_in_at(g, op, mm).is_nan() || crate::control::man::blind(g, mm) || crate::roomfight::over_is_mine(g, mm) { continue; }
+        let (to, at) = (g.pos_of(lead), where_of(g, mm));
         let his_pair = own.is_some() && crate::orders::squad_orders_pair_of(g, mm) == own;
         if (his_pair && walks.len(g, at, to) <= g.k.doortools.buddy_m) || walks.len(g, at, to) <= 3.5 { continue; }
         let face = g.ch[g.gd[lead].ch].aim_yaw;

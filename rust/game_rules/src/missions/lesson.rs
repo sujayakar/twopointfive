@@ -11,7 +11,7 @@ use alloc::{format, string::String, vec::Vec};
 // starts and ends on an ASCII character and a non-ASCII byte is no \w, as a non-ASCII unit is none in JavaScript.
 
 /// \b at `i`
-fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::suppression::is_word(b[i - 1])) != (i < b.len() && crate::suppression::is_word(b[i])) }
+fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::js::is_word(b[i - 1])) != (i < b.len() && crate::js::is_word(b[i])) }
 /// the literal `s` at `at`: where it ends
 fn lit(b: &[u8], at: usize, s: &str) -> Option<usize> { if b.get(at..)?.starts_with(s.as_bytes()) { Some(at + s.len()) } else { None } }
 /// `String.replace` of a global pattern: `at` says whether one starts at this byte, where it ends and what it becomes
@@ -133,7 +133,7 @@ fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> 
 }
 
 /// a teammate on his feet
-fn operative_up(g: &Game, x: GuardId) -> bool { g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) }
+pub(crate) fn operative_up(g: &Game, x: GuardId) -> bool { g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) }
 
 /// the one partner of a quiet pair: the first operative unit on his feet
 fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }

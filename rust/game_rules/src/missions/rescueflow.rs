@@ -10,11 +10,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// `inBounds(p, r)` of a scenario's rectangle.
-fn in_rect(p: V3, r: &crate::scene_scenarios::Rect) -> bool {
-    crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
-}
-
 /// The door of an opening, if it names one and the level has it.
 fn door_of(g: &Game, o: &crate::scene_scenarios::RouteOpening) -> Option<DoorId> {
     match &o.door {
@@ -195,7 +190,7 @@ fn rescue_flow_sees(g: &crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
 }
 
 fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
-    g.rescue.flow.regions.values().copied().find(|&r| in_rect(p, &g.tab.rescueflow_region[r].rect))
+    g.rescue.flow.regions.values().copied().find(|&r| super::roomclear::in_rect(p, g.tab.rescueflow_region[r].rect))
 }
 
 /// What the stages of a sensing share: the moment, the knobs, the team's eyes and every room.
@@ -213,7 +208,7 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
     look_over_a_room(g, &s);
     for &r in s.rooms.iter() {
         let rect = g.tab.rescueflow_region[r].rect;
-        if s.eyes.iter().any(|&e| in_rect(e, &rect)) {
+        if s.eyes.iter().any(|&e| super::roomclear::in_rect(e, rect)) {
             g.tab.rescueflow_region[r].was_in = s.t;
         }
     }
@@ -511,8 +506,8 @@ fn flow_now(g: &Game, f: &crate::scene_scenarios::RescueFlowData, k: RescueFlowK
     let sam = g.ch[g.pl[pl].ch].pos;
     let dynamic = crate::rescue::rescue_dynamic(g);
     let live = dynamic && g.rescue.result.is_none() && !crate::condition::down(g, g.pl[pl].ch);
-    let in_corr = in_rect(sam, &f.corridor);
-    let on_route = in_corr || in_rect(sam, &g.rescue.flow.room);
+    let in_corr = super::roomclear::in_rect(sam, f.corridor);
+    let on_route = in_corr || super::roomclear::in_rect(sam, g.rescue.flow.room);
     let sam_in = if on_route { None } else { rescue_flow_region_at(g, sam).map(|r| g.tab.rescueflow_region[r].id.clone()) };
     FlowNow { k, t: g.time, sam, in_corr, on_route, sam_in, live, dynamic }
 }

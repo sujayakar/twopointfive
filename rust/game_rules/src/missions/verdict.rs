@@ -33,7 +33,6 @@ fn live(g: &Game) -> bool { !g.aside }
 fn started(g: &Game) -> bool { g.verdict.t0.is_finite() }
 /// Seconds since the try started.
 fn secs(g: &Game) -> f64 { if started(g) { m::max(0.0, g.time - g.verdict.t0) } else { 0.0 } }
-fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
 
 /// The last order anybody gave, off the books' logs, by its row's serial (None: none yet).
 fn last_order(g: &Game) -> Option<u32> {
@@ -71,7 +70,7 @@ fn fresh(g: &mut Game, tail: Option<u32>) {
     let origins: Vec<V3> = men.iter().map(|&pl| g.ch[g.pl[pl].ch].pos).collect();
     let p0 = origins[0];
     let p = start_at(g).unwrap_or(p0);
-    let (wall_serial, fired0, resumed) = (g.destr.walls.serial, fired(g), g.chronicle.counts.loads > 0.0);
+    let (wall_serial, fired0, resumed) = (g.destr.walls.serial, super::par::fired(g), g.chronicle.counts.loads > 0.0);
     // a checkpoint load is a fresh mission carrying the old run's chronicle: its clock the mission's own
     let t0 = if resumed { g.time - g.mission.stats.elapsed } else { f64::NAN };
     let run = Some(g.mission.serial);
@@ -245,7 +244,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
             let o = if i > 0 { g.verdict.origins.get(i).copied().unwrap_or(p) } else { g.verdict.origin };
             if ::sim::maths::hypot2(p[0] - o[0], p[2] - o[2]) > crate::par::PAR_START_M { moved = true; break; }
         }
-        if moved || fired(g) != g.verdict.fired0 || tail != g.verdict.order0 { g.verdict.t0 = g.time; }
+        if moved || super::par::fired(g) != g.verdict.fired0 || tail != g.verdict.order0 { g.verdict.t0 = g.time; }
     }
     // (rails.ts: the seat with nobody on the floor parks him unseen: the mission's own staging, not a sandbox tick)
     if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || g.player_invisible) { g.verdict.cheat = true; }

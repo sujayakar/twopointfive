@@ -7,16 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// A number's part above its floor.
-fn frac(x: f64) -> f64 {
-    x - m::floor(x)
-}
-
 /// His id's share of 0..1: neighbours in the roster differ, no dice.
 fn id_share(g: &crate::game::Game, gd: GuardId, salt: Option<f64>) -> f64 {
     let salt = salt.unwrap_or(0.0);
     let c = g.gd[gd].ch;
-    frac((g.ch[c].id + salt) * 0.6180339887)
+    v3::frac((g.ch[c].id + salt) * 0.6180339887)
 }
 
 /// Does he carry a light of his own to switch on.
@@ -401,8 +396,8 @@ mod tests {
         ] {
             let x: f64 = (id + salt) * 0.6180339887;
             assert_eq!(x.to_bits(), whole);
-            assert_eq!(frac(x).to_bits(), part);
+            assert_eq!(v3::frac(x).to_bits(), part);
         }
-        assert_eq!(frac(-0.25).to_bits(), 0x3fe8000000000000);
+        assert_eq!(v3::frac(-0.25).to_bits(), 0x3fe8000000000000);
     }
 }

@@ -29,11 +29,6 @@ fn state_of<'g>(g: &'g mut Game) -> &'g mut State {
     g.m.unseen.states.get_or_insert_with(k, new_state)
 }
 
-/// which player the squad reads
-fn lead(g: &Game) -> PlayerId {
-    g.player
-}
-
 /// on a wall, as the sneak counts it: his back on it `wall_secs`, where the hold keeps that clock
 fn on_wall(g: &Game, pl: PlayerId) -> bool {
     let Some(w) = &g.pl[pl].wall else { return false };
@@ -90,7 +85,7 @@ fn unseen_live(g: &mut Game) -> bool {
     s.t = now;
     if now < s.sneak_t { s.sneak_t = -1e9; }
     if now < s.cue_t { s.cue_t = -1e9; }
-    let pl = lead(g);
+    let pl = g.player;
     let why;
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         why = String::from("no squad under orders");
@@ -144,7 +139,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
     let Some(gd) = who else { return };
     g.m.unseen.states.get_mut(pl).unwrap().cue_t = now;   // before the line is said: a read of the row from under `say` must see it, as the TypeScript's would
     g.stats.unseen.cues += 1;
-    let sam = lead(g);
+    let sam = g.player;
     let low = sam_low(g, sam) || on_wall(g, sam);
     crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None);
 }
@@ -161,12 +156,12 @@ fn entering(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
 
 /// Sam on a wall, and no place on it for this man right now
 fn off_wall(g: &Game, gd: GuardId) -> bool {
-    let pl = lead(g);
+    let pl = g.player;
     on_wall(g, pl) && (g.m.unseen.on_wall_at.get(gd).copied() != Some(g.time) || g.m.unseen.kneel_at.get(gd).copied() == Some(g.time))
 }
 
 fn low_now(g: &Game, gd: GuardId) -> bool {
-    let pl = lead(g);
+    let pl = g.player;
     sam_low(g, pl) || off_wall(g, gd)
 }
 
@@ -202,7 +197,7 @@ pub fn unseen_wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) 
         if q.is_some() {
             let now = g.time;
             g.m.unseen.on_wall_at.set(gd, now);
-            let pl = lead(g);
+            let pl = g.player;
             let wall = g.pl[pl].wall.as_ref().unwrap().serial;
             g.m.unseen.placed.set(gd, wall);
         } else {
@@ -223,7 +218,7 @@ fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V
     if !under_unseen(g, gd) {
         return None;
     }
-    let pl = lead(g);
+    let pl = g.player;
     if g.pl[pl].wall.is_none() || !on_wall(g, pl) {
         return None;
     }

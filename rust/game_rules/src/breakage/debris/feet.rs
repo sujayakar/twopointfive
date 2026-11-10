@@ -100,7 +100,7 @@ fn shoved(g: &mut Game, men: &[FootMan], k: &FootKnobs, c: DebrisChunkId, bk: &m
 /// A piece at rest, or only slid there by a boot, and not shoved a moment ago: the seconds since it was.
 fn ready(g: &Game, c: DebrisChunkId, k: &FootKnobs) -> Option<f64> {
     let ch = &g.tab.debris_chunk[c];
-    if !(ch.rest || is_on(ch.foot)) || ch.age <= 0.0 || ch.on.is_some() || ch.glass.is_some() { return None; }
+    if !(ch.rest || ch.foot == Some(true)) || ch.age <= 0.0 || ch.on.is_some() || ch.glass.is_some() { return None; }
     let since = ch.foot_at.map_or(m::INF, |at| ch.age - at);
     let wait = if ch.foot_n.unwrap_or(0.0) >= k.give_up { k.give_up_secs } else { k.cooldown };
     if since < wait { None } else { Some(since) }
@@ -117,7 +117,7 @@ fn by_anybody(g: &Game, c: DebrisChunkId, men: &[FootMan], k: &FootKnobs) -> boo
     let row = &g.tab[g.tab.debris_chunk[c].box_];
     let (bh, bc) = (row.h, row.c);
     let mass = box_mass(bh);
-    let far = bound_of(bh) + k.radius + k.reach + 0.05;
+    let far = v3::len(bh) + k.radius + k.reach + 0.05;
     men.iter().filter(|mm| moves_it(mm, mass, k)).any(|mm| {
         let d = far + m::hyp2(mm.vel[0], mm.vel[2]) * k.lead;
         m::abs(mm.pos[0] - bc[0]) < d && m::abs(mm.pos[2] - bc[2]) < d
@@ -213,7 +213,7 @@ impl Lying {
         ch.foot = Some(true);
         ch.v = [dx * s.speed, 0.0, dz * s.speed];
         let wy = m::max(-5.0, m::min(5.0, k.spin * (lz * dx - lx * dz) * s.speed / m::max(0.01, e1 * e1 + e2 * e2)));
-        ch.w = [0.0, wy + (luck(nth, 3.0) - 0.5) * 0.6 * s.speed / m::max(0.08, bound_of(self.h)), 0.0];
+        ch.w = [0.0, wy + (luck(nth, 3.0) - 0.5) * 0.6 * s.speed / m::max(0.08, v3::len(self.h)), 0.0];
     }
 
     /// A scuff for the ear only (no hearing event: his steps already carry his noise).
@@ -244,7 +244,7 @@ pub(in crate::breakage) fn debris_foot_step(g: &mut crate::game::Game, c_2: Debr
     let c = c_2;
     g.tab.debris_chunk[c].age += dt;
     if g.tab.debris_chunk[c].rest { return; }
-    if !is_on(g.tab.debris_chunk[c].foot) { g.tab.debris_chunk[c].rest = true; return; }
+    if g.tab.debris_chunk[c].foot != Some(true) { g.tab.debris_chunk[c].rest = true; return; }
     let sub = 2;
     let h = dt / sub as f64;
     let mut s = 0;

@@ -4,7 +4,7 @@ use super::aim::{aim_legs, clamp, quiet_tick, Step, R};
 use super::light::{KIT_VIEW_LOOP as K, KIT_VIEW_QUIET as QK};
 use super::plan::KIT_PLAN;
 use super::types::*;
-use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2, yaw_to};
+use super::walk::{along, at, away, flat, free, out_of, sam_goes, sam_stand, v2};
 use crate::game::{Game, SlotKind};
 use crate::ids::*;
 use crate::m;
@@ -50,7 +50,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         let h0 = 1.15;
         b.quiet = true;
         b.h_to = h0 + (lamp_pos[1] - h0) * 3.0 / d;
-        b.legs = vec![Leg { yaw: yaw_to(p, lamp_pos), cap: K.gun_rate * R, min_t: QK.rise, hold: 0.1 }];
+        b.legs = vec![Leg { yaw: crate::v3::yaw_to(p, lamp_pos), cap: K.gun_rate * R, min_t: QK.rise, hold: 0.1 }];
         b.leg = 0;
         b.leg_t = f64::NAN;
         to(g, b, "rise");
@@ -79,7 +79,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
             st.a.lift_at = now;
             if QK.cut { gas_out(g, st, true); }
             to(g, b, "dark");
-            b.legs = vec![Leg { yaw: yaw_to(p, at(st, [0.0, -1.5, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }];
+            b.legs = vec![Leg { yaw: crate::v3::yaw_to(p, at(st, [0.0, -1.5, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }];
             b.leg = 0;
             b.leg_t = f64::NAN;
             b.h_to = 1.0;
@@ -171,7 +171,7 @@ pub(super) fn light_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
         let sg = if along(st, st.sam) >= 0.0 { 1.0 } else { -1.0 };
         let (w2, o) = (st.width / 2.0, st.plan.as_ref().map_or(0.0, |x| x.wall.face));
         b.quiet = true;
-        b.legs = vec![Leg { yaw: yaw_to(p, at(st, [-sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }, Leg { yaw: yaw_to(p, at(st, [sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: QK.light.sweep, hold: QK.light.hold }];
+        b.legs = vec![Leg { yaw: crate::v3::yaw_to(p, at(st, [-sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: -1.0, hold: 0.0 }, Leg { yaw: crate::v3::yaw_to(p, at(st, [sg * w2, o, 0.0])), cap: K.gun_rate * R, min_t: QK.light.sweep, hold: QK.light.hold }];
         b.leg = 0;
         b.leg_t = f64::NAN;
         to(g, b, "act");

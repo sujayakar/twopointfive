@@ -1,5 +1,5 @@
 //! The other doors of the room an entry goes into: watched while its men come in and while they hold it, and held by its spare men once a threshold's are in.
-use super::threats::{blocked_at, door_tools_room_in, frame, pos, segment_blocked};
+use super::threats::{door_tools_room_in, frame};
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -30,7 +30,7 @@ pub(super) fn door_tools_other_doors(g: &mut Game, op: DoorOpId, when: Watched) 
     }
     for (o, r) in rows(g, op) {
         let a = *dop!(g, op).mine.get(r.gd).unwrap();
-        let yaw = v3::yaw_to(pos(g, r.gd), r.w);
+        let yaw = v3::yaw_to(g.pos_of(r.gd), r.w);
         let words = crate::orders::door_words(g, o);
         asg!(g, a).watch = Some(r.w);
         asg!(g, a).face = Some(yaw);
@@ -90,7 +90,7 @@ fn still_watched(g: &mut Game, x: &Deal, e: Option<&Entry>, o: DoorId, by: Guard
     let (Some(far), Some(e)) = (opening_of(g, o), e) else { return false };
     let at = inner_of(g, e);
     if crate::entrypoints::entry_points_far_known(g, far, at) || theirs(g, x, o, Some(by)) { return false; }
-    x.when != Watched::Seen || { let p = pos(g, by); !(leaf_across(g, o, p, at) > 0.0) }
+    x.when != Watched::Seen || { let p = g.pos_of(by); !(leaf_across(g, o, p, at) > 0.0) }
 }
 
 /// The nearest doors first and those to the outside last: as they come in, no more than half of them on doors, and none of two.
@@ -101,7 +101,7 @@ fn dealt(g: &mut Game, x: &Deal, entries: Vec<Entry>) {
     let spare = if still < 3 { 0.0 } else { m::floor(x.inside.len() as f64 / 2.0) };
     let mut ranked: Vec<(f64, Entry)> = entries.into_iter().map(|e| {
         let fc = frame(g, e.door);
-        let dists: Vec<f64> = x.inside.iter().map(|m_| v3::dist_xz(pos(g, *m_), fc)).collect();
+        let dists: Vec<f64> = x.inside.iter().map(|m_| v3::dist_xz(g.pos_of(*m_), fc)).collect();
         ((if g.dr[e.door].def.exterior.unwrap_or(false) { 100.0 } else { 0.0 }) + m::min_n(&dists), e)
     }).collect();
     js::sort_by(&mut ranked, |a, b| a.0 - b.0);
@@ -130,15 +130,15 @@ fn worth_watching(g: &mut Game, x: &Deal, e: &Entry) -> bool {
     let Some(far) = opening_of(g, e.door) else { return false };
     let (fc, at) = (frame(g, e.door), inner_of(g, e));
     if crate::entrypoints::entry_points_far_known(g, far, at) || theirs(g, x, e.door, None) || beside(g, &x.squad, e.door) { return false; }
-    !(blocked_at(g, fc[0] + e.out[0] * 0.9, fc[2] + e.out[1] * 0.9) && blocked_at(g, fc[0] + e.out[0] * 1.5, fc[2] + e.out[1] * 1.5))
+    !(crate::scene_collision::nav_grid_is_blocked(g, fc[0] + e.out[0] * 0.9, fc[2] + e.out[1] * 0.9) && crate::scene_collision::nav_grid_is_blocked(g, fc[0] + e.out[0] * 1.5, fc[2] + e.out[1] * 1.5))
 }
 /// Of those with a line to it, whom its leaf would hide least of it from, then the nearest.
 fn watcher_for(g: &Game, x: &Deal, e: &Entry, free: &[GuardId]) -> Option<GuardId> {
     let (fc, at) = (frame(g, e.door), inner_of(g, e));
     let mut can: Vec<(GuardId, f64, f64)> = Vec::new();
     for &gd in free {
-        let p = pos(g, gd);
-        if v3::dist_xz(p, fc) > g.k.doortools.other_door_m || segment_blocked(g, [p[0], 1.5, p[2]], at) { continue; }
+        let p = g.pos_of(gd);
+        if v3::dist_xz(p, fc) > g.k.doortools.other_door_m || crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], at, None, None, None) { continue; }
         let leaf = leaf_across(g, e.door, p, at);
         if x.when == Watched::Seen && leaf > 0.0 { continue; }
         can.push((gd, leaf, v3::dist_xz(p, fc)));
@@ -148,9 +148,9 @@ fn watcher_for(g: &Game, x: &Deal, e: &Entry, free: &[GuardId]) -> Option<GuardI
 }
 /// His muzzle: on the floor beyond it, or on the frame where he has no line to that.
 fn watch_at(g: &Game, e: &Entry, gd: GuardId) -> V3 {
-    let (p, fc) = (pos(g, gd), frame(g, e.door));
+    let (p, fc) = (g.pos_of(gd), frame(g, e.door));
     let beyond: V3 = [fc[0] + e.out[0], 1.2, fc[2] + e.out[1]];
-    if segment_blocked(g, [p[0], 1.5, p[2]], beyond) { [fc[0], 1.2, fc[2]] } else { beyond }
+    if crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], beyond, None, None, None) { [fc[0], 1.2, fc[2]] } else { beyond }
 }
 
 fn opening_of(g: &mut Game, o: DoorId) -> Option<CoverOpeningId> {
@@ -171,7 +171,7 @@ fn theirs(g: &mut Game, x: &Deal, o: DoorId, by: Option<GuardId>) -> bool {
 /// A teammate stands by it: on his post, or with no order.
 fn beside(g: &mut Game, squad: &[GuardId], o: DoorId) -> bool {
     let fc = frame(g, o);
-    squad.iter().any(|&x| v3::dist_xz(pos(g, x), fc) < 3.0 && crate::seats::order_of(g, x).map_or(true, |a| asg!(g, a).post.is_some()))
+    squad.iter().any(|&x| v3::dist_xz(g.pos_of(x), fc) < 3.0 && crate::seats::order_of(g, x).map_or(true, |a| asg!(g, a).post.is_some()))
 }
 
 /// How much of a door its own leaf, stood open, would hide from a man at `p`.
@@ -214,7 +214,7 @@ pub(super) fn door_tools_hold_doors(g: &mut Game, op: DoorOpId) {
     let men: Vec<GuardId> = held_by(g, op, &|h| !h.out.unwrap_or(false));
     if men.is_empty() { return; }
     let mut stood: JsMap<GuardId, V3> = JsMap::new();
-    for x in ours_up(g) { stood.set(x, pos(g, x)); }
+    for x in ours_up(g) { stood.set(x, g.pos_of(x)); }
     let mut x = Holders { room, men, stood, sam: crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g)) };
     let doors = far_doors(g, op, room);
     let stay = if held_by(g, op, &|h| h.out.unwrap_or(false) && h.door.is_none()).is_empty() { g.k.doortools.thr_doors_stay } else { 0.0 };
@@ -238,7 +238,7 @@ fn held_by(g: &Game, op: DoorOpId, so: &dyn Fn(&DoorToolsHeldValue) -> bool) -> 
 fn far_doors(g: &Game, op: DoorOpId, room: RoomfightRoomId) -> Vec<Entry> {
     let (d, tools) = (dop!(g, op).door, &g.sets[g.seat].door_tools);
     let rest: Vec<GuardId> = ours_up(g).into_iter().filter(|x| !dop!(g, op).men.contains(x)).collect();
-    let taken = |o: DoorId| tools.ops.iter().any(|x| *x != op && dop!(g, *x).door == o) || tools.held.values().any(|r| r.door == Some(o)) || rest.iter().any(|&x| v3::dist_xz(pos(g, x), frame(g, o)) < 3.0);
+    let taken = |o: DoorId| tools.ops.iter().any(|x| *x != op && dop!(g, *x).door == o) || tools.held.values().any(|r| r.door == Some(o)) || rest.iter().any(|&x| v3::dist_xz(g.pos_of(x), frame(g, o)) < 3.0);
     let mut doors: Vec<Entry> = g.tab.roomfight_room[room].entries.iter().filter(|e| e.door != d && !taken(e.door)).cloned().collect();
     let fc = frame(g, d);
     js::sort_by(&mut doors, |a, b| v3::dist_xz(b.at, fc) - v3::dist_xz(a.at, fc));
@@ -249,14 +249,14 @@ fn holder_for(g: &Game, x: &Holders, e: &Entry) -> Option<(GuardId, Option<V3>)>
     let (o, fc, at) = (e.door, frame(g, e.door), inner_of(g, e));
     let mut near: Vec<(GuardId, f64)> = Vec::new();
     for &gd in &x.men {
-        let p = pos(g, gd);
-        if v3::dist_xz(p, fc) > g.k.doortools.thr_doors_m || segment_blocked(g, [p[0], 1.5, p[2]], at) || js::truthy(leaf_across(g, o, p, at)) { continue; }
+        let p = g.pos_of(gd);
+        if v3::dist_xz(p, fc) > g.k.doortools.thr_doors_m || crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], at, None, None, None) || js::truthy(leaf_across(g, o, p, at)) { continue; }
         near.push((gd, v3::dist_xz(p, fc)));
     }
     js::sort_by(&mut near, |a, b| a.1 - b.1);
     if let Some(n) = near.first() { return Some((n.0, None)); }
     let (gd, to) = place_by(g, x, e)?;
-    let from = pos(g, gd);
+    let from = g.pos_of(gd);
     let path = crate::scene_collision::nav_grid_find_path(g, from, to, None, None)?;
     if crate::places::walk_len(from, &path) > g.k.doortools.thr_doors_walk { return None; }
     Some((gd, Some(to)))
@@ -274,14 +274,14 @@ fn place_by(g: &Game, x: &Holders, e: &Entry) -> Option<(GuardId, V3)> {
     for (k, [along, off]) in places.enumerate() {
         for sgn in [1.0, -1.0] {
             let p = door_pt(g, o, w / 2.0 + sgn * (w / 2.0 + along), *off, side, None);
-            if blocked_at(g, p[0], p[2]) { continue; }
+            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
             let cell = g.col.nav.cell;
             let key = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));
-            if !g.tab.roomfight_room[x.room].cells.has(crate::Num(key)) || segment_blocked(g, [p[0], 1.5, p[2]], at) { continue; }
+            if !g.tab.roomfight_room[x.room].cells.has(crate::Num(key)) || crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], at, None, None, None) { continue; }
             let hid = leaf_across(g, o, p, at);
             let behind = if js::truthy(hid) { LEAF_COST * (1.0 + hid) } else { 0.0 };
             for &gd in &x.men {
-                let c = v3::dist_xz(pos(g, gd), p) + 0.4 * (k + 1) as f64 + behind;
+                let c = v3::dist_xz(g.pos_of(gd), p) + 0.4 * (k + 1) as f64 + behind;
                 let clear = v3::dist_xz(x.sam, p) >= 1.0 && !x.stood.iter().any(|(y, q)| y != gd && v3::dist_xz(*q, p) < 1.0);
                 if clear && best.map_or(true, |b| c < b.0) { best = Some((c, gd, p)); }
             }
@@ -293,7 +293,7 @@ fn place_by(g: &Game, x: &Holders, e: &Entry) -> Option<(GuardId, V3)> {
 fn on_door(g: &mut Game, op: DoorOpId, e: &Entry, gd: GuardId, post: Option<V3>) {
     let (o, fc) = (e.door, frame(g, e.door));
     let w: V3 = [fc[0] + e.out[0], 1.2, fc[2] + e.out[1]];
-    let yaw = v3::yaw_to(post.unwrap_or(pos(g, gd)), w);
+    let yaw = v3::yaw_to(post.unwrap_or(g.pos_of(gd)), w);
     let name = crate::orders::door_words(g, o);
     if let Some(to) = post {
         let r = &mut dop!(g, op);

@@ -310,6 +310,10 @@ pub fn segment_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<
 
 /// segmentBlocked with nothing passed: the solid test.
 pub fn solid_blocked(g: &Game, a: V3, b: V3, shrink: Option<f64>) -> bool { solid_blocked_over(g, &Over::OWN, a, b, shrink) }
+/// anything solid between two places, asked at knee height
+pub fn low_blocked(g: &Game, a: V3, b: V3) -> bool { solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
+/// a wall, a sill or a pane between two places, asked at knee height: the level's statics alone
+pub fn low_walled(g: &Game, a: V3, b: V3) -> bool { solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
 /// …of the world as the question takes it
 pub fn solid_blocked_over(g: &Game, over: &Over, a: V3, b: V3, shrink: Option<f64>) -> bool { segment_blocked_over(g, over, a, b, shrink, Some(0.0)) }
 
@@ -575,10 +579,10 @@ pub fn nav_grid_rebake(g: &mut crate::game::Game, x0: f64, z0: f64, x1: f64, z1:
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let pad = 0.34 + cell;
     let mut changed = Vec::new();
-    let cx0 = clampi(m::floor((x0 - pad) / cell), 0.0, nw - 1.0);
-    let cx1 = clampi(m::floor((x1 + pad) / cell), 0.0, nw - 1.0);
-    let cz0 = clampi(m::floor((z0 - pad) / cell), 0.0, nh - 1.0);
-    let cz1 = clampi(m::floor((z1 + pad) / cell), 0.0, nh - 1.0);
+    let cx0 = crate::v3::clamp(m::floor((x0 - pad) / cell), 0.0, nw - 1.0);
+    let cx1 = crate::v3::clamp(m::floor((x1 + pad) / cell), 0.0, nw - 1.0);
+    let cz0 = crate::v3::clamp(m::floor((z0 - pad) / cell), 0.0, nh - 1.0);
+    let cz1 = crate::v3::clamp(m::floor((z1 + pad) / cell), 0.0, nh - 1.0);
     let mut z = cz0;
     while z <= cz1 {
         let mut x = cx0;
@@ -707,8 +711,8 @@ fn nav_grid_nearest_free(g: &Game, gx: f64, gz: f64, wx: Option<f64>, wz: Option
 /// the centre of the walkable cell nearest a world point, or none within reach.
 pub fn nav_grid_nearest_free_point(g: &Game, wx: f64, wz: f64) -> Option<V3> {
     let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
-    let x = clampi(m::floor(wx / cell), 0.0, nw - 1.0);
-    let z = clampi(m::floor(wz / cell), 0.0, nh - 1.0);
+    let x = crate::v3::clamp(m::floor(wx / cell), 0.0, nw - 1.0);
+    let z = crate::v3::clamp(m::floor(wz / cell), 0.0, nh - 1.0);
     let c = if g.col.nav.blocked[(z * nw + x) as usize] != 0 { nav_grid_nearest_free(g, x, z, Some(wx), Some(wz)) } else { Some([x, z]) };
     c.map(|c| [(c[0] + 0.5) * cell, 0.0, (c[1] + 0.5) * cell])
 }
@@ -728,10 +732,6 @@ pub fn nav_grid_walkable(g: &crate::game::Game, a: V3, b: V3) -> bool {
         i += 1.0;
     }
     true
-}
-
-fn clampi(x: f64, a: f64, b: f64) -> f64 {
-    if x < a { a } else if x > b { b } else { x }
 }
 
 /// the sight line a→b against the level's STATICS alone
@@ -815,8 +815,8 @@ mod tests {
 
     #[test]
     fn small_ones() {
-        assert_eq!(clampi(-1.0, 0.0, 3.0), 0.0);
-        assert_eq!(clampi(4.0, 0.0, 3.0), 3.0);
-        assert!(clampi(f64::NAN, 0.0, 3.0).is_nan());
+        assert_eq!(crate::v3::clamp(-1.0, 0.0, 3.0), 0.0);
+        assert_eq!(crate::v3::clamp(4.0, 0.0, 3.0), 3.0);
+        assert!(crate::v3::clamp(f64::NAN, 0.0, 3.0).is_nan());
     }
 }

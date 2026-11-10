@@ -14,14 +14,6 @@ fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
 /// the character of a seat's man
 fn man_char(g: &Game, s: SeatId) -> CharId { let pl = crate::cmd::seat_man(g, s); g.pl[pl].ch }
 
-/// game.ts `WEAPONS[id]`
-fn weapon_row(g: &Game, id: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef { g.m.weapons.weapons.get(id).unwrap() }
-
-/// a bone of his if it has been baked, else his feet raised by `up`
-fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
-}
-
 /// THE TICK, off the players' plain records: every row of `STEPS`, in order.
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) { game_step_watched(g, dt, cmds, &mut |_, _| ()) }
 
@@ -64,7 +56,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
             t = 1.0 - v3::smoothstep(3.0, 7.0, nd);
             if g.gd[nr].state == GuardState::Suspicious || g.gd[nr].state == GuardState::Search { t = m::max(t, 0.6 * (1.0 - v3::smoothstep(7.0, 10.0, nd))); }
             let p = g.ch[pc].pos;
-            let spots: [V3; 2] = [[p[0], 0.15, p[2]], bone_or(g, pc, Bone::Chest, 1.1)];
+            let spots: [V3; 2] = [[p[0], 0.15, p[2]], g.ch[pc].bone_or(Bone::Chest, 1.1)];
             if g.sets[g.seat].torch_on_t > g.time { g.sets[g.seat].torch_on_t = -100.0; }
             let mut i = 0;
             'torch: while i < g.guards.len() {
@@ -88,7 +80,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
 /// the muzzle of the stand-in gun in his hands
 fn stand_in_muzzle(g: &Game, long: Option<crate::rig_props::LongRig>, cb: bool, def: crate::weapons::WeaponId) -> f64 {
     if long == Some(crate::rig_props::LongRig::Sc20k) { return crate::rig_props::sc20k_muzzle_ahead(None); }
-    let row = weapon_row(g, def);
+    let row = g.weapon(def);
     if cb && row.rig != crate::weapons::WeaponDefRig::Carbine { return crate::rig_props::carbine_muzzle_ahead(None); }
     row.muzzle_ahead
 }
@@ -110,7 +102,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         if g.gd[gd].unit.is_none() { g.gd[gd].carbine = deal == CarbineDeal::All || (deal == CarbineDeal::Reyes && g.gd[gd].callsign == "Reyes"); }
         let route = g.gd[gd].route;
         let want = if g.gd[gd].carbine { WeaponId::Aks74u } else { g.tab.route[route].weapon.unwrap_or(WeaponId::Guard9mm) };
-        if !crate::condition::down(g, g.gd[gd].ch) && g.fa[g.gd[gd].weapon].def != want { let row = weapon_row(g, want).clone(); let w = crate::weapons::firearm_new(g, &row); g.gd[gd].weapon = w; g.gd[gd].reload_t = -1.0; }
+        if !crate::condition::down(g, g.gd[gd].ch) && g.fa[g.gd[gd].weapon].def != want { let row = g.weapon(want).clone(); let w = crate::weapons::firearm_new(g, &row); g.gd[gd].weapon = w; g.gd[gd].reload_t = -1.0; }
         if g.gd[gd].work_stow.is_some() { crate::workstow::mate_stow_tick(g, gd); }
         if g.gd[gd].second.is_some() { crate::gunslots::side_tick(g, gd, Some(dt)); }
         let long = crate::guards::long_rig_of(g, gd); let cb = long.is_some();
@@ -131,9 +123,9 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         {
             let had = g.ch[c].gun_look.as_ref().and_then(|l| l.hand);
             let into = g.ch[c].gun_look.clone();
-            let in_hands = weapon_row(g, def).clone();
-            let other = g.gd[gd].second.as_ref().map(|s| weapon_row(g, g.fa[s.gun].def).clone());
-            let third = match g.gd[gd].slung.as_ref() { Some(s) if s.out => Some(weapon_row(g, g.fa[s.own].def).clone()), _ => None };
+            let in_hands = g.weapon(def).clone();
+            let other = g.gd[gd].second.as_ref().map(|s| g.weapon(g.fa[s.gun].def).clone());
+            let third = match g.gd[gd].slung.as_ref() { Some(s) if s.out => Some(g.weapon(g.fa[s.own].def).clone()), _ => None };
             let look = crate::gunlook::gun_look_of(g, into, Some(&in_hands), other.as_ref(), third.as_ref());
             let hand = if cb { look.as_ref().and_then(|l| l.hand) } else { None };
             g.ch[c].gun_look = look;
@@ -164,7 +156,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         g.ch[c].anim.grip[1] = in_hand;
         // (GEAR.on, page true: `long === 'sc20k' && !GEAR.on` is false)
         g.ch[c].anim.reload_back = false;
-        let pellets = weapon_row(g, def).pellets.is_some();
+        let pellets = g.weapon(def).pellets.is_some();
         g.ch[c].anim.reload_mag = !pellets;
         let dead = crate::condition::down(g, g.gd[gd].ch);
         // (MOVES.on, page 1: the block always runs)
@@ -183,7 +175,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         {
             let on = g.gd[gd].held.is_none();
             let tk = g.ch[c].anim.trained;
-            let h = crate::weapons::handling_of(weapon_row(g, def));
+            let h = crate::weapons::handling_of(g.weapon(def));
             let tw = &mut g.ch[c].turn;
             tw.on = on; tw.h = h; tw.k = tk;
         }

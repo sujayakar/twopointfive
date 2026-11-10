@@ -17,11 +17,6 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State 
     g.m.holdfire.states.get_or_insert_with(key, fresh)
 }
 
-/// Which player's squad this is.
-fn lead_of(seat: &crate::seats::SeatRef) -> PlayerId {
-    seat.player
-}
-
 /// The squad's living men.
 fn living(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut men = crate::orders::squad_orders_squad(g, seat);
@@ -117,7 +112,7 @@ fn lift(g: &mut crate::game::Game, loud: Option<bool>) {
 
 /// A round has left a gun: a player's starts the fight for his squad.
 pub fn hold_fire_shot(g: &mut crate::game::Game, shooter: CharId) {
-    let lead = lead_of(&crate::seats::here(g));
+    let lead = crate::seats::here(g).player;
     if shooter != g.pl[lead].ch {
         return;
     }

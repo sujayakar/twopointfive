@@ -982,20 +982,19 @@ pub fn squad_orders_trail_back(g: &crate::game::Game, gd: GuardId, extra: f64) -
     Some(squad_orders_slot(g, back))
 }
 
-fn apart_open(g: &Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
 fn apart_bad(g: &Game, x: V3) -> bool { squad_orders_in_frame(g, x) || crate::doorway::doorway_lane(g, x, None).is_some() }
 fn apart_clear(t: &[V3], x: V3, by: f64) -> bool { t.iter().all(|&o| dist_xz(o, x) >= by - 0.05) }
 fn apart_short(g: &Game, p: V3, slot: V3, t: &[V3], k: f64) -> Option<V3> {
-    if dist_xz(p, slot) < 1.5 && !apart_bad(g, p) && apart_clear(t, p, k) && apart_open(g, p, slot) { Some([p[0], 0.0, p[2]]) } else { None }
+    if dist_xz(p, slot) < 1.5 && !apart_bad(g, p) && apart_clear(t, p, k) && !crate::scene_collision::low_blocked(g, p, slot) { Some([p[0], 0.0, p[2]]) } else { None }
 }
 ///  None: the slot itself.
 fn apart_hold(g: &Game, p: V3, sam: V3, slot: V3, t: &[V3], k: f64) -> Option<V3> {
-    if dist_xz(p, slot) >= 1.5 || apart_bad(g, p) || !apart_open(g, p, slot) { return None; }
+    if dist_xz(p, slot) >= 1.5 || apart_bad(g, p) || crate::scene_collision::low_blocked(g, p, slot) { return None; }
     let here: V3 = [p[0], 0.0, p[2]];
     let by = m::min(k, g.k.orders.file_tight);
     let mut near: Option<usize> = None;   // (an index: `o === t` below is the identity of an entry)
     for (i, &o) in t.iter().enumerate() {
-        if dist_xz(o, p) < by - 0.05 && apart_open(g, o, p) && (match near { None => true, Some(n) => dist_xz(o, p) < dist_xz(t[n], p) }) { near = Some(i); }
+        if dist_xz(o, p) < by - 0.05 && !crate::scene_collision::low_blocked(g, o, p) && (match near { None => true, Some(n) => dist_xz(o, p) < dist_xz(t[n], p) }) { near = Some(i); }
     }
     let ti = match near { Some(n) => n, None => return Some(here) };
     let to = t[ti];
@@ -1007,7 +1006,7 @@ fn apart_hold(g: &Game, p: V3, sam: V3, slot: V3, t: &[V3], k: f64) -> Option<V3
             let (c, sn) = (m::cos(ang), m::sin(ang));
             let (ux, uz) = ((p[0] - to[0]) / d, (p[2] - to[2]) / d);
             let x: V3 = [to[0] + (ux * c + uz * sn) * r, 0.0, to[2] + (uz * c - ux * sn) * r];
-            if !apart_bad(g, x) && !crate::scene_collision::nav_grid_is_blocked(g, x[0], x[2]) && apart_open(g, p, x)
+            if !apart_bad(g, x) && !crate::scene_collision::nav_grid_is_blocked(g, x[0], x[2]) && !crate::scene_collision::low_blocked(g, p, x)
                 && t.iter().enumerate().all(|(i, &o)| i == ti || dist_xz(o, x) >= by - 0.05) && dist_xz(sam, x) >= by - 0.05
             {
                 return Some(x);
@@ -1028,7 +1027,7 @@ fn squad_orders_apart_slot(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
         if o != gd && !crate::condition::down(g, g.gd[o].ch) && bb.post.is_some() { t.push(bb.goal); }
     }
     let mut any = false;
-    for &q in t.iter() { if dist_xz(q, slot) < k && apart_open(g, q, slot) { any = true; break; } }
+    for &q in t.iter() { if dist_xz(q, slot) < k && !crate::scene_collision::low_blocked(g, q, slot) { any = true; break; } }
     if !any { return None; }
     if let Some(&row) = g.sets[g.seat].orders.apart_of.get(a) {
         if dist_xz(row.at, slot) < 0.5 {
@@ -1048,7 +1047,7 @@ fn squad_orders_apart_slot(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
     let tight = g.k.orders.file_tight;
     let tries: Vec<f64> = if tight < k { vec![k, tight] } else { vec![k] };
     for ap in tries {   // (doorwayClearNear itself wants a clear line from the place to the point)
-        q = crate::doorway::doorway_clear_near(g, slot, &mut |g: &mut Game, x: V3| apart_bad(g, x) || !apart_open(g, x, sam), Some(&taken), Some(ap), Some(p));
+        q = crate::doorway::doorway_clear_near(g, slot, &mut |g: &mut Game, x: V3| apart_bad(g, x) || crate::scene_collision::low_blocked(g, x, sam), Some(&taken), Some(ap), Some(p));
         if q.is_none() { q = crate::doorway::doorway_clear_near(g, slot, &mut |g: &mut Game, x: V3| apart_bad(g, x), Some(&taken), Some(ap), Some(p)); }
         if q.is_some() { by = ap; break; }
     }

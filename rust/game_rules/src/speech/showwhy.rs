@@ -50,11 +50,6 @@ fn st_row(g: &mut Game, pl: PlayerId) -> &mut crate::showwhy::State {
     g.m.showwhy.states.get_mut(pl).unwrap()
 }
 
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// His words are over him this frame, asked of the bubble's clock.
 fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
     match &g.gd[gd].bubble {
@@ -225,14 +220,14 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let (pos, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
     let door = g.dr[g.tab.doortools_door_op[op].door].frame_centre;
-    let d0 = flat(pos, door);
+    let d0 = v3::dist_xz(pos, door);
     for &o in &g.tab.doortools_door_op[op].men {
         if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         let o_pos = g.ch[g.gd[o].ch].pos;
-        let d = flat(pos, o_pos);
-        if d < 0.3 || d > reach || flat(o_pos, door) > d0 - 0.1 {
+        let d = v3::dist_xz(pos, o_pos);
+        if d < 0.3 || d > reach || v3::dist_xz(o_pos, door) > d0 - 0.1 {
             continue;
         }
         if m::abs(v3::wrap_angle(m::atan2(o_pos[0] - pos[0], o_pos[2] - pos[2]) - yaw)) < 1.0 {
@@ -261,7 +256,7 @@ fn op_mem(g: &mut Game, op: DoorOpId) -> &mut OpMem { g.m.showwhy.op_mem.get_mut
 fn stack_begins(g: &mut Game, op: DoorOpId, men: &[GuardId]) {
     let (k, t) = (g.k.showwhy, g.time);
     let (lead, door) = { let o = &g.tab.doortools_door_op[op]; (o.lead, g.dr[o.door].frame_centre) };
-    let mut file: Vec<(GuardId, f64)> = men.iter().filter(|&&gd| gd != lead && !crate::condition::down(g, g.gd[gd].ch)).map(|&gd| (gd, flat(g.ch[g.gd[gd].ch].pos, door))).collect();
+    let mut file: Vec<(GuardId, f64)> = men.iter().filter(|&&gd| gd != lead && !crate::condition::down(g, g.gd[gd].ch)).map(|&gd| (gd, v3::dist_xz(g.ch[g.gd[gd].ch].pos, door))).collect();
     js::sort_by(&mut file, |a, b| b.1 - a.1);
     let mut r = OpMem { t, turns: Vec::new(), fist_t: 0.0, fists: 0 };
     let mut at = t + 0.15;
@@ -401,7 +396,7 @@ fn hurt_owed(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     if r.lag_n as f64 >= k.lag_max || t < r.lag_t { return; }
     let pc = g.pl[g.player].ch;
-    if crate::orders::rows::is(g, a, crate::orders::Is::Follows) && g.pl[g.player].sprinting && !crate::condition::down(g, pc) && flat(g.ch[c].pos, g.ch[pc].pos) > k.lag_m {
+    if crate::orders::rows::is(g, a, crate::orders::Is::Follows) && g.pl[g.player].sprinting && !crate::condition::down(g, pc) && v3::dist_xz(g.ch[c].pos, g.ch[pc].pos) > k.lag_m {
         owe(mem(g, gd), LINE_LAG, Why::Hurt, t + 3.0);
     }
 }
@@ -488,6 +483,6 @@ mod tests {
     /// A FAILURE MEANS: a man on the floor above counts as far off: every range here is on the floor.
     #[test]
     fn a_range_is_on_the_floor() {
-        assert_eq!(flat([0.0, 0.0, 0.0], [3.0, 9.0, 4.0]), 5.0);
+        assert_eq!(v3::dist_xz([0.0, 0.0, 0.0], [3.0, 9.0, 4.0]), 5.0);
     }
 }

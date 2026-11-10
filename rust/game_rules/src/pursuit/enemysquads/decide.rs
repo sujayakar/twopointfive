@@ -726,7 +726,6 @@ fn send(g: &mut Game, q: EnemysquadsSquadId, d: RoomfightDefId, role: SentRole, 
     }
 }
 fn squad_name(g: &Game, q: EnemysquadsSquadId) -> String { g.tab.enemysquads_squad[q].name.clone() }
-fn count_word(n: usize) -> String { match crate::enemysquads::count().get(n) { Some(w) => w.clone(), None => format!("{}", n) } }
 
 /// a squad's word: which of the three, by the situation, never a die
 pub(super) fn decide(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
@@ -896,7 +895,7 @@ fn set_off(g: &mut Game, q: EnemysquadsSquadId, sit: &Situation, word: &Answer) 
         }
         SquadChoice::Flank => {
             for (i, d) in word.go.iter().enumerate() { send(g, q, *d, SentRole::Flank, Some(&word.ways[i]), sit); }
-            format!("{}: {} going around — {}!", squad_name(g, q), count_word(word.go.len()), if sit.lost { "cut them off" } else { "keep them there" })
+            format!("{}: {} going around — {}!", squad_name(g, q), super::radio_check::count_word(word.go.len()), if sit.lost { "cut them off" } else { "keep them there" })
         }
     };
     let gd0 = g.tab.roomfight_def[word.go[0]].gd;

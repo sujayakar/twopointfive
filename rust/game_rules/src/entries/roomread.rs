@@ -10,13 +10,6 @@ use alloc::{string::String, vec, vec::Vec};
 use crate::Num;
 use crate::scene_collision::{nav_grid_idx, nav_grid_is_blocked};
 
-/// a Map's key: the language's Map holds −0 and 0 as one key, `Num` tells them apart by bits
-#[inline]
-fn key(i: f64) -> Num { Num(i + 0.0) }
-
-/// Distance in plan.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// a nav cell on the grid and not blocked
 fn free(g: &Game, x: f64, z: f64) -> bool {
     let (w, h) = (g.col.nav.w, g.col.nav.h);
@@ -46,12 +39,12 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
 struct Lines { opens: Vec<CoverOpeningId>, doors: JsMap<Num, DoorId>, lines: JsMap<Num, CoverOpeningId> }
 impl Lines {
     /// A cell of the space: on none of them.
-    fn inner(&self, i: f64) -> bool { !self.doors.has(key(i)) && !self.lines.has(key(i)) }
+    fn inner(&self, i: f64) -> bool { !self.doors.has(crate::Num(i + 0.0)) && !self.lines.has(crate::Num(i + 0.0)) }
     /// The way out whose line a cell is on.
     fn way(&self, g: &Game, i: f64) -> Option<CoverOpeningId> {
-        match self.doors.get(key(i)) {
+        match self.doors.get(crate::Num(i + 0.0)) {
             Some(&d) => self.opens.iter().copied().find(|&q| g.tab.cover_opening[q].door == Some(d)),
-            None => self.lines.get(key(i)).copied(),
+            None => self.lines.get(crate::Num(i + 0.0)).copied(),
         }
     }
 }
@@ -60,13 +53,13 @@ fn opening_lines(g: &Game, opens: &[CoverOpeningId], p: V3, reach: f64) -> JsMap
     let mut lines: JsMap<Num, CoverOpeningId> = JsMap::new();
     for &o in opens {
         let q = &g.tab.cover_opening[o];
-        if q.door.is_some() || flat(q.at, p) > reach + 3.0 { continue; }
+        if q.door.is_some() || v3::dist_xz(q.at, p) > reach + 3.0 { continue; }
         let (tx, tz, half) = (-q.n[1], q.n[0], m::max(0.0, q.half - 0.34));
         let k = m::ceil(half / cs) + 1.0;
         let mut a = -k;
         while a <= k {
             let (x, z) = (q.at[0] + tx * a * cs * 0.5, q.at[2] + tz * a * cs * 0.5);
-            if !(m::abs(a * cs * 0.5) > half + 1e-6 || nav_grid_is_blocked(g, x, z)) { lines.set(key(nav_grid_idx(g, m::floor(x / cs), m::floor(z / cs))), o); }
+            if !(m::abs(a * cs * 0.5) > half + 1e-6 || nav_grid_is_blocked(g, x, z)) { lines.set(crate::Num(nav_grid_idx(g, m::floor(x / cs), m::floor(z / cs)) + 0.0), o); }
             a += 1.0;
         }
     }
@@ -98,19 +91,19 @@ fn flooded(g: &Game, x: &Lines, from: f64, reach: f64) -> (Vec<f64>, JsMap<Num, 
     let mut cells: Vec<f64> = vec![from];
     let mut steps: JsMap<Num, f64> = JsMap::new();
     let mut edge: JsMap<CoverOpeningId, f64> = JsMap::new();
-    steps.set(key(from), 0.0);
+    steps.set(crate::Num(from + 0.0), 0.0);
     let mut at = 0;
     while at < cells.len() {
         let c = cells[at];
         at += 1;
         let (cx, cz) = (js::rem(c, w), js::to_i32(c / w) as f64);
-        let s = *steps.get(key(c)).unwrap();
+        let s = *steps.get(crate::Num(c + 0.0)).unwrap();
         for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
             if !free(g, cx + dx, cz + dz) { continue; }
             let n = nav_grid_idx(g, cx + dx, cz + dz);
             if let Some(o) = x.way(g, n) { if !edge.has(o) { edge.set(o, c); } continue; }
-            if s >= max || steps.has(key(n)) { continue; }
-            steps.set(key(n), s + 1.0);
+            if s >= max || steps.has(crate::Num(n + 0.0)) { continue; }
+            steps.set(crate::Num(n + 0.0), s + 1.0);
             cells.push(n);
         }
     }
@@ -124,7 +117,7 @@ fn way_out(g: &mut Game, o: CoverOpeningId, c: f64, p: V3, ring: &JsSet<String>)
     let s = if (e[0] - at[0]) * n[0] + (e[2] - at[2]) * n[1] >= 0.0 { 1.0 } else { -1.0 };
     let in_n = [n[0] * s, n[1] * s];
     let beyond: V3 = [at[0] - in_n[0], 0.0, at[2] - in_n[1]];
-    let dist = flat(at, p);
+    let dist = v3::dist_xz(at, p);
     let Some(d) = door else {
         return RoomWay { o, in_n, beyond, far_known: crate::cleared::cleared_rooms_known_at(g, beyond), shut: false, locked: false, dist };
     };
@@ -143,6 +136,6 @@ mod tests {
     /// A cell's number on the grid is one key whichever sign its nought has.
     #[test]
     fn a_map_key_holds_minus_zero_as_zero() {
-        assert!(key(-0.0) == key(0.0));
+        assert!(crate::Num(-0.0 + 0.0) == crate::Num(0.0 + 0.0));
     }
 }

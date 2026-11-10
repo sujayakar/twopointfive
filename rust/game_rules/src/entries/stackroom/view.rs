@@ -30,7 +30,7 @@ fn far_cells(g: &Game, d: DoorId, side: f64) -> Vec<V3> {
         let mut dx = -n;
         while dx <= n {
             let q = [(cx + dx + 0.5) * cell, 0.0, (cz + dz + 0.5) * cell];
-            if flat(q, c) <= view_far && !nav_blocked(g, q[0], q[2]) {
+            if v3::dist_xz(q, c) <= view_far && !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
                 if crate::orders::side_of(g, d, q) != side { l.push(q); }
             }
             dx += 1.0;
@@ -94,22 +94,22 @@ fn kept_marks(g: &Game, x: &View, men: &[GuardId]) -> JsMap<usize, V3> {
     let apart = g.k.stackroom.apart;
     let mut kept: JsMap<usize, V3> = JsMap::new();
     let stood = stood_marks(g, x, men);
-    let loose: Vec<usize> = (0..x.posts.len()).filter(|i| !stood.iter().any(|q| flat(*q, x.posts[*i].pos) < SAME_M)).collect();
+    let loose: Vec<usize> = (0..x.posts.len()).filter(|i| !stood.iter().any(|q| v3::dist_xz(*q, x.posts[*i].pos) < SAME_M)).collect();
     // (only a place this rule could have dealt: by the door's own wall, no further along it than the rule reaches)
     let mut mine: Vec<V3> = stood.into_iter().filter(|&q| crate::doortools::off_of(g, x.d, q, x.side) < x.jamb_out + 0.5
-        && from_middle(g, x, q) <= x.w / 2.0 + g.k.stackroom.view_past + 0.05 && !x.posts.iter().any(|p| flat(p.pos, q) < SAME_M)).collect();
-    js::sort_by(&mut mine, |p, q| flat(*p, x.c) - flat(*q, x.c));
+        && from_middle(g, x, q) <= x.w / 2.0 + g.k.stackroom.view_past + 0.05 && !x.posts.iter().any(|p| v3::dist_xz(p.pos, q) < SAME_M)).collect();
+    js::sort_by(&mut mine, |p, q| v3::dist_xz(*p, x.c) - v3::dist_xz(*q, x.c));
     for q in mine {
         if loose.iter().all(|i| kept.has(*i)) { break; }
         if !unseen_place(g, x, q) { continue; }
-        let stands = (0..x.posts.len()).any(|i| !loose.contains(&i) && flat(x.posts[i].pos, q) < apart);
-        if stands || kept.values().any(|o| flat(*o, q) < apart) { continue; }
+        let stands = (0..x.posts.len()).any(|i| !loose.contains(&i) && v3::dist_xz(x.posts[i].pos, q) < apart);
+        if stands || kept.values().any(|o| v3::dist_xz(*o, q) < apart) { continue; }
         let h = x.hand(g, q);
         let mut free: Vec<(usize, f64)> = loose.iter().filter(|i| !kept.has(**i)).map(|&i| (i, if x.hand(g, x.posts[i].pos) == h { 0.0 } else { 1.0 })).collect();
-        js::sort_by(&mut free, |a, b| js::or(a.1 - b.1, flat(x.posts[a.0].pos, q) - flat(x.posts[b.0].pos, q)));
+        js::sort_by(&mut free, |a, b| js::or(a.1 - b.1, v3::dist_xz(x.posts[a.0].pos, q) - v3::dist_xz(x.posts[b.0].pos, q)));
         let u = free[0].0;
         // (nor a body's width from a dealt mark that will stand where it is)
-        if loose.iter().any(|&j| j != u && !kept.has(j) && flat(x.posts[j].pos, q) < apart && !in_view(g, x.d, &x.far, x.posts[j].pos)) { continue; }
+        if loose.iter().any(|&j| j != u && !kept.has(j) && v3::dist_xz(x.posts[j].pos, q) < apart && !in_view(g, x.d, &x.far, x.posts[j].pos)) { continue; }
         kept.set(u, q);
     }
     kept
@@ -121,7 +121,7 @@ fn stood_marks(g: &Game, x: &View, men: &[GuardId]) -> Vec<V3> {
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), man) else { continue };
         if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(x.d) { continue; }
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if flat(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, x.d, post, x.side) > 0.0 { stood.push(post); }
+        if v3::dist_xz(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, x.d, post, x.side) > 0.0 { stood.push(post); }
     }
     stood
 }
@@ -129,8 +129,8 @@ fn stood_marks(g: &Game, x: &View, men: &[GuardId]) -> Vec<V3> {
 fn from_middle(g: &Game, x: &View, q: V3) -> f64 { m::abs(crate::doortools::along_of(g, x.d, q) - x.w / 2.0) }
 /// A place the floor beyond does not see, a body's width off what is taken.
 fn unseen_place(g: &Game, x: &View, q: V3) -> bool {
-    !nav_blocked(g, q[0], q[2]) && on_floor(g, x.f, q) && sees(g, x.front, q) && !crate::doorway::doorway_stand(g, q)
-        && !x.taken.iter().any(|o| flat(*o, q) < g.k.stackroom.apart) && !in_view(g, x.d, &x.far, q)
+    !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && on_floor(g, x.f, q) && !crate::scene_collision::low_blocked(g, x.front, q) && !crate::doorway::doorway_stand(g, q)
+        && !x.taken.iter().any(|o| v3::dist_xz(*o, q) < g.k.stackroom.apart) && !in_view(g, x.d, &x.far, q)
 }
 
 /// A hand dealt more places than it has men to take them without crossing gives up the ones nearest the frame.
@@ -139,14 +139,14 @@ fn across_marks(g: &Game, x: &View, k: &mut Deal, men: &[GuardId]) {
     let mut on: Vec<f64> = Vec::new();
     for &man in men {
         let p = g.ch[g.gd[man].ch].pos;
-        if !(crate::doortools::off_of(g, x.d, p, x.side) > 0.0) || flat(p, x.c) > s.view_men { continue; }
+        if !(crate::doortools::off_of(g, x.d, p, x.side) > 0.0) || v3::dist_xz(p, x.c) > s.view_men { continue; }
         let a = crate::doortools::along_of(g, x.d, p);
         on.push(if a >= x.w + s.view_out { 1.0 } else if a <= -s.view_out { -1.0 } else { 0.0 });
     }
     for h in [1.0, -1.0] {
         let room = men.len() as i32 - on.iter().filter(|o| **o == -h).count() as i32;
         let mut mine: Vec<usize> = (0..x.posts.len()).filter(|&i| x.hand(g, k.at(x, i)) == h && from_middle(g, x, k.at(x, i)) < x.w / 2.0 + s.view_past + 1.0).collect();
-        js::sort_by(&mut mine, |a, b| flat(k.at(x, *a), x.c) - flat(k.at(x, *b), x.c));
+        js::sort_by(&mut mine, |a, b| v3::dist_xz(k.at(x, *a), x.c) - v3::dist_xz(k.at(x, *b), x.c));
         let over = mine.len() as i32 - room;
         let give: Vec<usize> = mine.into_iter().filter(|i| !k.kept.has(*i)).take(m::max(over as f64, 0.0) as usize).collect();
         for i in give { k.across[i] = true; }
@@ -165,7 +165,7 @@ fn ways_kept(g: &mut Game, x: &View) -> Vec<Vec<RearWaysItem>> {
 fn deal(g: &mut Game, x: &View, k: &mut Deal) -> JsMap<usize, Dealt> {
     let n = x.posts.len();
     let mut order: Vec<usize> = (0..n).filter(|i| k.moved(*i)).collect();
-    js::sort_by(&mut order, |a, b| flat(x.posts[*a].pos, x.c) - flat(x.posts[*b].pos, x.c));
+    js::sort_by(&mut order, |a, b| v3::dist_xz(x.posts[*a].pos, x.c) - v3::dist_xz(x.posts[*b].pos, x.c));
     let mut stay: JsSet<usize> = JsSet::new();
     let mut got = loop {
         match deal_round(g, x, k, &order, &stay) { Ok(got) => break got, Err(i) => { stay.add(i); } }
@@ -212,7 +212,7 @@ fn place_on(g: &mut Game, x: &View, k: &mut Deal, i: usize, h: f64, fixed: &[V3]
     let places = k.places[if h > 0.0 { 0 } else { 1 }].get_or_insert_with(|| places_on(g, x, h));
     for shy in [true, false] {
         for &(q, glass) in places.iter() {
-            if (shy && glass) || fixed.iter().any(|o| flat(*o, q) < apart) { continue; }
+            if (shy && glass) || fixed.iter().any(|o| v3::dist_xz(*o, q) < apart) { continue; }
             if k.ways[i].iter().all(|way| crate::rearwatch::rear_sees(g, q, way.o, way.front).is_some()) { return Some(q); }
         }
     }
@@ -253,7 +253,7 @@ fn as_posts(g: &Game, x: &View, got: &JsMap<usize, Dealt>) -> Vec<StackPost> {
     }
     if !got.keys().into_iter().any(|i| x.posts[i].lead) { return out; }
     let mut best = 0;
-    for i in 1..out.len() { if flat(out[i].pos, x.c) < flat(out[best].pos, x.c) { best = i; } }
+    for i in 1..out.len() { if v3::dist_xz(out[i].pos, x.c) < v3::dist_xz(out[best].pos, x.c) { best = i; } }
     for (i, p) in out.iter_mut().enumerate() { p.lead = i == best; }
     out
 }

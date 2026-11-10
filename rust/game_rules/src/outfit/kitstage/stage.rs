@@ -104,14 +104,10 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
     }
     g.kit_stage = Some(st);
     if n > 0 {
-        box_changed(g);
+        g.boxes_changed();
         let _ = crate::scene_collision::nav_grid_rebake(g, x0, z0, x1, z1);
         crate::scene_collision::sound_paths_invalidate(g);
     }
-}
-/// the game's own word that a static was written: the mirror compares them again, and what is drawn off the list sees it
-pub(super) fn box_changed(g: &mut Game) {
-    g.engine.world.geom_serial += 1.0;
 }
 pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
     for &i in hidden { if let Some(&p) = g.props.all.get(i) { crate::props::prop_system_remove(g, p); } }

@@ -27,7 +27,7 @@ fn word_row(g: &Game) -> Option<usize> {
     menu.rows.iter().position(|&d| g.tab.orders_order_def[d].word)
 }
 fn give_go(g: &mut Game, men: &[GuardId]) -> bool {
-    let p = sam_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     crate::orders::squad_orders_close(g);
     let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
     let opts = crate::orders::GiveOpts { men: Some(men.to_vec()), ..Default::default() };
@@ -100,7 +100,7 @@ fn charge_on_key(g: &mut Game, input: InputId) -> bool {
     key_taken(g, input);
     let free = free_keyed(g);
     if free.is_empty() { return true; }
-    let near = nearest_of(g, free, sam_pos(g, &crate::seats::here(g)));
+    let near = nearest_of(g, free, g.seat_pos(&crate::seats::here(g)));
     door_tools_trigger(g, near);
     true
 }

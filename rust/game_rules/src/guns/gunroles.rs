@@ -35,10 +35,6 @@ fn deal_key(i: usize, x: f64, z: f64) -> String {
     alloc::format!("0|{}|{}|{}", i, round_text(x * 10.0), round_text(z * 10.0))
 }
 
-/// `WEAPONS[id]`, for a read. A Firearm's `def` is this table's key, one row an id.
-fn row(g: &Game, id: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(id).unwrap()
-}
 /// The id of the row of his primary: `gunPrimary` without the copy of the row, for the rules here that ask only which row it is.
 fn primary_id(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
     if let Some(s) = &g.gd[gd].second {
@@ -51,13 +47,13 @@ fn primary_id(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
 }
 /// The row in his hands, `gd.weapon.def`.
 fn held_row(g: &Game, gd: GuardId) -> &crate::weapons::WeaponDef {
-    row(g, g.fa[g.gd[gd].weapon].def)
+    g.weapon(g.fa[g.gd[gd].weapon].def)
 }
 
 /// What his primary is for.
 fn gun_role(g: &crate::game::Game, gd: GuardId) -> crate::gunroles::GunRole {
     let d = primary_id(g, gd);
-    if row(g, d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
+    if g.weapon(d).cls == crate::weapons::WeaponClass::Pistol { return GunRole::Pistol; }
     role_row(d).unwrap_or(GunRole::Rifle)
 }
 
@@ -82,10 +78,10 @@ fn line_of(g: &crate::game::Game, p: V3, to: V3) -> f64 {
 /// A row of the table into a man's hands: nothing for the row he carries or one switched off.
 fn gun_hand(g: &mut crate::game::Game, gd: GuardId, id_2: crate::weapons::WeaponId) {
     let held = g.gd[gd].weapon;
-    if g.fa[held].def == id_2 || !row(g, id_2).enabled { return; }
+    if g.fa[held].def == id_2 || !g.weapon(id_2).enabled { return; }
     let route = g.gd[gd].route;
     g.tab.route[route].weapon = Some(id_2);
-    let def = row(g, id_2).clone();
+    let def = g.weapon(id_2).clone();
     let gun = crate::weapons::firearm_new(g, &def);
     g.gd[gd].weapon = gun;
     g.gd[gd].reload_t = -1.0;
@@ -155,7 +151,7 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
     }
     let mut said: Vec<String> = Vec::with_capacity(out.len());
     for o in &out {
-        let short = row(g, o.gun).short.replace(' ', "-");
+        let short = g.weapon(o.gun).short.replace(' ', "-");
         said.push(alloc::format!("{} {} ({} m)", g.gd[o.gd].callsign, short, round_text(o.line)));
     }
     out
@@ -252,7 +248,7 @@ pub fn gun_string(g: &crate::game::Game, gd: GuardId) -> f64 {
     if d != primary_id(g, gd) { return 0.0; }
     let r = gun_role(g, gd);
     if r == GunRole::Belt {
-        if let Some(b) = &row(g, d).burst { return m::round((b.min + b.max) / 2.0); }
+        if let Some(b) = &g.weapon(d).burst { return m::round((b.min + b.max) / 2.0); }
     }
     if r == GunRole::Reach { 1.0 } else { 0.0 }
 }
