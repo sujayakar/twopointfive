@@ -42,7 +42,7 @@ How to make one: makers.md. The contract is `src/objects/object.ts`; a level put
 
 # Plants (10 November)
 
-Three makers, three plants each, alone with the bench and its notes, two card rounds (three for some). Nine plants: birch, palm, ivy; hedge, pine, lavender; monstera, rose, reeds. One (birch) reaches every mark. Six more reach every mark that is the plant's own and miss only real time beside the reference. The pine shimmers (12.2 % where 8 is allowed: needles finer than a pixel) and the lavender does too far off (15.7 of 13). 33 to 52 minutes of work a maker for all three.
+Three makers, three plants each, alone with the bench and its notes, two card rounds (three for some). Nine plants: birch, palm, ivy; hedge, pine, lavender; monstera, rose, reeds. One (birch) reaches every mark. Five more (rose, reeds, monstera, ivy, palm) reach every mark that is the plant's own and miss only real time beside the reference. The hedge hardly sways (0.39 cm of 0.5, measured only at the end); the pine shimmers (12.2 % where 8 is allowed: needles finer than a pixel; its third level 1.38 of 1.3); the lavender shimmers far off (15.7 of 13) and hardly sways (0.36). 33 to 52 minutes of work a maker for all three.
 
 **The coarse levels were the easy part**: outline, cover, brightness, color and shadow held at nearly every swap from the first round, where hard objects had needed three. What was hard was the renderer and the card: a plant of 100,000 leaves takes the reference ten minutes (30,000: two to five).
 
