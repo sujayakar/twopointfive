@@ -108,7 +108,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
     let rung = if g.fog_of_war.on { quiet_rung_of_query(g, q) } else { crate::quietfog::QuietRung::Off };
     crate::quietfog::quiet_fog_start(g, q, rung);
     if let Some(wx) = crate::weather_kinds::weather_of(q) {
-        if crate::weather::weather_kind(g) != Some(wx) {
+        if g.weather.kind_now != Some(wx) {
             crate::weather::weather_set_kind_2(g, Some(wx));
         }
     }
