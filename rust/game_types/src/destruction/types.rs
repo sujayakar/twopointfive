@@ -98,14 +98,6 @@ pub struct LaneMark {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct DestructionRoundHit {
-    pub n: V3,
-    pub index: Option<f64>,
-    pub prop: Option<PropId>,
-    pub box_: Option<BoxId>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct DestructionDoorsForOpts {
     pub radius: Option<f64>,
     pub power: Option<f64>,

@@ -26,7 +26,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `player/` | `update_player`, one tick of his keys, feet, aim, guns, throws and footfalls; the cursor (`update_aim`); his rows (`build_interactables`) |
 | `noshove.rs` | a teammate falling in goes round Sam |
 | `aim.rs`, `aimweight.rs`, `aimcost.rs` | how settled a shot is, both sides; turn rate and the lagging ring; lamps need a real hit, feet cost the shot |
-| `combat/` | a round's flight (`fire_weapon_raw`), who it finds, `hit_player`, held things as boxes, cans going off |
+| `combat/` | a round (`fire_weapon_raw`), its flight and whom it finds (`round.rs`), where it lands (`lands.rs`), `hit_player`, held things as boxes, cans going off |
 | `weapons.rs` | a gun's state: magazine, chamber, modes, reload, the launcher's loads, the OCP. The rows are `rows` in `game_types/src/weapons/` |
 | `tracers.rs`, `thinline.rs` | which rounds show a streak; boxes the page draws as thin lines |
 | `gunreload.rs`, `autoreload.rs` | reload beats and cues, shell by shell on a tube gun; the dry gun starting its own |
