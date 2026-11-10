@@ -118,7 +118,7 @@ program is in, up to a cap.
 - **Compile once, and never in play.** "ideally not needing to recompile for the gear selection screen and levels", "i think we shouldn't do truly
   lazy compilation where then have stutters during gameplay".
 - **Every pass has a timer** or a row in `passtimer-exempt.ts` that says why not. A pass that rests a frame says `timer.idle`, or its row keeps its
-  last time. One frame in five is stamped and read back; whoever reads frame by frame calls `timer.ask` each frame, a script too.
+  last time.
 - **The scene group is full** on some adapters: a new storage buffer may not fit (`particles.ts` counts them).
 
 ## To change it
@@ -150,7 +150,7 @@ It says nothing of time or of how a thing looks. Say "never seen on a GPU" of an
 ## What holds it
 
 Checks (`bun run tools/qa/checks.ts <name>`): `frame-layout.ts` (the block against the struct), `shaders-check.ts` (parse, `trim`, `fold`, `inline`),
-`quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `timerreads-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
+`quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
 `settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`. By hand, on the
 module: `bun run tools/draw/doors-check.ts` (each door's share of the plan, kept).
 

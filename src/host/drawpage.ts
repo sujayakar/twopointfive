@@ -441,7 +441,6 @@ async function main(): Promise<void> {
       if (quality.early) quality.remeasure();
       if (quality.calibrating) { if (measure.calibrates(engine)) quality.calibrateTick(raw); }
       else if (raw < 0.5 && !rested && !stopped() && !measure.active) { const fresh = engine.timer.resolved !== resolved; resolved = engine.timer.resolved; gpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(rendered) : NaN; quality.sample(raw, gpuMs); }
-      if (quality.calibrating || !quality.measured || measure.reads || readout.on) engine.timer.ask();
       measure.begins(); cloud?.begins(); reel.frame(raw); frame(Math.min(1 / 20, raw) * ((window as unknown as { __timeScale?: number }).__timeScale ?? 1), undefined, !unseen()); measure.timed(told.update, told.render); cloud?.drawn(raw, gpuMs, rested); gpuMs = NaN; measure.drawn(raw, told.fps);
       if (away || room > 0) { const w = pace.sent(performance.now()), end = (): void => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(rendered) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }
       requestAnimationFrame(loop);

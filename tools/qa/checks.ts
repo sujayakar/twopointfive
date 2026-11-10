@@ -16,7 +16,7 @@ const ROWS: readonly Row[] = [
   ['materials-probes.ts', 'picture'], ['passtimer-check.ts', 'picture'], ['perf-probes.ts', 'picture'], ['portal-check.ts', 'picture'], ['quality-check.ts', 'picture'], ['rainscale-check.ts', 'picture'],
   ['rainwalls-check.ts', 'picture'], ['reflup-check.ts', 'picture'], ['rolled-check.ts', 'picture'], ['sdfrig-probes.ts', 'picture'], ['smokeline-check.ts', 'picture'],
   ['smokelook-check.ts', 'picture'], ['splitrays-check.ts', 'picture'], ['steadybounce-check.ts', 'picture'], ['sunglint-check.ts', 'picture'],
-  ['sweep-ir-check.ts', 'picture'], ['timerreads-check.ts', 'picture'],
+  ['sweep-ir-check.ts', 'picture'],
   ['shaders-check.ts', 'shaders', 'parse'], ['shaders-check.ts', 'shaders', 'trim'], ['shaders-check.ts', 'shaders', 'fold'], ['shaders-check.ts', 'shaders', 'inline'], ['shaders-check.ts', 'shaders', 'levelset'], ['shaders-check.ts', 'shaders', 'rows'],
   ['bench-check.ts', 'page'], ['framecap-check.ts', 'page'], ['gpulost-check.ts', 'page'], ['keeppage-check.ts', 'page'], ['nogpu-check.ts', 'page'], ['pace-check.ts', 'page'], ['perfrec-check.ts', 'page'], ['pipequeue-check.ts', 'page'],
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],

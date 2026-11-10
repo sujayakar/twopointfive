@@ -7,13 +7,6 @@ export const RENDER_PASSES: readonly string[] = ['composite', 'post', 'fxaa', 'g
 /** … the one of them that draws into the page's own textures, so its stamp follows its own work (read on an M4 Max under Metal against 50,000 recorded frames,
  *  2026-11-04) · and the rest, which draw to the display or after it: THEIR stamps are the ones that hold the wait */
 export const SURFACE_PASS = 'gbuffer', PRESENT_PASSES: readonly string[] = RENDER_PASSES.filter(p => p !== SURFACE_PASS);
-/** A FRAME NOBODY ASKS FOR IS ONE IN `EVERY` READ BACK: mapping a frame's stamps and adding them up costs the page as much as a pass of its own does, and the ladder
- *  judges a second at a time. Five, for a pass's own rhythm is a half, a quarter or an eighth of the frames: each of its frames comes round in turn. A slow page is
- *  read sooner, after `SLOW` ms and an odd number of frames, so that a second of it always holds a few. Whoever reads frame by frame asks (`ask`), and every frame
- *  is read for `KEEPS` ms after the last asking. */
-const EVERY = 5, SLOW = 100, KEEPS = 500;
-/** frames a GPU may have in hand: two that are further apart than this do not overlap */
-const IN_HAND = 3;
 /** One pass's raw interval in the last resolved frame: ms from that frame's earliest timestamp (see GpuTimer.lastRaw / unionMs). */
 export interface PassInterval { name: string; begin: number; end: number }
 export class GpuTimer {
@@ -24,7 +17,7 @@ export class GpuTimer {
   private names: string[] = [];
   /** passes declared idle THIS frame (idle()): reported as an explicit 0 without a query slot */
   private idles: string[] = [];
-  private pending: { buf: GPUBuffer; names: string[]; idles: string[]; frame: number } [] = [];
+  private pending: { buf: GPUBuffer; names: string[]; idles: string[] } [] = [];
   /** Smoothed ms per pass name. */
   results = new Map<string, number>();
   /** Unsmoothed ms per pass name of the last readback that resolved, and how many readbacks have resolved so far — for scripted measurement. */
@@ -36,52 +29,44 @@ export class GpuTimer {
    *  while unionMs() is the wall span the GPU was actually busy with the listed passes. Per-pass numbers stay what they are (fine for a pass measured
    *  with frames serialized; misleading for a small pass that straddled a big one). */
   lastRaw: PassInterval[] = [];
-  /** the earliest and the latest tick (ns, device timeline) of the last resolved readback, and its frame: a pair older than the one (the other, of frames too far apart to
-   *  overlap) in the NEXT readback was not written that frame */
-  private lastBeginTick: bigint = 0n; private lastEndTick: bigint = 0n; private lastFrameNo = 0;
+  /** the earliest tick (ns, device timeline) of the last resolved readback: a pair older than it in the NEXT readback was not written that frame */
+  private lastBeginTick: bigint = 0n;
   private lastSeen = new Map<string, number>(); private frameNo = 0;
-  /** this frame's stamps are written and read back */
-  private reads = false; private readAt = 0; private readMs = -1e9; private askedMs = -1e9;
   enabled: boolean;
 
-  constructor(private device: GPUDevice, enabled: boolean, private now: () => number = () => performance.now()) {
+  constructor(private device: GPUDevice, enabled: boolean) {
     this.enabled = enabled;
     if (!enabled) return;
     this.querySet = device.createQuerySet({ type: 'timestamp', count: this.capacity * 2 });
     this.resolveBuf = device.createBuffer({ size: this.capacity * 16, usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC });
   }
 
-  /** every frame is wanted, from the next on */
-  ask() { this.askedMs = this.now(); }
   beginFrame() {
     this.names.length = 0; this.idles.length = 0; this.frameNo++;
-    const now = this.now(), since = this.frameNo - this.readAt; this.reads = now - this.askedMs <= KEEPS || since >= EVERY || since % 2 === 1 && now - this.readMs >= SLOW;
-    if (this.reads) { this.readAt = this.frameNo; this.readMs = now; }
     // forget passes that stopped running (a smoke solver gone idle, removed cascades, idle probes)
     for (const [k, f] of this.lastSeen) if (this.frameNo - f > 30) { this.lastSeen.delete(k); this.results.delete(k); }
   }
 
-  /** Returns timestampWrites for a pass descriptor (or undefined when disabled/full, and on a frame that is not read back). */
+  /** Returns timestampWrites for a pass descriptor (or undefined when disabled/full). */
   pass(name: string): GPUComputePassTimestampWrites | undefined {
     if (!this.enabled || this.names.length >= this.capacity) return undefined;
-    this.lastSeen.set(name, this.frameNo); if (!this.reads) return undefined;
-    const i = this.names.length; this.names.push(name);
+    const i = this.names.length; this.names.push(name); this.lastSeen.set(name, this.frameNo);
     return { querySet: this.querySet!, beginningOfPassWriteIndex: i * 2, endOfPassWriteIndex: i * 2 + 1 };
   }
   /** Declare that `name` deliberately did no GPU work this frame (a cache resting on its off frame): it counts as having run, at an explicit 0 ms, so the
    *  smoothed `results` average the pass at the rate it really runs at. Do NOT open an empty timed pass for this instead: an empty compute pass never
    *  writes its timestamp pair, the slot keeps whatever ticks an earlier frame left there, and their difference reads as a plausible phantom cost (the
    *  half-rate cascades read at ~93 % of full rate that way until 08-10). */
-  idle(name: string) { if (!this.enabled) return; if (this.reads) this.idles.push(name); this.lastSeen.set(name, this.frameNo); }
+  idle(name: string) { if (!this.enabled) return; this.idles.push(name); this.lastSeen.set(name, this.frameNo); }
 
   /** Call after encoding all passes, before submit. */
   resolve(enc: GPUCommandEncoder) {
-    if (!this.enabled || (this.names.length === 0 && this.idles.length === 0)) return;   // (a frame that is not read back has neither)
+    if (!this.enabled || (this.names.length === 0 && this.idles.length === 0)) return;
     const n = this.names.length;
     let rb = this.readBufs.pop();
     if (!rb) rb = this.device.createBuffer({ size: this.capacity * 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
     if (n > 0) { enc.resolveQuerySet(this.querySet!, 0, n * 2, this.resolveBuf!, 0); enc.copyBufferToBuffer(this.resolveBuf!, 0, rb, 0, n * 16); }
-    this.pending.push({ buf: rb, names: this.names.slice(), idles: this.idles.slice(), frame: this.frameNo });
+    this.pending.push({ buf: rb, names: this.names.slice(), idles: this.idles.slice() });
   }
 
   /** Call after submit. Maps the oldest pending readback asynchronously. */
@@ -94,13 +79,13 @@ export class GpuTimer {
       p.buf.unmap(); this.readBufs.push(p.buf);
       const totals = new Map<string, number>(); const raw: PassInterval[] = [];
       // A pass that took a slot and then encoded nothing (or an empty pass) leaves the ticks of whatever earlier frame last used that slot. Command buffers
-      // START in order (though frames may overlap on the GPU), so a pair that begins before the first stamp of the frame READ BEFORE THIS ONE is at least two reads stale:
-      // it cost nothing this frame and must not enter the timeline or set its origin. (Where the two are next to each other a one-read-stale pair cannot be told apart
-      // from a frame that overlapped its predecessor — which is why resting passes declare idle() rather than open empty passes. Further apart, the last stamp is the line.)
+      // START in order (though frames may overlap on the GPU), so a pair that begins before the PREVIOUS frame's first stamp is at least two frames stale:
+      // it cost nothing this frame and must not enter the timeline or set its origin. (One-frame-stale pairs cannot be told apart from a frame that
+      // overlapped its predecessor — which is why resting passes declare idle() rather than open empty passes.)
       // A never-written slot resolves to zeros (the query set's initial state): the same nothing.
-      const n = Math.max(1, p.frame - this.lastFrameNo), fence = n > IN_HAND ? this.lastEndTick : this.lastBeginTick; let t0: bigint | null = null; this.lastFrameNo = p.frame;
+      const fence = this.lastBeginTick; let t0: bigint | null = null;
       const stale = (b: bigint, e: bigint) => b < fence || (b === 0n && e === 0n);
-      for (let i = 0; i < p.names.length; i++) { const b = t[i * 2], e = t[i * 2 + 1]; if (e < b || stale(b, e)) continue; if (t0 === null || b < t0) t0 = b; if (e > this.lastEndTick) this.lastEndTick = e; }
+      for (let i = 0; i < p.names.length; i++) { const b = t[i * 2], e = t[i * 2 + 1]; if (e >= b && !stale(b, e) && (t0 === null || b < t0)) t0 = b; }
       if (t0 !== null) this.lastBeginTick = t0;
       for (let i = 0; i < p.names.length; i++) {
         const b = t[i * 2], e = t[i * 2 + 1];
@@ -111,9 +96,8 @@ export class GpuTimer {
         const begin = Number(b - t0!) / 1e6; raw.push({ name: p.names[i], begin, end: begin + ms });
       }
       for (const k of p.idles) if (!totals.has(k)) totals.set(k, 0);   // resting passes: an honest zero this frame
-      const keep = 0.9 ** n;   // (eased by the frames gone by, however few of them were read)
-      for (const [k, v] of totals) this.results.set(k, (this.results.get(k) ?? v) * keep + v * (1 - keep));
-      for (const k of this.results.keys()) if (!totals.has(k) && this.frameNo - (this.lastSeen.get(k) ?? -99) > 1) this.results.set(k, this.results.get(k)! * 0.5 ** n);   // not in this readback and not stamped lately: fade out instead of freezing at the last busy value
+      for (const [k, v] of totals) this.results.set(k, (this.results.get(k) ?? v) * 0.9 + v * 0.1);
+      for (const k of this.results.keys()) if (!totals.has(k) && this.frameNo - (this.lastSeen.get(k) ?? -99) > 1) this.results.set(k, this.results.get(k)! * 0.5);   // not in this readback and not stamped lately: fade out instead of freezing at the last busy value
       this.lastFrame = totals; this.lastRaw = raw; this.resolved++;
     }).catch(() => { /* device lost or unmapped */ });
   }
