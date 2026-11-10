@@ -515,4 +515,18 @@ mod tests {
         assert_eq!(file_cross_cost(&f, &[1, 0]), 500.0);
         assert_eq!(file_cross_cost(&f, &[0, 1]), 0.0);
     }
+
+    /// Which face of a door a place is on, as the men deal it. A failure means a man on a door's own line is told off to the far face.
+    #[test]
+    fn a_place_on_a_door_s_line_counts_as_its_plus_face() {
+        let mut g = Game::blank();
+        let d = g.dr.push(crate::doors::Door::blank());
+        let mut at = |closed_dir: f64, p: V3| {
+            (g.dr[d].def.closed_dir, g.dr[d].def.hinge) = (closed_dir, [10.0, 5.0]);
+            side_of(&g, d, p)
+        };
+        assert_eq!(at(1.5707963267948966, [9.0, 0.0, 5.0]), 1.0);
+        assert_eq!(at(1.5707963267948966, [11.0, 0.0, 5.0]), -1.0);
+        assert_eq!(at(0.0, [12.0, 0.0, 5.0]), 1.0);
+    }
 }

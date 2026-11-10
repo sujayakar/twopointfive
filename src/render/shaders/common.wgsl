@@ -155,12 +155,10 @@ const SIDE_H: i32 = 70;
 const SIDE_RES: f32 = 2.5;
 const SIDE_UNKNOWN: u32 = 14u;
 const SIDE_DOOR: u32 = 15u;
-fn sideWord(k: u32) -> u32 { if ((TRY & 1u) != 0u) { return bitcast<u32>(boxMat[SIDES_AT + (k >> 2u)][k & 3u]); } return frame.sides[k >> 2u][k & 3u]; }
-fn sideColWord(k: u32) -> u32 { if ((TRY & 1u) != 0u) { return bitcast<u32>(boxMat[SIDES_AT + 1750u + (k >> 5u)][(k >> 3u) & 3u]); } return frame.sideCols[k >> 5u][(k >> 3u) & 3u]; }
 fn sideAt(x: f32, z: f32) -> u32 {
   let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
   if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return SIDE_UNKNOWN; }
-  let k = u32(c.y * SIDE_W + c.x); let w = sideWord(k); let kind = w & 3u;
+  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u]; let kind = w & 3u;
   if (kind == 0u) { return (w >> 2u) & 31u; }
   if (kind == 3u) { return SIDE_DOOR; }   // (a doorway's cell that knows its door's line: every place's to a read of the cache; sideLine reads its line)
   if (kind != 1u) { return SIDE_UNKNOWN; }
@@ -175,13 +173,13 @@ fn sideAt(x: f32, z: f32) -> u32 {
 /// (kind 1) and a doorway's (kind 3: its door's line, or its run's own middle). The sign is the step, in cells, toward the point's own side.
 fn sideLine(c: vec2i, m: vec2f) -> vec2f {
   if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2f(0.0); }
-  let k = u32(c.y * SIDE_W + c.x); let w = sideWord(k);
+  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u];
   if ((w & 1u) == 0u) { return vec2f(0.0); }
   let d = m - ((vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025);
   return vec2f(select(0.0, select(min(d.x, -1e-6), max(d.x, 1e-6), d.x >= 0.0), ((w >> 2u) & 1u) == 1u), select(0.0, select(min(d.y, -1e-6), max(d.y, 1e-6), d.y >= 0.0), ((w >> 8u) & 1u) == 1u));
 }
 /// is cell `c` a doorway's that knows its line (kind 3)
-fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (sideWord(k) & 3u) == 3u; }
+fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (frame.sides[k >> 2u][k & 3u] & 3u) == 3u; }
 /** A SPOT STOOD `d` METRES OFF ITS OWN FACE, IN PLAN (xz; add it to the point): so that the wall a face is of does not stand in the spot's own way. WHAT LOOKS UP IS NOT
  *  STOOD OFF: it has no wall under it to be clear of, and the normal handed here is the shading normal, which on lying snow leans with the drift. At the
  *  foot of a wall such snow leans at the wall, and a step along it ended in the room behind: shown by that room's exposure (a white line along every outer
@@ -571,7 +569,7 @@ fn occludedCapsules(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> bool {
 /** the proxy's outward normal at a point p on it (traceClosest / traceClosestMesh tails) */
 fn proxyNormal(p: vec3f, cp: Capsule) -> vec3f { return roundConeNormal(p, cp.a, cp.b, cp.r, coneRb(cp)); }
 
-// ---- mesh-traced character shadows (FLAG_MESH_SHADOWS; data written by render/meshShadows.ts every frame the flag is up, layout described there;
+// ---- mesh-traced character shadows (FLAG_MESH_SHADOWS; data written by render/meshShadows.ts, a man's in every frame he moves in; layout described there;
 // meshLoad() and MESH_MAX_CHARS come from the scene prelude). The CPU twin of every function here is render/meshbvh.ts (triHit / bvhAnyHit):
 // same tolerances, same visiting order.
 const MESH_EPS_UV: f32 = 1e-5;    // barycentric slack: triangles are this much fat at their edges, so a ray through a shared edge cannot slip between both
@@ -596,9 +594,8 @@ fn meshTri(c0: u32, ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
 // leaf tests its ≤ 4 triangles. ANY hit ends it: returns that triangle's t (a real blocker in (MESH_TMIN, tmax], not necessarily the nearest),
 // or −1. Links only ever point forward, so a well-formed tree ends within N steps; `it` caps a malformed one at N regardless.
 fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 {
-  let hd = meshLoad(0u);                        // (N, NODE_BASE, TRI_BASE, T)
-  let N = hd.x;
-  let nb = hd.y + k * N * 2u; let tb = hd.z + k * hd.w * 3u;
+  let hd = meshLoad(k);                         // (his tree's nodes, where they begin, where its corners begin, its triangles)
+  let N = hd.x; let nb = hd.y; let tb = hd.z;
   var i = 0u; var it = 0u;
   loop {
     if (i >= N || it >= N) { break; }

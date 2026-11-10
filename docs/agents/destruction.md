@@ -75,11 +75,11 @@ engine.
 `cover_k` go, and a charge within `contact_m` widens its hole to `min_hole`. A man can ask first (`wall_break_would_open`).
 
 **A wall charge.** `wall_at` finds the wall under the point, or its reason in words. `wall_charge_settle` slides the place to floor on both sides.
-Sam's row is `wall_charge_sam_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
+Sam's row is `wall_charge_rows`, his job `wall_charge_sam_tick`. The squad's order is `wall_charge_order`, stepped through `Phase` (`Place`,
 `Standoff`, `Armed`, `Wait`, `Enter`) by `wall_charge_step`. The count is `carried` where the card (`kit/`) or the level's `wallCharges`
 (`issue_stage`) gave one, else `cost` door charges out of the bag (`wall_charge_price`).
 
-**The blow** (`wall_charge_blow_raw`). Who is caught on the charge's side is asked first (`wall_charge_blast_share`). Then the blast, the pall, and a
+**The blow** (`wall_charge_blow`). Who is caught on the charge's side is asked first (`wall_charge_blast_share`). Then the blast, the pall, and a
 borrowed stun can's burst (`detonate_stun`). On his own side a man inside `wallkill.near_m` dies; others go blind (`safe_secs`). Beyond the wall, only
 if a hole opened (a wall that held is still a wall), and with a line: inside `knock_m` he is struck down, inside `stun_m` blind and folded. A defender
 in that room with no line is folded out to `room_m`. A teammate past the wall is dazzled for `ours_secs`.
@@ -127,7 +127,7 @@ load puts back a clone of the whole game and its block (`savestate/`), so nothin
 ## Rules that hold
 
 - **A blast does the same to anyone.** "blowing a wall charge with me right next to it should kill me". Sam, teammates, defenders and civilians alike
-  (`blow_seat`).
+  (`guard_caught`, `civilian_caught`, `player_caught`).
 - **It catches whom the warning named.** `wall_charge_too_close` and the blow ask the same thing, before the blast, so furniture it smashes exposes
   nobody late.
 - **The men step back.** "after i place a wall charge, my guys should move away with standoff". A man told to hold stays, and the row says so.

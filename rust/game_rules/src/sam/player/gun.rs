@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// a gun's row of WEAPONS (TypeScript: `gun.def`, the object itself)
-fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
+pub(super) fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(def).unwrap()
 }
 
@@ -15,94 +15,6 @@ fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapo
 
 /// how long his line hangs over him before the man answers
 pub(super) fn sam_beat(chars: f64) -> f64 { v3::clamp(0.7 + 0.018 * chars, 0.9, 1.4) }
-
-/// he is as wide as his shoulders in a door frame: BODY_R narrows to DOOR_R on a doorway's middle line
-pub fn body_r(g: &crate::game::Game, p: V3) -> f64 {
-    let fit = door_fit();
-    let mut k: f64 = 0.0;
-    for i in 0..g.doors.list.len() {
-        let d = g.doors.list[i];
-        let fc = g.dr[d].frame_centre;
-        let dx = p[0] - fc[0];
-        let dz = p[2] - fc[2];
-        if dx * dx + dz * dz > 1.3 { continue; }
-        let c = g.dr[d].def.closed_dir;
-        let ux = m::cos(c);
-        let uz = m::sin(c);
-        let lat = m::abs(dx * ux + dz * uz);
-        let out = m::abs(dz * ux - dx * uz);
-        let kl = 1.0 - v3::clamp((lat - fit.lat[0]) / (fit.lat[1] - fit.lat[0]), 0.0, 1.0);
-        let ko = 1.0 - v3::clamp((out - fit.out[0]) / (fit.out[1] - fit.out[0]), 0.0, 1.0);
-        k = m::max(k, kl * kl * (3.0 - 2.0 * kl) * ko * ko * (3.0 - 2.0 * ko));
-    }
-    BODY_R - (BODY_R - DOOR_R) * k
-}
-
-/// the player's own collision: a sweep from the last settled spot, then the push-out
-pub(super) fn collide_player(g: &mut crate::game::Game, y1: f64) {
-    let id = g.player;
-    let c = g.pl[id].ch;
-    let mut pl = crate::player::CollideManPl { char: crate::player::CollideManPlChar { pos: g.ch[c].pos }, safe: g.pl[id].safe };
-    collide_man(g, &mut pl, y1);
-    g.ch[c].pos = pl.char.pos;
-    g.pl[id].safe = pl.safe;
-}
-
-/// the same settle for any body with a place and the spot it last stood clear at
-pub(super) fn collide_man(g: &crate::game::Game, pl: &mut crate::player::CollideManPl, y1: f64) {
-    let mut p = pl.char.pos;
-    if let Some(s) = pl.safe {
-        let dx = p[0] - s[0];
-        let dz = p[2] - s[2];
-        let n = m::min(32.0, m::ceil(m::hyp2(dx, dz) / SWEEP_STEP));
-        if n > 1.0 {
-            p[0] = s[0];
-            p[2] = s[2];
-            let mut i = 1.0;
-            while i < n {
-                p[0] += dx / n;
-                p[2] += dz / n;
-                let r = body_r(g, p);
-                crate::scene_collision::collide_circle(g, &mut p, r, 0.2, y1, Some(4.0));
-                crate::scene_collision::clamp_to_world(&mut p, BODY_R);
-                i += 1.0;
-            }
-            p[0] += dx / n;
-            p[2] += dz / n;
-        }
-    }
-    for _k in 0..4 {
-        let r = body_r(g, p);
-        crate::scene_collision::collide_circle(g, &mut p, r, 0.2, y1, Some(6.0));
-        if !crate::scene_collision::clamp_to_world(&mut p, BODY_R) { break; }
-    }
-    pl.char.pos = p;
-    pl.safe = Some([p[0], 0.0, p[2]]);
-}
-
-/// may he stand up here
-pub fn can_stand(g: &crate::game::Game) -> bool {
-    let p = g.ch[g.pl[g.player].ch].pos;
-    can_stand_at(g, p)
-}
-
-/// may he stand up at a spot: settles a copy against the band between crouched and standing head height
-pub(super) fn can_stand_at(g: &crate::game::Game, p: V3) -> bool {
-    let mut q: V3 = [p[0], p[1], p[2]];
-    let r = body_r(g, p);
-    crate::scene_collision::collide_circle(g, &mut q, r, 1.0, 1.7, Some(2.0));
-    m::hyp2(q[0] - p[0], q[2] - p[2]) < 0.01
-}
-
-/// settle the player against the statics now, swept from where he last stood clear
-pub fn settle_player(g: &mut crate::game::Game) {
-    let pl = g.player;
-    let p = g.ch[g.pl[pl].ch].pos;
-    let still = match g.pl[pl].safe { Some(s) => s[0] == p[0] && s[2] == p[2], None => false };
-    if crate::condition::down(g, g.pl[pl].ch) || still { return; }
-    let y1 = if g.pl[pl].crouch { 1.0 } else { 1.7 };
-    collide_player(g, y1);
-}
 
 /// the crouch-walk's top speed: the sneak's own
 pub(super) fn crouch_pace(g: &crate::game::Game) -> f64 { g.k.twogears.crouch }
@@ -164,18 +76,18 @@ pub(super) fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<b
     if g.pl[pl].holstered == on { return; }
     g.pl[pl].holstered = on;
     let (c, pistol, rifle) = (g.pl[pl].ch, g.pl[pl].pistol, g.pl[pl].rifle);
-    if on && crate::weapons::firearm_reloading(g, pistol) {
-        crate::weapons::firearm_cancel_reload(g, pistol);
-        crate::character::anim_cancel_reload(g, c);
-    }
-    if on && crate::weapons::firearm_reloading(g, rifle) {
-        crate::weapons::firearm_cancel_reload(g, rifle);
-        crate::character::anim_cancel_reload(g, c);
-    }
+    if on { reload_dropped(g, c, pistol); reload_dropped(g, c, rifle); }
     if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].equip_t = RIFLE_EQUIP_SECS; }
     if !quiet {
         crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
     }
+}
+
+/// a gun's reload given up half way, if it is in one
+pub fn reload_dropped(g: &mut crate::game::Game, c: CharId, gun: FirearmId) {
+    if !crate::weapons::firearm_reloading(g, gun) { return; }
+    crate::weapons::firearm_cancel_reload(g, gun);
+    crate::character::anim_cancel_reload(g, c);
 }
 
 /// the stow's way to his holster: quiet
@@ -302,24 +214,20 @@ pub(super) fn shell_break(g: &mut crate::game::Game) -> Option<crate::player::Sh
     if reloading { if !feeding { return None; } } else if crate::gunreload::shell_plan(g, rifle, None, None).is_none() { return None; }
     if g.fa[rifle].chamber == 1.0 || (g.fa[rifle].infinite && g.fa[rifle].mag.is_some()) {
         if !feeding { return None; }
-        crate::weapons::firearm_cancel_reload(g, rifle);
-        crate::character::anim_cancel_reload(g, c);
+        reload_dropped(g, c, rifle);
         return Some(crate::player::ShellBreak::Fire);
     }
     if !g.fa[rifle].mag.map_or(false, js::truthy) { return None; }
     if feeding && g.fa[rifle].feed_n == 0.0 { return Some(crate::player::ShellBreak::Bolt); }
     if crate::character::anim_kit_busy(g, c) || !crate::game::player_rifle_up(g, pl) || wall_not_stack(g, pl) { return None; }
-    if feeding {
-        crate::weapons::firearm_cancel_reload(g, rifle);
-        crate::character::anim_cancel_reload(g, c);
-    }
+    if feeding { reload_dropped(g, c, rifle); }
     if reload_in_hand(g, Some(false), Some(true)) { Some(crate::player::ShellBreak::Bolt) } else { None }
 }
 
-/// `pl.wall && pl.wall.kind !== 'stack'`
-fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool {
-    match &g.pl[pl].wall { Some(w) => w.kind != Some(crate::player::WallHoldKind::Stack), None => false }
-}
+/// Stacked on a wall with the rifle.
+pub(super) fn on_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some_and(|w| w.kind == Some(crate::player::WallHoldKind::Stack)) }
+/// On a wall some other way: his back to it.
+pub(super) fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some() && !on_stack(g, pl) }
 
 /// a tube gun's beat as the weapon's row (TypeScript: the one object, ShellRow being WeaponDef['reload'] & { exact: true })
 fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::WeaponDefReload {

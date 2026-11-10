@@ -25,18 +25,13 @@ pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     g.stats.samstun.staggered += 1;
 }
 
-/// What a fold takes out of his hands: a can wound up goes back on the belt, a quick throw is dropped, every sustained verb stops.
+/// What a fold takes out of his hands: a can wound up goes back on the belt, every sustained verb stops.
 pub fn fold_cancels(g: &mut crate::game::Game) {
     let p = g.player;
     if let Some(k) = g.pl[p].pending_throw.as_ref().map(|t| t.kind) {
-        match k {
-            crate::game::ThrowKind::Frag => g.pl[p].frags += 1.0,
-            crate::game::ThrowKind::Flash => g.pl[p].flashbangs += 1.0,
-            _ => g.pl[p].canisters += 1.0,
-        }
+        crate::player::can_back(g, p, k);
         g.pl[p].pending_throw = None;
     }
-    g.sets[g.seat].hand.throw_held = false;
     if g.pl[p].picking().is_some() || g.pl[p].wanding().is_some() { g.sets[g.seat].hand.f_held = true; }
     let mut i = 0;
     while i < 6 && crate::interact::cancel_sustained(g) { i += 1; } // one verb a call

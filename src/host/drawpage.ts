@@ -218,7 +218,7 @@ async function main(): Promise<void> {
   engine.settings.markingTexel = D.f[sky() + Sky.markTexel] || MARKING_TEXEL;
   pipelineProgress.onChange = () => { gpuStory.stage = `while compiling shaders, ${pipelineProgress.done} of ${pipelineProgress.total}`; say(`compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …`); };
   // the men: the mesh and its skinning, the tree that shadows him, the cones the rays meet of him
-  const ch = await chP, chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars.jointMats, chars.charInsts);
+  const ch = await chP, chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars);
   engine.skin = chars; engine.setMeshShadows(shadows);
   if (ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }
   if (meshAuthored(ch.mesh)) { engine.settings.charMats = true; charSlots(ch); }

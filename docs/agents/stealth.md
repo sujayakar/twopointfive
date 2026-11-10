@@ -47,7 +47,7 @@ the keys.
 A new effect asks whose it is. The place is live: walls, weather, a lamp's glow, smoke. What the team does always shows (`fog_of_war_ours_id`,
 `fog_of_war_doing`). Everybody else stands as the team last saw him.
 
-**The pass.** `fog_of_war_pass`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
+**The pass.** `fog_of_war_update`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
 teammates not blind, live stuck cameras, then a tutorial step's eye (`rails_step_eye`), up to `fog_eye_count` and never past `FOG_EYES`. Under
 `k.fog.own` a teammate counts only by an ordered lens. Each man off the team, up or down, is asked of them all: a line (`fog_of_war_sees`) through air
 that lets it (`fog_of_war_clear`: `clear_between` at `k.fog.smoke`, as a man's own eyes are held to), and `judge` writes his `Rec`. Places (the lit
@@ -150,8 +150,8 @@ the mains stop them (`alive`). `sensing` is off under a night breach and a rescu
   `wand.rs`, `chronicle.rs`). `?knob.fog.linger=1` turns one. A word: `?wallpress=0`.
 - **A new effect under the fog:** ask whose it is. The team's: `fog_of_war_doing`. Another man's: `fog_of_war_air_hides` at the source, or a place
   kept like `thing_recs`. The place's: nothing to do. No fog exception of its own, and no rule reads `g.fog_picture`.
-- **A new eye:** a `FogEye` in `fog_of_war_pass`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
-- **A new row for Sam:** a `Verb`, a row in `build_interactables` or a `*_rows` call beside it, and the owner reads the seat's `act`.
+- **A new eye:** a `FogEye` in `teams_eyes`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
+- **A new row for Sam:** a `Verb`, its thing `Offers::add`ed with the row (a file of `player/offers/`, or a `*_rows` call from `around`), and the owner reads the seat's `act`.
 - **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices.rs` and `rust/sim/src/lights.rs`, drawn by
   `device_boxes`.
 - **A price:** `ScoreK`; a new count is a `chron_*` and a `RunCounts` field.

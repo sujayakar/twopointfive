@@ -183,7 +183,7 @@ fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
         T::Reload => ok_reload(g),
         T::Launcher { on, fired } => ok_launcher(g, *on, *fired),
         T::Burst { n } => ok_burst(g, *n),
-        T::Threw { kind, quick, area } => ok_threw(g, kind.map(LessonThrown::as_str), *quick, *area, s),
+        T::Threw { kind, area } => ok_threw(g, kind.map(LessonThrown::as_str), *area, s),
         T::OrderTo { who } => ok_order_to(g, &crate::seats::here(g), *who),
         T::StackOn { door, who, set } => ok_stack_on(g, door, *who, *set),
         T::PairsOn { doors } => ok_pairs_on(g, &crate::seats::here(g), *doors),
@@ -279,14 +279,13 @@ fn ok_burst(g: &Game, n: Option<f64>) -> bool {
     crate::game::player_rifle_up(g, p) && crate::weapons::firearm_automatic(g, r) && g.fa[r].auto_idx >= n.unwrap_or(3.0)
 }
 
-fn ok_threw(g: &Game, k: Option<&str>, quick: bool, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
+fn ok_threw(g: &Game, k: Option<&str>, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
     use crate::chronicle::ChronKind;
-    let from = if quick { s.held_at } else { s.chron0 };
-    if from < 0.0 { return false; }
+    if s.chron0 < 0.0 { return false; }
     let key = area.map_or(String::new(), |a| format!("threw:{}:{},{},{},{}", k.unwrap_or("undefined"), a.x0, a.z0, a.x1, a.z1));
     if area.is_some() && js::truthy(seen_n(s, key.clone())) { return true; }   // (seen once is seen: a frag or a stun can is off the floor the frame after it goes off)
     let len = g.chronicle.events.len();
-    for i in (m::min(from, len as f64) as usize)..len {
+    for i in (m::min(s.chron0, len as f64) as usize)..len {
         let e = &g.chronicle.events[i];
         if e.kind != ChronKind::Thrown || !(k.is_none() || chron_text(e, "kind") == k) { continue; }
         let Some(a) = area else { return true };
@@ -675,7 +674,6 @@ fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Optio
         n: JsMap::new(),
         chron: ev,
         chron0: ev,
-        held_at: -1.0,
         last_order,
         last_pair,
         words: JsSet::new(),
@@ -731,12 +729,6 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
         while s.chron < len {
             add(s, format!("chron:{}", g.chronicle.events[s.chron as usize].kind.as_str()));
             s.chron += 1.0;
-        }
-        if s.held_at < 0.0 {
-            let p = crate::seats::here(g).player;
-            if g.sets[crate::seats::seat_of_man(g, p)].hand.throw_held {
-                s.held_at = len;
-            }
         }
     }
     {

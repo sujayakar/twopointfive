@@ -20,7 +20,7 @@ import { planOpeningsSteps, openAreas, openingLooks, openingReach, openingsKey, 
 import { buildWallRaster, wallRasterHandOnSteps, rasterRect, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob, type ReachOnly } from './render/reach';
 import { Steps, WHOLE, clock, spend, type Pace } from './render/steps';
 import { PLAN_PACE } from './render/planPace';
-import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
+import { MeshShadows } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
 import { Particles } from './render/particles';
@@ -823,7 +823,7 @@ export class Engine {
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)
     writeFrame(this.frameData, fp);
     // (the look prototype's two tables are 30 KB of the block and change when a door comes to rest: they are sent when they have changed, the head every frame)
-    this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSent ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0 && sidesStamp !== this.sidesSent) this.device.queue.writeBuffer(this.world.matBuf, this.world.matBuf.size - 1890 * 16, this.frameData, 928, 1890 * 16); if (sidesStamp >= 0) this.sidesSent = sidesStamp;
+    this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSent ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSent = sidesStamp;
     this.passes.sliverRays = Math.round(s.sharpSliver) >= 1 && Math.round(s.sharpSliverCap) > 0;   // (the sliver rule picks the sharp kernel's traced variant)
     if (this.sharpOn) { writeFrameOut(this.frameDataOut, this.frameData, this.outWidth, this.outHeight, decouple ? { viewProj: cam.viewProj, invViewProj: cam.invViewProj, prevViewProj: this.prevVpU } : undefined); this.device.queue.writeBuffer(this.frameBufOut, 0, this.frameDataOut, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSentOut ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSentOut = sidesStamp; this.ensureSceneBGOut(); this.passes.sceneBGOut = this.sceneBGOut; }   // the OUTPUT frame block + its scene group for the output-size passes (decoupled: with the camera's own unjittered matrices — its raster stands still)
     else this.passes.sceneBGOut = null;
@@ -840,7 +840,7 @@ export class Engine {
     const ts = (n: string) => timer.pass(n);
     this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!, ts); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
     if (this.smoke.encode) this.smoke.encode(enc, ts);
-    if (meshOn && this.world.charCount > 0) this.meshShadows!.encode(enc, Math.min(this.world.charCount, MESH_MAX_CHARS), ts('mesh'));   // skin + refit every listed character's tree from this frame's joint matrices — before the cascades, the first pass that traces
+    if (meshOn) { if (this.meshShadows!.plan(this.world.charCount)) this.meshShadows!.encode(enc, ts('mesh')); else timer.idle('mesh'); }   // skin + refit the tree of every listed character who has moved from this frame's joint matrices — before the cascades, the first pass that traces
     this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);

@@ -53,10 +53,14 @@ fn js_slice<T: Copy>(v: &[T], a: usize, b: usize) -> Vec<T> {
 
 // ---------------------------------------------------------------- the grenade's wait
 
-/// the names of who ran and is not back (fragStep's `names`)
-fn fled_names(g: &Game, op: DoorOpId) -> String {
-    let f = g.tab.doortools_door_op[op].fled.as_ref().map(|f| f.keys()).unwrap_or_default();
-    calls(g, &f)
+/// The names of who ran and is not back.
+pub(super) fn fled_names(g: &Game, fled: &Option<JsSet<GuardId>>) -> String { calls(g, &fled.as_ref().map(|f| f.keys()).unwrap_or_default()) }
+/// The first of the men who did not run says so.
+pub(super) fn fled_said(g: &mut Game, op: DoorOpId, fled: Option<JsSet<GuardId>>) {
+    door_tools_beat(g, op, &format!("the door waits: {} not back", fled_names(g, &fled)));
+    let r = &g.tab.doortools_door_op[op];
+    let who = r.men.iter().copied().find(|&m| !fled.as_ref().is_some_and(|f| f.has(m))).unwrap_or(r.lead);
+    crate::game::game_say(g, who, "hold — back on the door.", None, None);
 }
 
 /// Once a tick for an order whose door is still to be opened: who ran from a grenade and is not back, and true when the order does not move
@@ -86,7 +90,7 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
     }
     let size = g.tab.doortools_door_op[op].fled.as_ref().unwrap().len();
     if size > 0 && n0 == 0 {
-        let what = format!("grenade on the stack · {} off the door", fled_names(g, op));
+        let what = format!("grenade on the stack · {} off the door", fled_names(g, &g.tab.doortools_door_op[op].fled));
         door_tools_beat(g, op, &what);
     }
     if size == 0 && n0 > 0 {
@@ -113,12 +117,8 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
     }
     if !o.fled_said.unwrap_or(false) {
         o.fled_said = Some(true);
-        let what = format!("the door waits: {} not back", fled_names(g, op));
-        door_tools_beat(g, op, &what);
-        let o = &g.tab.doortools_door_op[op];
-        let f = o.fled.as_ref().unwrap();
-        let who = o.men.iter().copied().find(|&m| !f.has(m)).unwrap_or(o.lead);
-        crate::game::game_say(g, who, "hold — back on the door.", None, None);
+        let fled = g.tab.doortools_door_op[op].fled.clone();
+        fled_said(g, op, fled);
     }
     true
 }
@@ -361,7 +361,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
                     continue;
                 }
                 let look = door_pt(g, d, w / 2.0 - s * 0.6, 4.5, into, None);
-                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None });
                 break 'find;
             }
         }
@@ -377,7 +377,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
                     continue;
                 }
                 let look = door_pt(g, d, w / 2.0 - s * 1.2, 5.0, into, None);
-                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None });
                 break 'find;
             }
         }
@@ -393,7 +393,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
         if let Some(f) = f {
             let off = -off_of(g, d, [f[0], 0.0, f[2]], side);
             if off > 0.3 && off <= 2.5 && !out.iter().any(|o| v3::dist_xz(o.pos, f) < 0.9) {
-                out.push(crate::entrypoints::Pod { pos: [f[0], 0.0, f[2]], face: inward, watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: [f[0], 0.0, f[2]], face: inward, watch: None });
             }
         }
     }

@@ -23,7 +23,6 @@ fn nv_hand_free(g: &crate::game::Game) -> bool {
     }
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     if g.pl[p].pending_throw.is_some()
-        || g.sets[g.seat].hand.throw_held
         || crate::character::anim_in_throw(g, c)
         || crate::character::anim_reloading(g, c)
         || crate::weapons::firearm_reloading(g, pistol)
@@ -95,9 +94,8 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     if crate::game::player_rifle_up(g, p) {
         return Some(crate::character::KitItem::Rifle);
     }
-    let k = crate::game::player_canister_sel(g, p);
-    match k {
-        Some(k) if !g.pl[p].holstered && g.pl[p].dragging().is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
+    match crate::player::can_in_hand(g, p) {
+        Some(k) if g.pl[p].dragging().is_none() && crate::game::game_throw_count(g, seat, k) > 0.0 => Some(crate::character::KitItem::Can),
         _ => None,
     }
 }
@@ -212,10 +210,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     }
     // a gun leaving the hand takes its magazine change with it
     let pistol = g.pl[p].pistol;
-    if was == Some(crate::character::KitItem::Pistol) && crate::weapons::firearm_reloading(g, pistol) {
-        crate::weapons::firearm_cancel_reload(g, pistol);
-        crate::character::anim_cancel_reload(g, c);
-    }
+    if was == Some(crate::character::KitItem::Pistol) { crate::player::reload_dropped(g, c, pistol); }
     let front = kit_sling_front(g);
     g.ch[c].anim.kit_front = front;
     let r = *g.ch[c].bones.get(crate::character::Bone::HandR).unwrap();
@@ -246,7 +241,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
         Some(crate::character::KitItem::Pistol)
     } else if crate::game::player_rifle_up(g, p) {
         Some(crate::character::KitItem::Rifle)
-    } else if sel.is_some() && !g.pl[p].holstered {
+    } else if crate::player::can_in_hand(g, p).is_some() {
         Some(crate::character::KitItem::Can)
     } else {
         None

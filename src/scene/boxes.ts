@@ -429,7 +429,7 @@ export class BoxWorld {
     this.geoBuf = makeBuffer(device, maxBoxes * GEO_STRIDE * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
     this.cutOn = cutConfig.on;
     if (this.cutOn) this.cutData = new Float32Array(maxBoxes * CUT_STRIDE * 4);
-    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0) + 1890 * 16, S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
+    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
     if (WORLD.gridW + WORLD.gridH > 96) throw new Error('trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay ≤ 96 for that cap to be unreachable');
     if (maxBoxes > 65536 || maxBoxes * WORLD.gridW * WORLD.gridH >= 1 << 24) throw new Error('trace grid: packed items keep the box index in 16 bits and cell starts in 24');
     this.cellStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1 + 2 * WORLD.gridW * WORLD.gridH);

@@ -27,7 +27,7 @@ fn diceTapsBy(P: vec3f, own: u32) -> DiceTaps {
   var m: array<f32, 4>;   // (the four columns in a loop: the table's read is written into this program once, not four times)
   for (var n = 0u; n < 4u; n++) {
     let k = u32(select(g0.y, g1.y, n >= 2u)) * frame.rcC0Dims.x + u32(select(g0.x, g1.x, (n & 1u) == 1u));
-    let c = (sideColWord(k) >> ((k & 7u) * 4u)) & 15u; m[n] = select(0.0, 1.0, c == own || c >= SIDE_UNKNOWN);
+    let c = (frame.sideCols[k >> 5u][(k >> 3u) & 3u] >> ((k & 7u) * 4u)) & 15u; m[n] = select(0.0, 1.0, c == own || c >= SIDE_UNKNOWN);
   }
   let m00 = m[0]; let m10 = m[1]; let m01 = m[2]; let m11 = m[3];
   let any = m00 + m10 + m01 + m11; if (any == 4.0 || any == 0.0) { return t; }   // (all P's own: the plain read · none: a place too narrow to hold a probe, read as it was)

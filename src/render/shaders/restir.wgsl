@@ -105,7 +105,7 @@ struct RestirU {
   jitter: vec4f,  // xy = this frame's TAAU jitter in internal px, zw = the previous render's (the reservoir domain is the UNJITTERED pixel centre: traced from there, reprojected from there)
   mot: vec4f,     // MOTION (header; cfg.w bits 256 / 512 / 1024 switch its three parts): x = the screen motion (px a frame at THIS resolution — the host scales its per-1000-rows knob) under which the history keeps its full confidence · y = the floor of the cut past MOTION_RAMP × x (fraction of the M cap) · z = the motion (px) past which spatial reuse runs at the pixel · w = spare
   fwd: array<vec4u, 4>,           // last frame's light slot p → this frame's slot (byte p; 255 = that light is not uploaded this frame)
-  inv: array<vec4u, 4>,           // this frame's slot → last frame's (a byte each: 255 = the light is new this frame; + 64 = its record is last frame's, word for word)
+  inv: array<vec4u, 4>,           // this frame's slot → last frame's (a byte each: 255 = the light is new this frame; + 64 = its record is last frame's, word for word: lights.ts SLOT_SAME)
   prevLights: array<Light, 64>,   // last frame's uploaded light records (positions, cones, intensities as they were): the fresh candidate's 'target then'
 };
 @group(2) @binding(0) var<storage, read> resIn: array<vec4u>;          // last frame's reservoirs (temporal stage), 8×8-tiled: x,y = class 0, z,w = class 1 (layout: pack / unpack below); then one belief record per tile (tileRecIndex)
@@ -137,10 +137,8 @@ fn tileDark(bel: vec2u, s: u32) -> bool { return ((bel[s >> 5u] >> (s & 31u)) & 
 
 fn fwdSlot(p: u32) -> u32 { return (ru.fwd[p >> 4u][(p >> 2u) & 3u] >> ((p & 3u) * 8u)) & 255u; }
 fn invByte(s: u32) -> u32 { return (ru.inv[s >> 4u][(s >> 2u) & 3u] >> ((s & 3u) * 8u)) & 255u; }
-/** last frame's slot of the light now in slot s, or 255 */
-fn invSlot(s: u32) -> u32 { let b = invByte(s); return select(b & 63u, 255u, b == 255u); }
-/** the light in slot s is as it was last frame: what it would send a point then is what it sends it now, and need not be worked out twice (most of a level's lights, most frames) */
-fn sameLight(s: u32) -> bool { let b = invByte(s); return b != 255u && (b & 64u) != 0u; }
+/** the light with this byte is as it was last frame: what it would have sent a point then is what it sends it now (most of a level's lights, most frames) */
+fn sameLight(b: u32) -> bool { return (b & 192u) == 64u; }
 
 // ---- reservoir texel: 64 bits per class + a 12-bit view-depth signature split over the two ----
 //   word A: slot 6 | M 5 | Vq 3 | iu 4 | iv 4 | hint 4 | depth6 6      word B: W f16 | p̂ log-12 | 3 darkSlot (low 3 in class 0's word, high 3 in class 1's) | valid 1 (bit 31)
@@ -448,8 +446,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         // a cone that swept off the pixel, a dimmed panel let go at once; a light that did not reach here last frame (the cone just arrived) keeps its confidence
         // (symmetric: a light that JUMPED up — a fluorescent restrike's strokes go 5 % ↔ 100 % frame to frame — is as badly represented by the history as one that dropped;
         // one-sided, the up-strokes came through at half weight for a frame)
-        let stood = sameLight(curT[c]); var lp: Light;
-        if (stood) { pPT[c] = pT[c]; } else { lp = ru.prevLights[rSlot(twA)]; let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok); }
+        if (sameLight(invByte(curT[c]))) { pPT[c] = pT[c]; Mt[c] = min(rM(twA), mCapPix); }   // (as it was: its target is last frame's, and the ratio 1)
+        else {
+        let lp = ru.prevLights[rSlot(twA)];
+        let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok);
         if (pPT[c] > 0.0) {
           // The ratio that cuts confidence is the GEOMETRIC one — each target ÷ its light's power at the time (common.wgsl lightPower: the luminance of the uploaded colour = colour × intensity):
           // a light that only dimmed, brightened or changed hue (a fluorescent's dropout strokes every other frame, a restrike's 5 % ↔ 100 %, the lightning's decay)
@@ -458,10 +458,11 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           // from one fresh sample twice per flicker period: 1–3-spp penumbrae the shadow filter could neither trust nor clamp, i.e. blotches that pumped with the
           // tube. A cone that swept off the pixel or a lamp that moved still lets go as before.
           var r = pT[c] / pPT[c];
-          if (!stood) { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
+          { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
+        }
       }
       var raysC = raysCfg; var dimC = false;
       if (RESTIR_TRADE && dimShare > 0.0 && Wl[c] < dimShare * (Wl[0] + Wl[1] + luminance(Ut[0] + Ut[1]))) { raysC = min(raysCfg, 2u); dimC = true; }   // TRADE (dim class): this class is a sliver of the light here — the 2-ray tier's alternation for it alone
@@ -622,7 +623,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         let slot = select(pickF[c], pickG[c], j == 1u); let pj = select(pF[c], pG[c], j == 1u);
         // its target LAST frame at this point: the same light as it was then (new this frame → 0 → it enters at full weight)
         var pPrev = 0.0;
-        if (M_t > 0.0) { let ps = invSlot(slot); if (sameLight(slot)) { pPrev = pj; } else if (ps != 255u) { let evp = evalLightDirect(ru.prevLights[ps], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
+        if (M_t > 0.0) { let b = invByte(slot); if (sameLight(b)) { pPrev = pj; } else if (b != 255u) { let evp = evalLightDirect(ru.prevLights[b & 63u], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
         let wj = pj / (M_t * pPrev + Mf * pj) * Vj * Wf[c];        // m_j × p̂_c(x_j)·W_j (= Wf exactly: W_j = 1 / p(x_j) = Wf / p̂ over the set the draw ranged over) × V
         if (wj > 0.0) { wsum += wj; col += hueOf(slot) * wj; if (tileDark(bel, slot) || slot + 1u == darkSlot) { wOut += wj; colOut += hueOf(slot) * wj; } }   // (HUE SPLIT: a fresh sample of its own darkSlot light / a light the tile calls dark)
         if (rnd() * wsum < wj) { ySlot = slot; yUv = select(uvF[c], uvG[c], j == 1u); yV = Vj; yP = pj; }

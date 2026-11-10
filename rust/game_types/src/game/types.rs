@@ -694,7 +694,6 @@ pub struct Player {
     #[is(2.0)] pub flashbangs: f64,
     #[is(2.0)] pub frags: f64,
     #[is(crate::game::SlotKind::Pistol)] pub slot: crate::game::SlotKind,
-    #[is(crate::game::ThrowKind::Smoke)] pub throw_kind: crate::game::ThrowKind,
     #[is(FirearmId(0))] pub rifle: FirearmId,
     pub has_rifle: bool,
     pub equip_t: f64,
@@ -714,7 +713,6 @@ pub struct Player {
     pub nv: bool,
     pub nv_amount: f64,
     #[is(LightId(0))] pub light: LightId,
-    #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
     /// he is low because his hands' work put him there, not by his own key
     pub knee: Option<crate::player::Knee>,
@@ -906,21 +904,7 @@ pub struct PlayerSel {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlayerSelRing {
-    pub ax: f64,
-    pub ay: f64,
-    pub z: f64,
-    pub t0: f64,
-    pub lit: f64,
-    pub armed: bool,
-    pub free: Option<bool>,
-    pub more: Option<bool>,
-    pub at: Option<V3>,
-    pub ox: Option<f64>,
-    pub oy: Option<f64>,
-    pub mx: Option<f64>,
-    pub my: Option<f64>,
-    pub clear: Option<bool>,
-    pub pt: Option<f64>,
+    pub state: crate::cmdring::RingState,
     pub key: String,
     pub whistle: Option<bool>,
 }
