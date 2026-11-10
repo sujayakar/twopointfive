@@ -89,8 +89,10 @@ Glass: a pane is out of the raster and the trace grid, listed in the info block 
 mirrors, the composite its tint and bend. Outdoors: `skyRadiance` paints the sky; rain is the march and `src/picture/rain.ts`, snow `snowField.ts` and
 `src/picture/snow/`.
 
-**Quality.** `PRESETS` has `high`, `medium`, `low`, `verylow`. At boot `calibrateTick` times the live picture behind the card and `plan` picks a
-preset and scale from `COST`. Then `sample` judges a window a second under `ladderBands`; `ladderAim` is 60, the maintainer's pick. Under the aim with
+**Quality.** `PRESETS` has `high`, `medium`, `low`, `verylow`. At boot `calibrateTick` times the live picture behind the card by the GPU's busy span (the passes'
+sum counts overlaps twice) and `plan` picks a preset and scale from `COST`: a tier is drawn up to `TIER_CUT` under its own start before the tier below is picked, the hop up
+reads the same, and the first window at a tier auto went up to corrects its price for a while (`seen`). Then `sample` judges a window a second under `ladderBands`; `ladderAim`
+is 60, the maintainer's pick. Under the aim with
 the GPU the limit, the scale is cut to what the cost model says lands on target, down to `SCALE_FLOOR`, then the preset drops (`HOLD`). With room,
 `CLIMB` takes a step at a time and undoes it on a bad window. `SHED` drops sharp direct under auto before it takes pixels ("Auto drops it"). `PACED`
 leaves alone a page held to a low rate by something else. `?quality=` pins a tier, `?adapt=0` holds the one it stands on. `EVENPACE` draws at the

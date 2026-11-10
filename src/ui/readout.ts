@@ -4,7 +4,7 @@ import type { SmokeSystem } from '../smoke/smoke';
 import type { Quality } from './quality';
 import { RENDER_PASSES } from '../gpu/timer';
 
-const LS = 'twopointsix.readout', EVERY = 10, RENDERED = [...RENDER_PASSES];
+const LS = 'twopointsix.readout', EVERY = 10, RENDERED = RENDER_PASSES;
 export interface ReadoutSource { engine: Engine; smoke: SmokeSystem; quality: Quality; adapter: string; men(): number; told: { fps: number; tick: number; draw: number; update: number; render: number; hud: number } }
 export class Readout {
   on = false;
