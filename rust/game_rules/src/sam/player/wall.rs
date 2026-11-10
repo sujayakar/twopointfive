@@ -446,7 +446,7 @@ pub(super) fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, cam: CameraI
         wall_refused(g, blocked || why.blocked);
     }
 }
-fn wall_refused(g: &mut Game, blocked: bool) {
+pub(super) fn wall_refused(g: &mut Game, blocked: bool) {
     let pl = g.player;
     crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), if blocked { "can't get to that wall" } else { "no wall to take here" });
 }
