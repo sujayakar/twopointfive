@@ -27,7 +27,6 @@ pub fn hands_free(g: &mut Game) {
     put_down(g, pl);
     crate::player::cancel_reloads(g, pl);
     crate::player::throw_off(g, pl);
-    g.sets[g.seat].hand.throw_held = false;
     g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
 }
