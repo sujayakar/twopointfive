@@ -28,7 +28,7 @@ const start = freshStart({ search: '?levelFile=compound.json&roomclear&squad4&se
 
 // ---- the server, and the wire: what is sent arrives two of the clock's ticks later
 const S = await standStart(start), WAY = 2 * 1000 / 60, wire: { at: number; go: () => void }[] = [], later = (go: () => void): void => { wire.push({ at: now + WAY, go }); };
-const server = new NetServer({ now: () => now, step: c => S.step(c), word: () => S.word(), watch: () => S.watch(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
+const server = new NetServer({ now: () => now, step: c => S.step(c), word: () => S.word(), ended: () => S.ended() }, { game: 'g', build: '', start, seatKeys: ['a', 'b'] });
 const joined = (c: NetClient, keep: { conn: Conn | null }): void => { keep.conn = { send: t => { later(() => c.message(t, now)); return 1; }, close: () => { /* */ } }; };
 
 // ---- the second player
@@ -57,7 +57,7 @@ let seen = 0, asleep = false, stall = false, off = false, level = 0, worst = 0, 
 function beat(): void {
   now += 1000 / 60; while (wire.length && wire[0].at <= now) wire.shift()!.go();
   if (!stall) server.advance();
-  b.beat({ ...FIRST, k: [bKeys[Math.floor(b.sent / 50) % 4]], v: [B.ticks ? 2 : 0, 0, 12, 0, 0.96, 21, 0.6, 16 / 9, 0] }, now); b.walk({ step: c => B.step(c), word: () => B.word(), watch: () => B.watch() });
+  b.beat({ ...FIRST, k: [bKeys[Math.floor(b.sent / 50) % 4]], v: [B.ticks ? 2 : 0, 0, 12, 0, 0.96, 21, 0.6, 16 / 9, 0] }, now); b.walk({ step: c => B.step(c), word: () => B.word() });
   if (asleep) return;
   const was = game.ticks, before = row() >= 0 ? two(row() + Man.at) : null;
   if (net.tick(input, cam, canvas, off, () => { seen++; })) level++;
@@ -83,7 +83,7 @@ for (let i = 0; i < 12; i++) { stall = true; run(4); stall = false; run(8); }
 FORESEE.on = false; for (let i = 0; i < 60; i++) { asleep = true; run(2); asleep = false; run(1); } FORESEE.on = true;
 input.keys.clear(); run(60);
 const walked = seen, parted = c.bad ? `parted at tick ${c.bad.t}` : '';
-line(!c.bad && !c.broken && c.wordsOk > 20 && c.watchOk === c.wordsOk && c.watchOff === 0 && !b.bad, 'every word tick, the words of the whole game are the server\'s, on the page\'s half and on the second player\'s', parted || `${c.wordsOk} word ticks, ${c.sent} records sent, ${c.heldRun} ticks ran on a held one`);
+line(!c.bad && !c.broken && c.wordsOk > 20 && !b.bad, 'every word tick, the word of every part of the game is the server\'s, on the page\'s half and on the second player\'s', parted || `${c.wordsOk} word ticks, ${c.sent} records sent, ${c.heldRun} ticks ran on a held one`);
 line(led > 0.1 && worst < 0.02, 'his man is drawn where the look ahead has him', `at most ${led.toFixed(2)} m ahead of the game; ${(worst * 1000).toFixed(1)} mm off the look`);
 line(held > 5 && moved > 0.01 && rewound < 1e-4, 'where nothing was confirmed the others stand still', `${held} such ticks, ${(rewound * 1000).toFixed(2)} mm, where between two that were they are up to ${(moved * 1000).toFixed(0)} mm apart`);
 line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended over both', `${spreads} of them, ${(spread * 1000).toFixed(1)} mm off half way`);
