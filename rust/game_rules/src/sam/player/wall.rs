@@ -516,7 +516,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
     let busy = g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].charging.is_some()
-        || crate::game::player_choosing(g, pl) || g.pl[pl].sel.down_t >= 0.0 || g.pl[pl].throw_held || g.sets[g.seat].orders.menu.is_some()
+        || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].hand.throw_held || g.sets[g.seat].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;
@@ -561,11 +561,11 @@ pub(super) fn wall_take_yaw(g: &mut crate::game::Game, pl: PlayerId) -> bool {
 /// Where the can he is aiming will come to rest: the arc's first touch bounces and rolls on. Read only.
 pub fn throw_rest(world: &mut crate::ask::WorldAsk, pl: PlayerId) -> Option<crate::player::ThrowRest> {
     let g = world.shared();
-    let (from, v0) = match &g.pl[pl].throw_preview {
+    let (from, v0) = match &g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview {
         Some(sol) if !sol.points.is_empty() => (sol.points[0], sol.v0),
         _ => return None,
     };
-    if !(g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
+    if !(g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some())) { return None; }
     let kind = g.pl[pl].held_kind;
     let rest = crate::frag::rest_of_throw(world, kind, from, v0);
     Some(ThrowRest { at: rest.at, path: rest.path })
@@ -576,6 +576,6 @@ pub fn launch_cancel(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     if g.pl[pl].launch_held.is_none() { return false; }
     g.pl[pl].launch_held = None;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_preview = None;
     true
 }

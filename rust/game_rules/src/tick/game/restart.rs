@@ -242,8 +242,8 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     for s in seats {
         let pl = crate::cmd::seat_man(g, s);
         g.pl[pl].pending_throw = None;
-        g.pl[pl].throw_held = false;
-        g.pl[pl].throw_preview = None;
+        g.sets[s].hand.throw_held = false;
+        g.sets[s].hand.throw_preview = None;
     }
 }
 

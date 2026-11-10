@@ -456,8 +456,7 @@ fn takes_leaf(g: &mut Game, st: &KitStage, p: V3) -> bool {
 }
 /// SAM'S FRAG, AIMED THROUGH THE GATE: the leaf held open stands in the room on the hinge's side, so the way in is between the latch jamb and the leaf's free edge; the grenade is aimed from his hand through the middle of that gap. True once the arc the game has solved first lands `frag_land` inside
 fn frag_aim(g: &mut Game, st: &KitStage, b: &mut Beat) -> bool {
-    let pl = g.player;
-    let Some(pv) = g.pl[pl].throw_preview.as_ref() else { return false };
+    let Some(pv) = g.sets[g.seat].hand.throw_preview.as_ref() else { return false };
     let Some(&o) = pv.points.first() else { return false };
     let land = pv.land;
     if st.a.led.is_none() { return false; }
@@ -1416,7 +1415,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     let Some(mut b) = st.a.beat.take() else { return };
     let pl = g.player;
     st.a.cuts += 1;
-    if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; g.pl[pl].throw_held = false; }
+    if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; g.sets[g.seat].hand.throw_held = false; }
     if b.man.is_none() && g.pl[pl].charging.is_some() { crate::doortools::door_tools_cancel_sam(g); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)

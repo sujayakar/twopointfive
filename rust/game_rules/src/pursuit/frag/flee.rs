@@ -155,9 +155,9 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
         let secs = v3::lerp(st[0], st[1], v3::clamp(j.d / b.wound, 0.0, 1.0));
         let along = away(b.at, g.ch[c].pos);
         crate::samstun::stagger_player(g, secs, along);
-        if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
-        if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
-        g.pl[pl].throw_held = false;
+        if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.sets[g.seat].hand.f_held = true; }
+        if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.sets[g.seat].hand.f_held = true; }
+        g.sets[g.seat].hand.throw_held = false;
         g.pl[pl].pending_throw = None;
     }
 }
@@ -464,9 +464,9 @@ pub fn rest_of_throw(a: &mut impl crate::ask::Asker, kind: crate::game::ThrowKin
 /// comes to rest (`rest`) or where the launcher's arc ends.
 pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Option<crate::view::ThrowReachView> {
     use crate::game::ThrowKind;
-    let sol = g.pl[pl].throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
+    let sol = g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
     let burst = |at: V3| crate::view::ThrowReachView { at, kill: g.k.frag.lethal_m, hurt: m::max(g.k.frag.lethal_m, g.k.frag.wound_m), stun: 0.0 };
-    if g.pl[pl].throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some()) {
+    if g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some()) {
         let kind = g.pl[pl].held_kind;
         if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag) { return None; }
         let at = rest?;

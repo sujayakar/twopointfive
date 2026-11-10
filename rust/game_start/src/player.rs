@@ -385,9 +385,9 @@ impl Player {
         for _ in 0..60 {
             if let Some(p) = aim { self.aim(p); }
             self.tick().await;
-            let (lit, there) = self.seen(|g, s| {
+            let (lit, there) = self.seen(|_, s| {
                 let rows = &s.nearby;
-                (rows.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
+                (rows.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
             });
             if lit { self.down(game::consts::INTERACT_KEY); self.ticks(2).await; return true; }
             if there { self.down("ArrowDown"); }

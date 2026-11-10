@@ -209,8 +209,9 @@ fn sam_hit(g: &mut Game, pl: PlayerId, r: &crate::shotgun::RoundIn) {
     let (c, dir) = (r.c, r.dir);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[pl].hit_flash = 1.0;
-    if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.pl[pl].f_held = true; }
-    if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
+    let his = crate::seats::seat_of_man(g, pl);
+    if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.sets[his].hand.f_held = true; }
+    if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.sets[his].hand.f_held = true; }
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.9), None);
     if !g.god_mode {
         let seat = crate::seats::seat_of_man(g, pl);
