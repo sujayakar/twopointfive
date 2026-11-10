@@ -83,11 +83,11 @@ pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, 
         if gw > 0.0 {
             // the shoulders come round against the step and over the foot he is on; the head stays where it was looking
             let (tw, rl) = (hs * hsh[0] * DEGR, hw * hsh[0] * 0.3 * DEGR);
-            turn(d, rig, s1, q_mul(&q_yaw(tw * 0.25), &q_roll(rl * 0.3)));
-            turn(d, rig, s2, q_mul(&q_yaw(tw * 0.35), &q_roll(rl * 0.35)));
-            turn(d, rig, s3, q_mul(&q_yaw(tw * 0.4), &q_roll(rl * 0.35)));
-            turn(d, rig, nk, q_mul(&q_yaw(-tw * 0.5), &q_roll(-rl * 0.5)));
-            turn(d, rig, hd, q_mul(&q_yaw(-tw * 0.5), &q_roll(-rl * 0.5)));
+            turn(d, rig, s1, quat::mul(q_yaw(tw * 0.25), q_roll(rl * 0.3)));
+            turn(d, rig, s2, quat::mul(q_yaw(tw * 0.35), q_roll(rl * 0.35)));
+            turn(d, rig, s3, quat::mul(q_yaw(tw * 0.4), q_roll(rl * 0.35)));
+            turn(d, rig, nk, quat::mul(q_yaw(-tw * 0.5), q_roll(-rl * 0.5)));
+            turn(d, rig, hd, quat::mul(q_yaw(-tw * 0.5), q_roll(-rl * 0.5)));
         }
         if lean > 1e-5 {
             turn(d, rig, s1, q_pitch(lean * 0.4));
@@ -120,7 +120,7 @@ pub fn gaze_keep(g: usize, an: &mut Anim, dt: f64, want_w: f64, crouch: f64, spr
         v.w = damp(v.w, want_w, 10.0, dt);
         if v.w > 0.01 {
             fk.part(rig, d, list(FK_HEAD));
-            let gz = q_rotate(&fk.rot(role(HEAD)), &gaze_local);
+            let gz = quat::rotate(fk.rot(role(HEAD)), gaze_local);
             let (el, gyaw) = (asin(clamp(gz[1], -1.0, 1.0)) + nod, atan2(gz[0], gz[2]));
             let bow = (MV2.hurt.pitch + MV2.hurt.head) * clamp(hu, 0.0, 1.0) + (MV2.shaken.pitch + MV2.shaken.head) * clamp(sk, 0.0, 1.0);
             let target_el = -(GAZE_EL.stand + (GAZE_EL.crouch - GAZE_EL.stand) * crouch + (GAZE_EL.sprint - GAZE_EL.stand) * sprint * (1.0 - crouch) + bow) * DEGR;
@@ -158,15 +158,15 @@ pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64) -> u32 {
         let kk = lerp(0.5, 1.0, cr);
         let (hand_r, hand_l) = (role(HAND_R), role(HAND_L));
         let (pr0, pl0, rr0, rl0) = (fk.at(hand_r), fk.at(hand_l), fk.rot(hand_r), fk.rot(hand_l));
-        let gun_in = lerp3(&[SNEAK.gun_in_stand[0], SNEAK.gun_in_stand[1], SNEAK.gun_in_stand[2]], &[SNEAK.gun_in[0], SNEAK.gun_in[1], SNEAK.gun_in[2]], cr);
-        let gun_r = add3(pr0, gun_in);
+        let gun_in = v3::lerp3([SNEAK.gun_in_stand[0], SNEAK.gun_in_stand[1], SNEAK.gun_in_stand[2]], [SNEAK.gun_in[0], SNEAK.gun_in[1], SNEAK.gun_in[2]], cr);
+        let gun_r = v3::add(pr0, gun_in);
         // (the right hand lives at −x: in = toward the middle, never past it)
         let free_r = [pr0[0] + min(SNEAK.hand_in, max(0.0, -pr0[0])) * kk, pr0[1] - 0.02 * kk, pr0[2] - 0.03 * kk];
         let free_l = [pl0[0] - min(SNEAK.hand_in, max(0.0, pl0[0])) * kk, pl0[1] - 0.02 * kk, pl0[2] - 0.03 * kk];
         let pole_w = lerp(0.35, 0.7, r);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &lerp3(&free_r, &gun_r, r), Some(&lerp3(&[-0.05, 0.4, -1.0], &[-0.12, -1.0, -0.5], r)), pole_w, Some(&rr0), false);
-        let gun_l = add3(fk.at(hand_r), sub3(pl0, pr0));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &lerp3(&free_l, &gun_l, r), Some(&lerp3(&[0.05, 0.4, -1.0], &[0.2, -1.0, -0.35], r)), pole_w, Some(&rl0), true);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hand_r, &v3::lerp3(free_r, gun_r, r), Some(&v3::lerp3([-0.05, 0.4, -1.0], [-0.12, -1.0, -0.5], r)), pole_w, Some(&rr0), false);
+        let gun_l = v3::add(fk.at(hand_r), v3::sub(pl0, pr0));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &v3::lerp3(free_l, gun_l, r), Some(&v3::lerp3([0.05, 0.4, -1.0], [0.2, -1.0, -0.35], r)), pole_w, Some(&rl0), true);
         RAN | RAN_ALL
     })
     .unwrap_or(0);
@@ -359,9 +359,9 @@ fn left_shape(tune: &Knobs, o: &mut CreepArms) {
     let CreepArms { cr, cke, ws, dealt, .. } = *o;
     let hd = &CREEP.l;
     let (pole, fing, back, cu, th, sp) = (hd.pole, hd.fing, hd.back, hd.curl, hd.thumb, hd.spread);
-    let to = add3(
-        mad3(lerp3(&hd.at, &hd.at_c, cr), tune.kit.close.lead, cke),
-        scale3(drift(tune, o, 0.0), if dealt { 1.0 / max(0.38, lerp(tune.kit.close.left, 1.0, ws)) } else { 1.0 }),
+    let to = v3::add(
+        v3::mad(v3::lerp3(hd.at, hd.at_c, cr), tune.kit.close.lead, cke),
+        v3::scale(drift(tune, o, 0.0), if dealt { 1.0 / max(0.38, lerp(tune.kit.close.left, 1.0, ws)) } else { 1.0 }),
     );
     *o = CreepArms { pole, fing, back, cu, th, sp, to, ..*o };
 }
@@ -371,10 +371,10 @@ fn left_wide(o: &mut CreepArms) {
     let CreepArms { ws, ha, hg, swing, wsh, wide_pole, mut pole, mut fing, mut back, mut cu, mut th, mut sp, mut to, .. } = *o;
     if ws > 0.0 {
         let s = -ha * swing;
-        to = lerp3(&to, &[wsh[0] + s * CREEP.heft.out, -wsh[1] + abs(s) * CREEP.heft.up, wsh[2] + wsh[3] + s - hg * 0.1], ws);
-        pole = lerp3(&pole, &wide_pole, ws);
-        fing = lerp3(&fing, &CREEP.wide.fing, ws);
-        back = lerp3(&back, &CREEP.wide.back, ws);
+        to = v3::lerp3(to, [wsh[0] + s * CREEP.heft.out, -wsh[1] + abs(s) * CREEP.heft.up, wsh[2] + wsh[3] + s - hg * 0.1], ws);
+        pole = v3::lerp3(pole, wide_pole, ws);
+        fing = v3::lerp3(fing, CREEP.wide.fing, ws);
+        back = v3::lerp3(back, CREEP.wide.back, ws);
         cu = lerp(cu, CREEP.wide.curl, ws);
         th = lerp(th, CREEP.wide.thumb, ws);
         sp = lerp(sp, CREEP.wide.spread, ws);
@@ -386,7 +386,7 @@ fn left_wide(o: &mut CreepArms) {
 fn left_arm(hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &CreepArms) {
     let CreepArms { fix_l, sl, fl_l, pole, fing, back, cu, th, sp, to, .. } = *o;
     let r = hand_rot(&fix_l, sq(o, fing), sq(o, back));
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(sl, sq(o, to)), Some(&sq(o, pole)), 0.8, Some(&r), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &v3::add(sl, sq(o, to)), Some(&sq(o, pole)), 0.8, Some(&r), false);
     hand(d, hh, 0, &[cu + fl_l, cu + 0.05 + fl_l * 0.9, cu + 0.1 + fl_l * 0.8, cu + 0.15 + fl_l * 0.7], th + fl_l * 0.5, sp);
 }
 
@@ -399,7 +399,7 @@ fn mir(v: [f64; 3]) -> [f64; 3] {
 fn right_shape(tune: &Knobs, o: &mut CreepArms) {
     let CreepArms { cr, cke, .. } = *o;
     let hd = &CREEP.r;
-    let (a0, p0, fing, back) = (add3(lerp3(&hd.at, &hd.at_c, cr), drift(tune, o, 2.1)), hd.pole, hd.fing, hd.back);
+    let (a0, p0, fing, back) = (v3::add(v3::lerp3(hd.at, hd.at_c, cr), drift(tune, o, 2.1)), hd.pole, hd.fing, hd.back);
     let (curl, thb, spr) = (hd.curl, hd.thumb, hd.spread * (1.0 - cke));
     *o = CreepArms { fing, back, a0, p0, curl, thb, spr, ..*o };
 }
@@ -409,10 +409,10 @@ fn right_wide(o: &mut CreepArms) {
     let CreepArms { ws, ha, hg, swing, wsh, wide_pole, mut fing, mut back, mut a0, mut p0, mut curl, mut thb, mut spr, .. } = *o;
     if ws > 0.0 {
         let s = ha * swing;
-        a0 = lerp3(&a0, &[-wsh[0] - s * CREEP.heft.out, -wsh[1] + abs(s) * CREEP.heft.up, wsh[2] - wsh[3] + s - hg * 0.1], ws);
-        p0 = lerp3(&p0, &mir(wide_pole), ws);
-        fing = lerp3(&fing, &mir(CREEP.wide.fing), ws);
-        back = lerp3(&back, &mir(CREEP.wide.back), ws);
+        a0 = v3::lerp3(a0, [-wsh[0] - s * CREEP.heft.out, -wsh[1] + abs(s) * CREEP.heft.up, wsh[2] - wsh[3] + s - hg * 0.1], ws);
+        p0 = v3::lerp3(p0, mir(wide_pole), ws);
+        fing = v3::lerp3(fing, mir(CREEP.wide.fing), ws);
+        back = v3::lerp3(back, mir(CREEP.wide.back), ws);
         curl = lerp(curl, CREEP.wide.curl, ws);
         thb = lerp(thb, CREEP.wide.thumb, ws);
         spr = lerp(spr, CREEP.wide.spread, ws);
@@ -423,7 +423,7 @@ fn right_wide(o: &mut CreepArms) {
 /// The right arm's point.
 fn right_point(o: &mut CreepArms) {
     let CreepArms { fix_r, sr, fing, back, a0, p0, .. } = *o;
-    let (to, rot, pole) = (add3(sr, sq(o, a0)), hand_rot(&fix_r, sq(o, fing), sq(o, back)), sq(o, p0));
+    let (to, rot, pole) = (v3::add(sr, sq(o, a0)), hand_rot(&fix_r, sq(o, fing), sq(o, back)), sq(o, p0));
     *o = CreepArms { pole, to, rot, ..*o };
 }
 
@@ -434,9 +434,9 @@ fn by_distance(tune: &Knobs, fk: &mut Fk, o: &mut CreepArms) {
         let (s_at, s_rot, s_pole) = sheath_fist(fk, &rc_inv, &fix_r, crouch, 0.0, tune.kit.close.hover);
         // (the travel half-eased: the hand must be seen to go with every step)
         let cp = cke + (ck - cke) * 0.5;
-        to = add3(mad3(lerp3(&to, &s_at, cp), sq(o, tune.kit.close.bow), sin(PI * cke)), scale3(sq(o, drift(tune, o, 2.1)), cke));
-        rot = slerp(&rot, &s_rot, cke);
-        pole = lerp3(&pole, &s_pole, cke);
+        to = v3::add(v3::mad(v3::lerp3(to, s_at, cp), sq(o, tune.kit.close.bow), sin(PI * cke)), v3::scale(sq(o, drift(tune, o, 2.1)), cke));
+        rot = quat::slerp(rot, s_rot, cke);
+        pole = v3::lerp3(pole, s_pole, cke);
         curl = lerp(CREEP.r.curl, tune.kit.close.curl, cke);
     }
     *o = CreepArms { pole, to, curl, rot, ..*o };

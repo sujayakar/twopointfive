@@ -1,16 +1,6 @@
 //! Breath, weight and balance, and the feet last of all.
 use super::*;
 
-#[inline(always)]
-fn sign(x: f64) -> f64 {
-    if x > 0.0 {
-        1.0
-    } else if x < 0.0 {
-        -1.0
-    } else {
-        x
-    }
-}
 /// What the steps of a man's own life hand on to the ones after them.
 #[derive(Clone, Copy, Default)]
 struct Life {
@@ -250,7 +240,7 @@ fn spots_wanted(o: &mut Life) {
 /// Newly planted, set down by a teleport or far off, they lock where the pose has them.
 fn lock_again(foot: &mut [AnimFoot; 2], o: &Life) {
     let Life { teleported, w_was, want_p, want_yaw, .. } = *o;
-    let relock = w_was <= 0.01 || teleported || dist_xz(&foot[0].p, &want_p[0]) > 0.45 || dist_xz(&foot[1].p, &want_p[1]) > 0.45;
+    let relock = w_was <= 0.01 || teleported || v3::dist_xz(foot[0].p, want_p[0]) > 0.45 || v3::dist_xz(foot[1].p, want_p[1]) > 0.45;
     if relock {
         for side in 0..2 {
             foot[side].p = want_p[side];
@@ -263,7 +253,7 @@ fn lock_again(foot: &mut [AnimFoot; 2], o: &Life) {
 /// Whether a foot is far from where the pose wants it.
 fn astray(o: &Life, foot: &[AnimFoot; 2], i: usize) -> bool {
     let Life { want_p, want_yaw, dist, turn_at, .. } = *o;
-    dist_xz(&foot[i].p, &want_p[i]) > dist || abs(wrap_angle(foot[i].yaw - want_yaw[i])) > turn_at
+    v3::dist_xz(foot[i].p, want_p[i]) > dist || abs(wrap_angle(foot[i].yaw - want_yaw[i])) > turn_at
 }
 
 /// A planted foot holds its place, turns within what the ankle takes, and starts a step when the pose is far from it and it is its turn.
@@ -314,7 +304,7 @@ fn locked(f_w: &mut f64, o: &Life, f: &AnimFoot, rest_p: &[f64; 3], rest_r: &[f6
     let fw = *f_w;
     let p = [lerp(rest_p[0], mp[0], fw), lerp(rest_p[1], mp[1], fw), lerp(rest_p[2], mp[2], fw)];
     let dyaw = wrap_angle((f.yaw - yin) - foot_yaw(rest_r)) * fw;
-    (p, q_mul(&q_yaw(dyaw), rest_r))
+    (p, quat::mul(q_yaw(dyaw), *rest_r))
 }
 
 /// Both feet locked, and by how much: feet_last reads the stack's feet without this.
@@ -322,8 +312,8 @@ fn lock_offs(f_w: &mut f64, foot: &mut [AnimFoot; 2], o: &mut Life) {
     let Life { yin, fl, fr, rl, rr, .. } = *o;
     let (tl, ql) = locked(f_w, o, &foot[0], &fl, &rl);
     let (tr, qr) = locked(f_w, o, &foot[1], &fr, &rr);
-    foot[0].lock_off = sub3(tl, fl);
-    foot[1].lock_off = sub3(tr, fr);
+    foot[0].lock_off = v3::sub(tl, fl);
+    foot[1].lock_off = v3::sub(tr, fr);
     foot[0].lock_yaw = wrap_angle((foot[0].yaw - yin) - foot_yaw(&rl)) * *f_w;
     foot[1].lock_yaw = wrap_angle((foot[1].yaw - yin) - foot_yaw(&rr)) * *f_w;
     *o = Life { tl, ql, tr, qr, ..*o };
@@ -472,7 +462,7 @@ fn without(o: &Feet, i: usize, a: [f64; 3], t: [f64; 3], r: [f64; 4]) -> ([f64; 
     let un = q_yaw(-lock_yaw[i] * k);
     let o = lock_off[i];
     let at = [a[0] - o[0] * k, a[1] - o[1] * k, a[2] - o[2] * k];
-    (at, add3(at, q_rotate(&un, &sub3(t, a))), q_mul(&un, &r))
+    (at, v3::add(at, quat::rotate(un, v3::sub(t, a))), quat::mul(un, r))
 }
 
 /// Both feet as posed, and which way he faces.
@@ -539,7 +529,7 @@ fn cycle_under(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
 fn pivot_at(i: usize, o: &Feet, f: &AnimStep, on_toe: bool) -> [f64; 3] {
     let Feet { want_p, want_toe, .. } = *o;
     if f.fresh { return if on_toe { want_toe[i] } else { want_p[i] }; }
-    if on_toe { add3(f.shown, lever(o, i, f.off_yaw)) } else { f.shown }
+    if on_toe { v3::add(f.shown, lever(o, i, f.off_yaw)) } else { f.shown }
 }
 
 /// The foot set down, let go of by the cycle, or eased into the pose where a layer has the legs.
@@ -603,7 +593,7 @@ fn hold_place(foot: &mut [AnimStep; 2], i: usize, o: &Feet) {
             foot[i].yaw += sign(err_yaw) * min(abs(err_yaw) - turn_at, pivot * dt);
         }
         foot[i].off_yaw = wrap_angle(foot[i].yaw - want_yaw[i]);
-        let under = if toe_down { add3(want_p[i], lever(o, i, foot[i].off_yaw)) } else { want_p[i] };
+        let under = if toe_down { v3::add(want_p[i], lever(o, i, foot[i].off_yaw)) } else { want_p[i] };
         foot[i].off[0] = foot[i].p[0] - under[0];
         foot[i].off[2] = foot[i].p[2] - under[2];
         foot[i].off_v[0] = 0.0;
@@ -627,7 +617,7 @@ fn start_steps(foot: &mut [AnimStep; 2], o: &Feet) {
                 break;
             }
             let f = &mut foot[one];
-            f.from = add3(want_p[one], f.off);
+            f.from = v3::add(want_p[one], f.off);
             f.swing = 0.0;
             f.from_yaw = f.yaw;
             f.down = false;
@@ -647,7 +637,7 @@ fn swing_through(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     let Feet { dt, want_p, want_yaw, swing, lift, mut shown, .. } = *o;
     if foot[i].swing >= 0.0 {
         // through the air: the further off past what a step takes, the quicker the step, so a fast turn is quick steps and the foot gets there
-        foot[i].swing += dt / swing * max(1.0, dist_xz(&foot[i].from, &want_p[i]) / FEET.reach);
+        foot[i].swing += dt / swing * max(1.0, v3::dist_xz(foot[i].from, want_p[i]) / FEET.reach);
         let e = smoothstep(0.0, 1.0, min(1.0, foot[i].swing));
         let from = foot[i].from;
         shown[i] = [lerp(from[0], want_p[i][0], e), want_p[i][1] + sin(PI * min(1.0, foot[i].swing)) * lift, lerp(from[2], want_p[i][2], e)];
@@ -664,7 +654,7 @@ fn swing_through(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
             foot[i].yaw = want_yaw[i];
         }
     } else {
-        shown[i] = add3(want_p[i], foot[i].off);
+        shown[i] = v3::add(want_p[i], foot[i].off);
     }
     *o = Feet { shown, ..*o };
 }
@@ -674,12 +664,12 @@ fn foot_speed(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     let Feet { dt, s, p0, p_was, teleported, want_p, mut shown, .. } = *o;
     let free = !(foot[i].swing < 0.0 && foot[i].down);
     if dt > 1e-5 && free && !foot[i].fresh && !teleported {
-        let gone = sub3(sub3(shown[i], p0), sub3(foot[i].shown, p_was));
+        let gone = v3::sub(v3::sub(shown[i], p0), v3::sub(foot[i].shown, p_was));
         let (l, most) = (hypot3(gone[0], gone[1], gone[2]), min(FEET.top_speed + FEET.top_speed_k * s, FEET.top_speed_most) * dt);
         if l > most {
             let k = most / l;
             shown[i] = [shown[i][0] - gone[0] * (1.0 - k), shown[i][1] - gone[1] * (1.0 - k), shown[i][2] - gone[2] * (1.0 - k)];
-            if foot[i].swing < 0.0 { foot[i].off = sub3(shown[i], want_p[i]); foot[i].off_v = [0.0; 3]; }
+            if foot[i].swing < 0.0 { foot[i].off = v3::sub(shown[i], want_p[i]); foot[i].off_v = [0.0; 3]; }
         }
     }
     *o = Feet { shown, ..*o };
@@ -697,17 +687,17 @@ fn body_turn(o: &mut Feet) {
 fn foot_turn(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     let Feet { dt, p0, yin, teleported, ankle, toe, rot, lift, mut shown, body, body_back, mut placed, .. } = *o;
     let dyaw = wrap_angle((foot[i].yaw - yin) - foot_yaw(&rot[i]));
-    let mut q = q_mul(&body, &q_mul(&q_yaw(dyaw), &rot[i]));
+    let mut q = quat::mul(body, quat::mul(q_yaw(dyaw), rot[i]));
     if dt > 1e-5 && !teleported && foot[i].q_was != [0.0; 4] {
         let a = 2.0 * acos(min(1.0, abs(q[0] * foot[i].q_was[0] + q[1] * foot[i].q_was[1] + q[2] * foot[i].q_was[2] + q[3] * foot[i].q_was[3])));
         let most = FEET.top_turn * dt;
-        if a > most { q = slerp(&foot[i].q_was, &q, most / a); }
+        if a > most { q = quat::slerp(foot[i].q_was, q, most / a); }
     }
     foot[i].q_was = q;
     // and a toe that would be under the floor comes up onto it: in a step, onto it and then the step's lift over that
-    let toe_off = q_rotate(&q, &q_rotate(&[-rot[i][0], -rot[i][1], -rot[i][2], rot[i][3]], &sub3(toe[i], ankle[i])));
+    let toe_off = quat::rotate(q, quat::rotate([-rot[i][0], -rot[i][1], -rot[i][2], rot[i][3]], v3::sub(toe[i], ankle[i])));
     let up = if foot[i].swing >= 0.0 { sin(PI * min(1.0, foot[i].swing)) * lift } else { 0.0 };
     shown[i][1] = max(shown[i][1] - up, p0[1] + TOE_FLOOR_Y - toe_off[1]) + up;
-    placed[i] = (o.stands.model(&shown[i]), q_mul(&body_back, &q));
+    placed[i] = (o.stands.model(&shown[i]), quat::mul(body_back, q));
     *o = Feet { shown, placed, ..*o };
 }

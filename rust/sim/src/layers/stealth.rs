@@ -223,18 +223,18 @@ fn arm_point(st: &mut game_types::character::AnimSp, fk: &mut Fk, side: usize, o
     let Sneaks { tw_y, tw_p, cs, kl, k_hi, k_z, lt, dr, sg, kn, sf, a_, up_n, fo_n, ha_n, .. } = *o;
     let (wf, wb) = (STEALTH.walk.fwd, STEALTH.walk.back);
     let (s0, fo, ha) = (fk.at(up_n), fk.at(fo_n), fk.at(ha_n));
-    let len = (dist3(&fo, &s0) + dist3(&ha, &fo)) * 0.97;
+    let len = (v3::dist(fo, s0) + v3::dist(ha, fo)) * 0.97;
     let (d1, d2, d3) = (dr * sin(lt * 0.83 + sf * 2.1), dr * sin(lt * 1.31 + sf * 1.3 + 0.7), dr * sin(lt * 0.57 + sf * 0.9 + 1.9));
     let mut to = untwist(fk, tw_y, tw_p, [kn[0] + sg * STEALTH.idle.out + d1, max(STEALTH.idle.floor, k_hi - STEALTH.idle.below) + d2, max(kn[2] + STEALTH.idle.fwd, k_z + STEALTH.idle.lead) + d3]);
     if a_ > 0.0 {
-        to = lerp3(&to, &untwist(fk, tw_y, tw_p, [kn[0] * 0.6 + sg * wf[0], max(STEALTH.idle.floor, k_hi + wf[1]), k_z + wf[2]]), a_);
+        to = v3::lerp3(to, untwist(fk, tw_y, tw_p, [kn[0] * 0.6 + sg * wf[0], max(STEALTH.idle.floor, k_hi + wf[1]), k_z + wf[2]]), a_);
     } else if a_ < 0.0 {
-        to = lerp3(&to, &[s0[0] + sg * wb[0], s0[1] + wb[1], s0[2] + wb[2]], -a_);
+        to = v3::lerp3(to, [s0[0] + sg * wb[0], s0[1] + wb[1], s0[2] + wb[2]], -a_);
     }
     if side == 0 && cs > 0.003 {
         let behind = [s0[0] + wb[0], s0[1] + wb[1] + 0.06, s0[2] + wb[2] * STEALTH.creep.swing];
         let ahead = untwist(fk, tw_y, tw_p, [kl[0] * 0.5 + STEALTH.creep.at[0], max(STEALTH.creep.floor, k_hi + STEALTH.creep.at[1]), k_z + STEALTH.creep.at[2]]);
-        to = lerp3(&to, &lerp3(&behind, &ahead, st.lead), cs);
+        to = v3::lerp3(to, v3::lerp3(behind, ahead, st.lead), cs);
     }
     // (beyond the arm: reached toward, never locked out)
     let (dx, dy, dz) = (to[0] - s0[0], to[1] - s0[1], to[2] - s0[2]);
@@ -265,11 +265,11 @@ fn nod_lift(n: f64) -> f64 {
 /// as it will be drawn (nvHead), so the gaze stays in its own upright plane
 fn nv_tip(d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
     let hd = role(HEAD);
-    let gh = q_mul(head, rest_inv);
-    let z = q_rotate(&gh, &[0.0, 0.0, 1.0]);
+    let gh = quat::mul(*head, *rest_inv);
+    let z = quat::rotate(gh, [0.0, 0.0, 1.0]);
     let l = hypot2(z[0], z[2]);
-    let ax = if l > 1e-4 { [z[2] / l, 0.0, -z[0] / l] } else { q_rotate(&gh, &[1.0, 0.0, 0.0]) };
-    set_unit(d, hd, &q_mul(&own_rot(d, hd), &axis_angle(&q_rotate(&conj(*head), &ax), nod)));
+    let ax = if l > 1e-4 { [z[2] / l, 0.0, -z[0] / l] } else { quat::rotate(gh, [1.0, 0.0, 0.0]) };
+    set_unit(d, hd, &quat::mul(own_rot(d, hd), quat::axis_angle(quat::rotate(quat::conj(*head), ax), nod)));
 }
 /// The look under a door: on the pose at `at` (a copy of the finished pose, which is then MADE the pose) he shuffles in and sinks with his feet where
 /// they were, the trunk folds, the head bows at the foot of the leaf, a goggle nod under way is posed on it, and the hands go low: the right wrist at
@@ -314,9 +314,9 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
             let lift = *nod_up == Some(true);
             let mut tip = if lift { nod_lift(nod) } else { nod };
             fk_run(rig, d, fk.rot, fk.pos);
-            let head = q_mul(&twist_of(tw[2], tw[3]), &q_mul(&twist_of(tw[0], tw[1]), &fk.rot(hd)));
+            let head = quat::mul(twist_of(tw[2], tw[3]), quat::mul(twist_of(tw[0], tw[1]), fk.rot(hd)));
             if !lift && nod > 0.0 {
-                tip = min(nod, max(0.0, STEALTH.cable.nod_max * DEGR - asin(clamp(-q_rotate(&q_mul(&head, &hri), &[0.0, 0.0, 1.0])[1], -1.0, 1.0))));
+                tip = min(nod, max(0.0, STEALTH.cable.nod_max * DEGR - asin(clamp(-quat::rotate(quat::mul(head, hri), [0.0, 0.0, 1.0])[1], -1.0, 1.0))));
             }
             nv_tip(d, &head, &hri, tip);
             *nv_a = tip;

@@ -19,6 +19,7 @@
 use game_types::glassbreak::{Fragment, FragmentCause, FragmentFall, FragmentKind};
 use game_types::glasspen::PaneType;
 use game_types::knobs::Knobs;
+use game_types::v3;
 use alloc::vec::Vec;
 use crate::falls::{self, FallSound, FallTold};
 use crate::glass::{classify_row, dice_out, site_of, GW_COLS, GW_CRATER, GW_DSEED, GW_FLAGS, GW_GOING, GW_N, GW_OPEN, GW_ROWS, GW_SEED, G_DICE, G_DICE_AT, G_GONE, G_RUN, G_SITE};
@@ -484,35 +485,6 @@ fn normal_of(r: &Row) -> [f64; 3] {
     } else {
         [r.cs, 0.0, -r.sn]
     }
-}
-#[inline]
-fn add3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-#[inline]
-fn sub3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-#[inline]
-fn scale3(a: [f64; 3], s: f64) -> [f64; 3] {
-    [a[0] * s, a[1] * s, a[2] * s]
-}
-#[inline]
-fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-/// v3.normalize: a length of nought (or none) divides by one
-#[inline]
-pub fn norm3(a: [f64; 3]) -> [f64; 3] {
-    let mut l = hypot3(a[0], a[1], a[2]);
-    if l == 0.0 || l != l {
-        l = 1.0;
-    }
-    [a[0] / l, a[1] / l, a[2] / l]
-}
-#[inline]
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
-    a + (b - a) * t
 }
 /// The nearest point of a box (yawed, no more) to p
 #[inline]
@@ -1018,14 +990,14 @@ fn release_crater(c: &mut Ctx, ri: usize, i: usize, cause: u32, tune: &Knobs) ->
         }
         let (area, cu, cv) = poly_area(&g.p[..g.n]);
         let nr = normal_of(r);
-        let out_sign = if dot3(nr, r.last_dir) >= 0.0 { 1.0 } else { -1.0 };
-        let nn = scale3(nr, out_sign);
+        let out_sign = if v3::dot(nr, r.last_dir) >= 0.0 { 1.0 } else { -1.0 };
+        let nn = v3::scale(nr, out_sign);
         let seed = r.w[GW_SEED + i];
         let h = hash01(seed as f64);
         (
             g.n,
             g.p,
-            (Fr { kind: K_PIECE, centre: to_world(r, cu, cv), normal: nn, area, velocity: add3(scale3(nn, 2.5 + 2.0 * h), [0.0, -0.2, 0.0]), spin: [0.0, 0.0, 0.0], grain: 0.004, cause, seed: seed ^ 0xC2A7E5, key: (i * FRAGS_PER_SITE) as f64 }, out_sign),
+            (Fr { kind: K_PIECE, centre: to_world(r, cu, cv), normal: nn, area, velocity: v3::add(v3::scale(nn, 2.5 + 2.0 * h), [0.0, -0.2, 0.0]), spin: [0.0, 0.0, 0.0], grain: 0.004, cause, seed: seed ^ 0xC2A7E5, key: (i * FRAGS_PER_SITE) as f64 }, out_sign),
         )
     };
     let rev = outline_rev(pn(c.g).row(ri), frag.1);
@@ -1053,13 +1025,13 @@ fn release_frag(c: &mut Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64;
         let cw = to_world(r, f.cu, f.cv);
         let mut dir_out = r.last_dir;
         if let Some(fr) = from {
-            let d = sub3(cw, fr);
+            let d = v3::sub(cw, fr);
             if hypot3(d[0], d[1], d[2]) > 1e-6 {
-                dir_out = norm3(d);
+                dir_out = v3::normalize(d);
             }
         }
-        let out_sign = if dot3(n, dir_out) >= 0.0 { 1.0 } else { -1.0 };
-        let nn = scale3(n, out_sign);
+        let out_sign = if v3::dot(n, dir_out) >= 0.0 { 1.0 } else { -1.0 };
+        let nn = v3::scale(n, out_sign);
         let key = r.key as f64;
         let fd = fid as f64;
         let (h1, h2, h3) = (hash01(key * 7919.0 + fd * 131.0), hash01(key * 104729.0 + fd * 193.0), hash01(fd * 7.0 + key));
@@ -1072,8 +1044,8 @@ fn release_frag(c: &mut Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64;
         } else {
             tune.glassbreak.out * (0.15 + 0.5 * h3)
         };
-        let base = if (cause == C_BLAST || cause == C_RAKE) && from.is_some() { scale3(norm3(add3(scale3(dir_out, 0.7), scale3(nn, 0.5))), speed) } else { scale3(nn, speed) };
-        let velocity = add3(base, [0.0, -0.2 - 0.6 * h1, 0.0]);
+        let base = if (cause == C_BLAST || cause == C_RAKE) && from.is_some() { v3::scale(v3::normalize(v3::add(v3::scale(dir_out, 0.7), v3::scale(nn, 0.5))), speed) } else { v3::scale(nn, speed) };
+        let velocity = v3::add(base, [0.0, -0.2 - 0.6 * h1, 0.0]);
         let spin = tune.glassbreak.spin;
         let seed = point_seed(r.key, cw[0], cw[1], cw[2]) ^ fid;
         (
@@ -1195,14 +1167,14 @@ fn release_clump(c: &mut Ctx, ri: usize, d: &Dice, cl: pattern::Clump, tune: &Kn
     let (fr, rev) = {
         let r = pn(c.g).row(ri);
         let n = normal_of(r);
-        let out_sign = if dot3(n, r.last_dir) >= 0.0 { 1.0 } else { -1.0 };
-        let nn = scale3(n, out_sign);
+        let out_sign = if v3::dot(n, r.last_dir) >= 0.0 { 1.0 } else { -1.0 };
+        let nn = v3::scale(n, out_sign);
         let (key, ck) = (r.key as f64, cl.k as f64);
         let (h1, h2, h3) = (hash01(key * 7919.0 + ck * 131.0), hash01(key * 104729.0 + ck * 193.0), hash01(ck * 7.0 + key));
         let rad = js_max(1e-3, hypot2(cu - d.u, cv - d.v));
         let (a, b) = (to_world(r, 0.0, 0.0), to_world(r, (cu - d.u) / rad, (cv - d.v) / rad));
-        let spread = sub3(b, a);
-        let velocity = add3(add3(scale3(nn, tune.glassbreak.out * (0.3 + 0.9 * h1)), scale3(spread, 0.5 * h2)), [0.0, -0.3 - 0.5 * h3, 0.0]);
+        let spread = v3::sub(b, a);
+        let velocity = v3::add(v3::add(v3::scale(nn, tune.glassbreak.out * (0.3 + 0.9 * h1)), v3::scale(spread, 0.5 * h2)), [0.0, -0.3 - 0.5 * h3, 0.0]);
         let spin = tune.glassbreak.spin;
         let centre = to_world(r, cu, cv);
         (
@@ -1257,14 +1229,14 @@ fn drop_all(c: &mut Ctx, ri: usize, d: &Dice, tune: &Knobs) {
         let (fr, rev) = {
             let r = pn(c.g).row(ri);
             let nr = normal_of(r);
-            let out_sign = if dot3(nr, r.last_dir) >= 0.0 { 1.0 } else { -1.0 };
-            let nn = scale3(nr, out_sign);
+            let out_sign = if v3::dot(nr, r.last_dir) >= 0.0 { 1.0 } else { -1.0 };
+            let nn = v3::scale(nr, out_sign);
             let (key, bd) = (r.key as f64, b as f64);
             let (h1, h3) = (hash01(key * 7919.0 + bd * 131.0), hash01(bd * 7.0 + key));
             let near = js_max(0.0, 1.0 - hypot2(cu - d.u, cv - d.v) / 0.6);
             let spin = tune.glassbreak.spin;
             (
-                Fr { kind: K_CLUMP, centre: to_world(r, cu, cv), normal: nn, area: n[b] as f64 * du * dv, velocity: add3(scale3(nn, tune.glassbreak.out * (0.1 + 0.25 * h1 + 0.8 * near)), [0.0, -0.3 - 0.5 * h3, 0.0]), spin: [(h1 - 0.5) * spin, 0.0, (h3 - 0.5) * spin], grain: tune.glassbreak.dice_grain, cause: C_DICE, seed: d.seed ^ (b as u32 + 1).wrapping_mul(0x9E37_79B1), key: bd },
+                Fr { kind: K_CLUMP, centre: to_world(r, cu, cv), normal: nn, area: n[b] as f64 * du * dv, velocity: v3::add(v3::scale(nn, tune.glassbreak.out * (0.1 + 0.25 * h1 + 0.8 * near)), [0.0, -0.3 - 0.5 * h3, 0.0]), spin: [(h1 - 0.5) * spin, 0.0, (h3 - 0.5) * spin], grain: tune.glassbreak.dice_grain, cause: C_DICE, seed: d.seed ^ (b as u32 + 1).wrapping_mul(0x9E37_79B1), key: bd },
                 outline_rev(r, out_sign),
             )
         };
@@ -1293,13 +1265,13 @@ fn release_sheet(c: &mut Ctx, ri: usize, away: [f64; 3], kk: f64, tune: &Knobs) 
         }
         let r = p.row(ri);
         let n = normal_of(r);
-        let out_sign = if dot3(n, away) >= 0.0 { 1.0 } else { -1.0 };
-        let nn = scale3(n, out_sign);
+        let out_sign = if v3::dot(n, away) >= 0.0 { 1.0 } else { -1.0 };
+        let nn = v3::scale(n, out_sign);
         let (hu, hv) = (r.hu, r.hv);
         let area = 4.0 * hu * hv;
         let seed = point_seed(r.key, r.c[0], r.c[1], r.c[2]);
         (
-            Fr { kind: K_SHEET, centre: r.c, normal: nn, area, velocity: add3(scale3(nn, tune.glassbreak.blast_out * kk * 0.6), [0.0, 0.4, 0.0]), spin: [1.5 * kk, 0.0, 0.4], grain: 0.0, cause: C_BLAST, seed, key: 0.0 },
+            Fr { kind: K_SHEET, centre: r.c, normal: nn, area, velocity: v3::add(v3::scale(nn, tune.glassbreak.blast_out * kk * 0.6), [0.0, 0.4, 0.0]), spin: [1.5 * kk, 0.0, 0.4], grain: 0.0, cause: C_BLAST, seed, key: 0.0 },
             [(-hu, -hv), (hu, -hv), (hu, hv), (-hu, hv)],
             outline_rev(r, out_sign),
         )
@@ -1352,7 +1324,7 @@ pub fn impact(c: &mut Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: 
     r.last_uv = [u, v];
     if let Some(d) = dir {
         if hypot3(d[0], d[1], d[2]) > 1e-6 {
-            r.last_dir = norm3(d);
+            r.last_dir = v3::normalize(d);
         }
     }
     let blow = At { ri, u, v, seed: point_seed(r.key, x[0], x[1], x[2]), energy };
@@ -1617,7 +1589,7 @@ pub fn blast_sheet(c: &mut Ctx, arrival: Arrival, s: usize, at: [f64; 3], radius
         return false;
     }
     set_k(r, arrival.seq, kk);
-    let away = if d > 1e-6 { norm3(sub3(q, at)) } else { normal_of(r) };
+    let away = if d > 1e-6 { v3::normalize(v3::sub(q, at)) } else { normal_of(r) };
     r.last_dir = away;
     r.who = who;
     let (qu, qv) = to_uv(r, q[0], q[1], q[2]);
@@ -1666,7 +1638,7 @@ fn stars_toward(r: &mut Row, twin_at: [f64; 3], q: [f64; 3], kk: f64, prev: f64,
         let fu = ((s & 0xffff) as f64 / 65535.0) * 2.0 - 1.0;
         let fv = ((s >> 16) as f64 / 65535.0) * 2.0 - 1.0;
         let a = to_world(r, fu * 0.9 * r.hu, fv * 0.9 * r.hv);
-        let m = [lerp(a[0], q[0], 0.35), lerp(a[1], q[1], 0.35), lerp(a[2], q[2], 0.35)];
+        let m = [v3::lerp(a[0], q[0], 0.35), v3::lerp(a[1], q[1], 0.35), v3::lerp(a[2], q[2], 0.35)];
         let (pu, pv) = to_uv(r, m[0], m[1], m[2]);
         if open_uv(r, pu, pv) || classify_row(&r.d, &r.w, pu, pv) >= 0 {
             continue;
@@ -1866,7 +1838,7 @@ fn rake_by(c: &mut Ctx, ri: usize, m: &Walker, tune: &Knobs) {
     let (frags, mu, key, v_clear) = {
         let r = pn(c.g).row(ri);
         let n = normal_of(r);
-        let w = dot3(sub3(pos, r.c), n);
+        let w = v3::dot(v3::sub(pos, r.c), n);
         if js_abs(w) > tune.glassbreak.rake_m || pos[1] >= r.c[1] + r.hv {
             return;
         }
@@ -1874,7 +1846,7 @@ fn rake_by(c: &mut Ctx, ri: usize, m: &Walker, tune: &Knobs) {
         if js_abs(mu) > r.hu + 0.1 {
             return;
         }
-        let vn = -dot3(vel, n) * sign_or_one(w);
+        let vn = -v3::dot(vel, n) * sign_or_one(w);
         let sp = hypot2(vel[0], vel[2]);
         if vn <= 0.3 || vn < 0.6 * sp {
             return;

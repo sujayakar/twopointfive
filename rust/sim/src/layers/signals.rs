@@ -11,9 +11,9 @@ struct HeadDrawn {
 impl HeadDrawn {
     fn of(fk: &Fk, tw: &[f64; 4], rest_inv: &[f64; 4]) -> HeadDrawn {
         let tn = twist_of(tw[0], tw[1]);
-        let hr = q_mul(&twist_of(tw[2], tw[3]), &q_mul(&tn, &q_mul(&fk.rot(role(HEAD)), rest_inv)));
+        let hr = quat::mul(twist_of(tw[2], tw[3]), quat::mul(tn, quat::mul(fk.rot(role(HEAD)), *rest_inv)));
         let nk = fk.at(role(NECK));
-        HeadDrawn { at: add3(nk, q_rotate(&tn, &sub3(fk.at(role(HEAD)), nk))), x: q_rotate(&hr, &[1.0, 0.0, 0.0]), y: q_rotate(&hr, &[0.0, 1.0, 0.0]), z: q_rotate(&hr, &[0.0, 0.0, 1.0]) }
+        HeadDrawn { at: v3::add(nk, quat::rotate(tn, v3::sub(fk.at(role(HEAD)), nk))), x: quat::rotate(hr, [1.0, 0.0, 0.0]), y: quat::rotate(hr, [0.0, 1.0, 0.0]), z: quat::rotate(hr, [0.0, 0.0, 1.0]) }
     }
     /// a direction of the head's frame, in the model's
     fn dir(&self, p: &[f64; 3]) -> [f64; 3] {
@@ -60,7 +60,7 @@ fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> u32 {
         turn(d, rig, role(SHOULDER_L), q_roll(p.shrug * DEGR));
         fk_run(rig, d, fk.rot, fk.pos);
         let r = hand_rot(&fix_l, hd.dir(&p.fingers), hd.dir(&p.back));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(hd.at, hd.dir(&p.to)), Some(&p.pole), 0.85, Some(&r), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &v3::add(hd.at, hd.dir(&p.to)), Some(&p.pole), 0.85, Some(&r), false);
         hand(d, hh, 0, &p.curl, p.thumb, 0.0);
     });
     left_arm_mask(p.e, p.e, p.e);
@@ -90,7 +90,7 @@ pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> u32 {
     let p = HeadHand {
         e: an.nv_arm,
         shrug: tune.kit.nv.hand.shrug,
-        to: lerp3(&tune.kit.nv.hand.up, &tune.kit.nv.hand.down, k),
+        to: v3::lerp3(tune.kit.nv.hand.up, tune.kit.nv.hand.down, k),
         pole: tune.kit.nv.hand.pole,
         fingers: tune.kit.nv.hand.fingers,
         back: tune.kit.nv.hand.back,
@@ -116,7 +116,7 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64)
             // body English on the chop: the upper spine goes a few degrees with the hand, the eyes stay on where it sends people
             let ft = curve(t, &[[0.22, 0.0], [0.46, 1.0], [0.62, 0.5], [0.9, 0.0]]);
             if ft > 1e-3 {
-                let q = |kk: f64| q_mul(&q_yaw(-3.5 * DEGR * ft * kk), &q_mul(&q_roll(-2.0 * DEGR * ft * kk), &q_pitch(2.5 * DEGR * ft * kk)));
+                let q = |kk: f64| quat::mul(q_yaw(-3.5 * DEGR * ft * kk), quat::mul(q_roll(-2.0 * DEGR * ft * kk), q_pitch(2.5 * DEGR * ft * kk)));
                 turn(d, rig, role(SPINE2), q(0.4));
                 turn(d, rig, role(SPINE3), q(0.6));
                 turn(d, rig, role(NECK), q(-0.3));
@@ -151,7 +151,7 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64)
             let hz = curve(t, &[[0.0, 0.1], [0.28, 0.08], [0.38, 0.3], [0.46, 0.43], [0.95, 0.42]]);
             to = [sh[0] + hx, sh[1] + hy, sh[2] + hz];
             let chop = smoothstep(0.28, 0.46, t);
-            r = hand_rot(&fix_l, lerp3(&[0.1, 1.0, 0.25], &[0.05, -0.18, 1.0], chop), lerp3(&[1.0, 0.0, -0.2], &[0.6, 0.8, 0.1], chop));
+            r = hand_rot(&fix_l, v3::lerp3([0.1, 1.0, 0.25], [0.05, -0.18, 1.0], chop), v3::lerp3([1.0, 0.0, -0.2], [0.6, 0.8, 0.1], chop));
             (pole, clav, curl, thumb, spread) = ([1.0, -0.35, 0.1], 7.0 * (1.0 - 0.6 * chop), [0.05, 0.08, 0.12, 0.18], 0.3, 0.0);
         } else if kind == SignalKind::Squeeze {
             // the stack's "ready": the hand onto the shoulder of the man ahead, two squeezes, and back
@@ -224,8 +224,8 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> u32
             // the stretch: the chest up a few degrees, the head forward and tipped away from the working hand
             turn(d, rig, role(SPINE2), q_pitch(-1.6 * DEGR * env));
             turn(d, rig, role(SPINE3), q_pitch(-1.8 * DEGR * env));
-            turn(d, rig, role(NECK), q_mul(&q_pitch(5.0 * DEGR * env), &q_roll(-3.0 * DEGR * env)));
-            turn(d, rig, role(HEAD), q_mul(&q_pitch(9.0 * DEGR * env), &q_mul(&q_roll(-6.0 * DEGR * env), &q_yaw(-4.0 * DEGR * env))));
+            turn(d, rig, role(NECK), quat::mul(q_pitch(5.0 * DEGR * env), q_roll(-3.0 * DEGR * env)));
+            turn(d, rig, role(HEAD), quat::mul(q_pitch(9.0 * DEGR * env), quat::mul(q_roll(-6.0 * DEGR * env), q_yaw(-4.0 * DEGR * env))));
         }
     });
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
@@ -269,8 +269,8 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> u32 {
             return None;
         }
         if hw > 0.003 {
-            turn(d, rig, role(NECK), q_mul(&q_yaw(9.0 * DEGR * hw), &q_pitch(5.0 * DEGR * hw)));
-            turn(d, rig, role(HEAD), q_mul(&q_roll(-5.0 * DEGR * hw), &q_mul(&q_yaw(13.0 * DEGR * hw), &q_pitch(8.0 * DEGR * hw))));
+            turn(d, rig, role(NECK), quat::mul(q_yaw(9.0 * DEGR * hw), q_pitch(5.0 * DEGR * hw)));
+            turn(d, rig, role(HEAD), quat::mul(q_roll(-5.0 * DEGR * hw), quat::mul(q_yaw(13.0 * DEGR * hw), q_pitch(8.0 * DEGR * hw))));
         }
         Some(n)
     }) else {
@@ -289,8 +289,8 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> u32 {
         let (sh, live0, rot0) = (fk.at(role(UPPER_ARM_L)), fk.at(role(HAND_L)), fk.rot(role(HAND_L)));
         // under and ahead of the collar on that side: the fingers come up onto the handset
         let wrist = [sh[0] - 0.035, sh[1] - 0.115, sh[2] + 0.15];
-        let r = nlerp(&rot0, &hand_rot(&fix_l, [-0.4, 0.82, -0.4], [0.3, 0.3, 0.9]), w);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lerp3(&live0, &wrist, w), Some(&[0.75, -1.0, 0.1]), w, Some(&r), false);
+        let r = quat::nlerp(rot0, hand_rot(&fix_l, [-0.4, 0.82, -0.4], [0.3, 0.3, 0.9]), w);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &v3::lerp3(live0, wrist, w), Some(&[0.75, -1.0, 0.1]), w, Some(&r), false);
         hand(d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0);
     });
     ask_mask(&[(role(SHOULDER_L), 1.0, true)]);

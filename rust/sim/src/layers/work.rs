@@ -41,10 +41,10 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64) -> u32 {
         let pick = [lock[0] - 0.04, lock[1] - 0.035 + 0.004 * jig * work, lock[2] - 0.135 + 0.01 * rake * work];
         let wrench = [lock[0] + 0.05, lock[1] - 0.075, lock[2] - 0.125];
         let roll_r = (11.0 * rake * work + 4.0 * jig * work - 8.0 * set_ev) * DEGR;
-        let rot_r = hand_rot(&fix_r, [-0.1, 0.15, 1.0], q_rotate(&q_roll(roll_r), &normalize([-0.6, 1.0, 0.0])));
+        let rot_r = hand_rot(&fix_r, [-0.1, 0.15, 1.0], quat::rotate(q_roll(roll_r), v3::normalize([-0.6, 1.0, 0.0])));
         let roll_l = (3.0 * sin(t * 2.0 * PI * 0.55) + 7.0 * set_ev) * DEGR;
-        let f_l = normalize([-0.4, 0.5, 1.0]);
-        let rot_l = hand_rot(&fix_l, f_l, q_rotate(&axis_angle(&f_l, roll_l), &normalize([0.35, -1.0, 0.55])));
+        let f_l = v3::normalize([-0.4, 0.5, 1.0]);
+        let rot_l = hand_rot(&fix_l, f_l, quat::rotate(quat::axis_angle(f_l, roll_l), v3::normalize([0.35, -1.0, 0.55])));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &pick, Some(&[-0.45, -1.0, -0.45]), 0.75, Some(&rot_r), false);
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &wrench, Some(&[0.3, -1.0, -0.45]), 0.75, Some(&rot_l), true);
         hand(d, hh, 1, &[0.55, 0.7, 0.9, 0.95], 0.75, 0.0);
@@ -85,7 +85,7 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
         fk_run(rig, d, fk.rot, fk.pos);
         let (tl, tr) = (untwist(fk, tw_y, tw_p, l_at), untwist(fk, tw_y, tw_p, r_at));
         if look > 0.01 {
-            let mut to = lerp3(&tl, &tr, 0.5 * rw);
+            let mut to = v3::lerp3(tl, tr, 0.5 * rw);
             to[2] += 0.45;
             look_at(d, rig, fk, &gaze_local, to, w * look, 0.0);
         }
@@ -147,39 +147,39 @@ impl Untwist {
         let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
         let mut e3 = q_yaw(tw_y * 0.4);
         if !falsy(tw_p) {
-            let right = q_rotate(&e3, &AX);
-            e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+            let right = quat::rotate(e3, AX);
+            e3 = quat::mul(quat::axis_angle(right, tw_p), e3);
         }
         let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
-        let p2t = add3(q_rotate(&e1, &sub3(p2, p1)), p1);
-        let p3t = add3(q_rotate(&e2, &sub3(add3(q_rotate(&e1, &sub3(p3, p1)), p1), p2t)), p2t);
-        Untwist { ident: short && falsy(tw_y) && falsy(tw_p), ie1: conj(e1), ie2: conj(e2), ie3: conj(e3), i_all: conj(q_mul(&e3, &q_mul(&e2, &e1))), p1, p2t, p3t }
+        let p2t = v3::add(quat::rotate(e1, v3::sub(p2, p1)), p1);
+        let p3t = v3::add(quat::rotate(e2, v3::sub(v3::add(quat::rotate(e1, v3::sub(p3, p1)), p1), p2t)), p2t);
+        Untwist { ident: short && falsy(tw_y) && falsy(tw_p), ie1: quat::conj(e1), ie2: quat::conj(e2), ie3: quat::conj(e3), i_all: quat::conj(quat::mul(e3, quat::mul(e2, e1))), p1, p2t, p3t }
     }
     /// where to pose a point for it to end up at `h`
     fn un(&self, h: [f64; 3]) -> [f64; 3] {
         if self.ident {
             return h;
         }
-        let x1 = add3(q_rotate(&self.ie3, &sub3(h, self.p3t)), self.p3t);
-        let x2 = add3(q_rotate(&self.ie2, &sub3(x1, self.p2t)), self.p2t);
-        add3(q_rotate(&self.ie1, &sub3(x2, self.p1)), self.p1)
+        let x1 = v3::add(quat::rotate(self.ie3, v3::sub(h, self.p3t)), self.p3t);
+        let x2 = v3::add(quat::rotate(self.ie2, v3::sub(x1, self.p2t)), self.p2t);
+        v3::add(quat::rotate(self.ie1, v3::sub(x2, self.p1)), self.p1)
     }
     /// a direction (the door hand's: the whole twist undone at once)
     fn dir(&self, dv: [f64; 3]) -> [f64; 3] {
-        q_rotate(&self.i_all, &dv)
+        quat::rotate(self.i_all, dv)
     }
 }
 /// the door hand's fingers on the leaf, model space: up and ~25° out along the face, away from his middle on that arm's side
 fn door_fingers(tw: &Untwist, n0: &[f64; 3], side: usize) -> [f64; 3] {
-    let mut t0 = cross3(&AY, n0);
-    if len3(&t0) < 1e-4 {
+    let mut t0 = v3::cross(AY, *n0);
+    if v3::len(t0) < 1e-4 {
         t0 = [1.0, 0.0, 0.0];
     }
-    t0 = normalize(t0);
+    t0 = v3::normalize(t0);
     if (if side == 1 { -1.0 } else { 1.0 }) * t0[0] < 0.0 {
-        t0 = scale3(t0, -1.0);
+        t0 = v3::scale(t0, -1.0);
     }
-    tw.dir(normalize(add3(scale3(AY, 0.9), scale3(t0, 0.42))))
+    tw.dir(v3::normalize(v3::add(v3::scale(AY, 0.9), v3::scale(t0, 0.42))))
 }
 /// (side → its clavicle, upper arm, forearm and hand)
 fn arm_of(side: usize) -> (usize, usize, usize, usize) {
@@ -200,7 +200,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
     }
     let right = dp.right;
     let arm = if right { 1 } else { 0 };
-    let n0 = normalize(n);
+    let n0 = v3::normalize(n);
     let Some(Some((n, tw, f, p_tgt, w_l, w_r))) = with_pose(g, at, |d, rig, n, fk| {
         if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
             return None;
@@ -209,16 +209,16 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
         fk_run(rig, d, fk.rot, fk.pos);
         let mut tw = Untwist::at(fk, tw_y, tw_p, false);
         let (nn, f, ua0) = (tw.dir(n0), door_fingers(&tw, &n0, arm), arm_of(arm).1);
-        let wrist_of = |p: [f64; 3]| mad3(mad3(p, nn, 0.035), f, -0.08);
-        let lean = 8.0 * DEGR * smoothstep(0.4, 0.55, dist3(&fk.at(ua0), &wrist_of(tw.un(p0)))) * w_was;
+        let wrist_of = |p: [f64; 3]| v3::mad(v3::mad(p, nn, 0.035), f, -0.08);
+        let lean = 8.0 * DEGR * smoothstep(0.4, 0.55, v3::dist(fk.at(ua0), wrist_of(tw.un(p0)))) * w_was;
         if lean > 1e-4 {
             // (bowing toward +Z is + about +X = up × Z)
-            let ax = cross3(&AY, &normalize([-n0[0], 0.0, -n0[2] + 1e-6]));
-            turn(d, rig, role(SPINE1), axis_angle(&ax, lean * 0.4));
-            turn(d, rig, role(SPINE2), axis_angle(&ax, lean * 0.35));
-            turn(d, rig, role(SPINE3), axis_angle(&ax, lean * 0.25));
-            turn(d, rig, role(NECK), axis_angle(&ax, -lean * 0.45));
-            turn(d, rig, role(HEAD), axis_angle(&ax, -lean * 0.55));
+            let ax = v3::cross(AY, v3::normalize([-n0[0], 0.0, -n0[2] + 1e-6]));
+            turn(d, rig, role(SPINE1), quat::axis_angle(ax, lean * 0.4));
+            turn(d, rig, role(SPINE2), quat::axis_angle(ax, lean * 0.35));
+            turn(d, rig, role(SPINE3), quat::axis_angle(ax, lean * 0.25));
+            turn(d, rig, role(NECK), quat::axis_angle(ax, -lean * 0.45));
+            turn(d, rig, role(HEAD), quat::axis_angle(ax, -lean * 0.55));
             fk_run(rig, d, fk.rot, fk.pos);
             tw = Untwist::at(fk, tw_y, tw_p, false);
         }
@@ -227,7 +227,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
         let (mut tgt_l, mut tgt_r) = (0.0, 0.0);
         if live && hand_no >= 0.0 {
             let (sh, wr) = (fk.at(ua0), wrist_of(p_tgt));
-            let (dd, ahead, far) = (dist3(&sh, &wr), wr[2] - sh[2], if reach { 0.45 } else { 0.0 });
+            let (dd, ahead, far) = (v3::dist(sh, wr), wr[2] - sh[2], if reach { 0.45 } else { 0.0 });
             let ok = if dp.reach_ok { dd < 0.585 + far && dd > 0.16 && ahead > 0.02 } else { dd < 0.56 + far && dd > 0.2 && ahead > 0.06 };
             dp.reach_ok = ok;
             if ok {
@@ -260,7 +260,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
             continue;
         }
         let fs = if side == arm { f } else { door_fingers(&tw, &n0, side) };
-        let wrist = mad3(mad3(p_tgt, nn, 0.035), fs, -0.08);
+        let wrist = v3::mad(v3::mad(p_tgt, nn, 0.035), fs, -0.08);
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
@@ -269,18 +269,18 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
             let (sg, (sh_n, ua, fa, hd)) = (if side == 1 { 1.0 } else { -1.0 }, arm_of(side));
             fk_run(rig, d, fk.rot, fk.pos);
             let (live0, rot0) = (fk.at(hd), fk.rot(hd));
-            let far = smoothstep(0.38, 0.54, dist3(&fk.at(ua), &wrist)) * e;
+            let far = smoothstep(0.38, 0.54, v3::dist(fk.at(ua), wrist)) * e;
             if far > 1e-3 {
                 // the shoulder reaches too: clavicle forward and a touch up
-                turn(d, rig, sh_n, q_mul(&q_yaw(sg * 10.0 * DEGR * far), &q_roll(-sg * 3.0 * DEGR * far)));
+                turn(d, rig, sh_n, quat::mul(q_yaw(sg * 10.0 * DEGR * far), q_roll(-sg * 3.0 * DEGR * far)));
                 fk_run(rig, d, fk.rot, fk.pos);
             }
             // elbow down, out to the arm's side, a shade back; back of the hand toward him = palm flat on the face he pushes
-            let rot = nlerp(&rot0, &hand_rot(&fix[side], fs, nn), e);
-            two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &lerp3(&live0, &wrist, e), Some(&[-sg * 0.4, -1.0, -0.35]), e, Some(&rot), false);
+            let rot = quat::nlerp(rot0, hand_rot(&fix[side], fs, nn), e);
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &v3::lerp3(live0, wrist, e), Some(&[-sg * 0.4, -1.0, -0.35]), e, Some(&rot), false);
             // open, the fingers a little apart, and the thumb up into the palm's plane
             hand(d, hh, side, &[0.1, 0.1, 0.15, 0.2], 0.1, 0.35);
-            turn(d, rig, digits(side)[0] as usize, axis_angle(&q_rotate(&fk.rot(hd), &AY), sg * 40.0 * DEGR * e));
+            turn(d, rig, digits(side)[0] as usize, quat::axis_angle(quat::rotate(fk.rot(hd), AY), sg * 40.0 * DEGR * e));
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
         if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
@@ -310,9 +310,9 @@ fn shape_mix(a: Shape, b: Shape, k: f64) -> Shape {
         return b;
     }
     Shape {
-        wrist: lerp3(&a.wrist, &b.wrist, k),
-        f: lerp3(&a.f, &b.f, k),
-        b: lerp3(&a.b, &b.b, k),
+        wrist: v3::lerp3(a.wrist, b.wrist, k),
+        f: v3::lerp3(a.f, b.f, k),
+        b: v3::lerp3(a.b, b.b, k),
         curl: [lerp(a.curl[0], b.curl[0], k), lerp(a.curl[1], b.curl[1], k), lerp(a.curl[2], b.curl[2], k), lerp(a.curl[3], b.curl[3], k)],
         thumb: lerp(a.thumb, b.thumb, k),
         spread: lerp(a.spread, b.spread, k),
@@ -341,18 +341,18 @@ struct Work {
 }
 impl Work {
     fn at(&self, x: f64, y: f64, off: f64) -> [f64; 3] {
-        mad3(mad3(mad3(self.p_t, self.r_t, x), self.u_t, y), self.n_t, off)
+        v3::mad(v3::mad(v3::mad(self.p_t, self.r_t, x), self.u_t, y), self.n_t, off)
     }
     /// a palm on the face (the door hand's numbers)
     fn flat(&self, side: usize, x: f64, y: f64, off: f64) -> Shape {
-        let f = normalize(add3(scale3(self.u_t, 0.9), scale3(self.r_t, (if side == 1 { 1.0 } else { -1.0 }) * 0.42)));
-        Shape { wrist: mad3(mad3(self.at(x, y, off), self.n_t, 0.035), f, -0.08), f, b: self.n_t, curl: [0.1, 0.1, 0.15, 0.2], thumb: 0.1, spread: 0.35, body: false }
+        let f = v3::normalize(v3::add(v3::scale(self.u_t, 0.9), v3::scale(self.r_t, (if side == 1 { 1.0 } else { -1.0 }) * 0.42)));
+        Shape { wrist: v3::mad(v3::mad(self.at(x, y, off), self.n_t, 0.035), f, -0.08), f, b: self.n_t, curl: [0.1, 0.1, 0.15, 0.2], thumb: 0.1, spread: 0.35, body: false }
     }
     /// the same push from further off: the arm long, the fingers' pads on it from a little above
     fn tips(&self, side: usize, x: f64, y: f64, off: f64) -> Shape {
-        let f = normalize(add3(scale3(self.n_t, -1.0), scale3(self.u_t, -0.3)));
-        let b = normalize(add3(self.u_t, scale3(self.r_t, (if side == 1 { 1.0 } else { -1.0 }) * 0.25)));
-        Shape { wrist: mad3(self.at(x, y, off), f, -0.17), f, b, curl: [0.12, 0.12, 0.16, 0.2], thumb: 0.25, spread: 0.3, body: false }
+        let f = v3::normalize(v3::add(v3::scale(self.n_t, -1.0), v3::scale(self.u_t, -0.3)));
+        let b = v3::normalize(v3::add(self.u_t, v3::scale(self.r_t, (if side == 1 { 1.0 } else { -1.0 }) * 0.25)));
+        Shape { wrist: v3::mad(self.at(x, y, off), f, -0.17), f, b, curl: [0.12, 0.12, 0.16, 0.2], thumb: 0.25, spread: 0.3, body: false }
     }
     /// palm flat where the shoulder is near enough for it, else the long arm
     fn push_on(&self, fk: &Fk, side: usize, x: f64, y: f64, off: f64) -> Shape {
@@ -361,13 +361,13 @@ impl Work {
             Some(s) => s[side],
             None => fk.at(arm_of(side).1),
         };
-        shape_mix(a, self.tips(side, x, y, off), smoothstep(0.48, 0.56, dist3(&sh, &a.wrist)))
+        shape_mix(a, self.tips(side, x, y, off), smoothstep(0.48, 0.56, v3::dist(sh, a.wrist)))
     }
     /// a forefinger's tip at a spot, the wrist behind and a little under it
     fn poke(&self, side: usize, x: f64, y: f64, off: f64, curl: [f64; 4], thumb: f64) -> Shape {
-        let f = normalize(add3(scale3(self.n_t, -1.0), scale3(self.u_t, 0.25)));
-        let b = normalize(add3(self.u_t, scale3(self.r_t, if side == 1 { 0.3 } else { -0.3 })));
-        Shape { wrist: mad3(self.at(x, y, off), f, -WORK.tip_len), f, b, curl, thumb, spread: 0.0, body: false }
+        let f = v3::normalize(v3::add(v3::scale(self.n_t, -1.0), v3::scale(self.u_t, 0.25)));
+        let b = v3::normalize(v3::add(self.u_t, v3::scale(self.r_t, if side == 1 { 0.3 } else { -0.3 })));
+        Shape { wrist: v3::mad(self.at(x, y, off), f, -WORK.tip_len), f, b, curl, thumb, spread: 0.0, body: false }
     }
     /// what a hand does, by the verb (0 keys, 1 charge, 2 lever, 3 take); `fk` as it stands
     fn shape(&self, fk: &Fk, side: usize) -> Shape {
@@ -402,16 +402,16 @@ impl Work {
             let thr = smoothstep(dur - 0.26, dur - 0.1, t);
             let jig = if dur > 1.2 { bump(t, 0.45, 0.55, 0.62, 0.8) + bump(t, 1.0, 1.1, 1.17, 1.35) } else { 0.0 };
             let gp = self.at(0.0, self.dir * (WORK.lever * (1.0 - 2.0 * thr) - 0.012 * jig), 0.05);
-            let f = normalize(add3(scale3(self.n_t, -1.0), scale3(self.u_t, -0.2)));
+            let f = v3::normalize(v3::add(v3::scale(self.n_t, -1.0), v3::scale(self.u_t, -0.2)));
             // a fist over the handle from above
-            return Shape { wrist: mad3(mad3(gp, self.n_t, 0.075), self.u_t, 0.03), f, b: self.u_t, curl: [0.7, 0.75, 0.75, 0.75], thumb: 0.55, spread: 0.0, body: false };
+            return Shape { wrist: v3::mad(v3::mad(gp, self.n_t, 0.075), self.u_t, 0.03), f, b: self.u_t, curl: [0.7, 0.75, 0.75, 0.75], thumb: 0.55, spread: 0.0, body: false };
         }
         let u = clamp(t / dur, 0.0, 1.0);
         let out = 0.05 + 0.17 * smoothstep(0.55, 0.96, u) + 0.004 * sin(t * 13.0) * bump(u, 0.15, 0.25, 0.9, 1.0);
         let (gp, gr) = (self.at(if self.two { sg * 0.045 } else { 0.0 }, 0.0, out), smoothstep(0.12, 0.22, u) * 0.6);
         // fingers in, palms toward each other, thumbs up
-        let b = normalize(add3(scale3(self.r_t, sg * 0.85), scale3(self.u_t, 0.5)));
-        let hold = Shape { wrist: mad3(gp, self.n_t, 0.085), f: scale3(self.n_t, -1.0), b, curl: [gr, gr, gr + 0.05, gr + 0.1], thumb: 0.45, spread: 0.1, body: false };
+        let b = v3::normalize(v3::add(v3::scale(self.r_t, sg * 0.85), v3::scale(self.u_t, 0.5)));
+        let hold = Shape { wrist: v3::mad(gp, self.n_t, 0.085), f: v3::scale(self.n_t, -1.0), b, curl: [gr, gr, gr + 0.05, gr + 0.1], thumb: 0.45, spread: 0.1, body: false };
         if !self.done || !lead {
             return hold;
         }
@@ -556,9 +556,9 @@ fn which_hands(an: &mut Anim, o: &mut AtWork) {
         was.two = (kind == WorkKind::Charge || kind == WorkKind::Take) && r_free;
     }
     let (main, two) = (if was.main != 0.0 { 1usize } else { 0 }, was.two);
-    let n0 = normalize(n_at);
+    let n0 = v3::normalize(n_at);
     // ---- the body: bowed to a low thing, leaned into a long reach (by last frame's weight; the head levelled back out of both), the eyes onto it
-    let ax = cross3(&AY, &normalize([-n0[0], 0.0, -n0[2] + 1e-6]));
+    let ax = v3::cross(AY, v3::normalize([-n0[0], 0.0, -n0[2] + 1e-6]));
     *o = AtWork { w_was, done, main, two, n0, ax, ..*o };
 }
 
@@ -566,14 +566,14 @@ fn which_hands(an: &mut Anim, o: &mut AtWork) {
 fn how_low(fk: &mut Fk, o: &mut AtWork) {
     let AtWork { p0, main, n0, .. } = *o;
     let bow1 = 30.0 * DEGR * smoothstep(0.3, 0.8, (fk.at(role(UPPER_ARM_L))[1] + fk.at(role(UPPER_ARM_R))[1]) / 2.0 - p0[1]);
-    let lean1 = 14.0 * DEGR * smoothstep(0.42, 0.66, dist3(&fk.at(arm_of(main).1), &mad3(p0, n0, 0.12)));
+    let lean1 = 14.0 * DEGR * smoothstep(0.42, 0.66, v3::dist(fk.at(arm_of(main).1), v3::mad(p0, n0, 0.12)));
     *o = AtWork { bow1, lean1, ..*o };
 }
 
 /// The body bowed and leaned (by last frame's weight; the head levelled back out of both).
 fn body(o: &AtWork, d: &mut [S], rig: &Rig, bow: f64, lean: f64) -> () {
     let AtWork { ax, .. } = *o;
-    let q = |sh: f64| q_mul(&axis_angle(&ax, lean * sh), &q_pitch(bow * sh));
+    let q = |sh: f64| quat::mul(quat::axis_angle(ax, lean * sh), q_pitch(bow * sh));
     turn(d, rig, role(SPINE1), q(0.4));
     turn(d, rig, role(SPINE2), q(0.35));
     turn(d, rig, role(SPINE3), q(0.25));
@@ -620,12 +620,12 @@ fn thing(fk: &mut Fk, o: &mut AtWork) {
     let AtWork { p0, tw_y, tw_p, t, dur, kind, dir, keys, nk, done, main, two, n0, sh_full, .. } = *o;
     let un = Untwist::at(fk, tw_y, tw_p, true);
     let p_t = un.un(p0);
-    let n_t = normalize(sub3(un.un(add3(p0, n0)), p_t));
+    let n_t = v3::normalize(v3::sub(un.un(v3::add(p0, n0)), p_t));
     // the thing's right as he sees it (model −X is his right)
-    let across = cross3(&AY, &n0);
-    let r0 = if len3(&across) < 1e-4 { [-1.0, 0.0, 0.0] } else { normalize(across) };
-    let r_t = normalize(sub3(un.un(add3(p0, r0)), p_t));
-    let wk = Work { p_t, n_t, r_t, u_t: cross3(&n_t, &r_t), sh_full, un, t, dur, kind, dir, main, two, done, keys, nk };
+    let across = v3::cross(AY, n0);
+    let r0 = if v3::len(across) < 1e-4 { [-1.0, 0.0, 0.0] } else { v3::normalize(across) };
+    let r_t = v3::normalize(v3::sub(un.un(v3::add(p0, r0)), p_t));
+    let wk = Work { p_t, n_t, r_t, u_t: v3::cross(n_t, r_t), sh_full, un, t, dur, kind, dir, main, two, done, keys, nk };
     *o = AtWork { wk, ..*o };
 }
 
@@ -640,9 +640,9 @@ fn arms_up(c: &mut game_types::character::AnimWk, fk: &mut Fk, o: &mut AtWork) {
                 continue;
             }
             let (sh, sp) = (fk.at(arm_of(side).1), wk.shape(fk, side));
-            let (mut dd, mut ahead) = (dist3(&sh, &sp.wrist), sp.wrist[2] - sh[2]);
+            let (mut dd, mut ahead) = (v3::dist(sh, sp.wrist), sp.wrist[2] - sh[2]);
             if let Some(sf) = sh_full {
-                let df = dist3(&sf[side], &sp.wrist);
+                let df = v3::dist(sf[side], sp.wrist);
                 if df < dd {
                     dd = df;
                     ahead = max(ahead, sp.wrist[2] - sf[side][2]);
@@ -680,14 +680,14 @@ fn arm_works(sp: &Shape, hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, si
     let (sg, (sh_n, ua, fa, hd)) = (if side == 1 { 1.0 } else { -1.0 }, arm_of(side));
     fk_run(rig, d, fk.rot, fk.pos);
     let (live0, rot0) = (fk.at(hd), fk.rot(hd));
-    let far = smoothstep(0.38, 0.54, dist3(&fk.at(ua), &sp.wrist)) * e;
+    let far = smoothstep(0.38, 0.54, v3::dist(fk.at(ua), sp.wrist)) * e;
     if far > 1e-3 {
         // the shoulder reaches too (the door hand's turn)
-        turn(d, rig, sh_n, q_mul(&q_yaw(sg * 10.0 * DEGR * far), &q_roll(-sg * 3.0 * DEGR * far)));
+        turn(d, rig, sh_n, quat::mul(q_yaw(sg * 10.0 * DEGR * far), q_roll(-sg * 3.0 * DEGR * far)));
         fk_run(rig, d, fk.rot, fk.pos);
     }
     // elbow down and out
-    let rot = nlerp(&rot0, &hand_rot(&fix[side], sp.f, sp.b), e);
-    two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &lerp3(&live0, &sp.wrist, e), Some(&[-sg * 0.45, -1.0, -0.3]), e, Some(&rot), false);
+    let rot = quat::nlerp(rot0, hand_rot(&fix[side], sp.f, sp.b), e);
+    two_bone_ik(rig, d, fk.rot, fk.pos, ua, fa, hd, &v3::lerp3(live0, sp.wrist, e), Some(&[-sg * 0.45, -1.0, -0.3]), e, Some(&rot), false);
     hand(d, hh, side, &sp.curl, sp.thumb, sp.spread);
 }

@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use crate::collide;
 use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
-use crate::panes::{self, norm3, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
+use crate::panes::{self, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
 use crate::world::{asking, clamp, js_abs, js_max, js_min, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
 use prim::sqrt;
 
@@ -149,7 +149,7 @@ fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64, tune: &Kno
     let u1 = (s & 0xffff) as f64 / 65535.0;
     let u2 = (s >> 16) as f64 / 65535.0;
     let up = if js_abs(d[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
-    let e1 = norm3(cross(up, d));
+    let e1 = game_types::v3::normalize(cross(up, d));
     let e2 = cross(d, e1);
     let r = tan(a * sqrt(u1));
     let phi = u2 * PI * 2.0;
@@ -160,7 +160,7 @@ fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64, tune: &Kno
         let (px, py, pz) = (t.n[0] - d[0] * t.cos, t.n[1] - d[1] * t.cos, t.n[2] - d[2] * t.cos);
         out = [out[0] + px * kk, out[1] + py * kk, out[2] + pz * kk];
     }
-    norm3(out)
+    game_types::v3::normalize(out)
 }
 #[inline]
 fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
