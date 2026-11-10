@@ -17,7 +17,7 @@ fn fineAt(i: u32) -> FineAt {
 fn fineBone(bone: u32, a: FineAt, x: vec3f, row: u32, person: u32) -> vec3f {
   let b = a.shape + row + bone * 3u; let l = vec3f(dot(fF(b).xyz, x) + fF(b).w, dot(fF(b + 1u).xyz, x) + fF(b + 1u).w, dot(fF(b + 2u).xyz, x) + fF(b + 2u).w); let p = &pieces[movers[person + bone]]; /* (knees' rows are not quite square to each other: where it stands is found for what they are) */ let X = (*p).r0.xyz; let Y = (*p).r1.xyz; let Z = (*p).r2.xyz; let yz = cross(Y, Z); let c = -((*p).r0.w * yz + (*p).r1.w * cross(Z, X) + (*p).r2.w * cross(X, Y)) / dot(X, yz); return c + X * l.x + Y * l.y + Z * l.z;
 }
-fn fineSide(v: u32) -> f32 { return (f32(v) / 254.0 * 2.0 - 1.0) * 1.25; }
+fn fineSide(v: u32) -> f32 { return (f32(v) - 127.0) * 0.01; }
 struct FineV { w: vec3f, n: vec3f, col: vec3f, bone: u32 };
 /** a vertex in the world: its place; `all`: what else it knows */
 fn fineVertex(a: FineAt, row: u32, all: bool) -> FineV {

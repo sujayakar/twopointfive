@@ -28,7 +28,7 @@ export class Air {
       for (let z = lo[2]!; z <= hi[2]!; z++) for (let y = lo[1]!; y <= hi[1]!; y++) for (let x = lo[0]!; x <= hi[0]!; x++) { const g = [x, y, z]; if (g[a] === 0) continue; OFF.forEach(([s, t], bit) => {
         const from: V3 = [0, 0, 0]; for (let k = 0; k < 3; k++) from[k] = this.o[k]! + (g[k]! + 0.5) * H[k]!; from[u]! += s! * H[u]!; from[v]! += t! * H[v]!; from[a]! -= H[a]!; const q = sub(from, p.at); let l0 = 0, l1 = H[a]!; for (let k = 0; k < 3; k++) { const e = dot(p.rot[k]!, q), d = p.rot[k]![a]!, h = p.half[k]! * (p.quad && p.quad[k] !== 0 ? 0.8 : 1); if (Math.abs(d) < 1e-9) { if (Math.abs(e) > h) return; continue; } const m = (-h - e) / d, n = (h - e) / d; l0 = Math.max(l0, Math.min(m, n)); l1 = Math.min(l1, Math.max(m, n)); } if (l0 <= l1) to(this.ix(x, y, z), 1 << bit); }); }
   };
-  private stand(ps: Piece[]) { for (const p of ps) { if (p.flags & (F.WATER | F.FAR | F.OPEN) || (Math.max(...p.half) < 0.22 && !p.stays)) continue; for (let a = 0; a < 3; a++) this.cover(p, a, (i, bit) => { this.base[a]![i]! |= bit; }); } }
+  private stand(ps: Piece[]) { for (const p of ps) { if (p.mesh !== undefined || p.flags & (F.WATER | F.FAR | F.OPEN) || (Math.max(...p.half) < 0.22 && !p.stays)) continue; for (let a = 0; a < 3; a++) this.cover(p, a, (i, bit) => { this.base[a]![i]! |= bit; }); } }
   private only: number[][] | null = null;
   /** what stands between lo and hi has changed; `about`: all that stands within r of a place */
   change(about: (c: V3, r: number) => Piece[], lo: V3, hi: V3) {

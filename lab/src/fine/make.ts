@@ -1,7 +1,7 @@
 // A SCENE, DRAWN FINE: which shape is drawn for each of its boxes. Few shapes fit them all (template.ts); what is laid or cast in pieces gets a skin of them (pavers, boards, sheets, panels); odd pieces are their own
 // shape, once for all that are alike; people share one body. Rays, feet and blasts go on meeting the boxes.
 import { type V3, type Rot, rng } from '../math';
-import { F, type Piece, type World } from '../scene/world';
+import { F, type Piece } from '../scene/world';
 import { MATERIALS } from '../scene/materials';
 import type { Building } from '../scene/building';
 import { box, cushionBox, drum, round, limb, slab, pack, PLAIN, type Packed, type Shape } from './template';
@@ -10,13 +10,13 @@ import { normalsOf } from '../mesh/mesh';
 import { solid, lighten } from '../mesh/made';
 
 /** what stands somewhere: a shape, whose box it fits, what it is made of */
-export interface Inst { shape: string; piece: Piece; /** its own box, if it is laid on the piece and is not the piece */ at?: V3; rot?: Rot; half?: V3; taper: number; tint?: V3; moves: boolean; /** whose body (pieces, in order) */ body?: Piece[] }
+export interface Inst { shape: string; piece: Piece; /** its own box, if it is laid on the piece and is not the piece */ at?: V3; rot?: Rot; half?: V3; taper: number; tint?: V3; moves: boolean; /** whose body (pieces, in order) */ body?: Piece[]; /** a hole has taken it */ gone?: boolean }
 export interface FineScene { insts: Inst[]; shapes: string[] }
 
 // ---------------------------------------------------------------- shapes, by what they are called (so that any worker can make any)
 const RECIPES: Record<string, () => Shape> = {
   hard: () => box('hard', 1, 0.005, 0.0004, 0), metal: () => box('metal', 2, 0.0026, 0.0002, 0), cast: () => box('cast', 3, 0.008, 0.0022, 0.004), wood: () => box('wood', 4, 0.006, 0.0012, 0), soft: () => cushionBox(5),
-  drum: () => drum('drum', 0.004, 0), pipe: () => drum('pipe', 0.003, 0.004), ball: () => round('ball', 4, 0), limb: () => limb(6), knot: () => round('knot', 4, 0.10), body: () => body(),
+  drum: () => drum('drum', 0.004, 0), ball: () => round('ball', 4, 0), limb: () => limb(6), knot: () => round('knot', 4, 0.10), body: () => body(),
   ...Object.fromEntries([0, 1, 2].flatMap(i => [[`paver${i}`, () => slab(`paver${i}`, 20 + i, 0.003, 0.0008, 0.0012, 'stone')], [`board${i}`, () => slab(`board${i}`, 30 + i, 0.0025, 0.0004, 0, 'wood')], [`panel${i}`, () => slab(`panel${i}`, 40 + i, 0.004, 0.0010, 0.0018, 'cast')], [`sheet${i}`, () => slab(`sheet${i}`, 50 + i, 0.003, 0.0012, 0, 'felt')]] as [string, () => Shape][])),
 };
 /** a piece that nothing else is like, as a shape of its own */
@@ -45,7 +45,7 @@ export function makeFine(b: Building): FineScene {
   const w = b.world, insts: Inst[] = [], q = rng(17), used = new Set<string>(), put = (i: Inst) => { insts.push(i); used.add(i.shape); }, plain = (p: Piece) => !(p.flags & (F.GLASS | F.WATER | F.FAR | F.GLOW | F.BEND | F.MESH)) && Math.max(...p.half) < 60;
   // ---- what stands, and what moves by itself
   const of = new Set(b.people.concat(b.player.body).flatMap(p => p.body)); for (const [list, moves] of [[w.pieces, false], [w.moving, true]] as const) for (const p of list) { if (!plain(p) || of.has(p) || p.rig === 'spare') continue; const s = shapeOf(p); if (!s) continue; p.fine = true; put({ shape: s.shape, piece: p, taper: s.taper, moves, ...(s.rot ? { rot: s.rot, half: s.half } : {}) }); }
-  for (const p of new Set(b.people.concat(b.player.body))) { for (const q2 of p.body) q2.fine = true; put({ shape: 'body', piece: p.body[0]!, taper: 0, moves: true, body: p.body }); }
+  for (const p of new Set(b.people.concat(b.player.body))) { for (const q2 of p.body) q2.fine = q2.skin = true; put({ shape: 'body', piece: p.body[0]!, taper: 0, moves: true, body: p.body }); }
   // ---- skins
   const grid = new Map<string, Piece[]>(), key = (x: number, y: number, z: number) => `${Math.floor(x / 2)},${Math.floor(y / 2)},${Math.floor(z / 2)}`, solidAt = w.pieces.filter(p => plain(p) && !p.quad && !p.planes?.length && Math.max(...p.half) < 45); for (const p of solidAt) { const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]), lo = p.at.map((v, k) => Math.floor((v - e[k]!) / 2)), hi = p.at.map((v, k) => Math.floor((v + e[k]!) / 2)); for (let x = lo[0]!; x <= hi[0]!; x++) for (let y = lo[1]!; y <= hi[1]!; y++) for (let z = lo[2]!; z <= hi[2]!; z++) { const k = `${x},${y},${z}`; let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(p); } }
   const inside = (x: V3, not: Piece) => (grid.get(key(...x)) ?? []).some(p => p !== not && [0, 1, 2].every(k => Math.abs((x[0] - p.at[0]) * p.rot[k]![0] + (x[1] - p.at[1]) * p.rot[k]![1] + (x[2] - p.at[2]) * p.rot[k]![2]) < p.half[k]! + 0.001));
@@ -56,10 +56,8 @@ export function makeFine(b: Building): FineScene {
       const long = l.shape === 'board' ? hi < hj : false, [du, dv] = l.shape === 'board' ? (long ? [l.a, l.b] : [l.b, l.a]) : side && Math.abs(p.rot[i]![1]) > 0.9 ? [l.b, l.a] : [l.a, l.b], nu = Math.max(1, Math.round(2 * hi / du)), nv = Math.max(1, Math.round(2 * hj / dv)), su = hi / nu, sv = hj / nv;
       for (let u = 0; u < nu; u++) for (let v = 0; v < nv; v++) { const cu = -hi + su * (2 * u + 1), cv = -hj + sv * (2 * v + 1), at = [0, 1, 2].map(k => p.at[k]! + n[k]! * (p.half[a]! + 0.002) + p.rot[i]![k]! * cu + p.rot[j]![k]! * cv) as V3; let hidden = 0; for (const [x, y] of [[0, 0], [0.8, 0.8], [-0.8, 0.8], [0.8, -0.8], [-0.8, -0.8]] as const) if (inside([0, 1, 2].map(k => at[k]! + n[k]! * 0.012 + p.rot[i]![k]! * su * x + p.rot[j]![k]! * sv * y) as V3, p)) hidden++; if (hidden >= 4) continue;
         // its own frame: y out of the face; x and z along it
-        const X = p.rot[i]!, Z: V3 = [X[1] * n[2] - X[2] * n[1], X[2] * n[0] - X[0] * n[2], X[0] * n[1] - X[1] * n[0]], t = 1 - 0.10 * q(); put({ shape: l.shape + Math.floor(q() * 3), piece: p, at, rot: [X, n, Z], half: [su - l.gap / 2, 0.006, sv - l.gap / 2], taper: 0, tint: [t, t, t], moves: false }); }
+        const X = p.rot[i]!, Z: V3 = [X[1] * n[2] - X[2] * n[1], X[2] * n[0] - X[0] * n[2], X[0] * n[1] - X[1] * n[0]], t = 1 - 0.05 * q(), hu = su - l.gap / 2, hv = sv - l.gap / 2; put({ shape: l.shape + Math.floor(q() * 3), piece: p, at, /* (boards run along their own x) */ rot: long ? [Z, n, [-X[0], -X[1], -X[2]]] : [X, n, Z], half: long ? [hv, 0.006, hu] : [hu, 0.006, hv], taper: 0, tint: [t, t, t], moves: false }); }
     }
   }
   return { insts, shapes: [...used] };
 }
-/** the cars of the study: two, on the lower roof */
-export type { World };

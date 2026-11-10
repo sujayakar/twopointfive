@@ -12,11 +12,12 @@ export interface Shape {
   name: string; kind: number; mesh: Mesh;
   /** FITS: three a vertex; how far from a side its edges reach (thinner boxes have thinner ones); half of the box it was made as */ s?: Float32Array; reach?: number; half?: V3;
   /** its curvature goes with the box: errors too, and normals are the fitted shape's */ round?: boolean;
+  /** its colors are kept already as they lie (LIGHT) */ lit?: boolean;
   /** levels made by hand, coarser than what simplifying the finest gives; each with what it is off */ coarse?: { mesh: Mesh; s: Float32Array; error: number }[];
   /** SKINNED: two bones a vertex and how much it goes with the first; each bone's rest: rows world → its own */ bones?: Uint8Array; weight?: Float32Array; rest?: Float32Array;
 }
 type Made = { mesh: Mesh; s: Float32Array; error: number };
-const flat = (n: number) => new Uint8Array(n * 4).fill(255);
+const flat = (n: number, v = 255) => new Uint8Array(n * 4).fill(v);
 /** a box with its edges cut by c (44 triangles: each face keeps its own normal, the cuts run from one to the next), or sharp (12) */
 function plainBox(h: V3, c: number, error: number): Made {
   const pos: number[] = [], nrm: number[] = [], s: number[] = [], tri: number[] = [], at: Record<string, number> = {}; for (let a = 0; a < 3; a++) for (const d of [-1, 1]) for (const u of [-1, 1]) for (const v of [-1, 1]) { const q = [0, 0, 0], n = [0, 0, 0], k = (a + 1) % 3, l = (a + 2) % 3, sg = [0, 0, 0]; q[a] = d * h[a]!; q[k] = u * (h[k]! - c); q[l] = v * (h[l]! - c); n[a] = d; sg[a] = d; sg[k] = u; sg[l] = v; at[`${a},${sg}`] = pos.length / 3; pos.push(...q); nrm.push(...n); s.push(...sg); }
@@ -64,11 +65,17 @@ export function limb(seed: number): Shape {
 }
 /** a flat slab that lies on a face, its top at +half y: a paver, a board, a panel of concrete, a sheet of roofing */
 export function slab(name: string, seed: number, r: number, unevenness: number, pits: number, grain: 'stone' | 'wood' | 'cast' | 'felt'): Shape {
-  const o = rng(seed)() * 90, h: V3 = [0.3, 0.006, 0.3], reach = 0.02; const m = solid((x, y, z) => rbox(x, y, z, h, r) + (grain === 'wood' ? 0.0005 : 0.0015) * step(-0.02, 0, Math.max(Math.abs(x) - h[0], Math.abs(z) - h[2])) * (0.5 + fbm3(x * 12 + o, 1, z * 12, 3)), h, 0.013, 2, (x, y, z) => y < 0 ? 0 : grain === 'wood' ? unevenness * fbm3(x * 5 + o, 0, z * 110, 3) : unevenness * fbm3(x * 24 + o, 0, z * 24, 3) - pits * step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)),
-    (x, y, z) => { const b = fbm3(x * 3 + o, 5, z * 3, 3), p = step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)), v = grain === 'wood' ? 0.95 + 0.16 * fbm3(x * 4 + o, 0, z * 120, 3) : 0.94 + 0.08 * b - (pits > 0 ? 0.12 * p : 0); void y; return [v, v, v, 1]; }, 0.0004);
-  const out = fit(name, m, h, reach); for (let i = 1; i < out.s!.length; i += 3) out.s![i] = Math.max(-1, Math.min(1, m.pos[i]! / h[1])) ; return { ...out, half: h, /* (what is lost there is seen as far as it can be told apart: grain, pits) */ coarse: [plainBox(h, 0.0025, grain === 'wood' ? 0.0045 : 0.006), plainBox(h, 0, grain === 'wood' ? 0.009 : 0.012)] };
+  const o = rng(seed)() * 90, h: V3 = [0.3, 0.006, 0.3], reach = 0.02, wood = grain === 'wood'; const m = solid((x, y, z) => rbox(x, y, z, h, r) + (wood ? 0.0005 : 0.0015) * step(-0.02, 0, Math.max(Math.abs(x) - h[0], Math.abs(z) - h[2])) * (0.5 + fbm3(x * 12 + o, 1, z * 12, 3)), h, 0.0065, 1, (x, y, z) => y < 0 ? 0 : wood ? unevenness * fbm3(x * 5 + o, 0, z * 110, 3) : unevenness * fbm3(x * 24 + o, 0, z * 24, 3) - pits * step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)),
+    (x, _y, z) => { const b = fbm3(x * 3 + o, 5, z * 3, 3), p = step(0.36, 0.52, noise3(x * 55 + o, 3, z * 55)), v = wood ? 0.85 + 0.14 * fbm3(x * 4 + o, 0, z * 120, 3) : 0.85 + 0.07 * b - (pits > 0 ? 0.11 * p : 0); return [v, v, v, 1]; }, 0.0004);
+  // (its mean is what its piece is: what it was made as is brought to that, and the plain far levels are it)
+  let sum = 0, many = 0; for (let i = 0; i < m.col.length; i += 4) if (m.nrm[i / 4 * 3 + 1]! > 0.5) { sum += (m.col[i]! / 255) ** 2; many++; } const k = Math.sqrt(many / sum / TINTED) ; const col = new Uint8Array(m.col.length); for (let i = 0; i < col.length; i++) col[i] = Math.min(255, Math.round(m.col[i]! * k * LIGHT)); const mean = Math.round(255 * Math.sqrt(1 / TINTED) * LIGHT), coarse = [plainBox(h, 0.0025, wood ? 0.0045 : 0.006), plainBox(h, 0, wood ? 0.009 : 0.012)]; for (const c of coarse) c.mesh.col = flat(c.mesh.col.length / 4, mean);
+  const out = fit(name, { ...m, col }, h, reach); for (let i = 1; i < out.s!.length; i += 3) out.s![i] = Math.max(-1, Math.min(1, m.pos[i]! / h[1])); return { ...out, half: h, lit: true, /* (what is lost there is seen as far as it can be told apart: grain, pits) */ coarse };
 }
 
+/** colors are kept so much darker than they are (as roots), so that they may be brighter than 1 */
+const LIGHT = Math.sqrt(0.8);
+/** the mean of what skins' parts are tinted with, squared (make.ts) */
+export const TINTED = 0.951;
 // ---------------------------------------------------------------- levels, and how they lie for the GPU
 export interface Packed { name: string; data: Uint32Array; levels: { triangles: number; error: number }[]; kind: number }
 const oct = (x: number, y: number, z: number): number => { const s = Math.abs(x) + Math.abs(y) + Math.abs(z) || 1; let a = x / s, b = z / s; if (y < 0) { const p = (1 - Math.abs(b)) * (a < 0 ? -1 : 1), q = (1 - Math.abs(a)) * (b < 0 ? -1 : 1); a = p; b = q; } const q = (v: number) => Math.round((v * 0.5 + 0.5) * 65535) & 0xffff; return (q(a) | (q(b) << 16)) >>> 0; };
@@ -87,8 +94,8 @@ export function pack(sh0: Shape, least = 12): Packed {
   let ci = 0; levels.forEach((l, li) => cut[li]!.forEach(ids => {
     const n = ids.length, tri = new Uint32Array(n * 3); ids.forEach((t, i) => { for (let k = 0; k < 3; k++) tri[i * 3 + k] = l.tri[t * 3 + k]!; }); const local = new Map<number, number>(), list: number[] = [], taken = new Set<number>(), first: number[] = [], uses = new Map<number, number>(); for (const v of tri) uses.set(v, (uses.get(v) ?? 0) + 1);
     for (let t = 0; t < n; t++) { let best = -1, least = 1e9; for (let k = 0; k < 3; k++) { const v = tri[t * 3 + k]!; if (!taken.has(v) && uses.get(v)! < least) { least = uses.get(v)!; best = k; } } for (let k = 0; k < 3; k++) uses.set(tri[t * 3 + k]!, uses.get(tri[t * 3 + k]!)! - 1); if (best < 0) best = 0; else { taken.add(tri[t * 3 + best]!); local.set(tri[t * 3 + best]!, t); } first.push(best); list.push(tri[t * 3 + best]!); }
-    for (const v of tri) if (!local.has(v)) { local.set(v, list.length); list.push(v); } const vr = rows.length / 4, q8 = (x: number) => Math.max(0, Math.min(255, Math.round((x / 1.25 * 0.5 + 0.5) * 254)));
-    for (const v of list) { const p = [0, 1, 2].map(k => Math.round((o[v * 3 + k]! - mn[k]!) / st[k]!)), L = Math.hypot(m.nrm[v * 3]!, m.nrm[v * 3 + 1]!, m.nrm[v * 3 + 2]!) || 1, c = [0, 1, 2].map(k => m.col[v * 4 + k]!); let hi = 0, w = (c[0]! | (c[1]! << 8) | (c[2]! << 16)) >>> 0; if (sh.kind === FITS) { hi = q8(sh.s![v * 3]!) | (q8(sh.s![v * 3 + 1]!) << 8); w = ((c[0]! >> 3) | ((c[1]! >> 2) << 5) | ((c[2]! >> 3) << 11) | (q8(sh.s![v * 3 + 2]!) << 16)) >>> 0; } else if (sh.kind === SKINNED) { hi = sh.bones![v * 2]! | (sh.bones![v * 2 + 1]! << 7); w = (w | (Math.round(sh.weight![v]! * 255) << 24)) >>> 0; } rows.push((p[0]! | (p[1]! << 16)) >>> 0, (p[2]! | (hi << 16)) >>> 0, oct(m.nrm[v * 3]! / L, m.nrm[v * 3 + 1]! / L, m.nrm[v * 3 + 2]! / L), w); }
+    for (const v of tri) if (!local.has(v)) { local.set(v, list.length); list.push(v); } const vr = rows.length / 4, q8 = (x: number) => Math.max(0, Math.min(255, 127 + Math.round(x * 100)));
+    for (const v of list) { const p = [0, 1, 2].map(k => Math.round((o[v * 3 + k]! - mn[k]!) / st[k]!)), L = Math.hypot(m.nrm[v * 3]!, m.nrm[v * 3 + 1]!, m.nrm[v * 3 + 2]!) || 1, c = [0, 1, 2].map(k => sh.lit ? m.col[v * 4 + k]! : Math.min(255, Math.round(m.col[v * 4 + k]! * LIGHT))); let hi = 0, w = (c[0]! | (c[1]! << 8) | (c[2]! << 16)) >>> 0; if (sh.kind === FITS) { hi = q8(sh.s![v * 3]!) | (q8(sh.s![v * 3 + 1]!) << 8); w = ((c[0]! >> 3) | ((c[1]! >> 2) << 5) | ((c[2]! >> 3) << 11) | (q8(sh.s![v * 3 + 2]!) << 16)) >>> 0; } else if (sh.kind === SKINNED) { hi = sh.bones![v * 2]! | (sh.bones![v * 2 + 1]! << 7); w = (w | (Math.round(sh.weight![v]! * 255) << 24)) >>> 0; } rows.push((p[0]! | (p[1]! << 16)) >>> 0, (p[2]! | (hi << 16)) >>> 0, oct(m.nrm[v * 3]! / L, m.nrm[v * 3 + 1]! / L, m.nrm[v * 3 + 2]! / L), w); }
     const tr = rows.length / 4; for (let t = 0; t < n; t++) rows.push((t | (local.get(tri[t * 3 + (first[t]! + 1) % 3]!)! << 8) | (local.get(tri[t * 3 + (first[t]! + 2) % 3]!)! << 16)) >>> 0); while (rows.length % 4) rows.push(0);
     const c = clusterAt + ci++ * 4; rows[c] = vr; rows[c + 1] = tr; rows[c + 2] = n; rows[c + 3] = list.length; if (list.length > 256) throw new Error(sh.name + ': a cluster with ' + list.length + ' vertices');
   }));

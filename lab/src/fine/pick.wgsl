@@ -20,7 +20,7 @@ fn ballOf(a: FineAt) -> f32 { let h = fine[a.shape]; let kind = h.y & 15u; if (k
 @compute @workgroup_size(64) fn first(@builtin(global_invocation_id) id: vec3u) {
   let i = id.x; if (i >= fineK.many) { return; } let a = fineAt(i); if ((a.flags & FI_GONE) != 0u) { return; } let r = ballOf(a); if (a.at.y < -60.0 || !inside(a.at, r)) { return; }
   /* (what the section cuts through is drawn as its box, which has an end to show; what lies on it is cut a pixel at a time) */
-  if ((a.flags & FI_CUT) != 0u && frame.misc.y < 1e8) { let e = abs(a.x.y) * a.half.x + abs(a.y.y) * a.half.y + abs(a.z.y) * a.half.z; if (a.at.y - e > frame.misc.y || ((a.flags & FI_SELF) != 0u && a.at.y + e > frame.misc.y)) { return; } }
+  if ((a.flags & FI_CUT) != 0u && frame.misc.y < 1e8) { let e = select(abs(a.x.y) * a.half.x + abs(a.y.y) * a.half.y + abs(a.z.y) * a.half.z, 1.3, (a.flags & FI_BODY) != 0u); if (a.at.y - e > frame.misc.y || ((a.flags & (FI_SELF | FI_BODY)) == FI_SELF && a.at.y + e > frame.misc.y)) { return; } }
   if ((a.flags & FI_OPEN) != 0u && frame.misc.y < OPEN_FLOOR) { return; }
   if (fineK.hide > 0.5 && hidden(a.at, r, true)) { let j = atomicAdd(&n[N_HID], 1u); again[j] = i; return; } put(i, a, r);
 }
