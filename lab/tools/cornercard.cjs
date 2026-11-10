@@ -1,6 +1,7 @@
 // The terrace's corner, as boxes (the rooftop) and in fine geometry (the study 'corner'), in one run on whatever GPU this machine has:
 //   node lab/tools/cornercard.cjs stills     from the game's camera and near by, by day, dusk and night; PATHS=300 beside the path tracer
 //   node lab/tools/cornercard.cjs time       whole frames, pass by pass, at 1080p and 1440p
+//   node lab/tools/cornercard.cjs page       the page of both (corner.html), driven as a person would
 //   node lab/tools/cornercard.cjs error      each against its own path tracer
 // ONLY=name,… for some of the views; KINDS=boxes,fine,stand; OUT is where things go.
 const { execSync } = require('child_process'), fs = require('fs'), path = require('path'), http = require('http');
@@ -16,6 +17,10 @@ views.push({ name: 'cut-day', w: size[0], h: size[1], fov: LENS, yaw: 0.62, pitc
   const s = http.createServer((q, r) => fs.readFile(path.join(SITE, q.url.split('?')[0]), (e, d) => { if (e) { r.writeHead(404); r.end(); return; } r.writeHead(200, { 'content-type': q.url.endsWith('.js') ? 'text/javascript' : 'text/html' }); r.end(d); })).listen(0);
   const extra = (process.env.CHROME_ARGS || '').split(' ').filter(Boolean), b = await chromium.launch({ ...(process.env.CHROME ? { executablePath: process.env.CHROME } : {}), args: ['--enable-unsafe-webgpu', '--disable-dawn-features=timestamp_quantization', '--enable-dawn-features=allow_unsafe_apis', ...extra] }), p = await b.newPage();
   p.on('console', m => { if ((m.type() === 'error' || m.type() === 'warning') && !/404/.test(m.text())) console.log('page:', m.text().slice(0, 600)); }); p.on('pageerror', e => console.log('pageerror', String(e).slice(0, 1500)));
+  if (what === 'page') {                            // the page itself (corner.html): pictures of it, and what its button says
+    fs.copyFileSync(path.join(LAB, 'corner.html'), path.join(SITE, 'corner.html')); await p.setViewportSize({ width: 1600, height: 900 }); await p.goto(`http://localhost:${s.address().port}/corner.html`); await p.waitForFunction(() => !document.getElementById('load'), null, { timeout: 240000 }); const shot = async n => { await p.waitForTimeout(5000); await p.screenshot({ path: path.join(OUT, `page-${n}.jpg`), type: 'jpeg', quality: 82 }); console.log(n, (await p.evaluate(() => document.getElementById('stats').textContent + document.getElementById('error').textContent)).replace(/\n/g, ' | ')); };
+    await shot('fine'); await p.keyboard.press(' '); await shot('boxes'); await p.keyboard.press(' '); await p.waitForTimeout(1500); await p.click('#view button:nth-child(3)'); await shot('near'); await p.click('#hour button:nth-child(3)'); await shot('night'); await p.click('#time'); await p.waitForFunction(() => window.timeText, null, { timeout: 400000 }); console.log(await p.evaluate(() => window.timeText)); await shot('timed'); fs.rmSync(SITE, { recursive: true, force: true }); await b.close(); s.close(); process.exit(0);
+  }
   const only = process.env.ONLY ? process.env.ONLY.split(',') : null, mine = views.filter(v => !only || only.some(o => v.name === o || v.name.startsWith(o + '-') || v.name.endsWith('-' + o))), ask = (f, a) => p.evaluate(async ([f, a]) => { try { return await window.S[f](...a); } catch (e) { return 'FAILED ' + String(e.stack || e); } }, [f, a]); let no = 0; const bad = (n, r) => { if (typeof r === 'string') { console.log(n, r.slice(0, 1500)); no = 1; return true; } return false; };
   // boxes; fine, and rays meet the fine; fine, and rays meet the boxes that were there
   const kinds = { boxes: ['rooftop', 1], fine: ['corner', 1], stand: ['corner', -1], near: ['corner', -1], quarter: ['corner', 4] }; let opened = '';
