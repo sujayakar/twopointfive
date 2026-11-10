@@ -62,7 +62,7 @@ pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastV
     v
 }
 /// Who is drawn in the sneaking suit this frame.
-pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
+pub fn sneak_suit(g: &Game, c_2: CharId) -> bool {
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
     let k: Option<bool> = match crate::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),   // (cast.ts:74 `asked !== undefined ? asked : activeScenario(g)`: null = no mission)

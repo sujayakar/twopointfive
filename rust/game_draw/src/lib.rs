@@ -187,7 +187,7 @@ pub struct Drawn {
     pub lead: lead::Lead,
     /// the picture is a tube's, whatever the run's was
     tube: Option<bool>,
-    watched: Vec<watched::Watched>,
+    watched: Vec<game::rig_props::CarriedBox>,
 }
 impl Drawn {
     /// A TICK HAS RUN: the sections of `want`, made again from the game as it stands

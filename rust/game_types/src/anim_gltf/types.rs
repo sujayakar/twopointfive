@@ -3,7 +3,7 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct GltfNode {
     pub name: String,
     pub parent: f64,
@@ -13,7 +13,7 @@ pub struct GltfNode {
     pub s: V3,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Track {
     pub node: f64,
     pub path: f64,
@@ -22,20 +22,20 @@ pub struct Track {
     pub step: bool,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Clip {
     pub name: String,
     pub duration: f64,
     pub tracks: Vec<crate::anim_gltf::Track>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct SkinData {
     pub joints: Vec<f64>,
     pub inverse_bind: Vec<f32>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug)]
 pub struct MeshData {
     pub positions: Vec<f32>,
     pub normals: Vec<f32>,
@@ -69,7 +69,7 @@ pub enum MeshDataJoints {
     Uint8Array(Vec<u8>),
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct CastVariant {
     pub name: String,
     pub side: crate::anim_gltf::CastSide,
@@ -84,13 +84,13 @@ pub enum CastSide {
     Responder,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct CastInfo {
     pub parts: Vec<String>,
     pub variants: Vec<AnimGltfCastVariantId>,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct GltfCharacter {
     pub nodes: Vec<crate::anim_gltf::GltfNode>,
     pub order: Vec<f64>,
@@ -99,6 +99,8 @@ pub struct GltfCharacter {
     pub clips: JsMap<String, ClipId>,
     pub node_by_name: JsMap<String, f64>,
     pub cast: Option<AnimGltfCastInfoId>,
+    /// what its meshes have of packs and a back to lie on (none without a cast)
+    pub back: Option<crate::packside::Back>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

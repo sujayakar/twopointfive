@@ -4,6 +4,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
+use crate::rig_props::{Carried, CarriedBox};
 use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- panels and contact
@@ -210,51 +211,42 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
 
 // ---------------------------------------------------------------- what the men carry, as boxes (world.raycast sees them) and the words the figure is told
 
-/// Held and worn props as small boxes, and what each figure is told it holds; then every rig box's motion key.
+/// Held and worn props as small boxes, and what each figure is told it holds: each player's own kit, then each man's, then the hostages' wrist ties.
 pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let n0 = out.len() as f64;
-    hand_props_raw(g, out);
-    rig_keys(g, out, n0);
-}
-
-/// Motion identity: every rig box from `n0` on gets its man's id and its ordinal among his boxes this frame. Owner 0 stays on the index rule.
-fn rig_keys(g: &mut crate::game::Game, out: &Vec<AnyBoxId>, n0: f64) {
-    let mut ord = hand_ord();
-    let mut k = n0 as usize;
-    while k < out.len() {
-        let b = out[k];
-        k += 1;
-        let o = js::to_i32(g.tab[b].owner) & 0xff;
-        if o == 0 { continue; }
-        let at = ord[o as usize];
-        ord[o as usize] = at.wrapping_add(1);
-        g.tab.edit(b).mkey = Some(crate::scene_boxes::mkey().rig + ((o << 8) as f64) + m::min(255.0, at as f64));
-    }
-}
-
-/// Each player's own kit, then each man's, then the hostages' wrist ties.
-fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    crate::seats::each_seat(g, &mut |g| player_props(g, out));
-    let mut i = 0usize;
-    while i < g.guards.len() {
+    let mut list = Carried::default();
+    crate::seats::each_seat(g, &mut |g| player_props(g, &mut list));
+    for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        i += 1;
-        if crate::fogofwar::fog_of_war_hidden(g, gd) {
-            let c = g.gd[gd].ch;
-            g.ch[c].in_hand = None;
-            continue;
-        }
-        guard_props(g, gd, out);
+        let c = g.gd[gd].ch;
+        if crate::fogofwar::fog_of_war_hidden(g, gd) { g.ch[c].in_hand = None; continue; }
+        if let Some(big) = big_of(g, c) { g.ch[c].anim.big_side = side_of(g, c, big); }
+        g.ch[c].in_hand = guard_props(g, gd, &mut list);
     }
+    wrist_ties(g, &mut list, false);
+    list.keyed();
+    list.laid(g, out);
+}
+
+/// the ties of the hostages the fog of war hides, or of those it does not
+fn wrist_ties(g: &crate::game::Game, out: &mut Carried, hidden: bool) {
     for cv in crate::civilians::civilians_shown(g) {
         let c = g.gd[cv].ch;
-        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && !crate::condition::down(g, g.gd[cv].ch);
-        if tied && !crate::fogofwar::fog_of_war_hidden(g, cv) { crate::rig_props::wrist_tie_boxes(g, c, out); }
+        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && !crate::condition::down(g, c);
+        if tied && crate::fogofwar::fog_of_war_hidden(g, cv) == hidden { crate::rig_props::wrist_tie_boxes(g, c, out); }
     }
+}
+
+/// the big slot's tool this man carries
+fn big_of(g: &crate::game::Game, c: CharId) -> Option<crate::kit::BigTool> { crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id }) }
+
+/// where a hand finds that tool at the side of his pack: a hammer's
+fn side_of(g: &crate::game::Game, c: CharId, big: crate::kit::BigTool) -> Option<crate::character::AnimBigSide> {
+    if big != crate::kit::BigTool::Hammer { return None; }
+    hammer_side(g, c).map(|s| crate::character::AnimBigSide { o: s.o, z: s.z })
 }
 
 /// What the player carries and wears, as boxes, and the fist's and the figure's words for this frame.
-fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+fn player_props(g: &mut crate::game::Game, out: &mut Carried) {
     use crate::rig_props::RifleAt as Rf;
     use crate::rig_props::{RigOpts};
     let p = g.player;
@@ -288,11 +280,10 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let crate::kitanim::KitShowV { pistol_in_hand, rifle, held, knife } = show;
     let lens_up = crate::kitanim::kit_gun_up(g, &crate::seats::here(g));
     g.ch[c].anim.grip_can = held.is_some();
-    let big_s = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
+    let big_s = big_of(g, c);
     let big_over = rifle == Some(Rf::Slung) && !crate::kitanim::kit_sling_front(g);
     let is_hammer = big_s == Some(crate::kit::BigTool::Hammer);
-    let side = if is_hammer { hammer_side(g, c) } else { None };
-    g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
+    g.ch[c].anim.big_side = big_s.and_then(|b| side_of(g, c, b));
     let clear = if is_hammer && big_over { crate::rig_props::big_clear_of(g, c, crate::kit::BigTool::Hammer, None) } else { 0.0 };
     g.ch[c].anim.big_clear = clear;
     let in_hand = !down;
@@ -333,31 +324,29 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     };
     crate::rig_props::rig_boxes(g, c, opts, out, None);
     crate::handwork::work_props(g, c, out);
-    crate::irlaser::sam_laser_boxes(g, out);
+    crate::irlaser::sam_laser_boxes(g, &crate::seats::here(g), out);
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.
-fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
+fn hammer_side(g: & crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
     let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideWhat::Hammer, None)?;
     let rig = g.ch[c_2].rig;
     let l = crate::packside::side_local(g, rig, p)?;
     Some(HammerSide { o: l.o, z: l.z })
 }
 
-/// What one guard or unit carries and wears, as boxes.
-fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
+/// What one guard or unit carries and wears, as boxes; and the word for what his fist holds.
+fn guard_props(g: &crate::game::Game, gd: GuardId, out: &mut Carried) -> Option<crate::inhand::InHandWord> {
     let c = g.gd[gd].ch;
-    let big = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
     let stow = crate::workstow::stow_hang(g, gd);
-    let big = match big {
-        Some(b) => b,
-        None => { guard_kit(g, gd, out, stow); hung_side(g, gd, out); return; }
+    let Some(big) = big_of(g, c) else {
+        let word = guard_kit(g, gd, out, stow);
+        hung_side(g, gd, out);
+        return word;
     };
     let alive = !crate::condition::down(g, g.gd[gd].ch);
-    let side = if big == crate::kit::BigTool::Hammer { hammer_side(g, c) } else { None };
-    g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
     let hang = stow || (alive && g.ch[c].anim.big_tool.is_some() && g.ch[c].anim.hide_held_item);
-    guard_kit(g, gd, out, hang);
+    let word = guard_kit(g, gd, out, hang);
     let slung_out = g.gd[gd].slung.as_ref().filter(|s| s.out).map(|s| s.own);
     if let (crate::kit::BigTool::Shotgun, true, Some(own)) = (big, alive, slung_out) {
         let def = g.fa[own].def;
@@ -370,16 +359,16 @@ fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) 
             Some(w) => { let black = crate::cast::sneak_suit(g, c); crate::rig_props::hung_boxes(g, c, w, out, Some(crate::rig_props::rig()), Some(black)); }
             None => hung_side(g, gd, out),
         }
-        return;
+        return word;
     }
     hung_side(g, gd, out);
     let k = if alive { g.ch[c].anim.big_k } else { 0.0 };
-    let kind = big;
-    crate::rig_props::big_boxes(g, c, kind, k, out, None, None);
+    crate::rig_props::big_boxes(g, c, big, k, out, None, None);
+    word
 }
 
 /// A man throwing with his free hand, the long gun still in the other: the grenade in the left fist until it leaves him.
-fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
+fn free_can(g: &crate::game::Game, gd: GuardId, out: &mut Carried) {
     let c = g.gd[gd].ch;
     if crate::character::anim_throw_off(g, c) && crate::frag::frag_in_fist(g, gd) {
         crate::rig_props::free_can_boxes(g, c, crate::game::ThrowKind::Frag, out);
@@ -387,7 +376,7 @@ fn free_can(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
 }
 
 /// A teammate with his sidearm out: the long gun he let go of hangs down his front.
-fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
+fn hung_side(g: &crate::game::Game, gd: GuardId, out: &mut Carried) {
     if let Some(own) = crate::gunslots::side_hung(g, gd) {
         let c = g.gd[gd].ch;
         let w = own;
@@ -397,10 +386,9 @@ fn hung_side(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
 }
 
 /// A man's row without the big slot's tool. `hang`: his own gun is out of his hands.
-fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, hang: bool) {
+fn guard_kit(g: &crate::game::Game, gd: GuardId, out: &mut Carried, hang: bool) -> Option<crate::inhand::InHandWord> {
     use crate::rig_props::{rig, RigOpts};
     let c = g.gd[gd].ch;
-    g.ch[c].in_hand = None;
     let team = g.team(gd);
     let trained = g.gd[gd].trained;
     let ho = if crate::char_look::side_of_team(team, Some(trained)) == crate::anim_gltf::CastSide::Defender { g.k.inhand.holster_out } else { 0.0 };
@@ -424,7 +412,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
                 crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
             }
         }
-        return;
+        return None;
     }
     let fl = g.gd[gd].flashlight;
     let rule = crate::guards::in_hand(g, gd);
@@ -437,11 +425,11 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
         crate::handwork::belt_torch(g, c, out);
     }
-    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == crate::rig_props::RigWeapon::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
+    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == crate::rig_props::RigWeapon::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return None; }
     if held.is_none() {
         let r = rig();
         crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
-        return;
+        return None;
     }
     let def = g.fa[g.gd[gd].weapon].def;
     if hang {
@@ -462,31 +450,29 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
                 crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None);
             }
         }
-        return;
+        return None;
     }
     if rk == crate::rig_props::RigWeapon::Sc20k {
-        g.ch[c].in_hand = Some(crate::rig_props::long_hold(crate::rig_props::LongRig::Sc20k, None));
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
         let black = crate::cast::sneak_suit(g, c);
         let light = g.tab.light[fl].enabled;
         let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
         crate::rig_props::rig_boxes(g, c, o, out, None);
         free_can(g, gd, out);
-        return;
+        return Some(crate::rig_props::long_hold(crate::rig_props::LongRig::Sc20k, None));
     }
     if crate::kit::kit_pistol(g, gd) && row(g, def).rig == crate::weapons::WeaponDefRig::Pistol {
-        g.ch[c].in_hand = Some(crate::inhand::in_pistol());
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
         let light_on = g.tab.light[fl].enabled;
         let o = RigOpts { goggles, nv, slot: 1.0, light_on, is_guard: false, in_hand: Some(true), fit: Some(true), ..Default::default() };
         crate::rig_props::rig_boxes(g, c, o, out, None);
-        return;
+        return Some(crate::inhand::in_pistol());
     }
     let ih = !carbine && !torch_held;
     let beam = g.gd[gd].beam_dir;
-    g.ch[c].in_hand = Some(if carbine { crate::rig_props::long_hold(crate::rig_props::LongRig::Carbine, None) }
+    let word = if carbine { crate::rig_props::long_hold(crate::rig_props::LongRig::Carbine, None) }
         else if torch_held { crate::rig_props::torch_hold(beam, None) }
-        else { crate::inhand::in_pistol() });
+        else { crate::inhand::in_pistol() };
     let light_on = g.tab.light[fl].enabled;
     let lens = g.tab.light[fl].color;
     let o = RigOpts {
@@ -503,29 +489,23 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
         crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None);
     }
     if carbine { free_can(g, gd, out); }
+    Some(word)
 }
 
 // ---------------------------------------------------------------- what only a viewer's picture asks for
 
 /// What the men the fog of war leaves out carry, for a viewer's picture without the fog. Never part of a step.
-pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let n0 = out.len() as f64;
-    let mut i = 0usize;
-    while i < g.guards.len() {
+pub fn hidden_props(g: &crate::game::Game, out: &mut Carried) {
+    for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        i += 1;
         if crate::fogofwar::fog_of_war_hidden(g, gd) { guard_props(g, gd, out); }
     }
-    for cv in crate::civilians::civilians_shown(g) {
-        let c = g.gd[cv].ch;
-        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && !crate::condition::down(g, g.gd[cv].ch);
-        if tied && crate::fogofwar::fog_of_war_hidden(g, cv) { crate::rig_props::wrist_tie_boxes(g, c, out); }
-    }
-    rig_keys(g, out, n0);
+    wrist_ties(g, out, true);
+    out.keyed();
 }
 
 /// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m. None: no bore, or the muzzle is against what it meets.
-pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId>, civ: Option<bool>) -> Option<crate::combat::LaserReach> {
+pub fn laser_reach(g: & crate::game::Game, c_2: CharId, self_: Option<GuardId>, civ: Option<bool>) -> Option<crate::combat::LaserReach> {
     let civ = civ.unwrap_or(false);
     let dir = g.ch[c_2].gun_dir;
     let from = v3::mad(g.ch[c_2].muzzle, dir, 0.02);
@@ -566,10 +546,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
 }
 
 /// A laser line from `from` along unit `dir` for `l` metres and (dot) the bead where it lands: emissive geometry no ray sees. The one place an infrared box is made.
-pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mut Vec<AnyBoxId>, dot: bool, ir: Option<bool>, air: Option<bool>) {
-    let ir = ir.unwrap_or(false);
-    let air = air.unwrap_or(false);
-    if ir && !crate::irlaser::ir_viewer(g) { return; }
+pub fn beam_boxes(from: V3, dir: V3, l: f64, out: &mut Carried, dot: bool, ir: bool, air: bool) {
     let red: V3 = if ir { crate::irlaser::ir_tint() } else { [1.0, 0.06, 0.03] };
     const HW: f64 = 0.0022;
     let up: V3 = if m::abs(dir[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
@@ -577,7 +554,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     let y = v3::cross(dir, x);
     let flags = crate::scene_boxes::box_flag();
     let box_flags = flags_or(flags.no_shadow, flags.dynamic);
-    let line = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
+    let line = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
         h: [HW, HW, l / 2.0],
         yaw: Some(v3::yaw_of(dir)),
@@ -587,12 +564,10 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
         flags: Some(box_flags),
         ..Default::default()
     });
-    crate::thinline::thin_note(g, line.into(), HW, 0.45);
-    let shown = if ir { crate::irlaser::ir_note(g, line.into()) } else { line.into() };
-    out.push(shown);
+    out.boxes.push(CarriedBox { b: line, thin: Some(crate::thinline::Thin { hw0: HW, k: 0.45 }), ir, air: air.then_some(dot) });
     if dot {
         let end = v3::mad(from, dir, l - 0.006);
-        let bead = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
+        let bead = crate::scene_boxes::make_box_value(&crate::scene_boxes::MakeBoxP {
             c: end,
             h: [0.011, 0.011, 0.011],
             yaw: Some(0.0),
@@ -601,11 +576,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
             flags: Some(box_flags),
             ..Default::default()
         });
-        let shown = if ir { crate::irlaser::ir_note(g, bead.into()) } else { bead.into() };
-        out.push(shown);
-        if air { crate::thinline::thin_air(g, line.into(), Some(bead.into())); }
-    } else if air {
-        crate::thinline::thin_air(g, line.into(), None);
+        out.boxes.push(CarriedBox { b: bead, ir, ..CarriedBox::default() });
     }
 }
 
