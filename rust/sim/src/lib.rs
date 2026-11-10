@@ -41,7 +41,6 @@ pub mod panes;
 pub mod pattern;
 pub mod pen;
 pub mod poses;
-pub mod props;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
@@ -152,12 +151,6 @@ pub fn state_part(i: usize, what: u32) -> usize {
 /// how many rows a table holds (5: the columns of the doors' part of a block)
 pub fn doors_cap(table: u32) -> usize {
     doors::cap(table)
-}
-// ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
-/// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
-/// where column k of the part starts (100 + k)
-pub fn props_cap(table: u32) -> usize {
-    props::cap(table)
 }
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 /// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)

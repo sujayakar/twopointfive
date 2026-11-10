@@ -446,7 +446,7 @@ impl FurnAsk for Play {
         let d = |&it: &PropId| { let q = self.prop_at(it); (q[0] - at[0]).hypot(q[1] - at[1]) };
         *self.g.props.all.iter().min_by(|a, b| d(a).partial_cmp(&d(b)).unwrap()).expect("a prop")
     }
-    fn prop_at(&self, it: PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn prop_at(&self, it: PropId) -> [f64; 2] { [self.g.tab.props_prop[it].x, self.g.tab.props_prop[it].z] }
     fn level_as_it_stands(&self) -> [String; 3] {
         let n = self.g.destr.walls.authored as usize;
         let flags: Vec<String> = self.g.col.boxes.iter().take(n).map(|&b| format!("{}", self.g.tab.boxes[b].flags)).collect();

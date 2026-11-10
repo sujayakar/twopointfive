@@ -298,11 +298,10 @@ impl StealthAsk for Play {
     fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden(&self.g, gd) }
     fn things_kept(&self) -> Vec<([f64; 2], bool)> { self.g.fog_of_war.thing_recs.values().map(|r| ([r.x, r.z], r.held)).collect() }
     fn furniture(&self) -> Vec<game::ids::PropId> { self.g.props.props.iter().copied().collect() }
-    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [self.g.tab.props_prop[it].x, self.g.tab.props_prop[it].z] }
     fn prop_shoved(&mut self, it: game::ids::PropId, at: [f64; 2]) {
-        game::props::prop_set_x(&mut self.g, it, at[0]);
-        game::props::prop_set_z(&mut self.g, it, at[1]);
-        game::props::prop_set_dirty(&mut self.g, it, true);
+        game::props::prop_move_to(&mut self.g, it, at[0], at[1]);
+        self.g.tab.props_prop[it].dirty = true;
         game::props::prop_place(&mut self.g, it);
     }
     fn ours(&self, who: Option<f64>) -> bool { game::fogofwar::fog_of_war_ours_id(&self.g, who) }

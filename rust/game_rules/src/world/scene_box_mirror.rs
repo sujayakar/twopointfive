@@ -268,8 +268,8 @@ fn box_mirror_boot(g: &mut crate::game::Game) {
     if c.glass != PANE_CAP || c.view != PANE_CAP {
         panic!("the Rust module holds {} broken panes and a view of {}: src/scene/boxMirror.ts says {} of each", c.glass, c.view, PANE_CAP);
     }
-    if c.leaves != crate::sim_propshome::PROP_PARTS || c.things != crate::sim_propshome::PROP_CAP {
-        panic!("the Rust module's copy lists {} leaves and {} things of furniture: src/sim/propshome.ts says {} boxes and {} things", c.leaves, c.things, crate::sim_propshome::PROP_PARTS, crate::sim_propshome::PROP_CAP);
+    if c.leaves != crate::props::PROP_PARTS || c.things != crate::props::PROP_CAP {
+        panic!("the Rust module's copy lists {} leaves and {} things of furniture: the furniture says {} boxes and {} things", c.leaves, c.things, crate::props::PROP_PARTS, crate::props::PROP_CAP);
     }
     x.scratch_len = sim::sim_scratch_len() as f64;
     x.lamp_cap = sim::light_cap() as f64;
@@ -772,7 +772,7 @@ pub fn box_mirror_things(g: &mut crate::game::Game) -> bool {
     let every = g.col.mirror.things_all;
     let s = g.sim;
     for (i, &p) in all.iter().enumerate() {
-        let row = [crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p), g.tab.props_prop[p].radius];
+        let row = [g.tab.props_prop[p].x, g.tab.props_prop[p].z, g.tab.props_prop[p].yaw, g.tab.props_prop[p].radius];
         world(s).thing[i * TH_..i * TH_ + 4].copy_from_slice(&row);
     }
     let mut at = 0usize;

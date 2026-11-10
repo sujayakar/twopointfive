@@ -399,7 +399,7 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
     while pi < g.props.props.len() {
         let p = g.props.props[pi];
         pi += 1;
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let mut near = false;
         for &d in g.doors.list.iter() {
             let fc = g.dr[d].frame_centre;

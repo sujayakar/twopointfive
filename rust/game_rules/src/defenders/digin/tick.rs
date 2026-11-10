@@ -25,7 +25,7 @@ fn entered(g: &mut Game, room: RoomfightRoomId) -> bool {
 fn phase_of(g: &mut Game, gd: GuardId) -> Phase {
     match state_of(g).men.get(gd) { Some(x) => x.phase, None => Phase::Idle }
 }
-fn prop_at(g: &Game, p: PropId) -> V3 { [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)] }
+fn prop_at(g: &Game, p: PropId) -> V3 { [g.tab.props_prop[p].x, 0.0, g.tab.props_prop[p].z] }
 
 /// braceInRoom: `to` is his room's floor and the way to it from `from` does not leave the room
 fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -> bool {
@@ -304,8 +304,8 @@ fn new_man() -> crate::digin::Man {
 /// he lets go of what he was at; furniture left where it stands is somebody else's to haul
 fn drop(g: &mut crate::game::Game, m: &mut crate::digin::Man, gd: Option<GuardId>) {
     if let Some(p) = m.prop {
-        crate::props::prop_set_vx(g, p, 0.0);
-        crate::props::prop_set_vz(g, p, 0.0);
+        g.tab.props_prop[p].vx = 0.0;
+        g.tab.props_prop[p].vz = 0.0;
         state_of(g).used.delete(p);
     }
     if let (Some(k), Some(who)) = (m.room, gd) {
@@ -379,11 +379,11 @@ fn haul(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man,
     let cap = g.k.digin.haul_speed / m::max(0.1, g.k.digin.pace) * 1.6;
     if vl > cap { vx *= cap / vl; vz *= cap / vl; }
     if flat(pp, pos) > 2.2 { vx = 0.0; vz = 0.0; }                     // it has caught on something behind him: left where it is
-    crate::props::prop_set_vx(g, p, vx);
-    crate::props::prop_set_vz(g, p, vz);
+    g.tab.props_prop[p].vx = vx;
+    g.tab.props_prop[p].vz = vz;
     crate::props::prop_wake(g, p);
     let id = g.ch[c].id;
-    crate::props::prop_set_last_who(g, p, id);
+    g.tab.props_prop[p].who = id;
     if m::hyp2(vx, vz) > 0.3 && g.time - m.scrape_t > g.k.digin.scrape_every {
         m.scrape_t = g.time;
         scrape(g, gd, *m, r, None);
@@ -529,8 +529,8 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         Phase::Haul => {                                              // planted: at the door with it, or stopped short
             let k = rk.unwrap();
             let p = match m.prop { Some(p) if g.props.props.contains(&p) => p, _ => { drop(g, m, Some(gd)); return } };
-            crate::props::prop_set_vx(g, p, 0.0);
-            crate::props::prop_set_vz(g, p, 0.0);
+            g.tab.props_prop[p].vx = 0.0;
+            g.tab.props_prop[p].vz = 0.0;
             let e = entry_at(g, k, m.brace);
             if contact { caught(g, d, m); drop(g, m, Some(gd)); return; }
             if let Some(e) = e {

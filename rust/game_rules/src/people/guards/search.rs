@@ -575,7 +575,7 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
     for i in 0..g.props.props.len() {
         let id = g.props.props[i];
         let r = g.tab.props_prop[id].radius + 0.7;
-        let (px, pz) = (crate::props::prop_x(g, id), crate::props::prop_z(g, id));
+        let (px, pz) = (g.tab.props_prop[id].x, g.tab.props_prop[id].z);
         let (x0, x1, z0, z1) = (
             m::max(0.0, m::floor((px - r) / cs)),
             m::min(w - 1.0, m::floor((px + r) / cs)),
