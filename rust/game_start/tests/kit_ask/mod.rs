@@ -178,8 +178,6 @@ pub trait KitAsk {
     fn switch_near(&mut self, at: [f64; 2]) -> Option<game::lightswitch::WallSwitch>;
     /// is the room's light on, by its switch
     fn switch_on(&self, sw: &game::lightswitch::WallSwitch) -> bool;
-    /// every row of the orders table: its id, its digit, whether a key of its own carries it
-    fn order_keys(&self) -> Vec<(String, Option<f64>, bool)>;
     /// the name each door is said by, as the level stands
     fn door_names(&self) -> Vec<String>;
     /// what a man calls each of the level's routes
@@ -602,7 +600,6 @@ impl KitAsk for Play {
         v.into_iter().next()
     }
     fn switch_on(&self, sw: &game::lightswitch::WallSwitch) -> bool { game::lightswitch::switch_lit(&self.g, sw) }
-    fn order_keys(&self) -> Vec<(String, Option<f64>, bool)> { self.g.tab.orders_order_def.iter().map(|(_, r)| (r.id.clone(), r.key, r.hot_key.is_some())).collect() }
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().filter_map(|&d| game::doornames::door_said_name(&self.g, d)).collect() }
     fn route_words(&self) -> Vec<String> { (0..self.g.level.routes.len()).map(|i| game::dialogue::route_name(&self.g, i as f64)).collect() }
     fn big_counts(&self) -> (i32, i32, i32, i32) { let b = &self.g.stats.bigkit; (b.sam_blows, b.sam_shells, b.mate_blows, b.mate_hammered) }

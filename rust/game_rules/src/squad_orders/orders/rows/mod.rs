@@ -9,7 +9,7 @@
 //!   can     this man can do his part (None), or the word for why not
 //!   only    the men, of those addressed, the order is for
 //!   valid   these men together can carry it out here (Ok), or not (Err(None)), or the word for why (Err(Some))
-//!   gone    the flat ring does not offer it on this target at all
+//!   gone    the ring does not offer it on this target at all
 //!   when    it stands in now for the row its data names (`OrderDef.stands_in`)
 //!   issue   hand each man his assignment; Some is a refusal, in those words
 //!   tick    once a frame for each man under the order, before he is posed
@@ -21,7 +21,7 @@
 //! Only `id`, `label` and `issue` must be written: `Row { frame: Some(frame), ..Row::new(ID, label, issue) }`.
 //!
 //! What an order's functions call, so that its id is written once, in its `Row`:
-//!   `list(g, &ORDER, data)`    its row on the menu (`data`: its page, its targets, its key, its words of assent). Listing again is the same row.
+//!   `list(g, &ORDER, data)`    its row on the menu (`data`: its page, its targets, its words of assent). Listing again is the same row.
 //!   `unlist(g, &ORDER)`        off the menu
 //!   `listed(g, seat, &ORDER)`  is it on this seat's menu
 //!   `assign(g, &ORDER, man, a)`  hand a man his task under this order: where he stands, which way he faces, how he carries his gun, the two
@@ -76,7 +76,7 @@ rows! {
     stunthere;
 }
 
-/// The row of the menu for an order: `data` is what only it knows (its page, its targets, its key), and the functions
+/// The row of the menu for an order: `data` is what only it knows (its page, its targets), and the functions
 /// are the order's own.
 pub fn def(r: &'static Row, data: OrderDef) -> OrderDef { OrderDef { id: String::from(r.id), row: r, ..data } }
 

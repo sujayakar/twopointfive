@@ -102,13 +102,13 @@ fn same_as_the_ticks(p: &Play, seed: u32) {
         let w = v.wedges.iter().find(|w| w.key == d as f64);
         let row = seat.row.get(d).copied().unwrap_or(-1.0);
         if d as f64 == seat.more { assert_eq!(w.map(|w| w.text.as_str()), Some("more"), "seed {seed}: wedge {d}"); continue; }
-        if m.page.is_none() && !more && d == 1 { assert_eq!(w.map(|w| w.text.clone()), m.quick.clone().filter(|q| !q.is_empty()), "seed {seed}: wedge 1"); continue; }
+        if !more && d == 1 { assert_eq!(w.map(|w| w.text.clone()), m.quick.clone().filter(|q| !q.is_empty()), "seed {seed}: wedge 1"); continue; }
         assert_eq!(w.map(|w| w.text.clone()), if row >= 0.0 { Some(m.words[row as usize].clone()) } else { None }, "seed {seed}: wedge {d}: {v:?} {:?}", seat.row);
     }
 }
 
 /// THE RULE: a word that changes while the ring is up is in the view the next frame, and the ring the view lays out is the tick's own, whatever its words are by then. A FAILURE MEANS: the HUD shows
-/// words the tick does not lay out, or a row that the flat ring's first wedge took. The control is the same ring a frame before, with no man near.
+/// words the tick does not lay out, or a row that the ring's first wedge took. The control is the same ring a frame before, with no man near.
 #[test]
 fn a_word_that_changes_under_the_ring_is_told_the_next_frame_and_the_wedges_stay_the_ticks() {
     for seed in SEEDS {
@@ -244,7 +244,7 @@ fn in_a_game_of_two_the_ring_is_the_seats_who_opened_it() {
         let input = p.host.input;
         game::seats::with_seat(&mut p.g, st, &mut |g| {
             let t = game::orders::squad_orders_target_at(g, [door[0], 0.0, door[1]]);
-            assert!(game::orders::squad_orders_open(g, Some(&t), Some(true), None));
+            assert!(game::orders::squad_orders_open(g, Some(&t), None));
             g.sets[g.seat].orders.cmd_ring = Some(game::cmdring::ring_open(g, input, 800.0, 600.0, 0.0, None));
         });
         let two = p.view_of(1).ring.expect("the second player's ring");

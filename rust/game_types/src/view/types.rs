@@ -1099,7 +1099,7 @@ pub struct RingWedge {
     pub text: String,
     /// it cannot be given now
     pub off: bool,
-    /// it turns the ring to another page
+    /// it turns the ring to the rest of the rows
     pub opens: bool,
 }
 

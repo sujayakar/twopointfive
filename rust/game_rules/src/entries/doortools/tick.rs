@@ -80,10 +80,10 @@ fn give_go(g: &mut Game, p: V3, men: &[GuardId]) -> Option<String> {
     let opts = crate::orders::GiveOpts { men: Some(men.to_vec()), ..Default::default() };
     crate::orders::squad_orders_give(g, crate::orders::rows::go::ORDER.id, Some(&t), None, Some(&opts))
 }
-/// the row of the menu that is up with this hot key: -1 with none (or no menu)
-fn menu_row_hot(g: &Game, seat: &crate::seats::SeatRef, key: &str) -> i32 {
+/// the word's row of the menu that is up: -1 with none (or no menu)
+fn menu_row_word(g: &Game, seat: &crate::seats::SeatRef) -> i32 {
     let Some(rows) = seat.orders.menu.as_ref().map(|m| m.rows.clone()) else { return -1 };
-    match rows.iter().position(|&d| g.tab.orders_order_def[d].hot_key.as_deref() == Some(key)) {
+    match rows.iter().position(|&d| g.tab.orders_order_def[d].word) {
         Some(i) => i as i32,
         None => -1,
     }
@@ -1165,10 +1165,10 @@ pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
     }
     let four = crate::orders::squad_orders_big(g, &crate::seats::here(g));
     let target = if four { g.sets[g.seat].orders.menu.as_ref().map(|M| M.target.clone()) } else { None };
-    let row = if target.is_some() { menu_row_hot(g, &crate::seats::here(g), &key) } else { -1 };
+    let row = if target.is_some() { menu_row_word(g, &crate::seats::here(g)) } else { -1 };
     let tap = g.k.doortools.word_tap;
     if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) {
-        let i = menu_row_hot(g, &crate::seats::here(g), &key);
+        let i = menu_row_word(g, &crate::seats::here(g));
         if i >= 0 {
             press_off(g, input, &key);
             crate::orders::squad_orders_pick(g, Some(i as f64));

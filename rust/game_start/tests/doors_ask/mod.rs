@@ -143,12 +143,12 @@ pub trait DoorsAsk {
     fn floor_free(&self, at: [f64; 2]) -> bool;
     /// how many orders the squad has been given
     fn orders_given(&self) -> usize;
-    /// the order menu as it stands, if one is up: its page and how many rows
-    fn menu_up(&self) -> Option<(Option<String>, usize)>;
-    /// the menu opens on what stands at `at`, as its key does, optionally turned to a page
-    fn menu_opens(&mut self, at: [f64; 2], page: Option<&str>);
-    /// the key on the row of that id on the open page
-    fn row_key(&self, id: &str) -> Option<f64>;
+    /// the order menu as it stands, if one is up: how many rows
+    fn menu_up(&self) -> Option<usize>;
+    /// the menu opens on what stands at `at`, as its key does
+    fn menu_opens(&mut self, at: [f64; 2]);
+    /// the wedge the row of that id is on
+    fn wedge(&self, id: &str) -> Option<usize>;
     /// the slot Sam has in his hands
     fn sam_slot(&self) -> game::game::SlotKind;
     /// a key tapped for two frames
@@ -500,14 +500,18 @@ impl DoorsAsk for Play {
     fn watch_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].watch).map(|p| [p[0], p[2]]) }
     fn floor_free(&self, at: [f64; 2]) -> bool { !game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
     fn orders_given(&self) -> usize { self.g.sets[self.g.seat].orders.log.len() }
-    fn menu_up(&self) -> Option<(Option<String>, usize)> { self.g.sets[self.g.seat].orders.menu.as_ref().map(|m| (m.page.clone(), m.rows.len())) }
-    fn menu_opens(&mut self, at: [f64; 2], page: Option<&str>) {
+    fn menu_up(&self) -> Option<usize> { self.g.sets[self.g.seat].orders.menu.as_ref().map(|m| m.rows.len()) }
+    fn menu_opens(&mut self, at: [f64; 2]) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
-        assert!(game::orders::squad_orders_open(&mut self.g, Some(&t), None, None), "the menu did not open on {at:?}");
+        assert!(game::orders::squad_orders_open(&mut self.g, Some(&t), None), "the menu did not open on {at:?}");
         self.ring_over_menu();
-        if page.is_some() { game::orders::squad_orders_turn(&mut self.g, page); }
     }
-    fn row_key(&self, id: &str) -> Option<f64> { self.g.sets[self.g.seat].orders.menu.as_ref()?.rows.iter().map(|&d| &self.g.tab.orders_order_def[d]).find(|r| r.id == id)?.key }
+    fn wedge(&self, id: &str) -> Option<usize> {
+        let s = &self.g.sets[self.g.seat];
+        let m = s.orders.menu.as_ref()?;
+        let i = m.rows.iter().position(|&d| self.g.tab.orders_order_def[d].id == id)?;
+        game::orders::squad_orders_seats(&self.g, m, s.orders.cmd_ring).row.iter().position(|&r| r == i as f64)
+    }
     fn sam_slot(&self) -> game::game::SlotKind { self.g.pl[self.g.player].slot }
     fn tap(&mut self, code: &str) { self.key_down(code); self.frame(); self.key_up(code); self.frame(); }
     fn on_face(&self, d: DoorId, along: f64, off: f64) -> [f64; 2] { let f = game::guards::frame_of(&self.g, d); [f.hx + f.ux * along + f.nx * off, f.hz + f.uz * along + f.nz * off] }

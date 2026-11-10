@@ -143,7 +143,7 @@ impl Me {
     async fn enter(&self, d: DoorId, why: &str) -> bool {
         let set = self.cursor_on(d).await && { let t = self.under(); self.seen(|g, s| game::autopilot::auto_pick(g, s, &t, Some(false), None).why == game::autopilot::AutoPickWhy::Set) };
         if !set { return self.quick_on(d, why).await; }
-        let (n, word) = (self.orders(), self.ask(|g| g.sets[g.seat].orders.knobs.wait_alt.clone()));
+        let (n, word) = (self.orders(), self.ask(|g| g.k.doortools.blow_key.clone()));
         self.key(&word).await;
         self.say(format!("word · {} ({}) → {}", self.name(d), why, self.order_given(n)));
         self.aim_off();

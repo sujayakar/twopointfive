@@ -46,7 +46,6 @@ pub struct WallCharge {
     #[is(OrdersOrderDefId(0))] pub opener: OrdersOrderDefId,
     #[is(OrdersOrderDefId(0))] pub row: OrdersOrderDefId,
     pub seated: bool,
-    #[is(String::from(""))] pub mode: String,
     pub player: Option<PlayerId>,
     pub roster: Vec<GuardId>,
     pub alone: f64,

@@ -169,12 +169,6 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     for d in 1..=9 {
         if pressed_delete(g, input, &format!("Digit{}", d)) && !js::truthy(digit) { digit = d as f64; }
     }
-    // the squad's only keys: a row's own letter is nobody's while the ring is up; the word's key stays the word's
-    for id in g.sets[g.seat].orders.defs.clone() {
-        if let Some(hot) = g.tab.orders_order_def[id].hot_key.clone() {
-            if !hot.is_empty() && hot != g.k.orders.wait_alt { pressed_delete(g, input, &hot); }
-        }
-    }
     g.tab.input[input].wheel = 0.0;
     let stale = {
         let read_t = g.sets[g.seat].orders.menu.as_ref().unwrap().read_t;
@@ -196,7 +190,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     if ring_more(g.sets[g.seat].orders.cmd_ring) && seats_now(g, None).over.is_empty() { unlight(g, Some(false)); }
     if rmb {
         if ring_more(g.sets[g.seat].orders.cmd_ring) { unlight(g, Some(false)); }
-        else if !squad_orders_page_back(g) { away(g);  }
+        else { away(g); }
         return true;
     }
     if lmb {
@@ -217,7 +211,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
                     menu.target = OrderTarget::None(OrderTargetNone { at, man: None });
                 }
             }
-            if menu.page.is_some() { squad_orders_turn(g, None); } else { squad_orders_refresh(g); }
+            squad_orders_refresh(g);
             if g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; return true; }
             if let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() {
                 r.more = Some(false);
@@ -227,7 +221,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
             squad_orders_ring_sel(g);
         }
     }
-    // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit; a wedge that opens a page turns the ring to it and lights nothing
+    // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit; 'more' turns the ring to the rest of them and lights nothing
     let lone = crate::ringlone::lone_key(g, &mut |g: &mut Game| squad_orders_ring_keys(g));
     let time = g.time;
     // ringWant reads only the table of numbers on g: R goes back as it comes out
@@ -239,26 +233,15 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     let mut turned = false;
     if js::truthy(want) && want != lit_now {
         let r = g.sets[g.seat].orders.cmd_ring;
-        let (rows, on_first) = {
-            let menu = g.sets[g.seat].orders.menu.as_ref().unwrap();
-            (menu.rows.clone(), menu.page.is_none())
-        };
         let seat = seats_now(g, r);
         let i = seat_at(&seat.row, want);
-        let first = on_first && !ring_more(r);
-        let opens = if i >= 0.0 { g.tab.orders_order_def[rows[i as usize]].opens.clone() } else { None };
+        let first = !ring_more(r);
         if first && (want == 1.0 || (js::truthy(digit) && seat.same.get(want as usize).is_some_and(|&x| x >= 0.0))) {
             g.sets[g.seat].orders.cmd_ring.as_mut().unwrap().lit = 1.0;
         } else if want == seat.more {
             unlight(g, Some(true));
             turned = true;
-            if g.sets[g.seat].orders.menu.as_ref().unwrap().flat.unwrap_or(false) {
-                squad_orders_refresh(g);
-                if g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; return true; }
-            }
-        } else if text(&opens) {
-            squad_orders_turn(g, opens.as_deref());
-            turned = true;
+            squad_orders_refresh(g);
             if g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; return true; }
         } else if i >= 0.0 {
             g.sets[g.seat].orders.cmd_ring.as_mut().unwrap().lit = want;
@@ -274,13 +257,13 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     let by_digit = digit > 0.0 && !turned && lit_now == digit;
     if latch != crate::cmdring::RingLatch::Give && !by_digit && !(click && !turned) { return true; }
     if click && !js::truthy(lit_now) { return true; }
-    // the lit wedge is given: the first page's first wedge is the quick key's own order, every other one its row's
+    // the lit wedge is given: the first wedge is the quick key's own order, every other one its row's
     let r = g.sets[g.seat].orders.cmd_ring;
     let n = g.sets[g.seat].orders.menu.clone().unwrap();
     let lit = r.unwrap().lit;
     let i = seat_at(&squad_orders_seats(g, &n, r).row, lit);
     g.sets[g.seat].orders.cmd_ring = None;
-    if n.page.is_none() && !ring_more(r) && lit == 1.0 {
+    if !ring_more(r) && lit == 1.0 {
         g.sets[g.seat].orders.menu = None;
         if n.part.is_some() {
             squad_orders_part_give(g, &mut |g: &mut Game| {
@@ -310,8 +293,7 @@ fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
 
 /// The order menu put up on `t` as a ring at the cursor (false: no menu opened there).
 fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool {
-    let flat = squad_orders_flat_ring(g);
-    if !squad_orders_open(g, Some(t), Some(flat), g_2.map(|p| p.men.as_slice())) { return false; }
+    if !squad_orders_open(g, Some(t), g_2.map(|p| p.men.as_slice())) { return false; }
     let (w, h) = (canvas.client_width, canvas.client_height);
     let r = crate::cmdring::ring_open(g, input, w, h, t0, None);
     g.sets[g.seat].orders.cmd_ring = Some(r);
@@ -378,21 +360,13 @@ fn squad_orders_ring_sel(g: &mut crate::game::Game) {
     if i >= 0.0 { g.sets[g.seat].orders.menu.as_mut().unwrap().sel = i; }
 }
 
-/// The open menu's rows by wedge: its page's own, or on 'more' the rest of them from wedge 1. A function of the menu's record: the tick's wedges and a HUD's are the same over the
+/// The open menu's rows by wedge, or on 'more' the rest of them from wedge 1. A function of the menu's record: the tick's wedges and a HUD's are the same over the
 /// same words (`menu.words`, `menu.quick`: orders/words.rs).
 pub fn squad_orders_seats(g: &crate::game::Game, m: &crate::orders::Menu, r: Option<crate::cmdring::RingState>) -> crate::orders::SquadOrdersSeats {
-    let word_key = g.k.orders.wait_alt.clone();
-    let flat = m.flat.unwrap_or(false);
-    let (mut s_row, s_more, s_over) = if flat {
-        let rows: Vec<crate::cmdring::FlatRow> = m.rows.iter().map(|&id| flat_row(g, id)).collect();
-        let lead = if rows.is_empty() { -1.0 } else { 0.0 };
-        let s = crate::cmdring::flat_seats(g, &rows, target_kind(&m.target), &word_key, lead);
-        (s.row, s.more, s.over)
-    } else {
-        let rows: Vec<crate::cmdring::SeatRow> = m.rows.iter().map(|&id| seat_row(g, id)).collect();
-        let s = crate::cmdring::ring_seats(g, &rows, target_kind(&m.target) != "none", &word_key, Some(m.page.is_none()));
-        (s.row, s.more, s.over)
-    };
+    let rows: Vec<crate::cmdring::FlatRow> = m.rows.iter().map(|&id| flat_row(g, id)).collect();
+    let lead = if rows.is_empty() { -1.0 } else { 0.0 };
+    let s = crate::cmdring::flat_seats(g, &rows, target_kind(&m.target), lead);
+    let (mut s_row, s_more, s_over) = (s.row, s.more, s.over);
     let wedges = g.k.cmdring.wedges as usize;
     let mut same = vec![-1.0; wedges + 1];
     if ring_more(r) {
@@ -400,8 +374,8 @@ pub fn squad_orders_seats(g: &crate::game::Game, m: &crate::orders::Menu, r: Opt
         for (n, &i) in s_over.iter().enumerate() { if n + 1 < row.len() { row[n + 1] = i; } else { row.push(i); } }   // (an array in JavaScript: it grows)
         return SquadOrdersSeats { row, more: 0.0, over: s_over, same };
     }
-    // the flat tree's first ring: a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's
-    if flat && text(&m.quick) {
+    // a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's
+    if text(&m.quick) {
         for d in 2..=wedges {
             let i = s_row[d];
             if i >= 0.0 && d as f64 != s_more && m.words.get(i as usize) == m.quick.as_ref() {
@@ -412,20 +386,15 @@ pub fn squad_orders_seats(g: &crate::game::Game, m: &crate::orders::Menu, r: Opt
     }
     SquadOrdersSeats { row: s_row, more: s_more, over: s_over, same }
 }
-fn seat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::SeatRow {
+fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
     let d = &g.tab.orders_order_def[id];
-    crate::cmdring::SeatRow {
-        key: d.key,
-        hot_key: d.hot_key.clone(),
-        opens: d.opens.clone(),
+    crate::cmdring::FlatRow {
+        id: d.id.clone(),
+        word: d.word,
         free: d.free,
         targets: d.targets.iter().map(|k| String::from(k.as_str())).collect(),
         listed: d.listed.as_ref().map(|l| l.iter().map(|k| String::from(k.as_str())).collect()),
     }
-}
-fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
-    let s = seat_row(g, id);
-    crate::cmdring::FlatRow { id: g.tab.orders_order_def[id].id.clone(), hot_key: s.hot_key, opens: s.opens, free: s.free, targets: s.targets, listed: s.listed }
 }
 
 /// A tap's order on `t`: nothing where a tutorial step teaches the key held; a second tap in the same place is 'fall in'.
@@ -531,7 +500,7 @@ fn squad_orders_ring_keys(g: &mut crate::game::Game) -> f64 {
     let wedges = g.k.cmdring.wedges as i32;
     for d in 1..=wedges {
         let at = d as usize;
-        let on = d as f64 == seat.more || if menu.page.is_none() && !ring_more(Some(r)) && d == 1 {
+        let on = d as f64 == seat.more || if !ring_more(Some(r)) && d == 1 {
             text(&menu.quick)
         } else {
             seat.row[at] >= 0.0 && (seat.row[at] as usize) < menu.rows.len()
