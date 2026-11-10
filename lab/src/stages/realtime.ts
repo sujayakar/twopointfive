@@ -50,6 +50,7 @@ export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]
 
 /** light on surfaces: patches in a table (wgsl/cache.wgsl). `o` sets constants of its text otherwise, `id` names buffers of its own: for measuring (kept.ts) */
 export function patches(o: Record<string, string> = {}, id = ''): CachePart {
+  for (const n of Object.keys(o)) if (![cacheLib, cacheTell, update].some(t => t.includes(`const ${n} = `))) throw new Error('no constant ' + n);
   const set = (t: string) => Object.entries(o).reduce((s, [k, v]) => s.replace(new RegExp(`const ${k} = [^;]+;`), `const ${k} = ${v};`), t), lib = set(cacheLib), tell = set(cacheTell), rush = [0, 1, 2], H = { HITS };
   const slots = +/const SLOTS = (\d+)u/.exec(lib)![1]!, cell = +/const CELL = ([\d.]+)/.exec(lib)![1]!, lanes = slots / 8, k = (n: string) => n + id, RW = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
   const bind: Stage['buffers'] = { keys: [k('keys'), 'array<atomic<u32>>', 'read_write'], cells: [k('cells'), 'array<vec4f>', 'read'] }, asks: Stage['buffers'] = { cand: [k('cand'), 'array<atomic<u32>>', 'read_write'] }, hits: Stage['buffers'] = { hits: ['hits', 'array<vec4u>', 'read_write'] };
@@ -102,8 +103,10 @@ export const svgf: DenoisePart = {
     return { stages, result: from, ...(second ? { second: from2 } : {}) };
   },
 };
+/** how wide a patch is, for what keeps none: a path ends where it is as wide as one (gather.wgsl, `fine`), whatever answers there */
+export const CELL_LINE = /const CELL = [\d.]+;/.exec(cacheLib)![0] + '\n';
 /** no memory of light at all: what a bounce hits is lit by nothing. Shows what the cache is worth */
-export function noCache(): CachePart { return { name: 'none', lib: 'const CELL = 0.32;\nstruct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { var c: Cached; return c; }\n', tell: 'fn cacheTell(who: u32, x: vec3f, n: vec3f) {}\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
+export function noCache(): CachePart { return { name: 'none', lib: CELL_LINE + 'var<private> askMoves: bool = false;\nstruct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { var c: Cached; return c; }\n', tell: 'fn cacheTell(who: u32, x: vec3f, n: vec3f) {}\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
 export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let o = frame.size.zw; if (f32(id.x) >= o.x || f32(id.y) >= o.y) { return; } textureStore(outT, id.xy, textureSampleLevel(color, linSamp, (vec2f(id.xy) + 0.5) / o, 0.0)); }' }] }; } };
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal, second }) => ({ stages: [], result: signal, ...(second ? { second } : {}) }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', airD: 'airD' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };

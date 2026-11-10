@@ -1,20 +1,24 @@
 // MESHES, as one more kind of piece: what a ray meets of one, and what is there. Rows are those of mesh/pack.ts, from MESH_ROW on.
-//   object   n levels, bits, children's row, children · a ball round it · the width at which it is gone · then a level each: error, tree, first child, children
+//   object   n levels, bits, children's row, children · a ball round it · the width at which it is gone, its class · then a level each: error, tree, first child, children
 //   child    three rows object → mesh (scaled) · mesh, tint, scale, what its level of the object is off
-//   mesh     corner, levels · a step of its grid, clusters' row · triangles' row, picking row and entries, clusters · ball · then a level each: error, tree, triangles, spread
+//   mesh     corner, levels · a step of its grid, clusters' row · triangles' row, picking row and entries, clusters · ball · then a level each: error, tree, error as it is seen, spread
 //   cluster  vertices' row, triangles, vertices | level << 16, how far it stands off      triangle  three vertices of its cluster, a byte each
 //   vertex   x y, z and spread, normal, color               node      both children: least corner, what it is · greatest corner
 // (what it is: a node's row, or 1 << 31 | first << 4 | how many triangles, or children of the object)
 // A hit's code is MESH_HIT | child << bits | cluster << 7 | triangle.
 const MESH = 64u; const MESH_HIT = 0x80000000u;
 fn mrow(r: u32) -> vec4f { return exF(MESH_ROW + r); }
+/* (words are read as words: a GPU may flush a small one to nothing where it is loaded as a float) */
 fn mrowU(r: u32) -> vec4u { return extra[MESH_ROW + r]; }
+fn asF(v: vec4u) -> vec4f { return bitcast<vec4f>(v); }
 /** any hit will do (a shadow's ray) */
 var<private> meshAny = false;
 /** how far a ray's levels may stand off the finest: so many metres (meshError), or so much of its footprint (meshFoot); or all at a level counted from the finest (meshLevel: 1 = the finest, 0 = by the two others) */
 var<private> meshError = 0.0; var<private> meshFoot = 0.0; var<private> meshLevel = 0u;
 /** and so many levels coarser than that: for the seam's study */
 var<private> meshMore = 0u;
+/** the object's level, counted from the finest (1), whatever the width: for measuring what each loses (0 = by the width) */
+var<private> meshObject = 0u; var<private> meshDrawn = false;      /* (and levels as the raster picks them) */
 /** how wide the ray's answer is there, in metres that a level may be off */
 fn meshWide(t: f32) -> f32 { return max(max(meshError, frame.knobs.x), (meshFoot + frame.knobs.y) * footAt(t)); }
 /** as far as this a ray does not meet the backs of triangles: it began under them, on a finer level */
@@ -24,24 +28,24 @@ var<private> meshOwn = true;
 
 fn meshVertex(row: u32, mn: vec3f, st: vec3f) -> vec3f { let v = mrowU(row); return mn + st * vec3f(f32(v.x & 0xffffu), f32(v.x >> 16u), f32(v.y & 0xffffu)); }
 /** which level of a mesh stands within `e` of its finest */
-fn meshPick(h: u32, n: u32, e: f32) -> u32 { if (meshLevel > 0u) { return min(meshLevel - 1u, n - 1u); } var l = n - 1u; loop { if (l == 0u || mrow(h + 4u + l).x <= e) { break; } l -= 1u; } return min(l + meshMore, n - 1u); }
+fn meshPick(h: u32, n: u32, e: f32) -> u32 { if (meshLevel > 0u) { return min(meshLevel - 1u, n - 1u); } var l = n - 1u; loop { let v = mrow(h + 4u + l); if (l == 0u || select(v.x, v.z, meshDrawn) <= e) { break; } l -= 1u; } return min(l + meshMore, n - 1u); }
 fn boxSpan(a: vec3f, b: vec3f, o: vec3f, inv: vec3f) -> vec2f { let p = (a - o) * inv; let q = (b - o) * inv; return vec2f(max3(min(p, q)), min3(max(p, q))); }
 fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
   let p = &pieces[k]; let sc = (*p).quad.x; let oo = vec3f(dot((*p).r0.xyz, ro) + (*p).r0.w, dot((*p).r1.xyz, ro) + (*p).r1.w, dot((*p).r2.xyz, ro) + (*p).r2.w) / sc; let od = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd)) / sc;
   let oh = (*p).planes; let head = mrowU(oh); let hull = boxSpan(-(*p).half / sc, (*p).half / sc, oo, safeInv(od)); if (max(hull.x, tmin) > min(hull.y, tmax)) { return false; }
-  var li = head.x - 1u; let may = meshWide(max(hull.x, 0.0)) / sc; loop { if (li == 0u || (meshLevel == 0u && mrow(oh + 3u + li).x <= may)) { break; } li -= 1u; }
+  var li = head.x - 1u; let may = meshWide(max(hull.x, 0.0)) / sc; loop { if (li == 0u || (meshLevel == 0u && mrow(oh + 3u + li).x <= may)) { break; } li -= 1u; } if (meshObject > 0u) { li = min(meshObject, head.x) - 1u; }
   var stack: array<u32, 48>; var stackT: array<f32, 48>; var sp = 0; var at = mrowU(oh + 3u + li).y; var atT = max(hull.x, tmin);
   var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var recs = 0u; var tris = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var backTo = meshBack;
   loop {
     if ((at & 0x80000000u) == 0u) {                                  // a node: the nearer child next, the farther later
-      let a0 = mrow(at); let a1 = mrow(at + 1u); let b0 = mrow(at + 2u); let b1 = mrow(at + 3u); let sa = boxSpan(a0.xyz, a1.xyz, o, inv); let sb = boxSpan(b0.xyz, b1.xyz, o, inv); let ta = max(sa.x, tmin); let tb = max(sb.x, tmin); let ha = ta <= min(sa.y, best); let hb = tb <= min(sb.y, best); let ra = bitcast<u32>(a0.w); let rb = bitcast<u32>(b0.w);
+      let a0 = mrowU(at); let a1 = mrow(at + 1u); let b0 = mrowU(at + 2u); let b1 = mrow(at + 3u); let sa = boxSpan(asF(a0).xyz, a1.xyz, o, inv); let sb = boxSpan(asF(b0).xyz, b1.xyz, o, inv); let ta = max(sa.x, tmin); let tb = max(sb.x, tmin); let ha = ta <= min(sa.y, best); let hb = tb <= min(sb.y, best); let ra = a0.w; let rb = b0.w;
       if (ha && hb) { let near = ta <= tb; if (sp < 46) { stack[sp] = select(ra, rb, near); stackT[sp] = select(ta, tb, near); sp += 1; } at = select(rb, ra, near); atT = select(tb, ta, near); continue; }
       if (ha) { at = ra; atT = ta; continue; } if (hb) { at = rb; atT = tb; continue; }
     } else if (child == 0xffffffffu) {                               // a child (or a few): the last of them now, into its own frame
       let first = (at & 0x7fffffffu) >> 4u; let count = at & 15u; if (count > 1u && sp < 46) { stack[sp] = 0x80000000u | (first << 4u) | (count - 1u); stackT[sp] = atT; sp += 1; }
       child = first + count - 1u; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
-      let a = mrow(c3.x); let b = mrow(c3.x + 1u); mn = a.xyz; st = b.xyz; recs = bitcast<u32>(b.w); tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, bitcast<u32>(a.w), meshWide(atT) / k); let lv = mrow(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (lv.x * k + bitcast<f32>(c3.w) * sc)); }
-      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1; at = bitcast<u32>(lv.y); continue;
+      let a = mrowU(c3.x); let b = mrowU(c3.x + 1u); mn = asF(a).xyz; st = asF(b).xyz; recs = b.w; tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, a.w, meshWide(atT) / k); let lv = mrowU(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (bitcast<f32>(lv.x) * k + bitcast<f32>(c3.w) * sc)); }
+      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1; at = lv.y; continue;
     } else {
       let first = (at & 0x7fffffffu) >> 4u; let vb = mrowU(recs + (first >> 7u)).x;
       for (var t = first; t < first + (at & 15u); t++) {
@@ -64,8 +68,8 @@ fn vnoise3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (
 fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let x = ro + rd * h.t; let k = h.piece; let p = &pieces[k]; let m = mats[(*p).mat & 255u]; let head = mrowU((*p).planes); let code = h.code & 0x7fffffffu; let child = code >> head.y; let t = code & ((1u << head.y) - 1u);
   let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); let ol = toLocal(k, x) / (*p).quad.x; let l = vec3f(dot(c0.xyz, ol) + c0.w, dot(c1.xyz, ol) + c1.w, dot(c2.xyz, ol) + c2.w);
-  let a4 = mrow(c3.x); let b4 = mrow(c3.x + 1u); let rec = mrowU(bitcast<u32>(b4.w) + (t >> 7u)); let vb = rec.x; let ix = mrowU(mrowU(c3.x + 2u).x + (t >> 2u))[t & 3u]; let i0 = vb + (ix & 255u); let i1 = vb + ((ix >> 8u) & 255u); let i2 = vb + ((ix >> 16u) & 255u);
-  let A = meshVertex(i0, a4.xyz, b4.xyz); let e1 = meshVertex(i1, a4.xyz, b4.xyz) - A; let e2 = meshVertex(i2, a4.xyz, b4.xyz) - A; let s0 = l - A; let gn = cross(e1, e2); let g2 = max(dot(gn, gn), 1e-30); var u = clamp(dot(cross(s0, e2), gn) / g2, 0.0, 1.0); let v = clamp(dot(cross(e1, s0), gn) / g2, 0.0, 1.0 - u); let w = 1.0 - u - v;
+  let a4 = mrow(c3.x); let b4 = mrowU(c3.x + 1u); let grid = asF(b4).xyz; let rec = mrowU(b4.w + (t >> 7u)); let vb = rec.x; let ix = mrowU(mrowU(c3.x + 2u).x + (t >> 2u))[t & 3u]; let i0 = vb + (ix & 255u); let i1 = vb + ((ix >> 8u) & 255u); let i2 = vb + ((ix >> 16u) & 255u);
+  let A = meshVertex(i0, a4.xyz, grid); let e1 = meshVertex(i1, a4.xyz, grid) - A; let e2 = meshVertex(i2, a4.xyz, grid) - A; let s0 = l - A; let gn = cross(e1, e2); let g2 = max(dot(gn, gn), 1e-30); var u = clamp(dot(cross(s0, e2), gn) / g2, 0.0, 1.0); let v = clamp(dot(cross(e1, s0), gn) / g2, 0.0, 1.0 - u); let w = 1.0 - u - v;
   let v0 = mrowU(i0); let v1 = mrowU(i1); let v2 = mrowU(i2); let ln = normalize(octUnpack(v0.z) * w + octUnpack(v1.z) * u + octUnpack(v2.z) * v); let col = unpack4x8unorm(v0.w) * w + unpack4x8unorm(v1.w) * u + unpack4x8unorm(v2.w) * v; let spread = (f32(v0.y >> 16u) * w + f32(v1.y >> 16u) * u + f32(v2.y >> 16u) * v) / 65535.0;
   let cs = bitcast<f32>(c3.z); var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags & ~15u; s.kind = m.kind; s.through = vec3f(0.0); s.glow = vec3f(0.0); s.metal = m.metal; s.f0 = m.f0;
   s.ng = normalize(toWorld(k, c0.xyz * gn.x + c1.xyz * gn.y + c2.xyz * gn.z)); s.n = normalize(toWorld(k, c0.xyz * ln.x + c1.xyz * ln.y + c2.xyz * ln.z)); if (dot(s.ng, rd) > 0.0) { s.ng = -s.ng; s.n = -s.n; }
@@ -78,6 +82,26 @@ fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let rough2 = m.rough * m.rough + 2.0 * spread; let q = l * cs * (*p).quad.x; var lg = vec3f(0.0); var fleck = 0.0;
   for (var o = 0u; o < 3u; o++) { let f = array<f32, 3>(330.0, 1150.0, 4100.0)[o]; let k = shows(f, fp); if (k <= 0.0) { break; } let e = 0.35 / f; let v0 = vnoise3(q * f); lg += (vec3f(vnoise3((q + vec3f(e, 0.0, 0.0)) * f), vnoise3((q + vec3f(0.0, e, 0.0)) * f), vnoise3((q + vec3f(0.0, 0.0, e)) * f)) - v0) * (k * 0.55); fleck += k * (v0 - 0.5); }
   if (dot(lg, lg) > 0.0) { let wg = normalize(toWorld(k, c0.xyz * lg.x + c1.xyz * lg.y + c2.xyz * lg.z)) * length(lg); let sm = s.n; s.n = normalize(s.n - (wg - s.n * dot(wg, s.n))); if (dot(s.n, sm) < 0.4) { s.n = normalize(s.n + sm * 0.5); } base *= 1.0 + 0.14 * fleck; }
+  // (a wide ray's answer is the mean of much of it: what that level lost is taken off what it sends back)
+  if (meshLostOn && fp >= 1.0 && footS > 0.0) { base *= meshLost(meshKind(h), 1.0, -rd).y; }
   s.rough = clamp(sqrt(rough2), 0.05, 1.0); s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); s.ao = vec2f(col.a, 0.0); return s;
+}
+// ---- WHAT A LEVEL LOST OF ITS SHAPE, as light (stages/lost.wgsl measures it, against the finest): how much of the sun, by its height and its way round the view, and of what comes from all round, it would
+// still send. A table a kind (a class of objects at a level of theirs): nine pixels' widths from a quarter of a millimetre, each twice the last; three heights of the view; sixteen numbers.
+const LOST_PX = 9u; const LOST_UP = 3u;
+/** off while it is measured */
+var<private> meshLostOn = true;
+/** whose table: 0 = nobody's */
+fn meshKind(h: Hit) -> u32 { if ((h.piece & LEAF_HIT) != 0u || (pieces[h.piece].flags & MESH) == 0u) { return 0u; } let o = pieces[h.piece].planes; let head = mrowU(o); let c = (h.code & 0x7fffffffu) >> head.y; return 1u + mrowU(o + 2u).y * 2u + select(0u, 1u, mrow(head.z + c * 4u + 3u).w > 0.0); }
+/** x a place among the nodes: which, and how far to the next */
+fn lostAt(x: f32, n: array<f32, 5>, many: u32) -> vec2f { var i = 0u; for (var k = 1u; k + 1u < many; k++) { if (x >= n[k]) { i = k; } } return vec2f(f32(i), clamp((x - n[i]) / (n[i + 1u] - n[i]), 0.0, 1.0)); }
+/** how much of the sun (x), and of what comes from all round (y), a pixel so wide of this kind should send, seen along V */
+fn meshLost(kind: u32, px: f32, V: vec3f) -> vec2f {
+  if (kind == 0u || kind > 8u) { return vec2f(1.0); } let L = frame.sunDir.xyz; let u = clamp(log2(max(px, 1e-6) / 0.00025), 0.0, f32(LOST_PX) - 1.001); let up = lostAt(V.y, array<f32, 5>(0.342, 0.707, 0.966, 2.0, 3.0), 3u); let el = lostAt(L.y, array<f32, 5>(0.07, 0.208, 0.423, 0.707, 0.966), 5u);
+  let a = dot(normalize(V.xz + vec2f(1e-5, 0.0)), normalize(L.xz + vec2f(0.0, 1e-5))); let az = select(vec2f(0.0, 1.0 - a), vec2f(1.0, -a), a < 0.0); var out = vec2f(0.0);      /* (0: the sun behind whoever looks; 2: in front) */
+  for (var i = 0u; i < 4u; i++) { let pi = u32(u) + (i & 1u); let ui = u32(up.x) + (i >> 1u); let w = select(1.0 - fract(u), fract(u), (i & 1u) == 1u) * select(1.0 - up.y, up.y, (i >> 1u) == 1u); if (w <= 0.0) { continue; } let r = MESH_LOST + ((kind - 1u) * LOST_PX * LOST_UP + pi * LOST_UP + ui) * 4u; var sun = 0.0;
+    for (var j = 0u; j < 4u; j++) { let e = u32(el.x) + (j & 1u); let z = u32(az.x) + (j >> 1u); let q = e * 3u + z; sun += mrow(r + (q >> 2u))[q & 3u] * select(1.0 - el.y, el.y, (j & 1u) == 1u) * select(1.0 - az.y, az.y, (j >> 1u) == 1u); }
+    out += w * vec2f(sun, mrow(r + 3u).w); }
+  return out;
 }
 fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf { if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & MESH) != 0u) { return meshSurf(ro, rd, h, fp); } return surfacePiece(ro, rd, h, fp); }

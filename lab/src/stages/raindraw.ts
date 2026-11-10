@@ -12,7 +12,7 @@ fn clipOf(x: vec3f) -> vec4f { let v = x - frame.camPos.xyz; let z = dot(v, fram
 @vertex fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) i: u32) -> V {
   var o: V; let d = drops[i]; o.p = vec4f(0.0, 0.0, -1.0, 1.0); if (d.light.a <= 0.0) { return o; } let c = vec2f(f32(vi & 1u), f32(vi >> 1u)); o.uv = c * 2.0 - 1.0; o.light = d.light; o.kind = vec2f(d.tail.w, d.tail.x); var x: vec3f;
   if (d.tail.w > 0.5) { let px = distance(d.head.xyz, frame.camPos.xyz) * 2.0 * length(frame.camUp.xyz) / frame.size.w; let r = max(d.head.w, 1.1 * px); o.light.a *= min(1.0, d.head.w / r * 1.4); x = d.head.xyz + vec3f(o.uv.x * r, 0.012, o.uv.y * r); }
-  else { let axis = normalize(d.head.xyz - d.tail.xyz); let side = normalize(cross(axis, d.head.xyz - frame.camPos.xyz)); x = mix(d.tail.xyz, d.head.xyz, c.y) + side * (o.uv.x * d.head.w); }
+  else { let axis = normalize(d.head.xyz - d.tail.xyz + vec3f(0.0, -1e-5, 0.0)); let turn = cross(axis, d.head.xyz - frame.camPos.xyz); let side = turn / max(length(turn), 1e-5); x = mix(d.tail.xyz, d.head.xyz, c.y) + side * (o.uv.x * d.head.w); }
   o.p = clipOf(x); o.t = distance(x, frame.camPos.xyz); return o;
 }
 @fragment fn fs(v: V) -> @location(0) vec4f {

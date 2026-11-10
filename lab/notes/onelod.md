@@ -15,6 +15,8 @@ What the verdict below got wrong: part of the gain indoors was light that came p
 
 People: their parts leave by size like anything else and nothing stands for them. Kept exact for every ray they cost 0.1 to 0.5 points, since rays that meet them find no kept light.
 
+Cells fitted tighter (10 November, after notes/voxels.md): rays from thirteen ways draw in the sides of a tight box that stand free, and thin what is not solid; and a cell of leaves counts how many stand behind one another, for its light. Over blocks, before and after: garden 4.2 to 4.0 %, its leaves 5.9 to 5.5; roof's leaves 8.5 to 7.7; ground by night 6.7 to 6.1; street by night 8.7 to 8.4, its leaves 12.6 to 9.8; but street's leaves by day 8.6 to 10.7. A frame costs the same; the map of cells a little more, once. Weighed and left out (a tenth of a point or less): colors by how open a place is to its cell's outside, a mean normal a side.
+
 Left out: limbs, twig blocks, leaves with rays of their own. Weather reaches cells by a rule of thumb (cells.wgsl, `weathered`).
 
 ## The race, as it was run

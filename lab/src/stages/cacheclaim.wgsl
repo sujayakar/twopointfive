@@ -4,5 +4,5 @@
   var at = callers(w, key); if (w >= 0x80000000u) { let asker = cacheFind(at & 0x7fffffffu); if (asker == NOTHING) { return; } at = HITS + asker; }
   let h = hits[at]; let x = bitcast<vec3f>(h.xyz);
   if (spot[s].w == 0u) { fresh[2u * s + 1u] = vec4f(x, 0.0); spot[s] = h; return; }
-  if (speaksFor(cells[2u * s + 1u].xyz, x, octUnpack(h.w & 0xfffffffeu))) { spot[s] = h; }
+  askMoves = (h.w & 2u) != 0u; if (speaksFor(cells[2u * s + 1u].xyz, x, octUnpack(h.w & 0xfffffffcu))) { spot[s] = h; }
 }
