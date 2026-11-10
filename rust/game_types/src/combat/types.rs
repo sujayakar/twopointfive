@@ -20,10 +20,20 @@ pub struct FireOpts {
     pub blind: Option<bool>,
 }
 
+/// what of the level a round came to: a static or a leaf by its index, or a loose thing by its box
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RoundMet {
+    pub n: V3,
+    pub index: Option<f64>,
+    pub prop: Option<PropId>,
+    pub box_: Option<BoxId>,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AcrossArm {
     pub index: f64,
     pub at: V3,
+    pub d: V3,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

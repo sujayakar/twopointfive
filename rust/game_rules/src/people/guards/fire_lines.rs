@@ -394,7 +394,7 @@ pub fn shot_origin(g: &crate::game::Game, c_2: CharId) -> V3 {
     if g.ch[c_2].anim.long_gun {
         if let Some(h) = g.ch[c_2].bones.get(crate::character::Bone::HandR) { return v3::copy(*h); }
     }
-    bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4)
+    crate::combat::shoulder(g, c_2)
 }
 
 /// Nothing a round would stop in between his gun and `to`, less the body's breadth at the far end.
@@ -451,7 +451,7 @@ fn line_geom_of(from: V3, to: V3, h: V3, y0: f64, y1: f64, vel: V3) -> Option<cr
 /// The nearest living colleague in this man's intended line of aim, or None.
 pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Option<GuardId>) -> Option<GuardId> {
     let c = g.gd[gd].ch;
-    let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c);
     let l = m::hyp2(to[0] - from[0], to[2] - from[2]);
     if l < 0.01 { return None; }
     let t_max = 1.0 + MUZZLE_PAST_M / l;
@@ -502,7 +502,7 @@ pub fn round_past_colleague(g: &crate::game::Game, gd: GuardId, to: V3, except: 
 
 /// The point MUZZLE_REACH_M out along where his gun is held, or where that line meets the floor.
 pub fn aim_ahead(g: &crate::game::Game, c_2: CharId) -> V3 {
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c_2);
     aim_ahead_of(from, g.ch[c_2].aim_pitch, g.ch[c_2].aim_yaw)
 }
 /// aimAhead's arithmetic
@@ -600,7 +600,7 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
         }
     }
     let ob = match o { Some(ob) => ob, None => return crate::guards::LineStep::Clear };
-    let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c);
     let geom = match line_geom(g, from, aim_at, ob) { Some(x) if !(x.t > 0.97) => x, _ => return crate::guards::LineStep::None };
     let pos = g.ch[c].pos;
     let (dx, dz) = (aim_at[0] - pos[0], aim_at[2] - pos[2]);

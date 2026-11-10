@@ -135,7 +135,7 @@ fn js_ix(len: usize, i: f64) -> Option<usize> {
 // ---------------------------------------------------------------- the sites
 
 /// A round stopped in something solid: what it knocks out, by what it hit.
-pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::particle_fx::ImpactFxHit, def: &crate::weapons::WeaponDef) {
+pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::combat::RoundMet, def: &crate::weapons::WeaponDef) {
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
     let look = hit_look(g, crate::particle_fx::HitLookHit { index: hit.index, prop: hit.prop, box_: hit.box_ });
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);

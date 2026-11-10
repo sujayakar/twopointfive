@@ -80,12 +80,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let raised = g.ch[c].anim.upper == crate::character::UpperMode::Aim
         || (crate::game::player_rifle_up(g, p) && g.ch[c].anim.long_stance == Some(crate::character::LongStance::Shoulder));
     if !raised { return false; }
-    let a = match g.ch[c].bones.get(crate::character::Bone::UpperArmR) {
-        Some(a) => *a,
-        None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
-    };
-    let muzzle = g.ch[c].muzzle;
-    crate::gunwall::wood_between(g, a, muzzle)
+    crate::gunwall::wood_between(g, crate::combat::shoulder(g, c), g.ch[c].muzzle)
 }
 
 /// `hold()` of stackUp: the fire sites' 'still coming into the hands' beat.

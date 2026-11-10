@@ -173,14 +173,6 @@ pub struct HitLook {
     pub said: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ImpactFxHit {
-    pub n: V3,
-    pub index: Option<f64>,
-    pub prop: Option<PropId>,
-    pub box_: Option<BoxId>,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct FixtureShatterFxT {
     pub pos: V3,

@@ -378,7 +378,7 @@ fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
 pub(super) fn flank_shot(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> crate::guards::FlankShot {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
-    let from = bone(g, c, crate::character::Bone::UpperArmR).unwrap_or_else(|| v3::add(pos, [0.0, 1.4, 0.0]));
+    let from = crate::combat::shoulder(g, c);
     let dist = v3::dist_xz(pos, p.centre);
     let brg = m::atan2(pos[0] - p.sam[0], pos[2] - p.sam[2]);
     let rear = m::abs(v3::wrap_angle(brg - (p.facing + m::PI)));

@@ -32,7 +32,7 @@ fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 
 /// The friend nearest along the line Sam's gun is held on, as far as what it is aimed at and `reachM` at most.
 fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c_2);
     let aim_yaw = g.ch[c_2].aim_yaw;
     let (dx, dz) = (m::sin(aim_yaw), m::cos(aim_yaw));
     let reach = m::min(g.k.friends.reach_m, m::hyp2(g.sets[g.seat].aim_point[0] - from[0], g.sets[g.seat].aim_point[2] - from[2]) + g.k.friends.past_m);
@@ -56,7 +56,7 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
 fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let o = g.sets[g.seat].aim_friend?;
     if g.sets[g.seat].aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c_2);
     let chest = bone_or(g, g.gd[o].ch, crate::character::Bone::Chest, 1.2);
     if m::hyp2(chest[0] - from[0], chest[2] - from[2]) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
 }

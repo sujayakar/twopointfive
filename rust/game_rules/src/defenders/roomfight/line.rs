@@ -8,11 +8,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `c.bones.upperArmR ?? c.pos + [0, 1.4, 0]`
-pub(super) fn shoulder_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::UpperArmR) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]) }
-}
-
 /// `c.bones.head ?? c.pos + [0, 1.6, 0]`
 pub(super) fn head_of(g: &Game, c: CharId) -> V3 {
     match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) }
@@ -73,7 +68,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
 pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V3) -> bool {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
-    let from = shoulder_of(g, c);
+    let from = crate::combat::shoulder(g, c);
     if !room_fight_friend_in_line(g, from, to, gd).is_some_and(|f| crate::character::is_player(g, f)) { return false; }
     g.gd[gd].muzzle_down = true;
     g.gd[gd].muzzle_clear_t = 0.0;
