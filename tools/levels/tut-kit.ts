@@ -4,11 +4,11 @@
 // key: the breaker box, a door they bang, a wall they hole, a frag over a wall of sandbags.
 //
 // THE SENTENCE NOBODY COULD SAY OF ANOTHER LEVEL: every thing on it is used twice, once by his hand and once by his word.
-// THE HAND PLACEMENT: the fights are the level's script (levels/tut-kit.script.ts): every man of the halt is held on his mark until his beat, so the first
+// THE HAND PLACEMENT: the fights are the level's script (rust/game_rules/src/missions/script_tut_kit.rs): every man of the halt is held on his mark until his beat, so the first
 // of every list here is the only deal there is. The gun's cone through the arch falls on the parked truck and never on the way to the arch's near jamb;
 // the sandbags, the gap and the barrier are one crouch, one smoke and one frag long; the bunk room's door stands in the shop he has already cleared, the
 // fuel room's door is locked with a gun on it and its wall is a partition, and the two in the wash yard sit behind bags a rifle cannot reach over.
-// The gun court, the shop and the store are tut-solo's to the centimetre (tools/levels/tut-solo.ts: this file grew from it and that level is not changed).
+// The gun court, the shop and the store are tut-solo's to the centimetre (this file grew from it and that level is not changed).
 //
 //        x 0        9          16              25          31          36
 //   z 5             ┌──────────┬───────────────┬───────────┬──────────┐
@@ -20,21 +20,20 @@
 //   z 23            └──────────┴───────────────┴─  wash yard ▒ ▒   ▮──┘
 //
 //   bun run tools/levels/export.ts tut-kit [--check]      → levels/tut-kit.json
-//   bun run tools/qa/lesson-check.ts tut-kit              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts tut-kit                the scripted player through every step to the debrief
+//   bun run tools/qa/pages.ts tut-kit-page                      the page with real keys through every step
 //   page: ?levelFile=tut-kit.json&roomclear=1&squad4&hour=night
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape } from '../../src/scene/carShapes';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, LessonData, LessonStep, StructureData, Rect, IssueData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import { glowShape } from './lib/carShapes';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, LessonData, LessonStep, StructureData, Rect, IssueData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import type { GwotMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { findCarLamps } from '../../src/game/carlamps';
-import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../../levels/tut-kit.script';
+import { carLampsIn } from './lib/carLamps';
+import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from './tutKitMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-kit';
@@ -122,7 +121,7 @@ export const BUNK_MEN: Vec3[] = [[26.6, 0, 8.4], [28.3, 0, 6.9]], FUEL_MAN: Vec3
 /** the rows of his own ring this mission teaches (`rails.rows`): a door by hand, his charge and its trigger */
 const OWN_ROWS = ['push', 'pull', 'charge'];
 /** where he leads the four back to: the gun court, square on to the wash yard's gateway and six metres from the floor behind its sandbags. A man's
- *  arm reaches about six and a half over a wall that high (squadthrow.ts, mapped on this floor), so the line is done close to this mark, not across the court */
+ *  arm reaches about six and a half over a wall that high (rust/game_rules/src/squad_orders/squadthrow, mapped on this floor), so the line is done close to this mark, not across the court */
 export const YARD_FROM: Vec3 = [23.8, 0.02, 19.75];
 /** THE WASH YARD: the gateway in its front wall, the wall of sandbags across it, the floor behind them where the frag is asked for, its back door */
 export const YARD_GATE = { a: 18.25, b: 21.25 }, YARD_BAGS = { x: 27.9, z: 19.75, len: 3.4 }, YARD_DOOR_Z = 19.75;
@@ -151,7 +150,7 @@ const BUNK: Rect = { x0: FRONT_X, x1: NPART_X, z0: YARD.z0, z1: ROOM_Z0 }, FUEL:
 /** a room's floor inside its walls */
 const inner = (R: Rect): Rect => ({ x0: R.x0 + 0.12, x1: R.x1 - 0.12, z0: R.z0 + 0.12, z1: R.z1 - 0.12 });
 
-/** HIS KIT is what every squad's leader is issued (game/kit.ts, the pouches rule: four pouches a man): one smoke, one stun grenade, one frag and one
+/** HIS KIT is what every squad's leader is issued (rust/game_rules/src/outfit/kit, the pouches rule: four pouches a man): one smoke, one stun grenade, one frag and one
  *  grenade for the launcher. The door charge comes out of the squad's bag. The card is named here, with nothing added, for one reason: a mission that
  *  names his card writes his counts (kitIssue), so the launcher comes up on its grenade. Without the block a tutorial's page leaves him as a Player is
  *  built, the tube on five sponge rounds no line here teaches. A card with spares is over the rule with a squad on the floor and is cut back to this at
@@ -186,8 +185,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('walls.yard');
   const gate = [{ ...DOORWAY, y0: 0, y1: 2.2 }];
   // (the north wall stops at the building: the bunk room and the fuel room stand against the halt's edge, and their own wall is the wall there)
-  G.yardWallX(YARD.z0, YARD.x0 - 0.12, FRONT_X); G.yardWallX(YARD.z1, YARD.x0 - 0.12, YARD.x1 + 0.12);
-  G.yardWallZ(YARD.x0, YARD.z0, YARD.z1, 'mud', gate); G.yardWallZ(YARD.x1, ROOM_Z1, YARD.z1, 'mud', [{ a: YARD_DOOR_Z - 0.6, b: YARD_DOOR_Z + 0.6, y0: 0, y1: 2.2 }]);
+  G.yardWallX(YARD.z0, YARD.x0 - 0.12, FRONT_X - t); G.yardWallX(YARD.z1, YARD.x0 - 0.12, YARD.x1 + 0.12);
+  G.yardWallZ(YARD.x0, YARD.z0, YARD.z1, 'mud', gate); G.yardWallZ(YARD.x1, ROOM_Z1 + t, YARD.z1, 'mud', [{ a: YARD_DOOR_Z - 0.6, b: YARD_DOOR_Z + 0.6, y0: 0, y1: 2.2 }]);
   for (const [x, z] of [[9, 5], [9, 23], [36, 23], [16, 5], [16, 23], [25, 23]] as const) G.pier(x, z);
   // the wash yard's back door, onto the plain behind the halt: steel, shut and locked until the two who end the mission come in by it
   doors.push({ name: 'wash', hinge: [YARD.x1, YARD_DOOR_Z - 0.58], closedDir: HALF, width: 1.16, locked: true, keySide: 1, swing: 1, steel: true, exterior: true, closer: false });
@@ -205,7 +204,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.gate(ARCH_X + 0.06, AXIS, 'z', 3.2, 1, 'paintBlue', 84);
   grp('walls.front');
   // (the wash yard's gateway: three metres of the front wall left out, a pier each side, no leaf)
-  G.yardWallZ(FRONT_X, ROOM_Z1, YARD_GATE.a, 'mud'); G.yardWallZ(FRONT_X, YARD_GATE.b, YARD.z1, 'mud'); G.pier(FRONT_X, YARD_GATE.a); G.pier(FRONT_X, YARD_GATE.b);
+  G.yardWallZ(FRONT_X, ROOM_Z1 + t, YARD_GATE.a, 'mud'); G.yardWallZ(FRONT_X, YARD_GATE.b, YARD.z1, 'mud'); G.pier(FRONT_X, YARD_GATE.a); G.pier(FRONT_X, YARD_GATE.b);
 
   // ---- the forecourt on the road: two pumps under a tin canopy, the van that was at them ----
   grp('forecourt');
@@ -219,9 +218,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // across the road, nose to the pumps it was leaving. It is as its driver left it, everything on: two
   // head lamps (beams across the forecourt), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens
   // is a glowing sliver a hair off the van's own and a little wider, so a round at a lamp meets the sliver first and puts it out; the van's own lens behind
-  // it stays the dead glass the lamp check finds (carlamps.ts, whose own search finds the lenses here: the kit's sizes are named in one place)
+  // it stays the dead glass the lamp check finds (rust/game_rules/src/air/carlamps.rs, whose own search finds the lenses here: the kit's sizes are named in one place)
   const VAN_AT = [4.5, 15.0] as const, van0 = K.boxes.length; G.van(VAN_AT[0], VAN_AT[1], HALF + 0.12);
-  { const lenses = findCarLamps(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
+  { const lenses = carLampsIn(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-kit: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT[0], mid[1] - VAN_AT[1]), nx = (mid[0] - VAN_AT[0]) / l, nz = (mid[1] - VAN_AT[1]) / l;
     heads.forEach((b, k) => {
@@ -259,7 +258,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the gun court: the nest in the far corner, the sandbags inside the arch, the gap, the barrier before the shop ----
   grp('court.gun');
-  G.sandbags(22.6, 8.2, 3.0, 0, 4); G.sandbags(21.0, 7.2, 2.0, HALF, 4);            // the nest: two low walls, the gun between them
+  G.sandbags(22.69, 8.2, 3.0, 0, 4); G.sandbags(21.0, 7.2, 2.0, HALF, 4);            // the nest: two low walls, the gun between them
   G.crates(24.0, 6.2, 0.1, 2); G.patch(22.6, 7.0, 2.6, 2.0, 'damp');
   G.sandbags(18.675, 12.2, 4.75, 0, 6);                                            // inside the arch, chest high: a crouched man behind them is out of the gun's sight (a hand north of the gate's open leaf, which stands along them)
   G.hesco(23.4, 12.6, 2, 0);                                                       // the barrier before the shop's door
@@ -268,13 +267,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // the gun court's own lamp: a mast by the shop's corner, its arm out over the court, the head between the nest and the gap. It lights the gun, the sandbags'
   // far end and the gap, and stops short of the shop's door: the ground he stands on for the door is lit by the shop's lamp alone (the line that has him shoot it out)
-  { const x = 22.3, z = 9.9, h = 4.6, px = 24.6;
-    add({ c: [px, (h + 0.11) / 2, z], h: [0.05, (h + 0.11) / 2, 0.05], ...M.galv });
-    add({ c: [(px + x) / 2, h + 0.085, z], h: [(px - x) / 2 + 0.1, 0.025, 0.025], ...M.galv });
-    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
-    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
-    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 120, range: 10, innerDeg: 34, outerDeg: 58, name: 'lamp_gun', group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1 });
-  }
+  const WARM = { color: [1.0, 0.8, 0.5] as Vec3, volumetric: 0.25, mains: true };                 // (this halt's lamps: warmer and hazier than the kit's own, on the mains)
+  G.yardLamp(22.3, 9.9, 'lamp_gun', { ...WARM, height: 4.6, axis: 'x', reach: 24.6 - 22.3, pole: 0.05, intensity: 120, range: 10, innerDeg: 34, outerDeg: 58 });
 
   // ---- the ground's marks: wheel tracks, worn earth, stains, the stones along the drive ----
   // Flat things are in three layers a millimetre and more apart (worn earth under the wheel tracks under a stain), each darker than what it lies on and none
@@ -335,7 +329,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // the squad's charge goes through
   grp('back.walls');
   G.wallX(YARD.z0, FRONT_X - t, YARD.x1 + t, 'render'); G.wallZ(FRONT_X, YARD.z0 + t, ROOM_Z0 - t, 'render'); G.wallZ(YARD.x1, YARD.z0 + t, ROOM_Z0 - t, 'render');
-  G.partZ(NPART_X, YARD.z0 + t, ROOM_Z0 - t, 'whitewash', [{ a: FUEL_DOOR_Z - 0.6, b: FUEL_DOOR_Z + 0.6 }]);   // (a PARTITION, whitewashed where the shell is render: built at the shell's thickness, wallcharge.ts refused it as concrete)
+  G.partZ(NPART_X, YARD.z0 + t, ROOM_Z0 - t, 'whitewash', [{ a: FUEL_DOOR_Z - 0.6, b: FUEL_DOOR_Z + 0.6 }]);   // (a PARTITION, whitewashed where the shell is render: built at the shell's thickness, rust/game_rules/src/entries/wallcharge refused it as concrete)
   doors.push({ name: 'bunk', hinge: [BUNK_DOOR_X - 0.58, ROOM_Z0], closedDir: 0, width: 1.16, swing: SWING_BUNK });   // (it opens into the bunk room: the stack is on the shop's side)
   doors.push({ name: 'fuel', hinge: [NPART_X, FUEL_DOOR_Z - 0.58], closedDir: HALF, width: 1.16, swing: -1, locked: true });   // (locked: its man has the key and his gun on it, the squad has a charge for the wall. Not steel: a door no tool opens is no way in at all to the level's own checks)
   zones.push({ id: 'shop', mat: 'stone', x0: SHOP.x0, z0: BUNK.z0, x1: STORE.x1, z1: SHOP.z1 });
@@ -356,8 +350,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.bulb(33.6, 8.0, 'bulb_fuel', 'fuel');
 
   // ---- a place somebody lives and works in. ADDITIONS ONLY, every one off the mission's line, off each man's mark and out of every door's sweep: none
-  //  of it is cover a line asks for, and none of it changes a fight. It is the level's own furniture as built, on both stands, like the table and the
-  //  crates above: not the lived-in pass (src/scene/lived.ts), which furnishes levels that were recorded bare ----
+  //  of it is cover a line asks for, and none of it changes a fight. It is the level's own furniture as built, like the table and the
+  //  crates above: not the lived-in pass (lib/lived.ts), which furnishes levels that were recorded bare ----
   grp('dress.road');     // the roadside: scrub along the verge
   G.bush(1.1, 17.4); G.bush(0.9, 25.6, 0.8); G.tyres(7.6, 19.8, 2);
   grp('dress.truck');    // the truck court's north corner: where the gate's men sit out a watch
@@ -383,14 +377,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // (the moon stands behind the shop, low over the back of the halt: the shop's own front, the door he blows and the wall he waits against, is in its
   //  shadow, so the lamp over the door is the one light on him there and shooting it out leaves him in the dark)
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([-0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
-  const lamp = (x: number, z: number, name: string, h = 3.4, outerDeg = 52, side = -1) => {
-    add({ c: [x, (h + 0.11) / 2, z + side * 0.6], h: [0.04, (h + 0.11) / 2, 0.04], ...M.galv });
-    add({ c: [x, h + 0.085, z + side * 0.3], h: [0.025, 0.025, 0.26], ...M.galv });
-    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
-    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
-    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 90, range: 9, innerDeg: outerDeg - 22, outerDeg, name, group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1 });
-  };
-  lamp(10.4, 12.2, 'lamp_gate'); lamp(LAMP[0], LAMP[2], 'lamp_shop', LAMP[1], 46, 1);   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
+  G.yardLamp(10.4, 12.2, 'lamp_gate', WARM); G.yardLamp(LAMP[0], LAMP[2], 'lamp_shop', { ...WARM, height: LAMP[1], outerDeg: 46, reach: 0.6 });   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
 
   // ---- the breaker box, on the gun court's north wall where the view sees it, and the beacon every level carries ----
   grp('breaker');
@@ -402,7 +389,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const dome = add({ c: [22.9, 2.16, 5.2], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: BoxFlag.NoShadow });
   switchables.push({ name: 'beacon0', boxes: [dome], group: 'emergency', on: false, baseEmissive: [9, 1.2, 0.35], mains: false });
 
-  // ---- THE HALT: six men in its rooms, each on his mark until the script calls his beat (levels/tut-kit.script.ts names them down the rooms: Tango 1 in
+  // ---- THE HALT: six men in its rooms, each on his mark until the script calls his beat (rust/game_rules/src/missions/script_tut_kit.rs names them down the rooms: Tango 1 in
   //  the shop, 2 and 3 in the store, 4 and 5 in the bunk room, 6 in the fuel room). Every room's marks are exactly its garrison: there is one deal. The
   //  man on the gun, the two for the launcher and the two of the wash yard are the script's own ----
   const SHOP_IN: Vec3 = [FRONT_X + 0.4, 1.2, AXIS], PART_IN: Vec3 = [PART_X, 1.2, AXIS], BUNK_IN: Vec3 = [BUNK_DOOR_X, 1.1, ROOM_Z0 - 0.3], FUEL_IN: Vec3 = [NPART_X + 0.3, 1.1, FUEL_DOOR_Z];
@@ -437,7 +424,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     //  own charge and frag go off where he is not standing, and the lesson is to see them. The squad's ring is the game's own, every row of it
     //  (no `orders` list): the digits a line names here are the digits the rest of the game has. His own ring's rows are the ones a line teaches: a
     //  door opened and shut by hand, his charge)
-    rails: { allow: ['move', 'sprint', 'crouch', 'wall', 'aim', 'fire', 'reload', 'mode', 'slot:rifle', 'camera', 'zoom'], respawn: 5, fog: false, lasers: false, flatRing: true, waits: { low: true }, rows: OWN_ROWS },
+    rails: { allow: ['move', 'sprint', 'crouch', 'wall', 'aim', 'fire', 'reload', 'mode', 'slot:rifle', 'camera', 'zoom'], respawn: 5, fog: false, lasers: false, waits: { low: true }, rows: OWN_ROWS },
     steps: ([
       // ================= HIS OWN KIT, ALONE =================
       // THE TRUCK COURT: a tap of the interaction key on the thing in front of him
@@ -462,7 +449,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'tab', line: 'Press [Tab] to close it, like any menu', done: { is: 'flag', flag: 'ownRing', value: false } },
       { id: 'charge', line: 'Hold [Space] on the door again and pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
       { id: 'back', line: 'Stand clear with your back to the wall beside the door', done: { is: 'any', of: [{ is: 'near', at: BACK, r: 0.6 }, { is: 'door', door: 'shop', state: 'open' }] }, at: BACK },
-      // (`blowLine`: his own charge is a row of his own actions where that rule is on — game/ownblow.ts — and stood clear it is the only row, so a tap gives it)
+      // (`blowLine`: his own charge is a row of his own actions where that rule is on — rust/game_rules/src/sam/ownblow.rs — and stood clear it is the only row, so a tap gives it)
       { id: 'blow', line: 'Press [F] to blow the door', blowLine: 'Press [Space] to blow the door', done: { is: 'door', door: 'shop', state: 'open' }, settle: 0.6, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in and shoot the guard inside', done: DOWN(N.shop), settle: 1.5, at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE: a stun grenade through a doorway (the store's doorway has no leaf and stands in line with the shop's door, so a man who throws from
@@ -487,10 +474,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
         explain: { quiet: true, title: 'Light', text: 'Enemies can only fight what they can see. In the dark they\'ll slow down and turn on flashlights.\nYour squad has night vision, so cut the lights and you\'ll own the dark.' } },
       { id: 'nv', line: 'Press [N] to turn on night vision', done: { is: 'flag', flag: 'nv' } },
       // THE BUNK ROOM: the command key HELD is the squad's ring. First only the hold, then the wedge once the ring is up, named by its words with its digit
-      { id: 'door', line: '[X] on the bunk room door', flatLine: 'Pick bang and clear with [4]', menuLine: 'Pick bang and clear with [4]', noTap: 'Keep [B] held down', after: { line: 'They\'re stacking up with a stun grenade ready', word: 'They\'re going in behind the stun grenade', on: ['bangClear'] }, at: BUNK_DOOR, done: TAKEN('bunk', BUNK), hold: 1.5,
+      { id: 'door', line: '[X] on the bunk room door', menuLine: 'Pick bang and clear with [4]', noTap: 'Keep [B] held down', after: { line: 'They\'re stacking up with a stun grenade ready', word: 'They\'re going in behind the stun grenade', on: ['bangClear'] }, at: BUNK_DOOR, done: TAKEN('bunk', BUNK), hold: 1.5,
         explain: { quiet: true, title: 'The squad\'s ring', text: 'A tap of [B] gives your squad the usual order for whatever you\'re pointing at.\n[X] and a ring will come up with everything else they can do there. On a door, they can throw a stun grenade in first.' } },
       // THE FUEL ROOM: a wall charge (a door is where a room expects them, and this one is locked with a gun on it)
-      { id: 'wall', line: '[X] on the wall', flatLine: 'Press [5] for more, then pick the wall charge with [3]', menuLine: 'Press [5] for more, then pick the wall charge with [3]', noTap: 'Keep [B] held down', after: { line: 'They\'re putting the charge on the wall', on: ['wallCharge'] }, eye: WALL_EYE, at: WALL_MARK,
+      { id: 'wall', line: '[X] on the wall', menuLine: 'Press [5] for more, then pick the wall charge with [3]', noTap: 'Keep [B] held down', after: { line: 'They\'re putting the charge on the wall', on: ['wallCharge'] }, eye: WALL_EYE, at: WALL_MARK,
         done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, ...TAKEN('fuel', FUEL).of] }, hold: 0.4,
         explain: { quiet: true, title: 'Walls', text: 'The next room\'s door is locked, and the enemy inside is watching it anyway.\nA charge on the wall will get your squad in where nobody\'s waiting.' } },
       { id: 'breach', line: 'Press [F] to blow it', after: { word: 'They\'re going through the wall' }, eye: WALL_EYE, at: WALL_MARK, done: TAKEN('fuel', FUEL), hold: 1.5 },
@@ -498,7 +485,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // their flashlights and get down behind the bags (the script ends the line that has him look once they are set)
       { id: 'lead', line: 'Press [B] on yourself, then lead your squad back out to the court', at: YARD_FROM, done: { is: 'all', of: [{ is: 'near', at: YARD_FROM, r: 1.6 }, { is: 'squad', area: COURT, n: 2 }] } },
       { id: 'lights', line: 'Two more are hiding in the yard, and you can see their flashlights', at: FRAG_AT, done: { is: 'any', of: [{ is: 'cue', name: 'seen' }, DOWN(N.yard)] } },
-      { id: 'throw', line: '[X] on the ground behind the sandbags', flatLine: 'Press [5] for more, then pick the frag with [1]', menuLine: 'Press [5] for more, then pick the frag with [1]', noTap: 'Keep [B] held down', after: { line: 'A teammate is throwing a frag over the sandbags', on: ['fragThere'] }, at: FRAG_AT,
+      { id: 'throw', line: '[X] on the ground behind the sandbags', menuLine: 'Press [5] for more, then pick the frag with [1]', noTap: 'Keep [B] held down', after: { line: 'A teammate is throwing a frag over the sandbags', on: ['fragThere'] }, at: FRAG_AT,
         done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'order:fragThere' }, DOWN(N.yard - 1)] }, DOWN(N.yard)] }, settle: 1.5 },
       { id: 'clear', line: 'Finish off anyone who\'s left', at: FRAG_AT, done: DOWN(N.yard), settle: 1.5 },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),

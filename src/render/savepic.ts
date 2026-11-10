@@ -1,4 +1,4 @@
-// A SAVE'S PICTURE, READ BACK WITHOUT A STALL (the host's: main.ts takeSavePictures; the switch is host/savepic.ts SAVEPIC).
+// A SAVE'S PICTURE, READ BACK WITHOUT A STALL (the host's: host/savepics.ts).
 //
 // The picture was `drawImage(the WebGPU canvas)` into a small 2D canvas straight after the frame was drawn: the browser reads the whole canvas back from the
 // GPU for that, on the page's own thread, and waits for the frame it has just been handed to finish first — tens of milliseconds on a frame that had 16.

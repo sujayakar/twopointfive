@@ -1,0 +1,6 @@
+# PAIR: the partner is told to take the nearest man and to watch him, again and again. For a mission with a partner: the lesson of a partner's orders has these on its menu.
+# REACHES: the partner's take and his watch.
+# DOES NOT REACH: anything of a squad, Sam's gun.
+unhurt
+every 6 from 2    order pairTake nearest all
+every 6 from 4    order pairWatch nearest all

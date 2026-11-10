@@ -1,21 +1,20 @@
-// ---- AN OPEN FIRE, DRAWN (game/fire.ts FIRE; the composite adds it to the picture: composite.wgsl, beside the lasers' light in the air) ----
+// ---- AN OPEN FIRE, DRAWN (rust/game_rules/src/air/fire.rs FIRE; the composite adds it to the picture: composite.wgsl, beside the lasers' light in the air) ----
 // A drum of burning wood is six things in the picture and this file is four of them: the FLAME, a volume of light marched where the pixel's ray crosses it; the
 // SMOKE its tips turn into, marched with it; the BED OF COALS it stands on (a disc over the drum's mouth); and the SHIMMER of the hot air over it (fireShimmer:
-// how far the picture behind is pushed aside). (The other two: its EMBERS are GPU particles, game/fire.ts; and it files real gas in the smoke solver.)
+// how far the picture behind is pushed aside). (The other two: its EMBERS are GPU particles, rust/game_rules/src/air/fire.rs; and it files real gas in the smoke solver.)
 // Nothing here reads the scene: a record per fire, the look's numbers and the pixel's ray in, light and how much of what is behind is kept out — so the same text
-// runs alone on a plain stage (tools/qa/fire-lab.cjs), where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light).
+// runs alone on a plain stage, where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light).
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
 //   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · spare      d = the bed of coals' radius (m; 0 = none drawn) · under the fog of war: 0 = drawn wherever it stands, 1 = only where the team sees, 2 = only where it does not (the composite's test: fireOver)
-struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (c.w: how much of this fire's flame is the solver's gas, 0‥1 — fireFlame · d.z: how far its smoke is the solver's soot, 0‥1 — fireFlameN)
-// THE LOOK'S NUMBERS, the same for every fire (game/fire.ts FIRE.look, live in the page's fire lab):
+struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (d.z: how far its smoke is the solver's soot, 0‥1 — fireFlame)
+// THE LOOK'S NUMBERS, the same for every fire (rust/game_rules/src/air/fire.rs FIRE.look):
 //   a = × the flame's light · × its white heart · how soon it hides what is behind it (1/m) · × how fast it climbs
 //   b = × its height · how torn it is 0‥2 · the smoke off its tips 0‥2 (0 = none) · the shimmer of the hot air over it (m the picture behind is pushed, 0 = none)
 //   c = how dark and sooty its cool edge is 0‥1 · how hard it breathes 0‥2 · spare · spare
 struct FireLook { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (d: x = how far the temporal resolve is told to take a fire's pixels from THIS frame (0‥1) · y = how far the wind leans the flame (m at one flame height, per m/s) · z = samples of the flame along a ray)
 
-const FIRE_STEPS = 40.0;        // samples of the flame along a pixel's ray when the look row names none (K.d.z = game/fire.ts FIRE.look.steps, 4‥64)
+const FIRE_STEPS = 40.0;        // samples of the flame along a pixel's ray when the look row names none (K.d.z = rust/game_rules/src/air/fire.rs FIRE.look.steps, 4‥64)
 const FIRE_SMOKE_STEPS = 10.0;  // … and of the smoke over it
-const FIRE_GAS_STEPS = 16.0;    // … and more of a flame that is the solver's gas: the wind carries it wider than the flame of noise ever stands
 const FIRE_FLAME_TOP = 2.3;     // × its height: over this there is no flame, whatever its tongues do
 const FIRE_SMOKE_TOP = 3.6;     // × its height: where the drawn smoke has thinned to nothing
 const FIRE_SMOKE_SIGMA = 3.5;   // 1/m: how soon the smoke hides what is behind it
@@ -45,13 +44,13 @@ fn fireColor(hot: f32, core: f32) -> vec3f {
   c = mix(c, vec3f(3.4, 1.35, 0.09), smoothstep(0.68, 0.86, hot));
   return mix(c, vec3f(9.0, 4.3, 0.6) * core, smoothstep(0.84, 1.0, hot));
 }
-/** HOW FAR THE WIND LEANS A FIRE at height y (× its height), in metres a metre a second of wind (K.d.y = game/fire.ts FIRE.look.lean): as y^1.5 through the
+/** HOW FAR THE WIND LEANS A FIRE at height y (× its height), in metres a metre a second of wind (K.d.y = rust/game_rules/src/air/fire.rs FIRE.look.lean): as y^1.5 through the
  *  body of the flame, then on at two fifths of that slope — the flame lies over, its smoke and the bound that is marched for it do not run away downwind */
 fn fireBend(K: FireLook, y: f32) -> f32 { let m = min(y, 1.5); return K.d.y * (m * sqrt(m) + 0.735 * max(y - 1.5, 0.0)); }
 /** 1 − what the last fireAir's flame and smoke let through, its bed of coals left out: what of the pixel is new every frame (composite.wgsl fireReact) */
 var<private> fireVeil: f32 = 0.0;
 /** at P: x = how much flame (0‥1), y = how hot it is there (0‥1: its edge and its tips are the cool end), z = how much smoke (0‥1) */
-fn fireFlameN(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
+fn fireFlame(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
   let R = F.a.w; let H = F.b.x * K.b.x; let t = F.b.w; let s = F.b.z * 61.0;
   var q = P - F.a.xyz;
   if (q.y < -0.04 || q.y > H * FIRE_SMOKE_TOP) { return vec3f(0.0); }
@@ -95,41 +94,13 @@ fn fireFlameN(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
     if (rs > 0.0) {
       let ns = 0.65 * fireN(vec3f(q.x * 5.0 + s, (q.y - up * 0.5) * 3.0, q.z * 5.0)) + 0.35 * fireN(vec3f(q.x * 12.0 - s, (q.y - up * 0.62) * 7.0, q.z * 12.0 + s));
       sm = smoothstep(0.46, 0.7, ns + 0.22 * rs) * smoothstep(0.0, 0.35, rs) * smoothstep(0.8, 1.7, y) * (1.0 - smoothstep(FIRE_SMOKE_TOP * 0.55, FIRE_SMOKE_TOP, y)) * (1.0 - f) * min(K.b.z, 2.0);
-      // ONE COLUMN (F.d.z, this fire's own share, eased by the game: game/fire.ts FIRE_LOOK_SMOKE): the solver's soot is born in the flame's tips and is the fire's
+      // ONE COLUMN (F.d.z, this fire's own share, eased by the game: rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE): the solver's soot is born in the flame's tips and is the fire's
       // smoke from there on, so what is drawn here is only the flame's dark tips, thinner, and gone by two flame heights where the gas has the column to itself.
       // 0 = a fire whose gas is not filed (far from the view, the rung that sheds it): the drawn plume as ever
       sm *= mix(1.0, 0.6 * (1.0 - smoothstep(1.15, 2.0, y)), F.d.z);
     }
   }
   return vec3f(f, hot, sm);
-}
-/** THE FLAME AS GAS (game/fire.ts FIRE.gas): HEAT the smoke solver carries on its fine lattice, filed at the coals with next to no smoke in it — what the
- *  solver lifts, curls and leans IS the flame's shape. `fireGas(p)` is that lattice's heat at p (the composite's: smoke_read.wgsl spgFineHot; a stand-alone
- *  build of this file gives it a 0). At P: x = how much flame, y = how hot: by the gas's own heat against the heart's (K.c.z) — it cools as it climbs, so the
- *  tips and the skin are the cool end with no rule saying so — and no flame under K.c.w of that. The lattice's cells are two centimetres: the tearing finer
- *  than a cell is the noise's, climbing with the gas. */
-fn fireFlameG(F: FireRec, K: FireLook, P: vec3f) -> vec2f {
-  let H = F.b.x * K.b.x; let q = P - F.a.xyz;
-  if (q.y < -0.04 || q.y > H * FIRE_FLAME_TOP) { return vec2f(0.0); }
-  let d = fireGas(P);
-  if (d <= 0.0) { return vec2f(0.0); }
-  let s = F.b.z * 61.0; let up = F.b.w * FIRE_RISE * K.a.w;
-  let n = 0.6 * fireN(vec3f(q.x * 8.0, (q.y - up * 1.25) * 5.0, q.z * 8.0) + s) + 0.4 * fireN(vec3f(q.x * 19.0, (q.y - up * 1.7) * 11.0, q.z * 19.0) - s);
-  let dn = d / max(K.c.z, 1e-4) * (1.0 + (n - 0.5) * 0.8 * K.b.y);
-  let lo = K.c.w;
-  let f = smoothstep(lo, lo + 0.12, dn) * smoothstep(-0.01, 0.06, q.y) * (1.0 - smoothstep(FIRE_FLAME_TOP - 0.45, FIRE_FLAME_TOP, q.y / H));
-  return vec2f(f, clamp((dn - lo) / max(1.0 - lo, 1e-3), 0.0, 1.0));
-}
-/** at P: x = how much flame (0‥1), y = how hot it is there (0‥1: its edge and its tips are the cool end), z = how much drawn smoke (0‥1). A fire whose gas the
- *  solver has (F.c.w, eased 0‥1 by the game) is the gas's flame, and its smoke is the solver's alone; any other is the flame of noise. */
-fn fireFlame(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
-  let gm = F.c.w;
-  var a = vec3f(0.0);
-  if (gm < 1.0) { a = fireFlameN(F, K, P); }
-  if (gm <= 0.0) { return a; }
-  let g = fireFlameG(F, K, P);
-  let wa = a.x * (1.0 - gm); let wg = g.x * gm; let f = wa + wg;
-  return vec3f(f, (wa * a.y + wg * g.y) / max(f, 1e-4), a.z * (1.0 - gm));
 }
 /** the smoke's own light at a height over the coals (y: × the flame's height): soot, lit from below by the fire it came off and dark above */
 fn fireSmokeColor(y: f32, glow: f32) -> vec3f { return vec3f(0.030, 0.026, 0.024) + vec3f(0.26, 0.06, 0.006) * (glow * exp(-max(y - 0.9, 0.0) * 2.2)); }
@@ -143,13 +114,11 @@ fn fireCyl(ro: vec3f, rd: vec3f, c: vec3f, R: f32, y0: f32, y1: f32) -> vec2f {
   else if (o.y < y0 || o.y > y1) { return vec2f(1.0, 0.0); }
   return vec2f(t0, t1);
 }
-/** how much wider than the flame of noise a fire whose flame is the solver's gas is marched (m): the wind carries real gas where it will */
-fn fireGasWide(F: FireRec) -> f32 { return F.c.w * (0.35 + 0.45 * length(F.c.xy)); }
 /** the cylinder nothing of this fire's flame or smoke leaves (the smoke leans downwind: the cylinder stands half that way and is that much wider). x = where
  *  the ray enters it, y = leaves. */
 fn fireBound(F: FireRec, K: FireLook, ro: vec3f, rd: vec3f) -> vec2f {
   let H = F.b.x * K.b.x; let lean = fireBend(K, FIRE_SMOKE_TOP);
-  return fireCyl(ro, rd, F.a.xyz + vec3f(F.c.x, 0.0, F.c.y) * (0.5 * lean), F.a.w * 3.6 + 0.5 * lean * length(F.c.xy) + 0.14 + fireGasWide(F), -0.04, H * FIRE_SMOKE_TOP);
+  return fireCyl(ro, rd, F.a.xyz + vec3f(F.c.x, 0.0, F.c.y) * (0.5 * lean), F.a.w * 3.6 + 0.5 * lean * length(F.c.xy) + 0.14, -0.04, H * FIRE_SMOKE_TOP);
 }
 /** THE BED OF COALS at a point of the drum's mouth (q: metres from its middle): what it glows, rgb. Lumps of char with fire in the gaps between them, the
  *  whole breathing slowly and with the light — the level's glowing lid alone is one flat bright plate. */
@@ -175,7 +144,7 @@ fn fireAir(F: FireRec, K: FireLook, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, 
   let glow = K.a.x * heat * (0.75 + 0.25 * F.c.z);
   // the flame's own cylinder, and the smoke's over it (wider, and further downwind)
   let fl = fireBend(K, FIRE_FLAME_TOP);   // (how far the flame's top leans a metre a second of wind: its cylinder stands half that way and is that much wider)
-  let cb = fireCyl(ro, rd, F.a.xyz + vec3f(F.c.x, 0.0, F.c.y) * (0.5 * fl), R * 2.4 + 0.5 * fl * wl + 0.07 + fireGasWide(F), -0.04, H * FIRE_FLAME_TOP);
+  let cb = fireCyl(ro, rd, F.a.xyz + vec3f(F.c.x, 0.0, F.c.y) * (0.5 * fl), R * 2.4 + 0.5 * fl * wl + 0.07, -0.04, H * FIRE_FLAME_TOP);
   let t0 = max(cb.x, 0.0); let t1 = min(cb.y, tMax); let inF = cb.x <= cb.y && t1 > t0;
   var emb = vec3f(0.0);
   // (the smoke first when the eye is under it, last when over: the camera looks down, so what is higher is nearer along most rays — march the two spans in the
@@ -198,7 +167,7 @@ fn fireAir(F: FireRec, K: FireLook, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, 
       }
     } else {
       if (!inF) { continue; }
-      let steps = select(FIRE_STEPS, clamp(floor(K.d.z), 4.0, 64.0), K.d.z >= 1.0) + FIRE_GAS_STEPS * step(0.001, F.c.w); let ds = (t1 - t0) / steps;
+      let steps = select(FIRE_STEPS, clamp(floor(K.d.z), 4.0, 64.0), K.d.z >= 1.0); let ds = (t1 - t0) / steps;
       for (var i = 0.0; i < steps; i += 1.0) {
         let P = ro + rd * (t0 + (i + jit) * ds);
         let fl = fireFlame(F, K, P);

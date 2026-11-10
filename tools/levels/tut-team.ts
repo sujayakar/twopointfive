@@ -1,4 +1,4 @@
-// THE SQUAD'S TUTORIAL MISSION, ON THE GROUND (levels/tut-team.json; `bun run tools/levels/export.ts tut-team`): the tunnel station of tools/levels/tut-sky.ts,
+// THE SQUAD'S TUTORIAL MISSION, ON THE GROUND (levels/tut-team.json; `bun run tools/levels/export.ts tut-team`): the tunnel station of tools/levels/tunnel-station.ts,
 // box for box, with the player standing on the road behind his own truck. What is different is the mission in the file, nothing on the floor:
 //   · HE IS ONE OF FIVE. He starts third in the file behind the north pickup's tail, in the truck's shadow from all three posts of the roadblock.
 //   · ONE ORDER, ONE WORD. The squad's key tapped on the ground, on a door and on himself, and the go key. No ring, no wall charge, no mains box, no goggles:
@@ -7,7 +7,7 @@
 //     already down in the yard.
 // THE SENTENCE NOBODY COULD SAY OF ANOTHER LEVEL is the station's own (the road ends in a hole in the mountain with a gun truck's lamps in front of it, and the
 // only way off the road is the station's gate). What this mission adds to it: the player is behind the truck with them when the first rounds come in.
-// FIVE BEATS, one new thing at a time (game/rails.ts locks the rest; levels/tut-team.script.ts stages the road):
+// FIVE BEATS, one new thing at a time (rust/game_rules/src/missions/rails.rs locks the rest; rust/game_rules/src/missions/script_tut_team.rs stages the road):
 //   the road      pinned behind the two pickups. Zoom out until all four are in the picture; the squad throws its smoke; the squad's key on the yard moves
 //                 them through the gate, and he goes with them.
 //   the gate      the roadblock comes down the road for the gate, and five rifles hold it.
@@ -16,8 +16,8 @@
 //   the last room the same two keys on the bunkhouse's door; then he calls them to him once more and walks them back to the trucks.
 // Nobody of the squad is lost (rails.respawn). He can be: a checkpoint stands at each beat's first step.
 import type { Vec3 } from '../../src/math/vec';
-import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATERIALS, SKY_ROOMS as R, YARD_IN, YARD_MARK, TEA_DOOR, PASS_DOOR, BUNK_DOOR, TRUCKS_MARK, ROAD_BACK } from './tut-sky';
+import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
+import { build as buildStation, SCENARIOS as STATION, MATERIALS as STATION_MATERIALS, STATION_ROOMS as R, YARD_IN, YARD_MARK, TEA_DOOR, PASS_DOOR, BUNK_DOOR, TRUCKS_MARK, ROAD_BACK } from './tunnel-station';
 
 export const NAME = 'tut-team';
 export const MATERIALS = STATION_MATERIALS;
@@ -26,7 +26,7 @@ export const NOTES = 'The squad\'s tutorial mission on the ground: the tunnel st
 const HALF = Math.PI / 2;
 /** where he stands when the first rounds come in: third in the file behind the north pickup's tail, a step behind his second man (tut-sky's OPS) */
 export const TEAM_SAM: Vec3 = [4.55, 0, 22.5];
-// (the yard inside the gate, the three doors a stack forms on and the road by the trucks are the station's own marks: tools/levels/tut-sky.ts)
+// (the yard inside the gate, the three doors a stack forms on and the road by the trucks are the station's own marks: tools/levels/tunnel-station.ts)
 /** the road by the trucks as the squad is counted back on it: men who follow him stop a few steps behind, and the last of a file stands in the lane along
  *  the yard's wall (a file that stopped on the station's own line, half a step short, kept the last step open) */
 const ROAD_HOME: Rect = { x0: 1.1, x1: 12.5, z0: 20.1, z1: 27.0 };

@@ -8,10 +8,9 @@
   "include": [
     "./**/*.ts",
     "../mp/**/*.ts",
-    "../sim/**/*.ts",
-    "../retire/*.ts",
+    "../levels/**/*.ts",
+    "../level-export.ts",
     "./types/**/*.d.ts",
-    "../../types/**/*.d.ts",
-    "../../src/debugHooks.ts"
+    "../../types/**/*.d.ts"
   ]
 }

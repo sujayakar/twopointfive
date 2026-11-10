@@ -1,5 +1,4 @@
 // Radiance cascades (world-space, 2.5D) — GPU resources, per-cascade params and dispatch.
-import { cutSwap, ProgramSet } from './cutSwap';
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import { GpuTimer } from '../gpu/timer';
 import { WORLD } from '../scene/world';
@@ -79,20 +78,20 @@ export class RadianceCascades {
   staggerUpper = false;
   /** LOSSY option (engine.settings.rcHalfRate): the whole cache at half rate — upper cascades on even frames, c0 + the dice bake on odd ones
    *  (the engine gives such a pair one direction jitter, so c0 merges parents traced with its own directions and the bake decodes c0 with
-   *  them too). Everything downstream just reads a dice volume that is at most a frame older; bounce / light meter / smoke ambient lag a
+   *  them too). Everything downstream just reads a dice volume that is at most a frame older; bounce / smoke ambient lag a
    *  moving light by that much. staggerUpper then counts in pairs (c2+ every fourth frame). */
   halfRate = false;
-  /** AMORTIZED UPKEEP (engine.settings.rcAmortize, mirrored every frame; docs/internal/p0a-cascades.md): when on, upper level n re-traces an interleaved
+  /** AMORTIZED UPKEEP (engine.settings.rcAmortize, mirrored every frame; docs/agents/render-light.md, "The cascades"): when on, upper level n re-traces an interleaved
    *  1/periods[n] of its probes per frame (rc.wgsl rcUpper's scheduled path) — constant work every frame, every probe refreshed once per period, c0 + the
    *  dice bake whole every frame; a fresh cache first bakes whole levels for PRIME_FRAMES so a never-traced probe is never read, and a re-primed one
    *  (invalidateWorld — engine.rebuildRc calls it) also takes its next dice bake with no history so it does not crawl up from black. Off = every level whole
    *  every frame through the original 3-D dispatch and the configured dice blend from the first bake: the cache exactly as it was — and so is ON while the
-   *  periods are all 1 (bit-identical captures, docs/internal/p0a-cascades.md §6). */
+   *  periods are all 1 (bit-identical captures). */
   amortize = true;
   periods: RcPeriods = RC_FULL_RATE;
   /** workgroups per upper-cascade probe (occupancy only — the same output bits for any count, verified by capture hash; index = level, entry 0 unused). c3's 80
    *  probes × 64 threads is about one thread per lane of an M4 Max looping 16×, so the pass was latency-bound: c3 0.79 → 0.39 (4 chunks) → 0.26 ms (8; 16 no
-   *  better), c2 0.53 → 0.39 (2; 4 no better), c1 already runs one item per thread — Σ 1.77 → 1.05 ms (docs/internal/p0a-cascades.md §6). engine.settings.rcChunks
+   *  better), c2 0.53 → 0.39 (2; 4 no better), c1 already runs one item per thread — Σ 1.77 → 1.05 ms. engine.settings.rcChunks
    *  is the source of truth (default [1,1,2,8]); all 1 = the original one-workgroup-per-probe dispatch. */
   chunks: readonly number[] = [1, 1, 1, 1];
   /** whole-level bakes still owed (counts down once every level has run whole); `historyFree` = the next dice bake blends nothing in (set by invalidateWorld — a
@@ -124,7 +123,6 @@ export class RadianceCascades {
     ] });
     const plTrace = this.plTrace = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, layoutTrace] });
     const plDice = this.plDice = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, layoutDice] });
-    cutSwap.add(this);   // (CUT BOXES: a late instance — a rebuilt or prewarmed grid — builds its second set at once and follows the frame's choice)
     if (!deferPipelines) {
       this.pipeUpper = device.createComputePipeline({ label: 'rcUpper', layout: plTrace, compute: { module: mod, entryPoint: 'rcUpper' } });
       this.pipeC0 = device.createComputePipeline({ label: 'rcC0', layout: plTrace, compute: { module: mod, entryPoint: 'rcC0' } });
@@ -145,7 +143,7 @@ export class RadianceCascades {
     this.stats = { intervals, bytes };
     this.dice = device.createTexture({ label: 'rcDice', size: [cfg.nx, cfg.ny * 7, cfg.nz], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC });
     this.diceView = this.dice.createView();
-    // previous frame's dice: the bake blends toward it (short EMA) so per-frame direction jitter does not shimmer the bounce / light meter / smoke ambient
+    // previous frame's dice: the bake blends toward it (short EMA) so per-frame direction jitter does not shimmer the bounce / smoke ambient
     this.dicePrev = device.createTexture({ label: 'rcDicePrev', size: [cfg.nx, cfg.ny * 7, cfg.nz], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.dicePrevView = this.dicePrev.createView();
     // solid angles
@@ -183,33 +181,6 @@ export class RadianceCascades {
       computePipelineAsync(d, { label: 'rcUpper', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcUpper' } }),
       computePipelineAsync(d, { label: 'rcC0', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
       computePipelineAsync(d, { label: 'rcDice', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
-  }
-  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): this instance's three kernels a second time, behind the cut prelude
-  private cutSet = new ProgramSet();
-  async buildCut(): Promise<void> {
-    const d = this.device; const mod = makeShader(d, scenePrelude(true) + lightingCommon + rcSrc, 'rcCut');
-    const [pipeUpper, pipeC0, pipeDice] = await Promise.all([
-      computePipelineAsync(d, { label: 'rcUpperCut', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcUpper' } }),
-      computePipelineAsync(d, { label: 'rcC0Cut', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
-      computePipelineAsync(d, { label: 'rcDiceCut', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
-    this.cutSet.set(this, { pipeUpper, pipeC0, pipeDice });
-  }
-  useCut(on: boolean) { this.cutSet.use(this, on); }
-  /** Dev / measurement hook (tools/qa/trace-lab.js via main.ts __hotCommon): rebuild the three kernels from the CURRENT scene prelude (an edited common.wgsl / traversal variant under
-   *  test) + rc.wgsl as bundled — the trace kernels are common.wgsl's biggest customer after the direct pass. All three or none: the old pipelines stay if the module has an error. */
-  async hotSwap(src: string = rcSrc): Promise<{ ok: boolean; messages: string[] }> {
-    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
-    const d = this.device; const pre = scenePrelude() + lightingCommon; const off = pre.split('\n').length - 1;
-    const mod = d.createShaderModule({ code: pre + src, label: 'rc-hot' });
-    const info = await mod.getCompilationInfo();
-    const messages = info.messages.map(m => `${m.type} ${m.lineNum - off}:${m.linePos} ${m.message}`);
-    if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    [this.pipeUpper, this.pipeC0, this.pipeDice] = await Promise.all([
-      d.createComputePipelineAsync({ label: 'rcUpper-hot', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcUpper' } }),
-      d.createComputePipelineAsync({ label: 'rcC0-hot', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
-      d.createComputePipelineAsync({ label: 'rcDice-hot', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
-    this.mod = mod;
-    return { ok: true, messages };
   }
 
   intervalStart(n: number) { return this.cfg.interval0 * (Math.pow(4, n) - 1) / 3; }
@@ -255,7 +226,7 @@ export class RadianceCascades {
   encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, timer: GpuTimer, frameIdx: number) {
     // A re-primed cache (invalidateWorld: a rebuilt / prewarmed grid going live, the light rig swapped) under `amortize` first takes BOOST_BAKES extra WHOLE, history-free,
     // untimed bakes in this same command buffer — one bounce order each (see BOOST_BAKES) — then the frame's own, so the field everything downstream reads this frame
-    // (gather, light meter, smoke ambient) is the converged one, not a quarter short. The extra bakes ignore half rate / stagger and leave historyFree up for the frame's
+    // (gather, smoke ambient) is the converged one, not a quarter short. The extra bakes ignore half rate / stagger and leave historyFree up for the frame's
     // own bake to consume. Every rc pass of ONE command buffer sees the sched bytes written LAST for its level (queue.writeBuffer lands before the submit): identical here
     // by construction — blend 1.0 for c0 throughout, and prime ≥ BOOST_BAKES + 1 keeps every upper level at period 1 / phase 0 through the frame's own bake.
     if (this.amortize && this.historyFree) for (; this.boost > 0; this.boost--) this.bake(enc, sceneBG, null, frameIdx);
@@ -267,7 +238,7 @@ export class RadianceCascades {
   private bake(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, timer: GpuTimer | null, frameIdx: number) {
     const N = this.cfg.cascades, forced = !timer;
     // half rate: uppers on even frames, c0 + bake on odd; a resting level declares itself idle to the timer (an honest 0 that frame — NOT an empty timed
-    // pass: an empty pass never writes its timestamps and the slot's stale ticks read as a phantom cost, docs/internal/p0a-cascades.md §4)
+    // pass: an empty pass never writes its timestamps and the slot's stale ticks read as a phantom cost)
     const doUpper = forced || !this.halfRate || (frameIdx & 1) === 0, doC0 = forced || !this.halfRate || (frameIdx & 1) === 1;
     const staggerClock = this.halfRate ? (frameIdx >> 1) : frameIdx;
     const sched: string[] = new Array(N).fill('rest'); const seen = this.primeSeen; if (seen.length !== N) { seen.length = N; seen.fill(false); }
@@ -321,5 +292,5 @@ export class RadianceCascades {
   /** the next bake starts from nothing (a re-primed cache: invalidateWorld): what a mean kept outside this class must drop too (render/diceRing.ts) */
   get reprimed(): boolean { return this.historyFree; }
   setDiceBlend(v: number) { if (v !== this.diceBlend) { this.diceBlend = v; this.writeParams(); } }
-  destroy() { cutSwap.remove(this); for (const b of this.bufs) b.destroy(); this.dice.destroy(); this.dicePrev.destroy(); this.paramsBuf.destroy(); this.dirOmegaBuf.destroy(); this.dummyParent?.destroy(); }
+  destroy() { for (const b of this.bufs) b.destroy(); this.dice.destroy(); this.dicePrev.destroy(); this.paramsBuf.destroy(); this.dirOmegaBuf.destroy(); this.dummyParent?.destroy(); }
 }

@@ -1,7 +1,7 @@
 // THE REGISTRY — the hostage rescue's level: one lit gallery straight to the room, two rooms you may run past, and a long dark locked way round to its other door.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts registry [--check]   → levels/registry.json, with its `scenarios.rescue` block
-//   page: ?levelFile=registry.json&rescue                · headless: bun run tools/qa/probes.ts registry
+//   page: ?levelFile=registry.json&rescue
 //
 // The idea it playtests (the levels goal's assumption, not the maintainer's words): THE CLOCK DECIDES WHAT YOU SKIP. The captor's clock starts on the team's
 // first step; the hostages are at the far end; and between the team and their door are two rooms the gallery passes. What the layout does about it:
@@ -29,21 +29,30 @@
 //     z 24 +--------+-------+-------+----------------+-----------+
 //
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
-// bounds typed into the shaders — holds without a change. The footstep surface map is still game/floor.ts's, the OFFICE's rectangles in code, whatever level
+// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/world/floor.rs's, the OFFICE's rectangles in code, whatever level
 // is loaded: the floors below are painted for the picture, a step here sounds as the office's floor at that spot does.
-// Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a provincial records office — tiled public floors, dark varnish, no accent paint. What it alone has: TILES and WAYFINDING LINES. The red line
+// is the public's way (the gallery to the counter and the registrar's door: the fast line), the blue line the clerks' (the serpentine through the stacks to the
+// sorting room: the long one) — the level's one decision, painted on its floor.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { KitViewData, LevelScenarios, Rect } from './lib/scenarios';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { GWOT_MATERIALS } from './lib/gwotKit';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'registry';
-export const NOTES = 'The registry: a lobby, a lit gallery past a glass-fronted reading room and a blind copy room to the registrar\'s office, and a long dark way round through the stacks to its side door. The hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts registry';
+const PLAIN_NOTES = 'The registry: a lobby, a lit gallery past a glass-fronted reading room and a blind copy room to the registrar\'s office, and a long dark way round through the stacks to its side door. The hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts registry';
 
 /** The spaces: the floor inside each one's walls. The ONE place a room's rectangle is typed — the structure's bounds and the probes' walks both read it. */
 export const REGISTRY_ROOMS: Record<'lobby' | 'gallery' | 'reading' | 'copy' | 'hall' | 'office' | 'stacks' | 'sorting', Rect> = {
@@ -61,12 +70,12 @@ export const REGISTRY_ROWS: { x: number; z0: number; z1: number }[] = [
   { x: 13.2, z0: 12.9, z1: 19.9 }, { x: 16.8, z0: 16.9, z1: 23.9 }, { x: 20.4, z0: 12.9, z1: 19.9 }, { x: 24.0, z0: 16.9, z1: 23.9 },
 ];
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest; picture only). The rescue starts the team 3 m INSIDE the
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only). The rescue starts the team 3 m INSIDE the
  *  front door, and from in there a picture looks out; from the forecourt the one thing that is this building's — the scribe's pitch, his table and typewriter
  *  under a faded umbrella — stands on the floor the men walk, south of the door and between Sam and the camera. So the way is a bespoke set: THE FRONT ITSELF,
  *  where it stands (the west wall on x 4, the same leaf on the same hinge, the lobby's red floor, its door mat and exit sign, a panel burning over the
  *  forms desk — both brought to the wedge of lobby the camera sees, behind the wall the stack stands on), with the pitch moved up the wall past the stack's last
- *  man, against the wall, without its umbrella (a canopy up there is cut by the frame), and the lobby panel lit. Boxes name their paint 'look|plain' (the first the file's palette holds), so the one block serves the look file too. No pane: the set has no glass. */
+ *  man, against the wall, without its umbrella (a canopy up there is cut by the frame), and the lobby panel lit. Boxes name their paint 'look|plain' (the first the file's palette holds), so the one block serves the skin too. No pane: the set has no glass. */
 const REGISTRY_KITVIEW: KitViewData = {
   sets: { front: { ref: [1, 14.75],
     doors: [{ id: 'rg_front', hinge: [4, 14.32], closedDir: Math.PI / 2, width: 0.86, exterior: true }],
@@ -274,7 +283,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- doors (closedDir 0: the leaf runs +x from the hinge, in a wall along x; π/2: +z, in a wall along z) ----------------
   const doors: LevelDoorDef[] = [
     { name: 'reading', hinge: [14.82, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // the room's one door opens out into the gallery, like 'copy': a roamer posted in here cannot wedge it
-    { name: 'copy', hinge: [19.42, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // opens out into the gallery: no wedge inside the room holds it (tools/qa/second-way-check.ts)
+    { name: 'copy', hinge: [19.42, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // opens out into the gallery: no wedge inside the room holds it (rust/game_start levels second-way)
     { name: 'copy_hall', hinge: [24.0, 8.42], closedDir: Math.PI / 2, width: 1.16, angle: 1.3, closer: false },    // left standing open, into the copy room: whoever is in there sees the main door through it
     { name: 'office', hinge: [29.0, 5.42], closedDir: Math.PI / 2, width: 1.16, locked: true },                    // (keyed from the hall, as the office's manager's door is from its corridor)
     { name: 'office_side', hinge: [32.02, 12.8], closedDir: 0, width: 1.16 },
@@ -289,13 +298,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A provincial records office, and its things are the clerk's: open folios, pigeonholes, taped bundles, sacks. Each room by what only it has — the lobby is the
   // PUBLIC's (a writing desk island with trays of pink, yellow and white forms), the reading room the READERS' (green-shaded lamps down the table, a card catalogue
   // with its drawers pulled), the copy room MACHINES (a sorter's comb, a guillotine, white reams banded blue, toner on the floor), the hall the COUNTER's three worn
   // positions, the registrar's office OXBLOOD and brass (a vitrine with the founding register, a samovar), the stacks their ROW TOPS (one colour of bundle a row),
   // the sorting room a GRID of cells and canvas sacks. The gallery stays bare but for what was dropped in it. Nothing stands on a line the look paints
-  // (registry-gwot.ts: red z 10.4 / 12.42 / x 24.9 / 28.3 / 8.6, the wait line z 6.85, the blue serpentine, the row numbers); everything is 1.05 m or lower but
+  // (the skin: red z 10.4 / 12.42 / x 24.9 / 28.3 / 8.6, the wait line z 6.85, the blue serpentine, the row numbers); everything is 1.05 m or lower but
   // the bundles on the rows' own tops; nothing lies on a surface the dressing deals on (tools/levels/dress.ts) but in the gaps between its things, unyawed.
   { const P = livedPieces({ add, grp, prop: K.prop }, C as unknown as Parameters<typeof livedPieces>[1]), W = Math.PI / 2, E = -Math.PI / 2, S = Math.PI, drawn = { flags: BoxFlag.NoShadow };
     const PINK: Vec3 = [0.86, 0.58, 0.64], LEMON: Vec3 = [0.9, 0.82, 0.42], GREEN: Vec3 = [0.06, 0.4, 0.2], TONER: Vec3 = [0.03, 0.03, 0.035], ROW_TOPS: Vec3[] = [INK.manila, INK.cream, [0.3, 0.3, 0.46], INK.iron];
@@ -457,9 +466,48 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     },
   };
   scenarios.kitView = REGISTRY_KITVIEW;
-  // THE FLOOR, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): this level has no room-clear structure, so without
+  // THE FLOOR, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): this level has no room-clear structure, so without
   // these a line that says where ('holding …') had only the OFFICE's words for it — the captor 'holding the server room' in the registrar's office
   scenarios.places = { areas: [{ name: "registrar's office", bounds: { ...R.office } }, { name: 'reading room', bounds: { ...R.reading } }, { name: 'copy room', bounds: { ...R.copy } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'gallery', bounds: { ...R.gallery } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'stacks', bounds: { ...R.stacks } }, { name: 'sorting room', bounds: { ...R.sorting } }] };
-  scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
+  scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
   return { level, scenarios, groups: trace.groups };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'registry';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const R = REGISTRY_ROOMS;
+const SKIN: Skin = {
+  wall: 'render', house: 'render', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'woodGrey', dado: 'blanketBrown',
+  floor: { stone: 'slab', lino: 'slab', carpet: 'canvas' },
+  metals: ['woodGrey', 'iron', 'galv'], patches: 4,
+  // THE LIVED ROOMS' OWN FLOORS (registry.ts lays one wall to wall in each room in a colour of its own, and a runner down the gallery): each as the stuff it
+  // is, in the palette's paint nearest the room's colour, so a room is still told by its floor from above. Floor paint in the public rooms and the copy room
+  // (the tiles lie on it), cloth where the room has a carpet, the bare slab between the stacks, hessian in the sorting room
+  own: [[[0.5, 0.15, 0.11], 'paintRust'], [[0.5, 0.36, 0.1], 'rugOchre'], [[0.5, 0.62, 0.5], 'rugCream'], [[0.15, 0.21, 0.34], 'paintBlue'], [[0.15, 0.3, 0.32], 'paintGreen'],
+    [[0.27, 0.09, 0.08], 'rugRed'], [[0.13, 0.13, 0.14], 'slab'], [[0.3, 0.25, 0.17], 'coyote'], [[0.3, 0.2, 0.18], 'blanketBrown']],   // (the last: the lobby's own mat)
+  // (the rescue names no rooms: the registrar's office is the one room that is lived in — the level's only wainscot and its only patterned rug)
+  rooms: [{ id: 'office', bounds: R.office }, { id: 'hall', bounds: R.hall }, { id: 'gallery_corridor', bounds: R.gallery }], noRug: /./, rugs: { office: 'afghan' },
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), tile = (x: number, z: number) => { const fa = T.floorAt(x, z); return fa ? T.tone(fa, 0.62) : null; };
+    // TILES on the public floors: the lobby, the gallery, the hall (never the reading room: a dark square on its floor reads as a man through the glass)
+    const lobbyRug = (x: number, z: number) => Math.abs(x - 7.0) < 1.9 && Math.abs(z - 14.7) < 1.4, runner = (_x: number, z: number) => Math.abs(z - 11.4) < 0.55;
+    const tl = tile(7, 8), tg = tile(12, 10.3), th = tile(26.5, 8);
+    if (tl) M.checker(R.lobby.x0, R.lobby.z0, R.lobby.x1, R.lobby.z1, 0.97, tl, lobbyRug);
+    if (tg) M.checker(R.gallery.x0, R.gallery.z0, R.gallery.x1, R.gallery.z1, 0.97, tg, runner);
+    if (th) M.checker(R.hall.x0, R.hall.z0, R.hall.x1, R.hall.z1, 0.97, th);
+    // THE RED LINE: from the front door, down both sides of the gallery, to the counter and to the registrar's door
+    const red = P.drumRed, blue = P.drumBlue;
+    M.path([[4.6, 14.7], [8.6, 14.7], [8.6, 10.4], [24.9, 10.4], [24.9, 7.0]], 0.12, red);
+    M.path([[10.1, 12.42], [28.3, 12.42], [28.3, 6.0], [28.9, 6.0]], 0.12, red);
+    M.seg(24.7, 6.85, 27.7, 6.85, 0.16, P.stencil);                                           // 'wait here', a stride short of the counter
+    // THE BLUE LINE: the clerks' way — through the stacks' west door, round the open end of every row, to the sorting room's door
+    M.path([[8.6, 14.7], [8.6, 18.0], [11.6, 18.0], [11.6, 21.9], [15.0, 21.9], [15.0, 14.9], [18.6, 14.9], [18.6, 21.9], [22.2, 21.9], [22.2, 14.9], [26.5, 14.9], [26.5, 16.2], [28.9, 16.2]], 0.12, blue);
+    // ROW NUMBERS at each row's open end
+    REGISTRY_ROWS.forEach((row, i) => { const south = row.z0 < 14; M.glyph(String(i + 1), row.x, south ? row.z1 + 0.75 : row.z0 - 0.75, 0.8, P.stencil); });
+    // a dark foot under the reading room's glass, on both faces: the pane is found from above by the band under it
+    G.skirt('x', 10, 10.7, 14.3, 1, 'woodGrey', 0.5, 0.12); G.skirt('x', 10, 10.7, 14.3, -1, 'woodGrey', 0.5, 0.12);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

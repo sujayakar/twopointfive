@@ -5,7 +5,7 @@
 //   · each material ROW says what its NAME is made of (the table of names as it is now: stuff.ts rowWord, what the exporter writes too);
 //   · each box, prop's part and gear screen's box says its own word ONLY where it was drawn as another thing than its row now says: the 2,200 stand-ins and
 //     the 2,100 darkened paints written as numbers, the boxes under a name that is two things, and nothing else.
-// The diff of a file is `"stuff"` words and nothing more; what each box is drawn as is the same before and after (tools/qa/stuff-audit.ts counts it).
+// The diff of a file is `"stuff"` words and nothing more; what each box is drawn as is the same before and after.
 // A FILE THAT ALREADY SAYS (a row with `stuff`) IS LEFT ALONE: its words are somebody's, and the old rule knows nothing of them.
 //   bun run tools/levels/stuff-bake.ts levels/barracks.json …   write each file in place
 //   bun run tools/levels/stuff-bake.ts --all                    every levels/*.json
@@ -21,7 +21,8 @@ import { fromBefore, paintUsers, rowOf, type Data, type Paints } from './paintUs
 export { fromBefore, paintUsers, rowOf };
 const ROOT = resolve(import.meta.dir, '../..');
 const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 
 /** what each paint user of a file from before WAS drawn as, in paintUsers' order */
 export function wasAll(d: Data): Was[] { const was = wasOf(d.materials); return [...paintUsers(d)].map(({ o }) => { const m = rowOf(d, o); return was(m !== undefined && m !== o.material ? { ...o, material: m } : o); }); }
@@ -52,7 +53,7 @@ if (import.meta.main) {
   for (const f of files) {
     const text = readFileSync(f, 'utf8'), d = parseLevelData(text) as Data;
     if (!fromBefore(d)) { console.log(`${basename(f)}: its rows already say what they are made of — left as it is`); if (OUT) writeFileSync(resolve(OUT, basename(f)), text); continue; }
-    const canon = serializeLevelData(d as never) === text, st = bake(d), errs = validateLevelData(d as never);
+    const canon = serializeLevelData(d as never) === text, st = bake(d), errs = levelFaults(d as never);
     if (errs.length) { console.error(`${basename(f)}: brought forward it does not validate — ${errs.slice(0, 3).join(' | ')}`); bad++; continue; }
     todo++;
     console.log(`${basename(f)}: ${st.rows} rows say their stuff, ${st.said} boxes and parts say their own${st.dropped ? `, ${st.dropped} dropped a word their row now says` : ''}${canon ? '' : ' — NOT in the canonical text before: more than words will move'}${CHECK ? ' (to do)' : ''}`);

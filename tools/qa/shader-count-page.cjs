@@ -14,14 +14,12 @@
 // its own device). No address = the walk a first visit makes: the title, a mission's kit picture, the mission, a second mission.
 // The software adapter compiles nothing like a GPU's driver does: the COUNTS are the page's, no time printed here is a price on a real machine.
 // Exit 0 = every page came ready with no GPU error on its console, 1 = one did not.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun } = require('./page.cjs');
 const fs = require('fs');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
-const PORT = opt('port', process.env.PORT || 5199), SETTLE = Number(opt('settle', 4)), JSON_OUT = opt('json', null), THEN = opt('then', null);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
+const PAGE = pageRun({ name: 'shader-count-page', port: opt('port', process.env.PORT || 5199) }), { note: log } = PAGE, SETTLE = Number(opt('settle', 4)), JSON_OUT = opt('json', null), THEN = opt('then', null);
 const WALK = argv.length ? argv : ['?', 'kit:?levelFile=compound.json&roomclear&squad4', '?levelFile=compound.json&roomclear&squad4', '?levelFile=block.json&roomclear&squad4'];
 const KIT = '&kitview&mute&noreplay&kitloud';
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 
 // in the page, before its script: the counters
 const COUNT = () => {
@@ -40,16 +38,14 @@ const COUNT = () => {
 };
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(() => { window.__testVisible = true; });
+  const ctx = await PAGE.context({ size: [320, 180] });
   await ctx.addInitScript(COUNT);
   const seenText = new Set(), seenPipe = new Set(); const out = []; let red = 0;
   for (const addr of WALK) {
     const kit = addr.startsWith('kit:'); const query = (kit ? addr.slice(4) + KIT : addr).replace(/^\?&/, '?');
     const q = new URLSearchParams(query.replace(/^\?/, '')); if (!q.has('mute')) q.set('mute', ''); if (!q.has('quality')) q.set('quality', 'medium');
-    const url = `http://localhost:${PORT}/?${q.toString().replace(/=(?=&|$)/g, '')}`;
-    const page = await ctx.newPage(); const errs = [], gpuErrs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
+    const url = PAGE.url(q.toString().replace(/=(?=&|$)/g, ''));
+    const { page, errors: errs } = await PAGE.open({ context: ctx, errors: { console: false } }), gpuErrs = [];
     page.on('console', m => { if (m.type() === 'error' && /WebGPU|GPU device|pipeline/i.test(m.text())) gpuErrs.push(m.text().slice(0, 300)); });
     log(url);
     const t = Date.now();
@@ -94,7 +90,6 @@ const COUNT = () => {
     if (gpuErrs.length) { red++; console.log(`- FAIL — ${addr}: ${gpuErrs.length} GPU error(s) on the console — ${gpuErrs[0]}`); } else console.log('  no GPU error on the console');
     if (row.boot) console.log(`  ${row.boot}`);
   }
-  await browser.close();
   if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify(out, null, 1));
-  process.exit(red ? 1 : 0);
+  await PAGE.end('', red ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

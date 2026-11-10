@@ -1,4 +1,4 @@
-// FOG OF WAR — the picture's half (game/fogofwar.ts has the rule; render/fogofwar.ts owns this pass). Dispatched ONLY while the switch is on: off = no pass,
+// FOG OF WAR — the picture's half (rust/game_rules/src/stealth/fogofwar has the rule; render/fogofwar.ts owns this pass). Dispatched ONLY while the switch is on: off = no pass,
 // no copy, and no other shader's text touched. Runs after the composite (+ the particles' splat, + GBAA) and before the resolve, IN PLACE on hdr: the host copies
 // hdr → a copy first, this reads the copy and stores hdr (the GBAA arrangement).
 //
@@ -6,12 +6,12 @@
 // own height, to the spot's (x, z) through the renderer's own trace grid (occludedTBoxes: every box a shadow ray meets — statics, door leaves, furniture, and
 // the things other men carry; glass panes are not in the grid, so sight passes them; characters' bodies are not asked, and the eye's own kit is skipped). In
 // plan, at eye height: the floor behind a desk is seen (he sees over it) and the floor behind a wall, a tall cabinet or a shut leaf is not — the Door Kickers
-// picture, on the statics and leaves the CPU's eye test (collision.ts segmentBlocked) walks for the men. The eye is handed in over the man's FEET at a nominal
-// height for his stance (game/fogofwar.ts FogEye.at), not at his animated head: the mask must not move with his stride.
+// picture, on the statics and leaves the CPU's eye test (rust/game_rules/src/world/scene_collision.rs segment_blocked) walks for the men. The eye is handed in over the man's FEET at a nominal
+// height for his stance (rust/game_rules/src/stealth/fogofwar FogEye.at), not at his animated head: the mask must not move with his stride.
 // The ray stops a hand short of the spot: a wall's FACE is seen when the floor at its foot is (the spot is pushed off the face along its normal first), and a
 // top face above the eye — a wall's top, a tall cabinet's — when the line reaches within `topPad` of it (its own box stands in the way of anything nearer).
 // A pixel nobody sees keeps its radiance, pushed toward its own grey by `desat` and scaled by `dim`. The sky is left alone.
-// THE CONE (game/fogofwar.ts FOG.cone — hard's fog): an eye's wedge then has a SOFT edge in the picture — the dimming comes in across `soft.x ‥ soft.y` (the
+// THE CONE (rust/game_rules/src/stealth/fogofwar FOG.cone — hard's fog): an eye's wedge then has a SOFT edge in the picture — the dimming comes in across `soft.x ‥ soft.y` (the
 // cosines either side of the wedge's own) and outward over `soft.z` metres from the near field's rim — so the mask a turning man sweeps over the floor has no
 // hard line in it. All three 0 (every eye all round, or a plain fovDeg wedge) = seen or not, the answer as it always was.
 //
@@ -26,13 +26,13 @@
 //            walk is not taken. A box that does not answer proves nothing: the walk is taken as ever. The table only PROPOSES a box; the answer is the test's.
 //            So a pixel nobody sees costs a box test or two an eye where it cost a walk an eye, and no pixel's answer can differ. It also leaves alone what it does
 //            not change: a seen pixel and the sky are not stored back (hdr already holds them) and the copy is read only where it is needed.
-//   (`//#C ` / `//#CH ` lines + the count section: tools/qa/fog-pass-check.cjs's counting programs — rays, box tests and cells per pixel instead of the picture.)
+//   (`//#C ` / `//#CH ` lines + the count section: the counting programs — rays, box tests and cells per pixel instead of the picture.)
 struct FowU {
   eyes: array<vec4f, 7>,    // xyz = the eye, w = his character id (0 = no eye in this slot): the ray skips the boxes he carries himself (goggles at the eye, the gun)
   looks: array<vec4f, 7>,   // xy = where it looks in plan (x, z; unit), z = cos of the half field (≤ −1.5: all round), w = the near field's radius (m)
   cfg: vec4f,               // x = eyes, y = dim, z = desaturation, w = topPad (m)
   soft: vec4f,              // the cone's soft edges: x = cos(half field − half band), y = cos(half field + half band) (x > y; both 0 = a hard line), z = the near rim's band (m; 0 = hard) · w = the fog's own light (0 = off: the live frame, dimmed)
-  lit: vec4f,               // THE FOG LIT AS THE TEAM LAST KNEW IT (game/fogofwar.ts FOG.lit; read only under the fog's own light, soft.w > 0): x = gain on the remembered lamps' light, over cfg.y (0 = off: the one fixed light), y = the fill's level as displayed, z = lamps in fowLights, w = a lamp that would add less than this at the pixel (as displayed) is not traced, one under twice it is faded in
+  lit: vec4f,               // THE FOG LIT AS THE TEAM LAST KNEW IT (rust/game_rules/src/stealth/fogofwar FOG.lit; read only under the fog's own light, soft.w > 0): x = gain on the remembered lamps' light, over cfg.y (0 = off: the one fixed light), y = the fill's level as displayed, z = lamps in fowLights, w = a lamp that would add less than this at the pixel (as displayed) is not traced, one under twice it is faded in
   lit2: vec4f,              // x = how much of the fill a corner, the foot of a wall or the floor under a table loses (0 = no such rays), y = how far those rays reach (m) · z = 1: THE FULL PICTURE (FOG.full) — soft.w's light, as lit.y, is a fill added to the live frame dimmed, and no lamp of fowLights is read
 };
 @group(1) @binding(0) var fowSrc: texture_2d<f32>;                          // the composite as written (a copy: hdr itself is stored over)
@@ -44,11 +44,11 @@ struct FowU {
 
 const FOW_LIGHTS: u32 = 48u;                // render/fogofwar.ts FOG_LIGHTS (change both together)
 struct FowLights { l: array<Light, 48> };
-@group(1) @binding(8) var<uniform> fowLights: FowLights;                    // the level's own lamps as the team last knew them + the sun or moon (game/fogofwar.ts litBlock): never `lights`, the live frame's
+@group(1) @binding(8) var<uniform> fowLights: FowLights;                    // the level's own lamps as the team last knew them + the sun or moon (rust/game_rules/src/stealth/fogofwar litBlock): never `lights`, the live frame's
 
 const FOW_FACE_OFF: f32 = 0.06;   // the spot is taken this far off its surface along the normal (in plan), and the ray stops this short of it
 
-// ---- THE FOG'S SOFT EDGE (game/fogofwar.ts FOG.edge — the maintainer, 10-15: 'fog of war edges shouldn't be so sharp'; fogSight.cfg.w = the band in metres, 0 = the
+// ---- THE FOG'S SOFT EDGE (rust/game_rules/src/stealth/fogofwar FOG.edge — the maintainer, 10-15: 'fog of war edges shouldn't be so sharp'; fogSight.cfg.w = the band in metres, 0 = the
 // hard line as it was). THE BAND LIES ACROSS THE SIGHT LINE, half on each side: an eye gives a spot it sees 1, less within half a band of its sight edge, and a
 // spot it does not see 0, more within half a band of it — 0.5 on the line itself — and the team's answer is the most any eye gives, as it always was (so the line of a
 // stack of men is one man's line, and the cone's soft edge is untouched). NOTHING HIDDEN SHOWS: what the band brightens past the line is the fog's own picture (rule 4g: the live frame with every
@@ -62,8 +62,7 @@ const FOW_FACE_OFF: f32 = 0.06;   // the spot is taken this far off its surface 
 //   · of a spot it does NOT see, the first bearing that goes as far as the spot (fowFirstClear; less FOW_EDGE_SLANT × the way across, which is what a wall
 //     through the spot at a slant explains), and the same question of the step before it: past a thing that ends, not a wall that carries on.
 // The band is `cfg.w` × how sure the step is (FOW_EDGE_JLO ‥ JHI: no pop as a man walks) × how far behind the nearer thing the spot is, up to a band (the line
-// leaves a corner hard and widens behind it, as a shadow's edge does; a spot beside the thing is not dimmed). tools/qa/fog-probes.ts edgeReplica is this, in
-// plan, statement for statement, and holds its rules: CHANGE BOTH TOGETHER (the probe pins this text's hash).
+// leaves a corner hard and widens behind it, as a shadow's edge does; a spot beside the thing is not dimmed).
 const FOW_EDGE_BINS: i32 = 64;      // the most bearings searched a side
 const FOW_EDGE_JLO: f32 = 0.06;     // a nearer thing starts where 1 / range steps up by this share over the bearings beside it … (no band under it)
 const FOW_EDGE_JHI: f32 = 0.18;     // … the whole band from this share up
@@ -149,7 +148,8 @@ fn fowSeen(P: vec3f, N: vec3f) -> f32 {
   for (var k = 0u; k < n; k++) {
     let e = fow.eyes[k]; if (e.w < 0.5) { continue; }
     let top = N.y > 0.5 && P.y > e.y - 0.05;                       // a top face at or above this eye: its own box is between the eye and it
-    let q = vec3f(P.x + N.x * FOW_FACE_OFF, e.y, P.z + N.z * FOW_FACE_OFF);
+    let off = standOff(N, FOW_FACE_OFF);
+    let q = vec3f(P.x + off.x, e.y, P.z + off.y);
     let to = q - e.xyz; let d = length(to);
     let pad = select(FOW_FACE_OFF, max(fow.cfg.w, FOW_FACE_OFF), top);
     if (d <= pad + 0.02) { return 1.0; }                           // at the eye's own feet
@@ -176,7 +176,7 @@ fn fowSeen(P: vec3f, N: vec3f) -> f32 {
 
 // ---- THE FOG LIT AS THE TEAM LAST KNEW IT (FOG.lit) — an unseen pixel's light is traced here from three things and nothing else: the paint under the pixel, the
 // level's own lamps in the state the team last saw each in (fowLights — the CPU's list; `lights`, the live frame's, is never read), and the boxes as handed to the
-// picture, which under the fog are the statics, the leaves and the loose things where the team last saw them (game/fogofwar.ts rules 4b, 4d). No radiance of the
+// picture, which under the fog are the statics, the leaves and the loose things where the team last saw them (rust/game_rules/src/stealth/fogofwar rules 4b, 4d). No radiance of the
 // live frame, no man's torch, no flash; and no man's shadow either: a box somebody carries is passed through (fowLitHit), and bodies are not boxes.
 /// occludedTBoxes (common.wgsl), its walk statement for statement, with two differences: no capsule cap, and EVERY box that has an owner is passed through. How far
 /// along the ray the first box met stands (near-first by cell, as there), −1 = clear.
@@ -185,16 +185,14 @@ fn fowLitHit(ro: vec3f, rd: vec3f, tmaxIn: f32) -> f32 {
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { return -1.0; }
   let tmax = min(tmaxIn, tb.y);
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
     if (boxOwner(boxGeo[bi]) != 0u) { continue; }
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { return r.x; }
   }
   var run = 0u;
@@ -212,15 +210,14 @@ fn fowLitHit(ro: vec3f, rd: vec3f, tmaxIn: f32) -> f32 {
   for (var iter = 0; iter < 96; iter++) {
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     var bestInCell = -1.0;
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (boxOwner(b) != 0u) { continue; }
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell)) { bestInCell = r.x; }
     }
     if (bestInCell >= 0.0) { return bestInCell; }
@@ -248,7 +245,7 @@ fn fowLitOpen(Po: vec3f, N: vec3f) -> f32 {
   return 1.0 - fow.lit2.x * min(shut * 0.3, 1.0);
 }
 /// the unseen pixel under FOG.lit: the paint under the fill (`form` = the fixed light's own shape; shut out where fowLitOpen says) + under each remembered lamp that
-/// a ray from the spot reaches + the glow of a lit panel's own face (an area lamp stands 7 cm proud of the face it is the light of: game.ts)
+/// a ray from the spot reaches + the glow of a lit panel's own face (an area lamp stands 7 cm proud of the face it is the light of: rust/game_rules/src/tick/game)
 fn fowLit(P: vec3f, N: vec3f, paint: vec3f, form: f32) -> vec3f {
   let Po = P + N * 0.03;
   let inv = 1.0 / max(frame.exposure, 1e-4);
@@ -298,7 +295,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   //#H let c = textureLoad(fowSrc, p, 0);
   let grey = vec3f(luminance(c.rgb));
   var unseen = mix(c.rgb, grey, fow.cfg.z) * fow.cfg.y;
-  // THE FOG'S OWN LIGHT (game/fogofwar.ts FOG.flat): a pixel nobody sees is the surface's paint under one fixed light — nothing of the live frame is in it, so no
+  // THE FOG'S OWN LIGHT (rust/game_rules/src/stealth/fogofwar FOG.flat): a pixel nobody sees is the surface's paint under one fixed light — nothing of the live frame is in it, so no
   // lamp, weapon light, muzzle flash, tracer, smoke, beam or particle in a room nobody watches shows there (soft.w = the level as displayed: the exposure is taken out)
   if (fow.soft.w > 0.0) {
     let paint = textureLoad(fowAlbedo, p, 0).rgb;
@@ -329,13 +326,13 @@ const FOW_WALK_WHOLE: bool = GRID_W + GRID_H <= 96;   // the walk's 96-cell cap 
 /// hit, 4 cm of height pad inside the cell's cull (a level ray: the hit is at the eye's own height). Or the walk answered 'blocked' before it got there: the same
 /// answer. A global is asked by the walk unless its bounds, 5 mm proud, miss the segment's — they cannot, around a meeting point. Not asked at all: a tumbling box
 /// (its footprint is not its yaw's) and anything the eye's own man carries (the walk skips those in the grid). false = no answer: the caller walks.
-fn fowHintBox(bi: u32, e: vec3f, rd: vec3f, tmax: f32, invRd: vec3f, axisFast: bool, owner: u32) -> bool {
+fn fowHintBox(bi: u32, e: vec3f, rd: vec3f, tmax: f32, invRd: vec3f, owner: u32) -> bool {
   var b = boxGeo[bi];
   if ((b.flags & BOX_ROT) != 0u || skipsOwner(boxOwner(b), owner) || fogThinBox(b, bi)) { return false; }   // (… nor one a fog eye passes: FOG.thin)
   let s = scene.grid.x + 0.001;
   if (b.h.x <= s || b.h.z <= s) { return false; }
   b.h = vec3f(b.h.x - s, b.h.y, b.h.z - s);
-  return isectBox(e, rd, b, tmax, bi, invRd, axisFast).x >= 0.0;
+  return isectBox(e, rd, b, tmax, bi, invRd).x >= 0.0;
 }
 /// does a box the table names for this bearing stand in the pixel's own ray, short of the spot? (fowHintBox: true = the walk would be blocked, for certain)
 fn fowHintBlocked(k: u32, e: vec4f, rd: vec3f, tmaxIn: f32) -> bool {
@@ -344,7 +341,6 @@ fn fowHintBlocked(k: u32, e: vec4f, rd: vec3f, tmaxIn: f32) -> bool {
   let tb = isectBounds(e.xyz, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > 0.0 || tb.y < 0.0) { return false; }                // an eye outside the traced world: the walk's own business
   let tmax = min(tmaxIn, tb.y);
-  let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
   let j = i32(floor((atan2(rd.z, rd.x) / FOW_TAU + 0.5) * f32(FOW_BINS) - 0.5));   // the two bins whose bearings stand either side of this one
   let ha = textureLoad(fowHint, vec2i((j + FOW_BINS) % FOW_BINS, i32(k)), 0).x;
   let hb = textureLoad(fowHint, vec2i((j + 1) % FOW_BINS, i32(k)), 0).x;
@@ -352,11 +348,11 @@ fn fowHintBlocked(k: u32, e: vec4f, rd: vec3f, tmaxIn: f32) -> bool {
   let reach = u32(tmax * 105.0) + 50u;                           // a box the table's ray met well past the spot is not asked (it would say no: the walk is taken either way)
   if (a != 0u && (ha >> 16u) <= reach) {
     //#C fowCount.y += 1.0;
-    if (fowHintBox(a - 1u, e.xyz, rd, tmax, invRd, axisFast, u32(e.w + 0.5))) { return true; }
+    if (fowHintBox(a - 1u, e.xyz, rd, tmax, invRd, u32(e.w + 0.5))) { return true; }
   }
   if (b != 0u && b != a && (hb >> 16u) <= reach) {
     //#C fowCount.y += 1.0;
-    if (fowHintBox(b - 1u, e.xyz, rd, tmax, invRd, axisFast, u32(e.w + 0.5))) { return true; }
+    if (fowHintBox(b - 1u, e.xyz, rd, tmax, invRd, u32(e.w + 0.5))) { return true; }
   }
   return false;
 }
@@ -366,16 +362,14 @@ fn fowWalk(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> vec2f {
   let tb = isectBounds(ro, invRd, WORLD_MIN, WORLD_MAX);
   if (tb.x > tb.y || tb.y < 0.0) { return vec2f(-1.0, 0.0); }
   let tmax = min(tmaxIn, tb.y);
-  let gskip = (frame.flags & FLAG_GRID_SKIP) != 0u; let ycull = (frame.flags & FLAG_GRID_YCULL) != 0u; let fast = gskip || ycull; let axisFast = (frame.flags & FLAG_AXIS_BOX) != 0u;
-  let slabs = (frame.flags & FLAG_GRID_SLABS) != 0u; let shrink = select(0.0, scene.grid.y, slabs);
   let yEnd = ro.y + rd.y * tmax;
   let pEnd = vec3f(ro.x + rd.x * tmax, yEnd, ro.z + rd.z * tmax);
   let sLo = min(ro, pEnd); let sHi = max(ro, pEnd);
   for (var g = 0u; g < scene.numGlobals; g++) {
-    if (globalSkipped(g, sLo, sHi, ycull, slabs)) { continue; }
+    if (globalOutside(g, sLo, sHi)) { continue; }
     let bi = scene.globals[g >> 2u][g & 3u];
     //#C fowCount.z += 1.0;
-    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd, axisFast);
+    let r = isectBox(ro, rd, boxGeo[bi], tmax, bi, invRd);
     if (r.x >= 0.0) { return vec2f(r.x, f32(bi) + 1.0); }
   }
   var run = 0u;
@@ -394,16 +388,15 @@ fn fowWalk(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> vec2f {
     //#C fowCount.w += 1.0;
     let ci = u32(cell.y * GRID_W + cell.x);
     var cw: CellWalk;
-    if (fast) { cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run, gskip, ycull, shrink); }
-    else { cw.start = gridCells[ci]; cw.end = gridCells[ci + 1u]; cw.qlo = 0u; cw.qhi = 255u; }
+    cw = gridCell(ci, ro.y + rd.y * max(tCell - tBack, t0), yEnd, &run);
     var bestInCell = -1.0; var bestBox = 0.0;
     for (var k = cw.start; k < cw.end; k++) {
-      let gi = gridItem(k, cw, ycull); if (gi < 0) { continue; }
+      let gi = gridItem(k, cw); if (gi < 0) { continue; }
       let bi = u32(gi);
       let b = boxGeo[bi];
       if (skipsOwner(boxOwner(b), skipOwner)) { continue; }
       //#C fowCount.z += 1.0;
-      let r = isectBox(ro, rd, b, tmax, bi, invRd, axisFast);
+      let r = isectBox(ro, rd, b, tmax, bi, invRd);
       if (r.x >= 0.0 && (bestInCell < 0.0 || r.x < bestInCell) && !fogThinBox(b, bi)) { bestInCell = r.x; bestBox = f32(bi) + 1.0; }
     }
     if (bestInCell >= 0.0) { return vec2f(bestInCell, bestBox); }
@@ -431,7 +424,7 @@ fn pre(@builtin(global_invocation_id) gid: vec3u) {
   textureStore(fowHintOut, vec2i(gid.xy), vec4u(h, 0u, 0u, 0u));
   //#C textureStore(fowHintOut, vec2i(i32(gid.x), i32(gid.y) + 7), vec4u(u32(fowCount.z) | (u32(fowCount.w) << 16u), 0u, 0u, 0u));   // (the counting table is twice as tall: what each ray cost, under the rows — 7 = the eyes, the arrays' own literal)
 }
-//#SECTION count — the counting programs only (tools/qa/fog-pass-check.cjs through FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
+//#SECTION count — the counting programs only (FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
 // answered where the walk says clear, or fowWalk against occludedTBoxes) · y = the hints' box tests · z = the walks' box tests · w = the cells the walks crossed
 var<private> fowCount: vec4f;
 fn fowTally(ro: vec3f, rd: vec3f, tmax: f32, owner: u32) {

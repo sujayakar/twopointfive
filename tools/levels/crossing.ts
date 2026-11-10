@@ -3,10 +3,7 @@
 // THE LEVEL'S ONE IDEA: TWO MEN WHO WATCH EACH OTHER — nobody crosses by the lane until both drop on one word.
 // Seven beats are authored (the game has seven names for a level's men); a deal mans five or six.
 //   bun run tools/levels/export.ts crossing          → levels/crossing.json (its footstep `surfaces`, its scenarios.quiet block; no room clear in it)
-//   bun run tools/qa/quiet-check.ts crossing.json     the quiet block against the built floor, every deal started
-//   bun run tools/qa/quiet-light.ts crossing          the light a sneaking man stands in, on paper
-//   bun run tools/qa/quiet-pair.ts --level crossing.json --seeds 1-48      the scripted pair beside the same run alone
-//   bun run tools/qa/quiet-plan.ts crossing --png     the plan picture: beats, starts, places, ways out, the cameras' cones
+//   levels stands crossing     the quiet block against the built floor, every deal started
 //   page: ?levelFile=crossing.json&quiet&squad=1   (&quiet=N pins the deal)
 //
 //        x 4      8       13       19       25       31       36
@@ -36,7 +33,7 @@
 //    fall at their heels), and the box hides the floor at each man's back from the other man — but not the man. Drop one and the other watches him fall, or
 //    finds him lying under his lamp a breath later. What the two do: the partner is sent round to one man's back (X on him, 1) and says 'set'; a bare F is
 //    refused while the mate is looking — 'hold. he has eyes on him' — so the player goes up the box's other side to the other man's back himself, gives F and
-//    F again, and puts his own hands on with the partner's: both go down on one beat (pairorders.ts PAIR.gripBody: a man with the partner's hands on him
+//    F again, and puts his own hands on with the partner's: both go down on one beat (rust/game_rules/src/squad_orders/pairorders.rs PAIR.gripBody: a man with the partner's hands on him
 //    calls no body in). A stack of crates off each end of the box turns the way to each back into a diagonal from the lot: straight up his spine, not across
 //    his shoulder. Across the lane's mouth, out on the road, stands a BLAST SCREEN (x 17.5 to 23.5): the lane men see the lane and each other and nothing
 //    of the forecourt, and whoever goes through the mouth walks round the screen's end under their lamps. Alone the lane is not a way: it is another crossing.
@@ -66,13 +63,13 @@
 // Every man starts his lap at its first waypoint on the first frame (the game deals no phase): the lane men are on their marks from about the tenth second.
 // REPLAY: three starts (outside the south gate, in the lorry park · outside the east wicket · outside the west wicket, by the tea stall: all south of the
 // road), three places for the thing, three sets, five ways out (north gate · south gate · east wicket · east yard gate · west wicket), all open every run.
-// In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. NOT SEEN ON A GPU: laid out on paper, checked headless, one still on the software renderer.
+// In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. NOT SEEN ON A GPU: laid out on paper, checked headless, one still on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
-import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
+import type { KitViewData, LevelScenarios, QuietData, Rect, ResponseData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
@@ -92,7 +89,7 @@ export const CROSSING_ROOMS: Record<'records' | 'office' | 'impound' | 'hut' | '
 };
 const R = CROSSING_ROOMS;
 
-/** THE SEVEN BEATS (seven and no more: a level's men are named off game.ts CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks, facing the way he came to it — so a mark is come at from the side he is to look from.
+/** THE SEVEN BEATS (seven and no more: a level's men are named off rust/game_rules/src/tick/game CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks, facing the way he came to it — so a mark is come at from the side he is to look from.
  *  ON THE FIRST LAP a man stands on waypoint 0 from the first frame and has not come to it from anywhere (he faces down his first leg): so the long stands — the lane men's marks, the clerk's desk, the road
  *  walker's chicane — are waypoint 1 or later, come at on the first lap as on every other. (The forecourt man's first six seconds and the south walker's first eight face the other way: short, and left.) */
 export const CROSSING_ROUTES: PatrolRoute[] = [
@@ -124,7 +121,7 @@ export const CROSSING_ROUTES: PatrolRoute[] = [
  *    the south gate (the lane and its two lit men straight ahead, the long dark way to the east door off to the right, the west pocket walled off) ·
  *    the office safe (the one place with a second problem behind the crossing: the clerk's back and the lens on the safe) ·
  *    set 0 (nobody in the lot behind the pair, nobody on the forecourt: the lane's two men ARE the problem, and the road walker is what the east door costs).
- *  Measured (tools/qa/quiet-pair.ts, scripted, build 53406430): alone or with the partner only following nobody gets across; the double lands 5 of 6 and ends unseen;
+ *  Measured (scripted, build 53406430): alone or with the partner only following nobody gets across; the double lands 5 of 6 and ends unseen;
  *  the east door with the partner on the walker 4 of 4. Set 2 in its place leaves the east door to the camera alone (a free way round); set 1 empties the office. */
 export const QUIET: QuietData = {
   thing: 'the manifest',
@@ -152,11 +149,11 @@ export const QUIET: QuietData = {
   ],
   needs: {
     coffee: { name: 'the kettle in the boom hut', pos: [6.2, 0, 19.1], face: -Math.PI / 2 },
-    smoke: { name: 'the east gate', pos: [35.3, 0, 15.9], face: Math.PI },
+    smoke: { name: 'the road gate', pos: [35.3, 0, 15.9], face: Math.PI },
   },
 };
 
-/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
+/** scenarios.response (rust/game_rules/src/pursuit/qrf, rust/game_start/tests/response_team.rs): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
  *  they come on foot from the house's side, by one of its two yard gates. Character yaws (forward = [sin, 0, cos]: 0 looks down the plan, toward the road). */
 export const RESPONSE: ResponseData = {
   why: 'A border post: the company that mans it sleeps in its lines up the road, with a duty section dressed and a telephone to the customs house.',
@@ -411,7 +408,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'shed', mat: 'stone', x0: 30, z0: 19.5, x1: 36, z1: 24 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the south gate from the lorry park, where the pair starts — the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lorry park, where the pair starts — the
   // lot's pickup and the seized blue box over the wall behind them. The pallet of crates and the two tyres left outside the gate (`G.crates(11.4, 26.4 …)`,
   // `G.tyres(12.9, 25.3 …)` above) stand where the file of five forms, so they are out of the picture: by id, as the export numbers them (the kit's list is the file's, box for box).
   // FOR THE PICTURE ONLY (`add`: the mission never loads these): only `exterior` lamps stay lit in a picture and the lane's are 8 m off, so the strip behind the
@@ -431,19 +428,19 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [12.45, 2.2, 23.25], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 14, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
   // (FOUND, not typed: an unnamed box has its place in the file for an id, so a box added earlier in this generator would turn a typed list onto other boxes.
-  //  The eleven are what those two calls laid, counted off the kit's list either side of them; a count that is not eleven throws.)
-  if (lorryPark1 - lorryPark0 !== 11) throw new Error(`crossing: the gear screen's way hides the 11 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
+  //  The five are what those two calls laid, counted off the kit's list either side of them; a count that is not five throws.)
+  if (lorryPark1 - lorryPark0 !== 5) throw new Error(`crossing: the gear screen's way hides the 5 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
   const lorryParkOut = Array.from({ length: lorryPark1 - lorryPark0 }, (_, k) => `box_${String(lorryPark0 + k).padStart(4, '0')}`);
   const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
-  // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —
+  // what a row calls the doors (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —
   // the two gates the duty section comes by as RESPONSE names them, the rest by what stands outside or which wall the leaf is in
   const doorNames = [{ door: 'off_imp', name: 'customs office to impound door' }, { door: 'gate_n', name: 'customs yard gate' }, { door: 'gate_ne', name: 'impound yard gate' }, { door: 'gate_s', name: 'lorry park gate' }, { door: 'gate_w', name: 'tea stall wicket' }, { door: 'gate_e', name: 'ditch wicket' }, { door: 'fence_e', name: 'kerb wall door' }, { door: 'hut_e', name: 'boom hut back door' }, { door: 'rec_w', name: 'records yard door' }, { door: 'imp_e', name: 'impound yard door' }, { door: 'shed_w', name: 'shed door' }];
   return { level, scenarios: { quiet: QUIET, response: RESPONSE, kitView, doorNames }, groups: trace.groups, surfaces };
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------
-// What each place of the crossing is FOR, seen from above (src/scene/lived.ts: every box here is in a group `lived.<place>`, every prop is named
-// `lived.<place>.<what>`, all of it the tail of the lists and left out with the switch off). No light and no change to one: the hiding dark is the level.
+// What each place of the crossing is FOR, seen from above (lib/lived.ts: every box here is in a group `lived.<place>`, every prop is named
+// `lived.<place>.<what>`, all of it the tail of the lists). No light and no change to one: the hiding dark is the level.
 // Outdoors everything is low or against a wall — the lane is a lit kill zone and the lot is the pair's cover as it was dealt.
 // A SOLID thing's top is either under 0.2 m (feet and the nav grid both pass over it) or over 0.25 (both go round): between the two a body is stopped by floor the grid calls free.
 function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>): void {
@@ -522,7 +519,7 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.s(4.46, 7.1, 0, 0.85, 0.3, 0.3, 'whitewash'); L.d(4.765, 7.1, 0.3, 0.6, 0.004, 0.14, 'glassDark');                                                             // a washing machine
   L.s(4.46, 7.8, 0, 0.85, 0.3, 0.3, 'paintCream'); L.d(4.4, 7.68, 0.85, 0.86, 0.2, 0.07, 'plasticBlack'); L.d(4.4, 7.92, 0.85, 0.86, 0.2, 0.07, 'plasticBlack');    // a cooker
   L.line(8.9, 5.6, 8.9, 10.9, 0.08, 'whitewash'); L.line(11.1, 5.6, 11.1, 10.9, 0.08, 'whitewash'); L.line(6.9, 8.0, 6.9, 10.9, 0.08, 'whitewash');                // the bays
-  L.s(10.3, 12.12, 0.48, 0.54, 0.5, 0.02, 'paintBlue'); L.s(9.75, 12.12, 0, 0.64, 0.32, 0.02, 'rubber'); L.s(10.85, 12.12, 0, 0.64, 0.32, 0.02, 'rubber');         // a bicycle against the kerb wall
+  L.s(10.3, 12.12, 0.48, 0.54, 0.23, 0.02, 'paintBlue'); L.s(9.75, 12.12, 0, 0.64, 0.32, 0.02, 'rubber'); L.s(10.85, 12.12, 0, 0.64, 0.32, 0.02, 'rubber');         // a bicycle against the kerb wall
   L.s(10.8, 12.12, 0.9, 0.94, 0.03, 0.14, 'iron'); L.s(10.05, 12.12, 0.8, 0.86, 0.1, 0.05, 'plasticBlack');
   L.d(10.8, 12.12, 0.64, 0.9, 0.012, 0.012, 'iron'); L.d(10.05, 12.12, 0.54, 0.8, 0.012, 0.012, 'iron');                                                           // the stem and the seat post
   L.d(6.0, 10.6, 0, 0.05, 0.5, 0.02, 'paintGreen', 0.5); L.round(5.6, 10.82, 0, 0.04, 0.3, 'rubber', false); L.round(6.42, 10.36, 0, 0.04, 0.3, 'rubber', false);     // another, flat on the ground

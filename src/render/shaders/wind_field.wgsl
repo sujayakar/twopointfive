@@ -1,6 +1,6 @@
-// ---- THE WIND FIELD (game/wind.ts): the air's velocity from ONE source at a point — the analytic supply-vent JET and the STORM outdoors. This one text is compiled
-// into BOTH GPU consumers (render/particles.ts prepends it to the particle kernels, smoke/smoke.ts to the solver's), and game/wind.ts jetVel / stormVel repeat it
-// on the CPU (windAt: the moths, the panel, the probes) — three copies of one small model; tools/qa wind-probes compares the constants and the CPU numbers. No
+// ---- THE WIND FIELD (rust/game_rules/src/air/wind.rs): the air's velocity from ONE source at a point — the analytic supply-vent JET and the STORM outdoors. This one text is compiled
+// into BOTH GPU consumers (render/particles.ts prepends it to the particle kernels, smoke/smoke.ts to the solver's), and rust/game_rules/src/air/wind.rs jet_vel / stormVel repeat it
+// on the CPU (windAt: the moths, the panel, the probes) — three copies of one small model. No
 // bindings, no structs of either consumer: plain functions of plain arguments, so the two blocks that carry the records (particles_common.wgsl ImpulseRec in its
 // 'wind' mode, smoke/wind_force.wgsl WindSrc) can lay them out as suits them.
 //
@@ -9,11 +9,11 @@
 // over the last 30 % of dMax and outside 2.6 σ (a bounded support: a solver cell or a leaf outside it does exactly nothing); a jet blowing DOWN at a floor turns
 // to run out along it below WIND_DEFLECT_H over it (the impinging jet's wall jet — what slides a leaf lying under a diffuser instead of pinning it) and is nothing
 // under that floor. `floorY` ≤ −100 = no floor. The STORM: the weather's wind vector everywhere OUTDOORS (outside the two roofed footprints, under
-// WIND_STORM_TOP), easing in over the first metre and a half off the facade (the wall's lee) and slower along the ground. ROOF BY ROOF (windStormRoofs; game/wind.ts
+// WIND_STORM_TOP), easing in over the first metre and a half off the facade (the wall's lee) and slower along the ground. ROOF BY ROOF (windStormRoofs; rust/game_rules/src/air/wind.rs
 // WX_OWN.wind): a level of three or four roofs of its own used to hand windStorm their BOUNDING BOX as its one footprint — on a level built round a yard that box is
 // the yard, and nothing outdoors there had any wind. With that rule on the storm record of such a level carries all four footprints and the storm blows wherever
 // none of them is overhead, easing in off whichever is nearest; a level of one or two roofs still calls windStorm, with the rectangles it always had.
-const WIND_DEFLECT_H: f32 = 0.55;    // m over its floor below which a down-jet turns outward (game/wind.ts WIND_FIELD.deflectH)
+const WIND_DEFLECT_H: f32 = 0.55;    // m over its floor below which a down-jet turns outward (rust/game_rules/src/air/wind.rs WIND_FIELD.deflectH)
 const WIND_DEFLECT_LOSS: f32 = 0.35; // share of the speed the turn costs at the floor itself (WIND_FIELD.deflectLoss)
 const WIND_SUPPORT_SIG: f32 = 2.6;   // radial cut-off in σ (e^−6.76 ≈ 0.001 of the axis speed) (WIND_FIELD.supportSigma)
 const WIND_STORM_TOP: f32 = 8.0;     // m: no storm record above this (nothing that flies or smokes is up there) (WIND_FIELD.stormTop)

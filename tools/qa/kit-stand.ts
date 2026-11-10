@@ -1,8 +1,8 @@
 // A KIT STOOD UP EMPTY, for a check that lays one piece and looks at what it laid (tools/qa/ground-pieces-check.ts, tools/qa/kit-stores-check.ts), as
 // tools/levels/library.ts lays a piece for the catalogue. One place, so that a change to how a kit is stood up is made once.
 import type { Box } from '../../src/scene/boxes';
-import { officeKit } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { officeKit } from '../levels/lib/officeGen';
+import { gwotKit, gwotOfOffice } from '../levels/lib/gwotKit';
 import { GWOT_PALETTE, type GwotMat } from '../../src/scene/gwotPalette';
 
 export type Kit = ReturnType<typeof gwotKit>;

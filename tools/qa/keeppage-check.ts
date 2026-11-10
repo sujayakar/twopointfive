@@ -4,7 +4,7 @@
 // and nothing it hung on the device outlives it (a listener, an open error scope, a method put over the device's, its `lost`), that a thing the device called
 // invalid is not kept (a module with a compile error, a layout with a validation error, the stand-in made after a failed compile), that a lost device is dropped
 // and the next lease opens another, and which window is a shell (`keepRole`). What it does to a real load is a page check (tools/qa/keeppage-page.cjs) and,
-// for the seconds, a measurement on a machine with a GPU (docs/agents/render.md).
+// for the seconds, a measurement on a machine with a GPU.
 //   bun run tools/qa/keeppage-check.ts                    exit 0 = every check passed, 1 = one failed
 //   KEEPPAGE_BREAK=1 bun run tools/qa/keeppage-check.ts   every maker goes straight to the device (nothing is kept): must FAIL
 // the stand-in browser, in place BEFORE the module is loaded: a GPUDevice whose prototype makes things and counts them
@@ -26,7 +26,8 @@ class FakeQueue {   // (its calls are its prototype's, as a real queue's are)
 }
 const QUEUE = new FakeQueue();
 class FakeDevice extends EventTarget {
-  #lost = new Promise<unknown>(r => { lostNow = r; });
+  lose: (i: unknown) => void = () => { };   // (this device's own loss; `lostNow` is the newest device's)
+  #lost = new Promise<unknown>(r => { lostNow = r; this.lose = r; });
   get lost() { return this.#lost; }
   onuncapturederror: unknown = null;
   createShaderModule(d: unknown) { return new Thing('ShaderModule', d); }
@@ -54,13 +55,16 @@ const land = async () => { await tick(); for (const f of flying.splice(0)) f.don
 const got = async <T,>(p: Promise<T> | T): Promise<T> => { await land(); return p; };
 
 // ---- which window is what
-{ const R = K.keepRole, base = { word: null, tab: null, top: true, keeper: false, own: false, driven: false, onefile: false };
+{ const R = K.keepRole, base = { word: null, tab: null, top: true, keeper: false, own: false, driven: false };
   check(R(base) === 'shell', 'a visitor\'s tab, no word: the shell');
   check(R({ ...base, driven: true }) === 'plain' && R({ ...base, driven: true, word: '1' }) === 'shell', 'a driven browser keeps its own page unless ?keeppage=1 asks');
   check(R({ ...base, proven: false }) === 'plain' && R({ ...base, proven: false, word: '1' }) === 'shell' && R({ ...base, proven: true }) === 'shell', 'a browser where a frame was never seen to draw with its parent\'s device keeps its own page unless ?keeppage=1 asks');
   check(R({ ...base, word: '0' }) === 'plain' && R({ ...base, tab: '0' }) === 'plain' && R({ ...base, tab: '0', word: '1' }) === 'shell', '?keeppage=0 is a whole page, and the tab\'s kept word too, until ?keeppage=1');
-  check(R({ ...base, own: true }) === 'plain' && R({ ...base, onefile: true }) === 'plain' && R({ ...base, top: false }) === 'plain', 'the benchmark, the kit picture, the one-file page and a page in somebody else\'s frame keep their own page');
+  check(R({ ...base, own: true }) === 'plain' && R({ ...base, top: false }) === 'plain', 'the benchmark and a page in somebody else\'s frame keep their own page');
   check(R({ ...base, top: false, keeper: true }) === 'kept', 'a frame under its shell takes the shell\'s device');
+  check(R({ ...base, top: false, keeper: true, picture: true }) === 'beside' && R({ ...base, top: false, picture: true }) === 'plain' && R({ ...base, top: false, keeper: true, picture: true, word: '0' }) === 'plain' && R({ ...base, top: false, keeper: true, picture: true, tab: '0' }) === 'plain'
+    && R({ ...base, top: false, stale: true, picture: true }) === 'plain' && R({ ...base, picture: true }) === 'plain',
+    'a picture inside a page takes the shell\'s device beside its page where there is a shell, opens its own where there is none, and never sends the tab anywhere');
   check(R({ ...base, top: false, keeper: true, own: true }) === 'leave' && R({ ...base, top: false, keeper: true, word: '0' }) === 'leave' && R({ ...base, top: false, keeper: false, stale: true }) === 'leave', 'a frame that must load whole, or whose shell is another build\'s, sends the tab to its address'); }
 
 // ---- the keeper
@@ -120,7 +124,7 @@ check(wrapped === 1 && scopes === 1, '(a load\'s own method over the device\'s i
 
 // ---- the next load
 const two = await keeper.take(), d2 = two.device as unknown as Dev;
-check(two.n === 2 && !two.fresh && opens === 1 && two.device === one.device, 'the second lease is the same device, not opened again');
+check(two.n === 2 && !two.fresh && opens === 1 && two.real === one.real && two.device !== one.device && two.device instanceof FakeDevice, 'the second lease is the same device, not opened again, through a view of its own');
 check(bufs.every(t => t.destroyed), 'the first load\'s buffers, texture and query set are destroyed when its lease ends');
 check(scopes === 0, 'the error scope it left open is closed');
 d2.addEventListener('uncapturederror', () => { heard2++; }); d2.dispatchEvent(new Event('uncapturederror'));
@@ -150,7 +154,7 @@ check(K.keptRecord({ whole: 1 } as Record<string, unknown>, null).kept === undef
 { let mine = 0; (d2 as Record<string, unknown>).createTexture = () => { mine++; return null; }; two.release(); (two.device as unknown as Dev).createTexture({ size: [1, 1] });
   check(mine === 0, 'a method a load put over the device\'s is gone the moment its lease ends'); }
 const twoB = await keeper.take(), d2b = twoB.device as unknown as Dev;
-check(twoB.n === 3 && twoB.device === one.device && await got(d2b.createComputePipelineAsync(pipeDesc(d2b))) === a, '(the next lease on the same device still gets the first load\'s pipeline)');
+check(twoB.n === 3 && twoB.real === one.real && await got(d2b.createComputePipelineAsync(pipeDesc(d2b))) === a, '(the next lease on the same device still gets the first load\'s pipeline)');
 
 // ---- a lost device
 let lost2: unknown = null; void d2b.lost.then(i => { lost2 = i; }); lostNow({ reason: 'unknown', message: 'gone' }); await tick(); await tick();
@@ -197,8 +201,12 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
 { const Q = QUEUE as unknown as Record<string, (...a: unknown[]) => void>, own = (o: object, m: string) => Object.prototype.hasOwnProperty.call(o, m);
   type Calls = { n: number; ms: number; mb: number; worst: number; what: string; by: Record<string, [number, number, number]> };
   const word = (l: Awaited<ReturnType<typeof keeper.take>> | null) => K.keptRecord({ whole: 1 } as Record<string, unknown>, l) as { calls?: Calls; kept?: number };
-  const use = (d: Dev, buf: unknown): void => { d.createBuffer({ size: 64 }); d.createTexture({ size: [4, 4] }); Q.writeBuffer(buf, 0, new Float32Array(262144)); Q.writeBuffer(buf, 0, new Float32Array(262144), 0, 131072);
+  // (a page's calls of the queue are its device's: on a kept page that is the lease's own view of the queue)
+  const queueOf = (d: Dev): Record<string, (...a: unknown[]) => void> => (d as unknown as { queue: Record<string, (...a: unknown[]) => void> }).queue;
+  const use = (d: Dev, buf: unknown): void => { const Q = queueOf(d); d.createBuffer({ size: 64 }); d.createTexture({ size: [4, 4] }); Q.writeBuffer(buf, 0, new Float32Array(262144)); Q.writeBuffer(buf, 0, new Float32Array(262144), 0, 131072);
     Q.writeTexture({}, new Uint8Array(1048576), { offset: 0, bytesPerRow: 1024 }, [256, 512]); Q.writeTexture({}, new Uint8Array(1048576), { offset: 4096, bytesPerRow: 1024 }, { width: 4, height: 4 }); Q.submit([]); };
+  /** nothing of anybody's is written on the kept device or its queue: every lease reads them through a view */
+  const bare = (): boolean => devices.every(d => Object.getOwnPropertyNames(d).every(k => k === 'onuncapturederror' || k === 'lose')) && Object.getOwnPropertyNames(QUEUE).length === 0;   // (the stand-in's two fields of its own)
   // a whole page: a device of its own, nothing of a keeper's on it
   const plain = new FakeDevice() as unknown as Dev, w0 = made.write ?? 0;
   K.startCallClock(plain as unknown as GPUDevice, true, false); use(plain, {});
@@ -209,13 +217,14 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
   K.keptFreeze(); use(plain, {});
   check(!own(QUEUE, 'writeBuffer') && !own(QUEUE, 'writeTexture') && !own(plain, 'createBuffer') && !own(plain, 'createTexture') && Q.submit === pages && K.CALLS.now?.n === 7, 'at the boot\'s freeze the clock stops: the device\'s and the queue\'s calls are their own again, what a page put over one stays, and a later call is not counted');
   delete (Q as Record<string, unknown>).submit;
-  // a kept page: the keeper's own makers are on the device, and are there again when the clock stops
-  const A = await keeper.take(), dA = A.device as unknown as Dev, keepers = dA.createBuffer;
-  K.startCallClock(A.device, true, false); const timedMaker = dA.createBuffer, mineA = dA.createBuffer({ size: 8 }) as Thing; use(dA, mineA); K.keptFreeze();
-  check(timedMaker !== keepers && dA.createBuffer === keepers && !own(QUEUE, 'submit') && word(A).calls?.n === 8 && word(A).kept === A.n, 'on a kept page the clock goes over the keeper\'s makers and they are back at the freeze; the record has `calls` beside `kept`');
+  // a kept page: the keeper's own makers answer the lease's view, and answer it again when the clock stops; the device and its queue are never written on
+  const A = await keeper.take(), dA = A.device as unknown as Dev, keepers = dA.createBuffer, queuesA = queueOf(dA).submit;
+  K.startCallClock(A.device, true, false); const timedMaker = dA.createBuffer, timedSubmit = queueOf(dA).submit, bareA = bare(), mineA = dA.createBuffer({ size: 8 }) as Thing; use(dA, mineA); K.keptFreeze();
+  check(timedMaker !== keepers && dA.createBuffer === keepers && timedSubmit !== queuesA && queueOf(dA).submit === queuesA && bareA && bare() && word(A).calls?.n === 8 && word(A).kept === A.n, 'on a kept page the clock goes over the keeper\'s makers in the lease\'s own view and they are back at the freeze, with nothing written on the device or its queue; the record has `calls` beside `kept`');
   A.release(); check(mineA.destroyed, '…and what the load made under the clock was still the lease\'s to destroy');
-  const B = await keeper.take(); K.startCallClock(B.device, true, false); const hadB = own(QUEUE, 'writeBuffer'), clockB = (B.device as unknown as Dev).createBuffer; B.release();
-  check(hadB && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit') && (B.device as unknown as Dev).createBuffer !== clockB, 'a kept load that ends before its freeze leaves nothing of its clock on the device or its queue');
+  const B = await keeper.take(), qB = queueOf(B.device as unknown as Dev), queuesB = qB.writeBuffer; K.startCallClock(B.device, true, false); const hadB = qB.writeBuffer !== queuesB, clockW = qB.writeBuffer, clockB = (B.device as unknown as Dev).createBuffer; B.release();
+  const w1 = made.write ?? 0; qB.writeBuffer('b', 0, new Float32Array(4)); check((made.write ?? 0) === w1, 'a load whose lease is over hands the queue nothing');
+  check(hadB && qB.writeBuffer !== clockW && bare() && (B.device as unknown as Dev).createBuffer !== clockB, 'a kept load that ends before its freeze leaves nothing of its clock in its view of the device or of the queue');
   // the play total: from the freeze on, the queue's three calls are counted, with the arguments they were given
   { const got: unknown[][] = [], P = FakeQueue.prototype, was = [P.writeBuffer, P.writeTexture, P.submit];
     P.writeBuffer = function (...a: unknown[]) { got.push(a); }; P.writeTexture = function (...a: unknown[]) { got.push(a); }; let refuse = false; P.submit = function (...a: unknown[]) { if (refuse) throw new Error('refused'); got.push(a); };
@@ -231,8 +240,8 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
     K.startCallClock(plain as unknown as GPUDevice, true, false); const cleared = K.CALLS.play === null; K.keptFreeze();   // (were the old total still there, the load's clock would have put it back at this freeze)
     check(cleared && K.CALLS.play === null && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit'), 'a clock started again takes the last play total off the queue; with the play total switched off (?playclock=0) nothing stays over the queue after the freeze');
     // …and a kept page's go with its lease; a kept load whose lease is over by its freeze puts nothing on the queue
-    const E = await keeper.take(); K.KEPT.lease = E; K.startCallClock(E.device, true, true); K.keptFreeze(); const hadE = own(QUEUE, 'submit') && !!K.CALLS.play; E.release();
-    check(hadE && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'writeTexture') && !own(QUEUE, 'submit'), 'a kept load\'s play total is taken off the queue at the end of its lease');
+    const E = await keeper.take(), qE = queueOf(E.device as unknown as Dev), queuesE = [qE.writeBuffer, qE.writeTexture, qE.submit]; K.KEPT.lease = E; K.startCallClock(E.device, true, true); K.keptFreeze(); const clocksE = [qE.writeBuffer, qE.writeTexture, qE.submit], hadE = qE.submit !== queuesE[2] && !!K.CALLS.play; E.release(); got.length = 0; qE.submit([]); qE.writeTexture('t', new Float32Array(1), {}, [1, 1]);
+    check(hadE && qE.writeBuffer !== clocksE[0] && qE.writeTexture !== clocksE[1] && qE.submit !== clocksE[2] && got.length === 0 && bare(), 'a kept load\'s play total is taken off its view of the queue at the end of its lease, which then hands the queue nothing');
     const F = await keeper.take(); K.KEPT.lease = F; K.startCallClock(F.device, true, true); F.release(); K.keptFreeze();
     check(!F.alive && K.CALLS.play === null && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit'), 'a kept load whose lease is over by its freeze puts no play total on a queue that is no longer its');
     K.KEPT.lease = null;
@@ -240,11 +249,66 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
   K.CALLS.stop(); K.startCallClock(plain as unknown as GPUDevice, false); use(plain, {}); K.keptFreeze();
   check(K.CALLS.now === null && K.CALLS.play === null && !own(QUEUE, 'writeBuffer') && !own(plain, 'createBuffer') && word(null).calls === undefined, 'with the clock switched off (?callclock=0) nothing is put over a call, in the load or after it, and the record has no `calls`'); }
 
+// ---- two seats at once: a picture inside the page (the Team & kit picture) holds the device beside its page
+{ const SEAT = K.KEEP_PAGE.pictureSeat, opened0 = keeper.opened, leases0 = keeper.leases;
+  const page = await keeper.take(), dp = page.device as unknown as Dev, pageBuf = dp.createBuffer({ size: 8 }) as Thing;
+  const pic = await keeper.take(SEAT), dq = pic.device as unknown as Dev, picBuf = dq.createBuffer({ size: 8 }) as Thing;
+  check(page.alive && pic.alive && pic.real === page.real && pic.device !== page.device && pic.seat === SEAT && page.seat === K.KEEP_PAGE.seat && pic.n === 1 && keeper.opened === opened0 && keeper.leases === leases0 + 2 && keeper.seats.join() === `${K.KEEP_PAGE.seat},${SEAT}`,
+    'a picture\'s lease is taken beside its page\'s: both hold the one device, each through its own view, and the picture\'s seat counts its own leases');
+  // what one compiled the other finds made, whichever asks first, and a compile in flight is one compile for both
+  const asks = made.asyncAsk, pq = dq.createComputePipelineAsync(pipeDesc(dq, 'mission')), pp = dp.createComputePipelineAsync(pipeDesc(dp, 'mission')); await tick();
+  const one1 = flying.length === 1 && made.asyncAsk === asks + 1, vq = await got(pq), vp = await got(pp);
+  check(one1 && vq === vp && pic.stats.pipelines === 1 && page.stats.pipelines === 0 && page.stats.asked === 1, 'a program the picture asked for and its page asks for too is one compile, counted to the one that asked first');
+  // each view is its page's own: a method one puts over the device's is not the other's, and each hears its own `lost`
+  let mineQ = 0; (dq as Record<string, unknown>).createTexture = () => { mineQ++; return null; }; dp.createTexture({ size: [1, 1] });
+  check(mineQ === 0 && dq.createTexture !== dp.createTexture && pic.device.lost !== page.device.lost, 'what the picture puts over the device\'s methods is in its own view: its page does not call it');
+  let heardP = 0, heardQ = 0; dp.addEventListener('uncapturederror', () => { heardP++; }); dq.addEventListener('uncapturederror', () => { heardQ++; });
+  // the picture goes (its window is dropped): its things are destroyed, its page's are not, and its page still holds the device
+  pic.release(); devices[devices.length - 1].dispatchEvent(new Event('uncapturederror'));
+  check(picBuf.destroyed && !pageBuf.destroyed && page.alive && !pic.alive && heardP === 1 && heardQ === 0, 'the picture\'s lease ends by itself: its buffers and listeners go, its page\'s stay');
+  // the next picture (another mission picked) ends the one before it and nothing of the page's
+  const pic2 = await keeper.take(SEAT), buf2 = (pic2.device as unknown as Dev).createBuffer({ size: 8 }) as Thing, pic3 = await keeper.take(SEAT);
+  check(!pic2.alive && buf2.destroyed && pic3.alive && pic3.n === 3 && page.alive && !pageBuf.destroyed, 'a new picture takes the picture\'s seat: the one before it is over, the page\'s lease is not');
+  // Deploy: the page loads again. Its lease ends, the picture inside it with it, and the mission's page finds the picture's program made
+  const buf3 = (pic3.device as unknown as Dev).createBuffer({ size: 8 }) as Thing, next = await keeper.take(), dn = next.device as unknown as Dev;
+  const same = await got(dn.createComputePipelineAsync(pipeDesc(dn, 'mission')));
+  check(!page.alive && !pic3.alive && buf3.destroyed && pageBuf.destroyed && next.alive && keeper.seats.join() === K.KEEP_PAGE.seat && same === vq && next.stats.pipelines === 0 && next.stats.asked === 1 && made.asyncAsk === asks + 1,
+    'THE POINT: the page\'s next load ends the picture with its page, and what the picture compiled answers the mission\'s load, nothing compiled');
+  // a picture's window dropped while it was still on its way to the device: its seat is given up by its page, and the take is refused, so no lease is left that nobody can end
+  { const going = keeper.take(SEAT).then(() => 'handed', () => 'refused'); keeper.release(SEAT); const how = await going;
+    check(how === 'refused' && keeper.seats.join() === K.KEEP_PAGE.seat && next.alive, 'a seat released while a take of it is on its way: that take is refused and the seat is empty; the page\'s lease stands'); }
+  // a picture does not wait for the queue its own live page keeps feeding; a lease's `onuncapturederror` is its own listener, never the device's one property
+  { const asksBefore = made.queueAsk ?? 0; holdQueue = true; const quick = await Promise.race([keeper.take(SEAT), tick().then(tick).then(() => null)]); holdQueue = false;
+    check(quick !== null && quick.waited === null && (made.queueAsk ?? 0) === asksBefore, 'a picture taking its seat beside its live page does not wait for the queue (it is its own page\'s, and never runs dry)');
+    let a = 0, b = 0; const dev = devices[devices.length - 1];
+    (next.device as unknown as { onuncapturederror: unknown }).onuncapturederror = () => { a++; }; if (quick) (quick.device as unknown as { onuncapturederror: unknown }).onuncapturederror = () => { b++; };
+    dev.dispatchEvent(new Event('uncapturederror')); const both = a === 1 && b === 1 && dev.onuncapturederror === null;
+    quick?.release(); dev.dispatchEvent(new Event('uncapturederror'));
+    check(both && a === 2 && b === 1 && dev.onuncapturederror === null && Object.getOwnPropertyNames(dev).every(k => k === 'onuncapturederror' || k === 'lose'), 'each holder\'s `onuncapturederror` hears the device, the one that goes stops hearing, and the device\'s own property is never written'); }
+  // a device lost under two holders is told to both
+  const pic4 = await keeper.take(SEAT); let lostP: unknown = null, lostQ: unknown = null; void next.device.lost.then(i => { lostP = i; }); void pic4.device.lost.then(i => { lostQ = i; });
+  devices[devices.length - 1].lose({ reason: 'unknown', message: 'gone' }); await tick(); await tick();
+  check(lostP !== null && lostQ !== null, 'a lost device is told to the page and to the picture inside it');
+  const after = await keeper.take(); check(after.fresh && keeper.opened === opened0 + 1 && !pic4.alive, '…and the page\'s next load opens another, the picture\'s lease over with its page'); after.release(); }
+
+// ---- what the visit worked out once is kept as bytes, for every later lease (the look's maps)
+{ const first = await keeper.take(), src = [new Uint8Array([1, 2, 3]), new Uint8Array([4])], kb0 = keeper.keptBytes;
+  first.keepBytes('map a', src, [0.5, 2]); src[0][0] = 9; first.keepBytes('map a', [new Uint8Array([7, 7, 7])], [1]);
+  const got = first.bytes('map a'), none = first.bytes('map b');
+  check(!!got && got.bytes.length === 2 && got.bytes[0] !== src[0] && got.bytes[0].join() === '1,2,3' && got.bytes[1].join() === '4' && got.nums.join() === '0.5,2' && none === null && keeper.keptBytes === kb0 + 4,
+    'bytes a page worked out are kept under their name as copies of the shell\'s own: the page\'s later writes do not reach them, and the first said under a name stands');
+  const second = await keeper.take(), pic = await keeper.take(K.KEEP_PAGE.pictureSeat);
+  check(!first.alive && second.bytes('map a') === got && pic.bytes('map a') === got, 'the next load, and a picture beside it, are handed the same bytes: nothing is worked out twice in a visit');
+  const cap = K.KEEP_PAGE.bytesCap; (K.KEEP_PAGE as { bytesCap: number }).bytesCap = keeper.keptBytes + 2; second.keepBytes('too big', [new Uint8Array(3)]); second.keepBytes('fits', [new Uint8Array(2)]); (K.KEEP_PAGE as { bytesCap: number }).bytesCap = cap;
+  check(second.bytes('too big') === null && !!second.bytes('fits'), 'past the visit\'s cap nothing more is kept (the page makes it again, as a page with no lease does)');
+  second.release(); }
+
 // ---- the frame's side
 { const up = { [K.KEEP_PAGE.hook]: keeper } as Record<string, unknown>, win = { parent: up };
   check(K.keeperAbove(win, 'build-a')?.same === true && K.keeperAbove(win, 'build-b')?.same === false, 'a frame knows its shell, and a shell of another build');
   check(K.keeperAbove({ parent: {} }) === null && K.keeperAbove({ get parent(): unknown { throw new Error('another origin'); } }) === null, 'no shell above, or a window of another origin above: none');
   const self: { parent?: unknown } = {}; self.parent = self; check(K.keeperAbove(self) === null, 'a window with nothing above it has no shell');
+  check(K.keeperAbove(win, 'build-a')?.depth === 1 && K.keeperAbove({ parent: win }, 'build-a')?.depth === 2 && K.keeperAbove({ parent: win }, 'build-a')?.keeper === keeper, 'a picture inside a frame finds its page\'s shell two windows up, and a page tells that from its own');
   keeper.refused = true; check(K.keeperAbove(win, 'build-a')?.same === false, 'a shell whose device a browser would not draw with is not taken from again'); }
 
 console.log(red ? `keeppage-check: ${red} FAILED` : 'keeppage-check: all passed'); process.exit(red ? 1 : 0);

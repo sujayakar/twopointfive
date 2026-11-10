@@ -1,14 +1,23 @@
-// THE BENCHMARK'S SCENES — the floors a benchmark run plays, each a mission of the list (scene/scenarioList.ts) on its own level, taken by the hands-off player
-// (host/handsoff.ts) on a seed that names the deal and the dice. Plain data: the page (ui/bench.ts) plays them in this order, one page load each, and
-// tools/qa/bench-seeds.ts plays them headless over a set of seeds and names the seed kept here (its header has the rule; `--check` says when a kept seed has gone stale).
-import type { HandsOffPlan } from './handsoff';
+// THE BENCHMARK'S SCENES — the floors a benchmark run plays, each a mission of the list (rust/game_types/src/scene_scenario_list/rows.rs) on its own level, taken by the hands-off player
+// on a seed that names the deal and the dice. Plain data: the page (ui/bench.ts) plays them in this order, one page load each.
+/** a hands-off player's plan */
+export interface HandsOffPlan {
+  /** the die the hands' own beats are rolled on */
+  seed: number;
+  /** run seconds after which the hands stop (end 'cap') */
+  cap?: number;
+  /** doors by name: a held room that has one of them is taken first, by that door, in this order — then the nearest as ever */
+  route?: string[];
+  /** before the rooms: a teammate is sent to throw the breaker (the quick key on its panel), and the hands wait for the dark */
+  breaker?: boolean;
+}
 
 export interface BenchSceneDef {
   /** its word in the report and on the tool's command line */
   id: string;
   /** what the report calls it */
   name: string;
-  /** the mission played: a room clear row of SCENARIOS */
+  /** the mission played: a room clear row of the list */
   scn: string;
   /** played on Hard */
   hard: boolean;

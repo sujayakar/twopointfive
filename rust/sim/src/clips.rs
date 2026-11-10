@@ -1,14 +1,15 @@
-//! THE CLIPS A POSE IS SAMPLED FROM (src/anim/gltf.ts Clip, Track; src/anim/skeleton.ts sampleClip) — a character file's animations, copied in ONCE as the
+//! THE CLIPS A POSE IS SAMPLED FROM — a character file's animations, copied in ONCE as the
 //! host first samples one, so that a sample is one question whose answer is written straight into a pose (the bench's, or one at home in a game's pool:
 //! skeleton.rs `ask_sample`), and so that a layer of the animator written here samples with no crossing.
 //!
 //! AUTHORED DATA, NOT STATE: nothing writes a track after its file is loaded, a clip is the same for every game, and no snapshot carries it. So this is
-//! outside the games' blocks (state.rs) and has no part: a COPY (tools/sim/build.ts STATICS), held by tools/qa/pose-ident.ts, which reads every single of
-//! every clip back and samples each both ways. A clip is known by the number `end` gave it; the host keeps which clip that is.
+//! outside the games' blocks (state.rs) and has no part: a COPY (tools/qa/rust-rules-check.ts STATICS). A clip is known by the number `end` gave it; the host keeps which clip that is.
 //!
 //! A CLIP WRITTEN TWICE IS ONE CLIP. The host knows a clip by its object and a character file may be loaded more than once in a process (a game stood up
 //! again), so `end` looks for a clip already held with the same length, the same tracks and the same singles (found by a word folded from them, then compared
 //! whole) and gives ITS number, keeping nothing of the second writing. The table grows with the clips there are, not with how often they are loaded.
+//! WHERE A CLIP STANDS HERE IS THE PROCESS'S, first come first served, and no game's: a host that has worked out a clip's word asks `find` and writes only
+//! what the table does not hold, so that two machines of one game, which came to their clips in different orders, keep nothing different in their records.
 //! To be found again a clip has to be written again, so the table always KEEPS ROOM FOR ITS LARGEST CLIP: a new clip that would leave less is refused
 //! (`end`), and a full table still knows every clip it holds.
 //!
@@ -18,8 +19,8 @@
 //! WHERE A SAMPLE'S TIME FALLS AMONG A TRACK'S KEYS depends on the track's times alone, and a clip's tracks share theirs (the game's rig: 159 tracks a clip
 //! on two sets of times). So `end` gives every track the number of its LINE — the first track of the clip with the same times, single for single — and a
 //! sample finds its place on a line once (`Place`), where the TypeScript searches each track: the same place, so the same numbers.
-use crate::single::{get, put, S};
-use crate::skeleton::{store_unit, MAX_NODES, NODE};
+use crate::single::{get, S};
+use crate::skeleton::{MAX_NODES, NODE};
 use crate::world::{js_max, js_min};
 
 /// clips the table holds (a character file has some fifty)
@@ -109,7 +110,14 @@ pub struct Table {
     pub owed: usize,
     pub open: bool,
     pub bad: bool,
+    /// THE WORDS OF CLIPS THE STORE REFUSED, this process's: such a clip is asked once, or a full store would have the whole clip written again at every sample. The oldest goes past `NOS`
+    pub no: [u32; NOS],
+    /// how many clips have been begun in this store: what a test counts, so that a game that wrote a clip it holds again shows
+    pub begins: u32,
+    pub n_no: usize,
 }
+/// refusals kept (a refused clip is a mistake in a character file or the store's size, said by name: there is hardly ever one)
+pub const NOS: usize = 32;
 static mut ALL: Table = Table {
     clips: [Clip { duration: 0.0, track0: 0, tracks: 0, nodes: 0, word: 0 }; CLIPS + 1],
     tracks: [Track { at: 0, keys: 0, out: 0, node: 0, chan: 0, comps: 0, step: false, line: 0 }; TRACKS],
@@ -123,15 +131,24 @@ static mut ALL: Table = Table {
     owed: 0,
     open: false,
     bad: false,
+    no: [0; NOS],
+    n_no: 0,
+    begins: 0,
 };
 #[inline(always)]
 pub fn table() -> &'static mut Table {
     unsafe { &mut *core::ptr::addr_of_mut!(ALL) }
 }
+/// the clips' table, to read
+#[inline(always)]
+pub fn table_read() -> &'static Table {
+    unsafe { &*core::ptr::addr_of!(ALL) }
+}
 
 /// a clip of `tracks` tracks is about to be written: false = no room to write it (the host samples that clip itself). A clip left half written (its `end`
 /// never came) is dropped here: the table is never held shut by one.
 pub fn begin(duration: f64, tracks: usize) -> bool {
+    table().begins += 1;
     let t = table();
     if t.open {
         t.used = t.from;
@@ -151,7 +168,8 @@ pub fn begin(duration: f64, tracks: usize) -> bool {
 /// `u32::MAX` = not a track this table takes (no clip open, a node no pose has, no key, no room): the clip is then refused whole by `end`
 pub fn track(node: usize, path: u32, step: bool, keys: usize) -> u32 {
     let t = table();
-    let comps = if path == 1 { 4 } else { 3 };
+    let (out, comps) = shape_of(node, path);
+    let comps = comps as usize;
     if !t.open || t.owed == 0 || node >= MAX_NODES || path > 2 || keys == 0 || keys > (POOL - t.used) / (1 + comps) {
         t.bad = true;
         return u32::MAX;
@@ -159,7 +177,7 @@ pub fn track(node: usize, path: u32, step: bool, keys: usize) -> u32 {
     let c = &mut t.clips[t.n_clips];
     let k = (c.track0 + c.tracks) as usize;
     let chan = if path == 0 { 0 } else if path == 1 { 3 } else { 7 };
-    t.tracks[k] = Track { at: t.used as u32, keys: keys as u32, out: (node * NODE + chan) as u32, node: node as u16, chan: chan as u16, comps: comps as u32, step, line: LINES as u32 };
+    t.tracks[k] = Track { at: t.used as u32, keys: keys as u32, out, node: node as u16, chan: chan as u16, comps: comps as u32, step, line: LINES as u32 };
     c.tracks += 1;
     if node as u32 + 1 > c.nodes {
         c.nodes = node as u32 + 1;
@@ -224,29 +242,70 @@ pub fn end() -> i32 {
     t.n_clips += 1;
     (t.n_clips - 1) as i32
 }
-/// a stored single as a word (the double it stands for, its two halves folded: singles alike give words alike)
-#[inline(always)]
-fn bits(pool: &[S], i: usize) -> u32 {
-    let b = get(pool, i).to_bits();
-    b as u32 ^ (b >> 32) as u32
+/// FNV-1a over a clip: its length, each track's shape, then every single in the pool's order (a track's times, then its values). One fold, so that a host
+/// can work out a clip's word from its own copy of the clip and ask for it (`find`) without writing anything.
+pub struct Fold(u32);
+impl Fold {
+    pub fn new(duration: f64) -> Fold {
+        let mut f = Fold(0x811c_9dc5);
+        let d = duration.to_bits();
+        f.eat(d as u32);
+        f.eat((d >> 32) as u32);
+        f
+    }
+    #[inline(always)]
+    fn eat(&mut self, w: u32) {
+        self.0 = (self.0 ^ w).wrapping_mul(0x0100_0193);
+    }
+    /// a track's shape: (`out`, `comps`) as `shape_of` gives them
+    pub fn shape(&mut self, keys: u32, out: u32, comps: u32, step: bool) {
+        self.eat(keys);
+        self.eat(out);
+        self.eat(comps | (step as u32) << 8);
+    }
+    /// a single, as the double it stands for (its two halves folded: singles alike give words alike)
+    #[inline(always)]
+    pub fn single(&mut self, v: f64) {
+        let b = v.to_bits();
+        self.eat(b as u32 ^ (b >> 32) as u32);
+    }
+    pub fn word(&self) -> u32 {
+        self.0
+    }
 }
-/// FNV-1a over a clip: its length, each track's shape, and the singles `from..to` of the pool
+/// a track's place in a pose as one number of the clip's own, and how many numbers a key of it has
+pub fn shape_of(node: usize, path: u32) -> (u32, u32) {
+    let comps = if path == 1 { 4 } else { 3 };
+    let chan = if path == 0 { 0 } else if path == 1 { 3 } else { 7 };
+    ((node * NODE + chan) as u32, comps)
+}
 fn fold(t: &Table, c: &Clip, from: usize, to: usize) -> u32 {
-    let mut h = 0x811c_9dc5u32;
-    let mut eat = |w: u32| h = (h ^ w).wrapping_mul(0x0100_0193);
-    let d = c.duration.to_bits();
-    eat(d as u32);
-    eat((d >> 32) as u32);
+    let mut f = Fold::new(c.duration);
     for k in c.track0 as usize..(c.track0 + c.tracks) as usize {
         let tr = &t.tracks[k];
-        eat(tr.keys);
-        eat(tr.out);
-        eat(tr.comps | (tr.step as u32) << 8);
+        f.shape(tr.keys, tr.out, tr.comps, tr.step);
     }
     for i in from..to {
-        eat(bits(&t.pool, i));
+        f.single(get(&t.pool, i));
     }
-    h
+    f.word()
+}
+/// the number of the clip held under this word, written or not by this game: nothing is written to ask
+#[inline]
+pub fn find(word: u32) -> Option<usize> {
+    let t = table_read();
+    t.clips[..t.n_clips].iter().position(|c| c.word == word)
+}
+/// has the store refused the clip of this word in this process?
+#[inline]
+pub fn refused(word: u32) -> bool {
+    let t = table_read();
+    t.no[..t.n_no.min(NOS)].contains(&word)
+}
+/// the store has refused the clip of this word
+pub fn refuse(word: u32) {
+    let t = table();
+    if !t.no[..t.n_no.min(NOS)].contains(&word) { t.no[t.n_no % NOS] = word; t.n_no += 1; }
 }
 /// are clip `a` (held) and clip `b` (just written, `len` singles) the same clip: length, tracks and every single
 fn alike(t: &Table, a: &Clip, b: &Clip, len: usize) -> bool {
@@ -273,9 +332,9 @@ pub fn nodes_of(c: usize) -> usize {
     }
 }
 
-/// skeleton.ts sampleClip: clip `c` at time `t` (seconds; wrapped where `looped`, else held inside the clip) into the pose `d` — only the nodes the clip
+/// Clip `c` at time `t` (seconds; wrapped where `looped`, else held inside the clip) into the pose `d` — only the nodes the clip
 /// has tracks for are written. The caller has made sure `d` holds `nodes_of(c)` nodes; a number the table does not hold writes nothing.
-pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool, in_singles: bool) {
+pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
     let tb = table();
     if c >= tb.n_clips {
         return;
@@ -318,32 +377,12 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool, in_singles: bool)
             continue;
         }
         let f = p.f;
-        if in_singles {
-            // (POSEMATH.singles: the step between the two keys in singles — single.rs; where the time falls among the keys is found as ever)
-            let fs = crate::single::weight(f);
-            if comps == 3 {
-                crate::single::step3(d, o, rows, pool, a, b, fs);
-            } else {
-                crate::single::step4(d, o, rows, pool, a, b, fs);
-            }
-            continue;
-        }
+        // (the step between the two keys in singles: single.rs)
+        let fs = crate::single::weight(f);
         if comps == 3 {
-            for c in 0..3 {
-                let (av, bv) = (get(pool, a + c), get(pool, b + c));
-                put(d, o + c * rows, av + (bv - av) * f);
-            }
+            crate::single::step3(d, o, rows, pool, a, b, fs);
         } else {
-            // the shorter way round, then made a unit again
-            let (mut bx, mut by, mut bz, mut bw) = (get(pool, b), get(pool, b + 1), get(pool, b + 2), get(pool, b + 3));
-            let (ax, ay, az, aw) = (get(pool, a), get(pool, a + 1), get(pool, a + 2), get(pool, a + 3));
-            if ax * bx + ay * by + az * bz + aw * bw < 0.0 {
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
-            }
-            store_unit(d, o, rows, ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, aw + (bw - aw) * f);
+            crate::single::step4(d, o, rows, pool, a, b, fs);
         }
     }
 }

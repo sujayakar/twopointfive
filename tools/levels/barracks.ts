@@ -26,27 +26,35 @@
 // → across the yard and back; a second, tighter one through the duty office (mess hall → o_hall → o_s1 → bunks 3 → s1 → south gallery → h_s).
 // FIRE DOORS: two cross walls with a door in each cut every gallery in three (ng_w, ng_e, sg_w, sg_e), so no straight run of gallery is much longer than eleven
 // metres. Without them the scripted four were shot from both ends of a 23 m gallery walking to their second room (24 seeds, Standard: 10 runs won; with, 15).
-// ELEVEN DEFENDERS IN THREE SQUADS, a wing each and the link (rebuild/enemy-squads/squad-format.md): Charlie the south wing (bunks 5, bunks 3), Bravo the link
+// ELEVEN DEFENDERS IN THREE SQUADS, a wing each and the link (docs/level-format.md): Charlie the south wing (bunks 5, bunks 3), Bravo the link
 // (mess hall, galley), Alpha the north wing (the day room and the post at the north gallery's east end). Six rooms stand EMPTY (wash room, bunks 4, duty office, bunks 1, bunks 2, armoury): behind a shut door
 // an empty room and a held one read the same.
 // The shell is the office's rectangle (outer walls on x 4 / 36, z 4 / 24): the weather's 'indoors' rectangle is typed to it, so the rooms are dry — and so is the
-// yard, which the weather also takes for indoors (no rain falls in it). Only the old demo's kit (src/scene/officeGen.ts officeKit). Units: metres. +X east, +Z south.
-// NOT SEEN DRAWN: laid out on paper and checked headless (map:check); nobody has looked at it on a GPU.
+// yard, which the weather also takes for indoors (no rain falls in it). Only the old demo's kit (lib/officeGen.ts officeKit). Units: metres. +X east, +Z south.
+// NOT SEEN DRAWN: laid out on paper and checked headless; nobody has looked at it on a GPU.
+//   bun run tools/levels/export.ts barracks [--check]      → levels/barracks.json
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a police battalion's lines round a parade square — whitewash and police green over dark packed earth. What it alone has: DRILL AND SPORT
+// on the square (a volleyball court, the formation's marks, the path worn corner to corner between the two gallery doors with its whitewashed stones) and
+// the rooms' numbers as tally bars on the gallery floors. The square stays dark and bare of anything large and pale: a man crossing it must stand out.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { GWOT_FINISH, GWOT_PALETTE as GP, ROUGH_CLOTH, type GwotMat } from '../../src/scene/gwotPalette';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
+import { GWOT_FINISH, GWOT_PALETTE as GP, ROUGH_CLOTH, type GwotMat, GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { drawnAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'barracks';
-export const NOTES = 'The barracks: two wings of small rooms, each off a gallery that looks onto the yard through unglazed openings, joined by a link block with the mess hall. Eleven defenders in three squads (a wing each and the link), seven doors and an arch in from outside. For the four man squad. One floor, box geometry only, the office\'s rectangle and kit. Regenerate: bun run map:export barracks';
+const PLAIN_NOTES = 'The barracks: two wings of small rooms, each off a gallery that looks onto the yard through unglazed openings, joined by a link block with the mess hall. Eleven defenders in three squads (a wing each and the link), seven doors and an arch in from outside. For the four man squad. One floor, box geometry only, the office\'s rectangle and kit. Regenerate: bun run map:export barracks';
 
 // THE WALL LINES. Outer walls stand on whole metres (the office's rectangle); every inner line stands on a QUARTER metre, in the middle of a nav cell, so a
 // wall costs the half-metre grid one row and a 2.3 m gallery keeps four.
@@ -81,7 +89,7 @@ export const BARRACKS_ROOMS: Record<'galley' | 'hall' | 'duty' | 'bunks1' | 'bun
 // and carton (group `exterior`) were cut by the frame's edges, so they step out.
 const BARRACKS_KITVIEW: KitViewData = { ways: [{ door: 's_end', hide: ['exterior'], roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }, { door: 'k_out', roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }] };
 
-/** what a row calls the doors no room of the structure names (scenarios.doorNames — game/doornames.ts; no bearing in a name): the yard's and the galleries' own doors,
+/** what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the yard's and the galleries' own doors,
  *  each by the bunk room it is beside */
 const DOOR_NAMES = [{ door: 'n1', name: 'bunks 1 door' }, { door: 'n2', name: 'bunks 2 door' }, { door: 'n12', name: 'bunks 1 to 2 door' }, { door: 'n3', name: 'armoury door' }, { door: 's2', name: 'bunks 4 door' }, { door: 's4', name: 'wash room door' }, { door: 'n_yard', name: 'yard door by bunks 2' }, { door: 's_yard', name: 'yard door by bunks 4' }, { door: 'ng_w', name: 'fire door by bunks 1' }, { door: 'sg_w', name: 'fire door by bunks 3' }, { door: 'sg_e', name: 'fire door by bunks 5' }, { door: 's_end', name: 'outer door by the wash room' }];
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
@@ -314,15 +322,15 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { ...dx('s1', 14.8, SZ), swing: -1 }, dx('s2', 21.8, SZ), dx('s3', 26.8, SZ), dx('s4', 32.8, SZ), { ...dz('s34', S34, 21.8), swing: -1 },                     // the south wing's
     dz('ng_w', NG_FIRE[0], 8.8), dz('ng_e', NG_FIRE[1], 8.8), dz('sg_w', SG_FIRE[0], 17.8), dz('sg_e', SG_FIRE[1], 17.8),          // the galleries' fire doors
   ];
-  // ANOTHER WAY IN (tools/qa/second-way-check.ts): a held room whose two doors could both stand wedged has one hung to open OUT of it, which no wedge holds —
+  // ANOTHER WAY IN (rust/game_start levels second-way): a held room whose two doors could both stand wedged has one hung to open OUT of it, which no wedge holds —
   // the day room's west door n4a (onto the gallery), bunks 2's n12 (into bunks 1's lobby: hung so while bunks 2 was held; the room is empty now and the swing is
   // only how the door hangs), bunks 3's s1 (into its lobby off the south gallery: the duty office
   // behind o_s1 is itself shut when the mess hall wedges o_hall), bunks 5's s34 (into bunks 4's lobby).
   // Two swings are stopped short: o_s1 into bunks 3 (a cot stands past its jamb) and n3 into the gallery (wide open it would cross the fire door's leaf).
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
-  // out with the switch off, and then this is the barracks above, box for box). A police battalion's lines: what makes each room ITS room. The five bunk rooms are
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // A police battalion's lines: what makes each room ITS room. The five bunk rooms are
   // told apart by WHO sleeps there, said with one blanket a bed: recruits (brown-grey issue blankets, square, bunks stacked two high on the north wall), sergeants
   // (red quilts, a tunic with chevrons and a peaked cap on each), the standby section (blue blankets thrown back, vest and helmet on every bed), nobody (bare
   // springs, mattresses rolled in ticking), the sick (white sheets, a red cross: bunks 5 is the sick bay). Rules kept: nothing solid or loose within 1.1 m of a
@@ -334,10 +342,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // furnished alike. LAST in the lists on purpose (tools/levels/export.ts): the lived boxes are the tail of the boxes, the lived props the tail of the props.
   {
     const L = livedKit(K), P = L.P, NS = BoxFlag.NoShadow;
-    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (src/scene/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
+    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (lib/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
     const IRON: Vec3 = [0.13, 0.13, 0.14], TIN: Vec3 = [0.55, 0.56, 0.55], YELLOW: Vec3 = [0.72, 0.58, 0.1];
     // BEDDING AND WHAT IS LAID ON IT IS CLOTH, AND SAYS SO IN THE LOOK'S OWN WORDS (src/scene/gwotPalette.ts): all of it is drawn only, so nothing in the
-    // simulation reads these paints, and the look's second file keeps a drawn-only thing above the floor as authored — a colour of this file's own there is
+    // simulation reads these paints, and the skin keeps a drawn-only thing above the floor as authored — a colour of this file's own there is
     // drawn flat, a palette row is drawn as the stuff it names (and carries that row's finish: the pass at the end of this block)
     const lived0 = K.boxes.length;
     const KHAKI: Vec3 = GP.coyote;
@@ -631,7 +639,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- what the room clear takes from this level ----------------
   // ELEVEN DEFENDERS, PLACED BY HAND. A room's first `garrison` marks, in the order written, are the men who stand there (placement seed 0, the first staging:
-  // roomclear.ts placeDefenders); the marks after them are only what another seed may deal. THE PROBLEM, in one sentence: two men on a dark post at the north
+  // rust/game_rules/src/missions/roomclear.rs place_defenders); the marks after them are only what another seed may deal. THE PROBLEM, in one sentence: two men on a dark post at the north
   // gallery's east end look across the yard at the lit south gallery — one at the floor in front of the wash room and out through the arch, one square onto
   // bunks 5's door — so the nearest way in, and the door the marker points at, are both walked under guns the team cannot reach from there.
   //   gallery post 2              (31.0, 8.9) THE ARCH MAN: the south gallery from s3's east jamb to s4, the yard's east end, the arch. (32.6, 9.4) THE DOOR MAN:
@@ -646,7 +654,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   //   mess hall 2                 opposite corners, crossing diagonals: every one of the six doors is in somebody's eyes
   //   bunks 3 2                   one gun a door
   //   bunks 5 2                   both on the NORTH side of the room, off the line of the south window: (29.2, 21.4) on the gallery door, (26.4, 21.6) on the wash room's
-  // Squads: a wing each and the link. Alpha = the day room + the post, four men in two rooms, so it has a pair to send (enemysquads.ts: a squad with fewer than
+  // Squads: a wing each and the link. Alpha = the day room + the post, four men in two rooms, so it has a pair to send (rust/game_rules/src/pursuit/enemysquads: a squad with fewer than
   // two men past one a room only ever barricades); it wedges the day room's east door alone.
   const door = (id: string) => doorDefs.find(d => d.name === id)!;
   /** the point a gun rests on for a door, seen from inside room `r`: the middle of the opening, 0.16 m to the room's side of the wall line, chest high */
@@ -660,7 +668,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const roomClear: StructureData = {
     name: 'the barracks', maxMen: 11,
     team: { sam: START, samYaw: Math.PI, ops: [[37.3, 0, 21.4], [39.1, 0, 21.3], [37.4, 0, 22.8], [38.8, 0, 23.0]], opsYaw: Math.PI },
-    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): the north-west corner, outside the galley's
+    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): the north-west corner, outside the galley's
     // back door. One man holds the galley; the mess hall is behind it, and from the mess both galleries are taken from their closed ends, not across the yard
     starts: [{ sam: [12.6, 0, 2.0], samYaw: -Math.PI / 2, ops: [[14.0, 0, 1.6], [14.0, 0, 2.6], [15.2, 0, 1.6], [15.2, 0, 2.6]], opsYaw: -Math.PI / 2 }],
     rooms: [
@@ -707,14 +715,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           mark(R.day, 30.6, 7.4, 'n4a'),           // west of the locker stub, along the wall
         ] },
       { id: 'ngal_e', name: 'gallery post', bounds: { ...NGAL_E }, garrison: 2,
-        doors: [{ id: 'n_end', from: 'outside' }, { id: 'ng_e', from: 'north gallery' }, { id: 'n4b', from: 'day room' }, { id: 'n4a', from: 'day room' }],   // NOT n3, the armoury's: a door a held room lists is hung to open into it, and n3's leaf stops at 1.3 for the armoury's racks — hung into the gallery it left a man no way through from its pull face (probes.ts oneway-men)
+        doors: [{ id: 'n_end', from: 'outside' }, { id: 'ng_e', from: 'north gallery' }, { id: 'n4b', from: 'day room' }, { id: 'n4a', from: 'day room' }],   // NOT n3, the armoury's: a door a held room lists is hung to open into it, and n3's leaf stops at 1.3 for the armoury's racks — hung into the gallery it left a man no way through from its pull face
         marks: [
           mark(NGAL_E, 31.0, 8.9, 'n_end', [33.0, 1.1, 18.6]),   // PLACED: THE ARCH MAN. Back from the east opening, his gun across the yard on the floor in front of the wash room's door
           mark(NGAL_E, 32.6, 9.4, 'ng_e', [27.6, 1.1, 18.6]),    // PLACED: THE DOOR MAN. In the same opening, east of his mate, across the yard's corner onto bunks 5's door
           mark(NGAL_E, 29.6, 9.9, 'n_end'),                      // by the pier between the two openings, down the gallery onto the end door
         ] },
     ],
-    // (rebuild/enemy-squads/squad-format.md) who holds what; what a squad does about it is the AI's. Rally = one of its rooms' marks.
+    // (docs/level-format.md) who holds what; what a squad does about it is the AI's. Rally = one of its rooms' marks.
     squads: [
       { id: 'charlie', name: 'Charlie', rooms: ['bunks5', 'bunks3'], rally: [16.2, 0, 22.4] },
       { id: 'bravo', name: 'Bravo', rooms: ['hall', 'galley'], rally: [9.0, 0, 12.9] },
@@ -722,7 +730,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
   };
 
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears). First zone that holds a point wins ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears). First zone that holds a point wins ----------------
   const zone = (id: string, mat: 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass', r: Rect) => ({ id, mat, x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 });
   const surfaces: SurfacesData = {
     building: { x0: X0, x1: X1, z0: Z0, z1: Z1 }, grassEdge: 3.2, inside: 'lino', outside: 'asphalt', verge: 'grass',
@@ -737,8 +745,60 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the galleries and the bunk rooms: the building's lino)
     ],
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
   const places: PlacesData = { areas: [{ name: 'duty office', bounds: { ...R.duty } }, { name: 'bunks 1', bounds: { ...R.bunks1 } }, { name: 'bunks 2', bounds: { ...R.bunks2 } }, { name: 'armoury', bounds: { ...R.arms } }, { name: 'bunks 4', bounds: { ...R.bunks4 } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'armoury gallery', bounds: { ...R.ngal } }, { name: 'wash room gallery', bounds: { ...R.sgal } }, { name: 'yard', bounds: { ...R.yard } }] };
   return { level, scenarios: { roomClear, places, kitView: BARRACKS_KITVIEW, doorNames: DOOR_NAMES }, groups: trace.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'barracks';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const R = BARRACKS_ROOMS;
+/** WHAT THE PLAIN FILE WROTE AS COLOURS OF ITS OWN, by what each is (the skin's `own`: the look can only draw such a colour flat, and the shared rules took a
+ *  lived floor for furniture — the grey door mat came out galvanised sheet). The pickup on the east side is the battalion's, in its green; the day room's
+ *  settee is red cloth; army paint is olive. Then the lived floors: the walk to the front door is gravel between its stones, the south gallery's
+ *  runner coir and its door mat grey felt, the sergeants' mat red, the hearth's ash dark wet earth, the armoury's issue line yellow paint */
+const OWN: Skin['own'] = [[[0.2, 0.23, 0.18], 'paintGreen'], [[0.3, 0.12, 0.1], 'rugRed'], [[0.24, 0.235, 0.14], 'olive'],
+  [[0.33, 0.29, 0.2], 'gravel'], [[0.5, 0.37, 0.18], 'rugOchre'], [[0.4, 0.4, 0.38], 'blanketGrey'], [[0.42, 0.1, 0.08], 'rugRed'], [[0.05, 0.05, 0.05], 'damp'], [[0.72, 0.58, 0.1], 'genYellow']];
+const ARMS: GwotMat[] = ['olive', 'olive', 'ply', 'olive', 'woodGrey'];
+const SKIN: Skin = {
+  wall: 'whitewash', house: 'whitewash', inner: 'render', frameOut: 'paintGreen', frameIn: 'woodGrey', dado: 'paintGreen',
+  floor: { concrete: 'dust', grass: 'dirt', lino: 'slab', stone: 'slab', carpet: 'canvas' },
+  rooms: [{ id: 'duty', bounds: R.duty }, { id: 'bunks1', bounds: R.bunks1 }, { id: 'bunks4', bounds: R.bunks4 }, { id: 'arms', bounds: R.arms }, { id: 'wash', bounds: R.wash }],
+  rugs: { bunks1: 'felt', bunks2: 'mat', bunks3: 'felt', bunks4: 'mat', bunks5: 'felt', day: 'mat', duty: 'mat' },
+  pick: c => { const lived = c.group.startsWith('lived.');
+    if (c.name === 'plant' && c.group === 'yard') return 'scrub';                             // (the square's planters: camelthorn, not a clipped hedge)
+    if (c.name === 'cardboard' && c.group === 'arms') return ARMS[(c.i * 7 + 3) % ARMS.length];   // the armoury's shelves and pallet: olive tins and plywood cases, not grocery cartons
+    if (c.name === 'cardboard' && c.group === 'exterior') return 'olive';                     // the stores pallet left out at the south-east corner: olive cases
+    // THE LIVED THINGS IN AN OFFICE PAINT the shared rules leave be or take for something else
+    if (!lived) return undefined;
+    if (c.name === 'plant') return 'paintGreen';                                              // the sentry box and the battalion's sign: boards in police green
+    if (c.name === 'chair') return 'tarpBlue';                                                // the sick bay's screen, the laundry's rack, the bale of blankets: blue cloth
+    if (c.name === 'red') return 'drumRed';                                                   // the fire point's keep-clear square: red paint
+    if (c.name === 'partRed' && c.y1 > 0.1) return 'mudDark';                                 // the tea yard's hearth: two cheeks of fired mud brick
+    if (c.y1 <= 0.1 && c.name === 'white') return 'truckWhite';                               // the inspection line, the fall-in line, the stop lines: white paint
+    return undefined; },
+  own: OWN,
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), lime = T.tone(P.whitewash, 0.8), green = P.paintGreen;
+    // the VOLLEYBALL COURT at the east end of the square: lime lines, the net's line, the two attack lines
+    M.outline(23.1, 12.7, 31.1, 15.3, 0.08, lime); M.seg(27.1, 12.5, 27.1, 15.5, 0.1, lime); M.seg(25.8, 12.7, 25.8, 15.3, 0.06, lime); M.seg(28.4, 12.7, 28.4, 15.3, 0.06, lime);
+    // the PATH worn corner to corner between the two gallery doors, edged with whitewashed stones
+    { const ax = 19.4, az = 11.3, bx = 23.0, bz = 15.9, cx = 24.4, cz = 16.9, fa = T.floorAt(21, 13.5); if (fa) M.path([[ax, az], [bx, bz], [cx, cz]], 0.8, T.tone(fa, 0.72));
+      const L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L; for (let s = 0.5; s < L; s += 0.75) for (const e of [-1, 1]) { const x = ax + ux * s - uz * e * 0.55, z = az + uz * s + ux * e * 0.55; M.fill(x - 0.1, z - 0.1, x + 0.1, z + 0.1, lime); } }
+    // the FORMATION's marks in front of the mess hall: three ranks of six
+    for (let i = 0; i < 3; i++) for (let k = 0; k < 6; k++) { const x = 14.3 + i * 0.75, z = 12.3 + k * 0.75; if (Math.abs(x - 16.6) < 0.6 && Math.abs(z - 14.0) < 1.2) continue; M.fill(x - 0.13, z - 0.13, x + 0.13, z + 0.13, lime); }
+    // vehicles stop OUTSIDE the arch: the ruts, the stop bar
+    G.ruts(39.8, 14.0, 37.3, 14.0); M.seg(37.0, 12.9, 37.0, 15.1, 0.16, lime);
+    // ROOM NUMBERS as tally bars on the gallery floor beside each bunk room's door, and a green line along each gallery's yard side
+    const bars: [number, number, number][] = [[15.4, 8.95, 1], [21.4, 8.95, 2], [15.4, 19.05, 3], [22.4, 19.05, 4], [27.4, 19.05, 5]];
+    for (const [x, z, n] of bars) M.tally(x + 1.15, z, n, green, true, 0.5, 0.09, 0.2);
+    M.seg(R.ngal.x0, 10.42, R.ngal.x1, 10.42, 0.1, green); M.seg(R.sgal.x0, 17.58, R.sgal.x1, 17.58, 0.1, green);
+    M.hazard(25.5, 8.55, 27.3, 8.85, P.genYellow, P.iron);                                    // the armoury's door: the one hazard band on the post
+    // the wash room: the floor wet round its drain
+    G.patch(33.0, 22.0, 2.4, 1.7, 'damp', 0.15); G.patch(33.3, 21.8, 1.3, 1.0, 'damp', 0.9, 0.0128); M.fill(32.85, 21.85, 33.15, 22.15, P.iron);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

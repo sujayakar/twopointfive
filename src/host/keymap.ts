@@ -1,12 +1,11 @@
 // THE PLAYER'S OWN KEYS: which key on the board gives each key the game asks for. Options ▸ Controls rebinds one (ui/keybinds.ts), this machine keeps it
 // (localStorage `twopointsix.keys`), and Reset there puts every one back. `?keybinds=0` = the build's own keys for the visit, the kept ones left as kept.
-// OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, main.ts's first line). A headless tool, the level editor, the viewer and the workbench
-// never do, so their keys are the build's whatever this machine has kept.
-// WHERE IT SITS: at the keyboard, and nowhere else. game/input.ts asks `gameCode()` what a key that went down IS before it files it, so the game goes on asking
-// for the codes it always did (`input.hit('KeyR')`), and everything downstream of the Input is as it was: the tick's PlayerCmd, the session journal, a run's
-// tape, a replay. A recording made with R on another key holds 'KeyR' and plays the same on any machine. Nothing here is read by src/game but that one call
+// OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, host/drawpage.ts).
+// WHERE IT SITS: at the keyboard, and nowhere else. host/input.ts asks `gameCode()` what a key that went down IS before it files it, so the game goes on asking
+// for the codes it always did (`input.hit('KeyR')`), and everything downstream of the Input is as it was: the tick's PlayerCmd, a run's
+// tape, a replay. A recording made with R on another key holds 'KeyR' and plays the same on any machine. Nothing here is read by the game but that one call
 // (and the keyboard's own two: `camKey` and `KEYMAP.pinchOnly`, which key the camera is on and what the wheel under Ctrl is):
-// it is no rule of the game, so it is no knob table and the harness's two stands (whose Input has no keyboard) never meet it.
+// it is no rule of the game.
 // WHAT CAN MOVE: the keys of KEY_ACTS, one row each. A key that does two things in the build (E puts away and swaps a hold; V whistles and is a row of the order
 // menu; the digits are the kit and the menu's rows) moves as one: it is the KEY that is rebound, not the verb. The mouse, the wheel and the camera's key stay (Ctrl, or the Space bar
 // while no row has it: `camSpace`, `camKey` — it is no row, so it has no cap to click and a row put on Space takes Space from it).
@@ -18,7 +17,7 @@
 // `keyText` READS FINISHED WORDS, and that is a guess: a cap standing alone is taken for the key unless the words round it say it is a place's letter ('room B',
 // 'Vault B', 'B wing', 'T-junction'); a digit only where the words say key ('then 3', '2 again'); the walk keys only in a list of keys. A line that hands the
 // HUD a code instead of a letter would need none of it: the lines are written all over the game, and that is a pass of its own.
-// A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, `FREED`): the wall hold's. Walking into a wall takes it and walking off it lets go (game/wallsnap.ts `press`),
+// A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, `FREED`): the wall hold's. Walking into a wall takes it and walking off it lets go (rust/game_rules/src/stealth/wallsnap.rs `press`),
 // so its key is spare and Q is left for something else. The game goes on asking for 'KeyQ' and MEANS the wall hold by it, as every recording made before
 // does; what changed is the board: nothing on it gives that code until the player puts the row on a key here (Q itself, if he likes: a rebind like any
 // other, kept, and Reset takes it off again). Q pressed with the row unbound files nothing. OFF IN THE MODULE like the rest; the game page turns it on as
@@ -41,31 +40,20 @@
 // its own code's key, as it was before the move; it is on no key only when both are held. Nothing is kept for that: the row he put on Q moved away,
 // the command is on Q again.
 // THE SQUAD'S ONLY KEYS (`KEYMAP.qOnly`, `DROPPED`; the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu … so we don't
-// need all the other keys"): the orders menu's row (code 'KeyX') and the who row (code 'KeyT') have no key in the build, the way the wall hold's has
-// none. The game goes on asking for both codes and every recording holds them; nothing on the board gives them. A row kept on a key from before keeps
-// it, as he set it, and Options lists such a row only while it has one (ui/options.ts squadRows): on a fresh machine neither can be given a key there.
-// X and T pressed with the rows unbound file nothing, and no line of words is rewritten for them. The page turns it on as it
-// boots with the ring that carries every order (game/cmdring.ts `only`); `?qonly=0`, or `?qring=0` (no ring: the menu needs its key), = both on their keys.
-// THE MENU'S LETTERS GO WITH ITS KEY (`KEYMAP.letGo`, `LETTERS`; only with `qOnly`): frag and clear on G, the big tool and the squad's smoke on H are
-// rows of that menu and do nothing without it (a wheel up takes them from nobody: game/orders.ts). While the ring carries every order and the menu's
-// row has no key those two ARE ASLEEP: no key, nothing to bind, and G and H on the board are spare — a row put on one takes it from nobody, where it
-// used to swap with a row no list shows and leave that row sitting unseen on the key it gave up. Options lists them by the same facts (ui/options.ts
-// squadRows). The menu on a key (kept from before): both are rows again, on G and H or where he put them, rebound like any other. KEPT AS HE SET IT:
-// what is kept for a sleeping letter stays kept and means the same when it wakes, on this board or a visit on another — but a key given to another row
-// while it slept is that row's (the letter's entry goes with the key), and a letter never takes the menu's own key. The facts are LIVE, the way the
-// wall hold's are: `onlyWhen` (the page hands it game/cmdring.ts `only`: the debugger can put the old menu back mid-visit, and the letters wake with
-// it) and `throwWhen` (game/quickthrow.ts: G is the quick throw's key then, with no menu up, and stays awake — NO LIST SHOWS IT there, which is the
-// old flaw on that one key for that visit). OFF IN THE MODULE; the page turns it on as it boots, `?menuletters=0` = both rows on G and H as they were.
+// need all the other keys"): THE LISTED ORDERS MENU AND ITS KEY ARE GONE (no row, and the game asks for no such code; a kept 'KeyX' is a stranger's row and is dropped), and the who row
+// (code 'KeyT') has no key in the build, the way the wall hold's has none. A who row kept on a key from before keeps it, as he set it, and Options lists it only while it has one (ui/options.ts).
+// T pressed with the row unbound files nothing, and no line of words is rewritten for it. The page turns it on as it
+// boots with the ring that carries every order (rust/game_rules/src/squad_orders/cmdring.rs `only`); `?qonly=0` = the who row on its key.
 // TWO MORE ROWS THE BUILD GIVES NO KEY (`KEYMAP.setFree`, `SETFREED`): the selector's (Z) and the weapon light's (L). Both are rows of the setup that the
-// digit of the gun in his hands opens (game/slotsetup.ts), so neither needs a key of its own. As with the wall hold: the game goes on asking for 'KeyZ'
+// digit of the gun in his hands opens (rust/game_rules/src/outfit/slotsetup.rs), so neither needs a key of its own. As with the wall hold: the game goes on asking for 'KeyZ'
 // and 'KeyL', the board gives neither until the player puts the row on a key here, a kept entry is kept as he set it, and the letters are not the rows'
 // while they are unbound. The page turns it on as it boots; `?slotsetup=0` (the setup's own word) = Z and L as they were.
-// EMPTY HANDS ARE A SLOT ON BACKTICK (`KEYMAP.slotWhen`, `SLOT`; the rule is game/handslot.ts): while the page says the slot is on, its code ('Digit0') has
+// EMPTY HANDS ARE A SLOT ON BACKTICK (`KEYMAP.slotWhen`, `SLOT`; the rule is rust/game_types/src/handslot): while the page says the slot is on, its code ('Digit0') has
 // the backtick key in the build, the debugger's code ('Backquote', which the page goes on asking for) has the backslash key, and E's row (put away or
 // draw, the swap of a hold) has no key: E is spare. Nothing kept is rewritten; a row he moved stays where he put it. IN WORDS the letter E is still the
 // way a line names putting it away ('E puts it away', written all over the game and its lessons): while the slot is on that letter is read as the
 // slot's key (`ALIAS`), so those lines follow without being rewritten, and follow a rebind of the slot. OFF IN THE MODULE (`slotWhen` null).
-// HIS OWN ACTIONS ARE A RING (`KEYMAP.handWhen`, `HAND`, `HAND_SLOT`; the rule is game/handring.ts): while the page says so the whistle's row has no key
+// HIS OWN ACTIONS ARE A RING (`KEYMAP.handWhen`, `HAND`, `HAND_SLOT`; the rule is rust/game_types/src/knobs/handring.rs): while the page says so the whistle's row has no key
 // (it is the ring's last wedge; its letter in a line of words is left alone, as a freed row's is), and over the slot's layer the interaction's row is on
 // E, the Space key giving the game nothing: 'Space  open' reads 'E  open'. OFF IN THE MODULE (`handWhen` null).
 // (E's letter is the slot's) Only while E's row has no key: put on a key by hand it is that key again, in caps and in words, and its row is back on the Controls list. The slot's
@@ -80,41 +68,33 @@ export const KEY_ACTS: KeyAct[] = [
   act('Space', 'Space'), act('V', 'KeyV'), act('N', 'KeyN'),
   act('R', 'KeyR'), act('Z', 'KeyZ'), act('L', 'KeyL'), act('E', 'KeyE'),
   act('1', 'Digit1'), act('2', 'Digit2'), act('3', 'Digit3'), act('4', 'Digit4'), act('5', 'Digit5'),
-  act('X', 'KeyX'), act('B', 'KeyB'), act('T', 'KeyT'), act('F', 'KeyF'), act('G', 'KeyG'), act('H', 'KeyH'),
+  act('B', 'KeyB'), act('T', 'KeyT'), act('F', 'KeyF'),
   act('`', 'Backquote'),
 ];
-/** the empty hands' slot (game/handslot.ts): a row only while the slot is on (the header's note). Off, it is on no list and the 0 key is anybody's */
+/** the empty hands' slot (rust/game_types/src/handslot): a row only while the slot is on (the header's note). Off, it is on no list and the 0 key is anybody's */
 const SLOT_ACT = act('0', 'Digit0'), WITH_SLOT = [...KEY_ACTS, SLOT_ACT];
 /** the page's own: never a row's key (Esc the pause, Enter the checkpoint, Tab the way back, the arrows the highlight, the F row the browser's and the
- *  recorders', the modifiers the camera's and the browser's, P [ ] the showcase's and the exposure's, Caps Lock a key some boards only ever press) */
+ *  recorders', the modifiers the camera's and the browser's, [ ] the exposure's, Caps Lock a key some boards only ever press) */
 const FIXED = /^(Escape|Enter|NumpadEnter|Tab|Arrow(Up|Down|Left|Right)|F\d{1,2}|(Control|Alt|Meta|OS)(Left|Right)?|KeyP|BracketLeft|BracketRight|CapsLock|ContextMenu|NumLock|ScrollLock|Pause|PrintScreen|Unidentified|)$/;
 export const KEYMAP = { /** false = the build's own keys, whatever is kept: the module's own stand (a tool, the editor, the viewer), and the page's under `?keybinds=0` */ on: false,
   /** the wall hold's row has no key in the build (the header's note). false = it is on Q: the module's own stand, and the page's under `?qfree=0` */ qFree: false,
   /** the squad's command (the quick order's row, code 'KeyB') has Q for its key in the build and B gives nothing: only with `qFree`. false = it is on B: the module's own stand, and the page's under `?bkey` */ qCmd: false,
-  /** the orders menu's row (code 'KeyX') and the who row (code 'KeyT') have no key in the build: the squad's keys are the command key and the word's, and the ring is the menu (game/cmdring.ts `only`, raised with it). false = they are on X and T: the module's own stand, and the page's under `?qonly=0` or `?qring=0` */ qOnly: false,
-  /** the menu's letters sleep while the menu has no key (the header's note). false = both rows on G and H: the module's own stand, and the page's under `?menuletters=0` */ letGo: false,
-  /** …only while the ring carries every order (the page hands it game/cmdring.ts `only`; null = whenever `qOnly`) */ onlyWhen: null as (() => boolean) | null, /** …and G not while it is the quick throw's key (game/quickthrow.ts; null = never) */ throwWhen: null as (() => boolean) | null,
+  /** the who row (code 'KeyT') has no key in the build: the squad's keys are the command key and the word's, and the ring is the menu (rust/game_rules/src/squad_orders/cmdring.rs `only`, raised with it). false = it is on T: the module's own stand, and the page's under `?qonly=0` */ qOnly: false,
   /** the selector's row and the weapon light's have no key in the build: both are rows of the gun's setup (the header's note). false = they are on Z and L: the module's own stand, and the page's under `?slotsetup=0` */ setFree: false,
   /** …only while this says so (the page hands it the setup's own switch as it stands, so a recording that plays with the setup off has Z and L back; null = always) */ setWhen: null as (() => boolean) | null,
   /** …only while this says so (the page hands it the walk-in switch; null = always) */ freeWhen: null as (() => boolean) | null,
   /** the camera's key is Space while Space is no row's (`camKey` below: the action on E, nothing put on Space by hand). false = it is Ctrl: the module's own stand, and the page's under `?camspace=0` */ camSpace: false,
   /** …and while it is, THE WHEEL UNDER A HELD CTRL KEY IS NOTHING (the maintainer, 10-24: "ctrl-scroll still zooms in and out, should remove"). A
    *  trackpad pinch still zooms: the browser sends it as a wheel that says Ctrl with no Ctrl key down, and that is how the two are told apart
-   *  (game/input.ts `ctrlDown`). false = any wheel that says Ctrl zooms, as it was: the module's own stand, and the page's under `?pinchonly=0` */ pinchOnly: false,
-  /** empty hands are a slot on backtick while this says so (the page hands it game/handslot.ts's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (game/handring.ts; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
+   *  (host/input.ts `ctrlDown`). false = any wheel that says Ctrl zooms, as it was: the module's own stand, and the page's under `?pinchonly=0` */ pinchOnly: false,
+  /** empty hands are a slot on backtick while this says so (the page hands it rust/game_types/src/handslot's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (rust/game_types/src/knobs/handring.rs; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
 const LS = 'twopointsix.keys';
 /** the rows whose keys in the build are not their own codes, while `qFree` is on: row id → its keys ([] = none) */
 const FREED: Record<string, string[]> = { KeyQ: [] };
 /** the row the build has on another key than its code names, while `qCmd` is on (and `qFree`: Q is the wall's without it): row id → its keys */
 const MOVED: Record<string, string[]> = { KeyB: ['KeyQ'] };
 /** the rows the build gives no key while `qOnly` is on (the header's note): row id → its keys */
-const DROPPED: Record<string, string[]> = { KeyX: [], KeyT: [] };
-/** the menu's rows on letters, which are rows only while the menu's has a key (the header's note) */
-const LETTERS: Record<string, true> = { KeyG: true, KeyH: true };
-const MENU_ID = 'KeyX';
-/** is a letter's row asleep right now */
-const asleep = (id: string): boolean => { if (!LETTERS[id] || !KEYMAP.letGo || !KEYMAP.qOnly || (KEYMAP.onlyWhen && !KEYMAP.onlyWhen()) || (id === 'KeyG' && !!KEYMAP.throwWhen && KEYMAP.throwWhen())) return false; const m = byId.get(MENU_ID); return !m || !keysNow(m).length; };
-const sleepNow = () => (asleep('KeyG') ? 1 : 0) | (asleep('KeyH') ? 2 : 0);
+const DROPPED: Record<string, string[]> = { KeyT: [] };
 /** the rows with no key in the build while `setFree` is on: row id → its keys */
 const SETFREED: Record<string, string[]> = { KeyZ: [], KeyL: [] };
 /** is a row one of those, with the switch on */
@@ -124,11 +104,11 @@ const setFreed = (id: string) => setNow() && !!SETFREED[id];
 const SLOT: Record<string, string[]> = { KeyE: [], Digit0: ['Backquote'], Backquote: ['Backslash'] };
 /** …and the row a line of words means by another row's letter then */
 const ALIAS: Record<string, string> = { KeyE: 'Digit0' };
-/** HIS OWN ACTIONS ARE A RING (game/handring.ts): the whistle's row has no key (it is a wedge of that ring; the player may give it one) — and, over the
+/** HIS OWN ACTIONS ARE A RING (rust/game_types/src/knobs/handring.rs): the whistle's row has no key (it is a wedge of that ring; the player may give it one) — and, over the
  *  slot's layer, which is what leaves E spare, the interaction's row is on E and the Space key gives the game nothing */
 const HAND: Record<string, string[]> = { KeyV: [] }, HAND_SLOT: Record<string, string[]> = { Space: ['KeyE'] };
 const SLOT_ID = SLOT_ACT.id;
-const dormant = (id: string) => (id === SLOT_ID && !slotNow()) || asleep(id);
+const dormant = (id: string) => id === SLOT_ID && !slotNow();
 /** the rows there are right now */
 export const keyRows = (): KeyAct[] => slotNow() ? WITH_SLOT : KEY_ACTS;
 /** are empty hands a slot in the build right now */
@@ -142,8 +122,7 @@ export const cmdOnQ = () => KEYMAP.qCmd && KEYMAP.qFree;
 const special = (id: string) => !!FREED[id] || !!MOVED[id] || !!SLOT[id] || !!HAND[id] || !!HAND_SLOT[id] || !!SETFREED[id] || (KEYMAP.qOnly && !!DROPPED[id]);
 /** a row's keys in the build, now (the wall hold never falls back to Q while Q is the command's) */
 const freeNow = () => KEYMAP.qFree && (KEYMAP.qCmd || (KEYMAP.freeWhen ? KEYMAP.freeWhen() : true));
-const home = (a: KeyAct): string[] => asleep(a.id) ? NO_KEYS : (cmdOnQ() ? MOVED[a.id] : undefined) ?? slotOf(a.id) ?? (freeNow() ? FREED[a.id] : undefined) ?? (setNow() ? SETFREED[a.id] : undefined) ?? (KEYMAP.qOnly ? DROPPED[a.id] : undefined) ?? a.codes;
-const NO_KEYS: string[] = [];
+const home = (a: KeyAct): string[] => (cmdOnQ() ? MOVED[a.id] : undefined) ?? slotOf(a.id) ?? (freeNow() ? FREED[a.id] : undefined) ?? (setNow() ? SETFREED[a.id] : undefined) ?? (KEYMAP.qOnly ? DROPPED[a.id] : undefined) ?? a.codes;
 const same = (x: string[], y: string[]) => x.length === y.length && x.every((c, i) => c === y[i]);
 
 /** row id → its key now (null = none). Only rows that are NOT as built are in it */
@@ -151,7 +130,7 @@ const bound = new Map<string, string | null>();
 /** key on the board → the code the game is given ('' = a key whose row moved away). null = nothing rebound: every key is itself */
 let map: Map<string, string> | null = null;
 /** the switches `map` and the words were built under: a reader that finds them moved builds again */
-let builtOn = false, builtFree = false, builtCmd = false, builtSlot = false, builtHand = false, builtSet = false, builtOnly = false, builtSleep = 0;
+let builtOn = false, builtFree = false, builtCmd = false, builtSlot = false, builtHand = false, builtSet = false, builtOnly = false;
 type Words = { re: RegExp; to: Map<string, string> } | null;
 let text: Words = null, textAll: Words = null;
 const byId = new Map<string, KeyAct>(), byCap = new Map<string, KeyAct>();
@@ -159,17 +138,23 @@ for (const a of WITH_SLOT) { byId.set(a.id, a); byCap.set(a.cap.toLowerCase(), a
 
 /** A code a key on a board can have ('KeyK', 'Numpad1', 'IntlBackslash'): letters and digits, nothing else */
 const CODE = /^[A-Za-z][A-Za-z0-9]{1,23}$/;
-/** THE GAME PAGE, as it boots (main.ts, before anything is drawn): the player's keys are live here unless `?keybinds=0`, and what this machine kept is read */
+/** THE GAME PAGE, as it boots (host/drawpage.ts, before anything is drawn): the player's keys are live here unless `?keybinds=0`, and what this machine kept is read */
 export function keysBoot(q: URLSearchParams) {
-  KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0'; KEYMAP.camSpace = q.get('camspace') !== '0'; KEYMAP.pinchOnly = q.get('pinchonly') !== '0'; KEYMAP.qOnly = q.get('qonly') !== '0' && q.get('qring') !== '0'; KEYMAP.letGo = q.get('menuletters') !== '0';
+  KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0'; KEYMAP.camSpace = q.get('camspace') !== '0'; KEYMAP.pinchOnly = q.get('pinchonly') !== '0'; KEYMAP.qOnly = q.get('qonly') !== '0' && q.get('qring') !== '0';
   try { const v = JSON.parse((globalThis as any).localStorage?.getItem(LS) ?? 'null'); if (v && typeof v === 'object') adopt(v); } catch { /* no store */ }
+}
+/** A PAGE THAT PLAYS THE GAME: the keys as its rules have them (empty hands a slot, his own actions a ring, a gun's key its setup, the orders all on their ring), and the wall hold's row with
+ *  no key while walking into a wall takes it */
+export function gameKeysBoot(q: URLSearchParams, walkIn: () => boolean) {
+  KEYMAP.slotWhen = KEYMAP.handWhen = KEYMAP.setWhen = () => true; KEYMAP.freeWhen = walkIn;
+  keysBoot(q);
 }
 /** take a kept table: only what is whole is taken (a row we have, a key that may be one, no key twice); anything else leaves that row as built */
 function adopt(v: Record<string, unknown>) {
   bound.clear(); const taken = new Set<string>();
   for (const a of WITH_SLOT) { const k = v[a.id]; if (k === null) bound.set(a.id, null); else if (typeof k === 'string' && CODE.test(k) && !FIXED.test(k) && !taken.has(k) && (special(a.id) || !(a.codes.length === 1 && k === a.id))) { bound.set(a.id, k); taken.add(k); } }   // (a freed or moved row's own key is kept as he set it: the header's note)
   // a row still as built whose key a kept row took is left without that key: with another of its own it keeps that one, else it has none
-  for (const a of keyRows()) { if (bound.has(a.id) || special(a.id) || LETTERS[a.id]) continue; const h = home(a), free = h.filter(c => !taken.has(c)); if (free.length < h.length) { bound.set(a.id, free[0] ?? null); if (free[0]) taken.add(free[0]); } }   // (a freed row is given no entry it was not kept with: keysNow leaves it without a key another row holds)
+  for (const a of keyRows()) { if (bound.has(a.id) || special(a.id)) continue; const h = home(a), free = h.filter(c => !taken.has(c)); if (free.length < h.length) { bound.set(a.id, free[0] ?? null); if (free[0]) taken.add(free[0]); } }   // (a freed row is given no entry it was not kept with: keysNow leaves it without a key another row holds)
   tidy(); rebuild();
 }
 function keep() { try { const o: Record<string, string | null> = {}; for (const [id, k] of bound) o[id] = k; const S = (globalThis as any).localStorage; if (bound.size) S?.setItem(LS, JSON.stringify(o)); else S?.removeItem(LS); } catch { /* no store */ } }
@@ -182,7 +167,7 @@ function tidy() {
     const others = a.codes.filter(c => c !== k); if (others.every(c => ![...bound].some(([o, ok]) => o !== id && ok === c))) bound.delete(id); }
 }
 function rebuild() {
-  KEYMAP.rev++; map = null; text = textAll = null; builtOn = KEYMAP.on; builtFree = freeNow(); builtCmd = cmdOnQ(); builtSlot = slotNow(); builtHand = handNow(); builtSet = setNow(); builtOnly = KEYMAP.qOnly; builtSleep = sleepNow();
+  KEYMAP.rev++; map = null; text = textAll = null; builtOn = KEYMAP.on; builtFree = freeNow(); builtCmd = cmdOnQ(); builtSlot = slotNow(); builtHand = handNow(); builtSet = setNow(); builtOnly = KEYMAP.qOnly;
   // every row that is not on the keys its code names: the player's own (while `on`), and the rows the build itself moved (`FREED`)
   const moved: [string, string | null][] = [];
   for (const a of keyRows()) { const ks = keysNow(a); if (!same(ks, a.codes)) moved.push([a.id, ks[0] ?? null]); }   // (the slot's row with the slot off is no row: the 0 key is itself, or the row's it was given to)
@@ -198,9 +183,9 @@ function rebuild() {
     const to = new Map<string, string>(), alts: string[] = [];
     for (const [id, k] of moved) { if (!k && ((FREED[id] && freeNow()) || (HAND[id] && handNow()) || setFreed(id))) continue;   // (freed and unbound: the letter is not the row's — the header's note)
       if (id === SLOT_ID && !all) continue;   // (the slot's cap in the build, '0', is a count in a line of words, never a key: only a list of keys names it)
-      const drop = !k && KEYMAP.qOnly && (!!DROPPED[id] || asleep(id)); if (drop && !all && id !== 'KeyX') continue;   // (dropped and unbound: the who key's letter is left as written; the orders key's is the command key held — the ring is the menu)
+      const drop = !k && KEYMAP.qOnly && !!DROPPED[id]; if (drop && !all) continue;   // (dropped and unbound: the who key's letter is left as written)
       const as = slotNow() && !k ? ALIAS[id] : undefined;   // (…or it is another row's while empty hands are a slot and E's row has no key of its own: that row's key now)
-      const a = byId.get(id)!, now = as ? capNow(as) : drop && !all ? `hold ${capNow('KeyB')}` : k ? keyLabel(k) : NONE, c = esc(a.cap), low = a.cap.toLowerCase(); if (now === a.cap) continue;
+      const a = byId.get(id)!, now = as ? capNow(as) : k ? keyLabel(k) : NONE, c = esc(a.cap), low = a.cap.toLowerCase(); if (now === a.cap) continue;
       const walk = /^Key[WASD]$/.test(id), digit = /^Digit\d$/.test(id);
       if (walk && !all) continue;
       to.set(a.cap, now);
@@ -210,6 +195,8 @@ function rebuild() {
       to.set(low, now.toLowerCase());
       if (a.cap.length > 1) alts.push(`(?<=\\+ ?)${esc(low)}(?![A-Za-z0-9])`, `(?<![A-Za-z0-9])${esc(low)}(?= ?\\+)`);
       else alts.push(`(?<![A-Za-z0-9])${low}(?= closes\\b| / )`); }
+    // (a line written when the orders menu had a key, the letter X: the ring is the menu now, so it names the command key kept down, and in a list of keys no key)
+    if (KEYMAP.qOnly) { to.set('X', all ? NONE : `hold ${capNow('KeyB')}`); alts.push(`${L}X${R}`); }
     return alts.length ? { re: new RegExp(alts.join('|'), 'g'), to } : null;
   };
   text = mk(false); textAll = mk(true);
@@ -230,40 +217,39 @@ export function keyLabel(code: string): string {
 }
 /** the key a press on the board gives the game: itself while nothing is rebound; the row's own code where a row was put on it; '' where its row moved away */
 export function gameCode(code: string): string { fresh(); if (!map) return code; const to = map.get(code); return to === undefined ? code : to; }
-/** a letter's keys now: none asleep; awake, its own (kept, or the build's) less any that another row holds — a key given away while it slept, or one a
- *  kept row sits on, is that row's (the other letter's too, G before H) */
-function letterKeys(a: KeyAct): string[] { if (asleep(a.id)) return NO_KEYS; const k = bound.get(a.id), ks = bound.has(a.id) ? (k ? [k] : NO_KEYS) : a.codes;
-  return ks.filter(c => !keyRows().some(o => o !== a && (!LETTERS[o.id] || o.id < a.id) && keysNow(o).includes(c))); }
 /** a row's keys now: the player's while his table is live and holds the row, else the build's */
-function keysNow(a: KeyAct): string[] { if (!KEYMAP.on) return home(a); if (LETTERS[a.id]) return letterKeys(a); if (bound.has(a.id)) { const k = bound.get(a.id); return k ? [k] : []; }
+function keysNow(a: KeyAct): string[] { if (!KEYMAP.on) return home(a); if (bound.has(a.id)) { const k = bound.get(a.id); return k ? [k] : []; }
   if (!(special(a.id) && bound.size)) return home(a);
   const held = [...bound.values()], h0 = home(a), h = h0.filter(c => !held.includes(c));
   if (h.length || !h0.length || !(MOVED[a.id] || slotOf(a.id))) return h;   // (a row the build gives no key has none to lose)
   return a.codes.filter(c => !held.includes(c) && !keyRows().some(o => o !== a && home(o).includes(c))); }   // (…and a row the slot moved, its key in the build given to another row by hand: its own code's key, while that is no other row's in the build — the slot on 0; the debugger then has none, backtick being the slot's)   // (the command's Q held by a row he put there: it is on its own code's key, B, if that is free — never on no key while one of the two is)   // (a freed row back on its old key because walking in was switched off, and that key given to another row meanwhile: it has none)
-function fresh() { if (builtOn !== KEYMAP.on || builtFree !== freeNow() || builtCmd !== cmdOnQ() || builtSlot !== slotNow() || builtHand !== handNow() || builtSet !== setNow() || builtOnly !== KEYMAP.qOnly || builtSleep !== sleepNow()) rebuild(); }
+function fresh() { if (builtOn !== KEYMAP.on || builtFree !== freeNow() || builtCmd !== cmdOnQ() || builtSlot !== slotNow() || builtHand !== handNow() || builtSet !== setNow() || builtOnly !== KEYMAP.qOnly) rebuild(); }
 /** is a row on the keys the build gives it (what a cap marks as moved when it is not) */
 export function keyBuilt(id: string): boolean { const a = byId.get(id); return !a || same(keysNow(a), home(a)); }
 /** the keys of a row now: as built, its one key, or none */
 export function keysOf(id: string): string[] { const a = byId.get(id); return a && !dormant(id) ? keysNow(a) : []; }
-/** is a row one the build gives no key right now (the wall hold's, while walking in works) */
-export function keyFreed(id: string): boolean { return (freeNow() && !!FREED[id]) || setFreed(id); }
 /** the cap of a row now ('—' with no key) */
 export function capNow(id: string): string { const a = byId.get(id); if (!a) return id; const as = slotNow() ? ALIAS[id] : undefined; if (as && !keysNow(a).length) return capNow(as); const ks = keysNow(a); return same(ks, a.codes) ? a.cap : ks[0] ? keyLabel(ks[0]) : NONE; }
 /** the row a cap of the build names ('f', 'Space', '2'), if it names one */
 export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLowerCase()) ?? null; }
 /** a cap the HUD was handed, as it is bound now. Anything that is no row's cap ('LMB', '×') is handed back */
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
-/** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) game/input.ts keeps the keys in a text box nobody sees, told by this
+/** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) host/input.ts keeps the keys in a text box nobody sees, told by this
  *  label; a key aimed at it is a key of the game's. `typedInto` is the test a key's listener makes of its target: an input, a select, a text area or
- *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (host/findme.ts, editor/app.ts and replay/engineplay.ts spell the same test themselves.) */
+ *  editable text he types in, and never that box (host/input.ts's own `typingTarget`, for a listener that cannot see its box). */
 export const SINK_LABEL = 'game input';
 export function typedInto(t: EventTarget | null): boolean { const el = t as { tagName?: string; isContentEditable?: boolean; getAttribute?(k: string): string | null } | null; return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName ?? '') && el.getAttribute?.('aria-label') !== SINK_LABEL || !!el.isContentEditable); }
-/** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms; host/findme.ts: tapped twice): the Space bar while the board leaves
+/** THE CAMERA'S KEY (host/input.ts: held, the mouse turns the view and the wheel zooms): the Space bar while the board leaves
  *  it spare — his own actions are a ring on E (`HAND_SLOT`) and he put no row on Space himself — else null: it is Ctrl, as it always was. It is no row: it
  *  cannot be moved, and its cap is drawn plain (a line of words that says Space means the action's key, wherever that is) */
 export const camKey = (): string | null => KEYMAP.camSpace && gameCode('Space') === '' ? 'Space' : null;
 /** …and its name on a list of keys */
 export const camCap = (): string => camKey() ? 'Space' : 'Ctrl';
+/** a line with its keys by their codes in brackets, as the Rust game words a lesson's, each key as it is bound now through `key` and the words between through
+ *  `word`. A key's name never goes through keyText: "Space" read as words is the action's key, and the camera's key is the Space bar */
+export const keysInLine = (line: string, key: (cap: string) => string, word: (t: string) => string): string => line.split(/(\[[^\]]+\])/).map(t => !/^\[[^\]]+\]$/.test(t) ? word(t) : t === '[X]' && KEYMAP.qOnly ? `Hold ${key(keyCap('B'))}` : key(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))).join('');
+/** …as plain words (the objective's row and Tab's card) */
+export const capsPlain = (s: string): string => keysInLine(s, c => c, t => keyText(t));
 /** a line of words with the keys it names as they are bound now. `all` = the line is a list of keys (the Controls list's key column): the walk keys and the
  *  digits are keys there too. Handed back untouched, the same string, while nothing is rebound */
 export function keyText(s: string, all = false): string {
@@ -272,8 +258,6 @@ export function keyText(s: string, all = false): string {
   T.re.lastIndex = 0; return s.replace(T.re, (m, ...r) => { const to = T.to.get(m) ?? m, at = r.find(x => typeof x === 'number') as number; if (!to.startsWith('hold ')) return to; const pre = s.slice(0, at);   // (the orders key's 'hold Q': its capital where it opens a line or a sentence, the bare cap after 'hold', 'Q held' after 'with')
     return /\bhold $/i.test(pre) ? to.slice(5) : /\bwith $/i.test(pre) ? `${to.slice(5)} held` : at === 0 || /(?:[.:!?] |\n)$/.test(pre) ? 'H' + to.slice(1) : to; });   // (the orders key's 'hold Q' opens a line with its capital)
 }
-/** is anything not as built (what Reset has to undo) */
-export function keysChanged(): boolean { return KEYMAP.on && bound.size > 0 && keyRows().some(a => !same(keysNow(a), home(a))); }
 /** who has `code` now (never `but`) */
 function holder(code: string, but: string): KeyAct | null { for (const a of keyRows()) if (a.id !== but && keysOf(a.id).includes(code)) return a; return null; }
 /** may a row be put on this key at all */
@@ -285,20 +269,14 @@ export function bindKey(id: string, code: string): { ok: boolean; why?: 'fixed' 
   const a = byId.get(id); if (!a || !KEYMAP.on || dormant(id)) return { ok: false, why: 'off' };
   if (!keyFree(code)) return { ok: false, why: 'fixed' };
   const mine = keysOf(id); if (mine.length === 1 && mine[0] === code) return { ok: true };
-  const other = holder(code, id); let swapped: string | undefined, gave: string | null = null;
-  if (other && LETTERS[id] && other.id === MENU_ID) return { ok: false, why: 'fixed' };   // (a letter never takes the menu's own key: it would put itself to sleep on it)
-  const slept = Object.keys(LETTERS).filter(asleep);
+  const other = holder(code, id); let swapped: string | undefined;
   if (other) { const theirs = keysOf(other.id).filter(c => c !== code);   // (a row with two keys in the build that loses one keeps the other: Right Shift taken leaves Shift on the left)
     const give = theirs.length ? theirs[0] : mine.find(c => c !== code) ?? null;
-    if (give === null && MOVED[other.id]) bound.delete(other.id); else settle(other, give); swapped = other.id; gave = give; }   // (the command with nothing handed back keeps no entry: keysNow puts it on B while B is free)
+    if (give === null && MOVED[other.id]) bound.delete(other.id); else settle(other, give); swapped = other.id; }   // (the command with nothing handed back keeps no entry: keysNow puts it on B while B is free)
   settle(a, code);
-  for (const l of slept) { const k = bound.get(l); if (l !== id && k && (k === code || k === gave)) bound.delete(l); }   // (a key given to a row while a letter that was kept on it slept is that row's: the letter's entry goes)
   tidy(); rebuild(); keep(); return { ok: true, swapped };
 }
 /** leave a row with no key */
 export function unbindKey(id: string) { if (!byId.has(id) || !KEYMAP.on || dormant(id)) return; bound.set(id, null); tidy(); rebuild(); keep(); }
 /** every key as built */
 export function resetKeys() { if (!KEYMAP.on || !bound.size) return; bound.clear(); rebuild(); keep(); }
-/** the table as kept ({} = as built), and a table put in its place: what a check stages, and the page's `__keys` */
-export function keysKept(): Record<string, string | null> { const o: Record<string, string | null> = {}; for (const [id, k] of bound) o[id] = k; return o; }
-export function setKeys(v: Record<string, string | null>, write = false) { adopt(v); if (write) keep(); }

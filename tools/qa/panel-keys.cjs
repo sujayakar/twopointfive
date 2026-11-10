@@ -1,29 +1,23 @@
-// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see page-look.cjs for what that
+// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see pages.ts for what that
 // adapter can and cannot do) and REAL key events are sent through the browser, so the whole road is under test: Input's capture listener, the panel's veto,
-// the panel's own listener for a focused field, main.ts's hotkey line.
+// the panel's own listener for a focused field, host/drawpage.ts's hotkey line.
 //   backtick  opens and shuts the tweak panel — with the pointer over the game, over the panel, with the search box / a slider / a list holding the keyboard —
 //             is never typed into the search, and steps NO debug view (the buffers are the 'debug view' row on the Frame page, by the list alone)
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move
 //   node tools/qa/panel-keys.cjs      env: PORT (the dev server's, default 5199) · QUALITY (default verylow)      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (game/handslot.ts; under ?handslot=0 it is Backquote)
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let fails = 0;
-const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${ok || got === undefined ? '' : `   (got ${JSON.stringify(got)})`}`); if (!ok) fails++; };
+const PAGE = require('./page.cjs').page({ name: 'panel-keys', detail: 'fail' }), { check, note: log } = PAGE;
+const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (rust/game_types/src/handslot; under ?handslot=0 it is Backquote)
+const QUALITY = process.env.QUALITY || 'verylow';
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-  const pageErrors = []; page.on('pageerror', x => pageErrors.push(String(x && x.stack || x).slice(0, 400)));
-  log('goto'); await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`);
-  await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__menu.close(); window.__smoke.params.enabled = false; window.__engine.render = () => {}; });   // (keys, not pixels: the renderer is stubbed, a frame costs nothing)
+  const { page, errors: pageErrors, go } = await PAGE.open({ errors: { console: false } });
+  log('goto'); await go(`paused&quality=${QUALITY}&mute`);
+  await page.evaluate(async () => { await window.__ready; window.__draw.run(0); window.__draw.smoke.params.enabled = false; window.__engine.render = () => {}; });   // (keys, not pixels: the renderer is stubbed, a frame costs nothing)
   log('ready');
   // one frame of the page's own loop (the hotkeys run inside it), then what the checks read
   const frame = () => page.evaluate(() => { window.__runFrames(1, 1 / 60); const s = document.querySelector('#panel input[type=search]'); const a = document.activeElement;
     return { open: window.__panel.visible, view: window.__engine.settings.debugView, search: s ? s.value : null, focus: a && a !== document.body ? (a.closest('#panel') ? 'panel' : a.tagName) : 'none' }; });
-  const pressed = (code) => page.evaluate((c) => window.__input.pressed.has(c), code);
+  const pressed = (code) => page.evaluate((c) => window.__draw.input.pressed.has(c), code);
   const game = { x: 300, y: 400 };   // a spot on the canvas, clear of the panel's column on the right
   await page.mouse.move(game.x, game.y);
   let s = await frame(); check(!s.open && s.view === 0, 'boot: the panel is shut, the final picture is up', s);
@@ -39,10 +33,10 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   const clickSearch = async () => { const r = await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }); await page.mouse.click(r[0], r[1]); };   // (a plain click where the box is: a locator's click waits on the page's frames, and this page only draws when a check steps it)
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   // (the break path: the rule as it was, put back in front of the panel's own veto for this one press: a letter typed over the panel opens the search. It must fail the next line and no other)
-  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => { const i = window.__input, was = i.keyVeto; window.__wasVeto = was; i.keyVeto = e => { const b = document.querySelector('#panel input[type=search]'); if (e.key.length !== 1) return was ? was(e) : false; b.focus(); b.value += e.key; b.dispatchEvent(new Event('input')); e.preventDefault(); return true; }; });
+  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => { const i = window.__draw.input, was = i.keyVeto; window.__wasVeto = was; i.keyVeto = e => { const b = document.querySelector('#panel input[type=search]'); if (e.key.length !== 1) return was ? was(e) : false; b.focus(); b.value += e.key; b.dispatchEvent(new Event('input')); e.preventDefault(); return true; }; });
   await page.keyboard.press('KeyF'); const fGame = await pressed('KeyF'); s = await frame();
   check(s.open && s.search === '' && s.focus === 'none' && fGame, 'pointer over the panel, nothing clicked: a typed letter is the game\'s and the search stays empty', { ...s, fGame });   // (it used to open the search: W A S D went into the box whenever the pointer rested on the panel)
-  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => { window.__input.keyVeto = window.__wasVeto; const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); b.blur(); });
+  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => { window.__draw.input.keyVeto = window.__wasVeto; const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); b.blur(); });
   await clickSearch(); await page.keyboard.press('KeyF'); const fTyped = await pressed('KeyF'); s = await frame();
   check(s.open && s.search === 'f' && s.focus === 'panel' && !fTyped, 'a click on the search: now a letter is typed into it, and the game does not get it', { ...s, fTyped });
   await page.mouse.move(game.x, game.y); await page.keyboard.press('KeyF'); const fBack = await pressed('KeyF'); s = await frame();
@@ -74,7 +68,7 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.view === 0, 'and the key shuts it from the game again', s);
 
   const rail = await page.evaluate(() => { const names = [...document.querySelectorAll('#panel .sys')].map(b => (b.title || '').split(' — ')[0]); const rows = document.querySelectorAll('#panel .row').length; const empty = [...document.querySelectorAll('#panel .ppage')].filter(p => !p.querySelector('.row')).length; return { names, rows, empty }; });
-  check(rail.names[0] === 'Sandbox' && ['Missions', 'Squad', 'Enemy AI', 'Stealth', 'Player & weapons', 'Frame'].every(n => rail.names.includes(n)) && rail.rows > 1000 && rail.empty === 0, 'the rail: the game\'s pages first, every page has rows', { ...rail, names: rail.names.join(' · ') });
+  check(rail.names[0] === 'Rules' && rail.names.includes('Frame') && rail.rows > 300 && rail.empty === 0, 'the rail: the rules first, every page has rows', { ...rail, names: rail.names.join(' · ') });
   // THE PANEL KEEPS ITS HEIGHT WHILE THE SEARCH TYPES. On a tall window a long page's panel is taller than its rail, and a query with few rows would shrink it from under a pointer
   // resting low on it; a browser with a real pointer reads that as the pointer leaving, and the rest of the word would go to the game. Headless Chromium sends no such
   // leave, so what is held here is the height: the same while the search types, let go when the search does.
@@ -86,7 +80,5 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   check(h0 > 900 && h1 === h0 && s.search === 'qzq' && s.focus === 'panel' && h2 < h0 - 200, 'a tall page, a query with no rows: the panel keeps its height while the search types, and lets it go with the keyboard', { h0, h1, h2, ...s });
   await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); }); await page.setViewportSize({ width: 1280, height: 720 });
   check(pageErrors.length === 0, 'no page error', pageErrors);
-  await browser.close();
-  console.log(fails ? `=== panel-keys: ${fails} FAILED ===` : '=== panel-keys: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error('SCRIPT ERROR', String(e && e.stack || e).slice(0, 800)); process.exit(2); });

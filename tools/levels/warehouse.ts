@@ -1,9 +1,9 @@
 // THE WAREHOUSE — a big many-room floor for the four squad, in the Door Kickers mould: one racked hall with long lanes, a loading dock on its east side, and a
 // ring of small rooms (plant room, lockers, break room, tool cage, shipping office, two offices) off an L-shaped service corridor that runs round the hall's
 // north and west sides. The team starts OUTSIDE, in the dark off the south-west corner, and there is a way in on every face of the building.
-// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts warehouse [--check]     → levels/warehouse.json, with its `scenarios.roomClear` block
-//   page: ?levelFile=warehouse.json&roomclear&squad4       · headless: bun run tools/qa/scenario-level-probes.ts levels/warehouse.json --only data,four
+//   page: ?levelFile=warehouse.json&roomclear&squad4       · headless: levels stands warehouse --only data,four
 //
 //              x 4      10        17          25      30       36
 //         z 4  +--plant_ext--------+--window---+-------+--------+
@@ -27,8 +27,8 @@
 // THE HALL: two rows of pallet racking run east-west (A north, B south), each in two lengths with a 2 m cross gap, the gaps staggered. Three lanes of 3 to 4 m run
 // the hall's length: the dock doors and the west door look straight down them. A racking bay is loaded full (nobody sees or shoots through), low (a man kneels
 // behind it and stands to see over), high (legs show under it) or empty; pallets and one tall crate stand in the middle lane.
-// ELEVEN DEFENDERS IN FOUR SQUADS, by the rooms they hold (`scenarios.roomClear.squads`, the squads part's format: rebuild/enemy-squads/squad-format.md).
-// A squad sends men out only with two to spare past one a room (enemysquads.ts), so who can LEAVE is the level's own decision:
+// ELEVEN DEFENDERS IN FOUR SQUADS, by the rooms they hold (`scenarios.roomClear.squads`, the squads part's format: docs/level-format.md).
+// A squad sends men out only with two to spare past one a room (rust/game_rules/src/pursuit/enemysquads), so who can LEAVE is the level's own decision:
 //   office (3)  the front office 2, the manager's office 1 — one to spare: they lock down and hold
 //   floor (3)   the hall — two to spare: a pair can come round
 //   dock (3)    the dock — two to spare: a pair can come round
@@ -37,26 +37,34 @@
 // The plant room, the lockers and the break room are held by nobody: rooms the fog keeps shut until somebody looks, and the north side's way round.
 //
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24): the weather's INTERIOR rectangle and the world bounds typed into the shaders hold without a
-// change. No stair tower: the response team is gated off under the scenarios — but game/weather.ts still types the office's tower in as ANNEX (x 1.1..4,
+// change. No stair tower: the response team is gated off under the scenarios — but rust/game_rules/src/air/weather.rs still types the office's tower in as ANNEX (x 1.1..4,
 // z 9.33..12.87), and the fire exit opens beside it: in the storm that patch of the west verge stays dry and the door lets no gust in. Known, left: the only
-// doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (game/floor.ts), as on every level.
-// NO BREACH PLAN: no F drill — all four teammates are the order menu's from the first frame. Only the old demo's kit (src/scene/officeGen.ts officeKit).
+// doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (rust/game_rules/src/world/floor.rs), as on every level.
+// NO BREACH PLAN: no F drill — all four teammates are the order menu's from the first frame. Only the old demo's kit (lib/officeGen.ts officeKit).
 // Units: meters. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, the scenario probes, scripted play-throughs); nobody has looked at it on a GPU.
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a bonded customs shed on the ring road — bare block, hazard yellow and black, rust. What it alone has: LOGISTICS PAINT (a hazard band
+// across both sides of every hall door, a number on the apron outside each of the five ways in, lane lines along the racks, pallet squares on the marshalling
+// floor and the dock, truck bays outside the shutters, the staff's parking by their door). No rugs, no dados, no earth indoors.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { KitViewData, LevelScenarios, Rect } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { drawnAs, PANEL_GREY, CHAIR_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene/stuff';
+import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'warehouse';
-export const NOTES = 'The warehouse: a racked hall and a loading dock ringed by small rooms off an L-shaped service corridor, a way in on every face, the team starting outside. Eleven defenders in three squads (floor, dock, office). For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts warehouse';
+const PLAIN_NOTES = 'The warehouse: a racked hall and a loading dock ringed by small rooms off an L-shaped service corridor, a way in on every face, the team starting outside. Eleven defenders in three squads (floor, dock, office). For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts warehouse';
 
 /** The spaces: the floor inside each one's walls. The ONE place a room's rectangle is typed. */
 export const WAREHOUSE_ROOMS: Record<'plant' | 'lockers' | 'brk' | 'cage' | 'ship' | 'ncorr' | 'wcorr' | 'mgr' | 'front' | 'hall' | 'dock', Rect> = {
@@ -72,7 +80,7 @@ export const WAREHOUSE_ROOMS: Record<'plant' | 'lockers' | 'brk' | 'cage' | 'shi
   hall: { x0: 13.06, x1: 29.94, z0: 11.06, z1: 23.88 },
   dock: { x0: 30.06, x1: 35.88, z0: 11.06, z1: 23.88 },
 };
-/** THE SQUADS, in the squads part's format (/rebuild/enemy-squads/squad-format.md, stable 2026-10-07): which of the structure's rooms each holds — its men are
+/** THE SQUADS, in the squads part's format (docs/level-format.md): which of the structure's rooms each holds — its men are
  *  those rooms' garrisons — and where it regroups (a mark of one of its rooms). `barricade` is left at its default: every door of a squad's
  *  rooms but the one joining two of its own (`off`, `co`). `mayLeave` is the default (free to leave) for all but the Stores, who stay (`mayLeave: false`). What a squad DOES is the AI's. */
 export const WAREHOUSE_SQUADS: { id: string; name: string; rooms: string[]; rally: Vec3; mayLeave?: boolean }[] = [
@@ -325,7 +333,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'l_s', hinge: [14.82, 8.0], closedDir: 0, width: 1.16 },                            // the lockers
     { name: 'b_s', hinge: [19.82, 8.0], closedDir: 0, width: 1.16 },                            // the break room
     { name: 'c_s', hinge: [26.82, 8.0], closedDir: 0, width: 1.16 },                            // the tool cage
-    { name: 'o_s', hinge: [31.82, 8.0], closedDir: 0, width: 1.16, swing: 1 },                  // the shipping office; opens OUT into the north corridor: no wedge holds it, so the shipping office and the tool cage behind `co` always have a way in (tools/qa/second-way-check.ts). The cage's own door, the one the team comes to first, stays theirs to wedge
+    { name: 'o_s', hinge: [31.82, 8.0], closedDir: 0, width: 1.16, swing: 1 },                  // the shipping office; opens OUT into the north corridor: no wedge holds it, so the shipping office and the tool cage behind `co` always have a way in (rust/game_start levels second-way). The cage's own door, the one the team comes to first, stays theirs to wedge
     { name: 'lb', hinge: [17.0, 5.82], closedDir: Math.PI / 2, width: 1.16 },                   // the lockers ↔ the break room
     { name: 'co', hinge: [30.0, 5.82], closedDir: Math.PI / 2, width: 1.16 },                   // the tool cage ↔ the shipping office
     // the offices, onto the west corridor
@@ -341,7 +349,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED-IN ROOMS (src/scene/lived.ts: left out by the loader with the switch off) ----------------
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts) ----------------
   // A bonded customs shed. THE SHED IS GREY AND YELLOW, AND THE ONLY BRIGHT COLOURS IN IT ARE THE THINGS THAT WERE SEIZED, in three places with three jobs: the
   // bulk locked up on the cage's shelf tops, one opened carton on the hall's examining table, and a few small pieces (his cut) beside the chief's safe. Every place gets one thing only it has, the clutter of that use, a floor of its own
   // and something loose. Additions only, the TAIL of the boxes and of the props; no light, nothing lit.
@@ -352,7 +360,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // in the porters' room only, paper in towers and tied bundles in the manifest office only. tools/levels/livedKit.ts has the shared pieces; what only this level has is a few lines here.
   {
     const L = livedKit(K), P = L.P, NS = BoxFlag.NoShadow;
-    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (src/scene/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
+    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (lib/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
     const YEL: Vec3 = [0.75, 0.55, 0.08], CREAM: Vec3 = [0.78, 0.74, 0.6], BOARD: Vec3 = [0.2, 0.35, 0.3], TEA: Vec3 = [0.75, 0.6, 0.3];
     // what was seized: bolts of cloth, whisky. Nothing the house owns wears these
     const MAG: Vec3 = [0.62, 0.1, 0.38], TURQ: Vec3 = [0.05, 0.45, 0.45], SAFF: Vec3 = [0.88, 0.5, 0.06], AMBER: Vec3 = [0.5, 0.28, 0.06];
@@ -513,7 +521,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE EXAMINING TABLE stands against the north wall, west of the corner man's mark (moved 11-04, the maintainer's word). Out in the lane (27.4, 12.9,
     // where it first stood) it lay on the one cheap line from the hall's north door to the standing places outside the dock's north door, the line that
     // skirts that door's own lane: a man of the floor squad sent round to the dock was priced 38 m round the racks where the bare hall gives him 7, and was
-    // refused, so the squad never went round to the dock (tools/qa/wayround-check.ts: 54 ways of 4463)
+    // refused, so the squad never went round to the dock (54 ways of 4463)
     { const X = 26.9, Z = 11.65;
       L.table(X, Z, 1.6, 0.9, 0, C.metal, 0.9);                                   // a crate opened on it, its lid, straw, what was in it
       B(X - 0.55, Z - 0.4, X + 0.35, Z + 0.4, 0.9, 0.905, [0.7, 0.6, 0.3], NS); B(X - 0.4, Z - 0.3, X + 0.2, Z + 0.2, 0.905, 1.22, C.wood); B(X + 0.38, Z - 0.35, X + 0.74, Z + 0.1, 0.9, 0.93, C.woodDark);
@@ -627,7 +635,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Eleven defenders in six held rooms (maxMen: with Sam and the four that is sixteen characters, all the skinning holds). Every room gives more marks than men,
   // split between its doors. The room order is the order a scripted commander works them, each room's first door the one he tries first: from the staff door the
   // front office, the manager's office through it, the hall by its west door, the dock from the hall, then the two north-east rooms.
-  // THE ELEVEN ARE PLACED BY HAND: placement seed 0, attempt 1 (roomclear.ts placeDefenders) stands each room's FIRST `garrison` marks, in the order written here,
+  // THE ELEVEN ARE PLACED BY HAND: placement seed 0, attempt 1 (rust/game_rules/src/missions/roomclear.rs place_defenders) stands each room's FIRST `garrison` marks, in the order written here,
   // so the first marks of every room are the level's one authored problem and the rest are spares a seeded deal may still draw. What the hand placement is for:
   //   THE PROBLEM  the building is a ring: whichever door the team fights at, somebody can walk round to its back. The hall's three and the dock's three each
   //                have a pair to send (one squad of one room, two to spare); the offices' three and the two store rooms hold where they are.
@@ -643,7 +651,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     roomClear: {
       name: 'the warehouse', maxMen: 11,
       team: { sam: [8.0, 0, 26.2], samYaw: Math.PI / 2, ops: [[9.4, 0, 25.6], [8.6, 0, 25.4], [7.2, 0, 25.4], [6.4, 0, 25.6]], opsYaw: Math.PI / 2 },
-      // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): the dark off the SOUTH-EAST corner,
+      // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): the dark off the SOUTH-EAST corner,
       // looking up the loading apron. The apron's lamp lights both dock doors; they are eight metres apart, one pair's each on a single word. Kill the lamp
       // or cross its light. (The first spot tried, outside the plant room's own door at the north-west corner, handed the level its best answer for nothing.)
       starts: [{ sam: [36.6, 0, 26.2], samYaw: Math.PI * 0.75, ops: [[35.2, 0, 25.6], [35.2, 0, 26.8], [34.0, 0, 25.6], [34.0, 0, 26.8]], opsYaw: Math.PI * 0.75 }],
@@ -721,10 +729,64 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'shipping', mat: 'carpet', x0: 30, z0: 4, x1: 36, z1: 8 },
     ],
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
   scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'service corridor', bounds: { ...R.ncorr } }, { name: 'staff corridor', bounds: { ...R.wcorr } }] };
   scenarios.kitView = WAREHOUSE_KITVIEW;
-  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
+  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
   return { level, scenarios, groups: trace.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'warehouse';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const R = WAREHOUSE_ROOMS;
+/** WHAT THE PLAIN FILE WROTE AS COLOURS OF ITS OWN, by what each is (the skin's `own`: the look can only draw such a colour flat, and the shared rules took a
+ *  lived floor for furniture — the hardstanding came out galvanised sheet, the green lino a blanket). The shed's yellow steel (the rolling stair, the bollards,
+ *  the sack trucks, the forklift, the clamp) is generator yellow; then the lived floors: the container's hardstanding concrete, the tea room's offcut brown
+ *  felt, the porters' duckboard grey timber, the manifest office's offcut green matting, the queue's wear on the cashier's floor that floor trodden brown, the
+ *  wear in the verge bare earth */
+const OWN: Skin['own'] = [[[0.75, 0.55, 0.08], 'genYellow'],
+  [[0.4, 0.38, 0.34], 'slab'], [[0.3, 0.4, 0.5], 'blanketBrown'], [[0.34, 0.26, 0.17], 'woodGrey'], [[0.16, 0.27, 0.2], 'rugGreen'], [[0.12, 0.12, 0.14], 'blanketBrown'], [[0.25, 0.21, 0.15], 'mudFloor']];
+const LOADS: GwotMat[] = ['sandbag', 'olive', 'sandbag', 'tarpBlue', 'olive', 'ply', 'sandbag', 'olive', 'sandbag', 'ply'];   // (sacking is burlap brown: in the palette's pale `sack` four loads in ten were the palest things on the floor, white cubes under a panel)
+const SKIN: Skin = {
+  wall: 'block', house: 'block', inner: 'block', frameOut: 'genYellow', frameIn: 'woodGrey', verge: 'gravel', dado: null, noRug: /./,
+  floor: { lino: 'slab', concrete: 'slab', carpet: 'canvas' },
+  metals: ['rust', 'galv', 'iron', 'genYellow'],
+  rooms: [{ id: 'north_corridor', bounds: R.ncorr }, { id: 'west_corridor', bounds: R.wcorr }],   // (the scuffed band along a corridor's walls)
+  // THE HALL: its racking's blue uprights and orange beams are a European distribution shed's, its loads taped cartons — here rusted frames, grey timber
+  // decks, and on them burlap sacks, olive crates, a tarp-wrapped pallet, plywood cases (each standing for exactly what it was: a carton is still a carton to a round)
+  pick: c => { const a = c.b.albedo;
+    if (c.name === undefined && a[2] > 0.4 && a[0] < 0.15) return 'rust';
+    if (c.name === undefined && a[0] > 0.6 && a[1] < 0.4 && a[2] < 0.1) return 'woodGrey';   // (the racking's orange beams — not the forklift's yellow body: that is the shed's yellow, OWN below)
+    if (c.name === 'cardboard' && c.group === 'lived.hall' && c.y1 - c.y0 > 0.5) return 'sandbag';   // (the lived hall's load: its place in the list no longer deals it)
+    if (c.name === 'cardboard' && c.y1 - c.y0 > 0.5) { const m = LOADS[(c.i * 7 + 3) % LOADS.length]; return m === 'sandbag' && c.group === 'exterior.yard' ? 'tarpBlue' : m; }   // (sacks left out on the apron are under a tarp)
+    if (c.name === 'wood' && c.y1 - c.y0 > 0.8 && c.thin > 0.7) return 'ply';
+    // THE LIVED THINGS IN AN OFFICE PAINT the shared rules leave be or take for something else
+    if (!c.group.startsWith('lived.')) return undefined;
+    if (c.name === 'red') return 'drumRed';                                                   // drink crates, the bay's and the bond's red lines: red enamel
+    if (c.y1 <= 0.1 && c.name === 'white') return 'truckWhite';                               // the scale's edge, the electrician's mat: white paint
+    if (c.y1 <= 0.1 && c.name === 'woodDark' && c.group === 'lived.wcorr') return 'coyote';   // the coir mat inside the staff door
+    return undefined; },
+  own: OWN,
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), Y = P.genYellow, K = P.iron, paint = T.tone(Y, 0.95);   // (floor paint in the shed's own yellow, a little worn: the look draws a classed row darkened in one piece as that row's stuff, and the stencil ochre these were in has no stuff, so 110 decals drew flat)
+    G.ruts(30.0, 26.0, 39.0, 26.0); G.patch(20, 16.6, 1.5, 1.0, 'oil', 0.4); G.patch(20.5, 16.3, 0.9, 0.7, 'oil', 1.2, 0.0125); G.patch(27, 19, 1.3, 0.9, 'oil', 1.1); G.patch(16, 21.4, 2.6, 1.6, 'damp', 0.2);
+    // lane lines along the racks' feet, worn through in places
+    for (const z of [13.7, 15.3, 18.7, 20.3]) for (let x = 14.4, k = 0; x < 26.4; x += 2.0, k++) { if ((k * 5 + Math.round(z * 10)) % 7 === 0) continue; M.seg(x, z, x + 1.4, z, 0.16, paint); }
+    // A HAZARD BAND either side of every door of the hall (and the dock's own north door): where the lanes are entered is what the eye finds first
+    const band = (x: number, z: number, wallAlongX: boolean) => { for (const s of [-1, 1]) { if (wallAlongX) M.hazard(x - 0.9, z + s * 0.62 - 0.2, x + 0.9, z + s * 0.62 + 0.2, Y, K); else M.hazard(x + s * 0.62 - 0.2, z - 0.9, x + s * 0.62 + 0.2, z + 0.9, Y, K); } };
+    band(13.0, 19.4, false); band(22.4, 11.0, true); band(30.0, 14.4, false); band(30.0, 21.4, false); band(33.4, 11.0, true);
+    // THE FIVE WAYS IN, numbered on the apron outside each: the staff door, the fire exit, the plant room's door, the dock's two
+    M.glyph('1', 11.4, 25.7, 1.4, paint); M.glyph('2', 2.4, 9.4, 1.4, paint); M.glyph('3', 6.4, 2.4, 1.4, paint); M.glyph('4', 37.7, 13.4, 1.4, paint); M.glyph('5', 37.7, 21.4, 1.4, paint);
+    // THE STAFF'S PARKING off the south-west corner, by their door: three bays' lines, worn through at the wheels
+    for (const x of [4.4, 6.9, 9.4]) { M.seg(x, 24.8, x, 25.85, 0.1, paint); M.seg(x, 26.25, x, 27.25, 0.1, paint); }
+    // two TRUCK BAYS outside the shutters, backed up to and driven off a hundred times
+    M.outline(36.5, 14.9, 39.9, 17.3, 0.12, paint, 'e'); M.outline(36.5, 17.3, 39.9, 19.7, 0.12, paint, 'e'); G.patch(38.2, 16.1, 1.6, 0.9, 'oil', 0.2); G.patch(38.0, 18.6, 1.2, 0.8, 'oil', -0.3);
+    // PALLET SQUARES on the marshalling floor and in the dock, some standing empty, each with its tally
+    const sq = (x: number, z: number, n: number) => { M.outline(x - 0.8, z - 0.7, x + 0.8, z + 0.7, 0.07, paint); if (n) M.tally(x, z + 0.95, n, paint, true, 0.3, 0.06, 0.14); };
+    sq(27.4, 13.2, 1); sq(27.4, 15.3, 2); sq(27.4, 17.4, 3); sq(27.6, 22.4, 4); sq(34.9, 16.0, 1); sq(34.9, 18.6, 2); sq(32.6, 17.6, 0); sq(32.8, 20.4, 3); sq(32.8, 14.6, 4);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

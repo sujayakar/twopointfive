@@ -1,4 +1,4 @@
-// THE LOOK KIT'S GROUND PIECES (src/scene/gwotKit.ts rubble, stain, hearth, ruts, patch, ground, groundAt, lie) and the lived tail's closing
+// THE LOOK KIT'S GROUND PIECES (tools/levels/lib/gwotKit.ts rubble, stain, hearth, ruts, patch, ground, groundAt, lie) and the lived tail's closing
 // (tools/levels/livedKit.ts livedTail): is what lies on the ground the ground's own, and does each flat thing lie where the table says?
 //   bun run tools/qa/ground-pieces-check.ts                         exit 0 = all pass, 1 = a line failed (named)
 //   GROUNDPIECES_BREAK=1 bun run tools/qa/ground-pieces-check.ts    the red path: each line asks the KIT for the thing as it was laid before (a scatter judged
@@ -14,7 +14,7 @@
 //   4 heights     the table `lie` is the order finish < stain < ruts < patch, a millimetre or more apart, and the pieces lie where it says:
 //                 on the kit's default finish a stain lies over the finish and under ruts, and a patch over them
 //   5 the tail    when a lived tail is done the generator's group is no lived group, so a box laid after it is one the exporter refuses by name
-// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, tools/qa/lived-check.ts <level>). No picture is
+// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, levels stands <level>). No picture is
 // judged here.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
@@ -22,7 +22,7 @@ import { GWOT_PALETTE, GWOT_FINISH, GWOT_DARKER, type GwotMat } from '../../src/
 import { doesOfName } from '../../src/scene/stuff';
 import { DOES_DEFAULT } from '../../src/scene/materials';
 import { standKit as stand, laid, lines, ROWS, type Kit } from './kit-stand';
-import { isLived } from '../../src/scene/lived';
+import { isLived } from '../levels/lib/lived';
 import { livedTail } from '../levels/livedKit';
 
 const BREAK = process.env.GROUNDPIECES_BREAK === '1';

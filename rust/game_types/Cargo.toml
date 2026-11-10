@@ -1,0 +1,20 @@
+# The game's data: every module's types and their defaults, the IDs, the knob tables. It runs no rule, and depends on nothing of the game.
+[workspace]
+
+[package]
+name = "game_types"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+maths = { path = "../maths" }
+prim = { path = "../prim" }
+game_derive = { path = "../game_derive" }
+
+[profile.dev]
+opt-level = 0
+debug = false

@@ -8,7 +8,7 @@
 //     browser zooms with — Ctrl or ⌘ with + and − step it, with 0 it is the window's again. Kept per machine (localStorage `twopointsix.textsize`: the step's
 //     index; nothing kept = the window's). A step never takes the layout under `floor` (1200 × 675 of its own pixels, the smallest the screens hold whole
 //     at): on a window with less room than the largest step asks for, the larger steps share the room there is, so each is still a step.
-//   THE PAGE DOES NOT ZOOM: Ctrl / ⌘ + − 0, Ctrl + wheel (nothing over a menu; over the picture a pinch is the camera's zoom and the wheel under a held Ctrl key nothing — game/input.ts) and a pinch are taken from the browser.
+//   THE PAGE DOES NOT ZOOM: Ctrl / ⌘ + − 0, Ctrl + wheel (nothing over a menu; over the picture a pinch is the camera's zoom and the wheel under a held Ctrl key nothing — host/input.ts) and a pinch are taken from the browser.
 // HOW: CSS `zoom` on each layer of the page that carries words (`LAYERS`; never the picture's canvas), the factor in `--tz` on the root, which also wears the
 // class `tsz` while the switch is on. Inside a zoomed layer a length in px is that many of the LAYER's pixels, and three things do not follow by themselves:
 //   · a viewport unit is multiplied like any other length, so a rule in a layer writes `calc(25vw / var(--tz, 1))`, never a bare `25vw`
@@ -19,11 +19,11 @@
 //     divide by `rectZoom()` (the speech bubbles' blockers, the debugger's tooltip, the kit picture's width); a size read off the WINDOW or the picture's
 //     canvas divides by `textZoom()` (the overlay's marks, `uiSize()`). The two are the same number wherever an engine measures a zoomed element in window
 //     pixels, which the boot asks it once (`rectZoom` is 1 on one that answers in the element's own). A canvas drawn inside a layer multiplies its
-//     device pixels by `textZoom()` or it is stretched (the kit figure, the debrief's map, the wind graph).
-// THE SWITCH: `TEXTSIZE.on`, OFF in this module, raised by the page's boot (main.ts → bootTextSize; `?textsize=0` = off: no factor, no class, the browser's
+//     device pixels by `textZoom()` or it is stretched (the debrief's map, the wind graph).
+// THE SWITCH: `TEXTSIZE.on`, OFF in this module, raised by the page's boot (host/drawpage.ts → bootTextSize; `?textsize=0` = off: no factor, no class, the browser's
 // own zoom keys, every rule as it was — `var(--tz, 1)` is 1). Never in the Team & kit picture's own window (an iframe is zoomed with the layer it sits in).
-// It is a look, not a rule of the game: the picture's canvas, the cursor and every number the game reads are untouched, nothing here is in a recording, and
-// the headless harness never boots it. Plain DOM; nothing at module level uses another module's exports.
+// It is a look, not a rule of the game: the picture's canvas, the cursor and every number the game reads are untouched, and nothing here is in a recording.
+// Plain DOM; nothing at module level uses another module's exports.
 export const TEXTSIZE = {
   /** the whole thing; off = the page as it was */
   on: false,
@@ -42,7 +42,7 @@ const LS = 'twopointsix.textsize', ID = 'textsize-css';
 /** sent on the window when the step changes (a screen that draws the choice repaints) */
 export const TEXT_EVENT = 'tps-textsize';
 /** every layer of the page that carries words: the fight screen's, the cards', the screens laid over them */
-const LAYERS = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#tabcard', '#alarm', '#checkpoint', '#journal', '#caption', '#timeline', '#panel', '#ptip', '#loading', '#menu', '#missions', '#brief', '#options', '#replaytag', '#fatal', '#kit-preview', '#tapebar', '#tapenote', '#tapebig', '#taperefuse'];
+const LAYERS = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#tabcard', '#alarm', '#checkpoint', '#panel', '#ptip', '#loading', '#menu', '#missions', '#brief', '#options', '#fatal', '#tapebar', '#tapenote', '#tapebig'];
 const CSS = `
 html.tsz :is(${LAYERS.join(', ')}) { zoom: var(--tz, 1); }
 html.tsz { touch-action: pan-x pan-y; }
@@ -125,7 +125,7 @@ export function zoomKey(e: { key?: string; code?: string; ctrlKey?: boolean; met
   return null;
 }
 
-/** the page's boot (main.ts), before anything is drawn: the switch off the URL, this machine's step, the rules and the listeners. `child` = the Team & kit
+/** the page's boot (host/drawpage.ts), before anything is drawn: the switch off the URL, this machine's step, the rules and the listeners. `child` = the Team & kit
  *  picture's own window, which is never sized by itself. */
 export function bootTextSize(q: URLSearchParams, child = false) {
   if (booted || typeof window === 'undefined' || typeof document === 'undefined' || !document.documentElement?.classList) return;
@@ -140,7 +140,7 @@ export function bootTextSize(q: URLSearchParams, child = false) {
   window.addEventListener('resize', apply);
   // a style sheet that joins the page later (each screen puts its own rules in when it first opens) has its `@media` rules asked the same way
   if (typeof MutationObserver === 'function') { const mo = new MutationObserver(ms => { if (ms.some(m => Array.from(m.addedNodes).some(n => n.nodeName === 'STYLE' || n.nodeName === 'LINK'))) mediaRules(); }); mo.observe(document.head, { childList: true }); if (document.body) mo.observe(document.body, { childList: true }); }
-  // the browser's zoom is the page's: its keys step the size here, Ctrl + wheel is left to whatever is under the cursor (the picture: game/input.ts, where a pinch zooms the camera), a pinch is nothing
+  // the browser's zoom is the page's: its keys step the size here, Ctrl + wheel is left to whatever is under the cursor (the picture: host/input.ts, where a pinch zooms the camera), a pinch is nothing
   window.addEventListener('keydown', e => {
     const d = zoomKey(e); if (d === null) return;
     e.preventDefault(); if (e.repeat || !TEXTSIZE.keys) return;

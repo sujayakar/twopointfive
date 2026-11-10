@@ -15,23 +15,23 @@
 //  * only FULL-HEIGHT static occluders count as walls (bottom ≤ WALL_Y0 and top within 10 cm of the ceiling, shadow-casting, unrotated):
 //    furniture, counters, cubicle partitions, sills, headers, door jambs and stops, glazing openings and every door leaf (dynamic) are open ground;
 //  * every light not registered by the level build (torches, muzzle flashes, the rail light, dropped torches…) carries an all-ones mask. The moon
-//    and the hour's sun have a mask of their own under ReSTIR (reachMaskForDirectional below; game.ts buildDirReach, hours.ts sunReach); the street lamps above the roof line get one over the INTERIOR cells only (they enter the building through its openings,
+//    and the hour's sun have a mask of their own under ReSTIR (reachMaskForDirectional below; reachKeep.ts dir and sun); the street lamps above the roof line get one over the INTERIOR cells only (they enter the building through its openings,
 //    but outdoors they overfly walls a 2D raster would say block them);
 //  * the light looks out from several source points (its own position and points pushed out along its facing / around it), the start
 //    and end sub-cells of every sight line are ignored (a fixture mounted on a wall sits inside that wall's sub-cell column), and a sight
 //    line threading the shared corner of two diagonal wall sub-cells slips through.
 // But the receiving cell is SAMPLED, not covered: five looks per 1 m cell (its centre and four corner sub-cells, SUBS, on the 1/16 m
 // raster), reached if ANY look sees ANY source point. A light that gets into a cell only across a strip lying between those five points
-// is level 0 there — dropped outright by direct / directIrradiance / gloss, a hard cut at that cell's edge. The review (docs/internal/
-// review-2026-08-08.md #17) counted 36 such cells over lights × cells with an exact 3D raycast, nearly all dim ceiling panels two doorways
+// is level 0 there — dropped outright by direct / directIrradiance / gloss, a hard cut at that cell's edge. The review of
+// 08-08 counted 36 such cells over lights × cells with an exact 3D raycast, nearly all dim ceiling panels two doorways
 // off (worst ~40 % of the local unshadowed score at three cells by panel_cubicles_11; the beacons 13–18 % of theirs in a blackout). The
 // one-cell dilation ring (REACH_OPTS.ring) keeps every one of them at level 1 — but on this level 47 % of each mask's footprint was then
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on
 // the break-room wall (commit 1170839); so the ring is OFF by default: a deliberate trade of a few dim far-panel slivers for no cell-edge
 // arcs. Turning it back on wants the consumer side changed first (level 1 = tail-only, never a leader, in direct.wgsl).
-import { SideMap } from '../math/side';
+import { whole } from './steps';
 import { WORLD } from '../scene/world';
-import { BoxFlag, type Box } from '../scene/boxes';
+import { BoxFlag, type Box, type PlanBox } from '../scene/boxes';
 import { cutConfig } from '../scene/cut';
 import type { Vec3 } from '../math/vec';
 
@@ -45,15 +45,15 @@ const SUBS: [number, number][] = [[8, 8], [1, 1], [14, 1], [1, 14], [14, 14]];  
 /** All-threes row: the mask of a light that may reach anywhere, at full weight (dynamic lights, the moon). */
 export const REACH_ALL = (() => { const a = new Uint32Array(REACH_ROW_WORDS); a.fill(0xffffffff); return a; })();
 
-/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as doors.ts has it). */
+/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/fittings/doors has it). */
 export interface ReachDoor { hinge: [number, number]; closedDir: number; width: number }
 
 /** Full-height wall raster over the fine grid: 1 = a wall covers (any part of) this sub-cell, 2 = a doorway's gap (open ground, but light
  *  that only arrives through it is down-ranked: the leaf may well be shut, and even open it is a sliver of the emitter). Built once. */
-export function buildWallRaster(statics: Box[], doors: ReachDoor[] = []): Uint8Array {
+export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] = []): Uint8Array {
   const solid = new Uint8Array(FW * FH);
   for (const d of doors) {   // gaps first, walls after (a jamb post inside the gap's end sub-cell stays a wall)
-    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (doors.ts / level.ts convention)
+    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/fittings/doors / level.ts convention)
     for (let s = 0.03; s < d.width; s += FINE / 2) for (let across = -0.16; across <= 0.16; across += FINE / 2) {   // ± the wall's thickness across the gap
       const x = Math.floor((d.hinge[0] + ux * s - uz * across - WORLD.min[0]) / FINE), z = Math.floor((d.hinge[1] + uz * s + ux * across - WORLD.min[2]) / FINE);
       if (x >= 0 && z >= 0 && x < FW && z < FH) solid[z * FW + x] = 2;
@@ -76,7 +76,7 @@ export function buildWallRaster(statics: Box[], doors: ReachDoor[] = []): Uint8A
 /** How many samples a sight line may step from a sub-cell without missing anything: 1 on and beside a wall or a doorway's gap, more the farther the nearest one is
  *  (the Chebyshev distance d to it in sub-cells, two chamfer passes — exact for that metric; a line advances at most 0.8 sub-cell a sample on either axis, so the
  *  next ceil(1.25 (d - 1)) - 1 samples land within d - 1 sub-cells of this one: all open ground, which a sight line reads and forgets). Kept per raster. */
-const JUMPS = new SideMap<Uint8Array, Uint8Array>('reach.JUMPS');
+const JUMPS = new WeakMap<Uint8Array, Uint8Array>();
 function jumpsOf(solid: Uint8Array): Uint8Array {
   let j = JUMPS.get(solid); if (j) return j;
   j = jumpsFor(solid); JUMPS.set(solid, j); return j;
@@ -101,17 +101,43 @@ function jumpsFor(solid: Uint8Array): Uint8Array {
 }
 /** What differs between two wall rasters: the box of sub-cells that changed (null = none), for ReachOnly.boxes. Where walls only OPENED, the old raster's jumps
  *  are still safe on the new one (every distance only grew), so they are handed over instead of being worked out again. */
-export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, number, number, number] | null {
+export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, number, number, number] | null { return whole(wallRasterDiffSteps(prev, next)); }
+/** … in the scan's own steps (below), for a caller that reads the walls a little a frame (reachKeep.ts): the same box, and the jumps handed over when the scan ends */
+export function* wallRasterDiffSteps(prev: Uint8Array, next: Uint8Array): Generator<void, [number, number, number, number] | null, void> {
   if (prev.length !== next.length) return [0, 0, FW - 1, FH - 1];
+  const d = yield* rasterScanSteps(prev, next); if (!d.box) return null;
+  const j = JUMPS.get(prev); if (j && !d.closed) JUMPS.set(next, j);
+  return d.box;
+}
+/** a box of sub-cells (wallRasterDiff's) as a rect of the level, in metres: [x0, z0, x1, z1] */
+export function rasterRect(b: readonly [number, number, number, number]): [number, number, number, number] {
+  return [WORLD.min[0] + b[0] * FINE, WORLD.min[2] + b[1] * FINE, WORLD.min[0] + (b[2] + 1) * FINE, WORLD.min[2] + (b[3] + 1) * FINE];
+}
+/** one scan for both: the box of sub-cells that differ, and whether any went from open ground to a wall or a doorway's gap (`closed`: only then can a
+ *  distance to the nearest of them have shrunk, and an old jump field step over something a sight line must read). IN STEPS (render/steps.ts: a quarter
+ *  of a million cells, 4 to 5 ms cold in a browser), a stop every `SCAN_ROWS` rows: wallRasterDiff runs it to its end, a reading on the clock takes it a few stops a frame (reachKeep.ts). */
+const SCAN_ROWS = 32;
+function* rasterScanSteps(prev: Uint8Array, next: Uint8Array): Generator<void, { box: [number, number, number, number] | null; closed: boolean }, void> {
   let x0 = FW, z0 = FH, x1 = -1, z1 = -1, closed = false;
-  for (let z = 0, i = 0; z < FH; z++) for (let x = 0; x < FW; x++, i++) {
-    if (prev[i] === next[i]) continue;
-    if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z;
-    if (next[i] && !prev[i]) closed = true;
-  }
-  if (x1 < 0) return null;
-  const j = JUMPS.get(prev); if (j && !closed) JUMPS.set(next, j);
-  return [x0, z0, x1, z1];
+  for (let z = 0, i = 0; z < FH; z++) { if (z > 0 && z % SCAN_ROWS === 0) yield;
+    for (let x = 0; x < FW; x++, i++) {
+      if (prev[i] === next[i]) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z;
+      if (next[i] && !prev[i]) closed = true;
+    } }
+  return { box: x1 < 0 ? null : [x0, z0, x1, z1], closed };
+}
+/** The same for a raster that is NOBODY'S STATE (ReachJob.own: the look page's daylight at openings keeps its own walls and their jump field, and neither
+ *  side table of this file knows them): the box of sub-cells `next` differs from `prev` in (wallRasterDiff's; null = none differ; true = no telling,
+ *  rasters of two sizes), and where its walls only OPENED (a wall holed: every blast) prev's jump
+ *  field is HANDED ON to next, as wallRasterDiff hands the game's. Where any cell closed (a wall put back by a restart, a box set down) it is not, and
+ *  the next mask makes the field fresh. Until 11-05 the look made the field again, whole, on the frame it read a blast's walls. In steps: the scan's
+ *  own; `prev`'s field is handed on as it stands at the last step. */
+export function* wallRasterHandOnSteps(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): Generator<void, [number, number, number, number] | null | true, void> {
+  if (prev.solid.length !== next.solid.length) return true;
+  const d = yield* rasterScanSteps(prev.solid, next.solid);
+  if (d.box && !d.closed && prev.jumps) next.jumps = prev.jumps;
+  return d.box;
 }
 
 /** 2D line of sight over the fine raster from the centre of sub-cell (ax, az) to the centre of (bx, bz), ignoring both end sub-cells.
@@ -180,24 +206,25 @@ export function segNearRect(ax: number, az: number, bx: number, bz: number, r: r
   return true;
 }
 /** A change limited to some rects of the level (a wall opened there): only the cells whose line to the light passes those rects are decided again, every other
- *  cell keeps its level from `prev` (game.ts reachTick — a whole mask is ~10 ms of sight lines, the cells behind one hole a few dozen). */
-/** cells decided by sight lines since the module loaded, and the samples those lines took — the unit of the work (game.ts reachTick paces itself by the steps: a
+ *  cell keeps its level from `prev` (reachKeep.ts tick — a whole mask is ~10 ms of sight lines, the cells behind one hole a few dozen). */
+/** cells decided by sight lines since the module loaded, and the samples those lines took — the unit of the work (reachKeep.ts tick paces itself by the steps: a
  *  count, not a clock; a cell is anything from five short lines to twenty-five long ones) */
 export const REACH_WORK = { cells: 0, steps: 0, fields: 0 };   // fields: jump fields worked out (one a raster, none for a raster whose walls only opened)
-/** How game.ts reachTick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
+/** How reachKeep.ts tick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
  *  next (60000: over 31 staged blasts on five levels no blast's masks land later than they did a mask at a time; at 40000 five did, by up to ten frames).
- *  `whole` (the page's ?reachpace=old) = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
- *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. */
+ *  `whole` = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
+ *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs.
+ *  Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
+ *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames. `steps` IS THE STEP OF A FRAME
+ *  WITH NO PACE (a tool's stand, which keeps no clock; the page with `?planpace=old`; a page's first frames): where the frame has the planners' pace the
+ *  keeper's step is an allowance of TIME (reachKeep.ts KEEP_MS), since a count of steps is 2 ms warm and five times that cold in a browser. */
 export const REACH_PACE = { steps: 60000, whole: false, wholeCells: 60 };
 export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [number, number, number, number])[]; /** cells farther than this from the light keep their level too (past its range it lights nothing) */ maxDist?: number;
   /** the wall raster's changed sub-cells, as boxes (wallRasterDiff): given these, a cell is decided again only if one of its OWN sight lines touches one — the same
    *  masks as with `rects` alone (a line that reads no changed sub-cell answers as it did), from far fewer cells when the light stands near the hole */
   boxes?: readonly (readonly [number, number, number, number])[] }
 /** the source points every cell of a mask was decided from (reachMaskFor), where that is one set */
-const SOURCES = new SideMap<Uint32Array, string>('reach.SOURCES');
-/** was every cell of this mask decided from one set of source points? (then, inside the light's range, it equals a whole re-derive from them on the raster it was last
- *  decided against; in the half metre between the range the game queues a light by and ReachOnly.maxDist a cell may hold an older level — floor the light does not light) */
-export function reachOneSource(mask: Uint32Array): boolean { return SOURCES.has(mask); }
+const SOURCES = new WeakMap<Uint32Array, string>();
 /** A mask decided over several calls (reachMaskSome): cells until `budget` sight-line steps are spent each call, where it stood kept in `st` — its source points too, so a light that turns
  *  between calls is still one mask from one set. The caller drops `st` if the raster or the ReachOnly changes under it. */
 export interface ReachJob { budget: number;
@@ -290,17 +317,9 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
   return mask;
 }
 
-/** Reach mask of a DIRECTIONAL light (the moon; the breach's sun): every cell NOT under the ceiling slab reaches at full weight; a cell under it reaches (level 3)
- *  iff one of its looks — the five sub-cell points of SUBS at floor, desk and head height — has an unblocked 3D path toward the light through the level's
- *  statics (`blocked(from, dirToLight, dist)` is the caller's raycast: the window strips, the fire exit, the lobby's glazing), else 0. Only the ReSTIR estimator
- *  consumes it (lights.ts LightSet.dirMasks): scored unshadowed everywhere, the moon out-draws a dim desk lamp for the fresh candidate on every indoor floor and the
- *  ray then dies in the ceiling — wasted rays, a penumbra hint everywhere, and torch light indoors starving for fresh samples under a daytime sun. Errs toward
- *  'reaches' like the rest (three heights, five points; a strip between them stays dark — the moon through a 10 cm slit). ~1700 cells × ≤ 15 rays, once.
- *  A LOOK STANDS IN OPEN AIR (`free`, the caller's: the point itself, the nearest point of its own cell outside the solid it fell in, or null where the cell has none).
- *  The corner looks sit 9 cm inside the cell, and a wall on a cell's line is 12 cm to either side of it: such a look started INSIDE the wall, its ray left through
- *  the wall's outer face, and every cell along the inside of an outer wall read 'the sun reaches'. On the pass at midday that was the cells men stack in, with the
- *  hour's sun, thousands of times the room's bulb, in their fresh draw: a white speckle for every bulb pick (REACH_OPTS.solidLooks = the looks as they were). */
-export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Uint32Array {
+/** … IN STEPS (render/steps.ts), a stop after every cell that is decided by rays (up to 180 of them a cell; a cell that keeps its level or stands in the
+ *  open costs nothing and is no stop): the same mask, for a caller that takes a few cells a frame (reachKeep.ts) */
+export function* reachMaskForDirectionalSteps(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Generator<void, Uint32Array, void> {
   const mask = new Uint32Array(REACH_ROW_WORDS);
   const W = WORLD.gridW, H = WORLD.gridH;
   const heights = REACH_OPTS.solidLooks ? [0.05, 0.8, 1.7] : DIR_HEIGHTS;
@@ -319,6 +338,7 @@ export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, 
         const dist = up > 0.05 ? Math.min(60, (WORLD.ceilingY + 1.5 - y) / up) : 60;   // nothing static stands above the roof line: once the ray is a metre over the slab it is in the clear
         if (!blocked(from, dirToLight, dist)) { lv = 3; break out; }
       }
+      yield;
     }
     if (lv) mask[ci >> 4] |= lv << ((ci & 15) * 2);
   }
@@ -328,8 +348,3 @@ export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, 
 /** Level 0..3 of cell ci in a mask (0 = cannot reach). */
 export function reachLevel(mask: Uint32Array, ci: number): number { return (mask[ci >> 4] >>> ((ci & 15) * 2)) & 3; }
 
-/** Fraction of the level's cells a mask reaches at all (for the panel / logs). */
-export function reachFraction(mask: Uint32Array): number {
-  let n = 0; for (let ci = 0; ci < WORLD.gridW * WORLD.gridH; ci++) if (reachLevel(mask, ci)) n++;
-  return n / (WORLD.gridW * WORLD.gridH);
-}

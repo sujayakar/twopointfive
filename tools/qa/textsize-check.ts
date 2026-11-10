@@ -6,10 +6,9 @@
 //   3. the keys a browser zooms with are read as larger / smaller / back, with Ctrl or ⌘ only;
 //   4. the page's rules: no bare viewport unit in a zoomed layer (each is written `/ var(--tz, 1)`), every `@media` on the game page is a px width or height
 //      (what the rewrite can scale), every layer the factor is put on is in the page or made by a module that names it, the switch is off in the module;
-//   5. nothing under src/game, src/scene, src/anim or src/math reads it (a look, never a rule).
-//   bun run tools/qa/textsize-check.ts        (probes.ts textsize; TEXTSIZE_BREAK=1 must FAIL — the window's reference halved)
-// The page itself — sizes on the real screens, the keys, the kept step, the switch off — is tools/qa/textsize-page.cjs. Neither stand reads this module:
-// the result is the same under TPS_PROFILE=shipped.
+//   5. nothing under src/scene, src/anim or src/math reads it (a look, never a rule).
+//   bun run tools/qa/textsize-check.ts        (TEXTSIZE_BREAK=1 must FAIL — the window's reference halved)
+// The page itself — sizes on the real screens, the keys, the kept step, the switch off — is tools/qa/textsize-page.cjs.
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -50,10 +49,8 @@ export async function textsizeCheck(): Promise<boolean> {
 
     // 4. the page's rules
     const src = readFileSync(`${ROOT}/src/ui/textsize.ts`, 'utf8'), layers: string[] = (/const LAYERS = \[([^\]]+)\]/.exec(src)?.[1] ?? '').split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean);
-    const page = readFileSync(`${ROOT}/index.html`, 'utf8'), ui = readdirSync(`${ROOT}/src/ui`).filter(f => f.endsWith('.ts')).map(f => [`src/ui/${f}`, readFileSync(`${ROOT}/src/ui/${f}`, 'utf8')] as [string, string]);
-    // (the replay played in the game page — src/replay/engineplay.ts — makes layers of its own: its bar, the note field, the play mark, the no-tape note)
-    const replay = readdirSync(`${ROOT}/src/replay`).filter(f => f.endsWith('.ts')).map(f => [`src/replay/${f}`, readFileSync(`${ROOT}/src/replay/${f}`, 'utf8')] as [string, string]);
-    const files: [string, string][] = [['index.html', page], ...ui, ...replay];
+    const page = readFileSync(`${ROOT}/index.html`, 'utf8'), ui = ['src/ui', 'src/tape'].flatMap(d => readdirSync(`${ROOT}/${d}`).filter(f => f.endsWith('.ts')).map(f => [`${d}/${f}`, readFileSync(`${ROOT}/${d}/${f}`, 'utf8')] as [string, string]));
+    const files: [string, string][] = [['index.html', page], ...ui];
     // (not in a layer: the benchmark's own report, the Team & kit picture's own window)
     const EXEMPT = (file: string, line: string) => file === 'src/ui/bench.ts' || /body\.kitview::after/.test(line) || /^\s*(\/\/|\/?\*)/.test(line) && !/[{;]\s*$/.test(line);
     const bare: string[] = [];
@@ -62,7 +59,7 @@ export async function textsizeCheck(): Promise<boolean> {
     const odd: string[] = [];
     for (const [f, text] of files) if (f !== 'src/ui/textsize.ts') for (const m of text.matchAll(/@media\s*(\([^{]+)\{/g)) { const cond = m[1].trim(); if (/prefers-/.test(cond)) continue; if (scaledQuery(cond, 2) === cond || /\d(em|rem|vw|vh)\b/.test(cond)) odd.push(`${f}: ${cond}`); }
     check(odd.length === 0, 'every @media on the game page is a px width or height (what the factor can scale)', odd.join(' · ') || 'all of them');
-    const made = (id: string) => page.includes(`id="${id}"`) || [...ui, ...replay].some(([, t]) => t.includes(`id = '${id}'`));
+    const made = (id: string) => page.includes(`id="${id}"`) || ui.some(([, t]) => t.includes(`id = '${id}'`));
     const lost = layers.filter(l => !made(l.slice(1)));
     check(layers.length >= 15 && lost.length === 0 && !layers.includes('#view'), 'every layer the factor is put on is in the page or made by a module, and the picture\'s canvas is not one', lost.length ? `not found: ${lost.join(' ')}` : `${layers.length} layers`);
     check(/export const TEXTSIZE = \{[^}]*?\bon: false,/s.test(src), 'the switch is OFF in the module (the page\'s boot raises it; ?textsize=0 leaves it)', '');
@@ -72,12 +69,12 @@ export async function textsizeCheck(): Promise<boolean> {
     // (a READ is an import of the module, a call of one of its functions, its hook or its factor in a rule; a comment that names the file is not one)
     const READS = /from\s+['"][^'"]*\/textsize['"]|\b(?:textZoom|rectZoom|uiSize|uiMatch|textStep|setTextStep|zoomFor|bootTextSize)\s*\(|__textsize\b|--tz\b/;
     const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/(^|\s)\/\/.*$/, '')).join('\n');
-    const SIM_DIRS = ['src/game', 'src/scene', 'src/anim', 'src/math', 'src/sim'];
+    const SIM_DIRS = ['src/scene', 'src/anim', 'src/math'];
     for (const dir of SIM_DIRS) for (const f of readdirSync(`${ROOT}/${dir}`)) if (f.endsWith('.ts') && READS.test(code(readFileSync(`${ROOT}/${dir}/${f}`, 'utf8')))) readers.push(`${dir}/${f}`);
     const would = ["import { textZoom } from '../ui/textsize';", 'const z = textZoom();', "el.style.width = 'calc(10px * var(--tz, 1))';", 'const t = (window as any).__textsize;'].filter(l => READS.test(code(l))).length;
     const wouldNot = ['// (the page\'s words grow the same way, ui/textsize.ts)', '/** see textZoom() in ui/textsize.ts */', 'const ringZoom = (w: number) => w / 1920;'].filter(l => READS.test(code(l))).length;
     check(would === 4 && wouldNot === 0, 'the reader test is red on an import, a call, the hook and the factor in a rule, and not on a comment that names the file', `${would} of 4 reads caught · ${wouldNot} of 3 comments and look-alikes caught`);
-    check(readers.length === 0, 'nothing in the simulation reads the text size', readers.join(' ') || SIM_DIRS.join(', '));
+    check(readers.length === 0, 'nothing under those that make the world reads the text size', readers.join(' ') || SIM_DIRS.join(', '));
   } finally { TEXTSIZE.ref = ref0; }
   console.log(`=== textsize: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;

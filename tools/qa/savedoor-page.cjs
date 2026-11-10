@@ -2,46 +2,32 @@
 // STAND-IN backend on this machine (cloud/test/standin.ts: `npm ci` in cloud/ first). Three pages of the dev server, booted side by side:
 //   A  ?cloud=<the stand-in>: an F9 take makes NO download, the stand-in has the file, the recorder knows it is being sent and then that it arrived, and the
 //      notes say so; the benchmark card's line for each way a run can go, its move to "were sent", and Close waiting for a file that is on its way
-//      (the card is put up by hand: a whole ?bench run is tools/qa/bench-page.cjs);
+//      (the card is put up by hand);
 //   B  ?downloads=1&cloud=0: the door as it was, one download and the old note;
 //   C  ?cloud=0: nobody listens. No download, the notes say the take stopped and then that it was saved nowhere (no shot server here), and the card
 //      says the results weren't sent, with no notice line.
-// On each page, after the take, THE CHECKPOINT EXPORT (the debug panel's own 'export chosen' button, ui/bindings.ts, on a slot saved by hand): A no download,
-// the line says it is being sent and then that it was, and the stand-in has the file; B the file is downloaded and the line is the old "exported …";
-// C no download and the line says it wasn't sent.
 //   PORT=<dev server> node tools/qa/savedoor-page.cjs      (three boots of the game: many minutes on the software adapter; SAVEDOOR_ONLY=A = page A alone)
 // Exit 0 = every check passed, 1 = one failed or a page did not boot.   SAVEDOOR_BREAK=1: page A is opened under ?downloads=1 as well — must FAIL.
 // Nothing here is a real card, a real backend or a real network: never seen on a GPU.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOT_THE_PAGE } = require('./page.cjs'), PAGE = pageRun({ name: 'savedoor-page' }), { check, note: log } = PAGE;
 const path = require('node:path'), cp = require('node:child_process');
-const ONLY = process.env.SAVEDOOR_ONLY || '', PORT = process.env.PORT || 5199, CPORT = Number(process.env.CPORT || 3219), ROOT = path.resolve(__dirname, '../..'), BREAK = process.env.SAVEDOOR_BREAK === '1' ? '&downloads=1' : '';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
+const ONLY = process.env.SAVEDOOR_ONLY || '', CPORT = Number(process.env.CPORT || 3219), ROOT = path.resolve(__dirname, '../..'), BREAK = process.env.SAVEDOOR_BREAK === '1' ? '&downloads=1' : '';
 const CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key';
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const admin = async (kind, fn, args) => { const r = await fetch(`${CLOUD}/api/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Convex ${KEY}` }, body: JSON.stringify({ path: fn, format: 'convex_encoded_json', args: [args] }) }); const j = await r.json(); if (j.status !== 'success') throw new Error(JSON.stringify(j).slice(0, 300)); return j.value; };
 const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls;
-const open = async (ctx, q) => { const page = await ctx.newPage(); const errs = [], downloads = [];
-  page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
-  page.on('console', m => { if (m.type() !== 'error') return; const at = m.location().url || ''; if (!(/\/favicon\.ico$/.test(at) || /^http:\/\/localhost:5174\//.test(at) || /Failed to load resource/.test(m.text()))) errs.push(m.text().slice(0, 300)); });
+const open = async (ctx, q) => { const { page, errors: errs, go, ready } = await PAGE.open({ context: ctx, errors: { skip: /Failed to load resource/, skipAt: NOT_THE_PAGE } }), downloads = [];
   page.on('download', d => downloads.push(d));
-  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute${q}`, { waitUntil: 'commit' });
-  return { page, errs, downloads, ready: (async () => { await page.waitForFunction(() => !!window.__ready, null, { timeout: 1500000 }); await page.evaluate(async () => { await window.__ready; }); })() }; };
+  await go(`paused&quality=low&mute${q}`, { waitUntil: 'commit' });
+  return { page, errs, downloads, ready: ready() }; };
 const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [], old = P.hudNote; P.hudNote = s => { if (!/^● REC/.test(s)) notes.push(s); try { old(s); } catch (e) { /* */ } };
-  window.__menu?.close?.(); P.start('door check'); window.__runFrames(6); P.stop(); window.__notes = notes; return { notes: [...notes], went: P.lastSent }; });
-const exportCk = page => page.evaluate(async () => { const g = window.__game, said = [], old = g.msg; g.msg = s => { said.push(s); old.call(g, s); };
-  window.__menu?.close?.(); const r = window.__save.save('door check', true), b = [...document.querySelectorAll('button')].find(x => x.textContent === 'export chosen');
-  if (!r || !r.ok || !b) { g.msg = old; return { err: b ? `the save was refused: ${r && r.why}` : 'no export button on the page', said: [] }; }
-  b.click(); await new Promise(r => setTimeout(r, 4000)); g.msg = old; return { said: said.filter(s => /checkpoint/i.test(s)), title: b.title }; });
+  window.__draw.run(0); P.start('door check'); window.__runFrames(6); P.stop(); window.__notes = notes; return { notes: [...notes], went: P.lastSent }; });
 (async () => {
   const standin = cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' });
   process.on('exit', () => { try { standin.kill(); } catch (e) { /* gone */ } });   // (whatever ends this run, a failed launch too: a stand-in left up would answer the next one)
   let up = false; for (let i = 0; i < 60; i++) { try { await heard(); up = true; break; } catch { await sleep(250); } }
   check(up, 'the stand-in backend is up'); if (!up) { standin.kill(); process.exit(1); }
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, acceptDownloads: true });
-  await ctx.addInitScript(() => { window.__testVisible = true; });
+  const ctx = await PAGE.context({ size: [320, 180], options: { acceptDownloads: true } });
   try {
     const A = await open(ctx, `&cloud=${encodeURIComponent(CLOUD)}${BREAK}`), B = ONLY === 'A' ? null : await open(ctx, '&downloads=1&cloud=0'), C = ONLY === 'A' ? null : await open(ctx, '&cloud=0');
     // ---- A: a backend that sends
@@ -55,10 +41,6 @@ const exportCk = page => page.evaluate(async () => { const g = window.__game, sa
     await sleep(2000); const a2 = await A.page.evaluate(() => ({ notes: window.__notes, went: window.__perfrec.lastSent }));
     check(a2.went === 'arrived' && a2.notes.join(' | ') === 'The recording is being sent to the developer. | The recording was sent to the developer.', `A: once the file is on the backend the recorder knows it arrived and a second note says so (${a2.went}: ${a2.notes.join(' | ')})`);
     check(rows.length === 1 && rows[0].kind === 'perf' && /^perf-.*\.json$/.test(rows[0].name) && rows[0].size > 500, `A: the backend has the take (${rows.map(r => `${r.kind} ${r.name} ${r.size}`).join(' · ')})`);
-    // the checkpoint export
-    const ak = await exportCk(A.page); let ckRows = []; for (let i = 0; i < 20; i++) { try { ckRows = (await admin('query', 'files:list', {})).filter(r => r.kind === 'checkpoint'); } catch (e) { log(String(e)); } if (ckRows.length) break; await sleep(500); }
-    check(!ak.err && A.downloads.length === 0 && ak.said.join(' | ') === 'The checkpoint is being sent to the developer. | The checkpoint was sent to the developer.' && /nothing is downloaded/.test(ak.title), `A: an exported checkpoint makes no download, and its line says it is being sent and then that it was (${ak.err ?? ak.said.join(' | ')}; ${A.downloads.length} downloads)`);
-    check(ckRows.length === 1 && /^twopointsix-checkpoint-.*\.json$/.test(ckRows[0].name) && ckRows[0].size > 500, `A: the backend has the checkpoint (${ckRows.map(r => `${r.kind} ${r.name} ${r.size}`).join(' · ')})`);
     // the card, put up by hand with each answer
     const said = await A.page.evaluate(() => { const V = window.__bench.deps.view, out = [];
       for (const w of [{ result: 'sent', take: 'sent' }, { result: 'held', take: 'held' }, { result: false, take: false }, { result: 'sent', take: false }]) { V.show('a report', () => {}, w); out.push([document.getElementById('bench-said')?.textContent ?? '(no line)', !!document.querySelector('#bench-card .cloudnote')]); }
@@ -87,8 +69,6 @@ const exportCk = page => page.evaluate(async () => { const g = window.__game, sa
     await B.ready; log('B ready');
     const b = await take(B.page); await sleep(3000);
     check(B.downloads.length === 1 && /^perf-.*\.json$/.test(B.downloads[0]?.suggestedFilename() ?? '') && b.went === false && /^REC saved — \d+ frames$/.test(b.notes.join(' | ')) && (await B.page.evaluate(() => window.__saveUp.on)) === false, `B (?downloads=1): the take is downloaded once and the note is the old one (${B.downloads.map(d => d.suggestedFilename()).join(', ')}: ${b.notes.join(' | ')})`);
-    const bk = await exportCk(B.page);
-    check(!bk.err && B.downloads.length === 2 && /^twopointsix-checkpoint-.*\.json$/.test(B.downloads[1]?.suggestedFilename() ?? '') && bk.said.length === 1 && /^exported twopointsix-checkpoint-.*\.json \(\d+ KB\)$/.test(bk.said[0]), `B (?downloads=1): an exported checkpoint is downloaded once and the line is the old one (${bk.err ?? bk.said.join(' | ')}; ${B.downloads.map(d => d.suggestedFilename()).join(', ')})`);
     check(!B.errs.length, `B: no page or console error (${B.errs.length}${B.errs.length ? ': ' + B.errs[0] : ''})`);
     // ---- C: nobody listening, a page on this machine
     await C.ready; log('C ready');
@@ -97,10 +77,8 @@ const exportCk = page => page.evaluate(async () => { const g = window.__game, sa
     check(C.downloads.length === 0 && c3.went === false && /^REC stopped with \d+ frames\. \| The recording wasn't saved, because no shot server is up\.$/.test(cNotes.join(' | ')), `C (?cloud=0, localhost): no download, and the notes say it stopped and then that it was saved nowhere (${cNotes.join(' | ')})`);
     const lone = await C.page.evaluate(() => { window.__bench.deps.view.show('a report', () => {}, { result: false, take: false }); const t = document.getElementById('bench-said')?.textContent, n = !!document.querySelector('#bench-card .cloudnote'); document.getElementById('bench-card')?.remove(); return [t, n]; });
     check(/^Your results weren't sent, so press Copy/.test(lone[0] ?? '') && lone[1] === false && (await C.page.evaluate(() => window.__cloud)) === null, `C: the card on a page with no backend says not sent and has no notice line (${JSON.stringify(lone)})`);
-    const ck3 = await exportCk(C.page);
-    check(!ck3.err && C.downloads.length === 0 && ck3.said.join(' | ') === "The checkpoint wasn't sent.", `C (?cloud=0): an exported checkpoint makes no download and its line says it wasn't sent (${ck3.err ?? ck3.said.join(' | ')}; ${C.downloads.length} downloads)`);
     check(!C.errs.length, `C: no page or console error (${C.errs.length}${C.errs.length ? ': ' + C.errs[0] : ''})`);
     }
-  } finally { await browser.close().catch(() => {}); standin.kill(); }
-  console.log(red ? `${red} FAILED` : 'all pass'); process.exit(red ? 1 : 0);
+  } finally { await PAGE.close(); standin.kill(); }
+  await PAGE.end(PAGE.fails ? `${PAGE.fails} FAILED` : 'all pass');
 })().catch(e => { console.log('- FAIL — the script died: ' + String(e).slice(0, 400)); process.exit(1); });

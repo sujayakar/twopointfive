@@ -1,11 +1,11 @@
 // THE HOSTED PAGE'S BACKEND, from the page's side. A build that was GIVEN A BACKEND'S ADDRESS (tools/build.ts builds one in where the environment names it —
-// `TPS_CLOUD_URL`; the hosted build's script sets it, tools/host/build.sh) can keep three things there, each in a file of its own beside this one:
+// `TPS_CLOUD_URL`; the hosted build's script sets it, tools/host/build.sh) can keep these there, each in a file of its own beside this one:
 //   tapes.ts      the kept tape of every page visit (what this browser already keeps for the replay viewer)
 //   telemetry.ts  small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   prefs.ts      the browser's settings, so another browser handed this one's id opens with them
 //   files.ts      the files the page saves for the player (a benchmark's report, a replay, a recording), into the backend's file storage
-//   notes.ts      what the player wrote on a replay: the notes on a kept visit, the F7 shelf's saved windows
-// A build with no address — the dev server, a checkout, the one-file build, every headless tool — has none of this: `cloudBoot` returns null, no id is made,
+//   notes.ts      what the player wrote on a replay: the notes on a kept visit
+// A build with no address — the dev server, a checkout, the one-file build — has none of this: `cloudBoot` returns null, no id is made,
 // nothing is asked of any server. THE BUILD AS IT WAS.
 // WHO THE BROWSER IS: a random id it makes once and keeps (localStorage `twopointsix.cloud.pid`). There are no accounts. A link that carries an id
 // (`?player=<id>`, `__cloud.link()`) hands it to another browser, which takes the id and the settings kept under it before the game reads a single key,
@@ -28,8 +28,8 @@
 // puts the error card up. It works where the game never started — no adapter, no device, nothing booted: the visit is named here and its `visit` record
 // is what `navigator` says — and on a visit that is up, where it goes out at once on the live records. Same switch, same notice: a browser that has not
 // seen the notice is told `waits`, and the card that shows the notice's line sends the record by saying `told()`.
-// No game code is imported (src/game is one import cycle): main.ts hands in the visit's name, the kept tapes' store and closures over its own objects.
-import type { KeptStore } from '../replay/keepstore';
+// No game code is imported: host/drawcloud.ts hands in the visit's name, the kept tapes' store and closures over its own objects.
+import type { KeptStore } from '../tape/keepstore';
 import { wire, type Wire } from './wire';
 import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
@@ -39,7 +39,6 @@ import { tabLoad, LOADTIME } from './loadtime';
 import { FileSync, FILESYNC } from './files';
 import { LOOPBACK, HTTPS_ADDR, LOCAL_HOST, bare } from './addr';
 import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
-import { shelfNoted, shelfGet } from '../replay/shelf';
 
 /** THE MACHINE'S POWER, in the benchmark report's own words (ui/bench.ts): "plugged in" or "on battery (62 %)". The browser is asked once, on the first
  *  call (no prompt; a browser without the question never answers), and what it handed back is read as it stands on every later call: '' until then.
@@ -83,7 +82,7 @@ const mark = (s: string): string => { let h = 0x811c9dc5; for (let i = 0; i < s.
 const builtIn = (): string => { try { return typeof __TPS_CLOUD__ === 'string' && /^https:\/\//.test(__TPS_CLOUD__) ? bare(__TPS_CLOUD__) : ''; } catch { return ''; } };
 /** the backend this page's own server said it runs ('' = none, or not asked yet): `cloudFind` */
 let found = '', asked: Promise<void> | null = null;
-/** A LOCAL BUILD ASKS ITS SERVER FOR ITS BACKEND, once (main.ts awaits it through `cloudAdopt`; the replay viewer through `cloudNotes`). Only a page served
+/** A LOCAL BUILD ASKS ITS SERVER FOR ITS BACKEND, once (host/drawpage.ts awaits it through `cloudAdopt` and `cloudNotes`). Only a page served
  *  from this machine with no address built in asks; a static build's `qa/cloud` is an empty file. Never rejects; a second and a half at most */
 export function cloudFind(): Promise<void> {
   return asked ??= (async () => {
@@ -131,7 +130,7 @@ export function cloudPid(): string {
 /** what a browser is asked when it opens another's link (the browser's own dialog: nothing of the page is up yet) */
 export const ADOPT_ASK = "Use the settings from this link? They'll replace the settings in this browser, and this browser will share its settings, replays and stats with the developer. You can turn that off in Options.";
 
-/** BEFORE THE GAME BOOTS (main.ts calls it first): a browser handed an id by its address takes the id and its settings; a browser that shares its id with
+/** BEFORE THE GAME BOOTS (host/drawpage.ts calls it first): a browser handed an id by its address takes the id and its settings; a browser that shares its id with
  *  another takes the settings where the other saved newer ones. Both end in one replace of the page — true = the page is going, boot nothing. Costs nothing
  *  (no request, no wait) for a build with no backend, a visit that does not send, and a browser that never linked. */
 export async function cloudAdopt(q: URLSearchParams): Promise<boolean> {
@@ -161,7 +160,7 @@ export async function cloudAdopt(q: URLSearchParams): Promise<boolean> {
 }
 
 export interface CloudDeps {
-  /** this page visit's name (ui/replaykey.ts session: the kept tape's own) */
+  /** this page visit's name (the kept tape's own) */
   sid: string;
   /** the kept tapes' store (null: this page keeps none) */
   store: Pick<KeptStore, 'rows' | 'head' | 'piecesFrom'> | null;
@@ -197,7 +196,7 @@ const savedWord = (t: 'now' | 'held' | null): Saved => t === 'now' ? 'sent' : t 
  *  sending off stays with it, as its tape and its notes do. A replay that names no visit (a file opened in the viewer and sent by a press) is not judged */
 const replayMay = (q: URLSearchParams, kind: string, meta?: Record<string, string>): boolean =>
   !(kind === 'replay' || kind === 'f7') || (CLOUD.tapes && !off(q.get('cloudtapes')) && (!meta?.session || visitsNow().includes(meta.session)));
-/** the GPU device's queue, the part asked (main.ts hands `gpu.device.queue`) */
+/** the GPU device's queue, the part asked (the page hands `gpu.device.queue`) */
 export interface GpuQueue { onSubmittedWorkDone(): Promise<unknown> }
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
@@ -213,7 +212,7 @@ export interface Cloud {
   /** every saved file that may go has gone or been let go (true), or `capMs` (15 s) is over, a sending failed, or what is left waits for the notice
    *  (false). For a page about to leave: the sending is a file's only copy now, and a navigation cuts it off */
   filesIdle(capMs?: number): Promise<boolean>;
-  /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
+  /** one drawn frame (the page's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
   /** …and, where the page hands in its GPU queue, THE GPU'S WAIT ON A FRAME (telemetry.ts `lag`): on a live frame, with no wait already out, the queue is
    *  asked when this frame's work is done. One promise at a time, none on a page that does not send; `?gpulag=0` puts it off */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number, queue?: GpuQueue): void;
@@ -282,9 +281,7 @@ export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'row
     const url = notesUrl(q); if (!url) return false;
     // ONE ROUND AT A TIME, and one more after it where a note was saved meanwhile (typing saves every quarter second): two rounds side by side read the
     // same marks and could land the older words last
-    // (a saved window whose visit is not kept goes up whole through the saved files, as on the game's page: this page files it under its own name)
-    const file = (n: string, b: Blob, k: string, m?: Record<string, string>): boolean => { const F = pageFileSync(q); if (!F || F.add(n, b, k, m) !== 'now') return false; drain(F); return true; };
-    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid), file }), busy: null, again: false };
+    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows() }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid) }), busy: null, again: false };
     if (P.busy) { P.again = true; return P.busy; }
     P.busy = (async () => { let f = 0; do { P.again = false; f = P.sync.stats.failed; await P.sync.round(); } while (P.again); return P.sync.stats.failed === f; })().finally(() => { P.busy = null; });
     return await P.busy;
@@ -341,17 +338,17 @@ export async function cloudFile(q: URLSearchParams, name: string, blob: Blob, ki
 /** `secs`: a page's report goes up this long after it was made (the ones that come with it ride along); `early`: errors nothing caught that are kept
  *  while the page is still asking whether it has a backend */
 export const PAGE_REPORTS = { secs: 2, early: 8 };
-/** what a page that is not a visit says of itself: `page`, the word its records are marked with ('replay' = the map viewer, 'tape' = the game's page
+/** what a page that is not a visit says of itself: `page`, the word its records are marked with ('tape' = the game's page
  *  playing a replay's tape); `uncaught`, it has no listeners of its own for an error nothing caught, so those are taken here; the build and the machine
  *  where the page knows them (a page that knows no build asks its server for the one small file a build carries, when it first has something to say) */
 export interface PageReports { page: string; uncaught?: boolean; build?: () => string | undefined; machine?: () => unknown }
 let pageFatal: ((r: FatalReport) => FatalSent) | null = null;
 /** A PAGE THAT IS NOT A VISIT ANYBODY PLAYED REPORTS WHAT GOES WRONG ON IT (report.ts: `reportError` from any file, and the page's console, tapped here):
- *  the replay viewer, and the game's page while it plays a replay's tape — neither boots the backend's side, so until this their reports waited in the
+ *  the game's page while it plays a replay's tape — it boots no backend's side, so until this its reports waited in the
  *  page and went nowhere. They are `error` records under a name made for this page load, behind one `visit` record marked `page`.
  *  UNDER THE RECORDS' OWN WORDS, and narrower than a visit's: a backend, the browser's switch, `?cloud=0`, `?cloudstats=0` on this page's address (a
- *  tape's page carries the OFF words its tape was recorded under: replay/engineplay.ts tapeSearch) OR on the address of the game's page this tab was
- *  on last (`tabSaysOff`: the viewer's own address carries no words), AND the notice already read in this browser or the sending its own choice — such
+ *  tape's page carries the OFF words its tape was recorded under) OR on the address of the game's page this tab was
+ *  on last (`tabSaysOff`), AND the notice already read in this browser or the sending its own choice — such
  *  a page cannot show the notice, so a browser that has not read it sends nothing from here and the reports stay in the page.
  *  NOTHING IS ASKED OF THE BACKEND UNTIL THERE IS A REPORT: a page with nothing to say makes no request. No frame is counted and no `end` is written, so
  *  a report here is its first coming and carries no count. Resolves true where this page's reports go up; never rejects. Once a page */
@@ -408,7 +405,7 @@ type ReportMore = { where?: string; level?: string; stack?: string[]; data?: unk
  *  of their own, as before: a note goes only for a visit that may go, a Send is a press) */
 const SS_OFF = 'twopointsix.cloud.off';
 function tabMark(q: URLSearchParams): void {
-  // (only a visit somebody plays takes the mark off again: the game's page playing a tape — `?playtape`, replay/engineplay.ts — is one of the pages a
+  // (only a visit somebody plays takes the mark off again: the game's page playing a tape — `?playtape` — is one of the pages a
   // visit leads to, and its address is the tape's)
   try { if (off(q.get('cloud')) || off(q.get('cloudstats'))) sessionStorage.setItem(SS_OFF, '1'); else if (!q.has('playtape')) sessionStorage.removeItem(SS_OFF); } catch { /* no session storage: nothing remembered */ }
 }
@@ -428,7 +425,7 @@ export async function cloudCarries(q: URLSearchParams, sid: string | undefined):
   try { await cloudFind(); return !!sid && !!notesUrl(q) && visitsNow().includes(sid); } catch { return false; }
 }
 
-/** THE PAGE'S BOOT of the backend's side (main.ts, once, after the replay key is up). null = this build or this visit has no backend: nothing was made */
+/** THE PAGE'S BOOT of the backend's side (host/drawcloud.ts, once). null = this build or this visit has no backend: nothing was made */
 export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const url = cloudUrl(q), store = ls(); if (!url || !store) return null;
   const pid = cloudPid(), W = wire(url);
@@ -457,7 +454,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });
   const save: Cloud['save'] = (name, blob, kind, meta, done) => filesOn() && replayMay(q, kind, meta) ? savedWord(files.add(name, blob, kind, meta, done)) : 'off';
   // (what the player wrote on a replay rides with the replays: their word, their list of visits that may go)
-  const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid), file: (n, b, k, m) => files.add(n, b, k, m) === 'now' }) : null;
+  const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows() }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 

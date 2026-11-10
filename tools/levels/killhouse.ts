@@ -1,6 +1,6 @@
 // KILLHOUSE — 'The kill house': a small shoot house on a range, run AGAINST A CLOCK. Five small rooms off one short corridor that a ply partition and a
 // door cut in two; a front door on the corridor's west end and a back door into the mess; six defenders dealt afresh every
-// visit (roomclear.ts ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (game/par.ts) times the run from the first thing anybody does
+// visit (rust/game_rules/src/missions/roomclear.rs ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (rust/game_rules/src/missions/par.rs) times the run from the first thing anybody does
 // to 'structure taken', adds seconds for every teammate lost, and names a medal.
 //
 //        x 12        17.5        23         28
@@ -18,22 +18,38 @@
 //   lights: every room lit, both halls dark · garrison: tyres 1 · bunks 1 · radio 1 · store 1 · mess 2
 //
 //   bun run tools/levels/export.ts killhouse [--check]      → levels/killhouse.json
-//   page: ?levelFile=killhouse.json&roomclear&squad4        (&way=2: the back door · &nopar: the room clear alone)
+//   page: ?levelFile=killhouse.json&roomclear&squad4        (&way=2: the back door)
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a training shoot house on a forward base — a sandbagged shell, raw plywood partitions, barricades, crates and targets, packed earth underfoot,
+// a HESCO backstop. What it alone has: THE RANGE'S OWN MARKING PAINT, violet, on the ground only, and white engineer tape. Every mark is read off the level's
+// data where it is laid (the level as the skin is handed it: scenarios.roomClear and the doors), so a mark cannot say what the level does not:
+//   · A START BOX at EVERY way in (the structure's `team` and each of `starts[]`), all drawn alike — none is numbered, none is 'the' start — with a tape toe
+//     line where each of the five stands, on the side he faces;
+//   · A NUMERAL at each held room's door, on the side the team comes to it from, its top to the door: the room's place in the level's own room list (1 tyres ·
+//     2 bunks · 3 radio · 4 store · 5 mess — each room's own door is named for the room). A room with two doors wears its numeral at both
+//     (the mess: at 'mess' and outside 'back');
+//   · THE CLEAR LINE: one violet line across each of those doors on the room's side — past it a man is in the room;
+//   · THE FIRING LINE east of the house, in front of the three ply targets: a band of violet and tape blocks, and a toe line square to each target.
+// No letters, no lane lines, no bays, no tiles, no bands at a door. No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, ParData, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { KitViewData, LevelScenarios, ParData, Rect, StructureData, TeamStart } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { PANEL_GREY } from '../../src/scene/stuff';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
+import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'killhouse';
-export const NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
+const PLAIN_NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
 
-/** THE PAR (game/par.ts): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
- *  (rebuild/missions/new/killhouse.md has the spread: clocks 39‥141 s, median 85 careful and 66 straight at the doors): gold is a fast
+/** THE PAR (rust/game_rules/src/missions/par.rs): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
+ *  (the spread: clocks 39‥141 s, median 85 careful and 66 straight at the doors): gold is a fast
  *  run with nobody lost, silver a clean run at the careful median, bronze a clean slow one or a quick one that lost a man; a man lost costs the gold-to-silver gap (25 s),
  *  so one man lost is one medal */
 export const PAR: ParData = { gold: 65, silver: 90, bronze: 120, lossSecs: 25 };
@@ -62,11 +78,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- walls: a blockwork shell 0.24 thick, painted ply partitions 0.12 ----
   grp('walls.exterior');
-  // ANOTHER WAY IN (tools/qa/second-way-check.ts): the four rooms with one door each have a WINDOW on an outside wall — glass from a 0.15 m kerb (a walker is stopped by anything standing 0.2 m high) to just under
+  // ANOTHER WAY IN (rust/game_start levels second-way): the four rooms with one door each have a WINDOW on an outside wall — glass from a 0.15 m kerb (a walker is stopped by anything standing 0.2 m high) to just under
   // door-head height, so once it is shot out a man steps through it — on the far side from their doors and away from both ready lines (the store's stands west of every line from a mark inside to a man on the back door's ready line): a door wedged from inside is then
   // one choice, and the walk round to the glass, against the clock, is the other. Glass and not a second door: a door into the store was measured to cost the
   // team men (below); a pane is no way out for the man inside and no way for anybody's feet until it is broken.
-  const port = (a: number) => ({ a, b: a + 1.2, y0: 0.15, y1: 1.88, glass: 'whole' as const });   // (its head under 1.9 m: tools/qa/door-size.ts reads a taller hole with no sill of 0.3 m as a doorway without a leaf)
+  const port = (a: number) => ({ a, b: a + 1.2, y0: 0.15, y1: 1.88, glass: 'whole' as const });   // (its head under 1.9 m: levels doors reads a taller hole with no sill of 0.3 m as a doorway without a leaf)
   wallX(7, 11.88, 28.12, 0.24, C.concrete, [port(14.7), port(18.8), port(24.1)]);                   // north: tyres, bunks, radio
   wallX(20, 11.88, 28.12, 0.24, C.concrete, [port(14.6), { a: 24.6, b: 25.8, y0: 0, y1: 2.2 }]);    // south: the store's window; the back door
   wallZ(12, 7, 20, 0.24, C.concrete, [{ a: 12.6, b: 13.8, y0: 0, y1: 2.2 }]);                      // west: the front door
@@ -130,7 +146,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- doors (closedDir 0: the leaf runs +x from the hinge along a z-wall; π/2: +z along an x-wall) ----
   const doors: LevelDoorDef[] = [
     { name: 'front', hinge: [12.0, 12.62], closedDir: Math.PI / 2, width: 1.16, exterior: true },
-    { name: 'back', hinge: [24.62, 20.0], closedDir: 0, width: 1.16, exterior: true, swing: 1 },   // opens outward: the mess's men can wedge 'mess' alone (tools/qa/second-way-check.ts)
+    { name: 'back', hinge: [24.62, 20.0], closedDir: 0, width: 1.16, exterior: true, swing: 1 },   // opens outward: the mess's men can wedge 'mess' alone (rust/game_start levels second-way)
     { name: 'tyres', hinge: [14.02, 12.0], closedDir: 0, width: 1.16 },
     { name: 'bunks', hinge: [19.62, 12.0], closedDir: 0, width: 1.16 },
     { name: 'radio', hinge: [25.02, 12.0], closedDir: 0, width: 1.16 },
@@ -140,9 +156,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // THE RANGE ROUND THE HOUSE. The house's five rooms have their things; the ground round it had a table, a bench, one line of sandbags and the butts. What a
-  // range is made of stands on it now, in the look's own kit (src/scene/gwotKit.ts, so a tyre and a drum are round): the READY LINE is where a detail waits its
+  // range is made of stands on it now, in the look's own kit (lib/gwotKit.ts, so a tyre and a drum are round): the READY LINE is where a detail waits its
   // turn (ammunition crates by the table, the water can, the drum the empty cases go in, the tyres nobody has carried round to the house yet), the SOUTH side
   // has the end of its sandbag line and the stones cleared off the back way in, the BUTTS have lane markers past the firing line, a sandbag return at each end
   // of the backstop and the spall at its foot, and the dark NORTH side is where the house's spares lie (block for the next wall, timber for the barricades).
@@ -239,3 +255,57 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   return { level, scenarios: { roomClear, par: { ...PAR }, kitView: KILLHOUSE_KITVIEW }, groups: trace.groups, surfaces };
 }
 function norm(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'killhouse';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES} — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the floor's.`;
+/** the range's marking paint. The palette (src/scene/gwotPalette.ts) has no paint of this hue, so it is a colour of this file's own and only decals wear it;
+ *  the outside doors' paint is this, darker: rust/game_rules/src/fittings/doors/paint.rs */
+const VIOLET: Vec3 = [0.42, 0.2, 0.66];
+/** the three ply targets' lanes (tools/levels/killhouse.ts, group 'range': targets at x 33.4) and where the firing line lies, between the east wall's foot and them */
+const TARGET_Z = [10.4, 13.5, 16.6], FIRE_X = 29.5;
+const SKIN: Skin = {
+  wall: 'sandbag', house: 'ply', inner: 'ply', frameOut: 'woodGrey', frameIn: 'poplar', dado: null, ground: 'dust', verge: 'dirt', patches: 6,
+  floor: { lino: 'dirt' },
+  noRug: /./, metals: ['olive', 'iron', 'rust'],
+  // (the two halves of the corridor: the scuffed band along a hall's walls — the scenarios name the held rooms only)
+  rooms: [{ id: 'front hall', bounds: { x0: 12.12, x1: 21.54, z0: 12.06, z1: 14.44 } }, { id: 'far hall', bounds: { x0: 21.66, x1: 27.88, z0: 12.06, z1: 14.44 } }],
+  // plywood for everything the floor has in wood (the barricade, the crates, the targets, the table tops), sandbags and a HESCO berm on the range
+  pick: c => c.name === 'wood' ? 'ply' : c.group === 'range' && c.name === 'partTan' ? 'sandbag' : c.group === 'range' && c.name === 'concrete' ? 'hesco' : undefined,
+  dress: (G, level, T) => {
+    const M = lookMarks(T), tape = saidAs('paint', T.tone(P.plasticWhite, 0.9)), worn = T.tone(VIOLET, 0.8);
+    const rc = (level.scenarios as LevelScenarios | undefined)?.roomClear; if (!rc) throw new Error('killhouse: the level carries no room clear to read its marks off');
+    // THE GROUND A RANGE WEARS, laid before any paint so the marks lie on it: the range road along the south edge and the spur a truck backs up toward the
+    // ready line (wheels), the beat the details walk round the house a stride off its walls and out to the firing line (feet), and gravel raked between the
+    // firing line and the targets. Each is the lot's own earth darker, or a second finish: nothing here is a colour.
+    { const lot = T.floorAt(9, 24) ?? P.dust;
+      /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
+      const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };
+      G.ruts(0.6, 26.5, 39.4, 26.5); G.ruts(3.2, 25.6, 3.2, 17.4);
+      beat([[9.1, 15.3], [9.1, 21.9], [29.0, 21.9], [29.0, 18.5]]);          // round the south side, past the back door's box, to the line
+      beat([[9.1, 11.1], [9.1, 5.6], [29.0, 5.6], [29.0, 8.5]]);             // round the dark north side, under the windows
+      M.fill(29.9, 8.7, 33.0, 18.3, P.gravel); }
+    /** where a man stands: a tape line half a metre long, a short stride ahead of his feet, square to the way he faces (yaw: he faces (sin, cos)) */
+    const toe = (p: Vec3 | [number, number], yaw: number) => { const x = p[0], z = p[p.length - 1], fx = Math.sin(yaw), fz = Math.cos(yaw), cx = x + fx * 0.3, cz = z + fz * 0.3;
+      M.seg(cx - fz * 0.25, cz + fx * 0.25, cx + fz * 0.25, cz - fx * 0.25, 0.07, tape); };
+    // A START BOX at every way in, all alike
+    const ways = [rc.team, ...(rc.starts ?? [])].filter((w): w is TeamStart => !!w);
+    for (const w of ways) { const men: Vec3[] = [w.sam, ...(w.ops ?? [])], PAD = 0.7;
+      const x0 = Math.min(...men.map(p => p[0])) - PAD, x1 = Math.max(...men.map(p => p[0])) + PAD, z0 = Math.min(...men.map(p => p[2])) - PAD, z1 = Math.max(...men.map(p => p[2])) + PAD;
+      M.outline(x0, z0, x1, z1, 0.1, VIOLET);
+      toe(w.sam, w.samYaw); for (const p of w.ops ?? []) toe(p, w.opsYaw ?? w.samYaw); }
+    // A NUMERAL and THE CLEAR LINE at every door of every held room, in the room list's own order
+    rc.rooms.forEach((room, k) => { if (k > 8) return; const b = room.bounds, rx = (b.x0 + b.x1) / 2, rz = (b.z0 + b.z1) / 2;
+      for (const rd of room.doors) { const d = level.doors.find(q => q.name === rd.id); if (!d) throw new Error(`killhouse: room '${room.id}' names a door '${rd.id}' the level has not`);
+        const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir), mx = d.hinge[0] + ux * d.width / 2, mz = d.hinge[1] + uz * d.width / 2;
+        // (the door's normal, away from the room)
+        let nx = -uz, nz = ux; if ((mx + nx - rx) ** 2 + (mz + nz - rz) ** 2 < (mx - nx - rx) ** 2 + (mz - nz - rz) ** 2) { nx = -nx; nz = -nz; }
+        M.glyph(String(k + 1), mx + nx * 0.8, mz + nz * 0.8, 0.55, VIOLET, Math.atan2(nx, nz));
+        const L = d.width / 2 + 0.25; M.seg(mx - nx * 0.45 - ux * L, mz - nz * 0.45 - uz * L, mx - nx * 0.45 + ux * L, mz - nz * 0.45 + uz * L, 0.1, worn); } });
+    // THE FIRING LINE in front of the targets: a band along it, a toe line square to each target (a firer faces +x: yaw π/2)
+    M.hazard(FIRE_X - 0.15, TARGET_Z[0] - 1.55, FIRE_X + 0.15, TARGET_Z[2] + 1.55, VIOLET, tape, 0.31);
+    for (const z of TARGET_Z) toe([FIRE_X - 0.75, z], Math.PI / 2);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

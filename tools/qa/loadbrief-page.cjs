@@ -1,6 +1,6 @@
-// THE LOAD BRIEF ON THE REAL PAGE (src/ui/loadbrief.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe), a mission's own
+// THE LOAD BRIEF ON THE REAL PAGE (src/ui/loadbrief.ts): headless Chromium on the software WebGPU adapter, a mission's own
 // address loaded as a visitor loads it — no ?paused, no ?mute — once for each kind of mission, each started another way.
-//   PORT=5199 node tools/qa/loadbrief-page.cjs [outDir]      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs)
+//   PORT=5199 node tools/qa/loadbrief-page.cjs [outDir]      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs; with no word night breach and tutorial, a boot each; JOBS=all every kind)
 //   night breach · room clear · rescue · quiet · tutorial · solo night
 //            from the first tick the page shows that mission's brief (its id, its title, a place and a job in words, the map of its level) and no controls list; when
 //            the boot is done the block is live and the world behind it holds still (the game's clock does not move over drawn frames); then it is started —
@@ -11,16 +11,14 @@
 //   paused   the automation boot (?paused&mute): no brief at any point, and a script's frames run
 // exit 0 = every job, with no page error · 1 = otherwise. LOADBRIEF_BREAK=1 loads the brief jobs with the switch off: they must FAIL.
 // THE FRAMES ARE NOT DRAWN unless REAL=1: the software adapter takes minutes over one frame of the level, and nothing here reads one — the page's own loop
-// runs every frame of the game with the renderer's draw put aside from the moment the boot is done (carlamps-page.cjs's STEP, for the whole run). REAL=1
+// runs every frame of the game with the renderer's draw put aside from the moment the boot is done. REAL=1
 // leaves the renderer alone: the same verdicts over drawn frames, for one job at a time and a long wait.
 // Game logic and DOM only: nothing here judges a picture of the level. With an outDir it keeps a still of each brief as Chromium lays it out (the brief is
 // plain DOM, so that still is the brief; the level behind it has never been seen on a GPU by this tool).
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const PAGE = require('./page.cjs').page({ name: 'loadbrief-page' }), { check, note: log } = PAGE;
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.LOADBRIEF_BREAK === '1', REAL = process.env.REAL === '1';
-const ONLY = (process.env.JOBS || '').split(',').map(s => s.trim()).filter(Boolean);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+const QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.LOADBRIEF_BREAK === '1', REAL = process.env.REAL === '1';
+const ONLY = (process.env.JOBS === 'all' ? '' : process.env.JOBS || 'night breach,tutorial').split(',').map(s => s.trim()).filter(Boolean);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
 
 const JOBS = [
@@ -42,20 +40,18 @@ const SEEN = () => { const b = document.getElementById('brief'), t = (s) => (b &
       const cr = c.getBoundingClientRect(), want = Math.max(480, Math.round(cr.width * devicePixelRatio)); if (Math.abs(c.width - want) > 2 || Math.abs(cr.height / cr.width - 0.7) > 0.01 || cr.bottom > innerHeight + 1) return false;
       try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4 * 101) if (d[i] > 40) n++; return n > 200; } catch (e) { return false; } })(),
     level: b && b.querySelector('.bpic canvas') ? b.querySelector('.bpic canvas').getAttribute('data-level') : null, start: t('.bgo span'), status: t('.bstatus'),
-    menu: document.getElementById('menu').classList.contains('on'), controlsList: document.querySelectorAll('#menu .controls .row').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
+    menu: document.getElementById('menu').classList.contains('on'), bootHead: !!document.querySelector('#menu .head') && !!document.querySelector('#menu .bootstatus'), buttons: document.querySelectorAll('#menu .actions button').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
     fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
 // in the page: the game's clock after two drawn frames (so a clock that did not move is a held world, not a page that drew nothing)
-const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__input.keys], pressed: [...window.__input.pressed] }; };
+const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__draw.input.keys], pressed: [...window.__draw.input.pressed] }; };
 const centre = (page, sel) => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, sel);
 const runs = async (page, from, secs = 300) => { for (const end = Date.now() + secs * 1000; Date.now() < end;) { const c = await page.evaluate(CLOCK); if (c.t > from + 1e-6) return c; await page.waitForTimeout(500); } return null; };
 
 (async () => {
-  let red = 0; const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   for (const job of JOBS) {
-    const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
-    const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
+    const { page, errors: errs } = await PAGE.open({ size: [1024, 576], errors: { skip: /Failed to load resource/ } });
     const brief = !job.off && !job.paused, query = (BREAK && brief ? 'loadbrief=0&' : '') + job.query;
-    const url = `http://localhost:${PORT}/?${query}&quality=${QUALITY}`; log(`${job.name}: ${url}`);
+    const url = PAGE.url(`${query}&quality=${QUALITY}`); log(`${job.name}: ${url}`);
     const r = {}; let ok = false, why = '';
     try {
       await page.goto(url, { waitUntil: 'commit' });
@@ -88,26 +84,23 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
     const clean = !errs.length && !(r.after && r.after.fatal);
     if (r.err) why = r.err;
     else if (!clean) why = `page errors: ${errs.slice(0, 3).join(' | ') || r.after.fatal}`;
-    else if (job.off) { ok = !r.boot.brief && r.boot.controlsList > 5 && !r.ready.brief && !!r.clock && !r.after.brief && !r.after.menu; why = JSON.stringify({ boot: r.boot.brief, rows: r.boot.controlsList, ran: !!r.clock, menu: r.after.menu }); }
+    else if (job.off) { ok = !r.boot.brief && r.boot.bootHead && r.boot.buttons === 0 && !r.ready.brief && !!r.clock && !r.after.brief && !r.after.menu; why = JSON.stringify({ boot: r.boot.brief, head: r.boot.bootHead, buttons: r.boot.buttons, ran: !!r.clock, menu: r.after.menu }); }
     else if (job.paused) { ok = !r.boot.brief && !r.ready.brief && Math.abs(r.ran - 5 / 60) < 1e-6 && !r.after.brief; why = JSON.stringify({ boot: r.boot.brief, ready: r.ready.brief, ran: r.ran }); }
     else {
-      const words = r.boot.brief && r.boot.id === job.id && r.boot.title === job.title && r.boot.place.length > 8 && (job.scene ? r.boot.scene.length > 20 && r.boot.teach >= 1 && !r.boot.job : r.boot.job.length > 20 && r.boot.facts.length >= 2) && r.boot.start === 'Start' && !r.boot.menu && r.boot.controlsList === 0;
+      const words = r.boot.brief && r.boot.id === job.id && r.boot.title === job.title && r.boot.place.length > 8 && (job.scene ? r.boot.scene.length > 20 && r.boot.teach >= 1 && !r.boot.job : r.boot.job.length > 20 && r.boot.facts.length >= 1) && r.boot.start === 'Start' && !r.boot.menu;
       const gone = !r.after.brief && !r.after.menu && !!r.clock && r.clock.held.length === 0;
       let mid = true;
       if (job.how === 'early') mid = /live/.test(r.early.was) || (/armed/.test(r.early.cls) && r.early.brief);   // (pressed while it boots: kept, and nothing more is asked of the player; on a machine that booted before the press could be made, the press was an ordinary start)
-      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && (r.still.level || '').replace(/-gwot(?=\.json$)/, '') === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
+      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && r.still.level === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
       if (job.how === 'controls') mid = mid && r.keysUp.options && r.keysWords.length > 200 && /sprint/i.test(r.keysWords) && !r.keysShut.options && r.keysShut.brief && !r.keysShut.menu && r.keysClock === r.heldFor[1] && /bgo/.test(r.keysFocus);
       if (job.how === 'script') mid = mid && Math.abs(r.script - 3 / 60) < 1e-6;
       ok = words && mid && gone;
       why = JSON.stringify({ words, id: r.boot.id, title: r.boot.title, map: r.still ? (r.still.picture ? r.still.level : 'NONE') : undefined, live: r.ready.cls, held: r.heldFor, mid, gone, after: { brief: r.after.brief, menu: r.after.menu }, clock: r.clock && +r.clock.t.toFixed(3), keys: r.clock && r.clock.held });
     }
-    if (!ok) red++;
-    const says = job.off ? 'under ?loadbrief=0: no brief, the old card and its controls list while it boots, the run under way with nothing pressed'
+    const says = job.off ? 'under ?loadbrief=0: no brief, the title\'s head and the status line with no buttons while it boots, the run under way with nothing pressed'
       : job.paused ? 'the automation boot: no brief at any point, a script\'s frames run'
       : `${job.name}: its own brief from the first tick, held until started (${job.how}), then the run`;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${says} — ${why}`);
+    check(ok, `${says} — ${why}`);
   }
-  await browser.close();
-  console.log(`=== loadbrief-page: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
-  process.exit(red ? 1 : 0);
+  await PAGE.end(`=== loadbrief-page: ${PAGE.fails ? 'FAILURES above' : 'ALL PASS'} ===`);
 })();

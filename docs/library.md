@@ -2,16 +2,16 @@
 
 WRITTEN BY `bun run tools/levels/library.ts --write` FROM THE KITS. Do not edit: change the kit, then write it again (`--check` is red when this page is stale).
 
-186 pieces in 6 kits, 115 named paints in 6 tables.
+187 pieces in 6 kits, 115 named paints in 6 tables.
 A piece is something a level asks a kit for by name. Each row is one call laid alone: the call a showroom makes.
 
 - **To a man**, read off the boxes as laid: *solid to h* = feet, sight, rounds and sound meet it, up to h metres; *off the floor* = solid, but nothing of it comes
   down to the floor (it is laid on furniture or on a wall); *glass* = sight passes it, feet and sound do not; *walked over* = solid but under 0.2 m;
   *loose* = a body a man shoves and a blast throws; *drawn only* = no ray and no foot meets it; *lit* = it adds a lamp or a lit fixture.
 - **Size** is length × width × height in metres of the call that was laid. A wall, a rug or a line is as long as it was asked for.
-- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things the round rule finds, marking bitmaps, lamps.
+- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things, marking bitmaps, lamps.
 - **Paints** are rows of the tables under Paints below, most boxes first; `row × 0.60` is a row darkened; a colour a kit writes as numbers shows as its numbers.
-- **The showrooms**: `?levelFile=gwot-yard.json&solo&hour=midday` and `?levelFile=library-hall.json&solo&hour=midday`. Between them one of each piece stands, and its line in the
+- **The showrooms**: `tools/levels/gwot-yard.ts` and `?levelFile=library-hall.json&solo&hour=midday`. Between them one of each piece stands, and its line in the
   showroom's generator is the call to copy.
 - Which level lays which piece is not on this page (it moves with every generator): `bun run tools/levels/library.ts --uses FILE` writes it.
 
@@ -19,8 +19,8 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
-| gwotKit | `src/scene/gwotKit.ts` | 79 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
-| officeKit | `src/scene/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
+| gwotKit | `tools/levels/lib/gwotKit.ts` | 80 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
+| officeKit | `tools/levels/lib/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
 | livedQuiet | `tools/levels/lived-quiet.ts` | 11 |  |
@@ -38,7 +38,7 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | chest | livedPieces, livedTrain | 1.06 × 0.66 × 0.9 · 0.58 × 0.38 × 0.32 |
 | cone | livedKit, livedPieces | 0.34 × 0.34 × 0.56 · 0.3 × 0.3 × 0.49 |
 | crate | livedKit, livedPieces | 0.8 × 0.5 × 0.47 · 0.5 × 0.5 × 0.42 |
-| drum | gwotKit, livedKit | 0.56 × 0.56 × 0.88 · 0.56 × 0.56 × 0.89 |
+| drum | gwotKit, livedKit | 0.57 × 0.57 × 0.88 · 0.56 × 0.56 × 0.89 |
 | ladder | gwotKit, livedPieces | 0.6 × 0.44 × 2.84 · 2.4 × 0.46 × 0.07 |
 | mat | livedKit, livedQuiet | 1.4 × 1 × 0.02 · 1.6 × 0.9 × 0.01 |
 | mug | livedKit, livedQuiet | 0.07 × 0.07 × 0.09 · 0.08 × 0.08 × 0.1 |
@@ -47,7 +47,7 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | shelf | officeKit, livedQuiet | 1.6 × 0.4 × 1.9 · 2 × 0.36 × 1.5 |
 | stool | livedKit, livedPieces, livedQuiet, livedTrain | 0.34 × 0.34 × 0.47 · 0.36 × 0.36 × 0.48 · 0.34 × 0.34 × 0.34 · 0.34 × 0.34 × 0.42 |
 | table | gwotKit, livedKit, livedPieces, livedTrain | 1.6 × 0.75 × 0.75 · 1.8 × 0.7 × 0.74 · 2 × 0.9 × 0.74 · 1.8 × 0.8 × 0.75 |
-| tyres | gwotKit, livedKit | 0.68 × 0.64 × 0.6 · 0.68 × 0.68 × 0.6 |
+| tyres | gwotKit, livedKit | 0.69 × 0.68 × 0.6 · 0.67 × 0.67 × 0.6 |
 
 ## One piece, handed out by more than one kit
 
@@ -66,7 +66,7 @@ It is no second way of building the name.
 
 ## gwotKit
 
-`src/scene/gwotKit.ts`
+`tools/levels/lib/gwotKit.ts`
 
 ### gwotKit: walls
 
@@ -132,15 +132,15 @@ It is no second way of building the name.
 | **plasticChair**(x, z, yaw = 0, colour = 'plasticWhite') | PROP (chair): a moulded PLASTIC CHAIR — seat, back, two arms, four splayed legs; the sitter faces local −Z | loose | 0.49 × 0.45 × 0.82 | 1 loose (8 parts) | plasticGreen | gwot-yard |
 | **chairAs**(x, z, yaw, seat = 'plasticWhite', foot = seat) | PROP (chair): the OFFICE chair's own five boxes in other paint — same footprint, mass and shape, so a finished level can swap its chairs' look and keep every run as it was (the pedestal reads as a plastic stool's foot) | loose | 0.51 × 0.5 × 1.1 | 1 loose (5 parts) | plasticBlue | gwot-yard |
 | **trunk**(x, z, yaw = 0, paint = 'paintGreen') | COVER (knee high): a painted tin TRUNK 0.8 × 0.45 × 0.4 with strap bands and a hasp | solid to 0.4 | 0.8 × 0.45 × 0.4 | 1 solid, 2 markings | paintGreen | gwot-yard |
-| **stove**(x, z) | COVER: a cast-iron STOVE (bukhari) with its flue to the roof — the winter corner of a room | solid to 3 | 0.4 × 0.4 × 3 | 8 solid, 1 round | rust, GWOT_PALETTE.iron, GWOT_PALETTE.tin | gwot-yard |
-| **tandoor**(x, z) | COVER: a clay bread OVEN (tandoor), a mud drum 0.9 across and 0.55 high with a black mouth | solid to 0.55 | 1.5 × 1.4 × 0.55 | 4 solid, 1 drawn, 1 round, 1 marking | mudDark, damp | gwot-yard |
+| **stove**(x, z) | COVER: a cast-iron STOVE (bukhari) with its flue to the roof — the winter corner of a room | solid to 3 | 0.41 × 0.41 × 3 | 5 solid, 1 round | GWOT_PALETTE.iron, GWOT_PALETTE.tin, rust | gwot-yard |
+| **tandoor**(x, z) | COVER: a clay bread OVEN (tandoor), a mud drum 0.9 across and 0.55 high with a black mouth | solid to 0.55 | 1.5 × 1.4 × 0.55 | 1 solid, 1 drawn, 1 round, 1 marking | damp, mudDark | gwot-yard |
 
 ### gwotKit: stores & cover
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) | solid to 0.88 | 0.56 × 0.56 × 0.88 | 4 solid, 1 round, 16 markings | drumRed | library-hall |
-| **drums**(x, z, n = 3, yaw = 0) | a group of drums: n standing in a tight cluster from (x, z), colours dealt by position | solid to 0.88 | 1.54 × 1.18 × 0.88 | 16 solid, 4 round, 64 markings | rust, drumBlue, olive | gwot-yard |
+| **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) | solid to 0.88 | 0.57 × 0.57 × 0.88 | 1 solid, 1 round, 4 markings | drumRed | library-hall |
+| **drums**(x, z, n = 3, yaw = 0) | a group of drums: n standing in a tight cluster from (x, z), colours dealt by position | solid to 0.88 | 1.57 × 1.17 × 0.88 | 4 solid, 4 round, 16 markings | rust, drumBlue, olive | gwot-yard |
 | **drumDown**(x, z, yaw = 0, colour = 'rust') | COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked, 0.88 long along local X. Steel in any paint (`steelIn`). Hands back its top, so a level lays snow or dust along it with `lay` | solid to 0.58 | 0.88 × 0.64 × 0.58 | 3 solid | woodGrey, rust | gwot-yard |
 | **jerryCan**(x, z, yaw = 0, colour = 'olive') | PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything | loose | 0.34 × 0.16 × 0.45 | 1 loose (3 parts), 2 markings | olive, GWOT_PALETTE.iron | gwot-yard |
 | **gasBottle**(x, z, colour = 'drumRed') | PROP (bin): a GAS BOTTLE (LPG), 0.3 across with its collar | loose | 0.4 × 0.4 × 0.62 | 1 loose (3 parts) | drumRed, GWOT_PALETTE.iron | gwot-yard |
@@ -150,12 +150,12 @@ It is no second way of building the name.
 | **hesco**(x, z, n = 2, yaw = 0) | COVER (full): HESCO bastions — n wire-and-liner cells of 1.1 m, 1.37 high, filled with earth, in a row along local x | solid to 1.41 | 2.19 × 1.1 × 1.41 | 4 solid, 8 markings | dirt, hesco | gwot-yard |
 | **jersey**(x, z, n = 1, yaw = 0) | COVER (crouch): JERSEY barriers — n precast 2 m lengths, 0.81 high, in a row along local x | solid to 0.81 | 2 × 0.6 × 0.81 | 2 solid, 2 markings | tWall | gwot-yard |
 | **tWall**(x, z, n = 3, yaw = 0, height = 2.9) | COVER (full): T-WALLS — n precast blast-wall segments 1.2 m wide and `height` tall, each on its foot, in a row along local x | solid to 2.9 | 4.78 × 0.84 × 2.9 | 8 solid | tWall | gwot-yard |
-| **tyres**(x, z, n = 3) | COVER (waist): a stack of TYRES, n high (0.2 m each). One lying alone is a fat one, 0.27 m (as the older kit's is): a solid that tops out between 0.20 and 0.25 m stops a body on a cell the nav grid calls free | solid to 0.6 | 0.68 × 0.64 × 0.6 | 12 solid, 3 round, 1 marking | GWOT_PALETTE.rubber | gwot-yard |
+| **tyres**(x, z, n = 3) | COVER (waist): a stack of TYRES, n high (0.2 m each). One lying alone is a fat one, 0.27 m (as the older kit's is): a solid that tops out between 0.20 and 0.25 m stops a body on a cell the nav grid calls free | solid to 0.6 | 0.69 × 0.68 × 0.6 | 3 solid, 3 round, 1 marking | GWOT_PALETTE.rubber | gwot-yard |
 | **blocks**(x, z, yaw = 0, layers = 2) | COVER (knee): a stack of concrete BLOCKS 0.8 × 0.4 × 0.4, cores up | solid to 0.4 | 0.8 × 0.4 × 0.4 | 1 solid, 3 markings | block | gwot-yard |
 | **woodPile**(x, z, yaw = 0, len = 1.4) | COVER (knee): a WOOD PILE — split poplar, three layers | solid to 0.42 | 1.41 × 0.6 × 0.42 | 3 solid, 9 markings | woodGrey | gwot-yard |
 | **pipes**(x, z, yaw = 0, n = 3, len = 1.8, r = 0.16) | COVER (knee to thigh): steel PIPES stacked along local X — n = 1‥3: two on the ground side by side and the third in the notch between them; one of the ground pair is rust. Their bores are dark at both ends. Hands back each pipe's top (`lay` puts snow along it) | solid to 0.59 | 1.89 × 0.65 × 0.59 | 3 solid | GWOT_PALETTE.iron, rust | library-hall |
 | **log**(x, z, yaw = 0, len = 1.0, r = 0.095, baseY = 0, bark = 'woodGrey', grain = 'poplar') | one LOG lying along local X, bark on, its ends pale grain. WALK-OVER at the default (0.19 across: a top between 0.20 and 0.25 m stops a body on a cell the nav grid calls free, so a single log is under that or over it); `baseY` lifts it onto a pile. Hands back its top | walked over | 1 × 0.19 × 0.19 | 1 solid | woodGrey | library-hall |
-| **choppingBlock**(x, z, yaw = 0) | COVER (knee): a CHOPPING BLOCK — a round of poplar 0.44 across and 0.32 high, its top scored | solid to 0.32 | 0.42 × 0.42 × 0.32 | 4 solid, 1 round, 1 marking | poplar | library-hall |
+| **choppingBlock**(x, z, yaw = 0) | COVER (knee): a CHOPPING BLOCK — a round of poplar 0.44 across and 0.32 high, its top scored | solid to 0.32 | 0.43 × 0.43 × 0.32 | 1 solid, 1 round, 1 marking | poplar | library-hall |
 | **plankBench**(x, z, yaw = 0, len = 1.12) | COVER (knee): a PLANK BENCH — a board across two stacks of mud brick, `len` long along local X | solid to 0.41 | 1.15 × 0.35 × 0.41 | 3 solid | mud, mudLight, poplar | library-hall |
 | **bricks**(x, z, yaw = 0, n = 5) | WALK-OVER: loose MUD BRICKS left where the work stopped, n of them, some on the others | walked over | 0.95 × 0.49 × 0.18 | 6 solid | mud, mudLight | library-hall |
 | **pot**(x, z, baseY = 0) | a cooking POT, sooted iron, 0.26 across (under 0.2 m of radius a round is two squares: `roundSlabs`); `baseY` stands it on a bench or a stove | off the floor | 0.34 × 0.34 × 0.14 | 2 solid | GWOT_PALETTE.iron | library-hall |
@@ -165,11 +165,11 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **generator**(x, z, yaw = 0, colour = 'genYellow') | COVER (waist): a diesel GENERATOR on its skid, 1.5 × 0.75 × 1.0: louvred sides, a control panel on local −Z, the exhaust stack | solid to 1.32 | 1.6 × 0.8 × 1.32 | 4 solid, 4 markings | GWOT_PALETTE.iron, genYellow, rust | gwot-yard |
-| **waterTank**(x, z, colour = 'plasticBlue', plinth = 1.1) | COVER (full): a WATER TANK — a 1 000 l plastic tank on a mud-brick plinth (`plinth` m high; 0 = on the ground) | solid to 2.2 | 1.32 × 1.32 × 2.26 | 7 solid, 1 round, 16 markings | plasticBlue, galv, mud, plasticBlack | gwot-yard |
+| **waterTank**(x, z, colour = 'plasticBlue', plinth = 1.1) | COVER (full): a WATER TANK — a 1 000 l plastic tank on a mud-brick plinth (`plinth` m high; 0 = on the ground) | solid to 2.2 | 1.32 × 1.32 × 2.26 | 4 solid, 1 round, 4 markings | galv, mud, plasticBlack, plasticBlue | gwot-yard |
 | **pump**(x, z, yaw = 0) | COVER: a hand PUMP on its concrete pad (the pad a walk-over) with a bucket | solid to 1.08 | 2.82 × 2.4 × 1.08 | 6 solid, 2 drawn | paintGreen, damp, block, GWOT_PALETTE.iron, plasticBlue | gwot-yard |
-| **pickup**(x, z, yaw = 0, body = 'truckWhite', opts = {}) | COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal gun in the bed (the "technical") | solid to 1.71 | 5.04 × 1.82 × 1.71 | 32 solid, 3 round, 2 markings | drumBlue, truckWhite, GWOT_PALETTE.rubber, rust, plasticBlack, plasticWhite, truckRed, glassDark | gwot-yard |
+| **pickup**(x, z, yaw = 0, body = 'truckWhite', opts = {}) | COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal gun in the bed (the "technical") | solid to 1.71 | 5.04 × 1.82 × 1.71 | 23 solid, 3 round, 2 markings | truckWhite, GWOT_PALETTE.rubber, plasticBlack, drumBlue, plasticWhite, truckRed, glassDark, rust | gwot-yard |
 | **van**(x, z, yaw = 0, body = 'truckWhite') | COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is local (−3.2, 0): where a man is put in) | solid to 1.95 | 5.63 × 2.65 × 1.95 | 23 solid | truckWhite, GWOT_PALETTE.rubber, plasticBlack, plasticWhite, truckRed, glassDark | library-hall |
-| **lorry**(x, z, yaw = 0) | COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` | solid to 1.95 | 6.68 × 2.34 × 2.2 | 20 solid | GWOT_PALETTE.rubber, poplar, truckRed, GWOT_PALETTE.iron, plasticWhite, glassDark, GWOT_PALETTE.canvas, woodGrey | gwot-yard |
+| **lorry**(x, z, yaw = 0) | COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every vehicle here it hands back the shapes its boxes say (tools/levels/lib/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` | solid to 1.95 | 6.68 × 2.34 × 2.2 | 20 solid | GWOT_PALETTE.rubber, poplar, truckRed, GWOT_PALETTE.iron, plasticWhite, glassDark, GWOT_PALETTE.canvas, woodGrey | gwot-yard |
 | **motorbike**(x, z, yaw = 0, tank = 'truckRed') | COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X | solid to 1.04 | 1.96 × 0.64 × 1.04 | 10 solid | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, galv, plasticBlack, truckRed | gwot-yard |
 | **handcart**(x, z, yaw = 0, load = 'none') | COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing | solid to 0.97 | 2.52 × 1.11 × 0.97 | 9 solid, 2 markings | sack, woodGrey, GWOT_PALETTE.rubber, poplar | gwot-yard |
 | **stall**(x, z, yaw = 0, w = 2.2, awning = 'tarpBlue') | COVER (waist at the counter): a MARKET STALL `w` wide: a skirted counter of produce trays on local −Z, the keeper's striped awning on four poles behind it | solid to 2.15 | 2.5 × 2.13 × 2.18 | 15 solid, 10 markings | ply, woodGrey, GWOT_PALETTE.canvas, poplar, tarpBlue | gwot-yard |
@@ -186,10 +186,11 @@ It is no second way of building the name.
 | **lantern**(x, z, name, group, baseY = 0, on = true) | a hurricane LANTERN standing on something `baseY` high (0 = the floor; a low table 0.3, a table 0.75): a small warm light, its own fuel (not the mains) | off the floor, lit | 0.14 × 0.14 × 0.29 | 1 solid, 2 drawn, 1 lamp | paintBlue, plasticWhite | gwot-yard |
 | **tube**(x, z, alongX, group, on = true, flicker = false) | a bare fluorescent TUBE under a roof (light-only, like the kits' ceiling panels — the camera looks through the roof): a switchable in `group` | overhead, lit | 1.2 × 0.1 × 0.04 | 1 solid, 1 fixture | plasticWhite | gwot-yard |
 | **floodLight**(x, z, dir, name, on = true, height = 3.4, mains = false) | a work FLOODLIGHT on a pole `height` tall at (x, z), thrown along `dir` (an XZ direction): white, wide, off the yard's own supply (group 'exterior') | solid to 3.4, lit | 0.32 × 0.23 × 3.52 | 2 solid, 1 drawn, 1 lamp | galv, plasticBlack, plasticWhite | gwot-yard, library-hall |
+| **yardLamp**(x, z, name, o = {}) | a yard LAMP: a pole with a shaded head on an arm, throwing a POOL straight down (about 7 m across the ground at the default cone) and little past it: a thing to walk round, where the floodLight washes a whole yard. The HEAD hangs at (x, z), not the pole: the pole stands `reach` from it along `axis` ('z' and -0.6, north, unless said), so the light is under the head with nothing solid round it and the pole's thin shadow falls away from the pool's middle. The arm ENDS AT the pole's face and at the head's: it runs into neither, so no top of the three lies in another's. A fixture like any other: a round or the OCP puts it out. Options: `on`; `mains` (the breaker takes it too; its own supply unless said); `height` of the lens (3.4); `axis` and `reach`; `pole`, its half width (0.04); `outerDeg` (52) and `innerDeg` (22 under it); `intensity` (90); `range` (9); `color`; `volumetric`; `group` ('exterior'). Returns the lens (the light's fixture box) and the head's `top`, for what a level lays on it | solid to 3.51, lit | 0.84 × 0.4 × 3.51 | 3 solid, 1 drawn, 1 lamp | galv, plasticBlack, plasticWhite | library-hall |
 
 ## officeKit
 
-`src/scene/officeGen.ts`
+`tools/levels/lib/officeGen.ts`
 
 ### officeKit: glass
 
@@ -252,7 +253,7 @@ It is no second way of building the name.
 | **band**(axis, line, a, b, side, y0, y1, paint, t = 0.24, proud = 0.008, solid = false) | DECAL: a BAND on a wall's face from a to b, y0‥y1: a painted dado or plinth (hand it the WALL'S OWN stuff in the new colour, `saidAs`: the wall's joints run on under the colour's edge), a plate, a door's skin. 8 mm proud, the other kit's dado's: under a door frame's 12, so a band laid door to door ends beneath the jambs. Returns its box, for what is painted on it | drawn only | 2.3 × 0.01 × 1 | 1 drawn | partBlue | library-hall |
 | **vent**(axis, line, a, b, side, y0, y1, paint, t = 0.24, proud = 0.02, solid = false) | DECAL: a VENT on a wall's face from a to b, y0‥y1: a louvred panel two fingers proud (hand it a paint that says `louvre`) | drawn only | 0.6 × 0.02 × 0.4 | 1 drawn | (0.5, 0.51, 0.52) | library-hall |
 | **conduit**(axis, line, a, b, side, y, paint, clip, drop, t = 0.24, solid = false) | DECAL: a run of CONDUIT on a wall's face from a to b at height y, a clip (`clip`: its paint) every metre and a half; `drop` = a branch down to that height at b, into a box that hangs under it (the box stands 11 cm past b). The run, its clips and its branch are always drawn only; `solid` = the box stands | drawn only | 4.61 × 0.09 × 0.75 | 6 drawn | metal, (0.7, 0.71, 0.72) | library-hall |
-| **pipe**(x, z, y0, y1, r, paint, rings = [], solid = false) | a PIPE standing at (x, z) from y0 to y1, radius r: four slabs turned an eighth each. SOLID, the game stands it up as one round (scene/round.ts); drawn only, it stays the eight-sided post the four slabs make (the round rule takes plain boxes). `rings` = what is round it, each [y0, y1, r]: a flange at its foot, a collar half way | drawn only | 0.23 × 0.23 × 3 | 12 drawn | (0.7, 0.71, 0.72) | library-hall |
+| **pipe**(x, z, y0, y1, r, paint, rings = [], solid = false) | a PIPE standing at (x, z) from y0 to y1, radius r. SOLID, one box that says it is round (scene/round.ts); drawn only, the eight-sided post of four slabs turned an eighth each. `rings` = what is round it, each [y0, y1, r]: a flange at its foot, a collar half way | drawn only | 0.23 × 0.23 × 3 | 12 drawn | (0.7, 0.71, 0.72) | library-hall |
 
 ## livedKit
 
@@ -271,9 +272,9 @@ It is no second way of building the name.
 |---|---|---|---|---|---|---|
 | **table**(x, z, w, d, yaw = 0, top = C.wood, h = 0.74, legs = C.metal) | a trestle table: a top on two end frames (rays and rounds pass under it: it stops feet, not fire) | solid to 0.74 | 1.8 × 0.7 × 0.74 | 3 solid | metal, wood | library-hall |
 | **crate**(x, z, w, d, h, yaw = 0, albedo = C.wood, y = 0) | a wooden crate with two battens on its lid (a solid block: cover to its height) | solid to 0.47 | 0.8 × 0.5 × 0.47 | 3 solid | woodDark, wood | library-hall |
-| **tyres**(x, z, n, yaw = 0, r = 0.34) | a stack of n tyres (0.2 m each), each a `round` turned 0.1 rad on the one below, the top one's well drawn on it. A layer turned θ reaches at most r·(cos θ + sin θ) along a wall: a four-high stack (0.3 rad at the top) 8.5 cm past r, so keep the centre r + 0.1 off a wall. Stacks side by side: give them the SAME yaw and 0.72 m between centres at r 0.34 (turned differently they bite into each other until 0.77 m). One lying alone is a fat one, 0.27 m: a solid topping out between 0.20 and 0.25 m stops a body on a cell the nav grid calls free | solid to 0.6 | 0.68 × 0.68 × 0.6 | 12 solid, 3 round, 1 marking | black | library-hall |
+| **tyres**(x, z, n, yaw = 0, r = 0.34) | a stack of n tyres (0.2 m each), each a `round` turned 0.1 rad on the one below, the top one's well drawn on it. A layer turned θ reaches at most r·(cos θ + sin θ) along a wall: a four-high stack (0.3 rad at the top) 8.5 cm past r, so keep the centre r + 0.1 off a wall. Stacks side by side: give them the SAME yaw and 0.72 m between centres at r 0.34 (turned differently they bite into each other until 0.77 m). One lying alone is a fat one, 0.27 m: a solid topping out between 0.20 and 0.25 m stops a body on a cell the nav grid calls free | solid to 0.6 | 0.67 × 0.67 × 0.6 | 3 solid, 3 round, 1 marking | black | library-hall |
 | **jerryCans**(x, z, n, yaw = 0, albedo = LIVED_PAINT.oliveDrab, y = 0) | a row of n jerry cans along local X, standing | solid to 0.47 | 0.56 × 0.34 × 0.47 | 3 solid | oliveDrab | library-hall |
-| **drumFixed**(x, z, albedo = LIVED_PAINT.oxide, y = 0) | a drum standing where it is (static; `drum` is the one a man can shove) | solid to 0.88 | 0.54 × 0.54 × 0.88 | 4 solid, 1 round, 9 markings | oxide | library-hall |
+| **drumFixed**(x, z, albedo = LIVED_PAINT.oxide, y = 0) | a drum standing where it is (static; `drum` is the one a man can shove) | solid to 0.88 | 0.55 × 0.55 × 0.88 | 1 solid, 1 round, 4 markings | oxide | library-hall |
 | **hung**(x, z, alongX, w, y0, y1, albedo, t = 0.04) | a thing hung on a wall (drawn only: a coat, a board, a hose): `alongX` = on a wall that runs along X, at the wall's face `x, z` | drawn only | 0.5 × 0.04 × 0.8 | 1 drawn | LIVED_PAINT.canvas | library-hall |
 
 ### livedKit: clutter
@@ -428,8 +429,8 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **hoist**(x, z, turn = 0) | MOTOR POOL: an engine hoist, the engine hanging on its chain over a drip tray (beam along the frame's x) | solid to 2.3 | 1.6 × 0.96 × 2.42 | 11 solid, 3 drawn | rust, GWOT_PALETTE.iron, galv, genYellow, GWOT_PALETTE.tin, oil | library-hall |
-| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.88 × 0.77 | 13 solid, 7 drawn, 3 round | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
-| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.58 × 1.18 × 1.2 | 15 solid, 3 round | woodGrey, plasticBlack | library-hall |
+| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.88 × 0.77 | 4 solid, 7 drawn, 3 round | GWOT_PALETTE.rubber, GWOT_PALETTE.iron, GWOT_PALETTE.tin, mud | library-hall |
+| **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.59 × 1.19 × 1.2 | 6 solid, 3 round | woodGrey, plasticBlack | library-hall |
 | **flag**(x, z) | THE RANGE: the red flag on its pole, a red and white square painted round the foot | solid to 3.5 | 1.5 × 1 × 3.5 | 2 solid, 3 drawn | truckRed, block, galv, whitewash | library-hall |
 | **basins**(x, z, turn = 0) | QUARTERS: the wash bench — tin basins in a row, towels on a rail behind | solid to 1.3 | 2 × 0.55 × 1.3 | 8 solid, 6 drawn | GWOT_PALETTE.tin, plasticBlue, woodGrey, block, blanketGrey, poplar, rugCream | library-hall |
 | **loft**(x, z) | THE WHITE HOUSE: the headman's pigeon loft — a white box with a green roof up a pole (not blue: BLUE is a pair in the lesson it stands in) | solid to 1.9 | 1.34 × 1.08 × 2.51 | 3 solid, 5 drawn | GWOT_PALETTE.rubber, woodGrey, paintGreen, straw, whitewash | library-hall |
@@ -481,15 +482,15 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | stencil | 0.62, 0.5, 0.1 | rough 0.7 | steel |  | 0 |
 | rust | 0.28, 0.12, 0.06 | rough 0.85 | steel |  | 7 |
 | iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | steel |  | 16 |
-| galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | steel |  | 11 |
+| galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | steel |  | 12 |
 | tin | 0.56, 0.55, 0.52 | rough 0.42, bare metal | steel |  | 9 |
 | drumBlue | 0.06, 0.15, 0.33 | rough 0.5 | steel |  | 3 |
 | drumRed | 0.4, 0.07, 0.05 | rough 0.5 | steel |  | 2 |
 | genYellow | 0.6, 0.42, 0.04 | rough 0.5 | steel |  | 2 |
-| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | grey plastic |  | 7 |
+| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | grey plastic |  | 8 |
 | plasticGreen | 0.08, 0.28, 0.14 | rough 0.45 | plastic |  | 1 |
 | plasticBlue | 0.03, 0.12, 0.36 | rough 0.45 | plastic |  | 5 |
-| plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | dark plastic |  | 10 |
+| plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | dark plastic |  | 11 |
 | jerryYellow | 0.62, 0.46, 0.05 | rough 0.45 | plastic |  | 0 |
 | rubber | 0.03, 0.03, 0.033 | rough 0.85 | dark plastic |  | 13 |
 | poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 15 |
@@ -519,7 +520,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 
 ### OFFICE_PALETTE
 
-`src/scene/officeGen.ts`: the office's paints.
+`tools/levels/lib/officeGen.ts`: the office's paints.
 
 | Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
@@ -553,7 +554,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 
 ### KIT_PALETTE
 
-`src/scene/levelKit.ts`: the map kit's copy of the office's paints.
+`tools/levels/lib/levelKit.ts`: the map kit's copy of the office's paints.
 
 | Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|

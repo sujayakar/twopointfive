@@ -1,0 +1,3 @@
+# places for a wall charge on levels/tut-kit.json (floor behind them as the nav grid stands; the level with its lived-in rooms in)
+706
+# two walls ran into the corner of a building's own (a picture that flickered): they end at its face now, and the corners' places went with them (2026-11-09)

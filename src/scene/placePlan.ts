@@ -4,10 +4,10 @@
 // a guard senses through a door must come from the same openings the picture draws). Until 11-04 this lived in render/placeField.ts, beside the GPU field
 // that is solved on it; that file keeps the field, its buffer and Sam's eye, and reads the plan from here.
 // WHO READS IT: render/placeField.ts (the light of a place, the look's exposure), render/wallSides.ts (which side of a wall a point is on), scene/openings.ts
-// (where a place is open to the sky), scene/geoTry.ts by main.ts (a yard wall has the sky on both hands), and the checks of each.
-// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did (a tool hands one table of both: tools/qa/place-field-page.cjs
-// --place); the solve's are read by render/placeField.ts alone.
-import { Box, BoxFlag } from './boxes';
+// (where a place is open to the sky), and the checks of each.
+// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did;
+// the solve's are read by render/placeField.ts alone.
+import { Box, BoxFlag, type PlanBox } from './boxes';
 import { WORLD } from './world';
 import { type Pt, apart, narrowest, footprint, WAY } from './wayThrough';
 
@@ -40,14 +40,14 @@ const HIDDEN = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 const SLICES = 8, FULL = (1 << SLICES) - 1;
 /** is a box of the level one a plan of its walls counts at all, whatever its height: upright, drawn or shadowing, long enough one way (not a post, a pipe or a
  *  mullion), and not a decal or a glow card. Glass counts. placeWall's own test, and scene/openings.ts's plan from the floor to the ceiling. */
-export function placeSolid(b: Box): boolean {
+export function placeSolid(b: PlanBox): boolean {
   return !b.rot && (b.flags & HIDDEN) !== HIDDEN && Math.max(b.h[0], b.h[2]) >= PLACE.minWide && !((b.flags & BoxFlag.NoShadow) !== 0 && (b.flags & BoxFlag.Glass) === 0);
 }
 /** which slices of the height between PLACE.maxFoot and PLACE.minTop a box fills, as bits (0 = it is no part of a wall). A wall fills them all; a window is
  *  a sill, a pane and a lintel that fill them between them, so the map adds boxes up cell by cell. Glass counts (a window is a wall to the light of a
  *  place, whole or shot out: the light that comes through it is the room's own reading). Not a tilted box, not one a blast has hidden, not a decal or a
  *  glow card, not a post. A door's leaf is the one dynamic box that counts as a whole wall's height (thin, wide and a door's height: a man is none of the three): it is never drawn into the map where it hangs, and it is what says how far its door's line stands open (doorSteps). */
-export function placeWall(b: Box): number {
+export function placeWall(b: PlanBox): number {
   if (b.rot || (b.flags & HIDDEN) === HIDDEN) return 0;
   const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], wide = Math.max(b.h[0], b.h[2]);
   if ((b.flags & BoxFlag.Dynamic) !== 0) return y1 >= PLACE.minTop && y0 <= PLACE.maxFoot && y1 - y0 >= 1.7 && Math.min(b.h[0], b.h[2]) <= 0.08 && wide >= 0.3 ? FULL : 0;
@@ -56,7 +56,7 @@ export function placeWall(b: Box): number {
   for (let k = 0; k < SLICES; k++) { const y = PLACE.maxFoot + (k + 0.5) * step; if (y0 - 0.02 <= y && y <= y1 + 0.02) bits |= 1 << k; }
   return bits;
 }
-/** OR `bits` into the cells of one box's footprint (render-side twin of game/airSim.ts stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
+/** OR `bits` into the cells of one box's footprint (render-side twin of src/picture/air.ts stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
 export function stampCells(cx: number, cz: number, hx: number, hz: number, yaw: number, each: (k: number) => void): void {
   const cell = 1 / PLACE_RES, c = Math.cos(yaw), s = Math.sin(yaw), square = Math.abs(c * s) < 0.02;
   const need = cell * (square ? 0.5 : 0.75) + 1e-4, ex = Math.max(hx, need), ez = Math.max(hz, need);
@@ -71,7 +71,7 @@ export function stampCells(cx: number, cz: number, hx: number, hz: number, yaw: 
 function stamp(m: Uint8Array, bits: number, cx: number, cz: number, hx: number, hz: number, yaw: number): void { stampCells(cx, cz, hx, hz, yaw, k => { m[k] |= bits; }); }
 /** is this box a roof over the cells it covers: a slab over head height, wide both ways, not tilted, not one a blast has hidden (a roof the camera cuts away
  *  is still a roof: it is hidden from the eye alone) */
-export function placeRoof(b: Box): boolean {
+export function placeRoof(b: PlanBox): boolean {
   return !b.rot && (b.flags & HIDDEN) !== HIDDEN && (b.flags & BoxFlag.Dynamic) === 0 && b.c[1] - b.h[1] >= PLACE.minTop && Math.min(b.h[0], b.h[2]) >= PLACE.roofWide;
 }
 /** a leaf as the plan asks after it: where it is, how far it reaches, its footprint */
@@ -104,12 +104,20 @@ export function doorJambs(statics: readonly Box[], gaps: readonly PlaceGap[]): P
  *  depth counted, and a leaf swung clear leaves the doorway whole. 1 with no leaf near. (Two leaves that meet in one doorway are two doors here, each
  *  measured to the point they meet at: no level has such a pair.) */
 export function doorwayOpen(gap: PlaceGap, leaves: readonly PlaceLeaf[], jambs: readonly Pt[][] = []): number {
-  const [ax, az, bx, bz] = gap, len = Math.hypot(bx - ax, bz - az); if (!(len > 1e-3)) return 1;
-  const mx = (ax + bx) / 2, mz = (az + bz) / 2, hung: Pt[][] = [];
-  for (const l of leaves) if (Math.hypot(l.c[0] - mx, l.c[1] - mz) <= len * 0.5 + l.r + 0.3) hung.push(l.o);
-  if (!hung.length) return 1;
-  const A: Pt[] = [[ax, az], [ax, az]], B: Pt[] = [[bx, bz], [bx, bz]], play = WAY.play, whole = Math.min(len - play, narrowest(A, B, jambs, play));
-  return Math.max(0, Math.min(1, narrowest(A, B, [...jambs, ...hung], play) / Math.max(whole, 1e-3)));
+  const hung = leaves.filter(l => hangsIn(gap, l)); return hung.length ? openPast(gap, hung, jambs, doorwayWhole(gap, jambs)) : 1;
+}
+/** does a leaf hang near enough to a doorway to stand in its way */
+function hangsIn([ax, az, bx, bz]: PlaceGap, l: Pick<PlaceLeaf, 'c' | 'r'>): boolean {
+  const len = Math.hypot(bx - ax, bz - az); return len > 1e-3 && Math.hypot(l.c[0] - (ax + bx) / 2, l.c[1] - (az + bz) / 2) <= len * 0.5 + l.r + 0.3;
+}
+const endsOf = ([ax, az, bx, bz]: PlaceGap): [Pt[], Pt[]] => [[[ax, az], [ax, az]], [[bx, bz], [bx, bz]]];
+/** the way through a doorway with nothing hung in it, m (its walls' alone: no leaf moves it) */
+function doorwayWhole(gap: PlaceGap, jambs: readonly Pt[][]): number {
+  const [A, B] = endsOf(gap); return Math.min(Math.hypot(gap[2] - gap[0], gap[3] - gap[1]) - WAY.play, narrowest(A, B, jambs, WAY.play));
+}
+/** the way past the leaves that hang in it, over the whole */
+function openPast(gap: PlaceGap, hung: readonly PlaceLeaf[], jambs: readonly Pt[][], whole: number): number {
+  const [A, B] = endsOf(gap); return Math.max(0, Math.min(1, narrowest(A, B, [...jambs, ...hung.map(l => l.o)], WAY.play) / Math.max(whole, 1e-3)));
 }
 /** A DOORWAY'S OPENNESS AS THE MAP CARRIES IT: DOOR_STEPS steps of a DOOR_PER_STOP-th of a stop under wide open (so the top step is a doorway whole,
  *  the least is about a thirty-second of it, and a step is the same small change of brightness wherever it falls); 0 = shut, the line is a wall.
@@ -119,6 +127,27 @@ export function doorStep(open: number): number { return open > 0 ? Math.max(0, M
 /** every door's step as the level stands (`jambs`: doorJambs of the same statics and gaps, where the caller keeps them) */
 export function doorSteps(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[], jambs: readonly Pt[][][] = doorJambs(statics, gaps)): number[] {
   const leaves = leafOutlines(dynamics); return gaps.map((g, n) => doorStep(doorwayOpen(g, leaves, jambs[n])));
+}
+/** …KEPT: a door is measured again when a leaf that hangs in it is not where it was, and by nothing else (a doorway's whole way and its jambs are its
+ *  walls'). The steps are doorSteps' of the same boxes, whichever door moved (tools/draw/doors-check.ts). */
+class KeptSteps {
+  readonly steps: number[] = [];
+  /** doors measured since the page began */
+  measured = 0;
+  private jambs: Pt[][][] = []; private whole: number[] = []; private hung: number[][] = [];
+  /** the walls or the doors' lines are others: every door is another door */
+  walls(statics: readonly Box[], gaps: readonly PlaceGap[]): void { this.jambs = doorJambs(statics, gaps); this.whole = gaps.map((g, n) => doorwayWhole(g, this.jambs[n])); this.hung = gaps.map(() => [NaN]); this.steps.length = gaps.length; }
+  /** the leaves have moved */
+  update(dynamics: readonly Box[], gaps: readonly PlaceGap[]): void {
+    const leaves = leafOutlines(dynamics);
+    gaps.forEach((g, n) => {
+      const hung = leaves.filter(l => hangsIn(g, l)), was = this.hung[n]; let k = 0, stands = true;
+      for (const l of hung) for (const p of l.o) { stands &&= was[k] === p[0] && was[k + 1] === p[1]; k += 2; }
+      if (stands && k === was.length) return;
+      this.hung[n] = hung.flatMap(l => l.o.flatMap(p => [p[0], p[1]])); this.measured++;
+      this.steps[n] = doorStep(hung.length ? openPast(g, hung, this.jambs[n], this.whole[n]) : 1);
+    });
+  }
 }
 /** the map of a list of boxes: 255 = wall; a free cell is 1 (a doorway's cell) or 2 (any other), + 4 when no roof is over it (row-major, j * PLACE_W + i).
  *  DOORS OPEN BY DEGREES: A LEAF IS NEVER A WALL WHERE IT HANGS, and a door's cells carry HOW OPEN IT IS in the bits above (× 8: its step,
@@ -166,12 +195,6 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
   for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4) | (door[k] ? deg[k] << 3 : 0);
   return out;
 }
-/** "is this spot free floor under the open sky?" on the plan of a list of boxes as they stand, for a rule that asks before the world is filled (scene/geoTry.ts:
- *  a yard wall is a wall with the sky on both hands). Off the map is the open air. */
-export function skyPlan(statics: readonly Box[]): (x: number, z: number) => boolean {
-  const m = placeMask(statics, []);
-  return (x, z) => { const i = Math.floor((x - WORLD.rcMin[0]) * PLACE_RES), j = Math.floor((z - WORLD.rcMin[2]) * PLACE_RES); if (i < 0 || j < 0 || i >= PLACE_W || j >= PLACE_H) return true; const v = m[j * PLACE_W + i]; return v !== 255 && (v & 4) !== 0; };
-}
 /** a number that changes when the map's walls would: every box that is part of a wall or a roof */
 function wallsKey(statics: readonly Box[]): number {
   let key = statics.length * 31 | 0;
@@ -180,12 +203,12 @@ function wallsKey(statics: readonly Box[]): number {
 }
 
 /** a number that changes when a leaf has moved at all (to a quarter of a hundredth of a radian, half a centimetre): PlaceMap's, for "are the steps still the steps" */
-function leafKey(dynamics: readonly Box[]): number {
+export function leafKey(dynamics: readonly Box[]): number {
   let key = 17; for (const b of dynamics) { if (placeWall(b) !== FULL) continue; key = (Math.imul(key, 33) + Math.round(b.yaw * 400) * 7 + Math.round((b.c[0] * 3 + b.c[2] * 7) * 200)) | 0; }
   return key;
 }
 /** … and each door's line: the map's key but for how far each door stands open */
-function placeKey(statics: readonly Box[], gaps: readonly PlaceGap[]): number {
+export function placeKey(statics: readonly Box[], gaps: readonly PlaceGap[]): number {
   let key = wallsKey(statics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; return key;
 }
 /** the map of the level as it stands, drawn again only when its key moves. ONE a frame, whoever reads it (the field below, render/wallSides.ts): each
@@ -197,18 +220,27 @@ export class PlaceMap {
   /** times its SHAPE changed: which cells are a wall's and which a doorway's (the walls, the doors' lines, and which doors stand open at all; not how
    *  far). What a reader that asks no more than that is keyed by (render/wallSides.ts WallSides). */
   shape = 0;
+  /** times a draw CLOSED a cell: one that was free or a doorway's is a wall's now (a door's line shut, a wall put back, a box set down). A reader that
+   *  may lag the map only where it opened is keyed by this too (render/wallSides.ts: what it knows of a cell that has become a wall is nothing) */
+  closed = 0;
+  private was = new Uint8Array(PLACE_W * PLACE_H);
   private key = NaN; private shapeKey = NaN;
-  private wallKey = NaN; private jambs: Pt[][][] = []; private leafKey = NaN; private steps: number[] = [];
+  private wallKey = NaN; private read = NaN; private gaps: readonly PlaceGap[] = []; private leafKey = NaN; readonly doors = new KeptSteps();
   /** No leaf is a wall and each door's line says how open it is (placeMask `steps`). The map is its walls, its doors' lines and their steps, so it is
    *  drawn again when one of those moves and not for a leaf's swing between two steps. The jambs are found again only with the walls, and the steps
-   *  worked out again only when a leaf has moved (a level at rest costs its two keys). */
-  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean {
-    let key = placeKey(statics, gaps);
-    if (key !== this.wallKey) { this.wallKey = key; this.jambs = doorJambs(statics, gaps); this.leafKey = NaN; }
-    const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.steps = doorSteps(statics, dynamics, gaps, this.jambs); }
-    const steps = this.steps; key = (Math.imul(key, 33) + 7) | 0; for (const st of steps) key = (Math.imul(key, 33) + st) | 0;
+   *  worked out again only when a leaf has moved, and then those of the doors it hangs in. `told` = a count of the statics' changes, by whoever mirrors
+   *  them (scene/boxes.ts staticsTold): while it and the doors' lines (the very list) stand, the walls are not read over (NaN = nobody counts: they are, every time). */
+  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = [], told = NaN): boolean {
+    if (told !== this.read || gaps !== this.gaps) {
+      this.read = told; this.gaps = gaps;
+      const key = placeKey(statics, gaps); if (key !== this.wallKey) { this.wallKey = key; this.doors.walls(statics, gaps); this.leafKey = NaN; }
+    }
+    const lk = leafKey(dynamics); if (lk !== this.leafKey) { this.leafKey = lk; this.doors.update(dynamics, gaps); }
+    const steps = this.doors.steps; let key = (Math.imul(this.wallKey, 33) + 7) | 0; for (const st of steps) key = (Math.imul(key, 33) + st) | 0;
     if (key === this.key) return false;
-    this.key = key; placeMask(statics, dynamics, this.mask, gaps, steps); this.drawn++;
+    const first = Number.isNaN(this.key), was = this.was, mask = this.mask; was.set(mask);
+    this.key = key; placeMask(statics, dynamics, mask, gaps, steps); this.drawn++;
+    if (first) this.closed++; else for (let k = 0; k < mask.length; k++) if (mask[k] === 255 && was[k] !== 255) { this.closed++; break; }
     let sk = (Math.imul(this.wallKey, 33) + 5) | 0; for (const st of steps) sk = (Math.imul(sk, 33) + (st ? 1 : 0)) | 0; if (sk !== this.shapeKey) { this.shapeKey = sk; this.shape++; }
     return true;
   }

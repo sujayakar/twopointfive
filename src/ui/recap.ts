@@ -1,4 +1,4 @@
-/** EVERY DEATH EXPLAINS ITSELF — the end card's panel (the game's half is game/deathrecap.ts, which decides WHETHER anything may be shown: nothing while
+/** EVERY DEATH EXPLAINS ITSELF — the end card's panel (the game's half is rust/game_rules/src/speech/deathrecap.rs, which decides WHETHER anything may be shown: nothing while
  *  anybody still plays).
  *
  *  One small plan of the floor round the man who went down, fog lifted: every man where he stood, the man who did it and the round's line in the card's one
@@ -10,16 +10,12 @@
  *  The clock is the display's (never the game's: the card is up over a stopped run), a picture at most every PAINT_MS; it sleeps while the card is put away and
  *  stops for good once the card is unbuilt. `__recap` on the window = the panel on the card now (`seek(k)` a moment as a still, `show(i)`, `take`).
  *
- *  `mountRecap(host, game)` is the whole face: it appends the panel to `host` and returns it, or returns null with nothing appended when there is nothing to
- *  show (the switch off, the run still on, nobody of ours down). `drawRecap` draws one moment `t` of a take; `recapMenAt` is where every man was then. */
-import type { Game } from '../game/game';
-import { deathRecapOf, MAN_STRIDE } from '../game/deathrecap';
-import type { RecapTake, RecapFrame, RecapMan, DeathRecap } from '../game/deathrecap';
-import { mapOf } from '../game/replaybuf';
-import type { ReplayMap } from '../replay/format';
-import { gearText } from '../game/gear';
+ *  `mountRecap(host, end, R)` is the whole face, R being the game's record as the card asked for it: it appends the panel to `host` and returns it, or returns null with nothing appended when there is nothing to
+ *  show (the run still on, nobody of ours down). `drawRecap` draws one moment `t` of a take; `recapMenAt` is where every man was then. */
+import { MAN_STRIDE } from '../view/debriefview';
+import type { RecapTake, RecapFrame, RecapMan, DeathRecap } from '../view/debriefview';
 import { textZoom } from './textsize';
-import { shownName } from '../host/names';
+import type { RunEnd } from '../view/runend';
 /** what to write for the man with this id whom the take itself calls `was` (mountRecap hands the page's: a player's picked name) */
 type NameOf = (id: number, was: string) => string;
 const AS_KEPT: NameOf = (_id, was) => was;
@@ -77,7 +73,7 @@ export function recapMenAt(T: RecapTake, t: number): RecapManAt[] {
  *  shrink the picture to hold all of it: his trail runs in from the edge), the muzzle — never less than MIN_HALF_M round the lost man. */
 export function recapFit(T: RecapTake, W: number, H: number): RecapFit {
   const d = T.death; let x0 = d.at[0], x1 = d.at[0], z0 = d.at[1], z1 = d.at[1];
-  const add = (p: [number, number] | null) => { if (!p) return; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); };
+  const add = (p: [number, number] | null | undefined) => { if (!p) return; x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[1]); z1 = Math.max(z1, p[1]); };
   add(d.from); add(d.byAt);
   for (const f of T.frames) for (let i = 0; i < f.n; i++) { const id = f.men[i * MAN_STRIDE]; if (id === d.victim ? f.t <= d.t + 1e-6 : id === d.by && f.t >= d.t - LEAD_SECS) add([f.men[i * MAN_STRIDE + 1], f.men[i * MAN_STRIDE + 2]]); }
   x0 = Math.min(x0, d.at[0] - MIN_HALF_M); x1 = Math.max(x1, d.at[0] + MIN_HALF_M); z0 = Math.min(z0, d.at[1] - MIN_HALF_M); z1 = Math.max(z1, d.at[1] + MIN_HALF_M);
@@ -85,8 +81,8 @@ export function recapFit(T: RecapTake, W: number, H: number): RecapFit {
   return { s, ox: W / 2 - (x0 + x1) / 2 * s, oy: H / 2 - (z0 + z1) / 2 * s, w: W, h: H };
 }
 
-/** (replay/minimap.ts draws the same boxes for the F7 viewer, in that page's colours: this is its floor in the menu's — keep the two in step) */
-function drawFloor(ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, map: ReplayMap, f: RecapFit): void {
+/** (tape/minimap.ts draws the same boxes for the F7 viewer, in that page's colours: this is its floor in the menu's — keep the two in step) */
+function drawFloor(ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, map: ReturnType<RunEnd['map']>, f: RecapFit): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = BASE; ctx.fillRect(0, 0, W, H);
   ctx.setTransform(dpr * f.s, 0, 0, dpr * f.s, dpr * f.ox, dpr * f.oy);
   const B = map.boxes, px = 1 / f.s;
@@ -183,11 +179,11 @@ export function drawRecap(ctx: CanvasRenderingContext2D, dpr: number, T: RecapTa
 }
 
 /** The three labels under the plan: who · with what · from how far. Nothing for a death nobody can be named for. */
-export function recapLabels(T: RecapTake, nameOf: NameOf = AS_KEPT): string[] {
+export function recapLabels(T: RecapTake, nameOf: NameOf = AS_KEPT, kit: (text: string) => string = s => s): string[] {
   const d = T.death; if (d.cause === 'unknown') return [];
   const out: string[] = [];
   if (d.byName) out.push(nameOf(d.by, d.byName));
-  if (d.cause === 'round' && d.weapon) out.push(gearText(d.weapon)); else if (d.cause === 'blast') out.push('blast');
+  if (d.cause === 'round' && d.weapon) out.push(kit(d.weapon)); else if (d.cause === 'blast') out.push('blast');
   if (d.dist >= 0.5) out.push(`${d.dist < 10 ? d.dist.toFixed(1) : Math.round(d.dist)} m`);
   return out;
 }
@@ -195,11 +191,11 @@ export function recapLabels(T: RecapTake, nameOf: NameOf = AS_KEPT): string[] {
 /** The take's clock as the playback runs it: from its first sample to its last, in seconds. */
 export function recapSpan(T: RecapTake): [number, number] { const a = T.frames[0]?.t ?? T.death.t, b = T.frames[T.frames.length - 1]?.t ?? T.death.t; return [Math.min(a, T.death.t), Math.max(b, T.death.t)]; }
 
-export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
+export function mountRecap(host: HTMLElement, end: Pick<RunEnd, 'map' | 'name' | 'kit'>, R: DeathRecap | null | undefined): RecapUi | null {
   const G = globalThis as any;
-  const R: DeathRecap | null = deathRecapOf(game); if (!R) { G.__recap = null; return null; }
-  const nameOf: NameOf = (id, was) => shownName(game, id, was);
-  const takes = R.takes.slice();   // as they stand now: while the player is down the record's own list is live, and a chip must keep showing the man it names
+  if (!R) { G.__recap = null; return null; }
+  const nameOf: NameOf = (id, was) => end.name(id, was);
+  const takes = R.takes;
   const root = el('div', 'db-recap'); host.appendChild(root);
   const cv = el('canvas', 'db-recap-cv') as HTMLCanvasElement; root.appendChild(cv);
   let ctx: CanvasRenderingContext2D | null = null;
@@ -209,7 +205,7 @@ export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
   // the floor is drawn once a take, onto a canvas of its own, and laid under every moment
   let floor: HTMLCanvasElement | null = null, fctx: CanvasRenderingContext2D | null = null;
   if (ctx) try { floor = document.createElement('canvas'); floor.width = cv.width; floor.height = cv.height; fctx = floor.getContext('2d'); } catch { floor = null; fctx = null; }
-  const map = ctx ? mapOf(game) : null;
+  const map = ctx ? end.map() : null;
   const cap = el('div', 'db-recap-cap'); root.appendChild(cap);
   let still = typeof G.requestAnimationFrame !== 'function';
   try { if (G.matchMedia?.('(prefers-reduced-motion: reduce)').matches) still = true; } catch { /* no window */ }
@@ -248,7 +244,7 @@ export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
     const T = takes[Math.max(0, Math.min(takes.length - 1, i))]; ui.take = T;
     fit = recapFit(T, VIEW_W, VIEW_H); span = recapSpan(T);
     if (fctx && map) drawFloor(fctx, VIEW_W, VIEW_H, dpr, map, fit);
-    cap.textContent = ''; const labels = recapLabels(T, nameOf);
+    cap.textContent = ''; const labels = recapLabels(T, nameOf, end.kit);
     labels.forEach((s, n) => { const e = el(n === 0 && T.death.byName ? 'b' : 'span'); e.textContent = s; cap.appendChild(e); });
     cap.style.display = labels.length ? '' : 'none';
     chips.forEach((c, n) => c.classList.toggle('on', takes[n] === T));

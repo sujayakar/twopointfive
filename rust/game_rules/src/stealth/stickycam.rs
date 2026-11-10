@@ -1,0 +1,439 @@
+pub use ::game_types::stickycam::types;
+pub use types::*;
+use crate::game::Game;
+use crate::flight::Met;
+use crate::ids::*;
+use crate::js::{self, JsMap, JsSet};
+use crate::m;
+use crate::v3::{self, Quat, V3};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
+
+/// The module's knobs as the launcher's flight reads them.
+fn b(g: &crate::game::Game) -> crate::launcher::Ballistics {
+    let r = &g.k.sticky;
+    crate::launcher::Ballistics { speed: r.speed, gravity: r.gravity, drag: r.drag, radius: r.radius, life: r.life, substeps: r.substeps, solve_iters: r.solve_iters }
+}
+
+/// What this visit's mission hands him at least.
+pub fn sticky_visit(g: &crate::game::Game) -> f64 {
+    g.m.stickycam.visit.unwrap_or(0.0)
+}
+
+/// Written at a mission's start, let go of at its quit.
+pub fn sticky_visit_set(g: &mut crate::game::Game, n: f64) {
+    let k = m::max(0.0, m::min(g.k.sticky.carry, js::or(m::floor(n), 0.0)));
+    if js::truthy(k) { g.m.stickycam.visit = Some(k); } else { g.m.stickycam.visit = None; }
+}
+
+/// Hand a player `n` cameras: the count on the rifle, and the load listed while the gun has a tube and he was issued any.
+pub fn sticky_issue(g: &mut crate::game::Game, pl: PlayerId, n: f64, listed: Option<bool>) {
+    let listed = match listed { Some(l) => l, None => n > 0.0 };
+    let rf = g.pl[pl].rifle;
+    let carry = g.k.sticky.carry;
+    let has = g.fa[rf].attachments.iter().position(|a| *a == crate::weapons::RifleAttachment::Cam);
+    let want = listed && g.fa[rf].attachments.contains(&crate::weapons::RifleAttachment::Ring);
+    g.fa[rf].cams = if want { m::max(0.0, m::min(m::floor(n), carry)) } else { 0.0 };
+    if want && has.is_none() {
+        g.fa[rf].attachments.push(crate::weapons::RifleAttachment::Cam);
+    } else if !want {
+        if let Some(k) = has {
+            g.fa[rf].attachments.remove(k);
+            let len = g.fa[rf].attachments.len() as i32;
+            if g.fa[rf].att_idx >= len { g.fa[rf].att_idx = if len != 0 { 0 } else { -1 }; }
+        }
+    }
+}
+
+/// Where to send one for what the cursor names: over that spot at the flight's height.
+pub fn cam_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
+    let ap = seat.aim_point;
+    let (mut x, mut z) = (ap[0], ap[2]);
+    let (dx, dz) = (x - from[0], z - from[2]);
+    let d = m::hyp2(dx, dz);
+    if d < 1.5 && d > 1e-3 { x = from[0] + dx / d * 1.5; z = from[2] + dz / d * 1.5; }
+    [x, g.k.sticky.aim_y, z]
+}
+
+/// The previewed flight, by the live flight's own stepping.
+pub fn cam_solve(g: &crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
+    let r = b(g);
+    crate::launcher::arc_solve(g, from, target, r)
+}
+
+/// The launch velocity: dead level through the aim point's height.
+fn cam_vel(g: &crate::game::Game, from: V3, target: V3) -> V3 {
+    let r = b(g);
+    crate::launcher::launch_vel(from, target, r)
+}
+
+/// One camera leaves the shooter's tube; the count is the caller's to take.
+pub fn fire_cam(g: &mut crate::game::Game, pl: PlayerId, from: V3, target: V3) -> StickyCamId {
+    g.pl[pl].cam_seq += 1.0;
+    let id = g.pl[pl].cam_seq;
+    let vel = cam_vel(g, from, target);
+    let cam = g.tab.stickycam_sticky_cam.push(StickyCam { pos: v3::copy(from), n: [0.0, 1.0, 0.0], vel: Some(vel), age: 0.0, si: -1.0, id });
+    g.pl[pl].cams.push(cam);
+    let (level, c) = (g.k.sticky.launch_noise, g.pl[pl].ch);
+    crate::flight::launched(g, c, from, 0.5, Some(1.25), level);
+    cam
+}
+
+/// It has come to rest: stuck to static `si` with normal `n`, or (si −1) lying on what is under `at`.
+fn settle(g: &mut crate::game::Game, pl: PlayerId, cam: StickyCamId, at: V3, n: V3, si: f64) {
+    g.tab.stickycam_sticky_cam[cam].vel = None;
+    g.tab.stickycam_sticky_cam[cam].si = si;
+    if si < 0.0 {
+        let o: V3 = [at[0], m::max(at[1], 0.05), at[2]];
+        let dn = crate::scene_collision::raycast(g, o, [0.0, -1.0, 0.0], 4.0);
+        let dp = crate::props::prop_system_raycast(g, o, [0.0, -1.0, 0.0], 4.0);
+        let t = m::min(
+            match &dn { Some(d) if d.index < 1e6 => d.t, _ => f64::INFINITY },
+            match &dp { Some(d) => d.t, None => f64::INFINITY },
+        );
+        let row = &mut g.tab.stickycam_sticky_cam[cam];
+        row.pos = [at[0], if t.is_finite() { m::max(0.0, o[1] - t) } else { 0.0 }, at[2]];
+        row.n = [0.0, 1.0, 0.0];
+    } else {
+        let row = &mut g.tab.stickycam_sticky_cam[cam];
+        row.pos = v3::copy(at);
+        row.n = v3::normalize(n);
+    }
+    let pos = g.tab.stickycam_sticky_cam[cam].pos;
+    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(if si < 0.0 { 0.3 } else { 0.22 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.1 }));
+    let level = g.k.sticky.stick_noise;
+    crate::flight::noise(g, [pos[0], 0.0, pos[2]], level, 0.0, None);
+    // the most that stay out: the oldest stuck one retires
+    let mut out = 0.0;
+    for i in 0..g.pl[pl].cams.len() {
+        let c = g.pl[pl].cams[i];
+        if g.tab.stickycam_sticky_cam[c].vel.is_none() { out += 1.0; }
+    }
+    while out > g.k.sticky.max {
+        let mut k = None;
+        for i in 0..g.pl[pl].cams.len() {
+            let c = g.pl[pl].cams[i];
+            if g.tab.stickycam_sticky_cam[c].vel.is_none() { k = Some(i); break; }
+        }
+        let Some(k) = k else { break };
+        g.pl[pl].cams.remove(k);
+        out -= 1.0;
+    }
+}
+
+/// One frame of every camera a player has in the air, and the once-a-second check of a stuck one's surface.
+pub fn update_stickies(g: &mut crate::game::Game, dt: f64) {
+    let pl = g.player;
+    if g.pl[pl].cams.is_empty() { return; }
+    // (a copy: a camera coming to rest may retire the oldest out of the list; a retired one is still walked, as there)
+    let walk: Vec<StickyCamId> = g.pl[pl].cams.clone();
+    for cam in walk {
+        if g.tab.stickycam_sticky_cam[cam].vel.is_none() {
+            let was = m::floor(g.tab.stickycam_sticky_cam[cam].age);
+            g.tab.stickycam_sticky_cam[cam].age += dt;
+            let row = g.tab.stickycam_sticky_cam[cam];
+            if row.si >= 0.0 && m::floor(row.age) != was && crate::scene_collision::raycast(g, v3::mad(row.pos, row.n, 0.05), v3::scale(row.n, -1.0), 0.1).is_none() {
+                settle(g, pl, cam, row.pos, [0.0, 1.0, 0.0], -1.0);
+            }
+            continue;
+        }
+        let fly = b(g);
+        let h = dt / fly.substeps;
+        let by = g.pl[pl].ch;
+        let up = [0.0, 1.0, 0.0];
+        let mut done = false;
+        let mut s = 0.0;
+        while s < fly.substeps && !done {
+            s += 1.0;
+            g.tab.stickycam_sticky_cam[cam].age += h;
+            let pos = g.tab.stickycam_sticky_cam[cam].pos;
+            let mut vel = g.tab.stickycam_sticky_cam[cam].vel.unwrap();
+            let bodies = crate::flight::bodies(g, by);
+            let leg = crate::flight::leg(g, &fly, h, pos, &mut vel, &bodies);
+            g.tab.stickycam_sticky_cam[cam].vel = Some(vel);
+            let Some(leg) = leg else { continue };
+            let Some(met) = leg.met else { g.tab.stickycam_sticky_cam[cam].pos = leg.to; continue };
+            done = true;
+            match met {
+                Met::Man(c, t) => {
+                    let at = v3::mad(pos, leg.dir, m::max(0.0, t - 0.1));
+                    crate::flight::struck(g, c, leg.dir, by);
+                    settle(g, pl, cam, at, up, -1.0);
+                }
+                Met::Prop(ph) => settle(g, pl, cam, v3::mad(pos, leg.dir, m::max(0.0, ph.t - 0.1)), up, -1.0),
+                // (a leaf carries nothing: it drops at its foot)
+                Met::Static(hit) if hit.index >= 1e6 => settle(g, pl, cam, v3::mad(pos, leg.dir, m::max(0.0, hit.t - 0.1)), up, -1.0),
+                Met::Static(hit) => settle(g, pl, cam, v3::mad(pos, leg.dir, hit.t), hit.n, hit.index),
+                Met::Floor => {
+                    g.tab.stickycam_sticky_cam[cam].pos = leg.to;
+                    settle(g, pl, cam, [leg.to[0], 0.0, leg.to[2]], up, -1.0);
+                }
+            }
+        }
+        let row = g.tab.stickycam_sticky_cam[cam];
+        if !done && row.age > fly.life {
+            settle(g, pl, cam, row.pos, up, -1.0);
+        }
+    }
+}
+
+/// Is its surface flat.
+fn flat(g: &crate::game::Game, c_2: StickyCamId) -> bool {
+    m::abs(g.tab.stickycam_sticky_cam[c_2].n[1]) > g.k.sticky.flat_y
+}
+
+/// Where a stuck camera's lens stands.
+fn cam_lens(g: &crate::game::Game, c_2: StickyCamId) -> V3 {
+    let c = g.tab.stickycam_sticky_cam[c_2];
+    v3::mad(c.pos, c.n, g.k.sticky.off)
+}
+
+/// The stuck cameras that send a picture: the newest `live` of them.
+fn sticky_live(g: &crate::game::Game, pl: &crate::stickycam::StickyLivePl) -> Vec<StickyCamId> {
+    let mut out: Vec<StickyCamId> = Vec::new();
+    let n = m::max(0.0, m::floor(g.k.sticky.live));
+    let mut i = pl.cams.len();
+    while i > 0 && (out.len() as f64) < n {
+        i -= 1;
+        if g.tab.stickycam_sticky_cam[pl.cams[i]].vel.is_none() { out.push(pl.cams[i]); }
+    }
+    out
+}
+
+/// The fog's eyes a player's live stuck cameras are, newest first.
+pub(super) fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::fogofwar::FogEye> {
+    let pl = seat.player;
+    if g.pl[pl].cams.is_empty() { return none(); }
+    let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
+    // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
+    let wide = if g.k.fog.cone { m::min(g.k.sticky.fov_deg, crate::fogofwar::field_deg(g)) } else { g.k.sticky.fov_deg };
+    let live = sticky_live(g, &crate::stickycam::StickyLivePl { cams: g.pl[pl].cams.clone() });
+    for c in live {
+        let p = cam_lens(g, c);
+        let all = flat(g, c);
+        let row = g.tab.stickycam_sticky_cam[c];
+        out.push(crate::fogofwar::FogEye {
+            id: EYE_ID + js::rem(row.id, 50.0),
+            pos: p,
+            look: if all { [1.0, 0.0, 0.0] } else { v3::normalize([row.n[0], 0.0, row.n[2]]) },
+            at: p,
+            fov: Some(if all { 360.0 } else { wide }),
+            near: Some(0.0),
+            wand: None,
+        });
+    }
+    out
+}
+
+/// Has he a tube on the gun in his hands to put one on.
+fn can_take(g: &crate::game::Game, pl: PlayerId) -> bool {
+    let rf = g.pl[pl].rifle;
+    g.fa[rf].attachments.contains(&crate::weapons::RifleAttachment::Ring)
+}
+
+/// His own stuck camera nearest his feet within `r` that he has a clear line to from his eyes.
+fn cam_near(g: &crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> {
+    let ch = g.pl[pl].ch;
+    let p = g.ch[ch].pos;
+    let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
+    let mut best = None;
+    let mut bd = r;
+    for i in 0..g.pl[pl].cams.len() {
+        let c = g.pl[pl].cams[i];
+        if g.tab.stickycam_sticky_cam[c].vel.is_some() { continue; }
+        let d = v3::dist_xz(g.tab.stickycam_sticky_cam[c].pos, p);
+        if d < bd {
+            let lens = cam_lens(g, c);
+            if !crate::scene_collision::solid_blocked(g, eye, lens, None) { best = Some(c); bd = d; }
+        }
+    }
+    best
+}
+
+/// Nothing in his hands that takes them.
+fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
+
+/// The camera he could take back this frame.
+fn cam_to_take(g: &crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
+    if can_take(g, pl) && hands_free(g, pl) {
+        let reach = g.k.sticky.take_reach;
+        cam_near(g, pl, reach)
+    } else {
+        None
+    }
+}
+
+/// The interaction row of the nearest stuck camera.
+pub fn sticky_rows(g: &crate::game::Game, pl: PlayerId, busy: bool, o: &mut crate::player::Offers) {
+    if !can_take(g, pl) { return; }
+    let Some(c) = cam_near(g, pl, crate::player::NEARBY_M) else { return };
+    let ch = g.pl[pl].ch;
+    let near = v3::dist_xz(g.tab.stickycam_sticky_cam[c].pos, g.ch[ch].pos) < g.k.sticky.take_reach;
+    let reach = near && hands_free(g, pl);
+    let pos = cam_lens(g, c);
+    let it = crate::player::mark(crate::game::InteractableKind::Cam, pos, "sticky camera", if reach { "" } else if near { "hands full" } else { "step closer" }, reach);
+    let take = if reach && !busy { Some(crate::player::row(&it, crate::game::Verb::TakeCam, "take it back", "")) } else { None };
+    o.add(it, take.into_iter().collect());
+}
+
+/// Space on that row: the camera comes off its wall and is one more on his launcher. False = nothing to take.
+pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
+    let Some(c) = cam_to_take(g, pl) else { return false };
+    let k = g.pl[pl].cams.iter().position(|x| *x == c).unwrap();
+    g.pl[pl].cams.remove(k);
+    let rf = g.pl[pl].rifle;
+    let n = m::min(g.k.sticky.carry, g.fa[rf].cams + 1.0);
+    sticky_issue(g, pl, n, Some(true));
+    let pos = g.tab.stickycam_sticky_cam[c].pos;
+    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(0.16), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
+    let level = g.k.sticky.take_noise;
+    let c = g.pl[pl].ch;
+    crate::flight::noise_at(g, c, level);
+    true
+}
+
+/// Drawn: a dark block on its surface and a lens proud of it, keyed as a wall device's so the fog lets them through; the lens is red on the one that sends.
+pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
+    let pl = g.player;
+    let flag = crate::scene_boxes::box_flag();
+    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let device = crate::scene_boxes::mkey().device;
+    for i in 0..g.pl[pl].cams.len() {
+        let id = g.pl[pl].cams[i];
+        let c = g.tab.stickycam_sticky_cam[id];
+        let z = match c.vel { Some(v) => v3::normalize(v), None => c.n };
+        let up = m::abs(z[1]) > 0.9;
+        let yaw = if up { 0.0 } else { v3::yaw_of(z) };
+        let body_h: V3 = if up { [0.035, 0.014, 0.035] } else { [0.035, 0.035, 0.014] };
+        let lens_h: V3 = if up { [0.012, 0.006, 0.012] } else { [0.012, 0.012, 0.006] };
+        let c0 = v3::mad(c.pos, z, if c.vel.is_some() { 0.0 } else { 0.014 });
+        let c1 = v3::mad(c.pos, z, if c.vel.is_some() { 0.02 } else { 0.034 });
+        let key = device + CAM_KEY + js::rem(c.id, 4096.0) * 2.0;
+        let b0 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(body())), flags: Some(flags), mkey: Some(key), ..Default::default() });
+        out.push(b0.into());
+        let paint = if sending(g, g.player, id) { lens_live() } else { lens() };
+        let b1 = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP { c: c1, h: lens_h, yaw: Some(yaw), albedo: Some(v3::copy(paint)), flags: Some(flags), mkey: Some(key + 1.0), ..Default::default() });
+        out.push(b1.into());
+    }
+}
+
+/// Is this camera sending this frame: one of the newest `live` stuck, and the fog took it as an eye.
+fn sending(g: &crate::game::Game, pl: PlayerId, c: StickyCamId) -> bool {
+    let live = if crate::fogofwar::fog_of_war_active(g) {
+        let cams = StickyLivePl { cams: g.pl[pl].cams.clone() };
+        sticky_live(g, &cams)
+    } else {
+        none_cams()
+    };
+    let eye = EYE_ID + js::rem(g.tab.stickycam_sticky_cam[c].id, 50.0);
+    live.contains(&c) && g.fog_of_war.eyes.iter().any(|e| e.id == eye)
+}
+
+/// A small lens on each of his own stuck cameras while the fog is live.
+pub fn sticky_marks(g: &crate::game::Game, pl: PlayerId) -> Vec<crate::view::CamMark> {
+    if !crate::fogofwar::fog_of_war_active(g) { return Vec::new(); }
+    g.pl[pl].cams.iter().filter(|&&c| g.tab.stickycam_sticky_cam[c].vel.is_none()).map(|&c| crate::view::CamMark { at: cam_lens(g, c), sends: sending(g, pl, c) }).collect()
+}
+
+/// A camera of his is still in the air.
+pub fn sticky_flying(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+    let pl = seat.player;
+    g.pl[pl].cams.iter().any(|c| g.tab.stickycam_sticky_cam[*c].vel.is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::weapons::RifleAttachment as A;
+
+    fn game() -> (Box<Game>, PlayerId) {
+        let mut g = Box::new(Game::blank());
+        let rifle = g.fa.push(crate::weapons::Firearm::blank());
+        let pl = g.pl.push(crate::game::Player { rifle, ..crate::game::Player::blank() });
+        g.player = pl;
+        (g, pl)
+    }
+    fn cam(g: &mut Game, pl: PlayerId, id: f64, flying: bool) -> StickyCamId {
+        let c = g.tab.stickycam_sticky_cam.push(StickyCam { pos: [0.0; 3], n: [0.0, 1.0, 0.0], vel: if flying { Some([1.0, 0.0, 0.0]) } else { None }, age: 0.0, si: -1.0, id });
+        g.pl[pl].cams.push(c);
+        c
+    }
+
+    /// A camera sent at a spot right by him still flies a throw's length that way (a metre and a half); further off goes where the cursor is. It always flies at the row's height.
+    #[test]
+    fn a_near_cursor_is_pushed_out_to_a_throw() {
+        let (mut g, _) = game();
+        let from = [0.3, 1.2, -0.4];
+        g.sets[g.seat].aim_point = [1.1, 0.0, 0.7];
+        let p = cam_aim_point(&g, &crate::seats::here(&g), from);
+        assert!((m::hyp2(p[0] - from[0], p[2] - from[2]) - 1.5).abs() < 1e-12, "{:?}", p);
+        assert!(((p[2] - from[2]) * (1.1 - from[0]) - (p[0] - from[0]) * (0.7 - from[2])).abs() < 1e-12, "on the cursor's bearing");
+        assert_eq!(p[1], g.k.sticky.aim_y);
+        g.sets[g.seat].aim_point = [10.25, 0.0, -3.5];
+        let p = cam_aim_point(&g, &crate::seats::here(&g), from);
+        assert_eq!((p[0], p[1], p[2]), (10.25, g.k.sticky.aim_y, -3.5));
+        // the cursor on his own feet has no bearing to push along
+        g.sets[g.seat].aim_point = [from[0], 0.0, from[2]];
+        let p = cam_aim_point(&g, &crate::seats::here(&g), from);
+        assert_eq!((p[0], p[2]), (from[0], from[2]));
+    }
+
+    #[test]
+    fn issue_lists_the_load_only_on_a_gun_with_a_tube() {
+        let (mut g, pl) = game();
+        let rf = g.pl[pl].rifle;
+        g.fa[rf].attachments = vec![A::Ring, A::He40];
+        sticky_issue(&mut g, pl, 9.7, None);
+        assert_eq!(g.fa[rf].cams, g.k.sticky.carry);
+        assert_eq!(g.fa[rf].attachments, vec![A::Ring, A::He40, A::Cam]);
+        // nothing issued: the load comes off, and the selection stays on the list
+        g.fa[rf].att_idx = 2;
+        sticky_issue(&mut g, pl, 0.0, None);
+        assert_eq!((g.fa[rf].cams, g.fa[rf].att_idx), (0.0, 0));
+        assert_eq!(g.fa[rf].attachments, vec![A::Ring, A::He40]);
+        // all sent, still listed: the load stays, dry
+        sticky_issue(&mut g, pl, 0.0, Some(true));
+        assert_eq!(g.fa[rf].attachments, vec![A::Ring, A::He40, A::Cam]);
+        // no tube: never listed
+        g.fa[rf].attachments = vec![A::He40];
+        sticky_issue(&mut g, pl, 2.0, None);
+        assert_eq!((g.fa[rf].cams, g.fa[rf].attachments.len()), (0.0, 1));
+    }
+
+    #[test]
+    fn the_newest_stuck_camera_sends_and_one_in_the_air_does_not() {
+        let (mut g, pl) = game();
+        let (a, b, _flying) = (cam(&mut g, pl, 1.0, false), cam(&mut g, pl, 2.0, false), cam(&mut g, pl, 3.0, true));
+        g.k.sticky.live = 1.0;
+        let cams = StickyLivePl { cams: g.pl[pl].cams.clone() };
+        assert_eq!(sticky_live(&mut g, &cams), vec![b]);
+        g.k.sticky.live = 3.0;
+        assert_eq!(sticky_live(&mut g, &cams), vec![b, a]);
+        g.k.sticky.live = 1.0;
+        let eyes = sticky_eyes(&g, &crate::seats::here(&g));
+        assert_eq!(eyes.len(), 1);
+        assert_eq!((eyes[0].id, eyes[0].fov, eyes[0].near), (202.0, Some(360.0), Some(0.0)));
+    }
+
+    #[test]
+    fn left_to_send_counts_the_air_up_to_the_carry() {
+        let (mut g, pl) = game();
+        let rf = g.pl[pl].rifle;
+        g.fa[rf].cams = 1.0;
+        cam(&mut g, pl, 1.0, false);
+        assert!(!sticky_flying(&g, &crate::seats::here(&g)));
+        cam(&mut g, pl, 2.0, true);
+        assert!(sticky_flying(&g, &crate::seats::here(&g)));
+        g.fa[rf].cams = g.k.sticky.carry;
+    }
+
+    #[test]
+    fn a_visit_is_held_floored_and_capped_and_zero_lets_go() {
+        let (mut g, _) = game();
+        sticky_visit_set(&mut g, 2.9);
+        assert_eq!(sticky_visit(&mut g), 2.0);
+        sticky_visit_set(&mut g, 99.0);
+        assert_eq!(sticky_visit(&mut g), g.k.sticky.carry);
+        sticky_visit_set(&mut g, f64::NAN);
+        assert_eq!(g.m.stickycam.visit, None);
+    }
+}

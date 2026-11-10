@@ -1,15 +1,15 @@
 // Box scene representation, GPU packing and the 2D (XZ) uniform grid used by all ray queries.
-import { SideMap } from '../math/side';
 import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
-import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT, MAX_CUT_PLANES } from './cut';
+import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT } from './cut';
 import type { BoxShape } from './shapes';
 import { AIR_ROWS } from './airGrid';
-import { groundRayConfig, GH_ROWS } from './groundField';
-import { roundConfig, packRoundRows, ROUND_CORE_W } from './round';
+import { packRoundRows, ROUND_CORE_W } from './round';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
 
+/** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
+export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
 export const BoxFlag = {
   NoPrimary: 1,      // not rasterized into the G-buffer (ceilings, light-only geometry)
   NoShadow: 2,       // ignored by all rays (decals, glow cards)
@@ -26,28 +26,39 @@ export const BoxFlag = {
   // A glass box is authored geometry (levels/*.json flag name 'Glass', albedo = the pane's transmission tint) that no traced ray and no raster triangle ever
   // sees: upload() keeps it out of the trace grid AND the visible list and instead lists it in SceneInfo.glass (≤ MAX_GLASS panes, 3 vec4f each), where
   // composite / fgather / direct test view and shadow segments against it analytically (Fresnel reflection + tint + dust glow; common.wgsl glassTrace).
-  // CPU: movement collision and sound treat it as a wall, sight passes through it (collision.ts segmentBlocked's `through`), a round / kick / bang breaks it.
+  // CPU: movement collision and sound treat it as a wall, sight passes through it (rust/game_rules/src/world/scene_collision.rs segment_blocked's `through`), a round / kick / bang breaks it.
   Glass: 1 << 17,
-  // A THIN THING THAT STANDS FREE (scene/thin.ts thinLevel, as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
-  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (game/fogofwar.ts: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — game/guards.ts eyeThrough), and
+  // A THIN THING THAT STANDS FREE (as a level is stood up: a stovepipe, a window's bar, a lone post). CPU-only, like SoundSeal (bits
+  // 18-31 of the GPU word are the marking row): the fog of war's own sight passes it while FOG.thin is on (rust/game_rules/src/stealth/fogofwar: segmentBlocked's `through`; a teammate's own eye too under FOG.mates — rust/game_rules/src/people/guards eye_through), and
   // the picture's fog eye learns which boxes carry it from the sight table's own bit list (render/fogofwar.ts FogFrame.thinBits), not from the box's word.
   Thin: 1 << 18,
-  // A WINDOW'S BAR (scene/bars.ts barLevel, as a level is stood up: the kit's upright between a window's bays). CPU-only, like Thin: a round that meets one
-  // breaks it and a line of fire passes one while WINBARS.on is up (game/winbars.ts; collision.ts shotBlocked's `firePass`); read by nothing else.
+  // A WINDOW'S BAR (as a level is stood up: the kit's upright between a window's bays). CPU-only, like Thin: a round that meets one
+  // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/breakage/winbars.rs; rust/game_rules/src/world/scene_collision.rs shot_blocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
-/** A DRAWN-ONLY SHEET (a stain, ruts, a painted line, a poster: something the picture shows that no ray and no body meets) is a box whose flags under this
- *  mask are NoShadow alone; a SOLID thing is one with none of them */
-export const SHEET_MASK = BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;
 /** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
  *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
 export const BOX_ROUND_BIT = 8;
 
-import { coatRough } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
+import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
+/** the engine's wait for a stale draw order (BoxWorld.upload): `calm` drawn packs the statics must have stood still for, and `still`, upload's own count of
+ *  them, kept by the engine: how many frames have been drawn is the picture's business and no part of the world's state */
+export interface DrawWait { calm: number; still: number }
+/** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
+ *  planner that is given more than one frame (render/steps.ts) works on copies of these, taken in the call that begins it (planBoxes), so the level it
+ *  plans is one level, as it stood then. The type is the list of what may be asked: a planner that reads another field of a box does not compile until
+ *  the copy carries it. Nothing of a copy is shared with the box it was taken from. */
+export interface PlanBox { c: Vec3; h: Vec3; yaw: number; flags: number; rot?: Quat; cut?: { readonly length: number }; round?: boolean }
+export function planBoxes(list: readonly Box[]): PlanBox[] {
+  const out: PlanBox[] = new Array(list.length);
+  for (let i = 0; i < list.length; i++) { const b = list[i], r = b.rot;
+    out[i] = { c: [b.c[0], b.c[1], b.c[2]], h: [b.h[0], b.h[1], b.h[2]], yaw: b.yaw, flags: b.flags, rot: r ? [r[0], r[1], r[2], r[3]] : undefined, cut: b.cut !== undefined && b.cut.length > 0 ? { length: b.cut.length } : undefined, round: b.round }; }
+  return out;
+}
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -57,14 +68,14 @@ export interface Box {
   flags: number;
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
-  /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK, while `albedo` itself stays as authored (no rule reads a material from it: what a
+  /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK (sentAlbedo below; for a thing of solid glass, glass's dark × wetK), while `albedo` itself stays as authored (no rule reads a material from it: what a
    *  box does is its word, scene/materials.ts; the wet lot's answer is the row's own `wet`). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
    *  should still hold the heading for CPU code that only cares about that. Absent = yaw about +Y as always. */
   rot?: Quat;
-  /** DRAWN ELSEWHERE (game/stature.ts — a man drawn a few per cent taller or shorter takes the kit bolted to him along): the centre and half extents the GPU is handed for this box —
+  /** DRAWN ELSEWHERE (rust/game_rules/src/outfit/stature.rs — a man drawn a few per cent taller or shorter takes the kit bolted to him along): the centre and half extents the GPU is handed for this box —
    *  its geo words and its trace-grid registration — in place of c / h. The simulation's box (CPU ray casts, picking, everything that reads c / h) stays where it is. Dynamics only;
    *  absent = c / h, as ever. */
   dc?: Vec3; dh?: Vec3;
@@ -77,7 +88,7 @@ export interface Box {
   /** WHAT THIS BOX IS MADE OF (scene/stuff.ts): a material of the look, 'waits', 'glass' or 'rubber'; absent = plain. It is SAID, never read off the
    *  colour: by the level file (the box's own `stuff`, else its material row's: levelLoad.ts puts it here when the file is read) or by the code that makes
    *  the box (a kit's add() from the palette row it was handed, a prop's part, a door's leaf). The look draws exactly this (render/gbuffer.ts lookWordOf),
-   *  and the PICTURE of a round's hit reads it (game/particleFx.ts HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
+   *  and the PICTURE of a round's hit reads it (rust/game_rules/src/breakage/particle_fx.rs HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
    *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
    *  paint copies it. */
   stuff?: BoxStuff;
@@ -87,17 +98,17 @@ export interface Box {
    *  materials.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is the same thing. */
   does?: DoesWord;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
-   *  (game/weather.ts sets it with the rain; runtime only, never authored) */
+   *  (rust/game_rules/src/air/weather.rs sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
   /** MARKINGS (scene/markings.ts): up to MAX_MARKS_PER_BOX pixel-art signifiers ON this box's faces — key caps, packing tape, drawer seams, the vending
    *  window, text bars, LEDs, glyphs — authored in the level file (BoxData.markings / a prop part's) or by the code that makes the box (door leaves). The
    *  upload registers the list in the marking table (the tail of matBuf) and names its first record in the top 14 bits of the GPU flags word; the g-buffer,
    *  composite and the reflection pass evaluate them; the secondary rays get their area average folded into `boxAlbedoSec` (the 4th mat row). */
   marks?: MarkingDef[];
-  /** × the emission of this box's emissive markings (runtime: game/lighting.ts writes a switchable's supply factor here — a blackout, the OCP, a flicker —
+  /** × the emission of this box's emissive markings (runtime: rust/game_rules/src/air/lighting.rs writes a switchable's supply factor here — a blackout, the OCP, a flicker —
    *  next to the box's own emissive; absent = 1) */
   markGain?: number;
-  /** THE PICTURE'S EMISSION, where it is not the box's own (render-only: game/fogofwar.ts FOG.kept — a lamp's face under the fog of war as the team last saw
+  /** THE PICTURE'S EMISSION, where it is not the box's own (render-only: rust/game_rules/src/stealth/fogofwar FOG.kept — a lamp's face under the fog of war as the team last saw
    *  it, lit or dark): the upload takes these in place of `emissive` / `markGain`; nothing in the game reads them, and `emissive` itself stays the lamp's real
    *  state. Absent = the box's own. Read only: several boxes may be handed one array */
   fogEmit?: Readonly<Vec3>; fogMark?: number;
@@ -117,11 +128,11 @@ export interface Box {
   cutCore?: Vec3;
   /** GLASS (cut.ts CutGlass): this cut box's two z faces are drawn see-through inside a rim in the core colour. Picture only; packed with the record, like cutCore. */
   cutGlass?: CutGlass;
-  /** ROUND (a geometry trial: scene/geoTry.ts): this cut box is a prism standing for a ROUND thing about its own x (1), y (2) or z (3). Picture only, packed with the
+  /** ROUND (scene/shapes.ts): this cut box is a prism standing for a ROUND thing about its own x (1), y (2) or z (3). Picture only, packed with the
    *  record like cutCore: the g-buffer's cut pass shades the faces round that axis with one turning normal and lets marks and the look's paint run over them. Every
    *  ray still meets the prism's flat faces. Not with cutGlass. */
   cutRound?: 1 | 2 | 3;
-  /** AN ARC (a trial: scene/lorryTry.ts): with cutRound about x or z, the round's axis lies this many metres UNDER the box's centre (its own −y), so a box cut to a
+  /** AN ARC (scene/shapes.ts): with cutRound about x or z, the round's axis lies this many metres UNDER the box's centre (its own −y), so a box cut to a
    *  few facets of a wide circle is shaded as that circle: a bowed roof, a fender. Picture only, packed with the record (which must leave its last row unused: seven
    *  planes at most). Absent or 0 = the round's axis is the box's own middle. */
   cutArc?: number;
@@ -132,12 +143,9 @@ export interface Box {
    *  shows the coping's stuff). Absent = the box's own `stuff`. Picture only, packed with the record on the look page. */
   cutCoreStuff?: BoxStuff;
   /** ROUND (scene/round.ts — read its head): this box is a ROUND THING, the cylinder about its own y of radius h[0] (= h[2]) and half height h[1]. Every CPU ray
-   *  and segment (rayBox, collision.ts lineBox) and what walks against it (collideCircle) meet the cylinder; with roundConfig.gpu so do the picture (the cut pass)
-   *  and every GPU ray. Set by round.ts roundLevel as a level is stood up; never with a cut record. */
+   *  and segment (rayBox, rust/game_rules/src/world/scene_collision.rs line_box) and what walks against it (collideCircle) meet the cylinder; where cut pieces are on so do the picture (the cut pass)
+   *  and every GPU ray. Said by the level file (BoxData.round); never with a cut record. */
   round?: boolean;
-  /** what round.ts roundLevel made this box FROM (the kit's slab as the level file has it): its centre, half extents, flags and marks, put back when the level is
-   *  stood up with the switch down, and what the level's fingerprint is taken over */
-  was?: { c: Vec3; h: Vec3; yaw: number; flags: number; marks?: MarkingDef[] };
   /** A SHAPE (scene/shapes.ts — read its head): how this box of a level stands when shapes are on, as its level file says it (BoxData.shape) or as the kit
    *  that made it said it. Authored data: nothing but shapes.ts shapeLevel reads it, as the level is stood up. */
   shape?: BoxShape;
@@ -146,11 +154,11 @@ export interface Box {
   shaped?: boolean;
   /** this static is a PIECE of a shape (BoxShape.with): added after the level's own boxes by shapeLevel, taken away by it; never in a level file's list.
    *  TRIM: drawn and nothing else (it stands NoShadow, so no ray, eye or body meets it); `of` = the number of the box that says it, which it follows out of
-   *  the picture (shapes.ts withPieces) */
+   *  the picture */
   piece?: boolean;
   of?: number;
   /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
-   *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (game/debris.ts, DEBRIS.dress). */
+   *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (rust/game_rules/src/breakage/debris, DEBRIS.dress). */
   dress?: boolean;
 }
 /** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
@@ -159,26 +167,20 @@ export interface Box {
  *  maxBoxes ≤ 65534 (the visible word keeps 1 + index in 16 bits, 0xFFFF = new).
  *  `look` is more than a motion identity: a box keyed in its byte is PICTURE ONLY for the CPU's world ray whatever its flags say (BoxWorld.raycast, lookKeyed
  *  below) — key nothing there that a cursor, an order, a laser or a tripwire should land on. */
-export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble)
-/** a LOOK piece (keyed MKEY.look): drawn and lit, in no collision list — a round, an eye and a boot pass through it. Most are NoShadow; under the cut switch the
- *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
-const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24);   // (or a piece of DRESSING under another key: Box.dress)
+export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (rust/game_rules/src/breakage/debris), keyed off their serial · look: what a broken wall looks like where it broke (rust/game_rules/src/breakage/edge_look.rs: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (rust/game_rules/src/breakage/wallskin.rs: the authored static × 16 + piece)
 
 /** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
  *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
- *  `marks` …) is then a write to a slot that is there, never a new layout. Make a box through this or through makeBox; a literal elsewhere forks the layout again
- *  (tools/qa/boxshape-check.ts counts them). */
+ *  `marks` …) is then a write to a slot that is there, never a new layout. Make a box through this or through makeBox; a literal elsewhere forks the layout again. */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, cutCoreStuff: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, cutCoreStuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 /** IS THIS PIECE OF TRIM DRAWN (scene/shapes.ts: `piece`, said by the static `of`)? While the box that says it is: trim has no life of its own, so nothing
  *  that hides a box (a round, a blast, a wall coming down, a checkpoint putting any of them back) hides, files or restores its trim — the picture asks the
  *  box, here, where the world lists what it draws. A piece's own flags never change. */
 export const trimDrawn = (all: readonly Box[], t: Box): boolean => t.of === undefined || !(all[t.of].flags & BoxFlag.NoPrimary);
-/** is a static drawn: not hidden, not a pane, and trim only while its box is (the test the world's list makes; for a check that asks what the picture shows) */
-export const boxDrawn = (all: readonly Box[], b: Box): boolean => !(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b));
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
   const b = boxOf(p.c, p.h, 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0);
   for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
@@ -189,7 +191,7 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
 export function copyBox(b: Box): Box {
   return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
     rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, does: b.does, cutCoreStuff: b.cutCoreStuff,
+    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, does: b.does, cutCoreStuff: b.cutCoreStuff,
   } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
 
@@ -200,17 +202,29 @@ export const wordOf = (b: { stuff?: BoxStuff; does?: DoesWord }): { stuff?: BoxS
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
+/** a thing of solid glass: it says 'glass' and is no pane (a pane, BoxFlag.Glass, is the glass engine's whatever it says). The one test: what cracks
+ *  as solid glass (rust/game_rules/src/breakage/particle_fx.rs solid_glass) and what is drawn as it (below) ask it. */
+export const solidGlassBox = (b: { stuff?: BoxStuff; flags: number }): boolean => b.stuff === 'glass' && (b.flags & BoxFlag.Glass) === 0;
+/** the neutral dark a thing of solid glass is sent as in place of its own colour (scene/stuff.ts SOLIDGLASS), or −1 where it is sent as it is: the rule
+ *  down, no solid glass, a face that carries markings, a colour that dark already */
+export function glassDark(b: Box): number {
+  if (!SOLIDGLASS.on || b.marks !== undefined || !solidGlassBox(b)) return -1;
+  const a = b.albedo; return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2] > SOLIDGLASS.lum ? SOLIDGLASS.lum : -1;
+}
+/** THE COLOUR A BOX IS SENT IN, channel c (render-only, the one place: the packed albedo, the folded secondary albedo's base and the static slice's
+ *  compare): its own × its wetness (Box.wetK), and for a thing of solid glass the neutral dark × its wetness. `albedo` itself is never touched. */
+export const sentAlbedo = (b: Box, c: 0 | 1 | 2, dark = glassDark(b)): number => (dark >= 0 ? dark : b.albedo[c]) * (b.wetK ?? 1);
 /** The finish as the one f32 the GPU gets (boxMat[3i+1].w): roughness clamped to 0‥1, + 2 if metal, + 4 if anisotropic — three plain floats' worth in
  *  disjoint ranges, so common.wgsl boxFinish() peels them off with two compares (no bit tricks on a float the driver may renormalise). */
 export function matWord(b: Box): number {
-  const own = b.rough ?? ROUGH_DEFAULT, coat = coatRough(b.stuff), r = coat !== undefined && coat < own ? coat : own;   // (a box that says a named coat is no rougher than the coat: scene/stuff.ts COATFINISH)
+  const own = b.rough ?? ROUGH_DEFAULT, coat = coatRough(b.stuff) ?? (SOLIDGLASS.on && solidGlassBox(b) ? SOLIDGLASS.rough : undefined), r = coat !== undefined && coat < own ? coat : own;   // (a box that says a named coat is no rougher than the coat, and a thing of solid glass no rougher than glass: scene/stuff.ts COATFINISH, SOLIDGLASS)
   return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
 }
 
 export const GEO_STRIDE = 8; // words (32 B): cx cy cz rot | hx hy hz flags
-/** GLASS BREAKING (game/glassbreak.ts): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
+/** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): a per-pane fracture record in the tail of matBuf AFTER the marking table — GB_STRIDE vec4 rows per SceneInfo.glass slot (4 header
  *  rows: site count, flags, u axis, damage · hu hv type · the dice wave · the dice grid; then 8 sites × 4 rows: place + ring zone · radials + seed + energy + merge · chord
- *  radii · open-piece masks, 12 bits a band, two bands a float — glassbreak.ts fill() is the layout's one writer), read by common.wgsl glassCellOpen and composite's crack drawing only under the prelude
+ *  radii · open-piece masks, 12 bits a band, two bands a float — rust/game_rules/src/breakage/glassbreak.rs fill() is the layout's one writer), read by common.wgsl glassCellOpen and composite's crack drawing only under the prelude
  *  const GLASS_BREAK (render/frame.ts glassBreakConfig; common.wgsl GB_BASE = MARK_BASE + MARK_TABLE_ROWS). The rows exist (zero) whatever the switch: a bigger buffer
  *  is not a different frame. */
 export const GB_STRIDE = 36, GB_ROWS = MAX_GLASS * GB_STRIDE;
@@ -238,6 +252,10 @@ export class BoxWorld {
   /** PICTURE ONLY, the renderer's own: dynamic boxes left out of the RASTER this frame (still packed, still what every reader of the list sees, never written) — the squad's
    *  weapon lasers while composite draws them as light in the air (engine.ts ← passes.setBeams, settings.beamAir). null = none, the list drawn as ever. */
   hidePrimary: Set<Box> | null = null;
+  /** STATICS LEFT OUT OF THE PICTURE WITH NO WORD IN THEIR FLAGS (rust/game_rules/src/breakage/wallskin.rs: the paint on a holed wall, drawn as its standing pieces instead): a static
+   *  whose index this holds is not rasterised. Picture only, like trim's rule (trimDrawn): every flag the game and the rays read stands as it was, and
+   *  `boxDrawn` (what a box's own flags say) does not know of it — ask `staticDrawn(i)` for what the list holds. null = none. */
+  undrawn: { has(i: number): boolean } | null = null;
   /** MOTION IDENTITY (Box.mkey): on = a keyed dynamic box hands the g-buffer the index its key had LAST frame in the top 16 bits of its `visible` word (upload();
    *  gbuffer.wgsl vsBox reads its previous transform there); off = every word is the bare index and the vertex stage index-matches as it always did — mirrored from
    *  engine.settings.motionIds each frame. `mkeyPrev` = key → index in last frame's combined list. */
@@ -247,6 +265,8 @@ export class BoxWorld {
   mkeyStats = { matched: 0, fresh: 0, unkeyed: 0 };
   /** Combined list uploaded this frame (statics first, then dynamics). */
   all: Box[] = [];
+  /** how many boxes were uploaded this frame */
+  get count(): number { return this.all.length; }
   maxBoxes: number;
   geoData: ArrayBuffer; geoF32: Float32Array; geoU32: Uint32Array;
   matData: Float32Array;
@@ -269,7 +289,7 @@ export class BoxWorld {
    *  threw no shadow, stood in no mirror and bounced no light (seen on a thirteen-man mission: two defenders by a window with no shadow beside a stove pipe that had one).
    *  The mesh trees still hold MESH_MAX_CHARS (render/meshbvh.ts): past them a man is his round cones to every ray (common.wgsl meshShadowT / meshClosest). */
   static readonly MAX_CAST = 16;
-  /** …and how many of them a frame's list takes: all of them, or — ?allproxies=0 in the page, main.ts — the eight it took before, so the ninth man drawn is
+  /** …and how many of them a frame's list takes: all of them, or — ?allproxies=0 in the page, host/drawpage.ts — the eight it took before, so the ninth man drawn is
    *  again without a shadow. The list's own room (MAX_CAST, the info block's layout) does not move with it. */
   static castCap = BoxWorld.MAX_CAST;
   static readonly CAPS_PER_CHAR = 15; static readonly MAX_CAPSULES = BoxWorld.MAX_CAST * BoxWorld.CAPS_PER_CHAR;
@@ -287,24 +307,13 @@ export class BoxWorld {
   /** static box indices carrying BoxFlag.Glass (intact or broken), rebuilt when statics change — the game's shatter / restore / 'break all' walk this */
   glassStatics: number[] = [];
   private glassScratch: { i: number; d: number }[] = []; private glassStaticsN = -1;
-  /** GLASS BREAKING (game/glassbreak.ts): fills slot k's GB_STRIDE rows for static `staticIndex` into `dst` at float offset `off` (returns false = the pane is whole: zeros);
+  /** GLASS BREAKING (rust/game_rules/src/breakage/glassbreak.rs): fills slot k's GB_STRIDE rows for static `staticIndex` into `dst` at float offset `off` (returns false = the pane is whole: zeros);
    *  null = no such system attached. Consulted by packGlass every frame in SceneInfo order; the table is uploaded only while any pane has something to say (and once more
    *  when the last goes whole so the rows read zero again). */
   glassCellFill: ((staticIndex: number, dst: Float32Array, off: number) => boolean) | null = null;
   private gbData = new Float32Array(GB_ROWS * 4); private gbLive = false;
   /** the cell table as last uploaded, bit for bit (packGlass writes the buffer only when the freshly filled table differs from it) */
   private gbSent = new Uint32Array(GB_ROWS * 4); private gbBits = new Uint32Array(this.gbData.buffer);
-  /** THE AIR GRID (scene/airGrid.ts; game/airDust.ts is its writer): the weather's dust share per plan cell, in matBuf's tail after the marking and glass
-   *  tables and BEFORE the cut table (so its place does not move with the cut switch) — AIR_ROWS vec4 rows read by common.wgsl wxIndoor under the prelude's WX_VOL. Written only when handed a changed grid. */
-  setAirGrid(cells: Float32Array) {
-    this.device.queue.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16, cells.buffer, cells.byteOffset, Math.min(cells.byteLength, AIR_ROWS * 16));
-  }
-  /** GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts): the hills' rows, in matBuf's LAST region (after the cut table). Nothing without the switch. */
-  setGroundField(rows: Float32Array) {
-    if (!this.groundOn) return;
-    this.device.queue.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? this.maxBoxes * CUT_STRIDE * 16 : 0), rows.buffer, rows.byteOffset, Math.min(rows.byteLength, GH_ROWS * 16));
-  }
-  private groundOn = false;
   /** how many statics' geo + mat rows the last WHOLE write of the two buffers covered (−1 = none yet): upload() writes only the dynamics' tail while they still stand */
   private rowsStatN = -1;
   /** the visible list as last uploaded, word for word */
@@ -329,17 +338,38 @@ export class BoxWorld {
   rig: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> } | null = null;
   static readonly RB_QUANT = 0.001;   // = render/sdfrig.ts RB_QUANT (shaders/sdfrig.wgsl coneRb decodes it)
   visible: Uint32Array; visibleCount = 0; visibleBuf: GPUBuffer;
+  /** THE STATICS ARE DRAWN FROM THE TOP DOWN. The camera looks down, so what stands higher is nearly always nearer: drawn first, it takes the depth and
+   *  what lies under it (the floor under a desk, the ground slab under the floor) fails the depth test before it is shaded, whatever it is made of.
+   *  AND NO FACE CHANGES HANDS. Where two boxes' faces lie in one plane the depth test keeps the first drawn, which was always the earlier box in the list
+   *  (a plinth running across a pier's foot stays the plinth's). So a box is never drawn before an earlier box it shares such a face with (rankStatics):
+   *  only boxes that cannot tie are put in another order. `drawTop[i]` = static i's top as it is drawn (a single float); `drawRank[i]` = its place in the
+   *  order; ranked again only when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does (`drawRankN`,
+   *  -1 = stale). `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow
+   *  as they did.
+   *  THE ORDER MAY WAIT (the page's pace: render/planPace.ts, render/steps.ts). Ranking reads every static and in a browser runs cold, 2 to 7 ms of the
+   *  frame a wall is blown. Given a `DrawWait` (upload's second word: the engine's, and its count of still packs is the engine's to keep, not this
+   *  world's), a stale order is made again only on a drawn pack, once the statics have stood still for `calm` drawn packs; until then THE STATICS ARE
+   *  DRAWN IN THE LIST'S OWN ORDER, which is the order every tie is defined by: the picture is the same, and only the work of shading what is then
+   *  hidden comes back for those frames (and for as long as a static changes more often than that). `drawWaits` (the engine sets it with the pace) =
+   *  a pack with no draw after it never makes the order either. With neither (a tool, a check, `?planpace=old`): at once, on the pack that finds it
+   *  stale, as ever. `drawAskedUndrawn`: a pack with no draw after it found a change (the next drawn pack starts the wait again for it). Two words of
+   *  the picture's are in this world's state for it, `drawWaits` and that one; neither is a count of frames. */
+  private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
+  drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
-  /** bumped by game/wallbreak.ts whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
+  /** a count of the statics' changes, by whoever mirrors them from elsewhere (draw/world.ts): what was read off them stands while it does. Every row that is
+   *  told, whatever changed it (a load, a flag, a lamp's face), where `geomSerial` counts what a blast does to the level's shape alone. NaN = nobody counts */
+  staticsTold = NaN;
+  /** bumped by rust/game_rules/src/breakage/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
   geomSerial = 0;
-  // ---- THE STATIC SLICE, PACKED ONCE (the CPU-frame lane, docs/internal/cpu-frame.md): the 782 statics used to be re-packed every frame — 4 trig calls, an f16 pack, matWord,
+  // ---- THE STATIC SLICE, PACKED ONCE: the 782 statics used to be re-packed every frame — 4 trig calls, an f16 pack, matWord,
   // the marking slot lookup a box — for words that never change. Now every static's PACK INPUTS (centre, yaw, halves, flags, owner, albedo, emissive, cutHeight, the finish, the
   // marking gain, the rotation, the marking list's identity + length) are shadowed per INDEX in `statShadow`, and a box whose inputs read equal to its shadow keeps the words it
   // packed before (the geo / mat arrays are written only by this class); anything else — a hidden static, a dimmed fixture, a moved editor box, a replaced Box object with other
   // values — is repacked on the spot. Writers need raise no flag: the compare IS the truth (~25 field reads a box, a few µs for the office). What is not per box is an EPOCH:
   // the marking table's state (a list registered / repacked / the table reset) and the markings switch — `packEpoch` bumps and every static repacks. Bytes: identical by
-  // construction (the pack is a pure function of the shadowed inputs), proven by tools/cpu-frame/tables-hash.ts against the pre-lane recording.
+  // construction (the pack is a pure function of the shadowed inputs).
   private static readonly SS = 24;   // shadow floats per static: c0 c1 c2 yaw h0 h1 h2 flags owner a0 a1 a2 e0 e1 e2 cutHeight matWord markGain hasRot r0 r1 r2 r3 marksLen
   private statShadow = new Float64Array(0);
   private statShadowMarks: (MarkingDef[] | undefined)[] = [];
@@ -361,34 +391,6 @@ export class BoxWorld {
   private gridLast = new Int32Array(0); private gridLastGlobals: number[] = []; private gridLiveN = -1;
   /** how many frames' trace grids were built, and how many were found standing (QA / the panel) */
   gridBuilds = { built: 0, kept: 0 };
-  // ---- THE CPU RAYCAST's OWN GRID over the statics (rayGrid — the CPU-frame lane): raycast() used to test every box in `all` (~1100) per ray, three rays a frame in the calm office
-  // (two laser tripwires + the cursor's aim ray) — a quarter of Game.update. Now the STATIC prefix of `all` (as of the last upload) is walked through a 2D DDA over WORLD's 1 m
-  // cells, testing only the statics registered in each cell (once per ray — a stamp), the few too big for the grid or reaching outside it once per ray as GLOBALS, and the
-  // dynamics (the tail of `all`) by the same brute force as before. Every static is registered whatever its flags (skipFlags are judged per query exactly as the brute force did:
-  // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
-  // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
-  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt by list() when a static's SHAPE changed
-  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
-  static readonly RAY_PAD = 1e-3;
-  private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
-  private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)
-  /** the shape each static had when the ray grid was last built (list()): RS doubles a static — centre, yaw, half-sizes, rotated?, the rotation */
-  private static readonly RS = 12; private rgShape = new Float64Array(0);
-  private rgFill = new Uint32Array(WORLD.gridW * WORLD.gridH); private rgRanges = new Int32Array(0);
-  private rgStamp = new Uint32Array(0); private rgRay = 0;
-  private rcBest = 0; private rcBi = -1; private rcBn: Vec3 = [0, 1, 0];
-  /** A RAY ASKED BY THE PICTURE (the cursor's pick under a HUD read — game/orders.ts hover): `fn` with the ray grid's stamps the asker's own (`own.w`, kept
-   *  between asks) and the last ray's scratch put back after, so it writes nothing a snapshot of the game holds. Not to be nested. */
-  rayAside<T>(own: { w?: object }, fn: () => T): T {
-    type Q = { stamp: Uint32Array<ArrayBuffer>; ray: number };
-    let q = own.w as Q | undefined; if (!q || q.stamp.length < this.rgStamp.length) q = { stamp: new Uint32Array(this.rgStamp.length), ray: 0 };   // (boxes added since: an empty table is a clean one)
-    const mine = { stamp: this.rgStamp, ray: this.rgRay, best: this.rcBest, bi: this.rcBi, bn: this.rcBn };
-    this.rgStamp = q.stamp; this.rgRay = q.ray; own.w = undefined;   // (an ask inside this one on the same store makes a table of its own: this one's ray ids are in use)
-    try { return fn(); }
-    finally { own.w = { stamp: this.rgStamp, ray: this.rgRay } satisfies Q; this.rgStamp = mine.stamp; this.rgRay = mine.ray; this.rcBest = mine.best; this.rcBi = mine.bi; this.rcBn = mine.bn; }
-  }
-  /** the ray grid's shape, for the panel / the differential test */
-  rayGridStats = { statics: 0, globals: 0, items: 0 };
   // ---- MARKINGS (scene/markings.ts): the table of packed records lives in the TAIL of matBuf, from vec4 row maxBoxes × MAT_STRIDE / 4 (common.wgsl MARK_BASE) —
   // no new binding: every shader that has the scene group can read a box's markings. A box's list is registered on first upload (deduplicated by CONTENT +
   // albedo + size, so every carton of a size shares one set of records — 'identical on every instance of a kind' literally), its first record's 1-based
@@ -399,7 +401,7 @@ export class BoxWorld {
   markingTexel = MARKING_TEXEL;
   markData = new Float32Array(MARK_TABLE_ROWS * 4); markRows = 0; private markDirty = false;   // the table (vec4 rows) and how many rows are taken
   private markByKey = new Map<string, { slot: number; n: number; rows: number; sec: Vec3; anyEmit: boolean; marks: MarkingDef[]; base: Vec3; h: Vec3 }>();
-  private markOfBox = new SideMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
+  private markOfBox = new WeakMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
   markStatsInfo = { lists: 0, records: 0, rows: 0, boxes: 0, dropped: 0, uploads: 0 };
   // ---- CUT BOXES (scene/cut.ts): under the switch (latched here at construction — the shaders were compiled from the same value) a box with a cut record raises
   // BOX_CUT_BIT in its GPU flags word and its planes are packed into the CUT TABLE, a third tail region of matBuf after the marking and glass tables: CUT_STRIDE vec4
@@ -407,40 +409,27 @@ export class BoxWorld {
   // `visible` ([visibleCount, visibleCount + visibleCutCount)): the g-buffer draws them with its cut pipeline. Switch off = none of it exists: no bit, no table, no
   // second list — the words and the buffer of the build without it.
   readonly cutOn: boolean;
-  /** ROUND THINGS (scene/round.ts): the GPU's half is up — a round box carries GEO_ROUND in its flags word (bit 3: the CPU's Dynamic, which no shader reads), its
-   *  prism's planes in its rows of the cut table (for the cut pass, and for a ray of a program compiled with the cut rule, common.wgsl ROUND_AS_CUT: no BOX_CUT_BIT, so a round still counts for no cut program), and it is drawn from the cut list's picture-only end
-   *  (cut always: every ray program holds a round rule from boot — the cylinder's, or the prism's where the cut rule is compiled in). Needs the cut switch, whose table and pipeline these are. */
-  readonly roundOn: boolean;
   private cutData = new Float32Array(0);
   private cutLo = 1 << 30; private cutHi = -1; private cutLoD = 1 << 30; private cutHiD = -1; private cutSplit = 0;   // the rows packed this frame, as two index ranges: the statics' (below cutSplit) and the dynamics'
   /** how many of this frame's visible boxes are cut (they follow the plain ones in `visible`) */
   visibleCutCount = 0;
-  /** how many of those — the FIRST ones of the cut list — a ray can meet (not NoShadow). The g-buffer draws exactly these whole on a frame whose ray programs carry
-   *  no cut rule (render/cutSwap.ts drawsCut), so picture and rays agree; the picture-only ones behind them (glass plates) are drawn cut always */
+  /** how many of those — the FIRST ones of the cut list — a ray can meet (not NoShadow); the picture-only ones behind them are glass plates */
   visibleCutTraced = 0;
-  /** how many boxes of the last upload carry a record AND can be met by a ray (not NoShadow: a glass plate is picture only) — what render/cutSwap.ts takes the cut
-   *  programs by: 0 = the frame runs the boot's programs, which have no cut rule */
+  /** how many boxes of the last upload carry a record AND can be met by a ray (not NoShadow: a glass plate is picture only) */
   cutTraced = 0;
   private cutVisible = new Uint32Array(0);
   private statShadowCut: (CutPlane[] | undefined)[] = [];
-  /** the boxes carrying a record in the last uploaded list, and their planes (counted when asked: the debug hook's and the probes' number) */
-  get cutStats(): { boxes: number; planes: number } {
-    let boxes = 0, planes = 0;
-    if (this.cutOn) for (const b of this.all) { const c = b.cut; if (c !== undefined && c.length > 0) { boxes++; planes += Math.min(c.length, MAX_CUT_PLANES); } }
-    return { boxes, planes };
-  }
 
-  constructor(private device: GPUDevice, maxBoxes = WORLD.maxBoxes) {
+  constructor(protected device: GPUDevice, maxBoxes = WORLD.maxBoxes) {
     this.maxBoxes = maxBoxes;
     if (maxBoxes !== WORLD.maxBoxes) throw new Error('BoxWorld: maxBoxes must be WORLD.maxBoxes (the shaders place the marking table after that many mat rows)');
     this.geoData = new ArrayBuffer(maxBoxes * GEO_STRIDE * 4); this.geoF32 = new Float32Array(this.geoData); this.geoU32 = new Uint32Array(this.geoData);
     this.matData = new Float32Array(maxBoxes * MAT_STRIDE);
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.geoBuf = makeBuffer(device, maxBoxes * GEO_STRIDE * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
-    this.cutOn = cutConfig.on; this.roundOn = this.cutOn && roundConfig.gpu;
-    this.groundOn = groundRayConfig.on;
+    this.cutOn = cutConfig.on;
     if (this.cutOn) this.cutData = new Float32Array(maxBoxes * CUT_STRIDE * 4);
-    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0) + (this.groundOn ? GH_ROWS * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
+    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
     if (WORLD.gridW + WORLD.gridH > 96) throw new Error('trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay ≤ 96 for that cap to be unreachable');
     if (maxBoxes > 65536 || maxBoxes * WORLD.gridW * WORLD.gridH >= 1 << 24) throw new Error('trace grid: packed items keep the box index in 16 bits and cell starts in 24');
     this.cellStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1 + 2 * WORLD.gridW * WORLD.gridH);
@@ -452,8 +441,6 @@ export class BoxWorld {
     this.visible = new Uint32Array(maxBoxes); this.visibleSent = new Uint32Array(maxBoxes);
     this.visibleBuf = makeBuffer(device, this.visible.byteLength, S, 'visibleBoxes');
   }
-
-  addStatic(b: Box): number { this.statics.push(b); this.staticsDirty = true; return this.statics.length - 1; }
 
   // ---- markings ----
   /** The 1-based slot of the first record of box b's marking list (0 = none / table full), registering the list on first sight; also caches the box's
@@ -485,29 +472,11 @@ export class BoxWorld {
     const sec = secondaryAlbedo(ent.base, ent.h, ent.marks.slice(0, n), this.markingTexel); ent.sec[0] = sec[0]; ent.sec[1] = sec[1]; ent.sec[2] = sec[2]; ent.anyEmit = anyEmit;
     this.markDirty = true;
   }
-  /** THE BUFFERS ARE NOT WHAT THE BOOKS SAY: a rollback snapshot put back (game/rollback.ts) writes these books back with the boxes — what was sent, how many,
-   *  which grid stands — while the GPU's buffers are as the abandoned moment left them. The next upload packs and writes every static, the visible list, the
+  /** FORGET WHAT WAS SENT. The next upload packs and writes every static, the visible list, the
    *  glass table, the marking table and both grids whole. Reads nothing of the simulation and changes none of it. */
   forgetSent() { this.packEpoch++; this.visibleSent.fill(0xffffffff); this.gbSent.fill(0xffffffff); this.gbLive = true; this.markDirty = true; this.gridLiveN = -1; this.rowsStatN = -1; }
-  /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (game.ts registers the lights after the first upload) */
+  /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (rust/game_rules/src/tick/game registers the lights after the first upload) */
   repackMarkings(texel = this.markingTexel) { this.markingTexel = texel; for (const ent of this.markByKey.values()) if (ent.slot) this.packList(ent); this.packEpoch++; }   // (every static repacks: the secondary albedos may have moved)
-  /** how full the append-only marking table is: rows taken / MARK_TABLE_ROWS (the editor compacts past two thirds; its lint warns on a level that alone nears it) */
-  get markTableFill(): number { return this.markRows / MARK_TABLE_ROWS; }
-  /** Forget every registered marking list (the table is append-only: right for the game's fixed set of lists, but an editor session paints a new list per
-   *  stroke). The next upload re-registers exactly the lists the boxes then carry. Returns the rows that were taken. */
-  resetMarkTable(): number {
-    const taken = this.markRows;
-    this.markRows = 0; this.markByKey.clear(); this.markOfBox = new SideMap(); this.markDirty = true; this.packEpoch++;   // (every static repacks — and so re-registers its list)
-    this.markStatsInfo.lists = 0; this.markStatsInfo.records = 0; this.markStatsInfo.rows = 0;
-    return taken;
-  }
-  /** the records of box b's list as packed (for the panel / __mark.list) — [] when it has none */
-  markRecordsOf(b: Box): { row: number; rows: number; head: number[] }[] {
-    if (!b.marks?.length) return []; const { slot } = this.markSlotOf(b); if (!slot) return [];
-    const out: { row: number; rows: number; head: number[] }[] = []; const n = Math.min(b.marks.length, MAX_MARKS_PER_BOX); let row = slot - 1;
-    for (let k = 0; k < n; k++) { const rows = markRecordRows(b.marks[k]); out.push({ row, rows, head: Array.from(this.markData.subarray(row * 4, row * 4 + 32)) }); row += rows; }
-    return out;
-  }
 
   /** Begin a frame's proxy list. Characters append CAPS_PER_CHAR records each via addCharacterCapsules(). */
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
@@ -529,10 +498,21 @@ export class BoxWorld {
     const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
     this.charCount++; this.capsuleCount = this.charCount * BoxWorld.CAPS_PER_CHAR;
   }
+  /** a character's records as rows of words (src/draw: an end and its radius, the other end, whose they are) from `at`, in one colour or one a record; his bound at `b` of `fb` */
+  addCapsuleRows(f: Float32Array, u: Uint32Array, at: number, owner: number, colours: readonly Vec3[], fb: Float32Array, b: number): void {
+    if (this.charCount >= BoxWorld.castCap) return;
+    const N = BoxWorld.CAPS_PER_CHAR, base = this.charCount * N, D = this.capsuleData;
+    for (let i = 0; i < N; i++) { const o = (base + i) * 8, s = at + i * 8, c = colours[i] ?? colours[0];
+      for (let k = 0; k < 7; k++) D[o + k] = f[s + k];
+      const r = Math.round(Math.min(1, Math.max(0, c[0])) * 31) & 31, g = Math.round(Math.min(1, Math.max(0, c[1])) * 63) & 63, l = Math.round(Math.min(1, Math.max(0, c[2])) * 31) & 31;
+      this.capsuleU32[o + 7] = ((owner & 255) | ((r << 11 | g << 5 | l) << 8)) >>> 0; }
+    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; for (let k = 0; k < 4; k++) this.infoF32[bo + k] = fb[b + k];
+    this.charCount++; this.capsuleCount = this.charCount * N;
+  }
   /** Turn the frame's proxy list into the SDF rig (see `rig`): per real record (radius > 0) the fitted r0 as its radius and r1 packed above the albedo; per character the cull sphere
    *  fitted to the cones' ends + radii (+ the smooth union's pad + 1 cm) about the middle of their box. Idempotent — a render with no game step re-applies it to the same records and
    *  gets the same words (the ends are never touched, r0 / r1 come from the fit, the sphere is rebuilt from both). */
-  private applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
+  protected applyRig(base: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> }) {
     const D = this.capsuleData, U = this.capsuleU32, N = BoxWorld.CAPS_PER_CHAR;
     for (let c = 0; c < this.charCount; c++) {
       const rig = base.byOwner?.get(U[c * N * 8 + 7] & 0xff) ?? base;   // (the cast: a man's own fit by his id — the owner byte every one of his records carries — else the shared one)
@@ -564,6 +544,65 @@ export class BoxWorld {
     const cs = Math.abs(Math.cos(b.yaw)), sn = Math.abs(Math.sin(b.yaw));
     return [cs * b.h[0] + sn * b.h[2], sn * b.h[0] + cs * b.h[2]];
   }
+  /** THE ORDER THE STATICS ARE DRAWN IN (drawRank). Tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box
+   *  it shares a face's plane with. Two faces share a plane when they look the same way, lie within `TIE_PLANE` of one plane and their bounds lie over one
+   *  another by more than `TIE_PATCH`: those are the faces whose depths the depth test cannot tell apart, where the first drawn is kept. Held to the list's
+   *  order, each is won by the box that always won it. A box that waits takes the turn of the latest box it waits for (and comes after it), never an
+   *  earlier one, so the low wide things (floors, the ground) still come last.
+   *  ONE RULE FOR EVERY BOX: a face is its plane (the unit normal and how far along it) and its bounds in the world, whatever the box's turn or tilt, so
+   *  there is no frame to match and no bin to fall either side of. The faces are sorted by how far along their normals they lie and each is asked only of
+   *  those within TIE_PLANE of it. Bounds for a turned face are wider than the face: that only ever asks a box to wait that need not.
+   *  Faces that look down are not asked (the camera never sees one). A CUTAWAY box is asked as it is drawn: stopped at its cutHeight. */
+  private rankStatics(nStat: number) {
+    const all = this.all, top = this.drawTop, ord = this.drawSlot.subarray(0, nStat);
+    for (let i = 0; i < nStat; i++) ord[i] = i;
+    ord.sort((a, b) => top[b] - top[a] || a - b);
+    const turn = new Uint32Array(nStat); for (let r = 0; r < nStat; r++) turn[ord[r]] = r;   // a static's turn by its top alone
+    // every face that can be seen: FW numbers each: box, along, normal xyz, bounds lo xyz, bounds hi xyz
+    const FW = 11, F: number[] = [], X: Vec3 = [1, 0, 0], Y: Vec3 = [0, 1, 0], Z: Vec3 = [0, 0, 1];
+    for (let i = 0; i < nStat; i++) {
+      const b = all[i]; if (b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) continue;
+      const c = b.c, rot = b.rot; let ax: Vec3, ay: Vec3, az: Vec3;
+      if (rot) { ax = quat.rotate(rot, X); ay = quat.rotate(rot, Y); az = quat.rotate(rot, Z); }
+      else if (b.yaw === 0) { ax = X; ay = Y; az = Z; }
+      else { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); ax = [cs, 0, -sn]; ay = Y; az = [sn, 0, cs]; }   // (the box's own x and z in the world: rayBox's world-to-local, turned back)
+      const cut = !rot && (b.flags & BoxFlag.Cutaway) !== 0 && b.cutHeight < c[1] + b.h[1];   // (drawn only below its cutHeight: its top is there, and its sides stop there)
+      const hy = cut ? Math.max(0, (b.cutHeight - (c[1] - b.h[1])) / 2) : b.h[1], cy = cut ? c[1] - b.h[1] + hy : c[1];
+      const A = [ax, ay, az], H = [b.h[0], hy, b.h[2]];
+      for (let u = 0; u < 3; u++) for (let sg = -1; sg <= 1; sg += 2) {
+        const n = A[u]; if (n[1] * sg < -0.5) continue;
+        const v = A[(u + 1) % 3], w = A[(u + 2) % 3], hv = H[(u + 1) % 3], hw = H[(u + 2) % 3];
+        const mx = c[0] + sg * H[u] * n[0], my = cy + sg * H[u] * n[1], mz = c[2] + sg * H[u] * n[2];
+        const ex = Math.abs(v[0]) * hv + Math.abs(w[0]) * hw, ey = Math.abs(v[1]) * hv + Math.abs(w[1]) * hw, ez = Math.abs(v[2]) * hv + Math.abs(w[2]) * hw;
+        F.push(i, sg * (n[0] * mx + n[1] * my + n[2] * mz), sg * n[0], sg * n[1], sg * n[2], mx - ex, my - ey, mz - ez, mx + ex, my + ey, mz + ez);
+      }
+    }
+    // who waits for whom: a later box for each earlier one whose face it shares
+    const at = new Uint32Array(F.length / FW); for (let k = 0; k < at.length; k++) at[k] = k * FW; at.sort((p, q) => F[p + 1] - F[q + 1]);
+    const after: number[][] = [], PLANE = BoxWorld.TIE_PLANE, PATCH = BoxWorld.TIE_PATCH; let ties = 0;
+    for (let m = 0; m < at.length; m++) { const p = at[m], far = F[p + 1] + PLANE;
+      for (let k = m + 1; k < at.length && F[at[k] + 1] <= far; k++) { const q = at[k];
+        if (F[p] === F[q] || F[p + 2] * F[q + 2] + F[p + 3] * F[q + 3] + F[p + 4] * F[q + 4] < 1 - 1e-9) continue;   // (the same box, or not looking the same way)
+        let over = 0, apart = false;
+        for (let d = 0; d < 3; d++) { const o = Math.min(F[p + 8 + d], F[q + 8 + d]) - Math.max(F[p + 5 + d], F[q + 5 + d]); if (o > PATCH) over++; else if (o < -PLANE) apart = true; }
+        if (apart || over < 2) continue;
+        const first = Math.min(F[p], F[q]), then = Math.max(F[p], F[q]); (after[first] ??= []).push(then); ties++; } }
+    const rank = this.drawRank; this.drawTies = ties; this.drawRanked++;
+    if (ties === 0) { rank.set(turn); return; }
+    // a box takes the turn of the latest box it waits for. Every wait is for an earlier box, so walked in the list's order each box's turn is settled
+    // before those that wait for it are told; then by turn, and by the list between a box and those that took its turn
+    for (let i = 0; i < nStat; i++) { const l = after[i]; if (l !== undefined) for (let k = 0; k < l.length; k++) if (turn[l[k]] < turn[i]) turn[l[k]] = turn[i]; }
+    for (let i = 0; i < nStat; i++) ord[i] = i;
+    ord.sort((a, b) => turn[a] - turn[b] || a - b);
+    for (let r = 0; r < nStat; r++) rank[ord[r]] = r;
+  }
+  /** two faces are in one plane when they lie this near along their normal (m). The depth buffer (near 0.5 m, single floats) tells surfaces about
+   *  0.05 mm apart at the camera's usual 21 m and about 0.2 mm at its farthest 40 m; nearer than that, the first drawn is what is seen. */
+  static readonly TIE_PLANE = 0.00025;
+  /** and when their bounds lie over one another by more than this, two ways (m): a hair, so that faces which only meet at an edge are not a tie */
+  static readonly TIE_PATCH = 0.0005;
+  /** how many times a box waits for an earlier one in the order as last made, and how many times the order has been made (a check reads both) */
+  drawTies = 0; drawRanked = 0;
   /** World Y half extent (yawed boxes: h.y; fully rotated ones: the |R|·h row, like footprint()). */
   static heightExtent(b: Box): number {
     if (!b.rot) return b.h[1];
@@ -576,67 +615,70 @@ export class BoxWorld {
     return q < 0 ? 0 : q > WORLD.gridYLevels - 1 ? WORLD.gridYLevels - 1 : q;
   }
 
-  /** THE LIST — what the GAME reads of the box world: the combined list as of now (`all`: raycast's candidates, an index's box), the glass statics' list, and the
-   *  raycast's grid over the statics, rebuilt when their count changed or one's SHAPE moved (rgShape: centre, half-sizes, turn — all buildRayGrid reads; a changed
-   *  colour, wetness or lamp leaves it standing). Returns the statics' count. Nothing here is the picture's and nothing is written to the GPU. */
+  /** THE LIST: the combined list as of now (`all`: an index's box) and the glass statics' list. Returns the statics' count. Nothing is written to the GPU. */
   private list(): number {
     const all = this.all; all.length = 0;
     for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
     if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);
     const nStat = this.statics.length;
     if (this.staticsDirty || this.glassStaticsN !== nStat) { this.glassStatics.length = 0; for (let i = 0; i < nStat; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = nStat; }
-    const RS = BoxWorld.RS; if (this.rgShape.length < nStat * RS) { this.rgShape = new Float64Array(Math.max(nStat, this.maxBoxes) * RS); this.rgN = -1; }
-    const G = this.rgShape; let moved = this.rgN !== nStat;
-    for (let i = 0; i < nStat; i++) {
-      const b = all[i], o = i * RS, c = b.c, h = b.h, rot = b.rot;
-      if (G[o] === c[0] && G[o + 1] === c[1] && G[o + 2] === c[2] && G[o + 3] === b.yaw && G[o + 4] === h[0] && G[o + 5] === h[1] && G[o + 6] === h[2]
-        && (rot ? G[o + 7] === 1 && G[o + 8] === rot[0] && G[o + 9] === rot[1] && G[o + 10] === rot[2] && G[o + 11] === rot[3] : G[o + 7] === 0)) continue;
-      moved = true;
-      G[o] = c[0]; G[o + 1] = c[1]; G[o + 2] = c[2]; G[o + 3] = b.yaw; G[o + 4] = h[0]; G[o + 5] = h[1]; G[o + 6] = h[2];
-      if (rot) { G[o + 7] = 1; G[o + 8] = rot[0]; G[o + 9] = rot[1]; G[o + 10] = rot[2]; G[o + 11] = rot[3]; } else { G[o + 7] = 0; G[o + 8] = 0; G[o + 9] = 0; G[o + 10] = 0; G[o + 11] = 0; }
-    }
-    if (moved) this.buildRayGrid(nStat);
     return nStat;
   }
   /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
    *  are set. `between` = a pack with no draw of its own after it (ensurePacked): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the
    *  pack that is drawn still resolves 'where was this box last frame'. */
-  upload(between = false) {
+  upload(between = false, wait: DrawWait | null = null) {
     const nStat = this.list(); const all = this.all;
-    let nv = 0, marked = 0;
+    let nv = 0, marked = 0, asked = false;
     const marksOn = this.markingsEnabled;
     let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
     const SS = BoxWorld.SS; let staticsChanged = false;
+    if (this.drawTop.length < this.maxBoxes) { this.drawTop = new Float32Array(this.maxBoxes); this.drawRank = new Uint32Array(this.maxBoxes); this.drawSlot = new Uint32Array(this.maxBoxes); this.drawRankN = -1; }
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
     const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
     const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
-    const cutOn = this.cutOn, roundOn = this.roundOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
+    const cutOn = this.cutOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
     let np = Math.max(this.cutVisible.length, cutOn ? this.maxBoxes : 0);   // (the cut list is filled from both ends: traceable boxes from the front, picture-only ones from the back)
     if (cutOn && this.cutVisible.length < this.maxBoxes) this.cutVisible = new Uint32Array(this.maxBoxes);
-    const cv = this.cutVisible;
+    const cv = this.cutVisible, und = this.undrawn;
     for (let i = 0; i < nStat; i++) {
       const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
-      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
+      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd), ml = marks === undefined ? -1 : marks.length;
       if (!forceAll && S[so] === c[0] && S[so + 1] === c[1] && S[so + 2] === c[2] && S[so + 3] === b.yaw && S[so + 4] === h[0] && S[so + 5] === h[1] && S[so + 6] === h[2]
-        && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === al[0] * wk && S[so + 10] === al[1] * wk && S[so + 11] === al[2] * wk && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
+        && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === a0 && S[so + 10] === a1 && S[so + 11] === a2 && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
         && S[so + 15] === b.cutHeight && S[so + 16] === mw && S[so + 17] === mg && S[so + 23] === ml && SM[i] === marks && (!cutOn || SC[i] === b.cut)
         && (rot ? S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3] : S[so + 18] === 0)) {
         if (SK[i]) marked++;
       } else {
         staticsChanged = true;
+        this.drawTop[i] = !rot && (b.flags & BoxFlag.Cutaway) && b.cutHeight < c[1] + h[1] ? Math.fround(b.cutHeight) : Math.fround(Math.fround(c[1]) + Math.fround(rot ? BoxWorld.heightExtent(b) : h[1]));
+        if (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2] || S[so + 15] !== b.cutHeight
+          || ((S[so + 7] ^ b.flags) & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Cutaway)) !== 0
+          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) { this.drawRankN = -1; asked = true; }   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
-        S[so + 9] = al[0] * wk; S[so + 10] = al[1] * wk; S[so + 11] = al[2] * wk; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
+        S[so + 9] = a0; S[so + 10] = a1; S[so + 11] = a2; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
         if (rot) { S[so + 18] = 1; S[so + 19] = rot[0]; S[so + 20] = rot[1]; S[so + 21] = rot[2]; S[so + 22] = rot[3]; } else { S[so + 18] = 0; S[so + 19] = 0; S[so + 20] = 0; S[so + 21] = 0; S[so + 22] = 0; }
         S[so + 23] = ml; SM[i] = marks; if (cutOn) SC[i] = b.cut;
       }
       if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
-      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn)
-        if (roundOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
+      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b)) && !(und !== null && und.has(i))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn; `undrawn` leaves a box out)
+        if (cutOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
     }
+    if (this.drawRankN !== nStat) {
+      if (this.drawRankN >= 0 || this.statShadowN !== nStat) asked = true;   // (the list grew or shrank: that is a change too)
+      this.drawRankN = -1;
+      let now = !(between && this.drawWaits);
+      if (between) { if (wait !== null) now = false; if (!now && asked) this.drawAskedUndrawn = true; }
+      else { if (wait !== null) { if (asked || this.drawAskedUndrawn) wait.still = 0; else wait.still++; now = wait.still >= wait.calm; } this.drawAskedUndrawn = false; }
+      if (now) { this.rankStatics(nStat); this.drawRankN = nStat; if (wait !== null) wait.still = 0; }   // (the count starts from nothing each time the order is made: a change this pack could not say it saw, an upload that threw part way, then waits its full time)
+    }
+    if (nv > 0 && this.drawRankN === nStat) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
+      for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];
+      for (let r = 0, w = 0; w < nv; r++) if (slot[r] !== 0xFFFFFFFF) vis[w++] = slot[r]; }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
     if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
     // ---- dynamics: packed every frame, as ever
@@ -651,7 +693,7 @@ export class BoxWorld {
         let pslot = 0;
         if (this.motionIds && b.mkey !== undefined) { const pi = this.mkeyPrev.get(b.mkey); if (pi === undefined) { pslot = 0xFFFF; fresh++; } else { pslot = pi + 1; matched++; } this.mkeyCur.set(b.mkey, i); }
         else unkeyed++;
-        if (roundOn && b.round === true) cv[--np] = i | (pslot << 16);
+        if (cutOn && b.round === true) cv[--np] = i | (pslot << 16);
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i | (pslot << 16); else cv[nc++] = i | (pslot << 16); } else this.visible[nv++] = i | (pslot << 16);
       } else if (this.motionIds && b.mkey !== undefined) this.mkeyCur.set(b.mkey, i);
     }
@@ -683,11 +725,9 @@ export class BoxWorld {
     this.buildGrid();
     this.packBehind = false;
   }
-  /** THE LIST WITHOUT THE PACK, for a tick that nothing is drawn after — every tick of a game server, every tick but the last of a re-run or of a frame that steps
-   *  twice: between two ticks the cursor's ray, a laser's dot and a device's beam read `all` and the raycast's grid and nothing of the pack (tools/qa/tickcost.ts
-   *  --list plays the scripted runs this way and gets the same run to the bit). The rows on the GPU and the visible list are then BEHIND the list until the next
-   *  upload(): engine.ts packs before every draw, and a GPU pass that reads the rows with no draw before it asks ensurePacked() first. tools/qa/relist-check.ts holds
-   *  both halves: the same game, and the same bytes on the device at every draw. */
+  /** THE LIST WITHOUT THE PACK, for a tick that nothing is drawn after: between two ticks the cursor's ray, a laser's dot and a device's beam read `all` and the raycast's grid and nothing of the pack.
+   *  The rows on the GPU and the visible list are then BEHIND the list until the next
+   *  upload(): engine.ts packs before every draw, and a GPU pass that reads the rows with no draw before it asks ensurePacked() first. */
   relist() { this.list(); this.packBehind = true; }
   /** the rows on the device are an older list's (a relist since the last pack) */
   private packBehind = false;
@@ -696,7 +736,7 @@ export class BoxWorld {
   ensurePacked() { if (this.packBehind) this.upload(true); }
   /** THE LOOK'S WORD FOR A BOX (the look page's material maps; render/gbuffer.ts lookWordOf, set by the engine on that page): a small whole number that rides above
    *  the finish in the box's mat word (8 × it; common.wgsl boxLook reads it, boxFinish takes it off): what the box is made of, whether it is one that moves (`moves`:
-   *  packed past the statics), and a number of its own. Asked at every pack of the box. null (every other page, every headless stand) = the word as it ever was.
+   *  packed past the statics), and a number of its own. Asked at every pack of the box. null (every other page) = the word as it ever was.
    *  Set it with setStuffOf: the statics are packed only when one of their shadowed inputs moves, and this is not one of them. */
   stuffOf: ((b: Box, moves: boolean) => number) | null = null;
   /** … and for an old break's cut faces (Box.cutOld): the stuff of its core, packed with the cut's record (cut.ts packCut). null = none packed, as ever. */
@@ -707,12 +747,12 @@ export class BoxWorld {
   /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */
   private packBox(i: number, b: Box, marksOn: boolean): boolean {
     const gf = this.geoF32, gu = this.geoU32, mf = this.matData; const o = i * GEO_STRIDE; let marked = false;
-    const round = this.roundOn && b.round === true;   // (round wins over a cut record, here as in rayBox and lineBox: nothing gives a round box one)
-    let flags = (b.flags & (this.roundOn ? 0xf7 : 0xff)) | (round ? BOX_ROUND_BIT : 0) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
+    const round = this.cutOn && b.round === true;   // (round wins over a cut record, here as in rayBox and lineBox: nothing gives a round box one)
+    let flags = (b.flags & (this.cutOn ? 0xf7 : 0xff)) | (round ? BOX_ROUND_BIT : 0) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
     const em = b.fogEmit ?? b.emissive;   // (the picture's emission: Box.fogEmit)
     if (em[0] + em[1] + em[2] > 0) flags |= BoxFlag.Emissive;
-    const wk = b.wetK ?? 1;   // (render-only: see Box.wetK)
-    let s0 = b.albedo[0] * wk, s1 = b.albedo[1] * wk, s2a = b.albedo[2] * wk;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
+    const wk = b.wetK ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd);   // (render-only: Box.wetK, and solid glass's dark — sentAlbedo; a marked face is never glass's dark, so `wk` alone is the marks' factor)
+    let s0 = a0, s1 = a1, s2a = a2;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
     if (marksOn && b.marks !== undefined && b.marks.length > 0 && !b.rot) {   // (a tilted box never carries markings: the face frame assumes yaw only)
       const mk = this.markSlotOf(b);
       if (mk.slot > 0 && mk.slot <= MARK_SLOT_MAX) { flags |= mk.slot << MARK_SLOT_SHIFT; s0 = mk.sec[0] * wk; s1 = mk.sec[1] * wk; s2a = mk.sec[2] * wk; marked = true; }
@@ -727,11 +767,12 @@ export class BoxWorld {
     gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));
     gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
     const m = i * MAT_STRIDE;
-    mf[m] = b.albedo[0] * wk; mf[m + 1] = b.albedo[1] * wk; mf[m + 2] = b.albedo[2] * wk; mf[m + 3] = b.cutHeight;
-    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+    mf[m] = a0; mf[m + 1] = a1; mf[m + 2] = a2; mf[m + 3] = b.cutHeight;
+    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit && !(b.mkey !== undefined && b.mkey >>> 24 === MKEY.skin >>> 24)) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+      // (what stands of a holed wall's paint is the level's own, handed over with the frame's boxes: it does not MOVE — rust/game_rules/src/breakage/wallskin.rs)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
-    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)
+    mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (rust/game_rules/src/air/lighting.rs drives it with the switchable's supply)
     return marked;
   }
 
@@ -927,95 +968,17 @@ export class BoxWorld {
     this.device.queue.writeBuffer(this.capsuleBuf, 0, this.capsuleData.buffer, 0, Math.max(32, this.capsuleCount * 32));
     this.device.queue.writeBuffer(this.infoBuf, 0, info);
   }
-
-  /** CPU ray cast against all boxes (closest hit). Used for mouse picking / aim point. A glass pane IS hit by default (the maintainer, 08-11: "pointing at glass should
-   *  target that point in the glass, not what's behind it" — the reticle, the arm and the throw arc sit on the pane; a round finds it anyway, combat.ts through
-   *  StaticCollision.raycast); pass BoxFlag.Glass in skipFlags to see through panes (a laser's reach, a tracer's line). */
-  /** glass-break's hook (game/glassbreak.ts sets it beside StaticCollision.glassOpen): a Glass static whose CELL at the hit point has fallen is no hit — the aim
-   *  ray, the reticle and the throw arc pass through the hole like a round and a sight line do (W4G.10) */
-  glassOpen: ((index: number, p: Vec3) => boolean) | null = null;
-  /** A LOOK piece (MKEY.look — a blown wall's plates, lintel and rubble) is not met, shadow-casting or not: the game's callers ask where something LANDS (the
-   *  cursor's aim, an order's point, a weapon laser's dot, a tripwire's reach), and a round along the same line goes through it (the collision lists never held
-   *  one). `withLook` is for an instrument standing in for the PICTURE's rays (tools/qa/cut-cost.js: what the raster shows, what a gather ray stops on). */
-  raycast(ro: Vec3, rd: Vec3, tmax = 1e9, skipFlags: number = BoxFlag.NoShadow | BoxFlag.NoPrimary, skipOwner = 0, withLook = false): { t: number; index: number; n: Vec3 } | null {
-    const all = this.all; this.rcBest = tmax; this.rcBi = -1; this.rcBn = [0, 1, 0];
-    const nS = this.rgN;
-    if (nS < 0 || nS > all.length) {   // no grid for this list (never uploaded): the brute force as it was
-      for (let i = 0; i < all.length; i++) if (withLook || !lookKeyed(all[i])) this.rayTest(i, ro, rd, skipFlags, skipOwner);
-    } else {
-      // dynamics and globals first (they tighten `best` before the walk), then the statics cell by cell along the ray
-      for (let i = nS; i < all.length; i++) if (withLook || !lookKeyed(all[i])) this.rayTest(i, ro, rd, skipFlags, skipOwner);
-      const G = this.rgGlobals; for (let k = 0; k < G.length; k++) this.rayTest(G[k], ro, rd, skipFlags, skipOwner);
-      this.rayWalk(ro, rd, skipFlags, skipOwner);
-    }
-    return this.rcBi >= 0 ? { t: this.rcBest, index: this.rcBi, n: this.rcBn } : null;
-  }
-  /** one candidate of raycast(): the brute force's per-box test, statement for statement, + the tie rule the index order gave it */
-  private rayTest(i: number, ro: Vec3, rd: Vec3, skipFlags: number, skipOwner: number) {
-    const b = this.all[i]; if (b.flags & skipFlags) return; if (skipOwner && b.owner === skipOwner) return;   // (e.g. the cursor's aim ray must not land on the player's own gun / goggles)
-    const r = rayBox(ro, rd, b, this.rcBest);
-    if (r && (r.t < this.rcBest || (r.t === this.rcBest && i < this.rcBi))) {
-      if (this.glassOpen && (b.flags & BoxFlag.Glass) && i < this.statics.length && this.glassOpen(i, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t])) return;   // through the hole in a holed pane
-      this.rcBest = r.t; this.rcBi = i; this.rcBn = r.n;
-    }
-  }
-  /** the statics along the ray: a 2D DDA over the XZ cells from where the ray enters the grid, each cell's registered statics tested once (the stamp), stopping once the next
-   *  cell begins past the best hit (a static's entry point lies in a cell it is registered in — the padded footprint contains it — so nothing nearer can be beyond) */
-  private rayWalk(ro: Vec3, rd: Vec3, skipFlags: number, skipOwner: number) {
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell; const gx = W * cs, gz = H * cs;
-    const ox = ro[0], oz = ro[2], dx = rd[0], dz = rd[2];
-    let t0 = 0, t1 = Infinity;
-    if (dx !== 0) { const ta = (0 - ox) / dx, tb = (gx - ox) / dx; if (ta < tb) { if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; } else { if (tb > t0) t0 = tb; if (ta < t1) t1 = ta; } } else if (ox < 0 || ox > gx) return;
-    if (dz !== 0) { const ta = (0 - oz) / dz, tb = (gz - oz) / dz; if (ta < tb) { if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; } else { if (tb > t0) t0 = tb; if (ta < t1) t1 = ta; } } else if (oz < 0 || oz > gz) return;
-    if (!(t0 <= t1)) return;   // (misses the grid — or NaN)
-    let cx = Math.floor((ox + dx * t0) / cs), cz = Math.floor((oz + dz * t0) / cs);
-    if (cx < 0) cx = 0; else if (cx > W - 1) cx = W - 1; if (cz < 0) cz = 0; else if (cz > H - 1) cz = H - 1;
-    const stepX = dx > 0 ? 1 : dx < 0 ? -1 : 0, stepZ = dz > 0 ? 1 : dz < 0 ? -1 : 0;
-    const dtx = stepX ? cs / Math.abs(dx) : Infinity, dtz = stepZ ? cs / Math.abs(dz) : Infinity;
-    let tmx = dx > 0 ? ((cx + 1) * cs - ox) / dx : dx < 0 ? (cx * cs - ox) / dx : Infinity;
-    let tmz = dz > 0 ? ((cz + 1) * cs - oz) / dz : dz < 0 ? (cz * cs - oz) / dz : Infinity;
-    if (++this.rgRay === 0xffffffff) { this.rgStamp.fill(0); this.rgRay = 1; }
-    const ray = this.rgRay, stamp = this.rgStamp, start = this.rgStart, items = this.rgItems;
-    let tEnter = t0;
-    for (;;) {
-      if (tEnter > this.rcBest) return;
-      const c = cz * W + cx; const e = start[c + 1];
-      for (let k = start[c]; k < e; k++) { const i = items[k]; if (stamp[i] === ray) continue; stamp[i] = ray; this.rayTest(i, ro, rd, skipFlags, skipOwner); }
-      if (tmx < tmz) { tEnter = tmx; cx += stepX; if (cx < 0 || cx >= W) return; tmx += dtx; }
-      else if (tmz < Infinity) { tEnter = tmz; cz += stepZ; if (cz < 0 || cz >= H) return; tmz += dtz; }
-      else return;   // (a vertical ray: one cell)
-    }
-  }
-  /** register the static prefix all[0, n) of the last upload in the ray grid (see the members): padded footprints into cells, the oversize / out-of-grid ones as globals */
-  private buildRayGrid(n: number) {
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell, N = W * H, pad = BoxWorld.RAY_PAD; const all = this.all;
-    if (this.rgRanges.length < n * 4) this.rgRanges = new Int32Array(Math.max(n, this.maxBoxes) * 4);
-    if (this.rgStamp.length < this.maxBoxes) { this.rgStamp = new Uint32Array(this.maxBoxes); this.rgRay = 0; }
-    const R = this.rgRanges, start = this.rgStart; start.fill(0); this.rgGlobals.length = 0;
-    for (let i = 0; i < n; i++) {
-      const b = all[i]; const r = i * 4; const [ex, ez] = BoxWorld.footprint(b);
-      const x0 = Math.floor((b.c[0] - ex - pad) / cs), x1 = Math.floor((b.c[0] + ex + pad) / cs), z0 = Math.floor((b.c[2] - ez - pad) / cs), z1 = Math.floor((b.c[2] + ez + pad) / cs);
-      if (!(x0 >= 0 && z0 >= 0 && x1 < W && z1 < H) || (x1 - x0 + 1) * (z1 - z0 + 1) > 96) { R[r] = -1; this.rgGlobals.push(i); continue; }   // (reaches outside the grid, or huge — a floor: tested every ray; NaN geometry lands here too)
-      R[r] = x0; R[r + 1] = x1; R[r + 2] = z0; R[r + 3] = z1;
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) start[z * W + x]++;
-    }
-    let sum = 0; for (let c = 0; c < N; c++) { const k = start[c]; start[c] = sum; sum += k; } start[N] = sum;
-    if (sum > this.rgItems.length) this.rgItems = new Uint32Array(Math.max(sum, this.rgItems.length * 2));
-    const fill = this.rgFill; fill.fill(0); const items = this.rgItems;
-    for (let i = 0; i < n; i++) {
-      const r = i * 4; const x0 = R[r]; if (x0 < 0) continue; const x1 = R[r + 1], z0 = R[r + 2], z1 = R[r + 3];
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const c = z * W + x; items[start[c] + fill[c]++] = i; }
-    }
-    this.rgN = n; this.rayGridStats.statics = n; this.rayGridStats.globals = this.rgGlobals.length; this.rayGridStats.items = sum;
-  }
 }
 
-/** is this box's record a SHAPE's (scene/shapes.ts: the box says it, and stands as it) and no break's? */
-export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== undefined;
 /** IS THIS BOX'S CUT RECORD MET by the game's rays and segments? Under the cut-pieces switch every record is (scene/cut.ts); a shape's always: a shape is
  *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
 export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;
 export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
+  return rayBoxOwn(ro, rd, b, tmax);
+}
+/** The test itself, with no crossing: for the box world's own raycast (BoxWorld.raycast is the host's and walks the host's list, a thousand boxes a ray:
+ *  asked of the Rust game once a box, one ray from outside a tick cost most of a second). */
+function rayBoxOwn(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
   if (b.round === true) return rayBoxRound(ro, rd, b, tmax);   // ROUND THINGS (scene/round.ts): the cylinder (below)
   if (b.cut !== undefined && cutMet(b)) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
   if (b.rot) return rayBoxRot(ro, rd, b, tmax);
@@ -1033,8 +996,8 @@ export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n
   { let ta = (-h[2] - lz) * iz, tb = (h[2] - lz) * iz; let s = -1; if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; s = 1; } if (ta > t0) { t0 = ta; axis = 2; sgn = s; } if (tb < t1) t1 = tb; if (t0 > t1) return null; }
   // Origin INSIDE the box (no face entered ahead of it — an origin exactly ON a face heading in counts as inside too): no hit, deliberately. Callers lean on it: the
   // cursor's pick and a round's static hit start rays at muzzles and lenses that may sit in their own housing, an item or a spark born inside a static leaves it
-  // freely, an eye momentarily inside a swinging leaf still sees (collision.ts segmentBlockedDynamic). What must NOT lean on it is a blocked-or-not question about a
-  // segment born on a wall's face — collision.ts segmentBlocked judges statics by the full slab interval (lineBox) for exactly that reason. Same rule in rayBoxRot.
+  // freely, an eye momentarily inside a swinging leaf still sees (rust/game_rules/src/world/scene_collision.rs segment_blocked_dynamic). What must NOT lean on it is a blocked-or-not question about a
+  // segment born on a wall's face — rust/game_rules/src/world/scene_collision.rs segment_blocked judges statics by the full slab interval (lineBox) for exactly that reason. Same rule in rayBoxRot.
   if (axis < 0) return null;
   const ln0 = axis === 0 ? sgn : 0, ln1 = axis === 1 ? sgn : 0, ln2 = axis === 2 ? sgn : 0;   // the local face normal (the other two components the literal 0 they always were)
   const n: Vec3 = [cs * ln0 + sn * ln2, ln1, -sn * ln0 + cs * ln2];

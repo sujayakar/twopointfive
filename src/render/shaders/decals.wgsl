@@ -9,7 +9,7 @@ const DK_SCORCH: u32 = 2u;
 const DK_SCUFF: u32 = 3u;
 const DK_CHIP: u32 = 4u;
 const DK_GLASS: u32 = 5u;             // a round's hole + crack star ON a glass pane: never a g-buffer surface (panes are not rasterised) — composite.wgsl draws it via glassMarks below
-const DK_WETPRINT: u32 = 6u;          // a wet shoe print (game/wet.ts: Sam in from the rain): heel + ball darkened / saturated like wet fabric, param = how wet (aged toward 0 on the CPU)
+const DK_WETPRINT: u32 = 6u;          // a wet shoe print (rust/game_rules/src/air/wet.rs: Sam in from the rain): heel + ball darkened / saturated like wet fabric, param = how wet (aged toward 0 on the CPU)
 const DK_DAMAGE: u32 = 7u;            // the destruction lane's dent / shred / crack (damageMark; the look is floor(param))
 const DECAL_PLANE_TOL: f32 = 0.03;    // m either side of the decal's plane a surface may sit and still take it (a rug on the scorched floor, a panel proud of the wall)
 const DECAL_FACING: f32 = 0.6;        // min cos between the pixel's face normal and the decal's
@@ -223,7 +223,7 @@ fn wetPrintMark(o: ptr<function, DecalOut>, q: vec2f, k: f32, seed: u32, fp: f32
   (*o).albedo = alb;
 }
 
-// The destruction lane's marks (game/destruction.ts damageDecal): ONE kind, three looks off floor(param) — 0 a DENT punched into sheet metal (a rack front, a
+// The destruction lane's marks (rust/game_rules/src/breakage/destruction damageDecal): ONE kind, three looks off floor(param) — 0 a DENT punched into sheet metal (a rack front, a
 // cabinet): a shallow round dimple, its bowl tilted in the normal so one side catches the light, the paint crazed pale round a dark centre; 1 a SHRED in a
 // fabric-covered partition or a chair back: a ragged dark tear with the pale wadding showing through and loose fibres round it; 2 a CRACK in a dark screen:
 // a black impact blotch, a spider of hairlines out of it and a bruise of dead panel round them; 9 a CRACK IN SOLID GLASS: that star, pale and wide enough to read. s = fract(param) = strength 0‥1.
@@ -254,7 +254,7 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     alb = mix(alb, alb * 0.18 + vec3f(0.01), tear * s);
     alb = mix(alb, vec3f(0.78, 0.76, 0.7), wad * 0.55 * s);
     alb = mix(alb, alb * 1.35 + vec3f(0.06), fray * 0.5 * s);
-  } else if (look == 6u) {   // FILM: the dust and grit a blast's pall leaves on a floor or a desk top once it has settled (game/floormess.ts); the seed's top bit = the burst's own heart, which alone carries the soot
+  } else if (look == 6u) {   // FILM: the dust and grit a blast's pall leaves on a floor or a desk top once it has settled (rust/game_rules/src/breakage/floormess.rs); the seed's top bit = the burst's own heart, which alone carries the soot
     let edge = 0.74 + 0.26 * dkAngNoise(theta, 9.0, seed);
     let sit = dkSit(); var x = rho / (R * edge); var lie = 1.0;
     if (sit) {   // a little off round, its shore bent by the surface's field, and lying only where that field banks: films that overlap are ONE drifted layer
@@ -287,7 +287,7 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     alb = mix(alb, alb * vec3f(0.16, 0.15, 0.14), soot * 0.7 * (1.0 - 0.5 * k));
     alb = mix(alb, mix(vec3f(0.15, 0.14, 0.125), select(vec3f(0.7, 0.68, 0.63), mix(dust, vec3f(0.7, 0.68, 0.63), 0.4), sit), step(0.55, dkRand(gc, seed + 29u))), speck * (0.5 + 0.35 * dkRand(gc, seed + 30u)) * select(1.0, 0.35 + 0.65 * lie, sit));   // (marks that sit: a pale speck is of the dust it lies in, and fewer show on bare ground)
     (*o).keep *= 1.0 - 0.9 * max(max(k, soot), speck) * select(1.0, 1.0 - 0.7 * dkWet, sit);   // matte where it lies (on wet ground it is wet: most of the shine stays)
-  } else if (look == 7u || look == 8u) {   // RUBBLE: what a chunk the debris pool took leaves where it lay (game/floormess.ts) — 7 crushed plaster / masonry, 8 splinters and shreds; long along t
+  } else if (look == 7u || look == 8u) {   // RUBBLE: what a chunk the debris pool took leaves where it lay (rust/game_rules/src/breakage/floormess.rs) — 7 crushed plaster / masonry, 8 splinters and shreds; long along t
     let fibre = look == 8u;
     let edge = 0.6 + 0.4 * dkAngNoise(theta, 7.0, seed);
     let x = length(vec2f(q.x, q.y * 1.5)) / (R * edge); if (x >= 1.0) { return; }
@@ -311,7 +311,7 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     let dl = length(dv);
     if (dl > 1e-4) { (*o).n = normalize((*o).n + (dv.x * t + dv.y * b) * (0.35 * frag * smoothstep(-0.08, 0.0, bd) / dl)); }   // each piece's rim leans out: it catches the light as a thing lying there
     (*o).keep *= 1.0 - 0.85 * max(smear, frag);
-  } else {   // crack: look 2 in a dark screen; look 9 in SOLID GLASS (game/particleFx.ts HITSTUFF: a car's window, which cracks and stays) — the same star
+  } else {   // crack: look 2 in a dark screen; look 9 in SOLID GLASS (rust/game_rules/src/breakage/particle_fx.rs HITSTUFF: a car's window, which cracks and stays) — the same star
              // drawn to be read from the game's camera: a crushed pale heart, frosted lines millimetres wide and a milky bruise. (A black hairline on dark
              // glass shows nothing: seen on a GPU, 2026-11-04.)
     let glass = look == 9u;
@@ -340,7 +340,7 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
   (*o).albedo = alb;
 }
 
-// WALL WEAR (game/wallwear.ts; kind 'damage', param ≥ WEAR_LOOK — render/decals.ts WEAR_MARK is the contract): what a breakable shows while rounds are counted
+// WALL WEAR (rust/game_rules/src/breakage/wallwear.rs; kind 'damage', param ≥ WEAR_LOOK — render/decals.ts WEAR_MARK is the contract): what a breakable shows while rounds are counted
 // into it, before it gives. ONE record per round; on a thin partition it sits on the wall's mid-plane and is drawn on BOTH faces. R = the mark's reach on this
 // face (m), s = strength 0‥1 (how far gone the cell is), mat = 0 plaster · 1 wood · 2 cardboard / cloth. ENTRY face: a pock (a chip out round a pin of dark)
 // that grows into a small hole — a near-black core in a ring of exposed material, the bed sloping into it — with cracks running out to the reach. EXIT face:
@@ -463,7 +463,7 @@ fn decalSurface(P: vec3f, faceN: vec3f, boxIdx: u32, albedo: vec3f, fp: f32) -> 
 // What a bullet does to laminated glazing: a hole the size of a pea, a collar of pulverised glass round it that has gone milky, and a star of cracks running
 // out from it — some short and crazed, some long with a fork, the odd chord of the web joining two of them — stopped by the interlayer before the pane can
 // fall. Three coverages come back and composite turns them into light: the crack lines and the collar cut what comes THROUGH the pane and catch what falls
-// ON it (they are diffusers now), the hole is simply dark. Everything is drawn off the decal's 12-bit seed (glass.ts hashes it from where the pane was hit),
+// ON it (they are diffusers now), the hole is simply dark. Everything is drawn off the decal's 12-bit seed (rust/game_rules/src/breakage/glass.rs hashes it from where the pane was hit),
 // in the pane's plane, in metres, softened over the pixel's footprint on the pane — with a floor under a crack's coverage, because a hairline that catches
 // the light reads from across the room though it is a twentieth of a pixel wide.
 struct GlassMarks { crack: f32, frost: f32, core: f32 };

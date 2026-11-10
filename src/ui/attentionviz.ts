@@ -1,24 +1,32 @@
-// WHERE A GUARD'S ATTENTION IS, ON THE FLOOR (game/attention.ts attentionMarks — this file draws exactly that list). The maintainer, 10-13: "we should make sure
+// WHERE A GUARD'S ATTENTION IS, ON THE FLOOR (`view.attention` — this file draws exactly that list). The maintainer, 10-13: "we should make sure
 // it's legible and fun". No word and no number (show, not tell): a dotted thread from the man's feet to the place his attention went — along the way he will walk when he is going over — and a ring there. The
 // ring is a clock: whole while he walks over, running down once he is at the thing, starting part-spent when the same trick has been played on him lately,
 // and it flickers for the last beat — he has said he is done and his eye is about to widen. A thing he only turns his head to gets the same ring, small and
 // brief; an attention another file holds (a man at a lit screen) a steady dim one. Amber, the HUD's colour for a wary man (STYLE.md). Drawn into the overlay's
 // #traj SVG under the squad's marks. Reads only; no state but its nodes. Never seen on a GPU: the weights and the colour are guesses.
 import type { Vec3 } from '../math/vec';
-import type { Game, Guard } from '../game/game';
-import type { FollowCamera } from '../game/camera';
-import { ATTENTION, attentionMarks, attentionWay, type AttentionWayKept, type AttentionWayStore } from '../game/attention';
+import type { HudCam, HudSource } from '../view/hud';
+import type { AttentionLine, TickView } from '../view/read';
+import { walkOf, type KeptLegs } from './planfloor';
 
 const NS = 'http://www.w3.org/2000/svg';
 const SEG = 28, FLOOR = 0.05, AMBER = '#ffd866';
 type Part = 'thread' | 'track' | 'arc';
 interface Els { g: SVGGElement; p: Record<Part, SVGPathElement>; d: Record<Part, string>; op: string }
-/** each man's kept way and the tables the grid is searched on (attention.ts attentionWay): the PICTURE'S own — a game drawn and the same game not drawn hold
- *  the same state */
-const keptWays = new WeakMap<Guard, AttentionWayKept>();
-const ways: AttentionWayStore = { get: gd => keptWays.get(gd), set: (gd, w) => keptWays.set(gd, w), nav: {} };
+/** each man's kept way: the PICTURE'S own, a game drawn and the same game not drawn hold the same state. (6000: a walk's own budget: a place his walk finds is a place the thread finds) */
+const ways: KeptLegs = new WeakMap(), WAY_BUDGET = 6000;
+/** THE THREAD'S WAY: his feet, every corner of the way he will take, the place, for a man walking to it (the maintainer, 10-22, of a thread drawn through a hut's wall: "weird that the line here is a straight
+ *  line, not a pathed one. i'd expected pathed from squad commands"); straight for a man who only looks, and where the floor has no way at all */
+export function attentionWay(src: HudSource, reask: number, L: AttentionLine, from: Vec3): Vec3[] {
+  const straight = [from, L.at]; if (!L.walks) return straight;
+  const w = walkOf(ways, src, reask, WAY_BUDGET, L.man, { from, own: L.own, stops: [L.at] });
+  return w.length < 2 ? straight : w;
+}
 
-/** the thread along `way` (game/attention.ts attentionWay: straight for a man who only looks, the way he will walk for one going over), from `head` m along
+/** the held attentions that are drawn: nothing live of a man the fog hides, but on the viewer's own picture with the fog lifted (`bare`) */
+export const attentionShown = (lines: readonly AttentionLine[], bare: boolean): AttentionLine[] => lines.filter(L => bare || !L.hidden);
+
+/** the thread along `way` (attentionWay: straight for a man who only looks, the way he will walk for one going over), from `head` m along
  *  it to `tail` m short of its end, in half-metre pieces — so the part of it in the view is drawn when an end is out of it. Empty for a man all but at the ring. */
 export function threadPoints(way: Vec3[], head: number, tail: number): Vec3[] {
   let len = 0; for (let i = 1; i < way.length; i++) len += Math.hypot(way[i][0] - way[i - 1][0], way[i][2] - way[i - 1][2]);
@@ -46,8 +54,9 @@ export class AttentionViz {
     const E: Els = { g, p, d: { thread: '', track: '', arc: '' }, op: '' };
     this.root.appendChild(g); return E;
   }
-  update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const bc = document.body.classList, marks = bc.contains('blinded') || bc.contains('attract') ? [] : attentionMarks(game);   // (hidden by the page under those, as every mark over a man is)
+  /** `bare`: the viewer's own picture with the fog lifted shows a man the fog hides */
+  update(src: HudSource, view: TickView, cam: HudCam, w: number, h: number, edge: number, bare = false) {
+    const { ringM, wayReask } = view.look.attention, bc = document.body.classList, marks = bc.contains('blinded') || bc.contains('attract') ? [] : attentionShown(view.attention, bare);   // (hidden by the page under those, as every mark over a man is)
     // a point out of the view breaks the line there (never a chord across the gap)
     const path = (pts: Vec3[]) => {
       let d = '', run = 0;
@@ -65,11 +74,11 @@ export class AttentionViz {
     for (let i = 0; i < marks.length; i++) {
       const M = marks[i], E = this.els[i] ?? (this.els[i] = this.make());
       if (i >= this.shown) E.g.style.display = 'block';
-      const r = M.mode === 'go' ? ATTENTION.ringM : ATTENTION.ringM * 0.7;
-      const op = M.mode === 'lent' ? '0.55' : M.ending ? (Math.floor(game.time * 10) % 2 ? '0.35' : '1') : '0.95';   // (the last beat flickers: he has said he is done)
+      const r = M.mode === 'go' ? ringM : ringM * 0.7, feet = src.at(M.man) ?? M.at, from: Vec3 = [feet[0], FLOOR, feet[2]];
+      const op = M.mode === 'lent' ? '0.55' : M.ending ? (Math.floor(src.time * 10) % 2 ? '0.35' : '1') : '0.95';   // (the last beat flickers: he has said he is done)
       if (E.op !== op) { E.op = op; E.g.setAttribute('opacity', op); }
       // the thread starts off his feet and stops at the ring's edge, not its middle
-      set(E, 'thread', thread(attentionWay(game, M, ways), 0.35, r));
+      set(E, 'thread', thread(attentionWay(src, wayReask, M, from), 0.35, r));
       set(E, 'track', ring(M.at, r, 1)); set(E, 'arc', ring(M.at, r, M.left));
     }
     for (let i = marks.length; i < this.shown; i++) this.els[i].g.style.display = 'none';

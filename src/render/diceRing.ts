@@ -2,7 +2,7 @@
 // The maintainer on his GPU, 11-01, the pass at midday with doors open: "lots of temporal instability for midday, also strange shimmering on metallic
 // barrels", "lots of temporal instability on the guy's back too", "overall night, dawn, and dusk look pretty good. midday and overcast are the broken ones".
 // THE FAULT. The cache (render/rc.ts) looks along a fixed set of directions, shifted a little every frame so that over time it sees between them, and what
-// everything reads (the dice: the gather's second bounce and its outlier bound, a wet coat's sheen, the smoke, the light meter, the look page's exposure a
+// everything reads (the dice: the gather's second bounce and its outlier bound, a wet coat's sheen, the smoke, the look page's exposure a
 // place) is a running mean of about three frames of it. At night a room's light is its lamps, broad and near, and three frames agree. By day the lamps are
 // drawn at the hour's share and a room is lit by what a door or a window lets in: small, far, thousands of times brighter than the room, caught by one
 // frame's directions and missed by the next. Measured on the software adapter in the pass's store with its door open at midday: the light the cache holds at
@@ -13,8 +13,8 @@
 // four at dawn and dusk, eight on a grey day and at midday.
 // HOW. The cache bakes whole into its dice (its own running mean off: rc.setDiceBlend(1)); step() copies that bake into its slot of a texture that holds
 // one bake a point and writes the mean of the slots held back into the dice. Everything downstream binds the dice as before.
-// PICTURE AND METER: the light meter and the smoke read the dice, so on the look page the row changes what they read (steadier, a few frames later).
-// It takes no die and no wall clock and imports nothing from src/game. NEVER SEEN ON A GPU.
+// THE SMOKE reads the dice, so on the look page the row changes what it reads (steadier, a few frames later).
+// It takes no die and no wall clock and imports no game code. NEVER SEEN ON A GPU.
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import ringSrc from './shaders/dice_ring.wgsl' with { type: 'text' };
 
@@ -73,14 +73,14 @@ export class DiceRing {
   fits(dice: GPUTexture): boolean { return dice.height * RING_MAX <= (this.device.limits?.maxTextureDimension3D ?? 2048); }
   /** After the cache baked this frame WHOLE into `dice` (its own mean off): keep that bake as point `slot` of `n` and write the mean of the points held
    *  back into `dice`. `fresh` = the cache started over this frame (rc.reprimed, read before its encode): what was held is dropped. False = not ready. */
-  step(enc: GPUCommandEncoder, dice: GPUTexture, slot: number, n: number, fresh: boolean): boolean {
+  step(enc: GPUCommandEncoder, dice: GPUTexture, slot: number, n: number, fresh: boolean, ts?: (name: string) => GPUComputePassTimestampWrites | undefined): boolean {
     if (!this.ready || !this.pipe || n < 2 || n > RING_MAX || !this.fits(dice)) return false;
     this.bindTo(dice);
     this.mask = ringMask(this.mask, slot, n, fresh || n !== this.points); this.points = n;
     const w = dice.width, h = dice.height, d = dice.depthOrArrayLayers;
     enc.copyTextureToTexture({ texture: dice }, { texture: this.ring!, origin: [0, slot * h, 0] }, [w, h, d]);
     this.u[0] = n; this.u[1] = this.mask; this.u[2] = h; this.u[3] = 0; this.device.queue.writeBuffer(this.ubo, 0, this.u);
-    const pass = enc.beginComputePass({ label: 'dice ring mean' }); pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind!);
+    const pass = enc.beginComputePass({ label: 'dice ring mean', timestampWrites: ts?.('diceRing') }); pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind!);
     pass.dispatchWorkgroups(Math.ceil(w / 4), Math.ceil(h / 4), Math.ceil(d / 4)); pass.end(); this.stepped++;
     return true;
   }

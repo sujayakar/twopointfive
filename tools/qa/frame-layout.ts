@@ -4,7 +4,8 @@
 //   2. FrameFlags (frame.ts) ⇄ the FLAG_* consts (common.wgsl): each a distinct power of two, no two features on one bit, the same value under the same
 //      name on both sides, and every WGSL flag known to the host.
 //   3. BoxFlag (boxes.ts) ⇄ BOX_* (common.wgsl): distinct bits; the GPU's names carry the CPU's values.
-//   bun run tools/qa/frame-layout.ts        (exit 1 on any FAIL; also `probes.ts frame-layout`)
+//   4. the shadow ratio clamp's bound: direct_common.wgsl RATIO_HI = render/denoise.ts's knob ratioHi.
+//   bun run tools/qa/frame-layout.ts        (exit 1 on any FAIL)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -56,7 +57,7 @@ const writers: [string, RegExp][] = [
   ['directCfg', /f\[(\d+)\] = p\.directCfg\[0\]/], ['lossyCfg', /f\[(\d+)\] = p\.lossyCfg\[0\]/], ['cardCfg', /u\[(\d+)\] = nc;/], ['cardSlots', /u\[(\d+) \+ k\] = k < nc/],
   ['weatherA', /f\[(\d+)\] = w\.rain;/], ['weatherB', /f\[(\d+)\] = w\.flash\[0\];/], ['weatherC', /f\[(\d+)\] = w\.interior\[0\];/], ['glassCfg', /f\[(\d+)\] = p\.glassCfg\[0\];/],
   ['weatherD', /f\[(\d+)\] = w\.annex\[0\];/], ['volCfg', /u\[(\d+)\] = p\.volCfg\[0\] >>> 0;/],
-  ['froxelA', /f\[(\d+)\] = p\.froxelA\[0\];/], ['froxelB', /u\[(\d+)\] = p\.froxelB\[0\] >>> 0;/], ['froxelC', /f\[(\d+)\] = p\.froxelC\[0\];/], ['prevCam', /f\[(\d+)\] = p\.prevCamPos\[0\];/],
+  ['prevCam', /f\[(\d+)\] = p\.prevCamPos\[0\];/],
   ['rtCfg', /f\[(\d+)\] = p\.rtCfg\[0\];/], ['matCfg', /f\[(\d+)\] = p\.matCfg\[0\];/],
   ['p5Cfg', /u\[(\d+)\] = p\.p5Cfg\[0\] >>> 0;/], ['jitter', /f\[(\d+)\] = p\.jitter\[0\];/], ['markCfg', /f\[(\d+)\] = p\.markCfg\[0\];/], ['sharpCfg', /f\[(\d+)\] = p\.sharpCfg\[0\];/], ['sharpCfgB', /f\[(\d+)\] = p\.sharpCfgB\[0\];/], ['sharpCfgC', /f\[(\d+)\] = p\.sharpCfgC\[0\];/],
   ['rigCfg', /f\[(\d+)\] = p\.rigCfg\[0\];/], ['rigCfgB', /f\[(\d+)\] = p\.rigCfgB\[0\];/],
@@ -68,7 +69,7 @@ const writers: [string, RegExp][] = [
   ['eyeCfg', /f\[(\d+)\] = ey\[0\];/],   // (written through `ey = p.eyeCfg ?? ZERO4`: the look prototype's Eyes follow Sam row)
   ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, which the one exposure model tones a place by)
   ['lampCfg', /f\[(\d+)\] = lc\[0\];/],   // (written through `lc = p.lampCfg ?? ZERO4`: the look prototype's Light stays in its room row by day)
-  ['sideCfg', /u\[(\d+)\] = sd && sc \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/], ['placeCfg', /f\[(\d+)\] = pc\[0\];/],   // (the look prototype's Walls have two sides row: the flag, up with the column table, then render/wallSides.ts's words, which the exposure reads too)
+  ['sideCfg', /u\[(\d+)\] = sd && sc \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/], ['placeCfg', /f\[(\d+)\] = pc\[0\];/], ['levelCfg', /u\[(\d+)\] = levelSwitches\(\);/],   // (the look prototype's Walls have two sides row: the flag, up with the column table, then render/wallSides.ts's words, which the exposure reads too)
 ];
 { const rows: string[] = []; let bad = 0, missing = 0;
   for (const [name, re] of writers) {
@@ -99,7 +100,7 @@ const lit = (t: string): number => { t = t.trim().replace(/u\b/g, ''); let m: Re
   const unread = wg.filter(([, v]) => !Number.isFinite(v));
   const dupW = wg.filter(([, v], i) => wg.findIndex(([, w]) => w === v) !== i);
   verdict(unread.length === 0 && wg.every(([, v]) => isPow2(v)) && dupW.length === 0, `common.wgsl: ${wg.length} FLAG_ consts, each a readable, distinct single bit`, [...unread.map(([n]) => `${n}: literal '${declared.find(m => m[1] === n)?.[2].trim()}' not understood (decimal / 0x… / 1u << n expected)`), ...dupW.map(([n, v]) => `${n} = ${v} shares its bit with ${wg.find(([m, w]) => w === v && m !== n)?.[0]}`)].join(' · '));
-  verdict(wg.length >= 24 && wg.length <= host.length, `the FLAG_ table was actually read: ${wg.length} consts found (≥ 24, ≤ FrameFlags' ${host.length})`, wg.length < 24 ? 'the regex matched too few lines — did the declaration style change?' : '');   // (the count guard: a regex that quietly matches nothing would make every check below vacuous)
+  verdict(wg.length >= 18 && wg.length <= host.length, `the FLAG_ table was actually read: ${wg.length} consts found (≥ 18, ≤ FrameFlags' ${host.length})`, wg.length < 18 ? 'the regex matched too few lines — did the declaration style change?' : '');   // (the count guard: a regex that quietly matches nothing would make every check below vacuous)
   const byName = new Map(host.map(([n, v]) => [norm(n), v]));
   const rows: string[] = [];
   for (const [n, v] of wg) { const key = norm(n.replace(/^FLAG_/, '')); const hv = byName.get(ALIAS[key] ?? key); if (hv === undefined) rows.push(`${n} (${v}) has no FrameFlags entry`); else if (hv !== v) rows.push(`${n} = ${v} but FrameFlags.${ALIAS[key] ?? key} = ${hv}`); }
@@ -120,6 +121,13 @@ console.log('\n=== frame-layout: BoxFlag (boxes.ts) vs BOX_* (common.wgsl) ===')
   const rows: string[] = [];
   for (const [n, v] of wg) { const hv = byName.get(norm(n.replace(/^BOX_/, ''))); if (!Number.isFinite(v)) rows.push(`${n}: literal not understood`); else if (hv === undefined) rows.push(`${n} (${v}) has no BoxFlag entry`); else if (hv !== v) rows.push(`${n} = ${v} but BoxFlag = ${hv}`); }
   verdict(rows.length === 0 && wg.length >= 6, `every BOX_ const (${wg.length} ≥ 6 read) names a BoxFlag of the same value`, rows.join(' · '));
+}
+
+// ---------------------------------------------------------------- 4. one number said in two languages: the shadow ratio clamp's bound
+{
+  const wg = /^const RATIO_HI\s*:\s*f32\s*=\s*([0-9.]+);/m.exec(readFileSync(`${ROOT}/src/render/shaders/direct_common.wgsl`, 'utf8'))?.[1];
+  const ts = /\bratioHi: ([0-9.]+),/.exec(readFileSync(`${ROOT}/src/render/denoise.ts`, 'utf8'))?.[1];   // (read as text: the module asks for a GPU at load)
+  verdict(wg !== undefined && ts !== undefined && Number(wg) === Number(ts), 'the shadow ratio clamp has one bound: direct_common.wgsl RATIO_HI (sharp direct) = the denoiser knobs\' ratioHi', `RATIO_HI ${wg} · ratioHi ${ts}`);
 }
 
 console.log(`\n=== frame-layout: ${fails ? `${fails} FAIL` : 'ALL PASS'} ===`);

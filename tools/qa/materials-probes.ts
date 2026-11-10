@@ -1,9 +1,9 @@
-// Renderer v3 PHASE 4 — materials, ray-traced reflections, the detail layer (docs/internal/p4-materials.md) — the CPU-held / pure parts. The passes need the
+// Renderer v3 PHASE 4 — materials, ray-traced reflections, the detail layer — the CPU-held / pure parts. The passes need the
 // GPU (the Browser pane: boots, toggles, __png identity, the cost tables); what a headless bun can hold is everything AROUND them:
 //   materials-finish     the finish (rough / metal) through the level format: the office file carries it per material and per box, loadLevel resolves box over
 //                        material, an old file (no finish anywhere) loads to boxes without one, levelToData writes only what the paint does not say, the
-//                        validator trips on bad values; and Box → GPU word → back (matWord ⇄ common.wgsl boxFinish, ported)
-//   materials-presets    which presets switch the reflections on and with what (ultra ÷2 · 2 rays · ≤ 0.55 · 4, high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
+//                        bad values are faults; and Box → GPU word → back (matWord ⇄ common.wgsl boxFinish, ported)
+//   materials-presets    which presets switch the reflections on and with what (high ÷2 · 1 · ≤ 0.45 · 3, medium ÷3 · 1 · ≤ 0.35 · 3,
 //                        low / verylow off), apply() writes exactly that, the ?nortreflect veto holds across apply()
 //   materials-frame      the engine writes rtCfg.w = the divisor with the switch on and 0 with it off, holds Gloss DOWN while on whatever settings.gloss says,
 //                        matCfg.w = the detail amount — read back off a real Engine's Frame bytes on the fake device; and settings aside, the first 624 bytes of the
@@ -13,18 +13,15 @@
 //                        stretches the lobe along the axis it is told to
 //   materials-arealight  the analytic stand-in for a panel on a rough finish (centre direction, lobe widened by r / 2d, no renormalisation) against a quadrature
 //                        of the true GGX integral over a 1.2 × 0.6 panel: peak within −35 % / +60 % for rough 0.3‥0.45 — the choice reflect.wgsl rtGlints documents
-//   materials-wear       the detail layer's traffic map (render/wear.ts) on the office: deterministic, the corridor route worn and a wall's inside not, every
-//                        threshold stamped, the wall-proximity channel 1 at a wall's foot and 0 mid-room, the size the shader's mapping assumes
-//   bun run tools/qa/probes.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict; probes.ts sets the exit code)
-import { ROOT, fake } from './headless.ts';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+//   bun run tools/qa/checks.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict)
+import { ROOT, fake, main } from './here.ts';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const { OFFICE_DATA, buildLevel } = await import(`${ROOT}/src/scene/level.ts`);
-const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { validateLevelData, canonicalLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
+const { canonicalLevelData, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { makeBox, matWord, ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { PRESETS, QUALITY_NAMES, rtVeto, Quality } = await import(`${ROOT}/src/ui/quality.ts`);
 const { FrameFlags, FRAME_BYTES, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
@@ -44,8 +41,8 @@ function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ finish
 export async function materialsFinish() {
-  console.log('\n=== materials-finish: the finish through the level file, the loader both ways, the validator, the GPU word ===');
-  const D = OFFICE_DATA; const mats = D.materials;
+  console.log('\n=== materials-finish: the finish through the level file, the loader both ways, its faults, the GPU word ===');
+  const D = JSON.parse(readFileSync(`${ROOT}/levels/office.json`, 'utf8')); const mats = D.materials;
   const withRough = Object.entries(mats).filter(([, m]: any) => m.rough !== undefined).length;
   verdict(withRough >= 20 && mats.lino?.rough === 0.22 && mats.stone?.rough === 0.15 && mats.metal?.metal === true && mats.metal?.rough === 0.28 && mats.screenOff?.rough === 0.08 && mats.carpet?.rough >= 0.9,
     `office.json: ${withRough}/${Object.keys(mats).length} materials carry a finish (lino ${mats.lino?.rough}, stone ${mats.stone?.rough}, metal ${mats.metal?.rough} metal=${mats.metal?.metal}, screenOff ${mats.screenOff?.rough}, carpet ${mats.carpet?.rough})`);
@@ -61,19 +58,15 @@ export async function materialsFinish() {
   { const D2 = JSON.parse(JSON.stringify(D)); D2.boxes[carpetI].rough = 0.3; D2.boxes[metalI].metal = false; D2.boxes[metalI].rough = 0.5; const L2 = loadLevel(D2);
     verdict(L2.boxes[carpetI].rough === 0.3 && L2.boxes[metalI].rough === 0.5 && L2.boxes[metalI].metal === undefined, 'a box\'s own rough / metal override its material\'s (metal:false over a metal material = no metal)', `carpet box ${L2.boxes[carpetI].rough} · metal box ${L2.boxes[metalI].rough}/${L2.boxes[metalI].metal}`); }
   { const old = JSON.parse(JSON.stringify(D)); for (const m of Object.values(old.materials) as any[]) { delete m.rough; delete m.metal; } for (const b of old.boxes) { delete b.rough; delete b.metal; }
-    const errs = validateLevelData(old); const Lo = loadLevel(old); const any = Lo.boxes.some((b: any) => b.rough !== undefined || b.metal !== undefined);
+    const Lo = loadLevel(old); const any = Lo.boxes.some((b: any) => b.rough !== undefined || b.metal !== undefined);
     const rest: string[] = []; const n = structuralDiff({ ...L, boxes: L.boxes.map((b: any) => { const c = { ...b }; delete c.rough; delete c.metal; return c; }) }, Lo, rest, 3);
-    verdict(errs.length === 0 && !any && n === 0, 'a file without any finish (every rough / metal stripped) validates, loads, and gives the same Level minus the finishes', errs.length ? errs[0] : `${n} other diffs ${rest.join(' | ')}`); }
-  { const D1 = levelToData(L, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id), boxGroups: D.boxes.map((b: any) => b.group), floors: D.floors, surfaces: D.surfaces, meta: D.meta, volumes: D.volumes, connectors: D.connectors, devices: D.devices });
+    verdict(!any && n === 0, 'a file without any finish (every rough / metal stripped) loads, and gives the same Level minus the finishes', `${n} other diffs ${rest.join(' | ')}`); }
+  { const D1 = levelToData(L, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id), boxGroups: D.boxes.map((b: any) => b.group), floors: D.floors, surfaces: D.surfaces, meta: D.meta, volumes: D.volumes, devices: D.devices });
     const diffs: string[] = []; const n = structuralDiff(canonicalLevelData(D), canonicalLevelData(D1), diffs, 4);
     verdict(n === 0, 'data → level → data keeps every finish where it was (materials by name, the one-offs per box, nothing duplicated onto 900 boxes)', diffs.join(' | '));
     const Lm = loadLevel(D); Lm.boxes[linoI].rough = undefined; delete Lm.boxes[linoI].rough;
     const Dm = levelToData(Lm, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id) }); const back = loadLevel(Dm);
     verdict(Dm.boxes[linoI].rough === ROUGH_DEFAULT && back.boxes[linoI].rough === ROUGH_DEFAULT, 'a finished-material box made matte at runtime is written as an explicit rough 1 and loads back matte', `written ${Dm.boxes[linoI].rough}`); }
-  { const bad = JSON.parse(JSON.stringify(D)); bad.materials.lino.rough = 1.5; bad.materials.metal.metal = 'yes'; bad.boxes[3].rough = -0.1; bad.boxes[4].metal = 1;
-    const errs: string[] = validateLevelData(bad);
-    const want = [/materials\.lino: rough must be a number in \[0, 1\]/, /materials\.metal: metal must be a boolean/, /boxes\[3\].*rough must be/, /boxes\[4\].*metal must be/];
-    verdict(want.every(re => errs.some(e => re.test(e))), 'the validator reports rough outside [0, 1] and a non-boolean metal, on materials and on boxes', errs.slice(0, 4).join(' | ')); }
   { const cases = [{}, { rough: 0.22 }, { rough: 0.28, metal: true }, { rough: 0.22, aniso: true }, { rough: 0.05, metal: true, aniso: true }, { rough: 1.7 }, { rough: -1 }, { metal: true }];
     const rows: string[] = []; let ok = true;
     for (const c of cases) { const b = makeBox({ c: [0, 0, 0], h: [1, 1, 1], ...c }); const w = matWord(b); const f = decodeFinish(Math.fround(w)); const wantR = Math.min(1, Math.max(0, (c as any).rough ?? ROUGH_DEFAULT));
@@ -86,7 +79,6 @@ export async function materialsFinish() {
 export async function materialsPresets() {
   console.log('\n=== materials-presets: which presets switch the reflections on, and with what ===');
   const P = PRESETS as Record<string, any>;
-  verdict(P.ultra.rt.on && P.ultra.rt.div === 2 && P.ultra.rt.rays === 2 && P.ultra.rt.maxRough === 0.55 && P.ultra.rt.atrous === 4, 'ultra: on, half-res target, 2 rays, finishes ≤ 0.55, 4 à-trous', JSON.stringify(P.ultra.rt));
   verdict(P.high.rt.on && P.high.rt.div === 2 && P.high.rt.rays === 1 && P.high.rt.maxRough === 0.45 && P.high.rt.atrous === 3, 'high: on, half-res target, 1 ray, finishes ≤ 0.45, 3 à-trous', JSON.stringify(P.high.rt));
   verdict(P.medium.rt.on && P.medium.rt.div === 3 && P.medium.rt.rays === 1 && P.medium.rt.maxRough === 0.35, 'medium: on, third-res target, 1 ray, finishes ≤ 0.35 (floors, screens, steel)', JSON.stringify(P.medium.rt));
   verdict(['low', 'verylow'].every(n => !P[n].rt.on), 'low / verylow: off (the finish table and the detail layer stay: they live in the g-buffer)', ['low', 'verylow'].map(n => `${n} ${P[n].rt.on}`).join(' · '));
@@ -101,17 +93,11 @@ export async function materialsPresets() {
     q.pin('low'); const offOk = engine.settings.rtReflect === false;
     q.pin('medium'); const md = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
     q.pin('high'); const hi = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
-    q.pin('ultra'); const ul = { on: engine.settings.rtReflect, div: engine.settings.rtReflectDiv, rays: engine.settings.rtRays, maxR: engine.settings.rtMaxRough, at: engine.settings.rtAtrous };
-    verdict(offOk && md.on && md.div === 3 && md.maxR === 0.35 && hi.on && hi.div === 2 && hi.rays === 1 && hi.maxR === 0.45 && hi.at === 3 && ul.on && ul.rays === 2 && ul.maxR === 0.55 && ul.at === 4, 'Quality.apply: low → off; medium / high / ultra → their blocks land in settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous', `medium ${JSON.stringify(md)} · high ${JSON.stringify(hi)} · ultra ${JSON.stringify(ul)}`);
+    verdict(offOk && md.on && md.div === 3 && md.maxR === 0.35 && hi.on && hi.div === 2 && hi.rays === 1 && hi.maxR === 0.45 && hi.at === 3, 'Quality.apply: low → off; medium / high → their blocks land in settings.rtReflect / rtReflectDiv / rtRays / rtMaxRough / rtAtrous', `medium ${JSON.stringify(md)} · high ${JSON.stringify(hi)}`);
     verdict(engine.settings.detail === 0.35, 'settings.detail defaults to 0.35 and no preset touches it', `detail ${engine.settings.detail}`);
     rtVeto.on = true; q.pin('medium'); q.pin('high'); const vetoed = engine.settings.rtReflect === false && engine.settings.rtReflectDiv === 2; rtVeto.on = false; q.pin('high'); const back = engine.settings.rtReflect === true;
     verdict(vetoed && back, '?nortreflect (rtVeto): high applies with the reflections held OFF (its divisor / rays still written); veto lifted → on again');
-    // renderer v3 phase 5: the ultra-only extras (Preset.p5) — on in ultra, P5_OFF everywhere else, and a hop off ultra puts them back
-    const p5of = () => ({ gi: engine.settings.giResample, rays: engine.settings.giResampleRays, mesh: engine.settings.rtMeshHits, reuse: engine.settings.rtHitReuse });
-    q.pin('ultra'); const u5 = p5of(); q.pin('high'); const h5 = p5of(); q.pin('ultra'); q.pin('medium'); const m5 = p5of(); q.pin('low'); const l5 = p5of(); q.pin('verylow'); const v5 = p5of();
-    verdict(u5.gi === 'temporal' && u5.rays === 2 && u5.mesh === true && u5.reuse === false, 'phase 5: ultra switches gather resampling (temporal, 2 fresh rays) and mesh hits ON, hit-lighting reuse OFF (measured no gain)', JSON.stringify(u5));
-    verdict([h5, m5, l5, v5].every(x => x.gi === 'off' && x.mesh === false && x.reuse === false), 'phase 5: high / medium / low / verylow carry all three OFF (their passes byte for byte as they were), including straight after an ultra visit', [h5, m5, l5, v5].map(x => JSON.stringify(x)).join(' · '));
-    verdict(QUALITY_NAMES.every((n: string) => P[n].p5 && ['off', 'temporal', 'full'].includes(P[n].p5.gi) && P[n].p5.giRays >= 1 && P[n].p5.giRays <= 4 && typeof P[n].p5.mesh === 'boolean' && typeof P[n].p5.reuse === 'boolean'), 'every preset carries a well-formed p5 block');   __teardownDom();
+    __teardownDom();
   }
   done('materials-presets');
 }
@@ -120,7 +106,7 @@ export async function materialsPresets() {
 async function fakeEngine() {
   (globalThis as any).window ??= globalThis; (globalThis as any).devicePixelRatio ??= 1;
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
-  const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
+  const { FollowCamera } = await import(`${ROOT}/src/host/camera.ts`);
   const inner = fake('device');
   const dev = new Proxy(inner, { get(t: any, p) { if (p === 'limits') return { maxStorageBuffersPerShaderStage: 10 }; return t[p]; } });   // (the fake coerces to 0: give the Engine's budget check a real number)
   const gpu: any = { device: dev, hasTimestamps: false, format: 'bgra8unorm', linearSampler: fake('sampler'), canvas: { clientWidth: 800, clientHeight: 500, width: 800, height: 500 }, ctx: fake('ctx') };
@@ -135,7 +121,7 @@ export async function materialsFrame() {
   let E: any;
   try { E = await fakeEngine(); } catch (e: any) { verdict(false, 'a real Engine stands up on the fake device', String(e?.message ?? e).split('\n')[0]); done('materials-frame'); return; }
   const { engine, cam } = E;
-  const after = (set: (s: any) => void) => { set(engine.settings); engine.render(cam, 1, 1 / 60, false); const u = new Uint32Array(engine.frameData), f = new Float32Array(engine.frameData); return { flags: u[62], rt: [f[156], f[157], f[158], f[159]], mat: [f[160], f[161], f[162], f[163]] }; };
+  const after = (set: (s: any) => void) => { set(engine.settings); engine.render(cam, 1, 1 / 60, false); const u = new Uint32Array(engine.frameData), f = new Float32Array(engine.frameData); return { flags: u[62], rt: [f[144], f[145], f[146], f[147]], mat: [f[148], f[149], f[150], f[151]] }; };
   const on = after(s => { s.rtReflect = true; s.gloss = true; s.rtReflectDiv = 2; s.rtRays = 1; s.rtMaxRough = 0.45; s.detail = 0.35; });
   verdict(on.rt[3] === 2 && on.rt[0] === Math.fround(0.45) && on.rt[1] === 1 && (on.flags & F.Gloss) === 0, 'rtReflect on (+ gloss on): rtCfg = (0.45, 1, aniso, ÷2) and Gloss held DOWN — the reflection pass covers the polished floors', `rtCfg ${on.rt.map(v => +v.toFixed(3)).join(',')} flags 0x${on.flags.toString(16)}`);
   verdict(on.mat[3] === Math.fround(0.35) && on.mat[0] === 1 && on.mat[1] === 1 && on.mat[2] === 60, 'matCfg = (highlights 1, strength 1, ray bound 60, detail 0.35)', `matCfg ${on.mat.map(v => +v.toFixed(3)).join(',')}`);
@@ -161,9 +147,9 @@ export async function materialsFrame() {
     viewProj: ident(1), invViewProj: ident(2), prevViewProj: ident(3), camPos: [20, 6, 14], camDir: [0, -0.7, -0.7], time: 12.5, dt: 1 / 60, width: 1777, height: 1000,
     frameIdx: 77, numLights: 33, flags: 0x1234abcd, exposure: 2, skyZenith: [0.01, 0.02, 0.05], skyHorizon: [0.04, 0.05, 0.08], hazeDensity: 0.035,
     rcInterval0: 1, rcC0Dims: [40, 4, 28], rcNumCascades: 4, rcD0: 6, rcFrameParity: 1, numSmoke: 2, debugView: 0, indirectScale: 0.35, emissiveScale: 1, volSteps: 20,
-    capColor: [0.01, 0.012, 0.016, 0.3], post: [0, 475, 0, 0.4], rcJitter: [0.3, 0.6], directCfg: [8, 4, 10, 0.5], directAdaptiveMin: 3, numTransient: 1, secMinE: 0.006,
+    capColor: [0.01, 0.012, 0.016, 0.3], post: [0, 475, 0, 0.4], rcJitter: [0.3, 0.6], directCfg: [8, 4, 10, 0.5], numTransient: 1, secMinE: 0.006,
     glassCfg: [1, 1, 1, 0], lossyCfg: [2, 2, 0, 4], cardSlots: [3, 5], weather: { ...noWeather(), rain: 0.5, wet: 1, flash: [0.1, 0.1, 0.2] },
-    volCfg: [4, 2, 15, 0], froxelA: [0.5, 56, 2, 0.93], froxelB: [240, 135, 64, 4], froxelC: [0.1, 0.2, 0.3, 0], prevCamPos: [19, 6, 15], froxelPrevNear: 0.5,
+    volCfg: [4, 2, 15, 0], prevCamPos: [19, 6, 15],
     rtCfg: [0.45, 1, 0.7, 2], matCfg: [1, 1, 60, 0.35], p5Cfg: [17, 0x0a031402, 3, 0], jitter: [0.25, -0.125, 0.5, 0.375], markCfg: [0.025, 1, 1.5, 1],
   };
   const A = new ArrayBuffer(mainBytes); mainWrite(A, base);
@@ -172,19 +158,19 @@ export async function materialsFrame() {
   const same = firstDiff < 0;
   verdict(same, `bytes [0, ${mainBytes}) identical to main's for the same FrameParams`, same ? '' : `first difference at byte ${firstDiff}`);
   const f = new Float32Array(B); const u = new Uint32Array(B);
-  verdict(f[156] === Math.fround(0.45) && f[157] === 1 && f[159] === 2 && f[160] === 1 && f[162] === 60 && f[163] === Math.fround(0.35), 'the tail carries rtCfg @624 and matCfg @640 where common.wgsl reads them', `f[156..163] = ${Array.from(f.subarray(156, 164)).map(v => +v.toFixed(3)).join(', ')}`);
-  verdict(u[164] === 17 && u[165] === 0x0a031402 && u[166] === 3 && u[167] === 0 && f[168] === 0.25 && f[169] === -0.125 && f[170] === 0.5 && f[171] === 0.375, 'and p5Cfg @656 (u32 ×4) + jitter @672 (renderer v3 phase 5) after them', `u[164..167] = ${Array.from(u.subarray(164, 168)).join(', ')} · f[168..171] = ${Array.from(f.subarray(168, 172)).join(', ')}`);
-  verdict(f[172] === Math.fround(0.025) && f[173] === 1 && f[174] === 1.5 && f[175] === 1, 'and markCfg @688 (the markings lane: base texel, contrast, emission ×, reflect)', `f[172..175] = ${Array.from(f.subarray(172, 176)).map(v => +v.toFixed(4)).join(', ')}`);
-  verdict(f[176] === 1368 && f[177] === 770 && f[178] === 1777 && f[179] === 1000 && f[180] === 1 && f[181] === Math.fround(0.3) && f[182] === 2.5 && f[183] === Math.fround(0.01), 'and sharpCfg @704 + sharpCfgB @720 (sharp direct: sizes, knobs)', `f[176..183] = ${Array.from(f.subarray(176, 184)).map(v => +v.toFixed(4)).join(', ')}`);
-  verdict(f[184] === 0.25 && f[185] === -0.125 && f[186] === 0 && f[187] === 0, 'and sharpCfgC @736 (the decoupled jitter)', `f[184..187] = ${Array.from(f.subarray(184, 188)).join(', ')}`);
-  verdict(f[188] === 45 && f[189] === 20 && f[190] === 1 && f[191] === Math.fround(0.006) && f[192] === 1 && f[193] === 24 && f[194] === Math.fround(0.0015) && f[195] === Math.fround(0.012), 'and rigCfg @752 + rigCfgB @768 (the SDF character rig: bits + soft-query numbers, blend / trace numbers)', `f[188..195] = ${Array.from(f.subarray(188, 196)).map(v => +v.toFixed(4)).join(', ')}`);
-  verdict(f[196] === 3 && f[197] === 9376 && f[198] === 4 && f[199] === 0, 'and giCfg @784 (GI in motion: young-history rays k, cap, young length)', `f[196..199] = ${Array.from(f.subarray(196, 200)).join(', ')}`);
-  verdict(f[200] === 0 && f[201] === 0 && f[202] === 0 && f[203] === 0 && f[204] === 0 && f[205] === 0 && f[206] === 0 && f[207] === 0, 'and weatherE @800 + weatherF @816 (particle rain\'s near-field disc + its v2 phase: zeros from a WeatherFrame that never rains particles) last', `f[200..207] = ${Array.from(f.subarray(200, 208)).join(', ')}`);
-  verdict(f[208] === 0 && f[209] === 0 && f[210] === 0 && f[211] === 0, 'and shadeCfg @832 (the look prototype\'s shade row: zeros from a frame that gives none = the picture as it was)', `f[208..211] = ${Array.from(f.subarray(208, 212)).join(', ')}`);
-  verdict(f[212] === 0 && f[213] === 0 && f[214] === 0 && f[215] === 0 && f[216] === 0 && f[217] === 0 && f[218] === 0 && f[219] === 0, 'and veilA @848 + veilB @864 (the look prototype\'s loose snow in the air: zeros from a frame that gives none = no powder)', `f[212..219] = ${Array.from(f.subarray(212, 220)).join(', ')}`);
-  verdict(f[220] === 0 && f[221] === 0 && f[222] === 0 && f[223] === 0, 'and eyeCfg @880 (the look prototype\'s Eyes follow Sam row: zeros from a frame that gives none = every place brought up by its own darkness, as before)', `f[220..223] = ${Array.from(f.subarray(220, 224)).join(', ')}`);
-  verdict(f[224] === 0 && f[225] === 0 && f[226] === 0 && f[227] === 0, 'and gradeCfg @896 (the look prototype\'s Contrast row as the one exposure model takes it: zeros from a frame that gives none = nothing undone)', `f[224..227] = ${Array.from(f.subarray(224, 228)).join(', ')}`);
-  verdict(f[228] === 0 && f[229] === 0 && f[230] === 0 && f[231] === 0, 'and lampCfg @912 (the look prototype\'s Light stays in its room row by day: zeros from a frame that gives none = every floor and glow as it was)', `f[228..231] = ${Array.from(f.subarray(228, 232)).join(', ')}`);
+  verdict(f[144] === Math.fround(0.45) && f[145] === 1 && f[147] === 2 && f[148] === 1 && f[150] === 60 && f[151] === Math.fround(0.35), 'the tail carries rtCfg @576 and matCfg @592 where common.wgsl reads them', `f[144..151] = ${Array.from(f.subarray(144, 152)).map(v => +v.toFixed(3)).join(', ')}`);
+  verdict(u[152] === 17 && u[153] === 0x0a031402 && u[154] === 3 && u[155] === 0 && f[156] === 0.25 && f[157] === -0.125 && f[158] === 0.5 && f[159] === 0.375, 'and p5Cfg @608 (u32 ×4) + jitter @624 (renderer v3 phase 5) after them', `u[152..155] = ${Array.from(u.subarray(152, 156)).join(', ')} · f[156..159] = ${Array.from(f.subarray(156, 160)).join(', ')}`);
+  verdict(f[160] === Math.fround(0.025) && f[161] === 1 && f[162] === 1.5 && f[163] === 1, 'and markCfg @640 (the markings lane: base texel, contrast, emission ×, reflect)', `f[160..163] = ${Array.from(f.subarray(160, 164)).map(v => +v.toFixed(4)).join(', ')}`);
+  verdict(f[164] === 1368 && f[165] === 770 && f[166] === 1777 && f[167] === 1000 && f[168] === 1 && f[169] === Math.fround(0.3) && f[170] === 2.5 && f[171] === Math.fround(0.01), 'and sharpCfg @656 + sharpCfgB @672 (sharp direct: sizes, knobs)', `f[164..171] = ${Array.from(f.subarray(164, 172)).map(v => +v.toFixed(4)).join(', ')}`);
+  verdict(f[172] === 0.25 && f[173] === -0.125 && f[174] === 0 && f[175] === 0, 'and sharpCfgC @688 (the decoupled jitter)', `f[172..175] = ${Array.from(f.subarray(172, 176)).join(', ')}`);
+  verdict(f[176] === 45 && f[177] === 20 && f[178] === 1 && f[179] === Math.fround(0.006) && f[180] === 1 && f[181] === 24 && f[182] === Math.fround(0.0015) && f[183] === Math.fround(0.012), 'and rigCfg @704 + rigCfgB @720 (the SDF character rig: bits + soft-query numbers, blend / trace numbers)', `f[176..183] = ${Array.from(f.subarray(176, 184)).map(v => +v.toFixed(4)).join(', ')}`);
+  verdict(f[184] === 3 && f[185] === 9376 && f[186] === 4 && f[187] === 0, 'and giCfg @736 (four free words since the young-history rays went: still written as given)', `f[184..187] = ${Array.from(f.subarray(184, 188)).join(', ')}`);
+  verdict(f[188] === 0 && f[189] === 0 && f[190] === 0 && f[191] === 0 && f[192] === 0 && f[193] === 0 && f[194] === 0 && f[195] === 0, 'and weatherE @752 + weatherF @768 (particle rain\'s near-field disc + its v2 phase: zeros from a WeatherFrame that never rains particles) last', `f[188..195] = ${Array.from(f.subarray(188, 196)).join(', ')}`);
+  verdict(f[196] === 0 && f[197] === 0 && f[198] === 0 && f[199] === 0, 'and shadeCfg @784 (the look prototype\'s shade row: zeros from a frame that gives none = the picture as it was)', `f[196..199] = ${Array.from(f.subarray(196, 200)).join(', ')}`);
+  verdict(f[200] === 0 && f[201] === 0 && f[202] === 0 && f[203] === 0 && f[204] === 0 && f[205] === 0 && f[206] === 0 && f[207] === 0, 'and veilA @800 + veilB @816 (the look prototype\'s loose snow in the air: zeros from a frame that gives none = no powder)', `f[200..207] = ${Array.from(f.subarray(200, 208)).join(', ')}`);
+  verdict(f[208] === 0 && f[209] === 0 && f[210] === 0 && f[211] === 0, 'and eyeCfg @832 (the look prototype\'s Eyes follow Sam row: zeros from a frame that gives none = every place brought up by its own darkness, as before)', `f[208..211] = ${Array.from(f.subarray(208, 212)).join(', ')}`);
+  verdict(f[212] === 0 && f[213] === 0 && f[214] === 0 && f[215] === 0, 'and gradeCfg @848 (the look prototype\'s Contrast row as the one exposure model takes it: zeros from a frame that gives none = nothing undone)', `f[212..215] = ${Array.from(f.subarray(212, 216)).join(', ')}`);
+  verdict(f[216] === 0 && f[217] === 0 && f[218] === 0 && f[219] === 0, 'and lampCfg @864 (the look prototype\'s Light stays in its room row by day: zeros from a frame that gives none = every floor and glow as it was)', `f[216..219] = ${Array.from(f.subarray(216, 220)).join(', ')}`);
   done('materials-frame');
 }
 
@@ -263,79 +249,4 @@ export async function materialsArealight() {
   done('materials-arealight');
 }
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------ the traffic map
-/** the office's wall band as every page has it, summed byte by byte (render/wear.ts bandByOccupancy): moved only on purpose */
-const WALL_BAND_SUM = 3450058653;
-export async function materialsWear() {
-  console.log('\n=== materials-wear: the detail layer\'s traffic map on the office (render/wear.ts) ===');
-  const { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`);
-  const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
-  const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-  const level = buildLevel(); const col = new StaticCollision(level.boxes);
-  const t0 = performance.now(); const A = buildWearMap(level, col.nav); const ms = performance.now() - t0; const B = buildWearMap(level, col.nav);
-  verdict(A.w === WORLD.gridW * WORLD.gridCell * WEAR_RES && A.h === WORLD.gridH * WORLD.gridCell * WEAR_RES && A.data.length === A.w * A.h * 2, `${A.w}×${A.h} texels, 2 bytes each = the world's ${WORLD.gridW}×${WORLD.gridH} m grid at ${WEAR_RES}/m (detail.wgsl maps wp.xz through WORLD_MIN / GRID_W·H / GRID_CELL)`, `${A.data.length} B in ${ms.toFixed(0)} ms`);
-  let same = A.data.length === B.data.length; for (let i = 0; same && i < A.data.length; i++) if (A.data[i] !== B.data[i]) same = false;
-  verdict(same, 'deterministic: two builds are byte-identical (nothing random — the same level draws the same wear)');
-  const at = (x: number, z: number, ch: 0 | 1) => { const tx = Math.floor((x - WORLD.min[0]) * WEAR_RES), tz = Math.floor((z - WORLD.min[2]) * WEAR_RES); return A.data[(tz * A.w + tx) * 2 + ch] / 255; };
-  // traffic: the corridor route's own waypoints are worn; the middle of a wall / outside the fence is not; every door's threshold is stamped
-  const route = level.routes.find((r: any) => r.name === 'corridor') ?? level.routes[0];
-  const onRoute = route.points.map((p: any) => at(p[0], p[2], 0));
-  verdict(onRoute.every((v: number) => v > 0.5), `traffic > 0.5 at every waypoint of route '${route.name}' (a man stands and turns there every lap)`, onRoute.map((v: number) => v.toFixed(2)).join(' · '));
-  const quiet = [at(0.5, 0.5, 0), at(39.5, 0.6, 0), at(5.0, 4.05, 0)];   // the world's NW corner, its NE corner, inside the north wall
-  verdict(quiet.every(v => v < 0.08), 'traffic ≈ 0 where nobody can walk (the world\'s corners, inside a wall)', quiet.map(v => v.toFixed(2)).join(' · '));
-  const doors = level.doors.map((d: any) => { const cx = d.hinge[0] + Math.cos(d.closedDir) * d.width * 0.5, cz = d.hinge[1] + Math.sin(d.closedDir) * d.width * 0.5; return { name: d.name, v: at(cx, cz, 0) }; });
-  verdict(doors.every((d: any) => d.v > 0.6), `every threshold worn (traffic > 0.6 at all ${doors.length} frame centres)`, doors.map((d: any) => `${d.name} ${d.v.toFixed(2)}`).join(' · '));
-  // wall proximity: 1 at the corridor's north wall foot, 0 in the middle of the lobby / the corridor
-  const wallFoot = at(17.0, 10.06, 1), midLobby = at(8.0, 20.0, 1), midCorr = at(17.0, 11.1, 1);
-  verdict(wallFoot > 0.7 && midLobby < 0.05 && midCorr < 0.05, 'wall proximity: high at the corridor\'s wall foot, ≈ 0 mid-lobby and mid-corridor (GRIME_REACH 16 cm)', `wall foot ${wallFoot.toFixed(2)} · mid-lobby ${midLobby.toFixed(2)} · mid-corridor ${midCorr.toFixed(2)}`);
-  { // the band as every page has it is not to move (the build's grime band reads it): its sum on the office, held to the byte
-    let sum = 0; for (let i = 1; i < A.data.length; i += 2) sum = (Math.imul(sum, 31) + A.data[i]) >>> 0;
-    verdict(sum === WALL_BAND_SUM, 'the wall band every page has is the one it always had: a sum over the office\'s band, byte by byte', `${sum} (held: ${WALL_BAND_SUM})`); }
-  { // THE LOOK'S PAGE (buildWearMap's `longFoot`): the band is a strip along a long face. WEARFOOT_BREAK=1 = the band as every other page has it: must fail.
-    // A made-up floor, each thing far from the next. A long wall (20 cm thick) with a crate pushed against its side and a board leant flat on it; a front of
-    // pier, low sill, pier, then a doorway and a short pier past it, laid along x, along z and at a yaw, each with a crate against its sill; the kit's corner
-    // (24 cm walls on a 44 cm pillar) with a crate touching the pillar; a short wall; a block; four crates in a row along x and along z; a table's leg, a thin
-    // post, a pier, a crate, two crates side by side; a slab standing 3° off true beside a wall.
-    const on = process.env.WEARFOOT_BREAK !== '1';
-    type B = { c: number[]; h: number[]; yaw: number; flags: number };
-    const bx = (c: number[], h: number[], yaw = 0): B => ({ c, h, yaw, flags: 0 });
-    /** boxes authored along x about the origin, turned by `yaw` about +y and put down at `at` (Box.yaw: local +x → (cos, 0, −sin)) */
-    const put = (at: number[], yaw: number, bs: B[]): B[] => bs.map(b => { const c = Math.cos(yaw), s = Math.sin(yaw); return bx([at[0] + c * b.c[0] + s * b.c[2], b.c[1], at[1] - s * b.c[0] + c * b.c[2]], b.h, b.yaw + yaw); });
-    const spot = (at: number[], yaw: number, x: number, z: number): [number, number] => { const c = Math.cos(yaw), s = Math.sin(yaw); return [at[0] + c * x + s * z, at[1] - s * x + c * z]; };
-    const front = (): B[] => [bx([-1, 1.4, 0], [0.4, 1.4, 0.1]), bx([0, 0.45, 0], [0.6, 0.45, 0.1]), bx([1, 1.4, 0], [0.4, 1.4, 0.1]), bx([1.9, 2.45, 0], [0.5, 0.35, 0.1]), bx([2.8, 1.4, 0], [0.4, 1.4, 0.1]), bx([0, 0.3, 0.4], [0.3, 0.3, 0.3])];
-    const FRONTS: [number[], number][] = [[[8, 20], 0], [[20, 20], Math.PI / 2], [[30, 20], 0.6]];
-    const row = (): B[] => [-0.9, -0.3, 0.3, 0.9].map(x => bx([x, 0.3, 0], [0.3, 0.3, 0.3]));
-    const ROWS: [number[], number][] = [[[8, 25], 0], [[14, 25], Math.PI / 2]];
-    const LEG = [10.02, 0.37, 9.02], POST = [14.05, 1, 9.05], PIER = [18, 1, 9], CRATE = [22, 0.3, 9], PAIR = [26, 0.3, 9];
-    const boxes: B[] = [bx([10, 1.2, 5], [4, 1.2, 0.1]), bx([12, 0.3, 5.4], [0.3, 0.3, 0.3]), bx([8, 0.6, 5.12], [0.5, 0.6, 0.02]),
-      bx(LEG, [0.02, 0.37, 0.02]), bx(POST, [0.05, 1, 0.05]), bx(PIER, [0.12, 1, 0.12]), bx(CRATE, [0.3, 0.3, 0.3]), bx([PAIR[0] - 0.3, 0.3, 9], [0.3, 0.3, 0.3]), bx([PAIR[0] + 0.3, 0.3, 9], [0.3, 0.3, 0.3]),
-      bx([22, 1.2, 14], [0.8, 1.2, 0.1]), bx([30, 1, 14], [1.5, 1, 0.5]),
-      ...FRONTS.flatMap(([at, yaw]) => put(at, yaw, front())), ...ROWS.flatMap(([at, yaw]) => put(at, yaw, row())),
-      bx([24, 1.2, 25], [3, 1.2, 0.12]), bx([27.22, 1.2, 25], [0.22, 1.2, 0.22]), bx([27.74, 0.3, 25], [0.3, 0.3, 0.3]),          // the kit's corner and a crate touching its pillar
-      bx([34, 1.2, 8], [0.12, 1.2, 3.9]), bx([33.6, 0.4, 5], [0.28, 0.4, 0.12], Math.PI / 2 + 0.03)];                             // a wall along z and a slab 3° off true at its side
-    const S = buildWearMap({ routes: [], doors: [], boxes } as any, null, on);
-    const g = (x: number, z: number) => S.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * S.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255;
-    const round = (c: number[], r: number) => Math.max(g(c[0] + r, c[2]), g(c[0] - r, c[2]), g(c[0], c[2] + r), g(c[0], c[2] - r), g(c[0] + r, c[2] + r), g(c[0] - r, c[2] - r));
-    const wall = g(10, 4.8), beside = Math.min(g(11.62, 5.2), g(12.38, 5.2)), board = g(8, 5.24), leant = Math.max(g(12, 5.8), g(11.6, 5.6), g(12.4, 5.6));
-    const none = Math.max(round(LEG, 0.13), round(POST, 0.15), round(PIER, 0.2), round(CRATE, 0.38), g(26, 9.38), g(26.68, 9), g(25.32, 9), g(26, 8.62), leant);
-    const short = g(22, 14.2), blockSide = g(30, 14.6), blockEnd = g(31.6, 14);
-    // each front: the least along its back face and along its front face clear of the crate (a hand off the face), the most round the crate's free sides, in the doorway and at the pier past it
-    const fr = FRONTS.map(([at, yaw]) => { const q = (x: number, z: number) => g(...spot(at, yaw, x, z)); let least = 1;
-      for (let x = -1.3; x <= 1.3; x += 0.05) { least = Math.min(least, q(x, -0.2)); if (Math.abs(x) > 0.45) least = Math.min(least, q(x, 0.2)); }
-      return { least, crate: Math.max(q(0, 0.82), q(0.42, 0.55), q(-0.42, 0.55)), door: q(1.9, 0.2), past: Math.max(q(2.8, 0.2), q(2.8, -0.2)) }; });
-    const rw = ROWS.map(([at, yaw]) => { const q = (x: number, z: number) => g(...spot(at, yaw, x, z)); let least = 1; for (let x = -1.1; x <= 1.1; x += 0.05) least = Math.min(least, q(x, 0.4), q(x, -0.4)); return { least, end: Math.max(q(1.4, 0), q(-1.4, 0)) }; });
-    const corner = Math.max(g(27.74, 25.42), g(27.74, 24.58), g(28.16, 25)), cornerWall = g(24, 25.24), slab = Math.max(g(33.38, 5), g(33.6, 5.4), g(33.6, 4.6));
-    // a 10 cm wall at every yaw, a hand off its face along six metres of it: the least of them (a run through texels lost the band at the steps of a turned wall)
-    let least = 1, leastAt = 0;
-    for (let k = 0; k < 24; k++) { const yaw = Math.PI * k / 24, at = [20, 14], M = buildWearMap({ routes: [], doors: [], boxes: [bx([20, 1.2, 14], [4, 1.2, 0.05], yaw)] } as any, null, on);
-      for (let t = -3; t <= 3; t += 0.05) { const [x, z] = spot(at, yaw, t, 0.13), v = M.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * M.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255; if (v < least) { least = v; leastAt = k * 7.5; } } }
-    const f2 = (v: number) => v.toFixed(2);
-    verdict(wall > 0.5 && beside === wall && board > 0.5 && none === 0 && short > 0.02 && short < wall && blockSide > 0.5 && blockEnd === 0
-      && fr.every(f => f.least > 0.3 && f.crate === 0 && f.door === 0 && f.past === 0) && rw.every(r => r.least > 0.2 && r.end === 0) && Math.abs(rw[0].least - rw[1].least) < 0.15
-      && corner === 0 && cornerWall > 0.5 && slab === 0 && least > 0.3,
-      'on the look\'s page the band is a strip along a long face: whole at a wall, beside a crate pushed against it and along a board leant on it; along a front of piers and a sill laid along x, along z or at a yaw, with nothing round the crate against its sill, in its doorway or at the short pier past it; a 10 cm wall at any of 24 yaws keeps it; a short wall has part of it; a block and a row of four crates have it along their long sides and not at their ends, whichever way the row lies; a table leg, a thin post, a pier, a crate, two crates, a crate against a wall, a crate touching the kit\'s corner pillar and a slab 3° off true beside a wall have none',
-      `wall ${f2(wall)} · beside the leant crate ${f2(beside)} · along the board ${f2(board)} · fronts (least / crate / doorway / pier past) ${fr.map(f => `${f2(f.least)} ${f2(f.crate)} ${f2(f.door)} ${f2(f.past)}`).join(' | ')} · rows (least along / ends) ${rw.map(r => `${f2(r.least)} ${f2(r.end)}`).join(' | ')} · least along a turned wall ${f2(least)} (at ${leastAt}°) · 1.6 m wall ${f2(short)} · block side ${f2(blockSide)} end ${f2(blockEnd)} · corner pillar's crate ${f2(corner)}, its wall ${f2(cornerWall)} · tilted slab ${f2(slab)} · leg, post, pier, crate, two crates, leant crate: ${f2(none)}`); }
-  let worn = 0, grimy = 0; const n = A.w * A.h; for (let i = 0; i < n; i++) { if (A.data[i * 2] > 128) worn++; if (A.data[i * 2 + 1] > 128) grimy++; }
-  verdict(worn / n > 0.01 && worn / n < 0.25 && grimy / n > 0.02 && grimy / n < 0.35, 'coverage is a minority of the floor: worn (> ½) 1–25 %, grime band (> ½) 2–35 %', `worn ${(100 * worn / n).toFixed(1)} % · grime ${(100 * grimy / n).toFixed(1)} %`);
-  done('materials-wear');
-}
+if (import.meta.main) await main([materialsFinish, materialsPresets, materialsFrame, materialsVndf, materialsArealight], materialsFailures);

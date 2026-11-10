@@ -15,49 +15,46 @@
 // WHERE THE WORDS CAME FROM (2026-11-05). Until then the rules read a box's COLOUR: an exact match against the office's palette gave a paint's name, a
 // paint of the 2010s look carried the name it stood for in a hair's shift of its colour, and a colour nobody had named was classed by how bright and how
 // grey it was. Every row below is one answer that rule gave, under a plain name, and every level file was written again with the word its colour said, so
-// no rule moved (tools/qa/does-audit.ts lists a box whose word and colour disagree; tools/levels/doesWas.ts keeps the old rule, frozen, to bring forward
+// no rule moved (tools/levels/doesWas.ts keeps the old rule, frozen, to bring forward
 // a box nobody has said a word for). So some rows are accidents kept: the 'unnamed' rows are tones, not stuffs. Each is a choice still owed, and making
 // it is one edit here or one word in a generator.
 // No imports but types: game/ reads this without pulling a kit, a palette or the renderer in.
 
 /** what a round knocks out of a thing, and the class a wall of it is to the wall engine, a round and a charge */
 export type Surf = 'metal' | 'plastic' | 'glass' | 'wood' | 'cardboard' | 'drywall' | 'concrete' | 'carpet' | 'fabric' | 'foliage';
-export const SURFS: readonly Surf[] = ['metal', 'plastic', 'glass', 'wood', 'cardboard', 'drywall', 'concrete', 'carpet', 'fabric', 'foliage'];
-/** how a blast breaks a piece of furniture (game/furnblast.ts FURN_BREAK has a row a class) */
+/** how a blast breaks a piece of furniture (rust/game_rules/src/breakage/furnblast.rs FURN_BREAK has a row a class) */
 export type BreakClass = 'wood' | 'board' | 'metal' | 'hard' | 'soft';
-export const BREAK_CLASSES: readonly BreakClass[] = ['wood', 'board', 'metal', 'hard', 'soft'];
-/** lying snow, by how trodden it is (render/snowField.ts, game/snowBog.ts) */
+/** lying snow, by how trodden it is (render/snowField.ts, rust/game_rules/src/air/snow_bog.rs) */
 export type SnowKind = 'snow' | 'snowPacked' | 'snowOld';
-export const SNOW_KINDS: readonly SnowKind[] = ['snow', 'snowPacked', 'snowOld'];
 
 /** WHAT A MATERIAL DOES: every column a rule reads. An absent flag is false; an absent word is none. */
 export interface Does {
-  /** a round's hit (game/particleFx.ts), how tough a wall of it is (wallbreak.ts), what a round goes through (wallpen.ts), what a charge is told (wallcharge.ts) */
+  /** a round's hit (rust/game_rules/src/breakage/particle_fx.rs), how tough a wall of it is (rust/game_rules/src/breakage/wallbreak), what a round goes through (rust/game_rules/src/guns/wallpen.rs), what a charge is told (rust/game_rules/src/entries/wallcharge) */
   surf: Surf;
-  /** how a blast breaks furniture of it (furnblast.ts, winbars.ts) */
+  /** how a blast breaks furniture of it (rust/game_rules/src/breakage/furnblast.rs, winbars) */
   breaks: BreakClass;
-  /** sheet steel on a frame: a cabinet or a locker of it comes apart as sheets and a carcass (furnblast.ts steel) */
+  /** sheet steel on a frame: a cabinet or a locker of it comes apart as sheets and a carcass (rust/game_rules/src/breakage/furnblast.rs steel) */
   steel?: true;
-  /** the wall engine's partitions (wallbreak.ts): 'board' = a plasterboard wall where it stands full height, low cover where it does not; 'screen' = a
+  /** the wall engine's partitions (rust/game_rules/src/breakage/wallbreak): 'board' = a plasterboard wall where it stands full height, low cover where it does not; 'screen' = a
    *  cubicle's partition, a full wall the same way and, thin and low, cloth on a frame */
   wall?: 'board' | 'screen';
-  /** plasterboard to a round: it goes through a thin run of it under a roof (wallpen.ts). A pale thing of no row is nobody's plasterboard */
+  /** plasterboard to a round: it goes through a thin run of it under a roof (rust/game_rules/src/guns/wallpen.rs). A pale thing of no row is nobody's plasterboard */
   board?: true;
-  /** low cover the wall engine breaks, and furniture a blast takes where it is a panel or a small carton (wallbreak.ts, furnblast.ts) */
+  /** low cover the wall engine breaks, and furniture a blast takes where it is a panel or a small carton (rust/game_rules/src/breakage/wallbreak, furnblast) */
   cover?: 'wood' | 'cardboard';
-  /** the building, not its furniture: a blast leaves it standing and its mouth throws none of it (furnblast.ts) */
+  /** the building, not its furniture: a blast leaves it standing and its mouth throws none of it (rust/game_rules/src/breakage/furnblast.rs) */
   struct?: true;
-  /** … but low down it is a counter or an appliance, which the mouth of a hole does throw (furnblast.ts mouthMine) */
+  /** … but low down it is a counter or an appliance, which the mouth of a hole does throw (rust/game_rules/src/breakage/furnblast.rs) */
   counter?: true;
-  /** a dark casing: a screen's housing, a monitor's foot and neck are found by it (destruction.ts index) */
+  /** a dark casing: a screen's housing, a monitor's foot and neck are found by it (rust/game_rules/src/breakage/destruction index) */
   casing?: true;
-  /** a small thin sheet of it lying on a desk or pinned to a wall is paper (destruction.ts index) */
+  /** a small thin sheet of it lying on a desk or pinned to a wall is paper (rust/game_rules/src/breakage/destruction index) */
   paper?: true;
-  /** a thin slab of it is a screen or a television (destruction.ts index) */
+  /** a thin slab of it is a screen or a television (rust/game_rules/src/breakage/destruction index) */
   screen?: true;
-  /** lying snow (snowBog.ts, airSim.ts, the blast's mouth, and the picture's snow field) */
+  /** lying snow (rust/game_rules/src/air/snow_bog.rs, air_sim, the blast's mouth, and the picture's snow field) */
   snow?: SnowKind;
-  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: game/weather.ts). Nothing is kept: whoever asks what a round
+  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: rust/game_rules/src/air/weather.rs). Nothing is kept: whoever asks what a round
    *  knocks out of the lot while the ground is wet is answered from this (doesWet below). Absent = the same wet as dry. As measured: wet tarmac sparks. */
   wet?: string;
 }
@@ -122,25 +119,10 @@ export const DOES_DEFAULT: DoesWord = 'unnamed';
 /** word → its `does`, made once from the table and never written again */
 const ROWS: ReadonlyMap<string, Does> = new Map(Object.entries(MATERIALS as Record<string, Material>).flatMap(([w, m]): [string, Does][] => m.does ? [[w, m.does]] : []));
 const DEFAULT: Does = ROWS.get(DOES_DEFAULT)!;
-/** every word that has a `does`, in the table's order */
-export const DOES_WORDS: readonly string[] = [...ROWS.keys()];
-/** every word the look draws, in the table's order (a check holds it equal to the look's own list: render/lookTex.ts) */
-export const LOOKS_WORDS: readonly string[] = Object.entries(MATERIALS as Record<string, Material>).filter(([, m]) => m.looks).map(([w]) => w);
 export const doesWordOk = (v: unknown): v is DoesWord => typeof v === 'string' && ROWS.has(v);
 /** the columns of a word (the default row's for a word the table does not have: a file opened leniently can carry any string) */
 export const doesOfWord = (w: string | undefined): Does => (w !== undefined && ROWS.get(w)) || DEFAULT;
 /** WHAT A BOX DOES: its own word's row, else the default row. The one question a rule asks of a material. */
 export const doesOf = (b: { does?: string } | null | undefined): Does => (b && b.does !== undefined && ROWS.get(b.does)) || DEFAULT;
-/** … and what it does WHILE SOAKED (the lot's slab under rain: Does.wet) */
-export const doesWet = (b: { does?: string } | null | undefined): Does => { const d = doesOf(b); return d.wet !== undefined ? doesOfWord(d.wet) : d; };
 /** the word a box carries for `w`: nothing for the default row (absent = default everywhere a box is kept) */
 export const doesSaid = (w: string | undefined): { does?: DoesWord } => w !== undefined && w !== DOES_DEFAULT && doesWordOk(w) ? { does: w } : {};
-/** THE `does` COLUMNS AS NUMBERS, a row a word, for a module that reads no strings (the Rust crate, when a reader moves there): the host hands this
- *  table over at boot and writes each box's row number from the same list in the same build. The numbers are places in SURFS, BREAK_CLASSES and
- *  SNOW_KINDS (+ 1; 0 = none); `wet` is a row number, the row's own where it is the same wet as dry. Never written to a file. */
-export function doesRows(): { words: readonly string[]; cols: readonly string[]; rows: number[][] } {
-  const cols = ['surf', 'breaks', 'steel', 'wall', 'board', 'cover', 'struct', 'counter', 'casing', 'paper', 'screen', 'snow', 'wet'];
-  const rows = DOES_WORDS.map((w, i) => { const d = ROWS.get(w)!; return [SURFS.indexOf(d.surf), BREAK_CLASSES.indexOf(d.breaks), d.steel ? 1 : 0, d.wall === 'board' ? 1 : d.wall === 'screen' ? 2 : 0, d.board ? 1 : 0,
-    d.cover === 'wood' ? 1 : d.cover === 'cardboard' ? 2 : 0, d.struct ? 1 : 0, d.counter ? 1 : 0, d.casing ? 1 : 0, d.paper ? 1 : 0, d.screen ? 1 : 0, d.snow ? 1 + SNOW_KINDS.indexOf(d.snow) : 0, d.wet !== undefined ? DOES_WORDS.indexOf(d.wet) : i]; });
-  return { words: DOES_WORDS, cols, rows };
-}

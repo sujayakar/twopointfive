@@ -1,6 +1,6 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
-import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
-import { cutSwap } from './cutSwap';
+import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull, laterRenderPipelineAsync } from '../gpu/device';
+import { KEPT } from '../gpu/keep';   // (the kept page's lease: the look's maps are worked out once a visit — makeLayers)
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
@@ -16,24 +16,27 @@ import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
 import { LOOK_WITH, LOOK_PAINTED, LOOK_WORDS, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
+import { LookPool } from './lookWorkers';
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
-import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_ROLLED, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND, lookLayer, lookMip } from './lookTex';
+import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_ROLLED, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND, lookMip } from './lookTex';
 
 /** the word's fields (common.wgsl boxStuff, look.wgsl lookSurface read the same): the stuff below `moves`, the box's own number × `own`, `owns` of them */
 export const LOOK_WORD = { stuffs: LOOK_WORDS, moves: 32, own: 64, owns: 45 } as const;
 /** THE STUFFS SOME BOX HAS BEEN (bits by stuff number), and how many times that grew: the g-buffer makes a stuff's map the first time a box is one (needLook) */
 const SEEN = { bits: 0, grew: 0 };
 function lookSeen(stuff: number) { const bit = 1 << stuff; if (stuff > 0 && !(SEEN.bits & bit)) { SEEN.bits |= bit; SEEN.grew++; } }
+/** the stuffs some box has been, by bits (a page whose boxes are packed elsewhere) */
+export function lookNeedBits(bits: number) { for (let s = 1; s < 32; s++) if (bits >>> s & 1) lookSeen(s); }
 /** nothing has been any stuff yet (a check starts from here; the page never does: one level a page) */
 export function lookForget() { SEEN.bits = 0; SEEN.grew++; }
-/** say what is about to be drawn: every stuff named here has its map made by the next needLook() (a check; the page asks its boxes their words: main.ts) */
+/** say what is about to be drawn: every stuff named here has its map made by the next needLook() (a check; the page asks its boxes their words: host/drawpage.ts) */
 export function lookNeed(stuffs: Iterable<string>) { for (const w of stuffs) lookSeen(lookStuffOf(w)); }
 /** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (5 bits), whether it MOVES (a box past the
  *  level's statics, rebuilt every frame, which carries its map with it: 32), and a number of its own, 0‥44 (× 64), that shifts its map so two crates are not one crate
  *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
  *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
- *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (game/devices.ts), so a tripwire's beam coming or going still moves the
+ *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/stealth/devices.rs), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
  *  WHAT IT IS MADE OF IS WHAT THE BOX SAYS (Box.stuff: its own word or its material row's, put there when the level was loaded or the box was made:
  *  scene/stuff.ts) and nothing else: a box that says nothing is plain. No colour is asked, so rain that darkens a slab, a repaint or a tone of wear cannot
@@ -55,24 +58,12 @@ export function lookCoreOf(): (b: Box) => number {
   return b => { const w = b.cutCoreStuff ?? b.stuff, stuff = w !== undefined ? lookStuffOf(w) : 0; lookSeen(stuff); return stuff; };
 }
 /** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */
-function nextTask(): Promise<void> {
+export function nextTask(): Promise<void> {
   return new Promise(res => { if (typeof MessageChannel === 'undefined') { setTimeout(res, 0); return; } const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); res(); }; ch.port2.postMessage(0); });
 }
-/** look.wgsl on the look page; on every other, the few names fsBox's dead calls need and nothing else (no binding: the bind group is the page's as it was) */
+/** look.wgsl, behind the tables of lookTex.ts it reads as constants */
 function lookWgsl(): string {
-  return lookConfig.on ? `const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};   // the layer a man's clothes are woven from (look.wgsl lookMan; no box's rule)\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\nconst LOOK_KEEP = array<vec4f, ${LOOK_LAYERS}>(${LOOK_NAMES.map((_, l) => `vec4f(${wgslNum(LOOK_BUILT[l])}, ${wgslNum(LOOK_FADES[l])}, ${wgslNum(LOOK_SOAKS[l])}, ${wgslNum(LOOK_WORN[l])})`).join(', ')});   // lookTex.ts STUFFS: a stuff laid in place, how far it blotches (0 = a place somebody keeps), whether it takes damp, how hard use shows on it\nconst LOOK_ROLLED = array<f32, ${LOOK_LAYERS}>(${LOOK_ROLLED.map(wgslNum).join(', ')});   // lookTex.ts STUFFS' rolled: metres over which a pressed or moulded thing's arrises are rolled (look.wgsl lookRoll)\nconst LOOK_UNIT = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNIT.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' unit: a stuff made of pieces: one piece's size in the map (m), its bond, how far a piece's shade may sit from the next's\nconst LOOK_LAY = array<vec4f, ${LOOK_LAYERS}>(${LOOK_LAY.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' untiles, bay and runs: it is read twice and cross-faded; pieces a bay along and up; which way its grain runs (0 the box's own, 1 the long way where it lies, 2 the long way always)\nconst LOOK_THING = array<vec4f, ${LOOK_LAYERS}>(${LOOK_THING.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' least, foot, ground and sheds: half a face's width under which its map is not shown; the layer that comes up through it at a wall's foot (-1 none); bare ground that freezes by snow; snow does not lie on it\nconst LOOK_UNDER = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNDER.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' under: the plinth's layer and the core's (-1 none), and half the length and half the height of the least wall that shows them\nconst LOOK_HANDLED = vec3f(${wgslNum(LOOK_HANDLED.long / 2)}, ${wgslNum(LOOK_HANDLED.tall / 2)}, ${wgslNum(LOOK_HANDLED.thin / 2)});   // lookTex.ts LOOK_HANDLED as half-extents: what a hand moves (its arrises are rubbed) is under x on its longer side, under y tall, over z thin\nconst LOOK_GROUND = vec3f(${wgslNum(LOOK_GROUND.top)}, ${wgslNum(LOOK_GROUND.snow)}, ${wgslNum(LOOK_GROUND.foot)});   // lookTex.ts LOOK_GROUND: a top under x is ground, a face under y is the snow field's, a box whose foot is under z stands on the ground\n` + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
-fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool, rolls: bool) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }
-fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f { return n; }
-struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
-struct LookGround { n: vec3f, rough: f32 };
-fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround { return LookGround(nIn, roughIn); }
-fn lookMarkSoft() -> vec2f { return vec2f(0.0, 1.0); }
-fn lookTrod() -> f32 { return 0.0; }
-fn lookWears(n: vec3f, bi: u32, hf: vec4f) -> bool { return false; }
-struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
-fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f, nIn: vec3f, albedoIn: vec3f, roughIn: f32, gainIn: f32, cavity: f32, dust: vec4f, owner: u32, fp: f32) -> LookMan { return LookMan(albedoIn, nIn, roughIn, gainIn); }
-fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint: vec3f, albedoIn: vec3f, roughIn: f32, fp: f32) -> LookSnow { return LookSnow(albedoIn, gn, roughIn, 0.0, false); }
-`;
+  return `const LOOK_L_CLOTH: i32 = ${LOOK_NAMES.indexOf('cloth')};   // the layer a man's clothes are woven from (look.wgsl lookMan; no box's rule)\nconst LOOK_LAYERS: i32 = ${LOOK_LAYERS};\nconst LOOK_BASE = array<f32, ${LOOK_LAYERS}>(${LOOK_ROUGH.map(v => v.toFixed(3)).join(', ')});   // lookTex.ts LOOK_ROUGH: the roughness each layer is written around\nconst LOOK_KEEP = array<vec4f, ${LOOK_LAYERS}>(${LOOK_NAMES.map((_, l) => `vec4f(${wgslNum(LOOK_BUILT[l])}, ${wgslNum(LOOK_FADES[l])}, ${wgslNum(LOOK_SOAKS[l])}, ${wgslNum(LOOK_WORN[l])})`).join(', ')});   // lookTex.ts STUFFS: a stuff laid in place, how far it blotches (0 = a place somebody keeps), whether it takes damp, how hard use shows on it\nconst LOOK_ROLLED = array<f32, ${LOOK_LAYERS}>(${LOOK_ROLLED.map(wgslNum).join(', ')});   // lookTex.ts STUFFS' rolled: metres over which a pressed or moulded thing's arrises are rolled (look.wgsl lookRoll)\nconst LOOK_UNIT = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNIT.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' unit: a stuff made of pieces: one piece's size in the map (m), its bond, how far a piece's shade may sit from the next's\nconst LOOK_LAY = array<vec4f, ${LOOK_LAYERS}>(${LOOK_LAY.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' untiles, bay and runs: it is read twice and cross-faded; pieces a bay along and up; which way its grain runs (0 the box's own, 1 the long way where it lies, 2 the long way always)\nconst LOOK_THING = array<vec4f, ${LOOK_LAYERS}>(${LOOK_THING.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' least, foot, ground and sheds: half a face's width under which its map is not shown; the layer that comes up through it at a wall's foot (-1 none); bare ground that freezes by snow; snow does not lie on it\nconst LOOK_UNDER = array<vec4f, ${LOOK_LAYERS}>(${LOOK_UNDER.map(r => `vec4f(${r.map(wgslNum).join(', ')})`).join(', ')});   // lookTex.ts STUFFS' under: the plinth's layer and the core's (-1 none), and half the length and half the height of the least wall that shows them\nconst LOOK_HANDLED = vec3f(${wgslNum(LOOK_HANDLED.long / 2)}, ${wgslNum(LOOK_HANDLED.tall / 2)}, ${wgslNum(LOOK_HANDLED.thin / 2)});   // lookTex.ts LOOK_HANDLED as half-extents: what a hand moves (its arrises are rubbed) is under x on its longer side, under y tall, over z thin\nconst LOOK_GROUND = vec3f(${wgslNum(LOOK_GROUND.top)}, ${wgslNum(LOOK_GROUND.snow)}, ${wgslNum(LOOK_GROUND.foot)});   // lookTex.ts LOOK_GROUND: a top under x is ground, a face under y is the snow field's, a box whose foot is under z stands on the ground\n` + lookSrc;
 }
 /** a number as WGSL takes an f32 literal, every digit of it (a row of lookTex.ts STUFFS is not rounded on its way to the shader) */
 const wgslNum = (v: number): string => Number.isInteger(v) ? v.toFixed(1) : String(v);
@@ -85,7 +76,7 @@ export const lookAmounts = { ...LOOK_DEFAULTS };
 export function lookSync() { lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; lookConfig.lamps = lookAmounts.lamps; lookConfig.veil = lookAmounts.veil; lookConfig.puffs = lookAmounts.puffs; lookConfig.eyes = lookAmounts.eyes; lookConfig.fireSmoke = lookAmounts.firesmoke; lookConfig.windows = lookAmounts.windows; lookConfig.glare = lookAmounts.glare; lookConfig.stir = lookAmounts.stir; lookConfig.rooms = lookAmounts.rooms; lookConfig.steady = lookAmounts.steady; lookConfig.roomBright = lookAmounts.roomb; lookConfig.order = lookAmounts.order; lookConfig.dark = lookAmounts.dark; lookConfig.pressed = lookAmounts.pressed;
   lookConfig.gradeExp = Math.pow(2, 2 * (lookAmounts.gexp - 1)); lookConfig.gradeC = lookAmounts.contrast; lookConfig.gradeH = 0.09 * (lookAmounts.highs - 1); lookConfig.gradeS = 0.09 * (lookAmounts.lows - 1); lookConfig.gradeSat = lookAmounts.colour; }   // (the grading rows rest at 1: Exposure 0‥2 = two stops down to two up; Highlights and Shadows 0‥2 = a stop and a half down to as much up, 0.09 of the tone map's 16.5 stops)
 /** the cast's part ids the look's men are drawn by (look.wgsl manWeb), each 1 + its index in the cast's part list, 0 = this cast has none: the operators' suit
- *  (it carries the plate carrier) and the canvas chest rig. The page says them once its cast is loaded (main.ts). */
+ *  (it carries the plate carrier) and the canvas chest rig. The page says them once its cast is loaded (host/drawpage.ts). */
 export const lookParts = { suit: 0, rig: 0 };
 
 export interface SkinnedDrawable {
@@ -133,11 +124,19 @@ export class GBuffer {
   private objLayout: GPUBindGroupLayout; private mod: GPUShaderModule; private pipeLayout: GPUPipelineLayout;
   private targets: GPUColorTargetState[]; private depthStencil: GPUDepthStencilState;
   private objBG: GPUBindGroup | null = null; private objBGKey = '';
-  private cutMod: GPUShaderModule | null = null; private cutPipe: GPURenderPipeline | null = null;
+  private cutMod: GPUShaderModule | null = null; private cutModSnow: GPUShaderModule | null = null; private cutPipe: GPURenderPipeline | null = null;
 
   constructor(private device: GPUDevice, private sceneLayout: GPUBindGroupLayout, readonly pool: TexturePool = new TexturePool(device), maxBoxes = 4096) {
     this.geoBytes = maxBoxes * GEO_STRIDE * 4;
-    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    // THE SNOW'S SURFACE IS A TEXT OF ITS OWN (2026-11-07). The boxes' fragment stage shades the snow paint off the level's snow field (snow.wgsl snowBox, and
+    // under the look look.wgsl lookSnow): 113 KB of pasted text on the plain page and 200 on the look's, read by two levels. As a branch of the one text
+    // (frame.ts LevelSw, tried the same day) it stood in every level's program, and the look's page lost its device at the first drawn frame on the software
+    // adapter. So the module is written twice, `GBUF_SNOW` false and true, word for word the texts a level without snow and a snow level always compiled, and
+    // EVERY program of it comes in the level's writing: the boxes, the cut boxes, the hills and the men (no text of this module asks the frame's level word
+    // for the snow's surface). A page draws with its level's own and asks for the other behind it (init, prepareSkin): a visit builds each once, and no
+    // level's start compiles either again.
+    const text = (cut: boolean, snow: boolean) => scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\nconst GBUF_SNOW: bool = ${snow};   // the snow's surface in the boxes' shading (gbuffer.ts: the module's two writings)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + (cut ? gbufCutSrc : '');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    const mod = makeShader(device, text(false, false), 'gbuffer'); this.modSnow = makeShader(device, text(false, true), 'gbufferSnow');
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -149,20 +148,19 @@ export class GBuffer {
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the traffic map the detail layer reads (rg8unorm over the world's XZ; a 1×1 zero until a level hands one over — setWearMap)
       { binding: 8, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the snow field (render/snowField.ts; rgba16float over the world's XZ — a 1×1 zero on every page but a snow level's) …
       { binding: 9, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },   // … and its place + the look's numbers (snow.wgsl SnowCfg; all zero = not live)
-      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (game/snowTracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
-      ...(lookConfig.on ? [   // THE LOOK PROTOTYPE (look.wgsl; on its page only): the two map arrays, their sampler and the panel's numbers
-        { binding: 11, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' as const, viewDimension: '2d-array' as const } },
-        { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' as const, viewDimension: '2d-array' as const } },
-        { binding: 13, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' as const } },
-        { binding: 14, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' as const } },
-      ] : []),
+      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (src/picture/snow/tracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
+      // THE LOOK PROTOTYPE (look.wgsl): the two map arrays, their sampler and the panel's numbers
+      { binding: 11, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
+      { binding: 13, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 14, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ] });
     this.pipeLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.objLayout] });
     this.targets = [{ format: 'rgba8unorm' }, { format: 'rgb10a2unorm' }, { format: 'r32uint' }, { format: 'rg16float' }, { format: 'rg8unorm' }, { format: 'rg8unorm' }];   // (+ the material and GBAA edge targets: 8 + 8 + 4 + 4 + 2 + 2 = 28 bytes per sample of the 32 the default limits allow, by WebGPU's attachment accounting — rgba8 / rgb10a2 count 8 each)
     this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
     this.mod = mod;   // (the box pipeline: init(), awaited by the engine before the first frame)
     // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
-    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + lookWgsl() + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
+    if (cutConfig.on) { this.cutMod = makeShader(device, text(true, false), 'gbufferCut'); this.cutModSnow = makeShader(device, text(true, true), 'gbufferCutSnow'); }
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)
@@ -177,16 +175,16 @@ export class GBuffer {
     this.trackView = this.trackTex.createView();
     this.snowCfg = makeBuffer(device, SNOW_CFG_FLOATS * 4, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'snowCfg');
     device.queue.writeBuffer(this.snowCfg, 0, new Float32Array(SNOW_CFG_FLOATS));
-    if (lookConfig.on) this.makeLook();
+    this.makeLook();
   }
-  // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl; the look page only): two mipped texture arrays and the panel's numbers.
+  // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl): two mipped texture arrays and the panel's numbers.
   // A LEVEL HAS THE MAPS IT DRAWS AND NO OTHERS (11-04, with the catalogue growing past a dozen stuffs: a layer is 2.8 MB and about half a second of arithmetic,
   // and thirteen of them in the constructor had once been six seconds in front of the first compile). A stuff's layer is made the first time some box IS that
-  // stuff (lookWordOf says so; main.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
+  // stuff (lookWordOf says so; host/drawpage.ts says a whole level's paints before its first frame, so nothing pops), into the next free SLOT of the arrays; the shader
   // goes from a layer to its slot through the block's table and draws a stuff with no slot plain. The arrays are as long as the slots in use: when they are
   // full they are made again longer and what they held is copied across on the GPU.
-  private lookTex: [GPUTexture, GPUTexture] | null = null;
-  private lookView: [GPUTextureView, GPUTextureView] | null = null; private lookSamp: GPUSampler | null = null; private lookCfg: GPUBuffer | null = null;
+  private lookTex!: [GPUTexture, GPUTexture];   // (these four: makeLook, which the constructor calls)
+  private lookView!: [GPUTextureView, GPUTextureView]; private lookSamp!: GPUSampler; private lookCfg!: GPUBuffer;
   /** each layer's slot in the arrays (−1 = not made), how many slots are taken, and the SEEN count the last look at it was made at */
   private lookSlot = new Int8Array(LOOK_LAYERS).fill(-1); private lookSlots = 0; private lookSeenAt = -1;
   private lookEven = true; private lookMips = 1; private lookRoom = 1;   // (how many sizes a map has, and how many slots the arrays have room for)
@@ -212,7 +210,6 @@ export class GBuffer {
   needLook(sliceMs: number = LOOK_SLICE.boot): Promise<void> { return this.lookJob = this.lookJob.catch(() => { /* its own caller was told */ }).then(() => this.makeLayers(sliceMs)); }
   private lookJob: Promise<void> = Promise.resolve();
   private async makeLayers(sliceMs: number): Promise<void> {
-    if (!this.lookTex) return;
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
     const want = new Set<number>([LOOK_NAMES.indexOf('cloth')]);   // (the men's cloth reads the cloth layer: look.wgsl lookMan)
     for (let l = 0; l < LOOK_PAINTED; l++) if (SEEN.bits & (1 << (l + 1))) { want.add(l); for (const w of LOOK_WITH[LOOK_NAMES[l] as LookName] ?? []) want.add(LOOK_NAMES.indexOf(w)); }
@@ -226,28 +223,49 @@ export class GBuffer {
       old[0].destroy(); old[1].destroy(); this.lookRoom = slots;   // (a texture destroyed after a submit lives until the work submitted with it is done)
     }
     const tex = this.lookTex;
-    for (const l of make) {
+    // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
+    // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
+    // ONCE A VISIT (gpu/keep.ts Lease.bytes): a map is the same bytes on every level — it depends on its layer, its size and the evening, which is what its name says — so on the kept page a layer the visit has made is handed over, every size of it, and only the others are
+    // worked out; each of those is then kept. A page with no lease (a driven one, a whole one) makes every layer as it did.
+    const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0}`;
+    const had = make.map(l => { const k = lease?.bytes(nameOf(l)) ?? null; return k && k.bytes.length === this.lookMips * 2 && k.nums.length === 2 ? k : null; }), toMake = had.filter(k => !k).length;
+    const pool = toMake ? await LookPool.open(toMake) : null, asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map((l, k) => had[k] ? null : pool.make(l, LOOK_N, this.lookEven)) : null;
+    asked?.forEach(p => p?.catch(() => { /* taken below, where the layer is then made here */ }));   // (null = a layer the visit had: nothing asked)
+    try { for (let k = 0; k < make.length; k++) {
+      const l = make[k];
       await nextTask();
-      const m = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask), slot = this.lookSlots; let lv = [m.a, m.b];
-      for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
-        for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
-        if (n > 1) lv = [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
+      let got: Awaited<ReturnType<typeof lookLayerSliced>> | null = null, sizes: { a: Uint8Array[]; b: Uint8Array[] } | null = null;   // (`sizes`: a worker's layer comes with every smaller size made)
+      const kept = had[k];
+      /** every size of the layer's two maps, largest first: [a, b] a size */
+      const all: Uint8Array[][] = [];
+      if (kept) { for (let mip = 0; mip < this.lookMips; mip++) all.push([kept.bytes[mip * 2], kept.bytes[mip * 2 + 1]]); this.lookBy.kept = (this.lookBy.kept ?? 0) + 1; }
+      else {
+        if (asked && asked[k]) { try { const w = await asked[k]!; got = w; sizes = w.sizes; this.lookBy.workers++; } catch { got = null; } asked[k] = null; }   // (… and let go of: a batch's maps are not all held to its end)
+        if (!got) { got = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask); this.lookBy.here++; }
+        let lv = [got.a, got.b];
+        for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) { all.push(lv); if (n > 1) lv = sizes ? [sizes.a[mip + 1], sizes.b[mip + 1]] : [lookMip(lv[0], n, false), lookMip(lv[1], n, true)]; }
+        (this.lookFresh ??= []).push(LOOK_NAMES[l]);
+        if (lease?.alive) lease.keepBytes(nameOf(l), all.flat(), [got.tone, got.hollow]);
       }
+      const m = kept ? { tone: kept.nums[0], hollow: kept.nums[1] } : got!, slot = this.lookSlots;
+      for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, all[mip][i], { bytesPerRow: n * 4 }, [n, n, 1]);
       if (l === LOOK_NAMES.indexOf('cloth')) this.lookMen = [m.tone, m.hollow];   // (the men's cloth was tuned against this layer as it fell: look.wgsl lookMan takes the evening back out)
       this.lookSlots++; this.lookMade.push(LOOK_NAMES[l]);
       // a stuff is pointed at its slot only once every layer its drawing reads is in: until then it draws plain, never against an empty map
       this.lookSlot[l] = slot; this.setLook();
-    }
+    } } finally { pool?.close(); }
     this.lookFillMs += (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
   }
+  /** how many layers were made on workers and how many on this thread, and how many the visit had made already and handed over (a check reads it; from the console: __engine.gbuffer.lookBy) */
+  lookBy: { workers: number; here: number; kept?: number } = { workers: 0, here: 0 };
+  /** the layers THIS page worked out, by name (the others of lookMade were the visit's) */
+  lookFresh: string[] = [];
   /** the layers made so far, in the order of their slots (a check reads it; from the console: __engine.gbuffer.lookMade) */
   lookMade: string[] = [];
   /** how long the maps have taken to make, each batch start to end, the boot's other work between the layers included (ms; 0 = none made) */
   lookFillMs = 0;
-  /** the panel moved a number (lookAmounts), or a level came in and said how kept it is (lookConfig.kept, main.ts hostLevel): the uniform block again.
-   *  Nothing on a page without the look. */
+  /** the panel moved a number (lookAmounts), or a level came in and said how kept it is (lookConfig.kept, host/drawpage.ts hostLevel): the uniform block again. */
   setLook() {
-    if (!this.lookCfg) return;
     const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
     this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, lookConfig.kept, k.pressed, 0, 0, 0, 0, 0, 0, 0, 0, 0, k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0, ...this.lookSlotRows()]));
   }
@@ -261,7 +279,7 @@ export class GBuffer {
   private lookMen: [number, number] = [1, 0];
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
-  private snowQuads: GPUBuffer | null = null; private snowQuadCount = 0; private snowPipe: GPURenderPipeline | null = null;
+  private snowQuads: GPUBuffer | null = null; private snowQuadCount = 0; private snowPipe: GPURenderPipeline | null = null; private modSnow!: GPUShaderModule;
   /** hand over a level's snow field (null = none: a 1×1 zero and no mesh) with its uniform block (snowField.ts snowCfgRows) */
   setSnowField(f: { data: Uint16Array; w: number; h: number; quads: Uint32Array } | null, cfg: Float32Array) {
     this.snowTex.destroy(); this.snowQuads?.destroy(); this.snowQuads = null; this.snowQuadCount = 0;
@@ -282,7 +300,7 @@ export class GBuffer {
     this.device.queue.writeTexture({ texture: this.snowTex, origin: [x0, z0] }, f.data, { offset: (z0 * f.w + x0) * 8, bytesPerRow: f.w * 8 }, [rw, rh]);
   }
   private trackTex: GPUTexture; private trackView: GPUTextureView; private trackW = 1; private trackH = 1;
-  /** the prints pressed into the snow (game/snowTracks.ts): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
+  /** the prints pressed into the snow (src/picture/snow/tracks.ts): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
    *  (a 1×1 zero). The texture is made the first time a size is seen. */
   setSnowTracks(t: { data: Uint8Array; w: number; h: number } | null, rect?: readonly [number, number, number, number]) {
     const w = t?.w ?? 1, h = t?.h ?? 1;
@@ -297,7 +315,7 @@ export class GBuffer {
   }
   /** the look's numbers alone (the console's `__snow.relook()`) */
   setSnowCfg(cfg: Float32Array) { this.device.queue.writeBuffer(this.snowCfg, 0, cfg.subarray(0, SNOW_CFG_FLOATS)); }
-  /** the traffic map the detail layer reads (render/wear.ts builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
+  /** the traffic map the detail layer reads (rust/game_draw/src/traffic.rs builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
   private wearTex: GPUTexture; private wearView: GPUTextureView;
   setWearMap(data: Uint8Array, w: number, h: number) {
     this.wearTex.destroy();
@@ -307,43 +325,44 @@ export class GBuffer {
   }
 
   /** The box pipeline (every frame's raster), compiled off the GPU process's main thread (gpu/device.ts renderPipelineAsync). `opts.sharp`: also the sharp-direct down pass
-   *  (gdown), which is otherwise made synchronously on the first sharp frame — main.ts asks for it whenever a preset may switch sharp direct on. Engine.init awaits it. */
+   *  (gdown), which is otherwise made synchronously on the first sharp frame — host/drawpage.ts asks for it whenever a preset may switch sharp direct on. Engine.init awaits it. */
   async init(opts: { sharp?: boolean } = {}): Promise<void> {
-    const jobs: Promise<unknown>[] = [renderPipelineAsync(this.device, {
-      label: 'gbufBoxes', layout: this.pipeLayout,
-      vertex: { module: this.mod, entryPoint: 'vsBox' },
-      fragment: { module: this.mod, entryPoint: 'fsBox', targets: this.targets },
-      primitive: { topology: 'triangle-list', cullMode: 'back' },
-      depthStencil: this.depthStencil,
-    }).then(p => { this.boxPipe = p; })];
+    // The boxes' program and the cut boxes', each in its two writings (the constructor's note). The level's own is the boot's: awaited here, drawn every
+    // frame. The other is asked for behind the boot and not kept: a page is one level for its whole life, and the ask is for the visit's next one.
+    const snow = snowLookConfig.surface, jobs: Promise<unknown>[] = [];
+    const boxes = (m: GPUShaderModule, label: string, cut: boolean): GPURenderPipelineDescriptor => ({ label, layout: this.pipeLayout,
+      vertex: { module: m, entryPoint: cut ? 'vsBoxCut' : 'vsBox' }, fragment: { module: m, entryPoint: cut ? 'fsBoxCut' : 'fsBox', targets: this.targets },
+      primitive: { topology: 'triangle-list', cullMode: 'back' }, depthStencil: this.depthStencil });
+    for (const s of [false, true]) { const d = boxes(s ? this.modSnow : this.mod, s ? 'gbufBoxesSnow' : 'gbufBoxes', false);
+      if (s === snow) jobs.push(renderPipelineAsync(this.device, d).then(p => { this.boxPipe = p; })); else void laterRenderPipelineAsync(this.device, d); }
     if (opts.sharp) jobs.push(this.prepareDown());
-    if (snowLookConfig.surface) jobs.push(renderPipelineOrNull(this.device, {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
-      label: 'gbufSnow', layout: this.pipeLayout,
-      vertex: { module: this.mod, entryPoint: 'vsSnow', buffers: [{ arrayStride: 8, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'uint32x2' }] }] },
-      fragment: { module: this.mod, entryPoint: 'fsSnow', targets: this.targets },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      depthStencil: this.depthStencil,
-    }, 'the snow\'s drifts are drawn as the level\'s boxes').then(p => { this.snowPipe = p; }));
-    if (this.cutMod) jobs.push(renderPipelineOrNull(this.device, {   // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole, and the rays are held to whole boxes too (cutSwap.rasterFailed)
-      label: 'gbufBoxesCut', layout: this.pipeLayout,
-      vertex: { module: this.cutMod, entryPoint: 'vsBoxCut' },
-      fragment: { module: this.cutMod, entryPoint: 'fsBoxCut', targets: this.targets },
-      primitive: { topology: 'triangle-list', cullMode: 'back' },
-      depthStencil: this.depthStencil,
-    }, 'cut pieces are drawn and traced as whole boxes').then(p => { this.cutPipe = p; if (!p) cutSwap.rasterFailed(); }));
+    { const hills: GPURenderPipelineDescriptor = {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes, where a level has drifts. Of the snow's writing, so a snow level's own and every other level's ask for later. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
+        label: 'gbufSnow', layout: this.pipeLayout,
+        vertex: { module: this.modSnow, entryPoint: 'vsSnow', buffers: [{ arrayStride: 8, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'uint32x2' }] }] },
+        fragment: { module: this.modSnow, entryPoint: 'fsSnow', targets: this.targets },
+        primitive: { topology: 'triangle-list', cullMode: 'none' }, depthStencil: this.depthStencil };
+      if (snow) jobs.push(renderPipelineOrNull(this.device, hills, 'the snow\'s drifts are drawn as the level\'s boxes').then(p => { this.snowPipe = p; })); else void laterRenderPipelineAsync(this.device, hills); }
+    // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole (the rays still meet the cut shapes: wrong at the cut, never missing)
+    if (this.cutMod && this.cutModSnow) for (const s of [false, true]) { const d = boxes(s ? this.cutModSnow : this.cutMod, s ? 'gbufBoxesCutSnow' : 'gbufBoxesCut', true);
+      if (s === snow) jobs.push(renderPipelineOrNull(this.device, d, 'cut pieces are DRAWN as whole boxes; rays still meet their cut shape').then(p => { this.cutPipe = p; })); else void laterRenderPipelineAsync(this.device, d); }
     await Promise.all(jobs);
   }
-  /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (main.ts / the viewer, once the glTF says which format) — the same
+  /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (the page, once the glTF says which format) — the same
    *  object skinPipe() would otherwise make synchronously inside that frame. */
   async prepareSkin(fmt: GPUVertexFormat): Promise<void> {
     if (this.skinPipes.has(fmt)) return;
-    const p = await renderPipelineAsync(this.device, this.skinDesc(fmt));
+    // (the men's program in both writings, asked in one order on every level: the level's own awaited, the other for the visit's next level — init's note)
+    const snow = snowLookConfig.surface; let own: Promise<GPURenderPipeline> | null = null;
+    for (const w of [false, true]) { const d = this.skinDesc(fmt, w); if (w === snow) own = renderPipelineAsync(this.device, d); else void laterRenderPipelineAsync(this.device, d); }
+    const p = await own!;
     if (!this.skinPipes.has(fmt)) this.skinPipes.set(fmt, p);
   }
-  private skinDesc(fmt: GPUVertexFormat): GPURenderPipelineDescriptor {
+  /** the men's program, in the level's own writing of the module or the other (the constructor's note: a snow level's men are cold, look.wgsl lookMan) */
+  private skinDesc(fmt: GPUVertexFormat, snow = snowLookConfig.surface): GPURenderPipelineDescriptor {
+    const mod = snow ? this.modSnow : this.mod;
     return {
-      label: 'gbufSkin', layout: this.pipeLayout,
-      vertex: { module: this.mod, entryPoint: 'vsSkin', buffers: [
+      label: snow ? 'gbufSkinSnow' : 'gbufSkin', layout: this.pipeLayout,
+      vertex: { module: mod, entryPoint: 'vsSkin', buffers: [
         { arrayStride: 44, attributes: [
           { shaderLocation: 0, offset: 0, format: 'float32x3' },
           { shaderLocation: 1, offset: 12, format: 'float32x3' },
@@ -353,7 +372,7 @@ export class GBuffer {
         { arrayStride: fmt === 'uint8x4' ? 4 : 8, attributes: [{ shaderLocation: 2, offset: 0, format: fmt }] },
         { arrayStride: 8, attributes: [{ shaderLocation: 5, offset: 0, format: 'float32x2' }] },   // (material slot, cavity) — render/charMaterials.ts
       ] },
-      fragment: { module: this.mod, entryPoint: 'fsSkin', targets: this.targets },
+      fragment: { module: mod, entryPoint: 'fsSkin', targets: this.targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
       depthStencil: this.depthStencil,
     };
@@ -367,7 +386,7 @@ export class GBuffer {
     return p;
   }
 
-  /** A new INTERNAL size (w, h) — and, under SHARP DIRECT (docs/internal/sharp-direct.md), the OUTPUT size (ow, oh) the boxes and men are actually rasterised at: then the six targets everyone binds
+  /** A new INTERNAL size (w, h) — and, under SHARP DIRECT, the OUTPUT size (ow, oh) the boxes and men are actually rasterised at: then the six targets everyone binds
    *  (albedo … mat, at w × h) are the internal VIEW of an output-size raster set (albedoO … matO), filled by encodeDown; sharp off = one set at w × h exactly as before (the O views alias it). */
   resize(w: number, h: number, ow = w, oh = h, sharp = false) {
     if (!sharp) { ow = w; oh = h; }
@@ -441,7 +460,7 @@ export class GBuffer {
   }
 
   private objectBindGroup(visibleBuf: GPUBuffer, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer): GPUBindGroup {
-    if (this.lookTex && this.lookSeenAt !== SEEN.grew) { this.lookSeenAt = SEEN.grew; this.needLook(LOOK_SLICE.play).catch(e => console.error('look maps:', e)); }   // (a box has been a stuff nobody had been: its map is made a few milliseconds at a time behind the frames, and it draws plain until it is in)
+    if (this.lookSeenAt !== SEEN.grew) { this.lookSeenAt = SEEN.grew; this.needLook(LOOK_SLICE.play).catch(e => console.error('look maps:', e)); }   // (a box has been a stuff nobody had been: its map is made a few milliseconds at a time behind the frames, and it draws plain until it is in)
     const jm = skin?.jointMats ?? dummy, ci = skin?.charInsts ?? dummy, cm = skin?.charMats ?? dummy;
     const key = `${idOf(visibleBuf)}:${idOf(jm)}:${idOf(ci)}:${idOf(decalBuf)}:${idOf(this.prevJoints)}:${idOf(this.wearTex)}:${idOf(cm)}:${idOf(this.snowTex)}:${idOf(this.trackTex)}`;
     if (this.objBG && this.objBGKey === key) return this.objBG;
@@ -450,13 +469,13 @@ export class GBuffer {
       { binding: 4, resource: { buffer: this.prevBoxes } }, { binding: 5, resource: { buffer: this.prevJoints } }, { binding: 6, resource: this.wearView },
       { binding: 7, resource: { buffer: cm } },
       { binding: 8, resource: this.snowView }, { binding: 9, resource: { buffer: this.snowCfg } }, { binding: 10, resource: this.trackView },
-      ...(this.lookView ? [{ binding: 11, resource: this.lookView[0] }, { binding: 12, resource: this.lookView[1] }, { binding: 13, resource: this.lookSamp! }, { binding: 14, resource: { buffer: this.lookCfg! } }] : []),
+      { binding: 11, resource: this.lookView[0] }, { binding: 12, resource: this.lookView[1] }, { binding: 13, resource: this.lookSamp }, { binding: 14, resource: { buffer: this.lookCfg } },
     ] });
     this.objBGKey = key; return this.objBG;
   }
 
   /** decalBuf: the decal buffer (Decals.buf), or any storage buffer while none is attached — it is only read under FrameFlags.Decals, which the engine never raises then */
-  encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, visibleBuf: GPUBuffer, visibleCount: number, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer, ts?: GPURenderPassTimestampWrites, cutCount = 0, cutWhole = 0) {
+  encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, visibleBuf: GPUBuffer, visibleCount: number, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer, ts?: GPURenderPassTimestampWrites, cutCount = 0) {
     if (skin && this.prevJointsFor !== skin.jointMats) { this.prevJoints.destroy(); this.prevJoints = makeBuffer(this.device, skin.jointMats.size, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'prevJoints'); this.prevJointsFor = skin.jointMats; }   // (a palette-sized 'previous' the first frame a skin shows up; zeros until the first snapshot — that frame's skinned motion is garbage, and the resolve is reset on a first frame anyway)
     const S = this.sharp;   // SHARP DIRECT: rasterise at the OUTPUT size into the O set (encodeDown then derives the internal view); off = the internal targets, exactly as before
     const pass = enc.beginRenderPass({
@@ -474,10 +493,11 @@ export class GBuffer {
     });
     const obg = this.objectBindGroup(visibleBuf, skin, dummy, decalBuf);
     pass.setBindGroup(0, sceneBG); pass.setBindGroup(1, obg);
-    if (this.snowPipe && this.snowQuads && this.snowQuadCount > 0) { pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
+    if (this.snowPipe && snowLookConfig.surface && this.snowQuads && this.snowQuadCount > 0) {   // (…on a page whose level raised the snow's surface: only there is the pipeline kept)
+      pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
     pass.setPipeline(this.boxPipe);
-    if (!this.cutPipe) cutWhole = cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing)
-    pass.draw(36, visibleCount + cutWhole);   // `cutWhole` = the first so-many of the cut list drawn as their whole boxes: the traceable ones, on a frame whose ray programs have no cut rule (render/cutSwap.ts — picture and rays agree)
+    const cutWhole = this.cutPipe ? 0 : cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing: the rays still meet the cut shape)
+    pass.draw(36, visibleCount + cutWhole);
     if (cutCount > cutWhole) { pass.setPipeline(this.cutPipe!); pass.draw(36 + 6 * CUT_ROWS, cutCount - cutWhole, 0, visibleCount + cutWhole); }   // CUT BOXES: listed after the plain ones in `visible` (BoxWorld.visibleCutCount); six faces + a quad per plane
     if (skin && skin.instanceCount > 0) {
       pass.setPipeline(this.skinPipe(skin.jointsFormat));
@@ -500,7 +520,7 @@ export class GBuffer {
   /** At the tail of the frame's command buffer: copy this frame's box transforms (BoxWorld's geo + mat rows, as uploaded for THIS frame) and joint palette into the 'previous' buffers the next
    *  frame's vertex stages read. Queue writes for the next frame are ordered after this command buffer, so the copies see exactly what this frame drew. */
   snapshotPrev(enc: GPUCommandEncoder, world: BoxWorld, skin: SkinnedDrawable | null) {
-    const n = world.all.length; if (n > 0) { enc.copyBufferToBuffer(world.geoBuf, 0, this.prevBoxes, 0, n * GEO_STRIDE * 4); enc.copyBufferToBuffer(world.matBuf, 0, this.prevBoxes, this.geoBytes, n * MAT_STRIDE * 4); }
+    const n = world.count; if (n > 0) { enc.copyBufferToBuffer(world.geoBuf, 0, this.prevBoxes, 0, n * GEO_STRIDE * 4); enc.copyBufferToBuffer(world.matBuf, 0, this.prevBoxes, this.geoBytes, n * MAT_STRIDE * 4); }
     if (skin && this.prevJointsFor === skin.jointMats) enc.copyBufferToBuffer(skin.jointMats, 0, this.prevJoints, 0, skin.jointMats.size);
   }
 }

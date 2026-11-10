@@ -1,21 +1,22 @@
-// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, a session journal, an
-// exported checkpoint, a level from the editor. It began as the one place the page clicked an <a download>, with a listener (`SAVED.sink`) told of each file
+// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, an
+// exported checkpoint. It began as the one place the page clicked an <a download>, with a listener (`SAVED.sink`) told of each file
 // so that a hosted build's backend could keep the same one (the maintainer: "can you make it so benchmark results upload automatically?", "we should do that
 // for everything that gets downloaded"). THEN, the same day: "we should get rid of local downloads entirely", and his pick for a file that cannot go: no
-// download, the page says it was not sent, the editor keeps saving its level files. So a file now goes to the LISTENER ALONE and the browser is handed
-// nothing, for every kind that has given its download up (`SAVE_UP`): the recorder's take, the benchmark's result, the session journal and an exported checkpoint have. A kind still
-// on `SAVE_UP.local` is downloaded as before and told to the listener too: the editor's level, the one kind that stays. `?downloads=1` is the door as it
-// was, for a developer: every file downloaded, the listener told.
+// download, the page says it was not sent. So a file now goes to the LISTENER ALONE and the browser is handed nothing, for every kind (`SAVE_UP`). The
+// one kind that kept its download, the level editor's document, went with the editor on 2026-11-07. `?downloads=1` is the door as it was, for a
+// developer: every file downloaded, the listener told.
 // A REPLAY DOES NOT COME THIS WAY, and nothing downloads one. F7 and the engine replay's Save hand theirs to the backend with `cloud.ts cloudFile`, which
 // they wait on for the file's end and which goes by the replays' own rules; the map viewer's goes up with its notes (cloud/notes.ts), a kept visit by the
 // tape sync. So the door has no kind to save one under.
 // THE DOOR ANSWERS WHAT BECAME OF THE FILE (`Saved`, and later `done`: it arrived, or it was let go), and whoever saved it says so to the player in plain
 // words (`savedWords`): there is no file in a downloads folder to notice any more, so a save that went nowhere must not look like one that went.
-// WHO LISTENS IS NOT THIS FILE'S: the listener is set from outside (main.ts, to the backend's file intake where a build has one), and whether a file may go
-// is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build and every headless tool set no sink.
-// A PAGE IS ONE BUNDLE: the workbench has a door of its own, and no listener unless that page sets one. The replay pages carry no door at all.
-// THIS MODULE IMPORTS NOTHING: ui/ and editor/ save through it.
-export type SavedKind = 'perf' | 'bench' | 'price' | 'session' | 'checkpoint' | 'level' | 'modelerr' | 'capture';
+// WHO LISTENS IS NOT THIS FILE'S: the listener is set from outside (host/drawpage.ts, to the backend's file intake where a build has one), and whether a file may go
+// is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build sets no sink.
+// A PAGE IS ONE BUNDLE: the replay pages carry no door at all.
+// THIS MODULE IMPORTS NOTHING: ui/ saves through it.
+/** every kind of file the door knows, as a list (the type below is made of it; tools/qa/savefile-check.ts walks it, so a kind added here is watched at once) */
+export const SAVED_KINDS = ['perf', 'bench', 'price', 'capture'] as const;
+export type SavedKind = typeof SAVED_KINDS[number];
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }
 /** what became of a saved file: 'sent' = the listener is sending it now (not that it has arrived), 'held' = the listener keeps it, in memory, and sends it
@@ -29,15 +30,15 @@ export type SavedDone = (arrived: boolean) => void;
  *  anything that is not 'sent', 'held' or true reads as false. What it throws is dropped, and so is the rejection of a promise it hands back */
 export const SAVED: { sink: ((f: SavedFile, done?: SavedDone) => Saved | boolean | void) | null } = { sink: null };
 /** `on`: a saved file goes to the listener alone, and the browser is handed none (`?downloads=1` puts it off: every file is downloaded and the listener told,
- *  as it was). `local`: the kinds that are downloaded all the same */
-export const SAVE_UP: { on: boolean; local: SavedKind[] } = { on: true, local: ['level'] };
-try { if (new URLSearchParams(location.search).get('downloads') === '1') SAVE_UP.on = false; } catch { /* no page (the harness) */ }
-/** a file of this kind is handed to the browser as a download, whatever the listener does with it */
-export const downloads = (kind: SavedKind): boolean => !SAVE_UP.on || SAVE_UP.local.includes(kind);
-/** the page is served from this machine (or there is no page: a native host, the harness), where a shot server may be up (tools/shot-server.ts) */
+ *  as it was). No kind is downloaded for its own sake any more: the one that was, the level editor's document, went with the editor (2026-11-07) */
+export const SAVE_UP: { on: boolean } = { on: true };
+try { if (new URLSearchParams(location.search).get('downloads') === '1') SAVE_UP.on = false; } catch { /* no page */ }
+/** a file is handed to the browser as a download, whatever the listener does with it */
+export const downloads = (): boolean => !SAVE_UP.on;
+/** the page is served from this machine (or there is no page: a native host, a tool), where a shot server may be up (tools/shot-server.ts) */
 export const onThisMachine = (): boolean => typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
 /** a file is worth making at all: somebody listens, or the browser is handed it (a large take is not put together for nobody) */
-export const wanted = (kind: SavedKind): boolean => !!SAVED.sink || downloads(kind);
+export const wanted = (): boolean => !!SAVED.sink || downloads();
 export interface SaveOpts {
   meta?: Record<string, string | undefined>;
   /** how long a download's address is kept alive for the browser to read (ms, 2000): a large file is still being written when the click returns */
@@ -68,11 +69,11 @@ function download(name: string, blob: Blob, holdMs = 2000): void {
 }
 /** what the door did with a file: `went` = the listener's answer, `local` = the browser was handed it as a download */
 export interface Went { went: Saved; local: boolean }
-/** save `blob` under `name`: to the listener, and to the browser as a download where the kind still has one (`downloads`). Answers what was done with it.
+/** save `blob` under `name`: to the listener, and to the browser as a download where the page asked for downloads (`downloads`). Answers what was done with it.
  *  THROWS only where a download was owed and could not be asked for (no page, the browser refused), as each spot's own anchor did, and the listener is not
  *  told then: a caller that marks a file as handed over must not go on as if it had been */
 export function saveFile(kind: SavedKind, name: string, blob: Blob, o: SaveOpts = {}): Went {
-  const local = downloads(kind); if (local) download(name, blob, o.holdMs);
+  const local = downloads(); if (local) download(name, blob, o.holdMs);
   return { went: tellSaved(kind, name, blob, o.meta, o.done), local };
 }
 /** what became of a saved file that was not downloaded, said to the player. `what` opens the sentence ("The recording"); `many` = it names more than one thing */

@@ -3,7 +3,7 @@
 // the wing opens onto its near end, and every room but one has the hall for its only way in: the entry, and every stack after it, is made in those men's
 // view. The hall is itself a ROOM of the structure (its door: 'front') — a room clear shuts every door a structure room lists, so a gun put behind an open
 // door at the hall's end would be staged behind a shut one. The kit is AS ISSUED for every man — the file's `scenarios.issue`
-// block (game/kit.ts kitIssue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
+// block (rust/game_rules/src/outfit/kit kit_issue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
 // game — the maintainer, 10-18 — and nobody has re-tuned the hall without it.)
 //
 //        x 9              20          22              32        37
@@ -20,21 +20,32 @@
 //
 //   bun run tools/levels/export.ts hall [--check]      → levels/hall.json
 //   page: ?levelFile=hall.json&roomclear&squad4        (&noissue: the squad's kit as this machine keeps it)
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a border scouts' company wing — pale mud plaster outside, cream distemper in, bare slab underfoot, a rug in the bunks and one in the ready room.
+// What it alone has: THE RANGE CARD. The men who hold the hall have paced it out and painted it on the floor in the company's pale sky blue: a firing line across the
+// far end, in front of where they stand; a line across the hall every five metres from it with its distance, written to be read from their end; and the two
+// limits of their arc, which run from the firing line down the whole hall, out through the front door's jambs and end on the twenty-metre line on the porch.
+// The floor between those two lines is what the far guns see: indoors it is the hall, outside it is the strip nobody stands on when 'front' opens.
+// No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { IssueData, KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { IssueData, KitViewData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { PANEL_GREY } from '../../src/scene/stuff';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'hall';
-export const NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
+const PLAIN_NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
 
-/** THE ISSUE (game/kit.ts kitIssue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
+/** THE ISSUE (rust/game_rules/src/outfit/kit kit_issue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
  *  teammate the ballistic shield until the shield left the game (10-18); since 10-15 the page has staged this level with the plain issue. */
 export const ISSUE: IssueData = { members: {} };
 
@@ -57,8 +68,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- walls: a blockwork shell 0.24 thick, blockwork along the hall too (0.12), painted partitions between the rooms ----
   grp('walls.exterior');
-  // ANOTHER WAY IN (tools/qa/second-way-check.ts): one WINDOW, in the bunks' outside wall round the corner from the porch — glass from a 0.15 m kerb (a walker is
-  // stopped by anything standing 0.2 m high) to just under door-head height (tools/qa/door-size.ts reads a taller hole with no sill as a doorway without a leaf),
+  // ANOTHER WAY IN (rust/game_start levels second-way): one WINDOW, in the bunks' outside wall round the corner from the porch — glass from a 0.15 m kerb (a walker is
+  // stopped by anything standing 0.2 m high) to just under door-head height (levels doors reads a taller hole with no sill as a doorway without a leaf),
   // so once it is shot out a man steps through it. 'front' is the wing's one outside door and the hall's men can wedge it; no wedge shuts a pane. The bunks'
   // own door opens into the bunks, so from inside that room it opens by hand, and the walk comes out into the hall beside the front door: still in the far guns' view.
   wallX(8, 8.88, 37.12, 0.24, C.concrete, [{ a: 11.0, b: 12.2, y0: 0.15, y1: 1.88, glass: 'whole' }]);   // north: the bunks' window
@@ -125,17 +136,17 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const doors: LevelDoorDef[] = [
     { name: 'front', hinge: [9.0, 13.42], closedDir: Math.PI / 2, width: 1.16, exterior: true },
     { name: 'bunks', hinge: [14.02, 12.8], closedDir: 0, width: 1.16 },
-    // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (doors.ts wedgeHolds), so from the
-    // hall they open by hand; 'link' opens into the ready room and so by hand from there into the store — tools/qa/second-way-check.ts)
+    // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (rust/game_rules/src/fittings/doors), so from the
+    // hall they open by hand; 'link' opens into the ready room and so by hand from there into the store — rust/game_start levels second-way)
     { name: 'kit_room', hinge: [25.02, 12.8], closedDir: 0, width: 1.16, swing: 1 },
     { name: 'store', hinge: [18.02, 15.2], closedDir: 0, width: 1.16 },
-    { name: 'ready_room', hinge: [28.02, 15.2], closedDir: 0, width: 1.16, swing: -1 },   // opens out into the hall: the ready room's men can wedge 'link' alone (tools/qa/second-way-check.ts)
+    { name: 'ready_room', hinge: [28.02, 15.2], closedDir: 0, width: 1.16, swing: -1 },   // opens out into the hall: the ready room's men can wedge 'link' alone (rust/game_start levels second-way)
     { name: 'link', hinge: [22.0, 17.02], closedDir: Math.PI / 2, width: 1.16 },
     { name: 'post', hinge: [32.0, 13.42], closedDir: Math.PI / 2, width: 1.16 },
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: boxes in group `lived.<room>`, props `lived.*`, the tail of both lists; left out by the loader with the switch off).
+  // ---- LIVED IN (lib/lived.ts: boxes in group `lived.<room>`, props `lived.*`, the tail of both lists).
   // The four rooms only: THE HALL STAYS BARE, that is the mission. Everything stands against a wall, 1.1 m and more off every door's line, off every
   // defender's mark and out of his line to his door; nothing taller than a table stands free of a wall. No light, nothing emissive.
   {
@@ -196,7 +207,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.thing(26.5, 0.8, 19.85, 0.8, 0.55, 0.02, C.woodDark);
     L.hung(26.5, 19.82, true, 1.3, 0.95, 1.8, [0.7, 0.66, 0.52], 0.01);
     L.hung(30.9, 15.28, true, 0.9, 1.0, 1.7, C.black, 0.02);
-    // ROUND THE WING, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). A company wing's outside: the PORCH is where a relief
+    // ROUND THE WING, from the look's kit (lib/gwotKit.ts: a drum and a tyre are round). A company wing's outside: the PORCH is where a relief
     // waits (ammunition crates by the bench, a drum, the sandbag line carried on past the lamp's side, the tyres off the truck that brought them); the
     // YARD along the blank south wall keeps the firewood and two drums, with field stones lying where they were turned up; the BACK has the block left
     // over from the wall. Nothing stands in the strip the hall's two guns see through the open front door, on a start mark, or before the bunks' window.
@@ -216,7 +227,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const STORE: Rect = { x0: 9.12, x1: 21.94, z0: 15.26, z1: 19.88 }, READY: Rect = { x0: 22.06, x1: 31.94, z0: 15.26, z1: 19.88 };
   const GUARD: Rect = { x0: 32.06, x1: 36.88, z0: 8.12, z1: 19.88 }, HALL: Rect = { x0: 9.12, x1: 31.94, z0: 12.86, z1: 15.14 };
 
-  // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — doortools.ts pods2 reads a plan's two for the
+  // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — rust/game_rules/src/entries/doortools pods2 reads a plan's two for the
   //  first two men in. The first two then stand in file and only the front man's gun answers the far guns, while the third and fourth still fan out and one
   //  goes on up the hall alone (Blue Two lost 7 m in, in 15 of 24 runs): 24 seeds as shipped, 40 of 96 teammates up against 60 without the plan, the far guns' kills 38 against 12.)
 
@@ -284,3 +295,44 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   return { level, scenarios: { roomClear, places: { areas: [{ name: 'guardroom', bounds: GUARD }, { name: 'porch', bounds: { x0: 3, x1: 8.88, z0: 9, z1: 19 } }] }, issue: ISSUE, kitView: HALL_KITVIEW }, groups: trace.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'hall';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+/** the company's pale sky blue. The palette has no paint this pale (its blues are deep ones), so it is a colour of this file's own and only decals wear it; the outside door's paint is this,
+ *  darker: rust/game_rules/src/fittings/doors/paint.rs */
+const SKY: Vec3 = [0.25, 0.55, 0.72];
+/** the firing line (x), the hall's two walls' faces (z), the line of the front door (z) and half its opening */
+const FIRE_X = 27.6, HALL_Z0 = 12.92, HALL_Z1 = 15.08, DOOR_Z = 14.25, DOOR_HALF = 0.45, FRONT_X = 9;
+const SKIN: Skin = {
+  wall: 'mudLight', house: 'mudLight', inner: 'paintCream', frameOut: 'woodGrey', frameIn: 'woodGrey', dado: null, ground: 'dust', verge: 'scrub', patches: 5,
+  floor: { lino: 'slab' },
+  noRug: /kit|store|hall/, rugs: { bunks: 'kilim', ready: 'baluch' }, metals: ['iron', 'olive', 'galv'],
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), worn = T.tone(SKY, 0.8), Q = Math.PI / 2;
+    // THE GROUND ROUND A COMPANY WING, laid before the range card so the card lies on it. WHEELS: the camp road along the south edge and the spur a truck
+    // backs up to the sandbag line. FEET: the walk from the road to the porch, and the sentry's beat right round the wing a stride off its walls, which
+    // passes under the bunks' window (the one other way into a room). Each is the lot's own earth darker.
+    { const lot = T.floorAt(7.3, 23) ?? P.dust;
+      /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
+      const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };
+      G.ruts(0.6, 25.8, 39.4, 25.8); G.ruts(2.2, 25.0, 2.2, 19.0);
+      beat([[7.3, 24.9], [7.3, 15.4]]);
+      beat([[7.3, 21.6], [38.4, 21.6], [38.4, 6.4], [7.3, 6.4], [7.3, 12.8]]); }
+    // THE FIRING LINE, across the hall in front of the far end
+    M.seg(FIRE_X, HALL_Z0, FIRE_X, HALL_Z1, 0.14, SKY);
+    // A LINE EVERY FIVE METRES from it, each with its distance beside it (top toward the front door: read from the far end)
+    for (const m of [5, 10, 15]) {
+      const x = FIRE_X - m;
+      M.seg(x, HALL_Z0, x, HALL_Z1, 0.06, worn);
+      M.word(String(m), x + 0.5, 13.3, 0.5, worn, Q);
+    }
+    // THE LIMITS OF THE ARC: from the firing line through the front door's two jambs and on to the twenty-metre line on the porch
+    const far = FIRE_X - 20, k = (FIRE_X - far) / (FIRE_X - FRONT_X), dz = DOOR_HALF * k;
+    for (const s of [-1, 1]) M.seg(FIRE_X, DOOR_Z, far, DOOR_Z + s * dz, 0.05, worn);
+    M.seg(far, DOOR_Z - dz - 0.25, far, DOOR_Z + dz + 0.25, 0.06, worn);
+    M.word('20', far + 0.5, DOOR_Z - dz - 0.75, 0.5, worn, Q);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

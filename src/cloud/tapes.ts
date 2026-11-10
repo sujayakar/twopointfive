@@ -1,4 +1,4 @@
-// THE KEPT TAPES GO UP: what this browser already keeps of every page visit (src/replay/keeper.ts files a piece every few seconds into keepstore.ts) is sent to
+// THE KEPT TAPES GO UP: what this browser already keeps of every page visit (src/tape/keeper.ts files a piece every few seconds into keepstore.ts) is sent to
 // the backend's `tapes:put`, a round every `secs`. It is a SYNC OF THE STORE, not a second recorder: a round reads the store's rows, and for every visit with
 // pieces the backend has not been sent it sends them, newest visit first — so a visit whose page closed mid-way is finished by the next page that opens, and a
 // call that failed is simply tried again next round. A piece goes up as the gzip member the store holds (one written plain as its page went away is packed
@@ -9,7 +9,7 @@
 // thread is the wire's: a call's bytes to base64 and to JSON (`call` bounds one call). Never measured on a real page beside a fight.
 // How far each visit has gone is this module's own note (`TapeNotes`: the page's is localStorage `twopointsix.cloud.tapes`); with the note lost, the backend
 // is asked what it has. No game code is imported.
-import type { KeptStore, KeptRow, Body } from '../replay/keepstore';
+import type { KeptStore, KeptRow, Body } from '../tape/keepstore';
 import type { Wire } from './wire';
 import { WireError } from './wire';
 
@@ -55,7 +55,7 @@ export class TapeSync {
     this.gz = o.gz !== undefined ? o.gz : typeof CompressionStream === 'undefined' ? null : (text: string) => new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
   }
   /** one round. ASKED FOR WHILE ONE RUNS, IT IS ONE MORE ROUND AFTER THAT ONE (one, however many ask): a running round read the store when it began, and
-   *  what was filed since — a run's end (ui/replaykey.ts `onEndKept`), the tail a hidden page files — is not in it; it used to wait for the next beat, 20 s
+   *  what was filed since — a run's end, the tail a hidden page files — is not in it; it used to wait for the next beat, 20 s
    *  on, and a tab shut before that left the replay on the backend short of its end until that browser came back. Never rejects */
   round(): Promise<void> {
     if (this.busy) return BREAK ? this.busy : this.next ??= this.busy.then(() => { this.next = null; return this.round(); });

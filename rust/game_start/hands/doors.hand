@@ -1,0 +1,16 @@
+# DOORS: the squad works the door nearest the nearest man who is not theirs: stacks on it, one pair holds the threshold and clears
+# from outside, then all are told to go, fall back in, and one pair stacks and bangs its way in; and again, on whichever door is
+# nearest him by then. The pair's own orders come first, while the pair is whole.
+# REACHES: the stack order and its places, the word to go, the door tools (open and clear, bang and clear, the threshold held),
+# entries and the room fight behind them, shutting a door, the fall-in order. The tool says, a floor, which of these lines the
+# game never took there and why.
+# DOES NOT REACH: a charge on a door or a wall, the wand, the throws' page, a pair's orders, Sam's gun.
+unhurt
+every 24 from 1    order stack door all
+every 48 from 3    order thresholdHold door blue
+every 48 from 5    order openClear door blue
+every 24 from 6    order go door all
+every 24 from 12   order fallIn sam all
+every 24 from 14   order stack door blue
+every 24 from 16   order bangClear door blue
+every 24 from 8    order shutDoor opendoor all

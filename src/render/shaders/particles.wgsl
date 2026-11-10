@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // GPU particles — the simulation (EXPERIMENT, render/particles.ts; prelude = scene + lighting_common + particles_common). Two kernels in one compute pass:
 //   emit    one thread per particle born this frame: finds its emit record (the CPU queued them: kind, shape, seed, the ring slots it was dealt), draws
 //           its direction / speed / life / size from a hash of (seed, index) — no Math.random anywhere on the path, so a ?paused capture repeats — and
@@ -13,7 +14,7 @@ struct Pool { hdr: array<atomic<u32>, 16>, parts: array<Particle> };   // hdr[0]
 @group(1) @binding(1) var<uniform> em: EmitBlock;
 @group(1) @binding(2) var diceTex: texture_3d<f32>;   // the radiance cache's irradiance dice (lighting_common.wgsl diceIrradiance / diceMeanRadiance)
 @group(1) @binding(3) var airTex: texture_2d<f32>;    // SNOW GRAINS: the air over the level's floor (render/airField.ts: rg = its velocity m/s along x / z, b = lift m/s, a = 1 in open air) — a 1×1 stand-in on a page with none; read only under SNOW_GRAINS
-struct GrainCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f };               // render/particles.ts grainCfg: a = the wind's speed with no gust, the radius they live in, a grain's weight, × the light; b = the small eddies' share, × the lift, × the field's velocity (the blown snow's speed), 1 = there is a field; c = A BLAST throwing the loose snow this frame (game/snowBlast.ts): its place x, z, the radius it throws from (m), the share of the lying grains it takes a second (0 = none); d = how fast they leave it, outward and up (m/s); e = how a grain is DRAWN (game/snowFx.ts SNOWGRAINS shutter / dash / tail: s of its motion drawn, the longest dash in grain widths, how far its tail fades) — the step packs it into the grain for the draw; e.w = how far the WISPS stand back from the view's middle while the grains run (SNOWGRAINS.wispsBack: 1 = thinned to nothing inside the grains' radius, 0 = everywhere)
+struct GrainCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f };               // render/particles.ts grainCfg: a = the wind's speed with no gust, the radius they live in, a grain's weight, × the light; b = the small eddies' share, × the lift, × the field's velocity (the blown snow's speed), 1 = there is a field; c = A BLAST throwing the loose snow this frame (rust/game_rules/src/air/snow_blast.rs): its place x, z, the radius it throws from (m), the share of the lying grains it takes a second (0 = none); d = how fast they leave it, outward and up (m/s); e = how a grain is DRAWN (src/picture/snow/fx.ts SNOWGRAINS shutter / dash / tail: s of its motion drawn, the longest dash in grain widths, how far its tail fades) — the step packs it into the grain for the draw; e.w = how far the WISPS stand back from the view's middle while the grains run (SNOWGRAINS.wispsBack: 1 = thinned to nothing inside the grains' radius, 0 = everywhere)
 @group(1) @binding(4) var<uniform> grain: GrainCfg;
 
 // ---- hash RNG: pcg on (seed, particle index, stream)
@@ -67,11 +68,11 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
   var pos = rec.pos; var vel: vec3f;
   var rainDead = false;                                    // (the rain disc found no outdoor point: the slot is written spent)
   let sp = rec.speed * (1.0 - rec.p.w * rnd(seed, 3u));
-  if (rec.shape == 0u) {                                   // cone about dir, uniform over the cap (game/sparks.ts emitCone)
+  if (rec.shape == 0u) {                                   // cone about dir, uniform over the cap (rust/game_rules/src/breakage/sparks.rs emitCone)
     let dn = normalize(rec.dir); let U = basisU(dn); let W = cross(dn, U);
     let cy = 1.0 - rnd(seed, 1u) * (1.0 - cos(rec.p.x)); let sr = sqrt(max(0.0, 1.0 - cy * cy)); let th = rnd(seed, 2u) * 6.2831853;
     vel = (dn * cy + U * (cos(th) * sr) + W * (sin(th) * sr)) * sp;
-  } else if (rec.shape == 1u) {                            // ground burst: upper hemisphere narrowed by spread, rotated toward vertical by lift (sparks.ts emitBurst)
+  } else if (rec.shape == 1u) {                            // ground burst: upper hemisphere narrowed by spread, rotated toward vertical by lift (rust/game_rules/src/breakage/sparks.rs)
     let th = rnd(seed, 1u) * 6.2831853;
     var cy = pow(rnd(seed, 2u), 1.0 + rec.p.x * 3.0) * 0.9 + 0.05; cy = cy + (1.0 - cy) * rec.q.y;
     let sr = sqrt(max(0.0, 1.0 - cy * cy));
@@ -81,15 +82,15 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
     let o = vec3f(cos(th), 0.0, sin(th));
     pos = rec.pos + o * rec.posB.x;
     vel = normalize(o + vec3f(0.0, rec.q.y, 0.0) + (vec3f(rnd(seed, 2u), rnd(seed, 4u), rnd(seed, 5u)) - 0.5) * rec.p.x) * sp;
-  } else if (rec.shape == 4u) {                            // RAIN DISC (game/rainFx.ts): born on the rain slab's top face (pos.y, minus up to `lift` m so no two fall in step), uniformly over the OUTDOOR
+  } else if (rec.shape == 4u) {                            // RAIN DISC (src/picture/rain.ts): born on the rain slab's top face (pos.y, minus up to `lift` m so no two fall in step), uniformly over the OUTDOOR
     // part of the disc of radius posB.x about pos.xz — up to 32 tries for a point outside the interior / annex footprints (frame.weatherC / D: the very rectangles the lattice
     // rain is cut by) inside the world's rim, thinned toward the disc's rim where the lattice takes over again (volumetrics.wgsl rainNearKeep mirrors the taper); no luck =
     // born spent (the lot is a 4 m ring round the building: a disc thrown over it from the follow camera is a sixth outdoors, so a dozen tries lost a tenth of the births).
     // Velocity: along dir at speed (the terminal fall + the wind — a drip off an eave hands in a slow one and the update's drag brings it up to speed)
-    let grainRec = SNOW_GRAINS && snowNow() && rec.posB.y > 2.5;   // (a GRAIN's record, game/snowFx.ts: aspect 3 — it is placed by its own step each time it is picked up, so no point is thrown for it here and nothing thins it)
+    let grainRec = lv(SNOW_GRAINS) && snowNow() && rec.posB.y > 2.5;   // (a GRAIN's record, src/picture/snow/fx.ts: aspect 3 — it is placed by its own step each time it is picked up, so no point is thrown for it here and nothing thins it)
     var ok = grainRec; var q2 = rec.pos.xz;
-    let wispRec = SNOW_WISPS && snowNow() && rec.posB.y > 1.5 && rec.posB.y < 2.5;   // (a WISP's record, game/snowFx.ts: aspect 2 — each try must also land in a gust patch, and the flakes' curtains do not thin it)
-    let puffRec = SNOW_WISPS && wispRec && ((rec.k.w >> 16u) & 255u) == 0u;   // (… and a BLAST's puff of powder, game/snowBlast.ts: a wisp record with no gust length — thrown where the blast was, whatever the gusts and the view's middle are doing, and born running out from it)
+    let wispRec = lv(SNOW_WISPS) && snowNow() && rec.posB.y > 1.5 && rec.posB.y < 2.5;   // (a WISP's record, src/picture/snow/fx.ts: aspect 2 — each try must also land in a gust patch, and the flakes' curtains do not thin it)
+    let puffRec = lv(SNOW_WISPS) && wispRec && ((rec.k.w >> 16u) & 255u) == 0u;   // (… and a BLAST's puff of powder, rust/game_rules/src/air/snow_blast.rs: a wisp record with no gust length — thrown where the blast was, whatever the gusts and the view's middle are doing, and born running out from it)
     let skyRec = snowNow() && !wispRec && !grainRec && abs(rec.posB.x - frame.weatherE.z) < 0.5 && distance(rec.pos.xz, frame.weatherE.xy) < 2.0;   // (the falling snow's own record: its disc IS the view's — a kick's, a blast's throw's is a small one of its own, and what they throw up is lifted off snow that lies)
     for (var t = 0u; t < 32u && !ok; t++) {
       let rr = sqrt(rnd(seed, 20u + t * 3u)); let th = rnd(seed, 21u + t * 3u) * 6.2831853;
@@ -99,16 +100,16 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
       if (skyRec) { open = flakeOpen(q2); if (snowPast() > 0.0 && pastWorld(vec3f(q2.x, 0.0, q2.y))) { keep = min(rim, 1.0 - smoothstep(PAST_RIM_IN, PAST_RIM_OUT, rr)); } }   // (the SKY's flake may be born in the air past the level's rim — SNOW_LOOK.past, particles_common.wgsl snowPast — where the fall thins sooner toward the disc's edge: those flakes show only over the picture's near part, and every one out there is one fewer in the level)
       else { open = rainOutdoors(q2); }
       ok = open && rnd(seed, 22u + t * 3u) < keep;
-      if (SNOW_WISPS) { if (wispRec && ok && !puffRec && !snowOneAir()) { ok = rnd(seed, 200u + t) < wispGust(q2, f32((rec.k.w >> 16u) & 255u) * (32.0 / 255.0)); } }
-      if (SNOW_WISPS) { if (SNOW_GRAINS) { if (wispRec && ok && !puffRec && grain.b.w > 0.5 && !snowOneAir()) { ok = rnd(seed, 300u + t) < mix(1.0, smoothstep(0.55, 1.0, distance(q2, frame.weatherE.xy) / max(grain.a.y, 1.0)), clamp(grain.e.w, 0.0, 1.0)) && length(airAt(q2).xy) >= WISP_LEE_DIE * grain.a.x; } } }   // (with the grains running the wisps stand back from the view's middle: the veil is the far look — and none is thrown into air the field holds dead, where its step would fade it at once)
+      if (lv(SNOW_WISPS)) { if (wispRec && ok && !puffRec && !snowOneAir()) { ok = rnd(seed, 200u + t) < wispGust(q2, f32((rec.k.w >> 16u) & 255u) * (32.0 / 255.0)); } }
+      if (lv(SNOW_WISPS)) { if (lv(SNOW_GRAINS)) { if (wispRec && ok && !puffRec && grain.b.w > 0.5 && !snowOneAir()) { ok = rnd(seed, 300u + t) < mix(1.0, smoothstep(0.55, 1.0, distance(q2, frame.weatherE.xy) / max(grain.a.y, 1.0)), clamp(grain.e.w, 0.0, 1.0)) && length(airAt(q2).xy) >= WISP_LEE_DIE * grain.a.x; } } }   // (with the grains running the wisps stand back from the view's middle: the veil is the far look — and none is thrown into air the field holds dead, where its step would fade it at once)
     }
-    if (SNOW_WISPS) { if (SNOW_GRAINS) { if (wispRec && ok && !puffRec && snowOneAir()) { let Aq = airAt(q2); ok = Aq.w > 0.5 && rnd(seed, 400u) < smoothstep(grain.f.y, max(grain.f.z, grain.f.y + 1e-3), length(Aq.xy)); } } }   // ONE AIR: a wisp is snow LIFTED off the ground, and only where the air over that ground runs fast enough to lift it — asked once, of the point the record threw: as many are born over a square metre as its air is fast, none in a lull or a lee
-    if (ok && !wispRec && !grainRec) { ok = rnd(seed, 18u) < rainBand(q2); }           // v2 SHEETS: the births thinned on a value noise carried downwind (game/rainFx.ts files (1 + amp) × as many, so the mean holds) — curtains of denser rain cross the lot
+    if (lv(SNOW_WISPS)) { if (lv(SNOW_GRAINS)) { if (wispRec && ok && !puffRec && snowOneAir()) { let Aq = airAt(q2); ok = Aq.w > 0.5 && rnd(seed, 400u) < smoothstep(grain.f.y, max(grain.f.z, grain.f.y + 1e-3), length(Aq.xy)); } } }   // ONE AIR: a wisp is snow LIFTED off the ground, and only where the air over that ground runs fast enough to lift it — asked once, of the point the record threw: as many are born over a square metre as its air is fast, none in a lull or a lee
+    if (ok && !wispRec && !grainRec) { ok = rnd(seed, 18u) < rainBand(q2); }           // v2 SHEETS: the births thinned on a value noise carried downwind (src/picture/rain.ts files (1 + amp) × as many, so the mean holds) — curtains of denser rain cross the lot
     pos = vec3f(q2.x, rec.pos.y - rec.q.y * rnd(seed, 19u), q2.y);
     vel = normalize(rec.dir) * sp;
     if (numWinds() > 0u) { vel += windAir(pos, kind, -1e9) * em.rainCfgD.w; }   // v2 WIND: born moving with the AIR where it enters the slab (a drop has fallen through this wind for seconds already) — the storm's vector, its gust, its lee off the facade
-    if (SNOW_WISPS) { if (wispRec) { vel = wispAir(pos, seed, rec.k.w); } }   // a wisp is born running with the wind
-    if (SNOW_WISPS) { if (puffRec) { let o2 = q2 - rec.pos.xz; let ol = length(o2); vel += vec3f(o2.x, 0.0, o2.y) * (sp / max(ol, 0.05)) * (0.3 + 0.7 * rnd(seed, 17u)); } }   // … a blast's puff also out from the blast, at the record's speed
+    if (lv(SNOW_WISPS)) { if (wispRec) { vel = wispAir(pos, seed, rec.k.w); } }   // a wisp is born running with the wind
+    if (lv(SNOW_WISPS)) { if (puffRec) { let o2 = q2 - rec.pos.xz; let ol = length(o2); vel += vec3f(o2.x, 0.0, o2.y) * (sp / max(ol, 0.05)) * (0.3 + 0.7 * rnd(seed, 17u)); } }   // … a blast's puff also out from the blast, at the record's speed
     rainDead = !ok;
   } else {                                                 // puff: uniform direction, speed skewed slow
     let z = rnd(seed, 1u) * 2.0 - 1.0; let th = rnd(seed, 2u) * 6.2831853; let sr = sqrt(max(0.0, 1.0 - z * z));
@@ -157,11 +158,11 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
   pool.parts[slot] = p;
 }
 
-// ================================================================== the sheet (game/sheetModel.ts is the CPU reference of these two — keep them in step)
+// ================================================================== the sheet (render/sheetModel.ts is the CPU reference of these two — keep them in step)
 /** Free flight: gravity, the anisotropic drag (through-slip × airspeed, along-slip barely), the flutter torque off the offset centre of pressure, ω damped and
  *  kept ⊥ n, n turned by ω. k0 = (g, KT, KN_LIN, KN_Q), k1.z = FLUT. `gust` = s of blast wind still carrying it (an impulse set it; 0 for every other leaf):
  *  drag and torque × (1 − GUST_K·g) against the co-moving air, g held at 1 then ramped out over the gust's last GUST_RAMP share — × exactly 1 in still air.
- *  `vAir` = the AIR's own velocity here (the wind field: game/wind.ts): every aerodynamic term is taken against the RELATIVE wind v − vAir and the air's motion
+ *  `vAir` = the AIR's own velocity here (the wind field: rust/game_rules/src/air/wind.rs): every aerodynamic term is taken against the RELATIVE wind v − vAir and the air's motion
  *  added back — the gust's 'co-moving parcel' made general; vAir = 0 (no wind record names this leaf) = the equations exactly as they were, term for term. */
 fn sheetAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function, vec3f>, gust: ptr<function, f32>, k0: vec4f, flut: f32, dt: f32, vAir: vec3f) {
   var v = (*p).vel; var nn = *n;
@@ -179,7 +180,7 @@ fn sheetAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function
   nn = normalize(nn + cross(ww, nn) * dt);
   (*p).vel = v + vAir; *n = nn; *w = ww;                        // … and back out of it
 }
-/** A kicked sheet's SHAPE response (game/sheetModel.ts sheetImpulse's tail): handed the gust a kick of `kick` m/s earns, set tumbling about an in-plane axis, and — if it
+/** A kicked sheet's SHAPE response (render/sheetModel.ts sheetImpulse's tail): handed the gust a kick of `kick` m/s earns, set tumbling about an in-plane axis, and — if it
  *  was LYING (`lay`) — tipped off flat toward a hashed side and lifted by its dipped edge (one already in the air keeps its attitude: a second kick must not snap it).
  *  `hseed` = what the three hashes come off (an impulse's seed, a wind wake's window hash), mixed with the slot. Shared by the impulses and the wind's wake. */
 fn sheetKickShape(p: ptr<function, Particle>, slot: u32, sn: ptr<function, vec3f>, sw: ptr<function, vec3f>, gust: ptr<function, f32>, aspect: f32, kick: f32, hseed: u32, lay: bool) {
@@ -205,43 +206,9 @@ fn sheetKickShape(p: ptr<function, Particle>, slot: u32, sn: ptr<function, vec3f
 /** Two-sided light on a sheet at P with (camera-facing) normal N: one pass over the lights scoring the FRONT (toward the eye) and BACK irradiance separately —
  *  evalLight without the cosine, split by the sign of N·L — behind the reach masks like the chips; the three strongest (front + TRANS·back) get a shadow ray, the
  *  rest are credited at UNTRACED_CREDIT. Returns front, back. */
-struct SheetLight { front: vec3f, back: vec3f };
-fn sheetLight(P: vec3f, N: vec3f, trans: f32, owner: u32) -> SheetLight {
-  var sl: SheetLight; sl.front = vec3f(0.0); sl.back = vec3f(0.0);
-  var bl = array<f32, 3>(-1.0, -1.0, -1.0); var bi = array<u32, 3>(0u, 0u, 0u);
-  var bF = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bB = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0));
-  var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0);
-  var restF = vec3f(0.0); var restB = vec3f(0.0);
-  for (var i = 0u; i < frame.numLights; i++) {
-    let li = lights[i];
-    let lv = lightReachLevel(i, P);
-    if (lv == 0u) { continue; }
-    var ev = evalLight(li, P, vec3f(0.0));
-    if (!ev.ok) { continue; }
-    let c = dot(N, ev.L);
-    let k = select(1.0, 0.25, lv == 1u);
-    let F = ev.E * (max(c, 0.0) * k); let B = ev.E * (max(-c, 0.0) * k);
-    let lum = luminance(F + B * trans);
-    if (lum < P_MIN_E || lum <= bl[2]) { restF += F; restB += B; continue; }
-    if (bl[2] > 0.0) { restF += bF[2]; restB += bB[2]; }
-    var s = 2u;
-    if (lum > bl[1]) { bl[2] = bl[1]; bi[2] = bi[1]; bF[2] = bF[1]; bB[2] = bB[1]; bL[2] = bL[1]; bd[2] = bd[1]; s = 1u;
-      if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bF[1] = bF[0]; bB[1] = bB[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; } }
-    bl[s] = lum; bi[s] = i; bF[s] = F; bB[s] = B; bL[s] = ev.L; bd[s] = ev.dist.x;
-  }
-  let traceOn = (em.flags & 1u) != 0u;
-  for (var s = 0u; s < P_SHADOW_K; s++) {
-    if (bl[s] <= 0.0) { continue; }
-    var vis = 1.0;
-    if (traceOn) { let Po = P + bL[s] * 0.02; if (occluded(Po, bL[s], bd[s] - 0.05, owner | ((lights[bi[s]].owner & 0xffu) << 8u))) { vis = 0.0; } }   // (origin nudged toward the light: either face may be the lit one)
-    sl.front += bF[s] * vis; sl.back += bB[s] * vis;
-  }
-  let uc = select(1.0, UNTRACED_CREDIT, traceOn);
-  sl.front += restF * uc; sl.back += restB * uc;
-  return sl;
-}
+// (the walk: pLight mode 1, below)
 
-// ================================================================== the glass shard (game/shardModel.ts is the CPU reference of the flight and the touch — keep them in step)
+// ================================================================== the glass shard (render/shardModel.ts is the CPU reference of the flight and the touch — keep them in step)
 /** Free flight: gravity, drag by size (k0.y is the rate at SHARD_REF_SIZE: area ÷ mass ∝ 1 ÷ size — the fines are stopped by the air, a palm-sized piece is not), a tumble
  *  the air barely damps; n turned by ω, the part of ω along n turns the outline. */
 fn shardAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function, vec3f>, k0: vec4f, dt: f32) {
@@ -258,53 +225,7 @@ fn shardAir(p: ptr<function, Particle>, n: ptr<function, vec3f>, w: ptr<function
  *  only from lights on the eye's side of it — and `scatter` = the irradiance its body and cut edges send on diffusely (both faces: a quarter whatever the angle + the cosine's
  *  share). One pass over the lights behind the reach masks like the chips; the `rays` strongest of the two kept (by what they would put on screen) get a shadow ray, everything
  *  else is credited at UNTRACED_CREDIT. A fragment costs at most two rays where a chip costs three. */
-struct ShardLit { scatter: vec3f, spec: vec3f };
-fn shardLight(P: vec3f, N: vec3f, V: vec3f, alpha0: f32, owner: u32, rays: u32, wS: f32) -> ShardLit {
-  var sl: ShardLit; sl.scatter = vec3f(0.0); sl.spec = vec3f(0.0);
-  var bl = array<f32, 2>(-1.0, -1.0); var bi = array<u32, 2>(0u, 0u);
-  var bS = array<vec3f, 2>(vec3f(0.0), vec3f(0.0)); var bG = array<vec3f, 2>(vec3f(0.0), vec3f(0.0));
-  var bL = array<vec3f, 2>(vec3f(0.0), vec3f(0.0)); var bd = array<f32, 2>(0.0, 0.0);
-  var restS = vec3f(0.0); var restG = vec3f(0.0);
-  let nv = max(dot(N, V), 0.1);
-  for (var i = 0u; i < frame.numLights; i++) {
-    let li = lights[i];
-    let lv = lightReachLevel(i, P);
-    if (lv == 0u) { continue; }
-    var ev = evalLight(li, P, vec3f(0.0));
-    if (!ev.ok) { continue; }
-    let k = select(1.0, 0.25, lv == 1u);
-    let c = dot(N, ev.L);
-    let S = ev.E * ((0.25 + 0.75 * abs(c)) * k);
-    var G = vec3f(0.0);
-    if (c > 0.0) {
-      let H = normalize(ev.L + V);
-      let nh = max(dot(N, H), 0.0);
-      let a = clamp(alpha0 + li.radius / (2.0 * max(ev.dist.x, 0.05)), 0.03, 1.0); let a2 = a * a;
-      let dd = nh * nh * (a2 - 1.0) + 1.0;
-      let f1 = 1.0 - clamp(dot(V, H), 0.0, 1.0); let f2 = f1 * f1;
-      G = ev.E * (min(a2 / (3.14159265 * dd * dd) * (SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1) / (4.0 * nv), SHARD_GLINT_CAP) * k);
-    }
-    let lum = luminance(S) * wS + luminance(G);                         // what it would show of this light: wS = its diffuse share × the 0.3 the eye is sent of it (0.03 in the air)
-    if (lum < P_MIN_E * 0.03 || lum <= bl[1]) { restS += S; restG += G; continue; }
-    if (bl[1] > 0.0) { restS += bS[1]; restG += bG[1]; }
-    var s = 1u;
-    if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bS[1] = bS[0]; bG[1] = bG[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; }
-    bl[s] = lum; bi[s] = i; bS[s] = S; bG[s] = G; bL[s] = ev.L; bd[s] = ev.dist.x;
-  }
-  let traceOn = (em.flags & 1u) != 0u;
-  let uc = select(1.0, UNTRACED_CREDIT, traceOn);
-  for (var s = 0u; s < 2u; s++) {
-    if (bl[s] <= 0.0) { continue; }
-    var vis = 1.0;
-    if (traceOn) {
-      if (s < rays) { let Po = P + bL[s] * 0.02; if (occluded(Po, bL[s], bd[s] - 0.05, owner | ((lights[bi[s]].owner & 0xffu) << 8u))) { vis = 0.0; } }
-      else { vis = UNTRACED_CREDIT; }
-    }
-    sl.scatter += bS[s] * vis; sl.spec += bG[s] * vis;
-  }
-  sl.scatter += restS * uc; sl.spec += restG * uc;
-  return sl;
-}
+// (the walk: pLight mode 2, below)
 
 // ================================================================== shading
 /** Irradiance-ish light on a small particle at P. N = the normal to shade with (up for something lying on the floor), or (0,0,0) for a tumbling chip / a puff:
@@ -317,56 +238,102 @@ fn shardLight(P: vec3f, N: vec3f, V: vec3f, alpha0: f32, owner: u32, rays: u32, 
 const P_SHADOW_K: u32 = 3u;
 const UNTRACED_CREDIT: f32 = 0.35;
 const P_MIN_E: f32 = 0.003;      // a light dimmer than this at the particle (W/m², after wrap) is not worth a slot or a ray: summed untraced
-struct PLight { E: vec3f, L1: vec3f, E1: vec3f };
-fn particleLight(P: vec3f, N: vec3f, wrap: f32, owner: u32, credit: f32) -> PLight {
-  var pl: PLight; pl.E = vec3f(0.0); pl.L1 = vec3f(0.0, 1.0, 0.0); pl.E1 = vec3f(0.0);
+// (the walk: pLight mode 0, below)
+
+/** The three light walks of a particle (the sheet's, the fragment's and the small particle's, described above, as they were statement for statement) as ONE body, so update() asks for the light at ONE call
+ *  (the compile: DXC — Chrome's compiler on Windows — inlines each call it meets, and the three walks were three copies of the light loop and the shadow ray). mode 0 =
+ *  the small particle's walk (the comment above P_SHADOW_K; wrap, credit); 1 = the sheet's (trans = wrap); 2 = the fragment's (V, alpha0, rays, wS). Returns a = E / front / scatter,
+ *  b = (0) / back / spec, and for mode 0 the strongest light's direction and irradiance after its ray (L1, E1). */
+struct PLit { a: vec3f, b: vec3f, L1: vec3f, E1: vec3f };
+fn pLight(mode: u32, P: vec3f, N: vec3f, wrap: f32, owner: u32, credit: f32, V: vec3f, alpha0: f32, rays: u32, wS: f32) -> PLit {
+  var pl: PLit; pl.a = vec3f(0.0); pl.b = vec3f(0.0); pl.L1 = vec3f(0.0, 1.0, 0.0); pl.E1 = vec3f(0.0);
+  let K = select(P_SHADOW_K, 2u, mode == 2u);
   var bl = array<f32, 3>(-1.0, -1.0, -1.0); var bi = array<u32, 3>(0u, 0u, 0u);
-  var bE = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0);
-  var rest = vec3f(0.0);
+  var bA = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bB = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0));
+  var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0);
+  var restA = vec3f(0.0); var restB = vec3f(0.0);
   let noN = all(N == vec3f(0.0));
+  let nv = max(dot(N, V), 0.1);
   for (var i = 0u; i < frame.numLights; i++) {
     let li = lights[i];
     let lv = lightReachLevel(i, P);
     if (lv == 0u) { continue; }
-    var ev = evalLight(li, P, N);
+    var ev = evalLight(li, P, select(vec3f(0.0), N, mode == 0u));   // (the sheet and the shard score without the cosine: they take the sign of N·L themselves)
     if (!ev.ok) { continue; }
-    ev.E *= select(1.0, wrap, noN) * select(1.0, 0.25, lv == 1u);
-    let lum = luminance(ev.E);
-    if (lum < P_MIN_E || lum <= bl[2]) { rest += ev.E; continue; }
-    // insert into the top three (what falls off the bottom joins the untraced rest)
-    if (bl[2] > 0.0) { rest += bE[2]; }
-    var k = 2u;
-    if (lum > bl[1]) { bl[2] = bl[1]; bi[2] = bi[1]; bE[2] = bE[1]; bL[2] = bL[1]; bd[2] = bd[1]; k = 1u;
-      if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bE[1] = bE[0]; bL[1] = bL[0]; bd[1] = bd[0]; k = 0u; } }
-    bl[k] = lum; bi[k] = i; bE[k] = ev.E; bL[k] = ev.L; bd[k] = ev.dist.x;
+    var A = vec3f(0.0); var B = vec3f(0.0); var lum = 0.0; var floorE = P_MIN_E;
+    if (mode == 0u) {
+      ev.E *= select(1.0, wrap, noN) * select(1.0, 0.25, lv == 1u);
+      A = ev.E; lum = luminance(ev.E);
+    } else if (mode == 1u) {
+      let c = dot(N, ev.L);
+      let k = select(1.0, 0.25, lv == 1u);
+      A = ev.E * (max(c, 0.0) * k); B = ev.E * (max(-c, 0.0) * k);
+      lum = luminance(A + B * wrap);
+    } else {
+      let k = select(1.0, 0.25, lv == 1u);
+      let c = dot(N, ev.L);
+      A = ev.E * ((0.25 + 0.75 * abs(c)) * k);
+      if (c > 0.0) {
+        let H = normalize(ev.L + V);
+        let nh = max(dot(N, H), 0.0);
+        let a = clamp(alpha0 + li.radius / (2.0 * max(ev.dist.x, 0.05)), 0.03, 1.0); let a2 = a * a;
+        let dd = nh * nh * (a2 - 1.0) + 1.0;
+        let f1 = 1.0 - clamp(dot(V, H), 0.0, 1.0); let f2 = f1 * f1;
+        B = ev.E * (min(a2 / (3.14159265 * dd * dd) * (SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1) / (4.0 * nv), SHARD_GLINT_CAP) * k);
+      }
+      lum = luminance(A) * wS + luminance(B);                         // what it would show of this light: wS = its diffuse share × the 0.3 the eye is sent of it (0.03 in the air)
+      floorE = P_MIN_E * 0.03;
+    }
+    // insert into the top K (what falls off the bottom joins the untraced rest)
+    let last = K - 1u;
+    if (lum < floorE || lum <= bl[last]) { restA += A; restB += B; continue; }
+    if (bl[last] > 0.0) { restA += bA[last]; restB += bB[last]; }
+    var s = last;
+    if (K == 3u) {
+      if (lum > bl[1]) { bl[2] = bl[1]; bi[2] = bi[1]; bA[2] = bA[1]; bB[2] = bB[1]; bL[2] = bL[1]; bd[2] = bd[1]; s = 1u;
+        if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bA[1] = bA[0]; bB[1] = bB[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; } }
+    } else if (lum > bl[0]) { bl[1] = bl[0]; bi[1] = bi[0]; bA[1] = bA[0]; bB[1] = bB[0]; bL[1] = bL[0]; bd[1] = bd[0]; s = 0u; }
+    bl[s] = lum; bi[s] = i; bA[s] = A; bB[s] = B; bL[s] = ev.L; bd[s] = ev.dist.x;
   }
   let traceOn = (em.flags & 1u) != 0u;
-  let Po = P + select(N, vec3f(0.0, 1.0, 0.0), noN) * 0.015;
-  for (var k = 0u; k < P_SHADOW_K; k++) {
-    if (bl[k] <= 0.0) { continue; }
-    var E = bE[k];
-    if (traceOn) { if (occluded(Po, bL[k], bd[k] - 0.03, owner | ((lights[bi[k]].owner & 0xffu) << 8u))) { E = vec3f(0.0); } }
-    if (k == 0u) { pl.E1 = E; pl.L1 = bL[0]; }
-    pl.E += E;
+  let Pp = P + select(N, vec3f(0.0, 1.0, 0.0), noN) * 0.015;
+  for (var s = 0u; s < K; s++) {
+    if (bl[s] <= 0.0) { continue; }
+    // the shadow ray (ONE call for the three walks): a small particle's from just off it along N (up when it has none), a sheet's and a fragment's from a hair toward the
+    // light (either face may be the lit one); a fragment past its `rays` strongest is credited at UNTRACED_CREDIT instead
+    let ray = traceOn && (mode != 2u || s < rays);
+    var occ = false;
+    if (ray) { occ = occluded(select(P + bL[s] * 0.02, Pp, mode == 0u), bL[s], select(bd[s] - 0.05, bd[s] - 0.03, mode == 0u), owner | ((lights[bi[s]].owner & 0xffu) << 8u)); }
+    if (mode == 0u) {
+      var E = bA[s];
+      if (occ) { E = vec3f(0.0); }
+      if (s == 0u) { pl.E1 = E; pl.L1 = bL[0]; }
+      pl.a += E;
+    } else {
+      var vis = 1.0;
+      if (traceOn) { if (ray) { if (occ) { vis = 0.0; } } else { vis = UNTRACED_CREDIT; } }
+      pl.a += bA[s] * vis; pl.b += bB[s] * vis;
+    }
   }
-  pl.E += rest * select(1.0, credit, traceOn);
+  if (mode == 0u) { pl.a += restA * select(1.0, credit, traceOn); }
+  else { let uc = select(1.0, UNTRACED_CREDIT, traceOn); pl.a += restA * uc; pl.b += restB * uc; }
   return pl;
 }
 
-// ================================================================== impulses (particles_common.wgsl ImpulseRec; game/sheetModel.ts impulseKick + sheetImpulse = the CPU reference)
+// ================================================================== impulses (particles_common.wgsl ImpulseRec; render/sheetModel.ts impulseKick + sheetImpulse = the CPU reference)
 fn numImpulses() -> u32 { return (em.flags >> 8u) & 31u; }
 
-// ================================================================== wind (game/wind.ts; the records ride behind the impulses — particles_common.wgsl; wind_field.wgsl is the field)
+// ================================================================== wind (rust/game_rules/src/air/wind.rs; the records ride behind the impulses — particles_common.wgsl; wind_field.wgsl is the field)
 fn numWinds() -> u32 { return (em.flags >> 16u) & 31u; }
 /** the three live wind knobs every wind record carries (read off the first): sheet wake speed (m/s of air over a resting leaf), sheet kick (× that speed = the hop it
- *  gets), debris coupling (the share of the air's velocity a chip's drag pulls toward) — game/wind.ts WIND; the defaults stand in with no record (spare's high half is unused) */
+ *  gets), debris coupling (the share of the air's velocity a chip's drag pulls toward) — rust/game_rules/src/air/wind.rs WIND; the defaults stand in with no record (spare's high half is unused) */
 struct WindKnobs { wake: f32, kick: f32, debrisK: f32 };
 fn windKnobs() -> WindKnobs {
   if (numWinds() == 0u) { return WindKnobs(0.35, 2.0, 0.15); }
   let r = em.imps[numImpulses()]; let a = unpack2x16float(r.seed); let b = unpack2x16float(r.spare);
   return WindKnobs(a.x, a.y, b.x);
 }
-/** the STORM record's air at p: the two rectangles it carries — or, ROOF BY ROOF (iflags bit 5; game/wind.ts WX_OWN.wind on a level of three or four roofs), those
+/** the STORM record's air at p: the two rectangles it carries — or, ROOF BY ROOF (iflags bit 5; rust/game_rules/src/air/wind.rs WX_OWN.wind on a level of three or four roofs), those
  *  two as the level's first two roofs + the Frame's packed third and fourth, the very footprints rainOutdoors cuts the rain by (wxRect of 0 or 1 has no width: no roof) */
 fn windStormOf(w: ImpulseRec, p: vec3f) -> vec3f {
   if ((w.iflags & 32u) != 0u) { return windStormRoofs(w.bias * w.strength, vec4f(w.pos, w.radius), vec4f(w.eye, w.up), wxRect(frame.cardCfg.y), wxRect(frame.cardCfg.z), p); }
@@ -385,11 +352,11 @@ fn windAir(p: vec3f, kind: u32, surfY: f32) -> vec3f {
   }
   return v;
 }
-/** A FIRE'S HOT AIR ON THE FALLING SNOW (look only: render/particles.ts setHeat, game/fire.ts FIRE_LOOK_SMOKE.snow). Each record is a jet that points up the
+/** A FIRE'S HOT AIR ON THE FALLING SNOW (look only: render/particles.ts setHeat, rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE.snow). Each record is a jet that points up the
  *  flame's own leaning middle (wind_field.wgsl windJet: fastest on its axis at the mouth, widening and slowing as it climbs). xyz = the air it adds at p, m/s:
  *  the jet itself, and round the fire, from the ground to a couple of metres over the mouth, a draught IN toward it (what feeds a plume; the jet has none of
  *  its own). w = how hot p is: the jet's speed there as a share of its speed at the mouth. Zero with no such record, which is every page but the look's. */
-const HEAT_FULL: f32 = 2.6;     // m/s: the air's speed at the mouth of a fire that burns at its full strength (game/fire.ts FIRE_LOOK_SMOKE.snow.speed); a fire burning low is slower, so cooler
+const HEAT_FULL: f32 = 2.6;     // m/s: the air's speed at the mouth of a fire that burns at its full strength (rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE.snow.speed); a fire burning low is slower, so cooler
 const HEAT_MELT_AT: f32 = 0.35;  // a flake in air this hot (heatAir's w) starts to melt …
 const HEAT_MELT_RATE: f32 = 14.0;  // … at this rate a second for each unit over it (in the middle of the column over the mouth: gone in a tenth of a second)
 const HEAT_IN_R: f32 = 0.9;    // m from the fire's middle at which the draught toward it is fastest
@@ -409,7 +376,7 @@ fn heatAir(p: vec3f) -> vec4f {
 }
 /** the share of the air's velocity a kind's drag pulls it toward: dust and sheets ride the air; chips a little (heavy for their size); brass and sparks not at all */
 fn windCoupling(kind: u32, debrisK: f32) -> f32 { return select(select(0.0, debrisK, kind == P_DEBRIS), 1.0, kind == P_DUST || kind == P_SHEET); }
-// a resting leaf in moving air (game/wind.ts WIND_FIELD repeats the three): trembles ∝ the air's speed over it, and once a WINDOW a hashed share of the leaves the
+// a resting leaf in moving air (rust/game_rules/src/air/wind.rs WIND_FIELD repeats the three): trembles ∝ the air's speed over it, and once a WINDOW a hashed share of the leaves the
 // air moves faster than the wake knob over are picked up — the share rising from 0 to PMAX as the speed doubles past the knob
 const WIND_TREMBLE: f32 = 0.35;        // rad of in-plane twitch per m/s of air (± that, at 1‥2 Hz per leaf)
 const WIND_WAKE_WINDOW: f32 = 0.75;    // s between wake draws
@@ -484,7 +451,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   // this frame's impulses (a stun charge, a round beside it, a thump on the floor): kick + wake before the step, so a woken leaf flies this very frame — nothing at all on the
   // frames without any, and never the particles born this frame (the event that queued the impulse is the one that threw them: it does not throw them twice)
   if (numImpulses() > 0u && !isNew && dt > 0.0) { if (applyImpulses(&p, kind, slot, &sn, &sw, &gust, aspect, &asleep)) { atomicAdd(&pool.hdr[4], 1u); } }
-  // ---- WIND (game/wind.ts): the AIR's velocity here this frame off the wind records behind the impulses — nothing on frames without any (one shift and a branch). A RESTING
+  // ---- WIND (rust/game_rules/src/air/wind.rs): the AIR's velocity here this frame off the wind records behind the impulses — nothing on frames without any (one shift and a branch). A RESTING
   // leaf reads it as deflected along the surface it lies on, trembles by it, and once a window a hashed share of the leaves it moves fast enough over hop up into it; whatever
   // flies takes its drag against the moving air below
   var vAir = vec3f(0.0); let wk = windKnobs();
@@ -521,8 +488,8 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
       shardAir(&p, &sn, &sw, k0, dt);
     } else {
       p.vel.y -= k0.x * dt;
-      if (emberIs(kind, p.color)) { let ph = f32(p.seed & 1023u) * 0.00614; p.vel += vec3f(EMBER_SWIRL * sin(p.age * 5.1 + ph), k0.x + EMBER_LIFT, EMBER_SWIRL * cos(p.age * 4.3 + ph * 1.7)) * dt; }   // EMBER (game/fire.ts): lighter than the hot air it left the fire in — it climbs, wandering, until it burns out
-      if (kind == P_DUST && steamIs(p.color)) { p.vel.y += 2.0 * k0.x * dt; }   // STEAM (snowBreath.ts): warm breath is lighter than the air — the puff's own slow settling, the other way up
+      if (emberIs(kind, p.color)) { let ph = f32(p.seed & 1023u) * 0.00614; p.vel += vec3f(EMBER_SWIRL * sin(p.age * 5.1 + ph), k0.x + EMBER_LIFT, EMBER_SWIRL * cos(p.age * 4.3 + ph * 1.7)) * dt; }   // EMBER (rust/game_rules/src/air/fire.rs): lighter than the hot air it left the fire in — it climbs, wandering, until it burns out
+      if (kind == P_DUST && steamIs(p.color)) { p.vel.y += 2.0 * k0.x * dt; }   // STEAM (src/picture/snow/breath.ts): warm breath is lighter than the air — the puff's own slow settling, the other way up
       p.vel = vAir + (p.vel - vAir) * exp(-k0.y * dt);   // drag against the MOVING air (vAir = 0: × e^−k·dt exactly as it was)
     }
     let mv = p.vel * dt; let len = length(mv);
@@ -540,13 +507,13 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
           p.pos += rd * max(0.0, hit.t - pad);
           var n = hit.n;
           let vn = dot(p.vel, n);
-          if (isSheet) {   // paper does not bounce: an up face lays it toward flat and rubs the slide (game/sheetModel.ts sheetGround); a wall lets it slide down, half aligned to it
+          if (isSheet) {   // paper does not bounce: an up face lays it toward flat and rubs the slide (render/sheetModel.ts sheetGround); a wall lets it slide down, half aligned to it
             let sgn = select(-1.0, 1.0, dot(sn, n) >= 0.0);
             if (vn < 0.0) { p.vel -= n * (vn * 1.05); }
             if (n.y > 0.6) { p.vel *= 0.6; sn = normalize(mix(sn, n * sgn, 0.7)); sw *= 0.3; }
             else { p.vel *= 0.85; sn = normalize(mix(sn, n * sgn, 0.35)); sw *= 0.6; }
             if (length(p.vel) < k1.x && n.y > 0.6) { asleep = true; p.bits |= PB_ASLEEP; p.vel = vec3f(0.0); sw = vec3f(0.0); sn = n * sgn; gust = 0.0; p.pos += n * (0.001 + 0.0012 * f32(slot % 5u)); }   // (a hair of stacking order: two sheets settling on one spot do not fight for the same plane)
-          } else if (isShard) {   // glass: a lively hop of its own height each touch, the slide thrown to a hashed side by the corner it struck (the skitter), a fresh tumble; slow enough on an up face and it lies down a little off flat (game/shardModel.ts shardTouch)
+          } else if (isShard) {   // glass: a lively hop of its own height each touch, the slide thrown to a hashed side by the corner it struck (the skitter), a fresh tumble; slow enough on an up face and it lies down a little off flat (render/shardModel.ts shardTouch)
             let hs = p.seed ^ (bitcast<u32>(p.age) * 0x85EBCA6Bu);
             let h0 = rnd(hs, 41u); let h1 = rnd(hs, 42u); let h2 = rnd(hs, 43u); let h3 = rnd(hs, 44u);
             let onFloor = n.y > 0.6;
@@ -608,68 +575,75 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
   let u = p.age / p.life;
   if (kind == P_SPARK) {
     if (emberIs(kind, p.color)) { p.shade = emberRadiance(u, p.color, k1.w, p.seed, p.age); } else { p.shade = sparkRadiance(u, k1.y, k1.w); }
-  } else if (isSheet) {
-    // the face the eye sees: light falling on it, TRANS of what falls on the other face (a leaf against a torch glows), the cache's ambient — facing up at rest,
-    // the sphere's mean in the air (both faces)
-    let albedo = unpackRgb8(p.color);
-    let N = select(-sn, sn, dot(sn, frame.camPos - p.pos) >= 0.0);
-    let sl = sheetLight(p.pos, N, k1.w, owner);
-    var amb: vec3f;
-    if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), N); }
-    else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * (0.5 + 0.5 * k1.w); }
-    amb *= frame.indirectScale;
-    p.shade = albedo * (sl.front + sl.back * k1.w + amb) * (1.0 / 3.14159265);
-    p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, gust));
-  } else if (isShard) {
-    // GLASS: what it mirrors toward the eye off its own face (the lights' lobes, the room's mean radiance by Fresnel) + the little its body and cut edges scatter, tinted.
-    // In the air it turns every frame, so it flashes as its face sweeps a light past the eye; at rest it is re-lit every 4th frame (staggered by slot: litter holds
-    // still, and a torch crossing it is three frames late at worst) with ONE shadow ray, flying with two.
-    if (!asleep || isNew || (!slept0 && (em.flags & 8u) != 0u) || ((frame.frameIdx + slot) & 3u) == 0u) {
-      let tint = unpackRgb8(p.color);
-      let V = normalize(frame.camPos - p.pos);
-      let N = select(-sn, sn, dot(sn, V) >= 0.0);
-      let rough = k1.z * (0.6 + 0.8 * f32((p.seed >> 12u) & 255u) / 255.0);                                    // no two fracture faces are equally clean
-      // (round five) at rest it is a little drift of broken glass — a frost, not a clear face: more of what falls on it goes on diffusely, so the lights are ranked by
-      // that share too and the two strongest are both shadow-rayed (a drift under a desk must not glow by the panels' untraced credit)
-      let frosted = asleep && (em.flags & 8u) != 0u;
-      var kS = k1.w; var wS = 0.03; var rays = select(2u, 1u, asleep);
-      if (frosted) { kS = max(kS, shardRestScatter(p.size, p.seed)); wS = kS * 0.3; rays = 2u; }
-      let sl = shardLight(p.pos, N, V, rough, owner, rays, wS);
-      let f1 = 1.0 - clamp(dot(N, V), 0.0, 1.0); let f2 = f1 * f1;
-      let Fv = SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1;
-      let env = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0));
+  } else {   // the sheet, the glass fragment and the rest: their three light walks are ONE pLight call (above) — set up per kind, then the kind's own shading
+    let lightDue = !isShard || !asleep || isNew || (!slept0 && (em.flags & 8u) != 0u) || ((frame.frameIdx + slot) & 3u) == 0u;   // (a fragment at rest is re-lit every 4th frame — below)
+    var mode = 0u; let albedo = unpackRgb8(p.color); var N = vec3f(0.0); var wrap = 0.4; var V = vec3f(0.0); var rough = 0.0; var kS = k1.w; var wS = 0.03; var rays = 0u;
+    if (isSheet) {
+      // the face the eye sees: light falling on it, TRANS of what falls on the other face (a leaf against a torch glows), the cache's ambient — facing up at rest,
+      // the sphere's mean in the air (both faces)
+      mode = 1u; wrap = k1.w;
+      N = select(-sn, sn, dot(sn, frame.camPos - p.pos) >= 0.0);
+    } else if (isShard) {
+      // GLASS: what it mirrors toward the eye off its own face (the lights' lobes, the room's mean radiance by Fresnel) + the little its body and cut edges scatter, tinted.
+      // In the air it turns every frame, so it flashes as its face sweeps a light past the eye; at rest it is re-lit every 4th frame (staggered by slot: litter holds
+      // still, and a torch crossing it is three frames late at worst) with ONE shadow ray, flying with two.
+      mode = 2u;
+      if (lightDue) {
+        V = normalize(frame.camPos - p.pos);
+        N = select(-sn, sn, dot(sn, V) >= 0.0);
+        rough = k1.z * (0.6 + 0.8 * f32((p.seed >> 12u) & 255u) / 255.0);                                    // no two fracture faces are equally clean
+        // (round five) at rest it is a little drift of broken glass — a frost, not a clear face: more of what falls on it goes on diffusely, so the lights are ranked by
+        // that share too and the two strongest are both shadow-rayed (a drift under a desk must not glow by the panels' untraced credit)
+        let frosted = asleep && (em.flags & 8u) != 0u;
+        rays = select(2u, 1u, asleep);
+        if (frosted) { kS = max(kS, shardRestScatter(p.size, p.seed)); wS = kS * 0.3; rays = 2u; }
+      }
+    } else {
+      if (kind == P_DUST) { wrap = k0.z; }                   // a puff scatters whatever crosses it toward the eye from every side (k0.z = params.dust 'wrap', 0.5: half a beam's worth reads right next to the wall it came out of)
+      else if (asleep) { N = vec3f(0.0, 1.0, 0.0); }
+    }
+    var pl: PLit;
+    if (lightDue) { pl = pLight(mode, p.pos, N, wrap, owner, UNTRACED_CREDIT, V, rough, rays, wS); }
+    if (isSheet) {
       var amb: vec3f;
-      if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); } else { amb = env * 3.14159265; }
-      p.shade = sl.spec + env * (Fv * frame.indirectScale) + tint * (sl.scatter + amb * frame.indirectScale) * (kS / 3.14159265);
+      if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), N); }
+      else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * (0.5 + 0.5 * k1.w); }
+      amb *= frame.indirectScale;
+      p.shade = albedo * (pl.a + pl.b * k1.w + amb) * (1.0 / 3.14159265);
+      p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, gust));
+    } else if (isShard) {
+      if (lightDue) {
+        let f1 = 1.0 - clamp(dot(N, V), 0.0, 1.0); let f2 = f1 * f1;
+        let Fv = SHARD_F0 + (1.0 - SHARD_F0) * f2 * f2 * f1;
+        let env = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0));
+        var amb: vec3f;
+        if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); } else { amb = env * 3.14159265; }
+        p.shade = pl.b + env * (Fv * frame.indirectScale) + albedo * (pl.a + amb * frame.indirectScale) * (kS / 3.14159265);
+      }
+      p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, 0.0));
+    } else {
+      // ambient off the radiance cache: a resting chip reads the dice like a floor point does (a probe spacing up, facing up); a flying chip half the sphere's mean;
+      // a puff the WHOLE sphere's (it is lit from behind as much as from the front) — which is what lets gypsum dust show pale in a dim corridor at all
+      var amb: vec3f;
+      if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); }
+      else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * select(0.5, 0.9 * k0.w, kind == P_DUST); }   // (k0.w = params.dust 'ambient' ×, 1)
+      amb *= frame.indirectScale;                             // the composite scales the bounce on screen by this: sit next to the floor it lies on, not above it
+      var L = albedo * (pl.a + amb) * (1.0 / 3.14159265);
+      if (kind == P_CASING) {                                 // the glint: Blinn-Phong off the strongest light toward the eye; tumbling in flight the normal spins (it twinkles), at rest it is up
+        let V = normalize(frame.camPos - p.pos);
+        var Nn = vec3f(0.0, 1.0, 0.0);
+        if (!asleep) { let a = p.spin + p.age * 31.0; Nn = normalize(vec3f(cos(a), 0.8, sin(a))); }
+        let H = normalize(pl.L1 + V);
+        let s = pow(max(dot(Nn, H), 0.0), 40.0);
+        L += pl.E1 * albedo * (s * 6.0) + albedo * amb * 0.3;   // metal: the highlight is tinted, and a little more of the room in it
+      }
+      p.shade = L;
     }
-    p.ori = pOctEncode(sn); let pw = packOmega(sw); p.omg = pw.x; p.omgZ = pw.y; p.aux = pack2x16float(vec2f(aspect, 0.0));
-  } else {
-    let albedo = unpackRgb8(p.color);
-    var N = vec3f(0.0); var wrap = 0.4;
-    if (kind == P_DUST) { wrap = k0.z; }                   // a puff scatters whatever crosses it toward the eye from every side (k0.z = params.dust 'wrap', 0.5: half a beam's worth reads right next to the wall it came out of)
-    else if (asleep) { N = vec3f(0.0, 1.0, 0.0); }
-    let pl = particleLight(p.pos, N, wrap, owner, UNTRACED_CREDIT);
-    // ambient off the radiance cache: a resting chip reads the dice like a floor point does (a probe spacing up, facing up); a flying chip half the sphere's mean;
-    // a puff the WHOLE sphere's (it is lit from behind as much as from the front) — which is what lets gypsum dust show pale in a dim corridor at all
-    var amb: vec3f;
-    if (asleep) { amb = diceIrradiance(p.pos + vec3f(0.0, c0Spacing().x, 0.0), vec3f(0.0, 1.0, 0.0)); }
-    else { amb = diceMeanRadiance(p.pos + vec3f(0.0, 0.25, 0.0)) * 3.14159265 * select(0.5, 0.9 * k0.w, kind == P_DUST); }   // (k0.w = params.dust 'ambient' ×, 1)
-    amb *= frame.indirectScale;                             // the composite scales the bounce on screen by this: sit next to the floor it lies on, not above it
-    var L = albedo * (pl.E + amb) * (1.0 / 3.14159265);
-    if (kind == P_CASING) {                                 // the glint: Blinn-Phong off the strongest light toward the eye; tumbling in flight the normal spins (it twinkles), at rest it is up
-      let V = normalize(frame.camPos - p.pos);
-      var Nn = vec3f(0.0, 1.0, 0.0);
-      if (!asleep) { let a = p.spin + p.age * 31.0; Nn = normalize(vec3f(cos(a), 0.8, sin(a))); }
-      let H = normalize(pl.L1 + V);
-      let s = pow(max(dot(Nn, H), 0.0), 40.0);
-      L += pl.E1 * albedo * (s * 6.0) + albedo * amb * 0.3;   // metal: the highlight is tinted, and a little more of the room in it
-    }
-    p.shade = L;
   }
   pool.parts[slot] = p;
 }
 
-// ================================================================== the rain drop (EXPERIMENT exp/particle-rain — game/rainFx.ts recycles them; particles_draw.wgsl rainVertex draws them)
+// ================================================================== the rain drop (EXPERIMENT exp/particle-rain — src/picture/rain.ts recycles them; particles_draw.wgsl rainVertex draws them)
 // v2 SHEETS: a smooth 2-D value noise the births are thinned by — (1 + A·n) ÷ (1 + A), n ∈ [−1, 1] at (q − offset) ÷ len (em.rainCfgE: amplitude, scale, the offset the CPU carries downwind)
 fn rainHash2(i: vec2i, k: u32) -> f32 { return rnd(pcg((bitcast<u32>(i.x) * 0x8DA6B343u) ^ (bitcast<u32>(i.y) * 0xD8163841u) ^ 0x51EE7u), k); }
 fn rainBand(q: vec2f) -> f32 {
@@ -740,32 +714,42 @@ fn rainShadeV(P: vec3f, V: vec3f, T: vec3f, k1: vec4f, glint: bool) -> vec3f {
     E += bE[k] * rainPhase(bL[k], V, T, bw[k], glint);
   }
   E += select(restAll, rest * UNTRACED_CREDIT, traceOn);
-  if (snowNow()) { E += (frame.skyHorizon + frame.skyZenith) * (0.5 * 3.14159265 * em.rainCfg.x * em.rainCfg.w); }   // a FLAKE is a white diffuse scatterer under the whole sky (a drop of water is not: it shows only what lights it): the dome's irradiance, by its isotropic share × rainCfg.w (the glint's weight slot — a flake has no glint: game/snowFx.ts SNOWFX.skyK) — so snow falling through a dark yard is still seen against it
+  if (snowNow()) { E += (frame.skyHorizon + frame.skyZenith) * (0.5 * 3.14159265 * em.rainCfg.x * em.rainCfg.w); }   // a FLAKE is a white diffuse scatterer under the whole sky (a drop of water is not: it shows only what lights it): the dome's irradiance, by its isotropic share × rainCfg.w (the glint's weight slot — a flake has no glint: src/picture/snow/fx.ts SNOWFX.skyK) — so snow falling through a dark yard is still seen against it
   return (E + frame.weatherB.xyz) * (RAIN_P_GAIN * k1.w * max(em.rainCfgB.z, 0.0));
 }
-/** One rain drop's frame. Falling: gravity + drag toward the AIR's velocity — the wind field's air here (game/wind.ts → windAir: the storm outdoors easing in off the facade and gusting,
+/** One rain drop's frame. Falling: gravity + drag toward the AIR's velocity — the wind field's air here (rust/game_rules/src/air/wind.rs → windAir: the storm outdoors easing in off the facade and gusting,
  *  a draught through an open door; × rainCfgD.w) — terminal = air + 9 m/s down, what the sky drops are born at; a drip off an eave is handed in slow and gets there inside a second,
  *  and every drop answers a gust over 1 ÷ drag ≈ 0.9 s as a real one does — then the swept segment through the trace grid AND the character capsules (traceClosest): a hit on anything
  *  visible ends the fall and the drop BECOMES its splash at the true landing point (roof, bonnet, pallet, Sam's shoulder) — PB_ASLEEP, the surface normal in `ori`, the landing time
  *  in `spin`, its life cut to the splash's — lit there once; a hit on an invisible box (the NoPrimary roof the camera looks through) or a drift into the roof's dry column / out of the
  *  world ends it unseen. Splashing: nothing moves; the splat grows the crown off (age − spin). SHADE (v2): this frame's at the head; LAST frame's — the point a frame's fall up
  *  today's streak, lit exactly as it was then — kept as the TAIL in omg / omgZ (f16 × 3; a rain drop has no angular velocity to keep there) for the splat to run head → tail. */
+/** what a grain's / a wisp's step hands back to rainStep: RS_DONE = it stored itself; RS_WISP / RS_GRAIN = light it at Ps toward the eye V along T (the one rainShadeV call), then store p */
+struct RainReq { p: Particle, act: u32, Ps: vec3f, V: vec3f, T: vec3f };
+const RS_NONE: u32 = 0u; const RS_DONE: u32 = 1u; const RS_WISP: u32 = 2u; const RS_GRAIN: u32 = 3u;
+fn rsDone() -> RainReq { var r: RainReq; r.act = RS_DONE; return r; }
 fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
-  if (SNOW_GRAINS) { if (grainIs(pin.aux)) { grainStep(pin, slot, isNew, dt); return; } }   // a grain of blown snow near the view (below): its own step
-  if (SNOW_WISPS) { if (wispIs(pin.aux)) { wispStep(pin, slot, isNew, dt); return; } }   // a wisp of blowing snow (below): its own step
+  // a grain of blown snow / a wisp of blowing snow near the view (below) takes its own step, and its light comes back here: ONE rainShadeV call below for the grain, the
+  // wisp, the drop's crown and the drop's head (DXC — Chrome's compiler on Windows — inlines each call it meets)
+  var req: RainReq; req.act = RS_NONE;
+  if (lv(SNOW_GRAINS)) { if (grainIs(pin.aux)) { req = grainStep(pin, slot, isNew, dt); } }
+  if (lv(SNOW_WISPS)) { if (req.act == RS_NONE && wispIs(pin.aux)) { req = wispStep(pin, slot, isNew, dt); } }
+  if (req.act == RS_DONE) { return; }
   var p = pin;
+  var landed = false; var sP = vec3f(0.0); var sV = vec3f(0.0); var sT = vec3f(0.0);   // a drop that lands this step: where its crown is lit, toward the eye, its normal
   let k0 = em.kp[P_RAIN * 2u]; let k1 = em.kp[P_RAIN * 2u + 1u];
+  if (req.act == RS_NONE) {
   if ((p.bits & PB_ASLEEP) != 0u) { atomicAdd(&pool.hdr[1], 1u); pool.parts[slot] = p; return; }   // a splash in progress: only its clock runs (the caller advanced it)
   if (!isNew && dt > 0.0) {
     var vAir = vec3f(0.0);
     if (numWinds() > 0u) { vAir = windAir(p.pos, P_RAIN, -1e9) * em.rainCfgD.w; }
-    if (SNOW_GRAINS) { if (snowNow() && snowOneAir()) { vAir = snowAir(p.pos, vAir); } }   // ONE AIR: among the walls a flake falls through the simulated field (slack in a lee, fast through a gap), over them through the open wind
-    if (LOOK) { if (snowNow() && numWinds() > 0u) {   // A FIRE'S HOT AIR (heatAir above; no record of it on any page but the look's): a flake near a fire is drawn in and carried up its column, and one that gets into the hot of it is gone
+    if (lv(SNOW_GRAINS)) { if (snowNow() && snowOneAir()) { vAir = snowAir(p.pos, vAir); } }   // ONE AIR: among the walls a flake falls through the simulated field (slack in a lee, fast through a gap), over them through the open wind
+    if (snowNow() && numWinds() > 0u) {   // A FIRE'S HOT AIR (heatAir above): a flake near a fire is drawn in and carried up its column, and one that gets into the hot of it is gone
       let H = heatAir(p.pos); vAir += H.xyz;
       if (H.w > HEAT_MELT_AT && rnd(p.seed, 620u + u32(p.age * 240.0)) < 1.0 - exp(-HEAT_MELT_RATE * (H.w - HEAT_MELT_AT) * dt)) { pool.parts[slot].age = p.life; return; }
-    } }   // (LOOK: dead text on every page but the look's)
+    }
     var grav = k0.x;
-    if (snowNow()) {   // A FLAKE (a level built for snow, game/snowFx.ts): it rides the air almost whole (the drag is the CPU's: gravity ÷ a metre and a bit a second), so its own
+    if (snowNow()) {   // A FLAKE (a level built for snow, src/picture/snow/fx.ts): it rides the air almost whole (the drag is the CPU's: gravity ÷ a metre and a bit a second), so its own
       // slow FLUTTER is added to the air it is dragged toward — a sway of rainCfgB.x m/s at rainCfgB.y rad/s (the glint's two slots: a flake has none), each flake its own phase
       // and rate off its seed — and no two fall alike (gravity × 0.8‥1.2 off the seed). Its fall is integrated EXACTLY (toward the
       // terminal velocity, air − gravity ∕ drag): the rain's step-then-drag loses a fifth of a slow fall at 20 fps, and a flake filed with the life of a 1.25 m/s fall must come down in it
@@ -785,7 +769,7 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
           if (hit.inside) { pool.parts[slot].age = p.life; atomicAdd(&pool.hdr[3], 1u); return; }
           if (snowNow()) {
             var skips = false;
-            if (SNOW_GRAINS) { if (snowOneAir() && hit.idx != CAPSULE_HIT && hit.n.y > 0.5 && grain.f.w > 0.0) {   // ONE AIR: where the air at the ground is fast enough to lift snow, a flake that comes down into it is not let lie — it skips on along the ground with that air (the fine snow a gust runs over a yard is the snow that is falling in it)
+            if (lv(SNOW_GRAINS)) { if (snowOneAir() && hit.idx != CAPSULE_HIT && hit.n.y > 0.5 && grain.f.w > 0.0) {   // ONE AIR: where the air at the ground is fast enough to lift snow, a flake that comes down into it is not let lie — it skips on along the ground with that air (the fine snow a gust runs over a yard is the snow that is falling in it)
               let Xs = p.pos + rd * hit.t; let As = airAt(Xs.xz); let ss = length(As.xy); let kk = u32(p.age * 240.0);
               if (As.w > 0.5 && rnd(p.seed, 500u + kk) < grain.f.w * smoothstep(grain.f.y, max(grain.f.z, grain.f.y + 1e-3), ss)) {
                 skips = true;
@@ -806,26 +790,38 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
           p.spin = p.age;                                   // when it landed: the crown's clock is age − spin
           p.life = min(p.life, p.age + max(k1.x, 0.02));    // and it lives the splash's length more — never past the life it was filed with (the CPU retires its slot by that)
           p.ori = pOctEncode(hit.n);
-          let Ps = p.pos + hit.n * 0.02;
-          p.shade = rainShadeV(Ps, normalize(frame.camPos - Ps), hit.n, k1, false);   // lit where it landed, toward the eye (in the lamp's cone it glitters; in the building's shadow it does not)
-          pool.parts[slot] = p; return;
+          landed = true; sP = p.pos + hit.n * 0.02; sV = normalize(frame.camPos - sP); sT = hit.n;   // lit where it landed, toward the eye (in the lamp's cone it glitters; in the building's shadow it does not) — below
         }
       }
+      if (!landed) {
       p.pos += mv;
-      if (snowNow()) {   // THE WRAP: a flake is in the air for seconds, so one that leaves the square round the view's disc (frame.weatherE: centre xz, radius — game/snowFx.ts) is
+      if (snowNow()) {   // THE WRAP: a flake is in the air for seconds, so one that leaves the square round the view's disc (frame.weatherE: centre xz, radius — src/picture/snow/fx.ts) is
         // carried to the far side of it at its own height: the view moves, or cuts, and the air it comes to is already snowing
         let E = frame.weatherE;
         if (E.z > 0.0) { let d = p.pos.xz - E.xy; if (abs(d.x) > E.z || abs(d.y) > E.z) { let w = (fract((d + E.z) / (2.0 * E.z)) * 2.0 - 1.0) * E.z; p.pos = vec3f(E.x + w.x, p.pos.y, E.y + w.y); } }
       }
+      }
     }
+    if (!landed) {
     var gone = p.pos.y < -0.2;
     if (snowNow() && snowPast() > 0.0) { gone = gone || !flakeOpen(p.pos.xz) || p.pos.y > WORLD_MAX.y; }   // (SNOW_LOOK.past: a flake's air goes on past the level's rim, to where the view's disc wraps it)
     else { gone = gone || !rainOutdoors(p.pos.xz) || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX); }
     if (gone) { pool.parts[slot].age = p.life; return; }   // drifted over the roof's dry column / out of the world: gone
+    }
   }
-  let V = normalize(frame.camPos - p.pos);
-  let tl = length(p.vel); let T = select(vec3f(0.0, -1.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
-  let head = rainShadeV(p.pos, V, T, k1, !snowNow());   // (a flake has no strand to glint along)
+  }
+  var glint = false;
+  if (req.act != RS_NONE) { sP = req.Ps; sV = req.V; sT = req.T; }
+  else if (!landed) {
+    sP = p.pos; sV = normalize(frame.camPos - p.pos);
+    let tl = length(p.vel); sT = select(vec3f(0.0, -1.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
+    glint = !snowNow();   // (a flake has no strand to glint along)
+  }
+  let sh = rainShadeV(sP, sV, sT, k1, glint);
+  if (req.act == RS_WISP) { var q = req.p; let lit = sh * max(em.rainCfgC.w, 0.0); q.shade = select(mix(q.shade, lit, 0.35), lit, isNew); pool.parts[slot] = q; return; }
+  if (req.act == RS_GRAIN) { var q = req.p; let lit = sh * max(grain.a.w, 0.0); q.shade = min(select(mix(q.shade, lit, 0.5), lit, q.age - q.spin < 2.0 * dt), vec3f(GRAIN_SHADE_MAX)); pool.parts[slot] = q; return; }   // (a grain that flies through a lamp's own point is lit from no distance: on the software adapter one such pixel overflowed the frame's half floats and took the whole picture black through the bloom and the history. No grain is brighter than GRAIN_SHADE_MAX)
+  if (landed) { p.shade = sh; pool.parts[slot] = p; return; }   // (the crown)
+  let head = sh;
   var tail = select(p.shade, head, isNew);                  // last frame's head = this frame's tail (a new drop has none: head both ends)
   tail = mix(head, tail, clamp(em.rainCfgB.w, 0.0, 1.0));
   p.omg = pack2x16float(tail.xy); p.omgZ = pack2x16float(vec2f(tail.z, 0.0));
@@ -833,14 +829,14 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
   pool.parts[slot] = p;
 }
 
-// ================================================================== a wisp of blowing snow (game/snowFx.ts SNOWWISPS; particles_draw.wgsl wispVertex draws it)
+// ================================================================== a wisp of blowing snow (src/picture/snow/fx.ts SNOWWISPS; particles_draw.wgsl wispVertex draws it)
 // Spindrift: fine snow the wind runs low over open ground. A rain-kind particle filed with aspect 2 (particles_common.wgsl wispIs), on a snow level's page with the
 // switch on (the prelude's SNOW_WISPS — every statement here is dead code otherwise). PICTURE ONLY: nothing reads a wisp.
 const WISP_DRAG: f32 = 5.0;          // 1/s: how fast a wisp takes the air's velocity (it IS the air's load: a fifth of a second)
 const WISP_TOP: f32 = 0.8;           // m: a wisp lifted over this is gone (they are the ground's)
 const WISP_MEANDER_LEN: f32 = 3.5;   // m: the scale of the crosswind sway they snake on
 const WISP_GROUND_AIR: f32 = 0.55;   // the wind field's height share at the ground (wind_field.wgsl windStorm) — the gust patches run downwind at the wisps' own speed
-/** the wind the wisps run on, at the ground, in the open: the STORM record's own vector (game/wind.ts) × the wind field's ground share. By itself this is NOT the
+/** the wind the wisps run on, at the ground, in the open: the STORM record's own vector (rust/game_rules/src/air/wind.rs) × the wind field's ground share. By itself this is NOT the
  *  field: with the roof-by-roof rule off the field keeps the storm out of the bounding box of a level's roofs, and on the pass that box holds the open yard between
  *  the houses, where spindrift belongs — a wisp then keeps to open ground by its own rule (rainOutdoors: born and alive only where no roof is over it; walls stop it
  *  by the trace). With the rule on (WX_OWN.wind) the field reaches the yard and every reader below takes this × wispShare: the field's own air where the wisp is. */
@@ -849,10 +845,10 @@ fn wispWind() -> vec3f {
   for (var i = n0; i < n0 + nw; i++) { let w = em.imps[i]; if (((w.iflags >> 2u) & 3u) == 1u && (w.kinds & (1u << P_RAIN)) != 0u) { return w.bias * (w.strength * WISP_GROUND_AIR); } }
   return vec3f(0.0);
 }
-/** ONE SNOW IN ONE AIR (game/snowFx.ts SNOW_LOOK.oneAir → grain.f.x; the field must be there: grain.b.w). The maintainer, 10-15: the blown grains "look like the
+/** ONE SNOW IN ONE AIR (src/picture/snow/fx.ts SNOW_LOOK.oneAir → grain.f.x; the field must be there: grain.b.w). The maintainer, 10-15: the blown grains "look like the
  *  flakes but seem to behave differently. we should probably just unify those systems … makes the air not feel physical as a fluid". With it on there is no grain
  *  kind: every snow particle — a falling flake, a wisp lifted off the ground — is carried by snowAir below, and what the wind lifts it lifts by one rule (grain.f.yz). */
-fn snowOneAir() -> bool { if (SNOW_GRAINS) { return grain.f.x > 0.5 && grain.b.w > 0.5; } return false; }
+fn snowOneAir() -> bool { if (lv(SNOW_GRAINS)) { return grain.f.x > 0.5 && grain.b.w > 0.5; } return false; }
 /** past the level's rim there is no air field: a flake out there (SNOW_LOOK.past) is in the open wind — 0 inside the world, 1 from a metre and a half out */
 fn pastRimAir(p: vec3f) -> f32 { return smoothstep(0.0, 1.5, max(max(WORLD_MIN.x - p.x, p.x - WORLD_MAX.x), max(WORLD_MIN.z - p.z, p.z - WORLD_MAX.z))); }
 /** the air a snow particle at `p` is carried by. AMONG THE WALLS (under grain.g.x m) it is the simulated field's (airAt: the ground's air over the level's plan —
@@ -860,7 +856,7 @@ fn pastRimAir(p: vec3f) -> f32 { return smoothstep(0.0, 1.5, max(max(WORLD_MIN.x
  *  so in the open, far from any wall, this IS `free`), with the field's lift; OVER THEM (above grain.g.y) it is `free`, the open wind the caller read (windAir × its
  *  own factor); between, the two blended. The field is 2D: one layer over the floor, the height is this profile's. */
 fn snowAir(p: vec3f, free: vec3f) -> vec3f {
-  if (SNOW_GRAINS) {
+  if (lv(SNOW_GRAINS)) {
     let A = airAt(p.xz);
     let h = (0.55 + 0.45 * clamp(p.y / 2.5, 0.0, 1.0)) / 0.55;
     let b = max(smoothstep(grain.g.x, max(grain.g.y, grain.g.x + 0.01), p.y), pastRimAir(p));
@@ -870,7 +866,7 @@ fn snowAir(p: vec3f, free: vec3f) -> vec3f {
   return free;
 }
 const WISP_LEE_DIE: f32 = 0.25;      // the field's share of the open wind under which a wisp's fade-out starts (WX_OWN.wind: it dies in a roof's lee)
-/** ONE WIND FIELD (game/wind.ts WX_OWN.wind — the storm record's iflags bit 4): the share 0‥1 of wispWind the FIELD has at ground point q — nothing under a roof,
+/** ONE WIND FIELD (rust/game_rules/src/air/wind.rs WX_OWN.wind — the storm record's iflags bit 4): the share 0‥1 of wispWind the FIELD has at ground point q — nothing under a roof,
  *  easing in off its lee (wind_field.wgsl, asked at the ground, where its height share IS WISP_GROUND_AIR: in the open the field's air is wispWind to the bit).
  *  1 everywhere with the rule off: the wisps on the raw vector, as they were. */
 fn wispShare(q: vec2f) -> f32 {
@@ -908,8 +904,8 @@ fn wispAir(pos: vec3f, seed: u32, color: u32) -> vec3f {
   let a = wispWind() * (em.rainCfgD.w * (1.0 + 0.5 * clamp(pos.y / 0.5, 0.0, 1.0))) * wispShare(pos.xz);   // (a little faster a hand higher: the veil shears)
   var av = a;
   var one = false;
-  if (SNOW_GRAINS) { if (snowOneAir()) { one = true; av = snowAir(pos, a) * vec3f(1.0, 0.0, 1.0) / max(em.rainCfgD.w, 1e-3); } }   // ONE AIR: the wisp is in the very air the flakes fall through (÷ the flakes' own ×, put back by the CPU as the wisps' speed: one number for all snow)
-  if (SNOW_GRAINS) { if (grain.b.w > 0.5 && !one) { let A = airAt(pos.xz); av = vec3f(A.x, 0.0, A.y) * (0.7 + 0.35 * clamp(pos.y / 0.5, 0.0, 1.0)); } }   // (SNOW GRAINS: the wisps ride the simulated air too — round a wall's end, slack in its lee; the field is the game's own air at the ground, × the wisps' speedK below like the formula it stands in for)
+  if (lv(SNOW_GRAINS)) { if (snowOneAir()) { one = true; av = snowAir(pos, a) * vec3f(1.0, 0.0, 1.0) / max(em.rainCfgD.w, 1e-3); } }   // ONE AIR: the wisp is in the very air the flakes fall through (÷ the flakes' own ×, put back by the CPU as the wisps' speed: one number for all snow)
+  if (lv(SNOW_GRAINS)) { if (grain.b.w > 0.5 && !one) { let A = airAt(pos.xz); av = vec3f(A.x, 0.0, A.y) * (0.7 + 0.35 * clamp(pos.y / 0.5, 0.0, 1.0)); } }   // (SNOW GRAINS: the wisps ride the simulated air too — round a wall's end, slack in its lee; the field is the game's own air at the ground, × the wisps' speedK below like the formula it stands in for)
   let s = length(av.xz);
   if (s < 1e-3) { return vec3f(0.0); }
   let d = av.xz / s; let c = vec2f(-d.y, d.x);
@@ -928,7 +924,7 @@ fn wispAir(pos: vec3f, seed: u32, color: u32) -> vec3f {
  *  leaves the crest), what stands in its way stops it and it is gone inside a third of a second (a wall cuts the veil), born inside a solid = never there; under
  *  a roof, over WISP_TOP or out of the world = gone; (WX_OWN.wind) in a roof's lee it slows with the field and fades. Lit as a flake is (rainShadeV: the three strongest lights shadow-tested, the sky's dome) × its gain, eased
  *  over a few frames so a shadow's edge crossing it does not flick. */
-fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
+fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) -> RainReq {
   var p = pin;
   let k1 = em.kp[P_RAIN * 2u + 1u];
   if (!isNew && dt > 0.0) {
@@ -940,7 +936,7 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
       if ((em.flags & 2u) != 0u) {
         let hit = traceClosest(p.pos, rd, len + 0.03, 0u);
         if (hit.idx >= 0) {
-          if (hit.inside) { pool.parts[slot].age = p.life; return; }
+          if (hit.inside) { pool.parts[slot].age = p.life; return rsDone(); }
           free = false;
           p.pos += rd * max(hit.t - 0.03, 0.0);
           if (hit.n.y > 0.5) { p.vel -= hit.n * min(dot(p.vel, hit.n), 0.0); p.pos += hit.n * 0.01; }
@@ -949,20 +945,18 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
       }
       if (free) { p.pos += mv; }
     }
-    if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || p.pos.y > WISP_TOP || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX)) { pool.parts[slot].age = p.life; return; }
+    if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || p.pos.y > WISP_TOP || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX)) { pool.parts[slot].age = p.life; return rsDone(); }
     if (wispShare(p.pos.xz) < WISP_LEE_DIE) { p.life = min(p.life, p.age + WISP_FADE_OUT); }   // (WX_OWN.wind) run into a roof's lee: the air that carried it is gone — it slows with the field and its fade-out starts, as against a wall
-    if (SNOW_GRAINS) { if (grain.b.w > 0.5 && !snowOneAir() && length(airAt(p.pos.xz).xy) < WISP_LEE_DIE * grain.a.x) { p.life = min(p.life, p.age + WISP_FADE_OUT); } }
-    if (SNOW_GRAINS) { if (snowOneAir() && ((p.color >> 16u) & 255u) != 0u && length(airAt(p.pos.xz).xy) < grain.g.w * grain.f.y) { p.life = min(p.life, p.age + WISP_FADE_OUT); p.vel.y -= 0.6 * dt; } }   // ONE AIR: where the air that lifted it slows under what holds snow up, it sinks back and is gone   // (SNOW GRAINS: on the simulated air the same rule by that air — dead air behind a wall carries nothing)
+    if (lv(SNOW_GRAINS)) { if (grain.b.w > 0.5 && !snowOneAir() && length(airAt(p.pos.xz).xy) < WISP_LEE_DIE * grain.a.x) { p.life = min(p.life, p.age + WISP_FADE_OUT); } }
+    if (lv(SNOW_GRAINS)) { if (snowOneAir() && ((p.color >> 16u) & 255u) != 0u && length(airAt(p.pos.xz).xy) < grain.g.w * grain.f.y) { p.life = min(p.life, p.age + WISP_FADE_OUT); p.vel.y -= 0.6 * dt; } }   // ONE AIR: where the air that lifted it slows under what holds snow up, it sinks back and is gone   // (SNOW GRAINS: on the simulated air the same rule by that air — dead air behind a wall carries nothing)
   }
   let Ps = p.pos + vec3f(0.0, 0.03, 0.0);
   let V = normalize(frame.camPos - Ps);
   let tl = length(p.vel); let T = select(vec3f(1.0, 0.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
-  let lit = rainShadeV(Ps, V, T, k1, false) * max(em.rainCfgC.w, 0.0);
-  p.shade = select(mix(p.shade, lit, 0.35), lit, isNew);
-  pool.parts[slot] = p;
+  var r: RainReq; r.p = p; r.act = RS_WISP; r.Ps = Ps; r.V = V; r.T = T; return r;   // (lit by rainStep's ONE rainShadeV: × rainCfgC.w, eased 0.35 a frame)
 }
 
-// ================================================================== a grain of blown snow near the view (game/snowFx.ts SNOWGRAINS; particles_draw.wgsl grainVertex draws it)
+// ================================================================== a grain of blown snow near the view (src/picture/snow/fx.ts SNOWGRAINS; particles_draw.wgsl grainVertex draws it)
 // The maintainer on the wisps, 10-14: "it should really feel like snow blowing around, which I think is much smaller/high frequency … the way the snow dances around
 // with stuff that feels like chaotic fluid dynamics, not just a single static pattern that lines up with the wind"; "neat interactions where the wind hits a wall …
 // like vortices past the edge of the door"; "overall this should be subtle". Thousands of fine grains inside a radius of the view's middle, each lying on the ground
@@ -970,7 +964,7 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
 // the level's floor, the walls and door leaves its obstacles) with small eddies of its own on top, skipping where it comes down while the air is fast, lying again
 // where it is not. A rain-kind particle filed with aspect 3 (particles_common.wgsl grainIs) — every statement dead code without the prelude's SNOW_GRAINS.
 // PICTURE ONLY: nothing reads a grain, and nothing reads the air it rides.
-const AIR_CELLS_PER_M: f32 = 5.0;    // the air field's cells a metre (render/airField.ts AIR_RES — tools/qa/snowgrains-check.ts holds the two together)
+const AIR_CELLS_PER_M: f32 = 5.0;    // the air field's cells a metre (render/airField.ts AIR_RES)
 const GRAIN_PICK_RATE: f32 = 5.0;    // 1/s: tries at being picked up, per lying grain
 const GRAIN_PICK_LO: f32 = 0.7;      // × the wind's ungusted speed: air slower than this lifts nothing (a lull, a lee) …
 const GRAIN_PICK_HI: f32 = 1.3;      // … at this it lifts every grain that tries (a gust, the jet through a gap)
@@ -1004,11 +998,11 @@ fn grainNoise3(u: vec3f, k: u32) -> vec3f {
  *  at the ground than a hand up), plus the small eddies, plus the field's lift, less its own sinking; its step swept through the trace grid — what faces up it
  *  skips off while the air is fast and lies on when it is not, a wall turns it and may take it; out of the radius, under a roof or out of the world it lies at
  *  once; over GRAIN_TOP, in dead air or at its flight's end it fades and lies. Lit as a flake is (rainShadeV) × its gain, on about every other frame, eased. */
-fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
+fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) -> RainReq {
   var p = pin;
   let k1 = em.kp[P_RAIN * 2u + 1u];
   if (isNew) { p.spin = -1.0; p.ori = 0u; p.omg = 0u; p.omgZ = 0u; p.shade = vec3f(0.0); p.vel = vec3f(0.0); }
-  if (!(dt > 0.0)) { pool.parts[slot] = p; return; }
+  if (!(dt > 0.0)) { pool.parts[slot] = p; return rsDone(); }
   let E = frame.weatherE; let Rn = max(grain.a.y, 1.0); let U0 = max(grain.a.x, 1e-3);
   var end = bitcast<f32>(p.omg);
   if (grain.b.w < 0.5 || E.z <= 0.0 || (p.spin >= 0.0 && p.age >= end)) { p.spin = -1.0; }
@@ -1017,39 +1011,41 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     p.omgZ = 0u; p.shade = vec3f(0.0);
     // A BLAST (grain.c / .d): for as long as it throws, a share of every lying grain is its — put down inside its disc and thrown out from its middle and up,
     // whatever the wind is doing (the loose snow a burst lifts); from there it is a flying grain like any other, on the air the same blast has shoved outward
-    if (grain.c.w > 0.0 && grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 13u) < 1.0 - exp(-grain.c.w * dt)) {
-      let rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
-      let dir = vec2f(cos(th), sin(th)); let q = grain.c.xy + dir * (rr * max(grain.c.z, 0.05));
-      if (rainOutdoors(q) && distance(q, E.xy) < Rn && airAt(q).w > 0.5) {   // (… off open ground only, as the wind's own pick-up: not off a crate's top or a brazier's — the air's map has those solid)
-        var y = 0.0; var ok = true;
-        if ((em.flags & 2u) != 0u) { let hit = traceClosest(vec3f(q.x, 1.3, q.y), vec3f(0.0, -1.0, 0.0), 1.6, 0u); if (hit.idx >= 0) { ok = !hit.inside && hit.n.y > 0.5; y = 1.3 - hit.t; } }
+    // … and the wind's own pick-up off open ground. The two are the turns of ONE loop round ONE ground ray (DXC — Chrome's compiler on Windows — inlines each call it meets):
+    // turn 0 the blast's grain (taken: done), turn 1 the wind's.
+    for (var turn = 0u; turn < 2u; turn++) {
+      var q = vec2f(0.0); var dir = vec2f(0.0); var rr = 0.0; var A = vec4f(0.0); var s = 0.0;
+      if (turn == 0u) {
+        if (!(grain.c.w > 0.0 && grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 13u) < 1.0 - exp(-grain.c.w * dt))) { continue; }
+        rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
+        dir = vec2f(cos(th), sin(th)); q = grain.c.xy + dir * (rr * max(grain.c.z, 0.05));
+        if (!(rainOutdoors(q) && distance(q, E.xy) < Rn && airAt(q).w > 0.5)) { continue; }   // (… off open ground only, as the wind's own pick-up: not off a crate's top or a brazier's — the air's map has those solid)
+      } else {
+        if (!(grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 1u) < 1.0 - exp(-GRAIN_PICK_RATE * dt))) { continue; }   // (… and not in its slot's last moments: a flight ends faded, before the ring takes the slot back)
+        rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
+        q = E.xy + vec2f(cos(th), sin(th)) * (rr * Rn);
+        if (!rainOutdoors(q)) { continue; }
+        A = airAt(q); s = length(A.xy);
+        if (!(A.w > 0.5 && rnd(p.seed, c + 4u) < smoothstep(GRAIN_PICK_LO * U0, GRAIN_PICK_HI * U0, s))) { continue; }
+      }
+      var y = 0.0; var ok = true;
+      if ((em.flags & 2u) != 0u) { let hit = traceClosest(vec3f(q.x, 1.3, q.y), vec3f(0.0, -1.0, 0.0), 1.6, 0u); if (hit.idx >= 0) { ok = !hit.inside && hit.n.y > 0.5; y = 1.3 - hit.t; } }
+      if (turn == 0u) {
         if (ok && y < 0.35) {   // (… and off the ground itself: what stands a box high in the disc keeps its snow)
           let h = rnd(p.seed, c + 5u); let far = rnd(p.seed, c + 6u);
           p.pos = vec3f(q.x, y + 0.03 + 0.2 * h, q.y);
           p.vel = vec3f(dir.x, 0.0, dir.y) * (grain.d.x * (0.2 + 0.8 * far) * (0.35 + 0.65 * rr)) + vec3f(0.0, grain.d.y * (0.25 + 0.75 * h), 0.0);
           p.spin = p.age; end = min(p.age + GRAIN_FLIGHT * (0.5 + rnd(p.seed, c + 7u)), p.life - GRAIN_FADE_OUT); p.omg = bitcast<u32>(end);
-          pool.parts[slot] = p; return;
+          pool.parts[slot] = p; return rsDone();
         }
+      } else if (ok) {
+        let h = rnd(p.seed, c + 5u);
+        p.pos = vec3f(q.x, y + 0.015 + 0.12 * h * h, q.y);
+        p.vel = vec3f(A.x, 0.0, A.y) * ((0.45 + 0.4 * h) * max(grain.b.z, 0.0)) + vec3f(0.0, (0.25 + 0.9 * rnd(p.seed, c + 6u)) * min(s / U0, 1.6), 0.0);
+        p.spin = p.age; end = min(p.age + GRAIN_FLIGHT * (0.5 + rnd(p.seed, c + 7u)), p.life - GRAIN_FADE_OUT); p.omg = bitcast<u32>(end);
       }
     }
-    if (grain.b.w > 0.5 && E.z > 0.0 && p.life - p.age > GRAIN_FADE_OUT + 0.4 && rnd(p.seed, c + 1u) < 1.0 - exp(-GRAIN_PICK_RATE * dt)) {   // (… and not in its slot's last moments: a flight ends faded, before the ring takes the slot back)
-      let rr = sqrt(rnd(p.seed, c + 2u)); let th = rnd(p.seed, c + 3u) * 6.2831853;
-      let q = E.xy + vec2f(cos(th), sin(th)) * (rr * Rn);
-      if (rainOutdoors(q)) {
-        let A = airAt(q); let s = length(A.xy);
-        if (A.w > 0.5 && rnd(p.seed, c + 4u) < smoothstep(GRAIN_PICK_LO * U0, GRAIN_PICK_HI * U0, s)) {
-          var y = 0.0; var ok = true;
-          if ((em.flags & 2u) != 0u) { let hit = traceClosest(vec3f(q.x, 1.3, q.y), vec3f(0.0, -1.0, 0.0), 1.6, 0u); if (hit.idx >= 0) { ok = !hit.inside && hit.n.y > 0.5; y = 1.3 - hit.t; } }
-          if (ok) {
-            let h = rnd(p.seed, c + 5u);
-            p.pos = vec3f(q.x, y + 0.015 + 0.12 * h * h, q.y);
-            p.vel = vec3f(A.x, 0.0, A.y) * ((0.45 + 0.4 * h) * max(grain.b.z, 0.0)) + vec3f(0.0, (0.25 + 0.9 * rnd(p.seed, c + 6u)) * min(s / U0, 1.6), 0.0);
-            p.spin = p.age; end = min(p.age + GRAIN_FLIGHT * (0.5 + rnd(p.seed, c + 7u)), p.life - GRAIN_FADE_OUT); p.omg = bitcast<u32>(end);
-          }
-        }
-      }
-    }
-    pool.parts[slot] = p; return;
+    pool.parts[slot] = p; return rsDone();
   }
   let h1 = f32(p.seed & 1023u) * (1.0 / 1023.0); let h2 = f32((p.seed >> 10u) & 1023u) * (1.0 / 1023.0);
   let A = airAt(p.pos.xz); let s = length(A.xy);
@@ -1058,7 +1054,7 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
   let n1 = grainNoise3(vec3f(p.pos.xz / GRAIN_EDDY1, tz + p.pos.y / GRAIN_EDDY1), 11u);
   let n2 = grainNoise3(vec3f(p.pos.xz / GRAIN_EDDY2, tz * 2.3 + p.pos.y / GRAIN_EDDY2), 23u);
   let ed = (n1 + n2 * 0.6) * (max(grain.b.x, 0.0) * s);
-  let gk = max(grain.b.z, 0.0);   // × the field's air = the blown snow's speed (snowFx.ts SNOWGRAINS.speedK: the field itself is the game's air as it is, for every reader)
+  let gk = max(grain.b.z, 0.0);   // × the field's air = the blown snow's speed (src/picture/snow/fx.ts SNOWGRAINS.speedK: the field itself is the game's air as it is, for every reader)
   var vT = (vec3f(A.x, 0.0, A.y) * ((0.55 + 0.45 * up) * (0.8 + 0.4 * h1)) + vec3f(ed.x, ed.z * 0.6, ed.y)) * gk;
   vT.y += A.z * grain.b.y * gk - GRAIN_SETTLE;
   p.vel = vT + (p.vel - vT) * exp(-mix(4.0, 9.0, h2) * dt);
@@ -1068,7 +1064,7 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     if ((em.flags & 2u) != 0u) {
       let hit = traceClosest(p.pos, rd, len + 0.02, 0u);
       if (hit.idx >= 0) {
-        if (hit.inside) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return; }
+        if (hit.inside) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return rsDone(); }
         free = false;
         p.pos += rd * max(hit.t - 0.02, 0.0) + hit.n * 0.01;
         let vn = min(dot(p.vel, hit.n), 0.0);
@@ -1084,20 +1080,18 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     if (free) { p.pos += mv; }
   }
   let dC = distance(p.pos.xz, E.xy);
-  if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX) || dC > Rn * 1.1) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return; }
+  if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX) || dC > Rn * 1.1) { p.spin = -1.0; p.omgZ = 0u; pool.parts[slot] = p; return rsDone(); }
   if (p.pos.y > GRAIN_TOP || s < GRAIN_DROP * U0) { end = min(end, p.age + GRAIN_FADE_OUT); }
   p.omg = bitcast<u32>(end);
   let env = smoothstep(0.0, GRAIN_FADE_IN, p.age - p.spin) * smoothstep(0.0, GRAIN_FADE_OUT, end - p.age) * (1.0 - smoothstep(0.7, 1.0, dC / Rn));
   p.omgZ = bitcast<u32>(clamp(grain.a.z, 0.0, 4.0) * (0.5 + h2) * env);
   p.color = u32(clamp(grain.e.x, 0.0, 0.999) * 4096.0) | (u32(clamp(grain.e.y, 0.0, 15.9) * 16.0) << 12u) | (u32(clamp(grain.e.z, 0.0, 1.0) * 255.0) << 20u);   // (how the draw shows it: grain.e, packed — the draw has no numbers of the grains' own)
+  var r: RainReq; r.p = p; r.act = RS_DONE;
   if (p.age - p.spin < 2.0 * dt || rnd(p.seed, c + 12u) < 0.5) {
     let Ps = p.pos + vec3f(0.0, 0.02, 0.0);
     let V = normalize(frame.camPos - Ps);
     let tl = length(p.vel); let T = select(vec3f(1.0, 0.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
-    let lit = rainShadeV(Ps, V, T, k1, false) * max(grain.a.w, 0.0);
-    // (a grain that flies through a lamp's own point is lit from no distance: on the software adapter one such pixel overflowed the frame's half floats and took the
-    // whole picture black through the bloom and the history. No grain is brighter than GRAIN_SHADE_MAX)
-    p.shade = min(select(mix(p.shade, lit, 0.5), lit, p.age - p.spin < 2.0 * dt), vec3f(GRAIN_SHADE_MAX));
-  }
-  pool.parts[slot] = p;
+    r.act = RS_GRAIN; r.Ps = Ps; r.V = V; r.T = T;   // (lit by rainStep's ONE rainShadeV: × grain.a.w, eased a half a frame, capped at GRAIN_SHADE_MAX)
+  } else { pool.parts[slot] = p; }
+  return r;
 }

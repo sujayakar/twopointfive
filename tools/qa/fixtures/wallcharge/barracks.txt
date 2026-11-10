@@ -1,2 +1,0 @@
-# places for a wall charge on levels/barracks.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
-580 518

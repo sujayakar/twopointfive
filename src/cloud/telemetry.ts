@@ -7,8 +7,8 @@
 //   boot    once, when the boot is over: its timeline as the page already takes it (ui/boot.ts) — ms to interactive, the ms it waited on shader pipelines, how
 //           many there were and how many failed, the three slowest by name, the longest frozen stretch, the first frame's GPU wait, and whether the
 //           visit was a reload (a browser keeps compiled shaders between loads, or does not: that is what this record is for)
-//   run     when a mission ends: how (done / failed), its seconds and its own tally (game/mission.ts stats), the quality it was drawn at, and `over`: the
-//           run's verdict in brief (game/verdict.ts: its kind, the word, won or lost, seconds, the way it was won, a cheat on or not, men lost of how many,
+//   run     when a mission ends: how (done / failed), its seconds and its own tally (rust/game_rules/src/missions/mission.rs stats), the quality it was drawn at, and `over`: the
+//           run's verdict in brief (rust/game_rules/src/missions/verdict.rs: its kind, the word, won or lost, seconds, the way it was won, a cheat on or not, men lost of how many,
 //           defenders down of how many, hostages alive of how many). THE END IS THE VERDICT'S where one is given (`endStage`): only the stealth mission
 //           moves the mission's stage word into an end, so a house taken, a rescue and a team wiped wrote no record at all until the page read the verdict
 //   perf    once every `perfSecs` of LIVE play: frames, their mean and 50th / 95th / 99th / worst time in ms, how many ran past 33 / 50 / 100 ms, the quality tier
@@ -27,7 +27,7 @@
 //           the browser says: a laptop on its battery can run the same build far slower. On a `run` and on the `visit` too
 //           `cpu`: THE MAIN THREAD'S TIME ON A FRAME. A real Mac played a round at 47 ms a frame with the GPU's timed work at 10 ms, and no record
 //           said where the other 35 went: the page's own script, or the GPU outside the timed passes. The loop already times itself every frame
-//           for the F9 recorder (main.ts: `perfrec.cpuFrameStart`, the game's update, the engine's render); those numbers are handed in here.
+//           for the F9 recorder (host/measure.ts: `perfrec.cpuFrameStart`, the game's update, the engine's render); those numbers are handed in here.
 //           Over the stretch's played frames (`n`; a frame the world is held still on, behind a card, is not one): `render` (the engine building
 //           the frame's commands) and `whole` (from the frame's start to the records' own call, which comes after the update and the render:
 //           update + render + the rest), each as mean / p50 / p95 / worst ms; `update` the same over the frames that ran a game tick (its own
@@ -38,7 +38,7 @@
 //           what tells them apart); `whole` small beside a long frame = the frame waits outside the frame callback (the GPU, the compositor, the display).
 //           `calls` (where the page keeps a clock on its GPU calls — gpu/keep.ts `CALLS.play`: the queue's writeBuffer, writeTexture and
 //           submit, from the boot's freeze on; ?playclock=0 or ?callclock=0 takes it off): the ms a played frame spent INSIDE those calls
-//           over the same window as `whole` (main.ts reads the page's running total where the frame's timer starts and at the records'
+//           over the same window as `whole` (host/drawpage.ts reads the page's running total where the frame's timer starts and at the records'
 //           call), as mean / p50 / p95 / worst with its own `n`, in tenths of a millisecond. Read it beside `whole`, not `render` alone: the
 //           update writes to the GPU too (the lights' buffer on a tick). A `calls` close to `whole` says the frame's time went inside those
 //           calls (held by the GPU process, or copying); a small one says nothing either way (an encoder's call, createBuffer and
@@ -47,8 +47,8 @@
 //           `rung`: WHERE THE QUALITY STOOD, AND WHEN IT MOVED. `preset` / `scale` / `sharp` / `shed` above are where the stretch ENDED; the ladder
 //           moves inside it (a real Mac's first minute ended on medium at half size, and nothing said whether it fell there in the first seconds,
 //           while programs were still building, or was pushed there by the play). `from` = the page's word for its rung as the stretch began
-//           (main.ts: preset, scale, the size drawn, 'sharp', 'shed', 'pinned') and `why` = the ladder's own last line by then (ui/quality.ts
-//           `lastChange`: 'calibrated (…): 10.0 ms compute at high → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
+//           (host/drawpage.ts: preset, scale, the size drawn, 'sharp', 'shed', 'pinned') and `why` = the ladder's own last line by then (ui/quality.ts
+//           `lastChange`: 'calibrated: measured 10.0 ms of GPU a frame on high ×0.77 → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
 //           the ladder's line for it] for each change of either, the first `moves` of them, `more` = how many after that. A fourth entry, 1, marks a
 //           change made WHILE PLAY WAS NOT LIVE (a menu, a held brief): its second is where play stood, not when it happened. The page is asked a
 //           few times a second on live frames, never every frame
@@ -59,13 +59,13 @@
 //           each rides on the visit's `end`
 //   end     as the page goes: seconds of live play and frames this visit
 // THE GPU'S TIME costs the frame nothing new. The engine already times its passes every frame on an adapter that can (gpu/timer.ts, what the quality ladder
-// reads), and main.ts already folds a frame's compute passes into one number for that ladder: that number is handed in here, where it is one add into a table
+// reads), and host/drawpage.ts already folds a frame's compute passes into one number for that ladder: that number is handed in here, where it is one add into a table
 // of quarter-milliseconds. No query, no readback and no pass is added for it. One frame in `gpuEvery` the per-pass times the engine holds are added up too (a
 // walk of a couple of dozen numbers, about twice a second), and the record carries each pass's mean — in TWO lists: `passes`, the compute passes the frame's
 // GPU time is the union of, and `render`, the render passes that union leaves out because a render pass's timestamps are not to be trusted on Metal (the
 // first real records had them on top, at twice the frame). An adapter with no timestamp queries has no `gpu`.
 // NOTHING ELSE: no key pressed, no name, no address — but a visit's record is keyed to the browser's random id and is, taken together, close to a
-// fingerprint of the machine. What of it is kept is the maintainer's choice (docs/agents/workflow.md). Records wait in a short queue and go up every `secs`, and as the page is hidden.
+// fingerprint of the machine. What of it is kept is the maintainer's choice. Records wait in a short queue and go up every `secs`, and as the page is hidden.
 // No game code is imported: the page hands in closures (cloud.ts).
 import type { Wire } from './wire';
 
@@ -75,7 +75,7 @@ export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warni
 
 export interface PlayFacts {
   scenario: string;
-  /** the mission's stage word (game/game.ts MissionStage) and whether a run is live in the player's hands */
+  /** the mission's stage word (rust/game_rules/src/tick/game MissionStage) and whether a run is live in the player's hands */
   stage: string; live: boolean;
   stats: Record<string, unknown>;
   preset: string; scale: number; auto: boolean;

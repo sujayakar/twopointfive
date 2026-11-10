@@ -1,7 +1,7 @@
 // THE CONSULATE — the four's hostage rescue: three hostages at the far end of a floor of rooms the squad has no time to clear, in a room one stack cannot take.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts consulate [--check]   → levels/consulate.json, with its `scenarios.rescue` block
-//   page: ?levelFile=consulate.json&rescue&squad=4        · headless: bun run tools/qa/probes.ts consulate
+//   page: ?levelFile=consulate.json&rescue&squad=4
 //
 // The idea it playtests (this goal's assumption, on the maintainer's words 'high risk hostage rescue situations where you do need to flow a lot more, go dynamic,
 // selective clearance along the way' and 'a four person squad as two pairs'): THE SQUAD SPENDS ITS MEN, NOT ITS TIME. The captor's clock starts on the team's
@@ -34,23 +34,34 @@
 // 'Manageable with four' as the depot held it: the corridor and the hall are ≥ 3 m and bare; every door a stack forms on has ≥ 1.9 m of clear floor past a jamb
 // on the side it is taken from; the hostage room's two doors are 11 m apart on one wall (one screen), their stacks out of each other's line.
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
-// bounds typed into the shaders — holds without a change. The footstep surface map is still game/floor.ts's, the OFFICE's rectangles in code.
+// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/world/floor.rs's, the OFFICE's rectangles in code.
 // LIGHT is the cue and the balance: the lobby, most of the corridor, the records room and the back office are dark (a team in them is hard to see), the rooms that
 // hold a man show him under a panel (visa, kitchen, a dim waiting room, the suite), and the hall's north end — where a stack on the main door stands — is lit.
 // All lit, the scripted four lost more than half their men on the way in; this way round the approach is the team's and the doors are the fight.
-// Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit: its walls, doors, glass, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a neighbouring state's consulate on one floor of a town house — sand plaster inside and out, dark varnish, bare stone and boards, and PLUM CARPET.
+// What it alone has: PROTOCOL UNDERFOOT, carpet bound in brass. The public's roped lane from the front door, the star in the lobby, the state runner down the
+// corridor, and the hall carpeted wall to wall (a room, not a route: the registry, cut from the same plan, paints a line to its door — this one does not); the same
+// carpet comes out as a mat under the consul's SIDE door, and what leads to that one is only the staff's tread, worn into the back office's floor from the hall's door and
+// from the kitchen's — the level's one decision (a pair on each door) read off the ground. A brass sill lies in every opening, as long as the opening is wide.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, Rect } from './lib/scenarios';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedPieces, INK } from './livedPieces';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
+import { GWOT_MATERIALS } from './lib/gwotKit';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, VARNISH, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'consulate';
-export const NOTES = 'The consulate: a lobby, a 3 m corridor past four rooms (a glass front, an open arch, two shut doors) to a hall, and the consul\'s office in two halves with a door on each. The four-person hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts consulate';
+const PLAIN_NOTES = 'The consulate: a lobby, a 3 m corridor past four rooms (a glass front, an open arch, two shut doors) to a hall, and the consul\'s office in two halves with a door on each. The four-person hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts consulate';
 
 /** The spaces: the floor inside each one's walls. The ONE place a room's rectangle is typed — the rescue's bounds, its regions and the probes all read it. */
 export const CONSULATE_ROOMS: Record<'lobby' | 'corridor' | 'visa' | 'records' | 'hall' | 'suite' | 'waiting' | 'kitchen' | 'back' | 'store', Rect> = {
@@ -264,7 +275,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- doors (closedDir 0: the leaf runs +x from the hinge, in a wall along x; π/2: +z, in a wall along z) ----------------
   const doors: LevelDoorDef[] = [
-    { name: 'visa', hinge: [14.82, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // the room's one door opens out into the corridor: no wedge inside the room holds it (tools/qa/second-way-check.ts)
+    { name: 'visa', hinge: [14.82, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // the room's one door opens out into the corridor: no wedge inside the room holds it (rust/game_start levels second-way)
     { name: 'records', hinge: [19.42, 10.0], closedDir: 0, width: 1.16, swing: 1 },   // opens out into the corridor, like 'visa': a man posted in the records room cannot wedge both of its doors
     { name: 'records_hall', hinge: [24.0, 8.42], closedDir: Math.PI / 2, width: 1.16, angle: 1.3, closer: false },   // left standing open, into the records room: whoever is in there sees the main door through it
     { name: 'kitchen', hinge: [21.17, 13.2], closedDir: 0, width: 1.16 },
@@ -278,11 +289,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; off = the level as it was) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; off = the level as it was) ----------------
   // A town-house consulate, not an office: flags, rope posts, gilt and round things, the tea service, luggage. Every room low enough to fight across; the consul's two
   // halves and the visa section (read through its glass) lowest of all. Nothing here lights anything; the rooms' light is said with colour.
   {
-    const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, OFFICE_PALETTE), Q = Math.PI / 4, NS = { flags: BoxFlag.NoShadow };
+    const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, OFFICE_PALETTE as unknown as Parameters<typeof livedPieces>[1]), Q = Math.PI / 4, NS = { flags: BoxFlag.NoShadow };
     const gilt = INK.brass, wine: Vec3 = INK.oxblood, tea: Vec3 = [0.5, 0.26, 0.08], turq: Vec3 = [0.1, 0.5, 0.5];
     /** a round thing: two squares, one turned an eighth */
     const round = (x: number, y0: number, z: number, s: number, h: number, a: Vec3, extra = {}) => { const L = P.at(x, z, 0); L.box(0, y0, 0, s, h, s, a, 0, extra); L.box(0, y0, 0, s, h - 0.004, s, a, Q, extra); };
@@ -364,7 +375,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE CONSUL'S SUITE — north half his study (flag, globe, green leather, the red telephone), south half the sitting room (a hearth, tea, the blanket they sit on)
     P.room('suite');
     flag(35.45, 4.5, C.red, C.white, INK.baize);
-    P.at(29.5, 8.35, 0).box(0, 0, 0, 0.5, 0.45, 0.5, C.woodDark); for (let i = 0; i < 4; i++) P.at(29.5, 8.35, 0).box(0, 0.45, 0, 0.62, 0.5 - i * 0.003, 0.62 * Math.tan(Math.PI / 8), INK.cream, i * Q); P.at(29.5, 8.35, 0).box(0.04, 0.95, 0.02, 0.3, 0.012, 0.2, INK.baize, 0.5);
+    P.at(29.5, 8.35, 0).box(0, 0, 0, 0.5, 0.45, 0.5, C.woodDark); P.at(29.5, 8.35, 0).box(0, 0.45, 0, 2 * 0.31 * 1.026, 0.5, 2 * 0.31 * 1.026, INK.cream, 0, { round: true }); P.at(29.5, 8.35, 0).box(0.04, 0.95, 0.02, 0.3, 0.012, 0.2, INK.baize, 0.5);
     { const L = P.at(31.45, 4.6, 0); L.box(0, 0, 0.08, 2.2, 0.42, 0.7, C.plant); L.box(0, 0, -0.3, 2.2, 0.85, 0.18, C.plant); L.box(-1.02, 0.42, 0.08, 0.16, 0.2, 0.7, C.plant); L.box(1.02, 0.42, 0.08, 0.16, 0.2, 0.7, C.plant); }
     P.phone(34.3, 0.76, 6.18, 0, C.red); P.phone(34.0, 0.76, 6.18, 0);
     P.armchair(32.9, 7.55, 0, INK.baize); P.armchair(34.3, 7.55, 0, INK.baize);
@@ -446,7 +457,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const SIDE: Vec3 = [29.1, 1.1, 17.0];    // … and on the side door, the south half's
   const scenarios: LevelScenarios = {
     rescue: {
-      // the four: the red pair in front, the blue pair a stride behind (rescue.ts stages team.ops[0..3] in the squad's own order)
+      // the four: the red pair in front, the blue pair a stride behind (rust/game_rules/src/missions/rescue stages team.ops[0..3] in the squad's own order)
       team: { sam: [7.2, 0, 15.4], samYaw: Math.PI / 2, ops: [[5.9, 0, 14.7], [5.9, 0, 16.1], [4.85, 0, 14.7], [4.85, 0, 16.1]], opsYaw: Math.PI / 2 },
       room: { name: "consul's office", where: 'end of the corridor', door: 'suite', bounds: R.suite, lights: 'suite', doorAim: MAIN },
       side: { door: 'suite_side', hold: [29.1, 0, 17.0], from: { door: 'back', bounds: R.back }, pair: true },
@@ -480,11 +491,81 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       },
     },
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest; picture only): the front door the team came in by, from the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only): the front door the team came in by, from the
   // street side (`ref`: the rescue starts them 4.6 m INSIDE it, and from in there the picture looks out). Everything else is measured: the stack falls on the blank
   // wall north of the door, the lobby's two-light window just past its last man.
   scenarios.kitView = { ways: [{ door: 'front', ref: [1, 18.75] }] };
-  // THE FLOOR, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it)
+  // THE FLOOR, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it)
   scenarios.places = { areas: [{ name: "consul's office", bounds: { ...R.suite } }, { name: 'visa office', bounds: { ...R.visa } }, { name: 'records room', bounds: { ...R.records } }, { name: 'waiting room', bounds: { ...R.waiting } }, { name: 'kitchen', bounds: { ...R.kitchen } }, { name: 'back office', bounds: { ...R.back } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'corridor', bounds: { ...R.corridor } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'store', bounds: { ...R.store } }] };
   return { level, scenarios, groups: trace.groups };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'consulate';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;
+/** the carpets' plum. The palette has no paint of this hue (its reds are the depot's and the registry's), so it is a colour of this file's own and only decals
+ *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: rust/game_rules/src/fittings/doors/paint.rs */
+const PLUM: Vec3 = [0.15, 0.035, 0.075];
+const SKIN: Skin = {
+  wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: VARNISH, frameIn: VARNISH, dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,
+  floor: { stone: 'slab', lino: 'slab', carpet: 'blanketBrown', carpetBlue: 'poplar' },   // (the consul's office: bare boards round its two carpets — a fitted carpet in the dark madder read 0.045, a hole in the floor)
+  metals: ['woodGrey', 'iron'],
+  // THE LIVED ROOMS' OWN FLOORS (consulate.ts lays one wall to wall in each staff room in a colour of its own): each as the stuff it is, and none of them a
+  // colour — the carpets' plum is this place's one accent, so the staff's floors are told apart by what they are made of: grey felt in the visa office, bare
+  // boards in the records room, matting in the waiting room, hessian in the back office, the slab in the store and under the hall's carpet. (The kitchen's quarry tile keeps the
+  // generator's own terracotta and draws flat: the palette has no tile, and its oxide paint made that floor louder than the plum.)
+  own: [[[0.4, 0.46, 0.53], 'blanketGrey'], [[0.27, 0.13, 0.24], 'woodGrey'], [[0.2, 0.33, 0.36], 'canvas'], [[0.42, 0.35, 0.24], 'coyote'],
+    [[0.27, 0.3, 0.2], 'slab'], [[0.1, 0.27, 0.18], 'slab']],
+  // (the rescue names no rooms. The wine wainscot goes round the floors a GUEST walks — each has the level's own rug on it, so the skin lays none; the hall's is
+  // laid by hand below — and the staff's rooms stay plain: which of them holds a man is drawn at each staging, and no paint says)
+  rooms: [{ id: 'lobby', bounds: R.lobby }, { id: 'corridor', bounds: R.corridor }, { id: 'waiting', bounds: R.waiting }, { id: 'suite', bounds: R.suite }],
+  noRug: /./, rugs: { lobby: 'afghan', corridor: 'afghan', waiting: 'afghan', suite: 'afghan' },
+  // filing cabinets in bare zinc (no army olive in a consulate), the consul's couch in oxblood
+  pick: c => { const a = c.b.albedo; if (c.name !== undefined || c.group === 'floors') return undefined; if (c.steel && a[0] < 0.7) return 'galv'; return a[0] === 0.3 && a[1] === 0.12 && a[2] === 0.1 ? 'rugRed' : undefined; },
+  dress: (G, level, T) => {
+    // (two sets of marks: M on the bare floor, Hi over the level's own rugs — their tops stand at 0.024)
+    const M = lookMarks(T), Hi = lookMarks({ ...T, flat: (x, z, w, d, a, yaw = 0, y = 0.011) => T.flat(x, z, w, d, a, yaw, y + 0.0146) });
+    const wine = T.tone(PLUM, 1.8), brass = P.rugOchre;
+    // A BRASS SILL in every inside opening, as long as the opening is wide: the nine doors, the waiting room's arch, the corridor's mouth — and the gap in the wall
+    // across the consul's office, which is a doorway to whoever has to fight through it
+    for (const d of level.doors) { if (d.exterior) continue; const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); M.seg(d.hinge[0], d.hinge[1], d.hinge[0] + ux * d.width, d.hinge[1] + uz * d.width, 0.28, brass); }
+    M.seg(12.4, 13.2, 14.6, 13.2, 0.28, brass); M.seg(10.0, R.corridor.z0, 10.0, R.corridor.z1, 0.28, brass); M.seg(R.suite.x0, SPLIT.z, SPLIT.x0, SPLIT.z, 0.28, brass);
+    // THE STAR let into the lobby's stone on the corridor's own axis: a man standing on it is standing in the corridor's line
+    { const x = 7.0, z = 11.6, q = Math.PI / 4; for (const [s, col] of [[1.7, brass], [1.46, wine]] as const) for (const yaw of [0, q]) T.flat(x, z, s, s, col, yaw, 0.0119 + (s < 1.6 ? 0.0004 : 0) + (yaw ? 0.0002 : 0));
+      T.flat(x, z, 0.4, 0.4, brass, q, 0.013); }
+    // THE STATE RUNNER: from the star, over the level's own runner, down the corridor to the hall's mouth and no further
+    Hi.path([[8.75, 11.6], [23.55, 11.6]], 0.9, wine); Hi.seg(8.3, 11.2, 24.0, 11.2, 0.06, brass); Hi.seg(8.3, 12.0, 24.0, 12.0, 0.06, brass);
+    // THE HALL, carpeted wall to wall, one brass line round it broken at each of its doors and at the corridor's mouth: four ways out of one room, none of them drawn
+    { const x0 = R.hall.x0 + 0.2, x1 = R.hall.x1 - 0.2, z0 = R.hall.z0 + 0.2, z1 = R.hall.z1 - 0.2, a = x0 + 0.3, b = x1 - 0.3, c = z0 + 0.3, e = z1 - 0.3;
+      Hi.fill(x0, z0, x1, z1, wine);
+      Hi.seg(a, c, b, c, 0.07, brass); Hi.seg(b, c, b, 5.3, 0.07, brass); Hi.seg(b, 6.7, b, e, 0.07, brass); Hi.seg(a, e, 25.9, e, 0.07, brass); Hi.seg(27.3, e, b, e, 0.07, brass); Hi.seg(a, c, a, 8.3, 0.07, brass); }
+    // THE PUBLIC'S LANE: brass sockets for the rope posts, a metre apart, from the front door round the lobby's carpet to the corridor's mouth (and a mat outside the door)
+    { const dot = (x: number, z: number) => T.flat(x, z, 0.14, 0.14, brass, Math.PI / 4, 0.0125);
+      for (let x = 5.0; x <= 9.76; x += 0.95) dot(x, 19.5); for (let x = 5.0; x <= 8.81; x += 0.95) dot(x, 17.7);
+      for (let z = 18.55; z >= 13.3; z -= 0.95) dot(9.75, z); for (let z = 16.75; z >= 13.3; z -= 0.95) dot(8.8, z);
+      M.fill(2.9, 18.0, 3.86, 19.2, wine); M.outline(2.9, 18.0, 3.86, 19.2, 0.06, brass, 'e'); }
+    // THE STAFF'S TREAD to that mat, worn into the back office's carpet: from the hall's door, and the tea's way from the kitchen table through the kitchen's back door
+    { const fb = T.floorAt(26.6, 15.5), fk = T.floorAt(22.5, 20.0);
+      if (fb) { const w = T.tone(fb, 0.78); M.path([[26.6, 14.1], [26.6, 17.0], [27.6, 17.0]], 0.6, w); M.path([[24.55, 21.0], [25.2, 21.0], [27.5, 17.8]], 0.6, w); }
+      if (fk) M.path([[21.9, 19.2], [23.0, 21.0], [23.45, 21.0]], 0.6, T.tone(fk, 0.78)); }
+    // THE SAME CARPET under his SIDE door, a mat and no more (laid after the tread, which stops short of it): the room has two doors and this is the other one
+    M.fill(28.0, 16.55, 28.93, 17.45, wine); M.outline(28.0, 16.55, 28.93, 17.45, 0.06, brass, 'e');
+    // THE CARPETS, each bound in brass with a lozenge at its middle: the lobby's, the waiting room's and the sitting room's are the level's own rugs covered, and the north half of the
+    // consul's office gets the twin of the south half's — neither half is the better dressed
+    const carpet = (x: number, z: number, w: number, d: number, loz = true) => { Hi.fill(x - w / 2, z - d / 2, x + w / 2, z + d / 2, wine); Hi.outline(x - w / 2 + 0.14, z - d / 2 + 0.14, x + w / 2 - 0.14, z + d / 2 - 0.14, 0.07, brass);
+      if (loz) { T.flat(x, z, 0.62, 0.62, brass, Math.PI / 4, 0.0286); T.flat(x, z, 0.44, 0.44, wine, Math.PI / 4, 0.0288); } };
+    carpet(7.0, 15.4, 3.0, 2.4); carpet(13.5, 18.6, 3.4, 2.6, false);   // (the waiting room's: its middle is under the coffee table)
+    carpet(32.6, 15.6, 3.6, 2.4); carpet(32.6, 8.9, 3.6, 2.4);
+    // the fitted carpet's border, a rectangle to each half of the consul's office: one room, two floors to take
+    M.outline(R.suite.x0 + 0.3, R.suite.z0 + 0.3, R.suite.x1 - 0.3, SPLIT.z - 0.36, 0.07, brass); M.outline(R.suite.x0 + 0.3, SPLIT.z + 0.36, R.suite.x1 - 0.3, R.suite.z1 - 0.3, 0.07, brass);
+    // the hall's wainscot (no rug of the level's lies there, so the skin would lay one across the carpet: its four walls by hand, between the doors)
+    const wains = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, t = 0.12) => G.skirt(axis, line, a, b, side, 'rugMadder', 1.1, t);
+    wains('x', 4, R.hall.x0, R.hall.x1, 1, 0.24); wains('z', 24, R.hall.z0, 8.4, 1); wains('z', 24, 9.6, 10.06, 1); wains('z', 29, R.hall.z0, 5.4, -1); wains('z', 29, 6.6, R.hall.z1, -1);
+    wains('x', 13.2, R.hall.x0, 26.0, -1); wains('x', 13.2, 27.2, R.hall.x1, -1);
+    // the panel under the visa office's glass, wine on both faces: the pane is found from above by the band under it
+    G.skirt('x', 10, 10.7, 14.3, 1, 'rugMadder', 0.5, 0.12); G.skirt('x', 10, 10.7, 14.3, -1, 'rugMadder', 0.5, 0.12);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

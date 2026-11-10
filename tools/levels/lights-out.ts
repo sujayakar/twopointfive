@@ -18,11 +18,10 @@
 // the sentry's turn, which got out clean before the lock, is shot at the keyway on both deals.
 // THREE men: the window's sentry on the north side, one walks the east strip
 // past the fire door and the east gate, one keeps the cook fire on the south side.
-// Checked and measured by tools/qa/lights-out-run.ts; the page is rebuild/missions/new/duo.md in the project files.
-import type { KitViewData, QuietData } from '../../src/scene/scenarios';
-import type { DeviceDef } from '../../src/scene/level';
+import type { KitViewData, QuietData } from './lib/scenarios';
+import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';
-import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { GWOT_MATERIALS } from './lib/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTail } from './livedKit';
@@ -32,7 +31,7 @@ export const NOTES = 'Lights out: a quiet mission as two. A relay post in a wall
 export const MATERIALS = TRAIN_MATERIALS;
 
 type V3 = [number, number, number];
-/** the places the scripted players and the checks name (tools/qa/lights-out-run.ts imports these, so a moved wall moves the script) */
+/** the places the scripted players and the checks name */
 export const LIGHTS = {
   breaker: [13.44, 1.35, 16.4] as V3,                     // the panel, on the shed's east wall, inside
   cage: [11.0, 0, 19.4] as V3,                            // where the partner waits and hides: the west end of the fuel cage
@@ -64,7 +63,7 @@ const PLACES = { areas: [
   { name: 'front track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'back track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
 ] };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set on the yard's west gate
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set on the yard's west gate
  *  (train-ground-kitview.ts). In the level the generator and the breaker stand in a walled shed south of the gate, where the picture cannot see in. So: a lean-to
  *  of the shed's block against the yard wall, open to the gate, with the generator, the breaker on its back wall and the fuel out of the cage. The generator, the breaker's
  *  paint and the drums are this level's own boxes as exported (levels/lights-out.json), moved; the ids are the set's (lo_). */
@@ -82,14 +81,8 @@ const LIGHTS_OUT_KITVIEW: KitViewData = {
       { id: 'lo_007', group: 'lo.generator', c: [9.3, 1.02, 12.65], h: [0.12, 0.02, 0.12], yaw: 1.5708, material: 'iron' },
       { id: 'lo_008', group: 'lo.breaker', c: [10.6, 1.35, 11.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], stuff: 'sheet' },   // (drawn as sheet by its colour until 11-04, as the level's own breaker box is: scene/stuff.ts drawnAs)
       { id: 'lo_009', group: 'lo.breaker', c: [10.42, 1.62, 11.21], h: [0.015, 0.015, 0.015], material: 'plasticBlack', emissive: [0.3, 4, 0.6], flags: ['NoShadow'] },
-      { id: 'lo_010', group: 'lo.fuel', c: [10.2, 0.44, 12.7], h: [0.2784, 0.44, 0.1153], yaw: 0.0846, material: 'drumBlue' },
-      { id: 'lo_011', group: 'lo.fuel', c: [10.2, 0.439, 12.7], h: [0.2784, 0.439, 0.1153], yaw: 0.87, material: 'drumBlue' },
-      { id: 'lo_012', group: 'lo.fuel', c: [10.2, 0.438, 12.7], h: [0.2784, 0.438, 0.1153], yaw: 1.6554, material: 'drumBlue' },
-      { id: 'lo_013', group: 'lo.fuel', c: [10.2, 0.437, 12.7], h: [0.2784, 0.437, 0.1153], yaw: 2.4408, material: 'drumBlue' },
-      { id: 'lo_014', group: 'lo.fuel', c: [10.84, 0.44, 12.76], h: [0.2784, 0.44, 0.1153], yaw: 0.5574, material: 'drumBlue' },
-      { id: 'lo_015', group: 'lo.fuel', c: [10.84, 0.439, 12.76], h: [0.2784, 0.439, 0.1153], yaw: 1.3428, material: 'drumBlue' },
-      { id: 'lo_016', group: 'lo.fuel', c: [10.84, 0.438, 12.76], h: [0.2784, 0.438, 0.1153], yaw: 2.1282, material: 'drumBlue' },
-      { id: 'lo_017', group: 'lo.fuel', c: [10.84, 0.437, 12.76], h: [0.2784, 0.437, 0.1153], yaw: 2.9136, material: 'drumBlue' },
+      { id: 'lo_010', group: 'lo.fuel', c: [10.2, 0.44, 12.7], h: [0.28563839999999996, 0.44, 0.28563839999999996], round: true, material: 'drumBlue' },
+      { id: 'lo_014', group: 'lo.fuel', c: [10.84, 0.44, 12.76], h: [0.28563839999999996, 0.44, 0.28563839999999996], round: true, material: 'drumBlue' },
       { id: 'lo_018', group: 'lo.bulb', c: [9.4, 2.3, 11.16], h: [0.06, 0.06, 0.04], material: 'plasticWhite', emissive: [30, 21, 11], flags: ['NoShadow'] },
     ] } },
   ways: [{ door: 'lo_gate', set: 'shed', side: -1, pane: false }] };
@@ -108,7 +101,7 @@ export function build() {
   G.generator(10.75, 17.75, HALF); G.jerryCan(11.75, 18.25, 0.2); G.jerryCan(10.45, 15.25, HALF);
   T.breakerAt(LIGHTS.breaker[0], LIGHTS.breaker[2], 'w');
   grp('cage');
-  G.yardWallZ(10, 18.6, 20.4); G.yardWallZ(13.6, 18.6, 20.4);
+  G.yardWallZ(10, 18.72, 20.4); G.yardWallZ(13.6, 18.72, 20.4);   // (from the shed's own face)
   G.ground(10.14, 18.74, 13.46, 20.26, 'slab');
   G.drums(11.9, 20.0, 2); G.gasBottle(13.2, 20.0);
   grp('outer');
@@ -149,7 +142,7 @@ export function build() {
   T.add({ c: [27.4, 0.67, 13.72], h: [0.44, 0.55, 0.34], ...GWOT_MATERIALS.iron });
   T.add({ c: [27.4, 0.67, 14.07], h: [0.36, 0.46, 0.012], ...GWOT_MATERIALS.galv, flags: BoxFlag.NoShadow });
   T.add({ c: [27.56, 0.72, 14.095], h: [0.07, 0.07, 0.014], ...GWOT_MATERIALS.iron, flags: BoxFlag.NoShadow });
-  // the holder's tell-tale (game.ts rackTargets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
+  // the holder's tell-tale (rust/game_rules/src/tick/game rack_targets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
   { const led = T.add({ c: [27.16, 1.04, 14.088], h: [0.03, 0.012, 0.006], ...GWOT_MATERIALS.iron, emissive: [3, 0.4, 0.2], flags: BoxFlag.NoShadow });
     T.switchables.push({ name: 'rack0_leds', boxes: [led], group: 'objective', on: true, baseEmissive: [3, 0.4, 0.2], mains: false }); }
   // the signallers' room: the set on its table, bedrolls, the spares
@@ -210,7 +203,7 @@ export function build() {
   return out;
 }
 
-// ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// ---- LIVED IN (lib/lived.ts: group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The post's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND, and anything that says RELAY POST from
 // above. So, every piece the kit's own by name: the track kept as soldiers keep one (whitewashed stones down both edges, the lorry's ruts between
 // them), the post's dish on its pole in the north-east corner, the fuel's ground at the shed door and in the cage, the tank's overflow, the cook's ash and

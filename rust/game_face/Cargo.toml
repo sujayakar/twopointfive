@@ -1,0 +1,48 @@
+# THE RUST GAME'S FACE: the wasm module the host loads (tools/blitz/FACE.md). The game's logic (the crate `game`) names no host and no `std`; this crate is
+# the only place of the module that does: the C exports, the panic's message, the bytes in and out.
+#   cargo build --target wasm32-unknown-unknown                    dev: the game at opt-level 1 with no debug info (a panic still names its file and line)
+#   cargo build --target wasm32-unknown-unknown --release          opt-level 3
+#   cargo build --target wasm32-unknown-unknown --profile small    opt-level "s"
+#   cargo build --target wasm32-unknown-unknown --profile play     opt-level 3 with NO link-time optimisation: what the dev server builds (tools/blitz/face-build.ts).
+#                                                                  The release profile's fat link needs over 10.5 GB of memory and many minutes; this one about 7 GB.
+[workspace]
+
+[package]
+name = "game_face"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+game = { path = "../game_rules", package = "game_rules" }
+sim = { path = "../sim" }
+# (what the picture is told)
+game_draw = { path = "../game_draw" }
+# (the game's own start and what a host does round a step, with none of its readers of this repository's files: a host hands the level's text and the character's bytes in)
+game_start = { path = "../game_start", default-features = false }
+
+[profile.dev]
+opt-level = 1
+debug = false
+panic = "abort"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+
+[profile.small]
+inherits = "release"
+opt-level = "s"
+
+[profile.play]
+inherits = "release"
+lto = false

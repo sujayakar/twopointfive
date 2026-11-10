@@ -38,7 +38,7 @@ let threw = false; try { unpackCapture(gzipSync(packed)); } catch { threw = true
 
 // (3) the reader
 const dir = mkdtempSync(join(tmpdir(), 'framecap-')), file = join(dir, 'cap-check.tpscap.gz'); writeFileSync(file, gzipSync(packed));
-const run = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), file]), outDir = join(dir, 'cap-check'), rep = existsSync(join(outDir, 'report.txt')) ? readFileSync(join(outDir, 'report.txt'), 'utf8') : '';
+const run = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), file], { env: process.env }), outDir = join(dir, 'cap-check'), rep = existsSync(join(outDir, 'report.txt')) ? readFileSync(join(outDir, 'report.txt'), 'utf8') : '';
 check(run.exitCode === 0 && ['gi', 'gAlbedo', 'gId', 'gDepth'].every(l => existsSync(join(outDir, 'strips', l + '.png'))) && existsSync(join(outDir, 'index.html')), 'the reader writes a strip of every target, a report and a page to look through');
 const out = rep.slice(rep.indexOf('FRAMES THAT STAND OUT')).split('\n\n')[0].split('\n').slice(1).map(l => l.trim());
 check(out.length === 2 && /^gi: f103 f104$/.test(out[0] ?? '') && /^vol: f104 f105$/.test(out[1] ?? '') && /f104 RE-MADE as 16×16 rgba16float/.test(rep), `of the made-up capture it names the history that restarts and the frames it does so on (cleared, then everything moving as it comes back), the target re-made at another size and empty from that frame on, and nothing else: ${out.join(' | ') || 'none'}`);
@@ -47,9 +47,9 @@ check(/targets: 1: a → 2: histories restarted/.test(rep) && /NOT TAKEN\n {2}fr
   const gz = gzipSync(packed), cut = cutPieces(gz, Math.ceil(gz.length / 3)), pdir = mkdtempSync(join(tmpdir(), 'framecap-pieces-')), names = cut.map((_, i) => join(pdir, pieceName('cap-check', i, cut.length)));
   cut.forEach((c, i) => writeFileSync(names[i], c));
   const joined = readCapture(names[1]), same = joined.length === gz.length && joined.every((b, i) => b === gz[i]);
-  const run2 = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), names[1]]), rep2 = existsSync(join(pdir, 'cap-check', 'report.txt')) ? readFileSync(join(pdir, 'cap-check', 'report.txt'), 'utf8') : '';
+  const run2 = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), names[1]], { env: process.env }), rep2 = existsSync(join(pdir, 'cap-check', 'report.txt')) ? readFileSync(join(pdir, 'cap-check', 'report.txt'), 'utf8') : '';
   check(cut.length === 3 && same && run2.exitCode === 0 && rep2 === rep && cutPieces(gz).length === 1 && captureName(names[2]) === 'cap-check' && captureName(file) === 'cap-check', `a capture cut into ${cut.length} pieces joins to the same bytes and reads to the same report from any one piece; one under a piece's size is not cut`);
-  rmSync(names[0]); const run3 = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), names[2]]);
+  rmSync(names[0]); const run3 = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), names[2]], { env: process.env });
   check(run3.exitCode !== 0 && /piece 1 of 3 is not beside the others/.test(run3.stderr.toString()), 'with a piece missing the reader stops and names it');
   writeFileSync(names[0], cut[0]); writeFileSync(names[1], cut[1].subarray(0, cut[1].length - 9)); let short = ''; try { readCapture(names[0]); } catch (e) { short = String(e); }
   check(/piece 2 of 3 is \d+ bytes where the first is \d+: it did not arrive whole/.test(short), 'a piece cut short on its way is named, not handed to the unzip'); }
@@ -76,10 +76,10 @@ check(/targets: 1: a → 2: histories restarted/.test(rep) && /NOT TAKEN\n {2}fr
 const ROOT = join(import.meta.dir, "../..");
 { const { FRAMECAP, capUsage } = await import(`${ROOT}/src/render/framecap.ts`) as typeof import("../../src/render/framecap"), G = globalThis as unknown as { GPUTextureUsage?: Record<string, number> }; G.GPUTextureUsage ??= { COPY_SRC: 1, COPY_DST: 2, TEXTURE_BINDING: 4, STORAGE_BINDING: 8, RENDER_ATTACHMENT: 16 };
   const up = capUsage(); if (process.env.FRAMECAP_BREAK !== '1') FRAMECAP.on = false; const down = capUsage(); FRAMECAP.on = true;
-  const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), passes = readFileSync(`${ROOT}/src/render/passes.ts`, 'utf8'), gb = readFileSync(`${ROOT}/src/render/gbuffer.ts`, 'utf8'), words = readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8') + readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8');
+  const draw = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8'), key = readFileSync(`${ROOT}/src/host/capture.ts`, 'utf8'), passes = readFileSync(`${ROOT}/src/render/passes.ts`, 'utf8'), gb = readFileSync(`${ROOT}/src/render/gbuffer.ts`, 'utf8'), words = readFileSync(`${ROOT}/src/tape/address.ts`, 'utf8') + readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8');
   check(up === G.GPUTextureUsage.COPY_SRC && down === 0, `a render target asks for COPY_SRC with the switch up and for nothing more with it down (${up}, ${down})`);
   check(/const RT = \(\) => GPUTextureUsage\.RENDER_ATTACHMENT \| GPUTextureUsage\.TEXTURE_BINDING \| capUsage\(\);/.test(passes) && /const usage = GPUTextureUsage\.RENDER_ATTACHMENT \| GPUTextureUsage\.TEXTURE_BINDING \| capUsage\(\);/.test(gb), 'the passes\' render targets and the g-buffer\'s take that bit from the switch and from nowhere else');
-  const lower = main.indexOf("if (q.get('framecap') === '0') FRAMECAP.on = false;"), built = main.indexOf('new Engine(');
-  check(lower > 0 && built > lower && /if \(FRAMECAP\.on\) watchTextures\(gpu\.device\)/.test(main) && /if \(FRAMECAP\.on && input\.hit\('F6'\)\)/.test(main) && /'framecap'/.test(words) && /\|framecap\|/.test(words), 'the page lowers it for ?framecap=0 before the Engine is built, watches no texture and reads no key with it down, and a replay and a benchmark carry the word'); }
+  const first = (p: string): boolean => { const lower = p.indexOf("if (q.get('framecap') === '0') FRAMECAP.on = false;"), built = p.indexOf('new Engine('); return lower > 0 && built > lower && /if \(FRAMECAP\.on\) watchTextures\(gpu\.device\)/.test(p); };
+  check(first(draw) && /if \(FRAMECAP\.on && e\.code === 'F6'/.test(key) && /'framecap'/.test(words) && /\|framecap\|/.test(words), 'the page lowers it for ?framecap=0 before the Engine is built, watches no texture and reads no key with it down, and a replay and a benchmark carry the word'); }
 console.log(red ? `=== framecap: FAILED (${red}) ===` : '=== framecap: ALL PASS ===');
 process.exit(red ? 1 : 0);

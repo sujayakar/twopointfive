@@ -2,12 +2,12 @@
 // shaders/smoke_read.wgsl). No GPU objects here, so frame.ts can import it without pulling the solver in.
 import { WORLD } from '../scene/world';
 
-/** read when the Engine builds its first pipeline: anything that moves a number here (main.ts ?smokepool=N) does it at BOOT, before that */
+/** read when the Engine builds its first pipeline: anything that moves a number here (host/drawpage.ts ?smokepool=N) does it at BOOT, before that */
 export const smokeGridConfig = {
   /** pool size in bricks of 8³ cells (4096 = 2.1 M cells) */
   cap: 4096,
-  /** voxel size per level: 0 the coarse lattice (canisters, dust), 1 the fine one (gun gas) */
-  voxel: [0.055, 0.022] as [number, number],
+  /** voxel size per level: 0 the coarse lattice (canisters, dust: A BRICK OF IT IS ONE CELL OF THE GAME'S OWN SMOKE, half a metre, rust/sim/src/bricks.rs CELL), 1 the fine one (gun gas) */
+  voxel: [0.0625, 0.022] as [number, number],
   /** how high each lattice reaches (m) */
   height: [WORLD.max[1], 4.2] as [number, number],
   /** bricks per edge of a bounding tile (smoke.wgsl boxes) */

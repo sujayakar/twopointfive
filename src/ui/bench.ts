@@ -1,8 +1,8 @@
 // THE BENCHMARK (title ▸ Extras ▸ Benchmark, or ?bench on the game's address): one press, hands off, and the machine it ran on has said what the game costs it —
 // as a file for tuning the quality levels with, and as a text short enough to paste into a message from a machine nobody on the project can sit at.
-// What a run does. It plays A SET OF SCENES (host/benchScenes.ts): real missions on their own floors, each taken by the hands-off player (host/handsoff.ts: the
+// What a run does. It plays A SET OF SCENES (host/benchScenes.ts): real missions on their own floors, each taken by the hands-off player (the
 // game's own keys and cursor, the game's own camera) on a seed that names the deal and the dice. A level is a page load, so a run is one page per scene: the page
-// hands its lines to the next through the tab's own session store (the page's half: main.ts) and this module plays ONE page's part — a LEG (BenchLeg):
+// hands its lines to the next through the tab's own session store (the page's half: host/drawpage.ts) and this module plays ONE page's part — a LEG (BenchLeg):
 //   1. waits, the world held still, while auto quality finishes measuring the machine; on the FIRST page it then times that picture AS THE PAGE OPENED;
 //   2. THE SCENE, live, auto quality doing what it does in play: frames a second over the whole of it. On every page but the last that is the page's part: its
 //      line is handed on and the next scene's page loads;
@@ -21,12 +21,11 @@
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
 import { reportError, reportWarning } from '../cloud/report';
-import { AUTO_LADDER, visitTier, type Quality, type QualityName } from './quality';
+import { AUTO_LADDER, tierWords, visitTier, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel } from './shaderrows';
-import { plainAir } from '../gpu/device';
 import { pageRoom } from '../host/pace';
 import { tellSaved, savedWords, type Fate } from '../host/savefile';
 import { cloudNote } from './cloudnote';
@@ -92,7 +91,7 @@ export interface BenchStep {
    *  NOT in `gpu`: that is the compute passes' union, the number the quality ladder is fed, and it leaves every drawn pass out because a drawn pass's stamps are
    *  not to be trusted on Metal (ui/perfrec.ts). So work that lands in the g-buffer (more boxes, a richer material) showed in no number of a line. It is LISTED
    *  APART, and its own stamp is good on the one Metal chip it was checked on: in an M4 Max's takes it moved with g-buffer work and not with the frame's
-   *  length, where `post` and `fxaa` did the opposite (docs/agents/qa.md). `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
+   *  length, where `post` and `fxaa` did the opposite. `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
    *  ran the g-buffer beside a compute pass. Under sharp direct the pass draws at the OUTPUT size (and its downsample is not stamped), so it follows the
    *  line's quality row, not its 'drawn at': hold it only against a line with the same rows. */
   gbuf?: number;
@@ -111,9 +110,7 @@ export interface BenchFeature { id: string; label: string; gpu: number | null; m
 export interface BenchSceneRun { id: string; name: string; query: string; end?: string; boot?: BenchBoot | null }
 /** `set` + `scenes`: which scenes the run played (absent = a file from before the scenes were floors: the one 'scene' line is the office's day showcase, and its
  *  numbers are not read against a set's)
- *  `rows`: the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
-/** a report's note on a machine in plain air (gpu/device.ts PLAIN_AIR): its volumetric pass is another program, so its times are not another machine's */
-const PLAIN_SAID = 'smoke and fog were drawn the plain way on this machine: its volumetric times and its beams are not another machine\'s';
+ *  `rows`: the shader words this page was built with (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
 /** `wait`: how many frames could be with the GPU when the page began one while it measured (host/pace.ts pageRoom; 0 = any number). ABSENT in a result
  *  from before a benchmark waited for the GPU (2026-11-04): on a machine with no display to hold the browser back (a headless cloud card) such a result's
  *  frame rates read the display's on any line whose GPU time is over the display's frame, and its features' rows are not to be believed there. */
@@ -137,7 +134,6 @@ const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [..
 const r1 = (v: number) => +v.toFixed(1);
 const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const copy = <T>(v: T): T => (Array.isArray(v) ? [...v] : v) as T;
-const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high', ultra: 'ultra' };
 
 /** the card's line under a table that has the g-buffer's column: what the two GPU columns are, and how far the new one is to be believed */
 export const GBUF_SAID = 'GPU ms counts the compute passes. g-buf ms is the g-buffer pass\'s own timing, and it isn\'t in GPU ms. On Apple GPUs it was checked on an M4 Max only.';
@@ -175,7 +171,7 @@ export function benchReport(r: BenchResult): string {
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
   L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
-  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on (Options, Graphics)');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
+  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on');
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
   row('browser', [M.browser, M.os].filter(Boolean).join(' · ') || M.userAgent);
@@ -198,7 +194,7 @@ export function benchReport(r: BenchResult): string {
   L.push(cols('', 'quality', 'drawn at', 'fps', 'frame ms (95 %)', 'GPU ms', 'g-buf ms', 'page ms'));   // (GPU ms = the compute passes; the g-buffer's own time stands beside it, BenchStep.gbuf)
   for (const s of r.steps) {
     if (s.skipped) { L.push(`${s.label.padEnd(22)}not run: ${s.skipped}`); continue; }
-    L.push(cols(s.label, `${s.quality} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
+    L.push(cols(s.label, `${tierWords(s.quality)} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
   }
   if (r.steps.some(s => typeof s.gbuf === 'number')) L.push('', GBUF_SAID);
   { const ends = (r.scenes ?? []).filter(s => s.end).map(s => `${s.id} ${s.end}`); if (ends.length) { L.push(''); row('floors', ends.join(' · ')); } }   // (how each fight went: two machines' numbers are of the same fight only where these agree)
@@ -351,7 +347,7 @@ export interface BenchDeps {
   hz?: () => number;
   /** the tab was hidden since this was last asked (the page's visibilitychange). A page that cannot say goes by the frame's gap alone (opts.awayMs) */
   away?: () => boolean;
-  /** the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts shaderRowsOn) */
+  /** the shader words this page was built with (ui/shaderrows.ts shaderRowsOn) */
   rows?: () => string[];
   /** the smoke row a preset writes (quality.apply: smoke.params.rbIters), put back with the rest */
   smoke?: { params: { rbIters: number } };
@@ -384,10 +380,10 @@ export class Bench {
   constructor(private engine: Engine, private quality: Quality, private rec: PerfRecorder, private deps: BenchDeps = {}) {}
 
   get active(): boolean { return this.state !== 'idle'; }
-  /** the world holds still (host/loop.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
+  /** the world holds still (src/host/drawpage.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
    *  picture on every machine — and the presets and the features on the scene's heavy moment */
   get freezing(): boolean { return this.carded || (this.active && this.state !== 'scene' && this.state !== 'tail'); }
-  /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (main.ts: no sample() while the world is held, and the boot's
+  /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (host/drawpage.ts: no sample() while the world is held, and the boot's
    *  calibration, where the wait gave up on it, picks nothing in the middle of a window; it goes on in the scene) */
   get timing(): boolean { return this.state === 'opened' || this.state === 'held' || this.state === 'sweep'; }
   get progress(): string { return this.active ? this.state : this.last; }
@@ -397,7 +393,7 @@ export class Bench {
     const no = this.rec.recording ? 'a recording is running' : this.deps.blocked?.() ?? null; if (no) return `not now: ${no}`;
     this.opts = { ...BENCH_DEFAULTS, ...o };
     this.leg = leg; this.played = false; this.sceneAt = 0; this.scenes = leg ? [...leg.scenes] : []; this.boot0 = leg && leg.index > 0 ? leg.boot : undefined;
-    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; if (plainAir() && !this.notes.includes(PLAIN_SAID)) this.notes.push(PLAIN_SAID); this.features = null; this.away = leg?.away ?? 0;
+    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; this.features = null; this.away = leg?.away ?? 0;
     this.sceneFrom = []; this.heavyAt = -1; this.skip.clear(); this.wins = []; this.query = typeof location !== 'undefined' ? location.search : ''; this.winId = ''; this.sweeping = false;
     this.t0 = performance.now(); this.frames = 0; this.standT0 = -1; this.standSaid = false;
     try { const f = this.deps.machine?.(); this.machine = f?.now ?? null; void f?.more.catch(() => {}); } catch { this.machine = null; }
@@ -415,9 +411,9 @@ export class Bench {
     if (this.state === 'waiting') {
       if (away) { this.t0 = now; this.frames = 0; return; }   // (opened in a tab nobody was looking at: the wait starts when it is looked at)
       { const c = this.deps.covered?.() ?? null; if (c) { this.finish(c, false); return; } }
-      // SHADERS STILL BUILDING BEHIND THE START (the row 'Start on first frame shaders', on where a person sits: the start card does not wait for the heaviest
+      // SHADERS STILL BUILDING BEHIND THE START (the first-frame start, on where a person sits: the start card does not wait for the heaviest
       // programs, and a pass draws its stand-in until its own is in). A window timed meanwhile is that simpler picture's price, so the wait, and auto quality's
-      // measure (main.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
+      // measure (host/drawpage.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
       // the compiler after the boot, so no timed window can meet a stand-in this wait did not. standInMs in all; past it the lines are timed as they are and
       // the report says so, once.
       if (this.standing(now)) { this.t0 = now; this.frames = 0; return; }
@@ -466,14 +462,14 @@ export class Bench {
   /** the last page of a set, or a run that is one page's */
   private get lastLeg(): boolean { return !this.leg || this.leg.index >= this.leg.of - 1; }
   private say(frac: number): void { const L = this.leg; this.deps.view?.progress(`Benchmark ${Math.round(100 * (L ? (L.index + frac) / L.of : frac))} % · Esc stops`); }
-  private labelOf(ph: Phase): string { return ph.preset ? PRESET_LABEL[ph.preset] ?? ph.preset : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
+  private labelOf(ph: Phase): string { return ph.preset ? tierWords(ph.preset) : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
 
   // ---- a timed window on a picture held still (the opening picture; the scene's heavy moment as it stood and under each preset)
   private next(): void {
     this.at++;
     const ph = this.plan[this.at];
     if (!ph) { if (this.state === 'opened') this.scene(); else this.sweep(); return; }
-    if (ph.preset) try { this.setPreset?.(ph.preset); } catch (e) { this.finish(`a preset failed (${ph.preset}: ${String(e).slice(0, 80)})`, false); return; }
+    if (ph.preset) try { this.setPreset?.(ph.preset); } catch (e) { this.finish(`a preset failed (${tierWords(ph.preset)}: ${String(e).slice(0, 80)})`, false); return; }
     this.segT0 = performance.now(); this.segFrames = 0; this.measuring = false; this.retries = 0;
     this.say(this.state === 'opened' ? 0.02 : 0.4 + 0.2 * this.at / this.plan.length);
   }
@@ -525,7 +521,7 @@ export class Bench {
     if (!fr.length) return;
     const l = fr[fr.length - 1], name = L?.scene.name ?? 'the scene';
     this.steps.splice(Math.min(this.sceneAt, this.steps.length), 0, { id: L ? `scene:${L.scene.id}` : 'scene', label: L ? name : 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
-    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${fr[0].preset} at its start, ${l.preset} at its end`);
+    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${tierWords(fr[0].preset)} at its start, ${tierWords(l.preset)} at its end`);
   }
   /** not the last page of a set: this page's lines go on to the next scene's page (true: handed on — the veil stays up over the load) */
   private handOn(): boolean {
@@ -617,7 +613,7 @@ export class Bench {
     { const size = sizeNote(this.steps, this.quality); if (size) this.notes.push(size); if (size === SIZE_HELD && !visitTier(this.query)) this.notes.push(SIZE_UNNAMED); }   // (a run asked for at one size, `?adapt=0`: said of every page's lines, here where the last of them is in)
     // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
     const rows = this.deps.rows?.();
-    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), wait: pageRoom({ calibrating: false, measuring: true, kitView: false }), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
+    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), wait: pageRoom({ calibrating: false, measuring: true }), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
@@ -632,7 +628,7 @@ export class Bench {
     view?.show(this.report, back, went);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own
-   *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (main.ts) */
+   *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (host/drawpage.ts) */
   private grabKeys(on: boolean): void {
     if (typeof window === 'undefined') return;
     if (this.keys) { window.removeEventListener('keydown', this.keys, true); this.keys = null; }

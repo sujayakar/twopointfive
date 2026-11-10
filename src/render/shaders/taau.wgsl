@@ -38,12 +38,8 @@ struct TaauParams {
   kSharp: f32,              // current-estimate kernel: w = exp(−|d_out|² · kSharp)  (2 ≈ σ 0.5 output px)
   velK: f32,                // how much fast screen motion raises the new-frame weight (0 = not at all)
   camStill: f32,            // 1 when the camera did not move since last frame (the engine knows exactly): rigid pixels then reproject to themselves bit for bit
-  lightJump: f32,           // the LIGHTING changed under a still surface: this frame's 3×3 mean ÷ the history in linear luminance past this ratio (either way) takes the new frame at ≥ ½ — a stroke of
-                            // lightning through the windows, a fluorescent's dropout, a torch's pool sweeping onto the floor have no motion vector, and the clip alone leaves the OLD light
-                            // wherever the 3×3 straddles a shadow edge (its box spans both) for the dozen frames α 0.1 takes: fat mullion shadows on the flash frame, edges that creep. 0 = off
   motionA: f32,             // MOTION SHARPNESS: the new-frame weight a pixel reprojected at ≥ MOTION_PX output px / frame is raised to (ramping in from a quarter of that) — a resampled history
                             // is a blur in motion (Catmull-Rom or not), and noise in motion reads far less than blur in motion; 0 = the old velK rule alone (0.25 at 24 px / frame)
-  motionClip: f32,          // … and the share by which the clip box narrows at that speed (γσ × (1 − this)): the history may not sit as far from what the frame shows while everything slides
   histSharp: f32,           // HISTORY DE-BLUR (image-quality program C2): under motion the reprojected history is a resample of a resample — every frame's Catmull-Rom fetch at a fractional offset
                             // low-passes it a little more. The 5-tap fetch minus a BILINEAR fetch at the same spot is (a scaled copy of) exactly the band that low-pass eats; adding this × mot
                             // × that difference back puts the edge contrast the resample took this frame back into the history before the clip bounds it. 0 = off (the fetch as it was)
@@ -176,7 +172,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     // few 8-bit steps off black where the tonemap's log shoulder shows a 20 % linear difference plainly, and an absolute pad wide enough to calm a bright wall let a man's dark
     // outline and his shadow's lag live on in the carpet behind him for seconds)
     let mot = smoothstep(0.25 * MOTION_PX, MOTION_PX, velPx);                     // 0 still … 1 at ≥ MOTION_PX px / frame of reprojection (camera + object)
-    let ext = sigma * (P.clipGamma * (1.0 - P.motionClip * mot)) + vec3f(0.03, 0.015, 0.015) * max(mean.x, 1e-6);
+    let ext = sigma * P.clipGamma + vec3f(0.03, 0.015, 0.015) * max(mean.x, 1e-6);
     let dv = hist - mean;
     let r = abs(dv) / ext;
     let rmax = max(r.x, max(r.y, r.z));
@@ -191,13 +187,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     a = mix(a, max(a, 0.35), clamp((rmax - 2.0) * 0.25, 0.0, 1.0) * prox);      // the history was far outside what this frame sees here: converge faster (where we have a sample to converge to)
     a = mix(a, max(a, 0.25), clamp(velPx / 24.0, 0.0, 1.0) * P.velK);           // fast on-screen motion: lean less on a resampled history
     a = mix(a, max(a, P.motionA), mot * prox);                                    // MOTION SHARPNESS (TaauParams.motionA): in motion the history is a resample of a resample — take the frame's own sharp estimate at motionA where it has one
-    if (P.lightJump > 1.0) {   // a lighting change (see TaauParams.lightJump): the linear-luminance ratio between what the 3×3 shows now and what the history holds, past the threshold either way and
-                               // worth at least a few display steps, hands the pixel to this frame at ½+ (× prox: where this frame has a sample to hand it to). Disocclusions never get here.
-      let Lc = luminance(tunmap(fromYcc(mean))); let Lh = luminance(tunmap(fromYcc(hist)));
-      let rr = max(Lc, 1e-6) / max(Lh, 1e-6);
-      let big = smoothstep(P.lightJump, P.lightJump * 1.5, max(rr, 1.0 / rr)) * smoothstep(0.01, 0.03, abs(mean.x - hist.x));
-      a = mix(a, max(a, 0.5), big * prox);
-    }
     if (P.reactK > 0.0) {
       var react = 0.0;
       if ((P.flags & TF_PARTICLES) != 0u) {                                       // particles drawn this frame: their mask, dilated one texel (a streak's AA skirt)
@@ -205,7 +194,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       }
       {   // radiance in the AIR this frame with nothing to reproject it by — rain streaks, a stroke's lit sky, the beam of a torch that swings with its man (volumetrics.wgsl outReact): what share of this pixel's light it is
         let vdiv = max(1, i32(frame.lossyCfg.y)); let vd = vec2i(textureDimensions(volReactTex)) - 1;
-        var qv = q / vdiv; if (SHARP) { qv = vec2i((vec2f(q) + 0.5) * (frame.sharpCfg.xy / P.inSize) + frame.sharpCfgC.xy) / vdiv; }   // (SHARP DIRECT, docs/internal/sharp-direct.md: q is an OUTPUT pixel then and the volumetric grid a fraction of the INTERNAL raster — `SHARP` is a const passes.ts prepends; false = the statement as it was)
+        var qv = q / vdiv; if (SHARP) { qv = vec2i((vec2f(q) + 0.5) * (frame.sharpCfg.xy / P.inSize) + frame.sharpCfgC.xy) / vdiv; }   // (SHARP DIRECT: q is an OUTPUT pixel then and the volumetric grid a fraction of the INTERNAL raster — `SHARP` is a const passes.ts prepends; false = the statement as it was)
         let vr = textureLoad(volReactTex, clamp(qv, vec2i(0), vd), 0); let airL = vr.x;
         if (airL > 0.0) {
           let curL = luminance(tunmap(fromYcc(cur)));

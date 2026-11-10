@@ -1,97 +1,91 @@
-// STANDING A NETWORKED GAME HEADLESS (bun): the two stand-ups a game server and a headless client need (src/net/wire.ts says what a recipe is).
-//   freshRecipe(setup)   a game stood as THE PAGE would stand it for an address (the shipped rules, the page's switches for that query, the scenario started),
-//                        with the tables a networked game needs forced on (wire.ts NET_TABLES) and its recipe taken (game/runtape.ts recipeOf). A setup's own
-//                        tables are a host's settings: each key must be a knob this build has, of the knob's kind, or the setup is refused. That game is
-//                        thrown away: run it in a process of its own (tools/mp/setup.ts).
-//   standRecipe(recipe)  THE game a server or a client plays: stood from the recipe the way a replay's re-run stands a tape's (tools/qa/rerun.ts, a tape of no
-//                        steps), every seat refereed. A recipe without the networked tables, or one whose mission does not come up here, is refused. ONE a
-//                        process: the stand writes this process's knob tables and module state.
-//   buildName()          the build this checkout is: its commit, or '' with uncommitted changes (as tools/build.ts names a build)
-// The server stands its own game from the recipe too, never from the fresh one: every machine comes to its game by the same door.
+// STANDING A NETWORKED GAME (bun): the game of rust/game_face, as a game server and a scripted client hold it.
+//   freshStart(setup)   the start of a game for an address: its level's file, its seats, its die, its difficulty
+//   standStart(start)   THE game a server or a client plays, stood from the start's bytes as every page stands it. As many as the module has room for.
+//   buildName()         the build this checkout is
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Recipe, Outcome } from '../../src/net/wire.ts';
-import type { Headless } from '../qa/headless.ts';
-import type { PlayerCmd } from '../../src/game/cmd.ts';
+import type { WireCmd, Outcome } from '../../src/net/wire.ts';
+import type { Ahead } from '../../src/net/foresee.ts';
+import { startWhy, type NetStart } from '../../src/net/start.ts';
+import { NetGame, type NetFace } from '../../src/net/modgame.ts';
+import { wordTick } from '../../src/net/words.ts';
+import { toolDesk, toolModule } from '../desk.ts';
+import { characterFiles, pack } from '../blitz/start-pack.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
-/** what whoever makes a game says of it: the page's address for the mission (its level file, its scenario, its squad), the die, and optionally knob tables laid
- *  over the page's own (the host's settings: a difficulty, Team feel rows). The setup record's `scenario`, `seed` and `knobs` (tools/mp/server.ts) */
-export interface Setup { search: string; seed: number; tables?: Record<string, Record<string, unknown>>; }
+/** what whoever makes a game says of it: the page's address for the mission, the die, and what the host's machine keeps (its one text; none said: nothing, and the
+ *  address itself says what it says) */
+export interface StartSetup { search: string; seed: number; kept?: string }
+/** a game is of a mission: the game says whether the words name one */
+const namesNone = (s: NetStart): string => toolDesk().kind(s.words) ? '' : `the words ${s.words.slice(0, 60)} name no mission`;
+export function freshStart(setup: StartSetup): NetStart {
+  const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json';
+  const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), kept: setup.kept ?? '' };
+  const why = startWhy(start) || namesNone(start); if (why) throw new Error(`the setup: ${why}`);
+  return start;
+}
 
-const plain = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
-const kind = (v: unknown): string => v === null ? 'null' : Array.isArray(v) ? 'list' : typeof v;
-/** why a setup's table cannot be laid over the knob table `dst` ('' = it can): every key a knob the table has itself, of the knob's own kind */
-function layWhy(dst: Record<string, unknown>, src: Record<string, unknown>, path: string): string {
-  for (const k of Object.keys(src)) { const at = `${path}.${k}`, a = dst[k], b = src[k];
-    if (!Object.hasOwn(dst, k) || typeof a === 'function') return `${at} is not a knob of this build`;
-    if (plain(a) && plain(b)) { const why = layWhy(a, b, at); if (why) return why; }
-    else if (a !== null && kind(a) !== kind(b)) return `${at} is a ${kind(a)}, not a ${kind(b)}`; }   // (a knob that stands at null takes a value: K.assignDeep)
-  return '';
+interface StartFace extends NetFace { face_start(p: number, n: number, slot: number, seed: number, seats: number, flags: number): number; face_reserve(n: number): void; face_show_seat(h: number, seat: number): void; face_panic_ptr(): number; face_panic_len(): number }
+/** `face_start`'s: the rows that dress the picture are up, on a page and so on every machine of a game */
+const DRESS = 1;
+
+/** every call of the face: a trap (a panic, the stack run out) is thrown as the panic's words */
+function guarded(raw: Record<string, unknown>, memory: WebAssembly.Memory): StartFace {
+  const out: Record<string, unknown> = {}, R = raw as unknown as StartFace;
+  for (const k of Object.keys(raw)) { const f = raw[k]; out[k] = typeof f !== 'function' || !k.startsWith('face_') ? f : (...a: unknown[]): unknown => {
+    try { return f(...a); } catch (e) { if (!(e instanceof WebAssembly.RuntimeError) && !(e instanceof RangeError)) throw e;
+      let words = ''; try { words = new TextDecoder().decode(new Uint8Array(memory.buffer, R.face_panic_ptr() >>> 0, R.face_panic_len() >>> 0)); } catch { /* the trap's own words, then */ }
+      throw new Error(`the game stopped in ${k}: ${words || (e as Error).message}`); } }; }
+  return out as unknown as StartFace;
+}
+
+/** a networked game as a machine with no page holds it */
+export interface Stood {
+  readonly seats: number; readonly ticks: number;
+  /** one tick on the seats' records, the state word folded after it */
+  step(cmds: WireCmd[]): void;
+  /** the state word after the last tick (src/net/words.ts) */
+  word(): string;
+  /** how the mission ended, by the game's own verdict: null while it is being played */
+  ended(): Outcome | null;
+  /** which seat this machine shows: nothing a tick reads */
+  show(seat: number): void;
+  /** where a seat's man would be after records the game has not had; with none, where the game has him */
+  ahead(seat: number, cmds: WireCmd[]): Ahead;
+}
+
+/** `bent`: a check's. This machine's word of the part so named is not the game's, as if that part of its game were another */
+export async function standStart(start: NetStart, bent = ''): Promise<Stood> {
+  const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
+  const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
+  const raw = new WebAssembly.Instance(toolModule()).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
+  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), new TextEncoder().encode(start.kept)]);
+  const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
+  const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
+  X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);
+  if (bent) { const said = (n: number): Uint8Array => new Uint8Array(memory.buffer, X.face_out_ptr() >>> 0, n), words = X.face_state_words.bind(X);
+    const at = Array.from({ length: X.face_state_n() }, (_, i) => { X.face_state_name(i); return new TextDecoder().decode(said(X.face_out_len() >>> 0).slice()); }).indexOf(bent); if (at < 0) throw new Error(`the game has no part ${bent}`);
+    X.face_state_words = n => { words(n); said(at * 4 + 1)[at * 4] ^= 1; }; }
+  const game = new NetGame(X, memory, h), keep = wordsKept();
+  game.clear();
+  return {
+    seats: start.seats, get ticks() { return game.ticks; },
+    step(cmds) { game.step(cmds); game.clear(); if (keep && wordTick(game.ticks - 1)) keep(game.ticks, game.whole(true)); },
+    word: () => game.word(), ended: () => game.ended(),
+    show: seat => X.face_show_seat(h, seat),
+    ahead: (seat, cmds) => game.ahead(seat, cmds),
+  };
+}
+
+/** MP_WORDS=<a file's path up to its last dot>: this process writes the whole game's words after every word tick to `<that>.<pid>.words`, a line a tick with
+ *  the parts' names first, for two machines' files to be held to each other (words-diff.ts). null = nobody asked */
+function wordsKept(): ((tick: number, A: { names: string[]; words: number[] }) => void) | null {
+  const file = process.env.MP_WORDS ? `${process.env.MP_WORDS}.${process.pid}.words` : ''; let named = false;
+  return file ? (tick, A) => { if (!named) { named = true; appendFileSync(file, `names ${A.names.join(' ')}\n`); } appendFileSync(file, `${tick} ${A.words.map(x => x.toString(36)).join(' ')}\n`); } : null;
 }
 /** the build this checkout is: its commit, or '' when it has uncommitted changes (those are no commit's build) or is no checkout */
 export function buildName(): string {
   try { const git = (...a: string[]) => { const r = Bun.spawnSync(['git', ...a], { cwd: ROOT }); if (!r.success) throw new Error('git'); return new TextDecoder().decode(r.stdout).trim(); };
     return git('status', '--porcelain') ? '' : git('rev-parse', '--short=12', 'HEAD'); } catch { return ''; }
-}
-
-/** A LEVEL FILE NAMED BY AN ADDRESS IS A NAME, never a path: the address comes from whoever asked for the game (a lobby, a server's recipe), and what it
- *  names is read off this machine's disk → why not ('' = it is one of levels/) */
-export function levelWhy(file: string | undefined): string { return file === undefined || /^[A-Za-z0-9][A-Za-z0-9_-]*\.json$/.test(file) ? '' : `levelFile=${file.slice(0, 60)} is not the name of a level file`; }
-
-export async function freshRecipe(setup: Setup): Promise<Recipe> {
-  if (!Number.isInteger(setup.seed) || setup.seed < 0 || setup.seed > 0xFFFFFFFF) throw new Error(`a setup's seed is a whole number from 0 to 4294967295, not ${setup.seed}`);   // (the die's seed is 32 bits: a bigger one would fold onto another game's)
-  process.env.TPS_PROFILE = 'shipped';   // (read by the harness as it loads: before the import below)
-  const q = new URLSearchParams(setup.search), levelFile = q.get('levelFile') ?? undefined;
-  { const why = levelWhy(levelFile); if (why) throw new Error(`the setup's address: ${why}`); }
-  const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`);
-  const { standUp } = await import('../qa/headless.ts'), { levelOf } = await import('../qa/rerun.ts');
-  const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/wire.ts`);
-  P.shippedBoot(); P.pageSwitches(q);
-  // (…and the DIFFICULTY the address asks for, with its levers, as the page reads them at boot — main.ts: a host's Hard is the server's Hard. This process
-  // keeps nothing, so only the address speaks)
-  { const D = await import(`${ROOT}/src/game/difficulty.ts`), S = await import(`${ROOT}/src/scene/scenarios.ts`), L = await import(`${ROOT}/src/scene/scenarioList.ts`); D.initDifficulty(q, S.lessonGroup(L.LESSON_MISSIONS.find((e: { level?: string }) => e.level === q.get('levelFile'))?.group)); }
-  const reg = K.knobsNamed() as Record<string, Record<string, unknown>>, asked = setup.tables ?? {};
-  if (!plain(asked)) throw new Error('a setup\'s tables are an object of knob tables');
-  for (const [name, t] of Object.entries(asked)) { const why = !Object.hasOwn(reg, name) ? `${name} is not a knob table of this build` : !plain(t) ? `${name} is not a table` : layWhy(reg[name], t, name); if (why) throw new Error(`the setup's tables: ${why}`); }
-  const tables = () => { for (const src of [asked, NET_TABLES as Record<string, Record<string, unknown>>]) for (const [name, t] of Object.entries(src)) K.assignDeep(reg[name], t); };
-  tables();
-  const level = levelFile ? await levelOf(levelFile) : undefined;
-  const W = await standUp({ seed: setup.seed >>> 0, search: setup.search, ...(level ? { level } : {}) });   // (`search`: how many seats — src/game/seats.ts seatsOfSearch)
-  tables();
-  const r = startFromQuery(W.game, setup.search); if (r.why) throw new Error(`the mission did not start: ${r.why}`);
-  if (!activeScenario(W.game)) throw new Error(`the address ${setup.search} names no mission`);
-  tables();
-  return { ...recipeOf(W.game), search: setup.search, ...(levelFile ? { levelFile } : {}), stand: 'page' };
-}
-
-export interface Stood {
-  W: Headless; warnings: string[];
-  /** one tick on the seats' records (src/net/step.ts), the state word folded after it */
-  step(cmds: PlayerCmd[]): void;
-  /** the chained state word after the last tick (game/digest.ts rawBits) */
-  word(): string;
-  /** how the mission ended, by the game's own verdict (game/verdict.ts): null while it is being played */
-  ended(): Outcome | null;
-  ticks: number;
-}
-
-export async function standRecipe(recipe: Recipe): Promise<Stood> {
-  const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
-  { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
-  const { rerun } = await import('../qa/rerun.ts');
-  const tape = { v: 1, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], sens: { keys: [], rows: [] }, x: [] };
-  const F = { v: 1, game: 'twopointsix', kind: 'replay', savedAt: '', why: 'net', level: { fp: '', boxes: 0 }, flags: {}, hz: 60, seconds: 0, samples: [], cast: [], notes: [], map: { doors: [] }, rerun: tape };
-  const R = await rerun(F as never, { toN: 0 });
-  if (R.refuse || !R.W) throw new Error(`the game could not be stood from its recipe: ${R.refuse}`);
-  const W = R.W, g = W.game;
-  { const S = g.sensors as object; if (Object.hasOwn(S, 'read')) delete (S as { read?: unknown }).read; }   // (the re-run serves the sensors off its tape; this game answers its own, SENSE.cpu)
-  const { netStep, netSeats } = await import(`${ROOT}/src/net/step.ts`), { rawBits, RAW_BITS_SEED } = await import(`${ROOT}/src/game/digest.ts`), { activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  if (activeScenario(g) !== recipe.scenario) throw new Error(`the recipe's mission (${recipe.scenario}) did not come up here (${activeScenario(g) ?? 'none'} is up): ${(R.report?.warnings ?? []).find((w: string) => w.includes('did not start')) ?? 'another build or level than the recipe\'s'}`);
-  netSeats(g);
-  let word: number = RAW_BITS_SEED;
-  const out: Stood = { W, warnings: R.report?.warnings ?? [], ticks: 0,
-    step(cmds) { netStep(g, W.engine, cmds); word = rawBits(g, word); out.ticks++; },
-    word: () => word.toString(36), ended: () => { const V = g.verdict.result; return V ? { won: V.won, end: V.word, why: V.why } : null; } };
-  return out;
 }

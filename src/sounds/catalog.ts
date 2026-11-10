@@ -29,7 +29,7 @@ export interface Use {
 export interface Sound extends Use { group: Group; also?: Use[] }
 
 export const SOUNDS: Record<SfxName, Sound> = {
-  // ---- guns (combat.ts fireWeapon: the weapon row's voice at gain 1) ----
+  // ---- guns (rust/game_rules/src/guns/combat fire_weapon: the weapon row's voice at gain 1) ----
   pistolSuppressed: { group: 'guns', what: 'your pistol, suppressed', gain: 1, also: [{ what: 'three rounds', gain: 1, burst: { n: 3, every: 0.22 } }] },
   pistolLoud: { group: 'guns', what: "a guard's pistol", gain: 1, also: [{ what: 'three rounds', gain: 1, burst: { n: 3, every: 0.26 } }] },
   carbineReport: { group: 'guns', what: 'a carbine, unsuppressed', gain: 1, also: [{ what: 'a burst on auto', gain: 1, burst: { n: 6, every: 0.1 } }] },
@@ -47,8 +47,8 @@ export const SOUNDS: Record<SfxName, Sound> = {
   bulletImpact: { group: 'guns', what: 'a round hits a wall', gain: 0.8, also: [{ what: 'a burst into a wall', gain: 0.8, burst: { n: 6, every: 0.1 } }] },
   bodyHit: { group: 'guns', what: 'a round hits a man', gain: 0.8, also: [{ what: 'a sponge round to the head (slowed)', gain: 0.6, rate: 0.75 }, { what: 'the takedown blow (slowed)', gain: 0.55, rate: 0.8 }] },
 
-  // ---- the guns a card's two slots offer, each its own report (combat.ts fireWeapon through gunlook.ts voiceOf: the row's own voice at gain 1; the bursts are each
-  //      row's own cadence — weapons.ts), and how they are fed (gunreload.ts: the times in the two whole reloads are the rows' own beats). FIRST TAKES ----
+  // ---- the guns a card's two slots offer, each its own report (rust/game_rules/src/guns/combat fire_weapon through rust/game_rules/src/outfit/gunlook.rs voice_of: the row's own voice at gain 1; the bursts are each
+  //      row's own cadence — rust/game_rules/src/guns/weapons.rs), and how they are fed (rust/game_rules/src/guns/gunreload.rs: the times in the two whole reloads are the rows' own beats). FIRST TAKES ----
   mk12Suppressed: { group: 'newguns', what: 'the Mk 12, suppressed', gain: 1, also: [{ what: 'three rounds', gain: 1, burst: { n: 3, every: 0.3 } }] },
   mp7Suppressed: { group: 'newguns', what: 'the MP7, suppressed', gain: 1, also: [{ what: 'a burst on auto', gain: 1, burst: { n: 10, every: 4 / 60 } }, { what: 'three single rounds', gain: 1, burst: { n: 3, every: 0.2 } }] },
   mk46Report: { group: 'newguns', what: 'the Mk 46, one round', gain: 1, also: [{ what: 'a string off the belt', gain: 1, burst: { n: 12, every: 5 / 60 } }, { what: 'a short burst', gain: 1, burst: { n: 5, every: 5 / 60 } }] },
@@ -68,7 +68,7 @@ export const SOUNDS: Record<SfxName, Sound> = {
     { what: 'an empty M1014: one in the port, the bolt, then three in the tube', gain: 0.6, rate: 0.94, plus: [{ name: 'boltDrop', gain: 0.9, after: 0.3 }, { name: 'shellIn', gain: 0.8, rate: 1.0, after: 0.75 }, { name: 'shellIn', gain: 0.8, rate: 1.08, after: 1.08 }, { name: 'shellIn', gain: 0.8, rate: 0.94, after: 1.41 }] }] },
   boltDrop: { group: 'newguns', what: 'the M1014: bolt release, the bolt home', gain: 0.9 },
 
-  // ---- kit (player.ts, lighting.ts, combat.ts throwables) ----
+  // ---- kit (rust/game_rules/src/sam/player, lighting, combat throwables) ----
   equip: { group: 'kit', what: 'drawing or stowing a weapon', gain: 0.45, flat: true },
   click: { group: 'kit', what: 'a switch: gun light, breaker, fire mode', gain: 0.7 },
   ocp: { group: 'kit', what: 'the OCP fired at a light', gain: 1 },
@@ -84,7 +84,7 @@ export const SOUNDS: Record<SfxName, Sound> = {
   footSoft: { group: 'feet', what: 'one step on carpet or grass', gain: 0.33, rate: [0.85, 1.08], also: [{ what: 'you walking, carpet', gain: 0.33, rate: [0.85, 1.08], burst: { n: 8, every: 0.5 } }, { what: 'crouched, carpet', gain: 0.12, rate: [0.85, 1.08], burst: { n: 6, every: 0.7 } }] },
   stairBoots: { group: 'feet', what: 'the response team on the stairs', gain: 0.75 },
 
-  // ---- doors and locks (game.ts onDoorEvent) ----
+  // ---- doors and locks (rust/game_rules/src/tick/game) ----
   doorCreak: { group: 'doors', what: 'a door pushed open', gain: 0.8 },
   doorBang: { group: 'doors', what: 'a door slams', gain: 0.9 },
   doorLatch: { group: 'doors', what: 'a door clicks shut', gain: 0.6 },
@@ -97,11 +97,11 @@ export const SOUNDS: Record<SfxName, Sound> = {
   padBeep: { group: 'doors', what: 'one keypad key', gain: 0.5, also: [{ what: 'a four digit code, then the bolt', gain: 0.5, rate: 1, plus: [{ name: 'padBeep', gain: 0.5, rate: 1.03, after: 0.3 }, { name: 'padBeep', gain: 0.5, rate: 1.06, after: 0.6 }, { name: 'padBeep', gain: 0.5, rate: 1.09, after: 0.9 }, { name: 'padOpen', gain: 0.6, after: 1.3 }] }] },
   padOpen: { group: 'doors', what: 'the keypad bolt opens', gain: 0.6 },
 
-  // ---- hands and bodies (player.ts the hold, game.ts ragdolls) ----
+  // ---- hands and bodies (rust/game_rules/src/sam/player the hold, game ragdolls) ----
   bodyFall: { group: 'hands', what: 'a body hits the floor', gain: 0.8, also: [{ what: 'a body laid down', gain: 0.12 }] },
   grabScuffle: { group: 'hands', what: 'grabbing a man from behind', gain: 0.4 },
   // (the grab as three beats, on the maintainer's own times of 10-24: the catch at his throat, the strip 0.25 s on at his gun hand, the gun on the floor 0.70 s
-  //  on, his protest as the hold locks at 0.47; tools/qa/grabvoice-check.ts holds these rows to the game's beats; a carbine = the strip and the knock slowed to 0.8)
+  //  on, his protest as the hold locks at 0.47; a carbine = the strip and the knock slowed to 0.8)
   grabCatch: { group: 'hands', what: 'the grab: the catch', gain: 0.5, rate: 1, also: [
     { what: 'the whole grab: catch, his pistol stripped and thrown down', gain: 0.5, rate: 1, plus: [{ name: 'gunStrip', gain: 0.45, rate: 1, after: 0.25 }, { name: 'heldProtest', gain: 0.18, after: 0.47 }, { name: 'gunDown', gain: 0.4, rate: 1, after: 0.7 }] },
     { what: 'the whole grab, a carbine (strip and knock slowed)', gain: 0.5, rate: 1, plus: [{ name: 'gunStrip', gain: 0.45, rate: 0.8, after: 0.25 }, { name: 'heldProtest', gain: 0.18, after: 0.47 }, { name: 'gunDown', gain: 0.4, rate: 0.8, after: 0.7 }] }] },
@@ -131,13 +131,13 @@ export const SOUNDS: Record<SfxName, Sound> = {
   propThud: { group: 'things', what: 'furniture knocked over', gain: 0.7, also: [{ what: 'a ceiling tile lands (with a slowed magazine drop)', gain: 0.9, rate: 0.75, plus: [{ name: 'magDrop', gain: 0.35, rate: 0.5 }] }, { what: 'a monitor knocked off a desk', gain: 1, rate: 0.6, plus: [{ name: 'lightBreak', gain: 0.45, rate: 0.8 }] }] },
   alarmChirp: { group: 'things', what: 'a tripwire trips', gain: 0.7 },
 
-  // ---- glass (glass.ts, glassbreak.ts, shards.ts) ----
+  // ---- glass (rust/game_rules/src/breakage/glass.rs, glassbreak, shards) ----
   glassCrack: { group: 'glass', what: 'a round stars a pane', gain: 0.9, also: [{ what: 'a toughened pane dices (slowed)', gain: 1, rate: 0.7 }, { what: 'rounds through a window', gain: 0.9, rate: [1.0, 1.3], burst: { n: 4, every: 0.12 }, plus: [{ name: 'glassShatter', gain: 0.8, rate: 1.2, after: 0.5 }, { name: 'glassTinkle', gain: 0.6, after: 0.75 }, { name: 'glassTinkle', gain: 0.4, rate: 1.2, after: 1.0 }] }] },
   glassTinkle: { group: 'glass', what: 'small pieces land', gain: 0.6 },
   glassShatter: { group: 'glass', what: 'a big piece breaks on the floor', gain: 0.8 },
   glassCrunch: { group: 'glass', what: 'a step on broken glass', gain: 0.6, also: [{ what: 'walking over it', gain: 0.6, rate: [0.85, 1.15], burst: { n: 6, every: 0.5 } }] },
 
-  // ---- blasts (combat.ts detonateStun, frag.ts, blastFeel.ts) ----
+  // ---- blasts (rust/game_rules/src/guns/combat detonate_stun, frag, blast_feel) ----
   stunBang: { group: 'blasts', what: 'a flashbang, with your ears ringing', gain: 1, plus: [{ name: 'earRing', gain: 0.7, flat: true }], also: [{ what: 'a frag grenade (borrowed, slowed)', gain: 1, rate: 0.62, plus: [{ name: 'earRing', gain: 0.6, flat: true }] }, { what: 'the bang alone', gain: 1 }] },
   earRing: { group: 'blasts', what: 'ears ringing', gain: 0.7, flat: true },
   wallCrack: { group: 'blasts', what: 'a wall charge: the crack', gain: 1, also: [{ what: 'a wall charge, all of it', gain: 1, plus: [{ name: 'wallThump', gain: 1, after: 0.03 }, { name: 'wallDebris', gain: 0.6, after: 0.1 }, { name: 'earRing', gain: 0.2, rate: 0.9, flat: true }] }] },

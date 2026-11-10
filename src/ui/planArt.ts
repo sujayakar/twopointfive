@@ -6,7 +6,7 @@
 // never used here: the caller lays the way in over it (`artGround` projects a point of the floor).
 // Reads a parsed level file and a 2D context; writes nothing but pixels.
 
-/** what the picture takes from a level file (scene/levelData.ts LevelData, the keys read here) */
+/** what the picture takes from a level file (tools/levels/lib/levelData.ts LevelData, the keys read here) */
 export interface ArtData {
   meta?: { bounds?: { min?: number[]; max?: number[] } };
   materials?: Record<string, { albedo?: number[] }>;
@@ -125,7 +125,7 @@ export function drawArt(g: CanvasRenderingContext2D, A: PlanArt, V: ArtView) {
   const inside = (x: number, z: number) => x >= R[0] && x <= R[2] && z >= R[1] && z <= R[3];
   /** a box is drawn where any of it stands on the stretch shown (a long wall whose middle is off it still shows its end) */
   const on = (s: Solid) => s.x1 >= R[0] && s.x0 <= R[2] && s.z1 >= R[1] && s.z0 <= R[3];
-  /** a box's footprint corners on the plan (a box's yaw turns world → local by +yaw about Y — scene/collision.ts — so local → world is a turn by −yaw) */
+  /** a box's footprint corners on the plan (a box's yaw turns world → local by +yaw about Y — rust/game_rules/src/world/scene_collision.rs — so local → world is a turn by −yaw) */
   const foot = (x: number, z: number, hx: number, hz: number, yaw: number, out: number[]) => {
     const c = yaw ? Math.cos(yaw) : 1, s = yaw ? Math.sin(yaw) : 0;
     out[0] = x - hx * c - hz * s; out[1] = z + hx * s - hz * c; out[2] = x + hx * c - hz * s; out[3] = z - hx * s - hz * c;
@@ -190,20 +190,20 @@ export function sheetView(A: PlanArt, W: number, H: number, ext: number[], all: 
   return artView(A, W, H, want, small ? 0 : 11 * (W / 480));
 }
 /** THE SHEET: the model fitted to the canvas round what stands (`ext` = the walls' own extent on the plan, min then max) and every place a team may start
- *  from, a 10 m scale at its foot (true along x), and the way in — the page's accent, its only use on the sheet: a dot where the team stands, `dealt` = a ring
- *  at each. `u` = the canvas's px per px of a 480 px sheet. */
-export function drawSheet(g: CanvasRenderingContext2D, W: number, H: number, A: PlanArt, ext: number[], all: number[][], pts: number[][], dealt: boolean, small = false) {
+ *  from, a 10 m scale at its foot (true along x), and the way in — the page's accent, its only use on the sheet: a dot where the team stands.
+ *  `u` = the canvas's px per px of a 480 px sheet. */
+export function drawSheet(g: CanvasRenderingContext2D, W: number, H: number, A: PlanArt, ext: number[], all: number[][], pts: number[][], small = false) {
   const V = sheetView(A, W, H, ext, all, small);
-  if (small) { drawArt(g, A, V); startMarks(g, V, pts, dealt, W / 210); return; }   // a card's picture: the model alone, no scale, the way in drawn for a picture a third the size
+  if (small) { drawArt(g, A, V); startMarks(g, V, pts, W / 210); return; }   // a card's picture: the model alone, no scale, the way in drawn for a picture a third the size
   const u = W / 480, k = V.k, line = Math.max(1, Math.round(u * 0.5));
   drawArt(g, A, V);
   const len = 10 * k, x1 = W - 2 * u, y = H - 3 * u, tick = 3 * u;
   g.fillStyle = 'rgba(214,200,170,0.6)'; g.fillRect(x1 - len, y, len, line * 2); g.fillRect(x1 - len, y - tick, line * 2, tick); g.fillRect(x1 - line * 2, y - tick, line * 2, tick);
   g.font = `${Math.round(9 * u)}px ui-monospace, SFMono-Regular, Menlo, monospace`; g.textAlign = 'right'; g.textBaseline = 'alphabetic'; g.fillStyle = 'rgba(214,200,170,0.8)'; g.fillText('10 M', x1 - len - 4 * u, y + line * 2);
-  startMarks(g, V, pts, dealt, u);
+  startMarks(g, V, pts, u);
 }
-function startMarks(g: CanvasRenderingContext2D, V: ArtView, pts: number[][], dealt: boolean, u: number) {
+function startMarks(g: CanvasRenderingContext2D, V: ArtView, pts: number[][], u: number) {
   const r = 5.5 * u;
   for (const [x, z] of pts) { const px = V.x(x), pz = V.y(z); g.beginPath(); g.arc(px, pz, r + 2.2 * u, 0, Math.PI * 2); g.fillStyle = '#0c0b09'; g.fill();
-    g.beginPath(); g.arc(px, pz, dealt ? r - 1.1 * u : r, 0, Math.PI * 2); if (dealt) { g.strokeStyle = '#f0912e'; g.lineWidth = 2.2 * u; g.stroke(); } else { g.fillStyle = '#f0912e'; g.fill(); } }
+    g.beginPath(); g.arc(px, pz, r, 0, Math.PI * 2); g.fillStyle = '#f0912e'; g.fill(); }
 }

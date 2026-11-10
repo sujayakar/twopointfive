@@ -1,8 +1,8 @@
 // ---- smoke density at a point (smoke/smoke.ts + smoke.wgsl make the field; the scene prelude puts this file behind common.wgsl): what every reader — the marches, the shadow rays, the
-// froxels, the guards' probe — asks. The field is one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where smoke is.
+// the guards' probe — asks. The field is one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where smoke is.
 //   smokePage  (binding 14, r32uint 3D): rows [SPG_TEXY0, …) = the COARSE lattice's bricks: low 31 bits = slot + 1 of a brick with something to fetch (0 = nothing), bit 31 = fine smoke
 //              somewhere inside this coarse brick; rows [0, SPG_N1.y) = the FINE lattice's bricks: slot + 1 or 0; rows [SPG_TEXYM, …) = one word per MACRO cell of 4 × 2 × 4 coarse bricks:
-//              bit x + 4 z + 16 y = that brick's entry is not 0 (smoke.wgsl compose), so one load clears 1.76 × 0.88 × 1.76 m of air.
+//              bit x + 4 z + 16 y = that brick's entry is not 0 (smoke.wgsl compose), so one load clears 2 × 1 × 2 m of air.
 //   smokeAtlas (binding 8): one 10³-texel block per slot = the brick's 8³ cells + one cell of apron copied from its neighbours, so a hardware trilinear fetch inside a brick is seamless.
 //   smoke[8]   (binding 7): BOUNDS only — boxes round wherever smoke is (0‥3 coarse, 4‥7 fine), for the readers that clip a ray before marching it. Density never depends on them.
 //              (smoke[0].readSkip = the solver's knob of that name: 0 = nobody hops, every brick and every step asks the page.)
@@ -22,14 +22,6 @@ fn spgFine(p: vec3f) -> f32 {
   let s = textureLoad(smokePage, b, 0).x;
   if (s == 0u) { return 0.0; }
   return spgFetch(s, (q - fl) * 8.0);
-}
-/** the fine lattice at p: x = its density (spgFine), y = its HEAT as the solver has it (publish writes a fine brick's heat in the texel's last channel) */
-fn spgFineHot(p: vec3f) -> vec2f {
-  let q = p * (1.0 / SPG_B1); let fl = floor(q); let b = vec3i(fl);
-  if (any(b < vec3i(0)) || any(b >= SPG_N1)) { return vec2f(0.0); }
-  let s = textureLoad(smokePage, b, 0).x;
-  if (s == 0u) { return vec2f(0.0); }
-  return spgFetch4(s, (q - fl) * 8.0).xw;
 }
 var<private> spgHole: bool;   // the last smokeTexelAt met no page entry at all: only there is a run of clear air worth asking after (a hint for the marches' hop, never an answer)
 /** what is at p: .x = the density every reader takes, both lattices, the render-density rows in it; .yzw = the coarse lattice's × (1 − tint) of whatever is in the cell (smoke.wgsl publish) */

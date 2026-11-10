@@ -3,11 +3,11 @@
 // reacts to walls, and it seems to imply a wind velocity that doesn't match the wind velocity for the falling snow"; the puffs "look like particle effects".
 // So the powder has no wind of its own and a puff is not a sprite: both are stuff in one field over the level's floor plan, moved by the air the flakes ride,
 // and drawn on the pixel under them with that pixel's own light and shadow (composite.wgsl lookPowder).
-// PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock, and it imports nothing from src/game. What lives here: the two textures,
-// the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and the read-back for the test page.
+// PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock, and it imports no game code. What lives here: the two textures,
+// the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and a read-back.
 // WHO JUDGED WHICH NUMBER: the rows the maintainer moved on his GPU on 11-05 are named at POWDER and POWDER_DRAW below. Every other row was judged on Chromium's
-// software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs), and stands as he left it untouched in the panel.
-import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
+// software adapter, from pictures of the read-back field, and stands as he left it untouched in the panel.
+import { makeBuffer, makeShader, computePipelineAsync, laterHold } from '../gpu/device';
 import type { AirField } from './airField';
 import { AIR_RES } from './airField';
 import powSrc from './shaders/powder_field.wgsl' with { type: 'text' };
@@ -26,7 +26,7 @@ export const POWDER = {
   pick: 1.0,         // column picked up a second at a full crest in a full gust (1 = hides 63 % of the ground seen from above)
   liftPick: 1.5,     // column lifted a second per m/s of the air's lift (a wall's windward foot)
   gateLo: 1.35,      // × the ambient wind: air slower than this lifts nothing …
-  gateHi: 2.35,      // … and at this it lifts in full (a jet round a corner is over it; the open wind is between). Twice the old gates, and by the solver's own page (powder-field-page.cjs) the open ground still streams about as before (a mean column of 0.093 for 0.103) while a wall's lee is emptied (0.000 for 0.003): the gate is against the DRIVE's speed, and the open air runs well over that
+  gateHi: 2.35,      // … and at this it lifts in full (a jet round a corner is over it; the open wind is between). Twice the old gates, and the open ground still streams about as before (a mean column of 0.093 for 0.103) while a wall's lee is emptied (0.000 for 0.003): the gate is against the DRIVE's speed, and the open air runs well over that
   patch: 3.5,        // m: a gust patch's size
   crest: 0.36,       // m: a crest's size (the thread it gives is about this wide)
   crestCut: 0.84,    // 0‥1: the share of the ground that is NOT a crest
@@ -83,6 +83,9 @@ function programOf(device: GPUDevice): { bgl: GPUBindGroupLayout; pipe: Promise<
   p = { bgl, pipe: computePipelineAsync(device, { label: 'powder step', layout, compute: { module, entryPoint: 'powderStep' } }) };
   PROGRAMS.set(device, p); return p;
 }
+/** ASKED FOR AHEAD OF ITS FIRST USE (engine.ts warmFirstUse, on the look's page): the step's program was made the first frame a snow level stood its powder,
+ *  so on the kept page a snow level's start compiled one program the title had not. One of the later set's while it compiles (gpu/device.ts laterHold). */
+export function powderWarm(device: GPUDevice): void { const letGo = laterHold(); programOf(device).pipe.then(letGo, letGo); }
 export class PowderField {
   readonly w: number; readonly h: number;
   /** what the picture reads: rgba16float, w × h, texel (i, j) = cell (i, j)'s centre (world x = (i + ½) / POW_RES): r = the powder's column, g = column × height (m),
@@ -129,7 +132,7 @@ export class PowderField {
    *  handed this frame (m/s); `time` = the caller's clock; `pickK` = × what the wind picks up (0 = kicks only); `airLive` false = the air field is not being stepped this
    *  frame, so what its texture still holds is a moment that is gone: the powder takes the air for still (nothing is carried, and it drops out as in a lee).
    *  dt ≤ 0 encodes nothing; dt is clamped to 1/30. ONE step per submitted encoder (the uniforms are a queue write). */
-  step(enc: GPUCommandEncoder, dt: number, time: number, ambient: number, pickK = 1, airLive = true): void {
+  step(enc: GPUCommandEncoder, dt: number, time: number, ambient: number, pickK = 1, airLive = true, ts?: (name: string) => GPUComputePassTimestampWrites | undefined): void {
     if (this.dead || !this.pipe || !(dt > 0)) return;
     dt = Math.min(dt, 1 / 30);
     const P = POWDER, f = this.uf, u = this.uu, keep = (life: number) => Math.exp(-dt / Math.max(life, 1e-3));
@@ -151,7 +154,7 @@ export class PowderField {
     for (let i = this.kicks.length - 1; i >= 0; i--) if (this.kicks[i].age >= T) this.kicks.splice(i, 1);
     u[24] = n; u[25] = 0; u[26] = 0; u[27] = 0;
     this.device.queue.writeBuffer(this.ubo, 0, this.u, 0, (U_HEAD + n * 8) * 4);
-    const pass = enc.beginComputePass({ label: 'powder' }); pass.setBindGroup(0, this.bind); pass.setPipeline(this.pipe);
+    const pass = enc.beginComputePass({ label: 'powder', timestampWrites: ts?.('powder') }); pass.setBindGroup(0, this.bind); pass.setPipeline(this.pipe);
     pass.dispatchWorkgroups(Math.ceil(this.w / 8), Math.ceil(this.h / 8)); pass.end();
     enc.copyTextureToTexture({ texture: this.nxt }, { texture: this.cur }, [this.w, this.h]);
   }

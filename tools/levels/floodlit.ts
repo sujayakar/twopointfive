@@ -3,22 +3,24 @@
 // eaves, and the rooms' open windows look straight down it at the gate. The floodlights and every bulb in the building hang on the MAINS; the mains breaker
 // is in the generator shed on the OUTSIDE of the west wall, a short walk from the start to a door with a lamp over it. Throw it (Sam's own row, or the squad's 'work' order
 // on the panel) and the yard is black: the defenders carry no lights and no goggles, the team has goggles. NOBODY COMES TO PUT THE LIGHTS BACK ON: a room
-// clear pins its defenders to their marks (lighting.ts hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
+// clear pins its defenders to their marks (rust/game_rules/src/air/lighting.rs hands one of them the errand and he says so; he does not walk). THE SHED IS EMPTY ON PURPOSE: with
 // one of the seven holding it (tried, 24 shipped seeds a way) the fight for it is heard, the building's men come out to it, and the team wins 21 of 24 with
-// the lights ON and 22 of 24 with them out — the dark stopped mattering. The trial is rebuild/missions/new/floodlit-shed-held.patch in the project files.
-// What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (the yard's
-// tubes need something to amplify — headless the stand-in meter has no moon and no bounce) and a hurricane lantern in each room (so a man who walks in
-// beside one can still be seen and fought at arm's length: the dark is an edge, not a switch that ends the fight; their strength, 6, is the mission's dial —
-// at 4 the dark cost 11 teammates of 96 over 24 shipped seeds, at 6 it costs 34, at 8 38, and the yard taken lit costs 54 and a third of the runs). No emergency beacons. The MOON is an
-// overcast night's 0.04: the page's meter counts it (probe.wgsl sums kind-2 lights) where the headless stand-in does not, and at the kit's 0.9 the yard
-// with the mains out read about half lit to a bare eye there (floodlit-check asks nvg.ts nvgPlaceLight, which counts the moon, for that reason).
-// CHECKED WITH THE FOUR ONLY: bun run tools/qa/scenario-level-probes.ts levels/floodlit.json --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
+// the lights ON and 22 of 24 with them out — the dark stopped mattering.
+// What is left burning with the mains out is on batteries and too dim for a bare eye: a red obstruction lamp on the radio mast on the front wall (there to be
+// seen, not to see by: at 6, over the sky, it took the gate and the middle of the yard past 0.2) and a hurricane lantern in each room (so a man who walks in beside one can
+// still be seen and fought at arm's length: the dark is an edge, not a switch that ends the fight; their strength is the mission's dial, 4.5 with the light
+// that comes round counted, which is the 6 the dial was set to when only the direct light was). No emergency beacons. AN OVERCAST NIGHT: the moon is 0.04 and
+// the SKY six tenths of what it was, a clear night's. The light meter counts both, as the picture draws both: under the old sky open ground read 0.19 to a
+// bare eye with no lamp near and the yard 0.13 to 0.25 (the line it is held to is 0.2); under this one it reads 0.02 to 0.15, what it was designed at.
+// MEASURED (`missions floodlit`, 48 seeds, the mains out from the start; of 192 men up at the end, standard / hard): 83 / 75 before, 94 / 99 now, the floor
+// cleared 35 / 33 and 40 / 37 times of 48, the defenders' rounds 410 / 407 and 277 / 280; the mains left on 89 / 70 both. The dark is the better plan again.
+// CHECKED WITH THE FOUR ONLY: levels stands floodlit --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
 // for a pair (a pair crossing the lit yard is wiped on most of that probe's seeds; that is the level's point, not a fault to tune away). WHEN THIS WAS
 // WRITTEN the probe's default seeds were 1,2,3 and seed 2 was red with the four: the last defender left by the store's back door and stood in the dark
-// strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). playthrough.ts's commander hunts him:
-// 48 of 48 shipped runs ended. ON THE BUILD OF 3752969b (10-14, frozen stand) the default is seeds 0,1,2,3 (0 = the level's own marks) and the four
+// strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). A commander that hunts him
+// ended 48 of 48 runs. ON THE BUILD OF 3752969b (10-14) the default is seeds 0,1,2,3 (0 = the level's own marks) and the four
 // takes the floor on all four (seed 2 at 51.8 s, one teammate up); the pair is wiped on 0, 1 and 2 and takes it on 3, which the probe does not ask of it.
-// Built from the kit (scene/levelKit.ts). Plan, +x east, +z south, metres:
+// Built from the kit (lib/levelKit.ts). Plan, +x east, +z south, metres:
 //
 //        x=4     x=9         x=16    x=22      x=27.5 x=31    x=36
 //   z=4  +=======================================================+   the compound wall, 2.6 m
@@ -34,18 +36,27 @@
 //   +--dS+ dW        [pickup]                    [drums]          |   dS = the shed's one door (south, outside the wall) · dW = the west foot gate
 //   z=24 +=================+   GATE   +===========================+
 //          team               x 18.5‥21.5      (a lamp on each gate post, facing out, and one over dS: on the mains like the floodlights)
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: the fuel post of a bush airstrip — blockwork behind a block wall, black steel frames, and aviation ORANGE, on the ground only. What it alone
+// has: A LANDING PAD. The yard the floodlights were hung for is a helicopter pad: the ring and its H in the middle of the open ground between the pickup and
+// the fuel drums, approach chevrons in through the gate, a wind tee in the dead east end. The pad says, from above, where the open ground is — the eleven
+// metres the level is about — and it lies the same whichever way the team comes in. No letters or numbers at doors, no bays, no lanes.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import * as K from '../../src/scene/levelKit';
+import type { Level } from './lib/level';
+import type { KitViewData, LevelScenarios, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
-import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
-import { drawnAs, madeOf } from '../../src/scene/stuff';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
+import { drawnAs, madeOf, saidAs } from '../../src/scene/stuff';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'floodlit';
-export const NOTES = 'The floodlit yard: a room clear whose one idea is the mains breaker. A lit yard under the windows; the breaker in a shed outside the wall. Kit pieces only. Regenerate: bun run tools/levels/export.ts floodlit';
+const PLAIN_NOTES = 'The floodlit yard: a room clear whose one idea is the mains breaker. A lit yard under the windows; the breaker in a shed outside the wall. Kit pieces only. Regenerate: bun run tools/levels/export.ts floodlit';
 
 export const FLOODLIT_ROOMS = {
   west:  { name: 'guard room', bounds: { x0: 9.12,  x1: 15.94, z0: 6.12, z1: 12.88 } },
@@ -60,7 +71,7 @@ export const FLOODLIT_START: Vec3 = [9.0, 0, 26.2];
 /** the middle of the gate's opening, chest high: what the window men look at */
 const GATE: Vec3 = [20.0, 1.1, 24.0];
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData). Seven men: guard room 2, hall 2, radio room 2, store 1. The window marks come first in the two window
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData). Seven men: guard room 2, hall 2, radio room 2, store 1. The window marks come first in the two window
  *  rooms, so the authored placement (and most deals) has a man at each window looking down the yard at the gate. */
 export const FLOODLIT_STRUCTURE: StructureData = {
   name: 'floodlit yard',
@@ -98,7 +109,7 @@ export const FLOODLIT_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the main gate has no leaf, and a picture anchored on
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the main gate has no leaf, and a picture anchored on
  *  that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle). So
  *  the way is the door the gate leads to: the building's front door, straight across the yard under its floodlights. The picture hangs no lamp of its own:
  *  the yard's floods are the level's, one of them over this door, and they are lit. */
@@ -135,7 +146,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   // ---------------- the building (x 9‥31, z 6‥13) ----------------
   K.grp(k, 'walls.exterior');
   const ext = C.concrete;
-  // (the store's back door opens OUTWARD: no wedge holds it, so the store's men can shut the radio room's door alone — tools/qa/second-way-check.ts)
+  // (the store's back door opens OUTWARD: no wedge holds it, so the store's men can shut the radio room's door alone — rust/game_start levels second-way)
   K.wallX(k, 6, 8.88, 31.12, EXT, ext, [K.doorAt(k, 'back', 'x', 6, 28.4, { exterior: true, swing: -1 })]);
   K.wallX(k, 13, 8.88, 31.12, EXT, ext, [hole(12, 14), K.doorAt(k, 'front', 'x', 13, 18.4, { exterior: true }), hole(23.5, 25.5)]);
   K.wallZ(k, 9, 6.12, 12.88, EXT, ext);
@@ -152,7 +163,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.wallX(k, 15, 0.48, 3.88, EXT, sw, [], {}, WALL_H);
   K.wallX(k, 19.5, 0.48, 3.88, EXT, sw, [K.doorAt(k, 'shed', 'x', 19.5, 2.4, { exterior: true })], {}, WALL_H);
   K.wallZ(k, 0.6, 15.12, 19.38, EXT, sw, [], {}, WALL_H);
-  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (lighting.ts stands its man north of the panel)
+  const breaker = K.breakerPanel(k, [1.5, 1.35, 19.38], [0, -1]);                  // faces north, into the shed (rust/game_rules/src/air/lighting.rs stands its man north of the panel)
   K.add(k, { c: [1.6, 0.45, 15.75], h: [0.75, 0.45, 0.4], albedo: [0.5, 0.42, 0.1] });   // the generator set on its skid, against the north wall
   K.add(k, { c: [1.6, 0.94, 15.75], h: [0.5, 0.04, 0.3], albedo: C.black });
   K.add(k, { c: [2.37, 0.6, 15.75], h: [0.015, 0.02, 0.02], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });   // its running lamp
@@ -196,17 +207,17 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   }
   // on batteries, and too dim for a bare eye: the mast's red obstruction lamp over the yard, a hurricane lantern in each room
   { const lamp = K.add(k, { c: [21.6, 6.04, 13.42], h: [0.06, 0.06, 0.06], albedo: C.red, emissive: [6, 0.4, 0.2], flags: BoxFlag.NoShadow });
-    k.lights.push({ kind: 'point', pos: [21.6, 6.1, 13.6], dir: [0, -1, 0], color: [1.0, 0.16, 0.1], intensity: 6, range: 34, innerDeg: 0, outerDeg: 180,
+    k.lights.push({ kind: 'point', pos: [21.6, 6.1, 13.6], dir: [0, -1, 0], color: [1.0, 0.16, 0.1], intensity: 2, range: 34, innerDeg: 0, outerDeg: 180,
       name: 'mast_lamp', group: 'battery', enabled: true, volumetric: 0, fixtureBox: lamp, radius: 0.06, mains: false }); }
   for (const [name, x, z, y] of [['lantern_west', 11.2, 10.6, 0.76], ['lantern_hall', 16.5, 7.4, 0], ['lantern_east', 26.9, 11.55, 0.5], ['lantern_store', 29.0, 12.45, 0.5]] as const) {
     K.add(k, { c: [x, y + 0.02, z], h: [0.06, 0.02, 0.06], albedo: C.black });
     const glass = K.add(k, { c: [x, y + 0.13, z], h: [0.04, 0.09, 0.04], albedo: C.white, emissive: [3, 1.8, 0.6], flags: BoxFlag.NoShadow });
-    k.lights.push({ kind: 'point', pos: [x, y + 0.16, z], dir: [0, -1, 0], color: [1.0, 0.6, 0.25], intensity: 6, range: 7, innerDeg: 0, outerDeg: 180,
+    k.lights.push({ kind: 'point', pos: [x, y + 0.16, z], dir: [0, -1, 0], color: [1.0, 0.6, 0.25], intensity: 4.5, range: 7, innerDeg: 0, outerDeg: 180,
       name, group: 'battery', enabled: true, volumetric: 0.1, fixtureBox: glass, radius: 0.05, mains: false });
   }
   K.moon(k, undefined, 0.04);                                                       // an overcast night (see the head)
 
-  // ---------------- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A fuel post run by seven men off one generator, and each room is what its men do there: the guard room is where they SLEEP (coats on the wall, boots by
   // the cots, the tea chest and its kettle), the hall is the POST's (fire buckets, the waterproofs by the door they go out of), the radio room has the MAST's
   // spare sections on the wall and the battery crate, the store the SACKS and the bucket, the shed the GENERATOR's (the can crate, a funnel bucket, overalls).
@@ -224,7 +235,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // THE LOCKERS SHADE THE HALL'S LANTERN (the maintainer's pick of 10-16, "Hall lockers"). The lantern stands on the floor in the corner west of them, so with
     // the mains out it lights the guard room's side and a wedge towards the front door, and the back wall, the far corner and the radio room's door are black
     // to a bare eye (floodlit-check reads both). That shade, not cover, is all they do to the fight; how much it is worth has moved with the goggles' infrared
-    // light and is in docs/agents/missions.md. Move the lockers or the lantern and the tallies move.
+    // light. Move the lockers or the lantern and the tallies move.
     P.room('east');
     P.poles(22.12, 1.28, 12.05, W, 3, 1.0, 0.07);                                    // the mast's spare sections, on brackets on the west wall
     P.crate(22.5, 12.45, 0.4, 0.1, C.wood, INK.iron, 'batteries');
@@ -236,9 +247,9 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // out there the ground outside the wall had the sky's even fill and nothing else — no pool, no shadow, the men one grey with the wall (the depot and the
     // pass have thin moons too, and lamps outside). The moon stays (it is what keeps the yard black with the mains out); these go out with the floodlights,
     // so the dark is as dark as it was. A bulkhead lamp on the outer face of each gate post, thrown out and along the wall away from the gate, and one over
-    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (nvg.ts NVG.darkAt is 0.5 — at 50
+    // the shed's door. THE GATE LAMPS' STRENGTH IS HELD UNDER THE TEAM'S GOGGLES' LINE: every start mark reads under 0.45 (rust/game_rules/src/teammates/nvg.rs NVG.darkAt is 0.5 — at 50
     // the five marks read 0.29‥0.62 and the team stood up half goggled, half bare-eyed), Sam's about 0.3. Nobody in the building has a line to a start mark
-    // or to the shed's door (tools/qa/floodlit-check.ts asks both). TRIED AND LEFT OUT: a third lamp at the wall's south-west corner to light the team from both sides — it
+    // or to the shed's door. TRIED AND LEFT OUT: a third lamp at the wall's south-west corner to light the team from both sides — it
     // sits 2.6 m from the nearest mark and 5 from Sam's, so any strength that lifts Sam's reading (0.25 → 0.39 at 8) takes the near man over the line (0.53).
     const lamp = (name: string, x: number, y: number, face: number, dir: Vec3, intensity: number, range: number, outerDeg: number, color: Vec3) => {
       const head = K.add(k, { c: [x, y, face + 0.04], h: [0.1, 0.06, 0.04], albedo: C.metal, emissive: [30, 22, 12], flags: BoxFlag.NoShadow });   // on a wall's south face
@@ -252,7 +263,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.room('yard');
     P.cone(17.9, 23.5); P.cone(22.1, 23.5);                                         // inside the gate, off its opening
     for (const [n, x, sx] of [['w', 18.38, -1], ['e', 21.62, 1]] as const) lamp(`lived.yard.gate_lamp_${n}`, x, 2.46, 24.16, [0.75 * sx, -0.45, 0.35], 17, 16, 70, [1.0, 0.75, 0.45]);
-    // THE FUEL POST'S OWN THINGS, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round), all of them against a wall or outside it: the open
+    // THE FUEL POST'S OWN THINGS, from the look's kit (lib/gwotKit.ts: a drum and a tyre are round), all of them against a wall or outside it: the open
     // ground between the gate and the door stays open. The EMPTIES are dumped in the dead east end, where the east floodlight rakes them; the pickup's two
     // spares lie by its tail; the generator's own drum stands in the shed, off the door's line and off the place the breaker is thrown from; and the stones
     // turned out of the gateway lie at the foot of the wall either side of it, under the gate lamps.
@@ -267,10 +278,10 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     playerSpawn: FLOODLIT_START,
     routes: [],
     breaker,
-    sky: { zenith: [0.012, 0.02, 0.04], horizon: [0.03, 0.04, 0.065] },
+    sky: { zenith: [0.007, 0.012, 0.024], horizon: [0.018, 0.024, 0.039] },   // (overcast as its moon is: see the head)
     mission: { serverRoom: { ...FLOODLIT_ROOMS.store.bounds }, entryDoor: 'store', rack: { index: 0, front: rackFront, halfW: 0.33 }, exfilDoor: 'foot_gate', exfilX: 3.5, exfilZ: 21.8, exfilOut: [-1, 0] },
   });
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above. `building` is the whole world so the plan is all zones (first match wins). The yard's packed earth, the shed's floor and the ground outside the
   // wall are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab ('stone') with lino laid in the hall.
   const surfaces: SurfacesData = {
@@ -282,3 +293,46 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   };
   return { level, scenarios: FLOODLIT_SCENARIOS, groups: k.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'floodlit';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+/** the pad's paint. The palette (src/scene/gwotPalette.ts) has no paint of this hue, so it is a colour of this file's own and only decals wear it */
+const ORANGE: Vec3 = [0.74, 0.2, 0.03];
+/** the middle of the pad: the open yard between the pickup (x ≤ 13.4) and the drums (x ≥ 26.7), on the gate's line */
+const PAD: [number, number] = [20.0, 18.6], PAD_R = 3.2;
+const SKIN: Skin = {
+  wall: 'block', house: 'render', inner: 'whitewash', frameOut: 'iron', frameIn: 'woodGrey', dado: null,
+  floor: { lino: 'slab' }, noRug: /./, metals: ['olive', 'galv', 'iron', 'rust'], patches: 0,   // (no patches: one would lie over the pad)
+  // floodlit.ts's own colours as the stuff they are: the yard's packed earth is GRAVEL (a second ground inside the wall: the dust stops at the gate), the fuel
+  // drums and the generator set wear their paint, the sandbags under the eaves are sandbags
+  own: [[[0.34, 0.3, 0.24], 'gravel'], [[0.2, 0.3, 0.42], 'drumBlue'], [[0.5, 0.45, 0.33], 'sandbag'], [[0.5, 0.42, 0.1], 'genYellow'], [[0.5, 0.47, 0.4], 'truckTan']],
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), white = saidAs('paint', T.tone(P.plasticWhite, 0.9)), [cx, cz] = PAD;   // (road paint in the plastic's white: a colour borrowed, not the stuff)
+    // THE GROUND A FUEL POST WEARS, laid before the pad's paint so the paint lies on it. WHEELS: the track along the outside of the south wall that the team
+    // came up, in at the gate, and round to where the pickup stands. FEET: the beat from the front door round the pad to the gate (nobody walks across a
+    // pad), the way in from the foot gate, and outside the wall the walk from the track to the shed's door. FUEL: what the drums have dripped. Each is its
+    // own ground darker or a second finish; the pad itself stays clean.
+    { const lot = T.floorAt(20, 26.6) ?? P.dust, yard = T.floorAt(8, 20) ?? P.gravel;
+      G.ruts(0.6, 26.5, 39.4, 26.5); G.ruts(20.0, 26.0, 20.0, 24.3);
+      /** a beat feet have worn: its own ground darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
+      const beat = (pts: [number, number][], ground: Vec3) => { M.path(pts, 1.2, T.tone(ground, 0.9)); M.path(pts, 0.5, T.tone(ground, 0.78)); };
+      G.ruts(18.3, 23.0, 12.6, 22.9);
+      beat([[18.4, 13.7], [16.0, 15.6], [16.0, 21.6], [18.2, 23.3]], yard);
+      beat([[19.6, 13.7], [24.0, 15.6], [24.0, 21.6], [21.8, 23.3]], yard);
+      beat([[4.6, 21.8], [9.0, 22.0]], yard);
+      beat([[8.6, 25.3], [3.0, 25.3], [3.0, 20.1]], lot);
+      G.patch(27.3, 18.6, 2.0, 1.5, 'oil', 0.3); G.patch(26.2, 19.3, 1.0, 0.6, 'oil', -0.4); G.patch(11.0, 17.0, 1.1, 0.8, 'oil', 0.2); }
+    // THE RING: an octagon, the way a pad is painted with a roller and a string
+    { const pts: [number, number][] = []; for (let i = 0; i <= 8; i++) { const a = Math.PI / 8 + i * Math.PI / 4; pts.push([cx + Math.cos(a) * PAD_R, cz + Math.sin(a) * PAD_R]); } M.path(pts, 0.16, ORANGE); }
+    // THE H, read from the gate
+    for (const s of [-1, 1]) M.seg(cx + s * 0.8, cz - 1.25, cx + s * 0.8, cz + 1.25, 0.3, white);
+    M.seg(cx - 0.8, cz, cx + 0.8, cz, 0.3, white);
+    // THE APPROACH: two chevrons in from the gate, pointing at the pad
+    for (const z of [23.1, 22.5]) { M.seg(cx - 0.9, z + 0.45, cx, z, 0.14, ORANGE); M.seg(cx + 0.9, z + 0.45, cx, z, 0.14, ORANGE); }
+    // THE WIND TEE in the dead east end of the yard: a T on the ground, its stem down the prevailing wind
+    { const x = 32.4, z = 20.6; M.seg(x - 0.9, z - 0.8, x + 0.9, z - 0.8, 0.22, white); M.seg(x, z - 0.8, x, z + 1.0, 0.22, white); }
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

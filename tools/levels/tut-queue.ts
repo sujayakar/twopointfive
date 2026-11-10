@@ -1,9 +1,9 @@
 // TUT-QUEUE — the tutorial's fourth mission, "The relay post, in pairs": ONE WALLED POST THAT ONE ORDER TO EVERYBODY CANNOT TAKE, AND HE IS ON ITS FLOOR
 // WITH HIS FOUR. Every stop is a thing the squad as one group loses and the squad as two pairs wins, and the only new thing in his hands is Shift held
-// with the command key: a part of the squad takes the new order and the rest go on as they were (game/planmode.ts planGoal). The word's key then sends
+// with the command key: a part of the squad takes the new order and the rest go on as they were (rust/game_rules/src/squad_orders/planmode.rs plan_goal). The word's key then sends
 // everything that waits. Nobody could say that of another level: here every room has two doors and every fight comes from two sides at once.
 // (The maintainer, 10-26: "then we have a level that teaches queueing commands" — after the missions that taught him his own body, the squad's key and
-// the word, and his kit and theirs. The floor is the plan mode mission's, tools/levels/tut-plan.ts, copied here and not imported: that mission was led
+// the word, and his kit and theirs. The floor is the plan mode mission's, copied here and not imported: that mission was led
 // from above with nobody of his on the floor, and goes out with plan mode.)
 //
 //        x 5     9  11    15        21 22  24.5              32.5  35
@@ -23,20 +23,20 @@
 //     the other, one word — and it wins because two men cannot watch two doors.
 //   · the hall is the room one stack loses. Its gun sits behind bags at the far end and looks down the room's length at the front door: men who come in
 //     by it are taken from the side. The back door is at the gunner's shoulder. A pair on each, sent by one word, and the gun is turned to the wrong door.
-//   · then more come, by the two gates at once: Shift with the key on one gate and then on the other, and the squad parts to watch both from behind the
-//     bags he has walked them to. A spot to watch is the same pair of keys as a second door, and two gates are the reason to want two of them.
+//   · then more come, by the two gates at once: Shift with the key KEPT DOWN by one gate and then by the other opens the wheel for a part of the squad, and
+//     its `cover` wedge turns that part to the gate from behind the bags he has walked them to. (A tap gives a spot what the key gives it, a move. The
+//     maintainer, 11-08: "you should need to open the radial menu to get covering a point".)
 //   · HE AND THE FOUR START inside the track gate by their truck, behind blocks no door and no gate of the post has a line to.
 //
 //   bun run tools/levels/export.ts tut-queue [--check]     → levels/tut-queue.json
-//   bun run tools/qa/lesson-check.ts tut-queue              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts tut-queue                the scripted player through every step
+//   bun run tools/qa/pages.ts tut-queue-page                      the page with real keys through every step
 //   page: ?levelFile=tut-queue.json&roomclear=1&squad4
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -124,7 +124,7 @@ export function build() {
   // ---- the guardroom: two doors on two walls, two men. The first plan ----
   const GUARD = hut({ x0: 15, z0: 6.5, x1: 21, z1: 11, kind: 'block', floor: 'slab', doors: [{ name: 'guard', side: 's', at: 17.2 }, { name: 'guard_side', side: 'e', at: 7.8 }] });
   grp('guardroom.room');
-  G.cot(15.7, 7.6, 0); G.trunk(16.9, 7.0, 0); G.table(19.3, 10.2, 1.2, 0.6, 0); G.plasticChair(19.3, 9.5, 0); G.bulb(18.0, 8.6, 'bulb_guardroom', 'guardroom');
+  G.cot(15.95, 7.6, 0); G.trunk(16.9, 7.0, 0); G.table(19.3, 10.2, 1.2, 0.6, 0); G.plasticChair(19.3, 9.5, 0); G.bulb(18.0, 8.6, 'bulb_guardroom', 'guardroom');
   G.stove(15.55, 10.4); G.gasBottle(20.55, 10.55); G.rug(17.9, 8.7, 2.0, 1.4, 'baluch');
 
   // ---- the hall: the gun behind its bags at the far end looks down the room at the front door; the back door is at the gunner's shoulder ----
@@ -140,9 +140,9 @@ export function build() {
   G.sandbags(30.4, 10.25, 2.4, HALF, 5);                            // A: chest-high bags (a rifle goes over them): a pair behind them (west of them) looks east at the road gate
   // B: a pair behind it (south of it) looks north at the back gate. WHERE IT STANDS (a player's tape, 10-22: his click fell 1.25 m west of the mark, the move put
   // the second man in the corner south of the guardroom, the way to face had no line for him there and he stood looking at a wall): a move's places are the
-  // squad's own (roomfit.ts: a few steps round the click, a wall at the back), so the post is where a hand that lands a metre and a half off still gets two men
+  // squad's own (rust/game_rules/src/entries/roomfit.rs: a few steps round the click, a wall at the back), so the post is where a hand that lands a metre and a half off still gets two men
   // who see the gate — clear of that corner to the west (the drums below fill it) and of the hall's front door to the east, whose picture stands over the
-  // ground north of it and takes a right click there (clicks swept with `TUTPLAN_POSTB`: docs/agents/missions.md)
+  // ground north of it and takes a right click there
   G.jersey(24.0, 9.3, 2, 0);
   grp('yard');
   G.drums(20.7, 11.65, 2);                                          // in the corner south of the guardroom: a man put there by a move to the barrier had the guardroom between him and the back gate
@@ -191,7 +191,7 @@ export function build() {
       // the gunner and the man beside him, behind the bags at the far end, both on the front door
       { id: 'hall', name: 'the hall', bounds: { ...HALL }, garrison: 2, doors: [{ id: 'hall', from: 'yard' }, { id: 'hall_back', from: 'yard' }],
         marks: [{ pos: [31.2, 0, 15.2], watch: 'hall', aimAt: IN_FRONT }, { pos: [31.4, 0, 14.2], watch: 'hall', aimAt: IN_FRONT }] },
-      // the men who come: the level's script keeps them outside until the last fight (levels/tut-queue.script.ts)
+      // the men who come: the level's script keeps them outside until the last fight (rust/game_rules/src/missions/script_tut_queue.rs)
       { id: 'road', name: 'the road', bounds: { ...ROAD }, garrison: 2, doors: [{ id: 'gate_e', from: 'yard' }],
         marks: [{ pos: [38.4, 0, 8.2], watch: 'gate_e', aimAt: [38.4, 1.1, 6.0] }, { pos: [38.6, 0, 11.8], watch: 'gate_e', aimAt: [38.6, 1.1, 13.0] }] },   // (behind the blast wall: each looks along it at the end he will walk round)
       { id: 'lane', name: 'the lane', bounds: { ...LANE }, garrison: 2, doors: [{ id: 'gate_n', from: 'yard' }],
@@ -214,17 +214,17 @@ export function build() {
   const HALL_EYE = { at: [28.4, 1.9, 16.0] as Vec3, yaw: 0, fov: 360 };   // the hall's lookout: the player sees the gunner from the card to the go
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up. A key is written by the game's own code letter in brackets: the page draws the player's key ([B] is the squad's command key).
-  // WHAT HE HAS: his body and his rifle (the first mission's), the command key's tap and the word (the second's). His kit and the squad's ring are the
-  // third mission's and are not asked for here, so they stay shut: the one new thing is Shift with the command key, the frame's action `goal`, from the
-  // step that teaches it. THE WORD IS SHUT UNTIL BOTH STACKS STAND, at the guardroom and again at the hall: a word given to one stack alone takes the
+  // WHAT HE HAS: his body and his rifle (the first mission's), the command key's tap and the word (the second's). His kit is the third mission's and is not
+  // asked for here, so it stays shut, and the squad's ring stays shut until the yard: the one new thing is Shift with the command key, the frame's action `goal`,
+  // from the step that teaches it. THE WORD IS SHUT UNTIL BOTH STACKS STAND, at the guardroom and again at the hall: a word given to one stack alone takes the
   // room by one door, and the step that was for the second door is gone before it was read.
   const lesson = {
     title: 'The relay post, in pairs',
-    // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch.
+    // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch, which is the wheel's alone.
     //  The list is the tap's too: an order off it is not given by the key either)
     // (`rows`: the interaction key is never his in this mission, and with a list no row is drawn while that key is locked. Without one the corner of the
     //  screen offered a door's row at every door and "throw it — kill the lights" at the breaker box, for a key that did nothing)
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
     steps: [
       // 1 · TWO DOORS, ONE WORD: the key on one door is everybody's, as he knows it; Shift with the key on the other door parts a pair off to it; the
       // word sends every stack that waits
@@ -235,35 +235,38 @@ export function build() {
         done: or(stacks(['guard', 'guard_side'], { set: true }), taken('guardroom')), at: D_SIDE, allow: ['goal'] },
       { id: 'word', line: 'Press [F] to send both pairs in at once', done: taken('guardroom'), at: [18.0, 1, 8.75], allow: ['word'] },
       // (the card that follows a fight, 'call', is marked `quiet`: the frame holds it until his squad's fight has been still for two seconds, to its
-      //  cap — rails.ts RAILS.cardBeat. The other cards follow a walk or an order and take the plain beat)
+      //  cap — rust/game_rules/src/missions/rails.rs RAILS.cardBeat. The other cards follow a walk or an order and take the plain beat)
       // 2 · THE ROOM ONE STACK LOSES: the gun looks down the hall at the front door. The front door is the one he can see from the guardroom, and the
       // squad is stacked on it before he has seen what is behind it; the walk round the hall shows him the gunner's back, and the card is read there
       { id: 'front', line: "Press [B] on the hall's front door to stack your whole squad on it", done: or(stacks(['hall'], { n: 3 }), taken('hall')), at: D_HALL, checkpoint: 'the hall', deny: ['word'] },
       { id: 'around', line: 'Walk around to the marked spot behind the hall', done: or(near(SPOT_HALL), stacks(['hall', 'hall_back']), taken('hall')), at: SPOT_HALL, eye: HALL_EYE },
       { id: 'back', line: 'Hold [Shift] and press [B] on the back door to send two teammates around to it', explain: { title: 'A gunner watching the door', text: "There's a gunner at the far end of the hall, and he's aiming at the front door, where your squad is stacked. If they all go in that way, they'll walk right into his fire.\nThe back door is right behind him." },
         done: or(stacks(['hall', 'hall_back'], { set: true }), taken('hall')), at: D_BACK, eye: HALL_EYE },
-      // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-queue.script.ts)
+      // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — rust/game_rules/src/missions/script_tut_queue.rs)
       { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: HALL_EYE, cue: 'breach', allow: ['word'] },
       // 3 · A SPOT TO WATCH: more come by two gates at once. He calls the four to him (men he has called are on nothing: on the page, where the first goal
-      // is half the squad's, the first spot takes the nearer pair and the second the other; with that rule off the first spot is everybody's and the
-      // second parts a pair off it) and walks them out between the bags and the barrier; Shift with the key by a gate turns them to it
-      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nHold [Shift] and press [B] on a spot, and two of them will turn to watch it from where they stand." },
+      // is half the squad's, the first spot's wheel is for the nearer pair and the second's for the other) and walks them out between the bags and the
+      // barrier. A SPOT IS WATCHED ONLY FROM THE WHEEL: a tap there, Shift or no, sends men to stand on it (the maintainer, 11-08: "i think shift Q on a point
+      // should just move the squad there, should match what regular Q does. you should need to open the radial menu to get covering a point")
+      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nYou'll have two teammates watch each gate." },
         done: or({ is: 'following' }, watch(WATCH_E, 1), taken('road'), taken('lane')), checkpoint: 'the gates' },
       { id: 'yard', line: "Walk out to the marked spot in the yard, and they'll follow you", done: or(near(SPOT_YARD), watch(WATCH_E, 1), taken('road'), taken('lane')), at: SPOT_YARD },
-      { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have two of them watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
-      // (the same goal by the wheel: Shift and the key KEPT DOWN open it for the part of the squad a tap would have sent, and the wedge picked is theirs alone.
-      //  A tap on this step gives nothing and says to keep the keys down — rails.ts `noTap`, which the tap with Shift asks too: orders.ts tapGive.
-      //  THE KEY KEPT DOWN WITH NO SHIFT is the wheel he learnt a mission ago, for everyone, and its second wedge turns all four to this gate with nobody
-      //  left on the first: the step passes on two of them here whoever watches the road, and `split` asks for the road gate again — a Shift tap there
-      //  parts a pair off the four. With a pair on each gate as this step ends, `split` is done as it comes up and no line of it is read)
-      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have two of them watch the back gate', menuLine: 'Press [2] to have two of them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
+      // (Shift and the key KEPT DOWN open the wheel for the part of the squad a tap would have sent, and the wedge picked is theirs alone: the frame's `ringPart`. A tap on these
+      //  steps gives nothing and says to keep the keys down — rust/game_rules/src/missions/rails.rs `noTap`, which the tap with Shift asks too: rust/game_rules/src/squad_orders/orders — and the key kept down with NO Shift is
+      //  a tap, so all four cannot come to one gate. A tap ON HIMSELF still calls them back: the way out when stray taps have left nobody free for the wheel.
+      //  EACH STEP ENDS ON THE GATE IT NAMES, by one man (the part is half of the biggest group, and after stray taps that may be one man), so no press leaves him with a line he
+      //  cannot finish. The tap on himself at `gateB` calls the road gate's men off too: `split` asks for that gate again, and is done as it comes up where it is still watched)
+      { id: 'gateA', line: 'Hold [Shift] and keep [B] held down on the marked spot by the road gate', menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
         explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for part of your squad.\nThey'll take the order you pick, and the others will keep doing what they were doing." },
-        allow: ['ring'], done: or(watch(WATCH_N, 2), and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
-      { id: 'split', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to turn two of them back to it', done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('road'), taken('lane')), at: WATCH_E },
+        allow: ['ringPart'], done: or(watch(WATCH_E, 1), taken('road')), at: WATCH_E },
+      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', menuLine: 'Press [2] to have them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
+        done: or(watch(WATCH_N, 1), taken('lane')), at: WATCH_N },
+      { id: 'split', line: "Nobody's watching the road gate now, so hold [Shift] and keep [B] held down on its marked spot", menuLine: 'Press [2] to have them watch the road gate', noTap: 'Keep [Shift] and [B] held down',
+        done: or(watch(WATCH_E, 1), taken('road'), taken('lane')), at: WATCH_E },
       { id: 'hold', line: 'Hold both gates with your squad', done: and(taken('road'), taken('lane')), cue: 'gates' },
     ],
   } as LessonData;
-  // (an order that is out: the line is what the men are doing, not the ask again — rails.ts `after`; the word's steps carry only the line after the word)
+  // (an order that is out: the line is what the men are doing, not the ask again — rust/game_rules/src/missions/rails.rs `after`; the word's steps carry only the line after the word)
   const AFTER: Record<string, { line?: string; word?: string }> = {
     door1: { line: "They're stacking up on the door" }, call: { line: "They're coming over to you" }, door2: { line: "Two of them are going to the side door, and they'll wait there until you say go" },
     word: { word: 'Both pairs are going in together' }, front: { line: "They're stacking up on the front door" }, back: { line: "Two of them are coming around to the back door" },
@@ -273,7 +276,7 @@ export function build() {
 
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // THE GROUND OUTSIDE THE WALL. The yard was furnished as it was built; the plain round it was one sheet of dust but for the two checkpoints, and the mission
   // opens beside the track gate with about a quarter of its picture on that sheet, in the last light. The track gate gets what the other two gates have, a
   // checkpoint, here one the post has stopped manning: whitewashed stones down both sides of the way in, its two barriers dragged off the track to let

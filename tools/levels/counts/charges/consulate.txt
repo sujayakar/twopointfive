@@ -1,0 +1,2 @@
+# places for a wall charge on levels/consulate.json (floor behind them as the nav grid stands; the level with its lived-in rooms in)
+725

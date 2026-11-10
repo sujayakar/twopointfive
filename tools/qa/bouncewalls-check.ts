@@ -1,7 +1,7 @@
 // THE BOUNCE IS NEVER READ THROUGH A WALL OFF A MAN — the check behind the scene prelude's BOUNCE_WALLS (src/render/frame.ts bounceWallsConfig; on,
 // ?nobouncewalls at boot = as it was; no game table, nothing for a recording to carry).
-//   bun run tools/qa/probes.ts bouncewalls        (family `render`)        BOUNCEWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
-// Its last three lines are REFL WALLS (a metal's reflection rays take the same read: section (5) below; REFLWALLS_BREAK=1 = that rule off: must FAIL).
+//   bun run tools/qa/checks.ts bouncewalls        BOUNCEWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
+// Its last two lines are REFL WALLS (a metal's reflection rays take the same read: section (5) below; REFLWALLS_BREAK=1 = that rule off: must FAIL).
 // the maintainer, 10-20, the pass at night, the squad in the snow against a lit room's outer wall: "i think there's some leak on direct and specular and indirect
 // with the wall here". The radiance cache (a 1 m lattice) is read a probe spacing along a face's normal — sound for a wall, and for a man standing by a wall the
 // room behind it: his side that faces the wall took the room's bounce, threw it on the snow, and a wet coat's sheen mirrored the room's lamps on his rims. And a
@@ -14,15 +14,15 @@
 // way, so the flaw is a number here too. What the picture looks like is the page's to show.
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function bounceWallsCheck(): Promise<boolean> {
   const BRK = process.env.BOUNCEWALLS_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== bouncewalls: the bounce is never read through a wall off a man${BRK ? ' (the rule off: must fail)' : ''} ===`);
   const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), flat = (s: string) => s.replace(/\s+/g, ' ').trim();
-  const lc = read('lighting_common.wgsl'), fg = read('fgather.wgsl'), rf = read('reflect.wgsl'), r5 = read('reflect_p5.wgsl'), comp = read('composite.wgsl');
+  const lc = read('lighting_common.wgsl'), fg = read('fgather.wgsl') + read('gather_split.wgsl');
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`), { defaultRcConfig } = await import(`${ROOT}/src/render/rc.ts`), { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
-  const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+  const { loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
   const CY: number = WORLD.ceilingY, RC0: number[] = WORLD.rcMin, SP = [WORLD.rcSize[0] / defaultRcConfig.nx, WORLD.rcSize[1] / defaultRcConfig.ny, WORLD.rcSize[2] / defaultRcConfig.nz];
 
   // (1) the text
@@ -57,21 +57,12 @@ export async function bounceWallsCheck(): Promise<boolean> {
       if ((m & 10u) == 0u) { Q.x = home.x; } else if ((m & 5u) == 0u) { Q.x = nb.x; }
       if ((m & 12u) == 0u) { Q.z = home.z; } else if ((m & 3u) == 0u) { Q.z = nb.z; }
       return vec4f(Q, 1.0);`);
-    const n = (s: string, re: RegExp) => (s.match(re) ?? []).length;
-    const man = /if \((?:!WALL_SIDES && )?BOUNCE_WALLS && bounceHitMan\(hit\)\) \{ (?:h\.)?E[h]? \+= diceIrradianceWalled\((?:Ph|P), hit\.n, bounceHitOwner\(hit\)\); \}/g;
-    const left = /if \(BOUNCE_WALLS && \(bounceHitMan\(hit\) \|\| bounceLeftNoWall\(N0?, owner, hit\.t\)\)\) \{ E[hb] \+?= diceIrradianceWalled\(Ph, hit\.n, bounceHitOwner\(hit\) \| \(owner << 8u\)\); \}/g;
-    const isMan = /fn bounceHitMan\(hit: Hit\) -> bool \{ if \(hit\.idx == CAPSULE_HIT\) \{ return true; \} return hit\.idx >= 0 && boxOwner\(boxGeo\[u32\(hit\.idx\)\]\) != 0u; \}/.test(lc) && /fn diceIrradianceWalled\(Ph: vec3f, n: vec3f, skip: u32\) -> vec3f \{ (?:if \(WALL_SIDES\) \{ return diceIrradianceFace\(Ph, n\); \}[^\n]*\n  )?let q = diceWalledPoint\(Ph, n, skip\); if \(q\.w == 0\.0\) \{ return vec3f\(0\.0\); \} return diceIrradiance\(q\.xyz, n\); \}/.test(lc);
+    const gather = (fg.match(/if \(BOUNCE_WALLS && \(bounceHitMan\(hit\) \|\| bounceLeftNoWall\(N0?, owner, hit\.t\)\)\) \{ E[hb] \+?= diceIrradianceWalled\(Ph, hit\.n, bounceHitOwner\(hit\) \| \(owner << 8u\)\); \}/g) ?? []).length;   // (a gather ray that left him for a wall asks the read: the copy's `use` below)
+    const noCell = /fn diceIrradianceWalled\(Ph: vec3f, n: vec3f, skip: u32\) -> vec3f \{ (?:if \(WALL_SIDES\) \{ return diceIrradianceFace\(Ph, n\); \}[^\n]*\n  )?let q = diceWalledPoint\(Ph, n, skip\); if \(q\.w == 0\.0\) \{ return vec3f\(0\.0\); \} return diceIrradiance\(q\.xyz, n\); \}/.test(lc);
     const noWall = /fn bounceLeftNoWall\(N0: vec3f, owner: u32, t: f32\) -> bool \{ return owner != 0u \|\| \(t < 2\.0 && max\(abs\(N0\.x\), max\(abs\(N0\.y\), abs\(N0\.z\)\)\) < 0\.98\); \}/.test(lc);
-    const manRefl = /if \(\(BOUNCE_WALLS && bounceHitMan\(hit\)\) \|\| walls != 0u\) \{ (?:h\.)?Eh \+= diceIrradianceWalled\(Ph, hit\.n, bounceHitOwner\(hit\) \| \(\(walls & 0xffu\) << 8u\)\); \}/g;   // (the reflections' sites also take a metal's rays: REFL WALLS, (5) below)
-    const sites = { cache: n(lc, man), gloss: n(fg, man), gather: n(fg, left), refl: n(rf, manRefl), refl5: n(r5, manRefl), coat: n(comp, /if \(BOUNCE_WALLS\) \{ let q = diceWalledPoint\(P, N, \(id >> 20u\) & 0xffu\); if \(q\.w > 0\.0\) \{ env = diceIrradiance\(q\.xyz, R\); \} \}/g) };
-    // (diceIrradianceFace(Ph, n) is the same read a spacing out along n wherever the look page's WALL SIDES is down: lighting_common.wgsl diceFaceBy's first line)
-    const kept = n(fg, /\{ Eh \+= (?:diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\)|diceIrradianceFace\(Ph, hit\.n\)); \}   \/\/ \(no walled read here/g), walks = (body.match(/occludedTBoxes\(/g) ?? []).length;   // (the software adapter's room: the walk written once, and the gather's program asks the read in three places — its two gloss / pane reads keep the old one)
-    const bare = n(fg, /diceIrradianceFrom\(/g) + n(fg + rf + r5, /\{ (?:h\.)?Eh \+= (?:diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\)|diceIrradianceFace\(Ph, hit\.n\)); \}/g);   // every one of the old reads must now sit in the else of a site above
-    const pre = /const BOUNCE_WALLS: bool = \$\{bounceWallsConfig\.on \? 'true' : 'false'\};/.test(readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'));
-    const flag = /if \(q\.has\('nobouncewalls'\)\) bounceWallsConfig\.on = false;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
-    verdict(body === WANT && sites.cache === 1 && sites.gloss === 0 && kept === 2 && walks === 1 && sites.gather === 3 && sites.refl === 1 && sites.refl5 === 2 && sites.coat === 1 && bare === 8 && noWall && isMan && pre && flag,
-      'the shader\'s rule is the one weighed below, every read off a man asks it, and the prelude and the page\'s flag carry the switch',
-      `diceWalledPoint ${body === WANT ? 'matches' : 'DIFFERS'} · asked by: the cache's probes ${sites.cache}/1, the gather's rays ${sites.gather}/3 (its gloss and pane rays keep the old read: ${kept}/2 marked, ${sites.gloss} walled), the box walk written ${walks} time(s) in the read, the reflections ${sites.refl}/1 + ${sites.refl5}/2, a wet coat's sheen ${sites.coat}/1 · old reads left, each in a site's else ${bare}/8 · bounceLeftNoWall ${noWall ? 'as weighed' : 'DIFFERS'} · a carried box is the man, and no cell seen is no read: ${isMan} · prelude const ${pre} · ?nobouncewalls ${flag}`); }
+    verdict(body === WANT && gather === 1 && noWall && noCell,
+      'the shader\'s diceWalledPoint and bounceLeftNoWall are the ones weighed below, a gather ray that left a man asks them, and no cell seen is no read',
+      `diceWalledPoint ${body === WANT ? 'matches' : 'DIFFERS'} · the gather's rays ask ${gather}/1 · bounceLeftNoWall ${noWall ? 'as weighed' : 'DIFFERS'} · no cell seen is no read ${noCell}`); }
 
   // ---- the copy ----
   type V = number[]; type Bx = { c: V; h: V; flags: number; yaw?: number; rot?: unknown };
@@ -189,13 +180,7 @@ export async function bounceWallsCheck(): Promise<boolean> {
   // boxes turned a quarter (the steel shelving itself: levelOf above leaves every turned box out) are put back, so a board over the hit stops the walk up as it
   // does in the shader. A read that sees no cell is no read (dark): counted, and held to a few in a hundred, so a walk that answered "nothing seen" everywhere
   // could not pass as a mend.
-  { const RB = process.env.REFLWALLS_BREAK === '1', RULE5 = !RB, n = (t: string, re: RegExp) => (t.match(re) ?? []).length;
-    const frameTs = readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'), mainTs = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8');
-    const metal = /let reflWalls = select\(0u, 0x100u \| owner, REFL_WALLS && metalness > 0\.25\);/g, calls = /(?:shadeReflHit|reflHitParts)\(hit, Po, dir, kEmit, reflWalls\)/g, any = /(?:shadeReflHit|reflHitParts)\(hit, Po, dir, kEmit[,)]/g;
-    const pre = /const REFL_WALLS: bool = \$\{reflWallsConfig\.on \? 'true' : 'false'\};/.test(frameTs), on = /export const reflWallsConfig = \{ on: true \};/.test(frameTs), flag = /if \(q\.has\('noreflwalls'\)\) reflWallsConfig\.on = false;/.test(mainTs);
-    verdict(n(rf, metal) === 1 && n(r5, metal) === 1 && n(rf, calls) === 1 && n(r5, calls) === 2 && n(rf, any) === 1 && n(r5, any) === 2 && pre && on && flag,
-      'a metal\'s reflection rays ask the walled read at every hit, in both reflection passes, and the prelude and the page\'s flag carry the switch',
-      `the metal test (with the pixel's owner in the skip word) ${n(rf, metal)}/1 + ${n(r5, metal)}/1 · hits shaded with it ${n(rf, calls)}/1 + ${n(r5, calls)}/2 (hits shaded in all: ${n(rf, any)} + ${n(r5, any)}; the read's sites are line 1's) · prelude const ${pre} · on in the page ${on} · ?noreflwalls ${flag}`);
+  { const RB = process.env.REFLWALLS_BREAK === '1', RULE5 = !RB;
     type Lv = { solid: Bx[]; walls: Bx[] };
     const kept = new Map<string, Lv | null>();
     /** levelOf with the boxes turned a quarter put back, their plan extents swapped (kept per file: both lines below ask every level) */

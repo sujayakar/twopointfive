@@ -1,13 +1,11 @@
-// SDF CHARACTER RIG (docs/internal/sdf-characters.md) — the CPU-held parts, headless:
+// SDF CHARACTER RIG — the CPU-held parts, headless:
 //   sdfrig-fit      the round-cone fit off the shipped mannequin: deterministic (two solves agree bit for bit), every radius sane (1–20 cm), left / right slots mirror,
 //                   per-slot rms under 30 mm and the whole under 25 mm, no overrides unaccounted for; prints the table
 //   sdfrig-pack     BoxWorld.upload on the fake device turns a frame's proxy list into the rig exactly: r0 over the hand radius, r1's millimetres in misc's top byte,
 //                   owner + albedo bits untouched, padding records left alone, the cull sphere fitted and holding every cone, idempotent, and rig = null (no fit attached) leaves the
 //                   list as written
-//   sdfrig-presets  the rig has no tier and no switch since the capsule cleanup (2026-08-11): the two extras (sdfRigSmooth / charSoftShadow) default off and Quality.apply
-//                   leaves them alone at every preset (rows, like gpuParticles)
-//   bun run tools/qa/probes.ts sdfrig
-import { ROOT, fake } from './headless.ts';
+//   bun run tools/qa/checks.ts sdfrig
+import { ROOT, fake, main } from './here.ts';
 
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { fitRig, rigTable, RIG_SLOTS, RIG_SLOT_NAMES, RB_QUANT, RIG_KPAD, RIG_OVERRIDES } = await import(`${ROOT}/src/render/sdfrig.ts`);
@@ -77,20 +75,4 @@ export async function sdfrigPack() {
   verdict(world.capsuleData[3] === fit.r0[0] && (world.capsuleU32[7] >>> 24) > 0 && world.infoF32[27] < 1.5, 'and the real records of that shorter list are fitted, its sphere too');
 }
 
-export async function sdfrigPresets() {
-  console.log('\n=== sdfrig-presets: no tier, no switch — apply() leaves the rig\'s two extras alone at every preset ===');
-  const __hadLS = 'localStorage' in globalThis, __hadDoc = 'document' in globalThis, __hadWin = 'window' in globalThis;   // (installed for Quality's constructor; TORN DOWN below — a body-less fake `document` left on globalThis killed the breach in any later probe of the same process: wave-3 review)
-  const __teardownDom = () => { if (!__hadLS) delete (globalThis as any).localStorage; if (!__hadDoc) delete (globalThis as any).document; if (!__hadWin) delete (globalThis as any).window; };
-  (globalThis as any).localStorage ??= { getItem: () => null, setItem: () => { /* */ } }; (globalThis as any).document ??= { hidden: false }; (globalThis as any).window ??= globalThis;
-  const { defaultSettings } = await import(`${ROOT}/src/engine.ts`);
-  const eng: any = { settings: defaultSettings(), rc: { cfg: { nx: 40, ny: 4, nz: 28, cascades: 4, interval0: 1 } }, rebuildRc() { /* */ }, prewarmRc() { /* */ }, timer: { enabled: false, results: new Map() }, effectiveScale: 1 };
-  const smoke: any = { params: { rbIters: 4 } };
-  const q = new Quality(eng, smoke); const S = eng.settings;
-  verdict(S.sdfRigSmooth === false && S.charSoftShadow === false && S.charSoftAnalytic === true, 'the two extras default OFF (smooth union in reflections, the drawn character shadows), the soft form analytic');
-  console.log(`  presets: ${QUALITY_NAMES.map((n: string) => `${n} ${'rig' in PRESETS[n] ? 'HAS a rig field' : 'no rig field'}`).join(' · ')}`);
-  let untouched = true;
-  for (const name of QUALITY_NAMES) { S.sdfRigSmooth = true; S.charSoftShadow = true; S.charSoftAnalytic = false; q.apply(name); if (S.sdfRigSmooth !== true || S.charSoftShadow !== true || S.charSoftAnalytic !== false) untouched = false; }
-  verdict(untouched, 'apply() at every preset leaves sdfRigSmooth / charSoftShadow / charSoftAnalytic as set by hand (rows, like gpuParticles — ?sdfsmooth / ?charsoft hold for the visit)');
-  S.sdfRigSmooth = false; S.charSoftShadow = false; S.charSoftAnalytic = true; q.apply('high');
-  __teardownDom();
-}
+if (import.meta.main) await main([sdfrigFit, sdfrigPack], sdfrigFailures);

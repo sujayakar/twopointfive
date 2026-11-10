@@ -1,7 +1,7 @@
 // THE DENSE KIT CARD (the maintainer on Team & kit, 10-20, beside a loadout card of Door Kickers 2: "this menu is pretty unwieldy … we shouldn't copy it
 // but maybe we have a popup menu per gun, more information density, etc."). The picked man's card on the one starting page (ui/startpage.ts), laid out
 // to be read at a glance and to fit the window with nothing scrolled:
-//   · THE TWO GUNS SIDE BY SIDE, each one tile: its drawing large, its name, the four bars of what it is good at (ui/gunStats.ts), and in the tile's corner
+//   · THE TWO GUNS SIDE BY SIDE, each one tile: its drawing large, its name, the four bars of what it is good at (ui/kitCard.ts), and in the tile's corner
 //     what rides on it as CHIPS — its suppressor, the light, what the launcher fires — lit where fitted or carried (a count beside a round), faint where not;
 //   · A GUN'S TILE OPENS ITS OWN POP-UP (a click on it; Enter with the keys on it): the guns the tile could be, side by side, each with its drawing, its
 //     name and the same four bars under one another so two guns are compared by eye, and under them that gun's fittings and rounds as the tiles they
@@ -9,21 +9,16 @@
 //     tiles and ends over the screen's foot: in a window too short for that it is drawn that much higher, over the foot of the tiles (kitCard.ts fit);
 //   · THE REST OF THE KIT IS ONE LINE OF SMALL TILES — the thing drawn, how many, its name —, the big slot among them;
 //   · THE COLOURS AND THE SETS (suit, trim; Reset, Copy, Paste) are a strip under the kit, and the pouches with the two weight bars one line over it.
-// It is the kit card itself (ui/kitCard.ts memberCard with `dense`: the same rows, values, refusals, lent and idle tiles, copy and paste) in another
+// It is the kit card itself (ui/kitCard.ts memberCard: the same rows, values, refusals, lent and idle tiles, copy and paste) in another
 // lay-out, so nothing of the kit's rules is here. THE KEYS are the card's: W S walk the tiles as they lie — the guns, the kit, the colours, the sets —,
 // A D change the tile the keys are on (a gun's tile: the next gun), and inside a pop-up W S walk the gun and its things, A D change, Esc shuts.
-// THE SWITCH: `KITDENSE.on`, on in the module; `?kitdense=0` on the address = the card as it was. UI only: nothing in the game reads it, nothing of it
-// is in a recording, and the card it lays out is a tree card (game/kittree.ts) — with the tree off the card is the older one whatever this says.
 // Plain strings: nothing at module level uses another module's exports.
-export const KITDENSE = { on: true };
-try { if (new URLSearchParams(location.search).get('kitdense') === '0') KITDENSE.on = false; } catch { /* no page (the harness) */ }
-
 const STYLE_ID = 'kc-dense-style';
 // (`.kc.kc-tree.kc-dense`: one class more than any rule of the start page's for the tree's tiles, so none of these wins by the order of the two sheets)
 const P = '#missions.one #loadout .lo-kit .kc.kc-tree.kc-dense', PL = '#missions.one.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense';
 /** a quiet mission's gear screen (ui/startpage.ts QUIET_CSS), the row the keys are on */
 const QS = '#missions.one.quiet.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense.focus';
-export const DENSE_CSS = `
+const DENSE_CSS = `
 ${P} { display: grid; grid-template-columns: minmax(0, 1fr) !important; row-gap: 6px; padding: 0 0 24px; }
 /* the pouches and the two weight bars: one line over the tiles */
 ${P} .kc-head { grid-column: 1; grid-row: auto; justify-content: flex-start; margin: 0 0 2px; }
@@ -84,7 +79,7 @@ ${P} .kc-pop .kc-kids .kc-val, ${P} .kc-pop .kc-kids .kc-val.num { grid-column: 
 ${P} .kc-pop .kc-kids .kc-val.num { font-size: 16px; }
 ${P} .kc-pop .kc-kids .kc-line button:nth-of-type(1) { grid-column: 2; grid-row: 2; width: 16px; height: 20px; }
 ${P} .kc-pop .kc-kids .kc-line button:nth-of-type(2) { grid-column: 4; grid-row: 2; width: 16px; height: 20px; }
-${P} .kc-pop .kc-kids .kc-row.lent, ${P} .kc-pop .kc-kids .kc-row.idle { grid-column: span 2; }   /* (a count with words beside it: the mission's own, or of no use here) */
+${P} .kc-pop .kc-kids .kc-row.idle { grid-column: span 2; }   /* (a count with words beside it: of no use here) */
 ${P} .kc-pop:has(.kc-row.refused) { padding-bottom: 30px; }
 ${P} .kc-gun > .kc-row > .kc-note { display: none !important; }   /* (a gun's refusal is on the card's own line, or in its open pop-up) */
 ${P} .kc-pop-note { display: none; margin: 8px 0 0 70px; font-size: 12px; line-height: 18px; color: #e8c15a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -99,7 +94,6 @@ ${P} .kc-gear .kc-line button:nth-of-type(2) { grid-column: 3; grid-row: 1; widt
 ${P} .kc-gear .kc-val, ${P} .kc-gear .kc-val.num { grid-column: 1 / -1; grid-row: 2; padding: 0 3px; min-width: 0; text-align: center; font-size: 12px; line-height: 22px; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 ${P} .kc-gear .kc-val:not(.num) { white-space: normal; overflow: visible; line-height: 1.2; }   /* (a long name — the big slot's — takes a second line) */
 ${P} .kc-gear .kc-val.num { font-size: 19px; }
-${P} .kc-gear .kc-row.lent .kc-val.num { font-size: 12px; letter-spacing: 0.02em; }   /* (a count with the mission's word beside it is read whole in a narrow tile, never cut) */
 ${P} .kc-gear .kc-label { grid-column: 1 / -1; grid-row: 3; padding: 0 4px; text-align: center; font-size: 9px; line-height: 1.3; letter-spacing: 0.12em; white-space: normal; overflow: visible; }
 /* the colours and the sets: a strip under the kit */
 ${P} .kc-look { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }

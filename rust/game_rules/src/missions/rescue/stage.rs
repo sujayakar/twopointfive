@@ -1,0 +1,582 @@
+use super::*;                      // your own module: its types, its other parts' functions
+use crate::game::Game;
+use crate::ids::*;
+use crate::js::{self, JsMap, JsSet};
+use crate::m;
+use crate::v3::{self, Quat, V3};
+use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+
+// ── small helpers ──
+
+fn rect_of(b: crate::scene_level::BreachPlanBounds) -> crate::scene_scenarios::Rect {
+    crate::scene_scenarios::Rect { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }
+}
+fn plan_bounds_of(b: crate::scene_scenarios::Rect) -> crate::scene_level::BreachPlanBounds {
+    crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }
+}
+/// `g.level.clearPlans?.find(p => p.door === door)?.bounds`
+fn clear_plan_bounds(g: &Game, door: &str) -> Option<crate::scene_scenarios::Rect> {
+    g.level.clear_plans.as_ref()?.iter().find(|p| p.door == door).and_then(|p| p.bounds).map(rect_of)
+}
+
+/// orders.ts doorWords, by id, or the name its level wrote for it
+pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
+    let d = crate::doors::doors_by_name(g, id_2);
+    let written = match d { Some(d) => crate::doornames::door_written_name(g, d), None => None };
+    match written { Some(s) => s, None => crate::orders::door_id_words(id_2) }
+}
+
+/// checkRescue's `free`: a man can be stood there. False = the place itself is wrong.
+fn check_free(g: &Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
+    let mut q: V3 = [p[0], 0.0, p[2]];
+    crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, None);
+    let pushed = m::hyp2(q[0] - p[0], q[2] - p[2]);
+    let near = crate::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]);
+    let mut prop = None;
+    for i in 0..g.props.props.len() {
+        let pr = g.props.props[i];
+        let row = &g.tab.props_prop[pr];
+        let gap = crate::props::prop_gap(row.home, row.hx, row.hz, p);
+        if gap < 0.3 { prop = Some(pr); break; }
+    }
+    if let Some(pr) = prop { bad.push(format!("{} ({}, {}): standing in {}", what, js::num_str(p[0]), js::num_str(p[2]), g.tab.props_prop[pr].def.name)); }
+    let far = match near { None => true, Some(n) => m::hyp2(n[0] - p[0], n[2] - p[2]) > 0.8 };
+    let why = if pushed > 0.15 { format!("in a wall or fixed furniture (pushed {} m out)", js::to_fixed(pushed, 2)) } else if far { String::from("no walkable floor within a step") } else { String::new() };
+    if !why.is_empty() { bad.push(format!("{} ({}, {}): {}", what, js::num_str(p[0]), js::num_str(p[2]), why)); }
+    why.is_empty()
+}
+/// checkRescue's `way`: joined on foot
+fn check_way(g: &Game, a: V3, b: V3) -> bool {
+    let aa = crate::scene_collision::nav_grid_nearest_free_point(g, a[0], a[2]);
+    let bb = crate::scene_collision::nav_grid_nearest_free_point(g, b[0], b[2]);
+    match (aa, bb) { (Some(aa), Some(bb)) => crate::scene_collision::nav_grid_find_path(g, aa, bb, None, None).is_some(), _ => false }
+}
+/// checkRescue's `line`: his eyes reach the point he covers
+fn check_line(g: &Game, bad: &mut Vec<String>, what: &str, mk: crate::scene_scenarios::ScenarioMark) {
+    if crate::scene_collision::wall_between(g, [mk.pos[0], 1.6, mk.pos[2]], mk.aim_at) { bad.push(format!("{}: no line from his eyes to the point he covers", what)); }
+}
+
+/// The rescue's data against the floor it is laid on. Empty = sound.
+pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios::RescueData>) -> Vec<String> {
+    let given = match s { Some(s) => Some(s.clone()), None => g.level.scenarios.as_ref().and_then(|c| c.rescue.clone()) };
+    let Some(s) = given else { return vec![String::from("this level has no hostage rescue data (its scenarios.rescue block)")]; };
+    let mut bad: Vec<String> = Vec::new();
+    let bb = match s.room.bounds { Some(b) => Some(b), None => clear_plan_bounds(g, &s.room.door) };
+    if crate::doors::doors_by_name(g, &s.room.door).is_none() { bad.push(format!("no door '{}' in the level (the hostage room's)", s.room.door)); }
+    if bb.is_none() { bad.push(format!("the hostage room has no bounds: neither room.bounds nor a clear plan for '{}'", s.room.door)); }
+    let ops: Vec<V3> = s.team.ops.clone().unwrap_or_default();
+    if ops.len() < 2 { bad.push(String::from("team.ops: the pair needs two marks")); }
+    let sam_ok = check_free(g, &mut bad, "team start, the player", s.team.sam);
+    for (i, p) in ops.iter().enumerate() {
+        if check_free(g, &mut bad, &format!("team start, teammate {}", i + 1), *p) && sam_ok && !check_way(g, s.team.sam, *p) {
+            bad.push(format!("team start, teammate {}: no way on foot from the player's mark", i + 1));
+        }
+    }
+    if s.hostages.is_empty() { bad.push(String::from("no hostages")); }
+    for (i, h) in s.hostages.iter().enumerate() {
+        let what = format!("hostage {}", i + 1);
+        if check_free(g, &mut bad, &what, h.pos) {
+            if let Some(b) = bb {
+                if !crate::squad::in_bounds(h.pos, Some(plan_bounds_of(b)), None) { bad.push(format!("{} ({}, {}): outside the hostage room", what, js::num_str(h.pos[0]), js::num_str(h.pos[2]))); }
+            }
+        }
+    }
+    let mut men: Vec<(String, crate::scene_scenarios::ScenarioMark, bool)> = vec![
+        (String::from("the captor"), s.captor, true),
+        (String::from("the door man, inside"), s.door_man.inside, true),
+        (String::from("the door man, outside"), s.door_man.outside, false),
+    ];
+    if let Some(guards) = &s.guards { for (i, r) in guards.iter().enumerate() { men.push((format!("room guard {}", i + 1), *r, true)); } }
+    for (i, r) in s.roamers.iter().enumerate() { men.push((format!("roamer {}", i + 1), *r, false)); }
+    for (what, mk, inside) in men.iter() {
+        if !check_free(g, &mut bad, what, mk.pos) { continue; }
+        if let Some(b) = bb {
+            if *inside != crate::squad::in_bounds(mk.pos, Some(plan_bounds_of(b)), None) {
+                bad.push(format!("{} ({}, {}): {} the hostage room", what, js::num_str(mk.pos[0]), js::num_str(mk.pos[2]), if *inside { "outside" } else { "inside" }));
+            }
+        }
+        if what != "the door man, outside" { check_line(g, &mut bad, what, *mk); }
+        if sam_ok && !check_way(g, s.team.sam, mk.pos) { bad.push(format!("{}: no way on foot from the team's start", what)); }
+    }
+    if let Some(side) = &s.side {
+        if crate::doors::doors_by_name(g, &side.door).is_none() { bad.push(format!("no door '{}' in the level (the side door)", side.door)); }
+        if let Some(from) = &side.from {
+            if crate::doors::doors_by_name(g, &from.door).is_none() { bad.push(format!("no door '{}' in the level (the room the side door is taken from)", from.door)); }
+        }
+        for (k, list) in [("stack", &side.stack), ("standoff", &side.standoff)] {
+            if let Some(list) = list {
+                for (i, p) in list.iter().enumerate() { check_free(g, &mut bad, &format!("side door {} mark {}", k, i + 1), *p); }
+            }
+        }
+    }
+    if let Some(flow) = &s.flow {
+        for o in flow.route.iter() {
+            if !flow.regions.iter().any(|r| r.id == o.region) { bad.push(format!("route opening '{}': no region '{}'", o.id, o.region)); }
+        }
+        let was = crate::rescueflow::rescue_flow_check(g);
+        for w in was { bad.push(format!("route \u{2014} {}", w)); }
+    }
+    bad
+}
+
+/// A new one: the field initialisers, and its three helpers.
+pub fn rescue_new() -> crate::rescue::Rescue {
+    let mut r = Rescue::blank();
+    r.flow = Box::new(crate::rescueflow::rescue_flow_new());
+    r.ending = crate::rescueend::rescue_end_new();
+    r.flush = crate::rescueflush::rescue_flush_new();
+    r
+}
+
+/// What the scenario takes from the level it stands on.
+pub(in crate::missions) fn rescue_data(g: &crate::game::Game) -> Option<crate::scene_scenarios::RescueData> {
+    g.level.scenarios.as_ref().and_then(|c| c.rescue.clone())
+}
+
+/// The hostage room's floor inside its walls.
+pub fn rescue_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
+    let s = rescue_data(g);
+    if let Some(b) = s.as_ref().and_then(|s| s.room.bounds) { return Some(b); }
+    if let Some(p) = &g.rescue.plan { return p.bounds.map(rect_of); }
+    match &s { Some(s) => clear_plan_bounds(g, &s.room.door), None => None }
+}
+
+/// The room the side door is taken from.
+pub fn rescue_from_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
+    let s = rescue_data(g)?;
+    let f = s.side.as_ref()?.from.as_ref()?;
+    match f.bounds { Some(b) => Some(b), None => clear_plan_bounds(g, &f.door) }
+}
+
+fn out_of_snap(x: f64) -> f64 {
+    if m::abs(x) < 1e-9 { 0.0 } else if m::abs(m::abs(x) - 1.0) < 1e-9 { m::sign(x) } else { x }
+}
+/// `dist` out of a door's frame on the side away from a room.
+pub(super) fn rescue_out_of(g: &crate::game::Game, d: DoorId, room: Option<crate::scene_scenarios::Rect>, dist: f64) -> V3 {
+    let th = g.dr[d].def.closed_dir;
+    let s = match room {
+        Some(r) => -crate::orders::side_of(g, d, [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]),
+        None => 1.0,
+    };
+    let fc = g.dr[d].frame_centre;
+    [fc[0] + out_of_snap(-m::sin(th)) * s * dist, 0.0, fc[2] + out_of_snap(m::cos(th)) * s * dist]
+}
+
+/// The floor just outside the hostage room's main door, or the point its first man in holds.
+pub(super) fn rescue_room_point(g: &crate::game::Game, which: crate::rescue::RescueRoomPointWhich) -> V3 {
+    let s = rescue_data(g).unwrap();
+    let given = match which { RescueRoomPointWhich::Outside => s.room.outside, RescueRoomPointWhich::Hold => s.room.hold };
+    if let Some(p) = given { return v3::copy(p); }
+    let d = crate::doors::doors_by_name(g, &s.room.door);
+    let a = s.room.door_aim;
+    let k = if which == RescueRoomPointWhich::Outside { 1.0 } else { 0.4 };
+    let Some(d) = d else { return [a[0], 0.0, a[2]]; };
+    let b = rescue_bounds(g);
+    let o = rescue_out_of(g, d, b, k);
+    let fc = g.dr[d].frame_centre;
+    [a[0] + (o[0] - fc[0]), 0.0, a[2] + (o[2] - fc[2])]
+}
+
+/// Is it up.
+pub fn rescue_up(g: &crate::game::Game) -> bool { g.staged.up == Some(crate::scene_scenarios::MissionKind::Rescue) }
+
+/// Why it cannot start right now (None = it can).
+fn rescue_can_start(g: &crate::game::Game) -> Option<String> {
+    let s = rescue_data(g);
+    if crate::quiet::quiet_of(g) { return Some(String::from("a quiet mission is up on this floor (quit it first)")); }
+    let Some(s) = s else { return Some(String::from("this level has no hostage rescue data (its scenarios.rescue block)")); };
+    if s.team.ops.as_ref().map_or(0, |o| o.len()) < 2 { return Some(String::from("this level's rescue block has no start marks for the pair (team.ops needs two)")); }
+    if rescue_bounds(g).is_none() { return Some(format!("this level has no clear plan for the '{}' door", s.room.door)); }
+    if crate::doors::doors_by_name(g, &s.room.door).is_none() { return Some(format!("the door '{}' is not in the level", s.room.door)); }
+    if !g.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
+    if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) \u{2014} nobody would move")); }
+    if let Some(run) = g.director.run {
+        if !g.tab.director_run[run].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[run].name)); }
+    }
+    if crate::nightbreach::night_breach_up(g) {
+        return Some(String::from(if crate::roomclear::room_clear_scenario_active(g) { "the room clear is staged" } else { "the night breach is staged" }));
+    }
+    if g.guards.iter().any(|x| g.gd[*x].unit.is_some()) { return Some(String::from("a spawned unit is already on the floor")); }
+    None
+}
+
+/// Start it. Returns the reason when refused or when the staging failed.
+pub(in crate::missions) fn rescue_start(g: &mut crate::game::Game) -> Option<String> {
+    if crate::rescue::rescue_up(g) { return None; }
+    if let Some(why) = rescue_can_start(g) { return Some(why); }
+    {
+        let t = rescue_data(g).unwrap().team;
+        let same = g.m.rescue.applied.as_ref().map_or(false, |a| crate::nightbreach::same_team(a, &t));
+        if !same {
+            let ops = t.ops.clone().unwrap();
+            g.k.rescue.sam_at = t.sam;
+            g.k.rescue.sam_yaw = t.sam_yaw;
+            g.k.rescue.ops_at = [ops[0], ops[1]];
+            g.m.rescue.applied = Some(t);
+        }
+    }
+    rescue_bench(g);
+    crate::civilians::civilians_leave(g);
+    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, ..Default::default() });
+    g.rescue.staged = 0.0;
+    g.rescue.log.clear();
+    g.rescue.failure = None;
+    rescue_stage(g);
+    if crate::rescue::rescue_up(g) { None } else { Some(g.rescue.failure.clone().unwrap_or_else(|| String::from("the staging failed"))) }
+}
+
+/// Stop it: the cast gone, the shift back.
+fn rescue_stop(g: &mut crate::game::Game) {
+    if !crate::rescue::rescue_up(g) { return; }
+    g.staged.down();
+    rescue_clear_cast(g);
+    if let Some(mut benched) = g.rescue.benched.take() {
+        for gd in benched.iter() {
+            let l = g.gd[*gd].flashlight;
+            if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(g, l); }
+        }
+        benched.extend_from_slice(&g.guards);
+        g.guards = benched;
+    }
+    crate::civilians::spawn_civilians(g);
+}
+
+/// Stage it; a staging that fails ends it cleanly.
+fn rescue_stage(g: &mut crate::game::Game) {
+    if let Err(e) = stage_tried(g) {
+        let failure = format!("the staging failed: {}", e);
+        g.rescue.failure = Some(failure.clone());
+        rescue_stop(g);
+    }
+}
+
+/// Who has the pair.
+pub fn rescue_mode(g: &crate::game::Game) -> crate::rescue::RescueMode {
+    if g.rescue.entry.is_some() { RescueMode::Door } else { RescueMode::Free }
+}
+
+/// F's entry has this man right now.
+pub(in crate::missions) fn rescue_owns(g: &crate::game::Game, gd: GuardId) -> bool {
+    if !crate::rescue::rescue_up(g) { return false; }
+    let Some(e) = &g.rescue.entry else { return false; };
+    e.ops.iter().any(|x| x.ended.is_none() && g.tab.doortools_door_op[x.op].men.contains(&gd))
+}
+
+/// The shift off the floor, lights out, kept for stop().
+fn rescue_bench(g: &mut crate::game::Game) {
+    let staff: Vec<GuardId> = g.guards.iter().copied().filter(|x| g.gd[*x].unit.is_none()).collect();
+    if staff.is_empty() { return; }
+    for gd in staff.iter() {
+        let l = g.gd[*gd].flashlight;
+        g.tab.light[l].enabled = false;
+        crate::render_lights::light_set_remove(g, l);
+    }
+    let mut benched = g.rescue.benched.take().unwrap_or_default();
+    benched.extend_from_slice(&staff);
+    g.rescue.benched = Some(benched);
+    let kept: Vec<GuardId> = g.guards.iter().copied().filter(|x| g.gd[*x].unit.is_some()).collect();
+    g.guards = kept;
+}
+
+/// The cast gone and everything kept about it forgotten.
+fn rescue_clear_cast(g: &mut crate::game::Game) {
+    let mut men = g.staged.team.clone();
+    men.extend_from_slice(&g.staged.foes);
+    for gd in men {
+        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Patrol)); }
+        crate::guards::despawn_unit(g, gd);
+    }
+    let hostages = g.staged.captives.clone();
+    g.civilians.retain(|c| !hostages.contains(c));
+    crate::enemysquads::squads_stop(g);
+    g.staged.team = Vec::new();
+    g.staged.foes = Vec::new();
+    g.staged.captives = Vec::new();
+    g.rescue.entry = None;
+    g.rescue.defs.clear();
+    g.rescue.act = None;
+    g.rescue.search_t.clear();
+    g.rescue.search_a.clear();
+    crate::rescueflow::rescue_flow_reset(g);
+    crate::rescueend::rescue_end_reset(g);
+    crate::rescueflush::rescue_flush_reset(g);
+    rescue_marks(g, false);
+}
+
+/// The scenario's own additions to the squad's door work: the side door's marks and the room's two doors linked.
+fn rescue_marks(g: &mut crate::game::Game, on: bool) {
+    let s = rescue_data(g);
+    let side = s.as_ref().and_then(|s| s.side.clone());
+    let fd = match &s { Some(s) => crate::doors::doors_by_name(g, &s.room.door), None => None };
+    let sd = match &side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
+    let mut i = g.sets[g.seat].orders.door_marks.len();
+    while i > 0 {
+        i -= 1;
+        if sd == Some(g.sets[g.seat].orders.door_marks[i].door) { g.sets[g.seat].orders.door_marks.remove(i); }
+    }
+    g.sets[g.seat].door_tools.linked.retain(|d| Some(*d) != fd && Some(*d) != sd);
+    g.sets[g.seat].door_tools.lights = None;
+    if !on { return; }
+    if let (Some(sd), Some(x)) = (sd, side.as_ref()) {
+        if let Some(stack) = x.stack.as_ref().filter(|st| !st.is_empty()) {
+            let face = rescue_face_of(g, sd);
+            g.sets[g.seat].orders.door_marks.push(crate::orders::SquadOrdersDoorMarksItem {
+                door: sd, side: face, stack: stack.clone(),
+                standoff: x.standoff.clone().unwrap_or_else(|| stack.clone()),
+            });
+        }
+    }
+    if let Some(d) = fd { g.sets[g.seat].door_tools.linked.push(d); }
+    if let Some(d) = sd { g.sets[g.seat].door_tools.linked.push(d); }
+}
+
+/// The face of one of the room's doors that is not the room's.
+pub(super) fn rescue_face_of(g: &crate::game::Game, d: DoorId) -> f64 {
+    match rescue_bounds(g) {
+        Some(b) => -crate::orders::side_of(g, d, [(b.x0 + b.x1) / 2.0, 0.0, (b.z0 + b.z1) / 2.0]),
+        None => 1.0,
+    }
+}
+
+/// One of the cast before he is spawned
+struct CastRow { role: Role, in_room: bool, mark: crate::scene_scenarios::ScenarioMark, name: String }
+
+/// The staging; Err is the message of what the staging throws, spawning a unit's among them.
+fn stage_tried(g: &mut Game) -> Result<(), String> {
+    let Some(s) = rescue_data(g) else { return Err(String::from("the level has no hostage rescue data")); };
+    forget_the_last_staging(g);
+    g.rescue.plan = g.level.clear_plans.as_ref().and_then(|l| l.iter().find(|p| p.door == s.room.door).cloned());
+    rescue_marks(g, true);
+    let sv = match s.side.as_ref().and_then(|x| x.from.as_ref()) { Some(f) => crate::doors::doors_by_name(g, &f.door), None => None };
+    g.rescue.server_out = sv.map(|sv| rescue_out_of(g, sv, rescue_from_bounds(g), 1.0));
+    crate::roomfight::room_fight_reset(g);
+    g.fight.blind_fire = true;
+    shut_the_doors(g, &s)?;
+    let cast = the_opposition(g, &s);
+    spawn_the_opposition(g, &cast)?;
+    deal_them_their_guns(g, &cast);
+    let cap_set = g.k.rescue.start == crate::knobs::RescueKStart::Hot;
+    if cap_set {
+        let captor = g.staged.foes[0];
+        g.rescue.defs.get_mut(captor).unwrap().set = true;
+    }
+    spawn_the_team(g, &s)?;
+    spawn_the_hostages(g, &s);
+    wind_the_clock_back(g);
+    put_sam_on_his_mark(g);
+    g.rescue.staged += 1.0;
+    g.rescue.said.clear();
+    g.rescue.cut = true;
+    g.rescue.murmur_at = g.time + 4.0;
+    g.rescue.murmur_n = 0.0;
+    g.rescue.ack_at = f64::NAN;
+    let ops = g.staged.team.clone();
+    crate::kit::kit_stage(g, &ops);
+    rescue_note(g, "staged");
+    if cap_set {
+        let callsign = g.gd[g.staged.foes[0]].callsign.clone();
+        rescue_note(g, &format!("set:{}", callsign));
+    }
+    Ok(())
+}
+
+/// Nobody on the floor yet, and nothing kept from the last time it was staged.
+fn forget_the_last_staging(g: &mut Game) {
+    g.staged.team = Vec::new();
+    g.staged.foes = Vec::new();
+    g.staged.captives = Vec::new();
+    g.rescue.entry = None;
+    g.rescue.defs.clear();
+    g.rescue.called = false;
+    g.rescue.search_t.clear();
+    g.rescue.search_a.clear();
+    crate::rescueflow::rescue_flow_reset(g);
+    crate::rescueend::rescue_end_reset(g);
+    crate::rescueflush::rescue_flush_reset(g);
+}
+
+/// The hostage room's door shut on its latch (the night leaves it ajar); the side door from the server room shut too, and for the scenario not locked.
+fn shut_the_doors(g: &mut Game, s: &crate::scene_scenarios::RescueData) -> Result<(), String> {
+    let Some(d) = crate::doors::doors_by_name(g, &s.room.door) else { return Err(String::from("Cannot read properties of undefined (reading 'reset')")); };
+    crate::breach::shut(g, d);
+    let side = match &s.side { Some(x) => crate::doors::doors_by_name(g, &x.door), None => None };
+    if let Some(sd) = side {
+        crate::breach::shut(g, sd);
+        g.dr[sd].leaf.locked = false;
+    }
+    Ok(())
+}
+
+/// The opposition: captor, door man, room guards, then the roamers on the first marks as written (the die is drawn all the same).
+fn the_opposition(g: &Game, s: &crate::scene_scenarios::RescueData) -> Vec<CastRow> {
+    let mut cast: Vec<CastRow> = vec![CastRow { role: Role::Captor, in_room: true, mark: s.captor, name: String::from("Captor") }];
+    if g.k.rescue.door_man == crate::knobs::RescueKDoorMan::Inside {
+        cast.push(CastRow { role: Role::Door, in_room: true, mark: s.door_man.inside, name: String::from("Door man") });
+    } else {
+        cast.push(CastRow { role: Role::Door, in_room: false, mark: s.door_man.outside, name: String::from("Door man") });
+    }
+    if let Some(guards) = &s.guards {
+        for (i, mk) in guards.iter().enumerate() { cast.push(CastRow { role: Role::Guard, in_room: true, mark: *mk, name: format!("Room guard {}", i + 1) }); }
+    }
+    let roamers = match &s.cast { Some(c) => c.roamers, None => g.k.rescue.roamers };
+    let n = m::max(0.0, m::min(s.roamers.len() as f64, m::round(roamers))) as usize;
+    for i in 0..n { cast.push(CastRow { role: Role::Roamer, in_room: false, mark: s.roamers[i], name: format!("Roamer {}", i + 1) }); }
+    cast
+}
+
+/// Each of them on his mark, held and pinned until the rescue lets him go.
+fn spawn_the_opposition(g: &mut Game, cast: &[CastRow]) -> Result<(), String> {
+    let budget = crate::seats::budget_with_seats(g, 1.0 + cast.len() as f64);
+    for (k, c) in cast.iter().enumerate() {
+        let gd = crate::guards::spawn_unit(g, &crate::guards::UnitOpts {
+            team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
+            name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::default()
+        })?;
+        crate::control::set_hold(g, gd, true, "rescue");
+        crate::control::set_pinned(g, gd, true, "rescue");
+        g.staged.foes.push(gd);
+        g.rescue.defs.set(gd, Def {
+            role: c.role, in_room: c.in_room, mark: DefMark { aim_at: c.mark.aim_at },
+            learned: f64::NAN, set: false, saw_foe: false, released: false,
+            burst: crate::nightbreach::BlindBurst { until: -1.0, n: 0.0, next: 0.0 },
+            k: k as f64, crew: DefCrew::Empty, look: None, spot: None, noise0: None,
+        });
+    }
+    Ok(())
+}
+
+/// Their guns, their squads by rooms; the men with the hostages are the rescue's to lead.
+fn deal_them_their_guns(g: &mut Game, cast: &[CastRow]) {
+    let deal: Vec<crate::gunroles::DealMan> = g.staged.foes.iter().enumerate().map(|(k, gd)| crate::gunroles::DealMan {
+        gd: *gd, watch: cast[k].mark.aim_at, hostage: Some(cast[k].role == Role::Captor),
+    }).collect();
+    crate::gunroles::gun_deal(g, &deal);
+    let men = g.staged.foes.clone();
+    crate::squaddeal::squads_by_rooms(g, &men);
+    for &h in &men {
+        if g.rescue.defs.get(h).map_or(false, |d| d.in_room) {
+            let t = g.time;
+            crate::owner::claim(g, h, crate::owner::by::MISSION, t, None);
+        }
+    }
+}
+
+/// The team at the lobby arch.
+fn spawn_the_team(g: &mut Game, s: &crate::scene_scenarios::RescueData) -> Result<(), String> {
+    let yaw = s.team.ops_yaw.unwrap_or(m::PI / 2.0);
+    let at = team_marks(g, s, yaw);
+    let squad = g.k.rescue.squad;
+    let mut i = 0usize;
+    while (i as f64) < squad {
+        let row = if squad > 2.0 { crate::nightbreach::squad4().get(i).cloned() } else { None };
+        let n = crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64;   // (a man a seat, this new teammate, everyone standing)
+        let opts = match row {
+            Some(r) => crate::guards::UnitOpts {
+                team: crate::teams::Team::Ours, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
+                pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
+                budget: Some(m::max(crate::nightbreach::squad4_budget(g), n)), ..crate::guards::UnitOpts::default()
+            },
+            None => crate::guards::UnitOpts {
+                team: crate::teams::Team::Ours, pos: at[i], yaw: Some(yaw),
+                name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
+                budget: Some(n), ..crate::guards::UnitOpts::default()
+            },
+        };
+        let gd = crate::guards::spawn_unit(g, &opts)?;
+        crate::control::set_hold(g, gd, true, "rescue");
+        crate::control::set_pinned(g, gd, true, "rescue");
+        g.gd[gd].trained = true;
+        g.staged.team.push(gd);
+        i += 1;
+    }
+    Ok(())
+}
+
+/// Where each of the squad starts: the pair's two marks, then a mark of the level's own, or a place found beside the man two ahead of him.
+fn team_marks(g: &Game, s: &crate::scene_scenarios::RescueData, yaw: f64) -> Vec<V3> {
+    let mut at: Vec<V3> = vec![g.k.rescue.ops_at[0], g.k.rescue.ops_at[1]];
+    let squad = g.k.rescue.squad;
+    let mut i = 2usize;
+    while (i as f64) < squad {
+        let mine = s.team.ops.as_ref().and_then(|o| o.get(i).copied());
+        let p = match mine {
+            Some(p) => v3::copy(p),
+            None => {
+                let mut taken = at.clone();
+                taken.push(g.k.rescue.sam_at);
+                crate::nightbreach::night_breach_stand_by(g, at[i - 2], &taken, Some(yaw))
+            }
+        };
+        at.push(p);
+        i += 1;
+    }
+    at
+}
+
+/// The hostages: the building's own civilians' names and clothes when the level has them.
+fn spawn_the_hostages(g: &mut Game, s: &crate::scene_scenarios::RescueData) {
+    let defs = g.level.civilians.clone().unwrap_or_default();
+    for (i, h) in s.hostages.iter().enumerate() {
+        let cd = defs.get(i);
+        let name = match cd {
+            Some(c) => c.name.clone(),
+            None => match ["Marta", "Owen", "Ines"].get(i) { Some(n) => String::from(*n), None => format!("Hostage {}", i + 1) },
+        };
+        let kind = match cd {
+            Some(c) => c.kind,
+            None => if i == 0 { crate::scene_level::CivilianDefKind::Cleaner } else { crate::scene_level::CivilianDefKind::Worker },
+        };
+        let tint = match cd {
+            Some(c) => c.tint,
+            None => if i == 0 { [0.3, 0.42, 0.5] } else if i == 1 { [0.5, 0.48, 0.42] } else { [0.46, 0.33, 0.36] },
+        };
+        let hostage = crate::civilians::spawn_hostage(g, &crate::civilians::SpawnHostageDef {
+            name, kind, tint, tint2: cd.and_then(|c| c.tint2), pos: h.pos, face: h.face,
+        });
+        g.staged.captives.push(hostage);
+    }
+}
+
+/// The rescue's own state as it stands before anybody has moved.
+fn wind_the_clock_back(g: &mut Game) {
+    g.rescue.resolve = 0.0;
+    g.rescue.resolve_secs = m::max(5.0, g.k.rescue.resolve_secs);
+    g.rescue.t0 = f64::NAN;
+    g.rescue.blind_rounds = 0.0;
+    g.rescue.result = None;
+    (g.staged.over, g.staged.saved) = (false, None);
+    g.rescue.act = None;
+    g.rescue.cap_by = None;
+    g.rescue.executed.clear();
+    g.rescue.counted.clear();
+    g.rescue.secured_at = f64::NAN;
+    g.rescue.step = RescueStep::Waiting;
+    g.rescue.bark_at = 0.0;
+    g.rescue.noise = None;
+    g.rescue.noise_serial = None;
+    g.rescue.alarm_at = f64::NAN;
+    g.rescue.way = None;
+    g.rescue.last_order = g.sets[g.seat].orders.log.last().map(|o| o.serial);
+}
+
+/// Sam at the start, facing in, rifle in his hands if he has one.
+fn put_sam_on_his_mark(g: &mut Game) {
+    let pl = g.player;
+    let sam_at = g.k.rescue.sam_at;
+    crate::game::game_teleport_player(g, v3::copy(sam_at));
+    let c = g.pl[pl].ch;
+    let sam_yaw = g.k.rescue.sam_yaw;
+    g.ch[c].aim_yaw = sam_yaw;
+    g.ch[c].body_yaw = sam_yaw;
+    if g.pl[pl].has_rifle { g.pl[pl].slot = crate::game::SlotKind::Rifle; }
+    g.pl[pl].holstered = false;
+}
+
+/// The hostage room in words.
+pub(super) fn rescue_place(g: &crate::game::Game) -> String {
+    let Some(s) = rescue_data(g) else { return String::from("hostage room"); };
+    match s.room.where_.as_deref() {
+        Some(w) if !w.is_empty() => format!("{}, {}", s.room.name, w),
+        _ => s.room.name,
+    }
+}

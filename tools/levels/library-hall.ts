@@ -1,8 +1,8 @@
 // LIBRARY-HALL: the SHOWROOM OF THE OLDER KITS — NOT a level to play for its own sake and not in the missions list. An open floor with one of every piece of
-// the office's kit (src/scene/officeGen.ts officeKit), the loud levels' lived kit (livedKit.ts), the furniture of the records levels (livedPieces.ts), the
+// the office's kit (lib/officeGen.ts officeKit), the loud levels' lived kit (livedKit.ts), the furniture of the records levels (livedPieces.ts), the
 // quiet pair's pen (lived-quiet.ts) and the training furniture (lived-train.ts), so each can be exported, looked at on the page
 // (?levelFile=library-hall.json&solo&hour=midday) and drawn into the catalogue (docs/library.md, tools/levels/library.ts). The look's own kit stands in its
-// own showroom, levels/gwot-yard.json (the pieces that one does not stand are here, by the car and on a stretch of their own): between the two, every piece of the library stands once, and `library.ts --check` is red when one does not.
+// own showroom, tools/levels/gwot-yard.ts (the pieces that one does not stand are here, by the car and on a stretch of their own): between the two, every piece of the library stands once, and `library.ts --check` is red when one does not.
 // It is also the worked example of each call: a level task reads a piece's line here and copies it.
 //
 //        x 0   4          11                                    40
@@ -15,14 +15,13 @@
 //   z 19 │  ▒▒▒▒ livedQuiet ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ │
 //   z 22 │  ░░░░ livedTrain ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
 //   z 28 └────────────────────────────────────────────────────────┘      the man starts in the west aisle (x under 3)
-// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (src/scene/lived.ts): the tail of the lists, left out with the switch off. So on the frozen stand the hall is
-// the hut and the bare grounds.
+// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (lib/lived.ts): the tail of the lists.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS, type GwotMat } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, Rect } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS, type GwotMat } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit, LIVED_PAINT } from './livedKit';
@@ -81,8 +80,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   K.ceilingPanel(7.5, 3.5, true, 'hut');
   grp('yard.office');
   K.bench(13.6, 2.2, 0); K.car(18.6, 3.6, 0.08, C.partBlue);
-  // THE LOOK'S KIT: the pieces its own showroom does not stand (gwot-yard's kept part is held as it is by lived-check, so a piece the look's kit gains is
-  // stood HERE): three by the car, and the newer ground pieces a bay each on their own stretch
+  // THE LOOK'S KIT: the pieces its own showroom does not stand (gwot-yard's kept part stays as it is, so a piece the look's kit gains is
+  // stood HERE): three by the car, the newer ground pieces a bay each on their own stretch, and its yard lamp with the hall's own lamps below
   grp('yard.gwot');
   G.drum(22.6, 2.2, 'drumRed', 0.3); G.van(28.4, 3.6, 0, 'truckWhite'); G.partX(3.6, 32.6, 36.6, 'whitewash');
   { let x: number, z: number;
@@ -97,7 +96,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     [x, z] = bayGwot(2.4); G.log(x, z - 0.35, 0.2, 1.0); G.log(x, z + 0.3, -0.15, 1.2, 0.13); G.choppingBlock(x + 0.9, z + 0.1, 0.4);
   }
   // A WALL'S FACE, and what the kit does to one: a stretch of mud wall with six windows along the hall's north edge. Each of the three ways to dress a window
-  // stands twice, SHUT and OPEN (a level lays the open one where a defender watches: tools/qa/marksight-check.ts); the mends, the spout, the roof's beam
+  // stands twice, SHUT and OPEN (a level lays the open one where a defender watches: rust/game_start levels sight); the mends, the spout, the roof's beam
   // ends, the split wood, the ladder; and by its foot the bench, the pot and the loose bricks
   grp('front.gwot');
   { const Z = 0.6, wins: [number, number][] = [[13.0, 14.2], [15.4, 16.6], [17.8, 19.0], [20.2, 21.4], [22.6, 23.8], [25.0, 26.2]];
@@ -110,9 +109,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     G.splitWood('x', Z, 26.3, 27.15, 1, 3); G.ladder('x', Z, 24.4, 1);
     G.plankBench(17.0, Z + 0.5, 0); G.pot(17.25, Z + 0.5, 0.41); G.bricks(12.7, Z + 0.45, 0.1, 6);
   }
-  // the hall's own light: the moon, and four floodlights that all throw the same way (one key: no lamp fills another's shadows), so the pieces stand lit at night too
+  // the hall's own light: the moon, and four floodlights that all throw the same way (one key: no lamp fills another's shadows), so the pieces stand lit at night too (the yard lamp shown in the north-east corner throws its pool straight down there, on no piece)
   grp('exterior.lamps');
   for (const [i, x] of [8, 17, 26, 35].entries()) G.floodLight(x, i % 2 ? 19.0 : 11.7, [0.3, 1], `flood_${i}`, true);
+  G.yardLamp(38.8, 4.8, 'lamp_yard');                                                         // the look's kit's yard lamp (the head hangs here: the pole is 0.6 m north), in the north-east corner past the car's row
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
   // the breaker and one emergency beacon: the game's blackout wants both
   grp('breaker');

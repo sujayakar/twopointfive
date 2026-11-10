@@ -1,34 +1,37 @@
-// THE TWO CHARGES — a small level for ONE idea: two timed charges in rooms well apart, both on one clock (75 s) that two pairs working both wings at once
-// beat with room to spare and the whole squad going to one and then the other beats less than half the time (red to one wing, blue to the other: T, then
-// the door orders — or the player takes a charge himself and sends the four to the other). Rooms, doors and charges are named 1 and 2, the numbers the look
-// file paints at the doors: the HUD has no compass. A low house of five rooms: a hall along the front, and off it two
-// wings, each a room and the workshop behind it where a charge stands on the bench. TWO WAYS TO EACH CHARGE: through the hall and the wing's room (two doors,
-// the room's men met on the way), or round the outside of the house to the workshop's own back door in its end wall (one door — and the room's men behind you
-// while you work). The wings share no door: from one charge to the other is back through the hall, or round the house.
+// THE TWO WORKSHOPS: a low house of five rooms, a room clear. It was the two charges' level, and that mission is out, so no row of the list opens it. A hall along
+// the front, and off it two wings, each a room and the workshop behind it. TWO WAYS TO EACH WORKSHOP: through the hall and the wing's room (two doors), or round the
+// outside of the house to the workshop's own back door in its end wall. The wings share no door: from one workshop to the other is back through the hall, or round the house.
 //
 //          x=6        x=12          x=20          x=28        x=34
 //   z=7    +----------+-------------+-------------+-----------+
 //          | WEST     |  WEST       |  EAST       | EAST      |
-//          | WORKSHOP d  ROOM       |  ROOM       d WORKSHOP  |      d = a door · the charges stand on the benches on the north wall
-//   (back) d charge 1 |             |             | charge 2  d (back)
+//          | WORKSHOP d  ROOM       |  ROOM       d WORKSHOP  |      d = a door · the benches stand on the north wall
+//   (back) d          |             |             |           d (back)
 //   z=13   +----------+----d--------+--------d----+-----------+
 //          |                 HALL (nobody holds it)           |
 //   z=17   +--WW--------------------d(front)-------------WW---+
 //                       the team forms up in the dark lot to the south
 //
-// What makes the idea true is in the file's `scenarios.defuse` block (scene/scenarios.ts DefuseData, read by game/defuse.ts): the two charges and the one clock.
 // The room clear is the level's `scenarios.roomClear` as on any level. Regenerate: bun run tools/levels/export.ts defuse
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a bomb maker's house — mud outside, whitewash in, bare slab in the two workshops. What it alone has: FIRING WIRE. A twin lead in copper runs
+// along the floor from each bench, out through its wing's two doors, to one battery plate in the middle of the hall (two runs parting from one point), with a painted 1 and 2 at the workshop doors, inside and at the back doors (the rooms'
+// numbers). No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
-import type { DefuseData, KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import * as K from '../../src/scene/levelKit';
+import type { Level } from './lib/level';
+import type { KitViewData, LevelScenarios, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
-import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'defuse';
-export const NOTES = 'The two charges: a defuse mission\'s own level. Two wings off one hall, a timed charge on the bench in the far room of each, one clock for both. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse';
+const PLAIN_NOTES = 'A room clear in a low house: two wings off one hall, a workshop in the far room of each. Kit pieces only. Regenerate: bun run tools/levels/export.ts defuse';
 
 /** The rooms INSIDE their walls and the doors each is entered by: data about the level, kept beside the generator that makes them true. */
 export const DEFUSE_ROOMS = {
@@ -41,11 +44,10 @@ export const DEFUSE_ROOMS = {
 /** where the team forms up: the dark lot south of the front door */
 export const DEFUSE_START: Vec3 = [20.0, 0, 22.4];
 
-/** the bench a charge stands on: its middle on the north wall, and the point on the charge a hand goes to */
+/** the workshops' bench: its middle on the north wall */
 const BENCH_Z = 7.47, BENCH_D = 0.7, BENCH_TOP = 0.76, WEST_X = 8.5, EAST_X = 31.5;
-const chargeAt = (x: number): Vec3 => [x, BENCH_TOP + 0.08, BENCH_Z + 0.18];
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
  *  A mark's place implies its facing: a man stands across the room from the door he fears. No breach plan, so no F drill: the team's start is here. */
 export const DEFUSE_STRUCTURE: StructureData = {
   name: 'the house', maxMen: 8,
@@ -82,20 +84,11 @@ export const DEFUSE_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE IDEA (scene/scenarios.ts DefuseData — game/defuse.ts): the two charges and their one clock. The clock is set where two pairs working both wings at once
- *  have room to spare and the whole squad working one and then the other only sometimes makes it (tools/qa/defuse-run.ts measures both). The names are the
- *  numbers painted at the workshop doors: the HUD has no compass and the camera turns. */
-export const DEFUSE_CHARGES: DefuseData = {
-  secs: 75, workSecs: 6,
-  devices: [
-    { id: 'one', name: 'charge 1', pos: chargeAt(WEST_X), n: [0, 1] },
-    { id: 'two', name: 'charge 2', pos: chargeAt(EAST_X), n: [0, 1] },
-  ],
-};
-
 // THE TEAM & KIT PICTURE (scenarios.kitView): a set of the house's own front, on the front wall's own line and door. The real door plans clean, but the
-// thing the level is about (the firing wire down the hall, the charges in the back rooms) is out of the picture's reach behind it: the set brings the
-// wire, its battery plate, a charge and the bench it was built on to the wall the stack stands on, under one warm bulb.
+// firing wire down the hall is out of the picture's reach behind it: the set brings the
+// wire, its battery plate, a dead charge and the bench it was built on to the wall the stack stands on, under one warm bulb.
+/** the firing wire's copper. The palette has no paint of this hue, so it is a colour of this file's own and only decals and the kit view's set wear it; the outside door's paint is
+ *  this, darker: rust/game_rules/src/fittings/doors/paint.rs */
 const COPPER: [number, number, number] = [0.46, 0.21, 0.07];
 const DEFUSE_KITVIEW: KitViewData = {
   sets: { front: { ref: [20.25, 20],
@@ -141,7 +134,7 @@ const DEFUSE_KITVIEW: KitViewData = {
       group: 'df', enabled: true, volumetric: 0, radius: 0.06, mains: false, fixture: 'df_bulb' }] } },
   ways: [{ door: 'df_front', set: 'front', pane: false, light: { porch: { intensity: 9, color: [1, 0.66, 0.36] }, fill: { intensity: 3.2 } } }] };
 
-export const DEFUSE_SCENARIOS: LevelScenarios = { roomClear: DEFUSE_STRUCTURE, defuse: DEFUSE_CHARGES, kitView: DEFUSE_KITVIEW,
+export const DEFUSE_SCENARIOS: LevelScenarios = { roomClear: DEFUSE_STRUCTURE, kitView: DEFUSE_KITVIEW,
   places: { areas: [{ name: DEFUSE_ROOMS.hall.name, bounds: { ...DEFUSE_ROOMS.hall.bounds } }] } };
 
 /** What tools/levels/export.ts writes levels/defuse.json from: the Level, the file's scenarios block, the editor group of every box. */
@@ -167,7 +160,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   const ext = C.concrete;
   K.wallX(k, 7, 5.88, 34.12, EXT, ext);                                    // north: blank — the benches stand against it
   // west and east, the ends of the house: each workshop's own back door, hung to open OUTWARD — no wedge holds it, so a workshop's men can shut the inside
-  // door alone and the way round the house stays a way in (tools/qa/second-way-check.ts)
+  // door alone and the way round the house stays a way in (rust/game_start levels second-way)
   K.wallZ(k, 6, 7.12, 16.88, EXT, ext, [K.doorAt(k, 'back_1', 'z', 6, 9.9, { exterior: true, swing: 1 })]);
   K.wallZ(k, 34, 7.12, 16.88, EXT, ext, [K.doorAt(k, 'back_2', 'z', 34, 9.9, { exterior: true, swing: -1 })]);
   // south z=17: the front door in the middle, a window onto the hall at each end
@@ -181,7 +174,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.wallZ(k, 28, 7.12, 12.94, INT, iw, [K.doorAt(k, 'shop_2', 'z', 28, 9.4)]);
   K.wallZ(k, 20, 7.12, 12.94, INT, iw);
 
-  // ---------------- the workshops: the bench on the north wall (the charge stands on it — game/defuse.ts draws it), a bare bulb over it ----------------
+  // ---------------- the workshops: the bench on the north wall, a bare bulb over it ----------------
   for (const [id, x] of [['wshop', WEST_X], ['eshop', EAST_X]] as const) {
     K.grp(k, id);
     K.desk(k, x, BENCH_Z, 1.8, BENCH_D, 0, C.woodDark);
@@ -212,7 +205,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 20.0, 26.6, 'street_lamp', [0, 0, -1], false);   // out: the team forms up in the dark
   K.moon(k);
 
-  // ---------------- lived-in (src/scene/lived.ts: the TAIL of every list) ----------------
+  // ---------------- lived-in (lib/lived.ts: the TAIL of every list) ----------------
   {
     const P = livedPieces({ add: b => K.add(k, b), grp: n => K.grp(k, n), prop: (...a) => K.prop(k, ...a) }, C);
     // the west workshop: where the charges are put together — tins of the stuff on the bench's end, a crate of it by the wall, a stool pulled out
@@ -242,10 +235,10 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     P.room('hall');
     P.boots(16.4, 16.6, Math.PI, 3); P.crate(7.0, 13.6, 0.5, 0.2); P.crate(33.1, 13.6, 0.5, -0.2);
     P.floor(20.0, 15.0, 24.0, 1.2, [0.3, 0.17, 0.14], 0.006, 0.006);
-    // THE LOT AND THE BACK, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
+    // THE LOT AND THE BACK, from the look's kit (lib/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
     // in sacks against the front wall, two drums east of the door, the spare wheels by the car that has not moved, firewood at the far edge of the back strip,
     // and the stones nobody has cleared. Nothing stands within 3 m of the front door or under a window, on the walk round either end, before a back door,
-    // or ON THE DEFENDERS' WAY ROUND THE OUTSIDE, which is 45.7 to 45.9 m of the 46 it may be (tools/qa/wayround-check.ts): it hugs the front wall, so the
+    // or ON THE DEFENDERS' WAY ROUND THE OUTSIDE, which is 45.7 to 45.9 m of the 46 it may be: it hugs the front wall, so the
     // sacks and the two drums stand beside the cars; and behind the house, with the team heard in the hall, it bows out to about 2 m from the back wall,
     // so the firewood is stacked at the strip's far edge. (Firewood on that line made the way 46.9 m and the pair stopped going round on one run in seven.)
     P.room('lot');
@@ -265,7 +258,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // north wall, and out by the front door to the south
     mission: { serverRoom: { ...R.eroom.bounds }, entryDoor: 'hall_2', rack: { index: 0, front: [25.6, 1.0, 7.5], halfW: 0.3 }, exfilDoor: 'front', exfilX: 20.0, exfilZ: 17.6, exfilOut: [0, 1] },
   });
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above, rect for rect. `building` is the whole world so the plan is all zones (first match wins): outside every zone is the lot's asphalt.
   // The workshops' dark finish is the paint the office lays on its server room's raised floor; here it is a workshop's hard floor, so 'stone'.
   const surfaces: SurfacesData = {
@@ -280,3 +273,51 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   };
   return { level, scenarios: DEFUSE_SCENARIOS, groups: k.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'defuse';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const R = DEFUSE_ROOMS;
+const SKIN: Skin = {
+  wall: 'mud', house: 'mud', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'poplar', dado: null, ground: 'dust', verge: 'dirt', patches: 6,
+  floor: { carpet: 'mudFloor', lino: 'slab' },
+  // defuse.ts's own colours as the stuff they are: the workshops' sealed floor is the bare slab this file says it is, the hall's runner and the big mat are
+  // plain cloth, the two workshops' own mats keep their red and their blue as carpet (from above that is how the two workshops are told apart; the
+  // wire's copper stays this place's one accent), and the two cars in the lot wear car paint
+  own: [[[0.2, 0.21, 0.24], 'slab'], [[0.3, 0.17, 0.14], 'blanketBrown'], [[0.3, 0.16, 0.13], 'rugRed'], [[0.16, 0.2, 0.3], 'rugNavy'], [[0.32, 0.2, 0.14], 'blanketBrown'],
+    [[0.3, 0.27, 0.2], 'truckTan'], [[0.2, 0.22, 0.26], 'paintBlue']],
+  noRug: /shop|hall/, metals: ['iron', 'rust', 'tin'],
+  rooms: [{ id: 'hall', bounds: R.hall.bounds }],
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), paint = T.tone(P.stencil, 0.92), K = P.iron, W = 0.035, GAP = 0.09;
+    // THE LOT'S GROUND, laid before any paint. WHEELS: the street along the south edge and each car's own way in off it. FEET: the walk up to the front door,
+    // and the beat that parts before the house and goes round each end to a workshop's back door: the level's two ways to each workshop, worn into the ground.
+    { const lot = T.floorAt(20, 22) ?? P.dust;
+      /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
+      const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };
+      G.ruts(0.6, 25.6, 39.4, 25.6); G.ruts(39.4, 20.85, 29.0, 20.66); G.ruts(0.6, 21.5, 10.0, 21.3);
+      beat([[20.0, 24.7], [20.0, 17.7]]);
+      beat([[19.7, 18.6], [5.3, 18.6], [5.3, 11.4]]); beat([[20.3, 18.6], [34.7, 18.6], [34.7, 11.4]]); }
+    /** a twin lead along a run of points: two thin copper lines a hand apart */
+    const lead = (pts: [number, number][]) => {
+      M.path(pts, W, COPPER);
+      M.path(pts.map(([x, z]) => [x + GAP, z + GAP] as [number, number]), W, T.tone(COPPER, 0.6));
+    };
+    // THE BATTERY PLATE in the middle of the hall, against its far wall: a dark board, two terminals
+    M.fill(19.7, 13.25, 20.6, 13.85, K); M.outline(19.7, 13.25, 20.6, 13.85, 0.05, T.tone(K, 1.6));
+    M.fill(19.85, 13.4, 20.0, 13.55, COPPER); M.fill(20.3, 13.4, 20.45, 13.55, COPPER);
+    // THE WEST RUN: plate → along the hall wall → in at the west door → round the room's rug → through the workshop door → the bench
+    lead([[19.85, 13.5], [15.25, 13.5], [15.25, 12.3], [13.2, 12.3], [13.2, 10.25], [10.9, 10.25], [10.9, 8.5], [8.5, 8.5]]);
+    // THE EAST RUN, its mirror
+    lead([[20.45, 13.5], [25.25, 13.5], [25.25, 12.3], [27.0, 12.3], [27.0, 10.25], [29.1, 10.25], [29.1, 8.5], [31.5, 8.5]]);
+    // 1 AND 2 at the workshop doors, on the side the squad comes from
+    M.glyph('1', 12.9, 11.2, 0.7, paint); M.glyph('2', 27.1, 11.2, 0.7, paint);
+    // …and outside each workshop's back door, on the ground of the house's ends
+    M.glyph('1', 4.6, 11.6, 0.7, paint); M.glyph('2', 35.4, 11.6, 0.7, paint);
+    // THE WORKSHOPS: scorched slab under each bench, spilt oil by the shelves
+    for (const x of [8.5, 31.5]) { const fa = T.floorAt(x, 8.4); if (fa) M.fill(x - 1.1, 7.75, x + 1.1, 8.25, T.tone(fa, 0.6)); }
+    G.patch(9.1, 11.8, 0.9, 0.6, 'oil', 0.4); G.patch(30.9, 11.8, 0.8, 0.6, 'oil', -0.3);
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

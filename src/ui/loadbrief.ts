@@ -3,51 +3,33 @@
 // The maintainer, 10-19, after watching a first-time player: "having the loading screen make more sense (e.g. being a pre mission brief) that you then click
 // through rather than flashing the controls"; that player's own notes: "stay on loading screen longer, would like to read".
 //
-// Before this a page whose address names a mission booted behind the OLD start card's look-alike (ui/menu.ts bootCard: a grey Start, the notes, the whole
+// Before this a page whose address names a mission booted behind the old start card (a grey Start, the notes, the whole
 // controls list and the shader count) and the mission began under it the moment the boot was done: a list of keys up for as long as the machine took, gone
-// before it could be read. Now that page shows THE MISSION: its own words off the mission list (scene/scenarioList.ts: the heading it sits under, its title,
-// the place, the job in one line, the team as deployed, the approach; the defenders' count only under `?mystery=0`) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
+// before it could be read. Now that page shows THE MISSION: its own words off the mission list (the desk's brief: the heading it sits under, its title,
+// the place, the job in one line, the team as deployed, the approach) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
 // drawMissionMap: the place as a model, a 10 m scale, the way in marked; the maintainer on the first cut, which had the mission's picture there: "let's show
 // the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
-//   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (main.ts: one term of the loop's
+//   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (host/drawpage.ts: one term of the loop's
 //     `frozen`, as under the pause card), so the run's first tick is the player's.
 //   · A PRESS IS NEVER LOST: one made while the page still boots is kept (the block sits pressed in) and the level starts the moment the block is live.
 //     Live is when the level stands AND its picture is ready behind the brief (ui/settle.ts, 10-28: every shader in, the first frames drawn, auto quality's
 //     pick made; `hold` below is the stretch between the two, the world still and the block filling). `?settle=0` = live the moment the level stands.
 //   · THE CONTROLS are where they are from every other screen, Options ▸ Controls (ui/options.ts), one quiet word away; BACK (Esc) is the mission list.
-//   · NOT FOR A PAGE NOBODY SITS AT: main.ts makes none under ?paused, a replay's tape, ?kitview's window or a benchmark's scene, and drops it unstarted once
-//     any script drives the page; the headless harness never comes through main.ts at all.
-// THE SWITCH: LOADBRIEF.on — ON in the page (main.ts; `?loadbrief=0` = the boot card and the straight start, as the build was), OFF in the module, so every
-// tool that stands a Menu on a fake DOM measures the cards as they were. A page-only screen: no game rule reads it and no knob table carries it.
+//   · NOT FOR A PAGE NOBODY SITS AT: host/drawpage.ts makes none under ?paused, a replay's tape or a benchmark's scene, and drops it unstarted once
+//     any script drives the page.
+// THE SWITCH: LOADBRIEF.on — ON in the page (host/drawpage.ts; `?loadbrief=0` = the boot card and the straight start, as the build was), OFF in the module.
+// A page-only screen: no game rule reads it and no knob table carries it.
 // Plain DOM in a layer of its own (#brief, made here), styled with ui/theme.ts's tokens; its rules are injected once. Nothing at module level uses another
-// module's exports. tools/qa/loadbrief-check.ts holds the words and the hand-over on a fake DOM; tools/qa/loadbrief-page.cjs looks at the real page.
-import { ALL_MISSIONS, specOfQuery, quitSearch } from '../scene/scenarioList';
-import { MISSION_GROUPS } from '../scene/scenarios';
-import { PICKS_UI, pickOfQuery, pickQuitSearch } from '../scene/picks';
-import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, defendersShown, reopenMissionsAfterLoad, type Mission } from './missions';
-import { openOptions, closeOptions, optionsOpen } from './options';
-import { START_PAGE } from './startpage';
+// module's exports. tools/qa/loadbrief-page.cjs looks at the real page.
+import { drawMissionMap, reopenMissionsAfterLoad } from './missions';
+import { desk } from '../view/desk';
+import type { BriefView } from '../view/read';
 import { menuTheme } from './theme';
 import { textZoom, rectZoom, TEXT_EVENT } from './textsize';
 
-export const LOADBRIEF = { on: false };
-
-/** what the brief says: the list's row, and the team as THIS page deploys it (a row deployed at another size than its own is still that row) */
-export interface BriefWords { mission: Mission; group: string; team: string }
-/** the mission a query string boots, in the list's words — its own row (ui/missions.ts missionOfQuery: the list's own answer, the plain solo night for
- *  `?solo` alone); deployed at a size no row has, the row of that kind on that level. Null: the address names no mission of the list (a plain page, a
- *  hand-typed combination on a level no row is on), or it picks its level by `?level=` (the editor's own level, the office as it was): the list's rows are
- *  written for the levels the list names, and a level being built is played the moment it loads. */
-export function briefOfQuery(search: string | URLSearchParams): BriefWords | null {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search; if (q.has('level')) return null;
-  const spec = specOfQuery(q), rows = [SOLO_NIGHT, ...ALL_MISSIONS.map(missionOf)];
-  const words = (m: Mission, squad: number): BriefWords => ({ mission: m, group: MISSION_GROUPS.find(g => g.id === m.group)?.title ?? '', team: teamWordsOf({ squad: squad as Mission['squad'] }) });
-  const own = missionOfQuery(q.toString(), rows); if (own) return words(own, spec?.squad ?? 0);
-  if (!spec) return null;
-  const here = rows.filter(m => m.scenario?.kind === spec.kind && (m.scenario.level ?? '') === (spec.level ?? ''));
-  const m = here.find(x => x.squad === spec.squad) ?? here[0];
-  return m ? words(m, spec.squad) : null;
-}
+/** the options layer over the brief: the page's own to hand over (ui/options.ts), which holds the game's rows. None: no Controls button */
+export interface BriefOptions { open(): void; close(): void; up(): boolean }
+export const LOADBRIEF: { on: boolean; options: BriefOptions | null } = { on: false, options: null };
 
 export interface LoadBrief {
   /** the boot's status line, as the boot card takes it ('compiling shaders 40 / 97 …'): the block fills by its 'N / M' */
@@ -55,7 +37,7 @@ export interface LoadBrief {
   /** the level can start: the block is live — and if it was pressed meanwhile (and the player is not reading Options over it), the run starts now.
    *  `onStart` runs once, as the brief goes; a throw from it is logged, never the caller's */
   live(onStart?: () => void): void;
-  /** the level stands and its picture is still being made ready behind the brief (main.ts, ui/settle.ts): the world is held still as under a live brief, the
+  /** the level stands and its picture is still being made ready behind the brief (host/drawpage.ts, ui/settle.ts): the world is held still as under a live brief, the
    *  block is NOT live and takes the boot's status line still; a press is kept, as while the page boots. `live` ends it */
   hold(): void;
   /** gone, unstarted (a page a script drives; a mission whose start was refused): no `onStart` */
@@ -64,7 +46,7 @@ export interface LoadBrief {
   readonly up: boolean;
   /** live or holding, and not yet started: the world behind it is held still */
   readonly held: boolean;
-  readonly words: BriefWords;
+  readonly words: BriefView;
 }
 
 const STYLE = 'brief-style';
@@ -131,26 +113,26 @@ function el(tag: string, cls?: string, text?: string) { const e = document.creat
  *  card then, as before). One a page. */
 export function loadBrief(search: string = typeof location !== 'undefined' ? location.search ?? '' : ''): LoadBrief | null {
   if (!LOADBRIEF.on || typeof document === 'undefined') return null;
-  const W = briefOfQuery(search); if (!W) return null;
-  const m = W.mission;
+  const W = desk().brief(search); if (!W.id) return null;
+  const opt = LOADBRIEF.options, optionsOpen = () => !!opt?.up(), closeOptions = () => opt?.close();
   styles();
   const host = document.getElementById('app') ?? document.body;
   document.getElementById('brief')?.remove?.();
-  const root = el('div'); root.id = 'brief'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', m.title); root.setAttribute('data-mission', m.id);
+  const root = el('div'); root.id = 'brief'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', W.title); root.setAttribute('data-mission', W.id);
   const column = el('div', 'bcol');
   const col = el('div', 'bin'); column.appendChild(col);
-  col.appendChild(el('div', 'bk', W.group));
-  col.appendChild(el('h1', 'bt', m.title));
-  col.appendChild(el('div', 'bplace', m.place));
+  col.appendChild(el('div', 'bk', W.groupTitle));
+  col.appendChild(el('h1', 'bt', W.title));
+  col.appendChild(el('div', 'bplace', W.place));
   // A TUTORIAL MISSION (its row carries a `scene`): where we are and why, then what it teaches — in place of the job's line and the three cells, which the
   // scene and a mission on rails make needless, so the card still fits a short window
-  const scene = m.scenario?.scene, teaches = m.scenario?.teaches;
+  const scene = W.scene, teaches = W.teaches;
   if (scene) { col.appendChild(el('div', 'bscene', scene));
-    if (teaches?.length) { const t = el('div', 'bteach'); t.appendChild(el('b', undefined, 'You will learn')); const ul = el('ul'); for (const line of teaches) ul.appendChild(el('li', undefined, line)); t.appendChild(ul); col.appendChild(t); } }
-  else { if (m.blurb) col.appendChild(el('div', 'bjob', m.blurb));
+    if (teaches.length) { const t = el('div', 'bteach'); t.appendChild(el('b', undefined, 'You will learn')); const ul = el('ul'); for (const line of teaches) ul.appendChild(el('li', undefined, line)); t.appendChild(ul); col.appendChild(t); } }
+  else { if (W.blurb) col.appendChild(el('div', 'bjob', W.blurb));
     const facts = el('div', 'bfacts');
     const fact = (label: string, value: string) => { if (!value || value === '—') return; const f = el('div', 'bf'); f.appendChild(el('b', undefined, label)); f.appendChild(el('span', undefined, value)); facts.appendChild(f); };
-    fact('Team', W.team); fact('Defenders', defendersShown(m)); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
+    fact('Team', W.team); fact('Approach', W.leanWords);   // (the mission sheet's own three cells and their names: ui/missions.ts)
     col.appendChild(facts); }
   const go = el('button', 'bgo') as HTMLButtonElement, fill = el('i'), words = el('div', 'bstatus', 'starting the GPU…');
   go.type = 'button'; go.setAttribute('aria-busy', 'true'); go.appendChild(fill); go.appendChild(el('span', undefined, 'Start')); go.appendChild(el('kbd', undefined, 'Enter'));
@@ -171,7 +153,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
     if (map.style) map.style.display = '';   // (hidden by a draw whose file did not come: shown again to be measured, and asked again)
     const r = map.getBoundingClientRect?.(), w = Math.max(480, Math.min(2880, Math.round((r?.width || 760) / rectZoom() * textZoom() * (window.devicePixelRatio || 1))));
     if (w === mapW) return; mapW = w;
-    void drawMissionMap(map, m, search, w).then(ok => { if (!up) return; if (ok) map.classList.add('in'); else if (mapW === w) mapW = 0; }).catch(() => { if (mapW === w) mapW = 0; });
+    void drawMissionMap(map, W.level, W.kind, W.way, w).then(ok => { if (!up) return; if (ok) map.classList.add('in'); else if (mapW === w) mapW = 0; }).catch(() => { if (mapW === w) mapW = 0; });
   };
   const resized = () => { setTimeout(drawMap, 0); };
   window.addEventListener('resize', resized); window.addEventListener(TEXT_EVENT, resized);
@@ -186,12 +168,12 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
     try { run?.(); } catch (e) { console.error('load brief: the start threw', e); }   // (the armed start runs inside the page's boot: a throw here must not be the boot's)
   };
   const arm = (on: boolean) => { armed = on; root.classList.toggle('armed', on); go.setAttribute('aria-pressed', String(on)); };
-  const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (main.ts's own quit)
-    const s = location.search ?? '', pick = PICKS_UI.on ? pickOfQuery(s) : null;
-    if (!pick || START_PAGE.on) reopenMissionsAfterLoad();
-    location.assign(location.pathname + (PICKS_UI.on ? pickQuitSearch(s) : quitSearch(s)) + location.hash);
+  const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (host/drawpage.ts's own quit)
+    const s = location.search ?? '';
+    reopenMissionsAfterLoad();
+    location.assign(location.pathname + desk().leave(s) + location.hash);
   };
-  // THE KEYS are the brief's while it is up (first in line at the window: main.ts makes it before the game's Input exists, so no key of the game's, and no Esc
+  // THE KEYS are the brief's while it is up (first in line at the window: host/drawpage.ts makes it before the game's Input exists, so no key of the game's, and no Esc
   // of the pause card's, is read under it): Enter / Space start, Esc is Back, Tab walks its three buttons. Left alone: a chord and the F-keys (the browser's,
   // the recorders' — but never an Esc on to the pause card), and every key while the options layer is up over it (ui/options.ts has its own).
   const onKey = (e: KeyboardEvent) => {
@@ -209,7 +191,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   go.onclick = start; back.onclick = leave;
   // CONTROLS: the options layer gives the focus back to what had it (ui/options.ts closeOptions) — START, so Enter after reading is Start, not Controls again;
   // and a press kept from the boot is taken back: the player chose to read, and the run does not start under the page they are reading.
-  keys.onclick = () => { if (!live) arm(false); go.focus?.(); openOptions({ tab: 'controls' }); };
+  if (opt) keys.onclick = () => { if (!live) arm(false); go.focus?.(); opt.open(); }; else keys.style.display = 'none';
   setTimeout(() => { if (up && !optionsOpen() && (document.activeElement ?? document.body) === document.body) go.focus?.(); }, 0);
 
   return {

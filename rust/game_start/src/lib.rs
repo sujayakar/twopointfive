@@ -1,0 +1,38 @@
+//! THE GAME'S OWN START, IN RUST (README.md beside this crate). A level file's text and the character's files in, a `Game` the tick can run out.
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments)]
+extern crate alloc;
+pub mod json;
+pub mod lessons;
+pub mod kit_file;
+pub mod kit_plan;
+pub mod kit_set;
+pub mod kit_stage;
+pub mod gltf;
+pub mod file;
+pub mod level;
+pub mod passes;
+pub mod stand;
+pub mod handed;
+#[cfg(feature = "std")]
+pub mod faults;
+#[cfg(feature = "std")]
+pub mod files;
+pub mod scene;
+#[cfg(feature = "std")]
+pub mod levels;
+#[cfg(feature = "std")]
+pub mod play;
+#[cfg(feature = "std")]
+pub mod steps;
+#[cfg(feature = "std")]
+pub mod hand;
+pub mod block;
+pub mod hands_off;
+pub mod host;
+pub mod figures;
+pub mod owes;
+pub mod parts;
+pub mod player;
+pub mod read;
+pub mod records;

@@ -3,16 +3,16 @@
 // = its centre, axes = its own: before the yaw / Box.rot, metres). The planes ride with the box for free: move, yaw or tumble the box and the cut goes with it.
 //
 // ONE MODEL: the rasteriser draws that solid (gbuffer.wgsl, the cut pass), every GPU ray meets it (common.wgsl isectBox → shadows, bounce, reflections, the light
-// meter, smoke sight lines, particles) and so do the CPU's rays and segments (boxes.ts rayBox, collision.ts lineBox → rounds, aim, sight, sound, throw arcs).
-// What stays the UNCUT box, by decision: everything that pushes against it (collision.ts collideCircle / gather, the nav grid, debris / prop contact), its
+// meter, smoke sight lines, particles) and so do the CPU's rays and segments (boxes.ts rayBox, rust/game_rules/src/world/scene_collision.rs line_box → rounds, aim, sight, sound, throw arcs).
+// What stays the UNCUT box, by decision: everything that pushes against it (rust/game_rules/src/world/scene_collision.rs collide_circle / gather, the nav grid, debris / prop contact), its
 // registration in the trace grid and the ray grid (a superset: only costs a test), and the smoke solver's obstacle bake.
 //
-// THE SWITCH: cutConfig.on (raised once at boot; the scene prelude's `const CUT_BOXES` is compiled from it, so flipping it wants a reload). OFF in this module, so
-// everything headless stands as it was (CUTBOXES=1 | 0 in front of a headless tool forces it; the cut probes raise it themselves); the PAGE turns it ON at boot
-// (main.ts → initCutSwitch) unless the address says ?nocutboxes / ?cutboxes=0 or this machine kept localStorage twopointsix.cutboxes = '0'. OFF = Box.cut is ignored by
+// THE SWITCH: cutConfig.on (raised once at boot; the scene prelude's `const CUT_BOXES` is compiled from it, so flipping it wants a reload). OFF in this module;
+// the PAGE turns it ON at boot
+// (host/drawpage.ts → initCutSwitch) unless the address says ?nocutboxes / ?cutboxes=0 or this machine kept localStorage twopointsix.cutboxes = '0'. OFF = Box.cut is ignored by
 // everything: the plain box, the base build's frame hash for hash. Whoever EMITS cut pieces asks cutBoxesOn() and emits its plain boxes otherwise.
 //
-// The record's contract (type, packing, limits) is written up in rebuild/cut-pieces/contract.md; the layout below is version 1.
+// The layout below is version 1.
 import type { Vec3, Quat } from '../math/vec';
 
 /** one cutting plane in the box's LOCAL frame: the box KEEPS the side n · p ≤ d (n unit, d metres from the box centre along n; what lies beyond is gone) */
@@ -27,15 +27,10 @@ export const CUT_STRIDE = CUT_ROWS + 1;
 export const CUT_PAD: readonly [number, number, number, number] = [0, 0, 0, 1];
 /** the GPU flag bit of a box that has a record (common.wgsl GEO_CUT; bit 16 of the geo flags word — free up there: the CPU's bit 16, SoundSeal, is never uploaded) */
 export const BOX_CUT_BIT = 1 << 16;
-/** the switch (see the head of this file). Mutate only at boot (main.ts initCutSwitch) or in a headless probe. */
+/** the switch (see the head of this file). Mutate only at boot (host/drawpage.ts initCutSwitch). */
 export const cutConfig = {
   on: false,
-  /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): true = every ray program boots as the build's WITHOUT the cut rule (the scene prelude's CUT_BOXES false: the text
-   *  `?nocutboxes` compiles), a second set with the rule is compiled in the background after boot, and the frame takes that set only while a cut box a ray can meet
-   *  is alive. false (`?cutprograms=boot`) = the one set, compiled with the rule from boot, as the switch first shipped. Read before the first pipeline is compiled. */
-  swap: true,
 };
-export const cutBoxesOn = () => cutConfig.on;
 /** read the switch from the page's URL / localStorage (a no-op headless): ON in the page unless ?nocutboxes / ?cutboxes=0, or this machine kept '0'. Call before
  *  the first pipeline is compiled. */
 export function initCutSwitch(): boolean {
@@ -44,7 +39,6 @@ export function initCutSwitch(): boolean {
   if (q.has('nocutboxes')) cutConfig.on = false;
   else if (q.has('cutboxes')) cutConfig.on = q.get('cutboxes') !== '0';
   else { let kept: string | null = null; try { kept = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no storage: on */ } cutConfig.on = kept !== '0'; }
-  if (q.get('cutprograms') === 'boot') cutConfig.swap = false;   // (the cut rule compiled into every ray program from boot — the A/B against the swap)
   return cutConfig.on;
 }
 
@@ -53,26 +47,9 @@ export function cutPlane(n: Vec3, d: number): CutPlane {
   const L = Math.hypot(n[0], n[1], n[2]); if (!(L > 1e-12)) return { n: [0, 0, 0], d: 1 };
   return { n: [n[0] / L, n[1] / L, n[2] / L], d: d / L };
 }
-/** the plane through local point p whose normal n points at what is REMOVED */
-export function cutThrough(p: Vec3, n: Vec3): CutPlane {
-  const L = Math.hypot(n[0], n[1], n[2]); if (!(L > 1e-12)) return { n: [0, 0, 0], d: 1 };
-  const u: Vec3 = [n[0] / L, n[1] / L, n[2] / L];
-  return { n: u, d: u[0] * p[0] + u[1] * p[1] + u[2] * p[2] };
-}
-/** the plane through three local points, removing the side the triangle a→b→c turns counter-clockwise towards (its right-hand normal) */
-export function cutThrough3(a: Vec3, b: Vec3, c: Vec3): CutPlane {
-  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
-  return cutThrough(a, [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]);
-}
 /** the farthest the uncut box reaches along n: max over the box of n · p */
 export const cutSupport = (h: Vec3, n: Vec3) => Math.abs(n[0]) * h[0] + Math.abs(n[1]) * h[1] + Math.abs(n[2]) * h[2];
 
-/** is local point p inside the cut solid (eps metres of slack) */
-export function cutContains(h: Vec3, cut: readonly CutPlane[] | undefined, p: Vec3, eps = 0): boolean {
-  if (Math.abs(p[0]) > h[0] + eps || Math.abs(p[1]) > h[1] + eps || Math.abs(p[2]) > h[2] + eps) return false;
-  if (cut) for (const c of cut) if (c.n[0] * p[0] + c.n[1] * p[1] + c.n[2] * p[2] > c.d + eps) return false;
-  return true;
-}
 
 /** The corners of the cut solid (local frame): every triple of its bounding planes (the box's six + the cuts) that meets in a point inside all the others.
  *  A helper for builders, bounds and tests (≤ 120 triples) — not for a per-frame loop over many boxes. */
@@ -165,41 +142,6 @@ export function cutToWorld(v: Vec3, yaw: number, rot?: Quat): Vec3 {
   const cs = Math.cos(yaw), sn = Math.sin(yaw);
   return [cs * v[0] + sn * v[2], v[1], -sn * v[0] + cs * v[2]];
 }
-/** Fit a box to its cut IN PLACE (centre, half-extents and record replaced; orientation kept). Returns false — and leaves the box alone — if nothing is left of it. */
-export function fitCutBox(b: { c: Vec3; h: Vec3; yaw: number; rot?: Quat; cut?: CutPlane[] }): boolean {
-  if (!b.cut || !b.cut.length) return true;
-  const r = cutRecord(b.h, b.cut); if (r.empty) return false;
-  const f = cutFit(b.h, r.cut); const w = cutToWorld(f.off, b.yaw, b.rot);
-  b.c = [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]]; b.h = f.h; b.cut = f.cut;
-  return true;
-}
-
-/** A PRISM from a convex outline: the polygon `poly` (points (u, v) in the plane across `axis`, either winding) extruded ± halfT along `axis` (0 = x, 1 = y,
- *  2 = z; (u, v) = the next two axes in order: axis x → (y, z), y → (z, x), z → (x, y)). Returns the fitted box { off, h } in the frame the polygon was given in and
- *  its record: one plane per polygon edge that is not already a side of the bounding rectangle. More than MAX_CUT_PLANES such edges: the ones that take least off
- *  are left out (`dropped`; the piece is then a little bigger than the outline — split the outline or accept it). A glass shard = its cell's outline across the
- *  pane's thin axis; a wall chunk = its outline across the wall's. */
-export function cutPrism(axis: 0 | 1 | 2, halfT: number, poly: readonly (readonly [number, number])[]): { off: Vec3; h: Vec3; cut: CutPlane[] | undefined; dropped: number; empty: boolean } {
-  const ua = (axis + 1) % 3, va = (axis + 2) % 3;
-  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity, area2 = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const p = poly[i], q = poly[(i + 1) % poly.length];
-    u0 = Math.min(u0, p[0]); u1 = Math.max(u1, p[0]); v0 = Math.min(v0, p[1]); v1 = Math.max(v1, p[1]); area2 += p[0] * q[1] - q[0] * p[1];
-  }
-  const off: Vec3 = [0, 0, 0], h: Vec3 = [0, 0, 0];
-  if (poly.length < 3 || !(Math.abs(area2) > 1e-12) || !(halfT > 0)) return { off, h, cut: undefined, dropped: 0, empty: true };
-  const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2; off[ua] = cu; off[va] = cv; h[axis] = halfT; h[ua] = (u1 - u0) / 2; h[va] = (v1 - v0) / 2;
-  const sgn = area2 > 0 ? 1 : -1, planes: CutPlane[] = [];
-  for (let i = 0; i < poly.length; i++) {
-    const p = poly[i], q = poly[(i + 1) % poly.length]; const eu = q[0] - p[0], ev = q[1] - p[1];
-    if (Math.abs(eu) + Math.abs(ev) < 1e-12) continue;
-    const n: Vec3 = [0, 0, 0]; n[ua] = sgn * ev; n[va] = -sgn * eu;                 // outward normal of the edge (the polygon's inside is on its other side)
-    const at: Vec3 = [0, 0, 0]; at[ua] = p[0] - cu; at[va] = p[1] - cv;
-    planes.push(cutThrough(at, n));
-  }
-  const r = cutRecord(h, planes);
-  return { off, h, cut: r.cut, dropped: r.dropped, empty: r.empty };
-}
 
 /** GLASS on a cut box (Box.cutGlass — picture only, the g-buffer's cut pass): the box's two faces across its own z (a glass plate: cutPrism over z) are drawn see-through by a
  *  screen door — `see` of their pixels (0‥0.98; fewer toward a grazing view) are left to what is behind — inside a rim `rim` pixels wide (0‥3.75, in quarters) that
@@ -230,7 +172,7 @@ export function packCut(cut: readonly CutPlane[], dst: Float32Array, o: number, 
 
 /** THE CPU CLIP every ray / segment test shares: the interval [t0, t1] of the local line o + t·d already inside the uncut box, cut down by the record. Result in
  *  CUT_CLIP: { t0, t1, k = the plane the line ENTERS the solid through at t0 (−1 = t0 was not moved: the box's own face, or the origin) }; false = nothing left.
- *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop (tools/qa/cut-rule.ts holds the two together). */
+ *  The same planes in the same order as common.wgsl isectCut, which takes them four at a time with no loop. */
 export const CUT_CLIP = { t0: 0, t1: 0, k: -1 };
 export function cutClip(cut: readonly CutPlane[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, t0: number, t1: number): boolean {
   let k = -1;

@@ -1,4 +1,4 @@
-// THE SNOW'S SURFACE (game/weatherKinds.ts SNOW_LOOK.on → the prelude's `const SNOW_SURF`; render/snowField.ts bakes the field). A snow level's lying snow as one
+// THE SNOW'S SURFACE (rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.on → the prelude's `const SNOW_SURF`; render/snowField.ts bakes the field). A snow level's lying snow as one
 // surface instead of painted boxes — the maintainer on his first GPU look at the pass: 'it does need to feel more organic. maybe we could do it with a height
 // map or something like that? the rectangles don't seem to work. and i think we can make the material seem much cooler / feel like freshly fallen snow.'
 //   THE FIELD   snowTex, over the world's plan: r = metres of snow STANDING over the ground (the level's drifts and banks as smooth hills), g = snow lies here,
@@ -18,12 +18,12 @@
 // roughness) · p[7] = the snow PAINT's rgb (how a snow box is known), fresh roughness · p[8] = (a cap's edge wander m, a glint grain's lean, a print's depth m — 0 = no prints, the prints' texels a metre) · p[9] = the TRODDEN paint's rgb · p[10] = the OLD paint's rgb (how a path's or a rut's strip is known), a print's rim m   — render/snowField.ts snowCfgRows
 struct SnowCfg { p: array<vec4f, 11> };
 @group(1) @binding(9) var<uniform> snowCfg: SnowCfg;
-// THE PRINTS (game/snowTracks.ts; `const SNOW_TRACKS`): one byte a texel over the same plan — 1 where a boot or a fallen man has pressed the snow, 0.5 on the
+// THE PRINTS (src/picture/snow/tracks.ts; `const SNOW_TRACKS`): one byte a texel over the same plan — 1 where a boot or a fallen man has pressed the snow, 0.5 on the
 // print's outline, 0 half a skirt outside it. Read as a height: a floor, a wall, and outside the outline the bank of snow the boot pushed up. An untidy print
 // (SNOWTRACKS.mess) is the same byte read the same way: its stamp breaks the outline, the bank's reach and the floor, and sets clods in the bank's half.
 @group(1) @binding(10) var snowTrackTex: texture_2d<f32>;
 
-fn snowLive() -> bool { return SNOW_SURF && snowCfg.p[1].z > 0.5; }
+fn snowLive() -> bool { return GBUF_SNOW && snowCfg.p[1].z > 0.5; }
 fn snowField(xz: vec2f) -> vec4f { return textureSampleLevel(snowTex, linSamp, (xz - snowCfg.p[0].xy) * snowCfg.p[0].z / snowCfg.p[1].xy, 0.0); }
 fn snowIsPaint(a: vec3f) -> bool { return all(abs(a - snowCfg.p[7].xyz) < vec3f(0.004)); }
 /** a path's or a rut's strip, by its paint (trodden or old snow) */
@@ -57,7 +57,7 @@ fn snowPrint(xz: vec2f, deep: f32, mess: f32, fine: f32) -> f32 {
   }
   return up - down;
 }
-/** how untidy the prints are, 0‥1 (game/snowTracks.ts SNOWTRACKS.mess, × 100 in a byte): the map carries it itself, in the first texel of the middle one of its
+/** how untidy the prints are, 0‥1 (src/picture/snow/tracks.ts SNOWTRACKS.mess, × 100 in a byte): the map carries it itself, in the first texel of the middle one of its
  *  three rows past the plan (the block's eleven rows are full, and the number belongs to the stamps that wrote the map) */
 fn snowPrintMess() -> f32 { let d = vec2i(textureDimensions(snowTrackTex)); return clamp(textureLoad(snowTrackTex, vec2i(0, max(d.y - 2, 0)), 0).r * 2.55, 0.0, 1.0); }
 /** the whole surface's height over the ground (m) from a field sample: the hills, snow's own depth where it lies, the troughs boots and wheels pressed */
@@ -80,7 +80,7 @@ fn snowShade(wp: vec3f, f: vec4f, up: vec3f, fp: f32, lying: bool) -> SnowS {
   var gx = (hxp - hxm) / (2.0 * e) + (nx - n0) / e2 * fade; var gz = (hzp - hzm) / (2.0 * e) + (nz - n0) / e2 * fade;
   // the prints: a dent the lamps model by its walls and its rim, crumbled inside (pressed snow breaks into clods); deeper where a drift's skirt stands, shallow in snow already trodden
   var pr = 0.0; var trod = 0.0; var cup = 0.0;
-  if (SNOW_TRACKS && lying && snowCfg.p[8].z > 0.0) {
+  if (lv(SNOW_TRACKS) && lying && snowCfg.p[8].z > 0.0) {
     let deep = (snowCfg.p[8].z + 0.6 * min(f.x, 0.25)) * (1.0 - 0.6 * max(f.z, f.w));
     let et = 0.75 / snowCfg.p[8].w;
     let mess = snowPrintMess(); let fine = clamp(0.0135 / max(fp, 1e-4), 0.0, 1.0);
@@ -182,11 +182,11 @@ struct SnowVOut { @builtin(position) pos: vec4f, @location(0) wp: vec3f };
   var f = snowField(v.wp.xz); f.y = 1.0;
   let s = snowShade(v.wp, f, vec3f(0.0, 1.0, 0.0), fp, true);
   o.albedo = vec4f(s.albedo, 1.0);
-  o.normal = vec4f(s.n * 0.5 + 0.5, select(1.0, 0.3333, SNOW_GLOW || SNOW_SPARKLE));   // (.a under SNOW GLOW or SNOW SPARKLE: 1∕3 = snow — gbuffer.wgsl fsBox's output line, composite.wgsl snowGlowAmt)
+  o.normal = vec4f(s.n * 0.5 + 0.5, select(1.0, 0.3333, lv(SNOW_GLOW) || lv(SNOW_SPARKLE)));   // (.a under SNOW GLOW or SNOW SPARKLE: 1∕3 = snow — gbuffer.wgsl fsBox's output line, composite.wgsl snowGlowAmt)
   o.id = u32(snowCfg.p[0].w + 0.5);   // the snow lies on the ground: its pixels are the ground slab's to every pass that asks whose they are
   o.vel = vec2f(0.0);
   o.mat = vec2f(s.rough, 0.0);
-  if (LOOK) { let lg = lookGround(v.wp, s.n, s.rough, fp); o.normal = vec4f(lg.n * 0.5 + 0.5, o.normal.a); o.mat = vec2f(lg.rough, 0.0); }   // THE LOOK PROTOTYPE (look.wgsl lookGround): the hills' relief × the panel's number, and the crust
+  let lg = lookGround(v.wp, s.n, s.rough, fp); o.normal = vec4f(lg.n * 0.5 + 0.5, o.normal.a); o.mat = vec2f(lg.rough, 0.0);   // THE LOOK'S OWN LINE (look.wgsl lookGround): the hills' relief × the panel's number, and the crust
   o.edge = EDGE_NONE;
   return o;
 }

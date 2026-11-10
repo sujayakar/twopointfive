@@ -8,7 +8,7 @@ import type { Vec3 } from '../math/vec';
 export interface SfxBuffer { readonly sampleRate: number; readonly length: number; readonly duration: number; readonly numberOfChannels: number; getChannelData(channel: number): Float32Array; }
 /** what buildSfx and the buffer helpers need of a context: the rate and a buffer factory — a BaseAudioContext is one, sfxContext(sr) another */
 export interface SfxContext { readonly sampleRate: number; createBuffer(channels: number, length: number, sampleRate: number): SfxBuffer; }
-/** the stand-in context: plain buffers, for a host without Web Audio (the native backend loads the Float32Arrays; the QA harness never needs one) */
+/** the stand-in context: plain buffers, for a host without Web Audio (the native backend loads the Float32Arrays) */
 export function sfxContext(sampleRate = 48000): SfxContext {
   return { sampleRate, createBuffer(channels, length, sr) { const ch: Float32Array[] = []; for (let c = 0; c < channels; c++) ch.push(new Float32Array(length)); return { sampleRate: sr, length, duration: length / sr, numberOfChannels: channels, getChannelData: (c) => ch[c] }; } };
 }
@@ -27,8 +27,6 @@ export interface PlayOpts {
   gain: number; rate: number; loop?: boolean;
   /** with `loop`: the stretch of the buffer that repeats, in seconds (absent = all of it) — a voice that starts at the buffer's head and then holds its middle */
   loopAt?: { start: number; end: number };
-  /** with `loop`: the source is stopped by itself this many seconds on, whatever becomes of its owner (absent = it loops until stopped) */
-  maxSecs?: number;
   bus: 'sfx' | 'ambience';
   /** positional: the HRTF model (near / loud) vs the cheap equal-power pan; absent = HRTF */
   hrtf?: boolean;
@@ -44,7 +42,7 @@ export interface PlayOpts {
   pan?: number;
   /** an LFO on the tone filter's frequency: the wind ambience's slow wobble */
   wobble?: { rateHz: number; depthHz: number };
-  /** the canister hiss's gain envelope: 0 → peak over `rise` s, held until `hold`, back to 0 at `end` (all from now); the source is stopped at end + 0.1 */
+  /** the listening page's canister hiss, its gain envelope: 0 → peak over `rise` s, held until `hold`, back to 0 at `end` (all from now); the source is stopped at end + 0.1 */
   envelope?: { peak: number; rise: number; hold: number; end: number };
 }
 
@@ -58,7 +56,7 @@ export interface AudioBackend {
   duration(id: string): number;
   play(o: PlayOpts): BackendVoice | null;
   /** re-aim / retune / re-level a live voice, eased over `tc` s (setTargetAtTime): loops re-aimed at their apparent position, retuned to the occlusion cutoff, ambience levels */
-  setVoice(v: BackendVoice, patch: { pos?: Vec3; cutoffHz?: number; gain?: number; rate?: number }, tc: number): void;
+  setVoice(v: BackendVoice, patch: { pos?: Vec3; cutoffHz?: number; gain?: number; rate?: number; send?: number }, tc: number): void;
   /** the voice budget stealing a voice: gain to 0 over `fadeMs`, the source stopped shortly after */
   stop(v: BackendVoice, fadeMs: number): void;
   /** a finished voice let go of (its nodes disconnected) */

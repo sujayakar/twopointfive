@@ -1,9 +1,9 @@
-// The pure parts of the renderer perf / noise pass (docs/internal/perf-2026-08-10.md): the torch bounce card's geometry (a CPU twin of cards.wgsl's
+// The pure parts of the renderer perf / noise pass: the torch bounce card's geometry (a CPU twin of cards.wgsl's
 // lane 0), its energy bookkeeping (the cone-flux closed form the shader's 64 stratified samples estimate, and the 4-point quadrature the gather evaluates,
 // both against brute-force integration of the true spot profile on a wall), the card nomination (lights.ts cardSlotsFor), and the flag / settings table
 // (bits distinct, defaults off, the frame block sized for the card slots). The GPU halves are verified by measurement (the doc's protocol); this is what
-// can be held without one.   bun run tools/qa/perf-probes.ts   (also `probes.ts perf`)
-import { ROOT } from './headless';
+// can be held without one.   bun run tools/qa/perf-probes.ts
+import { ROOT } from './here.ts';
 
 const { FrameFlags, FRAME_BYTES, MAX_CARDS, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
 const { cardSlotsFor } = await import(`${ROOT}/src/render/lights.ts`);
@@ -21,7 +21,7 @@ const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[
 const smoothstep = (e0: number, e1: number, x: number) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
 let fails = 0;
-/** failures so far (probes.ts prints the family verdict off it) */
+/** failures so far */
 export const perfProbeFailures = () => fails;
 const check = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); };
 
@@ -107,14 +107,14 @@ export async function perfFlags() {
   const vals = Object.entries(FrameFlags) as [string, number][];
   const distinct = new Set(vals.map(([, v]) => v)).size === vals.length && vals.every(([, v]) => v > 0 && (v & (v - 1)) === 0);
   check(distinct, 'every FrameFlags value is a distinct single bit', vals.map(([k, v]) => `${k}=${v}`).join(' '));
-  check(FrameFlags.BounceCards === 33554432 && FrameFlags.DirectSeedHold === 67108864 && FrameFlags.GiAdaptiveHist === 134217728, 'BounceCards = 1<<25, DirectSeedHold = 1<<26, GiAdaptiveHist = 1<<27 (1<<22 / 1<<24 went to Decals / Particles since; bits 0‥30 are all owned now — bit 31, the sign bit, is the only one left: frame-layout prints the table)', `${FrameFlags.BounceCards} ${FrameFlags.DirectSeedHold} ${FrameFlags.GiAdaptiveHist}`);
+  check(FrameFlags.BounceCards === 33554432, 'BounceCards = 1<<25 (1<<22 / 1<<24 went to Decals / Particles since; bits 14, 16, 26, 27 and 30 are free again since the old estimator and the old denoiser went: frame-layout prints the table)', `${FrameFlags.BounceCards}`);
   const S = defaultSettings();
-  check(S.torchBounceCards === false && S.directSeedHold === false && S.giAdaptiveHistory === false, 'defaults: torchBounceCards off, directSeedHold off, giAdaptiveHistory off', `${S.torchBounceCards} ${S.directSeedHold} ${S.giAdaptiveHistory}`);
+  check(S.torchBounceCards === false, 'defaults: torchBounceCards off', `${S.torchBounceCards}`);
   const placed = Object.entries(PRESETS).map(([n, p]: [string, any]) => `${n}:${p.cards === undefined ? '—' : p.cards ? 'on' : 'off'}`).join(' ');
   console.log(`  (info) preset placement of the cards: ${placed}`);
   // the frame block: writeFrame's card words land inside FRAME_BYTES and read back
   const buf = new ArrayBuffer(FRAME_BYTES); const ident = new Float32Array(16); ident[0] = ident[5] = ident[10] = ident[15] = 1;
-  const base: any = { viewProj: ident, invViewProj: ident, prevViewProj: ident, camPos: [0, 0, 0], camDir: [0, 0, -1], time: 0, dt: 0.016, width: 16, height: 16, frameIdx: 0, numLights: 0, flags: 0, exposure: 1, skyZenith: [0, 0, 0], skyHorizon: [0, 0, 0], hazeDensity: 0, rcInterval0: 1, rcC0Dims: [1, 1, 1], rcNumCascades: 1, rcD0: 4, rcFrameParity: 0, numSmoke: 0, debugView: 0, indirectScale: 1, emissiveScale: 1, volSteps: 8, capColor: [0, 0, 0, 0], post: [0, 0, 0, 1], rcJitter: [0.5, 0.5], directCfg: [1, 1, 1, 0], directAdaptiveMin: 2, numTransient: 0, secMinE: 0.01, lossyCfg: [2, 2, 0, 0], weather: noWeather(), glassCfg: [1, 1, 1, 0], volCfg: [0, 0, 0, 0], froxelA: [0.5, 56, 2, 0], froxelB: [0, 0, 0, 0], froxelC: [0, 0, 0, 0], prevCamPos: [0, 0, 0], froxelPrevNear: 0.5, rtCfg: [0.45, 1, 0.7, 0], matCfg: [1, 1, 60, 0], p5Cfg: [0, 0, 0, 0], jitter: [0, 0, 0, 0], markCfg: [0, 1, 1, 1], sharpCfg: [0, 0, 0, 0], sharpCfgB: [0, 0, 0, 0], sharpCfgC: [0, 0, 0, 0], rigCfg: [0, 20, 1, 0.006], rigCfgB: [1, 24, 0.0015, 0.012] };
+  const base: any = { viewProj: ident, invViewProj: ident, prevViewProj: ident, camPos: [0, 0, 0], camDir: [0, 0, -1], time: 0, dt: 0.016, width: 16, height: 16, frameIdx: 0, numLights: 0, flags: 0, exposure: 1, skyZenith: [0, 0, 0], skyHorizon: [0, 0, 0], hazeDensity: 0, rcInterval0: 1, rcC0Dims: [1, 1, 1], rcNumCascades: 1, rcD0: 4, rcFrameParity: 0, numSmoke: 0, debugView: 0, indirectScale: 1, emissiveScale: 1, volSteps: 8, capColor: [0, 0, 0, 0], post: [0, 0, 0, 1], rcJitter: [0.5, 0.5], directCfg: [1, 1, 1, 0], directAdaptiveMin: 2, numTransient: 0, secMinE: 0.01, lossyCfg: [2, 2, 0, 0], weather: noWeather(), glassCfg: [1, 1, 1, 0], volCfg: [0, 0, 0, 0], prevCamPos: [0, 0, 0], rtCfg: [0.45, 1, 0.7, 0], matCfg: [1, 1, 60, 0], p5Cfg: [0, 0, 0, 0], jitter: [0, 0, 0, 0], markCfg: [0, 1, 1, 1], sharpCfg: [0, 0, 0, 0], sharpCfgB: [0, 0, 0, 0], sharpCfgC: [0, 0, 0, 0], rigCfg: [0, 20, 1, 0.006], rigCfgB: [1, 24, 0.0015, 0.012] };
   let threw = ''; try { writeFrame(buf, { ...base, cardSlots: [5, 9, 13, 2, 40, 41, 42, 43, 44] }); } catch (e) { threw = String((e as Error).message ?? e); }
   const u = new Uint32Array(buf);
   check(!threw && FRAME_BYTES >= 464 && FRAME_BYTES % 16 === 0 && u[104] === MAX_CARDS && u[108] === 5 && u[111] === 2 && u[115] === 43, 'FRAME_BYTES ≥ 464, 16-aligned: cardCfg.x @416 = count (capped at MAX_CARDS), cardSlots words 108‥115 (tools/qa/frame-layout.ts holds the whole table against common.wgsl)', `${threw ? `writeFrame threw: ${threw} · ` : ''}count ${u[104]} slots ${Array.from(u.slice(108, 116)).join(',')}`);

@@ -2,6 +2,10 @@
 // page already stands at it, everything back at the end and when stopped. No browser, no GPU.   bun run tools/qa/perf-sweep-logic.ts   (exit 0 = all pass)
 import { PerfSweep, sweepOrder } from '../../src/ui/perfsweep';
 import { Quality } from '../../src/ui/quality';
+import { smokeIndirectFlip, type SweepSmoke } from '../../src/ui/sweepSmoke';
+import { byGpuCount, pageIndirect } from '../../src/smoke/dispatch';
+import { readFileSync } from 'node:fs';
+import type { SweepFlip } from '../../src/ui/perfsweep';
 let now = 0; (performance as any).now = () => now;
 const S: any = { heldAdaptive: false, heldRays: 4, gatherThird: false, renderScale: 0.8, sharpDirect: true, taau: true };
 const ev: any[] = []; const rec: any = { recording: false, start() { this.recording = true; }, stop() { this.recording = false; }, event(k: string, t: string) { ev.push(JSON.parse(t)); } };
@@ -80,8 +84,8 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   check(untouched && plain(a.settings) === medium && a.Q.current === 'medium' && /your quality stands/.test(a.said()), 'his new preset stands row for row, and finding out what a preset writes applied nothing to the page');
   const b = page(), inB = toFlip(b, 'meshNear') && b.settings.meshShadows === false; b.Q.pin('medium'); now += 16; b.sw.tick();
   check(inB && !b.sw.active && b.settings.meshShadows === false && b.settings.meshShadowsNear === false && plain(b.settings) === medium, 'a row the new preset writes to the very value the sweep had flipped it to: left as the preset wrote it');
-  const c = page(), inC = toFlip(c, 'held2') && c.settings.heldRays === 2; c.Q.pin('ultra'); const ultra = page(); ultra.Q.pin('ultra'); now += 16; c.sw.tick();
-  check(inC && !c.sw.active && plain(c.settings) === plain(ultra.settings), 'a row the new preset writes to another value: the preset\'s');
+  const c = page(), inC = toFlip(c, 'held2') && c.settings.heldRays === 2; c.Q.pin('low'); const low = page(); low.Q.pin('low'); now += 16; c.sw.tick();
+  check(inC && !c.sw.active && plain(c.settings) === plain(low.settings), 'a row the new preset writes to another value: the preset\'s');
   const d = page(); d.sw.start({ rounds: 1, only: ['heldAdaptive'] }); const inD = d.settings.heldAdaptive === true && !d.e.some(x => x.op === 'seg'); d.Q.pin('medium'); now += 16; d.sw.tick();
   check(inD && !d.sw.active && d.settings.heldAdaptive === false && plain(d.settings) === medium, 'changed by hand during the warm-up: the trade row it had switched on is off again');
   const f = page(), inF = toFlip(f, 'shadowOccl'); f.Q.setAuto(); now += 16; f.sw.tick();
@@ -109,10 +113,10 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   check(shared[0] + shared[1] <= 11, `three rounds of 23 rows: two rows are neighbours again in a later round ${shared[0]} + ${shared[1]} times of 44 (in order, reversed, in order: all 44)`);
   check(same(sweepOrder(['only'], 5), ['only']) && sweepOrder([], 3).length === 0 && same(list, Array.from({ length: 23 }, (_, k) => 'r' + k)), 'one row, no rows; the list handed in is left as it was');
   // and through a real sweep: the segments it logs
-  const S2: any = { heldAdaptive: false, heldRays: 4, gatherThird: false, renderScale: 0.8, sharpDirect: true, taau: true, volLightCap: 4, froxelVol: false };
+  const S2: any = { heldAdaptive: false, heldRays: 4, gatherThird: false, renderScale: 0.8, sharpDirect: true, taau: true, volLightCap: 4, wxAirSteps: 0 };
   const run = () => { const e2: any[] = []; const r2: any = { recording: false, start() { this.recording = true; }, stop() { this.recording = false; }, event(_k: string, t: string) { e2.push(JSON.parse(t)); } };
     const p = new PerfSweep({ settings: S2, width: 100, height: 50, timer: { enabled: true } } as any, { fogOfWar: null } as any, { current: 'high', calibrating: false, label: 'high', auto: true } as any, { stats: { live: 0 }, params: { enabled: true } } as any, r2, () => {});
-    p.start({ rounds: 3, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['heldAdaptive', 'held2', 'held0', 'gatherHalf', 'volK', 'froxel'] });
+    p.start({ rounds: 3, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['heldAdaptive', 'held2', 'held0', 'gatherHalf', 'volK', 'wxAir'] });
     for (let i = 0; i < 4000 && p.active; i++) { now += 16; p.tick(); } return { p, segs: e2.filter(e => e.op === 'seg'), begin: e2.find(e => e.op === 'begin') }; };
   const A = run(), B = run(), ids: string[] = A.begin.rows.map((r: any) => r.id), n = ids.length;
   const flips = (r: number) => A.segs.filter((s: any) => s.round === r && s.state === 'flip').map((s: any) => s.id as string);
@@ -120,7 +124,7 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   check(same(flips(0), ids) && [1, 2].every(r => same([...flips(r)].sort(), [...ids].sort())) && !same(flips(1), flips(2)), `round 1 as listed (${flips(0).join(' ')}), then ${flips(1).join(' ')}, then ${flips(2).join(' ')}`);
   check(same(A.segs.map((s: any) => s.id), B.segs.map((s: any) => s.id)), 'the same sweep run again takes the same order');
   check(A.segs.every((s: any) => same(Object.keys(s), ['op', 'i', 'of', 'round', 'id', 'state'])), 'a segment\'s line in the take is shaped as before (op, i, of, round, id, state)');
-  check(S2.heldAdaptive === false && S2.heldRays === 4 && S2.gatherThird === false && S2.volLightCap === 4 && S2.froxelVol === false, 'all back after the shuffled rounds');
+  check(S2.heldAdaptive === false && S2.heldRays === 4 && S2.gatherThird === false && S2.volLightCap === 4 && S2.wxAirSteps === 0, 'all back after the shuffled rounds');
 }
 { // the slow, live-only rows: 'wind sim off' and 'one snow in one air off'
   const mk = (hook: (() => any) | null) => {
@@ -167,6 +171,34 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   const opts = { rounds: 2, settleMs: 500, measureMs: 1000, settleFrames: 1, measureFrames: 2, only: ['wispMotes', 'held2'] };
   { const p = mk(); p.wispMotes = hook; p.start(opts); check(/live takes only/.test(why('wispMotes') ?? ''), `a frozen take skips the wisps' row with the reason (${why('wispMotes')})`); p.stop(); }
   { const p = mk(); p.oneAir = () => 'never asked'; p.start({ ...opts, live: true }); check(/no snow to flip/.test(why('wispMotes') ?? ''), 'a page that hands no wisp flip skips the row, whatever it hands for the other snow row'); p.stop(); }
+  { // THE SMOKE SOLVER'S DISPATCH (smoke/dispatch.ts) AND ITS ROW ON THE SWEEP (`smokeIndirect`, ui/sweepSmoke.ts): which way a page opens on, the flip with its reasons, the row's skips
+    const K: SweepSmoke = { sparse: { indirect: false, directAt: 0.5 }, stats: { pool: 20, stepped: 20 }, params: { enabled: true, frozen: false }, grid: { cap: 4096 } };
+    const said = (over: Partial<SweepSmoke>) => { const r = smokeIndirectFlip({ ...K, ...over }); return typeof r === 'string' ? r : 'flips'; };
+    check(said({}) === 'flips' && /switched off or held/.test(said({ params: { enabled: false } })) && /switched off or held/.test(said({ params: { enabled: true, frozen: true } })) && /no smoke is in the air/.test(said({ stats: { pool: 0, stepped: 0 } }))
+      && /already on the dispatch of before/.test(said({ sparse: { indirect: true, directAt: 0.5 } })) && /both sides would be one/.test(said({ stats: { pool: 3000, stepped: 2048 } })),
+      `the solver's flip says why it cannot be read: the solver off or held, no smoke, the page already the way of before, the pool so full that both ways go whole (${said({ params: { enabled: false } })} · ${said({ stats: { pool: 0, stepped: 0 } })})`);
+    { const f = smokeIndirectFlip(K) as SweepFlip, undo = f.apply(), on = K.sparse.indirect; undo(); check(on && !K.sparse.indirect, 'its apply puts the solver on the dispatch of before and its undo takes it off again'); }
+    // on a take: the sweep asks the solver it already holds (the stand-in below), so the row needs no hook of the page's
+    const r: any = { recording: false, start() { this.recording = true; }, stop() { this.recording = false; }, event(k: string, t: string) { ev.push(JSON.parse(t)); } }, ev: any[] = [];
+    const p = new PerfSweep({ settings: { renderScale: 0.8, volLightCap: 4 }, width: 100, height: 50, timer: { enabled: true } } as any, { fogOfWar: null } as any, { current: 'high', calibrating: false, label: 'high', auto: true } as any, { ...K, stats: { ...K.stats, live: 1 } } as any, r, () => {});
+    const smoke = (p as any).smoke as SweepSmoke, skipWhy = () => ev.find(e => e.op === 'begin')?.skipped?.find((x: any) => x.id === 'smokeIndirect')?.why, o = { rounds: 2, settleMs: 500, measureMs: 1000, settleFrames: 1, measureFrames: 2, only: ['smokeIndirect'] };
+    p.start({ ...o, only: ['smokeIndirect', 'volK'] }); check(/live takes only/.test(skipWhy() ?? '') && !smoke.sparse.indirect, `a frozen take skips the solver's row: a held world steps no smoke (${skipWhy()})`); p.stop(); ev.length = 0;
+    p.start({ ...o, live: true }); const row = ev.find(e => e.op === 'begin')?.rows?.[0]; let seen = false; for (let i = 0; i < 4000 && p.active; i++) { now += 50; p.tick(); seen ||= smoke.sparse.indirect; }
+    check(seen && !smoke.sparse.indirect && p.last === 'done' && row?.by === 'frame' && /20 bricks in the air/.test(row?.label ?? ''),
+      `on a live take the solver's row is flipped and put back, and its begin line says it is read by the frame's length and how much smoke stood (flipped ${seen}, back ${!smoke.sparse.indirect}, ${p.last}, by ${row?.by}, '${row?.label}')`);
+    // which way a page opens on. SMOKEDISPATCH_BREAK=1 asks the software adapter's answer where a real card's is wanted: the next line must fail.
+    const soft = process.env.SMOKEDISPATCH_BREAK === '1', g = (indirect: boolean, stepped: number, directAt = 0.5) => byGpuCount({ indirect, directAt }, stepped, 4096);
+    check(pageIndirect(null, soft) === false && pageIndirect('', soft) === false && pageIndirect('1', false) === true && !g(pageIndirect(null, soft), 0) && !g(pageIndirect(null, soft), 20) && !g(pageIndirect(null, soft), 3000),
+      'a page on a real card opens on the whole pool at any fill, and ?smokeindirect=1 gives it the GPU-written count');
+    check(pageIndirect(null, true) === true && pageIndirect('0', true) === false && pageIndirect('1', true) === true && g(true, 20) && !g(true, 2048) && g(true, 3000, 2) && !g(true, NaN),
+      'a page on a software adapter opens on the GPU-written count (?smokeindirect=0 gives it the whole pool), and that way is as it was: the whole pool from directAt of it stepping');
+    // …and that the page and the solver really ask these two (no GPU here to run them): read in the source, as the pacer's word is (pace-check.ts)
+    const src = (f: string) => readFileSync(new URL(`../../src/${f}`, import.meta.url), 'utf8');
+    check(/smoke\.sparse\.indirect = pageIndirect\(q\.get\('smokeindirect'\), engine\.gpu\.adapterFallback === true\);/.test(src('host/pictureopens.ts')) && /const indirect = byGpuCount\(this\.sparse, this\.stats\.stepped, cap\);/.test(src('smoke/smoke.ts'))
+      && /else if \(indirect\) pass\.dispatchWorkgroupsIndirect\(this\.argsBuf, op\.all \? 0 : 16\); else pass\.dispatchWorkgroups\(cap\);/.test(src('smoke/smoke.ts')) && /indirect: true, directAt: 0\.5/.test(src('smoke/smoke.ts'))
+      && /'smokeindirect'/.test(src('tape/address.ts')) && /\|smokeindirect\|/.test(src('ui/benchrun.ts')),
+      "the page sets the solver's dispatch by that rule as it opens, the solver's encode asks the one predicate and dispatches the whole pool otherwise, the solver's own default is the count as it was, and the word is a visit's (not kept in a link) that a benchmark carries");
+  }
   { const p = mk(); p.wispMotes = hook; p.start({ ...opts, live: true });
     const at: { id: string; state: string; t: number; settleMs?: number; m: number }[] = []; let n = 0;
     const drain = () => { const segs = e4.filter(x => x.op === 'seg'); while (n < segs.length) { const x = segs[n++]; at.push({ id: x.id, state: x.state, t: now, settleMs: x.settleMs, m: W.motes }); } };
@@ -239,7 +271,7 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   skips('one lamp: the second row', /one infrared light burns here/, set(1), 'irLightOne');
   { const p = mk(set(1)); p.start(opts); check(p.active && !why('irLight') && e6.find(x => x.op === 'begin').rows.some((r: any) => r.id === 'irLight' && r.from.irLights === 1 && r.to.irLights === 0), 'one lamp: the first row still runs'); p.stop(); check(L.irCap === Infinity, 'and stopped, the cap is off'); }
   for (const live of [false, true]) { const p = mk(set(5)), all = [...L.ir]; p.start({ ...opts, live });
-    const step = () => { if (live) { L.ir.length = 0; L.ir.push(...all); } };   // (a running game makes its list again every step, irlight.ts irLightTick; a frozen one writes nothing)
+    const step = () => { if (live) { L.ir.length = 0; L.ir.push(...all); } };   // (a running game makes its list again every step, rust/game_rules/src/teammates/irlight.rs ir_light_tick; a frozen one writes nothing)
     const at: { id: string; state: string; said: string; t: number }[] = []; let n = 0, held = true, whole = true;
     const drain = () => { const segs = e6.filter(x => x.op === 'seg'); while (n < segs.length) { const x = segs[n++]; at.push({ id: x.id, state: x.state, said: p.flipped, t: now }); } };
     drain();

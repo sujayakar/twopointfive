@@ -1,7 +1,7 @@
 // THE DEPOT — a motor pool at night: three huts round a floodlit yard, and a dark signals hut and a store's hatch that look across it.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
-//   bun run tools/levels/export.ts depot [--check]     → levels/depot.json (+ levels/depot-gwot.json), with its `scenarios.roomClear` block
-//   page: ?levelFile=depot.json&roomclear&squad4       · headless: bun run tools/qa/probes.ts depot
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
+//   bun run tools/levels/export.ts depot [--check]     → levels/depot.json, with its `scenarios.roomClear` block
+//   page: ?levelFile=depot.json&roomclear&squad4
 //
 // ONE PROBLEM, in a sentence: THE SIGNALS HUT AND THE STORE'S HATCH HOLD THE LIT YARD IN A CROSSFIRE FROM THE DARK, AND THE HUT'S OWN DOOR — AND THE
 // MAINS — ARE AT ITS BACK.
@@ -47,23 +47,32 @@
 //
 // ITS OWN SHELL (as the compound has): a walled yard, three roofs. Nothing of the office's stair tower or fire exit is here.
 // NO BREACH PLAN: there is no F drill — all four teammates are the order menu's from the first frame (the structure's `team` says where they start).
-// Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+// Only the old demo's kit (lib/officeGen.ts officeKit: its walls, doors, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: an old army motor pool and its signals hut — cream over oxide red, oil black. What it alone has: VEHICLES AND LETTERED DOORS. Each held
+// room's letter is painted on the ground at its doors (A the crew room, B the signals hut — at its one door, and again on the yard under the window that
+// has no door beside it — C the store), the yard has its parking bays, the stop line at the gate and a keep-clear box at the store's hatch, the bay its
+// inspection pit. No green, no mud.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import * as MD from '../../src/scene/markingDefaults';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, Rect, ResponseData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit, LIVED_PAINT } from './livedKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene/stuff';
+import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'depot';
-export const NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
+const PLAIN_NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
 
-/** THE DEPOT'S OWN PAINTS, the ones the office's palette has no name for. Named here so that the look's second file (depot-gwot.ts) says what each is made
+/** THE DEPOT'S OWN PAINTS, the ones the office's palette has no name for. Named here so that the skin below says what each is made
  *  of by its name and not by a colour typed twice. */
 export const DEPOT_PAINT = {
   hard: drawnAs('block', [0.23, 0.23, 0.22]),   // the hardstanding (what its colour was drawn as; nobody chose it: scene/stuff.ts)
@@ -93,7 +102,7 @@ export const DEPOT_ROOMS: Record<'duty' | 'a' | 'wash' | 'battery' | 'generator'
   aerials: { x0: 29.62, x1: 35.88, z0: 4.12, z1: 14.88 },
 };
 
-/** THE DEPOT'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — `bun run tools/qa/response-check.ts` stands every mark on the
+/** THE DEPOT'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/pursuit/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark on the
  *  built floor). A raid's team: it stands with the defenders. WHY HERE: the signals hut is this level's one problem already — the answer the floor is cut for
  *  is round the back to the hut and the mains — and a motor pool's trucks are out on the road with an escort the hut talks to. So the hut is also what
  *  calls: gunfire its men hear, and a few seconds to say so, brings the escort back to one of the depot's own two gates. The hut taken first, nobody calls. */
@@ -245,7 +254,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     if (slots.length) switchables.push({ name: `rack${i}_leds`, boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: i === 0, mains: false });
   }
   desk(27.0, 12.7, 1.6, 0.8, 0, C.metal); monitor(26.6, 12.6, 0, false); chair(26.7, 13.45, 0);
-  papers(27.55, 0.76, 12.5, 0.4); papers(27.3, 0.76, 12.95, -0.25);   // the signals log and a message pad (and paper for a firefight to throw about: loudchaos-probes.ts loudLevels wants six sheets a loud level)
+  papers(27.55, 0.76, 12.5, 0.4); papers(27.3, 0.76, 12.95, -0.25);   // the signals log and a message pad (and paper for a firefight to throw about: six sheets a loud level)
   cabinet(28.95, 14.45, -Math.PI / 2);
 
   // ---------------- the tyre store (x 4..9, z 18.5..24): NOT held, dark — a room off the bay, no door on the yard ----------------
@@ -266,7 +275,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Two doors: c_n on the yard's east mouth (an arm's length from the hatch), c_w from the bay (behind the hatch: one man's back to it, the edge of the other's eye). The hatch in its yard wall
   // has a shelf for a counter; two rows of racking run north–south in the south half.
   grp('room_c');
-  add({ c: [20.4, 0.98, 18.7], h: [1.0, 0.02, 0.1], albedo: C.woodDark });                    // the hatch's counter, a shelf on the wall's inside
+  add({ c: [20.4, 0.98, 18.71], h: [1.0, 0.02, 0.09], albedo: C.woodDark });                    // the hatch's counter, a shelf on the wall's inside
   shelf(20.0, 22.4, 0.5, 2.2, 0, 4, 2.0); shelf(21.8, 22.4, 0.5, 2.2, 0, 4, 2.0);
   pallet(23.3, 23.2, 0.9, 1.0);
 
@@ -316,7 +325,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   beacon(13.5, 20.2);                           // the bay
 
   // door leaves + frames (the kit's frame: jambs, head, the two stops in the leaf's plane). SWINGS: every held room has one door hung to open OUT of it
-  // (tools/qa/second-way-check.ts: no wedge holds that one) — a_e into the wash room, b_n into the generator room, c_w into the bay; the yard doors open in.
+  // (rust/game_start levels second-way: no wedge holds that one) — a_e into the wash room, b_n into the generator room, c_w into the bay; the yard doors open in.
   const X = 0, Z = Math.PI / 2;
   const doorDefs: LevelDoorDef[] = [
     { name: 'a_s', hinge: [11.82, 9.5], closedDir: X, width: 1.16, swing: -1 },             // the yard → the crew room; opens in
@@ -337,8 +346,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const THICK = new Set(['a_s', 'b_n', 'c_n', 'duty', 'battery_to_yard', 'generator_to_park', 'bay_to_yard']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<room>', every prop named 'lived.<room>.…' — the loader leaves them all out
-  // with the switch off, and then this is the depot above, box for box). What makes each space ITS place, as the office's rooms are: a motor pool and its signals
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<room>', every prop named 'lived.<room>.…').
+  // What makes each space ITS place, as the office's rooms are: a motor pool and its signals
   // hut. Rules kept: nothing solid within 1.1 m of a door's line or in a leaf's sweep, nothing solid on the wall a file stacks on beside a jamb, nothing on a
   // mark or a start or over 1.1 m across a mark's line to its door or out of its window, the lanes between doors bare. No light, nothing lit.
   // LAST in the lists on purpose (tools/levels/export.ts): the lived boxes are the tail of the boxes, the lived props the tail of the props.
@@ -449,7 +458,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (let k = 0; k < 3; k++) L.thing(32.6, 0.05 + k * 0.09, 4.3 + k * 0.08, 2.2, 0.035, 0.035, PALE);           // spare mast sections along the north wall
 
     // ---- OUTSIDE THE WALL — the road past the main gate and the track round the wall: scrub nobody cuts, stones off the track, what was dumped over the
-    // wall. Laid with the look's own kit (src/scene/gwotKit.ts: its paints are the look's materials). Nothing here stands inside the wall, where every
+    // wall. Laid with the look's own kit (lib/gwotKit.ts: its paints are the look's materials). Nothing here stands inside the wall, where every
     // metre of cover is the level's problem; outside it nothing is taller than a crouched man's knee but the scrub, and nothing is on or beside a start.
     L.room('road');
     { const G = gwotKit({ ...gwotOfOffice(K), prop: (...a) => { K.prop(...a); return L.own(a[0] === 'plant' ? 'scrub' : a[0]); } });
@@ -508,8 +517,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       ],
     },
   };
-  // the open floor's names (src/game/dialogue.ts: a held room is its own name; these are for everywhere a held room is not)
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways are the level's own. The main gate has no leaf
+  // the open floor's names (rust/game_rules/src/speech/dialogue: a held room is its own name; these are for everywhere a held room is not)
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the level's own. The main gate has no leaf
   // (its two are chained back on the inside of the wall), and a picture anchored on the opening had nothing for the kit that works a leaf — the hammer, the
   // shotgun, a door charge, the wand, a bang or a frag on order all stood idle there. So the first way is the first door the team meets through that gate:
   // the first hut's door on the yard (`a_s`), which plans with nothing in the camera's way. The second is the back gate's leaf in the east wall.
@@ -520,7 +529,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'duty office', bounds: { ...R.duty } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'battery room', bounds: { ...R.battery } },
     { name: 'generator room', bounds: { ...R.generator } }, { name: 'tyre store', bounds: { ...R.tyres } }, { name: 'bay', bounds: { ...R.bay } },
   ] };
-  // what a step sounds like (src/game/floor.ts): the hardstanding inside the wall and the road outside it are asphalt, the huts lino or sealed concrete
+  // what a step sounds like (rust/game_rules/src/world/floor.rs): the hardstanding inside the wall and the road outside it are asphalt, the huts lino or sealed concrete
   const surfaces: SurfacesData = {
     building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
     zones: [
@@ -530,3 +539,51 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   return { level, scenarios, groups: trace.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'depot';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const OWN = DEPOT_PAINT;
+const R = DEPOT_ROOMS;
+const SKIN: Skin = {
+  // WHAT EACH THING IS MADE OF, where the shared rules had no word for it or a wrong one (the look draws a paint as a material by its palette row, and a paint
+  // with no material is drawn flat). THE YARD IS POURED: the hardstanding wore `block`, which the look lays in courses like a wall on its side, over a
+  // quarter of the picture; a motor pool's yard is slab, in bays with joints, and the signals hut's raised floor is the same pour. The rooms that had lino
+  // are boarded (`floor`). `own`: the depot's own colours, by the row each wears — army paint on the trucks, the shelter and the generating set, red oxide
+  // on a drum and on the main gate's leaves, bare iron for the stove, a hub, a picket. (The shelter's chassis is a hair too dark for any row to stand for it.)
+  own: [[OWN.hard, 'slab'], [OWN.raised, 'slab'], [OWN.drab, 'olive'], [OWN.shelter, 'olive'], [OWN.set, 'olive'], [OWN.oxide, 'drumRed'], [OWN.gate, 'paintRust'], [OWN.iron, 'iron']],
+  pick: c => c.name === 'wallDark' ? 'woodGrey' : undefined,                           // the wash room's stall partitions: boards
+  wall: 'tWall', house: 'tWall', inner: 'paintCream', frameOut: 'paintRust', frameIn: 'woodGrey', dado: 'paintRust',
+  floor: { carpet: 'slab', stone: 'slab', lino: 'woodGrey' }, noRug: /./, rugs: { crew: 'mat' },
+  metals: ['olive', 'rust', 'drumRed', 'iron'],
+  rooms: [{ id: 'duty', bounds: R.duty }],
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), paint = T.tone(P.stencil, 0.92), Y = P.genYellow, K = P.iron;
+    // THE YARD'S WEAR, LAID FIRST so that every painted line and letter below lies over it (the pour is one paint from wall to wall, and from above it is a quarter of the picture): the ways feet take between the doors,
+    // trodden darker — the crew room to the bay's side door past the truck's tail, the battery room to the store, the gatehouse to the gate, the back
+    // gate to the mouth, and the back way itself from the gap to the generator room's door. The slab's own paint darker, never a colour laid on it.
+    { const fa = T.floorAt(14, 13); if (fa) { const w = T.tone(fa, 0.84), trod = (pts: [number, number][], wd = 0.8) => M.path(pts, wd, w);
+      trod([[12.4, 10.6], [15.0, 14.0], [15.9, 15.3], [16.5, 17.4]]); trod([[21.4, 10.6], [22.3, 14.4], [22.9, 17.4]]); trod([[6.4, 10.6], [5.3, 12.6]], 0.7);
+      trod([[34.8, 17.4], [30.0, 17.1], [24.8, 17.3]]); trod([[35.0, 14.4], [35.0, 10.6], [31.4, 8.0], [30.4, 6.9]], 0.7); } }
+    // OUTSIDE THE WALL: the track the patrol drives round it, and the road past the gate
+    G.ruts(1.9, 0.6, 1.9, 27.4, 'dirt'); G.ruts(1.0, 26.0, 39.1, 26.0, 'dirt'); G.ruts(38.2, 27.0, 38.2, 1.0, 'dirt'); G.ruts(39.1, 1.9, 1.0, 1.9, 'dirt');
+    // THE LETTERS: A the crew room (its yard door, its wash-room door), B the signals hut (its one door, from the generator room — and on the yard under its
+    // west window, where a door would be), C the store (its yard door, its bay door)
+    M.glyph('A', 12.25, 10.7, 0.85, paint); M.glyph('A', 16.5, 6.75, 0.85, paint);
+    M.glyph('B', 25.75, 8.3, 0.85, paint); M.glyph('B', 22.9, 11.9, 0.85, paint);
+    M.glyph('C', 22.75, 17.4, 0.85, paint); M.glyph('C', 16.9, 20.75, 0.85, paint);
+    // THE YARD: the stop line inside the gate, two parking bays on the south side, a keep-clear box in front of the store's hatch, the ruts in from the road
+    M.seg(4.7, 12.6, 4.7, 15.4, 0.14, paint);
+    M.outline(9.6, 15.5, 15.6, 18.3, 0.12, paint, 'n'); M.outline(15.6, 15.5, 19.0, 18.3, 0.12, paint, 'n');
+    M.outline(19.3, 17.3, 21.5, 18.3, 0.07, paint); for (let x = 19.5; x < 21.3; x += 0.6) M.seg(x, 18.25, x + 0.35, 17.35, 0.06, paint);
+    G.ruts(0.6, 14.0, 9.0, 14.0, 'oil'); G.patch(12.4, 16.9, 1.5, 1.0, 'oil', 0.1); G.patch(17.2, 16.8, 1.1, 0.8, 'oil', 1.3); G.patch(15.0, 12.6, 0.9, 0.7, 'oil', 0.2);
+    // THE BAY: the inspection pit's hazard edge, drawn round the truck that stands over it
+    M.hazard(10.9, 21.55, 15.9, 21.7, Y, K); M.hazard(10.9, 21.7, 11.1, 23.7, Y, K, 0.25); M.hazard(15.7, 21.7, 15.9, 23.7, Y, K, 0.25);
+    // THE EAST YARD: the fuel point's bund
+    M.outline(26.4, 22.2, 28.8, 23.86, 0.1, Y);
+    // THE SIGNALS HUT: the darker anti-static floor round the desk
+    { const fa = T.floorAt(27, 12.6); if (fa) M.fill(25.7, 11.7, 28.4, 13.7, T.tone(fa, 0.78)); }
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

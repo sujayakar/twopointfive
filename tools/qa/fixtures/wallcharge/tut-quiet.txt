@@ -1,2 +1,0 @@
-# places for a wall charge on levels/tut-quiet.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
-410 410

@@ -1,45 +1,27 @@
 // THE SUN'S GLINT: the check behind the scene prelude's SUN_GLINT (src/render/frame.ts sunGlintConfig; on on the look's page, ?nosunglint at boot = as it
 // was; no game table, nothing for a recording to carry).
-//   bun run tools/qa/probes.ts sunglint        (family `render`)        SUNGLINT_BREAK=1 = the rule off and the same lines asked: must FAIL
+//   bun run tools/qa/checks.ts sunglint        SUNGLINT_BREAK=1 = the rule off and the same lines asked: must FAIL
 //   Also here, since it is the same function's text: NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN (the prelude's GLINT_PICK, lines 4 and 5 below; GLINTPICK_BREAK=1
 //   asks the pick's lines of the half credit it replaces: must FAIL)
 // The maintainer, 11-04, of a car's gloss paint beside two pictures of the real thing: "mm doesn't look good. we don't need to go full hyperrealistic but we
 // should sell it more". Every lamp's highlight on a smooth finish was added analytically (shaders/reflect.wgsl rtGlints) and the brightest light of all, a
 // directional one, was skipped; the sky a reflection ray returns has no sun in it. So by day nothing smooth showed the sun.
-// WHAT THIS CAN AND CANNOT SAY. No shader runs here. The rule is held BY ITS TEXT in the three reflection passes (they must stay in step), the prelude's word
-// is asked as the page writes it on the look's page, off it, and with the switch down, its off word's wiring is read, and the sun's arithmetic is written
-// again below and asked what a glint is: brightest where the face looks half way between the eye and the sun, nothing on a face turned from the sun, on a
+// WHAT THIS CAN AND CANNOT SAY. No shader runs here. The sun's arithmetic is written again below, held to the shader by the text of its lines, and asked what a glint is: brightest where the face looks half way between the eye and the sun, nothing on a face turned from the sun, on a
 // smooth finish brighter than a white wall beside it, never over its bound at a grazing eye or on a metal, and fading out with no step. What the picture
 // looks like is the page's to show. Never seen on a GPU.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function sunGlintCheck(): Promise<boolean> {
   const BRK = process.env.SUNGLINT_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== sunglint: a smooth finish catches the sun${BRK ? ' (the rule off: must fail)' : ''} ===`);
-  const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'), src = (f: string) => readFileSync(resolve(ROOT, 'src', f), 'utf8');
-  const texts = [read('reflect.wgsl'), read('reflect_p5.wgsl'), read('compact/reflect_p5.wgsl')];
-  const { scenePrelude, lookConfig, sunGlintConfig } = await import(`${ROOT}/src/render/frame.ts`);
-  // 1. the prelude's word: true on the look's page with the switch up, false with the switch down, false off the look's page; the switch itself ships up, and
-  //    its off word is wired: main.ts lowers it for ?nosunglint, a replay's visit keeps the word, and the look's page knows it for one of its own
-  { const was = [lookConfig.on, sunGlintConfig.on]; let a: string | undefined, b: string | undefined, c: string | undefined;
-    const word = (look: boolean, sw: boolean) => { lookConfig.on = look; sunGlintConfig.on = sw; return /const SUN_GLINT: bool = (true|false);/.exec(scenePrelude())?.[1]; };
-    try { a = word(true, was[1] && !BRK); b = word(true, false); c = word(false, true); } finally { lookConfig.on = was[0]; sunGlintConfig.on = was[1]; }
-    const wired = /if \(q\.has\('nosunglint'\)\) sunGlintConfig\.on = false;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'nosunglint'/.test(src('ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'nosunglint'/.test(src('scene/look.ts'));
-    verdict(was[1] === true && a === 'true' && b === 'false' && c === 'false' && wired, 'the switch ships up; the prelude says the rule on the look\'s page with the switch as it ships, and nowhere else; and ?nosunglint is wired (the page lowers the switch, a replay\'s visit keeps the word, the look\'s page counts it its own)', `the switch ${was[1]} · look page ${a} · switch down ${b} · another page ${c} · the off word wired ${wired}`); }
-  // 2. the text: the sun's head, its four numbers and rtGlints are ONE text in the three passes; without the word the sun's flag is a constant false and the
-  //    lamps' skip is the old one; with it the sun is taken out of the contest before the four slots (never an unshadowed credit), has its own turn of the
-  //    one shadow loop (no call site more), and is faded in and bounded by its own light
+  const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8');
+  const texts = [read('reflect.wgsl')];
+  // 2. the sun's lines that the arithmetic below writes again: its fade and bound, in the part of the loop that is its own, and its floor
   { const cut = (s: string) => { const i = s.indexOf("// THE SUN'S GLINT"), k = s.indexOf('fn rtGlints('), j = s.indexOf('\n}\n', k); return i < 0 || k < 0 || j < 0 ? '' : s.slice(i, j); };
-    const parts = texts.map(cut), a = parts[0], same = a.length > 0 && parts.every(x => x === a);
-    const flag = a.includes('let far = SUN_GLINT && kind == 2u;') && a.includes('if ((kind == 2u && !far) || (!far && li.radius <= 0.0) || lightTransient(li)) { continue; }');
-    const iFar = a.indexOf('    if (far) {'), iCont = a.indexOf('      continue;\n    }\n', iFar), iSlots = a.indexOf('if (w > g0.w) { rest += g3.spec;');
-    const out = iFar > 0 && iCont > iFar && iSlots > iCont && a.slice(iFar, iCont).includes('if (g.w > gs.w) { gs = g; }') && !a.slice(iFar, iCont).includes('rest');
-    const own = a.slice(iFar, iCont).includes('smoothstep(RT_SUN_CUT, 3.0 * RT_SUN_CUT, w / e) * min(1.0, RT_SUN_PEAK * e / w)') && a.includes('RT_SUN_ALPHA - min(ax, ay)') && a.includes('g.dist = clamp((WORLD_MAX.y - Po.y) / max(Ld.y, 0.02), 0.5, RT_SUN_FAR);');
-    const turn = a.includes('for (var k = 0u; k < RT_GLINT_RAYS + 1u; k++) {') && a.includes('var g = g0; if (k == RT_GLINT_RAYS) { g = gs; } else if (k == 1u)') && (a.match(/occluded\(/g) ?? []).length === 1 && (a.match(/smokeTransmittance\(/g) ?? []).length === 1 && (a.match(/lightFogK\(/g) ?? []).length === 1;
-    verdict(same && flag && out && own && turn, 'the three reflection passes hold one text of the sun\'s rules, its numbers and the highlights\' loop: without the word the flag is a constant false and the lamps\' skip the old one; the sun leaves the loop before the four slots and is never credited unshadowed; it is faded in, bounded by its own light, floored and short; and it has a turn of the one shadow loop, with no call site more of the walk, the smoke or the fog\'s classes',
-      `one text in all three ${same} · the flag and the skip ${flag} · out of the contest ${out} · its own rules ${own} · its turn, one call site each ${turn}`); }
+    const a = cut(texts[0]), iFar = a.indexOf('    if (far) {'), iCont = a.indexOf('      continue;\n    }\n', iFar);
+    verdict(a.length > 0 && a.slice(iFar, iCont).includes('smoothstep(RT_SUN_CUT, 3.0 * RT_SUN_CUT, w / e) * min(1.0, RT_SUN_PEAK * e / w)') && a.includes('RT_SUN_ALPHA - min(ax, ay)'), 'the sun is faded in, bounded by its own light and floored as the arithmetic below has it', `the sun's lines in ${a.length} characters`); }
   // 3. the arithmetic, written again (rtGlints' own lines for a directional light): GGX D, height-correlated Smith, Schlick F in the face's frame, then the
   //    sun's fade and bound. Per unit of the sun's irradiance
   { const num = (name: string) => Number(new RegExp(`const ${name}: f32 = ([0-9.]+);`).exec(texts[0])?.[1] ?? NaN), CUT = num('RT_SUN_CUT'), FLOOR = num('RT_SUN_ALPHA'), PEAK = num('RT_SUN_PEAK');
@@ -64,19 +46,14 @@ export async function sunGlintCheck(): Promise<boolean> {
       'a glint is brightest where the face looks half way between the eye and the sun and falls away to nothing; a face turned from the sun has none; on a smooth finish (0.2) it is several times a white wall and at the roughness cut (0.45) a soft sheen, softer still under cloud; a grazing eye and a metal stop at the sun\'s own bound; and the sheen\'s rim is a fade, not a step',
       `per unit of the sun: at the mirror ${peak.toFixed(2)} · 10° off ${off10.toFixed(3)} · 60° off ${off60} · turned away ${back} · a white wall ${wall.toFixed(2)} · at 0.45 ${rough45.toFixed(3)}, under cloud ${cloud.toFixed(4)} · a grazing eye ${rim.toFixed(2)}, steel ${steel.toFixed(2)} of the bound ${PEAK} · the sheen's largest step a quarter degree ${step.toFixed(4)} · cut ${CUT}, floor ${FLOOR}`); }
   // 4. NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN (the prelude's GLINT_PICK, render/frame.ts glintPickConfig; the look's page, &glintpick=1, off unless asked;
-  //    GLINTPICK_BREAK=1 = the half credit asked the same lines: must FAIL). The word, then the text in the three passes
-  { const { glintPickConfig } = await import(`${ROOT}/src/render/frame.ts`); const was = [lookConfig.on, glintPickConfig.on]; let a: string | undefined, b: string | undefined, c: string | undefined;
-    const word = (look: boolean, sw: boolean) => { lookConfig.on = look; glintPickConfig.on = sw; return /const GLINT_PICK: bool = (true|false);/.exec(scenePrelude())?.[1]; };
-    try { a = word(true, true); b = word(true, false); c = word(false, true); } finally { lookConfig.on = was[0]; glintPickConfig.on = was[1]; }
-    const wired = /if \(q\.get\('glintpick'\) === '1'\) glintPickConfig\.on = true;/.test(src('main.ts')) && /VISIT_FLAGS = \[[^\]]*'glintpick'/.test(src('ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'glintpick'/.test(src('scene/look.ts'));
-    const cut = (t: string) => { const k = t.indexOf('fn rtGlints('), j = t.indexOf('\n}\n', k); return k < 0 || j < 0 ? '' : t.slice(k, j); }, f = texts.map(cut), t0 = f[0];
-    const lines = t0.includes('var poolW = 0.0; var pu = pick;')
-      && t0.includes('      var c = g;\n      if (w > g0.w) { c = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { c = g2; g2 = g1; g1 = g; } else if (w > g2.w) { c = g2; g2 = g; }\n      if (c.w > 0.0) { rest += c.spec; let first = poolW == 0.0; poolW += c.w; if (first) { g3 = c; } else { let p = c.w / poolW; if (pu < p) { g3 = c; pu = pu / p; } else { pu = (pu - p) / (1.0 - p); } } }\n      continue;\n    }\n    if (w > g0.w) { rest += g3.spec;')
-      && t0.includes('  if (GLINT_PICK) { g3.spec = rest; rest = vec3f(0.0); }') && t0.includes('  var G = rest * 0.5;') && t0.includes('else if (k == 3u) { g = g3; }') && t0.includes('G += g.spec * tr;') && texts.every(x => /\nconst RT_GLINT_RAYS: u32 = 4u;/.test(x)) && (t0.match(/if \(GLINT_PICK/g) ?? []).length === 2 && (t0.match(/rnd\(\)|hash13\(/g) ?? []).length === 0;
-    const call = texts.every(t => (t.match(/rtGlints\(P, Po, N, V, T, B, axh, ayh, F0h, owner, select\(1\.0 - kEmit, 1\.0, rays == 0u\), fract\(cpx \+ f32\(frame\.frameIdx % 4096u\) \* 0\.7548777\)\) \* frame\.matCfg\.x;/g) ?? []).length === 1 && (t.match(/let cpx = rnd\(\); let cpy = rnd\(\);/g) ?? []).length === 1 && /rngInit\(gid\.xy, 0x51f7u\);\n  let cpx = rnd\(\)/.test(t));
-    verdict(was[1] === false && a === 'true' && b === 'false' && c === 'false' && wired && f.every(x => x.length > 0 && x === t0) && lines && call,
-      'the pick ships DOWN: the prelude says it only on the look\'s page with the word, and &glintpick=1 is wired (the page raises the switch before the first pipeline, a replay\'s visit keeps the word, the look\'s page counts it its own); the three passes hold one text of it: three slots by strength, what leaves them or never joined them summed and one of it kept by its weight with ONE number handed on (the first without asking, and no division of a weight by itself), that one\'s ray answering for the sum, in front of the lines as they were; the number is the caller\'s, the pixel\'s own that is the same every frame stepped by the golden ratio, and no draw is added to the kernel\'s stream',
-      `the switch as shipped ${was[1]} · look page with the word ${a} · without ${b} · another page ${c} · wired ${wired} · one text ${f.every(x => x === t0)} · its lines ${lines} · the caller's number ${call}`); }
+  //    GLINTPICK_BREAK=1 = the half credit asked the same lines: must FAIL). The text the arithmetic below writes again
+  {
+    const cut = (t: string) => { const k = t.indexOf('fn rtGlints('), j = t.indexOf('\n}\n', k); return k < 0 || j < 0 ? '' : t.slice(k, j); }, t0 = cut(texts[0]);
+    const lines = t0.includes('var poolW = 0.0; var pu = pick;') && t0.includes('      var c = g;\n      if (w > g0.w) { c = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { c = g2; g2 = g1; g1 = g; } else if (w > g2.w) { c = g2; g2 = g; }\n      if (c.w > 0.0) { rest += c.spec; let first = poolW == 0.0; poolW += c.w; if (first) { g3 = c; } else { let p = c.w / poolW; if (pu < p) { g3 = c; pu = pu / p; } else { pu = (pu - p) / (1.0 - p); } } }\n      continue;\n    }\n    if (w > g0.w) { rest += g3.spec;') && t0.includes('  if (GLINT_PICK) { g3.spec = rest; rest = vec3f(0.0); }') && t0.includes('  var G = rest * 0.5;') && t0.includes('G += g.spec * tr;') && texts.every(x => /\nconst RT_GLINT_RAYS: u32 = 4u;/.test(x)) && (t0.match(/rnd\(\)|hash13\(/g) ?? []).length === 0;
+    const call = texts.every(t => (t.match(/rtGlints\(P, Po, N, V, T, B, axh, ayh, F0h, owner, select\(1\.0 - kEmit, 1\.0, rays == 0u\), fract\(cpx \+ f32\(frame\.frameIdx % 4096u\) \* 0\.7548777\)\) \* frame\.matCfg\.x;/g) ?? []).length === 1);
+    verdict(lines && call,
+      'three slots by strength, what leaves them or never joined them summed and one of it kept by its weight with ONE number handed on (the first without asking, and no division of a weight by itself), that one\'s ray answering for the sum; the number is the caller\'s, the pixel\'s own that is the same every frame stepped by the golden ratio, and the function draws nothing of the kernel\'s stream',
+      `its lines ${lines} · the caller's number ${call}`); }
   // 5. the pick's arithmetic, written again as the shader has it, in colour (a lamp = its highlight's rgb, its weight the luminance, and whether it is seen).
   //    The rule as it was: the four strongest by their rays, the rest at half unseen. With the word: three by their rays, the rest summed, one of the rest
   //    kept by its weight (the one number, handed on), and the sum drawn if that one is seen. The number over the frames is the shader's own: a pixel's

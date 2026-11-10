@@ -1,0 +1,15 @@
+# KIT: the squad goes quiet, closes on the nearest man who is not theirs, throws what it carries at him on order, covers him,
+# then goes loud, holds and falls in; and again.
+# REACHES: going silent and loud, the move order, the throws' page (a flash and a frag thrown by a teammate on order), cover,
+# hold, fall in. A floor's kit may not bring these, and the throws want a line: `mousehole-four` has them all.
+# DOES NOT REACH: a pair's orders on a man (hands/pair.hand), smoke and the wand under a door (no mission's kit brings them to a menu),
+# the 40 mm (no floor here stages shells: its own test is tests/orders.rs), wall charges, working a thing.
+unhurt
+at 1               order silent sam all
+every 20 from 2    order move nearest all
+every 6 from 9     order stunThere ahead all
+every 6 from 12    order fragThere ahead all
+every 20 from 16   order cover nearest all
+every 40 from 25   order loud sam all
+every 40 from 27   order hold sam all
+every 40 from 37   order fallIn sam all

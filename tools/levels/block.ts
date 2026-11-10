@@ -39,7 +39,6 @@
 //     the hall door bursts in the near leg with the corner between it and him: he is not blinded. He stands in a leg whose lamp is out (0.00 on the headless
 //     meter) and the men coming to the turn are in the near leg's (0.25‥0.35 at the mess's and the comms room's turn, 0.3 short of the workshop's mouth, 1.0 mid-leg).
 //   B stands in the far leg too, out of the turn's line, with his gun on the HEEL door.
-//   (the squads file's third man, blocksquads.ts) stands in the near leg's dead corner on the hall door: the one man a can through that door does catch.
 //   A room has exactly as many marks as men, so the fresh deal of every visit is this placement.
 //   THE EIGHT ARE FOUR SQUADS, one a room, and none leaves its room or wedges a door (BLOCK_SQUADS_HOLD below). As one pool most of them left their marks
 //   for the first fight on Hard and every plan became one fight in the hall; as a squad over two rooms the store's pair crossed the hall to the workshop.
@@ -55,8 +54,8 @@
 //     its turn and a yard lamp stands outside it, so the turn, the south end of the near leg and the west half of the far leg read a steady 1.0 whatever the
 //     breaker says, while its own two men stand east of the lamp's throw under the beacon only. The hall's own emergency lamps sweep the team in the hall
 //     the whole time.
-//   (these numbers are an older build's; the newest, and what the mess table's move did to them, are in docs/agents/levels.md — grep 'THE MESS TABLE')
-//   MEASURED (the shipped stand, seeds 1‥12, the four man squad, the scripted commander; won of 12 · men up of 48; Hard and standard play the same run
+//   (these numbers are an older build's, from before the mess table moved)
+//   MEASURED (seeds 1‥12, the four man squad, the scripted commander; won of 12 · men up of 48; Hard and standard play the same run
 //   for run, since nobody leaves a room):
 //     the hall doors  0 ·  0     the heel doors 12 · 40     the dark, then the hall doors (the store by its heel) 11 · 24
 //     the dark, then the heel doors 10 · 29 (Hard)     the second start, heel doors 12 · 37
@@ -77,22 +76,37 @@
 // THE SECOND START (the south end of the loading hall) is on the tool crib's door (crib_to_loading): the heel way into the workshop is the first thing in front of
 // the team, and the hall — with every hall door on it — is behind them.
 //   bun run tools/levels/export.ts block [--check]   → levels/block.json (+ the look's file)
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a district telephone exchange — the comms room and its racks, the frame room, the battery room, the switch room, the linemen's mess and its
+// kitchen, the repair shop and its tool crib, the cable store and the jointers' room, a loading hall. Cement render outside, cream over a PISTACHIO dado inside (the
+// yellow-green gloss of a state building: every door frame, the window frames, the lockers). What it alone has: CABLE TRENCHES. Their steel cover plates, a metre
+// each, come in under the stair tower's door (a spur off the chamber there runs to the mains on the loading hall's wall) and meet the trunk that runs down the
+// hall's north side (the level's own plates); a branch leaves it through each door a cable has business behind — the battery room, the frame room and on through
+// the heel door to the switchboard round the comms room's turn, the comms room's own door and up its near leg to the racks, the switch room, the store and
+// round ITS turn — and one runs down the loading hall, through the tool crib and its heel door into the back of the workshop. So the plates draw the level's
+// two ways to a far leg on the floor: the store's goes ROUND the turn; the comms room's and the workshop's come in by the HEEL door (the comms room's other
+// one stops at the racks, short of the turn). The mess has none: no cable has business there. Every fifth plate along the floor's length is a lifting plate
+// in the dado's paint. Drum rings in the store. No letters, no numbers, no lines, no bays, no tiles.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { KitViewWay, LevelScenarios, Rect } from '../../src/scene/scenarios';
-import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import * as MD from '../../src/scene/markingDefaults';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { KitViewWay, LevelScenarios, Rect } from './lib/scenarios';
+import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
+import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
 import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf } from '../../src/scene/stuff';
+import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
 
-export const NAME = 'block';
-export const NOTES = 'The block: a loading hall, a 3 m hall and four held rooms off it, two men to a room. Every held room turns a corner and its men are round it; the notch of each is a small room nobody holds, with the room\'s other door in it. For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts block';
+const PLAIN_NOTES = 'The block: a loading hall, a 3 m hall and four held rooms off it, two men to a room. Every held room turns a corner and its men are round it; the notch of each is a small room nobody holds, with the room\'s other door in it. For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts block';
 
-/** The scenario's spaces. A held room is an L; its rectangle here is the L's BOUNDING BOX (scene/scenarios.ts takes one rectangle a room), so it also covers
+/** The scenario's spaces. A held room is an L; its rectangle here is the L's BOUNDING BOX (lib/scenarios.ts takes one rectangle a room), so it also covers
  *  the notch room in its corner. The ONE place these are typed. */
 export const BLOCK_ROOMS: Record<'staging' | 'hall' | 'mess' | 'comms' | 'shop' | 'store' | 'battery' | 'switchroom', Rect> = {
   staging: { x0: 4.12, x1: 10.94, z0: 4.12, z1: 23.88 },
@@ -122,13 +136,6 @@ export const BLOCK_MOUTHS: { x: boolean; line: number; a: number; b: number }[] 
   { x: true, line: 18.6, a: 18.3, b: 20.34 }, { x: false, line: 30.74, a: 20.46, b: 23.88 },
 ];
 
-/** THE SQUADS FILE'S THREE (scene/scenarios.ts SquadData; blocksquads.ts stands its eleven in them): Alpha the mess, Bravo the workshop and the store,
- *  Charlie the comms room with the drive — Charlie never leaves it. Each rallies in the far leg of a room of its own. */
-export const BLOCK_SQUADS = (): NonNullable<NonNullable<LevelScenarios['roomClear']>['squads']> => [
-  { id: 'alpha', name: 'Alpha', rooms: ['mess'], rally: [17.6, 0, 5.8] },
-  { id: 'bravo', name: 'Bravo', rooms: ['shop', 'store'], rally: [33.0, 0, 22.2] },
-  { id: 'charlie', name: 'Charlie', rooms: ['comms'], rally: [29.4, 0, 6.0], barricade: ['b_s'], mayLeave: false },
-];
 /** THIS FILE'S EIGHT: one squad a room, and none leaves its room or wedges a door — a squad over two rooms sends its men across the hall to the room under
  *  attack, which unmakes the placement as surely as the one pool did. */
 export const BLOCK_SQUADS_HOLD = (): NonNullable<NonNullable<LevelScenarios['roomClear']>['squads']> => [
@@ -182,12 +189,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   wallX(4, 3.88, 36.12, 0.24, ext);                                                                              // north: blind
   wallZ(4, 4, 24, 0.24, ext, [{ a: 10.5, b: 11.7, y0: 0, y1: 2.2 }, { a: 16.5, b: 19.5, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' }]);
   // the west wall's long window, on the side nobody comes from: its shutters are folded back on the wall and the winter's wood is stacked under the sill
-  // (the library's pieces for a wall's face — src/scene/gwotKit.ts through the office kit's door). THE OPEN FORM, AND MEASURED: no mark watches through
-  // this pane and no mark's line crosses this wall (tools/qa/marksight-check.ts), so one leaf was first laid shut; on the page's stand the scripted team
+  // (the library's pieces for a wall's face — lib/gwotKit.ts through the office kit's door). THE OPEN FORM, AND MEASURED: no mark watches through
+  // this pane and no mark's line crosses this wall (rust/game_start levels sight), so one leaf was first laid shut; the scripted team
   // then took the floor 3 times in 24 seeds, against 7 in 24 before the shutters and 7 in 24 with them folded back. A shut leaf costs the team too (not
   // traced further: a look, a shot and the window's daylight all stop at it). So a window is shut only where its mission's tally is read with it shut.
   { const G = gwotKit(gwotOfOffice(K)); G.shutters('z', 4, 16.5, 19.5, -1, 'open', 'paintGreen', 0.9, 2.4); G.splitWood('z', 4, 16.7, 19.3, -1, 3); }
-  // the west stairwell's landing outside that door (officeGen.ts's, box for box: game/qrf.ts QRF_MARKS stands a team in it)
+  // the west stairwell's landing outside that door (officeGen.ts's, box for box: rust/game_rules/src/pursuit/qrf QRF_MARKS stands a team in it)
   slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, C.concrete);
   wallX(9.45, 1.1, 3.88, 0.24, ext); wallX(12.75, 1.1, 3.88, 0.24, ext); wallZ(1.22, 9.57, 12.63, 0.24, ext);
   slab(1.1, H, 9.33, 3.88, H + 0.2, 12.87, C.ceiling, { flags: BoxFlag.NoPrimary });
@@ -196,7 +203,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- interior partitions (t=0.12), all solid ----------------
   grp('walls.interior');
   const iw = C.wall;
-  // (every doorway is cut 0.2 m before a whole metre and 1.2 m wide: scene/doorSize.ts hangs the real door in it on a walk-grid cell)
+  // (every doorway is cut 0.2 m before a whole metre and 1.2 m wide: lib/doorSize.ts hangs the real door in it on a walk-grid cell)
   // the loading hall | everything else, x=11: the hall's mouth open wall to wall, the tool crib's door (crib_to_loading, z 20.8..22.0)
   wallZ(11, 4.12, 23.88, 0.12, iw, [{ a: 12.06, b: 15.2, y0: 0, y1: 2.6 }, { a: 20.8, b: 22.0 }]);
   // the hall's north wall z=12: the mess (m_s), the kitchen (kitchen_to_hall), the battery room (battery_to_hall), the frame room (frame_to_hall), the comms room (b_s)
@@ -224,7 +231,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('staging');
   bench(5.0, 6.2, Math.PI / 2); bench(5.0, 8.4, Math.PI / 2);
   shelf(7.4, 4.5, 2.6, 0.5, 0, 4, 2.0);
-  // THINGS TO WRECK (tools/qa/loudchaos-probes.ts loudLevels: a loud level carries twenty dressing boxes and six sheets of paper): a second bay of racking in
+  // THINGS TO WRECK (a loud level carries twenty dressing boxes and six sheets of paper): a second bay of racking in
   // the dead corner by the first, for the dressing's binders, and delivery notes left on the two benches. The rooms' own tables are lived things, which the
   // dressing does not see.
   shelf(9.75, 4.5, 2.0, 0.5, 0, 4, 2.0);
@@ -329,14 +336,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     beacons.push({ pos: [x, H - 0.3, z], box: dome });
   };
   beacon(18.0, 13.2); beacon(30.0, 13.2); beacon(7.5, 14.0);
-  // one in every held room's FAR leg, clear of both its men (a beacon is a beam tilted 27° down that turns about the vertical, game.ts: it lights nothing within
+  // one in every held room's FAR leg, clear of both its men (a beacon is a beam tilted 27° down that turns about the vertical, rust/game_rules/src/tick/game: it lights nothing within
   // a metre of its own foot — the store's stood over its B man and never lit him). With the mains out it sweeps the far leg and on out through the turn; the
   // near leg is black down its length but not at the turn (the head comment has the readings)
   beacon(18.4, 5.0); beacon(28.4, 5.0); beacon(19.4, 20.2); beacon(33.2, 21.4);
 
-  // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so game/doornames.ts says them as the rooms they join: 'hall-side mess
-  // door'). Every other door's id is SAID as it stands (orders.ts doorIdWords: 'kitchen to hall door'), so it is the two places it joins and carries no compass
-  // letter. (doornames.ts shorthandId counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
+  // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so rust/game_rules/src/speech/doornames.rs says them as the rooms they join: 'hall-side mess
+  // door'). Every other door's id is SAID as it stands (rust/game_rules/src/squad_orders/orders door_id_words: 'kitchen to hall door'), so it is the two places it joins and carries no compass
+  // letter. (rust/game_rules/src/speech/doornames.rs shorthand_id counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
   const doorDefs: LevelDoorDef[] = [
     { name: 'm_s', hinge: [12.82, 12.0], closedDir: 0, width: 1.16 },                       // hall → the mess (its near leg)
     { name: 'kitchen_to_hall', hinge: [16.82, 12.0], closedDir: 0, width: 1.16, swing: 1 },               // hall → the kitchen
@@ -348,7 +355,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 's_n', hinge: [27.82, 15.26], closedDir: 0, width: 1.16 },                      // hall → the store (its near leg)
     { name: 'jointers_to_hall', hinge: [34.42, 15.26], closedDir: 0, width: 1.16, swing: -1 },              // hall → the jointers' room
     // THE HEEL DOORS: each opens OUT of its held room into the notch room, so no wedge holds it and no boot opens it — the room always has a second way in
-    // (tools/qa/second-way-check.ts), and it is a pull for the team. The held rooms' hall doors stay theirs to wedge. The notch rooms' own doors open OUT of them
+    // (rust/game_start levels second-way), and it is a pull for the team. The held rooms' hall doors stay theirs to wedge. The notch rooms' own doors open OUT of them
     // (to the hall, to the loading hall) for the same reason: a held room's rectangle covers its notch room, so that check takes the notch room for manned too.
     { name: 'm_k', hinge: [17.82, 7.4], closedDir: 0, width: 1.16, swing: 1 } ,              // the kitchen → the mess's far leg
     { name: 'b_f', hinge: [27.82, 7.4], closedDir: 0, width: 1.16, swing: 1 } ,              // the frame room → the comms room's far leg
@@ -360,13 +367,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in group lived.<room>, every prop lived.<room>.<thing>; nothing above this line changed)
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in group lived.<room>, every prop lived.<room>.<thing>; nothing above this line changed)
   // A district telephone exchange. One family: octagon drums, ladders, grids of cells, coloured cords. Safety yellow is the loading hall's alone.
   {
     const P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, C as unknown as Parameters<typeof livedPieces>[1]), A = P.at(0, 0, 0), Q = Math.PI / 4;
-    // ROUND THINGS that stand still are the kits' (livedPieces.ts at().round, over src/scene/gwotKit.ts roundSlabs), by how far ACROSS they are: `oct` a small one
-    // (two squares s across; from 0.37 m the kit makes it an octagon), `oct8` a larger one as the octagon whose slabs are s long — the shape the round rule
-    // (src/scene/round.ts) makes one round box of
+    // ROUND THINGS that stand still are the kits' (livedPieces.ts at().round, over lib/gwotKit.ts roundSlabs), by how far ACROSS they are: `oct` a small one
+    // (two squares s across; from 0.37 m the kit makes it one round box), `oct8` a larger one, s long across its middle before the kit's radius takes it
+    // (lib/gwotKit.ts ROUND_FROM)
     const oct = (x: number, y0: number, z: number, s: number, h: number, col: Vec3) => A.round(x, y0, z, s / 1.86, h, col);
     // (a LOOSE thing's body: a prop's part cannot say it is round, so these two stay parts written by hand — the two squares, the octagon stepped 3 mm)
     const octParts = (y0: number, s: number, h: number, col: Vec3) => [P.part(0, y0, 0, s, h, s, col), P.part(0, y0, 0, s, h - 0.004, s, col, Q)];
@@ -420,7 +427,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // LINEMEN'S MESS: the table under red oilcloth in the near leg's far corner, beside the coats over their boots; round the turn the tea counter and its urn.
     // WHERE THE TABLE MAY STAND (nav cells are 0.5 m and a box blocks every cell within 0.3 m of it): not on the west wall south of z 7.5 — the cells
     // x 11.5‥12, z 8‥11.5 are where the third and fourth man of a stack on m_s from inside file up, and with the table there that order was refused 'no room
-    // on that door' (tools/qa/lived-stack-check.ts); not within a cell of (11.7, 6.5), the squads file's third man; not under the first coat on the rail
+    // on that door'; not within a cell of (11.7, 6.5), the squads file's third man; not under the first coat on the rail
     // (x 11.83‥12.11 at the north wall). So: z 4.5‥5.7 on the west wall.
     P.room('mess');
     P.floor(12.7, 8.03, 3.24, 7.78, [0.36, 0.42, 0.35], 0.004, 0.006); P.floor(17.35, 5.73, 5.94, 3.18, [0.36, 0.42, 0.35], 0.004, 0.006);   // sage lino, both legs
@@ -570,9 +577,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- what the room clear takes from this level ----------------
   // Eight defenders, two to a room (maxMen: the room clear's five lifted for this structure; with Sam and the four that is thirteen characters). A room has
   // EXACTLY TWO marks, so every deal of every visit (ROOMCLEAR.fresh deals the marks afresh) is the placement made by hand (the head comment): A at the far
-  // leg's end on the turn, B in the far leg on the heel door. The squads file (blocksquads.ts) adds its third men's marks: the near leg's dead corner. A room's `bounds` is its L's bounding
-  // box, the notch room included. Each room's first door is its hall door: the one a commander with no plan tries first. The eight are THREE SQUADS (BLOCK_SQUADS,
-  // above): the squads file's, man for man less its third men.
+  // leg's end on the turn, B in the far leg on the heel door. A room's `bounds` is its L's bounding
+  // box, the notch room included. Each room's first door is its hall door: the one a commander with no plan tries first. The eight are four squads (BLOCK_SQUADS_HOLD, above).
   const scenarios: LevelScenarios = {
     roomClear: {
       name: 'the block', maxMen: 8,
@@ -608,12 +614,82 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       squads: BLOCK_SQUADS_HOLD(),   // the eight hold their rooms: nobody walks out, no door is wedged
     },
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it). The four notch rooms are not here: an
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it). The four notch rooms are not here: an
   // area may not overlap a room's rectangle, and a held room's rectangle is its L's bounding box.
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways in show the block's own kitchen door off the hall —
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways in show the block's own kitchen door off the hall —
   // indoors, under the hall's own lamps (no porch lamp, no fill: `roomLights` 1 is said outright, the door being the level's own), the stack on the hinge's side.
   { const way: KitViewWay = { door: 'kitchen_to_hall', side: -1, roomLights: 1, pane: false, light: { porch: { intensity: 0 }, fill: { intensity: 0 } } }; scenarios.kitView = { ways: [way, { ...way }] }; }
   scenarios.places = { areas: [{ name: 'staging area', bounds: { ...R.staging } }, { name: 'hall', bounds: { ...R.hall } },
     { name: 'battery room', bounds: { ...R.battery } }, { name: 'switch room', bounds: { ...R.switchroom } }] };
   return { level, scenarios, groups: trace.groups };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'block';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const R = BLOCK_ROOMS;
+/** the one accent (a word to change it — and the outside doors' paint beside it: rust/game_rules/src/fittings/doors/paint.rs) */
+const ACCENT: GwotMat = 'prodGreen';
+/** THE ROOMS' OWN FLOORS (block.ts lays one wall to wall in each lived room, in a colour of its own): what each is made of, by the colour it was written in.
+ *  The shared rules ask a lived thing the furniture questions, and a floor is no furniture: the switch room's grey-green read as a cot's blanket and was
+ *  drawn as cloth, the mess's sage as a steel cabinet, the loading hall's oxide paint as nothing */
+const FLOORS: Skin['own'] = [
+  [[0.33, 0.22, 0.18], 'paintRust'],    // the loading hall: red-oxide floor paint
+  [[0.36, 0.42, 0.35], 'olive'],        // the mess: sage lino
+  [[0.37, 0.3, 0.21], 'woodGrey'],      // the workshop: wood block
+  [[0.2, 0.24, 0.22], 'paintGreen'],    // the switch room: a painted floor
+  [[0.22, 0.42, 0.7], 'paintBlue'],     // the battery room: acid-proof paint under the cells
+];
+/** where the plates are counted from: the loading hall's east wall (block.ts: the partition on x = 11) */
+const ZERO = 11;
+export const SKIN: Skin = {
+  wall: 'render', house: 'render', inner: 'whitewash', frameOut: ACCENT, frameIn: ACCENT, dado: null, noRug: /./, patches: 6,   // (the dado is laid below: the skin's own comes with a rug, and a rug here would lie under the lockers)
+  floor: { stone: 'slab', lino: 'canvas', carpet: 'slab' },   // (lino keeps canvas: the palette has no smooth sheet, and a paint row was tried and read as a floor of rusting steel — the look draws paint chipped to red)
+  metals: ['galv', 'iron', 'tin', 'woodGrey'],
+  // the gang's lockers in the mess (and any tall steel cabinet of the comms room) in the same paint
+  own: FLOORS,
+  pick: c => c.steel && c.y0 < 0.1 && c.y1 > 1.9 && c.b.albedo[0] < 0.4 && (c.group === 'mess' || c.group === 'comms') ? ACCENT : undefined,
+  dress: (G, level, T) => {
+    const M = lookMarks(T), W = 0.5;
+    // THE DADO: round every space of the floor, held or not, under the window sills (0.9 m), cut at every door, at the hall's open mouth and at the turn of every L (no wall there)
+    { const cuts: { x: boolean; line: number; a: number; b: number }[] = level.doors.map(d => { const x = Math.abs(Math.sin(d.closedDir)) < 0.5, h = x ? d.hinge[0] : d.hinge[1]; return { x, line: x ? d.hinge[1] : d.hinge[0], a: h - 0.08, b: h + d.width + 0.08 }; });
+      cuts.push({ x: false, line: ZERO, a: R.hall.z0 - 0.01, b: R.hall.z1 + 0.01 }, ...BLOCK_MOUTHS.map(m => ({ ...m, a: m.a - 0.01, b: m.b + 0.01 })));
+      const face = (x: boolean, at: number, a: number, b: number, side: 1 | -1) => { let s = a;
+        for (const c of cuts.filter(c => c.x === x && Math.abs(c.line - at) < 0.2 && c.b > a && c.a < b).sort((p, q) => p.a - q.a)) { if (c.a - s > 0.1) G.skirt(x ? 'x' : 'z', at, s, c.a, side, ACCENT, 0.85, 0); s = Math.max(s, c.b); }
+        if (b - s > 0.1) G.skirt(x ? 'x' : 'z', at, s, b, side, ACCENT, 0.85, 0); };
+      for (const r of BLOCK_SPACES) { face(true, r.z0, r.x0, r.x1, 1); face(true, r.z1, r.x0, r.x1, -1); face(false, r.x0, r.z0, r.z1, 1); face(false, r.x1, r.z0, r.z1, -1); } }
+    // A TRENCH: cover plates a metre long, cut on the whole metres of the floor's own grid, each the floor's colour darker with the floor showing in the joints;
+    // east of the loading hall's wall every fifth is a lifting plate, painted (heights of their own: over the doors' wear, under lookMarks' band)
+    let n = 0;
+    const plate = (x0: number, z0: number, x1: number, z1: number, lift: boolean) => { const x = (x0 + x1) / 2, z = (z0 + z1) / 2, fa = T.floorAt(x, z); if (fa && x1 - x0 > 0.08 && z1 - z0 > 0.08) T.flat(x, z, x1 - x0, z1 - z0, lift ? P[ACCENT] : T.tone(fa, 0.58), 0, 0.01162 + (n++ % 6) * 0.00002); };
+    const trench = (pts: [number, number][]) => {
+      for (let i = 0; i + 1 < pts.length; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], alongX = Math.abs(bx - ax) > Math.abs(bz - az);
+        // (a stretch after a corner starts past the corner's own plate; every stretch but the last runs half a width on, so the corner is whole)
+        const s = alongX ? Math.sign(bx - ax) : Math.sign(bz - az), from = (alongX ? ax : az) + (i ? s * W / 2 : 0), to = (alongX ? bx : bz) + (i + 2 < pts.length ? s * W / 2 : 0), lo = Math.min(from, to), hi = Math.max(from, to);
+        for (let a = lo; a < hi - 1e-6;) { const b = Math.min(hi, Math.floor(a + 1 + 1e-6));
+          if (alongX) plate(a + 0.03, az - W / 2, b - 0.03, az + W / 2, b - a > 0.99 && b > ZERO + 1 && Math.round(b - ZERO) % 5 === 0); else plate(ax - W / 2, a + 0.03, ax + W / 2, b - 0.03, false); a = b; } }
+    };
+    // in from the street under the stair tower's door to the trunk in the hall (the level's own plates, z 12.62); a branch down the loading hall to the tool crib's door
+    trench([[4.2, 11.1], [9.9, 11.1], [9.9, 12.62], [12.4, 12.62]]); trench([[9.9, 12.9], [9.9, 21.4], [ZERO, 21.4]]);
+    trench([[9.9, 10.66], [9.9, 10.0], [10.9, 10.0]]);   // … and a spur from the chamber by the stair door to the mains (block.ts: the breaker, on the wall at (10.9, 10.0))
+    // NORTH of the hall: a spur to the battery room's cells; through the frame room's door to the frame, and on through the heel door to the switchboard round the
+    // comms room's turn; through the comms room's own door and straight up its near leg to the racks
+    trench([[24.4, 11.7], [24.4, 8.0]]);
+    trench([[30.4, 11.7], [30.4, 9.3], [31.4, 9.3]]); trench([[30.15, 9.3], [28.4, 9.3], [28.4, 5.9]]);
+    trench([[33.4, 11.7], [33.4, 5.6]]);
+    // SOUTH: the tool crib from its loading hall door, through the heel door into the back of the workshop; the switch room across the heads of its racks; the
+    // store down its near leg and round the turn
+    trench([[ZERO, 21.4], [14.0, 21.4], [14.0, 22.4], [18.6, 22.4]]);
+    trench([[22.4, 15.5], [22.4, 17.2], [25.6, 17.2]]);
+    trench([[28.4, 15.5], [28.4, 22.2], [32.5, 22.2]]);
+    // a JOINTING CHAMBER's cover where the trunk branches: a square plate with the accent round its rim
+    for (const [x, z] of [[9.9, 11.1], [9.9, 21.4], [30.4, 9.3], [28.4, 22.2]]) { const fa = T.floorAt(x, z); if (fa) { T.flat(x, z, 0.84, 0.84, P[ACCENT], 0, 0.01176); T.flat(x, z, 0.68, 0.68, T.tone(fa, 0.5), 0, 0.0118); } }
+    // where cable drums lay on their sides: rings pressed into the floor of the store and the loading hall (thin: nothing here is a dark shape through a window)
+    const ring = (x: number, z: number, r: number) => { const fa = T.floorAt(x, z); if (!fa) return; const col = T.tone(fa, 0.66), K = 8, e = r / Math.cos(Math.PI / K);
+      for (let k = 0; k < K; k++) { const a = (k + 0.5) * 2 * Math.PI / K, b = (k + 1.5) * 2 * Math.PI / K; M.seg(x + Math.cos(a) * e, z + Math.sin(a) * e, x + Math.cos(b) * e, z + Math.sin(b) * e, 0.09, col); } };
+    ring(29.5, 20.6, 0.75); ring(29.9, 23.0, 0.6); ring(5.5, 20.4, 0.75); ring(7.1, 21.6, 0.6);
+    ring(33.5, 22.2, 0.75);   // (and the one the store's trench ends on, round the turn: the drum the cable came off)
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);

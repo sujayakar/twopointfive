@@ -1,0 +1,79 @@
+//! The types of `wallpen`.
+#![allow(unused_imports)]
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use alloc::{string::String, vec::Vec};
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
+pub enum ThinStuff {
+    #[default] Wood,
+    Cardboard,
+    Drywall,
+    Fabric,
+    Foliage,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ThinToll {
+    pub take: f64,
+    pub e_out: f64,
+    pub thru: f64,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WallCross {
+    pub index: f64,
+    pub t: f64,
+    pub at: V3,
+    pub n_in: V3,
+    pub exit: V3,
+    pub dir_in: V3,
+    pub dir_out: V3,
+    pub n_out: V3,
+    pub into: f64,
+    pub e_out: f64,
+    pub thru: f64,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ThinPath {
+    pub walls: Vec<crate::wallpen::WallCross>,
+    pub segs: Vec<crate::glasspen::RoundSeg>,
+    pub cross: Vec<crate::glasspen::PaneCross>,
+    pub st: Option<crate::glasspen::RoundPathSt>,
+    pub len: f64,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ThinLine {
+    pub walls: Vec<crate::wallpen::WallCross>,
+    pub panes: f64,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ThingAt {
+    pub b: BoxId,
+    pub stuff: crate::wallpen::ThinStuff,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ThinLineFirst {
+    pub t: f64,
+    pub index: f64,
+    pub n: V3,
+}
+
+#[derive(Clone, Debug)]
+pub enum ThinLine2 {
+    Clear,
+    ThinLine(crate::wallpen::ThinLine),
+}
+
+/// the counters this module keeps for the checks
+#[derive(Clone, Debug, Default)]
+pub struct WallpenStats {
+    pub crossed: i32,
+}
+
+pub const EXIT_EPS: f64 = 0.001;
+
+pub fn embed_scratch() -> Vec<i32> { alloc::vec![0; 64] }

@@ -15,7 +15,7 @@ struct Emitter {
   pos: vec3f, radius: f32,        // WORLD metres
   dir: vec3f, speed: f32,
   density: f32, temperature: f32, level: u32, mode: f32,
-  push: f32, expand: f32, kind: u32, tall: f32,                   // kind: WHAT it raises, as a cell's K word below (0 = canister smoke) · tall: A BODY's half height (mode 2, emBody below) or A LINE's half length along `dir` (mode 3, emR2 below); 0 on anything else
+  push: f32, expand: f32, kind: u32, tall: f32,                   // kind: WHAT it raises, as a cell's K word below (0 = the game's own smoke) · tall: A BODY's half height (mode 2, emBody below) or A LINE's half length along `dir` (mode 3, emR2 below); 0 on anything else
 };
 struct Level { dims: vec3u, pageBase: u32, voxel: f32, texY: u32, tile: u32, tileBase: u32 };   // dims in bricks; texY = this level's first row in the readers' page texture; tile = bricks per bounding tile edge (boxes)
 struct SP {
@@ -23,13 +23,13 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  stirConf: f32, show: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was) · show: THE SMOKE LAB'S PICTURES (0 anywhere else; smoke.ts `show`): bit 0 the bricks drawn (the readers' business: boxes hands the word on), bit 1 the smoke coloured by its spin (publish), the rest = the spin drawn as full colour, 1/s
+  stirConf: f32, pad17: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
   calmCells: f32, farCells: f32, calmMax: u32, dtCap: f32,        // WHO STEPS (buildList): cells a brick's fastest air may cross between two of its steps, in sight / out of sight; the longest wait in frames (1 = every brick every frame, 2, 4); the most time one step integrates
-  scaleCan: f32, scaleFx: f32, fineDecay: f32, fineShare: f32,    // the render density × of canister smoke / of everything else (publish) · THE FINE LATTICE LETS GO below
-  fineEps: f32, fineHeat: f32, fineRing: u32, fineKeep: f32,     // … and fineKeep: gas hotter than this on the fine lattice is not let go (0 = none kept, as first built)
+  bend: f32, whole: f32, fineDecay: f32, fineShare: f32,           // THE GAME'S SMOKE (below): how fast the coarse lattice is bent toward it (0 = not) · 1 = the whole of the way · THE FINE LATTICE LETS GO below
+  fineEps: f32, fineHeat: f32, fineRing: u32, pull: f32,          // pull: how hard smoke is drawn toward where the game has more of it (THE GAME'S SMOKE)
   levels: array<Level, 2>,
   dirty: array<vec4f, 16>,                                        // ≤ 8 boxes (lo, hi) whose obstacles changed since the last step
   windBound: array<vec4f, 8>,                                     // per wind source: bounding sphere (w < 0 = the storm: everywhere)
@@ -39,13 +39,13 @@ struct SP {
 
 // ---- the pool
 @group(1) @binding(0) var<storage, read_write> A: array<atomic<u32>>;   // counters · free list · stamps · wake stamps · fine-over-coarse stamps · page table
-@group(1) @binding(1) var<storage, read_write> M: array<u32>;           // header · live list · this step's list · per-slot records
+@group(1) @binding(1) var<storage, read_write> M: array<u32>;           // header · live list · this step's list · per-slot records · the game's smoke (M_BENT)
 @group(1) @binding(2) var<storage, read_write> V: array<vec2u>;         // vel0 · vel1 · curl: 4 × f16 a cell
 @group(1) @binding(3) var<storage, read_write> S: array<u32>;           // dens0 · dens1 (density, temperature as 2 × f16) · obstacle bytes · what kind of smoke (WHAT IS IN A CELL)
 @group(1) @binding(4) var<storage, read_write> P: array<f32>;           // pressure · divergence
 
 const C_FREE: u32 = 0u; const C_LIVE: u32 = 1u; const C_FAIL: u32 = 2u; const C_SCALAR: u32 = 3u; const C_RENDER: u32 = 4u; const C_VMAX: u32 = 5u; const C_ALLOC: u32 = 6u; const C_FREED: u32 = 7u; const C_BAKED: u32 = 8u; const C_FINE: u32 = 9u;
-const C_ACT: u32 = 10u; const C_STEP: u32 = 11u; const C_WORK: u32 = 12u; const C_TINT: u32 = 13u; const C_LVL1: u32 = 14u; const C_HELD: u32 = 15u;   // C_WORK: brick-steps since the pool was reset (never zeroed by a step: the tools' measure of work done)
+const C_ACT: u32 = 10u; const C_STEP: u32 = 11u; const C_WORK: u32 = 12u; const C_TINT: u32 = 13u; const C_LVL1: u32 = 14u; const C_HELD: u32 = 15u; const C_OFF: u32 = 16u; const C_OFFN: u32 = 17u;   // C_WORK: brick-steps since the pool was reset (never zeroed by a step: the tools' measure of work done)
 const A_FREE: u32 = 32u;
 const A_STAMP: u32 = A_FREE + CAP;
 const A_WAKE: u32 = A_STAMP + CAP;    // the step a source last reached this brick (markEmit)
@@ -56,11 +56,13 @@ const M_COUNT: u32 = 0u; const M_EPS: u32 = 1u; const M_DECAY: u32 = 2u; const M
 const M_LIST: u32 = 16u;              // every live brick
 const M_STEP: u32 = M_LIST + CAP;     // the ones that step this frame (buildList)
 const M_META: u32 = M_STEP + CAP;
-const MS: u32 = 40u;
+const MS: u32 = 42u;
 const K_COORD: u32 = 0u; const K_FLAGS: u32 = 1u; const K_VMAX: u32 = 2u; const K_EM0: u32 = 3u; const K_EM1: u32 = 4u; const K_WIND: u32 = 5u; const K_BOX: u32 = 6u; const K_OPEN: u32 = 7u; const K_NBR: u32 = 8u;
 const K_ACC: u32 = 35u; const K_DT: u32 = 36u; const K_PER: u32 = 37u;   // time owed since its last step · the time this step integrates · the frames it may wait (1, 2, 4)
 const K_DMAX: u32 = 38u;   // its densest cell as its last step left it (injectDecay)
-const F_SCALAR: u32 = 1u; const F_RENDER: u32 = 2u; const F_NEW: u32 = 4u; const F_ACT: u32 = 8u; const F_KIND: u32 = 16u; const F_KINDS: u32 = 32u; const F_TINT: u32 = 64u;   // F_KIND: some cell's K word is not 0 · F_KINDS: mine or a neighbour's is, or such a source is on me: the kind is carried here this step · F_TINT: some cell is tinted
+const K_MEAN: u32 = 39u;   // how much of the game's own smoke is in it, on average over its air (publish)
+const K_PULL: u32 = 40u;   // which way it is drawn toward where the game has more (injectDecay, for the next step's forces): x y, z as 4 × f16
+const F_SCALAR: u32 = 1u; const F_RENDER: u32 = 2u; const F_NEW: u32 = 4u; const F_ACT: u32 = 8u; const F_KIND: u32 = 16u; const F_KINDS: u32 = 32u; const F_TINT: u32 = 64u; const F_WALL: u32 = 128u;   // F_WALL: its middle is in something solid · F_KIND: some cell's K word is not 0 · F_KINDS: mine or a neighbour's is, or such a source is on me, or the game's smoke here has a color: the kind is carried here this step · F_TINT: some cell is tinted
 
 const V_VEL0: u32 = 0u; const V_VEL1: u32 = CAP * 512u; const V_CURL: u32 = CAP * 1024u;
 const S_DEN0: u32 = 0u; const S_DEN1: u32 = CAP * 512u; const S_BITS: u32 = CAP * 1024u; const S_KIND: u32 = CAP * 1152u;
@@ -69,6 +71,39 @@ const P_P: u32 = 0u; const P_DIV: u32 = CAP * 512u;
 const SRC_DIV_DT: f32 = 1.6;
 const MAX_DIV_DT: f32 = 2.0;
 const MAX_TRACE: f32 = 14.0;   // cells a backtrace may span: two bricks less the trilinear footprint — what markNbr's reach of 2 covers
+
+// THE GAME'S SMOKE. What an eye sees through is the simulation's: a grid of half-metre cells (rust/sim/src/bricks.rs), the same on every machine, in every snapshot and after every rollback. This solver is
+// what is drawn of it, finer and livelier than the simulation could afford, so it is BENT TOWARD THE GRID ALL THE TIME, ONE WAY, A LITTLE AT A TIME: x ← step(x) + (1 − e^(−dt·rate)) · P(y − C·x). y = the
+// grid's cells (the page hands them over as they lie: rust/game_draw/src/smoke.rs) · C = the mean over a brick's air (K_MEAN): A COARSE BRICK IS ONE CELL OF THE GRID, half a metre, so C is one sum a brick
+// · P = the correction spread over the brick's cells, shaded into the bricks next door where the grid says the way is open, so nothing is drawn of the half metres. Everything finer than a brick is left alone.
+//   · HOW FAST goes by how much it matters to an eye: `bend` × the difference in what a metre and a half of it hides. Two opaque clouds are one (what they differ in is the solver's, to look as it likes: billows), a
+//     cloud one side lacks is mended in a second, and the last of a gap closes too: by the square of the difference a thin edge never filled, and men could not see through smoke nobody was shown.
+//   · IT THINS BY THE GAME'S LAW, which is in what the grid holds: what is drawn of the game's smoke thins of itself only where there is more of it than that. By both, a cloud was half the game's as it went.
+//   · IT GOES THERE FIRST: smoke is drawn toward where the game has more of it (`pull`, along the difference's gradient; K_PULL), so a cloud rolls out to where it should be and what is left to mend is little.
+//   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is next to none it comes up out of the air in wisps (bendTo; no haze is laid between billows).
+//   · ONLY THE GAME'S SMOKE is measured and bent. A source the game does not hold (a breath, a fire's plume, gun gas) says so in the first byte of its K word, and that share of a cell is nobody's here.
+//   · what the grid holds that has no brick gets one (markBent); what comes up to meet it is of the color the grid's brick has (two metres square: dust, soot).
+//   · A JUMP IS THE SAME BEND TAKEN THE WHOLE OF THE WAY (`whole`): where the game is another moment's than the picture, the empty pool takes the grid as it stands in a few steps of next to no time, all before the
+//     frame is drawn (smoke.ts anew). What made the game jump is nobody's to ask here.
+const M_BENT: u32 = M_META + CAP * MS;   // (+ 0: the grid's plan in its own bricks, along x · + 1: along z)
+const M_BAT: u32 = M_BENT + 16u;         // a word a place of the plan: the row of the brick there and one (0 = none stands)
+const M_BROW: u32 = M_BAT + 512u;        // rows of 161 words: 128 densities (4 along x, then 4 along z, then 8 up), a byte a cell: 1, 2, 4 = open toward +x, up, +z; then what is missing from its color, as in a K word
+/** what a cell of the grid holds before a brick is made and kept for it: more as the pool runs short (WHO GIVES WAY) */
+fn bentLeast() -> f32 { return 0.03 * (1.0 + 3.0 * bitcast<f32>(M[M_TIGHT])); }
+const BENT_SIGMA: f32 = 6.0;             // what a metre of smoke of density 1 takes out of the light (common.wgsl)
+/** the grid's brick and cell a coarse brick stands for: row + 1 (0 = none stands: no smoke), cell · row NONE = the grid says nothing there (off its plan, above its top) */
+fn bentAt(b: vec3i) -> vec2u {
+  let x = b.x >> 2u; let z = b.z >> 2u; let wide = i32(M[M_BENT]);
+  if (b.y < 0 || b.y > 7 || x < 0 || z < 0 || x >= wide || z >= i32(M[M_BENT + 1u])) { return vec2u(NONE, 0u); }
+  return vec2u(M[M_BAT + u32(z * wide + x)], u32((b.y * 4 + (b.z & 3)) * 4 + (b.x & 3)));
+}
+/** what the grid holds there (−1 = it says nothing) */
+fn bentRho(r: vec2u) -> f32 { if (r.x == NONE) { return -1.0; } if (r.x == 0u) { return 0.0; } return bitcast<f32>(M[M_BROW + (r.x - 1u) * 161u + r.y]); }
+fn bentOpen(r: vec2u) -> u32 { if (r.x == NONE || r.x == 0u) { return 0u; } return (M[M_BROW + (r.x - 1u) * 161u + 128u + (r.y >> 2u)] >> ((r.y & 3u) * 8u)) & 7u; }
+/** what is missing from the color of the smoke there (1 − tint) */
+fn bentDye(r: vec2u) -> vec3f { if (r.x == NONE || r.x == 0u) { return vec3f(0.0); } return unpack4x8unorm(M[M_BROW + (r.x - 1u) * 161u + 160u]).yzw; }
+/** what `m` metres of it let through */
+fn bentThrough(rho: f32, m: f32) -> f32 { return exp(-BENT_SIGMA * m * rho); }
 
 fn packCoord(l: u32, b: vec3i) -> u32 { return u32(b.x) | (u32(b.y) << 10u) | (u32(b.z) << 17u) | (l << 27u) | 0x80000000u; }
 fn coordB(w: u32) -> vec3i { return vec3i(i32(w & 1023u), i32((w >> 10u) & 127u), i32((w >> 17u) & 1023u)); }
@@ -111,19 +146,17 @@ fn ringOf(l: u32, st: f32) -> i32 {
   let r = f32(clamp(select(sp.ring, min(sp.ring, sp.fineRing), l == 1u), 1u, 8u));
   return i32(round(mix(r, mix(1.0, r, st), bitcast<f32>(M[M_TIGHT]))));
 }
-// THE FINE LATTICE LETS GO (sp.fineDecay 0 and sp.fineShare 1 = none of it, as first benched). A fine brick is a fifteenth of a coarse one's volume, so gun gas left to wander costs the pool far more than
+// THE FINE LATTICE LETS GO (sp.fineDecay 0 and sp.fineShare 1 = none of it, as first benched). A fine brick is a twenty-third of a coarse one's volume, so gun gas left to wander costs the pool far more than
 // it shows: 1.7 s of automatic fire held 2,663 of 4,096 bricks for 3 % of the smoke in the air, and still held them 3 s later. In the boxes a fine domain was a 1.4 m cube whose faces ate what left it. Here:
 //   · density under the thin bar fades fineDecay/s faster on this lattice, always, and the heat in those cells with it (heat alone would hold a brick for seconds after its gas has gone): the crisp gas by the
 //     muzzle is untouched, what has spread to a haze is gone in a second or two;
-//   · … BUT NOT WHILE IT IS HOT (sp.fineKeep > 0; 0 = no such rule, as first built): a cell hotter than fineKeep is not thin, whatever its density, and from half of it up
-//     it is let go by degrees — so a flame (game/fire.ts FIRE.gas: heat with next to no smoke in it) keeps its lift for as long as its own cooling takes, then goes at once;
 //   · its floors are higher (fineEps, fineHeat: what is stored as nothing) and it keeps less air round the gas (fineRing cells): two bricks in three were clear air round thin wisps;
 //   · it has a share of the pool, counted by buildList, so a step late: fineShare of CAP, or whatever the coarse lattice leaves under the soft ceiling's foot (softLo) if that is more. From 0.7 of it new
 //     bricks are refused to the thinnest gas first, at all of it to everything but a source: the gas then meets an open face and fades there, as at a box's.
 // So a firefight's gun gas has the room while nobody else wants it and can never take a canister's bricks, whoever is shooting, and no game code counts anything.
 fn fineFull() -> f32 { return bitcast<f32>(M[M_FINE]); }
 // Make brick b of level l exist and mark it needed this step, asked for by smoke that stands at `st` (a source: 2). Page entry: 0 = none, LOCK = someone is filling it in this very dispatch, else
-// slot + 1. Pops happen only in the two mark kernels and pushes only in freeIdle, so the free list is never popped and pushed in one dispatch. A pool with nothing left refuses (C_FAIL): the smoke
+// slot + 1. Pops happen only in the three mark kernels and pushes only in freeIdle, so the free list is never popped and pushed in one dispatch. A pool with nothing left refuses (C_FAIL): the smoke
 // then meets an open face there.
 fn ensureBrick(l: u32, b: vec3i, st: f32) {
   let pi = pageIdx(l, b);
@@ -142,7 +175,7 @@ fn ensureBrick(l: u32, b: vec3i, st: f32) {
       if (n <= keepFree || n > CAP) { atomicAdd(&A[C_FREE], 1u); atomicStore(&A[A_PAGE + pi], 0u); atomicAdd(&A[C_FAIL], 1u); return; }
       let slot = atomicLoad(&A[A_FREE + n - 1u]);
       let m = metaOf(slot);
-      M[m + K_COORD] = packCoord(l, b); M[m + K_FLAGS] = F_NEW; M[m + K_VMAX] = 0u; M[m + K_BOX] = 0u; M[m + K_ACC] = 0u; M[m + K_PER] = 1u; M[m + K_DMAX] = 0u;
+      M[m + K_COORD] = packCoord(l, b); M[m + K_FLAGS] = F_NEW; M[m + K_VMAX] = 0u; M[m + K_BOX] = 0u; M[m + K_ACC] = 0u; M[m + K_PER] = 1u; M[m + K_DMAX] = 0u; M[m + K_MEAN] = 0u; M[m + K_PULL] = 0u; M[m + K_PULL + 1u] = 0u;
       atomicStore(&A[A_STAMP + slot], sp.stepNo);
       atomicStore(&A[A_PAGE + pi], slot + 1u);
       atomicAdd(&A[C_ALLOC], 1u);
@@ -157,7 +190,7 @@ fn ensureBrick(l: u32, b: vec3i, st: f32) {
 @compute @workgroup_size(1)
 fn stepBegin() {
   atomicStore(&A[C_LIVE], 0u); atomicStore(&A[C_FAIL], 0u); atomicStore(&A[C_SCALAR], 0u); atomicStore(&A[C_RENDER], 0u); atomicStore(&A[C_VMAX], 0u);
-  atomicStore(&A[C_ALLOC], 0u); atomicStore(&A[C_FREED], 0u); atomicStore(&A[C_BAKED], 0u); atomicStore(&A[C_FINE], 0u); atomicStore(&A[C_ACT], 0u); atomicStore(&A[C_STEP], 0u); atomicStore(&A[C_TINT], 0u);
+  atomicStore(&A[C_ALLOC], 0u); atomicStore(&A[C_FREED], 0u); atomicStore(&A[C_BAKED], 0u); atomicStore(&A[C_FINE], 0u); atomicStore(&A[C_ACT], 0u); atomicStore(&A[C_STEP], 0u); atomicStore(&A[C_TINT], 0u); atomicStore(&A[C_OFF], 0u); atomicStore(&A[C_OFFN], 0u);
   let used = f32(CAP - min(atomicLoad(&A[C_FREE]), CAP)) / f32(CAP);
   let s = smoothstep(sp.softLo, sp.softHi, used);
   M[M_EPS] = bitcast<u32>(mix(sp.flushEps, max(sp.softEps, sp.flushEps), s * s));
@@ -213,6 +246,14 @@ fn markEmit(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) 
     let b = lo + vec3i(i32(k % n.x), i32((k / n.x) % n.y), i32(k / (n.x * n.y)));
     if (emInBox(e, vec3f(b) * bs, vec3f(b + 1) * bs)) { if (deposits) { ensureBrick(e.level, b, 2.0); } wakeBrick(e.level, b); }
   }
+}
+
+// one workgroup per place of the grid's plan, one invocation a cell: what the game's smoke stands in has a brick (THE GAME'S SMOKE), asked for as smoke that dense is
+@compute @workgroup_size(128)
+fn markBent(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: u32) {
+  let row = M[M_BAT + wid.x]; if (row == 0u) { return; }
+  let rho = bentRho(vec2u(row, li));
+  if (rho > bentLeast()) { let wide = M[M_BENT]; ensureBrick(0u, vec3i(vec3u((wid.x % wide) * 4u + (li & 3u), li >> 4u, (wid.x / wide) * 4u + ((li >> 2u) & 3u))), standing(rho)); }
 }
 
 // one workgroup per live brick (last step's list): a brick holding density or heat needs itself and whichever bricks round it lie within `reach` cells of that smoke — the air the plume
@@ -394,10 +435,10 @@ fn sampleDen(f: u32, k: Bk, g: vec3f) -> DenTap {
   return r;
 }
 
-// WHAT IS IN A CELL. The boxes drew a whole box as one kind of smoke (canister plume × 1.3, anything else × 1.0, destruction dust tinted and shaped); with no boxes the kind rides with the smoke, per cell
-// of the coarse lattice: one K word = 4 × 8 bits (share of the density that is NOT canister smoke, then 1 − tint as r, g, b averaged over all of it). Shares, not amounts: they move along the
-// density's own backtrace weighted by density, take a source's kind in proportion to what it deposits, and nothing decays them. 0 = canister smoke, so a brick with only that in and round it
-// (no F_KINDS) does none of this. The fine lattice holds no canister smoke and nothing tinted: it has no words. Only publish reads them — the solver's own physics never does.
+// WHAT IS IN A CELL. The boxes drew a whole box as one kind of smoke (destruction dust tinted and shaped); with no boxes the kind rides with the smoke, per cell
+// of the coarse lattice: one K word = 4 × 8 bits (share of the density that is NOT THE GAME'S SMOKE, then 1 − tint as r, g, b averaged over all of it). Shares, not amounts: they move along the
+// density's own backtrace weighted by density, take a source's kind in proportion to what it deposits, and nothing decays them. 0 = the game's, untinted, so a brick with only that in and round it
+// (no F_KINDS) does none of this. The fine lattice holds none of the game's smoke and nothing tinted: it has no words. Only publish and the bend read them — the solver's own physics never does.
 fn sampleKind(k: Bk, g: vec3f) -> vec4f {
   let q = aboveFloor(k, g) - 0.5; let fl = floor(q); let i0 = vec3i(fl); let t = q - fl;
   var acc = vec4f(0.0); var sum = 0.0;
@@ -502,7 +543,7 @@ fn link(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
     var s = 0u; if (pi != NONE) { s = atomicLoad(&A[A_PAGE + pi]); if (s == LOCK) { s = 0u; } }
     M[k.m + K_NBR + li] = s;
     if (s != 0u && boxNear(M[metaOf(s - 1u) + K_BOX], o, 1)) { atomicOr(&wgNear, 1u); }   // smoke in me or in the one-cell shell round me
-    if (s != 0u && (M[metaOf(s - 1u) + K_FLAGS] & F_KIND) != 0u) { atomicOr(&wgKind, 1u); }   // (a coarse backtrace spans under a brick: 11 m/s × 1/30 s = 6.7 cells, and a brick that waits is slower still)
+    if (s != 0u && (M[metaOf(s - 1u) + K_FLAGS] & F_KIND) != 0u) { atomicOr(&wgKind, 1u); }   // (a coarse backtrace spans under a brick: 11 m/s × 1/30 s = 5.9 cells, and a brick that waits is slower still)
     // the six faces: smoke close to one with no brick beyond it (markNbr asked and the world ends there, or the pool had nothing left) = an open face the scalars are eased out toward;
     // under the floor is solid, not open
     if (s == 0u && (abs(o.x) + abs(o.y) + abs(o.z)) == 1 && !(o.y < 0 && k.b.y == 0) && boxNear(M[k.m + K_BOX], -o, ringOf(k.l, standing(bitcast<f32>(M[k.m + K_DMAX]))))) {
@@ -554,10 +595,15 @@ fn link(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
     // The scalar passes run (F_ACT) where their result can be anything but zero: smoke in the brick or in the one-cell shell round it, an emitter on it — or air moving a cell a step or
     // faster here, when the backtrace from one of MY cells (it uses my velocity) can reach further than that shell. Every other brick is air: exactly zero scalars, velocity only.
     let fast = bitcast<f32>(M[k.m + K_VMAX]) * k.dt / k.h > 0.8;
-    let act = atomicLoad(&A[A_STAMP + slot]) == sp.stepNo && (fast || atomicLoad(&wgNear) != 0u || (atomicLoad(&wgEm[0]) | atomicLoad(&wgEm[1])) != 0u);
+    let bent = k.l == 0u && sp.bend > 0.0 && bentRho(bentAt(k.b)) > bentLeast();
+    let act = atomicLoad(&A[A_STAMP + slot]) == sp.stepNo && (fast || bent || atomicLoad(&wgNear) != 0u || (atomicLoad(&wgEm[0]) | atomicLoad(&wgEm[1])) != 0u);
     var fl = M[k.m + K_FLAGS] & ~(F_NEW | F_ACT | F_KINDS);
-    if (k.l == 0u && atomicLoad(&wgKind) != 0u) { fl |= F_KINDS; }
-    if (act) { fl |= F_ACT; } else { fl &= ~F_SCALAR; M[k.m + K_BOX] = 0u; M[k.m + K_DMAX] = 0u; }
+    if (todo != 0u) {
+      var mid = 0u; for (var j = 0; j < 8; j++) { mid += solidBit(vec3i(3 + (j & 1), 3 + ((j >> 1u) & 1), 3 + (j >> 2u))); }
+      fl = select(fl & ~F_WALL, fl | F_WALL, mid > 4u);
+    }
+    if (k.l == 0u && (atomicLoad(&wgKind) != 0u || (sp.bend > 0.0 && any(bentDye(bentAt(k.b)) > vec3f(0.0))))) { fl |= F_KINDS; }
+    if (act) { fl |= F_ACT; } else { fl &= ~F_SCALAR; M[k.m + K_BOX] = 0u; M[k.m + K_DMAX] = 0u; M[k.m + K_MEAN] = 0u; }
     M[k.m + K_FLAGS] = fl;
     M[k.m + K_EM0] = atomicLoad(&wgEm[0]); M[k.m + K_EM1] = atomicLoad(&wgEm[1]); M[k.m + K_WIND] = atomicLoad(&wgWind); M[k.m + K_OPEN] = atomicLoad(&wgOpen);
     if (todo != 0u) { atomicAdd(&A[C_BAKED], 1u); }
@@ -600,12 +646,14 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
   let slot = openBrick(wid.x, li);
   if (slot == NONE) { return; }
   let k = brickOf(slot); let windMask = M[k.m + K_WIND];
+  var pull = vec3f(0.0); if (k.l == 0u && sp.bend > 0.0) { pull = sp.pull * vec3f(unpack2x16float(M[k.m + K_PULL]), unpack2x16float(M[k.m + K_PULL + 1u]).x); }
   for (var z = 0; z < 8; z += 4) {
     let c = vec3i(lid) + vec3i(0, 0, z); let cell = cidx(c); let i = slot * 512u + cell;
     if ((bitsOf(slot, cell) & 1u) != 0u) { V[V_VEL0 + i] = vec2u(0u); continue; }
     var u = unV(V[V_VEL1 + i]).xyz;
     let dT = unpack2x16float(S[S_DEN0 + i]);
     u.y += (sp.buoyancy * dT.y - sp.weight * dT.x) * k.dt;
+    u += pull * (1.0 - bentThrough(dT.x, 0.3)) * k.dt;   // (only where there is smoke to go: clear air is not blown about)
     let Pw = worldP(k, c);
     // CURLS WHERE A BODY STIRS (sp.stirConf; 0 = one strength everywhere): the confinement that keeps an eddy turning is stronger right round a moving body, falling
     // to the plain strength by three of its radii, so what he sheds rolls up while he is there and the smoke the wind pushes along a wall is as smooth as it was
@@ -759,6 +807,67 @@ fn advectScalars(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id
   }
 }
 
+// a brick and the 26 round it, as the bend reads them: what the grid holds (−1 = it says nothing, or the middle is solid), what is drawn, which ways are open; and for each eighth of
+// the brick which of the eight middles round it it is shaded between (bit 0 = its own)
+var<workgroup> wgWant: array<f32, 27>;
+var<workgroup> wgHas: array<f32, 27>;
+var<workgroup> wgWays: array<u32, 27>;
+var<workgroup> wgCorners: array<u32, 8>;
+fn bentIx(o: vec3i) -> u32 { return u32((o.x + 1) + 3 * (o.y + 1) + 9 * (o.z + 1)); }
+/** how much more of a line of sight the game hides there than is drawn */
+fn bentOff(o: vec3i) -> f32 { let i = bentIx(o); return bentThrough(wgHas[i], 3.0) - bentThrough(max(wgWant[i], 0.0), 3.0); }
+/** is the way from the brick at o to the one beyond it along axis a (toward s) open */
+fn bentWay(o: vec3i, a: u32, s: i32) -> bool { var at = o; if (s < 0) { at[a] -= 1; } return (wgWays[bentIx(at)] & (1u << a)) != 0u; }
+/** the corners an eighth (its signs) is shaded between: those it can be gone to from the brick's own middle, round the corners of two or three open ways; where that middle is solid, whichever are not */
+fn bentCorners(s: vec3i) -> u32 {
+  var said = 0u;
+  for (var j = 0u; j < 8u; j++) { if (wgWant[bentIx(select(vec3i(0), s, vec3<bool>((j & 1u) != 0u, (j & 2u) != 0u, (j & 4u) != 0u)))] >= 0.0) { said |= 1u << j; } }
+  if ((said & 1u) == 0u) { return said; }
+  var got = 1u;
+  for (var n = 0; n < 3; n++) {
+    for (var j = 0u; j < 8u; j++) {
+      if ((got & (1u << j)) == 0u) { continue; }
+      let o = select(vec3i(0), s, vec3<bool>((j & 1u) != 0u, (j & 2u) != 0u, (j & 4u) != 0u));
+      for (var a = 0u; a < 3u; a++) { let to = j | (1u << a); if (to != j && (said & (1u << to)) != 0u && bentWay(o, a, s[a])) { got |= 1u << to; } }
+    }
+  }
+  return got;
+}
+/** (what the grid holds, what is drawn) about cell c: the middles round it, shaded. x < 0 = the grid says nothing here */
+fn bentHere(c: vec3i) -> vec2f {
+  let q = (vec3f(c) + 0.5) / 8.0 - 0.5; let up = q > vec3f(0.0); let s = select(vec3i(-1), vec3i(1), up); let t = abs(q);
+  let ok = wgCorners[u32(up.x) | (u32(up.y) << 1u) | (u32(up.z) << 2u)];
+  var y = 0.0; var m = 0.0; var sum = 0.0;
+  for (var j = 0u; j < 8u; j++) {
+    if ((ok & (1u << j)) == 0u) { continue; }
+    let on = vec3<bool>((j & 1u) != 0u, (j & 2u) != 0u, (j & 4u) != 0u); let u = select(1.0 - t, t, on); let w = u.x * u.y * u.z; let i = bentIx(select(vec3i(0), s, on));
+    y += w * wgWant[i]; m += w * wgHas[i]; sum += w;
+  }
+  if (sum <= 0.0) { return vec2f(-1.0, 0.0); }
+  return vec2f(y, m) / sum;
+}
+/** lumps a unit across, about -0.5..0.5, no two alike: a slope hashed at whole numbers, rounded between (two sines crossed show as stripes where a whole cloud comes up at once) */
+fn lumps(p: vec3f) -> f32 {
+  let i = vec3i(floor(p)); let f = p - floor(p); let u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); var v = 0.0;
+  for (var j = 0; j < 8; j++) {
+    let o = vec3i(j & 1, (j >> 1u) & 1, j >> 2u); let w = select(1.0 - u, u, o == vec3i(1)); let c = bitcast<vec3u>(i + o);
+    var n = (c.x * 1664525u) ^ (c.y * 2246822519u) ^ (c.z * 3266489917u); n = (n ^ (n >> 15u)) * 2654435761u; n ^= n >> 13u;
+    let g = vec3f((vec3u(n) >> vec3u(2u, 12u, 22u)) & vec3u(1023u)) / 511.5 - 1.0;
+    v += w.x * w.y * w.z * dot(g, f - vec3f(o));
+  }
+  return v;
+}
+/** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
+fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * abs(o) * dt), 1.0, sp.whole > 0.0);
+  let d = h.x - h.y;
+  let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
+  if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
+  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; let due = a * d * bare * bare * bare * bare;
+  if (due < 1e-6) { return was; }
+  let q = P * 2.0 + vec3f(0.0, -sp.time * 0.35, sp.time * 0.15);
+  return was + due * (0.2 + 1.75 * smoothstep(-0.3, 0.5, lumps(q) + 0.5 * lumps(q * 2.1 + 17.0)));   // (wisps at two sizes, 0.85 in the mean)
+}
 var<workgroup> wgLo: array<atomic<i32>, 3>;
 var<workgroup> wgHi: array<atomic<i32>, 3>;
 @compute @workgroup_size(8, 8, 4)
@@ -771,6 +880,29 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
   if (li == 3u) { atomicStore(&wgMax, 0u); atomicStore(&wgKind, 0u); }
   let fl = workgroupUniformLoad(&wgWord);
   if ((fl & F_ACT) == 0u) { return; }
+  let bent = k.l == 0u && sp.bend > 0.0;
+  if (bent && li < 27u) {
+    let n = M[k.m + K_NBR + li]; let r = bentAt(k.b + vec3i(i32(li % 3u), i32((li / 3u) % 3u), i32(li / 9u)) - 1);
+    var y = bentRho(r); var m = 0.0;
+    if (n != 0u) { let nm = metaOf(n - 1u); m = bitcast<f32>(M[nm + K_MEAN]); if ((M[nm + K_FLAGS] & F_WALL) != 0u) { y = -1.0; } }
+    wgWant[li] = y; wgHas[li] = m; wgWays[li] = bentOpen(r);
+  }
+  workgroupBarrier();
+  if (bent && li == 32u) {   // (which way the difference grows, along each axis by the ways that are open)
+    var pull = vec3f(0.0); let off = bentOff(vec3i(0));
+    if (wgWant[13] >= 0.0) {
+      for (var a = 0u; a < 3u; a++) {
+        var o = vec3i(0); o[a] = 1; var sum = 0.0; var n = 0.0;
+        if (wgWant[bentIx(o)] >= 0.0 && bentWay(vec3i(0), a, 1)) { sum += bentOff(o) - off; n += 1.0; }
+        if (wgWant[bentIx(-o)] >= 0.0 && bentWay(vec3i(0), a, -1)) { sum += off - bentOff(-o); n += 1.0; }
+        if (n > 0.0) { pull[a] = sum / n / (8.0 * k.h); }
+      }
+    }
+    M[k.m + K_PULL] = pack2x16float(pull.xy); M[k.m + K_PULL + 1u] = pack2x16float(vec2f(pull.z, 0.0));
+  }
+  let least = bentLeast(); let dye = bentDye(bentAt(k.b));
+  if (bent && li < 8u) { wgCorners[li] = bentCorners(select(vec3i(-1), vec3i(1), vec3<bool>((li & 1u) != 0u, (li & 2u) != 0u, (li & 4u) != 0u))); }
+  workgroupBarrier();
   var eps = bitcast<f32>(M[M_EPS]); var extra = bitcast<f32>(M[M_DECAY]); let thin0 = bitcast<f32>(M[M_THIN]); var thin = thin0; let open = M[k.m + K_OPEN];
   let far = farOf(k.l, k.b);
   if (far > 0.0) {   // out of sight the ceiling starts at half the fill, bites up to three times as hard and calls four times the density thin
@@ -787,8 +919,10 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     var kd = vec4f(0.0); if (kinds) { kd = unpack4x8unorm(V[V_CURL + i].x); }
     // (the pool's soft ceiling: as it fills, THIN smoke goes faster — the body of a plume is untouched, its faint skirts give their bricks back)
     var faint = 1.0 - smoothstep(0.0, thin, v.x);
-    if (k.l == 1u && sp.fineKeep > 0.0) { faint *= 1.0 - smoothstep(0.5 * sp.fineKeep, sp.fineKeep, v.y); }   // (hot gas on the fine lattice is not let go: THE FINE LATTICE LETS GO)
-    v.x *= exp(-(sp.densDecay + extra * faint) * k.dt);
+    var h = vec2f(-1.0, 0.0); if (bent) { h = bentHere(c); }
+    let thins = exp(-(sp.densDecay + extra * faint) * k.dt); var mine = thins;
+    if (h.x > 0.0) { mine = exp(-(sp.densDecay * mix(1.0, smoothstep(0.95, 1.1, h.y / h.x), smoothstep(0.1 * least, 0.5 * least, h.x)) + extra * faint) * k.dt); }   // (IT THINS BY THE GAME'S LAW, above; what the grid has next to none of goes as ever)
+    if (kinds) { let own = v.x * kd.x * thins; v.x = own + v.x * (1.0 - kd.x) * mine; kd.x = own / max(v.x, 1e-6); } else { v.x *= mine; }
     v.y *= exp(-(sp.tempDecay + cool * faint) * k.dt);
     let Pw = worldP(k, c); var fed = false;
     for (var w = 0u; w < 2u; w++) {
@@ -805,6 +939,13 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
         v.y += e.temperature * g * sp.dt; fed = true;
       }
     }
+    var held = false;
+    if (bent) {
+      if (h.x >= 0.0) {
+        let own = v.x * kd.x; let had = v.x; let g = bendTo(v.x - own, h, Pw, k.dt); v.x = own + g; held = h.x > 0.5 * least;
+        if (kinds) { kd = vec4f(own / max(v.x, 1e-6), mix(kd.yzw, dye, clamp((v.x - had) / max(v.x, 1e-6), 0.0, 1.0))); }   // (what comes up comes up of the game's color)
+      }
+    }
     // an OPEN face (the world's edge, or the pool refused the brick beyond): the old boxes' dissipation band, only there. A brick with smoke normally has all its neighbours and never runs this.
     if (open != 0u) {
       var edge = 8.0;
@@ -814,7 +955,7 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
       let t = 1.0 - clamp(edge / 6.0, 0.0, 1.0); let t2 = t * t;
       v.x *= exp(-(4.0 * t + 26.0 * t2 * t2) * k.dt);
     }
-    v = select(max(v, vec2f(0.0)), vec2f(0.0), v <= select(vec2f(eps, epsT), vec2f(eps0), fed));   // (a cell a source is feeding keeps the plain floor: a weak source lays down less than the fine lattice's in a step and would never build)
+    v = select(max(v, vec2f(0.0)), vec2f(0.0), v <= select(select(vec2f(eps, epsT), vec2f(eps0), fed), vec2f(0.0, epsT), held));   // (where the game holds smoke nothing is too little: it comes up from none. A cell a source is feeding keeps the plain floor: a weak source lays down less than the fine lattice's in a step and would never build)
     let w16 = pack2x16float(v);
     S[S_DEN0 + i] = w16;
     if (kinds) { let kw = select(0u, pack4x8unorm(kd), v.x > 0.0); S[S_KIND + i] = kw; any |= kw; }
@@ -842,15 +983,29 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
 @group(2) @binding(7) var atlasOut: texture_storage_3d<rgba16float, write>;
 @group(2) @binding(8) var pageOut: texture_storage_3d<r32uint, write>;
 var<workgroup> wgHit: atomic<u32>;
-override PUB_ALL: u32 = 0u;   // 1 = every live brick, the waiting ones too (a render-density row moved: smoke.ts refreshDomains)
+var<workgroup> wgSum: atomic<u32>;
+var<workgroup> wgAir: atomic<u32>;
+override PUB_ALL: u32 = 0u;   // 1 = every live brick, the waiting ones too (the readers' switch moved: smoke.ts skipWas)
 @compute @workgroup_size(256)
 fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: u32) {
   var slot = NONE;
   if (PUB_ALL != 0u) { if (li == 0u) { var t = NONE; if (wid.x < M[M_COUNT]) { t = M[M_LIST + wid.x]; } wgSlot = t; } slot = workgroupUniformLoad(&wgSlot); } else { slot = openBrickU(wid.x, li); }
   if (slot == NONE) { return; }
   let k = brickOf(slot);
-  if (li == 0u) { atomicStore(&wgHit, 0u); }
+  if (li == 0u) { atomicStore(&wgHit, 0u); atomicStore(&wgSum, 0u); atomicStore(&wgAir, 0u); }
   workgroupBarrier();
+  // C of THE GAME'S SMOKE: what of it a brick holds, on average over its air
+  let bent = k.l == 0u && sp.bend > 0.0;
+  if (bent && (M[k.m + K_FLAGS] & F_SCALAR) != 0u) {
+    let mixed = (M[k.m + K_FLAGS] & F_KIND) != 0u; var sum = 0.0; var air = 0u;
+    for (var cell = li; cell < 512u; cell += 256u) {
+      if ((bitsOf(slot, cell) & 1u) != 0u) { continue; }
+      let i = slot * 512u + cell; var d = unpack2x16float(S[S_DEN0 + i]).x;
+      if (mixed) { d *= 1.0 - unpack4x8unorm(S[S_KIND + i]).x; }
+      sum += d; air++;
+    }
+    atomicAdd(&wgSum, u32(sum * 8192.0)); atomicAdd(&wgAir, air);
+  }
   if (li < 27u) {
     let n = M[k.m + K_NBR + li];
     if (n != 0u) {
@@ -864,6 +1019,11 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
   if (li == 0u) {
     let fl = M[k.m + K_FLAGS];
     M[k.m + K_FLAGS] = select(fl & ~F_RENDER, fl | F_RENDER, hit);
+    if (bent) {
+      let m = f32(atomicLoad(&wgSum)) / 8192.0 / f32(max(atomicLoad(&wgAir), 1u)); let y = bentRho(bentAt(k.b));
+      M[k.m + K_MEAN] = bitcast<u32>(m);
+      if (y >= 0.0 && (fl & F_WALL) == 0u && max(y, m) > 0.01) { atomicAdd(&A[C_OFF], u32(abs(bentThrough(y, 3.0) - bentThrough(m, 3.0)) * 1024.0)); atomicAdd(&A[C_OFFN], 1u); }
+    }
     if (k.l == 1u) {
       textureStore(pageOut, k.b + vec3i(0, i32(sp.levels[1].texY), 0), vec4u(select(0u, slot + 1u, hit), 0u, 0u, 0u));
       if (hit) {   // tell the coarse page there is fine smoke somewhere in these coarse bricks (compose turns the stamp into bit 31)
@@ -874,25 +1034,23 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
     }
   }
   if (!hit) { return; }
-  // a texel = (the density every reader takes: the solver's × its kind's render density, so those two rows act on smoke in the air · that density × (1 − tint), for the view march's dust look)
+  // a texel = (the density every reader takes · that density × (1 − tint), for the view march's dust look)
   let org = vec3i(i32(slot % ATLAS_X), i32((slot / ATLAS_X) % ATLAS_Y), i32(slot / (ATLAS_X * ATLAS_Y))) * 10 + 1;
-  let kinds = (M[k.m + K_FLAGS] & F_KINDS) != 0u; let plain = select(sp.scaleCan, sp.scaleFx, k.l == 1u);
+  let kinds = (M[k.m + K_FLAGS] & F_KINDS) != 0u;
   for (var j = li; j < 1000u; j += 256u) {
     let c = vec3i(i32(j % 10u), i32((j / 10u) % 10u), i32(j / 100u)) - 1;
     let r = cellRef(k, vec3i(c.x, select(c.y, max(c.y, 0), k.b.y == 0), c.z));   // (under the lattice's bottom row: that row again, as aboveFloor samples it)
     var o = vec4f(0.0);
     if (r.x != 0u) {
-      let at = (r.x - 1u) * 512u + r.y; let dt2 = unpack2x16float(S[S_DEN0 + at]); let d = dt2.x;
-      if (kinds) { let kd = unpack4x8unorm(S[S_KIND + at]); o.x = d * mix(sp.scaleCan, sp.scaleFx, kd.x); o = vec4f(o.x, o.x * kd.yzw); } else { o.x = d * plain; }
-      if (k.l == 1u) { o.w = dt2.y; }   // (a FINE brick's last channel is its HEAT, as the solver has it: nobody read that channel of a fine brick — smoke_read.wgsl spgFineHot, for a fire's flame)
-      else if ((u32(sp.show) & 2u) != 0u) { o = vec4f(o.x, o.x * clamp(unpack2x16float(V[V_CURL + at].y).y / f32(max(u32(sp.show) >> 2u, 1u)), 0.0, 1.0), 0.0, 0.0); }   // (THE SMOKE LAB, spin: a coarse cell's tint channels carry density × how hard the air in it turns, 0‥1, from the curl the step left: composite.wgsl smokeLabOver draws it; smoke.ts holds the dust twin off meanwhile)
+      let at = (r.x - 1u) * 512u + r.y; o.x = unpack2x16float(S[S_DEN0 + at]).x;
+      if (kinds) { o = vec4f(o.x, o.x * unpack4x8unorm(S[S_KIND + at]).yzw); }
     }
     textureStore(atlasOut, org + c, o);
   }
 }
 
-// the coarse page, dense (N0 texels, a few tens of µs): slot + 1 of a renderable coarse brick | bit 31 = fine smoke somewhere inside this coarse brick. One load tells a ray everything about 0.44 m of air.
-// A workgroup is one MACRO cell of 4 × 2 × 4 bricks and leaves a word for it too (rows from MACRO_Y): bit x + 4 z + 16 y = that brick's page entry is not 0. One load tells a ray about 1.76 × 0.88 × 1.76 m.
+// the coarse page, dense (N0 texels, a few tens of µs): slot + 1 of a renderable coarse brick | bit 31 = fine smoke somewhere inside this coarse brick. One load tells a ray everything about half a metre of air.
+// A workgroup is one MACRO cell of 4 × 2 × 4 bricks and leaves a word for it too (rows from MACRO_Y): bit x + 4 z + 16 y = that brick's page entry is not 0. One load tells a ray about 2 × 1 × 2 m.
 var<workgroup> wgMacro: atomic<u32>;
 @compute @workgroup_size(4, 2, 4)
 fn compose(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(local_invocation_index) li: u32) {
@@ -919,10 +1077,10 @@ fn wipePage(@builtin(global_invocation_id) gid: vec3u) {
 }
 
 // ------------------------------------------------------------------ boxes: ≤ 8 BOUNDS for the readers that clip rays before they march (never storage, never a limit on the smoke)
-// The marchers, the froxel cull and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
+// The marchers and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
 // bricks are binned into plan tiles, each tile keeps the box of its bricks, and the tiles are merged greedily into at most four boxes a level. More plumes than boxes = looser boxes
 // (rays walk some empty page entries), never lost smoke.
-struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, show: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
+struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, pad2: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
 @group(2) @binding(9) var<storage, read_write> domOut: array<DomOut, 8>;
 @group(2) @binding(10) var<storage, read_write> statsOut: array<u32>;
 var<workgroup> tl: array<atomic<u32>, NTILES * 6u>;
@@ -966,7 +1124,7 @@ fn boxes(@builtin(local_invocation_index) li: u32) {
   for (var q = 0u; q < 8u; q++) {
     let l = q >> 2u; let on = (q & 3u) < cnt[l]; let h = sp.levels[l].voxel;
     var d: DomOut;
-    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip; d.show = sp.show;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
+    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
     if (on) { d.origin = vec3f(lo[q]) * (8.0 * h); d.dims = vec3u(hi[q] - lo[q] + 1) * 8u; }
     domOut[q] = d;
     statsOut[16u + q * 2u] = select(0u, u32(lo[q].x) | (u32(lo[q].y) << 10u) | (u32(lo[q].z) << 20u) | 0x80000000u, on);
@@ -974,5 +1132,5 @@ fn boxes(@builtin(local_invocation_index) li: u32) {
   }
   statsOut[0] = n; statsOut[1] = atomicLoad(&A[C_SCALAR]); statsOut[2] = atomicLoad(&A[C_RENDER]); statsOut[3] = atomicLoad(&A[C_FAIL]);
   statsOut[4] = atomicLoad(&A[C_FREE]); statsOut[5] = atomicLoad(&A[C_VMAX]); statsOut[6] = atomicLoad(&A[C_ALLOC]); statsOut[7] = atomicLoad(&A[C_FREED]);
-  statsOut[8] = sp.stepNo; statsOut[9] = cnt[0] + cnt[1]; statsOut[10] = atomicLoad(&A[C_BAKED]); statsOut[11] = atomicLoad(&A[C_FINE]); statsOut[12] = M[M_EPS]; statsOut[13] = atomicLoad(&A[C_ACT]); statsOut[14] = M[M_NSTEP]; statsOut[15] = atomicLoad(&A[C_WORK]); statsOut[32] = M[M_THIN]; statsOut[33] = atomicLoad(&A[C_TINT]); statsOut[34] = atomicLoad(&A[C_LVL1]); statsOut[35] = atomicLoad(&A[C_HELD]);
+  statsOut[8] = sp.stepNo; statsOut[9] = cnt[0] + cnt[1]; statsOut[10] = atomicLoad(&A[C_BAKED]); statsOut[11] = atomicLoad(&A[C_FINE]); statsOut[12] = M[M_EPS]; statsOut[13] = atomicLoad(&A[C_ACT]); statsOut[14] = M[M_NSTEP]; statsOut[15] = atomicLoad(&A[C_WORK]); statsOut[32] = M[M_THIN]; statsOut[33] = atomicLoad(&A[C_TINT]); statsOut[36] = atomicLoad(&A[C_OFF]); statsOut[37] = atomicLoad(&A[C_OFFN]); statsOut[34] = atomicLoad(&A[C_LVL1]); statsOut[35] = atomicLoad(&A[C_HELD]);
 }

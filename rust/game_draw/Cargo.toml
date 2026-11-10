@@ -1,0 +1,19 @@
+# WHAT THE PICTURE IS TOLD. May name the rules and the data, and takes the game shared: nothing here can change it.
+[workspace]
+
+[package]
+name = "game_draw"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+game = { path = "../game_rules", package = "game_rules" }
+sim = { path = "../sim" }
+
+[profile.dev]
+opt-level = 0
+debug = false

@@ -1,0 +1,65 @@
+//! The types of `whistle`.
+#![allow(unused_imports)]
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use alloc::{string::String, vec::Vec};
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct WhistleMem {
+    pub responded_at: f64,
+    pub cues: f64,
+    pub glance_until: f64,
+    pub glance_at: Option<V3>,
+    pub soft: bool,
+    pub soft_at: f64,
+    pub last_look: f64,
+    pub last_twice: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Blower {
+    pub ready_at: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Heard {
+    pub at: V3,
+}
+
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Resolution {
+    pub hearers: JsMap<GuardId, crate::whistle::Heard>,
+    pub responder: Option<GuardId>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum PickKey {
+    LastLook,
+    LastTwice,
+}
+
+/// the state this module keeps at its top level
+#[derive(Clone, Debug, ToBytes, Blank)]
+pub struct WhistleMod {
+    pub mem_of: JsMap<GuardId, crate::whistle::WhistleMem>,
+    pub blower_of: JsMap<PlayerId, crate::whistle::Blower>,
+    pub res_of: JsMap<u32, crate::whistle::Resolution>,
+}
+
+/// the counters this module keeps for the checks
+#[derive(Clone, Debug, Default)]
+pub struct WhistleStats {
+    pub blown: i32,
+    pub resolved: i32,
+    pub answered: i32,
+}
+
+pub fn look_lines() -> Vec<String> { alloc::vec![String::from("hello?"), String::from("someone there?"), String::from("…what was that?"), String::from("who's that whistling?"), String::from("somebody down there?")] }
+
+pub fn twice_now() -> Vec<String> { alloc::vec![String::from("all right — who's messing around?"), String::from("that's twice now. come on out."), String::from("okay. not funny. where are you?")] }
+
+pub fn look_foe() -> Vec<String> { alloc::vec![String::from("…quiet. listen."), String::from("you hear that?"), String::from("something's there.")] }
+
+pub fn twice_foe() -> Vec<String> { alloc::vec![String::from("that's no bird. going to look."), String::from("someone's close. eyes up.")] }
+
+pub const NEVER: f64 = -1000000000.0;
+

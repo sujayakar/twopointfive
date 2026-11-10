@@ -1,6 +1,5 @@
 // Minimal vector / matrix / quaternion helpers. Column-major mat4 (WebGPU/glTF convention).
-import { hyp2, hyp3, hyp4 } from './hyp';
-export { hyp2, hyp3, hyp4 };   // (Math.hypot's own bits without its call: see hyp.ts)
+const hyp2 = (a: number, b: number): number => Math.sqrt(a * a + b * b), hyp3 = (a: number, b: number, c: number): number => Math.sqrt(a * a + b * b + c * c), hyp4 = (a: number, b: number, c: number, d: number): number => Math.sqrt(a * a + b * b + c * c + d * d);
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number]; // x y z w
 export type Mat4 = Float32Array; // 16, column-major
@@ -9,10 +8,6 @@ export const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const smoothstep = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 export const DEG = Math.PI / 180;
-/** Wrap angle to (-PI, PI]. */
-export const wrapAngle = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
-/** Move angle a toward b by at most maxStep (shortest arc). */
-export const approachAngle = (a: number, b: number, maxStep: number) => { const d = wrapAngle(b - a); return Math.abs(d) <= maxStep ? b : a + Math.sign(d) * maxStep; };
 export const damp = (a: number, b: number, rate: number, dt: number) => lerp(a, b, 1 - Math.exp(-rate * dt));
 
 export const v3 = {

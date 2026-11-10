@@ -1,4 +1,4 @@
-// OTHER TAKES of voices the maintainer was not happy with, to pick between on the listening page and on a sound replay's lanes (replay/soundlanes.ts):
+// OTHER TAKES of voices the maintainer was not happy with, to pick between on the listening page and on a sound replay's lanes (tape/soundlanes.ts):
 // two more ways each of the fourteen he filed under 'toys' (10-12) could go, and one more of each of the four he flagged on the lanes (10-13: propScrape,
 // propThud, lockBreak, magDrop — those four were also redone in the game's table to his note, so the take here is a second answer to the same note).
 // NOTHING HERE IS IN THE GAME'S TABLE: buildSfx / gameSfx never ask this file, a take is rendered the first time somebody asks for it and loaded beside the
@@ -13,7 +13,7 @@
 // other takes are still here to hear beside it).
 import type { SfxBuffer, SfxContext } from './backend';
 import { HEARD, SLIDE, clack, cluster, knock, thud, tuned, vary, voiced, type SfxName } from './sfx';
-import { biquad, peakTo, type Mode, type Tune, type Voice } from './synth';
+import { biquad, peakTo, type Tune, type Voice } from './synth';
 
 interface Take { say: string; dur: number; seed: number; fn: (v: Voice) => void; picked?: true }
 /** a take he PICKED (10-13): its recipe is the game's own voice now, in sfx.ts. Its place in the list stays, so 'new 2' still names the take it named when he chose */
@@ -352,5 +352,3 @@ export function altOne(ctx: SfxContext, name: string, k: number, tune: Tune): Sf
   const as = HEARD[name as SfxName] ?? AS[name as SfxName]; if (as === undefined) return null;
   return tuned(tune, () => voiced(ctx, as, T.dur, T.seed, T.fn));
 }
-/** the seed take k is written with (what a tuner's 'seed' starts from) */
-export function altSeed(name: string, k: number): number | undefined { return TAKES[name as SfxName]?.[k]?.seed; }

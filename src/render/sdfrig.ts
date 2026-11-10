@@ -1,16 +1,15 @@
-// The per-character SDF RIG (docs/internal/sdf-characters.md is the record). Every mannequin's 15 shadow / reflection proxies — the segments
+// The per-character SDF RIG (docs/agents/render-light.md, "Men in rays"). Every mannequin's 15 shadow / reflection proxies — the segments
 // Character.capsules() builds off the skeleton each frame, in that order — are ROUND CONES (tapered capsules: radius r0 at end a, r1 at end b) whose
 // radii are LEAST-SQUARES FITTED to the glTF mesh once at load: for each slot, the bind-pose vertices dominated by its joints (JOINTS below) are
 // projected onto its bind-pose segment and ρ ≈ r0·(1 − u) + r1·u is solved (a vertex past an end fits that end's cap radius), the residual per slot
 // printed (`rigTable`), and RIG_OVERRIDES lets a slot be pinned by hand. Nothing here touches the GPU: BoxWorld.upload applies the fit to every frame's
 // proxy list (scene/boxes.ts applyRig — r0 replaces the hand radius, r1 rides quantised to the millimetre in the top byte of `misc`, the character's cull
-// sphere is fitted to the cones) once the Engine has it (setRigFit: game.ts / the viewer at character load), and shaders/sdfrig.wgsl (appended to the
+// sphere is fitted to the cones) once the Engine has it (setRigFit: the page at character load), and shaders/sdfrig.wgsl (appended to the
 // scene prelude) has the GPU side: the closed-form ray / round-cone test every proxy loop in common.wgsl runs, plus two switchable extras — (ii) the
 // sphere-traced SMOOTH UNION of a man's cones (polynomial smin, K below per slot) as the reflection pass's closest hit, (iii) the soft-shadow query as
 // the direct estimator's character visibility (an experiment).
 import { GltfCharacter, MeshData, castGoggles, castSuit } from '../anim/gltf';
 import { Mat4, Vec3, m4, v3 } from '../math/vec';
-import { wallClock } from '../math/side';
 
 /** = BoxWorld.CAPS_PER_CHAR: the slots of Character.capsules(), in its order */
 export const RIG_SLOTS = 15;
@@ -18,13 +17,9 @@ export const RIG_SLOT_NAMES = ['lowerTorso', 'chest', 'shoulders', 'pelvis', 'ne
 export type RigSlotName = typeof RIG_SLOT_NAMES[number];
 /** the radii Character.capsules() authors by hand for the same slots (the 'was' column of the table; what a slot keeps when there is nothing to fit it to, and what an Engine with no fit attached traces) */
 export const HAND_RADII: readonly number[] = [0.15, 0.16, 0.07, 0.11, 0.105, 0.052, 0.042, 0.052, 0.042, 0.075, 0.058, 0.033, 0.075, 0.058, 0.033];
-/** SMOOTH-UNION blend radius per slot (m): slot s is folded into the running union with smin(·, ·, K[s]) in FOLD_ORDER — a knee / elbow / neck fillet the
- *  size of the joint, the arms last against everything with 2 cm so an arm at the side does not web to the ribs, the thighs 4 cm (the crotch fills, as
- *  cloth does). shaders/sdfrig.wgsl RIG_K carries the same numbers in slot order (× frame.rigCfgB.x for A/B; 0 = the plain union). */
-export const RIG_K: readonly number[] = [0.0, 0.06, 0.05, 0.06, 0.03, 0.02, 0.03, 0.02, 0.03, 0.04, 0.04, 0.03, 0.04, 0.04, 0.03];
-export const FOLD_ORDER: readonly number[] = [0, 3, 1, 2, 4, 9, 10, 11, 12, 13, 14, 5, 6, 7, 8];
-/** the largest smin bulge (k/4) any joint adds outside its cones — cull spheres and the closest hit's entry test are padded by it */
-export const RIG_KPAD = [...RIG_K].sort((a, b) => b - a).slice(0, 3).reduce((n, k) => n + k, 0) / 4;   // each smin bulges ≤ k/4 outside the plain union, and the fold NESTS: where three blends meet (chest + shoulders + neck) the surface can sit up to the sum of the three largest k/4 outside — the entry cones and the cull sphere are padded by that
+/** what every cull sphere of the rig is padded by (m). It was the largest bulge of the smooth union the rig's trials traced (gone 2026-11-07): the sum of the
+ *  three largest blend radii over four. The spheres are the mesh shadows' broad phase too, so the number stays what it was, to the bit. */
+export const RIG_KPAD = (0.06 + 0.06 + 0.05) / 4;
 /** r1 rides in the top byte of a capsule's misc word in these units (0 = 'same as r0': a plain capsule — what a record nobody fitted decodes to) */
 export const RB_QUANT = 0.001;
 /** Hand overrides, applied over the least-squares result (metres). Empty = the fit as solved. Example: { neckHead: { r1: 0.105 } } */
@@ -47,7 +42,7 @@ export interface RigSlotFit {
 }
 export interface RigFit { r0: Float32Array; r1: Float32Array; slots: RigSlotFit[]; verts: number; ms: number;
   /** THE CAST: men who wear different parts of the cast mesh have different fits — keyed by the character's id (the owner byte of his proxy records), read by BoxWorld.applyRig before the
-   *  fit's own radii (game.ts fills it as men are drawn: fitRig(ch, his part mask)). Absent / no entry = this fit. */
+   *  fit's own radii (rust/game_rules/src/tick/game fills it as men are drawn: fitRig(ch, his part mask)). Absent / no entry = this fit. */
   byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }>;
   /** THE CAST: how far (m) the worn mesh reaches outside the union of its own fitted cones in bind pose (a hat brim, an antenna, goggles flipped up) — BoxWorld.applyRig adds it to
    *  the man's cull sphere, which is also the mesh walk's broad phase, so a ray that grazes only that sliver still meets him. Absent on the mannequin (mask 0): the sphere as it was. */
@@ -70,7 +65,7 @@ export function sdRoundCone(p: Vec3, a: Vec3, b: Vec3, r0: number, r1: number): 
  *  chest, the pelvis line the lower torso — a torso is wider than deep, and one round cone up the spine fits its depth) */
 const SLOTS: { name: RigSlotName; seg: (j: J) => [Vec3, Vec3]; joints: string[]; uRange: [number, number]; after?: RigSlotName[]; rhoMax?: number }[] = (() => {
   const ext = (a: Vec3, b: Vec3, e: number): Vec3 => v3.mad(b, v3.normalize(v3.sub(b, a)), e);
-  const TOE_FLOOR_Y = 0.0147;   // = character.ts TOE_FLOOR_Y (the toe bone's height with the sole on the floor)
+  const TOE_FLOOR_Y = 0.0147;   // = rust/game_rules/src/body/character TOE_FLOOR_Y (the toe bone's height with the sole on the floor)
   const sole = (foot: Vec3, toe: Vec3): [Vec3, Vec3] => {
     const up = TOE_FLOOR_Y; const heel: Vec3 = [foot[0] - (toe[0] - foot[0]) * 0.35, Math.min(foot[1], toe[1] - up + 0.033 + (foot[1] - toe[1]) * 0.15), foot[2] - (toe[2] - foot[2]) * 0.35];
     const tip: Vec3 = [toe[0], toe[1] - up + 0.033, toe[2]];
@@ -108,7 +103,7 @@ function bindJoints(ch: GltfCharacter): J {
 
 const cache = new WeakMap<MeshData, Map<number, RigFit>>();
 let padV = new Int32Array(0), padD = new Float64Array(0);   // (fitRig's scratch: the vertices that stand outside their own cone, and by how much)
-/** The rig fit for a loaded character (solved on first use, ~10 ms for the mannequin's 8.5k vertices; cached per mesh — the QA harness builds many Games). `parts`: on a CAST mesh
+/** The rig fit for a loaded character (solved on first use, ~10 ms for the mannequin's 8.5k vertices; cached per mesh). `parts`: on a CAST mesh
  *  (anim/gltf.ts loadGltfCast) fit only the vertices of the parts in this mask — one man's kit; 0 = every vertex (the mannequin; on a cast, the union of all parts). */
 /** the most a cast outfit may add to its cull sphere (RigFit.pad), m */
 export const RIG_PAD_MAX = 0.3;
@@ -150,7 +145,7 @@ export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
     r0[si] = q0; r1[si] = q1;
     slots.push({ name: S.name, r0: q0, r1: q1, solved: [f0, f1], n, rms: n ? Math.sqrt(se / n) : 0, maxAbs: mx, cover: n ? inside / n : 0, len, hand: HAND_RADII[si], overridden: !!ov });
   });
-  const fit: RigFit = wallClock({ r0, r1, slots, verts: V, ms: performance.now() - t0 }, 'ms');   // (how long the solve took: a clock reading the game's state reaches — Game.rigFitOf — and nothing compares)
+  const fit: RigFit = { r0, r1, slots, verts: V, ms: performance.now() - t0 };
   if (partOf) {   // the cast: the least-squares cones do not BOUND what he wears — measure how far it stands outside them (capped: one stray vertex must not blow the sphere up)
     // pad = the greatest, over the worn vertices, of the distance to the NEAREST cone — found without asking every cone of every vertex: a vertex's nearest cone is no
     // farther than its OWN (the first slot it is a row of, else the one whose line it lies nearest: meshRows), so a vertex whose own-cone distance is inside the pad so far
@@ -176,7 +171,7 @@ export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
   return fit;
 }
 /** THE CAST'S FITS AHEAD OF PLAY: every mask a man of this cast can be drawn with — each variant with its mesh goggles up, and with the rig's box goggles in
- *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; game/cast.ts castParts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
+ *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; rust/game_rules/src/outfit/cast.rs cast_parts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
  *  instead of solving it mid-play. Nothing with the mannequin loaded. A fit that throws is left for its first use to report, as before. */
 export function fitRigCast(ch: GltfCharacter) {
   const cast = ch.cast; if (!cast) return;
@@ -238,13 +233,9 @@ export function rigTable(fit: RigFit): string {
   return rows.join('\n') + `\n${fit.verts} vertices, ${all.n} used, overall rms ${(Math.sqrt(all.se / Math.max(1, all.n)) * 1000).toFixed(1)} mm, solved in ${fit.ms.toFixed(1)} ms`;
 }
 
-// (What BoxWorld.upload needs to turn the frame's proxy list into the rig — { r0, r1, kPad } — engine.render builds inline from the attached fit, kPad = RIG_KPAD × settings.sdfRigK.)
+// (What BoxWorld.upload needs to turn the frame's proxy list into the rig — { r0, r1, kPad } — engine.render builds inline from the attached fit, kPad = RIG_KPAD.)
 
-/** WGSL the shader side needs from this table (prepended to shaders/sdfrig.wgsl by frame.ts scenePrelude): the sizes, and `charSdf(base, p, kS)` = the SMOOTH UNION of
- *  character `base ÷ capsPerChar`'s cones at p, unrolled in FOLD_ORDER with each slot's blend radius × kS (0 = the plain union) — generated here so the two sides
- *  cannot disagree about the order or the radii. */
+/** WGSL the shader side needs from this table (prepended to shaders/sdfrig.wgsl by frame.ts scenePrelude): the unit r1 is packed in */
 export function sdfRigWgslConsts(): string {
-  const fold = FOLD_ORDER.map((s, i) => i === 0 ? `  var d = coneSdfAt(base + ${s}u, p);` : `  d = sminP(d, coneSdfAt(base + ${s}u, p), ${RIG_K[s].toFixed(3)} * kS);`).join('\n');
-  return `const RIG_SLOTS: u32 = ${RIG_SLOTS}u;\nconst RIG_KPAD: f32 = ${RIG_KPAD.toFixed(4)};\nconst RB_QUANT: f32 = ${RB_QUANT};\n`
-    + `/** the smooth union of one character's ${RIG_SLOTS} round cones at p (render/sdfrig.ts FOLD_ORDER / RIG_K, × kS) */\nfn charSdf(base: u32, p: vec3f, kS: f32) -> f32 {\n${fold}\n  return d;\n}\n`;
+  return `const RB_QUANT: f32 = ${RB_QUANT};\n`;
 }

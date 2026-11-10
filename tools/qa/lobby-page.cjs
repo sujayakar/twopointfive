@@ -18,16 +18,13 @@
 //                    link not read) — the join line and the same-fight line must FAIL
 // The windows are driven by script (frames stepped, none drawn): what two PLAYERS see and feel on a GPU is not what this checks. NOT HERE: Convex's own
 // local backend, the hosted backend and its sandboxes, two machines. exit 0 = pass · 1 = a line failed · 2 = something could not be started
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOISE } = require('./page.cjs');
 const path = require('node:path'), cp = require('node:child_process'), fs = require('node:fs');
 const ROOT = path.resolve(__dirname, '../..');
-const PORT = process.env.PORT || 5351, CPORT = Number(process.env.CLOUD_PORT) || 3251, BREAK = process.env.LOBBY_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow';
+const PORT = process.env.PORT || 5351, PAGE = pageRun({ name: 'lobby-page', port: PORT }), line = PAGE.check, CPORT = Number(process.env.CLOUD_PORT) || 3251, BREAK = process.env.LOBBY_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
 const N = Number(arg('ticks', '300')), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000), BASE = `http://localhost:${PORT}/`, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', WORDS = 'paused&mute&quality=' + QUALITY;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource/;
 const T0 = Date.now(), log = (...a) => { if (process.env.LOBBY_SAY) console.log(`  [${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a); };
-let fails = 0; const line = (ok, what) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const until = async (f, ms = 20000) => { const t = Date.now(); for (;;) { const v = await f().catch(() => null); if (v || Date.now() - t > ms) return v; await sleep(250); } };
 const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Convex ${KEY}` }, body: JSON.stringify({ path: fn, format: 'convex_encoded_json', args: [args] }) }); const j = await r.json(); if (j.status !== 'success') throw new Error(`${fn}: ${JSON.stringify(j).slice(0, 200)}`); return j.value; };
@@ -41,15 +38,20 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
   kids.push(cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY, MP_IDLE_S: '900', MP_START_S: '300', MP_SILENT_S: '300' }, stdio: 'ignore' }));
   { const env = { ...process.env, PORT: String(PORT), TPS_DEV_CLOUD: CLOUD, MP_CLOUD_KEY: KEY }; delete env.TPS_LOCAL_CLOUD; delete env.MP_SERVER;
     kids.push(cp.spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env, stdio: 'ignore' })); }
-  const done = async (code, browser) => { try { await browser?.close(); } catch { /* gone */ } stopKids(); await sleep(500); process.exit(code); };
+  const done = async code => { await PAGE.close(); stopKids(); await sleep(500); process.exit(code); };
   await until(async () => (await fetch(`${CLOUD}/__stats`)).ok); const build = await until(async () => { const r = await fetch(`${BASE}qa/commit`); return r.ok ? (await r.text()).trim() : ''; }, 60000);
   if (!build || !(await until(async () => (await admin('runners:list', {})).some(r => r.builds.includes(build)), 30000))) { console.log('lobby-page: the dev server did not come up as its backend\'s runner'); return done(2); }
-  const browser = await chromium.launch({ args: FLAGS }).catch(() => null); if (!browser) { console.log('lobby-page: the browser did not start'); return done(2); }
-  const ctx = await browser.newContext({ viewport: { width: 640, height: 360 } }), errs = [];   // (ONE browser, two of its windows: they share what a browser keeps, and each is its own tab)
-  const open = async name => { const p = await ctx.newPage(); p.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text())) errs.push(`${name}: ${m.text().slice(0, 200)}`); }); p.on('pageerror', e => errs.push(`${name}: PAGEERROR ${String(e).slice(0, 300)}`)); return p; };
+  const ctx = await PAGE.context({ size: [640, 360] }).catch(() => null); if (!ctx) { console.log('lobby-page: the browser did not start'); return done(2); }
+  const errs = [];   // (ONE browser, two of its windows: they share what a browser keeps, and each is its own tab)
+  const open = async name => (await PAGE.open({ context: ctx, timeout: 300000, errors: { into: errs, as: `${name}: `, skip: [NOISE, /Failed to load resource/] } })).page;
   const inGame = (p, ms) => p.waitForFunction(() => { const q = new URLSearchParams(location.search); return q.has('seed') && q.has('net'); }, null, { timeout: ms }).then(() => true, () => false);
   // (the address is the game's before the game's page is: wait for the page itself, then for its boot, then for its client)
-  const stood = async p => { await p.waitForFunction(() => !!window.__ready, null, { timeout: NAV }); await p.evaluate(() => window.__ready); await p.waitForFunction(() => !!window.__net && !!window.__game, null, { timeout: 60000 }); };
+  const stood = async p => { await p.waitForFunction(() => !!window.__ready, null, { timeout: NAV }); await p.evaluate(() => window.__ready); await p.waitForFunction(() => !!window.__net && !!window.__draw, null, { timeout: 60000 }); };
+  /** the address of the link to a game from a window's own page */
+  const linkOf = (p, code) => { const u = new URL(p.url()); return `${u.origin}${u.pathname}?join=${code}`; };
+  // (pressed by script: a hand's press waits for the page's next drawn frame, which on this adapter is as long as it likes)
+  const click = async (p, sel) => { await p.waitForSelector(sel, { timeout: 120000, state: 'attached' }); await p.evaluate(sel => document.querySelector(sel).click(), sel); };
+  const ownMan = p => p.evaluate(() => window.__draw.game.view().me === window.__net.man().id);
   const title = async p => { await p.goto(`${BASE}?${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); return p.waitForSelector('#menu [data-coop="open"]', { timeout: 120000 }).then(() => true, () => false); };
   try {
     // 0 · a page with NO backend (`cloud=0`): Host game says why not, the solo list's memory is as it was, and the words said again stay up
@@ -58,12 +60,12 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
       const shown = () => Z.evaluate(() => { const l = document.getElementById('coopline'); return l && l.style.display !== 'none' && !/Starting/.test(l.textContent) ? l.textContent : ''; });
       let was = '', now = '', said = '', count = '', back = false, cleared = false, held = false;
       if (await Z.waitForSelector('#menu [data-coop="open"]', { timeout: 120000 }).then(() => true, () => false)) {
-        was = await kept(); await Z.click('#menu [data-coop="open"]'); await Z.click('#menu [data-coop="host"]'); await Z.waitForSelector('#missions.one.on', { timeout: 20000 }); await sleep(500);
-        await Z.click('#missions [data-act="deploy"]'); said = await until(shown, 30000) || ''; now = await kept();
+        was = await kept(); await click(Z, '#menu [data-coop="open"]'); await click(Z, '#menu [data-coop="host"]'); await Z.waitForSelector('#missions.one.on', { timeout: 20000 }); await sleep(500);
+        await click(Z, '#missions [data-act="deploy"]'); said = await until(shown, 30000) || ''; now = await kept();
         back = await Z.waitForSelector('#missions.one.on [data-act="deploy"]', { timeout: 20000 }).then(() => true, () => false); count = await Z.evaluate(() => document.querySelector('#missions .mcount')?.textContent || '');
-        await sleep(1800); await Z.mouse.click(4, 4); cleared = !(await shown());   // (a click takes the line down once it has been up a second and a half)
+        await sleep(1800); await Z.evaluate(() => window.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))); cleared = !(await shown());   // (a click takes the line down once it has been up a second and a half)
         // …and the same words said again are a NEW line: a key pressed the moment it is up (inside its hold) leaves it up
-        if (back) { await Z.click('#missions [data-act="deploy"]');
+        if (back) { await click(Z, '#missions [data-act="deploy"]');
           held = await Z.evaluate(() => new Promise(done => { const t0 = Date.now(), up = () => { const l = document.getElementById('coopline'); return !!l && l.style.display !== 'none' && !/Starting/.test(l.textContent); };
             const poll = () => { if (up()) { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', bubbles: true })); done(up()); } else if (Date.now() - t0 > 30000) done(false); else setTimeout(poll, 40); }; poll(); })); } }
       await Z.close();
@@ -73,7 +75,7 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
     // 1 · the title's row and the host's starting page
     const A = await open('host');
     const row = await title(A); let list = { rows: 0, can: 0, lessons: 0, block: '', kit: '', head: '' };
-    if (row) { await A.click('#menu [data-coop="open"]'); await A.click('#menu [data-coop="host"]'); await A.waitForSelector('#missions.one.on', { timeout: 20000 }); await sleep(800);
+    if (row) { await click(A, '#menu [data-coop="open"]'); await click(A, '#menu [data-coop="host"]'); await A.waitForSelector('#missions.one.on', { timeout: 20000 }); await sleep(800);
       list = await A.evaluate(() => { const vis = e => !!e && getComputedStyle(e).display !== 'none', M = document.getElementById('missions');
         const can = window.__coop ? window.__coop.hostable() : [];
         return { rows: M.querySelectorAll('.mrow').length, can: can.length, lessons: can.filter(r => r.group === 'tutorial' || !/^(roomclear|nightbreach)$/.test(r.kind)).length,
@@ -81,7 +83,7 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
     line(row && list.rows > 0 && list.rows === list.can && list.lessons === 0 && list.block === 'Host game' && list.kit === 0 && /co-op/i.test(list.head), `the title has a Co-op row; Host a game opens the starting page ("${list.head}") on ${list.rows} missions, every one a mission two can play, with no kit step and "${list.block}" on its block`);
 
     // 2 · the block makes the game, and the window goes through the door to it
-    if (row) await A.click('#missions [data-act="deploy"]');
+    if (row) await click(A, '#missions [data-act="deploy"]');
     const hosted = row && await inGame(A, NAV), qa = new URL(A.url()).searchParams, code = qa.get('join') || '';
     const games = await admin('games:list', {}).catch(() => []), G = games.find(g => g.code === code) || null, S = G ? new URLSearchParams(G.setup.scenario) : new URLSearchParams();
     line(hosted && /^[BCDFGHJKLMNPQRSTVWXZ]{5}$/.test(code) && !qa.has('netkey') && qa.get('seats') === '2' && !!G && G.holders.length === 2 && G.holders[0] !== '' && G.holders[1] === '' && S.get('seats') === '2' && S.get('squad') === '4' && S.has('roomclear'),
@@ -91,11 +93,11 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
     let inv = { state: '', seat: -1, shown: '', link: '', vis: false };
     const invite = p => p.evaluate(() => { const c = document.getElementById('coopinvite'), S = window.__net.state; return { state: S.state, seat: S.seat, vis: !!c && c.style.display !== 'none', shown: c?.querySelector('[data-coop="shown"]')?.textContent || '', link: c?.querySelector('[data-coop="link"]')?.textContent || '' }; });
     if (hosted) { await stood(A); await until(async () => (await invite(A)).vis, 20000); inv = await invite(A); }
-    line(inv.state === 'waiting' && inv.seat === 0 && inv.vis && inv.shown === code && inv.link === `${BASE}?join=${code}`, `invite: the host's window stands in seat ${inv.seat} while the server waits (${inv.state}) and shows the code ${inv.shown} and the link ${inv.link}`);
+    line(inv.state === 'waiting' && inv.seat === 0 && inv.vis && inv.shown === code && inv.link === linkOf(A, code), `invite: the host's window stands in seat ${inv.seat} while the server waits (${inv.state}) and shows the code ${inv.shown} and the link ${inv.link}`);
 
     if (hosted && !BREAK) { // (the door: one more load of the host's window, while the server still waits at tick 0)
       const key0 = await A.evaluate(() => window.__net.state.seat);
-      await A.goto(`${BASE}?join=${code}&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+      await A.goto(`${inv.link}&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
       const back = await inGame(A, NAV), qd = new URL(A.url()).searchParams; let d = { state: '', seat: -1, vis: false, shown: '' };
       if (back) { await stood(A); await until(async () => (await invite(A)).vis, 20000); d = await invite(A); }
       const g2 = (await admin('games:list', {}).catch(() => [])).find(g => g.code === code) || null;
@@ -104,32 +106,32 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
 
     // 4 · the second window types the code on the title
     const B = await open('join'); let typed = false;
-    if (BREAK) { await B.goto(`${BASE}?join=${code}&coop=0&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); }
-    else if (await title(B)) { await B.click('#menu [data-coop="open"]'); await B.focus('#menu [data-coop="code"]'); await B.keyboard.type(code.toLowerCase()); typed = (await B.inputValue('#menu [data-coop="code"]')) === code; await B.keyboard.press('Enter'); }
+    if (BREAK) { await B.goto(`${inv.link || BASE + '?x'}&coop=0&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); }
+    else if (await title(B)) { await click(B, '#menu [data-coop="open"]'); await B.focus('#menu [data-coop="code"]'); await B.keyboard.type(code.toLowerCase()); typed = (await B.inputValue('#menu [data-coop="code"]')) === code; await B.keyboard.press('Enter'); }
     const joined = hosted && await inGame(B, BREAK ? 60000 : NAV), qb = new URL(B.url()).searchParams;
     if (joined) await stood(B);
-    const seatB = joined ? await B.evaluate(() => ({ seat: window.__net.state.seat, mine: window.__game.seats.indexOf(window.__game.localSeat) })) : { seat: -1, mine: -1 };
-    line(joined && typed && qb.get('net') === qa.get('net') && qb.get('netgame') === qa.get('netgame') && !qb.has('netkey') && seatB.seat === 1 && seatB.mine === 1, `join: a second window typed the code on the title's Co-op row${typed ? '' : ' (THE FIELD DID NOT TAKE IT)'} and ${joined ? `was sent to the same game, in seat ${seatB.seat} (it shows seat ${seatB.mine}'s man)` : 'was NOT sent to the game'}`);
+    const seatB = joined ? { seat: await B.evaluate(() => window.__net.state.seat), own: await ownMan(B) } : { seat: -1, own: false };
+    line(joined && typed && qb.get('net') === qa.get('net') && qb.get('netgame') === qa.get('netgame') && !qb.has('netkey') && seatB.seat === 1 && seatB.own, `join: a second window typed the code on the title's Co-op row${typed ? '' : ' (THE FIELD DID NOT TAKE IT)'} and ${joined ? `was sent to the same game, in seat ${seatB.seat} (it shows ${seatB.own ? 'its own' : 'ANOTHER'} man)` : 'was NOT sent to the game'}`);
 
     // 5 · the same fight
     if (joined) {
-      const drive = (p, keys) => p.evaluate(keys => { window.__testVisible = true; window.__runFrames(10, 1 / 60, keys, 'none'); const g = window.__game, S = window.__net.state; return { state: S.state, confirmed: S.confirmed, behind: S.behind, far: S.far, ok: S.wordsOk, bad: !!S.bad, broken: S.broken, bye: S.bye, men: g.seats.map(s => [...s.view.player.char.pos]), alive: g.seats.map(s => s.view.player.char.alive !== false), mission: window.__roomclear ? window.__roomclear.state : '' }; }, keys);
+      const drive = (p, keys) => p.evaluate(keys => { window.__draw.run(10, keys, 'none'); const S = window.__net.state, men = [0, 1].map(s => window.__net.man(s)); return { state: S.state, confirmed: S.confirmed, behind: S.behind, far: S.far, ok: S.wordsOk, bad: !!S.bad, broken: S.broken, bye: S.bye, over: !!S.outcome, men: men.map(m => m.at), alive: men.map(m => !m.down) }; }, keys);
       const gone = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]), dead = s => s.bad || s.broken || s.bye;
       let a = await drive(A, []), b = await drive(B, []); const t1 = Date.now();
       while ((a.state !== 'playing' || b.state !== 'playing' || a.behind > 3 || b.behind > 3) && !dead(a) && !dead(b) && Date.now() - t1 < 240000) { a = await drive(A, []); b = await drive(B, []); }
       log('level', JSON.stringify({ a: [a.state, a.confirmed, a.behind], b: [b.state, b.confirmed, b.behind] }));
-      const start = a.men, at = { tick: a.confirmed, mission: a.mission, alive: a.alive }, base = Math.max(a.confirmed, b.confirmed), t2 = Date.now(); let n = 0;
+      const start = a.men, at = { tick: a.confirmed, over: a.over, alive: a.alive }, base = Math.max(a.confirmed, b.confirmed), t2 = Date.now(); let n = 0;
       // (how far each man GOT from where he stood, not where the walk left him: the keys go round a square, and a square can end where it began)
       const moved = [0, 0, 0, 0], reach = () => { [gone(a.men[0], start[0]), gone(a.men[1], start[1]), gone(b.men[0], start[0]), gone(b.men[1], start[1])].forEach((d, i) => { if (d > moved[i]) moved[i] = d; }); };
-      const free = at.mission === 'live' && at.alive.every(Boolean);   // (a man who is down, or a mission that is over, walks nowhere: the line then says so, not '0.0 m')
+      const free = !at.over && at.alive.every(Boolean);   // (a man who is down, or a mission that is over, walks nowhere: the line then says so, not '0.0 m')
       while ((a.confirmed < base + N || b.confirmed < base + N) && !dead(a) && !dead(b) && Date.now() - t2 < 600000) { const k = [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(n / 6) % 4]]; n++; a = await drive(A, k); b = await drive(B, [k[0] === 'KeyW' ? 'KeyS' : k[0] === 'KeyS' ? 'KeyW' : k[0] === 'KeyA' ? 'KeyD' : 'KeyA']); reach(); if (n % 10 === 0) log('fight', a.confirmed, b.confirmed, a.ok, b.ok); }
       const t3 = Date.now(); while ((a.behind > 3 || b.behind > 3 || Math.abs(a.confirmed - b.confirmed) > 30) && !dead(a) && !dead(b) && Date.now() - t3 < 120000) { a = await drive(A, []); b = await drive(B, []); }
-      const h = await fetch(String(qa.get('net')).replace(/^ws/, 'http') + '/health').then(r => r.json(), () => null), mineA = await A.evaluate(() => window.__game.seats.indexOf(window.__game.localSeat)), up = await A.evaluate(() => !!document.getElementById('coopinvite'));
+      const h = await fetch(String(qa.get('net')).replace(/^ws/, 'http') + '/health').then(r => r.json(), () => null), ownA = await ownMan(A), up = await A.evaluate(() => !!document.getElementById('coopinvite'));
       reach();
       line(a.confirmed >= base + N && b.confirmed >= base + N && !dead(a) && !dead(b) && a.ok >= Math.floor(a.confirmed / 30) && b.ok >= Math.floor(b.confirmed / 30) && a.ok > 0 && !!h && h.seats.length === 2 && h.seats.every(Boolean) && h.tick >= base + N,
         `same fight: the host's window walked ${a.confirmed} ticks and matched ${a.ok} of ${Math.floor(a.confirmed / 30)} state words, the second ${b.confirmed} and ${b.ok} of ${Math.floor(b.confirmed / 30)}${a.bad || b.bad ? ' (A WORD DIFFERED)' : ''}${a.broken || b.broken ? ` (${a.broken || b.broken})` : ''}; the server is at tick ${h ? h.tick : '?'} with ${h ? h.seats.filter(Boolean).length : 0} of ${h ? h.seats.length : '?'} seats connected`);
-      line(mineA === 0 && seatB.mine === 1 && moved.every(d => d > 0.3) && gone(start[0], start[1]) > 0.1 && !up,
-        `two players: the host's window shows seat ${mineA}'s man and the second seat ${seatB.mine}'s; each walked its own (as far as ${moved[0].toFixed(1)} m and ${moved[3].toFixed(1)} m from where he stood) and the other window's game has him moved too (${moved[2].toFixed(1)} m and ${moved[1].toFixed(1)} m); the invite is ${up ? 'STILL UP' : 'gone'}${free ? '' : ` — AT THE WALK'S START (tick ${at.tick}) the mission was '${at.mission}' and the men alive were ${at.alive.join(', ')}: NOBODY WAS FREE TO WALK, which is this run's clock (the walk began too late), not the lobby`}`);
+      line(ownA && seatB.own && moved.every(d => d > 0.3) && gone(start[0], start[1]) > 0.1 && !up,
+        `two players: each window shows its own man${ownA && seatB.own ? '' : ' (NO)'}; each walked its own (as far as ${moved[0].toFixed(1)} m and ${moved[3].toFixed(1)} m from where he stood) and the other window's game has him moved too (${moved[2].toFixed(1)} m and ${moved[1].toFixed(1)} m); the invite is ${up ? 'STILL UP' : 'gone'}${free ? '' : ` — AT THE WALK'S START (tick ${at.tick}) the mission was ${at.over ? 'over' : 'on'} and the men up were ${at.alive.join(', ')}: NOBODY WAS FREE TO WALK, which is this run's clock (the walk began too late), not the lobby`}`);
     } else line(false, 'same fight: the second window is not in the game, so nothing was walked');
     // 6 · a third window opens the link (after the walk: a page load is minutes here, and the fight does not wait for it)
     let full = '';
@@ -138,6 +140,6 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
       line(/already has two players/.test(full) && !left, `full: a third window that opened the link was told "${full}", and the code is off its address`); }
     line(errs.length === 0, `no page error${errs.length ? `: ${errs.slice(0, 3).join(' | ')}` : ''}`);
   } catch (e) { line(false, `the windows could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
-  console.log(fails ? `lobby-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (LOBBY_BREAK=1: the join line and the same-fight line must)' : ''}` : 'lobby-page: every line passed');
-  return done(fails ? 1 : 0, browser);
+  console.log(PAGE.fails ? `lobby-page: ${PAGE.fails} line${PAGE.fails === 1 ? '' : 's'} FAILED${BREAK ? ' (LOBBY_BREAK=1: the join line and the same-fight line must)' : ''}` : 'lobby-page: every line passed');
+  return done(PAGE.fails ? 1 : 0);
 })().catch(e => { console.log(`lobby-page: ${String(e && e.stack || e).slice(0, 400)}`); process.exit(2); });

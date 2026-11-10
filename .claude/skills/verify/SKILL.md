@@ -5,118 +5,119 @@ description: Build/launch/drive recipe for verifying changes to the twopointsix 
 
 # Verifying twopointsix
 
-Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable browser, drive input, look at pixels + HUD.
+The game is Rust in `rust/`, built to one WebAssembly module. `src/` only draws it. So a rule is verified by a native test, not a browser, and the page is for what
+crosses to the page. "Verified" in full means driven in a real browser with no console or GPU errors. There is no GPU on a cloud machine: say which step you reached
+(a native test, the gate, a check, a page script, played on a GPU) and say "never seen on a GPU" of the rest. `docs/agents/qa.md` has every command, address word and
+hook. This page is the working recipe and the traps.
 
-## Launch
-- `bun run dev` (or the `dev` entry in `.claude/launch.json` via preview_start) → http://localhost:5173
-- If :5173 is already up it is the maintainer's own play server (it bundles once at start-up, so it serves the code it started
-  with): leave it alone and boot your checkout on the `lead` entry (`preview_start name: "lead"` → :5199, or
-  `PORT=5199 bun run tools/serve.ts`; binding a port needs the sandbox off). A lane in a worktree uses its own :52xx port the same
-  way. Restart :5173 only after a merge to main (kill the pid on the port, `PORT=5173 bun run tools/serve.ts` from the main checkout).
-- Needs real WebGPU (Chrome/Edge stable on macOS works; the in-app Browser pane works). No npm install step.
-- `bun run typecheck` uses the vendored compiler in `vendor/typescript` (not a verification step, just FYI). That folder is
-  gitignored, so a cloud checkout does not have it: a system `tsc --noEmit -p tsconfig.json` does the same job there (tsc 6.0.2
-  passes on `src/`; `tsconfig.json` covers `src/` only, not `tools/`).
-- The build is the browser page. There is no other verification surface (the Mac app was removed 2026-10-11).
+## What verifies which change
 
-## Boot recipe (the boot is asynchronous)
-- Navigate to `http://localhost:<port>/?paused&quality=medium&mute` (`?paused` = deterministic, nothing runs until stepped;
-  `?mute` keeps the test page silent — the maintainer is listening to their own tab).
-- A `?paused` page (and any page a script drives) loads whole, with every hook on its own `window`. The page a PLAYER opens in Chrome is a shell
-  with the game in a frame (`docs/agents/render.md`, the kept page): to see that one, drop `?paused` or add `?keeppage=1`, and read the hooks on
-  `document.getElementById('kept-page').contentWindow`; `?keeppage=0` is the whole page for any address.
-- `await window.__ready` — the pipelines compile through `createComputePipelineAsync` behind a start card; every `__hook` below is
-  assigned only when that Promise resolves (it rejects if the boot dies; `window.__boot.pipelines` = {done,total,failed}).
-- Wait for `document.getElementById('view').clientWidth > 0` (a hidden pane gives a 0×0 canvas), then `__menu.close()`, then step
-  with `__runFrames`. (`__menu.close()` on the start card is its Start button: the plain solo night on the office. A squad
-  mission is a page load of its own URL — see *Squad flows* below — and needs no `__menu.close()`.) Set `window.__testVisible = true` before anything that samples quality/timings, or it waits forever hidden.
-- Stage captures with `__stage(pin, {park, guards, player})` (pins the camera verbatim) rather than the follow camera, and pass
-  `tabId` on every Browser-pane call — the pane is shared with other lanes' tabs.
+| change | ask it with |
+|---|---|
+| a rule of play | a native test in `rust/game_start/tests/` that fails without it, run by `cargo test --test <file>` in `rust/game_start` |
+| a change meant to change no play | `hold keep DIR` on the old tree, `hold check DIR` on the new one (`cargo run --release --bin hold --`) |
+| a change meant to change play | `missions > before.tsv`, the same to `after.tsv`, `missions diff before.tsv after.tsv`, then `gate` and `gate pin` with the reason in the commit |
+| anything in `rust/` | `gate` (`cargo build --profile gate --bin gate` in `rust/game_start`), and the module rebuilt before a page asks it |
+| a section, command or view | `bun run tools/draw/gen.ts`, then a page: `--check` is red where a file would change |
+| a shader | `bun run tools/qa/checks.ts shaders`, then `node tools/qa/wgsl-compile.cjs` (it parses and type-checks, a minute), then a page boot, which alone makes the pipelines |
+| the renderer's look | a `picture` check if one fits, a boot with a screenshot, and "never seen on a GPU" |
+| page code or `src/ui/` | `bun run typecheck`, `bun run tools/qa/checks.ts page menus`, the page script nearest it (`bun run tools/qa/pages.ts menus`) |
+| words a player reads | `bun run tools/qa/checks.ts words` |
+| a sound or the score | `bun run tools/qa/checks.ts sound`, and with a dev server up `PORT=<port> node tools/draw/sound-tapes.cjs --check`. Nobody here hears it |
+| networked play | `bun run tools/qa/pages.ts coop`, `bun run tools/draw/net-check.ts` |
+| saves or replays | `bun run tools/qa/pages.ts saves replay` |
+| a level | `.claude/skills/level/SKILL.md` |
 
-## Driving it without a human
-`src/main.ts` exposes test hooks on `window` (kept in prod builds on purpose — it's a sandbox):
-- `__runFrames(n, dt=1/60, keys=[])` — steps the whole app (game + sim + render) n fixed frames with the given
-  `KeyboardEvent.code`s held. **Use this instead of waiting on rAF**: the Browser pane throttles rAF to zero while
-  it is not visible, so wall-clock waits observe nothing. Screenshots do render the latest presented frame.
-- `__mouse(x, y)` sets the aim cursor in CSS px; `__click(button)` queues a click edge (`MouseEvent.button`: 0 = left / fire,
-  1 = middle / the orders menu, 2 = right / OCP or the rifle's attachment);
-  `__input` is the live Input object (e.g. `__input.buttons |= 4` holds RMB / aim).
-- `__game`, `__engine`, `__smoke`, `__cam` for state inspection; `__game.teleportPlayer([x,0,z])`,
-  `__game.spectate = i` (camera follows guard i), `__game.aiEnabled = false` to freeze perception.
-- Real DOM events also work: `window.dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW'}))`, mouse events on `#view`.
-- Between tool calls real frames may run (pane visible during screenshots), so stage state and step frames in
-  the same JS call, then screenshot immediately. `window.__timeScale = 0` freezes game time for the real frames
-  (handy to screenshot a muzzle flash a few fixed steps after `__click(0)`); set it back to 1.
-- While the pane is hidden, scripted frames render offscreen (no swap-chain stall) so `__runFrames` is ~1 ms per
-  frame on the CPU — the GPU lags behind. Before reading anything that comes from a GPU readback (light meter
-  `player.visibility`, `guard.smokeTrans`, `__smoke.stats`) `await __engine.device.queue.onSubmittedWorkDone()`
-  and then yield a macrotask. **Do not use `setTimeout` to yield in the hidden pane** — background timer
-  throttling clamps it to ≥1 s and a 100-iteration loop silently takes minutes (and keeps running after the tool
-  call times out, corrupting later calls; navigate to reload if that happens). Yield with a MessageChannel:
-  `await new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); })`.
-- Keep a single javascript_tool call under ~25 s: a few hundred frames plus GPU syncs is fine, thousands are not.
+`bun run qa` is the typecheck, every check and the gate. `gate long` also plays each squad mission to its end and the tutorials by keys. A pin holds a game to
+itself, never that it is any good.
 
-- Long soaks: kick off an `async` IIFE that loops `__runFrames(60)` + MessageChannel yields and stores its result on
-  `window.__res`, return immediately, then poll `window.__res` in a second call (a `setTimeout` poll is fine there).
-- `__demo` (the OLD showcase tour, no longer on any card: `.start()/.stop()`, jump with `__demo.shotI = k-1; __demo.shotT = 999`),
-  `__quality`
-  (`.apply('verylow'|'low'|'medium'|'high'|'ultra')`, `.sample(dt)`), `__audio` (`.stats`).
-- Squad hooks: `__orders` (`.open(target?)`, `.pick(i?)`, `.give(id, target?, who?)`, `.close()`, `.menu`, `.who`, `.cycleWho()`,
-  `.log`, `.summary()`), `__roomclear` / `__nightbreach` / `__rescue` (`.start()`, `.stop()`, `.restage()`, `.state`,
-  `.summary()`, `.log`), `__scenarios` (`.list`, `.current()`, `.pick(id)`, `.quit()`), `__picks` (`.list`, `.current()`, `.href(id)`).
-- Clean captures without the HUD: run `bun run tools/shot-server.ts` (needs to bind :5174 → outside the sandbox), then
-  `await __shot('name', jpegQuality=0.86, scale=1)` renders one offscreen frame, reads it back and POSTs it to
-  `docs/shots/name.jpg`. Works while the pane is hidden. Resize the pane first (`resize_window` 1440×900) for 16:10.
+## The recipe
 
-## Flows worth driving
-- Spawn → WASD/crouch/run → aim + LMB (muzzle flash light count goes up by 2, smoke goes live: `__smoke.stats.pool` > 0 a read-back later).
-- Pistol up (key `1` draws it; backtick empties the hands, `E` does nothing on the page's board) + RMB with the reticle snapped on a fixture (the ring is on the light; no word is drawn beside it any more) → the light goes dark, restrikes
-  after `tune.ocpDuration`; RMB on a guard's lit torch works too; nothing lit under the reticle → nothing happens.
-- Stand in a guard's flashlight (`__game.guards[i]`, put the player 3–4 m along its `bodyYaw`) → suspicious → alert → guards fire.
-- Key `3` (smoke) / `4` (stun) + LMB → billowing plume within ~3 s (debug view 5 shows volumetrics only). `G` throws nothing in the page
-  (`?quickthrow` = the old quick throw for the visit). `5` + LMB throws a frag (it kills Sam too). Debug / sandbox actions are buttons in the debugger (the tweak panel, on the backslash key; Tab is the game's key and opens nothing).
-  `X`, `T`, `Q` and `F` ARE keys again, with a squad on the floor (`src/game/orders.ts`): `X` (or the middle mouse button)
-  opens the orders menu on what the cursor is on, `T` steps who takes the order, `Q` is the squad's command: the target's first row with no menu,
-  or, on a door the men stand at or wait on, in they go by the entry they pick (`?noautopilot` = the first row always). The `B` KEY gives nothing
-  in the page (`src/host/keymap.ts`; `?bkey` = the command on B for the visit), but the command's CODE is still `'KeyB'`: a real key press is Q,
-  a scripted frame is `__runFrames(..., ['KeyB'])`.
-  `F` is the go word for an order that waits on Sam's mark. With no operative on the floor X / T / the middle button do nothing.
-- The debugger (the backslash key; `__panel.toggle()`): "rebuild cache" with other presets must not throw; debug views 0–17 are the
-  'debug view' list on its Frame page (`__engine.settings.debugView = n`) — no key steps them. Its keys pressed for real:
-  `PORT=<port> node tools/qa/panel-keys.cjs` (headless Chromium on the software adapter, ~3 min).
-- `Space` at a door / walk or sprint into it (`__game.doors.byName('server')` → `.angle`, events via `onDoorEvent`);
-  `__game.setBlackout(30,'debug')` / `.endBlackout()` (watch `targets.filter(t=>t.factor>0).length` restrike);
-  `__demo.start()` tour end-to-end must leave `__demo.active === false` with camera yaw/dist restored and no `#fatal` text
-  (`P` starts nothing from the page: the night and day showcases were removed — it only stops a tour that is running).
-- Console: filter for `error:` / `Invalid` — WGSL reserved words and storage-texture aliasing show up there, not as exceptions.
+**1. The module.** `bun run tools/blitz/face-build.ts --where` says what this machine would serve. On a checkout where the checked-in module is "of these sources"
+you need no cargo and no build. If you changed a source of `FACE_CRATES`, the dev server builds on the first ask (the `play` profile, about 7 GB of memory, while the
+page waits on a 202). To build first: `bun run tools/blitz/face-build.ts --profile play`.
 
-## Squad flows (the game as it is played now)
-- **The page opens on the title**: Play › · Options · Controls (`src/ui/menu.ts`; W S walk the buttons, Enter = Play). Play
-  opens the one starting page (`src/ui/startpage.ts`, two steps that each fit the window: MISSION = the missions as a text list, the
-  briefing with its plan, a Setup rail of one row a setting; Enter → TEAM & KIT = who comes and what each carries; Enter = Deploy, Esc back). Options is its own screen (`src/ui/options.ts`: Graphics · Audio · Game · Controls; keys 1–4, Esc back),
-  also from the pause card. `?cards` = the older start card, which opens on the short list: six rows
-  (`src/scene/picks.ts PICKS`: compound, registry, warehouse, depot, barracks-day, solo), each a link that deploys
-  straight in with the kit as issued, and a **Missions** button for the mission list (`?cards&nopicks` = the card before the
-  short list). `?pick=<id>` redirects to that row's own URL.
-- **Missions list → Loadout → Deploy**: Missions (`src/ui/missions.ts`: the solo night + one row per `src/scene/scenarioList.ts
-  SCENARIOS` entry; `H` / `J` step the sheet's Hour / Weather rows) → a pick opens the Loadout screen (`src/ui/loadout.ts`: how
-  many teammates, none to four, each man's kit card, the Squad kit row) → Deploy is a PAGE LOAD of the mission's URL.
-  `?loadout=<mission id>` lands on that screen directly.
-- **Straight in by URL** (what a row loads; one config per fresh boot): `?roomclear` (the pair), `?roomclear&squad4` or
-  `?squad=N` (0‥4 teammates), `?nightbreach`, `?rescue`, plus `&levelFile=<name>.json` for a level of its own (records, depot,
-  block, block-squads, warehouse, compound, barracks, registry). After `await __ready` check `__scenarios.current()`,
-  `__roomclear.state` / `__nightbreach.state` / `__rescue.state`, and that the team stands (`__roomclear.team`).
-- **Orders menu**: aim the cursor at a door / a spot on the floor (`__mouse`), press `X` (one-frame `__input.pressed.add('KeyX')`
-  inside a `__runFrames` step, or `__orders.open()`), read `__orders.menu` (rows listed for that target; greyed rows carry the
-  reason), give a row with its digit (1 = the target's own order: move there / stack up, 2 = cover, 3 = fall in, 4 = hold,
-  5 on a door = 'door tools ▸', a page of its own) or `__orders.pick(i)`; then step frames and watch `__orders.log` and the men
-  walk. No row is ever on a digit above 5. While the menu is up the digits are not Sam's weapon slots.
-- **Off switches worth knowing when a boot fails or a run looks different**: `?nodestruction`, `?glassfx=0`, `?mannequin`,
-  `?noslots`, `?nodoorpath`, `?radiocheck=0` (each takes one shipped-on feature back out). A headless tool stands the game up
-  FROZEN by default (the newer rules held off, as every frozen digest was recorded); `TPS_PROFILE=shipped` in front of it stands
-  it up as the page opens (`src/host/profile.ts`; `bun run tools/qa/probes.ts shipped`, and against the real page
-  `PORT=<port> node tools/qa/shipped-page.cjs`).
+**2. The server.** One on its own port, with no backend. Leave 5173 alone, and stop yours by pid.
 
-## Gotchas
-- HUD GPU timings for render passes (composite/fxaa) are unreliable on Metal TBDR; compute pass timings are fine.
-- Probe/light-meter and smoke-stats readbacks resolve on the event loop, so they stay stale inside a single `__runFrames` burst.
+```sh
+PORT=5297 bun run tools/serve.ts > /tmp/serve.log 2>&1 &  SERVER=$!
+# …
+kill $SERVER
+```
+
+**3. The browser.** `tools/qa/page.cjs` finds Chromium (`CHROMIUM`, `CHROME`, `/usr/bin/chromium` or Playwright's), Playwright (`PLAYWRIGHT_MODULE`, `NODE_PATH` or
+`/opt/node-tools/node_modules/playwright`) and the software adapter's flags (`SOFTWARE`). This script ran as it stands on a machine with no GPU:
+
+```js
+// PORT=5297 node <this script> <still.png>, from the top of the tree
+const { page, NOISE } = require(`${process.cwd()}/tools/qa/page.cjs`);
+const P = page({ name: 'drive' }), { check, note } = P;
+(async () => {
+  const { page: w, errors, go, ready, step } = await P.open({ size: [1280, 720],
+    errors: { also: /Invalid|error:/, skip: NOISE },              // WGSL and validation faults come as plain console lines
+    init: [() => { window.__testVisible = true; }] });            // a hidden page counts as seen
+  await go('paused&quality=verylow&mute&cloud=0&seed=1&roomclear&squad=2&levelFile=killhouse.json', { timeout: 600000 });
+  await ready();                                                  // sets the hooks, once the pipelines compile
+  const t0 = await w.evaluate(() => window.__draw.game.time);
+  await step(120, ['KeyW'], 'last');                              // two seconds with W held, the last frame drawn
+  const got = await w.evaluate(() => { const g = window.__draw.game; return { time: g.time, tally: g.tally(), men: g.map().men.length }; });
+  note(JSON.stringify(got));
+  check(got.time > t0, 'the game moved', `${t0} to ${got.time}`);
+  await w.evaluate(() => window.__draw.engine.device.queue.onSubmittedWorkDone());
+  await w.screenshot({ path: process.argv[2], timeout: 240000 });
+  check(errors.length === 0, 'no page, console or GPU error', errors.join('\n'));
+  await P.end();                                                  // closes the browser, exit 1 on a FAIL
+})().catch(e => { console.error(e); process.exit(2); });
+```
+
+Look at the picture. `P.open` keeps thrown errors and console errors. GPU validation reaches the console through the `uncapturederror` listener in
+`src/gpu/device.ts`, as a line that starts "WebGPU error:". A boot that dies raises the red card (`#fatal`), and `window.__ready` rejects.
+
+To keep a script, put it in `tools/qa/` with a row of `PAGES` in `tools/qa/pages.ts`, which starts a server of its own and hands the script `PORT`.
+
+## Driving it
+
+**Address.** `?paused` gives the whole page with its loop held until stepped: the start of any script. A mission is a page load of its own words: `?roomclear`,
+`?squad=2`, `?squad4`, `?rescue`, `?quiet`, `?nightbreach`, `?levelFile=depot.json`. `?seed=7` is one die, `?quality=verylow` a fixed preset, `?mute` silence,
+`?cards=0` no card waits and `?cloud=0` nothing sent. `?knob.doorthrow.kick_secs=3` sets any number of the rules. A plain address opens the title.
+
+**Hooks** (set when `main` is done):
+
+| hook | use |
+|---|---|
+| `__draw.run(n, keys, draw)` | `n` ticks of a sixtieth with those codes held. `draw` is `'none'`, `'last'` (default) or `'all'`. Takes a title or a brief down first |
+| `__draw.game` | `view()` the HUD's record, `map()` the men and doors, `floor()`, `tally()`, `run()`, `saves()`, `time`, and `commands` (`god(1)`, `save()`, `load(key)`) |
+| `__draw.cam` | `cam.project(point, width, height, 1)` is where a world point falls on the page; `cam.pin` holds the camera for a still |
+| `__draw.input`, `.engine`, `.quality`, `.hud`, `.pause`, `.smoke` | the page's parts |
+| `__engine`, `__quality`, `__panel`, `__boot`, `__game` | the renderer; presets; the debugger (`toggle()`); how the boot went; time and stage |
+| `__testVisible`, `__timeScale`, `__testFocus` | set by a tool: a hidden page counts as seen; game time's rate; somebody at the window |
+
+**Keys.** `step` holds `KeyboardEvent.code`s and files no press, so a key read as a press wants `__draw.input.pressed.add(code)` first, or a real key:
+`w.keyboard.down('Digit5')`, a step, then `up`. The mouse is real too (`w.mouse.move(x, y)`, `w.mouse.down()`). A real press goes through `src/host/keymap.ts`, and a
+code does not. So the squad's command is Q on the keyboard and `'KeyB'` as a code, and B on the keyboard gives nothing. F is the go word, the digits are the kit,
+backtick empties the hands and backslash opens the debugger. F5 saves, F6 captures a frame and F7 keeps a replay.
+
+**To aim:** read a place from `__draw.game.map()`, then `__draw.cam.project`, then `w.mouse.move`, then step two frames. `tools/qa/tut-road-page.cjs` has a full
+walker: real keys, a route around what stands, a click on a man, the HUD's line read off the DOM (`#railprompt`).
+
+## Traps
+
+- **A drawn frame can take a minute on the software adapter.** Step with `'none'` and draw only the last. `__runFrames` is the old name and draws every frame
+  by default, and a script about keys can stub the renderer with `__engine.render = () => {}`. Then it saw no picture at all, so say so.
+- **A boot takes a minute or more here.** Give `go` and the wait for `__ready` long timeouts. `QA_PAGE_CAP` is a script's cap under `pages.ts`, 10 minutes unless set.
+- **Playwright's clicks hang on the software adapter.** Click by script (`el.click()` in `evaluate`) or by `mouse.down` and `mouse.up` around a step.
+- **`NOISE` is an adapter's complaint** about smoke kernels it refuses. Smoke is not tested by a software boot unless the script steps the solver and reads it back,
+  as `smokejump-page.cjs` does. Skip nothing else.
+- **A driven page stands still.** `navigator.webdriver` or `?paused` makes the page whole, with its hooks on its own `window`. A player's Chrome has the game in a
+  frame (`kept-page`), hooks on its `contentWindow`; `?keeppage=1` shows that one. Do not trust a `requestAnimationFrame` wait or wall time: step.
+- **A screenshot shows the last frame presented.** Draw one first and give it a long timeout. It says that rows reach the renderer, never how it looks on a card.
+- **A fresh context has no `localStorage`, and a person's browser may.** Difficulty, kit cards, cheats and panel rows are kept there, and an address word wins.
+- **A save is a clone in the module's memory.** A reload loses it, and an autosave waits while anybody is alert (`run_no`), so a script that sees none may be right.
+- **One edit to a source of `FACE_CRATES` and the checked-in module is not served,** because the page's half is made from the same declarations. `--where` then says
+  "of OTHER sources", a page's first ask starts a build, and `kitview-plan.ts` finds no module.
+- **Comments in Rust and `src/` are partly stale.** Trust statements.
+- **Do not edit `src/` under a running measurement.** Never `pkill -f tools/serve.ts`.
+
+## What nothing here sees
+
+A GPU's picture, GPU timings, a sound, and whether a fight is fun. All of that stays unseen until somebody has played it.

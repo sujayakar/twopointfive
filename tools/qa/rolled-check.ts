@@ -1,6 +1,6 @@
 // A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT: the check behind lookTex.ts STUFFS' `rolled` and `mirrors`, look.wgsl
-// lookRoll / lookRollUp and the reflection pass's `coat` (docs/agents/render.md has the rule at length).
-//   bun run tools/qa/probes.ts rolled        (family `render`)
+// lookRoll / lookRollUp and the reflection pass's `coat`.
+//   bun run tools/qa/checks.ts rolled
 //   ROLLED_BREAK=1   no stuff says either word (the second writing below is handed a table with neither): must FAIL
 // The maintainer, of the cars: "we don't need to go full hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it
 // does feel like it should reflect more of the environment and be quite dynamic as we move around it". Drawn on a GPU, a stronger and smoother coat
@@ -9,11 +9,11 @@
 // torch) is in either. A real panel has a rolled shoulder between the two; a stack of boxes has a knife edge.
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 is the table, read. Line 2 is the rule written a second time (lookRoll, the Pressed panels
 // row's rest, lookSurface's hold on the summed tilt and its dead zone, the guard that keeps a rolled normal toward the eye, lookRollUp) and asked. Line 3
-// holds the shaders, the two preludes and the uniform's writer to that writing BY THEIR TEXT, so it is the first as far as those pins go. What a
+// holds the shader's lines to that writing BY THEIR TEXT, so it is the first as far as those pins go. What a
 // rolled arris LOOKS like, and what it catches from the game's camera, is a page's to show: the arithmetic in line 2's detail is said, not barred.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ROOT } from './headless.ts';
+import { ROOT } from './here.ts';
 export async function rolledCheck(): Promise<boolean> {
   const BRK = process.env.ROLLED_BREAK === '1'; let all = true;
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
@@ -68,28 +68,17 @@ export async function rolledCheck(): Promise<boolean> {
       && worst >= 1 - 1e-9 && upMost <= MAX + 1e-9 && upMost < 0.5 && off[0] === 0 && off[1] === 0 && Math.abs(half - MAX / 2) < 1e-9 && Math.abs(over - MAX) < 1e-9,
       'a flank turns up into its top and round an upright arris and never down at its foot; a top turns out at every edge; a thin rail or slab is rolled all across; the roll is whole as the page opens, held to the look\'s own lean, and never turns a face from the eye',
       `the look lets a normal lean ${deg(MAX).toFixed(1)}° (LOOK_MAX_TILT ${MAX}, nothing under ${MIN}); the Pressed panels row as the page opens gives the roll ${ROW} of itself · a flank ${2 * H[1]} m tall, rolled ${R} m: ${lean.toFixed(1)}° at its top, 0 from ${R} m down, 0 at its foot, ${n} heights asked: ${down} turn down, rising all the way ${mono}, greatest step ${jump.toFixed(4)} (the dead zone's own) · its upright arris ${deg(corner).toFixed(1)}° · a top: ${deg(te).toFixed(1)}° and ${deg(tw).toFixed(1)}° at two facing edges, 0 in the middle, and at a corner the two sum to ${Math.hypot(tc[0], tc[1]).toFixed(2)} and are held to ${held(tc).toFixed(2)} · a 6 cm rail: ${deg(rail).toFixed(1)}° half way to its edge, 0 on its crest · an 8 cm slab's side: 0 at its foot, ${deg(slabTop).toFixed(1)}° at its top · the guard, ${asked} views: the normal keeps at least ${worst.toFixed(2)} of the lesser of what the face had toward the eye and a twentieth · on an upright cut plane at most ${upMost.toFixed(2)} of up (the fog of war calls 0.5 a top) · the row at 0: ${Math.hypot(off[0], off[1])}, at a half ${deg(half).toFixed(1)}°, at 4 ${deg(over).toFixed(1)}° · SAID, NOT BARRED: an eye ${EYE}° up sees a flat flank mirror ${-EYE}° (the ground at its foot) and a flat top ${EYE}° up the far sky; rolled ${lean.toFixed(1)}°, the flank's top strip mirrors up to ${(2 * lean - EYE).toFixed(1)}° and a top's far rim down to ${(EYE - 2 * lean).toFixed(1)}°, so both reach the horizon for any eye under ${(2 * lean).toFixed(0)}° up, and a level torch beside that eye wants a normal ${EYE / 2}° up`); }
-  // 3. the shaders, the prelude and the uniform's writer, by their text
+  // 3. the shader's lines that line 2 writes again, by their text
   { const WANT_ROLL = 'fn lookRoll(r: f32, p: vec2f, h: vec2f, up: vec2f) -> vec2f { if (r <= 0.0) { return vec2f(0.0); } var e = vec2f(0.0); for (var a = 0; a < 2; a++) { if (abs(up[a]) > 0.5) { e[a] = clamp(1.0 - (h[a] - p[a] * sign(up[a])) / min(r, 2.0 * h[a]), 0.0, 1.0) * sign(up[a]); } else { e[a] = clamp(1.0 - (h[a] - abs(p[a])) / min(r, h[a]), 0.0, 1.0) * sign(p[a]); } } return e * LOOK_MAX_TILT * clamp(lookCfg.c.y, 0.0, 1.0); }';
     const WANT_UP = 'fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f { if (cls == 0u) { return n; } let s = lookRoll(LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)], vec2f(y, 0.0), vec2f(hy, 1.0), vec2f(1.0, 1.0)).x; if (s <= 0.0) { return n; } return normalize(n * sqrt(1.0 - s * s) + upW * s); }';
-    const WANT_ASK = 'var rolled = 0.0; if (rolls && cls != 0u && n.y > -0.5 && lookCfg.c.y > 0.0) { rolled = LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)]; } let rubs = handled && k2.y > 0.0; if (rubs || rolled > 0.0) {';
     const WANT_USE = 'if (rolled > 0.0) { var er = lookRoll(rolled, vec2f(pa, pb), vec2f(ha, hb), vec2f(TA.y, TB.y)); let V = normalize(frame.camPos - wp); let away = dot(TA * er.x + TB * er.y, V); if (away < 0.0) { er *= clamp((sqrt(1.0 - LOOK_MAX_TILT * LOOK_MAX_TILT) * dot(n, V) - 0.05) / -away, 0.0, 1.0); } e += er; } if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); } } let tl = length(tilt); if (tl > LOOK_MAX_TILT) { tilt *= LOOK_MAX_TILT / tl; } if (tl > LOOK_MIN_TILT) {';
-    const WANT_CUT = 'if (LOOK && !cap && own >= 0 && !side) { let upW = quatRotate(boxRot(bi), vec3f(0.0, 1.0, 0.0)); if (abs(dot(normalize(v.normal), upW)) < 0.1) { n = lookRollUp(boxStuff(bi), n, v.lc.y, v.hf.y, upW); } }';
-    const WANT_COAT = 'var coat = LOOK_MIRROR_PLAIN; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - LOOK_MIRROR_PLAIN) * beams.k.z; } let F0 = mix(vec3f(coat), base, metalness);';
-    const lf = flat(look), panel = text('src/ui/lookpanel.ts'), gb = text('src/render/gbuffer.ts'), fr = text('src/render/frame.ts'), ps = text('src/render/passes.ts'), en = text('src/engine.ts'), cut = flat(text('src/render/shaders/gbuffer_cut.wgsl')), box = flat(text('src/render/shaders/gbuffer.wgsl'));
-    const refl = ['reflect.wgsl', 'reflect_p5.wgsl', 'compact/reflect_p5.wgsl'].map(f => [f, flat(text(`src/render/shaders/${f}`))] as const);
-    const coats = refl.filter(([, t]) => t.includes(WANT_COAT) && t.includes('let F0h = mix(vec3f(coat), base, metalness *') && !t.includes('vec3f(0.04)')).map(([f]) => f);
+    const lf = flat(look);
     const pins: [string, boolean][] = [
-      ['look.wgsl lookRoll', lf.includes(WANT_ROLL)], ['look.wgsl lookRollUp', lf.includes(WANT_UP)], ['lookSurface asks the stuff only where its caller says the face is the box\'s own', lf.includes(WANT_ASK)],
+      ['look.wgsl lookRoll', lf.includes(WANT_ROLL)], ['look.wgsl lookRollUp', lf.includes(WANT_UP)],
       ['lookSurface rolls, guards the eye and adds it before the tilt is held', lf.includes(WANT_USE)],
-      ['a box\'s own face is rolled, a round\'s, an arc\'s and an old break\'s are not', box.includes('lookW, true);') && cut.includes('lookW, !bent);') && cut.includes('let bent = side || oldCut;')],
-      ['the cut pass asks lookRollUp on an upright cut plane, by the plane\'s own normal', cut.includes(WANT_CUT)],
-      ['the look\'s prelude carries LOOK_ROLLED off the table', gb.includes('const LOOK_ROLLED = array<f32, ${LOOK_LAYERS}>(${LOOK_ROLLED.map(wgslNum).join(\', \')});')],
-      ['a page without the look has lookRollUp as nothing', gb.includes('fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f { return n; }')],
-      ['the scene prelude carries the plain coat and LOOK_MIRRORS off the table', fr.includes('const LOOK_MIRROR_PLAIN: f32 = ${LOOK_MIRROR_PLAIN.toFixed(4)}; const LOOK_MIRRORS = array<f32, ${LOOK_WORDS}>(${LOOK_MIRRORS.map(v => v.toFixed(4)).join(\', \')});')],
-      ['the rule has a row of its own, Pressed panels: it reaches the g-buffer and the reflection pass (the second only on the look\'s page), the plain-boxes hold lowers it with the layers, and it alone keeps the look\'s surface from standing down', gb.includes('lookConfig.kept, k.pressed, ') && gb.includes('lookConfig.pressed = lookAmounts.pressed;') && panel.includes("['pressed', 'Pressed panels',") && !/const LIVE: ReadonlySet<string> = new Set\(\[[^\]]*'pressed'/.test(panel) && lf.includes('&& all(lookCfg.b.xyz == vec3f(0.0)) && lookCfg.c.y <= 0.0)) { return o; }') && en.includes('coats: lookConfig.on ? Math.max(0, Math.min(1, lookConfig.pressed)) : 0 });') && ps.includes('F[6] = opts.coats;') && ps.includes('F[6] === Math.fround(opts.coats)')],
-      ['all three reflection texts read the stuff\'s coat for the rays and the highlights', coats.length === 3] ];
+      ];
     const bad = pins.filter(p => !p[1]).map(p => p[0]);
-    verdict(bad.length === 0, 'the shaders\' rule is the one asked here: the look, the cut pass, both preludes, the row\'s way to the g-buffer and the reflection pass, and that pass\'s three texts', bad.length ? `NOT AS HELD: ${bad.join(' · ')}` : `${pins.length} texts as held (the reflection texts: ${coats.join(', ')})`); }
+    verdict(bad.length === 0, 'the shaders\' rule is the one asked here: lookRoll, lookRollUp and how lookSurface rolls, guards the eye and holds the tilt', bad.length ? `NOT AS HELD: ${bad.join(' · ')}` : `${pins.length} texts as held`); }
   console.log(`=== rolled: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

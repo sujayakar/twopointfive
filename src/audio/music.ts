@@ -3,14 +3,12 @@
 // exactly as before the split); the VOICES live behind `MusicBackend` (musicBackend.ts): the page's Web Audio node graph node for node (`WebAudioMusicBackend`; a native host's
 // synth was the other backend, since removed). Every random number a voice takes is drawn HERE and handed over, so the rnd stream and the
 // notes it decides are byte for byte the page's whatever plays them.
-// MORE THAN THE ONE THEME (pieces.ts, MUSIC.pieces — ON in the page, `?onetheme` off; OFF in the module and on the frozen stand): seven newer pieces take turns with the theme
+// MORE THAN THE ONE THEME (pieces.ts, MUSIC.pieces — ON in the page, OFF in the module): seven newer pieces take turns with the theme
 // here. `piece` says which is playing (0 = the theme: `tick` below, untouched); `turn` at each bar line is where one hands over to the next — a bar of swell, then the new
-// piece from its first bar. Which comes next is the level's own list (setlist.ts, MUSIC.byLevel: `setlist` below), or with that off a shuffled bag on the PAGE's die
-// (sysRandom: not the sequencer's stream, never the game's). With the switch off none of it
-// draws, schedules or builds anything: the theme's stream is what it was (tools/qa/music-check.ts).
+// piece from its first bar. Which comes next is the level's own list (setlist.ts, MUSIC.byLevel: `setlist` below). With the switch off none of it
+// draws, schedules or builds anything: the theme's stream is what it was.
 import type { MusicBackend, NoiseDice, PieceVoices } from './musicBackend';
 import { midi } from './musicBackend';
-import { sysRandom } from '../math/dice';
 import { MUSIC, PIECES, PIECE_NAMES, Hands, drawMetal, type Piece } from './pieces';
 export { midi, makeDrive, WebAudioMusicBackend } from './musicBackend';
 export type { MusicBackend } from './musicBackend';
@@ -36,8 +34,8 @@ export class Music {
   changes = 0;
   /** the newer pieces' voices over this backend; null on a backend without them (it plays the theme alone) */
   private hands: Hands | null;
-  private dealt = false; private bag: number[] = []; private since = 0; private want = -1; private leaving = false; private more = false;
-  /** THE MAIN MENU IS UP (main.ts: the title and its start pages). The maintainer, 10-14: "we should only have the main theme on the main menu" — so while it is, the
+  private dealt = false; private since = 0; private want = -1; private leaving = false; private more = false;
+  /** THE MAIN MENU IS UP (host/drawpage.ts: the title and its start pages). The maintainer, 10-14: "we should only have the main theme on the main menu" — so while it is, the
    *  score is the theme and nothing is dealt; the deal begins when play does (at the next bar line, behind the lead-out, when the theme was already sounding), and a visit
    *  that comes back to the menu comes back to the theme. A piece picked by hand (the panel) is left alone until the menu next opens or closes. */
   get menu() { return this.menuUp; }
@@ -63,9 +61,6 @@ export class Music {
   get picked() { return this.want >= 0 ? this.want : this.piece; }
   /** the Piece playing; null = the theme */
   private get playing(): Piece | null { return this.piece ? PIECES[this.piece - 1] : null; }
-  /** a mission began (main.ts: the Game dealt a fresh encounter — not a load, not a show's scratch copy). Once the piece playing has had MUSIC.missionAfter seconds the new mission gets the next one; a quick
-   *  restart keeps its music. */
-  mission() { if (MUSIC.pieces && this.hands && this.dealt && !this.themeOnly && !this.own && this.want < 0 && this.be.now() - this.since > MUSIC.missionAfter) this.want = this.next(); }   // (a level with music of its own keeps it across its restarts: the clock alone turns its list)
   /** ask for piece i by hand (the listening page, the panel): at the next bar line behind a bar of swell, or `now` = cut to its first bar at once */
   setPiece(i: number, now = false) {
     if (!this.hands || !(i >= 0 && i < PIECE_NAMES.length)) return;
@@ -75,8 +70,8 @@ export class Music {
     else { this.want = i; this.leaving = false; }
   }
   /** THE LEVEL'S OWN MUSIC (setlist.ts; the maintainer, 10-15: "we should curate the music for each level, not do it randomly"): the pieces written down for the level this
-   *  page is on, in their order, as PIECE_NAMES indices (main.ts says which, once, through AudioEngine.scoreSet). With MUSIC.byLevel on and a list here nothing is drawn from
-   *  the bag: play opens on the list's first piece, the clock hands over to the one after the piece playing and round again, and a new mission on the same list keeps
+   *  page is on, in their order, as PIECE_NAMES indices (host/drawpage.ts says which, once, through AudioEngine.scoreSet). With MUSIC.byLevel on and a list here
+   *  play opens on the list's first piece, the clock hands over to the one after the piece playing and round again, and a new mission on the same list keeps
    *  the music it has (a retry is not a new piece). A piece picked by hand that is not on the list plays on until the clock's next handover, which is to the list's first. */
   get setlist() { return this.list; }
   set setlist(l: readonly number[] | null) {   // (a list that is another level's or another kind of mission's, said while play is on: its first piece at the next bar line, unless the piece playing is on it)
@@ -85,17 +80,9 @@ export class Music {
   }
   private list: readonly number[] | null = null;
   private get own(): readonly number[] | null { return MUSIC.byLevel && this.list && this.list.length ? this.list : null; }
-  /** the next piece: the level's own list in its order (the one after the piece playing; its first when the piece playing is not the level's), else off the bag — every
-   *  piece but the one playing, shuffled on the page's own die, refilled when it runs out, so the visit opens with the newer pieces in some order and the theme comes
-   *  round after them */
+  /** the next piece: the level's own list in its order (the one after the piece playing; its first when the piece playing is not the level's). The one page that deals (the game's) always says a list: with none the piece playing plays on */
   private next(): number {
-    const own = this.own; if (own) return own[(own.indexOf(this.piece) + 1) % own.length];
-    this.bag = this.bag.filter(i => i !== this.piece);   // (never the piece playing: one picked by hand may still be in the bag)
-    if (!this.bag.length) {
-      this.bag = PIECE_NAMES.map((_, i) => i).filter(i => i !== this.piece);
-      for (let i = this.bag.length - 1; i > 0; i--) { const j = Math.floor(sysRandom() * (i + 1)); const a = this.bag[i]; this.bag[i] = this.bag[j]; this.bag[j] = a; }
-    }
-    return this.bag.pop()!;
+    const own = this.own; return own ? own[(own.indexOf(this.piece) + 1) % own.length] : this.piece;
   }
   /** piece i from its first bar at t */
   private begin(i: number, t = this.nextT) {

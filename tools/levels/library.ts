@@ -5,37 +5,40 @@
 //   bun run tools/levels/library.ts --uses FILE     which level lays which piece, as a page (it changes with every generator, so it is no file of the repo)
 //   bun run tools/levels/library.ts --pictures DIR  a PNG of each piece (DIR/<kit>.<piece>.png), drawn from its boxes (libraryDraw.ts)
 //   bun run tools/levels/library.ts --json FILE     everything below as data (a gallery page and the dressing tasks' tables read it)
-// HOW IT KNOWS. A kit hands its pieces out through src/scene/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
-//   1. builds EVERY generator under tools/levels with the watcher on (and runs a look file's `finish` on what its plain generator built): which piece each
+// HOW IT KNOWS. A kit hands its pieces out through lib/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
+//   1. builds EVERY generator under tools/levels with the watcher on (and runs a generator's `finish` on what its `build` built): which piece each
 //      level lays, how often, and with what arguments;
-//   2. takes for each piece the call a SHOWROOM makes (levels/gwot-yard.json stands the look's kit, levels/library-hall.json the older kits'), else the first
+//   2. takes for each piece the call a SHOWROOM makes (tools/levels/gwot-yard.ts stands the look's kit, levels/library-hall.json the older kits'), else the first
 //      call any level makes, and lays that one call alone in a fresh kit: the boxes, loose parts and lamps it adds are the piece — its size, what it costs,
 //      what it is to a man, its paints; and, from the door again, WHOSE piece it is: a piece that lays nothing of its own, only one piece of another kit
 //      (the lived kit's chair is the office's, named as a room's lived thing), is that piece, and is not a second way of building the name;
 //   3. reads what the piece is FOR, and its arguments, from the comment and the line that define it in the kit's own file.
 // Nothing about a piece is typed here: the one table below says where each kit lives and how to stand it up empty.
 // THE LIBRARY'S RULES (--check): every piece stands in a showroom; every piece says what it is; no piece tops out where a body is stopped on floor the nav
-// grid calls free (0.20 to 0.25 m: tools/qa/lived-check.ts holds the same band on a level); every kit that hands pieces out has its row here; docs/library.md
-// is up to date; a piece laid on a wall's face lies the same on all four ways a wall can face (skewOf).
+// grid calls free (0.20 to 0.25 m: levels stands holds the same band on a level); every kit that hands pieces out has its row here; docs/library.md
+// is up to date; a piece laid on a wall's face lies the same on all four ways a wall can face (skewOf); NO PIECE FLICKERS BY ITSELF and no showroom has a
+// patch that flickers (two drawn faces in one plane, drawn differently: tools/qa/zfight-check.ts zfight, asked of every call a generator makes, laid alone,
+// and of the showrooms' files).
 import { basename, resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, BoxWorld, type Box } from '../../src/scene/boxes';
-import type { Level, LightDef, PropDef } from '../../src/scene/level';
-import { watchPieces } from '../../src/scene/library';
-import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from '../../src/scene/officeGen';
-import { KIT_PALETTE } from '../../src/scene/levelKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import type { Level, LightDef, PropDef } from './lib/level';
+import { watchPieces } from './lib/library';
+import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from './lib/officeGen';
+import { KIT_PALETTE } from './lib/levelKit';
+import { gwotKit, gwotOfOffice } from './lib/gwotKit';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
 import { doesOfName } from '../../src/scene/stuff';
-import { findOctagons } from '../../src/scene/round';
-import { ALL_MISSIONS } from '../../src/scene/scenarioList';
+import { missionRows } from '../desk.ts';
 import { encodePng } from '../qa/png';
 import { livedKit, LIVED_PAINT } from './livedKit';
 import { livedPieces, INK } from './livedPieces';
 import { livedQuiet } from './lived-quiet';
 import { livedTrain } from './lived-train';
 import { drawBoxes, type DrawBox } from './libraryDraw';
+import { zfight, type Pair } from '../qa/zfight-check';
+import { bitsToFlags } from './lib/levelData';
 
 const ROOT = resolve(import.meta.dir, '../..'), HERE = import.meta.dir;
 const SHOWROOMS = ['gwot-yard', 'library-hall'], PAGE = 'docs/library.md';
@@ -47,8 +50,8 @@ const firstLine = (e: unknown) => String((e as Error).message ?? e).split('\n')[
 interface Stood { fns: Record<string, unknown>; boxes: Box[]; props: PropDef[]; lights: LightDef[]; switchables: Level['switchables']; seal?: () => void }
 const listsOf = (K: ReturnType<typeof officeKit>) => ({ boxes: K.boxes, props: K.props, lights: K.lights, switchables: K.switchables });
 const KITS: { name: string; file: string; stand(): Stood }[] = [
-  { name: 'gwotKit', file: 'src/scene/gwotKit.ts', stand() { const K = officeKit({ groups: [] }); return { fns: gwotKit(gwotOfOffice(K)), ...listsOf(K) }; } },
-  { name: 'officeKit', file: 'src/scene/officeGen.ts', stand() { const K = officeKit({ groups: [] }); return { fns: K, ...listsOf(K) }; } },
+  { name: 'gwotKit', file: 'tools/levels/lib/gwotKit.ts', stand() { const K = officeKit({ groups: [] }); return { fns: gwotKit(gwotOfOffice(K)), ...listsOf(K) }; } },
+  { name: 'officeKit', file: 'tools/levels/lib/officeGen.ts', stand() { const K = officeKit({ groups: [] }); return { fns: K, ...listsOf(K) }; } },
   { name: 'livedKit', file: 'tools/levels/livedKit.ts', stand() { const K = officeKit({ groups: [] }), L = livedKit(K); L.room('show'); return { fns: L, ...listsOf(K) }; } },
   { name: 'livedPieces', file: 'tools/levels/livedPieces.ts', stand() {
     const K = officeKit({ groups: [] }), P = livedPieces({ add: K.add, grp: K.grp, prop: K.prop }, OFFICE_PALETTE as unknown as Parameters<typeof livedPieces>[1]); P.room('show');
@@ -67,36 +70,32 @@ watchPieces({
   open(kit, name, args) { if (!open.length && building) { const k = `${kit}.${name}`; (calls.get(k) ?? calls.set(k, []).get(k)!).push({ level: building, args }); } open.push(name); },
   close() { open.pop(); },
 });
-const levels: string[] = [], unbuilt: { level: string; why: string }[] = [];
+const levels: string[] = [], unbuilt: { level: string; why: string }[] = [], builtBoxes = new Map<string, Box[]>();
 for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
   if (!/^export (?:function|const) build\b/m.test(readFileSync(resolve(HERE, f), 'utf8'))) continue;   // (a file with no build() is a kit or a tool: importing export.ts would run it)
   const gen = await import(resolve(HERE, f)), name = basename(f, '.ts');
-  // A LOOK FILE (`<name>-gwot.ts`) builds with its plain level's generator, which is counted under the plain level's name; what the look file lays itself is
-  // its `finish` (the skin's rugs, skirts and patches, its own dressing), run here on a level built unheard
+  // a generator's `finish` is its skin (the rugs, skirts and patches, its own dressing): what it lays counts with what `build` lays, under the level's one name
   const look = typeof gen.finish === 'function';
-  building = look ? '' : name; open.length = 0;
+  building = name; open.length = 0;
   try {
     const built = gen.build();
-    if (look) { if (built.scenarios) built.level.scenarios = built.scenarios; building = name; gen.finish(built.level, built.groups); }   // (the file's own block first, as export.ts hands it over)
-    levels.push(name);
+    if (look) { if (built.scenarios) built.level.scenarios = built.scenarios; gen.finish(built.level, built.groups); }   // (the file's own block first, as export.ts hands it over)
+    levels.push(name); builtBoxes.set(name, built.level.boxes);
   } catch (e) { unbuilt.push({ level: name, why: firstLine(e) }); }
 }
-building = 'office'; open.length = 0; buildOfficeProcedural({ groups: [] }, { lived: true }); levels.push('office');   // (the office is built by its own function, not a file under tools/levels; `lived`: as its FILE has it, whatever stand this tool runs on — the exporter says the same word)
+building = 'office'; open.length = 0; builtBoxes.set('office', buildOfficeProcedural({ groups: [] }).boxes); levels.push('office');   // (the office is built by its own function, not a file under tools/levels; `lived`: as its FILE has it, whatever stand this tool runs on — the exporter says the same word)
 building = ''; for (const k of KITS) k.stand();                   // a kit no generator stood up still says its pieces
 watchPieces(null);
 levels.sort();
-const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
-/** a level file's name as its generator's (the two differ for one level) */
-const fileOf = (level: string) => level.replace(/^blocksquads/, 'block-squads').replace(/-gwot$/, '');
-
+const onList = new Set(missionRows().filter(s => !s.offList).map(s => s.level.replace(/\.json$/, '')));
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
 interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; metal?: boolean; sim?: string; surface?: string }
 const PAINT_TABLES: { table: string; file: string; what: string; rows: PaintRow[] }[] = [
   { table: 'GWOT_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'the look\'s own paints: the only table the look draws as materials', rows: (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => ({ table: 'GWOT_PALETTE', name: n, albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, metal: GWOT_FINISH[n]?.metal, sim: doesOfName(n), surface: GWOT_SURFACE[n] })) },
   { table: 'SNOW_PALETTE', file: 'src/scene/gwotPalette.ts', what: 'lying snow as paint, for a level built in winter', rows: (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => ({ table: 'SNOW_PALETTE', name: n, albedo: SNOW_PALETTE[n], sim: doesOfName(n) })) },
-  { table: 'OFFICE_PALETTE', file: 'src/scene/officeGen.ts', what: 'the office\'s paints', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
-  { table: 'KIT_PALETTE', file: 'src/scene/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
+  { table: 'OFFICE_PALETTE', file: 'tools/levels/lib/officeGen.ts', what: 'the office\'s paints', rows: Object.entries(OFFICE_PALETTE).map(([n, a]) => ({ table: 'OFFICE_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
+  { table: 'KIT_PALETTE', file: 'tools/levels/lib/levelKit.ts', what: 'the map kit\'s copy of the office\'s paints', rows: Object.entries(KIT_PALETTE as Record<string, Vec3>).map(([n, a]) => ({ table: 'KIT_PALETTE', name: n, albedo: a, sim: doesOfName(n) })) },
   { table: 'LIVED_PAINT', file: 'tools/levels/livedKit.ts', what: 'colours of the older levels\' lived things that the office has no name for', rows: Object.entries(LIVED_PAINT).map(([n, a]) => ({ table: 'LIVED_PAINT', name: n, albedo: a })) },
   { table: 'INK', file: 'tools/levels/livedPieces.ts', what: 'accents of the older levels\' furniture', rows: Object.entries(INK).map(([n, a]) => ({ table: 'INK', name: n, albedo: a })) },
 ];
@@ -218,18 +217,18 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
   const parts = props.flatMap(partBoxes), all: DrawBox[] = [...statics.map(b => ({ c: b.c, h: b.h, yaw: b.yaw, albedo: b.albedo, flags: b.flags, emissive: b.emissive, marks: b.marks })), ...parts];
   if (!all.length) return piece;
   const top = (b: DrawBox) => b.c[1] + b.h[1], bottom = (b: DrawBox) => b.c[1] - b.h[1];
-  // what stops a body: a solid from 0.2 m up whose underside is under 1.5 m (the game's own two numbers: scene/collision.ts)
+  // what stops a body: a solid from 0.2 m up whose underside is under 1.5 m (the game's own two numbers: rust/game_rules/src/world/scene_collision.rs)
   const solid = statics.filter(b => !(b.flags & NS)), inWay = solid.filter(b => top(b) >= 0.2 - 1e-9 && bottom(b) < 1.5);
   const foot = Math.min(...all.map(bottom)), [len, wid] = footprint(all);
   piece.boxes = all;
   piece.count = { solid: solid.length, drawn: statics.length - solid.length, loose: props.length, parts: parts.length, marks: all.reduce((k, b) => k + (b.marks?.length ?? 0), 0),
-    round: findOctagons(statics).length, lights: lights.length, fixtures: fixtures.length };
+    round: statics.filter(b => b.round).length, lights: lights.length, fixtures: fixtures.length };
   piece.size = [r2(len), r2(wid), r2(Math.max(...all.map(top)) - foot)];
   piece.lit = lights.length + fixtures.length > 0;
   piece.reach = inWay.length ? r2(Math.max(...inWay.map(top))) : 0;
   piece.kind = statics.some(b => b.flags & BoxFlag.Glass) ? 'glass' : inWay.length ? (foot >= 0.25 ? 'raised' : 'solid') : props.length ? 'loose' : solid.some(b => top(b) < 0.2) ? 'walk-over' : solid.length ? 'overhead' : 'drawn';
   // THE BAND: a top in 0.20 to 0.25 m counts where it is the piece's top there. A lower course of sandbags is under the next one, and a sack's ear a hand's
-  // width out from under the sack above it stands on a cell the pile shuts anyway: lived-check's five probes, asked of the piece's own in-the-way boxes in
+  // width out from under the sack above it stands on a cell the pile shuts anyway: levels stands's five probes, asked of the piece's own in-the-way boxes in
   // place of the baked floor
   const NEAR = 0.1;
   const under = (b: Box, x: number, z: number) => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2]; return Math.abs(cs * dx - sn * dz) <= b.h[0] + NEAR && Math.abs(sn * dx + cs * dz) <= b.h[2] + NEAR; };
@@ -273,6 +272,42 @@ for (const k of KITS) {
   for (const n of names) catalogue.push(measure(k.name, n, said.get(n), k.stand));
 }
 
+// ------------------------------------------------------------------ no piece flickers ----
+// TWO FACES OF ONE PIECE IN ONE PLANE, DRAWN DIFFERENTLY, FLICKER wherever the piece is laid (tools/qa/zfight-check.ts: the depth test cannot choose). Asked of
+// EVERY CALL a generator makes, laid alone, not of each piece once: what a piece lays can depend on where it stands (a wash line deals its cloths by its place,
+// and only some lines dealt two that lapped; 11-05, with a handcart's shafts lying in its bed's top and a van's bumpers in its sides: 89 patches on 20 levels).
+// And of the showrooms' files, where pieces that are made to meet (a gate in its yard wall) stand as they are meant to.
+/** a kit's box as zfight asks a level file's: its flags by name, and what it is painted with */
+const asFile = (b: Box, i: number | string) => ({ id: `#${i}`, c: [...b.c], h: [...b.h], yaw: b.yaw, ...(b.rot ? { rot: b.rot } : {}), ...(b.round ? { round: true } : {}), flags: bitsToFlags(b.flags),
+  albedo: [...b.albedo], emissive: [...b.emissive], metal: b.metal ? 1 : 0, rough: b.rough, markings: b.marks?.length ? b.marks : undefined });
+const flickers = new Map<string, { n: number; level: string; big: [number, number] }>(); let callsAsked = 0, callsUnlaid = 0, callsOfProps = 0, hiddenWhereLaid = 0;
+/** … WHERE IT IS LAID. A piece on a wall's face has a back, and laid alone its back is open: a run of conduit and its clips lie in the wall's plane in two
+ *  paints, which nobody ever sees. So a patch a call shows alone is asked again WITH ITS LEVEL ROUND IT: the call's boxes among everything its generator
+ *  built (the build this run made, never the file on disk: a kit out of step with its files must not pass), less the build's own copies of those boxes.
+ *  What still shows counts. A generator that did not build is taken at the call's word alone. (A piece dealt from its kit's die lays a little differently
+ *  here than in its level, so the level's copy of it stays and may cover a patch of its own: mugs, boots, books and the like, none of which shows one.) */
+const same = (a: Box, b: Box) => a.yaw === b.yaw && a.c.every((v, i) => Math.abs(v - b.c[i]) < 1e-6) && a.h.every((v, i) => Math.abs(v - b.h[i]) < 1e-6);
+const shownThere = (level: string, alone: Box[]): Pair[] => { const there = builtBoxes.get(level); if (!there) return zfight({ boxes: alone.map(asFile) }).pairs.filter(p => p.verdict === 'seen');
+  const round = there.filter(b => !alone.some(a => same(a, b))), mine = new Set(alone.map((_, i) => `#a${i}`));
+  return zfight({ boxes: [...alone.map((b, i) => asFile(b, `a${i}`)), ...round.map(asFile)] }).pairs.filter(p => p.verdict === 'seen' && mine.has(p.a) && mine.has(p.b)); };
+for (const k of KITS) for (const name of pieceNames.get(k.name) ?? []) for (const c of calls.get(`${k.name}.${name}`) ?? []) {
+  const S = k.stand();   // (a stand a call: one shared between calls let a name or a floor an earlier call left decide what a later one laid)
+  try { (S.fns[name] as (...a: unknown[]) => unknown)(...c.args); } catch { callsUnlaid++; continue; }   // (a call that leans on what its level laid before it: not asked, counted)
+  callsAsked++;
+  // A LOOSE THING'S PARTS are asked in the thing's own frame, each thing by itself: it is carried and shoved about, so nothing of its level covers it
+  { const id = `${k.name}.${name}`; let n = 0, big: [number, number] = [0, 0];
+    for (const p of S.props) { const seen = zfight({ boxes: p.parts.map((q, i) => ({ id: `#p${i}`, c: [...q.off], h: [...q.h], yaw: q.yaw ?? 0, flags: [], albedo: [...q.albedo], emissive: [0, 0, 0], metal: 0, markings: q.marks?.length ? q.marks : undefined })) }).pairs.filter(x => x.verdict === 'seen'); if (seen.length > n) { n = seen.length; big = seen[0].size; } }
+    if (n) { const was = flickers.get(id); if (!was || n > was.n) flickers.set(id, { n, level: c.level, big }); } }
+  if (!S.boxes.length) { callsOfProps++; continue; }
+  const alone = zfight({ boxes: S.boxes.map(asFile) }).pairs.filter(p => p.verdict === 'seen'); if (!alone.length) continue;
+  const seen = shownThere(c.level, S.boxes); hiddenWhereLaid += Math.max(alone.length - seen.length, 0); if (!seen.length) continue;
+  const id = `${k.name}.${name}`, was = flickers.get(id); if (!was || seen.length > was.n) flickers.set(id, { n: seen.length, level: c.level, big: seen[0].size });
+}
+// (a showroom with no file of its own, gwot-yard's, is asked of what its generator builds)
+const showroomFlicker: { s: string; n: number }[] = [];
+for (const s of SHOWROOMS) { const f = resolve(ROOT, 'levels', `${s}.json`), data = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : { boxes: (await import(resolve(HERE, `${s}.ts`))).build().level.boxes.map(asFile) };
+  const n = zfight(data).pairs.filter(p => p.verdict === 'seen').length; if (n) showroomFlicker.push({ s, n }); }
+
 // ------------------------------------------------------------------ the library's rules ----
 const problems: string[] = [], plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const notShown = catalogue.filter(p => !SHOWROOMS.some(s => s in p.uses)), unsaid = catalogue.filter(p => !p.doc), banded = catalogue.filter(p => p.inBand), broken = catalogue.filter(p => p.error), skewed = catalogue.filter(p => p.skew);
@@ -282,6 +317,8 @@ if (unsaid.length) problems.push(`${plural(unsaid.length, 'piece does', 'pieces 
 if (banded.length) problems.push(`${plural(banded.length, 'piece tops', 'pieces top')} out between 0.20 and 0.25 m, where a body is stopped on floor the nav grid calls free: ${banded.map(p => p.id).join(', ')}`);
 if (skewed.length) problems.push(`${plural(skewed.length, 'piece', 'pieces')} laid on a wall's face ${skewed.length === 1 ? 'does' : 'do'} not lie the same on all four ways a wall can face: ${skewed.map(p => `${p.id} (${p.skew})`).join('; ')}`);
 if (broken.length) problems.push(`${plural(broken.length, 'piece', 'pieces')} could not be laid alone: ${broken.map(p => `${p.id} (${p.error})`).join(', ')}`);
+if (flickers.size) problems.push(`${plural(flickers.size, 'piece flickers', 'pieces flicker')} by ${flickers.size === 1 ? 'itself' : 'themselves'} (two faces of one call in one plane, drawn differently: end one box at the other or sink a face): ${[...flickers].map(([id, f]) => `${id} (${plural(f.n, 'patch', 'patches')} as ${f.level} lays it, the biggest ${f.big[0]} × ${f.big[1]} m)`).join(', ')}`);
+if (showroomFlicker.length) problems.push(`${plural(showroomFlicker.length, 'showroom has', 'showrooms have')} a patch that flickers (bun run tools/qa/zfight-check.ts ${showroomFlicker.map(r => r.s).join(' ')}): ${showroomFlicker.map(r => r.n < 0 ? `${r.s} has no file` : `${r.s} ${r.n}`).join(', ')}`);
 if (noRow.length) problems.push(`${plural(noRow.length, 'kit hands', 'kits hand')} pieces out and has no row in tools/levels/library.ts KITS: ${noRow.join(', ')}`);
 if (noPieces.length) problems.push(`${plural(noPieces.length, 'row', 'rows')} of KITS named no kit that hands pieces out (a kit renamed, or a name mistyped in its pieces() call): ${noPieces.join(', ')}`);
 if (unbuilt.length) problems.push(`${plural(unbuilt.length, 'generator', 'generators')} did not build: ${unbuilt.map(u => `${u.level} (${u.why})`).join(', ')}`);
@@ -307,9 +344,9 @@ function page(): string {
     '  down to the floor (it is laid on furniture or on a wall); *glass* = sight passes it, feet and sound do not; *walked over* = solid but under 0.2 m;',
     '  *loose* = a body a man shoves and a blast throws; *drawn only* = no ray and no foot meets it; *lit* = it adds a lamp or a lit fixture.',
     '- **Size** is length × width × height in metres of the call that was laid. A wall, a rug or a line is as long as it was asked for.',
-    '- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things the round rule finds, marking bitmaps, lamps.',
+    '- **Boxes** is what the piece costs: solid boxes, drawn-only boxes, loose things and their parts, round things, marking bitmaps, lamps.',
     '- **Paints** are rows of the tables under Paints below, most boxes first; `row × 0.60` is a row darkened; a colour a kit writes as numbers shows as its numbers.',
-    `- **The showrooms**: ${SHOWROOMS.map(s => `\`?levelFile=${s}.json&solo&hour=midday\``).join(' and ')}. Between them one of each piece stands, and its line in the`,
+    `- **The showrooms**: \`tools/levels/gwot-yard.ts\` and \`?levelFile=library-hall.json&solo&hour=midday\`. Between them one of each piece stands, and its line in the`,
     '  showroom\'s generator is the call to copy.',
     '- Which level lays which piece is not on this page (it moves with every generator): `bun run tools/levels/library.ts --uses FILE` writes it.', '');
   L.push('## The kits', '', '| Kit | File | Pieces | Its sections |', '|---|---|---|---|');
@@ -362,10 +399,10 @@ function usesPage(): string {
   const L: string[] = [], played = levels.filter(l => !SHOWROOMS.includes(l));
   const kitsOf = (level: string) => KITS.filter(k => catalogue.some(p => p.kit === k.name && level in p.uses)).map(k => k.name);
   L.push('# The library: which level lays which piece', '', 'Written by `bun run tools/levels/library.ts --uses FILE`. A piece laid from inside another piece is counted as the outer one;',
-    'a look file (`<name>-gwot`) is counted for what its own finish step lays on top of its plain level. The four levels built on `src/scene/levelKit.ts`',
+    'a skinned level counts what its floor lays and what its finish step lays on top. The four levels built on `tools/levels/lib/levelKit.ts`',
     '(defuse, floodlit, mousehole, records) lay the office\'s pieces through plain functions no kit hands out, so those calls are not counted.', '',
     '## The generators', '', '| Level | On the mission list | Kits it lays from | Pieces laid |', '|---|---|---|---|');
-  for (const l of played) L.push(`| ${l} | ${onList.has(fileOf(l)) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);
+  for (const l of played) L.push(`| ${l} | ${onList.has(l) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);
   L.push('', '## The pieces', '', '| Piece | Levels | Laid |', '|---|---|---|');
   for (const p of catalogue) { const ls = usesOf(p); L.push(`| ${p.id} | ${ls.length ? `${ls.length}: ${ls.map(l => `${l} ${p.uses[l]}`).join(', ')}` : 'a showroom only'} | ${ls.reduce((n, l) => n + p.uses[l], 0)} |`); }
   L.push('');
@@ -376,12 +413,13 @@ function usesPage(): string {
 const text = page(), OUT = resolve(ROOT, PAGE);
 const pictures = valueOf('--pictures'), json = valueOf('--json'), uses = valueOf('--uses');
 if (pictures) { mkdirSync(pictures, { recursive: true }); for (const p of catalogue) if (p.boxes.length) writeFileSync(resolve(pictures, `${p.id}.png`), encodePng(drawBoxes(p.boxes), 240, 180)); }
-if (json) writeFileSync(json, JSON.stringify({ showrooms: SHOWROOMS, levels: levels.map(l => ({ level: l, onList: onList.has(fileOf(l)) })), kits: KITS.map(k => ({ name: k.name, file: k.file })),
+if (json) writeFileSync(json, JSON.stringify({ showrooms: SHOWROOMS, levels: levels.map(l => ({ level: l, onList: onList.has(l) })), kits: KITS.map(k => ({ name: k.name, file: k.file })),
   pieces: catalogue.map(({ boxes: _boxes, rows: _rows, ...p }) => ({ ...p, toAMan: toAMan(p as Piece), cost: costOf(p as Piece) })), paints: PAINT_TABLES, problems }, null, 1));
 if (uses) writeFileSync(uses, usesPage());
 if (flag('--write')) { writeFileSync(OUT, text); console.log(`wrote ${PAGE}`); }
 const stale = !existsSync(OUT) || readFileSync(OUT, 'utf8') !== text;
 console.log(`library: ${catalogue.length} pieces in ${KITS.length} kits (${KITS.map(k => `${k.name} ${catalogue.filter(p => p.kit === k.name).length}`).join(', ')}), ${nPaints} named paints, ${levels.length} generators`);
+console.log(`  flicker: ${callsAsked} calls laid alone and asked${callsOfProps ? `, ${callsOfProps} of them of loose things only (each thing's parts asked in its own frame)` : ''}${callsUnlaid ? `, ${callsUnlaid} that lean on their level not asked` : ''}${hiddenWhereLaid ? `, ${hiddenWhereLaid} patches a call shows alone that its level hides (the back of a piece on a wall)` : ''}; ${SHOWROOMS.length} showrooms' files asked`);
 for (const p of problems) console.log(`  RULE: ${p}`);
 if (stale && !flag('--write')) console.log(`  ${PAGE} is ${existsSync(OUT) ? 'not what the kits give now' : 'missing'}: bun run tools/levels/library.ts --write`);
 if (flag('--check')) { const red = problems.length > 0 || stale; console.log(red ? 'FAIL library' : 'PASS library'); process.exit(red ? 1 : 0); }

@@ -106,7 +106,7 @@ declare const process: {
   argv: string[];
   env: Record<string, string | undefined>;
   exitCode: number | undefined;
-  pid: number; platform: string; version: string; versions: Record<string, string>; execPath: string; arch: string;
+  pid: number; platform: string; version: string; versions: Record<string, string>; execPath: string; execArgv: string[]; arch: string;
   cwd(): string;
   exit(code?: number): never;
   kill(pid: number, signal?: number | string): boolean;
@@ -128,12 +128,13 @@ interface ImportMeta { dir: string; main: boolean; path: string; file: string; u
 
 interface BunFile { text(): Promise<string>; json(): Promise<any>; arrayBuffer(): Promise<ArrayBuffer>; bytes(): Promise<Uint8Array>; exists(): Promise<boolean>; stream(): ReadableStream<Uint8Array>; size: number; name?: string; type: string }
 /** `Bun.spawn` / `Bun.spawnSync` take two call shapes and a wide options bag; the handles are typed only as far as the tools read them */
-interface BunSubprocess { pid: number; stdin: any; stdout: any; stderr: any; exited: Promise<number>; exitCode: number | null; signalCode: string | null; killed: boolean; kill(signal?: number | string): void; unref(): void }
+interface BunSubprocess { resourceUsage(): { cpuTime: { user: bigint; system: bigint; total: bigint } } | undefined; pid: number; stdin: any; stdout: any; stderr: any; exited: Promise<number>; exitCode: number | null; signalCode: string | null; killed: boolean; kill(signal?: number | string): void; unref(): void }
 interface BunSyncSubprocess { exitCode: number; success: boolean; signalCode?: string; stdout: Buffer; stderr: Buffer; pid: number }
 declare const Bun: {
-  version: string; revision: string; main: string; argv: string[]; env: Record<string, string | undefined>;
+  version: string; revision: string; which(name: string): string | null; main: string; argv: string[]; env: Record<string, string | undefined>;
   write(dest: string | URL | BunFile | number, data: string | ArrayBufferView | ArrayBufferLike | Blob | Response | BunFile): Promise<number>;
   file(path: string | URL | number, opts?: { type?: string }): BunFile;
+  which(cmd: string): string | null;
   serve(opts: Record<string, any>): { port: number; hostname: string; url: URL; stop(force?: boolean): void };
   spawn(cmd: string[] | (Record<string, any> & { cmd: string[] }), opts?: Record<string, any>): BunSubprocess;
   spawnSync(cmd: string[] | (Record<string, any> & { cmd: string[] }), opts?: Record<string, any>): BunSyncSubprocess;

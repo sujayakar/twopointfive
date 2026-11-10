@@ -1,25 +1,20 @@
 # The look
 
-What twopointsix looks like today, as built, written down so new work can be held to it.
-Where a rule has a number, the number is in the code and the file is named.
+What twopointsix looks like, so new work can be held to it. A rule's number is in the code and the file is named.
 
 ![The office at night: the squad of four, weapon lights on](public/assets/menu/room-clear-four.jpg)
 
-**Plain boxes under real light.** The world is plain shapes, each in one paint and made of one
-material. Everything that moves in the picture (soft shadow edges, colour bleeding off a wall, a beam
-hanging in dust, smoke rolling under a lamp) comes from something physical going on, never from a
-painted surface. A material gives a surface its grain and its relief, and the light on it is still
-the room's.
-
-The pictures in this file are mission-card key art: frames of the real game, taken closer and lower
-than the camera you play from.
+**Plain boxes under real light.** Everything that moves in the picture comes from something physical going on, never from a painted surface. The
+pictures are key art: frames of the real game, closer and lower than the play camera.
 
 ## The rules in short
 
-1. **Boxes, one paint and one material each.** Levels are boxes. A box has one paint and one finish, and the paint says what it is made of. Its material adds grain and relief for the light to catch. No photographs, no gradients, no baked light or shadow.
+1. **Boxes, one paint and one material each.** Levels are boxes. A box has one paint and one finish, and says what it is made of. Its material adds
+   grain and relief for the light to catch. No photographs, no gradients, no baked light or shadow.
 2. **Light is the detail.** All light is computed live. If it glows it lights the room; if it lights the room you can point at where it comes from.
-3. **Dark is the default.** A quiet night is mostly near-black with a few pools of light, each with a shape its source explains. A fight brings its own light: weapon lights, flashes, lit smoke.
-4. **One model.** What the picture shows is what the men see and hear. Nothing is drawn that the simulation does not have, and the other way round.
+3. **Dark is the default.** A quiet night is mostly near-black with a few pools of light, each with a shape its source explains. A fight brings its
+   own light: weapon lights, flashes, lit smoke.
+4. **One model.** What the picture shows is what the men see and hear. Nothing is drawn that the simulation does not have, and the other way around.
 5. **Made for the play camera.** A long lens, 21 m back and off to one side. Value reads from there, hue does not; shapes read, small print does not.
 6. **Every place is a place.** A level is somewhere with a use; each room has a use you can name in two words and the furniture to prove it.
 7. **Plausible kit and places.** 2010s gear, real door sizes, wear where use explains it. No insignia, no words to read.
@@ -27,78 +22,101 @@ than the camera you play from.
 
 ## Camera
 
-- By default 55° down, turned 22° off the grid, 21 m back, a 28° lens (`src/game/camera.ts`). Nearly a plan view, but you see wall faces and men's shoulders. The player can zoom (6–40 m) and orbit.
-- Rooms are drawn roofless: full-height walls are cut at the ceiling line and the cut is drawn as one near-black cap, like a section on a plan. There is no cut-away beyond that: you turn the camera instead.
-- Things are sized and coloured to read from play distance. Key art and showcases go in closer and lower, and the models hold up there better than they were built to; the test for new work is still the play camera.
+- 55° down, turned 22° off the grid, 21 m back, a 28° lens (`src/host/camera.ts`). Nearly a plan view, but you see wall faces and men's shoulders. The
+  player can zoom (6–40 m) and orbit.
+- Rooms are drawn roofless: full-height walls are cut at the ceiling line and the cut is one near-black cap, like a section on a plan. You turn the
+  camera: there is no cut-away.
+- Things read from play distance. The test for new work is still the play camera.
 
 ## Light
 
-- The frame is `paint × (direct + bounced light) + what glows`. Direct light is ray traced from emitters that have a size, so shadows have real penumbras; bounce carries the colour of what it left.
-- **Things that glow are lights.** A ceiling panel, a monitor, a server rack's LEDs, an exit sign: each lights its room and can be shot out. Panels and screens go with the mains; exit signs and rack LEDs stay.
-- **Warm against cold.** Sodium lamps and tungsten bulbs outside and in back rooms; a cold moon and a navy sky. Office panels are near-white; the server room is blue with green LEDs.
-- **The player's own light is the cold one.** Sam's rail light is cool white. Every other carried light is warm: guards' torches and teammates' weapon lights alike.
-- **Alarm is red-orange.** In a blackout the emergency domes and spinning beacons come on; with the signs, the torches and the moon they are all the light left.
-- **A flash has the colour of what makes it.** A muzzle flash is strongly orange and lasts 0.09 s; white there reads as a camera going off. A stun charge is hueless white and whites the room out for a frame; warm there reads as an explosion. Lightning is blue-white.
-- **Light shows in the air** where a beam would: torches and beacons through haze, not ceiling panels or the moon.
+- The frame is `paint × (direct + bounced light) + what glows`. Direct light is ray traced from emitters that have a size, so shadows have real
+  penumbras; bounce carries the color of what it left.
+- **Things that glow are lights.** A ceiling panel, a monitor, a server rack's LEDs, an exit sign: each lights its room and can be shot out. Panels
+  and screens go with the mains; exit signs and rack LEDs stay.
+- **Warm against cold.** Sodium lamps and tungsten bulbs outside and in back rooms; a cold moon and a navy sky. Office panels are near-white; the
+  server room is blue with green LEDs.
+- **The player's own light is the cold one.** Sam's rail light is cool white. Every other carried light is warm: guards' flashlights and teammates'
+  weapon lights alike.
+- **Alarm is red-orange.** In a blackout the emergency domes and spinning beacons come on; with the signs, the flashlights and the moon they are all
+  the light left.
+- **A flash has the color of what makes it.** A muzzle flash is strongly orange and very short; white there reads as a camera going off. A stun charge
+  is hueless white and whites the room out for a frame; warm there reads as an explosion. Lightning is blue-white.
+- **Light shows in the air** where a beam would, by each light's own `volumetric` row: a flashlight or a beacon through haze, not a ceiling panel or
+  the moon.
 - Night vision is a white-phosphor tube: one channel, heavy grain where the signal is weakest, an oval eyepiece.
 
 ![Night vision: white phosphor through an oval eyepiece](public/assets/menu/solo-night.jpg)
 
-Numbers: `levels/office.json` (`lights`, `switchables`), `src/game/rigProps.ts`, `src/game/effects.ts`, `src/game/hours.ts`.
+Numbers: `levels/office.json` (`lights`, `switchables`), `outfit/rig_props`, `tick/effects.rs` and `air/hours` of `rust/game_rules/src/`.
 
 ## The grade
 
-AgX tone mapping, a small bloom with no threshold (a fraction of every pixel scatters, as in a lens),
-fine grain, light sharpening (`src/render/shaders/`, `post.wgsl` first). No colour filter, no lens
-dirt, and no vignette except the red edge when you are hit: a clean photograph of a model, not a
-treated one.
+AgX tone mapping, a small bloom with no threshold (a fraction of every pixel scatters, as in a lens), fine grain, light sharpening
+(`src/render/shaders/`, `post.wgsl` first). No color filter, no lens dirt, and no vignette except the red edge when you are hit: a clean photograph of
+a model, not a treated one.
 
-## Colour
+## Color
 
-Two palettes, one set of rules. Colours are linear albedo, written as plain numbers in code.
+Two palettes, one set of rules. Colors are linear albedo, written as plain numbers in code.
 
-**The office** (`src/scene/officeGen.ts`): a neutral shell (pale walls, dark carpet, grey lino and
-stone) with furniture in a few saturated primaries: brick-red and royal-blue partitions, tan desks,
-blue chairs, cardboard brown.
+**The office** (`tools/levels/lib/officeGen.ts`): a neutral shell (pale walls, dark carpet, gray lino and stone) with furniture in a few saturated
+primaries: brick-red and royal-blue partitions, tan desks, blue chairs, cardboard brown.
 
-**Everywhere else, the 2010s look** (`src/scene/gwotPalette.ts`): earth. Mud brick, lime render,
-whitewash, concrete block; dust and dirt ground; poplar and grey wood; rust, iron, galvanised tin;
-deep painted doors; red-brown rugs; olive and coyote kit.
+**Everywhere else, the 2010s look** (`src/scene/gwotPalette.ts`): earth. Mud brick, lime render, whitewash, concrete block; dust and dirt ground;
+poplar and gray wood; rust, iron, galvanized tin; deep painted doors; red-brown rugs; olive and coyote kit.
 
 ![The compound: a stack on a mud wall, smoke through the door](public/assets/menu/compound-four.jpg)
 
-Rules both palettes keep:
+Both keep:
 
-- **The plan reads before any colour does.** Full-height walls end in the dark cap, so a building reads as dark lines round lit floors; lower yard walls show their own tops, under a paler coping.
-- **Earth ground is kept darker than the walls on it, on purpose.** Under a midday sun the exposure lifts every earth tone into one pale band; ground at a wall's value loses the plan and the men on it.
-- **One accent per place.** One painted hue a level, on doors, a dado band and ground marks. A few places have none and are told by their floor instead.
-- **Surfaces are quiet, things may be loud.** A wall carries colour only as a dado band; a floor only as marks. A partition, a door, a rug, a drum can be saturated.
+- **The plan reads before any color does.** Full-height walls end in the dark cap, so a building reads as dark lines around lit floors; lower yard
+  walls show their own tops, under a paler coping.
+- **Earth ground is kept darker than the walls on it, on purpose.** Under a midday sun the exposure lifts every earth tone into one pale band; ground
+  at a wall's value loses the plan and the men on it.
+- **One accent per place.** One painted hue a level, on doors, a dado band and ground marks. A few places have none and are told by their floor
+  instead.
+- **Surfaces are quiet, things may be loud.** A wall carries color only as a dado band; a floor only as marks. A partition, a door, a rug, a drum can
+  be saturated.
 - **A patch is darker than its ground, never paler**, and never under a third of it (that reads as a hole in the floor).
-- No plain grey or white on anything that is not steel (the game reads paint: a blast takes a plain grey box for a steel cabinet), and no red-white-navy stripes on a rug (from above it is a flag).
+- No red-white-navy stripes on a rug (from above it is a flag).
 
 ## Surfaces
 
-- **A paint, a finish and a material.** The paint is the colour, and it says what the thing is made of. The finish is how it takes a highlight: polished stone, lino and brushed metal are glossy; wood is satin; walls, carpet and earth are matte. The office's polished floors mirror the room where the quality tier traces reflections; the 2010s look keeps its ground matte.
-- **A material is a map the game makes itself.** Mud wall, plaster, block, earth, gravel, a concrete slab, wood, sheet metal, cloth, bare metal and painted metal each have a tiling map of grain, relief, finish and hollows, and a mud wall has field stone and mud brick under its render. The maps are written in code and built when the page boots. No image file ships and nothing is downloaded. This walks back the old rule of no textures at all; what a map may do is the rule now:
-  - **It varies the paint and never moves it.** Over a tile a map is exactly as bright as its paint, and the shade in its hollows is paid for by its high places. The level still chooses every value, and the light a wall bounces is still its paint's.
+- **A paint, a finish and a material.** The paint is the color. The finish is how it takes a highlight: polished stone, lino and brushed metal are
+  glossy; wood is satin; walls, carpet and earth are matte. The office's polished floors mirror the room where the quality tier traces reflections;
+  the 2010s look keeps its ground matte.
+- **A material is a map the game makes itself.** Mud wall, plaster, block, earth, gravel, a concrete slab, wood, sheet metal, cloth, bare metal,
+  painted metal and the rest of `LOOK_NAMES` each have a tiling map of grain, relief, finish and hollows, and a mud wall has field stone and mud brick
+  under its render. The maps are written in code and built when the page boots. No image file ships and nothing is downloaded. What a map may do:
+  - **It varies the paint and never moves it.** Over a tile a map is exactly as bright as its paint, and the shade in its hollows is paid for by its
+    high places. The level still
+    chooses every value, and the light a wall bounces is still its paint's: a ray's hit sees flat paint.
   - **It carries no light.** Relief is lit live by the lamps in the room. A map has no shadow, no highlight and no gradient of its own.
-  - **It shows how the thing was made and used:** the daubs of a hand, courses, boards, a weave, rust where water sat. Big, specific features beat fine noise. If it reads as noise from the play camera, it is wrong.
+  - **It shows how the thing was made and used:** the daubs of a hand, courses, boards, a weave, rust where water sat. Big, specific features beat
+    fine noise. If it reads as noise
+    from the play camera, it is wrong.
   - **It tiles without a seam,** and on a big face the repeat is broken up.
   - **It never carries words, pictures or signs.** Markings do that.
-  - **It belongs to the box.** What a box is made of is told once, from its own paint, and a thing that moves carries its map with it.
-  - The maps are drawn on the look page (`/look`) today. The game page draws the same boxes in flat paint until they are landed there.
-- **Markings** are the one drawn thing: tiny palette bitmaps on a box face, on a 2.5 cm grid, at most three flat colours. They exist so an object reads as what it is: a vent's slats, a keypad, a crate's bands. Contrast reads at 21 m, hue does not, so they are bars and blocks. A door, a floor row or a range line may carry blocky digits or a letter; nothing spells a word.
-- **Wear you can explain.** A darker path where people walk, grime at the skirting, bare metal on edges, damp at the foot of an outside wall, oil under an engine. Wear is the surface's own colour darker, and it also leads the eye to the doors.
-- **Marks made in play** (bullet holes, scorch, scuffs, wet boot prints, cracked glass) change the surface the lights hit, so they catch light as the wall does.
+
+  - **It belongs to the box.** What a box is made of is said once, as data (`src/scene/stuff.ts`), never read off its color, and a thing that moves
+    carries its map with it.
+- **Markings** are the one drawn thing: tiny palette bitmaps on a box face, on a 2.5 cm grid, at most three flat colors. They exist so an object reads
+  as what it is: a vent's slats, a keypad, a crate's bands. Contrast reads at 21 m, hue does not, so they are bars and blocks. A door, a floor row or
+  a range line may carry blocky digits or a letter; nothing spells a word.
+- **Wear you can explain.** A darker path where people walk, grime at the baseboard, bare metal on edges, damp at the foot of an outside wall, oil
+  under an engine. Wear is the surface's own color darker, and it also leads the eye to the doors.
+- **Marks made in play** (bullet holes, scorch, scuffs, wet boot prints, cracked glass) change the surface the lights hit, so they catch light as the
+  wall does.
 - **Small things that matter are geometry.** Sheets on a desk are thin boxes, not a picture of paper on the desk.
 
-Files: `src/scene/markings.ts`, `src/render/shaders/detail.wgsl`, `src/render/decals.ts`; the maps: `src/render/lookTex.ts`, `src/render/shaders/look.wgsl`, held by `tools/qa/lookmaps-check.ts`.
+Files: `src/scene/markings.ts`, `src/render/shaders/detail.wgsl`, `src/render/decals.ts`; the maps: `src/render/lookTex.ts`,
+`src/render/shaders/look.wgsl`, held by `tools/qa/lookmaps-check.ts`. `/look` opens the page with the debugger's sliders for them.
 
 ## Places
 
-The building blocks are the same everywhere: 3 m ceilings, thick shell walls and thin partitions,
-0.9 m doors, yard walls with a coping, and a kit of box-built objects (drums, sandbags, HESCO, cots,
-stoves, crates, tyres, generators, pickups, lanterns). What makes a level is what it is *for*.
+The building blocks are the same everywhere: 3 m ceilings, thick shell walls and thin partitions, real door sizes, yard walls with a coping, and a kit
+of box-built objects (drums, sandbags, HESCO, cots, stoves, crates, tires, generators, pickups, lanterns). What makes a level is what it is *for*.
 
 | Level | It is | Told by |
 | --- | --- | --- |
@@ -112,97 +130,104 @@ stoves, crates, tyres, generators, pickups, lanterns). What makes a level is wha
 | records | a district land office | surveyors' magenta, on the ground only |
 | consulate | a town-house consulate | plum carpet bound in brass |
 
-Other levels have a skin of their own (`tools/levels/*-gwot.ts`) or are built straight from the kit
-(`src/scene/gwotKit.ts`). No two places share an accent or a family of ground marks.
+Other levels have a skin of their own (in `tools/levels/<name>.ts`, its `finish` over its `build`) or are built straight from the kit
+(`tools/levels/lib/gwotKit.ts`). No two places share an accent or a family of ground marks.
 
-![The block: green dado, cover plates in the floor](public/assets/menu/block-squads.jpg)
+![The block: green dado, cover plates in the floor](public/assets/menu/block-four.jpg)
 
-**A room** needs six things: a use named in two words; signature furniture big enough to read from
-above; the clutter of that use; its own light; its own floor; something to shove or break. The
-office is the yardstick: the manager's dark desk on red carpet, the conference table behind glass,
-black racks in blue light, a storage room with one dim bulb. A room may be bare when that is its
-use: the corridor has almost nothing in it.
+**A room** needs six things: a use named in two words; signature furniture big enough to read from above; the clutter of that use; its own light; its
+own floor; something to shove or break. The office is the yardstick: the manager's dark desk on red carpet, the conference table behind glass, black
+racks in blue light, a storage room with one dim bulb. A room may be bare when that is its use: the corridor has almost nothing in it.
 
 ## People
 
-- One skeleton; a cast of part meshes, smooth bodies with hard-edged gear, no textures. Colour is per material slot (skin, eyes, two cloths, webbing, boots, helmet, metal, rubber, lens, one accent). Creases darken and ridges wear because the mesh has them.
-- **Built for the top-down view.** The camera sees the crown of a head and the tops of shoulders, so men differ by silhouette there: headgear and what is on their back.
-- **Sides read by value first.** On the 2010s levels operators are one mid-toned issue uniform (a camouflage pattern is drawn as its average colour) with dark green rigs and helmets; defenders wear muted local dress, pale or dark, never the ground's value, with no saturated colour.
-- **Pairs read by colour.** On the 2010s levels the only bright colour on a man is his pair marking, a small red or blue panel on helmet and shoulders. In the office the older dress leans the whole suit toward the pair colour, and defenders are dressed for a building.
-- **Quiet missions wear black.** Sam and a stealth partner go in a matt black suit, bare-headed, with a blacked-out rifle.
+- One skeleton; a cast of part meshes, smooth bodies with hard-edged gear, no textures. Color is per material slot (skin, eyes, two cloths, webbing,
+  boots, helmet, metal, rubber, lens, one accent). Creases darken and ridges wear because the mesh has them.
+- **Built for the top-down view.** The camera sees the crown of a head and the tops of shoulders, so men differ by silhouette there: headgear and what
+  is on their back.
+- **Sides read by value first.** On the 2010s levels operators are one mid-toned issue uniform (a camouflage pattern is drawn as its average color)
+  with dark green rigs and helmets; defenders wear muted local dress, pale or dark, never the ground's value, with no saturated color.
+- **Pairs read by color.** On the 2010s levels the only bright color on a man is his pair marking, a small red or blue panel on helmet and shoulders.
+  In the office the dress leans the whole suit toward the pair color, and defenders are dressed for a building.
+- **Quiet missions wear black.** Sam and a stealth partner go in a matte black suit, bare-headed, with a blacked-out rifle.
 
 ![A quiet mission: the sneaking suit](public/assets/menu/quiet-crossing-two.jpg)
 
 ## Gear
 
-Guns, goggles, canisters and tools are small sets of flat-coloured boxes bolted to bones
-(`src/game/rigProps.ts`): gunmetal, dark-earth furniture, black polymer. They need to read as what
-they are from play distance, no more. Canisters are told by a band (smoke red, stun pale, frag
-yellow). What glows on gear: a lit weapon light's lens. The squad's lasers are infrared, hair-thin
-lines seen only through night vision. Goggles never glow.
+Guns, goggles, canisters and tools are small sets of flat-colored boxes bolted to bones (`rust/game_rules/src/outfit/rig_props`): gunmetal, dark-earth
+furniture, black polymer. They need to read as what they are from play distance, no more. Canisters are told by a band (smoke red, stun pale, frag
+yellow). What glows on gear: a lit weapon light's lens. The squad's lasers are infrared, hair-thin lines seen only through night vision. Goggles never
+glow.
 
 ## Motion
 
-- **Training shows in how a man carries himself.** Trained men glide: pelvis low, elbows in, gun steady. Untrained men swing their shoulders and wing an elbow.
-- **Guns have weight, hands do the work.** A rifle takes longer to come round than a pistol. Kit is drawn, stowed and reloaded by hand; a door is pushed with a hand on it.
+- **Training shows in how a man carries himself.** Trained men glide: pelvis low, elbows in, gun steady. Untrained men swing their shoulders and wing
+  an elbow.
+- **Guns have weight, hands do the work.** A rifle takes longer to come around than a pistol. Kit is drawn, stowed and reloaded by hand; a door is
+  pushed with a hand on it.
 
 ## Effects
 
-- **A flash is a light first.** Muzzle flash, stun, a charge going off: each is a real light for its few frames, and the smoke starts on the same frame.
-- **Smoke is one fluid** for the picture and for every eye in the game. It is lit by the room, takes beams through it, casts shadow, and softens what is behind it. Canister smoke is white; dust off a wall takes the wall's colour.
-- **Sparks are hair-thin and over-bright**, cooling white to orange to red; the bloom is what makes them glow. Chips, dust, brass and paper are small lit things that land and stay.
+- **A flash is a light first.** Muzzle flash, stun, a charge going off: each is a real light for its few frames, and the smoke starts on the same
+  frame.
+- **Smoke is one fluid** for the picture and for every eye in the game. It is lit by the room, takes beams through it, casts shadow, and softens what
+  is behind it. Canister smoke is white; dust off a wall takes the wall's color.
+- **Sparks are hair-thin and over-bright**, cooling white to orange to red; the bloom is what makes them glow. Chips, dust, brass and paper are small
+  lit things that land and stay.
 - **Things break by material.** A wall wears, then holes; float glass falls in pieces, toughened glass dices whole, laminated glass webs and holds.
 - **Tracers** are thin emissive streaks, slower than real ones on purpose, so they can be seen.
-- **Weather and hour are light, not filters.** Night is the home hour: moon, lamps, storm. Dawn and dusk are a low orange sun; midday is hard short shadows and dark rooms by contrast; fog and dust are air that the same lights shine into.
-- **Fog of war dims, it does not hide the building.** Floor nobody on the team can see stays drawn but dim and nearly grey; men there are not drawn, and doors and furniture stay as the team last saw them. Its edge is cut by walls and door frames, as on a plan.
+- **Weather and hour are light, not filters.** Night is the home hour: moon, lamps, storm. Dawn and dusk are a low orange sun; midday is hard short
+  shadows and dark rooms by contrast; fog and dust are air that the same lights shine into.
+- **Fog of war dims, it does not hide the building.** Floor nobody on the team can see stays drawn but dim and nearly gray; men there are not drawn,
+  and doors and furniture stay as the team last saw them. Its edge is cut by walls and door frames, as on a plan.
 
-Effect numbers are tuned by eye in the viewer and pasted back (`src/game/effects.ts`): treat them as authored data.
+Effect numbers are tuned by eye (`rust/game_rules/src/tick/effects.rs`): treat them as authored data.
 
 ## Screens
 
-The menus and the fight screen are one look: the same sand, the same one orange, the same type
-(`src/ui/theme.ts`; the fight screen reads those tokens as `--h-…`, top of the sheet in `index.html`).
+The menus and the fight screen are one look: the same sand, the same one orange, the same type (`src/ui/theme.ts`; the fight screen reads those tokens
+as `--h-…`, top of the sheet in `index.html`).
 
-**Menus** (`src/ui/theme.ts`) are a planning table: warm black `#0c0b09`, sand text `#d2c9b5`, and
-one orange `#f0912e`. Headings are condensed bold caps; body is a plain sans, sentence case, short.
-Flat fills and mostly square corners, no chrome.
-Orange is spent sparingly, and each page has one filled block: the button that leads on. What does
-not apply is not drawn. Missions are picture cards in groups, the way Door Kickers 2 lays its
-missions out; the pictures are frames of the game being played. The man on the kit screen is lit by
-rays, like the game.
+**Menus** are a planning table: warm black `#0c0b09`, sand text `#d2c9b5`, one orange `#f0912e`. Headings are condensed bold caps; body is a plain
+sans, sentence case, short. Flat fills, mostly square corners, no chrome. Each page has one filled orange block: the button that leads on. What does
+not apply is not drawn. Missions are picture cards in groups; the pictures are frames of the game being played. The man on the kit screen is the
+game's own picture, lit by rays (`kitView.ts`).
 
-**The fight screen** (`index.html`) keeps the layout of Splinter Cell: Chaos Theory: small caps on a
-faint warm-black backing, pushed to the edges. Kit and the LIGHT and SOUND bars sit bottom left,
-orders top left, the objective top centre, radio bottom centre. Labels are the menus' condensed caps,
-rows their plain sans, digits and keys mono; the ink is sand. Orange is spent as sparingly as on a
-menu: the bar and key of the row a tap will do, the objective, the way a lost man was hit from. Any other colour means
-something: gold, red and blue for who an order goes to; amber then red for alarm; blue for a door.
-Nothing glows and a bar's fill is flat; a mark that sits on the picture carries a dark halo so sand reads on a sunlit floor.
+**The fight screen** (`index.html`) keeps the layout of Splinter Cell: Chaos Theory: small caps on a faint warm-black backing, pushed to the edges.
+Kit and the LIGHT and SOUND bars sit bottom left, orders top left, the objective top center, radio bottom center. Labels are the menus' condensed
+caps, rows their plain sans, digits and keys mono; the ink is sand. Orange is spent as sparingly as on a menu: the bar and key of the row a tap will
+do, the objective, the way a lost man was hit from. Any other color means something: gold, red and blue for who an order goes to; amber then red for
+alarm; blue for a door. Nothing glows and a bar's fill is flat; a mark that sits on the picture carries a dark halo so sand reads on a sunlit floor.
 In the world, marks are single glyphs over a head (`?`, `!`, `zz`, `✕`) and speech is a small caption.
 
-**Words.** Orders are lower-case verb phrases ("stack up", "fall in"); labels are caps; blurbs are
-short and flat. Doors and rooms are named for what they are ("store door"), not by compass. If a screen needs a paragraph to
-explain itself, the screen is wrong.
+**Words.** Orders are lower-case verb phrases ("stack up", "fall in"); labels are caps; blurbs are short and flat. Doors and rooms are named for what
+they are ("store door"), not by compass. If a screen needs a paragraph to explain itself, the screen is wrong.
 
 ## Not the look
 
-Each of these was tried or asked about and turned down; do not bring one back without a new reason.
+Do not bring these back without a new reason.
 
 - Photographs or downloaded textures on surfaces, fine noise standing in for a material, gradients, baked light or shadow.
-- Fake versions of physical things: dust motes that spawn in a torch cone, gun smoke as particles.
+- Fake versions of physical things: dust motes that spawn in a flashlight cone, gun smoke as particles.
 - Enemy laser sights; goggles that glow; a dollhouse wall cut-away.
 - Player-facing switches for art constants. The look is decided here, not on a settings page.
 
 ## Holding new work to it
 
-- Judge it from the play camera, in level lighting. Then crop small tiles around shadow edges and light pools and look again at 3–4×: "looks fine downscaled" has been wrong repeatedly.
-- Ask where the detail comes from. Grain and relief come from the material, and shape comes from the room's light on it. If the answer is "the light is painted on" or "it is a picture of somewhere else", it is not the look.
+- Judge it from the play camera, in level lighting. Then crop small tiles around shadow edges and light pools and look again at 3–4×: "looks fine
+  downscaled" is not enough.
+- Ask where the detail comes from. Grain and relief come from the material, and shape comes from the room's light on it. If the answer is "the light
+  is painted on" or "it is a picture of somewhere else", it is not the look.
 - Ask where the light comes from. If nothing in the room explains it, it is not the look.
 - Ask what the men in the game make of it. If they cannot see what the player sees, fix the model, not the picture.
 - A new place needs a use, an accent or a floor of its own, and rooms that pass the six.
 
-Three things the code holds you to (`bun run tools/qa/probes.ts look`, `cast-look`):
+Three things the code holds you to:
 
-- **The game reads paint.** Rounds, blasts and debris classify a box by its colour. A 2010s paint comes from `src/scene/gwotPalette.ts` and stands in for the office paint it replaced; do not invent colours on a level.
-- **A skin changes paint only.** A level's 2010s file is the plain file box for box, plus flat decals that start at the floor.
-- **Slot names are the contract with the meshes.** A character's material names are the slots above; a new mesh keeps them (`src/render/charMaterials.ts`).
+- **What a box is made of and does is said, not read off its paint** (`src/scene/stuff.ts`, `does` and `stuff` on a box). A 2010s paint comes from
+  `src/scene/gwotPalette.ts`, by name, and its row says what it is and does; do not invent colors on a level. A paint is still light: a wall's color
+  is in what comes around a room, which a man's eye reads.
+- **A skin changes paint only** (`tools/levels/gwotSkin.ts`). A level's file is its floor box for box, plus flat decals that start at the floor.
+- **Slot names are the contract with the meshes.** A character's material names are the slots above; a new mesh keeps them
+  (`src/render/charMaterials.ts`, `tools/chars/README.md`, held by `bun run tools/qa/cast-probes.ts`).

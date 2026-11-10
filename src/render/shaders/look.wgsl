@@ -1,5 +1,5 @@
-// THE LOOK PROTOTYPE (the page /look; render/frame.ts lookConfig, the scene prelude's const `LOOK`): THE MATERIAL LOOK, as STYLE.md's Surfaces now allows it (a box
-// has a paint and a material; the material is maps the page makes itself). On that page only until it is landed on the game's. This file is in the g-buffer module ONLY on that page (render/gbuffer.ts lookWgsl); every other page gets a stub.
+// THE LOOK PROTOTYPE (the page /look; render/frame.ts lookConfig): THE MATERIAL LOOK, as STYLE.md's Surfaces now allows it (a box
+// has a paint and a material; the material is maps the page makes itself). This file is in the g-buffer module (render/gbuffer.ts lookWgsl).
 //
 // What it does to a box pixel, in the g-buffer and nowhere else:
 //   MAPS      tiling materials (and two of masonry), each made by the page the first time a box is that stuff (render/gbuffer.ts needLook; render/lookTex.ts: paint, height, normal, roughness, cavity), picked by what the box SAYS it is made of
@@ -12,7 +12,7 @@
 //             (lookDeal), is laid in bays (lookPiece), and a kept place drifts a shade over ten metres.
 //   MASONRY   a mud wall's stone plinth and the mud brick where its render has fallen: two more maps, laid by the wall's own height and length.
 //   WEATHER   what follows the BUILDING, not the map: damp and dirt climbing a wall's foot to a ragged line, a bleached head and the runs under it, slow blotches;
-//             on the ground the level's own traffic map (render/wear.ts) — walked earth packed pale and smooth, dirt and stones gathered where nobody walks,
+//             on the ground the level's own traffic map (rust/game_draw/src/traffic.rs) — walked earth packed pale and smooth, dirt and stones gathered where nobody walks,
 //             against the walls.
 //   RELIEF    the map's normal, stood on the face. The g-buffer keeps the TILTED normal with alpha 0 (the target's spare code); gdown hands every working-size
 //             pass the box's own face back (common.wgsl lookGeoN), so the filters, the gather and the reservoirs see the flat wall they always saw, and only the
@@ -306,7 +306,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     tilt = tn * k.y;
     // ---- a snow level's bare ground (earth a man cleared, a rut): within a stride of lying snow it is frozen — ice in the low places, dark and smooth enough to
     // show a lamp, and frost grains over the rest, thinning away from the snow
-    if (SNOW_SURF && lookCfg.e.w > 0.0 && snowCfg.p[1].z > 0.5 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.y && thing.z > 0.5) {   // (the stuff's `ground`)
+    if (GBUF_SNOW && lookCfg.e.w > 0.0 && snowCfg.p[1].z > 0.5 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.y && thing.z > 0.5) {   // (the stuff's `ground`)
       let e = 0.3;   // (the field knows no roof here: a floor of earth inside an outer wall takes a hand's width of this along the wall — known, left)
       let near = max(max(snowField(wp.xz + vec2f(e, 0.0)).y, snowField(wp.xz - vec2f(e, 0.0)).y), max(snowField(wp.xz + vec2f(0.0, e)).y, snowField(wp.xz - vec2f(0.0, e)).y));
       if (near > 0.02) {
@@ -741,7 +741,7 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
   let T = min(lookCfg.g.y, 1.0) * min(K, 1.0); let op = side == 0u || side == 4u;
   let seed = f32(owner) * 0.618; let own = fract(seed); let own2 = fract(f32(owner) * 0.3819 + 0.27);
   let ridge = max(-cavity, 0.0);
-  let cold = SNOW_SURF && snowCfg.p[1].z > 0.5;
+  let cold = GBUF_SNOW && snowCfg.p[1].z > 0.5;   // (the module's own writing, as every snow read of the g-buffer's texts: render/gbuffer.ts. Asked of the frame's level word it was a short-circuit of two uniform reads here, and the software adapter's GPU process fell over drawing the men on the look's page)
   var alb = albedoIn; var rough = roughIn; var gain = gainIn;
   if (slot == 1u || slot == 2u || slot == 3u) {
     let tile = select(0.3, 0.16, slot == 3u);                                               // (webbing's thread is coarser)

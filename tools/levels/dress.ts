@@ -1,16 +1,16 @@
-// DRESSING: the things a loud level carries only so that a firefight has something to wreck (game/destruction.ts finds them BY SHAPE, as it finds the office's) —
+// DRESSING: the things a loud level carries only so that a firefight has something to wreck (rust/game_rules/src/breakage/destruction finds them BY SHAPE, as it finds the office's) —
 // paper stacks, mugs, phones, box files and dark monitors on the tables and counters a generator already stood up, binder runs on its shelf boards, files on its
-// cabinets. No new look: every piece is one the office already has (scene/levelKit.ts papers / monitor, officeGen's desk clutter), no light, no switchable, nothing
+// cabinets. No new look: every piece is one the office already has (lib/levelKit.ts papers / monitor, officeGen's desk clutter), no light, no switchable, nothing
 // at floor level, nothing outdoors, nothing where the generator already put a thing. tools/levels/export.ts calls dressLevel() after build() and files the boxes
-// LAST under the editor group DRESS_GROUP; scene/levelLoad.ts leaves that group out with the destruction switch off (game/destructionSwitch.ts), so the level a
+// LAST under the editor group DRESS_GROUP, which the game leaves out with destruction off (rust/game_start level.rs), so the level a
 // generator returns — and every index in it — is untouched by any of this.
 // Deterministic: every choice is a hash of the surface's own centre (never Math.random); a generator that moves a desk moves its dressing with it.
 import type { Vec3 } from '../../src/math/vec';
 import { Box, BoxFlag, makeBox } from '../../src/scene/boxes';
-import { drawnAs, worded } from '../../src/scene/stuff';
-import type { Level } from '../../src/scene/level';
-import * as MD from '../../src/scene/markingDefaults';
-import { DRESS_GROUP } from '../../src/game/destructionSwitch';
+import { PHONE_BLACK, madeOf, worded } from '../../src/scene/stuff';
+import type { Level } from './lib/level';
+import * as MD from './lib/markingDefaults';
+import { DRESS_GROUP } from './lib/lived';
 
 const SCREEN_OFF: Vec3 = [0.02, 0.02, 0.025], BLACK: Vec3 = [0.04, 0.04, 0.045];   // (the kit's screenOff / black paints: the export names them by colour, finish and all)
 const MUGS: Vec3[] = [[0.82, 0.82, 0.8], [0.15, 0.2, 0.35], [0.55, 0.12, 0.1], [0.2, 0.2, 0.21]];
@@ -23,10 +23,10 @@ const seedOf = (c: Vec3) => (Math.round(c[0] * 100) * 73856093) ^ (Math.round(c[
 const ext = (b: { h: Vec3; yaw: number }): [number, number] => { const ac = Math.abs(Math.cos(b.yaw)), as = Math.abs(Math.sin(b.yaw)); return [ac * b.h[0] + as * b.h[2], as * b.h[0] + ac * b.h[2]]; };
 
 /** THE LOUD LEVELS — the ones a scenario is played on, the ones that get dressing: generator (tools/levels/<gen>.ts) → file under levels/ and the page query that
- *  stages its scenario. The one list: export.ts dresses by it, tools/qa/loudchaos-probes.ts checks by it. */
+ *  stages its scenario. The one list: export.ts dresses by it. */
 export const LOUD_LEVELS: { gen: string; file: string; q: string }[] = [
   { gen: 'records', file: 'records.json', q: 'roomclear=1' }, { gen: 'depot', file: 'depot.json', q: 'roomclear=1&squad4' }, { gen: 'block', file: 'block.json', q: 'roomclear=1&squad4' },
-  { gen: 'blocksquads', file: 'block-squads.json', q: 'roomclear=1&squad4' }, { gen: 'warehouse', file: 'warehouse.json', q: 'roomclear=1&squad4' }, { gen: 'compound', file: 'compound.json', q: 'roomclear=1&squad4' },
+  { gen: 'warehouse', file: 'warehouse.json', q: 'roomclear=1&squad4' }, { gen: 'compound', file: 'compound.json', q: 'roomclear=1&squad4' },
   { gen: 'barracks', file: 'barracks.json', q: 'roomclear=1&squad4' }, { gen: 'registry', file: 'registry.json', q: 'rescue' },
   { gen: 'consulate', file: 'consulate.json', q: 'rescue&squad=4' },
 ];
@@ -82,7 +82,7 @@ export function dressLevel(level: Level, groups: string[]): DressStats {
       if (!monitorDone && short >= 0.34 && d < 0.3) { monitorDone = true; if (put('monitor', darkMonitor(at(u, top, -side * 0.08), yawL + (side > 0 ? 0 : Math.PI), mk), si)) continue; }
       if (d < 0.5) put('paper', paperPair(at(u, top, v), yaw, mk, R), si);
       else if (d < 0.68) put('mug', [mk(at(u, top + 0.05, v), [0.04, 0.05, 0.04], yaw, MUGS[Math.floor(R() * MUGS.length)])], si);
-      else if (d < 0.8) { const c = at(u, top + 0.025, v); put('phone', [mk(c, [0.09, 0.025, 0.07], yaw, drawnAs('metal', [0.07, 0.07, 0.08])), mk([c[0], top + 0.065, c[2]], [0.085, 0.015, 0.022], yaw + 0.15, [0.05, 0.05, 0.06])], si); }
+      else if (d < 0.8) { const c = at(u, top + 0.025, v); put('phone', [mk(c, [0.09, 0.025, 0.07], yaw, PHONE_BLACK), mk([c[0], top + 0.065, c[2]], [0.085, 0.015, 0.022], yaw + 0.15, madeOf('plastic', [0.05, 0.05, 0.06]))], si); }
       else if (d < 0.93) put('file', [mk(at(u, top + 0.045, v * 0.6), [0.16, 0.045, 0.125], yaw, FILES[Math.floor(R() * FILES.length)])], si);
     }
   }
@@ -90,7 +90,7 @@ export function dressLevel(level: Level, groups: string[]): DressStats {
 }
 
 type Mk = (c: Vec3, h: Vec3, yaw: number, albedo: Vec3, extra?: Partial<Box>) => Box;
-/** scene/levelKit.ts papers(): two sheets' worth of stack, the upper one askew */
+/** lib/levelKit.ts papers(): two sheets' worth of stack, the upper one askew */
 function paperPair(c: Vec3, yaw: number, mk: Mk, R: () => number): Box[] {
   const seed = 31 + Math.floor(R() * 40) * 2; const cs = Math.cos(yaw), sn = Math.sin(yaw);
   const h0: Vec3 = [0.11, 0.02, 0.15], h1: Vec3 = [0.1, 0.012, 0.14];
@@ -99,7 +99,7 @@ function paperPair(c: Vec3, yaw: number, mk: Mk, R: () => number): Box[] {
     mk([c[0] + cs * 0.03 - sn * 0.02, c[1] + 0.052, c[2] - sn * 0.03 - cs * 0.02], h1, yaw + 0.25, [0.9, 0.88, 0.8], { flags: BoxFlag.NoShadow, marks: MD.paperMarks(h1, seed + 1, R() < 0.4) }),
   ];
 }
-/** scene/levelKit.ts monitor(…, on = false): foot, neck, housing, the dark screen on local +Z — no keyboard, no switchable (a dead screen: it cracks and comes off its stand, no light goes) */
+/** lib/levelKit.ts monitor(…, on = false): foot, neck, housing, the dark screen on local +Z — no keyboard, no switchable (a dead screen: it cracks and comes off its stand, no light goes) */
 function darkMonitor(c: Vec3, yaw: number, mk: Mk): Box[] {
   const cs = Math.cos(yaw), sn = Math.sin(yaw); const at = (ly: number, lz: number): Vec3 => [c[0] + sn * lz, c[1] + ly, c[2] + cs * lz];
   const hs: Vec3 = [0.25, 0.15, 0.004];

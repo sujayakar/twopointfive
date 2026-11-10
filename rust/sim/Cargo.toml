@@ -1,3 +1,6 @@
+# The world's hot loops and each game's block. They stand on the types: a loop takes a record as it is.
+[workspace]
+
 [package]
 name = "sim"
 version = "0.1.0"
@@ -5,7 +8,13 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dependencies]
+game_types = { path = "../game_types" }
+maths = { path = "../maths" }
 prim = { path = "../prim" }
+
+[profile.dev]
+opt-level = 0
+debug = false

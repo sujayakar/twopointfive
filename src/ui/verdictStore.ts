@@ -1,12 +1,12 @@
-// What this machine keeps of the runs played (game/verdict.ts names how one run went; keeping a record is the PAGE's, never a rule's: nothing in src/game reads
+// What this machine keeps of the runs played (rust/game_rules/src/missions/verdict.rs names how one run went; keeping a record is the PAGE's, never a rule's: nothing in the game reads
 // this, and with no localStorage — headless, a private window — it keeps nothing and every answer is the empty one). One key, a small map: run key → a record.
-// The key is the caller's (main.ts): mission id + difficulty, so a way won on standard is not a way won on hard.
+// The key is the caller's: mission id + difficulty, so a way won on standard is not a way won on hard.
 //
-//   A TRY is counted when it STARTS (the squad's first order, Sam's first stride or round: verdict.ts's rule), so a try given up — a restart, a closed tab — is a
+//   A TRY is counted when it STARTS (the squad's first order, Sam's first stride or round: rust/game_rules/src/missions/verdict.rs's rule), so a try given up — a restart, a closed tab — is a
 //   try all the same, and restarting before anything was done is free. `s` = the tries started since the last win: the ticks on the end card.
 //   A WAY WON (doors · walls · dark · quiet) is kept for good: the fewest tries a win by it ever took, whether one of those wins lost nobody, its best time.
 //   Nothing here resets by itself; `clearVerdicts` is the only way back to nothing.
-import type { Approach } from '../game/verdict';
+import type { Approach } from '../view/runend';
 
 const KEY = 'twopointsix.verdicts';
 export const APPROACHES: readonly Approach[] = ['doors', 'walls', 'dark', 'quiet'];
@@ -46,7 +46,7 @@ export function keptWays(rec: MissionRecord | null): Partial<Record<Approach, { 
 /** how many ways are won (two = gold) */
 export function waysWon(rec: MissionRecord): number { return APPROACHES.filter(a => rec.w[a]).length; }
 
-/** A try has started (verdict.ts: the first order, stride or round). Returns which try of the streak it is, 0 when it is not counted (no key, no store). */
+/** A try has started (rust/game_rules/src/missions/verdict.rs: the first order, stride or round). Returns which try of the streak it is, 0 when it is not counted (no key, no store). */
 export function tryStarted(key: string): number {
   if (!key) return 0;
   const rec = recordOf(key); rec.n++; rec.s++;
@@ -66,5 +66,3 @@ export function runEnded(key: string, streak: number, run: { won: boolean; appro
   write(key, rec);
   return { streak, fresh: !had, gold: waysWon(rec) >= 2, rec };
 }
-/** forget one run key's record, or every record (no key) */
-export function clearVerdicts(key?: string) { const ls = store(); if (!ls) return; try { if (!key) { ls.removeItem(KEY); return; } const all = readAll(); delete all[key]; ls.setItem(KEY, JSON.stringify(all)); } catch { /* nowhere to keep one */ } }

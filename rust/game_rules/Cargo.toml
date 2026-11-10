@@ -1,0 +1,20 @@
+# The rules of the game: the crate every host calls `game`. May name the data.
+[workspace]
+
+[package]
+name = "game_rules"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+game_types = { path = "../game_types" }
+sim = { path = "../sim" }
+prim = { path = "../prim" }
+
+[profile.dev]
+opt-level = 0
+debug = false

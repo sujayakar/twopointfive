@@ -1,0 +1,364 @@
+//! The types of `roomfight`.
+#![allow(unused_imports)]
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use alloc::{string::String, vec::Vec};
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Entry {
+    pub door: DoorId,
+    pub at: V3,
+    pub out: [f64; 2],
+}
+
+#[derive(Clone, Debug, ToBytes, Blank)]
+pub struct RoomFight {
+    #[is({ let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], funnel: f64::INFINITY, line: f64::INFINITY }); t })] pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
+    pub live: bool,
+    #[is(true)] pub blind_fire: bool,
+    pub blind_rounds: f64,
+    pub defs: Vec<RoomfightDefId>,
+    pub ops: Vec<RoomfightOpId>,
+    /// what this tick has done that somebody would say aloud. Empty between two ticks
+    pub news: Vec<crate::roomfight::News>,
+    #[is(crate::roomfight::RoomFightStats { fall_back_out: 0.0 })] pub stats: crate::roomfight::RoomFightStats,
+    pub rooms: Vec<RoomfightRoomId>,
+    pub room_of_cell: JsMap<crate::Num, RoomfightRoomId>,
+    #[is(alloc::vec![0; 0])] pub fill_mark: Vec<u8>,
+    pub called: JsSet<GuardId>,
+    pub down_called: JsSet<GuardId>,
+    #[is(-100.0)] pub hot_t: f64,
+    pub reports: Vec<crate::roomfight::RoomFightReportsItem>,
+    pub heard_ev: JsSet<u32>,
+    pub sams: Vec<crate::roomfight::RoomFightSamsItem>,
+    pub drill_said: bool,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+pub enum RoomFightSkillKey {
+    Operative,
+    Hostile,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct FightSkill {
+    pub react: [f64; 2],
+    pub ready: f64,
+    pub surprise: [f64; 2],
+    pub sector_deg: f64,
+    pub settle_k: f64,
+    pub spread_k: f64,
+    pub preaim: f64,
+    pub notice: f64,
+    pub pair: f64,
+    pub shift: [f64; 2],
+    pub hold: [f64; 2],
+    pub glance: [f64; 2],
+    pub turn: f64,
+    pub bang_break: f64,
+    pub startle: [f64; 2],
+    pub daze: [f64; 2],
+    pub nerve: [f64; 2],
+    pub funnel: f64,
+    pub line: f64,
+}
+
+/// What a man of the fight has just done, or what a squad of them has decided (the man who has the word, if it is one man's)
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
+pub enum News { Man(GuardId, crate::roomfight::Did), Squad(EnemysquadsSquadId, Option<GuardId>, crate::roomfight::Word) }
+
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
+pub enum Did {
+    HoldsWhereHeIs,
+    FallsBack,
+    TakesCover,
+    /// a man on the move is where he will fight from; `fighting`: an enemy seen close stopped him
+    Plants { fighting: bool },
+    Surprised,
+    Flinches,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
+pub enum Word {
+    /// `ally`: whose call it heard. `waits`: it holds its answer on purpose
+    Hears { ally: Option<EnemysquadsSquadId>, waits: bool },
+    Stays,
+    Quiet,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct RoomFightStats {
+    pub fall_back_out: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct RoomFightReportsItem {
+    pub by: GuardId,
+    pub t: f64,
+    pub from: Option<V3>,
+    pub to: Option<V3>,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct RoomFightSamsItem {
+    pub x: f64,
+    pub z: f64,
+    pub t: f64,
+    pub v: [f64; 2],
+    pub known: f64,
+}
+
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Room {
+    pub id: f64,
+    pub cells: JsSet<crate::Num>,
+    pub entries: Vec<crate::roomfight::Entry>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum DefMode {
+    #[default] Hold,
+    Move,
+    Free,
+}
+
+/// The leg a defender is on, or was on last (roomfight/post.rs).
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct OnLeg {
+    /// who sent him: a tasker of owner/, `By::NOBODY` the room fight itself
+    pub by: crate::owner::By,
+    /// the points he still goes by, the last of them where he is sent
+    pub way: Vec<V3>,
+    pub kind: crate::roomfight::DefMoveKind,
+    /// the door he comes by
+    pub door: Option<DoorId>,
+    /// at its end he stands there on his sender's word
+    pub stays: bool,
+    /// how many times more he tries when he gets nowhere
+    pub tries: u8,
+    /// how it ended; None: he is on it
+    pub end: Option<LegEnd>,
+    /// how long he has been on it · where he last made ground, and how long ago · when his boots were last heard
+    pub t: f64,
+    pub stall_at: V3,
+    pub stall_t: f64,
+    pub step_t: f64,
+    /// the post he left for it, as he held it
+    pub left: Option<PostLeft>,
+}
+
+/// A post as a man held it when he left it, and how he was.
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct PostLeft {
+    pub t: f64,
+    pub state: crate::game::GuardState,
+    pub awareness: f64,
+    pub hold: bool,
+    pub pinned: bool,
+    pub station: V3,
+    pub home: V3,
+    pub room: Option<RoomfightRoomId>,
+    pub ev: Vec<f64>,
+    pub watch: f64,
+    pub want: f64,
+    pub pt: V3,
+}
+
+/// How a leg ended: he is there, there is no way, somebody to fight stopped him, or he was sent or let go elsewhere.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum LegEnd { #[default] Arrived, Nowhere, Contact, Taken }
+
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Def {
+    pub gd: GuardId,
+    pub station: V3,
+    pub home: V3,
+    pub room: Option<RoomfightRoomId>,
+    pub pinned0: bool,
+    pub staged: Option<bool>,
+    pub ev: Vec<f64>,
+    pub watch: f64,
+    pub want: f64,
+    pub want_at: f64,
+    pub glance_to: f64,
+    pub glance_until: f64,
+    pub glance_next: f64,
+    pub pt: V3,
+    pub heard_t: f64,
+    pub cnt: crate::roomfight::DefCnt,
+    pub noise_at: Option<V3>,
+    pub noise_t: f64,
+    pub noise_out: bool,
+    pub last_state: crate::game::GuardState,
+    pub last_seen: f64,
+    pub fix_keep: f64,
+    pub pre: bool,
+    pub nerve: f64,
+    pub lost_at: f64,
+    pub moved_at: f64,
+    pub mode: crate::roomfight::DefMode,
+    pub leg: OnLeg,
+    pub free_at: f64,
+    pub burst: crate::roomfight::DefBurst,
+    pub bolt_until: f64,
+    pub bolt_from: Option<CharId>,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct DefCnt {
+    pub shots: f64,
+    pub kick: f64,
+    pub bang: f64,
+    pub small: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct DefBurst {
+    pub until: f64,
+    pub n: f64,
+    pub next: f64,
+    pub broke: bool,
+    pub daze: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct Meter {
+    pub m: f64,
+    pub seen_t: f64,
+    pub glass_t: Option<f64>,
+}
+
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct Op {
+    pub gd: GuardId,
+    pub meters: JsMap<GuardId, crate::roomfight::Meter>,
+    pub tgt: Option<GuardId>,
+    pub turn: Option<crate::roomfight::OpTurn>,
+    pub pass: Option<crate::roomfight::OpPass>,
+    pub kept: Option<crate::roomfight::OpKept>,
+    pub track: f64,
+    pub pre: bool,
+    pub ready_at: f64,
+    pub n: f64,
+    pub next: f64,
+    pub lost_at: f64,
+    pub fell: Option<bool>,
+    pub aim: V3,
+    pub ov: crate::roomfight::OpOv,
+    pub step: Option<crate::roomfight::OpStep>,
+    pub hot_t: f64,
+    pub step_t: f64,
+    pub step_by: Option<crate::roomfight::OpStepBy>,
+    pub door_by: Option<crate::roomfight::OpDoorBy>,
+    pub funnel_t: f64,
+    pub line_t: f64,
+    pub line_by: Option<CharId>,
+    pub line_at: f64,
+    pub wall_t: f64,
+    pub step_until: f64,
+    pub said_t: f64,
+    pub rounds: f64,
+    pub block_t: f64,
+    pub feet_sm: Option<f64>,
+    pub feet_t: Option<f64>,
+    pub short_seen: f64,
+    pub short_since: f64,
+    pub short_t: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpTurn {
+    pub to: GuardId,
+    pub at: f64,
+    pub until: f64,
+    pub pt: Option<V3>,
+    pub t0: Option<f64>,
+    pub door: Option<DoorId>,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpPass {
+    pub h: GuardId,
+    pub until: f64,
+    pub no_shot: Option<bool>,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpKept {
+    pub h: GuardId,
+    pub track: f64,
+    pub t: f64,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpOv {
+    pub face: Option<f64>,
+    pub walk: Option<bool>,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpStep {
+    pub mine: V3,
+    pub goal: Option<V3>,
+    pub speed: Option<f64>,
+    pub strafe: Option<bool>,
+    pub face: Option<f64>,
+    pub door: bool,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpStepBy {
+    pub by: GuardId,
+    pub t: f64,
+    pub at: V3,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
+pub struct OpDoorBy {
+    pub by: GuardId,
+    pub t: f64,
+    pub at: V3,
+    pub door: DoorId,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RoomFightDoorShot {
+    pub by: GuardId,
+    pub at: V3,
+    pub door: DoorId,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RoomFightStepToPatch {
+    pub speed: Option<f64>,
+    pub face: Option<f64>,
+    pub strafe: Option<bool>,
+    pub aim_at: Option<V3>,
+    pub stance: Option<crate::character::Stance>,
+    pub stack_side: Option<f64>,
+    pub crouch: Option<bool>,
+    pub lean: Option<f64>,
+    pub upper: Option<crate::character::UpperMode>,
+    pub light: Option<bool>,
+    pub arrived: Option<bool>,
+    pub hot: Option<bool>,
+    pub flinch: Option<bool>,
+    pub direct: Option<bool>,
+    pub smoke: Option<bool>,
+    pub over: Option<crate::game::GuardScriptOver>,
+}
+
+pub fn fight_skill() -> JsMap<String, crate::roomfight::FightSkill> { { let mut t = JsMap::new(); t.set(String::from("operative"), crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], funnel: 0.35, line: 0.5 }); t.set(String::from("hostile"), crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], funnel: f64::INFINITY, line: f64::INFINITY }); t } }
+
+pub const ROOM_MAX_CELLS: f64 = 2400.0;
+
+pub fn room_dx() -> Vec<f64> { alloc::vec![1.0, -1.0, 0.0, 0.0] }
+
+pub fn room_dz() -> Vec<f64> { alloc::vec![0.0, 0.0, 1.0, -1.0] }
+
+pub const GLASS_LOOK: f64 = 4.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+pub enum DefMoveKind {
+    #[default] Cover,
+    Fallback,
+}

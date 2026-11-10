@@ -1,4 +1,4 @@
-// THE SNOW FIELD — a snow level's lying snow as ONE SURFACE (game/weatherKinds.ts SNOW_LOOK.on; the maintainer on his first GPU look at the pass, 10-14: 'it does
+// THE SNOW FIELD — a snow level's lying snow as ONE SURFACE (rust/game_rules/src/air/weather_kinds.rs SNOW_LOOK.on; the maintainer on his first GPU look at the pass, 10-14: 'it does
 // need to feel more organic. maybe we could do it with a height map or something like that? the rectangles don't seem to work').
 // The level file still says where the snow is — its ground slab, its trodden paths and ruts, the earth somebody cleared, its drifts and banks are placed boxes in
 // the snow paints (tools/levels/pass.ts; scene/gwotPalette.ts SNOW_PALETTE), and every one of them is still the box a boot, a round and a ray meet. What changes
@@ -12,8 +12,7 @@
 //   a  OLD     old grey snow: wheel ruts, slops, the ring round cleared earth.
 // Every edge in it is soft and wanders (value noise, seeded by position: the same level bakes the same field) — no straight line of the file survives as one.
 // The g-buffer shades the ground and every snow-painted box off it (snow.wgsl snowBox / fsSnow). PICTURE ONLY: nothing in the simulation reads the field, and
-// the men's light is measured as it always was. A pure function of the level; built by game.ts beside the traffic map, only on a snow level with the switch on.
-import type { Level } from '../scene/level';
+// the men's light is measured as it always was. A pure function of the level; built by rust/game_rules/src/tick/game beside the traffic map, only on a snow level with the switch on.
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
@@ -38,7 +37,7 @@ export const SNOW_SURF = {
   rough: 0.92,          // fresh snow's finish; trodden is a touch tighter
   pillow: 0.22,         // m from a cap's edge over which it rounds off
   capWave: 0.06,        // m: how far a cap's edge wanders in from the thing it lies on
-  trackDeep: 0.08,     // m: how deep a boot's print is drawn in fresh snow (game/snowTracks.ts; deeper where a drift's skirt stands, shallower in trodden snow)
+  trackDeep: 0.08,     // m: how deep a boot's print is drawn in fresh snow (src/picture/snow/tracks.ts; deeper where a drift's skirt stands, shallower in trodden snow)
   trackRim: 0.012,      // m: the bank of pushed-up snow round a print
 };
 
@@ -68,12 +67,12 @@ export interface SnowField {
 
 
 /** is this box a THIN LAY on the ground — a strip of trodden or old snow, swept earth, a mat: at the ground, a finger thick at most, not glass and not the
- *  deep snow's own paint (so never the slab). The bake's rule below and game/snowBog.ts's: one reading of the level's boxes. `bare` = it is ground somebody
+ *  deep snow's own paint (so never the slab). The bake's rule below and rust/game_rules/src/air/snow_bog.rs's: one reading of the level's boxes. `bare` = it is ground somebody
  *  CLEARED (any paint that is not snow's, and not a lit thing lying on the snow) */
 export function snowThinLay(b: Box): boolean { const top = b.c[1] + b.h[1]; return !(b.flags & BoxFlag.Glass) && top <= 0.03 && top > 0 && b.c[1] - b.h[1] >= -0.02 && snowPaintOf(b) !== 'snow'; }
 export function snowLayBare(b: Box): boolean { return snowPaintOf(b) === null && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0; }
 /** which lying snow a box is, by its word (scene/materials.ts, Box.does: the rows 'snow', 'packed snow' and 'old snow'), or null. THE SNOW FIELD IS ONE
- *  MODEL THE PICTURE AND THE GAME BOTH READ (game/snowBog.ts wades in what is drawn), so this file of the renderer's asks what a box DOES: the one render
+ *  MODEL THE PICTURE AND THE GAME BOTH READ (rust/game_rules/src/air/snow_bog.rs wades in what is drawn), so this file of the renderer's asks what a box DOES: the one render
  *  file that does. Never by the colour. (THE SHADER still knows the three snow paints by their numbers, shaders/snow.wgsl snowIsPaint: so a level's snow
  *  wears the palette's whites until that reads a word too, or it is snow to the game and plain paint to the picture.) */
 export function snowPaintOf(b: { does?: string }): SnowKind | null { return doesOf(b).snow ?? null; }
@@ -102,10 +101,7 @@ function toHalf(v: number): number {
 }
 
 /** `breakIt`: the check's break word — the hills are left a finger UNDER their boxes (the boxes then stand out of the surface, as rectangles) */
-/** `roll` (m; GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts, the look's page only): the open ground's lying snow is not flat — a slow swell this
- *  deep at most stands under the open sky, thinner where the snow is trodden or old and none on cleared ground, under a roof or in a wall. Picture and rays
- *  only: nothing in the update reads the field. */
-export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean; roll?: number } = {}): SnowField | null {
+export function buildSnowField(level: { boxes: Box[] }, opts: { wind?: readonly [number, number]; breakIt?: boolean } = {}): SnowField | null {
   const boxes = level.boxes;
   const w = Math.round(WORLD.gridW * WORLD.gridCell * SNOW_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * SNOW_RES);
   const ox = WORLD.min[0], oz = WORLD.min[2]; const N = w * h;
@@ -219,14 +215,6 @@ export function buildSnowField(level: Level, opts: { wind?: readonly [number, nu
     cover[i] = Math.max(cover[i], up); packed[i] *= 1 - up; old[i] *= 1 - up;
     if (mound[i] > stats.maxMound) stats.maxMound = mound[i];
   }
-  if (opts.roll && opts.roll > 0) for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
-    const i = z * w + x; if (wall[i]) continue;
-    const k = cover[i] * (1 - sstep(0.15, 0.6, roof[i])) * (1 - 0.85 * Math.max(packed[i], old[i])); if (k <= 0.02) continue;
-    const wx = ox + (x + 0.5) / SNOW_RES, wz = oz + (z + 0.5) / SNOW_RES, sw = wander(wx + 11.3, wz + 4.1, 3.6);
-    const r = opts.roll * k * Math.max(0, 0.12 + 0.88 * sw * sw * (3 - 2 * sw) + 0.22 * (wander(wx, wz, 1.2) - 0.5));
-    mound[i] += r * (1 - sstep(0, 0.3, mound[i]));   // (a bank keeps its own height: the swell is the open ground's)
-    if (mound[i] > stats.maxMound) stats.maxMound = mound[i];
-  }
   // ---- the mesh: every lattice quad with snow standing at a corner
   const q: number[] = [];
   for (let z = 0; z < h - 1; z++) for (let x = 0; x < w - 1; x++) { const i = z * w + x; if (mound[i] > 0 || mound[i + 1] > 0 || mound[i + w] > 0 || mound[i + w + 1] > 0) q.push(x, z); }
@@ -237,13 +225,13 @@ export function buildSnowField(level: Level, opts: { wind?: readonly [number, nu
   return { data, w, h, quads: new Uint32Array(q), slab, statics: boxes.length, paint: [SNOW_PALETTE.snow[0], SNOW_PALETTE.snow[1], SNOW_PALETTE.snow[2]], wind: [wd[0] / wl, wd[1] / wl], mound, cover, packed, old, roof, wall, hard, stats };
 }
 
-/** A BLAST DIGS THE STANDING SNOW OUT (game/snowBlast.ts, under SNOW_LOOK.blast). The hills are baked once; a blast that goes off in one left it standing — a
- *  charge cut a hole in a wall, the bank at its foot went with the blast (furnblast.ts FURN.mouth.snow) and its hill was still drawn across the hole. This lowers the hill round (x, z): to nothing within about `r` m, back
+/** A BLAST DIGS THE STANDING SNOW OUT (rust/game_rules/src/air/snow_blast.rs, under SNOW_LOOK.blast). The hills are baked once; a blast that goes off in one left it standing — a
+ *  charge cut a hole in a wall, the bank at its foot went with the blast (rust/game_rules/src/breakage/furnblast.rs FURN.mouth.snow) and its hill was still drawn across the hole. This lowers the hill round (x, z): to nothing within about `r` m, back
  *  to itself by 1.5 × r, on a ragged outline (the bake's own noise, turned by `seed`), always reckoned from the hill AS BAKED (asked twice, nothing more is dug) — but never under a snow box that still STANDS there solid (a drift,
  *  a bank nothing took: it is still what a boot meets, and the box would show through as a box): each keeps a hill of the bake's own shape, never higher
  *  than the hill as baked. `boxes` = the level's, as they are now. Returns the texels changed ([x0, z0, x1, z1], inclusive) or
  *  null when no hill stood there. The mesh is left as it is: a corner with nothing on it dives under the ground (snow.wgsl vsSnow).
- *  `keep` = a dig that will be asked again (game/snowBlast.ts asks one every frame of its window): the field keeps a note of what stood solid in its reach when
+ *  `keep` = a dig that will be asked again (rust/game_rules/src/air/snow_blast.rs asks one every frame of its window): the field keeps a note of what stood solid in its reach when
  *  its texels were last walked. A dig is a function of that alone (the hill as baked, the place, the seed) and only ever lowers, so asked again with the same
  *  boxes standing it could not lower a texel, and the texels are not walked (null; f.walks counts the walks made). A box taken since, moved or cut is a new answer. */
 export function digSnowField(f: SnowField, boxes: readonly Box[], x: number, z: number, r: number, seed = 0, keep = false): [number, number, number, number] | null {

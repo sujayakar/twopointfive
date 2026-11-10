@@ -2,7 +2,7 @@
 // zsorting in tutorial level". Two things drawn at the floor in different paint whose top faces share a plane fight for every pixel of their overlap on a GPU,
 // and the split moves with the camera: the training ground's gravel court and generator slab over the yard's dirt, all three tops at 4 mm.
 //
-//   bun run tools/qa/floor-order-check.ts [level.json …] [--verbose]      (probes.ts floororder, also under look; FLOOR_BREAK=1 = asked a metre apart: must fail)
+//   bun run tools/qa/floor-order-check.ts [level.json …] [--verbose]      (FLOOR_BREAK=1 = asked a metre apart: must fail)
 //
 // Per level file: of everything drawn whose top face is at the floor, no two of different paint that overlap on the plan have their tops under 0.7 mm apart.
 // The sweep itself: a solid finish is raised by growing (its underside stays), a decal is moved whole, a later tier never moves an earlier one, and a level

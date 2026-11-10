@@ -1,0 +1,1186 @@
+pub use ::game_types::gunhold::types;
+pub use types::*;
+use crate::v3::dist_xz;
+use crate::game::Game;
+use crate::ids::*;
+use crate::js::{self, JsMap, JsSet};
+use crate::m;
+use crate::v3::{self, Quat, V3};
+use alloc::{string::String, vec, vec::Vec};
+
+/// `GUNHOLD_NOW[was] ?? was`
+fn now_of(was: &str) -> String {
+    gunhold_now().get(String::from(was)).cloned().unwrap_or_else(|| String::from(was))
+}
+
+// ---------------------------------------------------------------- stats, the men
+
+/// This game's counters, the row itself: a game holds it from the start (`GunholdMod::blank`, and the TypeScript's Game as it is built).
+fn gun_hold_stats<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::gunhold::GunHoldStats {
+    g.m.gunhold.stats_of.as_mut().expect("a game holds its gun-hold counters from the start")
+}
+
+/// The men of the standoff on this held man, living, in roster order.
+fn men_on(g: &crate::game::Game, held: GuardId) -> Vec<GuardId> {
+    let mut out = Vec::new();
+    for &o in &g.guards {
+        if crate::condition::down(g, g.gd[o].ch) {
+            continue;
+        }
+        if let Some(s) = g.gd[o].standoff {
+            if g.tab.guards_standoff[s].pair == held {
+                out.push(o);
+            }
+        }
+    }
+    out
+}
+
+/// Take a hold's Known out of the table for a call that needs `g` and it together (the row keeps its place, a placeholder in it). Nothing
+/// reached while it is out reads the table: see notes, Traps.
+fn lend_known(g: &mut Game, key: u32) -> Option<Known> {
+    g.m.gunhold.knowns.get_mut(key).map(core::mem::take)
+}
+fn return_known(g: &mut Game, key: u32, k: Known) {
+    g.m.gunhold.knowns.set(key, k);
+}
+
+/// This man has the pair in his eyes this frame: what his side knows of the hold is brought up to it.
+pub fn gun_hold_see(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) {
+    let (variant, phase, shot_t) = match g.pl[g.player].holding() {
+        Some(h) => (h.variant, h.phase, h.shot_t),
+        None => return,
+    };
+    let key = p.key;
+    let mut k = match lend_known(g, key) {
+        Some(k) => k,
+        None => Known {
+            gun_t: -1.0,
+            shot_t: -1.0,
+            sam: v3::copy(p.sam),
+            facing: p.facing,
+            fix_t: g.time,
+            gone_t: -1.0,
+            expo: JsMap::new(),
+            expo_at: v3::copy(p.sam),
+            expo_t: g.time,
+            talker: None,
+            said_t: -100.0,
+            said_gun: false,
+            said_shot: false,
+        },
+    };
+    k.sam = v3::copy(p.sam);
+    k.facing = p.facing;
+    k.fix_t = g.time;
+    k.gone_t = -1.0;
+    if k.gun_t < 0.0 && variant == crate::character::HoldVariant::Gun && phase != crate::character::HoldPhase::Grab {
+        k.gun_t = g.time;
+    }
+    learn_shot(g, &mut k, shot_t, true);
+    let gun_known = k.gun_t >= 0.0;
+    return_known(g, key, k);
+    if gun_known && g.gd[gd].react_t > 0.3 {
+        g.gd[gd].react_t = 0.3;
+    }
+}
+
+/// A round from the hold reaches the side's knowledge through a man who sensed it, while it is fresh.
+fn learn_shot(g: &crate::game::Game, k: &mut crate::gunhold::Known, shot_t: f64, sensed: bool) {
+    if !(shot_t > k.shot_t) || !sensed || g.time - shot_t > FRESH_S {
+        return;
+    }
+    k.shot_t = shot_t;
+    if k.gun_t < 0.0 {
+        k.gun_t = g.time;
+    }
+}
+
+/// Is this man's standoff one the rule has (the pistol known in the hold, a part dealt him): the keys of the hold's Known and of his St.
+fn part_of(g: &crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
+    let s = g.gd[gd].standoff?;
+    let (held, key) = g.pl[g.player].holding().map(|h| (h.g, h.serial))?;
+    if held != g.tab.guards_standoff[s].pair {
+        return None;
+    }
+    if g.m.gunhold.knowns.has(key) && g.m.gunhold.states.has(s) {
+        Some((key, s))
+    } else {
+        None
+    }
+}
+
+/// Behind cover on purpose the standoff is kept while somebody of his side has seen the pair lately and no look found them gone.
+pub fn standoff_fix_kept(g: &crate::game::Game, gd: GuardId) -> bool {
+    let (key, s) = match part_of(g, gd) {
+        Some(p) => p,
+        None => return false,
+    };
+    let (gone_t, fix_t) = match g.m.gunhold.knowns.get(key) {
+        Some(k) => (k.gone_t, k.fix_t),
+        None => return false,
+    };
+    gone_t < 0.0 && g.time - m::max(g.tab.guards_standoff[s].seen_t, fix_t) < g.k.gunhold.keep_secs
+}
+
+/// A man this rule has on his feet for cover is not rooted in the open by rounds past his head.
+pub fn standoff_on_feet(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    let (key, s) = match part_of(g, gd) {
+        Some(p) => p,
+        None => return false,
+    };
+    let st = match g.m.gunhold.states.get(s) {
+        Some(st) => *st,
+        None => return false,
+    };
+    if st.phase != Phase::Cover && st.phase != Phase::Line {
+        return true;
+    }
+    let pos = g.ch[g.gd[gd].ch].pos;
+    let k = match lend_known(g, key) {
+        Some(k) => k,
+        None => return false,
+    };
+    let r = shown(g, &k, pos, st.phase == Phase::Cover && st.low);
+    return_known(g, key, k);
+    r
+}
+
+/// Is the clean line at Sam's back this man's to use: Sam has fired from behind the man, and the man is no civilian.
+pub fn gun_hold_free(g: &mut crate::game::Game, p: crate::guards::Pair) -> bool {
+    if g.team(p.held) == crate::teams::Team::Civilian {
+        return false;
+    }
+    let key = p.key;
+    match g.m.gunhold.knowns.get(key) {
+        Some(k) if !(k.shot_t < 0.0) => {}
+        _ => return false,
+    }
+    let now = g.time;
+    gun_hold_stats(g).free_t = now;
+    true
+}
+
+// ---------------------------------------------------------------- the floor his gun covers
+
+/// `!g.col.shotBlocked(from, [x, h, z], 0.02, PISTOL_ENERGY)`: expo's and shown's `open`
+fn open_at(g: &Game, from: V3, x: f64, h: f64, z: f64) -> bool {
+    !crate::scene_collision::shot_blocked(g, from, [x, h, z], Some(0.02), Some(PISTOL_ENERGY))
+}
+
+/// What a man on nav cell `i` shows Sam's gun from where the pair was last seen: 2 open, 1 open standing, 0 hidden; kept per cell.
+fn expo(g: &crate::game::Game, k: &mut crate::gunhold::Known, i: f64) -> f64 {
+    if dist_xz(k.sam, k.expo_at) > 0.5 || g.time - k.expo_t > 1.5 {
+        k.expo.clear();
+        k.expo_at = v3::copy(k.sam);
+        k.expo_t = g.time;
+    }
+    if let Some(&e) = k.expo.get(crate::Num(i)) {
+        return e;
+    }
+    let (w, cell) = (g.col.nav.w, g.col.nav.cell);
+    let x = (js::rem(i, w) + 0.5) * cell;
+    let z = (js::to_i32(i / w) as f64 + 0.5) * cell;
+    let gun: V3 = [k.expo_at[0], GUN_Y, k.expo_at[2]];
+    let e = if m::hyp2(x - gun[0], z - gun[2]) > 24.0 {
+        0.0
+    } else if open_at(g, gun, x, 0.8, z) || open_at(g, gun, x, 1.05, z) {
+        2.0
+    } else if open_at(g, gun, x, 1.5, z) || open_at(g, gun, x, 1.2, z) {
+        1.0
+    } else {
+        0.0
+    };
+    k.expo.set(crate::Num(i), e);
+    e
+}
+
+/// The nav cell under a point, −1 off the grid.
+fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
+    let n = &g.col.nav;
+    let x = m::floor(p[0] / n.cell);
+    let z = m::floor(p[2] / n.cell);
+    if x < 0.0 || z < 0.0 || x >= n.w || z >= n.h {
+        -1.0
+    } else {
+        z * n.w + x
+    }
+}
+
+/// The floor point at a nav cell's middle.
+fn centre(g: &crate::game::Game, i: f64) -> V3 {
+    let n = &g.col.nav;
+    [(js::rem(i, n.w) + 0.5) * n.cell, 0.0, (js::to_i32(i / n.w) as f64 + 0.5) * n.cell]
+}
+
+/// Is the pistol turned this man's way: within faceDeg of where the pair faces.
+fn faces_him(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
+    m::abs(v3::wrap_angle(m::atan2(p[0] - k.sam[0], p[2] - k.sam[2]) - k.facing)) < g.k.gunhold.face_deg * v3::DEG
+}
+
+/// Forward of Sam's rear arc.
+fn front(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
+    m::abs(v3::wrap_angle(m::atan2(p[0] - k.sam[0], p[2] - k.sam[2]) - (k.facing + m::PI))) > g.k.gunhold.rear_deg * v3::DEG
+}
+
+/// Is a man standing (or, behind low cover, crouched) at `p` in Sam's line of fire, forward of his rear arc.
+fn shown(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3, low: bool) -> bool {
+    if !front(g, k, p) {
+        return false;
+    }
+    let gun: V3 = [k.sam[0], GUN_Y, k.sam[2]];
+    if low {
+        open_at(g, gun, p[0], 0.8, p[2]) || open_at(g, gun, p[0], 1.05, p[2])
+    } else {
+        open_at(g, gun, p[0], 1.3, p[2]) || open_at(g, gun, p[0], 1.6, p[2]) || open_at(g, gun, p[0], 0.8, p[2])
+    }
+}
+
+/// The closure `price` returns, its captures read where it runs.
+fn price_at(g: &Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
+    let (cell, w) = (g.col.nav.cell, g.col.nav.w);
+    let near2 = g.k.gunhold.near_m * g.k.gunhold.near_m;
+    let x = (ix + 0.5) * cell;
+    let z = (iz + 0.5) * cell;
+    let dx = x - k.sam[0];
+    let dz = z - k.sam[2];
+    if dx * dx + dz * dz < near2 {
+        return 20.0;
+    }
+    let e = expo(g, k, iz * w + ix);
+    if e == 2.0 {
+        if front(g, k, [x, 0.0, z]) { 8.0 } else { 1.4 }
+    } else if e == 1.0 {
+        1.3
+    } else {
+        1.0
+    }
+}
+
+/// A way to `goal` at that price; its length and the longest unbroken stretch of it across floor Sam's gun covers in front of him.
+fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
+    let start = g.ch[g.gd[gd].ch].pos;
+    let path = crate::scene_collision::nav_grid_find_path(g, start, goal, Some(8000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)))?;
+    if path.is_empty() || dist_xz(path[path.len() - 1], goal) > 0.6 {
+        return None;
+    }
+    let (mut len, mut show, mut cur) = (0.0, 0.0, 0.0);
+    let mut a = start;
+    for &b in &path {
+        let d = dist_xz(a, b);
+        let steps = m::max(1.0, m::ceil(d / 0.4));
+        let mut j = 1.0;
+        while j <= steps {
+            let q: V3 = [a[0] + (b[0] - a[0]) * j / steps, 0.0, a[2] + (b[2] - a[2]) * j / steps];
+            let i = cell_of(g, q);
+            if i >= 0.0 && expo(g, k, i) == 2.0 && front(g, k, q) {
+                cur += d / steps;
+                if cur > show {
+                    show = cur;
+                }
+            } else {
+                cur = 0.0;
+            }
+            j += 1.0;
+        }
+        len += d;
+        a = b;
+    }
+    Some(WayTo { path, len, show })
+}
+
+/// Sets his path: no pathGoal, so a man stuck on this way is planned again at this rule's price.
+fn take(g: &mut crate::game::Game, gd: GuardId, path: &[V3]) {
+    let start = g.ch[g.gd[gd].ch].pos;
+    let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
+    crate::game::guard_set_path(g, gd, threaded);
+    let man = &mut g.gd[gd];
+    man.path_i = 0;
+    man.path_goal = None;
+    man.path_goal_orbit = false;
+    man.repath_t = 0.0;
+    man.stall_ref = None;
+    man.line_side = 0.0;
+}
+
+// ---------------------------------------------------------------- cover
+
+/// `n.blocked[i]` as a condition: past either end of the grid is undefined, so false (a cell off the grid can start the walk: nearestFreePoint's).
+fn blocked_at(g: &Game, i: f64) -> bool {
+    if i < 0.0 {
+        return false;
+    }
+    g.col.nav.blocked.get(i as usize).map_or(false, |&b| b != 0)
+}
+
+/// What the walk out for cover knows of him and of the others: fixed for the walk.
+struct CoverLook {
+    pos: V3,
+    d0: f64,
+    rear: f64,
+    near: f64,
+    round: bool,
+    bad: Option<V3>,
+    mates: Vec<V3>,
+    rivals: Vec<V3>,
+}
+
+/// A floor cell the walk has reached.
+#[derive(Clone, Copy)]
+struct Reached {
+    i: f64,
+    x: f64,
+    z: f64,
+    p: V3,
+    d_s: f64,
+    depth: f64,
+}
+
+/// The nearest floor, by walking, where Sam's gun has no line to him; `edge` = the open cell he came off to get there.
+fn pick_cover(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known, round: bool) -> Option<crate::gunhold::PickCover> {
+    let pos = g.ch[g.gd[gd].ch].pos;
+    let start = walk_starts_at(g, pos)?;
+    let (mates, rivals) = spots_taken(g, gd, s);
+    let d0 = dist_xz(pos, k.sam);
+    let rear = k.facing + m::PI;
+    let near = g.k.gunhold.near_m;
+    let bad = g.m.gunhold.states.get(s).and_then(|r| r.bad); // `st.bad`: nothing below writes the row
+    let look = CoverLook { pos, d0, rear, near, round, bad, mates, rivals };
+    let (best, came) = walk_out_for_cover(g, k, &look, start);
+    if best < 0.0 {
+        return None;
+    }
+    let edge = open_cell_behind(g, k, &came, best);
+    let spot = centre(g, best);
+    let low = expo(g, k, best) == 1.0;
+    Some(PickCover { spot, low, edge })
+}
+
+/// The cell under him; standing on a blocked one, the nearest free point's. None = he is off the grid.
+fn walk_starts_at(g: &Game, pos: V3) -> Option<f64> {
+    let start = cell_of(g, pos);
+    if start < 0.0 {
+        return None;
+    }
+    if !blocked_at(g, start) {
+        return Some(start);
+    }
+    let f = crate::scene_collision::nav_grid_nearest_free_point(g, pos[0], pos[2])?;
+    Some(cell_of(g, f))
+}
+
+/// Where the other men on their feet are or are going; and, of those on the same pair with no spot yet, who might beat him to one.
+fn spots_taken(g: &Game, gd: GuardId, s: GuardsStandoffId) -> (Vec<V3>, Vec<V3>) {
+    let pair = g.tab.guards_standoff[s].pair;
+    let mut mates: Vec<V3> = Vec::new();
+    let mut rivals: Vec<V3> = Vec::new();
+    for &o in &g.guards {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
+            continue;
+        }
+        let of = g.gd[o].standoff;
+        let spot = of.and_then(|os| g.m.gunhold.states.get(os)).and_then(|r| r.spot);
+        if let Some(spot) = spot {
+            mates.push(spot);
+        } else {
+            let at = g.ch[g.gd[o].ch].pos;
+            mates.push(at);
+            if let Some(os) = of {
+                if g.tab.guards_standoff[os].pair == pair {
+                    rivals.push(at);
+                }
+            }
+        }
+    }
+    (mates, rivals)
+}
+
+/// Ring by ring from where he starts, to six rings past the first fit cell: the lowest score wins, the first on a tie. Returns it (−1 for none) and how each cell was come to.
+fn walk_out_for_cover(g: &Game, k: &mut Known, look: &CoverLook, start: f64) -> (f64, JsMap<crate::Num, f64>) {
+    let w = g.col.nav.w;
+    let mut came: JsMap<crate::Num, f64> = JsMap::new();
+    came.set(crate::Num(start), -1.0);
+    let mut q: Vec<f64> = vec![start];
+    let (mut best, mut best_score, mut first_d) = (-1.0, m::INF, -1.0);
+    let max_d = m::ceil(g.k.gunhold.cover_m / g.col.nav.cell);
+    let mut depth = 1.0;
+    while depth <= max_d && !q.is_empty() {
+        let mut nx: Vec<f64> = Vec::new();
+        for &cur in &q {
+            let from = (js::rem(cur, w), js::to_i32(cur / w) as f64);
+            for dz in [-1.0, 0.0, 1.0] {
+                for dx in [-1.0, 0.0, 1.0] {
+                    let Some((i, x, z)) = step_to(g, &came, from, (dx, dz)) else { continue };
+                    let p = centre(g, i);
+                    let d_s = dist_xz(p, k.sam);
+                    if d_s < look.near && d_s < look.d0 {
+                        continue;
+                    }
+                    came.set(crate::Num(i), cur);
+                    nx.push(i);
+                    let Some(score) = cover_score(g, k, look, Reached { i, x, z, p, d_s, depth }) else { continue };
+                    if score < best_score {
+                        best_score = score;
+                        best = i;
+                    }
+                    if first_d < 0.0 {
+                        first_d = depth;
+                    }
+                }
+            }
+        }
+        q = nx;
+        if first_d >= 0.0 && depth - first_d >= 6.0 {
+            break;
+        }
+        depth += 1.0;
+    }
+    (best, came)
+}
+
+/// The cell one step `(dx, dz)` from `(cx, cz)`, by index and place, if it is new and he can walk there: no corner cut past something blocked.
+fn step_to(g: &Game, came: &JsMap<crate::Num, f64>, (cx, cz): (f64, f64), (dx, dz): (f64, f64)) -> Option<(f64, f64, f64)> {
+    if dx == 0.0 && dz == 0.0 {
+        return None;
+    }
+    let (w, h) = (g.col.nav.w, g.col.nav.h);
+    let x = cx + dx;
+    let z = cz + dz;
+    if x < 0.0 || z < 0.0 || x >= w || z >= h {
+        return None;
+    }
+    let i = z * w + x;
+    if blocked_at(g, i) || came.has(crate::Num(i)) {
+        return None;
+    }
+    let diagonal = dx != 0.0 && dz != 0.0;
+    if diagonal && (blocked_at(g, cz * w + x) || blocked_at(g, z * w + cx)) {
+        return None;
+    }
+    Some((i, x, z))
+}
+
+/// What cover here costs him, lower is better: walking, showing, open floor beside it, a rival nearer, and how far it is from Sam's back on a way round. None = this is no cover.
+fn cover_score(g: &Game, k: &mut Known, look: &CoverLook, c: Reached) -> Option<f64> {
+    let Reached { i, x, z, p, d_s, depth } = c;
+    let (w, h, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
+    let e = expo(g, k, i);
+    if e == 2.0 && front(g, k, p) {
+        return None;
+    }
+    if d_s < look.near + 0.5 {
+        return None;
+    }
+    if look.bad.map_or(false, |bad| dist_xz(p, bad) < 0.8) {
+        return None;
+    }
+    if look.mates.iter().any(|&m8| dist_xz(m8, p) < 0.9) {
+        return None;
+    }
+    let mut score = depth * cell + (if e == 1.0 { 1.0 } else { 0.0 }) + (if d_s < look.d0 - 1.5 { 4.0 } else { 0.0 });
+    for (ax, az) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
+        let xx = x + ax;
+        let zz = z + az;
+        if xx < 0.0 || zz < 0.0 || xx >= w || zz >= h {
+            continue;
+        }
+        let j = zz * w + xx;
+        if !blocked_at(g, j) && expo(g, k, j) == 2.0 {
+            let cj = centre(g, j);
+            if front(g, k, cj) {
+                score += 0.6;
+            }
+        }
+    }
+    if e == 2.0 {
+        score += 2.5;
+    }
+    if look.rivals.iter().any(|&r| dist_xz(r, p) + 0.5 < dist_xz(look.pos, p)) {
+        score += 3.0;
+    }
+    if look.round {
+        score += 0.7 * m::abs(v3::wrap_angle(look.rear - m::atan2(p[0] - k.sam[0], p[2] - k.sam[2])));
+    }
+    Some(score)
+}
+
+/// The open cell he comes off to reach the spot, within four steps of the way behind it.
+fn open_cell_behind(g: &Game, k: &mut Known, came: &JsMap<crate::Num, f64>, best: f64) -> Option<V3> {
+    let mut i = came.get(crate::Num(best)).copied().unwrap_or(-1.0);
+    let mut n = 0;
+    while i >= 0.0 && n < 4 {
+        if expo(g, k, i) == 2.0 {
+            return Some(centre(g, i));
+        }
+        i = came.get(crate::Num(i)).copied().unwrap_or(-1.0);
+        n += 1;
+    }
+    None
+}
+
+// ---------------------------------------------------------------- the way round
+
+/// A way to Sam's back that keeps out of his line; three path plans a look at most. Sets his path; `st` is the table's row, by `s`.
+fn plan_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known) -> bool {
+    let rear = k.facing + m::PI;
+    let mut plans = 0;
+    let pos = g.ch[g.gd[gd].ch].pos;
+    let max_run = if !faces_him(g, k, pos) {
+        g.k.gunhold.dash_m
+    } else if k.shot_t >= 0.0 && g.time - k.shot_t < g.k.gunhold.shy_s {
+        g.k.gunhold.show_m * 0.4
+    } else {
+        g.k.gunhold.show_m
+    };
+    let side = g.tab.guards_standoff[s].side;
+    for off in [40.0, 20.0, 60.0, 0.0, -25.0] {
+        for r in [4.2, 3.5, 4.8] {
+            let b = rear - side * off * v3::DEG;
+            let p: V3 = [k.sam[0] + m::sin(b) * r, 0.0, k.sam[2] + m::cos(b) * r];
+            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) {
+                continue;
+            }
+            // a place he can SHOOT from: his gun shoulder, either side of the spot, to Sam's chest
+            let sx = m::cos(b) * 0.22;
+            let sz = -m::sin(b) * 0.22;
+            let to: V3 = [k.sam[0], AIM_Y, k.sam[2]];
+            let mut shut = false;
+            for side_k in [-1.0, 0.0, 1.0] {
+                if crate::scene_collision::shot_blocked(g, [p[0] + sx * side_k, 1.3, p[2] + sz * side_k], to, Some(0.02), None) {
+                    shut = true;
+                    break;
+                }
+            }
+            if shut {
+                continue;
+            }
+            if crate::places::taken(g, gd, p, 1.2) {
+                continue;
+            }
+            plans += 1;
+            if plans > 3 {
+                return false;
+            }
+            let way = match way_to(g, gd, k, p) {
+                Some(way) => way,
+                None => continue,
+            };
+            if way.len > g.k.gunhold.flank_max_m || way.show > max_run {
+                continue;
+            }
+            take(g, gd, &way.path);
+            let (sam, facing) = (v3::copy(k.sam), k.facing);
+            if let Some(row) = g.m.gunhold.states.get_mut(s) {
+                row.goal = Some(p);
+                row.plan_sam = Some(sam);
+                row.plan_facing = facing;
+            }
+            return true;
+        }
+    }
+    false
+}
+
+/// Does this man go round, or stay behind his cover in front: a lone man goes; of two or more the man most in front of Sam stays.
+fn goes_round(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known) -> bool {
+    let pair = g.tab.guards_standoff[s].pair;
+    let men = men_on(g, pair);
+    if men.len() <= 1 {
+        return true;
+    }
+    if k.talker.map_or(true, |t| !men.contains(&t)) {
+        let mut b = m::INF;
+        k.talker = None;
+        for &man in &men {
+            let at = g.ch[g.gd[man].ch].pos;
+            let a = m::abs(v3::wrap_angle(m::atan2(at[0] - k.sam[0], at[2] - k.sam[2]) - k.facing));
+            if a < b {
+                b = a;
+                k.talker = Some(man);
+            }
+        }
+    }
+    k.talker != Some(gd)
+}
+
+// ---------------------------------------------------------------- the lines
+
+/// The pool a man draws one of the four moments from: a defender's own, else the staff's.
+fn gun_hold_pool(g: &crate::game::Game, gd: GuardId, kind: crate::gunhold::BarkKind) -> Vec<String> {
+    let own = if crate::teams::defender_words(g, gd) { gunhold_defender_lines().get(String::from(kind.as_str())).cloned() } else { None };
+    match own {
+        Some(own) if !own.is_empty() => own,
+        _ => {
+            let t = lines();
+            match kind {
+                crate::gunhold::BarkKind::Gun => t.gun,
+                crate::gunhold::BarkKind::Shot => t.shot,
+                crate::gunhold::BarkKind::Round => t.round,
+                crate::gunhold::BarkKind::Gone => t.gone,
+            }
+        }
+    }
+}
+
+/// One line of a moment, at most one every second and a half for the side; the one roll of the die is drawn either table.
+fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, kind: crate::gunhold::BarkKind, radio: Option<bool>) -> bool {
+    let radio = radio.unwrap_or(false);
+    if g.time - k.said_t < 1.5 {
+        return false;
+    }
+    k.said_t = g.time;
+    let pool = gun_hold_pool(g, gd, kind);
+    let n = pool.len() as f64;
+    let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];
+    let said = now_of(was);
+    crate::game::game_say(g, gd, &said, Some(radio), None);
+    true
+}
+
+// ---------------------------------------------------------------- his feet
+
+/// What his feet share this frame.
+#[derive(Clone, Copy)]
+struct Feet {
+    gd: GuardId,
+    s: GuardsStandoffId,
+    c: CharId,
+    now: f64,
+    look: V3,
+    dt: f64,
+    /// how low a man under fire crouches (0 when he is not flinching)
+    low: f64,
+    /// what the cell under him shows Sam's gun: `expo`
+    here_e: f64,
+    /// does he go round (rather than stay in front)
+    round: bool,
+}
+
+/// His row of this rule, which he has from his first frame knowing of the pistol: plan_round writes it there too.
+fn st(g: &mut Game, s: GuardsStandoffId) -> &mut St {
+    g.m.gunhold.states.get_mut(s).unwrap()
+}
+
+/// He stops where he is.
+fn stand(g: &mut Game, f: Feet) {
+    g.gd[f.gd].speed = v3::damp(g.gd[f.gd].speed, 0.0, 8.0, f.dt);
+    g.ch[f.c].vel = [0.0, 0.0, 0.0];
+    g.gd[f.gd].stall_ref = None;
+}
+
+/// He stops where he is, and this is his frame.
+fn stands_still(g: &mut Game, f: Feet, crouch: f64, quiet: bool) -> Option<GunHoldFeet> {
+    stand(g, f);
+    out(g, f, 0.0, false, None, crouch, quiet)
+}
+
+/// On a run, eyes and gun on where Sam is while the way keeps him anywhere ahead, else up the way
+fn along_path(g: &Game, f: Feet, k: &Known) -> V3 {
+    let (path_i, len) = (g.gd[f.gd].path_i, g.gd[f.gd].path.len());
+    if path_i >= len {
+        return f.look;
+    }
+    let wp = g.gd[f.gd].path[path_i];
+    let pos = g.ch[f.c].pos;
+    let yaw = m::atan2(wp[0] - pos[0], wp[2] - pos[2]);
+    if g.tab.guards_standoff[f.s].seen_t == f.now && !front(g, k, pos) {
+        return f.look;
+    }
+    if m::abs(v3::wrap_angle(m::atan2(f.look[0] - pos[0], f.look[2] - pos[2]) - yaw)) > 75.0 * v3::DEG {
+        [pos[0] + m::sin(yaw) * 4.0, f.look[1], pos[2] + m::cos(yaw) * 4.0]
+    } else {
+        f.look
+    }
+}
+
+/// What his feet do: not in his eyes this frame, his gun stays on where they were last seen
+fn out(g: &Game, f: Feet, move_: f64, run: bool, lk: Option<V3>, crouch: f64, quiet: bool) -> Option<GunHoldFeet> {
+    let look = lk.or(if g.tab.guards_standoff[f.s].seen_t == f.now { None } else { Some(f.look) });
+    Some(GunHoldFeet { move_, run, look, crouch, quiet })
+}
+
+/// When his next look is due.
+fn next_peek(g: &mut Game, who: crate::dice::Who, now: f64) -> f64 {
+    let every = g.k.gunhold.peek_every;
+    now + every * (0.6 + 0.8 * crate::dice::draw_for(g, "gunhold::next_peek#1", who))
+}
+
+/// This man's feet while the pistol is known in the hold; None = the ring as ever.
+pub fn gun_hold_feet(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::guards::Pair, s: GuardsStandoffId, fs: crate::gunhold::GunHoldFeetFs) -> Option<crate::gunhold::GunHoldFeet> {
+    let key = p.key;
+    let mut k = lend_known(g, key)?;
+    let r = feet(g, gd, dt, &p, s, fs, &mut k);
+    return_known(g, key, k);
+    r
+}
+
+/// His feet with the hold's Known in hand: he learns of the pistol, is dealt a part, and that part moves him; a part left falls through to the next in the same frame.
+fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsStandoffId, fs: GunHoldFeetFs, k: &mut Known) -> Option<GunHoldFeet> {
+    let c = g.gd[gd].ch;
+    if let Some(shot_t) = g.pl[g.player].holding().map(|h| h.shot_t) {
+        let sensed = g.tab.guards_standoff[s].seen_t == g.time || dist_xz(g.ch[c].pos, p.sam) < HEAR_M;
+        learn_shot(g, k, shot_t, sensed);
+    }
+    if k.gun_t < 0.0 {
+        return None;
+    }
+    let now = g.time;
+    if !g.m.gunhold.states.has(s) {
+        deal_him_in(g, gd, s, k);
+    }
+    if k.shot_t >= 0.0 && !k.said_shot && g.tab.guards_standoff[s].seen_t == now && bark(g, gd, k, BarkKind::Shot, None) {
+        k.said_shot = true;
+    }
+    let look = [k.sam[0], p.aim[1], k.sam[2]];
+    let low = if crate::suppression::flinching(g, gd) { g.k.suppression.displace_crouch } else { 0.0 };
+    let at = g.ch[c].pos;
+    let i = cell_of(g, at);
+    let here_e = if i >= 0.0 { expo(g, k, i) } else { 0.0 };
+    // the man who stays is the other half of the pincer: when Sam comes about, HIS back is to this one
+    let round = goes_round(g, gd, s, k) || !front(g, k, at);
+    let f = Feet { gd, s, c, now, look, dt, low, here_e, round };
+
+    if on_his_line(g, f, fs, k) {
+        return stands_still(g, f, 0.0, false);
+    }
+    if st(g, s).phase == Phase::React {
+        if now < st(g, s).go_t {
+            return stands_still(g, f, 0.0, false);
+        }
+        st(g, s).phase = Phase::Plan;
+    }
+    if st(g, s).phase == Phase::Plan && !chooses_where_to_be(g, f, k) {
+        return None;
+    }
+    match st(g, s).phase {
+        Phase::Run => runs_for_cover(g, f, k),
+        Phase::Cover => keeps_cover(g, f, k),
+        Phase::Peek => peeks(g, f, k),
+        Phase::Back => comes_back(g, f),
+        _ => flanks(g, f, k),
+    }
+}
+
+/// His first frame knowing of the pistol: he reacts for a moment off the ring, and says what he knows if the side has not yet.
+fn deal_him_in(g: &mut Game, gd: GuardId, s: GuardsStandoffId, k: &mut Known) {
+    let r0 = g.k.gunhold.react[0];
+    let r1 = g.k.gunhold.react[1];
+    let go_t = g.time + r0 + crate::dice::draw_of(g, "gunhold::feet#1", gd) * (r1 - r0);
+    g.m.gunhold.states.set(
+        s,
+        St {
+            phase: Phase::React,
+            go_t,
+            spot: None,
+            low: false,
+            edge: None,
+            goal: None,
+            plan_sam: None,
+            plan_facing: 0.0,
+            plan_t: 0.0,
+            peek_t: 0.0,
+            peek_end: -1.0,
+            peek_from: 0.0,
+            check_t: 0.0,
+            run_t: 0.0,
+            line_t: -1.0,
+            shown_t: 0.0,
+            retry_t: 0.0,
+            cover_bad: false,
+            bad: None,
+            said_round: false,
+        },
+    );
+    g.tab.guards_standoff[s].orbit_goal = None;
+    g.gd[gd].drop_path();
+    g.gd[gd].stall_ref = None;
+    if !k.said_gun && bark(g, gd, k, if k.shot_t >= 0.0 { BarkKind::Shot } else { BarkKind::Gun }, None) {
+        k.said_gun = true;
+        if k.shot_t >= 0.0 {
+            k.said_shot = true;
+        }
+    }
+}
+
+/// His line at Sam's back: he plants on it (the caller's round, if it is free) while it is sound; off it he plans again.
+fn on_his_line(g: &mut Game, f: Feet, fs: GunHoldFeetFs, k: &mut Known) -> bool {
+    let at = g.ch[f.c].pos;
+    let line_ok = fs.ok && !shown(g, k, at, false);
+    let row = *st(g, f.s);
+    let sound = line_ok && (row.phase != Phase::Flank || row.goal.map_or(true, |goal| dist_xz(at, goal) < 0.8) || fs.rear < (g.k.gunhold.rear_deg - 20.0) * v3::DEG);
+    let keeps = row.phase == Phase::Line && (line_ok || (f.now - row.line_t < 0.4 && !faces_him(g, k, at)));
+    if !sound && !keeps {
+        if row.phase == Phase::Line {
+            let row = st(g, f.s);
+            row.phase = Phase::Plan;
+            row.plan_t = 0.0;
+        }
+        return false;
+    }
+    if line_ok {
+        st(g, f.s).line_t = f.now;
+    }
+    if row.phase != Phase::Line {
+        st(g, f.s).phase = Phase::Line;
+        g.gd[f.gd].drop_path();
+    }
+    true
+}
+
+/// Out of Sam's line he stays; in it he goes down behind something low there, else runs for cover. False = no cover in reach: the ring as ever until the next look for some.
+fn chooses_where_to_be(g: &mut Game, f: Feet, k: &mut Known) -> bool {
+    if f.now < st(g, f.s).retry_t {
+        return false;
+    }
+    let at = g.ch[f.c].pos;
+    let open = shown(g, k, at, false);
+    if open && f.here_e == 1.0 && !shown(g, k, at, true) {
+        settles_here(g, f, at, true);
+        return true;
+    }
+    if !open {
+        settles_here(g, f, at, false);
+        return true;
+    }
+    let Some(cv) = pick_cover(g, f.gd, f.s, k, f.round) else {
+        st(g, f.s).retry_t = f.now + 1.5;
+        return false;
+    };
+    let row = st(g, f.s);
+    row.spot = Some(cv.spot);
+    row.low = cv.low;
+    row.edge = cv.edge;
+    row.goal = None;
+    let way = crate::scene_collision::nav_grid_find_path(g, at, cv.spot, Some(6000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)));
+    let way = way.unwrap_or_else(|| vec![v3::copy(cv.spot)]);
+    take(g, f.gd, &way);
+    let row = st(g, f.s);
+    row.phase = Phase::Run;
+    row.run_t = f.now;
+    true
+}
+
+/// Where he stands is his cover, crouched behind something low if `low`.
+fn settles_here(g: &mut Game, f: Feet, at: V3, low: bool) {
+    let peek_t = next_peek(g, crate::dice::Who::Man(f.gd), f.now);
+    let check_t = if low { f.now + 0.5 } else { 0.0 };
+    let row = st(g, f.s);
+    row.spot = Some(v3::copy(at));
+    row.low = low;
+    row.edge = None;
+    row.phase = Phase::Cover;
+    row.peek_t = peek_t;
+    row.check_t = check_t;
+    g.gd[f.gd].drop_path();
+}
+
+/// The run to his spot: there he takes cover; stuck, the spot is bad and he plans again.
+fn runs_for_cover(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
+    if st(g, f.s).spot.is_none() {
+        st(g, f.s).phase = Phase::Plan;
+        return stands_still(g, f, f.low, false);
+    }
+    let scramble = scrambles_off(g, f);
+    let chase = g.tune.guard_chase;
+    let arrived = if scramble { crate::guards::step_along_path(g, f.gd, f.dt, chase) } else { crate::guards::follow_path(g, f.gd, f.dt, chase) };
+    if arrived {
+        let peek_t = next_peek(g, crate::dice::Who::Man(f.gd), f.now);
+        let row = st(g, f.s);
+        row.phase = Phase::Cover;
+        row.peek_t = peek_t;
+        row.check_t = f.now + 0.4;
+        row.plan_t = m::max(row.plan_t, f.now + 0.3);
+        g.gd[f.gd].drop_path();
+    } else if crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.5) {
+        let row = st(g, f.s);
+        row.bad = row.spot;
+        row.spot = None;
+        row.phase = Phase::Plan;
+        g.gd[f.gd].drop_path();
+        g.gd[f.gd].stall_ref = None;
+    }
+    let speed = g.gd[f.gd].speed;
+    let look = along_path(g, f, k);
+    out(g, f, speed, true, Some(look), if f.here_e == 1.0 { 1.0 } else { m::max(f.low, 0.35) }, true)
+}
+
+/// The first strides: he sets off at once the way he has to go (backwards, sideways) and turns into it as he runs.
+fn scrambles_off(g: &mut Game, f: Feet) -> bool {
+    if f.now - st(g, f.s).run_t >= 1.2 || g.gd[f.gd].path_i >= g.gd[f.gd].path.len() {
+        return false;
+    }
+    let wp = g.gd[f.gd].path[g.gd[f.gd].path_i];
+    let at = g.ch[f.c].pos;
+    let yaw_to = m::atan2(wp[0] - at[0], wp[2] - at[2]);
+    if m::abs(v3::wrap_angle(yaw_to - g.ch[f.c].body_yaw)) <= 50.0 * v3::DEG {
+        return false;
+    }
+    g.ch[f.c].body_yaw = v3::approach_angle(g.ch[f.c].body_yaw, yaw_to, 5.5 * f.dt);
+    true
+}
+
+/// Behind cover: he checks it still hides him, sets off round if it is his frame to plan, and takes a look when nobody has had eyes on them for a while.
+fn keeps_cover(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
+    last_step_onto_spot(g, f);
+    if cover_found_out(g, f, k) {
+        let crouch = if st(g, f.s).low { 1.0 } else { 0.0 };
+        return out(g, f, 0.0, false, None, crouch, false);
+    }
+    if sets_off_round(g, f, k) {
+        let look = along_path(g, f, k);
+        return out(g, f, 0.0, true, Some(look), 0.0, true);
+    }
+    if f.now >= st(g, f.s).peek_t && f.now - k.fix_t > g.k.gunhold.peek_every * 0.5 && g.tab.guards_standoff[f.s].seen_t != f.now {
+        starts_a_look(g, f);
+    }
+    let at = g.ch[f.c].pos;
+    let down = st(g, f.s).low && front(g, k, at);
+    out(g, f, 0.0, false, None, if down { 1.0 } else { 0.0 }, false)
+}
+
+/// The walk here stops within a quarter metre of the spot, on the edge of its cell: the last step onto it, else he stands.
+fn last_step_onto_spot(g: &mut Game, f: Feet) {
+    let Some(spot) = st(g, f.s).spot else { return stand(g, f) };
+    let at = g.ch[f.c].pos;
+    let off = dist_xz(at, spot);
+    if !(off > 0.06 && off < 0.6 && f.dt > 0.0) {
+        return stand(g, f);
+    }
+    let step = m::min(1.0, 1.2 * f.dt / off);
+    g.ch[f.c].vel = [(spot[0] - at[0]) * step / f.dt, 0.0, (spot[2] - at[2]) * step / f.dt];
+    let to = [at[0] + (spot[0] - at[0]) * step, at[1], at[2] + (spot[2] - at[2]) * step];
+    crate::character::pos_replace(g, f.c, to);
+    g.gd[f.gd].speed = 1.2;
+    g.gd[f.gd].stall_ref = None;
+}
+
+/// Twice a second: has Sam walked the pair round his cover (two looks running, a beat apart). True = he has, and the man plans again.
+fn cover_found_out(g: &mut Game, f: Feet, k: &mut Known) -> bool {
+    if f.now < st(g, f.s).check_t {
+        return false;
+    }
+    st(g, f.s).check_t = f.now + 0.5;
+    let at = g.ch[f.c].pos;
+    let st_low = st(g, f.s).low;
+    if !shown(g, k, at, st_low) {
+        st(g, f.s).cover_bad = false;
+        return false;
+    }
+    let row = st(g, f.s);
+    if row.cover_bad {
+        row.cover_bad = false;
+        row.phase = Phase::Plan;
+        row.bad = None;
+        return true;
+    }
+    row.cover_bad = true;
+    row.check_t = f.now + 0.15;
+    false
+}
+
+/// One man's way round a frame, floor-wide: found, he is off and says so; not found, he is cornered.
+fn sets_off_round(g: &mut Game, f: Feet, k: &mut Known) -> bool {
+    if !f.round || f.now < st(g, f.s).plan_t || g.m.gunhold.planned == Some(f.now) {
+        return false;
+    }
+    g.m.gunhold.planned = Some(f.now);
+    let at = g.ch[f.c].pos;
+    let wait = if front(g, k, at) { 2.0 } else { 0.6 };
+    st(g, f.s).plan_t = f.now + wait;
+    if !plan_round(g, f.gd, f.s, k) {
+        g.tab.guards_standoff[f.s].cornered = true;
+        return false;
+    }
+    st(g, f.s).phase = Phase::Flank;
+    g.tab.guards_standoff[f.s].cornered = false;
+    if !st(g, f.s).said_round && bark(g, f.gd, k, BarkKind::Round, Some(true)) {
+        st(g, f.s).said_round = true;
+    }
+    true
+}
+
+/// A look: he steps out to the edge he came off, or from low cover glances over the top where he is.
+fn starts_a_look(g: &mut Game, f: Feet) {
+    let row = st(g, f.s);
+    row.peek_from = f.now;
+    row.peek_end = -1.0;
+    let (st_low, edge) = (row.low, row.edge);
+    match edge {
+        Some(edge) if !st_low => {
+            st(g, f.s).phase = Phase::Peek;
+            take(g, f.gd, &[v3::copy(edge)]);
+        }
+        _ => {
+            let peek_secs = g.k.gunhold.peek_secs;
+            let row = st(g, f.s);
+            row.phase = Phase::Peek;
+            row.peek_end = f.now + peek_secs * (if st_low { 0.6 } else { 1.0 }); // over the top of something low: a glance
+        }
+    }
+}
+
+/// The look: to its edge, a while there, and back; a man under fire breaks it off.
+fn peeks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
+    if st(g, f.s).peek_end < 0.0 {
+        let walk = g.tune.guard_walk;
+        let there = crate::guards::follow_path(g, f.gd, f.dt, walk);
+        if there || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.2) {
+            let peek_secs = g.k.gunhold.peek_secs;
+            st(g, f.s).peek_end = f.now + peek_secs;
+            g.gd[f.gd].drop_path();
+        }
+    } else {
+        stand(g, f);
+    }
+    let rattled = crate::suppression::flinching(g, f.gd);
+    if (st(g, f.s).peek_end >= 0.0 && f.now >= st(g, f.s).peek_end) || rattled {
+        if !rattled && g.tab.guards_standoff[f.s].seen_t < st(g, f.s).peek_from && sees_where_they_were(g, f, k) {
+            // looked, and they are not where they were left: the standoff is lost for everybody
+            k.gone_t = f.now;
+            bark(g, f.gd, k, BarkKind::Gone, Some(true));
+        }
+        ends_the_look(g, f);
+    }
+    let speed = g.gd[f.gd].speed;
+    out(g, f, speed, false, None, 0.0, false)
+}
+
+/// Has he a clear view from his eyes to where the pair was last known.
+fn sees_where_they_were(g: &Game, f: Feet, k: &Known) -> bool {
+    let at = g.ch[f.c].pos;
+    let eye = match g.ch[f.c].bones.get(crate::character::Bone::Head) {
+        Some(&head) => head,
+        None => v3::add(at, [0.0, 1.65, 0.0]),
+    };
+    !crate::scene_collision::segment_blocked(g, eye, [k.sam[0], 1.2, k.sam[2]], None, None, None)
+}
+
+/// The next look is set; he goes back to his spot if he has left it, else he is in cover already.
+fn ends_the_look(g: &mut Game, f: Feet) {
+    let peek_t = next_peek(g, crate::dice::Who::Man(f.gd), f.now);
+    st(g, f.s).peek_t = peek_t;
+    let at = g.ch[f.c].pos;
+    match st(g, f.s).spot {
+        Some(spot) if dist_xz(at, spot) > 0.3 => {
+            st(g, f.s).phase = Phase::Back;
+            take(g, f.gd, &[v3::copy(spot)]);
+        }
+        _ => {
+            let row = st(g, f.s);
+            row.phase = Phase::Cover;
+            row.check_t = f.now + 0.5;
+        }
+    }
+}
+
+/// The walk back to his spot after a look.
+fn comes_back(g: &mut Game, f: Feet) -> Option<GunHoldFeet> {
+    let done = st(g, f.s).spot.is_none() || {
+        let investigate = g.tune.guard_investigate;
+        crate::guards::follow_path(g, f.gd, f.dt, investigate) || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.2)
+    };
+    if done {
+        let row = st(g, f.s);
+        row.phase = Phase::Cover;
+        row.check_t = f.now + 0.5;
+        g.gd[f.gd].drop_path();
+    }
+    let speed = g.gd[f.gd].speed;
+    out(g, f, speed, false, None, f.low, false)
+}
+
+/// The way round: planned again when the pair has moved or come about; a man in the open with the pistol on him breaks for cover.
+fn flanks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
+    let at = g.ch[f.c].pos;
+    let here = shown(g, k, at, f.here_e == 1.0);
+    if here && faces_him(g, k, at) {
+        st(g, f.s).shown_t += f.dt;
+    } else {
+        let row = st(g, f.s);
+        row.shown_t = m::max(0.0, row.shown_t - f.dt);
+    }
+    if gives_up_the_way(g, f, k) {
+        return stands_still(g, f, f.low, true);
+    }
+    let speed = if here { g.tune.guard_chase } else { g.tune.guard_investigate };
+    let arrived = crate::guards::follow_path(g, f.gd, f.dt, speed);
+    if arrived || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 2.5) {
+        let row = st(g, f.s);
+        row.phase = Phase::Plan;
+        row.plan_t = f.now + 0.5;
+        row.goal = None;
+        g.gd[f.gd].drop_path();
+        g.gd[f.gd].stall_ref = None;
+    }
+    let speed = g.gd[f.gd].speed;
+    let look = along_path(g, f, k);
+    out(g, f, speed, true, Some(look), if f.here_e == 1.0 { 1.0 } else { m::max(f.low, if here { 0.35 } else { 0.0 }) }, true)
+}
+
+/// Caught in the open, or his way gone stale with no new one to be had: he drops it and plans again.
+fn gives_up_the_way(g: &mut Game, f: Feet, k: &mut Known) -> bool {
+    let stale = match st(g, f.s).plan_sam {
+        Some(plan_sam) => dist_xz(plan_sam, k.sam) > 1.2 || m::abs(v3::wrap_angle(k.facing - st(g, f.s).plan_facing)) > 40.0 * v3::DEG,
+        None => false,
+    };
+    if !(st(g, f.s).shown_t > 0.3 || (stale && f.now >= st(g, f.s).plan_t && g.m.gunhold.planned != Some(f.now))) {
+        return false;
+    }
+    g.m.gunhold.planned = Some(f.now);
+    let row = st(g, f.s);
+    let caught = row.shown_t > 0.3;
+    row.shown_t = 0.0;
+    row.plan_t = f.now + 1.0;
+    row.goal = None;
+    if !caught && plan_round(g, f.gd, f.s, k) {
+        return false;
+    }
+    let row = st(g, f.s);
+    row.phase = Phase::Plan;
+    row.bad = None;
+    g.gd[f.gd].drop_path();
+    true
+}
+
+/// QA and the standoff's muzzle: this man's part, by name.
+pub fn gun_hold_phase(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunhold::Phase> {
+    let (_, s) = part_of(g, gd)?;
+    g.m.gunhold.states.get(s).map(|st| st.phase)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // the TypeScript's own bits: bun, EXACT.on, Math.hypot(a[0] - b[0], a[2] - b[2])
+    #[test]
+    fn flat_matches_the_typescript() {
+        let d = dist_xz([1.25, 9.0, -3.5], [4.75, -2.0, 7.125]);
+        assert_eq!(d.to_bits(), FLAT_BITS);
+    }
+
+    #[test]
+    fn a_line_as_it_is_said_now() {
+        assert_eq!(now_of("going round him — keep him talking"), "going around him — keep him talking");
+        assert_eq!(now_of("he's moved — nobody where we left them!"), "he's moved — they're not where we left them!");
+        // a line the guide did not reword stands as it was
+        assert_eq!(now_of("he's armed — cover, get to cover!"), "he's armed — cover, get to cover!");
+    }
+
+    #[test]
+    fn every_reworded_line_is_a_line_of_a_table() {
+        let t = lines();
+        let staff: Vec<String> = [t.gun, t.shot, t.round, t.gone].concat();
+        let own: Vec<String> = gunhold_defender_lines().values().flatten().cloned().collect();
+        for from in gunhold_now().keys() {
+            assert!(staff.contains(&from) || own.contains(&from), "{}", from);
+        }
+    }
+
+    #[test]
+    fn a_new_stats_row_has_no_free_round_yet() {
+        assert_eq!(crate::gunhold::GunholdMod::blank().stats_of.unwrap().free_t, -1.0);
+    }
+
+    const FLAT_BITS: u64 = 0x40265f8d95065bd3;
+}

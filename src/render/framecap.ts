@@ -1,4 +1,4 @@
-// FRAME CAPTURE AND THE RENDERER'S TRACE (docs/agents/render.md, "A CAPTURE IS EVERY TARGET OF A FEW FRAMES").
+// FRAME CAPTURE AND THE RENDERER'S TRACE (docs/agents/render.md, "To measure").
 //
 // Two things a picture fault needs and a screenshot does not hold:
 //
@@ -24,7 +24,7 @@
 // when it does not (the trace is a few numbers a frame). Nothing here is read by the game.
 
 /** bytes a texel of the formats a target here may have (a format not listed is named in `skipped`) */
-/** THE PAGE'S SWITCH (`?framecap=0`, main.ts). Down = the render targets are made without COPY_SRC, as they were before a capture could read them, no texture
+/** THE PAGE'S SWITCH (`?framecap=0`, host/drawpage.ts). Down = the render targets are made without COPY_SRC, as they were before a capture could read them, no texture
  *  is watched and F6 does nothing. It is up by default because the usage is a property of a texture from the moment it is made: the key cannot ask for it
  *  later. Read where the targets are made (passes.ts RT, gbuffer.ts), so it is lowered before the Engine is built. */
 export const FRAMECAP = { on: true };

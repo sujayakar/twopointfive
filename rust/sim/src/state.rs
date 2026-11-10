@@ -1,10 +1,10 @@
 //! THE GAME'S STATE IN THE MODULE — everything of a game that lives in this memory from one call to the next is ONE BLOCK of bytes a game, and it is here.
 //!
 //! WHY ONE BLOCK. State of the game has to be taken and put back (a rollback, a save kept in memory), put into another game, folded into the state's word and
-//! compared (src/game/rollback.ts), and one day sent. A block is all of those with no line a system: the host copies its bytes. So:
+//! compared, and one day sent. A block is all of those with no line a system: the host copies its bytes. So:
 //!   · a family of the update that keeps state here adds ONE FIELD to `State` (a struct of flat, fixed-size columns) and its row in `PARTS`. Nothing else in
-//!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY the host proves (the box world), and
-//!     tools/sim/build.ts is red on a `static mut` it has no row for (STATICS there).
+//!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY made again from the game, and
+//!     tools/qa/rust-rules-check.ts is red on a `static mut` it has no row for (STATICS there).
 //!   · NO ADDRESS IN A BLOCK, ONLY INDICES. A block is the same bytes in whichever slot it stands, in the host's own memory while another game has the slot,
 //!     in a file, on another machine. A pointer kept in one is wrong the moment it moves.
 //!   · NO PADDING THE COMPILER CHOSE. Every byte of a block belongs to a named field (a `spare` where the alignment wants one), so the bytes are the state
@@ -17,13 +17,11 @@
 //! WHO HOLDS A SLOT is the host's business (src/sim/state.ts SimState: a game's block is bound to a slot here, or parked in the host's memory when more than
 //! `GAMES` games are alive at once). A call that reads or writes state names its slot, `g`.
 use crate::bricks::Smoke;
-use crate::dice::Dice;
 use crate::poses::Poses;
-use crate::doors::Doors;
-use crate::falls::Falls;
-use crate::props::Props;
-use crate::items::Items;
-use crate::slabs::Slabs;
+use crate::men::Men;
+use crate::lights::Lights;
+use crate::panes::Panes;
+use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -34,10 +32,7 @@ pub const GAMES: usize = 4;
 pub struct Head {
     /// the word of the layout this block was written under (`LAYOUT`): the host writes it into a new block
     pub layout: u32,
-    /// WHICH SYSTEMS' STATE IS AT HOME HERE, a bit a system (the host's table, src/sim/state.ts): a system whose bit is down keeps its state in the
-    /// TypeScript objects, as it did before it moved, and the part it would use here is zeros
-    pub homes: u32,
-    pub spare: [u32; 2],
+    pub spare: [u32; 3],
 }
 const _: () = assert!(size_of::<Head>() == 16);
 
@@ -45,14 +40,12 @@ const _: () = assert!(size_of::<Head>() == 16);
 #[repr(C, align(16))]
 pub struct State {
     pub head: Head,
-    pub dice: Dice,
-    pub doors: Doors,
-    pub falls: Falls,
-    pub props: Props,
-    pub slabs: Slabs,
-    pub items: Items,
+    pub men: Men,
+    pub lights: Lights,
+    pub weather: Weather,
     pub smoke: Smoke,
     pub poses: Poses,
+    pub panes: Panes,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -65,17 +58,15 @@ pub struct Part {
 }
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
 /// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
-/// paid for by every part that stands after it. Parts of a fixed length first, then the pools, the one sized largest LAST.
-pub const PARTS: [Part; 9] = [
+/// paid for by every part that stands after it. Parts of a fixed length first, then the pools: every game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all (a last pool with nothing in it takes no room, src/sim/state.ts `span`).
+pub const PARTS: [Part; 7] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, falls), len: size_of::<Falls>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, props), len: size_of::<Props>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, slabs), len: size_of::<Slabs>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, items), len: size_of::<Items>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
+    Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
+    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },   // (last: a game with no pane touched parks no room of it, and no part before it moved)
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();
@@ -90,6 +81,8 @@ const _: () = {
         i += 1;
     }
     assert!(at == LEN);
+    // (a man's columns are whole vectors from a 16-byte boundary: men.rs)
+    assert!(offset_of!(State, men) % 16 == 0);
     // (a pose starts on a 16-byte boundary: the block does, the pool's head is 16 bytes, and a pose is whole vectors — skeleton.rs `rows`)
     assert!(offset_of!(State, poses) % 16 == 0);
 };
@@ -115,6 +108,32 @@ static mut ALL: [State; GAMES] = unsafe { core::mem::zeroed() };
 #[inline(always)]
 pub fn state(g: usize) -> &'static mut State {
     unsafe { &mut (*core::ptr::addr_of_mut!(ALL))[g] }
+}
+/// the block in slot `g`, TO READ: the same block `state` hands out to write. A caller takes it for a read and lets it go; held across a call
+/// that writes the same part it is as unsound as two `state`s of one slot held at once already are (one thread, and nothing checks either).
+#[inline(always)]
+pub fn state_read(g: usize) -> &'static State {
+    unsafe { &(*core::ptr::addr_of!(ALL))[g] }
+}
+/// how many times each slot's block was written whole (`put`)
+static mut PUTS: [u32; GAMES] = [0; GAMES];
+/// THE ONE WAY A BLOCK IS WRITTEN WHOLE: a new game's (no bytes: zeros under the layout's word), one put back, one moved here. Tables made from a block and
+/// kept beside it (bricks.rs, air.rs) go by `stamp`, so none is ever read of a block that is not the one it was made from.
+pub fn put(g: usize, bytes: &[u8]) {
+    let n = if bytes.len() < LEN { bytes.len() } else { LEN };
+    unsafe {
+        let at = addr(g) as *mut u8;
+        core::ptr::write_bytes(at.add(n), 0, LEN - n);
+        core::ptr::copy_nonoverlapping(bytes.as_ptr(), at, n);
+        (*core::ptr::addr_of_mut!(PUTS))[g] = (*core::ptr::addr_of!(PUTS))[g].wrapping_add(1);
+    }
+    if n == 0 {
+        state(g).head.layout = LAYOUT;
+    }
+}
+/// which writing of slot `g`'s block this is: no two alike, and none a number a host deals (those count up from 1)
+pub fn stamp(g: usize) -> f64 {
+    -1.0 - unsafe { (*core::ptr::addr_of!(PUTS))[g] } as f64
 }
 /// where slot `g`'s block is (a byte address in the module's memory)
 pub fn addr(g: usize) -> usize {

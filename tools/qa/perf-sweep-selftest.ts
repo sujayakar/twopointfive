@@ -119,6 +119,16 @@ check(readSweeps({ frames: frames.slice(0, 50), events: [] }).length === 0 && sw
   check(!!cut.union && Math.abs(Math.abs(cut.union.mean) - 2) < 0.05, `a slow row read by its own settle: the whole 2 ms (${cut.union?.mean.toFixed(2)})`);
   check(!!plain.union && Math.abs(plain.union.mean) < 1.2, `the same frames cut by the take's 100 ms would have read a part of it (${plain.union?.mean.toFixed(2)}): the segment's own settle is what the report goes by`);
 }
+{ // A ROW WHOSE COST IS IN NO PASS'S STAMP (its begin line says `by: 'frame'`, ui/perfsweep.ts readBy): the GPU answers late, the frame is 8 ms longer and the
+  // passes' union does not move. Judged by the union it is 'inside the noise'; judged by the frame it is the 8 ms. The made-up take's row 'c' (does nothing) is given that.
+  const late = (by: boolean) => { const X = take(ROUNDS, shuffled).D, F = X.frames.map(f => ({ ...f })), E = X.events.map(e => ({ ...e }));
+    for (const e of E) { const o = JSON.parse(e.text); if (o.op === 'begin' && by) { o.rows.find((r: any) => r.id === 'c').by = 'frame'; e.text = JSON.stringify(o); }
+      if (o.op === 'seg' && o.id === 'c') for (let f = e.frame; f < e.frame + SETTLE_F + MEASURE_F; f++) { F[f].dt += 8; F[f].fps = 1000 / F[f].dt; } }
+    return readSweeps({ frames: F, events: E })[0].rows.find(r => r.id === 'c')!; };
+  const byUnion = late(false), byFrame = late(true);
+  check(byUnion.inNoise && Math.abs(byUnion.median) < 0.3, `a row that makes the frame 8 ms longer with no pass moved reads as nothing when judged by the union (median ${byUnion.median.toFixed(2)}, in the noise ${byUnion.inNoise})`);
+  check(!byFrame.inNoise && Math.abs(byFrame.median + 8) < 0.5 && /^\[by frame ms\] /.test(byFrame.label) && byFrame.per.every(v => Math.abs(v + 8) < 1), `the same take with the row marked: judged by the frame's length, every round (median ${byFrame.median.toFixed(2)}, '${byFrame.label}')`);
+}
 if (process.argv.includes('--print')) console.log(sweepText(D).join('\n'), '\n\n' + sweepMarkdown(D).join('\n'));
 console.log(red ? `=== perf-sweep-selftest: ${red} FAILED ===` : '=== perf-sweep-selftest: ALL PASS ===');
 process.exit(red ? 1 : 0);

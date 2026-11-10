@@ -2,7 +2,7 @@
 // WAY IN. A district clinic the size of a house: three small rooms in a row off ONE lit corridor, and at the corridor's end a duty room whose men look down its
 // whole length through a glass hatch. Every held room's door opens off that corridor, so every stack on a door stands lit in the post's lane. The rooms share
 // thin partitions and the building's north wall is blank and stands on a dark yard: the squad is issued wall charges for the run (scenarios.roomClear.wallCharges,
-// game/issue.ts) and makes its own doors — the outer wall into the ward, then partition by partition down the row, into the duty room from its side, behind the
+// rust/game_rules/src/outfit/issue.rs) and makes its own doors — the outer wall into the ward, then partition by partition down the row, into the duty room from its side, behind the
 // guns that are on the corridor.
 //   ward        1 man. Cots down the west wall, the nurse's table. The north wall (outside: the dark yard) is the first hole.
 //   exam room   3 men, lit: the couch, the doctor's desk, a screen on its feet. Shares a partition with the ward and with the store.
@@ -11,7 +11,7 @@
 //               fire exit on the east side is steel, its lock on the INSIDE face: from the duty room it wants the key, from the east side it opens to a hand
 //               (measured: a door charge is refused on steel, and the squad at the second start shoves it and goes in behind the hatch guns).
 //   corridor    18 × 3.8 m, lit end to end, the front door off the porch at its west end: three room doors on its north side, the post's door and hatch across its east end.
-// Built ONLY from the old demo's kit (scene/levelKit.ts). The building stands inside the rectangle the office's building stood in (x 4‥36, z 4‥24), so the
+// Built ONLY from the old demo's kit (lib/levelKit.ts). The building stands inside the rectangle the office's building stood in (x 4‥36, z 4‥24), so the
 // constants that still assume that footprint (weather's INTERIOR) treat it as indoors; what is underfoot is the file's own `surfaces` block (the end of build()).
 // Plan, +x east, +z south, metres:
 //
@@ -25,19 +25,26 @@
 //    porch     CORRIDOR, lit: the post's lane              g   |      g = the hatch (glass), dP = the post's door
 //   z=19   +---WWW----------WWW------------------+dP-----------+
 //               the south lot: a street lamp on the porch, a parked car
+//
+// THE SKIN, in the default look (src/scene/look.ts): the floor box for box in other clothes. tools/levels/gwotSkin.ts says what may change (paint and finish,
+// decals, the paint of a prop) and checks that nothing a round, a charge or a blast reads did.
+// ITS OWN PLACE: a district clinic — cement render outside, whitewash in, bare slab underfoot. What it alone has: THE QUEUE. A dashed line in the clinic's teal
+// runs the length of the corridor from the porch to a 'wait here' box under the duty room's hatch (the lane the hatch gun looks down, read off the ground), with
+// a standing square in front of each room's door, and a teal cross on the porch. No accent paint on a wall.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { Level } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import * as K from '../../src/scene/levelKit';
-import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
+import type { Level } from './lib/level';
+import type { KitViewData, LevelScenarios, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import * as K from './lib/levelKit';
+import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { KERB_GREY } from '../../src/scene/stuff';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { lookMarks } from './lookMarks';
 
-export const NAME = 'mousehole';
-export const NOTES = 'The clinic: the level of the mission Mousehole. Three rooms and a duty room off one lit corridor the duty room covers; blank outer wall and thin partitions for wall charges. Kit pieces only. Regenerate: bun run tools/levels/export.ts mousehole';
+const PLAIN_NOTES = 'The clinic: the level of the mission Mousehole. Three rooms and a duty room off one lit corridor the duty room covers; blank outer wall and thin partitions for wall charges. Kit pieces only. Regenerate: bun run tools/levels/export.ts mousehole';
 
-/** THE CLINIC'S OWN PAINTS, the ones the kit's palette has no name for. Named here so that the look's second file (mousehole-gwot.ts) says what each is made of
+/** THE CLINIC'S OWN PAINTS, the ones the kit's palette has no name for. Named here so that the skin below says what each is made of
  *  by its name and not by a colour typed twice. */
 export const MOUSEHOLE_PAINT = {
   sheet: [0.36, 0.4, 0.38] as Vec3,        // the exam room's pale green floor sheet
@@ -60,7 +67,7 @@ export const MOUSEHOLE_START: Vec3 = [12.0, 0, 3.4];
 
 /** THE ROOM CLEAR on this level. Nine men: ward 1, exam room 3, store 2, duty room 3, each room a section of its own that stays home. The room men stand
  *  across their rooms from the doors they fear, 2.7 m off the blank north wall (past the 2 m a wall charge knocks a man down at). `wallCharges`: what the
- *  squad is issued for the run whatever its cards carry (game/issue.ts) — four walls on the route and one spare.
+ *  squad is issued for the run whatever its cards carry (rust/game_rules/src/outfit/issue.rs) — four walls on the route and one spare.
  *  THE MEN ARE PLACED BY HAND: the room clear's own placement (seed 0, first staging) stands each room's first `garrison` marks IN FILE ORDER, so the order of
  *  each `marks` list below is the placement — moving a mark up or down the list changes who stands.
  *  THE PROBLEM IN ONE SENTENCE: a gun behind a hatch owns the lit corridor every door opens on, and the room he sits in is deeper than a flash reaches.
@@ -71,7 +78,7 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
   name: 'clinic',
   maxMen: 9,
   wallCharges: 5,
-  // each room is its own section and stays in it: when the first room is hit the rest shut, wedge and cover their corridor doors (game/enemysquads.ts)
+  // each room is its own section and stays in it: when the first room is hit the rest shut, wedge and cover their corridor doors (rust/game_rules/src/pursuit/enemysquads)
   squads: [
     { id: 'ward', name: 'Ward', rooms: ['ward'], barricade: ['ward'], mayLeave: false },
     { id: 'exam', name: 'Exam', rooms: ['exam'], barricade: ['exam'], mayLeave: false },
@@ -114,7 +121,7 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
       doors: [{ id: 'post', from: 'corridor' }, { id: 'fire_exit', from: 'east side' }],
       marks: [
         // The hatch (z 15.3‥16.3) gives a man behind the duty desk a line to the three room doors and the floor in front of each. A line is not the eye:
-        // guards.ts cuts every eye off at 16 m, so he notices a man at the exam and store doors and never one at the ward door (17.8 m) or the front door
+        // rust/game_rules/src/people/guards cuts every eye off at 16 m, so he notices a man at the exam and store doors and never one at the ward door (17.8 m) or the front door
         // (20.7 m). The duty room starts at x 27: no mark in it is inside 16 m of either.
         // PLACED (the first three stand): ONE NEAR, ONE DEEP, ONE UNDER THE LAMP. The hatch gun keeps the corridor. The man across from the fire exit stands under
         // the room's one lit panel, where anybody at that door sees him first. The third stands in the dark south end, 8.8 m from the fire exit — past the 8 m a
@@ -130,13 +137,13 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest). The way this level is named for is a WALL: the first way is
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest). The way this level is named for is a WALL: the first way is
  *  a bespoke set — a stretch of the clinic's street wall with the ward behind it, three cots and the cross on the floor. It was anchored on a span of blank wall
  *  (a breach and not a door), and every pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order —
  *  stood idle there: the maintainer, of the hammer on this level, "some demos still don't really do anything". So the set has a SIDE DOOR in that wall
  *  (`mh_side`, the wall cut round it with a lintel over) and the way is anchored on it: the stack stands on the same wall, and the wall charge still opens
  *  the wall beside the door (KIT_VIEW_LOOP.wallAt is measured along the stack's wall). Its boxes name their paint 'look|plain': the first the file's palette
- *  holds, so this one block serves the look file too. The second way was the level's own fire exit, which is STEEL (the hammer, the shotgun, a charge and
+ *  holds, so this one block serves the skin too. The second way was the level's own fire exit, which is STEEL (the hammer, the shotgun, a charge and
  *  the wand are refused by it): it is the same set, as the pass's two ways are one gate. */
 const MOUSEHOLE_KITVIEW: KitViewData = {
   sets: { ward: { ref: [20.5, 17], doors: [{id: 'mh_side', hinge: [20.07, 14], closedDir: 0, width: 0.86, exterior: true}], boxes: [
@@ -198,7 +205,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   const ext = C.concrete;
   K.wallX(k, 7, 8.88, 33.12, EXT, ext);                                               // north: blank, on the dark yard — the first hole
   K.wallX(k, 19, 8.88, 33.12, EXT, ext, [win(11.6, 13.6), win(19.0, 21.0)]);          // south: the corridor's two windows onto the lot. A metre clear of the duty room's door, so the camera's own side of the building does not hide that doorway
-  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (game/cleared.ts), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
+  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (rust/game_rules/src/teammates/cleared), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
   K.wallZ(k, 33, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'fire_exit', 'z', 33, 8.6, { exterior: true, steel: true, locked: true })]);   // east: the duty room's fire exit — steel, locked on its inside face (from the east side it opens to a hand: the second way in)
   K.grp(k, 'walls.interior');
   const iw = C.wall;
@@ -280,10 +287,10 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 6.6, 16.95, 'street_lamp_porch', [1, 0, 0]);                         // on the porch: whoever walks in the front way walks in lit
   K.moon(k);
 
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them
-  // all out with the switch off, and then this is the clinic above, box for box). The three rooms and the duty room are furnished by the level itself; what
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // The three rooms and the duty room are furnished by the level itself; what
   // had nothing was the ground round the building, which from above is most of the picture. So the lived things are the clinic's OUTSIDE, laid with the look's
-  // own kit (src/scene/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
+  // own kit (lib/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
   // sheets in, the side its generator is fuelled on, the lot the patients wait on.
   // Rules kept: nothing solid within 1.1 m of a door's line, nothing on or 0.45 m beside a start or a mark, and NOTHING BY A WALL A CHARGE IS FOR — every
   // outer wall of the clinic takes one, wherever it is asked, and the man who sets it and the four who stand off along it want the ground at its foot: so
@@ -330,7 +337,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // the one mission thread, for whoever plays the level outside a scenario: reach the duty room, pull the radio's drive, leave by the fire exit
     mission: { serverRoom: { ...MOUSEHOLE_ROOMS.post.bounds }, entryDoor: 'post', rack: { index: 1, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 33.6, exfilZ: 9.2 },
   });
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above, rect for rect. `building` is the whole world so the plan is all zones (first match wins): outside every zone is the lot's asphalt.
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
@@ -344,3 +351,60 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   };
   return { level, scenarios: MOUSEHOLE_SCENARIOS, groups: k.groups, surfaces };
 }
+
+// ─────────────────────────────── the skin ───────────────────────────────
+export const NAME = 'mousehole';
+export const MATERIALS = GWOT_MATERIALS;
+export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
+const OWN = MOUSEHOLE_PAINT;
+const R = MOUSEHOLE_ROOMS;
+/** the clinic's teal. The palette has no paint of this hue, so it is a colour of this file's own and only decals wear it; the outside door's paint is this,
+ *  darker: rust/game_rules/src/fittings/doors/paint.rs */
+const TEAL: Vec3 = [0.07, 0.3, 0.29];
+const SKIN: Skin = {
+  // WHAT EACH THING IS MADE OF, where the shared rules had no word for it or a wrong one (the look draws a paint as a material by its palette row, and a paint
+  // with no material is drawn flat). `own`: the clinic's own colours, by the row each wears — the exam room's sheet is the slab the other rooms stand on
+  // (the shared rule read a pale floor as block), the car on the lot and the water tank are painted steel, the kerbs precast concrete (they were army olive). `pick`: a clinic's white things are enamelled
+  // steel or cloth, never moulded plastic
+  own: [[OWN.sheet, 'slab'], [OWN.carDark, 'paintBlue'], [OWN.tank, 'drumBlue'], [OWN.kerb, 'tWall']],
+  pick: c => {
+    const n = c.name;
+    if (c.group === 'ward' && n === 'metal') return 'truckWhite';                     // the cots' frames: white enamel
+    if (n === 'partBlue') return 'blanketGrey';                                       // a folded blanket (grey wool: the navy rug is too dark to stand for the paint it was)
+    if (n === 'white' && !c.full) return (c.y1 - c.y0 < 0.15 && c.long > 1.5) || (c.thin < 0.06 && c.y1 > 1.5) ? 'sack' : 'truckWhite';   // a mattress (lying, a man long), the folding screen (thin, head high): cloth. Lockers, the nurse's table, the fridge: enamel
+    return undefined;
+  },
+  wall: 'render', house: 'render', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'poplar', dado: null, ground: 'dust', verge: 'dirt', patches: 5,
+  floor: { carpet: 'slab', lino: 'slab', stone: 'slab' },
+  noRug: /ward|exam|store|corridor/, metals: ['galv', 'tin', 'plasticWhite', 'iron'],
+  rooms: [{ id: 'corridor', bounds: R.corridor.bounds }],
+  dress: (G, _level, T) => {
+    const M = lookMarks(T), worn = T.tone(TEAL, 0.8);
+    // THE QUEUE: porch → the hatch, a stride off the benches on the south wall
+    M.dashed(9.6, 17.6, 25.2, 17.6, 0.08, worn, 0.7, 0.5);
+    M.path([[25.2, 17.6], [26.1, 17.6], [26.1, 16.4]], 0.08, worn);
+    // WAIT HERE: the box under the hatch
+    M.outline(25.5, 15.3, 26.7, 16.3, 0.08, TEAL);
+    // one at a time: a standing square in front of each room's door
+    for (const x of [12.05, 18.05, 24.05]) M.outline(x - 0.5, 15.25, x + 0.5, 16.05, 0.06, worn);
+    // THE CROSS on the porch
+    M.fill(7.3, 16.2, 7.8, 17.7, TEAL); M.fill(6.8, 16.7, 8.3, 17.2, TEAL);
+    // THE GROUND AS THE PLACE IS USED (from above it is most of the picture, and it was two sheets of one paint each): where wheels and feet go it is its
+    // own paint trodden darker, and what the clinic's work leaves is a stain where it is left. Nothing here is a colour laid on the ground.
+    const lot = T.floorAt(20, 23), yard = T.floorAt(20, 3);
+    if (lot && yard) {
+      const trod = (pts: [number, number][], w: number, of: Vec3, k = 0.8) => M.path(pts, w, T.tone(of, k));
+      // the lot: the wheels' way in to each car's tail (the clinic's own from the west, the other from the street), the queue's way from the street to the porch, and from the porch round to the pump
+      G.ruts(0.4, 20.08, 3.2, 20.36, 'dirt'); G.ruts(20.0, 27.7, 20.0, 26.1, 'dirt'); G.patch(20.1, 22.4, 1.3, 0.9, 'oil', 0.3);
+      trod([[13.0, 27.2], [11.2, 23.6], [9.0, 20.0], [8.2, 18.9]], 1.1, lot);
+      trod([[6.9, 15.9], [5.6, 14.3], [5.0, 13.5]], 0.8, lot); trod([[3.3, 9.4], [3.2, 7.2]], 0.7, lot);   // (each stops short of the wet round the pump: a path is never paler than what it crosses)
+      // the back yard: the same path on to the burn drums and the ash round them, the bare strip under the washing, the wet under the tank's tap
+      trod([[3.2, 6.6], [3.6, 5.2], [4.6, 3.4]], 0.7, yard, 0.76); G.patch(5.0, 2.3, 2.4, 1.9, 'damp', 0.4); G.patch(5.3, 2.1, 1.3, 1.0, 'damp', -0.5, 0.0128);
+      trod([[16.4, 1.5], [22.8, 1.5]], 1.0, yard, 0.78); G.patch(31.2, 4.4, 1.9, 1.2, 'damp', 0.2);
+      // the side: what the generator drips, the few steps from the fire exit to it
+      G.patch(35.5, 13.5, 1.7, 1.1, 'damp', 0.5); trod([[34.2, 9.6], [34.5, 10.9]], 0.7, yard, 0.76);
+      trod([[36.9, 14.4], [37.3, 18.6], [36.6, 22.6], [35.2, 26.6]], 0.8, yard, 0.76); G.patch(38.2, 19.2, 1.8, 1.3, 'damp', 1.1);   // the way round to the lot, past what was thrown out
+    }
+  },
+};
+export const finish = (level: Level, groups: string[]) => skinLevel(level, groups, SKIN);
