@@ -3,6 +3,7 @@ import type { Lab, Method } from '../lab';
 import type { Graph, Stage } from '../graph';
 import { buffer } from '../gpu';
 import { F } from '../scene/world';
+import { meshed } from '../mesh/code';
 import { rasterStage } from './raster';
 import pickCode from './meshpick.wgsl' with { type: 'text' };
 import drawCode from './meshdraw.wgsl' with { type: 'text' };
@@ -81,7 +82,7 @@ export async function drawn(lab: Lab): Promise<Drawn> { const u = new Uint32Arra
 /** a method with meshes in it: the stage goes in after the raster, and the first hit learns whose ids these are */
 export function withMeshes<M extends Method>(m: M, /** rays meet the boxes that stand in for meshes, and no triangles */ stand = false): M {
   const base = m.stages.bind(m);
-  m.stages = lab => { const out: Stage[] = []; for (const s of base(lab)) { if (s.name === 'first hit' && lab.building.world.meshes) out.push({ ...s, buffers: { ...s.buffers, meshSlots: ['meshSlots', 'array<vec4u>', 'read'] }, code: firstHit(s.code) }); else if (s.name === 'resolve' && lab.building.world.meshes) out.push({ ...s, code: resolved(s.code) }); else out.push(stand && lab.building.world.meshes && !s.make ? { ...s, before: c => c.replace('const MESH_RAYS = true;', 'const MESH_RAYS = false;') } : s); if (s.name === 'raster' && lab.building.world.meshes) out.push(meshStage(lab, lab.graph)); } return out; };
+  m.stages = lab => { const out: Stage[] = []; for (const s of base(lab)) { if (s.name === 'first hit' && lab.building.world.meshes) out.push({ ...s, buffers: { ...s.buffers, meshSlots: ['meshSlots', 'array<vec4u>', 'read'] }, code: firstHit(s.code) }); else if (s.name === 'resolve' && lab.building.world.meshes) out.push({ ...s, code: resolved(s.code) }); else out.push(stand && lab.building.world.meshes && !s.make ? { ...s, before: meshed.boxes } : s); if (s.name === 'raster' && lab.building.world.meshes) out.push(meshStage(lab, lab.graph)); } return out; };
   return m;
 }
 const firstHit = (code: string) => { const at = '  } else if (a != 0u) {\n'; if (code.split(at).length !== 2) throw new Error('first hit has changed'); return code.replace(at, `  } else if ((a & 0x40000000u) != 0u) {

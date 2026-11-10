@@ -34,18 +34,18 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> boo
   let p = &pieces[k]; let sc = (*p).quad.x; let oo = vec3f(dot((*p).r0.xyz, ro) + (*p).r0.w, dot((*p).r1.xyz, ro) + (*p).r1.w, dot((*p).r2.xyz, ro) + (*p).r2.w) / sc; let od = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd)) / sc;
   let oh = (*p).planes; let head = mrowU(oh); let hull = boxSpan(-(*p).half / sc, (*p).half / sc, oo, safeInv(od)); if (max(hull.x, tmin) > min(hull.y, tmax)) { return false; }
   var li = head.x - 1u; let may = meshWide(max(hull.x, 0.0)) / sc; let gone = mrow(oh + 2u).x; if (gone > 0.0 && may > gone && meshObject == 0u) { return false; }      /* (a skin: what it lies on is met in its place) */ loop { if (li == 0u || (meshLevel == 0u && mrow(oh + 3u + li).x <= may)) { break; } li -= 1u; } if (meshObject > 0u) { li = min(meshObject, head.x) - 1u; }
-  var stack: array<u32, 36>; var stackT: array<f32, 36>; var sp = 0; var at = mrowU(oh + 3u + li).y; var atT = max(hull.x, tmin);
+  var stack: array<u32, MESH_STACK>; var stackT: array<f32, MESH_STACK>; var sp = 0u; var at = mrowU(oh + 3u + li).y; var atT = max(hull.x, tmin);
   var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var recs = 0u; var tris = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var backTo = meshBack;
   loop {
     if ((at & 0x80000000u) == 0u) {                                  // a node: the nearer child next, the farther later
       let a0 = mrowU(at); let a1 = mrow(at + 1u); let b0 = mrowU(at + 2u); let b1 = mrow(at + 3u); let sa = boxSpan(asF(a0).xyz, a1.xyz, o, inv); let sb = boxSpan(asF(b0).xyz, b1.xyz, o, inv); let ta = max(sa.x, tmin); let tb = max(sb.x, tmin); let ha = ta <= min(sa.y, best); let hb = tb <= min(sb.y, best); let ra = a0.w; let rb = b0.w;
-      if (ha && hb) { let near = ta <= tb; if (sp < 34) { stack[sp] = select(ra, rb, near); stackT[sp] = select(ta, tb, near); sp += 1; } at = select(rb, ra, near); atT = select(tb, ta, near); continue; }
+      if (ha && hb) { let near = ta <= tb; if (sp < MESH_STACK - 2) { stack[sp] = select(ra, rb, near); stackT[sp] = select(ta, tb, near); sp += 1u; } at = select(rb, ra, near); atT = select(tb, ta, near); continue; }
       if (ha) { at = ra; atT = ta; continue; } if (hb) { at = rb; atT = tb; continue; }
     } else if (child == 0xffffffffu) {                               // a child (or a few): the last of them now, into its own frame
-      let first = (at & 0x7fffffffu) >> 4u; let count = at & 15u; if (count > 1u && sp < 34) { stack[sp] = 0x80000000u | (first << 4u) | (count - 1u); stackT[sp] = atT; sp += 1; }
+      let first = (at & 0x7fffffffu) >> 4u; let count = at & 15u; if (count > 1u && sp < MESH_STACK - 2) { stack[sp] = 0x80000000u | (first << 4u) | (count - 1u); stackT[sp] = atT; sp += 1u; }
       child = first + count - 1u; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
       let a = mrowU(c3.x); let b = mrowU(c3.x + 1u); mn = asF(a).xyz; st = asF(b).xyz; recs = b.w; tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, a.w, meshWide(atT) / k); let lv = mrowU(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (bitcast<f32>(lv.x) * k + bitcast<f32>(c3.w) * sc)); }
-      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1; at = lv.y; continue;
+      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1u; at = lv.y; continue;
     } else {
       let first = (at & 0x7fffffffu) >> 4u; let vb = mrowU(recs + (first >> 7u)).x;
       for (var t = first; t < first + (at & 15u); t++) {
@@ -56,16 +56,14 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> boo
       }
     }
     // what waits; a mark says that a child is done with
-    var go = false; loop { if (sp == 0) { break; } sp -= 1; at = stack[sp]; if (at == 0xffffffffu) { child = at; o = oo; d = od; inv = safeInv(d); continue; } atT = stackT[sp]; if (atT < best) { go = true; break; } } if (!go) { break; }
+    var go = false; loop { if (sp == 0u) { break; } sp -= 1u; at = stack[sp]; if (at == 0xffffffffu) { child = at; o = oo; d = od; inv = safeInv(d); continue; } atT = stackT[sp]; if (atT < best) { go = true; break; } } if (!go) { break; }
   }
   if (found) { hT = best; } return found;
 }
 /** is this a ray that meets the boxes that stand in for meshes, and not the meshes? (rays = -1; one that has a width: not the reference's, which has none) */
 fn byStand() -> bool { return frame.knobs.y < 0.0 && footW + footS > 0.0; }
 const STAND = 128u;
-/** do rays ever meet triangles? (Where they never do the text that would is left out: it weighs on a kernel even when it is not run) */
-const MESH_RAYS = true;
-fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { let fl = pieces[k].flags; if (!MESH_RAYS) { if ((fl & MESH) != 0u) { return false; } return meetPiece(k, ro, rd, tmin, tmax, cut); } if ((fl & STAND) != 0u && !byStand()) { return false; } if ((fl & MESH) != 0u) { if (byStand()) { return false; } return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
+fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool { let fl = pieces[k].flags; if ((fl & STAND) != 0u && !byStand()) { return false; } if ((fl & MESH) != 0u) { if (byStand()) { return false; } return meetMesh(k, ro, rd, tmin, tmax, select(1e9, cut, (pieces[k].flags & CUT) != 0u)); } return meetPiece(k, ro, rd, tmin, tmax, cut); }
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f { meshAny = true; let T = visiblePieces(ro, rd, tmin, tmax); meshAny = false; return T; }
 
 // ---- what is there
@@ -109,4 +107,4 @@ fn meshLost(kind: u32, px: f32, V: vec3f) -> vec2f {
     out += w * vec2f(sun, mrow(r + 3u).w); }
   return out;
 }
-fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf { if (MESH_RAYS && (h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & MESH) != 0u) { return meshSurf(ro, rd, h, fp); } return surfacePiece(ro, rd, h, fp); }
+fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf { if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & MESH) != 0u) { return meshSurf(ro, rd, h, fp); } return surfacePiece(ro, rd, h, fp); }
