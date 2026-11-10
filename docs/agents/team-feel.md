@@ -38,7 +38,7 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | `showwhy.rs` | waves, fists and lines that say why a teammate is waiting |
 
 Beside these: weapon lights are `team_lit`, `light_ruled`, `lit_place` and `wall_dark` in `rust/game_rules/src/people/guards/search.rs`, numbers in `LightsK`.
-Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs` and `flow.rs`. Openings dealt to stopped men are `cover/`, the team's pace
+Corners and the floor search are in `rust/game_rules/src/entries/doortools/threats.rs`, `flow.rs` and `flow_in.rs`. Openings dealt to stopped men are `cover/`, the team's pace
 `teampace.rs` (`squad.md`).
 
 The page draws: `rust/game_draw/src/lights.rs` hands over the infrared lights, `src/render/lights.ts` caps them.

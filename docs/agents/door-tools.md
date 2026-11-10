@@ -18,7 +18,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | module | what it does |
 |---|---|
-| `doortools/` | the orders: `DoorOp` and its phases, the counts, the word, Sam's own charge. Most numbers: `DoortoolsK` |
+| `doortools/` | the orders: `DoorOp` and its phases, the counts, the word and its key (`tick/`), the steps (`steps.rs`, a threshold's `steps/`), the other doors (`other.rs`). Numbers: `DoortoolsK` |
 | `orders/rows/` | one file a row (`openclear.rs`, `bangclear.rs`, `charge.rs`, `fragclear.rs`, `bigclear.rs`, `threshold.rs`, `go.rs`, `stack.rs`): label, `valid`, `issue` |
 | `orders/` | `squad_orders_stack_posts` and the marks behind it, `squad_orders_pair` (who takes which mark), `squad_orders_assign` |
 | `stackroom.rs`, `stackline.rs` | marks kept on the door's own face, in no other door's way; `stack_line_pace`, a man slowing in view of an open door |

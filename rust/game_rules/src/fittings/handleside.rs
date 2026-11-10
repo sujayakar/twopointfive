@@ -216,11 +216,7 @@ fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, 
     }
     if !latched && (g.dr[d].leaf.pull_t > 0.0 || g.dr[d].leaf.vel * crate::doors::door_swing(g, d) > 0.5) { return false; }
     if g.team(gd).ours() {
-        let p = seat.player;
-        // `new Set([...keys, ...codes])` where he holds codes, else his keys: lent by copy, the stub wants `g` too
-        let mut keys: JsSet<String> = g.pl[p].keys.clone();
-        if g.pl[p].codes.len() > 0 { for c in g.pl[p].codes.keys() { keys.add(c); } }
-        if crate::doors::doors_locked_out(g, d, from, Some(&keys)) { return false; }
+        if crate::doors::doors_locked_out(g, d, from, Some(&crate::orders::player_ring(g, seat.player))) { return false; }
     }
     true
 }
