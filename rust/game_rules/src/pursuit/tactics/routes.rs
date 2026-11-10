@@ -59,7 +59,7 @@ pub fn give_stuns(g: &mut crate::game::Game, gd: GuardId, n: f64) {
 }
 
 /// The stun charges on a man.
-pub fn stuns_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn stuns_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.tactics.kit.get(gd) { Some(k) => k.stuns, None => 0.0 }
 }
 
@@ -95,7 +95,7 @@ pub(super) fn in_contact(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Pinned by fire or flinching under it.
-pub(super) fn suppressed(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn suppressed(g: &crate::game::Game, gd: GuardId) -> bool {
     let sup = &g.cond[g.gd[gd].ch].sup;
     sup.latched || sup.down_t > 0.0 || sup.v >= g.k.suppression.flinch
 }
@@ -186,12 +186,12 @@ fn entry_bearing(t: V3, from: V3, path: &[V3], r: f64) -> f64 {
 }
 
 /// The line of FIRE from a man stood at p to the fix area at T, chest to chest height.
-pub(super) fn los_open(g: &mut crate::game::Game, p: V3, t: V3) -> bool {
+pub(super) fn los_open(g: &crate::game::Game, p: V3, t: V3) -> bool {
     !crate::scene_collision::shot_blocked(g, [p[0], 1.15, p[2]], [t[0], 1.0, t[2]], Some(0.02), None)
 }
 
 /// The last point along from → path still COVERED from T before the line opens for good on the way in, at least `min_from_t` off T.
-fn last_cover_point(g: &mut crate::game::Game, from: V3, path: &[V3], t: V3, min_from_t: f64) -> Option<V3> {
+fn last_cover_point(g: &crate::game::Game, from: V3, path: &[V3], t: V3, min_from_t: f64) -> Option<V3> {
     let s = sample_path(from, path, Some(0.3));
     let mut los: Vec<bool> = Vec::with_capacity(s.len());
     for &p in &s { los.push(los_open(g, p, t)); }

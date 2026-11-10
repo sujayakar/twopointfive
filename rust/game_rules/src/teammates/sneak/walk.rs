@@ -80,7 +80,7 @@ pub(in crate::teammates) fn sneak_step(g: &mut crate::game::Game, gd: GuardId) -
 }
 
 /// Is this man walking over where the teammate stands: the man sent to the breaker, or a suspicious man on his way to a sound.
-pub fn sneak_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+pub fn sneak_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     if crate::workthings::work_coming(g, gd, h) { return true; }
     if !g.k.sneak.on { return false; }
     let (end, goal) = {

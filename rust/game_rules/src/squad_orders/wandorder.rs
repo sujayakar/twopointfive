@@ -31,7 +31,7 @@ fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// Is there a fog to look into. (wandorder.ts live; WAND.on and WAND.mate are settled on)
-fn live(g: &mut crate::game::Game) -> bool {
+fn live(g: &crate::game::Game) -> bool {
     crate::fogofwar::fog_of_war_active(g)
 }
 
@@ -41,7 +41,7 @@ pub fn carries(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The fight has him: its lease, blind, folded, or the room fight's aim over his order.
-fn fought(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
+fn fought(g: &crate::game::Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     g.tab.orders_assignment[a].yield_t >= 0.0
         || crate::control::man::blind(g, gd)
         || crate::control::man::staggered(g, gd)
@@ -381,7 +381,7 @@ pub fn mate_wand_eye(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::fo
 }
 
 /// `mateWandEye` from its second line on, in his seat's view.
-fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
+fn eye_in_view(g: &Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     let st = g.m.wandorder.states.get(k)?;
     if st.jobs.is_empty() {

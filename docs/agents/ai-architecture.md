@@ -82,8 +82,9 @@ above it in the list. `claim` itself refuses nobody, so the list decides only wh
 the last man ask it; other rules ask `has` of those they give way to.
 
 **Posts.** `hold` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `set_hold` and `set_pinned`, which note the
-writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`. No
-rule writes his `mode`. A leg keeps who sent him (`on_leg_of`): sent elsewhere, the first errand is over.
+writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`.
+No rule writes his `mode` or works out whether he is there: `leg_ended` tells his sender that he arrived, has no way, met somebody or was taken
+off it. An `errand` tries again; one that `stays` has him stand at its end.
 
 **Limits have no one home.** What a man may do is asked of the module that knows: `lane_bars`, `round_held`, `silent_holds_glass`,
 `room_fight_cover_passes`, `last_holds`, `stays_in_rooms`. A new rule that moves a man asks them for itself.

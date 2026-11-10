@@ -151,7 +151,8 @@ It says nothing of time or of how a thing looks. Say "never seen on a GPU" of an
 
 Checks (`bun run tools/qa/checks.ts <name>`): `frame-layout.ts` (the block against the struct), `shaders-check.ts` (parse, `trim`, `fold`, `inline`),
 `quality-check.ts` (what the ladder decides), `passtimer-check.ts`, `framecap-check.ts` (measuring), `keeppage-check.ts`, `pipequeue-check.ts`,
-`settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`.
+`settle-check.ts`, `pace-check.ts` (compiling, pace), `lookexpo-check.ts`, `smokelook-check.ts`, `materials-probes.ts`, `zfight-check.ts`. By hand, on the
+module: `bun run tools/draw/doors-check.ts` (each door's share of the plan, kept).
 
 Page scripts (`bun run tools/qa/pages.ts <name>`): `wgsl-compile.cjs`, `keeppage-page.cjs`, `weather-page.cjs`, `smokelife-page.cjs` (the running smoke is the
 game's; `--life` on a card), `smokejump-page.cjs` (after a jump the

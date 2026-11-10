@@ -19,14 +19,9 @@ pub struct Men {
 #[derive(Clone, Copy, Debug)]
 pub struct Host { pub input: InputId, pub cam: CameraId, pub canvas: crate::host_hud::View }
 
-/// the state that still moves, at home in the game's block (state.ts settle, as `Game.stepSeats` says it when a tick opens: the die, the pose pool, the smoke grid)
+/// the men's poses in the pool of the game's block
 pub fn settle(g: &mut Game) {
-    crate::math_dice::use_dice(g);
     crate::posehome::pose_home_tend(g);
-    // what the TypeScript's stores say of themselves in the block's head as they are made or moved in, and the Rust stores,
-    // which hold their part of the block from the start, do not: the pose pool (2), the doors (4) and the men's columns (256)
-    // are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
-    ::sim::state::state(g.sim).head.homes |= 2 | 4 | 256;
 }
 
 /// the canvas of a host that draws nothing

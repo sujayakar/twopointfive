@@ -89,7 +89,7 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
 }
 
 /// the bodies a round stops on, as far as the player can see them. (squad40.ts bodies)
-fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
+fn bodies(g: &crate::game::Game) -> crate::squad40::Bodies {
     let (mut friends, mut foes, mut mates): (Vec<CharId>, Vec<CharId>, Vec<CharId>) = (Vec::new(), Vec::new(), Vec::new());
     if !crate::condition::down(g, g.pl[g.player].ch) { friends.push(g.pl[g.player].ch); }
     for gd in g.guards.clone() {
@@ -132,7 +132,7 @@ fn gun_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, at: 
 }
 
 /// ONE MAN'S SHOT to a spot, from where he stands with his gun turned to it (`Close`: not armed there; None: he has none). (squad40.ts shotOf)
-fn shot_of(g: &mut crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40::Bodies>) -> Option<crate::squad40::ShotOf> {
+fn shot_of(g: &crate::game::Game, gd: GuardId, at: V3, b: Option<&crate::squad40::Bodies>) -> Option<crate::squad40::ShotOf> {
     let made;
     let bb: &Bodies = match b { Some(x) => x, None => { made = bodies(g); &made } };
     let c = g.gd[gd].ch;

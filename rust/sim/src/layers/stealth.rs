@@ -134,7 +134,7 @@ fn as_sneaks(an: &mut Anim, o: &mut Sneaks) {
     let (at, at_b, _) = poses(an);
     let (want, cs, ready_w, wide_s, hands_down) = (an.stealth.as_ref().map_or(false, |f| f.free) && !busy, an.creep_shown, an.ready_w, an.wide_s, an.hands_down);
     let (wm, fixes) = (clamp(w_move, 0.0, 1.0), [an.hand_fix[0], an.hand_fix[1]]);
-    (o.at, o.at_b, o.want, o.cs, o.ready_w, o.wide_s, o.hands_down, o.wm, o.fixes) = (at, at_b, want, cs, ready_w, wide_s, hands_down, wm, fixes);
+    *o = Sneaks { at, at_b, want, cs, ready_w, wide_s, hands_down, wm, fixes, ..*o };
 }
 
 /// In and out of it.
@@ -142,7 +142,7 @@ fn comes_up(st: &mut game_types::character::AnimSp, o: &mut Sneaks) {
     let Sneaks { dt, want, .. } = *o;
     st.w_a = clamp(st.w_a + if want { dt / STEALTH.in_secs } else { -dt / STEALTH.out_secs }, 0.0, 1.0);
     let w_a = st.w_a * st.w_a * (3.0 - 2.0 * st.w_a);
-    o.w_a = w_a;
+    *o = Sneaks { w_a, ..*o };
 }
 
 /// The arms' own crouch: down with him at once (the elbows flaring for as long as he is still sinking), up after him.
@@ -160,14 +160,14 @@ fn arms_crouch(st: &mut game_types::character::AnimSp, tune: &Knobs, o: &mut Sne
     let t = st.t;
     let up = st.cr * st.cr * (3.0 - 2.0 * st.cr);
     let w = w_a * up * max(1.0, cs);
-    (o.t, o.up, o.w) = (t, up, w);
+    *o = Sneaks { t, up, w, ..*o };
 }
 
 /// How much his weight sways.
 fn sways_by(o: &mut Sneaks) {
     let Sneaks { crouch, cs, wm, w_a, up, .. } = *o;
     let sway = w_a * up * (1.0 - wm) * (1.0 - cs) * crouch;
-    o.sway = sway;
+    *o = Sneaks { sway, ..*o };
 }
 
 /// At a stand, never a held frame: the weight goes foot to foot with the feet where they were.
@@ -205,7 +205,7 @@ fn arms_swing(st: &mut game_types::character::AnimSp, tune: &Knobs, fk: &mut Fk,
     let tgt = if cs > 0.003 { if vz > 0.15 { 1.0 } else { clamp((fz_l + 0.25) / 0.55, 0.0, 1.0) } } else { 0.0 };
     st.lead += (tgt - st.lead) * min(1.0, dt * STEALTH.creep.rate);
     let (lt, dr) = (t * 2.0 * PI / max(0.5, tune.stealthpose.sway_secs), tune.stealthpose.drift_m * (1.0 - wm));
-    (o.kl, o.kr, o.k_hi, o.k_z, o.s, o.lt, o.dr) = (kl, kr, k_hi, k_z, s, lt, dr);
+    *o = Sneaks { kl, kr, k_hi, k_z, s, lt, dr, ..*o };
 }
 
 /// Which arm, and how much of it is his to move: the knife hand is the close-in mode's; with his arms out the left is the carriage's too.
@@ -215,7 +215,7 @@ fn whose_arm(side: usize, o: &mut Sneaks) {
     let a_ = sg * s;
     let (up_n, fo_n, ha_n) = if side == 0 { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L)) } else { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R)) };
     let w_arm = w * (1.0 - ready_w) * (if side == 0 { 1.0 - cs * wide_s * clamp(hands_down, 0.0, 1.0) } else { 1.0 - cs });
-    (o.sg, o.kn, o.sf, o.a_, o.up_n, o.fo_n, o.ha_n, o.w_arm) = (sg, kn, sf, a_, up_n, fo_n, ha_n, w_arm);
+    *o = Sneaks { sg, kn, sf, a_, up_n, fo_n, ha_n, w_arm, ..*o };
 }
 
 /// Where the hand goes: over the knee, forward and back with the walk, by the foot it leads; beyond the arm it is reached toward, never locked out.
@@ -242,7 +242,7 @@ fn arm_point(st: &mut game_types::character::AnimSp, fk: &mut Fk, side: usize, o
     if dd > len {
         to = [s0[0] + dx * len / dd, s0[1] + dy * len / dd, s0[2] + dz * len / dd];
     }
-    o.to = to;
+    *o = Sneaks { to, ..*o };
 }
 
 /// The arm there: the back arm's elbow goes behind him, not out.

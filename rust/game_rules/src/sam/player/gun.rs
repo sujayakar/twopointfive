@@ -49,7 +49,7 @@ pub(super) fn collide_player(g: &mut crate::game::Game, y1: f64) {
 }
 
 /// the same settle for any body with a place and the spot it last stood clear at
-pub(super) fn collide_man(g: &mut crate::game::Game, pl: &mut crate::player::CollideManPl, y1: f64) {
+pub(super) fn collide_man(g: &crate::game::Game, pl: &mut crate::player::CollideManPl, y1: f64) {
     let mut p = pl.char.pos;
     if let Some(s) = pl.safe {
         let dx = p[0] - s[0];
@@ -81,13 +81,13 @@ pub(super) fn collide_man(g: &mut crate::game::Game, pl: &mut crate::player::Col
 }
 
 /// may he stand up here
-pub fn can_stand(g: &mut crate::game::Game) -> bool {
+pub fn can_stand(g: &crate::game::Game) -> bool {
     let p = g.ch[g.pl[g.player].ch].pos;
     can_stand_at(g, p)
 }
 
 /// may he stand up at a spot: settles a copy against the band between crouched and standing head height
-pub(super) fn can_stand_at(g: &mut crate::game::Game, p: V3) -> bool {
+pub(super) fn can_stand_at(g: &crate::game::Game, p: V3) -> bool {
     let mut q: V3 = [p[0], p[1], p[2]];
     let r = body_r(g, p);
     crate::scene_collision::collide_circle(g, &mut q, r, 1.0, 1.7, Some(2.0));

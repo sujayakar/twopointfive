@@ -119,7 +119,7 @@ pub(super) fn arriving(g: &Game, st: &KitStage) -> bool {
 const ROOM: f64 = 0.2;
 /// THE CARD SWITCH: no restage, the SAME men walk. The man whose card opened steps out a lane, walks up and cuts in at the head place; the men ahead of his old place each step back one, rearmost first. Sam never moves;
 /// the fourth man (behind Sam, across the door) does not cross it: he steps round Sam's yard side to `act4` and back when his card shuts.
-pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
+pub(super) fn rotate(g: &Game, st: &mut KitStage, who: Option<GuardId>) {
     let (s, n) = (st.s, st.n);
     let pp = |p: V2, a: f64, o: f64| -> V2 { [p[0] + s[0] * a + n[0] * o, p[1] + s[1] * a + n[1] * o] };
     if let Some(&x) = st.order.get(3) {
@@ -208,7 +208,7 @@ fn homing_at_hole(g: &Game, st: &mut KitStage) -> bool {
     true
 }
 /// HOME: no row begins with a man far from his place, and a row of Sam's waits for the men on their own legs, `home_secs` at most: then, and at once for a man `far_m` off, the room is staged again under the dissolve, and the row that waited begins at once. A man found off his place again after that is not staged again until he has been seen home. True: the row waits.
-pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
+pub(super) fn homing(g: &Game, st: &mut KitStage) -> bool {
     let now = g.time;
     if st.hole { return homing_at_hole(g, st); }
     if st.a.seated { st.a.seated = false; st.a.home_t = f64::NAN; return false; }

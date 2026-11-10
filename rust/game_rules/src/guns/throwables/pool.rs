@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Closest hit among statics + door leaves and props.
-fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
+fn throwables_ray(g: &crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);
     let ph = crate::props::prop_system_raycast(g, ro, rd, match &st { Some(s) => s.t, None => tmax });
     if let Some(ph) = ph {
@@ -82,7 +82,7 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
 }
 
 /// The first spent thing in the list: a magazine, a ring, a dud, a can that has gone off and finished.
-fn first_spent(g: &mut Game) -> Option<usize> {
+fn first_spent(g: &Game) -> Option<usize> {
     for i in 0..g.items.items.len() {
         let x = g.items.items[i];
         let k = g.tab.item[x].kind;
@@ -94,7 +94,7 @@ fn first_spent(g: &mut Game) -> Option<usize> {
 }
 
 /// The first thing in the list that is no live can.
-fn first_not_live(g: &mut Game) -> Option<usize> {
+fn first_not_live(g: &Game) -> Option<usize> {
     for i in 0..g.items.items.len() {
         let x = g.items.items[i];
         if !live_can(g, x) {
@@ -110,7 +110,7 @@ pub fn throwables_remove_at(g: &mut crate::game::Game, i: f64) {
 }
 
 /// Launch velocity from `from` to land at `to` with a pleasant arc; also the sampled preview points until first impact.
-pub fn throwables_solve(g: &mut crate::game::Game, from: V3, to: V3, max_speed: Option<f64>) -> crate::throwables::ThrowSolution {
+pub fn throwables_solve(g: &crate::game::Game, from: V3, to: V3, max_speed: Option<f64>) -> crate::throwables::ThrowSolution {
     let max_speed = max_speed.unwrap_or(11.0);
     let d = v3::sub(to, from);
     let dist = m::hyp2(d[0], d[2]);
@@ -511,7 +511,7 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.
-fn live_can(g: &mut crate::game::Game, x: ItemId) -> bool {
+fn live_can(g: &crate::game::Game, x: ItemId) -> bool {
     let k = g.tab.item[x].kind;
     (k == ItemKind::Smoke || k == ItemKind::Flash || k == ItemKind::Frag) && (!g.tab.item[x].fired || g.tab.item[x].emit_t > 0.0)
 }

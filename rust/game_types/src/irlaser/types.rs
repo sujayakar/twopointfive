@@ -6,7 +6,6 @@ use alloc::{string::String, vec::Vec};
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct IrlaserMod {
-    pub view_tube: Option<bool>,
     pub ir_made: JsSet<AnyBoxId>,
 }
 

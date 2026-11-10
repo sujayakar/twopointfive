@@ -168,7 +168,7 @@ fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
 }
 
 /// What Sam's hands are on, if a verb of his that plants him is running.
-pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
+pub fn sam_work(g: &crate::game::Game) -> Option<crate::handwork::SamWork> {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
@@ -290,7 +290,7 @@ pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
 }
 
 /// The thing in his hand while it comes out and is put away: a caddy-sized box off the working hand.
-pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
+pub fn work_props(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props::Carried) {
     let i = crate::character::anim_work_info(g, c_2);
     let Some(l) = i.pose else { return };
     if l.kind != crate::character::WorkKind::Take || i.w < 0.4 { return; }
@@ -305,7 +305,7 @@ pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
     let done = l.t > l.dur;
     let bf = crate::scene_boxes::box_flag();
     let owner = owner_of(g, c_2);
-    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
+    out.put(&crate::scene_boxes::MakeBoxP {
         c: if done { [h[0], h[1] - 0.07, h[2]] } else { [h[0] + f[0] * 0.09 - r[0] * s, h[1], h[2] + f[2] * 0.09 - r[2] * s] },
         h: [0.05, 0.013, 0.07],
         yaw: Some(m::atan2(f[0], f[2])),
@@ -316,7 +316,6 @@ pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(b.into());
 }
 
 // ---------------------------------------------------------------- the radio hand
@@ -347,7 +346,7 @@ pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::guards:
 }
 
 /// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark.
-pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
+pub fn belt_torch(g: &crate::game::Game, c_2: CharId, out: &mut crate::rig_props::Carried) {
     let Some(hp) = g.ch[c_2].bones.get(crate::character::Bone::Hips).copied() else { return };
     let f = crate::character::character_forward(g, c_2);
     let r: V3 = [-f[2], 0.0, f[0]];
@@ -356,7 +355,7 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
     let at: V3 = [hp[0] + r[0] * o + f[0] * a, hp[1] - 0.045, hp[2] + r[2] * o + f[2] * a];
     let bf = crate::scene_boxes::box_flag();
     let owner = owner_of(g, c_2);
-    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
+    out.put(&crate::scene_boxes::MakeBoxP {
         c: at,
         h: [0.017, 0.062, 0.017],
         yaw: Some(m::atan2(f[0], f[2])),
@@ -365,8 +364,7 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(b.into());
-    let b = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
+    out.put(&crate::scene_boxes::MakeBoxP {
         c: [at[0], at[1] - 0.07, at[2]],
         h: [0.021, 0.012, 0.021],
         yaw: Some(m::atan2(f[0], f[2])),
@@ -376,7 +374,6 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
         owner: Some(owner),
         ..Default::default()
     });
-    out.push(b.into());
 }
 
 #[cfg(test)]

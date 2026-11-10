@@ -340,7 +340,7 @@ fn sky_lum(g: &crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome
 }
 
 /// The box the shadow casters stand in.
-fn box_of(g: &mut crate::game::Game) -> crate::hours::SkyStateBox {
+fn box_of(g: &crate::game::Game) -> crate::hours::SkyStateBox {
     let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
     let mut b = SkyStateBox { x0: m::INF, x1: -m::INF, z0: m::INF, z1: -m::INF, top: 0.0 };
     let mut i = 0;
@@ -371,7 +371,7 @@ fn reach_of(b: crate::hours::SkyStateBox, p: V3, d: V3) -> f64 {
 }
 
 /// The statics alone between a and b: no door leaf is in the way.
-fn static_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn static_blocked(g: &crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::segment_blocked_over(g, &crate::ask::Over::statics(), a, b, None, None)
 }
 
@@ -408,7 +408,7 @@ fn kept_rays(g: &mut Game, fine: bool, key: crate::Num, at: V3) -> Vec<Open> {
 }
 
 /// The ambient's rays that leave point C unblocked by the statics.
-fn open_rays(g: &mut crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
+fn open_rays(g: &crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
     let to_sun = g.m.hours.reach.to_sun;
     let (sky_rays, gnd_rays) = (sky(), gnd());
     let mut out: Vec<Open> = Vec::new();

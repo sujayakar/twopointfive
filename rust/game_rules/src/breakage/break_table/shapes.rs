@@ -307,7 +307,7 @@ fn ragged_planes(rag: &BreakRowRagged, h: V3, faces: &[OpenFace], most: f64, acr
 }
 
 /// RAGGED END: the planes for a standing piece's open faces. The record is not fitted: feet and the nav grid keep the box.
-pub(super) fn ragged_cut(g: &mut crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
+pub(super) fn ragged_cut(g: &crate::game::Game, row: &crate::break_table::BreakRow, h: V3, faces: &[crate::break_table::OpenFace]) -> Option<Vec<crate::scene_cut::CutPlane>> {
     let rag = row.ragged?;
     if faces.is_empty() { return None; }
     let (most, across) = (g.k.breaks.max_standing_planes, g.k.breaks.across_deg);

@@ -19,7 +19,7 @@ fn marks_put_back(g: &mut Game, keep: crate::orders::MarksKeep) {
 }
 
 /// the line from the doorway's front to a place, asked three times a hand apart when `seam` is set
-fn clear_line(g: &mut Game, over: &Over, front: V3, q: V3, seam: f64) -> bool {
+fn clear_line(g: &Game, over: &Over, front: V3, q: V3, seam: f64) -> bool {
     if crate::scene_collision::solid_blocked_over(g, over, front, [q[0], 0.45, q[2]], None) { return false; }
     if !(seam > 0.0) { return true; }
     let dx = q[0] - front[0];
@@ -32,7 +32,7 @@ fn clear_line(g: &mut Game, over: &Over, front: V3, q: V3, seam: f64) -> bool {
 }
 
 /// n spots for a move order round `at`, abreast across the facing
-pub fn squad_orders_spots_at(g: &mut crate::game::Game, at: V3, face: f64, n: f64) -> Vec<V3> {
+pub fn squad_orders_spots_at(g: &crate::game::Game, at: V3, face: f64, n: f64) -> Vec<V3> {
     if n <= 1.0 { return vec![v3::copy(at)]; }
     let f: V3 = [m::sin(face), 0.0, m::cos(face)];
     let r: V3 = [-f[2], 0.0, f[0]];
@@ -87,7 +87,7 @@ pub fn squad_orders_spots_at(g: &mut crate::game::Game, at: V3, face: f64, n: f6
 }
 
 /// spotsAt's `tries.find(q => ok(q) && apart(q)) ?? v3.copy(at)`
-fn spot_of(g: &mut Game, at: V3, tries: &[V3], out: &[V3]) -> V3 {
+fn spot_of(g: &Game, at: V3, tries: &[V3], out: &[V3]) -> V3 {
     for q in tries.iter().copied() {
         let ok = !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [q[0], 0.45, q[2]], None);
         if ok && !out.iter().any(|o| v3::dist_xz(*o, q) < 0.6) { return q; }
@@ -488,7 +488,7 @@ fn squad_orders_stack_least_glass(g: &mut crate::game::Game, over: &Over, d: Doo
 }
 
 /// A DOOR ACROSS A PASSAGE: may a man wait at `pos` on this face of it
-fn squad_orders_hall_stands(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, pos: V3) -> bool {
+fn squad_orders_hall_stands(g: &crate::game::Game, over: &Over, d: DoorId, side: f64, pos: V3) -> bool {
     let jamb_out = g.k.orders.jamb_out;
     let th = g.dr[d].def.closed_dir;
     let nx = -m::sin(th) * side;

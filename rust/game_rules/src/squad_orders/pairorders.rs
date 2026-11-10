@@ -110,13 +110,13 @@ fn pair_orders_caught(g: &mut Game) -> bool {
 }
 
 /// his hands are on his man, or he is sent and on the last paces to him   (PairOrders.finishing)
-pub(super) fn pair_orders_finishing(g: &mut Game, gd: GuardId) -> bool {
+pub(super) fn pair_orders_finishing(g: &Game, gd: GuardId) -> bool {
     let j = match g.pair.jobs.get(gd) { Some(j) => *j, None => return false };
     g.k.spotted.on && (j.t0 >= 0.0 || pair_orders_last_paces(g, j, gd))
 }
 
 /// sent, inside the ring, nothing holding him and nothing solid between him and the man   (PairOrders.lastPaces)
-fn pair_orders_last_paces(g: &mut Game, j: crate::pairorders::Job, gd: GuardId) -> bool {
+fn pair_orders_last_paces(g: &Game, j: crate::pairorders::Job, gd: GuardId) -> bool {
     let p = pos_of(g, gd);
     let c = pos_of(g, j.foe);
     j.going && j.watcher.is_none() && j.wait_t < 0.0 && v3::dist_xz(p, c) < g.k.pair.heel_ring
@@ -132,7 +132,7 @@ pub(super) fn pair_orders_gone(g: &Game, h: GuardId) -> Option<String> {
 }
 
 /// a clear line from a teammate's eyes to a man's chest   (PairOrders.sees)
-pub(super) fn pair_orders_sees(g: &mut Game, gd: GuardId, h: GuardId) -> bool {
+pub(super) fn pair_orders_sees(g: &Game, gd: GuardId, h: GuardId) -> bool {
     let a = pos_of(g, gd);
     let b = pos_of(g, h);
     !crate::scene_collision::segment_blocked(g, [a[0], 1.5, a[2]], [b[0], 1.2, b[2]], None, None, None)
@@ -521,7 +521,7 @@ fn pair_orders_body_lit(g: &mut Game, o: GuardId, foe: GuardId, at: V3) -> bool 
 }
 
 /// inside what `w`'s eyes sweep, with a line to it: the distance, or −1
-fn swept_d(g: &mut Game, eye: V3, hb: [f64; 2], l: f64, half: f64, x: f64, y: f64, z: f64) -> f64 {
+fn swept_d(g: &Game, eye: V3, hb: [f64; 2], l: f64, half: f64, x: f64, y: f64, z: f64) -> f64 {
     let dx = x - eye[0];
     let dz = z - eye[2];
     let d = m::hyp2(dx, dz);
@@ -592,13 +592,13 @@ fn pair_orders_back(g: &Game, foe: GuardId, m: f64) -> V3 {
 }
 
 /// is `p` floor at `foe`'s back with nothing solid between it and him   (PairOrders.backOpen)
-fn pair_orders_back_open(g: &mut Game, foe: GuardId, p: V3) -> bool {
+fn pair_orders_back_open(g: &Game, foe: GuardId, p: V3) -> bool {
     let c = pos_of(g, foe);
     !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [c[0], 1.0, c[2]], None)
 }
 
 /// where the hands go on from: a short pace behind the way he MOSTLY faces, as far as there is floor   (PairOrders.behind)
-fn pair_orders_behind(g: &mut Game, foe: GuardId) -> V3 {
+fn pair_orders_behind(g: &Game, foe: GuardId) -> V3 {
     for d in [0.8, 0.6, 0.45] {
         let p = pair_orders_back(g, foe, d);
         if pair_orders_back_open(g, foe, p) { return p; }
@@ -607,7 +607,7 @@ fn pair_orders_behind(g: &mut Game, foe: GuardId) -> V3 {
 }
 
 /// where a man waits on the mark: `stageM` behind him, nearer where the floor is short   (PairOrders.stage)
-fn pair_orders_stage(g: &mut Game, foe: GuardId) -> V3 {
+fn pair_orders_stage(g: &Game, foe: GuardId) -> V3 {
     for k in [1.0, 0.8, 0.6] {
         let p = pair_orders_back(g, foe, g.k.pair.stage_m * k);
         if !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && pair_orders_back_open(g, foe, p) { return p; }
@@ -911,7 +911,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
 }
 
 /// nothing solid between two points a pace apart, at knee height   (PairOrders.clearOf)
-fn pair_orders_clear_of(g: &mut Game, a: V3, b: V3) -> bool {
+fn pair_orders_clear_of(g: &Game, a: V3, b: V3) -> bool {
     !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 

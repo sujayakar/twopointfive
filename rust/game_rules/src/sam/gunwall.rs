@@ -38,7 +38,7 @@ fn fight_on(g: &mut crate::game::Game) -> bool {
 }
 
 /// His frame on `yaw`: forward, right, the gun shoulder over his feet, how crouched (0..1).
-fn frame(g: &mut crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
+fn frame(g: &crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
     let (s, co) = (m::sin(yaw), m::cos(yaw));
     let f: V3 = [s, 0.0, co];
     let r: V3 = [-co, 0.0, s];
@@ -72,7 +72,7 @@ fn closing(s: crate::gunwall::St, f: V3) -> f64 {
 }
 
 /// The line a raised gun lies along on `yaw`: `a` at the hand end, `b` at the muzzle.
-fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
+fn raised_line(g: &crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp, yaw: f64, o: Option<V3>) -> crate::gunwall::RaisedLine {
     let o = o.unwrap_or(g.ch[c_2].pos);
     let fr = frame(g, c_2, yaw);
     let af = AtF { f: fr.f, r: fr.r };
@@ -92,14 +92,14 @@ fn raised_line(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp
 }
 
 /// A collision ray a → b, at most `most` metres.
-fn hits(g: &mut Game, a: V3, b: V3, most: f64) -> bool {
+fn hits(g: &Game, a: V3, b: V3, most: f64) -> bool {
     let d = v3::sub(b, a);
     let l = v3::len(d);
     l > 1e-3 && crate::scene_collision::raycast(g, a, v3::scale(d, 1.0 / l), m::min(l, most)).is_some()
 }
 
 /// Stood at (x, z) with the long gun in the shoulder on `to`: would the gun, and the first `ahead` metres of its round's way, lie clear?
-pub(super) fn gun_clear_from(g: &mut crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
+pub(super) fn gun_clear_from(g: &crate::game::Game, c_2: CharId, x: f64, z: f64, to: V3, ahead: f64) -> bool {
     let yaw = m::atan2(to[0] - x, to[2] - z);
     let fr = frame(g, c_2, yaw);
     let py = g.ch[c_2].pos[1];
@@ -121,7 +121,7 @@ fn low_reach(g: &crate::game::Game, c_2: CharId) -> f64 {
 }
 
 /// A panel on a → b as a round sees one, counted.
-fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn panel(g: &crate::game::Game, a: V3, b: V3) -> bool {
     wood_between(g, a, b)
 }
 
@@ -138,7 +138,7 @@ pub(super) fn wood_between(g: &Game, a: V3, b: V3) -> bool {
 }
 
 /// A ray along a → b, `need` past it; a hit where he aims (`to`) does not count.
-fn cast(g: &mut Game, to: Option<V3>, deep: bool, a: V3, b: V3, need: f64) -> bool {
+fn cast(g: &Game, to: Option<V3>, deep: bool, a: V3, b: V3, need: f64) -> bool {
     let d = v3::sub(b, a);
     let l = v3::len(d);
     if l < 1e-3 { return false; }
@@ -212,7 +212,7 @@ fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp,
 }
 
 /// YOUR BREACH SHOT: where the raised gun's own line meets a lock a shell takes, inside the gun's reach and a stride: that point; else none.
-pub(super) fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
+pub(super) fn breach_aim(g: &crate::game::Game, c_2: CharId, b: crate::weapons::PelletSpecBreach) -> Option<V3> {
     let aim_yaw = g.ch[c_2].aim_yaw;
     let ml = raised_line(g, c_2, GunUp::Aim, aim_yaw, None);
     let rd = v3::sub(ml.b, ml.a);

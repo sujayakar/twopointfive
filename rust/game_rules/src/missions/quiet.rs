@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the switches as they stand now
-fn held_now(g: &mut crate::game::Game) -> crate::quiet::Held {
+fn held_now(g: &crate::game::Game) -> crate::quiet::Held {
     crate::quiet::Held { pairup: g.k.pairup.on, pair: g.k.pair.on, sneak: g.k.sneak.on, spotted: g.k.spotted.on, silent: g.k.silent.on, silent_start: g.k.silent.start }
 }
 
@@ -235,7 +235,7 @@ fn quiet_mission_deal_one(g: &crate::game::Game, q: &crate::scene_scenarios::Qui
     let sets = q.patrols.as_ref().map(|p| p.len());
     match g.quiet.pin {
         None => crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } },
-        Some(pin) => pinned_deal(crate::math_dice::mulberry32(pin_seed(pin) as f64), q.starts.len(), q.spots.len(), sets),
+        Some(pin) => pinned_deal(crate::dice::Die(pin_seed(pin) as u32), q.starts.len(), q.spots.len(), sets),
     }
 }
 
@@ -346,7 +346,7 @@ fn behind_or_why(g: &crate::game::Game, s: &crate::scene_scenarios::QuietStart) 
 }
 
 /// THE FLOOR A MAN STANDS ON AT A HOLDER'S FACE: the nearest free cell with a clear line to the face and, given the room, inside it
-pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::quiet::HolderStandArea>) -> crate::quiet::HolderStand {
+pub fn holder_stand(g: &crate::game::Game, front: V3, area: Option<crate::quiet::HolderStandArea>) -> crate::quiet::HolderStand {
     let e = 0.3;
     let mut best: Option<V3> = None;
     let mut bs = m::INF;
@@ -386,7 +386,7 @@ fn free(g: &mut crate::game::Game, out: &mut Vec<String>, what: &str, p: V3) -> 
 }
 
 /// a way on foot
-fn way(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn way(g: &crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::nav_grid_find_path(g, a, b, Some(20000.0), None).map_or(false, |path| !path.is_empty())
 }
 
@@ -545,7 +545,7 @@ mod tests {
     /// A FAILURE MEANS: a link with a pin does not put a player back on the deal it names: the same pin deals the same, on the lists' own rows, and the patrols' length moves neither of the other two picks.
     #[test]
     fn a_pinned_deal_is_the_same_each_time_and_stays_on_its_lists() {
-        let deal = |pin: f64, s, p, q| { let d = pinned_deal(crate::dice::Die::new(pin_seed(pin) as u32), s, p, q); (d.start, d.spot, d.patrol) };
+        let deal = |pin: f64, s, p, q| { let d = pinned_deal(crate::dice::Die(pin_seed(pin) as u32), s, p, q); (d.start, d.spot, d.patrol) };
         let pins = [7.0, 0.0, -5.0, 2147483648.5, 11.0, 23.0];
         for pin in pins {
             let (a, b, c) = deal(pin, 5, 4, Some(3));

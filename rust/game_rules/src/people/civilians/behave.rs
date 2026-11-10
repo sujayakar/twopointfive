@@ -213,7 +213,7 @@ pub(super) fn pick(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) -> S
 }
 
 /// This is not the office's floor.
-pub(super) fn away(g: &mut crate::game::Game) -> bool { !crate::dialogue::is_office(g) }
+pub(super) fn away(g: &crate::game::Game) -> bool { !crate::dialogue::is_office(g) }
 
 /// What she tells the man she reaches, by cause.
 pub(super) fn report_pool(cause: Option<&str>) -> Vec<String> {
@@ -224,13 +224,13 @@ pub(super) fn report_pool(cause: Option<&str>) -> Vec<String> {
 }
 
 /// A pool without its shouts for 'security' where there is no such desk.
-fn no_security(g: &mut crate::game::Game, pool: &[String]) -> Vec<String> {
+fn no_security(g: &crate::game::Game, pool: &[String]) -> Vec<String> {
     if !away(g) { return pool.to_vec(); }
     pool.iter().filter(|t| !t.to_ascii_lowercase().contains("security")).cloned().collect()
 }
 
 /// {room} {name} {label} {she} {her} {cs} filled off her record.
-pub(super) fn fill(g: &mut crate::game::Game, gd: GuardId, text: &str, guard: Option<GuardId>) -> String {
+pub(super) fn fill(g: &crate::game::Game, gd: GuardId, text: &str, guard: Option<GuardId>) -> String {
     let cv = civ_of(g, gd);
     let at = g.cv[cv].cause_pos.unwrap_or(g.ch[g.gd[gd].ch].pos);
     let room = crate::dialogue::room_name(g, at);
@@ -892,7 +892,7 @@ fn released(g: &mut crate::game::Game, gd: GuardId) {
 
 // ---------------------------------------------------------------- FLEE: whom to, and the run
 /// Metres by path, and the path; no path is Infinity.
-pub(super) fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> crate::civilians::PathMetres {
+pub(super) fn path_metres(g: &crate::game::Game, from: V3, to: V3) -> crate::civilians::PathMetres {
     let p = match crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) { Some(p) if !p.is_empty() => p, _ => return PathMetres { m: m::INF } };
     let mut s = 0.0;
     let mut prev = from;
@@ -928,7 +928,7 @@ fn target_key(g: &mut Game, t: &CivTarget) -> CivBadTarget {
 /// A candidate of pickTarget, and what she would pay for it.
 struct Cand { t: CivTarget, cost: f64 }
 /// `consider` of pickTarget.
-fn consider(g: &mut Game, cv: CivId, cands: &mut Vec<Cand>, t: CivTarget, key: CivBadTarget, adj: f64, from: V3, threat: Option<V3>) {
+fn consider(g: &Game, cv: CivId, cands: &mut Vec<Cand>, t: CivTarget, key: CivBadTarget, adj: f64, from: V3, threat: Option<V3>) {
     if g.cv[cv].bad_targets.has(key) { return; }
     let metres = path_metres(g, from, t.pos).m;
     if !metres.is_finite() { return; }
@@ -1000,7 +1000,7 @@ pub(super) fn to_flee(g: &mut crate::game::Game, gd: GuardId, t: &crate::civilia
 }
 
 /// The running target's cost as flee compares two of them.
-fn run_cost(g: &mut Game, from: V3, t: &CivTarget) -> f64 {
+fn run_cost(g: &Game, from: V3, t: &CivTarget) -> f64 {
     let adj = match t.kind { CivTargetKind::Guard => -g.k.civ.guard_bonus_m, CivTargetKind::Exit => g.k.civ.exit_malus_m, CivTargetKind::Phone => 0.0 };
     path_metres(g, from, t.pos).m + adj
 }

@@ -20,7 +20,7 @@ fn sfx_of(l: &LANDINGValue) -> Vec<ChunkSfxItem> {
 
 // ---------------------------------------------------------------- the arithmetic of a box's attitude
 
-fn rot_of(g: &mut Game, b: AnyBoxId) -> Quat {
+fn rot_of(g: &Game, b: AnyBoxId) -> Quat {
     match g.tab[b].rot {
         Some(r) => r,
         None => v3::quat::yaw(g.tab[b].yaw),
@@ -449,7 +449,7 @@ fn slides_free(g: &mut Game, b: AnyBoxId, f: &Footprint, way: [f64; 2], d: f64) 
 }
 
 /// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.
-fn debris_foot_gap(g: &mut crate::game::Game, b: AnyBoxId, px: f64, pz: f64, d1x: f64, d1z: f64, e1: f64, e2: f64, radius: f64) -> crate::debris::DebrisFootGap {
+fn debris_foot_gap(g: &crate::game::Game, b: AnyBoxId, px: f64, pz: f64, d1x: f64, d1z: f64, e1: f64, e2: f64, radius: f64) -> crate::debris::DebrisFootGap {
     let bc = g.tab[b].c;
     let (d2x, d2z) = (-d1z, d1x);
     let (rx, rz) = (px - bc[0], pz - bc[2]);
@@ -588,7 +588,7 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
 }
 
 /// Does a piece's footprint reach into a static? Level rays from its middle to its four corners.
-fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
+fn debris_foot_in(g: &crate::game::Game, b: AnyBoxId) -> bool {
     let q = rot_of(g, b);
     let bh = g.tab[b].h;
     let bc = g.tab[b].c;
@@ -856,7 +856,7 @@ const PILE: f64 = 0.3;
 /// WHERE A PIECE LIES: its centre's height on the surface under it, or on the top of what already lies on that surface over its footprint, so that no two pieces lie
 /// through each other. None = nothing under it. What it found under it, if that is a prop. A piece just landing (it has come through whatever lies there) goes on top of
 /// the pile; a piece already `seated` asks only about what is beneath it.
-fn debris_seat(g: &mut Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Option<crate::props::PropSystemRaycast>) {
+fn debris_seat(g: &Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Option<crate::props::PropSystemRaycast>) {
     let b = g.tab.debris_chunk[c].box_;
     let sup = support_along(g, b, [0.0, 1.0, 0.0]);
     let bc = g.tab[b].c;
@@ -876,7 +876,7 @@ fn debris_seat(g: &mut Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Op
 }
 
 /// The top of what lies on `surface` over box b's footprint; the surface itself where nothing does. `rubble`: the wall's rubble counts as well as the pool's pieces.
-fn pile_top(g: &mut Game, b: AnyBoxId, surface: f64, seated: bool, rubble: bool) -> f64 {
+fn pile_top(g: &Game, b: AnyBoxId, surface: f64, seated: bool, rubble: bool) -> f64 {
     let mine = footprint(g, b);
     let (bc, sup) = (g.tab[b].c, mine.hy);
     let mut top = surface;
@@ -897,7 +897,7 @@ fn pile_top(g: &mut Game, b: AnyBoxId, surface: f64, seated: bool, rubble: bool)
 }
 
 /// Where the rubble of a wall that has just come down lies: at `y` as it was dealt, or on the pool's pieces if some already lie there.
-pub(in crate::breakage) fn debris_rubble_height(g: &mut crate::game::Game, b: AnyBoxId, y: f64) -> f64 {
+pub(in crate::breakage) fn debris_rubble_height(g: &crate::game::Game, b: AnyBoxId, y: f64) -> f64 {
     if g.destr.debris.list.is_empty() { return y; }
     let sup = support_along(g, b, [0.0, 1.0, 0.0]);
     m::max(y, pile_top(g, b, y - sup, false, false) + sup + 0.0015)
@@ -922,7 +922,7 @@ pub(in crate::breakage) fn debris_resettle(g: &mut crate::game::Game, c: DebrisC
 /// A box's plan on the floor: a rectangle along its most level long axis, half extents e1 and e2, and its half height.
 #[derive(Clone, Copy)]
 struct Footprint { d1x: f64, d1z: f64, e1: f64, e2: f64, hy: f64 }
-fn footprint(g: &mut Game, b: AnyBoxId) -> Footprint {
+fn footprint(g: &Game, b: AnyBoxId) -> Footprint {
     let bh = g.tab[b].h;
     let a = axes_of(rot_of(g, b));
     let mut iu = 0usize;
@@ -977,7 +977,7 @@ fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
 }
 
 /// The box's half extent along world direction n.
-pub(in crate::breakage) fn support_along(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
+pub(in crate::breakage) fn support_along(g: &crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let r = rot_of(g, b);
     support_of(r, g.tab[b].h, n)
 }
@@ -988,13 +988,13 @@ fn evictable(g: &crate::game::Game, c_2: DebrisChunkId) -> bool {
     ch.rest || ch.foot == Some(true)
 }
 
-fn bound_r(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { bound_of(g.tab[b].h) }
+fn bound_r(g: &crate::game::Game, b: AnyBoxId) -> f64 { bound_of(g.tab[b].h) }
 
 /// A nominal mass off the volume, clamped.
-fn mass_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { mass_from(g.tab[b].h) }
+fn mass_of(g: &crate::game::Game, b: AnyBoxId) -> f64 { mass_from(g.tab[b].h) }
 
 /// Radians between n and the box axis layFlat would settle onto it.
-fn face_tilt(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
+fn face_tilt(g: &crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let q = rot_of(g, b);
     face_tilt_of(q, g.tab[b].h, n)
 }

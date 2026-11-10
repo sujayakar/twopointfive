@@ -158,37 +158,7 @@ fn as_on_wall(an: &mut Anim, o: &mut OnWall) {
     // the sidle's own step: its share of the feet, and of the pelvis on the move
     let g_share = lerp(WALL_POSE.gait.share[0], WALL_POSE.gait.share[1], cr);
     let gw = g_share * (1.0 - park) * w;
-    o.at = at;
-    o.at_b = at_b;
-    o.at_rest = at_rest;
-    o.at_c = at_c;
-    o.idle_t = idle_t;
-    o.cr = cr;
-    o.s = s;
-    o.side_v = side_v;
-    o.park = park;
-    o.aim_w = aim_w;
-    o.ny = ny;
-    o.phase = phase;
-    o.wall_hit = wall_hit;
-    o.aim_yaw = aim_yaw;
-    o.lk = lk;
-    o.chest_rest_inv = chest_rest_inv;
-    o.gaze_local = gaze_local;
-    o.wall_take = wall_take;
-    o.on_wall = on_wall;
-    o.yin = yin;
-    o.take_feet = take_feet;
-    o.i_rl = i_rl;
-    o.i_ly = i_ly;
-    o.i_rr = i_rr;
-    o.i_ry = i_ry;
-    o.e = e;
-    o.n = n;
-    o.tr = tr;
-    o.root_off = root_off;
-    o.g_share = g_share;
-    o.gw = gw;
+    *o = OnWall { at, at_b, at_rest, at_c, idle_t, cr, s, side_v, park, aim_w, ny, phase, wall_hit, aim_yaw, lk, chest_rest_inv, gaze_local, wall_take, on_wall, yin, take_feet, i_rl, i_ly, i_rr, i_ry, e, n, tr, root_off, g_share, gw, ..*o };
 }
 
 /// The joints, and the clip's feet underneath.
@@ -198,7 +168,7 @@ fn wall_now(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
     // what is underneath: the clip's feet
     fk_run(rig, d, fk.rot, fk.pos);
     let (f_l, f_r, r_l, r_r) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
-    (o.hips, o.s1, o.s2, o.s3, o.nk, o.hd, o.foot_l, o.foot_r, o.f_l, o.f_r, o.r_l, o.r_r) = (hips, s1, s2, s3, nk, hd, foot_l, foot_r, f_l, f_r, r_l, r_r);
+    *o = OnWall { hips, s1, s2, s3, nk, hd, foot_l, foot_r, f_l, f_r, r_l, r_r, ..*o };
 }
 
 /// The spine toward the standing idle's, joint by joint.
@@ -273,7 +243,7 @@ fn wall_lean(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
         turn(d, rig, s2, quat::mul(quat::axis_angle(n, d_t * 0.3), quat::axis_angle(ax_n, rest * 0.4)));
         turn(d, rig, s3, quat::axis_angle(n, d_t * 0.2));
     }
-    (o.twist, o.gaze_deg) = (twist, gaze_deg);
+    *o = OnWall { twist, gaze_deg, ..*o };
 }
 
 /// The head.
@@ -302,7 +272,7 @@ fn step_clock(gait: &mut f64, o: &mut OnWall) {
     let u = (1.0 + s) / 2.0;
     let mv = (1.0 - park) * w * (1.0 - g_share);
     let wall_gait = *gait;
-    (o.u, o.mv, o.wall_gait) = (u, mv, wall_gait);
+    *o = OnWall { u, mv, wall_gait, ..*o };
 }
 
 /// A parked spot in the wall's frame for one role of one foot, and its toes' yaw.
@@ -368,7 +338,7 @@ fn treads(held: &mut bool, o: &mut OnWall) {
         *held = false;
     }
     let wtk_hold = *held;
-    (o.g_l, o.g_r, o.taking, o.wtk_hold) = (g_l, g_r, taking, wtk_hold);
+    *o = OnWall { g_l, g_r, taking, wtk_hold, ..*o };
 }
 
 /// Where a sole is bound, parked or stepping.
@@ -443,7 +413,7 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
     } else {
         *wtk = None;
     }
-    (o.t_l, o.t_r) = (t_l, t_r);
+    *o = OnWall { t_l, t_r, ..*o };
 }
 /// The wall hold's arms: both palms laid on the face beside the hips, fingers down and out along it, the elbows where the pose says; mended (WALLSNAP),
 /// the wrists hang beside the hips, a resting hand on the plaster with the thumb beside the index.

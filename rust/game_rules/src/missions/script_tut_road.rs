@@ -47,23 +47,23 @@ fn aim(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::directo
 }
 
 /// c.query.inside(v, 'sam') of one of the script's volumes
-fn sam_in(g: &mut Game, r: DirectorRunId, pick: fn(&TutRoadVars) -> &Option<crate::director::VolumeRef>) -> bool {
+fn sam_in(g: &Game, r: DirectorRunId, pick: fn(&TutRoadVars) -> &Option<crate::director::VolumeRef>) -> bool {
     let id = pick(tut_road_vars(g, r)).as_ref().expect("declared by tut_road_define").id.clone();
     crate::director::director_inside_volume(g, &crate::seats::here(g), r, &id, &crate::director::DirectorInsideVolumeWho::Sam)
 }
 
 ///  the player is on the sentry's firing lane, or coming round the truck's nose to it
-fn lane(g: &mut Game, r: DirectorRunId) -> bool {
+fn lane(g: &Game, r: DirectorRunId) -> bool {
     sam_in(g, r, |v| &v.road_east) || sam_in(g, r, |v| &v.road_nose)
 }
 
 ///  the player is out on the gun's own ground
-fn out(g: &mut Game, r: DirectorRunId) -> bool {
+fn out(g: &Game, r: DirectorRunId) -> bool {
     sam_in(g, r, |v| &v.field) || sam_in(g, r, |v| &v.open_east)
 }
 
 ///  how many of the last three still stand
-fn up(g: &mut Game, r: DirectorRunId, men: &[TutRoadGateMen]) -> f64 {
+fn up(g: &Game, r: DirectorRunId, men: &[TutRoadGateMen]) -> f64 {
     let mut n = 0.0;
     for m in men {
         if crate::director::director_query_alive(g, r, m.u.as_ref().expect("men holds found men only")) { n += 1.0; }
@@ -377,7 +377,7 @@ pub(super) fn tut_road_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
 }
 
 ///  id 0: the player is out in the open.
-pub(super) fn tut_road_gun_test(g: &mut crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
+pub(super) fn tut_road_gun_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         0 => Ok(out(g, r)),
         _ => Err(format!("tut_road 'gun': no c.until of id {}", id)),
@@ -505,7 +505,7 @@ pub(super) fn tut_road_gate_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 ///  id 0: each of the men has arrived or is down; ids 1 to 3: one of them is down.
-pub(super) fn tut_road_gate_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_road::TutRoadGateFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_road_gate_test(g: &crate::game::Game, r: DirectorRunId, f: &crate::script_tut_road::TutRoadGateFrame, id: u32) -> Result<bool, String> {
     match id {
         0 => {
             for m in &f.men {

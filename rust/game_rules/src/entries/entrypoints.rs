@@ -51,7 +51,7 @@ fn entry_points_mark(g: &mut crate::game::Game, p: V3) {
 }
 
 /// A line from a man at `p` to the face of `o` on side `sg` (its middle, or either third of its width). `open`: leaves out of the way.
-fn entry_points_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, sg: f64, open: bool) -> bool {
+fn entry_points_sees(g: &crate::game::Game, p: V3, o: CoverOpeningId, sg: f64, open: bool) -> bool {
     let eye: V3 = [p[0], EYE, p[2]];
     let (at, n, half) = opening_shape(g, o);
     for k in [0.0, 0.6, -0.6] {

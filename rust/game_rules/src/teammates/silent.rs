@@ -65,7 +65,7 @@ pub fn silent_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// loud has reached this man since the order
-pub(super) fn reached(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn reached(g: &crate::game::Game, gd: GuardId) -> bool {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let since = match g.m.silent.states.get(key) { Some(s) => s.since, None => return false };
     crate::roomfight::room_fight_hot_for(g, gd) && crate::roomfight::room_fight_hot_of(g, gd) >= since

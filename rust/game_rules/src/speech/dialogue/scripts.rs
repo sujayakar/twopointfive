@@ -28,7 +28,7 @@ pub(super) fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::D
                 if js::truthy(by_script) { return by_script; }
                 let by_shape = played_n(c, &alloc::format!("shape:{}", a.shape.as_str())) - played_n(c, &alloc::format!("shape:{}", b.shape.as_str()));
                 if js::truthy(by_shape) { return by_shape; }
-                crate::math_dice::hash_str(&alloc::format!("{}|{}", c.who, a.id)) - crate::math_dice::hash_str(&alloc::format!("{}|{}", c.who, b.id))
+                crate::dice::hash_str(&alloc::format!("{}|{}", c.who, a.id)) - crate::dice::hash_str(&alloc::format!("{}|{}", c.who, b.id))
             });
             sc = fits.into_iter().next();
         }
@@ -57,7 +57,7 @@ fn played_n(ctx: &DialogueCtx, key: &str) -> f64 {
 }
 
 /// Does this script fit the man and the moment, and does every line it would say to him resolve now.
-fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
+fn script_fits(g: &crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     if sc.t != ctx.t || !sc.k.contains(&ctx.k) { return false; }
     if let Some(band) = &sc.band { if !band.contains(&ctx.band) { return false; } }
     if let Some(needs) = &sc.needs { if needs.iter().any(|n| !fact(ctx, *n)) { return false; } }
@@ -90,7 +90,7 @@ pub(super) fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKe
     let room = String::from(ctx.tokens.room.as_deref().unwrap_or(""));
     let Some(list) = table.get(room) else { return b; };
     if list.is_empty() { return b; }
-    let i = js::rem(crate::math_dice::hash_str(&alloc::format!("{}|room|{}", ctx.who, sc.id)), list.len() as f64) as usize;
+    let i = js::rem(crate::dice::hash_str(&alloc::format!("{}|room|{}", ctx.who, sc.id)), list.len() as f64) as usize;
     let r = &list[i];
     Beat { sam: r.sam.clone(), him: r.him.clone(), after: r.after.clone().or(b.after.clone()), ..b }
 }

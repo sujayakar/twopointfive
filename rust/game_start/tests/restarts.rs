@@ -14,7 +14,7 @@ fn office(link: Option<&str>) -> Play {
 /// a game restarted as the page's cards and keys restart it, at a clock and a die both arms share, and a quarter of a second of quiet
 fn restart(p: &mut Play) {
     p.g.time = CLOCK;
-    p.g.dice = Some(game::math_dice::sim_dice_new(9.0));
+    p.g.dice = game::dice::Draws { seed: 9, n: 0.0 };
     game::savestate::control::restart(&mut p.g);
     p.g.god_mode = true;
     p.run(0.25);

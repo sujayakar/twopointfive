@@ -21,12 +21,12 @@ fn answers(g: &Game, x: EnemysquadsSquadId) -> bool {
     false
 }
 /// `home(g, Q).find(D => D.gd !== m)?.gd`
-fn home_but(g: &mut Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
+fn home_but(g: &Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
     let h = home(g, q);
     h.into_iter().map(|d| def_gd(g, d)).find(|&x| x != m)
 }
 /// `home(g, Q)[0]?.gd`
-fn home_first(g: &mut Game, q: EnemysquadsSquadId) -> Option<GuardId> {
+fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
     let h = home(g, q);
     h.first().map(|&d| def_gd(g, d))
 }
@@ -56,7 +56,7 @@ pub(super) fn key_up(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardI
         g.tab.enemysquads_squad[q].call_die = Some(die);
     }
     let [lo, hi] = g.k.squads.call_secs;
-    let secs = lo + crate::math_dice::roll(g.tab.enemysquads_squad[q].call_die.as_mut().unwrap()) * (hi - lo);
+    let secs = lo + g.tab.enemysquads_squad[q].call_die.as_mut().unwrap().roll() * (hi - lo);
     let now = g.time;
     g.tab.enemysquads_squad[q].calls.as_mut().unwrap().push(Call { by: m, end: now + secs, at, room: room.cloned(), body, eyes: body.is_none() });
     let said = mate(g, m);
@@ -130,7 +130,7 @@ fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) {
         let d = check_dice(g, q, Some(0x3c6ef372u32 as f64));
         g.tab.enemysquads_squad[q].ask_die = Some(d);
     }
-    let ask = lo + crate::math_dice::roll(g.tab.enemysquads_squad[q].ask_die.as_mut().unwrap()) * (hi - lo);
+    let ask = lo + g.tab.enemysquads_squad[q].ask_die.as_mut().unwrap().roll() * (hi - lo);
     let d0 = def_of(g, m);
     let p = pos_of(g, m);
     let from = g.tab.enemysquads_squad[q].rc.as_ref().unwrap().afield.as_ref().and_then(|a| a.get(m)).copied();
@@ -334,7 +334,7 @@ fn net_send(g: &mut crate::game::Game, x: EnemysquadsSquadId, who: GuardId, stop
 /// (netCheck's beat)
 fn nc_beat(g: &mut Game) -> f64 {
     let any = the_state(g).squads.iter().any(|&q| { let s = &g.tab.enemysquads_squad[q]; s.wary == Some(true) || s.news_t > -100.0 || s.contact_t > -100.0 });
-    let r = crate::math_dice::roll(&mut net_mut(g).die);
+    let r = net_mut(g).die.roll();
     let k = &g.k.squads;
     k.net_every * (if any { k.check_alert_k } else { 1.0 }) * (1.0 + (r * 2.0 - 1.0) * k.check_jitter)
 }
@@ -369,7 +369,7 @@ fn nc_silent(g: &Game, x: EnemysquadsSquadId) -> bool {
 }
 /// (netCheck's posts) the places of X's men, as its own side knows them
 struct Post { at: V3, m: GuardId }
-fn posts(g: &mut Game, x: EnemysquadsSquadId) -> Vec<Post> {
+fn posts(g: &Game, x: EnemysquadsSquadId) -> Vec<Post> {
     let mut p: Vec<Post> = Vec::new();
     let men = g.tab.enemysquads_squad[x].men.clone();
     for m in men {
@@ -381,7 +381,7 @@ fn posts(g: &mut Game, x: EnemysquadsSquadId) -> Vec<Post> {
     p
 }
 /// the man who asks: the man at home nearest X's posts, of any other squad   (netCheck's asker)
-fn asker(g: &mut Game, x: EnemysquadsSquadId) -> Option<GuardId> {
+fn asker(g: &Game, x: EnemysquadsSquadId) -> Option<GuardId> {
     let p = posts(g, x);
     let (mut best, mut bd) = (None, f64::INFINITY);
     let squads = the_state(g).squads.clone();
@@ -414,7 +414,7 @@ fn net_check(g: &mut crate::game::Game) {
     if the_state(g).nc.is_none() {
         let first = the_state(g).squads[0];
         let mut die = check_dice(g, first, Some(0x1b873593u32 as f64));
-        let next_at = g.time + (0.5 + 0.5 * crate::math_dice::roll(&mut die)) * g.k.squads.net_every;
+        let next_at = g.time + (0.5 + 0.5 * die.roll()) * g.k.squads.net_every;
         let tick_t = g.time;
         g.m.enemysquads.states.as_mut().unwrap().nc = Some(NetCheck { next_at, stage: crate::enemysquads::CheckStage::Idle, t0: 0.0, caller: None, about: None, done: JsSet::new(), tried: JsMap::new(), queried: JsMap::new(), say: Vec::new(), die, tick_t });
     }
@@ -728,7 +728,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         }
         let t = g.time;
         let from = v3::copy(g.tab.roomfight_def[d].station);
-        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::default() });
+        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, t0: t, ..Sent::default() });
         crate::roomfight::loose_at(g, d, due.at);
         let (a, b) = (pos_of(g, due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));
@@ -861,8 +861,8 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
             event(g, q, SquadEventWhat::Back, Some(gd));
         }
         let r = &mut g.tab.enemysquads_squad[q].sent[i];
-        r.phase = SentPhase::Run; r.back = Some(true); r.spot = Some(s.from); r.door = None; r.way = None; r.tries = 0.0;
-        crate::roomfight::run(g, d, s.from, None, 0.3, crate::owner::by::SQUAD_LEG);
+        r.phase = SentPhase::Run; r.back = Some(true); r.spot = Some(s.from); r.door = None; r.way.clear();
+        send_round(g, d, s.from, None, Vec::new());
         return;
     }
     if mode == crate::roomfight::DefMode::Hold && g.time - s.t0 > 6.0 { sent_home(g, q, i); }
@@ -870,38 +870,22 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
 
 /// squadsTick 3, a man on a leg (`s.phase === 'run'`)
 fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: RoomfightDefId, mode: crate::roomfight::DefMode) {
-    use crate::roomfight::DefMode;
+    use crate::roomfight::{DefMode, LegEnd};
     let gd = s.gd;
-    let step = crate::roomfight::boots(g, gd, s.step_t);
-    g.tab.enemysquads_squad[q].sent[i].step_t = step;
-    let at = pos_of(g, gd);
-    if mode == DefMode::Move {
-        if let Some(w) = &s.way {
-            if w.len() > 1 && (flat(at, w[0]) < 1.4 || flat(at, w[1]) < flat(w[0], w[1])) {
-                g.tab.enemysquads_squad[q].sent[i].way.as_mut().unwrap().remove(0);
-                crate::roomfight::run(g, d, w[1], s.door, 0.3, crate::owner::by::SQUAD_LEG);
-            }
-        }
+    let Some(how) = crate::roomfight::leg_ended(g, d, crate::owner::by::SQUAD_LEG) else { return };
+    if how == LegEnd::Taken && mode != DefMode::Free {
+        // (somebody stronger has him: he goes on when he is let go, if that is soon)
+        if g.time - s.t0 > g.k.squads.hold_secs { g.tab.enemysquads_squad[q].sent.remove(i); return; }
+        if crate::roomfight::on_leg(g, d) || crate::owner::kept(g, gd, crate::owner::by::SQUAD_LEG).is_some() || !fit(g, gd) { return; }
+        let here = pos_of(g, gd);
+        let mut way = s.way.clone();
+        if let Some(k) = (0..way.len()).min_by(|&a, &b| flat(way[a], here).total_cmp(&flat(way[b], here))) { way.drain(..k); }
+        send_round(g, d, s.spot.unwrap_or(s.from), s.door, way);
         return;
     }
-    let there = s.spot.map_or(false, |p| flat(at, p) < 2.0);
+    if s.back == Some(true) { g.tab.enemysquads_squad[q].sent.remove(i); return; }
+    let there = how == LegEnd::Arrived;
     let seen = g.time - g.gd[gd].last_seen_t < 1.0;
-    let again = mode == DefMode::Hold && !there && !seen && s.tries < 3.0 && s.spot.is_some();
-    if s.back == Some(true) {
-        if again && fit(g, gd) {
-            g.tab.enemysquads_squad[q].sent[i].tries = s.tries + 1.0;
-            crate::roomfight::run(g, d, s.spot.unwrap(), None, 0.3, crate::owner::by::SQUAD_LEG);
-            return;
-        }
-        g.tab.enemysquads_squad[q].sent.remove(i);
-        return;
-    }
-    if again && fit(g, gd) {
-        g.tab.enemysquads_squad[q].sent[i].tries = s.tries + 1.0;
-        let next = match s.way.as_ref().and_then(|w| w.first().copied()) { Some(p) => p, None => s.spot.unwrap() };
-        crate::roomfight::run(g, d, next, s.door, 0.3, crate::owner::by::SQUAD_LEG);
-        return;
-    }
     let holds = s.hold == Some(true);
     let name = name_of(g, q);
     if s.role == SentRole::Flank && mode == DefMode::Hold && (if holds { there || seen } else { seen && !there }) {

@@ -176,22 +176,7 @@ fn as_carried(an: &Anim, o: &mut LongArms) {
     let (t, aim, aim_pitch, long_steady, trained, rl_k) = (an.idle_t, an.upper_w.aim, an.aim_pitch, an.long_steady, an.trained, an.rlc.k);
     let (mvs_yaw, mvs_climb, mvs_back, dl, dr) = (an.mvs.yaw, an.mvs.climb, an.mvs.back, an.dp.w_l.x, an.dp.w_r.x);
     let (grip_up, fix_l, g_wrist, g_fingers, g_back) = (an.grip_up, an.hand_fix[0], an.long_grip.wrist, an.long_grip.fingers, an.long_grip.back);
-    o.t = t;
-    o.aim = aim;
-    o.aim_pitch = aim_pitch;
-    o.long_steady = long_steady;
-    o.trained = trained;
-    o.rl_k = rl_k;
-    o.mvs_yaw = mvs_yaw;
-    o.mvs_climb = mvs_climb;
-    o.mvs_back = mvs_back;
-    o.dl = dl;
-    o.dr = dr;
-    o.grip_up = grip_up;
-    o.fix_l = fix_l;
-    o.g_wrist = g_wrist;
-    o.g_fingers = g_fingers;
-    o.g_back = g_back;
+    *o = LongArms { t, aim, aim_pitch, long_steady, trained, rl_k, mvs_yaw, mvs_climb, mvs_back, dl, dr, grip_up, fix_l, g_wrist, g_fingers, g_back, ..*o };
 }
 
 /// The chest, the trigger hand and the clip's bore as posed on this spine.
@@ -199,7 +184,7 @@ fn clip_bore(fk: &mut Fk, hand_r: usize, o: &mut LongArms) {
     let (chest, pr0, rr0) = (fk.at(role(SPINE3)), fk.at(hand_r), fk.rot(hand_r));
     // the clip's bore as posed on this spine
     let g0 = v3::normalize(v3::sub(fk.at(role(MIDDLE1_R)), pr0));
-    (o.chest, o.rr0, o.g0) = (chest, rr0, g0);
+    *o = LongArms { chest, rr0, g0, ..*o };
 }
 
 /// The bore in the model, and the gun's own frame about it: y up out of the receiver, x to the figure's left.
@@ -215,7 +200,7 @@ fn bore(ch: &[f64; LC_COUNT], o: &mut LongArms) {
     let flat = v3::mad(AY, dd, -dd[1]);
     let yw = if v3::len(flat) > 1e-4 { v3::normalize(flat) } else { [cos(yaw), 0.0, -sin(yaw)] };
     let xw = v3::cross(yw, dd);
-    (o.sway, o.dd, o.rr, o.yw, o.xw) = (sway, dd, rr, yw, xw);
+    *o = LongArms { sway, dd, rr, yw, xw, ..*o };
 }
 
 /// A point off the gun in its own frame.
@@ -232,7 +217,7 @@ fn anchor_at(ch: &[f64; LC_COUNT], fk: &mut Fk, o: &mut LongArms) {
     let sh = fk.at(role(UPPER_ARM_R));
     let mut anchor = [lerp(chest[0], sh[0], ka), lerp(chest[1], sh[1], ka), lerp(chest[2], sh[2], ka)];
     anchor[0] = max(anchor[0], chest[0] - LONG_ANCHOR_SIDE_MAX);
-    (o.pump, o.ka, o.anchor) = (pump, ka, anchor);
+    *o = LongArms { pump, ka, anchor, ..*o };
 }
 
 /// Steadied against the gait: the anchor's side-to-side followed through a two-pole low-pass.
@@ -257,7 +242,7 @@ fn steady(lg: &mut game_types::character::AnimLg, ch: &[f64; LC_COUNT], o: &mut 
             anchor[0] = lerp(anchor[0], l1, iso);
         }
     }
-    o.anchor = anchor;
+    *o = LongArms { anchor, ..*o };
 }
 
 /// Where the hand is off the chest, the reload carry's own point in it.
@@ -274,7 +259,7 @@ fn off_chest(ch: &[f64; LC_COUNT], o: &mut LongArms) {
         off[1] += (rl_at[1] - off[1]) * rl_k;
         off[2] += (rl_at[2] - off[2]) * rl_k;
     }
-    o.off = off;
+    *o = LongArms { off, ..*o };
 }
 
 /// The swing's pivot, between the shoulders or the gun shoulder itself, less the twist's tilt of the whole trunk about the chest joint.
@@ -291,7 +276,7 @@ fn swing(ch: &[f64; LC_COUNT], o: &mut LongArms) {
         off[1] = oy * cos(ph) + oz * sin(ph);
         off[2] = -oy * sin(ph) + oz * cos(ph);
     }
-    o.off = off;
+    *o = LongArms { off, ..*o };
 }
 
 /// The hand's point, back by the kick.
@@ -301,7 +286,7 @@ fn hand_point(o: &mut LongArms) {
     if mvs_back > 1e-5 {
         pr = v3::mad(pr, dd, -mvs_back);
     }
-    o.pr = pr;
+    *o = LongArms { pr, ..*o };
 }
 
 /// The elbows, by training, shouldered; and the support hand's turn.
@@ -317,7 +302,7 @@ fn elbows(tune: &Knobs, ch: &[f64; LC_COUNT], o: &mut LongArms) {
     pole_r[1] += tune.mv.gait.wing * uw;
     pole_r[0] -= 0.25 * uw;
     let rl = hand_rot(&fix_l, in_gun(o, &g_fingers), in_gun(o, &g_back));
-    (o.pole_r, o.pole_l, o.pw, o.rl) = (pole_r, pole_l, pw, rl);
+    *o = LongArms { pole_r, pole_l, pw, rl, ..*o };
 }
 
 /// The arms at a point; how far the support hand fell short of its own (nought when it reached).

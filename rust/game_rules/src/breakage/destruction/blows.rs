@@ -217,7 +217,7 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
 }
 
 /// The door leaves a blast here would take off their hinges; nothing is touched.
-pub fn destruction_doors_for(g: &mut crate::game::Game, at: V3, opts: Option<crate::destruction::DestructionDoorsForOpts>) -> Vec<DoorId> {
+pub fn destruction_doors_for(g: &crate::game::Game, at: V3, opts: Option<crate::destruction::DestructionDoorsForOpts>) -> Vec<DoorId> {
     let opts = opts.unwrap_or_default();
     if chaos_of(g) <= 0.0 { return Vec::new(); }
     let tear = opts.radius.unwrap_or(g.k.walls.blast.radius) * opts.power.unwrap_or(1.0) * g.k.walls.blast.door_k;
@@ -240,7 +240,7 @@ pub fn destruction_furn_blast(g: &mut crate::game::Game, at: V3, src: crate::fur
 }
 
 /// The flags static `i` was authored with if this lane has hidden it, else None.
-pub(in crate::breakage) fn destruction_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> {
+pub(in crate::breakage) fn destruction_flags0(g: &crate::game::Game, i: f64) -> Option<f64> {
     if let Some(&f) = g.destr.hidden.get(crate::Num(i)) { return Some(f); }
     if let Some(f) = crate::wallbreak::wall_break_flags0(g, i) { return Some(f); }
     crate::winbars::bar_flags0(g, i)

@@ -192,7 +192,7 @@ fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
 }
 
 /// A door order that is made and waiting on something that is not its own next step.
-fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
+fn waits(g: &crate::game::Game, op: DoorOpId) -> bool {
     let r = &g.tab.doortools_door_op[op];
     if r.word.is_some() || r.hold == 2.0 {
         return false;

@@ -103,7 +103,7 @@ pub fn life_layer(g: usize, an: &mut Anim, dt: f64, s: f64, crouch_pose: f64, w:
 /// Which way he faces and how low he is.
 fn as_stands(an: &Anim, o: &mut Life) {
     let (yin, cr_t) = (an.body_yaw_in, an.cr_t);
-    (o.yin, o.cr_t) = (yin, cr_t);
+    *o = Life { yin, cr_t, ..*o };
 }
 
 /// How fast he turns.
@@ -135,7 +135,7 @@ fn own_motion(lf: &mut game_types::character::AnimLife, o: &mut Life) {
         };
         lf.prev_pos = p0;
     }
-    o.teleported = teleported;
+    *o = Life { teleported, ..*o };
 }
 
 /// The breath, harder after a run.
@@ -145,7 +145,7 @@ fn breathe(lf: &mut game_types::character::AnimLife, tune: &Knobs, o: &mut Life)
     let b_rate = lerp(LIFE.breath_rate, tune.hardbreath.chest_rate, lf.exert);
     let b_amp = lerp(LIFE.breath_amp, tune.hardbreath.chest_amp, lf.exert) * lerp(1.0, 0.35, clamp(s / 2.0, 0.0, 1.0)) * LIFE.on;
     lf.breath = (lf.breath + dt * b_rate * 2.0 * PI) % (2.0 * PI);
-    o.b_amp = b_amp;
+    *o = Life { b_amp, ..*o };
 }
 
 /// His weight swings as he starts and stops.
@@ -180,7 +180,7 @@ fn weight_shifts(lf: &mut game_types::character::AnimLife, o: &Life) {
 /// The feet as the pose has them.
 fn feet_of_pose(foot_l: usize, foot_r: usize, fk: &mut Fk, o: &mut Life) {
     let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
-    (o.fl, o.fr, o.rl, o.rr) = (fl, fr, rl, rr);
+    *o = Life { fl, fr, rl, rr, ..*o };
 }
 
 /// The body posed: the weight, the hip dropped on the resting side, the breath in the chest.
@@ -217,14 +217,14 @@ fn feet_stand(lf: &mut game_types::character::AnimLife, f_w: &mut f64, o: &mut L
     let standing = if max(s, lf.root_v) < 0.22 && w_f > 0.5 && FEET.on > 0.5 && !(cr_t > 0.0 && cr_t < 1.0) { 1.0 } else { 0.0 };
     let w_was = *f_w;
     *f_w = damp(*f_w, standing, if standing != 0.0 { 12.0 } else { 16.0 + 40.0 * lf.root_v }, dt);
-    o.w_was = w_was;
+    *o = Life { w_was, ..*o };
 }
 
 /// The feet put back where they were.
 fn as_posed(o: &mut Life) {
     let Life { fl, fr, rl, rr, .. } = *o;
     let (tl, tr, ql, qr) = (fl, fr, rl, rr);
-    (o.tl, o.ql, o.tr, o.qr) = (tl, ql, tr, qr);
+    *o = Life { tl, ql, tr, qr, ..*o };
 }
 
 /// Where the pose wants each foot, in the world.
@@ -234,7 +234,7 @@ fn spots_wanted(o: &mut Life) {
     let want_p = [stands.world(&fl), stands.world(&fr)];
     let want_yaw = [yin + foot_yaw(&rl), yin + foot_yaw(&rr)];
     let (swing, lift, dist, turn_at, pivot, lag_cap) = (FEET.swing, FEET.lift, FEET.dist, FEET.turn_deg * DEGR, FEET.pivot, FEET.lag_cap_deg * DEGR);
-    (o.stands, o.want_p, o.want_yaw, o.swing, o.lift, o.dist, o.turn_at, o.pivot, o.lag_cap) = (stands, want_p, want_yaw, swing, lift, dist, turn_at, pivot, lag_cap);
+    *o = Life { stands, want_p, want_yaw, swing, lift, dist, turn_at, pivot, lag_cap, ..*o };
 }
 
 /// Newly planted, set down by a teleport or far off, they lock where the pose has them.
@@ -316,7 +316,7 @@ fn lock_offs(f_w: &mut f64, foot: &mut [AnimFoot; 2], o: &mut Life) {
     foot[1].lock_off = v3::sub(tr, fr);
     foot[0].lock_yaw = wrap_angle((foot[0].yaw - yin) - foot_yaw(&rl)) * *f_w;
     foot[1].lock_yaw = wrap_angle((foot[1].yaw - yin) - foot_yaw(&rr)) * *f_w;
-    (o.tl, o.ql, o.tr, o.qr) = (tl, ql, tr, qr);
+    *o = Life { tl, ql, tr, qr, ..*o };
 }
 /// What the steps of the feet hand on to the ones after them. Pairs are the left and the right.
 #[derive(Clone, Copy, Default)]
@@ -445,7 +445,7 @@ fn as_on_feet(an: &mut Anim, o: &mut Feet) {
     let dd = hypot2(p0[0] - p_was[0], p0[2] - p_was[2]);
     let teleported = dd > 0.5;
     let went = if dd > 1e-6 { [(p0[0] - p_was[0]) / dd, (p0[2] - p_was[2]) / dd] } else { [0.0, 0.0] };
-    (o.at, o.yin, o.cr_t, o.f_w, o.lock_off, o.lock_yaw, o.p_was, o.teleported, o.went) = (at, yin, cr_t, f_w, lock_off, lock_yaw, p_was, teleported, went);
+    *o = Feet { at, yin, cr_t, f_w, lock_off, lock_yaw, p_was, teleported, went, ..*o };
 }
 
 /// Whether a layer has the legs.
@@ -453,7 +453,7 @@ fn legs_free(o: &mut Feet) {
     let Feet { w_f, own, .. } = *o;
     let active = w_f > 0.5 && FEET.on > 0.5;
     let k = if active { own } else { 0.0 };
-    (o.active, o.k) = (active, k);
+    *o = Feet { active, k, ..*o };
 }
 
 /// A foot the stack has, the standing lock taken back out of it.
@@ -471,7 +471,7 @@ fn feet_as_posed(fk: &Fk, foot_l: usize, foot_r: usize, o: &mut Feet) {
     let (fl, toe_pose_l, rl) = without(o, 0, fk.at(foot_l), fk.at(role(TOE_L)), fk.rot(foot_l));
     let (fr, toe_pose_r, rr) = without(o, 1, fk.at(foot_r), fk.at(role(TOE_R)), fk.rot(foot_r));
     let stands = Stands::at(p0, yin);
-    (o.fl, o.toe_pose_l, o.rl, o.fr, o.toe_pose_r, o.rr, o.stands) = (fl, toe_pose_l, rl, fr, toe_pose_r, rr, stands);
+    *o = Feet { fl, toe_pose_l, rl, fr, toe_pose_r, rr, stands, ..*o };
 }
 
 /// Where the pose wants each foot, in the world; and how far it may want one from where it stands before it steps: a stand's small shuffle, a stride's reach.
@@ -484,18 +484,7 @@ fn feet_wanted(o: &mut Feet) {
     let (swing, lift, turn_at, pivot, lag_cap) = (FEET.swing, FEET.lift, FEET.turn_deg * DEGR, FEET.pivot, FEET.lag_cap_deg * DEGR);
     // how far the pose may want a foot from where it stands before it steps: a stand's small shuffle, a stride's reach
     let reach_now = lerp(FEET.dist, FEET.reach, min(s, 1.0));
-    o.ankle = ankle;
-    o.toe = toe;
-    o.rot = rot;
-    o.want_p = want_p;
-    o.want_toe = want_toe;
-    o.want_yaw = want_yaw;
-    o.swing = swing;
-    o.lift = lift;
-    o.turn_at = turn_at;
-    o.pivot = pivot;
-    o.lag_cap = lag_cap;
-    o.reach_now = reach_now;
+    *o = Feet { ankle, toe, rot, want_p, want_toe, want_yaw, swing, lift, turn_at, pivot, lag_cap, reach_now, ..*o };
 }
 
 /// How far past that a foot is.
@@ -533,7 +522,7 @@ fn cycle_under(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
         foot[i].off_yaw = 0.0;
         foot[i].fresh = true;
     }
-    (o.toe_down, o.at_floor, o.lifted, o.going) = (toe_down, at_floor, lifted, going);
+    *o = Feet { toe_down, at_floor, lifted, going, ..*o };
 }
 
 /// Where its pivot stood in the last frame's picture: what it holds from now on.
@@ -583,7 +572,7 @@ fn ease_off(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     }
     foot[i].off = off;
     foot[i].off_v = off_v;
-    (o.off, o.off_v) = (off, off_v);
+    *o = Feet { off, off_v, ..*o };
 }
 
 /// Down it holds its place, on the toe, or on the heel while the toe is still coming down, its way within what the ankle takes.
@@ -640,7 +629,7 @@ fn start_steps(foot: &mut [AnimStep; 2], o: &Feet) {
 fn shown_at_first(o: &mut Feet) {
     let Feet { want_p, .. } = *o;
     let shown = [want_p[0], want_p[1]];
-    o.shown = shown;
+    *o = Feet { shown, ..*o };
 }
 
 /// A foot in the air, or off the pose by what it is off by.
@@ -667,7 +656,7 @@ fn swing_through(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     } else {
         shown[i] = v3::add(want_p[i], foot[i].off);
     }
-    o.shown = shown;
+    *o = Feet { shown, ..*o };
 }
 
 /// A foot not down goes no faster than a foot goes, seen from where he stands: what the pose asks past that it comes to by the same easing.
@@ -683,7 +672,7 @@ fn foot_speed(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
             if foot[i].swing < 0.0 { foot[i].off = v3::sub(shown[i], want_p[i]); foot[i].off_v = [0.0; 3]; }
         }
     }
-    o.shown = shown;
+    *o = Feet { shown, ..*o };
 }
 
 /// Which way he faces, and the feet as posed.
@@ -691,7 +680,7 @@ fn body_turn(o: &mut Feet) {
     let Feet { yin, fl, rl, fr, rr, .. } = *o;
     let (body, body_back) = (q_yaw(yin), q_yaw(-yin));
     let placed = [(fl, rl), (fr, rr)];
-    (o.body, o.body_back, o.placed) = (body, body_back, placed);
+    *o = Feet { body, body_back, placed, ..*o };
 }
 
 /// It turns no faster than a foot turns, seen in the world; and a toe that would be under the floor comes up onto it.
@@ -710,5 +699,5 @@ fn foot_turn(foot: &mut [AnimStep; 2], i: usize, o: &mut Feet) {
     let up = if foot[i].swing >= 0.0 { sin(PI * min(1.0, foot[i].swing)) * lift } else { 0.0 };
     shown[i][1] = max(shown[i][1] - up, p0[1] + TOE_FLOOR_Y - toe_off[1]) + up;
     placed[i] = (o.stands.model(&shown[i]), quat::mul(body_back, q));
-    (o.shown, o.placed) = (shown, placed);
+    *o = Feet { shown, placed, ..*o };
 }

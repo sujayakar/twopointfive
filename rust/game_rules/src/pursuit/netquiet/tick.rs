@@ -21,7 +21,7 @@ fn kind_index(kind: LineKind) -> f64 {
     KINDS.iter().position(|k| *k == kind).map_or(-1.0, |i| i as f64)
 }
 
-fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
+fn pos_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     g.ch[c].pos
 }
@@ -45,7 +45,7 @@ fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// a man this file is about at all: a defender or night staff, not a man the mission leads itself
-fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn side(g: &crate::game::Game, gd: GuardId) -> bool {
     let team = g.team(gd);
     g.gd[gd].civ.is_none()
         && team.theirs()
@@ -53,12 +53,12 @@ fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// …and alive
-fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::condition::down(g, g.gd[gd].ch) && side(g, gd)
 }
 
 /// …on the net: alive, not in Sam's arm, not a man who has run
-fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn on_net(g: &crate::game::Game, gd: GuardId) -> bool {
     ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
@@ -152,7 +152,7 @@ fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind
 }
 
 /// is anybody of his side up on the whole net, the men in `but` aside
-fn net_up(g: &mut crate::game::Game, gd: GuardId, but: Option<&[GuardId]>) -> bool {
+fn net_up(g: &crate::game::Game, gd: GuardId, but: Option<&[GuardId]>) -> bool {
     let but = but.unwrap_or(&[]);
     let mut i = 0;
     while i < g.guards.len() {
@@ -461,7 +461,7 @@ pub(super) fn whipping(g: &crate::game::Game, gd: GuardId) -> bool {
 // ---------------------------------------------------------------- the last man's spot
 
 /// the entries as seen from `p` by a crouched man: how many he has a line to, the arc they sit in, its middle
-fn arc_at(g: &mut crate::game::Game, e: &[crate::roomfight::Entry], p: V3) -> crate::netquiet::ArcAt {
+fn arc_at(g: &crate::game::Game, e: &[crate::roomfight::Entry], p: V3) -> crate::netquiet::ArcAt {
     let eye: V3 = [p[0], g.k.netquiet.eye_m, p[2]];
     let mut seen = 0.0;
     let mut near = m::INF;
@@ -506,7 +506,7 @@ struct Rate {
     score: f64,
 }
 
-fn rate(g: &mut Game, e: &[crate::roomfight::Entry], from: V3, lim: f64, p: V3) -> Rate {
+fn rate(g: &Game, e: &[crate::roomfight::Entry], from: V3, lim: f64, p: V3) -> Rate {
     let a = arc_at(g, e, p);
     let back: V3 = [p[0] - m::sin(a.yaw) * 1.1, 1.0, p[2] - m::cos(a.yaw) * 1.1];
     let score = m::min(a.near, 8.0) - 0.35 * flat(p, from) + if crate::scene_collision::segment_blocked(g, [p[0], 1.0, p[2]], back, None, None, None) { 1.5 } else { 0.0 };
@@ -553,7 +553,7 @@ fn sort_spots(v: &mut [Rate], cmp: impl Fn(&Rate, &Rate) -> f64) {
 }
 
 /// where he goes: of his room's free floor, the spot with the most entries in view inside the narrowest arc; None = stay. No die.
-fn low_spot(g: &mut crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> Option<V3> {
+fn low_spot(g: &crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> Option<V3> {
     let (door_m, stay_m, max_m, lim) = (g.k.netquiet.door_m, g.k.netquiet.stay_m, g.k.netquiet.max_m, g.k.netquiet.arc_deg * v3::DEG);
     let (cs, w) = (g.col.nav.cell, g.col.nav.w);
     let e = g.tab.roomfight_room[r].entries.clone();
@@ -658,7 +658,7 @@ fn knows_squad(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// the last man at his act, and this file's to keep where he is
-fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn mine(g: &crate::game::Game, gd: GuardId) -> bool {
     let (last_beat, give_up) = (g.k.netquiet.last_beat, g.k.netquiet.give_up);
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return false };
     n.last >= SAID && n.last <= LOW && !(n.last == SAID && n.t > last_beat + give_up)
@@ -924,7 +924,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             n.last = DONE;
             return;
         };
-        if !crate::roomfight::on_leg_of(g, d, crate::owner::by::LAST_MAN) {
+        if crate::roomfight::leg_ended(g, d, crate::owner::by::LAST_MAN).is_some() {
             settle(g, gd, d);
         }
         return;

@@ -38,7 +38,7 @@ fn replace(g: &mut Game, c: CharId, map: &BTreeMap<u32, Pose>) {
 }
 
 /// the poses a character keeps from tick to tick, each once, in the order they go into the pool: his set's list, then his ragdoll's
-fn kept(g: &mut Game, c: CharId, ragdoll: bool) -> Vec<Pose> {
+fn kept(g: &Game, c: CharId, ragdoll: bool) -> Vec<Pose> {
     if ragdoll { return g.ch[c].rd.as_ref().map(|rd| alloc::vec![rd.pose]).unwrap_or_default(); }
     let s = g.ch[c].anim.poses;
     g.tab.pose_set[s].list.clone()

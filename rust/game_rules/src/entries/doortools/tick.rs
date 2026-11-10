@@ -104,7 +104,7 @@ fn trigger_free_keyed(g: &mut Game) {
 // ------------------------------------------------------------ who a can would catch
 
 /// is `p` in a stun can's reach through that door, the line asked without this door's own leaf
-fn door_tools_can_reach(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
+fn door_tools_can_reach(g: &crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
     let fc = g.dr[d].frame_centre;
     if !(off_of(g, d, p, side) < 0.0 && v3::dist_xz(p, fc) < g.k.doortools.stun_m) {
         return false;
@@ -114,7 +114,7 @@ fn door_tools_can_reach(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) 
     !crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::but_door(g, d), inn, [p[0], 1.1, p[2]], None)
 }
 /// Sam himself beyond the door, in a stun can's reach
-pub(super) fn door_tools_sam_behind(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
+pub(super) fn door_tools_sam_behind(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     if crate::condition::down(g, g.pl[g.player].ch) {
         return false;
     }
@@ -125,7 +125,7 @@ pub(super) fn door_tools_sam_behind(g: &mut crate::game::Game, d: DoorId, side: 
     door_tools_can_reach(g, d, side, p)
 }
 /// is `x` part of this entry, for the can
-fn entry_own(g: &mut Game, op: DoorOpId, x: GuardId) -> bool {
+fn entry_own(g: &Game, op: DoorOpId, x: GuardId) -> bool {
     if dop!(g, op).men.contains(&x) {
         return true;
     }
@@ -146,7 +146,7 @@ fn entry_own(g: &mut Game, op: DoorOpId, x: GuardId) -> bool {
     false
 }
 /// a living teammate in the can's reach who is no part of this entry
-pub(super) fn door_tools_mate_behind(g: &mut crate::game::Game, op: DoorOpId) -> Option<GuardId> {
+pub(super) fn door_tools_mate_behind(g: &crate::game::Game, op: DoorOpId) -> Option<GuardId> {
     let d = dop!(g, op).door;
     if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
         return None;
@@ -163,7 +163,7 @@ pub(super) fn door_tools_mate_behind(g: &mut crate::game::Game, op: DoorOpId) ->
     None
 }
 /// who of ours the squad's own can through that door would catch: a callsign, or "you"
-pub fn door_tools_can_behind(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Option<String> {
+pub fn door_tools_can_behind(g: &crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Option<String> {
     if let Some(mate) = door_tools_behind(g, d, side, men) {
         return Some(g.gd[mate].callsign.clone());
     }
@@ -1011,7 +1011,7 @@ fn stack_side_of(ux: f64, uz: f64, side: f64, fx: f64, fz: f64) -> f64 {
     }
 }
 /// a file out past one jamb, as far as the floor goes
-fn file_of(g: &mut Game, d: DoorId, side: f64, n: f64, off: f64, dir: f64, front: V3) -> Vec<crate::orders::StackPost> {
+fn file_of(g: &Game, d: DoorId, side: f64, n: f64, off: f64, dir: f64, front: V3) -> Vec<crate::orders::StackPost> {
     let (w, th) = (g.dr[d].def.width, g.dr[d].def.closed_dir);
     let (ux, uz) = (m::cos(th), m::sin(th));
     let (jamb_out, gap) = (g.k.orders.jamb_out, g.k.orders.file_gap);

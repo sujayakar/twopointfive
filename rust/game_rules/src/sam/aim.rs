@@ -23,7 +23,7 @@ pub fn aim_state_clear(this: &mut crate::aim::AimState) {
 }
 
 /// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet.
-fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, hold: Option<f64>) {
+fn feed_feet(g: &crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, hold: Option<f64>) {
     let hold = hold.unwrap_or(speed);
     a.speed_sm += (speed - a.speed_sm) * (1.0 - m::exp(-dt / m::max(tau, 1e-3)));
     if !a.speed_sm.is_finite() || a.speed_sm < 1e-4 {

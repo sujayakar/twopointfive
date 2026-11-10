@@ -171,13 +171,13 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             js::sort_by(&mut fits, |p, q| {
                 let d = played_of(played, &p.id) - played_of(played, &q.id);
                 if js::truthy(d) { return d; }
-                crate::math_dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, p.id)) - crate::math_dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, q.id))
+                crate::dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, p.id)) - crate::dice::hash_str(&format!("{}|{}|{}|{}", csa, csb, count, q.id))
             });
             let talk = fits.swap_remove(0);
             let n = played_of(&s.played, &talk.id) + 1.0;
             s.played.set(talk.id.clone(), n);
             s.count += 1.0;
-            let a_opens = js::to_i32(crate::math_dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
+            let a_opens = js::to_i32(crate::dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
             let (opener, other2, held) = if a_opens { (a, b, [hold_a, hold_b]) } else { (b, a, [hold_b, hold_a]) };
             s.run = Some(AmbientRun { a: opener, b: other2, talk, i: 0, at: time + 0.3, other, pad, held });
             crate::control::set_hold(g, opener, true, "dialogue");

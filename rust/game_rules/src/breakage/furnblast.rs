@@ -21,12 +21,12 @@ use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, Wa
 /// the box at index `i` of the level's list, if there is one
 fn box_at(g: &Game, i: f64) -> Option<BoxId> { if i < 0.0 || i as usize >= g.col.boxes.len() { None } else { Some(BoxId::from_ix(i as usize)) } }
 fn bx(i: f64) -> BoxId { BoxId::from_ix(i as usize) }
-fn is_piece(g: &mut Game, b: BoxId) -> bool { g.tab.boxes[b].piece == Some(true) }
-fn does_word(g: &mut Game, b: BoxId) -> Option<String> { g.tab.boxes[b].does.map(|w| String::from(w.as_str())) }
-fn box_does(g: &mut Game, b: BoxId) -> Does { let does = g.tab.boxes[b].does; crate::scene_materials::does_of(g, does) }
-fn snow_paint(g: &mut Game, b: BoxId) -> bool { let does = does_word(g, b); crate::render_snow_field::snow_paint_of(g, &crate::render_snow_field::SnowPaintOfB { does }).is_some() }
-fn box_class(g: &mut Game, b: BoxId) -> BreakClass { let does = does_word(g, b); break_class_of(g, &BreakClassOfB { does }) }
-fn flags_of(g: &mut Game, b: BoxId) -> i32 { js::to_i32(g.tab.boxes[b].flags) }
+fn is_piece(g: &Game, b: BoxId) -> bool { g.tab.boxes[b].piece == Some(true) }
+fn does_word(g: &Game, b: BoxId) -> Option<String> { g.tab.boxes[b].does.map(|w| String::from(w.as_str())) }
+fn box_does(g: &Game, b: BoxId) -> Does { let does = g.tab.boxes[b].does; crate::scene_materials::does_of(g, does) }
+fn snow_paint(g: &Game, b: BoxId) -> bool { let does = does_word(g, b); crate::render_snow_field::snow_paint_of(g, &crate::render_snow_field::SnowPaintOfB { does }).is_some() }
+fn box_class(g: &Game, b: BoxId) -> BreakClass { let does = does_word(g, b); break_class_of(g, &BreakClassOfB { does }) }
+fn flags_of(g: &Game, b: BoxId) -> i32 { js::to_i32(g.tab.boxes[b].flags) }
 /// BoxFlag.NoPrimary, BoxFlag.NoShadow, BoxFlag.Glass, BoxFlag.Dynamic as bits
 fn bits() -> (i32, i32, i32, i32) { let f = crate::scene_boxes::box_flag(); (js::to_i32(f.no_primary), js::to_i32(f.no_shadow), js::to_i32(f.glass), js::to_i32(f.dynamic)) }
 fn truly(x: Option<bool>) -> bool { x == Some(true) }
@@ -66,7 +66,7 @@ pub fn charge_source(radius: f64) -> crate::furnblast::BlastSource { if radius >
 /// which row of the break table a box is: its word's
 pub(super) fn break_class_of(g: &crate::game::Game, b: &crate::furnblast::BreakClassOfB) -> crate::scene_materials::BreakClass { crate::scene_materials::does_of_word(g, b.does.as_deref()).breaks }
 /// a box's bounds, its yaw taken in
-fn aabb_of(g: &mut crate::game::Game, b: BoxId) -> crate::furnblast::AABB {
+fn aabb_of(g: &crate::game::Game, b: BoxId) -> crate::furnblast::AABB {
     let (c, h, yaw) = { let r = &g.tab.boxes[b]; (r.c, r.h, r.yaw) };
     let cs = m::abs(m::cos(yaw)); let sn = m::abs(m::sin(yaw)); let ex = cs * h[0] + sn * h[2]; let ez = sn * h[0] + cs * h[2];
     AABB { x0: c[0] - ex, x1: c[0] + ex, y0: c[1] - h[1], y1: c[1] + h[1], z0: c[2] - ez, z1: c[2] + ez }
@@ -74,7 +74,7 @@ fn aabb_of(g: &mut crate::game::Game, b: BoxId) -> crate::furnblast::AABB {
 /// plan distance from a point to a box
 fn dist_xz(p: V3, a: crate::furnblast::AABB) -> f64 { m::hyp2(m::max_n(&[a.x0 - p[0], 0.0, p[0] - a.x1]), m::max_n(&[a.z0 - p[2], 0.0, p[2] - a.z1])) }
 /// a box's volume
-fn vol_of(g: &mut crate::game::Game, b: BoxId) -> f64 { let h = g.tab.boxes[b].h; h[0] * h[1] * h[2] * 8.0 }
+fn vol_of(g: &crate::game::Game, b: BoxId) -> f64 { let h = g.tab.boxes[b].h; h[0] * h[1] * h[2] * 8.0 }
 /// two plan rectangles overlap by more than a centimetre
 fn over_plan(a: crate::furnblast::OverPlanA, q: crate::furnblast::OverPlanQ) -> bool { a.x0 < q.x1 - 0.01 && a.x1 > q.x0 + 0.01 && a.z0 < q.z1 - 0.01 && a.z1 > q.z0 + 0.01 }
 
@@ -185,14 +185,14 @@ fn ensure_index(g: &mut Game) {
 /// the index made ahead of the blast, off the frame the wall goes on
 pub fn furniture_warm(g: &mut crate::game::Game) { if g.m.destruction_switch.blast_pace.on { ensure_index(g); } }
 /// does this part still stand; a cover panel, while any cell of it does
-fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool {
+fn furniture_stands(g: &crate::game::Game, m: FurnblastMemberId) -> bool {
     let i = g.tab.furnblast_member[m].i;
     match crate::wallbreak::wall_break_breakable_at(g, i) {
         Some(br) => br.open < br.cells,
         None => { let b = bx(i); flags_of(g, b) & bits().0 == 0 }
     }
 }
-fn any_stands(g: &mut Game, members: &[FurnblastMemberId]) -> bool { for &mi in members { if furniture_stands(g, mi) { return true; } } false }
+fn any_stands(g: &Game, members: &[FurnblastMemberId]) -> bool { for &mi in members { if furniture_stands(g, mi) { return true; } } false }
 /// what a blast would take first, asked before it goes off and reading only
 pub fn furniture_first_to_go(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource) -> Option<crate::furnblast::BlastFirst> {
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return None; }
@@ -234,7 +234,7 @@ fn furniture_row_take(g: &mut crate::game::Game, first: crate::furnblast::BlastF
     gone
 }
 /// a long run under a blast: what is in reach with a line, then what those held up
-fn furniture_row_fall(g: &mut crate::game::Game, standing: &[FurnblastMemberId], at: V3, reach: f64, origins: &[V3]) -> JsSet<FurnblastMemberId> {
+fn furniture_row_fall(g: &crate::game::Game, standing: &[FurnblastMemberId], at: V3, reach: f64, origins: &[V3]) -> JsSet<FurnblastMemberId> {
     let mut gone: JsSet<FurnblastMemberId> = JsSet::new();
     for &mi in standing {
         let (root, a) = { let r = &g.tab.furnblast_member[mi]; (r.root, r.a) };
@@ -258,7 +258,7 @@ fn furniture_row_fall(g: &mut crate::game::Game, standing: &[FurnblastMemberId],
 /// is static `i` one this module has broken
 pub(super) fn furniture_broken(g: &crate::game::Game, i: f64) -> bool { g.destr.furn.hidden.has(Num(i)) }
 /// a clear line of blast: furniture is no shield, anything else is
-fn furniture_clear(g: &mut crate::game::Game, o: V3, p: V3) -> bool {
+fn furniture_clear(g: &crate::game::Game, o: V3, p: V3) -> bool {
     let d = v3::sub(p, o); let l = v3::len(d); if l < 0.05 { return true; } let rd = v3::scale(d, 1.0 / l);
     let mut t0 = 0.0;
     for _step in 0..12 {
@@ -273,7 +273,7 @@ fn furniture_clear(g: &mut crate::game::Game, o: V3, p: V3) -> bool {
     false
 }
 /// a line of blast from any origin to a box: its middle, over its top, or its nearest point
-fn furniture_exposed_box(g: &mut crate::game::Game, origins: &[V3], a: crate::furnblast::AABB) -> bool {
+fn furniture_exposed_box(g: &crate::game::Game, origins: &[V3], a: crate::furnblast::AABB) -> bool {
     let cx = (a.x0 + a.x1) / 2.0; let cz = (a.z0 + a.z1) / 2.0;
     for &o in origins {
         let near: V3 = [m::max(a.x0, m::min(o[0], a.x1)), m::max(a.y0 + 0.05, m::min(o[1], a.y1 - 0.02)), m::max(a.z0, m::min(o[2], a.z1))];
@@ -582,7 +582,7 @@ fn furniture_roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
     cx >= 0.0 && cz >= 0.0 && cx < w.grid_w && cz < w.grid_h && i[(cz * w.grid_w + cx) as usize] == 1
 }
 /// may the mouth rule take static `i` at all, by what it was AUTHORED as. `saved` was a checkpoint's way past the snow switch; with the switch settled on it changes nothing.
-fn furniture_mouth_ok(g: &mut crate::game::Game, i: f64) -> bool {
+fn furniture_mouth_ok(g: &crate::game::Game, i: f64) -> bool {
     let b = match box_at(g, i) { Some(b) => b, None => return false };
     if is_piece(g, b) || g.tab.boxes[b].rot.is_some() || g.destr.furn.kept.has(Num(i)) || crate::wallbreak::wall_break_breakable_at(g, i).is_some() { return false; }   // (trim is no thing)
     let (np, _, gl, dy) = bits();
@@ -596,7 +596,7 @@ fn furniture_mouth_ok(g: &mut crate::game::Game, i: f64) -> bool {
     !g.destr.furn.fronts.iter().any(|f| f[0] > a.x0 - 0.3 && f[0] < a.x1 + 0.3 && f[2] > a.z0 - 0.3 && f[2] < a.z1 + 0.3)
 }
 /// everything resting on `seed`, layer by layer; None = something up there is not the rule's to take
-fn furniture_mouth_stack(g: &mut crate::game::Game, seed: &[crate::furnblast::AABB], done: &JsSet<crate::Num>, n: f64) -> Option<Vec<f64>> {
+fn furniture_mouth_stack(g: &crate::game::Game, seed: &[crate::furnblast::AABB], done: &JsSet<crate::Num>, n: f64) -> Option<Vec<f64>> {
     let n = n as usize;
     let touch = g.k.furn.touch; let (np, ns, _, _) = bits();
     let mut out: Vec<f64> = Vec::new(); let mut layer: Vec<AABB> = seed.to_vec();
@@ -619,7 +619,7 @@ fn furniture_mouth_stack(g: &mut crate::game::Game, seed: &[crate::furnblast::AA
     Some(out)
 }
 /// is the standing static `i` the mouth rule's to take as a THING
-fn furniture_mouth_mine(g: &mut crate::game::Game, i: f64, b: BoxId, a: crate::furnblast::AABB) -> bool {
+fn furniture_mouth_mine(g: &crate::game::Game, i: f64, b: BoxId, a: crate::furnblast::AABB) -> bool {
     if g.destr.furn.member_at.has(Num(i)) { return true; }
     if snow_paint(g, b) { return true; }   // (lying snow banked at the wall's foot, under a roof or not)
     let does = box_does(g, b); let (h, c) = (g.tab.boxes[b].h, g.tab.boxes[b].c);

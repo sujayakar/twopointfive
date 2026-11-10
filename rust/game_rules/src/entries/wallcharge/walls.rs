@@ -22,7 +22,7 @@ pub(super) fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f
 }
 
 /// Where the charge sits: on the near face, at the charge's height.
-pub(super) fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
+pub(super) fn charge_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
     let height = g.k.wallcharge.height;
     wall_pt(g, w, 0.0, FACE, Some(height))
 }

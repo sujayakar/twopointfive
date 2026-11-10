@@ -30,7 +30,7 @@ pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
 }
 
 /// How far a floor point is from the face the errand's thing is taken from, across its width; never, with something solid between.
-pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn rack_dist(g: &crate::game::Game, p: V3) -> f64 {
     let (front, half_w) = (g.level.errand.front, g.level.errand.half_w);
     let d = m::hyp2(p[0] - front[0], p[2] - front[2]);
     if d > 0.3 && crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [front[0] + (p[0] - front[0]) / d * 0.2, 1.0, front[2] + (p[2] - front[2]) / d * 0.2], None) {

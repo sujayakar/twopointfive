@@ -297,7 +297,7 @@ fn as_creeps(an: &Anim, o: &mut CreepArms) {
     let (at, at_b, _) = poses(an);
     let (cl_t, held, no_knife, crouch, swing, wsh) = (an.cl_t, an.grip[1], an.no_knife, an.crouch, an.heft_shape[1], an.wide_shape);
     let (wide_pole, fix_l, fix_r) = (an.wide_pole.unwrap_or(CREEP.wide.pole), an.hand_fix[0], an.hand_fix[1]);
-    (o.at, o.at_b, o.cl_t, o.held, o.no_knife, o.crouch, o.swing, o.wsh, o.wide_pole, o.fix_l, o.fix_r) = (at, at_b, cl_t, held, no_knife, crouch, swing, wsh, wide_pole, fix_l, fix_r);
+    *o = CreepArms { at, at_b, cl_t, held, no_knife, crouch, swing, wsh, wide_pole, fix_l, fix_r, ..*o };
 }
 
 /// How much of each arm is the layer's.
@@ -307,7 +307,7 @@ fn weights(tune: &Knobs, o: &mut CreepArms) {
     let (w_up, w_fore, w_hand) = (smoothstep(0.0, 0.75, w), smoothstep(0.08, 0.88, w), smoothstep(0.16, 1.0, w));
     let dealt = ck >= 0.0;
     let lw = wl * if dealt { lerp(tune.kit.close.left, 1.0, ws) } else { 1.0 };
-    (o.on_l, o.on_r, o.w_up, o.w_fore, o.w_hand, o.dealt, o.lw) = (on_l, on_r, w_up, w_fore, w_hand, dealt, lw);
+    *o = CreepArms { on_l, on_r, w_up, w_fore, w_hand, dealt, lw, ..*o };
 }
 
 /// The shoulders rounded, and which way they face.
@@ -326,7 +326,7 @@ fn creep_shoulders(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut CreepArms) {
     let l = or_one(hypot2(fx, fz));
     fx /= l;
     fz /= l;
-    (o.sl, o.sr, o.fx, o.fz) = (sl, sr, fx, fz);
+    *o = CreepArms { sl, sr, fx, fz, ..*o };
 }
 
 /// Left, up and forward off the shoulder line, as model axes.
@@ -341,7 +341,7 @@ fn alive(tune: &Knobs, o: &mut CreepArms) {
     let lt = cl_t * PI * 2.0 * tune.kit.close.flex;
     let fl_l = if dealt { tune.kit.close.flex_amp * (0.6 * sin(lt) + 0.4 * sin(lt * 1.63 + 1.1)) } else { 0.0 };
     let fl_r = if dealt { tune.kit.close.flex_amp * (0.6 * sin(lt * 1.21 + 2.3) + 0.4 * sin(lt * 0.71 + 0.4)) } else { 0.0 };
-    (o.lt, o.fl_l, o.fl_r) = (lt, fl_l, fl_r);
+    *o = CreepArms { lt, fl_l, fl_r, ..*o };
 }
 
 /// A wrist's drift.
@@ -363,7 +363,7 @@ fn left_shape(tune: &Knobs, o: &mut CreepArms) {
         v3::mad(v3::lerp3(hd.at, hd.at_c, cr), tune.kit.close.lead, cke),
         v3::scale(drift(tune, o, 0.0), if dealt { 1.0 / max(0.38, lerp(tune.kit.close.left, 1.0, ws)) } else { 1.0 }),
     );
-    (o.pole, o.fing, o.back, o.cu, o.th, o.sp, o.to) = (pole, fing, back, cu, th, sp, to);
+    *o = CreepArms { pole, fing, back, cu, th, sp, to, ..*o };
 }
 
 /// Out to its side, and still.
@@ -379,7 +379,7 @@ fn left_wide(o: &mut CreepArms) {
         th = lerp(th, CREEP.wide.thumb, ws);
         sp = lerp(sp, CREEP.wide.spread, ws);
     }
-    (o.pole, o.fing, o.back, o.cu, o.th, o.sp, o.to) = (pole, fing, back, cu, th, sp, to);
+    *o = CreepArms { pole, fing, back, cu, th, sp, to, ..*o };
 }
 
 /// The left arm there.
@@ -401,7 +401,7 @@ fn right_shape(tune: &Knobs, o: &mut CreepArms) {
     let hd = &CREEP.r;
     let (a0, p0, fing, back) = (v3::add(v3::lerp3(hd.at, hd.at_c, cr), drift(tune, o, 2.1)), hd.pole, hd.fing, hd.back);
     let (curl, thb, spr) = (hd.curl, hd.thumb, hd.spread * (1.0 - cke));
-    (o.fing, o.back, o.a0, o.p0, o.curl, o.thb, o.spr) = (fing, back, a0, p0, curl, thb, spr);
+    *o = CreepArms { fing, back, a0, p0, curl, thb, spr, ..*o };
 }
 
 /// The left's mirror.
@@ -417,14 +417,14 @@ fn right_wide(o: &mut CreepArms) {
         thb = lerp(thb, CREEP.wide.thumb, ws);
         spr = lerp(spr, CREEP.wide.spread, ws);
     }
-    (o.fing, o.back, o.a0, o.p0, o.curl, o.thb, o.spr) = (fing, back, a0, p0, curl, thb, spr);
+    *o = CreepArms { fing, back, a0, p0, curl, thb, spr, ..*o };
 }
 
 /// The right arm's point.
 fn right_point(o: &mut CreepArms) {
     let CreepArms { fix_r, sr, fing, back, a0, p0, .. } = *o;
     let (to, rot, pole) = (v3::add(sr, sq(o, a0)), hand_rot(&fix_r, sq(o, fing), sq(o, back)), sq(o, p0));
-    (o.pole, o.to, o.rot) = (pole, to, rot);
+    *o = CreepArms { pole, to, rot, ..*o };
 }
 
 /// The knife hand by distance: from its guard up across the chest to hover off the hilt.
@@ -439,7 +439,7 @@ fn by_distance(tune: &Knobs, fk: &mut Fk, o: &mut CreepArms) {
         pole = v3::lerp3(pole, s_pole, cke);
         curl = lerp(CREEP.r.curl, tune.kit.close.curl, cke);
     }
-    (o.pole, o.to, o.curl, o.rot) = (pole, to, curl, rot);
+    *o = CreepArms { pole, to, curl, rot, ..*o };
 }
 
 /// The right arm there.

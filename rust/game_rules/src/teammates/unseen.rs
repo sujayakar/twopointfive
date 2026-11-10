@@ -30,7 +30,7 @@ fn state_of<'g>(g: &'g mut Game) -> &'g mut State {
 }
 
 /// which player the squad reads
-fn lead(g: &mut Game) -> PlayerId {
+fn lead(g: &Game) -> PlayerId {
     g.player
 }
 
@@ -160,12 +160,12 @@ fn entering(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
 }
 
 /// Sam on a wall, and no place on it for this man right now
-fn off_wall(g: &mut Game, gd: GuardId) -> bool {
+fn off_wall(g: &Game, gd: GuardId) -> bool {
     let pl = lead(g);
     on_wall(g, pl) && (g.m.unseen.on_wall_at.get(gd).copied() != Some(g.time) || g.m.unseen.kneel_at.get(gd).copied() == Some(g.time))
 }
 
-fn low_now(g: &mut Game, gd: GuardId) -> bool {
+fn low_now(g: &Game, gd: GuardId) -> bool {
     let pl = lead(g);
     sam_low(g, pl) || off_wall(g, gd)
 }

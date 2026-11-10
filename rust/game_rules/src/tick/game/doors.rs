@@ -227,7 +227,7 @@ fn bodies_woken(g: &mut Game, bodies: &[CharId], angles: &[f64]) {
 }
 
 /// a seat's half of updateDoors, run over its view: the player's own contact on the leaves this frame (none: he is down)
-fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorContact> {
+fn game_door_contact(g: &crate::game::Game) -> Option<crate::doors::DoorContact> {
     let pl = g.player; let pc = g.pl[pl].ch;
     if crate::condition::down(g, g.pl[pl].ch) { return None; }
     let run = crate::sprintdoor::sprint_door_run(g, pl);

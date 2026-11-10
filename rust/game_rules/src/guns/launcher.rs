@@ -56,13 +56,13 @@ pub fn launch_vel(from: V3, target: V3, r: crate::launcher::Ballistics) -> V3 {
 }
 
 /// Where a ring fired now would go, for the preview.
-pub fn ring_solve(g: &mut crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
+pub fn ring_solve(g: &crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
     let r = ballistics_of(&g.k.ring);
     arc_solve(g, from, target, r)
 }
 
 /// ringSolve for anything the tube throws: stepped as a live ring at 60 Hz, until it meets a static, a leaf, a prop or the floor.
-pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::launcher::Ballistics) -> crate::throwables::ThrowSolution {
+pub fn arc_solve(g: &crate::game::Game, from: V3, target: V3, r: crate::launcher::Ballistics) -> crate::throwables::ThrowSolution {
     let v0 = launch_vel(from, target, r);
     let mut points: Vec<V3> = Vec::new();
     let mut p = v3::copy(from);

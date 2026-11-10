@@ -104,7 +104,7 @@ fn at_name(rects: &[PlaceRect], p: V3) -> Option<String> {
     match place_among(rects, p).1 { w if w.d == 0.0 => Some(w.rect.name), _ => None }
 }
 /// THE WAY A WALK COMES BY, for a line on the net: 'through the …' / 'from the …'. Words only: the search is asked and thrown away.
-pub fn way_name(g: &mut crate::game::Game, a: V3, b: V3, into: Option<&str>) -> Option<String> {
+pub fn way_name(g: &crate::game::Game, a: V3, b: V3, into: Option<&str>) -> Option<String> {
     let rects = level_rects(g)?;
     let room = into.filter(|s| !s.is_empty()).map(with_the);
     let end = at_name(&rects, b);
@@ -496,7 +496,7 @@ fn needs_hold(l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFac
     only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(facts, *n)))
 }
 /// The pending useful things: true now, known to him, not yet given, in the order he would give them.
-pub(super) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> {
+pub(super) fn pending_intel(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> {
     let mut out: Vec<PendingIntelItem> = Vec::new();
     let kinds = intel_kinds();
     let order: Vec<IntelKind> = match sc.and_then(|x| x.pin) {
@@ -523,11 +523,11 @@ pub(super) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::Di
     out
 }
 /// The first pending useful thing, or null.
-pub(super) fn intel_for(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Option<crate::dialogue::IntelFor> {
+pub(super) fn intel_for(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Option<crate::dialogue::IntelFor> {
     pending_intel(g, ctx, talk, sc).into_iter().next().map(|x| IntelFor { kind: x.kind, text: x.text })
 }
 /// The rambler's stream swallows a giving stage, when exactly ONE thing is pending.
-pub(super) fn swallowed(g: &mut crate::game::Game, sc: Option<&crate::dialogue::Script>, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
+pub(super) fn swallowed(g: &crate::game::Game, sc: Option<&crate::dialogue::Script>, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     match sc {
         Some(x) => x.shape == ShapeKey::Ramble && RAMBLE_SWALLOWS > 0.0 && s == StageKey::Num(2.0) && ctx.t == crate::game::Temperament::Nervy && pending_intel(g, ctx, talk, sc).len() == 1,
         None => false,

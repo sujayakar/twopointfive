@@ -39,7 +39,7 @@ fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
 }
 
 /// The rate the move's clock runs at: ahead of the hold's until the let-go, the hold's own pace from there.
-fn lead(g: &mut crate::game::Game, s: crate::disarm::Strip) -> f64 {
+fn lead(g: &crate::game::Game, s: crate::disarm::Strip) -> f64 {
     if !leads(g, Some(s)) { return 1.0; }
     let (k_take, k_drop) = (g.k.hold.strip.take, g.k.hold.strip.drop);
     let (f_take, f_drop) = (g.k.hold.first.take, g.k.hold.first.drop);

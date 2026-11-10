@@ -823,13 +823,13 @@ fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
     out
 }
 /// `p` on the floor, or the nearest free point to it.
-pub(super) fn nearest_free(g: &mut crate::game::Game, p: V3) -> Option<V3> {
+pub(super) fn nearest_free(g: &crate::game::Game, p: V3) -> Option<V3> {
     if nav_blocked(g, p[0], p[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) } else { Some([p[0], 0.0, p[2]]) }
 }
 
 // ---------------------------------------------------------------- movement as one element
 /// Where the walk to a room ends: a length past the stack marks along the stack line, away from the door.
-fn approach_end(g: &mut crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> V3 {
+fn approach_end(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> V3 {
     let s = p.stack;
     let u = v3::normalize([s[1][0] - s[0][0], 0.0, s[1][2] - s[0][2]]);
     for k in [1.6, 1.1, 0.6, 0.0] {

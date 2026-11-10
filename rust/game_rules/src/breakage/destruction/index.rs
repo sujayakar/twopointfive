@@ -13,7 +13,7 @@ fn has_flag(flags: f64, mask: i32) -> bool {
 }
 
 /// What a box does, by its word.
-fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
+fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
     let word = g.tab.boxes[b].does;
     crate::scene_materials::does_of(g, word)
 }
@@ -45,7 +45,7 @@ pub(super) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
 }
 
 /// The point just over a box's top, where line-of-sight targets aim.
-pub(super) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
+pub(super) fn top_of(g: &crate::game::Game, b: BoxId) -> V3 {
     let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
     [c[0], c[1] + h[1] + 0.05, c[2]]
 }

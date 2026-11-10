@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// a man's body, where it stands now
-fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
+fn pos_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     g.ch[c].pos
 }
@@ -32,7 +32,7 @@ fn plan_bounds(b: Option<crate::scene_scenarios::Rect>) -> Option<crate::scene_l
 }
 
 /// the room's rectangle, now
-fn room(g: &mut Game) -> Option<crate::scene_level::BreachPlanBounds> {
+fn room(g: &Game) -> Option<crate::scene_level::BreachPlanBounds> {
     plan_bounds(rescue_bounds(g))
 }
 

@@ -126,7 +126,7 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
 // ---------------------------------------------------------------- the threshold: who throws, what is lit, where a can goes
 
 /// Is he at the door, on the order's side of it.
-pub(super) fn door_tools_thr_at(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
+pub(super) fn door_tools_thr_at(g: &crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let p = pos_of(g, m);
     v3::dist_xz(p, g.dr[d].frame_centre) < g.k.doortools.throw_reach && off_of(g, d, p, side) > 0.0
@@ -217,7 +217,7 @@ pub(super) fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpI
 }
 
 /// Where a can leaves the hand: in the opening's span at the thrower's end, a forearm outside the frame line.
-pub(super) fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
+pub(super) fn door_tools_hand_at(g: &crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let w = g.dr[d].def.width;
     let p = pos_of(g, th);
@@ -337,7 +337,7 @@ pub(super) fn door_tools_thr_banged(g: &mut crate::game::Game, op: DoorOpId) {
 // ---------------------------------------------------------------- the step in
 
 /// `fits` of shallowPods: free floor, a clear line from the doorway's middle, apart from those already taken, not in the frame.
-fn shallow_fits(g: &mut Game, d: DoorId, mid: V3, out: &[crate::entrypoints::Pod], p: V3) -> bool {
+fn shallow_fits(g: &Game, d: DoorId, mid: V3, out: &[crate::entrypoints::Pod], p: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
         && !crate::scene_collision::solid_blocked(g, mid, [p[0], 0.45, p[2]], None)
         && !out.iter().any(|o| v3::dist_xz(o.pos, p) < 0.9)

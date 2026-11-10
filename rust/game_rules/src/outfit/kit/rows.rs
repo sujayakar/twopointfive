@@ -179,7 +179,7 @@ pub fn kit_rows(g: &crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
 }
 
 /// What a row costs member i's pouches as his card stands, and its rate in plain words; null for a row that is no pouch.
-pub(super) fn kit_row_cost(g: &mut crate::game::Game, i: f64, r: &crate::kit::KitRow, m: Option<&crate::kit::MemberKit>) -> Option<crate::kit::KitRowCost> {
+pub(super) fn kit_row_cost(g: &crate::game::Game, i: f64, r: &crate::kit::KitRow, m: Option<&crate::kit::MemberKit>) -> Option<crate::kit::KitRowCost> {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
     let item = r.item?;
     let it = g.k.slots.table.items.get(item).cloned();
@@ -228,7 +228,7 @@ fn guns_words(g: &Game, m: &MemberKit) -> String {
 }
 
 /// A card in a line.
-pub(super) fn kit_words(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
+pub(super) fn kit_words(g: &crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
     kit_card_words(g, i, &m)
 }
@@ -283,14 +283,14 @@ fn wall_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Strin
 }
 
 /// Member i's card differs from what he is issued (only the rows his card has).
-pub(super) fn kit_changed(g: &mut crate::game::Game, i: f64) -> bool {
+pub(super) fn kit_changed(g: &crate::game::Game, i: f64) -> bool {
     let mut m = kit_shown(g, i);
     let mut d = kit_issued_shown(g, i, None);
     kit_rows(g, i).iter().any(|r| row_has(g, r, &m) && { let (a, b) = (row_get(g, r, &mut m), row_get(g, r, &mut d)); !same_value(&a, &b) })
 }
 
 /// Why member i's card with one row set to `v` is refused, or null: it fits.
-fn over_why(g: &mut crate::game::Game, i: f64, row: &crate::kit::KitRow, v: &crate::kit::KitValue) -> Option<String> {
+fn over_why(g: &crate::game::Game, i: f64, row: &crate::kit::KitRow, v: &crate::kit::KitValue) -> Option<String> {
     let mut m = g.m.kit.kit.members[i as usize].clone();
     row_set(g, row, &mut m, v);
     card_why(g, i, &m)
@@ -397,14 +397,14 @@ pub(super) fn kit_reset_why(g: &mut crate::game::Game, i: f64) -> String {
 }
 
 /// Member i's card is what he is issued.
-pub(super) fn kit_as_issued(g: &mut crate::game::Game, i: f64) -> bool {
+pub(super) fn kit_as_issued(g: &crate::game::Game, i: f64) -> bool {
     let mut m = kit_shown(g, i);
     let mut c = issued_dealt(g, i);
     kit_rows(g, i).iter().all(|r| (!row_has(g, r, &c) && !row_has(g, r, &m)) || { let (a, b) = (row_get(g, r, &mut c), row_get(g, r, &mut m)); same_value(&a, &b) })
 }
 
 /// Member i's card as another man's card makes it: each row of his own takes the copied value where it offers it, a count over his row's most comes down.
-fn kit_paste_card(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::MemberKit {
+fn kit_paste_card(g: &crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::MemberKit {
     let mut m = kit_shown(g, i);
     let mut from = from.clone();   // (a read may home its picks: the caller's card is not ours to write)
     for r in kit_rows(g, i) {
@@ -493,7 +493,7 @@ fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {
 }
 
 /// A stored (or hand-typed) card made safe: every field one of its row's values, anything else the issued one.
-pub fn kit_sanitize(g: &mut crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit {
+pub fn kit_sanitize(g: &crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit {
     let mut card = kit_default(g, i);
     let Some(raw) = raw else { return card; };
     let at = |k: &str| raw.get(String::from(k));

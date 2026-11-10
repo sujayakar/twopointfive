@@ -298,7 +298,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
 
 /// The same tick with `after` told each step as it ends.
 pub fn game_update_watched(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View, after: Watch) {
-    crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     let me = game_host_seat(g);
     if g.restart_cut {

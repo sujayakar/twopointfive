@@ -55,7 +55,7 @@ fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::stackroom::Book {
 }
 
 /// the middle of a nav cell
-fn centre(g: &mut crate::game::Game, c_2: f64) -> V3 {
+fn centre(g: &crate::game::Game, c_2: f64) -> V3 {
     let (w, cell) = (g.col.nav.w, g.col.nav.cell);
     [(js::rem(c_2, w) + 0.5) * cell, 0.0, (js::to_i32(c_2 / w) as f64 + 0.5) * cell]
 }
@@ -181,7 +181,7 @@ fn floor_read(g: &mut Game, d: DoorId, side: f64) {
 }
 
 /// steps of walking from the doorway to `p` on that floor (−1: not on it)
-fn steps_to(g: &mut crate::game::Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> f64 {
+fn steps_to(g: &crate::game::Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> f64 {
     let (nw, nh, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (x, z) = (m::floor(p[0] / cell), m::floor(p[2] / cell));
     if x < 0.0 || z < 0.0 || x >= nw || z >= nh { return -1.0; }
@@ -208,9 +208,9 @@ fn steps_to(g: &mut crate::game::Game, over: &Over, f: &crate::stackroom::Floor,
 }
 
 /// on the floor, and the walk there no way round a wall
-fn on_floor(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -> bool { on_floor_over(g, &Over::OWN, f, p) }
+fn on_floor(g: &crate::game::Game, f: &crate::stackroom::Floor, p: V3) -> bool { on_floor_over(g, &Over::OWN, f, p) }
 /// …of the world as the question takes it
-fn on_floor_over(g: &mut Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> bool {
+fn on_floor_over(g: &Game, over: &Over, f: &crate::stackroom::Floor, p: V3) -> bool {
     let s = steps_to(g, over, f, p);
     if !(s >= 0.0) { return false; }
     let mid = centre(g, f.seed);
@@ -250,14 +250,14 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
 }
 
 /// a place a piece of furniture stands on, unless a man of the squad already stands on it at this door
-fn furnished(g: &mut crate::game::Game, d: DoorId, q: V3) -> bool {
+fn furnished(g: &crate::game::Game, d: DoorId, q: V3) -> bool {
     crate::orders::squad_orders_on_furniture(g, q) && !stood_at(g, &crate::seats::here(g), d, q)
 }
 
 // ---------------------------------------------------------------- THE RULE
 
 /// nothing solid between two places, at knee height
-fn sees(g: &mut Game, a: V3, q: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [q[0], 0.45, q[2]], None) }
+fn sees(g: &Game, a: V3, q: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [q[0], 0.45, q[2]], None) }
 /// off the opening's own lane
 fn off_lane(g: &Game, d: DoorId, w: f64, q: V3) -> bool { m::abs(crate::doortools::along_of(g, d, q) - w / 2.0) >= w / 2.0 + 0.25 }
 /// the hand of the opening a place is on
@@ -425,7 +425,7 @@ pub fn stack_room_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
 // ---------------------------------------------------------------- OUT OF THE ROOM'S VIEW
 
 /// is `p` (on face `side`) in view of the floor beyond the door through its opening
-fn in_view(g: &mut crate::game::Game, d: DoorId, far: &[V3], p: V3) -> bool {
+fn in_view(g: &crate::game::Game, d: DoorId, far: &[V3], p: V3) -> bool {
     let (eye, need) = (g.k.stackroom.view_eye, g.k.stackroom.view_cells);
     let pp = [p[0], eye, p[2]];
     let mut n = 0.0;
@@ -769,7 +769,7 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
 }
 
 /// a place by that doorway a mark may be dealt
-fn next_fits(g: &mut Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_c: V3, front: V3, used: &[V3], min_m: f64, shy: bool, q: V3) -> bool {
+fn next_fits(g: &Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_c: V3, front: V3, used: &[V3], min_m: f64, shy: bool, q: V3) -> bool {
     let s = g.k.stackroom;
     on_floor(g, floor, q)
         && flat(q, c) <= s.next_m

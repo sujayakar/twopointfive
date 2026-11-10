@@ -44,7 +44,7 @@ fn dust_shipped(k: &crate::particle_fx::ParticleFxModDUST) -> bool {
 // ---------------------------------------------------------------- what a hit is made of
 
 /// What a round knocks out of a static: its word's surface, or its word's wet row on the one slab the weather has soaked.
-pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
+pub fn surf_at(g: &crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
     let does = g.tab.boxes[b].does;
     if g.weather.lot == Some(b) {
         crate::scene_materials::does_wet(g, does).surf
@@ -54,7 +54,7 @@ pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::S
 }
 
 /// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.
-pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
+pub(super) fn said_surf(g: &crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
     let b = b?;
     let stuff = g.tab.boxes[b].stuff?;
     if is_pane(g.tab.boxes[b].flags) { return None; }
@@ -63,7 +63,7 @@ pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<c
 
 /// What a hit looks like: the surface its sparks, chips and dust go by, the colour they are tinted from, and whether it is solid glass. The box's own word first,
 /// then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does.
-pub(super) fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
+pub(super) fn hit_look(g: &crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
     let leaf = hit.prop.is_none() && hit.index.is_some_and(|i| i >= 1e6);
     let st = if hit.prop.is_none() && !leaf { hit.index.and_then(|i| js_ix(g.col.boxes.len(), i)).map(|x| g.col.boxes[x]) } else { None };
     let b: Option<BoxId> = if let Some(p) = hit.prop {

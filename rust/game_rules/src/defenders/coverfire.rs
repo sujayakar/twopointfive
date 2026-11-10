@@ -96,7 +96,7 @@ fn chew_live(g: &crate::game::Game) -> bool {
 }
 
 /// is the rule running this frame
-fn live(g: &mut crate::game::Game) -> bool {
+fn live(g: &crate::game::Game) -> bool {
     g.ai_enabled
 }
 
@@ -316,7 +316,7 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
 }
 
 /// nobody of his side, no neutral, no hostage in the lane or past it as far as a round would fly
-pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> bool {
+pub fn cover_lane(g: &crate::game::Game, gd: GuardId, from: V3, to: V3) -> bool {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
     let l2 = dx * dx + dz * dz;
@@ -358,7 +358,7 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
 }
 
 /// a free man's sum: is shooting through quicker than walking round
-fn worth(g: &mut crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
+fn worth(g: &crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
     let len = crate::places::walk_len(pos, &path) + flat(path.last().copied().unwrap_or(pos), to);
@@ -371,7 +371,7 @@ fn budget_of(g: &crate::game::Game, thru: bool, rounds: f64) -> f64 {
 }
 
 /// a man with no feet of his own to weigh
-fn stays(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn stays(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].pinned || g.gd[gd].hold || g.gd[gd].script.is_some()
 }
 
@@ -844,7 +844,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             if landed {
                 bump(g, BumpK::Landed);
                 let s = state_of(g);
-                if let Some(rec) = s.by_id.get_mut(crate::Num(cw_id)) {
+                if let Some(rec) = s.by_id.get(crate::Num(cw_id)) {
                 } else {
                     s.by_id.set(crate::Num(cw_id), StateByIdValue {  });
                 }

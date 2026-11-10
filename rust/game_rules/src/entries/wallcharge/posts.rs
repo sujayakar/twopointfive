@@ -12,7 +12,7 @@ fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn free(g: &mut Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) }
-fn clear(g: &mut Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
+fn clear(g: &Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
 fn box_ch(g: &Game, b: BoxId) -> (V3, V3) { let r = &g.tab.boxes[b]; (r.c, r.h) }
 /// the box of the wall as authored, by the engine's id, else the spot's own (`g.col.boxes[wall] ?? W.box`)
 fn box_of_wall(g: &Game, w: &WallSpot, wall: f64) -> BoxId { if wall >= 0.0 { g.col.boxes.get(wall as usize).copied().unwrap_or(w.box_) } else { w.box_ } }
@@ -223,7 +223,7 @@ pub fn wall_charge_settle(g: &mut crate::game::Game, w: &crate::wallcharge::Wall
 }
 
 /// Nothing stands at the charge's place any more.
-pub fn wall_charge_open_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+pub fn wall_charge_open_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
     let t = thick(g, w);
     let (a, b) = (wall_pt(g, w, 0.0, FACE, Some(0.35)), wall_pt(g, w, 0.0, -(t + FACE), Some(0.35)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
@@ -348,7 +348,7 @@ pub(super) fn wall_charge_in_frame(g: &crate::game::Game, q: V3, m: Option<f64>)
 }
 
 /// The wall is already open at the foot of a post `du` along it from the charge.
-fn wall_charge_open_foot(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64) -> bool {
+fn wall_charge_open_foot(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64) -> bool {
     let (bc, bh) = box_ch(g, w.box_);
     let (c, l) = if w.along_x { (bc[0], bh[0]) } else { (bc[2], bh[2]) };
     for e in [0.0, 0.35, -0.35] {
@@ -488,7 +488,7 @@ fn reach_kept(g: &mut Game, gd: GuardId, to: V3, menu: bool) -> Option<String> {
 }
 
 /// Something solid holds between the blast's reach and a chest at `p`, of the world the caller asks it of (the closure `covered` of safePosts).
-fn covered(g: &mut Game, over: &Over, src: V3, open: f64, p: V3) -> bool {
+fn covered(g: &Game, over: &Over, src: V3, open: f64, p: V3) -> bool {
     let chest: V3 = [p[0], 1.1, p[2]];
     let from = v3::lerp3(src, chest, open / v3::dist(src, chest));
     crate::scene_collision::solid_blocked_over(g, over, from, chest, None) && crate::scene_collision::segment_blocked_over(g, over, from, chest, None, None)
@@ -613,7 +613,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
     out
 }
 
-fn counts(g: &mut Game, h: GuardId, held: Option<GuardId>) -> bool {
+fn counts(g: &Game, h: GuardId, held: Option<GuardId>) -> bool {
     Some(h) != held && !crate::condition::down(g, g.gd[h].ch) && g.ch[g.gd[h].ch].alive && g.team(h).theirs()
 }
 
@@ -810,7 +810,7 @@ pub fn wall_charge_close_words(g: &crate::game::Game, c_2: Option<WallChargeId>,
 }
 
 /// A teammate outside the order in the blast: the word for it.
-fn wall_charge_in_blast(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, men: &[GuardId]) -> Option<String> {
+fn wall_charge_in_blast(g: &crate::game::Game, w: &crate::wallcharge::WallSpot, men: &[GuardId]) -> Option<String> {
     let t = thick(g, w);
     let (at, out, inn) = (wall_pt(g, w, 0.0, 0.0, None), wall_pt(g, w, 0.0, 0.5, Some(1.1)), wall_pt(g, w, 0.0, -(t + 0.45), Some(1.1)));
     let (stun_m, mate_m) = (g.k.doortools.stun_m, g.k.wallcharge.mate_m);
@@ -827,7 +827,7 @@ fn wall_charge_in_blast(g: &mut crate::game::Game, w: &crate::wallcharge::WallSp
     None
 }
 
-fn deal_of(g: &mut Game, lead: GuardId, rest: &[GuardId], posts: &[V3]) -> Vec<(GuardId, V3)> {
+fn deal_of(g: &Game, lead: GuardId, rest: &[GuardId], posts: &[V3]) -> Vec<(GuardId, V3)> {
     let mut d = vec![(lead, posts[0])];
     if !rest.is_empty() { d.extend(crate::orders::squad_orders_pair(g, rest, &posts[1..], None, None)); }
     d

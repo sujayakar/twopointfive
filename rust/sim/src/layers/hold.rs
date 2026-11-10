@@ -240,34 +240,7 @@ fn as_he_is(an: &mut Anim, h: &HoldPose, f: &mut Holding) {
     let (idle_t, strip, tw_y, tw_p) = (an.idle_t, an.hold_pose.and_then(|h| h.strip).map(|s| s.t), an.aim_yaw_offset, -an.aim_pitch * an.upper_w.aim * 0.35);
     let (gun_out, gun_pitch, shoot_t, rd_hand) = (h.gun_out.unwrap_or(0.0), h.gun_pitch.unwrap_or(0.0), an.shoot_t, an.rd_hand_l);
     let (fix_l, fix_r, grip_up) = (an.hand_fix[0], an.hand_fix[1], an.grip_up);
-    f.at = at;
-    f.at_b = at_b;
-    f.at_c = at_c;
-    f.at_aim = at_aim;
-    f.live = live;
-    f.gun_v = gun_v;
-    f.no_knife = no_knife;
-    f.t = t;
-    f.low = low;
-    f.haul = haul;
-    f.yank = yank;
-    f.step = step;
-    f.pull = pull;
-    f.grab = grab;
-    f.held = held;
-    f.choke = choke;
-    f.whip = whip;
-    f.idle_t = idle_t;
-    f.strip = strip;
-    f.tw_y = tw_y;
-    f.tw_p = tw_p;
-    f.gun_out = gun_out;
-    f.gun_pitch = gun_pitch;
-    f.shoot_t = shoot_t;
-    f.rd_hand = rd_hand;
-    f.fix_l = fix_l;
-    f.fix_r = fix_r;
-    f.grip_up = grip_up;
+    *f = Holding { at, at_b, at_c, at_aim, live, gun_v, no_knife, t, low, haul, yank, step, pull, grab, held, choke, whip, idle_t, strip, tw_y, tw_p, gun_out, gun_pitch, shoot_t, rd_hand, fix_l, fix_r, grip_up, ..*f };
 }
 
 /// How far the reach, the elbow's closing, the whip, the disarm, the lowering and the haul have come.
@@ -296,24 +269,7 @@ fn reach_and_choke(an: &mut Anim, tune: &Knobs, f: &mut Holding) {
     let lw = if live { 1.0 } else { w };
     let hu = haul_ease(&mut an.hd_hu, haul && choke && !gun_v, smoothstep(tune.hold.haul.in_[0], tune.hold.haul.in_[1], lck) * (1.0 - smoothstep(tune.hold.haul.out[0], tune.hold.haul.out[1], lck)), tune.hold.haul.down, dt) * (1.0 - gv) * lw;
     let hauled = hu > 1e-4;
-    f.gv = gv;
-    f.ug = ug;
-    f.cs_on = cs_on;
-    f.cr = cr;
-    f.ck = ck;
-    f.kn = kn;
-    f.fight = fight;
-    f.wnd = wnd;
-    f.stk = stk;
-    f.thru = thru;
-    f.s_t = s_t;
-    f.s_arm = s_arm;
-    f.e_body = e_body;
-    f.lck = lck;
-    f.lo = lo;
-    f.lw = lw;
-    f.hu = hu;
-    f.hauled = hauled;
+    *f = Holding { gv, ug, cs_on, cr, ck, kn, fight, wnd, stk, thru, s_t, s_arm, e_body, lck, lo, lw, hu, hauled, ..*f };
 }
 
 /// How much the yank, the blow he takes, the lunge's dip, the sway, the sitting back and the lag of his feet show.
@@ -350,7 +306,7 @@ fn yank_and_seat(an: &mut Anim, tune: &Knobs, f: &mut Holding) {
         0.6
     };
     let legs = lo > 1e-4 || yk > 1e-4 || ((tune.hold.lunge.dip != 0.0 || tune.hold.lunge.back != 0.0) && dip_w > 1e-4) || sw_on || seat_f > 1e-4 || lag_on || hb_s > 1e-4;
-    (f.yk, f.hb_s, f.dip_w, f.sw_s, f.seat_f, f.seat, f.ps, f.e_sl, f.e_sr, f.lag_on, f.leg_w, f.legs) = (yk, hb_s, dip_w, sw_s, seat_f, seat, ps, e_sl, e_sr, lag_on, leg_w, legs);
+    *f = Holding { yk, hb_s, dip_w, sw_s, seat_f, seat, ps, e_sl, e_sr, lag_on, leg_w, legs, ..*f };
 }
 
 /// How the trunk leans and turns, and where his two hands have the man.
@@ -387,7 +343,7 @@ fn lean_and_turn(tune: &Knobs, f: &mut Holding) {
     let (e_l, e_r) = (if grab { smoothstep(0.1, 0.7, ug) } else { 1.0 }, if grab { smoothstep(0.3, 0.95, ug) } else { 1.0 });
     let xg = smoothstep(0.3, 0.7, gv);
     let (back_k, back_g) = (if grab { 0.0 } else { smoothstep(0.0, 0.55, gv) }, if grab { 0.0 } else { 1.0 - smoothstep(0.45, 1.0, gv) });
-    (f.lean, f.brace, f.side, f.yaw_w, f.hy, f.hp, f.hold_l, f.hold_r, f.e_l, f.e_r, f.xg, f.back_k, f.back_g) = (lean, brace, side, yaw_w, hy, hp, hold_l, hold_r, e_l, e_r, xg, back_k, back_g);
+    *f = Holding { lean, brace, side, yaw_w, hy, hp, hold_l, hold_r, e_l, e_r, xg, back_k, back_g, ..*f };
 }
 
 /// The legs under him: the hips moved, and both feet put back where they stood or stepped.
@@ -458,7 +414,7 @@ fn hands_go(tune: &Knobs, fk: &mut Fk, from: &mut Option<[f64; 3]>, f: &mut Hold
         tgt_l = hold_l;
         tgt_r = hold_r;
     }
-    (f.hl, f.hr, f.live_r, f.r_l0, f.r_r0, f.tgt_l, f.tgt_r) = (hl, hr, live_r, r_l0, r_r0, tgt_l, tgt_r);
+    *f = Holding { hl, hr, live_r, r_l0, r_r0, tgt_l, tgt_r, ..*f };
 }
 
 /// The left arm across his throat, its fingers run on round it.
@@ -507,7 +463,7 @@ fn knife_fist(tune: &Knobs, f: &mut Holding) {
     let rot_r = quat::nlerp(r_r0, rot_k, e_rk);
     let pole_k = v3::lerp3([-0.9, 0.15, -0.4], [-0.8, -0.55, -0.3], kn);
     let base_r = v3::lerp3(tgt_r, tune.hold.knife.via, back_k);
-    (f.uar, f.far, f.rot_r, f.pole_k, f.base_r) = (uar, far, rot_r, pole_k, base_r);
+    *f = Holding { uar, far, rot_r, pole_k, base_r, ..*f };
 }
 
 /// The disarm: one path for the wrist, keyed in seconds: onto the gun in his hand, torn out and down to the hip, let go, then up to its station.
@@ -818,27 +774,7 @@ fn as_held(an: &mut Anim, h: &HeldPose, f: &mut BeingHeld) {
     let (grab, held, choke, whip) = (ph == HoldPhase::Grab, ph == HoldPhase::Held, ph == HoldPhase::Choke, ph == HoldPhase::Whip);
     let (ag, low, haul, yank, pull, shot_in, armed) = (clamp(h.agitation, 0.0, 1.0), h.low.unwrap_or(0.0), h.haul.unwrap_or(false), h.yank, h.pull.unwrap_or(0.0), h.shot.filter(|s| *s >= 0.0), h.armed.unwrap_or(false));
     let (tt, strip, fix_l, fix_r) = (an.idle_t, an.held_pose.and_then(|h| h.strip).map(|s| s.t), an.hand_fix[0], an.hand_fix[1]);
-    f.at = at;
-    f.at_b = at_b;
-    f.gun = gun;
-    f.bare = bare;
-    f.live = live;
-    f.t = t;
-    f.grab = grab;
-    f.held = held;
-    f.choke = choke;
-    f.whip = whip;
-    f.ag = ag;
-    f.low = low;
-    f.haul = haul;
-    f.yank = yank;
-    f.pull = pull;
-    f.shot_in = shot_in;
-    f.armed = armed;
-    f.tt = tt;
-    f.strip = strip;
-    f.fix_l = fix_l;
-    f.fix_r = fix_r;
+    *f = BeingHeld { at, at_b, gun, bare, live, t, grab, held, choke, whip, ag, low, haul, yank, pull, shot_in, armed, tt, strip, fix_l, fix_r, ..*f };
 }
 
 /// How far the reach and the choke have come, and how he fights, is jolted, shot at, knocked and breathes.
@@ -876,27 +812,7 @@ fn struggle(an: &mut Anim, tune: &Knobs, f: &mut BeingHeld) {
     let yaw_s = (3.0 * sin(tt * tau * 0.45 + 1.0) * amp - 7.0 * jerk + tune.hold.struggle.yaw * (0.65 * s1 + 0.35 * s2) * fgt) * DEGR;
     // ---- hard breathing while he is held
     let br = (0.5 - 0.5 * cos(tt * tau * tune.hold.breath.hz)) * (1.0 - limp) * (1.0 - 0.7 * fgt) * lerp(1.0, 0.6, gv) * w * e_in;
-    f.tau = tau;
-    f.gv = gv;
-    f.ug = ug;
-    f.ck = ck;
-    f.limp = limp;
-    f.e_in = e_in;
-    f.cs_on = cs_on;
-    f.cr = cr;
-    f.jl = jl;
-    f.hb = hb;
-    f.shot = shot;
-    f.knock = knock;
-    f.amp = amp;
-    f.jerk = jerk;
-    f.fgt = fgt;
-    f.s1 = s1;
-    f.s2 = s2;
-    f.s3 = s3;
-    f.roll = roll;
-    f.yaw_s = yaw_s;
-    f.br = br;
+    *f = BeingHeld { tau, gv, ug, ck, limp, e_in, cs_on, cr, jl, hb, shot, knock, amp, jerk, fgt, s1, s2, s3, roll, yaw_s, br, ..*f };
 }
 
 /// How far he is hauled, sunk, swayed, lowered and tipped.
@@ -916,7 +832,7 @@ fn let_down(an: &mut Anim, tune: &Knobs, f: &mut BeingHeld) {
     let b_in = lower_ease(&mut an.he_bc, if beats { smoothstep(tune.hold.beats.clamp[0], tune.hold.beats.clamp[1], lk) } else { 0.0 }, tune.hold.beats.back, dt);
     let tip_u = if beats { smoothstep(tune.hold.beats.tip_by[0], tune.hold.beats.tip_by[1], lk) } else { 0.0 };
     let b_tip = tip_u * (1.0 - limp) * (1.0 - gv);
-    (f.lv, f.hu, f.hauled, f.drop, f.sw, f.lo0, f.lo, f.b_off, f.b_in, f.tip_u, f.b_tip) = (lv, hu, hauled, drop, sw, lo0, lo, b_off, b_in, tip_u, b_tip);
+    *f = BeingHeld { lv, hu, hauled, drop, sw, lo0, lo, b_off, b_in, tip_u, b_tip, ..*f };
 }
 
 /// How far he is sat back into the arm, and how far each foot has been left behind.
@@ -941,7 +857,7 @@ fn sat_back(tune: &Knobs, f: &mut BeingHeld) {
     };
     let (off_l, off_r) = (foot(tune.hold.catch.feet[0][0], tune.hold.catch.feet[0][1], tune.hold.catch.heels[0]), foot(tune.hold.catch.feet[1][0], tune.hold.catch.feet[1][1], tune.hold.catch.heels[1]));
     let off_on = off_l[2] > 1e-4 || off_r[2] > 1e-4;
-    (f.limp_a, f.sit, f.off, f.off_l, f.off_r, f.off_on) = (limp_a, sit, off, off_l, off_r, off_on);
+    *f = BeingHeld { limp_a, sit, off, off_l, off_r, off_on, ..*f };
 }
 
 /// How his trunk, shoulders and head bend, and where his hands would hang.
@@ -975,7 +891,7 @@ fn bend(tune: &Knobs, f: &mut BeingHeld) {
     // (his hands hang from where his shoulders now are)
     let (h0, h1) = (tune.hold.hang[0], tune.hold.hang[1]);
     let (hang_l, hang_r) = if dn { ([h0[0], h0[1] - hg_y, h0[2] + hg_z], [h1[0], h1[1] - hg_y, h1[2] + hg_z]) } else { (h0, h1) };
-    (f.arch, f.heave, f.clav, f.chin1, f.head_roll, f.hyw, f.h0, f.h1, f.hang_l, f.hang_r) = (arch, heave, clav, chin1, head_roll, hyw, h0, h1, hang_l, hang_r);
+    *f = BeingHeld { arch, heave, clav, chin1, head_roll, hyw, h0, h1, hang_l, hang_r, ..*f };
 }
 
 /// Both arms in the arm hold: on the forearm, clawing at it, or hanging.
@@ -1062,7 +978,7 @@ fn arm_sets(tune: &Knobs, f: &mut BeingHeld) {
     let s_on = strip.is_some() && s_t < tune.hold.strip.home;
     let e_a = if grab { smoothstep(0.1, 0.75, ug) } else { 1.0 };
     let kept = lo0 > 1e-4 || b_off > 1e-4;
-    (f.z, f.s_t, f.s_on, f.e_a, f.kept) = (z, s_t, s_on, e_a, kept);
+    *f = BeingHeld { z, s_t, s_on, e_a, kept, ..*f };
 }
 
 /// The pelvis sunk, hauled, swayed, sat and lowered; his feet noted first.
@@ -1104,7 +1020,7 @@ fn held_hips(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, he_span: &mut f6
         shift(d, rig, hips, &[0.0, -lower_k(beats, tune.hold.beats.lower.sink, tune.hold.lower.sink) * lo, lower_k(beats, tune.hold.beats.lower.fwd, tune.hold.lower.fwd) * lo]);
         turn(d, rig, hips, q_pitch(lower_k(beats, tune.hold.beats.lower.hip, tune.hold.lower.hip) * lo * DEGR));
     }
-    (f.sp1, f.sp2, f.sp3, f.f_l, f.f_r, f.r_l, f.r_r, f.hit_rec) = (sp1, sp2, sp3, f_l, f_r, r_l, r_r, hit_rec);
+    *f = BeingHeld { sp1, sp2, sp3, f_l, f_r, r_l, r_r, hit_rec, ..*f };
 }
 
 /// The spine arched onto the arm with his struggle and his breath, the shoulders, the head.
@@ -1169,7 +1085,7 @@ fn held_hands_go(tune: &Knobs, fk: &mut Fk, f: &mut BeingHeld) {
     if s_on {
         tgt_r = curve3(strip_in(s_t, tune.hold.strip.take), &[(0.0, live_r), (tune.hold.strip.take, tune.hold.strip.meet), (tune.hold.strip.take + 0.06, tune.hold.strip.torn), (tune.hold.strip.free, tune.hold.strip.torn), (tune.hold.strip.up, z.tgt[1])]);
     }
-    (f.hl, f.hr, f.r_l0, f.r_r0, f.tgt_l, f.tgt_r) = (hl, hr, r_l0, r_r0, tgt_l, tgt_r);
+    *f = BeingHeld { hl, hr, r_l0, r_r0, tgt_l, tgt_r, ..*f };
 }
 
 /// Both arms onto their spots, and the fingers (a blend between the hold and the hang goes round the way it went the frame before).
@@ -1213,7 +1129,7 @@ fn arm_share(tune: &Knobs, f: &mut BeingHeld) {
     let BeingHeld { w, ug, cr, lv, e_a, .. } = *f;
     let w_a0 = w * e_a + w * (1.0 - e_a) * 0.35;
     let w_a = if cr { max(w_a0, smoothstep(tune.hold.catch.fling.arm_in[0], tune.hold.catch.fling.arm_in[1], ug) * lv) } else { w_a0 };
-    f.w_a = w_a;
+    *f = BeingHeld { w_a, ..*f };
 }
 
 /// His gun arm is where the disarm wants it by `take`.

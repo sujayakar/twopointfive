@@ -73,8 +73,8 @@ night breach's are cut by the rooms they stand in (`squads_by_rooms`), trained; 
 (`leads`: with the hostages, or on the captor's word) are nobody else's. After a thinking beat `decide` picks `Barricade`, `Flank` or `Help`,
 with no die. Those who stay dig in (`digs_in`). Hard here is `squad_drill`: longer
 beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to look when it goes quiet (`look_out`). Men called to a room of theirs
-are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`). `radio_check` finds a drop
-nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
+are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`); another room hit before they
+are off, they go there, and a man whose own it is stays (`due_here`). `radio_check` finds a drop nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
 
 **The room fight's other rules.** On Hard the last man up in a room gives it up by another door (`last_man`, `tick_out`), and the last of them all keeps
 his (`last_holds`). `dig_in_tick` runs `begin`, `start_brace`, `haul`, `wedge` and `to_cover`, each

@@ -250,7 +250,7 @@ fn chronicle_sample(g: &mut crate::game::Game, x: f64, z: f64, t: f64) {
 fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
 /// The first player's feet.
-fn pos_of(g: &mut crate::game::Game) -> V3 {
+fn pos_of(g: &crate::game::Game) -> V3 {
     let man = crate::seats::man_here(&crate::seats::here(g));
     g.ch[g.pl[man].ch].pos
 }

@@ -10,16 +10,16 @@ const SIDE: crate::teams::Team = crate::teams::Team::Hostile;
 
 // ---------------------------------------------------------------- what the TypeScript's language and closures gave
 /// `g.col.nav.findPath(a, b, maxIter, pen)` at a price this file holds as a value
-fn find_path(g: &mut Game, a: V3, b: V3, max_iter: f64, pen: Option<&crate::lanes::LanePenalty>) -> Option<Vec<V3>> {
+fn find_path(g: &Game, a: V3, b: V3, max_iter: f64, pen: Option<&crate::lanes::LanePenalty>) -> Option<Vec<V3>> {
     match pen {
         Some(p) => { let mut price = |_: &Game, ix: f64, iz: f64| lane_penalty_at(p, ix, iz); crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), Some(&mut price)) }
         None => crate::scene_collision::nav_grid_find_path(g, a, b, Some(max_iter), None),
     }
 }
 /// `g.col.segmentBlocked(a, b)`
-fn seg_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
+fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 /// `g.col.solidBlocked(a, b)`
-fn solid_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
+fn solid_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
 
 /// a cell's number as a key of a lane's floor (a Set has −0 and 0 as one key, `Num` by its bits)
 fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
@@ -294,7 +294,7 @@ fn held_at(g: &mut crate::game::Game, l: LanesLaneId) -> Vec<GuardId> {
 /// what backOut's two closures share
 struct BackOut { l: LanesLaneId, m: Option<Vec<u8>>, memo: JsMap<usize, bool>, w: usize }
 /// floor out of every lane he knows, out of this one's guns' sight, not in a doorway
-fn back_cover(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
+fn back_cover(g: &Game, b: &mut BackOut, i: usize) -> bool {
     if let Some(&v) = b.memo.get(i) { return v; }
     let cell = g.col.nav.cell;
     let c: V3 = [((i % b.w) as f64 + 0.5) * cell, 0.0, ((i / b.w) as f64 + 0.5) * cell];
@@ -305,7 +305,7 @@ fn back_cover(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
     v
 }
 /// every open floor about it is cover too
-fn back_deep(g: &mut Game, b: &mut BackOut, i: usize) -> bool {
+fn back_deep(g: &Game, b: &mut BackOut, i: usize) -> bool {
     let (w, h) = (b.w as isize, g.col.nav.h as isize);
     let (cx, cz) = ((i % b.w) as isize, (i / b.w) as isize);
     for dz in -1..=1isize {
@@ -467,9 +467,10 @@ fn round(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
         s(g).flank.set(gd, now + m::min(60.0, len / 2.0 + 10.0));
         let l_from = g.tab.lanes_lane[l].from;
         if let (true, Some(stop)) = (way_pin, stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
-            s(g).flank_of.set(gd, crate::lanes::Flank { lane: id, phase: crate::lanes::FlankPhase::Walk, at: stop, t: now, n: 0.0 });
+            s(g).flank_of.set(gd, crate::lanes::Flank { lane: id, phase: crate::lanes::FlankPhase::Walk, at: stop, t: now });
             clear_path(g, gd);
-            crate::roomfight::run(g, d, stop, None, 0.0, crate::owner::by::LANE);
+            let pace = g.tune.guard_chase;
+            crate::roomfight::send(g, d, crate::roomfight::Leg::errand(stop, pace), crate::owner::by::LANE);
             crate::belief::word(g, gd, l_from);
             if first { round_shout(g, gd); }
             continue;
@@ -591,7 +592,7 @@ fn bangs(g: &mut crate::game::Game) {
 }
 
 ///  where this body stands, if it is by the lane's guns and `eye` has a line to it
-fn manned_at(g: &mut Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
+fn manned_at(g: &Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
     let (pos, near) = (g.ch[c].pos, g.k.lanes.peek_near_m);
     if !g.tab.lanes_lane[l].guns.iter().any(|&q| flat(q, pos) < near) { return None; }
     let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
@@ -600,7 +601,7 @@ fn manned_at(g: &mut Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
     if !seg_blocked(g, eye, chest) { Some(pos) } else { None }
 }
 /// one of the other side, on his feet, that `eye` has a line to within `peekNearM` of where a lane's fire came from: a LINE, so the dark never makes a lane clear
-pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) -> Option<V3> {
+pub(super) fn guns_manned(g: &crate::game::Game, l: LanesLaneId, eye: V3) -> Option<V3> {
     for pl in crate::seats::men(g) {
         let pc = g.pl[pl].ch;
         if g.ch[pc].alive {
@@ -620,7 +621,7 @@ pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) ->
     None
 }
 /// has he the PLACE round a gun's spot in view: the spot, and all but one at most of a ring of six a man at the spot could stand on
-pub(super) fn spot_seen(g: &mut crate::game::Game, eye: V3, m: V3) -> bool {
+pub(super) fn spot_seen(g: &crate::game::Game, eye: V3, m: V3) -> bool {
     let c: V3 = [m[0], 1.4, m[2]];
     if seg_blocked(g, eye, c) { return false; }
     let mut miss = 0;
@@ -632,7 +633,7 @@ pub(super) fn spot_seen(g: &mut crate::game::Game, eye: V3, m: V3) -> bool {
     true
 }
 /// another of his side, fit, has had one of them in sight within 3 s somewhere by the lane's guns
-pub(super) fn net_sees(g: &mut crate::game::Game, l: LanesLaneId, but: GuardId) -> bool {
+pub(super) fn net_sees(g: &crate::game::Game, l: LanesLaneId, but: GuardId) -> bool {
     let near = g.k.lanes.peek_near_m;
     let mut i = 0;
     while i < g.fight.defs.len() {
@@ -744,20 +745,11 @@ fn flank_tick(g: &mut crate::game::Game, l: LanesLaneId) {
         if f.phase == FlankPhase::Walk {
             if !flanking(g, gd) { continue; }   // (too long on the way: let go of, the entry gone with it)
             if g.time - g.gd[gd].last_seen_t < 1.0 { s(g).flank_of.delete(gd); s(g).flank.delete(gd); continue; }   // (met one of them on the way: the fight's)
-            if flat(pos_of(g, gd), f.at) > 0.8 {   // not there yet
-                if crate::roomfight::on_leg(g, d) {   // (still walking it, or sent elsewhere meanwhile)
-                    if crate::roomfight::on_leg_of(g, d, crate::owner::by::LANE) && goal_of(g, gd).map_or(false, |to| flat(to, f.at) < 0.8) { continue; }
-                    s(g).flank_of.delete(gd); s(g).flank.delete(gd);
-                    continue;
-                }
-                if g.time - f.t < 2.0 { continue; }
-                f.n += 1.0;
-                if f.n > 4.0 { s(g).flank_of.delete(gd); s(g).flank.delete(gd); continue; }   // (walked on, a few times, then let go)
-                f.t = g.time;
-                s(g).flank_of.set(gd, f);
-                clear_path(g, gd);
-                crate::roomfight::run(g, d, f.at, None, 0.0, crate::owner::by::LANE);
-                continue;
+            let his = crate::roomfight::sent_to(g, d).is_some_and(|to| flat(to, f.at) < 0.8);   // (or sent elsewhere meanwhile)
+            match crate::roomfight::leg_ended(g, d, crate::owner::by::LANE) {
+                None if his => continue,
+                Some(crate::roomfight::LegEnd::Arrived) if his => {}
+                _ => { s(g).flank_of.delete(gd); s(g).flank.delete(gd); continue; }   // (no way round, or somebody else's)
             }
             s(g).flank.delete(gd);
             let p = pos_of(g, gd);

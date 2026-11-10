@@ -570,7 +570,7 @@ fn squad_orders_in_frame(g: &crate::game::Game, p: V3) -> bool {
     false
 }
 
-fn rest_bad(g: &mut Game, q: V3) -> bool { squad_orders_in_frame(g, q) || crate::doorway::doorway_in_way(g, q) || crate::doorway::doorway_lane(g, q, None).is_some() }
+fn rest_bad(g: &Game, q: V3) -> bool { squad_orders_in_frame(g, q) || crate::doorway::doorway_in_way(g, q) || crate::doorway::doorway_lane(g, q, None).is_some() }
 fn rest_others(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Vec<V3> {
     let mut out: Vec<V3> = vec![squad_orders_sam_stood(g, seat)];
     for (o, &b) in seat.orders.asg.iter() {
@@ -714,7 +714,7 @@ fn squad_orders_back_of(g: &crate::game::Game, follow: f64) -> f64 {
 }
 
 /// The way they came: the point `extra` metres further back along Sam's trail than this follower's own place. None: he is not following.
-pub fn squad_orders_trail_back(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> Option<V3> {
+pub fn squad_orders_trail_back(g: &crate::game::Game, gd: GuardId, extra: f64) -> Option<V3> {
     let a = *g.sets[g.seat].orders.asg.get(gd)?;
     if g.tab.orders_assignment[a].post.is_some() { return None; }
     let follow = g.tab.orders_assignment[a].follow;
@@ -722,14 +722,14 @@ pub fn squad_orders_trail_back(g: &mut crate::game::Game, gd: GuardId, extra: f6
     Some(squad_orders_slot(g, back))
 }
 
-fn apart_open(g: &mut Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
-fn apart_bad(g: &mut Game, x: V3) -> bool { squad_orders_in_frame(g, x) || crate::doorway::doorway_lane(g, x, None).is_some() }
+fn apart_open(g: &Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
+fn apart_bad(g: &Game, x: V3) -> bool { squad_orders_in_frame(g, x) || crate::doorway::doorway_lane(g, x, None).is_some() }
 fn apart_clear(t: &[V3], x: V3, by: f64) -> bool { t.iter().all(|&o| flat(o, x) >= by - 0.05) }
-fn apart_short(g: &mut Game, p: V3, slot: V3, t: &[V3], k: f64) -> Option<V3> {
+fn apart_short(g: &Game, p: V3, slot: V3, t: &[V3], k: f64) -> Option<V3> {
     if flat(p, slot) < 1.5 && !apart_bad(g, p) && apart_clear(t, p, k) && apart_open(g, p, slot) { Some([p[0], 0.0, p[2]]) } else { None }
 }
 ///  None: the slot itself.
-fn apart_hold(g: &mut Game, p: V3, sam: V3, slot: V3, t: &[V3], k: f64) -> Option<V3> {
+fn apart_hold(g: &Game, p: V3, sam: V3, slot: V3, t: &[V3], k: f64) -> Option<V3> {
     if flat(p, slot) >= 1.5 || apart_bad(g, p) || !apart_open(g, p, slot) { return None; }
     let here: V3 = [p[0], 0.0, p[2]];
     let by = m::min(k, g.k.orders.file_tight);
@@ -799,7 +799,7 @@ fn squad_orders_apart_slot(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
 }
 
 /// : straight on, a quarter metre at a time, while a man can stand there and walk there
-fn slot_reach(g: &mut Game, prev: V3, dir: V3, left: f64, ang: f64) -> (V3, f64) {
+fn slot_reach(g: &Game, prev: V3, dir: V3, left: f64, ang: f64) -> (V3, f64) {
     let (c, sn) = (m::cos(ang), m::sin(ang));
     let d: V3 = [dir[0] * c + dir[2] * sn, 0.0, dir[2] * c - dir[0] * sn];
     let (mut p, mut rem) = (prev, left);
@@ -814,7 +814,7 @@ fn slot_reach(g: &mut Game, prev: V3, dir: V3, left: f64, ang: f64) -> (V3, f64)
 }
 
 /// The point `back` metres behind Sam along his trail; past its end, on straight the way it was going, as far as the floor is free.
-fn squad_orders_slot(g: &mut crate::game::Game, back: f64) -> V3 {
+fn squad_orders_slot(g: &crate::game::Game, back: f64) -> V3 {
     let sam = g.ch[g.pl[g.player].ch].pos;
     let mut prev: V3 = [sam[0], 0.0, sam[2]];
     let mut left = back;

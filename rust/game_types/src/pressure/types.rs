@@ -11,7 +11,6 @@ pub struct Out {
     pub moving: bool,
     pub plant_t: f64,
     pub fought: bool,
-    pub step_t: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

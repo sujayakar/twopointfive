@@ -19,7 +19,7 @@ pub const FRAME_BOXES: f64 = 768.0;
 /// a box made to stay: a row of g.tab.boxes for good
 pub fn box_new(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId { g.tab.boxes.push(b) }
 /// a box made for this frame's list: a row freed by boxes_frame_reset is used again, else a new row
-fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
+pub fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     let id = box_kept(g, b);
     g.box_frame_rows.push(id);
     id
@@ -83,7 +83,7 @@ fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner
 }
 
 /// Is this piece of trim drawn: while the box that says it is.
-fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
+fn trim_drawn(g: &crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
     match g.tab.boxes[t].of {
         None => true,
         Some(of) => js::to_i32(g.tab.boxes[all[of as usize]].flags) & js::to_i32(box_flag().no_primary) == 0,
@@ -91,7 +91,7 @@ fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
 }
 
 /// Is a static drawn: not hidden, not a pane, and trim only while its box is.
-pub fn box_drawn(g: &mut crate::game::Game, all: &[BoxId], b: BoxId) -> bool {
+pub fn box_drawn(g: &crate::game::Game, all: &[BoxId], b: BoxId) -> bool {
     let f = box_flag();
     let (flags, piece) = { let x = &g.tab.boxes[b]; (x.flags, x.piece) };
     js::to_i32(flags) & (js::to_i32(f.no_primary) | js::to_i32(f.glass)) == 0 && (piece != Some(true) || trim_drawn(g, all, b))
@@ -642,7 +642,7 @@ mod tests {
         }
     }
 
-    fn rays(g: &mut Game, x: &mut Lcg) -> u32 {
+    fn rays(g: &Game, x: &mut Lcg) -> u32 {
         let mut h = 2166136261u32;
         for j in 0..4000 {
             let ro = [x.r() * 50.0 - 5.0, x.r() * 3.0, x.r() * 38.0 - 5.0];

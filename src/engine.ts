@@ -12,7 +12,7 @@ import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField, powderDrawWord, powderWarm } from './render/powderField';
 import { PlaceField } from './render/placeField';
-import { PlaceMap } from './scene/placePlan';
+import { PlaceMap, type PlaceGap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
@@ -45,6 +45,8 @@ const rcGridKey = (c: RcConfig) => `${c.nx}x${c.ny}x${c.nz}/d${c.d0}/c${c.cascad
 export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the frame's bit that the volumetric pass's dust look asks (smokeDrawWords) */ /** look only: the system lets a can's smoke out in bands (the smoke lab's row, SmokeSystem.streak) → a tint is drawn as a tint alone */ streaks?: boolean; dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
 
 const NO_BEAM = (): boolean => false;
+/** no doors' lines: one list, for what is kept of them stands while the list does */
+const NO_GAPS: readonly PlaceGap[] = [];
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
 
@@ -75,6 +77,8 @@ export class Engine {
   gbuffer: GBuffer;
   passes: LightingPasses;
   timer: GpuTimer;
+  /** the canvas's size in the window, by whoever reads it once a frame (host/viewsize.ts); null = the canvas is asked */
+  view: { readonly clientWidth: number; readonly clientHeight: number } | null = null;
   /** the render-target pool the g-buffer and the lighting passes share (render/texpool.ts): a size the adaptive ladder returns to costs no allocation */
   pool: TexturePool;
   sceneLayout: GPUBindGroupLayout;
@@ -525,9 +529,9 @@ export class Engine {
   get meshShadowsOn(): boolean { return this.settings.meshShadows && this.meshShadowsAvailable && !!this.meshShadows; }
 
   resize() {
-    const canvas = this.gpu.canvas;
+    const canvas = this.gpu.canvas, view = this.view ?? canvas;
     const dpr = window.devicePixelRatio || 1;
-    const cw = Math.max(1, Math.floor(canvas.clientWidth * dpr)), ch = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+    const cw = Math.max(1, Math.floor(view.clientWidth * dpr)), ch = Math.max(1, Math.floor(view.clientHeight * dpr));
     // canvas backing store at internal res; browser upscales. Internal height = min(maxInternalHeight, CSS height × dpr) × renderScale: the cap is what ×1.0 means on
     // this window and every step of the scale below it renders fewer pixels (until 08-11 the scale multiplied the window and was THEN capped, so on a HiDPI window —
     // 1440 device px against a 1000-px cap — everything from ×0.70 to ×1.00 rendered the same 1000 rows: a dead zone on the slider and rungs the adaptive ladder
@@ -754,8 +758,8 @@ export class Engine {
     // THE LOOK PROTOTYPE, light keeps to its room (the look panel's row `rooms`; lookConfig.rooms 0 = the cache as it was; DAY AND NIGHT, and the game's light
     // meter reads the cache, so on the look page the row changes what the meter and the guards read): the cascades' hand-over overlap (render/rc.ts)
     // and the cache rays' bounce read (lighting_common.wgsl hitRadiance, FrameFlags.RcRoom). Both stop the open air's daylight reaching a shut room's probes.
-    const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? [] : [];
-    if (lookSides || placeOn) { const t = clock(); this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps); spend(plan, clock() - t); }   // (the map of the level as it stands, ONE a frame and one for both readers: the wall sides here and the place field below. Doors open by degrees in it and no leaf is a wall, scene/placePlan.ts)
+    const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? NO_GAPS : NO_GAPS;
+    if (lookSides || placeOn) { const t = clock(); this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps, this.world.staticsTold); spend(plan, clock() - t); }   // (the map of the level as it stands, ONE a frame and one for both readers: the wall sides here and the place field below. Doors open by degrees in it and no leaf is a wall, scene/placePlan.ts)
     if (lookSides || placeOn) this.wallSides.update(this.world.statics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, this.placeMap, plan); else this.wallSides.drop();   // (the plan's words: the Walls have two sides row's for the cache reads, and the exposure's for a pixel's place whatever that row says, composite.wgsl lookPlaceLevels. Made again only when the map's shape changes)
     const sidesStamp = lookSides || placeOn ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none)
     const lookRoom = lookConfig.rooms > 0; this.rc.setOverlap(lookRoom ? 1 : 0);

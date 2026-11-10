@@ -534,7 +534,7 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
 }
 
 /// Along his own gun line: within 45 degrees of his aim, a line to the man, his eyes not full of magnesium.
-fn sights(g: &mut Game, gd: GuardId, c: CharId, head: V3, p: V3, hd: Option<V3>) -> bool {
+fn sights(g: &Game, gd: GuardId, c: CharId, head: V3, p: V3, hd: Option<V3>) -> bool {
     let pos = g.ch[c].pos;
     let mut off = m::atan2(p[0] - pos[0], p[2] - pos[2]) - g.ch[c].aim_yaw;
     off = m::atan2(m::sin(off), m::cos(off));
@@ -638,7 +638,7 @@ pub fn frag_in_fist(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// An arm round a corner: the hand half a pace from a man at `p` toward `to`, chest high; no arm goes through a wall.
-pub fn arm_round(g: &mut crate::game::Game, p: V3, to: V3) -> V3 {
+pub fn arm_round(g: &crate::game::Game, p: V3, to: V3) -> V3 {
     let (dx, dz) = (to[0] - p[0], to[2] - p[2]);
     let d = js::or(m::hyp2(dx, dz), 1.0);
     let out = m::min(0.7, d);
@@ -702,7 +702,7 @@ pub fn frag_winding(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// How many grenades have left his hand.
-pub fn frag_away(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn frag_away(g: &crate::game::Game, gd: GuardId) -> f64 {
     g.m.frag.def_books.as_ref().and_then(|b| b.carriers.iter().find(|x| x.gd == gd)).and_then(|x| x.away).unwrap_or(0.0)
 }
 

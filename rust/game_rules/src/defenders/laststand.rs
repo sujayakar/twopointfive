@@ -51,7 +51,7 @@ fn run_then(g: &mut Game, then: LaterThen) {
     }
 }
 /// the `f` of lines 265, 360, 374, 395: a line's words and its `then`, the place asked now
-fn redo_words(g: &mut Game, redo: &LaterRedo) -> NetRedoRet {
+fn redo_words(g: &Game, redo: &LaterRedo) -> NetRedoRet {
     match *redo {
         LaterRedo::MovedAt { d } => {
             let w = man_spoken(g, d);
@@ -78,7 +78,7 @@ fn line_slot(g: &mut Game, kind: LineKind, vars: Option<&JsMap<String, String>>)
     let (cls, say) = (row.1, row.2);
     let len = say.len() as f64;
     let st = st_of(g);
-    let i = match st.rot.get(kind) { Some(i) => *i, None => js::rem(m::floor(crate::math_dice::roll(&mut st.die) * len), len) };
+    let i = match st.rot.get(kind) { Some(i) => *i, None => js::rem(m::floor(st.die.roll() * len), len) };
     st.rot.set(kind, js::rem(i + 1.0, len));
     let tpl: &'static str = row.4.or(row.3).unwrap_or(say)[i as usize];
     let empty = JsMap::new();
@@ -103,7 +103,7 @@ fn id_truthy(id: &Option<String>) -> bool { id.as_deref().map_or(false, |s| !s.i
 /// where this man's body stands
 fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].gd; g.ch[g.gd[gd].ch].pos }
 /// (:230) the place as this man says it, asked now
-fn man_spoken(g: &mut Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
+fn man_spoken(g: &Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
 /// the defenders who are `alive`, in the list's order
 fn up_defs(g: &Game) -> Vec<RoomfightDefId> { let defs = g.fight.defs.clone(); defs.into_iter().filter(|&d| alive(g, d)).collect() }
 /// a line's `vars`
@@ -133,7 +133,7 @@ fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 
 /// a beat between two numbers, off the state's own die
 fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
-    r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
+    r[0] + st_of(g).die.roll() * (r[1] - r[0])
 }
 
 /// fit to speak or be spoken to: up, not held, his wits about him
@@ -148,13 +148,13 @@ fn fit(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 }
 
 /// fit, and nobody of the team in his sight these `quiet` seconds
-fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+fn calm(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     fit(g, d) && g.time - g.gd[gd].last_seen_t > g.k.laststand.quiet
 }
 
 /// where a point is, by the structure's own rooms
-fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
+fn where_(g: &crate::game::Game, p: V3) -> crate::laststand::Where {
     let rooms = g.level.rooms().to_vec();
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
@@ -173,7 +173,7 @@ fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
 }
 
 /// where a man says he is: the level's own name for the floor he stands on, only on ground it has no word for 'outside' the nearest room
-fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
+fn spoken(g: &crate::game::Game, p: V3) -> crate::laststand::Spoken {
     let w = where_(g, p);
     if id_truthy(&w.id) { return Spoken { id: w.id, the: w.the, at: w.at, spot: None }; }
     let r = match crate::dialogue::place_in(g, p) {
@@ -482,10 +482,10 @@ fn fresh_seed(seed: f64, attempt: f64) -> f64 {
 // ---------------------------------------------------------------- the seams with the rest of the game
 
 /// A new state for the endgame: its own die off the room clear's seed and attempt, four draws spent; the posts as staged, kept if it is the same staging.
-fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
+fn fresh(g: &crate::game::Game) -> crate::laststand::State {
     let (seed, attempt) = (g.room_clear.seed, g.room_clear.attempt);
-    let mut die = crate::math_dice::die_of(fresh_seed(seed, attempt));
-    for _ in 0..4 { crate::math_dice::roll(&mut die); }
+    let mut die = crate::dice::Die(js::to_u32(fresh_seed(seed, attempt)));
+    for _ in 0..4 { die.roll(); }
     let key = alloc::format!("{}:{}", seed, attempt);
     let kept = match &g.m.laststand.states { Some(was) if was.key == key => Some(was.post.clone()), _ => None };
     let post = match kept {

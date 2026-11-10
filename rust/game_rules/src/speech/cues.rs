@@ -365,7 +365,7 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
 }
 
 /// Every ear of the team's a shout could reach.
-fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
+fn cues_ears(g: &crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
@@ -537,7 +537,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     let n = g.cues.n;
     g.cues.n += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    let pick = js::rem(crate::math_dice::hash_str(&callsign) + n, say.len() as f64) as usize;
+    let pick = js::rem(crate::dice::hash_str(&callsign) + n, say.len() as f64) as usize;
     let text = fill(&say[pick], vars);
     cues_man(g, gd).said_t = t;
     g.cues.stats.cues += 1.0;

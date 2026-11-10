@@ -19,7 +19,7 @@ pub(super) fn head_of(g: &Game, c: CharId) -> V3 {
 }
 
 /// Is this body within the clearance it is owed of the line from → to
-pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
+pub(super) fn line_hit(g: &Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
     let pos = g.ch[ch].pos;
     let vel = g.ch[ch].vel;
     let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => pos };
@@ -42,7 +42,7 @@ pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, 
 }
 
 /// A friend, Sam or another living operative, within a body's breadth of the line from → to and a metre past it, wider for one on the move.
-pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, self_: GuardId) -> Option<CharId> {
+pub fn room_fight_friend_in_line(g: &crate::game::Game, from: V3, to: V3, self_: GuardId) -> Option<CharId> {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
     let l2 = dx * dx + dz * dz;

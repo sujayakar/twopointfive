@@ -144,9 +144,9 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
    markings, a light, a door) go through `read.rs` and `records.rs`, a line a type.
 6. Thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set
    (`passes.rs`; the game's `cut_record`, `box_world_add_static`, `light_from_def`).
-7. The die, seeded before the men are made (the game's `sim_dice_new`).
+7. The seed the game's draws are keyed by, before the men are made: what they are dealt is drawn under it.
 8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: **the game's own
-   constructor, `game_new`** (`rust/game_rules/src/tick/game/stand.rs`).
+9. The moving state at home in the block (`settle`: the pose pool, the smoke grid).
 9. The moving state at home in the block (`settle`: the die, the pose pool, the smoke grid).
 10. With no address, the solo night's card (`kit_solo_stand`). The visit's hour over the level's own night (`apply_hour`).
 11. The host's Input and camera (the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild`).
@@ -197,7 +197,7 @@ why, and which take a flag such as `--list` or `--write`. `LEVELS_BREAK=1` is ea
 
 ## Hold: is this build the same game as that one (`src/bin/hold.rs`)
 
-For a change that is meant to change nothing of play. 
+For a change that is meant to change nothing of play.
 
 ```
 cd rust/game_start
@@ -309,8 +309,8 @@ The rows, each with what it holds and then its breaks:
   out of the tree before the stand. The parts differ in nothing but what the table `CLOCK_ONLY` in `rows.rs` names, each with its reason; the clock's own
   part does differ, and the level's own record stands on each side as it stood. Breaks: `moves` a die drawn once on the clocked side only · `noclock` the
   block is out on both sides.
-- **`steps <run>`:** A STEP OF THE TICK WRITES WHAT `steps.txt` SAYS (made by `hold steps DIR --write`): 16 s of four runs, each step asked on every tenth
-  tick which parts it changed. Another part is a new coupling: meant and added to the file, or not made. Break: `said` the file forgets one.
+- **`steps <run>`:** A STEP OF THE TICK WRITES WHAT `steps.txt` SAYS (made by `hold steps DIR --write`): 16 s of four runs, each step asked each tenth
+  tick what it changed. Another part is a new coupling: meant and added, or not. Break: `said` forgets one.
 - **long: `played <id>`:** every room clear, rescue and the night breach, by the hands-off player (`src/hands_off.rs`) under the page's god mode, so
   that each goes on to its floor cleared. The mission played to its end by keys alone. (a) What a run owes (`src/owes.rs`), every tick. (b) It ends.
   (c) A line of words a reader can read (its end and time, Sam, who is up and down, the orders, the medal if any, the counts of `owes`) and a word a second

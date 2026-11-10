@@ -64,7 +64,7 @@ fn shuffled<T>(mut a: Vec<T>, die: &mut game::dice::Die) -> Vec<T> {
 }
 /// where n more men can stand: a room clear's unused marks and then its free floor, a room in turn; on any other floor anywhere a man can walk to from the player, none on top of him
 fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
-    let mut die = game::math_dice::mulberry32(0x57E55 as f64);
+    let mut die = game::dice::Die(0x57E55);
     let mut taken: Vec<[f64; 3]> = vec![g.ch[g.pl[g.player].ch].pos];
     taken.extend(g.guards.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
     taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));

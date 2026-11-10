@@ -542,7 +542,7 @@ fn as_asked(an: &mut Anim, l: &WorkPose, o: &mut AtWork) {
         nk = if k.len() < 4 { k.len() } else { 4 };
         keys[..nk].copy_from_slice(&k[..nk]);
     }
-    (o.at, o.at_b, o.t, o.dur, o.kind, o.dir, o.gaze_local, o.fix, o.keys, o.nk) = (at, at_b, t, dur, kind, dir, gaze_local, fix, keys, nk);
+    *o = AtWork { at, at_b, t, dur, kind, dir, gaze_local, fix, keys, nk, ..*o };
 }
 
 /// Which hands: settled while the verb runs, kept while it comes away.
@@ -559,7 +559,7 @@ fn which_hands(an: &mut Anim, o: &mut AtWork) {
     let n0 = v3::normalize(n_at);
     // ---- the body: bowed to a low thing, leaned into a long reach (by last frame's weight; the head levelled back out of both), the eyes onto it
     let ax = v3::cross(AY, v3::normalize([-n0[0], 0.0, -n0[2] + 1e-6]));
-    (o.w_was, o.done, o.main, o.two, o.n0, o.ax) = (w_was, done, main, two, n0, ax);
+    *o = AtWork { w_was, done, main, two, n0, ax, ..*o };
 }
 
 /// The body: bowed to a low thing, leaned into a long reach.
@@ -567,7 +567,7 @@ fn how_low(fk: &mut Fk, o: &mut AtWork) {
     let AtWork { p0, main, n0, .. } = *o;
     let bow1 = 30.0 * DEGR * smoothstep(0.3, 0.8, (fk.at(role(UPPER_ARM_L))[1] + fk.at(role(UPPER_ARM_R))[1]) / 2.0 - p0[1]);
     let lean1 = 14.0 * DEGR * smoothstep(0.42, 0.66, v3::dist(fk.at(arm_of(main).1), v3::mad(p0, n0, 0.12)));
-    (o.bow1, o.lean1) = (bow1, lean1);
+    *o = AtWork { bow1, lean1, ..*o };
 }
 
 /// The body bowed and leaned (by last frame's weight; the head levelled back out of both).
@@ -595,7 +595,7 @@ fn shoulders_to_be(g: usize, n: usize, o: &mut AtWork) -> bool {
             [fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R))]
         });
     }
-    o.sh_full = sh_full;
+    *o = AtWork { sh_full, ..*o };
     true
 }
 
@@ -604,7 +604,7 @@ fn eased(o: &mut AtWork) {
     let AtWork { t, dur, w_was, done, bow1, lean1, .. } = *o;
     let ease = w_was * if done { smoothstep(dur + 0.3, dur, t) } else { 1.0 };
     let (bow, lean) = (bow1 * ease, lean1 * ease);
-    (o.bow, o.lean) = (bow, lean);
+    *o = AtWork { bow, lean, ..*o };
 }
 
 /// Bowed and leaned as he is.
@@ -626,7 +626,7 @@ fn thing(fk: &mut Fk, o: &mut AtWork) {
     let r0 = if v3::len(across) < 1e-4 { [-1.0, 0.0, 0.0] } else { v3::normalize(across) };
     let r_t = v3::normalize(v3::sub(un.un(v3::add(p0, r0)), p_t));
     let wk = Work { p_t, n_t, r_t, u_t: v3::cross(n_t, r_t), sh_full, un, t, dur, kind, dir, main, two, done, keys, nk };
-    o.wk = wk;
+    *o = AtWork { wk, ..*o };
 }
 
 /// Which arms are up, and can each reach: asked inside 0.57 m of the shoulder joint and ahead of it, let go past 0.6; the put-away is on his own body. One hand's verb is the lead hand's alone; the other hand lets go once the thing is out.
@@ -659,7 +659,7 @@ fn arms_up(c: &mut game_types::character::AnimWk, fk: &mut Fk, o: &mut AtWork) {
             }
         }
     }
-    (o.tgt_l, o.tgt_r) = (tgt_l, tgt_r);
+    *o = AtWork { tgt_l, tgt_r, ..*o };
 }
 
 /// The arms come.
@@ -671,7 +671,7 @@ fn arms_come(c: &mut game_types::character::AnimWk, o: &mut AtWork) {
     spring_step(&mut c.w_r, tgt_r, rr, dt);
     let (w_l, w_r) = (clamp(c.w_l.x, 0.0, 1.0), clamp(c.w_r.x, 0.0, 1.0));
     c.shown = if main == 1 { w_r } else { w_l };
-    (o.w_l, o.w_r) = (w_l, w_r);
+    *o = AtWork { w_l, w_r, ..*o };
 }
 
 /// An arm at the thing: the shoulder reaches too (the door hand's turn), the elbow down and out.

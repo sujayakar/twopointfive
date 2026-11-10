@@ -222,7 +222,7 @@ fn as_thrown(an: &mut Anim, o: &mut Throw) {
     let low = thr_low >= 0.0;
     let full = !low && thr_far >= 1.0;
     let sx = if off { -1.0 } else { 1.0 };
-    (o.thr_low, o.thr_far, o.off, o.dur, o.rel, o.low, o.full, o.sx) = (thr_low, thr_far, off, dur, rel, low, full, sx);
+    *o = Throw { thr_low, thr_far, off, dur, rel, low, full, sx, ..*o };
 }
 
 /// The free hand's throw: the same swing, mirrored.
@@ -244,7 +244,7 @@ fn how_much(an: &mut Anim, tune: &Knobs, o: &mut Throw) {
     let leg_k = (1.0 - 0.5 * cr) * (1.0 - 0.4 * smoothstep(0.3, 1.5, abs(an.speed)));
     let cin = an.thr_carry.as_ref().map(|k| (k.r, k.l));
     let (fix_l, fix_r) = (an.hand_fix[0], an.hand_fix[1]);
-    (o.give, o.k_t, o.k_a, o.piv, o.cr, o.leg_k, o.cin, o.fix_l, o.fix_r) = (give, k_t, k_a, piv, cr, leg_k, cin, fix_l, fix_r);
+    *o = Throw { give, k_t, k_a, piv, cr, leg_k, cin, fix_l, fix_r, ..*o };
 }
 
 /// What is underneath: the feet to put back, each hand from its shoulder, and where the long hold has the trigger hand before the trunk winds.
@@ -255,7 +255,7 @@ fn underneath(fk: &mut Fk, o: &mut Throw) {
     let (u_r, u_l) = (v3::sub(fk.at(hr_n), fk.at(role(UPPER_ARM_R))), v3::sub(fk.at(hl_n), fk.at(role(UPPER_ARM_L))));
     // (the free hand's throw: where the long hold has the trigger hand, before the trunk winds)
     let gun = if off { Some((fk.at(hr_n), fk.rot(hr_n))) } else { None };
-    (o.fl_n, o.fr_n, o.f_l, o.f_r, o.r_l, o.r_r, o.u_r, o.u_l, o.gun) = (fl_n, fr_n, f_l, f_r, r_l, r_r, u_r, u_l, gun);
+    *o = Throw { fl_n, fr_n, f_l, f_r, r_l, r_r, u_r, u_l, gun, ..*o };
 }
 
 /// The trunk winds: the pelvis turn carries the whole spine, the spine joints add the rest; crouched he sits up out of the clip's hunch to get the arm over, chest first.
@@ -274,7 +274,7 @@ fn wind_up(tune: &Knobs, tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &mut Throw
     turn(d, rig, role(SPINE1), seg(0.3 + 0.12 * cr, 0.4, 0.25));
     turn(d, rig, role(SPINE2), seg(0.35 + 0.13 * cr, 0.35, 0.3));
     turn(d, rig, role(SPINE3), seg(0.35 - 0.25 * cr, 0.25, 0.45));
-    (o.chest_yaw, o.pitch, o.roll, o.ext) = (chest_yaw, pitch, roll, ext);
+    *o = Throw { chest_yaw, pitch, roll, ext, ..*o };
 }
 
 /// The head stays on the target, levelled out of the lean and the tilt, craned back down out of the sit-up.
@@ -300,7 +300,7 @@ fn shoulders(fk: &mut Fk, o: &mut Throw) {
     let (sh_r, sh_l) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)));
     // crouched: the follow-through stays up off the front knee
     let low_k = 1.0 - 0.45 * cr;
-    (o.sh_r, o.sh_l, o.low_k) = (sh_r, sh_l, low_k);
+    *o = Throw { sh_r, sh_l, low_k, ..*o };
 }
 
 /// A point of a path, up off the front knee.
@@ -325,7 +325,7 @@ fn hands_from(o: &mut Throw) {
     let u_t = if off { mir(u_l) } else { u_r };
     let r0 = if off { mir(match cin { Some((_, l)) => l, None => u_l }) } else { match cin { Some((r, _)) => r, None => u_r } };
     let l0 = match cin { Some((_, l)) => l, None => u_l };
-    (o.u_t, o.r0, o.l0) = (u_t, r0, l0);
+    *o = Throw { u_t, r0, l0, ..*o };
 }
 
 /// The points the throwing hand goes by.
@@ -336,7 +336,7 @@ fn throwing_points(tb: &ThrowTables, tune: &Knobs, o: &mut Throw) {
         let (kt, p) = tb.k3[TH_HAND_R][i];
         k_r[i] = (kt, lift(o, near(tune, o, kt, p)));
     }
-    (o.n_r, o.k_r) = (n_r, k_r);
+    *o = Throw { n_r, k_r, ..*o };
 }
 
 /// A toss from a hand that is nowhere near his hip: the further the authored top is past what `tossIn` m/s reaches by its time, the more the hand just drops, on one arc, to the swing's low point and scoops from there.
@@ -352,7 +352,7 @@ fn toss_from_anywhere(tune: &Knobs, o: &mut Throw) {
             k_r[0].1 = [lerp(lerp(r0[0], bot[0], 0.6), top[0], s), lerp(lerp(r0[1], bot[1], 0.6), top[1], s), lerp(lerp(r0[2], bot[2], 0.6) - 0.06, top[2], s)];
         }
     }
-    o.k_r = k_r;
+    *o = Throw { k_r, ..*o };
 }
 
 /// The balance arm: all of its reach only for the full throw; a toss lets it hang, read once, on the throw's first frame.
@@ -366,7 +366,7 @@ fn balance_arm(tune: &Knobs, hang: &mut f64, o: &mut Throw) {
     let hung = TOSS_HANG;
     let hung_y = if hung[1] < -0.25 { -0.25 + (hung[1] + 0.25) * low_k } else { hung[1] };
     let off_at = [lerp(u_l[0], hung[0], off_g), lerp(u_l[1], hung_y, off_g), lerp(u_l[2], hung[2], off_g)];
-    (o.k_b, o.off_g, o.off_at) = (k_b, off_g, off_at);
+    *o = Throw { k_b, off_g, off_at, ..*o };
 }
 
 /// The points the balance arm goes by.
@@ -385,7 +385,7 @@ fn balance_points(tb: &ThrowTables, o: &mut Throw) {
             k_l[i] = (kt, if full { lift(o, p) } else { lift(o, [u_l[0] + (p[0] - u_l[0]) * k_b, u_l[1] + (p[1] - u_l[1]) * k_b, u_l[2] + (p[2] - u_l[2]) * k_b]) });
         }
     }
-    (o.k_l, o.n_l) = (k_l, n_l);
+    *o = Throw { k_l, n_l, ..*o };
 }
 
 /// The ends of each path hang off the live hand: part way toward the first / from the last authored point, bowed out round the body.
@@ -413,7 +413,7 @@ fn throwing_path(o: &mut Throw) {
     pr.push(0.62, via(end_r, u_t, 0.55, if low { [-0.03, 0.0, 0.04] } else { [-0.10, 0.02, -0.02] }));
     pr.push(dur, u_t);
     let off_r = pr.at(t);
-    (o.reach_l, o.end_l, o.off_r) = (reach_l, end_l, off_r);
+    *o = Throw { reach_l, end_l, off_r, ..*o };
 }
 
 /// Where the other hand is now.
@@ -428,7 +428,7 @@ fn balance_path(o: &mut Throw) {
     pl.push(0.63, via(end_l, u_l, 0.5, if low { [0.0, 0.0, 0.0] } else { [0.03, 0.0, 0.02] }));
     pl.push(dur, u_l);
     let off_l = pl.at(t);
-    o.off_l = off_l;
+    *o = Throw { off_l, ..*o };
 }
 
 /// The throwing arm.
@@ -442,7 +442,7 @@ fn throwing_arm(tb: &ThrowTables, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut T
     } else {
         two_bone_ik(rig, d, fk.rot, fk.pos, ua_r, fa_r, hr_n, &v3::add(sh_r, off_r), Some(&swivel_pole(off_r, ref_r, tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_r, tb.c3(TH_FING_R, t), tb.c3(TH_BACK_R, t))), false);
     }
-    (o.ua_r, o.fa_r, o.hr_n, o.ua_l, o.fa_l, o.hl_n, o.ref_l) = (ua_r, fa_r, hr_n, ua_l, fa_l, hl_n, ref_l);
+    *o = Throw { ua_r, fa_r, hr_n, ua_l, fa_l, hl_n, ref_l, ..*o };
 }
 
 /// With the free hand's throw the gun does not swing with the trunk: the trigger hand stays where the long hold had it, turned as it was, lowered through the swing to a hand's length under the shoulder.
@@ -467,7 +467,7 @@ fn other_arm(tb: &ThrowTables, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut Thro
         let psi = (if full || low { s_t } else { lerp(tb.k1[TH_SWIV_L][0][1], s_t, k_b) }) * DEGR;
         two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &v3::add(sh_l, off_l), Some(&swivel_pole(off_l, ref_l, psi)), 1.0, rot.as_ref(), false);
     }
-    o.w_toss = w_toss;
+    *o = Throw { w_toss, ..*o };
 }
 
 /// Closed round the can, sprung open at the release, hanging loose after; the left hand firms up as it tucks in.
@@ -488,5 +488,5 @@ fn weights_in(o: &mut Throw) {
     let Throw { t, dur, give, cin, w_toss, .. } = *o;
     let w_r = (if cin.is_some() { 1.0 - smoothstep(0.62, dur, t) } else { bump(t, 0.0, 0.06, 0.62, dur) }) * give;
     let w_l = (if cin.is_some() { 1.0 - smoothstep(0.57, 0.72, t) } else { bump(t, 0.0, 0.09, 0.57, 0.72) }) * w_toss * give;
-    (o.w_r, o.w_l) = (w_r, w_l);
+    *o = Throw { w_r, w_l, ..*o };
 }
