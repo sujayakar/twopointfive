@@ -1525,7 +1525,7 @@ const SUN_LAMP = 255u; const OTHERS = 1; const FIRSTS = 1;
     var d: vec3f; var far = 400.0; let sun = l == SUN_LAMP; let fine = ((u32(FINE) >> select(select(k % 6u, 2u, torch), 0u, sun)) & 1u) != 0u; var slot = 99u; if (torch) { slot = (torchK[3u + (l >> 4u)][(l >> 2u) & 3u] >> (8u * (l & 3u))) & 255u; } let exact = fine && slot > 98u; leafMode = select(2u, 0u, exact); noLeaves = (sun && !fine) || slot < 99u;     /* (a torch has a picture of the leaves, as the sun has) */
     let pw = 2.0 * length(frame.camUp.xyz) / frame.size.y * p.t; if (sun) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, select(bn, fract(bn + vec2f(0.5, 0.5)), more)); footSharp(pw, 2.0 * frame.sunDir.w); }
     else { var a: vec4f; if (k == 3u) { a = aimCoat(l, s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(l, p.x, select(vec2f(c2.y, c3.y), vec2f(b3.y, b2.y), torch)); } d = a.xyz; far = a.w - 0.02; footSharp(pw, lampSize(l) / max(a.w, 0.1)); } leafTo = select(0.0, 1e9, exact); blkOn = !exact;
-    var T = 0.0; if (dot(p.ng, d) > 0.0 || p.leaf) { let side = select(-1.0, 1.0, dot(p.ng, d) > 0.0); T = lum(visible(p.x + p.ng * (o0 * side), d, 1e-3, far)); if (T > 0.0 && sun && noLeaves) { T *= leafSun(p.x, p.ng * side, b3); } else if (T > 0.0 && slot < 99u) { T *= leafTorch(slot, l, p.x, p.ng * side, b3); } }
+    var T = 0.0; if (dot(p.ng, d) > 0.0 || p.leaf) { let side = select(-1.0, 1.0, dot(p.ng, d) > 0.0); T = lum(visible(p.x + p.ng * (o0 * side), d, 1e-3, far)); if (T > 0.0 && sun && noLeaves) { T *= leafSun(p.x, p.ng * side, b3); } else if (T > 0.0 && slot < 99u) { T *= leafTorch(slot, l, p.x, b3, pw); } }
     if (k == 0u || k == 7u) { vf += vec2f(T, 1.0); v.w = vf.x / vf.y; } else if (torch) { tv += vec2f(T, 1.0) * tw[t]; } else if (k == 1u || k == 6u) { vo += vec2f(T, 1.0); v.x = vo.x / vo.y; let e = select(pe, pe2, more); tone += vec4f(e / select(pw, pw2, more) * W.x / max(U, vec3f(1e-6)) * T, T); } else { v.z = T; }
   }
   if (tv.y > 0.0) { v.y = tv.x / tv.y; }
@@ -1581,10 +1581,10 @@ fn torchWide(l: u32) -> f32 { let c = lamps[l].cone; return sqrt(max(1.0 - c * c
 /** a place in torch l's picture: −1‥1 both ways, and how far along */
 fn torchSpot(l: u32, x: vec3f) -> vec3f { let b = basis(lamps[l].n); let v = x - lamps[l].at; let z = dot(v, lamps[l].n); return vec3f(vec2f(dot(v, b[0]), dot(v, b[1])) / (max(z, 1e-3) * torchWide(l)), z); }
 `,co=`
-fn leafTorch(k: u32, l: u32, x: vec3f, n: vec3f, r: vec2f) -> f32 {
-  let q = torchSpot(l, x); if (q.z < 0.2 || any(abs(q.xy) > vec2f(0.99))) { return 1.0; } let base = vec2f(vec2u(k & 3u, k >> 2u) * ${Jr}u); let px = 2.0 * torchWide(l) * q.z / ${Jr}.0; let g = vec2f(q.x * 0.5 + 0.5, 0.5 - q.y * 0.5) * ${Jr}.0; let a = r.x * 6.2832; let m = mat2x2f(cos(a), sin(a), -sin(a), cos(a)); var s = 0.0;
-  for (var j = 0u; j < 4u; j++) { let off = m * (array<vec2f, 4>(vec2f(0.3, 0.1), vec2f(-0.2, 0.55), vec2f(-0.75, -0.3), vec2f(0.45, -0.8))[j] * 1.2); let d = textureLoad(torchTex, vec2i(base + clamp(g + off, vec2f(0.0), vec2f(${Jr-1}.0))), 0); let over = q.z - 0.1 / max(d, 1e-5) - px; s += select(1.0, 0.0, d > 0.0 && over > 0.014); }
-  return s * 0.25;
+fn leafTorch(k: u32, l: u32, x: vec3f, r: vec2f, wide: f32) -> f32 {
+  let q = torchSpot(l, x); if (q.z < 0.2 || any(abs(q.xy) > vec2f(0.99))) { return 1.0; } let base = vec2f(vec2u(k & 3u, k >> 2u) * ${Jr}u); let px = 2.0 * torchWide(l) * q.z / ${Jr}.0; let g = vec2f(q.x * 0.5 + 0.5, 0.5 - q.y * 0.5) * ${Jr}.0; let a = r.x * 6.2832; let R = max(1.1, 0.6 * wide / px); var s = 0.0;       /* (as wide as what asks, or a texel) */
+  for (var j = 0u; j < 8u; j++) { let t = a + 2.39996 * f32(j); let off = vec2f(cos(t), sin(t)) * (R * sqrt((f32(j) + 0.5) / 8.0)); let d = textureLoad(torchTex, vec2i(base + clamp(g + off, vec2f(0.0), vec2f(${Jr-1}.0))), 0); let over = q.z - 0.1 / max(d, 1e-5) - px; s += select(1.0, 0.0, d > 0.0 && over > 0.014); }
+  return s * 0.125;
 }
 `,H0=ar+`
 /** how much of torch k (lamp l) gets to x, v from the lamp */
@@ -1642,7 +1642,7 @@ fn farAir(y: f32) -> f32 { return frame.misc.w * 0.0015 * @tune.haze * exp(-max(
   for (var k = 0u; k < torchK[0].x; k++) {
     let l = torchK[1u + (k >> 2u)][k & 3u]; let sp = torchSpan(l, ro, rd, t1, 15.0); if (sp.x >= sp.y) { continue; } let w = ro - lamps[l].at; let tc = -dot(w, rd); let D = sqrt(max(dot(w, w) - tc * tc, 0.0025)); let a0 = atan((sp.x - tc) / D); let a1 = atan((sp.y - tc) / D); let n = 14.0; var G = vec3f(0.0);
     for (var i = 0.0; i < n; i += 1.0) { let t = tc + D * tan(mix(a0, a1, (i + 0.15 + 0.7 * j) / n)); let x = ro + rd * t; let a = aimLamp(l, x, vec2f(0.0)); if (max3(a.E) < 1e-3 || (x.y > frame.misc.y && overCut(x, frame.misc.y))) { continue; }
-      let s = @tune.beams * frame.misc.w; let fade = 1.0 - smoothstep(9.0, 15.0, a.dist); G += min(a.E, vec3f(250.0)) * (s * fade * torchSeen(k, l, x - lamps[l].at) * leafTorch(k, l, x, vec3f(0.0), vec2f(j, i * 0.37)) * (D * D + (t - tc) * (t - tc)) / D); }
+      let s = @tune.beams * frame.misc.w; let fade = 1.0 - smoothstep(9.0, 15.0, a.dist); G += min(a.E, vec3f(250.0)) * (s * fade * torchSeen(k, l, x - lamps[l].at) * leafTorch(k, l, x, vec2f(j, i * 0.37), 0.0) * (D * D + (t - tc) * (t - tc)) / D); }
     L += G * ((a1 - a0) / n / (4.0 * PI)) * mix(T, 1.0, 0.5); }
   { let m = ro + rd * (te + (t1 - te) * 0.5); let e = exp(-(farAir(m.y) + rainAir(m)) * (t1 - te)); L += T * (1.0 - e) * sunFar; T *= e; }
   textureStore(outA, id.xy, vec4f(L, T));
@@ -1698,7 +1698,9 @@ var<workgroup> part: array<vec4f, 64>;
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = underWater(unpackPx(textureLoad(surf, full, 0), rd), textureLoad(frontT, full, 0), rd); let who = id.y * dim.x + id.x;
   if (p.sky) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }
   if (p.kind == 63u) {                                             // a cut wall: what falls on one side of it and on the other, half and half
-    rngInit(id.xy, 17u); askMoves = false; var E = vec3f(0.0); for (var k = 0u; k < 2u; k++) { let n = p.n * select(-1.0, 1.0, k == 0u); let x = p.x + n * (p.rough + 0.003); let c = cacheSmooth(x, n); cacheTell(who * 2u + k, x, n); if (c.n > 0.0) { E += 0.5 * min(c.E + torchLight(x, n) + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun, vec3f(50.0)); } }
+    rngInit(id.xy, 17u); askMoves = false; var E = vec3f(0.0); for (var k = 0u; k < 2u; k++) { let n = p.n * select(-1.0, 1.0, k == 0u); let x = p.x + n * (p.rough + 0.003); let along = cross(n, vec3f(0.0, 1.0, 0.0)); cacheTell(who * 2u + k, x, n);
+      var s = vec3f(0.0); var m = 0.0; for (var i = -2; i <= 2; i++) { let y = x + along * (0.4 * f32(i)); if (i != 0 && !joined(x + n * 0.08, y + n * 0.08)) { continue; } let c = cacheSmooth(y, n); if (c.n > 0.0) { s += c.E + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun; m += 1.0; } }       /* (a cut is wide and flat, and one patch beside another would be seen) */
+      if (m > 0.0) { E += 0.5 * min(s / m + torchLight(x, n), vec3f(50.0)); } }
     textureStore(outE, id.xy, vec4f(E, 4.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
   }
   if (p.leaf && folHas(p.x)) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }          // (a leaf reads its light from the foliage, at every pixel: see resolve)
@@ -1812,12 +1814,12 @@ fn varOf(q: vec2i) -> vec2f { let m = textureLoad(mom, q, 0); var v = max(m.y - 
   if (p.sky && NARROW == 0) { textureStore(outB, id.xy, c); return; } if (NARROW == 1 && c.a < 0.0) { textureStore(outB, id.xy, c); return; }
   var vm = vec2f(0.0); var wv = 0.0; for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let q = clamp(p0 + vec2i(x, y), vec2i(0), dim - 1); let w = f32((2 - abs(x)) * (2 - abs(y))); vm += varOf(q) * w; wv += w; } } vm /= wv;
   let m0 = textureLoad(mom, p0, 0); let n = m0.z; let sg = sqrt(vm.x) * (SHARE * @tune.soft) / sqrt(max(n * 0.5, 1.0)) + 1e-3 + 0.012 * lum(c.rgb);
-  let young = 1.0 - smoothstep(1.0, 10.0, n); if (KIND == 0 && NARROW == 0 && n > 2.0 * f32(64 / STRIDE)) { textureStore(outB, id.xy, c); return; }      // (what many frames stand behind needs no wide blur)
+  let young = 1.0 - smoothstep(1.0, 10.0, n); if (KIND == 0 && NARROW == 0 && n > 4.0 * f32(64 / STRIDE)) { textureStore(outB, id.xy, c); return; }      // (what many frames stand behind needs no wide blur)
   var acc = c; var first = 0.0; var ws = 1.0; var wf = vec4f(1.0); let nv = vec4f(n, m0.w, n, n); let yv = vec4f(1.0) - smoothstep(vec4f(1.0), vec4f(10.0), nv); var vc = max(c * (1.0 - c), vec4f(0.0));
   if (KIND == 1) { if (all(((nv > vec4f(13.0)) & (vc < vec4f(0.004))) | (c < vec4f(0.0)))) { textureStore(outB, id.xy, c); return; } wf = lightOf(p0); acc = c * wf; first = firstNow;
     /* (one look says yes or no, never how sure it is: while few frames stand behind it, its neighbours say whether this is an edge of light or the middle of a soft one) */
     if (any((yv > vec4f(0.0)) & (c >= vec4f(0.0)))) { var q = vec4f(0.0); var qn = vec4f(0.0); for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let v = textureLoad(src, clamp(p0 + vec2i(x, y), vec2i(0), dim - 1), 0); let k = select(vec4f(0.0), vec4f(1.0), v >= vec4f(0.0)); q += v * k; qn += k; } } q /= max(qn, vec4f(1.0)); vc = max(vc, q * (1.0 - q) * yv); } }
-  let sf = sqrt(vc) * 0.6 / sqrt(max(nv, vec4f(1.0))) + vec4f(0.012) + 0.35 * yv; let l0 = lum(c.rgb); let fr = LAYER == 1;
+  let sf = sqrt(vc) * 1.5 / sqrt(max(nv, vec4f(1.0))) + vec4f(0.012) + 0.35 * yv; let l0 = lum(c.rgb); let fr = LAYER == 1;
   var reach = 1.0; if (NARROW == 1) { var rough = p.rough; if (fr) { rough = 0.02; } let lobe = rough * rough * 1.6 * c.a / max(p.t + c.a, 0.1) * frame.size.y / (2.0 * length(frame.camUp.xyz) * f32(DIV)); reach = lobe * (0.6 + young) + 1.5 * young; if (reach < 0.6 * f32(STRIDE)) { textureStore(outB, id.xy, c); return; } }
   for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
     if (x == 0 && y == 0) { continue; } let q = p0 + vec2i(x, y) * STRIDE; if (any(q < vec2i(0)) || any(q >= dim)) { continue; }
@@ -2120,7 +2122,7 @@ ${l.split(`
 //   Each group looks over 256 slots, lists the few whose turn it is, then works through the list: rays of neighbours in the list keep all its lanes busy.
 var<workgroup> todo: array<u32, 256>; var<workgroup> many: atomic<u32>;
 /** how many samples of what torches light are kept: they move */
-const TORCHES = 12.0;
+const TORCHES = 16.0;
 fn disturbed(x: vec3f) -> bool { for (var i = 0u; i < 8u; i++) { let c = changes.at[i]; if (c.w > 0.0 && distance(x, c.xyz) < c.w) { return true; } } return false; }
 /** how many samples an entry keeps where light is so steady */
 fn keeps(st: f32) -> f32 { let most = @tune.keep * (0.5 * RISE); return mix(min(FORGET, most), most, st); }

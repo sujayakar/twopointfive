@@ -2,7 +2,7 @@
 //   Each group looks over 256 slots, lists the few whose turn it is, then works through the list: rays of neighbours in the list keep all its lanes busy.
 var<workgroup> todo: array<u32, 256>; var<workgroup> many: atomic<u32>;
 /** how many samples of what torches light are kept: they move */
-const TORCHES = 12.0;
+const TORCHES = 16.0;
 fn disturbed(x: vec3f) -> bool { for (var i = 0u; i < 8u; i++) { let c = changes.at[i]; if (c.w > 0.0 && distance(x, c.xyz) < c.w) { return true; } } return false; }
 /** how many samples an entry keeps where light is so steady */
 fn keeps(st: f32) -> f32 { let most = @tune.keep * (0.5 * RISE); return mix(min(FORGET, most), most, st); }

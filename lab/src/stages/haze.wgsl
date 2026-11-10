@@ -16,7 +16,7 @@ fn farAir(y: f32) -> f32 { return frame.misc.w * 0.0015 * @tune.haze * exp(-max(
   for (var k = 0u; k < torchK[0].x; k++) {
     let l = torchK[1u + (k >> 2u)][k & 3u]; let sp = torchSpan(l, ro, rd, t1, 15.0); if (sp.x >= sp.y) { continue; } let w = ro - lamps[l].at; let tc = -dot(w, rd); let D = sqrt(max(dot(w, w) - tc * tc, 0.0025)); let a0 = atan((sp.x - tc) / D); let a1 = atan((sp.y - tc) / D); let n = 14.0; var G = vec3f(0.0);
     for (var i = 0.0; i < n; i += 1.0) { let t = tc + D * tan(mix(a0, a1, (i + 0.15 + 0.7 * j) / n)); let x = ro + rd * t; let a = aimLamp(l, x, vec2f(0.0)); if (max3(a.E) < 1e-3 || (x.y > frame.misc.y && overCut(x, frame.misc.y))) { continue; }
-      let s = @tune.beams * frame.misc.w; let fade = 1.0 - smoothstep(9.0, 15.0, a.dist); G += min(a.E, vec3f(250.0)) * (s * fade * torchSeen(k, l, x - lamps[l].at) * leafTorch(k, l, x, vec3f(0.0), vec2f(j, i * 0.37)) * (D * D + (t - tc) * (t - tc)) / D); }
+      let s = @tune.beams * frame.misc.w; let fade = 1.0 - smoothstep(9.0, 15.0, a.dist); G += min(a.E, vec3f(250.0)) * (s * fade * torchSeen(k, l, x - lamps[l].at) * leafTorch(k, l, x, vec2f(j, i * 0.37), 0.0) * (D * D + (t - tc) * (t - tc)) / D); }
     L += G * ((a1 - a0) / n / (4.0 * PI)) * mix(T, 1.0, 0.5); }
   { let m = ro + rd * (te + (t1 - te) * 0.5); let e = exp(-(farAir(m.y) + rainAir(m)) * (t1 - te)); L += T * (1.0 - e) * sunFar; T *= e; }
   textureStore(outA, id.xy, vec4f(L, T));

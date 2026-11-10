@@ -5,7 +5,9 @@
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = underWater(unpackPx(textureLoad(surf, full, 0), rd), textureLoad(frontT, full, 0), rd); let who = id.y * dim.x + id.x;
   if (p.sky) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }
   if (p.kind == 63u) {                                             // a cut wall: what falls on one side of it and on the other, half and half
-    rngInit(id.xy, 17u); askMoves = false; var E = vec3f(0.0); for (var k = 0u; k < 2u; k++) { let n = p.n * select(-1.0, 1.0, k == 0u); let x = p.x + n * (p.rough + 0.003); let c = cacheSmooth(x, n); cacheTell(who * 2u + k, x, n); if (c.n > 0.0) { E += 0.5 * min(c.E + torchLight(x, n) + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun, vec3f(50.0)); } }
+    rngInit(id.xy, 17u); askMoves = false; var E = vec3f(0.0); for (var k = 0u; k < 2u; k++) { let n = p.n * select(-1.0, 1.0, k == 0u); let x = p.x + n * (p.rough + 0.003); let along = cross(n, vec3f(0.0, 1.0, 0.0)); cacheTell(who * 2u + k, x, n);
+      var s = vec3f(0.0); var m = 0.0; for (var i = -2; i <= 2; i++) { let y = x + along * (0.4 * f32(i)); if (i != 0 && !joined(x + n * 0.08, y + n * 0.08)) { continue; } let c = cacheSmooth(y, n); if (c.n > 0.0) { s += c.E + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun; m += 1.0; } }       /* (a cut is wide and flat, and one patch beside another would be seen) */
+      if (m > 0.0) { E += 0.5 * min(s / m + torchLight(x, n), vec3f(50.0)); } }
     textureStore(outE, id.xy, vec4f(E, 4.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
   }
   if (p.leaf && folHas(p.x)) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }          // (a leaf reads its light from the foliage, at every pixel: see resolve)
