@@ -396,100 +396,81 @@ pub struct Across {
     pub nbs: &'static [Nb],
     pub head: &'static [u32],
 }
+/// the lists being made: a piece's entries, one after another
+struct Lists {
+    nbs: &'static mut [Nb; MAX_NB],
+    head: &'static mut [u32; MAX_FRAGS],
+    tail: &'static mut [u32; MAX_FRAGS],
+    used: u32,
+}
+impl Lists {
+    /// one more entry at the end of piece k's list
+    fn add(&mut self, k: usize, nb: Nb) {
+        self.nbs[self.used as usize] = nb;
+        self.used += 1;
+        if self.tail[k] != 0 {
+            self.nbs[self.tail[k] as usize - 1].next = self.used;
+        } else {
+            self.head[k] = self.used;
+        }
+        self.tail[k] = self.used;
+    }
+}
 /// gpFragments' neighbours for the pieces `h`, in the order the TypeScript's lists hold them
 pub fn across(h: &Held, d: &[f64], w: &[u32]) -> Across {
-    let nbs = unsafe { &mut *core::ptr::addr_of_mut!(NBS) };
-    let head = unsafe { &mut *core::ptr::addr_of_mut!(NB_HEAD) };
-    let tail = unsafe { &mut *core::ptr::addr_of_mut!(NB_TAIL) };
-    let list = h.list();
-    let mut used = 0u32;
-    for (k, f) in list.iter().enumerate() {
-        head[k] = 0;
-        tail[k] = 0;
-        let n = f.n as usize;
-        for e in 0..n {
-            let (p, q) = (f.p[e], f.p[(e + 1) % n]);
-            let (ex, ey) = (q.0 - p.0, q.1 - p.1);
-            let len = hypot2(ex, ey);
-            if len < 1e-7 || f.t[e] != CRACK {
-                continue;
-            }
-            let (nx, ny) = (ey / len, -ex / len);
-            let per = len / NB_SAMPLES as f64;
-            for j in 0..NB_SAMPLES {
-                let (a, c) = (j as f64 / NB_SAMPLES as f64, (j as f64 + 1.0) / NB_SAMPLES as f64);
-                let m = (a + c) / 2.0;
-                let o = classify_row(d, w, p.0 + ex * m + nx * 1e-4, p.1 + ey * m + ny * 1e-4);
-                if o == -1 || o == f.fid as i32 {
-                    continue;
-                }
-                let (ua, ub) = (p.0 + ex * a, p.0 + ex * c);
-                let t = tail[k];
-                if t != 0 && nbs[t as usize - 1].fid == o && nbs[t as usize - 1].ny == ny {
-                    let l = &mut nbs[t as usize - 1];
-                    l.len += per;
-                    l.u0 = js_min(js_min(l.u0, ua), ub);
-                    l.u1 = js_max(js_max(l.u1, ua), ub);
-                } else {
-                    nbs[used as usize] = Nb { fid: o, next: 0, dead: false, len: per, ny, u0: js_min(ua, ub), u1: js_max(ua, ub) };
-                    used += 1;
-                    if t != 0 {
-                        nbs[t as usize - 1].next = used;
-                    } else {
-                        head[k] = used;
-                    }
-                    tail[k] = used;
-                }
-            }
+    let mut l = unsafe { Lists { nbs: &mut *core::ptr::addr_of_mut!(NBS), head: &mut *core::ptr::addr_of_mut!(NB_HEAD), tail: &mut *core::ptr::addr_of_mut!(NB_TAIL), used: 0 } };
+    for (k, f) in h.list().iter().enumerate() {
+        l.head[k] = 0;
+        l.tail[k] = 0;
+        for e in 0..f.n as usize {
+            over_edge(&mut l, d, w, k, f, e);
         }
     }
-    // symmetric: what A says of B, B says of A (the longer of the two measures of their shared crack). A piece's list is walked as it stood when its turn
-    // came: what a later piece adds to it is not walked again.
-    for k in 0..list.len() {
-        let last = tail[k];
-        let mut e = head[k];
+    both_ways(&mut l, h);
+    Across { nbs: unsafe { &*core::ptr::addr_of!(NBS) }, head: unsafe { &*core::ptr::addr_of!(NB_HEAD) } }
+}
+/// What lies over edge `e` of piece k, where it is a crack: sampled along it, a run of samples of one piece is one entry.
+fn over_edge(l: &mut Lists, d: &[f64], w: &[u32], k: usize, f: &Frag, e: usize) {
+    let (p, q) = (f.p[e], f.p[(e + 1) % f.n as usize]);
+    let (ex, ey) = (q.0 - p.0, q.1 - p.1);
+    let len = hypot2(ex, ey);
+    if len < 1e-7 || f.t[e] != CRACK {
+        return;
+    }
+    let (nx, ny) = (ey / len, -ex / len);
+    let per = len / NB_SAMPLES as f64;
+    for j in 0..NB_SAMPLES {
+        let (a, c) = (j as f64 / NB_SAMPLES as f64, (j as f64 + 1.0) / NB_SAMPLES as f64);
+        let m = (a + c) / 2.0;
+        let o = classify_row(d, w, p.0 + ex * m + nx * 1e-4, p.1 + ey * m + ny * 1e-4);
+        if o == -1 || o == f.fid as i32 {
+            continue;
+        }
+        let (ua, ub) = (p.0 + ex * a, p.0 + ex * c);
+        let t = l.tail[k];
+        if t != 0 && l.nbs[t as usize - 1].fid == o && l.nbs[t as usize - 1].ny == ny {
+            let last = &mut l.nbs[t as usize - 1];
+            last.len += per;
+            last.u0 = js_min(js_min(last.u0, ua), ub);
+            last.u1 = js_max(js_max(last.u1, ua), ub);
+        } else {
+            l.add(k, Nb { fid: o, next: 0, dead: false, len: per, ny, u0: js_min(ua, ub), u1: js_max(ua, ub) });
+        }
+    }
+}
+/// Symmetric: what A says of B, B says of A (the longer of the two measures of their shared crack). A piece's list is walked as it stood when its turn
+/// came: what a later piece adds to it is not walked again.
+fn both_ways(l: &mut Lists, h: &Held) {
+    for k in 0..h.list().len() {
+        let last = l.tail[k];
+        let mut e = l.head[k];
         while e != 0 {
             let at = e as usize - 1;
-            let next = nbs[at].next;
-            if !nbs[at].dead && nbs[at].fid >= 0 {
-                let n = nbs[at];
-                match h.at[n.fid as usize] {
-                    0 => nbs[at].dead = true, // (a sliver too thin to be a piece, under 0.1 mm², is nobody's neighbour)
-                    place => {
-                        let o = place as usize - 1;
-                        let me = list[k].fid as i32;
-                        let mut b = head[o];
-                        let mut back = 0;
-                        while b != 0 {
-                            let m = &nbs[b as usize - 1];
-                            if !m.dead && m.fid == me && crate::world::js_abs(m.ny + n.ny) < 0.05 {
-                                back = b;
-                                break;
-                            }
-                            b = m.next;
-                        }
-                        if back == 0 {
-                            nbs[used as usize] = Nb { fid: me, next: 0, dead: false, len: n.len, ny: -n.ny, u0: n.u0, u1: n.u1 };
-                            used += 1;
-                            if tail[o] != 0 {
-                                nbs[tail[o] as usize - 1].next = used;
-                            } else {
-                                head[o] = used;
-                            }
-                            tail[o] = used;
-                        } else {
-                            let bk = nbs[back as usize - 1];
-                            let (len, u0, u1) = (js_max(bk.len, n.len), js_min(bk.u0, n.u0), js_max(bk.u1, n.u1));
-                            let b1 = &mut nbs[back as usize - 1];
-                            b1.len = len;
-                            b1.u0 = u0;
-                            b1.u1 = u1;
-                            let n1 = &mut nbs[at];
-                            n1.len = len;
-                            n1.u0 = u0;
-                            n1.u1 = u1;
-                        }
-                    }
+            let next = l.nbs[at].next;
+            if !l.nbs[at].dead && l.nbs[at].fid >= 0 {
+                match h.at[l.nbs[at].fid as usize] {
+                    0 => l.nbs[at].dead = true, // (a sliver too thin to be a piece, under 0.1 mm², is nobody's neighbour)
+                    place => says_back(l, place as usize - 1, h.list()[k].fid as i32, at),
                 }
             }
             if e == last {
@@ -498,7 +479,24 @@ pub fn across(h: &Held, d: &[f64], w: &[u32]) -> Across {
             e = next;
         }
     }
-    Across { nbs: unsafe { &*core::ptr::addr_of!(NBS) }, head: unsafe { &*core::ptr::addr_of!(NB_HEAD) } }
+}
+/// piece `o` says of `me` what `me`'s entry `at` says of it: its own entry of that crack evened with it, or one made
+fn says_back(l: &mut Lists, o: usize, me: i32, at: usize) {
+    let n = l.nbs[at];
+    let mut b = l.head[o];
+    while b != 0 {
+        let m = l.nbs[b as usize - 1];
+        if !m.dead && m.fid == me && crate::world::js_abs(m.ny + n.ny) < 0.05 {
+            let (len, u0, u1) = (js_max(m.len, n.len), js_min(m.u0, n.u0), js_max(m.u1, n.u1));
+            for i in [b as usize - 1, at] {
+                let it = &mut l.nbs[i];
+                (it.len, it.u0, it.u1) = (len, u0, u1);
+            }
+            return;
+        }
+        b = m.next;
+    }
+    l.add(o, Nb { fid: me, next: 0, dead: false, len: n.len, ny: -n.ny, u0: n.u0, u1: n.u1 });
 }
 
 // ---- a crater's outline, and a polygon's measure
