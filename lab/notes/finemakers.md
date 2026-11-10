@@ -16,9 +16,9 @@ An object is drawn fine and traced in boxes: what the eye meets is the fine shap
 6. **How it breaks**: what is laid on a wall in parts comes out part by part; what is one thing goes whole with its piece, and the wedges and rubble that come are drawn as the boxes they are. Rubble of its own material is the piece's.
 7. **Print and patterns** stay the piece's: marks, patterns and bumps are laid on the face a point is nearest to. A skin laid over a face (pavers, boards) hides that face's pattern.
 
-## What it costs (A10G, the whole rooftop, two cars, seven people, against boxes in one run)
+## What it costs (A10G, the whole rooftop, two cars, six people, against boxes in one run)
 - Frames, the world moving, 30 views by day, dusk and night: 1080p at 0.75 from 0.30 less to 0.54 ms more (mean 0.29) on 10 to 15; 1080p whole 0.69 less to 0.65 more on 15 to 23; 1440p at 0.75 0.64 less to 0.69 more. Less where curved pieces fill the picture (a car): boxes find those a pixel at a time, triangles do not. Its own passes 0.17 to 0.31. CPU up to 0.4 ms.
-- 6,577 things, 53.6 M triangles placed, 0.16 to 0.70 M drawn. 71 shapes (49 of them odd, 40 of those a car's), 0.40 M triangles, 16.4 MB, 8.0 squeezed; read back in a tenth of a second (0.2 with the page's text around it). Buffers that do not grow with the scene: 17 MB of indices, 2 of clusters.
+- 6,577 things, 53.6 M triangles placed, 0.16 to 0.70 M drawn. 71 shapes (49 of them odd, 38 of those the two cars'), 0.40 M triangles, 16.4 MB, 8.0 squeezed; read back in a tenth of a second (0.2 with the page's text around it). Buffers that do not grow with the scene: 17 MB of indices, 2 of clusters.
 - Made: 41 to 48 s in one thread, 23 in two, 17.5 in four or more: the body alone is 17. The table of what is drawn for what: 30 ms.
 - A hole: 10 to 25 ms for the blow itself, with boxes the same; it takes 4 to 7 panels. The longest frame after is the boxes' too (50 to 85 ms: what is joined, where lamps reach).
 - Swaps, a slow pull back, a thirtieth a step, the settled picture before and after: mean 0.95 to 1.3 of 255 where the same drawn twice is 0.9 to 1.1; one pixel in a thousand changes by 18 to 27, where drawn twice it is 15 to 20; at the worst step 65 (walking). Seen if looked for, close by. Not mended: a swap by dice over a few frames would.
