@@ -42,7 +42,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/pattern.rs CACHE': 'SCRATCH · a pane\'s pieces, derived from its row and held against the numbers they were made from: compared on every ask, so no write has to say, and no state', 'sim/src/pattern.rs CLOCK': 'SCRATCH · which of those were asked for last',
   'sim/src/pattern.rs NBS': 'SCRATCH · one support pass\'s neighbours across the cracks', 'sim/src/pattern.rs NB_HEAD': 'SCRATCH · where each piece\'s list of them starts', 'sim/src/pattern.rs NB_TAIL': 'SCRATCH · and ends',
   'sim/src/pattern.rs ORDER': 'SCRATCH · the order a toughened pane\'s clumps let go in, derived from its dice and held against the numbers they were made from',
-  'sim/src/nav.rs SHUT': 'SCRATCH · the nav grid\'s shut cells as they stand, written by the host for each search (the grid is the host\'s)',
+  'sim/src/nav.rs SHUT': 'COPY · the nav grid\'s shut cells, held to the grid cell by cell at every search', 'sim/src/nav.rs ENTERS': 'COPY · which of its eight a step from a cell enters, made with SHUT', 'sim/src/nav.rs WIDE': 'COPY · how wide and how large the grid SHUT is of was',
   'sim/src/nav.rs G': 'SCRATCH · one search\'s scores, left blank after it',
   'sim/src/nav.rs CAME': 'SCRATCH · one search\'s way back, left blank after it', 'sim/src/nav.rs CLOSED': 'SCRATCH · one search\'s closed cells, left blank after it',
   'sim/src/nav.rs OPEN': 'SCRATCH · one search\'s open list', 'sim/src/nav.rs SEEN': 'SCRATCH · the cells one search wrote, so it can blank them',
