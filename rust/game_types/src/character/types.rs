@@ -215,7 +215,6 @@ pub struct HoldPose {
     pub gun_out: Option<f64>,
     pub gun_pitch: Option<f64>,
     pub low: Option<f64>,
-    pub kill: Option<bool>,
     pub beats: Option<bool>,
     pub haul: Option<bool>,
     pub strip: Option<crate::character::StripPose>,
@@ -239,7 +238,6 @@ pub struct HeldPose {
     pub shot: Option<f64>,
     pub armed: Option<bool>,
     pub low: Option<f64>,
-    pub kill: Option<bool>,
     pub beats: Option<bool>,
     pub haul: Option<bool>,
     pub strip: Option<crate::character::StripPose>,
@@ -622,23 +620,21 @@ pub struct Anim {
     #[is(crate::character::AnimLg { w: crate::character::Spring::blank(), seen: None, ch: alloc::vec![crate::character::Spring::blank(); 21], pull: [0.0, 0.0, 0.0], lat: [f64::NAN, f64::NAN], run: 0.0, sprint: 0.0 })] pub lg: crate::character::AnimLg,
     pub lg_armed_was: bool,
     pub hd_w: crate::character::Spring,
-    #[is(crate::character::HoldPose { yank: None, step: None, man: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, variant: None, gun_out: None, gun_pitch: None, low: None, kill: None, beats: None, haul: None, strip: None })] pub hd_last: crate::character::HoldPose,
+    #[is(crate::character::HoldPose { yank: None, step: None, man: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, variant: None, gun_out: None, gun_pitch: None, low: None, beats: None, haul: None, strip: None })] pub hd_last: crate::character::HoldPose,
     pub hd_kn: crate::character::Spring,
     pub hd_gv: crate::character::Spring,
     pub hd_on: bool,
     pub hd_ck: crate::character::Spring,
     pub hd_lo: crate::character::Spring,
-    pub hd_kc: crate::character::Spring,
     pub hd_hu: crate::character::Spring,
     pub he_hu: crate::character::Spring,
     pub he_w: crate::character::Spring,
-    #[is(crate::character::HeldPose { yank: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, agitation: 0.0, variant: None, bare: None, shot: None, armed: None, low: None, kill: None, beats: None, haul: None, strip: None })] pub he_last: crate::character::HeldPose,
+    #[is(crate::character::HeldPose { yank: None, pull: None, phase: crate::character::HoldPhase::Held, t: 0.0, agitation: 0.0, variant: None, bare: None, shot: None, armed: None, low: None, beats: None, haul: None, strip: None })] pub he_last: crate::character::HeldPose,
     pub he_ck: crate::character::Spring,
     pub he_gv: crate::character::Spring,
     pub he_on: bool,
     pub he_lo: crate::character::Spring,
     pub he_lk: crate::character::Spring,
-    pub he_kc: crate::character::Spring,
     pub he_bo: crate::character::Spring,
     pub he_bc: crate::character::Spring,
     #[is([None, None])] pub he_hr: [Option<Quat>; 2],
@@ -1421,7 +1417,6 @@ pub struct SWAP {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CharacterModHOLDSHOW {
-    pub kill: bool,
     pub beats: bool,
 }
 
@@ -2514,7 +2509,7 @@ pub struct CharacterCapsules {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CharacterMod {
-    #[is(crate::character::CharacterModHOLDSHOW { kill: false, beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
+    #[is(crate::character::CharacterModHOLDSHOW { beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
     pub at0: JsMap<ClipId, crate::character::CharacterModAT0Value>,
 }
 

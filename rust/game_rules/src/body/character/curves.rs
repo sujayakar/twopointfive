@@ -28,7 +28,7 @@ mod tests {
     }
 }
 
-/// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a kill or a choke run to its end while he stands idle.
+/// The rate (1/s) Sam's hold layer lets go at once the controller has: slow out of a choke run to its end while he stands idle.
 pub(super) fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldPose, speed: f64, busy: bool) -> f64 {
     out_rate(last, speed, busy, g.m.character.hold_show, &g.k.hold)
 }
@@ -329,21 +329,21 @@ mod tests_2 {
     #[test]
     fn he_lets_go_after_a_choke_slowly_only_while_he_stands_there() {
         let hold = crate::knobs::HoldK::page();
-        let show = crate::character::CharacterModHOLDSHOW { kill: true, beats: false };
+        let show = crate::character::CharacterModHOLDSHOW { beats: false };
         let at_once = 16.0;
-        let pose = |phase, t, kill, beats, variant| HoldPose { phase, t, kill, beats, variant, ..HoldPose::default() };
+        let pose = |phase, t, beats, variant| HoldPose { phase, t, beats, variant, ..HoldPose::default() };
         let rate = |last, speed, busy| out_rate(last, speed, busy, show, &hold);
         let end_of_choke = 0.95 * hold.secs.choke;
-        let done = pose(HoldPhase::Choke, end_of_choke, None, Some(true), None);
+        let done = pose(HoldPhase::Choke, end_of_choke, Some(true), None);
         assert_eq!(rate(done, 0.0, false), hold.beats.after, "a choke run to its end, standing still");
         assert!(hold.beats.after < at_once, "the slow rate is slower than at once");
         let (a, b, c) = (rate(done, 0.2, false), rate(done, 0.35, false), rate(done, 0.5, false));
         assert!(hold.beats.after < a && a < b && b < c && c < at_once, "it quickens as he walks off: {a} {b} {c}");
         assert_eq!(rate(done, 2.0, false), at_once, "walking");
         assert_eq!(rate(done, -0.35, false), b, "a speed either way is a speed");
-        assert_eq!(rate(pose(HoldPhase::Choke, end_of_choke, None, None, None), 0.0, false), at_once, "with the beats' show off");
-        assert_eq!(rate(pose(HoldPhase::Choke, 0.5 * hold.secs.choke, None, Some(true), None), 0.0, false), at_once, "a choke broken off early");
-        assert_eq!(rate(pose(HoldPhase::Held, 0.0, Some(true), None, Some(HoldVariant::Gun)), 0.0, false), at_once, "held at gunpoint");
+        assert_eq!(rate(pose(HoldPhase::Choke, end_of_choke, None, None), 0.0, false), at_once, "with the beats' show off");
+        assert_eq!(rate(pose(HoldPhase::Choke, 0.5 * hold.secs.choke, Some(true), None), 0.0, false), at_once, "a choke broken off early");
+        assert_eq!(rate(pose(HoldPhase::Held, 0.0, None, Some(HoldVariant::Gun)), 0.0, false), at_once, "held at gunpoint");
         assert_eq!(rate(done, 0.0, true), at_once, "busy with something else");
     }
 }
