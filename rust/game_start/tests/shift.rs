@@ -182,7 +182,7 @@ fn every_kind_of_target_gets_the_same_order() {
             game::pairup::pair_up_apply(&mut p.g, None);
             p.g.k.silent.on = true;
             p.run(0.3);
-            let foe = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).unwrap();
+            let foe = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).unwrap();
             p.drop_all_but(&[foe]);
             game::silent::set_silent(&mut p.g, true);
             p.sam_put([11.0, 18.5]);

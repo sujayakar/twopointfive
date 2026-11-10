@@ -396,7 +396,7 @@ pub fn switch_act(g: &mut crate::game::Game, pl: PlayerId, verb: crate::game::Ve
 /// Can this man put a room's lights back: a living defender on his own feet and his own business.
 fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
     let man = &g.gd[gd];
-    let team = man.team;
+    let team = g.ch[man.ch].team;
     let own = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
         && g.ch[man.ch].alive
         && man.held.is_none()
@@ -404,7 +404,7 @@ fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.body_duty.is_none()
         && !crate::condition::is_blind(g, man.ch)
         && !crate::condition::is_folded(g, man.ch);
-    own && !crate::doze::doze_asleep(g, gd) && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    own && !crate::doze::doze_asleep(g, gd) && team.theirs()
 }
 
 /// Once a frame: a plate goes with its wall, a calm defender at the switch puts the room back, a hand stays at the plate a moment.

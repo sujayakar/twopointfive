@@ -181,7 +181,7 @@ fn tick_plans(g: &mut crate::game::Game) {
             continue;
         }
         let seed_fix = g.gd[seed].last_known.unwrap();
-        let seed_team = g.gd[seed].team;
+        let seed_team = g.team(seed);
         // a live plan of his side on (about) his fix takes him in by a re-deal
         let listed = s(g).plans.clone();
         let near = listed.into_iter().find(|&p| {
@@ -203,7 +203,7 @@ fn tick_plans(g: &mut crate::game::Game) {
             continue;
         }
         let seed_leader = g.gd[seed].leader;
-        let group: Vec<GuardId> = cands.iter().copied().filter(|&o| !used.has(o) && g.gd[o].team == seed_team && (o == seed || flat(g.gd[o].last_known.unwrap(), seed_fix) <= SHARE_M || g.gd[o].leader == Some(seed) || seed_leader == Some(o))).collect();
+        let group: Vec<GuardId> = cands.iter().copied().filter(|&o| !used.has(o) && g.team(o) == seed_team && (o == seed || flat(g.gd[o].last_known.unwrap(), seed_fix) <= SHARE_M || g.gd[o].leader == Some(seed) || seed_leader == Some(o))).collect();
         if group.len() < 2 {
             continue;
         }
@@ -481,8 +481,7 @@ fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
 
 /// nobody else of his side is alert (and free): he is on his own with it
 fn alone(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
-    !g.guards.iter().any(|&o| o != gd && g.gd[o].team == team && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].held.is_none() && !g.gd[o].hold)
+    !g.guards.iter().any(|&o| o != gd && g.team(o) == g.team(gd) && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].held.is_none() && !g.gd[o].hold)
 }
 
 /// The corner he holds, and whether it has the line on the fix
@@ -570,11 +569,11 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let list = g.guards.clone();
     for o in list {
         let man = &g.gd[o];
-        if o == gd || g.cond[man.ch].down || man.held.is_some() || man.hold || man.pinned || man.team != team || man.script.is_some() {
+        if o == gd || g.cond[man.ch].down || man.held.is_some() || man.hold || man.pinned || g.ch[man.ch].team != team || man.script.is_some() {
             continue;
         }
         let was_calm = matches!(man.state, crate::game::GuardState::Patrol | crate::game::GuardState::Suspicious | crate::game::GuardState::Search);
@@ -1014,13 +1013,13 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate:
     let radio_at = head_or_pos(g, gd);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(radio_at), Some(0.7), None);
     // the summons
-    let my_team = g.gd[gd].team;
+    let my_team = g.team(gd);
     let my_pos = pos_of(g, gd);
     let mut best: Option<GuardId> = None;
     let mut bd = SUMMON_M;
     let list = g.guards.clone();
     for o in list {
-        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != my_team || !free_man(g, o) || s(g).gates.has(o) || s(g).roles.has(o) || in_contact(g, o) {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != my_team || !free_man(g, o) || s(g).gates.has(o) || s(g).roles.has(o) || in_contact(g, o) {
             continue;
         }
         if g.gd[o].state == crate::game::GuardState::Alert {
@@ -1072,7 +1071,7 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate:
 fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerRecId]) -> Option<crate::tactics::Gate> {
     s(g);
     let c_pos = pos_of(g, gd);
-    let my_team = g.gd[gd].team;
+    let my_team = g.team(gd);
     for &rec in recs {
         let d = g.tab.tactics_danger_rec[rec].door;
         if cleared_for(g, gd, d) {
@@ -1207,8 +1206,7 @@ pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
     let mut gate = match s(g).gates.get(gd).cloned() {
         Some(gate) => gate,
         None => {
-            let team = g.gd[gd].team;
-            let recs = danger_doors(g, Some(team));
+            let recs = danger_doors(g, Some(g.team(gd)));
             if recs.is_empty() || in_contact(g, gd) {
                 return false;
             }

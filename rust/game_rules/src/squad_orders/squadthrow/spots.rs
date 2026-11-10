@@ -376,7 +376,7 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     // (… and one nobody of ours stands on or is going to: two men to one corner is one man left out in it)
     let apart_m = g.k.squadthrow.duck_apart_m;
     let near = |q: V3| v3::dist_xz(q, spot) < apart_m;
-    if g.guards.iter().any(|&o| o != gd && g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch) && near(pos_of(g, o))) { return false; }
+    if g.guards.iter().any(|&o| o != gd && g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && near(pos_of(g, o))) { return false; }
     if !crate::condition::down(g, g.pl[g.player].ch) && near(sam_pos(g, &crate::seats::here(g))) { return false; }
     if let Some(t) = taken {
         if t.iter().any(|q| near(*q)) { return false; }
@@ -494,7 +494,7 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
         home.push(crate::cleared::cleared_rooms_room_at(g, p));
     }
     // (each with whose feet they are: `o !== gd.char.pos` was an identity test of the array)
-    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), pos_of(g, o))).collect();
+    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), pos_of(g, o))).collect();
     if !crate::condition::down(g, g.pl[g.player].ch) { ours.push((None, sam_pos(g, &crate::seats::here(g)))); }
     let roll_k = roll_of(g, kind);
     let walls: Vec<V3> = match lob.as_deref() { Some(l) => l.walls.clone(), None => Vec::new() };
@@ -590,7 +590,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
     let mut mate: Option<GuardId> = None;
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].team != crate::teams::Team::Operative { continue; }
+        if !g.team(gd).ours() { continue; }
         let hit = if !crate::condition::down(g, g.gd[gd].ch) {
             // (duck: … and cannot be off its line before it bursts)
             let p = match moved { Some(q) if q.gd == gd => q.at, _ => pos_of(g, gd) };
@@ -648,7 +648,7 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
     }
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { continue; }
+        if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
         if stun_in(g, &pts, eye, false) { out.push(g.gd[gd].callsign.clone()); }

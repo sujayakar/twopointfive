@@ -312,7 +312,7 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
 
 /// Does anybody on the team see him, as of this frame's update. True for the team, and for everybody while the fog is off.
 pub fn fog_of_war_seen(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
+    if !fog_of_war_active(g) || g.team(gd).ours() { return true; }
     g.fog_of_war.recs.get(gd).map_or(false, |r| r.seen)
 }
 
@@ -329,7 +329,7 @@ pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::
 
 /// Is he in the picture: seen, seen a moment ago, fired on by the squad, or a body the team has seen.
 pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
+    if !fog_of_war_active(g) || g.team(gd).ours() { return true; }
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
     if r.seen || (crate::condition::down(g, g.gd[gd].ch) && r.body) { return true; }
     let since = g.time - r.t;
@@ -354,7 +354,7 @@ pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark>
     let mut out = Vec::new();
     if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
     for &gd in g.guards.iter() {
-        if crate::condition::down(g, g.gd[gd].ch) || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !g.team(gd).theirs() || !fog_of_war_hides(g, gd) { continue; }
         let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
         let Some(at) = r.at else { continue };
         let age = g.time - r.t;

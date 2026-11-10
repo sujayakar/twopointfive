@@ -946,7 +946,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
         let far = wall_off(g, &w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
         let chest = [p[0], 1.1, p[2]];
-        let ours = g.gd[gd].team == crate::teams::Team::Operative;
+        let ours = g.team(gd).ours();
         if !far {   // on the charge's own side: caught or not as he stood when it went (at it, he is killed)
             if !near.iter().any(|&(x, _)| x == gd) { continue; }
             if wk && dist < near_m {

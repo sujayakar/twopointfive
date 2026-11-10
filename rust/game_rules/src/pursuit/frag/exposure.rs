@@ -141,19 +141,12 @@ pub(super) fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// One side: the same team, or the player and an operative.
-pub(super) fn same_side(a: crate::teams::Team, b: crate::teams::Team) -> bool {
-    use crate::teams::Team;
-    a == b || (a == Team::Player && b == Team::Operative) || (a == Team::Operative && b == Team::Player)
-}
-
 /// A man a burst can still kill where he lies: down and breathing, the player's enemy, never a civilian.
 pub(super) fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
     if !crate::game::is_breathing(g, gd) || g.gd[gd].god || g.gd[gd].civ.is_some() {
         return false;
     }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    g.team(gd).theirs()
 }
 
 /// The points of a lying man a burst is asked for: hips, chest, head, a shin, none under the floor's skin.

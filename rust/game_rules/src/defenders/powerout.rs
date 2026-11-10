@@ -94,8 +94,7 @@ fn ruled(g: &crate::game::Game) -> Vec<RoomfightDefId> {
         let d = g.fight.defs[i];
         i += 1;
         let gd = g.tab.roomfight_def[d].gd;
-        let team = g.gd[gd].team;
-        if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && g.gd[gd].unit.is_some() {
+        if g.team(gd).theirs() && g.gd[gd].unit.is_some() {
             out.push(d);
         }
     }
@@ -446,8 +445,7 @@ pub(super) fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if !bo_active(g) || !g.m.powerout.states.as_ref().map_or(false, |s| s.word) {
         return false;
     }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
 }
 
 /// who the breaker's party has, on the one record: out for the lights, or waiting to be sent.

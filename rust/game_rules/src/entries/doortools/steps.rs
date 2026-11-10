@@ -685,7 +685,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
     if let Some((id, rname)) = room {
         let mut ins: Vec<GuardId> = Vec::new();
         for x in g.guards.clone() {
-            if !crate::condition::down(g, g.gd[x].ch) && g.gd[x].team == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) {
+            if !crate::condition::down(g, g.gd[x].ch) && g.team(x) == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) {
                 let xp = pos_of(g, x);
                 if g.level.room_at(xp).is_some_and(|r| r.id == id) { ins.push(x); }
             }
@@ -700,7 +700,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
             };
             let mut ins: Vec<GuardId> = Vec::new();
             for x in g.guards.clone() {
-                if !crate::condition::down(g, g.gd[x].ch) && g.gd[x].team == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) {
+                if !crate::condition::down(g, g.gd[x].ch) && g.team(x) == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) {
                     let xp = pos_of(g, x);
                     if crate::squadnet::in_flood(g, &flood, xp) { ins.push(x); }
                 }

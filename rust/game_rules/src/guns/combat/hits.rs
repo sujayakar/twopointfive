@@ -111,8 +111,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
     g.gd[gd].script = None;
     let held = crate::guards::in_hand(g, gd);
     if by == DownBy::Player {
-        let team = g.gd[gd].team;
-        if !(!crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
+        if g.team(gd).theirs() {
             crate::mission::tally(g, if how == DownKind::Shot { crate::mission::TallyK::Kills } else { crate::mission::TallyK::Knockouts });
         }
         crate::chronicle::chron_down(g, gd, how, with);
@@ -412,7 +411,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     use crate::rig_props::{rig, RigOpts, RigOptsRifle, RigOptsWeapon};
     let c = g.gd[gd].ch;
     g.ch[c].in_hand = None;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let trained = g.gd[gd].trained;
     let ho = if crate::char_look::side_of_team(team, Some(trained)) == crate::anim_gltf::CastSide::Defender { g.k.inhand.holster_out } else { 0.0 };
     let has_ho = js::truthy(ho);

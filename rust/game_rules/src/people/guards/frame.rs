@@ -73,7 +73,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         g.m.guards.unstick_legs.delete(gd);
         unstick_begin(g, gd);
     }
-    let staff = g.gd[gd].team == crate::teams::Team::Guard;
+    let staff = g.team(gd) == crate::teams::Team::Guard;
     if !staff { let c = g.gd[gd].ch; light_meter(g, c, dt); }
     let sense = crate::guards::senses::sense(g, gd, dt, staff);
     hands(g, gd, dt);
@@ -211,7 +211,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             g.gd[gd].react_t = 0.5 + crate::dice::draw_of(g, "guards::alertness#2", gd) * 0.5;
         } else {
             g.gd[gd].react_t = 0.9;
-            if g.gd[gd].team != crate::teams::Team::Operative && !crate::attention::attention_again(g, gd) {
+            if !g.team(gd).ours() && !crate::attention::attention_again(g, gd) {
                 crate::game::game_say(g, gd, "huh?", None, None);
             }
             let at = head_or_pos(g, c);

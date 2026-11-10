@@ -30,7 +30,7 @@ pub struct Leg {
 
 /// The bodies a thing `by` sent can find: the living, himself and the squad's own AI men apart.
 pub fn bodies(g: &Game, by: CharId) -> Vec<CharId> {
-    let men = g.guards.iter().filter(|&&gd| g.gd[gd].team != crate::teams::Team::Operative).map(|&gd| g.gd[gd].ch);
+    let men = g.guards.iter().filter(|&&gd| !g.team(gd).ours()).map(|&gd| g.gd[gd].ch);
     let civilians = crate::civilians::civilian_bodies(g).into_iter().map(|cv| g.gd[cv].ch);
     let players = crate::seats::men(g).into_iter().map(|pl| g.pl[pl].ch);
     let all: Vec<CharId> = men.chain(civilians).chain(players).collect();

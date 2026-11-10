@@ -74,8 +74,7 @@ pub(super) fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
 
 /// A living operative with a unit whose card left him his goggles.
 fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
-        && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
         && !crate::condition::down(g, g.gd[gd].ch)
         && crate::kit::kit_goggles(g, gd)
 }
@@ -297,8 +296,7 @@ pub fn nvg_dark(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// He wears the goggles at all.
 pub fn nvg_worn(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative
-        && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
         && crate::kit::kit_goggles(g, gd)
         && crate::roomfight::fight_live(g)
 }

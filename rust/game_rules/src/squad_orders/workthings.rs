@@ -611,7 +611,7 @@ pub fn work_job(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::workthi
 
 /// Is the breaker none of this man's business unless he is told.
 pub fn work_not_his(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
+    g.team(gd).ours()
 }
 
 /// A man who cannot leave where he stands is not handed the errand.

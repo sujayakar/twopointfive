@@ -163,7 +163,7 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
 
 /// A defender with the belt-fed gun keeps the post he was dealt.
 pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
+    if g.team(gd) != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
     true
 }
 

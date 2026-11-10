@@ -51,8 +51,7 @@ pub(super) fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
 /// scoreSpots on the plan in hand.
 fn score_into(g: &Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Option<&[f32]>) {
     let elapsed = g.time - p.t0;
-    let team = g.gd[gd].team;
-    let others: Vec<GuardId> = g.guards.iter().copied().filter(|&o| o != gd && g.gd[o].state == crate::game::GuardState::Search && g.gd[o].script.is_none() && g.gd[o].search_plan.is_some() && g.gd[o].team == team).collect();   // (teams: spots are split over HIS side's net)
+    let others: Vec<GuardId> = g.guards.iter().copied().filter(|&o| o != gd && g.gd[o].state == crate::game::GuardState::Search && g.gd[o].script.is_none() && g.gd[o].search_plan.is_some() && g.team(o) == g.team(gd)).collect();   // (teams: spots are split over HIS side's net)
     let at = g.ch[g.gd[gd].ch].pos;
     let (slack, ramp) = (PLAUS_SLACK_SECS, PLAUS_RAMP_SECS);
     for s in p.spots.iter_mut() {
@@ -78,11 +77,11 @@ pub fn score_spots(g: &mut crate::game::Game, gd: GuardId, walk: Option<&[f32]>)
 
 /// A spot some other searcher is walking to or looking into right now (within a spot's spacing of it): his, not ours.
 fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let spacing = SEARCH_SPACING_M;
     for &o in g.guards.iter() {
         let m_ = &g.gd[o];
-        if o == gd || m_.state != crate::game::GuardState::Search || m_.script.is_some() || m_.team != team { continue; }
+        if o == gd || m_.state != crate::game::GuardState::Search || m_.script.is_some() || g.ch[m_.ch].team != team { continue; }
         let q_plan = match &m_.search_plan { Some(q) => q, None => continue };
         if q_plan.current < 0.0 || (q_plan.phase != SearchPlanPhase::Walk && q_plan.phase != SearchPlanPhase::Look) { continue; }
         if let Some(q) = q_plan.spots.get(q_plan.current as usize) { if v3::dist_xz(q.pos, s.pos) < spacing { return true; } }

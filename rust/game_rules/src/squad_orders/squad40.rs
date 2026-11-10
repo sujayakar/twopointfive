@@ -95,11 +95,10 @@ fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
     for gd in g.guards.clone() {
         let c = g.gd[gd].ch;
         let up = !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive;
-        if g.gd[gd].team == crate::teams::Team::Operative {
+        if g.team(gd).ours() {
             if up { mates.push(c); }
         } else if up && !crate::fogofwar::fog_of_war_hidden(g, gd) {
-            let team = g.gd[gd].team;
-            if crate::teams::is_hostile(g, crate::teams::Team::Operative, team) && g.gd[gd].civ.is_none() && !g.staged.captives.contains(&gd) {
+            if g.team(gd).theirs() && !g.staged.captives.contains(&gd) {
                 foes.push(c);
             } else {
                 friends.push(c);

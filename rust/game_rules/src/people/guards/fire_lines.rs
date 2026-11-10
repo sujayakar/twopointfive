@@ -38,8 +38,8 @@ fn no_colleague(g: &Game, gd: GuardId, p: GuardId) -> bool {
     if p == gd || crate::condition::down(g, g.gd[p].ch) { return true; }
     let c = g.gd[p].ch;
     if !g.ch[c].alive { return true; }
-    let (a, b) = (g.gd[gd].team, g.gd[p].team);
-    crate::teams::is_hostile(g, a, b)
+    let (a, b) = (g.team(gd), g.team(p));
+    a.foe_of(b)
 }
 /// `gd.path = []; gd.pathGoal = null`: a whole write of the path (its serial), and the goal is no longer the standoff's object
 fn clear_path(g: &mut Game, gd: GuardId) {
@@ -459,7 +459,7 @@ pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Opt
     let t_max = 1.0 + MUZZLE_PAST_M / l;
     let mut best: Option<GuardId> = None;
     let mut bt = m::INF;
-    let near = g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() && crate::roomfight::fight_live(g);
+    let near = g.team(gd).ours() && crate::roomfight::fight_live(g);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];

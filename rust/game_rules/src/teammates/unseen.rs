@@ -34,10 +34,6 @@ fn lead(g: &mut Game) -> PlayerId {
     g.player
 }
 
-fn mate(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
-}
-
 /// on a wall, as the sneak counts it: his back on it `wall_secs`, where the hold keeps that clock
 fn on_wall(g: &Game, pl: PlayerId) -> bool {
     let Some(w) = &g.pl[pl].wall else { return false };
@@ -76,7 +72,7 @@ fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
         let h = g.guards[i];
         i += 1;
         let state = g.gd[h].state;
-        if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search) && crate::teams::hostile_to(g, h, g.gd[men[0]].team) {
+        if (state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search) && g.team(h).foe_of(g.team(men[0])) {
             return Some(String::from(if state == crate::game::GuardState::Alert { "a defender alert" } else { "a defender searching" }));
         }
     }
@@ -155,7 +151,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
 
 /// this teammate is unseen this frame
 pub fn under_unseen(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| mate(g, gd) && unseen_live(g) && !entering(g, &crate::seats::here(g), gd))
+    in_view(g, gd, &mut |g: &mut Game| g.team(gd).ours() && unseen_live(g) && !entering(g, &crate::seats::here(g), gd))
 }
 
 /// he is one of a door tool's men right now: that work is the door's own

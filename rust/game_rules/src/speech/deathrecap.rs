@@ -55,15 +55,15 @@ fn on_floor(g: &Game) -> Vec<OnFloor> {
 
 fn xz(p: V3) -> [f64; 2] { [p[0], p[2]] }
 fn head_of(g: &Game, c: CharId) -> V3 { match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) } }
-fn squad_up(g: &Game, gd: GuardId) -> bool { g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) }
+fn squad_up(g: &Game, gd: GuardId) -> bool { g.team(gd).ours() && !crate::condition::down(g, g.gd[gd].ch) }
 
 /// the man, as a take names him
 fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
     let id = g.ch[man.ch].id;
     match (man.gd, man.pl) {
         (Some(gd), _) => {
-            let (civ, team) = (g.gd[gd].civ.is_some(), g.gd[gd].team);
-            RecapMan { id, name: g.gd[gd].callsign.clone(), side: String::from(if civ { "civilian" } else { team.as_str() }), kind: if civ { RecapManKind::Civ } else { RecapManKind::Man } }
+            let team = g.team(gd);
+            RecapMan { id, name: g.gd[gd].callsign.clone(), side: String::from(team.as_str()), kind: if team == crate::teams::Team::Civilian { RecapManKind::Civ } else { RecapManKind::Man } }
         }
         (None, pl) => RecapMan { id, name: match pl { Some(p) => crate::seats::player_name(g, p), None => String::from("Player") }, side: String::from("player"), kind: RecapManKind::Player },
     }

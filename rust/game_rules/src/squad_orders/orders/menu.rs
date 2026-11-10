@@ -140,7 +140,7 @@ pub fn squad_orders_squad(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 /// Is he one of the men these orders move: the one roster test.
 pub fn squad_orders_mine(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if seat_ref.orders.cast.is_some() { return g.qrf.men.contains(&gd); }
-    if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative { return false; }
+    if !g.team(gd).ours() { return false; }
     let seat = seat_ref.id;
     crate::seats::in_seat(g, seat, gd)   // (… of this book's seat, in a game of more than one: seats.ts)
 }
@@ -154,7 +154,7 @@ pub fn squad_orders_sams(seat: &crate::seats::SeatRef) -> bool {
 pub fn squad_orders_team(seat: &crate::seats::SeatRef) -> crate::teams::Team {
     match &seat.orders.cast {
         Some(c) => c.team,
-        None => crate::teams::Team::Operative,
+        None => crate::teams::Team::Ours,
     }
 }
 

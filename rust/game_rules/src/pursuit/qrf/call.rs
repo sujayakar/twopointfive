@@ -209,7 +209,7 @@ fn staff_voice(g: &crate::game::Game) -> Option<GuardId> {
     let mut br = -1;
     for &x in &g.guards {
         let m = &g.gd[x];
-        if m.unit.is_some() || m.team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
+        if m.unit.is_some() || g.ch[m.ch].team != crate::teams::Team::Guard || g.cond[m.ch].down || m.held.is_some() { continue; }
         let r = if m.state == crate::game::GuardState::Alert { 0 } else if m.state == crate::game::GuardState::Patrol { 2 } else { 1 };
         if r > br { br = r; best = Some(x); }
     }
@@ -260,7 +260,7 @@ pub(super) fn alive(g: &crate::game::Game) -> Vec<GuardId> {
 /// Is this man on the defenders' net?
 fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
-    if g.gd[x].team != side || g.gd[x].civ.is_some() || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
+    if g.team(x) != side || crate::condition::down(g, g.gd[x].ch) || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 
@@ -401,7 +401,7 @@ pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
     if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
     for &x in &g.guards {
-        if g.gd[x].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[x].ch) && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
+        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
     }
     true
 }

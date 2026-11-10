@@ -126,7 +126,7 @@ fn off_the_walk(s: u32, to_a_sound: bool) -> (f64, f64, usize, usize, Option<Str
         let coming = p.up(man) && p.follower_on_walk(b, man, to_a_sound);
         if coming { on += 1; if p.low(b) { low += 1; } }
         if coming && v < 0.1 && dist(p.at(b), p.sam_at()) > 3.0 { still += 1.0 / 60.0; most = most.max(still); } else { still = 0.0; }
-        if roused.is_none() { roused = p.g.guards.iter().find(|&&x| p.g.gd[x].team != game::teams::Team::Operative && matches!(p.state(x), GuardState::Alert | GuardState::Search)).map(|&x| p.g.gd[x].callsign.clone()); }
+        if roused.is_none() { roused = p.g.guards.iter().find(|&&x| !p.g.team(x).ours() && matches!(p.state(x), GuardState::Alert | GuardState::Search)).map(|&x| p.g.gd[x].callsign.clone()); }
     }
     (most, dist(p.at(b), p.sam_at()), on, low, roused)
 }

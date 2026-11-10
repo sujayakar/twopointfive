@@ -62,7 +62,7 @@ fn parked(p: &Play, what: &str) -> usize {
     let mut n = 0;
     for &x in p.g.guards.iter().chain(p.g.civilians.iter()) {
         let r = &p.g.gd[x];
-        if r.team == Team::Operative { continue; }
+        if p.g.ch[r.ch].team.ours() { continue; }
         let c = p.g.ch[r.ch].pos;
         assert!(c[0] <= -39.0 && c[2] <= -39.0, "{}: a man of the level is at {:?}", what, c);
         assert!(r.state == GuardState::Patrol || r.state == GuardState::Dead, "{}: a man of the level is {:?}", what, r.state);

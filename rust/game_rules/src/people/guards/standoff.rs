@@ -165,8 +165,8 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         Some(p) if p.held != gd => p,
         _ => return false,
     };
-    let held_team = g.gd[p.held].team;
-    if (held_team != g.gd[gd].team && held_team != crate::teams::Team::Civilian) || !crate::teams::hostile_to(g, gd, crate::teams::Team::Player) {
+    let held_team = g.team(p.held);
+    if (held_team != g.team(gd) && held_team != crate::teams::Team::Civilian) || !g.team(gd).theirs() {
         return false;
     }
     if !pair_in_view(g, gd, &p) {
@@ -273,10 +273,10 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
         crate::audio_iface::game_audio_like_play(g, "alertSting", None, Some(0.75), None);
         g.last_sting_t = g.time;
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || o == p.held || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || g.gd[o].team != team {
+        if o == gd || o == p.held || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || g.team(o) != team {
             continue;
         }
         let state = g.gd[o].state;

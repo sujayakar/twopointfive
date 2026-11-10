@@ -601,7 +601,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
     let held = g.pl[g.player].holding.as_ref().map(|h| h.g);
     let known_s = g.k.wallcharge.fire_known_s;
     if crate::fogofwar::fog_of_war_active(g) {
-        let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.gd[*m].team == crate::teams::Team::Operative).collect();
+        let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.team(*m).ours()).collect();
         for k in crate::picture::known_places(g, &men, known_s) {
             if let Some(h) = crate::character::guard_of(g, k.who) { if counts(g, h, held) { out.push(k.at); } }
         }
@@ -617,8 +617,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
 }
 
 fn counts(g: &mut Game, h: GuardId, held: Option<GuardId>) -> bool {
-    let team = g.gd[h].team;
-    Some(h) != held && !crate::condition::down(g, g.gd[h].ch) && g.ch[g.gd[h].ch].alive && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    Some(h) != held && !crate::condition::down(g, g.gd[h].ch) && g.ch[g.gd[h].ch].alive && g.team(h).theirs()
 }
 
 fn fire_new(g: &mut Game, w: Option<&WallSpot>, all: Option<&[V3]>) -> WallChargeFireAsk {

@@ -23,7 +23,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     p.run(0.5);
     for m in p.mates() { if let Some(mut e) = p.g.m.kit.man_of.get(m).cloned() { e.kit.big = game::kit::BigKit::None; p.g.m.kit.man_of.set(m, e); } }
     if let Some(n) = charges { p.g.sets[p.g.seat].door_tools.charges = n; }
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } }
+    for gd in p.g.guards.clone() { if !p.g.team(gd).ours() && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
     p.g.dr[office].leaf.locked = false;
@@ -103,7 +103,7 @@ fn a_defender_lets_go_of_a_leaf_a_body_has_stopped() {
         let (mut p, def, door) = bunk(s);
         let c = p.g.dr[door].frame_centre;
         let man = p.g.tab.roomfight_def[def].gd;
-        let mate = p.g.guards.iter().copied().find(|&gd| gd != man && p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd)).unwrap();
+        let mate = p.g.guards.iter().copied().find(|&gd| gd != man && !p.g.team(gd).ours() && p.up(gd)).unwrap();
         let put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
         let shut = |p: &Play| phase(p, def) == game::digin::Phase::Shut;
         let mut n = 0;
@@ -129,7 +129,7 @@ fn sam_is_offered_the_wall_row_where_a_charge_can_be_set() {
     for (level, index, u, side) in [("block.json", 115, 10.44, -1.0), ("block.json", 115, 11.19, -1.0), ("depot.json", 9, 10.48, -1.0), ("pass.json", 16, 29.05, -1.0), ("pass.json", 41, 14.22, 1.0), ("mousehole.json", 36, 13.05, 1.0)] {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 7, ..Default::default() });
         p.g.god_mode = true;
-        for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative { p.g.gd[gd].hold = true; p.g.gd[gd].pinned = true; } }
+        for gd in p.g.guards.clone() { if !p.g.team(gd).ours() { p.g.gd[gd].hold = true; p.g.gd[gd].pinned = true; } }
         p.run(0.5);
         let (c, h) = { let b = &p.g.tab.boxes[p.g.col.boxes[index]]; (b.c, b.h) };
         let along_x = h[0] >= h[2];

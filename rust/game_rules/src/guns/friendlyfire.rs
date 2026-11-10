@@ -11,8 +11,7 @@ pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     if !(!crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
         return false;
     }
-    let team = g.gd[gd].team;
-    !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    !g.team(gd).theirs()
 }
 
 /// Is this shooter's side Sam's: an operative, never the night staff or a defender.
@@ -21,8 +20,7 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
     if g.gd[sg].civ.is_some() {
         return false;
     }
-    let team = g.gd[sg].team;
-    !crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
+    !g.team(sg).theirs()
 }
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
@@ -181,7 +179,7 @@ pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<
 pub(super) fn on_our_side(g: &crate::game::Game, c: CharId) -> bool {
     match crate::character::guard_of(g, c) {
         None => true,
-        Some(gd) => g.gd[gd].civ.is_none() && !crate::teams::is_hostile(g, crate::teams::Team::Player, g.gd[gd].team),
+        Some(gd) => g.team(gd).ours(),
     }
 }
 

@@ -51,9 +51,9 @@ fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// a man this file is about at all: a defender or night staff, not a man the mission leads itself
 fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     g.gd[gd].civ.is_none()
-        && (team == crate::teams::Team::Hostile || team == crate::teams::Team::Guard)
+        && team.theirs()
         && !crate::mission::leads(g, gd)
 }
 
@@ -163,7 +163,7 @@ fn net_up(g: &mut crate::game::Game, gd: GuardId, but: Option<&[GuardId]>) -> bo
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o != gd && g.gd[o].team == g.gd[gd].team && on_net(g, o) && !but.contains(&o) {
+        if o != gd && g.team(o) == g.team(gd) && on_net(g, o) && !but.contains(&o) {
             return true;
         }
     }
@@ -219,10 +219,10 @@ pub fn net_quiet_asked(g: &mut crate::game::Game, asker: Option<GuardId>, who: G
     if !on_net(g, asker) || asker == who {
         return;
     }
-    let team = g.gd[asker].team;
+    let team = g.team(asker);
     let mut hearers = Vec::new();
     for &m in men {
-        if m != asker && m != who && g.gd[m].team == team && on_net(g, m) {
+        if m != asker && m != who && g.team(m) == team && on_net(g, m) {
             hearers.push(m);
         }
     }
@@ -234,10 +234,10 @@ pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[Gua
     if !on_net(g, asker) {
         return;
     }
-    let team = g.gd[asker].team;
+    let team = g.team(asker);
     let mut quiet = Vec::new();
     for &m in silent {
-        if m != asker && g.gd[m].team == team && side(g, m) {
+        if m != asker && g.team(m) == team && side(g, m) {
             quiet.push(m);
         }
     }
@@ -257,12 +257,12 @@ pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[Gua
 fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Option<GuardId> {
     let at = pos_of(g, finder);
     let eye: V3 = [at[0], 1.5, at[2]];
-    let team = g.gd[finder].team;
+    let team = g.team(finder);
     let body_m = g.k.netquiet.body_m;
     let mut best: Option<GuardId> = None;
     let mut bs = m::INF;
     for &o in men {
-        if o == finder || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team || !side(g, o) {
+        if o == finder || !crate::condition::down(g, g.gd[o].ch) || g.team(o) != team || !side(g, o) {
             continue;
         }
         let c = g.gd[o].ch;
@@ -293,10 +293,10 @@ pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &
         Some(b) => id_of(g, b),
         None => -1.0,
     };
-    let team = g.gd[finder].team;
+    let team = g.team(finder);
     let mut told = Vec::new();
     for &o in men {
-        if o != finder && g.gd[o].team == team && on_net(g, o) {
+        if o != finder && g.team(o) == team && on_net(g, o) {
             told.push(o);
         }
     }
@@ -341,16 +341,16 @@ fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t < g.k.netquiet.shooter_secs {
         return true;
     }
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.player_invisible && crate::guards::sees_a_man(g, gd) {
+    let team = g.team(gd);
+    if team.theirs() && !g.player_invisible && crate::guards::sees_a_man(g, gd) {
         return true;
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let (o_team, o_ch) = (g.gd[o].team, g.gd[o].ch);
-        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch).visible {
+        let (o_team, o_ch) = (g.team(o), g.gd[o].ch);
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && team.foe_of(o_team) && crate::guards::can_see_char(g, gd, o_ch).visible {
             return true;
         }
     }
@@ -364,12 +364,12 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
     }
     let (fall_seen, fall_unseen, leader_shock) = (g.k.netquiet.fall_seen, g.k.netquiet.fall_unseen, g.k.morale.leader_shock);
     let id = id_of(g, victim);
-    let (v_team, v_ch) = (g.gd[victim].team, g.gd[victim].ch);
+    let (v_team, v_ch) = (g.team(victim), g.gd[victim].ch);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
+        if o == victim || !on_net(g, o) || g.team(o) != v_team || crate::control::man::blind(g, o) {
             continue;
         }
         if !crate::guards::can_see_char(g, o, v_ch).visible {
@@ -401,7 +401,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
     let (small_where, heard_last_t) = (g.gd[gd].witness.heard.small_where, g.gd[gd].witness.heard.last_t);
     let p = pos_of(g, gd);
     let me = id_of(g, gd);
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let lk = g.gd[gd].last_known;
     let rf: Option<V3> = if small && small_where.is_some() {
         small_where
@@ -435,7 +435,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
         }
         if let Some(w) = who {
             let w_team = crate::teams::team_of_id(g, w);
-            if !crate::teams::is_hostile(g, team, w_team) {
+            if !team.foe_of(w_team) {
                 continue;
             }
         }
@@ -615,14 +615,14 @@ fn last_kind(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let mut had = crate::enemysquads::squad_of(g, gd).map_or(0, |q| q.men.len()) > 1;
     let mut up = false;
     let mut near = false;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mate_m = g.k.netquiet.mate_m;
     let p = pos_of(g, gd);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || !side(g, o) {
+        if o == gd || g.team(o) != team || !side(g, o) {
             continue;
         }
         had = true;

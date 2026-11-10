@@ -30,7 +30,7 @@ fn ambient_live(g: &crate::game::Game) -> bool {
 fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
-    let calm = m.team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
+    let calm = g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
         && m.held.is_none() && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && !m.hold
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
