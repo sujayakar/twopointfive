@@ -9,8 +9,7 @@
 // THE LINES:
 //   moved         the page was sent to the game's own address, the seat's key no longer on it
 //   ready         the server held the seat and ran no tick while the page stood its game
-//   same fight    every state word of the run is the server's
-//   every part    beside it, the word of EVERY part of the game is the server's on every word tick (watched: src/net/words.ts)
+//   same fight    every state word of the run is the server's: every part of the game (src/net/words.ts)
 //   its own man   the page shows its own seat's man, the server ran ticks on its records, and he moved
 //   ahead         on the tick the first record with a walk key down went out, the look ahead had his man moved and the game had not; walking, he is ahead; a drawn frame has him where the look has him
 //   sleeps        a tab asleep with a key down is walked on by the server, with its hands off it is not; each time the page wakes far behind, catches up and still matches
@@ -42,8 +41,8 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
   // what the client's walk is handed, wrapped: the red path's one record, and the words kept for a file
   let broke = false, base = Infinity;
   const walk = C.walk;
-  C.walk = (host, max) => walk.call(C, { step: cmds => { if (BREAK && !broke && C.confirmed >= base + 90) { broke = true; const i = Math.max(0, C.seat), c = cmds[i]; cmds = cmds.slice(); cmds[i] = { ...c, k: c.k.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; } host.step(cmds); }, word: () => host.word(),
-    watch: () => { if (WORDS) { const w = net.whole(); out.names ||= w.names.join(' '); out.words.push(`${C.confirmed} ${w.words.map(x => x.toString(36)).join(' ')}`); } return host.watch(); } }, max);
+  C.walk = (host, max) => walk.call(C, { step: cmds => { if (BREAK && !broke && C.confirmed >= base + 90) { broke = true; const i = Math.max(0, C.seat), c = cmds[i]; cmds = cmds.slice(); cmds[i] = { ...c, k: c.k.includes('KeyA') ? ['KeyD'] : ['KeyA'] }; } host.step(cmds); },
+    word: () => { if (WORDS) { const w = net.whole(); out.names ||= w.names.join(' '); out.words.push(`${C.confirmed} ${w.words.map(x => x.toString(36)).join(' ')}`); } return host.word(); } }, max);
   // (a square, its legs by THE GAME'S ticks: a driven page steps as fast as the box lets it, and a record goes out on the client's own beat)
   const start = pos(), LEGS = ['KeyW', 'KeyD', 'KeyS', 'KeyA'], leg = () => LEGS[Math.floor(S().confirmed / 90) % 4];
   // LEVEL WITH ITS SERVER, as level as a driven page gets: ten ticks of one turn take their time, and the server confirms a tick every sixtieth of a second of it
@@ -129,7 +128,7 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     const a = pos(), down = man().down; if (rest) C.rest(performance.now());
     // (past the last tick he said anything for, half a second let him come to a stand: what the server does with a man nobody speaks for)
     const lastSaid = Math.max(C.confirmed, ...C.pending.map(q => q[0])), was = C.walk; let quiet = null;
-    C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; host.step(c); if (!quiet && t >= lastSaid + 30) quiet = pos(); }, word: () => host.word(), watch: () => host.watch() }, max);
+    C.walk = (host, max) => was.call(C, { step: c => { const t = C.confirmed; host.step(c); if (!quiet && t >= lastSaid + 30) quiet = pos(); }, word: () => host.word() }, max);
     await new Promise(r => setTimeout(r, 3500));
     const behind = S().behind, far = await level([]), b = pos(); C.walk = was;
     return { behind, far, key: k, down, room: +room.toFixed(2), walked: +gone(b, a).toFixed(2), after: quiet ? +gone(b, quiet).toFixed(2) : -1 };
@@ -170,12 +169,11 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: its game is nowhere near stood)
     await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!window.__net); await page.evaluate(() => window.__ready);
     const out = await page.evaluate(drive, { N, BREAK, NO_AHEAD, PICK: BAD_WAY ? 0 : 3, WORDS: !!WORDS });
-    const hEnd = await health(), S = out.state, M = out.main, words = Math.floor(N / 30), differ = S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine})` : '';
+    const hEnd = await health(), S = out.state, M = out.main, words = Math.floor(N / 30), differ = S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine}; --words DIR, then tools/mp/words-diff.ts, names the parts)` : '';
     line(moved.has('roomclear') === /roomclear/.test(setup.scenario) && moved.get('seed') === String(setup.seed) && moved.has('net') && !moved.has('netkey'), `moved: the page was sent to the game's own address, the seat's key kept off it (?${moved.toString().slice(0, 120)})`);
     line(!!hWait && hWait.state === 'waiting' && hWait.tick === 0 && hWait.seats[MINE] === true, `ready: while the page stood its game the server held the seat and waited (${hWait?.state}, tick ${hWait?.tick})`);
     line(M.confirmed >= M.base + N && !S.bad && !S.broken && M.words >= words && M.wordsOk >= Math.floor(M.confirmed / 30) && !out.fatal,
       `same fight: the page walked ${M.confirmed} ticks (the last ${M.confirmed - M.base} in ${M.secs} s, walking and firing) and matched ${M.wordsOk} of ${Math.floor(M.confirmed / 30)} state words${differ}${S.broken ? ` (${S.broken})` : ''}; to the end of the check ${S.wordsOk}; a confirmed tick cost ${M.walkMs.toFixed(1)} ms here${out.said ? `; the page said "${out.said}"` : ''}`);
-    line(S.watchOk > 0 && S.watchOff === 0, `every part: the word of the whole game was the server's on ${S.watchOk} of ${S.watchOk + S.watchOff} word ticks${S.watchOff ? ` (FIRST DIFFERENT after tick ${S.watchFirst}: --words DIR, then tools/mp/words-diff.ts, names the parts)` : ''}`);
     line(S.seat === MINE && out.shown && S.sent > 20 && !!hEnd && hEnd.lines[MINE].own > 20 && out.moved > 0.5, `its own man: seat ${S.seat}${TWO ? ` of ${hEnd?.lines.length}` : ''}, ${out.shown ? 'and it shows its own man' : 'and it shows ANOTHER man'}; ${S.sent} records sent, the server ran ${hEnd?.lines[MINE].own} ticks on them (${hEnd?.lines[MINE].late} late, ${hEnd?.lines[MINE].held} on a held one), the man moved ${out.moved} m; it aims ${S.margin} ticks past the server's`);
     { const K = out.key, A = out.ahead, g = A.gave, rule = g && (g.down || g.over), a = S.ahead;
       line(K.rec >= 0 && K.ahead > 1e-4 && K.game < 1e-6 && K.laterMs >= 0 && A.on > A.samples / 2 && (A.drawn === 2 || (rule && A.drawn < 2)) && (A.drawn === 0 || (A.off < 0.02 && A.led > 0.01)),
@@ -190,8 +188,8 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     await page.close();
     await Promise.race([botDone, sleep(20000)]);
     const bl = botOut.split('\n').find(x => x.startsWith('MPBOT ')), B = bl ? JSON.parse(bl.slice(6)) : null;
-    line(!!B && B.confirmed >= N && !B.bad && B.wordsOk >= words && B.watchOff === 0, `beside it: a ${TWO ? 'client in the first seat' : 'watcher'} on bun walked the same ${B?.confirmed ?? 0} ticks and matched ${B?.wordsOk ?? 0} words, and every part of the game on ${B?.watchOk ?? 0}`);
+    line(!!B && B.confirmed >= N && !B.bad && B.wordsOk >= words, `beside it: a ${TWO ? 'client in the first seat' : 'watcher'} on bun walked the same ${B?.confirmed ?? 0} ticks and matched ${B?.wordsOk ?? 0} words`);
   } catch (e) { line(false, `the page could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
   await PAGE.close(); try { bot.kill(); } catch { /* gone */ } srv.kill();
-  await PAGE.end(PAGE.fails ? `mpclient-page: ${PAGE.fails} line${PAGE.fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must, the every-part line and the ahead line with it)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
+  await PAGE.end(PAGE.fails ? `mpclient-page: ${PAGE.fails} line${PAGE.fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must, and the ahead line with it)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
 })().catch(e => { console.log(`mpclient-page: ${String(e && e.stack || e).slice(0, 400)}`); process.exit(2); });

@@ -58,7 +58,7 @@ check(/^[a-z0-9]{40}$/.test(freshId()) && freshId() !== freshId() && Number.isIn
 console.log('settings');
 { const M = await import('../mp/stand.ts'), idle = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] } as never;
   // (the mission is the address without the difficulty's own word, so that two games differ by what the word does and not by its letters)
-  const game = async (said: string): Promise<string> => { const search = coopScenario(said), start = M.freshStart({ search, seed: 7 }), q = new URLSearchParams(search); q.delete('difficulty'); const G = await M.standStart({ ...start, words: '?' + q.toString() }); for (let i = 0; i < 30; i++) G.step(Array.from({ length: G.seats }, () => idle)); return `${G.word()} ${G.watch()}`; };
+  const game = async (said: string): Promise<string> => { const search = coopScenario(said), start = M.freshStart({ search, seed: 7 }), q = new URLSearchParams(search); q.delete('difficulty'); const G = await M.standStart({ ...start, words: '?' + q.toString() }); for (let i = 0; i < 30; i++) G.step(Array.from({ length: G.seats }, () => idle)); return G.word(); };
   const [std, hard, bare] = [await game('?roomclear&difficulty=standard'), await game('?roomclear&difficulty=hard'), await game('?roomclear')];
   check(std === bare && hard !== std, `the host's difficulty is the server's: a Hard address stands another game than a Standard one (${hard} · ${std}), and an address that names none is Standard (${bare})`); }
 
