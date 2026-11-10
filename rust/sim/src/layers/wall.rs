@@ -378,17 +378,12 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
     let (mut t_l, mut t_r) = (foot_target(o, false, &f_l, &r_l, &i_rl, i_ly, false), foot_target(o, true, &f_r, &r_r, &i_rr, i_ry, false));
     if taking {
         // the take: each sole stays where it stood in the WORLD until its turn, then steps to the hold's spot in a low arc
-        let (tk, cy, sy) = (wall_take, cos(yin), sin(yin));
-        let to_world = |m: &[f64; 3]| [p0[0] + m[0] * cy + m[2] * sy, p0[1] + m[1], p0[2] - m[0] * sy + m[2] * cy];
-        let foot_yaw = |r: &[f64; 4]| {
-            let f = q_rotate(r, &AY);
-            atan2(f[0], f[2])
-        };
+        let (tk, stands) = (wall_take, Stands::at(p0, yin));
         let (s_l, s_r) = (foot_target(o, false, &f_l, &r_l, &i_rl, i_ly, true), foot_target(o, true, &f_r, &r_r, &i_rr, i_ry, true));
         if wtk.map_or(true, |k| tk < k.last) {
             let (l, r) = match take_feet {
                 Some(t) => (t.l, t.r),
-                None => (AnimFootSpot { p: to_world(&f_l), yaw: yin + foot_yaw(&r_l) }, AnimFootSpot { p: to_world(&f_r), yaw: yin + foot_yaw(&r_r) }),
+                None => (AnimFootSpot { p: stands.world(&f_l), yaw: yin + foot_yaw(&r_l) }, AnimFootSpot { p: stands.world(&f_r), yaw: yin + foot_yaw(&r_r) }),
             };
             let first = if dist_xz(&f_l, &s_l.0) >= dist_xz(&f_r, &s_r.0) { 0.0 } else { 1.0 };
             *wtk = Some(AnimWtk { l, r, first, last: tk });
@@ -399,8 +394,7 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
         let step = |from: [f64; 3], from_yaw: f64, sp: &Sole, r_clip: &[f64; 4], t0: f64, t1: f64| -> Sole {
             let q = clamp((tk - t0) / (t1 - t0), 0.0, 1.0);
             let ease = q * q * (3.0 - 2.0 * q);
-            let (wx, wz) = (from[0] - p0[0], from[2] - p0[2]);
-            let mut m = [wx * cy - wz * sy, from[1] - p0[1], wx * sy + wz * cy];
+            let mut m = stands.model(&from);
             let (dx, dz) = (m[0] - sp.0[0], m[2] - sp.0[2]);
             let (dl, mx) = (hypot2(dx, dz), tune.wallsnap.step_trail);
             if t0 > 0.0 && dl > mx {
