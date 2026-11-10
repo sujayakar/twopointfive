@@ -238,7 +238,7 @@ pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 
 /// a feed for any event: shock on one man
 pub fn morale_shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
-    if !ours(g, gd) || g.staged.leads(gd) { return; }
+    if !ours(g, gd) || crate::mission::leads(g, gd) { return; }
     mind(g, gd);
     let n = nerved(g, amount);
     let cap = g.k.morale.shock_cap;
@@ -256,7 +256,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if gd == victim || !ours(g, gd) || g.staged.leads(gd) || training_of(g, gd) != TrainingOf::Green || leader_of(g, gd) != Some(victim) { continue; }
+        if gd == victim || !ours(g, gd) || crate::mission::leads(g, gd) || training_of(g, gd) != TrainingOf::Green || leader_of(g, gd) != Some(victim) { continue; }
         mind(g, gd).leader_down = true;
         if crate::control::man::blind(g, gd) || !crate::guards::can_see_char(g, gd, vc).visible { continue; }
         let n = nerved(g, g.k.morale.leader_shock);
@@ -317,7 +317,7 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !ours(g, gd) || g.staged.leads(gd) || Some(g.gd[gd].team) == side || !reacts(g, gd) { continue; }
+        if !ours(g, gd) || crate::mission::leads(g, gd) || Some(g.gd[gd].team) == side || !reacts(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let d = flat(g.ch[c].pos, b.at);
         if d > g.k.morale.blast_m { continue; }
@@ -618,7 +618,7 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !ours(g, gd) || g.staged.leads(gd) { g.m.morale.state_of.delete(gd); continue; }
+        if !ours(g, gd) || crate::mission::leads(g, gd) { g.m.morale.state_of.delete(gd); continue; }
         let r = mind(g, gd);
         r.drive = false;
         r.shock *= k;

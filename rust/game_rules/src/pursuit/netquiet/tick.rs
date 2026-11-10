@@ -54,7 +54,7 @@ fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     g.gd[gd].civ.is_none()
         && (team == crate::teams::Team::Hostile || team == crate::teams::Team::Guard)
-        && !g.staged.leads(gd)
+        && !crate::mission::leads(g, gd)
 }
 
 /// …and alive

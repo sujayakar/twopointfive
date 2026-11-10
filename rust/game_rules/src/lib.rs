@@ -24,7 +24,7 @@ pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, 
 pub mod breakage;
 pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, fixture_break, floormess, furnblast, glass, glass_pattern, glassbreak, marks, particle_fx, render_decals, shard_model, shards, sheet_model, sim_fallshome, sim_slabshome, sparks, wallbreak, wallskin, wallwear, winbars};
 pub mod missions;
-pub use missions::{breach, director, lesson, mission, nightbreach, opening, par, quiet, quietfog, rails, rescue, rescuecheck, rescueend, rescueflow, rescueflush, roomclear, rowset, scenario_run, scene_scenario_list, start_list, scene_scenarios, script_tut_kit, script_tut_pair, script_tut_queue, script_tut_quiet, script_tut_road, script_tut_team, startfile, teamtally, verdict};
+pub use missions::{breach, director, lesson, mission, nightbreach, opening, par, quiet, quietfog, rails, rescue, rescueend, rescueflow, rescueflush, roomclear, rowset, scenario_run, scene_scenario_list, start_list, scene_scenarios, script_tut_kit, script_tut_pair, script_tut_queue, script_tut_quiet, script_tut_road, script_tut_team, startfile, teamtally, verdict};
 pub mod speech;
 pub use speech::{chronicle, cues, deathrecap, dialogue, doornames, showwhy, squadnet, told, words};
 pub mod squad_orders;

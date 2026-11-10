@@ -191,7 +191,6 @@ pub mod render_lights { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
-pub mod rescuecheck { pub mod types; pub use types::*; }
 pub mod rescueend { pub mod types; pub use types::*; }
 pub mod rescueflow { pub mod types; pub use types::*; }
 pub mod rescueflush { pub mod types; pub use types::*; }

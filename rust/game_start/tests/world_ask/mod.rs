@@ -524,7 +524,7 @@ pub trait RescueAsk {
 
 impl RescueAsk for Play {
     fn hostage_room_falls(&mut self, loud: bool) {
-        let cast: Vec<GuardId> = game::rescue::rescue_cast(&self.g).into_iter().filter(|c| c.in_room).map(|c| c.gd).collect();
+        let cast: Vec<GuardId> = self.g.staged.foes.iter().copied().filter(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).collect();
         for m in cast {
             let how = if loud { game::game::DownKind::Shot } else { game::game::DownKind::Struck };
             game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), None);
@@ -566,7 +566,7 @@ impl RescueAsk for Play {
         }
     }
     fn a_loud_round_at_the_room(&mut self) {
-        let m = game::rescue::rescue_cast(&self.g).into_iter().find(|c| c.in_room).expect("a man in the room").gd;
+        let m = self.g.staged.foes.iter().copied().find(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).expect("a man in the room");
         let (at, time, serial) = (self.at(m), self.g.time, self.g.serial());
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::default() });
     }

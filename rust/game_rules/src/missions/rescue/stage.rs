@@ -226,7 +226,7 @@ pub(in crate::missions) fn rescue_start(g: &mut crate::game::Game) -> Option<Str
         }
     }
     rescue_bench(g);
-    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, leads_foes: true, ..Default::default() });
+    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, ..Default::default() });
     g.rescue.staged = 0.0;
     g.rescue.log.clear();
     g.rescue.failure = None;
@@ -303,6 +303,7 @@ fn rescue_clear_cast(g: &mut crate::game::Game) {
     }
     let hostages = g.staged.captives.clone();
     g.civilians.retain(|c| !hostages.contains(c));
+    crate::enemysquads::squads_stop(g);
     g.staged.team = Vec::new();
     g.staged.foes = Vec::new();
     g.staged.captives = Vec::new();
@@ -436,6 +437,10 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         gd: *gd, watch: cast[k].mark.aim_at, hostage: Some(cast[k].role == Role::Captor),
     }).collect();
     crate::gunroles::gun_deal(g, &deal);
+    let men = g.staged.foes.clone();
+    crate::squaddeal::squads_by_rooms(g, &men);
+    // (the men with the hostages are the rescue's to lead)
+    for &h in &men { if g.rescue.defs.get(h).map_or(false, |d| d.in_room) { let t = g.time; crate::owner::claim(g, h, crate::owner::by::MISSION, t, None); } }
     let cap_set = g.k.rescue.start == crate::knobs::RescueKStart::Hot;
     if cap_set {
         let captor = g.staged.foes[0];

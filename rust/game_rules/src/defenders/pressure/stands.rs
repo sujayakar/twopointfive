@@ -234,7 +234,6 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
 
 /// GO AND LOOK, once a frame after the press's own rules: the word is kept every frame; a look is called when it has gone quiet
 fn go_look(g: &mut crate::game::Game) {
-    if g.staged.facts.leads_foes { return; }
     let mut up = 0.0;
     let mut i = 0;
     while i < g.fight.defs.len() {
