@@ -40,7 +40,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
     // light that is rarely found (a small bright window) is in none of most frames' neighbours: what it has varied by over time is let stand, or the dark would be darker than it is
     if (KIND == 0 && AIR == 0) { let sdh = sqrt(max(mo.y - mo.x * mo.x, 0.0)); e += vec4f(sdh * select(1.6, 1.0 * dull, NARROW == 1) * @tune.leash * smoothstep(4.0, 16.0, n)); } let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xw) / (length(e.xw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
     /* (torches move, the rest stands: each counts its own frames) */ var ny = 0.0; if (KIND == 1 && hw.y > 1e-6) { ny = min(mo.w, cap - 1.0) / (1.0 + 0.35 * abs(hc.y - h.y) / (e.y + 1e-4)); }
-    /* (what torches light is told apart: where it has changed by more than chance, history is of other light) */ if (KIND == 0 && NARROW == 0 && AIR == 0) { let gone = max(abs(h.w - m1.w) - 0.5 * sd.w - 0.05 * m1.w, 0.0) / (max(lum(h.rgb), lum(m1.rgb)) + 1e-4); n /= 1.0 + 24.0 * gone; }
+    /* (what torches light is told apart: where it has changed by more than chance, history is of other light) */ if (KIND == 0 && NARROW == 0 && AIR == 0) { let gone = max(abs(h.w - m1.w) - 0.6 * sd.w - 0.3 * max(h.w, m1.w), 0.0) / (max(lum(h.rgb), lum(m1.rgb)) + 1e-4); n /= 1.0 + 36.0 * gone; }
     var k = 1.0 / (n + 1.0); o = mix(hc, c1, select(vec4f(k), vec4f(k, 1.0 / (ny + 1.0), k, k), KIND == 1)); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, select(0.0, ny + 1.0, KIND == 1 && c.y >= 0.0));
     //2 o2 = mix(h2 / ws, now2, k);
     if (NARROW == 1) { o.a = mix(h.a, c.a, max(k, 0.2)); }
