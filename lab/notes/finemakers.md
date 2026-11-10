@@ -22,6 +22,7 @@ An object is drawn fine and traced in boxes: what the eye meets is the fine shap
 - Made: 41 to 48 s in one thread, 23 in two, 17.5 in four or more: the body alone is 17. The table of what is drawn for what: 30 ms.
 - A hole: 10 to 25 ms for the blow itself, with boxes the same; it takes 4 to 7 panels. The longest frame after is the boxes' too (50 to 85 ms: what is joined, where lamps reach).
 - Swaps, a slow pull back, a thirtieth a step, the settled picture before and after: mean 0.95 to 1.3 of 255 where the same drawn twice is 0.9 to 1.1; one pixel in a thousand changes by 18 to 27, where drawn twice it is 15 to 20; at the worst step 65 (walking). Seen if looked for, close by. Not mended: a swap by dice over a few frames would.
+- On a Mac (Apple GPU, Metal 3, the page's button, 16 views, 10 November): 0.46 ms more GPU time in the mean, 1.25 less (a car by night) to 1.18 more (walking, rooms, by night), on 19 to 26; by the clock no difference (0.01 ms in the mean). Its own passes 0.2 to 1.0. Shapes read in 0.06 s.
 - A thing in view: 12 triangles and up. A shape more: a quarter of a megabyte, nothing a frame.
 
 ## What the bench should ask of one (not built)
