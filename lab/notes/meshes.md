@@ -21,6 +21,14 @@ What was measured (A10G, 1920 x 1080 unless said)
 - Over the stones seen at 4 to 10 mm a pixel, where a ray meets the relief of what is drawn as stones: shadow 2 to 10 %, bounce 7 to 11 % (too bright: the dark between the stones is lost first).
 - **How bright a level is** (path tracer, all on one level): a stone of about 100 triangles sends back 3 % less, of 50 6 %, of 32 10 %, alike at any hour: one factor a level would mend it. A relief flattened to 4, 13, 26 mm: noon +1, +2, +1 %; low sun +9, +35, +75 %; grey sky +9, +26, +29 %. No color mends that.
 
+What levels lose of their light (10 November)
+- `src/mesh/lost.ts`, `stages/lost.wgsl`: when the scene is made, the finest mesh and what is drawn and traced in its place are asked the same: fifteen suns (five heights, three ways round), one ray to all round, what that ray lands on. Their ratio is a table a kind (a class of objects at a level of theirs), by the pixel's width and the view's height: 432 numbers. Sun, and all that comes from round about, are multiplied by it (`meshLost`, in resolve by `withMeshes`); so is what a wide ray is sent. Five bits of the first hit say whose table. About 6 s on the card, once; again if the pixel error or the rays' width is changed.
+- A table knows what it should: the relief drawn for pixels of 16 mm should send, of a sun 12 degrees high, 0.89 of what it does with the sun behind the eye, 0.84 from the side, 0.98 against it (the coat's shine is in it); of a sun at 75 degrees 0.80 to 0.87; of the sky 0.78.
+- Real time over paths, the stones, without haze, one box, from 9 to 40 m: afternoon in the sun 0.93 to 1.25 before, 0.93 to 0.98 now; in the shade 1.09 to 1.24, now 0.94 to 1.07; low sun 0.88 to 1.13, now 0.90 to 0.95; its shade 0.90 to 1.24, now 0.87 to 0.99. Over the swap from stones to relief (12 to 16 m) 0.95 to 1.07 before, 0.94 to 0.93 now. Contrast is nearer too (shade at 24 m, low sun: 0.40, now 0.47, of 0.59).
+- What is left is the same at every distance: 2 to 7 % dark. With everything drawn and traced at the finest, direct sun on stones is still 5 % under the paths' (not the start of the ray, not the denoiser); plain soil and walls are 3 to 6 % dark there in a low sun. Not found.
+- On the way: hits that miss must not be dropped on one side only (ground between stones); the coat is a third of what comes back against a low sun; what near stones send on has to be in the sun's part, or the sky's factor takes it.
+- Air is in real time and not in the paths: with the evening's haze on one side a floor looked 75 % too bright. `haze: 0` in a view; the page draws none.
+
 Traps
 - Distance alone is not enough of an error: color and small bumps vanish long before outlines do. Both count now (`COLOR`, `NORMAL` in simplify.ts). Rays go by distance alone (`apart`).
 - Which side of a surface a light is on must be asked of the smooth normal, or facets near the sun's edge go dark one by one.
@@ -28,4 +36,4 @@ Traps
 - A depth pyramid whose mips round down is read by shifting the pixel, not by scaling 0 to 1.
 - Waiting for each frame lets the GPU's clock fall by half: keep some in flight.
 
-Left open: brightness of coarse levels (above), and rims of reliefs, which are simplified each on its own; swaps of a tenth of the error move 1 % of pixels by 12 of 255 (not looked at in motion); building takes 20 to 45 s in one thread.
+Left open: rims of reliefs, which are simplified each on its own; swaps of a tenth of the error move 1 % of pixels by 12 of 255 (not looked at in motion); building takes 20 to 45 s in one thread.
