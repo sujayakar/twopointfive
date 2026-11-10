@@ -231,7 +231,6 @@ pub enum MissionStage {
 pub struct Mission {
     pub stage: crate::game::MissionStage,
     pub t0: f64,
-    pub drive_t: f64,
     pub pulled: bool,
     pub alarm_on: bool,
     pub sweep_at: f64,
@@ -373,7 +372,7 @@ pub struct Game {
     #[is(1.0)] pub fx_seed: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
-    #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
+    #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
     pub staged: crate::mission::Staged,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
@@ -748,6 +747,10 @@ pub enum Deed {
     Takedown(crate::game::PlayerTakedown),
     /// a man held
     Hold(crate::player::Hold),
+    /// a charge set on a wall
+    Wall(crate::wallcharge::WallChargeSam),
+    /// the errand's thing taken from where it is kept, and for how long he has been at it
+    Take(f64),
 }
 
 macro_rules! deeds {
@@ -774,9 +777,17 @@ deeds! {
     Door crate::hands::DoorMove: door_move door_move_mut door_move_over;
     Takedown crate::game::PlayerTakedown: takedown takedown_mut takedown_over;
     Hold crate::player::Hold: holding holding_mut holding_over;
+    Wall crate::wallcharge::WallChargeSam: wall_work wall_work_mut wall_work_over;
+    Take f64: taking taking_mut taking_over;
 }
 
 impl Player {
+    /// Does what he is in the middle of have his feet too? A leaf worked by hand leaves them his own.
+    pub fn planted(&self) -> bool { !matches!(self.deed, None | Some(Deed::Ease(_) | Deed::Door(_))) }
+    /// Has he a deed under way, or a body in tow?
+    pub fn hands_full(&self) -> bool { self.deed.is_some() || self.tow.is_some() }
+    /// Has he his hands on a man?
+    pub fn on_a_man(&self) -> bool { matches!(self.deed, Some(Deed::Takedown(_) | Deed::Hold(_))) }
     /// the body he has hold of
     pub fn dragging(&self) -> Option<GuardId> { self.tow.map(|t| t.who) }
     /// how he has hold of it, once he has it by an end or on his shoulder

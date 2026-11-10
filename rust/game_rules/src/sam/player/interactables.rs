@@ -265,16 +265,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             list.push(it);
         }
     } else if !down {
-        let busy = g.pl[pl].takedown().is_some()
-            || g.pl[pl].kick().is_some()
-            || g.pl[pl].picking().is_some()
-            || g.pl[pl].wanding().is_some()
-            || g.pl[pl].easing().is_some()
-            || g.pl[pl].coding().is_some()
-            || g.pl[pl].breaker_move().is_some()
-            || g.pl[pl].door_move().is_some()
-            || g.pl[pl].charging().is_some()
-            || g.mission.drive_t >= 0.0;
+        let busy = g.pl[pl].deed.is_some();
         let keys = g.pl[pl].keys.clone();
         let (sprinting, crouch, dragging_any) = (g.pl[pl].sprinting, g.pl[pl].crouch, g.pl[pl].dragging().is_some());
         let mut di = 0;
@@ -417,7 +408,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                 }
                 verbs.push(row(&it, crate::game::Verb::Wand, "look under it — the wand, quiet", ""));
             }
-            let free = reach && !busy && !crate::wallcharge::wall_charge_setting(&crate::seats::here(g));
+            let free = reach && !busy;
             crate::doortools::door_tools_sam_rows(g, &mut it, d, &mut verbs, free, &mut |_g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, hints: Option<String>| -> crate::game::Interactable {
                 row(&base, verb, &text, hints.as_deref().unwrap_or(""))
             });
@@ -523,16 +514,16 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             offer(&mut list, &mut things, it, verbs);
         }
         // the mission's rack while the drive is still in it
-        let drive_t = g.mission.drive_t;
+        let taking = g.pl[pl].taking().map(|t| t / crate::consts::DRIVE_SECS);
         if g.mission.stage == crate::game::MissionStage::Drive {
             let reach = crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH && !dragging_any && !sprinting && g.pl[pl].takedown().is_none();
             let (holder, thing) = (g.level.errand.holder.clone(), g.level.errand.thing.clone());
             let line1 = format!("{} · {}", holder, thing);
             let mut it = mark(crate::game::InteractableKind::Objective, g.level.errand.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
-            it.progress = if drive_t >= 0.0 { Some(m::min(1.0, drive_t / crate::consts::DRIVE_SECS)) } else { None };
+            it.progress = taking.map(|t| m::min(1.0, t));
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
-            if drive_t >= 0.0 {
-                it.line2 = format!("taking… {}%  ·  stay on it", pct(drive_t / crate::consts::DRIVE_SECS));
+            if let Some(t) = taking {
+                it.line2 = format!("taking… {}%  ·  stay on it", pct(t));
             } else if reach && !busy {
                 let text = format!("take {} — stay on it", thing);
                 verbs.push(row(&it, crate::game::Verb::Drive, &text, ""));
@@ -547,7 +538,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let active = g.light_home.mains.active;
             let gone_for_good = active && g.light_home.mains.permanent;
             if !gone_for_good && v3::dist_xz(bp, p) < NEARBY_M && (!crate::scene_collision::solid_blocked(g, eye, face, None) || match crate::workthings::sam_panel_point(g, p) { Some(at) => !crate::scene_collision::solid_blocked(g, eye, at, None), None => false }) {
-                let reach = v3::dist_xz(bp, p) < 1.15 && !dragging_any && !sprinting && g.pl[pl].takedown().is_none() && g.pl[pl].holding().is_none();
+                let reach = v3::dist_xz(bp, p) < 1.15 && !dragging_any && !sprinting;
                 let it = mark(crate::game::InteractableKind::Breaker, [bp[0], bp[1] + 0.35, bp[2]], String::from(if active { "breaker · thrown" } else { "breaker · power on" }), String::from(if reach { "" } else { "step closer" }), reach, active);
                 let mut verbs: Vec<crate::game::Interactable> = Vec::new();
                 if reach && !busy {
@@ -558,10 +549,8 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         }
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
-        let setting = crate::wallcharge::wall_charge_setting(&crate::seats::here(g));
-        let working = setting;
-        crate::stickycam::sticky_rows(g, pl, busy || working, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
-        crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
+        crate::stickycam::sticky_rows(g, pl, busy, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
+        crate::lightswitch::switch_rows(g, pl, busy, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
         // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
         if let Some(d) = g.pl[pl].picking().copied() {
             let pick = g.dr[d].leaf.pick;
@@ -587,15 +576,15 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let base = marker(g, &list, d);
             let progress = m::abs(g.dr[d].leaf.angle) / EASE_MAX;
             rows = vec![running(&base, crate::game::Verb::Ease, "easing it open… — Space or a step stops it where it is", Some(progress))];
-        } else if drive_t >= 0.0 {
+        } else if let Some(t) = taking {
             if let Some(it) = list.iter().find(|x| x.kind == crate::game::InteractableKind::Objective) {
-                rows = vec![running(it, crate::game::Verb::Drive, &format!("pulling… {}% — stay on it (Space or a step lets go)", pct(drive_t / crate::consts::DRIVE_SECS)), Some(drive_t / crate::consts::DRIVE_SECS))];
+                rows = vec![running(it, crate::game::Verb::Drive, &format!("pulling… {}% — stay on it (Space or a step lets go)", pct(t)), Some(t))];
             }
         } else if let Some(door) = g.pl[pl].charging().map(|c| c.door) {
             let base = marker(g, &list, door);
             let progress = crate::doortools::door_tools_sam_progress(g, &crate::seats::here(g));
             rows = vec![running(&base, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some(progress))];
-        } else if crate::wallcharge::wall_charge_setting(&crate::seats::here(g)) {
+        } else if g.pl[pl].wall_work().is_some() {
             rows = vec![crate::wallcharge::wall_charge_running_row(g, &mut running_cb)];
         } else if g.pl[pl].takedown().is_none() {
             let priority = interact_priority();

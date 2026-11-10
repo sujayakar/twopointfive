@@ -182,7 +182,7 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
     let pl = g.player;
     let f = g.k.doortools.blow_key.replacen("Key", "", 1);
     let key = crate::ownblow::blow_key_word(false, &f);
-    let sam_wall = g.sets[g.seat].wall_charge.sam.as_ref().map(|s| s.wall.clone());
+    let sam_wall = g.pl[pl].wall_work().map(|s| s.wall.clone());
     let wall = match sam_wall {
         Some(w) => Some(w),
         None => {
@@ -198,13 +198,14 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
     let set_off = g.k.wallcharge.set_off;
     let foot = wall_pt(g, &w, 0.0, set_off, None);
     let d = v3::dist_xz(p, foot);
-    if d > g.k.wallcharge.sam_marker_m || (c.is_none() && g.sets[g.seat].wall_charge.sam.is_none() && wall_charge_open_at(g, &w)) { return; }
-    if c.is_none() && g.sets[g.seat].wall_charge.sam.is_none() && !wall_charge_affordable(g, &crate::seats::here(g)) { return; }
+    let setting = g.pl[pl].wall_work().is_some();
+    if d > g.k.wallcharge.sam_marker_m || (c.is_none() && !setting && wall_charge_open_at(g, &w)) { return; }
+    if c.is_none() && !setting && !wall_charge_affordable(g, &crate::seats::here(g)) { return; }
     let near = d < g.k.wallcharge.sam_reach && wall_off(g, &w, p) > 0.0 && {
         let to = wall_pt(g, &w, 0.0, 0.1, Some(0.9));
         !crate::scene_collision::solid_blocked(g, [p[0], 0.9, p[2]], to, None)
     };
-    let free = !g.pl[pl].sprinting && g.pl[pl].dragging().is_none() && g.pl[pl].holding().is_none() && g.pl[pl].takedown().is_none();
+    let free = !g.pl[pl].sprinting && g.pl[pl].tow.is_none() && !g.pl[pl].on_a_man();
     let reach = near && free;
     let line1 = if c.is_some() { "wall · charge set" } else if w.outer == Some(true) { "wall · outer wall" } else { "wall · partition" };
     let line2 = if reach { "" } else if near { "hands full" } else { "step closer" };
@@ -219,7 +220,7 @@ pub(super) fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool,
         off: false,
         ..Default::default()
     };
-    if g.sets[g.seat].wall_charge.sam.is_some() {
+    if setting {
         it.in_reach = true;
         g.sets[g.seat].wall_charge.marker = Some(it.clone());
         offer(g, it, Vec::new());
@@ -260,21 +261,22 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
         Some(a) => a.kind == crate::game::InteractableKind::Wall && a.verb == Some(crate::game::Verb::Charge),
         None => false,
     };
-    if mine && g.sets[g.seat].wall_charge.sam.is_none() {
+    if mine && g.pl[pl].wall_work().is_none() {
         if let Some(wall) = g.sets[g.seat].wall_charge.offered.clone() {
-            g.sets[g.seat].wall_charge.sam = Some(WallChargeSam { wall, t0: g.time, at: [p[0], 0.0, p[2]] });
+            let t0 = g.time;
+            crate::deed::begin(g, crate::game::Deed::Wall(WallChargeSam { wall, t0, at: [p[0], 0.0, p[2]] }));
             return;
         }
     }
-    let s = match g.sets[g.seat].wall_charge.sam.clone() { Some(s) => s, None => return };
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].takedown().is_some()
+    let Some(s) = g.pl[pl].wall_work().cloned() else { return };
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting
         || v3::dist_xz(p, s.at) > g.k.wallcharge.sam_shift || (has_act && !mine) {
-        wall_charge_cancel(g);
+        g.pl[pl].wall_work_over();
         return;
     }
     if crate::workstow::sam_stowing(g, &crate::seats::here(g)) {
         let now = g.time;
-        if let Some(sam) = g.sets[g.seat].wall_charge.sam.as_mut() { sam.t0 = now; }
+        if let Some(w) = g.pl[pl].wall_work_mut() { w.t0 = now; }
         return;
     }
     let set_secs = g.k.doortools.set_secs;
@@ -283,7 +285,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     let el = g.time - s.t0;
     crate::handwork::charge_hands(g, ch, at, wall_n(&s.wall), el, set_secs, hand);
     if g.time - s.t0 < set_secs { return; }
-    g.sets[g.seat].wall_charge.sam = None;
+    g.pl[pl].wall_work_over();
     if wall_charge_open_at(g, &s.wall) || wall_charge_charge_on(g, &crate::seats::here(g), &s.wall).is_some() { return; }
     let paid = wall_charge_take(g);
     if paid < 0.0 {
@@ -297,28 +299,16 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     crate::furnblast::furniture_warm(g);
 }
 
-/// Is Sam setting one right now
-pub fn wall_charge_setting(seat: &crate::seats::SeatRef) -> bool {
-    seat.wall_charge.sam.is_some()
-}
-
 /// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145
 pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
     let height = g.k.wallcharge.height;
-    let (wall, at) = match g.sets[g.seat].wall_charge.sam.as_ref() { Some(s) => (s.wall.clone(), s.at), None => return None };
+    let (wall, at) = g.pl[g.player].wall_work().map(|s| (s.wall.clone(), s.at))?;
     Some(WallChargeSamJob { p: wall_pt(g, &wall, 0.0, 0.0, Some(height)), n: wall_n(&wall), at })
-}
-
-/// Broken off, nothing spent; true: there was one to break off
-pub fn wall_charge_cancel(g: &mut crate::game::Game) -> bool {
-    if g.sets[g.seat].wall_charge.sam.is_none() { return false; }
-    g.sets[g.seat].wall_charge.sam = None;
-    true
 }
 
 /// The one row while he is at it
 pub fn wall_charge_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, f64) -> crate::game::Interactable) -> crate::game::Interactable {
-    let s = g.sets[g.seat].wall_charge.sam.clone().unwrap();
+    let s = g.pl[g.player].wall_work().cloned().unwrap();
     let height = g.k.wallcharge.height;
     let it = match g.sets[g.seat].wall_charge.marker.clone() {
         Some(it) => it,

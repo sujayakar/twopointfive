@@ -61,7 +61,7 @@ fn out_now(g: &crate::game::Game, p: V3) -> bool { g.level.errand.exits.iter().a
 pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
     if g.aside {
-        g.mission.drive_t = -1.0;
+        g.pl[g.player].taking_over();
         return;
     }
     if g.mission.pulled {
@@ -82,11 +82,11 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
         g.mission.down_card_at = -1.0;
     }
     if g.mission.stage == MissionStage::Done || g.mission.stage == MissionStage::Failed {
+        g.pl[g.player].taking_over();
         return;
     }
     if crate::seats::all_down(g) {
         g.mission.stage = MissionStage::Failed;
-        g.mission.drive_t = -1.0;
         g.mission.down_card_at = g.time + DOWN_CARD_SECS;
         return;
     }
@@ -128,13 +128,13 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
         let p = player_pos(g, &crate::seats::here(g));
         let in_reach = rack_dist(g, p) < crate::consts::DRIVE_REACH;
         let pl = g.player;
-        if g.mission.drive_t < 0.0 {
+        let Some(&at_it) = g.pl[pl].taking() else {
             let asked = match &g.sets[g.seat].act {
                 Some(a) => a.kind == InteractableKind::Objective && a.verb == Some(Verb::Drive),
                 None => false,
             };
             if asked {
-                g.mission.drive_t = 0.0;
+                crate::deed::begin(g, crate::game::Deed::Take(0.0));
                 crate::audio_iface::game_audio_like_play(g, "click", Some(rf), Some(0.8), None);
                 crate::audio_iface::game_audio_like_play(g, "magOut", Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
                 let thing = g.level.errand.thing.clone();
@@ -143,15 +143,15 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
                     crate::chronicle::chron_objective(g, &format!("hands on {}", thing), Some(rf));
                 }
             }
-        } else if !in_reach || g.pl[pl].dragging().is_some() || g.pl[pl].takedown().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].sprinting {
-            cancel_drive(g);
+            return;
+        };
+        if !in_reach || g.pl[pl].sprinting {
+            g.pl[pl].taking_over();
+        } else if at_it + dt >= crate::consts::DRIVE_SECS {
+            drive_pulled(g);
         } else {
-            g.mission.drive_t += dt;
-            if g.mission.drive_t >= crate::consts::DRIVE_SECS {
-                drive_pulled(g);
-            } else {
-                crate::handwork::drive_hands(g, crate::consts::DRIVE_SECS, false);
-            }
+            if let Some(t) = g.pl[pl].taking_mut() { *t += dt; }
+            crate::handwork::drive_hands(g, crate::consts::DRIVE_SECS, false);
         }
     } else if g.mission.stage == MissionStage::Exfil {
         let p = player_pos(g, &crate::seats::here(g));
@@ -163,21 +163,13 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Hands off the drive before it is out: the pull starts over next time.
-pub fn cancel_drive(g: &mut crate::game::Game) {
-    if g.mission.drive_t < 0.0 {
-        return;
-    }
-    g.mission.drive_t = -1.0;
-}
-
 /// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look.
 pub fn drive_pulled(g: &mut crate::game::Game) {
     let w = g.level.errand.clone();
     let rf = w.front;
     crate::chronicle::chron_objective(g, &format!("{} is out of {}", w.thing, w.holder), Some(rf));
     crate::handwork::drive_hands(g, crate::consts::DRIVE_SECS, true);
-    g.mission.drive_t = -1.0;
+    g.pl[g.player].taking_over();
     g.mission.pulled = true;
     g.mission.stage = crate::game::MissionStage::Exfil;
     g.mission.sweep_at = if w.told { g.time + 7.0 } else { -1.0 };
@@ -352,12 +344,14 @@ fn stage_place(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
 fn stage_words(g: &Game, seat: &crate::seats::SeatRef) -> String {
     use crate::game::MissionStage;
     let s = g.mission.stage;
-    let drive_t = g.mission.drive_t;
+    let taking = g.pl[seat.player].taking();
     let w = &g.level.errand;
     match s {
         MissionStage::Infiltrate => format!("objective ▸ reach {}", w.place),
-        MissionStage::Drive if drive_t >= 0.0 => format!("objective ▸ taking {}… {}%", w.thing, drive_percent(drive_t)),
-        MissionStage::Drive => format!("objective ▸ take {} from {} (press Space in front of it, then stay on it)", w.thing, w.holder),
+        MissionStage::Drive => match taking {
+            Some(&t) => format!("objective ▸ taking {}… {}%", w.thing, drive_percent(t)),
+            None => format!("objective ▸ take {} from {} (press Space in front of it, then stay on it)", w.thing, w.holder),
+        },
         MissionStage::Exfil => format!("objective ▸ get out through {}", w.outs()),
         // (the run's clock and its counts stand still once it is done)
         MissionStage::Done => {
@@ -414,10 +408,10 @@ mod tests {
     fn with_nobody_playing_a_pull_is_let_go_of_and_nothing_else_moves() {
         let mut g = game();
         g.mission.stage = MissionStage::Drive;
-        g.mission.drive_t = 1.0;
+        g.pl.push(crate::game::Player { deed: Some(crate::game::Deed::Take(1.0)), ..crate::game::Player::blank() });
         g.aside = true;
         update_mission(&mut g, 0.1);
-        assert_eq!(g.mission.drive_t, -1.0);
+        assert!(g.pl[g.player].deed.is_none());
         assert!(g.mission.stage == MissionStage::Drive);
         assert_eq!(g.mission.stats.elapsed, 0.0);
     }

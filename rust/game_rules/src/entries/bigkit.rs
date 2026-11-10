@@ -320,15 +320,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = &g.pl[pid];
     let throw_held = g.sets[crate::seats::seat_of_man(g, pid)].hand.throw_held;
     let taken = g.cond[pl.ch].down
-        || pl.kick().is_some()
-        || pl.holding().is_some()
-        || pl.takedown().is_some()
-        || pl.dragging().is_some()
-        || pl.picking().is_some()
-        || pl.wanding().is_some()
-        || pl.coding().is_some()
-        || pl.easing().is_some()
-        || pl.door_move().is_some()
+        || pl.hands_full()
         || pl.wall.is_some()
         || pl.pending_throw.is_some()
         || throw_held

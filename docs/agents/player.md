@@ -37,6 +37,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `throwables/`, `throwplan.rs`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
 | `kit/`, `kitload.rs`, `loadout/`, `issue.rs`, `gear.rs` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
 | `bigkit.rs`, `packside.rs`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
+| `deed.rs` | what his hands or feet are in the middle of, one thing at a time (`Player.deed`): `begin`, `put_down`, `hands_free` |
 | `hands.rs`, `handwork.rs`, `workstow.rs`, `workthings.rs` | bodies and a leaf by hand; a hand on a thing; the gun put away for a job; a teammate's jobs |
 | `handslot/`, `handring/` | the empty-hands key; the ring |
 | `friends.rs`, `friendlyfire.rs`, `fireline.rs` | ring and low ready; rounds among friends; a teammate waiting out Sam's lane of fire |
@@ -144,6 +145,8 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 - **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
   ids of the Mk 18 and the Glock 19, and a line written with the old names goes through `gear_text`.
 - **A thing on the card:** `MemberKit`, `SlotTable` in `knobs/kit.rs`, its row in `kit/`, its weight in `knobs/kitload.rs`, its write in `kit_player`.
+- **A thing done by hand:** a kind of `Deed` with what it keeps, begun by `deed::begin`, which puts down the one before, after `hands_free` if it wants
+  both hands. Ask `planted` (his feet are in it too) or `hands_full` (a deed, or a body in `Player.tow`), never a list of kinds.
 - **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads the seat's `act`. A job that plants him is an arm of `sam_work`. A key: its code in
   `update_player`, its row in `KEY_ACTS`.
 - **A new reason his gun cannot fire:** a term of `walled` in `update_player` with its line on a click, and `gun_shut` so that the ring shows the bar.

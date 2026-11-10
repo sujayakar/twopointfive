@@ -105,8 +105,8 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
         Some(Deed::Charge(c)) => ("charge", c.door),
         Some(Deed::Hold(h)) if crate::player::hold_works(h) => return format!("hold:{}", g.gd[h.g].callsign),
         Some(Deed::Breaker(_)) => return String::from("breaker"),
-        _ if g.mission.drive_t >= 0.0 => return String::from("drive"),
-        _ if crate::wallcharge::wall_charge_setting(seat) => return String::from("charge:wall"),
+        Some(Deed::Take(_)) => return String::from("drive"),
+        Some(Deed::Wall(_)) => return String::from("charge:wall"),
         _ => return String::new(),
     };
     format!("{verb}:{}", g.dr[d].def.name)
@@ -116,15 +116,12 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
 pub(super) fn cancel_sustained(g: &mut Game) -> bool {
     let pl = g.player;
     match &g.pl[pl].deed {
-        Some(Deed::Pick(_)) => { crate::player::stop_picking(g); return true; }
-        Some(Deed::Wand(_)) => { crate::player::stop_wand(g); return true; }
-        Some(Deed::Ease(_) | Deed::Code(_) | Deed::Charge(_)) => { crate::deed::put_down(g, pl); return true; }
-        Some(Deed::Hold(h)) if crate::player::hold_works(h) => { crate::player::ease_off_hold(g); return true; }
-        _ => {}
+        Some(Deed::Pick(_)) => { crate::player::stop_picking(g); true }
+        Some(Deed::Wand(_)) => { crate::player::stop_wand(g); true }
+        Some(Deed::Ease(_) | Deed::Code(_) | Deed::Charge(_) | Deed::Wall(_) | Deed::Take(_)) => { crate::deed::put_down(g, pl); true }
+        Some(Deed::Hold(h)) if crate::player::hold_works(h) => { crate::player::ease_off_hold(g); true }
+        _ => false,
     }
-    if g.mission.drive_t >= 0.0 { crate::mission::cancel_drive(g); return true; }
-    if crate::wallcharge::wall_charge_cancel(g) { return true; }
-    false
 }
 
 /// a row the ring has a wedge for: one with something to do
