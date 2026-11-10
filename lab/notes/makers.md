@@ -25,3 +25,12 @@ Two faces never share a plane, the same way out, where both can be seen: make on
 2. how much of the picture it fills: five thin slats are two as wide as the five together; thinned leaves are larger
 3. its outline, within its error; its shadow's holes
 4. highlights: a lost bend of a surface is roughness
+
+## Plants
+
+`ficus.ts`, `tree.ts`, `fern.ts` and `grass.ts` are the ones there are; `src/scene/plants.ts` and `bough` in `src/scene/forest.ts` grow the lab's own. Wood is pieces (`p.bar`, or `p.from`); leaves are clusters (`w.clusters`, in a cluster's own frame, about 1 across) placed as instances: a spray, a frond, a tuft. A leaf is a pointed oval (kind 0: 0.46 as wide as long), a blade (kind 1: 0.06) or a twig (`wood`); `t` is its long way, `n` its face, `size` half its length, `tone` 0 to 1 its age. `tint` is the root of its color; what goes through it follows from that.
+- From 2 to 8,191 leaves a cluster (a cluster of one leaf means something else), all within 1.2 of its middle (blades: within 2.1 over its foot): what is farther out is cut off. Clusters are shared: a few kinds, many places. Make them once a world (a WeakMap, as ficus.ts does).
+- A leaf's ambient shade knows only its own cluster: how leaves are grouped decides how dark the middle is. A spray a cluster, not a leaf a cluster, not a crown a cluster.
+- Seen in the open: a clipped crown is a shell of leaves round a dark hollow with pale limbs; single leaves stand out only at the lit rim; thin parts glow when the light is behind them, thick ones go black; lit edges are yellower, shaded sides bluer.
+- It sways: each instance about its `base`, by `sway`; a stem stays at its branch (`rule.stems`).
+- Coarser levels: fewer leaves, each larger, so that as much is filled (by the square root of how many go, times 0.93 to 1), thin wood first. Or, for the last one, cells: `m.levels.push(voxLevel(m, 0.16, 0.08))` from `variants.ts` measures the finest into cells of 16 cm, with nothing to make; they are drawn as fog and cost more by the pixel than thinned leaves, so only where leaves fail.
