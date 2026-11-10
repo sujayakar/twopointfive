@@ -550,6 +550,9 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
         }
     }
     let out_of = |e: &crate::roomfight::Entry| -> V3 { [e.at[0] + e.out[0], 0.0, e.at[2] + e.out[1]] };
+    // (what a step into a cell costs him is the same to every place he weighs: asked once)
+    let wide = g.col.nav.w as usize;
+    let mut prices: Vec<f64> = alloc::vec![m::NAN; wide * g.col.nav.h as usize];
     let mut entries = g.tab.roomfight_room[t].entries.clone();
     js::sort_by(&mut entries, |a, b| dist_xz(pos, out_of(a)) - dist_xz(pos, out_of(b)));   // (nearest first, and a way by a door his mate has not taken is enough)
     for e in &entries {
@@ -569,7 +572,9 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
             if room_has(g, t, c) || (used.iter().any(|u| dist_xz(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
             if ctx_hot(g, &cap_known, &rear, &cap_ajar, p) { continue; }
             let path = crate::scene_collision::way_priced(&mut *g, pos, p, 6000.0, &mut |g, ix: f64, iz: f64| -> f64 {
-                if ctx_hot_cell(g, &cap_known, &rear, &cap_ajar, ix, iz) { 200.0 } else { dear0(g, &x, d_room, ix, iz) }
+                let at = &mut prices[iz as usize * wide + ix as usize];
+                if at.is_nan() { *at = if ctx_hot_cell(g, &cap_known, &rear, &cap_ajar, ix, iz) { 200.0 } else { dear0(g, &x, d_room, ix, iz) }; }
+                *at
             });
             let Some(path) = path.filter(|x| !x.is_empty()) else { continue };
             if dist_xz(path[path.len() - 1], p) > 0.8 { continue; }
