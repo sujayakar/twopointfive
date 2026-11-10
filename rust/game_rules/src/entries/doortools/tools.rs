@@ -273,7 +273,7 @@ fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
 }
 
 /// A door's rows: a set charge is said on the door's own line; else, in reach with free hands, 'set a charge'.
-pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Interactable, d: DoorId, verbs: &mut Vec<crate::game::Interactable>, free: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>) -> crate::game::Interactable) {
+pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Interactable, d: DoorId, verbs: &mut Vec<crate::game::Interactable>, free: bool) {
     let c = door_tools_charge_on(g, &crate::seats::here(g), d);
     let key = key_word(g);
     let f = crate::ownblow::blow_key_word(false, &key);
@@ -287,8 +287,7 @@ pub fn door_tools_sam_rows(g: &mut crate::game::Game, it: &mut crate::game::Inte
     }
     if !free || door_tools_sam_face(g, d).is_none() { return; }
     let text = alloc::format!("set a charge · {} left", g.sets[g.seat].door_tools.charges);
-    let r = row(g, it.clone(), crate::game::Verb::Charge, text, Some(alloc::format!("{}  blows it once set", f)));
-    verbs.push(r);
+    verbs.push(crate::player::row(it, crate::game::Verb::Charge, &text, &alloc::format!("{}  blows it once set", f)));
 }
 
 /// Is this set charge the squad's key's to blow: one the squad set, or his own while the squad works its door.

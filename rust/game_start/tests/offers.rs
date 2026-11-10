@@ -1,6 +1,6 @@
 //! WHAT THE GAME OFFERS AND WHAT IT THEN DOES, on three places the old checks read as faults.
 //!
-//! Two of them are held here as they are: a keypad door's entry rows (`door_tools_stackable`) and Sam's wall row (`wall_charge_sam_rows`). The
+//! Two of them are held here as they are: a keypad door's entry rows (`door_tools_stackable`) and Sam's wall row (`wall_charge_rows`). The
 //! third was a fault: a defender bringing furniture to a door standing open let the brace go with his hand on the leaf (`digin::hand_waits`).
 use game::orders::{squad_orders_give, squad_orders_target_at, squad_orders_why_not, OrderTarget};
 use game_start::play::{Opts, Play};

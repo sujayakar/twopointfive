@@ -293,11 +293,6 @@ pub fn wall_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate:
     if page == WALL_PAGE { vec![row] } else { rows.to_vec() }
 }
 
-/// Sam's own row at the foot of a partition his cursor is on.
-pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    wall_charge_sam_rows(g, p, busy, row, offer);
-}
-
 /// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();

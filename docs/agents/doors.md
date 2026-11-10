@@ -33,7 +33,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 The step itself is `doors/step.rs`: every leaf for one tick, on its record (`Leaf`, on its door). Furniture's is in `props.rs`, on its records. `game_update_doors` in
 `rust/game_rules/src/tick/game/doors.rs` gathers who is near a leaf, hands it over, and takes back where everybody ended. Sam's rows are in
-`rust/game_rules/src/sam/player/interactables.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
+`rust/game_rules/src/sam/player/offers/doors.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
 `tools/levels/lib/doorSize.ts`. A leaf is drawn as any box is; `rust/game_draw/src/doorways.rs` adds the doorways the light's reach asks for.
 
 ## How it works
@@ -89,7 +89,7 @@ stands.
   or `?knob.doorthrow.kick_secs=3` turns it. `?doorcost=0` is the cheap count for shooting one out.
 - **How a leaf moves:** `doors/step.rs`. What it keeps from tick to tick is a field of `Leaf`, and what a man did to a leaf is told by `doors_driven` and
   kept on it as its `drive`. The step reads the men near it and the floor, and hands back the noises it made.
-- **A new way to work a door:** a row in `rust/game_rules/src/sam/player/interactables.rs` for Sam; for the squad an order (`door-tools.md`). Move the leaf through
+- **A new way to work a door:** a row in `rust/game_rules/src/sam/player/offers/doors.rs` for Sam; for the squad an order (`door-tools.md`). Move the leaf through
   `doors_use`, `doors_crack`, `doors_pull`, `doors_pull_to` or `doors_kick_in`, never by its angle, so that the noise, the blame and who it struck follow.
 - **A noise:** `doors_sound`, which is heard by the rules and played by the mixer alike.
 - **A door in a level:** its generator; `closer`, `exterior`, `locked`, `lock`, `keySide`, `swing` and `steel` are the words. Another size is `DOOR_SIZE` and every

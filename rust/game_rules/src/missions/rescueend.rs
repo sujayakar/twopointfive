@@ -58,7 +58,7 @@ fn rescue_end_free(g: &mut crate::game::Game) -> bool {
 }
 
 /// The row on each living hostage in reach.
-fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, o: &mut crate::player::Offers) {
     if !crate::rescue::rescue_up(g) || g.rescue.result.is_some() { return; }
     let pl = who(g, &crate::seats::here(g));
     let had = crate::rescue::rescue_captor(g).is_some();
@@ -79,28 +79,11 @@ fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn F
         } else {
             String::from("get closer")
         };
-        let it = crate::game::Interactable {
-            kind: crate::game::InteractableKind::Guard,
-            pos: v3::add(hp, [0.0, 1.35, 0.0]),
-            line1,
-            line2,
-            in_reach: can && !had,
-            off: false,
-            guard: Some(h),
-            ..crate::game::Interactable::default()
-        };
-        if had { offer(g, it, Vec::new()); continue; }
-        let verbs = if can && !busy {
-            let v = if g.rescue.ending.lead.is_some() {
-                row(g, it.clone(), crate::game::Verb::Stay, String::from("stay here"), None, None)
-            } else {
-                row(g, it.clone(), crate::game::Verb::Lead, String::from("on your feet — with me"), None, None)
-            };
-            vec![v]
-        } else {
-            Vec::new()
-        };
-        offer(g, it, verbs);
+        let it = crate::game::Interactable { guard: Some(h), ..crate::player::mark(crate::game::InteractableKind::Guard, v3::add(hp, [0.0, 1.35, 0.0]), line1, line2, can && !had) };
+        let word = if had || !can || busy { None }
+            else if g.rescue.ending.lead.is_some() { Some(crate::player::row(&it, crate::game::Verb::Stay, "stay here", "")) }
+            else { Some(crate::player::row(&it, crate::game::Verb::Lead, "on your feet — with me", "")) };
+        o.add(it, word.into_iter().collect());
     }
 }
 
@@ -172,10 +155,4 @@ pub(super) fn rescue_end_objective(g: &crate::game::Game, seat: &crate::seats::S
         text: String::from("objective ▸ bring them out, or clear the building"),
         pos: near.map(|n| [n[0], 0.0, n[2]]),
     }
-}
-
-/// The hostages' rows, from player.ts buildInteractables.
-pub fn rescue_end_rows_2(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    if !crate::rescue::rescue_up(g) { return; }
-    rescue_end_rows(g, p, busy, row, offer);
 }
