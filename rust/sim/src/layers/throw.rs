@@ -142,20 +142,20 @@ struct Throw {
 
 /// The throw (the overhand at its size, or the underhand toss; mirrored for the free hand's throw): body English straight into the pose with the feet
 /// put back, then both arms by IK on a copy along paths that begin and end on the live hands, in through per-arm masks.
-pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knobs) -> u32 {
+pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knobs) -> bool {
     let mut o = Throw { t, ..Throw::default() };
     let (at, at_b, _) = poses(an);
     let Some(tb) = ThrowTables::of(tables) else {
-        return 0;
+        return false;
     };
     as_thrown(an, &mut o);
     how_much(an, tune, &mut o);
     const BODY: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &BODY) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut hs) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     // ---- what is underneath (feet to re-plant, each hand from its shoulder), then the body English
     let Some(()) = with_pose(g, at, |d, rig, _n, fk| {
@@ -165,11 +165,11 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         head_on_target(&tb, d, rig, &o);
         feet_back(d, rig, fk, &o);
     }) else {
-        return 0;
+        return false;
     };
     // ---- arms, IK'd on a copy against the body as it now is
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut hs;
     let hang = &mut an.thr_hang;
@@ -189,7 +189,7 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         fingers(d, hh, &o);
         weights_in(&mut o);
     }) else {
-        return 0;
+        return false;
     };
     // (the clavicles themselves are already posed in the pose; the copy carries the same turn)
     let (sl, sr) = (role(SHOULDER_L), role(SHOULDER_R));
@@ -199,7 +199,7 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         ask_mask(&[(sr, o.w_r, true), (sl, o.w_l, true), (sr, 0.0, false), (sl, 0.0, false)]);
     }
     if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return 0;
+        return false;
     }
     let left = &mut an.thr_last;
     let last = with_pose(g, at, |d, rig, _n, fk| {
@@ -208,10 +208,10 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         *left = Some(AnimThrLast { r, l });
     });
     if last.is_none() {
-        return 0;
+        return false;
     }
     hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 
 /// Which swing, the underhand toss, or the overhand at its size (`full` = as authored).

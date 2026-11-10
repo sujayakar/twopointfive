@@ -87,21 +87,21 @@ struct Feed {
 /// fetched and seated, the handle run, back to the fore-end; an untrained man's lands on the lip, is backed off and found, and is slapped home. Or, for
 /// a gun fed its own way, the hand through the stations it is handed. Solved on the scratch pose at `at_b` in the gun's frame as the trigger hand has
 /// it, laid on the pose by w through the support arm's mask.
-pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, keys: Option<&[FeedKey]>, tune: &Knobs) -> u32 {
+pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, keys: Option<&[FeedKey]>, tune: &Knobs) -> bool {
     let mut q = Feed { t, ..Feed::default() };
     let (at, at_b, _) = poses(an);
     as_he_is(an, &mut q);
     if keys.map_or(0, |k| k.len()) > KEYS_MAX {
-        return 0;
+        return false;
     }
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R, HIPS, SPINE2, THIGH_L, THIGH_R]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     let posed = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -128,11 +128,11 @@ pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, ke
     if posed == Some(true) {
         arm_mask(false);
         if !ask_blend(g, at, at_b, w, true, at, n) {
-            return 0;
+            return false;
         }
         hands_to(&h, an);
     }
-    RAN | RAN_ALL
+    true
 }
 
 /// How he is trained, where his pouches are, and the beats of it.
@@ -338,17 +338,17 @@ fn mag_fingers(d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, hand_l: usiz
 /// A pistol's magazine change, the support hand's, over the reload clip's pose: to the butt as the magazine drops free, to the belt for a fresh one (a
 /// magazine kept goes to the hip first), seated with the heel of the palm, and over the top to run the slide. The trigger hand, the gun and the body
 /// stay the clip's.
-pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) -> u32 {
+pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) -> bool {
     let (at, at_b, _) = poses(an);
     let (bt, fix_l) = (an.rl_b, an.hand_fix[0]);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R, HIPS]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -407,8 +407,8 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
     });
     arm_mask(false);
     if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }

@@ -37,7 +37,7 @@ struct HeadHand {
     thumb: f64,
 }
 /// the support hand to a place in the head's frame as it will be drawn (a smoke, the goggles): solved on the scratch pose at `at_b`, laid on the arm by e.
-fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> u32 {
+fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> bool {
     let (at, at_b, _) = poses(an);
     let (tw, hri, fix_l) = (an.nv_tw, an.head_rest_inv, an.hand_fix[0]);
     let Some(Some((n, hd))) = with_pose(g, at, |d, rig, n, fk| {
@@ -47,13 +47,13 @@ fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> u32 {
         fk_run(rig, d, fk.rot, fk.pos);
         Some((n, HeadDrawn::of(fk, &tw, &hri)))
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -65,13 +65,13 @@ fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> u32 {
     });
     left_arm_mask(p.e, p.e, p.e);
     if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// A smoke's arm: the left wrist to a place in front of the mouth.
-pub fn smoke_pose(g: usize, an: &mut Anim) -> u32 {
+pub fn smoke_pose(g: usize, an: &mut Anim) -> bool {
     let x = an.smoke_arm;
     let p = HeadHand {
         e: x * x * (3.0 - 2.0 * x),
@@ -86,7 +86,7 @@ pub fn smoke_pose(g: usize, an: &mut Anim) -> u32 {
     head_hand(g, an, &p)
 }
 /// A goggle flip's arm: the left hand at the goggles, wherever between up and down they are.
-pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> u32 {
+pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> bool {
     let p = HeadHand {
         e: an.nv_arm,
         shrug: tune.kit.nv.hand.shrug,
@@ -105,7 +105,7 @@ fn staggered(t: f64, tin: f64, tout: f64, e: f64) -> (f64, f64, f64) {
     (seg(0.0), seg(0.05), seg(0.09))
 }
 /// A left-hand signal: the arm solved against the body as it stands and laid on shoulder first.
-pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64) -> u32 {
+pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (side, fix_l) = (an.sig_side, an.hand_fix[0]);
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
@@ -125,13 +125,13 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64)
         }
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -190,27 +190,27 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64)
     let (w_up, w_fore, w_hand) = staggered(t, 0.2, 0.26, dur);
     left_arm_mask(w_up, w_fore, w_hand);
     if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// An idle tell: a look at the watch (the forearm level across the chest, the eyes down onto it), or a hand round to the back of the neck with the chest
 /// lifted into the stretch.
-pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> u32 {
+pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let (gaze_local, fix_l) = (an.gaze_local, an.hand_fix[0]);
     let (tin, tout) = if watch { (0.2, 0.28) } else { (0.26, 0.34) };
     // the body's share (the head, the chest): one window over the whole tell
     let env = bump(t, 0.0, tin, dur - tout, dur);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[SPINE2, NECK, HEAD]) { Some(n) } else { None }) else {
-        return 0;
+        return false;
     };
     if env <= 1e-4 {
-        return RAN;
+        return true;
     }
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     let mut wrist = [0.0f64; 3];
     with_pose(g, at, |d, rig, _n, fk| {
@@ -229,7 +229,7 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> u32
         }
     });
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -255,13 +255,13 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> u32
     let (w_up, w_fore, w_hand) = staggered(t, tin, tout, dur);
     left_arm_mask(w_up, w_fore, w_hand);
     if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
 /// A hand to the radio: the left hand up to the handset at his left collar, the head turned and tipped to it as far as his gun is down.
-pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> u32 {
+pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> bool {
     let (at, at_b, _) = poses(an);
     let fix_l = an.hand_fix[0];
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
@@ -274,13 +274,13 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> u32 {
         }
         Some(n)
     }) else {
-        return 0;
+        return false;
     };
     let Some(mut h) = hands_of(g, an) else {
-        return 0;
+        return false;
     };
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
+        return false;
     }
     let hh = &mut h;
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -295,8 +295,8 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> u32 {
     });
     ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
     if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, w), true, at, n) {
-        return 0;
+        return false;
     }
     hands_to(&h, an);
-    RAN | RAN_ALL
+    true
 }
