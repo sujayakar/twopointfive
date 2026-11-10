@@ -25,7 +25,7 @@ impl Tick {
     pub fn runs(&self, g: &Game) -> bool { !crate::condition::is_hurt(g, self.c, None) && self.shift(g) }
 }
 
-/// Where his keys send him this tick: the way across the floor (a unit, or nothing) and its length.
+/// Where his keys send him this tick: the way across the floor (a unit, or nothing), and how far the keys asked of it.
 #[derive(Clone, Copy)]
 pub(super) struct Go {
     pub x: f64, pub z: f64, pub l: f64,
@@ -95,7 +95,7 @@ fn begin(g: &mut Game, t: Tick) -> Option<crate::weapons::RifleAttachment> {
 }
 
 /// Enter, once he is down or the mission is lost (with Shift, at any time): the mission again, from this run's newest checkpoint if he is
-/// down, else from its start. True: the rest of the tick is not played.
+/// down and has one, else, and with Shift, from its start. True: the rest of the tick is not played.
 fn again_key(g: &mut Game, t: Tick) -> bool {
     if !t.hit(g, "Enter") { return false; }
     let (down, shift) = (crate::condition::down(g, t.c), t.shift(g));
@@ -126,7 +126,8 @@ fn lies_down(g: &mut Game, t: Tick) {
     crate::game::game_body_thud(g, c);
 }
 
-/// What runs whatever he does: his guns' clocks, his noise dying away, a stun's pose, the whistle.
+/// What runs whatever he does: his guns' clocks, his noise dying away, a stun's pose (and it makes him let go of whom he holds), the whistle, the gun at
+/// a wall.
 fn clocks(g: &mut Game, t: Tick) {
     let Tick { pl, c, dt, .. } = t;
     crate::weapons::firearm_update(g, t.gun, dt);

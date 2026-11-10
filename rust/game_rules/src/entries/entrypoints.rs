@@ -152,26 +152,13 @@ pub(super) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: 
         let Some(best) = best else {
             // it stays where it is: its man can at least hold the opening
             if entry_points_sees(g, pod.pos, by, side_of(by_at, by_n, pod.pos), true) {
-                out[i] = Pod { pos: pod.pos, face: pod.face, watch: Some(watch), moved: false };
+                out[i] = Pod { pos: pod.pos, face: pod.face, watch: Some(watch) };
             }
             continue;
         };
-        out[i] = Pod { pos: best, face: pod.face, watch: Some(watch), moved: true };
+        out[i] = Pod { pos: best, face: pod.face, watch: Some(watch) };
     }
     out
-}
-
-/// A search point taken over a better-seeing one by an uncleared opening: it counts as moved.
-pub(super) fn entry_points_swapped(pod: &mut crate::entrypoints::Pod) {
-    pod.moved = true;
-}
-
-/// A point an entry has just dealt to a man: the tallies.
-pub(super) fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) {
-    let risky = entry_points_risk_at(g, pod.pos, skip, None).is_some();
-    if pod.moved {
-    } else if risky {
-    }
 }
 
 fn opening_shape(g: &Game, o: CoverOpeningId) -> (V3, [f64; 2], f64) {

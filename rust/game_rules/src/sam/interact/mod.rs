@@ -12,7 +12,6 @@ use alloc::{format, string::String};
 /// every row a door can have, and those of them an open leaf can
 static OPEN_ROWS: &[&str] = &["pull", "ease", "charge", "breach", "hammer", "wand"];
 static SHUT_ROWS: &[&str] = &["pull", "ease", "charge", "breach", "hammer", "wand", "push", "pick", "kick", "rattle", "unlock", "code", "nocode"];
-static MOVE_KEYS: &[&str] = &["KeyW", "KeyA", "KeyS", "KeyD"];
 
 /// a level line from his eye to a hand's breadth short of the thing
 fn walled(g: &Game, eye: V3, to: V3) -> bool {
@@ -88,7 +87,7 @@ pub fn empty_word(t: Option<&crate::interact::EmptyThing>) -> String {
 /// the movement keys down, a bit each
 fn move_mask(g: &Game, input: InputId) -> f64 {
     let mut mask = 0i32;
-    for (i, k) in MOVE_KEYS.iter().enumerate() {
+    for (i, k) in crate::player::WALK_KEYS.iter().enumerate() {
         if crate::input::input_down(g, input, k) { mask |= 1 << i; }
     }
     mask as f64
@@ -231,7 +230,7 @@ fn ring_on_thing(g: &Game, seat: &crate::seats::SeatRef, r: &mut crate::cmdring:
     still
 }
 
-/// the selector's ring lent to a call that also takes `g`: no callee here reads the selector
+/// The selector's ring lent to a call that also takes `g`: neither of those that borrow it (where the ring is pinned, and where it wants to be) reads the selector.
 fn lend_ring<T>(g: &mut Game, f: impl FnOnce(&mut Game, &mut crate::cmdring::RingState) -> T) -> T {
     let mut r = ring(g).state;
     let out = f(g, &mut r);

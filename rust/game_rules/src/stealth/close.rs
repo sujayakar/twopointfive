@@ -289,7 +289,7 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
     let o = { let s = state_of(g); if s.t == now { s.best.clone() } else { None } };
     let o = match o { Some(o) if o.can => o, _ => return None };
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].tow.is_some() || g.pl[pl].planted()
-        || crate::game::player_rifle_up(g, pl) || (crate::game::player_canister_sel(g, pl).is_some() && !g.pl[pl].holstered) { return None; }
+        || crate::game::player_rifle_up(g, pl) || crate::player::can_in_hand(g, pl).is_some() { return None; }
     if crate::handwork::sam_work(g).is_some() { return None; }
     if g.pl[pl].wall.is_some() { return None; }
     let c = g.gd[o.guard].ch;
