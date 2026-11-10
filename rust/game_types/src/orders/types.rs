@@ -137,6 +137,18 @@ pub enum OrderTarget {
     Foe(crate::orders::OrderTargetFoe),
 }
 
+impl OrderTarget {
+    /// the spot of it, which every kind has
+    pub fn at(&self) -> V3 {
+        match self {
+            OrderTarget::Floor(x) => x.at,
+            OrderTarget::Door(x) => x.at,
+            OrderTarget::None(x) => x.at,
+            OrderTarget::Foe(x) => x.at,
+        }
+    }
+}
+
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct OrderTargetFloor {
     pub at: V3,

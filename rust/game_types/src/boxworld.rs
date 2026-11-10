@@ -97,6 +97,8 @@ pub struct World {
     pub rec: Vec<f64>,
     pub leaf: Vec<f64>,
     pub part: Vec<f64>,
+    /// how low and how high a static reaches that a line or a ray can meet (one that none can reaches nowhere): what a walk passes by on before it asks the row
+    pub tall: Vec<[f64; 2]>,
     /// …their flags (a part has none that a question asks for)
     pub flags: Vec<u32>,
     pub leaf_flags: Vec<u32>,
@@ -114,6 +116,8 @@ pub struct World {
     pub cs: f64,
     /// five a tilted static: its index, then the cells it is filed in (x0 x1 z0 z1)
     pub tilted: Vec<i32>,
+    /// the statics that stand over the grid's edge
+    pub outer: Vec<u32>,
     /// the furniture by its id (TH doubles each), and what of it is in the level now, in its own order
     pub thing: Vec<f64>,
     pub things: Vec<Thing>,
@@ -144,6 +148,15 @@ impl World {
     /// does a walker go through static `bi`, a pane of glass
     pub fn walked(&self, bi: usize) -> bool { self.walk[bi] != 0 }
 
+    /// does a static stand over the grid's edge, some of it on the grid
+    fn over_edge(&self, i: usize) -> bool {
+        let r = self.row(i);
+        let abs = |v: f64| if v < 0.0 { -v } else { v };
+        let (cs, sn) = (abs(r[R_COS]), abs(r[R_SIN]));
+        let over = |c: f64, e: f64, far: f64| c - e < far && c + e > 0.0 && (c - e < -1e-9 || c + e > far + 1e-9);
+        let (ex, ez) = (cs * r[R_H] + sn * r[R_H + 2], sn * r[R_H] + cs * r[R_H + 2]);
+        over(r[R_C], ex, self.w as f64 * self.cs) || over(r[R_C + 2], ez, self.h as f64 * self.cs)
+    }
     fn told(&mut self) { self.wrote = next(); }
     /// `row` of one of the three tables is box `b`
     fn put(&mut self, of: Of, b: &SBox) {
@@ -184,7 +197,11 @@ impl World {
                 let back = (crate::v3::clamp(lum(b.albedo), 0.0, 1.0) * 255.0) as u8;
                 moved |= self.flags[at as usize] != flags || self.back[at as usize] != back;
                 (self.flags[at as usize], self.back[at as usize]) = (flags, back);
+                let abs = |v: f64| if v < 0.0 { -v } else { v };
+                let up = abs(r[R_H + 1]) + if kind & K_ROT != 0 { abs(r[R_H]) + abs(r[R_H + 2]) } else { 0.0 };
+                self.tall[at as usize] = if flags & F_NO_SHADOW != 0 { [f64::INFINITY, f64::NEG_INFINITY] } else { [r[R_C + 1] - up, r[R_C + 1] + up] };
                 if moved { self.told(); }
+                if moved && self.w > 0 && !self.outer.contains(&at) && self.over_edge(at as usize) { self.outer.push(at); }
             }
             1 => self.leaf_flags[at as usize] = flags,
             _ => {}
@@ -255,7 +272,7 @@ impl Boxes {
     pub fn statics(&mut self, list: &[BoxId]) {
         for p in self.place.iter_mut() { if matches!(p, Some(Of::Static(_))) { *p = None; } }
         World::give_back(&mut self.rows.cut_free, &self.rows.rec);
-        (self.rows.rec, self.rows.flags, self.rows.back, self.rows.walk, self.rows.snow) = Default::default();
+        (self.rows.rec, self.rows.tall, self.rows.flags, self.rows.back, self.rows.walk, self.rows.snow) = Default::default();
         for &b in list { self.add_static(b); }
         self.rows.told();
     }
@@ -265,6 +282,7 @@ impl Boxes {
         let i = w.flags.len() as u32;
         assert!((i as usize) < MAX_BOXES, "more statics than a question can meet ({MAX_BOXES}): levelfit refuses such a level, and wallbreak such a piece");
         w.rec.resize(w.rec.len() + REC, 0.0);
+        w.tall.push([0.0; 2]);
         w.flags.push(0);
         w.back.push(0);
         w.walk.push(0);
@@ -279,6 +297,7 @@ impl Boxes {
         let w = &mut self.rows;
         World::give_back(&mut w.cut_free, &w.rec[n * REC..]);
         w.rec.truncate(n * REC);
+        w.tall.truncate(n);
         w.flags.truncate(n);
         w.back.truncate(n);
         w.walk.truncate(n);
@@ -297,6 +316,7 @@ impl Boxes {
         }
         o.start.push(o.items.len() as u32);
         o.tilted = tilted.iter().map(|&v| v as i32).collect();
+        o.outer = (0..o.boxes() as u32).filter(|&i| o.over_edge(i as usize)).collect();
     }
     /// THE LEAVES are these
     pub fn leaves(&mut self, list: &[BoxId]) {

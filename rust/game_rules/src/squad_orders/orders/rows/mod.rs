@@ -100,11 +100,6 @@ pub fn frame(g: &mut Game) {
     for r in ROWS { if let Some(f) = r.frame { f(g); } }
 }
 
-/// the point of the floor an order's target names
-pub(in crate::squad_orders) fn at(t: &OrderTarget) -> crate::v3::V3 {
-    match t { OrderTarget::Floor(x) => x.at, OrderTarget::Door(x) => x.at, OrderTarget::None(x) => x.at, OrderTarget::Foe(x) => x.at }
-}
-
 /// `issue` of a row that only opens a page: `give` refuses such a row before it comes to this
 fn opens_a_page(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { None }
 

@@ -6,14 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves; no goal, so it is not the standoff's point either.
-fn drop_plan(d: &mut crate::game::Guard) {
-    d.path = Vec::new();
-    d.path_serial = d.path_serial.wrapping_add(1);
-    d.path_goal = None;
-    d.path_goal_orbit = false;
-}
-
 /// One more round for a side.
 fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
     let slot = match t {
@@ -78,7 +70,7 @@ pub(super) fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: O
         f.leader = Some(lead);
         f.follow_t = 0.0;
         f.leader_still_t = 0.0;
-        drop_plan(f);
+        f.drop_path();
         f.leader_seen_t = now;
         f.leader_seen_pos = v3::copy(lead_pos);
     }
@@ -106,7 +98,7 @@ pub(super) fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: O
                 let t = &mut g.gd[third];
                 t.post = Some(best.clone());
                 t.follow_t = 0.0;
-                drop_plan(t);
+                t.drop_path();
             }
             if (old_post.as_ref().map_or(true, |o| !same_post(o, &best)) || Some(third) != old_post_man)
                 && Some(third) != except
@@ -124,7 +116,7 @@ pub(super) fn clear_lockdown(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { drop_plan(&mut g.gd[gd]); }
+        if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { g.gd[gd].drop_path(); }
         g.gd[gd].leader = None;
         g.gd[gd].post = None;
     }

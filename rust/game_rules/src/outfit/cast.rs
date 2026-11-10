@@ -14,7 +14,7 @@ fn office_dress(g: &Game, parts: &[String], list: &[AnimGltfCastVariantId]) -> V
     let field = field_parts();
     let mut bits: u32 = 0;
     for (i, n) in parts.iter().enumerate() { if field.contains(n) { bits |= 1u32 << (i as u32 & 31); } }
-    let keep: Vec<AnimGltfCastVariantId> = list.iter().copied().filter(|v| js::to_u32(g.tab.anim_gltf_cast_variant[*v].mask) & bits == 0).collect();
+    let keep: Vec<AnimGltfCastVariantId> = list.iter().copied().filter(|v| js::to_u32(g.art.variant[*v].mask) & bits == 0).collect();
     if !keep.is_empty() { keep } else { list.to_vec() }
 }
 /// The teammate at a place of the roster.
@@ -30,13 +30,13 @@ fn pick(list: &[AnimGltfCastVariantId], id: f64, skip: usize) -> Option<AnimGltf
 }
 fn defenders(g: &Game, cast: AnimGltfCastInfoId) -> Vec<AnimGltfCastVariantId> {
     let d = crate::anim_gltf::cast_side(g, cast, crate::anim_gltf::CastSide::Defender);
-    if crate::scene_look::look_office(g) { let parts = g.tab.anim_gltf_cast_info[cast].parts.clone(); office_dress(g, &parts, &d) } else { d }
+    if crate::scene_look::look_office(g) { let parts = g.art.cast[cast].parts.clone(); office_dress(g, &parts, &d) } else { d }
 }
 /// The variant this man wears (None with no cast loaded).
 pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantId> {
     use crate::anim_gltf::CastSide;
     use crate::teams::Team;
-    let cast = g.tab.rig[g.ch[c_2].rig].cast?;
+    let cast = g.art.rig[g.ch[c_2].rig].cast?;
     if let Some(had) = g.m.cast.worn.get(c_2) { return Some(*had); }
     let ops = crate::anim_gltf::cast_side(g, cast, CastSide::Operator);
     if crate::character::is_player(g, c_2) { g.m.cast.worn.set(c_2, ops[0]); return Some(ops[0]); }
@@ -51,7 +51,7 @@ pub(super) fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastV
     let v = if let Some(place) = place { operator_at(g, cast, place as f64) }
         else if team.ours() { pick(&ops, id, 1) }
         else if team == Team::Civilian {
-            let any = g.tab.anim_gltf_cast_info[cast].variants.iter().any(|x| g.tab.anim_gltf_cast_variant[*x].side == CastSide::Civilian);
+            let any = g.art.cast[cast].variants.iter().any(|x| g.art.variant[*x].side == CastSide::Civilian);
             let list = if any { crate::anim_gltf::cast_side(g, cast, CastSide::Civilian) } else { defenders(g, cast) };
             pick(&list, id, 0)
         } else {
@@ -76,8 +76,8 @@ pub fn sneak_suit(g: &Game, c_2: CharId) -> bool {
 pub fn cast_parts(g: &mut Game, c_2: CharId) -> f64 {
     let Some(v) = cast_variant_of(g, c_2) else { return 0.0; };
     let rig = g.ch[c_2].rig;
-    let cast = g.tab.rig[rig].cast.unwrap();
-    let vmask = g.tab.anim_gltf_cast_variant[v].mask;
+    let cast = g.art.rig[rig].cast.unwrap();
+    let vmask = g.art.variant[v].mask;
     if sneak_suit(g, c_2) { return crate::anim_gltf::cast_suit(g, cast, vmask); }
     let worn0 = {
         let carries = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c_2].id }).is_some();

@@ -191,24 +191,11 @@ fn way_round(g: &crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal:
     Some(way)
 }
 
-/// The rule lets go of him: his wait, if any, is forgotten. The caller returns None.
-fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>) {
-    if st.is_some() {
-        g.m.fireline.states.delete(gd);
-    }
-}
-
 /// He stands: the wait's seconds counted as they pass.
 fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
     let t = g.time;
     g.m.fireline.states.get_mut(gd).unwrap().t = t;
     FireLineFeet { goal: None, speed: 0.0 }
-}
-
-/// The row written back to the table, then `hold`.
-fn hold_row(g: &mut Game, gd: GuardId, s: St) -> Option<FireLineFeet> {
-    g.m.fireline.states.set(gd, s);
-    Some(hold(g, gd))
 }
 
 /// Is he on a door order past the stack.
@@ -226,135 +213,138 @@ fn on_wall_charge(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
 
 /// His feet while the player fires down a lane his walk would cross: speed 0 = wait where he stands, `goal` = the next corner of a way round, None = the order's own legs.
 pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, speed: f64, mine: bool) -> Option<crate::fireline::FireLineFeet> {
-    // `st` is a copy of his row: every path that keeps the wait writes it back by the key before it returns (nothing called in between reads the table).
-    let mut st: Option<St> = g.m.fireline.states.get(gd).cloned();
-    if let Some(s) = &st {
-        if g.time < s.t || g.time - s.t > 0.25 {
-            g.m.fireline.states.delete(gd);
-            st = None;
-        }
-    }
-    if mine || goal.is_none() || !crate::friendlyfire::ff_side(g, Some(gd)) || !crate::friendlyfire::ff_body(g, gd) || g.gd[gd].held.is_some() {
-        end(g, gd, st.as_ref());
-        return None;
-    }
-    let goal = goal.unwrap();
-    let Some(l) = lane_of(g) else {
-        // The fire has stopped, or lapsed between two slow rounds: he walks on, and for `lapseS` a lane that comes back is the same wait.
-        let Some(mut s) = st.filter(|s| s.way.is_none()) else {
-            g.m.fireline.states.delete(gd);
-            return None;
-        };
-        if s.go_t < 0.0 {
-            s.go_t = g.time;
-        }
-        if g.time - s.go_t > g.k.fireline.lapse_s {
-            g.m.fireline.states.delete(gd);
-            return None;
-        }
-        s.t = g.time;
-        g.m.fireline.states.set(gd, s);
-        return None;
-    };
-    let p = g.ch[g.gd[gd].ch].pos;
-    if crate::roomfight::room_fight_busy(g, gd, 1.0) {
-        end(g, gd, st.as_ref());
-        return None;
-    }
-    if past_the_stack(g, &crate::seats::here(g), gd) || on_wall_charge(g, &crate::seats::here(g), gd) || in_doorway(g, p[0], p[2]) {
-        end(g, gd, st.as_ref());
-        return None;
-    }
-    // The way round was to a place the order no longer sends him: asked afresh, of the new one.
-    let off_way = st.as_ref().and_then(|s| s.way.as_ref()).map_or(false, |way| {
-        let last = way[way.len() - 1];
-        m::hyp2(last[0] - goal[0], last[2] - goal[2]) > 0.75
-    });
-    if off_way {
+    let t = g.time;
+    if g.m.fireline.states.get(gd).is_some_and(|s| t < s.t || t - s.t > 0.25) {
         g.m.fireline.states.delete(gd);
-        st = None;
     }
-    let clear_m = g.k.fireline.clear_m;
-    let on_way = st.as_ref().map_or(false, |s| s.way.is_some());
-    if in_lane(g, l, p[0], p[2], Some(if on_way { -clear_m } else { 0.0 })) {
-        // Already in it: not moved by this rule, but for a man WAITING whom the gun swings onto, who stands as he stood to the wait's ceiling.
-        let max_s = g.k.fireline.max_s;
-        let stands = match &st {
-            Some(s) => !(s.way.is_some() || s.go_t >= 0.0 || g.time - s.since >= max_s),
-            None => false,
-        };
-        if !stands || in_enemy_line(g, gd) {
-            end(g, gd, st.as_ref());
-            return None;
+    let his = !mine && crate::friendlyfire::ff_side(g, Some(gd)) && crate::friendlyfire::ff_body(g, gd) && g.gd[gd].held.is_none();
+    let goal = goal.filter(|_| his);
+    let lane = if goal.is_some() { lane_of(g) } else { None };
+    if goal.is_some() && lane.is_none() {
+        lapses(g, gd);
+        return None;
+    }
+    let feet = goal.zip(lane).and_then(|(goal, l)| by_lane(g, gd, l, goal, speed));
+    if feet.is_none() {
+        g.m.fireline.states.delete(gd);
+    }
+    feet
+}
+
+/// The fire has stopped, or lapsed between two slow rounds: he walks on, and for `lapseS` a lane that comes back is the same wait.
+fn lapses(g: &mut Game, gd: GuardId) {
+    let (t, lapse) = (g.time, g.k.fireline.lapse_s);
+    let keeps = g.m.fireline.states.get_mut(gd).filter(|s| s.way.is_none()).is_some_and(|s| {
+        if s.go_t < 0.0 {
+            s.go_t = t;
         }
-        return hold_row(g, gd, st.unwrap());
+        s.t = t;
+        t - s.go_t <= lapse
+    });
+    if !keeps {
+        g.m.fireline.states.delete(gd);
+    }
+}
+
+/// His feet by the lane: None lets go of him, and his wait is forgotten.
+fn by_lane(g: &mut Game, gd: GuardId, l: Lane, goal: V3, speed: f64) -> Option<FireLineFeet> {
+    let p = g.ch[g.gd[gd].ch].pos;
+    if at_work(g, gd, p) {
+        return None;
+    }
+    if way_elsewhere(g, gd, goal) {
+        g.m.fireline.states.delete(gd);
+    }
+    let on_way = g.m.fireline.states.get(gd).is_some_and(|s| s.way.is_some());
+    if in_lane(g, l, p[0], p[2], Some(if on_way { -g.k.fireline.clear_m } else { 0.0 })) {
+        return if stands_in_it(g, gd) { Some(hold(g, gd)) } else { None };
     }
     if on_way {
-        // On a way round: the next corner, while what is left of it keeps out of the lane.
-        let mut s = st.take().unwrap();
-        let way = s.way.as_mut().unwrap();
-        while way.len() > 1 && m::hyp2(way[0][0] - p[0], way[0][2] - p[2]) < 0.6 {
-            way.remove(0);
-        }
-        let short_m = g.k.fireline.short_m;
-        if way.len() > 1 && cross_at(g, l, p, way, short_m, Some(-clear_m)) == f64::INFINITY {
-            let next = way[0];
-            s.t = g.time;
-            g.m.fireline.states.set(gd, s);
+        if let Some(next) = next_corner(g, gd, l, p) {
             return Some(FireLineFeet { goal: Some(next), speed });
         }
         g.m.fireline.states.delete(gd);
     }
-    // Does his way come into the lane: inside `shortM` of walking (a doorway between: that far beyond the frame), or on the slant with his next step inside `gapM` of its side.
-    let walk = match walk_of(g, gd, goal) {
-        Some(walk) => walk,
-        None if st.is_some() => vec![goal],
-        None => return None,
-    };
-    let keep = if st.is_some() { g.k.fireline.keep_m } else { 0.0 };
+    if !comes_in(g, gd, l, p, goal) || in_enemy_line(g, gd) {
+        return None;
+    }
+    waits(g, gd);
+    if let Some(next) = looks_round(g, gd, l, goal) {
+        return Some(FireLineFeet { goal: Some(next), speed });
+    }
+    Some(hold(g, gd))
+}
+
+/// What he is on is not put off for it: a fight, a door, a charge, a doorway he stands in.
+fn at_work(g: &Game, gd: GuardId, p: V3) -> bool {
+    crate::roomfight::room_fight_busy(g, gd, 1.0) || past_the_stack(g, &crate::seats::here(g), gd) || on_wall_charge(g, &crate::seats::here(g), gd) || in_doorway(g, p[0], p[2])
+}
+
+/// His way round was to a place the order no longer sends him: asked afresh, of the new one.
+fn way_elsewhere(g: &Game, gd: GuardId, goal: V3) -> bool {
+    let last = g.m.fireline.states.get(gd).and_then(|s| s.way.as_ref()).and_then(|way| way.last());
+    last.is_some_and(|last| m::hyp2(last[0] - goal[0], last[2] - goal[2]) > 0.75)
+}
+
+/// Already in the lane: not moved by this rule, but for a man WAITING whom the gun swings onto, who stands as he stood to the wait's ceiling.
+fn stands_in_it(g: &mut Game, gd: GuardId) -> bool {
+    let (t, max_s) = (g.time, g.k.fireline.max_s);
+    let waiting = g.m.fireline.states.get(gd).is_some_and(|s| !(s.way.is_some() || s.go_t >= 0.0 || t - s.since >= max_s));
+    waiting && !in_enemy_line(g, gd)
+}
+
+/// On a way round: the next corner, while what is left of it keeps out of the lane.
+fn next_corner(g: &mut Game, gd: GuardId, l: Lane, p: V3) -> Option<V3> {
+    let (t, short_m, clear_m) = (g.time, g.k.fireline.short_m, g.k.fireline.clear_m);
+    let s = g.m.fireline.states.get_mut(gd).unwrap();
+    let way = s.way.as_mut().unwrap();   // (he is on one)
+    while way.len() > 1 && m::hyp2(way[0][0] - p[0], way[0][2] - p[2]) < 0.6 {
+        way.remove(0);
+    }
+    s.t = t;
+    let left = way.clone();
+    if left.len() > 1 && cross_at(g, l, p, &left, short_m, Some(-clear_m)) == f64::INFINITY { Some(left[0]) } else { None }
+}
+
+/// Does his way come into the lane: inside `shortM` of walking (a doorway between: that far beyond the frame), or on the slant with his next step inside `gapM` of its side.
+fn comes_in(g: &Game, gd: GuardId, l: Lane, p: V3, goal: V3) -> bool {
+    let waiting = g.m.fireline.states.has(gd);
+    let Some(walk) = walk_of(g, gd, goal).or(if waiting { Some(vec![goal]) } else { None }) else { return false };
+    let k = g.k.fireline;
+    let keep = if waiting { k.keep_m } else { 0.0 };
     let door = door_at(g, p, &walk, 1.0);
-    let far = g.k.fireline.short_m + keep + (if door < f64::INFINITY { door + 0.9 } else { 0.0 });
-    let mut near = cross_at(g, l, p, &walk, far, None) < f64::INFINITY;
-    let gap_m = g.k.fireline.gap_m;
-    if !near && cross_at(g, l, p, &walk, 0.35 + keep, Some(gap_m)) < f64::INFINITY {
-        let look_m = g.k.fireline.look_m;
-        near = cross_at(g, l, p, &walk, look_m, None) < f64::INFINITY;
-    }
-    if !near {
-        end(g, gd, st.as_ref());
-        return None;
-    }
-    if in_enemy_line(g, gd) {
-        end(g, gd, st.as_ref());
-        return None;
-    }
-    let mut s = match st {
-        Some(s) => s,
-        None => {
-            let s = St { since: g.time, t: g.time, way: None, look_t: -1e9, go_t: -1.0, said: false };
-            g.m.fireline.states.set(gd, s.clone());
-            s
-        }
-    };
+    let far = k.short_m + keep + (if door < f64::INFINITY { door + 0.9 } else { 0.0 });
+    cross_at(g, l, p, &walk, far, None) < f64::INFINITY || (cross_at(g, l, p, &walk, 0.35 + keep, Some(k.gap_m)) < f64::INFINITY && cross_at(g, l, p, &walk, k.look_m, None) < f64::INFINITY)
+}
+
+/// He waits, and after a moment of it says so.
+fn waits(g: &mut Game, gd: GuardId) {
+    let (t, cue_s) = (g.time, g.k.fireline.cue_s);
+    let s = g.m.fireline.states.get_or_insert_with(gd, || St { since: t, t, way: None, look_t: -1e9, go_t: -1.0, said: false });
     s.go_t = -1.0;
-    if !s.said && g.time - s.since >= g.k.fireline.cue_s {
-        s.said = true;
-        crate::game::game_say(g, gd, "your line — holding.", None, None);
-        g.stats.fireline.cues += 1;
+    if s.said || t - s.since < cue_s {
+        return;
     }
-    // The ceiling: then a look for a way round, and again every `againS` (the men of a squad that stopped together do not all look on one frame).
+    s.said = true;
+    crate::game::game_say(g, gd, "your line — holding.", None, None);
+    g.stats.fireline.cues += 1;
+}
+
+/// The ceiling of a wait: then a look for a way round, and again every `againS` (the men of a squad that stopped together do not all look on one frame).
+fn looks_round(g: &mut Game, gd: GuardId, l: Lane, goal: V3) -> Option<V3> {
+    let (t, max_s, again_s) = (g.time, g.k.fireline.max_s, g.k.fireline.again_s);
     let place: i32 = g.guards.iter().position(|&x| x == gd).map_or(-1, |i| i as i32);
-    if g.time - s.since >= g.k.fireline.max_s + (place & 3) as f64 * 0.3 && g.time - s.look_t >= g.k.fireline.again_s {
-        s.look_t = g.time;
-        if let Some(way) = way_round(g, gd, l, goal) {
-            let next = way[0];
-            s.way = Some(way);
-            s.t = g.time;
-            g.m.fireline.states.set(gd, s);
-            return Some(FireLineFeet { goal: Some(next), speed });
-        }
+    let s = g.m.fireline.states.get_mut(gd).unwrap();   // (he waits)
+    if !(t - s.since >= max_s + (place & 3) as f64 * 0.3 && t - s.look_t >= again_s) {
+        return None;
     }
-    hold_row(g, gd, s)
+    s.look_t = t;
+    let way = way_round(g, gd, l, goal)?;
+    let next = way[0];
+    let s = g.m.fireline.states.get_mut(gd).unwrap();
+    s.way = Some(way);
+    s.t = t;
+    Some(next)
 }
 
 /// Is this rule holding him where he stands: nobody calls him stuck.

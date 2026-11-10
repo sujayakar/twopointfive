@@ -317,7 +317,22 @@ fn as_thrown(an: &Anim, b: &BlowRun, o: &mut Blow) {
     let (chop, palm, mouth) = (style == BlowStyle::Chop, style == BlowStyle::Palm, style == BlowStyle::Mouth);
     let x = e + tail;
     let w_all = smoothstep(0.0, 0.5 * h, t) * (1.0 - smoothstep(e - 0.16, e, t)) * free;
-    *o = Blow { at, at_b, t, h, e, tail, free, speed, gaze_local, fix_l, fix_r, chop, palm, mouth, x, w_all, ..*o };
+    o.at = at;
+    o.at_b = at_b;
+    o.t = t;
+    o.h = h;
+    o.e = e;
+    o.tail = tail;
+    o.free = free;
+    o.speed = speed;
+    o.gaze_local = gaze_local;
+    o.fix_l = fix_l;
+    o.fix_r = fix_r;
+    o.chop = chop;
+    o.palm = palm;
+    o.mouth = mouth;
+    o.x = x;
+    o.w_all = w_all;
 }
 
 /// Where it goes, the shoulders, and how long each arm is.
@@ -329,7 +344,7 @@ fn blow_spots(fk: &mut Fk, o: &mut Blow) {
     let (er, el) = (fk.at(role(FOREARM_R)), fk.at(role(FOREARM_L)));
     let arm_r = v3::dist(sr, er) + v3::dist(er, fk.at(role(HAND_R)));
     let arm_l = v3::dist(sl, el) + v3::dist(el, fk.at(role(HAND_L)));
-    *o = Blow { tgt, t2, sl, sr, arm_r, arm_l, ..*o };
+    (o.tgt, o.t2, o.sl, o.sr, o.arm_r, o.arm_l) = (tgt, t2, sl, sr, arm_r, arm_l);
 }
 
 /// A point no further than the arm reaches.
@@ -352,7 +367,7 @@ fn lock(s: [f64; 3], dv: [f64; 3], arm: f64) -> [f64; 3] {
 fn right_on(o: &mut Blow) {
     let Blow { chop, palm, w_all, .. } = *o;
     let right = (chop || palm) && w_all > 0.0;
-    *o = Blow { right, ..*o };
+    o.right = right;
 }
 
 /// The keys the right hand goes by.
@@ -383,7 +398,7 @@ fn right_keys(o: &mut Blow) {
             4,
         )
     };
-    *o = Blow { keys, nk, ..*o };
+    (o.keys, o.nk) = (keys, nk);
 }
 
 /// Between which two keys he is: into the hit it only gathers speed.
@@ -398,7 +413,7 @@ fn right_between(o: &mut Blow) {
     let u = if j == i || t <= ka.0 { 0.0 } else { clamp((t - ka.0) / (kb.0 - ka.0), 0.0, 1.0) };
     // (into the hit it only gathers speed)
     let ez = if kb.0 == h { u * u } else { u * u * (3.0 - 2.0 * u) };
-    *o = Blow { ka, kb, ez, ..*o };
+    (o.ka, o.kb, o.ez) = (ka, kb, ez);
 }
 
 /// The right arm there, a fist or an open hand.
@@ -437,7 +452,7 @@ fn left_hand(hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut Blow) 
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lock(sl, [0.16, -0.72, -0.68], arm_l), Some(&[0.5, 0.2, -0.8]), 0.6, Some(&rot), false);
         hand(d, hh, 0, &[BLOW.loose[0], BLOW.loose[1], BLOW.loose[2], BLOW.loose[3]], 0.3, 0.0);
     }
-    *o = Blow { w_l, ..*o };
+    o.w_l = w_l;
 }
 /// The knife's blow, the right arm over the punch clip's pose, by IK on a copy: to the hilt, the knife drawn down out of the sheath, through the kind's
 /// keys (eased key to key, the wrist's spots off the right shoulder, turned onto the man), back to the sheath's mouth and home; then the arm goes back
@@ -687,7 +702,31 @@ fn as_ready(an: &mut Anim, shape: &ReadyShape, kind: ReadyKind, there: Option<[f
         0.0
     };
     let e = w * w * (3.0 - 2.0 * w);
-    *o = Ready { grab, ready_up, has_wp, wp, bare, rd_a, u, rd_out_r, close_k, cl_t, knife_on, crouch, fix_l, fix_r, l_pole, l_fing, l_back, l_curl, l_thumb, l_spread, reach, spot, rd_live, kq, e, ..*o };
+    o.grab = grab;
+    o.ready_up = ready_up;
+    o.has_wp = has_wp;
+    o.wp = wp;
+    o.bare = bare;
+    o.rd_a = rd_a;
+    o.u = u;
+    o.rd_out_r = rd_out_r;
+    o.close_k = close_k;
+    o.cl_t = cl_t;
+    o.knife_on = knife_on;
+    o.crouch = crouch;
+    o.fix_l = fix_l;
+    o.fix_r = fix_r;
+    o.l_pole = l_pole;
+    o.l_fing = l_fing;
+    o.l_back = l_back;
+    o.l_curl = l_curl;
+    o.l_thumb = l_thumb;
+    o.l_spread = l_spread;
+    o.reach = reach;
+    o.spot = spot;
+    o.rd_live = rd_live;
+    o.kq = kq;
+    o.e = e;
 }
 
 /// The trunk's numbers eased: which way the man is from the chest (flat, within a radian of dead ahead), the bow, the guard's blade, the reach up.
@@ -757,7 +796,7 @@ fn shoulders(fk: &mut Fk, o: &mut Ready) {
     let l = if falsy(l) { 1.0 } else { l };
     fx /= l;
     fz /= l;
-    *o = Ready { sl, sr, fx, fz, ..*o };
+    (o.sl, o.sr, o.fx, o.fz) = (sl, sr, fx, fz);
 }
 
 /// How long the arm is, and no bearing yet.
@@ -766,7 +805,7 @@ fn arm_length(fk: &mut Fk, o: &mut Ready) {
     let el = fk.at(role(FOREARM_L));
     let arm = v3::dist(sl, el) + v3::dist(el, fk.at(role(HAND_L)));
     let (az, h, up) = (0.0, 0.0, 0.0);
-    *o = Ready { arm, az, h, up, ..*o };
+    (o.arm, o.az, o.h, o.up) = (arm, az, h, up);
 }
 
 /// (left, up, forward) in the shoulders' frame turned t toward his left, in the model's axes.
@@ -790,7 +829,7 @@ fn bearing(fk: &mut Fk, o: &mut Ready) {
             az = clamp(atan2(pb, pa), -READY_AZ[0], READY_AZ[1]);
         }
     }
-    *o = Ready { az, h, up, ..*o };
+    (o.az, o.h, o.up) = (az, h, up);
 }
 
 /// Where the lead hand goes.
@@ -821,7 +860,7 @@ fn reach_spot(c: &mut [f64], o: &mut Ready) {
         // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
         frame(o, spot, az)
     };
-    *o = Ready { h, up, o_l, ..*o };
+    (o.h, o.up, o.o_l) = (h, up, o_l);
 }
 
 /// The lead hand's numbers eased.
@@ -871,7 +910,7 @@ fn off_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, c: &mut [f64], 
         let q = c[R_CURL];
         hand(d, hh, 1, &[q, q + 0.04, q + 0.08, q + 0.12], c[R_THUMB], 0.0);
     }
-    *o = Ready { w_rb, ..*o };
+    o.w_rb = w_rb;
 }
 
 /// The right hand on the knife: the fist closes on the sheathed handle; the knife stays where it is.

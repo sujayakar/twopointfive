@@ -6,13 +6,9 @@ use crate::v3::{self, Quat, V3};
 
 /// The ray a falling thing asks of what it lands on: the `t` of `{ t } | null`. Statics, or the statics and then the props up to the statics' `t`, the props' answer first.
 fn ask(g: &Game, world: &crate::falling::FallWorld, ro: V3, rd: V3, tmax: f64) -> Option<f64> {
-    let st = crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| h.t);
     match world {
-        crate::falling::FallWorld::Statics => st,
-        crate::falling::FallWorld::StaticsAndProps => {
-            let ph = crate::props::prop_system_raycast(g, ro, rd, match st { Some(t) => t, None => tmax }).map(|h| h.t);
-            match ph { Some(t) => Some(t), None => st }
-        }
+        crate::falling::FallWorld::Statics => crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| h.t),
+        crate::falling::FallWorld::StaticsAndProps => crate::props::level_ray(g, ro, rd, tmax).map(|h| h.t),
     }
 }
 

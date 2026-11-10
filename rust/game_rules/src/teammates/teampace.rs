@@ -167,16 +167,8 @@ pub fn team_ran(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].speed < g.k.teampace.run_at { return; }
     let was = g.m.teampace.ran.get(gd).copied();
     let t = g.time;
-    match was {
-        Some(was) if !(t - was.t > g.k.teampace.gap) => {
-        }
-        _ => match why {
-            RunWhy::Follow => {},
-            RunWhy::Blast => {},
-            RunWhy::Cover => g.stats.teampace.cover += 1,
-            RunWhy::Told => {},
-        },
-    }
+    let on_the_same_run = was.is_some_and(|was| !(t - was.t > g.k.teampace.gap));
+    if why == RunWhy::Cover && !on_the_same_run { g.stats.teampace.cover += 1; }
     g.m.teampace.ran.set(gd, TeampaceModRanValue { t });
 }
 

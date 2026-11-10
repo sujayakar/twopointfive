@@ -1,9 +1,10 @@
 //! THE CHARACTER FROM ITS FILES: the mannequin (its skeleton, skin, mesh and clips) and, where a cast file is given, the cast's meshes over it.
 //! `src/anim/gltf.ts` `loadGltfCharacter` and `loadGltfCast`, line for line, with the files' bytes handed in (the start reads no file itself).
-//! The rows go where the game keeps them: `g.tab.rig`, `g.tab.clip`, `g.tab.anim_gltf_mesh_data`, `g.tab.anim_gltf_cast_info` / `_cast_variant`.
+//! The rows go where the game keeps them: `g.art.rig`, `g.art.clip`, `g.art.mesh`, `g.art.cast` / `_cast_variant`.
 use crate::json::{self, Json};
 use alloc::{string::String, vec, vec::Vec};
 use game::anim_gltf::{CastInfo, CastSide, CastVariant, Clip, GltfCharacter, GltfNode, MeshData, MeshDataJoints, SkinData, Track};
+use alloc::sync::Arc;
 use game::game::Game;
 use game::ids::*;
 use game::js::JsMap;
@@ -259,17 +260,18 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
 pub fn character(g: &mut Game, mannequin: GltfFile, cast: Option<GltfFile>) -> RigId {
     let base = load_base(mannequin);
     let dressed = cast.map(|c| load_cast(c, &base));
+    let art = Arc::make_mut(&mut g.art);
     let mut clips: JsMap<String, ClipId> = JsMap::new();
-    for c in base.clips { let name = c.name.clone(); let id = g.tab.clip.push(c); clips.set(name, id); }
+    for c in base.clips { let name = c.name.clone(); let id = art.clip.push(c); clips.set(name, id); }
     let (mesh, cast) = match dressed {
-        None => (g.tab.anim_gltf_mesh_data.push(base.mesh), None),
+        None => (art.mesh.push(base.mesh), None),
         Some((md, parts, variants)) => {
-            let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| g.tab.anim_gltf_cast_variant.push(v)).collect();
-            (g.tab.anim_gltf_mesh_data.push(md), Some(g.tab.anim_gltf_cast_info.push(CastInfo { parts, variants })))
+            let variants: Vec<AnimGltfCastVariantId> = variants.into_iter().map(|v| art.variant.push(v)).collect();
+            (art.mesh.push(md), Some(art.cast.push(CastInfo { parts, variants })))
         }
     };
     let mut rig = GltfCharacter { nodes: base.nodes, order: base.order, skin: base.skin, mesh, clips, node_by_name: base.node_by_name, cast, back: None };
-    rig.back = game::packside::back_of(g, &rig);
-    g.tab.rig.push(rig)
+    rig.back = game::packside::back_of(art, &rig);
+    art.rig.push(rig)
 }
 

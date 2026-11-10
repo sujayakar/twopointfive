@@ -42,7 +42,7 @@ pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool,
             if g.gd[gd].state == St::Patrol || g.gd[gd].state == St::Search {
                 crate::mind::set_state(g, gd, St::Suspicious, "guards");
                 g.gd[gd].search_t = 0.0;
-                clear_path(g, gd);
+                g.gd[gd].drop_path();
             }
             let line = words(g, o, n, cold);
             crate::game::game_say(g, gd, &line, Some(true), None);

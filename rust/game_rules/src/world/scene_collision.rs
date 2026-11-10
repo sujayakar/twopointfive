@@ -501,6 +501,9 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     sim::bricks::step(g.sim, sim::state::stamp(g.sim), world(g), js::to_u32(n), &bk, Some(&gk), &g.k) != ASK_HOST
 }
 
+/// a tick with no step of the grid in it: some of what the light of the next ones is worked out from is made ahead, no state
+pub fn grid_ahead(g: &Game) { if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::ahead(g.sim, world(g), &g.k); } }
+
 /// What the light under a roof is worked out from is made as a game stands, behind the loading, and not in its first step: the statics' lines, no state.
 pub fn light_ready(g: &Game) { sim::bricks::light_ready(g.sim, world(g), crate::hours::sky_now(g).to_sun, &g.k); }
 
@@ -672,7 +675,7 @@ fn nav_grid_there(g: &crate::game::Game) {
     if n > sim::nav::MAX_NAV {
         panic!("the floor's grid has {} cells and a search of the Rust module holds {} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it", n, sim::nav::MAX_NAV);
     }
-    unsafe { core::ptr::copy_nonoverlapping(g.col.nav.blocked.as_ptr(), sim::nav::shut_addr() as *mut u8, n); }
+    sim::nav::floor_is(&g.col.nav.blocked, g.col.nav.w as usize);
 }
 
 /// A* from a to b, smoothed; `penalty` a cost multiplier for stepping into a cell, asked where the search comes to a cell it has none for.
@@ -689,15 +692,7 @@ pub fn way_priced<G: core::ops::Deref<Target = Game>>(g: G, a: V3, b: V3, max_it
     let mut g = g;
     nav_grid_there(&g);
     let (nw, nh, cell) = (g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
-    let mut n = sim::nav::find_priced(world(&g), nw, nh, cell, a[0], a[2], b[0], b[2], js::to_u32(max_iter), &g.k);
-    while n == sim::nav::NEED {
-        for i in 0..sim::nav::need_len() {
-            let c = get_u32(sim::nav::need_addr(), i);
-            let v = price(&mut g, (c % nw as u32) as f64, (c / nw as u32) as f64);
-            put_f64(sim::nav::price_addr(), c as usize, v);
-        }
-        n = sim::nav::resume();
-    }
+    let n = sim::nav::start_priced(world(&g), nw, nh, cell, a[0], a[2], b[0], b[2], js::to_u32(max_iter), &g.k).unwrap_or_else(|| sim::nav::priced(&mut |c| price(&mut g, (c % nw) as f64, (c / nw) as f64)));
     way_of(n, a, b)
 }
 /// …for a host, that asks it of places of its own: one that is no number has no way

@@ -63,7 +63,7 @@ pub(super) fn said_surf(g: &crate::game::Game, b: Option<BoxId>) -> Option<crate
 
 /// What a hit looks like: the surface its sparks, chips and dust go by, the colour they are tinted from, and whether it is solid glass. The box's own word first,
 /// then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does.
-pub(super) fn hit_look(g: &crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
+pub(super) fn hit_look(g: &crate::game::Game, hit: &crate::combat::RoundMet) -> crate::particle_fx::HitLook {
     let leaf = hit.prop.is_none() && hit.index.is_some_and(|i| i >= 1e6);
     let st = if hit.prop.is_none() && !leaf { hit.index.and_then(|i| js_ix(g.col.boxes.len(), i)).map(|x| g.col.boxes[x]) } else { None };
     let b: Option<BoxId> = if let Some(p) = hit.prop {
@@ -135,9 +135,9 @@ fn js_ix(len: usize, i: f64) -> Option<usize> {
 // ---------------------------------------------------------------- the sites
 
 /// A round stopped in something solid: what it knocks out, by what it hit.
-pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::particle_fx::ImpactFxHit, def: &crate::weapons::WeaponDef) {
+pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::combat::RoundMet, def: &crate::weapons::WeaponDef) {
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
-    let look = hit_look(g, crate::particle_fx::HitLookHit { index: hit.index, prop: hit.prop, box_: hit.box_ });
+    let look = hit_look(g, &hit);
     let (surf, albedo, solid) = (look.surf, look.albedo, look.solid);
     let r = impact_row(surf);
     let pfx = g.m.particle_fx.pfx;
@@ -461,12 +461,12 @@ mod tests {
     #[test]
     fn a_hit_on_what_has_no_box_looks_like_wood_or_concrete() {
         let mut g = crate::game::Game::blank();
-        let at = |i: f64| crate::particle_fx::HitLookHit { index: Some(i), prop: None, box_: None };
-        let l = hit_look(&mut g, at(1e6));
+        let at = |i: f64| crate::combat::RoundMet { index: Some(i), ..Default::default() };
+        let l = hit_look(&mut g, &at(1e6));
         assert!(l.surf == crate::scene_materials::Surf::Wood && !l.said && l.albedo == [0.42, 0.3, 0.19]);
-        let l = hit_look(&mut g, at(99.0));
+        let l = hit_look(&mut g, &at(99.0));
         assert!(l.surf == crate::scene_materials::Surf::Concrete && l.albedo == [0.5, 0.5, 0.5]);
-        let l = hit_look(&mut g, crate::particle_fx::HitLookHit { index: None, prop: None, box_: None });
+        let l = hit_look(&mut g, &crate::combat::RoundMet::default());
         assert!(l.surf == crate::scene_materials::Surf::Concrete);
     }
 }

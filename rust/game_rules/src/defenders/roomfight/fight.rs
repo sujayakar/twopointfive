@@ -1,5 +1,6 @@
 //! THE ROOM FIGHT: its tick, what is heard in it, what it keeps of the whole, and the small questions asked of it.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -18,35 +19,14 @@ pub fn drilled_k(g: &crate::game::Game, gd: GuardId) -> f64 {
     if g.team(gd) == crate::teams::Team::Hostile && drilled_on(g) { g.k.drilled.shaken } else { 1.0 }
 }
 
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// A draw of the simulation's die in a range.
 pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 {
     r[0] + crate::dice::draw_for(g, "roomfight::pick#1", who) * (r[1] - r[0])
 }
 
-/// His head bone, or where it would be.
-pub(super) fn eye_of(g: &crate::game::Game, c_2: CharId) -> V3 {
-    match g.ch[c_2].bones.get(crate::character::Bone::Head) {
-        Some(p) => *p,
-        None => v3::add(g.ch[c_2].pos, [0.0, 1.65, 0.0]),
-    }
-}
-
-/// His chest bone, or where it would be.
-pub(super) fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
-    match g.ch[c_2].bones.get(crate::character::Bone::Chest) {
-        Some(p) => *p,
-        None => v3::add(g.ch[c_2].pos, [0.0, 1.1, 0.0]),
-    }
-}
-
 /// What of the light from `a`'s eye to `b`'s chest comes through the air.
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
-    let (eye, chest) = (eye_of(g, a), chest_of(g, b));
+    let (eye, chest) = (g.ch[a].bone_or(crate::character::Bone::Head, 1.65), g.ch[b].bone_or(crate::character::Bone::Chest, 1.1));
     crate::sense::clear_between(g, eye, chest)
 }
 
@@ -57,7 +37,7 @@ pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     let light = &g.tab.light[l];
     if !light.enabled || !(light.intensity > 0.0) || crate::condition::down(g, g.gd[o].ch) { return 0.0; }
     let (pos, dir, range, outer_deg) = (light.pos, light.dir, light.range, light.outer_deg);
-    let e = eye_of(g, eye);
+    let e = g.ch[eye].bone_or(crate::character::Bone::Head, 1.65);
     let (dx, dy, dz) = (e[0] - pos[0], e[1] - pos[1], e[2] - pos[2]);
     let len = m::hyp3(dx, dy, dz);
     if len > range || len < 1e-3 { return 0.0; }
@@ -178,12 +158,8 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
     out
 }
 
-pub(super) fn op_id(g: &Game, gd: GuardId) -> Option<RoomfightOpId> { g.fight.ops.iter().copied().find(|&o| g.tab.roomfight_op[o].gd == gd) }
-
 /// `g.col.segmentBlocked(a, b)`
 pub(super) fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
-
-pub(super) fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
 
 /// a man off `g.guards` by his body's number (`g.guards.find(x => x.char.id === e.who)`)
@@ -192,9 +168,9 @@ pub(super) fn guard_by_char_id(g: &Game, who: Option<f64>) -> Option<GuardId> { 
 /// is the floor hot in this teammate's ears.
 pub fn room_fight_hot_for(g: &crate::game::Game, gd: GuardId) -> bool { g.time - room_fight_hot_of(g, gd) < g.k.roomfight.team_hot }
 
-pub fn room_fight_hot_of(g: &crate::game::Game, gd: GuardId) -> f64 { match op_id(g, gd) { Some(o) => m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t), None => g.fight.hot_t } }
+pub fn room_fight_hot_of(g: &crate::game::Game, gd: GuardId) -> f64 { match op_of(g, gd) { Some(o) => m::max(g.tab.roomfight_op[o].hot_t, g.fight.hot_t), None => g.fight.hot_t } }
 
-pub fn room_fight_op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> { op_id(g, gd) }
+pub fn room_fight_op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> { op_of(g, gd) }
 
 /// Once a frame from Game.update.
 pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
@@ -218,7 +194,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
         let x = g.guards[gi]; gi += 1;
         if g.gd[x].unit.is_none() || crate::condition::down(g, g.gd[x].ch) { continue; }
         if g.team(x) == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
-        else if g.team(x).ours() && op_id(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
+        else if g.team(x).ours() && op_of(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
     }
     let mut ei = 0;
     while ei < g.events.len() {
@@ -231,7 +207,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
         g.fight.heard_ev.add(key);
         for i in 0..g.fight.ops.len() {
             let o = g.fight.ops[i]; let og = g.tab.roomfight_op[o].gd;
-            if !crate::condition::down(g, g.gd[og].ch) && v3::dist(e.pos, pos_of(g, og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
+            if !crate::condition::down(g, g.gd[og].ch) && v3::dist(e.pos, g.pos_of(og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
         }
         if e.kind == crate::director::EventKind::GuardShot {
             if let Some(w) = guard_by_char_id(g, e.who) { if g.team(w) == crate::teams::Team::Hostile {
@@ -263,7 +239,7 @@ pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
         let pr = crate::weather::hear_path(g, v3::add(e.pos, [0.0, 1.0, 0.0]), v3::add(g.ch[oc].pos, [0.0, 1.5, 0.0]), None);
         if !(pr.carry > 0.5 && e.level.unwrap_or(0.3) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry > 0.12) { continue; }
         g.tab.roomfight_op[o].step_t = e.time;
-        let (eye, chest) = (eye_of(g, oc), chest_of(g, wc));
+        let (eye, chest) = (g.ch[oc].bone_or(crate::character::Bone::Head, 1.65), g.ch[wc].bone_or(crate::character::Bone::Chest, 1.1));
         let sc = if crate::guards::eye_blocked(g, og, eye, chest) { 100.0 + pr.path_len } else { m::abs(v3::wrap_angle(v3::yaw_to(g.ch[oc].pos, g.ch[wc].pos) - g.ch[oc].aim_yaw)) };
         if sc < nd { nd = sc; near = Some(o); from = if pr.routed { pr.via } else { e.pos }; }
     }
@@ -275,22 +251,22 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
     let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
     let (mut dr, mut dm): (Option<DoorId>, f64) = (None, 1.6);
-    for x in g.doors.list.clone() { let q = flat(crate::doors::door_pos(g, x), e.pos); if q < dm { dm = q; dr = Some(x); } }
+    for x in g.doors.list.clone() { let q = dist_xz(crate::doors::door_pos(g, x), e.pos); if q < dm { dm = q; dr = Some(x); } }
     let dr = match dr { Some(x) if !g.dr[x].leaf.off => x, _ => return };
     let fc = g.dr[dr].frame_centre;
     let (mut free, mut post, mut post_at, mut post_turn): (i32, Option<RoomfightOpId>, Option<V3>, f64) = (0, None, None, f64::INFINITY);
     for i in 0..g.fight.ops.len() {
-        let o = g.fight.ops[i]; let og = g.tab.roomfight_op[o].gd; let oc = g.gd[og].ch; let op = g.ch[oc].pos; let d = flat(fc, op);
+        let o = g.fight.ops[i]; let og = g.tab.roomfight_op[o].gd; let oc = g.gd[og].ch; let op = g.ch[oc].pos; let d = dist_xz(fc, op);
         if crate::condition::down(g, g.gd[og].ch) || d > 9.0 || d < 0.5 { continue; }
         if let Some(b) = g.tab.roomfight_op[o].door_by { if b.door == dr && e.time - b.t < 0.6 { continue; } }
         let k = 0.35 / d; let at: V3 = [fc[0] + (op[0] - fc[0]) * k, 1.1, fc[2] + (op[2] - fc[2]) * k];
         let pr = crate::weather::hear_path(g, at, v3::add(op, [0.0, 1.5, 0.0]), None);
         if !(pr.carry > 0.5 && e.level.unwrap_or(0.3) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry > 0.05) { continue; }
-        let eye = eye_of(g, oc); if seg_blocked(g, eye, at) { continue; }
+        let eye = g.ch[oc].bone_or(crate::character::Bone::Head, 1.65); if seg_blocked(g, eye, at) { continue; }
         if let Some(a) = crate::seats::order_of(g, og) {
             let A = &g.tab.orders_assignment[a];
             if let (true, Some(ad), false, Some(aw)) = (A.arrived, A.door, A.spare.unwrap_or(false), A.watch) {
-                if ad != dr && flat(aw, g.dr[ad].frame_centre) < 1.6 {
+                if ad != dr && dist_xz(aw, g.dr[ad].frame_centre) < 1.6 {
                     let turn = m::abs(v3::wrap_angle(v3::yaw_to(op, at) - g.ch[oc].aim_yaw));
                     if turn < post_turn { post_turn = turn; post = Some(o); post_at = Some(at); }
                     continue;
@@ -334,7 +310,7 @@ mod tests {
 
     #[test]
     fn flat_ignores_height() {
-        assert_eq!(flat([0.0, 9.0, 0.0], [3.0, -4.0, 4.0]).to_bits(), 5.0f64.to_bits());
+        assert_eq!(dist_xz([0.0, 9.0, 0.0], [3.0, -4.0, 4.0]).to_bits(), 5.0f64.to_bits());
     }
 
     fn man(g: &mut Game, state: crate::game::GuardState) -> GuardId {

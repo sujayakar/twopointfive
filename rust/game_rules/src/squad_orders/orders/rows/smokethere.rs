@@ -17,12 +17,12 @@ fn label(g: &mut Game, t: &OrderTarget) -> String {
 }
 
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
-    let at = rows::at(t);
+    let at = t.at();
     match crate::squadsmoke::squad_smoke_thrower(g, men, at) { Some(th) => vec![th.gd], None => Vec::new() }
 }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    let at = rows::at(t);
+    let at = t.at();
     if crate::squadsmoke::squad_smoke_left(g, &crate::seats::here(g)) <= 0.0 { return Err(Some(String::from("no smoke left."))); }
     if crate::squadsmoke::squad_smoke_thrower(g, men, at).is_some() { Ok(()) } else { Err(Some(String::from("no throw from here."))) }
 }

@@ -1,5 +1,6 @@
 pub use ::game_types::coverfire::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -131,11 +132,6 @@ fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cover
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
-/// distance over the floor
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// his name
 fn name_of(g: &crate::game::Game, who: CharId) -> String { crate::character::guard_of(g, who).map_or_else(|| String::from("Player"), |x| g.gd[x].callsign.clone()) }
 
@@ -213,7 +209,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
     for (mate, row) in s.men.iter() {
         if mate == gd || g.team(mate) != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
-        if !g.ch[mc].alive || flat(g.ch[mc].pos, my_pos) > call_m { continue; }
+        if !g.ch[mc].alive || dist_xz(g.ch[mc].pos, my_pos) > call_m { continue; }
         for k in row.know.iter() {
             if !k.call.unwrap_or(false)
                 && who_passes(who, k.who)
@@ -361,7 +357,7 @@ pub fn cover_lane(g: &crate::game::Game, gd: GuardId, from: V3, to: V3) -> bool 
 fn worth(g: &crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
-    let len = crate::places::walk_len(pos, &path) + flat(path.last().copied().unwrap_or(pos), to);
+    let len = crate::places::walk_len(pos, &path) + dist_xz(path.last().copied().unwrap_or(pos), to);
     rounds * g.k.coverfire.round_secs <= len / g.k.coverfire.walk_pace
 }
 
@@ -377,11 +373,47 @@ fn stays(g: &crate::game::Game, gd: GuardId) -> bool {
 
 // ---------------------------------------------------------------- the choice
 
-/// May he put a round through what stands between his gun and this known place, and where to; keeps the chew's own books. What it returns is a copy of the row `men[gd].chew`, which is M.chew in the TypeScript: writes go through the row
+/// A known place as it is being weighed.
+#[derive(Clone, Copy)]
+struct Weighing {
+    gd: GuardId,
+    k: crate::coverfire::Know,
+    call: bool,
+    seen: bool,
+    held: bool,
+    time: f64,
+}
+
+/// May he put a round through what stands between his gun and this known place, and where to. Returns a copy of his row's chew: writes go through the row.
 fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, call: bool, seen: bool) -> Option<crate::coverfire::Chew> {
-    let (linger, same_m, lead_m, lead_secs, low_y) = (g.k.coverfire.linger_secs, g.k.coverfire.same_m, g.k.coverfire.lead_m, g.k.coverfire.lead_secs, g.k.coverfire.low_y);
-    let (thru_rest, give_secs, walk_ask_secs) = (g.k.wallpen.thru_rest_secs, g.k.coverfire.give_secs, g.k.coverfire.walk_ask_secs);
     let time = g.time;
+    leaves_a_chew_gone_cold(g, gd, time);
+    let held_to = place_of_his_chew_on_this_man(g, gd, &k);
+    let w = Weighing { gd, k, call, seen, held: held_to.is_some(), time };
+    let (to, a) = ask_the_line(g, w, held_to);
+    let a = match a {
+        Some(Ask2::Clear) => {
+            if w.held { the_line_has_come_clear(g, gd); }
+            return None;
+        }
+        None => return None,
+        Some(Ask2::Ask(a)) => a,
+    };
+    let budget = budget_of(g, a.kind.is_none(), a.rounds);
+    if barred_from_it(g, w, &a) {
+        return None;
+    }
+    let row = man_of(g, gd);
+    let new_one = match row.chew.as_ref() { None => true, Some(c) => !w.held || c.id != a.id };
+    if new_one && !opens_a_chew(g, w, &a, to, budget) {
+        return None;
+    }
+    keep_the_chews_books(g, w, &a, to, budget)
+}
+
+/// A chew not fed for `linger` seconds is over.
+fn leaves_a_chew_gone_cold(g: &mut Game, gd: GuardId, time: f64) {
+    let linger = g.k.coverfire.linger_secs;
     let row = man_of(g, gd);
     if let Some((id, fired)) = row.chew.as_ref().filter(|c| time - c.t > linger).map(|c| (c.id, c.fired)) {
         row.chew = None;
@@ -390,97 +422,116 @@ fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, cal
             log(g, &line);
         }
     }
+}
+
+/// Where his chew's rounds are going, if it is on this man and this sighting is no news or no further off.
+fn place_of_his_chew_on_this_man(g: &mut Game, gd: GuardId, k: &crate::coverfire::Know) -> Option<V3> {
+    let same_m = g.k.coverfire.same_m;
     let row = man_of(g, gd);
-    let held = row.chew.as_ref().map_or(false, |c| c.who == k.who && (k.t <= c.kt + 1e-9 || flat(c.to, k.at) < same_m));
-    let held_to = if held { row.chew.as_ref().map(|c| c.to) } else { None };
-    let mut to = k.at;
-    let a: Option<Ask2>;
+    row.chew.as_ref().filter(|c| c.who == k.who && (k.t <= c.kt + 1e-9 || dist_xz(c.to, k.at) < same_m)).map(|c| c.to)
+}
+
+/// What the line answers, and where: on a chew its place; else the place he knows, a guess at where a man moving went on to, then low where he last stood.
+fn ask_the_line(g: &mut Game, w: Weighing, held_to: Option<V3>) -> (V3, Option<Ask2>) {
+    let Weighing { gd, k, call, seen, time, .. } = w;
     if let (Some(t), false) = (held_to, seen) {
-        to = t;
-        a = ask(g, gd, to);
-    } else {
-        let mut b = ask(g, gd, to);
-        let sp = m::hyp2(k.v[0], k.v[1]);
-        let age = time - k.t;
-        if (matches!(b, None | Some(Ask2::Clear))) && !seen && !call && sp > 0.5 {
-            let d = m::min(lead_m, sp * m::min(age, lead_secs));
-            to = [k.at[0] + k.v[0] / sp * d, k.at[1], k.at[2] + k.v[1] / sp * d];
-            b = ask(g, gd, to);
-        }
-        if (matches!(b, None | Some(Ask2::Clear))) && !seen && !call && age > 0.3 {
-            to = [k.at[0], k.y0 + low_y, k.at[2]];
-            b = ask(g, gd, to);
-        }
-        a = b;
+        return (t, ask(g, gd, t));
     }
-    let a = match a {
-        Some(Ask2::Clear) => {
-            if held {
-                let (id, fired) = man_of(g, gd).chew.as_ref().map_or((0.0, 0.0), |c| (c.id, c.fired));
-                if js::truthy(fired) {
-                    let line = alloc::format!("{} off #{} after {}: the line is clear", g.gd[gd].callsign, js::num_str(id), js::num_str(fired));
-                    log(g, &line);
-                }
-                man_of(g, gd).chew = None;
-            }
-            return None;
-        }
-        None => return None,
-        Some(Ask2::Ask(a)) => a,
-    };
+    let (lead_m, lead_secs, low_y) = (g.k.coverfire.lead_m, g.k.coverfire.lead_secs, g.k.coverfire.low_y);
+    let mut to = k.at;
+    let mut b = ask(g, gd, to);
+    let sp = m::hyp2(k.v[0], k.v[1]);
+    let age = time - k.t;
+    if (matches!(b, None | Some(Ask2::Clear))) && !seen && !call && sp > 0.5 {
+        let d = m::min(lead_m, sp * m::min(age, lead_secs));
+        to = [k.at[0] + k.v[0] / sp * d, k.at[1], k.at[2] + k.v[1] / sp * d];
+        b = ask(g, gd, to);
+    }
+    if (matches!(b, None | Some(Ask2::Clear))) && !seen && !call && age > 0.3 {
+        to = [k.at[0], k.y0 + low_y, k.at[2]];
+        b = ask(g, gd, to);
+    }
+    (to, b)
+}
+
+/// Nothing stands between them any more: the chew is over.
+fn the_line_has_come_clear(g: &mut Game, gd: GuardId) {
+    let (id, fired) = man_of(g, gd).chew.as_ref().map_or((0.0, 0.0), |c| (c.id, c.fired));
+    if js::truthy(fired) {
+        let line = alloc::format!("{} off #{} after {}: the line is clear", g.gd[gd].callsign, js::num_str(id), js::num_str(fired));
+        log(g, &line);
+    }
+    man_of(g, gd).chew = None;
+}
+
+/// A mate's call is worth rounds only on cover; a piece he gave up on waits, unless a burst through it has news. Barred, a chew he held on it ends.
+fn barred_from_it(g: &mut Game, w: Weighing, a: &Ask) -> bool {
+    let Weighing { gd, k, call, seen, held, time } = w;
+    let thru_rest = g.k.wallpen.thru_rest_secs;
     let thru = a.kind.is_none();
-    let budget = budget_of(g, thru, a.rounds);
     let row = man_of(g, gd);
     let own_chew = held && !row.chew.as_ref().unwrap().call;
     if call && a.kind != Some(crate::wallbreak::BKind::Cover) && !own_chew {
         if held { row.chew = None; }
         no(g, "call");
-        return None;
+        return true;
     }
     let rest = row.gave.get(crate::Num(a.id)).copied().unwrap_or(-1.0);
     if rest > time && !(thru && (seen || k.t > rest - thru_rest)) {
         if held { row.chew = None; }
-        return None;
+        return true;
     }
-    let new_one = match row.chew.as_ref() { None => true, Some(c) => !held || c.id != a.id };
-    if new_one {
-        if !held {
-            if let Some(no) = row.no.as_ref() {
-                if no.id == a.id && no.until > time { return None; }
-            }
-            if !stays(g, gd) && !worth(g, gd, to, a.rounds) {
-                man_of(g, gd).no = Some(ManNo { id: a.id, until: time + walk_ask_secs });
-                bump(g, BumpK::Walked);
-                return None;
-            }
+    false
+}
+
+/// A new piece to chew on: a free man first weighs it against walking round, and what he has fired on this man carries over. False = he walks.
+fn opens_a_chew(g: &mut Game, w: Weighing, a: &Ask, to: V3, budget: f64) -> bool {
+    let Weighing { gd, k, call, seen, held, time } = w;
+    if !held {
+        let walk_ask_secs = g.k.coverfire.walk_ask_secs;
+        if let Some(no) = man_of(g, gd).no.as_ref() {
+            if no.id == a.id && no.until > time { return false; }
         }
-        let row = man_of(g, gd);
-        let (was_fired, was_lay, was_next, was_k) = match (held, row.chew.as_ref()) {
-            (true, Some(c)) => (c.fired, c.lay, c.next, c.k),
-            _ => (0.0, 0.0, 0.0, 0.0),
-        };
-        row.chew = Some(Chew {
-            id: a.id,
-            kind: a.kind,
-            who: k.who,
-            to: v3::copy(to),
-            hit: a.hit,
-            h0: a.hit,
-            kt: k.t,
-            n: 0.0,
-            fired: was_fired,
-            want: a.rounds,
-            layers: a.layers,
-            budget,
-            fresh: false,
-            lay: was_lay,
-            t: time,
-            next: was_next,
-            k: was_k,
-            call,
-            seen,
-        });
+        if !stays(g, gd) && !worth(g, gd, to, a.rounds) {
+            man_of(g, gd).no = Some(ManNo { id: a.id, until: time + walk_ask_secs });
+            bump(g, BumpK::Walked);
+            return false;
+        }
     }
+    let row = man_of(g, gd);
+    let (was_fired, was_lay, was_next, was_k) = match (held, row.chew.as_ref()) {
+        (true, Some(c)) => (c.fired, c.lay, c.next, c.k),
+        _ => (0.0, 0.0, 0.0, 0.0),
+    };
+    row.chew = Some(Chew {
+        id: a.id,
+        kind: a.kind,
+        who: k.who,
+        to: v3::copy(to),
+        hit: a.hit,
+        h0: a.hit,
+        kt: k.t,
+        n: 0.0,
+        fired: was_fired,
+        want: a.rounds,
+        layers: a.layers,
+        budget,
+        fresh: false,
+        lay: was_lay,
+        t: time,
+        next: was_next,
+        k: was_k,
+        call,
+        seen,
+    });
+    true
+}
+
+/// The chew goes on: its count starts again when the piece has changed; rounds spent to no end and he leaves it for a while. None = he has left it.
+fn keep_the_chews_books(g: &mut Game, w: Weighing, a: &Ask, to: V3, budget: f64) -> Option<Chew> {
+    let Weighing { gd, k, seen, time, .. } = w;
+    let thru = a.kind.is_none();
+    let (thru_rest, give_secs) = (g.k.wallpen.thru_rest_secs, g.k.coverfire.give_secs);
     let row = man_of(g, gd);
     let cw = row.chew.as_mut().unwrap();
     cw.hit = a.hit;
@@ -495,25 +546,20 @@ fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, cal
         cw.want = a.rounds;
         cw.budget = budget;
     }
-    if cw.n >= cw.budget && thru {
-        if seen { return Some(cw.clone()); }
-        let n = cw.n;
-        row.gave.set(crate::Num(a.id), time + thru_rest);
-        row.chew = None;
-        let line = alloc::format!("{} off #{}: {} rounds through it", g.gd[gd].callsign, js::num_str(a.id), js::num_str(n));
-        log(g, &line);
-        return None;
+    if !(cw.n >= cw.budget) || (thru && seen) {
+        return Some(cw.clone());
     }
-    if cw.n >= cw.budget {
-        let n = cw.n;
-        row.gave.set(crate::Num(a.id), time + give_secs);
-        row.chew = None;
-        bump(g, BumpK::GaveUp);
-        let line = alloc::format!("{} leaves #{}: {} rounds in and it stands", g.gd[gd].callsign, js::num_str(a.id), js::num_str(n));
-        log(g, &line);
-        return None;
-    }
-    Some(cw.clone())
+    let n = cw.n;
+    row.gave.set(crate::Num(a.id), time + if thru { thru_rest } else { give_secs });
+    row.chew = None;
+    if !thru { bump(g, BumpK::GaveUp); }
+    let line = if thru {
+        alloc::format!("{} off #{}: {} rounds through it", g.gd[gd].callsign, js::num_str(a.id), js::num_str(n))
+    } else {
+        alloc::format!("{} leaves #{}: {} rounds in and it stands", g.gd[gd].callsign, js::num_str(a.id), js::num_str(n))
+    };
+    log(g, &line);
+    None
 }
 
 // ---------------------------------------------------------------- the hooks
@@ -566,7 +612,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let to = cw.to;
     let p = g.k.aim.guard;
     let pos = g.ch[c].pos;
-    let dist = flat(pos, to);
+    let dist = dist_xz(pos, to);
     if g.gd[gd].reload_t < 0.0 {
         let muzzle = g.ch[c].muzzle;
         if !cover_lane(g, gd, muzzle, to) {
@@ -650,7 +696,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let p = g.k.aim.guard;
     let sk = op_skill();
     let pos = g.ch[c].pos;
-    let dist = flat(pos, to);
+    let dist = dist_xz(pos, to);
     let muzzle = g.ch[c].muzzle;
     if !cover_lane(g, gd, muzzle, to) {
         bump(g, BumpK::HeldFriend);
@@ -725,41 +771,63 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
     if !live(g) { return; }
     let time = g.time;
     state_of(g).last_t = time;
-    let was = state_of(g).serial;
-    if g.destr.walls.serial != was {
-        let rows = crate::wallbreak::wall_break_since(g, was);
-        let serial = g.destr.walls.serial;
-        state_of(g).serial = serial;
-        let reset = match rows.as_ref() {
-            None => true,
-            Some(rows) => rows.iter().any(|r| r.kind == crate::wallbreak::LevelChangeKind::Reset),
+    what_gave_under_fire(g, time);
+    the_fight_ais_men_see(g, dt);
+    if g.fight.live { the_operatives_see(g, dt); }
+    // by live index: a line said here may add an event, and the walk sees it, as for…of does
+    let mut i = 0;
+    while i < g.events.len() {
+        let (kind, e_time, e_to, e_who) = (g.events[i].kind, g.events[i].time, g.events[i].to, g.events[i].who);
+        i += 1;
+        let e_to = match e_to {
+            Some(t) if kind == crate::director::EventKind::GuardShot && e_time == g.time => t,
+            _ => continue,
         };
-        if reset {
-            let s = state_of(g);
-            s.men.clear();
-            s.by_id.clear();
-        } else {
-            for r in rows.unwrap().iter() {
-                if r.kind == crate::wallbreak::LevelChangeKind::Door || r.id < 0.0 { continue; }
-                let s = state_of(g);
-                let mut mine = false;
-                for (_, row) in s.men.iter_mut() {
-                    if let Some(cw) = row.chew.as_mut() {
-                        if cw.id == r.id {
-                            cw.fresh = true;
-                            mine = mine || time - cw.t < 1.0;
-                        }
-                    }
-                    row.gave.delete(crate::Num(r.id));
-                }
-                if mine {
-                    bump(g, BumpK::Opened);
-                    let line = alloc::format!("#{} gave ({})", js::num_str(r.id), r.kind.as_str());
-                    log(g, &line);
+        count_the_round_on_his_chew(g, e_to, e_who, time);
+    }
+    if time - state_of(g).prune_t > 2.0 { prune_the_books(g, time); }
+}
+
+/// The change feed: a piece that changed is news to the men on it and to a man who had given it up.
+fn what_gave_under_fire(g: &mut Game, time: f64) {
+    let was = state_of(g).serial;
+    if g.destr.walls.serial == was { return; }
+    let rows = crate::wallbreak::wall_break_since(g, was);
+    let serial = g.destr.walls.serial;
+    state_of(g).serial = serial;
+    let reset = match rows.as_ref() {
+        None => true,
+        Some(rows) => rows.iter().any(|r| r.kind == crate::wallbreak::LevelChangeKind::Reset),
+    };
+    if reset {
+        let s = state_of(g);
+        s.men.clear();
+        s.by_id.clear();
+        return;
+    }
+    for r in rows.unwrap().iter() {
+        if r.kind == crate::wallbreak::LevelChangeKind::Door || r.id < 0.0 { continue; }
+        let s = state_of(g);
+        let mut mine = false;
+        for (_, row) in s.men.iter_mut() {
+            if let Some(cw) = row.chew.as_mut() {
+                if cw.id == r.id {
+                    cw.fresh = true;
+                    mine = mine || time - cw.t < 1.0;
                 }
             }
+            row.gave.delete(crate::Num(r.id));
+        }
+        if mine {
+            bump(g, BumpK::Opened);
+            let line = alloc::format!("#{} gave ({})", js::num_str(r.id), r.kind.as_str());
+            log(g, &line);
         }
     }
+}
+
+/// An alert man with his foe in sight this frame knows where he is.
+fn the_fight_ais_men_see(g: &mut Game, dt: f64) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -774,100 +842,105 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             }
         }
     }
-    if g.fight.live {
-        let notice = op_skill().notice;
-        let mut i = 0;
-        while i < g.fight.ops.len() {
-            let id = g.fight.ops[i];
-            i += 1;
-            let (op, tgt) = (g.tab.roomfight_op[id].gd, g.tab.roomfight_op[id].tgt);
-            if crate::condition::down(g, g.gd[op].ch) || g.gd[op].script.is_none() { continue; }
-            let meters: Vec<(GuardId, f64, f64)> = g.tab.roomfight_op[id].meters.iter().map(|(h, v)| (h, v.m, v.seen_t)).collect();
-            for (h, mv, seen_t) in meters {
-                if !crate::condition::down(g, g.gd[h].ch) && seen_now(g.time, dt, seen_t) && (tgt == Some(h) || mv >= notice) {
-                    let low = g.ch[g.gd[h].ch].anim.crouch > 0.5;
-                    let c = g.gd[h].ch;
-                    see(g, op, c, low);
-                }
+}
+
+/// An operative with a man in sight this frame knows where he is, if that man is his target or he has noticed him.
+fn the_operatives_see(g: &mut Game, dt: f64) {
+    let notice = op_skill().notice;
+    let mut i = 0;
+    while i < g.fight.ops.len() {
+        let id = g.fight.ops[i];
+        i += 1;
+        let (op, tgt) = (g.tab.roomfight_op[id].gd, g.tab.roomfight_op[id].tgt);
+        if crate::condition::down(g, g.gd[op].ch) || g.gd[op].script.is_none() { continue; }
+        let meters: Vec<(GuardId, f64, f64)> = g.tab.roomfight_op[id].meters.iter().map(|(h, v)| (h, v.m, v.seen_t)).collect();
+        for (h, mv, seen_t) in meters {
+            if !crate::condition::down(g, g.gd[h].ch) && seen_now(g.time, dt, seen_t) && (tgt == Some(h) || mv >= notice) {
+                let low = g.ch[g.gd[h].ch].anim.crouch > 0.5;
+                let c = g.gd[h].ch;
+                see(g, op, c, low);
             }
         }
     }
-    // by live index: a line said here may add an event, and the walk sees it, as for…of does
-    let mut i = 0;
-    while i < g.events.len() {
-        let (kind, e_time, e_to, e_who) = (g.events[i].kind, g.events[i].time, g.events[i].to, g.events[i].who);
-        i += 1;
-        let e_to = match e_to {
-            Some(t) if kind == crate::director::EventKind::GuardShot && e_time == g.time => t,
+}
+
+/// A shot this frame, on the chew of the man who fired it, if he is on one this frame.
+fn count_the_round_on_his_chew(g: &mut Game, e_to: V3, e_who: Option<f64>, time: f64) {
+    let mut at = 0;
+    while let Some(gd) = state_of(g).men.next_key(&mut at) {
+        let char_id = g.ch[g.gd[gd].ch].id;
+        let cw = match state_of(g).men.get(gd).and_then(|row| row.chew.as_ref()) {
+            Some(cw) if Some(char_id) == e_who && cw.t == time => cw.clone(),
             _ => continue,
         };
-        let mut at = 0;
-        while let Some(gd) = state_of(g).men.next_key(&mut at) {
-            let char_id = g.ch[g.gd[gd].ch].id;
-            let cw = match state_of(g).men.get(gd).and_then(|row| row.chew.as_ref()) {
-                Some(cw) if Some(char_id) == e_who && cw.t == time => cw.clone(),
-                _ => continue,
-            };
-            let (fired, cw_call, cw_id, cw_hit) = (cw.fired, cw.call, cw.id, cw.hit);
-            if cw.kind.is_none() {
-                if !js::truthy(fired) {
-                    bump(g, BumpK::Thru);
-                    let name = name_of(g, cw.who);
-                    let line = alloc::format!("{} through #{} for {}{}: {} rounds, {} deep", g.gd[gd].callsign, js::num_str(cw_id), name, if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));
-                    log(g, &line);
-                    say_line(g, gd);
-                }
-                set_chew(g, gd, |row| { row.n += 1.0; row.fired += 1.0; });
-                bump(g, BumpK::ThruShots);
-                break;
-            }
-            if !js::truthy(fired) {
-                bump(g, BumpK::Chews);
-                if cw_call { bump(g, BumpK::Calls); }
-                let side = if g.team(gd).ours() { BumpK::OpChews } else { BumpK::DefChews };
-                bump(g, side);
-                let name = name_of(g, cw.who);
-                let line = alloc::format!("{} on {} #{} for {}{}: {} rounds wanted, {} deep", g.gd[gd].callsign, cw.kind.map_or("thru", |k| k.as_str()), js::num_str(cw_id), name, if cw_call { " (a call)" } else if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));
-                log(g, &line);
-                say_line(g, gd);
-            }
-            set_chew(g, gd, |row| { row.n += 1.0; row.fired += 1.0; });
-            bump(g, BumpK::Shots);
-            let gc = g.gd[gd].ch;
-            let o = crate::guards::shot_origin(g, gc);
-            let el = v3::dist(o, e_to);
-            let eh = if el > 0.1 { crate::scene_collision::raycast(g, o, v3::scale(v3::sub(e_to, o), 1.0 / el), el + 0.15) } else { None };
-            let landed = match eh {
-                Some(eh) if m::abs(eh.t - el) < 0.2 => crate::wallbreak::wall_break_breakable_at(g, eh.index).map(|b| b.id) == Some(cw_id),
-                _ => v3::dist(e_to, cw_hit) < 0.75 && el > 0.8,
-            };
-            if landed {
-                bump(g, BumpK::Landed);
-                let s = state_of(g);
-                if let Some(rec) = s.by_id.get(crate::Num(cw_id)) {
-                } else {
-                    s.by_id.set(crate::Num(cw_id), StateByIdValue {  });
-                }
-            }
-            break;
+        if cw.kind.is_none() {
+            return a_round_through(g, gd, &cw);
+        }
+        return a_round_into_the_piece(g, gd, &cw, e_to);
+    }
+}
+
+/// A burst through a thin wall: said and logged at its first round.
+fn a_round_through(g: &mut Game, gd: GuardId, cw: &Chew) {
+    if !js::truthy(cw.fired) {
+        bump(g, BumpK::Thru);
+        let name = name_of(g, cw.who);
+        let line = alloc::format!("{} through #{} for {}{}: {} rounds, {} deep", g.gd[gd].callsign, js::num_str(cw.id), name, if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));
+        log(g, &line);
+        say_line(g, gd);
+    }
+    set_chew(g, gd, |row| { row.n += 1.0; row.fired += 1.0; });
+    bump(g, BumpK::ThruShots);
+}
+
+/// A round on what he is chewing: said and logged at its first; counted as landed if it reached that piece.
+fn a_round_into_the_piece(g: &mut Game, gd: GuardId, cw: &Chew, e_to: V3) {
+    let (cw_call, cw_id, cw_hit) = (cw.call, cw.id, cw.hit);
+    if !js::truthy(cw.fired) {
+        bump(g, BumpK::Chews);
+        if cw_call { bump(g, BumpK::Calls); }
+        let side = if g.team(gd).ours() { BumpK::OpChews } else { BumpK::DefChews };
+        bump(g, side);
+        let name = name_of(g, cw.who);
+        let line = alloc::format!("{} on {} #{} for {}{}: {} rounds wanted, {} deep", g.gd[gd].callsign, cw.kind.map_or("thru", |k| k.as_str()), js::num_str(cw_id), name, if cw_call { " (a call)" } else if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));
+        log(g, &line);
+        say_line(g, gd);
+    }
+    set_chew(g, gd, |row| { row.n += 1.0; row.fired += 1.0; });
+    bump(g, BumpK::Shots);
+    let gc = g.gd[gd].ch;
+    let o = crate::guards::shot_origin(g, gc);
+    let el = v3::dist(o, e_to);
+    let eh = if el > 0.1 { crate::scene_collision::raycast(g, o, v3::scale(v3::sub(e_to, o), 1.0 / el), el + 0.15) } else { None };
+    let landed = match eh {
+        Some(eh) if m::abs(eh.t - el) < 0.2 => crate::wallbreak::wall_break_breakable_at(g, eh.index).map(|b| b.id) == Some(cw_id),
+        _ => v3::dist(e_to, cw_hit) < 0.75 && el > 0.8,
+    };
+    if landed {
+        bump(g, BumpK::Landed);
+        let s = state_of(g);
+        if !s.by_id.has(crate::Num(cw_id)) {
+            s.by_id.set(crate::Num(cw_id), StateByIdValue {  });
         }
     }
-    if time - state_of(g).prune_t > 2.0 {
-        state_of(g).prune_t = time;
-        let keep = g.k.coverfire.stale_secs + 1.0;
-        let mut at = 0;
-        while let Some(gd) = state_of(g).men.next_key(&mut at) {
-            if !g.guards.contains(&gd) {
-                state_of(g).men.delete(gd);
-                continue;
-            }
-            let row = man_of(g, gd);
-            row.know.retain(|k| time - k.t <= keep);
-            let mut at2 = 0;
-            while let Some(id) = row.gave.next_key(&mut at2) {
-                if row.gave.get(id).map_or(false, |until| *until <= time) {
-                    row.gave.delete(id);
-                }
+}
+
+/// Every two seconds: men gone from the game, places gone stale, pieces given up long enough.
+fn prune_the_books(g: &mut Game, time: f64) {
+    state_of(g).prune_t = time;
+    let keep = g.k.coverfire.stale_secs + 1.0;
+    let mut at = 0;
+    while let Some(gd) = state_of(g).men.next_key(&mut at) {
+        if !g.guards.contains(&gd) {
+            state_of(g).men.delete(gd);
+            continue;
+        }
+        let row = man_of(g, gd);
+        row.know.retain(|k| time - k.t <= keep);
+        let mut at2 = 0;
+        while let Some(id) = row.gave.next_key(&mut at2) {
+            if row.gave.get(id).map_or(false, |until| *until <= time) {
+                row.gave.delete(id);
             }
         }
     }

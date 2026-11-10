@@ -62,10 +62,9 @@ fn par_secs(g: &Game) -> f64 {
     m::max(0.0, t - g.par.t0)
 }
 
-/// teammates down now, of how many
-fn lost(g: &Game) -> (f64, f64) {
-    let ops = &g.staged.team;
-    (ops.iter().filter(|&&o| crate::condition::down(g, g.gd[o].ch)).count() as f64, ops.len() as f64)
+/// teammates down now
+fn lost(g: &Game) -> f64 {
+    g.staged.team.iter().filter(|&&o| crate::condition::down(g, g.gd[o].ch)).count() as f64
 }
 
 /// rounds and throws so far this mission (the mission's own tally and the chronicle's count: both fresh with the mission)
@@ -118,7 +117,7 @@ pub fn par_tick(g: &mut Game) {
         g.stats.par.started += 1;
     }
     if g.par.res.is_some() || g.room_clear.end != Some(crate::roomclear::RoomClearEnd::Taken) { return; }
-    let (lost, of) = lost(g);
+    let lost = lost(g);
     let r = par_result(&d, par_secs(g), lost);
     g.stats.par.finished += 1;
     g.par.res = Some(r);
@@ -134,7 +133,7 @@ fn par_row(g: &Game) -> String {
     let Some(d) = par_data(g) else { return String::new(); };
     if g.room_clear.end.is_some() { return String::new(); }   // (taken: par_objective words it · wiped: no time)
     if !par_started(g) { return format!("par {} / {} / {} · ", clock(d.gold), clock(d.silver), clock(d.bronze)); }
-    let (lost, _) = lost(g);
+    let lost = lost(g);
     let secs = par_secs(g);
     let total = secs + lost * d.loss_secs;
     let up = MEDALS.iter().copied().find(|&md| m::floor(total) <= bar(&d, md));

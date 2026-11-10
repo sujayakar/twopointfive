@@ -2,7 +2,6 @@
 //! men stand where the mission started them, nobody is parked and no pin is set. The director is held off here (`still`): what the men do is `kit_acts`.
 use game::game::GuardState;
 use game::kitstage::{self, KitStage};
-use game::teams::Team;
 use game_start::json::{self, Json};
 use game_start::play::{Opts, Play};
 

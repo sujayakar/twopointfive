@@ -234,8 +234,8 @@ fn sam_going_down_is_the_verdict_down() {
 
 fn wears(p: &Play, c: game::ids::CharId, part: &str) -> bool {
     let rig = p.g.ch[c].rig;
-    let cast = p.g.tab.rig[rig].cast.expect("no cast on this stand");
-    let at = p.g.tab.anim_gltf_cast_info[cast].parts.iter().position(|n| n == part).unwrap_or_else(|| panic!("no part {part}"));
+    let cast = p.g.art.rig[rig].cast.expect("no cast on this stand");
+    let at = p.g.art.cast[cast].parts.iter().position(|n| n == part).unwrap_or_else(|| panic!("no part {part}"));
     (p.g.ch[c].parts as u32) & (1 << at) != 0
 }
 
