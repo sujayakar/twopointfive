@@ -24,9 +24,9 @@ pub fn settle(g: &mut Game) {
     crate::math_dice::use_dice(g);
     crate::posehome::pose_home_tend(g);
     // what the TypeScript's stores say of themselves in the block's head as they are made or moved in, and the Rust stores,
-    // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32), the thrown things (128) and the
-    // men's columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
-    ::sim::state::state(g.sim).head.homes |= 2 | 4 | 32 | 128 | 256;
+    // which hold their part of the block from the start, do not: the pose pool (2), the doors (4), the furniture (32) and the men's
+    // columns (256) are at home. No rule reads these bits; the block is then the block the TypeScript start leaves, to the byte.
+    ::sim::state::state(g.sim).head.homes |= 2 | 4 | 32 | 256;
 }
 
 /// the canvas of a host that draws nothing

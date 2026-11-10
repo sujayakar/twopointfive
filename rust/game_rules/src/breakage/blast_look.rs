@@ -226,8 +226,8 @@ fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
-        if t::item_kind(g, it) != t::ItemKind::Flash || (t::item_age(g, it) == 0.0) != born { continue; }
-        let p = t::item_pos(g, it);
+        if g.tab.item[it].kind != t::ItemKind::Flash || (g.tab.item[it].age == 0.0) != born { continue; }
+        let p = g.tab.item[it].pos;
         if near([p[0], p[1] + h, p[2]], at, 0.02) { return true; }
     }
     false

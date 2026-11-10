@@ -244,15 +244,15 @@ fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
 /// The can cooks: on their own count it goes off, with the element out of its view, and they flow.
 pub(super) fn phase_bang(g: &mut crate::game::Game, el: &[GuardId]) {
     let it = match g.qrf.can { Some(it) => it, None => { start_flow(g, el); return; } };
-    if g.qrf.can_land_t.is_nan() && (crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it)) { g.qrf.can_land_t = g.time; }
+    if g.qrf.can_land_t.is_nan() && (g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled) { g.qrf.can_land_t = g.time; }
     if (!g.qrf.can_land_t.is_nan() && g.time - g.qrf.can_land_t >= BANG_FUSE) || g.qrf.phase_t > 2.4 {
-        crate::throwables::item_set_fired(g, it, true);
+        g.tab.item[it].fired = true;
         // detonateStun's daze falls on everybody but the element; what it writes to the list of men is put back with the list
         let all = g.guards.clone();
         g.guards = all.iter().copied().filter(|x| !g.qrf.men.contains(x)).collect();
         crate::combat::detonate_stun(g, it, None, None);
         g.guards = all;
-        let at = crate::throwables::item_pos(g, it);
+        let at = g.tab.item[it].pos;
         their_bang(g, at, el[0]);
         start_flow(g, el);
     }
@@ -424,7 +424,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         g.qrf.op_beat += 1.0;
     }
     if let Some(can) = g.tab.doortools_door_op[op].can {
-        if !crate::throwables::item_fired(g, can) { g.qrf.can = Some(can); g.qrf.can_land_t = g.time; }   // (perceiveScripted: the charge they put in is not a noise to them)
+        if !g.tab.item[can].fired { g.qrf.can = Some(can); g.qrf.can_land_t = g.time; }   // (perceiveScripted: the charge they put in is not a noise to them)
     }
     if g.tab.doortools_door_op[op].bang_t == g.time {
         if let Some(at) = g.tab.doortools_door_op[op].bang_at {

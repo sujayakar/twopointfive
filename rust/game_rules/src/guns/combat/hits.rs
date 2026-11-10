@@ -178,10 +178,10 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
     };
     let it = crate::throwables::throwables_spawn(g, item_kind, [h[0], m::max(0.25, h[1]), h[2]], [v0, v1, v2], Some(opts));
     if kind == DropFromHandKind::Rifle {
-        let rate = crate::throwables::item_tumble_rate(g, it) * 0.55;
-        crate::throwables::item_set_tumble_rate(g, it, rate);
-        let spin = crate::throwables::item_spin(g, it) * 0.5;
-        crate::throwables::item_set_spin(g, it, spin);
+        let rate = g.tab.item[it].tumble_rate * 0.55;
+        g.tab.item[it].tumble_rate = rate;
+        let spin = g.tab.item[it].spin * 0.5;
+        g.tab.item[it].spin = spin;
     }
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Dropped { kind: item_kind, quiet });
     it
@@ -430,7 +430,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
         if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None, None); }
         let dropped = g.gd[gd].dropped;
         let on_floor = match dropped {
-            Some(it) => { let k = crate::throwables::item_kind(g, it); k == crate::throwables::ItemKind::Torch || k == crate::throwables::ItemKind::Rifle }
+            Some(it) => { let k = g.tab.item[it].kind; k == crate::throwables::ItemKind::Torch || k == crate::throwables::ItemKind::Rifle }
             None => false,
         };
         if on_floor && !crate::runner::runner_bare(g, gd) {
@@ -637,21 +637,21 @@ pub fn update_items(g: &mut crate::game::Game, dt: f64) {
     while i < g.items.items.len() {
         let it = g.items.items[i];
         i += 1;
-        let kind = t::item_kind(g, it);
+        let kind = g.tab.item[it].kind;
         if kind == ItemKind::Smoke {
-            if !t::item_fired(g, it) {
-                let f = t::item_fuse(g, it) - dt;
-                t::item_set_fuse(g, it, f);
-                if t::item_fuse(g, it) <= 0.0 { t::item_set_fired(g, it, true); start_canister(g, it); }
-            } else if t::item_emit_t(g, it) > 0.0 {
-                let e = t::item_emit_t(g, it) - dt;
-                t::item_set_emit_t(g, it, e);
+            if !g.tab.item[it].fired {
+                let f = g.tab.item[it].fuse - dt;
+                g.tab.item[it].fuse = f;
+                if g.tab.item[it].fuse <= 0.0 { g.tab.item[it].fired = true; start_canister(g, it); }
+            } else if g.tab.item[it].emit_t > 0.0 {
+                let e = g.tab.item[it].emit_t - dt;
+                g.tab.item[it].emit_t = e;
             }
-        } else if kind == ItemKind::Flash && !t::item_fired(g, it) {
-            let landed = t::item_bounces(g, it) > 0.0 || t::item_settled(g, it);
-            if landed { let f = t::item_fuse(g, it) - dt; t::item_set_fuse(g, it, f); }
-            if t::item_fuse(g, it) <= 0.0 || (!landed && t::item_age(g, it) > crate::effects::bang().max_air) {
-                t::item_set_fired(g, it, true);
+        } else if kind == ItemKind::Flash && !g.tab.item[it].fired {
+            let landed = g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled;
+            if landed { let f = g.tab.item[it].fuse - dt; g.tab.item[it].fuse = f; }
+            if g.tab.item[it].fuse <= 0.0 || (!landed && g.tab.item[it].age > crate::effects::bang().max_air) {
+                g.tab.item[it].fired = true;
                 detonate_stun(g, it, None, None);
             }
         } else if kind == ItemKind::Frag {
@@ -674,20 +674,20 @@ pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
 fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     let seconds: f64;
     if crate::effects::flags().vent_canister {
-        let yaw = crate::throwables::item_heading(g, it);
-        let at = crate::effects::vent_mouth(crate::throwables::item_pos(g, it), yaw);
+        let yaw = g.tab.item[it].heading;
+        let at = crate::effects::vent_mouth(g.tab.item[it].pos, yaw);
         seconds = crate::effects::spawn_vent(g, at, yaw, None);
     } else {
         let p = can_params(g);
         seconds = p.canister_duration;
-        let pos = v3::add(crate::throwables::item_pos(g, it), [0.0, 0.1, 0.0]);
+        let pos = v3::add(g.tab.item[it].pos, [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
         let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
         crate::smoke_types::smoke_system_like_emit(g, &e);
         crate::out_events::push_smoke_system_like_emit(g, &e);
     }
-    crate::throwables::item_set_emit_t(g, it, seconds);
-    let pos = crate::throwables::item_pos(g, it);
+    g.tab.item[it].emit_t = seconds;
+    let pos = g.tab.item[it].pos;
     // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
     crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };

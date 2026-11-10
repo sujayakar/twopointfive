@@ -689,7 +689,7 @@ fn door_tools_word_tick(g: &mut crate::game::Game) {
                         return false;
                     }
                     match dop!(g, o).can {
-                        Some(c) => !crate::throwables::item_fired(g, c),
+                        Some(c) => !g.tab.item[c].fired,
                         None => true,
                     }
                 }))

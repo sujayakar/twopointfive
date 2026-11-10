@@ -139,10 +139,10 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             let pos = g.ch[c].pos;
             g_2.look = Some(away_look(g, d, g_2, pos)); g_2.crouch = 0.7;
             let it = g_2.can.unwrap();
-            let landed = crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it);
+            let landed = g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled;
             if landed && g_2.land_t < 0.0 { g_2.land_t = now; }
             if (g_2.land_t >= 0.0 && now - g_2.land_t >= TOSS_FUSE) || now - g_2.toss_t > TOSS_AIR_CAP {
-                crate::throwables::item_set_fired(g, it, true);
+                g.tab.item[it].fired = true;
                 crate::combat::detonate_stun(g, it, None, None);
                 // (their own charge: nobody on their side shouts 'flashbang!' at it)
                 let mut i = g.events.len();

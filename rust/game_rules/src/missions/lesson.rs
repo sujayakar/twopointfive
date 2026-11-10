@@ -307,10 +307,10 @@ fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scen
 }
 /// his own smoke can venting in `a`, on the floor no longer than `since`
 fn lying_can(g: &mut Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
-    use crate::throwables::{item_age, item_fired, item_kind, item_pos, item_who, ItemKind};
+    use crate::throwables::ItemKind;
     if k == Some("flash") || k == Some("frag") { return false; }
     let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
-    items.iter().any(|&x| item_kind(g, x) == ItemKind::Smoke && item_fired(g, x) && item_who(g, x) == me && item_age(g, x) <= since && inside(a, item_pos(g, x)))
+    items.iter().any(|&x| g.tab.item[x].kind == ItemKind::Smoke && g.tab.item[x].fired && g.tab.item[x].who == me && g.tab.item[x].age <= since && inside(a, g.tab.item[x].pos))
 }
 /// a bang of that kind in `a` this frame, not a charge's
 fn bang_in(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>) -> bool {

@@ -78,8 +78,8 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
     while ii < g.items.items.len() {
         let it = g.items.items[ii];
         ii += 1;
-        if crate::throwables::item_kind(g, it) == crate::throwables::ItemKind::Flash && !crate::throwables::item_fired(g, it) && !s(g).cans.contains(&it) {
-            let who = crate::throwables::item_who(g, it);
+        if g.tab.item[it].kind == crate::throwables::ItemKind::Flash && !g.tab.item[it].fired && !s(g).cans.contains(&it) {
+            let who = g.tab.item[it].who;
             if crate::teams::team_of_id(g, who) == SIDE { s(g).cans.push(it); }
         }
     }
@@ -99,7 +99,7 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
         let cans = core::mem::take(&mut s(g).cans);
         let mut kept = Vec::new();
         for it in cans {
-            if !crate::throwables::item_fired(g, it) && g.items.items.contains(&it) { kept.push(it); }
+            if !g.tab.item[it].fired && g.items.items.contains(&it) { kept.push(it); }
         }
         s(g).cans = kept;
     }
@@ -557,7 +557,7 @@ fn bangs(g: &mut crate::game::Game) {
         while k < s(g).cans.len() {
             let it = s(g).cans[k];
             k += 1;
-            if flat(crate::throwables::item_pos(g, it), epos) < 1.5 { ours = true; break; }
+            if flat(g.tab.item[it].pos, epos) < 1.5 { ours = true; break; }
         }
         let b: V3 = [epos[0], m::max(0.5, epos[1]), epos[2]];
         let mut li = 0;

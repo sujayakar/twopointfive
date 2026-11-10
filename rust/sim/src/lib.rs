@@ -45,7 +45,6 @@ pub mod props;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
-pub mod items;
 pub mod slabs;
 pub mod snow;
 pub mod state;

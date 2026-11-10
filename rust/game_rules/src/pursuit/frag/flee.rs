@@ -300,21 +300,21 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
 
 /// The hand grenade goes off where it lies, and the item is gone.
 fn detonate_frag(g: &mut crate::game::Game, it: ItemId) -> crate::frag::BlastReport {
-    crate::throwables::item_set_fired(g, it, true);
-    crate::throwables::item_set_life(g, it, 0.0);
-    let at = crate::throwables::item_pos(g, it);
-    let who = crate::throwables::item_who(g, it);
-    let serial = crate::throwables::item_serial(g, it);
+    g.tab.item[it].fired = true;
+    g.tab.item[it].life = 0.0;
+    let at = g.tab.item[it].pos;
+    let who = g.tab.item[it].who;
+    let serial = g.tab.item[it].serial;
     let spec = BlastSpec { who, serial: Some(serial), name: Some(String::from("frag grenade")), destr: Some(BlastSpecDestr { radius: Some(g.k.frag.destr_m), power: Some(1.0) }), ..Default::default() };
     blast(g, at, &spec)
 }
 
 /// The fuse runs from the hand, in the air or on the floor.
 pub fn frag_fuse(g: &mut crate::game::Game, it: ItemId, dt: f64) {
-    if crate::throwables::item_fired(g, it) { return; }
-    let fuse = crate::throwables::item_fuse(g, it) - dt;
-    crate::throwables::item_set_fuse(g, it, fuse);
-    if crate::throwables::item_fuse(g, it) <= 0.0 { detonate_frag(g, it); }
+    if g.tab.item[it].fired { return; }
+    let fuse = g.tab.item[it].fuse - dt;
+    g.tab.item[it].fuse = fuse;
+    if g.tab.item[it].fuse <= 0.0 { detonate_frag(g, it); }
 }
 
 /// The game's list of live grenades: the row itself, a writer writes through it.
@@ -441,13 +441,13 @@ fn roll_body(a: &mut impl crate::ask::Asker, it: RollBody, touch_fuse: Option<f6
 /// Where a live thrown thing will rest and the floor it crosses to get there.
 fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
     let body = RollBody {
-        pos: crate::throwables::item_pos(g, it),
-        vel: crate::throwables::item_vel(g, it),
-        radius: crate::throwables::item_radius(g, it),
-        restitution: crate::throwables::item_restitution(g, it),
-        friction: crate::throwables::item_friction(g, it),
-        bounces: crate::throwables::item_bounces(g, it),
-        fuse: crate::throwables::item_fuse(g, it),
+        pos: g.tab.item[it].pos,
+        vel: g.tab.item[it].vel,
+        radius: g.tab.item[it].radius,
+        restitution: g.tab.item[it].restitution,
+        friction: g.tab.item[it].friction,
+        bounces: g.tab.item[it].bounces,
+        fuse: g.tab.item[it].fuse,
     };
     roll_body(g, body, touch_fuse, props.unwrap_or(true), high.unwrap_or(false))
 }
@@ -487,7 +487,7 @@ pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Opt
 /// The defenders' live grenades the man has been cued on: where each is, and the seconds left.
 pub fn frag_marks(g: &crate::game::Game) -> Vec<crate::view::FragMark> {
     let Some(books) = &g.m.frag.books else { return Vec::new() };
-    books.iter().filter(|l| l.cued && !crate::throwables::item_fired(g, l.it)).map(|l| crate::view::FragMark { at: crate::throwables::item_pos(g, l.it), left: crate::throwables::item_fuse(g, l.it) }).collect()
+    books.iter().filter(|l| l.cued && !g.tab.item[l.it].fired).map(|l| crate::view::FragMark { at: g.tab.item[l.it].pos, left: g.tab.item[l.it].fuse }).collect()
 }
 
 /// The height a grenade lying at y is judged from, less the lift: what it lies on.
@@ -498,13 +498,13 @@ fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
 /// The rest reckoning of book `l` of the live grenades, made again ten times a second.
 pub(super) fn rest_of(g: &mut crate::game::Game, l: usize) -> crate::frag::Rest {
     let it = books_of(g)[l].it;
-    let settled = crate::throwables::item_settled(g, it);
+    let settled = g.tab.item[it].settled;
     let time = g.time;
     if let Some(r) = &books_of(g)[l].rest {
         if r.still == settled && (settled || time - r.t < 0.1) { return r.clone(); }
     }
     let rest = if settled {
-        let p = crate::throwables::item_pos(g, it);
+        let p = g.tab.item[it].pos;
         Rest { t: time, still: true, at: [p[0], rest_y(g, p[1]), p[2]], path: Vec::new() }
     } else {
         let r = roll_on(g, it, None, None, None);

@@ -1260,9 +1260,9 @@ pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) ->
 /// a charge in the air or on the floor when its thrower leaves the drill goes off on its own short fuse
 pub(super) fn loose_can(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
     if let Some(can) = g_2.can {
-        if !crate::throwables::item_fired(g, can) {
-            let fuse = crate::throwables::item_fuse(g, can);
-            crate::throwables::item_set_fuse(g, can, m::min(fuse, TOSS_FUSE));
+        if !g.tab.item[can].fired {
+            let fuse = g.tab.item[can].fuse;
+            g.tab.item[can].fuse = m::min(fuse, TOSS_FUSE);
         }
     }
 }

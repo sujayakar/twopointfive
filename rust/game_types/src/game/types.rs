@@ -1483,9 +1483,6 @@ pub struct Mods {
     pub combat: crate::combat::CombatMod,
     pub scene_level_load: crate::scene_level_load::SceneLevelLoadMod,
     pub snow_bog: crate::snow_bog::SnowBogMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_itemshome: crate::sim_itemshome::SimItemshomeMod,
     pub frag: crate::frag::FragMod,
     pub teampace: crate::teampace::TeampaceMod,
     pub squad: crate::squad::SquadMod,
