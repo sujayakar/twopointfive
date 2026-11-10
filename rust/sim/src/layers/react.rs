@@ -343,24 +343,77 @@ fn head_turn(d: &mut [S], rig: &Rig, o: &Lean) {
         turn(d, rig, role(HEAD), q(0.6));
     }
 }
+/// What the arms of it are made of.
+#[derive(Clone, Copy, Default)]
+struct Arms {
+    dt: f64,
+    gate: f64,
+    // as_moved: how he moved, as the body's share left it
+    at: usize,
+    at_b: usize,
+    lg_w: f64,
+    gaze: [f64; 3],
+    fix_l: [f64; 4],
+    rel: f64,
+    dz_t: f64,
+    ts: f64,
+    stw: f64,
+    stn: f64,
+    dzw: f64,
+    gun: bool,
+    gun_p: [f64; 3],
+    gun_r: [f64; 4],
+    td: f64,
+    arm_l: f64,
+    ts_out: f64,
+    code: u32,
+    up_l: usize,
+    fore_l: usize,
+    hand_l: usize,
+    sh_l: usize,
+}
+
 /// The reactions' arms, after their body: the start's shoulders and elbows on the pose at `at`; then, each solved on the scratch pose at `at_b` and laid
 /// back through its own mask, a blinded man's gun held on the line it had, his hand flat over his eyes, and the toss of the support hand along its keyed
 /// path.
 pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> u32 {
-    let (at, at_b, _) = poses(an);
-    let (lg_w, gaze, fix_l, m, po) = (an.lg.w.x, an.gaze_local, an.hand_fix[0], &an.mvs, &an.mv_po);
-    let (rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r) = (m.ts_rel, m.dz_t, m.ts_t, po.stw, po.stn, po.dzw, po.gun, po.gun_p, po.gun_r);
-    let (td, mut arm_l) = (rel + TOSS_AFTER, m.arm_l);
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HEAD]) { Some(n) } else { None }) else {
+    let mut o = Arms { dt, gate, ..Arms::default() };
+    as_moved(an, &mut o);
+    let Some(Some(n)) = with_pose(g, o.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HEAD]) { Some(n) } else { None }) else {
         return 0;
     };
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
+    start_arms(g, &o);
+    if !held_gun(g, n, &mut o) {
+        return 0;
+    }
+    if !blinded_hand(g, n, tune, &mut h, &mut o) {
+        return 0;
+    }
+    if !toss_hand(g, n, &mut h, &mut o) {
+        return 0;
+    }
+    (an.mvs.ts_t, an.mvs.arm_l) = (o.ts_out, o.arm_l);
+    hands_to(&h, an);
+    o.code
+}
+
+/// How he moved, as the body's share left it.
+fn as_moved(an: &Anim, o: &mut Arms) {
+    let (at, at_b, _) = poses(an);
+    let (lg_w, gaze, fix_l, m, po) = (an.lg.w.x, an.gaze_local, an.hand_fix[0], &an.mvs, &an.mv_po);
+    let (rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r) = (m.ts_rel, m.dz_t, m.ts_t, po.stw, po.stn, po.dzw, po.gun, po.gun_p, po.gun_r);
+    let (td, mut arm_l, mut ts_out, mut code) = (rel + TOSS_AFTER, m.arm_l, ts, RAN);
     let (up_l, fore_l, hand_l, sh_l) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(SHOULDER_L));
-    let mut code = RAN;
+    *o = Arms { at, at_b, lg_w, gaze, fix_l, rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r, td, arm_l, ts_out, code, up_l, fore_l, hand_l, sh_l, ..*o };
+}
+
+/// The start's arms: shoulders up, elbows wide and forearms half raised by what a long gun leaves of them.
+fn start_arms(g: usize, o: &Arms) {
+    let Arms { at, lg_w, stw, stn, sh_l, .. } = *o;
     if stw > 0.003 {
-        // the start's arms: shoulders up, elbows wide and forearms half raised by what a long gun leaves of them
         let aa = stw * (1.0 - clamp(lg_w, 0.0, 1.0));
         with_pose(g, at, |d, rig, _n, _fk| {
             for (sh, up, fo, sg) in [(sh_l, role(UPPER_ARM_L), role(FOREARM_L), 1.0), (role(SHOULDER_R), role(UPPER_ARM_R), role(FOREARM_R), -1.0)] {
@@ -373,10 +426,14 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             }
         });
     }
+}
+
+/// A blinded man's gun stays on the line it had, by how much of a long gun he has up.
+fn held_gun(g: usize, n: usize, o: &mut Arms) -> bool {
+    let Arms { at, at_b, lg_w, dzw, gun, gun_p, gun_r, mut code, .. } = *o;
     if gun {
-        // a blinded man's gun stays on the line it had, by how much of a long gun he has up
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-            return 0;
+            return false;
         }
         with_pose(g, at_b, |d, rig, _n, fk| {
             fk_run(rig, d, fk.rot, fk.pos);
@@ -384,16 +441,21 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         });
         ask_mask(&[(role(UPPER_ARM_R), smoothstep(0.003, 0.15, dzw) * smoothstep(0.02, 0.6, lg_w), true)]);
         if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-            return 0;
+            return false;
         }
         code |= RAN_ALL;
     }
+    *o = Arms { code, ..*o };
+    true
+}
+
+/// Blinded: the support hand goes flat over the eyes, wrist by the near eye, fingers across to the far one.
+fn blinded_hand(g: usize, n: usize, tune: &Knobs, h: &mut Hands, o: &mut Arms) -> bool {
+    let Arms { at, at_b, gaze, fix_l, dz_t, dzw, mut arm_l, mut code, up_l, fore_l, hand_l, sh_l, .. } = *o;
     if dzw > 0.003 {
-        // blinded: the support hand goes flat over the eyes, wrist by the near eye, fingers across to the far one
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-            return 0;
+            return false;
         }
-        let hh = &mut h;
         with_pose(g, at_b, |d, rig, _n, fk| {
             turn(d, rig, sh_l, q_roll(9.0 * DEGR));
             fk_run(rig, d, fk.rot, fk.pos);
@@ -405,23 +467,27 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             let pole = [tune.mv.dazzle.hand_pole[0], tune.mv.dazzle.hand_pole[1], tune.mv.dazzle.hand_pole[2]];
             let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, tune.mv.dazzle.hand_tilt), mad3(gz, up, tune.mv.dazzle.hand_roll));
             two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &to, Some(&pole), 0.85, Some(&r), false);
-            hand(d, hh, 0, &[0.22, 0.28, 0.34, 0.4], 0.3, 0.3);
+            hand(d, h, 0, &[0.22, 0.28, 0.34, 0.4], 0.3, 0.3);
         });
         let wz = smoothstep(0.08, 0.6, dzw);
         ask_mask(&[(sh_l, wz, true)]);
         if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-            return 0;
+            return false;
         }
         arm_l = max(arm_l, wz);
         code |= RAN_ALL;
     }
-    let mut ts_out = ts;
+    *o = Arms { arm_l, code, ..*o };
+    true
+}
+
+/// The toss: the support hand off the gun, down beside the hip, through and up, back to the gun (a path off the shoulder; its ends are the live hand).
+fn toss_hand(g: usize, n: usize, h: &mut Hands, o: &mut Arms) -> bool {
+    let Arms { dt, gate, at, at_b, fix_l, rel, ts, td, mut arm_l, mut ts_out, mut code, up_l, fore_l, hand_l, sh_l, .. } = *o;
     if ts >= 0.0 {
-        // the toss: the support hand off the gun, down beside the hip, through and up, back to the gun (a path off the shoulder; its ends are the live hand)
         if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-            return 0;
+            return false;
         }
-        let hh = &mut h;
         with_pose(g, at_b, |d, rig, _n, fk| {
             fk_run(rig, d, fk.rot, fk.pos);
             let sh = fk.at(up_l);
@@ -452,7 +518,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &add3(sh, off), Some(&[0.7, -0.45, -0.55]), 0.8, Some(&r), false);
             let (open, recup) = (smoothstep(rel - 0.02, rel + 0.04, ts), smoothstep(rel + 0.35, td, ts));
             let c = |grip: f64, flat: f64, cup: f64| lerp(lerp(grip, flat, open), cup, recup);
-            hand(d, hh, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup));
+            hand(d, h, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup));
             // the wrist's turn eases from and back to the grip it had on the gun at the ends (the path does the same for its place)
             wrist_ease(d, rig, fk, hand_l, &rot0, bump(ts, 0.0, 0.08, td - 0.22, td - 0.04));
         });
@@ -460,7 +526,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         arm_l = max(arm_l, hold);
         ask_mask(&[(sh_l, hold * gate, true), (sh_l, 0.0, false)]);
         if !ask_blend(g, at, at_b, 1.0, true, at, n) {
-            return 0;
+            return false;
         }
         ts_out = ts + dt;
         if ts_out > td {
@@ -468,9 +534,8 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         }
         code |= RAN_ALL;
     }
-    (an.mvs.ts_t, an.mvs.arm_l) = (ts_out, arm_l);
-    hands_to(&h, an);
-    code
+    *o = Arms { arm_l, ts_out, code, ..*o };
+    true
 }
 /// A man knocked about and still up: the support hand off the gun and pressed to his ribs. Solved on the scratch pose at `at_b`, laid on the pose by w
 /// through the support arm's mask.
