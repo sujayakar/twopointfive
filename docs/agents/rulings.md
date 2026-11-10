@@ -28,7 +28,7 @@ A ruling that stands on a system's own page is there and not here.
 - "we should just remove the max one wall charge per squad limitation": a man's slots are the only limit (`slot_max`), and no count runs across the squad.
 - "we should also probably just get rid of the ballistic shield, doesn't match the vibes (feels more like swat)": the game refuses a file whose card has the key.
 - "attachments like silencer should be per gun": `suppressed` for the long gun and `side_can` for the sidearm, on `MemberKit`.
-- "ideally rifle attachments should be hierarchical under the rifle": the card's rows are a tree (`tree_up`, `kittree`).
+- "ideally rifle attachments should be hierarchical under the rifle": the card's rows are a tree (`kit_rows`, `kittree`).
 - "sponge should show up, should only be part of stealth builds by default": `issued` cards carry no `rings`.
 - "not sure it makes sense to have "mission's" for equipment. that should just be defaults. and if we want to have required equipment, that should just be a constraint
   on the stuff you pick.": a quiet mission starts from your own stored card if it fits (`stealth_card`).

@@ -1442,7 +1442,7 @@ fn begin(g: &mut Game, st: &mut KitStage, f0: &'static str) {
     if let Some(x) = man { if !st.order.contains(&x) { st.a.rest_until = g.time + 1.0; return; } }
     let mut f = f0;
     let lit_card = st.a.cards.get(st.who as usize).map_or(false, |c| c.light);
-    if f == "light" && (man.is_some() || crate::kit::tree_up(g)) && !lit_card { f = "weapon"; }
+    if f == "light" && !lit_card { f = "weapon"; }
     if beats(f, man.is_some()).is_none() { f = "weapon"; }
     let q_row = if st.quiet { quiet_beats(f, man.is_some()) } else { None };
     let c = match man { Some(x) => g.gd[x].ch, None => g.pl[g.player].ch };

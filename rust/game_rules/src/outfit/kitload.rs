@@ -54,12 +54,10 @@ fn card_count(m: &crate::kit::MemberKit, field: &str) -> f64 {
 /// What ONE row of member i's card takes off his two scores as the card stands (None: a row that weighs nothing).
 pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit, field: &str) -> Option<crate::kitload::KitLoad> {
     let mut c: [f64; 2] = [0.0, 0.0];
-    if field == "weapon" || field == "primary" || field == "secondary" {
+    if field == "primary" || field == "secondary" {
         let guns = guns_of(g, i, m);
         let long = m.weapon != crate::kit::KitWeapon::Pistol;
-        let picked: &[crate::weapons::WeaponId] = if field == "weapon" {
-            &guns
-        } else if field == "primary" {
+        let picked: &[crate::weapons::WeaponId] = if field == "primary" {
             if long { &guns[..1] } else { &[] }
         } else if long {
             &guns[1..]
@@ -73,9 +71,6 @@ pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKi
     } else if field == "big" {
         let big = g.k.kitload.big.get(String::from(crate::kit::big_of(m).as_str())).copied();
         c = add(c, big, None);
-    } else if field == "walls" {
-        let wall = g.k.kitload.big.get(String::from("wall")).copied();
-        c = add(c, wall, Some(m::max(0.0, js::to_i32(m.walls) as f64)));
     } else if field == "wand" {
         let wand = if m.wand { g.k.kitload.small.get(String::from("wand")).copied() } else { None };
         c = add(c, wand, None);
@@ -112,14 +107,11 @@ fn snap(x: f64, r: f64) -> f64 {
     if m::abs(x - r) < 1e-9 { r } else { x }
 }
 
-/// What member i wears with the card `m` on him; None with the pouches rule off.
-fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> Option<crate::kitload::KitWorn> {
-    if !g.k.slots.on {
-        return None;
-    }
+/// What member i wears with the card `m` on him.
+fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> crate::kitload::KitWorn {
     let l = load_of(g, i, m);
     let r = load_ref(g, i, n);
-    Some(crate::kitload::KitWorn { mob: snap(l.mob, r.mob), con: snap(l.con, r.con), ref_mob: r.mob, ref_con: r.con })
+    crate::kitload::KitWorn { mob: snap(l.mob, r.mob), con: snap(l.con, r.con), ref_mob: r.mob, ref_con: r.con }
 }
 
 /// His legs' pace × his reference.
@@ -139,7 +131,7 @@ fn load_heard_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
 
 /// Member i's card has just gone on this man, one of `n` who came (None: it came off, or the staging chose his kit itself).
 pub(super) fn load_man(g: &mut crate::game::Game, c: CharId, i: f64, m: Option<&crate::kit::MemberKit>, n: Option<f64>) {
-    g.load[c] = m.and_then(|m| load_worn(g, i, m, n));
+    g.load[c] = m.map(|m| load_worn(g, i, m, n));
 }
 
 /// × the speed this man's legs may be asked for.

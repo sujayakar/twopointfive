@@ -176,8 +176,7 @@ const el = (tag: string, cls: string, text = ''): HTMLElement => { const e = doc
 /** a mannequin tint (linear albedo) as a CSS colour, about as it reads under a lamp */
 function tintCss(t: readonly number[]): string { const c = (x: number) => Math.round(255 * Math.pow(Math.min(1, Math.max(0, x * 1.6)), 1 / 2.2)); return `rgb(${c(t[0])},${c(t[1])},${c(t[2])})`; }
 const LOAD_TIP = { mob: 'mobility (the notch shows his issued kit)', con: 'concealment (the notch shows his issued kit)' };
-const POUCH_TIP = 'his breaching tools and throwables go in these. A grenade-sized thing takes one pouch and a big thing takes two';
-const POUCH_TIP_BIG = 'each pouch holds one grenade-sized thing, and the big slot holds one big thing like a shotgun, a hammer or a wall charge';
+const POUCH_TIP = 'each pouch holds one grenade-sized thing, and the big slot holds one big thing like a shotgun, a hammer or a wall charge';
 const UP = new Set(['KeyW', 'ArrowUp', 'w', 'W']), DOWN = new Set(['KeyS', 'ArrowDown', 's', 'S']), LEFT = new Set(['KeyA', 'ArrowLeft', 'a', 'A']), RIGHT = new Set(['KeyD', 'ArrowRight', 'd', 'D']);
 const OK = new Set(['Enter', 'NumpadEnter', 'Space', ' ', 'Spacebar']), BACK = new Set(['Escape', 'Esc']);
 /** by the key's PLACE on the board where the event says it (host/input.ts reads e.code: W A S D are where they are on any layout), else by its name */
@@ -314,8 +313,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts): 
     title.classList.toggle('changed', view.changed);
     const c = view.pouches, big = view.big, sq = view.squad; pips.textContent = '';
     for (let n = 0; n < Math.max(c.total, c.used); n++) pips.appendChild(el('i', n < c.used ? 'on' : ''));
-    if (big) for (let n = 0; n < Math.max(big.total, big.used); n++) pips.appendChild(el('i', n < big.used ? 'big on' : 'big'));   // (his one big slot, a wide pip after the pouches — lit when something rides in it)
-    pouch.title = big ? POUCH_TIP_BIG : POUCH_TIP;
+    for (let n = 0; n < Math.max(big.total, big.used); n++) pips.appendChild(el('i', n < big.used ? 'big on' : 'big'));   // (his one big slot, a wide pip after the pouches — lit when something rides in it)
     pouchN.textContent = `${c.used} / ${c.total}`;
     squadN.textContent = sq ? `squad ${sq.used} / ${sq.total}` : '';
     const lit = rowOf(cur), S = lit?.takes ?? null, M = lit?.would ?? null;

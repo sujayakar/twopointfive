@@ -210,7 +210,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-words.refused, #missions.one #loadout .lo-kit .kc-note { display: none; grid-column: auto; grid-row: auto; position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; padding: 0; border: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-words.refused { display: block; color: #e8c15a; background: var(--m-base); z-index: 1; }
 #missions.one #loadout .lo-kit .kc-row { position: static; grid-column: auto; grid-row: auto; grid-template-columns: 48px minmax(0, 1fr); margin: 0; padding: 8px 8px 8px 10px; background: rgba(var(--m-edge),0.06); border: 0; border-left: 3px solid transparent; border-radius: 0; }
-#missions.one #loadout .lo-kit .kc-row[data-field="big"] { grid-column: 1 / -1; grid-template-columns: 112px minmax(0, 1fr); padding-top: 10px; padding-bottom: 10px; }   /* (the big slot — rust/game_rules/src/outfit/kit BIGSLOT: the card's last tile, as wide as the card, under the pouches' tiles) */
+#missions.one #loadout .lo-kit .kc-row[data-field="big"] { grid-column: 1 / -1; grid-template-columns: 112px minmax(0, 1fr); padding-top: 10px; padding-bottom: 10px; }   /* (the big slot — rust/game_rules/src/outfit/kit: the card's last tile, as wide as the card, under the pouches' tiles) */
 #missions.one #loadout .lo-kit .kc-row[data-field="big"] .kc-ico { height: 44px; }
 #missions.one #loadout .lo-kit .kc-row:hover { background: rgba(var(--m-edge),0.12); }
 #missions.one.pane-loadout #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-accent-rgb),0.1); border-left-color: var(--m-accent); }

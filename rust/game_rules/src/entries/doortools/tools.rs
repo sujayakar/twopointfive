@@ -559,7 +559,7 @@ pub(super) fn door_tools_to_gun(g: &mut crate::game::Game, op: DoorOpId) -> bool
     let mut avoid: Vec<V3> = men.iter().copied().filter(|m| *m != by).map(|m| post_or_pos(g, op, m)).collect();
     avoid.push(g.ch[g.pl[g.player].ch].pos);
     let mark = if hammer { None } else { Some(post_or_pos(g, op, by)) };
-    let close = if g.k.bigslot.on && (hammer || crate::kit::kit_big(g, by) == crate::kit::BigKit::Shotgun) {
+    let close = if hammer || crate::kit::kit_big(g, by) == crate::kit::BigKit::Shotgun {
         Some(if hammer { crate::shotgun::BreachSpotClose::Hammer } else { crate::shotgun::BreachSpotClose::Shotgun })
     } else { None };
     let sp = match crate::shotgun::breach_spot(g, d, side, Some(&avoid), mark, close) { Some(s) => s, None => return false };
