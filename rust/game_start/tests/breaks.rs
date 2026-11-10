@@ -157,7 +157,7 @@ fn a_piece_does_not_come_to_rest_on_a_man_down() {
 #[test]
 fn a_piece_does_not_come_to_rest_on_a_man_at_the_walls_foot() {
     let mut bad = Vec::new();
-    for s in [1, 4, 8, 9] {
+    for s in [1, 4, 8, 9, 21] {
         for yaw in [core::f64::consts::FRAC_PI_2, -core::f64::consts::FRAC_PI_2] {
             let (mut p, c) = pass(s);
             let gd = man_down_facing(&mut p, [20.9, 9.0], Some(yaw));
