@@ -4,6 +4,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
+use crate::inhand::InHandWord;
 use crate::rig_props::{Carried, CarriedBox};
 use alloc::vec::Vec;
 
@@ -33,10 +34,12 @@ fn flags_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 /// The pistol poked out through a panel: gun shoulder and muzzle on opposite sides of one.
 pub fn arm_through(g: &crate::game::Game, c_2: CharId) -> bool {
-    let or = v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]);
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, or);
-    let to = g.ch[c_2].muzzle;
-    solid_between(g, from, to)
+    solid_between(g, shoulder(g, c_2), g.ch[c_2].muzzle)
+}
+
+/// His gun shoulder.
+pub fn shoulder(g: &Game, c: CharId) -> V3 {
+    bone_or(g, c, crate::character::Bone::UpperArmR, v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]))
 }
 
 /// A panel between `from` and `to`: a static, or a leaf standing shut or as good as (SoundSeal). Short segments only.
@@ -336,7 +339,7 @@ fn hammer_side(g: & crate::game::Game, c_2: CharId) -> Option<crate::combat::Ham
 }
 
 /// What one guard or unit carries and wears, as boxes; and the word for what his fist holds.
-fn guard_props(g: &crate::game::Game, gd: GuardId, out: &mut Carried) -> Option<crate::inhand::InHandWord> {
+fn guard_props(g: &crate::game::Game, gd: GuardId, out: &mut Carried) -> Option<InHandWord> {
     let c = g.gd[gd].ch;
     let stow = crate::workstow::stow_hang(g, gd);
     let Some(big) = big_of(g, c) else {
@@ -385,111 +388,152 @@ fn hung_side(g: &crate::game::Game, gd: GuardId, out: &mut Carried) {
     }
 }
 
-/// A man's row without the big slot's tool. `hang`: his own gun is out of his hands.
-fn guard_kit(g: &crate::game::Game, gd: GuardId, out: &mut Carried, hang: bool) -> Option<crate::inhand::InHandWord> {
-    use crate::rig_props::{rig, RigOpts};
-    let c = g.gd[gd].ch;
-    let team = g.team(gd);
-    let trained = g.gd[gd].trained;
-    let ho = if crate::char_look::side_of_team(team, Some(trained)) == crate::anim_gltf::CastSide::Defender { g.k.inhand.holster_out } else { 0.0 };
-    let has_ho = js::truthy(ho);
-    let hr = if has_ho { let mut h = rig().holster; h.out = h.out + ho; Some(h) } else { None };
-    let holster_out = if has_ho { Some(ho) } else { None };
-    let rk = crate::guards::rig_of(g, gd);
-    let carbine = rk == crate::rig_props::RigWeapon::Carbine;
-    if crate::condition::down(g, g.gd[gd].ch) {
-        if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None); }
-        let dropped = g.gd[gd].dropped;
-        let on_floor = match dropped {
-            Some(it) => { let k = g.tab.item[it].kind; k == crate::throwables::ItemKind::Torch || k == crate::throwables::ItemKind::Rifle }
-            None => false,
-        };
-        if on_floor && !crate::runner::runner_bare(g, gd) {
-            let r = rig();
-            if rk == crate::rig_props::RigWeapon::Sc20k {
-                crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.pistol.slide, grip: r.pistol.grip, suppressor: Some(r.pistol.suppressor) }, None);
-            } else {
-                crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
-            }
-        }
+/// What a man of the guards' or the squad's carries his gun as, read once for his row.
+struct Carries {
+    c: CharId,
+    rig: crate::rig_props::RigWeapon,
+    /// A squad man with a pistol of the kit's for his gun, and whether it is drawn as a pistol.
+    kit_pistol: bool,
+    as_pistol: bool,
+    /// How much further off his hip his holster rides, for what he wears under it.
+    holster_out: Option<f64>,
+}
+
+impl Carries {
+    fn of(g: &Game, gd: GuardId) -> Carries {
+        let side = crate::char_look::side_of_team(g.team(gd), Some(g.gd[gd].trained));
+        let out = if side == crate::anim_gltf::CastSide::Defender { g.k.inhand.holster_out } else { 0.0 };
+        let kit_pistol = crate::kit::kit_pistol(g, gd);
+        let as_pistol = kit_pistol && row(g, g.fa[g.gd[gd].weapon].def).rig == crate::weapons::WeaponDefRig::Pistol;
+        Carries { c: g.gd[gd].ch, rig: crate::guards::rig_of(g, gd), kit_pistol, as_pistol, holster_out: if js::truthy(out) { Some(out) } else { None } }
+    }
+    fn carbine(&self) -> bool { self.rig == crate::rig_props::RigWeapon::Carbine }
+    fn pistol(&self) -> bool { self.rig == crate::rig_props::RigWeapon::Pistol }
+    fn holster(&self) -> Option<crate::rig_props::RigHolster> {
+        self.holster_out.map(|out| { let h = crate::rig_props::rig().holster; crate::rig_props::RigHolster { out: h.out + out, ..h } })
+    }
+}
+
+/// A man's row without the big slot's tool, and the word for what his fist holds. `hang`: his own gun is out of his hands.
+fn guard_kit(g: &Game, gd: GuardId, out: &mut Carried, hang: bool) -> Option<InHandWord> {
+    let w = Carries::of(g, gd);
+    if crate::condition::down(g, w.c) {
+        down_kit(g, gd, &w, out);
         return None;
     }
-    let fl = g.gd[gd].flashlight;
     let rule = crate::guards::in_hand(g, gd);
-    let rule_word = rule;
-    let held = crate::handwork::swap_held(g, gd, rule_word);
+    let held = crate::handwork::swap_held(g, gd, rule);
     let torch_held = held == Some(crate::guards::InHand::Torch);
-    if rule.is_some() && !torch_held && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
-        crate::handwork::belt_torch(g, c, out);
-    }
-    if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == crate::rig_props::RigWeapon::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
-        crate::handwork::belt_torch(g, c, out);
-    }
-    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == crate::rig_props::RigWeapon::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return None; }
+    let gun_lost = g.gd[gd].gun_lost_at >= 0.0;
+    let out_of_hand = (rule.is_some() && !torch_held) || (held.is_none() && gun_lost);
+    if out_of_hand && w.pistol() && !w.kit_pistol && g.gd[gd].torch_lost_at < 0.0 { crate::handwork::belt_torch(g, w.c, out); }
     if held.is_none() {
-        let r = rig();
-        crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, hr);
+        let ran = g.gd[gd].fled && (!w.carbine() || crate::runner::runner_bare(g, gd));
+        if !ran && !(w.pistol() && gun_lost) { guard_holster(g, &w, out); }
         return None;
     }
-    let def = g.fa[g.gd[gd].weapon].def;
+    if w.rig == crate::rig_props::RigWeapon::Sc20k {
+        long_kit(g, gd, &w, out, hang)
+    } else if w.as_pistol {
+        pistol_kit(g, gd, &w, out, hang)
+    } else {
+        issue_kit(g, gd, &w, out, hang, torch_held)
+    }
+}
+
+/// A man down: his goggles up, and his sidearm still in its holster where it was the torch or the rifle he let go of.
+fn down_kit(g: &Game, gd: GuardId, w: &Carries, out: &mut Carried) {
+    use crate::throwables::ItemKind;
+    if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, w.c, false, out, crate::rig_props::rig().goggles, None); }
+    let on_floor = g.gd[gd].dropped.is_some_and(|it| matches!(g.tab.item[it].kind, ItemKind::Torch | ItemKind::Rifle));
+    if !on_floor || crate::runner::runner_bare(g, gd) { return; }
+    if w.rig == crate::rig_props::RigWeapon::Sc20k {
+        let p = crate::rig_props::rig().pistol;
+        crate::rig_props::holster_boxes(g, w.c, out, crate::rig_props::HolsterBoxesParts { slide: p.slide, grip: p.grip, suppressor: Some(p.suppressor) }, None);
+    } else {
+        guard_holster(g, w, out);
+    }
+}
+
+/// A guard's sidearm in its holster.
+fn guard_holster(g: &Game, w: &Carries, out: &mut Carried) {
+    let p = crate::rig_props::rig().guard_pistol;
+    crate::rig_props::holster_boxes(g, w.c, out, crate::rig_props::HolsterBoxesParts { slide: p.slide, grip: p.grip, suppressor: None }, w.holster());
+}
+
+/// What every squad man's boxes start from.
+fn squad_rig(g: &Game, gd: GuardId) -> crate::rig_props::RigOpts {
+    crate::rig_props::RigOpts { goggles: crate::nvg::nvg_worn(g, gd), nv: crate::nvg::nvg_down(g, gd), ..Default::default() }
+}
+
+/// A squad man's long gun, in hand or slung down his front.
+fn long_kit(g: &Game, gd: GuardId, w: &Carries, out: &mut Carried, hang: bool) -> Option<InHandWord> {
+    use crate::rig_props::{RifleAt, RigOpts};
+    let black = crate::cast::sneak_suit(g, w.c);
+    let o = RigOpts { slot: 0.0, holster: Some(true), rifle_black: Some(black), ..squad_rig(g, gd) };
     if hang {
-        if rk == crate::rig_props::RigWeapon::Sc20k {
-            let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
-            let black = crate::cast::sneak_suit(g, c);
-            let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Slung), sling_front: Some(true), rifle_black: Some(black), ..Default::default() };
-            crate::rig_props::rig_boxes(g, c, o, out, None);
-        } else if crate::kit::kit_pistol(g, gd) && row(g, def).rig == crate::weapons::WeaponDefRig::Pistol {
-            let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
-            let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), ..Default::default() };
-            crate::rig_props::rig_boxes(g, c, o, out, None);
-        } else {
-            let o = RigOpts { goggles: false, nv: false, slot: 1.0, light_on: false, is_guard: true, weapon: Some(if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol }), hang: Some(true), holster_out, ..Default::default() };
-            crate::rig_props::rig_boxes(g, c, o, out, None);
-            if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
-                let nv = crate::nvg::nvg_down(g, gd);
-                crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None);
-            }
-        }
+        crate::rig_props::rig_boxes(g, w.c, RigOpts { rifle: Some(RifleAt::Slung), sling_front: Some(true), ..o }, out, None);
         return None;
     }
-    if rk == crate::rig_props::RigWeapon::Sc20k {
-        let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
-        let black = crate::cast::sneak_suit(g, c);
-        let light = g.tab.light[fl].enabled;
-        let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(crate::rig_props::RifleAt::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
-        crate::rig_props::rig_boxes(g, c, o, out, None);
-        free_can(g, gd, out);
-        return Some(crate::rig_props::long_hold(crate::rig_props::LongRig::Sc20k, None));
+    let light = g.tab.light[g.gd[gd].flashlight].enabled;
+    crate::rig_props::rig_boxes(g, w.c, RigOpts { rifle: Some(RifleAt::Hand), rifle_light: Some(light), ..o }, out, None);
+    free_can(g, gd, out);
+    Some(crate::rig_props::long_hold(crate::rig_props::LongRig::Sc20k, None))
+}
+
+/// A squad man's pistol of the kit's, in hand or in its holster.
+fn pistol_kit(g: &Game, gd: GuardId, w: &Carries, out: &mut Carried, hang: bool) -> Option<InHandWord> {
+    use crate::rig_props::RigOpts;
+    let o = squad_rig(g, gd);
+    if hang {
+        crate::rig_props::rig_boxes(g, w.c, RigOpts { slot: 0.0, holster: Some(true), ..o }, out, None);
+        return None;
     }
-    if crate::kit::kit_pistol(g, gd) && row(g, def).rig == crate::weapons::WeaponDefRig::Pistol {
-        let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
-        let light_on = g.tab.light[fl].enabled;
-        let o = RigOpts { goggles, nv, slot: 1.0, light_on, is_guard: false, in_hand: Some(true), fit: Some(true), ..Default::default() };
-        crate::rig_props::rig_boxes(g, c, o, out, None);
-        return Some(crate::inhand::in_pistol());
+    let light_on = g.tab.light[g.gd[gd].flashlight].enabled;
+    crate::rig_props::rig_boxes(g, w.c, RigOpts { slot: 1.0, light_on, in_hand: Some(true), fit: Some(true), ..o }, out, None);
+    Some(crate::inhand::in_pistol())
+}
+
+/// The issue every other man has: a carbine, or a pistol, or a torch with the pistol holstered.
+fn issue_kit(g: &Game, gd: GuardId, w: &Carries, out: &mut Carried, hang: bool, torch_held: bool) -> Option<InHandWord> {
+    use crate::rig_props::{RigOpts, RigWeapon};
+    let carbine = w.carbine();
+    let weapon = Some(if carbine { RigWeapon::Carbine } else { RigWeapon::Pistol });
+    let o = RigOpts { slot: 1.0, is_guard: true, weapon, holster_out: w.holster_out, ..Default::default() };
+    if hang {
+        crate::rig_props::rig_boxes(g, w.c, RigOpts { hang: Some(true), ..o }, out, None);
+        kit_goggles(g, gd, w, out);
+        return None;
     }
-    let ih = !carbine && !torch_held;
     let beam = g.gd[gd].beam_dir;
-    let word = if carbine { crate::rig_props::long_hold(crate::rig_props::LongRig::Carbine, None) }
-        else if torch_held { crate::rig_props::torch_hold(beam, None) }
-        else { crate::inhand::in_pistol() };
-    let light_on = g.tab.light[fl].enabled;
-    let lens = g.tab.light[fl].color;
-    let o = RigOpts {
-        goggles: false, nv: false, slot: 1.0, light_on, is_guard: true,
-        torch: Some(torch_held), beam_dir: Some(beam), lens_color: Some(lens),
-        weapon: Some(if carbine { crate::rig_props::RigWeapon::Carbine } else { crate::rig_props::RigWeapon::Pistol }),
-        in_hand: if ih { Some(true) } else { None },
-        holster_out,
-        ..Default::default()
+    let word = if carbine {
+        crate::rig_props::long_hold(crate::rig_props::LongRig::Carbine, None)
+    } else if torch_held {
+        crate::rig_props::torch_hold(beam, None)
+    } else {
+        crate::inhand::in_pistol()
     };
-    crate::rig_props::rig_boxes(g, c, o, out, None);
-    if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
-        let nv = crate::nvg::nvg_down(g, gd);
-        crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None);
-    }
+    let light = &g.tab.light[g.gd[gd].flashlight];
+    let o = RigOpts {
+        light_on: light.enabled,
+        lens_color: Some(light.color),
+        torch: Some(torch_held),
+        beam_dir: Some(beam),
+        in_hand: if !carbine && !torch_held { Some(true) } else { None },
+        ..o
+    };
+    crate::rig_props::rig_boxes(g, w.c, o, out, None);
+    kit_goggles(g, gd, w, out);
     if carbine { free_can(g, gd, out); }
     Some(word)
+}
+
+/// A squad man's goggles, over a guard's rig.
+fn kit_goggles(g: &Game, gd: GuardId, w: &Carries, out: &mut Carried) {
+    if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
+        let nv = crate::nvg::nvg_down(g, gd);
+        crate::rig_props::goggles_boxes(g, w.c, nv, out, crate::rig_props::rig().goggles, None);
+    }
 }
 
 // ---------------------------------------------------------------- what only a viewer's picture asks for
