@@ -150,7 +150,6 @@ pub mod lightswitch { pub mod types; pub use types::*; }
 pub mod marks { pub mod types; pub use types::*; }
 pub mod math_dice { pub mod types; pub use types::*; }
 pub mod math_exact { pub mod types; pub use types::*; }
-pub mod math_hyp { pub mod types; pub use types::*; }
 pub mod math_side { pub mod types; pub use types::*; }
 pub mod mission { pub mod types; pub use types::*; }
 pub mod morale { pub mod types; pub use types::*; }

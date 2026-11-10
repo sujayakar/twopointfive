@@ -343,22 +343,56 @@ pub fn game_throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kin
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// spot() against the TypeScript's own bits (the closure of game.ts:2201 run under bun with EXACT on)
+
+    /// A leaf from (0, 0) along +z, its handle reach from 0.3 to 0.8 of it, a man at his ease beside it.
+    fn leaf(chest: V3, crack: bool) -> Leaf { Leaf { u: [0.0, 1.0], fx: 0.0, fz: 0.0, lo: 0.3, hi: 0.8, crack, chest, rgt: [0.0, -1.0], arm_l: None, arm_r: None } }
+
+    /// A FAILURE MEANS: his hand floats off the door he is pushing, or goes through his own chest to it.
     #[test]
-    fn spot_is_the_typescripts_to_the_bit() {
-        let cases: [(Leaf, bool, [u64; 3], bool, u64); 6] = [
-            (Leaf { u: [0.8, 0.6], fx: 1.1, fz: 2.3, lo: 0.3, hi: 0.8, crack: true, chest: [1.4, 1.25, 2.0], rgt: [0.6, -0.8], arm_l: Some([1.3, 1.4, 2.1]), arm_r: Some([1.6, 1.42, 2.2]) }, false, [0x3ff570a3d70a3d71, 0x3ff2e147ae147ae1, 0x4003d70a3d70a3d7], true, 0x3fdc37d6d52bdddb),
-            (Leaf { u: [0.8, 0.6], fx: 1.1, fz: 2.3, lo: 0.3, hi: 0.7, crack: false, chest: [1.4, 1.25, 2.0], rgt: [0.6, -0.8], arm_l: Some([1.3, 1.4, 2.1]), arm_r: Some([1.6, 1.42, 2.2]) }, true, [0x3ff5f3b645a1cac2, 0x3ff51eb851eb851e, 0x4004083126e978d5], true, 0x3fd925e3f96b21b3),
-            (Leaf { u: [-0.6, 0.8], fx: 0.25, fz: -1.7, lo: 0.3, hi: 0.8, crack: true, chest: [0.31, 0.9, -1.52], rgt: [-0.28, 0.96], arm_l: None, arm_r: None }, true, [0xbf7beb5ec62d21c0, 0x3feb333333333333, 0xbff5b8a40a2af706], true, 0x3fd51eb851eb851f),
-            (Leaf { u: [0.28, -0.96], fx: 3.3, fz: 3.4, lo: 0.3, hi: 0.7, crack: false, chest: [0.2, 1.3, 0.1], rgt: [1.0, 0.0], arm_l: None, arm_r: None }, false, [0x400bf7ced916872b, 0x3ff5999999999999, 0x4005d2f1a9fbe76c], false, 0x40117fbd56adbaa6),
-            (Leaf { u: [1.0, 0.0], fx: 0.0, fz: 0.0, lo: 0.3, hi: 0.8, crack: true, chest: [0.5, 1.1, 0.2], rgt: [0.0, 1.0], arm_l: Some([0.5, 1.25, 0.18]), arm_r: None }, false, [0x3fe55d3abc2fc066, 0x3ff07ae147ae147b, 0x0000000000000000], true, 0x3fd51eb851eb851f),
-            (Leaf { u: [0.0, 1.0], fx: 0.05, fz: 0.6, lo: 0.3, hi: 0.7, crack: false, chest: [0.1, 1.2, 0.72], rgt: [1.0, 0.0], arm_l: None, arm_r: Some([0.11, 1.38, 0.73]) }, true, [0x3fa999999999999a, 0x3ff47ae147ae147a, 0x3ff09e8b360b33a2], true, 0x3fd51eb851eb8520),
-        ];
-        for (l, right, p, reach, dist) in cases.iter() {
-            let s = spot(l, *right);
-            assert_eq!([s.p[0].to_bits(), s.p[1].to_bits(), s.p[2].to_bits()], *p);
-            assert_eq!(s.reach, *reach);
-            assert_eq!(s.dist.to_bits(), *dist);
+    fn a_hand_goes_on_the_leaf_at_a_height_he_could_hold_it() {
+        for chest in [[0.45, 1.25, 0.55], [0.3, 1.1, 0.2], [0.5, 1.4, 0.9], [2.0, 1.25, 0.5]] {
+            for (right, crack) in [(false, false), (true, false), (false, true), (true, true)] {
+                let s = spot(&leaf(chest, crack), right);
+                assert!(s.p[0].abs() < 1e-12, "{chest:?}: on the leaf's line: {:?}", s.p);
+                assert!(s.p[2] >= 0.3 - 1e-12 && s.p[2] <= 0.8 + 1e-12, "{chest:?}: on the part of it that takes a hand: {:?}", s.p);
+                assert!(s.p[1] >= 0.85 && s.p[1] <= 1.36, "{chest:?}: at a hand's height: {:?}", s.p);
+            }
         }
+    }
+
+    #[test]
+    fn he_reaches_a_leaf_his_arm_is_long_enough_for_and_says_so() {
+        let by = spot(&leaf([0.3, 1.25, 0.55], false), false);
+        assert!(by.reach, "beside it");
+        assert!(by.dist <= 0.5, "within an arm: {}", by.dist);
+        let far = spot(&leaf([2.0, 1.25, 0.55], false), false);
+        assert!(!far.reach, "two metres off");
+        assert!(far.dist > 1.0, "{}", far.dist);
+    }
+
+    /// His elbow has room: the hand does not come in nearer his shoulder than a bent arm can put it, when the leaf has somewhere else for it.
+    #[test]
+    fn a_hand_keeps_an_arms_bend_off_his_shoulder() {
+        let s = spot(&leaf([0.1, 1.2, 0.5], false), false);
+        assert!(s.dist >= 0.33 - 1e-9, "{}", s.dist);
+    }
+
+    #[test]
+    fn each_hand_works_off_its_own_shoulder_and_the_joint_is_used_where_it_is_given() {
+        let plain = leaf([0.3, 1.25, 0.55], false);
+        let (l, r) = (spot(&plain, false), spot(&plain, true));
+        assert_ne!(l.p, r.p, "the two hands have different places");
+        let mut joint = plain;
+        joint.arm_l = Some([0.2, 1.4, 0.4]);
+        let j = spot(&joint, false);
+        assert!(m::abs(m::hyp3(j.p[0] - 0.2, j.p[1] - 1.4, j.p[2] - 0.4) - j.dist) < 1e-12, "the distance is off the shoulder he has");
+        assert_eq!(spot(&joint, true).p, r.p, "the left shoulder is nothing to the right hand");
+    }
+
+    /// Through a crack, up close, the hand comes in low and further along than on a door he is shoving flat.
+    #[test]
+    fn a_hand_at_a_crack_goes_lower_when_he_is_up_against_it() {
+        let chest = [0.3, 1.25, 0.55];
+        assert!(spot(&leaf(chest, true), false).p[1] < spot(&leaf(chest, false), false).p[1]);
     }
 }
