@@ -120,7 +120,7 @@ const lightCode = FETCH + perBrick(`
     else { var best = 0.0; var who = 0u; for (var m = 0u; m < frame.counts.x; m++) { if (lamps[m].kind != 2u || lamps[m].on <= 0.0) { continue; } let q = aimLamp(m, x, vec2f(0.5)); let w = lum(q.E); if (w > best) { best = w; who = m; } } if (best <= 1e-3) { continue; } let q = aimLamp(who, x, vec2f(0.5)); d = q.dir; far = q.dist - 0.03; e = q.E; footLight(lampSize(who), far); }
     if (max3(e) <= 0.0) { continue; } let g0 = e * visible(x, d, 1e-3, far) * (1.0 / (4.0 * PI)); if (k < 2u) { L += g0; } else { now = min(g0, vec3f(200.0)); } }
   G[gi + SLOTS_S * 64u] = packV(vec4f(now, 1.0)); let u = rnd2(); let z = u.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); d = vec3f(r * cos(6.2832 * u.y), z, r * sin(6.2832 * u.y)); foot(0.16, 1.0); let h = nearest(x, d, 1e-3, 80.0, 0u, 1e9); let sm = smokeSeen(x, d, h.t); var B = vec3f(0.0); let fo = blkSeen();
-  if (h.piece == 0xffffffffu) { B = skyLod(d, 5.0); } else { let q = surfaceMean(x, d, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; B = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), d); }
+  if (h.piece == 0xffffffffu) { B = skyLod(d, 5.0); } else { let q = surfaceMean(x, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; B = select(q.glow, vec3f(0.0), own) + sentBack(q, rnd2()); }
   L += min(B * h.thru * fo.T * sm.a + sm.rgb + fo.L, vec3f(40.0)); let m = min(was.w + 1.0, mix(4.0, 24.0, steady(x))); G[gi] = packV(vec4f(mix(was.rgb, min(L, vec3f(200.0)), 1.0 / m), m));
 `, 64);
 const publishCode = FETCH + `const HALF = SLOTS_S * 512u;` + perBrick(`
