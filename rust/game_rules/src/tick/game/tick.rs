@@ -58,8 +58,7 @@ fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
 fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
-    // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; the pool's tenant tends it: a man who left the lists is out of it, one who
-    //  arrived is in)
+    // (the poses' pool: a man who left the lists is out of it, one who arrived is in)
     crate::posehome::pose_home_tend(g);
     crate::sense::smoke_home(g);
     // a record from anyone made one an honest seat could have sent, before anything reads it
@@ -69,7 +68,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         let near = if g.tab.cmd_seat[s].remote { let c = man_char(g, s); Some(g.ch[c].pos) } else { None };
         checked.push(crate::cmd::check_cmd(g, Some(&cmds[i]), near));
     }
-    crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     crate::sense::smoke_step(g, dt);
     for i in 0..n { crate::cmd::seat_load(g, seats[i], &checked[i]); }

@@ -54,7 +54,7 @@ pub struct Weather {
     /// on its way, oldest first
     pub thunders: Vec<crate::weather::Thunder>,
     /// the storm's own die: never the game's, whose stream a storm must not shift
-    pub die: u32,
+    pub die: crate::dice::Die,
     #[is(1.0)] pub fog_glow: f64,
     #[is([1.1, 0.45])] pub wind: [f64; 2],
     #[is(true)] pub wet_gloss: bool,

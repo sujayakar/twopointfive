@@ -114,9 +114,9 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
     for (i, dm) in men.iter().enumerate() {
         let c = g.gd[dm.gd].ch;
         let p = g.ch[c].pos;
-        let mut d = crate::math_dice::die_of(crate::math_dice::hash_str(&deal_key(i, p[0], p[2])));
-        let first = crate::math_dice::roll(&mut d);
-        let second = crate::math_dice::roll(&mut d);
+        let mut d = crate::dice::Die(js::to_u32(crate::dice::hash_str(&deal_key(i, p[0], p[2]))));
+        let first = d.roll();
+        let second = d.roll();
         draws.push([first, second]);
     }
     let n = men.len() as f64;

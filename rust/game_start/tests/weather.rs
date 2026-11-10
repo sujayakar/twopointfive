@@ -148,7 +148,7 @@ const AHEAD: usize = 240;
 fn the_next_stroke_is_foreseen() {
     for die in [1, 4000000000] {
         let mut p = born("office.json", "&weather=downpour");
-        p.g.weather.die = die;
+        p.g.weather.die = game::dice::Die(die);
         let (mut said, mut strokes, mut thunders) = (std::collections::VecDeque::new(), 0, p.g.weather.stats.thunders);
         for _ in 0..60 * 90 {
             let was = p.g.weather.stats.flashes;

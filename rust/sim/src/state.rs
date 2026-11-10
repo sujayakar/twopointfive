@@ -17,7 +17,6 @@
 //! WHO HOLDS A SLOT is the host's business (src/sim/state.ts SimState: a game's block is bound to a slot here, or parked in the host's memory when more than
 //! `GAMES` games are alive at once). A call that reads or writes state names its slot, `g`.
 use crate::bricks::Smoke;
-use crate::dice::Dice;
 use crate::poses::Poses;
 use crate::men::Men;
 use crate::lights::Lights;
@@ -33,10 +32,7 @@ pub const GAMES: usize = 4;
 pub struct Head {
     /// the word of the layout this block was written under (`LAYOUT`): the host writes it into a new block
     pub layout: u32,
-    /// WHICH SYSTEMS' STATE IS AT HOME HERE, a bit a system: a system whose bit is down keeps its state in the
-    /// TypeScript objects, as it did before it moved, and the part it would use here is zeros
-    pub homes: u32,
-    pub spare: [u32; 2],
+    pub spare: [u32; 3],
 }
 const _: () = assert!(size_of::<Head>() == 16);
 
@@ -44,7 +40,6 @@ const _: () = assert!(size_of::<Head>() == 16);
 #[repr(C, align(16))]
 pub struct State {
     pub head: Head,
-    pub dice: Dice,
     pub men: Men,
     pub lights: Lights,
     pub weather: Weather,
@@ -64,9 +59,8 @@ pub struct Part {
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
 /// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
 /// paid for by every part that stands after it. Parts of a fixed length first, then the pools: every game's by size, the one sized largest last of those; then the panes, which a game with no pane touched does not use at all (a last pool with nothing in it takes no room, src/sim/state.ts `span`).
-pub const PARTS: [Part; 8] = [
+pub const PARTS: [Part; 7] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },

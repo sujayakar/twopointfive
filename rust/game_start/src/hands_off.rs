@@ -342,7 +342,7 @@ impl HandsOff {
         let me = Rc::new(Me { p: Player::new(seat, Feet::default()), target: Cell::new(None), given: Cell::new(0) });
         let (cap, seed, own) = (plan.cap, plan.seed, me.clone());
         HandsOff {
-            me, script: Box::pin(async move { own.play(&plan).await }), cap, die: Die::new(0xb07u32.wrapping_add(seed.wrapping_mul(131))), shown: Vec::new(), last: None, last_t: -9.0, busy: 0.0, end: None,
+            me, script: Box::pin(async move { own.play(&plan).await }), cap, die: Die(0xb07u32.wrapping_add(seed.wrapping_mul(131))), shown: Vec::new(), last: None, last_t: -9.0, busy: 0.0, end: None,
             shot_at: -9.0, heard: -1.0,
         }
     }

@@ -41,11 +41,11 @@ fn an_evening_keeps_its_switches_and_its_die() {
     p.g.god_mode = true;
     p.g.tune.vis_floor *= 2.0;
     p.run(1.0);
-    for _ in 0..5 { game::math_dice::sim_random(&mut p.g); }   // (the die is ahead of where the first step had it)
-    let (floor, rolled, serial, restarts, run) = (p.g.tune.vis_floor, sim::state::state_read(p.g.sim).dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
+    p.g.dice.n += 5.0;   // (the die is ahead of where the first step had it)
+    let (floor, rolled, serial, restarts, run) = (p.g.tune.vis_floor, p.g.dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
     assert!(control::restart(&mut p.g));
     assert!(p.g.god_mode && p.g.tune.vis_floor == floor, "the switches went back with the game");
-    assert!(sim::state::state_read(p.g.sim).dice.n >= rolled, "the die went back with the game");
+    assert!(p.g.dice.n >= rolled, "the die went back with the game");
     assert!(p.g.serial_next >= serial, "a number would be dealt twice");
     assert_eq!(p.g.time, 0.0, "the clock starts over");
     assert_ne!(p.g.mission.serial, run, "it is a new run");

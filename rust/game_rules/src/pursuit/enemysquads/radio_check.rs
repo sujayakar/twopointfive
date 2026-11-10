@@ -453,21 +453,21 @@ fn check_word(name: &str, salt: f64, phases: f64) -> u32 {
     (h ^ js::to_i32(m::floor(phases * 8388607.0))) as u32
 }
 /// The check's own dice, never the game's: seeded off the squad's name and its men's stride phases.
-pub(super) fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::math_dice::Die {
+pub(super) fn check_dice(g: &crate::game::Game, q: EnemysquadsSquadId, salt: Option<f64>) -> crate::dice::Die {
     let salt = salt.unwrap_or(0.0);
     let mut phases = 0.0;
     for x in sq!(g, q).men.iter() {
         phases = phases + g.ch[g.gd[*x].ch].anim.phase;
     }
     let word = check_word(&sq!(g, q).name, salt, phases);
-    crate::math_dice::die_of(word as f64)
+    crate::dice::Die(word as u32)
 }
 /// How long till the next check: a squad that has heard of the team counts its men oftener.
-fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::math_dice::Die) -> f64 {
+fn check_beat(g: &crate::game::Game, q: EnemysquadsSquadId, die: &mut crate::dice::Die) -> f64 {
     let k = g.k.squads;
     let r = &sq!(g, q);
     let alert = if r.news_t > -100.0 || r.contact_t > -100.0 || r.wary == Some(true) { k.check_alert_k } else { 1.0 };
-    k.check_every * alert * (1.0 + (crate::math_dice::roll(die) * 2.0 - 1.0) * k.check_jitter)
+    k.check_every * alert * (1.0 + (die.roll() * 2.0 - 1.0) * k.check_jitter)
 }
 /// checkBeat off the squad's own check's die: the die lives in g, so it comes out for the call and goes back with the draw
 fn rc_beat(g: &mut Game, q: EnemysquadsSquadId) -> f64 {
@@ -478,13 +478,13 @@ fn rc_beat(g: &mut Game, q: EnemysquadsSquadId) -> f64 {
 }
 /// one draw of the squad's own check's die
 fn rc_roll(g: &mut Game, q: EnemysquadsSquadId) -> f64 {
-    crate::math_dice::roll(&mut rc!(g, q).die)
+    rc!(g, q).die.roll()
 }
 /// The squad's check, made on the first asking: the row itself.
 pub(super) fn rc_of<'g>(g: &'g mut crate::game::Game, q: EnemysquadsSquadId) -> &'g mut crate::enemysquads::Check {
     if sq!(g, q).rc.is_none() {
         let mut die = check_dice(g, q, None);
-        let first = crate::math_dice::roll(&mut die);
+        let first = die.roll();
         let next_at = g.time + first * check_beat(g, q, &mut die);
         let now = g.time;
         sq!(g, q).rc = Some(crate::enemysquads::Check {

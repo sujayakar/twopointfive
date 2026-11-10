@@ -78,7 +78,7 @@ fn line_slot(g: &mut Game, kind: LineKind, vars: Option<&JsMap<String, String>>)
     let (cls, say) = (row.1, row.2);
     let len = say.len() as f64;
     let st = st_of(g);
-    let i = match st.rot.get(kind) { Some(i) => *i, None => js::rem(m::floor(crate::math_dice::roll(&mut st.die) * len), len) };
+    let i = match st.rot.get(kind) { Some(i) => *i, None => js::rem(m::floor(st.die.roll() * len), len) };
     st.rot.set(kind, js::rem(i + 1.0, len));
     let tpl: &'static str = row.4.or(row.3).unwrap_or(say)[i as usize];
     let empty = JsMap::new();
@@ -133,7 +133,7 @@ fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 
 /// a beat between two numbers, off the state's own die
 fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
-    r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
+    r[0] + st_of(g).die.roll() * (r[1] - r[0])
 }
 
 /// fit to speak or be spoken to: up, not held, his wits about him
@@ -484,8 +484,8 @@ fn fresh_seed(seed: f64, attempt: f64) -> f64 {
 /// A new state for the endgame: its own die off the room clear's seed and attempt, four draws spent; the posts as staged, kept if it is the same staging.
 fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     let (seed, attempt) = (g.room_clear.seed, g.room_clear.attempt);
-    let mut die = crate::math_dice::die_of(fresh_seed(seed, attempt));
-    for _ in 0..4 { crate::math_dice::roll(&mut die); }
+    let mut die = crate::dice::Die(js::to_u32(fresh_seed(seed, attempt)));
+    for _ in 0..4 { die.roll(); }
     let key = alloc::format!("{}:{}", seed, attempt);
     let kept = match &g.m.laststand.states { Some(was) if was.key == key => Some(was.post.clone()), _ => None };
     let post = match kept {

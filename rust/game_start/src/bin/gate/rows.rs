@@ -329,7 +329,7 @@ fn plant(p: &mut Play, f: Flags) {
     if f.breaks("round") { let gun = p.g.gd[man].weapon; p.g.fa[gun].chamber -= 1.0; }
     if f.breaks("door") { let d = p.g.doors.list[0]; let a = p.g.dr[d].leaf.angle; p.g.dr[d].leaf.angle = a + 0.1; }
     if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
-    if f.breaks("die") { game::math_dice::sim_random(&mut p.g); }
+    if f.breaks("die") { p.g.dice.n += 1.0; }
     if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
     if f.breaks("lamps") { let f = &mut p.g.tab.fixture[game::ids::FixtureId(0)]; f.on = !f.on; }
     if f.breaks("smoke") { let c = p.g.ch[p.g.gd[man].ch].pos; game::smoke_types::smoke_system_like_emit(&mut p.g, &game::smoke_types::SmokeEmitter { pos: [c[0], 0.2, c[2]], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() }); }
@@ -440,7 +440,7 @@ fn again_row(name: &str, k: usize, first: &[Vec<u32>], names: &[String], f: Flag
     let mut fail = Vec::new();
     for (time, ordinal) in [(1, "second"), (2, "third")] {
         let (mut p, hand) = stand_run(k, SEED);
-        if f.breaks("second") && time == 1 { game::math_dice::sim_random(&mut p.g); }
+        if f.breaks("second") && time == 1 { p.g.dice.n += 1.0; }
         let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
         for i in 0..frames {
             frame_of(&mut p, &hand, i, &mut next, &mut did);
@@ -549,7 +549,7 @@ fn par_row(name: &str, id: &str, f: Flags) {
         let hand = hand_of("push", frames);
         let mut p = Play::mission_of(d, &link, &opts(SEED, 1));
         p.g.god_mode = hand.unhurt;
-        if planted { game::math_dice::sim_random(&mut p.g); }
+        if planted { p.g.dice.n += 1.0; }
         let (mut next, mut did) = (0, vec![(0, String::new()); hand.lines.len()]);
         let mut rows = vec![p.words()];
         for i in 0..frames {

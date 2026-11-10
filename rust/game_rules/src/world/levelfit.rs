@@ -15,9 +15,8 @@ fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
     crate::guards::MAX_SKINNED + civilians + g.k.seats.max - 1.0
 }
 
-/// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.
+/// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men.
 fn men_held() -> f64 {
-    if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
     m::floor(crate::doors::DOOR_CONTACTS / (crate::game::body_door_particles().len() as f64 + 1.0))
 }
 
@@ -169,13 +168,11 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crat
         lv.civilians.as_ref().map_or(0.0, |l| l.len() as f64),
     );
     let most = hand_over_most(g, civs);
-    let held = crate::sim_sim::sim_why_not().is_empty();
     let flag = crate::scene_boxes::box_flag();
     let glass = flagged(g, &col.boxes, flag.glass);
     let mut parts = 0.0;
     let (cells, entries, tilted) = grid_count(g);
     if let Some(p) = &g_2.props { for i in p.all.iter() { parts += i.boxes.len() as f64; } }
-    let inf = f64::INFINITY;
     let things = g_2.props.as_ref().map_or(0.0, |p| p.all.len() as f64);
     let guards = g_2.guards.as_ref().map_or(0.0, |l| l.len() as f64);
     let cuts = cut_statics(g, &col.boxes);
@@ -194,18 +191,18 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crat
         row("sheets of glass (a row a pane that is no longer whole)", big.sheets, cap.sheets),
     ];
     let clumps = clumps_most(g, &lv.boxes);
-    rows.push(row("clumps the largest sheet of glass dices into", clumps, if held { ::sim::panes_cap(1) as f64 } else { inf }));
+    rows.push(row("clumps the largest sheet of glass dices into", clumps, ::sim::panes_cap(1) as f64));
     let bars = flagged(g, &col.boxes, flag.bar);
-    rows.push(row("window's bars (a row a bar gone, in the game's block)", bars, if held { ::sim::panes_cap(0) as f64 } else { inf }));
+    rows.push(row("window's bars (a row a bar gone, in the game's block)", bars, ::sim::panes_cap(0) as f64));
     rows.push(row("doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors));
     rows.push(row("a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED));
     let man_rows = men_most(g, civs);
     rows.push(row("rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64));
-    let poses = if held { let c = civ_most(g); men_most(g, c) * man_singles_of(g, g_2) } else { 0.0 };
-    rows.push(row("singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, if held { crate::anim_skeleton::pose_pool_room() } else { inf }));
     let civ_cap = civ_most(g);
+    let poses = men_most(g, civ_cap) * man_singles_of(g, g_2);
+    rows.push(row("singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, crate::anim_skeleton::pose_pool_room()));
     rows.push(row("civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap));
-    rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, if held { crate::doors::DOOR_CONTACTS } else { inf }));
+    rows.push(row("contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, crate::doors::DOOR_CONTACTS));
     rows.push(row("light fixtures (a row of the lights' columns each)", big.fixtures, cap.fixtures));
     rows.push(row("lamps on its fixtures, at most (a row of the table a light question reads)", big.lamps, cap.lamps));
     rows.push(row("cameras", big.cameras, cap.cameras));
