@@ -168,7 +168,7 @@ Native tests in `rust/game_start/tests/`:
 | `wall_breaks.rs`, `blast_holes.rs` | a hole agrees for feet, eyes and rounds; chewed cover; a restart; asking first; a man walks the hole |
 | `wallcharge.rs`, `wall_kills.rs` | it catches whom the warning named; at it he dies, past it he is blind; men step back out of known fire |
 | `held_charges.rs`, `guns_and_debris.rs` | both hands, the count, whose key; a piece is heard where it lands, a boot files nothing |
-| `rounds_and_saves.rs` | what a round goes through; hits by `does`; a save carries the broken level; one flood for two walls |
+| `rounds_and_saves.rs` | what a round goes through; hits by `does`, wet or dry; a save carries the broken level; one flood for two walls |
 | `breaks.rs`, `debris_pool.rs`, `furniture.rs` | pieces of the thing, off a man down; a full pool; a wall shields furniture, a restart mends it |
 | `glass.rs`, `glass_open.rs`, `burst_panes.rs` | a pane broken early; what is open to feet, rays and sound; a burst and the glass between |
 | `held_frag.rs`, `held_forty.rs`, `marks.rs`, `restarts.rs` | whom a burst takes; the 40 mm's arming; marks put back; a restart is a fresh staging |

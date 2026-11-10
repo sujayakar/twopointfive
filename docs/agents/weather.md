@@ -89,7 +89,6 @@ other roll.
 | the hour | `darkdoor.rs`, `calmtorch.rs`, the kit picture's porch lamp | `hour_of`, `hour_has_lamps_out` |
 | storm wind | the rules' smoke grid | `wind_storm_drift` into `grid_step`, from `sense.rs`. No other wind reaches a rule |
 | deep snow | a thrown thing's bounce and slide, the squad's forecast of a throw | `snow_bog_at`, `bog_run`; `throwables/`, `throwplan.rs`, `squadsmoke.rs` |
-| the soaked lot | what a round knocks out of it | `surf_at` asks the word's wet row |
 | a fire's lamp | the light meter | a real light, moved by `update_fire` |
 
 Snow, rain and wind do not slow feet: no rule of a man's speed reads them.
