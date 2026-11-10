@@ -22,11 +22,11 @@ pub(super) fn ring_view(g: &Game, seat: &SeatRef) -> Option<RingView> {
         let i = seats.row.get(d).copied().unwrap_or(-1.0);
         if d as f64 == seats.more {
             wedges.push(RingWedge { key: d as f64, text: String::from("more"), off: false, opens: true });
-        } else if m.page.is_none() && !more && d == 1 {
+        } else if !more && d == 1 {
             if said(&m.quick) { wedges.push(RingWedge { key: 1.0, text: m.quick.clone().unwrap(), off: false, opens: false }); }
         } else if i >= 0.0 && (i as usize) < m.rows.len() {
             let at = i as usize;
-            wedges.push(RingWedge { key: d as f64, text: m.words[at].clone(), off: m.why.get(at).is_some_and(said), opens: said(&g.tab.orders_order_def[m.rows[at]].opens) });
+            wedges.push(RingWedge { key: d as f64, text: m.words[at].clone(), off: m.why.get(at).is_some_and(said), opens: false });
         }
     }
     let what = match &m.target {

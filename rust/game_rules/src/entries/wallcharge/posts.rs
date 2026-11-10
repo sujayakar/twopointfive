@@ -55,29 +55,22 @@ pub(super) fn wall_charge_sync(g: &mut crate::game::Game) -> bool {
         wall_charge_reset(g);
     }
     let live = wall_charge_on(g);
-    let mode = if live { g.k.wallcharge.menu.as_str() } else { "" };
-    if mode != g.sets[g.seat].wall_charge.mode {
-        g.sets[g.seat].wall_charge.mode = String::from(mode);
-        wall_charge_seat(g);
+    if live != g.sets[g.seat].wall_charge.seated {
+        wall_charge_seat(g, live);
         if !live { wall_charge_stop(g); }
     }
     live
 }
 
-/// Puts the rows on the menu as the mode says.
-fn wall_charge_seat(g: &mut crate::game::Game) {
+/// Puts the rows on the menu, or takes them off it.
+fn wall_charge_seat(g: &mut crate::game::Game, live: bool) {
     crate::orders::squad_orders_unregister(g, WALL_PAGE);
     crate::orders::squad_orders_unregister(g, WALL_ORDER);
-    g.sets[g.seat].wall_charge.seated = false;
-    if g.sets[g.seat].wall_charge.mode.is_empty() { return; }
-    let page = g.sets[g.seat].wall_charge.mode == "page";
+    g.sets[g.seat].wall_charge.seated = live;
+    if !live { return; }
     let (opener, row) = (g.sets[g.seat].wall_charge.opener, g.sets[g.seat].wall_charge.row);
-    g.tab.orders_order_def[opener].key = Some(5.0);
-    if page { crate::orders::squad_orders_register(g, opener, None); }
-    g.tab.orders_order_def[row].page = if page { Some(String::from(WALL_PAGE)) } else { None };
-    g.tab.orders_order_def[row].key = Some(if page { 3.0 } else { 5.0 });
+    crate::orders::squad_orders_register(g, opener, None);
     crate::orders::squad_orders_register(g, row, None);
-    g.sets[g.seat].wall_charge.seated = true;
 }
 
 /// A fresh run: nothing set, nothing under way.

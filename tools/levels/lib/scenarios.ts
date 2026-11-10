@@ -223,13 +223,9 @@ export interface LessonStep {
   /** the line while a charge his own hands set goes off from his own actions (rust/game_rules/src/sam/ownblow.rs OWNBLOW.on), where the step names the squad's key for
    *  it (absent: `line`) */
   blowLine?: string;
-  /** the line while the SQUAD's ring or menu is up (rust/game_rules/src/squad_orders/orders): the hold is one line, what to press in the ring the next (absent: `line`) */
+  /** the line while the SQUAD's ring or menu is up (rust/game_rules/src/squad_orders/orders): the hold is one line, what to press in the ring the next (absent: `line`). A digit it names is the wedge the row is on with
+   *  this level's `rails.orders` */
   menuLine?: string;
-  /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
-  pageLine?: string;
-  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, rust/game_rules/src/missions/rails.rs RAILS.flatRing:
-   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` */
-  flatLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -287,10 +283,6 @@ export interface RailsData {
   /** the orders the squad's menu lists on this level, by id (rust/game_rules/src/squad_orders/orders: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
-  /** the squad's ring on this mission is the game's flat tree (rust/game_rules/src/squad_orders/cmdring.rs CMDRING.flat: every order of the thing on one ring, no pages), as it
-   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (rust/game_rules/src/missions/rails.rs RAILS.flatRing; absent: the menu's pages, whose
-   *  digits `menuLine` and `pageLine` name) */
-  flatRing?: boolean;
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
    *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
   rows?: string[];

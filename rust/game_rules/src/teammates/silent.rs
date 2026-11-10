@@ -238,23 +238,15 @@ fn loud_word(w: Option<&str>) -> String {
 
 /// the rows on the menu, off it with the switch off; work only when that changes
 fn seat(g: &mut crate::game::Game) {
-    let go = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::go::ORDER.id);
-    let go_digit = match go {
-        Some(d) => match &g.tab.orders_order_def[d].hot_key { Some(k) => k.is_empty(), None => true },
-        None => false,
-    };
     let on = g.k.silent.on;
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if let Some(was) = g.m.silent.seats.get(key) {
-        if was.on == on && was.go_digit == go_digit { return; }
+        if was.on == on { return; }
     }
-    g.m.silent.seats.set(key, SilentModSeatsValue { on, go_digit });
+    g.m.silent.seats.set(key, SilentModSeatsValue { on });
     crate::orders::squad_orders_unregister(g, crate::orders::rows::loud::ORDER.id);
     crate::orders::squad_orders_unregister(g, crate::orders::rows::silent::ORDER.id);
     if !on { g.sets[g.seat].orders.posture = None; return; }
-    if let Some(go) = go {
-        if go_digit { crate::orders::squad_orders_register(g, go, None); }
-    }
     let [silent, loud] = rows(g);
     crate::orders::squad_orders_register(g, silent, Some(crate::orders::rows::go::ORDER.id));
     crate::orders::squad_orders_register(g, loud, None);

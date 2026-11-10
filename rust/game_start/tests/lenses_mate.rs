@@ -27,7 +27,7 @@ fn carried(s: u32) -> (Play, GuardId, GuardId) {
     let t = p.hostiles_by(door)[0];
     (p, him, t)
 }
-fn press_v(p: &mut Play) { let k = p.g.k.wand.order_key.clone(); p.key_down(&k); p.frame(); p.key_up(&k); }
+fn press_v(p: &mut Play) { p.key_down("KeyV"); p.frame(); p.key_up("KeyV"); }
 
 /// THE RULE: carried and never ordered, nobody kneels, no lens is among the fog's eyes, the man behind the door is not seen, and V orders nobody (it whistles). Ordered on the door, the man who carries it takes the order, walks up, feeds it, and only then his lens is an eye and the man behind the door seen.
 /// A FAILURE MEANS: a teammate looks under doors on his own, or the order does nothing.
@@ -39,6 +39,18 @@ fn a_teammate_looks_under_a_door_only_on_order() {
         press_v(&mut p);
         p.frame();
         assert!(p.wand_jobs().is_empty(), "seed {s}: V ordered somebody");
+        // (with a ring up on the door, the wand's row among its own: V is still the whistle)
+        let d = game::doors::doors_by_name(&p.g, "server").expect("the server door");
+        let c = p.g.dr[d].frame_centre;
+        p.run(6.0);
+        let blown = p.g.stats.whistle.blown;
+        let on_it = game::orders::squad_orders_target_at(&mut p.g, c);
+        assert!(game::orders::squad_orders_open(&mut p.g, Some(&on_it), None), "seed {s}: no menu on the door");
+        p.ring_over_menu();
+        press_v(&mut p);
+        p.frame();
+        assert!(p.wand_jobs().is_empty() && p.g.stats.whistle.blown > blown, "seed {s}: V with the ring up whistled for nobody");
+        game::orders::squad_orders_close(&mut p.g);
         p.run(2.5);
         let d = game::doors::doors_by_name(&p.g, "server").expect("the server door");
         let c = p.g.dr[d].frame_centre;

@@ -128,7 +128,6 @@ pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::Br
 /// Makes the row and registers it on the orders' menu.
 pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThings {
     let def = crate::orders::rows::def(&crate::orders::rows::work::ORDER, crate::orders::OrderDef {
-        key: Some(1.0),
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
@@ -267,7 +266,7 @@ fn work_things_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &cra
     let mut out = vec![seat.work.row];
     for &id in rows {
         let d = &g.tab.orders_order_def[id];
-        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_ref().map_or(true, |s| s.for_ != crate::orders::rows::movethere::ORDER.id) && d.key != Some(1.0) { out.push(id); }
+        if d.id != crate::orders::rows::movethere::ORDER.id && d.stands_in.as_ref().map_or(true, |s| s.for_ != crate::orders::rows::movethere::ORDER.id) { out.push(id); }
     }
     out
 }

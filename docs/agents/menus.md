@@ -65,7 +65,6 @@ On the page (`gameKeysBoot`) they stand so:
 | `Digit0` | empty hands | backtick (`SLOT`) |
 | `Backquote` | the debugger, the page's | backslash (`SLOT`) |
 | `KeyQ`, `KeyV`, `KeyT`, `KeyZ`, `KeyL`, `KeyE` | wall hold, whistle, who, selector, light, holster | no key, until the player gives one |
-| `KeyG`, `KeyH` | the old menu's letters | asleep, on no list (`LETTERS`) |
 
 The Space bar is then the camera's (`camKey`), while no row was put on it. Everything drawn names keys through `keyText`, `keyCap`, `capNow` or `keysInLine`: the game writes its
 lines with the build's letters or a code in brackets, and these write what is bound now. `KEY_ACTS` is the rows; `FIXED` is what no row can have.
@@ -122,7 +121,7 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
 ## To change it
 
 - **A key:** `KEY_ACTS` for a row, `KEYS` in `options.ts` for its words. Ask the game for a code. `?keybinds=0`, `?qfree=0`, `?camspace=0`, `?slotsetup=0`, `?qonly=0`,
-  `?menuletters=0`, `?pinchonly=0` and `?bkey` turn the board's rules off for a visit.
+  `?pinchonly=0` and `?bkey` turn the board's rules off for a visit.
 - **A setting:** a `flip`, `seg` or `range` in its tab's branch of `render`, kept by `keep`. One a game holds goes on `OptionsGame` and `settingsOf`, with a command in
   `rust/game_start/src/host/command.rs` and a word in `rust/game_draw/src/view.rs`.
 - **Something a card asks:** a line of `asks!` with the next number, then `bun run tools/draw/gen.ts`.

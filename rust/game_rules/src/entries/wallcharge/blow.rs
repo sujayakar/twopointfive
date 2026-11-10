@@ -400,7 +400,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
         return;
     }
     if let Some(rows) = g.sets[g.seat].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
-        if rows.iter().any(|&d| g.tab.orders_order_def[d].hot_key.as_deref() == Some(key.as_str())) { return; }
+        if rows.iter().any(|&d| g.tab.orders_order_def[d].word) { return; }
     }
     let sam = g.ch[g.pl[g.player].ch].pos;
     let c = match wall_charge_nearest(g, Some(&mut |g: &mut Game, x: WallChargeId| wall_charge_key_is(g, &crate::seats::here(g), x))) { Some(c) => c, None => return };

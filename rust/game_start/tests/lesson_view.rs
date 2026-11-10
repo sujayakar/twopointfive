@@ -204,7 +204,7 @@ fn every_line_a_player_reads_is_written_out() {
         let l = p.g.level.scenarios.as_ref().and_then(|s| s.lesson.clone()).unwrap_or_else(|| panic!("{} has a lesson", name));
         for t in &l.steps {
             let after = t.after.as_ref();
-            for w in [Some(&t.line), t.setup_line.as_ref(), t.ring_line.as_ref(), t.blow_line.as_ref(), t.menu_line.as_ref(), t.page_line.as_ref(), t.flat_line.as_ref(), t.no_tap.as_ref(),
+            for w in [Some(&t.line), t.setup_line.as_ref(), t.ring_line.as_ref(), t.blow_line.as_ref(), t.menu_line.as_ref(), t.no_tap.as_ref(),
                       after.and_then(|a| a.line.as_ref()), after.and_then(|a| a.word.as_ref()), t.explain.as_ref().map(|e| &e.text)].into_iter().flatten() {
                 let said = game::lesson::lesson_line(&p.g, w);
                 read += 1;
@@ -233,9 +233,9 @@ fn in_a_game_of_two_each_hud_is_told_of_its_own_seat() {
         // the second player's ring up on the step's mark: the line is what to press in it, for him alone
         let at = p.g.level.scenarios.as_ref().unwrap().lesson.as_ref().unwrap().steps[a.step as usize].at.expect("the step marks a place");
         let s = p.g.seats[1];
-        game::seats::with_seat(&mut p.g, s, &mut |g| { let t = game::orders::squad_orders_target_at(g, at); game::orders::squad_orders_open(g, Some(&t), Some(true), None); });
+        game::seats::with_seat(&mut p.g, s, &mut |g| { let t = game::orders::squad_orders_target_at(g, at); game::orders::squad_orders_open(g, Some(&t), None); });
         assert!(game::seats::seat(&p.g, s).orders.menu.is_some(), "seed {}: his ring is up", seed);
-        let want = step_text(&p, "gateB", |t| t.flat_line.clone());
+        let want = step_text(&p, "gateB", |t| t.menu_line.clone());
         assert_eq!(frame_of(&p.view_of(1).lesson.unwrap()).prompt.as_ref().unwrap().line, want, "seed {}: his line", seed);
         assert_ne!(frame_of(&p.view_of(0).lesson.unwrap()).prompt.as_ref().unwrap().line, want, "seed {}: the other's", seed);
 

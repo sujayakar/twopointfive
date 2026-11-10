@@ -638,8 +638,8 @@ impl<'a> Rules<'a> {
             self.text(format!("{at}.line"), &t.line);
             self.lesson_test(&format!("{at}.done"), &t.done, s);
             if !ids.insert(&t.id) { self.say(&at, "the id is another step's already"); }
-            for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line), ("pageLine", &t.page_line),
-                ("flatLine", &t.flat_line), ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }
+            for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line),
+                ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }
             if t.settle.is_some_and(|s| s <= 0.0 || s > 10.0) { self.say(format!("{at}.settle"), "seconds, over 0 and at most 10"); }
             if t.hold.is_some_and(|s| s < 0.0) { self.say(format!("{at}.hold"), "seconds, 0 or more"); }
             if t.eye.as_ref().and_then(|e| e.fov).is_some_and(|x| x <= 0.0 || x > 360.0) { self.say(format!("{at}.eye.fov"), "degrees, over 0 and up to 360"); }

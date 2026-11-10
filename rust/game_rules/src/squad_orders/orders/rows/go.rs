@@ -13,8 +13,8 @@ pub const ORDER: Row = Row {
     ..Row::new("go", label, issue)
 };
 
-/// the squad is one or two men (doortools deals the row its key by the same)
-fn small(g: &Game) -> bool { crate::seats::here(g).door_tools.go_key == Some(Some(String::from("small"))) }
+/// the squad is one or two men
+fn small(g: &Game) -> bool { crate::seats::here(g).door_tools.go_row == Some(crate::doortools::GoRow::Small) }
 
 /// doortools.ts:908 / :916
 fn label(g: &mut Game, t: &OrderTarget) -> String {
