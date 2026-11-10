@@ -29,7 +29,7 @@ fn look_of(g: &Game, h: GuardId) -> [f64; 2] {
 /// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)
 pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
     // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
-    g.orders.people = Some(crate::orders::SquadOrdersPeople::default());
+    g.sets[g.seat].orders.people = Some(crate::orders::SquadOrdersPeople::default());
     crate::pairorders::PairOrders::blank()
 }
 
@@ -274,9 +274,9 @@ pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[Guard
     Ok(())
 }
 /// one of the two take rows
-fn take_row(g: &mut Game, row: &'static crate::orders::Row, key: f64, ack: [&str; 2]) -> OrdersOrderDefId {
+fn take_row(g: &mut Game, row: &'static crate::orders::Row, ack: [&str; 2]) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(row, crate::orders::OrderDef {
-        key: Some(key), targets: vec![crate::orders::TargetKind::Foe],
+        targets: vec![crate::orders::TargetKind::Foe],
         ack: Some(vec![String::from(ack[0]), String::from(ack[1])]),
         ..Default::default()
     });
@@ -286,15 +286,15 @@ fn take_row(g: &mut Game, row: &'static crate::orders::Row, key: f64, ack: [&str
 /// mark, watch, now, dark: new rows each time they are seated   (PairOrders.rows)
 fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
-    let mark = take_row(g, &rows::pairmark::ORDER, 1.0, ["moving up on him.", "on him. your mark."]);
+    let mark = take_row(g, &rows::pairmark::ORDER, ["moving up on him.", "on him. your mark."]);
     let watch = crate::orders::squad_orders_row(g, rows::def(&rows::pairwatch::ORDER, crate::orders::OrderDef {
-        key: Some(2.0), targets: vec![crate::orders::TargetKind::Foe],
+        targets: vec![crate::orders::TargetKind::Foe],
         ack: Some(vec![String::from("eyes on him."), String::from("i've got him.")]),
         ..Default::default()
     }));
-    let now = take_row(g, &rows::pairtake::ORDER, 5.0, ["on him.", "moving up on him."]);
+    let now = take_row(g, &rows::pairtake::ORDER, ["on him.", "moving up on him."]);
     let dark = crate::orders::squad_orders_row(g, rows::def(&rows::pairdark::ORDER, crate::orders::OrderDef {
-        key: Some(1.0), targets: vec![crate::orders::TargetKind::Floor],
+        targets: vec![crate::orders::TargetKind::Floor],
         ack: Some(vec![String::from("moving."), String::from("on it.")]),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::movethere::ORDER.id) }),
         ..Default::default()
@@ -306,7 +306,7 @@ fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
 fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::rows;
     crate::orders::squad_orders_row(g, rows::def(&rows::pairgo::ORDER, crate::orders::OrderDef {
-        hot_key: Some(String::from("KeyF")), free: Some(true),
+        word: true, free: Some(true),
         targets: vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None, crate::orders::TargetKind::Foe],
         ..Default::default()
     }))
@@ -324,7 +324,7 @@ fn pair_orders_seat(g: &mut Game) {
     if up != seated_in(g, &crate::seats::here(g)) {
         for r in crate::orders::rows::ROWS.iter().filter(|r| r.is.contains(&crate::orders::Is::Pair)) { crate::orders::squad_orders_unregister(g, r.id); }
         for id in [crate::orders::rows::fallin::ORDER.id, crate::orders::rows::hold::ORDER.id] {
-            let found = g.orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == id);
+            let found = g.sets[g.seat].orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == id);
             let d = match found { Some(d) => d, None => continue };
             let has = g.tab.orders_order_def[d].targets.contains(&crate::orders::TargetKind::Foe);
             if up && !has { g.tab.orders_order_def[d].targets.push(crate::orders::TargetKind::Foe); }

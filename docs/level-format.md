@@ -395,7 +395,7 @@ A step:
 
 - `id` text, unique in the lesson. `line` text: the objective row. `done` a test (below).
 - `setupLine`, `ringLine`, `blowLine` text; default `line`. The line while a gun's setup, his own ring, or his own charge is what the keys work.
-- `menuLine` text; default `line`: while the squad's ring is up. `pageLine` default `menuLine`: on a page under the first. `flatLine` default `menuLine`: on a flat ring.
+- `menuLine` text; default `line`: while the squad's ring is up.
 - `hold` seconds at least 0; default none. The test must stay true so long. `settle` over 0, at most 10; default none. Seconds before the next step comes up.
 - `at` V3; default no marker. `atMan` a route's name: the marker rides on that man while he is up, then `at`. `toward` V3, needs `at`: an arrow on the ground from `at`.
 
@@ -412,7 +412,7 @@ On a level with `rails` only:
 
 - `allow` list of actions (`rails.rs`). Every other key is dropped. `respawn` seconds at least 0; default he goes down: a teammate spends so long on a knee instead. `fog` true or false.
 - `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee.
-- `lasers` false: no teammate shows an aiming laser. `flatRing` true: the squad's ring is one flat ring.
+- `lasers` false: no teammate shows an aiming laser.
 - `orders` list of order ids; default all: what the squad's menu lists. `rows` list of verbs; default all: what Space offers.
 
 A test is a record whose `is` says its kind, and `passes` runs it. Where it says n, the default is 1. A kind the build has no row for never passes.

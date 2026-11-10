@@ -49,7 +49,7 @@ const WALL_MARK: V3 = [30.95, 1.1, 6.6];
 const FRAG_AT: V3 = [29.6, 0.05, 19.8];
 const YARD_FROM: V3 = [23.8, 0.02, 19.75];
 
-fn own_ring(b: &Bot) -> bool { b.me(|p| p.sel.open && p.sel.ring.is_some()) }
+fn own_ring(b: &Bot) -> bool { b.seen(|_, s| s.hand.sel.open && s.hand.sel.ring.is_some()) }
 fn last_two(b: &Bot) -> Vec<GuardId> { b.named(&["Brandt", "Marsh"]) }
 /// the command key HELD on a point until the squad's ring is up, then the digits the line that is up names, in order
 async fn ring(b: &Bot, p: V3) -> bool {
@@ -59,9 +59,9 @@ async fn ring(b: &Bot, p: V3) -> bool {
     b.down("KeyB");
     b.hold(&["KeyB"], 0.45, || false).await;
     b.ticks(2).await;
-    let Some(flat_ring) = b.ask(|g| g.orders.menu.as_ref().map(|m| m.flat == Some(true))) else { b.say(String::from("  the squad's ring did not come up")); return false };
-    let said = b.ask(|g| game::lesson::lesson_step(g).and_then(|t| if flat_ring { t.flat_line } else { t.menu_line })).unwrap_or_default();
-    let rows = || b.ask(|g| g.orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
+    if b.ask(|g| g.sets[g.seat].orders.menu.is_none()) { b.say(String::from("  the squad's ring did not come up")); return false }
+    let said = b.ask(|g| game::lesson::lesson_step(g).and_then(|t| t.menu_line)).unwrap_or_default();
+    let rows = || b.ask(|g| g.sets[g.seat].orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
     let digits = Bot::digits(&said);
     b.say(format!("  the ring is up: '{}' -> {:?} · {}", said, digits, rows()));
     for d in digits { b.press(&format!("Digit{}", d), 4).await; b.say(format!("    [{}] -> {}", d, rows())); }

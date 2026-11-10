@@ -136,7 +136,7 @@ pub fn gun_raised(g: &crate::game::Game, pl: PlayerId, now: Option<f64>, m: Opti
     let now = now.unwrap_or(g.time);
     let sprinting = match m { Some(m) => m.sprinting, None => g.pl[pl].sprinting };
     let pistol = g.pl[pl].pistol;
-    (crate::game::player_pistol_up(g, pl) && (now - g.pl[pl].last_fire_t < 1.6 || g.fa[pistol].light_on || g.pl[pl].aim_held))
+    (crate::game::player_pistol_up(g, pl) && (now - g.pl[pl].last_fire_t < 1.6 || g.fa[pistol].light_on || g.sets[crate::seats::seat_of_man(g, pl)].hand.aim_held))
         || crate::game::player_braced_at(g, pl, sprinting)
 }
 
@@ -224,7 +224,7 @@ fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
     use crate::handwork::SamWorkKind;
     let Some(at) = w.at else { return };
     match w.kind {
-        SamWorkKind::Wall => if let Some(s) = g.wall_charge.sam.as_mut() { s.at = at; },
+        SamWorkKind::Wall => if let Some(s) = g.sets[g.seat].wall_charge.sam.as_mut() { s.at = at; },
         SamWorkKind::Door => if let Some(s) = g.pl[pl].charging.as_mut() { s.at = at; },
         SamWorkKind::Breaker | SamWorkKind::Drive | SamWorkKind::Switch => {}
     }
@@ -266,7 +266,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         if g.pl[pl].holding.is_some() { free_held(g, crate::player::FreeHeldWhy::Shot); }
         g.ch[c].vel = [0.0, 0.0, 0.0];
         let light = g.pl[pl].light; g.tab.light[light].enabled = false;
-        g.pl[pl].throw_preview = None;
+        g.sets[g.seat].hand.throw_preview = None;
         g.ch[c].anim.lockpick = false; g.ch[c].anim.long_gun = false;
         crate::character::character_update(g, c, dt);
         crate::game::game_body_thud(g, c);
@@ -461,10 +461,10 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     }
     let speed = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]);
     // aim
-    let ap = match stalk { Some(s) => s.at, None => g.aim_point };
+    let ap = match stalk { Some(s) => s.at, None => g.sets[g.seat].aim_point };
     let to_aim: V3 = [ap[0] - g.ch[c].pos[0], 0.0, ap[2] - g.ch[c].pos[2]];
     let aim_dist = m::hyp2(to_aim[0], to_aim[2]);
-    g.pl[pl].aim_held = false;
+    g.sets[g.seat].hand.aim_held = false;
     let gun_up = crate::game::player_pistol_up(g, pl);
     let rifle_up = crate::game::player_rifle_up(g, pl);
     let aiming = gun_raised(g, pl, None, None) && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() && !crate::hands::door_move_lowers(g, &crate::seats::here(g))
@@ -661,8 +661,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             }
         }
         // right click with the pistol out: the OCP zaps the light the reticle has snapped to
-        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
-            let t = g.aim_target;
+        if input_rmb_hit(g, input) && !(g.pl[pl].equip_t > 0.0) && g.ch[c].anim.big_tool.is_none() && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.sets[g.seat].aim_target.is_none() && g.sets[g.seat].aim_guard.is_none())) {
+            let t = g.sets[g.seat].aim_target;
             crate::game::game_ocp(g, t);
         }
     }
@@ -695,7 +695,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let owed = walled && !stunned && launch_was.is_some() && crate::aimweight::aim_weigh_launch_keep(g, pl, dt);
         let mut held = None;
         if let Some(l) = load {
-            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
+            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.sets[g.seat].orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
                 if !crate::backkey::back_hit(g, input) && !hit(g, input, "Blur") && !hit(g, input, "Paused") { held = Some(l); }
             }
         }
@@ -757,15 +757,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         g.pl[pl].launch_held = held;
     }
     // throwables: preview while a canister slot is up; throw on LMB (QUICKTHROW is off on the page: no G gesture)
-    if g.pl[pl].throw_eaten && !down(g, input, "KeyG") && !hit(g, input, "KeyG") { g.pl[pl].throw_eaten = false; }
-    let prev_preview = g.pl[pl].throw_preview.take();
+    let prev_preview = g.sets[g.seat].hand.throw_preview.take();
     {
         let tk = g.pl[pl].throw_kind;
         let other = if tk == ThrowKind::Flash { ThrowKind::Smoke } else { ThrowKind::Flash };
         if crate::game::game_throw_count(g, &crate::seats::here(g), tk) <= 0.0 && crate::game::game_throw_count(g, &crate::seats::here(g), other) > 0.0 { g.pl[pl].throw_kind = other; }
     }
     let slot_kind: Option<ThrowKind> = if g.pl[pl].holstered { None } else { crate::game::player_canister_sel(g, pl) };
-    let (throw_held, held_kind, throw_kind) = (g.pl[pl].throw_held, g.pl[pl].held_kind, g.pl[pl].throw_kind);
+    let (throw_held, held_kind, throw_kind) = (g.sets[g.seat].hand.throw_held, g.pl[pl].held_kind, g.pl[pl].throw_kind);
     let kind: ThrowKind = if slot_kind == Some(ThrowKind::Frag) && throw_held {
         if held_kind != ThrowKind::Frag { held_kind } else if throw_kind == ThrowKind::Frag { ThrowKind::Smoke } else { throw_kind }
     } else {
@@ -776,7 +775,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let tp = ap;
         let origin = throw_origin(g, &crate::seats::here(g));
         let sol = crate::throwables::throwables_solve(g, origin, [tp[0], m::max(0.05, m::min(tp[1], 2.6)), tp[2]], None);
-        g.pl[pl].throw_preview = Some(sol.clone());
+        g.sets[g.seat].hand.throw_preview = Some(sol.clone());
         let hold_ok = match g.ch[c].anim.kit_hold {
             None => true,
             Some(Some(crate::character::KitItem::Can)) => g.pl[pl].kit_can == slot_kind,
@@ -784,12 +783,12 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         };
         if input_lmb_hit(g, input) && g.arms[g.pl[pl].ch].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.arms[g.pl[pl].ch].fire_cd = 0.6; }
     }
-    if g.pl[pl].throw_held && !g.pl[pl].sprinting && !stunned {
-        let sol = match g.pl[pl].throw_preview.clone() { Some(s) => Some(s), None => prev_preview };
+    if g.sets[g.seat].hand.throw_held && !g.pl[pl].sprinting && !stunned {
+        let sol = match g.sets[g.seat].hand.throw_preview.clone() { Some(s) => Some(s), None => prev_preview };
         if let Some(sol) = sol { do_throw(g, &sol, kind); }
     }
-    g.pl[pl].throw_held = false;
-    if g.pl[pl].throw_preview.is_none() && ring_preview.is_some() && !g.pl[pl].throw_held { g.pl[pl].throw_preview = ring_preview; }
+    g.sets[g.seat].hand.throw_held = false;
+    if g.sets[g.seat].hand.throw_preview.is_none() && ring_preview.is_some() && !g.sets[g.seat].hand.throw_held { g.sets[g.seat].hand.throw_preview = ring_preview; }
     if let Some(p) = g.pl[pl].pending_throw.as_mut() { p.t -= dt; }
     if g.pl[pl].pending_throw.as_ref().map_or(false, |p| p.t <= 0.0) {
         let (sol, k2) = { let p = g.pl[pl].pending_throw.as_ref().unwrap(); (p.sol.clone(), p.kind) };

@@ -541,13 +541,9 @@ pub(super) fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId 
     g.tab.cmd_seat.push(s)
 }
 
-/// His man: the seat's set is on Game while the pass is about him (always, in a game of one), else on his own row.
+/// His man.
 pub fn seat_man(g: &crate::game::Game, id: SeatId) -> PlayerId {
-    if g.seat == id { return g.player; }
-    match &g.tab.cmd_seat[id].own {
-        Some(own) => own.player,
-        None => g.player,
-    }
+    crate::seats::seat(g, id).player
 }
 
 /// The record of the tick loaded into the seat's Input, camera and view size.

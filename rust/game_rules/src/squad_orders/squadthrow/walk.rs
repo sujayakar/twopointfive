@@ -98,7 +98,7 @@ pub(in crate::squad_orders) fn squad_log_row(g: &mut crate::game::Game, gd: Guar
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     let serial = g.serial();
-    g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
+    g.sets[g.seat].orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
 }
 
 /// The assignment that walks him to his throw, under the row's own id.
@@ -229,7 +229,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
     }
     crate::orders::squad_orders_new_group(g);
     if b.as_ref().map_or(false, |b| crate::orders::rows::id_is(&b.order, crate::orders::Is::Follows)) {
-        let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::fallin::ORDER.id);
+        let d = g.sets[g.seat].orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::fallin::ORDER.id);
         if let Some(d) = d {
             crate::orders::order_issue(g, d, &[gd], &w.t, None);
             return;
@@ -464,7 +464,6 @@ fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
     let open = rows::def(&rows::throwopen::ORDER, crate::orders::OrderDef {
         opens: Some(String::from(THROW_PAGE)),
-        hot_key: Some(g.k.frag.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
         ..crate::orders::OrderDef::default()
@@ -495,24 +494,24 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
 
 /// The rows on the menu.
 fn sync(g: &mut crate::game::Game) {
-    let has = g.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
+    let has = g.sets[g.seat].orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
     if has {
         return;
     }
     state_key(g);
-    let smoke = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::smokethere::ORDER.id);
-    let hold = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
+    let smoke = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::smokethere::ORDER.id);
+    let hold = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let after = if smoke.is_some() { smoke } else { hold };
     let made = rows(g);
-    let before = after.and_then(|a| g.orders.defs.get(a + 1).copied()).map(|d| g.tab.orders_order_def[d].id.clone());
+    let before = after.and_then(|a| g.sets[g.seat].orders.defs.get(a + 1).copied()).map(|d| g.tab.orders_order_def[d].id.clone());
     crate::orders::squad_orders_register(g, made[0], before.as_deref());
     for d in &made[1..] {
         crate::orders::squad_orders_register(g, *d, None);
     }
 }
 
-/// Once a frame after the menu's own input: the rows, and G with a floor menu's first page up turns it to the throws. True: the press was the row's.
-pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
+/// Once a frame after the ring's input: the rows in step with the switch, the walks whose man is gone, and what is worked out for an open menu.
+pub fn squad_throw_frame(g: &mut crate::game::Game) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if g.m.squadthrow.states.get(key).map_or(false, |s| !s.walks.is_empty()) {
         let mut at = 0usize;
@@ -528,25 +527,8 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
     }
     sync(g);
     // (no menu up, nothing is shown: what was worked out for one, or for the order it gave, goes)
-    if g.orders.menu.is_none() { if let Some(s) = g.m.squadthrow.states.get_mut(key) { if s.plans.len() > 0 { s.plans.clear(); } } }
+    if g.sets[g.seat].orders.menu.is_none() { if let Some(s) = g.m.squadthrow.states.get_mut(key) { if s.plans.len() > 0 { s.plans.clear(); } } }
     else { follow(g); }
-    let hit_key = g.k.frag.order_key.clone();
-    if g.orders.menu.is_none() || !crate::input::input_hit(g, input, &hit_key) {
-        return false;
-    }
-    let page = g.orders.menu.as_ref().unwrap().page.clone();
-    if page.as_deref() == Some(THROW_PAGE) {
-        g.tab.input[input].pressed.delete(hit_key);
-        return true;
-    }
-    if page.is_some() {
-        return false;
-    }
-    let i = g.orders.menu.as_ref().unwrap().rows.iter().position(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
-    let Some(i) = i else { return false };
-    g.tab.input[input].pressed.delete(hit_key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
 }
 
 #[cfg(test)]
@@ -560,7 +542,7 @@ mod tests {
         let gd = g.gd.push(crate::game::Guard::blank());
         squad_log_row(&mut g, gd, "fragThere", [0.25, 0.0, -0.04]);
         squad_log_row(&mut g, gd, "fragThere", [1.45, 0.0, 12.0]);
-        let log = &g.orders.log;
+        let log = &g.sets[g.seat].orders.log;
         assert_eq!(log[0].target, "floor:0.3,-0.0");
         assert_eq!(log[1].target, "floor:1.4,12.0");
         assert_ne!(log[0].serial, log[1].serial);

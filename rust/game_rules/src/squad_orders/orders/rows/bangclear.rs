@@ -16,20 +16,19 @@ pub const ORDER: Row = Row {
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let men = recipients_of(g, &crate::seats::here(g), t);
-    if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return format!("bang, then go in · {} left", g.door_tools.bangs); }
+    if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, &men) { return format!("bang, then go in · {} left", g.sets[g.seat].door_tools.bangs); }
     let first = if crate::doortools::door_tools_entry_verb(g, t) == Verb::Open { String::from("bang") } else { format!("{}, bang", crate::doortools::door_tools_entry_verb(g, t).as_str()) };
-    format!("{} and clear · {} left", first, g.door_tools.bangs)
+    format!("{} and clear · {} left", first, g.sets[g.seat].door_tools.bangs)
 }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return crate::doortools::row_can_then(g, What::Bang, t, men); }
-    if g.door_tools.bangs <= 0.0 { return Err(Some(String::from("no bangs left."))); }
+    if g.sets[g.seat].door_tools.bangs <= 0.0 { return Err(Some(String::from("no bangs left."))); }
     let who = match t { OrderTarget::Door(x) => crate::doortools::door_tools_can_behind(g, x.door, x.side, men), _ => None };
     if let Some(who) = who { return Err(Some(crate::doortools::row_behind_words(g, who))); }
     crate::doortools::row_stackable(g, t, men)
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    let on_word = o.map_or(false, |o| on(o.on_word));
-    crate::doortools::row_entry(g, true, men, t, on_word)
+    crate::doortools::row_entry(g, true, men, t)
 }

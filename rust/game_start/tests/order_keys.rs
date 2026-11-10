@@ -28,30 +28,26 @@ fn nothing_from(p: &mut Play, what: &str, s: u32) {
     }
 }
 
-/// THE RULE: "it's hard to hit numbers bigger than 5 when left hand is on wasd". The digits above 5 and 0 give nothing with any page of any menu up or with none. The control is a digit in reach on the same page: it gives its order.
+/// THE RULE: "it's hard to hit numbers bigger than 5 when left hand is on wasd". The digits above 5 and 0 give nothing with any menu up or with none. The control is a digit in reach on the same menu: it gives its order.
 /// A FAILURE MEANS: an order has gone onto a digit the left hand cannot reach, or those keys have been handed something else.
 #[test]
-fn a_digit_above_five_gives_nothing_with_any_page_up() {
+fn a_digit_above_five_gives_nothing_with_any_menu_up() {
     for s in SEEDS {
         for squad in [2, 4] {
             let (mut p, _, at) = stood(s, squad);
             hush(&mut p);
             nothing_from(&mut p, "no menu", s);
-            p.menu_opens([at[0] + 4.0, at[1] + 6.0], None);
+            p.menu_opens([at[0] + 4.0, at[1] + 6.0]);
             nothing_from(&mut p, "the floor's menu", s);
             p.tap("Escape");
-            p.menu_opens(p.sam_at(), None);
+            p.menu_opens(p.sam_at());
             nothing_from(&mut p, "Sam's menu", s);
             p.tap("Escape");
-            p.menu_opens(at, None);
+            p.menu_opens(at);
             assert!(p.menu_up().is_some(), "seed {s}: the staging");
             nothing_from(&mut p, "a door's menu", s);
-            p.tap("Escape");
-            p.menu_opens(at, Some(game::doortools::TOOLS_PAGE));
-            assert_eq!(p.menu_up().unwrap().0.as_deref(), Some(game::doortools::TOOLS_PAGE), "seed {s}: the staging");
-            nothing_from(&mut p, "a door's tools page", s);
-            let key = p.row_key("openClear").expect("the tools page has its row");
-            assert!(key <= 5.0, "seed {s}: the row sits on {key}");
+            let key = p.wedge("openClear").expect("a door's ring has its row");
+            assert!(key <= 5, "seed {s}: the row sits on {key}");
             p.tap(&format!("Digit{key}"));
             assert!(p.any_op() || p.menu_up().is_none(), "seed {s}: the control: a digit in reach gives its order");
             assert!(p.orders_given() > 0, "seed {s}: the control: a digit in reach gives its order");

@@ -131,8 +131,7 @@ export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
   const kitsOwn = el('div', 'lo-kits-own'); kitsRow.appendChild(kitsOwn);
   if (kitBtns.length > 1) squadRows.appendChild(kitsRow);
   const noteLine = el('div', 'lo-noteline'), note = el('div', 'lo-note'), pool = el('div', 'lo-pool'); pool.title = 'the stun canisters and door charges that the door tools use up, counted from what your teammates carry (see their cards)';
-  const squadP = el('div', 'lo-squadp'); squadP.title = 'the pouches the teammates who come fill between them (the squad\'s budget; blank while the table sets none)';
-  noteLine.append(note, squadP, pool); card.appendChild(noteLine);
+  noteLine.append(note, pool); card.appendChild(noteLine);
   // the members: you and four slots; under them the picked member's kit and uniform card
   const slots = el('div', 'lo-slots'); slots.setAttribute('data-row', 'members'); card.appendChild(slots);
   const kitHost = el('div', 'lo-kit'); kitHost.setAttribute('data-row', 'kit'); card.appendChild(kitHost);
@@ -224,7 +223,6 @@ export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
       words.textContent = team.sizes[squad].words;
       note.textContent = team.note; note.className = 'lo-note';
       sizeBtns.forEach((b, n) => { b.classList.toggle('on', n === squad); b.classList.toggle('own', team.sizes[n].own); b.setAttribute('aria-pressed', n === squad ? 'true' : 'false'); });
-      squadP.textContent = team.squad;
       pool.textContent = team.pool;
       if (team.kits.length && kitBtns.length > 1) { const of = (id: string) => team.kits.find(k => k.id === id), now = team.kits.find(k => k.now)?.id ?? null; if (!of(kitBtns[kitPick].id)?.offered) kitPick = 0;
         kitBtns.forEach((k, n) => { k.b.style.display = of(k.id)?.offered ? '' : 'none'; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); }); kitsOwn.textContent = now ? '' : 'a mix of your own'; }
@@ -338,8 +336,6 @@ const STYLE = `
 #loadout .lo-ics { display: none; }
 #loadout .lo-kit .kc-row.idle .kc-ico { opacity: 0.28; }   /* (carried, and of no use on this mission — the wand and the cameras with no fog of war: the thing drawn as faint as one not carried, its value 'no use here' in the note's grey; the label stays lit and the arrows work. It was the whole tile at 40 %, still reading 'carried': it looked broken) */
 #loadout .lo-kit .kc-row.idle .kc-val, #missions.one #loadout .lo-kit .kc-row.idle .kc-val { color: var(--m-dim, #8f887a); }   /* (the second selector: the one start page colours a value under two ids — ui/startpage.ts) */
-#loadout .lo-squadp { flex: 0 0 auto; margin-right: 14px; font: 11px ui-monospace, Menlo, monospace; letter-spacing: 0.06em; color: var(--m-btn-text); white-space: nowrap; }
-#loadout .lo-squadp:empty { display: none; }
 #loadout .lo-pool { flex: 0 0 auto; font: 11px ui-monospace, Menlo, monospace; letter-spacing: 0.06em; color: var(--m-text); white-space: nowrap; }
 #loadout .lo-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 6px; padding: 4px; border: 1px solid transparent; border-radius: 6px; }
 #loadout .lo-slots.sel { border-color: rgba(var(--m-accent-rgb),0.55); background: rgba(var(--m-btn-rgb),0.45); }
@@ -397,7 +393,7 @@ const STYLE = `
 #loadout .lo-kit .kc-sub, #loadout .lo-kit .kc-pouch { font-family: var(--m-head); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; }
 #loadout .lo-kit .kc-pips i { width: 12px; height: 12px; border-radius: 0; }
 #loadout .lo-kit .kc-pips i.on { background: var(--m-accent); }
-#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/outfit/kit BIGSLOT) */
+#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/outfit/kit) */
 #loadout .lo-kit .kc-words { padding: 8px 4px 0; font-size: 11.5px; line-height: 1.4; border-top: 0; }
 #loadout .lo-kit .kc-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 10px; align-content: start; padding: 7px 8px 7px 9px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-left: 3px solid rgba(var(--m-edge),0.3); border-radius: 0; }
 #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-sel-rgb),0.95); border-color: var(--m-accent); border-left-color: var(--m-accent); }

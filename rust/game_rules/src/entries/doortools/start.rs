@@ -165,7 +165,7 @@ pub(super) fn door_tools_will_kick(g: &mut crate::game::Game, op: DoorOpId) -> b
 
 /// one of these men carries a big-slot tool that takes this door's lock from either face
 pub(super) fn door_tools_big_opens(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> bool {
-    if !g.k.bigslot.on || is_steel(g, d) { return false; }
+    if is_steel(g, d) { return false; }
     if crate::silent::squad_silent(g, &crate::seats::here(g)) && !crate::silent::urgent(g) { return false; }
     for &m in men {
         if crate::bigkit::carries_hammer(g, m) { return true; }
@@ -211,8 +211,8 @@ fn door_tools_knows(seat: &crate::seats::SeatRef, d: DoorId, side: f64, free: bo
 
 /// write what the team knows of this face; `free` none forgets it
 fn door_tools_learn(g: &mut crate::game::Game, d: DoorId, side: f64, free: Option<bool>) {
-    let was = g.door_tools.tried.get(d).copied().unwrap_or(0.0);
-    g.door_tools.tried.set(d, learned(was, side, free));
+    let was = g.sets[g.seat].door_tools.tried.get(d).copied().unwrap_or(0.0);
+    g.sets[g.seat].door_tools.tried.set(d, learned(was, side, free));
 }
 
 /// why a hand does not open it, in a man's words
@@ -228,7 +228,7 @@ pub fn door_tools_known_shut(g: &crate::game::Game, d: DoorId, side: f64) -> boo
 fn stays_shut(g: &Game, d: DoorId, side: f64) -> bool { !is_open(g, d) && !crate::doors::door_off(g, d) && door_tools_locked_out(g, d, side) }
 /// once a tick: a door since opened, unlocked or broken is no longer one the team knows is shut
 pub(super) fn door_tools_forget(g: &mut Game) {
-    for d in g.door_tools.tried.keys() {
+    for d in g.sets[g.seat].door_tools.tried.keys() {
         for side in [-1.0, 1.0] {
             if door_tools_knows(&crate::seats::here(g), d, side, false) && !stays_shut(g, d, side) { door_tools_learn(g, d, side, None); }
         }
@@ -251,7 +251,7 @@ fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: GuardId,
         let level = if crate::silent::squad_silent(g, &crate::seats::here(g)) { 0.06 } else { 0.12 };
         crate::doors::doors_rattle(g, d, who, Some(level));
     }
-    g.door_tools.stats.tested += 1.0;
+    g.sets[g.seat].door_tools.stats.tested += 1.0;
     if say {
         let said = if out { format!("{}.", door_tools_shut_why(g, d)) } else { String::from("it's not locked.") };
         crate::game::game_say(g, gd, &said, None, None);
@@ -274,8 +274,8 @@ fn door_tools_stack_held(g: &crate::game::Game, seat: &crate::seats::SeatRef, d:
 /// once a frame: a man come to the jamb on a plain 'stack up' tries the door; a door whose lock rows the player stands at is known too
 pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
     let mut i = 0;
-    while i < g.door_tools.roster.len() {
-        let gd = g.door_tools.roster[i];
+    while i < g.sets[g.seat].door_tools.roster.len() {
+        let gd = g.sets[g.seat].door_tools.roster[i];
         i += 1;
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) else { continue };
@@ -290,8 +290,8 @@ pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
         door_tools_test(g, door, side, gd, true);
     }
     let mut j = 0;
-    while j < g.nearby.len() {
-        let (kind_door, door, reach, verb) = { let it = &g.nearby[j]; (matches!(it.kind, crate::game::InteractableKind::Door), it.door, it.in_reach, it.verb) };
+    while j < g.sets[g.seat].nearby.len() {
+        let (kind_door, door, reach, verb) = { let it = &g.sets[g.seat].nearby[j]; (matches!(it.kind, crate::game::InteractableKind::Door), it.door, it.in_reach, it.verb) };
         j += 1;
         let Some(d) = door else { continue };
         if !kind_door || !reach || is_open(g, d) || !is_lock_verb(verb) { continue; }
@@ -326,7 +326,7 @@ pub(super) fn door_tools_halt_at(g: &mut crate::game::Game, op: DoorOpId) -> boo
 /// what the man who tried it says of a door found shut, and the count of it
 fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> String {
     let why = door_tools_shut_why(g, d);
-    g.door_tools.stats.halted += 1.0;
+    g.sets[g.seat].door_tools.stats.halted += 1.0;
     crate::game::game_say(g, lead, &format!("{}. holding on it — your call.", why), None, None);
     why
 }
@@ -354,13 +354,13 @@ fn walk_marks(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId]) -> JsMap<
 pub(super) fn door_tools_walk_tried(g: &mut crate::game::Game) {
     let mut seen: JsSet<OrdersAssignmentId> = JsSet::new();
     let mut i = 0;
-    while i < g.door_tools.roster.len() {
-        let gd = g.door_tools.roster[i];
+    while i < g.sets[g.seat].door_tools.roster.len() {
+        let gd = g.sets[g.seat].door_tools.roster[i];
         i += 1;
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) else { continue };
         let Some((d, side)) = g.tab.orders_assignment[a].tries.as_ref().map(|t| (t.door, t.side)) else { continue };
         if seen.has(a) || crate::condition::down(g, g.gd[gd].ch) { continue; }
-        let roster = g.door_tools.roster.clone();
+        let roster = g.sets[g.seat].door_tools.roster.clone();
         let mut men = Vec::new();
         for m in roster {
             let Some(b) = crate::orders::squad_orders_of(&crate::seats::here(g), m) else { continue };
@@ -411,12 +411,12 @@ pub(super) fn door_tools_walk_tried(g: &mut crate::game::Game) {
 
 /// on a door the other pair is charging: the men just left stacked on it are asked to step back, clear of that order's marks
 fn door_tools_halt_back(g: &mut crate::game::Game, d: DoorId, side: f64, halted: &[GuardId]) {
-    let ch = g.door_tools.ops.iter().copied().find(|&o| {
+    let ch = g.sets[g.seat].door_tools.ops.iter().copied().find(|&o| {
         let r = &g.tab.doortools_door_op[o];
         r.kind == crate::doortools::DoorToolKind::Charge && r.door == d && r.side == side
     });
     if ch.is_none() {
-        let any = g.door_tools.set.iter().any(|&c| { let r = &g.tab.doortools_set_charge[c]; r.door == d && r.side == side && r.by != crate::ownblow::SAM_BY });
+        let any = g.sets[g.seat].door_tools.set.iter().any(|&c| { let r = &g.tab.doortools_set_charge[c]; r.door == d && r.side == side && r.by != crate::ownblow::SAM_BY });
         if !any { return; }
     }
     let mut rest = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None);
@@ -512,7 +512,7 @@ pub(super) fn door_tools_assign(g: &mut crate::game::Game, op: DoorOpId, gd: Gua
 
 /// a new order: the men are this order's now, and an order left with none is over
 pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, d: DoorId, side: f64, men: &[GuardId], phase: crate::doortools::Phase) -> DoorOpId {
-    for o in g.door_tools.ops.clone() {
+    for o in g.sets[g.seat].door_tools.ops.clone() {
         g.tab.doortools_door_op[o].men.retain(|m| !men.contains(m));
         if g.tab.doortools_door_op[o].men.is_empty() { door_tools_end(g, o, "re-ordered"); }
     }
@@ -550,7 +550,6 @@ pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortool
         corner: JsMap::new(),
         search: None,
         beats: Vec::new(),
-        on_word: false,
         word: None,
         hold: 0.0,
         ready_t: f64::NAN,
@@ -560,14 +559,14 @@ pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortool
         last_stack: None, last_hold: None, last_tossed: None, other: None, threat: None, ended: None,
     };
     let op = g.tab.doortools_door_op.push(row);
-    g.door_tools.ops.push(op);
-    g.door_tools.stats.orders += 1.0;
+    g.sets[g.seat].door_tools.ops.push(op);
+    g.sets[g.seat].door_tools.stats.orders += 1.0;
     op
 }
 
 /// the menu's release: a reason when it cannot be done
-pub fn door_tools_issue(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>) -> crate::doortools::DoorToolsIssue {
-    match door_tools_start(g, kind, men, t, on_word, None) {
+pub fn door_tools_issue(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsIssue {
+    match door_tools_start(g, kind, men, t, None) {
         crate::doortools::DoorToolsStart::Text(s) => crate::doortools::DoorToolsIssue::Text(s),
         crate::doortools::DoorToolsStart::DoorOp(_) => crate::doortools::DoorToolsIssue::Arm1(()),
     }
@@ -595,7 +594,7 @@ pub fn door_tools_order(g: &mut crate::game::Game, kind: crate::doortools::DoorT
         crate::doortools::DoorToolsStackable::Text(s) => return crate::doortools::DoorToolsOrder::Text(if s.is_empty() { String::from("no door") } else { s }),
     }
     crate::silent::silent_tool(g, kind == crate::doortools::DoorToolsOrderKind::BangClear);
-    let op = match door_tools_start(g, order_kind(kind), &up, &t, Some(false), Some(hold)) {
+    let op = match door_tools_start(g, order_kind(kind), &up, &t, Some(hold)) {
         crate::doortools::DoorToolsStart::Text(s) => return crate::doortools::DoorToolsOrder::Text(s),
         crate::doortools::DoorToolsStart::DoorOp(op) => op,
     };
@@ -608,16 +607,16 @@ pub fn door_tools_order(g: &mut crate::game::Game, kind: crate::doortools::DoorT
 }
 
 /// work the room from the threshold, as an order's `issue`
-pub fn door_tools_threshold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>, hold: Option<bool>) -> crate::doortools::DoorToolsThreshold {
-    match door_tools_start(g, crate::doortools::DoorToolKind::Threshold, men, t, on_word, hold) {
+pub fn door_tools_threshold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, hold: Option<bool>) -> crate::doortools::DoorToolsThreshold {
+    match door_tools_start(g, crate::doortools::DoorToolKind::Threshold, men, t, hold) {
         crate::doortools::DoorToolsStart::Text(s) => crate::doortools::DoorToolsThreshold::Text(s),
         crate::doortools::DoorToolsStart::DoorOp(_) => crate::doortools::DoorToolsThreshold::Arm1(()),
     }
 }
 
 /// work it and hold the jambs until told what next
-pub fn door_tools_threshold_hold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>) -> crate::doortools::DoorToolsThresholdHold {
-    match door_tools_threshold(g, men, t, on_word, Some(true)) {
+pub fn door_tools_threshold_hold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsThresholdHold {
+    match door_tools_threshold(g, men, t, Some(true)) {
         crate::doortools::DoorToolsThreshold::Text(s) => crate::doortools::DoorToolsThresholdHold::Text(s),
         crate::doortools::DoorToolsThreshold::Arm1(()) => crate::doortools::DoorToolsThresholdHold::Arm1(()),
     }
@@ -666,7 +665,7 @@ pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::
     let w = if ops.len() > 1 {
         let now = g.time;
         let id = g.tab.doortools_word.push(crate::doortools::Word { t0: now, go1: now, ..Default::default() });
-        g.door_tools.words.push(id);
+        g.sets[g.seat].door_tools.words.push(id);
         Some(id)
     } else { None };
     for op in ops {
@@ -692,26 +691,6 @@ pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::
     crate::doortools::DoorToolsThresholdThen::Arm1(())
 }
 
-/// given with 'wait for my word' on: the jambs stay held and the word is then what the row said
-pub(super) fn door_tools_then_on_word(g: &mut crate::game::Game, what: crate::doortools::DoorToolsThenOnWordWhat, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsThenOnWord {
-    let ask = match what { crate::doortools::DoorToolsThenOnWordWhat::Bang => crate::doortools::DoorToolsCanThresholdThenWhat::Bang, crate::doortools::DoorToolsThenOnWordWhat::Step => crate::doortools::DoorToolsCanThresholdThenWhat::Step };
-    let can = can_t(t);
-    if let crate::doortools::DoorToolsCanThresholdThen::Text(s) = door_tools_can_threshold_then(g, ask, Some(&can), men) { return crate::doortools::DoorToolsThenOnWord::Text(s); }
-    for op in door_tools_threshold_held(g, &crate::seats::here(g), men, door_of_t(t)) {
-        let thr = g.tab.doortools_door_op[op].thr.as_mut().unwrap();
-        thr.word_step = Some(what == crate::doortools::DoorToolsThenOnWordWhat::Step);
-        if thr.step_owed.unwrap_or(false) {
-            thr.step_owed = Some(false);
-            thr.cut_owed = Some(false);
-            thr.frag_t = None;
-            thr.frag_said = Some(false);
-        }
-        let line = if what == crate::doortools::DoorToolsThenOnWordWhat::Step { "step in, no bang" } else { "bang, then step in" };
-        door_tools_beat(g, op, &format!("on the word · {}", line));
-    }
-    crate::doortools::DoorToolsThenOnWord::Arm1(())
-}
-
 /// thresholdThen's `valid`: no cans, or one of ours behind the door: no bang
 pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: Option<&crate::doortools::DoorToolsCanThresholdThenT>, men: &[GuardId]) -> crate::doortools::DoorToolsCanThresholdThen {
     let door = match t { Some(crate::doortools::DoorToolsCanThresholdThenT::Door(x)) => Some(x.door), _ => None };
@@ -721,7 +700,7 @@ pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: cra
         return crate::doortools::DoorToolsCanThresholdThen::Text(String::from(s));
     }
     if what != crate::doortools::DoorToolsCanThresholdThenWhat::Bang { return crate::doortools::DoorToolsCanThresholdThen::Bool(true); }
-    if g.door_tools.bangs <= 0.0 { return crate::doortools::DoorToolsCanThresholdThen::Text(String::from("no bangs left.")); }
+    if g.sets[g.seat].door_tools.bangs <= 0.0 { return crate::doortools::DoorToolsCanThresholdThen::Text(String::from("no bangs left.")); }
     for op in ops {
         let (d, side, them) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side, o.men.clone()) };
         let Some(who) = door_tools_can_behind(g, d, side, &them).filter(|s| !s.is_empty()) else { continue };
@@ -745,15 +724,14 @@ pub(super) fn door_tools_to_step(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// open and clear / bang and clear / clear from outside / the threshold: into the stack first
-fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>, hold: Option<bool>) -> crate::doortools::DoorToolsStart {
-    let on_word = on_word.unwrap_or(false);
+fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, hold: Option<bool>) -> crate::doortools::DoorToolsStart {
     let hold = hold.unwrap_or(false);
     let crate::orders::OrderTarget::Door(target) = t else { return crate::doortools::DoorToolsStart::Text(String::from("no door")) };
     let (d, t_side) = (target.door, target.side);
     door_tools_sync(g);
     let Some(deal) = door_tools_deal_stack(g, d, t_side, men) else { return crate::doortools::DoorToolsStart::Text(crate::orders::squad_orders_no_room_words(g, "no room to stack on that door", &mut |g: &mut Game| door_tools_deal_stack(g, d, t_side, men).is_some())) };
     let posts = deal.posts;
-    let frag = kind == crate::doortools::DoorToolKind::BangClear && g.door_tools.frag_next;
+    let frag = kind == crate::doortools::DoorToolKind::BangClear && g.sets[g.seat].door_tools.frag_next;
     if kind == crate::doortools::DoorToolKind::BangClear && !door_tools_take(g, if frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang }) {
         return crate::doortools::DoorToolsStart::Text(String::from(if frag { "no frags left" } else { "no bangs left" }));
     }
@@ -761,8 +739,7 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
     let op = door_tools_new_op(g, kind, d, t_side, men, crate::doortools::Phase::Stack);
     g.tab.doortools_door_op[op].bang_held = kind == crate::doortools::DoorToolKind::BangClear;
     if frag { g.tab.doortools_door_op[op].frag = Some(true); }
-    if g.door_tools.big_next && kind == crate::doortools::DoorToolKind::OpenClear { g.tab.doortools_door_op[op].big = Some(true); }
-    g.tab.doortools_door_op[op].on_word = on_word && crate::orders::squad_orders_big(g, &crate::seats::here(g));
+    if g.sets[g.seat].door_tools.big_next && kind == crate::doortools::DoorToolKind::OpenClear { g.tab.doortools_door_op[op].big = Some(true); }
     g.tab.doortools_door_op[op].thr_hold = Some(hold && kind == crate::doortools::DoorToolKind::Threshold);
     let name = crate::orders::door_words(g, d);
     let fc = g.dr[d].frame_centre;

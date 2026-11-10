@@ -24,7 +24,7 @@ fn ring_on(p: &mut Play, at: [f64; 2]) {
     p.frame();
     let key = p.g.k.cmdring.key.clone();
     p.key_down(&key);
-    p.until(2.0, |p| ring(p).is_some()).unwrap_or_else(|| panic!("no ring two seconds after its key went down on {at:?}: {:?}", p.g.orders.menu.is_some()));
+    p.until(2.0, |p| ring(p).is_some()).unwrap_or_else(|| panic!("no ring two seconds after its key went down on {at:?}: {:?}", p.g.sets[p.g.seat].orders.menu.is_some()));
 }
 
 /// THE RULE: opening the ring on a door lists the menu's rows on their digits with their why-nots, in the words the tick last read; its first wedge is the quick key's word. A FAILURE
@@ -37,10 +37,10 @@ fn opening_it_on_a_door_lists_the_menus_rows_with_their_why_nots() {
         p.sam_unhurt();
         p.run(0.2);
         assert!(ring(&p).is_none(), "seed {seed}: no ring before the key");
-        p.g.door_tools.bangs = 0.0;
+        p.g.sets[p.g.seat].door_tools.bangs = 0.0;
         ring_on(&mut p, door);
         let v = ring(&p).unwrap();
-        let m = p.g.orders.menu.clone().unwrap();
+        let m = p.g.sets[p.g.seat].orders.menu.clone().unwrap();
         assert!(matches!(m.target, game::orders::OrderTarget::Door(_)), "seed {seed}: on the door: {:?}", m.target);
         assert_eq!(m.words.len(), m.rows.len(), "seed {seed}: each row is worded");
         assert!(v.wedges.len() >= 2, "seed {seed}: a door has rows: {v:?}");
@@ -58,7 +58,7 @@ fn opening_it_on_a_door_lists_the_menus_rows_with_their_why_nots() {
         let on_first = v.wedges.iter().any(|w| w.text == m.words[i]);
         if !on_first { assert_eq!(more_wedge(&mut p), true, "seed {seed}: its row is behind 'more': {v:?}"); }
         let v2 = ring(&p).unwrap();
-        let m2 = p.g.orders.menu.clone().unwrap();
+        let m2 = p.g.sets[p.g.seat].orders.menu.clone().unwrap();
         let w = v2.wedges.iter().find(|w| w.text == m2.words[i]).unwrap_or_else(|| panic!("seed {seed}: no wedge says {:?}: {v2:?}", m2.words[i]));
         assert!(w.off, "seed {seed}: no bangs and the row is live: {w:?}");
         assert!(m2.why[i].as_deref().unwrap_or("").contains("no bangs"), "seed {seed}: {:?}", m2.why[i]);
@@ -71,7 +71,7 @@ fn more_wedge(p: &mut Play) -> bool {
     p.key_down(&format!("Digit{}", w.key as i32));
     p.frame();
     p.key_up(&format!("Digit{}", w.key as i32));
-    p.g.orders.cmd_ring.is_some_and(|r| r.more == Some(true))
+    p.g.sets[p.g.seat].orders.cmd_ring.is_some_and(|r| r.more == Some(true))
 }
 
 /// THE RULE: the `more` page lists the rest of the rows from wedge 1, and the first page's wedge 1 is no quick word there. A FAILURE MEANS: the ring's other page shows nothing. The control is the first page, whose rows it does not repeat.
@@ -94,7 +94,7 @@ fn the_more_page_lists_the_rest_of_the_rows() {
 
 /// the view's wedges on rows against the tick's own seats, by digit
 fn same_as_the_ticks(p: &Play, seed: u32) {
-    let (m, r) = (p.g.orders.menu.clone().unwrap(), p.g.orders.cmd_ring.unwrap());
+    let (m, r) = (p.g.sets[p.g.seat].orders.menu.clone().unwrap(), p.g.sets[p.g.seat].orders.cmd_ring.unwrap());
     let seat = game::orders::squad_orders_seats(&p.g, &m, Some(r));
     let v = ring(p).unwrap();
     let more = r.more == Some(true);
@@ -102,13 +102,13 @@ fn same_as_the_ticks(p: &Play, seed: u32) {
         let w = v.wedges.iter().find(|w| w.key == d as f64);
         let row = seat.row.get(d).copied().unwrap_or(-1.0);
         if d as f64 == seat.more { assert_eq!(w.map(|w| w.text.as_str()), Some("more"), "seed {seed}: wedge {d}"); continue; }
-        if m.page.is_none() && !more && d == 1 { assert_eq!(w.map(|w| w.text.clone()), m.quick.clone().filter(|q| !q.is_empty()), "seed {seed}: wedge 1"); continue; }
+        if !more && d == 1 { assert_eq!(w.map(|w| w.text.clone()), m.quick.clone().filter(|q| !q.is_empty()), "seed {seed}: wedge 1"); continue; }
         assert_eq!(w.map(|w| w.text.clone()), if row >= 0.0 { Some(m.words[row as usize].clone()) } else { None }, "seed {seed}: wedge {d}: {v:?} {:?}", seat.row);
     }
 }
 
 /// THE RULE: a word that changes while the ring is up is in the view the next frame, and the ring the view lays out is the tick's own, whatever its words are by then. A FAILURE MEANS: the HUD shows
-/// words the tick does not lay out, or a row that the flat ring's first wedge took. The control is the same ring a frame before, with no man near.
+/// words the tick does not lay out, or a row that the ring's first wedge took. The control is the same ring a frame before, with no man near.
 #[test]
 fn a_word_that_changes_under_the_ring_is_told_the_next_frame_and_the_wedges_stay_the_ticks() {
     for seed in SEEDS {
@@ -117,20 +117,20 @@ fn a_word_that_changes_under_the_ring_is_told_the_next_frame_and_the_wedges_stay
         p.sam_unhurt();
         p.run(0.2);
         p.order("charge", door, Who::All);
-        p.until(60.0, |p| p.g.door_tools.set.len() > 0).unwrap_or_else(|| panic!("seed {seed}: no charge in a minute"));
+        p.until(60.0, |p| p.g.sets[p.g.seat].door_tools.set.len() > 0).unwrap_or_else(|| panic!("seed {seed}: no charge in a minute"));
         p.sam_put([door[0], door[1] + 9.0]);
         let men = p.mates();
         for &gd in &men { p.man_stands(gd, [door[0], door[1] + 9.0]); }
         p.run(0.1);
         ring_on(&mut p, door);
         same_as_the_ticks(&p, seed);
-        let says = |p: &Play| { let m = p.g.orders.menu.as_ref().unwrap(); m.words.iter().chain(m.quick.iter()).filter(|w| w.contains("too close")).count() };
+        let says = |p: &Play| { let m = p.g.sets[p.g.seat].orders.menu.as_ref().unwrap(); m.words.iter().chain(m.quick.iter()).filter(|w| w.contains("too close")).count() };
         let before = says(&p);
-        assert_eq!(before, 0, "seed {seed}: nobody is near: {:?}", p.g.orders.menu.as_ref().unwrap().words);
+        assert_eq!(before, 0, "seed {seed}: nobody is near: {:?}", p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().words);
         // a man at the door: the next frame's ring is worded so
         p.man_stands(men[0], [door[0], door[1] + 0.9]);
         p.frame();
-        assert!(says(&p) > 0, "seed {seed}: a man stands at the charge and no word says so: {:?} {:?}", p.g.orders.menu.as_ref().unwrap().words, p.g.orders.menu.as_ref().unwrap().quick);
+        assert!(says(&p) > 0, "seed {seed}: a man stands at the charge and no word says so: {:?} {:?}", p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().words, p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().quick);
         same_as_the_ticks(&p, seed);
         // (its row may be behind 'more')
         if !ring(&p).unwrap().wedges.iter().any(|w| w.text.contains("too close")) { assert!(more_wedge(&mut p), "seed {seed}: no wedge says it and there is no other page: {:?}", ring(&p)); same_as_the_ticks(&p, seed); }
@@ -155,7 +155,7 @@ fn a_taps_word_and_live_are_told() {
         assert!(p.view().empty.is_none(), "seed {seed}: nothing was tapped");
         // on open floor
         p.key_down(game::consts::INTERACT_KEY); p.frame(); p.key_up(game::consts::INTERACT_KEY); p.run(0.4);
-        let e = p.view().empty.unwrap_or_else(|| panic!("seed {seed}: a tap on open floor says nothing: {:?} nearby {}", p.g.pl[p.g.player].sel.word, p.g.nearby.len()));
+        let e = p.view().empty.unwrap_or_else(|| panic!("seed {seed}: a tap on open floor says nothing: {:?} nearby {}", p.g.sets[p.g.seat].hand.sel.word, p.g.sets[p.g.seat].nearby.len()));
         assert_eq!((e.word.as_str(), e.kind, e.dist), (game::handring::EMPTY_WORD, game::view::ThingKind::Wall, None), "seed {seed}");
         // a step up to a door takes it down
         p.sam_put([door[0], door[1] + 0.9]);
@@ -180,7 +180,7 @@ fn a_ring_wears_the_colour_of_who_it_goes_to() {
         assert_eq!(ring(&p).unwrap().tone, Some(game::view::Tone::Gold), "seed {seed}: all four");
         // the next order goes to one pair: the ring is theirs, and wears their colour
         game::orders::squad_orders_step_who(&mut p.g, 1.0, None);
-        let want = game::orders::squad_orders_pair_of(&p.g, p.g.orders.menu.as_ref().unwrap().men[0]).map(|x| if x == game::game::PairId::Red { game::view::Tone::Red } else { game::view::Tone::Blue });
+        let want = game::orders::squad_orders_pair_of(&p.g, p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().men[0]).map(|x| if x == game::game::PairId::Red { game::view::Tone::Red } else { game::view::Tone::Blue });
         assert!(want.is_some(), "seed {seed}");
         assert_eq!(ring(&p).unwrap().tone, want, "seed {seed}: {:?}", ring(&p).map(|r| r.caption));
     }
@@ -201,7 +201,7 @@ fn the_lit_wedge_follows_the_cursor() {
             p.point_at([door[0] + a.sin() * 3.0, door[1] + a.cos() * 3.0]);
             p.frame();
             let Some(v) = ring(&p) else { break };
-            assert_eq!(v.lit, p.g.orders.cmd_ring.unwrap().lit, "seed {seed}: the tick's lit wedge");
+            assert_eq!(v.lit, p.g.sets[p.g.seat].orders.cmd_ring.unwrap().lit, "seed {seed}: the tick's lit wedge");
             seen.insert(v.lit as i32);
         }
         assert!(seen.len() >= 2, "seed {seed}: the cursor went round and the lit wedge stayed: {seen:?}");
@@ -244,8 +244,8 @@ fn in_a_game_of_two_the_ring_is_the_seats_who_opened_it() {
         let input = p.host.input;
         game::seats::with_seat(&mut p.g, st, &mut |g| {
             let t = game::orders::squad_orders_target_at(g, [door[0], 0.0, door[1]]);
-            assert!(game::orders::squad_orders_open(g, Some(&t), Some(true), None));
-            g.orders.cmd_ring = Some(game::cmdring::ring_open(g, input, 800.0, 600.0, 0.0, None));
+            assert!(game::orders::squad_orders_open(g, Some(&t), None));
+            g.sets[g.seat].orders.cmd_ring = Some(game::cmdring::ring_open(g, input, 800.0, 600.0, 0.0, None));
         });
         let two = p.view_of(1).ring.expect("the second player's ring");
         assert!(p.view_of(0).ring.is_none(), "seed {seed}: the first player's is shut");
@@ -270,7 +270,7 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
         p.sam_put([door[0], door[1] + 0.9]);
         p.run(0.3);
         p.key_down(game::consts::INTERACT_KEY);
-        p.until(2.0, |p| p.view().hand.is_some()).unwrap_or_else(|| panic!("seed {seed}: his ring did not come up: {:?}", p.g.nearby.iter().map(|r| r.line2.clone()).collect::<Vec<_>>()));
+        p.until(2.0, |p| p.view().hand.is_some()).unwrap_or_else(|| panic!("seed {seed}: his ring did not come up: {:?}", p.g.sets[p.g.seat].nearby.iter().map(|r| r.line2.clone()).collect::<Vec<_>>()));
         let h = p.view().hand.unwrap();
         assert!(h.wedges.iter().any(|w| w.text != "whistle"), "seed {seed}: a door's rows: {h:?}");
         assert!(h.wedges.iter().all(|w| !w.text.starts_with("Space") && !w.text.contains(" · ")), "seed {seed}: its words up to the dot, less the key: {h:?}");

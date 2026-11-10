@@ -66,12 +66,6 @@ fn through(g: &mut Game, from: V3, p: &[V3], d: DoorId) -> bool {
     for &b in p { if crate::guards::crosses_door(g, a, b, d).is_some() { return true; } a = b; }
     false
 }
-/// metres of a walk from `from` by corners
-fn len_from(from: V3, q: &[V3]) -> f64 {
-    let (mut l, mut a) = (0.0, from);
-    for &b in q { l += flat(a, b); a = b; }
-    l
-}
 /// metres of a walk that starts at its first point
 fn len_of(w: &[V3]) -> f64 {
     let mut l = 0.0;
@@ -103,8 +97,8 @@ fn worked_out(v: &SquadOrdersWorkedValueItem) -> SquadOrdersWorkedMarks {
 /// A door face with no floor at either jamb: every place the men could stand for it instead, worked out once per face.
 fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::orders::SquadOrdersWorkedMarks {
     let key = if side > 0.0 { 0 } else { 1 };
-    if !g.orders.worked.has(d) { g.orders.worked.set(d, vec![None, None]); }
-    if let Some(had) = g.orders.worked.get(d).and_then(|both| both[key].as_ref()) { return worked_out(had); }
+    if !g.sets[g.seat].orders.worked.has(d) { g.sets[g.seat].orders.worked.set(d, vec![None, None]); }
+    if let Some(had) = g.sets[g.seat].orders.worked.get(d).and_then(|both| both[key].as_ref()) { return worked_out(had); }
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
     let n = [-u[1] * side, u[0] * side];
@@ -151,7 +145,7 @@ fn squad_orders_worked_marks(g: &mut crate::game::Game, d: DoorId, side: f64) ->
         }
     }
     let out = worked_out(&res);
-    if let Some(both) = g.orders.worked.get_mut(d) { both[key] = Some(res); }
+    if let Some(both) = g.sets[g.seat].orders.worked.get_mut(d) { both[key] = Some(res); }
     out
 }
 
@@ -221,7 +215,7 @@ pub(super) fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::
 
 /// Does a piece of furniture stand on this place, where it is now (its footprint, and a hand's breadth round it)?
 pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
-    if g.orders.fur_in { return false; }
+    if g.sets[g.seat].orders.fur_in { return false; }
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
         let (dx, dz) = (p[0] - g.tab.props_prop[pr].x, p[2] - g.tab.props_prop[pr].z);
@@ -248,7 +242,7 @@ pub(super) fn squad_orders_rear_posts_over(g: &mut crate::game::Game, over: &cra
     let sam = squad_orders_sam_place(g, &crate::seats::here(g));
     let mut out: Vec<StackPost> = Vec::new();
     let h = g.dr[d].def.width / 2.0;
-    let clear = !g.orders.fur_in;
+    let clear = !g.sets[g.seat].orders.fur_in;
     let anys: &[bool] = if clear { &[false, true] } else { &[true] };
     for &any in anys {
         for back in [2.2, 3.1, 4.0] {
@@ -486,7 +480,7 @@ fn lane_only(g: &mut Game, w: Way<'_>, base: &[V3], pen: Option<Pen<'_>>) -> Opt
         None => crate::doorway::doorway_lane_price_at(g, &mut lanes, x, z),
     }))?;
     if shut(g, w.from, w.ring, &way).is_some() || doors_on(g, w.from, &way).iter().any(|d| !mine.contains(d)) || along_lanes(g, w.from, &way, &mut lanes) > lane_m - 1.0
-        || len_from(w.from, &way) > len_from(w.from, base) * g.k.doormanners.lane_long + 1.0 { return None; }
+        || crate::places::walk_len(w.from, &way) > crate::places::walk_len(w.from, base) * g.k.doormanners.lane_long + 1.0 { return None; }
     if let Some(u) = w.unk {
         let (a, b) = (along(g, w.from, &way, Pen::Dear(u)), along(g, w.from, base, Pen::Dear(u)));
         if a > m::max(OFF_M, b) { return None; }
@@ -515,7 +509,7 @@ fn seen_way(g: &mut Game, w: Way<'_>, now: &[V3], base: &[V3], pen: Option<Pen<'
         let b = along_lanes(g, w.from, now, l);
         if a > b + 0.5 { return None; }
     }
-    if len_from(w.from, &way) > len_from(w.from, now) * long + 1.0 { return None; }
+    if crate::places::walk_len(w.from, &way) > crate::places::walk_len(w.from, now) * long + 1.0 { return None; }
     if let Some(u) = w.unk {
         let (a, b) = (along(g, w.from, &way, Pen::Dear(u)), along(g, w.from, now, Pen::Dear(u)));
         if a > m::max(OFF_M, b) { return None; }
@@ -605,7 +599,7 @@ pub(in crate::squad_orders) fn squad_orders_route(g: &mut crate::game::Game, gd:
         // (a way round far longer than the short way is not worth it, nor one still through unknown floor unless it crosses clearly less of it)
         let round_cap = g.k.orders.round_cap;
         if round_cap > 0.0 && !shut_plain(g) && !round && !(own && !through(g, from, &path, shy.unwrap()))
-            && ((left > OFF_M && left > off_m * ROUND_LESS) || len_from(from, &path) > len_from(from, &plain) * round_cap + ROUND_PLUS_M) {
+            && ((left > OFF_M && left > off_m * ROUND_LESS) || crate::places::walk_len(from, &path) > crate::places::walk_len(from, &plain) * round_cap + ROUND_PLUS_M) {
             return SquadOrdersRoute { how: Some(SquadOrdersRouteHow::Through), ..route_none() };
         }
     }
@@ -779,7 +773,7 @@ pub(super) fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, t
     let path = match find_path(g, from, to, Some(ROUND_ITER), Some(Pen::Dear(&unk))) { Some(p) => p, None => return Vec::new() };
     if along(g, from, &path, Pen::Dear(&unk)) > OFF_M { return Vec::new(); }
     let round_cap = g.k.orders.round_cap;
-    if round_cap > 0.0 && len_from(from, &path) > len_from(from, &plain) * round_cap + ROUND_PLUS_M { return Vec::new(); }   // (nor a way round far longer than the short way)
+    if round_cap > 0.0 && crate::places::walk_len(from, &path) > crate::places::walk_len(from, &plain) * round_cap + ROUND_PLUS_M { return Vec::new(); }   // (nor a way round far longer than the short way)
     all_but_last(&path)
 }
 
@@ -819,7 +813,7 @@ fn trail_doors_on(g: &Game, w: &[V3]) -> JsSet<DoorId> {
 
 /// A follower goes by the doors Sam took: the trail's corners where his own short way to his place ends through other doors; [] otherwise.
 pub(super) fn squad_orders_trail_way(g: &mut crate::game::Game, gd: GuardId, slot: V3, on_trail: V3, j: f64) -> Vec<V3> {
-    let t = g.orders.trail.clone();
+    let t = g.sets[g.seat].orders.trail.clone();
     if t.len() < 4 { return Vec::new(); }
     let at = g.ch[g.gd[gd].ch].pos;
     let from = free_from(g, &crate::seats::here(g), at);
@@ -869,14 +863,14 @@ pub fn squad_orders_reach(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Opt
 
 /// The door his walk to `to` would be refused for, where nobody of the team has tried it on the face he comes to it by. Sam's squad only.
 pub(super) fn squad_orders_walk_try(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::orders::SquadOrdersWalkTry> {
-    if g.orders.cast.is_some() { return None; }
+    if g.sets[g.seat].orders.cast.is_some() { return None; }
     let l = squad_orders_asked(g, gd, to).lock?;
     if crate::doortools::door_tools_untried(g, l.door, l.side) { Some(SquadOrdersWalkTry { door: l.door, side: l.side }) } else { None }
 }
 
 /// The men of a 'move' whose way runs at such a door, each dealt a stack mark on the face he comes to it by; Text: that door has no room for them.
 pub(super) fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId], to: V3) -> Option<crate::orders::SquadOrdersWalkStacks> {
-    if g.orders.cast.is_some() { return None; }
+    if g.sets[g.seat].orders.cast.is_some() { return None; }
     let mut out: Option<JsMap<GuardId, SquadOrdersWalkStacksMapValue>> = None;
     let mut at: Vec<(DoorId, f64, Vec<GuardId>)> = Vec::new();
     for &gd in men {
@@ -970,8 +964,8 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
     let at = tries_of(g, &crate::seats::here(g), held[0]).unwrap().at;
     let next = squad_orders_walk_stacks(g, &held, at);
     if let Some(SquadOrdersWalkStacks::Text(words)) = &next {
-        let i = js::rem(g.orders.acks, held.len() as f64) as usize;
-        g.orders.acks += 1.0;
+        let i = js::rem(g.sets[g.seat].orders.acks, held.len() as f64) as usize;
+        g.sets[g.seat].orders.acks += 1.0;
         crate::game::game_say(g, held[i], words, None, None);
         for &mm in &held { walk_stop(g, mm); }
         return;
@@ -1025,6 +1019,6 @@ mod tests {
     #[test]
     fn a_walk_is_measured_on_the_flat() {
         assert_eq!(len_of(&[[0.0, 9.0, 0.0], [3.0, 0.0, 4.0]]), 5.0);
-        assert_eq!(len_from([0.0, 0.0, 0.0], &[[3.0, 5.0, 4.0], [3.0, 0.0, 5.0]]), 6.0);
+        assert_eq!(crate::places::walk_len([0.0, 0.0, 0.0], &[[3.0, 5.0, 4.0], [3.0, 0.0, 5.0]]), 6.0);
     }
 }

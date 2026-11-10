@@ -51,7 +51,7 @@ fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueO
     let fd = crate::doors::doors_by_name(g, &s.room.door);
     let sd = match &s.side { Some(side) => crate::doors::doors_by_name(g, &side.door), None => None };
     let fd = fd?;
-    let on: Vec<DoorOpId> = g.door_tools.ops.iter().copied().filter(|&o| {
+    let on: Vec<DoorOpId> = g.sets[g.seat].door_tools.ops.iter().copied().filter(|&o| {
         let door = g.tab.doortools_door_op[o].door;
         door == fd || Some(door) == sd
     }).collect();
@@ -151,7 +151,7 @@ fn rescue_pick(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePick> {
 
 /// One door's order.
 fn give(g: &mut Game, gate: DoorGateId, ops: &mut Vec<EntryOpsItem>, who: &[GuardId], d: DoorId, is_side: bool) {
-    let kind = if g.door_tools.bangs > 0.0 { crate::doortools::DoorToolsOrderKind::BangClear } else { crate::doortools::DoorToolsOrderKind::OpenClear };
+    let kind = if g.sets[g.seat].door_tools.bangs > 0.0 { crate::doortools::DoorToolsOrderKind::BangClear } else { crate::doortools::DoorToolsOrderKind::OpenClear };
     let face = rescue_face_of(g, d);
     match crate::doortools::door_tools_order(g, kind, who, d, face, Some(gate), None) {
         crate::doortools::DoorToolsOrder::Text(_) => {}
@@ -236,7 +236,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
     crate::rescueflush::rescue_flush_tick(g);
     crate::rescueflow::rescue_flow_tick(g);
     rescue_search(g);
-    g.door_tools.lights = Some(true);
+    g.sets[g.seat].door_tools.lights = Some(true);
     let lit = rescue_dynamic(g);
     let mut i = 0;
     while i < g.staged.team.len() {
@@ -624,13 +624,6 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
         let t: V3 = [p[0] + ux * k, 1.2, p[2] + uz * k];
         if !crate::scene_collision::nav_grid_is_blocked(g, t[0], t[2]) { stack.push(t); }
     }
-    let mut taken: Vec<V3> = Vec::new();
-    for &o in &g.staged.foes {
-        if o != h && !crate::condition::down(g, g.gd[o].ch) {
-            taken.push(pos_of(g, o));
-            if let Some(s) = def_of(g, o).spot { taken.push(s); }
-        }
-    }
     if fires(g, c, p, out, &stack) { return Some(v3::copy(c)); }
     let cell = g.col.nav.cell;
     let (x0, x1, z0, z1) = (m::floor((c[0] - walk) / cell), m::ceil((c[0] + walk) / cell), m::floor((c[2] - walk) / cell), m::ceil((c[2] + walk) / cell));
@@ -642,7 +635,7 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
             let q: V3 = [(ix + 0.5) * cell, 0.0, (iz + 0.5) * cell];
             let d = v3::dist_xz(q, c);
             ix += 1.0;
-            if d < 0.5 || d > walk || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || in_rect(q, b) || !fires(g, q, p, out, &stack) || taken.iter().any(|&t| v3::dist_xz(t, q) < 1.5) { continue; }
+            if d < 0.5 || d > walk || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || in_rect(q, b) || !fires(g, q, p, out, &stack) || crate::places::taken(g, h, q, 1.5) { continue; }
             let x = rescue_crew_seen(g, q, p, 4.0);
             cand.push((q, x, d));
         }
@@ -657,10 +650,7 @@ fn rescue_crew_cross_spot(g: &mut crate::game::Game, h: GuardId, p: V3, walk: f6
         if tried >= 24 { break; }
         let path = match crate::scene_collision::nav_grid_find_path(g, c, k.0, None, None) { Some(path) => path, None => continue };
         if path.is_empty() || v3::dist_xz(path[path.len() - 1], k.0) > 0.8 { continue; }
-        let mut l = 0.0;
-        let mut q = c;
-        for &w in &path { l += v3::dist_xz(q, w); q = w; }
-        if l <= walk * 1.4 && !rescue_crew_legs(g, c, &path, &mut |_g: &mut Game, w: V3| in_rect(w, b)) { return Some(k.0); }
+        if crate::places::walk_len(c, &path) <= walk * 1.4 && !rescue_crew_legs(g, c, &path, &mut |_g: &mut Game, w: V3| in_rect(w, b)) { return Some(k.0); }
     }
     None
 }
@@ -876,7 +866,7 @@ fn rescue_search(g: &mut crate::game::Game) {
             Some(a) => {
                 let row = &g.tab.orders_assignment[a];
                 !crate::condition::down(g, g.gd[o].ch) && crate::orders::rows::id_is(&row.order, crate::orders::Is::Enters) && match row.post { Some(post) => !(v3::dist_xz(p, post) > 0.6), None => false }
-                    && in_rect(p, b) && !g.door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
+                    && in_rect(p, b) && !g.sets[g.seat].door_tools.ops.iter().any(|&x| g.tab.doortools_door_op[x].men.contains(&o))
             }
             None => false,
         };

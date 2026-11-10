@@ -748,10 +748,8 @@ pub struct CardView {
     pub who: f64,
     pub changed: bool,
     pub pouches: crate::view::CardPouches,
-    /// the big slot (None: the table gives none)
-    pub big: Option<crate::view::CardPouches>,
-    /// what the squad carries between them (None: no limit, or not one of those who come)
-    pub squad: Option<crate::view::CardPouches>,
+    /// the big slot
+    pub big: crate::view::CardPouches,
     pub load: crate::view::CardLoad,
     pub load_issued: crate::view::CardLoad,
     pub rows: Vec<crate::view::CardRow>,
@@ -862,8 +860,6 @@ pub struct TeamView {
     pub cards: bool,
     /// the mission is played with the kit as issued
     pub as_issued: bool,
-    /// what the squad's pouches hold between them (empty: no limit, or nobody comes)
-    pub squad: String,
     /// what is carried between them
     pub pool: String,
     /// the mission hands out wall charges of its own
@@ -1099,7 +1095,7 @@ pub struct RingWedge {
     pub text: String,
     /// it cannot be given now
     pub off: bool,
-    /// it turns the ring to another page
+    /// it turns the ring to the rest of the rows
     pub opens: bool,
 }
 

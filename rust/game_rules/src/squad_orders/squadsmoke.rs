@@ -41,10 +41,10 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
     }
     crate::orders::squad_orders_unregister(g, SMOKE_ORDER);
     if !js::truthy(n) { return; }
-    let after = g.orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
+    let after = g.sets[g.seat].orders.defs.iter().position(|d| g.tab.orders_order_def[*d].id == crate::orders::rows::hold::ORDER.id);
     let def = row(g);
     let before = match after {
-        Some(a) => g.orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
+        Some(a) => g.sets[g.seat].orders.defs.get(a + 1).map(|d| g.tab.orders_order_def[*d].id.clone()),
         None => None,
     };
     crate::orders::squad_orders_register(g, def, before.as_deref());
@@ -145,7 +145,6 @@ pub(super) fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at
 /// The order's row on the menu: its functions are orders/rows/smokethere.rs, its `issue` the body below.
 fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(&crate::orders::rows::smokethere::ORDER, crate::orders::OrderDef {
-        hot_key: Some(squadsmoke().order_key),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
         ..crate::orders::OrderDef::default()
@@ -178,7 +177,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
     crate::game::game_say(g, th.gd, "smoke out.", None, None);
     let callsign = g.gd[th.gd].callsign.clone();
     let serial = g.serial();
-    g.orders.log.push(crate::orders::SquadOrdersLogItem {
+    g.sets[g.seat].orders.log.push(crate::orders::SquadOrdersLogItem {
         t: g.time,
         order: String::from(SMOKE_ORDER),
         who: vec![callsign.clone()],
@@ -195,22 +194,6 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
         Some(s) if s.brought > 0.0 => vec![crate::view::Note { key: String::new(), text: format!("smoke {}", js::num_str(s.cans)) }],
         _ => Vec::new(),
     }
-}
-
-/// The row's key with a menu up that lists it: the press is that row's. True: the press was the row's.
-pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool {
-    let key = squadsmoke().order_key;
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
-    if g.orders.menu.is_none() || !g.m.squadsmoke.states.has(view) || !crate::input::input_hit(g, input, &key) { return false; }
-    let id = SMOKE_ORDER;
-    let i = match &g.orders.menu {
-        Some(menu) => menu.rows.iter().position(|d| g.tab.orders_order_def[*d].id == id),
-        None => None,
-    };
-    let i = match i { Some(i) => i, None => return false };
-    g.tab.input[input].pressed.delete(key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
 }
 
 #[cfg(test)]

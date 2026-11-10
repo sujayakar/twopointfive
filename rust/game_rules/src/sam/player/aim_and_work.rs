@@ -56,8 +56,8 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
         crate::game::game_toggle_drag(g, None);
     }
     cancel_reloads(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].easing = None;
     crate::wand::wand_drop(g, pl);
@@ -133,8 +133,8 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
         crate::game::game_toggle_drag(g, None);
     }
     cancel_reloads(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].easing = None;
     g.pl[pl].picking = None;
@@ -207,7 +207,7 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         }
         wand_row_back(g, pl, w);
         if g.pl[pl].wanding.is_some() && w.live {
-            let aim = g.aim_point;
+            let aim = g.sets[g.seat].aim_point;
             crate::wand::wand_turn(g, pl, aim, dt);
         }
     }
@@ -296,7 +296,7 @@ pub(super) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crat
 /// W.at[0] += dx; W.at[2] += dz. W.at IS the verb's owner's own vector in the TypeScript: the write goes to that owner, by the kind of work.
 fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork::SamWorkKind, dx: f64, dz: f64) {
     let at = match kind {
-        crate::handwork::SamWorkKind::Wall => g.wall_charge.sam.as_mut().map(|s| &mut s.at),
+        crate::handwork::SamWorkKind::Wall => g.sets[g.seat].wall_charge.sam.as_mut().map(|s| &mut s.at),
         crate::handwork::SamWorkKind::Door => g.pl[pl].charging.as_mut().map(|s| &mut s.at),
         _ => None,
     };
@@ -333,9 +333,9 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     g.pl[pl].easing = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].crouch = false;
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
-    g.pl[pl].f_held = true;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
+    g.sets[g.seat].hand.f_held = true;
     g.pl[pl].speed_sm = 0.0;
     cancel_reloads(g, pl);
     g.pl[pl].door_kick_tail = false;
@@ -599,26 +599,26 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         Some(aim) => v3::copy(aim),
         None => p,
     };
-    g.aim_point = p;
+    g.sets[g.seat].aim_point = p;
     let (w, h) = (canvas.client_width, canvas.client_height);
     build_interactables(g);
     // A light TAKEN is KEPT while the cursor stays where it took it.
     let reach = m::min(crate::aim::SNAP_PX, g.k.aim.player.light_snap_px);
     let at = g.m.player.light_at.get(g.player).copied();
-    let kept = match (g.aim_target, at) {
+    let kept = match (g.sets[g.seat].aim_target, at) {
         (Some(t), Some(a)) if m::hyp2(mx - a[0], my - a[1]) <= reach => Some(t),
         _ => None,
     };
     let mut on_it = false;
     let mut best_px = crate::aim::SNAP_PX;
-    g.aim_target = None;
-    g.aim_guard = None;
-    g.aim_snap = None;
-    g.aim_friend = None;
+    g.sets[g.seat].aim_target = None;
+    g.sets[g.seat].aim_guard = None;
+    g.sets[g.seat].aim_snap = None;
+    g.sets[g.seat].aim_friend = None;
     if hand_at.is_none() {
         let mut i = 0;
-        while i < g.interactables.len() {
-            let it = &g.interactables[i];
+        while i < g.sets[g.seat].interactables.len() {
+            let it = &g.sets[g.seat].interactables[i];
             i += 1;
             if it.kind != crate::game::InteractableKind::Light {
                 continue;
@@ -638,8 +638,8 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
                 continue;
             }
             best_px = d;
-            g.aim_target = Some(target);
-            g.aim_snap = Some(v3::copy(pos));
+            g.sets[g.seat].aim_target = Some(target);
+            g.sets[g.seat].aim_snap = Some(v3::copy(pos));
             on_it = on;
         }
     }
@@ -660,16 +660,16 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
         let eye = v3::add(g.ch[me].pos, [0.0, 1.3, 0.0]);
         if d < best_px && !crate::scene_collision::segment_blocked(g, eye, com, None, None, None) {
             best_px = d;
-            g.aim_guard = Some(gd);
-            g.aim_target = None;
-            g.aim_snap = Some(com);
+            g.sets[g.seat].aim_guard = Some(gd);
+            g.sets[g.seat].aim_target = None;
+            g.sets[g.seat].aim_snap = Some(com);
         }
     }
     // the exact ray still counts when it lands ON a man the loose test missed; the NEAREST body on the ray decides
-    if g.aim_guard.is_none() {
+    if g.sets[g.seat].aim_guard.is_none() {
         let mut best_t = hit_t.unwrap_or(1e9);
         let mut friend_t = f64::INFINITY;
-        let (lit, lit_at) = (g.aim_target, g.aim_snap);
+        let (lit, lit_at) = (g.sets[g.seat].aim_target, g.sets[g.seat].aim_snap);
         let mut i = 0;
         while i < g.guards.len() {
             let gd = g.guards[i];
@@ -685,38 +685,38 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if crate::friends::friend(g, gd) {
                 if t < friend_t {
                     friend_t = t;
-                    g.aim_friend = Some(gd);
+                    g.sets[g.seat].aim_friend = Some(gd);
                 }
                 continue;
             }
-            g.aim_guard = Some(gd);
-            g.aim_target = None;
-            g.aim_snap = Some(chest_or(g, gd, 1.2));
+            g.sets[g.seat].aim_guard = Some(gd);
+            g.sets[g.seat].aim_target = None;
+            g.sets[g.seat].aim_snap = Some(chest_or(g, gd, 1.2));
             best_t = t;
         }
-        if let (Some(friend), Some(guard)) = (g.aim_friend, g.aim_guard) {
+        if let (Some(friend), Some(guard)) = (g.sets[g.seat].aim_friend, g.sets[g.seat].aim_guard) {
             if guard != friend {
                 if friend_t >= best_t {
-                    g.aim_friend = None;
+                    g.sets[g.seat].aim_friend = None;
                 } else {
-                    g.aim_guard = None;
-                    g.aim_target = lit;
-                    g.aim_snap = lit_at;
+                    g.sets[g.seat].aim_guard = None;
+                    g.sets[g.seat].aim_target = lit;
+                    g.sets[g.seat].aim_snap = lit_at;
                 }
             }
         }
     }
     if crate::samstun::sam_blind(g, &crate::seats::here(g), None) > 0.5 {
-        g.aim_guard = None;
-        g.aim_target = None;
-        g.aim_snap = None;
+        g.sets[g.seat].aim_guard = None;
+        g.sets[g.seat].aim_target = None;
+        g.sets[g.seat].aim_snap = None;
     }
-    if let Some(snap) = g.aim_snap {
+    if let Some(snap) = g.sets[g.seat].aim_snap {
         if hand_at.is_none() {
-            g.aim_point = v3::copy(snap);
+            g.sets[g.seat].aim_point = v3::copy(snap);
         }
     }
-    if g.aim_target.is_none() {
+    if g.sets[g.seat].aim_target.is_none() {
         g.m.player.light_at.delete(g.player);
     } else if on_it || at.is_none() {
         g.m.player.light_at.set(g.player, [mx, my]);

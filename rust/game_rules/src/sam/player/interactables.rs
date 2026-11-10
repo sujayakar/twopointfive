@@ -649,16 +649,16 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             rows = out;
         }
     }
-    g.interactables = list;
+    g.sets[g.seat].interactables = list;
     // The highlight rides the list by key: on the same row if it is still there, else back to the top. A running verb's row is not carried over.
     let mut key = String::new();
     for (i, r) in rows.iter().enumerate() {
         if i > 0 { key.push('|'); }
         key.push_str(&row_key(g, r));
     }
-    if key != g.pl[pl].near_key {
-        g.pl[pl].near_key = key;
-        let keep = match g.hover.clone() {
+    if key != g.sets[g.seat].hand.near_key {
+        g.sets[g.seat].hand.near_key = key;
+        let keep = match g.sets[g.seat].hover.clone() {
             Some(hv) if hv.running != Some(true) => {
                 let want = row_key(g, &hv);
                 let mut at = None;
@@ -669,13 +669,13 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             }
             _ => None,
         };
-        let open = g.pl[pl].sel.open;
-        g.pl[pl].near_sel = match keep {
+        let open = g.sets[g.seat].hand.sel.open;
+        g.sets[g.seat].hand.near_sel = match keep {
             Some(k) if !(rows[k].kind == crate::game::InteractableKind::Charge && k > 0 && !open) => k as i32,
             _ => 0,
         };
     }
-    g.nearby = rows;
+    g.sets[g.seat].nearby = rows;
     pick_hover(g);
     crate::close::close_tick(g);
 }
@@ -700,16 +700,15 @@ fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
 
 /// Game.hover ← the highlighted row, Game.useDoor ← its door if it is a door row in reach
 pub fn pick_hover(g: &mut crate::game::Game) {
-    let pl = g.player;
-    let n = g.nearby.len() as i32;
-    let sel = g.pl[pl].near_sel;
-    g.pl[pl].near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
-    let best = g.nearby.get(g.pl[pl].near_sel as usize).cloned();
-    g.use_door = match &best {
+    let n = g.sets[g.seat].nearby.len() as i32;
+    let sel = g.sets[g.seat].hand.near_sel;
+    g.sets[g.seat].hand.near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
+    let best = g.sets[g.seat].nearby.get(g.sets[g.seat].hand.near_sel as usize).cloned();
+    g.sets[g.seat].use_door = match &best {
         Some(b) if b.kind == crate::game::InteractableKind::Door && b.in_reach => b.door,
         _ => None,
     };
-    g.hover = best;
+    g.sets[g.seat].hover = best;
 }
 
 /// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer
@@ -814,8 +813,8 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
     if g.pl[pl].dragging.is_some() { release_body(g, None); }
     if g.pl[pl].holding.is_some() { free_held(g, crate::player::FreeHeldWhy::Cancel); }
     g.pl[pl].takedown = None;
-    if g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].sel.down_t >= 0.0 {
-        g.pl[pl].f_held = true;
+    if g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].coding.is_some() || g.sets[g.seat].hand.sel.down_t >= 0.0 {
+        g.sets[g.seat].hand.f_held = true;
     }
     g.pl[pl].kick = None;
     g.pl[pl].picking = None;
@@ -825,13 +824,13 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
     crate::bigkit::sam_big_drop(g);
     g.pl[pl].easing = None;
     crate::hands::hands_cancel(g);
-    g.pl[pl].sel.down_t = -1.0;
-    g.pl[pl].sel.open = false;
-    g.pl[pl].sel.ring = None;
+    g.sets[g.seat].hand.sel.down_t = -1.0;
+    g.sets[g.seat].hand.sel.open = false;
+    g.sets[g.seat].hand.sel.ring = None;
     g.ch[c].anim.door_push = None;
     throw_off(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].speed_sm = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];

@@ -52,14 +52,14 @@ fn under(p: &Play) -> OrderTarget {
 }
 /// the key tapped, Shift held or not, as a hand presses it: the row it logged, if it logged one
 fn tap(p: &mut Play, shift: bool) -> Option<String> {
-    let (key, n) = (p.g.k.cmdring.key.clone(), p.g.orders.log.len());
+    let (key, n) = (p.g.k.cmdring.key.clone(), p.g.sets[p.g.seat].orders.log.len());
     if shift { p.key_down("ShiftLeft"); p.frame(); }
     p.key_down(&key);
     p.frame();
     p.key_up(&key);
     p.frame(); p.frame();
     if shift { p.key_up("ShiftLeft"); p.frame(); }
-    (p.g.orders.log.len() > n).then(|| p.g.orders.log.last().unwrap().order.clone())
+    (p.g.sets[p.g.seat].orders.log.len() > n).then(|| p.g.sets[p.g.seat].orders.log.last().unwrap().order.clone())
 }
 /// Shift and the key kept down until the ring is up
 fn wheel(p: &mut Play) {
@@ -71,7 +71,7 @@ fn wheel(p: &mut Play) {
 }
 /// a wedge of the ring given by its digit, and every key let go: the row it logged
 fn wedge(p: &mut Play, key: f64) -> Option<String> {
-    let (k, n, d) = (p.g.k.cmdring.key.clone(), p.g.orders.log.len(), format!("Digit{}", key as i32));
+    let (k, n, d) = (p.g.k.cmdring.key.clone(), p.g.sets[p.g.seat].orders.log.len(), format!("Digit{}", key as i32));
     p.key_down(&d);
     p.frame();
     p.key_up(&d);
@@ -79,7 +79,7 @@ fn wedge(p: &mut Play, key: f64) -> Option<String> {
     p.key_up(&k);
     p.key_up("ShiftLeft");
     p.frame(); p.frame();
-    (p.g.orders.log.len() > n).then(|| p.g.orders.log.last().unwrap().order.clone())
+    (p.g.sets[p.g.seat].orders.log.len() > n).then(|| p.g.sets[p.g.seat].orders.log.last().unwrap().order.clone())
 }
 /// the whole pair of `all` whose mean distance to `at` is the less
 fn nearer_pair(p: &Play, all: &[GuardId], at: [f64; 2]) -> Vec<GuardId> {
@@ -112,7 +112,7 @@ fn both(what: &str, seed: u32, stage: &dyn Fn(u32) -> Play, cursor: &dyn Fn(&Pla
         p.run(0.1);
         let (said0, was) = (p.said.len(), on_all(&p));
         let order = tap(&mut p, shift);
-        let who = if order.is_some() { p.g.orders.log.last().unwrap().who.clone() } else { Vec::new() };
+        let who = if order.is_some() { p.g.sets[p.g.seat].orders.log.last().unwrap().who.clone() } else { Vec::new() };
         Press { order, who, said: p.said.len() > said0, moved: on_all(&p) != was }
     };
     (press(false), press(true))
@@ -153,7 +153,7 @@ fn every_kind_of_target_gets_the_same_order() {
         let (key, shifted) = both("a teammate", s, &plain, &|p| { let a = p.at(men(p)[1]); on_floor(a) }, &|t| matches!(t, OrderTarget::None(_)));
         assert_eq!(key.order, shifted.order, "seed {s}: on a teammate");
         assert_eq!(key.order.as_deref(), Some("fallIn"), "seed {s}: on a teammate");
-        let on_man = |shift: bool| { let mut p = yard(s); let m = men(&p)[1]; let a = p.at(m); let t = game::orders::squad_orders_target_at(&mut p.g, [a[0], 0.0, a[1]]); assert!(matches!(&t, OrderTarget::None(n) if n.man == Some(m)), "seed {s}: the point on him is him: {t:?}"); let n = p.g.orders.log.len(); if shift { game::planmode::plan_goal(&mut p.g, &t); } else { game::autopilot::auto_quick(&mut p.g, &t); } (p.g.orders.log.len() > n).then(|| p.g.orders.log.last().unwrap().order.clone()) };
+        let on_man = |shift: bool| { let mut p = yard(s); let m = men(&p)[1]; let a = p.at(m); let t = game::orders::squad_orders_target_at(&mut p.g, [a[0], 0.0, a[1]]); assert!(matches!(&t, OrderTarget::None(n) if n.man == Some(m)), "seed {s}: the point on him is him: {t:?}"); let n = p.g.sets[p.g.seat].orders.log.len(); if shift { game::planmode::plan_goal(&mut p.g, &t); } else { game::autopilot::auto_quick(&mut p.g, &t); } (p.g.sets[p.g.seat].orders.log.len() > n).then(|| p.g.sets[p.g.seat].orders.log.last().unwrap().order.clone()) };
         assert_eq!(on_man(false), on_man(true), "seed {s}: on the man himself");
         // a spot by a wall that takes a charge, with one carried: the nearer whole pair
         let walled = |seed: u32| { let mut p = office(seed); game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0); p.sam_put([14.6, 15.2]); p.run(0.5); p };
@@ -190,9 +190,9 @@ fn every_kind_of_target_gets_the_same_order() {
             for _ in 0..30 { p.pin_man(foe, [22.0, 17.6], std::f64::consts::FRAC_PI_2, game::game::GuardState::Patrol, 0.0); p.frame(); }
             let a = p.at(foe);
             let t = OrderTarget::Foe(game::orders::OrderTargetFoe { at: [a[0], 0.0, a[1]], foe });
-            let (part, n) = (game::planmode::goal_men(&p.g, &t).map(|g| g.men), p.g.orders.log.len());
+            let (part, n) = (game::planmode::goal_men(&p.g, &t).map(|g| g.men), p.g.sets[p.g.seat].orders.log.len());
             if shift { game::planmode::plan_goal(&mut p.g, &t); } else { game::autopilot::auto_quick(&mut p.g, &t); }
-            let row = (p.g.orders.log.len() > n).then(|| p.g.orders.log.last().unwrap().clone());
+            let row = (p.g.sets[p.g.seat].orders.log.len() > n).then(|| p.g.sets[p.g.seat].orders.log.last().unwrap().clone());
             (row.as_ref().map(|r| r.order.clone()), row.map_or(Vec::new(), |r| r.who), part.map_or(Vec::new(), |l| names(&p, &l)))
         };
         let ((key, _, _), (shifted, who, part)) = (foe_order(false), foe_order(true));
@@ -215,8 +215,8 @@ fn the_parts_first_wedge_on_a_door_is_the_tap() {
         p.cursor_on(on_floor(DOOR));
         p.run(0.2);
         wheel(&mut p);
-        assert_eq!(sorted(p.g.orders.menu.clone().unwrap().part.expect("a part's ring")), near, "seed {s}");
-        assert_eq!(p.g.orders.menu.clone().unwrap().quick.as_deref(), Some("stack up"), "seed {s}");
+        assert_eq!(sorted(p.g.sets[p.g.seat].orders.menu.clone().unwrap().part.expect("a part's ring")), near, "seed {s}");
+        assert_eq!(p.g.sets[p.g.seat].orders.menu.clone().unwrap().quick.as_deref(), Some("stack up"), "seed {s}");
         assert_eq!(wedge(&mut p, 1.0).as_deref(), Some("stack"), "seed {s}");
         assert_eq!(sorted(the(&p, &all, "stack")), near, "seed {s}: {:?}", on_all(&p));
         drop(p);
@@ -231,7 +231,7 @@ fn the_parts_first_wedge_on_a_door_is_the_tap() {
             if matches!(under(&p), OrderTarget::Door(_)) { break 'looking; }
         } } }
         wheel(&mut p);
-        let m = p.g.orders.menu.clone().unwrap();
+        let m = p.g.sets[p.g.seat].orders.menu.clone().unwrap();
         assert_eq!(m.part.expect("a part's ring").len(), 4, "seed {s}: the door's men");
         assert_eq!(m.quick.as_deref(), Some("stack up"), "seed {s}");
         let (said, was) = (p.said.len(), on_all(&p));
@@ -331,7 +331,7 @@ fn a_door_a_pair_stands_on_is_that_pairs() {
             let mut p = yard(s);
             let l = men(&p);
             let t = game::orders::squad_orders_target_at(&mut p.g, [DOOR[0], 0.0, DOOR[1]]);
-            let opts = game::orders::GiveOpts { men: Some(l[..2].to_vec()), ack: None, on_word: None };
+            let opts = game::orders::GiveOpts { men: Some(l[..2].to_vec()), ack: None };
             assert_eq!(game::orders::squad_orders_give(&mut p.g, "stack", Some(&t), None, Some(&opts)), None, "seed {s}");
             p.run(30.0);
             'looking: for y in [0.05, 1.0, 1.8] { for dx in [0.0, 0.45, -0.45, 0.2, -0.2] { for dz in [0.0, -0.3, -0.6] {
@@ -339,7 +339,7 @@ fn a_door_a_pair_stands_on_is_that_pairs() {
                 p.run(0.05);
                 if matches!(under(&p), OrderTarget::Door(_)) { break 'looking; }
             } } }
-            assert!(p.g.orders.shown.quick.as_deref().is_some_and(|q| q.starts_with("stack up")), "seed {s}: the line: {:?}", p.g.orders.shown.quick);
+            assert!(p.g.sets[p.g.seat].orders.shown.quick.as_deref().is_some_and(|q| q.starts_with("stack up")), "seed {s}: the line: {:?}", p.g.sets[p.g.seat].orders.shown.quick);
             let n = p.said.len();
             let got = tap(&mut p, shift);
             if shift {
@@ -403,12 +403,12 @@ fn the_line_the_first_wedge_and_the_order_agree() {
         p.cursor_on(on_floor(SPOT));
         p.run(0.2);
         let t = under(&p);
-        let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "move").unwrap();
+        let d = p.g.sets[p.g.seat].orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "move").unwrap();
         let words = game::orders::squad_orders_label_of(&mut p.g, d, &t);
-        let line = p.g.orders.shown.quick.clone().expect("a line on a spot");
+        let line = p.g.sets[p.g.seat].orders.shown.quick.clone().expect("a line on a spot");
         assert!(line.starts_with(&words), "seed {s}: the line '{line}', the row '{words}'");
         wheel(&mut p);
-        let m = p.g.orders.menu.clone().expect("the ring's menu");
+        let m = p.g.sets[p.g.seat].orders.menu.clone().expect("the ring's menu");
         assert_eq!(sorted(m.part.clone().expect("the ring is a part's")), near, "seed {s}: the ring is for the men a tap would send");
         assert_eq!(m.quick.as_deref(), Some(words.as_str()), "seed {s}: the ring's first word");
         let v = p.view().ring.expect("the ring");
@@ -433,8 +433,8 @@ fn covering_a_spot_is_the_wheels_and_that_parts_only() {
             p.cursor_on(on_floor(SPOT));
             p.run(0.2);
             wheel(&mut p);
-            let t = p.g.orders.menu.clone().expect("the ring's menu").target;
-            let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "cover").unwrap();
+            let t = p.g.sets[p.g.seat].orders.menu.clone().expect("the ring's menu").target;
+            let d = p.g.sets[p.g.seat].orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == "cover").unwrap();
             let words = game::orders::squad_orders_label_of(&mut p.g, d, &t);
             let v = p.view().ring.expect("the ring");
             let w = v.wedges.iter().find(|w| w.text == words).unwrap_or_else(|| panic!("seed {s}: no wedge says '{words}': {v:?}"));

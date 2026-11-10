@@ -262,7 +262,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
     let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     let mut groups: Vec<Group> = Vec::new();
     let mut taken: JsSet<GuardId> = JsSet::new();
-    for op in g.door_tools.ops.clone() {
+    for op in g.sets[g.seat].door_tools.ops.clone() {
         let op_men = g.tab.doortools_door_op[op].men.clone();
         for &m in &op_men {
             taken.add(m);
@@ -292,9 +292,9 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 marks.push(q);
             }
         }
-        let (door, side, phase, on_word) = {
+        let (door, side, phase) = {
             let r = &g.tab.doortools_door_op[op];
-            (r.door, r.side, r.phase, r.on_word)
+            (r.door, r.side, r.phase)
         };
         if is_pre(phase) {
             let lane = g.tab.doortools_door_op[op].lane.as_ref().map(|l| l.gd);
@@ -312,7 +312,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 }
             }
             // (NO NEW WATCH FOR A MOMENT: an entry given to a stack already on its marks files the men again and goes at once)
-            if phase == crate::doortools::Phase::Stack && !on_word {
+            if phase == crate::doortools::Phase::Stack {
                 let mut formed = true;
                 for &m in &op_men {
                     if crate::condition::down(g, g.gd[m].ch) {
@@ -345,7 +345,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 }
             }
             // (a man let off to step onto his mark has the watch again once he is on it, unless the door then goes at once with no carrying it through)
-            let brief = phase == crate::doortools::Phase::Stack && !on_word && !carries(g, op);
+            let brief = phase == crate::doortools::Phase::Stack && !carries(g, op);
             let mut kept: Vec<GuardId> = Vec::new();
             for &m in &cands {
                 if short_of(g, key, m) {
@@ -952,13 +952,7 @@ fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
         Some(p) => p,
         None => return d + 20.0,
     };
-    let mut l = 0.0;
-    let mut q = a;
-    for r in path {
-        l += flat(q, r);
-        q = r;
-    }
-    l + flat(q, b)
+    crate::places::walk_len(a, &path) + flat(path.last().copied().unwrap_or(a), b)
 }
 
 /// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book.

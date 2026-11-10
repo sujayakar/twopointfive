@@ -47,7 +47,7 @@ a tick worked out from time: the server's tick against this clock, plus `margin`
 
 **On the page.** `netAsked` says hello and moves the page to the game's own address (`movedTo`), because a page reads its picture off its address. The
 seat's key comes off the address and is kept for the tab. Each page tick `DrawNet.tick` sends the record, walks, and looks ahead. It walks one tick, two while
-more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody sees. Under a card or in a hidden tab it sends one `restOf` record and goes on walking.
+more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody sees. As a card goes up or the tab is hidden it sends one `restOf` record, whatever was held, and goes on walking.
 
 **The look ahead.** `Foresee.look` asks `face_ahead` to walk his man through `NetClient.unplayed` on a copy, writing nothing;
 `lead.rs` draws him there. Only his walk and aim are ahead: his rounds, doors, orders and pose, and every other man, are the
@@ -60,8 +60,8 @@ word that differs is kept as `bad` and told up as `Lost`; the door closes its so
 **A record is checked as it is stepped.** `face_networked` marks every seat `remote`, so `check_cmd` keeps the look-at within `reach` of his man and works the view's
 matrices out again from the pose on every machine.
 
-**Seats in the rules.** One seat's own things are the `SeatSet`, which stands on `Game` while a pass is about that seat; the others wait in their seat's row.
-`with_seat` changes them over for a pass, `each_seat` passes over all, and a tick stands the first seat whichever this machine shows (`show_seat`).
+**Seats in the rules.** One seat's own things are the `SeatSet`, its row of `g.sets`; `g.seat` names the seat a pass is about.
+`with_seat` moves it for a pass, `each_seat` passes over all, and a tick is about the first seat whichever this machine shows (`show_seat`).
 A reader that holds the game shared takes a `SeatRef` (`seat`, `here`), so it can answer for any seat.
 
 **Each player's own:** his man, hands, lens, aim, what he hovers and works, his book of orders, door tools and wall charges. His teammates: `deal_seats` cuts the
@@ -109,7 +109,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 
 - **A number:** `NET`, `NETDOOR`, `FORESEE`, `COOP`. **A message:** `src/net/wire.ts`, then `NetServer.message` or `NetClient.message`.
 - **A new field in a record:** `WireCmd`, `wireOk`, `recordOf`, `recordTo`, and `RECORD` in `rust/game_face/src/net.rs`, all in one order.
-- **Something per player:** a field of `SeatSet`, in `swap_set`, `set_of_game`, `SeatRef` and both of its makers. A rule that reads it takes `seat: &SeatRef`.
+- **Something per player:** a field of `SeatSet`, and of `SeatRef` and its maker. A rule that reads it takes `seat: &SeatRef`.
 - **A world rule that says "the player":** ask `men`, `men_up`, `all_down`, `nearest_man` or `faced_man`, or stand the seat with `standing_for`. Add a test to `two_seats.rs`.
 - **A mission for two:** take its rules through for two, then add its kind to `seat_kinds`.
 - **Try it on one machine:** `cd cloud && npm ci` once, `bun run dev`, two windows of the page. With no backend, `bun run tools/mp/lan.ts` prints an address for each

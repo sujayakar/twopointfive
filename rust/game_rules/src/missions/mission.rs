@@ -129,7 +129,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
         let in_reach = rack_dist(g, p) < crate::consts::DRIVE_REACH;
         let pl = g.player;
         if g.mission.drive_t < 0.0 {
-            let asked = match &g.act {
+            let asked = match &g.sets[g.seat].act {
                 Some(a) => a.kind == InteractableKind::Objective && a.verb == Some(Verb::Drive),
                 None => false,
             };

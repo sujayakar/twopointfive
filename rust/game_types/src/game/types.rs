@@ -365,12 +365,6 @@ pub struct Game {
     pub show_debug: bool,
     #[is(-1.0)] pub spectate: f64,
     pub player_invisible: bool,
-    pub threat_proximity: f64,
-    #[is(-100.0)] pub torch_on_t: f64,
-    pub aim_point: V3,
-    pub aim_target: Option<FixtureId>,
-    pub aim_guard: Option<GuardId>,
-    pub aim_friend: Option<GuardId>,
     pub dyn_boxes: Vec<AnyBoxId>,
     pub rings: Vec<crate::launcher::Ring>,
     pub shells: Vec<crate::he40::Shell>,
@@ -378,13 +372,7 @@ pub struct Game {
     pub doors: crate::doors::Doors,
     pub door_deals: Vec<crate::doorswing::SwingDeal>,
     pub props: crate::props::PropSystem,
-    pub use_door: Option<DoorId>,
     pub reach_interior: Option<Vec<u8>>,
-    pub hover: Option<crate::game::Interactable>,
-    pub interactables: Vec<crate::game::Interactable>,
-    pub nearby: Vec<crate::game::Interactable>,
-    pub aim_snap: Option<V3>,
-    pub act: Option<crate::game::Interactable>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     /// a scripted hand is at this point of the world: his cursor is on it, and his aim is it
@@ -436,7 +424,6 @@ pub struct Game {
     pub recap: crate::deathrecap::Recap,
     pub verdict: crate::verdict::Verdict,
     pub room_clear: crate::roomclear::RoomClearScenario,
-    pub orders: crate::orders::SquadOrders,
     pub fog_of_war: crate::fogofwar::FogOfWar,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
@@ -448,10 +435,7 @@ pub struct Game {
     pub entry: crate::entrypoints::EntryPoints,
     pub cleared: crate::cleared::ClearedRooms,
     pub rescue: crate::rescue::Rescue,
-    pub door_tools: crate::doortools::DoorTools,
     pub pair: crate::pairorders::PairOrders,
-    pub work: crate::workthings::WorkThings,
-    pub wall_charge: crate::wallcharge::WallCharge,
     pub door_path: crate::doorpath::DoorPath,
     /// (this machine's own saves: in no bytes)
     #[bytes(skip)]
@@ -464,15 +448,15 @@ pub struct Game {
     pub smoke: crate::smoke_types::SmokeSystemLike,
     /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
     pub aside: bool,
-    /// (the host's camera: in no bytes)
-    #[bytes(skip)]
-    pub view_proj: Option<crate::game::GameViewProj>,
     pub rolls: Vec<crate::game::Roll>,
     pub roll_seq: f64,
     pub restart_cut: bool,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
+    /// the seat a pass is about, and its man (`seats::with_seat`)
     #[is(SeatId(0))] pub seat: SeatId,
+    /// each seat's own things, by its id
+    #[is(crate::seats::sets_new())] pub sets: Tab<SeatId, crate::seats::SeatSet>,
     pub seats: Vec<SeatId>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
@@ -488,7 +472,7 @@ pub struct Game {
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// INVENTED: what g.serial() deals
     #[is(1)] pub serial_next: u32,
-    /// INVENTED: a second cast of the squad is on Game (squadcast::with_cast): seats.ts:240 CAST_VIEW
+    /// INVENTED: a second cast of the squad is in the seat's row (squadcast::with_cast): seats.ts:240 CAST_VIEW
     pub in_cast: bool,
     /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
     pub box_frame_rows: Vec<FrameBoxId>,
@@ -694,13 +678,10 @@ pub enum Temperament {
 pub struct Player {
     #[is(CharId(0))] pub ch: CharId,
     pub crouch: bool,
-    pub aim_held: bool,
     #[is(-10.0)] pub last_fire_t: f64,
     pub backpedal: bool,
     pub sprinting: bool,
     pub dash: bool,
-    pub friend_low: bool,
-    #[is(-10.0)] pub friend_t: f64,
     #[is([0.0, 0.0])] pub shoved: [f64; 2],
     #[is(-1.0)] pub shoved_t: f64,
     #[is([0.0, 0.0])] pub shoved_from: [f64; 2],
@@ -713,7 +694,6 @@ pub struct Player {
     pub noise: f64,
     pub takedown: Option<crate::game::PlayerTakedown>,
     pub holding: Option<crate::player::Hold>,
-    pub catch_due: Option<f64>,
     pub bubble: Option<crate::game::PlayerBubble>,
     pub speed_sm: f64,
     pub hit_flash: f64,
@@ -738,9 +718,7 @@ pub struct Player {
     #[is(FirearmId(0))] pub rifle: FirearmId,
     pub has_rifle: bool,
     pub equip_t: f64,
-    pub setup: Option<crate::game::PlayerSetup>,
     pub setup_hand: Option<crate::game::PlayerSetupHand>,
-    pub setup_key: Option<crate::game::PlayerSetupKey>,
     pub rifle_gone: bool,
     pub kit_was: Option<Option<crate::character::KitItem>>,
     pub kit_can: Option<crate::game::ThrowKind>,
@@ -755,17 +733,11 @@ pub struct Player {
     pub code_t: f64,
     pub breaker_move: Option<crate::game::PlayerBreakerMove>,
     pub hand_wait: f64,
-    pub near_sel: i32,
-    #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
     #[is(LightId(0))] pub light: LightId,
-    pub throw_eaten: bool,
-    pub throw_held: bool,
     #[is(crate::game::ThrowKind::Smoke)] pub held_kind: crate::game::ThrowKind,
-    pub throw_preview: Option<crate::throwables::ThrowSolution>,
     pub pending_throw: Option<crate::game::PlayerPendingThrow>,
     pub easing: Option<DoorId>,
     pub ease_stall_t: f64,
@@ -774,7 +746,6 @@ pub struct Player {
     pub knee: Option<crate::player::Knee>,
     pub picking: Option<DoorId>,
     pub kick: Option<crate::game::PlayerKick>,
-    pub f_held: bool,
     pub wand: bool,
     pub wanding: Option<crate::wand::Wanding>,
     #[is(crate::kit::BigKit::None)] pub big_kit: crate::kit::BigKit,

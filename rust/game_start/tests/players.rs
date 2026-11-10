@@ -192,26 +192,3 @@ fn a_rescue_refuses_two_players() {
     assert!(why.is_some_and(|w| !w.is_empty()) && p.g.rescue.result.is_none());
     for _ in 0..30 { frame(&mut p, 0); }
 }
-
-/// THE RULE: a restart in a game of two leaves each machine showing its own player, every hand checked as it was, and the one game the same on both.
-/// A FAILURE MEANS: the second player's page is on the first player's man from the first restart on, or nobody's hand is checked any more.
-#[test]
-fn after_a_restart_each_machine_still_shows_its_own() {
-    let run = |shown: usize| {
-        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 5, seats: 2, dress: true, ..Default::default() });
-        for s in p.g.seats.clone() { p.g.tab.cmd_seat[s].remote = true; }
-        let seat = p.g.seats[shown];
-        game::seats::show_seat(&mut p.g, seat);
-        for _ in 0..90 { hands(&mut p, 0, &["KeyW"], None, false); hands(&mut p, 1, &["KeyD"], None, false); frame(&mut p, shown); }
-        game::seats::show_seat(&mut p.g, seat);
-        assert!(game::savestate::control::restart(&mut p.g));
-        assert_eq!((p.g.local_seat, p.g.seat, p.g.player), (Some(seat), seat, man(&p, shown)), "seat {shown} is shown");
-        assert!(p.g.seats.iter().all(|&s| p.g.tab.cmd_seat[s].remote), "a hand is no longer checked");
-        let first = p.words();
-        for _ in 0..60 { hands(&mut p, 1, &["KeyW"], None, false); frame(&mut p, shown); }
-        (first, p.words())
-    };
-    let (a, b) = (run(0), run(1));
-    let names = game_start::parts::names();
-    for (x, y) in [(&a.0, &b.0), (&a.1, &b.1)] { assert!(game_start::parts::differ(&names, x, y).is_empty(), "{:?}", game_start::parts::differ(&names, x, y)); }
-}

@@ -174,7 +174,7 @@ impl Play {
     }
     /// ONE FRAME OF A NETWORKED MACHINE THAT SHOWS THE SEAT `shown`: it is handed every seat's command and steps on them all, so two machines' games
     /// get the same hands and only the shown seat differs. Each seat's command is sampled from its own Input through its own camera (idle, unless
-    /// a test writes them). Between frames the first seat stands on the game, for the test to read.
+    /// a test writes them). Between frames `g.seat` is the first seat, for the test to read.
     pub fn net_frame(&mut self, shown: usize) {
         let cmds = self.net_sample();
         self.net_step(&cmds, shown);
@@ -213,7 +213,7 @@ impl Play {
     pub fn lens_and_keys(&mut self) {
         for s in self.g.seats.clone() {
             let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
-            let (follow, aim) = game::seats::with_seat(&mut self.g, s, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+            let (follow, aim) = game::seats::with_seat(&mut self.g, s, &mut |g| (game::game::game_follow_pos(g, None), g.sets[g.seat].aim_point));
             game::camera::follow_camera_update(&mut self.g, cam, DT, follow, Some(aim));
             game::input::input_end_frame(&mut self.g, input);
         }
@@ -274,6 +274,12 @@ impl Play {
 
     // ---- the hand: Sam is moved as a player moves him, through the host's Input
 
+    /// STAGING: the ring up over the menu that is open, where the cursor is, as holding the squad's key puts it up.
+    pub fn ring_over_menu(&mut self) {
+        let (input, at) = (self.host.input, self.g.seat);
+        let r = game::cmdring::ring_open(&mut self.g, input, 800.0, 600.0, 0.0, None);
+        self.g.sets[at].orders.cmd_ring = Some(r);
+    }
     /// The cursor on the place `at` (chest height), held there as the camera moves.
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
@@ -409,14 +415,14 @@ impl Play {
     /// how many door charges a seat's squad has set and not blown
     pub fn seat_door_charges(&self, seat: usize) -> usize { game::seats::seat(&self.g, self.g.seats[seat]).door_tools.set.len() }
     /// how many wall charges the first player's squad has set and not blown
-    pub fn wall_charges(&self) -> usize { self.g.wall_charge.set.len() }
+    pub fn wall_charges(&self) -> usize { self.g.sets[self.g.seat].wall_charge.set.len() }
     /// THE SQUAD IS TOLD TO SET A WALL CHARGE at a place of a wall, by the order's own call, carrying what it needs. An order the game refuses fails the test with the game's reason.
     pub fn orders_wall_charge(&mut self, at: [f64; 3]) {
         game::wallcharge::wall_charge_raise_carried(&mut self.g, 2.0);
         if let Some(why) = game::wallcharge::wall_charge_order(&mut self.g, at, None) { panic!("the wall charge was refused: {}", why); }
     }
     /// a place of the floor `off` metres out from the first wall charge's face, on the side it was set from
-    pub fn off_the_wall_charge(&self, off: f64) -> [f64; 2] { let w = self.g.tab.wallcharge_set_wall_charge[self.g.wall_charge.set[0]].wall.clone(); let at = game::wallcharge::wall_pt(&self.g, &w, 0.0, off, None); [at[0], at[2]] }
+    pub fn off_the_wall_charge(&self, off: f64) -> [f64; 2] { let w = self.g.tab.wallcharge_set_wall_charge[self.g.sets[self.g.seat].wall_charge.set[0]].wall.clone(); let at = game::wallcharge::wall_pt(&self.g, &w, 0.0, off, None); [at[0], at[2]] }
     /// the objective row, as a HUD is given it
     pub fn objective(&self) -> String { self.view().mission.text }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
@@ -516,7 +522,7 @@ impl Play {
     /// Every row the orders' table holds, by its id, in the table's order: on the menu or off it.
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
-    pub fn menu(&self) -> Vec<String> { self.g.orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
+    pub fn menu(&self) -> Vec<String> { self.g.sets[self.g.seat].orders.defs.iter().map(|&d| self.g.tab.orders_order_def[d].id.clone()).collect() }
     /// is the order of that id on the squad's menu now
     pub fn on_menu(&self, id: &str) -> bool { self.menu().iter().any(|r| r == id) }
     /// the living men of the red pair, and of the blue (the menu's own call, `SquadOrders.men`)

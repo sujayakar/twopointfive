@@ -232,7 +232,7 @@ fn two_doors(seed: u32) -> (Play, DoorId, DoorId) {
 }
 
 /// THE RULE: "simultaneous breach ... didn't really work". A pair stacked on each door of a room, both on their marks, one word: both go on one frame, each through its own door, to places apart, and no can is thrown. The control is the word to one pair: the other stays.
-/// A FAILURE MEANS: the two entries are no longer on one word.
+/// A FAILURE MEANS: the two entries are no longer on one word, or a pair goes with no word.
 #[test]
 fn two_doors_go_on_one_word() {
     for s in SEEDS {
@@ -241,7 +241,7 @@ fn two_doors_go_on_one_word() {
         p.order("stack", p.frame_at(a), Who::Red);
         p.order("stack", p.frame_at(b), Who::Blue);
         p.until(40.0, |p| red.iter().chain(blue.iter()).all(|&m| p.arrived(m))).unwrap_or_else(|| panic!("seed {s}: never both stacked: {}", p.roll()));
-        p.run(1.0);
+        if let Some(t) = p.always(3.0, |p| !p.any_op()) { panic!("seed {s}: they went with no word, {t:.2} s on"); }
         let bangs = p.left().1;
         p.key_down("KeyF");
         p.frame();
@@ -266,29 +266,6 @@ fn two_doors_go_on_one_word() {
         p.order("go", p.sam_at(), Who::Red);
         p.run(0.1);
         assert!(!p.ops_on(a).is_empty() && p.ops_on(b).is_empty(), "seed {s}: the control: the word to red sends red alone");
-    }
-}
-
-/// THE RULE: tools given on the word wait in ready; on the word the bang goes first and the quiet door opens on the bang door's go, so both pairs enter after the bang. The control is three seconds with no word: both still wait.
-/// A FAILURE MEANS: a pair on the word goes by itself, or the quiet door goes in ahead of the bang.
-#[test]
-fn tools_on_the_word_wait_and_the_bang_goes_first() {
-    for s in SEEDS {
-        let (mut p, a, b) = two_doors(s);
-        p.order_on_word("bangClear", p.frame_at(a), Who::Red);
-        p.order_on_word("openClear", p.frame_at(b), Who::Blue);
-        p.run(0.1);
-        let (oa, ob) = (p.ops_on(a)[0], p.ops_on(b)[0]);
-        let ready = |p: &Play| p.op_phase(oa) == game::doortools::Phase::Ready && p.op_phase(ob) == game::doortools::Phase::Ready;
-        p.until(45.0, |p| ready(p)).unwrap_or_else(|| panic!("seed {s}: never both ready: {:?} {:?}", p.op_beats(oa), p.op_beats(ob)));
-        if let Some(t) = p.always(3.0, |p| ready(p)) { panic!("seed {s}: he went with no word, {t:.2} s on"); }
-        p.key_down("KeyF");
-        p.frame();
-        p.key_up("KeyF");
-        p.until(45.0, |p| !p.any_op()).unwrap_or_else(|| panic!("seed {s}: never ended"));
-        let (bang, rgo, bshove, bgo) = (p.beat_t(oa, "bang").expect("bang"), p.beat_t(oa, "go").expect("go"), p.beat_t(ob, "shove").expect("shove"), p.beat_t(ob, "go").expect("go"));
-        assert!(bang < bgo && (bshove - rgo).abs() < 2.5 / 60.0 && bgo >= rgo, "seed {s}: bang {bang:.2} red go {rgo:.2} blue shove {bshove:.2} blue go {bgo:.2}");
-        assert_eq!((p.op_ended(oa).as_deref(), p.op_ended(ob).as_deref()), (Some("in"), Some("in")), "seed {s}");
     }
 }
 

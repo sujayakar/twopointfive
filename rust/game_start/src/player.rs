@@ -202,7 +202,7 @@ impl Player {
     // ---- his hands
     /// a key goes down for a tick. (The squad's is never pressed twice inside the window of a double press: his second is a second try at an order, never 'fall in')
     pub async fn key(&self, code: &str) {
-        let (quick, twice, secs) = self.ask(|g| (code == g.orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
+        let (quick, twice, secs) = self.ask(|g| (code == g.sets[g.seat].orders.knobs.quick_key, g.k.cmdring.twice, g.k.cmdring.twice_secs));
         if quick && twice {
             while self.t.get() < self.quick_at.get() + secs + 0.05 { self.tick().await }
             self.quick_at.set(self.t.get());
@@ -385,9 +385,9 @@ impl Player {
         for _ in 0..60 {
             if let Some(p) = aim { self.aim(p); }
             self.tick().await;
-            let (lit, there) = self.seen(|g, s| {
+            let (lit, there) = self.seen(|_, s| {
                 let rows = &s.nearby;
-                (rows.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
+                (rows.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == kind && r.verb == Some(verb)), rows.iter().any(|r| r.kind == kind && r.verb == Some(verb)))
             });
             if lit { self.down(game::consts::INTERACT_KEY); self.ticks(2).await; return true; }
             if there { self.down("ArrowDown"); }

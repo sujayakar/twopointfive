@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// THE BACK KEY: Esc is the pause, and only the pause; what Esc used to back out of in the fight — the squad's order menu (a page of it: back to the first), the
+/// THE BACK KEY: Esc is the pause, and only the pause; what Esc used to back out of in the fight — the squad's order menu, the
 /// open Space list, a running sustained verb (the leaf being eased, the pick, the choke, the drive), the launcher's held arc — backs out on Tab. The maintainer,
 /// 10-17: "esc is overloaded -- exiting out of menus as well as going to pause. maybe we make tab exit out of menus and esc is always pause?"
 ///   `BACKKEY.tab` — ON in the page (`?tabback=0` = Esc backs out first and pauses only with nothing to back out of, as it did), OFF here and on the frozen

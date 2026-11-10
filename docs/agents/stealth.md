@@ -85,7 +85,7 @@ room back (`light_switch_tick`, `puts_back`). **Car lamps** are found from the b
 (`dead_lamp`).
 
 **One key and a ring.** `build_interactables` makes the rows (`Interactable`, each with a `Verb`). `update_interact` reads the key: a tap does the
-highlighted row; kept down for `k.handring.hold_secs` it puts up a ring, with the whistle as its last wedge (`whistle_wedge`). What is done is `g.act`
+highlighted row; kept down for `k.handring.hold_secs` it puts up a ring, with the whistle as its last wedge (`whistle_wedge`). What is done is the seat's `act`
 for that frame, read by the rule that owns it.
 
 **Close in.** `close_at` is the one test for rows, clicks and the ready pose. `close_windows` gives a man a rear arc, sides and a front, each with a
@@ -114,7 +114,7 @@ nearest who `can_answer` comes. A second inside `twice_window` is a search; a ma
 send (`sticky_eyes`); `take_cam` takes one back.
 
 **The wand** is kit (`wand_offered`: carried, under the fog, a door `wand_fits`). `start_wand`, then `wand_through`; `wand_eye` is a wedge past the
-leaf that the cursor turns (`wand_turn`). A teammate looks only by order (`wand_order_key`), his lens sweeping by itself (`mate_wand_eye`).
+leaf that the cursor turns (`wand_turn`). A teammate looks only by order (`wand_order_frame`), his lens sweeping by itself (`mate_wand_eye`).
 
 **Devices** are level data (`docs/level-format.md`). `update_camera` tests a lens by `eye_contact` and `lens_gain`, then `camera_suspect` (a man sent)
 and `camera_alarm` (the floor up). `update_laser` breaks on a stranger's body or a flying item (`body_breaks`, `laser_trip`). A round, the jammer or
@@ -151,7 +151,7 @@ the mains stop them (`alive`). `sensing` is off under a night breach and a rescu
 - **A new effect under the fog:** ask whose it is. The team's: `fog_of_war_doing`. Another man's: `fog_of_war_air_hides` at the source, or a place
   kept like `thing_recs`. The place's: nothing to do. No fog exception of its own, and no rule reads `g.fog_picture`.
 - **A new eye:** a `FogEye` in `fog_of_war_pass`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
-- **A new row for Sam:** a `Verb`, a row in `build_interactables` or a `*_rows` call beside it, and the owner reads `g.act`.
+- **A new row for Sam:** a `Verb`, a row in `build_interactables` or a `*_rows` call beside it, and the owner reads the seat's `act`.
 - **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices.rs` and `rust/sim/src/lights.rs`, drawn by
   `device_boxes`.
 - **A price:** `ScoreK`; a new count is a `chron_*` and a `RunCounts` field.

@@ -169,7 +169,6 @@ fn thing_of(g: &Game, r: &KitRow, m: &MemberKit) -> Option<TeamThing> {
         KitField::Charges => count(m.charges),
         KitField::Smoke => count(m.smoke),
         KitField::Frags => count(m.frags),
-        KitField::Walls => count(m.walls),
         KitField::Shells => count(m.shells),
         KitField::Cams => count(m.cams),
         KitField::Rings => count(m.rings),
@@ -227,8 +226,6 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
     let choices = f.map_or_else(any_size, |f| squad_choices(&f.entry));
     let at = &choices[size as usize];   // (the size is always one of the five: `kit_team` holds it there)
     let on = cards_on(f);
-    let sq = if on { squad_cost(g, None, None) } else { None };
-    let squad = match sq { Some(s) if size != 0.0 => format!("Squad pouches {} / {}", js::num_str(s.used), js::num_str(s.total)), _ => String::new() };
     let mut kits = Vec::new();
     if on {
         let only = alone(g);
@@ -246,7 +243,6 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
         note: note_line(f, at, size),
         cards: on,
         as_issued: f.is_some_and(|f| kit_as_issued(&f.entry)),
-        squad,
         pool: pool_line(g, f, size),
         walls: f.is_some_and(|f| f.walls != 0.0),
         kits,

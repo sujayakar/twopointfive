@@ -20,7 +20,7 @@ fn play(g: &mut Game, name: &str, at: V3, vol: f64) {
 fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
-/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the book on Game with one book, his seat's otherwise, asked inside that seat.
+/// `ordersOf(g, gd)`'s `sams && mine(gd)`: the first seat's book with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
     let s = crate::seats::seat_of(g, gd);

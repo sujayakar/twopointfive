@@ -6,28 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A row's digit off its key code: `Digit1` to `Digit9`, else 0.
-pub(super) fn digit_of(code: &str) -> f64 {
-    match code.strip_prefix("Digit").map(str::as_bytes) {
-        Some(&[d @ b'1'..=b'9']) => (d - b'0') as f64,
-        _ => 0.0,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// A row's digit off its key code: `wait_key` is either a digit of the ring or a key of its own.
-    #[test]
-    fn a_digit_is_one_to_nine_and_nothing_else_is_one() {
-        for (code, want) in [("Digit1", 1.0), ("Digit5", 5.0), ("Digit9", 9.0), ("Digit0", 0.0), ("Digit10", 0.0), ("Digit", 0.0), ("KeyX", 0.0), ("xDigit1", 0.0), ("", 0.0)] {
-            assert_eq!(digit_of(code), want, "{code:?}");
-        }
-    }
-
-}
-
 // ------------------------------------------------------------ small words
 
 /// `a === b` of two `Who`s (ring.indexOf)
@@ -90,8 +68,8 @@ pub(crate) fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>)
 pub fn squad_orders_show(g: &mut crate::game::Game, men: &[GuardId]) {
     let t = g.time;
     let who: Vec<String> = men.iter().filter(|&&m| !crate::condition::down(g, g.gd[m].ch)).map(|&m| g.gd[m].callsign.clone()).collect();
-    g.orders.shows.push(SquadOrdersShowsItem { t, who });
-    if g.orders.shows.len() > 16 { g.orders.shows.drain(0..8); }
+    g.sets[g.seat].orders.shows.push(SquadOrdersShowsItem { t, who });
+    if g.sets[g.seat].orders.shows.len() > 16 { g.sets[g.seat].orders.shows.drain(0..8); }
 }
 
 /// The built-in rows of the menu and the night breach's owner.
@@ -102,32 +80,32 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
     let words = |w: &[&str]| -> Option<Vec<String>> { Some(w.iter().map(|x| String::from(*x)).collect()) };
     let rows = [
         rows::def(&rows::movethere::ORDER, OrderDef {
-            key: Some(1.0), targets: vec![TargetKind::Floor],
+            targets: vec![TargetKind::Floor],
             ack: words(&["moving.", "on it."]),
             ..Default::default()
         }),
         rows::def(&rows::stack::ORDER, OrderDef {
-            key: Some(1.0), targets: vec![TargetKind::Door],
+            targets: vec![TargetKind::Door],
             ack: words(&["stacking up.", "on the door."]),
             ..Default::default()
         }),
         rows::def(&rows::cover::ORDER, OrderDef {
-            key: Some(2.0), targets: vec![TargetKind::Floor, TargetKind::Door],
+            targets: vec![TargetKind::Floor, TargetKind::Door],
             ack: words(&["covering.", "i've got it."]),
             ..Default::default()
         }),
         rows::def(&rows::fallin::ORDER, OrderDef {
-            key: Some(3.0), targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
+            targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
             ack: words(&["on you.", "with you."]),
             ..Default::default()
         }),
         rows::def(&rows::hold::ORDER, OrderDef {
-            key: Some(4.0), targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
+            targets: vec![TargetKind::Floor, TargetKind::Door, TargetKind::None],
             ack: words(&["holding."]),
             ..Default::default()
         }),
     ];
-    for row in rows {   // (rows of its own: a menu newly stood has none yet, whoever's orders stand on the game while it is made)
+    for row in rows {   // (rows of its own: a menu newly stood has none yet, whichever seat the pass is about while it is made)
         let (id, d) = (row.id.clone(), new_row(g, row));
         s.made.set(id, d);
         s.defs.push(d);
@@ -259,12 +237,12 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
             if !crate::condition::down(g, g.gd[gd].ch) { ring.push(Who::Num(k as f64)); }
         }
     }
-    let was = g.orders.who;
+    let was = g.sets[g.seat].orders.who;
     let now = match ring.iter().position(|&w| same_who(w, was)) {   // (a man of a squad in pairs is not on the ring: gold, either way)
         None => Who::All,
         Some(i) => ring[js::rem(i as f64 + dir + ring.len() as f64, ring.len() as f64) as usize],
     };
-    g.orders.who = now;
+    g.sets[g.seat].orders.who = now;
     now
 }
 
@@ -342,69 +320,38 @@ pub(super) fn squad_orders_shown_there(g: &crate::game::Game, a: OrdersAssignmen
     }
 }
 
-/// `d.listed ?? d.targets` of a row
-fn listed_on(d: &OrderDef) -> &[TargetKind] {
-    match &d.listed {
-        Some(l) => l,
-        None => &d.targets,
-    }
-}
-/// Is this digit taken on `def`'s page by a row offered on one of its targets
-fn digit_clash(g: &Game, seat: &crate::seats::SeatRef, def: OrdersOrderDefId, k: f64) -> bool {
-    let me = &g.tab.orders_order_def[def];
-    let page = me.page.as_deref().unwrap_or("");
-    seat.orders.defs.iter().any(|&o| {
-        let d = &g.tab.orders_order_def[o];
-        d.key == Some(k) && d.stands_in.is_none() && d.page.as_deref().unwrap_or("") == page && listed_on(d).iter().any(|t| listed_on(me).contains(t))
-    })
-}
-
-/// Add an order to the menu: at the foot or before `before`, on the next free digit of its page.
+/// Add an order to the menu: at the foot or before `before`.
 pub fn squad_orders_register(g: &mut crate::game::Game, def: OrdersOrderDefId, before: Option<&str>) {
     let id = g.tab.orders_order_def[def].id.clone();
     squad_orders_unregister(g, &id);
-    if let Some(si) = &g.tab.orders_order_def[def].stands_in {   // a stand-in: the other row's digit, page and place, the two never listed together
+    if let Some(si) = &g.tab.orders_order_def[def].stands_in {   // a stand-in: the other row's page and place, the two never listed together
         let wants = si.for_.clone();
-        let stood = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == wants);
+        let stood = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == wants);
         if let Some(stood) = stood {
             squad_orders_seat(g, def, stood);
             return;
         }
         g.tab.orders_order_def[def].stands_in = None;   // (not registered: listed as a row of its own)
     }
-    if truthy_str(&g.tab.orders_order_def[def].hot_key) {
-        g.tab.orders_order_def[def].key = None;
-    } else {
-        let key = g.tab.orders_order_def[def].key;
-        let redeal = match key {
-            None => true,
-            Some(k) => k < 1.0 || k > ORDER_DIGITS || digit_clash(g, &crate::seats::here(g), def, k),
-        };
-        if redeal {
-            let mut k = if truthy_str(&g.tab.orders_order_def[def].page) { 1.0 } else { 5.0 };
-            while k <= ORDER_DIGITS && digit_clash(g, &crate::seats::here(g), def, k) { k += 1.0; }
-            g.tab.orders_order_def[def].key = if k <= ORDER_DIGITS { Some(k) } else { None };   // (no digit left: the wheel still reaches the row)
-        }
-    }
     let i = match before {
-        Some(b) if !b.is_empty() => g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == b),
+        Some(b) if !b.is_empty() => g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == b),
         _ => None,
     };
-    let at = i.unwrap_or(g.orders.defs.len());
-    g.orders.defs.insert(at, def);
-    let stand_ins: Vec<OrdersOrderDefId> = g.orders.defs.iter().copied()
+    let at = i.unwrap_or(g.sets[g.seat].orders.defs.len());
+    g.sets[g.seat].orders.defs.insert(at, def);
+    let stand_ins: Vec<OrdersOrderDefId> = g.sets[g.seat].orders.defs.iter().copied()
         .filter(|&d| g.tab.orders_order_def[d].stands_in.as_ref().map_or(false, |x| x.for_ == id))
         .collect();
     for s in stand_ins {   // (registered again: its stand-ins move with it)
-        if let Some(j) = g.orders.defs.iter().position(|&d| d == s) { g.orders.defs.remove(j); }
+        if let Some(j) = g.sets[g.seat].orders.defs.iter().position(|&d| d == s) { g.sets[g.seat].orders.defs.remove(j); }
         squad_orders_seat(g, s, def);
     }
 }
 
 /// Open a fresh group (the men whose arrival one 'set.' waits on).
 pub fn squad_orders_new_group(g: &mut crate::game::Game) -> f64 {
-    g.orders.group += 1.0;
-    g.orders.group
+    g.sets[g.seat].orders.group += 1.0;
+    g.sets[g.seat].orders.group
 }
 
 /// A ROW OF A SEAT'S MENU IS ONE ROW OF THE TABLE, HOWEVER OFTEN IT IS LISTED. The row this seat's menu has for the id is written in place, on the
@@ -414,16 +361,16 @@ pub fn squad_orders_new_group(g: &mut crate::game::Game) -> f64 {
 /// when a held door's page was rebuilt or when the man with the hammer fell left an orphan each time, every later row stood one place further
 /// on, and two machines of one game that had seen a different number of re-listings numbered their rows differently.
 ///
-/// THE ROW IS THE MENU'S OWN (`SquadOrders.made`): each seat has its own, and so has a second cast's. Rows are written in place (a digit dealt, a page, a target that
+/// THE ROW IS THE MENU'S OWN (`SquadOrders.made`): each seat has its own, and so has a second cast's. Rows are written in place (a page, a target that
 /// comes and goes with the pairs), so two menus that shared one would change each other's.
 pub fn squad_orders_row(g: &mut crate::game::Game, def: crate::orders::OrderDef) -> OrdersOrderDefId {
-    if g.orders.made.len() == 0 && !g.orders.defs.is_empty() && !g.in_cast { adopt_rows(g); }
-    if let Some(d) = g.orders.made.get(def.id.clone()).copied() {
+    if g.sets[g.seat].orders.made.len() == 0 && !g.sets[g.seat].orders.defs.is_empty() && !g.in_cast { adopt_rows(g); }
+    if let Some(d) = g.sets[g.seat].orders.made.get(def.id.clone()).copied() {
         g.tab.orders_order_def[d] = def;
         return d;
     }
     let (id, d) = (def.id.clone(), new_row(g, def));
-    g.orders.made.set(id, d);
+    g.sets[g.seat].orders.made.set(id, d);
     d
 }
 
@@ -439,22 +386,22 @@ fn adopt_rows(g: &mut Game) {
     for id in ids {
         let rows: Vec<OrdersOrderDefId> = g.tab.orders_order_def.iter().filter(|(_, r)| r.id == id).map(|(d, _)| d).collect();
         let mut left = rows.clone();
-        let mine: Option<OrdersOrderDefId> = rows.iter().copied().find(|d| g.orders.defs.contains(d));
+        let mine: Option<OrdersOrderDefId> = rows.iter().copied().find(|d| g.sets[g.seat].orders.defs.contains(d));
         let mut ahead = 0;   // (the seats before this one that have none of it listed: each takes the next)
         let mut past = false;
         for &s in g.seats.iter() {
             if s == g.seat { past = true; continue; }
-            let Some(o) = g.tab.cmd_seat[s].own.as_ref() else { continue };
+            let o = &g.sets[s];
             let theirs = rows.iter().copied().find(|d| o.orders.defs.contains(d)).or_else(|| o.orders.made.get(id.clone()).copied());
             match theirs { Some(d) => left.retain(|&x| x != d), None => if !past { ahead += 1; } }
         }
-        if let Some(d) = mine.or_else(|| left.get(ahead).copied()) { g.orders.made.set(id, d); }
+        if let Some(d) = mine.or_else(|| left.get(ahead).copied()) { g.sets[g.seat].orders.made.set(id, d); }
     }
 }
 
 pub fn squad_orders_unregister(g: &mut crate::game::Game, id_2: &str) {
-    if let Some(i) = g.orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == id_2) {
-        g.orders.defs.remove(i);
+    if let Some(i) = g.sets[g.seat].orders.defs.iter().position(|&d| g.tab.orders_order_def[d].id == id_2) {
+        g.sets[g.seat].orders.defs.remove(i);
     }
 }
 
@@ -463,13 +410,13 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
     let own;
     let men: &[GuardId] = match men {
         Some(m) => m,
-        None => { own = g.orders.asg.keys(); &own }
+        None => { own = g.sets[g.seat].orders.asg.keys(); &own }
     };
     for &gd in men {
-        if g.orders.asg.has(gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
+        if g.sets[g.seat].orders.asg.has(gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
         squad_orders_drop(g, gd);
     }
-    if !g.orders.asg.values().any(|&a| g.tab.orders_assignment[a].post.is_none()) { g.orders.trail.clear(); }
+    if !g.sets[g.seat].orders.asg.values().any(|&a| g.tab.orders_assignment[a].post.is_none()) { g.sets[g.seat].orders.trail.clear(); }
 }
 
 /// `this.people?.near(at) ?? null`: the man of the other side nearest the point, with how near; None while g.orders.people is None.
@@ -499,7 +446,7 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
 }
 /// what a question of a point wants standing (before the first tick: the seat's list of things to work, which a tick keeps)
 fn pointed(g: &mut Game) {
-    if g.work.cache.is_none() { crate::workthings::work_things_keep(g); }
+    if g.sets[g.seat].work.cache.is_none() { crate::workthings::work_things_keep(g); }
     crate::scene_collision::stands(g);
 }
 /// …asked of the game shared, the copy of the boxes standing (`asked` = the walls whose sky was asked, for a rule to keep)
@@ -612,20 +559,20 @@ mod tests_2 {
     fn a_row_listed_again_is_the_same_row() {
         let mut g = alloc::boxed::Box::new(crate::game::Game::blank());
         let was = g.tab.orders_order_def.len();
-        let row = |id: &str, key: f64| crate::orders::OrderDef { id: String::from(id), key: Some(key), ..Default::default() };
-        let a = squad_orders_row(&mut g, row("first", 1.0));
-        let b = squad_orders_row(&mut g, row("second", 2.0));
+        let row = |id: &str, page: &str| crate::orders::OrderDef { id: String::from(id), page: Some(String::from(page)), ..Default::default() };
+        let a = squad_orders_row(&mut g, row("first", "1"));
+        let b = squad_orders_row(&mut g, row("second", "2"));
         assert_ne!(a, b);
         for k in 0..5 {
-            assert_eq!(squad_orders_row(&mut g, row("first", 3.0 + k as f64)), a, "listing {k}: the row moved");
-            assert_eq!(squad_orders_row(&mut g, row("second", 2.0)), b);
+            assert_eq!(squad_orders_row(&mut g, row("first", ["3", "4", "5", "6", "7"][k])), a, "listing {k}: the row moved");
+            assert_eq!(squad_orders_row(&mut g, row("second", "2")), b);
         }
         assert_eq!(g.tab.orders_order_def.len(), was + 2, "ten more listings made no row");
-        assert_eq!(g.tab.orders_order_def[a].key, Some(7.0), "the row holds what it was last listed as");
+        assert_eq!(g.tab.orders_order_def[a].page.as_deref(), Some("7"), "the row holds what it was last listed as");
         // (on the menu or off it: a row taken off the menu is still the table's row of its id)
         squad_orders_register(&mut g, a, None);
         squad_orders_unregister(&mut g, "first");
-        assert_eq!(squad_orders_row(&mut g, row("first", 1.0)), a);
+        assert_eq!(squad_orders_row(&mut g, row("first", "1")), a);
         assert_eq!(g.tab.orders_order_def.len(), was + 2);
     }
     use crate::game::PairId;

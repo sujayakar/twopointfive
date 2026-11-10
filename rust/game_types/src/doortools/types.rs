@@ -3,6 +3,10 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// the word's own row as the squad's size has it: none, a squad of one or two (it's on no list and waits stacked), a bigger one
+#[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
+pub enum GoRow { None, Small, Big }
+
 /// the step onto the diagonals, kept until the first can's burst has run dry
 #[derive(Clone, Debug, ToBytes)]
 pub enum ThresholdOut {
@@ -30,10 +34,10 @@ pub struct DoorTools {
     #[is(crate::doortools::DoorToolsStats { orders: 0.0, kicks: 0.0, picks: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, frags: 0.0, blown: 0.0, backblast: 0.0 })] pub stats: crate::doortools::DoorToolsStats,
     pub roster: Vec<GuardId>,
     pub seen: Option<crate::floorseen::FloorSeen>,
-    pub go_key: Option<Option<String>>,
+    pub go_row: Option<GoRow>,
     pub words: Vec<WordId>,
     #[is(-1000000000.0)] pub word_key_t: f64,
-    pub thr_key: Option<String>,
+    pub thr_row: bool,
     #[is(-1.0)] pub thr_sig: f64,
     pub sam_of: Option<PlayerId>,
     pub sam_spent: f64,
@@ -284,7 +288,6 @@ pub struct Threshold {
     pub out: Option<crate::doortools::ThresholdOut>,
     pub wide: Option<bool>,
     pub early: Option<bool>,
-    pub word_step: Option<bool>,
     pub shut_t: Option<f64>,
 }
 
@@ -406,7 +409,6 @@ pub struct DoorOp {
     pub aim: Option<crate::doortools::DoorToolsDoneItemAim>,
     pub pass: Option<crate::doortools::DoorToolsDoneItemPass>,
     pub beats: Vec<crate::doortools::DoorToolsDoneItemBeatsItem>,
-    pub on_word: bool,
     pub word: Option<WordId>,
     pub hold: f64,
     pub ready_t: f64,
@@ -647,18 +649,6 @@ pub enum DoorToolsThresholdThen {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorToolsThenOnWordWhat {
-    Bang,
-    Step,
-}
-
-#[derive(Clone, Debug)]
-pub enum DoorToolsThenOnWord {
-    Text(String),
-    Arm1(()),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorToolsCanThresholdThenWhat {
     Bang,
     Step,
@@ -826,8 +816,6 @@ pub const LEAF_COST: f64 = 4.0;
 pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc::vec![0.5, 2.4]] }
 
 pub const SAM_SHIFT: f64 = 0.35;
-
-pub const BIG_KEY: &str = "KeyH";
 
 pub const THR_PAGE: &str = "thr";
 

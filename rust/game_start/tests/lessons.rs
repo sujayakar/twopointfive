@@ -64,7 +64,7 @@ fn each_block_stands_on_its_floor() {
             if steps[..i].iter().any(|x| x.id == s.id) { faults.push(String::from("another step has its id")); }
             if s.cue.is_some() && steps[..i].iter().any(|x| x.cue == s.cue) { faults.push(format!("the cue {:?} is another step's too: a cue starts one beat", s.cue)); }
             if s.line.chars().count() > 96 { faults.push(format!("its line is {} characters: the objective row holds about 96", s.line.chars().count())); }
-            for line in [Some(&s.line), s.setup_line.as_ref(), s.ring_line.as_ref(), s.blow_line.as_ref(), s.menu_line.as_ref(), s.page_line.as_ref(), s.flat_line.as_ref()].into_iter().flatten() {
+            for line in [Some(&s.line), s.setup_line.as_ref(), s.ring_line.as_ref(), s.blow_line.as_ref(), s.menu_line.as_ref()].into_iter().flatten() {
                 for name in line.split('{').skip(1).filter_map(|x| x.split_once('}').map(|y| y.0)) { if !game::lesson::lesson_token(name) { faults.push(format!("{{{}}} is no move's token", name)); } }
             }
             if !s.at.is_none_or(|a| a.iter().all(|v| v.is_finite())) { faults.push(format!("its mark {:?} is nowhere", s.at)); }

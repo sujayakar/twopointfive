@@ -51,7 +51,7 @@ function walk(deep: string[] | undefined): Promise<string> {
     said(`  read ${words(root.querySelector('.mread'))}`); said(`  brief ${all('[class^=kb-], [class*=" kb-"]').filter(e => !e.children.length && !gone(e)).map(words).join(' / ')}`);
     const p = P(); said(`  link ${p.baseOf(p.missions.selected)} > ${p.loadout?.search() ?? 'none'}`); };
   const team = () => { const h = root.querySelector('#loadout'); if (!h) { said('team none'); return; }
-    said(`team ${words(h.querySelector('.lo-words'))} | ${all('.lo-size', h).map(b => `${words(b)}${flags(b)}:${b.title}`).join(' / ')} | ${words(h.querySelector('.lo-note'))} | ${words(h.querySelector('.lo-squadp'))} | ${words(h.querySelector('.lo-pool'))} | ${words(h.querySelector('[data-act="deploy"]'))}`);
+    said(`team ${words(h.querySelector('.lo-words'))} | ${all('.lo-size', h).map(b => `${words(b)}${flags(b)}:${b.title}`).join(' / ')} | ${words(h.querySelector('.lo-note'))} | ${words(h.querySelector('.lo-pool'))} | ${words(h.querySelector('[data-act="deploy"]'))}`);
     said(`  kits ${all('[data-kit]', h).map(b => `${words(b)}${gone(b) ? '~' : ''}${flags(b)}:${b.title}`).join(' / ')} ${words(h.querySelector('.lo-kits-own'))}`);
     for (const s of all('.lo-slot', h)) said(`  man ${flags(s)} ${words(s.querySelector('.lo-name'))} | ${words(s.querySelector('.lo-role'))} | ${words(s.querySelector('.lo-sum'))} | ${words(s.querySelector('.lo-pouch'))} | ${flags(s.querySelector('.lo-name')!)} | ${all('.lo-ic', s).map(c => `${c.title}${words(c)}#${hash(c.innerHTML)}`).join(',')} gun#${hash(s.querySelector('.lo-gun')?.innerHTML ?? '')} ${s.title}`); };
   const card = () => { const c = root.querySelector('.kc') as HTMLElement | null; if (!c) { said('card none'); return; }

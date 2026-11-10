@@ -117,7 +117,7 @@ fn wet_ground_is_the_rows_and_not_the_box() {
     assert!(p.g.weather.wet_on, "a downpour has the ground wet in half a second");
     let mut d = Drawn::default();
     d.take(&p.g, ALL);
-    d.frame(&p.g, 1.0, p.g.aim_point);
+    d.frame(&p.g, 1.0, p.g.sets[p.g.seat].aim_point);
     let wet = (0..p.g.engine.world.statics.len() as u32).filter(|&i| d.boxes.wet.is(i)).collect::<Vec<_>>();
     assert!(!wet.is_empty(), "a downpour wets something on the compound");
     for &i in &wet {
@@ -129,7 +129,7 @@ fn wet_ground_is_the_rows_and_not_the_box() {
     for _ in 0..3 {
         p.frame();
         d.take(&p.g, ALL);
-        d.frame(&p.g, 1.0, p.g.aim_point);
+        d.frame(&p.g, 1.0, p.g.sets[p.g.seat].aim_point);
         let h = d.boxes.head[0];
         assert!(!wet.iter().any(|&i| i >= h.from && i < h.to), "a wet box is sent again every tick: {}..{}", h.from, h.to);
     }

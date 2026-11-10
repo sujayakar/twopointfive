@@ -57,12 +57,12 @@ fn a_man_taken_off_a_locked_door_slings_the_shotgun() {
         let out = |p: &Play, m: GuardId| p.g.gd[m].slung.as_ref().map_or(false, |x| x.out);
         // (an entry halts at a door it finds shut, for Sam's word: the row given again, as the lead's "your call" asks)
         let mut k = 0;
-        let up = p.until(45.0, |p| { k += 1; if k % 60 == 0 && p.g.door_tools.ops.is_empty() { let _ = squad_orders_give(&mut p.g, "openClear", Some(&t), Some(Who::All), None); } p.mates().into_iter().any(|m| out(p, m)) });
+        let up = p.until(45.0, |p| { k += 1; if k % 60 == 0 && p.g.sets[p.g.seat].door_tools.ops.is_empty() { let _ = squad_orders_give(&mut p.g, "openClear", Some(&t), Some(Who::All), None); } p.mates().into_iter().any(|m| out(p, m)) });
         assert!(up.is_some(), "seed {s}: nobody brought the shotgun up for the lock");
         squad_orders_clear(&mut p.g, None);
         p.frame();
         p.frame();
-        assert!(p.g.door_tools.ops.is_empty(), "seed {s}: the door's work goes on two frames after the orders were taken");
+        assert!(p.g.sets[p.g.seat].door_tools.ops.is_empty(), "seed {s}: the door's work goes on two frames after the orders were taken");
         for (m, gun) in &own { assert!(!out(&p, *m) && p.g.gd[*m].weapon == *gun, "seed {s}: {} still has the shotgun up two frames after his orders were taken", p.g.gd[*m].callsign); }
     }
 }
