@@ -594,26 +594,26 @@ fn meshTri(c0: u32, ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
 // leaf tests its ≤ 4 triangles. ANY hit ends it: returns that triangle's t (a real blocker in (MESH_TMIN, tmax], not necessarily the nearest),
 // or −1. Links only ever point forward, so a well-formed tree ends within N steps; `it` caps a malformed one at N regardless.
 fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 {
-  let hd = meshLoad(k);                         // (his tree's nodes, where they begin, where its corners begin, its triangles)
+  let hd = meshLoad(k * 2u);                    // (his tree's nodes, where they begin, where its corners begin, its triangles)
   let N = hd.x; let nb = hd.y; let tb = hd.z;
+  let per = 65535.0 / MESH_SPAN; let rq = (ro - bitcast<vec3f>(meshLoad(k * 2u + 1u).xyz)) * per; let iq = invRd * (1.0 / per);   // (the ray in his boxes' own steps)
   var i = 0u; var it = 0u;
   loop {
     if (i >= N || it >= N) { break; }
     it++;
-    let n0 = meshLoad(nb + i * 2u); let n1 = meshLoad(nb + i * 2u + 1u);
-    let t0 = (bitcast<vec3f>(n0.xyz) - ro) * invRd; let t1 = (bitcast<vec3f>(n1.xyz) - ro) * invRd;
+    let n = meshLoad(nb + i); let leaf = (n.w & 0x80000000u) != 0u;
+    let t0 = (vec3f(n.xyz & vec3u(0xffffu)) - rq) * iq; let t1 = (vec3f(n.xyz >> vec3u(16u)) - rq) * iq;
     let tmn = min(t0, t1); let tmx = max(t0, t1);
     let tN = max(max(tmn.x, tmn.y), max(tmn.z, 0.0));
     let tF = min(min(tmx.x, tmx.y), min(tmx.z, tmax));
-    if (tN > tF) { i = n0.w; continue; }         // box missed over [0, tmax]: skip the subtree
-    let cnt = n1.w >> 24u;
-    if (cnt == 0u) { i = i + 1u; continue; }     // internal: descend (left child is next in memory)
-    let ts = n1.w & 0xffffffu;
+    if (tN > tF) { i = select(n.w, i + 1u, leaf); continue; }   // box missed over [0, tmax]: skip the subtree (a leaf's next node is the one behind it)
+    i = i + 1u;                                  // the left child of an internal node, and what comes after a leaf
+    if (!leaf) { continue; }
+    let cnt = (n.w >> 24u) & 127u; let ts = n.w & 0xffffffu;
     for (var q = 0u; q < cnt; q++) {
       let t = meshTri(tb + (ts + q) * 3u, ro, rd, tmax);
       if (t >= 0.0) { return t; }
     }
-    i = n0.w;                                    // leaf done: on to the skip link
   }
   return -1.0;
 }
