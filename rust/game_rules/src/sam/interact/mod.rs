@@ -172,6 +172,11 @@ fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
     if whistle_wedge(g, seat) { (keys | 1 << (js::to_i32(g.k.cmdring.wedges) & 31)) as f64 } else { keys as f64 }
 }
 
+/// His ring is put away with its press spent, if it is up or its key is down.
+pub fn interact_let_go(g: &mut Game) {
+    if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, true); }
+}
+
 /// Esc, ahead of the pause menu: the open selector backs out, else a running sustained verb stops.
 pub fn escape_interact(g: &mut Game) -> bool {
     if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, true); return true; }
@@ -274,7 +279,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let hit = crate::input::input_hit(g, input, key);
     let esc = crate::backkey::back_hit(g, input);
     if g.sets[g.seat].hand.f_held && !down && !hit { g.sets[g.seat].hand.f_held = false; }   // a spent press has come up: Space is live again
-    if crate::input::input_hit(g, input, "Paused") && (g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0) { close_selector(g, true); }
+    if crate::input::input_hit(g, input, "Paused") { interact_let_go(g); }
     // ---- a sustained verb is running: Space (a fresh press), Esc, or a step INTO it stops it; nothing else is on offer meanwhile
     let run = running_verb(g, &crate::seats::here(g));
     if !run.is_empty() {
