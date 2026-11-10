@@ -6,7 +6,8 @@ import { makeBuffer, Timer } from './device';
 import type { Struct } from './layout';
 
 /** Where a buffer lives: one element a pixel of some size, or a fixed number of elements. */
-export type Size = 'render' | 'half' | 'output' | { count: number };
+export type Grid = 'render' | 'wide' | 'narrow' | 'output';
+export type Size = Grid | { count: number };
 
 export interface BufferSpec {
   name: string;
@@ -66,8 +67,7 @@ export class Graph {
   readonly errors = new Map<string, string>();
   /** the stages that ran last frame, in order */
   ran: string[] = [];
-  renderSize: [number, number] = [0, 0];
-  outputSize: [number, number] = [0, 0];
+  grids: Record<Grid, [number, number]> = { render: [0, 0], wide: [0, 0], narrow: [0, 0], output: [0, 0] };
 
   private modules = new Map<string, Module>();
   private shared = new Map<string, Shared>();
@@ -124,28 +124,22 @@ export class Graph {
 
   // ---- sizes and buffers
 
-  resize(render: [number, number], output: [number, number]): boolean {
-    const same = (a: [number, number], b: [number, number]) => a[0] === b[0] && a[1] === b[1];
-    if (same(render, this.renderSize) && same(output, this.outputSize)) return false;
-    this.renderSize = render;
-    this.outputSize = output;
+  resize(grids: Record<Grid, [number, number]>): boolean {
+    const changed = (Object.keys(grids) as Grid[]).filter((g) => String(grids[g]) !== String(this.grids[g]));
+    if (changed.length === 0) return false;
+    this.grids = grids;
     for (const [name, list] of this.made) {
-      if (typeof this.buffers.get(name)!.size === 'object') continue;
+      const { size } = this.buffers.get(name)!;
+      if (typeof size === 'object' || !changed.includes(size)) continue;
       list.forEach((b) => b.destroy());
       this.made.delete(name);
+      this.lastWritten.delete(name);
     }
-    this.lastWritten.clear();
     this.groups.clear();
     return true;
   }
-  get halfSize(): [number, number] {
-    return [Math.ceil(this.renderSize[0] / 2), Math.ceil(this.renderSize[1] / 2)];
-  }
   pixels(size: Size): [number, number] {
-    if (size === 'render') return this.renderSize;
-    if (size === 'half') return this.halfSize;
-    if (size === 'output') return this.outputSize;
-    return [size.count, 1];
+    return typeof size === 'object' ? [size.count, 1] : this.grids[size];
   }
   elements(size: Size): number {
     const [w, h] = this.pixels(size);

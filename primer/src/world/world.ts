@@ -11,7 +11,7 @@ import { boundsOf, buildTree, type TreeNode } from './tree';
 import { NO_TURN, cross, length, normalize, scale, type Vec3 } from './vec';
 
 export const NOTHING = 0xffffffff;
-const MOST = { materials: 64, lamps: 80, objects: 128 };
+const MOST = { materials: 64, lamps: 80, objects: 128, planes: 1024, openings: 8 };
 
 const Piece = struct('Piece', {
   center: vec3f('', { unit: 'm' }),
@@ -62,6 +62,14 @@ const ObjectStruct = struct('Object', {
   spare1: f32(''),
   turn_before: vec4f(''),
 });
+const Opening = struct('Opening', {
+  center: vec3f('', { unit: 'm' }),
+  spare0: f32(''),
+  half_u: vec3f('half an edge', { unit: 'm' }),
+  spare1: f32(''),
+  half_v: vec3f('the other half edge', { unit: 'm' }),
+  spare2: f32(''),
+});
 const WorldStruct = struct('World', {
   sky_zenith: vec3f(''),
   still_pieces: u32(''),
@@ -70,7 +78,7 @@ const WorldStruct = struct('World', {
   sky_ground: vec3f(''),
   moving_root: u32('where the tree of what moves begins'),
   lamp_count: u32(''),
-  spare0: u32(''),
+  opening_count: u32(''),
   spare1: u32(''),
   spare2: i32(''),
 });
@@ -114,6 +122,8 @@ export class World {
     this.fixed('materials', MOST.materials * MaterialStruct.stride, U);
     this.fixed('lamps', MOST.lamps * Lamp.stride, U);
     this.fixed('objects', MOST.objects * ObjectStruct.stride, U);
+    this.fixed('planes', MOST.planes * 16, U);
+    this.fixed('openings', MOST.openings * Opening.stride, U);
     this.fixed('tables', (64 * 64 + 16 * 16 * 4) * 4, U);
     const tables = new Float32Array(64 * 64 + 16 * 16 * 4);
     tables.set(blueNoise(64));
@@ -131,7 +141,8 @@ export class World {
     uniform('tables', 'Tables', [TABLES]);
     storage('pieces', 'array<Piece>', [Piece]);
     storage('nodes', 'array<Node>', [Node]);
-    storage('planes', 'array<vec4f>');
+    uniform('planes', `array<vec4f, ${MOST.planes}>`);
+    uniform('openings', `array<Opening, ${MOST.openings}>`, [Opening]);
   }
 
   private fixed(name: string, bytes: number, usage: GPUBufferUsageFlags): void {
@@ -180,7 +191,7 @@ export class World {
 
     this.atLeast('pieces', (b.pieces.length + 1) * Piece.stride);
     this.atLeast('nodes', (this.stillNodes.length + Math.max(1, this.movers.length * 2)) * Node.stride);
-    this.atLeast('planes', Math.max(1, this.planes.length) * 16);
+    if (this.planes.length > MOST.planes) throw new Error(`${room.name}: too many planes`);
     this.write('pieces', packAll(Piece, this.still.map((p) => this.pieceRow(p))));
     this.write('nodes', packAll(Node, this.stillNodes as unknown as Record<string, Value>[]));
     if (this.planes.length) this.write('planes', new Float32Array(this.planes.flat()).buffer);
@@ -190,8 +201,9 @@ export class World {
     pack(WorldStruct, new DataView(row), 0, {
       sky_zenith: sky.zenith, sky_horizon: sky.horizon, sky_ground: sky.ground,
       still_pieces: this.still.length, moving_pieces: this.movers.length,
-      moving_root: this.stillNodes.length, lamp_count: b.lamps.length,
+      moving_root: this.stillNodes.length, lamp_count: b.lamps.length, opening_count: b.openings.length,
     });
+    this.write('openings', packAll(Opening, b.openings.map((o) => ({ center: o.center, half_u: o.halfU, half_v: o.halfV }))));
     this.write('world', row);
     this.places.clear();
     this.place(0);

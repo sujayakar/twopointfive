@@ -113,6 +113,7 @@ export const door: RoomSpec = {
     b.ball([1.6, 0.4, -0.6], 0.4, wall);
     b.box([2.4, 0.5, 0.9], [0.3, 0.5, 0.3], paint, { turn: turnAbout(Y, 0.5) });
     b.panelLamp([-2, 2.3, 0.2], [0.5, 0, 0], [0, 0, 0.5], [16, 13, 9]);
+    b.opening([0, 1.05, 0.35], [0, 1.05, 0], [0, 0, 0.45]);
     const leaf = b.object();
     b.box([0, H - 0.15, 0.45], [0.025, H - 0.16, 0.44], wood, { object: leaf });
   },

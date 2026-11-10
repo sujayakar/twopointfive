@@ -5,6 +5,7 @@ import type { Lab, Layout } from '../lab';
 import { panelsIn } from '../lab';
 import { readBack } from '../gpu/device';
 import { unpack, type Value } from '../gpu/layout';
+import { CACHE_SLOTS } from '../stages/cache';
 import { ROOMS, roomNamed } from '../rooms';
 import { RAY_KINDS, projectLine } from './rays';
 import { MIXER } from '../stages/picture';
@@ -13,7 +14,7 @@ import { add, axesAround, dot, scale, sub, type Vec3 } from '../world/vec';
 import { CHAPTERS, type Chapter } from './chapters';
 import { control, forgetControls } from './controls';
 import { el } from './dom';
-import { defaultOf, knob, setKnob } from './knobs';
+import { defaultOf, knob, setKnob, valueOf } from './knobs';
 
 const LAYOUTS: [Layout, string][] = [['one', '1'], ['two', '2'], ['four', '4'], ['wipe', 'Wipe']];
 
@@ -32,7 +33,8 @@ export class Page {
   private meterRows = el('div', { id: 'meter' });
   private code: HTMLDialogElement = el('dialog', { id: 'code' });
   private lampRows = el('div', { id: 'lamps' });
-  private tab: 'pixel' | 'lamps' | 'mixer' | 'meter' = 'pixel';
+  private cacheRows = el('div', { id: 'cache-rows' });
+  private tab: 'pixel' | 'lamps' | 'cache' | 'mixer' | 'meter' = 'pixel';
 
   constructor(private lab: Lab, root: HTMLElement) {
     this.stage.append(lab.canvas, this.overlay, this.headers, this.marker, this.wipeLine, this.status);
@@ -44,8 +46,10 @@ export class Page {
 
   go(number: number): void {
     const c = CHAPTERS.find((x) => x.number === number) ?? CHAPTERS[0]!;
-    this.chapter = c;
     const { lab } = this;
+    for (const key of Object.keys(this.chapter.sets ?? {})) setKnob(key, defaultOf(key));
+    this.chapter = c;
+    for (const [key, value] of Object.entries(c.sets ?? {})) setKnob(key, value);
     if (lab.world.room?.id !== c.room) this.openRoom(c.room);
     lab.layout = c.layout;
     lab.zoom = 1;
@@ -125,6 +129,8 @@ export class Page {
       ...c.text.map((t) => el('p', { html: t })),
       ...(c.formula ? [el('pre', { class: 'formula' }, c.formula)] : []),
       ...[
+        c.actions ? el('div', { class: 'actions' }, ...c.actions.map(([text, action]) =>
+          el('button', { type: 'button', click: () => this.act(action) }, text))) : null,
         section('Turn', c.knobs.map(control)),
         section('The room', roomRows),
         section('Break it', c.breaks.map(control), 'breaks'),
@@ -135,14 +141,23 @@ export class Page {
     );
   }
 
+  private act(action: string): void {
+    const { cache } = this.lab;
+    if (action === 'cache zero') cache.zero = true;
+    if (action === 'cache round') cache.rounds = 1;
+    if (action === 'cache rounds') cache.rounds = 32;
+    this.history = [];
+  }
+
   private drawRight(): void {
-    const tabs: [typeof this.tab, string][] = [['pixel', 'Pixel'], ['lamps', 'Lamps'], ['mixer', 'Mixer'], ['meter', 'Meter']];
+    const tabs: [typeof this.tab, string][] = [['pixel', 'Pixel'], ['lamps', 'Lamps'], ['cache', 'Cache'], ['mixer', 'Mixer'], ['meter', 'Meter']];
     const head = el('div', { class: 'segments', role: 'group' },
       ...tabs.map(([id, text]) =>
         el('button', { type: 'button', 'aria-pressed': String(this.tab === id), click: () => { this.tab = id; this.draw(); } }, text)));
     const body =
       this.tab === 'pixel' ? this.pinnedRows
       : this.tab === 'lamps' ? this.lampRows
+      : this.tab === 'cache' ? this.cacheRows
       : this.tab === 'meter' ? this.meterRows
       : el('div', { id: 'mixer' }, ...MIXER.map((k) => this.mixerRow(k.key)));
     this.lab.alsoWanted = this.tab === 'lamps' ? ['bars', 'reservoir_still', 'reservoir_changing'] : [];
@@ -217,12 +232,14 @@ export class Page {
     }
     if (lab.pinned) {
       await lab.rays.read();
-      if (lab.shown.slice(0, panelsIn[lab.layout]).includes('disc')) await this.findPinnedHit();
+      if (this.tab === 'cache' || lab.shown.slice(0, panelsIn[lab.layout]).includes('disc')) await this.findPinnedHit();
     }
     this.drawOverlay();
     if (this.tab === 'pixel') await this.refreshPinned();
     if (this.tab === 'lamps') await this.refreshLamps();
     if (this.tab === 'meter') this.refreshMeter();
+    if (this.tab === 'cache' || valueOf('cache_entries')) await this.readEntries();
+    if (this.tab === 'cache') this.refreshCache();
     const judged = lab.judged();
     if (judged.length && lab.ready) {
       await lab.judge.read(judged);
@@ -265,6 +282,14 @@ export class Page {
           line(c, corners[(k + 1) % 4]!, '#e8b04b', 1);
         });
       }
+      if (valueOf('cache_entries') && lab.shown[i] !== 'disc') {
+        const bright = 2 ** valueOf('exposure');
+        for (const e of this.entries) {
+          if (dot(e.normal, sub(eye.eye, e.position)) < 0) continue;
+          const rgb = e.direct.map((d, c) => Math.round(255 * Math.min(1, Math.max(0, (d + e.known[c]!) * 0.8 * bright)) ** (1 / 2.2)));
+          line(e.position, add(e.position, scale(e.normal, 0.06)), `rgb(${rgb.join(',')})`, 3);
+        }
+      }
       if (lab.shown[i] === 'disc') {
         this.drawDots(pen, r);
         pen.restore();
@@ -306,6 +331,77 @@ export class Page {
       const v = this.lab.judge.verdicts.get(node.dataset.view!);
       node.textContent = v && this.lab.truthCount < 64 ? 'the truth is still settling' : v ? `off ${percent(v.off)}   noise ${percent(v.noise)}` : '';
     }
+  }
+
+  // ---- the cache
+
+  private entries: { slot: number; position: Vec3; normal: Vec3; direct: Vec3; known: Vec3; bounced: Vec3; samples: number; frame: number }[] = [];
+  /** the pinned entry's gathered light, over time */
+  private history: { round: number; light: number }[] = [];
+
+  private async readEntries(): Promise<void> {
+    const { lab } = this;
+    if (!lab.made.includes('cache gather')) return;
+    const points = lab.graph.spec('cache_points').struct;
+    const entry = lab.graph.spec('cache').struct;
+    const [p, e] = await Promise.all([
+      readBack(lab.gpu, lab.graph.buffer('cache_points'), 0, CACHE_SLOTS * points.stride),
+      readBack(lab.gpu, lab.graph.buffer('cache@before'), 0, CACHE_SLOTS * entry.stride),
+    ]);
+    this.entries = [];
+    for (let slot = 0; slot < CACHE_SLOTS; slot++) {
+      const at = slot * points.stride + points.offsets.normal!;
+      if (p.getFloat32(at, true) === 0 && p.getFloat32(at + 4, true) === 0 && p.getFloat32(at + 8, true) === 0) continue;
+      const a = unpack(points, p, slot * points.stride);
+      const b = unpack(entry, e, slot * entry.stride);
+      this.entries.push({
+        slot, position: a.position as Vec3, normal: a.normal as Vec3, frame: a.frame as number,
+        direct: b.direct as Vec3, known: b.known as Vec3, bounced: b.bounced as Vec3, samples: b.samples as number,
+      });
+    }
+  }
+
+  private refreshCache(): void {
+    const { lab } = this;
+    const full = this.entries.length / CACHE_SLOTS;
+    const rows: HTMLElement[] = [
+      el('p', { class: 'hint' }, `round ${lab.cache.round} · ${this.entries.length} entries, ${(100 * full).toFixed(1)} % of the table`),
+    ];
+    const hit = this.pinnedHit;
+    if (!lab.pinned || !hit) {
+      rows.push(el('p', { class: 'hint' }, 'Click a place to follow the entry that speaks for it.'));
+    } else {
+      // the nearest entry that faces the same way
+      const near = this.entries
+        .filter((e) => dot(e.normal, hit.normal) > 0.7)
+        .map((e) => ({ e, d: Math.hypot(...sub(e.position, hit.position)) }))
+        .sort((a, b) => a.d - b.d)[0];
+      if (near) {
+        const { e } = near;
+        const light = 0.2126 * e.bounced[0] + 0.7152 * e.bounced[1] + 0.0722 * e.bounced[2];
+        const last = this.history[this.history.length - 1];
+        if (!last || last.round !== lab.cache.round) this.history.push({ round: lab.cache.round, light });
+        if (this.history.length > 400) this.history.shift();
+        const row = (name: string, v: Value, color = true) => [el('dt', {}, name), el('dd', {}, shown(v, color))];
+        rows.push(
+          el('h4', {}, `entry ${e.slot}`),
+          el('dl', {}, ...row('from here', near.d, false), ...row('direct', e.direct), ...row('gathering', e.bounced), ...row('known', e.known), ...row('samples', e.samples, false)),
+          el('h4', {}, 'what it gathers, over time'),
+          this.chart(this.history.map((h) => h.light)));
+      }
+    }
+    this.cacheRows.replaceChildren(...rows);
+  }
+
+  /** a small line, from zero up */
+  private chart(values: number[]): HTMLElement {
+    const W = 220;
+    const H = 70;
+    const top = Math.max(...values, 1e-6) * 1.15;
+    const line = values.map((v, i) => `${((i / Math.max(1, values.length - 1)) * W).toFixed(1)},${(H - (v / top) * H).toFixed(1)}`).join(' ');
+    const box = el('div', { class: 'chart' });
+    box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="light over time"><polyline points="${line}" fill="none" stroke="#5fd4c4" stroke-width="1.5"/></svg><span>${(top / 1.15).toPrecision(3)}</span>`;
+    return box;
   }
 
   private picks = new Map<number, number>();
@@ -352,9 +448,9 @@ export class Page {
   private pinnedHit: { position: Vec3; normal: Vec3 } | null = null;
   private async findPinnedHit(): Promise<void> {
     const { lab } = this;
-    if (!lab.pinned || !lab.graph.renderSize[0]) return;
+    if (!lab.pinned || !lab.graph.grids.render[0]) return;
     const spec = lab.graph.spec('hit_x');
-    const [w, h] = lab.graph.renderSize;
+    const [w, h] = lab.graph.grids.render;
     const index = Math.floor(lab.pinned[1] * h) * w + Math.floor(lab.pinned[0] * w);
     const v = unpack(spec.struct, await readBack(lab.gpu, lab.graph.buffer('hit_x'), index * spec.struct.stride, spec.struct.stride));
     this.pinnedHit = { position: v.position as Vec3, normal: v.normal as Vec3 };
@@ -388,7 +484,7 @@ export class Page {
 
   private refreshMeter(): void {
     const { graph, gpu } = this.lab;
-    const [w, h] = graph.renderSize;
+    const [w, h] = graph.grids.render;
     const rows = this.lab.made.filter((n) => !n.startsWith('view ')).map((name) => {
       const stage = graph.stages.find((s) => s.name === name)!;
       const writes = Array.isArray(stage.writes) ? stage.writes : Object.values(stage.writes);
@@ -397,7 +493,7 @@ export class Page {
       return el('tr', {}, el('td', {}, name), el('td', {}, ms === undefined ? '–' : ms.toFixed(2)), el('td', {}, (bytes / 1e6).toFixed(1)));
     });
     this.meterRows.replaceChildren(
-      el('p', { class: 'hint' }, `${gpu.about || 'GPU'} · render ${w} × ${h}, output ${graph.outputSize.join(' × ')}`),
+      el('p', { class: 'hint' }, `${gpu.about || 'GPU'} · render ${w} × ${h}, output ${graph.grids.output.join(' × ')}`),
       el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Stage'), el('th', {}, 'ms'), el('th', {}, 'MB'))), el('tbody', {}, ...rows)),
       el('p', { class: 'hint' }, 'Only what the panels depend on runs. On Apple GPUs passes overlap, so these do not add up to the frame.'));
   }

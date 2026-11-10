@@ -7,8 +7,8 @@ fn draw_ray(pixel: vec2u, start: vec3f, end: vec3f, kind: u32) {
   if (i >= MOST_LINES) { return; }
   drawn.lines[i] = Line(start, kind, end, 0u);
 }
-/// the same for stages at half size, whose pixel covers four
-fn draw_ray_half(pixel: vec2u, start: vec3f, end: vec3f, kind: u32) {
-  if (any(pixel != frame.pinned / 2u)) { return; }
+/// the same for stages on a smaller grid, whose pixel covers several
+fn draw_ray_of(pixel: vec2u, step: u32, start: vec3f, end: vec3f, kind: u32) {
+  if (any(pixel != frame.pinned / step)) { return; }
   draw_ray(frame.pinned, start, end, kind);
 }

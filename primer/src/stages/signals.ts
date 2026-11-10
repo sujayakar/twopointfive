@@ -2,7 +2,7 @@
 // denoiser) and true; which of them the picture uses is a switch.
 
 import { f32, struct, vec3f } from '../gpu/layout';
-import type { Graph } from '../gpu/graph';
+import type { Graph, Grid } from '../gpu/graph';
 import { choice, chosen } from '../page/knobs';
 
 export const Signal = struct('Signal', {
@@ -16,7 +16,9 @@ export interface SignalSpec {
   about: string;
   /** what the true value is, of the truth's parts, as an expression over `t` (Truth) and `s` (Surface) */
   truth: string;
-  size: 'render' | 'half';
+  size: Grid;
+  /** its raw buffer is another's, chosen by a knob */
+  rawIsAlias?: boolean;
 }
 
 export const SIGNALS: SignalSpec[] = [];
@@ -31,7 +33,7 @@ export function addSignal(graph: Graph, spec: SignalSpec, off: string, offReads:
     options: [['off', 'Off'], ['raw', 'Raw'], ['settled', 'Settled'], ['truth', 'Truth']],
     about: `${spec.about} Off: ${off}. Raw: this frame’s rays. Settled: denoised. Truth: from the path tracer. Replace one signal by its truth to see whether an error is its.`,
   });
-  graph.addBuffer({ name: `${id}_raw`, struct: Signal, size: spec.size, about: `${spec.name}: what this frame’s rays found` });
+  if (!spec.rawIsAlias) graph.addBuffer({ name: `${id}_raw`, struct: Signal, size: spec.size, about: `${spec.name}: what this frame’s rays found` });
   graph.addBuffer({ name: `${id}_true`, struct: Signal, size: 'render', about: `${spec.name}, by the path tracer` });
   graph.addBuffer({ name: `${id}_off`, struct: Signal, size: 'render', about: `${spec.name}, switched off` });
   graph.addStage({
@@ -61,5 +63,5 @@ fn run(pixel: vec2u) {
   let u = unblocked_at(vec2i(pixel));
   put_out(pixel, Signal(select(u.${id}, vec3f(1.0), knobs.denoise_what == DENOISE_WHAT_SHARE), 0.0));` : 'put_out(pixel, Signal(vec3f(0.0), 0.0));'} }`,
   });
-  graph.addAlias(`${id}_used`, () => `${id}_${{ off: 'off', raw: 'raw', settled: 'settled', truth: 'true' }[chosen(key)]!}`);
+  graph.addAlias(`${id}_used`, () => `${id}_${{ off: 'off', raw: spec.size === 'render' ? 'raw' : 'raw_up', settled: 'settled', truth: 'true' }[chosen(key)]!}`);
 }

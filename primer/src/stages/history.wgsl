@@ -1,11 +1,10 @@
 // THE MEAN OVER TIME. MOTION, TESTS, LEASH, NO_TIME, IMAGE: the parts this denoiser has.
 
-fn size_here() -> vec2u { return select(frame.render_size, frame.half_size, IS_HALF == 1u); }
 /// the render pixel that stands for a pixel of this signal
-fn hit_pixel(p: vec2i) -> vec2i { return select(p, p * 2, IS_HALF == 1u); }
+fn hit_pixel(p: vec2i) -> vec2i { return render_pixel(p, frame.GRID_step); }
 
 fn run(pixel: vec2u) {
-  let size = vec2i(size_here());
+  let size = vec2i(frame.GRID_size);
   let p = vec2i(pixel);
   let now = noisy_at(p);
   let hit = hit_x_at(hit_pixel(p));
@@ -53,7 +52,8 @@ fn run(pixel: vec2u) {
         spot += through * (now.distance * sharp);
       }
       let seen = on_screen_before(spot);
-      at = seen.uv * vec2f(size) - 0.5 - frame.jitter_before * (vec2f(size) / vec2f(frame.render_size));
+      let step = f32(frame.GRID_step);
+      at = (seen.uv * vec2f(frame.render_size) - 0.5 - frame.jitter_before - floor((step - 1.0) * 0.5)) / step;
       if (IMAGE == 0u && MOTION == 1u && all(frame.eye == frame.eye_before) && all(hit.position == hit.position_before) && all(frame.forward == frame.forward_before)) {
         at = vec2f(p); // nothing moved: exactly itself, or rounding would blur it a little every frame
       }
@@ -103,7 +103,7 @@ fn run(pixel: vec2u) {
     old = held;
   }
   let k = 1.0 / (count + 1.0);
-  out.value = mix(old, now.value, k);
+  out.value = stored(mix(old, now.value, k), pixel);
   out.square = mix(old_square, b * b, k);
   out.count = count + 1.0;
   out.why = why;
@@ -115,4 +115,17 @@ fn run(pixel: vec2u) {
   let single = mix(s * s, over_time, clamp((out.count - 2.0) / 6.0, 0.0, 1.0));
   out.doubt = single / out.count;
   put_kept(pixel, out);
+}
+
+/// As the history's number format keeps it. In 16 bits a mean over many frames stops learning: the step it
+/// should take is less than half of the last place.
+fn stored(v: vec3f, pixel: vec2u) -> vec3f {
+  if (knobs.history_format == HISTORY_FORMAT_F32) { return v; }
+  var x = v;
+  if (knobs.history_format == HISTORY_FORMAT_DITHERED) {
+    let place = exp2(floor(log2(max(abs(v), vec3f(1e-5)))) - 10.0);
+    let d = dice_of(DICE_KIND_WHITE, pixel, frame.number, 800u);
+    x += place * (vec3f(d.x, d.y, fract(d.x + d.y)) - 0.5);
+  }
+  return vec3f(unpack2x16float(pack2x16float(x.xy)), unpack2x16float(pack2x16float(x.zz)).x);
 }

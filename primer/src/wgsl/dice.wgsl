@@ -74,3 +74,6 @@ const DICE_Y_LAMP = 5u;
 const DICE_Y_POINT = 6u;
 const DICE_SHINE_PICK = 7u;
 const DICE_SHINE_POINT = 8u;
+const DICE_WIDE_WAY = 9u;
+const DICE_NARROW_RAY = 10u;
+const DICE_NUDGE = 11u;

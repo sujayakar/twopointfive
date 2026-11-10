@@ -19,6 +19,7 @@ export const MIXER = [
   gain('mix_one', 'One bounce', 'Light that has met one other surface. (The truth only.)'),
   gain('mix_two', 'Two bounces', 'Light that has met two. (The truth only.)'),
   gain('mix_more', 'More bounces', 'All the rest. (The truth only.)'),
+  gain('mix_wide', 'Wide light', 'All light that bounced, and the sky, sent back by the matte lobe. (Real time.)'),
   gain('mix_narrow', 'Mirror', 'All light but the lamps’ own, sent back by the coat.'),
 ];
 
@@ -56,7 +57,7 @@ export function addPicture(graph: Graph, views: Views): void {
   graph.addStage({
     name: 'sum',
     question: 'What does the eye see, from the signals as they are switched?',
-    reads: ['hit_x', 'unblocked', 'still_used', 'changing_used', 'shine_used'],
+    reads: ['hit_x', 'unblocked', 'still_used', 'changing_used', 'shine_used', 'wide_used', 'narrow_used'],
     writes: ['picture'],
     uses: ['x'],
     over: 'render',
@@ -75,7 +76,8 @@ fn run(pixel: vec2u) {
       changing *= u.changing;
     }
     sum += matte_share(s) * (still * knobs.mix_still + changing * knobs.mix_changing);
-    sum += shine_used_at(p).value * knobs.mix_shine;
+    sum += matte_share(s) * wide_used_at(p).value * knobs.mix_wide;
+    sum += shine_used_at(p).value * knobs.mix_shine + coat_share(s) * narrow_used_at(p).value * knobs.mix_narrow;
   }
   put_picture(pixel, Light(sum));
 }`,

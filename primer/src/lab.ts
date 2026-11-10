@@ -9,6 +9,7 @@ import { Judge } from './page/judge';
 import { Rays } from './page/rays';
 import { AT_SIZE, Views, type View } from './page/views';
 import { addStages } from './stages/all';
+import { Cache } from './stages/cache';
 import { Frame } from './stages/frame';
 import { eyeOf, type Eye } from './world/camera';
 import { World, WORLD_CONSTANTS } from './world/world';
@@ -21,6 +22,7 @@ import sky from './wgsl/sky.wgsl';
 import lampsCode from './wgsl/lamps.wgsl';
 import material from './wgsl/material.wgsl';
 import surface from './wgsl/surface.wgsl';
+import openings from './wgsl/openings.wgsl';
 import frameCode from './wgsl/frame.wgsl';
 import reservoir from './wgsl/reservoir.wgsl';
 import show from './wgsl/show.wgsl';
@@ -60,6 +62,7 @@ export class Lab {
   readonly views: Views;
   readonly rays: Rays;
   readonly judge: Judge;
+  readonly cache: Cache;
   /** buffers the page asks for besides the panels' */
   alsoWanted: string[] = [];
   layout: Layout = 'one';
@@ -101,6 +104,7 @@ export class Lab {
     this.judge = new Judge(gpu, this.graph);
     this.addModules();
     addStages(this.graph, this.views);
+    this.cache = new Cache(gpu, this.graph);
     this.knobs = knobStruct();
     this.frameBuffer = makeBuffer(gpu, 'frame', Frame.stride, GPUBufferUsage.UNIFORM);
     this.knobBuffer = makeBuffer(gpu, 'knobs', this.knobs.stride, GPUBufferUsage.UNIFORM);
@@ -129,6 +133,7 @@ export class Lab {
     g.addModule('lamps', { code: lampsCode, needs: [], shared: ['world', 'lamps'] });
     g.addModule('material', { code: material, needs: [], shared: ['tables'] });
     g.addModule('surface', { code: surface, needs: ['ray', 'material'], shared: ['materials', 'lamps', 'objects', 'pieces'] });
+    g.addModule('openings', { code: openings, needs: ['material'], shared: ['world', 'openings'] });
     g.addModule('reservoir', { code: reservoir, needs: ['lamps'], shared: [] });
     g.addModule('show', { code: show + AT_SIZE, needs: [], shared: [] });
   }
@@ -145,6 +150,7 @@ export class Lab {
     this.world.place(this.tick / 60);
     this.startTruthOver = true;
     this.graph.forget();
+    this.cache.zero = true;
   }
   resetCamera(): void {
     this.camera = structuredClone(this.world.room.camera);
@@ -186,7 +192,10 @@ export class Lab {
     const output: [number, number] = [rect.width, rect.height];
     const sharp = valueOf('render_scale');
     const render: [number, number] = [Math.max(8, Math.round(output[0] * sharp)), Math.max(8, Math.round(output[1] * sharp))];
-    if (graph.resize(render, output)) this.startTruthOver = true;
+    const fewer = (step: number): [number, number] => [Math.ceil(render[0] / step), Math.ceil(render[1] / step)];
+    const wasRender = String(graph.grids.render);
+    graph.resize({ render, output, wide: fewer(valueOf('wide_step')), narrow: fewer(valueOf('narrow_step')) });
+    if (String(render) !== wasRender) this.startTruthOver = true;
 
     const runs = !this.frozen || this.oneMore > 0;
     if (this.oneMore > 0) this.oneMore--;
@@ -209,7 +218,7 @@ export class Lab {
       this.startTruthOver = false;
     }
     if (runs) this.rays.start(encoder);
-    this.writeUniforms(render, output, runs);
+    this.writeUniforms(render, output, runs, runs ? this.cache.step(encoder) : { cache_go: 0, cache_commit: 0, cache_round: this.cache.round });
     const views = this.shown.slice(0, panelsIn[this.layout]);
     const wanted = views.map((id) => this.views.bufferOf(id));
     const all = [...wanted, ...this.judged().map((v) => this.judge.bufferOf(v)), ...this.alsoWanted];
@@ -242,11 +251,11 @@ export class Lab {
 
   /** the eye whose picture a panel shows */
   eyeOfPanel(i: number): Eye {
-    const aspect = this.graph.outputSize[0] / this.graph.outputSize[1];
+    const aspect = this.graph.grids.output[0] / this.graph.grids.output[1];
     return eyeOf(this.ghost && this.shown[i] === 'ghost' ? this.ghost : this.camera, aspect);
   }
 
-  private writeUniforms(render: [number, number], output: [number, number], runs: boolean): void {
+  private writeUniforms(render: [number, number], output: [number, number], runs: boolean, cache: { cache_go: number; cache_commit: number; cache_round: number }): void {
     const now = eyeOf(this.camera, output[0] / output[1]);
     const before = this.before ?? now;
     const jitter: [number, number] = valueOf('jitter') ? jitterOf(this.frames) : [0, 0];
@@ -258,10 +267,12 @@ export class Lab {
       ghost_eye: ghost.eye, ghost_forward: ghost.forward, ghost_right: ghost.right, ghost_up: ghost.up,
       ghost_on: this.ghost ? 1 : 0,
       number: this.frames, tick: this.tick, seconds: this.tick / 60, truth_number: this.truthCount,
-      render_size: render, half_size: this.graph.halfSize, output_size: output,
+      render_size: render, output_size: output,
+      wide_size: this.graph.grids.wide, narrow_size: this.graph.grids.narrow,
+      render_step: 1, wide_step: valueOf('wide_step'), narrow_step: valueOf('narrow_step'), output_step: 1,
       pinned_on: this.pinned ? 1 : 0,
       pinned: this.pinned ? [Math.floor(this.pinned[0] * render[0]), Math.floor(this.pinned[1] * render[1])] : [0, 0],
-      jitter, jitter_before: this.jitterBefore,
+      jitter, jitter_before: this.jitterBefore, ...cache,
     });
     const { queue } = this.gpu.device;
     queue.writeBuffer(this.frameBuffer, 0, bytes);
@@ -318,7 +329,7 @@ export class Lab {
 
   /** the way through a place in the picture */
   toward(at: [number, number]): [number, number, number] {
-    const e = eyeOf(this.camera, this.graph.outputSize[0] / this.graph.outputSize[1]);
+    const e = eyeOf(this.camera, this.graph.grids.output[0] / this.graph.grids.output[1]);
     const x = at[0] * 2 - 1;
     const y = 1 - at[1] * 2;
     return normalize(add(e.forward, add(scale(e.right, x), scale(e.up, y))));

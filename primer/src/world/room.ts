@@ -91,12 +91,17 @@ export class Builder {
   materials: Material[] = [];
   pieces: PieceGiven[] = [];
   lamps: LampGiven[] = [];
+  openings: { center: Vec3; halfU: Vec3; halfV: Vec3 }[] = [];
   /** object 0 is the room itself and never moves */
   objects = 1;
 
   material(m: Material): number {
     this.materials.push(m);
     return this.materials.length - 1;
+  }
+  /** a door or window that wide rays may be aimed through */
+  opening(center: Vec3, halfU: Vec3, halfV: Vec3): void {
+    this.openings.push({ center, halfU, halfV });
   }
   /** things that move together */
   object(): number {

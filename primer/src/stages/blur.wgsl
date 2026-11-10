@@ -1,10 +1,10 @@
 // THE MEAN OVER NEIGHBORS, one round (à trous: with holes). Neighbors on the same surface count, as far as
 // they are alike next to the doubt. STRIDE: how far apart.
 
-fn hit_pixel(p: vec2i) -> vec2i { return select(p, p * 2, IS_HALF == 1u); }
+fn hit_pixel(p: vec2i) -> vec2i { return render_pixel(p, frame.GRID_step); }
 
 fn run(pixel: vec2u) {
-  let size = vec2i(select(frame.render_size, frame.half_size, IS_HALF == 1u));
+  let size = vec2i(frame.GRID_size);
   let p = vec2i(pixel);
   let here = smooth_in_at(p);
   let hit = hit_x_at(hit_pixel(p));

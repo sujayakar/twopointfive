@@ -5,6 +5,8 @@ import { choice, slider, toggle } from '../page/knobs';
 import type { Views } from '../page/views';
 import { addFirstHit } from './firstHit';
 import { addBars } from './bars';
+import { addAnswers, addBounce } from './bounce';
+import { addCache } from './cache';
 import { addDisc } from './disc';
 import { addSettled } from './denoise';
 import { addLamps } from './lamps';
@@ -12,6 +14,7 @@ import { addPicture, addTruePicture } from './picture';
 import { addRack } from './rack';
 import { SIGNALS } from './signals';
 import { addTruth } from './truth';
+import { addUpscale } from './upscale';
 
 choice('dice_kind', {
   label: 'Dice', value: 1, options: [['white', 'White'], ['filling', 'Filling'], ['blue', 'Blue']],
@@ -41,9 +44,13 @@ export function addStages(graph: Graph, views: Views): void {
   addTruth(graph);
   addTruePicture(graph, views);
   addLamps(graph, views);
+  addBounce(graph, views);
+  addCache(graph, views);
+  addAnswers(graph);
   addRack(graph, views);
   for (const { id, size } of SIGNALS) addSettled(graph, id, size);
   addPicture(graph, views);
+  addUpscale(graph, views);
   addDisc(graph, views);
   addBars(graph);
 

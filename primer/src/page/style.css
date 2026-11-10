@@ -12,7 +12,7 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; background: var(--ground); color: var(--text); font: 13px/1.5 var(--sans); }
-#app { display: grid; height: 100%; grid: auto 1fr / 310px 1fr 250px; }
+#app { display: grid; height: 100%; grid: auto 1fr / 310px 1fr 270px; }
 #top { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--line); }
 #top .question { flex: 1; min-width: 12em; color: var(--quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #top .group { display: flex; gap: 2px; }
@@ -37,7 +37,7 @@ button[aria-pressed='true'] { background: var(--accent); border-color: var(--acc
 #steps { display: flex; flex-wrap: wrap; gap: 3px; }
 #steps button { min-width: 28px; padding: 2px 0; }
 .segments { display: flex; }
-.segments button { border-radius: 0; margin-left: -1px; flex: 1; padding: 2px 8px; }
+.segments button { border-radius: 0; margin-left: -1px; flex: 1; padding: 2px 4px; min-width: 0; font-size: 12px; }
 .segments button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
 .segments button:last-child { border-radius: 0 5px 5px 0; }
 .knob { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; margin: 7px 0; align-items: baseline; }
@@ -57,6 +57,9 @@ button[aria-pressed='true'] { background: var(--accent); border-color: var(--acc
 .panel-head select { background: rgb(19 20 22 / 0.82); max-width: 100%; }
 #overlay { pointer-events: none; }
 .rays { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.chart { position: relative; background: var(--raised); border-radius: 4px; }
+.chart span { position: absolute; top: 2px; left: 5px; font: 11px var(--mono); color: var(--quiet); }
 .verdict { display: block; font: 12px var(--mono); padding: 3px 2px; text-shadow: 0 0 3px #000, 0 0 3px #000; white-space: pre; }
 .lamp { display: grid; grid-template-columns: 22px 1fr; gap: 6px; align-items: center; margin: 3px 0; }
 .lamp-name { font: 11px var(--mono); color: var(--quiet); text-align: right; }
@@ -77,7 +80,7 @@ table { width: 100%; border-collapse: collapse; font: 12px var(--mono); font-var
 th { text-align: right; color: var(--quiet); font-weight: 400; }
 td { text-align: right; padding: 1px 0; }
 th:first-child, td:first-child { text-align: left; }
-dialog { position: absolute; inset: 60px 270px 20px 330px; width: auto; height: auto; max-width: none; max-height: none; margin: 0; z-index: 5; background: var(--ground); color: var(--text); border: 1px solid var(--quiet); border-radius: 8px; padding: 14px 16px; flex-direction: column; gap: 8px; }
+dialog { position: absolute; inset: 60px 290px 20px 330px; width: auto; height: auto; max-width: none; max-height: none; margin: 0; z-index: 5; background: var(--ground); color: var(--text); border: 1px solid var(--quiet); border-radius: 8px; padding: 14px 16px; flex-direction: column; gap: 8px; }
 dialog[open] { display: flex; }
 dialog header { display: flex; gap: 12px; align-items: baseline; }
 dialog header p { flex: 1; margin: 0; color: var(--quiet); }

@@ -96,6 +96,7 @@ fn run(p: vec2u) { put_shown(p, Shown(vec4f(view(p), 1.0))); }`,
 /** output pixels to pixels of other sizes */
 export const AT_SIZE = `
 fn at_render(p: vec2u) -> vec2i { return vec2i((vec2f(p) + 0.5) * vec2f(frame.render_size) / vec2f(frame.output_size)); }
-fn at_half(p: vec2u) -> vec2i { return vec2i((vec2f(p) + 0.5) * vec2f(frame.half_size) / vec2f(frame.output_size)); }
+fn at_wide(p: vec2u) -> vec2i { return vec2i((vec2f(p) + 0.5) * vec2f(frame.wide_size) / vec2f(frame.output_size)); }
+fn at_narrow(p: vec2u) -> vec2i { return vec2i((vec2f(p) + 0.5) * vec2f(frame.narrow_size) / vec2f(frame.output_size)); }
 fn at_output(p: vec2u) -> vec2i { return vec2i(p); }
 `;

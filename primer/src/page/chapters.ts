@@ -14,6 +14,10 @@ export interface Chapter {
   knobs: string[];
   breaks: string[];
   stages: string[];
+  /** buttons: what they say, and which action of the page they press */
+  actions?: [string, string][];
+  /** knobs it opens with */
+  sets?: Record<string, number>;
 }
 
 export const CHAPTERS: Chapter[] = [
@@ -103,5 +107,81 @@ export const CHAPTERS: Chapter[] = [
     ],
     breaks: ['break_no_tests', 'break_no_mean', 'break_count_twice'],
     stages: ['pick still', 'reuse still time', 'reuse still space', 'shadow still', 'remember still', 'shine'],
+  },
+  {
+    number: 5,
+    title: 'One bounce',
+    question: 'What light comes from everything that is not a lamp?',
+    text: [
+      'A wide ray leaves x by the cosine: a random dot on the disc, lifted to the half-sphere. What it meets is <b>y</b>. There one lamp is asked, by score, with one ray. The answer, times the share that y sends back, is one sample of the light at x. The estimate is a plain mean.',
+      'Noise is how uneven the disc is. In the Door room most dots see a dark wall and a few see the bright opening. Pin a point and look at its disc; then aim a share of the rays through the opening.',
+      'Wide light is always soft, so it is found at half size and blurred far. <i>No cache</i> stops after the lamps at y: one bounce. The rest is the next step.',
+    ],
+    formula: 'wide(x) = mean of  sends(y) · (lamps at y + …)',
+    room: 'color-box',
+    layout: 'four',
+    views: ['picture', 'wide_raw.value', 'hit_y sends', 'disc'],
+    knobs: ['source_wide', 'stop_at', 'wide_step', 'wide_aim', 'signal_up', 'dice_kind', 'coat_as_matte', 'history_frames', 'blur_rounds'],
+    breaks: ['break_lamps_twice'],
+    stages: ['wide rays', 'wide y light', 'wide answer', 'wide settled'],
+  },
+  {
+    number: 6,
+    title: 'The cache, by hand',
+    question: 'How does one bounce a frame become all of them?',
+    text: [
+      'Where a ray lands and nothing speaks for the place, an <b>entry</b> is founded: a point, a facing, a key made of the cell it is in. From then on it shoots rays of its own: one to a lamp, one over its half-sphere. What that one lands on is read from this same table as it stood last frame. So the table runs E = direct + K·E, one step a frame, and converges.',
+      '<b>Build it by hand:</b> pause the filling, start from zero, and let one round through at a time. Switch to <i>A bounce at a time</i> and watch light arrive bounce by bounce. Show the entries in space and fly the ghost among them. Pin a point: its entry’s rays are drawn, and the Cache tab follows its mean.',
+      'Lamps and all else are kept in two sums. A reader that has asked a lamp itself takes only the other one, or lamps would count twice.',
+    ],
+    formula: 'E ← direct + sends · E(hit)        all bounces = 1 / (1 − reflectance) of the first',
+    room: 'color-box',
+    layout: 'four',
+    views: ['cache all', 'cache cells', 'cache bounced', 'cache off'],
+    knobs: [
+      'cache_paused', 'cache_mode', 'cache_bounce_rounds', 'cache_entries', 'cache_cell', 'cache_push', 'cache_wall_test', 'cache_memory',
+      'cache_every', 'cache_late', 'cache_nudge', 'stop_at',
+    ],
+    breaks: ['break_no_facing', 'break_reads_itself'],
+    actions: [['Start from zero', 'cache zero'], ['One round', 'cache round'], ['32 rounds', 'cache rounds']],
+    stages: ['cache found wide', 'cache rays', 'cache lamps', 'cache gather', 'wide answer'],
+  },
+  {
+    number: 7,
+    title: 'Mirrors',
+    question: 'What does the coat show?',
+    text: [
+      'The same question as a wide ray’s, asked of the coat’s narrow lobe, and answered the same way: a lamp at the hit, the cache for the rest. The coat’s own reflectance is exact and multiplied afterwards.',
+      'It depends on the eye, so its history follows the <b>image</b>: it stands as far behind the surface as what it shows is before it. Turn the camera on the Strip floor, from mirror to matte. Highlights of lamps are a signal of their own.',
+      'Look for the sunlight that the upright mirror throws on the wall. The truth has it. Real time does not: the wall’s wide rays find the mirror and ask it as if it were matte. That light is lost on purpose.',
+    ],
+    formula: 'mirror(x) = coat share · mean of  light along the lobe',
+    room: 'strip-floor',
+    layout: 'four',
+    views: ['picture', 'true picture', 'narrow_raw.value', 'hit_r sends'],
+    knobs: ['source_narrow', 'source_shine', 'shine_by', 'narrow_step', 'stop_at', 'history_frames', 'history_leash'],
+    breaks: ['break_count_twice'],
+    stages: ['narrow rays', 'narrow y light', 'narrow answer', 'shine'],
+  },
+  {
+    number: 8,
+    title: 'The whole frame',
+    question: 'Where is detail made, and where is it lost?',
+    text: [
+      'The sum: glow + matte · (lamps · seen + wide) + highlights + coat · mirror. Nothing here looks for light. Each part has a gain in the mixer, and each signal can be off, raw, settled or true: replace one by its truth to see which error is its.',
+      'Wide light is found at half size and brought up by x. The picture is rendered at a fraction of the output and upscaled over time: every frame’s rays go through other spots of their pixels, and each output pixel keeps a mean.',
+      'History is where most of the detail comes from, and all of the lag. Put it in 16 bits with a long memory and watch it stop learning.',
+    ],
+    formula: 'C = glow + matte · (U · V + wide) + highlights + coat · mirror',
+    room: 'lamp-hall',
+    layout: 'four',
+    views: ['final', 'picture', 'sizes', 'picture off'],
+    knobs: [
+      'render_scale', 'jitter', 'upscale_by', 'upscale_frames', 'upscale_leash', 'wide_step', 'narrow_step', 'signal_up',
+      'source_still', 'source_changing', 'source_shine', 'source_wide', 'source_narrow', 'history_frames', 'history_format', 'exposure', 'tone',
+    ],
+    breaks: [],
+    sets: { render_scale: 0.5, jitter: 1 },
+    stages: ['sum', 'upscale', 'wide settled'],
   },
 ];
