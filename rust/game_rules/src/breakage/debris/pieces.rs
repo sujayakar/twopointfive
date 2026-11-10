@@ -320,7 +320,7 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
         if on_body {
             // (off a man down in the one shove: the speed that slides it clear of him against the floor's drag)
             let f = Footprint { d1x, d1z, e1, e2, hy };
-            let Some((wx, wz, d)) = way_off(g, bc, bottom, &f, &bones) else { s_.walled += 1.0; continue };
+            let Some((wx, wz, d)) = way_off(g, b, &f, &bones) else { s_.walled += 1.0; continue };
             dx = wx;
             dz = wz;
             s = m::min(k.v_max, m::sqrt(2.0 * k.slide * G * d));
@@ -414,9 +414,10 @@ pub(in crate::breakage) fn debris_foot_step(g: &mut crate::game::Game, c_2: Debr
     while s < sub && !g.tab.debris_chunk[c].rest { debris_slide(g, c, h); s += 1; }
 }
 
-/// The shortest way off the men down for a piece that lies on one, of sixteen, that a ray finds free: its direction, and how far. A way is as long as it takes to come clear of every bone in the piece's
+/// The shortest way off the men down for a piece that lies on one, of sixteen, that it would slide free: its direction, and how far. A way is as long as it takes to come clear of every bone in the piece's
 /// path that way, not only of those it lies on now: so a slide leaves less to slide, and the next is never back over him.
-fn way_off(g: &mut Game, bc: V3, bottom: f64, f: &Footprint, bones: &[V3]) -> Option<(f64, f64, f64)> {
+fn way_off(g: &mut Game, b: AnyBoxId, f: &Footprint, bones: &[V3]) -> Option<(f64, f64, f64)> {
+    let bc = seam_box(g, b).c;
     let span = |x: f64, z: f64| m::abs(x * f.d1x + z * f.d1z) * f.e1 + m::abs(x * -f.d1z + z * f.d1x) * f.e2;
     let mut ways: Vec<(f64, f64, f64)> = (0..16).map(|i| {
         let (c, s) = (m::cos(i as f64 * m::PI / 8.0), m::sin(i as f64 * m::PI / 8.0));
@@ -427,8 +428,27 @@ fn way_off(g: &mut Game, bc: V3, bottom: f64, f: &Footprint, bones: &[V3]) -> Op
         (wx, wz, path.into_iter().fold(0.0, |d, t| if m::abs(t - d) < half { t + half } else { d }))
     }).collect();
     ways.sort_by(|a, b| a.2.total_cmp(&b.2));
-    let from = [bc[0], m::max(bc[1], bottom + 0.03), bc[2]];
-    ways.into_iter().find(|&(wx, wz, d)| crate::scene_collision::raycast(g, from, [wx, 0.0, wz], span(wx, wz) + d + 0.1).is_none())
+    ways.into_iter().find(|&(wx, wz, d)| slides_free(g, b, f, [wx, wz], d))
+}
+
+/// Would `debris_slide` carry the piece `d` that way: no static, leaf or furniture before its middle, a floor under it all along, and no corner of it in a static it is clear of now.
+fn slides_free(g: &mut Game, b: AnyBoxId, f: &Footprint, way: [f64; 2], d: f64) -> bool {
+    let c0 = seam_box(g, b).c;
+    let from = [c0[0], m::max(c0[1], c0[1] - f.hy + 0.05), c0[2]];
+    let (ray, reach) = ([way[0], 0.0, way[1]], d + m::abs(way[0] * f.d1x + way[1] * f.d1z) * f.e1 + m::abs(way[1] * f.d1x - way[0] * f.d1z) * f.e2);
+    if crate::scene_collision::raycast(g, from, ray, reach).is_some() || crate::props::prop_system_raycast(g, from, ray, reach).is_some() { return false; }
+    let clear = !debris_foot_in(g, b);
+    let n = m::max(1.0, m::ceil(d / 0.15));
+    let mut free = true;
+    let mut k = 1.0;
+    while free && k <= n {
+        let c = [c0[0] + way[0] * d * k / n, c0[1], c0[2] + way[1] * d * k / n];
+        seam_box(g, b).c = c;
+        free = crate::scene_collision::raycast(g, [c[0], c[1] + 0.05, c[2]], [0.0, -1.0, 0.0], 0.05 + f.hy + 0.3).is_some() && !(clear && debris_foot_in(g, b));
+        k += 1.0;
+    }
+    seam_box(g, b).c = c0;
+    free
 }
 
 /// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.
