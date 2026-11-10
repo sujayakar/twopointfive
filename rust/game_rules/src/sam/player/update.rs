@@ -153,7 +153,7 @@ fn deed_has_him(g: &mut Game, t: Tick) -> bool {
     if g.pl[pl].planted() || working || staggered(g) { g.pl[pl].kit_owed = -1.0; }
     if beat || held { crate::kitanim::kit_tick(g, None); }
     if g.pl[pl].takedown().is_some() { strikes(g, t); return true; }
-    if held { update_hold(g, dt, t.input, t.cam); return true; }
+    if held { update_hold(g, t); return true; }
     if g.pl[pl].planted() || crate::handwork::sam_work(g).is_some() { throw_off(g, pl); }
     if g.pl[pl].kick().is_some() { update_kick(g, dt); return true; }
     if g.pl[pl].picking().is_some() { update_picking(g, dt); return true; }
@@ -313,10 +313,16 @@ fn footfall(g: &mut Game, t: Tick, speed: f64) {
         let base = if g.pl[pl].dash { g.k.crouchrun.loud } else if g.pl[pl].crouch { 0.125 } else if crate::kitload::load_gait(g, c, speed) > 2.0 { 0.6 } else { 0.26 };
         base * crate::kitload::load_heard(g, c)
     };
+    tread_heard(g, c, level);
+    if fall == 1.0 { let left = g.pl[pl].step_phase < 0.5; crate::wet::wet_footfall(g, left); }
+}
+
+/// His foot on the floor, `level` loud on a hard one: what it is worth here, told to who is near.
+pub(super) fn tread_heard(g: &mut Game, c: CharId, level: f64) {
     let pos = g.ch[c].pos;
     let loud = crate::floor::tread(g, pos, level, true);
     let (time, serial) = (g.time, g.serial());
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Step, pos, time, loud: false, level: Some(loud), serial, ..Default::default() });
-    g.pl[pl].noise = m::max(g.pl[pl].noise, loud);
-    if fall == 1.0 { let left = g.pl[pl].step_phase < 0.5; crate::wet::wet_footfall(g, left); }
+    let p = &mut g.pl[g.player];
+    p.noise = m::max(p.noise, loud);
 }
