@@ -651,7 +651,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend(g, gd) {
             continue;
         }
         let com = chest_or(g, gd, 1.2);
@@ -685,14 +685,12 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if !(t >= 0.0 && t < best_t + 0.5) {
                 continue;
             }
-            if crate::friends::friend_on_ray(g, gd) {
+            if crate::friends::friend(g, gd) {
                 if t < friend_t {
                     friend_t = t;
                     g.aim_friend = Some(gd);
                 }
-                if crate::friends::friend_no_snap(g, gd) {
-                    continue;
-                }
+                continue;
             }
             g.aim_guard = Some(gd);
             g.aim_target = None;
@@ -703,7 +701,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if guard != friend {
                 if friend_t >= best_t {
                     g.aim_friend = None;
-                } else if crate::friends::friend_no_snap(g, friend) {
+                } else {
                     g.aim_guard = None;
                     g.aim_target = lit;
                     g.aim_snap = lit_at;

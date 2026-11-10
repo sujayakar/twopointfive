@@ -6,13 +6,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::boxed::Box;
 
-/// The reticle passes this man over: he is not the player's enemy.
-pub fn friend_no_snap(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::teams::hostile_to(g, gd, crate::teams::Team::Player)
-}
-
-/// A man of his own side whose body the cursor's ray should know it landed on.
-pub fn friend_on_ray(g: &crate::game::Game, gd: GuardId) -> bool {
+/// He is not the player's enemy: the reticle passes him over, and the cursor's ray knows it landed on him.
+pub fn friend(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::teams::hostile_to(g, gd, crate::teams::Team::Player)
 }
 
