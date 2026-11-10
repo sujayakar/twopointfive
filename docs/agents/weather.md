@@ -75,7 +75,7 @@ night holds it off (`under_weather`).
 ask one question, `under_roof`.
 
 **The tick** runs `air_dust_update`, `update_fire`, `weather_update`, `update_wetness`, then the dress rows `wind_update` and `moths_update`
-(`step_seats_on_first`). `weather_update` steps strokes and thunder and writes `WeatherFrame`. The storm has its own die (`rnd`), so a stroke moves no
+(`STEPS`). `weather_update` steps strokes and thunder and writes `WeatherFrame`. The storm has its own die (`rnd`), so a stroke moves no
 other roll.
 
 **What moves a rule:**

@@ -161,8 +161,10 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     core::mem::take(&mut g.out)
 }
 /// …the same with what the step told its host still on the game (`g.out`), for a host that draws before it empties the list, as a page does
-pub fn step(g: &mut Game, h: &Host, dt: f64) {
-    game::game::game_update(g, dt, h.input, h.cam, h.canvas);
+pub fn step(g: &mut Game, h: &Host, dt: f64) { step_watched(g, h, dt, &mut |_, _| ()) }
+/// …with `after` told each step of the tick as it ends
+pub fn step_watched(g: &mut Game, h: &Host, dt: f64, after: game::game::Watch) {
+    game::game::game_update_watched(g, dt, h.input, h.cam, h.canvas, after);
     let me = game::game::game_host_seat(g);
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.sets[g.seat].aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };

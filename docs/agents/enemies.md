@@ -38,7 +38,7 @@ The start card's difficulty row is `difficulty_row` in `start_list/`.
 
 ## How it works
 
-**The tick.** `step_seats_on_first` runs the floor's rules (`update_suppression`, `room_fight_tick`, `morale_tick` and the rest, to `frag_tick`), then
+**The tick.** `STEPS` runs the floor's rules (`update_suppression`, `room_fight_tick`, `morale_tick` and the rest, to `frag_tick`), then
 `update_guard` for each man, then `door_force_tick`, `update_civilians`, `update_escalation`, `update_qrf`. `Team::Guard` is night staff on routes;
 `Team::Hostile` is defenders, posted by the room fight. Both run `update_guard`, whose head lists its parts.
 

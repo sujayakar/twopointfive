@@ -24,6 +24,8 @@ pub mod levels;
 #[cfg(feature = "std")]
 pub mod play;
 #[cfg(feature = "std")]
+pub mod steps;
+#[cfg(feature = "std")]
 pub mod hand;
 pub mod block;
 pub mod hands_off;
