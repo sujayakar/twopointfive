@@ -24,6 +24,7 @@ export function makeStage(m: Made, s: Stand): Stage {
     const at: V3 = crowd ? [((i % n) - (n - 1) / 2) * step, 0, (Math.floor(i / n) - (n - 1) / 2) * step] : [0, 0, 0], a = w.pieces.length, b = w.moving.length, live = m.levels[s.level]!.put(new Put(w, m.name, at, (s.yaw ?? 0) + (crowd ? i * 2.39996 : 0), 1 + i % 7));
     for (const p of [...w.pieces.slice(a), ...w.moving.slice(b)]) { own.add(p); if (s.plain) p.marks = undefined; } if (live) { lives.push(live); if (live.step) hung.push({ step: (dt, t, air) => live.step!(dt, t, air) }); }
   }
+  /* (cells do not sway: beside them leaves stand still, or the wind would be taken for a fault of theirs) */ if (m.levels.some(l => l.shape === 'voxels')) for (const i of w.instances) i.sway = 0;
   const solid = new Solid(w, []), bodies = new Bodies(solid, [], []), player = new Player(w, solid, [30, 0.05, 30], []);
   settleCut(w, PLACE); settle(w.pieces); solid.settle(); for (const [p, mask] of freeEdges(w.pieces)) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length && !p.bend) p.flags |= 0xfff << 16;
   return { own, lives, wide: n * step / 2, building: { world: w, doors: [], people: [], levels: [{ name: 'stage', cut: 1e9, look: [0, 0, 0] }], pool: [0, 0, -1, -1], poolTop: -99, poolDeep: 0, place: PLACE, hung, bodies, solid, player } };
