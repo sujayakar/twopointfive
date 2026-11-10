@@ -675,7 +675,7 @@ fn nav_grid_there(g: &crate::game::Game) {
     if n > sim::nav::MAX_NAV {
         panic!("the floor's grid has {} cells and a search of the Rust module holds {} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it", n, sim::nav::MAX_NAV);
     }
-    unsafe { core::ptr::copy_nonoverlapping(g.col.nav.blocked.as_ptr(), sim::nav::shut_addr() as *mut u8, n); }
+    sim::nav::floor_is(&g.col.nav.blocked, g.col.nav.w as usize);
 }
 
 /// A* from a to b, smoothed; `penalty` a cost multiplier for stepping into a cell, asked where the search comes to a cell it has none for.
