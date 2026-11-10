@@ -93,8 +93,9 @@ camera, so edges stand still for `gbaa`, which blends across box edges from the 
 drops it first. Over every preset `pictureOpens` lays `MOTION_CALM`: spatial taps everywhere, an extra penumbra ray, and a calmer resolve in motion.
 
 **Men in rays.** Each man is 15 round cones fitted to his mesh (`RigFit`): every ray's test at every tier. On High `MeshShadows` refits a triangle
-tree for the first `MESH_MAX_CHARS` men, and shadow rays from near receivers walk it (`meshShadowsNear`). `charSelfShadow` makes the direct light's
-rays test his own body too.
+tree for the first `MESH_MAX_CHARS` men, and shadow rays from near receivers walk it (`meshShadowsNear`). The tree is of what he wears (`wornTree`: the
+whole mesh's, less the parts he has not on, a ray meeting the same triangles in the same order; held by `cast-probes.ts` castTree), and it is made again
+only in a frame a bone of his moved. `charSelfShadow` makes the direct light's rays test his own body too.
 
 **Openings.** `planOpeningsSteps` finds where a level is open to the sky, and each opening is a light of its own, a portal (`lookOpeningLights`): a
 hole blown in a wall lets daylight in, and a man by it throws a shadow. Openings, wall sides and reach masks run in steps under one allowance a frame

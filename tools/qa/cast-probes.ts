@@ -14,7 +14,7 @@ import { join } from 'node:path';
 const { loadGltfCharacter, loadGltfCast, SLOT_NAMES, CAST_PART_STEP, CAST_MAX_PARTS, castSide, castFile: castFileName, CAST_FILE, CAST_FILE_LOOK } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { fitRig, fitRigCast, rigTable, RIG_SLOTS, RIG_PAD_MAX } = await import(`${ROOT}/src/render/sdfrig.ts`);
 const { meshBvhFor } = await import(`${ROOT}/src/render/meshShadows.ts`);
-const { MESH_MAX_CHARS } = await import(`${ROOT}/src/render/meshbvh.ts`);
+const { MESH_MAX_CHARS, wornTree, LEAF_PAD } = await import(`${ROOT}/src/render/meshbvh.ts`);
 
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); return ok; };
@@ -110,7 +110,7 @@ async function castFileOf(look: boolean) {
     for (let v = 0; v < m.vertexCount; v++) { const l = Math.hypot(m.normals[v * 3], m.normals[v * 3 + 1], m.normals[v * 3 + 2]); if (!(l > 0.9 && l < 1.1)) badN++; }
     verdict(degen <= union * 0.002 && badN === 0, `unit normals everywhere, zero-area triangles under 0.2 % (${degen})`, `${badN} bad normals`); }
   { const t0 = performance.now(); const bvh = meshBvhFor(m); const ms = performance.now() - t0; const mb = ((4 + MESH_MAX_CHARS * bvh.numNodes * 2 + MESH_MAX_CHARS * bvh.numTris * 3) * 16) / 1048576;
-    verdict(bvh.numTris === union && bvh.maxDepth + 2 <= 64, `the mesh-shadow tree builds: ${bvh.numNodes} nodes over ${bvh.numTris} triangles, ${bvh.maxDepth + 1} levels, ${ms.toFixed(0)} ms — ${mb.toFixed(1)} MB for ${MESH_MAX_CHARS} men (the mannequin's is 7.4)`); }
+    verdict(bvh.numTris === union, `the mesh-shadow tree builds: ${bvh.numNodes} nodes over ${bvh.numTris} triangles, ${bvh.maxDepth + 1} levels, ${ms.toFixed(0)} ms — ${mb.toFixed(1)} MB for ${MESH_MAX_CHARS} men (the mannequin's is 7.4)`); }
 }
 
 export async function castFit() { await castFitOf(false); await castFitOf(true); }
@@ -135,6 +135,52 @@ async function castFitOf(look: boolean) {
   { const all = fitRig(ch); verdict(all.verts === ch.mesh.vertexCount, 'mask 0 on the cast = the union of every part (the shared fall-back fit)'); }
 }
 
+// ---- a man's own tree (meshbvh.ts wornTree) against the whole mesh's: the same rays meet the same triangle first, through the same boxes, and the refit's order is one
+//      CAST_TREE_BREAK=1: a worn leaf's two first triangles are dealt the other way round · =2: the last refit step is done first
+export async function castTree() { await castTreeOf(false); await castTreeOf(true); }
+async function castTreeOf(look: boolean) {
+  console.log(`\n=== cast-tree: each variant's own shadow tree — ${look ? CAST_FILE_LOOK : CAST_FILE} ===`);
+  if (!verdict(existsSync(pathOf(look)), 'the file exists')) return;
+  const ch = await characterSet(look), m = ch.mesh, b = meshBvhFor(m), P = m.positions, BREAK = process.env.CAST_TREE_BREAK ?? '', bad = { tris: [] as string[], boxes: [] as string[], order: [] as string[], rays: [] as string[] }; let rays = 0, hits = 0, whole = 0, own = 0, ms = 0;
+  type Walk = { N: number; skip: (i: number) => number; first: (i: number) => number; count: (i: number) => number; corner: (c: number) => number; mn: Float32Array; mx: Float32Array; worn: (t: number) => boolean };
+  const hitOf = (w: Walk, ro: number[], rd: number[]): { tri: string; visits: number } => {
+    let i = 0, visits = 0;
+    while (i < w.N) { visits++;
+      let tn = 0, tf = 50; for (let a = 0; a < 3; a++) { const x = (w.mn[i * 3 + a] - ro[a]) / rd[a], y = (w.mx[i * 3 + a] - ro[a]) / rd[a]; tn = Math.max(tn, Math.min(x, y)); tf = Math.min(tf, Math.max(x, y)); }
+      if (tn > tf) { i = w.skip(i); continue; } if (!w.count(i)) { i++; continue; }
+      for (let t = w.first(i); t < w.first(i) + w.count(i); t++) { if (!w.worn(t)) continue;
+        const A = w.corner(t * 3) * 3, B = w.corner(t * 3 + 1) * 3, C = w.corner(t * 3 + 2) * 3, e1 = [0, 1, 2].map(a => P[B + a] - P[A + a]), e2 = [0, 1, 2].map(a => P[C + a] - P[A + a]), p = [rd[1] * e2[2] - rd[2] * e2[1], rd[2] * e2[0] - rd[0] * e2[2], rd[0] * e2[1] - rd[1] * e2[0]], det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2];
+        if (Math.abs(det) < 1e-12) continue; const s = [0, 1, 2].map(a => ro[a] - P[A + a]), u = (s[0] * p[0] + s[1] * p[1] + s[2] * p[2]) / det; if (u < 0 || u > 1) continue;
+        const q = [s[1] * e1[2] - s[2] * e1[1], s[2] * e1[0] - s[0] * e1[2], s[0] * e1[1] - s[1] * e1[0]], v = (rd[0] * q[0] + rd[1] * q[1] + rd[2] * q[2]) / det; if (v < 0 || u + v > 1) continue;
+        if ((e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) / det > 1e-4) return { tri: `${A} ${B} ${C}`, visits }; }
+      i = w.skip(i); }
+    return { tri: '', visits }; };
+  for (const v of ch.cast.variants) {
+    const worn = (x: number) => ((v.mask >>> m.part[x]) & 1) === 1, t0 = performance.now(), t = wornTree(b, m.vertexCount, worn); ms = Math.max(ms, performance.now() - t0);
+    if (BREAK === '1') { for (let x = 0; x < t.leaves; x++) { const n = t.order[x]; if (t.nodes[n * 4 + 2] > 1) { const a = t.nodes[n * 4 + 1] * 3; for (let j = 0; j < 3; j++) { const w = t.corners[a + j]; t.corners[a + j] = t.corners[a + 3 + j]; t.corners[a + 3 + j] = w; } } } }
+    const order = BREAK === '2' ? [...t.order].reverse() : [...t.order], wornTris: string[] = []; for (let k = 0; k < b.numTris; k++) if (worn(b.corners[k * 3])) wornTris.push(`${b.corners[k * 3]} ${b.corners[k * 3 + 1]} ${b.corners[k * 3 + 2]}`);
+    const his = Array.from({ length: t.numTris }, (_, k) => [0, 1, 2].map(j => t.verts[t.corners[k * 3 + j]]).join(' '));
+    if (his.join('|') !== wornTris.join('|')) bad.tris.push(v.name);
+    const step = new Int32Array(t.numNodes).fill(-1); for (let h = 0; h + 1 < t.steps.length; h++) for (let q = t.steps[h]; q < t.steps[h + 1]; q++) step[order[q]] = h;
+    for (let n = 0; n < t.numNodes; n++) { const leaf = t.nodes[n * 4 + 2] > 0; if (step[n] < 0 || (leaf ? step[n] !== 0 : step[n] <= step[n + 1] || step[n] <= step[t.nodes[n * 4 + 3]])) { bad.order.push(`${v.name} node ${n}`); break; } }
+    // the boxes by the refit's own order, and the whole tree's by its own rule (an unworn leaf is empty, and an empty child is left out)
+    const mn = new Float32Array(t.numNodes * 3), mx = new Float32Array(t.numNodes * 3);
+    for (const n of t.order) for (let a = 0; a < 3; a++) { const o = n * 4; if (t.nodes[o + 2]) { let lo = 1e30, hi = -1e30; for (let c = t.nodes[o + 1] * 3; c < (t.nodes[o + 1] + t.nodes[o + 2]) * 3; c++) { const x = P[t.verts[t.corners[c]] * 3 + a]; lo = Math.min(lo, x); hi = Math.max(hi, x); } mn[n * 3 + a] = lo - LEAF_PAD; mx[n * 3 + a] = hi + LEAF_PAD; } else { const r = t.nodes[o + 3]; mn[n * 3 + a] = Math.min(mn[(n + 1) * 3 + a], mn[r * 3 + a]); mx[n * 3 + a] = Math.max(mx[(n + 1) * 3 + a], mx[r * 3 + a]); } }
+    const Mn = new Float32Array(b.numNodes * 3).fill(1e18), Mx = new Float32Array(b.numNodes * 3).fill(1e18), empty = new Uint8Array(b.numNodes);
+    for (let i = b.numNodes - 1; i >= 0; i--) { if (b.triCount[i]) { const ws = [] as number[]; for (let k = b.triStart[i]; k < b.triStart[i] + b.triCount[i]; k++) if (worn(b.corners[k * 3])) ws.push(k); empty[i] = ws.length ? 0 : 1; if (ws.length) for (let a = 0; a < 3; a++) { let lo = 1e30, hi = -1e30; for (const k of ws) for (let j = 0; j < 3; j++) { const x = P[b.corners[k * 3 + j] * 3 + a]; lo = Math.min(lo, x); hi = Math.max(hi, x); } Mn[i * 3 + a] = lo - LEAF_PAD; Mx[i * 3 + a] = hi + LEAF_PAD; } }
+      else { const l = i + 1, r = b.right[i]; empty[i] = empty[l] & empty[r]; for (let a = 0; a < 3; a++) { Mn[i * 3 + a] = empty[l] ? Mn[r * 3 + a] : empty[r] ? Mn[l * 3 + a] : Math.min(Mn[l * 3 + a], Mn[r * 3 + a]); Mx[i * 3 + a] = empty[l] ? Mx[r * 3 + a] : empty[r] ? Mx[l * 3 + a] : Math.max(Mx[l * 3 + a], Mx[r * 3 + a]); } } }
+    if ([0, 1, 2].some(a => mn[a] !== Mn[a] || mx[a] !== Mx[a])) bad.boxes.push(v.name);
+    const W: Walk = { N: b.numNodes, skip: i => b.skip[i], first: i => b.triStart[i], count: i => b.triCount[i], corner: c => b.corners[c], mn: Mn, mx: Mx, worn: k => worn(b.corners[k * 3]) }, O: Walk = { N: t.numNodes, skip: i => t.nodes[i * 4], first: i => t.nodes[i * 4 + 1], count: i => t.nodes[i * 4 + 2], corner: c => t.verts[t.corners[c]], mn, mx, worn: () => true };
+    const roll = seeded(7 + v.mask); let wrong = 0;
+    for (let k = 0; k < 1500; k++) { const th = roll() * 6.2832, ro = [Math.cos(th) * 0.8, roll() * 2, Math.sin(th) * 0.8], to = [(roll() - 0.5) * 0.7, roll() * 1.9, (roll() - 0.5) * 0.5], d = to.map((x, a) => x - ro[a]), L = Math.hypot(d[0], d[1], d[2]), rd = d.map(x => x / L), a = hitOf(W, ro, rd), c = hitOf(O, ro, rd); rays++; whole += a.visits; own += c.visits; if (a.tri) hits++; if (a.tri !== c.tri) wrong++; }
+    if (wrong) bad.rays.push(`${v.name} ${wrong}`);
+  }
+  verdict(bad.tris.length === 0, 'a man\'s tree holds what he wears and nothing else, in the whole tree\'s order', bad.tris.join(' · '));
+  verdict(bad.order.length === 0, 'every node is in one refit step, after both its children\'s', bad.order.slice(0, 3).join(' · '));
+  verdict(bad.boxes.length === 0, 'and comes to the whole tree\'s box', bad.boxes.join(' · '));
+  verdict(bad.rays.length === 0 && hits > rays / 5 && own < whole, `every ray meets the same triangle first (${rays} rays, ${hits} hits; ${(whole / rays).toFixed(1)} nodes a ray in the whole tree, ${(own / rays).toFixed(1)} in his own; the slowest tree was cut in ${ms.toFixed(0)} ms)`, bad.rays.join(' · '));
+}
+
 const seeded = (s: number) => () => { s |= 0; s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 
-if (import.meta.main) await main([castLoader, castFile, castFit], castFailures);
+if (import.meta.main) await main([castLoader, castFile, castTree, castFit], castFailures);

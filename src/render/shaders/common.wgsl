@@ -594,9 +594,8 @@ fn meshTri(c0: u32, ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
 // leaf tests its ≤ 4 triangles. ANY hit ends it: returns that triangle's t (a real blocker in (MESH_TMIN, tmax], not necessarily the nearest),
 // or −1. Links only ever point forward, so a well-formed tree ends within N steps; `it` caps a malformed one at N regardless.
 fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 {
-  let hd = meshLoad(0u);                        // (N, NODE_BASE, TRI_BASE, T)
-  let N = hd.x;
-  let nb = hd.y + k * N * 2u; let tb = hd.z + k * hd.w * 3u;
+  let hd = meshLoad(k);                         // (his tree's nodes, where they begin, where its corners begin, its triangles)
+  let N = hd.x; let nb = hd.y; let tb = hd.z;
   var i = 0u; var it = 0u;
   loop {
     if (i >= N || it >= N) { break; }
