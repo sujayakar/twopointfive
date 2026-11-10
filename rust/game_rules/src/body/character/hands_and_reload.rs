@@ -57,7 +57,7 @@ pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f
 /// The action's clip over the pose at weight `w`, and the slump.
 fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
     let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
-    anim_layer(g, c, |s, an, k| ::sim::layers::act_pose(s, an, clip, w, dt, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::act_pose(s, an, clip, w, dt));
 }
 
 // ---- MOVES
@@ -206,10 +206,10 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
 fn anim_pistol_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::pistol_reload_arm(s, an, t, w, k)); }
 
 /// The support hand pressed to his ribs.
-fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::clutch_arm(s, an, w, k)); }
+fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::clutch_arm(s, an, w)); }
 
 /// A figure kept down: wrists behind the back, or hands on the head.
-fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::bound_arms(s, an, w, kind, k)); }
+fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::bound_arms(s, an, w, kind)); }
 
 /// The reactions: where the dazzle is from in his own frame, then their body, then their arms.
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
@@ -433,7 +433,7 @@ pub(super) fn anim_stand_pose(g: &mut crate::game::Game, c: CharId, ph: f64, w_i
     let mut at = |name: &'static str, of: f64| { let clip = clip_of(g, c, name); let t = of * g.tab.clip[clip].duration; clip_at(g, c, clip, t) };
     let (jog, sprint, walk) = (at("Jog_Fwd_Loop", ph), at("Sprint_Loop", ph), at("Walk_Loop", ph + WALK_PHASE));
     let cycle = ::sim::layers::Cycle { ph, w_idle, w_walk, w_jog, w_sprint, idle, jog, sprint, walk };
-    anim_layer(g, c, |s, an, k| ::sim::layers::stand_pose(s, an, &cycle, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::stand_pose(s, an, &cycle));
 }
 
 /// The crouch laid over the stand pose.
