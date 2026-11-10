@@ -132,11 +132,10 @@ fn an_enemy_names_the_player_he_fights() {
 }
 
 // (the calls whose seat goes in the mend: one place each)
-fn muzzle(p: &Play, gd: GuardId) -> bool { game::game::friend_before_muzzle(&p.g, gd) }
 fn clear(p: &Play, at: [f64; 3]) -> bool { game::qrf::clear_of_foes(&p.g, at) }
 fn foes(p: &Play, gd: GuardId) -> Vec<game::runner::Foe> { game::runner::foes(&p.g, gd) }
 
-/// THE RULE: what is about the team is about every man on the floor: a friend before the muzzle, a place clear of foes, whom a runner runs from, who sees a hole in a wall.
+/// THE RULE: what is about the team is about every man on the floor: a place clear of foes, whom a runner runs from, who sees a hole in a wall.
 /// A failure means the second player is not on the floor for that rule.
 #[test]
 fn the_team_is_both_players() {
@@ -153,16 +152,7 @@ fn the_team_is_both_players() {
             assert!(clear(&p, at), "seed {s}: CONTROL: nobody near");
             p.seat_stands(seat, [21.0, AISLE]);
             if clear(&p, at) { red.push(format!("seed {s}: seat {seat}'s man stands on the place and it is called clear of foes")); }
-            // a friend before the muzzle: the man who shoots stands off down the aisle, the player in his lane
-            let m = mates[0];
-            let c = p.g.gd[m].ch;
-            p.man_stands(m, [12.0, AISLE]);
-            let y = game::character::character_gun_yaw(&p.g, c);
-            let ahead = (0..32).map(|i| i as f64 * std::f64::consts::TAU / 32.0).map(|a| [1.5 * a.sin(), 1.5 * a.cos()])
-                .find(|d| game::character::in_dip_lane(d[0], d[1], y)).expect("a lane has a place 1.5 m out");
             let pc = p.g.pl[man(&p, seat)].ch;
-            p.g.ch[pc].pos = [12.0 + ahead[0], 0.0, AISLE + ahead[1]];
-            if !muzzle(&p, m) { red.push(format!("seed {s}: seat {seat}'s man stands in the lane and no friend is before the muzzle")); }
             // whom a runner runs from
             p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
             p.g.ch[pc].pos = [20.0, 0.0, AISLE];

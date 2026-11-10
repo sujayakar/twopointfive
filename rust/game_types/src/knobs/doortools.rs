@@ -108,7 +108,6 @@ pub struct DoortoolsK {
     #[k(1.2)] pub pod_apart: f64,
     #[k(alloc::vec![0.45, 1.8])] pub thr_pull_at: Vec<f64>,
     #[k(alloc::vec![0.45, 1.2])] pub thr_still: Vec<f64>,
-    #[k(alloc::vec![alloc::vec![-0.45, 1.2], alloc::vec![0.25, 1.8]])] pub thr_arc: Vec<Vec<f64>>,
     #[k(4.0)] pub thr_min: f64,
     #[k(2.0)] pub thr_quiet: f64,
     #[k(25.0)] pub thr_cap: f64,

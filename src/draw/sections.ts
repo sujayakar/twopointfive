@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 1273517202;
+export const LAYOUT = 2121065781;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -117,7 +117,7 @@ export const enum View {
   backs = 38,
   /** u32: saves made of this game so far: moves when there is another */
   saves = 39,
-  /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, the wall hold's feel, walking into a wall takes it, the command key tapped twice calls the squad in */
+  /** u32: what the game is set to, for a screen that sets it: hits do nothing to him, the men think, unlimited ammunition, it saves by itself, walking into a wall takes it, the command key tapped twice calls the squad in */
   god = 40,
   /** u32 */
   thinks = 41,
@@ -126,27 +126,25 @@ export const enum View {
   /** u32 */
   autosave = 43,
   /** u32 */
-  wallFeel = 44,
+  wallPress = 44,
   /** u32 */
-  wallPress = 45,
-  /** u32 */
-  fallIn = 46,
+  fallIn = 45,
   /** u32: what each man is thinking is said over him */
-  labels = 47,
+  labels = 46,
   /** u32: the run's end card is due: 1 it was lost, 2 won (0: not yet) */
-  ended = 48,
+  ended = 47,
   /** u32: this run, for whoever keeps what was won: 1 its try has begun · 2 it is over (what there is to keep is asked: face_run_view) */
-  run = 49,
+  run = 48,
   /** f32: night vision's amount, and how hard he has just been hit */
-  night = 50,
+  night = 49,
   /** f32 */
-  hit = 51,
+  hit = 50,
   /** u32: this game is the Team & kit picture: 1 staged, 2 nothing to stage (0: it is no picture) */
-  kit = 52,
+  kit = 51,
   /** u32: the Team & kit picture asks for a copy of the last picture over what it is about to stage again: moves each time; answered by a command */
-  veil = 53,
+  veil = 52,
   /** words a row */
-  row = 54,
+  row = 53,
 }
 
 /** the sky: one row */

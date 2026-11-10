@@ -78,8 +78,6 @@ mod laststand; pub use laststand::*;
 mod launcher; pub use launcher::*;
 mod lighting; pub use lighting::*;
 mod lightswitch; pub use lightswitch::*;
-mod lived; pub use lived::*;
-mod look; pub use look::*;
 mod morale; pub use morale::*;
 mod needs; pub use needs::*;
 mod netquiet; pub use netquiet::*;
@@ -114,7 +112,6 @@ mod savestate; pub use savestate::*;
 mod seats; pub use seats::*;
 mod seenwalk; pub use seenwalk::*;
 mod sense; pub use sense::*;
-mod shapes; pub use shapes::*;
 mod shards; pub use shards::*;
 mod shotgun; pub use shotgun::*;
 mod showwhy; pub use showwhy::*;
@@ -221,7 +218,6 @@ pub struct Knobs {
     pub badge: BadgeK,
     pub ckpt: CkptK,
     pub fog: FogK,
-    pub moves: MovesK,
     pub mv: MvK,
     pub turn: TurnK,
     pub doorpath: DoorpathK,
@@ -322,10 +318,7 @@ pub struct Knobs {
     pub squadnet: SquadnetK,
     pub takedown: TakedownK,
     pub stealthpose: StealthposeK,
-    pub look: LookK,
-    pub lived: LivedK,
     pub env: EnvK,
-    pub shapes: ShapesK,
     pub flash: FlashK,
     pub pace: PaceK,
     pub lights: LightsK,
@@ -368,6 +361,5 @@ pub struct Knobs {
     pub seenwalk: SeenwalkK,
     pub holdfire: HoldfireK,
     pub slots: SlotsK,
-    pub destruction: DestructionK,
     pub bigslot: BigslotK,
 }

@@ -72,9 +72,6 @@ pub struct GlassbreakK {
     /// (round two: 0.05 / 5 — the sheet frosts for a beat before the curtain comes down, and comes down a little slower)
     #[k(0.012)] pub dice_grain: f64,
     #[k(0.12)] pub clump_m: f64,
-    #[k(0.09)] pub dice_hang: f64,
-    #[k(4.2)] pub dice_speed: f64,
-    #[k(40.0)] pub clumps_per_frame: f64,
     /// queued pieces let go per frame (a round's own piece is never deferred)
     #[k(8.0)] pub releases_per_frame: f64,
     /// how a piece leaves: out along the blow (m/s, × 0.4‥1.4), spin (rad/s); a blast throws at blastOut × its strength there

@@ -506,7 +506,6 @@ pub struct Anim {
     #[is(-1.0)] pub strike_t: f64,
     pub steady_mean: Option<[f64; 2]>,
     pub cr_walk: f64,
-    pub steady_up: f64,
     pub snap_shot: bool,
     #[is(0.5)] pub trained: f64,
     pub dazzle: Option<crate::character::AnimDazzle>,
@@ -514,7 +513,6 @@ pub struct Anim {
     pub reload_back: bool,
     pub bound: f64,
     pub clutch: f64,
-    pub dip: f64,
     pub hurt: f64,
     #[is(-1.0)] pub hurt_side: f64,
     pub shaken: f64,
@@ -541,11 +539,10 @@ pub struct Anim {
     pub cl_k: f64,
     pub cl_t: f64,
     pub cl_l: f64,
-    #[is(crate::character::AnimMv2 { bd: crate::character::Spring::blank(), bd_k: 1.0, cl: crate::character::Spring::blank(), dip: crate::character::Spring::blank(), rw: crate::character::Spring::blank(), rl_at: 0.0 })] pub mv2: crate::character::AnimMv2,
-    #[is(crate::character::AnimMv2Shown { reload: 0.0, bound: 0.0, clutch: 0.0, dip: 0.0 })] pub mv2_shown: crate::character::AnimMv2Shown,
+    #[is(crate::character::AnimMv2 { bd: crate::character::Spring::blank(), bd_k: 1.0, cl: crate::character::Spring::blank(), rw: crate::character::Spring::blank(), rl_at: 0.0 })] pub mv2: crate::character::AnimMv2,
+    #[is(crate::character::AnimMv2Shown { reload: 0.0, bound: 0.0, clutch: 0.0 })] pub mv2_shown: crate::character::AnimMv2Shown,
     pub arms_pre: Option<crate::anim_skeleton::Pose>,
     pub arms_buf: Option<crate::anim_skeleton::Pose>,
-    pub sights_lift: f64,
     #[is(-1.0)] pub kick_t: f64,
     pub kick_hit: bool,
     #[is(-1.0)] pub sig_t: f64,
@@ -911,7 +908,6 @@ pub struct AnimMv2 {
     pub bd: crate::character::Spring,
     pub bd_k: f64,
     pub cl: crate::character::Spring,
-    pub dip: crate::character::Spring,
     pub rw: crate::character::Spring,
     pub rl_at: f64,
 }
@@ -921,7 +917,6 @@ pub struct AnimMv2Shown {
     pub reload: f64,
     pub bound: f64,
     pub clutch: f64,
-    pub dip: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1678,7 +1673,6 @@ pub struct WallPose {
     pub feet: crate::character::WallPoseFeet,
     pub slide: crate::character::WallPoseSlide,
     pub hands: crate::character::WallPoseHands,
-    pub elbow: crate::character::WallPoseElbow,
     pub peek: crate::character::WallPosePeek,
     pub mend: crate::character::WallPoseMend,
     pub gait: crate::character::WallPoseGait,
@@ -1701,20 +1695,8 @@ pub struct WallPoseSlide {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallPoseHands {
-    pub along: f64,
-    pub along_crouch: f64,
-    pub up: f64,
-    pub up_crouch: f64,
     pub off: f64,
-    pub out: f64,
     pub peek_in: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallPoseElbow {
-    pub out: f64,
-    pub room: f64,
-    pub down: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -1875,7 +1857,6 @@ pub struct Mv2 {
     pub clutch: crate::character::Mv2Clutch,
     pub hurt: crate::character::Mv2Hurt,
     pub shaken: crate::character::Mv2Shaken,
-    pub dip: crate::character::Mv2Dip,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -1983,16 +1964,6 @@ pub struct Mv2Shaken {
     pub head: f64,
     pub drop: f64,
     pub brace: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Mv2Dip {
-    pub pitch: f64,
-    pub down: f64,
-    pub back: f64,
-    pub rate_in: f64,
-    pub rate_out: f64,
-    pub lane: [f64; 3],
 }
 
 #[derive(Clone, Debug, Default)]
@@ -2391,27 +2362,6 @@ pub struct BigmoveShotgun {
     pub shove: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum MvOnK {
-    Reload,
-    Fold,
-    Steady,
-    On,
-    Entry,
-    Flinch,
-    Fall,
-    Toss,
-    Squeeze,
-    Snap,
-    Recoil,
-    Dazzle,
-    Gait,
-    Bound,
-    Clutch,
-    EntryEyes,
-    SteadyRun,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct BlowsNearB {
     pub t: f64,
@@ -2619,7 +2569,7 @@ pub const WALL_GAIT_REST: f64 = 0.55;
 
 pub static LEAN_POSE: crate::character::LeanPose = crate::character::LeanPose { deg: 28.0, level: 0.5, rate: 9.0 };
 
-pub static WALL_POSE: crate::character::WallPose = crate::character::WallPose { back: [0.135, 0.125, 0.21], lean: [4.5, 7.0], drop: [0.03, 0.02], chest_turn: 8.0, gaze: 58.0, head_pitch: 3.0, feet: crate::character::WallPoseFeet { lead: [0.16, 0.21, 25.0], trail: [-0.14, 0.16, 8.0], lead_crouch: [0.19, 0.31, 30.0], trail_crouch: [-0.15, 0.27, 12.0], trail_heel: 0.5 }, slide: crate::character::WallPoseSlide { line: 0.36, narrow: 0.6 }, hands: crate::character::WallPoseHands { along: 0.25, along_crouch: 0.29, up: 0.02, up_crouch: 0.12, off: 0.06, out: 0.35, peek_in: 0.1 }, elbow: crate::character::WallPoseElbow { out: 0.9, room: 0.35, down: 0.3 }, peek: crate::character::WallPosePeek { lean: 19.0, shift: 0.09, turn: 26.0, gaze: 70.0, tilt: 7.0 }, mend: crate::character::WallPoseMend { along: [0.24, 0.235], up: [0.0, 0.0], elbow: crate::character::WallPoseMendElbow { out: 0.5, room: -0.3, down: 0.2 }, splay: 0.08, sway: 0.025, fan: -0.3, curl: [0.1, 0.12, 0.16, 0.22], thumb: 0.1, thumb_in: 40.0 }, gait: crate::character::WallPoseGait { share: [1.0, 1.0], step: [0.36, 0.34], duty: 0.6, ahead: [0.02, 0.05], apart: [0.21, 0.22], near: [0.17, 0.2], far: [0.3, 0.36], lift: [0.07, 0.06], heel: [22.0, 24.0], toe: [40.0, 30.0], knee_room: [0.2, 0.45], hips: [0.875, 0.5], bob: [0.02, 0.012] } };
+pub static WALL_POSE: crate::character::WallPose = crate::character::WallPose { back: [0.135, 0.125, 0.21], lean: [4.5, 7.0], drop: [0.03, 0.02], chest_turn: 8.0, gaze: 58.0, head_pitch: 3.0, feet: crate::character::WallPoseFeet { lead: [0.16, 0.21, 25.0], trail: [-0.14, 0.16, 8.0], lead_crouch: [0.19, 0.31, 30.0], trail_crouch: [-0.15, 0.27, 12.0], trail_heel: 0.5 }, slide: crate::character::WallPoseSlide { line: 0.36, narrow: 0.6 }, hands: crate::character::WallPoseHands { off: 0.06, peek_in: 0.1 }, peek: crate::character::WallPosePeek { lean: 19.0, shift: 0.09, turn: 26.0, gaze: 70.0, tilt: 7.0 }, mend: crate::character::WallPoseMend { along: [0.24, 0.235], up: [0.0, 0.0], elbow: crate::character::WallPoseMendElbow { out: 0.5, room: -0.3, down: 0.2 }, splay: 0.08, sway: 0.025, fan: -0.3, curl: [0.1, 0.12, 0.16, 0.22], thumb: 0.1, thumb_in: 40.0 }, gait: crate::character::WallPoseGait { share: [1.0, 1.0], step: [0.36, 0.34], duty: 0.6, ahead: [0.02, 0.05], apart: [0.21, 0.22], near: [0.17, 0.2], far: [0.3, 0.36], lift: [0.07, 0.06], heel: [22.0, 24.0], toe: [40.0, 30.0], knee_room: [0.2, 0.45], hips: [0.875, 0.5], bob: [0.02, 0.012] } };
 
 pub fn stances() -> JsMap<String, crate::character::StanceShape> { { let mut t = JsMap::new(); t.set(String::from("highReady"), crate::character::StanceShape { fwd: 0.25, up: 0.15, side: -0.05, pitch: 8.0, lean: 7.0, head_pitch: 2.0, tuck: 0.85, blade: 0.0, head_yaw: 0.0, squat: 0.015 }); t.set(String::from("lowReady"), crate::character::StanceShape { fwd: 0.3, up: -0.215, side: -0.07, pitch: -42.0, lean: 3.0, head_pitch: 1.0, tuck: 0.3, blade: 0.0, head_yaw: 0.0, squat: 0.0 }); t.set(String::from("stack"), crate::character::StanceShape { fwd: 0.19, up: 0.13, side: -0.03, pitch: 22.0, lean: 9.0, head_pitch: 4.0, tuck: 1.0, blade: 22.0, head_yaw: 14.0, squat: 0.07 }); t.set(String::from("wall"), crate::character::StanceShape { fwd: 0.19, up: 0.13, side: -0.03, pitch: 22.0, lean: 4.5, head_pitch: 3.0, tuck: 1.0, blade: 0.0, head_yaw: 0.0, squat: 0.0 }); t } }
 
@@ -2635,11 +2585,9 @@ pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0,
 
 pub fn wall_tuck() -> crate::character::WALLTUCK { crate::character::WALLTUCK { long: crate::character::WALLTUCKLong { side: -0.165, up: -0.245, fwd: 0.185, pitch: -76.0, yaw: 15.0, aim_k: 0.0, elbow_r: [-0.75, -1.0, -0.45], elbow_l: [0.6, -1.0, -0.25] }, pistol: crate::character::WALLTUCKPistol { fwd: 0.2, up: -0.19, pitch: -70.0, tuck: 0.8 }, over: 0.12 } }
 
-pub const LONG_KICK_BACK: f64 = 0.03;
-
 pub static HAND: crate::character::Hand = crate::character::Hand { can: crate::character::HandCan { curl: [0.56, 0.58, 0.62, 0.68], thumb: 0.3 }, curl: [0.3, 0.35, 0.41, 0.48], thumb: 0.38, thumb_in: 34.0, thumb_bend: 15.0, thumb_close: 10.0, thumb_own: 1.0, spread: -0.15, vary: 0.05, side_vary: 0.035, finger_vary: 0.025, far: 45.0, trig: [6.0, 10.0, 6.0], trig_spread: 6.0, trig_trained: 0.6, trig_hold: 0.7 };
 
-pub static MV2: crate::character::Mv2 = crate::character::Mv2 { reload: crate::character::Mv2Reload { box_: crate::character::Mv2ReloadBox { mag: [0.085, -0.17, 0.125], strip: [0.09, -0.26, 0.15], handle: [0.05, -0.08, 0.07], pull: [0.05, -0.08, -0.03], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }, back: crate::character::Mv2ReloadBox { mag: [0.085, -0.15, -0.115], strip: [0.09, -0.23, -0.17], handle: [0.1, 0.01, 0.17], pull: [0.1, 0.01, 0.08], hf: [-0.9, 0.1, 0.3], hb: [0.0, 1.0, 0.0] }, pouch: [[0.15, 0.04, 0.215], [0.1, -0.03, 0.195]], pole: [0.7, -0.6, -0.25], pole_w: 0.7, fumble: 0.055, tap: 0.11, flare: crate::character::Mv2ReloadFlare { off: [0.12, 0.12, -0.03], tap: [0.13, 0.04, 0.0], pole: [1.0, 0.35, -0.2] }, fling: 0.06, rate: 14.0 }, bound: crate::character::Mv2Bound { rate: 6.0, back: crate::character::Mv2BoundBack { up: 0.07, out: 0.045, behind: 0.15, curl: [0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: crate::character::Mv2BoundHead { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: [0.28, 0.32, 0.36, 0.4], knuckle: [16.0, 5.0], thumb: 0.3 } }, clutch: crate::character::Mv2Clutch { rate: 7.0, at: [-0.14, 0.12, 0.12], pole: [1.0, -0.05, -0.35], fold: crate::character::Mv2ClutchFold { rate: 6.0, pitch: 24.0, pitch_too: 34.0, head: 20.0, drop: 0.05, sway: 3.0, hz: 1.0 } }, hurt: crate::character::Mv2Hurt { rate: 4.0, pitch: 11.0, lean: 8.0, head: 9.0, head_brace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, step_pitch: 5.0, step_roll: 10.0, step_yaw: 5.0, step_head: 4.0, step_drop: 0.04, step_side: 0.06, arm: 1.0 }, shaken: crate::character::Mv2Shaken { rate_in: 12.0, rate_out: 3.0, pitch: 11.0, head: 18.0, drop: 0.1, brace: 0.75 }, dip: crate::character::Mv2Dip { pitch: -36.0, down: 0.035, back: 0.02, rate_in: 13.0, rate_out: 9.0, lane: [0.25, 1.9, 0.34] } };
+pub static MV2: crate::character::Mv2 = crate::character::Mv2 { reload: crate::character::Mv2Reload { box_: crate::character::Mv2ReloadBox { mag: [0.085, -0.17, 0.125], strip: [0.09, -0.26, 0.15], handle: [0.05, -0.08, 0.07], pull: [0.05, -0.08, -0.03], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }, back: crate::character::Mv2ReloadBox { mag: [0.085, -0.15, -0.115], strip: [0.09, -0.23, -0.17], handle: [0.1, 0.01, 0.17], pull: [0.1, 0.01, 0.08], hf: [-0.9, 0.1, 0.3], hb: [0.0, 1.0, 0.0] }, pouch: [[0.15, 0.04, 0.215], [0.1, -0.03, 0.195]], pole: [0.7, -0.6, -0.25], pole_w: 0.7, fumble: 0.055, tap: 0.11, flare: crate::character::Mv2ReloadFlare { off: [0.12, 0.12, -0.03], tap: [0.13, 0.04, 0.0], pole: [1.0, 0.35, -0.2] }, fling: 0.06, rate: 14.0 }, bound: crate::character::Mv2Bound { rate: 6.0, back: crate::character::Mv2BoundBack { up: 0.07, out: 0.045, behind: 0.15, curl: [0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: crate::character::Mv2BoundHead { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: [0.28, 0.32, 0.36, 0.4], knuckle: [16.0, 5.0], thumb: 0.3 } }, clutch: crate::character::Mv2Clutch { rate: 7.0, at: [-0.14, 0.12, 0.12], pole: [1.0, -0.05, -0.35], fold: crate::character::Mv2ClutchFold { rate: 6.0, pitch: 24.0, pitch_too: 34.0, head: 20.0, drop: 0.05, sway: 3.0, hz: 1.0 } }, hurt: crate::character::Mv2Hurt { rate: 4.0, pitch: 11.0, lean: 8.0, head: 9.0, head_brace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, step_pitch: 5.0, step_roll: 10.0, step_yaw: 5.0, step_head: 4.0, step_drop: 0.04, step_side: 0.06, arm: 1.0 }, shaken: crate::character::Mv2Shaken { rate_in: 12.0, rate_out: 3.0, pitch: 11.0, head: 18.0, drop: 0.1, brace: 0.75 } };
 
 pub const TOSS_RELEASE: f64 = 0.14;
 

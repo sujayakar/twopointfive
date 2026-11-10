@@ -407,8 +407,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   };
 
   // ---------------- LIVED-IN ROOMS (lib/lived.ts): what makes each shop, the alley, the passage and the
-  //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list: the
-  //                  loader leaves it all out with the switch off. Additions only; nothing above is moved. No emitter: each place says its light with colour.
+  //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list.
+  //                  Additions only; nothing above is moved. No emitter: each place says its light with colour.
   //                  Solids keep 1.1 m off every door line, off the patrol legs and off every authored point; what is under 0.25 m is walked over ----------------
   {
     const w = G.piece(0, 0, 0);                                                    // the world's own frame: w(x, z, y0, y1, hx, hz, mat, extra?, yaw?)

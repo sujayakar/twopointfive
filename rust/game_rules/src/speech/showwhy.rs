@@ -302,12 +302,10 @@ fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
                 }
             }
             js::sort_by(&mut file, |a, b| b.1 - a.1);
-            if js::truthy(g.k.moves.squeeze) {
-                for &(man, _) in &file {
-                    if man_ahead(g, op, man) {
-                        g.m.showwhy.op_mem.get_mut(op).unwrap().turns.push(OpMemTurnsItem { gd: man, at });
-                        at += k.squeeze_gap;
-                    }
+            for &(man, _) in &file {
+                if man_ahead(g, op, man) {
+                    g.m.showwhy.op_mem.get_mut(op).unwrap().turns.push(OpMemTurnsItem { gd: man, at });
+                    at += k.squeeze_gap;
                 }
             }
             g.m.showwhy.op_mem.get_mut(op).unwrap().fist_t = at + k.fist_after;

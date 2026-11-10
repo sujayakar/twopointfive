@@ -371,10 +371,6 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             an.reload_row = Some(row);
             an.reload_at = at;
         }
-        // (MOVES.on, page 1)
-        let dip = g.k.moves.entry > 0.5 && cb && g.gd[gd].held.is_none() && !dead && team == Team::Operative
-            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
-        g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
         let from = g.gd[gd].last_known.unwrap_or(g.ch[c].pos);
         crate::condition::stun_pose(g, c, !dead, from);
         {

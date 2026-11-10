@@ -298,7 +298,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---------------- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
+  // ---------------- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<thing>'; LAST, after every kept thing) ----------------
   // A provincial records office, and its things are the clerk's: open folios, pigeonholes, taped bundles, sacks. Each room by what only it has — the lobby is the
   // PUBLIC's (a writing desk island with trays of pink, yellow and white forms), the reading room the READERS' (green-shaded lamps down the table, a card catalogue
   // with its drawers pulled), the copy room MACHINES (a sorter's comb, a guillotine, white reams banded blue, toner on the floor), the hall the COUNTER's three worn

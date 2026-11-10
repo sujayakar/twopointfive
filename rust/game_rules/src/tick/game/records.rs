@@ -154,28 +154,6 @@ pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate:
     }
 }
 
-/// A living friend stands in the lane his gun points down. Geometry only.
-pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
-    let c = g.gd[gd].ch;
-    let y = crate::character::character_gun_yaw(g, c);
-    let at = g.ch[c].pos;
-    let team = g.gd[gd].team;
-    for &o in &g.guards {
-        if o != gd && !crate::condition::down(g, g.gd[o].ch) && g.gd[o].team == team && in_lane(g.ch[g.gd[o].ch].pos, at, y) {
-            return true;
-        }
-    }
-    if crate::teams::hostile_to(g, gd, crate::teams::Team::Player) {
-        return false;
-    }
-    crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && in_lane(g.ch[g.pl[pl].ch].pos, at, y))
-}
-
-/// The `lane` closure of friendBeforeMuzzle.
-fn in_lane(p: V3, at: V3, y: f64) -> bool {
-    crate::character::in_dip_lane(p[0] - at[0], p[2] - at[2], y)
-}
-
 /// Down but breathing: put out cold, not shot. False for a living man and for a corpse.
 pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::condition::down(g, g.gd[gd].ch)

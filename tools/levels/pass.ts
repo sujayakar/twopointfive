@@ -521,7 +521,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
 
   extra.kept?.({ K, G, cap });
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the TEA ROOM is rugs and floor cushions round the stove, low tables with the tea on them, the
   // samovar's table; the KITCHEN the bread oven, a work table, flour in sacks and the water cans; the STORE sacks to the beams, fuel drums and
   // crates under one dim bulb; the BUNK ROOM four cots, a tin trunk and a felt on the floor round its stove; the BAY the halt's pickup, a bench, tyres and a

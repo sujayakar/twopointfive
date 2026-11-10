@@ -540,7 +540,6 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
     g.saves.enabled = false;
     g.tune.qrf = false;
     let t = &mut g.k.turn;
-    t.on = 1.0;
     t.aim = m::round(K.gun_rate * R * 1000.0) / 1000.0;
     t.aim_acc = m::round(K.gun_rate * R / K.ramp * 100.0) / 100.0;
     t.body = m::round(K.body_rate * R * 1000.0) / 1000.0;

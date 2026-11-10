@@ -592,7 +592,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: group 'lived.<place>'; LAST, after every kept thing) ----
   // THE TOWN'S EAST SIDE, which was one bare sheet of snow from the neighbour's wash line to the map's corner (level-needs `ground`: 126 m²). Both places are
   // PAST THE YARD'S WALL, which stands 2.47 m and has no gate on that side: no man of the shop has a line to them and no way leads from them into the yard.
   // (A player can walk there, out by the street gate and round the back of the town; no line of the lesson sends him.) No lamp is added. What a guard sees,

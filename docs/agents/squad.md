@@ -151,7 +151,7 @@ follows last (`room_keep_tick`, `room_kept`, `room_secs`).
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/`; `?knob.cmdring.twice_secs=0.6` turns one. Words: `?qtwice=0`, `?goalhalf=0`, `?doorbrisk=0`,
-  `?pacing=0`, `?nosquadthrow`. `?squad=4` is the team's size.
+  `?pacing=0`. `?squad=4` is the team's size.
 - **A new order:** a file in `orders/rows/` with `pub const ORDER: Row`, a line in `rows!` in its `mod.rs`, and its row on the menu: `rows::def` in
   `squad_orders_new`, or `list` from its `frame`. What other rules need to know of it goes in `Is`.
 - **A place on the ring:** `flat_top` and `flat_left` in `cmdring.rs`.
