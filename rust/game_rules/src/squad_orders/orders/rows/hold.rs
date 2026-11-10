@@ -31,7 +31,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
                 SquadOrdersAssignA {
                     order: String::from(ORDER.id), post: Some(posts[i]), face: Some(yaw), watch: Some([fc[0], 1.1, fc[2]]), door: Some(door),
                     stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
-                    going: String::from("holding"), there,
+                    going: "holding".into(), there: there.into(),
                     ..Default::default()
                 }
             }
@@ -42,14 +42,14 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
                 SquadOrdersAssignA {
                     order: String::from(ORDER.id), post: Some(posts[i]), face: Some(arc.yaw), watch: Some(watch),
                     stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
-                    going: String::from("holding"), there,
+                    going: "holding".into(), there: there.into(),
                     ..Default::default()
                 }
             }
             None => SquadOrdersAssignA {
                 order: String::from(ORDER.id), post: Some(posts[i]), face: Some(g.ch[g.gd[gd].ch].body_yaw),
                 stance: Some(crate::character::Stance::LowReady), upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"), there: String::from("holding"),
+                going: "holding".into(), there: "holding".into(),
                 ..Default::default()
             },
         };

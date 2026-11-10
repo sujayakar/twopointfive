@@ -19,7 +19,7 @@ fn still_mine(g: &Game, seat: &crate::seats::SeatRef, op: WallOpId, gd: GuardId)
 }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// an assignment's two words and nothing else: the rest as `a` is filled in
-fn job(going: &str, there: &str) -> WallChargeAssignA { WallChargeAssignA { going: String::from(going), there: String::from(there), ..Default::default() } }
+fn job(going: &str, there: &str) -> WallChargeAssignA { WallChargeAssignA { going: String::from(going).into(), there: String::from(there).into(), ..Default::default() } }
 fn none_upper(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::None), ..a } }
 fn none_aim(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), ..a } }
 
@@ -168,7 +168,8 @@ fn wall_charge_stand_off(g: &mut crate::game::Game, op: WallOpId, gd: GuardId) {
         stance: Some(crate::character::Stance::HighReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-        ..job("standing off", "stood off · the wall")
+        going: crate::orders::Doing::new(crate::orders::At::StandingOff, "standing off"),
+        ..job("", "stood off · the wall")
     };
     wall_charge_assign(g, op, gd, &a);
 }
@@ -229,7 +230,7 @@ pub(super) fn wall_charge_end(g: &mut crate::game::Game, op: WallOpId) {
             let a = match o!(g, op).mine.get(gd).copied() { Some(a) => a, None => continue };
             if crate::orders::squad_orders_of(&crate::seats::here(g), gd) != Some(a) { continue; }
             let r = &mut asg!(g, a);
-            if r.going == "standing off" && !r.spare.unwrap_or(false) && r.watch.is_none() {
+            if r.going.at == crate::orders::At::StandingOff && !r.spare.unwrap_or(false) && r.watch.is_none() {
                 if let Some(post) = r.post { r.face = Some(v3::yaw_to(post, watch)); r.watch = Some(watch); }
             }
         }
@@ -327,7 +328,7 @@ fn wall_charge_repick(g: &mut crate::game::Game, op: WallOpId) {
             let q = match pick { Some(q) => q, None => continue };
             o!(g, op).post.set(gd, q);
             o!(g, op).redealt.as_mut().unwrap().add(gd);
-            let standing = match o!(g, op).mine.get(gd).copied() { Some(a) => asg!(g, a).going == "standing off", None => false };
+            let standing = match o!(g, op).mine.get(gd).copied() { Some(a) => asg!(g, a).going.at == crate::orders::At::StandingOff, None => false };
             if standing { wall_charge_stand_off(g, op, gd); }
             moved += 1;
         }

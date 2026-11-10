@@ -52,7 +52,7 @@ pub(super) fn door_tools_close_up(g: &mut crate::game::Game, op: DoorOpId, gd: O
     if blocked_at(g, q[0], q[2]) || solid_blocked(g, [p.pos[0], 0.45, p.pos[2]], [q[0], 0.45, q[2]]) { return; }
     let fc = frame(g, d);
     let name = crate::orders::door_words(g, d);
-    door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(q), face: Some(p.face), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(crate::character::Stance::Stack), upper: Some(crate::character::UpperMode::None), stack_side: Some(p.stack_side), going: format!("closing up · {}", name), there: format!("on the frame · {}", name), ..Default::default() });
+    door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(q), face: Some(p.face), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(crate::character::Stance::Stack), upper: Some(crate::character::UpperMode::None), stack_side: Some(p.stack_side), going: format!("closing up · {}", name).into(), there: format!("on the frame · {}", name).into(), ..Default::default() });
 }
 
 /// The lead back onto his own jamb, after his boot.
@@ -61,7 +61,7 @@ pub(super) fn door_tools_back_to_jamb(g: &mut crate::game::Game, op: DoorOpId, g
     let d = dop!(g, op).door;
     let fc = frame(g, d);
     let name = crate::orders::door_words(g, d);
-    door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(p.pos), face: Some(p.face), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(crate::character::Stance::Stack), upper: Some(crate::character::UpperMode::None), stack_side: Some(p.stack_side), going: format!("stacking · {}", name), there: format!("stacked · {}", name), ..Default::default() });
+    door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(p.pos), face: Some(p.face), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(crate::character::Stance::Stack), upper: Some(crate::character::UpperMode::None), stack_side: Some(p.stack_side), going: format!("stacking · {}", name).into(), there: crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", name)), ..Default::default() });
 }
 
 /// Unlatched and shoved hard into the room from the jamb.
@@ -83,7 +83,7 @@ pub(super) fn door_tools_shove(g: &mut crate::game::Game, op: DoorOpId) {
     g.dr[d].leaf.last_who = id;
     let dp = crate::doors::door_pos(g, d);
     if crate::silent::silent_ease(g, lead) { crate::audio_iface::game_audio_like_play(g, "doorCreak", Some(dp), Some(0.5), None); } else { crate::audio_iface::game_audio_like_play(g, "doorBash", Some(dp), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 })); }
-    door_tools_beat(g, op, "shove");
+    door_tools_beat_is(g, op, crate::doortools::Beat::Shove, "shove");
 }
 
 /// The leaf is moving or stood open: what comes next, by the order.
@@ -245,7 +245,7 @@ pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemI
     g.sets[g.seat].door_tools.stats.bangs += 1.0;
     if dop!(g, op).thr.is_none() { door_tools_close_up(g, op, None); }
     let off = off_of(g, d, at, side);
-    door_tools_beat(g, op, &format!("bang · {} {} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, js::to_fixed(m::abs(off), 1)));
+    door_tools_beat_is(g, op, crate::doortools::Beat::Bang, &format!("bang · {} {} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, js::to_fixed(m::abs(off), 1)));
     if dop!(g, op).thr.is_some() { door_tools_thr_banged(g, op); }
 }
 
@@ -608,7 +608,7 @@ pub(super) fn door_tools_on_sector(g: &mut crate::game::Game, gd: GuardId, a: Or
     let watch = match pod.watch { Some(w) => [w[0], w[1], w[2]], None => [p[0] + m::sin(yaw) * 4.0, 1.2, p[2] + m::cos(yaw) * 4.0] };
     asg!(g, a).watch = Some(watch);
     asg!(g, a).face = Some(yaw);
-    asg!(g, a).there = String::from("holding the room");
+    asg!(g, a).there = "holding the room".into();
     yaw
 }
 
@@ -837,7 +837,7 @@ pub(super) fn door_tools_other_doors(g: &mut crate::game::Game, op: DoorOpId, en
         let words = crate::orders::door_words(g, o);
         asg!(g, a).watch = Some(r.w);
         asg!(g, a).face = Some(yaw);
-        asg!(g, a).there = format!("holding · {}", words);
+        asg!(g, a).there = format!("holding · {}", words).into();
         if let Some(h) = g.sets[g.seat].door_tools.held.get_mut(r.gd) {
             h.face = yaw;
             h.d = 0.0;
@@ -991,12 +991,12 @@ pub(super) fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
             let pace = g.sets[g.seat].orders.knobs.entry;
             // (NIGHTBREACH.opLights: true on the page)
             let light = g.sets[g.seat].door_tools.lights.unwrap_or(true);
-            door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(to), face: Some(yaw), watch: Some(w), shy: Some(None), thru: Some(d), pace: Some(pace), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light), search: Some(true), going: format!("to the far door · {}", name), there: format!("holding · {}", name), ..Default::default() });
+            door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(to), face: Some(yaw), watch: Some(w), shy: Some(None), thru: Some(d), pace: Some(pace), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light), search: Some(true), going: format!("to the far door · {}", name).into(), there: format!("holding · {}", name).into(), ..Default::default() });
         }
         let a = *dop!(g, op).mine.get(gd).unwrap();
         asg!(g, a).watch = Some(w);
         asg!(g, a).face = Some(yaw);
-        asg!(g, a).there = format!("holding · {}", name);
+        asg!(g, a).there = format!("holding · {}", name).into();
         g.sets[g.seat].door_tools.held.set(gd, crate::doortools::DoorToolsHeldValue { a, face: yaw, d: 0.0, hit_t: m::NAN, arr_t: m::NAN, out: Some(true), door: Some(o) });
         said.push(format!("{} {} {}", g.gd[gd].callsign, if post.is_some() { "up to" } else { "on" }, g.dr[o].def.name));
     }

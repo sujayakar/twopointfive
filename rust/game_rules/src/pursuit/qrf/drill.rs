@@ -436,12 +436,12 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         g.qrf.bangs = cast(g).tools.bangs + (if g.tab.doortools_door_op[op].bang_held { 1.0 } else { 0.0 });
         return;
     }
-    let why: String = if running { String::from("too long") } else { g.tab.doortools_door_op[op].ended.clone().unwrap_or_else(|| String::from("gone")) };
+    let ended = g.tab.doortools_door_op[op].ended;
     drop_drill(g);
-    note(g, &format!("drill-end:{}", why));
-    if why != "gone" { g.qrf.spent = Some(QrfSpent { room: t.room.clone(), fix_t: g.qrf.fix_t }); }
-    if why == "gone" { hold360(g, el); return; }   // (the tools started afresh under it: they re-form where they stand)
-    if why == "in" {
+    note(g, &format!("drill-end:{}", if running { "too long" } else { ended.map_or("gone", |e| e.as_str()) }));
+    if !running && ended.is_none() { hold360(g, el); return; }   // (the tools started afresh under it: they re-form where they stand)
+    g.qrf.spent = Some(QrfSpent { room: t.room.clone(), fix_t: g.qrf.fix_t });
+    if !running && ended == Some(crate::doortools::Ended::In) {
         g.qrf.phase = Phase::Called;
         g.qrf.phase_t = 0.0;
         let now = g.time;
@@ -451,7 +451,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         radio(g, Some(el[0]), &format!("{} clear — negative contact. {}", t.room, rest));
         note(g, &format!("clear:{}", t.room));
     } else {
-        let line = if why == "too long" {
+        let line = if running {
             format!("{} is taking too long — leave it, next", t.room)
         } else {
             let word = crate::words::wg(g, &"into", &"onto");

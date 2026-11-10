@@ -204,7 +204,7 @@ pub(super) fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::S
         }
         let A = &g.tab.orders_assignment[a];
         let (Some(door), Some(post)) = (A.door, A.post) else { continue };
-        if !(crate::orders::rows::id_is(&A.order, crate::orders::Is::Stacks) && A.there.starts_with("stacked")) {
+        if !(crate::orders::rows::id_is(&A.order, crate::orders::Is::Stacks) && A.there.at == crate::orders::At::Stacked) {
             continue;
         }
         let sam = sam_pos(g, seat);
@@ -489,7 +489,7 @@ fn door_tools_word_on_hold(g: &mut crate::game::Game, men: &[GuardId]) -> bool {
         if dop!(g, op).word.is_some() {
             continue;
         }
-        door_tools_beat(g, op, "the word");
+        door_tools_beat_is(g, op, crate::doortools::Beat::Word, "the word");
         if door_tools_word_steps(g, op) {
             door_tools_word_step_in(g, op);
         } else {
@@ -555,13 +555,13 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
         if matches!(dop!(g, op).phase, Phase::Ready | Phase::Armed | Phase::Thr) {
             dop!(g, op).hold = 1.0;
         }
-        door_tools_beat(g, op, "the word");
+        door_tools_beat_is(g, op, crate::doortools::Beat::Word, "the word");
         for gd in dop!(g, op).men.clone() {
             let Some(a) = dop!(g, op).mine.get(gd).copied() else { continue };
-            if g.tab.orders_assignment[a].there.starts_with("ready") {
+            if g.tab.orders_assignment[a].there.at == crate::orders::At::Ready {
                 let door = dop!(g, op).door;
                 let words = crate::orders::door_words(g, door);
-                g.tab.orders_assignment[a].there = format!("stacked · {}", words);
+                g.tab.orders_assignment[a].there = crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", words));
             }
         }
     }
@@ -623,8 +623,8 @@ fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) 
             stance: Some(if P.lead { crate::character::Stance::Stack } else { crate::character::Stance::HighReady }),
             upper: Some(crate::character::UpperMode::None),
             stack_side: Some(P.stack_side),
-            going: format!("stacking · {}", name),
-            there: format!("stacked · {}", name),
+            going: format!("stacking · {}", name).into(),
+            there: crate::orders::Doing::new(crate::orders::At::Stacked, format!("stacked · {}", name)),
             ..Default::default()
         };
         door_tools_assign(g, op, gd, &a);
@@ -767,7 +767,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
     let t = g.time;
     let name = crate::orders::door_words(g, d);
     if is_open(g, d) {
-        door_tools_beat(g, op, "open already");
+        door_tools_beat_is(g, op, crate::doortools::Beat::OpenAlready, "open already");
         let angle = g.dr[d].leaf.angle;
         if m::abs(angle) < 1.2 {
             g.dr[d].leaf.closing = false;
@@ -790,7 +790,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
         }
         if g.dr[d].def.steel.unwrap_or(false) {
             say(g, lead, "it's steel. no way through.");
-            door_tools_end(g, op, "steel and locked");
+            door_tools_end(g, op, crate::doortools::Ended::SteelAndLocked);
             return;
         }
         if crate::silent::silent_pick(g) && door_tools_pickable(g, d) {
@@ -818,7 +818,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
                 None => String::from(crate::words::wg(g, &"locked. can't kick it while we're silent.", &"locked. no boot while we are silent.")),
             };
             say(g, lead, &text);
-            door_tools_end(g, op, "locked · silent: no boot");
+            door_tools_end(g, op, crate::doortools::Ended::SilentNoBoot);
             return;
         }
         if boot.is_none() && door_tools_to_gun(g, op) {
@@ -834,8 +834,8 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
             watch: None,
             stance: Some(crate::character::Stance::None),
             upper: Some(crate::character::UpperMode::None),
-            going: format!("on the door · {}", name),
-            there: String::from("breaching"),
+            going: format!("on the door · {}", name).into(),
+            there: "breaching".into(),
             ..Default::default()
         };
         door_tools_assign(g, op, lead, &a);
@@ -873,8 +873,8 @@ pub(super) fn door_tools_to_handle(g: &mut crate::game::Game, op: DoorOpId, gate
         watch: None,
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::None),
-        going: format!("on the door · {}", words),
-        there: String::from("on the handle"),
+        going: format!("on the door · {}", words).into(),
+        there: "on the handle".into(),
         ..Default::default()
     };
     door_tools_assign(g, op, lead, &a);
@@ -1407,7 +1407,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
         }
     }
     if men.is_empty() {
-        door_tools_end(g, op, "nobody left on it");
+        door_tools_end(g, op, crate::doortools::Ended::NobodyLeft);
         return;
     }
     let lead = dop!(g, op).lead;

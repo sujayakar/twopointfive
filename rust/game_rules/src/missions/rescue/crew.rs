@@ -1,4 +1,5 @@
 use super::*;                      // your own module: its types, its other parts' functions
+use crate::doortools::{Beat, Ended};
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -735,7 +736,7 @@ fn rescue_post(g: &mut crate::game::Game, op: GuardId, look: Option<V3>, door: O
     crate::orders::squad_orders_assign(g, op, &crate::orders::SquadOrdersAssignA {
         order: String::from(crate::orders::rows::cover::ORDER.id), post: Some([p[0], 0.0, p[2]]), face: Some(y), watch: Some(watch),
         stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-        going: words.clone(), there: words,
+        going: words.clone().into(), there: words.into(),
         ..Default::default()
     });
     if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), op) { g.rescue.auto.add(a); }
@@ -765,25 +766,25 @@ fn rescue_tick_entry(g: &mut crate::game::Game) {
         let open_clear = row.kind == DoorToolKind::OpenClear;
         while (en.ops[i].seen as usize) < row.beats.len() {
             let beat = &row.beats[en.ops[i].seen as usize];
-            let (at, w) = (beat.t, beat.what.as_str());
-            if w == "stacked" { out.push((at, format!("stacked{}", tag), 0.0)); }
-            else if w == "kick" || w == "shove" {
-                out.push((at, format!("door-flung{}", tag), 4.0));
-                if open_clear { out.push((at, format!("nobang{}", tag), 5.0)); }
+            let at = beat.t;
+            match beat.is {
+                Beat::Stacked => out.push((at, format!("stacked{}", tag), 0.0)),
+                Beat::Kick | Beat::Shove | Beat::OpenAlready => {
+                    let door = if beat.is == Beat::OpenAlready { "open" } else { "flung" };
+                    out.push((at, format!("door-{}{}", door, tag), 4.0));
+                    if open_clear { out.push((at, format!("nobang{}", tag), 5.0)); }
+                }
+                Beat::Toss => out.push((at, format!("toss{}", tag), 5.0)),
+                Beat::Bang => out.push((at, format!("bang{}", tag), 5.0)),
+                Beat::Go => {
+                    out.push((at, String::from(if is_side { "enter:side" } else { "enter1" }), 5.0));
+                    if en.in_t.is_nan() { en.in_t = at; }
+                }
+                Beat::Word | Beat::Other => {}
             }
-            else if w == "open already" {
-                out.push((at, format!("door-open{}", tag), 4.0));
-                if open_clear { out.push((at, format!("nobang{}", tag), 5.0)); }
-            }
-            else if w.starts_with("toss:") { out.push((at, format!("toss{}", tag), 5.0)); }
-            else if w.starts_with("bang") { out.push((at, format!("bang{}", tag), 5.0)); }
-            else if w == "go" {
-                out.push((at, String::from(if is_side { "enter:side" } else { "enter1" }), 5.0));
-                if en.in_t.is_nan() { en.in_t = at; }
-            }
-            else if w.starts_with("end: ") { en.ops[i].ended = Some(String::from(&w[5..])); }
             en.ops[i].seen += 1.0;
         }
+        en.ops[i].ended = row.ended;
     }
     let en = g.rescue.entry.as_ref().unwrap();
     let (gate, split) = (en.gate, en.split);
@@ -808,13 +809,13 @@ fn rescue_tick_entry(g: &mut crate::game::Game) {
     let en = match g.rescue.entry.clone() { Some(en) => en, None => return };
     if !live.is_empty() { return; }
     let up: Vec<GuardId> = en.men.iter().copied().filter(|&o| !crate::condition::down(g, g.gd[o].ch)).collect();
-    if !up.is_empty() && en.ops.iter().all(|e| matches!(e.ended.as_deref(), Some("re-ordered") | Some("nobody left on it"))) {
+    if !up.is_empty() && en.ops.iter().all(|e| matches!(e.ended, Some(Ended::ReOrdered | Ended::NobodyLeft))) {
         rescue_note(g, "drill:called-off");
         rescue_end_entry(g, false);
         return;
     }
     if en.in_t.is_nan() {
-        let why = if up.is_empty() { String::from("lost") } else { en.ops[0].ended.clone().unwrap_or_else(|| String::from("null")) };
+        let why = if up.is_empty() { "lost" } else { en.ops[0].ended.map_or("null", |e| e.as_str()) };
         rescue_note(g, &format!("entry:{}", why));
         rescue_end_entry(g, false);
         return;
@@ -874,7 +875,7 @@ fn rescue_search(g: &mut crate::game::Game) {
                 let row = &g.tab.orders_assignment[a];
                 let kept = RescueSearchAValue { a, face: row.face, watch: row.watch, there: row.there.clone() };
                 g.rescue.search_a.set(o, kept);
-                g.tab.orders_assignment[a].there = String::from("searching the room");
+                g.tab.orders_assignment[a].there = "searching the room".into();
                 let line = format!("search:{}", g.gd[o].callsign);
                 rescue_note(g, &line);
                 t

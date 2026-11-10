@@ -134,7 +134,7 @@ impl Owes {
         let fighting = game::roomfight::room_fight_engaged(g, gd) || (h.script.is_none() && matches!(h.state, GuardState::Alert | GuardState::Search));
         let blind = g.cond[h.ch].blind_until > t || g.cond[h.ch].fold_until > t;
         let off_it = !a.arrived && a.post.is_some_and(|q| flat(p, q) > 0.6);
-        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there == "stopped short")
+        (!g.cond[h.ch].down && off_it && !fighting && !blind, a.there.at == game::orders::At::StoppedShort)
     }
     fn overlaps(&mut self, g: &Game, t: f64) {
         let mut team: Vec<(usize, [f64; 3])> = Vec::new();

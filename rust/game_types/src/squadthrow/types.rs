@@ -85,10 +85,10 @@ impl Default for Walk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WalkBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,
@@ -160,10 +160,10 @@ impl Default for Lent {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LentBack {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub order: String,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub t0: Option<f64>,
     pub follow: Option<f64>,
     pub watch: Option<V3>,

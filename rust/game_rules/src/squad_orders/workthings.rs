@@ -340,8 +340,8 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
         move_: Some(walk),
-        going: format!("to {}", th.name),
-        there: format!("at {}", th.name),
+        going: format!("to {}", th.name).into(),
+        there: format!("at {}", th.name).into(),
         set_line: None,
         ..Default::default()
     });
@@ -363,8 +363,8 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
                 move_: Some(walk),
                 spare: Some(true),
                 from: Some([p[0], 0.0, p[2]]),
-                going: String::from("moving"),
-                there,
+                going: "moving".into(),
+                there: there.into(),
                 set_line: Some(String::from("set.")),
                 ..Default::default()
             });
@@ -376,8 +376,8 @@ pub(super) fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &
                 face: Some(yaw),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 ..Default::default()
             });
         }
@@ -410,7 +410,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
     // the orders bring a mark to a man who cannot reach it, and call that arrived: he is not at the thing
     let far = match g.tab.orders_assignment[a].post { None => true, Some(post) => flat(post, stand) > 0.3 };
     if far {
-        let line = if g.tab.orders_assignment[a].there == "stopped short" { None } else { Some("can't get to it.") };
+        let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get to it.") };
         work_things_settle(g, gd, &mut j, line, false);
         return;
     }
@@ -426,7 +426,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
     g.tab.orders_assignment[a].pace = if low { Some(low_pace) } else { None };
     if !on {
         if j.t0 >= 0.0 { work_things_hand_off(g, gd, &mut j); }
-        g.tab.orders_assignment[a].there = format!("at {}", th.name);
+        g.tab.orders_assignment[a].there = format!("at {}", th.name).into();
         return;
     }
     if j.t0 < 0.0 {
@@ -451,9 +451,9 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
     let need = work_things_need_of(g, verb);
     let k = (now - j.t0) / need;
     g.tab.orders_assignment[a].there = if verb == WorkVerb::Drive {
-        format!("{}… {}%", work_things_words(g, &th), m::min(99.0, m::round(k * 100.0)))
+        format!("{}… {}%", work_things_words(g, &th), m::min(99.0, m::round(k * 100.0))).into()
     } else {
-        format!("on {}", th.name)
+        format!("on {}", th.name).into()
     };
     if k < 1.0 { return; }
     let line: String;
@@ -502,8 +502,8 @@ fn work_things_settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wor
         face: Some(face),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
-        going: String::from("holding"),
-        there: if turn { format!("holding · {}", th.name) } else { String::from("holding") },
+        going: "holding".into(),
+        there: if turn { format!("holding · {}", th.name).into() } else { String::from("holding").into() },
         set_line: None,
         ..Default::default()
     });

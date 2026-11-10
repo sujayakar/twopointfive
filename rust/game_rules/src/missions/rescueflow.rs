@@ -694,8 +694,8 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
                     stance: Some(crate::character::Stance::None),
                     upper: Some(crate::character::UpperMode::Aim),
                     move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-                    going: alloc::format!("holding {}", hall),
-                    there: alloc::format!("holding {}", hall),
+                    going: alloc::format!("holding {}", hall).into(),
+                    there: alloc::format!("holding {}", hall).into(),
                     ..Default::default()
                 },
             );
@@ -766,8 +766,8 @@ fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_sce
             stance: Some(crate::character::Stance::None),
             upper: Some(crate::character::UpperMode::Aim),
             move_: Some(crate::doortools::DoorToolsDoneItemLaneBackMove { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim }),
-            going: alloc::format!("moving · {}", o.name),
-            there: alloc::format!("covering {}", o.name),
+            going: alloc::format!("moving · {}", o.name).into(),
+            there: alloc::format!("covering {}", o.name).into(),
             ..Default::default()
         },
     );
@@ -795,8 +795,8 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
             face: None,
             stance: Some(crate::character::Stance::LowReady),
             upper: Some(crate::character::UpperMode::None),
-            going: String::from("catching up"),
-            there: String::from("with you"),
+            going: "catching up".into(),
+            there: "with you".into(),
             ..Default::default()
         },
     );

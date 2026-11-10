@@ -297,8 +297,12 @@ fn flankers_running(g: &crate::game::Game, plan: TacticsPlanId) -> bool {
     false
 }
 
+/// why everybody pushes
+#[derive(Clone, Copy, PartialEq)]
+enum Go { Set, Contact, TimeUp }
+
 /// the word: everybody pushes
-fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, why: &str) {
+fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, why: Go) {
     if g.tab.tactics_plan[plan].phase != PlanPhase::Approach {
         return;
     }
@@ -307,7 +311,7 @@ fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, why: 
     for r in roles {
         g.tab.tactics_role[r].holding = false;
     }
-    let line = if why == "contact" { "eyes on — go go go" } else if why == "timeout" { "can't wait — pushing, go" } else { "go go go" };
+    let line = match why { Go::Contact => "eyes on — go go go", Go::TimeUp => "can't wait — pushing, go", Go::Set => "go go go" };
     crate::game::game_say(g, caller, line, Some(true), None);
     g.tab.tactics_plan[plan].last_radio_t = g.time;
     for m in g.tab.tactics_plan[plan].members.clone() {
@@ -381,10 +385,10 @@ fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt: f6
                     g.tab.tactics_role[role].hold_t += dt;
                 }
                 if ready_to_go(g, plan) {
-                    let why = if g.tab.tactics_plan[plan].contact { "contact" } else { "set" };
+                    let why = if g.tab.tactics_plan[plan].contact { Go::Contact } else { Go::Set };
                     go_now(g, plan, gd, why);
                 } else if g.tab.tactics_role[role].hold_t >= g.tune.flank_wait {
-                    go_now(g, plan, gd, "timeout");
+                    go_now(g, plan, gd, Go::TimeUp);
                 }
             }
             out

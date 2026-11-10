@@ -109,7 +109,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
     let row = &mut g.tab.orders_assignment[a];
     row.watch = Some([p[0] + m::sin(yaw) * 5.0, 1.1, p[2] + m::cos(yaw) * 5.0]);
     row.face = Some(yaw);
-    row.there = String::from("clearing the room");
+    row.there = "clearing the room".into();
     true
 }
 
@@ -305,8 +305,8 @@ fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
         upper: Some(crate::character::UpperMode::Aim),
         light: Some(g.sets[g.seat].door_tools.lights.unwrap_or(true)),
         search: Some(true),
-        going: String::from(going),
-        there: String::from("holding the room"),
+        going: String::from(going).into(),
+        there: "holding the room".into(),
         ..Default::default()
     };
     door_tools_assign(g, op, gd, &a);
@@ -873,7 +873,7 @@ fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueu
     }
     g.tab.doortools_door_op[op].phase = Phase::Enter;
     g.tab.doortools_door_op[op].t0 = t;
-    door_tools_beat(g, op, "go");
+    door_tools_beat_is(g, op, crate::doortools::Beat::Go, "go");
     let lead = g.tab.doortools_door_op[op].lead;
     crate::game::game_say(g, lead, "going in.", None, None);
 }
@@ -900,7 +900,7 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     let pods = door_tools_pods(g, door, side, Some(if n_men > 2 || big { 4.0 } else { n_men as f64 }));
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None);
-        door_tools_end(g, op, "no floor inside");
+        door_tools_end(g, op, crate::doortools::Ended::NoFloorInside);
         return;
     }
     let first = door_tools_first_in(g, op, Some(pods[0].pos), None);

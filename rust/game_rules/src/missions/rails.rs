@@ -455,8 +455,8 @@ fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>) {
         face: Some(yaw),
         stance: Some(crate::character::Stance::LowReady),
         upper: Some(crate::character::UpperMode::None),
-        going: String::from("holding"),
-        there: String::from("holding"),
+        going: "holding".into(),
+        there: "holding".into(),
         crouch: if low { Some(true) } else { None },
         ..Default::default()
     };
