@@ -13,17 +13,17 @@ struct GunFrame {
 impl GunFrame {
     fn of(fk: &Fk) -> GunFrame {
         let wrist = fk.at(role(HAND_R));
-        let bore = normalize(sub3(fk.at(role(MIDDLE1_R)), wrist));
-        let y = mad3(AY, bore, -bore[1]);
-        let up = if len3(&y) > 1e-4 { normalize(y) } else { [0.0, 0.0, -1.0] };
-        GunFrame { wrist, bore, up, left: cross3(&up, &bore) }
+        let bore = v3::normalize(v3::sub(fk.at(role(MIDDLE1_R)), wrist));
+        let y = v3::mad(AY, bore, -bore[1]);
+        let up = if v3::len(y) > 1e-4 { v3::normalize(y) } else { [0.0, 0.0, -1.0] };
+        GunFrame { wrist, bore, up, left: v3::cross(up, bore) }
     }
     fn dir(&self, p: &[f64; 3]) -> [f64; 3] {
         let (x, y, d) = (&self.left, &self.up, &self.bore);
         [x[0] * p[0] + y[0] * p[1] + d[0] * p[2], x[1] * p[0] + y[1] * p[1] + d[1] * p[2], x[2] * p[0] + y[2] * p[1] + d[2] * p[2]]
     }
     fn at(&self, p: &[f64; 3]) -> [f64; 3] {
-        add3(self.wrist, self.dir(p))
+        v3::add(self.wrist, self.dir(p))
     }
 }
 /// What the steps of a reload hand on to the ones after them.
@@ -152,7 +152,7 @@ fn as_it_lies(fk: &mut Fk, hand_l: usize, q: &mut Feed) {
 /// Off a point in the trunk's frame.
 fn tk(q: &Feed, from: [f64; 3], by: [f64; 3]) -> [f64; 3] {
     let Feed { left, up, fwd, .. } = *q;
-    mad3(mad3(mad3(from, left, by[0]), up, by[1]), fwd, by[2])
+    v3::mad(v3::mad(v3::mad(from, left, by[0]), up, by[1]), fwd, by[2])
 }
 
 /// The hip's pouches: off the pelvis in the trunk's frame, or by the hips' own line where a bladed chest would carry them round with it.
@@ -160,9 +160,9 @@ fn hip_line(fk: &mut Fk, q: &mut Feed) {
     let Feed { hip_line, left, up, fwd, .. } = *q;
     let hips = fk.at(role(HIPS));
     let (hl, hf) = if hip_line {
-        let across = sub3(fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
-        let level = normalize(mad3(across, up, -dot3(&across, &up)));
-        (level, cross3(&level, &up))
+        let across = v3::sub(fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
+        let level = v3::normalize(v3::mad(across, up, -v3::dot(across, up)));
+        (level, v3::cross(level, up))
     } else {
         (left, fwd)
     };
@@ -172,7 +172,7 @@ fn hip_line(fk: &mut Fk, q: &mut Feed) {
 /// Off the hips by the hips' line.
 fn hk(q: &Feed, by: [f64; 3]) -> [f64; 3] {
     let Feed { up, hips, hl, hf, .. } = *q;
-    mad3(mad3(mad3(hips, hl, by[0]), up, by[1]), hf, by[2])
+    v3::mad(v3::mad(v3::mad(hips, hl, by[0]), up, by[1]), hf, by[2])
 }
 
 /// Which pouch, the beats, and the hand: round a thing from its front (fingers across it, palm toward him), or fingers down into the pouch.
@@ -183,7 +183,7 @@ fn pouch_and_beats(fk: &mut Fk, q: &mut Feed) {
     let (o, i, r, dur) = (bt.out, bt.in_, bt.rack, bt.dur);
     // the hand: round a thing from its front (fingers across it, palm toward him) · fingers down into the pouch
     let (mf, mb) = (gun.dir(&[-1.0, 0.15, 0.1]), gun.dir(&[0.1, -0.35, 1.0]));
-    let (pf, pb) = (mad3(mad3(scale3(up, -0.9), left, -0.3), fwd, 0.1), mad3(fwd, left, 0.3));
+    let (pf, pb) = (v3::mad(v3::mad(v3::scale(up, -0.9), left, -0.3), fwd, 0.1), v3::mad(fwd, left, 0.3));
     *q = Feed { pouch, r_pole, pole_w, o, i, r, dur, mf, mb, pf, pb, ..*q };
 }
 
@@ -250,10 +250,10 @@ fn mag_points(marks: &FeedMarks, q: &mut Feed) {
     let hp = if fum { half - 0.1 } else { half };
     let slap = fum && bt.pull && r - i >= 0.4;
     let fl = if fum { (1.0 - tr) * max(bump(t, i - 0.36, i - 0.22, i - 0.09, i + 0.02), if slap { bump(t, i + 0.07, i + 0.15, i + 0.19, i + 0.27) } else { 0.0 }) } else { 0.0 };
-    let hit = mad3(mad3(mad3(mag, gun.up, -0.035), gun.left, wob * 1.2), gun.bore, wob * 1.6);
-    let off = if fum { tk(q, lerp3(&hit, &strip, 0.65), scale3(MV2.reload.flare.off, 1.0 - tr)) } else { hit };
-    let tap_p = if slap { tk(q, mad3(mag, gun.up, -MV2.reload.tap * (1.0 - tr)), scale3(MV2.reload.flare.tap, 1.0 - tr)) } else { mag };
-    let over = mad3(mad3(pl, gun.bore, -(MV2.reload.fling + 0.1 * (1.0 - tr))), gun.left, 0.04 + 0.05 * (1.0 - tr));
+    let hit = v3::mad(v3::mad(v3::mad(mag, gun.up, -0.035), gun.left, wob * 1.2), gun.bore, wob * 1.6);
+    let off = if fum { tk(q, v3::lerp3(hit, strip, 0.65), v3::scale(MV2.reload.flare.off, 1.0 - tr)) } else { hit };
+    let tap_p = if slap { tk(q, v3::mad(mag, gun.up, -MV2.reload.tap * (1.0 - tr)), v3::scale(MV2.reload.flare.tap, 1.0 - tr)) } else { mag };
+    let over = v3::mad(v3::mad(pl, gun.bore, -(MV2.reload.fling + 0.1 * (1.0 - tr))), gun.left, 0.04 + 0.05 * (1.0 - tr));
     *q = Feed { mag, strip, hd, pl, fum, hp, fl, hit, off, tap_p, over, ..*q };
 }
 
@@ -322,7 +322,7 @@ fn lines(q: &Feed, a0: [f64; 3], a1: [f64; 3], a2: [f64; 3]) -> [f64; 3] {
 fn mag_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, hand_l: usize, up_l: usize, fore_l: usize, q: &Feed) {
     let Feed { fix_l, r_pole, pole_w, mf, mb, pf, pb, fl, to, hf_d, hb_d, .. } = *q;
     let rot = hand_rot(&fix_l, lines(q, mf, pf, hf_d), lines(q, mb, pb, hb_d));
-    let pole = if fl > 0.0 { lerp3(&r_pole, &MV2.reload.flare.pole, fl) } else { r_pole };
+    let pole = if fl > 0.0 { v3::lerp3(r_pole, MV2.reload.flare.pole, fl) } else { r_pole };
     two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &to, Some(&pole), pole_w, Some(&rot), false);
 }
 
@@ -358,13 +358,13 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
         let (cur, rot0) = (fk.at(hand_l), fk.rot(hand_l));
         let (left, up, fwd) = trunk_frame(fk);
         let hips = fk.at(role(HIPS));
-        let tk = |p: [f64; 3]| mad3(mad3(mad3(hips, left, p[0]), up, p[1]), fwd, p[2]);
+        let tk = |p: [f64; 3]| v3::mad(v3::mad(v3::mad(hips, left, p[0]), up, p[1]), fwd, p[2]);
         let (pouch, dump) = (tk(tune.kit.mag.pouch), tk(tune.kit.mag.dump));
         let (o, i, r, dur, kp, fr) = (bt.out, bt.in_, bt.rack, bt.dur, bt.keep, bt.fresh);
         let (well, strip) = (gun.at(&tune.kit.mag.well), gun.at(&tune.kit.mag.strip));
         let (sl, pl) = (gun.at(&tune.kit.mag.slide), gun.at(&tune.kit.mag.pull));
         // (seated: the heel of the palm drives it the last centimetre)
-        let seat = mad3(well, gun.up, 0.012);
+        let seat = v3::mad(well, gun.up, 0.012);
         let mut p = Path::of(&[(0.0, cur), (max(0.08, o - 0.14), well), (o, well), (o + 0.1, strip)]);
         if kp >= 0.0 {
             p.push((o + 0.04 + kp) * 0.5, tk(tune.kit.mag.via));
@@ -380,14 +380,14 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
             p.push(r - 0.09, sl);
             p.push(r, sl);
             p.push(r + 0.07, pl);
-            p.push(r + 0.15, mad3(pl, gun.up, 0.03));
+            p.push(r + 0.15, v3::mad(pl, gun.up, 0.03));
         } else {
             p.push(i + 0.3, cur);
         }
         p.push(dur - 0.03, cur);
         let (wf, wb) = (gun.dir(&tune.kit.mag.wf), gun.dir(&tune.kit.mag.wb));
         let (sf, sb) = (gun.dir(&tune.kit.mag.sf), gun.dir(&tune.kit.mag.sb));
-        let (pf, pb) = (mad3(mad3(scale3(up, -0.9), left, -0.25), fwd, 0.15), mad3(fwd, left, 0.4));
+        let (pf, pb) = (v3::mad(v3::mad(v3::scale(up, -0.9), left, -0.25), fwd, 0.15), v3::mad(fwd, left, 0.4));
         let (hq, hr) = (if kp >= 0.0 { kp - 0.06 } else { fr }, fr + 0.09);
         let lines = |a0: [f64; 3], a1: [f64; 3], a2: [f64; 3]| {
             let mut q = Path::of(&[(max(0.08, o - 0.14), a0), (o + 0.1, a0), (hq, a1), (hr, a1), (i - 0.2, a0), (i + 0.07, a0)]);

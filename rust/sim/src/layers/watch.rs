@@ -65,9 +65,9 @@ pub fn watch_look(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
             fk_run(rig, d, fk.rot, fk.pos);
             ran |= RAN_ALL;
             let hr = fk.rot(hd);
-            let gaze = q_rotate(&hr, &gaze_local);
-            let eyes = mad3(mad3(fk.at(hd), q_rotate(&hr, &AY), 0.1), gaze, 0.08);
-            let want = normalize(sub3(m, eyes));
+            let gaze = quat::rotate(hr, gaze_local);
+            let eyes = v3::mad(v3::mad(fk.at(hd), quat::rotate(hr, AY), 0.1), gaze, 0.08);
+            let want = v3::normalize(v3::sub(m, eyes));
             let yaw_e = clamp(wrap_angle(atan2(want[0], want[2]) - atan2(gaze[0], gaze[2])), -tune.watch.yaw * DEGR, tune.watch.yaw * DEGR);
             let pitch_e = clamp(asin(clamp(gaze[1], -1.0, 1.0)) - asin(clamp(want[1], -1.0, 1.0)), -tune.watch.up * DEGR, tune.watch.down * DEGR);
             if wt.w < 0.01 {
@@ -86,8 +86,8 @@ pub fn watch_look(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f6
             let (sh0, sh1, sh2) = (tune.watch.share[0], tune.watch.share[1], tune.watch.share[2]);
             let rest = sh1 + sh2;
             turn(d, rig, s3, q_yaw(yw * sh0));
-            turn(d, rig, nk, q_mul(&q_yaw(yw * sh1), &q_pitch(pw * sh1 / rest)));
-            turn(d, rig, hd, q_mul(&q_yaw(yw * sh2), &q_pitch(pw * sh2 / rest)));
+            turn(d, rig, nk, quat::mul(q_yaw(yw * sh1), q_pitch(pw * sh1 / rest)));
+            turn(d, rig, hd, quat::mul(q_yaw(yw * sh2), q_pitch(pw * sh2 / rest)));
         }
         ran
     })
@@ -125,7 +125,7 @@ pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> u32
         fk_run(rig, d, fk.rot, fk.pos);
         let sh = fk.at(up);
         let to = [sh[0] + sx * tune.watch.arm_out, sh[1] - tune.watch.arm_down, sh[2] + sz * tune.watch.arm_out];
-        let r = hand_rot(&fix, normalize([sx * 0.75, -0.55, sz * 0.75]), [-sx * 0.3, 1.0, -sz * 0.3]);
+        let r = hand_rot(&fix, v3::normalize([sx * 0.75, -0.55, sz * 0.75]), [-sx * 0.3, 1.0, -sz * 0.3]);
         two_bone_ik(rig, d, fk.rot, fk.pos, up, fore, hand_n, &to, Some(&[sgn * 0.5, -0.3, -0.8]), 0.6, Some(&r), false);
         hand(d, hh, side, &[0.12, 0.15, 0.18, 0.22], 0.15, 0.35);
     });

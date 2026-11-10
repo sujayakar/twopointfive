@@ -9,8 +9,10 @@ use game_types::rig_props::{Adj as RigAdj, SlingFrontHand, BIGRIG, RIG};
 use game_types::character::{Anim, AnimBigTool, AnimFoot, AnimFootSpot, AnimStep, AnimHdFix, AnimKickFrom, AnimKickLeg, AnimLongGrip, AnimThrLast, AnimWtk, BlowRun, BlowStyle, Character, CharacterTn, DoorPush, HaulPose, HeldPose, HoldPhase, HoldPose, HoldVariant, KitItem, KnifeSlash, MvGait, ReadyKind, ReadyShape, SignalKind, Spring, Stance, TakenStyle, ThrowTables as Tables, WorkKind, WorkPose};
 use game_types::gunreload::{FeedKey, FeedKeyAt, FeedKeyHow, FeedMarks};
 use game_types::knobs::Knobs;
+use game_types::m::{abs, max, min, round, sign, PI};
+use game_types::v3::{self, clamp, damp, lerp, quat, smoothstep, wrap_angle};
 use crate::roles::*;
-use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, pow, sin};
+use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, pow, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
 use crate::skeleton::{NODE, ask_blend, ask_mask, ask_sample, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
@@ -58,84 +60,11 @@ pub const RAN_ALL: u32 = 2;
 pub const fn ran_list(i: usize) -> u32 {
     4 << i
 }
-const PI: f64 = 3.141592653589793;
 const DEGR: f64 = PI / 180.0;
-#[inline(always)]
-fn abs(x: f64) -> f64 {
-    f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
-}
-/// math/vec.ts clamp, smoothstep
-#[inline(always)]
-fn clamp(x: f64, a: f64, b: f64) -> f64 {
-    if x < a {
-        a
-    } else if x > b {
-        b
-    } else {
-        x
-    }
-}
-#[inline(always)]
-fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
-    let t = clamp((x - a) / (b - a), 0.0, 1.0);
-    t * t * (3.0 - 2.0 * t)
-}
-/// Math.min, Math.max, Math.sign as JavaScript has them (no number in, no number out; the two noughts in their order)
-#[inline(always)]
-fn min(a: f64, b: f64) -> f64 {
-    if a != a || b != b {
-        f64::NAN
-    } else if a < b || (a == b && a.is_sign_negative()) {
-        a
-    } else {
-        b
-    }
-}
-#[inline(always)]
-fn max(a: f64, b: f64) -> f64 {
-    if a != a || b != b {
-        f64::NAN
-    } else if a > b || (a == b && b.is_sign_negative()) {
-        a
-    } else {
-        b
-    }
-}
-/// Math.round (halves go up; the noughts keep their sign as JavaScript's do)
-#[inline(always)]
-fn round(x: f64) -> f64 {
-    if !(abs(x) < 4503599627370496.0) || x == 0.0 {
-        return x;
-    }
-    let f = floor(x);
-    let r = if x - f >= 0.5 { f + 1.0 } else { f };
-    if r == 0.0 && x < 0.0 {
-        -0.0
-    } else {
-        r
-    }
-}
 /// Number.isFinite
 #[inline(always)]
 fn finite(x: f64) -> bool {
     abs(x) < f64::INFINITY
-}
-/// math/vec.ts lerp, damp, wrapAngle
-#[inline(always)]
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
-    a + (b - a) * t
-}
-#[inline(always)]
-fn damp(a: f64, b: f64, rate: f64, dt: f64) -> f64 {
-    lerp(a, b, 1.0 - exp(-rate * dt))
-}
-#[inline(always)]
-fn wrap_angle(a: f64) -> f64 {
-    let mut a = (a + PI) % (2.0 * PI);
-    if a <= 0.0 {
-        a += 2.0 * PI;
-    }
-    a - PI
 }
 /// character.ts Spring.step on two doubles of a layer's state: the value, then its speed
 #[inline(always)]
@@ -153,27 +82,13 @@ fn spring_step(s: &mut Spring, target: f64, w: f64, dt: f64) {
     spring(&mut d, 0, target, w, dt);
     (s.x, s.v) = (d[0], d[1]);
 }
-/// quat.rotate
-#[inline(always)]
-fn q_rotate(q: &[f64; 4], v: &[f64; 3]) -> [f64; 3] {
-    let (qx, qy, qz, qw) = (q[0], q[1], q[2], q[3]);
-    let (tx, ty, tz) = (2.0 * (qy * v[2] - qz * v[1]), 2.0 * (qz * v[0] - qx * v[2]), 2.0 * (qx * v[1] - qy * v[0]));
-    [v[0] + qw * tx + (qy * tz - qz * ty), v[1] + qw * ty + (qz * tx - qx * tz), v[2] + qw * tz + (qx * ty - qy * tx)]
-}
-/// v3.normalize
-#[inline(always)]
-fn normalize(a: [f64; 3]) -> [f64; 3] {
-    let l = hypot3(a[0], a[1], a[2]);
-    let l = if l == 0.0 || l != l { 1.0 } else { l };
-    [a[0] / l, a[1] / l, a[2] / l]
-}
 const AX: [f64; 3] = [1.0, 0.0, 0.0];
 const AY: [f64; 3] = [0.0, 1.0, 0.0];
 /// CharacterAnimator.kneePole: the knee steered over the toes (the foot bone's Y runs along the foot)
 fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
-    let f = q_rotate(foot_rot, &AY);
-    let h = normalize([f[0], 0.0, f[2] + 1e-6]);
-    normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75])
+    let f = quat::rotate(*foot_rot, AY);
+    let h = v3::normalize([f[0], 0.0, f[2] + 1e-6]);
+    v3::normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75])
 }
 /// A POSE'S SINGLES, and the one place in this file that says where one lies: node i's channel c (0‥2 its origin, 3‥6 its rotation, 7‥9 its
 /// scale). Every layer below reads and writes a pose through these two, so a pose laid out another way is these two lines. A POSE IS TEN COLUMNS, A NODE A
@@ -189,7 +104,7 @@ fn set_ch(d: &mut [S], i: usize, c: usize, v: f64) {
 /// CharacterAnimator.shift: node i's origin moved by a model-space offset
 fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     let p = parent_rot(rig, d, i);
-    let l = q_rotate(&[-p[0], -p[1], -p[2], p[3]], off);
+    let l = quat::rotate([-p[0], -p[1], -p[2], p[3]], *off);
     let (x, y, z) = (ch(d, i, 0) + l[0], ch(d, i, 1) + l[1], ch(d, i, 2) + l[2]);
     set_ch(d, i, 0, x);
     set_ch(d, i, 1, y);
@@ -210,18 +125,6 @@ fn q_yaw(a: f64) -> [f64; 4] {
 fn q_roll(a: f64) -> [f64; 4] {
     let s = sin(a / 2.0);
     [0.0 * s, 0.0 * s, 1.0 * s, cos(a / 2.0)]
-}
-/// quat.axisAngle about any axis
-#[inline(always)]
-fn axis_angle(ax: &[f64; 3], a: f64) -> [f64; 4] {
-    let s = sin(a / 2.0);
-    [ax[0] * s, ax[1] * s, ax[2] * s, cos(a / 2.0)]
-}
-/// quat.mul
-#[inline(always)]
-fn q_mul(a: &[f64; 4], b: &[f64; 4]) -> [f64; 4] {
-    let (ax, ay, az, aw, bx, by, bz, bw) = (a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3]);
-    [aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx, aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz]
 }
 /// CharacterAnimator.turn: node i (and its subtree) about model axes, in place
 #[inline(always)]
@@ -245,28 +148,8 @@ fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
 }
 const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
 #[inline(always)]
-fn dist3(a: &[f64; 3], b: &[f64; 3]) -> f64 {
-    hypot3(a[0] - b[0], a[1] - b[1], a[2] - b[2])
-}
-#[inline(always)]
 fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
     smoothstep(a, b, t) * (1.0 - smoothstep(c, d, t))
-}
-#[inline(always)]
-fn add3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
-}
-#[inline(always)]
-fn sub3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-#[inline(always)]
-fn mad3(a: [f64; 3], b: [f64; 3], s: f64) -> [f64; 3] {
-    [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]
-}
-#[inline(always)]
-fn conj(q: [f64; 4]) -> [f64; 4] {
-    [-q[0], -q[1], -q[2], q[3]]
 }
 /// `!x` of a number: nothing or no number
 #[inline(always)]
@@ -281,30 +164,30 @@ fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
     let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
     let mut e3 = q_yaw(tw_y * 0.4);
     if !falsy(tw_p) {
-        let right = q_rotate(&e3, &AX);
-        e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+        let right = quat::rotate(e3, AX);
+        e3 = quat::mul(quat::axis_angle(right, tw_p), e3);
     }
-    let (ie1, ie2, ie3) = (conj(e1), conj(e2), conj(e3));
+    let (ie1, ie2, ie3) = (quat::conj(e1), quat::conj(e2), quat::conj(e3));
     let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
-    let p2t = add3(q_rotate(&e1, &sub3(p2, p1)), p1);
-    let p3t = add3(q_rotate(&e2, &sub3(add3(q_rotate(&e1, &sub3(p3, p1)), p1), p2t)), p2t);
-    let x1 = add3(q_rotate(&ie3, &sub3(h, p3t)), p3t);
-    let x2 = add3(q_rotate(&ie2, &sub3(x1, p2t)), p2t);
-    add3(q_rotate(&ie1, &sub3(x2, p1)), p1)
+    let p2t = v3::add(quat::rotate(e1, v3::sub(p2, p1)), p1);
+    let p3t = v3::add(quat::rotate(e2, v3::sub(v3::add(quat::rotate(e1, v3::sub(p3, p1)), p1), p2t)), p2t);
+    let x1 = v3::add(quat::rotate(ie3, v3::sub(h, p3t)), p3t);
+    let x2 = v3::add(quat::rotate(ie2, v3::sub(x1, p2t)), p2t);
+    v3::add(quat::rotate(ie1, v3::sub(x2, p1)), p1)
 }
 /// CharacterAnimator.lookAt: the neck and head turned by `w` of the way from where the eyes look to `target` (model space); runs the pose forward first
 fn look_at(d: &mut [S], rig: &Rig, fk: &mut Fk, gaze_local: &[f64; 3], target: [f64; 3], w: f64, roll: f64) {
     fk_run(rig, d, fk.rot, fk.pos);
     let (nk, hd) = (role(NECK), role(HEAD));
     let hr = fk.rot(hd);
-    let gaze = q_rotate(&hr, gaze_local);
-    let eyes = mad3(mad3(fk.at(hd), q_rotate(&hr, &AY), 0.1), gaze, 0.08);
-    let want = normalize(sub3(target, eyes));
+    let gaze = quat::rotate(hr, *gaze_local);
+    let eyes = v3::mad(v3::mad(fk.at(hd), quat::rotate(hr, AY), 0.1), gaze, 0.08);
+    let want = v3::normalize(v3::sub(target, eyes));
     let yaw_e = clamp(wrap_angle(atan2(want[0], want[2]) - atan2(gaze[0], gaze[2])), -0.7, 0.7);
     let pitch_e = clamp(asin(clamp(gaze[1], -1.0, 1.0)) - asin(clamp(want[1], -1.0, 1.0)), -0.6, 0.8);
-    let look = |kk: f64| q_mul(&q_yaw(yaw_e * kk * w), &q_pitch(pitch_e * kk * w));
+    let look = |kk: f64| quat::mul(q_yaw(yaw_e * kk * w), q_pitch(pitch_e * kk * w));
     turn(d, rig, nk, look(0.4));
-    turn(d, rig, hd, if !falsy(roll) { q_mul(&q_roll(roll), &look(0.6)) } else { look(0.6) });
+    turn(d, rig, hd, if !falsy(roll) { quat::mul(q_roll(roll), look(0.6)) } else { look(0.6) });
 }
 // the life layer's columns (after its own numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)
 /// One hand-animated channel of a one-shot — Catmull-Rom through (time, value) keys, flat at the first and the last key, clamped outside
@@ -338,13 +221,6 @@ fn hermite(t: f64, t0: f64, p0: f64, m0: f64, t1: f64, p1: f64, m1: f64) -> f64 
     let u3 = u2 * u;
     (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
 }
-/// quat.nlerp: the shorter way, then made unit
-fn nlerp(a: &[f64; 4], b: &[f64; 4], t: f64) -> [f64; 4] {
-    let s = if a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] < 0.0 { -1.0 } else { 1.0 };
-    let (x, y, z, w) = (lerp(a[0], b[0] * s, t), lerp(a[1], b[1] * s, t), lerp(a[2], b[2] * s, t), lerp(a[3], b[3] * s, t));
-    let l = or_one(hypot4(x, y, z, w));
-    [x / l, y / l, z / l, w / l]
-}
 /// `x || 1` of a length: 1 where it is nothing or no number
 #[inline(always)]
 fn or_one(l: f64) -> f64 {
@@ -354,55 +230,7 @@ fn or_one(l: f64) -> f64 {
         l
     }
 }
-/// quat.slerp
-fn slerp(a: &[f64; 4], b: &[f64; 4], t: f64) -> [f64; 4] {
-    let mut d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-    let mut s = 1.0;
-    if d < 0.0 {
-        d = -d;
-        s = -1.0;
-    }
-    if d > 0.9995 {
-        return nlerp(a, b, t);
-    }
-    let th = acos(d);
-    let sn = sin(th);
-    let (wa, wb) = (sin((1.0 - t) * th) / sn, (sin(t * th) / sn) * s);
-    [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb, a[3] * wa + b[3] * wb]
-}
-/// quat.fromTo: the shortest turn that takes unit a onto unit b
-fn from_to(a: &[f64; 3], b: &[f64; 3]) -> [f64; 4] {
-    let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-    if d < -0.9999 {
-        let ax = if abs(a[0]) < 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] };
-        let c = [a[1] * ax[2] - a[2] * ax[1], a[2] * ax[0] - a[0] * ax[2], a[0] * ax[1] - a[1] * ax[0]];
-        let l = or_one(hypot3(c[0], c[1], c[2]));
-        return [c[0] / l, c[1] / l, c[2] / l, 0.0];
-    }
-    let c = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-    let w = 1.0 + d;
-    let l = or_one(hypot4(c[0], c[1], c[2], w));
-    [c[0] / l, c[1] / l, c[2] / l, w / l]
-}
-/// v3.lerp
-#[inline(always)]
-fn lerp3(a: &[f64; 3], b: &[f64; 3], t: f64) -> [f64; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
-}
-/// v3.dot, v3.scale; quat.normalize; a node's own rotation in a pose, read and put
-#[inline(always)]
-fn dot3(a: &[f64; 3], b: &[f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-#[inline(always)]
-fn scale3(a: [f64; 3], s: f64) -> [f64; 3] {
-    [a[0] * s, a[1] * s, a[2] * s]
-}
-#[inline(always)]
-fn q_unit(q: [f64; 4]) -> [f64; 4] {
-    let l = or_one(hypot4(q[0], q[1], q[2], q[3]));
-    [q[0] / l, q[1] / l, q[2] / l, q[3] / l]
-}
+/// a node's own rotation in a pose, read and put
 #[inline(always)]
 fn own_rot(d: &[S], i: usize) -> [f64; 4] {
     [ch(d, i, 3), ch(d, i, 4), ch(d, i, 5), ch(d, i, 6)]
@@ -430,25 +258,15 @@ fn arms_mask() {
     ask_mask(&[(role(SHOULDER_L), 1.0, true), (role(SHOULDER_R), 1.0, true)]);
 }
 const ARM_ROLES: [usize; 9] = [SPINE3, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, FOREARM_L, FOREARM_R, HAND_L, HAND_R];
-/// v3.cross
-#[inline(always)]
-fn cross3(a: &[f64; 3], b: &[f64; 3]) -> [f64; 3] {
-    [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
-}
-/// v3.len
-#[inline(always)]
-fn len3(a: &[f64; 3]) -> f64 {
-    hypot3(a[0], a[1], a[2])
-}
 /// CharacterAnimator.gripTurn: the rotation that carries the aim clip's grip (bore `g0`, gun hand at model rotation `rr0`) onto the wanted bore `gd` — the
 /// shortest arc, then unrolled about the bore so the pistol's top strap (`grip_up`, in the hand) faces `up_ref` as nearly as the bore allows
 fn grip_turn(g0: &[f64; 3], rr0: &[f64; 4], gd: &[f64; 3], up_ref: &[f64; 3], grip_up: &[f64; 3]) -> [f64; 4] {
-    let mut turn = from_to(g0, gd);
-    let up0 = q_rotate(&q_mul(&turn, rr0), grip_up);
-    let (want, cur) = (sub3(*up_ref, scale3(*gd, dot3(up_ref, gd))), sub3(up0, scale3(*gd, dot3(&up0, gd))));
-    if len3(&want) > 1e-4 && len3(&cur) > 1e-4 {
-        let (wn, cn) = (normalize(want), normalize(cur));
-        turn = q_mul(&axis_angle(gd, atan2(dot3(&cross3(&cn, &wn), gd), dot3(&cn, &wn))), &turn);
+    let mut turn = quat::from_to(*g0, *gd);
+    let up0 = quat::rotate(quat::mul(turn, *rr0), *grip_up);
+    let (want, cur) = (v3::sub(*up_ref, v3::scale(*gd, v3::dot(*up_ref, *gd))), v3::sub(up0, v3::scale(*gd, v3::dot(up0, *gd))));
+    if v3::len(want) > 1e-4 && v3::len(cur) > 1e-4 {
+        let (wn, cn) = (v3::normalize(want), v3::normalize(cur));
+        turn = quat::mul(quat::axis_angle(*gd, atan2(v3::dot(v3::cross(cn, wn), *gd), v3::dot(cn, wn))), turn);
     }
     turn
 }
@@ -531,14 +349,14 @@ fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, sp
             let mut q = q_pitch(curl[fi] * FIST[j] * DEGR);
             if j == 0 && !falsy(spread) {
                 // fan about the knuckle's palm-normal axis
-                q = q_mul(&q_roll((fi as f64 - 1.2) * spread * (if side == 1 { 1.0 } else { -1.0 }) * 9.0 * DEGR), &q);
+                q = quat::mul(q_roll((fi as f64 - 1.2) * spread * (if side == 1 { 1.0 } else { -1.0 }) * 9.0 * DEGR), q);
             }
             let k = 3 + fi * 3 + j;
-            set_unit(d, ns[k] as usize, &q_mul(&h.rest[at + k], &q));
+            set_unit(d, ns[k] as usize, &quat::mul(h.rest[at + k], q));
         }
     }
     for j in 0..3 {
-        set_unit(d, ns[j] as usize, &q_mul(&h.rest[at + j], &q_pitch(thumb * THUMB_FIST[j] * DEGR)));
+        set_unit(d, ns[j] as usize, &quat::mul(h.rest[at + j], q_pitch(thumb * THUMB_FIST[j] * DEGR)));
     }
     let b = &h.base[side * 60..side * 60 + 60];
     for g in 0..5 {
@@ -551,7 +369,7 @@ fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, sp
 fn from_basis(x: &[f64; 3], y: &[f64; 3], z: &[f64; 3]) -> [f64; 4] {
     let (m00, m10, m20, m01, m11, m21, m02, m12, m22) = (x[0], x[1], x[2], y[0], y[1], y[2], z[0], z[1], z[2]);
     let tr = m00 + m11 + m22;
-    q_unit(if tr > 0.0 {
+    quat::normalize(if tr > 0.0 {
         let s = sqrt(tr + 1.0) * 2.0;
         [(m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, 0.25 * s]
     } else if m00 > m11 && m00 > m22 {
@@ -567,7 +385,7 @@ fn from_basis(x: &[f64; 3], y: &[f64; 3], z: &[f64; 3]) -> [f64; 4] {
 }
 /// which way a foot points.
 fn foot_yaw(r: &[f64; 4]) -> f64 {
-    let f = q_rotate(r, &AY);
+    let f = quat::rotate(*r, AY);
     atan2(f[0], f[2])
 }
 /// where he stands and which way he faces: points between his own axes and the world
@@ -596,16 +414,16 @@ impl Stands {
 /// CharacterAnimator.handRot: the model rotation of a hand whose fingers point along `f` with the back of the hand to `b` (made square to f); `fix` is that
 /// side's calibration from the rest pose (the animator's handFix, handed in with the layer's numbers)
 fn hand_rot(fix: &[f64; 4], f: [f64; 3], b: [f64; 3]) -> [f64; 4] {
-    let ff = normalize(f);
-    let bb = normalize(mad3(b, ff, -dot3(&b, &ff)));
-    q_mul(&from_basis(&cross3(&ff, &bb), &ff, &bb), fix)
+    let ff = v3::normalize(f);
+    let bb = v3::normalize(v3::mad(b, ff, -v3::dot(b, ff)));
+    quat::mul(from_basis(&v3::cross(ff, bb), &ff, &bb), *fix)
 }
 /// CharacterAnimator.trunkFrame: the trunk's own left, up and forward, off the run-forward bones
 fn trunk_frame(fk: &Fk) -> ([f64; 3], [f64; 3], [f64; 3]) {
-    let up = normalize(sub3(fk.at(role(SPINE3)), fk.at(role(HIPS))));
-    let l = sub3(fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
-    let left = normalize(mad3(l, up, -dot3(&l, &up)));
-    (left, up, cross3(&left, &up))
+    let up = v3::normalize(v3::sub(fk.at(role(SPINE3)), fk.at(role(HIPS))));
+    let l = v3::sub(fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+    let left = v3::normalize(v3::mad(l, up, -v3::dot(l, up)));
+    (left, up, v3::cross(left, up))
 }
 pub const LC_COUNT: usize = 21;
 /// The scalar curve's spline for a keyed vector, one search for the segment and the same Hermite weights for each component
@@ -639,28 +457,28 @@ fn curve3(t: f64, k: &[(f64, [f64; 3])]) -> [f64; 3] {
 fn wrist_ease(d: &mut [S], rig: &Rig, fk: &mut Fk, hand_n: usize, rot0: &[f64; 4], wr: f64) {
     if wr < 0.999 {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (q, par) = (slerp(rot0, &fk.rot(hand_n), wr), parent_rot(rig, d, hand_n));
+        let (q, par) = (quat::slerp(*rot0, fk.rot(hand_n), wr), parent_rot(rig, d, hand_n));
         set_model_rot(d, hand_n, &q, &par);
     }
 }
 /// CharacterAnimator.knifeRot: the right hand's turn from where the blade is to point and which way the back of the hand faces (squared to the blade here)
 fn knife_rot(fix_r: &[f64; 4], blade: [f64; 3], back: [f64; 3]) -> [f64; 4] {
-    let t = normalize(blade);
-    let b = normalize(mad3(back, t, -dot3(&back, &t)));
-    hand_rot(fix_r, cross3(&t, &b), b)
+    let t = v3::normalize(blade);
+    let b = v3::normalize(v3::mad(back, t, -v3::dot(back, t)));
+    hand_rot(fix_r, v3::cross(t, b), b)
 }
 /// CharacterAnimator.sheathFist: where the right wrist goes, the fist's turn and the elbow's pole with the fist closed on the sheathed handle, in the chest
 /// joint's frame off the rest pose's (`rc_inv`: the rest chest's turn, inverted). `pull` m back down the knife's line, `off` m further off the chest.
 fn sheath_fist(fk: &Fk, rc_inv: &[f64; 4], fix_r: &[f64; 4], crouch: f64, pull: f64, off: f64) -> ([f64; 3], [f64; 4], [f64; 3]) {
     let s3 = role(SPINE3);
-    let q = q_mul(&fk.rot(s3), rc_inv);
-    let t = normalize(q_rotate(&q, &RIG.sheath.along));
-    let b0 = q_rotate(&q, &RIG.sheath.out);
-    let b = normalize(mad3(b0, t, -dot3(&b0, &t)));
-    let f = cross3(&t, &b);
-    let h = mad3(mad3(add3(fk.at(s3), q_rotate(&q, &RIG.sheath.at)), t, -pull), b, off);
-    let to = mad3(mad3(mad3(h, f, -RIG.knife.grip.fwd), b, RIG.knife.grip.palm), t, -RIG.knife.grip.side);
-    let pole = mad3(normalize(q_rotate(&q, &REACH.pole)), AY, lerp(REACH.pole_up[0], REACH.pole_up[1], clamp(crouch, 0.0, 1.0)));
+    let q = quat::mul(fk.rot(s3), *rc_inv);
+    let t = v3::normalize(quat::rotate(q, RIG.sheath.along));
+    let b0 = quat::rotate(q, RIG.sheath.out);
+    let b = v3::normalize(v3::mad(b0, t, -v3::dot(b0, t)));
+    let f = v3::cross(t, b);
+    let h = v3::mad(v3::mad(v3::add(fk.at(s3), quat::rotate(q, RIG.sheath.at)), t, -pull), b, off);
+    let to = v3::mad(v3::mad(v3::mad(h, f, -RIG.knife.grip.fwd), b, RIG.knife.grip.palm), t, -RIG.knife.grip.side);
+    let pole = v3::mad(v3::normalize(quat::rotate(q, REACH.pole)), AY, lerp(REACH.pole_up[0], REACH.pole_up[1], clamp(crouch, 0.0, 1.0)));
     (to, knife_rot(fix_r, t, b), pole)
 }
 /// the support arm from the upper arm down (the collar bone stays the clip's), or both arms
@@ -701,7 +519,7 @@ fn yaw_of(a: f64) -> [f64; 4] {
 fn twist_of(y: f64, p: f64) -> [f64; 4] {
     let mut q = yaw_of(y);
     if p != 0.0 {
-        q = q_mul(&axis_angle(&q_rotate(&q, &AX), p), &q);
+        q = quat::mul(quat::axis_angle(quat::rotate(q, AX), p), q);
     }
     q
 }
@@ -717,19 +535,15 @@ fn untwist_dir(tw_y: f64, tw_p: f64, dv: [f64; 3]) -> [f64; 3] {
     let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
     let mut e3 = q_yaw(tw_y * 0.4);
     if !falsy(tw_p) {
-        let right = q_rotate(&e3, &AX);
-        e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+        let right = quat::rotate(e3, AX);
+        e3 = quat::mul(quat::axis_angle(right, tw_p), e3);
     }
-    q_rotate(&q_mul(&conj(e1), &q_mul(&conj(e2), &conj(e3))), &dv)
+    quat::rotate(quat::mul(quat::conj(e1), quat::mul(quat::conj(e2), quat::conj(e3))), dv)
 }
 /// bigLayer's ease: a share clamped to 0‥1 and smoothed
 fn e3(u: f64) -> f64 {
     let u = clamp(u, 0.0, 1.0);
     u * u * (3.0 - 2.0 * u)
-}
-#[inline(always)]
-fn dist_xz(a: &[f64; 3], b: &[f64; 3]) -> f64 {
-    hypot2(a[0] - b[0], a[2] - b[2])
 }
 #[cfg(test)]
 mod tests {

@@ -11,6 +11,7 @@
 
 use crate::maths::{acos, atan2, hypot4};
 use crate::single::{get, put, S};
+use game_types::m;
 use game_types::v3::{self, quat, Quat, V3};
 
 /// nodes a rig on the bench can have (the game's has 55)
@@ -74,21 +75,6 @@ fn or_one(l: f64) -> f64 {
     } else {
         l
     }
-}
-#[inline(always)]
-fn clamp(x: f64, a: f64, b: f64) -> f64 {
-    if x < a {
-        a
-    } else if x > b {
-        b
-    } else {
-        x
-    }
-}
-/// Math.abs
-#[inline(always)]
-fn abs(x: f64) -> f64 {
-    f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
 
 
@@ -233,7 +219,7 @@ pub fn two_bone_ik(
     let (la, lb) = (v3::dist(pa, pb), v3::dist(pb, pc));
     let to = v3::sub(*target, pa);
     let far = v3::len(to);
-    let reach = clamp(far, abs(la - lb) + 0.01, (la + lb) * 0.998);
+    let reach = v3::clamp(far, m::abs(la - lb) + 0.01, (la + lb) * 0.998);
     rotate_model(d, b, &bend(pa, pb, pc, la, lb, reach, pole), &rot_of(rot, a));
     if fresh {
         fk_run_from(rig, d, rot, pos, b);
@@ -269,8 +255,8 @@ fn at3(pos: &[f64], i: usize) -> V3 {
 /// (a straight limb's own axis is noise: eased from the pole's to its own between 0.09 and 0.26 rad of bend, and never bent back to front).
 fn bend(pa: V3, pb: V3, pc: V3, la: f64, lb: f64, reach: f64, pole: Option<&V3>) -> Quat {
     let (u, w) = (v3::normalize(v3::sub(pb, pa)), v3::normalize(v3::sub(pc, pb)));
-    let bend_now = acos(clamp(v3::dot(u, w), -1.0, 1.0));
-    let bend_want = core::f64::consts::PI - acos(clamp((la * la + lb * lb - reach * reach) / (2.0 * la * lb), -1.0, 1.0));
+    let bend_now = acos(v3::clamp(v3::dot(u, w), -1.0, 1.0));
+    let bend_want = core::f64::consts::PI - acos(v3::clamp((la * la + lb * lb - reach * reach) / (2.0 * la * lb), -1.0, 1.0));
     let own = v3::cross(u, w);
     let al = v3::len(own);
     let across = v3::cross(pole.copied().unwrap_or([0.0, 0.0, 1.0]), u);
@@ -282,7 +268,7 @@ fn bend(pa: V3, pb: V3, pc: V3, la: f64, lb: f64, reach: f64, pole: Option<&V3>)
         if v3::dot(own, poles) < 0.0 && bend_now < 0.26 {
             own = v3::scale(own, -1.0);
         }
-        v3::normalize(v3::lerp3(poles, own, clamp((bend_now - 0.09) / 0.17, 0.0, 1.0)))
+        v3::normalize(v3::lerp3(poles, own, v3::clamp((bend_now - 0.09) / 0.17, 0.0, 1.0)))
     };
     quat::axis_angle(axis, bend_want - bend_now)
 }

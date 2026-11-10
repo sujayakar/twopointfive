@@ -130,7 +130,7 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
         soles(tune, wtk, &mut o);
         fk_run(rig, d, fk.rot, fk.pos);
         let pole_of = |t: &Sole, gf: &Option<Tread>| match gf {
-            Some(gf) if o.gw > 1e-4 => normalize(lerp3(&knee_pole(&t.1), &gf.2, o.gw)),
+            Some(gf) if o.gw > 1e-4 => v3::normalize(v3::lerp3(knee_pole(&t.1), gf.2, o.gw)),
             _ => knee_pole(&t.1),
         };
         two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), o.foot_l, &o.t_l.0, Some(&pole_of(&o.t_l, &o.g_l)), 0.6, Some(&o.t_l.1), false);
@@ -175,7 +175,7 @@ fn wall_now(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
 fn wall_spine(d: &mut [S], under: &[[f64; 4]; 8], o: &OnWall) {
     let OnWall { w, s1, s2, s3, nk, hd, .. } = *o;
     for (j, (i, share)) in [(s1, 0.9), (s2, 0.9), (s3, 0.9), (nk, 0.85), (hd, 0.85), (role(SHOULDER_L), 0.7), (role(SHOULDER_R), 0.7)].into_iter().enumerate() {
-        let q = nlerp(&own_rot(d, i), &under[j], share * w);
+        let q = quat::nlerp(own_rot(d, i), under[j], share * w);
         set_own_rot(d, i, &q);
     }
 }
@@ -187,26 +187,26 @@ fn wall_pelvis(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, gait: &mut f64
         *gait = WALL_GAIT_REST;
     }
     if gw > 1e-4 {
-        let q = nlerp(&own_rot(d, hips), &nlerp(&under[7], &hips_low, cr), gw);
+        let q = quat::nlerp(own_rot(d, hips), quat::nlerp(under[7], hips_low, cr), gw);
         set_own_rot(d, hips, &q);
     }
     fk_run(rig, d, fk.rot, fk.pos);
     let hp = fk.at(hips);
     let back_off = lerp(lerp(WALL_POSE.back[0], WALL_POSE.back[1], cr), WALL_POSE.back[2], 1.0 - park);
-    let out = dot3(&hp, &n) - (-root_off + back_off);
+    let out = v3::dot(hp, n) - (-root_off + back_off);
     let drop = lerp(WALL_POSE.drop[0], WALL_POSE.drop[1], cr) + 0.006 * (1.0 - park) * (1.0 - g_share) * (1.0 - cos(phase * 4.0 * PI)) + tune.wallsnap.dip * wall_hit;
-    shift(d, rig, hips, &add3(add3(scale3(n, -out * w), [0.0, -drop * w, 0.0]), scale3(tr, s * WALL_POSE.peek.shift * e * w)));
+    shift(d, rig, hips, &v3::add(v3::add(v3::scale(n, -out * w), [0.0, -drop * w, 0.0]), v3::scale(tr, s * WALL_POSE.peek.shift * e * w)));
     if gw > 1e-4 {
         let lvl = lerp(WALL_POSE.gait.hips[0], WALL_POSE.gait.hips[1], cr) - lerp(WALL_POSE.gait.bob[0], WALL_POSE.gait.bob[1], cr) * 0.5 * (1.0 + cos((*gait - 0.05) * 4.0 * PI));
-        shift(d, rig, hips, &add3([0.0, (lvl - hp[1]) * gw, 0.0], scale3(tr, -dot3(&hp, &tr) * gw)));
+        shift(d, rig, hips, &v3::add([0.0, (lvl - hp[1]) * gw, 0.0], v3::scale(tr, -v3::dot(hp, tr) * gw)));
     }
-    turn(d, rig, hips, q_mul(&axis_angle(&n, s * 3.0 * DEGR * e * w), &q_yaw(ny * 0.33 * w)));
+    turn(d, rig, hips, quat::mul(quat::axis_angle(n, s * 3.0 * DEGR * e * w), q_yaw(ny * 0.33 * w)));
 }
 
 /// Which way the chest is turned.
 fn chest_yaw_of(o: &OnWall, fk: &Fk) -> f64 {
     let OnWall { chest_rest_inv, s3, .. } = *o;
-    let l = q_rotate(&q_mul(&fk.rot(s3), &chest_rest_inv), &AX);
+    let l = quat::rotate(quat::mul(fk.rot(s3), chest_rest_inv), AX);
     atan2(-l[2], l[0])
 }
 
@@ -230,18 +230,18 @@ fn wall_lean(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
         turn(d, rig, s2, q_yaw(dy * 0.35));
         turn(d, rig, s3, q_yaw(dy * 0.35));
         fk_run(rig, d, fk.rot, fk.pos);
-        let dv = sub3(fk.at(nk), fk.at(s1));
-        let (tilt_n, tilt_t) = (atan2(dot3(&dv, &n), dv[1]), atan2(dot3(&dv, &tr), dv[1]));
+        let dv = v3::sub(fk.at(nk), fk.at(s1));
+        let (tilt_n, tilt_t) = (atan2(v3::dot(dv, n), dv[1]), atan2(v3::dot(dv, tr), dv[1]));
         let (d_n, d_t) = ((lean_deg * DEGR - tilt_n) * w, (s * WALL_POSE.peek.lean * DEGR * e - tilt_t) * w);
         let hs = clamp(d_n, -0.45 * cr - hip_share, 0.45 * cr - hip_share);
         hip_share += hs;
         if abs(hs) > 1e-5 {
-            turn(d, rig, hips, axis_angle(&ax_n, hs));
+            turn(d, rig, hips, quat::axis_angle(ax_n, hs));
         }
         let rest = d_n - hs;
-        turn(d, rig, s1, q_mul(&axis_angle(&n, d_t * 0.5), &axis_angle(&ax_n, rest * 0.6)));
-        turn(d, rig, s2, q_mul(&axis_angle(&n, d_t * 0.3), &axis_angle(&ax_n, rest * 0.4)));
-        turn(d, rig, s3, axis_angle(&n, d_t * 0.2));
+        turn(d, rig, s1, quat::mul(quat::axis_angle(n, d_t * 0.5), quat::axis_angle(ax_n, rest * 0.6)));
+        turn(d, rig, s2, quat::mul(quat::axis_angle(n, d_t * 0.3), quat::axis_angle(ax_n, rest * 0.4)));
+        turn(d, rig, s3, quat::axis_angle(n, d_t * 0.2));
     }
     *o = OnWall { twist, gaze_deg, ..*o };
 }
@@ -250,7 +250,7 @@ fn wall_lean(d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut OnWall) {
 fn wall_head(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &OnWall) {
     let OnWall { w, s, aim_w, ny, wall_hit, lk, gaze_local, e, n, nk, hd, twist, gaze_deg, .. } = *o;
     let hw = w * (1.0 - aim_w);
-    let gz = q_rotate(&fk.rot(hd), &gaze_local);
+    let gz = quat::rotate(fk.rot(hd), gaze_local);
     let gy = atan2(gz[0], gz[2]);
     let chest_yaw = chest_yaw_of(o, fk);
     let mut want = ny - s * gaze_deg * DEGR - twist;
@@ -258,10 +258,10 @@ fn wall_head(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &OnWall) {
     let dyaw = wrap_angle(want - gy) * hw;
     let el = asin(clamp(gz[1], -1.0, 1.0));
     let dpitch = (el + (WALL_POSE.head_pitch - tune.wallsnap.nod * wall_hit) * DEGR) * hw;
-    let gh = normalize([gz[0], 0.0, gz[2] + 1e-6]);
+    let gh = v3::normalize([gz[0], 0.0, gz[2] + 1e-6]);
     let ax_p = [gh[2], 0.0, -gh[0]];
     let unroll = -s * WALL_POSE.peek.lean * DEGR * e * 0.5 * hw;
-    let q = |share: f64| q_mul(&axis_angle(&n, unroll * share), &q_mul(&q_yaw(dyaw * share), &axis_angle(&ax_p, dpitch * share)));
+    let q = |share: f64| quat::mul(quat::axis_angle(n, unroll * share), quat::mul(q_yaw(dyaw * share), quat::axis_angle(ax_p, dpitch * share)));
     turn(d, rig, nk, q(0.4));
     turn(d, rig, hd, q(0.6));
 }
@@ -283,9 +283,9 @@ fn spot(o: &OnWall, lead: bool, right: bool) -> ([f64; 3], f64) {
     } else {
         ([WALL_POSE.feet.trail[0], WALL_POSE.feet.trail[1], WALL_POSE.feet.trail[2]], [WALL_POSE.feet.trail_crouch[0], WALL_POSE.feet.trail_crouch[1], WALL_POSE.feet.trail_crouch[2]])
     };
-    let av = lerp3(&stand, &low, cr);
+    let av = v3::lerp3(stand, low, cr);
     let sg = if right == lead { 1.0 } else { -1.0 };
-    (add3(scale3(tr, sg * av[0]), scale3(n, av[1] - root_off)), -sg * av[2] * DEGR)
+    (v3::add(v3::scale(tr, sg * av[0]), v3::scale(n, av[1] - root_off)), -sg * av[2] * DEGR)
 }
 
 /// The hold's own step: where this sole is on its track at the step clock's phase, its rotation, and where its knee points.
@@ -318,12 +318,12 @@ fn gait_foot(o: &OnWall, right: bool, r_idle: &[f64; 4], y_idle: f64) -> Tread {
         y_idle + lerp(WALL_POSE.gait.lift[0], WALL_POSE.gait.lift[1], cr) * up + BALL * sin(heel),
         tr[2] * al + n[2] * (off - root_off) + h[2] * BALL * (1.0 - cos(heel)),
     ];
-    let fwd = q_rotate(r_idle, &AY);
+    let fwd = quat::rotate(*r_idle, AY);
     let yaw0 = atan2(fwd[0], fwd[2]);
-    let r = q_unit(q_mul(&axis_angle(&[h[2], 0.0, -h[0]], heel), &q_mul(&q_yaw(wrap_angle(yaw_abs - yaw0)), r_idle)));
+    let r = quat::normalize(quat::mul(quat::axis_angle([h[2], 0.0, -h[0]], heel), quat::mul(q_yaw(wrap_angle(yaw_abs - yaw0)), *r_idle)));
     let kr = lerp(WALL_POSE.gait.knee_room[0], WALL_POSE.gait.knee_room[1], cr);
-    let dn = normalize([n[0] * kr, 0.0, (1.0 - kr) + n[2] * kr]);
-    (p, r, normalize([h[0] * 0.25 + dn[0] * 0.75, 0.5, h[2] * 0.25 + dn[2] * 0.75]))
+    let dn = v3::normalize([n[0] * kr, 0.0, (1.0 - kr) + n[2] * kr]);
+    (p, r, v3::normalize([h[0] * 0.25 + dn[0] * 0.75, 0.5, h[2] * 0.25 + dn[2] * 0.75]))
 }
 
 /// Each foot's own step; and whether the take's steps hold (a short take ends before the pose's weight is whole: the soles stay where they stepped to).
@@ -348,28 +348,28 @@ fn foot_target(o: &OnWall, right: bool, f_clip0: &[f64; 3], r_clip0: &[f64; 4], 
     let (f_clip, r_clip) = match gf {
         Some(gf) => {
             let gk = g_share * w;
-            (lerp3(f_clip0, &gf.0, gk), nlerp(r_clip0, &gf.1, gk))
+            (v3::lerp3(*f_clip0, gf.0, gk), quat::nlerp(*r_clip0, gf.1, gk))
         }
         None => (*f_clip0, *r_clip0),
     };
     let lw = if right { u } else { 1.0 - u };
     let ((lp, ly), (tp, ty)) = (spot(o, true, right), spot(o, false, right));
-    let mut p = lerp3(&tp, &lp, lw);
+    let mut p = v3::lerp3(tp, lp, lw);
     let yaw_rel = lerp(ty, ly, lw);
     let on_toes = cr * (1.0 - lw) * WALL_POSE.feet.trail_heel;
     p[1] = lerp(y_idle, f_clip[1], on_toes) + 0.04 * (1.0 - s * s) * (if (side_v > 0.0) == right { 1.0 } else { 0.25 }) + 0.08 * park * (1.0 - park) * (0.4 + 0.6 * lw);
-    let base = nlerp(r_idle, &r_clip, on_toes);
-    let fwd = q_rotate(&base, &AY);
+    let base = quat::nlerp(*r_idle, r_clip, on_toes);
+    let fwd = quat::rotate(base, AY);
     let yaw0 = atan2(fwd[0], fwd[2]);
-    let r = q_unit(q_mul(&q_yaw(wrap_angle(ny + yaw_rel - yaw0)), &base));
+    let r = quat::normalize(quat::mul(q_yaw(wrap_angle(ny + yaw_rel - yaw0)), base));
     let share = if full { 1.0 } else { park * (if wtk_hold { 1.0 } else { w }) };
-    let mut q = lerp3(&f_clip, &p, share);
+    let mut q = v3::lerp3(f_clip, p, share);
     if mv > 1e-4 {
-        let off_c = dot3(&q, &n) + root_off;
-        q = mad3(q, n, (WALL_POSE.slide.line + (off_c - root_off) * WALL_POSE.slide.narrow - off_c) * mv);
+        let off_c = v3::dot(q, n) + root_off;
+        q = v3::mad(q, n, (WALL_POSE.slide.line + (off_c - root_off) * WALL_POSE.slide.narrow - off_c) * mv);
     }
-    let into = -root_off + 0.11 - dot3(&q, &n);
-    (if into > 0.0 { mad3(q, n, into * w) } else { q }, nlerp(&r_clip, &r, share))
+    let into = -root_off + 0.11 - v3::dot(q, n);
+    (if into > 0.0 { v3::mad(q, n, into * w) } else { q }, quat::nlerp(r_clip, r, share))
 }
 
 /// Both soles' targets; in the take each stays where it stood in the world until its turn, then steps to the hold's spot in a low arc.
@@ -385,7 +385,7 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
                 Some(t) => (t.l, t.r),
                 None => (AnimFootSpot { p: stands.world(&f_l), yaw: yin + foot_yaw(&r_l) }, AnimFootSpot { p: stands.world(&f_r), yaw: yin + foot_yaw(&r_r) }),
             };
-            let first = if dist_xz(&f_l, &s_l.0) >= dist_xz(&f_r, &s_r.0) { 0.0 } else { 1.0 };
+            let first = if v3::dist_xz(f_l, s_l.0) >= v3::dist_xz(f_r, s_r.0) { 0.0 } else { 1.0 };
             *wtk = Some(AnimWtk { l, r, first, last: tk });
         }
         let mut k = wtk.unwrap_or_default();
@@ -401,9 +401,9 @@ fn soles(tune: &Knobs, wtk: &mut Option<AnimWtk>, o: &mut OnWall) {
                 m[0] = sp.0[0] + dx * mx / dl;
                 m[2] = sp.0[2] + dz * mx / dl;
             }
-            let mut p = lerp3(&m, &sp.0, ease);
+            let mut p = v3::lerp3(m, sp.0, ease);
             p[1] += tune.wallsnap.step_lift * sin(PI * q);
-            (p, nlerp(&q_unit(q_mul(&q_yaw(wrap_angle(from_yaw - yin - foot_yaw(r_clip))), r_clip)), &sp.1, ease))
+            (p, quat::nlerp(quat::normalize(quat::mul(q_yaw(wrap_angle(from_yaw - yin - foot_yaw(r_clip))), *r_clip)), sp.1, ease))
         };
         // (the further foot goes at once, the other waits, then closes as the back lands)
         let (early, late) = ((0.0, 0.58), (0.42, 1.0));
@@ -448,7 +448,7 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> u32 {
             let along = along0 - WALL_POSE.hands.peek_in * e * (if side == 1 { 1.0 + s } else { 1.0 - s }) / 2.0;
             let mut p = [hx + tr[0] * sg * along, hy, hz + tr[2] * sg * along];
             // carried square onto the plane, the wrist proud of it
-            let onto = (-WALL_ROOT_OFF + WALL_POSE.hands.off) - dot3(&p, &nn);
+            let onto = (-WALL_ROOT_OFF + WALL_POSE.hands.off) - v3::dot(p, nn);
             p[0] += nn[0] * onto;
             p[2] += nn[2] * onto;
             let fix = fixes[side];
@@ -458,7 +458,7 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> u32 {
             two_bone_ik(rig, d, fk.rot, fk.pos, up, fore, hnd, &p, Some(&pole), 0.9, Some(&r), false);
             hand(d, hh, side, &[WALL_POSE.mend.curl[0], WALL_POSE.mend.curl[1], WALL_POSE.mend.curl[2], WALL_POSE.mend.curl[3]], WALL_POSE.mend.thumb, WALL_POSE.mend.fan);
             // the thumb beside the index, out of the plaster
-            turn(d, rig, digits(side)[0] as usize, axis_angle(&q_rotate(&fk.rot(hnd), &AY), sg * WALL_POSE.mend.thumb_in * DEGR));
+            turn(d, rig, digits(side)[0] as usize, quat::axis_angle(quat::rotate(fk.rot(hnd), AY), sg * WALL_POSE.mend.thumb_in * DEGR));
         }
         RAN | RAN_ALL
     })

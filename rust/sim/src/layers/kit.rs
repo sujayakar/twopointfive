@@ -15,7 +15,7 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
         // the wrist over the flashlight's ring at the front of the right hip · over the sidearm's grip on the thigh
         let (belt, hol) = (untwist(fk, tw_y, tw_p, [hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), untwist(fk, tw_y, tw_p, [th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]));
         let (first, second) = if to_weapon { (belt, hol) } else { (hol, belt) };
-        Some((n, lerp3(&first, &second, across)))
+        Some((n, v3::lerp3(first, second, across)))
     }) else {
         return 0;
     };
@@ -33,8 +33,8 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
         turn(d, rig, role(SHOULDER_R), q_roll(4.0 * DEGR * e));
         fk_run(rig, d, fk.rot, fk.pos);
         // fingers down onto it, the back of the hand out to his right; the elbow back
-        let r = nlerp(&rot0, &hand_rot(&fix_r, [0.05, -1.0, 0.15], [-0.75, 0.0, 0.6]), e);
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
+        let r = quat::nlerp(rot0, hand_rot(&fix_r, [0.05, -1.0, 0.15], [-0.75, 0.0, 0.6]), e);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &v3::lerp3(live0, to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
         hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
     });
     if !ask_blend(g, at, at, 1.0, false, at_sw, n) {
@@ -58,13 +58,13 @@ struct Frame {
 /// an Adj as a layer is handed it: is there one, its offset along the parent's axes, its turn in degrees about the parent's x, then y, then z
 type Adj = (bool, [f64; 3], [f64; 3]);
 fn frame_from(o: [f64; 3], along: [f64; 3], up_hint: [f64; 3]) -> Frame {
-    let z = normalize(along);
-    let mut y = sub3(up_hint, scale3(z, dot3(&up_hint, &z)));
-    if len3(&y) < 1e-3 {
-        y = sub3([1.0, 0.0, 0.0], scale3(z, z[0]));
+    let z = v3::normalize(along);
+    let mut y = v3::sub(up_hint, v3::scale(z, v3::dot(up_hint, z)));
+    if v3::len(y) < 1e-3 {
+        y = v3::sub([1.0, 0.0, 0.0], v3::scale(z, z[0]));
     }
-    let y = normalize(y);
-    Frame { o, x: cross3(&y, &z), y, z }
+    let y = v3::normalize(y);
+    Frame { o, x: v3::cross(y, z), y, z }
 }
 /// The child frame = the parent's moved by the offset and turned about the parent's x, then y, then z
 fn apply_adj(f: &Frame, adj: &Adj) -> Frame {
@@ -78,10 +78,10 @@ fn apply_adj(f: &Frame, adj: &Adj) -> Frame {
     for (axis, deg) in [(f.x, adj.2[0]), (f.y, adj.2[1]), (f.z, adj.2[2])] {
         let ang = deg * dg;
         if !(abs(ang) < 1e-6) {
-            let q = axis_angle(&axis, ang);
-            x = q_rotate(&q, &x);
-            y = q_rotate(&q, &y);
-            z = q_rotate(&q, &z);
+            let q = quat::axis_angle(axis, ang);
+            x = quat::rotate(q, x);
+            y = quat::rotate(q, y);
+            z = quat::rotate(q, z);
         }
     }
     Frame { o, x, y, z }
@@ -100,12 +100,12 @@ fn un_adj(g: &Frame, adj: &Adj) -> Frame {
 /// The thigh holster's group frame off three joints and the body's forward, in whatever one space they are given in;
 /// `h` = how far down the thigh, out from the pelvis and forward
 fn holster_frame_of(th: [f64; 3], kn: [f64; 3], hp: [f64; 3], fwd: [f64; 3], h: [f64; 3], adj: &Adj) -> Frame {
-    let down = normalize(sub3(kn, th));
-    let mut outward = sub3(th, hp);
-    outward = sub3(outward, scale3(down, dot3(&outward, &down)));
+    let down = v3::normalize(v3::sub(kn, th));
+    let mut outward = v3::sub(th, hp);
+    outward = v3::sub(outward, v3::scale(down, v3::dot(outward, down)));
     outward[1] = 0.0;
-    let outward = if len3(&outward) > 1e-3 { normalize(outward) } else { cross3(&fwd, &[0.0, 1.0, 0.0]) };
-    apply_adj(&frame_from(mad3(mad3(mad3(th, down, h[0]), outward, h[1]), fwd, h[2]), down, fwd), adj)
+    let outward = if v3::len(outward) > 1e-3 { v3::normalize(outward) } else { v3::cross(fwd, [0.0, 1.0, 0.0]) };
+    apply_adj(&frame_from(v3::mad(v3::mad(v3::mad(th, down, h[0]), outward, h[1]), fwd, h[2]), down, fwd), adj)
 }
 const PISTOL: Option<KitItem> = Some(KitItem::Pistol);
 const RIFLE: Option<KitItem> = Some(KitItem::Rifle);
@@ -276,7 +276,7 @@ fn kit_hands(fk: &mut Fk, er: &mut Errand) {
     let (s_r, s_l, elbow_u) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)), fk.at(role(FOREARM_R)));
     let u_r: Spot = (fk.at(role(HAND_R)), fk.rot(role(HAND_R)), None);
     let u_l: Spot = (fk.at(role(HAND_L)), fk.rot(role(HAND_L)), None);
-    let (la, lb) = (len3(&sub3(elbow_u, s_r)), len3(&sub3(u_r.0, elbow_u)));
+    let (la, lb) = (v3::len(v3::sub(elbow_u, s_r)), v3::len(v3::sub(u_r.0, elbow_u)));
     let rifle = from == RIFLE || to == RIFLE;
     *er = Errand { s_r, s_l, elbow_u, u_r, u_l, la, lb, rifle, ..*er };
 }
@@ -296,7 +296,7 @@ fn und(er: &Errand, dv: [f64; 3]) -> [f64; 3] {
 /// Where the right hand set out from.
 fn kit_start(fk: &mut Fk, er: &mut Errand) {
     let Errand { cap, fix_r, q3, s_r, .. } = *er;
-    let st: Spot = (match cap.mr { Some(m) => un(fk, er, m), None => add3(s_r, dir_t(er, cap.r)) }, match (cap.mf, cap.mb) { (Some(f), Some(b)) => hand_rot(&fix_r, und(er, f), und(er, b)), _ => q_mul(&q3, &cap.rq) }, None);
+    let st: Spot = (match cap.mr { Some(m) => un(fk, er, m), None => v3::add(s_r, dir_t(er, cap.r)) }, match (cap.mf, cap.mb) { (Some(f), Some(b)) => hand_rot(&fix_r, und(er, f), und(er, b)), _ => quat::mul(q3, cap.rq) }, None);
     *er = Errand { st, ..*er };
 }
 
@@ -304,20 +304,20 @@ fn kit_start(fk: &mut Fk, er: &mut Errand) {
 fn spot(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &Errand, it: Option<KitItem>) -> Spot {
     let Errand { rc_inv, front, crouch, fix_r, holster, h_adj, p_adj, .. } = *er;
     if it == RIFLE && front {
-        return (add3(fk.at(role(SPINE2)), dir_t(er, sling.at)), hand_rot(&fix_r, dir_t(er, sling.fing), dir_t(er, sling.back)), Some(dir_t(er, tune.kit.front.pole)));
+        return (v3::add(fk.at(role(SPINE2)), dir_t(er, sling.at)), hand_rot(&fix_r, dir_t(er, sling.fing), dir_t(er, sling.back)), Some(dir_t(er, tune.kit.front.pole)));
     }
     if it == RIFLE {
         let (p, f, b) = (tune.kit.apex.at, tune.kit.apex.fing, tune.kit.apex.back);
-        return (add3(fk.at(role(UPPER_ARM_R)), dir_t(er, p)), hand_rot(&fix_r, dir_t(er, f), dir_t(er, b)), Some(dir_t(er, tune.kit.apex.pole)));
+        return (v3::add(fk.at(role(UPPER_ARM_R)), dir_t(er, p)), hand_rot(&fix_r, dir_t(er, f), dir_t(er, b)), Some(dir_t(er, tune.kit.apex.pole)));
     }
     if it == CAN {
         let (p, f, b) = (tune.kit.belt.at, tune.kit.belt.fing, tune.kit.belt.back);
-        return (un(fk, er, add3(fk.at(role(HIPS)), dir_t(er, p))), hand_rot(&fix_r, und(er, dir_t(er, f)), und(er, dir_t(er, b))), Some(dir_t(er, tune.kit.belt.pole)));
+        return (un(fk, er, v3::add(fk.at(role(HIPS)), dir_t(er, p))), hand_rot(&fix_r, und(er, dir_t(er, f)), und(er, dir_t(er, b))), Some(dir_t(er, tune.kit.belt.pole)));
     }
     if it == PISTOL {
         // the hand that holds the gun as it stands in the holster
         let p = un_adj(&holster_frame_of(fk.at(role(THIGH_R)), fk.at(role(SHIN_R)), fk.at(role(HIPS)), [0.0, 0.0, 1.0], holster, &h_adj), &p_adj);
-        return (un(fk, er, p.o), hand_rot(&fix_r, und(er, p.z), und(er, scale3(p.x, -1.0))), Some(dir_t(er, tune.kit.holster_pole)));
+        return (un(fk, er, p.o), hand_rot(&fix_r, und(er, p.z), und(er, v3::scale(p.x, -1.0))), Some(dir_t(er, tune.kit.holster_pole)));
     }
     let (p, r, pl) = sheath_fist(fk, &rc_inv, &fix_r, crouch, 0.0, 0.0);
     (p, r, Some(pl))
@@ -359,15 +359,15 @@ fn eh(u: f64) -> f64 {
 
 /// Between two spots, rounded by an arc and turned through a third.
 fn mix(er: &Errand, sa: &Spot, sb: &Spot, e: f64, arc: Option<[f64; 3]>, via: Option<[f64; 4]>) -> Spot {
-    let p = lerp3(&sa.0, &sb.0, e);
+    let p = v3::lerp3(sa.0, sb.0, e);
     (
         match arc {
-            Some(ar) => mad3(p, dir_t(er, ar), sin(PI * e)),
+            Some(ar) => v3::mad(p, dir_t(er, ar), sin(PI * e)),
             None => p,
         },
         match via {
-            Some(v) => slerp(&slerp(&sa.1, &v, e), &slerp(&v, &sb.1, e), e),
-            None => slerp(&sa.1, &sb.1, e),
+            Some(v) => quat::slerp(quat::slerp(sa.1, v, e), quat::slerp(v, sb.1, e), e),
+            None => quat::slerp(sa.1, sb.1, e),
         },
         None,
     )
@@ -448,7 +448,7 @@ fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand)
     if rifle && has_from {
         // (shoulder ↔ hip: the elbow goes with the hand, not ahead of it)
         if let (Some(pa), Some(pb)) = (sa.2, pole) {
-            pole = Some(lerp3(&pa, &pb, eh(u)));
+            pole = Some(v3::lerp3(pa, pb, eh(u)));
         }
     }
     grip = smoothstep(0.65, 1.0, u);
@@ -503,13 +503,13 @@ fn rifle_elbow(er: &mut Errand) {
     let Errand { s_r, elbow_u, u_r, rifle, mut pole_w, mut pole, .. } = *er;
     if let (true, Some(pl)) = (rifle, pole) {
         // a rifle's errand: the elbow exactly where its pole says, the pole itself led over from where the pose underneath has the elbow
-        let (ax, eb) = (sub3(u_r.0, s_r), sub3(elbow_u, s_r));
-        let al = len3(&ax);
-        let pu = if al > 1e-4 { mad3(eb, ax, -dot3(&eb, &ax) / (al * al)) } else { eb };
-        let pu = if len3(&pu) > 1e-3 { normalize(pu) } else { normalize(pl) };
-        let (wv, pn) = (clamp(pole_w / 0.85, 0.0, 1.0), normalize(pl));
-        let m = lerp3(&pu, &pn, wv);
-        pole = Some(if len3(&m) > 1e-3 { normalize(m) } else { pn });
+        let (ax, eb) = (v3::sub(u_r.0, s_r), v3::sub(elbow_u, s_r));
+        let al = v3::len(ax);
+        let pu = if al > 1e-4 { v3::mad(eb, ax, -v3::dot(eb, ax) / (al * al)) } else { eb };
+        let pu = if v3::len(pu) > 1e-3 { v3::normalize(pu) } else { v3::normalize(pl) };
+        let (wv, pn) = (clamp(pole_w / 0.85, 0.0, 1.0), v3::normalize(pl));
+        let m = v3::lerp3(pu, pn, wv);
+        pole = Some(if v3::len(m) > 1e-3 { v3::normalize(m) } else { pn });
         pole_w = 1.0;
     }
     *er = Errand { pole_w, pole, ..*er };
@@ -522,10 +522,10 @@ fn arm_room(tune: &Knobs, er: &mut Errand) {
     let lie: Option<[f64; 4]> = None;
     if own > 0.0 {
         let r_min = sqrt(max(0.0, la * la + lb * lb - 2.0 * la * lb * cos(tune.kit.elbow_min * PI / 180.0))) * own;
-        let dv = sub3(tg.0, s_r);
-        let dl = len3(&dv);
+        let dv = v3::sub(tg.0, s_r);
+        let dl = v3::len(dv);
         if dl < r_min {
-            tg.0 = mad3(s_r, if dl > 1e-4 { scale3(dv, 1.0 / dl) } else { dir_t(er, [-0.4, 0.2, 0.9]) }, r_min);
+            tg.0 = v3::mad(s_r, if dl > 1e-4 { v3::scale(dv, 1.0 / dl) } else { dir_t(er, [-0.4, 0.2, 0.9]) }, r_min);
         }
     }
     *er = Errand { tg, own, lie, ..*er };
@@ -535,10 +535,10 @@ fn arm_room(tune: &Knobs, er: &mut Errand) {
 fn support(tune: &Knobs, fk: &mut Fk, er: &mut Errand) {
     let Errand { t, to, cap, q3, s_l, u_l, mut join, .. } = *er;
     let gun_next = to == PISTOL || to == RIFLE;
-    let s_l0: Spot = (match cap.ml { Some(m) => un(fk, er, m), None => add3(s_l, dir_t(er, cap.l)) }, q_mul(&q3, &cap.lq), None);
+    let s_l0: Spot = (match cap.ml { Some(m) => un(fk, er, m), None => v3::add(s_l, dir_t(er, cap.l)) }, quat::mul(q3, cap.lq), None);
     let mut tl: Option<Spot> = None;
     if gun_next {
-        let rest: Spot = (add3(s_l, dir_t(er, tune.kit.rest)), s_l0.1, None);
+        let rest: Spot = (v3::add(s_l, dir_t(er, tune.kit.rest)), s_l0.1, None);
         tl = Some(mix(er, &mix(er, &s_l0, &rest, e3(t / 0.22), None, None), &u_l, join, None, None));
     } else if t < tune.kit.let_go {
         // …and no gun coming: it lets go and falls away, not snapped off
@@ -555,20 +555,20 @@ fn right_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, er: &mut Errand)
     two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&tg.1), false);
     if own > 0.0 {
         // the wrist: the hand's line brought back toward its forearm's where the path asked more of it than a wrist bends
-        let fa = sub3(fk.at(role(HAND_R)), fk.at(role(FOREARM_R)));
-        let (fl, fg) = (len3(&fa), q_rotate(&q_mul(&tg.1, &conj(fix_r)), &[0.0, 1.0, 0.0]));
+        let fa = v3::sub(fk.at(role(HAND_R)), fk.at(role(FOREARM_R)));
+        let (fl, fg) = (v3::len(fa), quat::rotate(quat::mul(tg.1, quat::conj(fix_r)), [0.0, 1.0, 0.0]));
         if fl > 1e-4 {
-            let fd = scale3(fa, 1.0 / fl);
-            let (ang, kn) = (acos(clamp(dot3(&fd, &fg), -1.0, 1.0)), tune.kit.wrist_knee * PI / 180.0);
+            let fd = v3::scale(fa, 1.0 / fl);
+            let (ang, kn) = (acos(clamp(v3::dot(fd, fg), -1.0, 1.0)), tune.kit.wrist_knee * PI / 180.0);
             let mx = max(kn + 0.01, tune.kit.wrist_max * PI / 180.0);
             if ang > kn {
                 let want = kn + (mx - kn) * (1.0 - exp(-(ang - kn) / (mx - kn)));
-                let ax = cross3(&fg, &fd);
-                let al = len3(&ax);
+                let ax = v3::cross(fg, fd);
+                let al = v3::len(ax);
                 if al > 1e-4 {
-                    let lim = q_mul(&axis_angle(&scale3(ax, 1.0 / al), (ang - want) * own), &tg.1);
+                    let lim = quat::mul(quat::axis_angle(v3::scale(ax, 1.0 / al), (ang - want) * own), tg.1);
                     two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&lim), false);
-                    lie = Some(q_mul(&conj(lim), &tg.1));
+                    lie = Some(quat::mul(quat::conj(lim), tg.1));
                 }
             }
         }
