@@ -9,9 +9,6 @@ use crate::v3::{self, V3};
 pub(super) fn throws(g: &mut Game, t: Tick, a: Aim, arc: Option<crate::throwables::ThrowSolution>) {
     let pl = t.pl;
     let left = |g: &Game, kind| throw_count(g, &crate::seats::here(g), kind) > 0.0;
-    let first = g.pl[pl].throw_kind;
-    let other = if first == ThrowKind::Flash { ThrowKind::Smoke } else { ThrowKind::Flash };
-    if !left(g, first) && left(g, other) { g.pl[pl].throw_kind = other; }
     g.sets[g.seat].hand.throw_preview = match can_in_hand(g, pl) {
         Some(kind) if !g.pl[pl].sprinting && left(g, kind) => Some(can_up(g, t, a, kind)),
         _ => arc,
@@ -67,13 +64,13 @@ pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: cr
     }
 }
 
-/// the can he has in his hand
+/// The kind of can his slot has up, whether or not one is left.
 pub fn can_in_hand(g: &crate::game::Game, pl: PlayerId) -> Option<crate::game::ThrowKind> {
     if g.pl[pl].holstered { None } else { crate::game::player_canister_sel(g, pl) }
 }
 
 /// a thrown thing not yet out of the hand goes back on the belt
-pub(super) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
+pub fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
     match kind {
         crate::game::ThrowKind::Frag => g.pl[pl].frags += 1.0,
         crate::game::ThrowKind::Flash => g.pl[pl].flashbangs += 1.0,

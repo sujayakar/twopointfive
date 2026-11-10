@@ -84,7 +84,7 @@ pub(super) fn set_holstered(g: &mut crate::game::Game, on: bool, quiet: Option<b
 }
 
 /// a gun's reload given up half way, if it is in one
-pub(super) fn reload_dropped(g: &mut crate::game::Game, c: CharId, gun: FirearmId) {
+pub fn reload_dropped(g: &mut crate::game::Game, c: CharId, gun: FirearmId) {
     if !crate::weapons::firearm_reloading(g, gun) { return; }
     crate::weapons::firearm_cancel_reload(g, gun);
     crate::character::anim_cancel_reload(g, c);
@@ -214,22 +214,19 @@ pub(super) fn shell_break(g: &mut crate::game::Game) -> Option<crate::player::Sh
     if reloading { if !feeding { return None; } } else if crate::gunreload::shell_plan(g, rifle, None, None).is_none() { return None; }
     if g.fa[rifle].chamber == 1.0 || (g.fa[rifle].infinite && g.fa[rifle].mag.is_some()) {
         if !feeding { return None; }
-        crate::weapons::firearm_cancel_reload(g, rifle);
-        crate::character::anim_cancel_reload(g, c);
+        reload_dropped(g, c, rifle);
         return Some(crate::player::ShellBreak::Fire);
     }
     if !g.fa[rifle].mag.map_or(false, js::truthy) { return None; }
     if feeding && g.fa[rifle].feed_n == 0.0 { return Some(crate::player::ShellBreak::Bolt); }
     if crate::character::anim_kit_busy(g, c) || !crate::game::player_rifle_up(g, pl) || wall_not_stack(g, pl) { return None; }
-    if feeding {
-        crate::weapons::firearm_cancel_reload(g, rifle);
-        crate::character::anim_cancel_reload(g, c);
-    }
+    if feeding { reload_dropped(g, c, rifle); }
     if reload_in_hand(g, Some(false), Some(true)) { Some(crate::player::ShellBreak::Bolt) } else { None }
 }
 
-/// stacked on a wall with the rifle; and with his back to one
+/// Stacked on a wall with the rifle.
 pub(super) fn on_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some_and(|w| w.kind == Some(crate::player::WallHoldKind::Stack)) }
+/// On a wall some other way: his back to it.
 pub(super) fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool { g.pl[pl].wall.is_some() && !on_stack(g, pl) }
 
 /// a tube gun's beat as the weapon's row (TypeScript: the one object, ShellRow being WeaponDef['reload'] & { exact: true })

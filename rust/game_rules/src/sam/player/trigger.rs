@@ -100,7 +100,7 @@ fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     if let Some(gd) = seat.aim_guard { return man_aim(g, seat, gd, 1.25); }
     free_aim(g, seat, None)
 }
-/// The pistol's right button: the light the reticle has snapped to is put out for a while. At nothing, it clicks at nothing.
+/// The pistol's right button: the light the reticle has snapped to, a man's flashlight too, is put out for a while. At nothing, it says no.
 pub(super) fn ocp_on_reticle(g: &mut Game) {
     let (light, man) = { let s = &g.sets[g.seat]; (s.aim_target, s.aim_guard) };
     if crate::lighting::ocpable(g, &crate::seats::here(g)) || (light.is_none() && man.is_none()) { crate::game::game_ocp(g, light); }
