@@ -21,7 +21,7 @@ An object is drawn fine and traced in boxes: what the eye meets is the fine shap
 - 6,577 things, 53.6 M triangles placed, 0.16 to 0.70 M drawn. 71 shapes (49 of them odd, 38 of those the two cars'), 0.40 M triangles, 16.4 MB, 8.0 squeezed; read back in a tenth of a second (0.2 with the page's text around it). Buffers that do not grow with the scene: 17 MB of indices, 2 of clusters.
 - Made: 41 to 48 s in one thread, 23 in two, 17.5 in four or more: the body alone is 17. The table of what is drawn for what: 30 ms.
 - A hole: 10 to 25 ms for the blow itself, with boxes the same; it takes 4 to 7 panels. The longest frame after is the boxes' too (50 to 85 ms: what is joined, where lamps reach).
-- Swaps, a slow pull back, a thirtieth a step, the settled picture before and after: see the table of 10 November at the end.
+- Swaps: see far levels, below.
 - On a Mac (Apple GPU, Metal 3, the page's button, 16 views, 10 November): 0.46 ms more GPU time in the mean, 1.25 less (a car by night) to 1.18 more (walking, rooms, by night), on 19 to 26; by the clock no difference (0.01 ms in the mean). Its own passes 0.2 to 1.0. Shapes read in 0.06 s.
 - A thing in view: 12 triangles and up. A shape more: a quarter of a megabyte, nothing a frame.
 
@@ -30,6 +30,9 @@ How far the shape is from its pieces (2 cm); brightness of shape and pieces unde
 
 ## Far levels (10 November, after Sujay found them poor)
 A level's vertices are some of the finest's, and kept their own normals and colors: one grain of noise was then spread over a triangle a hundred times its size, the same on every slab. Each level now has normals from its own triangles (by the squares of areas, so that a wide face is not bent by the slivers of its rim) and the mean color of all that went into each vertex. Where two stuffs meet in one skin the triangles are cut along the line, and the simplifier keeps the line (its vertices go only along it; where three meet they stay): each triangle says whose piece it is made of, in the top byte of its index. Letting dice choose the level near a swap made nothing better.
+Frames after it (30 views, 1080p at 0.75, one run): 0.46 less to 0.71 more than boxes, 0.37 in the mean, on 12 to 19; 15.4 MB, 7.6 squeezed. Swaps (a step's, one pixel in a thousand, of 255, where drawn twice is 14 to 19): 17 to 26 in the mean of eight steps, 20 to 33 at worst; before 18 to 28 and 19 to 68. Still seen if looked for at 10 to 13 m.
+
+What steam costs: five vents' plumes are 4.2 ms of 18 on the card (pressure 0.7, light 0.5, air 0.5, lamps 0.5, and the rest); haze and open doors are nothing. That is most of why this page's frames are longer than a still bench's.
 
 ## Known faults of the first ones
 Skins hide the patterns under them (planks of a floor look plainer fine than as a box). A box is cut by the section with an end to show; a skin or a body is cut open. Cloth, water, glass, leaves and the city stay as they were.
