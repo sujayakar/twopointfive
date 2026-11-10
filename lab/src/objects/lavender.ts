@@ -53,7 +53,7 @@ const into = (ls: Leaf[], R: Rot, at: V3, scale: number): Leaf[] => ls.map(l => 
 const frame = (y: V3): Rot => { const x = norm(cross(y, [0.31, 0.2, 0.93])); return [x, y, cross(x, y)]; };
 /** what of a kind of tuft is one instance: leaves, stalks, blooms */
 interface Sort { cluster: Cluster; at: V3; rot: Rot; scale: number; tint: V3; what: 0 | 1 | 2 }
-const made = new Map<number, Sort[][]>(), BRIGHT: V3[] = [[1, 1, 1], [0.93, 1, 0.925], [0.935, 1, 0.93], [0.875, 1, 0.90]];
+const made = new Map<number, Sort[][]>(), BRIGHT: V3[] = [[1, 1, 1], [0.955, 1, 0.925], [0.955, 1, 0.93], [0.895, 1, 0.90]];
 function sorts(level: number): Sort[][] { let all = made.get(level); if (all) return all; const g = GRAINS[level]!, b = BRIGHT[level]!; all = KINDS.map(u => { const s: Sort[] = [], p = grow(u, g), R = frame(u.y), push = (ls: Leaf[], kind: number, at: V3, scale: number, tint: V3, what: 0 | 1 | 2) => { if (ls.length > 1) s.push({ cluster: { kind, leaves: into(ls, R, at, scale) }, at, rot: R, scale, tint, what }); };
   push(p.leaves, g.oval ? 0 : 1, u.at, g.oval ? 0.175 : 0.162, mul(LEAF, b[0] * (g.oval ? Math.sqrt(0.7) : 1)), 0); push(p.stalks, 1, u.at, 0.21, mul(STALK, b[1]), 1); const mid = mul(p.blooms.reduce((q, l) => add(q, l.at), [0, 0, 0] as V3), 1 / Math.max(1, p.blooms.length)); push(p.blooms, 0, mid, 0.29, mul(VIOLET, b[2]), 2); return s; }); made.set(level, all); return all; }
 const kept = new WeakMap<World, Map<number, number[][]>>();
