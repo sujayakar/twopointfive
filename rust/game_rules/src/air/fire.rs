@@ -157,15 +157,6 @@ pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).
-fn wind_at(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
-    let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
-    let wv = crate::wind::wind_at(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]], None);
-    let wl = m::hyp2(wv[0], wv[2]);
-    let wk = if wl > wind_max { wind_max / wl } else { 1.0 };
-    crate::fire::WindAt { wv, wl, wind: [wv[0] * wk, wv[2] * wk] }
-}
-
-/// The same of the game as it stands, for whoever only reads it.
 pub fn flame_wind(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_sum(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]]);
@@ -228,37 +219,46 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
     crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
 }
 
-/// Out but still lit in the fog's picture: the remembered pool stays a fire's.
-fn held(g: &mut crate::game::Game, t: FixtureId) {
+/// The steady row of a fire's lamp: what it is as the level hung it. Made the first time the lamp is a fire's.
+fn steady_of(g: &mut Game, t: FixtureId) -> &mut crate::render_lights::RtLightSteady {
+    let pos = g.tab.fixture[t].pos;
+    let lamp = &mut g.tab.light[g.tab.fixture[t].light.unwrap()];
+    let (radius, color, range) = (lamp.radius, lamp.color, lamp.range);
+    lamp.steady.get_or_insert(crate::render_lights::RtLightSteady { intensity: 0.0, pos, radius, color: Some(color), range: Some(range), out: None })
+}
+
+/// Its lamp as a fire's: the width, the warmth and the reach of one, and for whoever asks after the place's steady light, how bright it is and whether it is out.
+fn as_fire(g: &mut Game, t: FixtureId, intensity: f64, out: bool) {
+    let s = steady_of(g, t);
+    s.intensity = intensity;
+    s.out = Some(out);
+    let s = *s;
+    let radius = m::max(s.radius, g.k.fire.size * mouth_of(g, t).r);
+    let warm = [0, 1, 2].map(|n| g.k.fire.warm.get(n).copied().unwrap_or(1.0));
+    let reach = g.k.fire.reach;
+    let lamp = &mut g.tab.light[g.tab.fixture[t].light.unwrap()];
+    let c = s.color.unwrap_or(lamp.color);
+    lamp.radius = radius;
+    lamp.color = [c[0] * warm[0], c[1] * warm[1], c[2] * warm[2]];
+    lamp.range = s.range.unwrap_or(lamp.range) * reach;
+}
+
+/// A fire that is out, each frame of it. While the fog's picture still has it lit, and for the one frame before the fog has had its say, it is held; else its lamp is back as the level hung it.
+fn out(g: &mut Game, t: FixtureId) {
     let l = g.tab.fixture[t].light.unwrap();
-    let tp = g.tab.fixture[t].pos;
-    if g.tab.light[l].steady.is_none() {
-        let lt = &mut g.tab.light[l];
-        lt.steady = Some(crate::render_lights::RtLightSteady { intensity: 0.0, pos: [tp[0], tp[1], tp[2]], radius: lt.radius, color: Some(lt.color), range: Some(lt.range), out: None });
-    }
-    let (s_radius, s_color, s_range) = {
-        let s = g.tab.light[l].steady.as_ref().unwrap();
-        (s.radius, s.color, s.range)
-    };
-    let c0 = match s_color {
-        Some(c) => c,
-        None => g.tab.light[l].color,
-    };
-    let warm = |i: usize, g: &Game| g.k.fire.warm.get(i).copied().unwrap_or(1.0);
-    let w = [warm(0, g), warm(1, g), warm(2, g)];
+    let ghost = g.tab.light[l].fog_ghost.unwrap_or(0.0) > 0.0;
+    let first = g.tab.light[l].steady.is_some_and(|st| !st.out.unwrap_or(false));
+    if ghost || first { held(g, t); } else { plain(g, t); }
+    crate::fixtures::light_home_feed_burning(g, l);
+}
+
+/// Held: the pool the picture remembers stays a fire's.
+fn held(g: &mut crate::game::Game, t: FixtureId) {
     let intensity = m::max(1e-4, g.tab.fixture[t].base_intensity * g.k.fire.bright);
-    g.tab.light[l].steady.as_mut().unwrap().intensity = intensity;
-    let radius = m::max(s_radius, g.k.fire.size * mouth_of(g, t).r);
-    let (lift, reach) = (g.k.fire.lift, g.k.fire.reach);
-    let lt = &mut g.tab.light[l];
-    lt.radius = radius;
-    lt.pos = [tp[0], tp[1] + lift, tp[2]];
-    lt.color = [c0[0] * w[0], c0[1] * w[1], c0[2] * w[2]];
-    let range = match s_range {
-        Some(r) => r,
-        None => lt.range,
-    };
-    lt.range = range * reach;
+    as_fire(g, t, intensity, true);
+    let p = g.tab.fixture[t].pos;
+    let lift = g.k.fire.lift;
+    g.tab.light[g.tab.fixture[t].light.unwrap()].pos = [p[0], p[1] + lift, p[2]];
 }
 
 /// The lamp back as the level hung it, and nothing said to the steady readers.
@@ -276,9 +276,6 @@ fn plain(g: &mut crate::game::Game, t: FixtureId) {
         lt.color = c0;
     }
 }
-
-// ---- the one seam: what skeleton 5 still cannot do (notes.md, ## Skeleton) ----
-
 
 #[cfg(test)]
 mod tests {
@@ -472,38 +469,25 @@ fn put_at(arr: &mut Vec<f64>, ix: usize, x: f64, hole: f64) {
 /// A frame book's hole: `n` is at least 1 where these are read, so it never equals `n - 1` or `n`, as `undefined` does not.
 const NO_FRAME: f64 = -1.0;
 
-/// One fire's embers, as this frame files them: the closure's captures at fire.ts:369.
-struct EmberFrom { mouth: MouthOf, flame_h: f64, e_up: f64, e_a: [f64; 4], heat: f64, si: f64 }
-
-/// A throw of embers off one fire, by its own seed and not the particles' serial.
-fn ember_emit(g: &mut Game, f: &EmberFrom, n: f64, hard: f64, k: f64) {
-    let fl = fire_look_smoke();
-    let (ember_speed, ember_life, ember_size, ember_gain) = (g.k.fire.ember_speed, g.k.fire.ember_life, g.k.fire.ember_size, g.k.fire.ember_gain);
-    let p = f.mouth.pos;
-    let a = f.e_a;
-    let (pos, dir, spread, speed_share, jit) = ([p[0] + a[0], p[1] + f.e_up, p[2] + a[1]], [a[2], 1.0, a[3]], fl.ember_spread + 0.6 * hard, fl.ember_speed, fl.ember_jit);
-    let seed = (m::imul(js::to_i32(f.si + 1.0), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(k + 1.0), 0x85EBCA77u32 as i32)) as u32 as f64;
-    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, pos, dir, n, crate::render_particles::EmitOpts {
-        shape: Some(crate::render_particles::EmitShape::Cone),
-        spread: Some(spread),
-        speed: ember_speed * speed_share * (1.0 + 1.6 * hard),
-        speed_jit: Some(0.6),
-        life: ember_life * (1.0 - 0.45 * hard),
-        life_jit: Some(0.45),
-        size: ember_size,
-        size_jit: Some(0.4),
-        pos_jit: Some(f.mouth.r * jit),
-        ember: Some(m::min(0.99, ember_gain * (0.5 + 0.5 * f.heat))),
-        seed: Some(seed),
-        ..crate::render_particles::EmitOpts::default()
-    });
+/// The frame's clock.
+struct Clock {
+    time: f64,
+    was: f64,
+    dt: f64,
 }
 
-/// `n` embers off one fire, counted in the book.
-fn ember_throw(g: &mut Game, f: &EmberFrom, n: f64, hard: f64) {
-    let k = book(g).embers;
-    ember_emit(g, f, n, hard, k);
-    book(g).embers += n;
+/// One fire burning this frame.
+struct Blaze {
+    t: FixtureId,
+    /// Which of the level's fires it is.
+    ix: usize,
+    seed: f64,
+    si: f64,
+    heat: f64,
+    flicker: f64,
+    mouth: MouthOf,
+    wind: [f64; 2],
+    flame_h: f64,
 }
 
 /// `g.smoke.emit`: the real body, then the event for the host's solver.
@@ -514,228 +498,226 @@ fn smoke_emit(g: &mut Game, e: &crate::smoke_types::SmokeEmitter) {
 
 /// Once a frame behind the lamps' paint: each fire's lamp flickered, moved and fed to its row, its coals, its cracks, and what the host shows and plays of it.
 pub fn update_fire(g: &mut Game, dt: f64) {
-    let mut any = false;
-    let mut i = 0;
-    while i < g.targets.len() {
-        let t = g.targets[i];
-        if is_fire(g, t) { any = true; break; }
-        i += 1;
-    }
-    if !any {
-        return;
-    }
-    state_of(g);   // makes the row; each write below gets it again, since calls that take g lie between them
-    let time = g.time;
-    let was = time - m::max(dt, 0.0);
+    let fires: Vec<FixtureId> = g.targets.iter().copied().filter(|t| is_fire(g, *t)).collect();
+    if fires.is_empty() { return; }
+    state_of(g);   // (the row made)
+    let clock = Clock { time: g.time, was: g.time - m::max(dt, 0.0), dt };
     let moved = dt > 0.0;
-    if moved {
-        // the host's book, which fire_stir reads: a fresh one when there is none or the clock went back on it
-        let stale = match g.engine.host_books.as_ref().and_then(|b| b.fire.as_ref()) {
-            Some(p) => was < p.time - 1e-9,
-            None => true,
-        };
-        let books = g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default);
-        if stale {
-            books.fire = Some(FireShown {
-                n: 0.0, time: 0.0, stir: None, stir_at: None, smoke: Vec::new(),
-                ember: Vec::new(), embers: 0.0,
-            });
-        }
-        let p = books.fire.as_mut().unwrap();
-        p.n += 1.0;
-        p.time = time;
-    }
-    let mut fires = 0.0;
-    let look = g.m.render_frame.look_config;
+    if moved { opens_book(g, &clock); }
+    let snow = g.m.render_frame.look_config.fire_snow > 0.0;
     let mut jets: Vec<crate::smoke_types::WindGpuSource> = Vec::new();
-    let snow_lift = look.fire_snow > 0.0;
-    let mut i = 0;
-    while i < g.targets.len() {
-        let t = g.targets[i];
-        i += 1;
-        if !is_fire(g, t) { continue; }
-        let ix = fires as usize;
-        fires += 1.0;
-        let l = g.tab.fixture[t].light.unwrap();
-        let heat = heat_of(g, t);
+    for (ix, &t) in fires.iter().enumerate() {
         if !burns(g, t) {
-            // out: while the fog's picture has it lit it is held as a fire's lamp, and for the one frame before the fog has had its say
-            let ghost = g.tab.light[l].fog_ghost.unwrap_or(0.0) > 0.0;
-            let first = match g.tab.light[l].steady { Some(st) => !st.out.unwrap_or(false), None => false };
-            if ghost || first {
-                held(g, t);
-                g.tab.light[l].steady.as_mut().unwrap().out = Some(true);
-            } else {
-                plain(g, t);
-            }
-            crate::fixtures::light_home_feed_burning(g, l);
+            out(g, t);
             continue;
         }
+        let b = Blaze::of(g, ix, t, clock.time);
+        b.lamp(g, clock.time);
+        b.coals(g);
+        if !moved { continue; }
+        let s = state_of(g);
+        s.lo = m::min(s.lo, b.flicker);
+        s.hi = m::max(s.hi, b.flicker);
+        if snow { jets.push(b.hot_air(g)); }
+        b.embers(g, &clock);
+        b.cracks(g, &clock);
+        b.smoke(g, &clock);
+    }
+    if !moved { return; }
+    if let Some(stir) = book(g).stir.as_mut() { stir.clear(); }
+    crate::render_particles::particles_set_heat(g, &jets);
+}
+
+/// The host's book, which fire_stir reads, on to this frame: a fresh one when there is none or the clock went back on it.
+fn opens_book(g: &mut Game, clock: &Clock) {
+    let books = g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default);
+    if books.fire.as_ref().map_or(true, |p| clock.was < p.time - 1e-9) {
+        books.fire = Some(FireShown { n: 0.0, time: 0.0, stir: None, stir_at: None, smoke: Vec::new(), ember: Vec::new(), embers: 0.0 });
+    }
+    let p = books.fire.as_mut().unwrap();
+    p.n += 1.0;
+    p.time = clock.time;
+}
+
+impl Blaze {
+    fn of(g: &Game, ix: usize, t: FixtureId, time: f64) -> Blaze {
         let seed = fire_seed(g, t);
-        let fl = fire_flicker(g, seed, time);
         let mouth = mouth_of(g, t);
-        let si = m::floor(seed * 65535.0);
-        let hung = g.tab.fixture[t].pos;
-        // the light: the authored lamp x the flicker, its place wandering with the flames; a reader of the place's steady light takes it for the authored lamp
-        if g.tab.light[l].steady.is_none() {
-            let lamp = &mut g.tab.light[l];
-            lamp.steady = Some(crate::render_lights::RtLightSteady {
-                intensity: 0.0, pos: hung, radius: lamp.radius, color: Some(lamp.color), range: Some(lamp.range), out: None,
-            });
-        }
-        g.tab.light[l].steady.as_mut().unwrap().out = Some(false);
-        let radius = m::max(g.tab.light[l].steady.unwrap().radius, g.k.fire.size * mouth.r);
-        g.tab.light[l].radius = radius;
-        let intensity = g.tab.fixture[t].base_intensity * g.tab.fixture[t].factor * g.k.fire.bright;
-        g.tab.light[l].steady.as_mut().unwrap().intensity = intensity;
-        let st = g.tab.light[l].steady.unwrap();
-        let c0 = match st.color { Some(c) => c, None => g.tab.light[l].color };
-        let warm = |n: usize| g.k.fire.warm.get(n).copied().unwrap_or(1.0);
-        let color = [c0[0] * warm(0), c0[1] * warm(1), c0[2] * warm(2)];
-        g.tab.light[l].color = color;
-        let range = match st.range { Some(r) => r, None => g.tab.light[l].range };
-        g.tab.light[l].range = range * g.k.fire.reach;
-        g.tab.light[l].intensity = st.intensity * fl;
-        let wander = g.k.fire.wander;
-        let x = wander_across(hung[0], wander, 0.83, h01(si + 5.0), 2.9, h01(si + 6.0), time);
-        let z = wander_across(hung[2], wander, 0.71, h01(si + 7.0), 3.3, h01(si + 8.0), time);
-        let y = wander_height(hung[1], g.k.fire.lift, g.k.fire.wander_up, fl, g.k.fire.depth);
+        Blaze { t, ix, seed, si: m::floor(seed * 65535.0), heat: heat_of(g, t), flicker: fire_flicker(g, seed, time), mouth, wind: flame_wind(g, mouth.pos).wind, flame_h: g.k.fire.height * g.k.fire.look.tall }
+    }
+
+    /// The light: the authored lamp x the flicker, its place wandering with the flames; a reader of the place's steady light takes it for the authored lamp.
+    fn lamp(&self, g: &mut Game, time: f64) {
+        let f = &g.tab.fixture[self.t];
+        let (l, hung, intensity) = (f.light.unwrap(), f.pos, f.base_intensity * f.factor * g.k.fire.bright);
+        as_fire(g, self.t, intensity, false);
+        let (k, si) = (&g.k.fire, self.si);
+        let x = wander_across(hung[0], k.wander, 0.83, h01(si + 5.0), 2.9, h01(si + 6.0), time);
+        let z = wander_across(hung[2], k.wander, 0.71, h01(si + 7.0), 3.3, h01(si + 8.0), time);
+        let y = wander_height(hung[1], k.lift, k.wander_up, self.flicker, k.depth);
+        g.tab.light[l].intensity = intensity * self.flicker;
         g.tab.light[l].pos = [x, y, z];
         crate::fixtures::light_home_feed(g, l);
-        // the coals, at this share of the glow updateTargets painted
-        let ck = coal_share(g.tab.fixture[t].factor, g.k.fire.coals, g.k.fire.coal_swing, fl);
-        let glow = g.tab.fixture[t].base_emissive;
-        let mut b = 0;
-        while b < g.tab.fixture[t].boxes.len() {
-            let bi = g.tab.fixture[t].boxes[b];
-            b += 1;
-            if let Some(&bx) = g.engine.world.statics.get(bi as usize) {
-                g.tab.boxes.edit(bx).emissive = [glow[0] * ck, glow[1] * ck, glow[2] * ck];
-            }
-        }
-        if moved {
-            let s = state_of(g);
-            s.lo = m::min(s.lo, fl);
-            s.hi = m::max(s.hi, fl);
-        }
-        let crate::fire::WindAt { wv, wl, wind } = wind_at(g, mouth.pos);
-        // the embers: a steady few off the flame and a throw with each crack, of every fire on every host; the picture leaves out what is far from where it looks
-        let (height, embers, ember_life, ember_crack) = (g.k.fire.height, g.k.fire.embers, g.k.fire.ember_life, g.k.fire.ember_crack);
-        let flame_h = height * g.k.fire.look.tall;
-        let px = moved && embers > 0.0;
-        let fl_smoke = fire_look_smoke();
-        if moved && snow_lift {
-            // the falling snow: this fire's hot air
-            let w = fl_smoke.snow;
-            let a = axis_at(g, flame_h * 0.5, wind);
-            let n = m::hyp3(a[2], 1.0, a[3]);
-            jets.push(crate::smoke_types::WindGpuSource {
-                kind: crate::wind::WindSourceKind::Jet,
-                pos: mouth.pos,
-                dir: [a[2] / n, 1.0 / n, a[3] / n],
-                speed: w.speed * heat,
-                reach: w.reach,
-                tan_spread: w.spread,
-                r0: mouth.r * w.mouth,
-                d_max: w.top,
-                bound: crate::smoke_types::WindGpuSourceBound { c: mouth.pos, r: w.top },
-                heat: Some(true),
-                ..crate::smoke_types::WindGpuSource::default()
-            });
-        }
-        let e_up = flame_h * fl_smoke.ember_up;
-        let e_a = axis_at(g, e_up, wind);
-        let from = EmberFrom { mouth, flame_h, e_up, e_a, heat, si };
-        if moved && px && ember_crack > 0.0 && book(g).stir.as_ref().map_or(false, |v| v.contains(&(ix as f64))) {
-            ember_throw(g, &from, m::round(ember_crack * 2.0), 1.0);
-        }
-        if px {
-            let owe = book(g).ember.get(ix).copied().unwrap_or(0.0) + embers / m::max(ember_life, 0.1) * heat * dt;
-            let n = m::floor(owe);
-            put_at(&mut book(g).ember, ix, owe - n, 0.0);
-            if n > 0.0 { ember_throw(g, &from, n, 0.0); }
-        }
-        // the cracks: the ones that fell in this frame, for the ear and (a throw of embers) for the eye
-        if moved {
-            for p in fire_pops(g, seed, time, 1.5) {
-                if p.at > was && p.at <= time {
-                    let gain = g.k.fire.crack * (0.5 + 0.5 * p.hard) * heat;
-                    let opts = crate::audio_iface::PlayOpts::Rate { rate: 0.8 + 0.5 * p.seed };
-                    crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(mouth.pos), Some(gain), Some(&opts));
-                    if px && ember_crack > 0.0 {
-                        ember_throw(g, &from, m::round(ember_crack * (0.4 + 0.6 * p.hard)), p.hard);
-                    }
-                }
-            }
-        }
-        // the smoke: a short source on the solver, filed afresh every `every` s
-        let b = g.k.fire.smoke;
-        if moved {
-            let slot = m::floor(time / b.every);
-            let p = book(g);
-            let n = p.n;
-            let goes = p.smoke.get(ix).copied() == Some(n - 1.0);
-            put_at(&mut p.smoke, ix, n, NO_FRAME);
-            if slot != m::floor(was / b.every) || !goes {
-                let l = fl_smoke;
-                let a = axis_at(g, height * l.up, wind);
-                smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                    pos: [mouth.pos[0] + a[0], mouth.pos[1] + height * l.up, mouth.pos[2] + a[1]],
-                    dir: [a[2], 1.0, a[3]],
-                    speed: b.speed,
-                    radius: l.radius,
-                    min_voxels: Some(b.cells),
-                    density: b.density * heat * l.density,
-                    temperature: b.temp * heat,
-                    ttl: b.every,
-                    age: 0.0,
-                    kind: crate::smoke_types::SmokeEmitterKind::Cloud,
-                    push: Some(b.push),
-                    jitter: Some(b.jitter),
-                    lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
-                    look: Some(true), fire: Some(true),
-                    tint: Some(l.soot),
-                    ..crate::smoke_types::SmokeEmitter::default()
-                });
-            }
-            // the look prototype: the fire puffs, a short burst of thicker, hotter gas, a few a second
-            let l = fl_smoke;
-            let ps = m::floor(time / l.puff_every);
-            if ps != m::floor(was / l.puff_every) || !goes {
-                let ox = (h01(si + ps * 31.0 + 11.0) - 0.5) * 2.0 * l.puff_off;
-                let oz = (h01(si + ps * 31.0 + 12.0) - 0.5) * 2.0 * l.puff_off;
-                let k = 0.7 + 0.6 * h01(si + ps * 31.0 + 13.0);
-                let a = axis_at(g, height * l.puff_up, wind);
-                smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                    pos: [mouth.pos[0] + ox + a[0], mouth.pos[1] + height * l.puff_up, mouth.pos[2] + oz + a[1]],
-                    dir: [a[2] + ox, 1.0, a[3] + oz],
-                    speed: l.puff_speed * k,
-                    radius: l.puff_radius,
-                    min_voxels: Some(b.cells),
-                    density: l.puff_density * heat * k,
-                    temperature: l.puff_temp * heat * k,
-                    ttl: l.puff_secs,
-                    age: 0.0,
-                    kind: crate::smoke_types::SmokeEmitterKind::Cloud,
-                    push: Some(l.puff_push),
-                    expand: Some(l.puff_expand),
-                    attack: Some(0.06),
-                    jitter: Some(0.9),
-                    lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
-                    look: Some(true), fire: Some(true),
-                    tint: Some(l.soot),
-                    ..crate::smoke_types::SmokeEmitter::default()
-                });
-            }
+    }
+
+    /// The coals, at this share of the glow updateTargets painted.
+    fn coals(&self, g: &mut Game) {
+        let f = &g.tab.fixture[self.t];
+        let share = coal_share(f.factor, g.k.fire.coals, g.k.fire.coal_swing, self.flicker);
+        let glow = f.base_emissive;
+        for bi in f.boxes.clone() {
+            if let Some(&b) = g.engine.world.statics.get(bi as usize) { g.tab.boxes.edit(b).emissive = [glow[0] * share, glow[1] * share, glow[2] * share]; }
         }
     }
-    if moved {
-        if let Some(stir) = g.engine.host_books.as_mut().and_then(|b| b.fire.as_mut()).and_then(|p| p.stir.as_mut()) {
-            stir.clear();
+
+    /// Its hot air, as the falling snow meets it.
+    fn hot_air(&self, g: &Game) -> crate::smoke_types::WindGpuSource {
+        let w = fire_look_smoke().snow;
+        let a = axis_at(g, self.flame_h * 0.5, self.wind);
+        let n = m::hyp3(a[2], 1.0, a[3]);
+        crate::smoke_types::WindGpuSource {
+            kind: crate::wind::WindSourceKind::Jet,
+            pos: self.mouth.pos,
+            dir: [a[2] / n, 1.0 / n, a[3] / n],
+            speed: w.speed * self.heat,
+            reach: w.reach,
+            tan_spread: w.spread,
+            r0: self.mouth.r * w.mouth,
+            d_max: w.top,
+            bound: crate::smoke_types::WindGpuSourceBound { c: self.mouth.pos, r: w.top },
+            heat: Some(true),
+            ..crate::smoke_types::WindGpuSource::default()
         }
-        crate::render_particles::particles_set_heat(g, &jets);
     }
-    state_of(g);
+
+    /// The embers: a steady few off the flame and a throw when it is stirred, of every fire on every host; the picture leaves out what is far from where it looks.
+    fn embers(&self, g: &mut Game, clock: &Clock) {
+        let (embers, life, crack) = (g.k.fire.embers, g.k.fire.ember_life, g.k.fire.ember_crack);
+        if !(embers > 0.0) { return; }
+        let stirred = book(g).stir.as_ref().is_some_and(|v| v.contains(&(self.ix as f64)));
+        if stirred && crack > 0.0 { self.throw(g, m::round(crack * 2.0), 1.0); }
+        let owe = book(g).ember.get(self.ix).copied().unwrap_or(0.0) + embers / m::max(life, 0.1) * self.heat * clock.dt;
+        let n = m::floor(owe);
+        put_at(&mut book(g).ember, self.ix, owe - n, 0.0);
+        if n > 0.0 { self.throw(g, n, 0.0); }
+    }
+
+    /// The cracks that fell in this frame, for the ear and (a throw of embers) for the eye.
+    fn cracks(&self, g: &mut Game, clock: &Clock) {
+        let crack = g.k.fire.ember_crack;
+        for p in fire_pops(g, self.seed, clock.time, 1.5) {
+            if !(p.at > clock.was && p.at <= clock.time) { continue; }
+            let gain = g.k.fire.crack * (0.5 + 0.5 * p.hard) * self.heat;
+            let opts = crate::audio_iface::PlayOpts::Rate { rate: 0.8 + 0.5 * p.seed };
+            crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(self.mouth.pos), Some(gain), Some(&opts));
+            if g.k.fire.embers > 0.0 && crack > 0.0 { self.throw(g, m::round(crack * (0.4 + 0.6 * p.hard)), p.hard); }
+        }
+    }
+
+    /// `n` embers off it, counted in the book, by its own seed and not the particles' serial.
+    fn throw(&self, g: &mut Game, n: f64, hard: f64) {
+        let fl = fire_look_smoke();
+        let nth = book(g).embers;
+        let k = &g.k.fire;
+        let up = self.flame_h * fl.ember_up;
+        let a = axis_at(g, up, self.wind);
+        let p = self.mouth.pos;
+        let seed = (m::imul(js::to_i32(self.si + 1.0), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(nth + 1.0), 0x85EBCA77u32 as i32)) as u32 as f64;
+        let o = crate::render_particles::EmitOpts {
+            shape: Some(crate::render_particles::EmitShape::Cone),
+            spread: Some(fl.ember_spread + 0.6 * hard),
+            speed: k.ember_speed * fl.ember_speed * (1.0 + 1.6 * hard),
+            speed_jit: Some(0.6),
+            life: k.ember_life * (1.0 - 0.45 * hard),
+            life_jit: Some(0.45),
+            size: k.ember_size,
+            size_jit: Some(0.4),
+            pos_jit: Some(self.mouth.r * fl.ember_jit),
+            ember: Some(m::min(0.99, k.ember_gain * (0.5 + 0.5 * self.heat))),
+            seed: Some(seed),
+            ..crate::render_particles::EmitOpts::default()
+        };
+        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, [p[0] + a[0], p[1] + up, p[2] + a[1]], [a[2], 1.0, a[3]], n, o);
+        book(g).embers += n;
+    }
+
+    /// The smoke: a short source on the solver, filed afresh every `every` s, and the puffs, a short burst of thicker, hotter gas a few a second.
+    fn smoke(&self, g: &mut Game, clock: &Clock) {
+        let p = book(g);
+        let n = p.n;
+        let goes_on = p.smoke.get(self.ix).copied() == Some(n - 1.0);
+        put_at(&mut p.smoke, self.ix, n, NO_FRAME);
+        let due = |every: f64| !goes_on || m::floor(clock.time / every) != m::floor(clock.was / every);
+        if due(g.k.fire.smoke.every) {
+            let e = self.gas(g);
+            smoke_emit(g, &e);
+        }
+        let every = fire_look_smoke().puff_every;
+        if due(every) {
+            let e = self.puff(g, m::floor(clock.time / every));
+            smoke_emit(g, &e);
+        }
+    }
+
+    /// The steady source.
+    fn gas(&self, g: &Game) -> crate::smoke_types::SmokeEmitter {
+        let (b, l) = (&g.k.fire.smoke, fire_look_smoke());
+        let p = self.mouth.pos;
+        let up = g.k.fire.height * l.up;
+        let a = axis_at(g, up, self.wind);
+        crate::smoke_types::SmokeEmitter {
+            pos: [p[0] + a[0], p[1] + up, p[2] + a[1]],
+            dir: [a[2], 1.0, a[3]],
+            speed: b.speed,
+            radius: l.radius,
+            density: b.density * self.heat * l.density,
+            temperature: b.temp * self.heat,
+            ttl: b.every,
+            push: Some(b.push),
+            jitter: Some(b.jitter),
+            ..soot(b.cells, l.soot)
+        }
+    }
+
+    /// The `nth` puff.
+    fn puff(&self, g: &Game, nth: f64) -> crate::smoke_types::SmokeEmitter {
+        let l = fire_look_smoke();
+        let luck = |j: f64| h01(self.si + nth * 31.0 + j);
+        let ox = (luck(11.0) - 0.5) * 2.0 * l.puff_off;
+        let oz = (luck(12.0) - 0.5) * 2.0 * l.puff_off;
+        let k = 0.7 + 0.6 * luck(13.0);
+        let p = self.mouth.pos;
+        let up = g.k.fire.height * l.puff_up;
+        let a = axis_at(g, up, self.wind);
+        crate::smoke_types::SmokeEmitter {
+            pos: [p[0] + ox + a[0], p[1] + up, p[2] + oz + a[1]],
+            dir: [a[2] + ox, 1.0, a[3] + oz],
+            speed: l.puff_speed * k,
+            radius: l.puff_radius,
+            density: l.puff_density * self.heat * k,
+            temperature: l.puff_temp * self.heat * k,
+            ttl: l.puff_secs,
+            push: Some(l.puff_push),
+            expand: Some(l.puff_expand),
+            attack: Some(0.06),
+            jitter: Some(0.9),
+            ..soot(g.k.fire.smoke.cells, l.soot)
+        }
+    }
+}
+
+/// What both its sources are: a cloud on the coarse grid, the picture's, a fire's.
+fn soot(cells: f64, tint: V3) -> crate::smoke_types::SmokeEmitter {
+    crate::smoke_types::SmokeEmitter {
+        min_voxels: Some(cells),
+        age: 0.0,
+        kind: crate::smoke_types::SmokeEmitterKind::Cloud,
+        lattice: Some(crate::smoke_types::SmokeLattice::Coarse),
+        look: Some(true),
+        fire: Some(true),
+        tint: Some(tint),
+        ..crate::smoke_types::SmokeEmitter::default()
+    }
 }
 
 #[cfg(test)]
