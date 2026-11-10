@@ -15,7 +15,7 @@ import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
 import waterpx from './waterpx.wgsl' with { type: 'text' };
 import { sightStages, sightCode } from './sight';
-import { torchStages, torchCode, torchView, torchLeaves } from './torches';
+import { torchStages, torchCode, torchView, torchLeaves, torchDirect, TORCH_READS } from './torches';
 import airlight from './airlight.wgsl' with { type: 'text' };
 import haze from './haze.wgsl' with { type: 'text' };
 import type { Place } from '../scene/place';
@@ -149,13 +149,13 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         ...looseStages(lab, g), raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
-        ...cache.stages, ...cellStages(lab, c, cache.lib, () => turn === 0), ...lab.smoke.stages(g, c, cache.lib, bounceLib), ...smokeMeanStages(lab),
+        ...torchStages(lab), ...cache.stages, ...cellStages(lab, c, cache.lib, () => turn === 0), ...lab.smoke.stages(g, c, cache.lib, bounceLib), ...smokeMeanStages(lab),
         ...sightStages(lab), S('lamps', torchView + torchLeaves + lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves', torchLeaves: 'torchTex' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, { torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }, { FINE: 4 }),
-        S('gather', cache.lib + cache.tell + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce', outV: 'bounceV' }, { ...c, ...cache.asks, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
-        S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
-        S('shine', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, c, { DIV: 2, LAYER: 1 }),
+        S('gather', cache.lib + cache.tell + bounceLib + torchCode + torchDirect + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce', outV: 'bounceV' }, { ...c, ...cache.asks, ...TORCH_READS, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
+        S('mirror', cache.lib + bounceLib + torchCode + torchDirect + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, { ...c, ...TORCH_READS }, { DIV: 2, LAYER: 0 }),
+        S('shine', cache.lib + bounceLib + torchCode + torchDirect + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'shine' }, { ...c, ...TORCH_READS }, { DIV: 2, LAYER: 1 }),
         ...dVis.stages, ...dT.stages, ...dB.stages, ...dM.stages, ...dS.stages,
-        ...airLightStages(lab, c, cache.lib), ...torchStages(lab), S('haze', airLightCode(lab.building.place) + torchCode + torchLeaves + haze, 'half', { surf: 'surf', airLight: 'light', torchLeaves: 'torchTex' }, { outA: 'haze' }, { torchMap: ['torchMap', 'array<f32>', 'read'], torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }), S('air', air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }),
+        ...airLightStages(lab, c, cache.lib), S('haze', airLightCode(lab.building.place) + torchCode + torchLeaves + haze, 'half', { surf: 'surf', airLight: 'light', torchLeaves: 'torchTex' }, { outA: 'haze' }, { torchMap: ['torchMap', 'array<f32>', 'read'], torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }), S('air', air, 'half', { surf: 'surf' }, { outA: 'air', outD: 'airD' }),
         S('air history', 'fn airAt2(p: vec2u) -> vec2f { return textureLoad(airD, p, 0).xy; }\nfn airWas(p: vec2u) -> vec2f { return textureLoad(airP, p, 0).xy; }\n' + temporal.replace(/^\s*\/\/2 /gm, '  // ').replace('CAP_NOW', 'f32(CAP)'), 'half', { airD: 'airD', 'airD@prev': 'airP', air: 'cur', 'airH@prev': 'hist', 'airM@prev': 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT' }, { outH: 'airH', outM: 'airM' }, {}, { DIV: 2, CAP: 16, SPREAD: 1.0, NARROW: 0, KIND: 0, LAYER: 0, AIR: 1 }),
         S('air blur', airblur, 'half', { airH: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airA' }, {}, { STRIDE: 1 }), S('air blur', airblur, 'half', { airA: 'src', surf: 'surf', haze: 'haze' }, { outB: 'airB' }, {}, { STRIDE: 2 }),
         S('tint', tint, 'render', { surf: 'surf', lampU: 'lampU', [dVis.result]: 'vis', [dT.result]: 'tone' }, { outT: 'lampT' }),

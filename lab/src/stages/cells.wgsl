@@ -15,7 +15,7 @@ fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var 
   let st = steady(at.xyz); if (many.z > 0u) { n = min(n, 6.0); } { let turn = select(3u, 7u, n > 32.0); if (n > 16.0 && st > 0.9 && (wg.x & turn) != (many.y & turn)) { go = false; } }
   let leafy = (r.x >> 31u) != 0u; let S = frame.sunDir.xyz; let sun0 = max3(frame.sunE.xyz) > 0.0; let h = at.w; var out = vec3f(0.0); var way = vec3f(0.0);
   if (go) {
-    rngKey(s * 8u + task, 203u); leafMode = 2u; byReach = true; blkPast = select(0.0, REACH_F, leafy); let x = at.xyz + (vec3f(rnd(), rnd(), rnd()) - 0.5) * ext.xyz * select(0.0, 1.0, leafy);
+    rngKey(s * 8u + task, 203u); leafMode = 2u; byReach = true; still = true; blkPast = select(0.0, REACH_F, leafy); let x = at.xyz + (vec3f(rnd(), rnd(), rnd()) - 0.5) * ext.xyz * select(0.0, 1.0, leafy);
     if (task < 6u) {
       let a = six(task); let u = rnd2(); let rr = sqrt(u.x); let bs = basis(a); let d = normalize(bs[0] * (rr * cos(6.2832 * u.y)) + bs[1] * (rr * sin(6.2832 * u.y)) + bs[2] * sqrt(max(1.0 - u.x, 0.0))); var o = x; if (!leafy) { o = onSide(at.xyz, ext.xyz, a * 1e3); }
       foot(h, 1.0); fromCell = cell; let hit = nearest(o, d, 2e-3, 600.0, 0u, 1e9); fromCell = NOTHING; var L = vec3f(0.0);

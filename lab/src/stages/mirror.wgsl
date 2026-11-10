@@ -14,7 +14,7 @@
   else {
     let q = wetFilm(surfaceAt(o, d, h, 0.004 + h.t * (0.002 + s.rough * s.rough)), 0.2); L = q.glow; if ((pieces[h.piece].lamp & 255u) != 255u) { L *= 1.0 - byFormula(s.rough); } let cs = dot(q.n, frame.sunDir.xyz); var V1 = vec3f(0.0); askMoves = (q.flags & MOVES) != 0u; let c = cacheSmooth(q.x, q.ng); let w = footAt(h.t);
     if (max3(frame.sunE.xyz) > 0.0 && cs > 0.0) { foot(w, 2.0 * frame.sunDir.w); V1 = visible(q.x + q.ng * 0.004 * sign(dot(q.ng, frame.sunDir.xyz)), coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()), 2e-3, 400.0); }
-    let m = returns(q); L += m / PI * (c.E * select(0.0, 1.0, c.n > 0.0) + frame.sunE.xyz * (max(cs, 0.0) * V1));
+    let m = returns(q); L += m / PI * (c.E * select(0.0, 1.0, c.n > 0.0) + torchLight(q.x, q.ng) + frame.sunE.xyz * (max(cs, 0.0) * V1));
     if ((pieces[h.piece].flags & WATER) != 0u) { L = skyLod(reflect(d, vec3f(0.0, 1.0, 0.0)), 2.0) * 0.12 + vec3f(0.02, 0.09, 0.1) * lum(frame.sunE.xyz) * 0.2; }
   }
   L = L * sm.a + sm.rgb; L *= h.thru; L = L * fo.T + fo.L; let m0 = lum(L); L *= min(1.0, 40.0 / max(m0, 1e-4));

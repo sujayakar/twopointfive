@@ -1,7 +1,7 @@
 // LIGHT IN THE AIR, kept where it is: a grid over the rooms and round them. A cell holds what the lamps and every bounce send through it (the same every way), and how much of the sun it
 // sees; a share of the cells looks again each frame. Torches move: what they send is found anew for every cell of their cones. The picture reads it along each ray, so nothing is kept on the screen.
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let i = id.x + id.y * 65535u * 64u; if (i >= AL_MANY) { return; } let c = vec3u(i % AL_N.x, (i / AL_N.x) % AL_N.y, i / (AL_N.x * AL_N.y)); let mid = AL_LO + (vec3f(c) + 0.5) * AL_H; leafMode = 2u; byReach = true;
+  let i = id.x + id.y * 65535u * 64u; if (i >= AL_MANY) { return; } let c = vec3u(i % AL_N.x, (i / AL_N.x) % AL_N.y, i / (AL_N.x * AL_N.y)); let mid = AL_LO + (vec3f(c) + 0.5) * AL_H; leafMode = 2u; byReach = true; still = true;
   var q = kept[i]; var J = vec4f(unpack2x16float(q.x), unpack2x16float(q.y)); var n = f32(q.z); let inside = !openAir(mid); let st = steady(mid); if (changes.all.y > 0.5) { n = 0.0; }
   let turn = select(select(7u, 15u, n > 30.0), 3u, n < 12.0 || st < 0.9); let due = inside && ((i + i / 64u) & turn) == (frame.counts.z & turn);
   if (due) {

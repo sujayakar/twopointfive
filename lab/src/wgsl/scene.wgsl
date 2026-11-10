@@ -3,7 +3,7 @@ struct Frame {
   camPos: vec4f, camRight: vec4f, camUp: vec4f, camFwd: vec4f,     // right and up are scaled by tan(fov / 2); right by the aspect too
   prevPos: vec4f, prevRight: vec4f, prevUp: vec4f, prevFwd: vec4f,
   sunDir: vec4f,       // w = the disc's angular radius
-  sunE: vec4f,         // irradiance on a surface facing it
+  sunE: vec4f,         // irradiance on a surface facing it; how many lamps more there are, of what torches light
   size: vec4f,         // render size, output size
   jitter: vec4f,       // this frame's, last frame's, in render pixels
   misc: vec4f,         // time (s), cut height, exposure, haze

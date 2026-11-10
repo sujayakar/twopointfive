@@ -24,7 +24,7 @@ fn aimNear(i: u32, x: vec3f, u: vec2f) -> Aim {
 }
 fn oneMore(s: u32) {
   var a = cells[2u * s]; var b = cells[2u * s + 1u]; let sp = spot[s]; let x0 = bitcast<vec3f>(sp.xyz); let n = octUnpack(sp.w & 0xfffffffcu); let st = steady(b.xyz); let key = atomicLoad(&keys[s]);
-  byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); } if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
+  byReach = true; still = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); } if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
   rngKey(key, 91u); leafMode = 2u; let x = x0 + n * 0.012; var sun = 0.0; var E = vec3f(0.0); let cs = dot(n, frame.sunDir.xyz);
   for (var k = 0u; k < 2u; k++) {
     var d: vec3f; var far = 400.0; var e = vec3f(0.0);

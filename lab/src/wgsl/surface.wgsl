@@ -242,10 +242,18 @@ fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
   return lum(a.E) * select(max(c, 0.0) + 0.12 * select(0.0, 1.0, (*l).kind == 0u && c > -0.6), 0.5, all(n == vec3f(0.0)));
 }
 var<private> byReach: bool = false;                                 // (the reference keeps a chance for every lamp)
+var<private> still: bool = false;                                   // (what is kept, is kept of lamps that stand: a torch is asked where it is needed)
+/** the lamps, and after them what torches light (cards.wgsl): for those who ask anew each frame */
+fn lampsAll() -> u32 { return frame.counts.x + u32(frame.sunE.w); }
 /** one lamp drawn in proportion to what it would send: its number and 1 / chance, or none */
 fn drawLamp(x: vec3f, n: vec3f) -> vec2f {
   var W = 0.0; var pick = -1.0; var w0 = 0.0; var u = rnd(); var near = vec4f(1.0);
-  for (var i = 0u; i < frame.counts.x; i++) { if ((i & 3u) == 0u) { near = lampReach(x, i >> 2u); if (!byReach) { near = mix(vec4f(0.04), vec4f(1.0), near); } } let k = near[i & 3u]; if (k <= 0.0) { continue; } let w = lampWeight(i, x, n) * k; if (w <= 0.0) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
+  for (var i = 0u; i < frame.counts.x; i++) { if ((i & 3u) == 0u) { near = lampReach(x, i >> 2u); if (!byReach) { near = mix(vec4f(0.04), vec4f(1.0), near); } } let k = near[i & 3u]; if (k <= 0.0 || (still && lamps[i].kind == 2u)) { continue; } let w = lampWeight(i, x, n) * k; if (w <= 0.0) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
+  return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
+}
+/** one of the spots torches light, drawn the same way */
+fn drawSpot(x: vec3f, n: vec3f) -> vec2f {
+  var W = 0.0; var pick = -1.0; var w0 = 0.0; var u = rnd(); let to = lampsAll(); for (var i = frame.counts.x; i < to; i++) { let w = lampWeight(i, x, n); if (w <= 1e-6) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
 // ================================================================ openings: where the sky is, for rays that should look there

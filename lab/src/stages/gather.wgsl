@@ -4,12 +4,12 @@
   let dim = textureDimensions(outE); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let p = underWater(unpackPx(textureLoad(surf, full, 0), rd), textureLoad(frontT, full, 0), rd); let who = id.y * dim.x + id.x;
   if (p.sky) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }
-  if (p.kind == 63u) {                                             // a cut wall: what falls on one side of it or the other
-    rngInit(id.xy, 17u); let n = p.n * select(-1.0, 1.0, rnd() < 0.5); let x = p.x + n * (p.rough + 0.003); askMoves = false; let c = cacheRead(x, n, rnd2()); cacheTell(who * 2u, x, n);
-    textureStore(outE, id.xy, vec4f(select(vec3f(0.0), min(c.E + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun, vec3f(50.0)), c.n > 0.0), 4.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
+  if (p.kind == 63u) {                                             // a cut wall: what falls on one side of it and on the other, half and half
+    rngInit(id.xy, 17u); askMoves = false; var E = vec3f(0.0); for (var k = 0u; k < 2u; k++) { let n = p.n * select(-1.0, 1.0, k == 0u); let x = p.x + n * (p.rough + 0.003); let c = cacheSmooth(x, n); cacheTell(who * 2u + k, x, n); if (c.n > 0.0) { E += 0.5 * min(c.E + torchLight(x, n) + frame.sunE.xyz * max(dot(n, frame.sunDir.xyz), 0.0) * c.sun, vec3f(50.0)); } }
+    textureStore(outE, id.xy, vec4f(E, 4.0)); textureStore(outV, id.xy, vec4f(0.0)); return;
   }
   if (p.leaf && folHas(p.x)) { textureStore(outE, id.xy, vec4f(0.0)); textureStore(outV, id.xy, vec4f(0.0)); return; }          // (a leaf reads its light from the foliage, at every pixel: see resolve)
-  rngInit(id.xy, 17u); leafMode = 2u; let x = p.x + p.ng * 0.004 * (1.0 + p.t * 0.02); var E = vec3f(0.0); var way = vec3f(0.0); var dist = 0.0; let N = u32(@tune.rays); let px = 2.0 * length(frame.camUp.xyz) / frame.size.y * 2.0 * p.t;
+  rngInit(id.xy, 17u); leafMode = 2u; still = true; let x = p.x + p.ng * 0.004 * (1.0 + p.t * 0.02); var E = vec3f(0.0); var way = vec3f(0.0); var dist = 0.0; let N = u32(@tune.rays); let px = 2.0 * length(frame.camUp.xyz) / frame.size.y * 2.0 * p.t;
   for (var k = 0u; k < N; k++) {
     let side = p.leaf && rnd() < 0.45; let n = select(select(p.ng, p.n, p.leaf), -p.n, side); let u = blue2(id.xy, 1u + k); let w = wideDir(select(x, p.x - p.ng * 0.02, side), n, u, rnd()); if (w.w <= 0.0) { continue; }
     if (dot(w.xyz, p.ng) * select(1.0, -1.0, side) <= 0.0) { continue; }
@@ -22,6 +22,8 @@
       let q = surfaceMean(o, d, h); let own = (pieces[h.piece].lamp & 255u) != 255u; if (!own) { L += thr * q.glow; } wide = footAt(h.t);
       if (wide >= @tune.fine * CELL || v == 3u) {
         L += thr * sentBack(q, rnd2(), d);
+        if (frame.sunE.w > 0.0) {        // (what torches light lights this too, anew each frame: the second bounce of a torch. What is kept knows nothing of it)
+          let y = q.x + q.ng * 0.004; let l = drawSpot(y, q.ng); if (l.x >= 0.0) { let g = aimLamp(u32(l.x), y, rnd2()); let e = g.E * (l.y * max(dot(q.ng, g.dir), 0.0)); if (max3(e) > 1e-5) { foot(wide, lampSize(u32(l.x)) / max(g.dist, 0.1)); L += thr * returns(q) / PI * min(e, vec3f(60.0)) * visible(y, g.dir, 2e-3, g.dist - 0.04) * 1.35; } } }        /* (a third more for the bounces after) */
         if (k < 2u) { cacheTell(who * 2u + k, q.x, q.ng); }
         break;
       }
