@@ -1302,19 +1302,15 @@ pub(super) fn carry(was: &Acts, a: &mut Acts) {
     (a.cuts, a.shots, a.hits_sam, a.hits_team, a.pins) = (was.cuts, was.shots, was.hits_sam, was.hits_team, was.pins);
     a.restages = was.restages + 1;
 }
+/// How a beat ended: cut short or not, whether somebody is far off his place for it, and whether it was the charge that opened a blank wall for another row.
+#[derive(Clone, Copy)]
+struct End { cut: bool, far: bool, hole: bool }
+
 pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static str) {
     st.a.last_end = g.time;
-    let team_row = row(b.row).team;
-    let far = team_row && st.order.iter().any(|&x| walk::off_home(g, st, x) > K.wall_off);
-    if st.a.fog_up {
-        st.a.fog_up = false;
-        g.fog_of_war.on = false;
-        g.fog_picture.viewer = false;
-        crate::fogofwar::fog_of_war_reset(g);
-        let pl = g.player;
-        g.pl[pl].wand = st.a.wand_was;
-        if let Some((x, was)) = st.a.wand_kit.take() { if let Some(e) = g.m.kit.man_of.get_mut(x) { e.kit.wand = was; } }
-    }
+    let far = row(b.row).team && st.order.iter().any(|&x| walk::off_home(g, st, x) > K.wall_off);
+    let e = End { cut: how == "cut", far, hole: b.prelude && b.marks.contains(&"hole") };
+    if st.a.fog_up { fog_down(g, st); }
     st.a.last = Some(BeatOver { n: b.n, field: b.field, phase: b.phase, marks: b.marks.clone(), how });
     if b.field == "smoke" && !b.mark_t.is_nan() { st.a.vent_at = b.mark_t + K.vent_secs; }
     st.a.clicked = 0.0;
@@ -1322,93 +1318,107 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
     st.a.beam = None;
     st.a.kneel = None;
     stay(g, st, false);
-    let now = g.time;
     for k in 0..st.order.len() { let x = st.order[k]; let l = low_at(g, st, x); low(g, st, x, l); }
-    let quick = how == "cut";
-    let hole_made = b.prelude && b.marks.contains(&"hole");
-    st.a.home_men = b.moved.iter().copied().filter(|&x| Some(x) != b.man).collect();
-    // (at a wall left open: who the next row waits for. The charge that opened it: everybody, Sam too. Any other row: the men it moved, once)
-    if hole_made { st.a.hole_men = st.order.clone(); st.a.hole_all = true; }
-    else if st.hole { for x in b.moved.iter().copied().chain(b.man) { if !st.a.hole_men.contains(&x) { st.a.hole_men.push(x); } } }
-    if !far || hole_made {
-        let n = b.moved.len();
-        for j in 0..n {
-            let x = b.moved[j];
-            if Some(x) != b.man && st.order.contains(&x) {
-                let p = home_of(g, st, x).0;
-                let (pace, delay) = if quick || hole_made { (K.swap_pace, 0.0) } else { (K.pace, K.shuffle[1] * (n - 1 - j) as f64) };
-                go(g, st, x, vec![p], pace, delay, false);
-                walk_of(st, x).unwrap().t0 = -1e9;
-            }
-        }
-    }
-    let pl = g.player;
-    if b.man.is_none() { g.pl[pl].crouch = st.quiet; }
-    if b.shots > 0 {
-        let gun = match b.man { Some(x) => Some(g.gd[x].weapon), None => crate::game::player_gun_in_hand(g, pl) };
-        if let Some(w) = gun { crate::weapons::firearm_rearm(g, w); }
-    }
-    match b.man {
-        Some(x) => {
-            let lane = walk_of(st, x).map_or(false, |w| { w.watch = None; w.face = None; w.lane });
-            let in_order = st.order.contains(&x);
-            let hy = home_of(g, st, x).1;
-            if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
-                let r = &mut g.tab.orders_assignment[a];
-                if r.order == "cover" { r.watch = None; r.upper = crate::character::UpperMode::None; r.stance = crate::character::Stance::LowReady; if in_order { r.face = Some(hy); } }
-            }
-            if in_order && !lane && (!far || hole_made) {
-                let h = home_of(g, st, x).0;
-                let pts = match b.via { Some(q) => vec![q, h], None => vec![h] };
-                go(g, st, x, pts, if how == "cut" || hole_made { K.swap_pace } else { K.pace }, 0.0, false);
-            }
-        }
-        None => {
-            if let Some(h) = b.hand.filter(|&h| h != g.pl[pl].slot) {
-                if st.quiet { g.pl[pl].slot = h; g.pl[pl].holstered = true; }
-                else { press(st, if h == SlotKind::Rifle { "Digit2" } else { "Digit1" }); st.a.hand_due = Some(h); }
-            }
-            if st.a.led.map_or(true, |l| l.at.is_none()) { let a = st.a.aim; st.a.sam_ch.v = a.v; st.a.sam_ch.want = a.v; st.a.sam_ch.w = a.w; st.a.sam_ch.own = false; }
-            st.a.led = None;
-            if let Some(i) = st.a.tube_was.take() { let r = g.pl[pl].rifle; g.fa[r].att_idx = i; }
-            if b.row == Act::Swap && b.phase == "stow" { super::cards::sam_card(g, st); sam_draw(st); }
-        }
-    }
-    let info = row(b.row);
-    let kept = b.marks.contains(&"kept");
-    st.a.rest_until = now + if how == "cut" { 0.0 } else if kept { m::min(info.rest, K.rest_quiet) } else if st.a.hi.is_none() && info.damage == Damage::None && info.rest == K.rest_quiet { K.rest_none } else { info.rest };
-    let door_gone = st.door.map_or(false, |d| g.dr[d].leaf.off);
-    // A WALL THAT OPENS ONCE, LOUDLY: the charge that opened a blank wall for another row leaves its hole, and the row asked plays through it from then on
-    if hole_made {
-        st.hole = true;
-        st.a.apart = false;
-        st.a.rest_until = now + if how == "cut" { 0.0 } else { K.rest_quiet };
-    } else if info.damage != Damage::None && (door_gone || b.marks.contains(&"frag") || b.marks.contains(&"gave") || (info.team && (b.marks.contains(&"blow") || far))) {
-        st.a.dirty = true;
-        st.a.apart = st.a.apart || far;
-        if how != "cut" && !b.mark_t.is_nan() { st.a.rest_until = b.mark_t + K.hold; }
-        else if how != "cut" && info.team { st.a.rest_until = now + K.rest_quiet; }
-    }
-    // THE LAMP SHOT OUT has no undo under the eye: the dark held to the row's end, then the room staged again
-    if b.row == Act::QuietGun && st.pool.map_or(false, |p| g.tab.fixture[p].broken) {
-        st.a.dirty = true;
-        st.a.rest_until = now;
-        st.a.rest_next = if how == "cut" { f64::NAN } else { QK.gun_rest };
-    }
-    // THE WALL CHARGE'S ROW OVER WITH NOTHING BLOWN: remembered for this way, and a charge still on the wall goes under the dissolve
-    if b.row == Act::WallCharge && how != "cut" && !b.marks.contains(&"blow") {
-        let no = if b.marks.contains(&"cap") { String::from("the wall charge never went off inside its row") }
-            else { let r = st.a.refused.clone().unwrap_or_default(); let r = r.split_once(": ").map_or(r.clone(), |x| String::from(x.1)); if r.is_empty() { String::from("the wall charge came down unblown") } else { r } };
-        wall_kept(st, &b, &no);
-        if st.a.refused.is_none() { st.a.refused = Some(format!("walls: {}", no)); }
-        if !g.sets[g.seat].wall_charge.set.is_empty() || !g.sets[g.seat].wall_charge.ops.is_empty() || b.marks.contains(&"down") || far { st.a.dirty = true; st.a.apart = st.a.apart || far; st.a.rest_until = now; }
-    }
-    // A LEAF SHOT TO PIECES under a row that says it leaves nothing
-    if door_gone && !st.a.dirty { st.a.dirty = true; }
+    moved_home(g, st, &b, e);
+    if b.man.is_none() { let pl = g.player; g.pl[pl].crouch = st.quiet; }
+    if b.shots > 0 { if let Some(w) = beat_gun(g, &b) { crate::weapons::firearm_rearm(g, w); } }
+    match b.man { Some(x) => man_home(g, st, &b, e, x), None => sam_home(g, st, &b) }
+    rests(g, st, &b, e);
+    mends(g, st, &b, e);
     // LOUD KIT'S COST: a loud row that went off is answered from inside; what the row left is mended by the cost's own restage
     let gun_row = b.row == Act::Gun || b.row == Act::GunDoor;
-    let supp = match b.man { Some(x) => Some(g.gd[x].weapon), None => crate::game::player_gun_in_hand(g, pl) }.map_or(false, |w| g.m.weapons.weapons.get(g.fa[w].def).map_or(false, |d| d.suppressed));
-    if quiet::costly(st.quiet, info.loud, b.prelude, how, gun_row, b.shots, supp, !b.mark_t.is_nan()) { quiet::cost_begin(g, st); }
+    let quiet_gun = beat_gun(g, &b).and_then(|w| g.m.weapons.weapons.get(g.fa[w].def)).is_some_and(|d| d.suppressed);
+    if quiet::costly(st.quiet, row(b.row).loud, b.prelude, how, gun_row, b.shots, quiet_gun, !b.mark_t.is_nan()) { quiet::cost_begin(g, st); }
+}
+/// the gun of whose card it is
+fn beat_gun(g: &Game, b: &Beat) -> Option<FirearmId> { match b.man { Some(x) => Some(g.gd[x].weapon), None => crate::game::player_gun_in_hand(g, g.player) } }
+/// The fog the wand's row was played in.
+fn fog_down(g: &mut Game, st: &mut KitStage) {
+    st.a.fog_up = false;
+    super::place::no_fog(g);
+    let pl = g.player;
+    g.pl[pl].wand = st.a.wand_was;
+    if let Some((x, was)) = st.a.wand_kit.take() { if let Some(e) = g.m.kit.man_of.get_mut(x) { e.kit.wand = was; } }
+}
+/// The men it moved go home. At a wall left open they are who the next row waits for: the charge that opened it, everybody, Sam too; any other row, the men it moved, once.
+fn moved_home(g: &mut Game, st: &mut KitStage, b: &Beat, e: End) {
+    st.a.home_men = b.moved.iter().copied().filter(|&x| Some(x) != b.man).collect();
+    if e.hole { st.a.hole_men = st.order.clone(); st.a.hole_all = true; }
+    else if st.hole { for x in b.moved.iter().copied().chain(b.man) { if !st.a.hole_men.contains(&x) { st.a.hole_men.push(x); } } }
+    if e.far && !e.hole { return; }
+    for (j, &x) in b.moved.iter().enumerate() {
+        if Some(x) == b.man || !st.order.contains(&x) { continue; }
+        let (pace, delay) = if e.cut || e.hole { (K.swap_pace, 0.0) } else { (K.pace, K.shuffle[1] * (b.moved.len() - 1 - j) as f64) };
+        let p = home_of(g, st, x).0;
+        go(g, st, x, vec![p], pace, delay, false);
+        walk_of(st, x).unwrap().t0 = -1e9;
+    }
+}
+/// The teammate whose row it was: his watch let go, and home by the corner he came round.
+fn man_home(g: &mut Game, st: &mut KitStage, b: &Beat, e: End, x: GuardId) {
+    let lane = walk_of(st, x).is_some_and(|w| { w.watch = None; w.face = None; w.lane });
+    let in_order = st.order.contains(&x);
+    let (home, face) = home_of(g, st, x);
+    if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), x) {
+        let r = &mut g.tab.orders_assignment[a];
+        if r.order == "cover" { r.watch = None; r.upper = crate::character::UpperMode::None; r.stance = crate::character::Stance::LowReady; if in_order { r.face = Some(face); } }
+    }
+    if !in_order || lane || (e.far && !e.hole) { return; }
+    let pts = b.via.into_iter().chain([home]).collect();
+    go(g, st, x, pts, if e.cut || e.hole { K.swap_pace } else { K.pace }, 0.0, false);
+}
+/// Sam's row: what he had in his hands comes back to them, and his aim is his again.
+fn sam_home(g: &mut Game, st: &mut KitStage, b: &Beat) {
+    let pl = g.player;
+    if let Some(h) = b.hand.filter(|&h| h != g.pl[pl].slot) {
+        if st.quiet { g.pl[pl].slot = h; g.pl[pl].holstered = true; }
+        else { press(st, if h == SlotKind::Rifle { "Digit2" } else { "Digit1" }); st.a.hand_due = Some(h); }
+    }
+    if st.a.led.map_or(true, |l| l.at.is_none()) { let a = st.a.aim; st.a.sam_ch.v = a.v; st.a.sam_ch.want = a.v; st.a.sam_ch.w = a.w; st.a.sam_ch.own = false; }
+    st.a.led = None;
+    if let Some(i) = st.a.tube_was.take() { let r = g.pl[pl].rifle; g.fa[r].att_idx = i; }
+    if b.row == Act::Swap && b.phase == "stow" { super::cards::sam_card(g, st); sam_draw(st); }
+}
+/// How long until the next row.
+fn rests(g: &Game, st: &mut KitStage, b: &Beat, e: End) {
+    let info = row(b.row);
+    let rest = if e.cut { 0.0 }
+        else if b.marks.contains(&"kept") { m::min(info.rest, K.rest_quiet) }
+        else if st.a.hi.is_none() && info.damage == Damage::None && info.rest == K.rest_quiet { K.rest_none }
+        else { info.rest };
+    st.a.rest_until = g.time + rest;
+}
+/// What the row left that is mended under a restage, and what is looked at before it is.
+fn mends(g: &Game, st: &mut KitStage, b: &Beat, e: End) {
+    let (now, info) = (g.time, row(b.row));
+    let marked = |m: &'static str| b.marks.contains(&m);
+    let door_gone = st.door.is_some_and(|d| g.dr[d].leaf.off);
+    if e.hole {   // (A WALL THAT OPENS ONCE, LOUDLY: its hole is left, and the row asked plays through it from then on)
+        st.hole = true;
+        st.a.apart = false;
+        st.a.rest_until = now + if e.cut { 0.0 } else { K.rest_quiet };
+    } else if info.damage != Damage::None && (door_gone || marked("frag") || marked("gave") || (info.team && (marked("blow") || e.far))) {
+        st.a.dirty = true;
+        st.a.apart = st.a.apart || e.far;
+        if !e.cut && !b.mark_t.is_nan() { st.a.rest_until = b.mark_t + K.hold; }
+        else if !e.cut && info.team { st.a.rest_until = now + K.rest_quiet; }
+    }
+    if b.row == Act::QuietGun && st.pool.is_some_and(|p| g.tab.fixture[p].broken) {   // (THE LAMP SHOT OUT has no undo under the eye: the dark held to the row's end, then the room staged again)
+        st.a.dirty = true;
+        st.a.rest_until = now;
+        st.a.rest_next = if e.cut { f64::NAN } else { QK.gun_rest };
+    }
+    if b.row == Act::WallCharge && !e.cut && !marked("blow") { charge_unblown(g, st, b, e); }
+    if door_gone { st.a.dirty = true; }   // (A LEAF SHOT TO PIECES under a row that says it leaves nothing)
+}
+/// THE WALL CHARGE'S ROW OVER WITH NOTHING BLOWN: remembered for this way, and a charge still on the wall goes under the dissolve.
+fn charge_unblown(g: &Game, st: &mut KitStage, b: &Beat, e: End) {
+    let refused = st.a.refused.as_deref().map_or("", |r| r.split_once(": ").map_or(r, |x| x.1));
+    let no = String::from(if b.marks.contains(&"cap") { "the wall charge never went off inside its row" } else if refused.is_empty() { "the wall charge came down unblown" } else { refused });
+    wall_kept(st, b, &no);
+    if st.a.refused.is_none() { st.a.refused = Some(format!("walls: {}", no)); }
+    let w = &g.sets[g.seat].wall_charge;
+    if !w.set.is_empty() || !w.ops.is_empty() || b.marks.contains(&"down") || e.far { st.a.dirty = true; st.a.apart = st.a.apart || e.far; st.a.rest_until = g.time; }
 }
 /// THE CUT: a pick ends whatever is running, now.
 pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
