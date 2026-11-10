@@ -95,7 +95,7 @@ pub fn character_new(g: &mut crate::game::Game, ch: RigId, d: crate::character::
     let sk = crate::anim_skeleton::skeleton_instance_new(g, ch);
     g.ch[id].skel = sk;
     // rest-pose chest rotation for "facing" extraction
-    let nodes = g.tab.rig[ch].nodes.len();
+    let nodes = g.art.rig[ch].nodes.len();
     let rp = crate::anim_skeleton::pose_new(g, nodes);
     crate::anim_skeleton::rest_pose(g, ch, rp);
     let origin = v3::m4::create();
@@ -538,7 +538,7 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
     clear_fall(g, id);
     // what the mesh drive needs from the moment of death
     let rig = g.ch[id].rig;
-    let nodes = g.tab.rig[rig].nodes.len();
+    let nodes = g.art.rig[rig].nodes.len();
     let pose = crate::anim_skeleton::pose_new(g, nodes);
     let drawn = g.ch[id].anim.pose;
     crate::anim_skeleton::pose_copy(g, pose, drawn);

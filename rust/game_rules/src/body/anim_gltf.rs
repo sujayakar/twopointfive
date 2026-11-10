@@ -12,7 +12,7 @@ fn part_bit(i: usize) -> f64 {
 
 /// A part's bit by name, 0 where the cast has no such part.
 fn named_bit(g: &Game, cast: AnimGltfCastInfoId, n: &str) -> f64 {
-    match g.tab.anim_gltf_cast_info[cast].parts.iter().position(|p| p == n) {
+    match g.art.cast[cast].parts.iter().position(|p| p == n) {
         Some(i) => part_bit(i),
         None => 0.0,
     }
@@ -43,7 +43,7 @@ pub fn cast_suit(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64)
         Some(b) => b,
         None => {
             let mut b = 0.0;
-            for (i, n) in g.tab.anim_gltf_cast_info[cast].parts.iter().enumerate() {
+            for (i, n) in g.art.cast[cast].parts.iter().enumerate() {
                 if n == "helmet" || n.starts_with("kit_") {
                     b = (js::to_i32(b) | js::to_i32(part_bit(i))) as u32 as f64;
                 }
@@ -59,8 +59,8 @@ pub fn cast_suit(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64)
 /// The variants of the cast worn by `side`, in the cast's order.
 fn variants_of(g: &Game, cast: AnimGltfCastInfoId, side: CastSide) -> Vec<AnimGltfCastVariantId> {
     let mut v = Vec::new();
-    for &x in g.tab.anim_gltf_cast_info[cast].variants.iter() {
-        if g.tab.anim_gltf_cast_variant[x].side == side {
+    for &x in g.art.cast[cast].variants.iter() {
+        if g.art.variant[x].side == side {
             v.push(x);
         }
     }
@@ -79,7 +79,7 @@ pub fn cast_side(g: &crate::game::Game, cast: AnimGltfCastInfoId, side: crate::a
             return d;
         }
     }
-    g.tab.anim_gltf_cast_info[cast].variants.clone()
+    g.art.cast[cast].variants.clone()
 }
 
 #[cfg(test)]
@@ -89,15 +89,15 @@ mod tests {
     fn make_cast(g: &mut Game, parts: &[&str]) -> AnimGltfCastInfoId {
         let mut c = CastInfo::default();
         c.parts = parts.iter().map(|p| String::from(*p)).collect();
-        g.tab.anim_gltf_cast_info.push(c)
+        alloc::sync::Arc::make_mut(&mut g.art).cast.push(c)
     }
 
     fn make_variant(g: &mut Game, cast: AnimGltfCastInfoId, name: &str, side: CastSide) -> AnimGltfCastVariantId {
         let mut v = CastVariant::default();
         v.name = String::from(name);
         v.side = side;
-        let id = g.tab.anim_gltf_cast_variant.push(v);
-        g.tab.anim_gltf_cast_info[cast].variants.push(id);
+        let id = alloc::sync::Arc::make_mut(&mut g.art).variant.push(v);
+        alloc::sync::Arc::make_mut(&mut g.art).cast[cast].variants.push(id);
         id
     }
 

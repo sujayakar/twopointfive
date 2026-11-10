@@ -103,6 +103,16 @@ pub struct GltfCharacter {
     pub back: Option<crate::packside::Back>,
 }
 
+/// what was read of character files
+#[derive(Clone, Debug, Default)]
+pub struct Art {
+    pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
+    pub mesh: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
+    pub variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
+    pub cast: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
+    pub rig: Tab<RigId, crate::anim_gltf::GltfCharacter>,
+}
+
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimGltfModNvgBitsValue {
     pub up: f64,

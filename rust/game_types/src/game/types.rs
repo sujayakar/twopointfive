@@ -486,6 +486,9 @@ pub struct Game {
     pub fa: Tab<FirearmId, crate::weapons::Firearm>,
     /// the other tables of things
     pub tab: Tabs,
+    /// (what was read of character files, which nothing writes after: in no bytes, and one for every copy of a game)
+    #[bytes(skip)]
+    pub art: alloc::sync::Arc<crate::anim_gltf::Art>,
     /// the knob tables, at the page's values
     #[is(crate::knobs::Knobs::page())] pub k: crate::knobs::Knobs,
     /// each module's own state
@@ -1304,17 +1307,6 @@ impl Game {
 pub struct Tabs {
     pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
-    // (a man's file as it was read, which nothing writes after: its five tables are in no bytes)
-    #[bytes(skip)]
-    pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
-    #[bytes(skip)]
-    pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
-    #[bytes(skip)]
-    pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
-    #[bytes(skip)]
-    pub anim_gltf_cast_info: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
-    #[bytes(skip)]
-    pub rig: Tab<RigId, crate::anim_gltf::GltfCharacter>,
     pub pose_set: Tab<PoseSetId, crate::anim_skeleton::PoseSet>,
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,

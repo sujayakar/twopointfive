@@ -14,9 +14,9 @@ fn bit_of(parts: &[String], name: &str) -> u32 {
 fn trunk_name(n: &str) -> bool { matches!(n, "DEF-hips" | "DEF-spine.001" | "DEF-spine.002" | "DEF-spine.003" | "DEF-thigh.L" | "DEF-thigh.R") }
 
 /// What a rig's cast has of packs, and the back they lie on. None: no cast, a mesh with no parts, or a skeleton without a chest.
-pub fn back_of(g: &Game, rig: &crate::anim_gltf::GltfCharacter) -> Option<Back> {
-    let cast = &g.tab.anim_gltf_cast_info[rig.cast?];
-    let md = &g.tab.anim_gltf_mesh_data[rig.mesh];
+pub fn back_of(art: &crate::anim_gltf::Art, rig: &crate::anim_gltf::GltfCharacter) -> Option<Back> {
+    let cast = &art.cast[rig.cast?];
+    let md = &art.mesh[rig.mesh];
     let part = md.part.as_ref()?;
     let node = rig.node_by_name.get(String::from("DEF-spine.003")).copied()?;
     let chest = rig.skin.joints.iter().position(|j| *j == node)?;
@@ -42,7 +42,7 @@ pub fn back_of(g: &Game, rig: &crate::anim_gltf::GltfCharacter) -> Option<Back> 
     for e in packs.iter_mut() { if e.is_some_and(|x| !(x.x0 < x.x1)) { *e = None; } }
     let mut body: u32 = 0;
     for &v in cast.variants.iter() {
-        let cv = &g.tab.anim_gltf_cast_variant[v];
+        let cv = &art.variant[v];
         if cv.side == crate::anim_gltf::CastSide::Operator { body |= js::to_u32(cv.mask); }
     }
     if body == 0 { body = 0xffff_ffff; }
@@ -63,14 +63,14 @@ pub fn back_of(g: &Game, rig: &crate::anim_gltf::GltfCharacter) -> Option<Back> 
 }
 /// The pack a man drawn with this part mask wears on his back; None with no cast, or none worn.
 pub fn pack_of(g: &Game, ch: RigId, mask: f64) -> Option<PackExt> {
-    let back = g.tab.rig[ch].back.as_ref()?;
+    let back = g.art.rig[ch].back.as_ref()?;
     let mask = js::to_u32(mask);
     if mask & back.kit == 0 { return None; }
     back.packs.iter().enumerate().find_map(|(i, e)| e.filter(|_| (mask >> (i as u32 & 31)) & 1 != 0))
 }
 /// The mask a man is drawn with while he carries a real tool on his back.
 pub fn pack_mask(g: &Game, ch: RigId, mask: f64, carries: bool) -> f64 {
-    let Some(back) = g.tab.rig[ch].back.as_ref().filter(|_| carries) else { return mask };
+    let Some(back) = g.art.rig[ch].back.as_ref().filter(|_| carries) else { return mask };
     let mk = js::to_u32(mask);
     if back.ram == 0 || back.pack == 0 || mk & back.ram == 0 { return mask; }
     ((mk & !back.ram) | back.pack) as f64
@@ -102,7 +102,7 @@ fn back_line(back: &Back, x: f64) -> [Option<BackPt>; BANDS] {
 /// How far a thing at a pack's side turns about its top end to lie along his back as posed.
 pub fn side_pitch(g: &Game, p: SidePlace, c: CharId) -> f64 {
     let t = g.k.packside;
-    let (Some(back), Some(pivot)) = (g.tab.rig[g.ch[c].rig].back.as_ref(), p.pivot) else { return 0.0 };
+    let (Some(back), Some(pivot)) = (g.art.rig[g.ch[c].rig].back.as_ref(), p.pivot) else { return 0.0 };
     let a = back.chest * 16;
     let len = p.len.unwrap_or(0.8);
     let r = p.r.unwrap_or(0.0) + t.rest;
@@ -145,6 +145,6 @@ pub fn side_skinned(p: SidePlace, jd: &[f32], at: usize) -> SidePlace {
 }
 /// A bind-space place in the chest joint's own space.
 pub fn side_local(g: &Game, ch: RigId, p: SidePlace) -> Option<SidePlace> {
-    let rig = &g.tab.rig[ch];
+    let rig = &g.art.rig[ch];
     Some(side_skinned(p, &rig.skin.inverse_bind, rig.back.as_ref()?.chest * 16))
 }
