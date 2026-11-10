@@ -153,7 +153,6 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
         let along = away(b.at, g.ch[c].pos);
         crate::samstun::stagger_player(g, secs, along);
         crate::deed::shaken_off(g, pl);
-        g.sets[g.seat].hand.throw_held = false;
         g.pl[pl].pending_throw = None;
     }
 }
@@ -459,8 +458,7 @@ pub fn throw_reach(g: &crate::game::Game, pl: PlayerId, rest: Option<V3>) -> Opt
     use crate::game::ThrowKind;
     let sol = g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_preview.as_ref().filter(|s| !s.points.is_empty())?;
     let burst = |at: V3| crate::view::ThrowReachView { at, kill: g.k.frag.lethal_m, hurt: m::max(g.k.frag.lethal_m, g.k.frag.wound_m), stun: 0.0 };
-    if g.sets[crate::seats::seat_of_man(g, pl)].hand.throw_held || (!g.pl[pl].holstered && crate::game::player_canister_sel(g, pl).is_some()) {
-        let kind = g.pl[pl].held_kind;
+    if let Some(kind) = crate::player::can_in_hand(g, pl) {
         if kind != ThrowKind::Flash && !(kind == ThrowKind::Frag) { return None; }
         let at = rest?;
         return Some(if kind == ThrowKind::Frag { burst(at) } else { crate::view::ThrowReachView { at, kill: 0.0, hurt: 0.0, stun: crate::effects::bang().dazzle_radius } });

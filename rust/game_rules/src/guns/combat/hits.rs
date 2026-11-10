@@ -198,7 +198,6 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
         crate::weapons::firearm_cancel_reload(g, pistol);
         crate::weapons::firearm_cancel_reload(g, rifle);
         crate::character::anim_cancel_reload(g, c);
-        g.sets[g.seat].hand.throw_held = false;
         g.pl[p].pending_throw = None;
         if let Some(gun) = in_hand {
             let def = g.fa[gun].def;
