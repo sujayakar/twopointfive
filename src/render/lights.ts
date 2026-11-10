@@ -125,6 +125,9 @@ export function packLight(f: Float32Array, u: Uint32Array, o: number, l: RtLight
 /** the first n words of two buffers, bit for bit. Read signed and kept out of upload()'s body: mask words run past 2^31, and a loop over them inside that long function ran in a slow tier (0.03 ms a frame in the depot) */
 function sameWords(a: Int32Array, b: Int32Array, n: number): boolean { for (let w = 0; w < n; w++) if (a[w] !== b[w]) return false; return true; }
 
+/** two lights' records (packLight's 16 words), bit for bit */
+function sameRecord(a: Uint32Array, at: number, b: Uint32Array, bt: number): boolean { for (let i = 0; i < 16; i++) if (a[at + i] !== b[bt + i]) return false; return true; }
+
 export class LightSet {
   lights: RtLight[] = [];
   buf: GPUBuffer;
@@ -148,6 +151,8 @@ export class LightSet {
    *  was in slot p last frame (255 = not uploaded now), `slotInv[s]` = last frame's slot of the light now in slot s (255 = new this frame). */
   prevData = new Uint8Array(MAX_LIGHTS * 64); prevCount = 0; private prev32 = new Uint32Array(this.prevData.buffer);
   slotFwd = new Uint8Array(MAX_LIGHTS).fill(255); slotInv = new Uint8Array(MAX_LIGHTS).fill(255);
+  /** 1 = the light in this slot has, word for word, the record it had last frame */
+  readonly slotSame = new Uint8Array(MAX_LIGHTS);
   /** THE INFRARED LIGHTS (LIGHT_IR; rust/game_rules/src/teammates/irlight.rs poses them every frame): a list of their own, so that no reader of `lights` — the CPU's light estimates, the
    *  fog of war's classes, the reach masks, a digest — can ever count one. Uploaded after `lights`, flagged infrared, and only while `tube` is up; enabled / intensity are read
    *  as for any light. In a tube frame it is a STEADY light like a carried torch (reservoirs, bounce, reflections: NOT a transient — a flood that burns for
@@ -244,6 +249,7 @@ export class LightSet {
       const fc = ir ? 0 : ghost ? 2 : this.fogClass(l);
       packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
+      this.slotSame[n] = this.slotInv[n] !== 255 && sameRecord(u, o, this.prev32, this.slotInv[n] * 16) ? 1 : 0;
       this.reachData.set(masks?.row(l) ?? REACH_ALL, n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame
       this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
     }

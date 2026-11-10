@@ -624,7 +624,7 @@ export class LightingPasses {
     f[8] = this.restirJitter[0]; f[9] = this.restirJitter[1]; f[10] = this.restirJitterPrev[0]; f[11] = this.restirJitterPrev[1];   // TAAU jitter in internal px: this frame's, the previous dispatch's (restir.wgsl RestirU.jitter)
     this.restirJitterPrev[0] = this.restirJitter[0]; this.restirJitterPrev[1] = this.restirJitter[1];
     f[12] = Math.max(0.05, this.restirMotionV) * (this.height / 1000); f[13] = Math.max(0.02, Math.min(1, this.restirMotionMin)); f[14] = Math.max(0, this.restirMotionPx) * (this.height / 1000); f[15] = 0;   // RestirU.mot (MOTION: the full-confidence motion in px at this resolution, the floor, the spatial threshold px; w free)
-    b8.set(lights.slotFwd.subarray(0, 64), RESTIR_U_FWD); b8.set(lights.slotInv.subarray(0, 64), RESTIR_U_INV);
+    b8.set(lights.slotFwd.subarray(0, 64), RESTIR_U_FWD); b8.set(lights.slotInv.subarray(0, 64), RESTIR_U_INV); for (let s = 0; s < MAX_LIGHTS; s++) if (lights.slotSame[s]) b8[RESTIR_U_INV + s] |= 64;   // (a slot is under 64: the byte's next bit says the record is last frame's, word for word)
     b8.set(lights.prevData.subarray(0, MAX_LIGHTS * 64), RESTIR_U_HEAD);
     this.device.queue.writeBuffer(this.restirU, 0, this.restirUData);
   }
