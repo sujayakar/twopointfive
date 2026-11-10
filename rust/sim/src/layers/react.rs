@@ -1,186 +1,85 @@
 //! What is done to him: a hit, a flinch, a startle, a blow, hands bound, a wound held.
 use super::*;
 
+/// How far what has happened to him leans him, piece upon piece: degrees of the trunk and the head, metres of the hips.
+#[derive(Clone, Copy, Default)]
+struct Lean {
+    dt: f64,
+    gate: f64,
+    // as_he_is: how he is, as the rules have said it
+    at: usize,
+    trained: f64,
+    lg_w: f64,
+    blind: bool,
+    blind_k: f64,
+    clutch: f64,
+    fold_too: bool,
+    hurt: f64,
+    hurt_side: f64,
+    aim: f64,
+    speed: f64,
+    phase: f64,
+    shaken: f64,
+    // as_it_struck: the way each thing came from, as it struck
+    fl_k_to: f64,
+    fl_d: [f64; 3],
+    st_d: [f64; 3],
+    ht_d: [f64; 3],
+    ht_side: f64,
+    dz_d: [f64; 3],
+    ts: f64,
+    rel: f64,
+    // none_yet: how trained he is, and nothing leant yet
+    t: f64,
+    pitch: f64,
+    yaw: f64,
+    roll: f64,
+    hp: f64,
+    hy: f64,
+    drop: f64,
+    sx: f64,
+    sz: f64,
+    stw: f64,
+    stn: f64,
+    // blinded: the side a blinded man turns away to is chosen once, as it goes off
+    dzw: f64,
+    // fold: the clutch's fold: under the blinded hunch it gives way by the hunch's own weight
+    cfw: f64,
+    // hurt, he hunches over it and steps heavy on that side; it gives way under the fold and the blinded hunch
+    under: f64,
+}
+
 /// After the stances and the arms, the body's share of the reactions: the flinch, the start, the hit, the blinded hunch, the clutch's fold, a hurt man's
 /// hunch and heavy step, a shaken man's ducked head and the toss's wind-up, summed into one turn of the trunk, one of the head and one move of the
 /// pelvis over feet held where they are. The arms that follow (the start's, the blinded hand, the held gun, the toss) are the host's.
 pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -> u32 {
-    let (at, trained, lg_w, blind, blind_k) = (an.p_a.at as usize, an.trained, an.lg.w.x, an.dazzle.is_some(), an.dazzle.map_or(0.0, |d| d.k));
-    let (clutch, fold_too, hurt, hurt_side, aim, speed, phase, shaken) = (an.clutch, an.fold_too, an.hurt, an.hurt_side, an.upper_w.aim, an.speed, an.phase, an.shaken);
+    let mut o = Lean { dt, gate, ..Lean::default() };
+    as_he_is(an, &mut o);
     let (m, po) = (&mut an.mvs, &mut an.mv_po);
-    let (fl_k_to, fl_d, st_d, ht_d, ht_side, dz_d, ts, rel) = (m.fl_k_to, m.fl_d, m.st_d, m.ht_d, m.ht_side, m.dz_d, m.ts_t, m.ts_rel);
-    with_pose(g, at, |d, rig, n, fk| {
+    as_it_struck(m, &mut o);
+    with_pose(g, o.at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD, HAND_R]) {
             return 0;
         }
-        let t = clamp(trained, 0.0, 1.0);
-        let kk = |p0: f64, p1: f64| lerp(p0, p1, t);
-        let (mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz) = (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
-        if m.fl_t >= 0.0 {
-            m.fl_k += (fl_k_to - m.fl_k) * min(1.0, dt * 12.0);
-            let dur = kk(tune.mv.flinch.dur[0], tune.mv.flinch.dur[1]);
-            let e = curve(m.fl_t / dur, &MV_FLINCH_ENV) * kk(tune.mv.flinch.amp[0], tune.mv.flinch.amp[1]) * m.fl_k * gate;
-            let (sd, lat) = (if fl_d[0] >= 0.0 { 1.0 } else { -1.0 }, min(1.0, abs(fl_d[0]) * 1.6));
-            pitch += tune.mv.flinch.pitch * e * (0.65 + 0.35 * max(0.0, fl_d[2]));
-            yaw -= sd * tune.mv.flinch.away * e * lat;
-            roll += sd * 3.0 * e * lat;
-            hp += tune.mv.flinch.head * e;
-            hy -= sd * tune.mv.flinch.away * e * lat;
-            drop += tune.mv.flinch.drop * e;
-            sx -= fl_d[0] * tune.mv.flinch.side * e;
-            sz -= fl_d[2] * tune.mv.flinch.side * e;
-            m.fl_t += dt;
-            if m.fl_t > dur {
-                m.fl_t = -1.0;
-            }
-        }
-        // the start: reared back off a thing in front, turned toward the side it is on; a thing behind him he comes round to
-        let (mut stw, mut stn) = (0.0f64, 1.0f64);
-        if m.st_t >= 0.0 {
-            let (dur, lw, dv) = (kk(MV_STARTLE.dur[0], MV_STARTLE.dur[1]), clamp(lg_w, 0.0, 1.0), st_d);
-            let amp = kk(MV_STARTLE.amp[0], MV_STARTLE.amp[1]);
-            let e = curve(m.st_t / dur, &MV_STARTLE.env) * lerp(amp, max(amp, MV_STARTLE.gun_amp), lw) * gate;
-            let (bh, sd) = (clamp(-dv[2], 0.0, 1.0), if dv[0] >= 0.0 { 1.0 } else { -1.0 });
-            let lat = if bh > 0.0 { 1.0 } else { min(1.0, abs(dv[0]) * 1.6) };
-            pitch -= MV_STARTLE.rear * (1.0 + MV_STARTLE.gun_rear * lw) * e * dv[2] * (if dv[2] < 0.0 { MV_STARTLE.behind_pitch } else { 1.0 });
-            yaw += sd * MV_STARTLE.turn * (1.0 + MV_STARTLE.behind_turn * bh) * e * lat;
-            roll -= sd * MV_STARTLE.lean * e * lat;
-            hp -= MV_STARTLE.head * e * max(0.3, dv[2]);
-            hy += sd * MV_STARTLE.head_turn * (1.0 + MV_STARTLE.behind_head * bh) * e * lat;
-            drop += MV_STARTLE.drop * e;
-            sx -= dv[0] * MV_STARTLE.back * (1.0 + MV_STARTLE.gun_back * lw) * e;
-            sz -= dv[2] * MV_STARTLE.back * (1.0 + MV_STARTLE.gun_back * lw) * e;
-            stw = e;
-            stn = sd;
-            m.st_t += dt;
-            if m.st_t > dur {
-                m.st_t = -1.0;
-            }
-        }
-        if m.ht_t >= 0.0 {
-            let (dv, e) = (ht_d, curve(m.ht_t, &MV_HIT_ENV) * gate);
-            let fz = if dv[2] <= 0.0 { 1.0 } else { -1.0 };
-            let (tp, ty) = (dv[2] * tune.mv.hit.pitch * e, ht_side * fz * tune.mv.hit.yaw * e * (0.4 + 0.6 * abs(dv[2])));
-            pitch += tp;
-            yaw += ty;
-            roll += (ht_side * fz * tune.mv.hit.roll * abs(dv[2]) - dv[0] * tune.mv.hit.roll * 2.0) * e;
-            hp -= tp * 0.5;
-            hy -= ty * 0.5;
-            drop += tune.mv.hit.drop * abs(e);
-            sx += dv[0] * tune.mv.hit.shove * e;
-            sz += dv[2] * tune.mv.hit.shove * e;
-            m.ht_t += dt;
-            if m.ht_t > tune.mv.hit.dur {
-                m.ht_t = -1.0;
-            }
-        }
-        // blinded: the side he turns away to is chosen once, as it goes off
-        let dz_t = if blind { clamp(blind_k, 0.0, 1.0) } else { 0.0 };
-        let rate = if dz_t > m.dz.x { tune.mv.dazzle.rate_in } else { tune.mv.dazzle.rate_out };
-        spring_step(&mut m.dz, dz_t, rate, dt);
-        if dz_t == 0.0 && m.dz.x < 0.02 {
-            m.dz.x = 0.0;
-            m.dz.v = 0.0;
-        }
-        let dzw = clamp(m.dz.x, 0.0, 1.0) * kk(tune.mv.dazzle.amp[0], tune.mv.dazzle.amp[1]) * gate;
-        if m.dz.x <= 0.0 {
-            m.dz_sd = 0.0;
-        } else if m.dz_sd == 0.0 {
-            m.dz_sd = if dz_d[0] >= 0.0 { 1.0 } else { -1.0 };
-        }
-        if dzw > 0.003 {
-            m.dz_t += dt;
-            let sd = if falsy(m.dz_sd) { 1.0 } else { m.dz_sd };
-            pitch += tune.mv.dazzle.hunch * dzw;
-            yaw -= sd * tune.mv.dazzle.away * dzw;
-            roll += sd * tune.mv.dazzle.roll * dzw;
-            hp += tune.mv.dazzle.head * dzw;
-            hy -= sd * tune.mv.dazzle.head_away * dzw;
-            drop += tune.mv.dazzle.drop * dzw;
-            sx += (-dz_d[0] * tune.mv.dazzle.back + tune.mv.dazzle.sway_x * sin(m.dz_t * 3.1)) * dzw;
-            sz += (-dz_d[2] * tune.mv.dazzle.back + tune.mv.dazzle.sway_z * sin(m.dz_t * 2.3 + 1.0)) * dzw;
-        } else {
-            m.dz_t = 0.0;
-        }
-        // the clutch's fold: under the blinded hunch it gives way by the hunch's own weight
-        let want = if clutch > 0.0 && fold_too { clamp(clutch, 0.0, 1.0) * (1.0 - clamp(dzw, 0.0, 1.0)) } else { 0.0 };
-        if want > 0.0 || m.cf.x != 0.0 {
-            spring_step(&mut m.cf, want, MV2.clutch.fold.rate, dt);
-            if want == 0.0 && m.cf.x < 0.01 {
-                m.cf.x = 0.0;
-                m.cf.v = 0.0;
-            }
-        }
-        let cfw = clamp(m.cf.x, 0.0, 1.0) * gate;
-        if cfw > 0.003 {
-            m.cf_t += dt;
-            let s = sin(m.cf_t * 2.0 * PI * MV2.clutch.fold.hz);
-            pitch += (if fold_too { MV2.clutch.fold.pitch_too } else { MV2.clutch.fold.pitch }) * cfw;
-            roll += MV2.clutch.fold.sway * s * cfw;
-            hp += MV2.clutch.fold.head * cfw;
-            drop += MV2.clutch.fold.drop * cfw;
-            sx += 0.012 * s * cfw;
-        } else {
-            m.cf_t = 0.0;
-        }
+        none_yet(&mut o);
+        flinch(tune, m, &mut o);
+        startle(m, &mut o);
+        hit(tune, m, &mut o);
+        blinded(tune, m, &mut o);
+        fold(m, &mut o);
         // a man's condition: hurt, then shaken; both give way under the fold and the blinded hunch
-        let (want, under) = (clamp(hurt, 0.0, 1.0), (1.0 - clamp(dzw, 0.0, 1.0)) * (1.0 - cfw));
-        if want > 0.0 || m.hu.x != 0.0 {
-            spring_step(&mut m.hu, want, MV2.hurt.rate, dt);
-            if want == 0.0 && m.hu.x < 0.01 {
-                m.hu.x = 0.0;
-                m.hu.v = 0.0;
-            }
-        }
-        let hu = clamp(m.hu.x, 0.0, 1.0) * gate * under;
-        if hu > 0.003 {
-            let (sd, aim_w) = (hurt_side, clamp(aim, 0.0, 1.0));
-            let (brace, mw) = (1.0 - MV2.hurt.brace * aim_w, smoothstep(0.15, 0.7, abs(speed)));
-            let on_it = max(0.0, -sd * sin(2.0 * PI * phase));
-            let step = on_it * on_it * mw;
-            m.hu_t += dt;
-            let br = sin(m.hu_t * 2.0 * PI * MV2.hurt.hz) * (1.0 - mw);
-            pitch += (MV2.hurt.pitch + MV2.hurt.step_pitch * step) * brace * hu;
-            roll -= sd * (MV2.hurt.lean + MV2.hurt.step_roll * step + MV2.hurt.sway * br) * hu;
-            yaw += sd * MV2.hurt.step_yaw * step * brace * hu;
-            hp += (MV2.hurt.head * (1.0 - MV2.hurt.head_brace * aim_w) + MV2.hurt.step_head * step) * hu;
-            drop += (MV2.hurt.drop + MV2.hurt.step_drop * step) * hu;
-            sx += sd * MV2.hurt.step_side * step * hu;
-        } else {
-            m.hu_t = 0.0;
-        }
-        let want = clamp(shaken, 0.0, 1.0);
-        if want > 0.0 || m.sk.x != 0.0 {
-            let rate = if want > m.sk.x { MV2.shaken.rate_in } else { MV2.shaken.rate_out };
-            spring_step(&mut m.sk, want, rate, dt);
-            if want == 0.0 && m.sk.x < 0.01 {
-                m.sk.x = 0.0;
-                m.sk.v = 0.0;
-            }
-        }
-        let sk = clamp(m.sk.x, 0.0, 1.0) * gate * under;
-        if sk > 0.003 {
-            pitch += MV2.shaken.pitch * (1.0 - MV2.shaken.brace * clamp(aim, 0.0, 1.0)) * sk;
-            hp += MV2.shaken.head * sk;
-            drop += MV2.shaken.drop * sk;
-        }
-        // the toss's body English: the left shoulder back with the hand, then through with it; a dip of the knees under the swing
-        if ts >= 0.0 {
-            let td = rel + TOSS_AFTER;
-            let wind = curve(ts, &[[0.0, 0.0], [rel * 0.8, 1.0], [rel + 0.03, 0.2], [rel + 0.2, -1.0], [rel + 0.4, -0.6], [td, 0.0]]) * gate;
-            yaw += 9.0 * wind;
-            pitch += 5.0 * max(0.0, -wind) + 2.0 * max(0.0, wind);
-            drop += 0.02 * abs(wind);
-        }
+        hurt(m, &mut o);
+        shaken(m, &mut o);
+        toss_english(&mut o);
         let mut ran = RAN;
-        if drop > 2e-4 || abs(sx) + abs(sz) > 2e-4 {
+        if o.drop > 2e-4 || abs(o.sx) + abs(o.sz) > 2e-4 {
             fk_run(rig, d, fk.rot, fk.pos);
-            mv_hips(d, rig, fk, &[sx, -drop, sz]);
+            mv_hips(d, rig, fk, &[o.sx, -o.drop, o.sz]);
             ran |= RAN_ALL;
         }
         // a blinded man's gun stays on the line it had: where the trigger hand is before the trunk turns away
         po.gun = false;
-        if dzw > 0.003 && lg_w > 0.02 {
+        if o.dzw > 0.003 && o.lg_w > 0.02 {
             fk_run(rig, d, fk.rot, fk.pos);
             ran |= RAN_ALL;
             let hand = role(HAND_R);
@@ -188,23 +87,261 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             po.gun_p = fk.at(hand);
             po.gun_r = fk.rot(hand);
         }
-        if abs(pitch) + abs(yaw) + abs(roll) > 1e-3 {
-            let q = |ky: f64, kp: f64| q_mul(&q_yaw(yaw * DEGR * ky), &q_mul(&q_roll(roll * DEGR * ky), &q_pitch(pitch * DEGR * kp)));
-            turn(d, rig, role(SPINE1), q(0.3, 0.4));
-            turn(d, rig, role(SPINE2), q(0.35, 0.35));
-            turn(d, rig, role(SPINE3), q(0.35, 0.25));
-        }
-        if abs(hp) + abs(hy) > 1e-3 {
-            let q = |kq: f64| q_mul(&q_yaw(hy * DEGR * kq), &q_pitch(hp * DEGR * kq));
-            turn(d, rig, role(NECK), q(0.4));
-            turn(d, rig, role(HEAD), q(0.6));
-        }
-        po.stw = stw;
-        po.stn = stn;
-        po.dzw = dzw;
+        trunk_turn(d, rig, &o);
+        head_turn(d, rig, &o);
+        po.stw = o.stw;
+        po.stn = o.stn;
+        po.dzw = o.dzw;
         ran
     })
     .unwrap_or(0)
+}
+
+/// How he is, as the rules have said it.
+fn as_he_is(an: &Anim, o: &mut Lean) {
+    let (at, trained, lg_w, blind, blind_k) = (an.p_a.at as usize, an.trained, an.lg.w.x, an.dazzle.is_some(), an.dazzle.map_or(0.0, |z| z.k));
+    let (clutch, fold_too, hurt, hurt_side, aim, speed, phase, shaken) = (an.clutch, an.fold_too, an.hurt, an.hurt_side, an.upper_w.aim, an.speed, an.phase, an.shaken);
+    *o = Lean { at, trained, lg_w, blind, blind_k, clutch, fold_too, hurt, hurt_side, aim, speed, phase, shaken, ..*o };
+}
+
+/// The way each thing came from, as it struck.
+fn as_it_struck(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let (fl_k_to, fl_d, st_d, ht_d, ht_side, dz_d, ts, rel) = (m.fl_k_to, m.fl_d, m.st_d, m.ht_d, m.ht_side, m.dz_d, m.ts_t, m.ts_rel);
+    *o = Lean { fl_k_to, fl_d, st_d, ht_d, ht_side, dz_d, ts, rel, ..*o };
+}
+
+/// How trained he is, and nothing leant yet.
+fn none_yet(o: &mut Lean) {
+    let Lean { trained, .. } = *o;
+    let t = clamp(trained, 0.0, 1.0);
+    let (mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz) = (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
+    let (mut stw, mut stn) = (0.0f64, 1.0f64);
+    *o = Lean { t, pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn, ..*o };
+}
+
+/// Between what an untrained man does and what a trained one does.
+fn kk(o: &Lean, p0: f64, p1: f64) -> f64 {
+    let Lean { t, .. } = *o;
+    lerp(p0, p1, t)
+}
+
+/// A round close by.
+fn flinch(tune: &Knobs, m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, fl_k_to, fl_d, mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz, .. } = *o;
+    if m.fl_t >= 0.0 {
+        m.fl_k += (fl_k_to - m.fl_k) * min(1.0, dt * 12.0);
+        let dur = kk(o, tune.mv.flinch.dur[0], tune.mv.flinch.dur[1]);
+        let e = curve(m.fl_t / dur, &MV_FLINCH_ENV) * kk(o, tune.mv.flinch.amp[0], tune.mv.flinch.amp[1]) * m.fl_k * gate;
+        let (sd, lat) = (if fl_d[0] >= 0.0 { 1.0 } else { -1.0 }, min(1.0, abs(fl_d[0]) * 1.6));
+        pitch += tune.mv.flinch.pitch * e * (0.65 + 0.35 * max(0.0, fl_d[2]));
+        yaw -= sd * tune.mv.flinch.away * e * lat;
+        roll += sd * 3.0 * e * lat;
+        hp += tune.mv.flinch.head * e;
+        hy -= sd * tune.mv.flinch.away * e * lat;
+        drop += tune.mv.flinch.drop * e;
+        sx -= fl_d[0] * tune.mv.flinch.side * e;
+        sz -= fl_d[2] * tune.mv.flinch.side * e;
+        m.fl_t += dt;
+        if m.fl_t > dur {
+            m.fl_t = -1.0;
+        }
+    }
+    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, ..*o };
+}
+
+/// The start: reared back off a thing in front, turned toward the side it is on; a thing behind him he comes round to.
+fn startle(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, lg_w, st_d, mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz, mut stw, mut stn, .. } = *o;
+    if m.st_t >= 0.0 {
+        let (dur, lw, dv) = (kk(o, MV_STARTLE.dur[0], MV_STARTLE.dur[1]), clamp(lg_w, 0.0, 1.0), st_d);
+        let amp = kk(o, MV_STARTLE.amp[0], MV_STARTLE.amp[1]);
+        let e = curve(m.st_t / dur, &MV_STARTLE.env) * lerp(amp, max(amp, MV_STARTLE.gun_amp), lw) * gate;
+        let (bh, sd) = (clamp(-dv[2], 0.0, 1.0), if dv[0] >= 0.0 { 1.0 } else { -1.0 });
+        let lat = if bh > 0.0 { 1.0 } else { min(1.0, abs(dv[0]) * 1.6) };
+        pitch -= MV_STARTLE.rear * (1.0 + MV_STARTLE.gun_rear * lw) * e * dv[2] * (if dv[2] < 0.0 { MV_STARTLE.behind_pitch } else { 1.0 });
+        yaw += sd * MV_STARTLE.turn * (1.0 + MV_STARTLE.behind_turn * bh) * e * lat;
+        roll -= sd * MV_STARTLE.lean * e * lat;
+        hp -= MV_STARTLE.head * e * max(0.3, dv[2]);
+        hy += sd * MV_STARTLE.head_turn * (1.0 + MV_STARTLE.behind_head * bh) * e * lat;
+        drop += MV_STARTLE.drop * e;
+        sx -= dv[0] * MV_STARTLE.back * (1.0 + MV_STARTLE.gun_back * lw) * e;
+        sz -= dv[2] * MV_STARTLE.back * (1.0 + MV_STARTLE.gun_back * lw) * e;
+        stw = e;
+        stn = sd;
+        m.st_t += dt;
+        if m.st_t > dur {
+            m.st_t = -1.0;
+        }
+    }
+    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn, ..*o };
+}
+
+/// A hit: shoved and turned the way the round went.
+fn hit(tune: &Knobs, m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, ht_d, ht_side, mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz, .. } = *o;
+    if m.ht_t >= 0.0 {
+        let (dv, e) = (ht_d, curve(m.ht_t, &MV_HIT_ENV) * gate);
+        let fz = if dv[2] <= 0.0 { 1.0 } else { -1.0 };
+        let (tp, ty) = (dv[2] * tune.mv.hit.pitch * e, ht_side * fz * tune.mv.hit.yaw * e * (0.4 + 0.6 * abs(dv[2])));
+        pitch += tp;
+        yaw += ty;
+        roll += (ht_side * fz * tune.mv.hit.roll * abs(dv[2]) - dv[0] * tune.mv.hit.roll * 2.0) * e;
+        hp -= tp * 0.5;
+        hy -= ty * 0.5;
+        drop += tune.mv.hit.drop * abs(e);
+        sx += dv[0] * tune.mv.hit.shove * e;
+        sz += dv[2] * tune.mv.hit.shove * e;
+        m.ht_t += dt;
+        if m.ht_t > tune.mv.hit.dur {
+            m.ht_t = -1.0;
+        }
+    }
+    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, ..*o };
+}
+
+/// The side a blinded man turns away to is chosen once, as it goes off.
+fn blinded(tune: &Knobs, m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, blind, blind_k, dz_d, mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz, .. } = *o;
+    let dz_t = if blind { clamp(blind_k, 0.0, 1.0) } else { 0.0 };
+    let rate = if dz_t > m.dz.x { tune.mv.dazzle.rate_in } else { tune.mv.dazzle.rate_out };
+    spring_step(&mut m.dz, dz_t, rate, dt);
+    if dz_t == 0.0 && m.dz.x < 0.02 {
+        m.dz.x = 0.0;
+        m.dz.v = 0.0;
+    }
+    let dzw = clamp(m.dz.x, 0.0, 1.0) * kk(o, tune.mv.dazzle.amp[0], tune.mv.dazzle.amp[1]) * gate;
+    if m.dz.x <= 0.0 {
+        m.dz_sd = 0.0;
+    } else if m.dz_sd == 0.0 {
+        m.dz_sd = if dz_d[0] >= 0.0 { 1.0 } else { -1.0 };
+    }
+    if dzw > 0.003 {
+        m.dz_t += dt;
+        let sd = if falsy(m.dz_sd) { 1.0 } else { m.dz_sd };
+        pitch += tune.mv.dazzle.hunch * dzw;
+        yaw -= sd * tune.mv.dazzle.away * dzw;
+        roll += sd * tune.mv.dazzle.roll * dzw;
+        hp += tune.mv.dazzle.head * dzw;
+        hy -= sd * tune.mv.dazzle.head_away * dzw;
+        drop += tune.mv.dazzle.drop * dzw;
+        sx += (-dz_d[0] * tune.mv.dazzle.back + tune.mv.dazzle.sway_x * sin(m.dz_t * 3.1)) * dzw;
+        sz += (-dz_d[2] * tune.mv.dazzle.back + tune.mv.dazzle.sway_z * sin(m.dz_t * 2.3 + 1.0)) * dzw;
+    } else {
+        m.dz_t = 0.0;
+    }
+    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, dzw, ..*o };
+}
+
+/// The clutch's fold: under the blinded hunch it gives way by the hunch's own weight.
+fn fold(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, clutch, fold_too, mut pitch, mut roll, mut hp, mut drop, mut sx, dzw, .. } = *o;
+    let want = if clutch > 0.0 && fold_too { clamp(clutch, 0.0, 1.0) * (1.0 - clamp(dzw, 0.0, 1.0)) } else { 0.0 };
+    if want > 0.0 || m.cf.x != 0.0 {
+        spring_step(&mut m.cf, want, MV2.clutch.fold.rate, dt);
+        if want == 0.0 && m.cf.x < 0.01 {
+            m.cf.x = 0.0;
+            m.cf.v = 0.0;
+        }
+    }
+    let cfw = clamp(m.cf.x, 0.0, 1.0) * gate;
+    if cfw > 0.003 {
+        m.cf_t += dt;
+        let s = sin(m.cf_t * 2.0 * PI * MV2.clutch.fold.hz);
+        pitch += (if fold_too { MV2.clutch.fold.pitch_too } else { MV2.clutch.fold.pitch }) * cfw;
+        roll += MV2.clutch.fold.sway * s * cfw;
+        hp += MV2.clutch.fold.head * cfw;
+        drop += MV2.clutch.fold.drop * cfw;
+        sx += 0.012 * s * cfw;
+    } else {
+        m.cf_t = 0.0;
+    }
+    *o = Lean { pitch, roll, hp, drop, sx, cfw, ..*o };
+}
+
+/// Hurt, he hunches over it and steps heavy on that side; it gives way under the fold and the blinded hunch.
+fn hurt(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, hurt, hurt_side, aim, speed, phase, mut pitch, mut yaw, mut roll, mut hp, mut drop, mut sx, dzw, cfw, .. } = *o;
+    let (want, under) = (clamp(hurt, 0.0, 1.0), (1.0 - clamp(dzw, 0.0, 1.0)) * (1.0 - cfw));
+    if want > 0.0 || m.hu.x != 0.0 {
+        spring_step(&mut m.hu, want, MV2.hurt.rate, dt);
+        if want == 0.0 && m.hu.x < 0.01 {
+            m.hu.x = 0.0;
+            m.hu.v = 0.0;
+        }
+    }
+    let hu = clamp(m.hu.x, 0.0, 1.0) * gate * under;
+    if hu > 0.003 {
+        let (sd, aim_w) = (hurt_side, clamp(aim, 0.0, 1.0));
+        let (brace, mw) = (1.0 - MV2.hurt.brace * aim_w, smoothstep(0.15, 0.7, abs(speed)));
+        let on_it = max(0.0, -sd * sin(2.0 * PI * phase));
+        let step = on_it * on_it * mw;
+        m.hu_t += dt;
+        let br = sin(m.hu_t * 2.0 * PI * MV2.hurt.hz) * (1.0 - mw);
+        pitch += (MV2.hurt.pitch + MV2.hurt.step_pitch * step) * brace * hu;
+        roll -= sd * (MV2.hurt.lean + MV2.hurt.step_roll * step + MV2.hurt.sway * br) * hu;
+        yaw += sd * MV2.hurt.step_yaw * step * brace * hu;
+        hp += (MV2.hurt.head * (1.0 - MV2.hurt.head_brace * aim_w) + MV2.hurt.step_head * step) * hu;
+        drop += (MV2.hurt.drop + MV2.hurt.step_drop * step) * hu;
+        sx += sd * MV2.hurt.step_side * step * hu;
+    } else {
+        m.hu_t = 0.0;
+    }
+    *o = Lean { pitch, yaw, roll, hp, drop, sx, under, ..*o };
+}
+
+/// Shaken, he ducks his head; it gives way the same.
+fn shaken(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
+    let Lean { dt, gate, aim, shaken, mut pitch, mut hp, mut drop, under, .. } = *o;
+    let want = clamp(shaken, 0.0, 1.0);
+    if want > 0.0 || m.sk.x != 0.0 {
+        let rate = if want > m.sk.x { MV2.shaken.rate_in } else { MV2.shaken.rate_out };
+        spring_step(&mut m.sk, want, rate, dt);
+        if want == 0.0 && m.sk.x < 0.01 {
+            m.sk.x = 0.0;
+            m.sk.v = 0.0;
+        }
+    }
+    let sk = clamp(m.sk.x, 0.0, 1.0) * gate * under;
+    if sk > 0.003 {
+        pitch += MV2.shaken.pitch * (1.0 - MV2.shaken.brace * clamp(aim, 0.0, 1.0)) * sk;
+        hp += MV2.shaken.head * sk;
+        drop += MV2.shaken.drop * sk;
+    }
+    *o = Lean { pitch, hp, drop, ..*o };
+}
+
+/// The toss's body English: the left shoulder back with the hand, then through with it; a dip of the knees under the swing.
+fn toss_english(o: &mut Lean) {
+    let Lean { gate, ts, rel, mut pitch, mut yaw, mut drop, .. } = *o;
+    if ts >= 0.0 {
+        let td = rel + TOSS_AFTER;
+        let wind = curve(ts, &[[0.0, 0.0], [rel * 0.8, 1.0], [rel + 0.03, 0.2], [rel + 0.2, -1.0], [rel + 0.4, -0.6], [td, 0.0]]) * gate;
+        yaw += 9.0 * wind;
+        pitch += 5.0 * max(0.0, -wind) + 2.0 * max(0.0, wind);
+        drop += 0.02 * abs(wind);
+    }
+    *o = Lean { pitch, yaw, drop, ..*o };
+}
+
+/// The trunk turned.
+fn trunk_turn(d: &mut [S], rig: &Rig, o: &Lean) {
+    let Lean { pitch, yaw, roll, .. } = *o;
+    if abs(pitch) + abs(yaw) + abs(roll) > 1e-3 {
+        let q = |ky: f64, kp: f64| q_mul(&q_yaw(yaw * DEGR * ky), &q_mul(&q_roll(roll * DEGR * ky), &q_pitch(pitch * DEGR * kp)));
+        turn(d, rig, role(SPINE1), q(0.3, 0.4));
+        turn(d, rig, role(SPINE2), q(0.35, 0.35));
+        turn(d, rig, role(SPINE3), q(0.35, 0.25));
+    }
+}
+
+/// The head turned.
+fn head_turn(d: &mut [S], rig: &Rig, o: &Lean) {
+    let Lean { hp, hy, .. } = *o;
+    if abs(hp) + abs(hy) > 1e-3 {
+        let q = |kq: f64| q_mul(&q_yaw(hy * DEGR * kq), &q_pitch(hp * DEGR * kq));
+        turn(d, rig, role(NECK), q(0.4));
+        turn(d, rig, role(HEAD), q(0.6));
+    }
 }
 /// The reactions' arms, after their body: the start's shoulders and elbows on the pose at `at`; then, each solved on the scratch pose at `at_b` and laid
 /// back through its own mask, a blinded man's gun held on the line it had, his hand flat over his eyes, and the toss of the support hand along its keyed
