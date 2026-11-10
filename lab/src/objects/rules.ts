@@ -16,7 +16,8 @@ export function build(m: Made, level: number, seed = 1): Built { const w = new W
 /** what it takes on the GPU: pieces, the tree over them (eight orders of what stands, one of what moves), planes and curves and marks, leaves and their trees */
 export function count(b: Built): Count {
   const { w } = b, rows = [...w.pieces, ...w.moving].reduce((n, p) => n + (p.planes?.length ?? 0) + 2 * (p.curves?.length ?? 0) + 3 * (p.marks?.length ?? 0), 0), leaves = w.instances.reduce((n, i) => n + w.clusters[i.cluster]!.leaves.length, 0), kinds = w.clusters.reduce((n, c) => n + c.leaves.length, 0);
-  return { pieces: w.pieces.length, moving: w.moving.length, leaves, clusters: w.instances.length, bytes: (w.pieces.length + w.moving.length) * PIECE_FLOATS * 4 + w.pieces.length * 32 * 8 + w.moving.length * 64 + rows * 16 + kinds * (32 + 32 * 8 * 0.67) + w.instances.length * (64 + 48 + 96 + 64) };
+  const vox = new Set([...w.pieces, ...w.moving].flatMap(p => p.vox ? [p.vox] : [])); let vb = 0; for (const v of vox) vb += v.byteLength;
+  return { pieces: w.pieces.length, moving: w.moving.length, leaves, clusters: w.instances.length, bytes: (w.pieces.length + w.moving.length) * PIECE_FLOATS * 4 + w.pieces.length * 32 * 8 + w.moving.length * 64 + rows * 16 + kinds * (32 + 32 * 8 * 0.67) + w.instances.length * (64 + 48 + 96 + 64) + vb };
 }
 const plain = (p: Piece) => !p.quad && !p.planes?.length && !p.curves?.length;
 /** what hangs together with what touches the floor: the rest floats */
