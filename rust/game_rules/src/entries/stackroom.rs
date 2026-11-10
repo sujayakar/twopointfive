@@ -289,7 +289,7 @@ fn fix_fits(g: &mut Game, x: &FixFit, q: V3, apart: f64) -> bool {
         && !anothers(g, x.d, q)
         && flat(q, x.c) >= x.min_m
         && !x.used.iter().any(|o| flat(*o, q) < apart)
-        && !crate::doorway::doorway_in_way(g, q)
+        && !crate::doorway::doorway_stand(g, q)
         && !(x.glass && crate::orders::squad_orders_behind_glass(g, x.d, x.side, q))
         && !(x.shy && furnished(g, x.d, q))
 }
@@ -501,7 +501,7 @@ fn cands_of(g: &mut Game, r: &mut ViewDeal, h: f64) {
         if !crate::scene_collision::solid_blocked(g, p0, p1, None) { break; }
         for off in [jamb_out, s.view_off] {
             let q = crate::doortools::door_pt(g, d, a, off, side, None);
-            if !nav_blocked(g, q[0], q[2]) && on_floor(g, r.f, q) && !crate::scene_collision::solid_blocked(g, r.front, [q[0], 0.45, q[2]], None) && !crate::doorway::doorway_in_way(g, q)
+            if !nav_blocked(g, q[0], q[2]) && on_floor(g, r.f, q) && !crate::scene_collision::solid_blocked(g, r.front, [q[0], 0.45, q[2]], None) && !crate::doorway::doorway_stand(g, q)
                 && !r.taken.iter().any(|o| flat(*o, q) < s.apart) && !in_view(g, d, r.far, q) && !furnished(g, d, q) {
                 let glass = crate::orders::squad_orders_behind_glass(g, d, side, q);
                 l.push((q, glass));
@@ -575,7 +575,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
         js::sort_by(&mut mine, |p, q| flat(*p, c) - flat(*q, c));
         if !loose.is_empty() {
             for &q in &mine {
-                if nav_blocked(g, q[0], q[2]) || !on_floor(g, &f, q) || crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None) || crate::doorway::doorway_in_way(g, q)
+                if nav_blocked(g, q[0], q[2]) || !on_floor(g, &f, q) || crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None) || crate::doorway::doorway_stand(g, q)
                     || taken.iter().any(|o| flat(*o, q) < s.apart) || in_view(g, d, &far, q) { continue; }
                 let stands = (0..posts.len()).filter(|i| !loose.contains(i)).any(|i| flat(posts[i].pos, q) < s.apart);
                 if stands || pre.values().any(|o| flat(*o, q) < s.apart) { continue; }
@@ -775,7 +775,7 @@ fn next_fits(g: &mut Game, d: DoorId, floor: &crate::stackroom::Floor, c: V3, d_
         && flat(q, c) <= s.next_m
         && flat(q, d_c) >= min_m
         && !used.iter().any(|u| flat(*u, q) < s.apart)
-        && !crate::doorway::doorway_in_way(g, q)
+        && !crate::doorway::doorway_stand(g, q)
         && !crate::scene_collision::solid_blocked(g, front, [q[0], 0.45, q[2]], None)
         && !(shy && furnished(g, d, q))
 }

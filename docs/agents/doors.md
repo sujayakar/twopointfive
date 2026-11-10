@@ -20,20 +20,20 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `doors/` | a door: its leaf, lock, latch and boxes; who is locked out; the boot; the hand; a man's path threaded through a frame |
 | `doorswing.rs` | which way each door opens, dealt once as the level is made |
-| `doorway.rs` | manners: who waits at a frame, who goes round whom, where nobody stands about |
-| `handleside.rs` | a man opens a door from where its handle is, off the floor the leaf sweeps |
+| `doorway.rs` | manners: where nobody stands about; `doorway/gate.rs`: who waits at a frame and who goes round whom |
+| `handleside.rs` | where a man works a handle from, off the floor the leaf sweeps; `handleside/gate.rs`: a man on his walk does it |
 | `sprintdoor.rs` | Sam running at a door |
 | `doorthrow.rs` | what a leaf driven into a man does to him |
-| `doorblast.rs` | a leaf off its hinges, splintered by gunfire or torn by a blast, and the slab it becomes |
+| `doorblast.rs` | a leaf off its hinges, torn by a blast, and the slab it becomes; `doorblast/splinter.rs`: splintered by gunfire |
 | `doornames.rs` | what a door is called out loud |
 | `shutdoor.rs` | the squad's order to shut one |
 | `doorforce.rs`, `darkdoor.rs`, `digin/` | defenders: firing and booting through a shut door, staying out of a dark room, wedging (`enemies.md`) |
 | `props.rs` | furniture: pushed, shoved by a leaf, thrown by a blast |
 | `slab.rs` | a leaf off its hinges, in the air, on its door's record |
 
-The step itself is `doors/step.rs`: every leaf for one tick, on its record (`Leaf`, on its door). Furniture's is in `props.rs`, on its records. `game_update_doors` in
-`rust/game_rules/src/tick/game/doors.rs` gathers who is near a leaf, hands it over, and takes back where everybody ended. Sam's rows are in
-`rust/game_rules/src/sam/player/interactables.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
+The step itself is `doors/step.rs`: every leaf for one tick, on its record (`Leaf`, on its door), with the men it meets in `doors/step/meet.rs`. Furniture's is in
+`props.rs`, on its records. `game_update_doors` in `rust/game_rules/src/tick/game/doors.rs` gathers who is near a leaf, hands it over, and takes back where everybody
+ended. Sam's rows are in `rust/game_rules/src/sam/player/interactables.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
 `tools/levels/lib/doorSize.ts`. A leaf is drawn as any box is; `rust/game_draw/src/doorways.rs` adds the doorways the light's reach asks for.
 
 ## How it works

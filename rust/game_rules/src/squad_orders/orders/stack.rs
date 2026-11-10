@@ -351,12 +351,12 @@ fn squad_orders_stack_posts_marks(g: &mut crate::game::Game, d: DoorId, side: f6
     let mut i = 0;
     while i < out.len() {
         let p = out[i].clone();
-        if p.lead || !crate::doorway::doorway_in_way(g, p.pos) { i += 1; continue; }
+        if p.lead || !crate::doorway::doorway_stand(g, p.pos) { i += 1; continue; }
         let mut taken: Vec<V3> = vec![sam];
         taken.extend(held.iter().copied());
         for (j, o) in out.iter().enumerate() { if j != i { taken.push(o.pos); } }
         let q = crate::doorway::doorway_clear_near(g, p.pos, &mut |g: &mut Game, q: V3| {
-            if crate::doorway::doorway_in_way(g, q) || (q[0] - c[0]) * n[0] + (q[2] - c[2]) * n[1] < 0.3 { return true; }
+            if crate::doorway::doorway_stand(g, q) || (q[0] - c[0]) * n[0] + (q[2] - c[2]) * n[1] < 0.3 { return true; }
             crate::scene_collision::solid_blocked_over(g, &over, front, [q[0], 0.45, q[2]], None)
         }, Some(&taken), Some(0.75), None);
         if let Some(q) = q {

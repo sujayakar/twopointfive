@@ -258,14 +258,14 @@ pub fn fit_spots(g: &mut crate::game::Game, at: V3, n: f64, front: f64, from: V3
     // the floor they may take: the space's cells a short walk and a short way from the point, in plain view of it, off every frame and leaf's swing, clear of furniture
     let spread = k.spread0 + k.spread_per * n;
     let mut c: Vec<V3> = Vec::new();
-    let ok_at = !crate::scene_collision::nav_grid_is_blocked(g, at[0], at[2]) && !crate::doorway::doorway_in_way(g, at) && clear(g, at);
+    let ok_at = !crate::scene_collision::nav_grid_is_blocked(g, at[0], at[2]) && !crate::doorway::doorway_stand(g, at) && clear(g, at);
     if ok_at { c.push([at[0], 0.0, at[2]]); }
     for &cell in r.cells.iter() {
         let steps = *r.steps.get(crate::Num(cell)).unwrap();
         if steps * cs > spread * 1.5 + 1.0 { break; }
         let q: V3 = [(js::rem(cell, nav_w) + 0.5) * cs, 0.0, ((js::to_i32(cell / nav_w) as f64) + 0.5) * cs];
         if v3::dist_xz(q, at) > spread || (ok_at && v3::dist_xz(q, at) < 0.3) { continue; }
-        if crate::doorway::doorway_in_way(g, q) || !clear(g, q) || crate::scene_collision::solid_blocked(g, [at[0], 1.3, at[2]], [q[0], 1.3, q[2]], None) { continue; }
+        if crate::doorway::doorway_stand(g, q) || !clear(g, q) || crate::scene_collision::solid_blocked(g, [at[0], 1.3, at[2]], [q[0], 1.3, q[2]], None) { continue; }
         c.push(q);
     }
     if (c.len() as f64) < n { return None; }
