@@ -96,6 +96,8 @@ export class Lab {
   /** the world at a tick, from the start (only what has a memory is stepped) */
   airMs = 0; private readonly sway = new Sway();
   private swing(tick: number) { const t0 = performance.now(); this.stir(); this.air.blow(this.wind, TICK); this.airMs = this.airMs * 0.95 + 0.05 * (performance.now() - t0); this.wade(); for (const h of this.building.hung) h.step(TICK, tick * TICK, this.air); this.ripples.step(TICK); }
+  /** a place has changed (a wall gave way): what is kept of light within r of it starts over. (What stands between places must be found anew first: mapJoins) */
+  forget(at: V3, r: number) { this.forgotten.push([...at, r]); } readonly forgotten: number[][] = [];
   ripples!: Ripples;
   /** legs in the water */
   private wade() { const r = this.ripples; this.building.player.wading = 0; if (!r.any) return; for (const p of this.building.people) { if (p.pos[0] < r.rect[0] - 0.4 || p.pos[0] > r.rect[2] + 0.4 || p.pos[2] < r.rect[1] - 0.4 || p.pos[2] > r.rect[3] + 0.4 || p.pos[1] > r.top) continue; for (const f of p.feet) { const deep = r.top - (f.at[1] + f.lift); if (deep > 0 && f.at[0] > r.rect[0] && f.at[0] < r.rect[2] && f.at[2] > r.rect[1] && f.at[2] < r.rect[3]) r.sink(f.at[0], f.at[2], 0.006 * Math.min(deep, 0.8), 0.15); if (p === this.building.player.body) this.building.player.wading = Math.max(this.building.player.wading, deep); } } }

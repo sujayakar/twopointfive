@@ -19,7 +19,7 @@ fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var 
     if (task < 6u) {
       let a = six(task); let u = rnd2(); let rr = sqrt(u.x); let bs = basis(a); let d = normalize(bs[0] * (rr * cos(6.2832 * u.y)) + bs[1] * (rr * sin(6.2832 * u.y)) + bs[2] * sqrt(max(1.0 - u.x, 0.0))); var o = x; if (!leafy) { o = onSide(at.xyz, ext.xyz, a * 1e3); }
       foot(h, 1.0); fromCell = cell; let hit = nearest(o, d, 2e-3, 600.0, 0u, 1e9); fromCell = NOTHING; var L = vec3f(0.0);
-      if (hit.piece == NOTHING) { L = skyLod(d, 2.0); } else { let p = surfaceMean(o, d, hit); let own = (pieces[hit.piece].lamp & 255u) != 255u; L = select(p.glow, vec3f(0.0), own) + sentBack(p, false, rnd2(), d); }
+      if (hit.piece == NOTHING) { L = skyLod(d, 2.0); } else { let p = surfaceMean(o, d, hit); let own = (pieces[hit.piece].lamp & 255u) != 255u; L = select(p.glow, vec3f(0.0), own) + sentBack(p, rnd2()); }
       let sm = smokeSeen(o, d, min(hit.t, 80.0)); let fo = blkSeen(); out = min((L * sm.a * hit.thru * fo.T + sm.rgb * fo.T + fo.L), vec3f(50.0)) * PI;
     } else {
       var o = x; var d = S; var far = 400.0; var e = vec3f(0.0); var wide = 2.0 * frame.sunDir.w;

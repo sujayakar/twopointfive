@@ -1,5 +1,5 @@
 // THE REAL-TIME METHOD, as parts with fixed signatures. Swap one for another to study it:
-//   cache     how light on surfaces is kept       (cacheRead / cacheFound, and stages that fill it)
+//   cache     how light on surfaces is kept       (cacheRead, cacheTell, and stages that fill it)
 //   denoise   signal → quieter signal
 //   upscale   color at render size → picture at output size
 import type { Method, Lab } from '../lab';
@@ -9,6 +9,7 @@ import { F } from '../scene/world';
 import { type V3, add, apply } from '../math';
 import signals from '../wgsl/signals.wgsl' with { type: 'text' };
 import cacheLib from '../wgsl/cache.wgsl' with { type: 'text' };
+import cacheTell from './cachetell.wgsl' with { type: 'text' };
 import surf from './surf.wgsl' with { type: 'text' };
 import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
@@ -39,50 +40,49 @@ import claim from './cacheclaim.wgsl' with { type: 'text' };
 import warm from './cachewarm.wgsl' with { type: 'text' };
 import update from './cacheupdate.wgsl' with { type: 'text' };
 
-const SLOTS = 262144; export const HITS = 1 << 20;
+export const HITS = 1 << 20;
 export const CHANGES: Record<string, [string, string, 'uniform']> = { changes: ['changes', 'Changes', 'uniform'] };
-export interface CachePart { name: string; /** what its buffers' names end with */ id?: string; lib: string; /** what a ray that landed somewhere tells it: cacheTell(who, x, n, moves), `hits[who]` is free to write */ tell: string; bind: Stage['buffers']; /** what telling writes beside */ asks?: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void>; /** more rounds this frame: the light has changed everywhere */ rush?: number }
-const TELL = 'fn cacheTell(who: u32, x: vec3f, n: vec3f, moves: bool) { if (who >= HITS) { return; } let wants = cacheWants(x, n, moves); if (wants == 0u) { return; } hits[who] = vec4u(bitcast<vec3u>(x), octPack(n)); for (var l = 0u; l < 4u; l++) { if ((wants & (1u << l)) != 0u) { cacheFound(cacheKeyOf(x, n, l & 1u, l >> 1u), who); } } }\n';
+export interface CachePart { name: string; /** what its buffers' names end with */ id?: string; lib: string; /** what a ray that landed somewhere tells it: cacheTell(who, x, n), who under HITS */ tell: string; bind: Stage['buffers']; /** what telling writes beside */ asks?: Stage['buffers']; stages: Stage[]; init(lab: Lab): Promise<void>; /** more rounds this frame: the light has changed everywhere */ rush?: number }
 /** the sum, whole (the teaching panel swaps this for a mask) */
 export const WHOLE = 'fn part(k: u32) -> f32 { return 1.0; }\n';
 export interface DenoisePart { name: string; stages(o: { signal: string; div: 1 | 2; cap: number; rounds: number; narrow?: boolean; fractions?: boolean; /** a signal that goes with it, by the same weights */ second?: string; /** of a mirror: 0 the surface's own, 1 the clear layer's */ layer?: number }, g: Graph): { stages: Stage[]; result: string; second?: string } }
 export interface UpscalePart { name: string; stages(g: Graph): { stages: Stage[]; result: string } }
 
-/** light on surfaces, in a table */
-export function hashCache(): CachePart {
-  const bind: Stage['buffers'] = { keys: ['keys', 'array<atomic<u32>>', 'read_write'], cand: ['cand', 'array<atomic<u32>>', 'read_write'], cells: ['cells', 'array<vec4f>', 'read'] };
-  const groups = { groups: (): [number, number, number] => [SLOTS / 64 / 8, 8, 1] }, lin = (t: string) => t.replaceAll('let s = id.x;', `let s = id.x + id.y * ${SLOTS / 8}u;`);
-  const claimS: Stage = { name: 'cache claim', over: groups, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read_write'], hits: ['hits', 'array<vec4u>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'] }, code: cacheLib + lin(claim) };
-  const keep: Stage = { name: 'cache keep', over: groups, code: '', async make() { return (enc, g) => { if (keep.when && !keep.when()) return; enc.copyBufferToBuffer(g.buffers.get('fresh')!, 0, g.buffers.get('cells')!, 0, SLOTS * 32); }; } };
-  const updateS: Stage = { name: 'cache', over: { groups: () => [SLOTS / 256, 1, 1] }, buffers: { ...bind, norms: ['norms', 'array<u32>', 'read'], fresh: ['fresh', 'array<vec4f>', 'read_write'], ...CHANGES }, code: signals + cacheLib + bounceLib + update };
-  let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, buffers: { ...bind, hits: ['hits', 'array<vec4u>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: cacheLib + warm };
-  const again = (k: number): Stage => ({ ...updateS, name: 'cache', when: () => (part.rush ?? 0) > k, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + k}u)`) });
+/** light on surfaces: patches in a table (wgsl/cache.wgsl). `o` sets constants of its text otherwise, `id` names buffers of its own: for measuring (kept.ts) */
+export function patches(o: Record<string, string> = {}, id = ''): CachePart {
+  const set = (t: string) => Object.entries(o).reduce((s, [k, v]) => s.replace(new RegExp(`const ${k} = [^;]+;`), `const ${k} = ${v};`), t), lib = set(cacheLib), tell = set(cacheTell), rush = [0, 1, 2], H = { HITS };
+  const slots = +/const SLOTS = (\d+)u/.exec(lib)![1]!, cell = +/const CELL = ([\d.]+)/.exec(lib)![1]!, lanes = slots / 8, k = (n: string) => n + id, RW = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST;
+  const bind: Stage['buffers'] = { keys: [k('keys'), 'array<atomic<u32>>', 'read_write'], cells: [k('cells'), 'array<vec4f>', 'read'] }, asks: Stage['buffers'] = { cand: [k('cand'), 'array<atomic<u32>>', 'read_write'] }, hits: Stage['buffers'] = { hits: ['hits', 'array<vec4u>', 'read_write'] };
+  const groups = { groups: (): [number, number, number] => [lanes / 64, 8, 1] }, spot = (a: 'read' | 'read_write') => ({ spot: [k('spot'), 'array<vec4u>', a] as [string, string, typeof a] }), fresh: Stage['buffers'] = { fresh: [k('fresh'), 'array<vec4f>', 'read_write'] };
+  const claimS: Stage = { name: 'cache claim', over: groups, consts: H, buffers: { ...bind, ...asks, ...fresh, ...spot('read_write'), ...hits }, code: `const LANES = ${lanes}u;\n` + lib + tell + claim };
+  const keep = (when: () => boolean): Stage => { const s: Stage = { name: 'cache keep', over: groups, code: '', async make() { return (enc, g) => { if (s.when && !s.when()) return; enc.copyBufferToBuffer(g.buffers.get(k('fresh'))!, 0, g.buffers.get(k('cells'))!, 0, slots * 32); }; } }; s.when = when; return s; };
+  const updateS: Stage = { name: 'cache', over: { groups: () => [slots / 256, 1, 1] }, consts: H, buffers: { ...bind, ...asks, ...fresh, ...spot('read'), ...hits, ...CHANGES }, code: signals + lib + tell + bounceLib + set(update) };
+  let at: [number, number] = [0, 0]; const warmS: Stage = { name: 'cache warm', over: { groups: () => [Math.ceil((at[1] - at[0]) / 64), 1, 1] }, consts: H, buffers: { ...bind, ...asks, ...hits, warmPts: ['warmPts', 'array<vec4u>', 'read'], warmAt: ['warmAt', 'vec4u', 'uniform'] }, code: lib + tell + warm };
+  // (a round more tells nobody: its word would lie where the first one's is still to be read)
+  const again = (r: number): Stage => ({ ...updateS, when: () => (part.rush ?? 0) > r, code: updateS.code.replace('rngKey(key, 91u)', `rngKey(key, ${92 + r}u)`).replace(/tellAs\(HITS \+ s[^;]*; \/\* \(tells\) \*\//, '') });
   const part: CachePart = {
-    name: 'hash', lib: cacheLib, tell: TELL, bind, stages: [claimS, updateS, keep, ...[0, 1, 2].flatMap(k => [again(k), { ...keep, when: () => (part.rush ?? 0) > k }])],
+    name: 'patches', id, lib, tell, bind, asks, stages: [claimS, updateS, keep(() => true), ...rush.flatMap(r => [again(r), keep(() => (part.rush ?? 0) > r)])],
     async init(lab) {
-      lab.buffer('keys', SLOTS * 4); lab.buffer('cells', SLOTS * 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('fresh', SLOTS * 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('norms', SLOTS * 4); lab.buffer('hits', HITS * 16); lab.uniform('warmAt', new Uint32Array(4));
-      const c = lab.buffer('cand', SLOTS * 4); lab.gpu.device.queue.writeBuffer(c, 0, new Uint32Array(SLOTS).fill(0xffffffff));
-      await lab.graph.build([claimS, warmS, keep]);
-      const pts = facePoints(lab), chunk = 49152; // 48 k at a time
-      for (let a = 0; a < pts.length / 4; a += chunk) {
-        const b = Math.min(pts.length / 4, a + chunk); at = [a, b]; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('hits')!, 0, pts.buffer as ArrayBuffer, a * 16, (b - a) * 16); lab.uniform('warmAt', new Uint32Array([a, b, 0, 0]));
-        const e = lab.gpu.device.createCommandEncoder(); lab.graph.run(e, [warmS, claimS, keep]); lab.gpu.device.queue.submit([e.finish()]);
+      lab.buffer(k('keys'), slots * 4, RW); lab.buffer(k('cells'), slots * 32, RW); lab.buffer(k('fresh'), slots * 32, RW); lab.buffer(k('spot'), slots * 16, RW); lab.buffer('hits', (HITS + slots) * 16); lab.uniform('warmAt', new Uint32Array(4)); lab.buffer('warmPts', WARM * 16, RW);
+      const keepW = keep(() => true), c = lab.buffer(k('cand'), slots * 4, RW); lab.gpu.device.queue.writeBuffer(c, 0, new Uint32Array(slots).fill(0xffffffff)); await lab.graph.build([claimS, warmS, keepW]);
+      const pts = facePoints(lab, Math.min(0.6, cell * 0.9));
+      for (let a = 0; a < pts.length / 4; a += WARM) {
+        const b = Math.min(pts.length / 4, a + WARM); at = [a, b]; lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('warmPts')!, 0, pts.buffer as ArrayBuffer, a * 16, (b - a) * 16); lab.uniform('warmAt', new Uint32Array([a, b, 0, 0]));
+        const e = lab.gpu.device.createCommandEncoder(); lab.graph.run(e, [warmS, claimS, keepW]); lab.gpu.device.queue.submit([e.finish()]);
       }
-      (lab as never as { warmed: number }).warmed = pts.length / 4;
     },
   };
   return part;
 }
-/** the part that ships, with constants of its text set otherwise (kept.ts) */
-export const keptPart = (o: Record<string, string>, _id = ''): CachePart => { if (Object.keys(o).length) throw new Error('no constants to set'); return hashCache(); };
+const WARM = 49152;
 /** points over every standing face a ray could meet, a hand's width apart: where light will be kept */
-export function facePoints(lab: Lab): Float32Array {
+export function facePoints(lab: Lab, step = 0.30): Float32Array {
   const out: number[] = [], ps = lab.building.world.pieces, grid = new Map<string, Piece[]>(), key = (x: number, y: number, z: number) => `${Math.floor(x / 2)},${Math.floor(y / 2)},${Math.floor(z / 2)}`;
   const solid = ps.filter(p => !(p.flags & (F.GLASS | F.WATER | F.FAR)) && !p.quad && Math.max(...p.half) < 40);
   for (const p of solid) { const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]); for (let x = Math.floor((p.at[0] - e[0]!) / 2); x <= Math.floor((p.at[0] + e[0]!) / 2); x++) for (let y = Math.floor((p.at[1] - e[1]!) / 2); y <= Math.floor((p.at[1] + e[1]!) / 2); y++) for (let z = Math.floor((p.at[2] - e[2]!) / 2); z <= Math.floor((p.at[2] + e[2]!) / 2); z++) { const k = `${x},${y},${z}`; let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(p); } }
   const inside = (q: V3, not: Piece) => (grid.get(key(...q)) ?? []).some(p => { if (p === not) return false; const d: V3 = [q[0] - p.at[0], q[1] - p.at[1], q[2] - p.at[2]]; for (let k = 0; k < 3; k++) { const r = p.rot[k]!; if (Math.abs(d[0] * r[0] + d[1] * r[1] + d[2] * r[2]) > p.half[k]! + 0.002) return false; } return true; });
   const nrm = new Float32Array(1), nu = new Uint32Array(nrm.buffer), oct = (n: V3) => { const s = Math.abs(n[0]) + Math.abs(n[1]) + Math.abs(n[2]); let x = n[0] / s, y = n[2] / s; if (n[1] < 0) { const a = (1 - Math.abs(y)) * Math.sign(x || 1), b = (1 - Math.abs(x)) * Math.sign(y || 1); x = a; y = b; } const q = (v: number) => Math.floor((v * 0.5 + 0.5) * 65535 + 0.5) & 0xffff; nu[0] = (q(x) | (q(y) << 16)) >>> 0; return nrm[0]!; };
-  const bits: number[] = [], step = 0.30;
+  const bits: number[] = [];
   for (const p of solid) {
     if (p.planes || p.curves || p.at[1] + p.half[1] < -0.6 || Math.max(...p.half) < 0.12) continue;
     for (let a = 0; a < 3; a++) for (const s of [-1, 1]) {
@@ -103,7 +103,7 @@ export const svgf: DenoisePart = {
   },
 };
 /** no memory of light at all: what a bounce hits is lit by nothing. Shows what the cache is worth */
-export function noCache(): CachePart { return { name: 'none', lib: 'const CELL = 0.32;\nstruct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { var c: Cached; return c; }\n', tell: 'fn cacheTell(who: u32, x: vec3f, n: vec3f, moves: bool) {}\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
+export function noCache(): CachePart { return { name: 'none', lib: 'const CELL = 0.32;\nstruct Cached { E: vec3f, sun: f32, n: f32 };\nfn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached { var c: Cached; return c; }\nfn cacheSmooth(x: vec3f, n: vec3f) -> Cached { var c: Cached; return c; }\n', tell: 'fn cacheTell(who: u32, x: vec3f, n: vec3f) {}\n', bind: {}, stages: [], async init(lab) { lab.buffer('hits', HITS * 16); } }; }
 export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: '@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let o = frame.size.zw; if (f32(id.x) >= o.x || f32(id.y) >= o.y) { return; } textureStore(outT, id.xy, textureSampleLevel(color, linSamp, (vec2f(id.xy) + 0.5) / o, 0.0)); }' }] }; } };
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal, second }) => ({ stages: [], result: signal, ...(second ? { second } : {}) }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', airD: 'airD' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
@@ -128,7 +128,7 @@ function smokeMeanStages(lab: Lab): Stage[] {
 }
 /** `edit` changes a stage's text before it is built: for asking what a part of it costs */
 export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart; edit?: (s: Stage) => Stage } = {}): Method & { glow: string; cache: CachePart } {
-  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64), turn = 0, since = 0, light = '', beat = 0;
+  const cache = o.cache ?? patches(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64), turn = 0, since = 0, light = '', beat = 0;
   const m: Method & { glow: string; cache: CachePart; warm?: Promise<void> } = {
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt', cache,
     signals(g, lab) {
@@ -167,7 +167,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
       // where each moving piece was; and what changed
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
-      let many = 0; lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && l.name !== 'flash' && l.name !== 'fire') many++; if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
+      let many = 0; lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && l.name !== 'flash' && l.name !== 'fire') many++; if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice(); for (const f of lab.forgotten.splice(0)) { if (n < 8) ch.set(f, n++ * 4); else many = 9; }
       const drift = lastHour < 0 ? 0 : Math.abs(lab.hour - lastHour), key = lab.lampsMode + lab.mains + lab.moon; lastHour = lab.hour; if (key !== last || drift > 0.02 || many > 5) { const turned = key !== last && last !== ''; last = key; quiet = 40; if (drift > 0.1 || many > 5 || turned) ch[33] = 1; }      /* (more lamps switched than can be told of one by one: everything forgets) */ quiet = Math.max(0, quiet - 1); ch[32] = 1 - Math.max(0.85 * Math.min(1, quiet / 24), Math.min(0.6, drift * 110)); lab.uniform('changes', ch);
       lab.uniform('taauK', new Float32Array([0.25 * (lab.exposure || 1), fresh ? 1 : 0, 0.2 + 0.8 * ch[32]!, 0])); fresh = false; cache.rush = quiet > 0 ? 3 : 0;
     },

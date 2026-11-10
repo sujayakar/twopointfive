@@ -9,7 +9,7 @@
 // The gather's own limit on one ray's light (50) is lifted here, so that what is lost there is not laid to any of them.
 import { Lab, type Method } from './lab';
 import type { Stage } from './graph';
-import { realtime, noCache, type CachePart, HITS } from './stages/realtime';
+import { realtime, noCache, patches, type CachePart, HITS } from './stages/realtime';
 import { Present } from './present';
 import { bench, flicker } from './bench';
 import { pathTracer } from './stages/path';
@@ -17,7 +17,6 @@ import { readTexture } from './gpu';
 import { KNOBS, defaults, type Knob } from './tune';
 import type { V3 } from './math';
 import pathsLib from './stages/cachepaths.wgsl' with { type: 'text' };
-import { keptPart } from './stages/realtime';
 
 export interface View { name: string; w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; tick?: number; doors?: number; groups?: Record<string, number>; moon?: number; mains?: boolean; lamp?: string; tune?: Record<string, number> }
 interface Way { spec: string; part: CachePart; m: Method; lean: Stage[]; whole: Stage[] }
@@ -25,7 +24,7 @@ const EXACT = 'paths n=24', none = noCache();
 /** nothing kept, nothing answered: what the frame costs without any of this (the zero is not known to the compiler) */
 const nothing = (): CachePart => ({ ...none, lib: none.lib.replaceAll('var c: Cached; return c;', 'var c: Cached; c.E = vec3f(frame.weather.x * 0.0 + frame.misc2.x * 1e-30) * n; c.n = 1.0; return c;') });
 const paths = (n: number): CachePart => ({ ...none, name: 'paths', lib: `const BOUNCES = ${n}u;\n` + pathsLib });
-const keep = (spec: string): CachePart => { const [kind, ...rest] = spec.split(' '), o = Object.fromEntries(rest.map(r => r.split('=') as [string, string])); return kind === 'none' ? nothing() : kind === 'paths' ? paths(+(o.n ?? 3)) : keptPart(Object.fromEntries(Object.entries(o).filter(([k]) => /^[A-Z]/.test(k))), rest.length ? '#' + serial++ : ''); };
+const keep = (spec: string): CachePart => { const [kind, ...rest] = spec.split(' '), o = Object.fromEntries(rest.map(r => r.split('=') as [string, string])); return kind === 'none' ? nothing() : kind === 'paths' ? paths(+(o.n ?? 3)) : patches(Object.fromEntries(Object.entries(o).filter(([k]) => /^[A-Z]/.test(k))), rest.length ? '#' + serial++ : ''); };
 let serial = 0; const idOf = (p: CachePart) => p.id ?? '';
 const fill = (lab: Lab, name: string, v: number) => { const b = lab.graph.buffers.get(name); if (b) lab.gpu.device.queue.writeBuffer(b, 0, new Uint32Array(b.size / 4).fill(v)); };
 /** what was asked for while nothing was updated is dropped */
