@@ -2,7 +2,7 @@
 //! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. Each is the TypeScript's, statement for statement:
 //! the same operands in the same order, so the same doubles, and every pose value stored as the single the TypeScript's Float32Array stores (single.rs).
 //!
-//! What a function works on is handed to it as slices. The animator's layers are layers.rs and ask here; under the row `poses` a character's
+//! What a function works on is handed to it as slices. The animator's layers are layers/ and ask here; under the row `poses` a character's
 //! poses live in its game's block (poses.rs) and a question is asked of them THERE, with no copy; a pose that is an array of the host's (a function's
 //! scratch) is written onto the BENCH below, asked about, and read back. A call a question still costs more than it saves, so the row is a proof and
 //! not a speed-up: the layers that move here next call these with no crossing at all.
@@ -363,7 +363,7 @@ macro_rules! poses_of {
         }
     };
 }
-/// A LAYER'S WAY IN (layers.rs): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
+/// A LAYER'S WAY IN (layers/): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
 /// `f` — or None where a question would answer false
 pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &mut Fk) -> R) -> Option<R> {
     let b = bench();
