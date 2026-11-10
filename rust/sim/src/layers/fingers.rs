@@ -35,7 +35,7 @@ fn q_turn_by(d: &mut [S], i: usize, q: [f64; 4], f: f64) {
 /// Node i's stored rotation turned the share f of the way to the local rotation at t[k‥k+3], in place
 fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
     let (cx, cy, cz, cw) = (-ch(d, i, 3), -ch(d, i, 4), -ch(d, i, 5), ch(d, i, 6));
-    // conj(q) · target
+    // quat::conj(q) · target
     let q = [
         cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1],
         cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k],

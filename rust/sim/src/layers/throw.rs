@@ -3,10 +3,10 @@ use super::*;
 
 /// An arm's IK pole from a swivel angle about the shoulder → hand line, in a basis off a reference the hand never points along
 fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
-    let hn = normalize(h);
-    let b1 = normalize(mad3(rf, hn, -dot3(&rf, &hn)));
-    let b2 = cross3(&hn, &b1);
-    mad3(scale3(b1, cos(psi)), b2, sin(psi))
+    let hn = v3::normalize(h);
+    let b1 = v3::normalize(v3::mad(rf, hn, -v3::dot(rf, hn)));
+    let b2 = v3::cross(hn, b1);
+    v3::mad(v3::scale(b1, cos(psi)), b2, sin(psi))
 }
 /// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is refused by name as the game loads)
 const THROW_KEYS: usize = 16;
@@ -204,7 +204,7 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
     let left = &mut an.thr_last;
     let last = with_pose(g, at, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (r, l) = (sub3(fk.at(role(HAND_R)), fk.at(role(UPPER_ARM_R))), sub3(fk.at(role(HAND_L)), fk.at(role(UPPER_ARM_L))));
+        let (r, l) = (v3::sub(fk.at(role(HAND_R)), fk.at(role(UPPER_ARM_R))), v3::sub(fk.at(role(HAND_L)), fk.at(role(UPPER_ARM_L))));
         *left = Some(AnimThrLast { r, l });
     });
     if last.is_none() {
@@ -252,7 +252,7 @@ fn underneath(fk: &mut Fk, o: &mut Throw) {
     let Throw { off, .. } = *o;
     let (fl_n, fr_n, hr_n, hl_n) = (role(FOOT_L), role(FOOT_R), role(HAND_R), role(HAND_L));
     let (f_l, f_r, r_l, r_r) = (fk.at(fl_n), fk.at(fr_n), fk.rot(fl_n), fk.rot(fr_n));
-    let (u_r, u_l) = (sub3(fk.at(hr_n), fk.at(role(UPPER_ARM_R))), sub3(fk.at(hl_n), fk.at(role(UPPER_ARM_L))));
+    let (u_r, u_l) = (v3::sub(fk.at(hr_n), fk.at(role(UPPER_ARM_R))), v3::sub(fk.at(hl_n), fk.at(role(UPPER_ARM_L))));
     // (the free hand's throw: where the long hold has the trigger hand, before the trunk winds)
     let gun = if off { Some((fk.at(hr_n), fk.rot(hr_n))) } else { None };
     *o = Throw { fl_n, fr_n, f_l, f_r, r_l, r_r, u_r, u_l, gun, ..*o };
@@ -270,7 +270,7 @@ fn wind_up(tune: &Knobs, tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &mut Throw
     let hips_n = role(HIPS);
     shift(d, rig, hips_n, &[tb.c1(TH_PEL_X, t) * leg_k * k_t * sx, tb.c1(TH_PEL_Y, t) * leg_k * k_t, tb.c1(TH_PEL_Z, t) * leg_k * k_t]);
     turn(d, rig, hips_n, q_yaw(pel_yaw));
-    let seg = |kk: f64, kp: f64, ke: f64| q_mul(&q_yaw(sp_yaw * kk), &q_mul(&q_roll(roll * kk), &q_pitch(pitch * kp - ext * ke)));
+    let seg = |kk: f64, kp: f64, ke: f64| quat::mul(q_yaw(sp_yaw * kk), quat::mul(q_roll(roll * kk), q_pitch(pitch * kp - ext * ke)));
     turn(d, rig, role(SPINE1), seg(0.3 + 0.12 * cr, 0.4, 0.25));
     turn(d, rig, role(SPINE2), seg(0.35 + 0.13 * cr, 0.35, 0.3));
     turn(d, rig, role(SPINE3), seg(0.35 - 0.25 * cr, 0.25, 0.45));
@@ -281,9 +281,9 @@ fn wind_up(tune: &Knobs, tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &mut Throw
 fn head_on_target(tb: &ThrowTables, d: &mut [S], rig: &Rig, o: &Throw) {
     let Throw { t, off, sx, k_t, chest_yaw, pitch, roll, ext, .. } = *o;
     let (hy, hr, hp) = (-chest_yaw * 0.85, -roll * 0.7, -pitch * 0.8 + ext);
-    turn(d, rig, role(NECK), q_mul(&q_yaw(hy * 0.4), &q_mul(&q_roll(hr * 0.4), &q_pitch(hp * 0.45))));
-    turn(d, rig, role(HEAD), q_mul(&q_yaw(hy * 0.6), &q_mul(&q_roll(hr * 0.6), &q_pitch(hp * 0.55))));
-    turn(d, rig, if off { role(SHOULDER_L) } else { role(SHOULDER_R) }, q_mul(&q_yaw(tb.c1(TH_CLAV_FWD, t) * DEGR * k_t * sx), &q_roll(-tb.c1(TH_CLAV_UP, t) * DEGR * k_t * sx)));
+    turn(d, rig, role(NECK), quat::mul(q_yaw(hy * 0.4), quat::mul(q_roll(hr * 0.4), q_pitch(hp * 0.45))));
+    turn(d, rig, role(HEAD), quat::mul(q_yaw(hy * 0.6), quat::mul(q_roll(hr * 0.6), q_pitch(hp * 0.55))));
+    turn(d, rig, if off { role(SHOULDER_L) } else { role(SHOULDER_R) }, quat::mul(q_yaw(tb.c1(TH_CLAV_FWD, t) * DEGR * k_t * sx), q_roll(-tb.c1(TH_CLAV_UP, t) * DEGR * k_t * sx)));
 }
 
 /// Feet back where the locomotion has them, soles as they were.
@@ -438,9 +438,9 @@ fn throwing_arm(tb: &ThrowTables, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut T
     let (ref_r, ref_l) = (SWIV_REF_R, SWIV_REF_L);
     if off {
         let to = mir(off_r);
-        two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &add3(sh_l, to), Some(&swivel_pole(to, ref_l, -tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_l, mir(tb.c3(TH_FING_R, t)), mir(tb.c3(TH_BACK_R, t)))), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &v3::add(sh_l, to), Some(&swivel_pole(to, ref_l, -tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_l, mir(tb.c3(TH_FING_R, t)), mir(tb.c3(TH_BACK_R, t)))), false);
     } else {
-        two_bone_ik(rig, d, fk.rot, fk.pos, ua_r, fa_r, hr_n, &add3(sh_r, off_r), Some(&swivel_pole(off_r, ref_r, tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_r, tb.c3(TH_FING_R, t), tb.c3(TH_BACK_R, t))), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, ua_r, fa_r, hr_n, &v3::add(sh_r, off_r), Some(&swivel_pole(off_r, ref_r, tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_r, tb.c3(TH_FING_R, t), tb.c3(TH_BACK_R, t))), false);
     }
     *o = Throw { ua_r, fa_r, hr_n, ua_l, fa_l, hl_n, ref_l, ..*o };
 }
@@ -465,7 +465,7 @@ fn other_arm(tb: &ThrowTables, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut Thro
         let part = |p: [f64; 3], q: [f64; 3]| -> [f64; 3] { [lerp(p[0], q[0], k_b), lerp(p[1], q[1], k_b), lerp(p[2], q[2], k_b)] };
         let rot = if low { None } else if full { Some(hand_rot(&fix_l, f_t, b_t)) } else { Some(hand_rot(&fix_l, part(f0, f_t), part(b0, b_t))) };
         let psi = (if full || low { s_t } else { lerp(tb.k1[TH_SWIV_L][0][1], s_t, k_b) }) * DEGR;
-        two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &add3(sh_l, off_l), Some(&swivel_pole(off_l, ref_l, psi)), 1.0, rot.as_ref(), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &v3::add(sh_l, off_l), Some(&swivel_pole(off_l, ref_l, psi)), 1.0, rot.as_ref(), false);
     }
     *o = Throw { w_toss, ..*o };
 }

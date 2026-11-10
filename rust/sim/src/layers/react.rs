@@ -327,7 +327,7 @@ fn toss_english(o: &mut Lean) {
 fn trunk_turn(d: &mut [S], rig: &Rig, o: &Lean) {
     let Lean { pitch, yaw, roll, .. } = *o;
     if abs(pitch) + abs(yaw) + abs(roll) > 1e-3 {
-        let q = |ky: f64, kp: f64| q_mul(&q_yaw(yaw * DEGR * ky), &q_mul(&q_roll(roll * DEGR * ky), &q_pitch(pitch * DEGR * kp)));
+        let q = |ky: f64, kp: f64| quat::mul(q_yaw(yaw * DEGR * ky), quat::mul(q_roll(roll * DEGR * ky), q_pitch(pitch * DEGR * kp)));
         turn(d, rig, role(SPINE1), q(0.3, 0.4));
         turn(d, rig, role(SPINE2), q(0.35, 0.35));
         turn(d, rig, role(SPINE3), q(0.35, 0.25));
@@ -338,7 +338,7 @@ fn trunk_turn(d: &mut [S], rig: &Rig, o: &Lean) {
 fn head_turn(d: &mut [S], rig: &Rig, o: &Lean) {
     let Lean { hp, hy, .. } = *o;
     if abs(hp) + abs(hy) > 1e-3 {
-        let q = |kq: f64| q_mul(&q_yaw(hy * DEGR * kq), &q_pitch(hp * DEGR * kq));
+        let q = |kq: f64| quat::mul(q_yaw(hy * DEGR * kq), q_pitch(hp * DEGR * kq));
         turn(d, rig, role(NECK), q(0.4));
         turn(d, rig, role(HEAD), q(0.6));
     }
@@ -460,12 +460,12 @@ fn blinded_hand(g: usize, n: usize, tune: &Knobs, h: &mut Hands, o: &mut Arms) -
             turn(d, rig, sh_l, q_roll(9.0 * DEGR));
             fk_run(rig, d, fk.rot, fk.pos);
             let hr = fk.rot(role(HEAD));
-            let (gz, up) = (q_rotate(&hr, &gaze), q_rotate(&hr, &AY));
-            let left = cross3(&up, &gz);
-            let eyes = mad3(mad3(fk.at(role(HEAD)), up, 0.1), gz, 0.08);
-            let to = mad3(mad3(mad3(eyes, gz, tune.mv.dazzle.hand_out), left, 0.04), up, 0.006 * sin(dz_t * 4.3) - tune.mv.dazzle.hand_drop);
+            let (gz, up) = (quat::rotate(hr, gaze), quat::rotate(hr, AY));
+            let left = v3::cross(up, gz);
+            let eyes = v3::mad(v3::mad(fk.at(role(HEAD)), up, 0.1), gz, 0.08);
+            let to = v3::mad(v3::mad(v3::mad(eyes, gz, tune.mv.dazzle.hand_out), left, 0.04), up, 0.006 * sin(dz_t * 4.3) - tune.mv.dazzle.hand_drop);
             let pole = [tune.mv.dazzle.hand_pole[0], tune.mv.dazzle.hand_pole[1], tune.mv.dazzle.hand_pole[2]];
-            let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, tune.mv.dazzle.hand_tilt), mad3(gz, up, tune.mv.dazzle.hand_roll));
+            let r = hand_rot(&fix_l, v3::mad(v3::scale(left, -1.0), up, tune.mv.dazzle.hand_tilt), v3::mad(gz, up, tune.mv.dazzle.hand_roll));
             two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &to, Some(&pole), 0.85, Some(&r), false);
             hand(d, h, 0, &[0.22, 0.28, 0.34, 0.4], 0.3, 0.3);
         });
@@ -491,12 +491,12 @@ fn toss_hand(g: usize, n: usize, h: &mut Hands, o: &mut Arms) -> bool {
         with_pose(g, at_b, |d, rig, _n, fk| {
             fk_run(rig, d, fk.rot, fk.pos);
             let sh = fk.at(up_l);
-            let (cur, rot0) = (sub3(fk.at(hand_l), sh), fk.rot(hand_l));
+            let (cur, rot0) = (v3::sub(fk.at(hand_l), sh), fk.rot(hand_l));
             // (a quick release winds up less)
             let wk = clamp(rel / 0.3, 0.5, 1.0);
-            let back = lerp3(&cur, &[0.07, -0.47, -0.1], wk);
+            let back = v3::lerp3(cur, [0.07, -0.47, -0.1], wk);
             // (on the way down the hand swings out past the pouches on his front, not through them)
-            let mut mid = lerp3(&cur, &back, 0.5);
+            let mut mid = v3::lerp3(cur, back, 0.5);
             mid[0] += 0.08 * wk;
             mid[2] += 0.06 * wk;
             let off = curve3(
@@ -515,7 +515,7 @@ fn toss_hand(g: usize, n: usize, h: &mut Hands, o: &mut Arms) -> bool {
             let fing = curve3(ts, &[(0.0, [0.0, -0.7, 0.7]), (rel * 0.72, [0.0, -1.0, 0.1]), (rel, [0.0, -0.8, 0.6]), (rel + 0.1, [0.0, -0.15, 1.0]), (rel + 0.22, [-0.05, 0.3, 1.0]), (td, [0.0, -0.2, 1.0])]);
             let bk = curve3(ts, &[(0.0, [0.5, -0.6, -0.5]), (rel, [0.3, -0.5, -0.8]), (rel + 0.12, [0.25, -1.0, -0.2]), (td, [0.3, -1.0, 0.0])]);
             let r = hand_rot(&fix_l, fing, bk);
-            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &add3(sh, off), Some(&[0.7, -0.45, -0.55]), 0.8, Some(&r), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &v3::add(sh, off), Some(&[0.7, -0.45, -0.55]), 0.8, Some(&r), false);
             let (open, recup) = (smoothstep(rel - 0.02, rel + 0.04, ts), smoothstep(rel + 0.35, td, ts));
             let c = |grip: f64, flat: f64, cup: f64| lerp(lerp(grip, flat, open), cup, recup);
             hand(d, h, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup));
@@ -555,8 +555,8 @@ pub fn clutch_arm(g: usize, an: &mut Anim, w: f64) -> u32 {
     with_pose(g, at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
         let (left, up, fwd) = trunk_frame(fk);
-        let p = mad3(mad3(mad3(fk.at(role(SPINE1)), left, MV2.clutch.at[0]), up, MV2.clutch.at[1]), fwd, MV2.clutch.at[2]);
-        let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, -0.25), mad3(fwd, up, 0.2));
+        let p = v3::mad(v3::mad(v3::mad(fk.at(role(SPINE1)), left, MV2.clutch.at[0]), up, MV2.clutch.at[1]), fwd, MV2.clutch.at[2]);
+        let r = hand_rot(&fix_l, v3::mad(v3::scale(left, -1.0), up, -0.25), v3::mad(fwd, up, 0.2));
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &p, Some(&MV2.clutch.pole), 0.7, Some(&r), false);
         hand(d, hh, 0, &[0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
     });
@@ -585,7 +585,7 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> u32 {
     with_pose(g, at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
         let (left, up, fwd) = trunk_frame(fk);
-        let tk = |o: [f64; 3], x: f64, y: f64, z: f64| mad3(mad3(mad3(o, left, x), up, y), fwd, z);
+        let tk = |o: [f64; 3], x: f64, y: f64, z: f64| v3::mad(v3::mad(v3::mad(o, left, x), up, y), fwd, z);
         let tv = |x: f64, y: f64, z: f64| tk([0.0, 0.0, 0.0], x, y, z);
         let (up_l, fore_l, hand_l, up_r, fore_r, hand_r) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R));
         if back {
@@ -603,17 +603,17 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> u32 {
         } else {
             // fingers laced on the crown, elbows wide: in the head's own frame, up its crown and forward along its gaze
             let hr = fk.rot(role(HEAD));
-            let hu = q_rotate(&hr, &AY);
-            let hf0 = q_rotate(&hr, &gaze);
-            let hf = normalize(mad3(hf0, hu, -dot3(&hf0, &hu)));
-            let hl = cross3(&hu, &hf);
-            let o = mad3(mad3(fk.at(role(HEAD)), hu, MV2.bound.head.up), hf, -MV2.bound.head.behind);
-            let hk = |x: f64, y: f64, z: f64| mad3(mad3(scale3(hl, x), hu, y), hf, z);
+            let hu = quat::rotate(hr, AY);
+            let hf0 = quat::rotate(hr, gaze);
+            let hf = v3::normalize(v3::mad(hf0, hu, -v3::dot(hf0, hu)));
+            let hl = v3::cross(hu, hf);
+            let o = v3::mad(v3::mad(fk.at(role(HEAD)), hu, MV2.bound.head.up), hf, -MV2.bound.head.behind);
+            let hk = |x: f64, y: f64, z: f64| v3::mad(v3::mad(v3::scale(hl, x), hu, y), hf, z);
             let (out, elbow) = (MV2.bound.head.out, MV2.bound.head.elbow);
             let r = hand_rot(&fix_l, hk(-0.84, 0.5, 0.04), hk(0.2, 0.75, -0.6));
-            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &mad3(o, hl, out), Some(&tv(1.0, -0.15, elbow)), 0.9, Some(&r), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &v3::mad(o, hl, out), Some(&tv(1.0, -0.15, elbow)), 0.9, Some(&r), false);
             let r = hand_rot(&fix_r, hk(0.84, 0.5, 0.04), hk(-0.2, 0.75, -0.6));
-            two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &mad3(o, hl, -out), Some(&tv(-1.0, -0.15, elbow)), 0.9, Some(&r), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &v3::mad(o, hl, -out), Some(&tv(-1.0, -0.15, elbow)), 0.9, Some(&r), false);
             // open hands, the fingers a little apart, and bent down at the knuckles onto the crown (an angle a side)
             let curl = [MV2.bound.head.curl[0], MV2.bound.head.curl[1], MV2.bound.head.curl[2], MV2.bound.head.curl[3]];
             hand(d, hh, 0, &curl, MV2.bound.head.thumb, 0.25);
@@ -622,7 +622,7 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> u32 {
                 let ns = digits(sd);
                 for fi in 0..4 {
                     let i = ns[3 + fi * 3] as usize;
-                    set_unit(d, i, &q_mul(&own_rot(d, i), &axis_angle(&AX, kn * DEGR)));
+                    set_unit(d, i, &quat::mul(own_rot(d, i), quat::axis_angle(AX, kn * DEGR)));
                 }
             }
         }

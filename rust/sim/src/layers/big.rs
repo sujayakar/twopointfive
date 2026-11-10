@@ -8,7 +8,7 @@ fn dir_mix(a: [f64; 3], b: [f64; 3], kk: f64) -> [f64; 3] {
     } else if kk >= 1.0 {
         b
     } else {
-        normalize(q_rotate(&slerp(&[0.0, 0.0, 0.0, 1.0], &from_to(&a, &b), kk), &a))
+        v3::normalize(quat::rotate(quat::slerp([0.0, 0.0, 0.0, 1.0], quat::from_to(a, b), kk), a))
     }
 }
 /// where a hand goes and how it is turned; a fist laid on the hammer's line also keeps the line's two axes through it (fingers, back)
@@ -26,10 +26,10 @@ fn spot_mix(a: BigSpot, b: BigSpot, e: f64, bow: Option<[f64; 3]>) -> BigSpot {
         b
     } else {
         let at = match bow {
-            Some(bw) => mad3(lerp3(&a.at, &b.at, e), bw, sin(PI * e)),
-            None => lerp3(&a.at, &b.at, e),
+            Some(bw) => v3::mad(v3::lerp3(a.at, b.at, e), bw, sin(PI * e)),
+            None => v3::lerp3(a.at, b.at, e),
         };
-        BigSpot { at, rot: slerp(&a.rot, &b.rot, e), f: [0.0; 3], b: [0.0; 3] }
+        BigSpot { at, rot: quat::slerp(a.rot, b.rot, e), f: [0.0; 3], b: [0.0; 3] }
     }
 }
 /// the hammer as its own line: the right fist's grip and the handle's direction, butt to head
@@ -45,8 +45,8 @@ fn line_mix(a: BigLine, b: BigLine, kk: f64, bow: Option<[f64; 3]>) -> BigLine {
         b
     } else {
         let g = match bow {
-            Some(bw) => mad3(lerp3(&a.g, &b.g, kk), bw, sin(PI * kk)),
-            None => lerp3(&a.g, &b.g, kk),
+            Some(bw) => v3::mad(v3::lerp3(a.g, b.g, kk), bw, sin(PI * kk)),
+            None => v3::lerp3(a.g, b.g, kk),
         };
         BigLine { g, d: dir_mix(a.d, b.d, kk) }
     }
@@ -65,31 +65,31 @@ impl Twisted {
         let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
         let mut e3 = q_yaw(tw_y * 0.4);
         if !falsy(tw_p) {
-            let right = q_rotate(&e3, &AX);
-            e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+            let right = quat::rotate(e3, AX);
+            e3 = quat::mul(quat::axis_angle(right, tw_p), e3);
         }
         let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
-        let p2t = add3(q_rotate(&e1, &sub3(p2, p1)), p1);
-        let p3t = add3(q_rotate(&e2, &sub3(add3(q_rotate(&e1, &sub3(p3, p1)), p1), p2t)), p2t);
+        let p2t = v3::add(quat::rotate(e1, v3::sub(p2, p1)), p1);
+        let p3t = v3::add(quat::rotate(e2, v3::sub(v3::add(quat::rotate(e1, v3::sub(p3, p1)), p1), p2t)), p2t);
         Twisted { e1, e2, e3, p1, p2t, p3t }
     }
     fn at(&self, h: [f64; 3]) -> [f64; 3] {
-        let x1 = add3(q_rotate(&self.e1, &sub3(h, self.p1)), self.p1);
-        let x2 = add3(q_rotate(&self.e2, &sub3(x1, self.p2t)), self.p2t);
-        add3(q_rotate(&self.e3, &sub3(x2, self.p3t)), self.p3t)
+        let x1 = v3::add(quat::rotate(self.e1, v3::sub(h, self.p1)), self.p1);
+        let x2 = v3::add(quat::rotate(self.e2, v3::sub(x1, self.p2t)), self.p2t);
+        v3::add(quat::rotate(self.e3, v3::sub(x2, self.p3t)), self.p3t)
     }
 }
 /// rigProps.ts bigBackOf for the hammer (BIGRIG.hammer.back): the point and the line across his back, off six joints in one space, `clear` m further off
 fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua_l: [f64; 3], ua_r: [f64; 3], clear: f64) -> ([f64; 3], [f64; 3]) {
-    let mut up = sub3(lerp3(&ua_l, &ua_r, 0.5), hips);
-    up = if len3(&up) > 1e-3 { normalize(up) } else { [0.0, 1.0, 0.0] };
-    let mut left = lerp3(&normalize(sub3(th_l, th_r)), &normalize(sub3(ua_l, ua_r)), max(0.0, min(1.0, BIGRIG.hammer.back.follow)));
-    left = mad3(left, up, -dot3(&left, &up));
-    left = if len3(&left) > 1e-3 { normalize(left) } else { normalize(sub3(ua_l, ua_r)) };
-    let cz = cross3(&left, &up);
-    let in_c = |dv: [f64; 3]| mad3(mad3(scale3(left, dv[0]), up, dv[1]), cz, dv[2]);
+    let mut up = v3::sub(v3::lerp3(ua_l, ua_r, 0.5), hips);
+    up = if v3::len(up) > 1e-3 { v3::normalize(up) } else { [0.0, 1.0, 0.0] };
+    let mut left = v3::lerp3(v3::normalize(v3::sub(th_l, th_r)), v3::normalize(v3::sub(ua_l, ua_r)), max(0.0, min(1.0, BIGRIG.hammer.back.follow)));
+    left = v3::mad(left, up, -v3::dot(left, up));
+    left = if v3::len(left) > 1e-3 { v3::normalize(left) } else { v3::normalize(v3::sub(ua_l, ua_r)) };
+    let cz = v3::cross(left, up);
+    let in_c = |dv: [f64; 3]| v3::mad(v3::mad(v3::scale(left, dv[0]), up, dv[1]), cz, dv[2]);
     let (off, bore) = (BIGRIG.hammer.back.off, BIGRIG.hammer.back.bore);
-    (add3(mid, in_c([off[0], off[1], off[2] - clear])), normalize(in_c(bore)))
+    (v3::add(mid, in_c([off[0], off[1], off[2] - clear])), v3::normalize(in_c(bore)))
 }
 /// What the steps of the big tool hand on to the ones after them: the beat as shares, where the point is, and where each hand is bound.
 #[derive(Clone, Copy, Default)]
@@ -353,16 +353,16 @@ fn big_body(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &BigBeat) {
     if abs(chest_yaw) + abs(pel_yaw) + abs(pitch) + abs(sh_f) + abs(sh_s) + drop > 1e-5 {
         let (fl_n, fr_n) = (role(FOOT_L), role(FOOT_R));
         let (mut f_l, mut f_r, r_l, r_r) = (fk.at(fl_n), fk.at(fr_n), fk.rot(fl_n), fk.rot(fr_n));
-        let ax_t = cross3(&AY, &tdir);
+        let ax_t = v3::cross(AY, tdir);
         // (the pelvis turn carries the whole spine; the spine joints add the rest)
-        let seg = |kk: f64| q_mul(&q_yaw((chest_yaw - pel_yaw) * kk), &axis_angle(&ax_t, pitch * kk));
+        let seg = |kk: f64| quat::mul(q_yaw((chest_yaw - pel_yaw) * kk), quat::axis_angle(ax_t, pitch * kk));
         shift(d, rig, hips_n, &[tdir[0] * sh_f + tleft[0] * sh_s, -drop, tdir[2] * sh_f + tleft[2] * sh_s]);
         turn(d, rig, hips_n, q_yaw(pel_yaw));
         turn(d, rig, role(SPINE1), seg(0.3));
         turn(d, rig, role(SPINE2), seg(0.35));
         turn(d, rig, role(SPINE3), seg(0.35));
         // the head: back out of most of it (the look below puts the eyes on the point)
-        let hq = |kk: f64| q_mul(&q_yaw(-chest_yaw * 0.8 * kk), &axis_angle(&ax_t, -pitch * 0.8 * kk));
+        let hq = |kk: f64| quat::mul(q_yaw(-chest_yaw * 0.8 * kk), quat::axis_angle(ax_t, -pitch * 0.8 * kk));
         turn(d, rig, role(NECK), hq(0.4));
         turn(d, rig, role(HEAD), hq(0.6));
         if ham && plant > 0.0 {
@@ -408,14 +408,14 @@ fn hands_now(fk: &mut Fk, f: &mut BigBeat) {
 /// A fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder, squared to the handle.
 fn fist(f: &BigBeat, side: usize, gp: [f64; 3], dv: [f64; 3], sh: [f64; 3]) -> BigSpot {
     let BigBeat { fix_l, fix_r, f_up, .. } = *f;
-    let mut h = add3(sub3(gp, sh), dir_t(f, [if side == 1 { -0.03 } else { 0.03 }, 0.0, 0.02]));
-    h = mad3(h, dv, -dot3(&h, &dv));
-    if len3(&h) < 1e-3 {
-        h = cross3(&dv, &f_up);
+    let mut h = v3::add(v3::sub(gp, sh), dir_t(f, [if side == 1 { -0.03 } else { 0.03 }, 0.0, 0.02]));
+    h = v3::mad(h, dv, -v3::dot(h, dv));
+    if v3::len(h) < 1e-3 {
+        h = v3::cross(dv, f_up);
     }
-    let f = normalize(h);
-    let b = if side == 1 { cross3(&f, &dv) } else { cross3(&dv, &f) };
-    BigSpot { at: mad3(mad3(gp, f, -BIGRIG.hammer.grip.fwd), b, BIGRIG.hammer.grip.palm), rot: hand_rot(if side == 1 { &fix_r } else { &fix_l }, f, b), f, b }
+    let f = v3::normalize(h);
+    let b = if side == 1 { v3::cross(f, dv) } else { v3::cross(dv, f) };
+    BigSpot { at: v3::mad(v3::mad(gp, f, -BIGRIG.hammer.grip.fwd), b, BIGRIG.hammer.grip.palm), rot: hand_rot(if side == 1 { &fix_r } else { &fix_l }, f, b), f, b }
 }
 
 /// Nothing placed yet (the left hand's place is by the kind: the hammer's line, or the gun's three axes).
@@ -431,7 +431,7 @@ fn no_tool(f: &mut BigBeat) {
 fn hammer_place(fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBeat) {
     let BigBeat { tw_y, tw_p, snug, clear, stowing, us, wind, sw, hit, grab, put, ue, eb, es, tdir, tleft, s_r, hp_at, arc, .. } = *f;
     let (back_r, held, ham_line);
-    let off = |gp: [f64; 3], dv: [f64; 3]| BigLine { g: add3(s_r, dir_t(f, gp)), d: normalize(dir_t(f, dv)) };
+    let off = |gp: [f64; 3], dv: [f64; 3]| BigLine { g: v3::add(s_r, dir_t(f, gp)), d: v3::normalize(dir_t(f, dv)) };
     // on his back, as the drawer has it: the fist takes it just under the head (snug: the back's frame as it WILL be after the chest twist still
     // to come, and the place that ENDS UP there)
     let tw = snug && (!falsy(tw_y) || !falsy(tw_p));
@@ -445,13 +445,13 @@ fn hammer_place(fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBe
         big_back_of(hips, fk.at(role(SPINE2)), th_l, th_r, ua_l, ua_r, clear)
     };
     let head_at = BIGRIG.hammer.head_at;
-    let back_l = BigLine { g: mad3(bo, bz, head_at - BIGMOVE.hammer.grab_at), d: bz };
+    let back_l = BigLine { g: v3::mad(bo, bz, head_at - BIGMOVE.hammer.grab_at), d: bz };
     let (ready_l, wound_l, over_l) = (off(BIGMOVE.hammer.ready.g, BIGMOVE.hammer.ready.d), off(BIGMOVE.hammer.wound.g, BIGMOVE.hammer.wound.d), off(BIGMOVE.hammer.over.g, BIGMOVE.hammer.over.d));
     // the blow: the head ON the point, the butt end by the pelvis on the point's own side
     let butt = BIGMOVE.hammer.butt;
     let b0 = [hips[0] + tleft[0] * butt[0] + tdir[0] * butt[2], hips[1] + butt[1], hips[2] + tleft[2] * butt[0] + tdir[2] * butt[2]];
-    let di = normalize(sub3(hp_at, b0));
-    let blow_l = BigLine { g: mad3(hp_at, di, -head_at), d: di };
+    let di = v3::normalize(v3::sub(hp_at, b0));
+    let blow_l = BigLine { g: v3::mad(hp_at, di, -head_at), d: di };
     let mut u = line_mix(back_l, ready_l, eb, Some(arc));
     if hit > 0.0 {
         u = line_mix(u, blow_l, hit, None);
@@ -484,23 +484,23 @@ fn hammer_place(fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBe
 fn shotgun_place(tune: &Knobs, f: &mut BigBeat) {
     let BigBeat { adj, stock_l0, fix_r, kick, in_hands, f_fwd, s_r, hp_at, arc, .. } = *f;
     let (back_r, held, gun);
-    back_r = BigSpot { at: add3(s_r, dir_t(f, tune.kit.apex.at)), rot: hand_rot(&fix_r, dir_t(f, tune.kit.apex.fing), dir_t(f, tune.kit.apex.back)), f: [0.0; 3], b: [0.0; 3] };
-    let pk = add3(s_r, dir_t(f, BIGMOVE.shotgun.pocket));
-    let mut z = normalize(sub3(hp_at, pk));
-    let mut yu = mad3(AY, z, -z[1]);
-    yu = if len3(&yu) > 1e-3 { normalize(yu) } else { f_fwd };
+    back_r = BigSpot { at: v3::add(s_r, dir_t(f, tune.kit.apex.at)), rot: hand_rot(&fix_r, dir_t(f, tune.kit.apex.fing), dir_t(f, tune.kit.apex.back)), f: [0.0; 3], b: [0.0; 3] };
+    let pk = v3::add(s_r, dir_t(f, BIGMOVE.shotgun.pocket));
+    let mut z = v3::normalize(v3::sub(hp_at, pk));
+    let mut yu = v3::mad(AY, z, -z[1]);
+    yu = if v3::len(yu) > 1e-3 { v3::normalize(yu) } else { f_fwd };
     if kick > 0.0 {
         let climb = kick * BIGMOVE.shotgun.climb * DEGR;
         let (cs, sn) = (cos(climb), sin(climb));
-        let z1 = add3(scale3(z, cs), scale3(yu, sn));
-        yu = sub3(scale3(yu, cs), scale3(z, sn));
+        let z1 = v3::add(v3::scale(z, cs), v3::scale(yu, sn));
+        yu = v3::sub(v3::scale(yu, cs), v3::scale(z, sn));
         z = z1;
     }
-    let x = cross3(&yu, &z);
+    let x = v3::cross(yu, z);
     gun = (x, yu, z);
     let in_g = |p: [f64; 3]| -> [f64; 3] { [x[0] * p[0] + yu[0] * p[1] + z[0] * p[2], x[1] * p[0] + yu[1] * p[1] + z[1] * p[2], x[2] * p[0] + yu[2] * p[1] + z[2] * p[2]] };
     // the trigger wrist that puts the butt (the stock's rear end, through the group's own offset) in the pocket
-    let wr0 = add3(pk, in_g([-adj[0], -adj[1], -stock_l0 - adj[2] - kick * BIGMOVE.shotgun.kick]));
+    let wr0 = v3::add(pk, in_g([-adj[0], -adj[1], -stock_l0 - adj[2] - kick * BIGMOVE.shotgun.kick]));
     let up0 = BigSpot { at: wr0, rot: hand_rot(&fix_r, z, in_g([-0.8, 0.6, 0.0])), f: [0.0; 3], b: [0.0; 3] };
     held = spot_mix(back_r, up0, in_hands, Some(arc));
     *f = BigBeat { back_r, held, gun, ..*f };
@@ -514,7 +514,7 @@ fn right_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     let own = e3(ue / 0.2) * (if stowing { 1.0 - e3((us - put) / (1.0 - put)) } else { 1.0 });
     // a hand up by the shoulder: the elbow out and up, not folded into the ribs
     let high = smoothstep(-0.18, 0.1, r.at[1] - s_r[1]);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr_n, &r.at, Some(&dir_t(f, lerp3(&[-0.5, -0.8, -0.3], &[-1.0, 0.3, -0.1], high))), 0.85 * own, Some(&r.rot), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr_n, &r.at, Some(&dir_t(f, v3::lerp3([-0.5, -0.8, -0.3], [-1.0, 0.3, -0.1], high))), 0.85 * own, Some(&r.rot), false);
     *f = BigBeat { own, ..*f };
 }
 
@@ -523,16 +523,16 @@ fn left_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     let BigBeat { ham, lg_wrist, lg_fing, lg_back, fix_l, stowing, us, ue, hr_n, hl_n, s_l, u_l, held, ham_line, gun, own, .. } = *f;
     let j = smoothstep(BIGMOVE.join[0], BIGMOVE.join[1], ue) * (if stowing { 1.0 - smoothstep(0.0, BIGMOVE.unjoin, us) } else { 1.0 });
     // let go of his gun, waiting in front of him
-    let mut l = spot_mix(u_l, BigSpot { at: add3(s_l, dir_t(f, BIGMOVE.wait)), rot: hand_rot(&fix_l, dir_t(f, [-0.25, -0.35, 0.9]), dir_t(f, [0.35, 0.9, 0.25])), f: [0.0; 3], b: [0.0; 3] }, e3(ue / 0.3), None);
+    let mut l = spot_mix(u_l, BigSpot { at: v3::add(s_l, dir_t(f, BIGMOVE.wait)), rot: hand_rot(&fix_l, dir_t(f, [-0.25, -0.35, 0.9]), dir_t(f, [0.35, 0.9, 0.25])), f: [0.0; 3], b: [0.0; 3] }, e3(ue / 0.3), None);
     if j > 0.0 {
         let wr = fk.at(hr_n);
         let on_it = if ham {
-            let gp = mad3(mad3(wr, held.f, BIGRIG.hammer.grip.fwd), held.b, -BIGRIG.hammer.grip.palm);
-            fist(f, 0, mad3(gp, ham_line.d, -BIGRIG.hammer.hands), ham_line.d, s_l)
+            let gp = v3::mad(v3::mad(wr, held.f, BIGRIG.hammer.grip.fwd), held.b, -BIGRIG.hammer.grip.palm);
+            fist(f, 0, v3::mad(gp, ham_line.d, -BIGRIG.hammer.hands), ham_line.d, s_l)
         } else {
             let (x, yu, z) = gun;
             let in_g = |p: [f64; 3]| -> [f64; 3] { [x[0] * p[0] + yu[0] * p[1] + z[0] * p[2], x[1] * p[0] + yu[1] * p[1] + z[1] * p[2], x[2] * p[0] + yu[2] * p[1] + z[2] * p[2]] };
-            BigSpot { at: add3(wr, in_g(lg_wrist)), rot: hand_rot(&fix_l, in_g(lg_fing), in_g(lg_back)), f: [0.0; 3], b: [0.0; 3] }
+            BigSpot { at: v3::add(wr, in_g(lg_wrist)), rot: hand_rot(&fix_l, in_g(lg_fing), in_g(lg_back)), f: [0.0; 3], b: [0.0; 3] }
         };
         l = spot_mix(l, on_it, e3(j), None);
     }

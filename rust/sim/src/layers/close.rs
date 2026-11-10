@@ -70,17 +70,17 @@ pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64) -> u32 {
         let hyaw = m * curve(t, &[[0.0, 0.0], [0.2, -3.0], [0.4, 9.0], [0.6, 4.0], [0.9, 0.0]]) * DEGR;
         let roll = m * curve(t, &[[0.0, 0.0], [0.25, -5.0], [0.5, -4.0], [kick_plant, -1.0], [0.9, 0.0]]) * DEGR;
         shift(d, rig, hips, &[sx, sy, sz]);
-        turn(d, rig, hips, q_mul(&q_yaw(hyaw), &q_mul(&q_roll(roll), &q_pitch(tilt))));
+        turn(d, rig, hips, quat::mul(q_yaw(hyaw), quat::mul(q_roll(roll), q_pitch(tilt))));
         // the spine and the head
         let lay = curve(t, &[[0.0, 0.0], [0.2, 3.0], [0.39, -8.0], [0.47, -3.5], [0.6, -2.5], [0.85, 0.0]]) * DEGR;
-        turn(d, rig, s1, q_mul(&q_yaw(-hyaw * 0.3), &q_mul(&q_roll(-roll * 0.4), &q_pitch(lay))));
-        turn(d, rig, s2, q_mul(&q_yaw(-hyaw * 0.3), &q_mul(&q_roll(-roll * 0.4), &q_pitch(lay * 0.7))));
+        turn(d, rig, s1, quat::mul(q_yaw(-hyaw * 0.3), quat::mul(q_roll(-roll * 0.4), q_pitch(lay))));
+        turn(d, rig, s2, quat::mul(q_yaw(-hyaw * 0.3), quat::mul(q_roll(-roll * 0.4), q_pitch(lay * 0.7))));
         turn(d, rig, s3, q_yaw(-hyaw * 0.2));
         turn(d, rig, nk, q_pitch(-(tilt + lay * 1.7) * 0.45));
         turn(d, rig, hd, q_pitch(-(tilt + lay * 1.7) * 0.55));
         fk_run(rig, d, fk.rot, fk.pos);
         // the swing foot: a moving origin (its own spot to the idle's) and offsets off it
-        let o = lerp3(&ks, &fs, smoothstep(0.0, 0.3, t));
+        let o = v3::lerp3(ks, fs, smoothstep(0.0, 0.3, t));
         let down = if t < kick_plant { 1.0 } else { 0.0 };
         let cx = -0.07 * m - fs[0];
         let ox = down * curve(t, &[[0.0, 0.0], [0.12, cx * 0.15], [0.26, cx * 0.6], [0.38, cx], [0.5, cx * 0.8], [0.64, cx * 0.3], [kick_plant, 0.0], [1.0, 0.0]]);
@@ -106,19 +106,19 @@ pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64) -> u32 {
         let knee_up = [-0.04 * m, 0.5, 1.0];
         two_bone_ik(rig, d, fk.rot, fk.pos, th_s, sh_s, ft_s, &target, Some(&knee_up), bump(t, 0.04, 0.2, 0.62, 0.8), None, false);
         // its ankle, then its sole levelled onto the idle's for the plant
-        rotate_local(d, ft_s, &axis_angle(&AX, curve(t, &[[0.0, 0.0], [0.2, 14.0], [0.34, -16.0], [0.42, -18.0], [0.58, 4.0], [0.68, 0.0]]) * DEGR));
+        rotate_local(d, ft_s, &quat::axis_angle(AX, curve(t, &[[0.0, 0.0], [0.2, 14.0], [0.34, -16.0], [0.42, -18.0], [0.58, 4.0], [0.68, 0.0]]) * DEGR));
         let flat = smoothstep(0.6, kick_plant, t);
         if flat > 0.0 {
             let (sh, own) = (fk.rot(sh_s), own_rot(d, ft_s));
-            set_model_rot(d, ft_s, &nlerp(&q_mul(&sh, &own), &fsr, flat), &sh);
+            set_model_rot(d, ft_s, &quat::nlerp(quat::mul(sh, own), fsr, flat), &sh);
         }
         // the planted foot: held, and set down on the idle's spot in one short low step if the kick found it off it
         let e = smoothstep(0.0, 0.24, t);
         let far = clamp(hypot2(kp[0] - fp[0], kp[2] - fp[2]) / 0.2, 0.0, 1.0);
-        let mut pin = lerp3(&kp, &fp, e);
+        let mut pin = v3::lerp3(kp, fp, e);
         pin[1] += 0.05 * sin(PI * e) * far;
         fk_run(rig, d, fk.rot, fk.pos);
-        two_bone_ik(rig, d, fk.rot, fk.pos, th_p, sh_p, ft_p, &pin, Some(&knee_pole(&fpr)), 0.6 * smoothstep(0.0, 0.15, t), Some(&nlerp(&kpr, &fpr, e)), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, th_p, sh_p, ft_p, &pin, Some(&knee_pole(&fpr)), 0.6 * smoothstep(0.0, 0.15, t), Some(&quat::nlerp(kpr, fpr, e)), false);
         RAN | RAN_ALL
     })
     .unwrap_or(0);
@@ -161,7 +161,7 @@ pub fn blow_legs(g: usize, an: &Anim, b: &BlowRun) -> u32 {
         let mut up = BLOW.legs.up;
         for (th, sh, ft, f) in [(role(THIGH_L), role(SHIN_L), role(FOOT_L), f_l), (role(THIGH_R), role(SHIN_R), role(FOOT_R), f_r)] {
             let (a, b, c) = (fk.at(th), fk.at(sh), fk.at(ft));
-            let len = (dist3(&a, &b) + dist3(&b, &c)) * BLOW.legs.straight;
+            let len = (v3::dist(a, b) + v3::dist(b, c)) * BLOW.legs.straight;
             let (hx, hzz) = (a[0] - f[0], a[2] + hz - f[2]);
             let q = len * len - hx * hx - hzz * hzz;
             up = min(up, if q > 0.0 { sqrt(q) - (a[1] - f[1]) } else { 0.0 });
@@ -201,7 +201,7 @@ pub fn blow_trunk(g: usize, an: &Anim, b: &BlowRun, tl: f64) -> u32 {
         if falsy(pt) && falsy(yw) {
             return RAN;
         }
-        let q = q_mul(&q_yaw(yw * 0.5 * DEGR), &q_pitch(pt * 0.5 * DEGR));
+        let q = quat::mul(q_yaw(yw * 0.5 * DEGR), q_pitch(pt * 0.5 * DEGR));
         turn(d, rig, role(SPINE2), q);
         turn(d, rig, role(SPINE3), q);
         turn(d, rig, role(NECK), q_pitch(-pt * 0.5 * DEGR));
@@ -327,17 +327,17 @@ fn blow_spots(fk: &mut Fk, o: &mut Blow) {
     let t2 = at2.map(|p| untwist(fk, tw_y, tw_p, p));
     let (sl, sr) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
     let (er, el) = (fk.at(role(FOREARM_R)), fk.at(role(FOREARM_L)));
-    let arm_r = dist3(&sr, &er) + dist3(&er, &fk.at(role(HAND_R)));
-    let arm_l = dist3(&sl, &el) + dist3(&el, &fk.at(role(HAND_L)));
+    let arm_r = v3::dist(sr, er) + v3::dist(er, fk.at(role(HAND_R)));
+    let arm_l = v3::dist(sl, el) + v3::dist(el, fk.at(role(HAND_L)));
     *o = Blow { tgt, t2, sl, sr, arm_r, arm_l, ..*o };
 }
 
 /// A point no further than the arm reaches.
 fn cap(s: [f64; 3], p: [f64; 3], arm: f64) -> [f64; 3] {
-    let off = sub3(p, s);
-    let (l, c) = (len3(&off), BLOW.reach * arm);
+    let off = v3::sub(p, s);
+    let (l, c) = (v3::len(off), BLOW.reach * arm);
     if l > c {
-        mad3(s, off, c / l)
+        v3::mad(s, off, c / l)
     } else {
         p
     }
@@ -345,7 +345,7 @@ fn cap(s: [f64; 3], p: [f64; 3], arm: f64) -> [f64; 3] {
 
 /// The arm thrown out straight along a line.
 fn lock(s: [f64; 3], dv: [f64; 3], arm: f64) -> [f64; 3] {
-    mad3(s, normalize(dv), BLOW.reach * arm)
+    v3::mad(s, v3::normalize(dv), BLOW.reach * arm)
 }
 
 /// Whether the right hand has a part in it.
@@ -358,23 +358,23 @@ fn right_on(o: &mut Blow) {
 /// The keys the right hand goes by.
 fn right_keys(o: &mut Blow) {
     let Blow { h, e, chop, tgt, sr, arm_r, .. } = *o;
-    let thru = sub3(tgt, sr);
+    let thru = v3::sub(tgt, sr);
     let last: BlowKey = (e - 0.14, lock(sr, [thru[0] * 0.5, max(thru[1], 0.0) + 0.4, max(thru[2], 0.1) * 0.8], arm_r), [0.0, 0.8, -0.5], [0.0, -0.5, -0.8], [-0.5, -0.8, -0.2]);
     let (keys, nk) = if chop {
         (
             [
-                (0.5 * h, add3(sr, [0.02, 0.12, -0.14]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
-                (0.72 * h, add3(sr, [0.03, 0.13, -0.17]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
+                (0.5 * h, v3::add(sr, [0.02, 0.12, -0.14]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
+                (0.72 * h, v3::add(sr, [0.03, 0.13, -0.17]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
                 (h, cap(sr, tgt, arm_r), [0.1, -0.45, 0.9], [-1.0, 0.2, 0.0], [-0.8, 0.1, -0.3]),
-                (h + 0.1, cap(sr, add3(tgt, [0.0, -0.32, 0.06]), arm_r), [0.1, -0.8, 0.6], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.4]),
-                (h + 0.22, cap(sr, add3(tgt, [0.0, -0.5, 0.1]), arm_r), [0.1, -0.9, 0.4], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.5]),
+                (h + 0.1, cap(sr, v3::add(tgt, [0.0, -0.32, 0.06]), arm_r), [0.1, -0.8, 0.6], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.4]),
+                (h + 0.22, cap(sr, v3::add(tgt, [0.0, -0.5, 0.1]), arm_r), [0.1, -0.9, 0.4], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.5]),
             ],
             5,
         )
     } else {
         (
             [
-                (0.5 * h, add3(sr, [0.16, -0.34, 0.2]), [0.0, 0.9, 0.3], [0.0, 0.3, -0.9], [-0.4, -0.7, -0.5]),
+                (0.5 * h, v3::add(sr, [0.16, -0.34, 0.2]), [0.0, 0.9, 0.3], [0.0, 0.3, -0.9], [-0.4, -0.7, -0.5]),
                 (h, cap(sr, tgt, arm_r), [0.0, 0.9, -0.3], [0.0, -0.3, -0.9], [-0.5, -0.8, -0.2]),
                 (h + 0.09, lock(sr, [thru[0] * 0.6, max(thru[1], 0.0) + 0.34, max(thru[2], 0.1) * 0.9], arm_r), [0.0, 0.8, -0.5], [0.0, -0.5, -0.8], [-0.5, -0.8, -0.2]),
                 last,
@@ -404,8 +404,8 @@ fn right_between(o: &mut Blow) {
 /// The right arm there, a fist or an open hand.
 fn right_hand(hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &Blow) {
     let Blow { fix_r, chop, ka, kb, ez, .. } = *o;
-    let rot = slerp(&hand_rot(&fix_r, ka.2, ka.3), &hand_rot(&fix_r, kb.2, kb.3), ez);
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&ka.1, &kb.1, ez), Some(&lerp3(&ka.4, &kb.4, ez)), 0.85, Some(&rot), false);
+    let rot = quat::slerp(hand_rot(&fix_r, ka.2, ka.3), hand_rot(&fix_r, kb.2, kb.3), ez);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &v3::lerp3(ka.1, kb.1, ez), Some(&v3::lerp3(ka.4, kb.4, ez)), 0.85, Some(&rot), false);
     if chop {
         hand(d, hh, 1, &[BLOW.fist[0], BLOW.fist[1], BLOW.fist[2], BLOW.fist[3]], 0.6, 0.0);
     } else {
@@ -462,7 +462,7 @@ pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, tota
     with_pose(g, at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
         let (sl, sr, er) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)), fk.at(role(FOREARM_R)));
-        let arm = dist3(&sr, &er) + dist3(&er, &fk.at(role(HAND_R)));
+        let arm = v3::dist(sr, er) + v3::dist(er, fk.at(role(HAND_R)));
         let mut az = 0.0;
         if has_at {
             let gp = untwist(fk, tw_y, tw_p, rd_at);
@@ -484,12 +484,12 @@ pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, tota
             }
             let q = &keys[i - 2];
             let mut o = fr(q.at);
-            let (l, cap) = (len3(&o), KNIFE_BLOW.reach * arm);
+            let (l, cap) = (v3::len(o), KNIFE_BLOW.reach * arm);
             if l > cap {
-                o = scale3(o, cap / l);
+                o = v3::scale(o, cap / l);
             }
             let bl = fr(q.blade);
-            (add3(sr, o), knife_rot(&fix_r, bl, cross3(&fr(q.fing), &bl)), fr(q.pole))
+            (v3::add(sr, o), knife_rot(&fix_r, bl, v3::cross(fr(q.fing), bl)), fr(q.pole))
         };
         let mut ts = [0.0f64; 8];
         ts[1] = KNIFE_BLOW.t_clear;
@@ -504,7 +504,7 @@ pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, tota
         }
         let (sa_, sb_) = (stop(i), stop(if i + 1 < nk + 3 { i + 1 } else { nk + 3 }));
         let ez = if i >= nk + 3 || t <= 0.0 { 0.0 } else { smoothstep(ts[i], ts[i + 1], t) };
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&sa_.0, &sb_.0, ez), Some(&lerp3(&sa_.2, &sb_.2, ez)), 0.9, Some(&slerp(&sa_.1, &sb_.1, ez)), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &v3::lerp3(sa_.0, sb_.0, ez), Some(&v3::lerp3(sa_.2, sb_.2, ez)), 0.9, Some(&quat::slerp(sa_.1, sb_.1, ez)), false);
         hand(d, hh, 1, &[REACH.curl[0], REACH.curl[1], REACH.curl[2], REACH.curl[3]], REACH.thumb, 0.0);
     });
     let w = lerp(under, 1.0, max(kb_r0, smoothstep(0.0, if falsy(t0) { 1e-6 } else { t0 }, kb_t)) * (1.0 - smoothstep(total - KNIFE_BLOW.fade, total, kb_t)));
@@ -722,21 +722,21 @@ fn ready_trunk(d: &mut [S], rig: &Rig, c: &mut [f64], o: &Ready) {
     let Ready { e, .. } = *o;
     let (lean, blade, hi) = (c[LEAN] * e, c[BLADE] * e, c[UP] * e);
     // (bowing toward +Z is + about +X = up × Z)
-    let ax = normalize(cross3(&AY, &[c[INTO], 0.0, c[INTO + 1] + 1e-6]));
+    let ax = v3::normalize(v3::cross(AY, [c[INTO], 0.0, c[INTO + 1] + 1e-6]));
     if lean > 1e-4 {
-        turn(d, rig, role(SPINE2), axis_angle(&ax, lean * 0.45));
-        turn(d, rig, role(SPINE3), axis_angle(&ax, lean * 0.55));
-        turn(d, rig, role(NECK), axis_angle(&ax, -lean * 0.45));
-        turn(d, rig, role(HEAD), axis_angle(&ax, -lean * 0.55));
+        turn(d, rig, role(SPINE2), quat::axis_angle(ax, lean * 0.45));
+        turn(d, rig, role(SPINE3), quat::axis_angle(ax, lean * 0.55));
+        turn(d, rig, role(NECK), quat::axis_angle(ax, -lean * 0.45));
+        turn(d, rig, role(HEAD), quat::axis_angle(ax, -lean * 0.55));
     }
     if hi > 1e-4 {
         // (up out of the crouch's bow toward the man who stands over him)
         let r = hi * READY_UP.rise * DEGR;
-        turn(d, rig, role(SPINE1), axis_angle(&ax, -r * 0.3));
-        turn(d, rig, role(SPINE2), axis_angle(&ax, -r * 0.35));
-        turn(d, rig, role(SPINE3), axis_angle(&ax, -r * 0.35));
-        turn(d, rig, role(NECK), axis_angle(&ax, r * READY_UP.look * 0.45));
-        turn(d, rig, role(HEAD), axis_angle(&ax, r * READY_UP.look * 0.55));
+        turn(d, rig, role(SPINE1), quat::axis_angle(ax, -r * 0.3));
+        turn(d, rig, role(SPINE2), quat::axis_angle(ax, -r * 0.35));
+        turn(d, rig, role(SPINE3), quat::axis_angle(ax, -r * 0.35));
+        turn(d, rig, role(NECK), quat::axis_angle(ax, r * READY_UP.look * 0.45));
+        turn(d, rig, role(HEAD), quat::axis_angle(ax, r * READY_UP.look * 0.55));
     }
     if blade > 1e-4 {
         // (− yaw swings his left shoulder toward +Z)
@@ -764,7 +764,7 @@ fn shoulders(fk: &mut Fk, o: &mut Ready) {
 fn arm_length(fk: &mut Fk, o: &mut Ready) {
     let Ready { sl, .. } = *o;
     let el = fk.at(role(FOREARM_L));
-    let arm = dist3(&sl, &el) + dist3(&el, &fk.at(role(HAND_L)));
+    let arm = v3::dist(sl, el) + v3::dist(el, fk.at(role(HAND_L)));
     let (az, h, up) = (0.0, 0.0, 0.0);
     *o = Ready { arm, az, h, up, ..*o };
 }
@@ -782,7 +782,7 @@ fn bearing(fk: &mut Fk, o: &mut Ready) {
     let Ready { tw_y, tw_p, has_wp, wp, sl, fx, fz, mut az, mut h, mut up, .. } = *o;
     if has_wp {
         // where the man is off the left shoulder: level run, height, bearing off square (+ = his left)
-        let dd = sub3(untwist(fk, tw_y, tw_p, wp), sl);
+        let dd = v3::sub(untwist(fk, tw_y, tw_p, wp), sl);
         let (pa, pb) = (dd[0] * fx + dd[2] * fz, dd[0] * fz - dd[2] * fx);
         h = hypot2(pa, pb);
         up = dd[1];
@@ -812,9 +812,9 @@ fn reach_spot(c: &mut [f64], o: &mut Ready) {
         } else {
             frame(o, [0.0, clamp(frac * up + bias, dy0, lerp(dy1, READY_UP.dy, q)), clamp(frac * h, lerp(r0, READY_UP.r[0], q), lerp(r1, READY_UP.r[1], q))], az)
         };
-        let (l, cap) = (len3(&o), READY_REACH * arm);
+        let (l, cap) = (v3::len(o), READY_REACH * arm);
         if l > cap {
-            o = scale3(o, cap / l);
+            o = v3::scale(o, cap / l);
         }
         o
     } else {
@@ -856,7 +856,7 @@ fn ease_bare(c: &mut [f64], o: &Ready) {
 fn lead_arm(d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, c: &mut [f64], o: &Ready) {
     let Ready { fix_l, sl, .. } = *o;
     let rot = hand_rot(&fix_l, get3(c, L_FING), get3(c, L_BACK));
-    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(sl, get3(c, R_L)), Some(&get3(c, L_POLE)), 0.85, Some(&rot), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &v3::add(sl, get3(c, R_L)), Some(&get3(c, L_POLE)), 0.85, Some(&rot), false);
     let q = c[L_CURL];
     hand(d, hh, 0, &[q, q + 0.04, q + 0.08, q + 0.12], c[L_THUMB], c[L_SPREAD]);
 }
@@ -867,7 +867,7 @@ fn off_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, c: &mut [f64], 
     let w_rb = if u > 0.0 { 0.0 } else { c[W_R] * rd_out_r * smoothstep(READY_BARE.way.right[0], READY_BARE.way.right[1], rd_a) };
     if w_rb > 1e-3 {
         let rot = hand_rot(&fix_r, get3(c, R_FING), get3(c, R_BACK));
-        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &add3(sr, get3(c, R_R)), Some(&get3(c, R_POLE)), 0.85, Some(&rot), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &v3::add(sr, get3(c, R_R)), Some(&get3(c, R_POLE)), 0.85, Some(&rot), false);
         let q = c[R_CURL];
         hand(d, hh, 1, &[q, q + 0.04, q + 0.08, q + 0.12], c[R_THUMB], 0.0);
     }
