@@ -4,7 +4,7 @@ import { buildBvh, type Bounds, type Bvh } from '../bvh';
 import { classOf } from './blocks';
 
 /** what a piece is to a ray */
-export const F = { /** its slanting faces are where it broke: what it is made of, not what it is painted with */ BROKEN: 1 << 7, GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29, /** triangles: what it is stands in the rows at `mesh` (quad's first is its scale) */ MESH: 1 << 6 } as const;
+export const F = { /** its slanting faces are where it broke: what it is made of, not what it is painted with */ BROKEN: 1 << 7, GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29, /** a mesh's, or stands in for one (which has no `mesh`): neither is drawn as a box, nor breaks as one */ MESH: 1 << 6, /** and triangles: what it is stands in the rows at `mesh` (quad's first is its scale) */ TRIANGLES: 3 << 4 } as const;
 
 /** ONE PIECE: a frame and half extents, cut by up to 8 planes, one quadric (A x² + B y² + C z² + D y ≤ 1) and up to 3 curves: ellipsoids, or cylinders (a radius of 0 is no end), anywhere in its frame.
  *  Where two of them meet is a crisp edge, as on a car between flank and shoulder */
@@ -14,6 +14,7 @@ export interface Piece {
   tint?: V3; lamp?: number; marks?: Mark[]; seed?: number; /** part of something bigger that rays of any width must meet (what is left of a wall) */ stays?: boolean;
   /** what it is a part of */ thing?: { name: string };
   /** what moves it, by name */ rig?: string;
+  /** something finer is drawn in its place: it stands for what moves and walks, and for rays that ask for no more */ ghost?: boolean;
   /** of triangles: its object's row (mesh/pack.ts) */ mesh?: number;
   /** a plate of a cloth: how its normal leans at (−x −y) (+x −y) (−x +y) (+x +y), and where its middle is on the cloth */ bend?: number[]; cell?: [number, number];
 }
