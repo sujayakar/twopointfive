@@ -329,7 +329,7 @@ pub struct Game {
     pub events: Vec<crate::game::GameEvent>,
     pub search_probe_n: f64,
     pub time: f64,
-    pub dice: Option<crate::math_dice::SimDice>,
+    pub dice: crate::dice::Draws,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     #[is(crate::Opaque)] pub men: crate::Opaque,
@@ -486,6 +486,9 @@ pub struct Game {
     pub fa: Tab<FirearmId, crate::weapons::Firearm>,
     /// the other tables of things
     pub tab: Tabs,
+    /// (what was read of character files, which nothing writes after: in no bytes, and one for every copy of a game)
+    #[bytes(skip)]
+    pub art: alloc::sync::Arc<crate::anim_gltf::Art>,
     /// the knob tables, at the page's values
     #[is(crate::knobs::Knobs::page())] pub k: crate::knobs::Knobs,
     /// each module's own state
@@ -1304,15 +1307,6 @@ impl Game {
 pub struct Tabs {
     pub boxes: crate::boxworld::Boxes,
     pub frame_boxes: Tab<FrameBoxId, crate::scene_boxes::Box>,
-    /// (a man's file as it was read, which nothing writes after: in no bytes)
-    #[bytes(skip)]
-    pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
-    /// (a man's file as it was read, which nothing writes after: in no bytes)
-    #[bytes(skip)]
-    pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
-    pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
-    pub anim_gltf_cast_info: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
-    pub rig: Tab<RigId, crate::anim_gltf::GltfCharacter>,
     pub pose_set: Tab<PoseSetId, crate::anim_skeleton::PoseSet>,
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,
@@ -1386,14 +1380,7 @@ pub struct Mods {
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,
     pub anim_gltf: crate::anim_gltf::AnimGltfMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_sim: crate::sim_sim::SimSimMod,
     pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
-    /// (a memo, worked out again from the rig: in no bytes)
-    #[bytes(skip)]
-    pub packside: crate::packside::PacksideMod,
-    pub rig_props: crate::rig_props::RigPropsMod,
     pub character: crate::character::CharacterMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,

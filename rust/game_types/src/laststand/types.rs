@@ -83,7 +83,7 @@ pub struct Later {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
-    pub die: crate::math_dice::Die,
+    pub die: crate::dice::Die,
     pub next_at: f64,
     pub check: Option<crate::laststand::Check>,
     pub known: JsSet<RoomfightDefId>,

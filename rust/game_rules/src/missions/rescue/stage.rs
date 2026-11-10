@@ -30,7 +30,7 @@ pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
 }
 
 /// checkRescue's `free`: a man can be stood there. False = the place itself is wrong.
-fn check_free(g: &mut Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
+fn check_free(g: &Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
     let mut q: V3 = [p[0], 0.0, p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, None);
     let pushed = m::hyp2(q[0] - p[0], q[2] - p[2]);
@@ -49,13 +49,13 @@ fn check_free(g: &mut Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
     why.is_empty()
 }
 /// checkRescue's `way`: joined on foot
-fn check_way(g: &mut Game, a: V3, b: V3) -> bool {
+fn check_way(g: &Game, a: V3, b: V3) -> bool {
     let aa = crate::scene_collision::nav_grid_nearest_free_point(g, a[0], a[2]);
     let bb = crate::scene_collision::nav_grid_nearest_free_point(g, b[0], b[2]);
     match (aa, bb) { (Some(aa), Some(bb)) => crate::scene_collision::nav_grid_find_path(g, aa, bb, None, None).is_some(), _ => false }
 }
 /// checkRescue's `line`: his eyes reach the point he covers
-fn check_line(g: &mut Game, bad: &mut Vec<String>, what: &str, mk: crate::scene_scenarios::ScenarioMark) {
+fn check_line(g: &Game, bad: &mut Vec<String>, what: &str, mk: crate::scene_scenarios::ScenarioMark) {
     if crate::scene_collision::wall_between(g, [mk.pos[0], 1.6, mk.pos[2]], mk.aim_at) { bad.push(format!("{}: no line from his eyes to the point he covers", what)); }
 }
 

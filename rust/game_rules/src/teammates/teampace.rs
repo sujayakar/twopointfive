@@ -108,7 +108,7 @@ fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::Leav
 }
 
 /// his leave, if it still runs
-fn live(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::Leave> {
+fn live(g: &crate::game::Game, gd: GuardId) -> Option<crate::teampace::Leave> {
     match g.m.teampace.leave.get(gd).copied() {
         Some(l) if g.time <= l.until => Some(l),
         _ => None,
@@ -129,7 +129,7 @@ fn blast_run(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// the most a teammate's legs may be asked for this frame
-pub fn team_cap(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn team_cap(g: &crate::game::Game, gd: GuardId) -> f64 {
     if crate::frag::frag_running(g, gd) {
         return if blast_run(g, gd) { m::max(g.k.pace.max, g.tune.player_sprint) } else { g.k.pace.max };
     }
@@ -140,7 +140,7 @@ pub fn team_cap(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// he is at the team's walk: no leave for the fight's pace or a run, nobody in his sights, no grenade he runs from
-pub fn team_at_walk(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn team_at_walk(g: &crate::game::Game, gd: GuardId) -> bool {
     if !team_slow(g, gd) || crate::frag::frag_running(g, gd) || fighting(g, gd) { return false; }
     match live(g, gd) {
         None => true,
@@ -149,7 +149,7 @@ pub fn team_at_walk(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// the reason he may be running for this frame, if any
-pub fn run_why(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::RunWhy> {
+pub fn run_why(g: &crate::game::Game, gd: GuardId) -> Option<crate::teampace::RunWhy> {
     if crate::frag::frag_running(g, gd) {
         return if blast_run(g, gd) { Some(RunWhy::Blast) } else { None };
     }
@@ -188,7 +188,7 @@ pub fn team_run_legs(g: &crate::game::Game, gd: GuardId, speed: f64) -> Option<f
 }
 
 /// how fast his legs pick pace up: a man with a reason to run gets to it as a runner does
-pub fn team_accel(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn team_accel(g: &crate::game::Game, gd: GuardId) -> f64 {
     if run_why(g, gd).is_some() { m::max(g.k.pace.accel, g.k.teampace.accel) } else { g.k.pace.accel }
 }
 

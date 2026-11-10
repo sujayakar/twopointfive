@@ -23,7 +23,7 @@ fn same_team(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::
 }
 
 /// `layout?.team`: the one layout is the room clear's, and its team is a getter asked at each read.
-fn layout_team(g: &mut Game, layout: Option<&NightBreachLayout>) -> Option<crate::scene_scenarios::TeamStart> {
+fn layout_team(g: &Game, layout: Option<&NightBreachLayout>) -> Option<crate::scene_scenarios::TeamStart> {
     if layout.is_some() { crate::roomclear::room_clear_scenario_start_now(g) } else { None }
 }
 
@@ -49,7 +49,7 @@ fn mark_of(
 }
 
 /// The search of standBy; Err is the TypeScript's throw.
-fn stand_by_checked(g: &mut Game, lead: V3, taken: &[V3], yaw: f64) -> Result<V3, String> {
+fn stand_by_checked(g: &Game, lead: V3, taken: &[V3], yaw: f64) -> Result<V3, String> {
     let mut best: Option<V3> = None;
     let mut bs = f64::INFINITY;
     let want: V3 = [lead[0] - 1.2 * m::sin(yaw), 0.0, lead[2] - 1.2 * m::cos(yaw)];
@@ -310,7 +310,7 @@ pub fn night_breach_new() -> crate::nightbreach::NightBreach {
 }
 
 /// The team start in force.
-fn night_breach_team_of(g: &mut crate::game::Game, layout: Option<&crate::nightbreach::NightBreachLayout>) -> Option<crate::scene_scenarios::TeamStart> {
+fn night_breach_team_of(g: &crate::game::Game, layout: Option<&crate::nightbreach::NightBreachLayout>) -> Option<crate::scene_scenarios::TeamStart> {
     if let Some(t) = layout_team(g, layout) { return Some(t); }
     g.level.scenarios.as_ref().and_then(|s| s.night_breach.as_ref()).map(|n| n.team.clone())
 }
@@ -328,7 +328,7 @@ fn night_breach_apply_team(g: &mut crate::game::Game, layout: Option<&crate::nig
 pub fn night_breach_up(g: &crate::game::Game) -> bool { matches!(g.staged.up, Some(MissionKind::Nightbreach | MissionKind::Roomclear)) }
 
 /// Why it cannot start right now.
-pub(super) fn night_breach_can_start(g: &mut crate::game::Game, layout: Option<&crate::nightbreach::NightBreachLayout>) -> Option<String> {
+pub(super) fn night_breach_can_start(g: &crate::game::Game, layout: Option<&crate::nightbreach::NightBreachLayout>) -> Option<String> {
     let t = night_breach_team_of(g, layout);
     if crate::quiet::quiet_of(g) { return Some(String::from("a quiet mission is up on this floor (quit it first)")); }
     let Some(t) = t else { return Some(String::from("this level does not say where the team starts (its scenarios block)")) };
@@ -423,7 +423,7 @@ fn night_breach_bench(g: &mut crate::game::Game) {
 }
 
 /// A place for a man of the second pair.
-pub fn night_breach_stand_by(g: &mut crate::game::Game, lead: V3, taken: &[V3], yaw: Option<f64>) -> V3 {
+pub fn night_breach_stand_by(g: &crate::game::Game, lead: V3, taken: &[V3], yaw: Option<f64>) -> V3 {
     let yaw = yaw.unwrap_or(m::PI / 2.0);
     match stand_by_checked(g, lead, taken, yaw) {
         Ok(q) => q,

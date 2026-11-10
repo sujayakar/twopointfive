@@ -343,7 +343,7 @@ pub(super) fn near_leg(a: V3, b: V3, k: V3) -> bool {
 }
 
 /// the walk to a spot: its length, or None if it will not do
-pub(super) fn leg_of(g: &mut Game, from: V3, threat: V3, known: &[V3], spot: V3, mind: bool) -> Option<f64> {
+pub(super) fn leg_of(g: &Game, from: V3, threat: V3, known: &[V3], spot: V3, mind: bool) -> Option<f64> {
     let path = crate::scene_collision::nav_grid_find_path(g, from, spot, None, None)?; if path.is_empty() { return None; }
     let (mut l, mut q, mut toward) = (0.0, from, false);
     for &w in &path {

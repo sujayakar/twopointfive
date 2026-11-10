@@ -398,7 +398,7 @@ pub(super) fn door_tools_tick_set(g: &mut crate::game::Game) {
 }
 
 /// Who stands off where for a charge: the man nearest the door on the first mark, the rest dealt the others; first entry = the setter.
-fn door_tools_standoff_deal(g: &mut crate::game::Game, men: &[GuardId], d: DoorId, posts: &[crate::orders::StackPost]) -> Vec<(GuardId, crate::orders::StackPost)> {
+fn door_tools_standoff_deal(g: &crate::game::Game, men: &[GuardId], d: DoorId, posts: &[crate::orders::StackPost]) -> Vec<(GuardId, crate::orders::StackPost)> {
     let fc = g.dr[d].frame_centre;
     let mut by: Vec<(GuardId, f64)> = men.iter().map(|m| (*m, flat(pos_of(g, *m), fc))).collect();
     js::sort_by(&mut by, |a, b| a.1 - b.1);
@@ -1033,7 +1033,7 @@ pub fn door_tools_frag_behind(g: &mut crate::game::Game, d: DoorId, side: f64, m
 }
 
 /// A teammate outside this order on the far side of the door, in the open reach of a charge on it.
-pub(super) fn door_tools_behind(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Option<GuardId> {
+pub(super) fn door_tools_behind(g: &crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Option<GuardId> {
     if !crate::orders::squad_orders_big(g, &crate::seats::here(g)) { return None; }
     let width = g.dr[d].def.width;
     let inn = door_pt(g, d, width / 2.0, 0.45, -side, Some(1.1));

@@ -33,7 +33,7 @@ pub(super) fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) ->
 }
 
 /// `spot_seen`'s walk: 2 = an eye has the spot, 1 = in an eye's field and every such eye's line stopped, 0 = in no eye's field.
-fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
+fn fog_of_war_ground_look(g: &crate::game::Game, x: f64, z: f64) -> f64 {
     let mut r = 0.0;
     let mut i = 0;
     while i < g.fog_of_war.eyes.len() {
@@ -122,7 +122,7 @@ fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, 
 }
 
 /// Do boxes i‥j stand where the record's copies do?
-fn thing_same(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[FrameBoxId]) -> bool {
+fn thing_same(g: &Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[FrameBoxId]) -> bool {
     if ghost.len() != j - i { return false; }
     let mut k = i;
     while k < j {

@@ -110,7 +110,7 @@ fn near(g: &Game, l: &[GuardId], sb: Option<crate::scene_scenarios::Rect>, sd: D
 }
 
 /// Who F takes, and to which door.
-fn rescue_pick(g: &mut crate::game::Game) -> Option<crate::rescue::RescuePick> {
+fn rescue_pick(g: &crate::game::Game) -> Option<crate::rescue::RescuePick> {
     let up: Vec<GuardId> = g.staged.team.iter().copied().filter(|&o| !crate::condition::down(g, g.gd[o].ch)).collect();
     if up.is_empty() { return None; }
     let data = rescue_data(g);

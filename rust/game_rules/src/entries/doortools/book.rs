@@ -104,7 +104,7 @@ pub fn row_stackable(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardI
     }
 }
 /// `canThresholdThen(what, t, men)` as a row's `valid` answers it
-pub fn row_can_then(g: &mut Game, what: crate::doortools::ThresholdThen, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_can_then(g: &Game, what: crate::doortools::ThresholdThen, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     match crate::doortools::door_tools_can_threshold_then(g, what, Some(&ct_of(t)), men) {
         crate::doortools::DoorToolsCanThresholdThen::Text(w) => Err(Some(w)),
         crate::doortools::DoorToolsCanThresholdThen::Bool(true) => Ok(()),

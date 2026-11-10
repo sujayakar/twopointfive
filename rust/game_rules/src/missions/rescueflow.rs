@@ -15,7 +15,7 @@ fn in_rect(p: V3, r: &crate::scene_scenarios::Rect) -> bool {
 }
 
 /// `g.col.segmentBlocked(a, b)`, the sight line with the collision's own defaults.
-fn blocked(g: &mut Game, a: V3, b: V3) -> bool {
+fn blocked(g: &Game, a: V3, b: V3) -> bool {
     crate::scene_collision::segment_blocked(g, a, b, None, None, None)
 }
 
@@ -139,7 +139,7 @@ fn rescue_flow_build(g: &mut crate::game::Game) {
 }
 
 /// What of the room can be seen through this opening at all, from the cover mark and three places across its threshold. `k` is not in the table while this runs.
-fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow::Known) {
+fn rescue_flow_lookable(g: &crate::game::Game, k: &mut crate::rescueflow::Known) {
     let (mark, at) = (k.o.mark, k.o.at);
     let dz = if k.o.north { 0.7 } else { -0.7 };
     let eyes: [V3; 4] = [[mark[0], EYE, mark[2]], [at[0], EYE, at[2] + dz], [at[0] - 0.9, EYE, at[2] + dz], [at[0] + 0.9, EYE, at[2] + dz]];
@@ -182,7 +182,7 @@ fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
 }
 
 /// Is this man of theirs seen by the team: the room fight's answer, else the fog's while it is up, else a plain line from any eye to his chest.
-fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
+fn rescue_flow_sees(g: &crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
     if crate::roomfight::room_fight_team_sees(g, h) {
         return true;
     }

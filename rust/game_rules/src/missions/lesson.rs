@@ -156,7 +156,7 @@ fn own_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player
 /// `onStack(g, m) === door`
 fn stack_is(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, door: &str) -> bool { on_stack(g, seat, m).as_deref() == Some(door) }
 /// `!!g.orders.of(m)?.arrived`
-fn arrived(g: &mut Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.orders_assignment[a].arrived) }
+fn arrived(g: &Game, m: GuardId) -> bool { crate::orders::squad_orders_of(&crate::seats::here(g), m).map_or(false, |a| g.tab.orders_assignment[a].arrived) }
 /// `g.orders.men(sel)`
 fn squad_men(g: &Game, seat: &crate::seats::SeatRef, sel: crate::orders::SquadOrdersMenSel) -> Vec<GuardId> { crate::orders::squad_orders_men(g, seat, Some(sel), None) }
 /// a text cell of a chronicle row (`e.data.<key>`)
@@ -169,7 +169,7 @@ fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1,
 fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.0) }
 
 /// one test asked: lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of)
-fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
+fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
         T::In { area } => inside(*area, own_pos(g, &crate::seats::here(g))),
@@ -259,7 +259,7 @@ fn ok_calm(g: &Game, route: Option<&str>) -> bool {
     })
 }
 
-fn ok_loaded(g: &mut Game, s: &mut StepSeen) -> bool {
+fn ok_loaded(g: &Game, s: &mut StepSeen) -> bool {
     let p = who(g, &crate::seats::here(g));
     let Some(w) = crate::game::player_gun_in_hand(g, p) else { return false };
     if crate::weapons::firearm_reloading(g, w) { s.n.set(String::from("loaded:began"), 1.0); return false; }
@@ -282,13 +282,13 @@ fn ok_launcher(g: &Game, on: Option<crate::weapons::RifleAttachment>, fired: boo
     on.map_or("none", |a| a.as_str()) == up && (!fired || (crate::game::player_rifle_up(g, p) && g.fa[r].ring_cd > 0.0))
 }
 
-fn ok_burst(g: &mut Game, n: Option<f64>) -> bool {
+fn ok_burst(g: &Game, n: Option<f64>) -> bool {
     let p = who(g, &crate::seats::here(g));
     let r = g.pl[p].rifle;
     crate::game::player_rifle_up(g, p) && crate::weapons::firearm_automatic(g, r) && g.fa[r].auto_idx >= n.unwrap_or(3.0)
 }
 
-fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
+fn ok_threw(g: &Game, k: Option<&str>, quick: bool, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
     use crate::chronicle::ChronKind;
     let from = if quick { s.held_at } else { s.chron0 };
     if from < 0.0 { return false; }
@@ -305,7 +305,7 @@ fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scen
     false
 }
 /// his own smoke can venting in `a`, on the floor no longer than `since`
-fn lying_can(g: &mut Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
+fn lying_can(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
     use crate::throwables::ItemKind;
     if k == Some("flash") || k == Some("frag") { return false; }
     let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
@@ -323,7 +323,7 @@ fn ok_order_to(g: &Game, seat: &crate::seats::SeatRef, want: crate::orders::Who)
     match (seat.orders.who, want) { (Who::All, Who::All) | (Who::Red, Who::Red) | (Who::Blue, Who::Blue) => true, (Who::Num(a), Who::Num(b)) => a == b, _ => false }
 }
 
-fn ok_stack_on(g: &mut Game, door: &str, sel: Option<crate::orders::SquadOrdersMenSel>, set: bool) -> bool {
+fn ok_stack_on(g: &Game, door: &str, sel: Option<crate::orders::SquadOrdersMenSel>, set: bool) -> bool {
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return false; }
     let men = squad_men(g, &crate::seats::here(g), sel.unwrap_or(crate::orders::SquadOrdersMenSel::All));
     !men.is_empty() && men.iter().all(|&m| stack_is(g, &crate::seats::here(g), m, door) && (!set || arrived(g, m)))
@@ -382,7 +382,7 @@ fn ok_squad(g: &Game, area: crate::scene_scenarios::Rect, n: Option<f64>) -> boo
     !men.is_empty() && inn as f64 >= m::min(men.len() as f64, n.unwrap_or(men.len() as f64))
 }
 
-fn ok_stacks(g: &mut Game, doors: &[String], n: Option<f64>, set: bool) -> bool {
+fn ok_stacks(g: &Game, doors: &[String], n: Option<f64>, set: bool) -> bool {
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return false; }
     let men = squad_men(g, &crate::seats::here(g), crate::orders::SquadOrdersMenSel::All);
     doors.iter().all(|d| men.iter().filter(|&&m| stack_is(g, &crate::seats::here(g), m, d) && (!set || arrived(g, m))).count() as f64 >= n.unwrap_or(1.0))
@@ -402,7 +402,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 
 // ---- the checks: what is wrong with a record on this floor. A field's type is the skeleton's now, so a check of a type alone (`typeof t.on`) has nothing to ask
 
-fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
+fn flag_of(g: &Game, flag: LessonFlag) -> bool {
     use LessonFlag as F;
     match flag {
         F::Crouch => flags::crouch(g),
@@ -437,40 +437,40 @@ fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
 pub mod flags {
     use super::*;
 
-    pub fn crouch(g: &mut crate::game::Game) -> bool { g.pl[g.player].crouch }
+    pub fn crouch(g: &crate::game::Game) -> bool { g.pl[g.player].crouch }
     pub fn sprint(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].sprinting }
     /// back to a wall
-    pub fn wall(g: &mut crate::game::Game) -> bool { g.pl[g.player].wall.is_some() }
+    pub fn wall(g: &crate::game::Game) -> bool { g.pl[g.player].wall.is_some() }
     /// …and leaning out of its open end
     pub fn peek(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].wall.as_ref().map_or(0.0, |w| w.peek) > 0.5 }
     /// out round a wall's open end, whichever hold
-    pub fn lean(g: &mut crate::game::Game) -> bool {
+    pub fn lean(g: &crate::game::Game) -> bool {
         let Some(w) = g.pl[g.player].wall.as_ref() else { return false };
         w.lean.unwrap_or(0.0) > 0.5 || (w.kind != Some(crate::player::WallHoldKind::Stack) && w.peek > 0.5)
     }
-    pub fn nv(g: &mut crate::game::Game) -> bool { g.pl[g.player].nv }
+    pub fn nv(g: &crate::game::Game) -> bool { g.pl[g.player].nv }
     /// the weapon light of the gun in hand
-    pub fn light(g: &mut crate::game::Game) -> bool {
+    pub fn light(g: &crate::game::Game) -> bool {
         let p = g.player;
         let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
         (crate::game::player_pistol_up(g, p) && g.fa[pistol].light_on) || (crate::game::player_rifle_up(g, p) && g.fa[rifle].light_on)
     }
     pub fn holstered(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holstered }
     /// a gun in the hands
-    pub fn gun(g: &mut crate::game::Game) -> bool { let p = g.player; crate::game::player_gun_in_hand(g, p).is_some() }
+    pub fn gun(g: &crate::game::Game) -> bool { let p = g.player; crate::game::player_gun_in_hand(g, p).is_some() }
     pub fn rings_out(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.fa[g.pl[seat.player].rifle].rings <= 0.0 }
     pub fn shells_out(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.fa[g.pl[seat.player].rifle].shells <= 0.0 }
-    pub fn auto(g: &mut crate::game::Game) -> bool { g.fa[g.pl[g.player].rifle].mode != crate::weapons::FireMode::Semi }
+    pub fn auto(g: &crate::game::Game) -> bool { g.fa[g.pl[g.player].rifle].mode != crate::weapons::FireMode::Semi }
     /// the setup of the gun in his hands is up; SLOTSETUP.on is settled true
     pub fn setup(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { crate::slotsetup::slot_setup_open(g, seat) }
     pub fn setup_shut(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !crate::slotsetup::slot_setup_open(g, seat) }
-    pub fn dragging(g: &mut crate::game::Game) -> bool { g.pl[g.player].dragging().is_some() }
+    pub fn dragging(g: &crate::game::Game) -> bool { g.pl[g.player].dragging().is_some() }
     /// the mains are off
-    pub fn dark(g: &mut crate::game::Game) -> bool { g.light_home.mains.active }
+    pub fn dark(g: &crate::game::Game) -> bool { g.light_home.mains.active }
     /// a wall charge is on a wall, waiting on the trigger
     pub fn charge_set(seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
     /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach
-    pub fn charge_clear(g: &mut crate::game::Game) -> bool {
+    pub fn charge_clear(g: &crate::game::Game) -> bool {
         let c = g.sets[g.seat].wall_charge.set.first().copied();
         let at = crate::lesson::lesson_step(g).and_then(|step| step.at);
         let Some(c) = c else { return false };
@@ -487,11 +487,11 @@ pub mod flags {
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking().is_some() }
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding().is_some() }
     /// the order menu is up
-    pub fn menu(g: &mut crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
+    pub fn menu(g: &crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
     /// his own ring is up, with or without a key down
     pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.sets[seat.id].hand.sel; sel.open && sel.ring.is_some() }
     /// the squad's posture is SILENT
-    pub fn silent(g: &mut crate::game::Game) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
+    pub fn silent(g: &crate::game::Game) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
 }
 
 #[cfg(test)]

@@ -20,10 +20,10 @@ fn flat(a: V3, b: V3) -> f64 {
 
 // ---- small reads
 
-fn of(g: &mut Game, m: GuardId) -> Option<OrdersAssignmentId> {
+fn of(g: &Game, m: GuardId) -> Option<OrdersAssignmentId> {
     crate::orders::squad_orders_of(&crate::seats::here(g), m)
 }
-fn post_of(g: &mut Game, m: GuardId) -> Option<V3> {
+fn post_of(g: &Game, m: GuardId) -> Option<V3> {
     let a = of(g, m)?;
     g.tab.orders_assignment[a].post
 }
@@ -216,7 +216,7 @@ fn keep_eyes_spare(g: &mut Game, a: OrdersAssignmentId, op: DoorOpId, m: GuardId
 }
 
 /// Who of a stack should have this way: a line from where he is, then into the doorway, then the man already on it.
-fn rank(g: &mut Game, key: PlayerId, op: Option<DoorOpId>, m: GuardId, o: CoverOpeningId, front: V3) -> f64 {
+fn rank(g: &Game, key: PlayerId, op: Option<DoorOpId>, m: GuardId, o: CoverOpeningId, front: V3) -> f64 {
     let mut r = 0.0;
     let p = pos_of(g, m);
     if rear_sees(g, p, o, front).is_some() {
@@ -682,7 +682,7 @@ fn let_go(g: &mut Game, pl: PlayerId, m: GuardId, why: &str) {
     note(book!(g, pl), &s);
 }
 /// The walk to Sam, once a judging for each man.
-fn walk(g: &mut Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> f64 {
+fn walk(g: &Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> f64 {
     if let Some(l) = far.get(x) {
         return *l;
     }
@@ -943,7 +943,7 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// How far from `a` to `b` on foot: the straight line when nothing stands in it, else the nav grid's path.
-fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     let d = flat(a, b);
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) {
         return d;
@@ -968,7 +968,7 @@ pub fn room_kept(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef, gd: Gu
 }
 
 /// Somebody not of this stack already has that way.
-fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverOpeningId, squad: &[GuardId]) -> bool {
+fn held_by_other(g: &crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverOpeningId, squad: &[GuardId]) -> bool {
     let (od, at) = (g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if let Some(op) = g_2.op {
         if let Some(l) = g.tab.doortools_door_op[op].lane.as_ref() {
@@ -1000,7 +1000,7 @@ fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: Co
 }
 
 /// The point of a way behind a man stood at `p` can watch: the doorway, its leaf's edge, or the floor just before it.
-pub fn rear_sees(g: &mut crate::game::Game, p: V3, o: CoverOpeningId, front: V3) -> Option<V3> {
+pub fn rear_sees(g: &crate::game::Game, p: V3, o: CoverOpeningId, front: V3) -> Option<V3> {
     let s = crate::cover::cover_sight_from(g, p, o);
     if s.is_some() {
         return s;
@@ -1024,7 +1024,7 @@ pub(super) fn rear_pin_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, g
 }
 
 /// doortools.ts enter(): the turn the men go in by, with the rear man put last.
-pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
+pub fn rear_last(g: &crate::game::Game, op: DoorOpId, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
     if turn.len() < 3 {
         return turn.to_vec();
     }

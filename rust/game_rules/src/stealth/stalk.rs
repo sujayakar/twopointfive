@@ -41,7 +41,7 @@ fn bearing_of(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
 }
 
 /// Are Sam's hands free for it at all: empty, and nothing else has him.
-fn hands(g: &mut crate::game::Game) -> bool {
+fn hands(g: &crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].holstered
         && !crate::condition::down(g, g.pl[me].ch)
@@ -57,7 +57,7 @@ fn free(g: &mut crate::game::Game) -> bool {
 }
 
 /// A tutorial step has taken the click.
-fn shut(g: &mut crate::game::Game) -> bool {
+fn shut(g: &crate::game::Game) -> bool {
     crate::rails::rails_shuts(g, "stalk")
 }
 
@@ -82,13 +82,13 @@ pub(super) fn stalk_begin_m(g: &crate::game::Game) -> f64 {
 }
 
 /// Is the held click the ONE way to grab a man from behind: on the page, only on a wall.
-pub(super) fn stalk_click_only(g: &mut crate::game::Game) -> bool {
+pub(super) fn stalk_click_only(g: &crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].wall.is_some() && !shut(g)
 }
 
 /// Why this man cannot be stalked from `p` right now, or None when he can (`begin`: a press's stricter test).
-fn out_of(g: &mut crate::game::Game, gd: GuardId, p: &[f64], begin: bool) -> Option<crate::stalk::Why> {
+fn out_of(g: &crate::game::Game, gd: GuardId, p: &[f64], begin: bool) -> Option<crate::stalk::Why> {
     if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
         return Some(Why::Him);
     }
@@ -118,7 +118,7 @@ pub(super) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The man a press at the cursor is on: the reticle's if he can be stalked, else the nearest within `cursorM` of the floor point.
-fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
+fn pressed(g: &crate::game::Game) -> Option<GuardId> {
     let p = g.ch[g.pl[g.player].ch].pos;
     let a = g.sets[g.seat].aim_point;
     if let Some(ag) = g.sets[g.seat].aim_guard {
@@ -143,7 +143,7 @@ fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// May the wait at a corner be his this frame: on a wall (not the stack), hands empty, room to come up.
-fn corner_gate(g: &mut crate::game::Game) -> bool {
+fn corner_gate(g: &crate::game::Game) -> bool {
     let me = g.player;
     let (kind, drawn) = match &g.pl[me].wall {
         None => return false,
@@ -161,7 +161,7 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
 }
 
 /// The man the wait at a corner takes this frame: the nearest who has come past him.
-fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
+fn corner_man(g: &crate::game::Game) -> Option<GuardId> {
     if !corner_gate(g) {
         return None;
     }
@@ -429,7 +429,7 @@ pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
 }
 
 /// The wait at a corner on his body: where his hands point, how much of the grab's reach, how far he is sunk.
-pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> {
+pub(super) fn stalk_wait(g: &crate::game::Game) -> Option<crate::stalk::StalkWait> {
     let me = g.player;
     let row = *g.m.stalk.state.get(me)?;
     let n = g.pl[me].wall.as_ref().map(|w| w.n);
@@ -486,7 +486,7 @@ pub fn stalk_grab(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option
 }
 
 /// The row's grab on this man is about to be taken: is it the stalk's? A question only.
-pub fn stalk_key_can(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn stalk_key_can(g: &crate::game::Game, gd: GuardId) -> bool {
     let me = g.player;
     if g.gd[gd].civ.is_some() || !hands(g) || (g.pl[me].crouch && !crate::player::can_stand(g)) {
         return false;

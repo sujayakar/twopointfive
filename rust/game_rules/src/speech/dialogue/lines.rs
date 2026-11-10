@@ -24,7 +24,7 @@ pub(super) fn band_of(a: f64) -> crate::dialogue::Band {
 }
 
 /// What this man knows of Sam, the highest level that holds, from his own record only.
-pub(super) fn knowledge_of(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Knowledge {
+pub(super) fn knowledge_of(g: &crate::game::Game, gd: GuardId) -> crate::dialogue::Knowledge {
     if g.gd[gd].witness.saw_act.is_some() || g.gd[gd].witness.saw_held.is_some() { return Knowledge::SawHurt; }
     if g.gd[gd].last_seen_t >= 0.0 || g.gd[gd].witness.alerted_by == Some(crate::game::WitnessAlertedBy::Sight) || {
         let weapon = g.gd[gd].weapon;
@@ -45,7 +45,7 @@ pub(super) fn knowledge_of(g: &mut crate::game::Game, gd: GuardId) -> crate::dia
 }
 
 /// How rattled this man is, 0 to 1.
-pub fn agitation_of(g: &mut crate::game::Game, gd: GuardId) -> f64 { agitation_terms(g, gd).a }
+pub fn agitation_of(g: &crate::game::Game, gd: GuardId) -> f64 { agitation_terms(g, gd).a }
 
 /// One term of the sum, and its label for the panel.
 fn add(a: &mut f64, why: &mut Vec<String>, v: f64, label: &str) {
@@ -55,7 +55,7 @@ fn add(a: &mut f64, why: &mut Vec<String>, v: f64, label: &str) {
 }
 
 /// The sum of what has rattled this man, clamped, with its terms for the panel and the probes.
-pub(super) fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::AgitationTerms {
+pub(super) fn agitation_terms(g: &crate::game::Game, gd: GuardId) -> crate::dialogue::AgitationTerms {
     use crate::game::{GuardState, Temperament};
     let t = temperament_of(g, gd);
     let talk = g.gd[gd].talk;
@@ -235,7 +235,7 @@ pub(super) fn run_on(lead: &str, fact: &str) -> String { run_on_text(lead, fact)
 
 /// Four digits off a callsign, the same every night for the same man.
 pub(super) fn badge_of(callsign: &str) -> String {
-    let n = 1000.0 + js::rem(crate::math_dice::hash_str(&format!("badge:{}", callsign)), 9000.0);
+    let n = 1000.0 + js::rem(crate::dice::hash_str(&format!("badge:{}", callsign)), 9000.0);
     format!("{}", n as i64)
 }
 

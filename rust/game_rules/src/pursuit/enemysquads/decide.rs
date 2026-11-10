@@ -251,7 +251,7 @@ pub fn in_squad_rooms(g: &crate::game::Game, gd: GuardId, p: V3) -> bool {
     }
 }
 /// a squad's men at home and free to be told something
-pub fn home(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDefId> {
+pub fn home(g: &crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDefId> {
     let mut out = Vec::new();
     let men = g.tab.enemysquads_squad[q].men.clone();
     for m in men {
@@ -380,7 +380,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
 }
 
 /// teamKnown, each place with how well it is known
-fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Known> {
+fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
     let mut out = Vec::new();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
@@ -403,7 +403,7 @@ fn ctx_line_over(g: &Game, over: &Over, a: V3, b: V3, y: f64) -> bool { !crate::
 /// a head or a chest in the line
 fn ctx_fire(g: &Game, a: V3, b: V3) -> bool { ctx_line(g, a, b, 1.5) || ctx_line(g, a, b, 1.0) }
 /// the line with every leaf out of it
-fn ctx_open(g: &mut Game, a: V3, b: V3) -> bool {
+fn ctx_open(g: &Game, a: V3, b: V3) -> bool {
     ctx_line_over(g, &Over::statics(), a, b, 1.5)
 }
 /// a man standing there is in front of one of the guns the side knows of
@@ -432,7 +432,7 @@ fn ctx_hot_cell(g: &mut Game, known: &[Known], rear: &[V3], ajar: &[V3], ix: f64
     h
 }
 /// in a doorway's line whether its leaf is shut or not
-fn ctx_lane(g: &mut Game, mouths: &[V3], p: V3) -> bool {
+fn ctx_lane(g: &Game, mouths: &[V3], p: V3) -> bool {
     let mouth_m = g.k.squads.mouth_m;
     for m0 in mouths { if flat(*m0, p) < mouth_m && ctx_open(g, *m0, p) { return true; } }
     false
@@ -610,7 +610,7 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
     pick_way(ways, taken, limit)
 }
 /// wayRound2's `ok`: a place short of the lane to hold the door from
-fn hold_ok(g: &mut Game, q: V3, s: f64, l: f64, outside: V3, back: f64, used: &[V3]) -> bool {
+fn hold_ok(g: &Game, q: V3, s: f64, l: f64, outside: V3, back: f64, used: &[V3]) -> bool {
     s >= 2.0 && l - s >= 3.0 && flat(q, outside) <= back && !nav_blocked(g, q[0], q[2]) && !used.iter().any(|u| flat(*u, q) < 1.2) && ctx_fire(g, q, outside)
 }
 
@@ -665,7 +665,7 @@ fn rooms_held(g: &Game, h: &[RoomfightDefId]) -> usize {
     seen.len()
 }
 /// a squad that could send men out on a call now: decide()'s own first three tests
-pub(super) fn may_go(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> bool {
+pub(super) fn may_go(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
     if g.tab.enemysquads_squad[q].def.may_leave == Some(false) { return false; }
     let sent: Vec<GuardId> = g.tab.enemysquads_squad[q].sent.iter().map(|s| s.gd).collect();
     for s in sent { if alive(g, s) { return false; } }

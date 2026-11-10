@@ -202,7 +202,7 @@ fn short(g: &mut Game, gd: GuardId, c: CharId, s: V3, rad: f64, ux: f64, uz: f64
 }
 
 /// The closure `room`: has his body the room to pass the player on this side.
-fn room(g: &mut Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) -> bool {
+fn room(g: &Game, c: CharId, s: V3, fx: f64, fz: f64, ring: f64, side: f64) -> bool {
     let hit = crate::scene_collision::raycast(g, [s[0], 0.45, s[2]], [fz * side, 0.0, -fx * side], 1.5);
     let t = match hit { Some(h) => h.t, None => 1.5 };
     t >= ring + g.ch[c].radius - 0.05

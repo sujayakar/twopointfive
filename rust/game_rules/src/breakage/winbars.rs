@@ -40,13 +40,13 @@ fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
 
 /// Is static `index` a window's bar that still stands?
-pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
+pub fn bar_at(g: &crate::game::Game, index: f64) -> bool {
     let Some(b) = box_of(g, index) else { return false };
     stands(g.tab.boxes[b].flags)
 }
 
 /// The flags a bar this rule took was authored with, or None.
-pub(super) fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
+pub(super) fn bar_flags0(g: &crate::game::Game, index: f64) -> Option<f64> {
     if untouched(g) { return None; }
     let s = g.sim;
     for i in 0..::sim::panes::bars_gone(s) as usize {

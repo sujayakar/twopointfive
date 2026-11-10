@@ -31,7 +31,7 @@ fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 }
 
 /// The friend nearest along the line Sam's gun is held on, as far as what it is aimed at and `reachM` at most.
-fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
+fn friend_in_sams_line(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
     let aim_yaw = g.ch[c_2].aim_yaw;
     let (dx, dz) = (m::sin(aim_yaw), m::cos(aim_yaw));
@@ -53,7 +53,7 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
 }
 
 /// …or the friend the CURSOR is on, only while the aim is free.
-fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
+fn friend_under_cursor(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let o = g.sets[g.seat].aim_friend?;
     if g.sets[g.seat].aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
@@ -100,7 +100,7 @@ struct SamsLine {
 }
 
 /// The closure `ask` of friendInSamsLine: one man against the line, the nearest so far kept in `line`.
-fn ask(g: &mut Game, o: GuardId, line: &mut SamsLine) {
+fn ask(g: &Game, o: GuardId, line: &mut SamsLine) {
     let c = g.gd[o].ch;
     if crate::condition::down(g, g.gd[o].ch) || !g.ch[c].alive { return; }
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[c].pos };

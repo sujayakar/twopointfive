@@ -1329,7 +1329,7 @@ fn lightMarkRef(li: Light) -> i32 { return select(-1, i32((li.kind >> 11u) & 0x3
 /** the panes (bits, SceneInfo.glass order) light `li` can possibly shine through: its CPU mask for panes 0‥23, every listed pane past that */
 fn lightGlassMask(li: Light) -> u32 { let n = glassCount(); if (n == 0u) { return 0u; } let allN = select(0xffffffffu, (1u << n) - 1u, n < 32u); return ((li.owner >> 8u) | 0xff000000u) & allN; }
 
-struct LightEval { L: vec3f, dist: vec3f, E: vec3f, ok: bool }; // dist.x = distance to light (for shadow ray)
+struct LightEval { L: vec3f, dist: vec3f, E: vec3f, ok: bool }; // dist.x = distance to light (for shadow ray), dist.y = what evalLight's light is the colour × the receiver's cosine of
 
 fn lightWindow(d: f32, range: f32) -> f32 { let x = d / range; let w = clamp(1.0 - x * x * x * x, 0.0, 1.0); return w * w; }
 
@@ -1347,6 +1347,25 @@ fn lightReachLevel(slot: u32, P: vec3f) -> u32 {
   return (reachWord(w) >> ((ci & 15u) * 2u)) & 3u;
 }
 fn lightReaches(slot: u32, P: vec3f) -> bool { return lightReachLevel(slot, P) != 0u; }
+/** THE LIGHTS THAT CAN GIVE P ANYTHING, a bit a slot (lights.ts cellsOf: the light's range comes over P's cell and its reach there is not 0; made on the CPU when a
+ *  light moves, is dimmed out or its reach changes). A light that is not in it gives P nothing by evalLight, so a walk over it gives what a walk over
+ *  every light gives. Every light with the reach flag off or P off the grid.
+ *      var at = lightsAt(P); for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) { … }                 (lowest slot first) */
+fn lightsAt(P: vec3f) -> vec2u {
+  let cx = i32(floor((P.x - WORLD_MIN.x) / GRID_CELL)); let cz = i32(floor((P.z - WORLD_MIN.z) / GRID_CELL));
+  if ((frame.flags & FLAG_REACH_MASK) == 0u || cx < 0 || cz < 0 || cx >= GRID_W || cz >= GRID_H) {
+    let n = min(frame.numLights, 64u);
+    return vec2u(select(0xffffffffu, (1u << (n & 31u)) - 1u, n < 32u), select(select(0xffffffffu, (1u << (n & 31u)) - 1u, n < 64u), 0u, n <= 32u));
+  }
+  let w = REACH_CELLS_AT + u32(cz * GRID_W + cx) * 2u;
+  return vec2u(reachWord(w), reachWord(w + 1u));
+}
+/** the lowest slot left in `at`, which loses it; 64 = none */
+fn nextLight(at: ptr<function, vec2u>) -> u32 {
+  if ((*at).x != 0u) { let i = firstTrailingBit((*at).x); (*at).x &= (*at).x - 1u; return i; }
+  if ((*at).y != 0u) { let i = firstTrailingBit((*at).y); (*at).y &= (*at).y - 1u; return i + 32u; }
+  return 64u;
+}
 
 /// evalLight as the PICTURE takes it: the light's irradiance under the fog's light classes (lightFogK — a torch nobody on the team sees the spot of gives nothing
 /// there). Every pass of the picture asks this one.
@@ -1374,7 +1393,7 @@ fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
   var r: LightEval; r.ok = false; r.E = vec3f(0.0);
   let kind = lightKind(li);
   if (kind == 2u) {
-    r.L = -li.dir; r.dist = vec3f(1e6, 0.0, 0.0);
+    r.L = -li.dir; r.dist = vec3f(1e6, 1.0, 0.0);
     let c = select(max(dot(N, r.L), 0.0), 1.0, all(N == vec3f(0.0)));
     if (c <= 0.0) { return r; }
     r.E = li.color * c; r.ok = true; return r;
@@ -1394,7 +1413,7 @@ fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
   }
   let c = select(max(dot(N, r.L), 0.0), 1.0, all(N == vec3f(0.0)));
   if (c <= 0.0 || att <= 0.0) { return r; }
-  r.E = li.color * (att * c); r.ok = true;
+  r.E = li.color * (att * c); r.ok = true; r.dist.y = att;
   return r;
 }
 
@@ -1403,11 +1422,11 @@ fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
 fn directIrradiance(P: vec3f, N: vec3f, skipOwner: u32, minE: f32, includeTransient: bool) -> vec3f {
   var E = vec3f(0.0);
   let Po = P + N * 0.01;
-  for (var i = 0u; i < frame.numLights; i++) {
+  var at = lightsAt(P);
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = lights[i];
     if (!includeTransient && lightTransient(li)) { continue; }
     if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { continue; }   // (an infrared light likewise, whatever includeTransient says)   // a lamp that is lit only in the fog's picture (lights.ts RtLight.fogGhost) gives the cascades nothing
-    if (!lightReaches(i, P)) { continue; }   // walled off from this cell (reach.ts): neither scored nor traced
     let ev = evalLight(li, P, N);
     if (!ev.ok) { continue; }
     if (max(ev.E.x, max(ev.E.y, ev.E.z)) < minE) { continue; }   // too dim to be worth a ray at a secondary vertex: dropped (half-crediting it unshadowed leaked far panels through walls once their range grew)

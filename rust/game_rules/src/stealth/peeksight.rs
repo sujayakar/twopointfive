@@ -3,7 +3,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// The player's eye while he peeks round the end of a wall, in place of his own (`own`), or None: no hold, no peek in.
-pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
+pub(super) fn peek_eye(g: &crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
     let pl = g.player;
     let w = g.pl[pl].wall?;
     if !(w.peek > 0.0) || crate::condition::down(g, g.pl[pl].ch) { return None; }

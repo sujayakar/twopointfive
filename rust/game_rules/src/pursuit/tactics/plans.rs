@@ -484,7 +484,7 @@ fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
 }
 
 /// nobody else of his side is alert (and free): he is on his own with it
-fn alone(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn alone(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.guards.iter().any(|&o| o != gd && g.team(o) == g.team(gd) && g.gd[o].state == crate::game::GuardState::Alert && g.gd[o].held.is_none() && !g.gd[o].hold)
 }
 
@@ -748,7 +748,7 @@ pub fn tactics_tick(g: &mut crate::game::Game) {
 }
 
 /// which face of d the point is on (+1 = the +n side of the closed frame line)
-pub(super) fn side_of(g: &mut crate::game::Game, d: DoorId, p: V3) -> f64 {
+pub(super) fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     let f = crate::guards::frame_of(g, d);
     if (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz >= 0.0 { 1.0 } else { -1.0 }
 }
@@ -767,7 +767,7 @@ pub(super) fn door_pt(g: &crate::game::Game, d: DoorId, a: f64, b: f64, sg: f64,
 }
 
 /// the level's clear plan for this door from side sg with its stack past the jamb at `near_a`
-pub(super) fn plan_for(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::scene_level::RoomClearPlan> {
+pub(super) fn plan_for(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64) -> Option<crate::scene_level::RoomClearPlan> {
     let n = g.level.clear_plans.as_ref().map_or(0, |v| v.len());
     for i in 0..n {
         let (same_door, stack0) = {
@@ -790,7 +790,7 @@ pub(super) fn plan_for(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f6
 }
 
 /// where the k-th man (0 lead, 1 second) stacks, and the facing there
-fn stack_spot(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> crate::tactics::StackSpot {
+fn stack_spot(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> crate::tactics::StackSpot {
     let out = if near_a <= 0.0 { -1.0 } else { 1.0 }; // which way along the frame line the wall runs from the near jamb
     let jamb = door_pt(g, d, near_a, STACK_OFF_M, sg, None);
     let face_of = |p: V3| m::atan2(jamb[0] - p[0], jamb[2] - p[2]);
@@ -848,7 +848,7 @@ pub(super) fn slice_stations(g: &crate::game::Game, d: DoorId, sg: f64, near_a: 
 }
 
 /// the entry legs for man k: the plan's beyond the frame line, else a stride and a half in and a leg to his side
-pub(super) fn entry_legs(g: &mut crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> Vec<V3> {
+pub(super) fn entry_legs(g: &crate::game::Game, d: DoorId, sg: f64, near_a: f64, k: f64, plan: Option<&crate::scene_level::RoomClearPlan>) -> Vec<V3> {
     let f = crate::guards::frame_of(g, d);
     let w = g.dr[d].def.width;
     if let Some(plan) = plan {

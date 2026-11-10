@@ -17,14 +17,14 @@ fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().get(String
 
 // ---- the layers of rust/sim (args: their numbers already on the bench)
 
-// ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers.rs gives)
+// ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers gives)
 
 // ---- the crouch's lay
 
 /// the crouch over the stand pose: its numbers onto the bench and the layer
 pub(super) fn anim_crouch_laid_ask(g: &mut crate::game::Game, c: CharId, ph: f64, w_move: f64, crouch_pose: f64) {
     let (idle, fwd) = (clip_of(g, c, "Crouch_Idle_Loop"), clip_of(g, c, "Crouch_Fwd_Loop"));
-    let (idle_t, fwd_t) = (g.ch[c].anim.idle_t, ph * g.tab.clip[fwd].duration);
+    let (idle_t, fwd_t) = (g.ch[c].anim.idle_t, ph * g.art.clip[fwd].duration);
     let (idle, fwd) = (clip_at(g, c, idle, idle_t), clip_at(g, c, fwd, fwd_t));
     anim_layer(g, c, |s, an, _| ::sim::layers::crouch_pose(s, an, w_move, crouch_pose, idle, fwd));
 }
@@ -75,7 +75,7 @@ pub(super) fn anim_steady_layer(g: &mut crate::game::Game, c: CharId, w: f64, ba
     if g.ch[c].anim.steady_mean.is_none() {
         let (thigh_l, thigh_r, hips) = { let nd = &g.ch[c].anim.nodes; (nd.thigh_l, nd.thigh_r, nd.hips) };
         let clip = clip_of(g, c, "Crouch_Fwd_Loop");
-        let dur = g.tab.clip[clip].duration;
+        let dur = g.art.clip[clip].duration;
         let nn = 24.0;
         let (mut roll, mut x) = (0.0, 0.0);
         let mut i = 0.0;

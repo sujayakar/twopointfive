@@ -26,7 +26,7 @@ fn support(g: &crate::game::Game, d: DoorId, tip: f64) -> f64 {
 }
 
 /// Does a floor rectangle cut into a static standing in the heights [y0, y1]?
-fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
+fn overlaps(g: &crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
     let (ux, uz, su, sn) = (m::cos(a), m::sin(a), hu - 0.012, hn - 0.012);
     let ex = m::abs(ux) * hu + m::abs(uz) * hn;
     let ez = m::abs(uz) * hu + m::abs(ux) * hn;
@@ -90,7 +90,7 @@ pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f6
 }
 
 /// The leaves a blast would take off, each with its strength there, asked without touching anything.
-pub fn door_blast_reach(g: &mut crate::game::Game, at: V3, tear_m: f64) -> Vec<crate::doorblast::DoorBlastReachItem> {
+pub fn door_blast_reach(g: &crate::game::Game, at: V3, tear_m: f64) -> Vec<crate::doorblast::DoorBlastReachItem> {
     let mut out = Vec::new();
     if !(tear_m > 0.0) {
         return out;
@@ -119,7 +119,7 @@ pub fn door_blast_reach(g: &mut crate::game::Game, at: V3, tear_m: f64) -> Vec<c
 }
 
 /// Has the blast a line to the leaf that no wall is in (the leaves themselves are not walls to it).
-fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
+fn reaches(g: &crate::game::Game, d: DoorId, at: V3) -> bool {
     let [hx, hz] = g.dr[d].def.hinge;
     let w = g.dr[d].def.width;
     let u = crate::doors::door_dir(g, d);

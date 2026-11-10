@@ -133,7 +133,9 @@ impl Play {
     /// one frame of the host; what the step told its host is kept (`said`, `sounds`)
     pub fn frame(&mut self) { self.frame_shown(|_| {}); }
     /// …with what a host does between the tick and the emptying of its out list: draws, as a page does, while `g.out` still holds what was told
-    pub fn frame_shown(&mut self, show: impl FnOnce(&mut Play)) {
+    pub fn frame_shown(&mut self, show: impl FnOnce(&mut Play)) { self.frame_watched(&mut |_, _| (), show); }
+    /// …with `after` told each step of the tick as it ends
+    pub fn frame_watched(&mut self, after: game::game::Watch, show: impl FnOnce(&mut Play)) {
         use game::out_events::OutEvent as E;
         if let Some(at) = self.cursor {
             let (w, h) = (self.host.canvas.client_width, self.host.canvas.client_height);
@@ -141,7 +143,7 @@ impl Play {
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
         self.hold_legs();
-        stand::step(&mut self.g, &self.host, DT);
+        stand::step_watched(&mut self.g, &self.host, DT, after);
         let asked = game::savestate::control::asked(&self.g.out);
         let told = game::savestate::control::after_step(&mut self.g, DT, asked);
         if told.kept.is_some() || told.back || told.said.is_some() { self.told.push(told); }

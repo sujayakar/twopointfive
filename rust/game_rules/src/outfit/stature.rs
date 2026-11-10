@@ -30,7 +30,7 @@ fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if crate::character::is_player(g, c_2) { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
-    let name = g.tab.anim_gltf_cast_variant[v].name.clone();
+    let name = g.art.variant[v].name.clone();
     let s = stature().get(name).copied().unwrap_or(1.0) + (hash01(g.ch[c_2].id) * 2.0 - 1.0) * t.jitter;
     m::round(m::min(t.max, m::max(t.min, s)) * 1000.0) / 1000.0
 }
@@ -44,7 +44,7 @@ fn paired(g: &crate::game::Game, c_2: CharId) -> bool {
 
 /// Once a frame, before anything of the men is drawn: every man's scale for this frame. False with no cast loaded.
 pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool {
-    if g.tab.rig[g.rig].cast.is_none() { return false; }
+    if g.art.rig[g.rig].cast.is_none() { return false; }
     for &c in men {
         let want = if paired(g, c) { 1.0 } else { stature_base(g, c) };
         match g.m.stature.shown.get(c).copied() {

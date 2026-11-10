@@ -59,7 +59,7 @@ pub fn legs_near(pos: V3, legs: &[crate::aimcost::RoundLeg]) -> f64 {
 }
 
 /// The feet a man's hands still remember: the fastest he has gone, let go over `stop_tau` (and to nothing: `stop_bleed`).
-pub fn feet_hold(g: &mut crate::game::Game, prev: f64, speed: f64, dt: f64) -> f64 {
+pub fn feet_hold(g: &crate::game::Game, prev: f64, speed: f64, dt: f64) -> f64 {
     let kept = prev * m::exp(-dt / m::max(g.k.aimcost.stop_tau, 1e-3)) - g.k.aimcost.stop_bleed * dt;
     let v = m::max(speed, kept);
     if v.is_finite() && v > 1e-4 { v } else { 0.0 }

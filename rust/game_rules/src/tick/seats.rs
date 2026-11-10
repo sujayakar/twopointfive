@@ -324,7 +324,7 @@ pub(super) fn stand_men(g: &mut crate::game::Game) {
 }
 
 /// where seat `i`'s man stands when the first stands on `at`
-pub(super) fn spot_beside(g: &mut crate::game::Game, at: V3, i: f64) -> V3 {
+pub(super) fn spot_beside(g: &crate::game::Game, at: V3, i: f64) -> V3 {
     if !js::truthy(i) { return at; }
     let apart = g.k.seats.apart;
     for k in 0..8 {
@@ -562,7 +562,7 @@ pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Guar
 }
 
 /// a seat's share of what the squad brings, for the seat the pass is about
-pub fn seat_share(g: &mut crate::game::Game, n: f64) -> f64 {
+pub fn seat_share(g: &crate::game::Game, n: f64) -> f64 {
     if one_book(g) { return n; }
     let me = g.tab.cmd_seat[g.seat].index;
     let (mut lo, mut mine, mut all) = (0.0, 0.0, 0.0);

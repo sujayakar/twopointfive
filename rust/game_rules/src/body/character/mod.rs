@@ -8,6 +8,8 @@ pub mod tables;
 pub use tables::*;
 pub mod begin;
 pub use begin::*;
+mod stages;
+use stages::*;
 pub mod update;
 pub use update::*;
 pub mod hands_and_reload;

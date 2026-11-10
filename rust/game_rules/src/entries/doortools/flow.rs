@@ -10,15 +10,13 @@ use crate::v3::dist_xz as flat;
 
 // ---- small reads
 
-/// `SR` of the TypeScript's methods, a row shared by the orders in one room. Let go before the next call that takes `g`
-fn search(g: &mut Game, sr: DoortoolsRoomSearchId) -> &mut RoomSearch { &mut g.tab.doortools_room_search[sr] }
 /// a point as this file deals one: `{ pos, face }`
 fn pod_at(pos: V3, face: f64) -> crate::entrypoints::Pod { crate::entrypoints::Pod { pos, face, watch: None, moved: false } }
 
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn has_over(g: &Game, gd: GuardId) -> bool { g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some()) }
 /// S.of(m)?.post ?? m.char.pos
-fn where_of(g: &mut Game, m: GuardId) -> V3 {
+fn where_of(g: &Game, m: GuardId) -> V3 {
     let post = crate::orders::squad_orders_of(&crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
     post.unwrap_or_else(|| pos_of(g, m))
 }
@@ -36,7 +34,7 @@ fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: 
     let leans = g.gd[gd].script.as_ref().and_then(|s| s.lean).map_or(false, js::truthy);
     let hd: Option<V3> = if leans { g.ch[c].bones.get(crate::character::Bone::Head).copied() } else { None };
     let p = hd.unwrap_or(g.ch[c].pos);
-    let s = search(g, sr);
+    let s = &mut g.tab.doortools_room_search[sr];
     let stale = match s.los.get(gd) {
         None => true,
         Some(l) => flat(l.at, p) > 0.35 || match hd { Some(h) => m::abs(l.at[1] - h[1]) > 0.2, None => l.at[1] != p[1] },
@@ -49,9 +47,9 @@ fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: 
     let (at, known) = { let l = s.los.get(gd).unwrap(); (l.at, l.ok[i]) };
     if known < 0 {
         let blocked = crate::scene_collision::segment_blocked(g, [at[0], if hd.is_some() { at[1] } else { 1.55 }, at[2]], q, None, None, None);
-        search(g, sr).los.get_mut(gd).unwrap().ok[i] = if blocked { 0 } else { 1 };
+        g.tab.doortools_room_search[sr].los.get_mut(gd).unwrap().ok[i] = if blocked { 0 } else { 1 };
     }
-    search(g, sr).los.get(gd).unwrap().ok[i] == 1
+    g.tab.doortools_room_search[sr].los.get(gd).unwrap().ok[i] == 1
 }
 
 /// every cell a man's muzzle is on this frame is looked at
@@ -64,9 +62,9 @@ pub(super) fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
         if (!outside && door_tools_in_at(g, op, gd).is_nan()) || crate::control::man::blind(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let p = g.ch[c].pos;
-        let n = search(g, sr).pts.len();
+        let n = g.tab.doortools_room_search[sr].pts.len();
         for i in 0..n {
-            let (seen, q) = { let s = search(g, sr); (s.looked[i] != 0, s.pts[i]) };
+            let (seen, q) = { let s = &g.tab.doortools_room_search[sr]; (s.looked[i] != 0, s.pts[i]) };
             if seen { continue; }
             let (dx, dz) = (q[0] - p[0], q[2] - p[2]);
             let dd = dx * dx + dz * dz;
@@ -74,7 +72,7 @@ pub(super) fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
             if (outside || dd > 1.44)
                 && (m::abs(v3::wrap_angle(m::atan2(dx, dz) - g.ch[c].aim_yaw)) > look_rad || !door_tools_line_to(g, sr, gd, i as f64)) { continue; }
             if let Some(f) = ok.as_mut() { if !f(g, gd, i as f64) { continue; } }
-            let s = search(g, sr);
+            let s = &mut g.tab.doortools_room_search[sr];
             s.looked[i] = 1;
             s.left -= 1.0;
         }
@@ -86,7 +84,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
     let (look_m, scan_rate, now) = (g.k.doortools.look_m, g.k.doortools.scan_rate, g.time);
     let c = g.gd[gd].ch;
     let (p, aim) = (g.ch[c].pos, g.ch[c].aim_yaw);
-    let s = search(g, sr);
+    let s = &mut g.tab.doortools_room_search[sr];
     let was = s.at.get(gd).copied().unwrap_or(now);
     let dt = v3::clamp(now - was, 0.0, 0.05);
     s.at.set(gd, now);
@@ -94,7 +92,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
     let n = s.pts.len();
     let (mut best, mut bd, mut by) = (-1i64, f64::INFINITY, 0.0);
     for i in 0..n {
-        let (seen, q) = { let s = search(g, sr); (s.looked[i] != 0, s.pts[i]) };
+        let (seen, q) = { let s = &g.tab.doortools_room_search[sr]; (s.looked[i] != 0, s.pts[i]) };
         if seen { continue; }
         let (dx, dz) = (q[0] - p[0], q[2] - p[2]);
         if dx * dx + dz * dz > look_m * look_m || !door_tools_line_to(g, sr, gd, i as f64) { continue; }
@@ -102,10 +100,10 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
         let turn = m::abs(v3::wrap_angle(y - y0));
         if turn < bd { bd = turn; best = i as i64; by = y; }
     }
-    if best < 0 { search(g, sr).yaw.delete(gd); return false; }
+    if best < 0 { g.tab.doortools_room_search[sr].yaw.delete(gd); return false; }
     if has_over(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
     let yaw = y0 + v3::clamp(v3::wrap_angle(by - y0), -scan_rate * dt, scan_rate * dt);
-    search(g, sr).yaw.set(gd, yaw);
+    g.tab.doortools_room_search[sr].yaw.set(gd, yaw);
     let row = &mut g.tab.orders_assignment[a];
     row.watch = Some([p[0] + m::sin(yaw) * 5.0, 1.1, p[2] + m::cos(yaw) * 5.0]);
     row.face = Some(yaw);
@@ -114,7 +112,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
 }
 
 /// how far it is from `a` to `b` on foot; Infinity past `lim` or with no way
-fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) -> f64 {
+fn door_tools_walk_len(g: &crate::game::Game, a: V3, b: V3, lim: f64) -> f64 {
     let d = flat(a, b);
     if d > lim { return f64::INFINITY; }
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) { return d; }
@@ -135,7 +133,7 @@ fn walk_key(a: V3, b: V3) -> String {
 }
 
 /// the call of what walks answers: a pair of places measured once a deal
-fn door_tools_walks_len(g: &mut crate::game::Game, w: &mut crate::doortools::Walks, a: V3, b: V3) -> f64 {
+fn door_tools_walks_len(g: &crate::game::Game, w: &mut crate::doortools::Walks, a: V3, b: V3) -> f64 {
     let Walks::Memo { memo, lim } = w;
     let key = walk_key(a, b);
     if let Some(l) = memo.get(key.clone()) { return *l; }
@@ -315,7 +313,7 @@ fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
 /// is this room's floor one the whole-room rule works? A room past the size is said once an order
 pub(super) fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool {
     let flow_max = g.k.doortools.flow_max;
-    let cells = search(g, sr).pts.len();
+    let cells = g.tab.doortools_room_search[sr].pts.len();
     if !(flow_max > 0.0) || cells as f64 <= flow_max { return true; }
     if !g.sets[g.seat].door_tools.big_said.has(op) {
         g.sets[g.seat].door_tools.big_said.add(op);
@@ -356,21 +354,21 @@ struct FlowCand { p: V3, sc: f64, d: f64 }
 /// DOORTOOLS.flowOn: the biggest piece of the floor nobody has looked at is gone INTO. True when men were sent
 fn door_tools_flow_in(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[GuardId]) -> bool {
     let flow_moves = g.k.doortools.flow_moves;
-    if search(g, sr).flows.unwrap_or(0.0) >= flow_moves { return false; }
-    if search(g, sr).cell_at.is_none() {
+    if g.tab.doortools_room_search[sr].flows.unwrap_or(0.0) >= flow_moves { return false; }
+    if g.tab.doortools_room_search[sr].cell_at.is_none() {
         let cs = g.col.nav.cell;
-        let pts = search(g, sr).pts.clone();
+        let pts = g.tab.doortools_room_search[sr].pts.clone();
         let mut at: JsMap<crate::Num, f64> = JsMap::new();
         for i in 0..pts.len() {
             let k = crate::scene_collision::nav_grid_idx(g, m::floor(pts[i][0] / cs), m::floor(pts[i][2] / cs));
             at.set(crate::Num(k), i as f64);
         }
-        search(g, sr).cell_at = Some(at);
+        g.tab.doortools_room_search[sr].cell_at = Some(at);
     }
     // (lent out for the body: the closures hand it about while `g` is lent to their callees. Only flowIn ever reads it)
-    let at = search(g, sr).cell_at.take().unwrap();
+    let at = g.tab.doortools_room_search[sr].cell_at.take().unwrap();
     let r = flow_in_body(g, op, sr, men, &at);
-    search(g, sr).cell_at = Some(at);
+    g.tab.doortools_room_search[sr].cell_at = Some(at);
     r
 }
 
@@ -381,7 +379,7 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
         (k.flow_cells, k.flow_bound, k.flow_reach, k.flow_deep, k.flow_moves, k.look_m, k.pod_apart, k.buddy_m)
     };
     // (`pts` never changes once made, and nothing in here looks at floor)
-    let (pts, looked) = { let s = search(g, sr); (s.pts.clone(), s.looked.clone()) };
+    let (pts, looked) = { let s = &g.tab.doortools_room_search[sr]; (s.pts.clone(), s.looked.clone()) };
     let n4 = crate::doortools::n4();
     // the unseen floor in pieces (cells that touch by a side): the biggest
     let mut mark = vec![0u8; pts.len()];
@@ -554,17 +552,17 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             pods.push((gd, pod_at([p1[0], 0.0, p1[2]], face_of(&pts, &part, mid, p1, None))));
         }
         {
-            let s = search(g, sr);
+            let s = &mut g.tab.doortools_room_search[sr];
             s.flows = Some(s.flows.unwrap_or(0.0) + 1.0);
             s.left_at_move = if into { s.left } else { f64::INFINITY };
         }
         for (who, mut pod) in pods {
             crate::entrypoints::entry_points_dealt(g, pod, None);
-            search(g, sr).yaw.delete(who);
+            g.tab.doortools_room_search[sr].yaw.delete(who);
             door_tools_send_on(g, op, who, &mut pod, "clearing the room");
         }
-        if search(g, sr).flow_said != Some(true) {
-            search(g, sr).flow_said = Some(true);
+        if g.tab.doortools_room_search[sr].flow_said != Some(true) {
+            g.tab.doortools_room_search[sr].flow_said = Some(true);
             crate::game::game_say(g, gd, "pushing through.", None, None);
         }
         let with = match mate { Some(x) => format!(" with {}", g.gd[x].callsign), None => String::new() };
@@ -573,7 +571,7 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
         return true;
     }
     // refused for the walk it would be from the men who stay: THEY CLOSE UP on the man at the front, and the walk is asked again from there
-    if far && search(g, sr).closes.unwrap_or(0.0) < flow_moves {
+    if far && g.tab.doortools_room_search[sr].closes.unwrap_or(0.0) < flow_moves {
         let own = crate::orders::squad_orders_pair_of(g, lead);
         let mut taken: Vec<V3> = Vec::new();
         for who in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) { if !crate::condition::down(g, g.gd[who].ch) { taken.push(where_(g, who)); } }
@@ -598,13 +596,13 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             }
             taken.push(pod.pos);
             crate::entrypoints::entry_points_dealt(g, pod, None);
-            search(g, sr).yaw.delete(mm);
+            g.tab.doortools_room_search[sr].yaw.delete(mm);
             door_tools_send_on(g, op, mm, &mut pod, "closing up");
             who.push(g.gd[mm].callsign.clone());
             n += 1;
         }
         if n > 0 {
-            let s = search(g, sr);
+            let s = &mut g.tab.doortools_room_search[sr];
             s.closes = Some(s.closes.unwrap_or(0.0) + 1.0);
             s.left_at_move = f64::INFINITY;
             let said = format!("close up:{} · on {}", who.join(", "), g.gd[lead].callsign);
@@ -627,11 +625,11 @@ struct MoveCand { i: usize, p: V3, sc: f64 }
 pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool {
     let (dead_cells, search_moves, look_m, pod_apart) = { let k = &g.k.doortools; (k.dead_cells, k.search_moves, k.look_m, k.pod_apart) };
     let flowing = door_tools_flows(g, op, sr);
-    let (left, moves, left_at_move) = { let s = search(g, sr); (s.left, s.moves, s.left_at_move) };
+    let (left, moves, left_at_move) = { let s = &g.tab.doortools_room_search[sr]; (s.left, s.moves, s.left_at_move) };
     if left < dead_cells || (!flowing && moves >= search_moves) { return false; }
     if left > left_at_move - 3.0 { return false; }
     // (`pts` never changes once made)
-    let (pts, looked, room) = { let s = search(g, sr); (s.pts.clone(), s.looked.clone(), s.room) };
+    let (pts, looked, room) = { let s = &g.tab.doortools_room_search[sr]; (s.pts.clone(), s.looked.clone(), s.room) };
     let mut dead: Vec<V3> = Vec::new();
     for i in 0..pts.len() { if looked[i] == 0 { dead.push(pts[i]); } }
     let mut mid: V3 = [0.0, 0.0, 0.0];
@@ -647,7 +645,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
     let men: Vec<GuardId> = by.iter().map(|x| x.0).collect();
     if flowing {
         if door_tools_flow_in(g, op, sr, &men) { return true; }
-        if search(g, sr).moves >= search_moves { return false; }
+        if g.tab.doortools_room_search[sr].moves >= search_moves { return false; }
     }
     let sd = core::cmp::max(1, dead.len() / 40);
     let sp = core::cmp::max(1, pts.len() / 80);
@@ -713,7 +711,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         if swap { crate::entrypoints::entry_points_swapped(&mut pod); }
         crate::entrypoints::entry_points_dealt(g, pod, None);
         {
-            let s = search(g, sr);
+            let s = &mut g.tab.doortools_room_search[sr];
             s.yaw.delete(gd);
             s.moves += 1.0;
             s.left_at_move = s.left;
@@ -721,7 +719,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         door_tools_send_on(g, op, gd, &mut pod, "clearing the room");
         if let Some(PointMate::With(x, mut xp)) = mates.get(chosen.i).copied() {
             crate::entrypoints::entry_points_dealt(g, xp, None);
-            search(g, sr).yaw.delete(x);
+            g.tab.doortools_room_search[sr].yaw.delete(x);
             door_tools_send_on(g, op, x, &mut xp, "clearing the room");
             let said = format!("on:{} with {}", g.gd[gd].callsign, g.gd[x].callsign);
             door_tools_beat(g, op, &said);
@@ -763,7 +761,7 @@ pub(super) fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n
 }
 
 /// the points before entrypoints.ts looks at them
-pub fn door_tools_pods_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
+pub fn door_tools_pods_as_were(g: &crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
     let n = n.unwrap_or(2.0);
     let mut out = door_tools_pods2(g, d, side);
     if n <= 2.0 || out.is_empty() { return out; }
@@ -794,7 +792,7 @@ pub fn door_tools_pods_as_were(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// podsAsWere: fits
-fn pods_fit(g: &mut Game, d: DoorId, mid: V3, p: V3, out: &[crate::entrypoints::Pod]) -> bool {
+fn pods_fit(g: &Game, d: DoorId, mid: V3, p: V3, out: &[crate::entrypoints::Pod]) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2])
         && !crate::scene_collision::solid_blocked(g, mid, [p[0], 0.45, p[2]], None)
         && !out.iter().any(|o| flat(o.pos, p) < 0.9)
@@ -822,7 +820,7 @@ pub(super) fn door_tools_in_frame(g: &crate::game::Game, d: DoorId, mid: V3, p: 
 }
 
 /// the two deep points: the level's clear plan when authored from that face, else the first free floor to either hand
-fn door_tools_pods2(g: &mut crate::game::Game, d: DoorId, side: f64) -> Vec<crate::entrypoints::Pod> {
+fn door_tools_pods2(g: &crate::game::Game, d: DoorId, side: f64) -> Vec<crate::entrypoints::Pod> {
     let w = g.dr[d].def.width;
     let into = -side;
     let name = g.dr[d].def.name.clone();
@@ -969,7 +967,7 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// THE SQUAD OF FOUR, a pair going in: its points kept `podApart` clear of the other order's men and of any teammate posted inside
-pub(super) fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pods: &[crate::entrypoints::Pod], n: f64) -> Vec<crate::entrypoints::Pod> {
+pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &[crate::entrypoints::Pod], n: f64) -> Vec<crate::entrypoints::Pod> {
     let pod_apart = g.k.doortools.pod_apart;
     let (door, side) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side) };
     let mut taken: Vec<V3> = Vec::new();

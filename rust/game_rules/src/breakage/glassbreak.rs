@@ -136,14 +136,14 @@ fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment
 }
 
 /// a pane's frame, for what the host still makes of a fragment
-fn glass_break_geom(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::PaneFrame {
+fn glass_break_geom(g: &crate::game::Game, bi: f64) -> crate::glassbreak::PaneFrame {
     let box_ = box_at(g, bi).unwrap();
     let st = row_at(g, bi);
     PaneFrame { key: st.key as f64, u_axis: if st.u_axis == 0 { 0.0 } else { 2.0 }, ht: st.ht, box_ }
 }
 
 /// pane-local (u, v) → world
-fn glass_break_world(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, u: f64, v_2: f64, w: Option<f64>) -> V3 {
+fn glass_break_world(g: &crate::game::Game, v: crate::glassbreak::PaneFrame, u: f64, v_2: f64, w: Option<f64>) -> V3 {
     let (yaw, c) = { let b = &g.tab.boxes[v.box_]; (b.yaw, b.c) };
     world_on(yaw, c, v.u_axis, u, v_2, w.unwrap_or(0.0))
 }

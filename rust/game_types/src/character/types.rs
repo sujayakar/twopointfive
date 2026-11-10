@@ -1461,9 +1461,7 @@ pub struct Gaze {
 pub struct Life {
     pub on: f64,
     pub breath_rate: f64,
-    pub breath_rate_run: f64,
     pub breath_amp: f64,
-    pub breath_amp_run: f64,
     pub mass_gain: f64,
     pub mass_back: f64,
     pub mass_fwd: f64,
@@ -2484,7 +2482,7 @@ pub static GAZE_EL: crate::character::GazeEl = crate::character::GazeEl { stand:
 
 pub static GAZE: crate::character::Gaze = crate::character::Gaze { keep: 0.8, yaw_damp: 0.7 };
 
-pub static LIFE: crate::character::Life = crate::character::Life { on: 1.0, breath_rate: 0.25, breath_rate_run: 0.62, breath_amp: 1.0, breath_amp_run: 2.6, mass_gain: 0.011, mass_back: 0.035, mass_fwd: 0.03, mass_dip: 0.004, mass_dip_max: 0.025, tip_gain: 0.9, tip_back: 5.0, tip_fwd: 6.0, rest_after: 1.6, shift_min: 4.0, shift_span: 5.0, shift_travel: 0.028, shift_in: 3.2, shift_out: 9.0, hip_drop: 2.2, spine_counter: 1.4, neck_counter: 0.6 };
+pub static LIFE: crate::character::Life = crate::character::Life { on: 1.0, breath_rate: 0.25, breath_amp: 1.0, mass_gain: 0.011, mass_back: 0.035, mass_fwd: 0.03, mass_dip: 0.004, mass_dip_max: 0.025, tip_gain: 0.9, tip_back: 5.0, tip_fwd: 6.0, rest_after: 1.6, shift_min: 4.0, shift_span: 5.0, shift_travel: 0.028, shift_in: 3.2, shift_out: 9.0, hip_drop: 2.2, spine_counter: 1.4, neck_counter: 0.6 };
 
 pub const TOE_FLOOR_Y: f64 = 0.0147;
 

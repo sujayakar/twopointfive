@@ -23,7 +23,7 @@ static LINES: [(crate::darkdoor::LineKind, Pool, Pool, Pool); 6] = [
 fn fresh_fear() -> crate::darkdoor::Fear {
     crate::darkdoor::Fear { act: DarkDoorAct::None, t: 0.0, door: -1.0, side: 1.0, spot: None, at: false, other: None, called: false, call_t: 0.0, tried: Vec::new(), left: -1e9, told: false, lag: 0.0, armed: -1.0, arm_t: -1e9, quits: Vec::new(), pass: Vec::new(), said: 0.0, idle: 0.0, ask: 0.0 }
 }
-fn pos_of(g: &mut Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
+fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// `g.doors.list[i]`: a door's index in the level's list, -1 being none
 fn door_at(g: &Game, door: f64) -> Option<DoorId> {
     if door < 0.0 { return None; }
@@ -86,13 +86,13 @@ fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// nobody's but his own.
-fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn own(g: &crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
     x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !crate::mission::leads(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.
-fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn able(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || !ours(g, gd) || !alarmed(g, gd) { return false; }
     !g.gd[gd].trained && own(g, gd)
 }
@@ -108,7 +108,7 @@ fn fight_walk(g: &crate::game::Game, gd: GuardId) -> crate::darkdoor::FightWalk 
 }
 
 /// free to come to a mate, or to go in with one.
-fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
+fn can_come(g: &crate::game::Game, o: GuardId) -> bool {
     if !ours(g, o) { return false; }
     let st = g.gd[o].state;
     if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::owner::has(g, o, crate::owner::by::NEEDS) { return false; }
@@ -246,12 +246,12 @@ fn stands_lit(g: &mut crate::game::Game, gd: GuardId, r: crate::darkdoor::Stands
 }
 
 /// an open doorway: the leaf off its hinges, or standing `openRad` off its frame.
-fn open(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn open(g: &crate::game::Game, d: DoorId) -> bool {
     g.dr[d].leaf.off || (!g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.darkdoor.open_rad)
 }
 
 /// the next doorway on his walk inside `reach` metres of path.
-fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<crate::darkdoor::DoorAhead> {
+fn door_ahead(g: &crate::game::Game, gd: GuardId, reach: f64) -> Option<crate::darkdoor::DoorAhead> {
     let mut run = 0.0;
     let mut a = pos_of(g, gd);
     let mut i = g.gd[gd].path_i;
@@ -279,7 +279,7 @@ fn door_ahead(g: &mut crate::game::Game, gd: GuardId, reach: f64) -> Option<crat
 }
 
 /// where he waits: short of the frame, off the middle of the opening; None = nowhere but where he stands.
-fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
+fn stand_spot(g: &crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let k = g.k.darkdoor;
     let f = crate::guards::frame_of(g, d);
     let p = pos_of(g, gd);

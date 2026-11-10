@@ -133,9 +133,8 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
         words: address.as_ref().map(|q| kit.as_ref().map_or_else(|| q.clone(), crate::kit_stage::mission_words)),
         scenario: o.scenario.clone(),
     };
-    // the die BEFORE the Game is made: its constructor rolls the men's construction dice
-    // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
-    g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
+    // (the seed before the men: what they are dealt is drawn under it)
+    g.dice = game::dice::Draws { seed: o.seed, n: 0.0 };
     // (THE LEVEL AS IT STANDS BEFORE THE MEN: what a restart stands them on again)
     game::savestate::control::keep_level(&mut g, &men);
     let why = game::standing::stand_men(&mut g, &men);
@@ -162,8 +161,10 @@ pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent>
     core::mem::take(&mut g.out)
 }
 /// …the same with what the step told its host still on the game (`g.out`), for a host that draws before it empties the list, as a page does
-pub fn step(g: &mut Game, h: &Host, dt: f64) {
-    game::game::game_update(g, dt, h.input, h.cam, h.canvas);
+pub fn step(g: &mut Game, h: &Host, dt: f64) { step_watched(g, h, dt, &mut |_, _| ()) }
+/// …with `after` told each step of the tick as it ends
+pub fn step_watched(g: &mut Game, h: &Host, dt: f64, after: game::game::Watch) {
+    game::game::game_update_watched(g, dt, h.input, h.cam, h.canvas, after);
     let me = game::game::game_host_seat(g);
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.sets[g.seat].aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };

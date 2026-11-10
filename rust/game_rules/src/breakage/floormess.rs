@@ -56,7 +56,7 @@ fn takes(b: &WorldBox) -> bool {
     js::to_u32(b.flags) & js::to_u32(f.no_primary + f.no_shadow) == 0 && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0.0
 }
 /// how far a film centred here may reach: to the nearest thing STANDING (any static whose span meets the band from waist to head height), measured to the box itself, and `want` at most. 0 = the centre is inside one.
-fn fit(g: &mut Game, x: f64, z: f64, want: f64) -> f64 {
+fn fit(g: &Game, x: f64, z: f64, want: f64) -> f64 {
     let k = g.k.chaos.mess;
     let mut near = alloc::vec![0i32; NEAR];
     let n = crate::scene_collision::gather(g, x - want, z - want, x + want, z + want, k.stand_y, k.clear_y, &mut near);

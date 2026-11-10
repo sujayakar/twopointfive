@@ -60,14 +60,14 @@ pub fn doze_mark(g: &crate::game::Game, gd: GuardId) -> &'static str {
     if b < 1.0 / 3.0 { "z" } else if b < 2.0 / 3.0 { "zZ" } else { "zZz" }
 }
 /// the run is one a man may doze in
-pub fn live(g: &mut crate::game::Game) -> bool {
+pub fn live(g: &crate::game::Game) -> bool {
     g.ai_enabled && !crate::seats::all_down(g)
         && g.level.lesson().is_none()
         && crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode
         && !g.light_home.mains.active
 }
 /// a staff man on a calm patrol with nothing on his mind or in his hands
-fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn calm(g: &crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
     g.ch[m.ch].team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
         && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
@@ -117,7 +117,7 @@ fn blank(phase: crate::doze::Phase, wp: f64, t: f64) -> crate::doze::Doze {
 }
 
 /// the length of his walk on the grid, infinite with no path
-fn walk_len(g: &mut crate::game::Game, from: &[f64], to: V3) -> f64 {
+fn walk_len(g: &crate::game::Game, from: &[f64], to: V3) -> f64 {
     crate::places::on_foot(g, [from[0], from[1], from[2]], to)
 }
 /// in the chair
@@ -529,7 +529,7 @@ fn own_side_owns(g: &Game, owner: f64, team: crate::teams::Team) -> bool {
     g.guards.iter().any(|&x| g.ch[g.gd[x].ch].id == owner && g.team(x) == team)
 }
 /// where the light on his face comes from: the nearest carried lamp of another side through clear air, else his own spot
-fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 {
+fn lamp_on(g: &crate::game::Game, gd: GuardId, head: V3) -> V3 {
     let mut best: Option<V3> = None;
     let mut bd = 14.0;
     let me = g.ch[g.gd[gd].ch].id;

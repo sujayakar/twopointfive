@@ -46,12 +46,12 @@ fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
 }
 
 /// A ray at the level's own boxes, the leaves aside.
-fn wall_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
+fn wall_ray(g: &crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     crate::scene_collision::raycast_over(g, &crate::ask::Over::statics(), ro, rd, tmax)
 }
 
 /// A WALL under the ray: not glass, not a leaf, standing to above a door's head.
-fn solid(g: &mut Game, h: &Option<Ray>) -> bool {
+fn solid(g: &Game, h: &Option<Ray>) -> bool {
     let Some(h) = h else { return false };
     if h.index >= 1e6 { return false; }
     let (c, half, flags) = seam_level_box(g, h.index as usize);
@@ -230,7 +230,7 @@ pub fn wall_switches(g: &mut crate::game::Game) -> Vec<crate::lightswitch::WallS
 }
 
 /// `all.filter(sw => wallStands(g, sw))`
-fn standing(g: &mut Game, all: &[WallSwitch]) -> Vec<WallSwitch> {
+fn standing(g: &Game, all: &[WallSwitch]) -> Vec<WallSwitch> {
     let mut list = Vec::new();
     for sw in all {
         if wall_stands(g, sw) { list.push(sw.clone()); }
@@ -239,12 +239,12 @@ fn standing(g: &mut Game, all: &[WallSwitch]) -> Vec<WallSwitch> {
 }
 
 /// The level's geometry serial, moved by every wall blown and by a load that puts one back.
-fn geom_serial(g: &mut crate::game::Game) -> f64 {
+fn geom_serial(g: &crate::game::Game) -> f64 {
     g.engine.world.geom_serial
 }
 
 /// Is the wall a plate was hung on still behind it.
-fn wall_stands(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
+fn wall_stands(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
     let (height, stand_m) = (g.k.lightswitch.height, g.k.lightswitch.stand_m);
     let h = wall_ray(g, [sw.stand[0], height, sw.stand[2]], [-sw.n[0], 0.0, -sw.n[2]], stand_m + 0.2);
     match h {

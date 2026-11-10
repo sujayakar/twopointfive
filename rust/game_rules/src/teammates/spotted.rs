@@ -15,17 +15,17 @@ fn man(g: &mut Game, gd: GuardId) -> &mut crate::spotted::Man {
     g.m.spotted.men.get_mut(gd).expect("spotted: a man's row is made by spotted_tick or looked for first")
 }
 /// any man of `wary` has a line to a body knelt at `q`
-fn any_in_line(g: &mut Game, wary: &[GuardId], q: &[f64]) -> bool {
+fn any_in_line(g: &Game, wary: &[GuardId], q: &[f64]) -> bool {
     for &h in wary { if in_line(g, h, q, true) { return true; } }
     false
 }
 /// nothing solid between him and `h` at waist height (hands: `open`)
-fn open_to(g: &mut Game, p: V3, h: GuardId) -> bool {
+fn open_to(g: &Game, p: V3, h: GuardId) -> bool {
     let c = pos(g, h);
     !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [c[0], 1.0, c[2]], None)
 }
 /// cover's `shot`: a line from `q` to the man `hp`, and none of ours standing in it
-fn shot_from(g: &mut Game, gd: GuardId, q: &[f64], hp: V3) -> bool {
+fn shot_from(g: &Game, gd: GuardId, q: &[f64], hp: V3) -> bool {
     if !(shot_line(g, q, &hp, 1.2) || shot_line(g, q, &hp, 1.6)) { return false; }
     let chest: V3 = [hp[0], 1.2, hp[2]];
     crate::roomfight::room_fight_friend_in_line(g, [q[0], 1.4, q[2]], chest, gd).is_none()
@@ -51,7 +51,7 @@ fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
 }
 
 /// a line from a man's eyes to a body at `q`, asked of the walls and furniture only: no door leaves
-fn in_line(g: &mut crate::game::Game, h: GuardId, q: &[f64], low: bool) -> bool {
+fn in_line(g: &crate::game::Game, h: GuardId, q: &[f64], low: bool) -> bool {
     let eye = eye_of(g, h);
     let walls = crate::ask::Over::statics();
     !crate::scene_collision::segment_blocked_over(g, &walls, eye, [q[0], if low { 0.75 } else { 1.25 }, q[2]], None, None)
@@ -123,7 +123,7 @@ pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -
 }
 
 /// an alert / searching man is a danger to one of them now
-fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
+fn danger_now(g: &crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let since = g.time - g.gd[h].last_seen_t;
     if since >= 0.0 && since < g.k.spotted.fresh_secs && ours(g, &crate::seats::here(g), h) { return true; }
     let hp = pos(g, h);
@@ -315,7 +315,7 @@ fn hide(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// a round from a man stood at `q` to a body at `hp`, stopped a body's breadth short of it
-fn shot_line(g: &mut crate::game::Game, q: &[f64], hp: &[f64], y: f64) -> bool {
+fn shot_line(g: &crate::game::Game, q: &[f64], hp: &[f64], y: f64) -> bool {
     let (dx, dz) = (hp[0] - q[0], hp[2] - q[2]);
     let l = m::hyp2(dx, dz);
     if l < 0.5 { return true; }
@@ -353,7 +353,7 @@ pub fn cover(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// `h` has turned to `gd`: roused, a line between them, and his fix on this man or squared up to him
-fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
+fn on_him(g: &crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let st = g.gd[h].state;
     if st != crate::game::GuardState::Suspicious && st != crate::game::GuardState::Alert && st != crate::game::GuardState::Search { return false; }
     let (p, hp) = (pos(g, gd), pos(g, h));

@@ -247,7 +247,7 @@ pub fn sight_gain_on(g: &mut crate::game::Game, gd: GuardId, o: GuardId, dist: f
 }
 
 /// What a watched man builds a second in this one's eye.
-fn gain(g: &mut Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
+fn gain(g: &Game, gd: GuardId, w: &Watched, dist: f64) -> f64 {
     let at = g.ch[w.c].pos;
     let hunts = hunting(g, gd);
     let moving = motion_sum(g.ch[g.gd[gd].ch].pos, hunts, at, w.vel, w.light, dist);

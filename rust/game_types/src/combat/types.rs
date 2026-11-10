@@ -69,4 +69,3 @@ pub fn solid_scratch() -> Vec<i32> { alloc::vec![0; 64] }
 
 pub const GUN_ITEM_LIFE: f64 = 240.0;
 
-pub fn hand_ord() -> Vec<u16> { alloc::vec![0; 256] }

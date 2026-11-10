@@ -23,12 +23,12 @@ fn charge_look() -> CHARGELOOK {
 const WALL_FLASH_COLOR: V3 = [1.0, 0.62, 0.25];
 
 /// DESTRUCTION.on && BLAST.on && chaosOf(g) > 0
-fn live(g: &mut crate::game::Game) -> bool { blast().on && crate::destruction::chaos_of(g) > 0.0 }
+fn live(g: &crate::game::Game) -> bool { blast().on && crate::destruction::chaos_of(g) > 0.0 }
 
 fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 
 /// where a wall charge's borrowed stun burst stands
-fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
+fn burst_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 {
     let y = 0.5 + crate::effects::bang().height;
     crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y))
 }
@@ -85,7 +85,7 @@ fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// how much of the firing line's run fits: the whole of it over clear floor, the short one where something stands in the way
-fn run_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
+fn run_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
     let k = charge_look();
     let [r0, jog, r1] = k.run;
     let a = crate::wallcharge::wall_pt(g, w, 0.035, 0.05, Some(0.12));
@@ -142,7 +142,7 @@ fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut
 }
 
 /// the stun charge's flash a wall charge borrowed (detonateStun lit it this frame where spawnBurst put it); None: none burning there
-fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
+fn flash_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> {
     let b = crate::effects::bang();
     let mut at = burst_at(g, w);
     at[1] += b.light_lift;
@@ -200,20 +200,20 @@ fn hash_u(n: f64) -> f64 {
 fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 
 /// is the wall open at the charge (the blast made its hole)? one segment through it at the slab's height
-fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+fn holed(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
     let (h, th) = (g.k.wallcharge.height, thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
 
 /// the authored stun sparks as they stand, over what they were when the tables were set: count, speed, life, size
-fn scale(g: &mut crate::game::Game) -> crate::blast_look::BurstOfK {
+fn scale(g: &crate::game::Game) -> crate::blast_look::BurstOfK {
     let (r, pfx, sp) = (ref_(), g.m.particle_fx.pfx, crate::effects::sparks());
     BurstOfK { n: pfx.bang_sparks / r.sparks, v: sp.speed / r.speed, l: sp.life / r.life, s: pfx.bang_spark_size / r.size }
 }
 
 /// the 'flash' item a burst stands over (`born`: the one born this very frame, else an older one)
-fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
+fn flash_under(g: &crate::game::Game, at: V3, born: bool) -> bool {
     use crate::throwables as t;
     let h = crate::effects::bang().height;
     let mut i = 0;
@@ -228,11 +228,11 @@ fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool {
 }
 
 /// is this burst a thrown stun can's (its item is older than this frame)?
-fn can_at(g: &mut crate::game::Game, at: V3) -> bool { flash_under(g, at, false) }
+fn can_at(g: &crate::game::Game, at: V3) -> bool { flash_under(g, at, false) }
 
 /// Is this burst a door charge's (a 'flash' item born this frame, 0.2 m off the door's frame line and 0.7 of its width along it)? The way the blast goes,
 /// where the room's share starts (ahead of the leaf the charge threw in), where the rest starts. None: not one, or a leaf flung in on its hinges.
-fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> {
+fn door_charge_at(g: &crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> {
     if !flash_under(g, at, true) { return None; }
     let k = door_sparks();
     let mut i = 0;

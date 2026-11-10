@@ -93,7 +93,7 @@ fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
 fn idx(k: f64, off: f64) -> i64 {
     (k - off) as i64
 }
-fn straight(g: &mut Game, p: V3, q: V3) -> bool {
+fn straight(g: &Game, p: V3, q: V3) -> bool {
     !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None)
 }
 /// His posture in a mode: low with Sam; low whenever he waits, crosses or backs off, and after a back-off until he has moved on.
@@ -553,7 +553,7 @@ fn others_on(g: &mut Game, else_eyes: &[GuardId], t: &mut [Crumb], a: i64, b: i6
 }
 
 /// `lay`: the way to crumb `to`, laid crumb by crumb for sneakWay; the goal.
-fn lay(g: &mut Game, man: &mut Man, t: &[Crumb], p: V3, i: i64, to: i64) -> V3 {
+fn lay(g: &Game, man: &mut Man, t: &[Crumb], p: V3, i: i64, to: i64) -> V3 {
     let goal = t[to as usize].p;
     let mut path: Vec<V3> = Vec::new();
     if to >= i {

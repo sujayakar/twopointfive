@@ -28,7 +28,7 @@ fn phase_of(g: &mut Game, gd: GuardId) -> Phase {
 fn prop_at(g: &Game, p: PropId) -> V3 { [g.tab.props_prop[p].x, 0.0, g.tab.props_prop[p].z] }
 
 /// braceInRoom: `to` is his room's floor and the way to it from `from` does not leave the room
-fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -> bool {
+fn way_in_room(g: &crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -> bool {
     if !crate::roomfight::room_fight_in_room(g, Some(room), to) { return false; }
     let a = crate::roomfight::room_fight_free_near(g, from).unwrap_or(from);
     let path = match crate::scene_collision::nav_grid_find_path(g, a, to, Some(6000.0), None) { Some(p) if !p.is_empty() => p, _ => return false };
@@ -39,7 +39,7 @@ fn way_in_room(g: &mut crate::game::Game, room: RoomfightRoomId, from: V3, to: V
 }
 
 /// braceInRoom: he can push this prop to the door from `q` without leaving his room
-fn pushable(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, pp: V3, q: V3, stand: V3) -> bool {
+fn pushable(g: &crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, pp: V3, q: V3, stand: V3) -> bool {
     if !(flat(q, pp) < 1.6) { return false; }
     if crate::scene_collision::solid_blocked(g, [q[0], 0.45, q[2]], [pp[0], 0.45, pp[2]], None) { return false; }
     let from = pos_of(g, g.tab.roomfight_def[d].gd);
@@ -47,7 +47,7 @@ fn pushable(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId,
 }
 
 /// braceInRoom: the best free floor of his room to push this prop toward the door from; None = none
-fn push_spot(g: &mut crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, e: crate::roomfight::Entry, pp: V3, stand: V3) -> Option<V3> {
+fn push_spot(g: &crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, e: crate::roomfight::Entry, pp: V3, stand: V3) -> Option<V3> {
     let (dx, dz) = (pp[0] - e.at[0], pp[2] - e.at[2]);
     let dl = js::or(m::hyp2(dx, dz), 1.0);
     let mut cand: Vec<(V3, f64)> = Vec::new();
@@ -195,7 +195,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
 }
 
 /// a wedge HOLDS this entry's door, asked from the inside of the entry
-fn holds(g: &mut crate::game::Game, e: crate::roomfight::Entry) -> bool {
+fn holds(g: &crate::game::Game, e: crate::roomfight::Entry) -> bool {
     crate::doors::doors_wedge_holds(g, e.door, [e.at[0] - e.out[0] * 0.8, 0.0, e.at[2] - e.out[1] * 0.8])
 }
 
@@ -694,7 +694,7 @@ fn watch(g: &mut crate::game::Game) {
 }
 
 /// A door of his room booted in; a man set on a door his room wedged was waiting for exactly that
-pub(in crate::defenders) fn dig_in_braced(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+pub(in crate::defenders) fn dig_in_braced(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     if !dig_in_set_on(g, gd, d) { return false; }
     true
 }

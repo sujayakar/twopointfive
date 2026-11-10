@@ -24,7 +24,7 @@ pub enum Do {
 
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
-fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
+fn here(g: &Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
 fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
@@ -60,7 +60,7 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
 }
 
 /// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.
-fn unsettled(g: &mut Game) -> Option<String> {
+fn unsettled(g: &Game) -> Option<String> {
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && !crate::condition::down(g, g.gd[x].ch)) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
     if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }
@@ -355,7 +355,7 @@ pub struct Survivors {
     god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, aside: bool,
     tune: crate::game::GameTune, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
     kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
-    dice: Option<crate::math_dice::SimDice>, sim_dice: ::sim::dice::Dice, fx_seed: f64, roll_seq: f64, event_seq: f64,
+    dice: crate::dice::Draws, fx_seed: f64, roll_seq: f64, event_seq: f64,
     saves_on: bool, stats: crate::game::Stats, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
     shown: Option<SeatId>, remote: Vec<bool>,
@@ -366,7 +366,7 @@ impl Survivors {
             god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, aside: g.aside,
             tune: g.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
             kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
-            dice: g.dice.clone(), sim_dice: unsafe { core::ptr::read(&::sim::state::state_read(g.sim).dice) }, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
+            dice: g.dice, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
             saves_on: g.saves.enabled, stats: g.stats.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
             shown: g.local_seat, remote: g.seats.iter().map(|&s| g.tab.cmd_seat[s].remote).collect(),
@@ -377,8 +377,7 @@ impl Survivors {
         put_cards(g, self.kit.clone());
         g.m.difficulty = self.difficulty.clone();
         g.quiet.pending = self.pending.clone();
-        (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice.clone(), self.fx_seed, self.roll_seq, self.event_seq);
-        ::sim::state::state(g.sim).dice = unsafe { core::ptr::read(&self.sim_dice) };
+        (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice, self.fx_seed, self.roll_seq, self.event_seq);
         (g.stats, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
     }
     /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses,

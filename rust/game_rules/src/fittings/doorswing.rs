@@ -21,7 +21,7 @@ struct Given {
 }
 
 /// The side (Doors.side's sign) of the closed leaf a floor point is on, 0 on the leaf's own line.
-fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
+fn side_of(g: &crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
     let c = g.dr[d].def.closed_dir;
     let ux = m::cos(c);
     let uz = m::sin(c);
@@ -148,7 +148,7 @@ fn floors_flood(comp: &mut [i32], sizes: &mut Vec<f64>, wall: &[u8], w: usize, h
 }
 
 /// The nav cells either face of every door opens on with every doorway shut: per door, the cells reachable off each face.
-fn floors(g: &mut crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
+fn floors(g: &crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
     let (wf, hf, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (w, h) = (wf as usize, hf as usize);
     let mut wall = g.col.nav.blocked.clone();
@@ -218,7 +218,7 @@ fn pe_of(k: usize, na: usize) -> f64 {
     ((k / na) as f64 + 0.5) * LEAF_STEP
 }
 /// leafCut's `free`: a man can stand at grid spot k (asked once). `at` is [cx, ux, nx, cz, uz, nz].
-fn leaf_free(g: &mut Game, known: &mut [i8], k: usize, na: usize, at: [f64; 6]) -> bool {
+fn leaf_free(g: &Game, known: &mut [i8], k: usize, na: usize, at: [f64; 6]) -> bool {
     if known[k] < 0 {
         let al = al_of(k, na);
         let pe = pe_of(k, na);
@@ -230,7 +230,7 @@ fn leaf_free(g: &mut Game, known: &mut [i8], k: usize, na: usize, at: [f64; 6]) 
     known[k] == 1
 }
 /// leafCut's `flood`: what a man reaches from the doorway, past the leaf if one is given; None when the leaf stands on the doorway itself.
-fn leaf_flood(g: &mut Game, known: &mut [i8], n_all: usize, na: usize, at: [f64; 6], start: usize, r: f64, leaf: Option<&[f32]>) -> Option<Vec<u8>> {
+fn leaf_flood(g: &Game, known: &mut [i8], n_all: usize, na: usize, at: [f64; 6], start: usize, r: f64, leaf: Option<&[f32]>) -> Option<Vec<u8>> {
     if let Some(l) = leaf {
         if (l[start] as f64) < r {
             return None;
@@ -257,7 +257,7 @@ fn leaf_flood(g: &mut Game, known: &mut [i8], n_all: usize, na: usize, at: [f64;
 }
 
 /// How much floor on face `s` of a door (m²) a man reaches the doorway from with no leaf there and not with the leaf open on that face; −1 = nowhere to stand at the doorway.
-fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
+fn leaf_cut(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let stop = if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth };
     if stop < 0.9 {
         return 0.0;
@@ -336,7 +336,7 @@ fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
 }
 
 /// Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way.
-fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
+fn leaf_swings(g: &crate::game::Game, d: DoorId, s: f64) -> bool {
     let stop = m::min(if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth }, LEAF_REST);
     let c = g.dr[d].def.closed_dir;
     let w = g.dr[d].def.width;
@@ -372,7 +372,7 @@ fn deal(g: &Game, d: DoorId, swing: f64, why: crate::doorswing::SwingWhy, into: 
     })
 }
 /// dealSwings' `toward`: the side of the leaf a rectangle's middle is on.
-fn toward(g: &mut Game, d: DoorId, r: Option<crate::doorswing::Rect>) -> f64 {
+fn toward(g: &Game, d: DoorId, r: Option<crate::doorswing::Rect>) -> f64 {
     match r {
         Some(r) => {
             let c = mid(r);
@@ -389,7 +389,7 @@ fn plan_rect(r: &crate::scene_level::BreachPlanBounds) -> crate::doorswing::Rect
 }
 
 /// dealSwings' `tries`, in order: the first rule that speaks for this door.
-fn first_rule(g: &mut Game, given: &Given, fl: &mut Option<JsMap<DoorId, crate::doorswing::FloorsValue>>, d: DoorId, name: &str) -> Option<crate::doorswing::SwingDeal> {
+fn first_rule(g: &Game, given: &Given, fl: &mut Option<JsMap<DoorId, crate::doorswing::FloorsValue>>, d: DoorId, name: &str) -> Option<crate::doorswing::SwingDeal> {
     use crate::doorswing::SwingWhy;
     // authored
     if let Some(s) = deal(g, d, g.dr[d].def.swing.unwrap_or(0.0), SwingWhy::Authored, None) {

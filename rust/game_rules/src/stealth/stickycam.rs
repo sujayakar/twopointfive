@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The module's knobs as the launcher's flight reads them.
-fn b(g: &mut crate::game::Game) -> crate::launcher::Ballistics {
+fn b(g: &crate::game::Game) -> crate::launcher::Ballistics {
     let r = &g.k.sticky;
     crate::launcher::Ballistics { speed: r.speed, gravity: r.gravity, drag: r.drag, radius: r.radius, life: r.life, substeps: r.substeps, solve_iters: r.solve_iters }
 }
@@ -55,13 +55,13 @@ pub fn cam_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: 
 }
 
 /// The previewed flight, by the live flight's own stepping.
-pub fn cam_solve(g: &mut crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
+pub fn cam_solve(g: &crate::game::Game, from: V3, target: V3) -> crate::throwables::ThrowSolution {
     let r = b(g);
     crate::launcher::arc_solve(g, from, target, r)
 }
 
 /// The launch velocity: dead level through the aim point's height.
-fn cam_vel(g: &mut crate::game::Game, from: V3, target: V3) -> V3 {
+fn cam_vel(g: &crate::game::Game, from: V3, target: V3) -> V3 {
     let r = b(g);
     crate::launcher::launch_vel(from, target, r)
 }
@@ -231,7 +231,7 @@ fn can_take(g: &crate::game::Game, pl: PlayerId) -> bool {
 }
 
 /// His own stuck camera nearest his feet within `r` that he has a clear line to from his eyes.
-fn cam_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> {
+fn cam_near(g: &crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCamId> {
     let ch = g.pl[pl].ch;
     let p = g.ch[ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
@@ -253,7 +253,7 @@ fn cam_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<StickyCam
 fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool { !g.pl[pl].sprinting && !g.pl[pl].hands_full() }
 
 /// The camera he could take back this frame.
-fn cam_to_take(g: &mut crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
+fn cam_to_take(g: &crate::game::Game, pl: PlayerId) -> Option<StickyCamId> {
     if can_take(g, pl) && hands_free(g, pl) {
         let reach = g.k.sticky.take_reach;
         cam_near(g, pl, reach)

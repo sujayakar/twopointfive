@@ -86,17 +86,17 @@ fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloo
 
 /// The last few things that happened. (needs.ts log; NEEDS_DEBUG's sink is host work)
 fn frac(s: &str) -> f64 {
-    js::rem(crate::math_dice::hash_str(s), 100000.0) / 100000.0
+    js::rem(crate::dice::hash_str(s), 100000.0) / 100000.0
 }
 
 /// Metres by path; infinite if there is none.
-fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> f64 {
+fn path_metres(g: &crate::game::Game, from: V3, to: V3) -> f64 {
     let Some(p) = crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) else { return m::INF };
     crate::places::walk_len(from, &p)
 }
 
 /// The waypoint of his route a trip to `spot` starts from; wp −1 = none.
-fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
+fn departure_point(g: &crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
     let r = g.tab.route[g.gd[gd].route].clone();
     let mut best = -1.0;
     let mut bm = m::INF;
@@ -120,9 +120,9 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
         return;
     }
     let cs = g.gd[gd].callsign.clone();
-    let mut ranked: Vec<(NeedKind, f64)> = need_kinds().iter().map(|&k| (k, crate::math_dice::hash_str(&format!("{}:{}:rank", cs, k.as_str())))).collect();
+    let mut ranked: Vec<(NeedKind, f64)> = need_kinds().iter().map(|&k| (k, crate::dice::hash_str(&format!("{}:{}:rank", cs, k.as_str())))).collect();
     js::sort_by(&mut ranked, |a, b| a.1 - b.1);
-    let want = 2.0 + js::rem(crate::math_dice::hash_str(&format!("{}:count", cs)), 2.0);
+    let want = 2.0 + js::rem(crate::dice::hash_str(&format!("{}:count", cs)), 2.0);
     for &(k, _) in ranked.iter() {
         if mem(g, gd).needs.len() as f64 >= want {
             break;
@@ -414,7 +414,7 @@ fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
 fn pick_line(g: &mut crate::game::Game, pool: &[String], gd: GuardId, salt: &str) -> String {
     let trips = mem(g, gd).trips;
     let cancels = mem(g, gd).cancels;
-    let h = crate::math_dice::hash_str(&format!("{}|{}|{}|{}", g.gd[gd].callsign, trips, cancels, salt));
+    let h = crate::dice::hash_str(&format!("{}|{}|{}|{}", g.gd[gd].callsign, trips, cancels, salt));
     pool[js::rem(h, pool.len() as f64) as usize].clone()
 }
 
@@ -495,7 +495,7 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
     let trips = mem(g, gd).trips;
     let lines = crate::dialogue::needs_lines_table();
     let pool: Vec<String> = match third {
-        Some(x) if js::rem(crate::math_dice::hash_str(&format!("{}|{}|other", pcs, trips)), 3.0) == 0.0 => {
+        Some(x) if js::rem(crate::dice::hash_str(&format!("{}|{}|other", pcs, trips)), 3.0) == 0.0 => {
             let other = g.gd[x].callsign.clone();
             lines.reply_other.iter().map(|s| s.replace("{other}", &other)).collect()
         }
@@ -504,7 +504,7 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
         }
     };
     let cs = g.gd[gd].callsign.clone();
-    let h = crate::math_dice::hash_str(&format!("{}|{}|{}|reply", pcs, cs, trips));
+    let h = crate::dice::hash_str(&format!("{}|{}|{}|reply", pcs, cs, trips));
     let line = pool[js::rem(h, pool.len() as f64) as usize].clone();
     crate::game::game_say(g, p, &line, None, None);
 }

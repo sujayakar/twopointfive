@@ -61,12 +61,12 @@ fn off_line(p: V3, a: V3, b: V3) -> f64 {
 }
 
 /// a leg of his walk: nothing solid on it and no man by it
-fn leg(g: &mut Game, men: &[V3], a: V3, b: V3) -> bool {
+fn leg(g: &Game, men: &[V3], a: V3, b: V3) -> bool {
     !crate::scene_collision::solid_blocked(g, [a[0], 0.5, a[2]], [b[0], 0.5, b[2]], None) && !men.iter().any(|q| off_line(*q, a, b) < MOVE_LINE)
 }
 
 /// Where you work it from: the list's first place he can walk to that nobody stands on.
-pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate::kit::BigTool) -> Option<crate::bigkit::SamBigSpot> {
+pub fn sam_big_spot(g: &crate::game::Game, d: DoorId, from: V3, tool: crate::kit::BigTool) -> Option<crate::bigkit::SamBigSpot> {
     if g.dr[d].leaf.off {
         return None;
     }
@@ -110,14 +110,14 @@ pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate:
 }
 
 /// a place with floor to stand on and a clear line to the leaf goes on the list
-fn put(g: &mut Game, out: &mut Vec<BigSpot>, pos: V3, at: V3, hinge: bool) {
+fn put(g: &Game, out: &mut Vec<BigSpot>, pos: V3, at: V3, hinge: bool) {
     if !crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) && !crate::scene_collision::solid_blocked(g, [pos[0], 1.2, pos[2]], at, None) {
         out.push(BigSpot { pos, yaw: v3::yaw_to(pos, at), at, hinge });
     }
 }
 
 /// The places a man works a door's tool from, on face `side`, best first.
-pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::kit::BigTool) -> Vec<crate::bigkit::BigSpot> {
+pub fn big_spots(g: &crate::game::Game, d: DoorId, side: f64, tool: crate::kit::BigTool) -> Vec<crate::bigkit::BigSpot> {
     let w = g.dr[d].def.width;
     let lock = crate::shotgun::lock_point(g, d, side);
     let mut out: Vec<BigSpot> = Vec::new();
@@ -151,7 +151,7 @@ pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::k
 }
 
 /// The row from where a stack stands: within reach of the doorway, a tool that opens it, a place he can walk to.
-pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate::kit::BigTool> {
+pub fn sam_big_far(g: &crate::game::Game, d: DoorId, p: V3) -> Option<crate::kit::BigTool> {
     let pid = g.player;
     if g.pl[pid].big_kit == crate::kit::BigKit::None {
         return None;
@@ -238,7 +238,7 @@ pub(super) fn big_out_by(g: &crate::game::Game, kind: crate::kit::BigTool) -> f6
 }
 
 /// How long your own gun takes to be put away by hand before the hand goes for the tool.
-pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
+pub fn sam_big_lead_of(g: &crate::game::Game) -> f64 {
     let pid = g.player;
     let Some(Some(it)) = g.pl[pid].kit_was else { return 0.0 };
     if crate::kitanim::kit_in_hand(g, &crate::seats::here(g)).is_none() {

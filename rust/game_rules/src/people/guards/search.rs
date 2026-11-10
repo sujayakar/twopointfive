@@ -95,7 +95,7 @@ fn beam_fan(d: V3) -> Vec<V3> {
 }
 
 /// what one ray of a beam ends on inside `m` of the lens: 3 something that stands, 2 its foot, 1 the ground, 0 nothing
-fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
+fn ray_end(g: &crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
     let dip = if r[1] < 0.0 { m::max(0.0, (o[1] - FLOOR_TOP) / -r[1]) } else { f64::INFINITY };
     let a = m::min(m, dip);
     if a > 0.0 && crate::scene_collision::segment_blocked(g, o, [o[0] + r[0] * a, o[1] + r[1] * a, o[2] + r[2] * a], None, None, None) {
@@ -113,7 +113,7 @@ fn ray_end(g: &mut crate::game::Game, o: V3, r: V3, m: f64) -> f64 {
 }
 
 /// is a beam into a wall: its middle ends on something that stands inside `m`, and no ray runs clear
-fn beam_walled(g: &mut crate::game::Game, o: V3, fan: &[V3], m: f64, held: bool) -> bool {
+fn beam_walled(g: &crate::game::Game, o: V3, fan: &[V3], m: f64, held: bool) -> bool {
     for i in 0..fan.len() {
         let e = ray_end(g, o, fan[i], m);
         if e == 0.0 || (i == 0 && !(e == 3.0 || (held && e == 2.0))) {

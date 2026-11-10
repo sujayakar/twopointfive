@@ -51,7 +51,7 @@ fn enemies(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.
 struct Commander { die: Die, next: usize, clear: bool }
 
 impl Commander {
-    fn new(seed: u32) -> Commander { Commander { die: Die::new(0xc0deu32.wrapping_add(seed.wrapping_mul(7919))), next: 30, clear: true } }
+    fn new(seed: u32) -> Commander { Commander { die: Die(0xc0deu32.wrapping_add(seed.wrapping_mul(7919))), next: 30, clear: true } }
     fn one_of(&mut self, mut v: Vec<[f64; 2]>, to: [f64; 2], n: usize) -> Option<[f64; 2]> {
         v.sort_by(|a, b| dist(*a, to).partial_cmp(&dist(*b, to)).unwrap());
         v.truncate(n);

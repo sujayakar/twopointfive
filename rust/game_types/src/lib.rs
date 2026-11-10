@@ -145,7 +145,6 @@ pub mod levelfit { pub mod types; pub use types::*; }
 pub mod lighting { pub mod types; pub use types::*; }
 pub mod lightswitch { pub mod types; pub use types::*; }
 pub mod marks { pub mod types; pub use types::*; }
-pub mod math_dice { pub mod types; pub use types::*; }
 pub mod math_exact { pub mod types; pub use types::*; }
 pub mod mission { pub mod types; pub use types::*; }
 pub mod morale { pub mod types; pub use types::*; }
@@ -236,7 +235,6 @@ pub mod shutdoor { pub mod types; pub use types::*; }
 pub mod silent { pub mod types; pub use types::*; }
 pub mod falls { pub mod types; pub use types::*; }
 pub mod fixtures { pub mod types; pub use types::*; }
-pub mod sim_sim { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }

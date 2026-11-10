@@ -254,10 +254,10 @@ fn pLight(mode: u32, P: vec3f, N: vec3f, wrap: f32, owner: u32, credit: f32, V: 
   var restA = vec3f(0.0); var restB = vec3f(0.0);
   let noN = all(N == vec3f(0.0));
   let nv = max(dot(N, V), 0.1);
-  for (var i = 0u; i < frame.numLights; i++) {
+  var at = lightsAt(P);
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = lights[i];
     let lv = lightReachLevel(i, P);
-    if (lv == 0u) { continue; }
     var ev = evalLight(li, P, select(vec3f(0.0), N, mode == 0u));   // (the sheet and the shard score without the cosine: they take the sign of N·L themselves)
     if (!ev.ok) { continue; }
     var A = vec3f(0.0); var B = vec3f(0.0); var lum = 0.0; var floorE = P_MIN_E;
@@ -689,10 +689,10 @@ fn rainShadeV(P: vec3f, V: vec3f, T: vec3f, k1: vec4f, glint: bool) -> vec3f {
   var bE = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bL = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0)); var bd = array<f32, 3>(0.0, 0.0, 0.0); var bw = array<f32, 3>(0.0, 0.0, 0.0);
   var bR = array<vec3f, 3>(vec3f(0.0), vec3f(0.0), vec3f(0.0));   // each kept light's UNTRACED share should a stronger one push it out of the three: its E in the open, nothing from under a roof
   var rest = vec3f(0.0); var restAll = vec3f(0.0);                 // (restAll: every light past the three, whole — only for the rays-off measuring mode, 'all unshadowed and whole' as it says)
-  for (var i = 0u; i < frame.numLights; i++) {
+  var at = lightsAt(P);
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = lights[i];
     let lv = lightReachLevel(i, P);
-    if (lv == 0u) { continue; }
     var ev = evalLight(li, P, vec3f(0.0));
     if (!ev.ok) { continue; }
     ev.E *= select(1.0, 0.25, lv == 1u);

@@ -21,12 +21,12 @@ fn surf_mat_of_word(s: &str) -> Option<Mat> {
     None
 }
 /// matOf(kind, box) for a box of the world
-fn mat_of_box(g: &mut Game, kind: crate::debris::ChunkKind, b: AnyBoxId) -> Mat {
+fn mat_of_box(g: &Game, kind: crate::debris::ChunkKind, b: AnyBoxId) -> Mat {
     let box_ = MatOfBox { does: g.tab[b].does.map(|w| String::from(w.as_str())) };
     mat_of(g, kind, &box_)
 }
 /// `c.mat ?? { mat: matOf(c.kind, c.box), gen: 0, paint: c.box.albedo }`
-fn meta_of(g: &mut Game, c: DebrisChunkId) -> BreakMeta {
+fn meta_of(g: &Game, c: DebrisChunkId) -> BreakMeta {
     if let Some(m) = g.tab.debris_chunk[c].mat { return m; }
     let (kind, b) = (g.tab.debris_chunk[c].kind, g.tab.debris_chunk[c].box_);
     let mat = mat_of_box(g, kind, b);
@@ -38,12 +38,12 @@ fn axes_by_size(h: V3) -> [usize; 3] {
     js::sort_by(&mut ax, |i, j| h[*i] - h[*j]);
     ax
 }
-fn word_of_box(g: &mut Game, b: AnyBoxId) -> crate::scene_boxes::WordOf {
+fn word_of_box(g: &Game, b: AnyBoxId) -> crate::scene_boxes::WordOf {
     let (stuff, does) = (g.tab[b].stuff, g.tab[b].does);
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does })
 }
 /// what a box is inside: what it says it is made of (inside_of)
-fn inside_of_box(g: &mut Game, b: AnyBoxId, mat: Mat) -> Inside { inside_of(g.tab[b].stuff, mat) }
+fn inside_of_box(g: &Game, b: AnyBoxId, mat: Mat) -> Inside { inside_of(g.tab[b].stuff, mat) }
 /// the key of a chunk's second drawn box
 fn mate_mkey(g: &Game, c: DebrisChunkId) -> f64 {
     crate::scene_boxes::mkey().debris + (js::to_i32(g.tab.debris_chunk[c].serial + 32768.0) & 65535) as f64
@@ -97,7 +97,7 @@ pub(in crate::breakage) fn breaks_share(g: &crate::game::Game) -> crate::break_t
 
 // ---------------------------------------------------------------- the pool's hooks
 /// The level and puff of a thrown piece's landing.
-pub(in crate::breakage) fn breaks_lands(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: AnyBoxId, speed: f64) -> crate::break_table::BreaksLands {
+pub(in crate::breakage) fn breaks_lands(g: &crate::game::Game, kind: crate::debris::ChunkKind, box_: AnyBoxId, speed: f64) -> crate::break_table::BreaksLands {
     if kind == crate::debris::ChunkKind::Shard { return BreaksLands { level: 0.0, dust: 0.0 }; }
     let mat = mat_of_box(g, kind, box_);
     let row = break_row(mat);
@@ -757,7 +757,7 @@ pub(in crate::breakage) fn breaks_heap(g: &mut crate::game::Game, surf: crate::s
 
 // ---------------------------------------------------------------- what still stands
 /// What the wall `b` is inside, for a lane that holds what it does as the Surf's word.
-pub(in crate::breakage) fn breaks_inside(g: &mut crate::game::Game, surf: &str, b: BoxId) -> crate::break_table::Inside {
+pub(in crate::breakage) fn breaks_inside(g: &crate::game::Game, surf: &str, b: BoxId) -> crate::break_table::Inside {
     let mat = surf_mat_of_word(surf).unwrap_or(Mat::Masonry);
     inside_of_box(g, b.into(), mat)
 }
@@ -769,7 +769,7 @@ pub(in crate::breakage) fn breaks_end_core(surf: &str, stuff: Option<crate::scen
 }
 
 /// The cut record of a standing piece from the faces that look into opened cells.
-pub(in crate::breakage) fn breaks_ragged(g: &mut crate::game::Game, b: &crate::break_table::CellGrid, rect: &[f64], h: V3) -> Option<Vec<crate::scene_cut::CutPlane>> {
+pub(in crate::breakage) fn breaks_ragged(g: &crate::game::Game, b: &crate::break_table::CellGrid, rect: &[f64], h: V3) -> Option<Vec<crate::scene_cut::CutPlane>> {
     let row = break_row(mat_of_surf(b.surf));
     if row.ragged.is_none() { return None; }
     let (x0, x1, y0, y1, z0, z1) = (rect[0], rect[1], rect[2], rect[3], rect[4], rect[5]);
@@ -829,7 +829,7 @@ pub(in crate::breakage) fn breaks_ragged(g: &mut crate::game::Game, b: &crate::b
 }
 
 /// The studs of a holed plasterboard partition, read off the cells alone.
-pub(in crate::breakage) fn breaks_studs(g: &mut crate::game::Game, b: &crate::break_table::CellGrid) -> Vec<crate::break_table::BreaksStudsItem> {
+pub(in crate::breakage) fn breaks_studs(g: &crate::game::Game, b: &crate::break_table::CellGrid) -> Vec<crate::break_table::BreaksStudsItem> {
     if b.ny < 2.0 || mat_of_surf(b.surf) != Mat::Plasterboard || b.n_open == Some(0.0) { return Vec::new(); }
     if !inside_of_box(g, b.box_.into(), Mat::Plasterboard).framed { return Vec::new(); }
     let k_ = g.k.breaks.stud;

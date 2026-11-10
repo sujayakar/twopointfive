@@ -102,7 +102,7 @@ pub(super) fn startle_torch(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Is he in a start right now, anybody's.
-pub fn startled(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn startled(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     match g.m.startle.state_of.get(gd) { Some(s) => now < s.until, None => false }
 }

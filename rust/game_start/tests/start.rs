@@ -2,8 +2,8 @@
 //! same game (rust/sim keeps blocks and tables in statics: a stand must leave nothing of the game before it).
 use game_start::play::{Opts, Play};
 
-/// a hash of each part of rust/sim's block in slot 0, and the die's count
-fn block() -> (Vec<u32>, f64) { (game_start::block::part_hashes(0), sim::state::state(0).dice.n) }
+/// a hash of each part of rust/sim's block in slot 0, and how many draws the game has taken
+fn block(p: &Play) -> (Vec<u32>, f64) { (game_start::block::part_hashes(0), p.g.dice.n) }
 
 /// A real level's room clear, run for ten seconds: the block after it.
 fn kit_yard(seed: u32) -> (Vec<u32>, f64) {
@@ -12,7 +12,7 @@ fn kit_yard(seed: u32) -> (Vec<u32>, f64) {
     assert!(p.hostiles_by([20.0, 14.0]).len() >= 4, "…and the level's garrison: {}", p.roll());
     p.run(10.0);
     assert!((p.time() - 10.0).abs() < 1e-6);
-    block()
+    block(&p)
 }
 
 /// A FAILURE MEANS: a stand left something of the last game behind (a static table of rust/sim or of the game crate that a new game does not

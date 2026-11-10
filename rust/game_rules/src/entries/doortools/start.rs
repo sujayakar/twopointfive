@@ -8,7 +8,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ small readers of this file
 
-fn pos_of(g: &mut Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
+fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn is_steel(g: &Game, d: DoorId) -> bool { g.dr[d].def.steel.unwrap_or(false) }
 fn is_wedge(g: &Game, d: DoorId) -> bool { g.dr[d].lock_id.starts_with("wedge:") }
 
@@ -322,7 +322,7 @@ fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> 
 }
 
 ///  a walker stands on his mark
-fn walker_on(g: &mut Game, m: GuardId) -> bool {
+fn walker_on(g: &Game, m: GuardId) -> bool {
     let b = crate::orders::squad_orders_of(&crate::seats::here(g), m).unwrap();
     let at = pos_of(g, m);
     let row = &g.tab.orders_assignment[b];
@@ -685,7 +685,7 @@ pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::
 }
 
 /// thresholdThen's `valid`: no cans, or one of ours behind the door: no bang
-pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: crate::doortools::ThresholdThen, t: Option<&crate::doortools::DoorToolsCanThresholdThenT>, men: &[GuardId]) -> crate::doortools::DoorToolsCanThresholdThen {
+pub(super) fn door_tools_can_threshold_then(g: &crate::game::Game, what: crate::doortools::ThresholdThen, t: Option<&crate::doortools::DoorToolsCanThresholdThenT>, men: &[GuardId]) -> crate::doortools::DoorToolsCanThresholdThen {
     let door = match t { Some(crate::doortools::DoorToolsCanThresholdThenT::Door(x)) => Some(x.door), _ => None };
     let ops = door_tools_threshold_held(g, &crate::seats::here(g), men, door);
     if ops.is_empty() {
@@ -813,7 +813,7 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
 }
 
 /// which hand of the opening a point is on, on this face: +1 past the far jamb, -1 before the near one, 0 on neither
-fn door_tools_hand_of(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> f64 {
+fn door_tools_hand_of(g: &crate::game::Game, d: DoorId, side: f64, p: V3) -> f64 {
     if off_of(g, d, p, side) <= 0.0 || v3::dist_xz(p, g.dr[d].frame_centre) > g.k.stackroom.view_men { return 0.0; }
     let w = g.dr[d].def.width;
     let a = along_of(g, d, p);
@@ -824,13 +824,13 @@ fn door_tools_hand_of(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) ->
 }
 
 /// a walk from where he stands to that place changes hands in front of the opening
-pub(super) fn door_tools_crosses_open(g: &mut crate::game::Game, d: DoorId, side: f64, from: V3, to: V3) -> bool {
+pub(super) fn door_tools_crosses_open(g: &crate::game::Game, d: DoorId, side: f64, from: V3, to: V3) -> bool {
     let h = door_tools_hand_of(g, d, side, from);
     h != 0.0 && (if along_of(g, d, to) > g.dr[d].def.width / 2.0 { 1.0 } else { -1.0 }) != h
 }
 
 ///  Sam and the teammates not on the order: nobody is sent to stand on them
-fn others_of(g: &mut Game, op: DoorOpId) -> Vec<V3> {
+fn others_of(g: &Game, op: DoorOpId) -> Vec<V3> {
     let mut out = vec![crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))];
     for x in g.guards.clone() {
         let ours = if crate::orders::squad_orders_sams(&crate::seats::here(g)) { g.team(x).ours() } else { crate::orders::squad_orders_mine(g, &crate::seats::here(g), x) };

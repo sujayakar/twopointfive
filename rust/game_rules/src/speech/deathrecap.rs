@@ -264,7 +264,7 @@ fn eighth(dx: f64, dz: f64) -> Option<[f64; 2]> {
 }
 
 /// a line from a man still up to one going down (the room fight's own 'man down' test, with a reach): blind men see nothing
-fn line_to(g: &mut Game, c: CharId, at: [f64; 2]) -> bool {
+fn line_to(g: &Game, c: CharId, at: [f64; 2]) -> bool {
     let p = g.ch[c].pos;
     if m::hyp2(p[0] - at[0], p[2] - at[1]) > g.k.recap.live_see_m { return false; }
     let h = head_of(g, c);
@@ -273,7 +273,7 @@ fn line_to(g: &mut Game, c: CharId, at: [f64; 2]) -> bool {
 
 /// could these ears have it: the sound model's own rule (a clear line, or over the furniture, else the walk round at the path's length, a shut leaf across it
 /// muffling it hard), without its cache
-fn ear(g: &mut Game, c: CharId, a: V3) -> bool {
+fn ear(g: &Game, c: CharId, a: V3) -> bool {
     let reach = g.k.recap.live_hear_m;
     let h = head_of(g, c);
     let b = [h[0], m::max(h[1], 0.9), h[2]];
@@ -308,7 +308,7 @@ fn heard(g: &mut Game, src: V3) -> bool {
 }
 
 /// did this player's man see him go down: a line, and where the fog is a cone (hard) inside the wedge he looks down or at his shoulder
-fn player_sees(g: &mut Game, pl: PlayerId, at: [f64; 2]) -> bool {
+fn player_sees(g: &Game, pl: PlayerId, at: [f64; 2]) -> bool {
     let c = g.pl[pl].ch;
     if crate::condition::down(g, g.pl[pl].ch) || crate::condition::is_blind(g, g.pl[pl].ch) || !line_to(g, c, at) { return false; }
     if !g.k.fog.cone { return true; }

@@ -81,8 +81,7 @@ fn destroyed(g: &Game) -> String {
 /// EVERY FIGURE, named: `who what` and its value as text
 pub fn read(g: &Game) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
-    let d = &sim::state::state_read(g.sim).dice;
-    out.push((String::from("die"), format!("{} {}", d.n, d.s)));
+    out.push((String::from("draws"), format!("{}", g.dice.n)));
     for m in men(g) {
         let c = &g.ch[m.ch];
         let who = match (m.player, m.kind) { (Some((i, _)), _) => format!("seat {}", i), (_, "civ") => format!("civilian {}", c.id), _ => format!("man {}", c.id) };

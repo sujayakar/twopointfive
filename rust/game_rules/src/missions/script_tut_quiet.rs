@@ -56,7 +56,7 @@ pub(super) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crat
 }
 
 /// the man by name, if he is still at his work
-fn calm(g: &mut Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
+fn calm(g: &Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
     let u = crate::director::director_beat_unit(g, callsign)?;
     if crate::director::director_query_state(g, r, &u) == Some(crate::game::GuardState::Patrol) { Some(u) } else { None }
 }
@@ -89,7 +89,7 @@ pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, f
 }
 
 /// he is the player's, grabbed or down
-fn taken(g: &mut Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
+fn taken(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
     !crate::director::director_query_alive(g, r, u) || crate::director::director_query_signalled(g, r, "lesson:held")
 }
 
@@ -272,7 +272,7 @@ pub(super) fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 ///  night's c.until closures, by the TEST_ ids.
-pub(super) fn tut_quiet_night_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_quiet_night_test(g: &crate::game::Game, r: DirectorRunId, f: &crate::script_tut_quiet::TutQuietNightFrame, id: u32) -> Result<bool, String> {
     let u = f.u.clone().expect("tut-quiet night: u is set at its start");
     let vars = tut_quiet_vars(g, r).clone();
     match id {

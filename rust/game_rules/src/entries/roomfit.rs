@@ -98,7 +98,7 @@ fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: V3, 
 }
 
 /// Has a man stood at `q` a line to it: a door, to just short of its frame and, its leaf open, on into the doorway; else to the point.
-fn sees(g: &mut crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> bool {
+fn sees(g: &crate::game::Game, q: V3, t: &crate::roomfit::Threat) -> bool {
     let eye: V3 = [q[0], EYE, q[2]];
     let d = v3::dist_xz(q, t.at);
     if d < 0.3 { return true; }
@@ -157,7 +157,7 @@ fn held_has(held: &[String], key: &str) -> bool {
 }
 
 /// Clear of the furniture that can be shoved, where it stands now.
-fn clear(g: &mut Game, q: V3) -> bool {
+fn clear(g: &Game, q: V3) -> bool {
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
         let dx = q[0] - g.tab.props_prop[pr].x;
@@ -223,7 +223,7 @@ fn score(g: &Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[
 }
 
 /// The best place on the floor `c` for row `i`'s job `t`.
-fn pick(g: &mut Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[V3], c: &[V3], t: Option<&crate::roomfit::Threat>, out: &[Option<crate::roomfit::Fit>], i: usize) -> Option<crate::roomfit::Fit> {
+fn pick(g: &Game, r: &crate::roomread::RoomRead, at: V3, front: f64, bodies: &[V3], c: &[V3], t: Option<&crate::roomfit::Threat>, out: &[Option<crate::roomfit::Fit>], i: usize) -> Option<crate::roomfit::Fit> {
     let mut best: Option<V3> = None;
     let mut bs = -m::INF;
     for &q in c.iter() {
@@ -317,7 +317,7 @@ pub fn fit_spots(g: &mut crate::game::Game, at: V3, n: f64, front: f64, from: V3
 }
 
 /// The longest clear run from `q` at eye height that is `sectorDeg` clear of every mate's gun.
-fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
+fn spare_run(g: &crate::game::Game, q: V3, front: f64, mates: &[crate::roomfit::Fit]) -> Option<crate::roomfit::Threat> {
     let k = g.k.roomfit;
     const B: usize = 16;
     let step = 2.0 * m::PI / (B as f64);

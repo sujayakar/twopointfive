@@ -359,7 +359,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
 }
 
 /// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.
-fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
+fn side_kick_spot(g: &crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
     if g.dr[d].leaf.off {
         return None;
     }
@@ -446,7 +446,7 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Planar distance from the player to a corpse: the nearer of its ankles, its hips and its grip.
-pub(super) fn body_dist(g: &mut crate::game::Game, gd: GuardId, within: Option<f64>) -> f64 {
+pub(super) fn body_dist(g: &crate::game::Game, gd: GuardId, within: Option<f64>) -> f64 {
     let within = within.unwrap_or(f64::INFINITY);
     let me = g.pl[g.player].ch;
     let p = g.ch[me].pos;
@@ -463,7 +463,7 @@ pub(super) fn body_dist(g: &mut crate::game::Game, gd: GuardId, within: Option<f
 }
 
 /// bodyDist's reach: not through a partition or a shut door; a point already past `within` keeps its plain distance, its line never walked.
-fn body_reach(g: &mut crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, within: f64) -> f64 {
+fn body_reach(g: &crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, within: f64) -> f64 {
     let Some(q) = q else { return 99.0 };
     let d = v3::dist_xz(q, p);
     if d + add >= within {
@@ -515,7 +515,7 @@ pub fn aim_level(c_2: crate::player::AimLevelC) -> V3 {
 }
 
 /// What the cursor's ray meets: the first thing of the world on it, never the man's own body.
-pub fn cursor_hit(g: &mut crate::game::Game, ray: crate::player::CursorHitRay, own: f64) -> Option<crate::scene_boxes::BoxWorldRaycast> {
+pub fn cursor_hit(g: &crate::game::Game, ray: crate::player::CursorHitRay, own: f64) -> Option<crate::scene_boxes::BoxWorldRaycast> {
     crate::scene_boxes::box_world_raycast(g, ray.ro, ray.rd, Some(200.0), None, Some(own), None)
 }
 

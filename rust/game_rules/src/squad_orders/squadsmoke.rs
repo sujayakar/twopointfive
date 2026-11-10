@@ -60,7 +60,7 @@ fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k: Op
 }
 
 /// Nothing between a can down at `a` and the spot `b` for its run along the floor.
-fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn run_clear(g: &crate::game::Game, a: V3, b: V3) -> bool {
     let d = v3::dist_xz(a, b);
     if d < 0.05 { return true; }
     let rd: V3 = [(b[0] - a[0]) / d, 0.0, (b[2] - a[2]) / d];
@@ -87,14 +87,14 @@ pub(super) fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Where a throw on `s` rests, the ground under its landing shortening the run.
-fn rest_of(g: &mut Game, from: V3, s: &crate::throwables::ThrowSolution, roll_k: f64) -> V3 {
+fn rest_of(g: &Game, from: V3, s: &crate::throwables::ThrowSolution, roll_k: f64) -> V3 {
     let bog = crate::snow_bog::snow_bog_at(g, s.land[0], 0.0, s.land[2]);
     let run = crate::snow_bog::bog_run(g, bog);
     squad_smoke_rest(from, s, Some(roll_k * run))
 }
 
 /// One man's throw to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests. None: he has none.
-pub(super) fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
+pub(super) fn squad_arc_to(g: &crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
     let t = squadsmoke();
     let roll_k = match roll_k { Some(r) => r, None => t.roll_k };
     let to: V3 = [at[0], at[1] + 0.05, at[2]];
@@ -122,7 +122,7 @@ pub(super) fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_
 }
 
 /// The man of `men` who would throw it, with his throw: the nearest to the spot with an arc to rest on it.
-pub(super) fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
+pub(super) fn squad_smoke_thrower(g: &crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
     let again = squadsmoke().again_secs;
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let mut order: Vec<GuardId> = men.to_vec();

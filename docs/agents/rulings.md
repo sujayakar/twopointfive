@@ -12,7 +12,7 @@ A ruling that stands on a system's own page is there and not here.
 - "weird that the men are covered in snow, shouldn't happen": `lookMan` puts no snow on a man, and "let's also remove the snow on boots" took the cake off too.
 - "we also need to get away from the pixel art textures": a man's camouflage is the print on the bolt (`manCamo2`), never noise cut at a level.
 - "we don't need to go full hyperrealistic but we should sell it more": a car's body is the `carpaint` stuff in `lookTex.ts`, and no more than that.
-- "i don't think we need the NVG to glow in the dark": `goggles_boxes` builds the tubes from `goggle_part`, with nothing lit.
+- "i don't think we need the NVG to glow in the dark": `goggles_boxes` builds the tubes from parts with nothing lit.
 - "shooting metal shouldn't have particle debris, maybe just sparks?": `hit_look` gives `Metal` no chips.
 - "for most glass we do want to simulate the fractures -- I think props like cars should be an exception": solid glass cracks and throws `SOLID_GLASS_CHIPS`.
 

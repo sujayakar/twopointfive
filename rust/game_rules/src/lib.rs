@@ -4,7 +4,7 @@
 extern crate alloc;
 pub use game_types::*;
 pub mod tick;
-pub use tick::{audio_iface, camera, cmd, effects, env, game, input, math_dice, out_events, savestate, seats, standing, sim_men_store, sim_sim, state_words, view, walkahead, dice};
+pub use tick::{audio_iface, camera, cmd, effects, env, game, input, out_events, savestate, seats, standing, sim_men_store, state_words, view, walkahead, dice};
 pub mod world;
 pub use world::{ask, floor, levelfit, places, scene_boxes, scene_collision, scene_cut, scene_level_load, scene_look, scene_marking_defaults, scene_markings, scene_materials, scene_stuff, thinline};
 pub mod air;

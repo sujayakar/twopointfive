@@ -193,18 +193,18 @@ fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -> bo
 fn cover_eye_of(p: V3) -> V3 { [p[0], EYE, p[2]] }
 
 /// The point of this opening a man stood at `p` can watch.
-pub(in crate::teammates) fn cover_sight_from(g: &mut Game, p: V3, o: CoverOpeningId) -> Option<V3> {
+pub(in crate::teammates) fn cover_sight_from(g: &Game, p: V3, o: CoverOpeningId) -> Option<V3> {
     let eye = cover_eye_of(p);
     cover_sight(g, eye, o)
 }
 
 /// A line from this eye to the opening itself.
-fn cover_line(g: &mut Game, eye: V3, o: CoverOpeningId) -> bool {
+fn cover_line(g: &Game, eye: V3, o: CoverOpeningId) -> bool {
     cover_sight(g, eye, o) == Some(g.tab.cover_opening[o].at)
 }
 
 /// The point of this opening a man at `eye` can watch: the opening, or just past an open leaf's free edge.
-fn cover_sight(g: &mut Game, eye: V3, o: CoverOpeningId) -> Option<V3> {
+fn cover_sight(g: &Game, eye: V3, o: CoverOpeningId) -> Option<V3> {
     let k = g.k.cover;
     let at = g.tab.cover_opening[o].at;
     let door = g.tab.cover_opening[o].door;
@@ -362,7 +362,7 @@ fn fast(g: &Game, cx: &Cx, gd: GuardId) -> bool {
 
 fn runs(g: &Game, cx: &Cx, gd: GuardId, at: V3) -> bool { fast(g, cx, gd) && behind_of(g, cx, gd, at) }
 
-fn sam_on(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
+fn sam_on(g: &Game, cx: &Cx, o: CoverOpeningId) -> bool {
     if matches!(g.tab.cover_opening[o].kind, OpeningKind::Rear | OpeningKind::Floor) { return false; }
     let at = g.tab.cover_opening[o].at;
     for &sam in &cx.sams {
@@ -421,7 +421,7 @@ fn rear_moved(g: &mut Game, r: CoverOpeningId) {
 }
 
 /// The point his gun rests on along (dx, dz): the furthest of three his eye has a line to.
-fn along(g: &mut Game, p: V3, dx: f64, dz: f64, l: f64, far: bool) -> Option<V3> {
+fn along(g: &Game, p: V3, dx: f64, dz: f64, l: f64, far: bool) -> Option<V3> {
     let h = m::hyp2(dx, dz);
     if !(h > 1e-6) { return None; }
     let rear_m = g.k.cover.rear_m;
@@ -907,7 +907,7 @@ fn in_lane(x: V3, a: V3, b: V3, lane: f64) -> bool {
 }
 
 /// The spot a man steps to to see through open door `o`.
-fn cover_step_spot(g: &mut Game, gd: GuardId, from: V3, o: CoverOpeningId, bodies: &[(CharId, V3)]) -> Option<CoverStepSpot> {
+fn cover_step_spot(g: &Game, gd: GuardId, from: V3, o: CoverOpeningId, bodies: &[(CharId, V3)]) -> Option<CoverStepSpot> {
     let k = g.k.cover;
     let me = g.gd[gd].ch;
     let p = pos_of(g, gd);

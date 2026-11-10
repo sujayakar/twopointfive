@@ -561,7 +561,11 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let (last, cut) = (g.tab.devices_laser_rt[l].last_trip_at, g.tab.devices_laser_rt[l].cut);
         let glow: V3 = if ok { if g.time - last < 1.5 { v3::scale(red(), if m::sin(g.time * 40.0) > 0.0 { 2.0 } else { 0.2 }) } else { [1.5, 0.1, 0.05] } } else { [0.0, 0.0, 0.0] };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::default() }).into());
-        if ok && cut > 0.05 { crate::combat::beam_boxes(g, d.from, dir, cut, out, cut < len - 0.05, None, None); }
+        if ok && cut > 0.05 {
+            let mut beam = crate::rig_props::Carried::default();
+            crate::combat::beam_boxes(d.from, dir, cut, &mut beam, cut < len - 0.05, false, false);
+            beam.laid(g, out);
+        }
     }
 }
 

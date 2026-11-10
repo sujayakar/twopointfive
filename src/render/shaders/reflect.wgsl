@@ -165,13 +165,13 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let NdotV = max(Ve.z, 0.05);
   let lamV = smithLambda(vec3f(Ve.x, Ve.y, NdotV), ax, ay);
-  for (var i = 0u; i < nL; i++) {
+  var at = lightsAt(P);
+  for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
     let li = wgLights[i];
     let kind = lightKind(li);
     let far = SUN_GLINT && kind == 2u;                                    // a direction and a disc, no place. (Without the word this is a constant false, and every line below is the line it was)
     if ((kind == 2u && !far) || (!far && li.radius <= 0.0) || lightTransient(li)) { continue; }
     if (kind == 3u && kAna <= 0.0) { continue; }                          // area-lit fixtures: only the share the traced ray leaves (none on a polish)
-    if (!lightReaches(i, P)) { continue; }
     let d = select(li.pos - P, -normalize(li.dir) * RT_SUN_FAR, far); let dist2 = dot(d, d); let dist = sqrt(dist2);
     if (!far && (dist > li.range || dist < 0.05)) { continue; }
     let Ld = d / dist;

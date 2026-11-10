@@ -21,7 +21,7 @@ fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
 }
 
 /// A round just cycled out of `w`: is it a tracer? Every `every`-th out of the box, or fewer than `lastN` left.
-fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
+fn is_tracer_round(g: &crate::game::Game, w: FirearmId) -> bool {
     let def = g.fa[w].def;
     let Some(t) = g.m.weapons.weapons.get(def).unwrap().tracer else { return false; };
     let k = if g.fa[w].infinite { g.fa[w].shots_fired } else { crate::weapons::firearm_spent(g, w) };

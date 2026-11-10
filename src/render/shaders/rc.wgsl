@@ -187,9 +187,10 @@ fn rcDice(@builtin(global_invocation_id) gid: vec3u) {
   if (frame.placeCfg.y > 0.5) {
     let P = probePos(vec3u(px, py, pz), rc.spacing);
     var V: array<vec3f, 7>; var T: array<f32, 7>;
-    for (var i = u32(frame.placeCfg.y) - 1u; i < frame.numLights; i++) {
+    var at = lightsAt(P);
+    for (var i = nextLight(&at); i < 64u; i = nextLight(&at)) {
+      if ((lights[i].kind & LIGHT_PORTAL) == 0u) { continue; }
       let li = lights[i];
-      if (!lightPortal(li) || !lightReaches(i, P)) { continue; }
       let dv = li.pos - P; let dist = length(dv);
       if (dist > li.range || dot(dv, li.dir) >= 0.0) { continue; }   // (out of its range, or behind it)
       let k0 = portalArea(li) * li.cosInner * lightWindow(dist, li.range); let sky = skyRadiance(dv / max(dist, 1e-4)); let hue = sky / max(luminance(sky), 1e-9);

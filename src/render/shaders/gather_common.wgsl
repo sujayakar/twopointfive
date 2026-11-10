@@ -58,7 +58,9 @@ fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f {
   let tLo = min(frame.p5Cfg.w, nL); let tHi = select(0u, nL, frame.rcJitter.w > 0.0);
   let nT = select(0u, tHi - tLo, tHi > tLo);
   let nK = select(0u, nC, ex != 0u);
-  let turns = select(nL + 1u, nT + nK, onScreen);
+  var at = vec2u(0u); if (!onScreen) { at = lightsAt(P); }   // (a light walled off from the bounce point's cell — reach.ts — is neither in the sum nor pickable: the same failure the direct pass had, one bounce down)
+  let nO = countOneBits(at.x) + countOneBits(at.y);
+  let turns = select(nO + 1u, nT + nK, onScreen);
   var U = vec3f(0.0); var W = 0.0; var pick = -1; var pw = 0.0; var pL = vec3f(0.0); var pDist = 0.0; var pRad = 0.0;
   var vis = 1.0;
   let Po = P + N * 0.01;
@@ -68,13 +70,13 @@ fn directAtPoint(P: vec3f, N: vec3f, ex: u32) -> vec3f {
     if (onScreen) {
       if (t < nT) { mode = 0u; slot = tLo + t; }
       else { mode = 1u; let k = t - nT; if ((ex & (1u << k)) == 0u) { continue; } slot = u32(wgCards[k * 4u + 1u].w); }
-    } else if (t == nL) { if (pick < 0) { break; } mode = 3u; slot = u32(pick); }
+    } else if (t == nO) { if (pick < 0) { break; } mode = 3u; slot = u32(pick); }
+    else { slot = nextLight(&at); }
     let li = wgLights[slot];
     if (mode == 0u && !lightTransient(li)) { continue; }
     if (mode == 2u) {
       if (lightTransient(li)) { continue; }
       if (ex != 0u) { let ck = wgCardOf[slot]; if (ck >= 0 && (ex & (1u << u32(ck))) != 0u) { continue; } }   // torch bounce cards: this light's direct term here is the card's to carry (never taken with the flag off: ex == 0u)
-      if (!lightReaches(slot, P)) { continue; }   // walled off from the bounce point's cell (reach.ts): neither in the sum nor pickable — the same failure the direct pass had, one bounce down
     }
     var ev: LightEval;
     if (mode != 3u) { ev = evalLight(li, P, N); }

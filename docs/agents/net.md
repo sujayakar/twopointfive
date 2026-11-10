@@ -47,7 +47,7 @@ a tick worked out from time: the server's tick against this clock, plus `margin`
 
 **On the page.** `netAsked` says hello and moves the page to the game's own address (`movedTo`), because a page reads its picture off its address. The
 seat's key comes off the address and is kept for the tab. Each page tick `DrawNet.tick` sends the record, walks, and looks ahead. It walks one tick, two while
-more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody sees. As a card goes up or the tab is hidden it sends one `restOf` record, whatever was held, and goes on walking.
+more than `NET.lead` wait; from `NETDOOR.far` it catches up over ticks nobody sees. Under a card or in a hidden tab it sends one `restOf` record and goes on walking.
 
 **The look ahead.** `Foresee.look` asks `face_ahead` to walk his man through `NetClient.unplayed` on a copy, writing nothing;
 `lead.rs` draws him there. Only his walk and aim are ahead: his rounds, doors, orders and pose, and every other man, are the

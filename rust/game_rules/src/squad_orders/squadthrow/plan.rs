@@ -34,7 +34,7 @@ pub fn lit(g: &Game, seat: &crate::seats::SeatRef) -> Option<(Vec<GuardId>, V3, 
 }
 
 /// what the plan was read off, as far as it moves while a menu is up: where each of ours stands, to half a metre, who is up, and what is left
-fn read_of(g: &mut Game, kind: SquadThrowKind) -> String {
+fn read_of(g: &Game, kind: SquadThrowKind) -> String {
     let mut s = js::num_str(left(g, kind));
     let mut at = |p: V3, up: bool| { s.push_str(&format!(";{},{}{}", js::num_str(m::floor(p[0] * 2.0)), js::num_str(m::floor(p[2] * 2.0)), if up { "" } else { "x" })); };
     at(g.ch[g.pl[g.player].ch].pos, !crate::condition::down(g, g.pl[g.player].ch));
@@ -109,7 +109,7 @@ fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Op
 }
 
 /// The row's words, with the warning of the plan for this spot.
-pub(in crate::squad_orders) fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
+pub(in crate::squad_orders) fn row_label(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let warn = g.m.squadthrow.states.get(key).and_then(|s| s.plans.get(kind)).filter(|p| p.at == at).and_then(|p| p.warn.clone()).unwrap_or_default();
     let n = left(g, kind);
