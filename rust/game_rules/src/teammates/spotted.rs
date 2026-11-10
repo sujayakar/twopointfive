@@ -69,11 +69,7 @@ pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
 
 /// his foe is Sam on his feet, or a live operative
 fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
-    match g.gd[h].foe {
-        Some(crate::game::Foe::Player) => !crate::condition::down(g, g.pl[seat.player].ch),
-        Some(crate::game::Foe::Guard(f)) => g.gd[f].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[f].ch),
-        None => false,
-    }
+    g.gd[h].foe.is_some_and(|f| !crate::condition::down(g, f) && crate::character::guard_of(g, f).map_or(true, |o| g.gd[o].team == crate::teams::Team::Operative))
 }
 
 /// an alert man with a real sighting of one of them inside `freshSecs`
@@ -372,7 +368,7 @@ fn on_him(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let eye = eye_of(g, h);
     if crate::scene_collision::segment_blocked(g, eye, [p[0], 1.25, p[2]], None, None, None) { return false; }
     let saw = m::max(g.gd[h].sight_t, g.gd[h].last_seen_t);
-    let his_fix = matches!(g.gd[h].foe, Some(crate::game::Foe::Guard(f)) if f == gd);
+    let his_fix = g.gd[h].foe == Some(g.gd[gd].ch);
     if his_fix && g.time - saw >= 0.0 && g.time - saw < g.k.spotted.fresh_secs { return true; }
     let (dx, dz) = (p[0] - hp[0], p[2] - hp[2]);
     let d = js::or(m::hyp2(dx, dz), 1.0);
@@ -581,7 +577,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
             set(g, gd, crate::spotted::SpottedMode::Caught, by);
             if was != crate::spotted::SpottedMode::Caught {
                 let text = match by {
-                    Some(b) if matches!(g.gd[b].foe, Some(crate::game::Foe::Player)) => "he's made you! covering!",
+                    Some(b) if crate::teams::foe_is_player(g, b) => "he's made you! covering!",
                     Some(_) => "he's made me! contact!",
                     None => "contact! covering you!",
                 };

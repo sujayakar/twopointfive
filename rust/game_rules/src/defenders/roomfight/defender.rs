@@ -229,7 +229,7 @@ fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64)
 fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
     if g.gd[gd].state == crate::game::GuardState::Alert && g.tab.roomfight_def[d].last_state != "alert" { let p = pick(g, crate::dice::Who::Def(d), s.react); g.gd[gd].react_t = m::max(g.gd[gd].react_t, p); }
-    let fc = crate::teams::foe_char(g, gd);
+    let fc = g.gd[gd].foe;
     if let Some(fc) = fc { if g.gd[gd].last_seen_t > g.tab.roomfight_def[d].last_seen + 1.5 && g.time - g.gd[gd].last_seen_t < 0.1 {
         let (cp, fp, pt) = (g.ch[c].pos, g.ch[fc].pos, g.tab.roomfight_def[d].pt);
         let off = m::abs(v3::wrap_angle(v3::yaw_to(cp, fp) - v3::yaw_to(cp, pt)));
@@ -460,10 +460,10 @@ fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
     // the man his eyes have (guards/senses), near enough to stop for; never the one he is getting away from
     let from = if g.time < g.tab.roomfight_def[d].bolt_until { g.tab.roomfight_def[d].bolt_from } else { None };
     let reach = g.k.roomfight.move_engage_m;
-    let near = crate::teams::foe_char(g, gd).map_or(false, |fc| v3::dist(g.ch[fc].pos, g.ch[c].pos) < reach);
+    let near = g.gd[gd].foe.map_or(false, |fc| v3::dist(g.ch[fc].pos, g.ch[c].pos) < reach);
     let contact = g.gd[gd].foe.filter(|&f| g.gd[gd].saw_foe_this_frame && near && !crate::control::man::blind(g, gd) && Some(f) != from);
     if let Some(ct) = contact {
-        let fc = match ct { crate::game::Foe::Player => { let man = crate::seats::faced_man(g, gd); g.pl[man].ch } crate::game::Foe::Guard(o) => g.gd[o].ch };
+        let fc = ct;
         crate::mind::foe(g, gd, Some(ct), "roomfight");
         crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
         room_fight_plant(g, d, "contact");

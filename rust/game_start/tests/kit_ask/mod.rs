@@ -1,6 +1,6 @@
 //! WHAT THE KIT AND PLAYER TESTS ASK AND STAGE that `Play` has no reader or call for yet: one line each, named for what it answers, so that a test never reaches into a field.
 #![allow(dead_code)]
-use game::game::{Foe, GuardState};
+use game::game::GuardState;
 use game::ids::*;
 use game_start::play::Play;
 
@@ -404,7 +404,7 @@ impl KitAsk for Play {
         let t0 = self.g.time;
         let m = &mut self.g.gd[gd];
         (m.state, m.awareness, m.react_t, self.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
-            (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(Foe::Player));
+            (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(self.g.pl[self.g.player].ch));
         m.path.clear();
         m.path_goal = None;
     }

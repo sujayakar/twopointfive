@@ -63,7 +63,7 @@ fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], dt: 
 pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
-    let pc = crate::teams::foe_char(g, gd);
+    let pc = g.gd[gd].foe;
     g.arms[g.gd[gd].ch].aim.braking = false;
     if !g.tune.aim_model || crate::condition::down(g, g.gd[gd].ch) {
         aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
@@ -78,8 +78,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let mut a = core::mem::take(&mut g.arms[g.gd[gd].ch].aim);
     feed_feet(g, &mut a, speed, dt, p.feet_tau, None);
     g.arms[g.gd[gd].ch].aim = a;
-    let at_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
-    let key = if at_player { String::from("sam") } else { alloc::format!("u{}", js::num_str(g.ch[pc].id)) };
+    let key = alloc::format!("u{}", js::num_str(g.ch[pc].id));
     let a = &mut g.arms[g.gd[gd].ch].aim;
     if a.tgt_key != key {
         if !a.tgt_key.is_empty() {
@@ -95,7 +94,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         None => g.ch[pc].pos,
     };
     let brg = m::atan2(trunk[0] - c_pos[0], trunk[2] - c_pos[2]);
-    let tvel = if at_player { crate::guards::player_ground_vel(g) } else { g.ch[pc].vel };
+    let tvel = if crate::character::is_player(g, pc) { crate::guards::player_ground_vel(g) } else { g.ch[pc].vel };
     let jumped = feed_target(&mut g.arms[g.gd[gd].ch].aim, c_pos, trunk, &tvel, dt, p.jump_deg, p.rate_tau);
     if g.gd[gd].pinned && g.gd[gd].skill.is_none() {
         g.arms[g.gd[gd].ch].aim.track = 1.0;
@@ -155,7 +154,7 @@ fn ai_spread_of(g: &crate::game::Game, gd: GuardId) -> crate::weapons::AiSpread 
 
 /// The man he is firing at, Sam's body if nobody: `foeChar(g, gd) ?? g.player.char`.
 fn foe_or_player(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> CharId {
-    match crate::teams::foe_char(g, gd) {
+    match g.gd[gd].foe {
         Some(c) => c,
         None => g.pl[seat.player].ch,
     }
