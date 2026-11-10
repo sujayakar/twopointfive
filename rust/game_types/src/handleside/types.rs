@@ -64,11 +64,6 @@ pub struct Ahead {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct BendA {
-    pub k: usize,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct ToolSpot {
     pub pos: V3,
     pub yaw: f64,

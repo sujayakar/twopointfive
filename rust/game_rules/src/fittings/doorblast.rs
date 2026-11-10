@@ -7,7 +7,40 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- what skeleton 5 still cannot do: one blocked step
+mod splinter;
+pub use splinter::splinter;
+
+/// A leaf as it stands: its bearing, along it from its hinge, its middle.
+struct Stands {
+    a: f64,
+    u: [f64; 2],
+    c: [f64; 2],
+}
+
+fn stands(g: &Game, d: DoorId) -> Stands {
+    let [hx, hz] = g.dr[d].def.hinge;
+    let half = g.dr[d].def.width * 0.5 + 0.01;
+    let a = g.dr[d].def.closed_dir + g.dr[d].leaf.angle;
+    let [ux, uz] = [m::cos(a), m::sin(a)];
+    Stands { a, u: [ux, uz], c: [hx + ux * half, hz + uz * half] }
+}
+
+impl Stands {
+    /// Straight off its face, the way `fly` goes.
+    fn out(&self, fly: f64) -> [f64; 2] {
+        [-self.u[1] * fly, self.u[0] * fly]
+    }
+}
+
+/// Where the handle is on a leaf `w` by `h`, from its middle.
+fn handle_on(w: f64, h: f64) -> [f64; 2] {
+    [(w - 0.14) - (w * 0.5 + 0.01), 1.0 - (h / 2.0 + 0.01)]
+}
+
+/// A leaf no blast and no round takes: steel, or off already.
+fn stays(g: &Game, d: DoorId) -> bool {
+    g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false)
+}
 
 
 /// Keeps a line of what the doors' blasts did.
@@ -57,7 +90,7 @@ fn overlaps(g: &crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0:
 }
 
 /// The nearest spot within maxR where that rectangle stands clear, by rings of sixteen bearings.
-fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
+fn free_spot(g: &crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
     let mut r = 0.03;
     while r <= max_r + 1e-9 {
         for i in 0..16 {
@@ -97,7 +130,7 @@ pub fn door_blast_reach(g: &crate::game::Game, at: V3, tear_m: f64) -> Vec<crate
     }
     let list = g.doors.list.clone();
     for d in list {
-        if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
+        if stays(g, d) {
             continue;
         }
         let [hx, hz] = g.dr[d].def.hinge;
@@ -187,64 +220,24 @@ fn leaf_is_off(g: &mut Game, d: DoorId, fly: f64) {
 /// The leaf comes off, thrown out of its frame away from `from`. False, and nothing done, for steel or one already off.
 pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Option<f64>) -> bool {
     let k = k.unwrap_or(1.0);
-    if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
+    if stays(g, d) {
         return false;
     }
+    let s = stands(g, d);
     let [hx, hz] = g.dr[d].def.hinge;
-    let w = g.dr[d].def.width;
-    let a = g.dr[d].def.closed_dir + g.dr[d].leaf.angle;
-    let (ux, uz) = (m::cos(a), m::sin(a));
-    let cx = hx + ux * (w * 0.5 + 0.01);
-    let cz = hz + uz * (w * 0.5 + 0.01);
-    let face = if ux * (from[2] - hz) - uz * (from[0] - hx) >= 0.0 { 1.0 } else { -1.0 };
+    let face = if s.u[0] * (from[2] - hz) - s.u[1] * (from[0] - hx) >= 0.0 { 1.0 } else { -1.0 };
     let fly: f64 = -face;
-    let (nx, nz) = (-uz * fly, ux * fly);
     frame_lets_go(g, d, who);
     let pos = crate::doors::door_pos(g, d);
     crate::doors::doors_sound(g, d, crate::doors::DoorSound::Kick, pos, who, 1.0);
-    let mut ahead: f64 = 9.0;
-    // (its own leaf, which is coming off, is no wall ahead of it)
-    let others = crate::ask::Over::but_door(g, d);
-    for f in [0.0, -0.4, 0.4] {
-        if let Some(h) = crate::scene_collision::raycast_over(g, &others, [cx + ux * w * f + nx * 0.06, 0.2, cz + uz * w * f + nz * 0.06], [nx, 0.0, nz], 9.0) {
-            ahead = m::min(ahead, h.t + 0.06);
-        }
-    }
+    let ahead = room_ahead(g, d, &s, fly);
     let back = ahead < g.dr[d].height + g.k.doorblast.room;
-    let (mut dx, mut dz) = (nx, nz);
-    if !back {
-        let (rx, rz) = (cx - from[0], cz - from[2]);
-        let rl = m::hyp2(rx, rz);
-        if rl > 0.05 {
-            dx += 0.35 * rx / rl;
-            dz += 0.35 * rz / rl;
-            let l = m::hyp2(dx, dz);
-            dx /= l;
-            dz /= l;
-        }
-    }
     let speed = g.k.doorblast.speed;
-    let sp = v3::lerp(speed[0], speed[1], v3::clamp(k, 0.0, 1.0)) * (if back { 0.7 } else { 1.0 });
+    let speed = v3::lerp(speed[0], speed[1], v3::clamp(k, 0.0, 1.0));
+    // (no room to fly: pushed at what is in front of it, and over the other way)
+    let slab = if back { upright(g, d, &s, s.out(fly), speed * 0.7, -fly) } else { flies_out(g, d, &s, fly, from, speed) };
     leaf_is_off(g, d, fly);
-    let (up, spin, tip) = (g.k.doorblast.up, g.k.doorblast.spin, g.k.doorblast.tip);
-    let p: V3 = [cx, support(g, d, 0.0), cz];
-    let ang = g.dr[d].leaf.angle;
-    g.dr[d].slab = Some(crate::doors::Slab {
-            p,
-            v: [dx * sp, up, dz * sp],
-            a,
-            spin: if back { 0.0 } else { fly * spin },
-            tip: 0.0,
-            tip_v: if back { 0.0 } else { tip },
-            side: if back { -fly } else { fly },
-            rest: false,
-            landed: false,
-            who,
-            t: 0.0,
-            ang,
-            bits: None,
-            wedged: 0.0,
-    });
+    g.dr[d].slab = Some(crate::doors::Slab { who, ang: g.dr[d].leaf.angle, ..slab });
     hands_off(g, d);
     let said = if back { format!("no room ahead ({} m): falls back", js::to_fixed(ahead, 2)) } else { format!("{} m ahead", js::to_fixed(ahead, 2)) };
     let line = format!("{} off its hinges · k {} · {}", g.dr[d].def.name, js::to_fixed(k, 2), said);
@@ -252,6 +245,76 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
     pose_slab(g, d);
     crate::doors::doors_torn(g, d, who, None);
     true
+}
+
+/// How far a leaf could go that way before it met something (its own leaf, which is coming off, is no wall ahead of it).
+fn room_ahead(g: &Game, d: DoorId, s: &Stands, fly: f64) -> f64 {
+    let ([ux, uz], [cx, cz], [nx, nz], w) = (s.u, s.c, s.out(fly), g.dr[d].def.width);
+    let others = crate::ask::Over::but_door(g, d);
+    let mut ahead: f64 = 9.0;
+    for f in [0.0, -0.4, 0.4] {
+        if let Some(h) = crate::scene_collision::raycast_over(g, &others, [cx + ux * w * f + nx * 0.06, 0.2, cz + uz * w * f + nz * 0.06], [nx, 0.0, nz], 9.0) {
+            ahead = m::min(ahead, h.t + 0.06);
+        }
+    }
+    ahead
+}
+
+/// Out of its frame flat, a little away from the blast, turning and going over.
+fn flies_out(g: &Game, d: DoorId, s: &Stands, fly: f64, from: V3, speed: f64) -> crate::doors::Slab {
+    let [mut dx, mut dz] = s.out(fly);
+    let (rx, rz) = (s.c[0] - from[0], s.c[1] - from[2]);
+    let rl = m::hyp2(rx, rz);
+    if rl > 0.05 {
+        dx += 0.35 * rx / rl;
+        dz += 0.35 * rz / rl;
+        let l = m::hyp2(dx, dz);
+        dx /= l;
+        dz /= l;
+    }
+    crate::doors::Slab { spin: fly * g.k.doorblast.spin, tip_v: g.k.doorblast.tip, ..upright(g, d, s, [dx, dz], speed, fly) }
+}
+
+/// An upright slab leaving its frame the way `[dx, dz]`, to go over on `side` and not yet doing so. Whose it is and the angle it leaves its door at are the caller's.
+fn upright(g: &Game, d: DoorId, s: &Stands, [dx, dz]: [f64; 2], speed: f64, side: f64) -> crate::doors::Slab {
+    crate::doors::Slab {
+        p: [s.c[0], support(g, d, 0.0), s.c[1]],
+        v: [dx * speed, g.k.doorblast.up, dz * speed],
+        a: s.a,
+        spin: 0.0,
+        tip: 0.0,
+        tip_v: 0.0,
+        side,
+        rest: false,
+        landed: false,
+        who: 0.0,
+        t: 0.0,
+        ang: 0.0,
+        bits: None,
+        wedged: 0.0,
+    }
+}
+
+/// What a round chips off a leaf.
+fn chips(who: f64, albedo: V3, speed: f64, spread: f64, life: f64) -> crate::render_particles::EmitOpts {
+    crate::render_particles::EmitOpts {
+        speed,
+        speed_jit: Some(0.7),
+        spread: Some(spread),
+        life,
+        life_jit: Some(0.3),
+        size: 0.006,
+        size_jit: Some(0.6),
+        aspect: Some(3.0),
+        color: Some(v3::copy(albedo)),
+        owner: Some(who),
+        ..Default::default()
+    }
+}
+
+/// A burst of debris particles, off `at` the way `toward`.
+fn debris_burst(g: &mut Game, at: V3, toward: V3, n: f64, o: crate::render_particles::EmitOpts) {
+    crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, at, v3::normalize(toward), n, o);
 }
 
 /// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's.
@@ -272,7 +335,7 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
         Some(d) => d,
         None => return,
     };
-    if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
+    if stays(g, d) {
         return;
     }
     let was = g.dr[d].leaf.shot;
@@ -285,286 +348,12 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
     }
     if share > 0.5 {
         // past half its toll: every round takes splinters out of its far face
-        let l = js::or(m::hyp3(dir[0], dir[1], dir[2]), 1.0);
-        let thick = g.dr[d].thick;
-        let (shed, speed) = (g.k.doorshot.shed, g.k.doorshot.chip_v[1]);
-        let albedo = g.tab.boxes[b].albedo;
-        let pos: V3 = [hit_p[0] + dir[0] / l * (thick + 0.02), hit_p[1], hit_p[2] + dir[2] / l * (thick + 0.02)];
-        crate::render_particles::particles_emit(
-            g,
-            crate::render_particles::PKind::Debris,
-            pos,
-            [dir[0] / l, dir[1] / l, dir[2] / l],
-            m::round(shed * m::min(1.0, share)),
-            crate::render_particles::EmitOpts {
-                speed,
-                speed_jit: Some(0.7),
-                spread: Some(0.9),
-                life: 16.0,
-                life_jit: Some(0.3),
-                size: 0.006,
-                size_jit: Some(0.6),
-                aspect: Some(3.0),
-                color: Some(v3::copy(albedo)),
-                owner: Some(who),
-                ..Default::default()
-            },
-        );
+        let way = v3::normalize(dir);
+        let through = g.dr[d].thick + 0.02;
+        let o = chips(who, g.tab.boxes[b].albedo, g.k.doorshot.chip_v[1], 0.9, 16.0);
+        let n = m::round(g.k.doorshot.shed * m::min(1.0, share));
+        debris_burst(g, [hit_p[0] + way[0] * through, hit_p[1], hit_p[2] + way[2] * through], dir, n, o);
     }
-}
-
-/// `R(k)` of splinter: the hash of (seed + k).
-fn r_of(seed: f64, k: f64) -> f64 {
-    crate::debris::hash01((seed + k) * 2654435761.0)
-}
-
-/// The cuts of a leaf's strips or lengths, uneven by `uneven`.
-fn cuts(seed: f64, n: f64, salt: f64, uneven: f64) -> Vec<f64> {
-    let mut c = vec![-1.0];
-    let mut j = 1.0;
-    while j < n {
-        c.push(-1.0 + 2.0 * (j + (r_of(seed, salt + j) - 0.5) * uneven) / n);
-        j += 1.0;
-    }
-    c.push(1.0);
-    c
-}
-
-/// The leaf goes in pieces the way a round travelling `dir` sends it; the lock rail stays as its box.
-pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Option<V3>) -> bool {
-    if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
-        return false;
-    }
-    let kk = g.k.doorshot.clone();
-    let [hx, hz] = g.dr[d].def.hinge;
-    let (w_, h_, t_) = (g.dr[d].def.width, g.dr[d].height, g.dr[d].thick);
-    let a = g.dr[d].def.closed_dir + g.dr[d].leaf.angle;
-    let (ux, uz) = (m::cos(a), m::sin(a));
-    let cx = hx + ux * (w_ * 0.5 + 0.01);
-    let cz = hz + uz * (w_ * 0.5 + 0.01);
-    let hw = g.dr[d].leaf_h[0];
-    let leaf = g.dr[d].box_;
-    let (albedo, yaw) = {
-        let row = &g.tab.boxes[leaf];
-        (row.albedo, row.yaw)
-    };
-    let fly: f64 = if dir[2] * ux - dir[0] * uz >= 0.0 { 1.0 } else { -1.0 };
-    let (nx, nz) = (-uz * fly, ux * fly);
-    let (mut dx, mut dz) = (dir[0], dir[2]);
-    {
-        let l = m::hyp2(dx, dz);
-        if l < 0.2 {
-            dx = nx;
-            dz = nz;
-        } else {
-            dx = 0.6 * dx / l + 0.4 * nx;
-            dz = 0.6 * dz / l + 0.4 * nz;
-            let mm = m::hyp2(dx, dz);
-            dx /= mm;
-            dz /= mm;
-        }
-    }
-    frame_lets_go(g, d, who);
-    let pos = crate::doors::door_pos(g, d);
-    crate::doors::doors_sound(g, d, crate::doors::DoorSound::Kick, pos, who, kk.level);
-    // the cuts: strips along the grain, each to uneven lengths; the piece the handles are on is the lock rail
-    let struck = match at {
-        Some(at) => m::floor(((at[0] - hx) * ux + (at[2] - hz) * uz) * 16.0) * 7.0 + m::floor(at[1] * 16.0) * 31.0,
-        None => 0.0,
-    };
-    let door_ix = g.doors.list.iter().position(|x| *x == d).map_or(-1.0, |i| i as f64);
-    let seed = door_ix * 977.0 + 131.0 + struck;
-    let xs = cuts(seed, m::max(1.0, kk.strips), 10.0, kk.uneven);
-    let handle_x = (w_ - 0.14) - (w_ * 0.5 + 0.01);
-    let handle_y = 1.0 - (h_ / 2.0 + 0.01);
-    let mut left = kk.chunks;
-    let mut rail: Option<[f64; 4]> = None;
-    let mut rail_x = 0.0;
-    let mut k = 100.0;
-    let land = crate::furnblast::furn_break_row(crate::scene_materials::BreakClass::Wood).land;
-    for i in 0..xs.len() - 1 {
-        let ys = cuts(seed, m::max(1.0, kk.lengths), 20.0 + (i as f64) * 8.0, kk.uneven);
-        let lx = (xs[i] + xs[i + 1]) / 2.0 * hw;
-        let sw = (xs[i + 1] - xs[i]) / 2.0 * hw;
-        for j in 0..ys.len() - 1 {
-            let ly = (ys[j] + ys[j + 1]) / 2.0 * h_ / 2.0;
-            let sl = (ys[j + 1] - ys[j]) / 2.0 * h_ / 2.0;
-            if rail.is_none() && m::abs(handle_x - lx) <= sw && m::abs(handle_y - ly) <= sl {
-                let mx = m::max(0.0, sw - 0.065);
-                let my = m::max(0.0, sl - 0.03);
-                rail = Some([sw, sl, v3::clamp(handle_x - lx, -mx, mx), v3::clamp(handle_y - ly, -my, my)]);
-                rail_x = lx;
-                continue;
-            }
-            let r1 = r_of(seed, k);
-            k += 1.0;
-            let r2 = r_of(seed, k);
-            k += 1.0;
-            let r3 = r_of(seed, k);
-            k += 1.0;
-            let sp = v3::lerp(kk.fly[0], kk.fly[1], r1);
-            let mut sd = (r2 - 0.5) * 2.0 * kk.side;
-            if sd * lx > 0.0 && m::abs(lx) > hw * 0.4 {
-                sd *= -0.5;
-            }
-            let top = fly * v3::lerp(kk.topple[0], kk.topple[1], r2);
-            let v: V3 = [dx * sp + ux * sd, v3::lerp(kk.up[0], kk.up[1], r3), dz * sp + uz * sd];
-            let om: V3 = [(r1 - 0.5) * kk.spin + ux * top, (r2 - 0.5) * 0.6 * kk.spin, (r3 - 0.5) * kk.spin + uz * top];
-            let c: V3 = [cx + ux * lx, h_ / 2.0 + 0.01 + ly, cz + uz * lx];
-            let take = left > 0.0;
-            left -= 1.0;
-            let got = if take {
-                let he: V3 = [sw, sl, t_ / 2.0];
-                let rot = v3::quat::mul(v3::quat::axis_angle([ux, 0.0, uz], fly * v3::lerp(kk.tilt[0], kk.tilt[1], r3)), v3::quat::yaw(yaw));
-                let f = crate::scene_boxes::copy_box(g, leaf);
-                let mut piece = g.tab.boxes.edit(f);
-                piece.c = c;
-                piece.h = he;
-                piece.yaw = yaw;
-                piece.rot = Some(rot);
-                piece.marks = None;
-                drop(piece);
-                crate::debris::debris_spawn(g, crate::debris::ChunkKind::Chunk, f, v, om, Some(who), Some(land.level))
-            } else {
-                None
-            };
-            match got {
-                Some(c) => {
-                    g.stats.doorblast.doorshot_chunks += 1;
-                    g.tab.debris_chunk[c].level = land.level;
-                    g.tab.debris_chunk[c].sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect();
-                    crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Wood);
-                    crate::break_table::breaks_dress(g, c);
-                }
-                None => {
-                    crate::render_particles::particles_emit(
-                        g,
-                        crate::render_particles::PKind::Debris,
-                        c,
-                        v3::normalize([v[0], m::max(0.3, v[1]), v[2]]),
-                        14.0,
-                        crate::render_particles::EmitOpts {
-                            speed: 2.4,
-                            speed_jit: Some(0.7),
-                            spread: Some(1.1),
-                            life: 18.0,
-                            life_jit: Some(0.3),
-                            size: 0.006,
-                            size_jit: Some(0.6),
-                            aspect: Some(3.0),
-                            color: Some(v3::copy(albedo)),
-                            owner: Some(who),
-                            ..Default::default()
-                        },
-                    );
-                }
-            }
-        }
-    }
-    crate::render_particles::particles_emit(
-        g,
-        crate::render_particles::PKind::Debris,
-        [cx, h_ * 0.5, cz],
-        v3::normalize([dx, 0.3, dz]),
-        kk.slivers[0],
-        crate::render_particles::EmitOpts {
-            speed: kk.slivers[1],
-            speed_jit: Some(0.6),
-            spread: Some(0.9),
-            life: 20.0,
-            life_jit: Some(0.3),
-            size: 0.028,
-            size_jit: Some(0.5),
-            aspect: Some(5.0),
-            color: Some(v3::copy(albedo)),
-            owner: Some(who),
-            ..Default::default()
-        },
-    );
-    for (s, n, sp) in [(1.0, kk.chips[0], kk.chip_v[0]), (-1.0, kk.chips[1], kk.chip_v[1])] {
-        crate::render_particles::particles_emit(
-            g,
-            crate::render_particles::PKind::Debris,
-            [cx, h_ * 0.55, cz],
-            v3::normalize([dx * s, 0.25, dz * s]),
-            n,
-            crate::render_particles::EmitOpts {
-                speed: sp,
-                speed_jit: Some(0.7),
-                spread: Some(1.1),
-                life: 18.0,
-                life_jit: Some(0.3),
-                size: 0.006,
-                size_jit: Some(0.6),
-                aspect: Some(3.0),
-                color: Some(v3::copy(albedo)),
-                owner: Some(who),
-                ..Default::default()
-            },
-        );
-    }
-    // what is left: the lock rail, lying where it dropped a little the round's way, clear of every static or laid in its own doorway
-    let bits = rail.unwrap_or([hw / m::max(1.0, kk.strips), h_ / 2.0 / m::max(1.0, kk.lengths), 0.0, 0.0]);
-    let (y0, y1) = (0.06, 0.3);
-    let mut ra = a + (r_of(seed, 7.0) - 0.5) * 0.8;
-    let mut px = cx + ux * rail_x + dx * 0.3;
-    let mut pz = cz + uz * rail_x + dz * 0.3;
-    if overlaps(g, px, pz, ra, bits[0], bits[1], y0, y1) {
-        match free_spot(g, px, pz, ra, bits[0], bits[1], y0, y1, 0.9) {
-            Some(to) => {
-                px = to[0];
-                pz = to[1];
-            }
-            None => {
-                let fc = g.dr[d].frame_centre;
-                px = fc[0];
-                pz = fc[2];
-                ra = g.dr[d].def.closed_dir;
-            }
-        }
-    }
-    leaf_is_off(g, d, fly);
-    let ang = g.dr[d].leaf.angle;
-    g.dr[d].slab = Some(crate::doors::Slab {
-            p: [px, t_ / 2.0 + LIFT, pz],
-            v: [0.0, 0.0, 0.0],
-            a: ra,
-            spin: 0.0,
-            tip: HALF_PI,
-            tip_v: 0.0,
-            side: fly,
-            rest: true,
-            landed: true,
-            who,
-            t: 0.0,
-            ang,
-            bits: Some(bits),
-            wedged: 0.0,
-    });
-    hands_off(g, d);
-    let line = format!("{} splintered by gunfire · {} pieces so far", g.dr[d].def.name, g.stats.doorblast.doorshot_chunks);
-    note(g, &line);
-    pose_slab(g, d);
-    // a body asleep against the leaf slides down now that it is gone
-    let mut chars = vec![g.pl[g.player].ch];
-    for o in g.guards.iter() {
-        chars.push(g.gd[*o].ch);
-    }
-    for o in crate::civilians::civilians_shown(g) {
-        chars.push(g.gd[o].ch);
-    }
-    for ch in chars {
-        let rag = match g.ch[ch].ragdoll {
-            Some(rag) if g.tab.ragdoll[rag].sleeping => rag,
-            _ => continue,
-        };
-        let h = g.ch[ch].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[ch].pos);
-        if m::hyp2(h[0] - hx, h[2] - hz) < w_ + 1.2 || m::hyp2(h[0] - px, h[2] - pz) < bits[1] + 0.8 {
-            crate::ragdoll::ragdoll_wake(g, rag);
-        }
-    }
-    crate::doors::doors_torn(g, d, who, Some(crate::wallbreak::LevelChangeCause::Fire));
-    true
 }
 
 /// Once a frame: every loose slab still moving is stepped and posed, in the order of their doors.
@@ -616,8 +405,7 @@ fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let b = g.dr[d].box_;
     let (w, t_, height) = (g.dr[d].def.width, g.dr[d].thick, g.dr[d].height);
     let (ux, uz) = (m::cos(s.a), m::sin(s.a));
-    let lx = (w - 0.14) - (w * 0.5 + 0.01);
-    let ly = 1.0 - (height / 2.0 + 0.01);
+    let [lx, ly] = handle_on(w, height);
     let lz = t_ / 2.0 + 0.03;
     let handles = g.dr[d].handle_boxes.clone();
     let seal = crate::scene_boxes::box_flag().sound_seal;
