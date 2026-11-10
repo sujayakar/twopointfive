@@ -70,7 +70,7 @@ fn at_sam(g: &Game, seat: &crate::seats::SeatRef) -> OrderTarget {
     OrderTarget::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: None })
 }
 fn opts_men(men: Vec<GuardId>, ack: Option<String>) -> GiveOpts {
-    GiveOpts { ack, on_word: None, men: Some(men) }
+    GiveOpts { ack, men: Some(men) }
 }
 /// `R.lit = 0; R.armed = false`, and `R.more` as given
 fn unlight(g: &mut Game, more: Option<bool>) {

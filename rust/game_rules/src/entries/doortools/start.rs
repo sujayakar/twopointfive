@@ -550,7 +550,6 @@ pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortool
         corner: JsMap::new(),
         search: None,
         beats: Vec::new(),
-        on_word: false,
         word: None,
         hold: 0.0,
         ready_t: f64::NAN,
@@ -566,8 +565,8 @@ pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortool
 }
 
 /// the menu's release: a reason when it cannot be done
-pub fn door_tools_issue(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>) -> crate::doortools::DoorToolsIssue {
-    match door_tools_start(g, kind, men, t, on_word, None) {
+pub fn door_tools_issue(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsIssue {
+    match door_tools_start(g, kind, men, t, None) {
         crate::doortools::DoorToolsStart::Text(s) => crate::doortools::DoorToolsIssue::Text(s),
         crate::doortools::DoorToolsStart::DoorOp(_) => crate::doortools::DoorToolsIssue::Arm1(()),
     }
@@ -595,7 +594,7 @@ pub fn door_tools_order(g: &mut crate::game::Game, kind: crate::doortools::DoorT
         crate::doortools::DoorToolsStackable::Text(s) => return crate::doortools::DoorToolsOrder::Text(if s.is_empty() { String::from("no door") } else { s }),
     }
     crate::silent::silent_tool(g, kind == crate::doortools::DoorToolsOrderKind::BangClear);
-    let op = match door_tools_start(g, order_kind(kind), &up, &t, Some(false), Some(hold)) {
+    let op = match door_tools_start(g, order_kind(kind), &up, &t, Some(hold)) {
         crate::doortools::DoorToolsStart::Text(s) => return crate::doortools::DoorToolsOrder::Text(s),
         crate::doortools::DoorToolsStart::DoorOp(op) => op,
     };
@@ -608,16 +607,16 @@ pub fn door_tools_order(g: &mut crate::game::Game, kind: crate::doortools::DoorT
 }
 
 /// work the room from the threshold, as an order's `issue`
-pub fn door_tools_threshold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>, hold: Option<bool>) -> crate::doortools::DoorToolsThreshold {
-    match door_tools_start(g, crate::doortools::DoorToolKind::Threshold, men, t, on_word, hold) {
+pub fn door_tools_threshold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, hold: Option<bool>) -> crate::doortools::DoorToolsThreshold {
+    match door_tools_start(g, crate::doortools::DoorToolKind::Threshold, men, t, hold) {
         crate::doortools::DoorToolsStart::Text(s) => crate::doortools::DoorToolsThreshold::Text(s),
         crate::doortools::DoorToolsStart::DoorOp(_) => crate::doortools::DoorToolsThreshold::Arm1(()),
     }
 }
 
 /// work it and hold the jambs until told what next
-pub fn door_tools_threshold_hold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>) -> crate::doortools::DoorToolsThresholdHold {
-    match door_tools_threshold(g, men, t, on_word, Some(true)) {
+pub fn door_tools_threshold_hold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsThresholdHold {
+    match door_tools_threshold(g, men, t, Some(true)) {
         crate::doortools::DoorToolsThreshold::Text(s) => crate::doortools::DoorToolsThresholdHold::Text(s),
         crate::doortools::DoorToolsThreshold::Arm1(()) => crate::doortools::DoorToolsThresholdHold::Arm1(()),
     }
@@ -692,26 +691,6 @@ pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::
     crate::doortools::DoorToolsThresholdThen::Arm1(())
 }
 
-/// given with 'wait for my word' on: the jambs stay held and the word is then what the row said
-pub(super) fn door_tools_then_on_word(g: &mut crate::game::Game, what: crate::doortools::DoorToolsThenOnWordWhat, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsThenOnWord {
-    let ask = match what { crate::doortools::DoorToolsThenOnWordWhat::Bang => crate::doortools::DoorToolsCanThresholdThenWhat::Bang, crate::doortools::DoorToolsThenOnWordWhat::Step => crate::doortools::DoorToolsCanThresholdThenWhat::Step };
-    let can = can_t(t);
-    if let crate::doortools::DoorToolsCanThresholdThen::Text(s) = door_tools_can_threshold_then(g, ask, Some(&can), men) { return crate::doortools::DoorToolsThenOnWord::Text(s); }
-    for op in door_tools_threshold_held(g, &crate::seats::here(g), men, door_of_t(t)) {
-        let thr = g.tab.doortools_door_op[op].thr.as_mut().unwrap();
-        thr.word_step = Some(what == crate::doortools::DoorToolsThenOnWordWhat::Step);
-        if thr.step_owed.unwrap_or(false) {
-            thr.step_owed = Some(false);
-            thr.cut_owed = Some(false);
-            thr.frag_t = None;
-            thr.frag_said = Some(false);
-        }
-        let line = if what == crate::doortools::DoorToolsThenOnWordWhat::Step { "step in, no bang" } else { "bang, then step in" };
-        door_tools_beat(g, op, &format!("on the word · {}", line));
-    }
-    crate::doortools::DoorToolsThenOnWord::Arm1(())
-}
-
 /// thresholdThen's `valid`: no cans, or one of ours behind the door: no bang
 pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: Option<&crate::doortools::DoorToolsCanThresholdThenT>, men: &[GuardId]) -> crate::doortools::DoorToolsCanThresholdThen {
     let door = match t { Some(crate::doortools::DoorToolsCanThresholdThenT::Door(x)) => Some(x.door), _ => None };
@@ -745,8 +724,7 @@ pub(super) fn door_tools_to_step(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// open and clear / bang and clear / clear from outside / the threshold: into the stack first
-fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>, hold: Option<bool>) -> crate::doortools::DoorToolsStart {
-    let on_word = on_word.unwrap_or(false);
+fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, hold: Option<bool>) -> crate::doortools::DoorToolsStart {
     let hold = hold.unwrap_or(false);
     let crate::orders::OrderTarget::Door(target) = t else { return crate::doortools::DoorToolsStart::Text(String::from("no door")) };
     let (d, t_side) = (target.door, target.side);
@@ -762,7 +740,6 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
     g.tab.doortools_door_op[op].bang_held = kind == crate::doortools::DoorToolKind::BangClear;
     if frag { g.tab.doortools_door_op[op].frag = Some(true); }
     if g.sets[g.seat].door_tools.big_next && kind == crate::doortools::DoorToolKind::OpenClear { g.tab.doortools_door_op[op].big = Some(true); }
-    g.tab.doortools_door_op[op].on_word = on_word && crate::orders::squad_orders_big(g, &crate::seats::here(g));
     g.tab.doortools_door_op[op].thr_hold = Some(hold && kind == crate::doortools::DoorToolKind::Threshold);
     let name = crate::orders::door_words(g, d);
     let fc = g.dr[d].frame_centre;

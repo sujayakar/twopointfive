@@ -12,7 +12,6 @@ pub struct State {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HoldFireOrderO {
-    pub waits: Option<bool>,
     pub blown: Option<bool>,
     pub silent: Option<bool>,
 }

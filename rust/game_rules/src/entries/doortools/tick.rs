@@ -184,7 +184,7 @@ fn door_tools_waiting4(g: &crate::game::Game, seat: &crate::seats::SeatRef, men:
         let o = &dop!(g, op);
         if any_shared(&o.men, men)
             && o.word.is_none()
-            && (o.on_word || matches!(o.phase, Phase::Armed | Phase::Standoff | Phase::Place))
+            && matches!(o.phase, Phase::Armed | Phase::Standoff | Phase::Place)
         {
             out.push(DoorToolsWaiting4Item::DoorOp(op));
         }
@@ -480,7 +480,7 @@ pub fn door_tools_word_owed(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 /// does the word at this held door step in with no can
 fn door_tools_word_steps(g: &crate::game::Game, op: DoorOpId) -> bool {
     let o = &dop!(g, op);
-    o.thr.as_ref().unwrap().word_step.unwrap_or(o.thr_hold.unwrap_or(false))
+    o.thr_hold.unwrap_or(false)
 }
 /// the pair's word: a room it is working from the threshold has its hold cut short
 fn door_tools_word_on_hold(g: &mut crate::game::Game, men: &[GuardId]) -> bool {
@@ -551,7 +551,6 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
             DoorToolsWaitingAnyItem::DoorOp(op) => Some(op),
         };
         let Some(op) = op else { continue };
-        dop!(g, op).on_word = false;
         dop!(g, op).word = Some(w);
         if matches!(dop!(g, op).phase, Phase::Ready | Phase::Armed | Phase::Thr) {
             dop!(g, op).hold = 1.0;

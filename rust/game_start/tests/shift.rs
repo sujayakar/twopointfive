@@ -331,7 +331,7 @@ fn a_door_a_pair_stands_on_is_that_pairs() {
             let mut p = yard(s);
             let l = men(&p);
             let t = game::orders::squad_orders_target_at(&mut p.g, [DOOR[0], 0.0, DOOR[1]]);
-            let opts = game::orders::GiveOpts { men: Some(l[..2].to_vec()), ack: None, on_word: None };
+            let opts = game::orders::GiveOpts { men: Some(l[..2].to_vec()), ack: None };
             assert_eq!(game::orders::squad_orders_give(&mut p.g, "stack", Some(&t), None, Some(&opts)), None, "seed {s}");
             p.run(30.0);
             'looking: for y in [0.05, 1.0, 1.8] { for dx in [0.0, 0.45, -0.45, 0.2, -0.2] { for dz in [0.0, -0.3, -0.6] {
