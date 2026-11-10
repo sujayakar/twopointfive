@@ -46,7 +46,7 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
 }
 
 /// goTo's plan. `round` None is the TypeScript's `round === pen`: no second search.
-fn go_to_plan(g: &mut Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
+fn go_to_plan(g: &Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
     let from = g.ch[g.gd[gd].ch].pos;
     let mut p = match pen {
         Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
@@ -340,7 +340,7 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.
-fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, eye: V3) -> f64 {
+fn reach_for(g: &crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, eye: V3) -> f64 {
     let is_player = crate::character::is_player(g, pc);
     if is_player {
         let vis = g.shown[g.pl[sam].ch].visibility;
@@ -400,7 +400,7 @@ fn eye_through(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// That man's own line to a point, asked bare.
-pub fn eye_blocked(g: &mut crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool {
+pub fn eye_blocked(g: &crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool {
     let through = eye_through(g, gd);
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
@@ -431,7 +431,7 @@ pub fn stranded_at(g: &crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// Can his body be walked straight from `from` to `to`?
-fn leg_clear(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
+fn leg_clear(g: &crate::game::Game, from: V3, to: V3) -> bool {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
     let l = m::hyp2(dx, dz);
@@ -449,7 +449,7 @@ fn leg_clear(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
 }
 
 /// The free cell centre nearest to `from` within `reach` that passes `test`.
-fn free_cell_near(g: &mut crate::game::Game, from: V3, reach: f64, test: crate::guards::FreeCellNearTest) -> Option<V3> {
+fn free_cell_near(g: &crate::game::Game, from: V3, reach: f64, test: crate::guards::FreeCellNearTest) -> Option<V3> {
     let cs = g.col.nav.cell;
     let r = m::ceil(reach / cs);
     let cx = m::floor(from[0] / cs);

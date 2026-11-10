@@ -184,7 +184,7 @@ fn bench_rig(g: &mut crate::game::Game, ch: RigId) -> bool {
 }
 
 /// A pose written to place `slot` of the bench.
-fn bench_put(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
+fn bench_put(g: &crate::game::Game, p: crate::anim_skeleton::Pose, slot: f64) {
     let o = (slot * BENCH_SLOT) as usize;
     let d = cols_of_read(g, p);
     let b = ::sim::skeleton::bench();
@@ -482,7 +482,7 @@ fn slot_of(p: crate::anim_skeleton::Pose) -> f64 {
 }
 
 /// A pose made ready for a question: at home as it stands (its slot), or copied to place `place` of the bench (−1).
-fn lend(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) -> f64 {
+fn lend(g: &crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) -> f64 {
     if slot_of(p) < 0.0 {
         bench_put(g, p, place);
         return -1.0;
@@ -491,7 +491,7 @@ fn lend(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) ->
 }
 
 /// lend, as rust/sim's questions want the answer: (the game or ON_BENCH, the pose's place in it).
-fn lent_at(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) -> (usize, usize) {
+fn lent_at(g: &crate::game::Game, p: crate::anim_skeleton::Pose, place: f64) -> (usize, usize) {
     let slot = lend(g, p, place);
     if slot < 0.0 {
         (::sim::skeleton::ON_BENCH, place as usize)

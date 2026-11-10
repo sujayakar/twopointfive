@@ -180,7 +180,7 @@ pub fn fire_holds(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// Did a round that stopped at `p`, in static `ix`, stop in this fire: its own box, or the drum under its mouth.
-pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> bool {
+pub fn fire_struck(g: &crate::game::Game, t: FixtureId, p: V3, ix: f64) -> bool {
     if g.tab.fixture[t].boxes.contains(&ix) {
         return true;
     }

@@ -90,13 +90,13 @@ fn frac(s: &str) -> f64 {
 }
 
 /// Metres by path; infinite if there is none.
-fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> f64 {
+fn path_metres(g: &crate::game::Game, from: V3, to: V3) -> f64 {
     let Some(p) = crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) else { return m::INF };
     crate::places::walk_len(from, &p)
 }
 
 /// The waypoint of his route a trip to `spot` starts from; wp −1 = none.
-fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
+fn departure_point(g: &crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
     let r = g.tab.route[g.gd[gd].route].clone();
     let mut best = -1.0;
     let mut bm = m::INF;

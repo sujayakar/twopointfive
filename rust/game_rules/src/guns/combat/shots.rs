@@ -82,7 +82,7 @@ fn st_of(h: crate::scene_collision::Raycast) -> crate::glasspen::RoundPathSt {
 }
 
 /// `fly` of fireWeapon: the same flight over panes and thin things alike, from what st0 is at this call.
-fn fly(g: &mut Game, muzzle: V3, dir: V3, e_muzzle: f64, st0: Option<crate::glasspen::RoundPathSt>, arm_panes: f64) -> Option<Pen> {
+fn fly(g: &Game, muzzle: V3, dir: V3, e_muzzle: f64, st0: Option<crate::glasspen::RoundPathSt>, arm_panes: f64) -> Option<Pen> {
     crate::wallpen::thin_path(g, muzzle, dir, 60.0, e_muzzle, Some(st0), Some(arm_panes)).map(|p| Pen {
         path: crate::glasspen::RoundPath { segs: p.segs, cross: p.cross, st: p.st, len: p.len },
         walls: Some(p.walls),
@@ -137,7 +137,7 @@ fn first_leg_contact(f: &ScanOf, own: bool) -> BodyHitContact {
 }
 
 /// Where the round enters this man, in metres of its path, or -1. `own`: a man of the shooter's own side, the entering hit only. (fireWeapon's scan)
-fn scan(g: &mut Game, f: &ScanOf, t_hit: f64, c: CharId, own: bool) -> f64 {
+fn scan(g: &Game, f: &ScanOf, t_hit: f64, c: CharId, own: bool) -> f64 {
     let Some(pen) = f.pen else {
         return body_hit(g, c, f.muzzle, f.dir, t_hit, Some(first_leg_contact(f, own)));
     };
@@ -623,7 +623,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
 }
 
 /// What the arm is through and where: a leaf's index (>= 1e6) is what the lock rule wants of a muzzle pressed to the keep.
-fn across_arm(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::AcrossArm> {
+fn across_arm(g: &crate::game::Game, c_2: CharId) -> Option<crate::combat::AcrossArm> {
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&b) => b, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let d = v3::sub(g.ch[c_2].muzzle, from);
     let l = v3::len(d);

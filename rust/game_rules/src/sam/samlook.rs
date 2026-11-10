@@ -32,7 +32,7 @@ fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Metres to a man his head could go to (infinity: not one); `deg` how far round from his aim, 180 anywhere.
-fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
+fn reach(g: &crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
     if !crate::close::close_subject(g, gd) { return f64::INFINITY; }
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
@@ -78,7 +78,7 @@ fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
 }
 
 /// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.
-fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+fn slip_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].state == crate::game::GuardState::Alert { return 0.0; }
     let slip_from = g.k.samlook.slip_from;
     let d = reach(g, gd, slip_from, 180.0);

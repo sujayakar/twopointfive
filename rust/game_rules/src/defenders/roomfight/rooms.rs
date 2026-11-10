@@ -92,7 +92,7 @@ pub(in crate::defenders) fn room_fight_free_near(g: &crate::game::Game, p: V3) -
 }
 
 /// `p` lies outside the rectangle round every room of the level's structure with open sky over it.
-pub(super) fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool {
+pub(super) fn room_fight_out_of_building(g: &crate::game::Game, p: V3) -> bool {
     let (mut x0, mut x1, mut z0, mut z1) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
     {
         let rooms = g.level.rooms();

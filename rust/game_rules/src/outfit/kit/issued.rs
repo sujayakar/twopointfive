@@ -262,7 +262,7 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
 }
 
 /// kitPlayer's `mine`: the gun your card picks for this slot.
-fn mine(g: &mut Game, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
+fn mine(g: &Game, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
     if let Some(d) = kit_slot_def(g, m, slot) { return d; }
     weapon_row(g, w)
 }
@@ -420,7 +420,7 @@ pub(super) fn kit_walls(g: &crate::game::Game, n: f64) -> f64 {
 }
 
 /// The squad's counted stun canisters and charges with `n` teammates coming.
-pub(super) fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::KitPoolIssued>) -> crate::kit::KitPool {
+pub(super) fn kit_pool(g: &crate::game::Game, n: f64, issued: Option<crate::kit::KitPoolIssued>) -> crate::kit::KitPool {
     let issued = issued.unwrap_or(KitPoolIssued { bangs: g.k.doortools.bangs, charges: g.k.doortools.charges });
     let (mut b, mut c, mut f) = (issued.bangs, issued.charges, g.k.frag.squad);
     let on = g.m.kit.kit.on;

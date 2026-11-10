@@ -103,7 +103,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
 }
 
 /// the enemies a run is planned round: the men he knows of, each where he believes him to be
-fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
+fn known(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let (forget, eye_h) = (g.k.picture.forget_secs, g.k.picture.eye_h);
     for i in crate::picture::ideas_of(g, gd) {
@@ -228,7 +228,7 @@ fn outside(g: &mut crate::game::Game, p: V3) -> bool {
 }
 
 /// has this enemy a line to a man at `p`
-fn line_to(g: &mut crate::game::Game, e: crate::runner::Foe, p: V3) -> bool {
+fn line_to(g: &crate::game::Game, e: crate::runner::Foe, p: V3) -> bool {
     !crate::scene_collision::segment_blocked(g, e.eye, [p[0], p[1] + 1.2, p[2]], None, None, None)
 }
 
@@ -354,7 +354,7 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     p.map_or(false, |p| !p.is_empty())
 }
 /// the mate he runs to: the nearest by the floor, inside `mateM`, of the four nearest by air
-fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
+fn pick_mate(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let mate_m = g.k.runner.mate_m;
     let mut best: Option<GuardId> = None;

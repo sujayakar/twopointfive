@@ -31,13 +31,13 @@ fn near3(a: &[f64], b: &[f64], eps: f64) -> bool {
 }
 
 /// The box glows at all.
-fn glows(g: &mut crate::game::Game, b: BoxId) -> bool {
+fn glows(g: &crate::game::Game, b: BoxId) -> bool {
     let e = g.tab.boxes[b].emissive;
     e[0] > 0.0 || e[1] > 0.0 || e[2] > 0.0
 }
 
 /// The box is this generator's lamp: size, then glow or paint.
-fn fits(g: &mut crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) -> bool {
+fn fits(g: &crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) -> bool {
     let (rot, h, glow, albedo) = { let x = &g.tab.boxes[b]; (x.rot, x.h, x.emissive, x.albedo) };
     if rot.is_some() || !near3(&h, &s.h, g.k.carlamps.fit) { return false; }
     if let Some(emissive) = s.emissive { return near3(&glow, &emissive, g.k.carlamps.tone); }
@@ -45,7 +45,7 @@ fn fits(g: &mut crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) -> boo
 }
 
 /// The lamp boxes of a level's vehicles in box order: each fits a generator's lamp and has its twin across the vehicle.
-pub fn find_car_lamps(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::carlamps::FoundLamp> {
+pub fn find_car_lamps(g: &crate::game::Game, boxes: &[BoxId]) -> Vec<crate::carlamps::FoundLamp> {
     let sig = sigs();
     let mut cand: Vec<Cand> = Vec::new();
     for i in 0..boxes.len() {
@@ -167,7 +167,7 @@ mod tests_need_box_rows {
     use super::*;
     use crate::scene_boxes::Box as WorldBox;
 
-    fn tail(g: &mut Game, x: f64, z: f64) -> BoxId {
+    fn tail(g: &Game, x: f64, z: f64) -> BoxId {
         g.col.boxes.push(WorldBox { c: [x, 0.7, z], h: [0.02, 0.06, 0.16], emissive: [0.5, 0.03, 0.02], ..WorldBox::default() })
     }
 

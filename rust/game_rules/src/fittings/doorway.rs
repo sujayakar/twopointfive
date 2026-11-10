@@ -70,12 +70,12 @@ pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
 }
 
 /// Not standing open enough to have a lane: on its hinges and latched, or under `laneAjar`.
-fn no_lane(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn no_lane(g: &crate::game::Game, d: DoorId) -> bool {
     !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < g.k.doormanners.lane_ajar)
 }
 
 /// STAND, the lane: the door standing open whose lane `p` is in.
-pub fn doorway_lane(g: &mut crate::game::Game, p: V3, but: Option<DoorId>) -> Option<DoorId> {
+pub fn doorway_lane(g: &crate::game::Game, p: V3, but: Option<DoorId>) -> Option<DoorId> {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if Some(d) == but { continue; }
@@ -133,7 +133,7 @@ pub fn doorway_lane_price_at(g: &crate::game::Game, price: &mut crate::doorway::
 }
 
 /// STAND, the lane: the place for a man of the file whose place `p` is in an open door's lane; `None`: in no lane, or no such floor.
-pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, taken: Option<&[V3]>) -> Option<V3> {
+pub fn doorway_off_lane(g: &crate::game::Game, p: V3, from: V3, k: f64, taken: Option<&[V3]>) -> Option<V3> {
     let taken: &[V3] = taken.unwrap_or(&[]);
     let d = doorway_lane(g, p, None)?;
     let r = rel(g, d, p);
@@ -239,7 +239,7 @@ fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::Door
 }
 
 /// His own side about him, living, other than himself: the men, and Sam with the squad.
-fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
+fn friends(g: &crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
     let mut out = Vec::new();
     let team = g.team(gd);
     for i in 0..g.guards.len() {
@@ -295,7 +295,7 @@ fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p
 }
 
 /// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.
-fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
+fn jamb_spot(g: &crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let f = crate::guards::frame_of(g, d);
     let pos = g.ch[g.gd[gd].ch].pos;
     let (jamb_past, file_gap, jamb_out, apart) = (g.k.doormanners.jamb_past, g.k.doormanners.file_gap, g.k.doormanners.jamb_out, g.k.doormanners.apart);
@@ -323,7 +323,7 @@ fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Op
 }
 
 /// Does `o`'s walk go through `d` within reach: metres of walk to the line and the face he comes from.
-fn through(g: &mut crate::game::Game, o: GuardId, d: DoorId) -> Option<crate::doorway::Through> {
+fn through(g: &crate::game::Game, o: GuardId, d: DoorId) -> Option<crate::doorway::Through> {
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (g.ch[g.gd[o].ch].pos, 0.0);
     let mut i = g.gd[o].path_i;
@@ -674,7 +674,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
 }
 
 /// How a man stood at p (chest and head) is exposed to a rifle at `aim_at`: 0 covered, 1 reached only through glass, 2 reached in clear air. (the closure `exposed` of offThreshold)
-fn exposed(g: &mut Game, aim_at: V3, p: V3) -> i32 {
+fn exposed(g: &Game, aim_at: V3, p: V3) -> i32 {
     let mut e = 0;
     for y in [1.1, 1.5] {
         let at: V3 = [p[0], y, p[2]];

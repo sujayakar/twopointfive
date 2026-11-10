@@ -75,7 +75,7 @@ fn green(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Has he a man of his side by him who still has his gun.
-fn mate_by(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn mate_by(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let eye = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
     let mut i = 0;

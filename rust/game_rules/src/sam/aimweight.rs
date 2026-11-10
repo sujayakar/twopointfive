@@ -117,7 +117,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
 }
 
 /// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.
-pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
+pub(super) fn aim_weigh_shot(g: &Game, tgt: V3) -> V3 {
     let pl = g.player;
     let w = g.pl[pl].aimw;
     if !w.live || w.on {

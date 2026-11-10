@@ -28,7 +28,7 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
 }
 
 /// The rule is up: the AI runs.
-fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled }
+fn live(g: &crate::game::Game) -> bool { g.ai_enabled }
 
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load).
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
@@ -66,12 +66,12 @@ fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// A leaf that is a shut door to a man: hung, home in its frame.
-fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn shut(g: &crate::game::Game, d: DoorId) -> bool {
     !g.dr[d].leaf.off && crate::doors::door_is_closed(g, d)
 }
 
 /// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge.
-fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
+fn behind(g: &crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
     let k = g.k.doorforce;
     if !shut(g, d) || flat(g.dr[d].frame_centre, at) > k.behind_m || flat(g.dr[d].frame_centre, from) > k.reach_m { return false; }
     if crate::doors::doors_side(g, d, from) == crate::doors::doors_side(g, d, at) { return false; }
@@ -81,7 +81,7 @@ fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -
 }
 
 /// HEARD: the shut door `at` is close behind for a man at `from`, the nearest such to `at`.
-fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
+fn door_between(g: &crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
     let mut best: Option<DoorId> = None;
     let mut bd = m::INF;
     let mut i = 0;
@@ -96,7 +96,7 @@ fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Opt
 }
 
 /// SEEN: the shut door that is now the first thing in his eyes' line to where he last saw the man.
-fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
+fn door_hiding(g: &crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let from: V3 = [pos[0], pos[1] + 1.5, pos[2]];
@@ -203,7 +203,7 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
 }
 
 /// This 'kick' is a boot this rule had a man of the listener's own side (or the listener) throw: no intruder.
-pub fn door_force_own_boot(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
+pub fn door_force_own_boot(g: &crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
     if e.kind != crate::director::EventKind::Kick { return false; }
     let who = match e.who { Some(w) => w, None => return false };
     if !live(g) { return false; }
@@ -317,7 +317,7 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// roundFor's `through`: the round reaches `to`, the leaf the first thing in the line, not with his muzzle against it, and not laid through standing glass.
-fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from: V3, to: V3, e: f64, index: f64) -> bool {
+fn round_through(g: &Game, gd: GuardId, def: crate::weapons::WeaponId, from: V3, to: V3, e: f64, index: f64) -> bool {
     let t = match crate::wallpen::thin_line(g, from, to, e, Some(0.3), None) {
         Some(crate::wallpen::ThinLine2::ThinLine(t)) => t,
         _ => return false,
@@ -329,7 +329,7 @@ fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from:
 }
 
 /// Where his rounds go for this belief: the place when the leaf is first in the line and the round crosses it, or the stretch of leaf nearest a man right at it.
-fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
+fn round_for(g: &crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
     let kf = g.k.doorforce;
     let d = b.door;
     if g.dr[d].def.steel == Some(true) { return None; }

@@ -83,7 +83,7 @@ fn window_at(wins: &[crate::close::CloseWindow], b: f64) -> Option<crate::close:
 }
 
 /// Nothing solid and no door leaf between two bodies at chest height.
-pub(super) fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> bool {
+pub(super) fn clear_between(g: &crate::game::Game, p: &[f64], q: &[f64]) -> bool {
     let a: V3 = [p[0], 1.0, p[2]];
     let b: V3 = [q[0], 1.0, q[2]];
     !crate::scene_collision::solid_blocked(g, a, b, None) && !crate::scene_collision::segment_blocked_dynamic(g, a, b, None)
@@ -98,7 +98,7 @@ pub fn close_subject(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// What Sam could do to this man from `p`: the one test the rows, the click and the ready pose share.
-pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseOffer {
+pub fn close_at(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseOffer {
     use crate::civilians::CivState;
     let pl = g.player;
     let c = g.gd[gd].ch;
@@ -308,7 +308,7 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
 }
 
 /// Who holds the mode now: the nearest living man in range with nothing solid between.
-fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
+fn mode_now(g: &crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].tow.is_some() || (g.pl[pl].planted() && g.pl[pl].takedown().is_none())
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
     if crate::handwork::sam_work(g).is_some() { return None; }
@@ -420,7 +420,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
 }
 
 /// The dark: how much of the build's near-sight floor this man has for Sam right now.
-pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
+pub fn close_near_k(g: &crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let st = g.gd[gd].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || dist < g.k.close.touch_m { return 1.0; }
     let k = v3::smoothstep(g.k.close.dark_at, g.k.close.lit_at, g.shown[g.pl[g.player].ch].visibility);
@@ -456,7 +456,7 @@ pub fn close_took(what: crate::close::CloseTookWhat) {
 }
 
 /// A man calm enough to sit.
-fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn calm(g: &crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
     m.state == crate::game::GuardState::Patrol && m.awareness < 0.3 && m.held.is_none() && m.script.is_none()
 }

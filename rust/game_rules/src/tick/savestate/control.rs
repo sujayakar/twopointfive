@@ -24,7 +24,7 @@ pub enum Do {
 
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
-fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
+fn here(g: &Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
 fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
@@ -60,7 +60,7 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
 }
 
 /// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.
-fn unsettled(g: &mut Game) -> Option<String> {
+fn unsettled(g: &Game) -> Option<String> {
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && !crate::condition::down(g, g.gd[x].ch)) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
     if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }

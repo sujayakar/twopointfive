@@ -30,7 +30,7 @@ const KNEES: [(usize, usize, usize); 2] = [(10, 12, 14), (11, 13, 15)];
 const NECK_CONE_COS: f64 = 0.5735764363510462;
 
 /// wd.gather(…, this.near): the collision grid's indices of the statics round the body.
-fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
+fn world_gather(g: &Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 

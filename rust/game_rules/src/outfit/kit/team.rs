@@ -122,7 +122,7 @@ fn note_line(f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> String {
 }
 
 /// What is carried between them.
-fn pool_line(g: &mut Game, f: Option<&TeamFor>, size: f64) -> String {
+fn pool_line(g: &Game, f: Option<&TeamFor>, size: f64) -> String {
     let issued = f.map_or(0.0, |f| f.walls);
     let walls_word = |n: f64| format!("{} wall charge{}", js::num_str(n), if n == 1.0 { "" } else { "s" });
     if !cards_on(f) {

@@ -90,7 +90,7 @@ pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&m
     e * eyes_at(g, place)
 }
 /// How many times brighter than it stands the light of the place about a point is seen by whoever is there (`eyes_at`).
-pub fn eyes_in(g: &mut crate::game::Game, p: V3) -> f64 {
+pub fn eyes_in(g: &crate::game::Game, p: V3) -> f64 {
     if crate::hours::exposure(g) >= 1.0 { return 1.0; }
     let field = crate::sense::under_roof(g, p);
     eyes_at(g, field.map(|f| f.place))

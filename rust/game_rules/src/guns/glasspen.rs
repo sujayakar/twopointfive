@@ -63,7 +63,7 @@ pub fn round_energy(g: &crate::game::Game, def: crate::weapons::WeaponId) -> f64
 }
 
 /// …and of the gun in this man's hands
-fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
+fn round_energy_of(g: &crate::game::Game, c_2: CharId) -> f64 {
     if let Some(pl) = crate::seats::man_of(g, Some(c_2)) {
         let gun = match crate::game::player_gun_in_hand(g, pl) { Some(f) => f, None => g.pl[pl].pistol };
         let def = g.fa[gun].def;
@@ -80,7 +80,7 @@ fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 }
 
 /// the energy a line-of-fire question about THIS man's gun is asked with
-pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
+pub fn shot_energy(g: &crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
     Some(match def { Some(d) => round_energy(g, d), None => round_energy_of(g, c_2) })
 }
 
@@ -100,7 +100,7 @@ pub fn reset_glass_pen(g: &mut crate::game::Game) {
 }
 
 /// a number that moves whenever what a round has to pay at any pane may have moved
-pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
+pub fn glass_toll_sig(g: &crate::game::Game) -> f64 {
     let rev = match g.m.glasspen.states.as_ref() { Some(s) => s.rev, None => 0.0 };
     rev * 65537.0 + crate::glassbreak::glass_break_open_sig(g)
 }
@@ -234,7 +234,7 @@ pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy:
 }
 
 /// is there standing glass on this line of fire
-pub fn glass_on_line(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+pub fn glass_on_line(g: &crate::game::Game, a: V3, b: V3) -> bool {
     let mut panes: Vec<crate::scene_collision::SegmentBlockedPanesItem> = Vec::new();
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(0.0), Some(&mut panes));
     !panes.is_empty()

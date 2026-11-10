@@ -470,7 +470,7 @@ fn room_clear_say(g: &mut crate::game::Game, id: RoomClearId, key: crate::squad:
 }
 
 /// A found colleague lying in this room within a few metres of the man, in his plain sight.
-fn room_clear_body_here(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId) -> Option<GuardId> {
+fn room_clear_body_here(g: &crate::game::Game, id: RoomClearId, gd: GuardId) -> Option<GuardId> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let bb = crate::guards::near_known_body(g, p, Some(3.5))?;

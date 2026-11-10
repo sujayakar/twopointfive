@@ -591,7 +591,7 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
 }
 
 /// The nearest OPEN doorway he can see that a hostile's round has just flown through towards his side of its wall, with no line of his to the shooter.
-fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<OrdersAssignmentId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
+fn room_fight_door_shot(g: &crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<OrdersAssignmentId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> {
     let r_k = g.k.roomfight;
     let p = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;
     let mut best: Option<RoomFightDoorShot> = None;

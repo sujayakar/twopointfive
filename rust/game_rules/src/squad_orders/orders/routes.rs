@@ -26,7 +26,7 @@ fn price(g: &Game, pen: Pen<'_>, ix: f64, iz: f64) -> f64 {
         }
     }
 }
-fn find_path(g: &mut Game, a: V3, b: V3, max_iter: Option<f64>, pen: Option<Pen<'_>>) -> Option<Vec<V3>> {
+fn find_path(g: &Game, a: V3, b: V3, max_iter: Option<f64>, pen: Option<Pen<'_>>) -> Option<Vec<V3>> {
     match pen {
         Some(p) => crate::scene_collision::nav_grid_find_path(g, a, b, max_iter, Some(&mut |g: &Game, x: f64, z: f64| price(g, p, x, z))),
         None => crate::scene_collision::nav_grid_find_path(g, a, b, max_iter, None),
@@ -61,7 +61,7 @@ fn doorway_cells(g: &Game, o: DoorId, dear: &mut JsSet<crate::Num>) {
     }
 }
 /// a walk from `from` by corners: does it cross `d`
-fn through(g: &mut Game, from: V3, p: &[V3], d: DoorId) -> bool {
+fn through(g: &Game, from: V3, p: &[V3], d: DoorId) -> bool {
     let mut a = from;
     for &b in p { if crate::guards::crosses_door(g, a, b, d).is_some() { return true; } a = b; }
     false
@@ -84,7 +84,7 @@ fn all_but_last(path: &[V3]) -> Vec<V3> {
 fn worked_at(c: V3, n: [f64; 2], u: [f64; 2], b: f64, l: f64, y: f64) -> V3 {
     [c[0] + n[0] * b + u[0] * l, y, c[2] + n[1] * b + u[1] * l]
 }
-fn worked_walk(g: &mut Game, over: &crate::ask::Over, front: V3, p: V3) -> bool {
+fn worked_walk(g: &Game, over: &crate::ask::Over, front: V3, p: V3) -> bool {
     !is_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked_over(g, over, front, [p[0], 0.45, p[2]], None)
 }
 fn worked_out(v: &SquadOrdersWorkedValueItem) -> SquadOrdersWorkedMarks {
@@ -214,7 +214,7 @@ pub(super) fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::
 }
 
 /// Does a piece of furniture stand on this place, where it is now (its footprint, and a hand's breadth round it)?
-pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
+pub fn squad_orders_on_furniture(g: &crate::game::Game, p: V3) -> bool {
     if g.sets[g.seat].orders.fur_in { return false; }
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
@@ -230,9 +230,9 @@ pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
 }
 
 /// `k` marks back from a door on face `side` for men its walls have no room for; as many as there are.
-pub fn squad_orders_rear_posts(g: &mut crate::game::Game, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> { squad_orders_rear_posts_over(g, &crate::ask::Over::OWN, d, side, k, taken) }
+pub fn squad_orders_rear_posts(g: &crate::game::Game, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> { squad_orders_rear_posts_over(g, &crate::ask::Over::OWN, d, side, k, taken) }
 /// …of the world as the question takes it
-pub(super) fn squad_orders_rear_posts_over(g: &mut crate::game::Game, over: &crate::ask::Over, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> {
+pub(super) fn squad_orders_rear_posts_over(g: &crate::game::Game, over: &crate::ask::Over, d: DoorId, side: f64, k: f64, taken: &[V3]) -> Vec<crate::orders::StackPost> {
     let th = g.dr[d].def.closed_dir;
     let u = [m::cos(th), m::sin(th)];
     let n = [-u[1] * side, u[0] * side];
@@ -353,7 +353,7 @@ fn arc_rec(x: &mut ArcDeal<'_>, i: usize, s: f64) {
 }
 
 /// Left holding: which way each man of a group faces, an approach each; a man alone keeps the way he faces (None).
-pub(super) fn squad_orders_hold_arcs(g: &mut crate::game::Game, at: &[V3]) -> Vec<Option<crate::orders::SquadOrdersHoldArcsItem>> {
+pub(super) fn squad_orders_hold_arcs(g: &crate::game::Game, at: &[V3]) -> Vec<Option<crate::orders::SquadOrdersHoldArcsItem>> {
     let n = at.len();
     let mut out: Vec<Option<SquadOrdersHoldArcsItem>> = vec![None; n];
     let mut grp: Vec<i32> = vec![-1; n];
@@ -448,7 +448,7 @@ pub(super) fn squad_orders_hold_arcs(g: &mut crate::game::Game, at: &[V3]) -> Ve
 struct Way<'a> { from: V3, to: V3, why_only: bool, ring: &'a JsSet<String>, unk: Option<&'a crate::cleared::DearPrice> }
 
 /// The first door of a walk locked against him.   (route's `shut`)
-fn shut(g: &mut Game, from: V3, ring: &JsSet<String>, path: &[V3]) -> Option<DoorId> {
+fn shut(g: &Game, from: V3, ring: &JsSet<String>, path: &[V3]) -> Option<DoorId> {
     let mut a = from;
     for &b in path {
         for i in 0..g.doors.list.len() {
@@ -460,7 +460,7 @@ fn shut(g: &mut Game, from: V3, ring: &JsSet<String>, path: &[V3]) -> Option<Doo
     None
 }
 /// (route's `doorsOn`)
-fn doors_on(g: &mut Game, from: V3, q: &[V3]) -> Vec<DoorId> {
+fn doors_on(g: &Game, from: V3, q: &[V3]) -> Vec<DoorId> {
     let mut out = Vec::new();
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
@@ -630,7 +630,7 @@ fn sw_paired(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId], gd: GuardI
     })
 }
 /// (sameWays's `wayOf`)
-fn way_of(g: &mut Game, s: V3, mid: &[V3], to: V3) -> Option<Vec<V3>> {
+fn way_of(g: &Game, s: V3, mid: &[V3], to: V3) -> Option<Vec<V3>> {
     let mut w = vec![s];
     let mut q = s;
     for &v in mid.iter().chain(core::iter::once(&to)) {
@@ -812,7 +812,7 @@ fn trail_doors_on(g: &Game, w: &[V3]) -> JsSet<DoorId> {
 }
 
 /// A follower goes by the doors Sam took: the trail's corners where his own short way to his place ends through other doors; [] otherwise.
-pub(super) fn squad_orders_trail_way(g: &mut crate::game::Game, gd: GuardId, slot: V3, on_trail: V3, j: f64) -> Vec<V3> {
+pub(super) fn squad_orders_trail_way(g: &crate::game::Game, gd: GuardId, slot: V3, on_trail: V3, j: f64) -> Vec<V3> {
     let t = g.sets[g.seat].orders.trail.clone();
     if t.len() < 4 { return Vec::new(); }
     let at = g.ch[g.gd[gd].ch].pos;

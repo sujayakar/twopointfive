@@ -22,11 +22,11 @@ fn grid_of(g: &Game, b: WallbreakBreakableId) -> crate::break_table::CellGrid {
     let r = &g.tab.wallbreak_breakable[b];
     crate::break_table::CellGrid { id: r.id, surf: r.surf, nx: r.nx, ny: r.ny, nz: r.nz, yb: r.yb.clone(), open: r.open.clone(), n_open: Some(r.n_open), box_: r.box_ }
 }
-fn word(g: &mut Game, b: BoxId) -> crate::scene_boxes::WordOf {
+fn word(g: &Game, b: BoxId) -> crate::scene_boxes::WordOf {
     let x = &g.tab.boxes[b];
     crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff: x.stuff, does: x.does })
 }
-fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
+fn does_of_box(g: &Game, b: BoxId) -> crate::scene_materials::Does {
     let does = g.tab.boxes[b].does;
     crate::scene_materials::does_of(g, does)
 }
@@ -65,7 +65,7 @@ pub(in crate::breakage) fn wall_break_new(g: &mut crate::game::Game) -> crate::w
 }
 
 /// Would `need` more pieces of B be more than this level may stand up. (WallBreak.over)
-fn wall_break_over(g: &mut crate::game::Game, b: WallbreakBreakableId, need: f64) -> bool {
+fn wall_break_over(g: &crate::game::Game, b: WallbreakBreakableId, need: f64) -> bool {
     let n = pieces_up(g) + need;
     let r = g.destr.walls.room;
     if n > g.k.walls.max_pieces || n > r.boxes || n > r.cuts { return true; }
@@ -81,7 +81,7 @@ fn wall_break_over(g: &mut crate::game::Game, b: WallbreakBreakableId, need: f64
 }
 
 /// How many pieces the room surely holds, whichever things are broken. (WallBreak.piecesSure)
-pub fn wall_break_pieces_sure(g: &mut crate::game::Game) -> f64 {
+pub fn wall_break_pieces_sure(g: &crate::game::Game) -> f64 {
     let r = g.destr.walls.room;
     if r.items == f64::INFINITY { return f64::INFINITY; }
     let mut foot = 1.0;
@@ -192,7 +192,7 @@ pub fn wall_break_adoptable(g: &crate::game::Game, index: f64) -> bool {
 }
 
 /// The columns a hard wall is cut into along its length. (WallBreak.hardCols)
-fn wall_break_hard_cols(g: &mut crate::game::Game, b: BoxId) -> f64 {
+fn wall_break_hard_cols(g: &crate::game::Game, b: BoxId) -> f64 {
     let h = g.tab.boxes[b].h;
     m::min(32.0, m::max(1.0, m::floor(m::max(h[0], h[2]) * 2.0 / g.k.walls.col + 1e-6)))
 }
@@ -263,14 +263,14 @@ pub(super) fn wall_break_hash(g: &mut crate::game::Game) -> f64 {
 }
 
 /// (WallBreak.toLocal)
-fn wall_break_to_local(g: &mut crate::game::Game, b: WallbreakBreakableId, p: V3) -> V3 {
+fn wall_break_to_local(g: &crate::game::Game, b: WallbreakBreakableId, p: V3) -> V3 {
     let (c, yaw) = { let x = own_box(g, b); (x.c, x.yaw) };
     let cs = m::cos(yaw); let sn = m::sin(yaw); let px = p[0] - c[0]; let pz = p[2] - c[2];
     [cs * px - sn * pz, p[1] - c[1], sn * px + cs * pz]
 }
 
 /// (WallBreak.toWorld)
-fn wall_break_to_world(g: &mut crate::game::Game, b: WallbreakBreakableId, l: V3) -> V3 {
+fn wall_break_to_world(g: &crate::game::Game, b: WallbreakBreakableId, l: V3) -> V3 {
     let (c, yaw) = { let x = own_box(g, b); (x.c, x.yaw) };
     let cs = m::cos(yaw); let sn = m::sin(yaw);
     [c[0] + cs * l[0] + sn * l[2], c[1] + l[1], c[2] - sn * l[0] + cs * l[2]]
@@ -280,10 +280,10 @@ fn wall_break_to_world(g: &mut crate::game::Game, b: WallbreakBreakableId, l: V3
 pub(super) fn wall_break_ci(g: &crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> f64 { let r = &g.tab.wallbreak_breakable[b]; (iy * r.nz + iz) * r.nx + ix }
 
 /// (WallBreak.xb)
-fn wall_break_xb(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64) -> f64 { let h = own_box(g, b).h; let nx = g.tab.wallbreak_breakable[b].nx; -h[0] + 2.0 * h[0] * ix / nx }
+fn wall_break_xb(g: &crate::game::Game, b: WallbreakBreakableId, ix: f64) -> f64 { let h = own_box(g, b).h; let nx = g.tab.wallbreak_breakable[b].nx; -h[0] + 2.0 * h[0] * ix / nx }
 
 /// (WallBreak.zb)
-fn wall_break_zb(g: &mut crate::game::Game, b: WallbreakBreakableId, iz: f64) -> f64 { let h = own_box(g, b).h; let nz = g.tab.wallbreak_breakable[b].nz; -h[2] + 2.0 * h[2] * iz / nz }
+fn wall_break_zb(g: &crate::game::Game, b: WallbreakBreakableId, iz: f64) -> f64 { let h = own_box(g, b).h; let nz = g.tab.wallbreak_breakable[b].nz; -h[2] + 2.0 * h[2] * iz / nz }
 
 /// The cell holding world point p, clamped into the static `inside` when given. (WallBreak.cellAt)
 pub(super) fn wall_break_cell_at(g: &mut crate::game::Game, b: WallbreakBreakableId, p: V3, inside: Option<BoxId>) -> [f64; 3] {
@@ -308,7 +308,7 @@ pub(super) fn wall_break_cell_at(g: &mut crate::game::Game, b: WallbreakBreakabl
 }
 
 /// World centre of a cell. (WallBreak.cellCentre)
-pub(super) fn wall_break_cell_centre(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> V3 {
+pub(super) fn wall_break_cell_centre(g: &crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> V3 {
     let (y0, y1) = { let r = &g.tab.wallbreak_breakable[b]; (r.yb[iy as usize], r.yb[iy as usize + 1]) };
     let l = [
         (wall_break_xb(g, b, ix) + wall_break_xb(g, b, ix + 1.0)) / 2.0,
@@ -319,7 +319,7 @@ pub(super) fn wall_break_cell_centre(g: &mut crate::game::Game, b: WallbreakBrea
 }
 
 /// The cell as a world box, for what it sheds: a value, made to be read and thrown away. (WallBreak.cellBox)
-pub(super) fn wall_break_cell_box(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> crate::scene_boxes::Box {
+pub(super) fn wall_break_cell_box(g: &crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> crate::scene_boxes::Box {
     let hx = (wall_break_xb(g, b, ix + 1.0) - wall_break_xb(g, b, ix)) / 2.0;
     let hy = { let r = &g.tab.wallbreak_breakable[b]; (r.yb[iy as usize + 1] - r.yb[iy as usize]) / 2.0 };
     let hz = (wall_break_zb(g, b, iz + 1.0) - wall_break_zb(g, b, iz)) / 2.0;
@@ -332,7 +332,7 @@ pub(super) fn wall_break_cell_box(g: &mut crate::game::Game, b: WallbreakBreakab
 }
 
 /// World centre and half-extents of one rect of `pieces`: what `rebuild` stands up and what `wouldOpen` forecasts. (WallBreak.rectBox)
-pub(super) fn wall_break_rect_box(g: &mut crate::game::Game, b: WallbreakBreakableId, arg1: [f64; 6]) -> crate::wallbreak::WallBreakRectBox {
+pub(super) fn wall_break_rect_box(g: &crate::game::Game, b: WallbreakBreakableId, arg1: [f64; 6]) -> crate::wallbreak::WallBreakRectBox {
     let [x0, x1, y0, y1, z0, z1] = arg1;
     let lx0 = wall_break_xb(g, b, x0); let lx1 = wall_break_xb(g, b, x1 + 1.0);
     let (ly0, ly1) = { let r = &g.tab.wallbreak_breakable[b]; (r.yb[y0 as usize], r.yb[y1 as usize + 1]) };

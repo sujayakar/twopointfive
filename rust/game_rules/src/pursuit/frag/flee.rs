@@ -428,7 +428,7 @@ fn roll_body(g: &Game, it: RollBody, touch_fuse: Option<f64>, props: bool, high:
 }
 
 /// Where a live thrown thing will rest and the floor it crosses to get there.
-fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
+fn roll_on(g: &crate::game::Game, it: ItemId, touch_fuse: Option<f64>, props: Option<bool>, high: Option<bool>) -> crate::frag::RollOn {
     let body = RollBody {
         pos: g.tab.item[it].pos,
         vel: g.tab.item[it].vel,
@@ -503,7 +503,7 @@ pub(super) fn rest_of(g: &mut crate::game::Game, l: usize) -> crate::frag::Rest 
 }
 
 /// Would a straight leg a → b shoulder a mate staying at q.
-fn shoulders(g: &mut crate::game::Game, a: V3, b: V3, q: V3) -> bool {
+fn shoulders(g: &crate::game::Game, a: V3, b: V3, q: V3) -> bool {
     let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
     let l = dx * dx + dz * dz;
     let d0 = m::hyp2(q[0] - a[0], q[2] - a[2]) - 0.05;

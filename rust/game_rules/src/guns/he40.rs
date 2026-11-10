@@ -87,7 +87,7 @@ fn ballistics(g: &Game) -> crate::launcher::Ballistics {
 }
 
 /// Where a round fired now would go, cut where it first enters one of `bodies`. (he40.ts shellSolve)
-pub fn shell_solve(g: &mut crate::game::Game, from: V3, target: V3, bodies: Option<&[CharId]>) -> crate::throwables::ThrowSolution {
+pub fn shell_solve(g: &crate::game::Game, from: V3, target: V3, bodies: Option<&[CharId]>) -> crate::throwables::ThrowSolution {
     let r = ballistics(g);
     let sol = crate::launcher::arc_solve(g, from, target, r);
     let bodies = bodies.unwrap_or(&[]);

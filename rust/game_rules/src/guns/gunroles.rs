@@ -67,7 +67,7 @@ fn rank_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// The clear floor from his mark toward what he watches, chest high (m).
-fn line_of(g: &mut crate::game::Game, p: V3, to: V3) -> f64 {
+fn line_of(g: &crate::game::Game, p: V3, to: V3) -> f64 {
     let dx = to[0] - p[0];
     let dz = to[2] - p[2];
     let l = m::hyp2(dx, dz);
@@ -162,7 +162,7 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
 }
 
 /// A defender with the belt-fed gun keeps the post he was dealt.
-pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn gun_keeps_post(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.team(gd) != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
     true
 }
@@ -188,7 +188,7 @@ pub fn gun_file_ranks(g: &crate::game::Game, men: &[GuardId]) -> Option<Vec<f64>
 }
 
 /// Of the men who may go first, the ones whose gun is the room's.
-pub fn gun_first(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
+pub fn gun_first(g: &crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     if men.len() < 2 { return men.to_vec(); }
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     let lo = m::min_n(&ranks);
@@ -203,7 +203,7 @@ pub fn gun_before(g: &crate::game::Game, first: GuardId, lead: GuardId) -> bool 
 }
 
 /// The turn the men go in by, the long guns last in the order they had; the man picked first never moves.
-pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
+pub fn gun_turn(g: &crate::game::Game, turn: &[GuardId], first: GuardId) -> Vec<GuardId> {
     if turn.len() < 3 { return turn.to_vec(); }
     let mut long: Vec<GuardId> = Vec::new();
     for &x in turn {
@@ -216,7 +216,7 @@ pub fn gun_turn(g: &mut crate::game::Game, turn: &[GuardId], first: GuardId) -> 
 }
 
 /// The men through a blown wall, nearest the hole first: the long guns' men after the others.
-pub fn gun_last(g: &mut crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
+pub fn gun_last(g: &crate::game::Game, men: &[GuardId]) -> Vec<GuardId> {
     if men.len() < 2 { return men.to_vec(); }
     let ranks: Vec<f64> = men.iter().map(|&x| rank_of(g, x)).collect();
     let back: Vec<GuardId> = men.iter().zip(&ranks).filter(|(_, &r)| r == 2.0).map(|(&x, _)| x).collect();

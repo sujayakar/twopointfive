@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// the switches as they stand now
-fn held_now(g: &mut crate::game::Game) -> crate::quiet::Held {
+fn held_now(g: &crate::game::Game) -> crate::quiet::Held {
     crate::quiet::Held { pairup: g.k.pairup.on, pair: g.k.pair.on, sneak: g.k.sneak.on, spotted: g.k.spotted.on, silent: g.k.silent.on, silent_start: g.k.silent.start }
 }
 
@@ -346,7 +346,7 @@ fn behind_or_why(g: &crate::game::Game, s: &crate::scene_scenarios::QuietStart) 
 }
 
 /// THE FLOOR A MAN STANDS ON AT A HOLDER'S FACE: the nearest free cell with a clear line to the face and, given the room, inside it
-pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::quiet::HolderStandArea>) -> crate::quiet::HolderStand {
+pub fn holder_stand(g: &crate::game::Game, front: V3, area: Option<crate::quiet::HolderStandArea>) -> crate::quiet::HolderStand {
     let e = 0.3;
     let mut best: Option<V3> = None;
     let mut bs = m::INF;
@@ -386,7 +386,7 @@ fn free(g: &mut crate::game::Game, out: &mut Vec<String>, what: &str, p: V3) -> 
 }
 
 /// a way on foot
-fn way(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn way(g: &crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::nav_grid_find_path(g, a, b, Some(20000.0), None).map_or(false, |path| !path.is_empty())
 }
 

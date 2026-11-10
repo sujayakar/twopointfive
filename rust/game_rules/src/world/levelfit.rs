@@ -55,7 +55,7 @@ fn marked(g: &Game, group: &str, b: Option<BoxId>) -> f64 {
 }
 
 /// What a level says of itself, counted before it is built.
-fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> crate::levelfit::LevelFit {
+fn level_counts(g: &crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> crate::levelfit::LevelFit {
     let (mut parts, mut sheets) = (0.0, 0.0);
     for p in level.props.iter() { parts += p.parts.len() as f64; }
     for &b in level.boxes.iter() { if crate::glass::is_sheet(g, Some(b)) { sheets += 1.0; } }
@@ -100,7 +100,7 @@ fn cut_statics(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
 }
 
 /// The clumps the largest sheet of a level's glass dices into, as the rule cuts them.
-fn clumps_most(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 {
+fn clumps_most(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
     let mut n = 0.0;
     for &b in boxes.iter() {
         if !crate::glass::is_sheet(g, Some(b)) { continue; }
@@ -149,7 +149,7 @@ fn row(what: &str, has: f64, cap: f64) -> crate::levelfit::FitRow {
 }
 
 /// Every count of a stood game against what holds it.
-fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::levelfit::FitRow> {
+fn fit_rows(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crate::levelfit::FitRow> {
     let col = &g_2.col;
     let lv = &g_2.level;
     let counted = crate::levelfit::LevelCountsLevel {
@@ -214,7 +214,7 @@ fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Vec<crat
 // ---- the functions translated code calls
 
 /// Civilians a game holds at once, at most: what a step's hand-over leaves after every other man a game may hold.
-pub fn civ_most(g: &mut crate::game::Game) -> f64 {
+pub fn civ_most(g: &crate::game::Game) -> f64 {
     let held = men_held();
     held - men_most(g, 0.0)
 }
@@ -240,7 +240,7 @@ pub fn flat_panel(group: &str, h: &[f64]) -> Option<crate::levelfit::FlatPanel> 
 }
 
 /// Why this level cannot be loaded, in words, or nothing: it fits.
-pub fn level_over(g: &mut crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> Option<String> {
+pub fn level_over(g: &crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> Option<String> {
     let has = level_counts(g, level);
     let cap = level_caps();
     let n = js::num_str;
@@ -269,7 +269,7 @@ pub fn break_room(g: &crate::game::Game, col: &crate::levelfit::StoodCol) -> cra
 }
 
 /// Why this stood game cannot be played, in words, or nothing: every row of the count not held in play is inside what holds it.
-pub fn stood_over(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood) -> Option<String> {
+pub fn stood_over(g: &crate::game::Game, g_2: &crate::levelfit::Stood) -> Option<String> {
     let over: Vec<String> = fit_rows(g, g_2).iter()
         .filter(|r| !r.play.unwrap_or(false) && r.has > r.cap)
         .map(|r| alloc::format!("{} {} ({})", js::num_str(r.has), r.what, js::num_str(r.cap)))

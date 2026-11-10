@@ -708,7 +708,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
 
 /// An outside man's walk to his post.
 fn to_post(g: &mut crate::game::Game, p: usize) {
-    let row = &mut g.qrf.perim.as_mut().unwrap().men[p];
+    let row = &g.qrf.perim.as_ref().unwrap().men[p];
     let (gd, post) = (row.gd, row.post.clone());
     crate::control::set_pinned(g, gd, false, "qrf");
     crate::control::set_hold(g, gd, false, "qrf");

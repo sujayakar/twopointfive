@@ -15,7 +15,7 @@ fn slice_path(path: &[V3], from: usize, to: usize) -> Vec<V3> {
     if from >= to { Vec::new() } else { path[from..to].to_vec() }
 }
 /// `const ok`, of findFace.
-fn ok_at(g: &mut Game, ref_: V3, p: V3, nav: bool) -> bool {
+fn ok_at(g: &Game, ref_: V3, p: V3, nav: bool) -> bool {
     stands(g, p, Some(nav)) && !walled(g, ref_, p)
 }
 /// `const face`, of findFace.
@@ -54,7 +54,7 @@ fn line_up(g: &mut Game, gd: GuardId, d: DoorId, side: f64, f: crate::handleside
 // ---- the file's functions ----
 
 /// A man's place at a door is his only while he keeps coming for it.
-fn fresh(g: &mut crate::game::Game, st: Option<&crate::handleside::St>) -> bool {
+fn fresh(g: &crate::game::Game, st: Option<&crate::handleside::St>) -> bool {
     match st { Some(st) => g.time >= st.seen && g.time - st.seen < 0.5, None => false }
 }
 
@@ -88,12 +88,12 @@ fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A wall, a sill or a pane between two floor points at shin height: the level's statics only.
-fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn walled(g: &crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: nothing of the level inside his body there (and, `nav`, on a cell the walkers' grid calls free).
-fn stands(g: &mut crate::game::Game, p: V3, nav: Option<bool>) -> bool {
+fn stands(g: &crate::game::Game, p: V3, nav: Option<bool>) -> bool {
     let nav = nav.unwrap_or(false);
     if nav && crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     let mut q: V3 = [p[0], 0.0, p[2]];
@@ -132,7 +132,7 @@ pub fn handle_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<cr
 }
 
 /// Searches a face's floor for its stand and its way through.
-fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
+fn find_face(g: &crate::game::Game, d: DoorId, side: f64) -> crate::handleside::Face {
     let k = g.k.handle;
     let w = g.dr[d].def.width;
     let hd = handle_at(g, d);
@@ -536,7 +536,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
 }
 
 /// The walk from `a` to a place at a handle, or None when that is no short way.
-fn way_to(g: &mut crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> {
+fn way_to(g: &crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> {
     let d = flat(a, to);
     if d < 0.5 || crate::scene_collision::nav_grid_walkable(g, a, to) { return Some(vec![to]); }
     let mut p = crate::scene_collision::nav_grid_find_path(g, a, to, Some(1500.0), None)?;
@@ -592,7 +592,7 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, 
 }
 
 /// The seconds a man's body must lean on a leaf from the face it opens into before it is pulled round; None = doors.ts's own beat.
-pub fn hand_press(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
+pub fn hand_press(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     if g.team(gd) == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
     if let Some(r) = g.m.handleside.rested.get(gd).copied() { if g.time < r.until { return None; } }
     let st = g.m.handleside.states.get(gd).cloned();
@@ -636,7 +636,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, order:
 }
 
 /// Where a door order's lead works the handle from without standing in the opening.
-fn near_stand(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> {
+fn near_stand(g: &crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> {
     let k = g.k.handle;
     let f = crate::guards::frame_of(g, d);
     let hd = handle_at(g, d);
@@ -672,7 +672,7 @@ pub fn tool_step(g: &mut crate::game::Game, gd: GuardId, pos: V3) -> bool {
 }
 
 /// Is a shut leaf to be stacked on from its latch jamb, whichever jamb a man is nearer.
-pub fn latch_first(g: &mut crate::game::Game, d: DoorId, stack: V3) -> bool {
+pub fn latch_first(g: &crate::game::Game, d: DoorId, stack: V3) -> bool {
     if !crate::doors::door_is_closed(g, d) || g.dr[d].leaf.off || !stands(g, stack, Some(true)) { return false; }
     let hd = handle_at(g, d);
     !walled(g, hd, stack)

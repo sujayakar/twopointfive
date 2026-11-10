@@ -51,7 +51,7 @@ pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
 }
 
 /// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.
-pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
+pub fn lamp_glare(g: &crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if !g.fight.live { return 0.0; }
     let l = g.gd[o].flashlight;
     let light = &g.tab.light[l];
@@ -181,7 +181,7 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
 pub(super) fn op_id(g: &Game, gd: GuardId) -> Option<RoomfightOpId> { g.fight.ops.iter().copied().find(|&o| g.tab.roomfight_op[o].gd == gd) }
 
 /// `g.col.segmentBlocked(a, b)`
-pub(super) fn seg_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
+pub(super) fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 
 pub(super) fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 

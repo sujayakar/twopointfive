@@ -32,7 +32,7 @@ fn drop_kind(g: &Game, def: crate::weapons::WeaponId) -> DropFromHandKind {
 fn flags_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 /// The pistol poked out through a panel: gun shoulder and muzzle on opposite sides of one.
-pub fn arm_through(g: &mut crate::game::Game, c_2: CharId) -> bool {
+pub fn arm_through(g: &crate::game::Game, c_2: CharId) -> bool {
     let or = v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]);
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, or);
     let to = g.ch[c_2].muzzle;
@@ -58,7 +58,7 @@ pub fn solid_between(g: &Game, from: V3, to: V3) -> bool {
 }
 
 /// May a contact shot from `a` count on `b`: no panel between their chests.
-fn contact_clear(g: &mut crate::game::Game, a: CharId, b: CharId) -> bool {
+fn contact_clear(g: &crate::game::Game, a: CharId, b: CharId) -> bool {
     if v3::dist_xz(g.ch[a].pos, g.ch[b].pos) > 1.2 { return true; }
     let from = v3::add(g.ch[a].pos, [0.0, 1.1, 0.0]);
     let or = g.ch[b].pos;
@@ -68,7 +68,7 @@ fn contact_clear(g: &mut crate::game::Game, a: CharId, b: CharId) -> bool {
 }
 
 /// rayHit plus the contact shot: a muzzle already inside his body cylinder is a hit where it is. `contact` None is the TypeScript's `true`.
-pub fn body_hit(g: &mut crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, contact: Option<crate::combat::BodyHitContact>) -> f64 {
+pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, contact: Option<crate::combat::BodyHitContact>) -> f64 {
     let t = crate::character::character_ray_hit(g, c_2, ro, rd, tmax);
     if t >= 0.0 || !g.ch[c_2].alive || matches!(contact, Some(BodyHitContact::Entering)) { return t; }
     if !crate::character::character_inside_body(g, c_2, ro, Some(0.25)) { return -1.0; }

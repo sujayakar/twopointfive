@@ -353,7 +353,7 @@ fn caller_ok(g: &Game, x: Option<GuardId>) -> bool {
         Some(x) => !off_net(g, x) && g.gd[x].state != GuardState::Alert && g.gd[x].script.is_none() && g.guards.contains(&x),
     }
 }
-fn silent(g: &mut Game, x: GuardId) -> bool {
+fn silent(g: &Game, x: GuardId) -> bool {
     off_net(g, x) && !g.gd[x].found && checker_for(g, x).is_none()
 }
 /// The check is over for now: idle, the next one on its clock.

@@ -414,7 +414,7 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
     crate::game::game_say(g, first, &line, Some(true), None);
 }
 /// not one who knows a covered lane lies that way
-fn may_look(g: &mut Game, d: RoomfightDefId, at: V3) -> bool {
+fn may_look(g: &Game, d: RoomfightDefId, at: V3) -> bool {
     let gd = def!(g, d).gd;
     !crate::lanes::lane_bars(g, gd, Some(at)) && !crate::lanes::lane_known_at(g, gd, Some(at))
 }
@@ -632,7 +632,7 @@ pub(super) fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
 }
 
 /// the memo of radioCheck's `atHome`
-fn at_home(g: &mut Game, q: EnemysquadsSquadId, h: &mut Option<Vec<RoomfightDefId>>) -> Vec<RoomfightDefId> {
+fn at_home(g: &Game, q: EnemysquadsSquadId, h: &mut Option<Vec<RoomfightDefId>>) -> Vec<RoomfightDefId> {
     if h.is_none() {
         *h = Some(home(g, q));
     }
@@ -1113,7 +1113,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
     }
 }
 /// A man of squad Q set off to look for `who` at `at`: his record, with the post he leaves and how he held it.
-pub(super) fn looker(g: &mut crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefId, who: GuardId, at: V3) -> crate::enemysquads::Looker {
+pub(super) fn looker(g: &crate::game::Game, q: EnemysquadsSquadId, d: RoomfightDefId, who: GuardId, at: V3) -> crate::enemysquads::Looker {
     let row = &def!(g, d);
     let gd = row.gd;
     crate::enemysquads::Looker {

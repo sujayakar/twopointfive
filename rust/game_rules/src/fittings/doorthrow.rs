@@ -13,7 +13,7 @@ fn side_of(t: crate::teams::Team) -> f64 {
 }
 
 /// The guard or civilian whose body has this character id.
-fn man_of(g: &mut Game, id_2: f64) -> Option<GuardId> {
+fn man_of(g: &Game, id_2: f64) -> Option<GuardId> {
     for i in 0..g.guards.len() {
         let x = g.guards[i];
         if g.ch[g.gd[x].ch].id == id_2 {
@@ -67,7 +67,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
 }
 
 /// Whose leaf it was, for the teams' own table (nobody the game knows: no foe's).
-fn team_of(g: &mut Game, id_2: f64) -> Option<crate::teams::Team> {
+fn team_of(g: &Game, id_2: f64) -> Option<crate::teams::Team> {
     if crate::seats::is_man_id(g, id_2) {
         return Some(crate::teams::Team::Ours);
     }

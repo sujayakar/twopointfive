@@ -55,7 +55,7 @@ fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 // ---------------------------------------------------------------- who can hear it
 
 /// Every player who is up and the living teammates, with their ears.
-pub(super) fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
+pub(super) fn listeners(g: &Game) -> Vec<crate::digin::ListenersItem> {
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
         if !crate::condition::down(g, g.pl[pl].ch) {
@@ -135,7 +135,7 @@ pub(super) fn path_len(from: V3, path: &[V3]) -> f64 {
 }
 
 /// How far on foot from `a` to `b`; infinity: no way found.
-pub(super) fn way_to(g: &mut Game, a: V3, b: V3) -> f64 {
+pub(super) fn way_to(g: &Game, a: V3, b: V3) -> f64 {
     let p = crate::roomfight::room_fight_free_near(g, a).unwrap_or(a);
     let q = crate::roomfight::room_fight_free_near(g, b).unwrap_or(b);
     match crate::scene_collision::nav_grid_find_path(g, p, q, Some(6000.0), None) {
@@ -166,7 +166,7 @@ pub(super) fn expect_entries(g: &mut Game, room: RoomfightRoomId, from: V3) -> [
 }
 
 /// One entry's cost for expect_entries: the map's closure at digin.ts:264.
-fn way_round(g: &mut Game, room: RoomfightRoomId, src: V3, e: &crate::roomfight::Entry) -> f64 {
+fn way_round(g: &Game, room: RoomfightRoomId, src: V3, e: &crate::roomfight::Entry) -> f64 {
     let o = match crate::roomfight::room_fight_free_near(g, [e.at[0] + e.out[0] * 1.2, 0.0, e.at[2] + e.out[1] * 1.2]) {
         Some(o) => o,
         None => return m::INF,
@@ -276,7 +276,7 @@ fn spot_score(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, hope: bool, bar: f6
 }
 
 /// Not seen from outside the door: outside at digin.ts:318.
-fn spot_outside(g: &mut Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
+fn spot_outside(g: &Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
     let mut s = s;
     for (k, o) in x.outs.iter().enumerate() {
         if hope || crate::scene_collision::segment_blocked(g, *o, at(p, 1.2), None, None, None) {
@@ -287,7 +287,7 @@ fn spot_outside(g: &mut Game, x: &SpotCtx, p: V3, s: f64, hope: bool) -> f64 {
 }
 
 /// The rest of the sum: rest at digin.ts:319.
-fn spot_rest(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, hope: bool) -> Option<f64> {
+fn spot_rest(g: &Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, hope: bool) -> Option<f64> {
     let mut s = s + back;
     for o in x.others.iter() {
         if flat(p, o.i) < 2.0 {
@@ -305,7 +305,7 @@ fn spot_rest(g: &mut Game, x: &SpotCtx, p: V3, self_: bool, s: f64, back: f64, h
 }
 
 /// Deep: the middle of the crossing floor he has in his sights from `p`. lookFrom at digin.ts:330.
-fn spot_look(g: &mut Game, x: &SpotCtx, p: V3) -> Option<V3> {
+fn spot_look(g: &Game, x: &SpotCtx, p: V3) -> Option<V3> {
     if !x.deep { return None; }
     let (mut sx, mut sz, mut k) = (0.0, 0.0, 0.0);
     for q in x.k.iter() {

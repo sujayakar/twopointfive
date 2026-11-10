@@ -51,7 +51,7 @@ fn clear_path(g: &mut Game, gd: GuardId) {
 // ---------------------------------------------------------------- what a man sees
 
 /// A world point in this man's open view: range, field, nothing solid between; light is not asked.
-pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Option<f64>, half_deg: Option<f64>) -> bool {
+pub fn point_in_view(g: &crate::game::Game, gd: GuardId, p: V3, range: Option<f64>, half_deg: Option<f64>) -> bool {
     let range = range.unwrap_or(12.0);
     let half_deg = half_deg.unwrap_or(60.0);
     if crate::doze::doze_asleep(g, gd) { return false; }
@@ -67,7 +67,7 @@ pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Optio
 }
 
 /// A light going out that this man's eye has a line to: the fixture, or the floor under it. No cone.
-pub(super) fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
+pub(super) fn light_out_seen(g: &crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
     let c = g.gd[gd].ch;
     let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
     let src: V3 = match e.from { Some(f) => f, None => [e.pos[0], 2.4, e.pos[2]] };
@@ -355,7 +355,7 @@ pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) ->
 }
 
 /// The fix a man is left with the frame Sam goes out of sight: led 0.9 s along his way, as far as the floor is open.
-pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
+pub(super) fn lead_fix(g: &crate::game::Game, from: V3, vel: V3) -> V3 {
     let p: V3 = [from[0], 0.0, from[2]];
     let (vx, vz) = (vel[0], vel[2]);
     let sp = m::hyp2(vx, vz);
@@ -398,7 +398,7 @@ pub fn shot_origin(g: &crate::game::Game, c_2: CharId) -> V3 {
 }
 
 /// Nothing a round would stop in between his gun and `to`, less the body's breadth at the far end.
-pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
+pub fn clear_shot(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     let from = shot_origin(g, c_2);
     let d = v3::sub(to, from);
     let l = v3::len(d);
@@ -408,7 +408,7 @@ pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
 }
 
 /// A pinned man's one question: his side's rounds have nothing for a pane, and standing glass is the first thing on the line.
-pub(super) fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
+pub(super) fn pane_first(g: &crate::game::Game, c_2: CharId, to: V3) -> bool {
     if crate::glasspen::shot_energy(g, c_2, None) != Some(0.0) { return false; }
     let from = shot_origin(g, c_2);
     let d = v3::sub(to, from);

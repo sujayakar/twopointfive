@@ -25,7 +25,7 @@ fn none_aim(a: WallChargeAssignA) -> WallChargeAssignA { WallChargeAssignA { sta
 
 // ------------------------------------------------------------ underFire's two answers: the match where they are called (conventions 3; the captures are WallChargeFireAsk)
 /// a round's line, the wall about to go being no cover where it will open   (underFire's `line`)
-fn fire_line(g: &mut Game, wall: &Option<WallSpot>, a: V3, b: V3) -> bool {
+fn fire_line(g: &Game, wall: &Option<WallSpot>, a: V3, b: V3) -> bool {
     if !crate::scene_collision::segment_blocked(g, a, b, None, None, None) { return true; }
     let w = match wall { Some(w) => w, None => return false };
     let tk = thick(g, w);
@@ -37,7 +37,7 @@ fn fire_line(g: &mut Game, wall: &Option<WallSpot>, a: V3, b: V3) -> bool {
     !crate::scene_collision::segment_blocked(g, a, at(-tk - 0.05), None, None, None) && !crate::scene_collision::segment_blocked(g, at(0.05), b, None, None, None)
 }
 /// how many of a man's six places on `q` a foe at `f` has a line to; `stop`: the first ends the asking   (underFire's `lines`)
-fn fire_lines(g: &mut Game, wall: &Option<WallSpot>, f: V3, q: V3, stop: bool) -> f64 {
+fn fire_lines(g: &Game, wall: &Option<WallSpot>, f: V3, q: V3, stop: bool) -> f64 {
     let e = g.k.wallcharge.fire_step;
     let from = [f[0], 1.4, f[2]];
     let mut n = 0.0;
@@ -50,7 +50,7 @@ fn fire_lines(g: &mut Game, wall: &Option<WallSpot>, f: V3, q: V3, stop: bool) -
 }
 fn fire_key(q: V3) -> [crate::Num; 3] { [crate::Num(q[0]), crate::Num(q[1]), crate::Num(q[2])] }
 /// `fire.score(q)`: how much under known fire a place is, 0 = not at all; each place asked once
-pub(super) fn wall_charge_fire_score(g: &mut crate::game::Game, fire: &mut crate::wallcharge::WallChargeFireAsk, q: V3) -> f64 {
+pub(super) fn wall_charge_fire_score(g: &crate::game::Game, fire: &mut crate::wallcharge::WallChargeFireAsk, q: V3) -> f64 {
     let WallChargeFireAsk::Lines { wall, all, memo, hit } = fire;
     let key = fire_key(q);
     if let Some(&v) = memo.get(key) { return v; }
@@ -65,7 +65,7 @@ pub(super) fn wall_charge_fire_score(g: &mut crate::game::Game, fire: &mut crate
     v
 }
 /// `fire.any(q)`: is it under fire at all, the first clear line ending the asking
-pub fn wall_charge_fire_any(g: &mut crate::game::Game, fire: &mut crate::wallcharge::WallChargeFireAsk, q: V3) -> bool {
+pub fn wall_charge_fire_any(g: &crate::game::Game, fire: &mut crate::wallcharge::WallChargeFireAsk, q: V3) -> bool {
     let WallChargeFireAsk::Lines { wall, all, hit, .. } = fire;
     let key = fire_key(q);
     if let Some(&v) = hit.get(key) { return v; }
@@ -175,7 +175,7 @@ fn wall_charge_stand_off(g: &mut crate::game::Game, op: WallOpId, gd: GuardId) {
 }
 
 /// the setter's job: to the wall's foot, facing it
-fn set_job(g: &mut Game, w: &WallSpot, spot: V3) -> WallChargeAssignA {
+fn set_job(g: &Game, w: &WallSpot, spot: V3) -> WallChargeAssignA {
     let a = job("charge · the wall", "setting the charge");
     let foot = wall_pt(g, w, 0.0, 0.0, None);
     WallChargeAssignA { post: Some(spot), face: Some(v3::yaw_to(spot, foot)), watch: None, ..none_upper(a) }
@@ -250,7 +250,7 @@ fn done_item(r: &WallOp) -> WallChargeDoneItem {
 }
 
 /// (the walk: never deeper into the blast than where he stands now)
-fn safe_walk(g: &mut Game, w: &WallSpot, gd: GuardId, q: V3) -> bool {
+fn safe_walk(g: &Game, w: &WallSpot, gd: GuardId, q: V3) -> bool {
     let p0 = pos_of(g, gd);
     let path = match crate::scene_collision::nav_grid_find_path(g, p0, q, Some(4000.0), None) { Some(p) => p, None => return false };
     let lim = wall_charge_blast_share(g, w, p0, None, None) + 0.05;
@@ -653,7 +653,7 @@ fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, l
 }
 
 /// s the men stand after the blast before the order sends them in
-fn wall_charge_blow_wait(g: &mut crate::game::Game, op: WallOpId) -> f64 {
+fn wall_charge_blow_wait(g: &crate::game::Game, op: WallOpId) -> f64 {
     let (after, now) = (g.k.wallcharge.after_blow, g.time);
     let h = match o!(g, op).hole { Some(h) => h, None => return after };
     if o!(g, op).men.iter().any(|&m| g.cond[g.gd[m].ch].blind_until > now) { return after; }   // (a man the blast caught: the beat as it was)
@@ -794,7 +794,7 @@ fn wall_charge_cross(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, p: V3
 }
 
 /// how far a line runs open from `p` at `yaw`, up to 6 m   (lookFrom's `open`)
-fn open_way(g: &mut Game, p: V3, yaw: f64) -> f64 {
+fn open_way(g: &Game, p: V3, yaw: f64) -> f64 {
     let (s, c) = (m::sin(yaw), m::cos(yaw));
     let mut d = 0.0;
     while d < 6.0 && !crate::scene_collision::solid_blocked(g, [p[0], 1.2, p[2]], [p[0] + s * (d + 1.0), 1.2, p[2] + c * (d + 1.0)], None) { d += 1.0; }
@@ -802,7 +802,7 @@ fn open_way(g: &mut Game, p: V3, yaw: f64) -> f64 {
 }
 
 /// the way a man on his point inside faces: the way he came unless that is a wall at his chest
-fn wall_charge_look_from(g: &mut crate::game::Game, p: V3, into: f64, want: f64) -> f64 {
+fn wall_charge_look_from(g: &crate::game::Game, p: V3, into: f64, want: f64) -> f64 {
     if open_way(g, p, want) >= 2.0 { return want; }
     let mut best = want;
     let mut score = f64::NEG_INFINITY;

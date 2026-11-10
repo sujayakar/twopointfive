@@ -84,7 +84,7 @@ fn ring_more(r: Option<crate::cmdring::RingState>) -> bool {
     r.is_some_and(|r| r.more.unwrap_or(false))
 }
 /// `this.seats(this.menu!, R)`
-fn seats_now(g: &mut Game, r: Option<crate::cmdring::RingState>) -> SquadOrdersSeats {
+fn seats_now(g: &Game, r: Option<crate::cmdring::RingState>) -> SquadOrdersSeats {
     let m = g.sets[g.seat].orders.menu.clone().unwrap();
     squad_orders_seats(g, &m, r)
 }
@@ -490,7 +490,7 @@ fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId,
 }
 
 /// The digits the ring has a wedge on, a bit each (0: no ring). All the game reads of a ring's picture.
-fn squad_orders_ring_keys(g: &mut crate::game::Game) -> f64 {
+fn squad_orders_ring_keys(g: &crate::game::Game) -> f64 {
     let (r, menu) = match (g.sets[g.seat].orders.cmd_ring, g.sets[g.seat].orders.menu.clone()) {
         (Some(r), Some(menu)) => (r, menu),
         _ => return 0.0,

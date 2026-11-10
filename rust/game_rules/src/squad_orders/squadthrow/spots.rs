@@ -54,7 +54,7 @@ fn lob_clean(g: &mut Game, clean: &LobClean, t: &SquadThrower) -> bool {
 }
 
 /// throwTo with the search's count lent: it spends flights from it (`Lob.lim` and throw_to's `lim` are two types of one shape)
-fn throw_to_lim(g: &mut Game, gd: GuardId, at: V3, kind: SquadThrowKind, stood: Option<V3>, walls: &[V3], lim: &mut LobLim) -> Option<crate::throwplan::ThrowTo> {
+fn throw_to_lim(g: &Game, gd: GuardId, at: V3, kind: SquadThrowKind, stood: Option<V3>, walls: &[V3], lim: &mut LobLim) -> Option<crate::throwplan::ThrowTo> {
     let mut count = crate::throwplan::ThrowToLim { n: lim.n };
     let th = crate::throwplan::throw_to(g, gd, at, kind, stood, Some(walls), Some(&mut count));
     lim.n = count.n;
@@ -87,7 +87,7 @@ fn in_own(g: &mut Game, kind: SquadThrowKind, pts: &[V3], px: f64, pz: f64, gd: 
 }
 
 /// (walkSpot wallSeen) a wall by the spot, a metre off or more, that the hand has a line to
-fn wall_seen(g: &mut Game, walls: &[V3], h: V3) -> bool {
+fn wall_seen(g: &Game, walls: &[V3], h: V3) -> bool {
     for w in walls {
         if m::hyp2(w[0] - h[0], w[2] - h[2]) >= 1.0 && !crate::scene_collision::solid_blocked(g, h, *w, None) { return true; }
     }
@@ -95,7 +95,7 @@ fn wall_seen(g: &mut Game, walls: &[V3], h: V3) -> bool {
 }
 
 /// (walkSpot arcAt) an arc for him standing on that cell that still holds a short step to any side of it; worked: or the throw he works out there, the SAME throw made from each side still going off by the spot
-fn arc_at(g: &mut Game, gd: GuardId, post: V3, straight: bool, worked: bool, at: V3, kind: SquadThrowKind, roll_k: Option<f64>, walls: &[V3], lim: &mut LobLim) -> Option<Arc> {
+fn arc_at(g: &Game, gd: GuardId, post: V3, straight: bool, worked: bool, at: V3, kind: SquadThrowKind, roll_k: Option<f64>, walls: &[V3], lim: &mut LobLim) -> Option<Arc> {
     let arc = if straight { crate::squadsmoke::squad_arc_to(g, gd, at, roll_k, Some(post)) } else { None };
     if let Some(arc) = arc {
         let mut ok = true;
@@ -271,7 +271,7 @@ fn flood(g: &mut Game, who: &[GuardId], home: &[f64], ours: &[(Option<GuardId>, 
 // ---- the part ----
 
 /// how many are left in the one bag
-pub(in crate::squad_orders) fn left(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
+pub(in crate::squad_orders) fn left(g: &crate::game::Game, kind: crate::squadthrow::SquadThrowKind) -> f64 {
     if kind == SquadThrowKind::Frag { g.sets[g.seat].door_tools.frags } else { g.sets[g.seat].door_tools.bangs }
 }
 
