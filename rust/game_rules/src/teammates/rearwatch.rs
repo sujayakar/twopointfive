@@ -675,7 +675,7 @@ fn let_go(g: &mut Game, pl: PlayerId, m: GuardId, why: &str) {
     };
     if let Some(a) = of(g, m) {
         if a == r.pin.a && g.tab.orders_assignment[a].post.is_none() {
-            g.tab.orders_assignment[a].going = String::from(FALLING);
+            g.tab.orders_assignment[a].going = String::from(FALLING).into();
         }
     }
     let s = format!("{} {} off {} · {}", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[r.pin.o].id, why);
@@ -938,7 +938,7 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
         };
         let row = &mut g.tab.orders_assignment[a];
         row.follow = 1e3;
-        row.going = format!("holding · {}", name);
+        row.going = format!("holding · {}", name).into();
     }
 }
 

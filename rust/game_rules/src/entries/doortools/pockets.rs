@@ -441,7 +441,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
         crate::game::game_say(g, lead, "no way in.", None, None);
-        door_tools_end(g, op, "no floor inside");
+        door_tools_end(g, op, crate::doortools::Ended::NoFloorInside);
         return;
     }
     let mut rest: Vec<GuardId> = men.iter().copied().filter(|m| !jamb.contains(m)).collect();

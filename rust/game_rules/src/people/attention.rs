@@ -106,13 +106,13 @@ pub(super) fn attention_aside(g: &mut crate::game::Game, gd: GuardId, p: V3, gai
             let off = g.time + g.k.attention.lent_back_secs;
             mem(g, gd).lent_off = off;
         }
-        end(g, gd, "glimpse");
+        end(g, gd, End::Broken, "glimpse");
         return false;
     }
     h.glimpse += gain;
     set_hold(g, gd, Some(h));
     if h.glimpse < g.k.attention.break_gain { return true; }
-    end(g, gd, "glimpse");
+    end(g, gd, End::Broken, "glimpse");
     line(g, gd, &broke());
     false
 }
@@ -134,7 +134,7 @@ pub(super) fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
         let off = g.time + g.k.attention.lent_back_secs;
         mem(g, gd).lent_off = off;
     }
-    end(g, gd, "step");
+    end(g, gd, End::Broken, "step");
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
         if !crate::belief::word_now(g, gd) {
             crate::mind::fix(g, gd, Some(v3::copy(at)), "attention");
@@ -208,12 +208,15 @@ fn secs_for(g: &crate::game::Game, kind: crate::attention::DrawKind) -> f64 {
     }
 }
 
+/// How a hold is over: he saw it through, its time is up, or something broke it off.
+enum End { Done, Over, Broken }
+
 /// The hold is over, for `why`.
-fn end(g: &mut crate::game::Game, gd: GuardId, why: &str) {
+fn end(g: &mut crate::game::Game, gd: GuardId, how: End, why: &str) {
     let row = mem(g, gd);
     let Some(h) = row.hold else { return };
     row.hold = None;
-    if why == "done" { g.stats.attention.released += 1; } else if why != "over" { g.stats.attention.broken += 1; }
+    match how { End::Done => g.stats.attention.released += 1, End::Over => {}, End::Broken => g.stats.attention.broken += 1 }
     log(g, why, log_h(&h));
 }
 
@@ -242,7 +245,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
     let free = able(g, gd);
     let mut h = mem(g, gd).hold;
     if h.is_some() && !free {
-        end(g, gd, "roused");
+        end(g, gd, End::Broken, "roused");
         h = None;
     }
     if !free {
@@ -254,7 +257,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
         match hh.mode {
             HoldMode::Go => {
                 if !suspicious || (!on_it(g, gd, &hh) && cand.is_none()) {
-                    end(g, gd, "elsewhere");
+                    end(g, gd, End::Broken, "elsewhere");
                     h = None;
                 }
             }
@@ -266,14 +269,14 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                     set_hold(g, gd, Some(hh));
                     h = Some(hh);
                 } else if suspicious && !on_it(g, gd, &hh) && cand.is_none() {
-                    end(g, gd, "elsewhere");
+                    end(g, gd, End::Broken, "elsewhere");
                     h = None;
                 } else if now >= hh.until {
                     if suspicious {
                         crate::mind::cap(g, gd, 0.1 + hh.glimpse, "attention");
-                        end(g, gd, "done");
+                        end(g, gd, End::Done, "done");
                     } else {
-                        end(g, gd, "over");
+                        end(g, gd, End::Over, "over");
                     }
                     h = None;
                 } else if suspicious {
@@ -291,7 +294,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                     h = Some(hh);
                 }
                 _ => {
-                    end(g, gd, "over");
+                    end(g, gd, End::Over, "over");
                     h = None;
                 }
             },
@@ -323,7 +326,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                 h = Some(hh);
             }
         } else if going && !(same && series) {
-            if h.is_some() { end(g, gd, "elsewhere"); }
+            if h.is_some() { end(g, gd, End::Broken, "elsewhere"); }
             let memory = g.k.attention.memory_secs;
             let row = mem(g, gd);
             row.takes.retain(|t| now - *t <= memory);
@@ -408,7 +411,7 @@ pub(super) fn attention_walk(g: &mut crate::game::Game, gd: GuardId) {
     let Some(h) = attention_of(g, gd) else { return };
     if h.mode != HoldMode::Go || h.until >= 0.0 { return; }
     if g.time - h.t0 > g.k.attention.walk_cap {
-        end(g, gd, "far");
+        end(g, gd, End::Broken, "far");
         return;
     }
     { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }
@@ -425,7 +428,7 @@ pub(super) fn attention_dwell(g: &mut crate::game::Game, gd: GuardId) -> bool {
     }
     if g.time >= h.until {
         crate::mind::cap(g, gd, 0.1 + h.glimpse, "attention");
-        end(g, gd, "done");
+        end(g, gd, End::Done, "done");
         return false;
     }
     { let to = g.k.attention.floor; crate::mind::raise(g, gd, to, "attention"); }

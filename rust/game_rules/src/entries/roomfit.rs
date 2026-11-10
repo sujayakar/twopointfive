@@ -377,7 +377,7 @@ fn take(g: &mut crate::game::Game, a: OrdersAssignmentId, f: &crate::roomfit::Fi
     let row = &mut g.tab.orders_assignment[a];
     row.watch = f.watch.map(v3::copy);
     row.face = Some(match (f.watch, row.post) { (Some(watch), Some(post)) => v3::yaw_to(post, watch), _ => f.face });
-    row.there = if f.words.is_empty() { String::from("in position") } else { alloc::format!("in position · {}", f.words) };
+    row.there = if f.words.is_empty() { String::from("in position").into() } else { alloc::format!("in position · {}", f.words).into() };
 }
 
 /// Once a frame for each man under 'move': he takes his watch up over the last steps onto his mark; standing, he looks again once a second.
@@ -388,7 +388,7 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         let (Some(f), Some(post)) = (row.fit.as_ref(), row.post) else { return; };
         (post, f.on, f.next_t, f.at, f.front)
     };
-    if g.tab.orders_assignment[a].there == "stopped short" { // (he could not get there, and says so: the deal was for a mark he never reached)
+    if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { // (he could not get there, and says so: the deal was for a mark he never reached)
         g.tab.orders_assignment[a].fit = None;
         return;
     }

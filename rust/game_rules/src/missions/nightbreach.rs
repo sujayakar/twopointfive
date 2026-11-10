@@ -521,6 +521,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
         NightBreachState::Inside => {
             let d = g.night_breach.drill.as_mut().unwrap();
             d.phase = crate::breach::Phase::Done;
+            d.recalled = true;
             d.beats.push(crate::breach::BreachDrillBeatsItem { what: String::from("recalled") });
             None
         }
@@ -673,9 +674,9 @@ pub fn night_breach_state(g: &crate::game::Game) -> crate::nightbreach::NightBre
     };
     match d.phase {
         crate::breach::Phase::Done => {
-            if d.beats.iter().any(|b| b.what == "clear") {
+            if !d.t_clear.is_nan() {
                 NightBreachState::Clear
-            } else if d.beats.iter().any(|b| b.what == "recalled") {
+            } else if d.recalled {
                 NightBreachState::Recalled
             } else {
                 NightBreachState::Failed
@@ -750,7 +751,7 @@ mod tests {
     /// The word for each phase of the drill.
     #[test]
     fn the_state_word_follows_the_drill() {
-        use crate::breach::{BreachDrill, BreachDrillBeatsItem, Phase};
+        use crate::breach::{BreachDrill, Phase};
         let mut g = Game::blank();
         assert_eq!(night_breach_state(&mut g), NightBreachState::Off);
         g.staged.begin(MissionKind::Nightbreach, Facts { fight: true, ..Facts::default() });
@@ -769,10 +770,10 @@ mod tests {
         d.phase = Phase::Done;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Failed);
         let d = g.night_breach.drill.as_mut().unwrap();
-        d.beats.push(BreachDrillBeatsItem { what: String::from("recalled") });
+        d.recalled = true;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Recalled);
         let d = g.night_breach.drill.as_mut().unwrap();
-        d.beats.push(BreachDrillBeatsItem { what: String::from("clear") });
+        d.t_clear = 1.0;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Clear);
     }
 

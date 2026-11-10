@@ -44,7 +44,7 @@ pub(super) fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> Roomfi
         gd, pinned0: g.gd[gd].pinned, station: p, home: front, room, staged: None, ev, watch: -1.0, want: -1.0, want_at: 0.0,
         glance_to: -1.0, glance_until: -1.0, glance_next, pt: front,
         heard_t: H.last_t, cnt: DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small }, noise_at: None, noise_t: -100.0, noise_out: false,
-        last_state: String::from(g.gd[gd].state.as_str()), last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0,
+        last_state: g.gd[gd].state, last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0,
         mode: DefMode::Hold, move_kind: DefMoveKind::Cover, move_t: 0.0, leg_by: crate::owner::By::NOBODY, came_by: None, stall_at: p, stall_t: 0.0, free_at: 0.0,
         burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None,
     };
@@ -217,7 +217,7 @@ fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64)
 /// the untrained man's beats.
 fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
-    if g.gd[gd].state == crate::game::GuardState::Alert && g.tab.roomfight_def[d].last_state != "alert" { let p = pick(g, crate::dice::Who::Def(d), s.react); g.gd[gd].react_t = m::max(g.gd[gd].react_t, p); }
+    if g.gd[gd].state == crate::game::GuardState::Alert && g.tab.roomfight_def[d].last_state != crate::game::GuardState::Alert { let p = pick(g, crate::dice::Who::Def(d), s.react); g.gd[gd].react_t = m::max(g.gd[gd].react_t, p); }
     let fc = g.gd[gd].foe;
     if let Some(fc) = fc { if g.gd[gd].last_seen_t > g.tab.roomfight_def[d].last_seen + 1.5 && g.time - g.gd[gd].last_seen_t < 0.1 {
         let (cp, fp, pt) = (g.ch[c].pos, g.ch[fc].pos, g.tab.roomfight_def[d].pt);
@@ -241,7 +241,7 @@ fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     let (seen, st) = (g.gd[gd].last_seen_t, g.gd[gd].state);
     let D = &mut g.tab.roomfight_def[d];
-    D.last_seen = seen; D.last_state = String::from(st.as_str());
+    D.last_seen = seen; D.last_state = st;
 }
 
 /// a dazzled defender empties a burst down what he was watching, or ducks.

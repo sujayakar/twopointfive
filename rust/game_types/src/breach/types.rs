@@ -17,6 +17,8 @@ pub struct BreachDrill {
     #[is(f64::NAN)] pub t_enter: f64,
     #[is(f64::NAN)] pub t_corner: f64,
     #[is(f64::NAN)] pub t_clear: f64,
+    /// called off with men inside
+    pub recalled: bool,
     pub beats: Vec<crate::breach::BreachDrillBeatsItem>,
     pub t: f64,
     pub done: JsSet<String>,

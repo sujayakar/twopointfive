@@ -144,8 +144,8 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
                 door: Some(d),
                 stance: Some(crate::character::Stance::None),
                 upper: Some(crate::character::UpperMode::Aim),
-                going: String::from("off the door"),
-                there,
+                going: "off the door".into(),
+                there: there.into(),
                 set_line: None,
                 ..Default::default()
             },
@@ -163,8 +163,8 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 set_line: None,
                 ..Default::default()
             },
@@ -209,8 +209,8 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
                 stance: crate::character::Stance::None,
                 upper: crate::character::UpperMode::Aim,
             }),
-            going: alloc::format!("wand · {}", words),
-            there: alloc::format!("feeding the wand · {}", words),
+            going: alloc::format!("wand · {}", words).into(),
+            there: alloc::format!("feeding the wand · {}", words).into(),
             set_line: None,
             ..Default::default()
         },
@@ -264,7 +264,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         Some(post) => flat(post, j.stand) > 0.3,
     };
     if short {
-        let line = if g.tab.orders_assignment[a].there == "stopped short" { None } else { Some("can't get on the door.") };
+        let line = if g.tab.orders_assignment[a].there.at == crate::orders::At::StoppedShort { None } else { Some("can't get on the door.") };
         settle(g, gd, &mut j, line, false);
         return;
     }
@@ -304,7 +304,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
     let what = if j.live { "looking under" } else { "feeding the wand" };
     let there = alloc::format!("{} · {}", what, crate::orders::door_words(g, d));
-    g.tab.orders_assignment[a].there = there;
+    g.tab.orders_assignment[a].there = there.into();
 }
 
 /// The order's row on the menus.

@@ -312,7 +312,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                     aa.goal = v3::copy(cur); aa.moved_t = now; aa.new_leg = true;
                 } else {
                     if d >= 1.0 {
-                        g.tab.orders_assignment[a].there = String::from("stopped short");
+                        g.tab.orders_assignment[a].there = crate::orders::Doing::new(crate::orders::At::StoppedShort, "stopped short");
                         crate::game::game_say(g, gd, "can't get through.", None, None);
                     }
                     let np = [p[0], 0.0, p[2]];
@@ -456,7 +456,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
         if let (true, Some(last)) = (all, last) {
             // (one of them said "can't get through": the group is not where it was sent, and nobody calls it set)
             let mut short = false;
-            for &b in g.sets[g.seat].orders.asg.values() { let bb = &g.tab.orders_assignment[b]; if bb.group == group && bb.there == "stopped short" { short = true; break; } }
+            for &b in g.sets[g.seat].orders.asg.values() { let bb = &g.tab.orders_assignment[b]; if bb.group == group && bb.there.at == crate::orders::At::StoppedShort { short = true; break; } }
             if !short { crate::game::game_say(g, last, &line, None, None); }
             for (_, &b) in g.sets[g.seat].orders.asg.iter() { if g.tab.orders_assignment[b].group == group { g.tab.orders_assignment[b].set_said = true; } }
         }
@@ -677,7 +677,7 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
     let q = crate::doorway::doorway_clear_near(g, p, &mut |g: &mut Game, x: V3| squad_orders_in_frame(g, x) || crate::doorway::doorway_in_way(g, x), Some(&taken), Some(apart), Some(face));
     let q = match q { Some(q) => q, None => return false };
     g.sets[g.seat].orders.short_of.get_mut(a).unwrap().k += 1.0;
-    g.tab.orders_assignment[a].there = String::from("stopped short");
+    g.tab.orders_assignment[a].there = crate::orders::Doing::new(crate::orders::At::StoppedShort, "stopped short");
     crate::game::game_say(g, gd, "can't get through.", None, None);
     let now = g.time;
     let aa = &mut g.tab.orders_assignment[a];

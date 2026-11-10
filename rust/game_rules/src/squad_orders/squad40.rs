@@ -284,8 +284,8 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
                 face: Some(face),
                 stance: Some(crate::character::Stance::LowReady),
                 upper: Some(crate::character::UpperMode::None),
-                going: String::from("holding"),
-                there: String::from("holding"),
+                going: "holding".into(),
+                there: "holding".into(),
                 set_line: None,
                 ..Default::default()
             });
@@ -337,8 +337,8 @@ pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderT
         watch: Some(to),
         stance: Some(crate::character::Stance::None),
         upper: Some(crate::character::UpperMode::Aim),
-        going: String::from("turning to fire · 40 mm"),
-        there: String::from("aiming · 40 mm"),
+        going: "turning to fire · 40 mm".into(),
+        there: "aiming · 40 mm".into(),
         set_line: None,
         ..Default::default()
     });

@@ -260,9 +260,9 @@ pub enum WallChargeValid {
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeAssignA {
     pub post: Option<V3>,
-    pub going: String,
+    pub going: crate::orders::Doing,
     pub face: Option<f64>,
-    pub there: String,
+    pub there: crate::orders::Doing,
     pub order: Option<String>,
     pub t0: Option<f64>,
     pub follow: Option<f64>,

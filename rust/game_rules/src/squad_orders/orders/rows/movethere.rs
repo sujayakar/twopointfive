@@ -73,7 +73,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
         let on = SquadOrdersAssignA {
             order: String::from(ORDER.id), post: Some(p), face: Some(face),
             stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-            going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
+            going: "moving".into(), there: "in position".into(), set_line: Some(String::from("set.")), fit,
             ..Default::default()
         };
         if let Some(w) = walk {
