@@ -12,10 +12,11 @@ import { buildDag, type Dag } from '../mesh/dag';
 import { pebble, column } from '../mesh/shapes';
 import { Store, packMesh, packObject, type PackedObject, type Packed } from '../mesh/pack';
 import { stones, relief, children, SIDE } from '../mesh/floor';
+import { LOST_ROWS } from '../mesh/lostsize';
 
 /** how fine it is made (set before the scene is) */
 export const FINE = { /** triangles of a pebble: 20 · 4^n */ pebble: 5, shapes: 6, /** how often the column's net is split in four */ column: 2, /** squares a side */ yard: 12, kinds: 4, /** the relief's grid */ relief: 256 };
-export interface Meshes { data: Float32Array<ArrayBuffer>; list: { name: string; packed: Packed }[]; squares: PackedObject[]; heroes: PackedObject[]; objects: PackedObject[]; weigh: Record<string, number>; ms: Record<string, number>; depth: number }
+export interface Meshes { data: Float32Array<ArrayBuffer>; list: { name: string; packed: Packed }[]; squares: PackedObject[]; heroes: PackedObject[]; objects: PackedObject[]; weigh: Record<string, number>; ms: Record<string, number>; depth: number; /** the row of the table of what levels lost of their light */ lost: number; /** where each class is looked at to measure that: a box of the world, and how many levels its objects have */ classes: { lo: V3; hi: V3; levels: number }[] }
 
 /** everything that takes long: shapes, levels, packing. Plain data, so a worker may do it */
 export function buildMeshes(say: (what: string) => void = () => {}): Meshes {
@@ -25,11 +26,12 @@ export function buildMeshes(say: (what: string) => void = () => {}): Meshes {
   const dags = Array.from({ length: FINE.shapes }, (_, i) => { say(`Pebble ${i + 1} of ${FINE.shapes}`); const m = timed('shapes', () => pebble(11 + i * 7, FINE.pebble, [0.85, 0.95, 0.6, 1, 0.75, 0.35, 0.9, 0.5][i % 8]!)); return timed('levels', () => buildDag(m)); }), shapes = dags.map((d, i) => keep('pebble ' + i, d));
   const squares = Array.from({ length: FINE.kinds }, (_, k) => {
     say(`Floor ${k + 1} of ${FINE.kinds}`); const st = stones(k, FINE.shapes), m = timed('relief', () => relief(st, dags, FINE.relief, -0.02)), d = timed('levels', () => buildDag(m, 48)), r = keep('relief ' + k, d);
-    return packObject(s, [{ error: 0, children: children(st, shapes) }, { error: SIDE / FINE.relief, children: [{ mesh: r, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }]);
+    return packObject(s, [{ error: 0, children: children(st, shapes) }, { error: SIDE / FINE.relief, children: [{ mesh: r, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }], 0);
   });
   // ---- the hero
-  const heroes = [false, true].map(drum => { say(drum ? 'The fallen drum' : 'The column'); const m = timed('shapes', () => column(drum, 0.011, FINE.column)), d = timed('levels', () => buildDag(m)), p = keep(drum ? 'drum' : 'column', d); return packObject(s, [{ error: 0, children: [{ mesh: p, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }]); });
-  return { data: s.data, list, squares, heroes, objects: [...squares, ...heroes], weigh: s.weigh, ms, depth: Math.max(...list.map(l => l.packed.depth)) };
+  const heroes = [false, true].map(drum => { say(drum ? 'The fallen drum' : 'The column'); const m = timed('shapes', () => column(drum, 0.011, FINE.column)), d = timed('levels', () => buildDag(m)), p = keep(drum ? 'drum' : 'column', d); return packObject(s, [{ error: 0, children: [{ mesh: p, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }], drum ? 2 : 1); });
+  const lost = s.take(LOST_ROWS, 'lost'); s.f.fill(1, lost * 4, (lost + LOST_ROWS) * 4);
+  return { data: s.data, list, squares, heroes, objects: [...squares, ...heroes], weigh: s.weigh, ms, depth: Math.max(...list.map(l => l.packed.depth)), lost, classes: [] };
 }
 let ready: Meshes | null = null;
 /** meshes made elsewhere, for the next scene */
@@ -45,6 +47,8 @@ export function makeMeshes(): Building {
   w.box([-h, -0.5, h], [h, 0.06, h + 0.2], M.concrete!); w.box([h, -0.5, -h], [h + 0.2, 0.06, h + 0.2], M.concrete!);
   w.lamp({ kind: 'rect', at: [0, 2.55, -h + 0.4], u: [1.2, 0, 0], v: [0, 0, 0.12], n: [0, -1, 0], radiance: [40, 30, 18], name: 'wall', on: 1, night: true });
   const solid = new Solid(w, []), people: Building['people'] = [], bodies = new Bodies(solid, [], people), player = new Player(w, solid, [2, 0.05, 2], []); settle(w.pieces.filter(p => !(p.flags & F.MESH))); solid.settle(); for (const [p, mask] of freeEdges(w.pieces.filter(p => !(p.flags & F.MESH)))) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length && !p.bend) p.flags |= 0xfff << 16;
+  // where their light is measured: stones with nothing but stones about them, and the two heroes as they stand
+  const box = (o: PackedObject, at: V3, r: number): { lo: V3; hi: V3; levels: number } => ({ lo: [at[0] - r, Math.max(0.05, at[1] + Math.min(0, o.mn[1])), at[2] - r], hi: [at[0] + r, at[1] + o.mx[1] - 0.05, at[2] + r], levels: 1 }), e = Y / 2; made.classes = [{ lo: [0.55 * e, 0, 0.55 * e], hi: [0.85 * e, 0.02, 0.85 * e], levels: 2 }, box(heroes[0]!, [0, 0, 0], 0.3), box(heroes[1]!, [0.95, 0.262, 0.75], 0.25)];
   w.meshes = made;
   return { hung: [], bodies, solid, player, world: w, doors: [], people, levels: [{ name: 'All of it', cut: 1e9, look: [0.2, 0.5, 0.2] }], pool: [0, 0, -1, -1], poolTop: -99, poolDeep: 0, place: PLACE };
 }

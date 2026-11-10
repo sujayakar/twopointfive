@@ -81,9 +81,11 @@ export async function drawn(lab: Lab): Promise<Drawn> { const u = new Uint32Arra
 /** a method with meshes in it: the stage goes in after the raster, and the first hit learns whose ids these are */
 export function withMeshes<M extends Method>(m: M): M {
   const base = m.stages.bind(m);
-  m.stages = lab => { const out: Stage[] = []; for (const s of base(lab)) { if (s.name === 'first hit' && lab.building.world.meshes) out.push({ ...s, buffers: { ...s.buffers, meshSlots: ['meshSlots', 'array<vec4f>', 'read'] }, code: firstHit(s.code) }); else out.push(s); if (s.name === 'raster' && lab.building.world.meshes) out.push(meshStage(lab, lab.graph)); } return out; };
+  m.stages = lab => { const out: Stage[] = []; for (const s of base(lab)) { if (s.name === 'first hit' && lab.building.world.meshes) out.push({ ...s, buffers: { ...s.buffers, meshSlots: ['meshSlots', 'array<vec4f>', 'read'] }, code: firstHit(s.code) }); else if (s.name === 'resolve' && lab.building.world.meshes) out.push({ ...s, code: resolved(s.code) }); else out.push(s); if (s.name === 'raster' && lab.building.world.meshes) out.push(meshStage(lab, lab.graph)); } return out; };
   return m;
 }
 const firstHit = (code: string) => { const at = '  } else if (a != 0u) {\n'; if (code.split(at).length !== 2) throw new Error('first hit has changed'); return code.replace(at, `  } else if ((a & 0x40000000u) != 0u) {
     let r = bitcast<vec4u>(meshSlots[((a >> 7u) & 0x7fffffu) * 4u + 3u]); h.piece = r.z >> 11u; h.code = MESH_HIT | ((r.z & 2047u) << mrowU(pieces[h.piece].planes).y) | ((r.w >> 8u) << 7u) | (a & 127u); h.t = 0.25 / (textureLoad(depthT, id.xy, 0) * dot(rd, frame.camFwd.xyz));
-` + at); };
+` + at).replace('textureStore(outSurf, id.xy, packPx(h.t, s));', 'var kept = packPx(h.t, s); if ((kept.w & (1u << 26u)) == 0u) { kept.w |= meshKind(h) << 27u; } textureStore(outSurf, id.xy, kept);'); };
+/** what a level lost of its light is taken off there: of the sun, and of all that comes from round about */
+const resolved = (code: string) => { const put = (c: string, from: string, to: string) => { if (c.split(from).length !== 2) throw new Error('resolve has changed: ' + from); return c.replace(from, to); }; return put(put(put(code, 'let s = pxSurf(p); let lt =', 'let s = pxSurf(p); var lost = vec2f(1.0); if (!p.leaf && frame.knobs.x >= 0.0) { lost = meshLost(textureLoad(surf, id.xy, 0).w >> 27u, 2.0 * length(frame.camUp.xyz) / frame.size.y * p.t, V); } let lt ='), 'b *= @tune.bounce; let rv', 'b *= @tune.bounce * lost.y; let rv'), 'var sun = frame.sunE.xyz * vz.a', 'var sun = frame.sunE.xyz * lost.x * vz.a'); };
