@@ -35,7 +35,7 @@ fn seen_now(time: f64, dt: f64, t: f64) -> bool {
 /// the team's line when one of them starts a chew or a burst
 fn say_line(g: &mut Game, gd: GuardId) {
     let (t, say_secs) = (g.time, g.k.coverfire.say_secs);
-    if g.k.coverfire.line.is_empty() || g.gd[gd].team != crate::teams::Team::Operative { return; }
+    if g.k.coverfire.line.is_empty() || !g.team(gd).ours() { return; }
     let m_said = man_of(g, gd).said_t;
     let s_said = state_of(g).said_t;
     if !(t - m_said > say_secs && t - s_said > 4.0) { return; }
@@ -209,9 +209,9 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
             }
         }
     }
-    let (team, my_pos) = (g.gd[gd].team, g.ch[g.gd[gd].ch].pos);
+    let (team, my_pos) = (g.team(gd), g.ch[g.gd[gd].ch].pos);
     for (mate, row) in s.men.iter() {
-        if mate == gd || g.gd[mate].team != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
+        if mate == gd || g.team(mate) != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
         if !g.ch[mc].alive || flat(g.ch[mc].pos, my_pos) > call_m { continue; }
         for k in row.know.iter() {
@@ -328,8 +328,8 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
         let energy = crate::glasspen::round_energy(g, def);
         crate::wallpen::flight_len(g, to, dir, past_m, energy) };
     let t_max = 1.0 + flight / l;
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+    let team = g.team(gd);
+    if !team.theirs() {
         for pl in crate::seats::men(g) {
             if !crate::condition::down(g, g.pl[pl].ch) { let pc = g.pl[pl].ch; if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; } }
         }
@@ -341,8 +341,7 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let oc = g.gd[o].ch;
         if !g.ch[oc].alive { continue; }
-        let oteam = g.gd[o].team;
-        if !crate::teams::is_hostile(g, team, oteam) && lane_hit(g, oc, from, dx, dz, l2, t_max, l) { return false; }
+        if !team.foe_of(g.team(o)) && lane_hit(g, oc, from, dx, dz, l2, t_max, l) { return false; }
     }
     for cv in crate::civilians::civilian_bodies(g) {
         let cc = g.gd[cv].ch;
@@ -825,7 +824,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             if !js::truthy(fired) {
                 bump(g, BumpK::Chews);
                 if cw_call { bump(g, BumpK::Calls); }
-                let side = if g.gd[gd].team == crate::teams::Team::Operative { BumpK::OpChews } else { BumpK::DefChews };
+                let side = if g.team(gd).ours() { BumpK::OpChews } else { BumpK::DefChews };
                 bump(g, side);
                 let name = name_of(g, cw.who);
                 let line = alloc::format!("{} on {} #{} for {}{}: {} rounds wanted, {} deep", g.gd[gd].callsign, cw.kind, js::num_str(cw_id), name, if cw_call { " (a call)" } else if cw.seen { " (in sight)" } else { "" }, js::num_str(cw.want), js::num_str(cw.layers));

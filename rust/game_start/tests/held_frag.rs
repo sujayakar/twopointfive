@@ -79,7 +79,7 @@ fn a_teammate_never_frags_his_own() {
         p.run(0.2);
         let hits = p.burst_hits();
         assert_eq!(p.bursts().1, 0, "seed {s}: the grenade caught {} of ours: {hits:?}", p.bursts().1);
-        let ours = hits.iter().filter(|(t, r)| matches!(t, game::teams::Team::Operative | game::teams::Team::Player) && *r != BlastResult::Shielded).count();
+        let ours = hits.iter().filter(|(t, r)| matches!(t, game::teams::Team::Ours) && *r != BlastResult::Shielded).count();
         assert_eq!(ours, 0, "seed {s}: {ours} of ours in the report: {hits:?}");
         assert!(men.iter().all(|&m| p.up(m) && p.folded(m) == 0.0), "seed {s}: a man of ours is down or folded: {}", p.roll());
         let at = p.burst_at().unwrap();

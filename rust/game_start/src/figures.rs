@@ -14,7 +14,7 @@ pub struct Man { pub ch: CharId, pub team: String, pub kind: &'static str, pub d
 pub fn men(g: &Game) -> Vec<Man> {
     let mut out = Vec::new();
     for (i, &s) in g.seats.iter().enumerate() { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; out.push(Man { ch: q.ch, team: String::from("player"), kind: "player", down: g.cond[q.ch].down, name: game::seats::player_name(g, p), state: String::new(), guard: None, player: Some((i, p)) }); }
-    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: m.team.as_str().to_string(), kind: "man", down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
+    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: g.ch[m.ch].team.as_str().to_string(), kind: "man", down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
     for &gd in &g.civilians { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: String::from("civilian"), kind: "civ", down: g.cond[m.ch].down, name: m.callsign.clone(), state: String::new(), guard: Some(gd), player: None }); }
     out
 }
@@ -147,7 +147,7 @@ impl Track {
 pub fn line(g: &Game) -> String {
     let mut said = Vec::new();
     for (i, &s) in g.seats.iter().enumerate() { let q = &g.pl[game::cmd::seat_man(g, s)]; said.push(format!("seat {} {}", i, if g.cond[q.ch].down { "down" } else { "up" })); }
-    let side = |ours: bool| g.guards.iter().filter(move |&&x| (g.gd[x].team == game::teams::Team::Operative) == ours);
+    let side = |ours: bool| g.guards.iter().filter(move |&&x| (g.team(x).ours()) == ours);
     let up = |ours: bool| side(ours).filter(|&&x| !game::condition::down(g, g.gd[x].ch) && g.gd[x].down_kind.is_none()).count();
     said.push(format!("{} of {} ours up", up(true), side(true).count()));
     said.push(format!("{} of {} others up", up(false), side(false).count()));

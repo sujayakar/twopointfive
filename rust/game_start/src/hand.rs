@@ -61,7 +61,7 @@ pub fn read_hand(text: &str, frames: usize) -> Hand {
 /// the men standing who are not of Sam's squad, nearest to Sam first
 pub fn others(p: &Play) -> Vec<game::ids::GuardId> {
     let sam = p.sam_at();
-    let mut v: Vec<game::ids::GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative && !game::condition::down(&p.g, p.g.gd[gd].ch) && p.g.gd[gd].down_kind.is_none()).collect();
+    let mut v: Vec<game::ids::GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours() && !game::condition::down(&p.g, p.g.gd[gd].ch) && p.g.gd[gd].down_kind.is_none()).collect();
     v.sort_by(|x, y| dist(p.at(*x), sam).partial_cmp(&dist(p.at(*y), sam)).unwrap());
     v
 }

@@ -8,7 +8,7 @@ use game::orders::OrderTarget;
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
-fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } } }
+fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, game::game::With::Hand); } } }
 
 // ---------------------------------------------------------------- a round into a wall
 
@@ -196,7 +196,7 @@ fn won(level: &str, link: &str) -> game::verdict::RunVerdict {
     let at = p.sam_at();
     p.sam_put([at[0] + 2.0, at[1]]);
     p.run(0.1);
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile && p.up(gd) { p.falls(gd, DownBy::Player); } }
+    for gd in p.g.guards.clone() { if p.g.team(gd) == game::teams::Team::Hostile && p.up(gd) { p.falls(gd, DownBy::Player); } }
     p.run(4.0);
     p.g.verdict.res.clone().unwrap_or_else(|| panic!("no verdict: {}", p.roll()))
 }

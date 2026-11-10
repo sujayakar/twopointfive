@@ -103,7 +103,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.gd[gd].team != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
+        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.team(gd) != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
             continue;
         }
         if !g.m.opening.born.has(gd) {

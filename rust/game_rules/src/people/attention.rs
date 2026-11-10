@@ -194,8 +194,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
         && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
     if crate::roomfight::fight_live(g) && !g.staged.facts.unseen { return false; }
-    let team = g.gd[gd].team;
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    g.team(gd).theirs()
 }
 
 /// Seconds AT the thing a fresh taking of this kind is worth.
@@ -331,7 +330,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
             let nth = (row.takes.len() + 1) as i32;
             row.takes.push(now);
             row.series = true;
-            let foe_lines = g.gd[gd].team != crate::teams::Team::Guard;
+            let foe_lines = g.team(gd) != crate::teams::Team::Guard;
             if nth as f64 >= g.k.attention.spent && cand.kind != DrawKind::Whistle {
                 crate::mind::set_state(g, gd, crate::game::GuardState::Search, "attention");
                 g.gd[gd].search_t = 0.0;
@@ -396,7 +395,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
         return;
     }
     mem(g, gd).told_at = now;
-    if g.gd[gd].team == crate::teams::Team::Guard {
+    if g.team(gd) == crate::teams::Team::Guard {
         let text = if g.escalation >= 1.0 { "clear here — staying on it" } else { "must have been nothing" };
         say(g, gd, text);
     } else {

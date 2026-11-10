@@ -621,7 +621,7 @@ impl KitAsk for Play {
         if c.stage != game::squad::ClearStage::Drill || c.drill.is_none() { return None; }
         c.cur.as_ref().map(|r| r.room.clone().unwrap_or_else(|| r.door.clone()))
     }
-    fn men_on_the_floor(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team != game::teams::Team::Operative && self.up(gd)).collect() }
+    fn men_on_the_floor(&self) -> Vec<GuardId> { self.g.guards.iter().copied().filter(|&gd| !self.g.team(gd).ours() && self.up(gd)).collect() }
     fn opening_of(&self, gd: GuardId) -> Option<game::ids::CoverOpeningId> { self.g.cover.jobs.get(gd).map(|j| j.o) }
     fn squared_up(&self, gd: GuardId) -> bool {
         let Some(o) = self.opening_of(gd) else { return false };

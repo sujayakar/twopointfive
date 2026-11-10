@@ -93,11 +93,11 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let d = v3::dist(b.from, pts[0]);
     let j = judge_at(g, b, id, d, Shows::Lying(&pts));
     if j.r != Some(BlastResult::Killed) && !(j.r == Some(BlastResult::Wounded) && j.d <= b.lethal) { return; }
-    let (callsign, team) = (g.gd[gd].callsign.clone(), g.gd[gd].team);
+    let (callsign, team) = (g.gd[gd].callsign.clone(), g.team(gd));
     rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed });
     rep.killed += 1.0;
     rep.finished += 1.0;
-    if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
+    if b.side == team && js::truthy(b.who) { g.stats.frag.own += 1; }
     let dir = away(b.at, pts[0]);
     let fresh = g.gd[gd].died_at == g.time;
     let had = g.gd[gd].down_by == Some(crate::game::DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
@@ -135,7 +135,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let j = judge(g, b, feet, head, id);
     let Some(r) = j.r else { return };
     rep.player = Some(r);
-    rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r });
+    rep.hits.push(BlastHit { id, team: crate::teams::Team::Ours, exposed: j.e, result: r });
     if r == BlastResult::Killed {
         if g.god_mode {
             rep.player = Some(BlastResult::Wounded);
@@ -256,10 +256,10 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
         let (pos, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
         let j = judge(g, &b, pos, head, id);
         let Some(r) = j.r else { continue };
-        let team = g.gd[gd].team;
+        let team = g.team(gd);
         rep.hits.push(BlastHit { id, team, exposed: j.e, result: r });
         if r == BlastResult::Shielded {  continue; }
-        if same_side(side, team) && js::truthy(spec.who) { g.stats.frag.own += 1; }
+        if side == team && js::truthy(spec.who) { g.stats.frag.own += 1; }
         if r == BlastResult::Killed {
             rep.killed += 1.0;
             let dir = away(at, g.ch[c].pos);
@@ -801,7 +801,7 @@ pub(super) fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDo
     let d0 = flat(cpos, at);
     let path0 = door_off_path(g, cpos[0], cpos[2], &wise.path);
     let leaves = open_leaves(g, cpos, reach + 2.0);
-    let ours = match who { None => true, Some(w) => g.gd[w].team == crate::teams::Team::Operative };
+    let ours = match who { None => true, Some(w) => g.team(w).ours() };
     let mut k = DoorDeal { at, d0, path0, wise, leaves, who, ours, best: None, best_s: f64::NEG_INFINITY, via: false };
     let (most, tries, apart_m) = (g.k.frag.flee_door_most, g.k.frag.flee_door_try, g.k.frag.flee_apart_m);
     let mut open: Vec<DoorId> = Vec::new();

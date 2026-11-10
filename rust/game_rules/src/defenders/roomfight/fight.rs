@@ -15,7 +15,7 @@ pub(super) fn drilled_on(g: &crate::game::Game) -> bool {
 
 /// × the seconds a stun canister doubles this man over: DRILLED.shaken for a drilled defender, 1 for anybody else.
 pub fn drilled_k(g: &crate::game::Game, gd: GuardId) -> f64 {
-    if g.gd[gd].team == crate::teams::Team::Hostile && drilled_on(g) { g.k.drilled.shaken } else { 1.0 }
+    if g.team(gd) == crate::teams::Team::Hostile && drilled_on(g) { g.k.drilled.shaken } else { 1.0 }
 }
 
 /// Distance on the floor.
@@ -199,7 +199,7 @@ pub fn room_fight_op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightO
 /// Once a frame from Game.update.
 pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     if !room_fight_on(g) { if g.fight.live { room_fight_stop(g); } return; }
-    let any = g.guards.iter().any(|&x| g.gd[x].unit.is_some() && (g.gd[x].team == crate::teams::Team::Hostile || g.gd[x].team == crate::teams::Team::Operative));
+    let any = g.guards.iter().any(|&x| g.team(x) == crate::teams::Team::Hostile || g.team(x).ours());
     if !any { if g.fight.live { room_fight_stop(g); } return; }
     g.fight.live = true;
     for i in 0..g.seats.len() {
@@ -217,8 +217,8 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while gi < g.guards.len() {
         let x = g.guards[gi]; gi += 1;
         if g.gd[x].unit.is_none() || crate::condition::down(g, g.gd[x].ch) { continue; }
-        if g.gd[x].team == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
-        else if g.gd[x].team == crate::teams::Team::Operative && op_id(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
+        if g.team(x) == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
+        else if g.team(x).ours() && op_id(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
     }
     let mut ei = 0;
     while ei < g.events.len() {
@@ -234,7 +234,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
             if !crate::condition::down(g, g.gd[og].ch) && v3::dist(e.pos, pos_of(g, og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
         }
         if e.kind == crate::director::EventKind::GuardShot {
-            if let Some(w) = guard_by_char_id(g, e.who) { if g.gd[w].team == crate::teams::Team::Hostile {
+            if let Some(w) = guard_by_char_id(g, e.who) { if g.team(w) == crate::teams::Team::Hostile {
                 let both = e.from.is_some() && e.to.is_some();
                 g.fight.reports.push(RoomFightReportsItem { by: w, t: e.time, from: if both { e.from } else { None }, to: if both { e.to } else { None } });
             } }
@@ -254,7 +254,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
 /// an enemy's footfall: heard by a teammate as any man hears a step
 pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
-    let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile => w, _ => return };
+    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
     let wc = g.gd[w].ch;
     let (mut near, mut nd, mut from): (Option<RoomfightOpId>, f64, V3) = (None, f64::INFINITY, e.pos);
     for i in 0..g.fight.ops.len() {
@@ -273,7 +273,7 @@ pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
 /// a door noise under an enemy's hand, kept for cue()
 pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     g.fight.heard_ev.add(key);
-    let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile && g.gd[w].unit.is_some() => w, _ => return };
+    let w = match guard_by_char_id(g, e.who) { Some(w) if g.team(w) == crate::teams::Team::Hostile => w, _ => return };
     let (mut dr, mut dm): (Option<DoorId>, f64) = (None, 1.6);
     for x in g.doors.list.clone() { let q = flat(crate::doors::door_pos(g, x), e.pos); if q < dm { dm = q; dr = Some(x); } }
     let dr = match dr { Some(x) if !g.dr[x].leaf.off => x, _ => return };
@@ -340,8 +340,9 @@ mod tests {
     fn man(g: &mut Game, state: crate::game::GuardState) -> GuardId {
         let c = crate::character::man_new(g, crate::character::Character::blank());
         g.cond[c].down = state == crate::game::GuardState::Dead;
-        let mut m = crate::game::Guard::new(c, String::new(), Some(crate::teams::Team::Operative), RouteId(0), 0, LightId(0), JsSet::new(), FirearmId(0), [0.0; 3], 0.0, GameTalkId(0));
-        m.state = state;
+        g.ch[c].team = crate::teams::Team::Ours;
+        let mut m = crate::game::Guard::blank();
+        (m.ch, m.state, m.foe) = (c, state, None);
         g.gd.push(m)
     }
 

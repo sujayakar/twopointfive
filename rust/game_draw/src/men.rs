@@ -222,7 +222,7 @@ fn dress(g: &Game, c: CharId) -> (CastSide, bool) {
         let side = g.m.cast.worn.get(c).map_or(CastSide::Operator, |&v| g.tab.anim_gltf_cast_variant[v].side);
         return (side, suit(g, c, true));
     }
-    if let Some(&gd) = g.guards.iter().find(|&&gd| g.gd[gd].ch == c) { return (game::char_look::side_of_team(g.gd[gd].team, Some(g.gd[gd].trained)), suit(g, c, false)); }
+    if let Some(&gd) = g.guards.iter().find(|&&gd| g.gd[gd].ch == c) { return (game::char_look::side_of_team(g.team(gd), Some(g.gd[gd].trained)), suit(g, c, false)); }
     (CastSide::Civilian, false)
 }
 fn suit(g: &Game, c: CharId, player: bool) -> bool {

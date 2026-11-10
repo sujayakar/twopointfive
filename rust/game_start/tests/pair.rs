@@ -20,7 +20,7 @@ fn pair_with_body(seed: u32, body: Option<[f64; 2]>) -> ((Play, GuardId, GuardId
     p.g.k.silent.on = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..if body.is_some() { 2 } else { 1 }]);
     game::silent::set_silent(&mut p.g, true);
     let t1 = foes[0];
@@ -70,7 +70,7 @@ fn two_seats(seed: u32) -> (Play, GuardId, Vec<Vec<GuardId>>) {
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
     p.run(0.3);
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[..1]);
     let mut men = Vec::new();
     for i in 0..2 {
@@ -174,7 +174,7 @@ fn sent_to_a_back(oneeye: bool, at: [f64; 2], yaw: f64) -> (Play, GuardId, Guard
     p.run(0.5);
     game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let foe = foes[0];
     p.drop_all_but(&foes[..1]);
     for _ in 0..5 { p.pin_man(foe, at, yaw, GuardState::Patrol, 0.0); p.frame(); }
@@ -248,7 +248,7 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     p.run(0.3);
     game::silent::set_silent(&mut p.g, true);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     let t1 = foes[0];
     p.drop_all_but(&foes[..1]);
     let east = std::f64::consts::FRAC_PI_2;
@@ -297,7 +297,7 @@ fn hears(who: impl Fn(&Play, GuardId, GuardId) -> f64, kind: game::director::Eve
     p.g.god_mode = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foe = p.g.guards.iter().copied().find(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).expect("a defender");
+    let foe = p.g.guards.iter().copied().find(|&gd| !p.g.team(gd).ours()).expect("a defender");
     let at = p.g.ch[p.g.gd[foe].ch].pos;
     let yaw = p.g.ch[p.g.gd[foe].ch].body_yaw;
     for _ in 0..5 { p.pin_man(foe, [at[0], at[2]], yaw, GuardState::Patrol, 0.0); p.frame(); }
@@ -362,7 +362,7 @@ fn in_a_mans_line(seed: u32, mate_x: f64) -> (i32, i32, f64) {
     p.g.k.silent.on = true;
     p.run(0.3);
     let m = p.mates()[0];
-    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| p.g.gd[gd].team != game::teams::Team::Operative).collect();
+    let foes: Vec<GuardId> = p.g.guards.iter().copied().filter(|&gd| !p.g.team(gd).ours()).collect();
     p.drop_all_but(&foes[1..2]);
     let man = foes[1];
     game::silent::set_silent(&mut p.g, true);

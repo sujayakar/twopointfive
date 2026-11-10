@@ -358,7 +358,7 @@ pub fn civilian_answer(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut 
     let own = away(g);
     let mut men_n = 0usize;
     if own {
-        for i in 0..g.guards.len() { let x = g.guards[i]; if g.gd[x].unit.is_none() && g.gd[x].team == Team::Guard { men_n += 1; } }
+        for i in 0..g.guards.len() { let x = g.guards[i]; if g.gd[x].unit.is_none() && g.team(x) == Team::Guard { men_n += 1; } }
     }
     let here = g.ch[g.gd[gd].ch].pos;
     let intel_row: Option<Vec<String>> = lines.intel.get(String::from(def_kind.as_str())).cloned();
@@ -504,7 +504,7 @@ fn civ_point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: f64) 
 
 /// living staff, free, on the shift's list
 pub(super) fn staff_calm(g: &crate::game::Game, o: GuardId) -> bool {
-    !crate::condition::down(g, g.gd[o].ch) && g.gd[o].team == Team::Guard && g.gd[o].held.is_none() && g.gd[o].script.is_none() && g.guards.contains(&o)
+    !crate::condition::down(g, g.gd[o].ch) && g.team(o) == Team::Guard && g.gd[o].held.is_none() && g.gd[o].script.is_none() && g.guards.contains(&o)
 }
 
 /// once a frame: the men react to a frightened woman, one in a corner, one on the floor
@@ -520,7 +520,7 @@ pub(super) fn guards_notice(g: &mut crate::game::Game, dt: f64) {
                 let mut i = 0;
                 while i < g.guards.len() {
                     let o = g.guards[i]; i += 1;
-                    if crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || crate::control::man::blind(g, o) { continue; }
+                    if crate::condition::down(g, g.gd[o].ch) || g.team(o) != Team::Guard || g.gd[o].held.is_some() || !g.guards.contains(&o) || g.gd[o].state == GuardState::Alert || crate::control::man::blind(g, o) { continue; }
                     if body_in_view_of(g, o, cv) { found_down(g, cv, o); break; }
                 }
             }
@@ -654,7 +654,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     let mut i = 0;
     while i < g.guards.len() {
         let other = g.guards[i]; i += 1;
-        if other == o || crate::condition::down(g, g.gd[other].ch) || g.gd[other].team != Team::Guard || g.gd[other].held.is_some() { continue; }
+        if other == o || crate::condition::down(g, g.gd[other].ch) || g.team(other) != Team::Guard || g.gd[other].held.is_some() { continue; }
         g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), breathing: !dead });
         if g.gd[other].script.is_some() { continue; }
         crate::mind::raise(g, other, 0.45, "civilians");
@@ -692,7 +692,7 @@ pub(super) fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
 pub(super) fn chatty_enough(g: &crate::game::Game, x: GuardId) -> bool {
     let up = match &g.gd[x].bubble { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
     let man = &g.gd[x];
-    man.team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
+    g.ch[man.ch].team == Team::Guard && man.unit.is_none() && man.state == GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.task.is_none() && man.body_duty.is_none() && !man.pinned && !man.hold && man.leader.is_none() && man.post.is_none() && man.awareness < 0.15 && !up && g.guards.contains(&x)
 }
 
 /// passing pleasantries, one a floor at a time

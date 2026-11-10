@@ -102,8 +102,7 @@ fn can_answer(g: &crate::game::Game, gd: GuardId, who: f64) -> bool {
     if state != crate::game::GuardState::Patrol && state != crate::game::GuardState::Suspicious { return false; }
     if g.gd[gd].held.is_some() || g.gd[gd].script.is_some() || g.gd[gd].task.is_some() { return false; }
     if crate::seats::is_man_id(g, who) {
-        let team = g.gd[gd].team;
-        crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+        g.team(gd).theirs()
     } else {
         false
     }
@@ -123,8 +122,7 @@ fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f6
         let gd = g.guards[at];
         at += 1;
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
-        let team = g.gd[gd].team;
-        if crate::seats::is_man_id(g, who) && !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { continue; }
+        if crate::seats::is_man_id(g, who) && !g.team(gd).theirs() { continue; }
         let pos = g.ch[g.gd[gd].ch].pos;
         if v3::dist(e.pos, pos) > g.k.whistle.horizon { continue; }
         let prop = crate::weather::hear_path(g, src, v3::add(pos, [0.0, 1.5, 0.0]), None);
@@ -192,7 +190,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         g.gd[gd].search_t = 0.0;
         crate::mind::raise(g, gd, knob_aw, "whistle");
     }
-    let is_guard = g.gd[gd].team == crate::teams::Team::Guard;
+    let is_guard = g.team(gd) == crate::teams::Team::Guard;
     if twice {
         // the second inside the window: a proper search of the place, gun out, no more 'hello?'
         {

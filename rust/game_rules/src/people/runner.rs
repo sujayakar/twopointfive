@@ -30,7 +30,7 @@ fn lines_of(kind: LineKind) -> LINESValue {
 /// one line of a kind from this man, shouted, never on the net
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     let l = lines_of(kind);
-    let extra = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &l.they) } else { l.he };
+    let extra = if g.team(gd) != crate::teams::Team::Guard { crate::words::w(g, &l.they) } else { l.he };
     let mut pool = l.say;
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
@@ -58,7 +58,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a living defender or a man of the night staff: never a civilian, an operative, a body
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
-    !g.cond[o.ch].down && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
+    !g.cond[o.ch].down && g.ch[o.ch].team.theirs()
 }
 
 /// nobody's to take: the men a mission leads itself and the response team
@@ -74,7 +74,7 @@ fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// a living armed man of his own side, on his feet: somebody to run to, somebody to tell
 fn mate_of(g: &crate::game::Game, gd: GuardId, o: GuardId) -> bool {
-    o != gd && ours(g, o) && g.gd[o].team == g.gd[gd].team && g.gd[o].held.is_none() && !g.m.runner.state_of.has(o)
+    o != gd && ours(g, o) && g.team(o) == g.team(gd) && g.gd[o].held.is_none() && !g.m.runner.state_of.has(o)
 }
 
 /// an enemy as a run reckons with him
@@ -86,16 +86,15 @@ fn foe_at(g: &crate::game::Game, who: CharId) -> crate::runner::Foe {
 /// his enemies on the floor: the player and every living man of a side hostile to his
 pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+    let team = g.team(gd);
+    if team.theirs() {
         if let Some(pl) = crate::seats::nearest_man(g, &g.ch[g.gd[gd].ch].pos) { let c = g.pl[pl].ch; out.push(foe_at(g, c)); }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, ot) {
+        if !crate::condition::down(g, g.gd[o].ch) && team.foe_of(g.team(o)) {
             let c = g.gd[o].ch;
             out.push(foe_at(g, c));
         }
@@ -119,8 +118,8 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
     let mut best: Option<CharId> = None;
     let mut bd = g.k.runner.close_m;
     let p = crate::seats::faced_man(g, gd);
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
+    let team = g.team(gd);
+    if team.theirs() && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
         let vis = crate::guards::can_see(g, gd);
         if vis.visible && vis.dist <= bd && crate::guards::sight_gain(g, gd, vis.dist) > 0.25 {
             best = Some(g.pl[p].ch);
@@ -131,8 +130,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || !team.foe_of(g.team(o)) { continue; }
         let c = g.gd[o].ch;
         let vis = crate::guards::can_see_char(g, gd, c);
         if vis.visible && vis.dist <= bd && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.25 {

@@ -344,7 +344,7 @@ fn net_row(callsign: &str, text: &str) -> String {
 
 /// A unit's line went out on his side's net: the strip gets it.
 pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
-    if g.gd[gd].team != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
+    if g.team(gd) != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
     let callsign = g.gd[gd].callsign.clone();
     let _ = cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard);
 }
@@ -378,7 +378,7 @@ fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
         let o = g.guards[i];
         i += 1;
         let c = g.gd[o].ch;
-        if g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch) && g.ch[c].alive { out.push(at(g.ch[c].pos)); }
+        if g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && g.ch[c].alive { out.push(at(g.ch[c].pos)); }
     }
     out
 }
@@ -392,8 +392,7 @@ fn heard_done(why: &str) -> bool {
 pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     let t = g.time;
     if !is_shout(text) || crate::condition::down(g, g.gd[gd].ch) { return false; }
-    let team = g.gd[gd].team;
-    if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) || !crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
+    if !g.team(gd).theirs() || !crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
     if let Some(s) = g.cues.shout_t {
         if t < s {   // (the clock went back: a checkpoint loaded)
             g.cues.shout_t = None;
@@ -464,7 +463,7 @@ fn bubble_tone(g: &crate::game::Game, gd: GuardId) -> crate::view::BubbleTone {
     }
     match m.state {
         S::Alert => T::Alert,
-        S::Suspicious | S::Search if m.team != crate::teams::Team::Operative => T::Sus,
+        S::Suspicious | S::Search if !g.ch[m.ch].team.ours() => T::Sus,
         _ => T::Calm,
     }
 }

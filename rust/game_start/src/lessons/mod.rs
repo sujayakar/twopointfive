@@ -99,7 +99,7 @@ impl Lesson {
                 if down_for == 0.0 {
                     let by = p.ask(|g| g.chronicle.counts.down_by.clone());
                     let shooter = p.ask(|g| g.guards.iter().find(|&&x| by == g.gd[x].callsign).map(|&x| g.ch[g.gd[x].ch].pos));
-                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| g.gd[x].team != Team::Operative && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.ch[g.gd[x].ch].pos), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
+                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| !g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.ch[g.gd[x].ch].pos), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
                 }
                 down_for += 1.0 / 60.0;
                 if down_for > 2.0 { p.failure(format!("the player went down at {} (mission stage {})", at(p.pos()), p.ask(|g| g.mission.stage.as_str()))); }
@@ -209,13 +209,13 @@ impl Bot {
     pub fn yaw(&self, x: GuardId) -> f64 { self.ask(|g| g.ch[g.gd[x].ch].body_yaw) }
     pub fn scripted(&self, x: GuardId) -> bool { self.ask(|g| g.gd[x].script.is_some()) }
     /// the enemy, up or down
-    pub fn foes(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.gd[x].team != Team::Operative).collect()) }
+    pub fn foes(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| !g.team(x).ours()).collect()) }
     pub fn downed(&self) -> usize { self.foes().into_iter().filter(|&x| !self.up(x)).count() }
     /// the man who walks the route of this name
     pub fn on_route(&self, name: &str) -> Option<GuardId> { self.ask(|g| g.guards.iter().copied().find(|&x| g.gd[x].unit.is_none() && g.tab.route[g.gd[x].route].name == name)) }
     pub fn named(&self, names: &[&str]) -> Vec<GuardId> { names.iter().filter_map(|n| self.ask(|g| g.guards.iter().copied().find(|&x| g.gd[x].callsign == *n))).collect() }
     /// his teammates still up
-    pub fn squad(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_some() && g.gd[x].team == Team::Operative && !game::condition::down(g, g.gd[x].ch)).collect()) }
+    pub fn squad(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).collect()) }
     pub fn chest(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([g.ch[c].pos[0], 1.25, g.ch[c].pos[2]]) }) }
     pub fn head(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]]) }) }
     /// he has a clear line from his head to the man's chest

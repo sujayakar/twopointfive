@@ -92,7 +92,7 @@ pub(super) fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> 
 /// May anything be done to him at all by Sam's hands.
 pub fn close_subject(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
+    if g.team(gd).ours() || crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
     if g.gd[gd].civ.is_some() && g.staged.captives.contains(&gd) { return false; }
     true
 }

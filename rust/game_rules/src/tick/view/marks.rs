@@ -14,7 +14,7 @@ fn wary_dots(awareness: f64) -> String {
 /// a man of the floor's mark: which glyphs, which colour, and nothing of where
 fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     let m = &g.gd[gd];
-    let own = m.team == crate::teams::Team::Operative;
+    let own = g.ch[m.ch].team.ours();
     let (mut text, mut tone) = (String::new(), HeadTone::Calm);
     let zz = crate::doze::doze_mark(g, gd);
     match m.state {

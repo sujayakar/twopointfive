@@ -237,7 +237,7 @@ fn turn(g: &mut Game, dt: f64, may: bool) -> Option<Do> {
 fn regret(g: &mut Game) {
     let Some(a) = g.saves.last_auto.clone() else { return };
     if g.time - a.t > g.k.ckpt.regret_secs || g.time < a.t { g.saves.last_auto = None; return; }
-    let alert = g.guards.iter().copied().find(|&x| g.gd[x].state == GuardState::Alert && crate::teams::hostile_to(g, x, crate::teams::Team::Player));
+    let alert = g.guards.iter().copied().find(|&x| g.gd[x].state == GuardState::Alert && g.team(x).theirs());
     let why = match alert { Some(x) => Some(format!("{} alert {:.0} s after", g.gd[x].callsign, g.time - a.t)), None if g.alarm.episode => Some(String::from("an alarm straight after")), None => None };
     let Some(why) = why else { return };
     if let Some(e) = g.saves.shelf.m.get_mut(a.key.clone()) { if e.info.regret.is_none() { e.info.regret = Some(why.clone());  } }

@@ -38,7 +38,7 @@ pub(super) fn flat(a: V3, b: V3) -> f64 {
 /// A man the rule is for: a defender of a live room fight, on his feet.
 pub(super) fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let r = &g.gd[gd];
-    r.team == SIDE && r.unit.is_some() && !g.cond[r.ch].down && r.held.is_none()
+    g.ch[r.ch].team == SIDE && !g.cond[r.ch].down && r.held.is_none()
 }
 
 /// One of his who is neither dazzled nor staggering.
@@ -654,7 +654,7 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
         }
         let (Some(a), Some(b), Some(who)) = (from, to, who) else { continue };
         let team = crate::teams::team_of_id(g, who);
-        if !crate::teams::is_hostile(g, SIDE, team) {
+        if !SIDE.foe_of(team) {
             continue;
         }
         let sx = b[0] - a[0];
@@ -667,7 +667,7 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
         while gi < g.guards.len() {
             let gd = g.guards[gi];
             gi += 1;
-            if g.gd[gd].team != SIDE || g.gd[gd].unit.is_none() || g.gd[gd].held.is_some() {
+            if g.team(gd) != SIDE || g.gd[gd].held.is_some() {
                 continue;
             }
             let dead = crate::condition::down(g, g.gd[gd].ch);

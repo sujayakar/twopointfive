@@ -107,7 +107,7 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
             p.sam_unhurt();
             let theirs = p.g.tab.cmd_seat[p.g.seats[1]].cam;
             game::camera::follow_camera_rotate(&mut p.g, theirs, 1.3);
-            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
+            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.team(m) == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
             let (had, mut rows, mut rounds) = (up(&p), Vec::new(), 0.0f64);
             for k in 0..1500usize {
                 if k == 60 || k == 780 { let x = if k == 60 { 11.5 } else { 27.5 }; p.seat_stands(0, [x, 12.5]); p.seat_stands(1, [x, 9.5]); }

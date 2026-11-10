@@ -69,6 +69,7 @@ pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque,
     p.frags = frags;
     let id = g.pl.push(p);
     g.ch[c].who = crate::character::Who::Player(id);
+    g.ch[c].team = crate::teams::Team::Ours;
     let def = g.fa[pistol].def;
     g.ch[c].muzzle_ahead = g.m.weapons.weapons.get(def).unwrap().muzzle_ahead;
     id
@@ -214,10 +215,10 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
             cs[js::rem(m::max(0.0, id_2 - 10.0), cs.len() as f64) as usize].clone()
         }
     };
-    if let Some(team) = look.and_then(|l| l.team) { g.gd[id].team = team; }
-    let team = g.gd[id].team;
+    if let Some(team) = look.and_then(|l| l.team) { g.ch[c].team = team; }
+    let team = g.team(id);
     // (an enemy of the player is born with the first of them in mind)
-    g.gd[id].foe = if team == crate::teams::Team::Guard || team == crate::teams::Team::Hostile { Some(g.pl[g.player].ch) } else { None };
+    g.gd[id].foe = if team.theirs() { Some(g.pl[g.player].ch) } else { None };
     let keys = match keys {
         Some(k) => k,
         None => vec![String::from(crate::doors::FLOOR_KEY)],

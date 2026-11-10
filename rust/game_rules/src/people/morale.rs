@@ -46,7 +46,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, r
     let mut pool: Vec<&'static str> = Vec::new();
     pool.extend_from_slice(l.now.unwrap_or(l.say));
     pool.extend_from_slice((if st.dark { l.dark } else { l.lit }).unwrap_or(&[]));
-    pool.extend_from_slice((if g.gd[gd].team != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
+    pool.extend_from_slice((if g.team(gd) != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;
     let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
     crate::game::game_say(g, gd, pool[i as usize], Some(radio), None);
@@ -73,7 +73,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a man this file is about at all: a living defender or a man of the night staff
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let m_ = &g.gd[gd];
-    !g.cond[m_.ch].down && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
+    !g.cond[m_.ch].down && g.ch[m_.ch].team.theirs()
 }
 
 /// may a sequence have him this frame
@@ -116,7 +116,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || !ours(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::runner::runner_nobody(g, o) { continue; }
+        if o == gd || !ours(g, o) || g.team(o) != g.team(gd) || g.gd[o].held.is_some() || crate::runner::runner_nobody(g, o) { continue; }
         let oc = g.gd[o].ch;
         if flat(g.ch[oc].pos, g.ch[c].pos) <= g.k.morale.alone_m {
             let chest = chest_of(g, oc);
@@ -129,7 +129,7 @@ pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// the men he is counted with: his squad's, else his room's
 fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
     if let Some(q) = crate::enemysquads::squad_of(g, gd) { return Some(q.men); }
-    if g.gd[gd].team != crate::teams::Team::Hostile { return None; }
+    if g.team(gd) != crate::teams::Team::Hostile { return None; }
     g.staged.rooms.iter().find(|r| r.defenders.contains(&gd)).map(|r| r.defenders.clone())
 }
 
@@ -315,7 +315,7 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !ours(g, gd) || crate::mission::leads(g, gd) || Some(g.gd[gd].team) == side || !reacts(g, gd) { continue; }
+        if !ours(g, gd) || crate::mission::leads(g, gd) || Some(g.team(gd)) == side || !reacts(g, gd) { continue; }
         let c = g.gd[gd].ch;
         let d = flat(g.ch[c].pos, b.at);
         if d > g.k.morale.blast_m { continue; }
@@ -390,10 +390,10 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
     let ge = g.k.guard_eye;
     let e = hole.map(|h| crate::guards::Eye { pos: eye, look: v3::normalize([h[0] - eye[0], 0.0, h[2] - eye[2]]), range: ge.range, half_deg: ge.half_deg, near_m: ge.near_m, near_deg: ge.near_deg, v_half_deg: None });
     let smoke = g.gd[gd].smoke_trans;
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let p = crate::seats::faced_man(g, gd);   // (the player he has in mind: asked as a side)
     let pc = g.pl[p].ch;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
+    if team.theirs() && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
         let v = crate::guards::can_see(g, gd);
         let (mut visible, mut dist) = (v.visible, v.dist);
         if !visible {
@@ -409,8 +409,7 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || !team.foe_of(g.team(o)) { continue; }
         let oc = g.gd[o].ch;
         let v = crate::guards::can_see_char(g, gd, oc);
         let (mut visible, mut dist) = (v.visible, v.dist);

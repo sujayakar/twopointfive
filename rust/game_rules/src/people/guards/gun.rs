@@ -265,8 +265,8 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         }
     }
     let (mut best, mut best_rate, mut cur_visible): (Option<CharId>, f64, bool) = (None, 0.05, false);
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, Team::Player) && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
+    let team = g.team(gd);
+    if team.theirs() && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
         let ch = g.pl[g.player].ch;
         consider(g, gd, ch, &mut best, &mut best_rate, &mut cur_visible);
     }
@@ -277,12 +277,11 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let och = g.gd[o].ch;
         if !g.ch[och].alive { continue; }
-        let oteam = g.gd[o].team;
-        if crate::teams::is_hostile(g, team, oteam) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
+        if team.foe_of(g.team(o)) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
             consider(g, gd, och, &mut best, &mut best_rate, &mut cur_visible);
         }
     }
-    let op = team == Team::Operative;
+    let op = team.ours();
     if cur_visible { return; }
     if let Some(b) = best {
         if g.gd[gd].foe != Some(b) {
@@ -328,16 +327,15 @@ fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams:
         let o = g.guards[i];
         i += 1;
         if crate::condition::down(g, g.gd[o].ch) { continue; }
-        let oteam = g.gd[o].team;
-        if crate::teams::is_hostile(g, team, oteam) { return true; }
+        if team.foe_of(g.team(o)) { return true; }
     }
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[seat.player].ch)
+    team.theirs() && !crate::condition::down(g, g.pl[seat.player].ch)
 }
 
 /// One of his side said it in the last three seconds.
 fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
     g.guards.iter().any(|&o| {
-        if o == gd || g.gd[o].team != team { return false; }
+        if o == gd || g.team(o) != team { return false; }
         match g.gd[o].bubble.as_ref() {
             Some(b) => g.time - b.t < 3.0 && (b.text.contains("clear.") || b.text.contains("all of them")),
             None => false,

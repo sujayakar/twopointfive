@@ -73,7 +73,7 @@ pub extern "C" fn face_hands_said(h: u32) {
         let squad = game::orders::squad_orders_squad(g, &game::seats::seat(g, g.seats[*seat]));
         let up = squad.iter().filter(|&&m| g.gd[m].state != game::game::GuardState::Dead).count();
         format!("{{\"t\":{},\"end\":{},\"given\":{},\"shotAt\":{},\"up\":{},\"of\":{},\"left\":{}}}", p.t(), p.end().map_or(String::from("null"), |e| format!("\"{}\"", e.as_str())), p.given(), p.shot_at(), up, squad.len(),
-            g.guards.iter().filter(|&&m| g.gd[m].team == game::teams::Team::Hostile && g.gd[m].state != game::game::GuardState::Dead).count())
+            g.guards.iter().filter(|&&m| g.team(m) == game::teams::Team::Hostile && g.gd[m].state != game::game::GuardState::Dead).count())
     } });
     super::out(s.into_bytes());
 }

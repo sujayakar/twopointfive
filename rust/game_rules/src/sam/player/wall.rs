@@ -520,7 +520,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
         || g.pl[pl].equip_t > 0.0 || now - g.pl[pl].last_fire_t < g.k.wallsnap.press_after_shot;
-    let alert_enemy = || g.guards.iter().any(|&h| g.gd[h].state == crate::game::GuardState::Alert && g.gd[h].team != crate::teams::Team::Operative && g.gd[h].team != crate::teams::Team::Civilian);
+    let alert_enemy = || g.guards.iter().any(|&h| g.gd[h].state == crate::game::GuardState::Alert && !g.team(h).ours() && g.team(h) != crate::teams::Team::Civilian);
     if busy || (gun_away && alert_enemy()) { g.m.player.ws_press.get_mut(pl).unwrap().t = 0.0; return; }
     let mut thing = false;
     let mut i = 0;

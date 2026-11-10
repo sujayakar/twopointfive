@@ -158,19 +158,19 @@ fn shield_of(g: &Game) -> Option<CharId> { g.pl[g.player].holding.as_ref().map(|
 /// him, for anybody's rounds but his; a civilian is found by a player's alone; a teammate and Sam by each other's (friendlyfire).
 fn whom_it_can_find(g: &Game, shooter: CharId, ours: bool) -> Vec<(CharId, bool)> {
     let by_player = crate::character::is_player(g, shooter);
-    let side = crate::teams::team_of_char(g, shooter);
+    let side = g.ch[shooter].team;
     let shield = shield_of(g);
     let (mut foes, mut own) = (Vec::new(), Vec::new());
     for pl in crate::seats::men(g) {
         let c = g.pl[pl].ch;
         if by_player || crate::condition::down(g, c) { continue; }
-        if crate::teams::is_hostile(g, side, crate::teams::Team::Player) { foes.push((c, false)); } else if ours { own.push((c, true)); }
+        if side.theirs() { foes.push((c, false)); } else if ours { own.push((c, true)); }
     }
     if let Some(c) = shield.filter(|&c| !by_player && c != shooter && !crate::condition::down(g, c)) { foes.push((c, false)); }
     for &gd in &g.guards {
         let c = g.gd[gd].ch;
         if Some(c) == shield || c == shooter || !g.ch[c].alive || crate::condition::down(g, c) { continue; }
-        if crate::teams::is_hostile(g, side, g.gd[gd].team) {
+        if side.foe_of(g.team(gd)) {
             if by_player || !g.gd[gd].god { foes.push((c, false)); }
         } else if ours && crate::friendlyfire::ff_body(g, gd) {
             own.push((c, true));

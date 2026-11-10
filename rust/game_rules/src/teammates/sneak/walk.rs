@@ -53,16 +53,14 @@ fn sneak_live_now(g: &mut Game) -> bool {
     for &h in g.guards.iter() {
         let r = &g.gd[h];
         if (r.state == crate::game::GuardState::Alert || r.state == crate::game::GuardState::Search)
-            && r.team != crate::teams::Team::Operative
-            && r.team != crate::teams::Team::Civilian { return false; }
+            && !g.ch[r.ch].team.ours()
+            && g.ch[r.ch].team != crate::teams::Team::Civilian { return false; }
     }
     true
 }
 
-pub(super) fn mate(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some() }
-
 /// This teammate is under the sneak this frame.
-pub fn sneaking(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.sneak.on && mate(g, gd) && sneak_live(g) }
+pub fn sneaking(g: &mut crate::game::Game, gd: GuardId) -> bool { g.k.sneak.on && g.team(gd).ours() && sneak_live(g) }
 
 /// He is low because Sam is.
 pub fn sneak_low(g: &mut crate::game::Game, gd: GuardId) -> bool {
@@ -122,7 +120,7 @@ pub fn sneak_word(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.k.sneak.on { return None; }
     let (mode, why) = match g.m.sneak.states.as_ref().and_then(|s| s.men.get(gd)) { Some(mm) => (mm.mode, mm.why), None => return None };
     // (`sneaking`, as the tick's `sneak_tick` last read the sneak live: a HUD's line asks and writes nothing)
-    if !(mate(g, gd) && g.m.sneak.live_at.is_some_and(|l| l.v)) { return None; }
+    if !(g.team(gd).ours() && g.m.sneak.live_at.is_some_and(|l| l.v)) { return None; }
     let word = match mode {
         Mode::Wait => match why {
             Why::Door => "clear of the door",
@@ -147,7 +145,7 @@ pub(super) fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
         let h = g.guards[i];
         i += 1;
         if h == gd || crate::condition::down(g, g.gd[h].ch) { continue; }
-        if !crate::teams::hostile_to(g, h, g.gd[gd].team) { continue; }
+        if !g.team(h).foe_of(g.team(gd)) { continue; }
         let hc = g.gd[h].ch;
         if flat(g.ch[hc].pos, p) < r && !crate::control::man::blind(g, h) && !crate::doze::doze_asleep(g, h) { out.push(h); }
     }
@@ -338,7 +336,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
     while i < g.guards.len() {
         let h = g.guards[i];
         i += 1;
-        if h == gd || crate::condition::down(g, g.gd[h].ch) || !crate::teams::hostile_to(g, h, g.gd[gd].team) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
+        if h == gd || crate::condition::down(g, g.gd[h].ch) || !g.team(h).foe_of(g.team(gd)) || crate::control::man::blind(g, h) || crate::doze::doze_asleep(g, h) { continue; }
         let e = eye_for(g, h, wide);
         let hab = match habit.as_mut() { Some(f) => (*f)(g, h), None => None };
         let mut looks = vec![walk_look(e)];

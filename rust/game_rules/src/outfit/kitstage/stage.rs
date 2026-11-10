@@ -53,7 +53,7 @@ fn park(g: &mut Game) -> (u32, u32) {
     let (mut k, mut men, mut alarms) = (0.0, 0, 0);
     let all: Vec<GuardId> = g.guards.iter().chain(g.civilians.iter()).copied().collect();
     for x in all {
-        if g.gd[x].team == crate::teams::Team::Operative { continue; }
+        if g.team(x).ours() { continue; }
         let (c, light) = (g.gd[x].ch, g.gd[x].flashlight);
         crate::character::pos_replace(g, c, [-40.0 - k * 3.0, 0.0, -40.0]);
         k += 1.0;

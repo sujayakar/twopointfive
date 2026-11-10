@@ -285,7 +285,7 @@ pub fn team_told(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
 
 /// the pace a teammate leaves a grenade at
 pub fn team_blast_pace(g: &crate::game::Game, gd: GuardId, run: f64) -> f64 {
-    if g.gd[gd].team != crate::teams::Team::Operative { return run; }
+    if !g.team(gd).ours() { return run; }
     if blast_run(g, gd) { run } else { m::min(run, g.k.pace.max) }
 }
 

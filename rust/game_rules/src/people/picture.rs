@@ -73,21 +73,20 @@ fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 
 /// a man who keeps a picture: a living armed man of an AI side
 fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
-    !crate::condition::down(g, g.gd[gd].ch) && g.ch[g.gd[gd].ch].alive && g.gd[gd].civ.is_none() && g.gd[gd].team != crate::teams::Team::Civilian
+    !crate::condition::down(g, g.gd[gd].ch) && g.ch[g.gd[gd].ch].alive && g.team(gd) != crate::teams::Team::Civilian
 }
 
 /// the enemies there are for a side: the players' men, then the floor's
 fn foes_of(g: &crate::game::Game, team: crate::teams::Team) -> Vec<CharId> {
     let mut out = Vec::new();
-    if team != crate::teams::Team::Player && crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
+    if team.theirs() {
         out.extend(crate::seats::men(g).into_iter().map(|p| g.pl[p].ch));
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if g.gd[o].civ.is_none() && crate::teams::is_hostile(g, team, ot) {
+        if team.foe_of(g.team(o)) {
             out.push(g.gd[o].ch);
         }
     }
@@ -121,8 +120,7 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].held.is_some() {
         return;
     }
-    let team = g.gd[gd].team;
-    for who in foes_of(g, team) {
+    for who in foes_of(g, g.team(gd)) {
         if !up(g, who) || gone(g, who) {
             continue;
         }
@@ -224,8 +222,7 @@ fn look_sam(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if g.gd[o].civ.is_some() || !crate::teams::is_hostile(g, crate::teams::Team::Player, ot) || !crate::teams::is_hostile(g, ot, crate::teams::Team::Operative) {
+        if !g.team(o).theirs() {
             continue;
         }
         let who = g.gd[o].ch;
@@ -294,14 +291,13 @@ fn hear(g: &mut crate::game::Game) {
                 None => continue,
             }
         };
-        let team = crate::character::guard_of(g, who).map_or(crate::teams::Team::Player, |o| g.gd[o].team);
+        let team = crate::character::guard_of(g, who).map_or(crate::teams::Team::Ours, |o| g.team(o));
         let loud = e.level.unwrap_or(0.0) >= 1.0;
         let mut gi = 0;
         while gi < g.guards.len() {
             let gd = g.guards[gi];
             gi += 1;
-            let gt = g.gd[gd].team;
-            if who == g.gd[gd].ch || !fighter(g, gd) || g.gd[gd].held.is_some() || !crate::teams::is_hostile(g, gt, team) {
+            if who == g.gd[gd].ch || !fighter(g, gd) || g.gd[gd].held.is_some() || !g.team(gd).foe_of(team) {
                 continue;
             }
             let p = pic_of(g, gd, now);
@@ -360,13 +356,13 @@ fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool
         }
     }
     let ao = match a {
-        None => return g.gd[bo].team == crate::teams::Team::Operative,
+        None => return g.team(bo).ours(),
         Some(ao) => ao,
     };
-    if !fighter(g, ao) || g.gd[ao].held.is_some() || g.gd[ao].team != g.gd[bo].team {
+    if !fighter(g, ao) || g.gd[ao].held.is_some() || g.team(ao) != g.team(bo) {
         return false;
     }
-    if g.gd[ao].team != crate::teams::Team::Hostile {
+    if g.team(ao) != crate::teams::Team::Hostile {
         return true;
     }
     let qa = crate::enemysquads::squad_of(g, ao);
@@ -468,7 +464,7 @@ pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
         if !fighter(g, gd) {
             continue;
         }
-        if g.gd[gd].team == crate::teams::Team::Operative {
+        if g.team(gd).ours() {
             ops = true;
         }
         let look_t = pic_of(g, gd, now).look_t;
@@ -720,7 +716,7 @@ fn known_of(g: &mut Game, best: &mut JsMap<CharId, (V3, f64, bool)>, ideas: Vec<
 pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) -> Vec<crate::picture::KnownPlacesItem> {
     state_of(g);
     let now = g.time;
-    let squad = men.iter().any(|&gd| g.gd[gd].team == crate::teams::Team::Operative);
+    let squad = men.iter().any(|&gd| g.team(gd).ours());
     let mut best: JsMap<CharId, (V3, f64, bool)> = JsMap::new();
     for &gd in men {
         if fighter(g, gd) {
@@ -737,8 +733,7 @@ pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) ->
             while i < g.guards.len() {
                 let h = g.guards[i];
                 i += 1;
-                let ht = g.gd[h].team;
-                if g.gd[h].civ.is_some() || !crate::teams::is_hostile(g, crate::teams::Team::Operative, ht) || gone(g, g.gd[h].ch) {
+                if !g.team(h).theirs() || gone(g, g.gd[h].ch) {
                     continue;
                 }
                 if let Some(s) = crate::fogofwar::fog_of_war_sighting(g, h) {
@@ -853,13 +848,12 @@ fn step_free(g: &mut Game, q: V3, gd: GuardId, mark: V3, sam: V3, bad: Option<V3
             return false;
         }
     }
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        let ot = g.gd[o].team;
-        if o == gd || crate::condition::down(g, g.gd[o].ch) || crate::teams::is_hostile(g, team, ot) {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || team.foe_of(g.team(o)) {
             continue;
         }
         if flat(g.ch[g.gd[o].ch].pos, q) < 0.8 {

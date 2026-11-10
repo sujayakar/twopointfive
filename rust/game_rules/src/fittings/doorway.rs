@@ -32,8 +32,7 @@ fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// The two sides whose men keep these manners.
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
-    let team = g.gd[gd].team;
-    team == crate::teams::Team::Operative || team == crate::teams::Team::Hostile
+    matches!(g.team(gd), crate::teams::Team::Ours | crate::teams::Team::Hostile)
 }
 
 /// `p` in `d`'s frame's own axes.
@@ -176,11 +175,11 @@ fn leaf_cuts(w: f64, angle: f64, along: f64, perp: f64) -> bool {
 }
 
 /// `leafRound`: does this man go round a leaf standing open across his walk.
-pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
+pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.team(gd).ours() }
 
 /// leafStall: he is walking on the spot by a leaf standing open (or was, less than `leafStallPush` ago): this frame the leaf is his to push.
 pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
+    if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { return false; }
     state_of(g, gd);
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -242,15 +241,15 @@ fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::Door
 /// His own side about him, living, other than himself: the men, and Sam with the squad.
 fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
     let mut out = Vec::new();
-    let team = g.gd[gd].team;
+    let team = g.team(gd);
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o != gd && g.gd[o].team == team && !crate::condition::down(g, g.gd[o].ch) {
+        if o != gd && g.team(o) == team && !crate::condition::down(g, g.gd[o].ch) {
             let c = g.gd[o].ch;
             out.push(FriendsItem { pos: g.ch[c].pos, vel: g.ch[c].vel, gd: Some(o), id: g.ch[c].id });
         }
     }
-    if team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[g.player].ch) {
+    if team.ours() && !crate::condition::down(g, g.pl[g.player].ch) {
         let c = g.pl[g.player].ch;
         out.push(FriendsItem { pos: g.ch[c].pos, vel: g.ch[c].vel, gd: None, id: g.ch[c].id });
     }
@@ -283,7 +282,7 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, tu
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.
 fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
+    if g.team(gd).ours() && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
     let t = g.time;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
@@ -628,7 +627,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let off = (aim_at[0] - f.hx) * f.nx + (aim_at[2] - f.hz) * f.nz;
     let sgn: f64 = if off >= 0.0 { 1.0 } else { -1.0 };
     // the squad steps THROUGH, to the side its man is on (failing that, back off it); a defender steps back on his own side, never out toward them
-    let foe = g.gd[gd].team == crate::teams::Team::Hostile;
+    let foe = g.team(gd) == crate::teams::Team::Hostile;
     let cov = foe;   // (stepCover: settled on)
     // them ALONG the door's wall: the half-plane says nothing there, so covered floor on either face will do
     let along = (aim_at[0] - f.hx) * f.ux + (aim_at[2] - f.hz) * f.uz - f.w / 2.0;

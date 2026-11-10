@@ -209,7 +209,7 @@ fn ajar_of(g: &crate::game::Game, d: DoorId) -> f64 {
 
 /// A leaf that wants a hand from `gd` standing at `from`: in his way, on its hinges, not locked against him, and nobody's already.
 fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, d: DoorId, from: V3) -> bool {
-    if g.gd[gd].team == crate::teams::Team::Civilian { return false; }
+    if g.team(gd) == crate::teams::Team::Civilian { return false; }
     if g.dr[d].leaf.off { return false; }
     let latched = g.dr[d].leaf.latched;
     if !latched {
@@ -218,7 +218,7 @@ fn wants_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, 
         if opened >= under { return false; }
     }
     if !latched && (g.dr[d].leaf.pull_t > 0.0 || g.dr[d].leaf.vel * crate::doors::door_swing(g, d) > 0.5) { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative {
+    if g.team(gd).ours() {
         let p = seat.player;
         // `new Set([...keys, ...codes])` where he holds codes, else his keys: lent by copy, the stub wants `g` too
         let mut keys: JsSet<String> = g.pl[p].keys.clone();
@@ -372,7 +372,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
                 && !g.dr[d].leaf.off
                 && !g.dr[d].leaf.latched
                 && g.dr[d].leaf.angle * crate::doors::door_swing(g, d) < k.ajar + 0.1
-                && g.gd[gd].team != crate::teams::Team::Civilian
+                && g.team(gd) != crate::teams::Team::Civilian
                 && line_up(g, gd, d, side, f, l, a_);
             if !thru { return false; }
         } else if off_at(g, d, pos) < 0.25 {   // in the frame itself: he is through it already
@@ -593,7 +593,7 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, 
 
 /// The seconds a man's body must lean on a leaf from the face it opens into before it is pulled round; None = doors.ts's own beat.
 pub fn hand_press(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
-    if g.gd[gd].team == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
+    if g.team(gd) == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
     if let Some(r) = g.m.handleside.rested.get(gd).copied() { if g.time < r.until { return None; } }
     let st = g.m.handleside.states.get(gd).cloned();
     if fresh(g, st.as_ref()) || g.gd[gd].speed < 0.3 { Some(f64::INFINITY) } else { Some(g.k.handle.press) }

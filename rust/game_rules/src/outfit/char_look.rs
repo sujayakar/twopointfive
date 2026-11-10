@@ -5,7 +5,7 @@ pub fn side_of_team(team: crate::teams::Team, trained: Option<bool>) -> crate::a
     use crate::anim_gltf::CastSide;
     use crate::teams::Team;
     match team {
-        Team::Operative | Team::Player => CastSide::Operator,
+        Team::Ours => CastSide::Operator,
         Team::Civilian => CastSide::Civilian,
         _ => if trained.unwrap_or(false) { CastSide::Responder } else { CastSide::Defender },
     }

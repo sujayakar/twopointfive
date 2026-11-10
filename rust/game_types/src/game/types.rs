@@ -978,7 +978,6 @@ pub struct Guard {
     #[is(CharId(0))] pub ch: CharId,
     #[is(crate::game::GuardState::Patrol)] pub state: crate::game::GuardState,
     pub callsign: String,
-    #[is(crate::teams::Team::Guard)] pub team: crate::teams::Team,
     /// the man he has in mind: a player's or an AI man. He may be a man who has left: a body stays readable, tables never shrink
     pub foe: Option<CharId>,
     pub faces: Option<f64>,
@@ -1252,16 +1251,6 @@ pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[
 
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
-impl Guard {
-    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
-    pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
-        let mut g = Guard::blank();
-        g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
-        if let Some(t) = team { g.team = t; }
-        g.keys = keys; g.weapon = weapon; g.talk = talk;
-        g
-    }
-}
 impl Player {
     ///  His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
     pub fn new(ch: CharId, has_rifle: bool, pistol: FirearmId, rifle: FirearmId) -> Self {
@@ -1271,6 +1260,8 @@ impl Player {
     }
 }
 impl Game {
+    /// whose man he is
+    pub fn team(&self, gd: GuardId) -> crate::teams::Team { self.ch[self.gd[gd].ch].team }
     /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }
@@ -1377,7 +1368,6 @@ pub struct Mods {
     pub packside: crate::packside::PacksideMod,
     pub rig_props: crate::rig_props::RigPropsMod,
     pub character: crate::character::CharacterMod,
-    pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub holdfire: crate::holdfire::HoldfireMod,

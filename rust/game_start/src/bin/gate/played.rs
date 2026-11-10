@@ -49,7 +49,7 @@ fn nothing_from_the_third(g: &Game, cmd: &mut PlayerCmd) {
 
 /// the middle of the wall nearest a man and more than a jump from him, a metre or more in from its face along its length
 fn into_a_wall(g: &mut Game) {
-    let man = g.guards.iter().copied().find(|&x| g.gd[x].team == Team::Operative && !game::condition::down(g, g.gd[x].ch)).expect("a man of the team");
+    let man = g.guards.iter().copied().find(|&x| g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).expect("a man of the team");
     let at = g.ch[g.gd[man].ch].pos;
     let far = |q: [f64; 3]| game::m::hyp2(q[0] - at[0], q[2] - at[2]);
     let walls = g.col.boxes.iter().map(|&b| &g.tab.boxes[b]).filter(|b| b.h[1] > 0.8 && b.c[1] < 1.5 && far(b.c) > 2.0).map(|b| b.c);
@@ -60,9 +60,9 @@ fn into_a_wall(g: &mut Game) {
 
 /// the run, as a reader reads it
 fn words_of_the_run(g: &Game, end: Option<End>, t: f64, orders: u32, o: &Owes) -> String {
-    let mates: Vec<_> = g.guards.iter().filter(|&&x| g.gd[x].team == Team::Operative).collect();
+    let mates: Vec<_> = g.guards.iter().filter(|&&x| g.team(x).ours()).collect();
     let up = mates.iter().filter(|&&&x| !game::condition::down(g, g.gd[x].ch)).count();
-    let down = g.guards.iter().filter(|&&x| g.gd[x].team != Team::Operative && game::condition::down(g, g.gd[x].ch)).count();
+    let down = g.guards.iter().filter(|&&x| !g.team(x).ours() && game::condition::down(g, g.gd[x].ch)).count();
     let sam = if game::condition::down(g, g.pl[g.player].ch) { "Sam down" } else { "Sam up" };
     let end = end.map_or("no end", |e| e.as_str());
     let medal = game::par::par_result_now(g).map_or(String::new(), |r| if r.medal == game::par::Medal::None { String::from("no medal · ") } else { format!("{} · ", r.medal.as_str()) });

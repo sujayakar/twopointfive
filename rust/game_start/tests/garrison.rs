@@ -18,7 +18,7 @@ fn mission(id: &str, seed: u32) -> Play {
     for o in p.mates() { p.parked(o); }
     p
 }
-fn defenders(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.gd[m].team == Team::Hostile).collect() }
+fn defenders(p: &Play) -> Vec<GuardId> { p.g.guards.iter().copied().filter(|&m| p.g.team(m) == Team::Hostile).collect() }
 fn events(p: &Play) -> Vec<(What, f64)> { p.squad_names().iter().flat_map(|q| p.squad_events(q)).collect() }
 /// the men of a squad who are not with the hostages
 fn free(p: &Play) -> Vec<GuardId> { defenders(p).into_iter().filter(|&m| !game::mission::leads(&p.g, m)).collect() }

@@ -81,7 +81,7 @@ fn silent_net(g: &mut crate::game::Game) -> bool {
     let (mut roster, mut on) = (0, 0);
     for i in 0..g.guards.len() {
         let x = &g.gd[g.guards[i]];
-        if x.unit.is_some() || x.team != crate::teams::Team::Guard { continue; }
+        if x.unit.is_some() || g.ch[x.ch].team != crate::teams::Team::Guard { continue; }
         roster += 1;
         if !g.cond[x.ch].down && x.held.is_none() { on += 1; }
     }
@@ -516,7 +516,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
         while i < g.guards.len() {
             let o = g.guards[i];
             i += 1;
-            if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, g.gd[o].team) || crate::rails::rails_down(g, o) { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || !g.team(m).foe_of(g.team(o)) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let vo = crate::guards::can_see_char(g, m, oc);
             if !vo.visible { continue; }
@@ -562,13 +562,13 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             let mc = g.gd[m].ch;
             let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
             let bp = crate::guards::body_pos(g, o);
-            let team = g.gd[m].team;
+            let team = g.team(m);
             let mut n = 0;
             let mut i = 0;
             while i < g.guards.len() {
                 let x = g.guards[i];
                 i += 1;
-                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.gd[x].team != team { continue; }
+                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.team(x) != team { continue; }
                 let take = x == o || {
                     let xp = crate::guards::body_pos(g, x);
                     flat(xp, bp) < 3.0 && !crate::scene_collision::segment_blocked(g, eye, v3::add(xp, [0.0, 0.3, 0.0]), None, None, None)
