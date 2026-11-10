@@ -145,7 +145,6 @@ pub(super) fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at
 /// The order's row on the menu: its functions are orders/rows/smokethere.rs, its `issue` the body below.
 fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(&crate::orders::rows::smokethere::ORDER, crate::orders::OrderDef {
-        hot_key: Some(squadsmoke().order_key),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
         ..crate::orders::OrderDef::default()

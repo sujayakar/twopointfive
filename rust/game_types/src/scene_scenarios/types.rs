@@ -281,8 +281,6 @@ pub struct LessonStep {
     pub ring_line: Option<String>,
     pub blow_line: Option<String>,
     pub menu_line: Option<String>,
-    pub page_line: Option<String>,
-    pub flat_line: Option<String>,
     pub done: crate::lesson::LessonTest,
     pub hold: Option<f64>,
     pub settle: Option<f64>,
@@ -309,8 +307,6 @@ impl Default for LessonStep {
             ring_line: None,
             blow_line: None,
             menu_line: None,
-            page_line: None,
-            flat_line: None,
             done: crate::lesson::LessonTest::Any { of: Vec::new() },   // (any of nothing: no deed passes it)
             hold: None,
             settle: None,
@@ -367,7 +363,6 @@ pub struct RailsData {
     pub waits: Option<crate::scene_scenarios::RailsDataWaits>,
     pub lasers: Option<bool>,
     pub orders: Option<Vec<String>>,
-    pub flat_ring: Option<bool>,
     pub rows: Option<Vec<String>>,
 }
 

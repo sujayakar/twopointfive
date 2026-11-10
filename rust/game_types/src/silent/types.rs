@@ -16,7 +16,6 @@ pub struct State {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentModSeatsValue {
     pub on: bool,
-    pub go_digit: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

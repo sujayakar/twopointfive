@@ -42,9 +42,9 @@ json_struct!(game::scene_scenarios::LessonStepEye { at: "at", yaw: "yaw", fov: "
 json_struct!(game::scene_scenarios::LessonStepExplain { title: "title", text: "text", quiet: "quiet", now: "now" });
 json_struct!(game::scene_scenarios::LessonStepOnWay { nv: "nv", run: "run" });
 json_struct!(game::scene_scenarios::LessonStepAfter { line: "line", on: "on", word: "word" });
-json_struct!(game::scene_scenarios::LessonStep { id: "id", line: "line", setup_line: "setupLine", ring_line: "ringLine", blow_line: "blowLine", menu_line: "menuLine", page_line: "pageLine", flat_line: "flatLine", done: "done", hold: "hold", settle: "settle", at: "at", at_man: "atMan", allow: "allow", deny: "deny", cue: "cue", checkpoint: "checkpoint", fog: "fog", no_tap: "noTap", eye: "eye", explain: "explain", toward: "toward", on_way: "onWay", after: "after" });
+json_struct!(game::scene_scenarios::LessonStep { id: "id", line: "line", setup_line: "setupLine", ring_line: "ringLine", blow_line: "blowLine", menu_line: "menuLine", done: "done", hold: "hold", settle: "settle", at: "at", at_man: "atMan", allow: "allow", deny: "deny", cue: "cue", checkpoint: "checkpoint", fog: "fog", no_tap: "noTap", eye: "eye", explain: "explain", toward: "toward", on_way: "onWay", after: "after" });
 json_struct!(game::scene_scenarios::RailsDataWaits { low: "low" });
-json_struct!(game::scene_scenarios::RailsData { allow: "allow", respawn: "respawn", fog: "fog", waits: "waits", lasers: "lasers", orders: "orders", flat_ring: "flatRing", rows: "rows" });
+json_struct!(game::scene_scenarios::RailsData { allow: "allow", respawn: "respawn", fog: "fog", waits: "waits", lasers: "lasers", orders: "orders", rows: "rows" });
 json_struct!(game::scene_scenarios::LessonData { title: "title", steps: "steps", rails: "rails" });
 json_struct!(game::scene_scenarios::ParData { gold: "gold", silver: "silver", bronze: "bronze", loss_secs: "lossSecs" });
 json_words!(game::kit::KitWeapon { Pistol: "pistol", Rifle: "rifle", Shotgun: "shotgun" });

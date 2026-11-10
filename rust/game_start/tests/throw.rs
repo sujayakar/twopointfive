@@ -10,14 +10,25 @@ type Throw = (game::ids::GuardId, Option<[f64; 2]>, [f64; 2]);
 
 fn flat(p: game::V3) -> [f64; 2] { [p[0], p[2]] }
 
-/// The throws' page opened on `at` with the frag's row lit; false where the menu does not list it.
+/// The ring held open on `at` with the frag's row lit; false where no ring lists it.
 fn lit(p: &mut Play, at: [f64; 2]) -> bool {
+    let key = p.g.k.cmdring.key.clone();
+    p.key_up(&key);
+    p.g.sets[p.g.seat].orders.menu = None;
+    p.g.sets[p.g.seat].orders.cmd_ring = None;
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
-    if !game::orders::squad_orders_open(&mut p.g, Some(&t), None, None) { return false; }
+    if !game::orders::squad_orders_open(&mut p.g, Some(&t), None) { return false; }
     p.ring_over_menu();
-    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE));
-    let row = p.g.sets[p.g.seat].orders.menu.as_ref().and_then(|m| m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere"));
-    match (row, p.g.sets[p.g.seat].orders.menu.as_mut()) { (Some(i), Some(m)) => { m.sel = i as f64; true } _ => false }
+    p.key_down(&key);
+    light(p)
+}
+fn light(p: &mut Play) -> bool {
+    let o = &mut p.g.sets[p.g.seat].orders;
+    let Some(m) = o.menu.as_mut() else { return false };
+    let Some(i) = m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere") else { return false };
+    m.sel = i as f64;
+    if let Some(r) = o.cmd_ring.as_mut() { r.lit = 0.0; }
+    true
 }
 
 /// What the picture shows of the lit row.
@@ -67,9 +78,9 @@ fn the_throw_shown_is_the_throw_given() {
             // a spot of the floor some of them have a throw to, 7 to 11 m from the first of the squad
             let lead = p.at(m0);
             let spot = (0..16).map(|b| { let a = (b as f64 + 0.37 * k as f64) * std::f64::consts::PI / 8.0; let r = 7.0 + (b % 3) as f64 * 2.0; [lead[0] + r * a.sin(), lead[1] + r * a.cos()] })
-                .find(|&at| lit(&mut p, at) && shown(&mut p).is_some());
+                .find(|&at| lit(&mut p, at) && { p.frame(); light(&mut p) && shown(&mut p).is_some() });
             if spot.is_none() { p.g.sets[p.g.seat].orders.menu = None; continue; }
-            for _ in 0..(20 + 7 * k) { p.frame(); }
+            for _ in 0..(20 + 7 * k) { p.frame(); light(&mut p); }
             let Some(i) = p.g.sets[p.g.seat].orders.menu.as_ref().map(|m| m.sel) else { continue };
             let Some(was) = shown(&mut p) else { p.g.sets[p.g.seat].orders.menu = None; continue };
             let (thrown, before) = (p.g.m.squadthrow.squadthrow_log.len(), walks(&p));

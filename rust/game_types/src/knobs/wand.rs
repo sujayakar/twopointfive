@@ -25,8 +25,6 @@ pub struct WandK {
     #[k(0.05)] pub shut_rad: f64,
     /// s kept off his spot before he gives it up (a man standing where he must kneel, furniture in the way)
     #[k(2.5)] pub give_up_secs: f64,
-    /// the key the order's row keeps from the rest of the game while the ring is up
-    #[k(String::from("KeyV"))] pub order_key: String,
     /// seconds for a teammate's lens to sweep from one end of its arc to the other and back (nobody aims it for him)
     #[k(5.0)] pub sweep_secs: f64,
     /// s from the start of the look (a teammate: from on his mark at the door) to the lens through, with `quick`, where the squat at the door is not drawn

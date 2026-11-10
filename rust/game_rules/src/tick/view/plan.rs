@@ -157,7 +157,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let wall_first = wall.is_some() && !t_set.iter().any(|&c| door_d(c) < wall_d);
         let reaches = up && !pair_first && (!wall_first || t_set.is_empty());   // the press gets as far as the door tools
         let any_word = by.iter().any(|e| e.word);
-        let row_key = s.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].hot_key.as_deref() == Some(g.k.doortools.blow_key.as_str())));   // a menu up with a row on the key: the key IS that row
+        let row_key = s.menu.as_ref().is_some_and(|m| m.rows.iter().any(|&d| g.tab.orders_order_def[d].word));   // a menu up with a row on the key: the key IS that row
         let early = big && t.ops.iter().any(|&o| {
             let op = &g.tab.doortools_door_op[o];
             op.thr.as_ref().is_some_and(|th| matches!(th.first, Some(crate::doortools::ThresholdFirst::Can | crate::doortools::ThresholdFirst::Burst))) && op.men.iter().any(|m| addr.contains(m))

@@ -464,7 +464,6 @@ fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
     use crate::orders::rows;
     let open = rows::def(&rows::throwopen::ORDER, crate::orders::OrderDef {
         opens: Some(String::from(THROW_PAGE)),
-        hot_key: Some(g.k.frag.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
         ..crate::orders::OrderDef::default()

@@ -55,12 +55,11 @@ fn an_ordered_frag_shows_who_and_where_and_goes_when_it_leaves_his_hand() {
     }
 }
 
-/// the throws' page opened on `at`, its frag's row lit (the menu's own record, as the ring lights it)
+/// a ring opened on `at`, its frag's row lit (the menu's own record, as the ring lights it)
 fn lit_frag(p: &mut Play, at: [f64; 2]) -> bool {
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
-    if !game::orders::squad_orders_open(&mut p.g, Some(&t), None, None) { return false; }
+    if !game::orders::squad_orders_open(&mut p.g, Some(&t), None) { return false; }
     p.ring_over_menu();
-    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE));
     let row = p.g.sets[p.g.seat].orders.menu.as_ref().and_then(|m| m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere"));
     match (row, p.g.sets[p.g.seat].orders.menu.as_mut()) { (Some(i), Some(m)) => { m.sel = i as f64; true } _ => false }
 }
@@ -75,7 +74,7 @@ fn a_lit_frag_row_previews_its_plan_and_nothing_when_refused() {
         p.sam_unhurt();
         p.run(0.3);
         p.g.sets[p.g.seat].door_tools.frags = 2.0;
-        assert!(lit_frag(&mut p, spot), "seed {seed}: the row is on the page");
+        assert!(lit_frag(&mut p, spot), "seed {seed}: the row is on the ring");
         p.frame();
         if p.g.sets[p.g.seat].orders.menu.is_none() { assert!(lit_frag(&mut p, spot), "seed {seed}"); }
         let v = throws(&p);
@@ -103,11 +102,10 @@ fn a_lit_frag_row_previews_its_plan_and_nothing_when_refused() {
 fn a_lit_shell_row_previews_its_kept_plan_and_nothing_when_refused() {
     let lit_shell = |p: &mut Play, at: [f64; 2]| {
         let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
-        assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None, None));
+        assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None));
         p.ring_over_menu();
-        game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE));
         let rows = p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().rows.clone();
-        p.g.sets[p.g.seat].orders.menu.as_mut().unwrap().sel = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the page") as f64;
+        p.g.sets[p.g.seat].orders.menu.as_mut().unwrap().sel = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the ring") as f64;
     };
     let kept = |p: &Play| p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone());
     for seed in SEEDS {

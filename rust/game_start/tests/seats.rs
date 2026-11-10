@@ -38,13 +38,13 @@ fn a_reader_asked_about_the_seat_that_does_not_stand_answers_for_that_seat() {
     }
 }
 
-/// each row on a seat's menu as it stands: which row of the table, its id, digit, page and targets
+/// each row on a seat's menu as it stands: which row of the table, its id, page and targets
 fn menu_of(g: &Game, seat: &SeatRef) -> Vec<(game::ids::OrdersOrderDefId, String)> {
-    seat.orders.defs.iter().map(|&d| { let r = &g.tab.orders_order_def[d]; (d, format!("{} {:?} {:?} {:?}", r.id, r.key, r.page, r.targets)) }).collect()
+    seat.orders.defs.iter().map(|&d| { let r = &g.tab.orders_order_def[d]; (d, format!("{} {:?} {:?}", r.id, r.page, r.targets)) }).collect()
 }
 
 /// THE RULE: a row of the orders' menu belongs to the seat that lists it. Two players' menus hold no row of the table between them, and what is
-/// written on one seat's rows (a digit dealt, a page, a target that comes with the pairs) is not on the other's.
+/// written on one seat's rows (a page, a target that comes with the pairs) is not on the other's.
 /// A FAILURE MEANS: a row is found by its id alone, so the two menus are one set of rows and one player's menu changes the other's.
 #[test]
 fn a_row_of_the_menu_is_one_seats() {
@@ -56,11 +56,10 @@ fn a_row_of_the_menu_is_one_seats() {
         let theirs = menu_of(&p.g, &seats::seat(&p.g, second));
         let both: Vec<_> = mine.iter().filter(|(d, _)| theirs.iter().any(|(x, _)| x == d)).collect();
         assert!(!mine.is_empty() && !theirs.is_empty() && both.is_empty(), "seed {s}: {} rows are on both seats' menus: {:?}", both.len(), both);
-        // the second seat's fall in is given a target and a digit of its own: the first seat's menu is as it was
+        // the second seat's fall in is given a target of its own: the first seat's menu is as it was
         seats::with_seat(&mut p.g, second, &mut |g| {
             let d = g.sets[g.seat].orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == "fallIn").expect("a squad's menu has fall in");
             g.tab.orders_order_def[d].targets.push(game::orders::TargetKind::Foe);
-            g.tab.orders_order_def[d].key = None;
             game::orders::squad_orders_register(g, d, None);
         });
         assert_eq!(menu_of(&p.g, &seats::seat(&p.g, first)), mine, "seed {s}: the second seat's menu was written and the first seat's changed");

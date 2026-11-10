@@ -14,8 +14,6 @@ pub struct OrdersK {
     ///  maintainer, 10-21, once the wall hold had left Q: "let's move the squad command button to Q then too", "let's unmap B too then", "so it's just Q, and
     ///  the quick tap should be exactly the same as B"): the board moved, this read did not
     #[k(String::from("KeyB"))] pub quick_key: String,
-    /// the word's own key: a row on it is not taken by the ring, and the ring leaves the press to the word
-    #[k(String::from("KeyF"))] pub wait_alt: String,
     /// the open menu's men, door face and why-nots are re-read this often (game seconds; a path search per man per row each time)
     #[k(1.0)] pub refresh_secs: f64,
     /// the reticle within this of a doorway's centre (or of its leaf) is ON that door; within `selfM` of Sam or `manM` of a teammate it is on nobody's floor

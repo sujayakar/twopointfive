@@ -112,10 +112,6 @@ fn rails_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::RailsDat
     crate::lesson::lesson_data(g).and_then(|l| l.rails.as_ref())
 }
 pub fn rails_live(g: &crate::game::Game) -> bool { rails_data(g).is_some() }
-/// this mission's ring is the flat tree's
-pub fn rails_flat_ring(g: &crate::game::Game) -> bool {
-    rails_data(g).map_or(false, |d| d.flat_ring.unwrap_or(false))
-}
 /// the lesson under the frame and the step that is up
 fn rails_lesson(g: &crate::game::Game) -> Option<crate::rails::RailsLesson> {
     let s = rails_at(g)?;
@@ -511,30 +507,24 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     }
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it)
     let menu = if up { seat.orders.menu.as_ref() } else { None };
-    let flat = menu.map_or(false, |x| x.flat.unwrap_or(false));
     let on = menu.map_or(false, |x| t.at.map_or(true, |at| {
         let p = crate::orders::order_target_at(&x.target);
         m::hyp2(p[0] - at[0], p[2] - at[2]) < MENU_M
     }));
-    let ring = if !on { None } else {
-        let x = menu.unwrap();
-        let l = if flat { t.flat_line.as_ref().or(t.menu_line.as_ref()) } else if x.page.is_none() { t.menu_line.as_ref() } else { t.page_line.as_ref().or(t.menu_line.as_ref()) };
-        l.filter(|l| !l.is_empty())
-    };
+    let ring = if on { t.menu_line.as_ref().filter(|l| !l.is_empty()) } else { None };
     let d = g.time - g.rails.tap_t;
     let note = if up && menu.is_none() && d >= 0.0 && d < NOTE_SECS { t.no_tap.as_ref().filter(|l| !l.is_empty()).map(|l| lesson_line(g, l)) } else { None };
     // (the order the step asks for has gone out: the line is what the men are doing. `afterSecs` on, the step asks again)
     let since = g.time - g.rails.gave_t;
     let aft = if up && gave_here && g.k.rails.after_secs > 0.0 && since >= 0.0 && since < g.k.rails.after_secs && g.time - g.rails.gave0 < g.k.rails.after_max { t.after.as_ref().and_then(said_now) } else { None };
-    // (over a flat ring that line stands whatever is open: that ring's line names ONE digit, and with the order out the row on it may be the order's next half)
-    let flat_aft = aft.is_some() && flat;
+    // (that line stands with the ring up as well: the ring's line names ONE digit, and with the order out the row on it may be the order's next half)
     let line = match (ring, &aft) {
-        (Some(r), _) if !flat_aft => lesson_line(g, r),
         (_, Some(a)) => lesson_line(g, a),
+        (Some(r), _) => lesson_line(g, r),
         _ => step_line(),
     };
     // (a line that asks for nothing is drawn as something to watch, with no ring on its place. Never a step's own line that merely names no key)
-    let watch = (ring.is_none() || flat_aft) && (aft.is_some() || (up && cue)) && !names_key(&line);
+    let watch = (ring.is_none() || aft.is_some()) && (aft.is_some() || (up && cue)) && !names_key(&line);
     Some(crate::view::RailPrompt { line, n, of: of_n, note, watch })
 }
 /// what a seat's HUD is told of the frame over this lesson
