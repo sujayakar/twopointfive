@@ -1,7 +1,7 @@
 //! WHAT A SEAT IS TOLD OF ITS RINGS AND ITS PLAN (`view.ring`, `hand`, `empty`, `plan`; rust/game_rules/src/tick/view/rings.rs, plan.rs, orders/words.rs): the page draws these.
 use game::orders::Who;
 use game::view::{KeyCap, PlanView, RingView, WaitWhy};
-use game_start::play::{nudge, Opts, Play};
+use game_start::play::{nudge, Button, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
@@ -278,6 +278,52 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
     }
 }
 
+/// THE RULE: his own ring stays up once the key is let go of with nothing pointed at, at a door and on open floor, where it is the whistle's wedge alone. It goes when he does its wedge (the
+/// hand out to it and the key let go, its digit, a click), and the back key and the right button put it away with nothing done.
+/// A FAILURE MEANS: a ring that was let go of shuts under the hand, or one stands that was answered. The control: each way out is asked of a ring that stood.
+#[test]
+fn his_own_ring_stays_until_it_is_answered_or_put_away() {
+    let key = game::consts::INTERACT_KEY;
+    for seed in SEEDS {
+        for at_door in [false, true] {
+            let stood = |ways: &mut dyn FnMut(&mut Play)| {
+                let (s, door) = yard(seed);
+                let mut p = Play::scene(&s, &Opts { seed, ..Default::default() });
+                p.sam_unhurt();
+                p.run(0.2);
+                p.sam_put(if at_door { [door[0], door[1] + 0.9] } else { [door[0], door[1] + 4.5] });
+                p.run(0.3);
+                p.key_down(key);
+                p.until(2.0, |p| p.view().hand.is_some()).unwrap_or_else(|| panic!("seed {seed}, at a door {at_door}: his ring did not come up"));
+                let h = p.view().hand.unwrap();
+                let whistle = h.wedges.iter().filter(|w| w.text == "whistle" && w.key == p.g.k.cmdring.wedges).count();
+                assert_eq!((whistle, h.wedges.len() > 1), (1, at_door), "seed {seed}: the staging: {h:?}");
+                ways(&mut p);
+                (p.view().hand.is_some(), game::whistle::whistle_ready_in(&mut p.g) > 0.0)
+            };
+            let let_go = |p: &mut Play| { p.key_up(key); p.run(0.2); };
+            let out_to = |p: &mut Play| {
+                let (h, i) = (p.view().hand.unwrap(), p.host.input);
+                let a = (-90.0 + (p.g.k.cmdring.wedges - 1.0) * 360.0 / p.g.k.cmdring.wedges).to_radians();
+                for px in [0.0, 60.0 * h.zoom] {   // (from its middle)
+                    let i = &mut p.g.tab.input[i];
+                    (i.mouse_x, i.mouse_y) = (h.x + a.cos() * px, h.y + a.sin() * px);
+                    p.frame();
+                }
+            };
+            let why = |way: &str| format!("seed {seed}, at a door {at_door}: {way} (still up, whistled)");
+            assert_eq!(stood(&mut |p| { let_go(p); p.run(2.0); }), (true, false), "{}", why("let go of on nothing"));
+            assert_eq!(stood(&mut |p| { out_to(p); p.key_up(key); p.run(0.2); }), (false, true), "{}", why("the hand out to the whistle and the key let go"));
+            assert_eq!(stood(&mut |p| { let_go(p); p.key_down("Digit5"); p.frame(); p.key_up("Digit5"); p.frame(); }), (false, true), "{}", why("its digit"));
+            assert_eq!(stood(&mut |p| { let_go(p); p.key_down(game::backkey::BACK_KEY); p.frame(); p.key_up(game::backkey::BACK_KEY); p.run(0.2); }), (false, false), "{}", why("the back key"));
+            assert_eq!(stood(&mut |p| { let_go(p); p.press(Button::Right); p.frame(); p.release(Button::Right); p.run(0.2); }), (false, false), "{}", why("the right button"));
+            if at_door { continue; }   // (there the lit wedge is the door's row, which is not a whistle)
+            assert_eq!(stood(&mut |p| { let_go(p); p.press(Button::Left); p.frame(); p.release(Button::Left); p.frame(); }), (false, true), "{}", why("a click"));
+            assert_eq!(stood(&mut |p| { let_go(p); p.key_down(key); p.frame(); p.key_up(key); p.frame(); }), (false, true), "{}", why("the key again"));
+        }
+    }
+}
+
 /// THE RULE: a card over the game puts away the squad's ring, his own, his gun's setup, the launcher's arc and a press that was not a ring yet, of the player whose screen it is, and the
 /// keys coming up under it send nothing. A FAILURE MEANS: one of them stands behind the pause, or letting go of its key there gives an order. The controls: each stands where no card
 /// came, the other seat's ring stands, and the same short press with no card is an order.
@@ -330,13 +376,13 @@ fn a_card_over_the_game_puts_the_rings_away_unsent() {
         card(&mut p);
         assert!(p.g.sets[seat].hand.setup.is_none(), "seed {seed}: his gun's setup");
         p.point_at([door[0] + 4.0, door[1] + 14.0]);
-        p.press(game_start::play::Button::Right);
+        p.press(Button::Right);
         p.until(1.0, |p| p.g.pl[p.g.player].launch_held.is_some()).unwrap_or_else(|| panic!("seed {seed}: the staging: no arc is held"));
         let loads = |p: &Play| (p.g.fa[rifle].shells, p.g.fa[rifle].rings, p.g.fa[rifle].cams);
         let had = loads(&p);
         card(&mut p);
         assert!(p.g.pl[p.g.player].launch_held.is_none() && p.g.sets[seat].hand.throw_preview.is_none(), "seed {seed}: the arc");
-        p.release(game_start::play::Button::Right);
+        p.release(Button::Right);
         p.run(0.5);
         assert_eq!(loads(&p), had, "seed {seed}: the button came up under it");
         // the second player's screen: his ring goes, the first's stands
