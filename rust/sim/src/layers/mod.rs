@@ -565,6 +565,34 @@ fn from_basis(x: &[f64; 3], y: &[f64; 3], z: &[f64; 3]) -> [f64; 4] {
         [(m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s]
     })
 }
+/// which way a foot points.
+fn foot_yaw(r: &[f64; 4]) -> f64 {
+    let f = q_rotate(r, &AY);
+    atan2(f[0], f[2])
+}
+/// where he stands and which way he faces: points between his own axes and the world
+#[derive(Clone, Copy, Default)]
+struct Stands {
+    p0: [f64; 3],
+    cy: f64,
+    sy: f64,
+}
+impl Stands {
+    fn at(p0: [f64; 3], yaw: f64) -> Stands {
+        Stands { p0, cy: cos(yaw), sy: sin(yaw) }
+    }
+    /// a point of his in the world
+    fn world(&self, m: &[f64; 3]) -> [f64; 3] {
+        let Stands { p0, cy, sy } = *self;
+        [p0[0] + m[0] * cy + m[2] * sy, p0[1] + m[1], p0[2] - m[0] * sy + m[2] * cy]
+    }
+    /// a point of the world in his own axes
+    fn model(&self, wp: &[f64; 3]) -> [f64; 3] {
+        let Stands { p0, cy, sy } = *self;
+        let (dx, dz) = (wp[0] - p0[0], wp[2] - p0[2]);
+        [dx * cy - dz * sy, wp[1] - p0[1], dx * sy + dz * cy]
+    }
+}
 /// CharacterAnimator.handRot: the model rotation of a hand whose fingers point along `f` with the back of the hand to `b` (made square to f); `fix` is that
 /// side's calibration from the rest pose (the animator's handFix, handed in with the layer's numbers)
 fn hand_rot(fix: &[f64; 4], f: [f64; 3], b: [f64; 3]) -> [f64; 4] {
