@@ -46,9 +46,193 @@ fn haul_ease(c: &mut Spring, on: bool, target: f64, down: f64, dt: f64) -> f64 {
     spring_step(c, 0.0, down, dt);
     max(0.0, c.x)
 }
+/// What the steps of a hold hand on to the ones after them: its clocks, and how much of each thing it does shows.
+#[derive(Clone, Copy, Default)]
+struct Holding {
+    w: f64,
+    dt: f64,
+    beats: bool,
+    man: Option<[f64; 3]>,
+    s_at: Option<[f64; 3]>,
+    // as_he_is: what he and the hold are as the step begins
+    at: usize,
+    at_b: usize,
+    at_c: usize,
+    at_aim: usize,
+    live: bool,
+    gun_v: bool,
+    no_knife: bool,
+    t: f64,
+    low: f64,
+    haul: bool,
+    yank: Option<f64>,
+    step: Option<f64>,
+    pull: Option<f64>,
+    grab: bool,
+    held: bool,
+    choke: bool,
+    whip: bool,
+    idle_t: f64,
+    strip: Option<f64>,
+    tw_y: f64,
+    tw_p: f64,
+    gun_out: f64,
+    gun_pitch: f64,
+    shoot_t: f64,
+    rd_hand: Option<[f64; 3]>,
+    fix_l: [f64; 4],
+    fix_r: [f64; 4],
+    grip_up: [f64; 3],
+    // reach_and_choke: how far the reach, the elbow's closing, the whip, the disarm, the lowering and the haul have come
+    gv: f64,
+    ug: f64,
+    cs_on: bool,
+    cr: bool,
+    ck: f64,
+    kn: f64,
+    fight: f64,
+    wnd: f64,
+    stk: f64,
+    thru: f64,
+    s_t: f64,
+    s_arm: bool,
+    e_body: f64,
+    lck: f64,
+    lo: f64,
+    lw: f64,
+    hu: f64,
+    hauled: bool,
+    // yank_and_seat: how much the yank, the blow he takes, the lunge's dip, the sway, the sitting back and the lag of his feet show
+    yk: f64,
+    hb_s: f64,
+    dip_w: f64,
+    sw_s: f64,
+    seat_f: f64,
+    seat: f64,
+    ps: f64,
+    e_sl: f64,
+    e_sr: f64,
+    lag_on: bool,
+    leg_w: f64,
+    legs: bool,
+    // lean_and_turn: how the trunk leans and turns, and where his two hands have the man
+    lean: f64,
+    brace: f64,
+    side: f64,
+    yaw_w: f64,
+    hy: f64,
+    hp: f64,
+    hold_l: [f64; 3],
+    hold_r: [f64; 3],
+    e_l: f64,
+    e_r: f64,
+    xg: f64,
+    back_k: f64,
+    back_g: f64,
+    // hands_go: where each hand is bound: round the outside of him and on, the left first
+    hl: usize,
+    hr: usize,
+    live_r: [f64; 3],
+    r_l0: [f64; 4],
+    r_r0: [f64; 4],
+    tgt_l: [f64; 3],
+    tgt_r: [f64; 3],
+    // knife_fist: the knife fist: the blade kept ahead round the outside of him, turned across only as it comes in over the shoulder
+    uar: usize,
+    far: usize,
+    rot_r: [f64; 4],
+    pole_k: [f64; 3],
+    base_r: [f64; 3],
+}
+
 /// Sam holding a man from behind: the legs sat, sunk and stepped under him, the trunk over the man's back, then both arms by IK on a copy (the left
 /// across his throat, the right the knife's fist or, on a scratch copy cross-faded in, the pistol at his head).
 pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats: bool, man: Option<[f64; 3]>, s_at: Option<[f64; 3]>, tune: &Knobs) -> u32 {
+    let mut f = Holding { w, dt, beats, man, s_at, ..Holding::default() };
+    as_he_is(an, h, &mut f);
+    // (read before anything is posed: an answer of 0 leaves the pose as it was handed)
+    let Some(mut hs) = hands_of(g, an) else {
+        return 0;
+    };
+    // ---- the clocks and shares: nothing here reads the pose
+    reach_and_choke(an, tune, &mut f);
+    yank_and_seat(an, tune, &mut f);
+    lean_and_turn(tune, &mut f);
+    // ---- the legs under him, then body English straight into the pose
+    let Some(Some(n)) = with_pose(g, f.at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD, MIDDLE1_R])) {
+            return None;
+        }
+        hold_legs(tune, d, rig, fk, &f);
+        hold_trunk(tune, d, rig, &f);
+        Some(n)
+    }) else {
+        return 0;
+    };
+    // ---- arms on a copy, against the body as it now is
+    if !ask_blend(g, f.at, f.at, 1.0, false, f.at_b, n) {
+        return 0;
+    }
+    let (hh, from, caught, fix) = (&mut hs, &mut an.hd_from, &mut an.hd_caught, &mut an.hd_fix);
+    let Some(()) = with_pose(g, f.at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        hands_go(tune, fk, from, &mut f);
+        // the left's fingers run on across the throat and hook back round it, palm to the neck
+        left_arm(tune, d, rig, fk, hh, caught, fix, &f);
+        if f.xg < 1.0 {
+            // ---- the knife fist: the blade kept pointing ahead round the outside of him, turned across only as it comes in over the shoulder
+            knife_fist(tune, &mut f);
+            if f.s_arm {
+                // THE DISARM: one path for the wrist, keyed in seconds: onto the gun in his hand, torn out and down to Sam's hip, let go, then up to its station
+                disarm_arm(tune, d, rig, fk, hh, &f);
+            } else {
+                // elbow out to the right and up, over the man's shoulder, for the throat; down and back once the fist is on the shoulder
+                two_bone_ik(rig, d, fk.rot, fk.pos, f.uar, f.far, f.hr, &f.base_r, Some(&f.pole_k), 0.9 * max(f.e_r, 0.3), Some(&f.rot_r), false);
+                hand(d, hh, 1, &[0.62, 0.68, 0.72, 0.76], 0.6, 0.0);
+            }
+        }
+    }) else {
+        return 0;
+    };
+    if f.xg > 0.0 {
+        // ---- the gun hand: the right arm re-seeded from the aim clip, one rigid turn of that grip onto the wanted bore, the wrist to its station;
+        //      on a scratch copy while the knife fist still has a share of the arm
+        let p = if f.xg < 1.0 { f.at_c } else { f.at_b };
+        if p != f.at_b && !ask_blend(g, f.at_b, f.at_b, 1.0, false, p, n) {
+            return 0;
+        }
+        // (the clavicle stays the body's)
+        ask_mask(&[(role(SHOULDER_R), 1.0, true), (role(SHOULDER_R), 0.0, false)]);
+        if !ask_blend(g, p, f.at_aim, 1.0, true, p, n) {
+            return 0;
+        }
+        with_pose(g, p, |d, rig, _n, fk| {
+            fk_run(rig, d, fk.rot, fk.pos);
+            gun_arm(tune, d, rig, fk, &f);
+        });
+        if p != f.at_b {
+            ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
+            if !ask_blend(g, f.at_b, p, f.xg, true, f.at_b, n) {
+                return 0;
+            }
+        }
+    }
+    arms_mask();
+    if !ask_blend(g, f.at, f.at_b, w, true, f.at, n) {
+        return 0;
+    }
+    if !left_arm_first(g, n, &f) {
+        return 0;
+    }
+    if !disarm_first(g, n, tune, &f) {
+        return 0;
+    }
+    hands_to(&hs, an);
+    RAN | RAN_ALL
+}
+
+/// What he and the hold are as the step begins.
+fn as_he_is(an: &mut Anim, h: &HoldPose, f: &mut Holding) {
     let (at, at_b, _) = poses(an);
     let (at_c, at_aim, live, gun_v, no_knife) = (an.p_c.at as usize, an.p_aim.at as usize, an.hold_pose.is_some(), h.variant == Some(HoldVariant::Gun), an.no_knife);
     let (ph, t, low, haul, yank, step, pull) = (h.phase, h.t, h.low.unwrap_or(0.0), h.haul.unwrap_or(false), h.yank, h.step, h.pull);
@@ -56,11 +240,12 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
     let (idle_t, strip, tw_y, tw_p) = (an.idle_t, an.hold_pose.and_then(|h| h.strip).map(|s| s.t), an.aim_yaw_offset, -an.aim_pitch * an.upper_w.aim * 0.35);
     let (gun_out, gun_pitch, shoot_t, rd_hand) = (h.gun_out.unwrap_or(0.0), h.gun_pitch.unwrap_or(0.0), an.shoot_t, an.rd_hand_l);
     let (fix_l, fix_r, grip_up) = (an.hand_fix[0], an.hand_fix[1], an.grip_up);
-    // (read before anything is posed: an answer of 0 leaves the pose as it was handed)
-    let Some(mut hs) = hands_of(g, an) else {
-        return 0;
-    };
-    // ---- the clocks and shares: nothing here reads the pose
+    *f = Holding { at, at_b, at_c, at_aim, live, gun_v, no_knife, t, low, haul, yank, step, pull, grab, held, choke, whip, idle_t, strip, tw_y, tw_p, gun_out, gun_pitch, shoot_t, rd_hand, fix_l, fix_r, grip_up, ..*f };
+}
+
+/// How far the reach, the elbow's closing, the whip, the disarm, the lowering and the haul have come.
+fn reach_and_choke(an: &mut Anim, tune: &Knobs, f: &mut Holding) {
+    let Holding { w, dt, beats, live, gun_v, no_knife, t, low, haul, grab, choke, whip, strip, .. } = *f;
     let gv = clamp(an.hd_gv.x, 0.0, 1.0);
     // the reach, 0 → 1
     let ug = if grab { clamp(t / tune.hold.secs.grab, 0.0, 1.0) } else { 1.0 };
@@ -84,6 +269,12 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
     let lw = if live { 1.0 } else { w };
     let hu = haul_ease(&mut an.hd_hu, haul && choke && !gun_v, smoothstep(tune.hold.haul.in_[0], tune.hold.haul.in_[1], lck) * (1.0 - smoothstep(tune.hold.haul.out[0], tune.hold.haul.out[1], lck)), tune.hold.haul.down, dt) * (1.0 - gv) * lw;
     let hauled = hu > 1e-4;
+    *f = Holding { gv, ug, cs_on, cr, ck, kn, fight, wnd, stk, thru, s_t, s_arm, e_body, lck, lo, lw, hu, hauled, ..*f };
+}
+
+/// How much the yank, the blow he takes, the lunge's dip, the sway, the sitting back and the lag of his feet show.
+fn yank_and_seat(an: &mut Anim, tune: &Knobs, f: &mut Holding) {
+    let Holding { w, dt, live, no_knife, t, yank, step, pull, grab, held, gv, ug, cs_on, lo, hu, .. } = *f;
     let yk = match yank {
         Some(y) if live => bump(y, 0.0, tune.hold.yank.in_, tune.hold.yank.in_ + tune.hold.yank.hold, tune.hold.yank.in_ + tune.hold.yank.hold + tune.hold.yank.out),
         _ => 0.0,
@@ -115,6 +306,12 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         0.6
     };
     let legs = lo > 1e-4 || yk > 1e-4 || ((tune.hold.lunge.dip != 0.0 || tune.hold.lunge.back != 0.0) && dip_w > 1e-4) || sw_on || seat_f > 1e-4 || lag_on || hb_s > 1e-4;
+    *f = Holding { yk, hb_s, dip_w, sw_s, seat_f, seat, ps, e_sl, e_sr, lag_on, leg_w, legs, ..*f };
+}
+
+/// How the trunk leans and turns, and where his two hands have the man.
+fn lean_and_turn(tune: &Knobs, f: &mut Holding) {
+    let Holding { w, beats, gun_v, no_knife, t, low, grab, choke, idle_t, gv, ug, ck, kn, fight, wnd, stk, thru, s_t, s_arm, e_body, lck, lo, lw, hu, hauled, hb_s, seat, .. } = *f;
     let ck_e = if low > 0.0 { max(ck, smoothstep(0.0, 0.75, lck)) } else { ck };
     let lean0 = lerp(lerp(tune.hold.lean, tune.hold.gun.lean, gv), tune.hold.choke_lean, ck_e) * DEGR * w * e_body;
     let lean1 = if lo > 1e-4 { lean0 + lower_k(beats, tune.hold.beats.lower.sam_lean, tune.hold.lower.sam_lean) * lo * DEGR * lw } else { lean0 };
@@ -146,251 +343,242 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
     let (e_l, e_r) = (if grab { smoothstep(0.1, 0.7, ug) } else { 1.0 }, if grab { smoothstep(0.3, 0.95, ug) } else { 1.0 });
     let xg = smoothstep(0.3, 0.7, gv);
     let (back_k, back_g) = (if grab { 0.0 } else { smoothstep(0.0, 0.55, gv) }, if grab { 0.0 } else { 1.0 - smoothstep(0.45, 1.0, gv) });
-    // ---- the legs under him, then body English straight into the pose
-    let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
-        if !(cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD, MIDDLE1_R])) {
-            return None;
-        }
-        if legs {
-            fk_run(rig, d, fk.rot, fk.pos);
-            let (f_l, f_r, r_l, r_r) = (fk.at(role(FOOT_L)), fk.at(role(FOOT_R)), fk.rot(role(FOOT_L)), fk.rot(role(FOOT_R)));
-            let off = [
-                tune.hold.sway.m * sw_s + tune.hold.catch.seat[2] * seat,
-                -lower_k(beats, tune.hold.beats.lower.sam_sink, tune.hold.lower.sam_sink) * lo * lw - tune.hold.yank.sink * yk * w * (if cs_on { tune.hold.catch.yank_sit } else { 1.0 }) - tune.hold.lunge.dip * dip_w - tune.hold.catch.seat[1] * seat - tune.hold.hit.sam_dip * hb_s,
-                lower_k(beats, tune.hold.beats.lower.sam_fwd, tune.hold.lower.sam_fwd) * lo * lw - tune.hold.lunge.back * dip_w - tune.hold.catch.seat[0] * seat + tune.hold.hit.sam_in * hb_s,
-            ];
-            shift(d, rig, role(HIPS), &off);
-            fk_run(rig, d, fk.rot, fk.pos);
-            let pole = |r: &[f64; 4], sx: f64| {
-                let kp = knee_pole(r);
-                normalize([kp[0] + sx * lower_k(beats, tune.hold.beats.lower.sam_knees, tune.hold.lower.sam_knees) * lo, kp[1], kp[2]])
-            };
-            let step_s = |f: [f64; 3], e: f64| if lag_on { [f[0], f[1] + tune.hold.catch.sam_lift * sin(PI * e) * min(1.0, ps / 0.1), f[2] + ps * (1.0 - e)] } else { f };
-            let (s_l, s_r) = (step_s(f_l, e_sl), step_s(f_r, e_sr));
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), role(FOOT_L), &s_l, Some(&pole(&r_l, 1.0)), leg_w, Some(&r_l), false);
-            // (the rear foot back and out under the seat)
-            let t_r = if seat_f > 1e-4 {
-                [s_r[0] - tune.hold.catch.brace[1] * seat_f, s_r[1] + if grab { tune.hold.catch.brace_lift * sin(PI * smoothstep(0.55, 1.0, ug)) * seat_f } else { 0.0 }, s_r[2] - tune.hold.catch.brace[0] * seat_f]
-            } else {
-                s_r
-            };
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), role(FOOT_R), &t_r, Some(&pole(&r_r, -1.0)), leg_w, Some(&r_r), true);
-        }
-        turn(d, rig, role(SPINE1), q_mul(&q_yaw(yaw_w * 0.3), &q_pitch(lean * 0.45)));
-        turn(d, rig, role(SPINE2), q_mul(&q_yaw(yaw_w * 0.35), &q_mul(&q_roll(side * 0.4), &q_pitch(lean * 0.35))));
-        turn(d, rig, role(SPINE3), q_mul(&q_yaw(yaw_w * 0.35), &q_mul(&q_roll(side * 0.6), &q_pitch(lean * 0.2))));
-        turn(d, rig, role(NECK), q_mul(&q_roll(side * 0.8 - brace), &q_mul(&q_yaw(hy * 0.4), &q_pitch(hp * 0.4))));
-        turn(d, rig, role(HEAD), q_mul(&q_roll(-side * 0.9), &q_mul(&q_yaw(hy * 0.6), &q_pitch(hp * 0.6))));
-        turn(d, rig, role(SHOULDER_L), q_roll(5.0 * DEGR * w * e_body));
-        turn(d, rig, role(SHOULDER_R), q_roll(-lerp(tune.hold.knife.clav * (1.0 - 0.6 * kn), tune.hold.gun.clav + 4.0 * wnd * (1.0 - stk), gv) * DEGR * w * e_body));
-        Some(n)
-    }) else {
-        return 0;
-    };
-    // ---- arms on a copy, against the body as it now is
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
-        return 0;
-    }
-    let (hh, from, caught, fix) = (&mut hs, &mut an.hd_from, &mut an.hd_caught, &mut an.hd_fix);
-    let Some((live_r, r_r0)) = with_pose(g, at_b, |d, rig, _n, fk| {
+    *f = Holding { lean, brace, side, yaw_w, hy, hp, hold_l, hold_r, e_l, e_r, xg, back_k, back_g, ..*f };
+}
+
+/// The legs under him: the hips moved, and both feet put back where they stood or stepped.
+fn hold_legs(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, f: &Holding) {
+    let Holding { w, beats, grab, ug, cs_on, lo, lw, yk, hb_s, dip_w, sw_s, seat_f, seat, ps, e_sl, e_sr, lag_on, leg_w, legs, .. } = *f;
+    if legs {
         fk_run(rig, d, fk.rot, fk.pos);
-        let (hl, hr) = (role(HAND_L), role(HAND_R));
-        let (live_l, live_r, r_l0, r_r0) = (fk.at(hl), fk.at(hr), fk.rot(hl), fk.rot(hr));
-        let (tgt_l, tgt_r);
-        if grab {
-            // round the outside of him and on: the left leads, the right follows
-            let (u_l, u_r) = (smoothstep(0.0, 0.75, ug), smoothstep(0.2, 1.0, ug));
-            if cr {
-                // over his left shoulder beside the neck and round the front of the throat: keys that ride the man, from where the reach had the hand
-                let off = match man {
-                    Some(m) => [clamp(m[0], -0.3, 0.3), clamp(m[2] - tune.hold.dist, -0.12, 0.45)],
-                    None => [0.0, 0.0],
-                };
-                let on_him = |p: [f64; 3]| [p[0] + off[0], p[1], p[2] + off[1]];
-                let from = *from.get_or_insert(rd_hand.unwrap_or(live_l));
-                tgt_l = curve3(u_l, &[(0.0, from), (tune.hold.catch.at[0], on_him(tune.hold.catch.via)), (tune.hold.catch.at[1], on_him(tune.hold.catch.over)), (1.0, on_him(hold_l))]);
-            } else {
-                tgt_l = curve3(u_l, &[(0.0, live_l), (0.4, tune.hold.via_l), (0.72, tune.hold.over_l), (1.0, hold_l)]);
-            }
-            tgt_r = curve3(u_r, &[(0.0, live_r), (0.55, tune.hold.knife.via), (1.0, hold_r)]);
-        } else {
-            tgt_l = hold_l;
-            tgt_r = hold_r;
-        }
-        // the left's fingers run on across the throat and hook back round it, palm to the neck
-        let rot_hold_l = hand_rot(&fix_l, [-1.0, 0.12, -0.4], [0.1, 0.35, 1.0]);
-        let u_lc = if cr { smoothstep(0.0, 0.75, ug) } else { 1.0 };
-        let rot_reach = if cr { hand_rot(&fix_l, [-0.3, 0.1, 1.0], [0.75, 0.6, -0.1]) } else { rot_hold_l };
-        let lv = if live { 1.0 } else { w };
-        let rot_l = if cr {
-            nlerp(&nlerp(&r_l0, &rot_reach, smoothstep(0.0, tune.hold.catch.arm_in, ug)), &rot_hold_l, smoothstep(tune.hold.catch.at[0], 0.95, u_lc))
-        } else {
-            nlerp(&r_l0, &rot_hold_l, e_l)
+        let (f_l, f_r, r_l, r_r) = (fk.at(role(FOOT_L)), fk.at(role(FOOT_R)), fk.rot(role(FOOT_L)), fk.rot(role(FOOT_R)));
+        let off = [
+            tune.hold.sway.m * sw_s + tune.hold.catch.seat[2] * seat,
+            -lower_k(beats, tune.hold.beats.lower.sam_sink, tune.hold.lower.sam_sink) * lo * lw - tune.hold.yank.sink * yk * w * (if cs_on { tune.hold.catch.yank_sit } else { 1.0 }) - tune.hold.lunge.dip * dip_w - tune.hold.catch.seat[1] * seat - tune.hold.hit.sam_dip * hb_s,
+            lower_k(beats, tune.hold.beats.lower.sam_fwd, tune.hold.lower.sam_fwd) * lo * lw - tune.hold.lunge.back * dip_w - tune.hold.catch.seat[0] * seat + tune.hold.hit.sam_in * hb_s,
+        ];
+        shift(d, rig, role(HIPS), &off);
+        fk_run(rig, d, fk.rot, fk.pos);
+        let pole = |r: &[f64; 4], sx: f64| {
+            let kp = knee_pole(r);
+            normalize([kp[0] + sx * lower_k(beats, tune.hold.beats.lower.sam_knees, tune.hold.lower.sam_knees) * lo, kp[1], kp[2]])
         };
-        let (ual, fal) = (role(UPPER_ARM_L), role(FOREARM_L));
-        if cr {
-            // (the elbow under the wrist and close to him until the hand is round the front of the throat, then up onto his collarbone)
-            let pole = lerp3(&[0.3, -0.92, 0.15], &[0.55, 0.25, 0.85], smoothstep(0.62, 1.0, u_lc));
-            let a_in = smoothstep(0.0, tune.hold.catch.arm_in, ug);
-            two_bone_ik(rig, d, fk.rot, fk.pos, ual, fal, hl, &tgt_l, Some(&pole), 0.95 * a_in, Some(&rot_l), false);
-            *caught = true;
-            *fix = Some(AnimHdFix { tgt: tgt_l, pole, pole_w: 0.95 * a_in, rot: nlerp(&rot_reach, &rot_hold_l, smoothstep(tune.hold.catch.at[0], 0.95, u_lc)), w: smoothstep(0.0, 0.1, ug) * lv, rw: a_in * lv });
+        let step_s = |f: [f64; 3], e: f64| if lag_on { [f[0], f[1] + tune.hold.catch.sam_lift * sin(PI * e) * min(1.0, ps / 0.1), f[2] + ps * (1.0 - e)] } else { f };
+        let (s_l, s_r) = (step_s(f_l, e_sl), step_s(f_r, e_sr));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), role(FOOT_L), &s_l, Some(&pole(&r_l, 1.0)), leg_w, Some(&r_l), false);
+        // (the rear foot back and out under the seat)
+        let t_r = if seat_f > 1e-4 {
+            [s_r[0] - tune.hold.catch.brace[1] * seat_f, s_r[1] + if grab { tune.hold.catch.brace_lift * sin(PI * smoothstep(0.55, 1.0, ug)) * seat_f } else { 0.0 }, s_r[2] - tune.hold.catch.brace[0] * seat_f]
         } else {
-            if *caught && cs_on && !gun_v && held && live && t < tune.hold.catch.settle {
-                let f = 1.0 - smoothstep(0.0, tune.hold.catch.settle, t);
-                *fix = Some(AnimHdFix { tgt: tgt_l, pole: [0.55, 0.25, 0.85], pole_w: 0.95, rot: rot_hold_l, w: f, rw: f });
-            } else if !grab {
-                *caught = false;
-            }
-            // elbow forward and a little left, up on his left collarbone
-            let pole = [0.55, 0.25, 0.85];
-            two_bone_ik(rig, d, fk.rot, fk.pos, ual, fal, hl, &tgt_l, Some(&pole), 0.95 * e_l, Some(&rot_l), false);
+            s_r
+        };
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), role(FOOT_R), &t_r, Some(&pole(&r_r, -1.0)), leg_w, Some(&r_r), true);
+    }
+}
+
+/// The trunk over the man's back, and the head with it.
+fn hold_trunk(tune: &Knobs, d: &mut [S], rig: &Rig, f: &Holding) {
+    let Holding { w, gv, kn, wnd, stk, e_body, lean, brace, side, yaw_w, hy, hp, .. } = *f;
+    turn(d, rig, role(SPINE1), q_mul(&q_yaw(yaw_w * 0.3), &q_pitch(lean * 0.45)));
+    turn(d, rig, role(SPINE2), q_mul(&q_yaw(yaw_w * 0.35), &q_mul(&q_roll(side * 0.4), &q_pitch(lean * 0.35))));
+    turn(d, rig, role(SPINE3), q_mul(&q_yaw(yaw_w * 0.35), &q_mul(&q_roll(side * 0.6), &q_pitch(lean * 0.2))));
+    turn(d, rig, role(NECK), q_mul(&q_roll(side * 0.8 - brace), &q_mul(&q_yaw(hy * 0.4), &q_pitch(hp * 0.4))));
+    turn(d, rig, role(HEAD), q_mul(&q_roll(-side * 0.9), &q_mul(&q_yaw(hy * 0.6), &q_pitch(hp * 0.6))));
+    turn(d, rig, role(SHOULDER_L), q_roll(5.0 * DEGR * w * e_body));
+    turn(d, rig, role(SHOULDER_R), q_roll(-lerp(tune.hold.knife.clav * (1.0 - 0.6 * kn), tune.hold.gun.clav + 4.0 * wnd * (1.0 - stk), gv) * DEGR * w * e_body));
+}
+
+/// Where each hand is bound: round the outside of him and on, the left first.
+fn hands_go(tune: &Knobs, fk: &mut Fk, from: &mut Option<[f64; 3]>, f: &mut Holding) {
+    let Holding { man, grab, rd_hand, ug, cr, hold_l, hold_r, .. } = *f;
+    let (hl, hr) = (role(HAND_L), role(HAND_R));
+    let (live_l, live_r, r_l0, r_r0) = (fk.at(hl), fk.at(hr), fk.rot(hl), fk.rot(hr));
+    let (tgt_l, tgt_r);
+    if grab {
+        // round the outside of him and on: the left leads, the right follows
+        let (u_l, u_r) = (smoothstep(0.0, 0.75, ug), smoothstep(0.2, 1.0, ug));
+        if cr {
+            // over his left shoulder beside the neck and round the front of the throat: keys that ride the man, from where the reach had the hand
+            let off = match man {
+                Some(m) => [clamp(m[0], -0.3, 0.3), clamp(m[2] - tune.hold.dist, -0.12, 0.45)],
+                None => [0.0, 0.0],
+            };
+            let on_him = |p: [f64; 3]| [p[0] + off[0], p[1], p[2] + off[1]];
+            let from = *from.get_or_insert(rd_hand.unwrap_or(live_l));
+            tgt_l = curve3(u_l, &[(0.0, from), (tune.hold.catch.at[0], on_him(tune.hold.catch.via)), (tune.hold.catch.at[1], on_him(tune.hold.catch.over)), (1.0, on_him(hold_l))]);
+        } else {
+            tgt_l = curve3(u_l, &[(0.0, live_l), (0.4, tune.hold.via_l), (0.72, tune.hold.over_l), (1.0, hold_l)]);
         }
-        // fingers close as the hands arrive
-        let open = 1.0 - if grab { smoothstep(0.5, 1.0, ug) } else { 1.0 };
-        let cl = |x: f64| lerp(x, 0.08, open);
-        hand(d, hh, 0, &[cl(0.5), cl(0.58), cl(0.64), cl(0.68)], lerp(0.55, 0.1, open), open * 0.4);
-        if xg < 1.0 {
-            // ---- the knife fist: the blade kept pointing ahead round the outside of him, turned across only as it comes in over the shoulder
-            let (uar, far) = (role(UPPER_ARM_R), role(FOREARM_R));
-            let e_rk = if grab { smoothstep(0.5, 1.0, ug) } else { 1.0 };
-            let rot_k = nlerp(&knife_rot(&fix_r, tune.hold.knife.blade, tune.hold.knife.back), &knife_rot(&fix_r, tune.hold.knife.off_blade, tune.hold.knife.off_back), kn);
-            let rot_r = nlerp(&r_r0, &rot_k, e_rk);
-            let pole_k = lerp3(&[-0.9, 0.15, -0.4], &[-0.8, -0.55, -0.3], kn);
-            let base_r = lerp3(&tgt_r, &tune.hold.knife.via, back_k);
-            if s_arm {
-                // THE DISARM: one path for the wrist, keyed in seconds: onto the gun in his hand, torn out and down to Sam's hip, let go, then up to its station
-                let (take, out, drop, home, follow) = (tune.hold.strip.take, tune.hold.strip.out, tune.hold.strip.drop, tune.hold.strip.home, tune.hold.strip.follow);
-                let m = add3(
-                    match s_at {
-                        Some(sa) => untwist(fk, tw_y, tw_p, sa),
-                        None => [tune.hold.strip.meet[0], tune.hold.strip.meet[1], tune.hold.strip.meet[2] + tune.hold.dist],
-                    },
-                    tune.hold.strip.over,
-                );
-                let back = lerp(drop, home, 0.45);
-                let p = curve3(
-                    strip_in(s_t, take),
-                    &[
-                        (0.0, live_r),
-                        (take * 0.55, [lerp(live_r[0], m[0], 0.5) - 0.07, lerp(live_r[1], m[1], 0.6), lerp(live_r[2], m[2], 0.45)]),
-                        (take, m),
-                        (out, add3(m, tune.hold.strip.wrench)),
-                        (drop, tune.hold.strip.low),
-                        (drop + follow, tune.hold.strip.low),
-                        (max(back, drop + follow + 0.06), tune.hold.knife.via),
-                        (home, base_r),
-                    ],
-                );
-                let (u1, u2, u3, u4) = (smoothstep(take * 0.3, take, s_t), smoothstep(take, out, s_t), smoothstep(out, drop, s_t), smoothstep(drop + 0.08, home - 0.06, s_t));
-                // over the top of the gun, fingers round it · rolled out, the back of the hand to the right · hanging at the thigh
-                let (r_grip, r_tear, r_low) = (hand_rot(&fix_r, [0.3, -0.5, 0.8], [-0.25, 0.9, 0.3]), hand_rot(&fix_r, [-0.2, -0.8, 0.55], [-0.9, 0.25, 0.3]), hand_rot(&fix_r, [0.05, -1.0, 0.15], [-1.0, 0.0, 0.1]));
-                let grip = smoothstep(take - 0.05, take + 0.02, s_t) * (1.0 - smoothstep(drop, drop + 0.07, s_t));
-                let fist = smoothstep(tune.hold.strip.knife - 0.12, tune.hold.strip.knife, s_t);
-                let cu = |x: f64| lerp(lerp(0.14, 0.7, grip), x, fist);
-                let rot = nlerp(&nlerp(&nlerp(&nlerp(&r_r0, &r_grip, u1), &r_tear, u2), &r_low, u3), &rot_r, u4);
-                two_bone_ik(rig, d, fk.rot, fk.pos, uar, far, hr, &p, Some(&lerp3(&[-0.95, -0.3, -0.2], &pole_k, u4)), lerp(0.95 * smoothstep(0.0, 0.1, s_t), 0.9 * max(e_r, 0.3), u4), Some(&rot), false);
-                hand(d, hh, 1, &[cu(0.62), cu(0.68), cu(0.72), cu(0.76)], lerp(lerp(0.15, 0.5, grip), 0.6, fist), 0.25 * (1.0 - grip) * (1.0 - fist));
-            } else {
-                // elbow out to the right and up, over the man's shoulder, for the throat; down and back once the fist is on the shoulder
-                two_bone_ik(rig, d, fk.rot, fk.pos, uar, far, hr, &base_r, Some(&pole_k), 0.9 * max(e_r, 0.3), Some(&rot_r), false);
-                hand(d, hh, 1, &[0.62, 0.68, 0.72, 0.76], 0.6, 0.0);
-            }
-        }
-        (live_r, r_r0)
-    }) else {
-        return 0;
+        tgt_r = curve3(u_r, &[(0.0, live_r), (0.55, tune.hold.knife.via), (1.0, hold_r)]);
+    } else {
+        tgt_l = hold_l;
+        tgt_r = hold_r;
+    }
+    *f = Holding { hl, hr, live_r, r_l0, r_r0, tgt_l, tgt_r, ..*f };
+}
+
+/// The left arm across his throat, its fingers run on round it.
+fn left_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, caught: &mut bool, fix: &mut Option<AnimHdFix>, f: &Holding) {
+    let Holding { w, live, gun_v, t, grab, held, fix_l, ug, cs_on, cr, e_l, hl, r_l0, tgt_l, .. } = *f;
+    let rot_hold_l = hand_rot(&fix_l, [-1.0, 0.12, -0.4], [0.1, 0.35, 1.0]);
+    let u_lc = if cr { smoothstep(0.0, 0.75, ug) } else { 1.0 };
+    let rot_reach = if cr { hand_rot(&fix_l, [-0.3, 0.1, 1.0], [0.75, 0.6, -0.1]) } else { rot_hold_l };
+    let lv = if live { 1.0 } else { w };
+    let rot_l = if cr {
+        nlerp(&nlerp(&r_l0, &rot_reach, smoothstep(0.0, tune.hold.catch.arm_in, ug)), &rot_hold_l, smoothstep(tune.hold.catch.at[0], 0.95, u_lc))
+    } else {
+        nlerp(&r_l0, &rot_hold_l, e_l)
     };
-    if xg > 0.0 {
-        // ---- the gun hand: the right arm re-seeded from the aim clip, one rigid turn of that grip onto the wanted bore, the wrist to its station;
-        //      on a scratch copy while the knife fist still has a share of the arm
-        let p = if xg < 1.0 { at_c } else { at_b };
-        if p != at_b && !ask_blend(g, at_b, at_b, 1.0, false, p, n) {
-            return 0;
+    let (ual, fal) = (role(UPPER_ARM_L), role(FOREARM_L));
+    if cr {
+        // (the elbow under the wrist and close to him until the hand is round the front of the throat, then up onto his collarbone)
+        let pole = lerp3(&[0.3, -0.92, 0.15], &[0.55, 0.25, 0.85], smoothstep(0.62, 1.0, u_lc));
+        let a_in = smoothstep(0.0, tune.hold.catch.arm_in, ug);
+        two_bone_ik(rig, d, fk.rot, fk.pos, ual, fal, hl, &tgt_l, Some(&pole), 0.95 * a_in, Some(&rot_l), false);
+        *caught = true;
+        *fix = Some(AnimHdFix { tgt: tgt_l, pole, pole_w: 0.95 * a_in, rot: nlerp(&rot_reach, &rot_hold_l, smoothstep(tune.hold.catch.at[0], 0.95, u_lc)), w: smoothstep(0.0, 0.1, ug) * lv, rw: a_in * lv });
+    } else {
+        if *caught && cs_on && !gun_v && held && live && t < tune.hold.catch.settle {
+            let f = 1.0 - smoothstep(0.0, tune.hold.catch.settle, t);
+            *fix = Some(AnimHdFix { tgt: tgt_l, pole: [0.55, 0.25, 0.85], pole_w: 0.95, rot: rot_hold_l, w: f, rw: f });
+        } else if !grab {
+            *caught = false;
         }
-        // (the clavicle stays the body's)
-        ask_mask(&[(role(SHOULDER_R), 1.0, true), (role(SHOULDER_R), 0.0, false)]);
-        if !ask_blend(g, p, at_aim, 1.0, true, p, n) {
-            return 0;
-        }
-        with_pose(g, p, |d, rig, _n, fk| {
-            fk_run(rig, d, fk.rot, fk.pos);
-            let hr = role(HAND_R);
-            let (p_r0, r_aim) = (fk.at(hr), fk.rot(hr));
-            // the clip's bore as posed on this body, and where the carry underneath actually has it pointing
-            let g0 = normalize(sub3(fk.at(role(MIDDLE1_R)), p_r0));
-            let g_live = normalize(q_rotate(&q_mul(&r_r0, &conj(r_aim)), &g0));
-            let (out, pitch) = (clamp(gun_out, 0.0, 1.0) * (1.0 - wnd), gun_pitch);
-            // recoil: up in ~35 ms, back down over ~0.2 s
-            let kick = if shoot_t >= 0.0 { bump(shoot_t, 0.0, 0.035, 0.06, 0.24) } else { 0.0 };
-            let rest = lerp3(&lerp3(&tune.hold.gun.hand, &tune.hold.gun.out_hand, out), &tune.hold.gun.via_b, back_g);
-            let bore_rest = normalize(lerp3(&lerp3(&tune.hold.gun.bore, &[0.0, sin(pitch), cos(pitch)], out), &tune.hold.gun.via_bore, back_g));
-            let (mut hand_at, mut bore);
-            if grab {
-                let u_r = smoothstep(0.1, 1.0, ug);
-                hand_at = match s_at {
-                    // (the disarm, the pistol hold's: the frame comes down on the man's gun wrist on its way round and up to his head)
-                    Some(sa) if gun_v => {
-                        let (rap, gs, take) = (add3(untwist(fk, tw_y, tw_p, sa), tune.hold.strip.rap), tune.hold.secs.grab, tune.hold.strip.take);
-                        curve3(strip_in(t, take), &[(0.0, live_r), (take, rap), (lerp(take, gs, 0.35), tune.hold.gun.via_a), (lerp(take, gs, 0.7), tune.hold.gun.via_b), (gs, rest)])
-                    }
-                    _ => curve3(u_r, &[(0.0, live_r), (0.38, tune.hold.gun.via_a), (0.7, tune.hold.gun.via_b), (1.0, rest)]),
-                };
-                bore = normalize(curve3(u_r, &[(0.0, g_live), (0.5, tune.hold.gun.via_bore), (1.0, bore_rest)]));
-            } else if whip {
-                hand_at = lerp3(&lerp3(&lerp3(&rest, &tune.hold.gun.wind_hand, wnd), &tune.hold.gun.hit_hand, stk), &tune.hold.gun.thru_hand, thru);
-                bore = normalize(lerp3(&lerp3(&lerp3(&bore_rest, &tune.hold.gun.wind_bore, wnd), &tune.hold.gun.hit_bore, stk), &tune.hold.gun.bore, thru));
-            } else {
-                hand_at = rest;
-                bore = bore_rest;
-            }
-            if kick > 0.0 {
-                // the muzzle flips up about the wrist and the hand comes back along the bore
-                let up_k = sin(tune.hold.gun.kick_pitch * DEGR * kick);
-                bore = normalize([bore[0], bore[1] + up_k, bore[2]]);
-                hand_at = mad3(add3(hand_at, [0.0, 0.01 * kick, 0.0]), bore, -tune.hold.gun.kick_back * kick);
-            }
-            let turned = grip_turn(&g0, &r_aim, &bore, &AY, &grip_up);
-            // (the first frames of the reach: still mostly the carry's own hand)
-            let e_g = if grab { smoothstep(0.05, 0.6, ug) } else { 1.0 };
-            let rot_r = nlerp(&r_r0, &q_mul(&turned, &r_aim), e_g);
-            // elbow out to the right and a little down; up and back as it cocks
-            let pole = lerp3(&[-1.0, -0.35, -0.45], &[-0.7, 0.2, -0.7], wnd * (1.0 - stk));
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr, &hand_at, Some(&pole), 0.9 * max(e_g, 0.3), Some(&rot_r), false);
-        });
-        if p != at_b {
-            ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-            if !ask_blend(g, at_b, p, xg, true, at_b, n) {
-                return 0;
-            }
-        }
+        // elbow forward and a little left, up on his left collarbone
+        let pole = [0.55, 0.25, 0.85];
+        two_bone_ik(rig, d, fk.rot, fk.pos, ual, fal, hl, &tgt_l, Some(&pole), 0.95 * e_l, Some(&rot_l), false);
     }
-    arms_mask();
-    if !ask_blend(g, at, at_b, w, true, at, n) {
-        return 0;
+    // fingers close as the hands arrive
+    let open = 1.0 - if grab { smoothstep(0.5, 1.0, ug) } else { 1.0 };
+    let cl = |x: f64| lerp(x, 0.08, open);
+    hand(d, hh, 0, &[cl(0.5), cl(0.58), cl(0.64), cl(0.68)], lerp(0.55, 0.1, open), open * 0.4);
+}
+
+/// The knife fist: the blade kept ahead round the outside of him, turned across only as it comes in over the shoulder.
+fn knife_fist(tune: &Knobs, f: &mut Holding) {
+    let Holding { grab, fix_r, ug, kn, back_k, r_r0, tgt_r, .. } = *f;
+    let (uar, far) = (role(UPPER_ARM_R), role(FOREARM_R));
+    let e_rk = if grab { smoothstep(0.5, 1.0, ug) } else { 1.0 };
+    let rot_k = nlerp(&knife_rot(&fix_r, tune.hold.knife.blade, tune.hold.knife.back), &knife_rot(&fix_r, tune.hold.knife.off_blade, tune.hold.knife.off_back), kn);
+    let rot_r = nlerp(&r_r0, &rot_k, e_rk);
+    let pole_k = lerp3(&[-0.9, 0.15, -0.4], &[-0.8, -0.55, -0.3], kn);
+    let base_r = lerp3(&tgt_r, &tune.hold.knife.via, back_k);
+    *f = Holding { uar, far, rot_r, pole_k, base_r, ..*f };
+}
+
+/// The disarm: one path for the wrist, keyed in seconds: onto the gun in his hand, torn out and down to the hip, let go, then up to its station.
+fn disarm_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, hh: &mut Hands, f: &Holding) {
+    let Holding { s_at, tw_y, tw_p, fix_r, s_t, e_r, hr, live_r, r_r0, uar, far, rot_r, pole_k, base_r, .. } = *f;
+    let (take, out, drop, home, follow) = (tune.hold.strip.take, tune.hold.strip.out, tune.hold.strip.drop, tune.hold.strip.home, tune.hold.strip.follow);
+    let m = add3(
+        match s_at {
+            Some(sa) => untwist(fk, tw_y, tw_p, sa),
+            None => [tune.hold.strip.meet[0], tune.hold.strip.meet[1], tune.hold.strip.meet[2] + tune.hold.dist],
+        },
+        tune.hold.strip.over,
+    );
+    let back = lerp(drop, home, 0.45);
+    let p = curve3(
+        strip_in(s_t, take),
+        &[
+            (0.0, live_r),
+            (take * 0.55, [lerp(live_r[0], m[0], 0.5) - 0.07, lerp(live_r[1], m[1], 0.6), lerp(live_r[2], m[2], 0.45)]),
+            (take, m),
+            (out, add3(m, tune.hold.strip.wrench)),
+            (drop, tune.hold.strip.low),
+            (drop + follow, tune.hold.strip.low),
+            (max(back, drop + follow + 0.06), tune.hold.knife.via),
+            (home, base_r),
+        ],
+    );
+    let (u1, u2, u3, u4) = (smoothstep(take * 0.3, take, s_t), smoothstep(take, out, s_t), smoothstep(out, drop, s_t), smoothstep(drop + 0.08, home - 0.06, s_t));
+    // over the top of the gun, fingers round it · rolled out, the back of the hand to the right · hanging at the thigh
+    let (r_grip, r_tear, r_low) = (hand_rot(&fix_r, [0.3, -0.5, 0.8], [-0.25, 0.9, 0.3]), hand_rot(&fix_r, [-0.2, -0.8, 0.55], [-0.9, 0.25, 0.3]), hand_rot(&fix_r, [0.05, -1.0, 0.15], [-1.0, 0.0, 0.1]));
+    let grip = smoothstep(take - 0.05, take + 0.02, s_t) * (1.0 - smoothstep(drop, drop + 0.07, s_t));
+    let fist = smoothstep(tune.hold.strip.knife - 0.12, tune.hold.strip.knife, s_t);
+    let cu = |x: f64| lerp(lerp(0.14, 0.7, grip), x, fist);
+    let rot = nlerp(&nlerp(&nlerp(&nlerp(&r_r0, &r_grip, u1), &r_tear, u2), &r_low, u3), &rot_r, u4);
+    two_bone_ik(rig, d, fk.rot, fk.pos, uar, far, hr, &p, Some(&lerp3(&[-0.95, -0.3, -0.2], &pole_k, u4)), lerp(0.95 * smoothstep(0.0, 0.1, s_t), 0.9 * max(e_r, 0.3), u4), Some(&rot), false);
+    hand(d, hh, 1, &[cu(0.62), cu(0.68), cu(0.72), cu(0.76)], lerp(lerp(0.15, 0.5, grip), 0.6, fist), 0.25 * (1.0 - grip) * (1.0 - fist));
+}
+
+/// The gun hand: the aim clip's grip turned whole onto the wanted bore, the wrist to its station.
+fn gun_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, f: &Holding) {
+    let Holding { s_at, gun_v, t, grab, whip, tw_y, tw_p, gun_out, gun_pitch, shoot_t, grip_up, ug, wnd, stk, thru, back_g, live_r, r_r0, .. } = *f;
+    let hr = role(HAND_R);
+    let (p_r0, r_aim) = (fk.at(hr), fk.rot(hr));
+    // the clip's bore as posed on this body, and where the carry underneath actually has it pointing
+    let g0 = normalize(sub3(fk.at(role(MIDDLE1_R)), p_r0));
+    let g_live = normalize(q_rotate(&q_mul(&r_r0, &conj(r_aim)), &g0));
+    let (out, pitch) = (clamp(gun_out, 0.0, 1.0) * (1.0 - wnd), gun_pitch);
+    // recoil: up in ~35 ms, back down over ~0.2 s
+    let kick = if shoot_t >= 0.0 { bump(shoot_t, 0.0, 0.035, 0.06, 0.24) } else { 0.0 };
+    let rest = lerp3(&lerp3(&tune.hold.gun.hand, &tune.hold.gun.out_hand, out), &tune.hold.gun.via_b, back_g);
+    let bore_rest = normalize(lerp3(&lerp3(&tune.hold.gun.bore, &[0.0, sin(pitch), cos(pitch)], out), &tune.hold.gun.via_bore, back_g));
+    let (mut hand_at, mut bore);
+    if grab {
+        let u_r = smoothstep(0.1, 1.0, ug);
+        hand_at = match s_at {
+            // (the disarm, the pistol hold's: the frame comes down on the man's gun wrist on its way round and up to his head)
+            Some(sa) if gun_v => {
+                let (rap, gs, take) = (add3(untwist(fk, tw_y, tw_p, sa), tune.hold.strip.rap), tune.hold.secs.grab, tune.hold.strip.take);
+                curve3(strip_in(t, take), &[(0.0, live_r), (take, rap), (lerp(take, gs, 0.35), tune.hold.gun.via_a), (lerp(take, gs, 0.7), tune.hold.gun.via_b), (gs, rest)])
+            }
+            _ => curve3(u_r, &[(0.0, live_r), (0.38, tune.hold.gun.via_a), (0.7, tune.hold.gun.via_b), (1.0, rest)]),
+        };
+        bore = normalize(curve3(u_r, &[(0.0, g_live), (0.5, tune.hold.gun.via_bore), (1.0, bore_rest)]));
+    } else if whip {
+        hand_at = lerp3(&lerp3(&lerp3(&rest, &tune.hold.gun.wind_hand, wnd), &tune.hold.gun.hit_hand, stk), &tune.hold.gun.thru_hand, thru);
+        bore = normalize(lerp3(&lerp3(&lerp3(&bore_rest, &tune.hold.gun.wind_bore, wnd), &tune.hold.gun.hit_bore, stk), &tune.hold.gun.bore, thru));
+    } else {
+        hand_at = rest;
+        bore = bore_rest;
     }
+    if kick > 0.0 {
+        // the muzzle flips up about the wrist and the hand comes back along the bore
+        let up_k = sin(tune.hold.gun.kick_pitch * DEGR * kick);
+        bore = normalize([bore[0], bore[1] + up_k, bore[2]]);
+        hand_at = mad3(add3(hand_at, [0.0, 0.01 * kick, 0.0]), bore, -tune.hold.gun.kick_back * kick);
+    }
+    let turned = grip_turn(&g0, &r_aim, &bore, &AY, &grip_up);
+    // (the first frames of the reach: still mostly the carry's own hand)
+    let e_g = if grab { smoothstep(0.05, 0.6, ug) } else { 1.0 };
+    let rot_r = nlerp(&r_r0, &q_mul(&turned, &r_aim), e_g);
+    // elbow out to the right and a little down; up and back as it cocks
+    let pole = lerp3(&[-1.0, -0.35, -0.45], &[-0.7, 0.2, -0.7], wnd * (1.0 - stk));
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr, &hand_at, Some(&pole), 0.9 * max(e_g, 0.3), Some(&rot_r), false);
+}
+
+/// The left arm is the hold's own before the layer's weight has come in: its path starts where the reach had the hand.
+fn left_arm_first(g: usize, n: usize, f: &Holding) -> bool {
+    let Holding { w, at, at_b, live, ug, cr, .. } = *f;
     if cr && live && w < 1.0 {
         // (the left arm is the hold's own before the layer's weight has come in: its path starts where the reach had the hand)
         let w_l = max(w, smoothstep(0.0, 0.1, ug));
         if w_l > w {
             ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
             if !ask_blend(g, at, at_b, (w_l - w) / (1.0 - w), true, at, n) {
-                return 0;
+                return false;
             }
         }
     }
+    true
+}
+
+/// The disarm: the hand is on the gun at `take`, before the layer's own weight has come in.
+fn disarm_first(g: usize, n: usize, tune: &Knobs, f: &Holding) -> bool {
+    let Holding { w, at, at_b, strip, s_t, .. } = *f;
     if strip.is_some() && s_t < tune.hold.strip.out && w < 1.0 {
         // (the disarm: the hand is on the gun at `take`, before the layer's own weight has come in)
         let w_s = max(w, smoothstep(0.0, 0.8 * tune.hold.strip.take, s_t));
         if w_s > w {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
             if !ask_blend(g, at, at_b, (w_s - w) / (1.0 - w), true, at, n) {
-                return 0;
+                return false;
             }
         }
     }
-    hands_to(&hs, an);
-    RAN | RAN_ALL
+    true
 }
 /// CharacterAnimator.catchFix's arm: the catch's left hand put back where the hold's own arm had it, after the layers that still move his trunk.
 pub fn catch_arm(g: usize, an: &Anim, x: &AnimHdFix) -> u32 {
