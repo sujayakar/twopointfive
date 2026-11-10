@@ -111,7 +111,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let pist = an.rl_b.hand && !long_gun && an.reload_t >= 0.0;
         let (throw_t, strike_t, no_tool) = (an.throw_t, an.strike_t, an.big_tool.is_none());
         let want = if live
-            && (pist || (mv_on(g, MvOnK::Reload) && long_gun && (reload_mag || has_feed)))
+            && (pist || (long_gun && (reload_mag || has_feed)))
             && !busy && throw_t < 0.0 && strike_t < 0.0 && no_tool { 1.0 } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.rw.x != 0.0 {
             let rate = MV2.reload.rate;
@@ -134,7 +134,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
         let (hurt, aim, clutch_in, off_hand) = (an.hurt, an.upper_w.aim, an.clutch, an.throw_t < 0.0 && an.strike_t < 0.0 && an.big_tool.is_none());
         let reload_shown = an.mv2_shown.reload;
         let rest = if hurt > 0.0 { v3::clamp(hurt, 0.0, 1.0) * MV2.hurt.arm * (1.0 - v3::smoothstep(0.1, 0.5, aim)) * (if off_hand { 1.0 } else { 0.0 }) } else { 0.0 };
-        let want = if mv_on(g, MvOnK::Clutch) && reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
+        let want = if reload_shown == 0.0 && !busy { v3::clamp(m::max(clutch_in, rest), 0.0, 1.0) } else { 0.0 };
         if want > 0.0 || g.ch[c].anim.mv2.cl.x != 0.0 {
             let rate = MV2.clutch.rate;
             let cl = &mut g.ch[c].anim.mv2.cl;
@@ -152,10 +152,9 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
     }
     // ---- kept down: a hostage's wrists behind her back, hands on the head for somebody told to stay where he is
     {
-        let mv_bound = mv_on(g, MvOnK::Bound);
         let an = &mut g.ch[c].anim;
         let bound = an.bound;
-        let on = mv_bound && bound != 0.0 && !an.long_gun;
+        let on = bound != 0.0 && !an.long_gun;
         let want = if on && (an.mv2.bd.x < 0.02 || an.mv2.bd_k == bound) { 1.0 } else { 0.0 };
         if on && an.mv2.bd.x < 0.02 { an.mv2.bd_k = bound; }
         if want > 0.0 || an.mv2.bd.x != 0.0 {
@@ -225,8 +224,7 @@ pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
 
 /// The reactions' body, summed into one turn of the trunk, one of the head and one move of the pelvis.
 fn anim_mv_post_body(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
-    let fold = fold_on(g, Some(g.ch[c].anim.fold_too));
-    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, fold, k));
+    anim_layer(g, c, |s, an, k| ::sim::layers::mv_post_body(s, an, dt, gate, k));
 }
 
 /// The reactions' arms, after their body: the start's, a blinded man's gun and hand, the toss.

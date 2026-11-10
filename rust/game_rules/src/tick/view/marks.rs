@@ -24,9 +24,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
         GuardState::Patrol => if !zz.is_empty() { text = String::from(zz); } else if !own { let d = wary_dots(m.awareness); if !d.is_empty() { text = d; tone = HeadTone::Sus; } },
     }
     // (a man of your own bent away with a forearm over his eyes says it himself)
-    let posed = own && g.k.moves.on > 0.5 && g.k.moves.dazzle > 0.5;
-    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !posed {
-        if text.is_empty() && own { tone = HeadTone::Sus; }
+    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !own {
         text.insert(0, '✹');
     }
     (text, tone)

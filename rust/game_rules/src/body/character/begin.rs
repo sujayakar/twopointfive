@@ -439,7 +439,7 @@ pub(super) fn anim_desync(g: &mut crate::game::Game, c: CharId, seed: f64) {
 pub fn anim_fire(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.shoot_t = 0.0;
     g.ch[c].anim.hn.fired = 0.0;
-    if g.ch[c].anim.long_gun && mv_on(g, crate::character::MvOnK::Recoil) {
+    if g.ch[c].anim.long_gun {
         let t = v3::clamp(g.ch[c].anim.trained, 0.0, 1.0);
         let r = &g.k.mv.recoil;
         let k = |p: [f64; 2]| v3::lerp(p[0], p[1], t);
@@ -463,16 +463,12 @@ pub fn anim_hit(g: &mut crate::game::Game, c: CharId) {
 
 /// startled, from his front
 pub fn anim_flinch(g: &mut crate::game::Game, c: CharId) {
-    if mv_on(g, crate::character::MvOnK::Flinch) { anim_flinch_from(g, c, None, None, None); } else { anim_hit(g, c); }
+    anim_flinch_from(g, c, None, None, None);
 }
 
 /// rounds going past: a duck away from where they come from
 pub fn anim_flinch_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>, k: Option<f64>, soft: Option<bool>) {
     let (k, soft) = (k.unwrap_or(1.0), soft.unwrap_or(false));
-    if !mv_on(g, crate::character::MvOnK::Flinch) {
-        if !soft { g.ch[c].anim.hit_t = 0.0; }
-        return;
-    }
     let dur = g.k.mv.flinch.dur;
     let d = v3::lerp(dur[0], dur[1], v3::clamp(g.ch[c].anim.trained, 0.0, 1.0));
     let fl_t = g.ch[c].anim.mvs.fl_t;
@@ -497,7 +493,6 @@ pub fn anim_flinch_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>
 
 /// the start of a man who has just seen what he did not expect
 pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3>) {
-    if !mv_on(g, crate::character::MvOnK::Flinch) { g.ch[c].anim.hit_t = 0.0; return; }
     if g.ch[c].anim.mvs.st_t >= 0.0 { return; }
     let st_d = match toward { Some(w) => anim_flat_model(g, c, w, [0.0, 0.0, 1.0]), None => [0.0, 0.0, 1.0] };
     g.ch[c].anim.mvs.st_d = st_d;
@@ -506,7 +501,6 @@ pub fn anim_startle_from(g: &mut crate::game::Game, c: CharId, toward: Option<V3
 
 /// a round that went home on a man who stays up
 pub fn anim_hit_from(g: &mut crate::game::Game, c: CharId, along: Option<V3>) {
-    if !mv_on(g, crate::character::MvOnK::Flinch) { g.ch[c].anim.hit_t = 0.0; return; }
     let ht_t = g.ch[c].anim.mvs.ht_t;
     let e0 = if ht_t >= 0.0 { v3::clamp(curve(ht_t, &crate::character::MV_HIT_ENV), 0.0, 1.0) } else { 0.0 };
     g.ch[c].anim.mvs.ht_t = 0.07 * e0;
@@ -523,10 +517,9 @@ pub fn anim_hit_from(g: &mut crate::game::Game, c: CharId, along: Option<V3>) {
     };
 }
 
-/// the support hand's underhand toss; off, the chop the teams used to make
+/// the support hand's underhand toss
 pub fn anim_toss_item(g: &mut crate::game::Game, c: CharId, release: Option<f64>) {
     let release = release.unwrap_or(crate::character::TOSS_RELEASE);
-    if !mv_on(g, crate::character::MvOnK::Toss) { anim_signal(g, c, crate::character::SignalKind::Go, None); return; }
     let m_ = &mut g.ch[c].anim.mvs;
     if m_.ts_t >= 0.0 { return; }
     m_.ts_t = 0.0;
@@ -724,11 +717,6 @@ pub(super) fn anim_kit_rifle(g: &crate::game::Game, c: CharId) -> bool {
         Some(k) => k.from == Some(Kit::Rifle) || k.to == Some(Kit::Rifle),
         None => false,
     }
-}
-
-/// the support hand's magazine work can be shown at all
-pub fn anim_kit_hands_on(g: &crate::game::Game, c: CharId) -> bool {
-    g.k.moves.reload > 0.5
 }
 
 /// a magazine change as the drawer needs it; none when none is shown

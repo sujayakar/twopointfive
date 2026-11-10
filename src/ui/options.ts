@@ -29,8 +29,8 @@ export type OptionsTab = 'graphics' | 'audio' | 'game' | 'controls';
 /** WHAT THE SCREEN SETS OF A GAME, whoever holds it: each reads as the game is set now, and is set by being written */
 export interface OptionsGame {
   autosave: boolean; god: boolean; thinks: boolean; ammo: boolean;
-  /** the wall hold's feel is on, and whether walking into a wall takes it */
-  readonly wallFeel: boolean; wallPress: boolean;
+  /** walking into a wall takes it */
+  wallPress: boolean;
   /** the command key tapped twice calls the squad in, now (a tutorial holds it back until a step lists it) */
   readonly fallIn: boolean;
   /** the faint dots on what can be acted on */
@@ -327,7 +327,7 @@ function render(S: Screen) {
     flip(body, 'Autosave checkpoints', () => game.autosave, v => { game.autosave = v; },
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
     flip(body, 'Interaction hints', () => game.hints, v => { game.hints = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
-    if (game.wallFeel) flip(body, 'Walk into a wall to take it', () => game.wallPress, v => { game.wallPress = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
+    flip(body, 'Walk into a wall to take it', () => game.wallPress, v => { game.wallPress = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — rows on trial, kept by host/findme.ts)
     cloudRows({ sec, flip, seg }, body);   // (ui/cloudrows.ts: a hosted build's two rows — sharing, and the settings link; nothing on a build with no backend)
     sec(body, 'Cheats');
@@ -354,8 +354,8 @@ function render(S: Screen) {
 /** does walking into a wall take it, as it will stand once the boot is over: before a game is handed over, what this machine has kept and the address's words (the boot card
  *  and the keyboard both ask before that) */
 export function walkInNow(): boolean {
-  if (deps) return deps.game.wallFeel && deps.game.wallPress;
-  try { const q = new URLSearchParams(globalThis.location?.search ?? ''); return !q.has('nowallsnap') && (q.has('wallpress') ? q.get('wallpress') !== '0' : kept().wallpress ?? true); } catch { return true; }
+  if (deps) return deps.game.wallPress;
+  try { const q = new URLSearchParams(globalThis.location?.search ?? ''); return q.has('wallpress') ? q.get('wallpress') !== '0' : kept().wallpress ?? true; } catch { return true; }
 }
 /** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the

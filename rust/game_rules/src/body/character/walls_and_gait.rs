@@ -168,7 +168,7 @@ pub(super) fn anim_long_body(g: &mut crate::game::Game, c: CharId, w: f64, run: 
     let (run, sprint) = (run.unwrap_or(0.0), sprint.unwrap_or(0.0));
     if w < 0.003 { return; }
     let ch = anim_lg_channels(g, c);
-    anim_layer(g, c, |s, an, k| ::sim::layers::long_body(s, an, w, run, sprint, &ch, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::long_body(s, an, w, run, sprint, &ch));
 }
 /// the long gun, arms
 pub(super) fn anim_long_arms(g: &mut crate::game::Game, c: CharId, w: f64, kick_t: f64, dt: f64, yield_door: bool, keep: bool) {

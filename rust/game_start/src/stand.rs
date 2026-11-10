@@ -77,7 +77,7 @@ fn populate_host(g: &mut Game, boxes: &mut Vec<BoxId>) {
     let doors = g.level.doors.clone();
     passes::thin_level(g, boxes, &doors);
     passes::bar_level(g, boxes);
-    if g.k.shapes.on { passes::shape_level(g, boxes); }
+    passes::shape_level(g, boxes);
     for &b in boxes.iter() { game::scene_boxes::box_world_add_static(g, b); }
     for ld in g.level.lights.clone().iter() { let l = game::render_lights::light_from_def(g, ld); game::render_lights::light_set_add(g, l); }
 }
@@ -124,8 +124,7 @@ pub fn stand(data: &Json, assets: Assets, o: &StartOpts) -> Stood {
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
     game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
-    let (dressing, lived) = (g.k.destruction.on, g.k.lived.on);
-    let mut loaded = level::load(&mut g, data, dressing, lived);
+    let mut loaded = level::load(&mut g, data);
     populate_host(&mut g, &mut loaded.boxes);
     g.col.boxes = loaded.boxes.clone();   // (`level.boxes`, which the constructor reads as the collision's list)
     let men = game::standing::Men {

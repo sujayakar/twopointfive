@@ -119,10 +119,10 @@ fn stand_extra(g: &mut Game, n: f64) {
     let spots = extra_spots(g, n);
     let mut stood = 0;
     let serial = g.guards.iter().filter(|&&x| g.gd[x].callsign.starts_with("Extra ")).count();
-    let (light, budget) = (g.k.nightbreach.def_lights, game::guards::MAX_SKINNED - g.civilians.len() as f64);
+    let budget = game::guards::MAX_SKINNED - g.civilians.len() as f64;
     for s in spots {
         let name = format!("Extra {}", serial + stood + 1);
-        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::default() };
+        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(false), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
         game::mission::adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) });

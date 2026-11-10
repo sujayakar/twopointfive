@@ -287,8 +287,8 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.streetLamp(k, 6.6, 16.95, 'street_lamp_porch', [1, 0, 0]);                         // on the porch: whoever walks in the front way walks in lit
   K.moon(k);
 
-  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them
-  // all out with the switch off, and then this is the clinic above, box for box). The three rooms and the duty room are furnished by the level itself; what
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // The three rooms and the duty room are furnished by the level itself; what
   // had nothing was the ground round the building, which from above is most of the picture. So the lived things are the clinic's OUTSIDE, laid with the look's
   // own kit (lib/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
   // sheets in, the side its generator is fuelled on, the lot the patients wait on.

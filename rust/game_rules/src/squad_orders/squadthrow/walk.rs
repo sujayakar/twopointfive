@@ -372,9 +372,6 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         }
         return;
     }
-    if !g.k.squadthrow.on {
-        return end_walk(g, key, gd, None);
-    }
     if spent > g.k.squadthrow.walk_secs {
         return end_walk(g, key, gd, Some("can't get a throw."));
     }
@@ -503,20 +500,10 @@ pub fn notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::
     Vec::new()
 }
 
-/// The rows on the menu while the switch is on, off it otherwise.
+/// The rows on the menu.
 fn sync(g: &mut crate::game::Game) {
     let has = g.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == THROW_OPEN);
-    let on = g.k.squadthrow.on;
-    if on == has {
-        return;
-    }
-    if !on {
-        for id in [THROW_OPEN, FRAG_THERE, STUN_THERE] {
-            crate::orders::squad_orders_unregister(g, id);
-        }
-        if g.orders.menu.is_some() {
-            crate::orders::squad_orders_close(g);
-        }
+    if has {
         return;
     }
     state_key(g);
@@ -531,12 +518,9 @@ fn sync(g: &mut crate::game::Game) {
     }
 }
 
-/// Once a frame after the menu's own input: the rows in step with the switch, and G with a floor menu's first page up turns it to the throws. True: the press was the row's.
+/// Once a frame after the menu's own input: the rows, and G with a floor menu's first page up turns it to the throws. True: the press was the row's.
 pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    if !g.k.squadthrow.on && !g.m.squadthrow.states.has(key) {
-        return false;
-    }
     if g.m.squadthrow.states.get(key).map_or(false, |s| !s.walks.is_empty()) {
         let mut at = 0usize;
         while let Some(gd) = g.m.squadthrow.states.get(key).and_then(|s| s.walks.next_key(&mut at)) {
@@ -546,11 +530,6 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
             };
             if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w_a {
                 g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
-            } else if !g.k.squadthrow.on {
-                let w = g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
-                if let Some(w) = w {
-                    squad_hand_back(g, &mut walk_lent(&w), None);
-                }
             }
         }
     }
