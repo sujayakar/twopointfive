@@ -18,16 +18,16 @@ const CLASS = { paver: 0, board: 1, brick: 2, stone: 3, panel: 4, mulch: 5, meta
 /** skins are met by rays no wider than this; wider ones meet what they lie on */
 const SKIN = 0.025;
 interface Placed { row: number; at: V3; rot: Rot; half: V3; mat: number; tint: V3; cls: number }
-export interface Corner extends Meshes { placed: Placed[] }
+export interface Corner extends Meshes { placed: Placed[]; /** what each class sends back in the mean, beside its material: the boxes that stand in for it are that color */ mean: V3[] }
 
 /** everything that takes long. Plain data, so that a worker may do it */
 export function buildCorner(say: (what: string) => void = () => {}): Corner {
   const ms: Record<string, number> = {}, timed = <T>(k: string, f: () => T): T => { const t = performance.now(), v = f(); ms[k] = (ms[k] ?? 0) + performance.now() - t; return v; };
-  const s = new Store(0), list: Meshes['list'] = [], made = (name: string, n: number, f: (i: number) => Mesh): Packed[] => { say(name); return Array.from({ length: n }, (_, i) => { const m = timed('shapes', () => f(i)), d: Dag = timed('levels', () => buildDag(m)), packed = timed('pack', () => packMesh(s, d)); list.push({ name: `${name} ${i}`, packed }); return packed; }); };
-  const placed: Placed[] = [], objects: PackedObject[] = [], q = rng(91), pick = <T>(l: T[]): T => l[Math.floor(q() * l.length)]!, shade = (k: number): V3 => { const v = 1 - k * q(); return [v, v, v]; };
+  const s = new Store(0), list: Meshes['list'] = [], made = (name: string, n: number, f: (i: number) => Mesh): Packed[] => { say(name); return Array.from({ length: n }, (_, i) => { const m = timed('shapes', () => f(i)), d: Dag = timed('levels', () => buildDag(m)), packed = timed('pack', () => packMesh(s, d)); { const c: V3 = [0, 0, 0], k = m.col.length / 4; for (let v = 0; v < k; v++) { const open = 0.72 + 0.28 * m.col[v * 4 + 3]! / 255; for (let a = 0; a < 3; a++) c[a]! += (m.col[v * 4 + a]! / 255) ** 2 * open / k; } hue.set(packed, c); } list.push({ name: `${name} ${i}`, packed }); return packed; }); };
+  const hue = new Map<Packed, V3>(), sums: { c: V3; n: number }[] = [], placed: Placed[] = [], objects: PackedObject[] = [], q = rng(91), pick = <T>(l: T[]): T => l[Math.floor(q() * l.length)]!, shade = (k: number): V3 => { const v = 1 - k * q(); return [v, v, v]; };
   /** children given in the world, as one object */
   const object = (cls: number, kids: { mesh: Packed; at: V3; rot?: Rot; scale?: number; tint?: V3 }[], mat: number, tint: V3 = [1, 1, 1], skin = 0) => {
-    if (!kids.length) return; let c: V3 = [0, 0, 0]; for (const k of kids) c = add(c, k.at); c = [c[0] / kids.length, c[1] / kids.length, c[2] / kids.length];
+    if (!kids.length) return; { const t = sums[cls] ??= { c: [0, 0, 0], n: 0 }; for (const k of kids) { const h = hue.get(k.mesh)!, q2 = k.tint ?? [1, 1, 1]; for (let a = 0; a < 3; a++) t.c[a]! += h[a]! * q2[a]! ** 2 * tint[a]! ** 2; t.n++; } } let c: V3 = [0, 0, 0]; for (const k of kids) c = add(c, k.at); c = [c[0] / kids.length, c[1] / kids.length, c[2] / kids.length];
     const o = packObject(s, [{ error: 0, children: kids.map((k): Child => ({ mesh: k.mesh, at: [k.at[0] - c[0], k.at[1] - c[1], k.at[2] - c[2]], rot: k.rot ?? ID, scale: k.scale ?? 1, tint: k.tint ?? [1, 1, 1] })) }], cls, skin);
     objects.push(o); placed.push({ row: o.row, at: c, rot: ID, half: [0, 1, 2].map(k => Math.max(Math.abs(o.mn[k]!), Math.abs(o.mx[k]!)) + 1e-4) as V3, mat, tint, cls });
   };
@@ -59,7 +59,7 @@ export function buildCorner(say: (what: string) => void = () => {}): Corner {
   for (let i = 0; i < 4; i++) object(CLASS.cloth, [{ mesh: drum, at: [10.6 + 0.85 * Math.cos(i * 1.57 + 0.5), FL + 0.28, 0.2 + 0.85 * Math.sin(i * 1.57 + 0.5)], rot: rotY(q() * 6) }], M.fabric!, (i % 2 ? C.white : C.grey) as V3); object(CLASS.metal, [{ mesh: disc, at: [10.6, FL + 0.46, 0.2] }], M.paint!, C.red as V3);
 
   const lost = s.take(LOST_ROWS, 'lost'); s.f.fill(1, lost * 4, (lost + LOST_ROWS) * 4);
-  return { data: s.data, list, squares: [], heroes: [], objects, weigh: s.weigh, ms, depth: Math.max(...list.map(l => l.packed.depth)), lost, classes: [], placed };
+  return { data: s.data, list, squares: [], heroes: [], objects, weigh: s.weigh, ms, depth: Math.max(...list.map(l => l.packed.depth)), lost, classes: [], placed, mean: sums.map(t => t.c.map(v => Math.sqrt(v / t.n)) as V3) };
 }
 const PLANTERS: [number, number, number, number, number][] = [[4.6, 2.4, 11.8, 4.2, 0.55], [9.9, 4.9, 11.8, 7.7, 0.5], [4.6, 6.4, 7.6, 7.7, 0.5]];
 const LOUNGERS: [number, number, V3, number][] = [[6.0, 0.2, C.white as V3, 0.25], [7.4, 0.1, C.orange as V3, 0.1], [8.8, 0.15, C.white as V3, -0.05]];
@@ -70,16 +70,16 @@ export const giveCorner = (c: Corner) => { ready = c; };
 export function makeCorner(): Building {
   const b = makeBuilding(), w = b.world, c = ready ?? buildCorner(), near = (x: number, y: number) => Math.abs(x - y) < 0.06, cut = { flags: F.CUT };
   // ---- what is no longer seen
-  const ghost = (f: (p: Piece, lo: V3, hi: V3) => boolean) => { let n = 0; for (const p of w.pieces) { if (p.ghost || p.flags & F.MESH || p.mat === M.glass) continue; const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]); if (f(p, p.at.map((v, k) => v - e[k]!) as V3, p.at.map((v, k) => v + e[k]!) as V3)) { p.ghost = true; n++; } } return n; };
+  const ghost = (f: (p: Piece, lo: V3, hi: V3) => boolean, mat?: number, tint?: V3) => { let n = 0; for (const p of w.pieces) { if (p.ghost || p.flags & F.MESH || p.mat === M.glass) continue; const e = [0, 1, 2].map(k => Math.abs(p.rot[0][k]!) * p.half[0] + Math.abs(p.rot[1][k]!) * p.half[1] + Math.abs(p.rot[2][k]!) * p.half[2]); if (f(p, p.at.map((v, k) => v - e[k]!) as V3, p.at.map((v, k) => v + e[k]!) as V3)) { p.ghost = true; n++; if (mat !== undefined) { p.mat = mat; p.tint = tint!; p.marks = undefined; } } } return n; };
   const took: Record<string, number> = {};
-  took.floor = ghost((p, lo, hi) => p.mat === M.stone && near(lo[0], 4.09) && near(hi[0], 12.09) && near(hi[1], FL) && hi[2] - lo[2] > 15); took.deck = ghost((p, lo, hi) => p.mat === M.wood && near(lo[0], 4.3) && near(hi[0], 12.0) && near(lo[2], -1.6) && near(hi[2], 1.9));
-  for (const [x0, z0, x1, z1, h] of PLANTERS) took.planters = (took.planters ?? 0) + ghost((p, lo, hi) => p.mat === M.paint && lo[0] > x0 - 0.05 && hi[0] < x1 + 0.05 && lo[2] > z0 - 0.05 && hi[2] < z1 + 0.05 && near(lo[1], FL) && near(hi[1], FL + h));
+  took.floor = ghost((p, lo, hi) => p.mat === M.stone && near(lo[0], 4.09) && near(hi[0], 12.09) && near(hi[1], FL) && hi[2] - lo[2] > 15, M.plaster!, c.mean[CLASS.paver]!); took.deck = ghost((p, lo, hi) => p.mat === M.wood && near(lo[0], 4.3) && near(hi[0], 12.0) && near(lo[2], -1.6) && near(hi[2], 1.9), M.wood!, c.mean[CLASS.board]!);
+  for (const [x0, z0, x1, z1, h] of PLANTERS) took.planters = (took.planters ?? 0) + ghost((p, lo, hi) => p.mat === M.paint && lo[0] > x0 - 0.05 && hi[0] < x1 + 0.05 && lo[2] > z0 - 0.05 && hi[2] < z1 + 0.05 && near(lo[1], FL) && near(hi[1], FL + h), M.plaster!, c.mean[CLASS.panel]!);
   took.rail = ghost((p, lo, hi) => p.mat === M.steel && lo[1] > FL - 0.05 && hi[1] < FL + 1.06 && ((near((lo[0] + hi[0]) / 2, 12.0) && hi[0] - lo[0] < 0.1 && (hi[2] - lo[2] > 15 || lo[2] > -1.75)) || (near((lo[2] + hi[2]) / 2, 8.0) && hi[2] - lo[2] < 0.1 && lo[0] > 4.0)));
   took.cloth = ghost((p, lo, hi) => p.mat === M.fabric && lo[0] > 5 && hi[0] < 12 && lo[1] > FL && hi[1] < FL + 1.1 && lo[2] > -1.6 && hi[2] < 1.9); took.table = ghost((p, lo, hi) => p.mat === M.paint && !!p.quad && near(p.at[0], 10.6) && near(p.at[2], 0.2) && hi[1] - lo[1] < 0.08 && lo[1] > FL);
   if (took.floor !== 1 || took.deck !== 1 || took.planters !== 12 || !took.rail || took.cloth !== 10 || took.table !== 1) console.warn('corner: not all was found', JSON.stringify(took));
   // ---- what lies under the skins
   const core = (a: V3, d: V3, mat: number, tint: V3) => w.box(a, d, mat, { tint, ...cut });
-  core([4.09, FL - 0.03, -8.09], [12.09, FL, -1.6], M.stone!, [1, 1, 1]); core([4.09, FL - 0.0299, -1.6], [12.09, FL + 0.026, 1.9], M.wood!, [0.82, 0.76, 0.7]); core([4.09, FL - 0.0298, 1.9], [12.09, FL - 0.016, 8.09], M.concrete!, [0.80, 0.79, 0.77]);
+  core([4.09, FL - 0.03, -8.09], [12.09, FL + 0.0004, -1.6], M.stone!, [1, 1, 1]); core([4.09, FL - 0.0299, -1.6], [12.09, FL + 0.026, 1.9], M.wood!, [0.82, 0.76, 0.7]); core([4.09, FL - 0.0298, 1.9], [12.09, FL - 0.016, 8.09], M.concrete!, [0.80, 0.79, 0.77]);
   core([4.09, FL - 0.02, 2.02], [4.187, FL - 0.0005, 8.089], M.stone!, [1, 1, 1]); core([11.993, FL - 0.02, 2.02], [12.089, FL - 0.0005, 8.089], M.stone!, [1, 1, 1]);
   core([4.089, FL, -1.6], [4.1025, FL + 3.19, 0.5], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL + 2.4, 0.5], [4.1024, FL + 3.189, 1.75], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL, 1.75], [4.1023, FL + 3.188, 3.1], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL + 2.7, 3.1], [4.1022, FL + 3.187, 6.9], M.plaster!, [0.86, 0.85, 0.83]); core([4.089, FL, 6.9], [4.1021, FL + 3.186, 7.9], M.plaster!, [0.86, 0.85, 0.83]);
   w.add({ at: [12.0, FL + 1.0, -4.8], half: [0.028, 0.02, 3.2], mat: M.steel!, ...cut });      // (the rail goes on as it was by the pool)
