@@ -460,7 +460,7 @@ pub fn door_words(g: &crate::game::Game, d: DoorId) -> String {
 /// orders.ts:2692 the words of a door's id; nothing the game holds is read
 fn id_words(id: &str) -> String {
     let said = door_said();
-    let mut t: Vec<String> = id.split('_').map(|x| said.get(String::from(x)).cloned().unwrap_or_else(|| String::from(x))).collect();
+    let mut t: Vec<String> = id.split('_').map(|x| said.of(x).cloned().unwrap_or_else(|| String::from(x))).collect();
     if t[t.len() - 1] != "door" { t.push(String::from("door")); }
     t.join(" ")
 }

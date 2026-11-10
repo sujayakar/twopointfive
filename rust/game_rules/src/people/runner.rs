@@ -25,7 +25,7 @@ macro_rules! run {
 
 /// one kind's row of the skeleton's table
 fn lines_of(kind: LineKind) -> LINESValue {
-    lines().get(String::from(kind.as_str())).unwrap().clone()
+    lines().of(kind.as_str()).unwrap().clone()
 }
 
 /// one line of a kind from this man, shouted, never on the net

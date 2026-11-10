@@ -10,7 +10,7 @@ use alloc::{string::String, vec, vec::Vec};
 
 /// `GUNHOLD_NOW[was] ?? was`
 fn now_of(was: &str) -> String {
-    gunhold_now().get(String::from(was)).cloned().unwrap_or_else(|| String::from(was))
+    gunhold_now().of(was).cloned().unwrap_or_else(|| String::from(was))
 }
 
 // ---------------------------------------------------------------- stats, the men
@@ -606,7 +606,7 @@ fn goes_round(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut c
 
 /// The pool a man draws one of the four moments from: a defender's own, else the staff's.
 fn gun_hold_pool(g: &crate::game::Game, gd: GuardId, kind: crate::gunhold::BarkKind) -> Vec<String> {
-    let own = if crate::teams::defender_words(g, gd) { gunhold_defender_lines().get(String::from(kind.as_str())).cloned() } else { None };
+    let own = if crate::teams::defender_words(g, gd) { gunhold_defender_lines().of(kind.as_str()).cloned() } else { None };
     match own {
         Some(own) if !own.is_empty() => own,
         _ => {

@@ -30,8 +30,7 @@ fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if crate::character::is_player(g, c_2) { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
     let t = stature_tune();
-    let name = g.art.variant[v].name.clone();
-    let s = stature().get(name).copied().unwrap_or(1.0) + (hash01(g.ch[c_2].id) * 2.0 - 1.0) * t.jitter;
+    let s = variant_stature(&g.art.variant[v].name) + (hash01(g.ch[c_2].id) * 2.0 - 1.0) * t.jitter;
     m::round(m::min(t.max, m::max(t.min, s)) * 1000.0) / 1000.0
 }
 

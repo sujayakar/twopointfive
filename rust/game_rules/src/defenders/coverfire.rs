@@ -27,7 +27,7 @@ fn def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
 }
 /// FIGHT_SKILL.operative
 fn op_skill() -> crate::roomfight::FightSkill {
-    *crate::roomfight::fight_skill().get(String::from("operative")).unwrap()
+    *crate::roomfight::fight_skill().of("operative").unwrap()
 }
 /// the frame's sightings: `now(t)` of coverfireTick
 fn seen_now(time: f64, dt: f64, t: f64) -> bool {
@@ -62,7 +62,7 @@ fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
 /// QA: why a known place was not worth rounds, counted
 fn no(g: &mut crate::game::Game, why: &str) {
     let w = &mut g.m.coverfire.coverfire_why;
-    let n = w.get(String::from(why)).copied().unwrap_or(0.0);
+    let n = w.of(why).copied().unwrap_or(0.0);
     w.set(String::from(why), n + 1.0);
 }
 
@@ -254,7 +254,7 @@ fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::coverfir
     };
     if st.t < g.k.coverfire.near_m { no(g, "close"); return None; }
     let kind = b.kind;
-    let behind = g.k.coverfire.behind_m.get(String::from(kind.as_str())).copied().unwrap_or(3.0);
+    let behind = g.k.coverfire.behind_m.of(kind.as_str()).copied().unwrap_or(3.0);
     if l - st.t > behind { no(g, "beyond"); return None; }
     if crate::props::prop_system_raycast(g, from, dir, st.t).is_some() { no(g, "prop"); return None; }
     let w = weight_of(g, gd);
@@ -974,7 +974,7 @@ mod tests {
         let mut g = Game::blank();
         no(&mut g, "far");
         no(&mut g, "far");
-        assert_eq!(g.m.coverfire.coverfire_why.get(String::from("far")).copied(), Some(2.0));
+        assert_eq!(g.m.coverfire.coverfire_why.of("far").copied(), Some(2.0));
         // toFixed: a tie goes up, as format!'s does not
         g.time = 1.125;
         log(&mut g, "x");

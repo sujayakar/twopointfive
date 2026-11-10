@@ -47,7 +47,7 @@ fn text(s: &str) -> Option<ChronicleDataValue> {
 
 /// Where a need is answered on this level, or None.
 fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
-    if !g.level.own_places() { return need_spots().get(String::from(kind.as_str())).cloned(); }
+    if !g.level.own_places() { return need_spots().of(kind.as_str()).cloned(); }
     let s = g.level.needs().and_then(|n| match kind {
         NeedKind::Coffee => n.coffee.as_ref(),
         NeedKind::Smoke => n.smoke.as_ref(),
@@ -127,7 +127,7 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
             continue;
         }
         let ks = k.as_str();
-        let [lo, hi] = *fill_min().get(String::from(ks)).unwrap();
+        let [lo, hi] = *fill_min().of(ks).unwrap();
         let l0 = level0();
         mem(g, gd).needs.push(Need {
             kind: k,
@@ -446,13 +446,13 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
     if let Some(p) = p {
         t.partner = Some(p);
         t.reply_at = g.time + g.k.needs.reply_after;
-        let own = if quiet { lines.announce_own.get(String::from(kind)) } else { None };
-        let pool: Vec<String> = own.or_else(|| lines.announce.get(String::from(kind))).or_else(|| lines.announce.get(String::from("coffee"))).unwrap().clone();
+        let own = if quiet { lines.announce_own.of(kind) } else { None };
+        let pool: Vec<String> = own.or_else(|| lines.announce.of(kind)).or_else(|| lines.announce.of("coffee")).unwrap().clone();
         t.line = pick_line(g, &pool, gd, "announce");
         crate::game::game_say(g, gd, &t.line, None, None);
     } else {
-        let own = if quiet { lines.short_own.get(String::from(kind)) } else { None };
-        let short: String = own.or_else(|| lines.short.get(String::from(kind))).cloned().unwrap_or_else(|| String::from(kind));
+        let own = if quiet { lines.short_own.of(kind) } else { None };
+        let short: String = own.or_else(|| lines.short.of(kind)).cloned().unwrap_or_else(|| String::from(kind));
         t.line = lines.radio.replacen("{who}", &g.gd[gd].callsign, 1).replacen("{short}", &short, 1);
         crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;

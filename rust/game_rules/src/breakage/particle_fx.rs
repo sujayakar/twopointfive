@@ -163,7 +163,7 @@ pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::comb
 
 /// IMPACT[surf]: the table has every word of Surf.
 fn impact_row(surf: crate::scene_materials::Surf) -> crate::particle_fx::ImpactRecipe {
-    *crate::particle_fx::impact().get(String::from(surf.as_str())).unwrap()
+    *crate::particle_fx::impact().of(surf.as_str()).unwrap()
 }
 
 /// The muzzle's unburnt powder.

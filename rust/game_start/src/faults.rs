@@ -182,7 +182,7 @@ impl<'a> Rules<'a> {
         match (o.material, &o.albedo) {
             (Some(_), Some(_)) | (None, None) => self.say(w, "says one of material and albedo"),
             (Some(m), None) => {
-                let has = |m: &str| self.f.materials.get(String::from(m)).is_some();
+                let has = |m: &str| self.f.materials.of(m).is_some();
                 if !(has(m) || or && m.split('|').any(has)) { self.say(format!("{w}.material"), format!("the file has no material '{m}'")); }
             }
             (None, Some(a)) => if !light(a) { self.say(format!("{w}.albedo"), "0 or more"); }

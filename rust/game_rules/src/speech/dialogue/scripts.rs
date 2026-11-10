@@ -52,7 +52,7 @@ pub(super) fn script_for(g: &mut crate::game::Game, ctx: &mut crate::dialogue::D
 
 /// `Number(played(key))`: 1 if this session has played it and the rotation is on.
 fn played_n(ctx: &DialogueCtx, key: &str) -> f64 {
-    let played = SCRIPT_ROTATE && ctx.recent.as_ref().is_some_and(|r| r.has(String::from(key)));
+    let played = SCRIPT_ROTATE && ctx.recent.as_ref().is_some_and(|r| r.holds(key));
     if played { 1.0 } else { 0.0 }
 }
 
@@ -110,8 +110,8 @@ fn him_raw(b: &Beat, ctx: &DialogueCtx) -> Option<(String, HimOfK)> {
     match &b.him {
         Him::Text(text) => Some((text.clone(), HimOfK::Empty)),
         Him::Arm1(by) => {
-            if let Some(text) = by.get(String::from(ctx.k.as_str())) { return Some((text.clone(), him_k(ctx.k))); }
-            by.get(String::from(ctx.t.as_str())).or_else(|| by.get(String::from("*"))).map(|text| (text.clone(), HimOfK::Empty))
+            if let Some(text) = by.of(ctx.k.as_str()) { return Some((text.clone(), him_k(ctx.k))); }
+            by.of(ctx.t.as_str()).or_else(|| by.of("*")).map(|text| (text.clone(), HimOfK::Empty))
         }
     }
 }

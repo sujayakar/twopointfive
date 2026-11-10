@@ -87,7 +87,7 @@ pub(in crate::missions) fn director_programs(g: &crate::game::Game) -> Vec<Strin
 /// Why `name` cannot start now; None = it can.
 fn director_can_start(g: &crate::game::Game, name: &str) -> Option<String> {
     let Some(manifest) = &g.director.manifest else { return Some(String::from("this level has no script")) };
-    if manifest.programs.get(String::from(name)).is_none() {
+    if manifest.programs.of(name).is_none() {
         let list = manifest.programs.keys().join(", ");
         return Some(format!("no program '{}' (programs: {})", name, if list.is_empty() { "none" } else { list.as_str() }));
     }
@@ -139,7 +139,7 @@ pub(in crate::missions) fn director_start(g: &mut crate::game::Game, name: &str,
     if let Some(why) = director_can_start(g, name) {
         return Some(why);
     }
-    let def = g.director.manifest.as_ref().unwrap().programs.get(String::from(name)).unwrap().clone();
+    let def = g.director.manifest.as_ref().unwrap().programs.of(name).unwrap().clone();
     let seed = seed_of(opts.and_then(|o| o.seed), g.director.serial);
     g.director.serial += 1.0;
     let triggers = def.triggers.clone();
@@ -305,7 +305,7 @@ fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[
 
 /// A second trigger for a running beat is a no-op; one re-started after it ended replaces its record.
 pub(super) fn director_start_beat(g: &mut crate::game::Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBeatId> {
-    let Some(script) = g.tab.director_run[r].def.beats.get(String::from(name)).map(|b| b.fn_) else {
+    let Some(script) = g.tab.director_run[r].def.beats.of(name).map(|b| b.fn_) else {
         return None;
     };
     let cur = beat_by_name(g, r, name);

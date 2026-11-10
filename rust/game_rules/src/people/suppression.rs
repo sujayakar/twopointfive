@@ -32,7 +32,7 @@ fn keen_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: CharId) -> 
         }
     }
     match t {
-        Some(t) => match g.k.suppression.keen.get(String::from(t.as_str())) {
+        Some(t) => match g.k.suppression.keen.of(t.as_str()) {
             Some(&k) => js::or(k, 1.0),
             None => 1.0,
         },

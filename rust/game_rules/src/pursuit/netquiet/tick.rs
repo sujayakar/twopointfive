@@ -14,7 +14,7 @@ static KINDS: [LineKind; 6] = [LineKind::Name, LineKind::Why, LineKind::Last, Li
 
 ///  one kind's pool, from the skeleton's table
 fn lines_of(kind: LineKind) -> Vec<String> {
-    lines().get(String::from(kind.as_str())).cloned().unwrap_or_default()
+    lines().of(kind.as_str()).cloned().unwrap_or_default()
 }
 
 /// `KINDS.indexOf(kind)`

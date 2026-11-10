@@ -66,7 +66,7 @@ struct Paint<'a> { name: &'a str, mats: &'a JsMap<String, Material> }
 impl<'a> Paint<'a> {
     fn row(&self, o: &Said) -> Option<&'a Material> {
         let m = o.material?;
-        Some(self.mats.get(String::from(m)).unwrap_or_else(|| panic!("level '{}': unknown material '{}'", self.name, m)))
+        Some(self.mats.of(m).unwrap_or_else(|| panic!("level '{}': unknown material '{}'", self.name, m)))
     }
     fn albedo(&self, o: &Said) -> V3 { self.row(o).map(|m| m.albedo).or(o.albedo).unwrap_or_else(|| panic!("level '{}': a box says no paint", self.name)) }
     fn rough(&self, o: &Said) -> Option<f64> { o.rough.or_else(|| self.row(o)?.rough) }

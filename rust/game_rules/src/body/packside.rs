@@ -18,7 +18,7 @@ pub fn back_of(art: &crate::anim_gltf::Art, rig: &crate::anim_gltf::GltfCharacte
     let cast = &art.cast[rig.cast?];
     let md = &art.mesh[rig.mesh];
     let part = md.part.as_ref()?;
-    let node = rig.node_by_name.get(String::from("DEF-spine.003")).copied()?;
+    let node = rig.node_by_name.of("DEF-spine.003").copied()?;
     let chest = rig.skin.joints.iter().position(|j| *j == node)?;
     let at = |v: usize| -> V3 { let p = &md.positions; [p[v * 3] as f64, p[v * 3 + 1] as f64, p[v * 3 + 2] as f64] };
     let mut packs: Vec<Option<PackExt>> = cast.parts.iter().map(|name| name.starts_with("kit_").then_some(PackExt { x0: m::INF, x1: -m::INF, top0: -m::INF, top1: -m::INF, z0: m::INF, z1: -m::INF })).collect();

@@ -16,9 +16,9 @@ fn issuing_on(g: &Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool
 /// `gd.weapon.def.cls === 'pistol'`, of a gun's row
 fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.weapon(w).cls == crate::weapons::WeaponClass::Pistol }
 /// `SUITS[s].tint`
-fn suit_tint(s: SuitId) -> V3 { suits().get(String::from(s.as_str())).unwrap().tint }
+fn suit_tint(s: SuitId) -> V3 { suits().of(s.as_str()).unwrap().tint }
 /// `TRIMS[t].tint`
-fn trim_tint(t: TrimId) -> V3 { trims().get(String::from(t.as_str())).unwrap().tint }
+fn trim_tint(t: TrimId) -> V3 { trims().of(t.as_str()).unwrap().tint }
 /// `g.guards.some(gd => !!gd.unit && gd.team === 'operative')`
 fn team_on_floor(g: &Game) -> bool {
     g.guards.iter().any(|&gd| g.team(gd).ours())
@@ -53,7 +53,7 @@ fn page_issued(g: &crate::game::Game) -> bool { g.m.kit.issued_page || g.m.kit.l
 
 /// The level's block names a card for you: nothing is handed over it.
 pub(super) fn kit_issue_whole(members: Option<&JsMap<String, crate::scene_scenarios::IssueCard>>) -> bool {
-    members.map_or(false, |m| m.has(String::from("0")))
+    members.map_or(false, |m| m.holds("0"))
 }
 
 /// A mission's own issue: `f` (the staging, asked again) runs under the mission's cards. False: no such block, or already issuing.
@@ -242,7 +242,7 @@ fn card_bare(g: &mut Game, pl: PlayerId, m: &MemberKit) {
 /// The level's issue says which load is up under his barrel.
 fn issue_loaded(g: &mut Game, pl: PlayerId) {
     use crate::scene_scenarios::IssueCardLoaded as Up;
-    let Some(up) = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).and_then(|d| d.members.get(String::from("0"))).and_then(|c| c.loaded) else { return };
+    let Some(up) = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).and_then(|d| d.members.of("0")).and_then(|c| c.loaded) else { return };
     let a = match up { Up::Ring => crate::weapons::RifleAttachment::Ring, Up::He40 => crate::weapons::RifleAttachment::He40 };
     let rifle = g.pl[pl].rifle;
     let Some(k) = g.fa[rifle].attachments.iter().position(|&x| x == a) else { return };

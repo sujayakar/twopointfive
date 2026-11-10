@@ -73,7 +73,7 @@ fn up(g: &Game, r: DirectorRunId, men: &[TutRoadGateMen]) -> f64 {
 
 /// `c.flag[name]` as a condition: a Json's truth in JavaScript
 fn flag_on(g: &Game, r: DirectorRunId, name: &str) -> bool {
-    match g.tab.director_run[r].flags.get(String::from(name)) {
+    match g.tab.director_run[r].flags.of(name) {
         None | Some(None) => false,
         Some(Some(crate::director::Json::Bool(x))) => *x,
         Some(Some(crate::director::Json::Num(x))) => js::truthy(*x),

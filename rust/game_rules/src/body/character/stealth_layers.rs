@@ -233,7 +233,7 @@ pub(super) fn anim_catch_fix(g: &mut crate::game::Game, c: CharId) {
 
 /// The ready pose: the trunk, then the arms. Weight `w`; `live` = still asked for.
 pub(super) fn anim_ready_layer(g: &mut crate::game::Game, c: CharId, w: f64, kind: crate::character::ReadyKind, live: bool, dt: f64, tw_y: f64, tw_p: f64) {
-    let shape = crate::character::ready().get(String::from(kind.as_str())).unwrap().clone();
+    let shape = crate::character::ready().of(kind.as_str()).unwrap().clone();
     let there = g.ch[c].anim.rd_at.map(|p| anim_to_model_p(g, c, p));
     let rc = anim_sheath_rest_inv(g, c);
     anim_layer(g, c, |s, an, k| sim::layers::ready_layer(s, an, w, kind, &shape, live, dt, tw_y, tw_p, there, rc, k));
