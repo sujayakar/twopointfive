@@ -4,7 +4,13 @@ import type { Graph } from '../gpu/graph';
 import { choice, slider, toggle } from '../page/knobs';
 import type { Views } from '../page/views';
 import { addFirstHit } from './firstHit';
-import { addPicture } from './picture';
+import { addBars } from './bars';
+import { addDisc } from './disc';
+import { addSettled } from './denoise';
+import { addLamps } from './lamps';
+import { addPicture, addTruePicture } from './picture';
+import { addRack } from './rack';
+import { SIGNALS } from './signals';
 import { addTruth } from './truth';
 
 choice('dice_kind', {
@@ -23,16 +29,25 @@ choice('tone', {
   about: 'A curve that rolls bright light off; a straight line that clips; or false color, a band a stop.',
 });
 
+const SURFACE_X = `
+/// x, as a surface
+fn surface_x(hit: HitX) -> Surface {
+  return Surface(hit.position, hit.normal, normalize(frame.eye - hit.position), hit.matte, hit.through, hit.roughness, hit.metal);
+}`;
+
 export function addStages(graph: Graph, views: Views): void {
+  graph.addModule('x', { needs: ['material'], shared: [], code: SURFACE_X });
   addFirstHit(graph);
   addTruth(graph);
-  addPicture(graph);
+  addTruePicture(graph, views);
+  addLamps(graph, views);
+  addRack(graph, views);
+  for (const { id, size } of SIGNALS) addSettled(graph, id, size);
+  addPicture(graph, views);
+  addDisc(graph, views);
+  addBars(graph);
 
-  views.add({
-    id: 'true picture', group: 'Pictures', name: 'The truth', about: 'The sum of the truth’s parts, by the mixer. It settles as you wait.',
-    reads: ['true_picture'], code: 'return show_light(true_picture_at(at_render(p)).light);',
-  });
-  graph.addAlias('main_picture', () => 'true_picture');
+  graph.addAlias('main_picture', () => (graph.buffers.has('view picture') ? 'picture' : 'true_picture'));
   views.add({
     id: 'ghost', group: 'Pictures', name: 'From the ghost', about: 'The frozen frame, seen by another camera. What the frame does not see is grey.',
     reads: ['hit_x', 'main_picture'], uses: ['ray', 'surface'],

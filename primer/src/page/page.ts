@@ -3,12 +3,13 @@
 
 import type { Lab, Layout } from '../lab';
 import { panelsIn } from '../lab';
-import type { Value } from '../gpu/layout';
+import { readBack } from '../gpu/device';
+import { unpack, type Value } from '../gpu/layout';
 import { ROOMS, roomNamed } from '../rooms';
 import { RAY_KINDS, projectLine } from './rays';
 import { MIXER } from '../stages/picture';
 import { dolly, orbit, pan } from '../world/camera';
-import { add, scale, type Vec3 } from '../world/vec';
+import { add, axesAround, dot, scale, sub, type Vec3 } from '../world/vec';
 import { CHAPTERS, type Chapter } from './chapters';
 import { control, forgetControls } from './controls';
 import { el } from './dom';
@@ -30,7 +31,8 @@ export class Page {
   private pinnedRows = el('div', { id: 'pinned' });
   private meterRows = el('div', { id: 'meter' });
   private code: HTMLDialogElement = el('dialog', { id: 'code' });
-  private tab: 'pixel' | 'mixer' | 'meter' = 'pixel';
+  private lampRows = el('div', { id: 'lamps' });
+  private tab: 'pixel' | 'lamps' | 'mixer' | 'meter' = 'pixel';
 
   constructor(private lab: Lab, root: HTMLElement) {
     this.stage.append(lab.canvas, this.overlay, this.headers, this.marker, this.wipeLine, this.status);
@@ -134,14 +136,16 @@ export class Page {
   }
 
   private drawRight(): void {
-    const tabs: ['pixel' | 'mixer' | 'meter', string][] = [['pixel', 'Pixel'], ['mixer', 'Mixer'], ['meter', 'Meter']];
+    const tabs: [typeof this.tab, string][] = [['pixel', 'Pixel'], ['lamps', 'Lamps'], ['mixer', 'Mixer'], ['meter', 'Meter']];
     const head = el('div', { class: 'segments', role: 'group' },
       ...tabs.map(([id, text]) =>
         el('button', { type: 'button', 'aria-pressed': String(this.tab === id), click: () => { this.tab = id; this.draw(); } }, text)));
     const body =
       this.tab === 'pixel' ? this.pinnedRows
+      : this.tab === 'lamps' ? this.lampRows
       : this.tab === 'meter' ? this.meterRows
       : el('div', { id: 'mixer' }, ...MIXER.map((k) => this.mixerRow(k.key)));
+    this.lab.alsoWanted = this.tab === 'lamps' ? ['bars', 'reservoir_still', 'reservoir_changing'] : [];
     this.right.replaceChildren(head, body);
   }
 
@@ -186,7 +190,7 @@ export class Page {
           class: 'panel-head',
           style: `top:${r.y / dpr}px;` + (right ? 'right:0' : `left:${r.x / dpr}px`),
           title: view?.about ?? '',
-        }, makeMenu(i));
+        }, makeMenu(i), el('span', { class: 'verdict', 'data-view': lab.shown[i]! }));
       }));
     this.wipeLine.hidden = lab.layout !== 'wipe';
     this.wipeLine.style.left = `${lab.wipe * 100}%`;
@@ -211,10 +215,19 @@ export class Page {
       this.marker.style.left = `${(r.x + x * r.width) / dpr}px`;
       this.marker.style.top = `${(r.y + y * r.height) / dpr}px`;
     }
-    if (lab.pinned) await lab.rays.read();
+    if (lab.pinned) {
+      await lab.rays.read();
+      if (lab.shown.slice(0, panelsIn[lab.layout]).includes('disc')) await this.findPinnedHit();
+    }
     this.drawOverlay();
     if (this.tab === 'pixel') await this.refreshPinned();
+    if (this.tab === 'lamps') await this.refreshLamps();
     if (this.tab === 'meter') this.refreshMeter();
+    const judged = lab.judged();
+    if (judged.length && lab.ready && !lab.frozen) {
+      await lab.judge.read(judged);
+      this.drawVerdicts();
+    }
   }
 
   /** the pinned pixel's rays, and the frame's camera as the ghost sees it */
@@ -252,9 +265,99 @@ export class Page {
           line(c, corners[(k + 1) % 4]!, '#e8b04b', 1);
         });
       }
+      if (lab.shown[i] === 'disc') {
+        this.drawDots(pen, r);
+        pen.restore();
+        return;
+      }
       if (lab.pinned) lab.rays.lines.forEach((l) => line(l.start, l.end, RAY_KINDS[l.kind]?.[1] ?? '#fff', 1.25));
       pen.restore();
     });
+  }
+
+  /** where the pinned point's rays went, on its disc */
+  private drawDots(pen: CanvasRenderingContext2D, r: { x: number; y: number; width: number; height: number }): void {
+    const { lines } = this.lab.rays;
+    const hit = this.pinnedHit;
+    if (!hit) return;
+    const [t, b] = axesAround(hit.normal);
+    const radius = 0.48 * Math.min(r.width, r.height);
+    for (const l of lines) {
+      const name = RAY_KINDS[l.kind]?.[0];
+      if (name === 'onward' || name === 'reused' || name === 'candidate') continue;
+      const toward = sub(l.end, l.start);
+      const size = Math.hypot(...toward);
+      if (Math.hypot(...sub(l.start, hit.position)) > 0.03 || size < 1e-6) continue;
+      pen.fillStyle = RAY_KINDS[l.kind]![1];
+      pen.beginPath();
+      pen.arc(
+        r.x + r.width / 2 + (dot(toward, t) / size) * radius,
+        r.y + r.height / 2 - (dot(toward, b) / size) * radius,
+        3.5, 0, 2 * Math.PI);
+      pen.fill();
+      pen.strokeStyle = '#000';
+      pen.stroke();
+    }
+  }
+
+  private drawVerdicts(): void {
+    const percent = (x: number) => (Number.isFinite(x) ? `${(100 * x).toFixed(1)} %` : '–');
+    for (const node of this.headers.querySelectorAll<HTMLElement>('.verdict')) {
+      const v = this.lab.judge.verdicts.get(node.dataset.view!);
+      node.textContent = v ? `off ${percent(v.off)}   noise ${percent(v.noise)}` : '';
+    }
+  }
+
+  private picks = new Map<number, number>();
+  private picksKey = '';
+  /** what each lamp would send to the pinned point, how much is seen, and how often it was picked */
+  private async refreshLamps(): Promise<void> {
+    const { lab } = this;
+    if (!lab.pinned || !lab.made.includes('bars')) {
+      this.lampRows.replaceChildren(el('p', { class: 'hint' }, 'Click a pixel to see what each lamp would send there.'));
+      return;
+    }
+    const key = `${lab.pinned}${lab.world.version}${JSON.stringify(lab.camera)}`;
+    if (key !== this.picksKey) this.picks.clear();
+    this.picksKey = key;
+    const spec = lab.graph.spec('bars');
+    const data = await readBack(lab.gpu, lab.graph.buffer('bars'), 0, lab.world.lampCount * spec.struct.stride);
+    for (const p of await lab.readPinned()) {
+      if (!p.name.startsWith('reservoir_')) continue;
+      const lamp = p.values.lamp as number;
+      if (lamp < lab.world.lampCount) this.picks.set(lamp, (this.picks.get(lamp) ?? 0) + 1);
+    }
+    const picked = Math.max(1, [...this.picks.values()].reduce((a, b) => a + b, 0));
+    const rows = Array.from({ length: lab.world.lampCount }, (_, i) => {
+      const v = unpack(spec.struct, data, i * spec.struct.stride);
+      const u = v.unblocked as number[];
+      return { i, sends: 0.2126 * u[0]! + 0.7152 * u[1]! + 0.0722 * u[2]!, seen: v.seen as number, color: v.color as number[], share: (this.picks.get(i) ?? 0) / picked };
+    }).filter((r) => r.sends > 0).sort((a, b) => b.sends - a.sends);
+    const total = rows.reduce((sum, r) => sum + r.sends, 0);
+    const bar = (share: number, color: string) => el('span', { class: 'bar', style: `width:${Math.min(100, 100 * share)}%;background:${color}` });
+    const most = rows[0]?.sends ?? 1;
+    this.lampRows.replaceChildren(
+      el('p', { class: 'hint' }, `${rows.length} lamps can reach this point. Pale: what it would send. Solid: what is seen of it. Below: how often the ray asked it.`),
+      ...rows.slice(0, 24).map((r) => {
+        const top = Math.max(...r.color, 1e-6);
+        const rgb = `rgb(${r.color.map((c) => Math.round(255 * Math.pow(c / top, 1 / 2.2))).join(',')})`;
+        return el('div', { class: 'lamp', title: `sends ${((100 * r.sends) / total).toFixed(1)} % of all, ${(100 * r.seen).toFixed(0)} % seen, picked ${(100 * r.share).toFixed(1)} %` },
+          el('span', { class: 'lamp-name' }, String(r.i)),
+          el('span', { class: 'bars' },
+            el('span', { class: 'track' }, bar(r.sends / most, `color-mix(in srgb, ${rgb} 30%, transparent)`), bar((r.sends / most) * r.seen, rgb)),
+            el('span', { class: 'track thin' }, bar(r.share, '#9a9c98'))));
+      }));
+  }
+
+  private pinnedHit: { position: Vec3; normal: Vec3 } | null = null;
+  private async findPinnedHit(): Promise<void> {
+    const { lab } = this;
+    if (!lab.pinned || !lab.graph.renderSize[0]) return;
+    const spec = lab.graph.spec('hit_x');
+    const [w, h] = lab.graph.renderSize;
+    const index = Math.floor(lab.pinned[1] * h) * w + Math.floor(lab.pinned[0] * w);
+    const v = unpack(spec.struct, await readBack(lab.gpu, lab.graph.buffer('hit_x'), index * spec.struct.stride, spec.struct.stride));
+    this.pinnedHit = { position: v.position as Vec3, normal: v.normal as Vec3 };
   }
 
   private reading = false;

@@ -5,8 +5,9 @@ import { Graph } from './gpu/graph';
 import { componentsOf, pack, unpack, type Struct, type Value } from './gpu/layout';
 import { choiceConstants, knobStruct, onKnob, packKnobs, valueOf } from './page/knobs';
 import { Present, type Panel } from './page/present';
+import { Judge } from './page/judge';
 import { Rays } from './page/rays';
-import { AT_SIZE, Views } from './page/views';
+import { AT_SIZE, Views, type View } from './page/views';
 import { addStages } from './stages/all';
 import { Frame } from './stages/frame';
 import { eyeOf, type Eye } from './world/camera';
@@ -21,6 +22,7 @@ import lampsCode from './wgsl/lamps.wgsl';
 import material from './wgsl/material.wgsl';
 import surface from './wgsl/surface.wgsl';
 import frameCode from './wgsl/frame.wgsl';
+import reservoir from './wgsl/reservoir.wgsl';
 import show from './wgsl/show.wgsl';
 
 export type Layout = 'one' | 'two' | 'four' | 'wipe';
@@ -53,6 +55,9 @@ export class Lab {
   readonly world: World;
   readonly views: Views;
   readonly rays: Rays;
+  readonly judge: Judge;
+  /** buffers the page asks for besides the panels' */
+  alsoWanted: string[] = [];
   layout: Layout = 'one';
   /** what each panel shows, by view id */
   shown: string[] = ['hit_x.normal', 'hit_x.matte', 'hit_x.position', 'hit_x.roughness'];
@@ -89,6 +94,7 @@ export class Lab {
     this.world = new World(gpu, this.graph);
     this.views = new Views(this.graph);
     this.rays = new Rays(gpu, this.graph);
+    this.judge = new Judge(gpu, this.graph);
     this.addModules();
     addStages(this.graph, this.views);
     this.knobs = knobStruct();
@@ -99,6 +105,7 @@ export class Lab {
     this.present = new Present(gpu);
     onKnob((k) => {
       if (k.resetsTruth) this.startTruthOver = true;
+      this.judge.forget();
     });
   }
 
@@ -118,6 +125,7 @@ export class Lab {
     g.addModule('lamps', { code: lampsCode, needs: [], shared: ['world', 'lamps'] });
     g.addModule('material', { code: material, needs: [], shared: ['tables'] });
     g.addModule('surface', { code: surface, needs: ['ray', 'material'], shared: ['materials', 'lamps', 'objects', 'pieces'] });
+    g.addModule('reservoir', { code: reservoir, needs: ['lamps'], shared: [] });
     g.addModule('show', { code: show + AT_SIZE, needs: [], shared: [] });
   }
 
@@ -191,7 +199,8 @@ export class Lab {
 
     const encoder = gpu.device.createCommandEncoder();
     if (this.startTruthOver) {
-      graph.clear(encoder, 'truth');
+      for (const name of ['truth', 'disc', 'bars']) graph.clear(encoder, name);
+      this.judge.forget();
       this.truthCount = 0;
       this.startTruthOver = false;
     }
@@ -199,7 +208,8 @@ export class Lab {
     this.writeUniforms(render, output, runs);
     const views = this.shown.slice(0, panelsIn[this.layout]);
     const wanted = views.map((id) => this.views.bufferOf(id));
-    this.ready = graph.run(encoder, wanted, runs ? undefined : (name) => name.startsWith('view '));
+    const all = [...wanted, ...this.judged().map((v) => this.judge.bufferOf(v)), ...this.alsoWanted];
+    this.ready = graph.run(encoder, all, runs ? undefined : (name) => name.startsWith('view '));
     if (runs) this.made = graph.ran;
     const ran = runs && graph.ran.includes('truth');
     const panels: Panel[] = this.panelRects().map((r, i) => ({
@@ -219,6 +229,11 @@ export class Lab {
       this.frames++;
       graph.flip();
     }
+  }
+
+  /** the views on the screen that can be compared with the truth */
+  judged(): View[] {
+    return this.shown.slice(0, panelsIn[this.layout]).map((id) => this.views.find(id)).filter((v): v is View => v?.judged !== undefined);
   }
 
   /** the eye whose picture a panel shows */

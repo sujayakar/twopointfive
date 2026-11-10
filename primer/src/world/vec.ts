@@ -33,3 +33,14 @@ export function turnVec(q: Quat, v: Vec3): Vec3 {
   const t = add(cross(u, v), scale(v, q[3]));
   return add(v, scale(cross(u, t), 2));
 }
+
+/** the same two axes as `frame_around` in math.wgsl */
+export function axesAround(n: Vec3): [Vec3, Vec3] {
+  const s = n[2] >= 0 ? 1 : -1;
+  const a = -1 / (s + n[2]);
+  const b = n[0] * n[1] * a;
+  return [
+    [1 + s * n[0] * n[0] * a, s * b, -s * n[0]],
+    [b, s + n[1] * n[1] * a, -n[1]],
+  ];
+}

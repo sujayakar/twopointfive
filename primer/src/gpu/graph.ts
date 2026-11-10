@@ -79,7 +79,9 @@ export class Graph {
   private nextId = 1;
   private parity = 0;
   private frame = 0;
+  /** which frame wrote a buffer last, not counting this one */
   private lastWritten = new Map<string, number>();
+  private writtenNow = new Set<string>();
   private edits = new Map<string, string>();
 
   constructor(readonly gpu: Gpu, private prelude: () => string) {
@@ -386,7 +388,7 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
       else pass.dispatchWorkgroups(Math.ceil(w / 8), Math.ceil(h / 8));
       pass.end();
       for (const write of Object.values(asMap(stage.writes))) {
-        this.lastWritten.set(withoutBefore(this.resolve(write)), this.frame);
+        this.writtenNow.add(withoutBefore(this.resolve(write)));
       }
       this.ran.push(stage.name);
     }
@@ -395,6 +397,8 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
 
   /** this frame becomes last frame */
   flip(): void {
+    for (const name of this.writtenNow) this.lastWritten.set(name, this.frame);
+    this.writtenNow.clear();
     this.parity = 1 - this.parity;
     this.frame++;
   }

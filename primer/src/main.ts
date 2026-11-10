@@ -1,4 +1,5 @@
 import { Lab } from './lab';
+import { readBack } from './gpu/device';
 import { setKnob } from './page/knobs';
 import { Page } from './page/page';
 
@@ -22,7 +23,7 @@ async function start(): Promise<void> {
     return;
   }
   const page = new Page(lab, app);
-  Object.assign(window, { lab, page, setKnob });
+  Object.assign(window, { lab, page, setKnob, readBack });
   const next = () => {
     try {
       if (!(window as { holdFrames?: boolean }).holdFrames) lab.frame();

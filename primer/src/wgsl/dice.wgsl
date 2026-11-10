@@ -72,4 +72,5 @@ const DICE_WIDE = 3u;
 const DICE_NARROW = 4u;
 const DICE_Y_LAMP = 5u;
 const DICE_Y_POINT = 6u;
-const DICE_REUSE = 7u;
+const DICE_SHINE_PICK = 7u;
+const DICE_SHINE_POINT = 8u;

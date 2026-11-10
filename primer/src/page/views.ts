@@ -12,6 +12,8 @@ export interface View {
   uses: string[];
   /** the body of `fn view(p: vec2u) -> vec3f`: p is an output pixel. Linear color out */
   code: string;
+  /** its answer can be compared with the truth, number by number: two buffers with a `value` */
+  judged?: { answer: string; truth: string };
 }
 
 const Shown: Struct = struct('Shown', { color: vec4f('linear, 0 to 1') });

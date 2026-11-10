@@ -33,7 +33,7 @@ const FLAGS = [
       page.draw();
       lab.ready = false;
       const start = performance.now();
-      for (let k = 0; k < 400 && !lab.ready; k++) { lab.frame(); await new Promise((r) => setTimeout(r, 50)); }
+      for (let k = 0; k < 2000 && !lab.ready && !lab.graph.errors.size; k++) { lab.frame(); await new Promise((r) => setTimeout(r, 10)); }
       for (let k = 0; k < (s.frames ?? 1); k++) { lab.frame(); if (k % 8 === 7) await lab.gpu.device.queue.onSubmittedWorkDone(); }
       await lab.gpu.device.queue.onSubmittedWorkDone();
       if (s.run) window.said = await eval(s.run);

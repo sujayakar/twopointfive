@@ -49,14 +49,6 @@ fn deliver(parts: ptr<function, Parts>, w: Walk, bounces: u32, light: vec3f, lam
   else { (*parts).still += light; }
 }
 
-fn sun_met(toward: vec3f) -> u32 {
-  for (var i = 0u; i < world.lamp_count; i++) {
-    let l = lamps[i];
-    if (l.kind == LAMP_SUN && dot(toward, l.normal) > 1.0 - 0.5 * l.radius * l.radius) { return i; }
-  }
-  return NOTHING;
-}
-
 /// A lamp that a ray ran into counts for less, the likelier it was to be aimed at from there.
 fn weight_of_met(w: Walk, lamp: u32, distance: f32) -> f32 {
   if (w.total <= 0.0) { return 1.0; }

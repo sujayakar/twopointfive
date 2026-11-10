@@ -101,7 +101,7 @@ fn panel_share(lamp: Lamp, origin: vec3f, normal: vec3f) -> f32 {
 }
 
 /// What lands on a matte surface from a whole lamp with nothing in the way, over π. Exact.
-fn unblocked(lamp: Lamp, origin: vec3f, normal: vec3f) -> vec3f {
+fn light_unblocked(lamp: Lamp, origin: vec3f, normal: vec3f) -> vec3f {
   if (lamp.kind == LAMP_SUN) {
     return lamp.radiance * (lamp.radius * lamp.radius * max(dot(normal, lamp.normal), 0.0));
   }
@@ -159,4 +159,13 @@ fn pick_by_score(origin: vec3f, normal: vec3f, die: f32) -> Pick {
   }
   if (kept == NOTHING) { return Pick(NOTHING, 0.0, 0.0); }
   return Pick(kept, kept_score / total, total);
+}
+
+/// Is the sun's disc that way?
+fn sun_met(toward: vec3f) -> u32 {
+  for (var i = 0u; i < world.lamp_count; i++) {
+    let l = lamps[i];
+    if (l.kind == LAMP_SUN && dot(toward, l.normal) > 1.0 - 0.5 * l.radius * l.radius) { return i; }
+  }
+  return NOTHING;
 }
