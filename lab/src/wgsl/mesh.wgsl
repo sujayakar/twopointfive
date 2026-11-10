@@ -8,7 +8,9 @@
 // A hit's code is MESH_HIT | child << bits | cluster << 7 | triangle.
 const MESH = 64u; const MESH_HIT = 0x80000000u;
 fn mrow(r: u32) -> vec4f { return extra[MESH_ROW + r]; }
+/* (words are read as words: a GPU may flush a small one to nothing where it is loaded as a float) */
 fn mrowU(r: u32) -> vec4u { return bitcast<vec4u>(extra[MESH_ROW + r]); }
+fn asF(v: vec4u) -> vec4f { return bitcast<vec4f>(v); }
 /** any hit will do (a shadow's ray) */
 var<private> meshAny = false;
 /** how far a ray's levels may stand off the finest: so many metres (meshError), or so much of its footprint (meshFoot); or all at a level counted from the finest (meshLevel: 1 = the finest, 0 = by the two others) */
@@ -36,14 +38,14 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
   var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var recs = 0u; var tris = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var backTo = meshBack;
   loop {
     if ((at & 0x80000000u) == 0u) {                                  // a node: the nearer child next, the farther later
-      let a0 = mrow(at); let a1 = mrow(at + 1u); let b0 = mrow(at + 2u); let b1 = mrow(at + 3u); let sa = boxSpan(a0.xyz, a1.xyz, o, inv); let sb = boxSpan(b0.xyz, b1.xyz, o, inv); let ta = max(sa.x, tmin); let tb = max(sb.x, tmin); let ha = ta <= min(sa.y, best); let hb = tb <= min(sb.y, best); let ra = bitcast<u32>(a0.w); let rb = bitcast<u32>(b0.w);
+      let a0 = mrowU(at); let a1 = mrow(at + 1u); let b0 = mrowU(at + 2u); let b1 = mrow(at + 3u); let sa = boxSpan(asF(a0).xyz, a1.xyz, o, inv); let sb = boxSpan(asF(b0).xyz, b1.xyz, o, inv); let ta = max(sa.x, tmin); let tb = max(sb.x, tmin); let ha = ta <= min(sa.y, best); let hb = tb <= min(sb.y, best); let ra = a0.w; let rb = b0.w;
       if (ha && hb) { let near = ta <= tb; if (sp < 46) { stack[sp] = select(ra, rb, near); stackT[sp] = select(ta, tb, near); sp += 1; } at = select(rb, ra, near); atT = select(tb, ta, near); continue; }
       if (ha) { at = ra; atT = ta; continue; } if (hb) { at = rb; atT = tb; continue; }
     } else if (child == 0xffffffffu) {                               // a child (or a few): the last of them now, into its own frame
       let first = (at & 0x7fffffffu) >> 4u; let count = at & 15u; if (count > 1u && sp < 46) { stack[sp] = 0x80000000u | (first << 4u) | (count - 1u); stackT[sp] = atT; sp += 1; }
       child = first + count - 1u; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
-      let a = mrow(c3.x); let b = mrow(c3.x + 1u); mn = a.xyz; st = b.xyz; recs = bitcast<u32>(b.w); tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, bitcast<u32>(a.w), meshWide(atT) / k); let lv = mrow(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (lv.x * k + bitcast<f32>(c3.w) * sc)); }
-      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1; at = bitcast<u32>(lv.y); continue;
+      let a = mrowU(c3.x); let b = mrowU(c3.x + 1u); mn = asF(a).xyz; st = asF(b).xyz; recs = b.w; tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, a.w, meshWide(atT) / k); let lv = mrowU(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (bitcast<f32>(lv.x) * k + bitcast<f32>(c3.w) * sc)); }
+      stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1; at = lv.y; continue;
     } else {
       let first = (at & 0x7fffffffu) >> 4u; let vb = mrowU(recs + (first >> 7u)).x;
       for (var t = first; t < first + (at & 15u); t++) {
@@ -66,8 +68,8 @@ fn vnoise3(p: vec3f) -> f32 { let i = floor(p); let f = p - i; let w = f * f * (
 fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let x = ro + rd * h.t; let k = h.piece; let p = &pieces[k]; let m = mats[(*p).mat & 255u]; let head = mrowU((*p).planes); let code = h.code & 0x7fffffffu; let child = code >> head.y; let t = code & ((1u << head.y) - 1u);
   let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); let ol = toLocal(k, x) / (*p).quad.x; let l = vec3f(dot(c0.xyz, ol) + c0.w, dot(c1.xyz, ol) + c1.w, dot(c2.xyz, ol) + c2.w);
-  let a4 = mrow(c3.x); let b4 = mrow(c3.x + 1u); let rec = mrowU(bitcast<u32>(b4.w) + (t >> 7u)); let vb = rec.x; let ix = mrowU(mrowU(c3.x + 2u).x + (t >> 2u))[t & 3u]; let i0 = vb + (ix & 255u); let i1 = vb + ((ix >> 8u) & 255u); let i2 = vb + ((ix >> 16u) & 255u);
-  let A = meshVertex(i0, a4.xyz, b4.xyz); let e1 = meshVertex(i1, a4.xyz, b4.xyz) - A; let e2 = meshVertex(i2, a4.xyz, b4.xyz) - A; let s0 = l - A; let gn = cross(e1, e2); let g2 = max(dot(gn, gn), 1e-30); var u = clamp(dot(cross(s0, e2), gn) / g2, 0.0, 1.0); let v = clamp(dot(cross(e1, s0), gn) / g2, 0.0, 1.0 - u); let w = 1.0 - u - v;
+  let a4 = mrow(c3.x); let b4 = mrowU(c3.x + 1u); let grid = asF(b4).xyz; let rec = mrowU(b4.w + (t >> 7u)); let vb = rec.x; let ix = mrowU(mrowU(c3.x + 2u).x + (t >> 2u))[t & 3u]; let i0 = vb + (ix & 255u); let i1 = vb + ((ix >> 8u) & 255u); let i2 = vb + ((ix >> 16u) & 255u);
+  let A = meshVertex(i0, a4.xyz, grid); let e1 = meshVertex(i1, a4.xyz, grid) - A; let e2 = meshVertex(i2, a4.xyz, grid) - A; let s0 = l - A; let gn = cross(e1, e2); let g2 = max(dot(gn, gn), 1e-30); var u = clamp(dot(cross(s0, e2), gn) / g2, 0.0, 1.0); let v = clamp(dot(cross(e1, s0), gn) / g2, 0.0, 1.0 - u); let w = 1.0 - u - v;
   let v0 = mrowU(i0); let v1 = mrowU(i1); let v2 = mrowU(i2); let ln = normalize(octUnpack(v0.z) * w + octUnpack(v1.z) * u + octUnpack(v2.z) * v); let col = unpack4x8unorm(v0.w) * w + unpack4x8unorm(v1.w) * u + unpack4x8unorm(v2.w) * v; let spread = (f32(v0.y >> 16u) * w + f32(v1.y >> 16u) * u + f32(v2.y >> 16u) * v) / 65535.0;
   let cs = bitcast<f32>(c3.z); var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags & ~15u; s.kind = m.kind; s.through = vec3f(0.0); s.glow = vec3f(0.0); s.metal = m.metal; s.f0 = m.f0;
   s.ng = normalize(toWorld(k, c0.xyz * gn.x + c1.xyz * gn.y + c2.xyz * gn.z)); s.n = normalize(toWorld(k, c0.xyz * ln.x + c1.xyz * ln.y + c2.xyz * ln.z)); if (dot(s.ng, rd) > 0.0) { s.ng = -s.ng; s.n = -s.n; }

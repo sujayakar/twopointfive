@@ -1,10 +1,10 @@
 // WHAT A LEVEL LOST OF ITS SHAPE, AS LIGHT. The same looks at the finest mesh, lit and hidden as it is, and at what is drawn in its place for pixels so wide, lit by rays as wide as the picture's: fifteen suns
 // (five heights, three ways round), one ray to all round, and what that ray lands on sends of each sun. Sums go out; what one is of the other is the table (mesh/lost.ts).
 // Twice: the second time what a wide ray lands on sends what the first found, as it will.
-struct LostK { tau: f32, rays: f32, kinds: u32, round: u32, pad: vec4u, at: array<vec4f, 16> };
+struct LostK { tau: f32, rays: f32, kinds: u32, round: u32, pad: vec4u, at: array<vec4u, 16> };
 const NEAR = 0.7;                                                   // farther than this things are somebody else's shade
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) g: vec3u, @builtin(local_invocation_index) li: u32) {
-  let c = g.x; let up = c % LOST_UP; let pi = (c / LOST_UP) % LOST_PX; let kind = c / (LOST_UP * LOST_PX); let px = 0.00025 * exp2(f32(pi)); let lo = lostK.at[kind * 2u]; let hi = lostK.at[kind * 2u + 1u]; let level = bitcast<u32>(lo.w); let cls = bitcast<u32>(hi.w);
+  let c = g.x; let up = c % LOST_UP; let pi = (c / LOST_UP) % LOST_PX; let kind = c / (LOST_UP * LOST_PX); let px = 0.00025 * exp2(f32(pi)); let lu = lostK.at[kind * 2u]; let hu = lostK.at[kind * 2u + 1u]; let lo = asF(lu); let hi = asF(hu); let level = lu.w; let cls = hu.w;
   meshLostOn = lostK.pad.x > 0u; leafMode = 1u; var F: array<f32, 68>; for (var i = 0u; i < 68u; i++) { F[i] = 0.0; }
   for (var s = 0u; s < 4u; s++) {
     rngState = pcg(li + 64u * (s + 4u * (lostK.round + g.y + 64u * c))); let r3 = vec3f(rnd(), rnd(), rnd()); let turn = rnd() * 6.2832; let sy = array<f32, 3>(0.342, 0.707, 0.966)[up]; let V = vec3f(cos(turn) * sqrt(1.0 - sy * sy), sy, sin(turn) * sqrt(1.0 - sy * sy)); let ro = mix(lo.xyz, hi.xyz, r3) + V * 4.0; let seed = rngState;
