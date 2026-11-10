@@ -1,5 +1,5 @@
 // A SWISS CHEESE PLANT IN A POT: a thick stem tied to a stake, long stalks from it, and on each a blade as long as a forearm, cut from its edge almost to its rib, with holes along the rib; two young blades are whole and paler,
-// one is still rolled. A blade is fingers: each a long oval from the rib with a forked blunt end; between two at the rib a filler leaves a hole, or none. Coarser: a finger is one oval; then a blade is nine; then four.
+// one is still rolled. A blade is fingers: each a long oval from the rib with a forked blunt end; between two at the rib a filler leaves a hole, or none. Coarser: a finger is two ovals; then the holes go; then a finger is one oval. (A blade's cuts are deep enough to show at every level.)
 import { type V3, ID, add, sub, mul, norm, cross, dot, rng, mix } from '../math';
 import type { Cluster, Leaf, World } from '../scene/world';
 import { M } from '../scene/materials';
@@ -13,7 +13,7 @@ const BLADES: Blade[] = (() => {
   const r = rng(77), out: Blade[] = [], N = 11; for (let i = 0; i < N; i++) {
     const k = i / (N - 1), a = 0.55 + i * 2.39996 + (r() - 0.5) * 0.4, o: V3 = [Math.cos(a), 0, Math.sin(a)], from = stemAt(0.08 + 0.92 * k), young = i >= N - 2, reach = (young ? 0.14 : 0.36 - 0.14 * k) * (0.92 + 0.16 * r()), up = (young ? 0.32 : 0.15 + 0.24 * k) * (0.9 + 0.2 * r()), at = add(from, [o[0] * reach, up, o[2] * reach]);
     // the face looks up and out, the tip hangs out and down: older leaves more
-    const tilt = young ? 0.6 : 0.26 + 0.24 * (1 - k) + 0.16 * (r() - 0.5), side: V3 = [-o[2], 0, o[0]], yaw = (r() - 0.5) * 0.7, w: V3 = norm(add(mul(o, Math.cos(yaw)), mul(side, Math.sin(yaw)))), tip = norm(add(mul(w, Math.cos(tilt)), [0, -Math.sin(tilt), 0])), f0 = norm(add(add(mul(w, Math.sin(tilt)), [0, Math.cos(tilt), 0]), mul(side, (r() - 0.5) * 0.55))), face = norm(sub(f0, mul(tip, dot(f0, tip))));
+    const tilt = young ? 0.6 : 0.38 + 0.28 * (1 - k) + 0.16 * (r() - 0.5), side: V3 = [-o[2], 0, o[0]], yaw = (r() - 0.5) * 0.7, w: V3 = norm(add(mul(o, Math.cos(yaw)), mul(side, Math.sin(yaw)))), tip = norm(add(mul(w, Math.cos(tilt)), [0, -Math.sin(tilt), 0])), f0 = norm(add(add(mul(w, Math.sin(tilt)), [0, Math.cos(tilt), 0]), mul(side, (r() - 0.5) * 0.55))), face = norm(sub(f0, mul(tip, dot(f0, tip))));
     out.push({ from, at, tip, face, long: young ? (i === N - 1 ? 0.20 : 0.24) : (0.355 + 0.06 * Math.sin(k * 3.6)) * (0.94 + 0.12 * r()), age: young ? 0 : 1, droop: young ? 0.10 : 0.22 + 0.14 * r(), seed: i });
   } return out;
 })();
@@ -32,21 +32,21 @@ function blade(b: Blade, level: number): Leaf[] {
   for (const s of [-1, 1]) FINGERS.forEach(([y0, ex, ey], i) => {
     const wob = 1 + 0.06 * jit(), x1 = ex * wob, y1 = ey + 0.02 * jit(), P = (k: number, across = 0): [number, number] => { const dx = x1, dy = y1 - y0, l = Math.hypot(dx, dy); /* it bends to the tip as it goes */ return [s * (dx * k + across * -dy / l - 0.02 * k * k), y0 + dy * k + across * dx / l + 0.05 * k * k * (i ? 1 : 0.3)]; }, tone = tone0 + 0.10 * jit(), h = (i % 2) * 0.003;
     if (level === 0) {
-      const fork = 0.019 + 0.004 * jit(), cut = 0.04 * jit(); oval(...P(0.09), ...P(0.59), h, tone, 1.02); oval(...P(0.28 + cut), ...P(0.82), h + 0.003, tone + 0.02 * jit(), 1.03); oval(...P(0.50, -0.010), ...P(0.99, -fork), h + 0.005, tone + 0.02 * jit(), 1.0); oval(...P(0.52, 0.010), ...P(0.99, fork), h + 0.006, tone + 0.02 * jit(), 1.0);
-    } else if (level === 1) { oval(...P(0.08), ...P(0.64), h, tone, 1.02); oval(...P(0.36), ...P(1.0), h + 0.004, tone, 1.02); }
-    else if (level === 2) { oval(...P(0.02), ...P(0.66), h, tone, 1.065); if (i > 0 && i < 7) oval(...P(0.38), ...P(1.0), h + 0.004, tone, 1.065); }
-    else oval(...P(0.02), ...P(1.0), h, tone, 0.893);
+      const fork = 0.019 + 0.004 * jit(), cut = 0.04 * jit(); oval(...P(0.125), ...P(0.60), h, tone, 1.02); oval(...P(0.28 + cut), ...P(0.82), h + 0.003, tone + 0.02 * jit(), 1.03); oval(...P(0.50, -0.010), ...P(0.99, -fork), h + 0.005, tone + 0.02 * jit(), 1.0); oval(...P(0.52, 0.010), ...P(0.99, fork), h + 0.006, tone + 0.02 * jit(), 1.0);
+    } else if (level === 1) { oval(...P(0.11), ...P(0.65), h, tone, 1.02); oval(...P(0.36), ...P(1.0), h + 0.004, tone, 1.02); }
+    else if (level === 2) { oval(...P(0.02), ...P(0.66), h, tone, 1.048); if (i > 0 && i < 7) oval(...P(0.38), ...P(1.0), h + 0.004, tone, 1.048); }
+    else oval(...P(0.02), ...P(1.0), h, tone, 0.875);
     // toward the next finger: past a hole by the rib, or from the rib
-    if (i < FINGERS.length - 1) { const [ny, nx, nyy] = FINGERS[i + 1]!, g = r(), hole = g < 0.7 && i > 0, m0 = (y0 + ny) / 2, f0 = hole ? 0.31 + 0.04 * jit() : 0.0, f = hole ? f0 + 0.20 : 0.46, X = s * (x1 + nx) / 2, Y = (y1 + nyy) / 2 - m0; if (level < 2) oval(X * f0, m0 + Y * f0, X * f, m0 + Y * f, -0.002, tone + 0.03 * jit(), 1.1); }
+    if (i < FINGERS.length - 1) { const [ny, nx, nyy] = FINGERS[i + 1]!, g = r(), hole = g < 0.7 && i > 0, m0 = (y0 + ny) / 2, f0 = hole ? 0.335 + 0.03 * jit() : 0.0, f = hole ? f0 + 0.20 : 0.46, X = s * (x1 + nx) / 2, Y = (y1 + nyy) / 2 - m0; if (level < 2) oval(X * f0, m0 + Y * f0, X * f, m0 + Y * f, -0.002, tone + 0.03 * jit(), 1.1); }
   });
   // along the rib, and the tip
-  const n = [6, 4, 2, 1][level]!, long = [0.23, 0.31, 0.46, 0.8][level]!; for (let i = 0; i < n; i++) { const a = -0.09 + (0.75 - (level > 1 ? long - 0.23 : 0)) * i / Math.max(1, n - 0.6); oval(0, a, 0, a + long, 0.008, tone0 + 0.03 * jit(), [0.94, 0.9, 0.9, 0.7][level]!); } oval(0, 0.58, 0, 1.0, 0.009, tone0 + 0.02, 1.0); if (!level) for (const s of [-1, 1]) oval(s * 0.01, 0.66, s * 0.045, 0.97, 0.007, tone0 + 0.02, 1.0);
+  const n = [6, 4, 2, 1][level]!, long = [0.23, 0.31, 0.46, 0.8][level]!; for (let i = 0; i < n; i++) { const a = -0.09 + (0.75 - (level > 1 ? long - 0.23 : 0)) * i / Math.max(1, n - 0.6); oval(0, a, 0, a + long, 0.008, tone0 + 0.03 * jit(), [0.88, 0.88, 0.9, 0.7][level]!); } oval(0, 0.58, 0, 1.0, 0.009, tone0 + 0.02, 1.0); if (!level) for (const s of [-1, 1]) oval(s * 0.01, 0.66, s * 0.045, 0.97, 0.007, tone0 + 0.02, 1.0);
   return leaves;
 }
 /** a blade nods on its knee: the spray's foot is there, its middle straight above (so that what it turns about is where it hangs) */
 const wide = (b: Blade) => b.long * 1.42, MIDDLE = 0.95;
 const cluster = (b: Blade, level: number): Cluster => { const side = cross(b.tip, b.face), turn = (v: V3): V3 => add(add(mul(side, v[0]), mul(b.tip, v[1])), mul(b.face, v[2])), k = wide(b); return { kind: 0, leaves: blade(b, level).map(l => ({ ...l, at: sub(mul(turn(l.at), b.long / k), [0, MIDDLE, 0]), n: turn(l.n), t: turn(l.t), size: l.size * b.long / k })) }; };
-const kept = new WeakMap<World, Map<number, number[]>>(), grown = new Map<number, Cluster[]>(), BRIGHT = [1, 1, 1, 1];
+const kept = new WeakMap<World, Map<number, number[]>>(), grown = new Map<number, Cluster[]>(), /* (what a coarser level no longer lets through was pot and floor: its green is greyer by that) */ BRIGHT: V3[] = [[1, 1, 1], [1, 1, 1], [1.035, 1.015, 1.07], [1.07, 1.02, 1.17]];
 const clusters = (w: World, level: number): number[] => { let m = kept.get(w); if (!m) kept.set(w, m = new Map()); let l = m.get(level); if (!l) { let g = grown.get(level); if (!g) grown.set(level, g = BLADES.map(b => cluster(b, level))); m.set(level, l = g.map(c => { w.clusters.push(c); return w.clusters.length - 1; })); } return l; };
 function wood(p: Put, level: number) {
   const mat = M['lamp shade']!, round = (pts: V3[], r0: number, r1: number, tint: V3, balls: boolean) => { for (let i = 0; i + 1 < pts.length; i++) { const a = r0 + (r1 - r0) * i / (pts.length - 1), b = r0 + (r1 - r0) * (i + 1) / (pts.length - 1); p.bar(pts[i]!, pts[i + 1]!, a, b, mat, tint); if (balls && i) p.ball(pts[i]!, [a, a, a], mat, tint); } };
@@ -63,15 +63,15 @@ function wood(p: Put, level: number) {
 }
 function put(p: Put, level: number) {
   const ix = clusters(p.w, level), dice = rng(p.seed * 13 + 5);
-  p.from({ pieces: [], instances: BLADES.map((b, k) => { const v = (0.95 + 0.10 * dice()) * BRIGHT[level]!, up = wide(b) * MIDDLE, at = add(b.at, [0, up, 0]); return { cluster: ix[k]!, at, rot: ID, scale: wide(b), base: add(b.at, [0, -1.9 * up, 0]), sway: 0.035 + 0.015 * dice(), phase: dice() * 6.28, tint: mul(b.age ? mix(GREEN, LATER, k / BLADES.length) : YOUNG, v) }; }) });
+  p.from({ pieces: [], instances: BLADES.map((b, k) => { const q = 0.95 + 0.10 * dice(), g = BRIGHT[level]!, c = b.age ? mix(GREEN, LATER, k / BLADES.length) : YOUNG, up = wide(b) * MIDDLE, at = add(b.at, [0, up, 0]); return { cluster: ix[k]!, at, rot: ID, scale: wide(b), base: add(b.at, [0, -1.9 * up, 0]), sway: 0.035 + 0.015 * dice(), phase: dice() * 6.28, tint: [c[0] * q * g[0], c[1] * q * g[1], c[2] * q * g[2]] as V3 }; }) });
   wood(p, level);
 }
 export const monstera: ObjectKind = { name: 'monstera', title: 'Swiss cheese plant in a pot', make: (): Made => ({
   name: 'monstera', title: 'Swiss cheese plant in a pot', size: [1.16, 1.01, 1.24], on: 'floor', close: { at: [0.02, 0.72, 0.05], far: 3.4 }, read: 0, moves: { kind: 'sways' }, crowd: 64,
   levels: [
     { shape: 'leaves', error: 0, less: '', put(p) { put(p, 0); } },
-    { shape: 'leaves', error: 0.012, less: 'holes; a finger is two ovals, its end whole; the stem\'s joints', put(p) { put(p, 1); } },
-    { shape: 'leaves', error: 0.030, less: 'cuts: a blade is ten ovals; roots, the rolled one', put(p) { put(p, 2); } },
-    { shape: 'leaves', error: 0.060, less: 'a blade is five ovals; stalks are straight', put(p) { put(p, 3); } },
+    { shape: 'leaves', error: 0.012, less: 'a finger is two ovals, its end whole; the stem\'s joints', put(p) { put(p, 1); } },
+    { shape: 'leaves', error: 0.030, less: 'holes, roots, the rolled one; a blade\'s rib', put(p) { put(p, 2); } },
+    { shape: 'leaves', error: 0.060, less: 'a finger is one oval; stalks are straight', put(p) { put(p, 3); } },
   ],
 }) };

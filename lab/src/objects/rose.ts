@@ -1,10 +1,10 @@
 // A SHRUB ROSE IN FLOWER: canes that rise from one crown and arch out, shoots off them with leaves of five leaflets, and at the ends of the upper shoots double flowers with their buds. Petals lie along the rim of a cup, so that
-// its edge is round. Coarser: a leaf is three leaflets and a flower ten petals; then a leaf is one and a flower four; then a shoot is four leaves and a flower two.
+// its edge is round. Coarser: a leaf is three leaflets and a flower twelve petals; then a leaf is one and a flower four; then a shoot is five leaves and a flower three.
 import { type V3, type Rot, ID, add, sub, mul, norm, cross, dot, rng, mix } from '../math';
 import type { Cluster, Leaf, World } from '../scene/world';
 import { M } from '../scene/materials';
 import type { Made, ObjectKind, Put } from './object';
-const OLD: V3 = [0.182, 0.285, 0.112], NEW: V3 = [0.262, 0.352, 0.118], BRONZE: V3 = [0.335, 0.262, 0.135], PINK: V3 = [0.640, 0.345, 0.420], BUD: V3 = [0.600, 0.240, 0.320], BARK: V3 = [0.40, 0.35, 0.25], CANE: V3 = [0.37, 0.42, 0.22];
+const OLD: V3 = [0.192, 0.302, 0.116], NEW: V3 = [0.275, 0.372, 0.122], BRONZE: V3 = [0.335, 0.262, 0.135], PINK: V3 = [0.640, 0.345, 0.420], BUD: V3 = [0.600, 0.240, 0.320], BARK: V3 = [0.40, 0.35, 0.25], CANE: V3 = [0.37, 0.42, 0.22];
 const face = (n: V3, t: V3): V3 => norm(sub(n, mul(t, dot(n, t))));
 /** a shoot grows along +y from −0.95: its stem, and leaves by turns round it, each of five leaflets on a stalk that arches out; 0.16 m a unit */
 function shoot(seed: number, level: number, flowers: boolean): Cluster {
@@ -17,10 +17,10 @@ function shoot(seed: number, level: number, flowers: boolean): Cluster {
     const at = (q: number): V3 => add(from, add(mul(o, long * q * (1 - 0.12 * q)), [0, long * (rise * q * 0.72 - hang * q * q * 0.75), 0])), way = (q: number): V3 => norm(sub(at(q + 0.05), at(q - 0.05))), up = (q: number): V3 => { const d = way(q); return face(add([0, 1, 0], mul(side, tw)), d); };
     const leaflet = (q: number, s: number, size: number, dq = 0) => { const d = way(q), u = up(q), w = cross(u, d), t = s ? norm(add(add(mul(w, s * 0.92), mul(d, 0.50 + dq)), mul(u, -0.10 - 0.16 * r()))) : norm(add(d, mul(u, -0.12))), n = add(u, add(mul(w, s * (0.10 - 0.35 * r())), mul(d, 0.3 * (r() - 0.5)))); put(add(at(q), mul(t, size * 1.02)), t, n, size, Math.min(1, tone0 + 0.18 * (r() - 0.5))); };
     const z = young ? 0.72 : 1;
-    if (level === 0) { stick(at(0), at(0.48)); stick(at(0.45), at(0.95)); leaflet(0.46, 1, 0.138 * z); leaflet(0.46, -1, 0.138 * z); leaflet(0.74, 1, 0.156 * z); leaflet(0.74, -1, 0.156 * z); leaflet(0.96, 0, 0.172 * z); }
+    if (level === 0) { stick(at(0.02), at(0.93)); leaflet(0.46, 1, 0.138 * z); leaflet(0.46, -1, 0.138 * z); leaflet(0.74, 1, 0.156 * z); leaflet(0.74, -1, 0.156 * z); leaflet(0.96, 0, 0.172 * z); }
     else if (level === 1) { leaflet(0.60, 1, 0.2025 * z, 0.1); leaflet(0.60, -1, 0.2025 * z, 0.1); leaflet(0.93, 0, 0.184 * z); }
     else if (level === 2) { const d = way(0.75), t = d, n = up(0.75); r(); put(at(0.84), t, n, 0.346 * z, tone0); }
-    else if (i % 2 === 0) { const d = way(0.7), n = up(0.7); put(at(0.72), d, n, 0.492 * z, tone0 + 0.02); }
+    else if (i % 2 === 0) { const d = way(0.7), n = up(0.7); put(at(0.72), d, n, 0.487 * z, tone0 + 0.02); }
   }
   // what holds the flower: sepals, under it
   if (flowers && level === 0) { const c = stem(1); for (let i = 0; i < 5; i++) { const a = i * 1.2566, o: V3 = [Math.cos(a), 0, Math.sin(a)]; put(add(c, add(mul(o, 0.07), [0, -0.015, 0])), norm(add(o, [0, 0.25 - 0.5 * (i % 2), 0])), [0, 1, 0.01], 0.075, 0.4); } }
@@ -30,10 +30,11 @@ function shoot(seed: number, level: number, flowers: boolean): Cluster {
 function flower(seed: number, level: number, open: number): Cluster {
   const r = rng(1700 + seed), leaves: Leaf[] = [], ring = (n: number, at: number, y: number, tilt: number, size: number, tone: number, a0: number) => { for (let i = 0; i < n; i++) { const a = a0 + i * 6.2832 / n + (r() - 0.5) * 0.30, q = tilt + (r() - 0.5) * 0.22, o: V3 = [Math.cos(a), 0, Math.sin(a)], t: V3 = norm([-o[2], 0.12 * (r() - 0.5), o[0]]), w: V3 = add(mul(o, Math.cos(q)), [0, Math.sin(q), 0]), n0 = cross(t, w), n1 = n0[1] < 0 ? mul(n0, -1) : n0; leaves.push({ at: add(mul(o, at * (0.95 + 0.1 * r())), [0, y + 0.04 * (r() - 0.5), 0]), t, n: face(n1, t), size: size * (0.93 + 0.14 * r()), tone: Math.max(0, Math.min(1, tone + 0.16 * (r() - 0.5))) }); } };
   const c = 1 - open; // a cup is narrower and more upright
-  if (level === 0) { ring(5, 0.66 - 0.16 * c, -0.10 + 0.14 * c, 0.02 + 0.75 * c, 0.56, 0.80, 0); ring(5, 0.36 - 0.06 * c, -0.20, 0.45 + 0.4 * c, 0.46, 0.60, 0); ring(5, 0.52 - 0.14 * c, 0.02 + 0.14 * c, 0.38 + 0.7 * c, 0.50, 0.72, 0.63); ring(4, 0.28, -0.08, 0.75, 0.36, 0.50, 0.3); ring(5, 0.38 - 0.10 * c, 0.12 + 0.12 * c, 0.75 + 0.5 * c, 0.40, 0.62, 0.2); ring(4, 0.25, 0.20 + 0.1 * c, 1.05 + 0.3 * c, 0.30, 0.50, 0.9); ring(3, 0.12, 0.23 + 0.1 * c, 1.25, 0.20, 0.40, 0.4); ring(2, 0.04, 0.20, 1.3, 0.16, 0.30, 0); }
-  else if (level === 1) { ring(5, 0.52 - 0.14 * c, -0.07 + 0.12 * c, 0.16 + 0.75 * c, 0.66, 0.74, 0); ring(3, 0.30 - 0.06 * c, 0.10 + 0.1 * c, 0.75 + 0.4 * c, 0.56, 0.58, 0.5); ring(2, 0.10, 0.18, 1.1, 0.34, 0.45, 0); }
-  else if (level === 2) { for (const s of [1, -1]) leaves.push({ at: [0, 0.02, s * 0.30], t: [1, 0, 0], n: face([0, 1, s * -0.30], [1, 0, 0]), size: 0.92 - 0.1 * c, tone: 0.60 }); leaves.push({ at: [0, 0.08, 0], t: [0, 0, 1], n: [0.95, 0.31, 0], size: 0.55, tone: 0.5 }); }
-  else { leaves.push({ at: [0, 0.04, 0.26], t: [1, 0, 0], n: face([0, 1, -0.45], [1, 0, 0]), size: 1.0, tone: 0.58 }, { at: [0, 0.04, -0.26], t: [1, 0, 0], n: face([0, 1, 0.45], [1, 0, 0]), size: 1.0, tone: 0.58 }); }
+  if (level === 0) { ring(5, 0.66 - 0.16 * c, -0.10 + 0.14 * c, 0.02 + 0.75 * c, 0.56, 0.80, 0); ring(5, 0.36 - 0.06 * c, -0.20, 0.45 + 0.4 * c, 0.46, 0.60, 0); ring(5, 0.52 - 0.14 * c, 0.02 + 0.14 * c, 0.38 + 0.7 * c, 0.50, 0.72, 0.63); ring(5, 0.38 - 0.10 * c, 0.12 + 0.12 * c, 0.75 + 0.5 * c, 0.40, 0.62, 0.2); ring(4, 0.25, 0.20 + 0.1 * c, 1.05 + 0.3 * c, 0.30, 0.50, 0.9); ring(3, 0.12, 0.23 + 0.1 * c, 1.25, 0.20, 0.40, 0.4); ring(2, 0.04, 0.20, 1.3, 0.16, 0.30, 0); }
+  // (where petals are fewer, the light that goes to and fro between many is lost: they turn their paler back to the light, and lie in two layers)
+  else if (level === 1) { ring(5, 0.54 - 0.14 * c, -0.07 + 0.12 * c, 0.16 + 0.75 * c, 0.66, 0.74, 0); ring(3, 0.30 - 0.06 * c, 0.10 + 0.1 * c, 0.75 + 0.4 * c, 0.56, 0.62, 0.5); ring(2, 0.10, 0.18, 1.1, 0.34, 0.5, 0); ring(2, 0.24, -0.14, 0.12, 0.62, 0.6, 0.9); leaves.forEach((l, i) => { if (i < 8) l.n = mul(l.n, -1); }); }
+  else if (level === 2) { const flat = (x: number, y: number, z: number, a: number, tilt: number, size: number) => { const t: V3 = [Math.cos(a), 0, Math.sin(a)]; leaves.push({ at: [x, y, z], t, n: mul(face([-Math.sin(a) * -tilt, 1, Math.cos(a) * -tilt], t), -1), size, tone: 0.60 }); }; flat(0, 0.04, 0.30, 0, 0.30, 0.95 - 0.1 * c); flat(0, 0.04, -0.30, 0, -0.30, 0.95 - 0.1 * c); flat(0, -0.12, 0, 1.571, 0, 0.95 - 0.1 * c); leaves.push({ at: [0, 0.10, 0], t: [0, 0, 1], n: [0.95, 0.31, 0], size: 0.55, tone: 0.5 }); }
+  else for (const z of [0.27, -0.27, 0]) leaves.push({ at: [0, z ? 0.05 : -0.1, z], t: z ? [1, 0, 0] : [0, 0, 1], n: mul(face([0, 1, -z * 1.6], z ? [1, 0, 0] : [0, 0, 1]), -1), size: 1.04, tone: 0.60 });
   return { kind: 0, leaves };
 }
 /** a bud: petals wrapped to a point along +y, half a unit wide; and what lies on the ground */
@@ -59,7 +60,7 @@ const frame = (y: V3, turn: number): Rot => { const e = norm(cross(y, Math.abs(y
 const kept = new WeakMap<World, Map<number, number[]>>(), grown = new Map<number, Cluster[]>();
 /** six shoots (three that flower), four flowers, a bud, what has fallen */
 const clusters = (w: World, level: number): number[] => { let m = kept.get(w); if (!m) kept.set(w, m = new Map()); let l = m.get(level); if (!l) { let g = grown.get(level); if (!g) grown.set(level, g = [...[0, 1, 2, 3, 4, 5].map(i => shoot(i, level, i > 2)), flower(0, level, 1), flower(1, level, 0.85), flower(2, level, 0.5), flower(3, level, 0.15), bud(level), fallen()]); m.set(level, l = g.map(c => { w.clusters.push(c); return w.clusters.length - 1; })); } return l; };
-const BRIGHT = [1, 0.985, 0.955, 0.94], BLOOM = [1, 0.99, 0.97, 0.96];
+const BRIGHT = [1, 0.955, 0.930, 0.910], BLOOM = [1, 0.92, 0.96, 0.93];
 function put(p: Put, level: number) {
   const ix = clusters(p.w, level), dice = rng(p.seed * 19 + 7), mat = M['lamp shade']!;
   // (a flower goes with its shoot: it turns about the same foot by the same wind)
@@ -75,11 +76,11 @@ function put(p: Put, level: number) {
   }
 }
 export const rose: ObjectKind = { name: 'rose', title: 'Shrub rose in flower', make: (): Made => ({
-  name: 'rose', title: 'Shrub rose in flower', size: [1.25, 1.2, 1.25], on: 'floor', close: { at: [0.16, 0.85, 0.28], far: 3.0 }, read: 0, moves: { kind: 'sways' }, crowd: 64,
+  name: 'rose', title: 'Shrub rose in flower', size: [1.2, 1.17, 1.22], on: 'floor', close: { at: [0.16, 0.85, 0.28], far: 3.0 }, read: 0, moves: { kind: 'sways' }, crowd: 64,
   levels: [
     { shape: 'leaves', error: 0, less: '', put(p) { put(p, 0); } },
-    { shape: 'leaves', error: 0.0155, less: 'thorns, stalks; a leaf is three leaflets, a flower ten petals', put(p) { put(p, 1); } },
-    { shape: 'leaves', error: 0.032, less: 'twigs; a leaf is one, a flower three petals', put(p) { put(p, 2); } },
-    { shape: 'leaves', error: 0.070, less: 'buds; a shoot is five leaves, a flower two petals', put(p) { put(p, 3); } },
+    { shape: 'leaves', error: 0.0155, less: 'thorns, stalks; a leaf is three leaflets, a flower twelve petals', put(p) { put(p, 1); } },
+    { shape: 'leaves', error: 0.032, less: 'twigs; a leaf is one, a flower four petals', put(p) { put(p, 2); } },
+    { shape: 'leaves', error: 0.070, less: 'buds; a shoot is five leaves, a flower three petals', put(p) { put(p, 3); } },
   ],
 }) };
