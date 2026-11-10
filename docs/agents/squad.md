@@ -27,7 +27,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `squadthrow/`, `squadsmoke.rs`, `squad40.rs` | frag and stun, smoke, a 40 mm shell on order |
 | `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
 | `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
-| `cover/`, `rearwatch.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
+| `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
 | `squadcast.rs` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
 
 The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
@@ -125,7 +125,8 @@ back only by what his own legs closed on him (`no_shove_back`). `walkahead.rs` i
 his order names nothing to watch and no door, on the walk to any mark and on the mark under `Is::LooksAbout` (`cover_eyes_free`), or if it left him
 spare (`cover_spare`). Nearer weighs more, a shut door less, one under Sam's gun or a posted man's little (`sam_k`, `held_k`). A dealt man moves his
 gun and not his feet (`cover_pose_for`). One man steps aside to see through an open door nobody has a line into (`cover_step_deal`), and his mark
-stays.
+stays. A man with nothing dealt him turns to floor of his room that nobody of the team has looked over (`unlooked_by`), off the record `look_over` keeps:
+a mark a cell within 11 m of whoever has it in his eyes.
 
 **`rearwatch.rs`** keeps a stack's back man on the way behind it (`rear_watch_tick`, `rear_ways`). With no door behind, he watches a way in
 (`cover_read_rear`). On an entry of three or more he goes in last (`rear_last`). As the squad leaves a taken room one man keeps its other door, then
@@ -171,6 +172,7 @@ Native tests in `rust/game_start/tests/`:
 | `throw.rs`, `throw_walk.rs`, `throws.rs`, `squad_smoke.rs` | the throw shown is the one given, a walked throw, a shell, smoke |
 | `rooms_held.rs` | cover keeps its angle, an order under fire stands, shutting a door |
 | `held_team.rs`, `men_by_sam.rs` | the team's pace, going round Sam and a chair |
+| `corners.rs` | a squad that follows looks over the whole room |
 | `held_cover.rs`, `passing.rs`, `taken.rs` | openings dealt, cover on the walk, an order taken away |
 
 `squadkeys-check.ts` (a `tools/qa/checks.ts` row) holds the controls list to the keys.
