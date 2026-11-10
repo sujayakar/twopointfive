@@ -250,7 +250,7 @@ async function main(): Promise<void> {
   for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => audio.start(), { capture: true });   // (a browser's sound begins with a hand on the page)
   engine.fogFrame = fog; const rims = engine.outline = makeOutlineFrame(); engine.beams = world.beams;
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
-  const reach = new DrawReach(engine, world, gaps);
+  const reach = new DrawReach(engine, world, D, gaps);
   const weather = new WeatherPicture(engine, D, world, engine.particles, smoke);
   audio.outdoors = weather.roofs.outdoors;
 
