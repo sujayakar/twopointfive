@@ -9,8 +9,9 @@
 //!
 //! The lengths and the angles are the game's own (maths.rs): the host asks only where those stand in its `Math`.
 
-use crate::maths::{acos, atan2, cos, hypot3, hypot4, sin};
+use crate::maths::{acos, atan2, hypot4};
 use crate::single::{get, put, S};
+use game_types::v3::{self, quat, Quat, V3};
 
 /// nodes a rig on the bench can have (the game's has 55)
 pub const MAX_NODES: usize = 128;
@@ -228,134 +229,75 @@ fn rot_of(rot: &[f64], i: usize) -> [f64; 4] {
 pub fn two_bone_ik(
     rig: &Rig, d: &mut [S], rot: &mut [f64], pos: &mut [f64], a: usize, b: usize, c: usize, target: &[f64; 3], pole: Option<&[f64; 3]>, pole_w: f64, end_rot: Option<&[f64; 4]>, fresh: bool,
 ) {
-    let (pa, pb, pc) = ([pos[a * 3], pos[a * 3 + 1], pos[a * 3 + 2]], [pos[b * 3], pos[b * 3 + 1], pos[b * 3 + 2]], [pos[c * 3], pos[c * 3 + 1], pos[c * 3 + 2]]);
-    let (la, lb) = (hypot3(pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2]), hypot3(pb[0] - pc[0], pb[1] - pc[1], pb[2] - pc[2]));
-    let (tt0, tt1, tt2) = (target[0] - pa[0], target[1] - pa[1], target[2] - pa[2]);
-    let ttl = hypot3(tt0, tt1, tt2);
-    let dist = clamp(ttl, abs(la - lb) + 0.01, (la + lb) * 0.998);
-    // 1. bend at b for the reach
-    let (mut x, mut y, mut z) = (pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]);
-    let mut l = or_one(hypot3(x, y, z));
-    let (u0, u1, u2) = (x / l, y / l, z / l);
-    x = pc[0] - pb[0];
-    y = pc[1] - pb[1];
-    z = pc[2] - pb[2];
-    l = or_one(hypot3(x, y, z));
-    let (w0, w1, w2) = (x / l, y / l, z / l);
-    let bend_now = acos(clamp(u0 * w0 + u1 * w1 + u2 * w2, -1.0, 1.0));
-    let bend_want = core::f64::consts::PI - acos(clamp((la * la + lb * lb - dist * dist) / (2.0 * la * lb), -1.0, 1.0));
-    let (mut ax0, mut ax1, mut ax2) = (u1 * w2 - u2 * w1, u2 * w0 - u0 * w2, u0 * w1 - u1 * w0);
-    let al = hypot3(ax0, ax1, ax2);
-    let (pl0, pl1, pl2) = match pole {
-        Some(p) => (p[0], p[1], p[2]),
-        None => (0.0, 0.0, 1.0),
-    };
-    let (mut pa0, mut pa1, mut pa2) = (pl1 * u2 - pl2 * u1, pl2 * u0 - pl0 * u2, pl0 * u1 - pl1 * u0);
-    if hypot3(pa0, pa1, pa2) < 1e-6 {
-        pa0 = 1.0;
-        pa1 = 0.0;
-        pa2 = 0.0;
-    }
-    l = or_one(hypot3(pa0, pa1, pa2));
-    pa0 = pa0 / l;
-    pa1 = pa1 / l;
-    pa2 = pa2 / l;
-    if al < 1e-5 {
-        ax0 = pa0;
-        ax1 = pa1;
-        ax2 = pa2;
-    } else {
-        let ia = 1.0 / al;
-        ax0 = ax0 * ia;
-        ax1 = ax1 * ia;
-        ax2 = ax2 * ia;
-        if ax0 * pa0 + ax1 * pa1 + ax2 * pa2 < 0.0 && bend_now < 0.26 {
-            ax0 = ax0 * -1.0;
-            ax1 = ax1 * -1.0;
-            ax2 = ax2 * -1.0;
-        }
-        let k = clamp((bend_now - 0.09) / 0.17, 0.0, 1.0);
-        x = pa0 + (ax0 - pa0) * k;
-        y = pa1 + (ax1 - pa1) * k;
-        z = pa2 + (ax2 - pa2) * k;
-        l = or_one(hypot3(x, y, z));
-        ax0 = x / l;
-        ax1 = y / l;
-        ax2 = z / l;
-    }
-    let mut q = [0.0f64; 4];
-    {
-        let sn = sin((bend_want - bend_now) / 2.0);
-        q[0] = ax0 * sn;
-        q[1] = ax1 * sn;
-        q[2] = ax2 * sn;
-        q[3] = cos((bend_want - bend_now) / 2.0);
-    }
-    rotate_model(d, b, &q, &rot_of(rot, a));
+    let (pa, pb, pc) = (at3(pos, a), at3(pos, b), at3(pos, c));
+    let (la, lb) = (v3::dist(pa, pb), v3::dist(pb, pc));
+    let to = v3::sub(*target, pa);
+    let far = v3::len(to);
+    let reach = clamp(far, abs(la - lb) + 0.01, (la + lb) * 0.998);
+    rotate_model(d, b, &bend(pa, pb, pc, la, lb, reach, pole), &rot_of(rot, a));
     if fresh {
         fk_run_from(rig, d, rot, pos, b);
     } else {
         fk_run(rig, d, rot, pos);
     }
-    // 2. swing a so the end lands on the target line
+    // swing a so the end lands on the target line
     let par_a = rig.parent[a];
     let p_rot_a = if par_a >= 0 { rot_of(rot, par_a as usize) } else { [0.0, 0.0, 0.0, 1.0] };
-    let tl1 = or_one(ttl);
-    let (s0, s1, s2) = (tt0 / tl1, tt1 / tl1, tt2 / tl1);
-    {
-        x = pos[c * 3] - pos[a * 3];
-        y = pos[c * 3 + 1] - pos[a * 3 + 1];
-        z = pos[c * 3 + 2] - pos[a * 3 + 2];
-        l = or_one(hypot3(x, y, z));
-        let (f0, f1, f2) = (x / l, y / l, z / l);
-        let dd = f0 * s0 + f1 * s1 + f2 * s2;
-        if dd < -0.9999 {
-            // quat.fromTo's own turn-about for two opposite directions
-            let (e0, e1, e2) = if abs(f0) < 0.9 { (1.0, 0.0, 0.0) } else { (0.0, 1.0, 0.0) };
-            let (c0, c1, c2) = (f1 * e2 - f2 * e1, f2 * e0 - f0 * e2, f0 * e1 - f1 * e0);
-            let cl = or_one(hypot3(c0, c1, c2));
-            q[0] = c0 / cl;
-            q[1] = c1 / cl;
-            q[2] = c2 / cl;
-            q[3] = 0.0;
-        } else {
-            let (c0, c1, c2, c3) = (f1 * s2 - f2 * s1, f2 * s0 - f0 * s2, f0 * s1 - f1 * s0, 1.0 + dd);
-            let ql = or_one(hypot4(c0, c1, c2, c3));
-            q[0] = c0 / ql;
-            q[1] = c1 / ql;
-            q[2] = c2 / ql;
-            q[3] = c3 / ql;
-        }
-        rotate_model(d, a, &q, &p_rot_a);
-    }
+    let line = v3::normalize(to);
+    let end = v3::normalize(v3::sub(at3(pos, c), at3(pos, a)));
+    rotate_model(d, a, &quat::from_to(end, line), &p_rot_a);
     fk_run_from(rig, d, rot, pos, a);
-    // 3. swivel the bend plane toward the pole about the a→target axis
-    if let Some(pole) = pole {
-        if pole_w > 0.0 {
-            let (e0, e1, e2) = (pos[b * 3] - pos[a * 3], pos[b * 3 + 1] - pos[a * 3 + 1], pos[b * 3 + 2] - pos[a * 3 + 2]);
-            let (es, ps) = (-(e0 * s0 + e1 * s1 + e2 * s2), -(pole[0] * s0 + pole[1] * s1 + pole[2] * s2));
-            let (ep0, ep1, ep2) = (e0 + s0 * es, e1 + s1 * es, e2 + s2 * es);
-            let (pp0, pp1, pp2) = (pole[0] + s0 * ps, pole[1] + s1 * ps, pole[2] + s2 * ps);
-            let (el, ppl) = (hypot3(ep0, ep1, ep2), hypot3(pp0, pp1, pp2));
-            if el > 1e-4 && ppl > 1e-4 {
-                let (en0, en1, en2) = (ep0 / el, ep1 / el, ep2 / el);
-                let (pn0, pn1, pn2) = (pp0 / ppl, pp1 / ppl, pp2 / ppl);
-                let ang = atan2((en1 * pn2 - en2 * pn1) * s0 + (en2 * pn0 - en0 * pn2) * s1 + (en0 * pn1 - en1 * pn0) * s2, en0 * pn0 + en1 * pn1 + en2 * pn2);
-                let sn = sin(ang * pole_w / 2.0);
-                q[0] = s0 * sn;
-                q[1] = s1 * sn;
-                q[2] = s2 * sn;
-                q[3] = cos(ang * pole_w / 2.0);
-                rotate_model(d, a, &q, &p_rot_a);
-                fk_run_from(rig, d, rot, pos, a);
-            }
-        }
+    // swivel the bend plane toward the pole about the a→target axis
+    if let Some(q) = pole.filter(|_| pole_w > 0.0).and_then(|pole| swivel(v3::sub(at3(pos, b), at3(pos, a)), *pole, line, pole_w)) {
+        rotate_model(d, a, &q, &p_rot_a);
+        fk_run_from(rig, d, rot, pos, a);
     }
-    // 4. the end's own rotation
+    // the end's own rotation
     if let Some(er) = end_rot {
         set_model_rot(d, c, er, &rot_of(rot, b));
         fk_run_from(rig, d, rot, pos, c);
     }
+}
+
+/// a bone's place in a pose run forward
+#[inline(always)]
+fn at3(pos: &[f64], i: usize) -> V3 {
+    [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]]
+}
+
+/// The turn at the middle bone that brings the end to `reach` of the root: about the axis it is bent round now, or the pole's where it is all but straight
+/// (a straight limb's own axis is noise: eased from the pole's to its own between 0.09 and 0.26 rad of bend, and never bent back to front).
+fn bend(pa: V3, pb: V3, pc: V3, la: f64, lb: f64, reach: f64, pole: Option<&V3>) -> Quat {
+    let (u, w) = (v3::normalize(v3::sub(pb, pa)), v3::normalize(v3::sub(pc, pb)));
+    let bend_now = acos(clamp(v3::dot(u, w), -1.0, 1.0));
+    let bend_want = core::f64::consts::PI - acos(clamp((la * la + lb * lb - reach * reach) / (2.0 * la * lb), -1.0, 1.0));
+    let own = v3::cross(u, w);
+    let al = v3::len(own);
+    let across = v3::cross(pole.copied().unwrap_or([0.0, 0.0, 1.0]), u);
+    let poles = v3::normalize(if v3::len(across) < 1e-6 { [1.0, 0.0, 0.0] } else { across });
+    let axis = if al < 1e-5 {
+        poles
+    } else {
+        let mut own = v3::scale(own, 1.0 / al);
+        if v3::dot(own, poles) < 0.0 && bend_now < 0.26 {
+            own = v3::scale(own, -1.0);
+        }
+        v3::normalize(v3::lerp3(poles, own, clamp((bend_now - 0.09) / 0.17, 0.0, 1.0)))
+    };
+    quat::axis_angle(axis, bend_want - bend_now)
+}
+
+/// The turn about the root's line to the target that brings the bend (`e`: root to middle) `pole_w` of the way round toward the pole.
+fn swivel(e: V3, pole: V3, line: V3, pole_w: f64) -> Option<Quat> {
+    let ep = v3::mad(e, line, -v3::dot(e, line));
+    let pp = v3::mad(pole, line, -v3::dot(pole, line));
+    let (el, pl) = (v3::len(ep), v3::len(pp));
+    if !(el > 1e-4 && pl > 1e-4) {
+        return None;
+    }
+    let (en, pn) = ([ep[0] / el, ep[1] / el, ep[2] / el], [pp[0] / pl, pp[1] / pl, pp[2] / pl]);
+    let ang = atan2(v3::dot(v3::cross(en, pn), line), v3::dot(en, pn));
+    Some(quat::axis_angle(line, ang * pole_w))
 }
 
 // ---- THE QUESTIONS (the module's exports: lib.rs)
