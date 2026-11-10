@@ -28,7 +28,7 @@ use crate::light;
 use crate::lines;
 use crate::maths::{cos, exp, log, sin};
 use crate::state::GAMES;
-use crate::world::{js_max, js_min, World, ASK_HOST, F_GLASS, K_ROT, MAX_BOXES, REC, R_C, R_COS, R_H, R_KIND, R_SIN, Seen};
+use crate::world::{js_max, js_min, World, F_GLASS, K_ROT, MAX_BOXES, REC, R_C, R_COS, R_H, R_KIND, R_SIN, Seen};
 use prim::{floor, sqrt};
 
 /// the sky of the hour or of the night, by luminance: where its one directional light stands and what that puts on a face turned to it, the dome's top and foot
@@ -110,6 +110,8 @@ const TO_OUTSIDE: u16 = 0xfffd;
 const TO_DARK: u16 = 0xfffc;
 const _: () = assert!(MAX_GLOW < TO_DARK as usize);
 
+/// the words a lamp's bit is in
+const LAMPS: usize = light::MOST.div_ceil(64);
 /// A WORLD'S TABLE, made from its statics
 struct Cast {
     rays: [[Ray; RAYS]; MAX_GLOW],
@@ -123,6 +125,12 @@ struct Cast {
     near: [u32; MAX_GLOW],
     /// the change every metre under a roof is made for
     made: u32,
+    /// which lamps a metre's middle was asked a line to, which of those it has, and what stood between them then (a word, 0 = it was not asked)
+    asked: [[u64; LAMPS]; MAX_GLOW],
+    clear: [[u64; LAMPS]; MAX_GLOW],
+    between: [u64; MAX_GLOW],
+    /// where each lamp of the list stood (a word)
+    stood: [u64; light::MOST],
     /// 0 not asked · 1 the open sky · 2 a roof
     roof: [u8; MAX_HALF],
     /// is a metre one place with the next along x (1) and the next along z (2) · 4 = it was asked
@@ -144,6 +152,10 @@ const NO_CAST: Cast = Cast {
     low: [0; MAX_HALF],
     near: [0; MAX_GLOW],
     made: 0,
+    asked: [[0; LAMPS]; MAX_GLOW],
+    clear: [[0; LAMPS]; MAX_GLOW],
+    between: [0; MAX_GLOW],
+    stood: [0; light::MOST],
     roof: [0; MAX_HALF],
     joined: [0; MAX_GLOW],
     nx: 0,
@@ -536,35 +548,79 @@ fn levels(c: &mut Cast, w: &World, st: &mut [f64; LEN], new: bool, rounds: usize
     }
 }
 
-/// the six faces of the meter under the sweep's lamps at a point (None: a line of it is the host's to judge)
-fn lamps_on(w: &World, k: &K, p: [f64; 3], tune: &Knobs) -> Option<[f64; 6]> {
-    let mut acc = [0.0; 6];
-    if light::estimate(w, k.lamps, p, &light::NO_SHADE, k.rows, &mut acc, tune) == ASK_HOST {
-        return None;
+/// a word of what stands between a lamp and a metre: the statics and the leaves (none is 0)
+fn between(c: &Cast, w: &World) -> u64 {
+    let mut h = (c.now as u64).wrapping_mul(0x9e3779b97f4a7c15);
+    for v in w.leaf.iter().map(|v| v.to_bits()).chain(w.leaf_flags.iter().map(|f| *f as u64)) {
+        h = (h ^ v).wrapping_mul(0x9e3779b97f4a7c15);
+        h ^= h >> 29;
     }
-    Some(acc)
+    h | 1
+}
+/// the list's lamps stand where they stood, or the lines to them are forgotten
+fn stand(c: &mut Cast, set: &light::Set) {
+    for (i, stood) in set.places().enumerate() {
+        if c.stood[i] != stood {
+            c.stood[i] = stood;
+            for a in c.asked.iter_mut() {
+                a[i / 64] &= !(1 << (i % 64));
+            }
+        }
+    }
+}
+/// the six faces of the meter under the sweep's lamps at a metre's middle (None: a line of it is the host's to judge). A line to a lamp is asked once for as long as
+/// the lamp stands there and nothing between has changed
+fn lamps_on(c: &mut Cast, w: &World, set: &light::Set, between: u64, m: usize, p: [f64; 3], tune: &Knobs) -> Option<[f64; 6]> {
+    if c.between[m] != between {
+        c.between[m] = between;
+        c.asked[m] = [0; LAMPS];
+    }
+    let (asked, clear) = (&mut c.asked[m], &mut c.clear[m]);
+    set.estimate(p, |i, end| {
+        let (word, bit) = (i / 64, 1u64 << (i % 64));
+        if asked[word] & bit == 0 {
+            let shut = lines::sight_line(w, true, F_GLASS, p[0], p[1], p[2], end[0], end[1], end[2], tune)?;
+            asked[word] |= bit;
+            clear[word] = if shut { clear[word] & !bit } else { clear[word] | bit };
+        }
+        Some(clear[word] & bit == 0)
+    })
 }
 fn mean(v: &[f64; 6]) -> f64 {
     (v[0] + v[1] + v[2] + v[3] + v[4] + v[5]) / 6.0
 }
 
+/// A LEAF NEAR ENOUGH TO BE IN A LINE'S WAY: its row, its middle from the metre's, and the square of the ball that holds it
+#[derive(Clone, Copy)]
+struct Leaf {
+    at: usize,
+    from: [f64; 3],
+    ball: f64,
+}
 /// ONE METRE WORKED OUT: what its lines bring of the metres as they are
-fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, tune: &Knobs) {
+#[allow(clippy::too_many_arguments)]
+fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, set: &light::Set, between: u64, tune: &Knobs) {
     if cast(c, w, m, tune) > 0 {
         unsafe { SWEPT[1] += 1 };
     }
     let a = [(m % c.nx) as f64 + 0.5, HEIGHT, (m / c.nx) as f64 + 0.5];
-    // the leaves that hang near enough to be in a line's way
-    let (mut near, mut n) = ([0usize; MOST], 0);
-    for i in 0..w.leaves() {
-        let at = i * REC;
-        let (dx, dz) = (w.leaf[at + R_C] - a[0], w.leaf[at + R_C + 2] - a[2]);
+    let (mut near, mut n) = ([Leaf { at: 0, from: [0.0; 3], ball: 0.0 }; MOST], 0);
+    for (i, r) in w.leaf.chunks_exact(REC).enumerate() {
+        let (dx, dz) = (r[R_C] - a[0], r[R_C + 2] - a[2]);
         if dx * dx + dz * dz < NEAR * NEAR && n < MOST {
-            near[n] = at;
+            let ball = r[R_H] * r[R_H] + r[R_H + 1] * r[R_H + 1] + r[R_H + 2] * r[R_H + 2] + 1e-6;
+            near[n] = Leaf { at: i * REC, from: [dx, r[R_C + 1] - a[1], dz], ball };
             n += 1;
         }
     }
-    let shut = |p: [f64; 3], d: [f64; 3], tmax: f64| near[..n].iter().any(|&at| lines::ray_box_n(&w.cut, p[0], p[1], p[2], d[0], d[1], d[2], &w.leaf[at..at + REC], tmax).is_some());
+    // (a line that passes wide of the ball round a leaf passes the leaf)
+    let shut = |p: [f64; 3], d: [f64; 3], tmax: f64| {
+        near[..n].iter().any(|l| {
+            let v = [l.from[0] + a[0] - p[0], l.from[1] + a[1] - p[1], l.from[2] + a[2] - p[2]];
+            let t = v[0] * d[0] + v[1] * d[1] + v[2] * d[2];
+            v[0] * v[0] + v[1] * v[1] + v[2] * v[2] - t * t <= l.ball && lines::ray_box_n(&w.cut, p[0], p[1], p[2], d[0], d[1], d[2], &w.leaf[l.at..l.at + REC], tmax).is_some()
+        })
+    };
     let s = &k.sky;
     let open = open_air(s) + s.sun * js_max(0.0, s.to_sun[1]);
     let w_ = ways();
@@ -599,7 +655,7 @@ fn work(c: &mut Cast, w: &World, st: &mut [f64; LEN], m: usize, k: &K, tune: &Kn
     st[O_GLOW_MEAN + m] = avg;
     st[O_GLOW_UP + m] = f[2];
     st[O_GLOW_MAX + m] = js_max(js_max(js_max(f[0], f[1]), js_max(f[2], f[3])), js_max(f[4], f[5]));
-    if let Some(lamps) = lamps_on(w, k, a, tune) {
+    if let Some(lamps) = lamps_on(c, w, set, between, m, a, tune) {
         st[O_GLOW_A + m] = avg + mean(&lamps);
     }
 }
@@ -639,12 +695,14 @@ pub fn step(g: usize, w: &World, st: &mut [f64; LEN], nbx: usize, nbz: usize, k:
     st[O_GLOW_LEFT] = if young && left <= quick { 0.0 } else { left };
     st[O_GLOW_AT] = ((i + per) % n) as f64;
     unsafe { SWEPT = [per, 0] };
+    let (set, between) = (light::set(k.lamps, k.rows), between(c, w));
+    stand(c, set);
     for _ in 0..per {
         if i >= n {
             i = 0;
         }
         if roof(c, w, (i % nx) as f64 + 0.5, (i / nx) as f64 + 0.5, tune) {
-            work(c, w, st, i, k, tune);
+            work(c, w, st, i, k, set, between, tune);
         }
         i += 1;
     }
