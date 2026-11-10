@@ -117,6 +117,8 @@ pub struct World {
     pub cs: f64,
     /// five a tilted static: its index, then the cells it is filed in (x0 x1 z0 z1)
     pub tilted: Vec<i32>,
+    /// the statics that stand over the grid's edge
+    pub outer: Vec<u32>,
     /// the furniture by its id (TH doubles each), and what of it is in the level now, in its own order
     pub thing: Vec<f64>,
     pub things: Vec<Thing>,
@@ -149,6 +151,15 @@ impl World {
     /// does a walker go through static `bi`, a pane of glass
     pub fn walked(&self, bi: usize) -> bool { self.walk[bi] != 0 }
 
+    /// does a static stand over the grid's edge, some of it on the grid
+    fn over_edge(&self, i: usize) -> bool {
+        let r = self.row(i);
+        let abs = |v: f64| if v < 0.0 { -v } else { v };
+        let (cs, sn) = (abs(r[R_COS]), abs(r[R_SIN]));
+        let over = |c: f64, e: f64, far: f64| c - e < far && c + e > 0.0 && (c - e < -1e-9 || c + e > far + 1e-9);
+        let (ex, ez) = (cs * r[R_H] + sn * r[R_H + 2], sn * r[R_H] + cs * r[R_H + 2]);
+        over(r[R_C], ex, self.w as f64 * self.cs) || over(r[R_C + 2], ez, self.h as f64 * self.cs)
+    }
     fn told(&mut self) {
         self.wrote = next();
         self.stood = self.wrote;
@@ -198,6 +209,7 @@ impl World {
                 self.tall[at as usize] = if flags & F_NO_SHADOW != 0 { [f64::INFINITY, f64::NEG_INFINITY] } else { [r[R_C + 1] - up, r[R_C + 1] + up] };
                 if moved { self.wrote = next(); }
                 if stands { self.stood = self.wrote; }
+                if moved && self.w > 0 && !self.outer.contains(&at) && self.over_edge(at as usize) { self.outer.push(at); }
             }
             1 => self.leaf_flags[at as usize] = flags,
             _ => {}
@@ -319,6 +331,7 @@ impl Boxes {
         w.items = items;
         let keep: Vec<i32> = w.tilted.chunks_exact(5).filter(|t| (t[0] as usize) < n).flatten().copied().collect();
         w.tilted = keep;
+        w.outer.retain(|&i| (i as usize) < n);
         w.told();
     }
     /// THE GRID THEY ARE FILED IN, with nothing filed: its cells across and deep, a cell's side
@@ -328,6 +341,7 @@ impl Boxes {
         o.start = alloc::vec![0; (w * h) as usize + 1];
         o.items.clear();
         o.tilted.clear();
+        o.outer.clear();
     }
     /// …and these statics filed in it, each in the cells of a plan (x0 x1 z0 z1), in their order and after all that were filed before
     pub fn file(&mut self, list: &[(u32, [i32; 4])]) {
@@ -341,6 +355,9 @@ impl Boxes {
         }
         *o.start.last_mut().unwrap() = items.len() as u32;
         o.items = items;
+        for &(i, _) in list {
+            if (i as usize) < o.boxes() && !o.outer.contains(&i) && o.over_edge(i as usize) { o.outer.push(i); }
+        }
     }
     /// …and this one told among the tilted
     pub fn file_tilted(&mut self, i: u32, [x0, x1, z0, z1]: [i32; 4]) { self.rows.tilted.extend_from_slice(&[i as i32, x0, x1, z0, z1]); }
