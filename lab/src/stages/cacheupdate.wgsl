@@ -1,16 +1,17 @@
 // LIGHT ON SURFACES, one more sample an entry: the sun, one lamp, and one ray to see what else is out there, read from the table as it stands. Where that ray lands it calls for an entry too.
 //   Each group looks over 256 slots, lists the few whose turn it is, then works through the list: rays of neighbours in the list keep all its lanes busy.
 var<workgroup> todo: array<u32, 256>; var<workgroup> many: atomic<u32>;
+fn disturbed(x: vec3f) -> bool { for (var i = 0u; i < 8u; i++) { let c = changes.at[i]; if (c.w > 0.0 && distance(x, c.xyz) < c.w) { return true; } } return false; }
 fn itsTurn(s: u32) -> bool {
   if (spot[s].w == 0u) { return false; } let home = cells[2u * s + 1u].xyz; if (all(home == vec3f(0.0))) { return false; }   // (founded this frame: where it began is not in cells yet)
-  let w = cells[2u * s].w; if (w > FOURTH && steady(home) > 0.9) { let m = select(3u, 7u, w > EIGHTH); return (atomicLoad(&keys[s]) & m) == (frame.counts.z & m); } return true;
+  let w = cells[2u * s].w; var m = 0u; if (w > FOURTH && steady(home) > 0.9) { m = select(3u, 7u, w > EIGHTH); } else if (w >= FORGET && disturbed(home)) { m = 1u; }     // (while a door near it moves it knows all it will keep: every second frame is enough)
+  return (atomicLoad(&keys[s]) & m) == (frame.counts.z & m);
 }
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) g: vec3u, @builtin(local_invocation_index) li: u32) {
   if (li == 0u) { atomicStore(&many, 0u); } workgroupBarrier();
   for (var i = 0u; i < 4u; i++) { let s = g.x * 256u + i * 64u + li; if (itsTurn(s)) { todo[atomicAdd(&many, 1u)] = s; } }
   workgroupBarrier(); let n = atomicLoad(&many); for (var i = li; i < n; i += 64u) { oneMore(todo[i]); }
 }
-fn disturbed(x: vec3f) -> bool { for (var i = 0u; i < 8u; i++) { let c = changes.at[i]; if (c.w > 0.0 && distance(x, c.xyz) < c.w) { return true; } } return false; }
 fn oneMore(s: u32) {
   var a = cells[2u * s]; var b = cells[2u * s + 1u]; let sp = spot[s]; let x0 = bitcast<vec3f>(sp.xyz); let n = octUnpack(sp.w & 0xfffffffeu); let st = steady(b.xyz); let key = atomicLoad(&keys[s]);
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); } if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
