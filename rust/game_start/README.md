@@ -258,6 +258,8 @@ build is the same game; this says what the other game came to.
 
 `src/bin/blastcost.rs` prices the tick of a wall blast against a quiet tick, natively.
 
+`src/bin/thin.rs` stages what no hand reaches (shotguns, window bars, sheets on walls) and prints hashes to compare two builds by (its head says how).
+
 ## The gate: what a build is held to (`src/bin/gate/`)
 
 One native command, with no page and no module in it. It stands every mission on the game's own list and plays a few of them, each as the page and the
