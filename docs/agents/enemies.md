@@ -23,9 +23,9 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `guards/` | one man's tick (`frame.rs`), `senses/`, `behave/`, the floor's alarm and radio check |
 | `mind.rs`, `belief.rs`, `control/`, `owner.rs` | the one door to his mind, what his gun covers, who has his body, whose man he is |
-| `difficulty.rs` | the levels and levers, written over the `pressure/` and `digin/` tables |
+| `difficulty.rs` | the levels and levers, written over the `pressure.rs` and `digin/` tables |
 | `enemysquads/`, `squaddeal.rs`, `stayask.rs` | squads, their net, choices and radio check; squads cut from rooms; squads told to stay |
-| `pressure/`, `digin/`, `laststand.rs` | a room fight's press, furniture and wedges, the last few |
+| `pressure.rs`, `digin/`, `laststand.rs` | the last man of a room on Hard, furniture and wedges, the last few |
 | `tactics/`, `lanes/`, `doorforce.rs` | pursuit and doorways, covered lanes, a shut door between him and his man |
 | `suppression.rs`, `flinch.rs`, `startle.rs`, `morale.rs`, `runner.rs`, `netquiet/` | nerve: pinned, ducked, surprised, shaken, gone, and a net that does not answer |
 | `darkdoor.rs`, `darkfoe.rs`, `calmtorch.rs`, `powerout.rs` | men and the dark |
@@ -58,13 +58,12 @@ his fix and a look round. `alert`: a cover rule, his reaction beat, a standoff, 
 **The floor's alarm.** `escalation` is 0, 1 or 2 (`raise_escalation`, `step_down_escalation`). From 1 men hear keener and walk brisker; at 2
 `supervise_lockdown` deals followers and posts. `update_rollcall` is the staff's radio check, which is how a death nobody found comes out.
 
-**Who has him.** The body list in `control/` is `frag`, `runner`, `morale`, `startle`, `duck`, `lost`, `rally`; the first to answer wins. The first four
-are asked before his own script and state, the last two (his room is lost; a fight next door) at his post.
-Rules that task him set a bit in `owner.rs` (`taskers!` in its types, strongest first), and a rule asks `kept` before
-it takes him. That order is why a squad's man is not the press's.
+**Who has him.** The body list in `control/` is `frag`, `runner`, `morale`, `startle`, `duck`, `lost`; the first to answer wins. The first four
+are asked before his own script and state, the last (his room is lost) at his post. Rules that task him set a bit in `owner.rs` (`taskers!` in its types,
+strongest first), and a rule asks `kept` before it takes him.
 
-**Difficulty.** `tables_of` writes `PressureK` and `DiginK` from a level and the levers. Hard's AI turns on the press (`on`, `warned`, `second`,
-`by_way`, `rescue_crew`, `way_out`, `drilled`, `sweep`) and `digin/`, with `keeper` off and `reach_m` from `HardK`. The levers (`preset_levers`) are
+**Difficulty.** `tables_of` writes `PressureK` and `DiginK` from a level and the levers. Hard's AI turns on `on`, `rescue_crew`,
+`drilled` and `sweep` of the first, and `digin/`, with `reach_m` from `HardK`. The levers (`preset_levers`) are
 `?fog=`, `?enemyai=`, `?enemykit=`, `?told=`; Hard's fog stands on cones. `HardAtK` (a stun charge each, by structure, through `difficulty_here`) and
 `DrillAtK` (rows of `SquadsK`) hold what is one map's own. `training_of` reads the mix off `morale_at`: at standard a band's first man is steady and
 the rest green; at hard only the last of three or more is green. A squad's `training` comes first.
@@ -77,8 +76,8 @@ beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to
 are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`). `radio_check` finds a drop
 nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
 
-**The room fight's other rules.** `consider` and `tick_press` take men to a fight together. `press_keeps_home` keeps a man, `stand_to` is surprise
-lost, `last_man` and `tick_out` give ground, `go_look` sends a pair. `dig_in_tick` runs `begin`, `start_brace`, `haul`, `wedge` and `to_cover`, each
+**The room fight's other rules.** On Hard the last man up in a room gives it up by another door (`last_man`, `tick_out`), and the last of them all keeps
+his (`last_holds`). `dig_in_tick` runs `begin`, `start_brace`, `haul`, `wedge` and `to_cover`, each
 heard (`scrape`, `shout`). `step_stand` starts when the last few are up (`few`, a third of those staged at most): `start_check`, `tick_check`, and
 each says where he is (`tick_moved`).
 
@@ -153,7 +152,7 @@ breach or a rescue, and `spawn_hostage` makes a rescue's.
 - **A rule that takes his body:** a file in `control/` and a line of `rules!` at its rank (`ai-architecture.md`). A rule that tasks him: a line of
   `taskers!`.
 - **What Hard is:** a row of `PressureK`, set in `tables_of` and added to what `pressure_same` compares. On one map: `HardAtK` or `DrillAtK`.
-- **A level:** `SquadData` (`rooms`, `rally`, `may_leave`, `training`), `way_out`, `ResponseData`. `docs/level-format.md` has the words.
+- **A level:** `SquadData` (`rooms`, `rally`, `may_leave`, `training`), `ResponseData`. `docs/level-format.md` has the words.
 
 ## What holds it
 

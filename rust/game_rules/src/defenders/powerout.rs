@@ -208,7 +208,7 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if roused(g, gd) { return Some("in a fight".into()); }
     if crate::mission::lies_in_wait(g, gd) || crate::mission::captor(g) == Some(gd) { return Some("the captor / lying in wait".into()); }
     if crate::gunroles::gun_keeps_post(g, gd) { return Some("his gun keeps its post".into()); }
-    if crate::pressure::press_keeps_home(g, d, Some(false)) { return Some("kept home by the press".into()); }
+    if crate::pressure::last_holds(g, d) { return Some("the last of them keeps his room".into()); }
     None
 }
 
@@ -801,7 +801,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
         return true;
     }
     let step_t = man(g, i).step_t;
-    let step_t = crate::pressure::boots(g, gd, step_t);
+    let step_t = crate::roomfight::boots(g, gd, step_t);
     man(g, i).step_t = step_t;
     let role = man(g, i).role;
     let from = man(g, i).from;

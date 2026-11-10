@@ -368,7 +368,7 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
                 back: None,
             };
             sq!(g, c.q).sent.push(row);
-            crate::pressure::loose(g, x, c.at);
+            crate::roomfight::loose_at(g, x, c.at);
         }
         let text = format!("{} go to where the team was last seen or heard, {} s after the last word of them", callsigns(g, &men), js::to_fixed(g.time - c.w, 0));
         event(g, c.q, SquadEventWhat::Sweep, &text, Some(men[0]));
@@ -1376,7 +1376,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
         return true;
     }
     let step_t = look_of(g, q, l).step_t;
-    let step_t = crate::pressure::boots(g, gd, step_t);
+    let step_t = crate::roomfight::boots(g, gd, step_t);
     look_of(g, q, l).step_t = step_t;
     // (back, spot and from move only just before a return below: these are his row as it stands all the way down)
     let (l_back, l_spot, l_from, l_t0, l_news0, x, all) = {

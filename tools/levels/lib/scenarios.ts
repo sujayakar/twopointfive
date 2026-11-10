@@ -45,9 +45,6 @@ export interface StructureData { name: string; team?: TeamStart; rooms: Structur
   /** a bigger floor for the four-man squad: the most defenders this structure may hold ALIVE AT ONCE (absent = five; at most eleven — Sam, the four and eleven
    *  fill the skinning's sixteen: rust/game_rules/src/missions/roomclear.rs check_structure, nightbreach) */
   maxMen?: number;
-  /** HARD defenders here do not come in after the team one at a time: the men a lost room draws hold one door of it from back off it (rust/game_rules/src/defenders/pressure
-   *  PRESSURE.wayOut — nothing at standard, nothing on a level without the row; whichever scenario stands this structure's defenders) */
-  wayOut?: boolean;
   /** false = this floor's men NEVER DIG IN (rust/game_rules/src/defenders/digin — rust/game_rules/src/defenders/roomfight: no man of it braces a door, takes cover behind furniture or sets his gun on
    *  the door he expects, at any difficulty and whatever its squads decide) — for a level whose words lean on men standing where they were dealt (Training
    *  5 and 6: a lesson is read at six seconds a line, so its men always had the minute to set a gun on the door the order is taught at). Absent = the game's

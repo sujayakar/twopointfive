@@ -1,7 +1,7 @@
-//! A DEFENDER AND HIS POST (rust/game_rules/src/defenders/roomfight/post.rs, control/lost.rs, control/rally.rs): how he leaves it and comes back, whoever decides it.
+//! A DEFENDER AND HIS POST (rust/game_rules/src/defenders/roomfight/post.rs): how he leaves it and comes back, whoever decides it.
 use game::ids::RoomfightDefId;
 use game::owner::{self, by};
-use game::roomfight::{at_post, is_loose, on_leg, on_leg_of, send, Leg};
+use game::roomfight::{at_post, on_leg_of, send, Leg};
 use game_start::play::{Opts, Play};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
@@ -21,30 +21,6 @@ fn elsewhere(p: &Play, d: RoomfightDefId) -> game::V3 {
     let room = p.g.tab.roomfight_def[d].room;
     let o = p.g.fight.defs.iter().copied().find(|&o| o != d && p.g.tab.roomfight_def[o].room != room).expect("a defender of another room");
     p.g.tab.roomfight_def[o].station
-}
-/// he hears a fight there now, his few seconds are over and his mind is made up to go
-fn hears_a_fight(p: &mut Play, d: RoomfightDefId) {
-    let (at, t, gd) = (elsewhere(p, d), p.time(), p.g.tab.roomfight_def[d].gd);
-    p.g.gd[gd].last_seen_t = t - 60.0;
-    let row = &mut p.g.tab.roomfight_def[d];
-    row.noise_at = Some(at);
-    row.noise_t = t;
-    row.rally_at = t;
-    row.rally_go = true;
-}
-
-/// THE RULE: a man sent from his post, whoever sent him, goes on that errand alone: the clock that was to take him to a fight next door is out.
-/// A FAILURE MEANS: a man sent to a lane or a breaker, planted there, runs off to the next room on a clock that began before he was sent (before: four of the eight ways to send him left it running).
-#[test]
-fn a_man_sent_from_his_post_goes_on_that_errand_alone() {
-    for s in SEEDS {
-        let (mut p, d) = consulate(s);
-        hears_a_fight(&mut p, d);
-        let to = elsewhere(&p, d);
-        send(&mut p.g, d, Leg::to(to, 3.0), by::LANE);
-        assert!(on_leg(&p.g, d), "seed {s}: he is off his post");
-        assert!(p.g.tab.roomfight_def[d].rally_at.is_nan(), "seed {s}: his clock to go next door still runs on the leg");
-    }
 }
 
 /// THE RULE: a leg answers to who sent him on it. Sent somewhere else meanwhile, the first leg is over, whatever he is doing now.
@@ -75,24 +51,5 @@ fn a_look_is_over_when_he_is_sent_elsewhere() {
         p.run(0.1);
         assert!(on_leg_of(&p.g, d, by::LAST_MAN), "seed {s}: he goes where he was sent");
         assert!(!p.g.m.lanes.states.as_ref().unwrap().peek.has(gd), "seed {s}: the look is over");
-    }
-}
-
-/// THE RULE: a man nobody has goes to a fight next door, off his post on the fight's own hunt; a man somebody has stays.
-/// A FAILURE MEANS: the list is not asked at his post, or a man with an errand leaves it for a noise.
-#[test]
-fn a_fight_next_door_takes_a_man_nobody_has() {
-    for s in SEEDS {
-        let (mut p, d) = consulate(s);
-        hears_a_fight(&mut p, d);
-        p.run(0.1);
-        assert!(is_loose(&p.g, d), "seed {s}: he goes");
-        drop(p);
-        let (mut p, d) = consulate(s);
-        hears_a_fight(&mut p, d);
-        let (gd, t) = (p.g.tab.roomfight_def[d].gd, p.time());
-        owner::claim(&mut p.g, gd, by::LANE, t, None);
-        p.run(0.1);
-        assert!(at_post(&p.g, d), "seed {s}: he is the lane's, and stays");
     }
 }

@@ -38,13 +38,10 @@ struct Line {
 }
 /// The new lines, in the written order.
 static LINES: &[Line] = &[
-    Line { kind: CueKind::Help, cls: 1.0, say: &["moving to the fight — {the}", "they're hit {at} — moving to them"], now: None, guide: None },
     Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"], now: None, guide: None },
     Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"], now: None, guide: None },
     Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"], now: None, guide: None },
     Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"], now: None, guide: None },
-    Line { kind: CueKind::StayOurs, cls: 3.0, say: &["they're hit {at} — staying on my door", "shots {at} — staying on my door"], now: Some(&["they're hit {at} — staying on my post", "that was {at} — staying on my post"]), guide: None },
-    Line { kind: CueKind::Stay, cls: 3.0, say: &["shots {at} — holding my room", "heard that, {the} — holding my room"], now: Some(&["that was {at} — holding my post", "heard that, {the} — holding my post"]), guide: None },
     Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"], now: None, guide: None },
     Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"], now: None, guide: None },
     Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"], now: None, guide: None },
@@ -68,8 +65,6 @@ fn gap_of(k: CueKind) -> f64 {
         CueKind::HuntOver => 4.0,
         CueKind::Calm => 4.0,
         CueKind::Still => 6.0,
-        CueKind::Stay => 3.0,
-        CueKind::StayOurs => 3.0,
         _ => 0.0,
     }
 }
@@ -162,13 +157,10 @@ fn sparse_set(v: &mut Vec<Option<f64>>, i: usize, x: f64) {
 /// `kindT[kind]`, the place of a kind's clock.
 fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
     match k {
-        CueKind::Stay => &mut v.stay,
         CueKind::Calm => &mut v.calm,
         CueKind::Cover => &mut v.cover,
         CueKind::Flinch => &mut v.flinch,
         CueKind::Still => &mut v.still,
-        CueKind::Help => &mut v.help,
-        CueKind::StayOurs => &mut v.stay_ours,
         CueKind::HuntOver => &mut v.hunt_over,
         CueKind::FellBack => &mut v.fell_back,
         CueKind::Planted => &mut v.planted,
@@ -185,13 +177,10 @@ fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
 /// `kinds[kind]`, the place of a kind's tally.
 fn kinds_of(v: &mut CuesKinds, k: CueKind) -> &mut Option<f64> {
     match k {
-        CueKind::Stay => &mut v.stay,
         CueKind::Calm => &mut v.calm,
         CueKind::Cover => &mut v.cover,
         CueKind::Flinch => &mut v.flinch,
         CueKind::Still => &mut v.still,
-        CueKind::Help => &mut v.help,
-        CueKind::StayOurs => &mut v.stay_ours,
         CueKind::HuntOver => &mut v.hunt_over,
         CueKind::FellBack => &mut v.fell_back,
         CueKind::Planted => &mut v.planted,
@@ -212,13 +201,10 @@ fn tail_from(len: usize, n: f64) -> usize {
 }
 fn file_kind(k: CueKind) -> CuesFileKind {
     match k {
-        CueKind::Stay => CuesFileKind::Stay,
         CueKind::Calm => CuesFileKind::Calm,
         CueKind::Cover => CuesFileKind::Cover,
         CueKind::Flinch => CuesFileKind::Flinch,
         CueKind::Still => CuesFileKind::Still,
-        CueKind::Help => CuesFileKind::Help,
-        CueKind::StayOurs => CuesFileKind::StayOurs,
         CueKind::HuntOver => CuesFileKind::HuntOver,
         CueKind::FellBack => CuesFileKind::FellBack,
         CueKind::Planted => CuesFileKind::Planted,
@@ -580,7 +566,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
 /// His row of `men`, made the first time he is asked after: the row itself.
 fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
-        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
+        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), covered: false };
         g.cues.men.set(gd, row);
     }
     g.cues.men.get_mut(gd).unwrap()
@@ -592,7 +578,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     let said_t = cues_man(g, gd).said_t;
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || crate::condition::is_blind(g, g.gd[gd].ch) || t - said_t < g.k.cues.man_secs || crate::runner::runner_mute(g, gd) { return false; }
     let own = g.gd[gd].bubble.as_ref().is_some_and(|b| t >= b.t && t - b.t < 1.5);   // he has just said something of his own: that was his word on it,
-    if own && !matches!(kind, CueKind::Help | CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
+    if own && !matches!(kind, CueKind::FellBack | CueKind::SquadWaits | CueKind::SquadCopiesWaits) { return false; }   // but a shout to the men beside him, or a squad's word on its net, still goes out
     if cues_kind_busy(g, kind) { return false; }   // (the floor has just heard this from somebody)
     *kind_t_of(&mut g.cues.kind_t, kind) = Some(t);
     let cls = line_of(kind).cls;
@@ -700,27 +686,8 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let at = cues_at(g, p);
             if cues_cue(g, gd, CueKind::Still, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
         }
-        // a loud thing outside his room, and he has not gone: the dice said stay (rallyAt drawn again), or nobody of his side is posted where it came from
-        let (noise_at, noise_out, noise_t, d_rally) = { let row = &g.tab.roomfight_def[d]; (row.noise_at, row.noise_out, row.noise_t, row.rally_at) };
-        if noise_at.is_some() && noise_out && noise_t > cues_man(g, gd).noise_t && cues_man(g, gd).ep < 0.0 && hold { cues_man(g, gd).ep = noise_t; }
-        if cues_man(g, gd).ep >= 0.0 {
-            let m_rally = cues_man(g, gd).rally_at;
-            let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
-            if !hold || t - noise_t > 6.0 {
-                cues_man(g, gd).ep = -1.0;
-            } else if !crate::owner::has(g, gd, crate::owner::by::SQUAD) && !crate::owner::has(g, gd, crate::owner::by::PRESS) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
-                && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
-            {
-                let at = cues_at(g, noise_at.unwrap());
-                if cues_cue(g, gd, if drawn_again { CueKind::StayOurs } else { CueKind::Stay }, Some(&at_vars(&at))) { cues_man(g, gd).again_t = t; }
-                cues_man(g, gd).ep = -1.0;
-            }
-        }
-        // (read again: pressKeepsHome above can have written the def's rallyAt to NaN)
-        let (now, rally_now) = (g.gd[gd].state, g.tab.roomfight_def[d].rally_at);
+        let now = g.gd[gd].state;
         let M = cues_man(g, gd);
-        M.noise_t = noise_t;
-        M.rally_at = rally_now;
         M.state = now;
     }
     if g.cues.squelch_due {
@@ -768,11 +735,7 @@ fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
     let gd = g.tab.roomfight_def[d].gd;
     cues_man(g, gd);
     let c = g.gd[gd].ch;
-    if what.starts_with("goes to the fight next door") {
-        let p = g.tab.roomfight_def[d].noise_at.or(g.gd[gd].last_known).unwrap_or(g.ch[c].pos);
-        let at = cues_at(g, p);
-        cues_cue(g, gd, CueKind::Help, Some(&at_vars(&at)));
-    } else if what.starts_with("holds where he ended up") {
+    if what.starts_with("holds where he ended up") {
         if g.time - cues_man(g, gd).stood_t > 15.0 {
             let p = g.ch[c].pos;
             let at = cues_at(g, p);
@@ -804,14 +767,6 @@ fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
         cues_cue(g, gd, CueKind::Surprised, None);
     } else if what.starts_with("flinches:") {
         cues_cue(g, gd, CueKind::Flinch, None);
-    } else if what.contains("stays to keep his room") {
-        let noise_at = g.tab.roomfight_def[d].noise_at;
-        if g.time - cues_man(g, gd).again_t > g.k.cues.again_secs {
-            if let Some(p) = noise_at {
-                let at = cues_at(g, p);
-                if cues_cue(g, gd, CueKind::StayOurs, Some(&at_vars(&at))) { cues_man(g, gd).again_t = g.time; }
-            }
-        }
     }
 }
 
@@ -900,21 +855,21 @@ mod tests {
         }
     }
 
-    /// A FAILURE MEANS: one kind of cue hushes another (a man staying on his door silences the man holding his room), or the floor says one kind over itself.
+    /// A FAILURE MEANS: one kind of cue hushes another (a man standing down silences the man who has lost them), or the floor says one kind over itself.
     #[test]
     fn a_kind_waits_only_on_itself_and_only_for_its_gap() {
         let mut game = Game::blank();
         let g = &mut game;
-        *kind_t_of(&mut g.cues.kind_t, CueKind::Stay) = Some(10.0);
-        g.time = 12.9;
-        assert!(cues_kind_busy(g, CueKind::Stay));
-        assert!(!cues_kind_busy(g, CueKind::StayOurs));
-        g.time = 13.0;
-        assert!(!cues_kind_busy(g, CueKind::Stay));
-        *kind_t_of(&mut g.cues.kind_t, CueKind::Help) = Some(13.0);
-        assert!(!cues_kind_busy(g, CueKind::Help), "a shout to the men beside him has no gap");
+        *kind_t_of(&mut g.cues.kind_t, CueKind::Calm) = Some(10.0);
+        g.time = 13.9;
+        assert!(cues_kind_busy(g, CueKind::Calm));
+        assert!(!cues_kind_busy(g, CueKind::HuntOver));
+        g.time = 14.0;
+        assert!(!cues_kind_busy(g, CueKind::Calm));
+        *kind_t_of(&mut g.cues.kind_t, CueKind::Flinch) = Some(14.0);
+        assert!(!cues_kind_busy(g, CueKind::Flinch), "a shout at the door has no gap");
         g.time = 9.0;   // (the clock went back: a checkpoint loaded)
-        assert!(!cues_kind_busy(g, CueKind::Stay));
+        assert!(!cues_kind_busy(g, CueKind::Calm));
     }
 
     /// A FAILURE MEANS: the strip tells one piece of news twice in ten seconds because another man said it, or holds a line back from a net that has not said it for longer.

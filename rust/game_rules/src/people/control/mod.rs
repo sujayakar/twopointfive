@@ -172,8 +172,8 @@ macro_rules! rules {
     };
 }
 
-// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` and `rally` take
-// him off his post.)
+// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` takes him
+// off his post.)
 rules! {
     frag: "a live grenade";
     runner: "broke and ran";
@@ -181,7 +181,6 @@ rules! {
     startle: "startled";
     duck: "head down under fire";
     lost: "his room is lost";
-    rally: "a fight next door";
 }
 // a man's record of who said no is a bit a rule
 const _: () = assert!(RULES.len() <= 32, "Control.declined is 32 bits: widen it before the list holds a 33rd rule");

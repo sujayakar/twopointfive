@@ -308,7 +308,7 @@ fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefI
         return Some(String::from("in a fight"));
     }
     if crate::gunroles::gun_keeps_post(g, gd) { return Some(String::from("his gun keeps its post")); }
-    if crate::pressure::press_keeps_home(g, d, Some(false)) { return Some(String::from("kept home by the press")); }
+    if crate::pressure::last_holds(g, d) { return Some(String::from("the last of them keeps his room")); }
     if crate::mission::captor(g) == Some(gd) { return Some(String::from("the captor")); }
     None
 }

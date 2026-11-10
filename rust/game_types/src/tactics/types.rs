@@ -70,7 +70,6 @@ pub struct Lone {
 pub enum DangerWhy {
     #[default] Body,
     Drop,
-    Press,
     Rounds,
 }
 

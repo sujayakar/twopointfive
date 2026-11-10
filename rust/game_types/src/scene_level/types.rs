@@ -385,8 +385,6 @@ impl Level {
     pub fn room_at(&self, p: V3) -> Option<&crate::scene_scenarios::StructureRoom> {
         self.rooms().iter().find(|r| { let b = &r.bounds; p[0] > b.x0 && p[0] < b.x1 && p[2] > b.z0 && p[2] < b.z1 })
     }
-    /// its defenders may leave the building by a way out
-    pub fn way_out(&self) -> bool { self.floor().is_some_and(|f| f.way_out == Some(true)) }
     /// its defenders may dig in
     pub fn digs_in(&self) -> bool { self.floor().map_or(true, |f| f.dig_in != Some(false)) }
     /// the room its captives are held in, as its file says it

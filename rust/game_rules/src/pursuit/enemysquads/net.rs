@@ -802,7 +802,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         let t = g.time;
         let from = v3::copy(g.tab.roomfight_def[d].station);
         g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::default() });
-        crate::pressure::loose(g, d, due.at);
+        crate::roomfight::loose_at(g, d, due.at);
         let (a, b) = (pos_of(g, due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));
         let way = match way { Some(w) if !w.is_empty() => format!(" {}", w), _ => String::new() };
@@ -949,7 +949,7 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
 fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: RoomfightDefId, mode: crate::roomfight::DefMode) {
     use crate::roomfight::DefMode;
     let gd = s.gd;
-    let step = crate::pressure::boots(g, gd, s.step_t);
+    let step = crate::roomfight::boots(g, gd, s.step_t);
     g.tab.enemysquads_squad[q].sent[i].step_t = step;
     let at = pos_of(g, gd);
     if mode == DefMode::Move {
@@ -1024,7 +1024,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
         return;
     }
     g.tab.enemysquads_squad[q].sent[i].phase = SentPhase::Loose;
-    if mode != DefMode::Free { crate::pressure::loose(g, d, s.fix_at); }
+    if mode != DefMode::Free { crate::roomfight::loose_at(g, d, s.fix_at); }
     if there && !seen {
         g.tab.enemysquads_squad[q].sent[i].there = Some(g.time);
         let text = format!("{}: in position — on them!", name);

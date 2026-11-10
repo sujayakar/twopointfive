@@ -48,7 +48,7 @@ taskers! {
     DUG: "dug in", ["set on his door"];
     BREAKER: "the lights", ["out for the lights, or waiting to be sent"];
     SQUAD: "his squad", ["at rest, his squad's call"];
-    PRESS: "the press", ["the press has him, or he stays to keep the room it leaves"];
+    OUT: "out of his room", ["the last man up in it, out by another door"];
     NEEDS: "a need of his own", ["off for a coffee, a smoke, some water or a stretch"];
 }
 
