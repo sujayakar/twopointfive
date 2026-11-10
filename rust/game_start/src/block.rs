@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 
 /// the parts' names, in the parts' order (rust/sim/src/state.rs PARTS)
-pub const PART_NAMES: [&str; 10] = ["head", "dice", "doors", "slabs", "men", "lights", "weather", "smoke", "poses", "panes"];
+pub const PART_NAMES: [&str; 9] = ["head", "dice", "doors", "men", "lights", "weather", "smoke", "poses", "panes"];
 const _: () = assert!(PART_NAMES.len() == sim::state::PARTS.len());
 
 /// how long a block is, in bytes

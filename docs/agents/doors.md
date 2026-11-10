@@ -29,6 +29,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `shutdoor.rs` | the squad's order to shut one |
 | `doorforce.rs`, `darkdoor.rs`, `digin/` | defenders: firing and booting through a shut door, staying out of a dark room, wedging (`enemies.md`) |
 | `props.rs` | furniture: pushed, shoved by a leaf, thrown by a blast |
+| `slab.rs` | a leaf off its hinges, in the air, on its door's record |
 
 The step itself is `rust/sim/src/doors.rs`: every leaf for one tick, on flat columns. Furniture's is in `props.rs`, on its records. `game_update_doors` in
 `rust/game_rules/src/tick/game/doors.rs` gathers who is near a leaf, hands it over, and takes back where everybody ended. Sam's rows are in
