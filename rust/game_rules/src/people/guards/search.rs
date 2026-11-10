@@ -565,12 +565,30 @@ fn far_from(p: V3, list: &[Cand], r: f64) -> bool { list.iter().all(|k| v3::dist
 /// Deal the spots of the man's plan (his row) round its fix: flood, count what stands about every reached cell, keep the best covered a spacing apart, ask the
 /// line from the fix, take the top spots by cover and a few well-spread cells of open floor.
 fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
-    let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
-    let n = (w * hn) as usize;
     let fix = g.gd[gd].search_plan.as_ref().unwrap().fix;
     let crate::guards::FloodFrom { secs, metres } = flood_from(g, fix, SEARCH_RADIUS_M, None);
-    // props: every cell within reach of a chair / carton / plant / bin counts it
-    let mut prop_n: Vec<u8> = vec![0; n];
+    let prop_n = cells_by_props(g);
+    let leaf_n = cells_behind_open_leaves(g);
+    let (cands, opens) = reached_cells(g, &secs, &metres, &prop_n, &leaf_n);
+    let eye_fix: V3 = [fix[0], 1.0, fix[2]];
+    let mut chosen = best_covered(g, cands, eye_fix);
+    add_open_floor(g, opens, &mut chosen, eye_fix);
+    let mut spots: Vec<crate::guards::SearchSpot> = Vec::with_capacity(chosen.len());
+    for c in chosen.iter() {
+        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, kind: c.kind, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
+    }
+    let now = g.time;
+    let p = g.gd[gd].search_plan.as_mut().unwrap();
+    p.spots = spots;
+    p.flood_at = now;
+    p.current = -1.0;
+    p.rr = 0.0;
+}
+
+/// Props: every cell within reach of a chair / carton / plant / bin counts it.
+fn cells_by_props(g: &Game) -> Vec<u8> {
+    let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
+    let mut prop_n: Vec<u8> = vec![0; (w * hn) as usize];
     for i in 0..g.props.props.len() {
         let id = g.props.props[i];
         let r = g.tab.props_prop[id].radius + 0.7;
@@ -594,8 +612,13 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
             z += 1.0;
         }
     }
-    // open leaves: the cells close along a leaf standing well open, off the doorway itself: behind the door
-    let mut leaf_n: Vec<u8> = vec![0; n];
+    prop_n
+}
+
+/// Open leaves: the cells close along a leaf standing well open, off the doorway itself: behind the door.
+fn cells_behind_open_leaves(g: &Game) -> Vec<u8> {
+    let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
+    let mut leaf_n: Vec<u8> = vec![0; (w * hn) as usize];
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if m::abs(g.dr[d].leaf.angle) < 0.7 || g.dr[d].leaf.off { continue; }
@@ -614,9 +637,14 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
             a += 0.25;
         }
     }
-    // every reached cell a stride or more off the fix: what stands about it
+    leaf_n
+}
+
+/// Every reached cell a stride or more off the fix, by what stands about it: those with something, and those of open floor.
+fn reached_cells(g: &Game, secs: &[f32], metres: &[f32], prop_n: &[u8], leaf_n: &[u8]) -> (Vec<Cand>, Vec<Cand>) {
+    let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (mut cands, mut opens): (Vec<Cand>, Vec<Cand>) = (Vec::new(), Vec::new());
-    for i in 0..n {
+    for i in 0..(w * hn) as usize {
         let met = metres[i] as f64;
         if !secs[i].is_finite() || met > SEARCH_RADIUS_M || met < 1.5 { continue; }
         let (cx, cz) = ((i % w as usize) as f64, (i / w as usize) as f64);
@@ -636,40 +664,38 @@ fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
         let c = Cand { cell: i, pos: [(cx + 0.5) * cs, 0.0, (cz + 0.5) * cs], kind, cheap, m: met, hidden: false, cover: 0.0 };
         if cheap > 0.0 { cands.push(c); } else { opens.push(c); }
     }
+    (cands, opens)
+}
+
+/// The best covered a spacing apart, asked for the line from the fix: the top ones by cover.
+fn best_covered(g: &Game, mut cands: Vec<Cand>, eye_fix: V3) -> Vec<Cand> {
     js::sort_by(&mut cands, |a, b| js::or(b.cheap - a.cheap, a.m - b.m));
     let mut kept: Vec<Cand> = Vec::new();
     for c in cands.iter() {
         if kept.len() >= 40 { break; }
         if far_from(c.pos, &kept, SEARCH_SPACING_M) { kept.push(*c); }
     }
-    let eye_fix: V3 = [fix[0], 1.0, fix[2]];
     for c in kept.iter_mut() {
         c.hidden = crate::scene_collision::segment_blocked(g, eye_fix, [c.pos[0], 0.6, c.pos[2]], None, None, None);
         c.cover = v3::clamp(c.cheap + (if c.hidden { 0.3 } else { 0.0 }), 0.05, 1.0);
     }
     js::sort_by(&mut kept, |a, b| js::or(b.cover - a.cover, a.m - b.m));
-    let mut chosen: Vec<Cand> = kept.iter().take(SEARCH_SPOTS as usize).copied().collect();
-    js::sort_by(&mut opens, |a, b| b.m - a.m);   // controls: open floor, as far out and as far apart as the place allows
+    kept.iter().take(SEARCH_SPOTS as usize).copied().collect()
+}
+
+/// Controls: open floor, as far out and as far apart as the place allows.
+fn add_open_floor(g: &Game, mut opens: Vec<Cand>, chosen: &mut Vec<Cand>, eye_fix: V3) {
+    js::sort_by(&mut opens, |a, b| b.m - a.m);
     let mut controls = 0.0;
     for c in opens.iter_mut() {
         if controls >= SEARCH_CONTROLS { break; }
-        if far_from(c.pos, &chosen, 2.5) {
+        if far_from(c.pos, chosen, 2.5) {
             c.hidden = crate::scene_collision::segment_blocked(g, eye_fix, [c.pos[0], 0.6, c.pos[2]], None, None, None);
             c.cover = if c.hidden { 0.3 } else { 0.1 };
             chosen.push(*c);
             controls += 1.0;
         }
     }
-    let mut spots: Vec<crate::guards::SearchSpot> = Vec::with_capacity(chosen.len());
-    for c in chosen.iter() {
-        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, kind: c.kind, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
-    }
-    let now = g.time;
-    let p = g.gd[gd].search_plan.as_mut().unwrap();
-    p.spots = spots;
-    p.flood_at = now;
-    p.current = -1.0;
-    p.rr = 0.0;
 }
 
 /// The plan for this man's search, on his row: built on its first frame round his fix (his feet if he has none), rebuilt if the fix has moved a couple of
