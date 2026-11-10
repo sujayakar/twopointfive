@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fine Rooftop</title>
+<style>
+:root{--red:#e8121c;--ink:#111418;--glass:rgba(14,17,21,.84);color-scheme:dark}
+html,body{margin:0;height:100%;background:#d8dcdd;overflow:hidden;font:500 13px/1.4 "Helvetica Neue",Arial,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+#top{position:fixed;left:calc(22px + env(safe-area-inset-left,0px));top:calc(18px + env(safe-area-inset-top,0px));pointer-events:none;text-shadow:0 1px 12px rgba(0,0,0,.45)}#top b{display:block;font-weight:800;font-size:26px;letter-spacing:-.02em;line-height:1}#top i{font-style:normal;display:block;margin-top:6px;opacity:.92;max-width:44ch}
+#panel{position:fixed;right:calc(18px + env(safe-area-inset-right,0px));top:calc(18px + env(safe-area-inset-top,0px));width:268px;background:var(--glass);border-left:3px solid var(--red);padding:14px 16px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 64px);overflow-y:auto;scrollbar-width:thin;box-sizing:border-box}
+#panel h4{margin:4px 0 -4px;font-size:11px;font-weight:500;color:#aeb9c2}#panel .row{display:flex;gap:4px;flex-wrap:wrap}#panel label{display:flex;justify-content:space-between;align-items:center;gap:8px}#panel label span{min-width:58px;text-align:right;font:500 11px ui-monospace,Menlo,monospace}
+button{font:inherit;font-size:12px;color:#fff;background:rgba(255,255,255,.10);border:0;padding:4px 8px;cursor:pointer}button:hover{background:rgba(255,255,255,.2)}button.on{background:var(--red)}button:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:1px}input[type=range]{width:112px;accent-color:var(--red)}
+#stats{font:500 11px/1.5 ui-monospace,Menlo,monospace;white-space:pre;min-height:10em}
+#keys{position:fixed;left:22px;bottom:16px;right:310px;opacity:.95;text-shadow:0 1px 10px rgba(0,0,0,.6);font-size:12px;pointer-events:none}
+#out{position:fixed;left:22px;top:88px;margin:0;max-height:calc(100vh - 150px);max-width:calc(100vw - 350px);overflow:auto;background:rgba(14,17,21,.88);border-left:3px solid var(--red);padding:14px 18px;font:500 12px/1.45 ui-monospace,Menlo,monospace;white-space:pre}
+#error{position:fixed;left:22px;bottom:60px;right:300px;background:#300;color:#fdd;padding:12px;white-space:pre-wrap;font:12px ui-monospace,monospace;max-height:40vh;overflow:auto}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#eef0f0;color:var(--ink)}#load b{font-size:40px;font-weight:800;letter-spacing:-.03em;display:block;line-height:1}#load p{margin:10px 0 0;color:#555}
+#more{display:none}
+@media(max-width:720px){#panel{left:0;right:0;top:auto;bottom:0;width:auto;max-height:46vh;border-left:0;border-top:3px solid var(--red);padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}#panel.shut>:not(#more):not(#side):not(#stats){display:none}#more{display:block;align-self:flex-end}#keys{display:none}#top i{max-width:60vw}#out{left:16px;max-width:calc(100vw - 32px);box-sizing:border-box;font-size:10px}#error{right:22px}#stats{min-height:0}}
+</style></head><body><canvas id="c"></canvas>
+<div id="top"><b>FINE ROOFTOP</b><i>The whole scene as boxes, and drawn fine over them. Space turns one into the other.</i></div>
+<div id="panel" class="shut"><button id="more">More</button><div class="row" id="side"></div><h4>See it from</h4><div class="row" id="view"></div><h4>Hour</h4><div class="row" id="hour"></div><label>Error <input id="tau" type="range" min="-3" max="3" step="0.25"><span id="tauT"></span></label>
+<div id="stats"></div><button id="time">Time both on this machine (about two minutes)</button></div>
+<div id="keys">Drag to turn &nbsp; Scroll to go near &nbsp; Right drag or WASD to move, Q E down and up &nbsp; Click a wall to blow a hole &nbsp; <b>Space</b> boxes / fine</div>
+<pre id="out" hidden></pre><pre id="error" hidden></pre><div id="load"><div><b>FINE ROOFTOP</b><p id="what">Opening</p></div></div>
+<script type="text/plain" id="shapes"></script><script type="module" src="./finepage.js"></script></body></html>
