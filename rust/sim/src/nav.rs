@@ -46,10 +46,34 @@ static mut WAY: [f64; MAX_WAY * 2] = [0.0; MAX_WAY * 2];
 /// the scores have been made blank (infinite) once: they are zero as the module loads, and a table of infinities would be bytes in the file
 static mut BLANK: bool = false;
 
-/// where the host writes the shut cells (a byte address), and where a way's waypoints are (x z a point)
-pub fn shut_addr() -> usize {
-    core::ptr::addr_of!(SHUT) as usize
+/// which of the eight cells round a cell a step enters (in `NEAR`'s order, a bit each), of the floor `floor` was last told
+static mut ENTERS: [u8; MAX_NAV] = [0; MAX_NAV];
+static mut WIDE: (usize, usize) = (0, 0);
+/// the eight, in the search's own order
+const NEAR: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
+/// THE FLOOR A SEARCH IS OF: its shut cells, `gw` across
+pub fn floor_is(blocked: &[u8], gw: usize) {
+    let (shut, enters, wide) = unsafe { (&mut *core::ptr::addr_of_mut!(SHUT), &mut *core::ptr::addr_of_mut!(ENTERS), &mut *core::ptr::addr_of_mut!(WIDE)) };
+    if *wide == (gw, blocked.len()) && shut[..blocked.len()] == *blocked {
+        return;
+    }
+    *wide = (gw, blocked.len());
+    shut[..blocked.len()].copy_from_slice(blocked);
+    let gh = if gw == 0 { 0 } else { blocked.len() / gw };
+    for c in 0..gw * gh {
+        let (cx, cz) = ((c % gw) as i32, (c / gw) as i32);
+        let open = |x: i32, z: i32| x >= 0 && z >= 0 && x < gw as i32 && z < gh as i32 && blocked[z as usize * gw + x as usize] == 0;
+        let mut bits = 0;
+        for (k, &(dx, dz)) in NEAR.iter().enumerate() {
+            // (a step on the diagonal passes both the cells beside it)
+            if open(cx + dx, cz + dz) && (dx == 0 || dz == 0 || (open(cx + dx, cz) && open(cx, cz + dz))) {
+                bits |= 1 << k;
+            }
+        }
+        enters[c] = bits;
+    }
 }
+/// where a way's waypoints are (x z a point)
 pub fn way_addr() -> usize {
     core::ptr::addr_of!(WAY) as usize
 }
@@ -327,6 +351,7 @@ fn dear_along<P: Prices>(src: &mut P, grid: &Grid, a0: f64, a2: f64, b0: f64, b2
 /// the search's tables
 struct Tables {
     shut: &'static [u8; MAX_NAV],
+    enters: &'static [u8; MAX_NAV],
     g: &'static mut [S; MAX_NAV],
     came: &'static mut [u32; MAX_NAV],
     closed: &'static mut [u8; MAX_NAV],
@@ -338,6 +363,7 @@ fn tables() -> Tables {
     unsafe {
         Tables {
             shut: &*core::ptr::addr_of!(SHUT),
+            enters: &*core::ptr::addr_of!(ENTERS),
             g: &mut *core::ptr::addr_of_mut!(G),
             came: &mut *core::ptr::addr_of_mut!(CAME),
             closed: &mut *core::ptr::addr_of_mut!(CLOSED),
@@ -407,8 +433,10 @@ impl Open {
         self.cell[mi] = self.cell[self.n];
         self.score[mi] = self.score[self.n];
         self.look(mi / BLOCK);
-        if self.n / BLOCK != mi / BLOCK {
-            self.look(self.n / BLOCK);
+        // (the last one's block has another least only if that was it)
+        let b = self.n / BLOCK;
+        if b != mi / BLOCK && self.least[b] as usize == self.n {
+            self.look(b);
         }
         c
     }
@@ -476,26 +504,28 @@ fn search<P: Prices>(src: &mut P, run: &Run, t: &mut Tables) -> Result<usize, i3
             full = true;
             break;
         }
-        let (near, n_near) = steps_from(run, t, cur);
-        // (every one of them is priced before any is stepped into)
-        if !P::FLAT {
-            for s in &near[..n_near] {
-                src.at(s.cell);
+        let (from, cx, cz) = (get(t.g, cur), cur as u32 % gw as u32, cur as u32 / gw as u32);
+        let mut near = t.enters[cur];
+        while near != 0 {
+            let k = near.trailing_zeros() as usize;
+            near &= near - 1;
+            let (dx, dz) = NEAR[k];
+            let (x, z) = (cx.wrapping_add_signed(dx), cz.wrapping_add_signed(dz));
+            let ni = (z as usize * gw + x as usize) & (MAX_NAV - 1);
+            if t.closed[ni] != 0 {
+                continue;
             }
-        }
-        let from = get(t.g, cur);
-        for s in &near[..n_near] {
-            let ng = from + (if s.diagonal { SQRT2 } else { 1.0 }) * js_max(1.0, src.at(s.cell));
-            let was = get(t.g, s.cell);
+            let ng = from + (if dx != 0 && dz != 0 { SQRT2 } else { 1.0 }) * js_max(1.0, src.at(ni));
+            let was = get(t.g, ni);
             if ng < was {
-                let f = ng + left(run, s.x as usize, s.z as usize);
-                put(t.g, s.cell, ng);
-                t.came[s.cell] = cur as u32 + 1;
+                let f = ng + left(run, x as usize, z as usize);
+                put(t.g, ni, ng);
+                t.came[ni] = cur as u32 + 1;
                 if was < f64::INFINITY {
-                    open.better(s.cell, f);
+                    open.better(ni, f);
                 }
-                open.push(s.cell, f);
-                t.seen[n_seen] = s.cell as u32;
+                open.push(ni, f);
+                t.seen[n_seen] = ni as u32;
                 n_seen += 1;
             }
         }
@@ -503,44 +533,6 @@ fn search<P: Prices>(src: &mut P, run: &Run, t: &mut Tables) -> Result<usize, i3
     let way = if full { Err(ASK_HOST) } else { way_back(run, t) };
     blank(n_seen);
     way
-}
-
-/// a step into a cell: which, where it is, and whether it is on the diagonal
-#[derive(Clone, Copy, Default)]
-struct Step {
-    cell: usize,
-    x: u32,
-    z: u32,
-    diagonal: bool,
-}
-/// The cells a step from a cell may enter, in the search's own order.
-#[inline(always)]
-fn steps_from(run: &Run, t: &Tables, cur: usize) -> ([Step; 8], usize) {
-    let (gw, gh, shut) = (run.gw, run.gh, t.shut);
-    let mut near = [Step::default(); 8];
-    let mut n = 0usize;
-    let (cx, cz) = ((cur % gw) as i32, (cur / gw) as i32);
-    for dz in -1..=1i32 {
-        for dx in -1..=1i32 {
-            if dx == 0 && dz == 0 {
-                continue;
-            }
-            let (nx, nz) = (cx + dx, cz + dz);
-            if nx < 0 || nz < 0 || nx >= gw as i32 || nz >= gh as i32 {
-                continue;
-            }
-            let ni = nz as usize * gw + nx as usize;
-            if shut[ni] != 0 || t.closed[ni] != 0 {
-                continue;
-            }
-            if dx != 0 && dz != 0 && (shut[cz as usize * gw + nx as usize] != 0 || shut[nz as usize * gw + cx as usize] != 0) {
-                continue;
-            }
-            near[n] = Step { cell: ni, x: nx as u32, z: nz as u32, diagonal: dx != 0 && dz != 0 };
-            n += 1;
-        }
-    }
-    (near, n)
 }
 
 /// the way the search found, its cells from the first step to the goal: how many
