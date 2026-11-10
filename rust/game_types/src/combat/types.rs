@@ -4,7 +4,7 @@ use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// bodyHit's contact: what decides a round whose origin is already inside the man. `true` is the parameter's None. Entering = false: the entering hit only. Muzzle = fireWeapon's test. LegCrown = a later leg through glass, ro[1] <= headTop's height (or pos + 1.8). Flight = a ring or a 40 mm round, ro[1] < headTop's height (or pos + 1.75) + radius
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum BodyHitContact {
     Entering,
     Muzzle { st0_t: Option<f64>, muzzle: V3, glass_arm: bool, shooter: CharId },

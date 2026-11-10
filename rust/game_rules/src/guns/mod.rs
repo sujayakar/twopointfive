@@ -2,6 +2,7 @@
 pub mod autoreload;
 pub mod combat;
 pub mod fireline;
+pub mod flight;
 pub mod friendlyfire;
 pub mod friends;
 pub mod glasspen;
