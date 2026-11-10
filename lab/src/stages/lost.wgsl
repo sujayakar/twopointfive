@@ -14,10 +14,10 @@ const NEAR = 0.7;                                                   // farther t
       var q = surfaceAt(ro, -V, h, px); if (dot(q.n, V) < 0.03) { q.n = normalize(q.n + V * (0.05 - dot(q.n, V))); } let x = select(ro - V * h.t, q.x, fine); let m = lum(q.albedo) / PI; meshFoot = select(lostK.rays, 0.0, fine);
       for (var k = 0u; k < 15u; k++) {
         let el = array<f32, 5>(0.07, 0.208, 0.423, 0.707, 0.966)[k / 3u]; let az = turn + f32(k % 3u) * 1.5707963 * select(-1.0, 1.0, (s & 1u) == 0u); let L = coneDir(vec3f(cos(az) * sqrt(1.0 - el * el), el, sin(az) * sqrt(1.0 - el * el)), frame.sunDir.w, rnd2()); let cs = dot(q.n, L); if (cs <= 0.0) { continue; }
-        foot(0.0, 0.0); if (!fine) { footSharp(px, 2.0 * frame.sunDir.w); } F[side * 16u + k] += m * cs * lum(roughMatte(q.kind, q.albedo, q.n, V, L)) * lum(visible(x + q.n * select(0.003 + 0.166 * px, 0.002, fine), L, 1e-3, NEAR));
+        foot(0.0, 0.0); if (!fine) { footSharp(px, 2.0 * frame.sunDir.w); } F[side * 16u + k] += (m * (1.0 - lum(fresnel(coatF0(q), max(dot(q.n, V), 0.02)))) * cs * lum(roughMatte(q.kind, q.albedo, q.n, V, L)) + lum(coatOf(q, V, L, 0.005))) * lum(visible(x + q.n * select(0.003 + 0.166 * px, 0.002, fine), L, 1e-3, NEAR));
       }
       // from all round: the sky, all alike, and what stands near, which sees less of it itself. (What a wide ray is told of a surface is the mean of a patch of it)
-      let d = cosineDir(q.n, rnd2()); foot(0.0, 0.0); if (!fine) { foot(2.0 * px, 0.5); } let o = x + q.n * select(0.004 + 0.22 * px, 0.002, fine); let w = nearest(o, d, 1e-3, NEAR, 0u, 1e9); var e = 1.0;
+      let d = cosineDir(q.n, rnd2()); foot(0.0, 0.0); if (!fine) { foot(2.0 * px, 0.5); } let o = x + q.n * select(0.004 + 0.22 * px, 0.002, fine); let w = nearest(o, d, 1e-3, NEAR, 0u, 1e9); var e = select(0.0, 1.0, d.y > 0.15);      /* (low down something else stands: walls, a hill) */
       if (w.piece != NOTHING) { let b = surfaceMean(o, d, w); e = lum(b.albedo) * 0.85; if (fine) { foot(0.0, 0.0); e = lum(b.albedo) * mix(0.3, 1.0, lum(visible(b.x + b.ng * 0.002, cosineDir(b.ng, rnd2()), 1e-3, NEAR))); } }
       F[side * 16u + 15u] += m * e * lum(matteSeen(q.kind, q.albedo, max(dot(q.n, V), 0.02))); meshFoot = 0.0;
     }
