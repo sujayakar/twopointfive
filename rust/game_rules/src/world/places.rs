@@ -42,17 +42,20 @@ pub fn roomy(g: &Game, p: V3) -> bool {
     [[0.0, 0.0], [cs, 0.0], [-cs, 0.0], [0.0, cs], [0.0, -cs]].iter().all(|o| !crate::scene_collision::nav_grid_is_blocked(g, p[0] + o[0], p[2] + o[1]))
 }
 
-/// SOMEBODY HAS IT: within `apart` of `p` another man stands, or is on his way there, or means to: whatever rule sent him.
-pub fn taken(g: &Game, gd: GuardId, p: V3, apart: f64) -> bool {
+/// SOMEBODY HAS IT: within `apart` of `p` another man stands, or is on his way there, or means to, whatever rule or order sent him; or a player does.
+pub fn taken(g: &mut Game, gd: GuardId, p: V3, apart: f64) -> bool {
     let at = |q: Option<V3>| q.map_or(false, |q| v3::dist_xz(q, p) < apart);
-    g.guards.iter().any(|&o| {
-        if o == gd || crate::condition::down(g, g.gd[o].ch) { return false; }
+    if crate::seats::men_up(g).into_iter().any(|pl| at(Some(g.ch[g.pl[pl].ch].pos))) { return true; }
+    for o in g.guards.clone() {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let m = &g.gd[o];
-        at(Some(g.ch[m.ch].pos))
+        if at(Some(g.ch[m.ch].pos))
             || at(m.script.as_ref().and_then(|s| s.goal))
             || (m.path_i < m.path.len() && at(m.path_goal))
             || at(g.cond[m.ch].sup.cover)
             || at(m.body_duty.and_then(|d| d.spot))
-            || at(m.standoff.and_then(|s| g.tab.guards_standoff[s].orbit_goal))
-    })
+            || at(m.standoff.and_then(|s| g.tab.guards_standoff[s].orbit_goal)) { return true; }
+        if g.gd[o].unit.is_some() && crate::seats::order_of(g, o).is_some_and(|a| at(g.tab.orders_assignment[a].post)) { return true; }
+    }
+    false
 }

@@ -881,7 +881,7 @@ fn no_floor(g: &Game, dc: &JsMap<crate::Num, DoorId>, p: V3) -> bool {
 }
 
 /// a couple of strides to somewhere a chest at `h` is hidden from `threat` (and from the face of the breach), walked to in a straight line
-fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, b: Option<WallreactBreachId>, taken: &[V3], loosely: Option<bool>) -> Option<V3> {
+fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, b: Option<WallreactBreachId>, loosely: Option<bool>) -> Option<V3> {
     let loosely = loosely.unwrap_or(false);
     let step_m = g.k.wallreact.step_m;
     let t = [threat[0], 1.15, threat[2]];
@@ -937,7 +937,7 @@ fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, 
             plans += 1;
             if plans > 8 || !crate::places::walk(g, from, p, 0.5).is_some_and(|w| w.l <= 1.5 * r + 1.0) { continue; }
         }
-        if taken.iter().any(|q| flat(*q, p) < 0.9) { continue; }
+        if crate::places::taken(g, gd, p, 0.9) { continue; }
         if loose { alt = Some(p); ac = cost; continue; }
         best = Some(p);
         bc = cost;
@@ -990,22 +990,22 @@ fn spot_own(g: &mut Game, gd: GuardId, p: V3, threat: V3, t: V3, kn: &[Wallreact
 }
 
 /// where a crouching man goes
-fn wall_react_spot(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>, others: &[V3]) -> Option<V3> {
+fn wall_react_spot(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>) -> Option<V3> {
     let p = pos_of(g, gd);
     let kn: Vec<WallreactBreachId> = wall_react_known(g, gd).into_iter().filter(|o| Some(*o) != b).collect();
     let t = [threat[0], 1.15, threat[2]];
     let first = if b.is_some() {
-        match wall_react_step_out(g, gd, p, threat, 0.9, b, others, None) { Some(q) => Some(q), None => spot_own(g, gd, p, threat, t, &kn) }
+        match wall_react_step_out(g, gd, p, threat, 0.9, b, None) { Some(q) => Some(q), None => spot_own(g, gd, p, threat, t, &kn) }
     } else {
-        match spot_own(g, gd, p, threat, t, &kn) { Some(q) => Some(q), None => wall_react_step_out(g, gd, p, threat, 0.9, None, others, None) }
+        match spot_own(g, gd, p, threat, t, &kn) { Some(q) => Some(q), None => wall_react_step_out(g, gd, p, threat, 0.9, None, None) }
     };
     if first.is_some() { return first; }
-    if let Some(q) = wall_react_run_for(g, gd, p, threat, others, &kn) { return Some(q); }
-    if b.is_some() { wall_react_step_out(g, gd, p, threat, 0.9, b, others, Some(true)) } else { None }
+    if let Some(q) = wall_react_run_for(g, gd, p, threat, &kn) { return Some(q); }
+    if b.is_some() { wall_react_step_out(g, gd, p, threat, 0.9, b, Some(true)) } else { None }
 }
 
 /// nothing within a few strides: the nearest corner he can run to that hides a crouched chest
-fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, taken: &[V3], kn: &[WallreactBreachId]) -> Option<V3> {
+fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, kn: &[WallreactBreachId]) -> Option<V3> {
     let run_m = g.k.wallreact.run_m;
     let t = [threat[0], 1.15, threat[2]];
     let dc = crate::guards::door_cells(g);
@@ -1016,7 +1016,7 @@ fn wall_react_run_for(g: &mut Game, gd: GuardId, from: V3, threat: V3, taken: &[
             let a = a as f64;
             let p = [from[0] + m::sin(a * m::PI / 8.0) * r, 0.0, from[2] + m::cos(a * m::PI / 8.0) * r];
             if no_floor(g, &dc, p) { continue; }
-            if !crate::scene_collision::segment_blocked(g, t, [p[0], 0.9, p[2]], None, None, None) || taken.iter().any(|q| flat(*q, p) < 0.9) { continue; }
+            if !crate::scene_collision::segment_blocked(g, t, [p[0], 0.9, p[2]], None, None, None) || crate::places::taken(g, gd, p, 0.9) { continue; }
             if flat(p, threat) < flat(from, threat) * 0.6 { continue; }
             plans += 1;
             if plans > 10 { return best; }
@@ -1073,16 +1073,15 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
         WallReactAsks::Arm1(q) => q,
     };
     let (threat, pb) = (q.threat, q.x.b);
-    let others: Vec<V3> = g.guards.iter().copied().filter(|o| *o != gd && !crate::condition::down(g, g.gd[*o].ch)).map(|o| pos_of(g, o)).collect();
     if let Some(d) = crate::roomfight::def_of(g, gd) {
         let mode = g.tab.roomfight_def[d].mode;
         if mode != DefMode::Hold {
-            let r = if mode == DefMode::Move { R::Fine } else { shift_word(wall_react_shift(g, gd, threat, pb, &others)) };
+            let r = if mode == DefMode::Move { R::Fine } else { shift_word(wall_react_shift(g, gd, threat, pb)) };
             return (r, format!("mode {}: {}", mode.as_str(), r.as_str()));
         }
         let man = &g.gd[gd];
         if g.time - man.last_seen_t < 0.6 && man.last_known.map_or(false, |k| flat(k, c) < 5.0) { return (R::Later, String::from("a man at arm's length")); }
-        let mut to = wall_react_spot(g, gd, threat, pb, &others);
+        let mut to = wall_react_spot(g, gd, threat, pb);
         if let Some(q) = to {
             if g.gd[gd].stays_in_rooms || crate::digin::dig_in_set(g, gd) {
                 if crate::roomfight::room_fight_room_at(g, q) != g.tab.roomfight_def[d].room { to = None; }
@@ -1104,12 +1103,12 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
         say(g, gd, "cover's gone — moving!");
         return (R::Moved, String::from("moved"));
     }
-    let r = shift_word(wall_react_shift(g, gd, threat, pb, &others));
+    let r = shift_word(wall_react_shift(g, gd, threat, pb));
     (r, format!("the fight's own: {}", r.as_str()))
 }
 
 /// a man in the fight AI: its own shift to cover
-fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>, others: &[V3]) -> WallReactShift {
+fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBreachId>) -> WallReactShift {
     use crate::game::GuardState;
     let man = &g.gd[gd];
     if man.script.is_some() || man.pinned || man.standoff.is_some() || !g.tune.suppression { return WallReactShift::Fine; }
@@ -1117,7 +1116,7 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
         return if man.state == GuardState::Search || man.state == GuardState::Suspicious { WallReactShift::Later } else { WallReactShift::Fine };
     }
     if g.cond[man.ch].sup.cover.is_some() { return WallReactShift::Fine; }
-    let to = match wall_react_spot(g, gd, threat, b, others) {
+    let to = match wall_react_spot(g, gd, threat, b) {
         Some(q) => q,
         None => {  return WallReactShift::Later; }
     };
@@ -1149,21 +1148,10 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     if g.tab.orders_assignment[a].yield_t >= 0.0 || crate::roomfight::room_fight_engaged(g, gd) { return WallReactOpMove::Later; }
     let q = match wall_react_asks(g, gd, p, post, 1.2) { WallReactAsks::Text(_) => return WallReactOpMove::Fine, WallReactAsks::Arm1(q) => q };
     let threat = q.threat;
-    let taken: Vec<V3> = crate::seats::with_seat(g, v, &mut |g| {
-        let mut taken = vec![player_pos(g, &crate::seats::here(g))];
-        for m in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-            if m == gd || crate::condition::down(g, g.gd[m].ch) { continue; }
-            taken.push(pos_of(g, m));
-            if let Some(b) = crate::orders::squad_orders_of(&crate::seats::here(g), m) {
-                if let Some(q) = g.tab.orders_assignment[b].post { taken.push(q); }
-            }
-        }
-        taken
-    });
     let pb = q.x.b;
-    let to = match wall_react_step_out(g, gd, post, threat, 1.2, pb, &taken, None) {
+    let to = match wall_react_step_out(g, gd, post, threat, 1.2, pb, None) {
         Some(q) => Some(q),
-        None => wall_react_step_out(g, gd, post, threat, 1.2, pb, &taken, Some(true)),
+        None => wall_react_step_out(g, gd, post, threat, 1.2, pb, Some(true)),
     };
     let to = match to { Some(q) => q, None => { return WallReactOpMove::Later; } };
     let now = g.time;

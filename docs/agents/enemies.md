@@ -139,7 +139,7 @@ breach or a rescue, and `spawn_hostage` makes a rescue's.
   check after that.
 - **The quiet net.** "Dread from unanswered radio checks and bodies found. Heard in the calls getting worse, seen in beams whipping to noises.
   Done-test: the last man never dies standing upright without firing". One dead man is one shock to one man.
-- **Cover** stays in rooms his squad stays in, never behind a latched door (`cover_from`).
+- **Cover** stays in rooms his squad stays in, never behind a latched door (`cover_from`), never where another man is going (`taken`).
 - **The response team is level design.** "let's make it part of the level design" and "not all levels should have it".
 - **Warnings come first.** A wedge, a grenade, a charge and a press each have a sound or a line first (`cues.rs`).
 
