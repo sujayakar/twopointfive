@@ -1,10 +1,9 @@
 // WHAT A TORCH REACHES: how far its light goes, every way in its cone, found anew each frame. The air in the beam is then lit along the eye's own ray, exactly, with no grid and no history.
-import cardsCode from './cards.wgsl' with { type: 'text' };
+import spotsCode from './spots.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
+import { SPOT_TORCHES, SPOT_ROWS, spotRow } from '../scene/blocks';
 import type { Lab } from '../lab';
 import type { Stage } from '../graph';
-/** lamps more: six a torch, of the five nearest (cards.wgsl) */
-export const CARD_TORCHES = 5, CARDS = CARD_TORCHES * 6;
 /** only what it returns to a wide ray is asked of bounce.wgsl */
 const returnsOnly = bounceLib.slice(bounceLib.indexOf('fn returns'), bounceLib.indexOf('fn sentBack'));
 export const TORCH = { n: 128, most: 8, /** its picture of the leaves: one tile of an atlas, four across */ tile: 384 };
@@ -45,9 +44,9 @@ fn torchLight(x: vec3f, n: vec3f) -> vec3f { var E = vec3f(0.0); for (var k = 0u
 `;
 export const TORCH_READS: NonNullable<Stage['buffers']> = { torchMap: ['torchMap', 'array<f32>', 'read'], torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] };
 export function torchStages(lab: Lab): Stage[] {
-  lab.buffer('torchMap', N * N * MOST * 4); lab.uniform('torchK', new Uint32Array(28)); lab.buffer('cards', CARDS * 80); let count = 0; const cardsOn = () => lab.torches > 0;
-  return [{ name: 'torch lights', over: { groups: () => [CARD_TORCHES, 1, 1] }, when: cardsOn, buffers: { cards: ['cards', 'array<vec4f>', 'read_write'], torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }, code: torchView + returnsOnly + cardsCode },
-    { name: 'torch lights', over: { groups: () => [1, 1, 1] }, code: '', async make() { return (enc, g) => { const at = Math.min(64, lab.building.world.lamps.length); if (cardsOn()) enc.copyBufferToBuffer(g.buffers.get('cards')!, 0, lab.scene.lamps, at * 80, Math.min(CARDS, 64 - at) * 80); }; } },
+  lab.buffer('torchMap', N * N * MOST * 4); lab.uniform('torchK', new Uint32Array(28)); lab.buffer('spots', SPOT_ROWS * 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC); let count = 0; const on = () => lab.torches > 0, many = () => Math.min(SPOT_TORCHES, lab.torches);
+  return [{ name: 'torch lights', over: { groups: () => [many() * 4, 1, 1] }, when: on, buffers: { spots: ['spots', 'array<vec4u>', 'read_write'], torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }, code: torchView + returnsOnly + spotsCode },
+    { name: 'torch lights', over: { groups: () => [1, 1, 1] }, code: '', async make() { return (enc, g) => { if (on()) enc.copyBufferToBuffer(g.buffers.get('spots')!, 0, lab.scene.extraBuffer, spotRow(lab.scene.blocks, lab.scene.blockRow) * 16, many() * 512 * 16); }; } },
     { name: 'torch reach', over: { groups: () => [N / 8, N / 8, Math.max(1, count)] }, when: () => { count = lab.torches; return count > 0; }, buffers: { torchMap: ['torchMap', 'array<f32>', 'read_write'], torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }, code: torchCode.slice(0, torchCode.indexOf('/** how much')) + `
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let k = id.z; if (k >= torchK[0].x) { return; } let l = torchK[1u + (k >> 2u)][k & 3u]; let n = lamps[l].n; let b = basis(n); let p = ((vec2f(id.xy) + 0.5) / ${N}.0 * 2.0 - 1.0) * torchWide(l); let d = normalize(n + b[0] * p.x + b[1] * p.y); leafMode = 2u; let h = nearest(lamps[l].at, d, 0.08, 24.0, 0u, 1e9); torchMap[k * ${N * N}u + id.x + ${N}u * id.y] = min(h.t, 24.0); }` }];
 }

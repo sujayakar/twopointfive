@@ -243,23 +243,21 @@ fn lampWeight(i: u32, x: vec3f, n: vec3f) -> f32 {
 }
 var<private> byReach: bool = false;                                 // (the reference keeps a chance for every lamp)
 var<private> still: bool = false;                                   // (what is kept, is kept of lamps that stand: a torch is asked where it is needed)
-/** the lamps, and after them what torches light (cards.wgsl): for those who ask anew each frame */
-fn lampsAll() -> u32 { return frame.counts.x + u32(frame.sunE.w); }
 /** one lamp drawn in proportion to what it would send: its number and 1 / chance, or none */
 fn drawLamp(x: vec3f, n: vec3f) -> vec2f {
   var W = 0.0; var pick = -1.0; var w0 = 0.0; var u = rnd(); var near = vec4f(1.0);
   for (var i = 0u; i < frame.counts.x; i++) { if ((i & 3u) == 0u) { near = lampReach(x, i >> 2u); if (!byReach) { near = mix(vec4f(0.04), vec4f(1.0), near); } } let k = near[i & 3u]; if (k <= 0.0 || (still && lamps[i].kind == 2u)) { continue; } let w = lampWeight(i, x, n) * k; if (w <= 0.0) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
-/** one of the spots torches light, drawn the same way */
-fn drawSpot(x: vec3f, n: vec3f) -> vec2f {
-  var W = 0.0; var pick = -1.0; var w0 = 0.0; var u = rnd(); let to = lampsAll(); for (var i = frame.counts.x; i < to; i++) { let w = lampWeight(i, x, n); if (w <= 1e-6) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
-  return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
-}
-/** what the spots that torches light send x, facing n (seen or not: one of them is drawn, and asked) */
-fn spotLight(x: vec3f, n: vec3f, wide: f32) -> vec3f {
-  if (frame.sunE.w <= 0.0) { return vec3f(0.0); } let l = drawSpot(x, n); if (l.x < 0.0) { return vec3f(0.0); } let g = aimLamp(u32(l.x), x, rnd2()); let e = g.E * (l.y * max(dot(n, g.dir), 0.0)); if (max3(e) <= 1e-5) { return vec3f(0.0); }
-  foot(wide, lampSize(u32(l.x)) / max(g.dist, 0.1)); return min(e, vec3f(60.0)) * visible(x, g.dir, 2e-3, g.dist - 0.04);
+/** what reaches x, facing n, of what torches light (spots.wgsl): `many` drawn from the list, one of them kept by what it would send, and asked. spotWay: where from */
+var<private> spotWay = vec3f(0.0);
+fn spotLight(x: vec3f, n: vec3f, wide: f32, many: u32) -> vec3f {
+  let all = u32(frame.sunE.w) * 256u; spotWay = vec3f(0.0); if (all == 0u) { return vec3f(0.0); } var W = 0.0; var e = vec3f(0.0); var d = vec3f(0.0); var r = 0.0;
+  for (var m = 0u; m < many; m++) {
+    let j = min(u32((f32(m) + rnd()) / f32(many) * f32(all)), all - 1u); let c = extra[SPOT_ROW + 2u * j + 1u]; if (c.x == 0u) { continue; } let a = extra[SPOT_ROW + 2u * j]; let v = bitcast<vec3f>(a.xyz) - x; let up = dot(n, v); let to = -dot(octUnpack(a.w), v); if (up <= 0.0 || to <= 0.0) { continue; }
+    let q = unpack2x16float(c.y); let d2 = dot(v, v); let f = vec3f(unpack2x16float(c.x), q.x) * (up * to / (d2 * (d2 + q.y) * PI)); let w = lum(f); W += w; if (rnd() * W < w) { e = f / max(w, 1e-12); d = v; r = q.y; }
+  }
+  if (W <= 0.0) { return vec3f(0.0); } let far = length(d); spotWay = d / far; foot(wide, sqrt(r) / far); return min(e * (W * f32(all) / f32(many)), vec3f(60.0)) * visible(x, spotWay, 2e-3, far - 0.02);
 }
 // ================================================================ openings: where the sky is, for rays that should look there
 fn openingPdf(x: vec3f, d: vec3f) -> f32 {

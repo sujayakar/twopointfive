@@ -21,8 +21,8 @@ const SUN_LAMP = 255u;
   /* (torches are few and each is asked: where two reach and one is behind a wall, a throw of the dice between them would be seen) */ var tw = vec3f(0.0); var ti = vec3i(-1); var tv = vec2f(0.0); var W = vec2f(0.0); var U = vec3f(0.0); var pe = vec3f(0.0); var pw = 1.0; var pick = vec3i(-1); var u = vec2f(b2.x, b3.x); var s = pxSurf(p); let shines = byFormula(p.rough) > 0.0 || isPaint(p.kind); if (isPaint(p.kind)) { s = paintFlakes(s); } var C = vec4f(0.0); var WC = 0.0; var uc = rnd();
   // the sun is one of them
   let cs = dot(p.n, frame.sunDir.xyz); let sunE = frame.sunE.xyz * select(max(cs, 0.0), 0.5, p.leaf); let sunW = lum(sunE); var fi = SUN_LAMP; var fw = sunW; var fe = sunE; var W0 = 0.0; let sees = p.leaf || dot(p.ng, frame.sunDir.xyz) > 0.0; if (!sees) { fw = 0.0; fe = vec3f(0.0); }
-  let many = lampsAll(); for (var g = 0u; g * 4u < many; g++) { let reach = lampReach(p.x, g); if (max4(reach) <= 0.0) { continue; }
-   for (var j = 0u; j < 4u; j++) { let i = g * 4u + j; if (reach[j] <= 0.0 || i >= many) { continue; }
+  for (var g = 0u; g * 4u < frame.counts.x; g++) { let reach = lampReach(p.x, g); if (max4(reach) <= 0.0) { continue; }
+   for (var j = 0u; j < 4u; j++) { let i = g * 4u + j; if (reach[j] <= 0.0 || i >= frame.counts.x) { continue; }
     let e = lampE(i, p.x, n) * reach[j]; let w = lum(e); if (w <= 1e-5) { continue; } let torch = lamps[i].kind == 2u;
     if (torch) { W.y += w; if (w > tw.x) { tw = vec3f(w, tw.xy); ti = vec3i(i32(i), ti.xy); } else if (w > tw.y) { tw = vec3f(tw.x, w, tw.y); ti = vec3i(ti.x, i32(i), ti.y); } else if (w > tw.z) { tw.z = w; ti.z = i32(i); } }
     else { var qe = e; var qw = w; var qi = i; if (w > fw) { qe = fe; qw = fw; qi = fi; fe = e; fw = w; fi = i; } if (qw > 0.0) { U += qe; W0 += qw; let q = qw / W0; if (u.x < q) { pick.x = i32(qi); u.x = u.x / q; pe = qe; pw = qw; } else { u.x = (u.x - q) / (1.0 - q); } } }

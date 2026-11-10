@@ -38,7 +38,7 @@ fn oneMore(s: u32) {
     let h = nearest(o, d, select(2e-3, 0.0, k == 0u), far, 0u, 1e9); if (k == 0u) { if (h.piece != NOTHING) { continue; } fresh[2u * s] = vec4f(0.0); fresh[2u * s + 1u] = vec4f(0.0); spot[s] = vec4u(0u); return; }
     let sm = smokeSeen(x, w.xyz, min(h.t, 80.0)); let fo = blkSeen(); E += min((sm.rgb * fo.T + fo.L) * w.w, vec3f(60.0));
     if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * fo.T * (w.w * sm.a); }
-    else { let q = surfaceMean(x, w.xyz, h); let own = (pieces[h.piece].lamp & 255u) != 255u; let thru = h.thru * fo.T * (w.w * sm.a); E += min((select(q.glow, vec3f(0.0), own) + sentBack(q, rnd2(), w.xyz) + returns(q) / PI * spotLight(q.x + q.ng * 0.004, q.ng, 0.1)) * thru, vec3f(60.0)); tellAs(HITS + s, 0x80000000u | key, q.x, q.ng); /* (tells) */ }
+    else { let q = surfaceMean(x, w.xyz, h); let own = (pieces[h.piece].lamp & 255u) != 255u; let thru = h.thru * fo.T * (w.w * sm.a); E += min((select(q.glow, vec3f(0.0), own) + sentBack(q, rnd2(), w.xyz) + returns(q) / PI * spotLight(q.x + q.ng * 0.004, q.ng, 0.1, 4u)) * thru, vec3f(60.0)); tellAs(HITS + s, 0x80000000u | key, q.x, q.ng); /* (tells) */ }
   }
   let m = min(a.w + 1.0, keeps(st)); let k = min(1.0, RISE / (m + RISE - 1.0));
   let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[2u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); fresh[2u * s + 1u] = vec4f(b.xyz, clamp(finite(mix(b.w, sun, k), 1.0), 0.0, 1.0));

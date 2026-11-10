@@ -1,6 +1,5 @@
 // THE LAB: one world, one camera, one clock in ticks, and a list of stages that turn them into a picture. Everything the picture depends on is a pure
 // function of (tick, inputs so far, seed), so a run can be played again exactly and two methods can be shown the same frames.
-import { CARDS } from './stages/torches';
 import { openGpu, buffer, readTexture, readBuffer, type Gpu } from './gpu';
 import { Graph, type Stage } from './graph';
 import { SceneGpu, SPARE } from './scenegpu';
@@ -19,7 +18,7 @@ import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
 import { Sway } from './sway';
 import { skyMap, skyCode, tread, TROD } from './scene/skymap';
-import { blockCode } from './scene/blocks';
+import { blockCode, SPOT_TORCHES } from './scene/blocks';
 import { mapBlocks } from './blockmap';
 import { Air, airCode, airRows, BREEZE } from './scene/air';
 import { type V3, clamp, norm } from './math';
@@ -122,7 +121,7 @@ export class Lab {
   private send() {
     const [rw, rh] = this.graph.render, [ow, oh] = this.graph.output, c = this.camera.frame(ow / oh), p = this.prev ?? c, b = this.building, h = this.hourNow; this.sky.update(h);
     const f = new Float32Array(160), u = new Uint32Array(f.buffer); let o = 0; const v = (a: ArrayLike<number>, w = 0) => { f.set([a[0]!, a[1]!, a[2]!, w], o); o += 4; };
-    v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, this.torches > 0 ? CARDS : 0);
+    v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, Math.min(SPOT_TORCHES, this.torches));
     f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.scene.joinRow, h.night * 2.2 * (this.mains ? 1 : 0)], o); o += 4;
     this.slots = (this.scene.sendAir(this.air), this.scene.sendRipples(this.ripples), this.scene.moved()); this.scene.cull(c, this.cut); this.scene.sendLamps();
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.otherDice, this.air.strength], o); o += 4; { const me = b.player.body.pos; this.tune.set(this.playing ? [me[0], me[1] + 1.0, me[2]] : [0, -999, 0], 25); } f.set(this.look(), o); f.set([this.snow, this.snowNow, Math.max(0, Math.min(0.1, this.time - this.drawnAt)), this.ripples.live ? 1 : 0], o + 32); this.drawnAt = this.time;
