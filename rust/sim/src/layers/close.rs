@@ -2,6 +2,9 @@
 use super::*;
 use rd_row::*;
 
+/// a key of a blow: when, where the wrist is, the line wrist to knuckles, the back of the hand, the elbow's pole
+type BlowKey = (f64, [f64; 3], [f64; 3], [f64; 3], [f64; 3]);
+
 /// where each of the ready pose's eased numbers stands in its row
 mod rd_row {
     pub const R_L: usize = 0;
@@ -206,141 +209,235 @@ pub fn blow_trunk(g: usize, an: &Anim, b: &BlowRun, tl: f64) -> u32 {
     })
     .unwrap_or(0)
 }
+/// What the steps of a blow hand on to the ones after them.
+#[derive(Clone, Copy, Default)]
+struct Blow {
+    at1: [f64; 3],
+    at2: Option<[f64; 3]>,
+    tw_y: f64,
+    tw_p: f64,
+    // as_thrown: the blow, its beats, and how much of him it has
+    at: usize,
+    at_b: usize,
+    t: f64,
+    h: f64,
+    e: f64,
+    tail: f64,
+    free: f64,
+    speed: f64,
+    gaze_local: [f64; 3],
+    fix_l: [f64; 4],
+    fix_r: [f64; 4],
+    chop: bool,
+    palm: bool,
+    mouth: bool,
+    x: f64,
+    w_all: f64,
+    // blow_spots: where it goes, the shoulders, and how long each arm is
+    tgt: [f64; 3],
+    t2: Option<[f64; 3]>,
+    sl: [f64; 3],
+    sr: [f64; 3],
+    arm_r: f64,
+    arm_l: f64,
+    // right_on: whether the right hand has a part in it
+    right: bool,
+    // right_keys: the keys the right hand goes by
+    keys: [BlowKey; 5],
+    nk: usize,
+    // right_between: between which two keys he is: into the hit it only gathers speed
+    ka: BlowKey,
+    kb: BlowKey,
+    ez: f64,
+    // left_hand: the left hand: held up before a chop, over the mouth, or thrown back behind a palm
+    w_l: f64,
+}
+
 /// A takedown's own move, the arms, by IK on a copy of the pose (the knife styles' right arm is the knife's own): the chop's fist cocked behind the ear
 /// and hammered down, the palm heel driven up and through with the arm locked out; the left flat on his back (chop), over his mouth (the knife from
 /// behind) or thrown back and down (the rest). The eyes stay on the mark.
 pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Option<[f64; 3]>, tw_y: f64, tw_p: f64, shown: &mut f64) -> u32 {
-    let (at, at_b, _) = poses(an);
-    let (t, h, e, tail, style, free, speed) = (b.t, b.hit, b.end, b.tail, b.style, 1.0 - clamp(an.upper_w.aim, 0.0, 1.0), abs(an.speed));
-    let (gaze_local, fix_l, fix_r) = (an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
-    let (chop, palm, mouth) = (style == BlowStyle::Chop, style == BlowStyle::Palm, style == BlowStyle::Mouth);
-    let x = e + tail;
-    let w_all = smoothstep(0.0, 0.5 * h, t) * (1.0 - smoothstep(e - 0.16, e, t)) * free;
-    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD]) { Some(n) } else { None }) else {
+    let mut o = Blow { at1, at2, tw_y, tw_p, ..Blow::default() };
+    as_thrown(an, b, &mut o);
+    let Some(Some(n)) = with_pose(g, o.at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD]) { Some(n) } else { None }) else {
         return 0;
     };
-    if w_all <= 0.0 && !(mouth && t < x) {
+    if o.w_all <= 0.0 && !(o.mouth && o.t < o.x) {
         *shown = 0.0;
         return RAN;
     }
     let Some(mut hs) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+    if !ask_blend(g, o.at, o.at, 1.0, false, o.at_b, n) {
         return 0;
     }
     let hh = &mut hs;
-    let Some((tgt, right, w_l)) = with_pose(g, at_b, |d, rig, _n, fk| {
+    let Some(()) = with_pose(g, o.at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
-        let tgt = untwist(fk, tw_y, tw_p, at1);
-        let t2 = at2.map(|p| untwist(fk, tw_y, tw_p, p));
-        let (sl, sr) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
-        let (er, el) = (fk.at(role(FOREARM_R)), fk.at(role(FOREARM_L)));
-        let arm_r = dist3(&sr, &er) + dist3(&er, &fk.at(role(HAND_R)));
-        let arm_l = dist3(&sl, &el) + dist3(&el, &fk.at(role(HAND_L)));
-        let cap = |s: [f64; 3], p: [f64; 3], arm: f64| -> [f64; 3] {
-            let o = sub3(p, s);
-            let (l, c) = (len3(&o), BLOW.reach * arm);
-            if l > c {
-                mad3(s, o, c / l)
-            } else {
-                p
-            }
-        };
-        // the arm thrown out straight along a line
-        let lock = |s: [f64; 3], dv: [f64; 3], arm: f64| -> [f64; 3] { mad3(s, normalize(dv), BLOW.reach * arm) };
-        let right = (chop || palm) && w_all > 0.0;
-        if right {
-            // (when, where the wrist is, the line wrist → knuckles, the back of the hand, the elbow's pole)
-            type Key = (f64, [f64; 3], [f64; 3], [f64; 3], [f64; 3]);
-            let thru = sub3(tgt, sr);
-            let last: Key = (e - 0.14, lock(sr, [thru[0] * 0.5, max(thru[1], 0.0) + 0.4, max(thru[2], 0.1) * 0.8], arm_r), [0.0, 0.8, -0.5], [0.0, -0.5, -0.8], [-0.5, -0.8, -0.2]);
-            let (keys, nk): ([Key; 5], usize) = if chop {
-                (
-                    [
-                        (0.5 * h, add3(sr, [0.02, 0.12, -0.14]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
-                        (0.72 * h, add3(sr, [0.03, 0.13, -0.17]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
-                        (h, cap(sr, tgt, arm_r), [0.1, -0.45, 0.9], [-1.0, 0.2, 0.0], [-0.8, 0.1, -0.3]),
-                        (h + 0.1, cap(sr, add3(tgt, [0.0, -0.32, 0.06]), arm_r), [0.1, -0.8, 0.6], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.4]),
-                        (h + 0.22, cap(sr, add3(tgt, [0.0, -0.5, 0.1]), arm_r), [0.1, -0.9, 0.4], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.5]),
-                    ],
-                    5,
-                )
-            } else {
-                (
-                    [
-                        (0.5 * h, add3(sr, [0.16, -0.34, 0.2]), [0.0, 0.9, 0.3], [0.0, 0.3, -0.9], [-0.4, -0.7, -0.5]),
-                        (h, cap(sr, tgt, arm_r), [0.0, 0.9, -0.3], [0.0, -0.3, -0.9], [-0.5, -0.8, -0.2]),
-                        (h + 0.09, lock(sr, [thru[0] * 0.6, max(thru[1], 0.0) + 0.34, max(thru[2], 0.1) * 0.9], arm_r), [0.0, 0.8, -0.5], [0.0, -0.5, -0.8], [-0.5, -0.8, -0.2]),
-                        last,
-                        last,
-                    ],
-                    4,
-                )
-            };
-            let mut i = 0;
-            while i < nk - 1 && t >= keys[i + 1].0 {
-                i += 1;
-            }
-            let j = if i + 1 < nk { i + 1 } else { nk - 1 };
-            let (ka, kb) = (keys[i], keys[j]);
-            let u = if j == i || t <= ka.0 { 0.0 } else { clamp((t - ka.0) / (kb.0 - ka.0), 0.0, 1.0) };
-            // (into the hit it only gathers speed)
-            let ez = if kb.0 == h { u * u } else { u * u * (3.0 - 2.0 * u) };
-            let rot = slerp(&hand_rot(&fix_r, ka.2, ka.3), &hand_rot(&fix_r, kb.2, kb.3), ez);
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&ka.1, &kb.1, ez), Some(&lerp3(&ka.4, &kb.4, ez)), 0.85, Some(&rot), false);
-            if chop {
-                hand(d, hh, 1, &[BLOW.fist[0], BLOW.fist[1], BLOW.fist[2], BLOW.fist[3]], 0.6, 0.0);
-            } else {
-                hand(d, hh, 1, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0);
-            }
+        blow_spots(fk, &mut o);
+        right_on(&mut o);
+        if o.right {
+            right_keys(&mut o);
+            right_between(&mut o);
+            right_hand(hh, d, rig, fk, &o);
         }
-        let mut w_l = 0.0;
-        if let (true, Some(t2)) = (chop, t2) {
-            w_l = bump(t, 0.04, 0.5 * h, h - 0.02, h + 0.15) * free;
-            fk_run(rig, d, fk.rot, fk.pos);
-            let rot = hand_rot(&fix_l, [0.0, 1.0, 0.2], [0.0, 0.2, -1.0]);
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &cap(sl, t2, arm_l), Some(&[0.6, -0.7, -0.2]), 0.8, Some(&rot), false);
-            hand(d, hh, 0, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0);
-        } else if let (true, Some(t2)) = (mouth, t2) {
-            let (c, dn) = if tail > 0.0 { (x - 0.5, x - 0.2) } else { (e - 0.18, e - 0.04) };
-            w_l = bump(t, 0.03, 0.14, c, dn) * free * if tail > 0.0 && t > e { 1.0 - smoothstep(BLOW.walk[0], BLOW.walk[1], speed) } else { 1.0 };
-            fk_run(rig, d, fk.rot, fk.pos);
-            let rot = hand_rot(&fix_l, [-1.0, 0.0, 0.1], [0.1, 0.0, 1.0]);
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &cap(sl, t2, arm_l), Some(&[0.8, -0.5, 0.0]), 0.8, Some(&rot), false);
-            hand(d, hh, 0, &[BLOW.cup[0], BLOW.cup[1], BLOW.cup[2], BLOW.cup[3]], 0.3, 0.0);
-        } else if !chop && !mouth {
-            w_l = bump(t, 0.4 * h, h, e - 0.2, e) * free;
-            fk_run(rig, d, fk.rot, fk.pos);
-            let rot = hand_rot(&fix_l, [0.15, -0.7, -0.7], [1.0, 0.2, 0.1]);
-            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lock(sl, [0.16, -0.72, -0.68], arm_l), Some(&[0.5, 0.2, -0.8]), 0.6, Some(&rot), false);
-            hand(d, hh, 0, &[BLOW.loose[0], BLOW.loose[1], BLOW.loose[2], BLOW.loose[3]], 0.3, 0.0);
-        }
-        (tgt, right, w_l)
+        left_hand(hh, d, rig, fk, &mut o);
     }) else {
         return 0;
     };
     let side = |on: bool, r: usize| if on { role(r) } else { usize::MAX };
-    let left = w_l > 0.0;
+    let left = o.w_l > 0.0;
     ask_mask(&[
-        (side(right, SHOULDER_R), w_all, false),
-        (side(right, UPPER_ARM_R), w_all, false),
-        (side(right, FOREARM_R), w_all, false),
-        (side(right, HAND_R), w_all, true),
-        (side(left, SHOULDER_L), w_l, false),
-        (side(left, UPPER_ARM_L), w_l, false),
-        (side(left, FOREARM_L), w_l, false),
-        (side(left, HAND_L), w_l, true),
+        (side(o.right, SHOULDER_R), o.w_all, false),
+        (side(o.right, UPPER_ARM_R), o.w_all, false),
+        (side(o.right, FOREARM_R), o.w_all, false),
+        (side(o.right, HAND_R), o.w_all, true),
+        (side(left, SHOULDER_L), o.w_l, false),
+        (side(left, UPPER_ARM_L), o.w_l, false),
+        (side(left, FOREARM_L), o.w_l, false),
+        (side(left, HAND_L), o.w_l, true),
     ]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+    if !ask_blend(g, o.at, o.at_b, 1.0, true, o.at, n) {
         return 0;
     }
-    if w_all > 0.0 {
-        with_pose(g, at, |d, rig, _n, fk| look_at(d, rig, fk, &gaze_local, tgt, 0.6 * w_all, 0.0));
+    if o.w_all > 0.0 {
+        with_pose(g, o.at, |d, rig, _n, fk| look_at(d, rig, fk, &o.gaze_local, o.tgt, 0.6 * o.w_all, 0.0));
     }
     hands_to(&hs, an);
-    *shown = max(w_all, w_l);
+    *shown = max(o.w_all, o.w_l);
     RAN | RAN_ALL
+}
+
+/// The blow, its beats, and how much of him it has.
+fn as_thrown(an: &Anim, b: &BlowRun, o: &mut Blow) {
+    let (at, at_b, _) = poses(an);
+    let (t, h, e, tail, style, free, speed) = (b.t, b.hit, b.end, b.tail, b.style, 1.0 - clamp(an.upper_w.aim, 0.0, 1.0), abs(an.speed));
+    let (gaze_local, fix_l, fix_r) = (an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
+    let (chop, palm, mouth) = (style == BlowStyle::Chop, style == BlowStyle::Palm, style == BlowStyle::Mouth);
+    let x = e + tail;
+    let w_all = smoothstep(0.0, 0.5 * h, t) * (1.0 - smoothstep(e - 0.16, e, t)) * free;
+    *o = Blow { at, at_b, t, h, e, tail, free, speed, gaze_local, fix_l, fix_r, chop, palm, mouth, x, w_all, ..*o };
+}
+
+/// Where it goes, the shoulders, and how long each arm is.
+fn blow_spots(fk: &mut Fk, o: &mut Blow) {
+    let Blow { at1, at2, tw_y, tw_p, .. } = *o;
+    let tgt = untwist(fk, tw_y, tw_p, at1);
+    let t2 = at2.map(|p| untwist(fk, tw_y, tw_p, p));
+    let (sl, sr) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+    let (er, el) = (fk.at(role(FOREARM_R)), fk.at(role(FOREARM_L)));
+    let arm_r = dist3(&sr, &er) + dist3(&er, &fk.at(role(HAND_R)));
+    let arm_l = dist3(&sl, &el) + dist3(&el, &fk.at(role(HAND_L)));
+    *o = Blow { tgt, t2, sl, sr, arm_r, arm_l, ..*o };
+}
+
+/// A point no further than the arm reaches.
+fn cap(s: [f64; 3], p: [f64; 3], arm: f64) -> [f64; 3] {
+    let off = sub3(p, s);
+    let (l, c) = (len3(&off), BLOW.reach * arm);
+    if l > c {
+        mad3(s, off, c / l)
+    } else {
+        p
+    }
+}
+
+/// The arm thrown out straight along a line.
+fn lock(s: [f64; 3], dv: [f64; 3], arm: f64) -> [f64; 3] {
+    mad3(s, normalize(dv), BLOW.reach * arm)
+}
+
+/// Whether the right hand has a part in it.
+fn right_on(o: &mut Blow) {
+    let Blow { chop, palm, w_all, .. } = *o;
+    let right = (chop || palm) && w_all > 0.0;
+    *o = Blow { right, ..*o };
+}
+
+/// The keys the right hand goes by.
+fn right_keys(o: &mut Blow) {
+    let Blow { h, e, chop, tgt, sr, arm_r, .. } = *o;
+    let thru = sub3(tgt, sr);
+    let last: BlowKey = (e - 0.14, lock(sr, [thru[0] * 0.5, max(thru[1], 0.0) + 0.4, max(thru[2], 0.1) * 0.8], arm_r), [0.0, 0.8, -0.5], [0.0, -0.5, -0.8], [-0.5, -0.8, -0.2]);
+    let (keys, nk) = if chop {
+        (
+            [
+                (0.5 * h, add3(sr, [0.02, 0.12, -0.14]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
+                (0.72 * h, add3(sr, [0.03, 0.13, -0.17]), [0.2, 0.3, -0.9], [-1.0, 0.0, 0.0], [-0.7, 1.0, -0.4]),
+                (h, cap(sr, tgt, arm_r), [0.1, -0.45, 0.9], [-1.0, 0.2, 0.0], [-0.8, 0.1, -0.3]),
+                (h + 0.1, cap(sr, add3(tgt, [0.0, -0.32, 0.06]), arm_r), [0.1, -0.8, 0.6], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.4]),
+                (h + 0.22, cap(sr, add3(tgt, [0.0, -0.5, 0.1]), arm_r), [0.1, -0.9, 0.4], [-1.0, 0.2, 0.0], [-0.8, -0.2, -0.5]),
+            ],
+            5,
+        )
+    } else {
+        (
+            [
+                (0.5 * h, add3(sr, [0.16, -0.34, 0.2]), [0.0, 0.9, 0.3], [0.0, 0.3, -0.9], [-0.4, -0.7, -0.5]),
+                (h, cap(sr, tgt, arm_r), [0.0, 0.9, -0.3], [0.0, -0.3, -0.9], [-0.5, -0.8, -0.2]),
+                (h + 0.09, lock(sr, [thru[0] * 0.6, max(thru[1], 0.0) + 0.34, max(thru[2], 0.1) * 0.9], arm_r), [0.0, 0.8, -0.5], [0.0, -0.5, -0.8], [-0.5, -0.8, -0.2]),
+                last,
+                last,
+            ],
+            4,
+        )
+    };
+    *o = Blow { keys, nk, ..*o };
+}
+
+/// Between which two keys he is: into the hit it only gathers speed.
+fn right_between(o: &mut Blow) {
+    let Blow { t, h, keys, nk, .. } = *o;
+    let mut i = 0;
+    while i < nk - 1 && t >= keys[i + 1].0 {
+        i += 1;
+    }
+    let j = if i + 1 < nk { i + 1 } else { nk - 1 };
+    let (ka, kb) = (keys[i], keys[j]);
+    let u = if j == i || t <= ka.0 { 0.0 } else { clamp((t - ka.0) / (kb.0 - ka.0), 0.0, 1.0) };
+    // (into the hit it only gathers speed)
+    let ez = if kb.0 == h { u * u } else { u * u * (3.0 - 2.0 * u) };
+    *o = Blow { ka, kb, ez, ..*o };
+}
+
+/// The right arm there, a fist or an open hand.
+fn right_hand(hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &Blow) {
+    let Blow { fix_r, chop, ka, kb, ez, .. } = *o;
+    let rot = slerp(&hand_rot(&fix_r, ka.2, ka.3), &hand_rot(&fix_r, kb.2, kb.3), ez);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&ka.1, &kb.1, ez), Some(&lerp3(&ka.4, &kb.4, ez)), 0.85, Some(&rot), false);
+    if chop {
+        hand(d, hh, 1, &[BLOW.fist[0], BLOW.fist[1], BLOW.fist[2], BLOW.fist[3]], 0.6, 0.0);
+    } else {
+        hand(d, hh, 1, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0);
+    }
+}
+
+/// The left hand: held up before a chop, over the mouth, or thrown back behind a palm.
+fn left_hand(hh: &mut Hands, d: &mut [S], rig: &Rig, fk: &mut Fk, o: &mut Blow) {
+    let Blow { t, h, e, tail, free, speed, fix_l, chop, mouth, x, t2, sl, arm_l, .. } = *o;
+    let mut w_l = 0.0;
+    if let (true, Some(to)) = (chop, t2) {
+        w_l = bump(t, 0.04, 0.5 * h, h - 0.02, h + 0.15) * free;
+        fk_run(rig, d, fk.rot, fk.pos);
+        let rot = hand_rot(&fix_l, [0.0, 1.0, 0.2], [0.0, 0.2, -1.0]);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &cap(sl, to, arm_l), Some(&[0.6, -0.7, -0.2]), 0.8, Some(&rot), false);
+        hand(d, hh, 0, &[BLOW.open[0], BLOW.open[1], BLOW.open[2], BLOW.open[3]], 0.2, 0.0);
+    } else if let (true, Some(to)) = (mouth, t2) {
+        let (from, gone) = if tail > 0.0 { (x - 0.5, x - 0.2) } else { (e - 0.18, e - 0.04) };
+        w_l = bump(t, 0.03, 0.14, from, gone) * free * if tail > 0.0 && t > e { 1.0 - smoothstep(BLOW.walk[0], BLOW.walk[1], speed) } else { 1.0 };
+        fk_run(rig, d, fk.rot, fk.pos);
+        let rot = hand_rot(&fix_l, [-1.0, 0.0, 0.1], [0.1, 0.0, 1.0]);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &cap(sl, to, arm_l), Some(&[0.8, -0.5, 0.0]), 0.8, Some(&rot), false);
+        hand(d, hh, 0, &[BLOW.cup[0], BLOW.cup[1], BLOW.cup[2], BLOW.cup[3]], 0.3, 0.0);
+    } else if !chop && !mouth {
+        w_l = bump(t, 0.4 * h, h, e - 0.2, e) * free;
+        fk_run(rig, d, fk.rot, fk.pos);
+        let rot = hand_rot(&fix_l, [0.15, -0.7, -0.7], [1.0, 0.2, 0.1]);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lock(sl, [0.16, -0.72, -0.68], arm_l), Some(&[0.5, 0.2, -0.8]), 0.6, Some(&rot), false);
+        hand(d, hh, 0, &[BLOW.loose[0], BLOW.loose[1], BLOW.loose[2], BLOW.loose[3]], 0.3, 0.0);
+    }
+    *o = Blow { w_l, ..*o };
 }
 /// The knife's blow, the right arm over the punch clip's pose, by IK on a copy: to the hilt, the knife drawn down out of the sheath, through the kind's
 /// keys (eased key to key, the wrist's spots off the right shoulder, turned onto the man), back to the sheath's mouth and home; then the arm goes back
