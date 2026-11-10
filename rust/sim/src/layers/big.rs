@@ -248,7 +248,26 @@ fn as_big(an: &mut Anim, b: &AnimBigTool, lg: &AnimLongGrip, f: &mut BigBeat) {
     let (speed, clear, fix_l, fix_r, gaze_local) = (an.speed, an.big_clear, an.hand_fix[0], an.hand_fix[1], an.gaze_local);
     let stowing = end >= 0.0 && t >= end;
     let us = if stowing { clamp((t - end) / max(1e-3, stow), 0.0, 1.0) } else { 0.0 };
-    *f = BigBeat { at, at_b, ham, t, equip, end, snug, windup, lg_wrist, lg_fing, lg_back, adj, stock_l0, speed, clear, fix_l, fix_r, gaze_local, stowing, us, ..*f };
+    f.at = at;
+    f.at_b = at_b;
+    f.ham = ham;
+    f.t = t;
+    f.equip = equip;
+    f.end = end;
+    f.snug = snug;
+    f.windup = windup;
+    f.lg_wrist = lg_wrist;
+    f.lg_fing = lg_fing;
+    f.lg_back = lg_back;
+    f.adj = adj;
+    f.stock_l0 = stock_l0;
+    f.speed = speed;
+    f.clear = clear;
+    f.fix_l = fix_l;
+    f.fix_r = fix_r;
+    f.gaze_local = gaze_local;
+    f.stowing = stowing;
+    f.us = us;
 }
 
 /// The beat as shares: wound up, swung, struck, kicked, planted; in his hands; and where the drawn tool is.
@@ -297,7 +316,7 @@ fn beat(an: &mut Anim, blows: &[f64], f: &mut BigBeat) {
         let (t0, t1, put_at) = if snug { (BIGMOVE.snug.take[0], BIGMOVE.snug.take[1], BIGMOVE.snug.put_at) } else { (BIGMOVE.take[0], BIGMOVE.take[1], BIGMOVE.put_at) };
         an.big_k = smoothstep(t0, t1, ue) * (if stowing { 1.0 - smoothstep(put * put_at, put, us) } else { 1.0 });
     }
-    *f = BigBeat { wind, sw, hit, kick, plant, grab, put, ue, eb, in_hands, es, ..*f };
+    (f.wind, f.sw, f.hit, f.kick, f.plant, f.grab, f.put, f.ue, f.eb, f.in_hands, f.es) = (wind, sw, hit, kick, plant, grab, put, ue, eb, in_hands, es);
 }
 
 /// Where the point is from where he stands, and what squares the chest as the pose has it onto it.
@@ -321,7 +340,7 @@ fn toward(fk: &mut Fk, f: &mut BigBeat) {
         clamp(wrap_angle(psi - atan2(f[0], f[2])), -1.2, 1.2)
     };
     let still = 1.0 - smoothstep(0.2, 1.0, abs(speed));
-    *f = BigBeat { hips_n, reach, tdir, tleft, turn_to, still, ..*f };
+    (f.hips_n, f.reach, f.tdir, f.tleft, f.turn_to, f.still) = (hips_n, reach, tdir, tleft, turn_to, still);
 }
 
 /// How the trunk and the pelvis turn, lean, shift and drop.
@@ -344,7 +363,7 @@ fn big_lean(f: &mut BigBeat) {
         sh_s = 0.0;
         drop = 0.0;
     }
-    *f = BigBeat { chest_yaw, pel_yaw, pitch, sh_f, sh_s, drop, ..*f };
+    (f.chest_yaw, f.pel_yaw, f.pitch, f.sh_f, f.sh_s, f.drop) = (chest_yaw, pel_yaw, pitch, sh_f, sh_s, drop);
 }
 
 /// The trunk and the pelvis under it, a wider stance for the blow, and the feet put back.
@@ -385,7 +404,7 @@ fn big_body(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &BigBeat) {
 /// The trunk's own frame.
 fn big_frame(fk: &mut Fk, f: &mut BigBeat) {
     let (f_left, f_up, f_fwd) = trunk_frame(fk);
-    *f = BigBeat { f_left, f_up, f_fwd, ..*f };
+    (f.f_left, f.f_up, f.f_fwd) = (f_left, f_up, f_fwd);
 }
 
 /// A direction of the trunk's frame.
@@ -402,7 +421,7 @@ fn hands_now(fk: &mut Fk, f: &mut BigBeat) {
     let hp_at = untwist(fk, tw_y, tw_p, at0);
     let arc = dir_t(f, BIGMOVE.arc);
     let (u_r, u_l) = (BigSpot { at: fk.at(hr_n), rot: fk.rot(hr_n), f: [0.0; 3], b: [0.0; 3] }, BigSpot { at: fk.at(hl_n), rot: fk.rot(hl_n), f: [0.0; 3], b: [0.0; 3] });
-    *f = BigBeat { hr_n, hl_n, s_r, s_l, hp_at, arc, u_r, u_l, ..*f };
+    (f.hr_n, f.hl_n, f.s_r, f.s_l, f.hp_at, f.arc, f.u_r, f.u_l) = (hr_n, hl_n, s_r, s_l, hp_at, arc, u_r, u_l);
 }
 
 /// A fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder, squared to the handle.
@@ -424,7 +443,7 @@ fn no_tool(f: &mut BigBeat) {
     // (the left hand's place on the tool, by the kind: the hammer's line, or the gun's three axes)
     let ham_line = BigLine::default();
     let gun = ([0.0f64; 3], [0.0f64; 3], [0.0f64; 3]);
-    *f = BigBeat { back_r, held, ham_line, gun, ..*f };
+    (f.back_r, f.held, f.ham_line, f.gun) = (back_r, held, ham_line, gun);
 }
 
 /// The hammer: on his back, up, wound, over the top and down onto the point.
@@ -477,7 +496,7 @@ fn hammer_place(fk: &mut Fk, at_back: &mut f64, grab_at: &mut f64, f: &mut BigBe
         *grab_at = head_at - BIGMOVE.hammer.grab_at;
     }
     ham_line = l;
-    *f = BigBeat { back_r, held, ham_line, ..*f };
+    (f.back_r, f.held, f.ham_line) = (back_r, held, ham_line);
 }
 
 /// The shotgun: over the shoulder, then its butt in the pocket and its bore on the point.
@@ -503,7 +522,7 @@ fn shotgun_place(tune: &Knobs, f: &mut BigBeat) {
     let wr0 = v3::add(pk, in_g([-adj[0], -adj[1], -stock_l0 - adj[2] - kick * BIGMOVE.shotgun.kick]));
     let up0 = BigSpot { at: wr0, rot: hand_rot(&fix_r, z, in_g([-0.8, 0.6, 0.0])), f: [0.0; 3], b: [0.0; 3] };
     held = spot_mix(back_r, up0, in_hands, Some(arc));
-    *f = BigBeat { back_r, held, gun, ..*f };
+    (f.back_r, f.held, f.gun) = (back_r, held, gun);
 }
 
 /// The right hand onto it, and back.
@@ -515,7 +534,7 @@ fn right_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
     // a hand up by the shoulder: the elbow out and up, not folded into the ribs
     let high = smoothstep(-0.18, 0.1, r.at[1] - s_r[1]);
     two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr_n, &r.at, Some(&dir_t(f, v3::lerp3([-0.5, -0.8, -0.3], [-1.0, 0.3, -0.1], high))), 0.85 * own, Some(&r.rot), false);
-    *f = BigBeat { own, ..*f };
+    f.own = own;
 }
 
 /// The left let go of his gun, waiting in front of him, then onto the tool.
@@ -540,7 +559,7 @@ fn left_hand(d: &mut [S], rig: &Rig, fk: &mut Fk, f: &mut BigBeat) {
         l = spot_mix(l, u_l, e3((us - BIGMOVE.unjoin * 0.5) / (0.92 - BIGMOVE.unjoin * 0.5)), None);
     }
     two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hl_n, &l.at, Some(&dir_t(f, [0.5, -0.85, -0.15])), 0.6 * own, Some(&l.rot), false);
-    *f = BigBeat { j, ..*f };
+    f.j = j;
 }
 
 /// The fingers open and shut on it.
