@@ -31,7 +31,7 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(0) var<uniform> frame: Frame;
 @group(0) @binding(1) var<storage, read> nodes: array<Node>;
 @group(0) @binding(2) var<storage, read> pieces: array<Piece>;
-@group(0) @binding(3) var<storage, read> extra: array<vec4f>;        // planes, then marks (4 rows each), then leaves (2 rows), by the offsets below
+@group(0) @binding(3) var<storage, read> extra: array<vec4u>;        // leaves (2 rows), planes, marks (3 rows each) and much else, by the offsets below. Words, some of them numbers' bits: a float may be changed on its way if it is none, or very small
 @group(0) @binding(4) var<storage, read> insts: array<Inst>;
 @group(0) @binding(5) var<uniform> lamps: array<Lamp, 64>;
 @group(0) @binding(6) var<uniform> openings: array<Opening, 32>;
@@ -45,7 +45,8 @@ struct Mark { at: vec2f, size: vec2f, uv: vec4f, color: vec3f, face: u32 };
 @group(0) @binding(15) var smokeTex: texture_3d<f32>;       // the pool's bricks, each with a cell of its neighbours round it: light scattered per unit, and how much smoke per metre
 @group(0) @binding(16) var smokePage: texture_3d<u32>;      // which of them stands where (+ 1)
 
-const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const BEND = 0x20000000u;
+fn exF(i: u32) -> vec4f { return bitcast<vec4f>(extra[i]); }
+const BROKEN = 128u; const GLASS = 256u; const WATER = 512u; const CUT = 1024u; const GLOW = 2048u; const NOSHADOW = 4096u; const QUAD = 8192u; const MOVES = 16384u; const FAR = 32768u; const OPEN = 0x10000000u; const BEND = 0x20000000u;
 const NOTHING = 0xffffffffu; const LEAF_HIT = 0x80000000u;
 
 // ---- random numbers: a stream per pixel and frame, the same every run
@@ -61,7 +62,7 @@ fn rnd2() -> vec2f { if (QUASI) { return quasi(); } return vec2f(rnd(), rnd()); 
 /** blue noise over the screen, stepped through the frames by the golden ratio: neighbours differ, and so do frames */
 fn blue2(p: vec2u, k: u32) -> vec2f {
   let o = vec2u((k * 23u) & 63u, (k * 41u) & 63u);
-  let c = (p + o) & vec2u(63u); let i = c.y * 64u + c.x; let r = extra[u32(frame.misc2.y) + (i >> 1u)]; let n = select(r.xy, r.zw, (i & 1u) == 1u);
+  let c = (p + o) & vec2u(63u); let i = c.y * 64u + c.x; let r = exF(u32(frame.misc2.y) + (i >> 1u)); let n = select(r.xy, r.zw, (i & 1u) == 1u);
   return fract(n + f32(frame.counts.z & 1023u) * vec2f(0.61803399, 0.75487767));
 }
 // ---- the sky: one function, one image (its mips are the blur)
@@ -102,12 +103,12 @@ fn meet(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32, cut: f32) -> bool {
   }
   let np = flags & 15u;
   for (var i = 0u; i < np; i++) {
-    let pl = extra[(*p).planes + i]; let den = dot(pl.xyz, d); let num = pl.w - dot(pl.xyz, e0);
+    let pl = exF((*p).planes + i); let den = dot(pl.xyz, d); let num = pl.w - dot(pl.xyz, e0);
     if (abs(den) < 1e-12) { if (num < 0.0) { return false; } continue; }
     let t = num / den + sh; if (den < 0.0) { if (t > tn) { tn = t; code = 7u + i; } } else { tf = min(tf, t); }
   }
   let nc = (flags >> 4u) & 3u; for (var i = 0u; i < nc; i++) {        // the curves: each one stay of its own
-    let q = extra[(*p).planes + np + 2u * i].xyz; let e = e0 - extra[(*p).planes + np + 2u * i + 1u].xyz; let A = dot(q * d, d); let B = dot(q * d, e); let C = dot(q * e, e) - 1.0;
+    let q = exF((*p).planes + np + 2u * i).xyz; let e = e0 - exF((*p).planes + np + 2u * i + 1u).xyz; let A = dot(q * d, d); let B = dot(q * d, e); let C = dot(q * e, e) - 1.0;
     if (A < 1e-9) { if (C > 0.0) { return false; } continue; } let disc = B * B - A * C; if (disc <= 0.0) { return false; } let s = sqrt(disc); let t0 = (-B - s) / A + sh; if (t0 > tn) { tn = t0; code = 16u + i; } tf = min(tf, (-B + s) / A + sh);
   }
   if ((flags & WATER) != 0u) {                                       // water: somewhere in its box, where the ray meets the waves
@@ -131,7 +132,7 @@ fn safeInv(d: vec3f) -> vec3f { return 1.0 / select(d, vec3f(1e-12), abs(d) < ve
 fn leafWide(kind: u32) -> f32 { return select(select(0.46, 0.06, kind == 1u), 0.022, kind == 2u); }
 /** a leaf: a pointed oval, seen from both sides */
 fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
-  let a = extra[k * 2u]; let b = bitcast<vec4u>(extra[k * 2u + 1u]);
+  let a = exF(k * 2u); let b = extra[k * 2u + 1u];
   let n = octUnpack(b.x); let den = dot(n, rd); if (abs(den) < 1e-6) { return -1.0; }
   let t = dot(a.xyz - ro, n) / den; if (t <= tmin || t >= tmax) { return -1.0; }
   let x = ro + rd * t - a.xyz; let tl = octUnpack(b.y); let u = dot(x, tl) / a.w; let v = dot(x, cross(n, tl)) / a.w;
@@ -156,7 +157,7 @@ fn smokeWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> vec4f {
     if (t >= s.y || tau > 5.0) { break; } let x = ro + rd * t; let f = footAt(t);
     if (smokeSlot(x) == 0u) { let e = (SM_AT + (floor((x - SM_AT) / SM_BRICK) + ahead) * SM_BRICK - ro) * inv; t = max(max(min3(e), t) + 2e-3, t + 0.25 * f); continue; }
     let dt = min(max(max(0.12, 0.5 * f), (s.y - s.x) / 96.0), s.y - t); let y = x + rd * (0.5 * dt); let p = smokeSlot(y);
-    if (p != 0u) { var v: vec4f; if (f > SM_BRICK) { v = extra[BLK_SMOKE + p - 1u]; } else { v = smokeIn(p, y); if (max3(v.rgb) > 24.0) { v = vec4f(0.0, 0.0, 0.0, v.w); } } let d = v.w * dt; if (lit) { o = vec4f(o.rgb + v.rgb * (exp(-tau) * (1.0 - exp(-d))), 1.0); } tau += d; }      /* (a flame lights by its lamp: rays that are blurred see only its smoke) */
+    if (p != 0u) { var v: vec4f; if (f > SM_BRICK) { v = exF(BLK_SMOKE + p - 1u); } else { v = smokeIn(p, y); if (max3(v.rgb) > 24.0) { v = vec4f(0.0, 0.0, 0.0, v.w); } } let d = v.w * dt; if (lit) { o = vec4f(o.rgb + v.rgb * (exp(-tau) * (1.0 - exp(-d))), 1.0); } tau += d; }      /* (a flame lights by its lamp: rays that are blurred see only its smoke) */
     t += dt;
   }
   o.w = exp(-tau); return o;

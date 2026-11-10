@@ -7,9 +7,9 @@
 // (what it is: a node's row, or 1 << 31 | first << 4 | how many triangles, or children of the object)
 // A hit's code is MESH_HIT | child << bits | cluster << 7 | triangle.
 const MESH = 64u; const MESH_HIT = 0x80000000u;
-fn mrow(r: u32) -> vec4f { return extra[MESH_ROW + r]; }
+fn mrow(r: u32) -> vec4f { return exF(MESH_ROW + r); }
 /* (words are read as words: a GPU may flush a small one to nothing where it is loaded as a float) */
-fn mrowU(r: u32) -> vec4u { return bitcast<vec4u>(extra[MESH_ROW + r]); }
+fn mrowU(r: u32) -> vec4u { return extra[MESH_ROW + r]; }
 fn asF(v: vec4u) -> vec4f { return bitcast<vec4f>(v); }
 /** any hit will do (a shadow's ray) */
 var<private> meshAny = false;

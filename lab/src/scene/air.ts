@@ -2,7 +2,7 @@
 // and a run repeats. The fine one is the smoke's bricks, which begin as this, border on this, and are drawn to it as a whole.
 //   The weather gives the free wind: at the rim, along the top, and slowly (over four seconds) to what lies open to the sky, as the wind above mixes down. Gusts come in upwind and go through. Between two cells is an opening, measured once: walls and panes shut it, a
 // door's leaf shuts it while it is shut, leaves hold the air back. Air is not squeezed: what flows into a cell flows out. So lee, draughts and still rooms are found, not told.
-import { type V3, sub, dot } from '../math';
+import { type V3, sub, dot, add, mul } from '../math';
 import { F, boundsOf, type Piece, type World } from './world';
 import type { Place } from './place';
 /** the mean wind at strength 1, m/s */
@@ -22,15 +22,23 @@ export class Air {
     const list: number[] = [], red: number[] = [], black: number[] = []; for (let z = 0; z < nz; z++) for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) { const i = this.ix(x, y, z); list.push(i); ((x + y + z) & 1 ? black : red).push(i); } this.list = Int32Array.from(list); this.red = Int32Array.from(red); this.black = Int32Array.from(black); this.measure(w, doors); this.reset();
   }
   private ix(x: number, y: number, z: number) { return x + 1 + (y + 1) * this.sy + (z + 1) * this.sz; }
-  /** what stands between neighbouring cells: five ways across each face, each shut by what it meets */
-  private measure(w: World, doors: { leaf: Piece[]; open: number }[]) {
-    const OFF = [[0, 0], [-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]];
-    const cover = (p: Piece, a: number, to: (i: number, bit: number) => void) => {
-      const b = boundsOf(p), lo = [0, 1, 2].map(k => Math.max(0, Math.floor((b.mn[k]! - this.o[k]!) / H[k]! - (k === a ? 0.5 : 0)))), hi = [0, 1, 2].map(k => Math.min(this.n[k]! - 1, Math.floor((b.mx[k]! - this.o[k]!) / H[k]! + (k === a ? 0.5 : 0)))), u = (a + 1) % 3, v = (a + 2) % 3;
+  private static OFF = [[0, 0], [-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]];
+  private cover = (p: Piece, a: number, to: (i: number, bit: number) => void, OFF = Air.OFF) => {
+      const b = boundsOf(p), C = this.only, lo = [0, 1, 2].map(k => Math.max(C ? C[0]![k]! : 0, Math.floor((b.mn[k]! - this.o[k]!) / H[k]! - (k === a ? 0.5 : 0)))), hi = [0, 1, 2].map(k => Math.min(C ? C[1]![k]! : this.n[k]! - 1, Math.floor((b.mx[k]! - this.o[k]!) / H[k]! + (k === a ? 0.5 : 0)))), u = (a + 1) % 3, v = (a + 2) % 3;
       for (let z = lo[2]!; z <= hi[2]!; z++) for (let y = lo[1]!; y <= hi[1]!; y++) for (let x = lo[0]!; x <= hi[0]!; x++) { const g = [x, y, z]; if (g[a] === 0) continue; OFF.forEach(([s, t], bit) => {
         const from: V3 = [0, 0, 0]; for (let k = 0; k < 3; k++) from[k] = this.o[k]! + (g[k]! + 0.5) * H[k]!; from[u]! += s! * H[u]!; from[v]! += t! * H[v]!; from[a]! -= H[a]!; const q = sub(from, p.at); let l0 = 0, l1 = H[a]!; for (let k = 0; k < 3; k++) { const e = dot(p.rot[k]!, q), d = p.rot[k]![a]!, h = p.half[k]! * (p.quad && p.quad[k] !== 0 ? 0.8 : 1); if (Math.abs(d) < 1e-9) { if (Math.abs(e) > h) return; continue; } const m = (-h - e) / d, n = (h - e) / d; l0 = Math.max(l0, Math.min(m, n)); l1 = Math.min(l1, Math.max(m, n)); } if (l0 <= l1) to(this.ix(x, y, z), 1 << bit); }); }
-    };
-    for (const p of w.pieces) { if (p.flags & (F.WATER | F.FAR | F.OPEN) || Math.max(...p.half) < 0.22) continue; for (let a = 0; a < 3; a++) cover(p, a, (i, bit) => { this.base[a]![i]! |= bit; }); }
+  };
+  private stand(ps: Piece[]) { for (const p of ps) { if (p.flags & (F.WATER | F.FAR | F.OPEN) || (Math.max(...p.half) < 0.22 && !p.stays)) continue; for (let a = 0; a < 3; a++) this.cover(p, a, (i, bit) => { this.base[a]![i]! |= bit; }); } }
+  private only: number[][] | null = null;
+  /** what stands between lo and hi has changed; `about`: all that stands within r of a place */
+  change(about: (c: V3, r: number) => Piece[], lo: V3, hi: V3) {
+    const a = lo.map((v, k) => Math.max(0, Math.floor((v - this.o[k]!) / H[k]!) - 1)), b = hi.map((v, k) => Math.min(this.n[k]! - 1, Math.floor((v - this.o[k]!) / H[k]!) + 2)); for (let z = a[2]!; z <= b[2]!; z++) for (let y = a[1]!; y <= b[1]!; y++) for (let x = a[0]!; x <= b[0]!; x++) for (let k = 0; k < 3; k++) this.base[k]![this.ix(x, y, z)] = 0;
+    const c = mul(add(lo, hi), 0.5), r = Math.max(...hi.map((v, k) => (v - lo[k]!) / 2)) + 1.5; this.only = [a, b]; this.stand(about(c, r).filter(p => !(p.flags & F.MOVES))); this.only = null; this.doorKey = '?';
+  }
+  /** what stands between neighbouring cells: five ways across each face, each shut by what it meets */
+  private measure(w: World, doors: { leaf: Piece[]; open: number }[]) {
+    const cover = this.cover;
+    this.stand(w.pieces);
     for (const d of doors) { const faces = new Map<string, [number, number, number]>(); for (let a = 0; a < 3; a++) cover(d.leaf[0]!, a, (i, bit) => { if (this.base[a]![i]! & bit) return; const k = a + ':' + i, f = faces.get(k); if (f) f[2]++; else faces.set(k, [a, i, 1]); }); this.doorFaces.push({ get: () => d.open, faces: [...faces.values()] }); }
     // leaves hold it back, by their area in a cubic metre
     for (const i of w.instances) { const c = w.clusters[i.cluster]!; let area = 0; for (const l of c.leaves) area += l.size * l.size * (l.wood ? 0.05 : 0.9); const g = [0, 1, 2].map(k => Math.floor((i.at[k]! - this.o[k]!) / H[k]!)); if (g.some((q, k) => q < 0 || q >= this.n[k]!)) continue; this.drag[this.ix(g[0]!, g[1]!, g[2]!)]! += 0.2 * area * i.scale * i.scale / (H[0] * H[1] * H[2]); }
@@ -106,7 +114,7 @@ export class Air {
 }
 export const airRows = (cells: number) => Math.ceil(cells / 2);
 export const airCode = (a: Air) => `
-fn airCell(c: vec3i) -> vec4f { let i = u32(c.x + ${a.n[0]} * (c.y + ${a.n[1]} * c.z)); let r = bitcast<vec4u>(extra[u32(frame.pool2.w) + (i >> 1u)]); let v = bitcast<vec2i>(select(r.xy, r.zw, (i & 1u) == 1u)); return vec4f(vec3f(vec3i((v.x << 16u) >> 16u, v.x >> 16u, (v.y << 16u) >> 16u)) * 0.001, f32(v.y >> 16u)); }
+fn airCell(c: vec3i) -> vec4f { let i = u32(c.x + ${a.n[0]} * (c.y + ${a.n[1]} * c.z)); let r = extra[u32(frame.pool2.w) + (i >> 1u)]; let v = bitcast<vec2i>(select(r.xy, r.zw, (i & 1u) == 1u)); return vec4f(vec3f(vec3i((v.x << 16u) >> 16u, v.x >> 16u, (v.y << 16u) >> 16u)) * 0.001, f32(v.y >> 16u)); }
 /** the air's speed at a place, m/s: the coarse air, not read from the far side of what is shut */
 fn windAt(x: vec3f) -> vec3f {
   let g = clamp((x - vec3f(${a.o.map(v => v.toFixed(3)).join(', ')})) / vec3f(${H.map(v => v.toFixed(3)).join(', ')}) - 0.5, vec3f(0.0), vec3f(${a.n.map(v => (v - 1.001).toFixed(3)).join(', ')})); let b = vec3i(g); let f = g - vec3f(b); let h = vec3i(select(vec3f(0.0), vec3f(1.0), f > vec3f(0.5))); let own = airCell(b + h); var s = vec3f(0.0); var ws = 0.0;

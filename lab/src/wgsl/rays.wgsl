@@ -128,7 +128,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
 /** a cell's first row: thickness, and share of leaves · tight box, is it grass · the box's far corner · two of its colors */
 fn cellShare(r: vec4u) -> f32 { return f32(r.x >> 24u) / 255.0; }
 struct Blk { t: f32, cell: u32, tau: f32, L: vec3f };
-fn blkWord(at: u32, i: u32) -> u32 { return bitcast<vec4u>(extra[at + (i >> 2u)])[i & 3u]; }
+fn blkWord(at: u32, i: u32) -> u32 { return extra[at + (i >> 2u)][i & 3u]; }
 /** how thick a cell's contents stand, a metre, along x y z (within its tight box), and that box */
 struct CellBox { sigma: vec3f, lo: vec3f, hi: vec3f };
 fn cellBox(r: vec4u, lo: vec3f, h: f32) -> CellBox {
@@ -149,7 +149,7 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
     let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + level * 512u + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
     if (cell >= 0x80000000u) { let d = i32(cell & 255u); let e2 = (BLK_LO + vec3f(c) * BRICK + select(vec3f(max(q - d + 1, vec3i(0))), vec3f(min(q + d, vec3i(i32(per)))), rd > vec3f(0.0)) * h - ro) * inv; t = max(t, min(min3(e2), select(1e9, max(blk.y, t), level == 0u))) + 1e-3; continue; }      /* (nothing so many cells round) */
     if (cell != fromCell) {
-      let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
+      let r = extra[BLK_CELLS + (cell - 1u) * 2u]; let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
       if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = cellShare(r); let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
     }
     t = out + 1e-3;

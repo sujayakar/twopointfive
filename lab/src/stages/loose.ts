@@ -15,7 +15,7 @@ fn qfrom(a: vec3f, b: vec3f) -> vec4f { let d = dot(a, b); if (d < -0.999) { ret
     if (p.info.x == 0u) {
       // a gust tears one off: a spray drawn at random, and a leaf of it
       if (rnd() > looseK.z) { continue; } let k = min(u32(rnd() * looseK.w), u32(looseK.w) - 1u); let I = insts[k]; if ((I.tint & 0x1000000u) == 0u || (I.tint & 0x2000000u) != 0u) { continue; }
-      let lf = I.leaf + u32(rnd() * 120.0); let a = extra[lf * 2u]; let b = bitcast<vec4u>(extra[lf * 2u + 1u]); if ((b.w & 255u) != 0u) { continue; } let s2 = dot(I.r0.xyz, I.r0.xyz); let d = a.xyz - vec3f(I.r0.w, I.r1.w, I.r2.w); let x = (I.r0.xyz * d.x + I.r1.xyz * d.y + I.r2.xyz * d.z) / s2;
+      let lf = I.leaf + u32(rnd() * 120.0); let a = exF(lf * 2u); let b = extra[lf * 2u + 1u]; if ((b.w & 255u) != 0u) { continue; } let s2 = dot(I.r0.xyz, I.r0.xyz); let d = a.xyz - vec3f(I.r0.w, I.r1.w, I.r2.w); let x = (I.r0.xyz * d.x + I.r1.xyz * d.y + I.r2.xyz * d.z) / s2;
       /* (an autumn leaf comes off easily) */ if ((I.tint & 255u) < ((I.tint >> 8u) & 255u) && rnd() > 0.35) { continue; } let air = windAt(x); if (length(air) < 3.0 + 2.5 * rnd() && tick > 4u) { continue; } p.at = vec4f(x, a.w / sqrt(s2)); p.vel = vec4f(air * 0.2, 0.0); let nn = normalize(I.r0.xyz * octUnpack(b.x).x + I.r1.xyz * octUnpack(b.x).y + I.r2.xyz * octUnpack(b.x).z); p.q = qmul(qfrom(vec3f(0.0, 1.0, 0.0), nn), vec4f(0.0, sin(rnd() * 3.0), 0.0, cos(rnd() * 3.0))); p.q = normalize(p.q); p.info = vec4u(1u, I.tint, pcg(rngState), 3000u + u32(rnd() * 6000.0)); continue;
     }
     let air = windAt(p.at.xyz); let h = f32(p.info.z & 1023u) / 1023.0;
