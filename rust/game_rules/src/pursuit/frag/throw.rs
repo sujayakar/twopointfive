@@ -100,8 +100,7 @@ fn tick_book(g: &mut Game, i: usize) {
     // (the list first: the accessors read a row that a thing off the list no longer has)
     if !g.items.items.contains(&it) || g.tab.item[it].fired || g.tab.item[it].life <= 0.0 {
         for gd in live!(g, i).flee.keys() {
-            crate::game::guard_set_path(g, gd, Vec::new());
-            crate::guards::guard_set_path_goal(g, gd, None);
+            g.gd[gd].drop_path();
             if !crate::condition::down(g, g.gd[gd].ch) { let c = g.gd[gd].ch; g.ch[c].anim.crouch_target = 0.0; }
         }
         g.m.frag.books.as_mut().unwrap().remove(i);

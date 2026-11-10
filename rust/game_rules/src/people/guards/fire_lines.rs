@@ -594,11 +594,10 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
     for &s in cands.iter() {
         if failed & (if s < 0.0 { 1 } else { 2 }) != 0 { continue; }
         let Some(cand) = step_that_opens_it(g, w, s) else { continue };
-        crate::game::guard_set_path(g, gd, vec![cand]);
+        g.gd[gd].set_path(vec![cand]);
         let man = &mut g.gd[gd];
         man.path_i = 0;
-        man.path_goal = Some(v3::copy(cand));
-        man.path_goal_orbit = false;
+        man.set_path_goal(Some(v3::copy(cand)));
         man.stall_ref = None;
         man.line_side = if s < 0.0 { -1.0 } else { 1.0 };
         man.line_gain = -1.0;

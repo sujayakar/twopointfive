@@ -274,7 +274,7 @@ fn close_up(g: &mut Game, op: DoorOpId, f: &Piece, lead: GuardId, walks: &mut Wa
     let mut taken: Vec<V3> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&who| !crate::condition::down(g, g.gd[who].ch)).map(|who| where_of(g, who)).collect();
     let mut came: Vec<String> = Vec::new();
     for mm in g.tab.doortools_door_op[op].men.clone() {
-        if mm == lead || crate::condition::down(g, g.gd[mm].ch) || door_tools_in_at(g, op, mm).is_nan() || crate::control::man::blind(g, mm) || crate::roomfight::over_is_mine(g, mm) { continue; }
+        if mm == lead || crate::condition::down(g, g.gd[mm].ch) || door_tools_in_at(g, op, mm).is_nan() || crate::control::man::blind(g, mm) || crate::roomfight::has_over(g, mm) { continue; }
         let (to, at) = (g.pos_of(lead), where_of(g, mm));
         let his_pair = own.is_some() && crate::orders::squad_orders_pair_of(g, mm) == own;
         if (his_pair && walks.len(g, at, to) <= g.k.doortools.buddy_m) || walks.len(g, at, to) <= 3.5 { continue; }

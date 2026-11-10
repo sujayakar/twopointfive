@@ -100,7 +100,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
         if turn < bd { bd = turn; best = i as i64; by = y; }
     }
     if best < 0 { g.tab.doortools_room_search[sr].yaw.delete(gd); return false; }
-    if crate::roomfight::over_is_mine(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
+    if crate::roomfight::has_over(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { return true; }
     let yaw = y0 + v3::clamp(v3::wrap_angle(by - y0), -scan_rate * dt, scan_rate * dt);
     g.tab.doortools_room_search[sr].yaw.set(gd, yaw);
     let row = &mut g.tab.orders_assignment[a];
@@ -174,7 +174,7 @@ fn strands(g: &Game, squad: &[GuardId], sam: &[V3], gd: GuardId, p: V3, go: &[Gu
 /// his own partner has a door of the order's room to hold, so he is spare
 fn lent(g: &Game, squad: &[GuardId], gd: GuardId, free: &[GuardId], m: GuardId, op: Option<DoorOpId>) -> bool {
     let (Some(o), Some(op)) = (mate_of(g, squad, gd, m), op) else { return false };
-    !free.contains(&o) && !crate::condition::down(g, g.gd[o].ch) && g.tab.doortools_door_op[op].men.contains(&o) && !crate::roomfight::over_is_mine(g, o) && door_tools_on_other(g, op, o)
+    !free.contains(&o) && !crate::condition::down(g, g.gd[o].ch) && g.tab.doortools_door_op[op].men.contains(&o) && !crate::roomfight::has_over(g, o) && door_tools_on_other(g, op, o)
 }
 
 /// the nearest of `list` to `gd`, the first on a tie
@@ -355,7 +355,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
     let mut dead = Dead::of(g, sr);
     let mut by: Vec<(GuardId, f64)> = Vec::new();
     for mm in g.tab.doortools_door_op[op].men.clone() {
-        if !door_tools_in_at(g, op, mm).is_nan() && !crate::control::man::blind(g, mm) && !crate::roomfight::over_is_mine(g, mm) && !door_tools_on_other(g, op, mm) { by.push((mm, dist_xz(g.pos_of(mm), dead.mid))); }
+        if !door_tools_in_at(g, op, mm).is_nan() && !crate::control::man::blind(g, mm) && !crate::roomfight::has_over(g, mm) && !door_tools_on_other(g, op, mm) { by.push((mm, dist_xz(g.pos_of(mm), dead.mid))); }
     }
     if by.is_empty() { return false; }
     js::sort_by(&mut by, |a, b| a.1 - b.1);

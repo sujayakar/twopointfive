@@ -275,10 +275,7 @@ pub(super) fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk:
     let to = d.to;
     crate::guards::go_to(g, gd, to, None);
     if crate::guards::follow_path(g, gd, dt, walk) || { let c = g.gd[gd].ch; flat(&g.ch[c].pos, to[0], to[2]) < 0.3 } {
-        g.gd[gd].path = Vec::new();
-        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         if !crate::close::close_seat(g, gd, Some(&d.at[..]), Some(d.face)) {
             let wp = d.wp;
             drop(g, gd);

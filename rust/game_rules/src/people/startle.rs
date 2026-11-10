@@ -198,9 +198,8 @@ fn runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
     crate::owner::claim(g, gd, crate::owner::by::STARTLE, now, None);
     let row = g.m.startle.state_of.get_mut(gd).unwrap();
     row.run_at = now; row.ref_ = None; row.script = None;
-    crate::game::guard_set_path(g, gd, Vec::new());
     let man = &mut g.gd[gd];
-    man.path_goal = None; man.path_goal_orbit = false; man.stall_ref = None;
+    man.drop_path(); man.stall_ref = None;
     true
 }
 

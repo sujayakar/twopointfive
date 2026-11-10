@@ -309,7 +309,7 @@ fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f6
     let c = g.col.nav.cell;
     let ix = m::floor(x / c);
     let iz = m::floor(z / c);
-    let key = crate::Num((ix + 4096.0 * iz) * 2.0 + if low { 1.0 } else { 0.0 } + 0.0);
+    let key = crate::Num::of((ix + 4096.0 * iz) * 2.0 + if low { 1.0 } else { 0.0 });
     let t = g.time;
     if let Some(was) = g.m.sneak.cell_lit.as_ref().and_then(|cs| cs.get(key)) {
         if t >= was[1] && t - was[1] < age { return was[0]; }
@@ -377,7 +377,7 @@ fn walk_in_cone(g: &Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, 
 fn walk_cell(x: f64, z: f64) -> f64 { m::floor(x / 0.25) + 4096.0 * m::floor(z / 0.25) }
 /// The line from a defender to a man on this floor, asked once per defender per quarter-metre: its length, or −1.
 fn walk_line(g: &mut Game, w: &mut SneakWalk, q: usize, x: f64, z: f64, pc: &Target, fresh: bool) -> f64 {
-    let key = crate::Num(walk_cell(x, z) + 0.0);
+    let key = crate::Num::of(walk_cell(x, z));
     let h = w.men[q].h;
     if let Some(&v) = w.men[q].line.get(key) { return v; }
     if !fresh {
@@ -394,7 +394,7 @@ fn walk_line(g: &mut Game, w: &mut SneakWalk, q: usize, x: f64, z: f64, pc: &Tar
 pub fn sneak_walk_watched(g: &mut crate::game::Game, this: &mut crate::sneak::SneakWalk, x: f64, z: f64, wider: Option<bool>) -> bool {
     let w = this;
     let wider = wider.unwrap_or(false);
-    let key = crate::Num(walk_cell(x, z) * 2.0 + if wider { 1.0 } else { 0.0 } + 0.0);
+    let key = crate::Num::of(walk_cell(x, z) * 2.0 + if wider { 1.0 } else { 0.0 });
     if let Some(&was) = w.memo.get(key) { return was; }
     let mut lit = -1.0;
     let mut r = false;
@@ -476,8 +476,8 @@ mod tests {
 
     #[test]
     fn a_map_key_is_one_for_both_zeroes() {
-        assert!(crate::Num(-0.0 + 0.0) == crate::Num(0.0 + 0.0));
-        assert_eq!(crate::Num(walk_cell(-0.0, -0.0) + 0.0).0.to_bits(), 0.0f64.to_bits());
+        assert!(crate::Num::of(-0.0) == crate::Num::of(0.0));
+        assert_eq!(crate::Num::of(walk_cell(-0.0, -0.0)).0.to_bits(), 0.0f64.to_bits());
     }
 
     #[test]

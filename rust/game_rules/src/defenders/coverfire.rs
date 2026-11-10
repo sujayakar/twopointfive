@@ -144,10 +144,7 @@ fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 fn see(g: &mut crate::game::Game, gd: GuardId, who: CharId, low: bool) {
     let c = who;
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
-    let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
-        Some(t) => *t,
-        None => g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(pos),
-    };
+    let trunk = g.ch[c].bone(crate::character::Bone::Spine2).or(g.ch[c].bone(crate::character::Bone::Hips)).unwrap_or(pos);
     let at: V3 = [trunk[0], pos[1] + (if low { 0.8 } else { 1.25 }), trunk[2]];
     let t = g.time;
     let m = man_of(g, gd);

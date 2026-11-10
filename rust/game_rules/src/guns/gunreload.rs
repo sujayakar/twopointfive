@@ -190,7 +190,7 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
     };
     let plain = dry && !crate::weapons::firearm_shell_fed(g, gun);
     let (n, port) = if plain {
-        (g.weapon(g.fa[gun].def).clone().mag_capacity, true)
+        (g.weapon(g.fa[gun].def).mag_capacity, true)
     } else {
         (g.fa[gun].feed_n, g.fa[gun].feed_port)
     };
@@ -284,7 +284,7 @@ pub fn feed_begin(g: &mut crate::game::Game, gun: FirearmId) -> crate::weapons::
     crate::weapons::firearm_cancel_reload(g, gun);
     let p = match shell_plan(g, gun, Some(true), None) {
         Some(p) if !p.idle => p,
-        _ => return g.weapon(g.fa[gun].def).clone().reload,
+        _ => return g.weapon(g.fa[gun].def).reload,
     };
     let row = crate::player::shell_row_as_weapon_row(&p.row);
     crate::weapons::firearm_plan_feed(g, gun, row, &p.times, p.port);

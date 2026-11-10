@@ -860,9 +860,9 @@ pub fn sneak_way(g: &mut crate::game::Game, gd: GuardId, goal: V3) {
         if dist_xz(pg, goal) < 0.05 && g.gd[gd].path_i < g.gd[gd].path.len() { return; }
     }
     let way = g.m.sneak.states.as_mut().unwrap().men.get_mut(gd).unwrap().way.take().unwrap();
-    crate::game::guard_set_path(g, gd, way);
+    g.gd[gd].set_path(way);
     g.gd[gd].path_i = 0;
-    crate::guards::guard_set_path_goal(g, gd, Some([goal[0], 0.0, goal[2]]));
+    g.gd[gd].set_path_goal(Some([goal[0], 0.0, goal[2]]));
     g.gd[gd].repath_t = 0.0;
 }
 

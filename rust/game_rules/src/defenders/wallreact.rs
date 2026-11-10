@@ -1132,10 +1132,9 @@ fn wall_react_shift(g: &mut Game, gd: GuardId, threat: V3, b: Option<WallreactBr
     g.cond[man.ch].sup.pinned_t = 0.0;
     g.cond[man.ch].sup.down_t = 0.0;
     g.cond[man.ch].sup.latched = false;
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.set_path_goal(None);
     man.stall_ref = None;
-    crate::game::guard_set_path(g, gd, Vec::new());
+    g.gd[gd].set_path(Vec::new());
     g.m.wallreact.wall_react.moved_t.set(gd, now);
     crate::wallreact::Reconsidered::Moved
 }

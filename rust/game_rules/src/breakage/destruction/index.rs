@@ -298,7 +298,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
 
 /// The underside of the roof over (x, z), or none under the open sky: five rays a 0.6 m square, remembered per square.
 pub(super) fn destruction_roof_y(g: &mut crate::game::Game, x: f64, z: f64) -> Option<f64> {
-    let key = crate::Num(m::floor(x / 0.6) * 4096.0 + m::floor(z / 0.6) + 0.0);
+    let key = crate::Num::of(m::floor(x / 0.6) * 4096.0 + m::floor(z / 0.6));
     if let Some(&c) = g.destr.roofs.get(key) {
         return if c < 0.0 { None } else { Some(c) };
     }

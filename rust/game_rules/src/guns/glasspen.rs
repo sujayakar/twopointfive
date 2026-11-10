@@ -184,7 +184,7 @@ pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy
 
 /// the muzzle already past the glass: what the panes across the arm left the round, filed at the arm's crossing; None: the old rule stands
 pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> {
-    let from = g.ch[c_2].bone_or(crate::character::Bone::UpperArmR, 1.4);
+    let from = crate::combat::shoulder(g, c_2);
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
     let w = ::sim::pen::arm_walk(&crate::glassbreak::glass_ctx(g), from, mz, dir, energy, &g.k).map(|(e, l)| (e, l.iter().map(crossing).collect::<Vec<PaneCross>>()));
