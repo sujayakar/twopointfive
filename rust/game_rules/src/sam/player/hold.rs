@@ -46,7 +46,7 @@ fn unhook(g: &mut Game, gd: GuardId) {
     g.tab.game_talk[talk].held_since = -1.0;
 }
 
-/// Let go at once: the man is handed straight back, Sam's side cleared; past killCut with the knife in, he dies by it.
+/// Let go at once: the man is handed straight back, Sam's side cleared.
 pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -897,10 +897,7 @@ pub(super) fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     unhook(g, gd);
     g.gd[gd].speed = 0.0;
     g.ch[hc].vel = [0.0, 0.0, 0.0];
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
+    lose_path(g, gd);
     g.gd[gd].body_duty = None;
     g.gd[gd].stall_ref = None;
     g.ch[hc].aim_pitch = 0.0;
@@ -945,8 +942,4 @@ mod tests {
         assert_eq!(js_len("you ▸ — é"), 9.0);
     }
 
-    #[test]
-    fn the_knife_is_only_the_kill_phase() {
-        let mut h = Hold::default();
-    }
 }

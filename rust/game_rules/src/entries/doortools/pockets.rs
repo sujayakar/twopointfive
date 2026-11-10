@@ -361,7 +361,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
                     continue;
                 }
                 let look = door_pt(g, d, w / 2.0 - s * 0.6, 4.5, into, None);
-                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None });
                 break 'find;
             }
         }
@@ -377,7 +377,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
                     continue;
                 }
                 let look = door_pt(g, d, w / 2.0 - s * 1.2, 5.0, into, None);
-                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: p, face: v3::yaw_to(p, look), watch: None });
                 break 'find;
             }
         }
@@ -393,7 +393,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
         if let Some(f) = f {
             let off = -off_of(g, d, [f[0], 0.0, f[2]], side);
             if off > 0.3 && off <= 2.5 && !out.iter().any(|o| v3::dist_xz(o.pos, f) < 0.9) {
-                out.push(crate::entrypoints::Pod { pos: [f[0], 0.0, f[2]], face: inward, watch: None, moved: false });
+                out.push(crate::entrypoints::Pod { pos: [f[0], 0.0, f[2]], face: inward, watch: None });
             }
         }
     }

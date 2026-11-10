@@ -430,7 +430,7 @@ fn door_path_move(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, q: V
     }
     if let Some(pod) = pod {
         if flat(&pod.pos, &old) < 0.1 {
-            g.tab.doortools_door_op[w.op].pod.set(gd, crate::entrypoints::Pod { pos: [q[0], pod.pos[1], q[2]], moved: false, ..pod });
+            g.tab.doortools_door_op[w.op].pod.set(gd, crate::entrypoints::Pod { pos: [q[0], pod.pos[1], q[2]], ..pod });
         }
     }
 }
