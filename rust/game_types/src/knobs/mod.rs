@@ -116,7 +116,6 @@ mod shards; pub use shards::*;
 mod shotgun; pub use shotgun::*;
 mod showwhy; pub use showwhy::*;
 mod silent; pub use silent::*;
-mod skeleton; pub use skeleton::*;
 mod slotsetup; pub use slotsetup::*;
 mod smokebreak; pub use smokebreak::*;
 mod sneak; pub use sneak::*;
@@ -304,7 +303,6 @@ pub struct Knobs {
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflush: RescueflushK,
-    pub posemath: PosemathK,
     pub sense: SenseK,
     pub cmdcheck: CmdcheckK,
     pub seats: SeatsK,

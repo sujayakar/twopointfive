@@ -80,7 +80,7 @@ pub(super) fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, tak
 
 /// The swap's arm, by its envelope e and how far across k.
 fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
-    anim_layer(g, c, |s, an, n| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p, n));
+    anim_layer(g, c, |s, an, _| ::sim::layers::swap_pose(s, an, sw.at as usize, e, k, weapon, tw_y, tw_p));
 }
 
 /// Hands at work on a thing: the gate, and the layer when it runs.
@@ -98,11 +98,11 @@ pub(super) fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fre
     let (p, n) = (anim_to_model_p(g, c, l.p), anim_to_model_d(g, c, l.n));
     let an = &g.ch[c].anim;
     let r_free = l.hand != Some(0.0) && !armed && an.upper != UpperMode::Torch && (!an.long_gun || an.stowed) && (!an.grip[1] || an.stowed) && an.throw_t < 0.0 && an.sw.t < 0.0;
-    anim_layer(g, c, |s, an, k| ::sim::layers::work_layer(s, an, &l, n, p, dt, live, r_free, tw_y, tw_p, k));
+    anim_layer(g, c, |s, an, _| ::sim::layers::work_layer(s, an, &l, n, p, dt, live, r_free, tw_y, tw_p));
 }
 
 /// The torch up in the hand that holds it, weight e.
-pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::torch_up(s, an, e, k)); }
+pub(super) fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::torch_up(s, an, e)); }
 
 /// A hand to the radio: its clock and spring, and the pose when it shows.
 pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
@@ -119,7 +119,7 @@ pub(super) fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
 }
 
 /// The hand at the radio by w, and the head's share hw.
-fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::radio_pose(s, an, w, hw, k)); }
+fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::radio_pose(s, an, w, hw)); }
 
 // ---- holding a man, and being held
 

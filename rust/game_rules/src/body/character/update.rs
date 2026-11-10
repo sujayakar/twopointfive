@@ -116,9 +116,9 @@ fn mask_of(a: &mut Anim, k: Mask) -> &mut Vec<f32> {
     match k { Mask::Upper => &mut a.upper_mask, Mask::Torso => &mut a.torso_mask, Mask::Arms => &mut a.arms_mask, Mask::ArmR => &mut a.arm_r_only }
 }
 /// `blendPose(a, b, w, this.<mask>, out)`: the mask is lent out of g for the call; blendPose reads the slice handed in and never his animator.
-fn blend_masked(g: &mut Game, c: CharId, a: Option<crate::anim_skeleton::Pose>, b: crate::anim_skeleton::Pose, w: f64, k: Mask, out: crate::anim_skeleton::Pose, singles: bool) {
+fn blend_masked(g: &mut Game, c: CharId, a: Option<crate::anim_skeleton::Pose>, b: crate::anim_skeleton::Pose, w: f64, k: Mask, out: crate::anim_skeleton::Pose) {
     let mask = core::mem::take(mask_of(&mut g.ch[c].anim, k));
-    crate::anim_skeleton::blend_pose(g, a, b, w, Some(&mask), out, singles);
+    crate::anim_skeleton::blend_pose(g, a, b, w, Some(&mask), out);
     *mask_of(&mut g.ch[c].anim, k) = mask;
 }
 /// The swap's clock, read off `carry` (`want`: None = undefined, Some(None) = null); not called on a re-bake.
@@ -151,7 +151,6 @@ fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, s
 fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let sn = SNEAK;
     let cr = &CREEP;
-    let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
     let dash_k_stride = g.k.dash.stride;
     let dash_k_rate = g.k.dash.rate;
     let pr = g.ch[c].anim.params.clone();
@@ -475,16 +474,16 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let upper_w_relaxed = g.ch[c].anim.upper_w.relaxed;
     if upper_w_relaxed > 0.003 {
         let (clip, t) = (clip_of(g, c, "Pistol_Idle_Loop"), g.ch[c].anim.idle_t);
-        crate::anim_skeleton::sample_clip(g, clip, t, true, p_upper, singles);
-        blend_masked(g, c, None, p_upper, upper_w_relaxed, Mask::Upper, p_a, singles);
+        crate::anim_skeleton::sample_clip(g, clip, t, true, p_upper);
+        blend_masked(g, c, None, p_upper, upper_w_relaxed, Mask::Upper, p_a);
     }
     let a = &mut g.ch[c].anim;
     a.tu_k = v3::clamp(a.tu_k + (if tgt_torch > 0.0 { dt } else { -dt }) / 0.4, 0.0, 1.0);
     let upper_w_torch = a.upper_w.torch;
     if upper_w_torch > 0.003 {
         let (clip, t) = (clip_of(g, c, "Idle_Torch_Loop"), g.ch[c].anim.idle_t);
-        crate::anim_skeleton::sample_clip(g, clip, t, true, p_upper, singles);
-        blend_masked(g, c, None, p_upper, upper_w_torch, Mask::Torso, p_a, singles);
+        crate::anim_skeleton::sample_clip(g, clip, t, true, p_upper);
+        blend_masked(g, c, None, p_upper, upper_w_torch, Mask::Torso, p_a);
     }
     let tu_k = g.ch[c].anim.tu_k;
     if tu_k > 0.0 { anim_torch_up_layer(g, c, v3::smoothstep(0.0, 1.0, tu_k)); }
@@ -578,28 +577,28 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         let pn = v3::clamp(g.ch[c].anim.aim_pitch / (45.0 * m::PI / 180.0), -1.0, 1.0);
         let clip = clip_of(g, c, "Pistol_Aim_Neutral");
         sample_at0(g, clip, p_upper);
-        if pn > 0.01 { let clip = clip_of(g, c, "Pistol_Aim_Up"); sample_at0(g, clip, p_b); crate::anim_skeleton::blend_pose(g, None, p_b, pn, None, p_upper, singles); }
-        else if pn < -0.01 { let clip = clip_of(g, c, "Pistol_Aim_Down"); sample_at0(g, clip, p_b); crate::anim_skeleton::blend_pose(g, None, p_b, -pn, None, p_upper, singles); }
+        if pn > 0.01 { let clip = clip_of(g, c, "Pistol_Aim_Up"); sample_at0(g, clip, p_b); crate::anim_skeleton::blend_pose(g, None, p_b, pn, None, p_upper); }
+        else if pn < -0.01 { let clip = clip_of(g, c, "Pistol_Aim_Down"); sample_at0(g, clip, p_b); crate::anim_skeleton::blend_pose(g, None, p_b, -pn, None, p_upper); }
         let shoot_t = g.ch[c].anim.shoot_t;
         if shoot_t >= 0.0 {
             let w = if shoot_t < 0.04 { shoot_t / 0.04 } else { v3::clamp(1.0 - (shoot_t - 0.3) / 0.3, 0.0, 1.0) };
             let clip = clip_of(g, c, "Pistol_Shoot");
             if g.ch[c].anim.snap_shot && m::abs(pn) > 0.01 {   // MOVES.snap, a shot along a pitched aim: its recoil alone, laid on the pitched pose
                 crate::anim_skeleton::pose_copy(g, p_b, p_aim);
-                crate::anim_skeleton::sample_clip(g, clip, shoot_t, false, p_b, singles);
+                crate::anim_skeleton::sample_clip(g, clip, shoot_t, false, p_b);
                 let mask = core::mem::take(&mut g.ch[c].anim.upper_mask);
                 add_pose_delta(g, p_upper, p_aim, p_b, w, &mask);
                 g.ch[c].anim.upper_mask = mask;
             } else {
-                crate::anim_skeleton::sample_clip(g, clip, shoot_t, false, p_b, singles);
-                crate::anim_skeleton::blend_pose(g, None, p_b, w, None, p_upper, singles);
+                crate::anim_skeleton::sample_clip(g, clip, shoot_t, false, p_b);
+                crate::anim_skeleton::blend_pose(g, None, p_b, w, None, p_upper);
             }
         }
         let aim = g.ch[c].anim.upper_w.aim;
-        if w_lg <= 0.0 { blend_masked(g, c, None, p_upper, aim, Mask::Upper, p_a, singles); }
+        if w_lg <= 0.0 { blend_masked(g, c, None, p_upper, aim, Mask::Upper, p_a); }
         else {   // the rifleman: the aim clip's trunk and head; its pistol arms only by what the long gun has not got of them
-            blend_masked(g, c, None, p_upper, aim, Mask::Torso, p_a, singles);
-            blend_masked(g, c, None, p_upper, aim * (1.0 - w_lg), Mask::Arms, p_a, singles);
+            blend_masked(g, c, None, p_upper, aim, Mask::Torso, p_a);
+            blend_masked(g, c, None, p_upper, aim * (1.0 - w_lg), Mask::Arms, p_a);
             let gate = w_lg * (1.0 - w_hd) * (1.0 - w_he) * (1.0 - w_lp);
             if gate * (1.0 - w_wall_arms) > 0.003 {
                 if mv_g.live { let aim = g.ch[c].anim.upper_w.aim; anim_mv_trunk(g, c, gate * (1.0 - w_st * wl) * aim, mv_g, true); }
@@ -735,11 +734,11 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     } else if a.reload_t >= 0.0 {
         let t = a.reload_t;
         let clip = clip_of(g, c, "Pistol_Reload");
-        crate::anim_skeleton::sample_clip(g, clip, t, false, p_b, singles);
+        crate::anim_skeleton::sample_clip(g, clip, t, false, p_b);
         let w = v3::clamp(m::min(t / 0.12, (d_reload - t) / 0.15), 0.0, 1.0);
         let a = &mut g.ch[c].anim;
         if a.rl_b.hand && !a.long_gun { a.kit_gun_free = w; }
-        blend_masked(g, c, None, p_b, w, Mask::Upper, p_a, singles);
+        blend_masked(g, c, None, p_b, w, Mask::Upper, p_a);
         let a = &mut g.ch[c].anim;
         a.reload_t += dt * (d_reload / a.reload_dur);
         if a.reload_t > d_reload { a.reload_t = -1.0; }
@@ -758,12 +757,12 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         let a = &g.ch[c].anim;
         let sc = if a.strike_k == StrikeKind::Jab { a.clips.get("Punch_Jab").copied().unwrap_or(cross) } else { cross };
         let t = a.strike_t;
-        crate::anim_skeleton::sample_clip(g, sc, t, false, p_b, singles);
+        crate::anim_skeleton::sample_clip(g, sc, t, false, p_b);
         let d = g.tab.clip[sc].duration;
         let w = v3::clamp(m::min(t / 0.05, (d - t) / 0.15), 0.0, 1.0);
         w_strike = w;
         let bw_style = g.ch[c].anim.bw.as_ref().map(|b| b.style);
-        blend_masked(g, c, None, p_b, match bw_style { Some(st) => w * blow_clip(st), None => w }, Mask::Upper, p_a, singles);
+        blend_masked(g, c, None, p_b, match bw_style { Some(st) => w * blow_clip(st), None => w }, Mask::Upper, p_a);
         if let Some(b) = g.ch[c].anim.bw.clone() { anim_blow_trunk(g, c, &b); bw_trunk = true; }
         if g.ch[c].anim.strike_leth { let k = g.ch[c].anim.strike_k; anim_knife_blow(g, c, k, dt, d / 1.15, y, -p * 0.35); }
         let a = &mut g.ch[c].anim;
@@ -782,10 +781,10 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     let hit_t = g.ch[c].anim.hit_t;
     if hit_t >= 0.0 {
         let clip = clip_of(g, c, "Hit_Chest");
-        crate::anim_skeleton::sample_clip(g, clip, hit_t, false, p_b, singles);
+        crate::anim_skeleton::sample_clip(g, clip, hit_t, false, p_b);
         let d = g.tab.clip[clip].duration;
         let w = v3::clamp(1.0 - m::abs(hit_t / d - 0.3) / 0.7, 0.0, 1.0) * 0.8;
-        blend_masked(g, c, None, p_b, w, Mask::Upper, p_a, singles);
+        blend_masked(g, c, None, p_b, w, Mask::Upper, p_a);
         let a = &mut g.ch[c].anim;
         a.hit_t += dt;
         if a.hit_t > d { a.hit_t = -1.0; }
@@ -832,7 +831,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
     // ---- the whole-body action clip, over everything above with its eased weight
     let mut w_act = 0.0;
     if a.act.is_some() || a.act_w > 0.0 { w_act = anim_act_layer(g, c, dt); }
-    if let Some(pre) = g.ch[c].anim.arms_pre { if w_act > 0.0 { crate::anim_skeleton::blend_pose(g, None, p_b, w_act, None, pre, singles); } }
+    if let Some(pre) = g.ch[c].anim.arms_pre { if w_act > 0.0 { crate::anim_skeleton::blend_pose(g, None, p_b, w_act, None, pre); } }
     // ---- MOVES: a crouched man's toes stay out of the floor
     if crouch_pose > 0.003 { anim_toes_up(g, c, crouch_pose); }
     // ---- MOVES: the hand pass, last of all, finger and thumb joints only
@@ -889,7 +888,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         }
         let hb = g.ch[c].anim.hand_buf.unwrap();
         g.ch[c].anim.hand_pre = Some(hb);
-        blend_masked(g, c, Some(p_a), sb, 1.0, Mask::ArmR, hb, singles);
+        blend_masked(g, c, Some(p_a), sb, 1.0, Mask::ArmR, hb);
     } else { g.ch[c].anim.hand_pre = None; }
     let a = &mut g.ch[c].anim;
     if a.big_under && a.big_buf.is_some() { a.hand_pre = a.big_buf.clone(); }
