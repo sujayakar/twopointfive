@@ -169,7 +169,6 @@ fn thing_of(g: &Game, r: &KitRow, m: &MemberKit) -> Option<TeamThing> {
         KitField::Charges => count(m.charges),
         KitField::Smoke => count(m.smoke),
         KitField::Frags => count(m.frags),
-        KitField::Walls => count(m.walls),
         KitField::Shells => count(m.shells),
         KitField::Cams => count(m.cams),
         KitField::Rings => count(m.rings),

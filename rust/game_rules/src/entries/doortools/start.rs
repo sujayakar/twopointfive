@@ -165,7 +165,7 @@ pub(super) fn door_tools_will_kick(g: &mut crate::game::Game, op: DoorOpId) -> b
 
 /// one of these men carries a big-slot tool that takes this door's lock from either face
 pub(super) fn door_tools_big_opens(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> bool {
-    if !g.k.bigslot.on || is_steel(g, d) { return false; }
+    if is_steel(g, d) { return false; }
     if crate::silent::squad_silent(g, &crate::seats::here(g)) && !crate::silent::urgent(g) { return false; }
     for &m in men {
         if crate::bigkit::carries_hammer(g, m) { return true; }

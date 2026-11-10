@@ -397,7 +397,7 @@ const STYLE = `
 #loadout .lo-kit .kc-sub, #loadout .lo-kit .kc-pouch { font-family: var(--m-head); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; }
 #loadout .lo-kit .kc-pips i { width: 12px; height: 12px; border-radius: 0; }
 #loadout .lo-kit .kc-pips i.on { background: var(--m-accent); }
-#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/outfit/kit BIGSLOT) */
+#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/outfit/kit) */
 #loadout .lo-kit .kc-words { padding: 8px 4px 0; font-size: 11.5px; line-height: 1.4; border-top: 0; }
 #loadout .lo-kit .kc-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 10px; align-content: start; padding: 7px 8px 7px 9px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-left: 3px solid rgba(var(--m-edge),0.3); border-radius: 0; }
 #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-sel-rgb),0.95); border-color: var(--m-accent); border-left-color: var(--m-accent); }

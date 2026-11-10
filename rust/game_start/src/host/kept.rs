@@ -69,7 +69,7 @@ fn fields(j: &Json) -> Option<JsMap<String, KitValue>> {
             Json::Bool(b) => out.set(k.clone(), KitValue::Bool(*b)),
             Json::Num(n) => out.set(k.clone(), KitValue::Num(*n)),
             Json::Str(s) => out.set(k.clone(), KitValue::Text(s.clone())),
-            // (a null or a list is no row's value, but the key is there: a card with no `smoke` at all is one from before the pouches)
+            // (a null or a list is no row's value)
             _ => out.set(k.clone(), KitValue::Num(f64::NAN)),
         };
     }
@@ -95,14 +95,13 @@ pub fn read(g: &mut Game, text: &str) {
     g.m.kit.deal_own = j.get("own").bool() == Some(true);
     let stealth = if j.get("stealth").bool() == Some(true) { j.get("members").at(0) } else { j.get("stealth") };
     if let Some(f) = fields(stealth) { kit::kit_stealth_set(g, Some(&f)); }
-    kit::kit_built_home(g);
     let mut cards = g.m.kit.kit.members.clone();
     let left = kit::kit_fit_all(g, &mut cards, None, None);
     g.m.kit.kit.members = cards;
     for (i, what) in left.iter().enumerate() {
         if what.is_empty() { continue; }
         let gunless = i == 0 && g.m.kit.kit.members[0].weapon != KitWeapon::Rifle && what.len() == 1;
-        g.m.kit.kit_note[i] = kit::kit_left_words(g, what, gunless);
+        g.m.kit.kit_note[i] = kit::kit_left_words(what, gunless);
     }
 }
 

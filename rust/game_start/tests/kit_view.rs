@@ -284,9 +284,6 @@ fn the_big_slot_is_told_with_the_door_that_offers_it() {
         assert!(b.offered, "seed {}: beside the shut door at {:?}, and nothing is offered: {:?}", seed, door, p.g.sets[p.g.seat].nearby.iter().map(|r| r.verb).collect::<Vec<_>>());
         p.sam_put(far); p.run(0.3);
         assert!(!kit(&p).big.unwrap().offered, "seed {}: no door by him, and the row is lit", seed);
-        // a game with no big slot has no row
-        p.g.k.bigslot.on = false;
-        assert!(kit(&p).big.is_none(), "seed {}", seed);
     }
 }
 /// Sam stands beside the first shut door that offers his tool; where it stands

@@ -245,15 +245,13 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     }
     // the big slot's own row, while a man of the squad carries the hammer or the breaching shotgun
     let mut big = false;
-    if g.k.bigslot.on {
-        let mut k = 0;
-        while k < g.sets[g.seat].door_tools.roster.len() {
-            let m = g.sets[g.seat].door_tools.roster[k];
-            k += 1;
-            if crate::bigkit::carries_hammer(g, m) || (!crate::condition::down(g, g.gd[m].ch) && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
-                big = true;
-                break;
-            }
+    let mut k = 0;
+    while k < g.sets[g.seat].door_tools.roster.len() {
+        let m = g.sets[g.seat].door_tools.roster[k];
+        k += 1;
+        if crate::bigkit::carries_hammer(g, m) || (!crate::condition::down(g, g.gd[m].ch) && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
+            big = true;
+            break;
         }
     }
     if Some(big) != g.sets[g.seat].door_tools.big_row {
