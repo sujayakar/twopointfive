@@ -5,12 +5,12 @@
 //   node lab/tools/object.cjs chair --fault "shut back"  one with a fault planted: exit 0 when the mark meant for it is missed
 //   node lab/tools/object.cjs --faults [name,name]      every planted fault; exit 1 when one is not caught
 //   node lab/tools/object.cjs ficus~0.08,0.16 ficus@0.08,0.16   its coarser levels as blocks of cells of those sizes (~), or its coarsest hand made one where those take over (@)
-//   --quick: small and noisy, for a machine without a GPU. --parts look,seen,swap,calm,alive,print,crowd: only these. --tune wide=0.25: a knob of the real-time picture (src/tune.ts) set otherwise
+//   --quick: small and noisy, for a machine without a GPU. --parts look,seen,swap,calm,alive,print,crowd: only these. --paths 0.4: so many of the reference's paths (grainier, for what has many leaves). --tune wide=0.25: a knob of the real-time picture (src/tune.ts) set otherwise
 const { execSync } = require('child_process'), fs = require('fs'), path = require('path'), http = require('http');
 let chromium; for (const p of ['/opt/node-tools/node_modules/playwright', 'playwright-core', 'playwright']) { try { chromium = require(p).chromium; break; } catch { } }
 const LAB = path.resolve(__dirname, '..'), OUT = path.resolve(process.env.OUT || 'out'), SITE = (fs.mkdirSync(OUT, { recursive: true }), fs.mkdtempSync(path.join(OUT, 'site-')));
-const argv = process.argv.slice(2), flag = n => argv.includes(n), after = n => { const i = argv.indexOf(n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : undefined; }, taken = new Set(['--fault', '--faults', '--parts', '--tune'].map(n => argv.indexOf(n) + 1).filter(i => i > 0));
-const opts = { quick: flag('--quick'), ...(after('--parts') ? { parts: after('--parts').split(',') } : {}), ...(after('--tune') ? { tune: Object.fromEntries(after('--tune').split(',').map(x => [x.split('=')[0], +x.split('=')[1]])) } : {}) };
+const argv = process.argv.slice(2), flag = n => argv.includes(n), after = n => { const i = argv.indexOf(n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : undefined; }, taken = new Set(['--fault', '--faults', '--parts', '--tune', '--paths'].map(n => argv.indexOf(n) + 1).filter(i => i > 0));
+const opts = { quick: flag('--quick'), ...(after('--parts') ? { parts: after('--parts').split(',') } : {}), ...(after('--paths') ? { paths: +after('--paths') } : {}), ...(after('--tune') ? { tune: Object.fromEntries(after('--tune').split(',').map(x => [x.split('=')[0], +x.split('=')[1]])) } : {}) };
 execSync(`bun build src/object.ts --outfile "${SITE}/object.js" --target browser --loader .wgsl:text`, { cwd: LAB, stdio: 'inherit' }); fs.copyFileSync(path.join(LAB, 'object.html'), path.join(SITE, 'object.html'));
 const list = (what) => JSON.parse(execSync(`bun -e "import { ${what} } from './src/objects/${what === 'OBJECTS' ? 'index' : 'faults'}'; console.log(JSON.stringify(${what === 'OBJECTS' ? 'Object.keys(OBJECTS)' : 'FAULTS'}))"`, { cwd: LAB }).toString());
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');

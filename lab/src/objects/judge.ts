@@ -15,7 +15,7 @@ import * as px from './pixels';
 import type { Pic, Mask } from './pixels';
 export interface Image { name: string; w: number; h: number; data: string }
 export interface Report { name: string; title: string; found: Found[]; counts: Count[]; errors: { error: number; less: string; from: number }[]; images: Image[]; passes: Record<string, Record<string, number>>; gpu: string; seconds: Record<string, number> }
-export interface Opts { quick?: boolean; parts?: string[]; /** knobs of the real-time picture set otherwise (tune.ts), to ask what one is worth */ tune?: Record<string, number> }
+export interface Opts { /** of the reference's paths, such a share */ paths?: number; quick?: boolean; parts?: string[]; /** knobs of the real-time picture set otherwise (tune.ts), to ask what one is worth */ tune?: Record<string, number> }
 type Light = 'noon' | 'dusk' | 'lamp' | 'torch' | 'sky';
 const LIGHTS: Record<Light, { hour: number; moon: number; lamp: number; beam: number; sun: boolean }> = { noon: { hour: 12.6, moon: 1, lamp: 0, beam: 0, sun: true }, dusk: { hour: 17.65, moon: 1, lamp: 0, beam: 0, sun: true }, lamp: { hour: 23, moon: 0, lamp: 1, beam: 0, sun: true }, torch: { hour: 22.3, moon: 0, lamp: 0, beam: 1, sun: true }, sky: { hour: 13.2, moon: 1, lamp: 0, beam: 0, sun: false } };
 interface View { look: V3; far: number; yaw: number; pitch: number; w: number; h: number }
@@ -62,7 +62,7 @@ export async function judge(m: Made, o: Opts = {}): Promise<Report> {
   const say = (id: string, what: string, value: number, unit: string, level?: number, note?: string) => { found.push({ id, what, value, unit, ...(level === undefined ? {} : { level }), ...(note ? { note } : {}) }); }, put = (name: string, data: string, w: number, h: number) => { images.push({ name, w, h, data }); };
   const r = rules(m); found.push(...r.found, ...alive(m)); tick('rules');
   const b0 = bounds(build(m, 0)), mid: V3 = [0, 1, 2].map(a => (b0.lo[a]! + b0.hi[a]!) / 2) as V3, is = [0, 1, 2].map(a => b0.hi[a]! - b0.lo[a]!), diag = Math.hypot(...is), reach = Math.hypot(is[0]!, is[2]!) / 2;
-  const K = Q ? 0.35 : 1, N = { rt: Q ? 10 : 150, ref: Q ? 6 : 500, small: Q ? 10 : 1200, sky: Q ? 12 : 900, ss: Q ? 2 : 4, turn: Q ? 5 : 20, settle: Q ? 6 : 80 };
+  const K = Q ? 0.35 : 1, N = { rt: Q ? 10 : 150, ref: Q ? 6 : Math.round(500 * (o.paths ?? 1)), small: Q ? 10 : Math.round(1200 * (o.paths ?? 1)), sky: Q ? 12 : Math.round(900 * (o.paths ?? 1)), ss: Q ? 2 : 4, turn: Q ? 5 : 20, settle: Q ? 6 : 80 };
   /** so many pixels across, the window a part wider; never nearer than the game's camera comes */
   const across = (n: number, window: number, pitch: number, most = 448): View => { const far = Math.max(4, diag / (n * PIXEL)), w = round(Math.min(most * K, diag / (far * PIXEL) * window * K)); return { look: mid, far: far / K, yaw: 0.62, pitch, w, h: w }; };
   const near = across(340, 1.22, 0.55), middle = across(150, 1.35, 0.75), small = across(48, 1.6, 0.94, 160), swapAt = (k: number): View => { const far = Math.max(4, takesOver(m.levels[k]!)), px0 = diag / (far * PIXEL), w = round(Math.min(Math.max(384, px0 * 1.25), Math.max(Q ? 40 : 72, px0 * 2.3))); return { look: mid, far, yaw: 0.62, pitch: 0.78, w: Q ? Math.min(w, 96) : w, h: Q ? Math.min(w, 96) : w }; }, aside = (v: View): View => ({ ...v, yaw: v.yaw - Math.PI / 2 }), game: View = { look: mid, far: Math.max(22, diag * 6), yaw: 0.62, pitch: 0.94, w: 0, h: 0 }; { const n = diag / (game.far * PIXEL); game.w = game.h = round(Math.min(Q ? 96 : Math.max(320, n * 1.15), Math.max(64, n * 1.7))); }
