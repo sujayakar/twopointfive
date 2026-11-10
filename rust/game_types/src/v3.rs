@@ -268,9 +268,9 @@ pub mod m4 {
 
     pub type Mat4 = [f32; 16];
 
-    /// every cell as the double the TypeScript reads
+    /// every cell as a double
     #[inline]
-    fn wide(a: &Mat4) -> [f64; 16] {
+    pub fn wide(a: &Mat4) -> [f64; 16] {
         let mut d = [0.0; 16];
         let mut i = 0;
         while i < 16 {
@@ -294,15 +294,19 @@ pub mod m4 {
         *a
     }
     /// `a × b`.
+    #[inline]
     pub fn mul(a: &Mat4, b: &Mat4) -> Mat4 {
-        let [a00, a01, a02, a03, a10, a11, a12, a13, a20, a21, a22, a23, a30, a31, a32, a33] = wide(a);
+        mul_wide(&wide(a), b)
+    }
+    /// `a × b` of an `a` that many are multiplied by, widened once.
+    #[inline]
+    pub fn mul_wide(a: &[f64; 16], b: &Mat4) -> Mat4 {
         let mut out = [0.0; 16];
-        for i in 0..4 {
-            let (b0, b1, b2, b3) = (b[i * 4] as f64, b[i * 4 + 1] as f64, b[i * 4 + 2] as f64, b[i * 4 + 3] as f64);
-            out[i * 4] = (b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30) as f32;
-            out[i * 4 + 1] = (b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31) as f32;
-            out[i * 4 + 2] = (b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32) as f32;
-            out[i * 4 + 3] = (b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33) as f32;
+        for (o, b) in out.chunks_exact_mut(4).zip(b.chunks_exact(4)) {
+            let (b0, b1, b2, b3) = (b[0] as f64, b[1] as f64, b[2] as f64, b[3] as f64);
+            for k in 0..4 {
+                o[k] = (b0 * a[k] + b1 * a[4 + k] + b2 * a[8 + k] + b3 * a[12 + k]) as f32;
+            }
         }
         out
     }

@@ -900,8 +900,14 @@ pub(super) fn skeleton_instance_new(g: &crate::game::Game, ch: RigId) -> crate::
     }
 }
 
-/// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides, then the skinning matrices.
+/// A body posed: run forward, and skinned where it stands.
 pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, world: &crate::v3::m4::Mat4, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
+    skeleton_instance_forward(g, this, pose, twists, overrides);
+    skeleton_instance_skin(g, this, world);
+}
+
+/// Model-space matrices of all nodes from a local pose, with model-space twists and per-node overrides.
+pub(super) fn skeleton_instance_forward(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, pose: crate::anim_skeleton::Pose, twists: Option<&[crate::anim_skeleton::TwistSpec]>, overrides: Option<&[Option<crate::anim_skeleton::NodeOverride>]>) {
     let d = cols_of_read(g, pose);
     let rig = &g.art.rig[this.rig];
     let n_ = rows_of(pose);
@@ -971,14 +977,15 @@ pub(super) fn skeleton_instance_update(g: &crate::game::Game, this: &mut crate::
         };
         this.globals[i] = if parent >= 0.0 { v3::m4::mul(&this.globals[parent as usize], &local) } else { v3::m4::copy(&local) };
     }
-    // skinning matrices (world · global · inverse bind, written straight into the joint's slice of joint_data)
-    let joints = &rig.skin.joints;
-    for j in 0..joints.len() {
-        let mut ibm: v3::m4::Mat4 = [0.0; 16];
-        ibm.copy_from_slice(&rig.skin.inverse_bind[j * 16..j * 16 + 16]);
-        let tmp = v3::m4::mul(&this.globals[joints[j] as usize], &ibm);
-        let out = v3::m4::mul(world, &tmp);
-        this.joint_data[j * 16..j * 16 + 16].copy_from_slice(&out);
+}
+
+/// The skinning matrices of a body run forward (world · global · inverse bind, straight into the joint's slice of joint_data): what is drawn of it, and no part of the run.
+pub(super) fn skeleton_instance_skin(g: &crate::game::Game, this: &mut crate::anim_skeleton::SkeletonInstance, world: &crate::v3::m4::Mat4) {
+    let rig = &g.art.rig[this.rig];
+    let world = v3::m4::wide(world);
+    for ((&node, ibm), out) in rig.skin.joints.iter().zip(rig.skin.inverse_bind.chunks_exact(16)).zip(this.joint_data.chunks_exact_mut(16)) {
+        let bound = v3::m4::mul(&this.globals[node as usize], ibm.first_chunk().unwrap());
+        out.copy_from_slice(&v3::m4::mul_wide(&world, &bound));
     }
 }
 
