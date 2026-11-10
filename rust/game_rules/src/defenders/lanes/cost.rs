@@ -707,10 +707,7 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
             }
             let c = g.gd[gd].ch;
             let p = if dead {
-                match g.ch[c].bones.get(crate::character::Bone::Hips) {
-                    Some(x) => *x,
-                    None => g.ch[c].pos,
-                }
+                g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos)
             } else {
                 g.ch[c].pos
             };

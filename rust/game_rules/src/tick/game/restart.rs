@@ -203,7 +203,7 @@ pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { crate::player::t
 pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
     let hit = match g.ch[c_2].ragdoll { Some(r) => crate::ragdoll::ragdoll_take_impact(g, r, None, None), None => 0.0 };
     if hit > 1.4 {
-        let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
+        let at = g.ch[c_2].bone(crate::character::Bone::Spine2).unwrap_or(g.ch[c_2].pos);
         crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
         crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15));
     }

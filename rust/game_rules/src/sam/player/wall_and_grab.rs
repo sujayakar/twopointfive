@@ -29,15 +29,6 @@ fn owed_with(owed: Option<f64>, clicked: f64) -> f64 {
     (js::to_i32(owed.unwrap_or(0.0)) | (js::to_i32(clicked) & 5)) as f64
 }
 
-/// `gd.path = []; gd.pathGoal = null`: a whole new path, so its serial moves, and the goal is no longer the standoff's own point.
-fn lose_path(g: &mut Game, gd: GuardId) {
-    let m_ = &mut g.gd[gd];
-    m_.path = Vec::new();
-    m_.path_serial = m_.path_serial.wrapping_add(1);
-    m_.path_goal = None;
-    m_.path_goal_orbit = false;
-}
-
 /// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?
 fn stack_in_way(g: &Game, p: PlayerId, ap: V3) -> bool {
     let c = g.pl[p].ch;
@@ -573,7 +564,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     }
     g.gd[gd].speed = 0.0;
     g.ch[gc].vel = [0.0, 0.0, 0.0];
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, 1.0);
     let at = v3::add(g.ch[gc].pos, [0.0, 1.3, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
@@ -718,7 +709,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
                     crate::belief::word(g, o, at);
                     g.gd[o].react_t = 0.7;
                     g.gd[o].search_t = 0.0;
-                    lose_path(g, o);
+                    g.gd[o].drop_path();
                     g.gd[o].search_plan = None;
                     g.gd[o].pieing = None;
                 }
@@ -732,7 +723,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         };
         crate::squad::end_guard_script(g, gd, Some(st));
     }
-    lose_path(g, gd);
+    g.gd[gd].drop_path();
     {
         let m_ = &mut g.gd[gd];
         m_.speed = 0.0;

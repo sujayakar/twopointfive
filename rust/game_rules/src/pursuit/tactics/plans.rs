@@ -27,10 +27,7 @@ fn aim_at_fix(out: &mut TacMove, fix: V3) {
 
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(p) => *p,
-        None => g.ch[c].pos,
-    }
+    g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos)
 }
 
 /// what tacticsPenalty's answer charges for stepping into cell (ix, iz)   (tactics.ts:361 tacticsPenalty, the closure it returns)
@@ -954,10 +951,7 @@ fn comes_to(g: &mut Game, o: GuardId, spot: V3) {
     crate::mind::raise(g, o, 0.5, "tactics");
     let man = &mut g.gd[o];
     man.search_t = 0.0;
-    man.path = Vec::new();
-    man.path_serial = man.path_serial.wrapping_add(1);
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.drop_path();
     man.stall_ref = None;
     man.body_duty = None;
     man.search_plan = None;

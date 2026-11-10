@@ -32,7 +32,7 @@ fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> f64 
     let d = dist_xz(pv, pb);
     if d >= g.k.rescueflush.reach_m { return f64::INFINITY; }
     let e: V3 = [pb[0], 1.5, pb[2]];
-    let c = match g.ch[cv].bones.get(crate::character::Bone::Chest) { Some(p) => *p, None => v3::add(pv, [0.0, 0.6, 0.0]) };
+    let c = g.ch[cv].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pv, [0.0, 0.6, 0.0]));
     if crate::scene_collision::shot_blocked(g, e, c, None, None) { return f64::INFINITY; }
     if crate::sense::clear_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
 }

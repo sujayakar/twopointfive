@@ -77,10 +77,7 @@ struct Round {
 /// One man's share of one round.
 fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool, team: crate::teams::Team) {
     if c == r.shooter || Some(c) == r.hit || !g.ch[c].alive || held { return; }
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(&b) => b,
-        None => v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]),
-    };
+    let chest = g.ch[c].bone_or(crate::character::Bone::Chest, 1.1);
     let s = v3::clamp(v3::dot(v3::sub(chest, r.from), r.dir), 0.0, r.t_hit);
     let foe = r.shooter_team.foe_of(team);
     let min_travel = g.k.suppression.min_travel;
@@ -365,10 +362,8 @@ fn pinned_says_so(g: &mut Game, gd: GuardId, friendly: bool) {
 
 /// `gd.path = []; gd.pathGoal = null; gd.stallRef = null`: a whole write of his path (Guard.path_serial), and a goal the standoff did not lay.
 fn clear_walk(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
     let o = &mut g.gd[gd];
-    o.path_goal = None;
-    o.path_goal_orbit = false;
+    o.drop_path();
     o.stall_ref = None;
 }
 

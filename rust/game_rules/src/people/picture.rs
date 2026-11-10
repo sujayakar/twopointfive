@@ -205,10 +205,7 @@ fn look_sam(g: &mut crate::game::Game) {
         return;
     }
     let cpos = g.ch[c].pos;
-    let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(cpos, [0.0, 1.65, 0.0]),
-    };
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(cpos, [0.0, 1.65, 0.0]));
     let fwd = crate::character::character_forward(g, c);
     let thr = crate::guards::team_through();
     let mut i = 0;

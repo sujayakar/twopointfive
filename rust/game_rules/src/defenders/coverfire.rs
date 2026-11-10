@@ -47,7 +47,7 @@ fn say_line(g: &mut Game, gd: GuardId) {
 }
 /// hit: is this body in the lane
 fn lane_hit(g: &Game, ch: CharId, from: V3, dx: f64, dz: f64, l2: f64, t_max: f64, l: f64) -> bool {
-    let h = match g.ch[ch].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[ch].pos };
+    let h = g.ch[ch].bone(crate::character::Bone::Hips).unwrap_or(g.ch[ch].pos);
     let t = v3::clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / l2, 0.0, t_max);
     m::hyp2(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < g.k.coverfire.lane + g.k.coverfire.cone_k * t * l
 }
@@ -146,7 +146,7 @@ fn see(g: &mut crate::game::Game, gd: GuardId, who: CharId, low: bool) {
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
         Some(t) => *t,
-        None => match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(t) => *t, None => pos },
+        None => g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(pos),
     };
     let at: V3 = [trunk[0], pos[1] + (if low { 0.8 } else { 1.25 }), trunk[2]];
     let t = g.time;

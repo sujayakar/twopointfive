@@ -14,10 +14,7 @@ pub fn track_at(g: &Game, track: &Track) -> Option<(V3, V3)> {
     match *track {
         Track::Muzzle { by } => Some((g.ch[by].muzzle, g.ch[by].gun_dir)),
         Track::EjectPort { by } => {
-            let from = match g.ch[by].bones.get(crate::character::Bone::HandR) {
-                Some(hand) => *hand,
-                None => g.ch[by].muzzle,
-            };
+            let from = g.ch[by].bone(crate::character::Bone::HandR).unwrap_or(g.ch[by].muzzle);
             Some((v3::add(v3::mad(from, g.ch[by].gun_dir, 0.06), [0.0, 0.06, 0.0]), [0.0, 1.0, 0.0]))
         }
         Track::Spark { slot, gen_ } => {

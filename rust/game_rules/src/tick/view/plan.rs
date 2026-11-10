@@ -16,8 +16,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy)]
 struct For { own: bool, reading: bool }
 
-fn id_of(g: &Game, gd: GuardId) -> f64 { g.char_id(gd) }
-
 /// 'Red Two' is R2, 'Blue One' B1, 'Kestrel' K
 pub fn plan_tag(callsign: &str) -> String {
     let mut w = callsign.split_whitespace();
@@ -299,7 +297,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     throws_plan(g, seat, who, paired, &squad, &mut out.throws);
     if who.own {
         if let Some(menu) = &s.menu {
-            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: id_of(g, gd), at: crate::v3::on_floor(g.pos_of(gd)), tone: tone_of(g, paired, gd) }); } }
+            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: g.char_id(gd), at: crate::v3::on_floor(g.pos_of(gd)), tone: tone_of(g, paired, gd) }); } }
             if !crate::condition::down(g, g.pl[seat.player].ch) { out.you = Some(crate::v3::on_floor(g.seat_pos(seat))); }
         }
     }
@@ -387,7 +385,7 @@ fn man_looks(g: &Game, a: &crate::orders::Assignment, c: &crate::character::Char
 fn throws_plan(g: &Game, seat: &SeatRef, who: For, paired: bool, squad: &[GuardId], out: &mut Vec<PlanThrow>) {
     for t in throws_view(g, seat) {
         if t.kind == ThrowKind::Shell || t.points.len() < 2 || (t.preview && !who.own) { continue; }
-        let Some(&gd) = squad.iter().find(|&&m| id_of(g, m) == t.man) else { continue };
+        let Some(&gd) = squad.iter().find(|&&m| g.char_id(m) == t.man) else { continue };
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let walk = match &t.walk { Some(w) if w.len() > 1 => w.iter().map(|&q| crate::v3::on_floor(q)).collect(), _ => Vec::new() };
         let end = t.points[t.points.len() - 1];

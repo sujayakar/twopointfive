@@ -107,10 +107,7 @@ pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     p.phase_t = 0.0;
     {
         let me = &mut g.gd[gd];
-        me.path = Vec::new();
-        me.path_serial = me.path_serial.wrapping_add(1);
-        me.path_goal = None;
-        me.path_goal_orbit = false;
+        me.drop_path();
         me.stall_ref = None;
     }
     // (one man says it for a search, not each of them a second apart)

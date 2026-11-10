@@ -375,9 +375,7 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
     let an = &mut g.ch[c].anim;
     an.crouch_target = 0.0; an.lean = 0.0; an.reverse = false;
     crate::mind::set_state(g, gd, state, "squad");
-    // (`gd.path = []; gd.pathGoal = null`: guard_set_path and guard_set_path_goal, written out for the row in hand)
-    g.gd[gd].path = Vec::new(); g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-    g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;
+    g.gd[gd].drop_path();
     if state == crate::game::GuardState::Patrol {
         crate::mind::set(g, gd, 0.0, "squad"); g.gd[gd].react_t = 0.0; g.gd[gd].search_t = 0.0; crate::mind::fix_keep(g, gd, None, "squad"); g.gd[gd].body_duty = None;
     }
@@ -396,7 +394,7 @@ pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderP
         let new_leg = match goal { None => had.is_some(), Some(_) => !patch.held || goal != had };
         if new_leg {
             let man = &mut g.gd[gd];
-            man.path = Vec::new(); man.path_serial = man.path_serial.wrapping_add(1); man.path_goal = None; man.path_goal_orbit = false; man.stuck_t = 0.0;   // (a new array and no goal: the setters' two rules, for the row in hand)
+            man.drop_path(); man.stuck_t = 0.0;
             if let Some(s) = man.script.as_mut() { s.arrived = Some(false); }
             g.m.squad.settle_watch.delete(gd);
         }
@@ -552,7 +550,7 @@ fn room_clear_body_here(g: &crate::game::Game, id: RoomClearId, gd: GuardId) -> 
     let p = g.ch[c].pos;
     let bb = crate::guards::near_known_body(g, p, Some(3.5))?;
     let bc = g.gd[bb].ch;
-    let h = match g.ch[bc].bones.get(crate::character::Bone::Hips) { Some(x) => *x, None => g.ch[bc].pos };
+    let h = g.ch[bc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[bc].pos);
     if let Some(bounds) = g.tab.squad_room_clear[id].plan.bounds {
         if !in_bounds([h[0], 0.0, h[2]], Some(bounds), Some(0.3)) { return None; }
     }

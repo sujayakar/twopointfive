@@ -13,7 +13,7 @@ macro_rules! asg { ($g:ident, $a:expr) => { $g.tab.orders_assignment[$a] }; }
 fn frame(g: &Game, d: DoorId) -> V3 { g.dr[d].frame_centre }
 fn eye_of(g: &Game, m: GuardId) -> V3 {
     let c = g.gd[m].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => [g.ch[c].pos[0], 1.6, g.ch[c].pos[2]] }
+    g.ch[c].bone(crate::character::Bone::Head).unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]])
 }
 
 /// the men of the orders let go on this order's word
@@ -268,7 +268,7 @@ fn corner_turn(g: &mut Game, op: DoorOpId, gd: GuardId, a: OrdersAssignmentId, p
     let done = dop!(g, op).threat.as_ref().and_then(|th| th.deal.as_ref()).and_then(|de| de.get(gd)).map_or(-m::INF, |w| w.done_t);
     let tx = m::max(door_tools_in_at(g, op, gd), done);
     if tx.is_nan() { return true; }
-    let up = crate::roomfight::over_is_mine(g, gd);
+    let up = crate::roomfight::has_over(g, gd);
     if up { c.fight = Some(c.fight.unwrap_or(0.0) + v3::clamp(t - c.last.unwrap_or(t), 0.0, 0.05)); }
     c.last = Some(t);
     if !up && door_tools_on_point(g, gd, a, pod) && (c.turned.unwrap_or(false) || m::abs(v3::wrap_angle(yaw - g.ch[ch].body_yaw)) > 1.3) {
@@ -490,7 +490,7 @@ fn threat_watching(g: &mut Game, op: DoorOpId, gd: GuardId, a: OrdersAssignmentI
     asg!(g, a).watch = Some(spot);
     let tx = door_tools_in_at(g, op, gd);
     let p = g.ch[ch].pos;
-    let up = crate::roomfight::over_is_mine(g, gd);
+    let up = crate::roomfight::has_over(g, gd);
     let since = |last: f64| v3::clamp(t - (if last.is_nan() { t } else { last }), 0.0, 0.05);
     if tx.is_nan() {
         let stuck = g.k.doortools.threat_stuck;
@@ -638,7 +638,7 @@ fn keep_sector(g: &mut Game, gd: GuardId, r: &mut crate::doortools::DoorToolsHel
     if asg!(g, a).arrived {
         if r.arr_t.is_nan() { r.arr_t = asg!(g, a).arr_t; } else { asg!(g, a).arr_t = r.arr_t; }
     }
-    if !asg!(g, a).arrived || crate::roomfight::over_is_mine(g, gd) || r.out.unwrap_or(false) { return; }
+    if !asg!(g, a).arrived || crate::roomfight::has_over(g, gd) || r.out.unwrap_or(false) { return; }
     let p = g.pos_of(gd);
     let want = if !sector_hit(g, gd, p, r.face) { Some(0.0) } else if r.d != 0.0 && !sector_hit(g, gd, p, r.face + r.d) { Some(r.d) } else { None };
     if want == Some(r.d) { r.hit_t = m::NAN; return; }

@@ -456,10 +456,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         t.line = lines.radio.replacen("{who}", &g.gd[gd].callsign, 1).replacen("{short}", &short, 1);
         crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;
-        let at = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(h) => *h,
-            None => g.ch[c].pos,
-        };
+        let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }

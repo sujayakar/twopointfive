@@ -36,10 +36,7 @@ fn fresh() -> crate::tactics::TState {
 /// `m.path = []; m.pathGoal = null; m.stallRef = null`: a fresh leg; a whole new path is a new serial, and the standoff's point is no longer his goal.
 fn fresh_leg(g: &mut Game, m: GuardId) {
     let o = &mut g.gd[m];
-    o.path = Vec::new();
-    o.path_serial = o.path_serial.wrapping_add(1);
-    o.path_goal = None;
-    o.path_goal_orbit = false;
+    o.drop_path();
     o.stall_ref = None;
 }
 
@@ -328,10 +325,7 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
     let c = g.gd[victim].ch;
     let pos = g.ch[c].pos;
     let Some(d) = door_near(g, pos, None) else { return; };
-    let at = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(&b) => b,
-        None => v3::add(pos, [0.0, 1.1, 0.0]),
-    };
+    let at = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pos, [0.0, 1.1, 0.0]));
     let team = g.team(victim);
     let mut seen = false;
     let mut i = 0;

@@ -9,8 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---- small lookups of the tick ----
 
 fn hit(g: &Game, input: InputId, code: &str) -> bool { crate::input::input_hit(g, input, code) }
-fn down(g: &Game, input: InputId, code: &str) -> bool { crate::input::input_down(g, input, code) }
-fn shift_down(g: &Game, input: InputId) -> bool { down(g, input, "ShiftLeft") || down(g, input, "ShiftRight") }
+fn shift_down(g: &Game, input: InputId) -> bool { crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight") }
 /// g.audio.play(name, at, vol)
 fn play(g: &mut Game, name: &str, at: Option<V3>, vol: f64) { crate::audio_iface::game_audio_like_play(g, name, at, Some(vol), None) }
 /// a gun's def.auto?.interval
@@ -398,7 +397,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         }
     }
     nv_key(g, Some(input), dt);
-    let keys_on = down(g, input, "KeyW") || down(g, input, "KeyA") || down(g, input, "KeyS") || down(g, input, "KeyD");
+    let keys_on = crate::input::input_down(g, input, "KeyW") || crate::input::input_down(g, input, "KeyA") || crate::input::input_down(g, input, "KeyS") || crate::input::input_down(g, input, "KeyD");
     let sprint_key = !crate::condition::is_hurt(g, g.pl[pl].ch, None) && shift_down(g, input) && keys_on;
     if hit(g, input, "KeyR") || (crate::game::player_pistol_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, gun)) || (crate::game::player_rifle_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, rifle)) {
         let sprinting = sprint_key && !wall_ran_on(g, pl, input) && !(g.pl[pl].crouch);
@@ -408,7 +407,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let basis = crate::camera::follow_camera_planar_basis(g, cam);
     let (fwd, right) = (basis.fwd, basis.right);
     let (mut mx, mut mz) = (0.0, 0.0);
-    let (w, s, d, a) = (down(g, input, "KeyW"), down(g, input, "KeyS"), down(g, input, "KeyD"), down(g, input, "KeyA"));
+    let (w, s, d, a) = (crate::input::input_down(g, input, "KeyW"), crate::input::input_down(g, input, "KeyS"), crate::input::input_down(g, input, "KeyD"), crate::input::input_down(g, input, "KeyA"));
     let way = keys_way(fwd, right, w, s, d, a);
     mx = way[0]; mz = way[1];
     let stalk = {
@@ -472,7 +471,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let body = g.gd[tow.who].ch;
         let rag = g.ch[body].ragdoll;
         let has_rag = rag.is_some();
-        let hips = match g.ch[body].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[body].pos };
+        let hips = g.ch[body].bone(crate::character::Bone::Hips).unwrap_or(g.ch[body].pos);
         let (dx, dz) = (hips[0] - g.ch[c].pos[0], hips[2] - g.ch[c].pos[2]);
         let d = m::hyp2(dx, dz);
         if d > 1e-4 { tow.yaw = m::atan2(dx, dz); }

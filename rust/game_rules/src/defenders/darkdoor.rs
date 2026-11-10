@@ -354,10 +354,7 @@ fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
         g.gd[m].pieing = None;
     }
     g.gd[m].search_t = 0.0;
-    g.gd[m].path = Vec::new();
-    g.gd[m].path_serial = g.gd[m].path_serial.wrapping_add(1);
-    g.gd[m].path_goal = None;
-    g.gd[m].path_goal_orbit = false;
+    g.gd[m].drop_path();
     g.gd[m].stall_ref = None;
     let s = fear(g, gd);
     if !s.called {
@@ -656,10 +653,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "darkdoor");
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
-        g.gd[gd].path = Vec::new();
-        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
     }
     crate::mind::raise(g, gd, 0.42, "darkdoor");
     g.gd[gd].search_t = 0.0;

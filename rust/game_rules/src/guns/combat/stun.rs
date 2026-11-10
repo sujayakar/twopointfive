@@ -106,7 +106,7 @@ impl Flash {
     /// takes him as any other does where he looks at it
     fn takes(&self, g: &mut Game, c: CharId, own: bool, spare: bool, own_seen: bool) -> Option<(f64, f64)> {
         let bare = if matches!(g.ch[c].who, crate::character::Who::Player(_)) { 1.6 } else { 1.65 };
-        let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, bare, 0.0]));
+        let head = g.ch[c].bone_or(crate::character::Bone::Head, bare);
         let d = v3::dist(head, self.at);
         if d > self.radius { return None; }
         let u = v3::clamp(d / self.radius, 0.0, 1.0);
@@ -148,4 +148,3 @@ pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p
     );
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
 }
-

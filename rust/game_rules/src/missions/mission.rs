@@ -247,9 +247,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
         crate::mind::set_state(g, best, GuardState::Suspicious, "mission");
         g.gd[best].react_t = 1.2;
         g.gd[best].search_t = 0.0;
-        g.gd[best].path = Vec::new();
-        g.gd[best].path_serial = g.gd[best].path_serial.wrapping_add(1);
-        g.gd[best].path_goal = None; g.gd[best].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+        g.gd[best].drop_path();
     }
     let line = format!("something's tripped in {} — going to take a look", g.level.errand.place);
     crate::game::game_say(g, best, &line, Some(true), None);

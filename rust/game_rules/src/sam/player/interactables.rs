@@ -489,7 +489,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         for gd in bodies {
             if !crate::condition::down(g, g.gd[gd].ch) || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let gc = g.gd[gd].ch;
-            let hips = match g.ch[gc].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[gc].pos };
+            let hips = g.ch[gc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[gc].pos);
             let mid: V3 = [hips[0], hips[1] + 0.12, hips[2]];
             let dragging = g.pl[pl].dragging() == Some(gd);
             let reach = dragging || body_dist(g, gd, Some(1.3)) < 1.3;
@@ -781,7 +781,7 @@ pub(in crate::sam) fn release_body(g: &mut crate::game::Game, laid: Option<bool>
     if let Some(r) = g.ch[b].ragdoll { crate::ragdoll::ragdoll_clear_pins(g, r); }
     let c = g.pl[pl].ch;
     g.ch[c].anim.haul = None;
-    let at = match g.ch[b].bones.get(crate::character::Bone::FootL) { Some(f) => *f, None => g.ch[b].pos };
+    let at = g.ch[b].bone(crate::character::Bone::FootL).unwrap_or(g.ch[b].pos);
     crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(if laid { 0.12 } else { 0.3 }), None);
 }
 

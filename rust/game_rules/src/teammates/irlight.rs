@@ -48,10 +48,7 @@ fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
 fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
     let pos = g.ch[c_2].pos;
     let yaw = g.ch[c_2].aim_yaw;
-    let head = match g.ch[c_2].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(pos, [0.0, HEAD_Y, 0.0]),
-    };
+    let head = g.ch[c_2].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, HEAD_Y, 0.0]));
     let fx = m::sin(yaw);
     let fz = m::cos(yaw);
     let dn = m::sin(g.k.irlight.dip * v3::DEG);
@@ -360,10 +357,7 @@ pub(super) fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
     }
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let at = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(b) => *b,
-        None => [pos[0], pos[1] + 1.2, pos[2]],
-    };
+    let at = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or([pos[0], pos[1] + 1.2, pos[2]]);
     let id = g.ch[c].id;
     let e = ir_light_at(g, at, Some(id));
     kit_of(g).seen.set(o, crate::irlight::KitSeenValue { t: now, e });

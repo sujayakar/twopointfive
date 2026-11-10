@@ -20,7 +20,7 @@ fn free(g: &mut Game, x: f64, z: f64) -> bool {
 
 /// a cell of the space: no door's frame and no leafless opening's line
 fn inner(i: f64, dc: &JsMap<Num, DoorId>, line_of: &JsMap<Num, CoverOpeningId>) -> bool {
-    !dc.has(crate::Num(i + 0.0)) && !line_of.has(crate::Num(i + 0.0))
+    !dc.has(crate::Num::of(i)) && !line_of.has(crate::Num::of(i))
 }
 
 /// The space round `p` and its ways out; pure, draws no dice. `reach`: metres of walking followed; `hint`: whose side, with `p` on a line; `ring`:
@@ -44,7 +44,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
             let z = o_at[2] + tz * a * cs * 0.5;
             if !(m::abs(a * cs * 0.5) > w_ + 1e-6 || nav_grid_is_blocked(g,x, z)) {
                 let i = nav_grid_idx(g,m::floor(x / cs), m::floor(z / cs));
-                line_of.set(crate::Num(i + 0.0), o);
+                line_of.set(crate::Num::of(i), o);
             }
             a += 1.0;
         }
@@ -81,27 +81,27 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
     let mut steps: JsMap<Num, f64> = JsMap::new();
     let mut cells: Vec<f64> = vec![nav_grid_idx(g,sx, sz)];
     let mut edge: JsMap<CoverOpeningId, f64> = JsMap::new(); // the space's cell by each way's line, the first met
-    steps.set(crate::Num(cells[0] + 0.0), 0.0);
+    steps.set(crate::Num::of(cells[0]), 0.0);
     let mut qi = 0;
     while qi < cells.len() {
         let c = cells[qi];
         let x = js::rem(c, w);
         let z = js::to_i32(c / w) as f64;
-        let s = *steps.get(crate::Num(c + 0.0)).unwrap();
+        let s = *steps.get(crate::Num::of(c)).unwrap();
         for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
             let (nx, nz) = (x + dx, z + dz);
             if !free(g, nx, nz) { continue; }
             let n = nav_grid_idx(g,nx, nz);
-            let o = match dc.get(crate::Num(n + 0.0)) {
+            let o = match dc.get(crate::Num::of(n)) {
                 Some(&d) => opens.iter().copied().find(|&q| g.tab.cover_opening[q].door == Some(d)),
-                None => line_of.get(crate::Num(n + 0.0)).copied(),
+                None => line_of.get(crate::Num::of(n)).copied(),
             };
             if let Some(o) = o {
                 if !edge.has(o) { edge.set(o, c); }
                 continue;
             }
-            if s >= max || steps.has(crate::Num(n + 0.0)) { continue; }
-            steps.set(crate::Num(n + 0.0), s + 1.0);
+            if s >= max || steps.has(crate::Num::of(n)) { continue; }
+            steps.set(crate::Num::of(n), s + 1.0);
             cells.push(n);
         }
         qi += 1;
@@ -187,6 +187,6 @@ mod tests {
     /// A cell's number on the grid is one key whichever sign its nought has.
     #[test]
     fn a_map_key_holds_minus_zero_as_zero() {
-        assert!(crate::Num(-0.0 + 0.0) == crate::Num(0.0 + 0.0));
+        assert!(crate::Num::of(-0.0) == crate::Num::of(0.0));
     }
 }

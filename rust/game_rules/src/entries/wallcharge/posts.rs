@@ -380,7 +380,7 @@ fn wall_charge_standoff_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
                 let top = lo + n * file_gap + 0.5;
                 while s <= top {
                     let q = wall_pt(g, w, dir * s, post_off, None);
-                    if !!crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, prev, q) { break; }
+                    if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, prev, q) { break; }
                     prev = q;
                     if s + 1e-6 >= next && !(strict && (wall_charge_in_frame(g, q, None) || wall_charge_open_foot(g, w, dir * s))) { runs[ri].push(q); next = s + file_gap; }
                     s += 0.45;
@@ -505,7 +505,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
         let top = r.standoff + n * file_gap + 0.5;
         while s <= top {
             let q = wall_pt(g, w, dir * s, post_off, None);
-            if !!crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, prev, q) { break; }
+            if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, prev, q) { break; }
             prev = q;
             if s + 1e-6 >= next && !wall_charge_in_frame(g, q, None) && !wall_charge_open_foot(g, w, dir * s) && ours(g, q, room0) { pool.push((q, None)); next = s + file_gap; }
             s += 0.45;
@@ -536,13 +536,13 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
                 let q: V3 = [at[0] + x, 0.0, at[2] + z];
                 z += 0.9;
                 let d = v3::dist_xz(q, at);
-                if d < lo || d > hide || !!crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || wall_off(g, w, q) <= 0.3 || wall_charge_in_frame(g, q, None) || !ours(g, q, room0) { continue; }
+                if d < lo || d > hide || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || wall_off(g, w, q) <= 0.3 || wall_charge_in_frame(g, q, None) || !ours(g, q, room0) { continue; }
                 // (a place is good if the charge's own line to it is cut, and to a step off it every way there is floor)
                 let mut good = covered(g, &statics, src, open, q);
                 for (dx, dz) in [(0.4, 0.0), (-0.4, 0.0), (0.0, 0.4), (0.0, -0.4)] {
                     if !good { break; }
                     let p: V3 = [q[0] + dx, 0.0, q[2] + dz];
-                    good = !!crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || covered(g, &statics, src, open, p);
+                    good = crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || covered(g, &statics, src, open, p);
                 }
                 if good { hid.push(q); }
             }

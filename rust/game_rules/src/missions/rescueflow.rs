@@ -177,10 +177,7 @@ fn rescue_flow_sees(g: &crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
         return crate::fogofwar::fog_of_war_seen(g, h);
     }
     let ch = g.gd[h].ch;
-    let c = match g.ch[ch].bones.get(crate::character::Bone::Chest) {
-        Some(&c) => c,
-        None => v3::add(g.ch[ch].pos, [0.0, 1.1, 0.0]),
-    };
+    let c = g.ch[ch].bone_or(crate::character::Bone::Chest, 1.1);
     for &e in eyes {
         if dist_xz(e, c) < 30.0 && !crate::scene_collision::segment_blocked(g, e, c, None, None, None) {
             return true;

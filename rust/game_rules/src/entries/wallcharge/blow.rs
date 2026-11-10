@@ -728,7 +728,7 @@ fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
         let pod = deal.get(gd).unwrap_or(&pods[0]).clone();
         let sg = js::or(m::sign(wall_along(&w, pod.pos) - h.du), if i % 2 != 0 { 1.0 } else { -1.0 });
         let mut lane = wall_pt(g, &w, h.du + sg * half, -(tk + mouth_in), None);
-        if !!crate::scene_collision::nav_grid_is_blocked(g, lane[0], lane[2]) { lane = if !crate::scene_collision::nav_grid_is_blocked(g, mouth[0], mouth[2]) { mouth } else { pod.pos }; }
+        if crate::scene_collision::nav_grid_is_blocked(g, lane[0], lane[2]) { lane = if !crate::scene_collision::nav_grid_is_blocked(g, mouth[0], mouth[2]) { mouth } else { pod.pos }; }
         queue.push(WallChargeDoneItemQueueItem { gd, at: t + i as f64 * second, lane, pod });
     }
     // (the room's own doors: each, nearest the hole first, is one man's to hold from his point. A man with no door keeps the room ahead of him, and one man always does)

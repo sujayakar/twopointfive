@@ -651,7 +651,7 @@ fn body_found(g: &mut crate::game::Game, m: GuardId, o: GuardId) {
 /// How many of his side not yet found lie there to be counted: that body, and any within 3 m of it he has a line to.
 fn bodies_found_there(g: &mut crate::game::Game, m: GuardId, o: GuardId, bp: V3) -> usize {
     let mc = g.gd[m].ch;
-    let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
+    let eye = g.ch[mc].bone_or(crate::character::Bone::Head, 1.65);
     let team = g.team(m);
     let mut n = 0;
     for i in 0..g.guards.len() {

@@ -640,10 +640,10 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
         let d = def_of(g, m);
         let mine = room_of(g, q, p0, Some(1.0));
         let (d, mine) = match (d, mine) { (Some(d), Some(r)) => (d, r), _ => continue };
-        if g.time - g.gd[m].last_seen_t < 1.0 && (noticed(g, m) || glimpse(g, q, m)) {
+        if g.time - g.gd[m].last_seen_t < 1.0 && (roused(g, m) || glimpse(g, q, m)) {
             let p = match crate::belief::eyes_fix_def(g, m) { Some(k) => k, None => g.pos_of(m) };
             let r = match room_of(g, q, p, Some(0.75)) { Some(r) => r, None => mine };
-            if !(noticed(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
+            if !(roused(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
         }
         let (noise, noise_t) = { let x = &g.tab.roomfight_def[d]; (x.noise_at, x.noise_t) };
         if let Some(n) = noise {

@@ -183,8 +183,8 @@ fn lamps_on(g: &Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bo
 /// The light on one body, the brighter of his chest and his head: what stands on him, and what eyes used to the place see him by.
 pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let pos = g.ch[c].pos;
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(pos, [0.0, 1.2, 0.0]) };
-    let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(pos, [0.0, 1.6, 0.0]) };
+    let chest = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(v3::add(pos, [0.0, 1.2, 0.0]));
+    let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.6, 0.0]));
     let (a, pa) = light_at(g, chest, None, None, None);
     let (b, pb) = light_at(g, head, None, None, None);
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
@@ -283,8 +283,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         crate::mind::set(g, gd, 0.45, "guards");
         g.gd[gd].react_t = 1.2;
         g.gd[gd].search_t = 0.0;
-        crate::game::guard_set_path(g, gd, Vec::new());
-        crate::guards::guard_set_path_goal(g, gd, None);
+        g.gd[gd].drop_path();
         g.gd[gd].search_plan = None;
         g.gd[gd].pieing = None;
         let left = enemy_up_on_floor(g, &crate::seats::here(g), team);
@@ -420,7 +419,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     if let Some(out) = rr.out {
         if drop != Some(None) && before < out && rr.dur - g.gd[gd].reload_t >= out {
             let pos = g.ch[c].pos;
-            let h = match g.ch[c].bones.get(crate::character::Bone::HandR) { Some(b) => *b, None => v3::add(pos, [0.0, 1.1, 0.0]) };
+            let h = g.ch[c].bone(crate::character::Bone::HandR).unwrap_or(v3::add(pos, [0.0, 1.1, 0.0]));
             let d = g.ch[c].gun_dir;
             let vel = g.ch[c].vel;
             let (id, yaw) = (g.ch[c].id, g.ch[c].aim_yaw);

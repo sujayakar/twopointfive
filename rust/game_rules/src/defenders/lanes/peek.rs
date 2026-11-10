@@ -175,7 +175,7 @@ fn they_are_still_on_it(g: &mut Game, o: Out, seen: V3) {
     r.peek_n += 1.0;
     r.peek_at = now + m::min(most, gap * m::pow(2.0, r.peek_n));
     if r.guns.len() < 4 && r.guns.iter().all(|&q| dist_xz(q, seen) > 1.5) { r.guns.push([seen[0], 0.0, seen[2]]); }   // (where they stand now: a place to stop is out of that one's sight too)
-    if now - s(g).said_t > 2.0 { s(g).said_t = now; say_net(g, gd, "they're still on it — stay back!"); }
+    if now - s(g).said_t > 2.0 { s(g).said_t = now; crate::game::game_say(g, gd, "they're still on it — stay back!", Some(true), None); }
     peek_back(g, gd, d);
 }
 
@@ -220,11 +220,11 @@ fn lane_is_clear(g: &mut Game, o: Out, p: crate::lanes::Peek) {
     let mates = let_go_the_men_held_on_it(g, gd, id);
     let from = g.tab.lanes_lane[l].from;   // (the row outlives its place on the list)
     if !mates.is_empty() {
-        say_net(g, gd, "they're off it — move up, together!");
+        crate::game::game_say(g, gd, "they're off it — move up, together!", Some(true), None);
         for &o in mates.iter() { if let Some(dm) = def_of(g, o) { crate::roomfight::loose_at(g, dm, from); } }
         crate::roomfight::loose_at(g, d, from);
     } else {
-        say_net(g, gd, "they've moved off it — eyes open!");
+        crate::game::game_say(g, gd, "they've moved off it — eyes open!", Some(true), None);
         peek_on(g, gd, p);
         peek_back(g, gd, d);
     }
@@ -382,8 +382,7 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
     }
     if !named { return; }
     if !crate::roomfight::room_fight_lane_stop(g, gd, look) { return; }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
+    g.gd[gd].drop_path();
     let (p, now) = (g.pos_of(gd), g.time);
     held_on(g, gd, StateHeldValue { lane, t: now, look, aimed: true, at: p });
     if now - s(g).said_t > 5.0 {
@@ -430,7 +429,7 @@ pub fn lane_bars(g: &crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
     let field = g.k.lanes.field_m;
     if g.tab.lanes_lane[l].guns.iter().any(|m| dist_xz(*m, to) < field + 4.0) { return true; }
     let i = cell_at(g, to);
-    g.tab.lanes_lane[l].cells.as_ref().map_or(false, |c| c.has(cell_key(i)))
+    g.tab.lanes_lane[l].cells.as_ref().map_or(false, |c| c.has(crate::Num::of(i)))
 }
 
 /// He has shouted for a lane and the wind-up still has his arm: the dig-in does not adopt him.
@@ -453,7 +452,7 @@ pub fn lane_known_at(g: &crate::game::Game, gd: GuardId, to: Option<V3>) -> bool
         if !knows(g, l, gd) { continue; }
         let r = &g.tab.lanes_lane[l];
         let Some(cells) = r.cells.as_ref() else { continue };
-        if cells.has(cell_key(i)) || r.guns.iter().any(|m| dist_xz(*m, to) < field + 4.0) { return true; }
+        if cells.has(crate::Num::of(i)) || r.guns.iter().any(|m| dist_xz(*m, to) < field + 4.0) { return true; }
     }
     false
 }
@@ -507,6 +506,6 @@ mod tests {
 
     #[test]
     fn a_negative_zero_cell_is_cell_zero() {
-        assert!(cell_key(-0.0) == cell_key(0.0));
+        assert!(crate::Num::of(-0.0) == crate::Num::of(0.0));
     }
 }

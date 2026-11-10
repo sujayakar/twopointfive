@@ -10,10 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `c.bones.hips ?? c.pos`
 fn hips_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Hips) {
-        Some(b) => *b,
-        None => g.ch[c].pos,
-    }
+    g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos)
 }
 /// `c.bones.headTop?.[1] ?? c.pos[1] + 1.75`
 fn crown_of(g: &Game, c: CharId) -> f64 {
@@ -597,11 +594,10 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
     for &s in cands.iter() {
         if failed & (if s < 0.0 { 1 } else { 2 }) != 0 { continue; }
         let Some(cand) = step_that_opens_it(g, w, s) else { continue };
-        crate::game::guard_set_path(g, gd, vec![cand]);
+        g.gd[gd].set_path(vec![cand]);
         let man = &mut g.gd[gd];
         man.path_i = 0;
-        man.path_goal = Some(v3::copy(cand));
-        man.path_goal_orbit = false;
+        man.set_path_goal(Some(v3::copy(cand)));
         man.stall_ref = None;
         man.line_side = if s < 0.0 { -1.0 } else { 1.0 };
         man.line_gain = -1.0;

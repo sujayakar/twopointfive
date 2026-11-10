@@ -601,10 +601,7 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
         }
         g.gd[gd].speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
-        g.gd[gd].path = Vec::new();
-        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         let down = settled && crate::character::anim_act_shown(g, c) > 0.5;
         if let Some(row) = g.m.close.seated.as_mut().and_then(|seated| seated.get_mut(gd)) {
             row.down = down;

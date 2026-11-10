@@ -186,10 +186,7 @@ fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
                 crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
                 g.gd[id].react_t = 0.8;
                 g.gd[id].search_t = 0.0;
-                g.gd[id].path = Vec::new();
-                g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
-                g.gd[id].path_goal = None;
-                g.gd[id].path_goal_orbit = false;
+                g.gd[id].drop_path();
             }
         }
     }
@@ -269,7 +266,7 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
 }
 /// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.
 fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V3> {
-    let h = match g.ch[c_2].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => return None };
+    let h = g.ch[c_2].bone(crate::character::Bone::Hips)?;
     let along = v3::clamp(((h[0] - a[0]) * (b[0] - a[0]) + (h[2] - a[2]) * (b[2] - a[2])) / m::max(1e-6, m::pow(v3::dist_xz(a, b), 2.0)), 0.0, 1.0);
     if v3::dist_xz(h, v3::lerp3(a, b, along)) > 1.6 { return None; }
     let caps = crate::character::character_capsules(g, c_2);
@@ -337,14 +334,11 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3) -> Option<GuardId> {
         crate::mind::set_state(g, id, crate::game::GuardState::Suspicious, "devices");
         g.gd[id].react_t = errand().react_t;
         g.gd[id].search_t = 0.0;
-        g.gd[id].path = Vec::new();
-        g.gd[id].path_serial = g.gd[id].path_serial.wrapping_add(1);
-        g.gd[id].path_goal = None;
-        g.gd[id].path_goal_orbit = false;
+        g.gd[id].drop_path();
     }
     crate::game::game_say(g, id, "copy, control — on my way", Some(true), None);
     let c = g.gd[id].ch;
-    let at = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos };
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), None);
     Some(id)
 }

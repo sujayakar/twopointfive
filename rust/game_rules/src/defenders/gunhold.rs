@@ -293,11 +293,10 @@ fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goa
 fn take(g: &mut crate::game::Game, gd: GuardId, path: &[V3]) {
     let start = g.pos_of(gd);
     let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
-    crate::game::guard_set_path(g, gd, threaded);
+    g.gd[gd].set_path(threaded);
     let man = &mut g.gd[gd];
     man.path_i = 0;
-    man.path_goal = None;
-    man.path_goal_orbit = false;
+    man.set_path_goal(None);
     man.repath_t = 0.0;
     man.stall_ref = None;
     man.line_side = 0.0;
@@ -1048,10 +1047,7 @@ fn peeks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
 /// Has he a clear view from his eyes to where the pair was last known.
 fn sees_where_they_were(g: &Game, f: Feet, k: &Known) -> bool {
     let at = g.ch[f.c].pos;
-    let eye = match g.ch[f.c].bones.get(crate::character::Bone::Head) {
-        Some(&head) => head,
-        None => v3::add(at, [0.0, 1.65, 0.0]),
-    };
+    let eye = g.ch[f.c].bone(crate::character::Bone::Head).unwrap_or(v3::add(at, [0.0, 1.65, 0.0]));
     !crate::scene_collision::segment_blocked(g, eye, [k.sam[0], 1.2, k.sam[2]], None, None, None)
 }
 

@@ -216,10 +216,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         let me = &mut g.gd[gd];
         me.witness.saw_held = Some(crate::game::WitnessSawHeld { who });
         g.arms[me.ch].fire_cd = m::max(g.arms[me.ch].fire_cd, 0.8);
-        me.path = Vec::new();
-        me.path_serial = me.path_serial.wrapping_add(1);
-        me.path_goal = None;
-        me.path_goal_orbit = false;
+        me.drop_path();
         me.stall_ref = None;
         me.pieing = None;
         me.search_plan = None;

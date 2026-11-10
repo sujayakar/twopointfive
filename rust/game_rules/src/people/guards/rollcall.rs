@@ -21,7 +21,7 @@ fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
 /// his head bone, or his feet (`x.char.bones.head ?? x.char.pos`: where a radio crackle sounds)
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => g.ch[c].pos }
+    g.ch[c].bone(Bone::Head).unwrap_or(g.ch[c].pos)
 }
 /// `g.level.routes[gd.routeI]`'s points, if that route exists
 fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {

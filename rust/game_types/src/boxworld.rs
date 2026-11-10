@@ -419,4 +419,3 @@ pub fn rows_of<'a>(boxes: impl ExactSizeIterator<Item = &'a SBox>) -> (Vec<f64>,
     for (i, b) in boxes.enumerate() { w.put(Of::Part(i as u32), b); }
     (w.part, w.cut)
 }
-

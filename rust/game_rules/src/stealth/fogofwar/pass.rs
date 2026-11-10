@@ -526,7 +526,7 @@ fn fog_of_war_eye_on_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, 
 /// Where a body is looked for: a hand's height over where it lies.
 fn body_at(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
+    let hp = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]]
 }
 

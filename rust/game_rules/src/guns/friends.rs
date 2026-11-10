@@ -103,7 +103,7 @@ struct SamsLine {
 fn ask(g: &Game, o: GuardId, line: &mut SamsLine) {
     let c = g.gd[o].ch;
     if crate::condition::down(g, g.gd[o].ch) || !g.ch[c].alive { return; }
-    let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[c].pos };
+    let h = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let (rx, rz) = (h[0] - line.from[0], h[2] - line.from[2]);
     let t = rx * line.dx + rz * line.dz;
     if t < 0.15 || t > line.reach || t >= line.bt { return; }

@@ -307,10 +307,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     if kind == crate::fixtures::FixtureKind::Breaker {
         let c = g.pl[p].ch;
         let pos = g.ch[c].pos;
-        let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(head) => *head,
-            None => v3::add(pos, [0.0, 1.6, 0.0]),
-        };
+        let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.6, 0.0]));
         let own = crate::workthings::sam_panel_point(g, pos);
         if crate::scene_collision::segment_blocked(g, eye, v3::add(tpos, [0.0, 0.0, -0.18]), None, None, None)
             && !(match own {

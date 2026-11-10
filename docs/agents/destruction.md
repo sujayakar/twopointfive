@@ -46,7 +46,7 @@ A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g
 ## How it works
 
 **Chaos.** `chaos_of` is one number from 0 to 1, `tune.chaos`, set from the knob `chaos.def` as the game is made. No panel row or word turns it. At 0
-most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on`, `glass_break_live` and `chew_live` all ask it.
+most of this page is off: `destruction_round`, `destruction_bang`, `wall_charge_on` and `glass_break_live` all ask it.
 
 **Heat.** A round or a bang pours heat into a coarse floor grid that decays (`destruction_stoke`, `heat_tau`), and heat × 2 × chaos is what the
 thresholds read (`t_decal` up to `t_tile`). One round marks a wall; a beaten spot loses its papers, its clutter, then a tile. Each kind has a rate cap

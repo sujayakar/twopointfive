@@ -605,10 +605,7 @@ fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: cra
     }
     if why == crate::doorpath::DoorPathDropWhy::GaveUp {
         // (the line under him was this walk's own: left there, goTo sees its goal met and never plans)
-        crate::game::guard_set_path(g, w.gd, Vec::new());
-        let man = &mut g.gd[w.gd];
-        man.path_goal = None;
-        man.path_goal_orbit = false;
+        g.gd[w.gd].drop_path();
     }
     let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), w.gd) else { return };
     let Some(post) = g.tab.orders_assignment[a].post else { return };
@@ -746,11 +743,10 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     let goal = g.gd[gd].script.unwrap().goal.unwrap();
     let first = arr[0];
     let arr_n = arr.len() as f64;
-    crate::game::guard_set_path(g, gd, arr);
+    g.gd[gd].set_path(arr);
     let man = &mut g.gd[gd];
     man.path_i = 0;
-    man.path_goal = Some([goal[0], goal[1], goal[2]]);
-    man.path_goal_orbit = false;
+    man.set_path_goal(Some([goal[0], goal[1], goal[2]]));
     w.arr = Some(man.path_serial);
     w.arr_n = arr_n;
     // his feet stay on the line: until his chest is round he side-steps along it, as the fight had him

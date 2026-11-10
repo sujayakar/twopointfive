@@ -137,9 +137,7 @@ pub(super) fn attention_step(g: &mut crate::game::Game, gd: GuardId, at: V3) {
             crate::mind::fix(g, gd, Some(v3::copy(at)), "attention");
         }
         let man = &mut g.gd[gd];
-        man.path = Vec::new();
-        man.path_serial = man.path_serial.wrapping_add(1);
-        man.path_goal = None; man.path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+        man.drop_path();
     }
 }
 
@@ -412,9 +410,7 @@ fn spent_on_it(g: &mut Game, gd: GuardId, foe_lines: bool) {
     g.gd[gd].search_plan = None;
     g.gd[gd].pieing = None;
     g.gd[gd].react_t = 0.0;
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-    g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     log(g, "spent", LogH { secs: 0.0 });
     line(g, gd, &if foe_lines { spent_foe() } else { spent() });

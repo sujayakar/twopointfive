@@ -7,8 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-fn yaw_to(a: V3, b: V3) -> f64 { v3::yaw_to(a, b) }
-
 
 /// His order's own tick, if it has one: it may rewrite his Assignment or re-assign him.
 fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: OrdersAssignmentId) {
@@ -387,8 +385,8 @@ fn stopped_face(g: &Game, a: OrdersAssignmentId, pl: &FilePlace, d: f64) -> Opti
     let sam = g.pl[g.player].ch;
     let sam_pos = g.ch[sam].pos;
     if pl.to_sam < 0.3 { return Some(g.tab.orders_assignment[a].face_now.unwrap_or(g.ch[sam].body_yaw)); }
-    if g.tab.orders_assignment[a].follow == 0.0 { return Some(yaw_to(pl.p, sam_pos)); }
-    Some(yaw_to(sam_pos, pl.p))
+    if g.tab.orders_assignment[a].follow == 0.0 { return Some(v3::yaw_to(pl.p, sam_pos)); }
+    Some(v3::yaw_to(sam_pos, pl.p))
 }
 
 /// A man's mark this frame.
@@ -533,7 +531,7 @@ fn on_his_mark_yet(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, order_id: &
         let (w, fit, spare) = (g.tab.orders_assignment[a].watch, g.tab.orders_assignment[a].fit.is_some(), g.tab.orders_assignment[a].spare.unwrap_or(false));
         arrived = match w {
             None => true,
-            Some(w) => fit || (spare && crate::cover::cover_has(g, gd)) || m::abs(v3::wrap_angle(g.ch[c].aim_yaw - yaw_to(g.ch[c].pos, w))) < 0.2,
+            Some(w) => fit || (spare && crate::cover::cover_has(g, gd)) || m::abs(v3::wrap_angle(g.ch[c].aim_yaw - v3::yaw_to(g.ch[c].pos, w))) < 0.2,
         };
     }
     g.tab.orders_assignment[a].arrived = arrived;
@@ -587,7 +585,7 @@ fn unasked_cover(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, feet: &Feet, 
 /// He has his gun on the enemy he has spotted, unless a pair's order is finishing him.
 fn eyes_on_the_spotted(g: &Game, gd: GuardId, w: V3, look: &mut Carriage) {
     if crate::pairorders::pair_orders_finishing(g, gd) { return; }
-    look.watch = Some(w); look.face = Some(yaw_to(g.pos_of(gd), w)); look.strafe = false; look.pose = aim_pose(); look.pose_is_move = false;
+    look.watch = Some(w); look.face = Some(v3::yaw_to(g.pos_of(gd), w)); look.strafe = false; look.pose = aim_pose(); look.pose_is_move = false;
 }
 
 /// On the walk with no line to the order's own watch, the gun leads the way he walks.
@@ -606,7 +604,7 @@ fn back_pedal_watchdog(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, look: &
     if let Some(wp) = wp {
         if t - w.path > 1.0 && crate::scene_collision::low_blocked(g, q, wp) {
             let man = &mut g.gd[gd];
-            man.path = Vec::new(); man.path_serial = man.path_serial.wrapping_add(1); man.path_goal = None; man.path_goal_orbit = false;
+            man.drop_path();
             w.path = t;
         }
     }
@@ -650,7 +648,7 @@ fn muzzle_clear_of_friends(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, acr
     if !(look.pose.1 == crate::character::UpperMode::Aim || look.pose.0 == crate::character::Stance::Stack) { g.tab.orders_assignment[a].low = false; return; }
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    let yaw = match look.watch { Some(w) => yaw_to(p, w), None => g.ch[c].body_yaw };
+    let yaw = match look.watch { Some(w) => v3::yaw_to(p, w), None => g.ch[c].body_yaw };
     let (fx, fz) = (m::sin(yaw), m::cos(yaw));
     let len = match look.watch { Some(w) => dist_xz(p, w), None => 5.0 };
     let lane = if g.tab.orders_assignment[a].low { g.k.orders.lane_out } else { g.k.orders.lane_in };

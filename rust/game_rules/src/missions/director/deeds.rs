@@ -152,7 +152,7 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsi
         crate::chronicle::chron_radio(g, x, line);
     }
     crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
-    let at = gd.map(|x| { let c = g.gd[x].ch; match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos } });
+    let at = gd.map(|x| { let c = g.gd[x].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) });
     crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
 }
 // ---- world: doors (ts 985)

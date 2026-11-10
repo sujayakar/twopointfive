@@ -81,10 +81,7 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
         ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
-    let at = match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(head) => *head,
-        None => v3::add(pos, [0.0, if g.pl[pl].crouch { 1.05 } else { 1.6 }, 0.0]),
-    };
+    let at = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, if g.pl[pl].crouch { 1.05 } else { 1.6 }, 0.0]));
     crate::audio_iface::game_audio_like_play(g, "whistle", Some(at), Some(gain), None);
     true
 }
@@ -181,10 +178,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     g.stats.whistle.answered += 1;
     if !crate::belief::word_now(g, gd) { crate::mind::fix(g, gd, Some(v3::copy(h.at)), "whistle"); }
     {
-        g.gd[gd].path = Vec::new();
-        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
-        g.gd[gd].path_goal = None;
-        g.gd[gd].path_goal_orbit = false;
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
         g.gd[gd].stall_t = 0.0;
         g.gd[gd].search_t = 0.0;
