@@ -478,9 +478,19 @@ fn ray_round(ro: V3, rd: V3, b: &Bx, tmax: f64) -> Option<(f64, V3)> {
     Some((t0, [cs * l0 + sn * l2, l1, -sn * l0 + cs * l2]))
 }
 
+/// A ray that keeps further from a box's middle than its corners stand (and a little over, for a turn that is not quite of length one) meets nothing
+/// of it, however it is turned: most boxes a ray is asked of are so, and are asked for no sine.
+#[inline]
+fn passes_by(ro: V3, rd: V3, x: &Bx) -> bool {
+    let p = v3::sub(x.c, ro);
+    let (pp, dd, pd) = (v3::dot(p, p), v3::dot(rd, rd), v3::dot(p, rd));
+    let rr = v3::dot(x.h, x.h) * 1.04 + 0.02;
+    pp * dd - pd * pd > rr * dd || (pd < 0.0 && pp > rr)
+}
+
 /// The closest hit of a ray on one box; origin inside = no hit.
 pub fn ray_box(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBox> {
-    let (round, has_cut) = { let x = &g.tab[b]; (x.round == Some(true), x.cut.is_some()) };
+    let (round, has_cut) = { let x = &g.tab[b]; if passes_by(ro, rd, x) { return None; } (x.round == Some(true), x.cut.is_some()) };
     if round { return ray_box_round(g, ro, rd, b, tmax).map(|r| crate::scene_boxes::RayBox { t: r.t, n: r.n }); }
     if has_cut && cut_met(g, b) { return ray_box_cut(g, ro, rd, b, tmax).map(|r| crate::scene_boxes::RayBox { t: r.t, n: r.n }); }
     let x = &g.tab[b];
