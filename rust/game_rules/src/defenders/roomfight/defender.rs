@@ -72,7 +72,7 @@ pub(super) fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, 
         }
     }
     if g.gd[gd].script.is_some() {
-        let st = match g.gd[gd].state { crate::game::GuardState::Dead | crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Patrol, crate::game::GuardState::Suspicious => crate::squad::EndGuardScriptState::Suspicious, crate::game::GuardState::Alert => crate::squad::EndGuardScriptState::Alert, crate::game::GuardState::Search => crate::squad::EndGuardScriptState::Search };
+        let st = g.gd[gd].state;
         crate::squad::end_guard_script(g, gd, Some(st));
     }
     if !g.gd[gd].hold {
@@ -481,7 +481,7 @@ fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, fighting: bool
     let gd = g.tab.roomfight_def[d].gd;
     let c = g.gd[gd].ch;
     let threat = v3::copy(room_fight_threat_of(g, d));
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
     crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
     crate::mind::raise(g, gd, 0.92, "roomfight");
     crate::control::set_hold(g, gd, true, "roomfight");

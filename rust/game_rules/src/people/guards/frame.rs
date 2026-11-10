@@ -192,12 +192,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
             g.last_sting_t = g.time;
         }
         if g.ai_enabled {
-            let by = match alert_cause(g, gd, seen) {
-                crate::guards::AlertCause::Body => crate::game::WitnessAlertedBy::Body,
-                crate::guards::AlertCause::Radio => crate::game::WitnessAlertedBy::Radio,
-                crate::guards::AlertCause::Sound => crate::game::WitnessAlertedBy::Sound,
-                crate::guards::AlertCause::Sight => crate::game::WitnessAlertedBy::Sight,
-            };
+            let by = alert_cause(g, gd, seen);
             g.gd[gd].witness.alerted_by = Some(by);
             g.gd[gd].witness.alert_t = g.time;
         }
@@ -267,7 +262,7 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
     collide_guard(g, gd, p0x, p0z);
     if crate::startle::startle_gun_down(g, gd) {
         upper = UpperMode::None;
-        duck = duck || hand_carry(g, gd) != crate::guards::HandCarry::Torch;
+        duck = duck || hand_carry(g, gd) != crate::guards::InHand::Torch;
     }
     let is_aim = upper == UpperMode::Aim;
     if g.gd[gd].muzzle_eval_t != g.time {

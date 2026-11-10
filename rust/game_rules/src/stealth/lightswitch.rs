@@ -307,7 +307,7 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
     if !on {
         for &t in &sw.targets {
             if g.tab.fixture[t].on && g.tab.fixture[t].factor > 0.0 {
-                crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Shot), Some(sw.floor));
+                crate::game::game_light_event(g, t, Some(crate::lighting::LightEventCause::Shot), Some(sw.floor));
             }
         }
     }

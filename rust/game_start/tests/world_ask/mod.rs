@@ -294,7 +294,7 @@ impl DarkAsk for Play {
         self.g.ch[cb].aim_yaw = y; self.g.ch[cb].body_yaw = y;
     }
     fn dark_knows(&self, gd: GuardId) -> bool { self.g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.knows) }
-    fn mains_pulled(&mut self) { game::game::game_set_blackout(&mut self.g, 86400.0, game::game::GameSetBlackoutCause::Hand); }
+    fn mains_pulled(&mut self) { game::game::game_set_blackout(&mut self.g, 86400.0, game::lighting::SetBlackoutCause::Hand); }
     fn powerout_at(&self, what: game::powerout::PowerOutEventWhat) -> Option<f64> { self.g.m.powerout.states.as_ref()?.events.iter().find(|e| e.what == what).map(|e| e.t) }
     fn powerout_sent(&self) -> Vec<GuardId> {
         let Some(st) = self.g.m.powerout.states.as_ref() else { return Vec::new() };
@@ -613,7 +613,7 @@ pub trait ReviewAsk {
 impl ReviewAsk for Play {
     fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| self.g.tab.fixture[t].on && self.g.tab.fixture[t].kind != game::fixtures::FixtureKind::Breaker).expect("a lamp lit") }
     fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.sets[self.g.seat].aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
-    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
+    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::lighting::LightEventCause::Shot), None); }
     fn lamp_disabled(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].blind_until > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
         let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::default() };

@@ -62,7 +62,7 @@ pub(in crate::missions) fn director_beat_until(test: crate::director::CondTest) 
     Cond::Arm2(CondArm2 { test })
 }
 /// c.on: the union `filterOrName` comes resolved, a name or a filter
-pub(in crate::missions) fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::CondArm3Kind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
+pub(in crate::missions) fn director_beat_on(g: &crate::game::Game, r: DirectorRunId, kind: crate::director::EventViewKind, name: Option<&str>, filter: Option<crate::director::EventFilter>) -> crate::director::Cond {
     Cond::Arm3(CondArm3 { kind, name: name.map(String::from), filter, got: None, tick0: g.tab.director_run[r].tick_n })
 }
 /// c.all
@@ -117,14 +117,14 @@ pub(in crate::missions) fn director_beat_rout(g: &mut crate::game::Game, r: Dire
     if crate::condition::down(g, g.gd[gd].ch) { return Ok(false); }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Alert)); }
     crate::control::set_hold(g, gd, false, "director");
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     Ok(true)
 }
 /// c.release
-pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, state: Option<crate::squad::EndGuardScriptState>) -> Result<(), String> {
-    let state = state.unwrap_or(crate::squad::EndGuardScriptState::Search);
+pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, state: Option<crate::game::GuardState>) -> Result<(), String> {
+    let state = state.unwrap_or(crate::game::GuardState::Search);
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(state)); }
     crate::control::set_hold(g, gd, false, "director");

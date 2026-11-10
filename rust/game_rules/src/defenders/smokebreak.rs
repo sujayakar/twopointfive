@@ -144,7 +144,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
             let b = k.thread;
             smoke_emit(g, &crate::smoke_types::SmokeEmitter {
                 pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: THREAD_EVERY, age: 0.0,
-                kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
+                kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeLattice::Fine),
                 confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
                 ..crate::smoke_types::SmokeEmitter::default()
             });
@@ -165,7 +165,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
             smoke_emit(g, &crate::smoke_types::SmokeEmitter {
                 pos: a.pos, dir: [a.dir[0] * b.speed + v[0] * 0.3, a.dir[1] * b.speed, a.dir[2] * b.speed + v[2] * 0.3], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells),
                 density: b.density, temperature: b.temp, ttl: k.out, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), expand: Some(b.expand),
-                attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),
+                attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),
                 tint: Some(k.color), track: None,
                 ..crate::smoke_types::SmokeEmitter::default()
             });

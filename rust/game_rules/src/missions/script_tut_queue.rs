@@ -233,7 +233,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
                     return Ok(Some(crate::director::director_beat_any(vec![burst, wait, f.gone.clone().unwrap()])));
                 }
                 for u in up(g, r, f).iter() {
-                    crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
                 }
                 return Ok(None);
             }
@@ -285,7 +285,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
             }
             11 => {
                 for u in up(g, r, f).iter() {
-                    crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                    crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
                 }
                 return Ok(None);
             }
@@ -411,7 +411,7 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
                 }
             }
             f.at = 1;
-            Ok(Some(crate::director::director_beat_on(g, r, crate::director::CondArm3Kind::Signal, Some("lesson:gates"), None)))
+            Ok(Some(crate::director::director_beat_on(g, r, crate::director::EventViewKind::Signal, Some("lesson:gates"), None)))
         }
         1 => {
             let mut men = Vec::new();
@@ -444,7 +444,7 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
         4 => {
             if broke(g, r, b, f)? { return Ok(None); }
             for u in left(g, r, &f.men).iter() {
-                crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
             }
             let wait = crate::director::director_beat_wait(g, r, ON_SECS)?;
             f.at = 5;
@@ -462,7 +462,7 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
         6 => {
             if broke(g, r, b, f)? { return Ok(None); }
             for u in left(g, r, &f.men).iter() {
-                crate::director::director_beat_release(g, r, b, u, Some(crate::squad::EndGuardScriptState::Alert))?;
+                crate::director::director_beat_release(g, r, b, u, Some(crate::game::GuardState::Alert))?;
             }
             f.at = 7;
             Ok(Some(one()))

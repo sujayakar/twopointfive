@@ -38,15 +38,6 @@ pub struct LevelChange {
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
-pub enum LevelChangeCause {
-    #[default] Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BlastOpts {
     pub radius: Option<f64>,
@@ -198,3 +189,12 @@ pub struct WallBreakPlanOfItem {
 }
 
 pub const HIDE: f64 = 3.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum LevelChangeCause {
+    #[default] Blast,
+    Fire,
+    Load,
+    Reset,
+    Collapse,
+}

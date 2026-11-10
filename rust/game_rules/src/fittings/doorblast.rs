@@ -570,7 +570,7 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
             crate::ragdoll::ragdoll_wake(g, rag);
         }
     }
-    crate::doors::doors_torn(g, d, who, Some(crate::doors::DoorsTornCause::Fire));
+    crate::doors::doors_torn(g, d, who, Some(crate::wallbreak::LevelChangeCause::Fire));
     true
 }
 

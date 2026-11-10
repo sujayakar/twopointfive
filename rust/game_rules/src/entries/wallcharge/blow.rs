@@ -242,7 +242,7 @@ pub(super) fn wall_charge_end(g: &mut crate::game::Game, op: WallOpId) {
 /// `Object.assign(op, { ended })`: the done list's copy of the order
 fn done_item(r: &WallOp) -> WallChargeDoneItem {
     let mut stage = JsMap::new();
-    for (k, v) in r.stage.iter() { stage.set(k, match *v { WallOpStageValue::Lane => WallChargeDoneItemStageValue::Lane, WallOpStageValue::Pod => WallChargeDoneItemStageValue::Pod }); }
+    for (k, v) in r.stage.iter() { stage.set(k, *v); }
     WallChargeDoneItem {
         t0: r.t0,
     }
@@ -573,7 +573,7 @@ fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
         o!(g, op).queue.remove(i);
         if o!(g, op).men.contains(&q.gd) {
             o!(g, op).pod.set(q.gd, q.pod.clone());
-            o!(g, op).stage.set(q.gd, WallOpStageValue::Lane);
+            o!(g, op).stage.set(q.gd, crate::wallcharge::WallStage::Lane);
             let lw = g.k.wallcharge.lane_watch;
             let watch = if lw > 0.0 { Some(wall_pt(g, w, o!(g, op).hole.unwrap().du, -(tk + lw), Some(g.k.wallcharge.height))) } else { None };
             let a = entry_job(&crate::seats::here(g), q.lane, into, watch, light, "entering · the wall");
@@ -597,12 +597,12 @@ fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
         asg!(g, a).search_t = Some(t);
         wall_charge_cross(g, op, gd, p);
         let (arrived, yield_t, arr_t, post) = { let r = &asg!(g, a); (r.arrived, r.yield_t, r.arr_t, r.post) };
-        if st == WallOpStageValue::Lane {
+        if st == crate::wallcharge::WallStage::Lane {
             settled = false;
             if wall_off(g, w, p) < -(tk + 0.15) || arrived || post.map_or(false, |q| v3::dist_xz(p, q) < 0.35) {   // through the hole: on to his own point
                 let pod = o!(g, op).pod.get(gd).unwrap().clone();
                 if !o!(g, op).crossed.has(gd) { let along = wall_along(w, p); o!(g, op).crossed.set(gd, along); }
-                o!(g, op).stage.set(gd, WallOpStageValue::Pod);
+                o!(g, op).stage.set(gd, crate::wallcharge::WallStage::Pod);
                 let there = if pod.watch.is_some() && !word_on(&pod.door) { "holding the hole" } else { "holding the room" };
                 let job = entry_job(&crate::seats::here(g), pod.pos, pod.face, pod.watch, light, there);
                 wall_charge_assign(g, op, gd, &job);
@@ -616,7 +616,7 @@ fn step_enter(g: &mut Game, op: WallOpId, w: &WallSpot, t: f64, el: f64) {
     if settled && o!(g, op).in_t.is_nan() { o!(g, op).in_t = t; }
     if (settled && t - o!(g, op).in_t >= g.k.wallcharge.sweep_secs) || el >= g.k.wallcharge.enter_cap {
         for gd in o!(g, op).men.clone() {
-            if o!(g, op).stage.get(gd).copied() == Some(WallOpStageValue::Pod) { wall_charge_take_hold(g, op, gd, Some(light)); }
+            if o!(g, op).stage.get(gd).copied() == Some(crate::wallcharge::WallStage::Pod) { wall_charge_take_hold(g, op, gd, Some(light)); }
         }
         wall_charge_end(g, op);
     }

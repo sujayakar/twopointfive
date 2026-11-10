@@ -301,14 +301,6 @@ pub struct LightOutSeenE {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AlertCause {
-    Body,
-    Radio,
-    Sound,
-    Sight,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorTamper {
     Picked,
     Forced,
@@ -424,31 +416,6 @@ pub struct ChaseFix {
 pub enum SteadyLamps {
     Bool(bool),
     LampRows(crate::scene_collision::LampRows),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RigOf {
-    Pistol,
-    Carbine,
-    Sc20k,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum LongRigOf {
-    Carbine,
-    Sc20k,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum HandCarry {
-    Torch,
-    Weapon,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum InHand {
-    Torch,
-    Weapon,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
@@ -727,3 +694,8 @@ pub fn team_tint() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(Stri
 
 pub fn team_tint2() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.02, 0.02, 0.025]); t.set(String::from("operative"), [0.05, 0.07, 0.06]); t.set(String::from("hostile"), [0.09, 0.08, 0.05]); t.set(String::from("player"), [0.1, 0.32, 0.18]); t.set(String::from("civilian"), [0.05, 0.06, 0.1]); t } }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum InHand {
+    Torch,
+    Weapon,
+}

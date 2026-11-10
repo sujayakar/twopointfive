@@ -137,11 +137,11 @@ fn band_of(g: &crate::game::Game, gd: GuardId) -> Option<Vec<GuardId>> {
 fn mix_now(g: &mut crate::game::Game) -> crate::morale::MixNow {
     let key = format!("{}|{}|{}", g.time, g.k.pressure.on, g.k.digin.on);
     if let Some(had) = &g.m.morale.mix_at {
-        if had.key == key { return if had.mix == MoraleModMixAtValueMix::Hard { MixNow::Hard } else { MixNow::Mixed }; }
+        if had.key == key { return if had.mix == crate::morale::MixNow::Hard { MixNow::Hard } else { MixNow::Mixed }; }
     }
     let ai = match crate::difficulty::levers_shown(g, None).ai { Some(d) => d.as_str(), None => if g.k.pressure.on { "hard" } else { "standard" } };
     let hard = crate::morale::morale_at().get(String::from(ai)).map_or(false, |v| v == "hard");
-    g.m.morale.mix_at = Some(MoraleModMixAtValue { key, mix: if hard { MoraleModMixAtValueMix::Hard } else { MoraleModMixAtValueMix::Mixed } });
+    g.m.morale.mix_at = Some(MoraleModMixAtValue { key, mix: if hard { crate::morale::MixNow::Hard } else { crate::morale::MixNow::Mixed } });
     if hard { MixNow::Hard } else { MixNow::Mixed }
 }
 

@@ -193,7 +193,7 @@ pub(super) fn breach_drill_end(g: &mut crate::game::Game) {
     let mut all = vec![dr!(g).a, dr!(g).b];
     all.extend_from_slice(&dr!(g).hostiles);
     for gd in all {
-        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Patrol)); }
+        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::game::GuardState::Patrol)); }
     }
 }
 
@@ -296,7 +296,7 @@ pub(super) fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
             let planted = a_in && v3::dist_xz(g.ch[ca].pos, from) < 0.07 && m::abs(v3::wrap_angle(g.ch[ca].body_yaw - kf)) < 0.1;
             if (planted && t > t_go + 0.5) || t > t_go + 1.8 {
                 crate::squad::order(g, a, OP { goal: Some(None), aim_at: Some(None), ..Default::default() });
-                crate::character::anim_kick_door(g, ca, Some(crate::character::AnimKickDoorOpts { leg: Some(crate::character::AnimKickDoorOptsLeg::Left) }));
+                crate::character::anim_kick_door(g, ca, Some(crate::character::AnimKickDoorOpts { leg: Some(crate::character::AnimKickLeg::Left) }));
                 dr!(g).t_kick = t;
                 dr!(g).phase = Phase::Kick;
                 breach_drill_beat(g, "kick");

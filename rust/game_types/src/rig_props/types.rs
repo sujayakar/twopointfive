@@ -266,14 +266,14 @@ pub struct RigOpts {
     pub light_on: bool,
     pub is_guard: bool,
     pub torch: Option<bool>,
-    pub weapon: Option<crate::rig_props::RigOptsWeapon>,
+    pub weapon: Option<crate::rig_props::RigWeapon>,
     pub beam_dir: Option<V3>,
     pub lens_color: Option<V3>,
     pub holster: Option<bool>,
     pub held: Option<crate::game::ThrowKind>,
     pub knife: Option<bool>,
     pub sheath: Option<bool>,
-    pub rifle: Option<crate::rig_props::RigOptsRifle>,
+    pub rifle: Option<crate::rig_props::RifleAt>,
     pub sling_front: Option<bool>,
     pub sling_rest: Option<f64>,
     pub rifle_light: Option<bool>,
@@ -282,23 +282,10 @@ pub struct RigOpts {
     pub holster_out: Option<f64>,
     pub kit: Option<crate::rig_props::KitDraw>,
     pub rifle_black: Option<bool>,
-    pub big: Option<crate::rig_props::RigOptsBig>,
+    pub big: Option<crate::kit::BigTool>,
     pub big_k: Option<f64>,
     pub big_clear: Option<bool>,
     pub hang: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RigOptsWeapon {
-    Pistol,
-    Carbine,
-    Sc20k,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RigOptsRifle {
-    Hand,
-    Slung,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -310,12 +297,6 @@ pub struct KitDraw {
     pub rest: Option<f64>,
     pub no_mag: Option<bool>,
     pub mag_l: Option<crate::slotsetup::SetupGun>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RigOptsBig {
-    Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -482,27 +463,9 @@ pub struct SlungBase {
     pub want: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum Sc20kFrameWhere {
-    Hand,
-    Slung,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Sc20kFrame {
     pub g: crate::rig_props::Frame,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum Sc20kBoxesWhere {
-    Hand,
-    Slung,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum LongHoldWeapon {
-    Carbine,
-    Sc20k,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -522,30 +485,10 @@ pub struct RigLightPose {
     pub dir: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RigTorchPosWeapon {
-    Pistol,
-    Carbine,
-    Sc20k,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TorchCarryDirLow {
     pub tan: f64,
     pub rate: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigClearOfKind {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PackSideDimsWhat {
-    Rifle,
-    Shotgun,
-    Hammer,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -558,37 +501,11 @@ pub struct PackSideDims {
     pub len: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PackSideBindWhat {
-    Rifle,
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum PackSideWhat {
-    Rifle,
-    Shotgun,
-    Hammer,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BigBackOf {
     pub o: V3,
     pub z: V3,
     pub cf: crate::rig_props::Frame,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BigBoxesKind {
-    Shotgun,
-    Hammer,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum HungBoxesWeapon {
-    Carbine,
-    Sc20k,
 }
 
 /// the state this module keeps at its top level
@@ -642,3 +559,29 @@ pub const TORCH_CARRY_RATE: f64 = 13.0;
 pub static BIGRIG: crate::rig_props::Bigrig = crate::rig_props::Bigrig { hammer: crate::rig_props::BigrigHammer { handle: crate::rig_props::Seg { l0: -0.46, l1: 0.265, thick: 0.02, tall: 0.02, adj: None }, head: crate::rig_props::Seg { l0: 0.265, l1: 0.335, thick: 0.085, tall: 0.045, adj: None }, grip: crate::rig_props::BigrigHammerGrip { fwd: 0.08, palm: 0.03, side: 0.0 }, hands: 0.36, head_at: 0.3, back: crate::rig_props::RigSc20kSlung { off: [-0.055, 0.01, -0.19], bore: [-0.42, 0.91, 0.0], roll: 90.0, follow: 0.5, adj: None } }, shotgun: crate::rig_props::BigrigShotgun { back: crate::rig_props::RigSc20kSlung { off: [-0.02, 0.17, -0.18], bore: [0.5, -0.866, 0.2], roll: 180.0, follow: 0.5, adj: None } }, clear: crate::rig_props::BigrigClear { hammer: 0.11, shotgun: 0.075 } };
 
 pub const BIG_TAG: &str = "big";
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum RifleAt {
+    Hand,
+    Slung,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum LongRig {
+    Carbine,
+    Sc20k,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum PackSideWhat {
+    Rifle,
+    Shotgun,
+    Hammer,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum RigWeapon {
+    Pistol,
+    Carbine,
+    Sc20k,
+}

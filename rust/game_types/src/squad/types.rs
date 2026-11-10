@@ -167,14 +167,6 @@ pub struct BODYLINESCOLD {
     pub radio1: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum EndGuardScriptState {
-    Patrol,
-    Suspicious,
-    Alert,
-    Search,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OrderPatch {
     pub goal: Option<Option<V3>>,

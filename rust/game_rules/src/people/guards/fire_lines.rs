@@ -102,12 +102,12 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
 }
 
 /// What took a man over the alert line just now.
-pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::guards::AlertCause {
-    if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::guards::AlertCause::Sight; }
-    if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::guards::AlertCause::Sound; }
-    if g.time - g.gd[gd].sight_t < 1.0 { return crate::guards::AlertCause::Sight; }
-    if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::guards::AlertCause::Body; }
-    crate::guards::AlertCause::Radio
+pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::game::WitnessAlertedBy {
+    if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::game::WitnessAlertedBy::Sight; }
+    if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::game::WitnessAlertedBy::Sound; }
+    if g.time - g.gd[gd].sight_t < 1.0 { return crate::game::WitnessAlertedBy::Sight; }
+    if g.gd[gd].body_duty.is_some() || g.time - g.gd[gd].saw_body_t < 2.0 { return crate::game::WitnessAlertedBy::Body; }
+    crate::game::WitnessAlertedBy::Radio
 }
 
 /// Floor point under a body: its pelvis once the ragdoll has it.

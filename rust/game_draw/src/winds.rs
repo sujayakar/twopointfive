@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use game::game::Game;
 use game::ids::*;
 use game::out_events::OutEvent;
-use game::smoke_types::{WindGpuSource, WindGpuSourceKind};
+use game::smoke_types::{WindGpuSource};
 use game::wind::{WindSource, WindSourceKind};
 
 section! {
@@ -167,7 +167,7 @@ fn own(s: &WindSource, roofs: &mut Vec<Rect>) -> Wind {
 
 fn gpu(s: &WindGpuSource) -> Wind {
     let mut w = Wind::ZERO;
-    w.kind = matches!(s.kind, WindGpuSourceKind::Storm) as u32;
+    w.kind = matches!(s.kind, game::wind::WindSourceKind::Storm) as u32;
     w.says = (s.field == Some(true)) as u32 | (s.heat == Some(true)) as u32 * 2;
     w.kinds = s.kinds.map_or(0, |k| k as u32);
     w.pos = s.pos.map(|x| x as f32);

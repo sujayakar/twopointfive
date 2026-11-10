@@ -164,10 +164,7 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
 
 /// A hostage: a civilian of the usual make at `pos`, down and told to stay down with no end to it.
 pub fn spawn_hostage(g: &mut crate::game::Game, def: &crate::civilians::SpawnHostageDef) -> GuardId {
-    let kind = match def.kind {
-        SpawnHostageDefKind::Cleaner => crate::scene_level::CivilianDefKind::Cleaner,
-        SpawnHostageDefKind::Worker => crate::scene_level::CivilianDefKind::Worker,
-    };
+    let kind = def.kind;
     let made = crate::scene_level::CivilianDef {
         name: def.name.clone(),
         kind,

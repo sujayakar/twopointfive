@@ -272,17 +272,6 @@ fn all_taken(g: &Game) -> bool {
     true
 }
 
-/// endGuardScript's word for a man's own state.
-fn script_state(s: crate::game::GuardState) -> Option<crate::squad::EndGuardScriptState> {
-    match s {
-        crate::game::GuardState::Patrol => Some(crate::squad::EndGuardScriptState::Patrol),
-        crate::game::GuardState::Suspicious => Some(crate::squad::EndGuardScriptState::Suspicious),
-        crate::game::GuardState::Alert => Some(crate::squad::EndGuardScriptState::Alert),
-        crate::game::GuardState::Search => Some(crate::squad::EndGuardScriptState::Search),
-        crate::game::GuardState::Dead => None,
-    }
-}
-
 // ---- the skeleton's functions
 
 /// One defender's blind fire this frame; true when a round left the barrel.
@@ -478,7 +467,7 @@ fn night_breach_order(g: &mut crate::game::Game) -> Option<crate::nightbreach::N
         crate::seats::each_seat(g, &mut |v| crate::holdfire::hold_fire_drill(v));
         if live_of(g).stun {
             let by = crate::seats::first_of(g, &mut |v| {
-                if crate::doortools::door_tools_take(v, crate::doortools::DoorToolsTakeWhat::Bang) { Some(v.seat) } else { None }
+                if crate::doortools::door_tools_take(v, crate::doortools::DoorToolsCan::Bang) { Some(v.seat) } else { None }
             });
             g.night_breach.bang_by = by;
             if by.is_some() {
@@ -517,7 +506,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
             if g.night_breach.bang_taken {
                 g.night_breach.bang_taken = false;
                 if let Some(s) = g.night_breach.bang_by {
-                    crate::seats::with_seat(g, s, &mut |v| crate::doortools::door_tools_refund(v, crate::doortools::DoorToolsRefundWhat::Bang));
+                    crate::seats::with_seat(g, s, &mut |v| crate::doortools::door_tools_refund(v, crate::doortools::DoorToolsCan::Bang));
                 }
                 g.night_breach.bang_by = None;
             }
@@ -564,8 +553,8 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
             let Some(h) = g.staged.foes.get(i).copied() else { break };
             if crate::condition::down(g, g.gd[h].ch) { continue; }
             if g.gd[h].script.is_some() {
-                let was = script_state(g.gd[h].state);
-                crate::squad::end_guard_script(g, h, was);
+                let was = g.gd[h].state;
+                crate::squad::end_guard_script(g, h, Some(was));
             }
             crate::control::set_hold(g, h, true, "nightbreach");
             crate::control::set_pinned(g, h, true, "nightbreach");
@@ -595,7 +584,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraI
         NightBreachState::Recalled | NightBreachState::Failed => {
             for o in night_breach_drill_ops(g) {
                 if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].script.is_some() && !in_his_book(g, o) {
-                    crate::squad::end_guard_script(g, o, Some(crate::squad::EndGuardScriptState::Search));
+                    crate::squad::end_guard_script(g, o, Some(crate::game::GuardState::Search));
                     crate::control::set_hold(g, o, true, "nightbreach");
                     crate::control::set_pinned(g, o, true, "nightbreach");
                 }

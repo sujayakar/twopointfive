@@ -20,7 +20,7 @@ pub struct StickyLivePl {
 
 #[derive(Clone, Debug, Default)]
 pub struct StickyRowsRowOver {
-    pub kind: Option<crate::stickycam::StickyRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -35,22 +35,6 @@ pub struct StickyRowsRowOver {
     pub close: Option<crate::close::CloseKind>,
     pub past: Option<bool>,
     pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum StickyRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 /// the state this module keeps at its top level

@@ -90,7 +90,7 @@ pub(super) fn door_tools_end(g: &mut crate::game::Game, op: DoorOpId, why: &str)
     door_tools_off_lock(g, op);
     if o!(g, op).bang_held {
         o!(g, op).bang_held = false;
-        let what = if tr(o!(g, op).frag) { DoorToolsRefundWhat::Frag } else { DoorToolsRefundWhat::Bang };
+        let what = if tr(o!(g, op).frag) { crate::doortools::DoorToolsCan::Frag } else { crate::doortools::DoorToolsCan::Bang };
         door_tools_refund(g, what);
     }
     door_tools_pie_off(g, op);
@@ -375,7 +375,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
             say(g, lead, &line);
             o!(g, op).bang_held = false;
             o!(g, op).frag = Some(false);
-            door_tools_refund(g, DoorToolsRefundWhat::Frag);
+            door_tools_refund(g, crate::doortools::DoorToolsCan::Frag);
             door_tools_beat(g, op, "frag held");
             door_tools_enter(g, op);
             return;
@@ -384,7 +384,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
         let line = crate::words::wg(g, &"you're in there — no bang. going in.", &"you are in there — no bang. going in.");
         say(g, lead, line);
         o!(g, op).bang_held = false;
-        door_tools_refund(g, DoorToolsRefundWhat::Bang);
+        door_tools_refund(g, crate::doortools::DoorToolsCan::Bang);
         door_tools_beat(g, op, "no bang · you are in there");
         if o!(g, op).word.is_some() { o!(g, op).phase = Phase::Wait; o!(g, op).hold = 2.0; return; }
         door_tools_enter(g, op);
@@ -393,7 +393,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
         let cs = g.gd[mate].callsign.clone();
         say(g, lead, &format!("{} is in there, so no bang. going in.", cs));
         o!(g, op).bang_held = false;
-        door_tools_refund(g, DoorToolsRefundWhat::Bang);
+        door_tools_refund(g, crate::doortools::DoorToolsCan::Bang);
         door_tools_beat(g, op, &format!("no bang · {} is in there", cs));
         if o!(g, op).word.is_some() { o!(g, op).phase = Phase::Wait; o!(g, op).hold = 2.0; return; }
         door_tools_enter(g, op);
@@ -421,7 +421,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
         let turning = match leaf_t { Some(lt) if t > lt => (angle - leaf_a.unwrap()) / (t - lt), _ => g.dr[d].leaf.vel };
         let swing = turning * away;
         if !(m::abs(angle) >= g.k.doortools.frag_way_open || (a >= g.k.doortools.frag_way_ajar && swing > 0.0)) {
-            let (what, tag, refund) = if frag { ("frag", "frag", DoorToolsRefundWhat::Frag) } else { ("bang", "can", DoorToolsRefundWhat::Bang) };
+            let (what, tag, refund) = if frag { ("frag", "frag", crate::doortools::DoorToolsCan::Frag) } else { ("bang", "can", crate::doortools::DoorToolsCan::Bang) };
             if o!(g, op).frag_way_t.is_none() {
                 o!(g, op).frag_way_t = Some(t);
                 door_tools_beat(g, op, &format!("{} waits: the door is in the way ({} rad)", tag, js::to_fixed(angle, 2)));
@@ -760,7 +760,7 @@ fn step_place(g: &mut Game, op: DoorOpId, cx: &Cx) {
         crate::handwork::charge_hands(g, c, on, [n1[0] - o0[0], 0.0, n1[2] - o0[2]], t - set_t, set_secs, None);
     }
     if t - set_t < set_secs { return; }
-    if !door_tools_take(g, DoorToolsTakeWhat::Charge) {
+    if !door_tools_take(g, crate::doortools::DoorToolsCan::Charge) {
         say(g, lead, "no charges left.");
         door_tools_short(g, op, "no charges");
         return;
@@ -1196,7 +1196,7 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
     } else if thr!(g, op).hand_t.is_some() {
         thr!(g, op).hand_t = None;
     }
-    if !door_tools_take(g, DoorToolsTakeWhat::Bang) { return; }
+    if !door_tools_take(g, crate::doortools::DoorToolsCan::Bang) { return; }
     let w = g.dr[d].def.width;
     let from = door_tools_hand_at(g, op, th);
     let land = match pick.at { Some(a) => a, None => door_tools_land_at(g, op, None) };

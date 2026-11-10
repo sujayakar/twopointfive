@@ -1,6 +1,6 @@
 //! WHAT A CALM MAN ON A NIGHT MAKES OF WHAT REACHES HIM: a far glimpse, a death nobody found.
 mod stealth_ask;
-use game::game::{DownBy, DownKind, GameSetBlackoutCause, GuardState};
+use game::game::{DownBy, DownKind, GuardState};
 use game_start::play::{dist, nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
 use stealth_ask::StealthAsk;
@@ -32,7 +32,7 @@ fn a_far_glimpse_gives_a_calm_man_no_place_to_walk_to() {
         let was = p.at(m);
         p.until(10.0, |p| p.awareness(m) >= 0.08).unwrap_or_else(|| panic!("seed {s}: 10 s lit at 20 m and he took nothing in: Sam's light {:.2}", p.sam_light()));
         assert!(p.state(m) == GuardState::Patrol && p.fix(m).is_none(), "seed {s}: at 20 m, awareness {:.2}: he is {:?} with a fix {:?}", p.awareness(m), p.state(m), p.fix(m));
-        game::game::game_set_blackout(&mut p.g, 86400.0, GameSetBlackoutCause::Hand);
+        game::game::game_set_blackout(&mut p.g, 86400.0, game::lighting::SetBlackoutCause::Hand);
         if let Some(t) = p.always(5.0, |p| p.fix(m).is_none() && dist(p.at(m), was) < 0.5) { panic!("seed {s}: {t:.2} s after the mains went: fix {:?}, {:.2} m off his post", p.fix(m), dist(p.at(m), was)); }
         drop(p);
 

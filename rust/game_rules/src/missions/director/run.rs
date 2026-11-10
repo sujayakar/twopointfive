@@ -33,8 +33,8 @@ fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBe
     g.tab.director_run[r].beats.iter().copied().find(|&b| g.tab.director_live_beat[b].name == name)
 }
 /// `gd.team === 'guard' ? 'search' : 'alert'`
-fn hand_back_state(g: &Game, gd: GuardId) -> crate::squad::EndGuardScriptState {
-    if g.team(gd) == crate::teams::Team::Guard { crate::squad::EndGuardScriptState::Search } else { crate::squad::EndGuardScriptState::Alert }
+fn hand_back_state(g: &Game, gd: GuardId) -> crate::game::GuardState {
+    if g.team(gd) == crate::teams::Team::Guard { crate::game::GuardState::Search } else { crate::game::GuardState::Alert }
 }
 /// the man's chest, else `up` over his feet
 fn chest_of(g: &Game, c: CharId, up: f64) -> V3 {
@@ -449,7 +449,7 @@ fn director_holds(g: &mut crate::game::Game, r: DirectorRunId, c_2: &mut crate::
                     continue;
                 }
                 let any_name = c.name.as_deref().map_or(true, |n| n.is_empty());
-                if c.kind == CondArm3Kind::Signal && !any_name && e.name != c.name {
+                if c.kind == crate::director::EventViewKind::Signal && !any_name && e.name != c.name {
                     continue;
                 }
                 if c.filter.as_ref().map_or(true, |f| filter_holds(g, r, f, e)) {

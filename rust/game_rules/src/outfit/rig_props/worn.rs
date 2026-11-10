@@ -318,10 +318,7 @@ pub fn rig_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::Ri
     let rig = rig.unwrap_or_else(|| crate::rig_props::rig());
     kit_boxes(g, c_2, o, out, rig);
     if let Some(big) = o.big {
-        let kind = match big {
-            RigOptsBig::Shotgun => BigBoxesKind::Shotgun,
-            RigOptsBig::Hammer => BigBoxesKind::Hammer,
-        };
+        let kind = big;
         big_boxes(g, c_2, kind, o.big_k.unwrap_or(0.0), out, Some(rig), Some(o.big_clear.unwrap_or(false)));
     }
 }
@@ -351,13 +348,13 @@ fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
         if o.sheath.unwrap_or(false) {
             sheath_boxes(g, c_2, out, Some(!knife), Some(rig));
         }
-        if o.rifle == Some(RigOptsRifle::Hand) && hand.is_some() {
+        if o.rifle == Some(crate::rig_props::RifleAt::Hand) && hand.is_some() {
             let lens = if o.rifle_light.unwrap_or(false) { v3::scale(rail_lens_color(), rig.sc20k.lens_glow) } else { [0.0, 0.0, 0.0] };
             let m4 = rifle_m4(Some(rig));
-            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Hand), Some(lens), m4, o.kit, o.fit, Some(false), None, o.rifle_black);
-        } else if o.rifle == Some(RigOptsRifle::Slung) {
+            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Hand), Some(lens), m4, o.kit, o.fit, Some(false), None, o.rifle_black);
+        } else if o.rifle == Some(crate::rig_props::RifleAt::Slung) {
             let m4 = rifle_m4(Some(rig));
-            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Slung), Some([0.0, 0.0, 0.0]), m4, None, Some(false), o.sling_front, o.sling_rest, o.rifle_black);
+            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Slung), Some([0.0, 0.0, 0.0]), m4, None, Some(false), o.sling_front, o.sling_rest, o.rifle_black);
         }
         if let Some(mag_l) = o.kit.and_then(|k| k.mag_l) {
             mag_box_l(g, c_2, out, mag_l, o.fit, None, None);
@@ -388,13 +385,13 @@ fn kit_boxes(g: &mut crate::game::Game, c_2: CharId, o: crate::rig_props::RigOpt
             _ => [0.0, 0.0, 0.0],
         }
     };
-    if o.weapon == Some(RigOptsWeapon::Carbine) || o.weapon == Some(RigOptsWeapon::Sc20k) {
-        let sc20k = o.weapon == Some(RigOptsWeapon::Sc20k);
+    if o.weapon == Some(crate::rig_props::RigWeapon::Carbine) || o.weapon == Some(crate::rig_props::RigWeapon::Sc20k) {
+        let sc20k = o.weapon == Some(crate::rig_props::RigWeapon::Sc20k);
         if hang {
-            hung_boxes(g, c_2, if sc20k { HungBoxesWeapon::Sc20k } else { HungBoxesWeapon::Carbine }, out, Some(rig), Some(false));
+            hung_boxes(g, c_2, if sc20k { crate::rig_props::LongRig::Sc20k } else { crate::rig_props::LongRig::Carbine }, out, Some(rig), Some(false));
         } else if sc20k {
             let m4 = rifle_m4(Some(rig));
-            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Hand), Some(lit(rig.sc20k.lens_glow)), m4, None, None, None, None, None);
+            sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(crate::rig_props::RifleAt::Hand), Some(lit(rig.sc20k.lens_glow)), m4, None, None, None, None, None);
         } else {
             carbine_boxes(g, c_2, out, rig.carbine, lit(rig.carbine.lens_glow), None, None);
         }

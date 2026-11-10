@@ -106,12 +106,6 @@ pub struct PodHold {
     pub door: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum WallChargeDoneItemStageValue {
-    Lane,
-    Pod,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeStats {
     pub orders: f64,
@@ -193,7 +187,7 @@ pub struct WallOp {
     pub from: JsMap<GuardId, V3>,
     pub hole: Option<crate::wallcharge::WallChargeDoneItemHole>,
     pub queue: Vec<crate::wallcharge::WallChargeDoneItemQueueItem>,
-    pub stage: JsMap<GuardId, crate::wallcharge::WallOpStageValue>,
+    pub stage: JsMap<GuardId, crate::wallcharge::WallStage>,
     pub pod: JsMap<GuardId, crate::wallcharge::Pod>,
     pub crossed: JsMap<GuardId, f64>,
     pub last: JsMap<GuardId, Option<V3>>,
@@ -206,15 +200,9 @@ pub struct WallOp {
     pub repick_kept: Option<JsMap<String, f64>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum WallOpStageValue {
-    Lane,
-    Pod,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeRowsRowOver {
-    pub kind: Option<crate::wallcharge::WallChargeRowsRowOverKind>,
+    pub kind: Option<crate::game::InteractableKind>,
     pub pos: Option<V3>,
     pub line1: Option<String>,
     pub line2: Option<String>,
@@ -229,22 +217,6 @@ pub struct WallChargeRowsRowOver {
     pub close: Option<crate::close::CloseKind>,
     pub past: Option<bool>,
     pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum WallChargeRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
 }
 
 #[derive(Clone, Debug)]
@@ -386,3 +358,9 @@ pub const SKY_TOP: f64 = 12.0;
 pub fn sky_off() -> Vec<f64> { alloc::vec![0.5, 1.0, 1.6] }
 
 pub fn sky_along() -> Vec<f64> { alloc::vec![-0.5, 0.0, 0.5] }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum WallStage {
+    Lane,
+    Pod,
+}

@@ -26,21 +26,8 @@ fn m870(g: &Game) -> &crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap()
 }
 
-fn spots_tool(t: SamBigSpotTool) -> BigSpotsTool {
-    match t {
-        SamBigSpotTool::Shotgun => BigSpotsTool::Shotgun,
-        SamBigSpotTool::Hammer => BigSpotsTool::Hammer,
-    }
-}
-fn rebound_kind(k: crate::game::PlayerKickToolKind) -> crate::character::BigReboundKind {
-    match k {
-        crate::game::PlayerKickToolKind::Shotgun => crate::character::BigReboundKind::Shotgun,
-        crate::game::PlayerKickToolKind::Hammer => crate::character::BigReboundKind::Hammer,
-    }
-}
-
 /// The big slot's tool that opens this door from where you stand.
-pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<crate::bigkit::SamBig> {
+pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<crate::kit::BigTool> {
     let pid = seat.player;
     let kit = g.pl[pid].big_kit;
     if kit == crate::kit::BigKit::None
@@ -55,8 +42,8 @@ pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -
         return None;
     }
     match kit {
-        crate::kit::BigKit::Shotgun => Some(crate::bigkit::SamBig::Shotgun),
-        crate::kit::BigKit::Hammer => Some(crate::bigkit::SamBig::Hammer),
+        crate::kit::BigKit::Shotgun => Some(crate::kit::BigTool::Shotgun),
+        crate::kit::BigKit::Hammer => Some(crate::kit::BigTool::Hammer),
         crate::kit::BigKit::None => None,
     }
 }
@@ -79,7 +66,7 @@ fn leg(g: &mut Game, men: &[V3], a: V3, b: V3) -> bool {
 }
 
 /// Where you work it from: the list's first place he can walk to that nobody stands on.
-pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate::bigkit::SamBigSpotTool) -> Option<crate::bigkit::SamBigSpot> {
+pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate::kit::BigTool) -> Option<crate::bigkit::SamBigSpot> {
     if g.dr[d].leaf.off {
         return None;
     }
@@ -97,7 +84,7 @@ pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate:
     // (the places on HIS side of the opening before the ones across it)
     let width = g.dr[d].def.width;
     let mine = crate::doortools::along_of(g, d, from) < width / 2.0;
-    let list = big_spots(g, d, side, spots_tool(tool));
+    let list = big_spots(g, d, side, tool);
     let mut order: Vec<BigSpot> = list.iter().copied().filter(|x| x.hinge == mine).collect();
     order.extend(list.iter().copied().filter(|x| x.hinge != mine));
     for s in order {
@@ -130,7 +117,7 @@ fn put(g: &mut Game, out: &mut Vec<BigSpot>, pos: V3, at: V3, hinge: bool) {
 }
 
 /// The places a man works a door's tool from, on face `side`, best first.
-pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::bigkit::BigSpotsTool) -> Vec<crate::bigkit::BigSpot> {
+pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::kit::BigTool) -> Vec<crate::bigkit::BigSpot> {
     let w = g.dr[d].def.width;
     let lock = crate::shotgun::lock_point(g, d, side);
     let mut out: Vec<BigSpot> = Vec::new();
@@ -140,7 +127,7 @@ pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::b
         let pos = crate::doortools::door_pt(g, d, w + past, off, side, None);
         put(g, &mut out, pos, lock, false);
     }
-    if tool == BigSpotsTool::Shotgun {
+    if tool == crate::kit::BigTool::Shotgun {
         for &[past, off] in &t.shoulder {
             let pos = crate::doortools::door_pt(g, d, w + past, off, side, None);
             put(g, &mut out, pos, lock, false);
@@ -148,13 +135,13 @@ pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::b
     }
     let mid = crate::doortools::door_pt(g, d, w / 2.0, 0.5, side, None);
     if !crate::doors::doors_pull_face(g, d, mid) {
-        let at = if tool == BigSpotsTool::Hammer { crate::doortools::door_pt(g, d, HINGES_IN, PROUD, side, Some(lock[1])) } else { lock };
+        let at = if tool == crate::kit::BigTool::Hammer { crate::doortools::door_pt(g, d, HINGES_IN, PROUD, side, Some(lock[1])) } else { lock };
         for &[past, off] in &t.jamb {
             let pos = crate::doortools::door_pt(g, d, -past, off, side, None);
             put(g, &mut out, pos, at, true);
         }
     }
-    if tool == BigSpotsTool::Hammer {
+    if tool == crate::kit::BigTool::Hammer {
         for &[past, off] in &t.shoulder {
             let pos = crate::doortools::door_pt(g, d, w + past, off, side, None);
             put(g, &mut out, pos, lock, false);
@@ -164,7 +151,7 @@ pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::b
 }
 
 /// The row from where a stack stands: within reach of the doorway, a tool that opens it, a place he can walk to.
-pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate::bigkit::SamBigFar> {
+pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate::kit::BigTool> {
     let pid = g.player;
     if g.pl[pid].big_kit == crate::kit::BigKit::None {
         return None;
@@ -175,8 +162,8 @@ pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate:
     }
     let tool = sam_big(g, &crate::seats::here(g), d)?;
     let (asked, answer) = match tool {
-        SamBig::Shotgun => (SamBigSpotTool::Shotgun, SamBigFar::Shotgun),
-        SamBig::Hammer => (SamBigSpotTool::Hammer, SamBigFar::Hammer),
+        crate::kit::BigTool::Shotgun => (crate::kit::BigTool::Shotgun, crate::kit::BigTool::Shotgun),
+        crate::kit::BigTool::Hammer => (crate::kit::BigTool::Hammer, crate::kit::BigTool::Hammer),
     };
     if sam_big_spot(g, d, p, asked).is_some() { Some(answer) } else { None }
 }
@@ -218,8 +205,8 @@ pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
     let mv = t.moves.as_ref()?;
     let (tool_kind, t_now, blows, end, at) = (t.kind, t.t, mv.blows.clone(), mv.end, mv.at);
     let (kind, equip) = match tool_kind {
-        crate::game::PlayerKickToolKind::Shotgun => (crate::character::AnimBigToolKind::Shotgun, big_equip(g, BigEquipKind::Shotgun)),
-        crate::game::PlayerKickToolKind::Hammer => (crate::character::AnimBigToolKind::Hammer, big_equip(g, BigEquipKind::Hammer)),
+        crate::kit::BigTool::Shotgun => (crate::kit::BigTool::Shotgun, big_equip(g, crate::kit::BigTool::Shotgun)),
+        crate::kit::BigTool::Hammer => (crate::kit::BigTool::Hammer, big_equip(g, crate::kit::BigTool::Hammer)),
     };
     let windup = big_wind(g);
     let stow = big_stow(g);
@@ -227,10 +214,10 @@ pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
 }
 
 /// Seconds from the hand leaving for the tool to the tool in his hands.
-fn big_equip(g: &crate::game::Game, kind: crate::bigkit::BigEquipKind) -> f64 {
+fn big_equip(g: &crate::game::Game, kind: crate::kit::BigTool) -> f64 {
     match kind {
-        BigEquipKind::Hammer => g.k.bigslot.equip_w,
-        BigEquipKind::Shotgun => g.k.bigslot.draw_w,
+        crate::kit::BigTool::Hammer => g.k.bigslot.equip_w,
+        crate::kit::BigTool::Shotgun => g.k.bigslot.draw_w,
     }
 }
 
@@ -240,13 +227,13 @@ fn big_stow(g: &crate::game::Game) -> f64 {
 }
 
 /// After which a hammer's wind-up may begin (a shell: the same as bigEquip).
-pub(super) fn big_out_by(g: &crate::game::Game, kind: crate::bigkit::BigOutByKind) -> f64 {
+pub(super) fn big_out_by(g: &crate::game::Game, kind: crate::kit::BigTool) -> f64 {
     match kind {
-        BigOutByKind::Hammer => {
-            let equip = big_equip(g, BigEquipKind::Hammer);
+        crate::kit::BigTool::Hammer => {
+            let equip = big_equip(g, crate::kit::BigTool::Hammer);
             equip - m::min(g.k.bigslot.flow, equip * 0.5)
         }
-        BigOutByKind::Shotgun => big_equip(g, BigEquipKind::Shotgun) - 0.0,
+        crate::kit::BigTool::Shotgun => big_equip(g, crate::kit::BigTool::Shotgun) - 0.0,
     }
 }
 
@@ -283,7 +270,7 @@ pub(super) fn big_wind(g: &crate::game::Game) -> f64 {
 
 /// From one blow to the next: never less than a follow-through and a wind-up.
 pub(super) fn big_swing(g: &crate::game::Game) -> f64 {
-    m::max(g.k.bigslot.swing, crate::character::big_rebound(crate::character::BigReboundKind::Hammer) + g.k.bigslot.heft)
+    m::max(g.k.bigslot.swing, crate::character::big_rebound(crate::kit::BigTool::Hammer) + g.k.bigslot.heft)
 }
 
 /// The beat is over and his legs are his own, the tool still going back onto him.
@@ -358,11 +345,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
 
 /// The row performed: the beat begins, the kick's verb with the tool in the boot's place.
 pub fn sam_big_start(g: &mut crate::game::Game, d: DoorId) {
-    let tool = match sam_big(g, &crate::seats::here(g), d) {
-        Some(SamBig::Shotgun) => crate::player::StartKickTool::Shotgun,
-        Some(SamBig::Hammer) => crate::player::StartKickTool::Hammer,
-        None => return,
-    };
+    let Some(tool) = sam_big(g, &crate::seats::here(g), d) else { return };
     crate::player::start_kick(g, d, Some(false), Some(tool));
 }
 
@@ -374,7 +357,7 @@ fn over(g: &mut Game, pid: PlayerId, tail: f64, landed: bool) {
         let kind = t.kind;
         if let Some(mv) = t.moves.as_mut() {
             if mv.end < 0.0 {
-                mv.end = now + if landed { m::min(tail, crate::character::big_rebound(rebound_kind(kind))) } else { 0.0 };
+                mv.end = now + if landed { m::min(tail, crate::character::big_rebound(kind)) } else { 0.0 };
                 mv.blows.retain(|b| *b <= now);
             }
         }
@@ -436,7 +419,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         return false;
     }
     let kind = tool!(g, pid).kind;
-    let hammer = kind == crate::game::PlayerKickToolKind::Hammer;
+    let hammer = kind == crate::kit::BigTool::Hammer;
     if tool!(g, pid).moves.is_some() && !tool!(g, pid).next.is_finite() {
         // (on his way to the place: the first blow is wound up, the first shell goes, once he stands on it with the tool in his hands)
         let arrived = tool!(g, pid).moves.as_ref().unwrap().arrived;
@@ -452,7 +435,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         if !tool!(g, pid).moves.as_ref().unwrap().arrived {
             return false;
         }
-        let out_by = big_out_by(g, if hammer { BigOutByKind::Hammer } else { BigOutByKind::Shotgun });
+        let out_by = big_out_by(g, if hammer { crate::kit::BigTool::Hammer } else { crate::kit::BigTool::Shotgun });
         let next = m::max(now, out_by) + if hammer { big_wind(g) } else { 0.0 };
         next_at(g, pid, next);
         return false;
@@ -528,7 +511,7 @@ pub fn big_side(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
 }
 
 /// The big slot's tool a man carries, for the drawer.
-pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::bigkit::BigCarried> {
+pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::kit::BigTool> {
     let kit = if let Some(pid) = crate::seats::man_by_id(g, c_2.id) {
         g.pl[pid].big_kit
     } else {
@@ -536,8 +519,8 @@ pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Op
         crate::kit::kit_big(g, gd)
     };
     match kit {
-        crate::kit::BigKit::Hammer => Some(BigCarried::Hammer),
-        crate::kit::BigKit::Shotgun => Some(BigCarried::Shotgun),
+        crate::kit::BigKit::Hammer => Some(crate::kit::BigTool::Hammer),
+        crate::kit::BigKit::Shotgun => Some(crate::kit::BigTool::Shotgun),
         crate::kit::BigKit::None => None,
     }
 }
@@ -580,7 +563,7 @@ pub(super) fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
         s.t = now;
     }
     let up_at = g.gd[gd].slung.as_ref().unwrap().t;
-    g.time - up_at >= big_equip(g, BigEquipKind::Shotgun)
+    g.time - up_at >= big_equip(g, crate::kit::BigTool::Shotgun)
 }
 
 /// … and is slung again: his own gun back in his hands, as he put it down.
@@ -648,7 +631,7 @@ pub(super) fn hammer_in(g: &mut crate::game::Game, gd: GuardId, hard: Option<boo
     let h = g.gd[gd].big_out.as_mut().unwrap();
     h.blows.retain(|b| *b <= now);
     h.end = match h.blows.last() {
-        Some(&last) => m::max(now, last + crate::character::big_rebound(crate::character::BigReboundKind::Hammer)),
+        Some(&last) => m::max(now, last + crate::character::big_rebound(crate::kit::BigTool::Hammer)),
         None => now,
     };
 }
@@ -686,7 +669,7 @@ pub(super) fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&m
             g.ch[c].anim.big_tool = None;
             continue;
         }
-        let equip = big_equip(g, BigEquipKind::Hammer);
+        let equip = big_equip(g, crate::kit::BigTool::Hammer);
         let windup = big_wind(g);
         let stow = big_stow(g);
         let (blows, at) = {
@@ -694,7 +677,7 @@ pub(super) fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&m
             (h.blows.clone(), h.at)
         };
         g.ch[c].anim.big_tool = Some(crate::character::AnimBigTool {
-            kind: crate::character::AnimBigToolKind::Hammer,
+            kind: crate::kit::BigTool::Hammer,
             t,
             equip,
             windup,

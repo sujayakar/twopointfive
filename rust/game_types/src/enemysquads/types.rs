@@ -152,13 +152,6 @@ pub struct Check {
     pub tick_t: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CheckStage {
-    #[default] Idle,
-    Called,
-    Asked,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Quiet {
     pub gd: GuardId,
@@ -297,7 +290,7 @@ pub struct StateNetItem {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NetCheck {
     pub next_at: f64,
-    pub stage: crate::enemysquads::NetCheckStage,
+    pub stage: crate::enemysquads::CheckStage,
     pub t0: f64,
     pub caller: Option<GuardId>,
     pub about: Option<EnemysquadsSquadId>,
@@ -307,13 +300,6 @@ pub struct NetCheck {
     pub say: Vec<crate::enemysquads::NetCheckSayItem>,
     pub die: crate::math_dice::Die,
     pub tick_t: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum NetCheckStage {
-    #[default] Idle,
-    Called,
-    Asked,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -463,3 +449,10 @@ pub const HUNG_SECS: f64 = 10.0;
 pub const NET_BREATH: f64 = 1.2;
 
 pub const NET_TRIES: f64 = 2.0;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+pub enum CheckStage {
+    #[default] Idle,
+    Called,
+    Asked,
+}

@@ -107,26 +107,12 @@ pub struct TablesOf {
     pub d: crate::knobs::DiginK,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
-pub enum DifficultyNow {
-    Hard,
-    Standard,
-    Custom,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LeversShown {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DifficultyWordsLevel {
-    Hard,
-    Standard,
-    Custom,
 }
 
 #[derive(Clone, Debug)]
@@ -162,3 +148,10 @@ pub const LS: &str = "twopointsix.difficulty";
 pub const LS_LEVERS: &str = "twopointsix.levers";
 
 pub fn squad_hard() -> Vec<crate::difficulty::SQUADHARDItem> { alloc::vec![crate::difficulty::SQUADHARDItem { file: String::from("compound.json"), structure: String::from("the compound"), words: String::from("A squad gets to one of its rooms faster when you hit it, and nobody walks into a room that's already lost. You'll hear them call it gone on the radio, and they'll be on their own doors when you get there") }, crate::difficulty::SQUADHARDItem { file: String::from("barracks.json"), structure: String::from("the barracks"), words: String::from("A pair sent around to hold a lost room's other door won't stay out there once the squad it went to help stops answering. You'll hear them call \"back on our doors\", and they'll be in their own rooms again and come at you when you take the next one") }, crate::difficulty::SQUADHARDItem { file: String::from("warehouse.json"), structure: String::from("the warehouse"), words: String::from("") }, crate::difficulty::SQUADHARDItem { file: String::from("block.json"), structure: String::from("the block"), words: String::from("") }] }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
+pub enum DifficultyNow {
+    Hard,
+    Standard,
+    Custom,
+}

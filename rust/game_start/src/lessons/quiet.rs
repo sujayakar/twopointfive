@@ -6,7 +6,6 @@ use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use game::game::{GuardState, InteractableKind, MissionStage, Verb};
-use game::guards::HandCarry;
 use game::ids::GuardId;
 use game::weapons::RifleAttachment;
 
@@ -125,7 +124,7 @@ async fn deed(b: &Bot, id: &str) {
             // his torch has come down for the smoke and he has clicked it off: still the hand's, under his shoulder, and dark
             let low = b.ask(|g| { let c = g.gd[a].ch; g.ch[c].bones.get(game::character::Bone::UpperArmR).map_or(-1.0, |u| u[1] - g.tab.light[g.gd[a].flashlight].pos[1]) });
             let carry = b.ask(|g| game::guards::hand_carry(g, a));
-            if b.scripted(a) && (carry != HandCarry::Torch || lit_up(a) || low < 0.2) { b.fail(format!("{} does not smoke with his torch low and switched off ({:?}, {}, {:.2} m under the shoulder)", b.called(a), carry, if lit_up(a) { "lit" } else { "out" }, low)).await; }
+            if b.scripted(a) && (carry != game::guards::InHand::Torch || lit_up(a) || low < 0.2) { b.fail(format!("{} does not smoke with his torch low and switched off ({:?}, {}, {:.2} m under the shoulder)", b.called(a), carry, if lit_up(a) { "lit" } else { "out" }, low)).await; }
             if !b.close_in(a, Some([25.5, 0.0, 17.75])).await { b.fail(format!("could not get behind the first man ({:.2} m off, he stands at {}, {:?})", flat(b.pos(), b.man_at(a)), at(b.man_at(a)), b.state(a))).await; }
             b.unseen(n0, a, "coming up behind him").await;
             if !b.scripted(a) { b.fail(format!("{} turned from his smoke as the player came up crouched ({:?})", b.called(a), b.state(a))).await; }

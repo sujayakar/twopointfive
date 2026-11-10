@@ -3,14 +3,6 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// which CHAOS row a rate cap reads, live at each take: puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
-#[derive(Clone, Copy, Debug, ToBytes)]
-pub enum RateCapN {
-    Puff,
-    Paper,
-    Knock,
-    Decal,
-}
 /// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes, Bars, Snow
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum BlastListener {
@@ -105,14 +97,6 @@ pub struct LaneMark {
     pub s: [f64; 2],
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DestructionTakeK {
-    Paper,
-    Puff,
-    Knock,
-    Decal,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DestructionRoundHit {
     pub n: V3,
@@ -169,3 +153,12 @@ pub fn pall_dirs() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [0.7071, 0.7071], 
 pub fn lane_mark() -> JsMap<String, crate::destruction::LaneMark> { { let mut t = JsMap::new(); t.set(String::from("dent"), crate::destruction::LaneMark { look: 0.0, r: [0.036, 0.045], s: [0.7, 0.9] }); t.set(String::from("shred"), crate::destruction::LaneMark { look: 1.0, r: [0.06, 0.075], s: [0.85, 0.85] }); t.set(String::from("crack"), crate::destruction::LaneMark { look: 2.0, r: [0.085, 0.11], s: [0.9, 0.9] }); t } }
 
 pub fn roof_rays() -> Vec<[f64; 2]> { alloc::vec![[0.0, 0.0], [0.29, 0.0], [-0.29, 0.0], [0.0, 0.29], [0.0, -0.29]] }
+
+/// which CHAOS row a rate cap reads, live at each take: puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+pub enum RateCapN {
+    Puff,
+    Paper,
+    Knock,
+    Decal,
+}

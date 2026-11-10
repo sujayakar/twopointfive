@@ -223,15 +223,12 @@ pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::Do
 }
 
 /// The subscriber game.ts:1208 hangs on the doors: a torn leaf is a row in the destruction's change feed.
-fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCause) {
+fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::wallbreak::LevelChangeCause) {
     let c = g.dr[d].frame_centre;
     let r = g.dr[d].def.width / 2.0 + 0.1;
     let row = crate::wallbreak::WallBreakNoteC {
         kind: crate::wallbreak::LevelChangeKind::Door,
-        cause: match cause {
-            crate::doors::DoorsTornCause::Blast => crate::wallbreak::LevelChangeCause::Blast,
-            crate::doors::DoorsTornCause::Fire => crate::wallbreak::LevelChangeCause::Fire,
-        },
+        cause: cause,
         id: g.doors.list.iter().position(|x| *x == d).map_or(-1.0, |i| i as f64),
         pos: [c[0], c[1], c[2]],
         rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r],
@@ -243,8 +240,8 @@ fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCa
 }
 
 /// Told of every leaf that comes off, by whatever road, on the frame it leaves its frame.
-pub(in crate::fittings) fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::doors::DoorsTornCause>) {
-    torn_feed(g, d, who, cause.unwrap_or(crate::doors::DoorsTornCause::Blast));
+pub(in crate::fittings) fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::wallbreak::LevelChangeCause>) {
+    torn_feed(g, d, who, cause.unwrap_or(crate::wallbreak::LevelChangeCause::Blast));
 }
 
 /// The first of `dists` out from the door's middle on `side` that has floor.
