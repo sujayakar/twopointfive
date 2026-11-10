@@ -358,7 +358,7 @@ fn over(g: usize, w: &World) {
     let mut gr = grid(g);
     let round = |r: &[f64]| {
         let e = r[R_H] + r[R_H + 1] + r[R_H + 2];
-        [r[R_C] - e, r[R_C + 2] - e, r[R_C] + e, r[R_C + 2] + e]
+        [r[R_C] - e, r[R_C + 2] - e, r[R_C] + e, r[R_C + 2] + e, r[R_C + 1] + e]
     };
     let seen = unsafe { &mut (*core::ptr::addr_of_mut!(SEEN))[g] };
     seen.look(w, round, |r| gr.dirty(r[0], r[1], r[2], r[3]));
@@ -570,6 +570,12 @@ pub fn light_ready(g: usize, w: &World, to_sun: [f64; 3], tune: &Knobs) {
     if x >= 1.0 && z >= 1.0 && x * z <= MAX_BRICKS as f64 {
         crate::glow::ready(g, w, x as usize, z as usize, to_sun, tune);
     }
+}
+/// what a tick with no step in it makes ahead for the light (glow.rs ahead)
+pub fn ahead(g: usize, w: &World, tune: &Knobs) {
+    let st = &state_read(g).smoke.st;
+    let (x, z) = dims(st);
+    crate::glow::ahead(g, w, st, x, z, tune);
 }
 /// `n` STEPS of a tenth of a second each of the grid of the game in slot `g` (its block's `stamp`), over box world `w` as it stands.
 /// 0, or ASK_HOST = no grid stands on this level (its plan is larger than a grid can be), or the game has none: the
