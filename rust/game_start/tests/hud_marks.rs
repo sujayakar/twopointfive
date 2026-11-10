@@ -103,9 +103,9 @@ fn the_mark_over_a_man_says_what_he_is() {
         assert_eq!(shown(&p, mate), ("".into(), HeadTone::Calm), "seed {}: no '?' over a man of your own", seed);
         set(&mut p, foe, GuardState::Alert, 1.0);
         assert_eq!(shown(&p, foe), ("!".into(), HeadTone::Alert), "seed {}", seed);
-        p.g.tune.aim_model = true; p.g.gd[foe].aim.track = 1.0;
+        p.g.tune.aim_model = true; p.g.arms[p.g.gd[foe].ch].aim.track = 1.0;
         assert_eq!(shown(&p, foe), ("◎!".into(), HeadTone::Alert), "seed {}: he has you lined up", seed);
-        set(&mut p, mate, GuardState::Alert, 1.0); p.g.gd[mate].aim.track = 1.0;
+        set(&mut p, mate, GuardState::Alert, 1.0); p.g.arms[p.g.gd[mate].ch].aim.track = 1.0;
         assert_eq!(shown(&p, mate), ("!".into(), HeadTone::Alert), "seed {}: never the '◎' of a man who has you lined up", seed);
         p.g.cond[p.g.gd[foe].ch].blind_until = p.g.time + 5.0;
         assert_eq!(shown(&p, foe).0, "✹◎!", "seed {}: a stun goes in front", seed);

@@ -340,7 +340,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let (stagger, fire_cd, aware, back_m, hit_noise) = (g.k.ring.stagger, g.k.ring.stagger_fire_cd, g.k.ring.stagger_aware, g.k.ring.stagger_back, g.k.ring.hit_noise);
     crate::condition::fold(g, c, stagger);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, stagger);
-    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, fire_cd);
+    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, fire_cd);
     let weapon = g.gd[gd].weapon;
     g.fa[weapon].burst = None;
     crate::condition::stopped_dead(g, gd);

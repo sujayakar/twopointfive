@@ -338,6 +338,7 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     let c = crate::character::character_new(g, ch, desc);
     g.gd[id].ch = c;
     g.ch[c].who = crate::character::Who::Guard(id);
+    g.arms[c].fire_cd = 1.0;   // (a second before his first round)
 
     g.gd[id].last_pos = v3::copy(pos);
     g.gd[id].route_i = route_i;

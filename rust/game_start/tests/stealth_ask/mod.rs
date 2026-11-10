@@ -460,7 +460,7 @@ impl StealthAsk for Play {
         h.state = game::game::GuardState::Alert;
         h.awareness = 1.0;
         h.react_t = 0.0;
-        h.fire_cd = 0.5;
+        self.g.arms[h.ch].fire_cd = 0.5;
         h.last_known = Some([fix[0], 0.0, fix[1]]);
         h.last_seen_t = -100.0;
         h.sight_t = -100.0;
