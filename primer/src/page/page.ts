@@ -86,7 +86,7 @@ export class Page {
       el('span', { class: 'question' }, lab.world.room.question),
       el('div', { class: 'group' },
         button(lab.playing ? 'Pause' : 'Play', 'The world’s clock (Space)', () => (lab.playing = !lab.playing), lab.playing),
-        button('Freeze', 'Nothing is made anew; the frame stands (F)', () => (lab.frozen = !lab.frozen), lab.frozen),
+        button('Freeze', 'The frame stands, and the truth goes on settling on it (F)', () => (lab.frozen = !lab.frozen), lab.frozen),
         button('One frame', 'Make one frame (.)', () => { lab.frozen = true; lab.step(); }),
         button('Ghost', 'Fly a second camera through the frozen frame (G)', () => this.toggleGhost(), lab.ghost !== null),
         button('Camera', 'Back to where the room begins', () => lab.resetCamera())),
@@ -224,7 +224,7 @@ export class Page {
     if (this.tab === 'lamps') await this.refreshLamps();
     if (this.tab === 'meter') this.refreshMeter();
     const judged = lab.judged();
-    if (judged.length && lab.ready && !lab.frozen) {
+    if (judged.length && lab.ready) {
       await lab.judge.read(judged);
       this.drawVerdicts();
     }
@@ -304,7 +304,7 @@ export class Page {
     const percent = (x: number) => (Number.isFinite(x) ? `${(100 * x).toFixed(1)} %` : '–');
     for (const node of this.headers.querySelectorAll<HTMLElement>('.verdict')) {
       const v = this.lab.judge.verdicts.get(node.dataset.view!);
-      node.textContent = v ? `off ${percent(v.off)}   noise ${percent(v.noise)}` : '';
+      node.textContent = v && this.lab.truthCount < 64 ? 'the truth is still settling' : v ? `off ${percent(v.off)}   noise ${percent(v.noise)}` : '';
     }
   }
 

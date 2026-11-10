@@ -50,6 +50,10 @@ function jitterOf(frame: number): [number, number] {
   return [halton(2), halton(3)];
 }
 
+/** in a frozen frame the truth goes on settling, so that the frame can be compared with it */
+const settlesWhileFrozen = (stage: string): boolean =>
+  stage.startsWith('view ') || stage.startsWith('judge ') || stage === 'truth' || stage === 'true picture' || stage.endsWith(' true');
+
 export class Lab {
   readonly graph: Graph;
   readonly world: World;
@@ -209,9 +213,9 @@ export class Lab {
     const views = this.shown.slice(0, panelsIn[this.layout]);
     const wanted = views.map((id) => this.views.bufferOf(id));
     const all = [...wanted, ...this.judged().map((v) => this.judge.bufferOf(v)), ...this.alsoWanted];
-    this.ready = graph.run(encoder, all, runs ? undefined : (name) => name.startsWith('view '));
+    this.ready = graph.run(encoder, all, runs ? undefined : settlesWhileFrozen);
     if (runs) this.made = graph.ran;
-    const ran = runs && graph.ran.includes('truth');
+    const ran = graph.ran.includes('truth');
     const panels: Panel[] = this.panelRects().map((r, i) => ({
       ...r,
       picture: graph.buffer(wanted[i]!),
@@ -224,8 +228,8 @@ export class Lab {
     const after = graph.timer.end(encoder);
     gpu.device.queue.submit([encoder.finish()]);
     after();
+    if (ran) this.truthCount++;
     if (runs) {
-      if (ran) this.truthCount++;
       this.frames++;
       graph.flip();
     }

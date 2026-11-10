@@ -73,7 +73,7 @@ export const CHAPTERS: Chapter[] = [
     question: 'How little noise can one ray a pixel give?',
     text: [
       'The same noise, through several denoisers. Each rung of the rack adds one part to the rung before. The numbers on a panel are measured against the truth: <b>off</b>, how far the mean is wrong; <b>noise</b>, how much single frames still jump.',
-      'First let nothing move (Pause): a plain mean wins. Then press Play, or turn the camera, and watch rung 2 smear, rung 3 ghost, rung 4 ring edges with noise, rung 5 trade lag for a little error.',
+      'First let nothing move (Pause): a plain mean wins. Then press Play, or turn the camera, and watch rung 2 smear, rung 3 ghost, rung 4 ring edges with noise, rung 5 trade lag for a little error. Press F in the middle of a motion: the frame stands and the truth settles on it.',
       'What is denoised is a share from 0 to 1, not light. Switch it to light and see what the filter does to the falloff.',
     ],
     formula: 'kept = kept + (now − kept) / n        noise left = α / (2 − α),  lag ≈ 1 / α frames',
