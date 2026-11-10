@@ -50,6 +50,12 @@ pub(super) fn anim_life_layer(g: &mut crate::game::Game, c: CharId, dt: f64, s: 
     anim_layer(g, c, |slot, an, k| ::sim::layers::life_layer(slot, an, dt, s, crouch_pose, w, w_f, p0, k));
 }
 
+/// the rule of a foot, over the finished pose
+pub(super) fn anim_feet_last(g: &mut crate::game::Game, c: CharId, dt: f64, s: f64, w_f: f64, own: f64) {
+    let p0 = g.ch[c].pos;
+    anim_layer(g, c, |slot, an, _| ::sim::layers::feet_last(slot, an, dt, s, w_f, own, p0));
+}
+
 /// deliberate movement's body and, if they are in, its arms
 pub(super) fn anim_sneak_layer(g: &mut crate::game::Game, c: CharId, dl: f64, pace: f64, soft: f64, arms_in: f64, surge: f64, dsh: Option<f64>) {
     let dsh = dsh.unwrap_or(0.0);
