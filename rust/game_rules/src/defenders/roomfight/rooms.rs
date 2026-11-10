@@ -113,7 +113,7 @@ pub(super) fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorI
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
         i += 1;
-        if crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.6 { continue; }
+        if g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.6 { continue; }
         let f = crate::guards::frame_of(g, d);
         let along = (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz;
         let off = (p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz;

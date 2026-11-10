@@ -110,7 +110,7 @@ fn by_day_a_room_is_lit_by_what_it_is_open_to() {
     let c = p.g.dr[yard].frame_centre;
     game::doors::doors_kick_in(&mut p.g, yard, [c[0], 0.0, c[2] + 1.0], 0.0, None);
     p.run(20.0);
-    assert!(game::doors::door_angle(&p.g, yard).abs() > 0.8, "the scene: the door to the yard was to stand open");
+    assert!(p.g.dr[yard].leaf.angle.abs() > 0.8, "the scene: the door to the yard was to stand open");
     let open = [light(&mut p, near), light(&mut p, deep), light(&mut p, behind)];
     assert!(open[0] > 0.3, "by the open door at noon {open:?}");
     assert!(open[1] > 0.01 && open[1] < 0.4 * open[0], "the far corner of the room with the open door {open:?}");

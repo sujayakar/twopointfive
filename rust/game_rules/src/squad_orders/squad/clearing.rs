@@ -304,7 +304,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         let d = g.doors.list[at];
         at += 1;
         let how = match crate::guards::door_tamper(g, d) { Some(h) => h, None => continue };
-        if crate::doors::door_noticed(g, d) { continue; }
+        if g.dr[d].leaf.noticed { continue; }
         let forced = how == crate::guards::DoorTamper::Forced;
         let mut by: Option<GuardId> = None;
         let men = if cl!(g).stage == ClearStage::Drill { vec![cl!(g).a] } else { clearing_men(g) };
@@ -318,9 +318,9 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
             if !crate::scene_collision::segment_blocked(g, eye, [spot[0], 1.0, spot[2]], None, None, None) { by = Some(gd); break; }
         }
         let by = match by { Some(by) => by, None => continue };
-        crate::doors::door_set_noticed(g, d, true);
+        g.dr[d].leaf.noticed = true;
         let now = g.time;
-        crate::doors::door_set_noticed_t(g, d, now);
+        g.dr[d].leaf.noticed_t = now;
         let mut line = String::from(if forced { "this one's been forced — someone's through here" } else { "lock's been picked — he's been through here" });
         let mut replanned = false;
         let room = match &g.level.clear_plans {

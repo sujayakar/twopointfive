@@ -23,7 +23,6 @@ pub mod bricks;
 pub mod clips;
 pub mod collide;
 pub mod dice;
-pub mod doors;
 pub mod falls;
 pub mod fog;
 pub mod glass;
@@ -118,11 +117,6 @@ pub fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64, tune: &Knobs) -> u3
 }
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
 
-// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
-/// how many rows a table holds (5: the columns of the doors' part of a block)
-pub fn doors_cap(table: u32) -> usize {
-    doors::cap(table)
-}
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 /// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)
 #[inline(always)]

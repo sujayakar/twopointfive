@@ -153,15 +153,15 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let planted = !shut || (man_arrived(g, lead) && flat(man_pos(g, lead), p.kick_from) < 0.15 && m::abs(v3::wrap_angle(man_yaw(g, lead) - p.kick_face)) < 0.15);
         if !((planted && g.qrf.phase_t > 0.45) || g.qrf.phase_t > 1.8) { return; }
         if let Some(d) = d {
-            if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d) < 1.0 {
-                crate::doors::door_set_latched(g, d, false);
-                crate::doors::door_set_closing(g, d, false);
-                let v = s * m::max(m::abs(crate::doors::door_vel(g, d)), m::abs(p.fling));
-                crate::doors::door_set_vel(g, d, v);
-                crate::doors::door_set_quiet_t(g, d, -1.0);
-                crate::doors::door_set_creak_armed(g, d, false);
+            if !g.dr[d].leaf.off && crate::doors::doors_open_for(g, d) < 1.0 {
+                g.dr[d].leaf.latched = false;
+                g.dr[d].leaf.closing = false;
+                let v = s * m::max(m::abs(g.dr[d].leaf.vel), m::abs(p.fling));
+                g.dr[d].leaf.vel = v;
+                g.dr[d].leaf.quiet_t = -1.0;
+                g.dr[d].leaf.creak_armed = false;
                 let who = g.ch[g.gd[lead].ch].id;
-                crate::doors::door_set_last_who(g, d, who);
+                g.dr[d].leaf.last_who = who;
                 let at = crate::doors::door_pos(g, d);
                 crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
                 say(g, lead, "door!");
@@ -173,7 +173,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     }
     // step two: once the leaf is round (or 0.8 s of it), the charge, if the pool has one, chopped in from where he stands square to the doorway
     if let Some(d) = d {
-        if crate::doors::door_angle(g, d) * s < 0.9 && g.time - g.qrf.shoved_at < 0.8 { return; }
+        if g.dr[d].leaf.angle * s < 0.9 && g.time - g.qrf.shoved_at < 0.8 { return; }
     }
     g.qrf.shoved_at = f64::NAN;
     match d {

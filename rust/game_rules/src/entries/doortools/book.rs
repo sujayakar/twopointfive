@@ -35,7 +35,7 @@ pub fn off_of(g: &crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
 }
 /// unlatched and swung past OPEN_RAD
 pub fn is_open(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= OPEN_RAD
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= OPEN_RAD
 }
 /// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)
 fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {

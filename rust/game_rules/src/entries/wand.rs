@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 
 /// A door the wand goes under: shut home, on its hinges, not the steel fire door.
 pub fn wand_fits(g: &crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && m::abs(crate::doors::door_angle(g, d)) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
+    !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle) < g.k.wand.shut_rad && g.dr[d].def.steel != Some(true)
 }
 
 /// Is 'look under it' on this door's rows for this player.

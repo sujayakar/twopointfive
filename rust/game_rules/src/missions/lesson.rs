@@ -213,14 +213,14 @@ fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
 
 fn ok_door(g: &Game, door: &str, state: LessonDoorState) -> bool {
     use LessonDoorState as S;
-    use crate::doors::{door_is_closed, door_lock_broken, door_locked, doors_by_name};
+    use crate::doors::{door_is_closed, doors_by_name};
     let Some(d) = doors_by_name(g, door) else { return false };
     match state {
         S::Open => !door_is_closed(g, d),
         S::Shut => door_is_closed(g, d),
-        S::Unlocked => !door_locked(g, d) || door_lock_broken(g, d),
+        S::Unlocked => !g.dr[d].leaf.locked || g.dr[d].leaf.lock_broken,
         S::Charged => crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),
-        S::Broken => door_lock_broken(g, d),
+        S::Broken => g.dr[d].leaf.lock_broken,
     }
 }
 

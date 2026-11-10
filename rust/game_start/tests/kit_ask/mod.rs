@@ -409,11 +409,11 @@ impl KitAsk for Play {
     fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.arms[self.g.gd[gd].ch].fire_cd = 0.0; }
     fn leaf_left_at(&mut self, d: DoorId, angle: f64) {
         use game::doors::*;
-        door_set_angle(&mut self.g, d, angle);
-        door_set_vel(&mut self.g, d, 0.0);
-        door_set_closing(&mut self.g, d, false);
-        door_set_latched(&mut self.g, d, angle.abs() < 1e-3);
-        door_set_quiet_t(&mut self.g, d, 5.0);
+        self.g.dr[d].leaf.angle = angle;
+        self.g.dr[d].leaf.vel = 0.0;
+        self.g.dr[d].leaf.closing = false;
+        self.g.dr[d].leaf.latched = angle.abs() < 1e-3;
+        self.g.dr[d].leaf.quiet_t = 5.0;
         door_place(&mut self.g, d);
     }
     fn sam_holds_his_spot(&mut self, aim: [f64; 2]) {
@@ -484,9 +484,9 @@ impl KitAsk for Play {
     fn alone_with_charges(&mut self, n: f64) { game::doortools::door_tools_alone(&mut self.g, n); }
     fn leaf_shut(&mut self, d: DoorId) {
         use game::doors::*;
-        door_set_angle(&mut self.g, d, 0.0);
-        door_set_vel(&mut self.g, d, 0.0);
-        door_set_latched(&mut self.g, d, true);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.vel = 0.0;
+        self.g.dr[d].leaf.latched = true;
     }
     fn sam_at_door(&mut self, d: DoorId, side: f64, off: f64) {
         let w = self.g.dr[d].def.width;
@@ -538,7 +538,7 @@ impl KitAsk for Play {
     fn sam_charging(&self) -> bool { self.g.pl[self.g.player].charging.is_some() }
     fn two_hands_on_work(&self) -> bool { let c = self.g.pl[self.g.player].ch; self.g.ch[c].anim.wk.two }
     fn charges_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.charges }
-    fn door_in(&self, d: DoorId) -> bool { game::doors::door_off(&self.g, d) || (!game::doors::door_latched(&self.g, d) && game::doors::door_lock_broken(&self.g, d)) }
+    fn door_in(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off || (!self.g.dr[d].leaf.latched && self.g.dr[d].leaf.lock_broken) }
     fn rows(&self) -> Vec<(game::game::InteractableKind, Option<game::game::Verb>)> { self.g.sets[self.g.seat].nearby.iter().map(|r| (r.kind, r.verb)).collect() }
     fn leaf_pt(&self, d: DoorId, along: f64, out: f64) -> [f64; 2] {
         let (th, h, sw) = (self.g.dr[d].def.closed_dir, self.g.dr[d].def.hinge, game::doors::door_swing(&self.g, d));
@@ -606,8 +606,8 @@ impl KitAsk for Play {
     fn own_gun_up(&self, gd: GuardId) -> bool { self.g.gd[gd].slung.as_ref().map_or(true, |s| !s.out) && self.g.ch[self.g.gd[gd].ch].anim.big_tool.is_none() }
     fn frame_blows(&self) -> f64 { self.g.k.bigslot.swings }
     fn floor_on_edge(&mut self) { game::game::game_escalate(&mut self.g); }
-    fn door_found_picked(&mut self, d: DoorId) { game::doors::door_set_locked(&mut self.g, d, false); }
-    fn door_found_forced(&mut self, d: DoorId) { game::doors::door_set_locked(&mut self.g, d, false); game::doors::door_set_lock_broken(&mut self.g, d, true); }
+    fn door_found_picked(&mut self, d: DoorId) { self.g.dr[d].leaf.locked = false; }
+    fn door_found_forced(&mut self, d: DoorId) { self.g.dr[d].leaf.locked = false; self.g.dr[d].leaf.lock_broken = true; }
     fn man_suspects(&mut self, gd: GuardId, at: [f64; 2]) {
         game::mind::fix(&mut self.g, gd, Some([at[0], 0.0, at[1]]), "guards");
         game::mind::raise(&mut self.g, gd, 0.5, "guards");
@@ -676,9 +676,9 @@ impl KitAsk for Play {
     fn sprint_pace(&self) -> f64 { self.g.tune.player_sprint }
     fn shoulder_keeps(&self) -> f64 { self.g.k.sprintdoor.keep }
     fn sam_kicking(&self) -> bool { self.g.pl[self.g.player].kick.is_some() }
-    fn door_off_hinges(&self, d: DoorId) -> bool { game::doors::door_off(&self.g, d) }
-    fn door_broken(&self, d: DoorId) -> bool { game::doors::door_lock_broken(&self.g, d) }
-    fn door_locked_to(&mut self, d: DoorId, at: [f64; 2]) { game::doors::door_set_locked(&mut self.g, d, true); self.g.dr[d].key_side = game::doors::doors_side(&self.g, d, [at[0], 0.0, at[1]]); }
+    fn door_off_hinges(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off }
+    fn door_broken(&self, d: DoorId) -> bool { self.g.dr[d].leaf.lock_broken }
+    fn door_locked_to(&mut self, d: DoorId, at: [f64; 2]) { self.g.dr[d].leaf.locked = true; self.g.dr[d].key_side = game::doors::doors_side(&self.g, d, [at[0], 0.0, at[1]]); }
     fn quiet_pair(&mut self) {
         self.g.k.pairup.on = true;
         game::pairup::pair_up_apply(&mut self.g, None);
@@ -710,7 +710,7 @@ impl KitAsk for Play {
     fn sam_starts_pick(&mut self, d: DoorId) { game::player::start_picking(&mut self.g, d); }
     fn sam_starts_takedown(&mut self, gd: GuardId) { game::player::start_takedown(&mut self.g, gd, None, None, None); }
     fn sam_starts_drag(&mut self, gd: GuardId) { game::game::game_toggle_drag(&mut self.g, Some(gd)); }
-    fn lock_state(&self, d: DoorId) -> (bool, bool, f64) { (game::doors::door_locked(&self.g, d), game::doors::door_lock_broken(&self.g, d), game::doors::door_pick(&self.g, d)) }
+    fn lock_state(&self, d: DoorId) -> (bool, bool, f64) { (self.g.dr[d].leaf.locked, self.g.dr[d].leaf.lock_broken, self.g.dr[d].leaf.pick) }
     fn kick_spot(&mut self, d: DoorId, near: [f64; 2]) -> [f64; 2] { let s = game::doors::doors_kick_spot(&mut self.g, d, [near[0], 0.0, near[1]]); [s.pos[0], s.pos[2]] }
     fn work_spot(&mut self, d: DoorId, near: [f64; 2]) -> [f64; 2] { let s = game::doors::doors_work_spot(&mut self.g, d, [near[0], 0.0, near[1]], None, None); [s.pos[0], s.pos[2]] }
     fn stranded(&self, at: [f64; 2]) -> bool { game::guards::stranded_at(&self.g, at[0], at[1]) }
@@ -731,7 +731,7 @@ impl KitAsk for Play {
     fn save_waiting(&self) -> Option<String> { self.g.saves.pending.as_ref().map(|p| p.why.clone()) }
     fn clearing(&self) -> bool { self.g.clearing.is_some() }
     fn door(&self, name: &str) -> DoorId { game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}' on this level")) }
-    fn leaf(&self, d: DoorId) -> f64 { game::doors::door_angle(&self.g, d) }
+    fn leaf(&self, d: DoorId) -> f64 { self.g.dr[d].leaf.angle }
     fn sam_just_hit(&self) -> bool { self.g.pl[self.g.player].hit_flash > 0.94 }
     fn saw_sam(&self, gd: GuardId) -> bool { self.g.gd[gd].saw_player_this_frame }
     fn legs(&self, gd: GuardId) -> f64 { self.g.gd[gd].speed }

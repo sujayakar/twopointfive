@@ -558,7 +558,7 @@ fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     if let Some(db) = g.tab.roomfight_op[o].door_by {
         if g.time - db.t >= 0.6 || crate::condition::down(g, g.gd[db.by].ch) || look.map_or(false, |l| l.door == Some(db.door)) {
             g.tab.roomfight_op[o].door_by = None; // stale, or the door he is already looking at
-        } else if who.is_none() && Some(db.by) != gone && !crate::doors::door_latched(g, db.door) && m::abs(crate::doors::door_angle(g, db.door)) > 0.1 && !on_way_to_door
+        } else if who.is_none() && Some(db.by) != gone && !g.dr[db.door].leaf.latched && m::abs(g.dr[db.door].leaf.angle) > 0.1 && !on_way_to_door
             && arc.map_or(true, |a| m::abs(v3::wrap_angle(v3::yaw_to(g.ch[c].pos, db.at) - a)) < g.k.roomfight.arc_half_deg * crate::v3::DEG) {
             // a door an enemy's hand has OPENED in his sight: he looks at its doorway
             who = Some(db.by);
@@ -607,7 +607,7 @@ fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, go
             let d = g.doors.list[j];
             j += 1;
             if only.map_or(false, |x| x != d) { continue; } // a door he is already looking at keeps his look until it lapses
-            if !crate::doors::door_off(g, d) && (crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) <= 0.1) { continue; } // a shut leaf is no opening
+            if !g.dr[d].leaf.off && (g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) <= 0.1) { continue; } // a shut leaf is no opening
             if let Some(id) = a { // a gun an order has on ANOTHER door keeps it
                 let row = &g.tab.orders_assignment[id];
                 if let (true, Some(ad), false, Some(w)) = (row.arrived, row.door, row.spare.unwrap_or(false), row.watch) {

@@ -208,8 +208,8 @@ fn a_door_put_back_forgets_who_touched_it() {
         let (at, who) = (p.sam_at(), p.g.ch[p.g.pl[p.g.player].ch].id);
         game::doors::doors_use(&mut p.g, d, [at[0], 0.0, at[1]], who, None);
         p.run(0.3);
-        assert!(game::doors::door_last_who(&p.g, d) == who && !game::doors::door_latched(&p.g, d), "seed {s}: used by Sam: last who {}, latched {}", game::doors::door_last_who(&p.g, d), game::doors::door_latched(&p.g, d));
+        assert!(p.g.dr[d].leaf.last_who == who && !p.g.dr[d].leaf.latched, "seed {s}: used by Sam: last who {}, latched {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched);
         game::doors::door_reset(&mut p.g, d);
-        assert!(game::doors::door_last_who(&p.g, d) == -1.0 && game::doors::door_latched(&p.g, d) && game::doors::door_angle(&p.g, d).abs() < 1e-3, "seed {s}: put back: last who {}, latched {}, angle {}", game::doors::door_last_who(&p.g, d), game::doors::door_latched(&p.g, d), game::doors::door_angle(&p.g, d));
+        assert!(p.g.dr[d].leaf.last_who == -1.0 && p.g.dr[d].leaf.latched && p.g.dr[d].leaf.angle.abs() < 1e-3, "seed {s}: put back: last who {}, latched {}, angle {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched, p.g.dr[d].leaf.angle);
     }
 }

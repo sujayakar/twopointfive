@@ -239,11 +239,11 @@ pub(super) fn homing(g: &mut Game, st: &mut KitStage) -> bool {
 fn seat(g: &Game, st: &mut KitStage) { st.a.seat_tried = true; st.a.seated = true; ask_veil(g, st); }
 /// Where the leaf rests is its own business: the quiet picture rests it ajar, eased back there by the host's own hand after a row moved it
 pub(super) fn ease_leaf(g: &mut Game, st: &KitStage, d: DoorId) {
-    let a0 = crate::doors::door_angle(g, d);
+    let a0 = g.dr[d].leaf.angle;
     let da = st.leaf_rest - a0;
     let step = QK.leaf_rate * st.a.step_dt;
-    crate::doors::door_set_latched(g, d, false);
-    crate::doors::door_set_closing(g, d, false);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_angle(g, d, if m::abs(da) <= step { st.leaf_rest } else { a0 + m::sign(da) * step });
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.angle = if m::abs(da) <= step { st.leaf_rest } else { a0 + m::sign(da) * step };
 }

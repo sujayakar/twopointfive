@@ -20,7 +20,7 @@ fn at_the_door(s: u32, work: &str) -> (Play, DoorId, [f64; 2]) {
     let there = p.at(keep);
     p.pin_man(keep, there, 0.0, GuardState::Patrol, 0.0);
     let d = game::doors::doors_by_name(&p.g, "server").unwrap();
-    if work == "lock" { game::doors::door_set_locked(&mut p.g, d, true); }
+    if work == "lock" { p.g.dr[d].leaf.locked = true; }
     let sam = p.g.player;
     p.g.pl[sam].wand = true;
     p.sam_put([door[0], door[1] + 0.9]);

@@ -196,7 +196,7 @@ impl Me {
         self.say(format!("→ {} himself ({} at home)", self.name(d), h.men.len()));
         let face = out_pt(e, 0.9, 0.0);
         self.go(self.free(face).unwrap_or(face), 60.0, || false).await;
-        let shut = || self.ask(|g| game::doors::door_locked(g, d) && !game::doors::door_lock_broken(g, d) && game::doors::door_angle(g, d).abs() < 0.3);
+        let shut = || self.ask(|g| g.dr[d].leaf.locked && !g.dr[d].leaf.lock_broken && g.dr[d].leaf.angle.abs() < 0.3);
         if shut() {
             // (the highlight walked to the boot by its key, as a hand walks it)
             let end = self.t() + 2.0;

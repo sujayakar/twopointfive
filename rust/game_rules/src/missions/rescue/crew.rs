@@ -487,7 +487,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         let room_door = rescue_data(g).unwrap().room.door;
         let dr = crate::doors::doors_by_name(g, &room_door);
         if let Some(dr) = dr {
-            if !crate::doors::door_latched(g, dr) && !crate::doors::door_closing(g, dr) && in_rect(pos_of(g, h), bounds) {
+            if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(pos_of(g, h), bounds) {
                 let (at, fc) = (pos_of(g, h), g.dr[dr].frame_centre);
                 if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
                     let who = g.ch[g.gd[h].ch].id;

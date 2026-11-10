@@ -7,7 +7,7 @@ use super::plan::KIT_PLAN;
 use super::quiet;
 use super::types::*;
 use super::walk::{self, along, at, away, flat, free, go, home_of, low, low_at, out_of, rotate, sam_goes, sam_goes_low, sam_stand, step_out, v2, v3, walk_of, yaw_to};
-use crate::doors::{door_angle, door_closing, door_is_closed, door_latched, door_off, door_set_lock_broken, door_set_locked, door_lock_broken, doors_crack, doors_pull_to};
+use crate::doors::{door_is_closed, doors_crack, doors_pull_to};
 use crate::game::{Game, GuardState, InteractableKind, SlotKind, Verb};
 use crate::ids::*;
 use crate::kit::{BigKit, MemberKit};
@@ -121,12 +121,12 @@ fn door_steel(g: &Game, d: DoorId) -> bool { g.dr[d].def.steel == Some(true) }
 
 // ------------------------------------------------------------ the leaf, where there is one
 fn crack(g: &mut Game, st: &KitStage, b: &Beat, wide: f64) { if let Some(d) = st.door { let (p, id) = (pos(g, b), ch_id(g, b)); doors_crack(g, d, p, id, st.a.step_dt, None, Some(K.swing), Some(wide)); } }
-fn wide_open(g: &Game, st: &KitStage, wide: f64) -> bool { st.door.map_or(true, |d| m::abs(door_angle(g, d) - st.leaf_shut) >= wide - 0.1) }
-fn is_ajar(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| !door_off(g, d) && m::abs(door_angle(g, d) - st.leaf_shut) >= 0.03) }
+fn wide_open(g: &Game, st: &KitStage, wide: f64) -> bool { st.door.map_or(true, |d| m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= wide - 0.1) }
+fn is_ajar(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03) }
 /// not yet shut for a row that works a shut leaf: ajar, or on the quiet picture still on its way
-fn leaf_wait(g: &Game, st: &KitStage) -> bool { is_ajar(g, st) || (st.leaf_rest != st.leaf_shut && st.door.map_or(false, |d| !door_off(g, d) && (!door_latched(g, d) || door_closing(g, d)))) }
-pub(super) fn off_rest(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| !door_off(g, d) && m::abs(door_angle(g, d) - st.leaf_rest) >= 0.03) }
-fn unlock(g: &mut Game, st: &KitStage) { if let Some(d) = st.door { door_set_locked(g, d, false); } }
+fn leaf_wait(g: &Game, st: &KitStage) -> bool { is_ajar(g, st) || (st.leaf_rest != st.leaf_shut && st.door.map_or(false, |d| !g.dr[d].leaf.off && (!g.dr[d].leaf.latched || g.dr[d].leaf.closing))) }
+pub(super) fn off_rest(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle - st.leaf_rest) >= 0.03) }
+fn unlock(g: &mut Game, st: &KitStage) { if let Some(d) = st.door { g.dr[d].leaf.locked = false; } }
 fn on_door(st: &KitStage) -> OrderTarget { OrderTarget::Door(crate::orders::OrderTargetDoor { at: [st.foot[0], 0.0, st.foot[2]], door: the_door(st), side: st.side }) }
 fn floor(p: V3) -> OrderTarget { OrderTarget::Floor(crate::orders::OrderTargetFloor { at: [p[0], 0.0, p[2]], ..crate::orders::OrderTargetFloor::default() }) }
 fn roster(g: &Game, x: GuardId) -> Who { Who::Num(crate::orders::squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&o| o == x).map_or(-1.0, |i| i as f64)) }
@@ -212,7 +212,7 @@ pub(super) fn fire_at(g: &mut Game, man: Option<GuardId>, to: V3) {
 pub(super) fn mend(g: &mut Game, st: &mut KitStage) {
     if !st.a.shot { return; }
     st.a.shot = false;
-    if let Some(d) = st.door { if !door_off(g, d) { crate::doors::door_set_shot(g, d, 0.0); } }
+    if let Some(d) = st.door { if !g.dr[d].leaf.off { g.dr[d].leaf.shot = 0.0; } }
     if st.hole {
         st.a.hole_shots += 1;
         crate::glass::reset_glass(g); crate::glasspen::reset_glass_pen(g);
@@ -461,10 +461,10 @@ fn frag_aim(g: &mut Game, st: &KitStage, b: &mut Beat) -> bool {
     let land = pv.land;
     if st.a.led.is_none() { return false; }
     let gate: Option<V2> = st.door.and_then(|d| {
-        if door_off(g, d) { return None; }
+        if g.dr[d].leaf.off { return None; }
         let def = &g.dr[d].def;
         let (w, h) = (def.width, def.hinge);
-        let a = def.closed_dir + door_angle(g, d);
+        let a = def.closed_dir + g.dr[d].leaf.angle;
         let j: V2 = [h[0] + m::cos(def.closed_dir) * w, h[1] + m::sin(def.closed_dir) * w];
         let t: V2 = [h[0] + m::cos(a) * w, h[1] + m::sin(a) * w];
         if out_of(st, t) < 0.0 { Some([(j[0] + t[0]) / 2.0, (j[1] + t[1]) / 2.0]) } else { None }
@@ -508,7 +508,7 @@ fn thrown_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if let Some(d) = st.door {
         let (p, id) = (pos(g, b), ch_id(g, b));
         if !frag || b.phase == "open" || b.phase == "throw" || (b.phase == "out" && el < K.ajar_at) { doors_crack(g, d, p, id, st.a.step_dt, None, Some(K.swing), Some(wide)); }
-        else if m::abs(door_angle(g, d) - st.leaf_shut) > K.ajar + 0.04 { doors_pull_to(g, d, id); }
+        else if m::abs(g.dr[d].leaf.angle - st.leaf_shut) > K.ajar + 0.04 { doors_pull_to(g, d, id); }
         else { doors_crack(g, d, p, id, st.a.step_dt, None, Some(K.swing), Some(K.ajar)); }
     }
     if b.phase == "open" {
@@ -615,7 +615,7 @@ fn charge_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(),
     if !free(g, v2(q)) { return Err(String::from("no room at the door")); }
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: a charge will not cut it")); }
-    if door_off(g, d) { return Err(String::from("no leaf to set it on")); }
+    if g.dr[d].leaf.off { return Err(String::from("no leaf to set it on")); }
     b.base = g.sets[g.seat].door_tools.stats.blown;
     b.post = Some(v2(q));
     to(g, b, "go");
@@ -630,7 +630,7 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let c = door_charge(g, &crate::seats::here(g), d);
     if b.mark_t.is_nan() && g.sets[g.seat].door_tools.stats.blown > b.base { mark(g, b, "blow"); }
     if !b.mark_t.is_nan() { return if now - b.mark_t >= K.aftermath { Step::Done } else { Step::On }; }
-    let ajar = !door_off(g, d) && m::abs(door_angle(g, d) - st.leaf_shut) >= 0.03;
+    let ajar = !g.dr[d].leaf.off && m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03;
     let id = ch_id(g, b);
     if ajar && (b.phase == "go" || b.phase == "ask") { doors_pull_to(g, d, id); }
     if b.phase == "go" {
@@ -665,7 +665,7 @@ fn wand_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Strin
     if !tiles(g, 0).contains(&"wand") { return Err(String::from("no wand on this card")); }
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: no gap under it")); }
-    if door_off(g, d) { return Err(String::from("no leaf to look under")); }
+    if g.dr[d].leaf.off { return Err(String::from("no leaf to look under")); }
     if !free(g, v2(q)) { return Err(String::from("no room at the door")); }
     let pl = g.player;
     st.a.wand_was = g.pl[pl].wand;
@@ -673,7 +673,7 @@ fn wand_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Strin
     fog_on(g, st);
     b.post = Some(v2(q));
     // (a leaf left wide by the row before is pulled home first, with him out of its sweep; only then is he walked to its foot)
-    if m::abs(door_angle(g, d) - st.leaf_shut) >= 0.03 {
+    if m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03 {
         let def = &g.dr[d].def;
         let p = sam_pos(g, &crate::seats::here(g));
         let clear = m::hyp2(p[0] - def.hinge[0], p[2] - def.hinge[1]) > def.width + K.wand_clear;
@@ -691,7 +691,7 @@ fn wand_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let now = g.time;
     let el = now - b.pt;
     let d = the_door(st);
-    let ajar = m::abs(door_angle(g, d) - st.leaf_shut) >= 0.03;
+    let ajar = m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03;
     let id = ch_id(g, b);
     if ajar && (b.phase == "shut" || b.phase == "go" || b.phase == "ask") { doors_pull_to(g, d, id); }
     if b.phase == "shut" {
@@ -728,7 +728,7 @@ fn wand_mate_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), 
     let Some(card) = g.m.kit.man_of.get(x).map(|e| e.kit.wand) else { return Err(String::from("no card on him")) };
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: no gap under it")); }
-    if door_off(g, d) { return Err(String::from("no leaf to look under")); }
+    if g.dr[d].leaf.off { return Err(String::from("no leaf to look under")); }
     st.a.wand_kit = Some((x, card));
     g.m.kit.man_of.get_mut(x).unwrap().kit.wand = true;
     st.a.wand_was = g.pl[g.player].wand;
@@ -832,7 +832,7 @@ fn cam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String
     b.hand = hand_was(g, &crate::seats::here(g), st);
     b.base = g.pl[pl].cam_seq;
     to(g, b, "open");
-    door_set_locked(g, d, false);
+    g.dr[d].leaf.locked = false;
     st.a.tube_was = Some(g.fa[rifle].att_idx);
     sam_goes(st, p);
     Ok(())
@@ -849,7 +849,7 @@ fn cam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "open" {
         if flat(p, post) <= K.way_m { if let Some(q) = cam_spot(g, st, v2(p)) { b.spot = Some(q); } }
         let up = tube(g, st, RifleAttachment::Cam);
-        let there = flat(p, post) <= K.way_m && m::abs(door_angle(g, d) - st.leaf_shut) >= K.cam_wide - 0.1 && off(g.ch[b.ch_id].aim_yaw, yaw_to(p, b.spot.unwrap())) <= 3.0 * R;
+        let there = flat(p, post) <= K.way_m && m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= K.cam_wide - 0.1 && off(g.ch[b.ch_id].aim_yaw, yaw_to(p, b.spot.unwrap())) <= 3.0 * R;
         if !(up && there) && el < 4.0 { return Step::On; }
         if !up { b.marks.push("kept"); st.a.refused = Some(String::from("cams: the launcher never came up")); return Step::Done; }
         to(g, b, "fire");
@@ -1062,11 +1062,11 @@ fn wall_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     Step::On
 }
 // ------------------------------------------------------------ the big slot's tools
-fn gave(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| door_lock_broken(g, d) || door_off(g, d) || m::abs(door_angle(g, d) - st.leaf_shut) > 0.2) }
+fn gave(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| g.dr[d].leaf.lock_broken || g.dr[d].leaf.off || m::abs(g.dr[d].leaf.angle - st.leaf_shut) > 0.2) }
 fn big_of(st: &KitStage, i: u32) -> Option<BigKit> { st.a.cards.get(i as usize).map(|c| c.big).filter(|b| *b != BigKit::None) }
 fn big_give(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Option<String> {
     let d = the_door(st);
-    door_set_lock_broken(g, d, false);
+    g.dr[d].leaf.lock_broken = false;
     pools(g, st, Some("bigtool"));
     let t = on_door(st);
     let who = roster(g, b.man.unwrap());
@@ -1079,7 +1079,7 @@ fn big_mate_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), S
     if big_of(st, b.i).is_none() { return Err(String::from("nothing for a door in his big slot")); }
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: it holds")); }
-    if door_off(g, d) { return Err(String::from("no leaf to break")); }
+    if g.dr[d].leaf.off { return Err(String::from("no leaf to break")); }
     if is_ajar(g, st) { to(g, b, "shut"); return Ok(()); }
     match big_give(g, st, b) { Some(w) => Err(w), None => Ok(()) }
 }
@@ -1106,7 +1106,7 @@ fn big_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), St
     let Some(tool) = big_of(st, 0) else { return Err(String::from("nothing for a door in his big slot")) };
     let d = the_door(st);
     if door_steel(g, d) { return Err(String::from("steel: it holds")); }
-    if door_off(g, d) { return Err(String::from("no leaf to break")); }
+    if g.dr[d].leaf.off { return Err(String::from("no leaf to break")); }
     let mut q = f;
     let t = if tool == BigKit::Hammer { crate::bigkit::SamBigSpotTool::Hammer } else { crate::bigkit::SamBigSpotTool::Shotgun };
     if let Some(sp) = crate::bigkit::sam_big_spot(g, d, f, t) {
@@ -1132,7 +1132,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         let id = ch_id(g, b);
         if is_ajar(g, st) { doors_pull_to(g, d, id); }
         if (flat(sam_pos(g, &crate::seats::here(g)), b.post.unwrap()) > K.way_m || is_ajar(g, st)) && el < 4.0 { return Step::On; }
-        door_set_lock_broken(g, d, false);
+        g.dr[d].leaf.lock_broken = false;
         st.a.led = None;
         to(g, b, "ask");
         b.leg_t = f64::NAN;
@@ -1377,7 +1377,7 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
     let info = row(b.row);
     let kept = b.marks.contains(&"kept");
     st.a.rest_until = now + if how == "cut" { 0.0 } else if kept { m::min(info.rest, K.rest_quiet) } else if st.a.hi.is_none() && info.damage == Damage::None && info.rest == K.rest_quiet { K.rest_none } else { info.rest };
-    let door_gone = st.door.map_or(false, |d| door_off(g, d));
+    let door_gone = st.door.map_or(false, |d| g.dr[d].leaf.off);
     // A WALL THAT OPENS ONCE, LOUDLY: the charge that opened a blank wall for another row leaves its hole, and the row asked plays through it from then on
     if hole_made {
         st.hole = true;
@@ -1494,13 +1494,13 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
     let (b_some, b_leaf_shut, b_leaf, b_man, b_team, b_id) = match st.a.beat.as_ref() { Some(b) => { let r = row(b.row); (true, r.door == Leaf::Shut, r.leaf, b.man, r.team, Some(g.ch[b.ch_id].id)) } None => (false, false, false, None, false, None) };
     let to_shut = st.leaf_rest == st.leaf_shut || (if b_some { b_leaf } else { now < st.a.leaf_ask });
     if let Some(d) = st.door {
-        if (!b_some || b_leaf_shut) && !door_off(g, d) {
-            if to_shut && m::abs(door_angle(g, d) - st.leaf_shut) >= 0.03 && now - st.a.pulled > 1.0 {
+        if (!b_some || b_leaf_shut) && !g.dr[d].leaf.off {
+            if to_shut && m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03 && now - st.a.pulled > 1.0 {
                 st.a.pulled = now;
                 let id = b_id.unwrap_or_else(|| match st.order.first() { Some(&x) => g.ch[g.gd[x].ch].id, None => sam_id(g, &crate::seats::here(g)) });
                 doors_pull_to(g, d, id);
             }
-            if !to_shut && st.a.cost_t.is_nan() && m::abs(door_angle(g, d) - st.leaf_rest) > 1e-4 { walk::ease_leaf(g, st, d); }
+            if !to_shut && st.a.cost_t.is_nan() && m::abs(g.dr[d].leaf.angle - st.leaf_rest) > 1e-4 { walk::ease_leaf(g, st, d); }
         }
     }
     let c = g.pl[pl].ch;

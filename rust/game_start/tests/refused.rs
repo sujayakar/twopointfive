@@ -35,13 +35,13 @@ fn wedge(p: &mut Play, d: DoorId) {
     let name = p.g.dr[d].def.name.clone();
     p.g.dr[d].key_side = side;
     p.g.dr[d].lock_id = format!("wedge:{name}");
-    game::doors::door_set_locked(&mut p.g, d, true);
+    p.g.dr[d].leaf.locked = true;
 }
 fn give(p: &mut Play, id: &str, at: [f64; 2], who: Who) -> Option<String> {
     let t = squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     squad_orders_give(&mut p.g, id, Some(&t), Some(who), None)
 }
-fn shut(p: &Play, d: DoorId) -> bool { game::doors::door_angle(&p.g, d).abs() < 0.05 && game::doors::door_latched(&p.g, d) && !game::doors::door_off(&p.g, d) }
+fn shut(p: &Play, d: DoorId) -> bool { p.g.dr[d].leaf.angle.abs() < 0.05 && p.g.dr[d].leaf.latched && !p.g.dr[d].leaf.off }
 fn ops_on(p: &Play, d: DoorId) -> usize { p.g.sets[p.g.seat].door_tools.ops.iter().filter(|&&o| p.g.tab.doortools_door_op[o].door == d).count() }
 /// how many of the squad have gone through to the room's side of the door
 fn across(p: &Play) -> usize { p.mates().iter().filter(|&&m| p.at(m)[1] < 15.85).count() }

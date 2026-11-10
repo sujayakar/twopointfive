@@ -626,7 +626,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
         let k = match &p.room { Some(r) => r.clone(), None => p.door.clone() };
         let dist = v3::dist(g.dr[d].frame_centre, at);
         let tampered = door_tamper(g, d) == Some(DoorTamper::Forced)
-            || (g.dr[d].def.locked == Some(true) && crate::doors::door_noticed(g, d) && g.time - crate::doors::door_noticed_t(g, d) < TAMPER_MEMORY_SECS);
+            || (g.dr[d].def.locked == Some(true) && g.dr[d].leaf.noticed && g.time - g.dr[d].leaf.noticed_t < TAMPER_MEMORY_SECS);
         let inside = match p.bounds.clone() { Some(b) => crate::squad::in_bounds(at, Some(b), None), None => false };
         let r = by_room.get_or_insert_with(k, || RoomRow { plans: Vec::new(), d: f64::INFINITY, tampered: false, inside: false });
         r.plans.push(p);

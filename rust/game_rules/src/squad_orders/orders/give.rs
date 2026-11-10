@@ -153,7 +153,7 @@ pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crat
     let land = if sc.index >= 0.0 { v3::mad(ro, rd, sc.t) } else { p };
     let own = bx.and_then(|b| g.doors.list.iter().copied().find(|&d| AnyBoxId::World(g.dr[d].box_) == b));
     let leaf = match (own, bx) {
-        (Some(d), _) => if crate::doors::door_off(g, d) { None } else { Some(d) },
+        (Some(d), _) => if g.dr[d].leaf.off { None } else { Some(d) },
         (None, Some(b)) => crate::fogofwar::fog_of_war_door_of_box(g, b),
         (None, None) => None,
     };

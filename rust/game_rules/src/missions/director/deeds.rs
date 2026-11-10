@@ -159,23 +159,23 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, callsi
 /// c.doors.lock
 pub(in crate::missions) fn director_beat_door_lock(g: &mut crate::game::Game, d: &crate::director::DoorRef, on: bool) -> Result<(), String> {
     let door = director_door_of(g, d)?;
-    crate::doors::door_set_locked(g, door, on);
-    if on { crate::doors::door_set_lock_broken(g, door, false); }
+    g.dr[door].leaf.locked = on;
+    if on { g.dr[door].leaf.lock_broken = false; }
     Ok(())
 }
 /// c.doors.open
 pub(in crate::missions) fn director_beat_door_open(g: &mut crate::game::Game, d: &crate::director::DoorRef, angle: Option<f64>, hold: Option<bool>) -> Result<(), String> {
     let door = director_door_of(g, d)?;
-    crate::doors::door_set_latched(g, door, false);
-    crate::doors::door_set_closing(g, door, false);
+    g.dr[door].leaf.latched = false;
+    g.dr[door].leaf.closing = false;
     match angle {
-        Some(a) => { crate::doors::door_set_angle(g, door, a); crate::doors::door_set_vel(g, door, 0.0); crate::doors::door_place(g, door); }
+        Some(a) => { g.dr[door].leaf.angle = a; g.dr[door].leaf.vel = 0.0; crate::doors::door_place(g, door); }
         None => {
             let sign = js::or(m::sign(g.dr[door].def.angle.unwrap_or(1.0)), 1.0);
-            crate::doors::door_set_vel(g, door, sign * 3.2);
+            g.dr[door].leaf.vel = sign * 3.2;
         }
     }
-    if hold == Some(true) { crate::doors::door_set_quiet_t(g, door, -3600.0); } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
+    if hold == Some(true) { g.dr[door].leaf.quiet_t = -3600.0; } // (an hour of quiet is a leaf on its stay; Door.reset puts it back)
     Ok(())
 }
 // ---- world: stimulus (ts 999)
