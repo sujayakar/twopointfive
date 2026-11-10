@@ -5,8 +5,10 @@ import { type World, type Piece, boundsOf, F } from './world';
 
 export const FINEST = 0.32, LEVELS = 2, BRICK = FINEST * 8, BRICK_WORDS = 588, OFFSET = [0, 512, 576, 584], CELL_ROWS = 2, LIGHT_ROWS = 3, /** a brick of smoke each */ SMOKE_ROWS = 3072;
 /** how big a thing is to a ray: its middle extent (a wire is thin, a wall is not). 0, 1: gone once a ray is 0.32, 0.64 m wide; 3: always there, for it may part one room from another. (What moves leaves nothing behind: a person seen by a wide ray is too little to tell, and soft boxes in their place gained nothing) */
+/** for a study: do solids go into cells too, or leaves alone? */
+export const STUDY = { solids: true };
 export function classOf(p: Piece): number {
-  if (p.flags & (F.GLASS | F.WATER | F.GLOW | F.NOSHADOW | F.FAR | F.BEND | F.MESH) || (p.lamp ?? -1) >= 0 || p.stays) return 3;
+  if (!STUDY.solids || p.flags & (F.GLASS | F.WATER | F.GLOW | F.NOSHADOW | F.FAR | F.BEND | F.MESH) || (p.lamp ?? -1) >= 0 || p.stays) return 3;
   const e = [...p.half].sort((a, b) => a - b), size = e[1]! * 2; if (size >= FINEST / 2 && e[2]! * 2 >= FINEST * 2) return 3;       /* (a strip of wall over a door, a shelf's board: a sheet, however narrow) */
   return size < FINEST ? 0 : size < FINEST * 2 ? 1 : 3;
 }
