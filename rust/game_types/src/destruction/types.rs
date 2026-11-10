@@ -110,13 +110,6 @@ pub struct DestructionWallsForOpts {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct DestructionBurstHit {
-    pub index: Option<f64>,
-    pub prop: Option<PropId>,
-    pub box_: Option<BoxId>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct DestructionPallEmitR {
     pub radius: f64,
     pub density: f64,

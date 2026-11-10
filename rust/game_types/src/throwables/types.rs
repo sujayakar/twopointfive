@@ -233,11 +233,6 @@ pub struct RIFLEITEMStock {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ThrowablesRay {
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct ThrowablesSpawnOpts {
     pub kind: Option<crate::throwables::ItemKind>,
     pub pos: Option<V3>,

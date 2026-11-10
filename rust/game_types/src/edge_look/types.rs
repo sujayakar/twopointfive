@@ -55,7 +55,7 @@ pub struct EdgeLook {
     pub blasted: JsMap<crate::Num, Vec<[f64; 2]>>,
     pub todo: Vec<crate::edge_look::EdgeLookTodoItem>,
     pub held: bool,
-    #[is(crate::debris::FootBook { shoves: 0.0, stats: crate::debris::FootBookStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } })] pub foot_book: crate::debris::FootBook,
+    #[is(crate::debris::FootBook { shoves: 0.0, stats: crate::debris::DebrisFeetStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } })] pub foot_book: crate::debris::FootBook,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
