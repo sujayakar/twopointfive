@@ -9,4 +9,4 @@ fn sentParts(q: Surf, rd: vec3f) -> array<vec3f, 2> {
   let f = coatF0(q); let lf = lum(f); let r = q.rough; let u = 1.0 - sat(-dot(q.ng, rd)); let u2 = u * u; let even = 0.0476 * exp(-3.55 * r * r); let coat = f * (0.955 / (1.0 + 1.346 * pow(r, 3.67))) + vec3f(select(exp(-3.55 * r * r) * u2 * u2 * u, even, COAT_EVEN)); let matte = matteOf(q) * matteMean(q.kind, q.albedo) * (1.0 - lf - (1.0 - lf) / 21.0);
   let all = (matte + coat) / PI; let sun = frame.sunE.xyz * (max(dot(q.ng, frame.sunDir.xyz), 0.0) / PI); if (COAT_SUN > 0.9) { return array<vec3f, 2>(all, (matte + coat) * sun); } return array<vec3f, 2>(all, matte * sun + frame.sunE.xyz * coatOf(q, -rd, frame.sunDir.xyz, COAT_SUN));
 }
-const COAT_EVEN = false; const COAT_SUN = 0.08;       /* (how much wider the sun's lobe is; over 0.9: spread evenly) */
+const COAT_EVEN = true; const COAT_SUN = 0.08;       /* (how much wider the sun's lobe is; over 0.9: spread evenly) */
