@@ -99,11 +99,7 @@ pub fn creep_body(g: usize, an: &mut Anim, e: f64, free: f64, cr: f64, gw: f64, 
         let lw = CREEP.look * e * free * (1.0 - clamp(wt_w, 0.0, 1.0));
         if at_there && lw > 0.003 {
             fk_run(rig, d, fk.rot, fk.pos);
-            // (toModelP: the world point in the model's frame)
-            let (cy, sy) = (cos(yin), sin(yin));
-            let (dx, dz) = (creep_at[0] - p0[0], creep_at[2] - p0[2]);
-            let m = [dx * cy - dz * sy, creep_at[1] - p0[1], dx * sy + dz * cy];
-            let target = untwist(fk, tw_y, tw_p, m);
+            let target = untwist(fk, tw_y, tw_p, Stands::at(p0, yin).model(&creep_at));
             look_at(d, rig, fk, &gaze_local, target, lw, 0.0);
         }
         *out = [ha, hg];
