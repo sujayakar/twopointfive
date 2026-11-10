@@ -550,13 +550,12 @@ impl DoorsAsk for Play {
         let d = |p: PropId| { let q = self.prop_at(p); (q[0] - at[0]).hypot(q[1] - at[1]) };
         self.g.props.props.iter().copied().min_by(|a, b| d(*a).partial_cmp(&d(*b)).unwrap()).expect("the level has movable things")
     }
-    fn prop_at(&self, prop: PropId) -> [f64; 2] { [game::props::prop_x(&self.g, prop), game::props::prop_z(&self.g, prop)] }
+    fn prop_at(&self, prop: PropId) -> [f64; 2] { [self.g.tab.props_prop[prop].x, self.g.tab.props_prop[prop].z] }
     fn prop_put(&mut self, prop: PropId, at: [f64; 2]) {
-        game::props::prop_set_x(&mut self.g, prop, at[0]);
-        game::props::prop_set_z(&mut self.g, prop, at[1]);
-        game::props::prop_set_vx(&mut self.g, prop, 0.0);
-        game::props::prop_set_vz(&mut self.g, prop, 0.0);
-        game::props::prop_set_w(&mut self.g, prop, 0.0);
+        game::props::prop_move_to(&mut self.g, prop, at[0], at[1]);
+        self.g.tab.props_prop[prop].vx = 0.0;
+        self.g.tab.props_prop[prop].vz = 0.0;
+        self.g.tab.props_prop[prop].w = 0.0;
     }
     fn order_floor(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) {
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at: [at[0], 0.0, at[1]], ..game::orders::OrderTargetFloor::default() });

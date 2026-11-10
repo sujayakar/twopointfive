@@ -224,10 +224,10 @@ pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
     if g.orders.fur_in { return false; }
     for i in 0..g.props.props.len() {
         let pr = g.props.props[i];
-        let (dx, dz) = (p[0] - crate::props::prop_x(g, pr), p[2] - crate::props::prop_z(g, pr));
+        let (dx, dz) = (p[0] - g.tab.props_prop[pr].x, p[2] - g.tab.props_prop[pr].z);
         let radius = g.tab.props_prop[pr].radius;
         if m::abs(dx) > radius + FUR_M || m::abs(dz) > radius + FUR_M { continue; }
-        let (cs, sn) = (crate::props::prop_cs(g, pr), crate::props::prop_sn(g, pr));
+        let (cs, sn) = (g.tab.props_prop[pr].cs, g.tab.props_prop[pr].sn);
         let (lx, lz) = (cs * dx - sn * dz, sn * dx + cs * dz);   // (the place in the prop's own frame)
         let (hx, hz) = (g.tab.props_prop[pr].hx, g.tab.props_prop[pr].hz);
         if m::hyp2(m::max(0.0, m::abs(lx) - hx), m::max(0.0, m::abs(lz) - hz)) < FUR_M { g.m.doorway.stack_own.fur += 1.0; return true; }

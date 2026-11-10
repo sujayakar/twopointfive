@@ -29,7 +29,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     let spawn = level.player_spawn;
     g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
     // loose furniture and thrown things: never collision occluders
-    g.props = crate::props::prop_system_new(g, &level.props, Some(crate::Opaque));
+    g.props = crate::props::prop_system_new(g, &level.props);
     g.items = crate::throwables::Throwables::blank();
     g.tracers = crate::tracers::tracers_new(g, None);   // (its lights and its sparks are reached by path)
     g.weather = crate::weather::weather_new(g);

@@ -122,14 +122,13 @@ impl Snow {
     }
 
     fn props(&mut self, g: &Game) {
-        let s = &::sim::state::state_read(g.sim).props;
         for &id in &g.props.props {
-            let (p, r) = (&g.tab.props_prop[id], s.row[id.0 as usize] as usize);
-            let (vx, vz, spin, rest) = (s.vx[r], s.vz[r], s.w[r], s.flags[r] & ::sim::props::F_ASLEEP != 0);
+            let p = &g.tab.props_prop[id];
+            let (vx, vz, spin, rest) = (p.vx, p.vz, p.w, p.asleep);
             for (i, part) in p.def.parts.iter().enumerate() {
                 let Some(&bx) = p.boxes.get(i) else { continue };
                 let b = &g.tab.boxes[bx];
-                self.things.push(Thing { kind: 0, key: id.0 as u32, part: i as u32, says: rest as u32, at: [s.x[r] as f32, s.z[r] as f32], c: b.c.map(|x| x as f32), h: part.h.map(|x| x as f32), yaw: b.yaw as f32, vel: [vx as f32, 0.0, vz as f32], spin: spin as f32, radius: p.radius as f32, mass: p.mass as f32, foot: (part.off[1] - part.h[1]) as f32 });
+                self.things.push(Thing { kind: 0, key: id.0 as u32, part: i as u32, says: rest as u32, at: [p.x as f32, p.z as f32], c: b.c.map(|x| x as f32), h: part.h.map(|x| x as f32), yaw: b.yaw as f32, vel: [vx as f32, 0.0, vz as f32], spin: spin as f32, radius: p.radius as f32, mass: p.mass as f32, foot: (part.off[1] - part.h[1]) as f32 });
             }
         }
     }

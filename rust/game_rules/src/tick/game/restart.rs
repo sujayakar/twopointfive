@@ -79,13 +79,13 @@ pub(super) fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
         i -= 1;
         let (p, rx, rz) = { let r = &g.rolls[i]; (r.p, r.x, r.z) };
         let here = g.props.props.contains(&p);
-        let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+        let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
         let mut v = if here && dt > 0.0 { m::hyp2(px - rx, pz - rz) / dt } else { 0.0 };
         if !v.is_finite() { v = 0.0; }
         g.rolls[i].x = px;
         g.rolls[i].z = pz;
         g.rolls[i].k = m::min(1.0, v / voice.full_v);
-        let rolling = crate::props::prop_rolling(g, p);
+        let rolling = g.tab.props_prop[p].rolling;
         if here && rolling && v > voice.min_v {
             g.rolls[i].move_t = g.time;
             if !js::truthy(g.rolls[i].voice) {
