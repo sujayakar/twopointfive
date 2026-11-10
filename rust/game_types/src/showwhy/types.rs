@@ -12,10 +12,6 @@ pub enum Why {
     Hurt,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowWhyStats {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Owed {
     pub text: String,
@@ -62,7 +58,6 @@ pub struct OpMemTurnsItem {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
-    pub stats: crate::showwhy::ShowWhyStats,
     pub after_you_t: f64,
     pub keep_say_t: f64,
     pub line_say_t: f64,
