@@ -62,6 +62,8 @@ pub fn run(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, more: 
 pub fn on_leg(g: &Game, d: RoomfightDefId) -> bool { g.tab.roomfight_def[d].mode == DefMode::Move }
 /// He is on the leg `by` sent him on. (No: he is planted, loose, or sent elsewhere meanwhile)
 pub fn on_leg_of(g: &Game, d: RoomfightDefId, by: By) -> bool { on_leg(g, d) && g.tab.roomfight_def[d].leg_by == by }
+/// He is on his way to cover, and fights as he goes.
+pub fn fights_as_he_goes(g: &Game, gd: GuardId) -> bool { def_of(g, gd).is_some_and(|d| on_leg(g, d) && g.tab.roomfight_def[d].move_kind == DefMoveKind::Cover) }
 /// He is at his post.
 pub fn at_post(g: &Game, d: RoomfightDefId) -> bool { g.tab.roomfight_def[d].mode == DefMode::Hold }
 /// He is off it on the fight's own hunt.

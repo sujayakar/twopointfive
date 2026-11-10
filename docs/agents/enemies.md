@@ -88,12 +88,14 @@ each says where he is (`tick_moved`).
 held at its mouth (`held_on`), `back_out` of its line, are sent `round`, set and fire from an angle (`pin_start`), throw (`frag_out`, `stun`), or look
 (`peek_start`). `lane_bars` bars other rules. Room fight only, at any difficulty.
 
-**Nerve.** `note_round` adds to a man's suppression, `flinch_round` ducks him, `head_down` pins him and `cover_from` finds him cover. `startle_sight`
-gives a beat at first sight, then `choose` draws or, for a green man alone inside `run_m`, runs. Morale is shock plus standing terms (alone, dark) as
-dread: `rung_now` gives jumpy and broken, and a blast (`feed`) starts a duck, a scrabble back or a blind burst. `ripe` and `lost` hand a broken man to
-`runner_tick`: a shout, the gun dropped (`drop`), a way out (`plan_out`). From there he counts for nothing (`runner_nobody`). `flinch_tick` sends a
-green man alone under fire too. `net_quiet_asked`, `net_quiet_body` and `net_quiet_fall` shock the men, once a dead man (`pay`), and worsen the calls;
-a whip turns his gun to a noise; the last man (`last_kind`) goes low on `low_spot`.
+**Nerve.** `note_round` adds to a man's suppression, `flinch_round` ducks him, and `head_down` pins him. Where getting down hides him from nobody
+(`ducking_hides`) he goes a beat later for what `cover_from` finds, off his post by `control/open.rs`, facing them and firing as he goes
+(`fight_on_the_way`: the walk's own cone, never more lined up than a walking man gets). `startle_sight` gives a beat at first sight, then `choose`
+draws or, for a green man alone inside `run_m`, runs. Morale is shock plus standing terms (alone, dark) as dread: `rung_now` gives jumpy and broken,
+and a blast (`feed`) starts a duck, a scrabble back or a blind burst. `ripe` and `lost` hand a broken man to `runner_tick`: a shout, the gun dropped
+(`drop`), a way out (`plan_out`). From there he counts for nothing (`runner_nobody`). `flinch_tick` sends a green man alone under fire too.
+`net_quiet_asked`, `net_quiet_body` and `net_quiet_fall` shock the men, once a dead man (`pay`), and worsen the calls; a whip turns his gun to a
+noise; the last man (`last_kind`) goes low on `low_spot`.
 
 **The dark.** `dark_door_gate` stops a green man alone short of a dark room (`dark_room`), calling a mate if one is near. In `dark_foe_tick` a man who
 knows (`learns`) or has the word (`has_word`) and is blind (`dark_foe_blind`) lights his lamp if he carries one (`carry`), else walks where he can see

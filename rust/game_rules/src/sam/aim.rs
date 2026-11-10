@@ -142,6 +142,12 @@ pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
+/// The same of a man who fires as he walks: as lined up as a walking man gets.
+pub fn aim_ready_walking(g: &crate::game::Game, gd: GuardId) -> bool {
+    let p = g.k.aim.guard;
+    !g.tune.aim_model || g.arms[g.gd[gd].ch].aim.track >= m::min(p.acquire_min, p.moving_track_cap) - 1e-9
+}
+
 /// The standoff's flank round: are the feet he remembers still enough?
 pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
     g.arms[g.gd[gd].ch].aim.move_sm <= g.k.aimcost.flank_at
