@@ -357,6 +357,9 @@ export class BoxWorld {
   private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
   drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
+  /** a count of the statics' changes, by whoever mirrors them from elsewhere (draw/world.ts): what was read off them stands while it does. Every row that is
+   *  told, whatever changed it (a load, a flag, a lamp's face), where `geomSerial` counts what a blast does to the level's shape alone. NaN = nobody counts */
+  staticsTold = NaN;
   /** bumped by rust/game_rules/src/breakage/wallbreak whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
   geomSerial = 0;
