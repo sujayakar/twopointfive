@@ -410,7 +410,7 @@ fn put_away(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
             0.0
         },
     );
-    *er = Errand { roll, grip, hold, pole, tg, stow, pole_w, ..*er };
+    *er = Errand { hold, stow, roll, pole_w, grip, pole, tg, ..*er };
 }
 
 /// The empty hand to where the next one lives.
@@ -450,7 +450,7 @@ fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand)
         }
     }
     grip = smoothstep(0.65, 1.0, u);
-    *er = Errand { grip, pole, tg, pole_w, ..*er };
+    *er = Errand { pole_w, grip, pole, tg, ..*er };
 }
 
 /// Up with it into the pose underneath.
@@ -477,7 +477,7 @@ fn bring_up(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
     } else {
         0.0
     };
-    *er = Errand { roll, join, free, grip, hold, pole, tg, stow, pole_w, ..*er };
+    *er = Errand { hold, stow, roll, join, free, pole_w, grip, pole, tg, ..*er };
 }
 
 /// Nothing next: the emptied hand back to the pose underneath.
@@ -491,7 +491,7 @@ fn back_empty(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand
     pole_w = 0.85 * (1.0 - e);
     grip = 1.0 - smoothstep(0.0, 0.45, u);
     free = e;
-    *er = Errand { free, grip, pole, tg, pole_w, ..*er };
+    *er = Errand { free, pole_w, grip, pole, tg, ..*er };
 }
 
 /// A rifle's errand: the elbow exactly where its pole says, the pole itself led over from where the pose underneath has the elbow.
@@ -508,7 +508,7 @@ fn rifle_elbow(er: &mut Errand) {
         pole = Some(if len3(&m) > 1e-3 { normalize(m) } else { pn });
         pole_w = 1.0;
     }
-    *er = Errand { pole, pole_w, ..*er };
+    *er = Errand { pole_w, pole, ..*er };
 }
 
 /// What an arm can do, by how much of the hand is the errand's and not the pose's under it: none on the first frames nor as it lands.
@@ -524,7 +524,7 @@ fn arm_room(tune: &Knobs, er: &mut Errand) {
             tg.0 = mad3(s_r, if dl > 1e-4 { scale3(dv, 1.0 / dl) } else { dir_t(er, [-0.4, 0.2, 0.9]) }, r_min);
         }
     }
-    *er = Errand { own, lie, tg, ..*er };
+    *er = Errand { tg, own, lie, ..*er };
 }
 
 /// The support hand: off whatever it had, to wait in front of him and onto the gun late; or let go of, and falling away.
@@ -541,7 +541,7 @@ fn support(tune: &Knobs, fk: &mut Fk, er: &mut Errand) {
         join = e3(t / tune.kit.let_go);
         tl = Some(mix(er, &s_l0, &u_l, join, None, None));
     }
-    *er = Errand { tl, join, ..*er };
+    *er = Errand { join, tl, ..*er };
 }
 
 /// The right arm, its wrist's line brought back toward its forearm's where the path asked more than a wrist bends.

@@ -476,7 +476,7 @@ fn hammer_place(g: usize, d: &mut [S], fk: &mut Fk, at_back: &mut f64, grab_at: 
         *grab_at = head_at - BIGMOVE.hammer.grab_at;
     }
     ham_line = l;
-    *f = BigBeat { held, back_r, ham_line, ..*f };
+    *f = BigBeat { back_r, held, ham_line, ..*f };
 }
 
 /// The shotgun: over the shoulder, then its butt in the pocket and its bore on the point.
@@ -501,7 +501,7 @@ fn shotgun_place(b: &AnimBigTool, tune: &Knobs, f: &mut BigBeat) {
     let wr0 = add3(pk, in_g([-adj[0], -adj[1], -stock_l0 - adj[2] - kick * BIGMOVE.shotgun.kick]));
     let up0 = BigSpot { at: wr0, rot: hand_rot(&fix_r, z, in_g([-0.8, 0.6, 0.0])), f: [0.0; 3], b: [0.0; 3] };
     held = spot_mix(back_r, up0, in_hands, Some(arc));
-    *f = BigBeat { held, back_r, gun, ..*f };
+    *f = BigBeat { back_r, held, gun, ..*f };
 }
 
 /// The right hand onto it, and back.
