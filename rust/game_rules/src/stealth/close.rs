@@ -178,7 +178,7 @@ pub fn close_kind_of(o: Option<&crate::close::CloseOffer>) -> crate::close::Clos
 }
 
 /// One staff man's marker and rows.
-pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::close::CloseRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool, o: &mut crate::player::Offers) {
     use crate::close::CloseKind as K;
     use crate::game::{Interactable, InteractableKind};
     let pl = g.player;
@@ -189,30 +189,30 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
         if !busy && far < crate::stalk::stalk_begin_m(g) && crate::stalk::stalk_could(g, gd) {
             let line2 = sneak_hint();
             let it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, 1.35, 0.0]), line1: String::from("guard"), line2, in_reach: false, off: false, guard: Some(gd), ..Interactable::default() };
-            offer(g, it, Vec::new());
+            o.add(it, Vec::new());
         }
         return;
     }
-    let o = close_at(g, gd, p);
-    let kind = close_kind_of(Some(&o));
+    let at = close_at(g, gd, p);
+    let kind = close_kind_of(Some(&at));
     let seated = close_seated(g, gd);
     let alert = g.gd[gd].state == crate::game::GuardState::Alert;
-    let where_ = match o.win { None => "", Some(w) => match w.kind { K::Front => " · facing you", K::Side => " · side on", _ => "" } };
+    let where_ = match at.win { None => "", Some(w) => match w.kind { K::Front => " · facing you", K::Side => " · side on", _ => "" } };
     let line1 = format!("guard{}{}", if alert { " · alert" } else if seated { " · seated" } else { "" }, if alert { "" } else { where_ });
-    let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: o.why.clone(), in_reach: o.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::default() };
+    let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: at.why.clone(), in_reach: at.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::default() };
     let sneak = !busy && crate::stalk::stalk_could(g, gd);
-    if sneak && !o.can { it.line2 = sneak_hint(); }
+    if sneak && !at.can { it.line2 = sneak_hint(); }
     let mut verbs: Vec<Interactable> = Vec::new();
-    if o.can && !busy {
+    if at.can && !busy {
         let is_civ = g.gd[gd].civ.is_some();
         let empty = g.pl[pl].holstered;
         let gun = crate::player::grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun;
         let rmb = !(crate::rails::rails_hushes(g, "alt") && crate::rails::rails_hushes(g, "menu"));
         let away = !crate::rails::rails_hushes(g, "hands");
-        let choke = if rmb && o.grab && !is_civ && crate::rails::rails_offers(g, "grab") { "  ·  RMB  hold to choke him" } else { "" };
+        let choke = if rmb && at.grab && !is_civ && crate::rails::rails_offers(g, "grab") { "  ·  RMB  hold to choke him" } else { "" };
         let rifle_up = crate::game::player_rifle_up(g, pl);
         let sling = if rifle_up { "sling it" } else { "holster" };
-        let click: String = if !o.strike {
+        let click: String = if !at.strike {
             String::new()
         } else if !empty {
             if away && (rmb) {
@@ -225,27 +225,26 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
             String::new()
         };
         let only = crate::stalk::stalk_click_only(g) && !is_civ;
-        if o.grab && only {
+        if at.grab && only {
             let line2 = if empty {
-                if o.strike && rmb { format!("LMB  hold to grab him  ·  RMB  knock him out{}", choke) } else { String::from("LMB  hold to grab him") }
+                if at.strike && rmb { format!("LMB  hold to grab him  ·  RMB  knock him out{}", choke) } else { String::from("LMB  hold to grab him") }
             } else {
                 format!("E  {}, then hold LMB to grab him", sling)
             };
-            verbs.push(Interactable { verb: None, running: Some(false), progress: None, in_reach: true, line2, ..it.clone() });
-        } else if o.grab {
+            verbs.push(crate::player::said(&it, &line2));
+        } else if at.grab {
             let text = if kind == K::Seat {
                 if gun { "haul him out of the chair — pistol to his head" } else { "haul him out of the chair" }
             } else if gun { "grab him — pistol to his head" } else if rifle_up { "grab him — the rifle goes on your back" } else { "grab him" };
-            let v = row(g, it.clone(), crate::game::Verb::Grab, String::from(text), Some(click), None);
-            verbs.push(v);
-        } else if o.strike {
-            let why = if o.win.map_or(false, |w| w.grab) { "you can't grab him while he's onto you" } else { "the grab is from behind" };
+            verbs.push(crate::player::row(&it, crate::game::Verb::Grab, text, &click));
+        } else if at.strike {
+            let why = if at.win.map_or(false, |w| w.grab) { "you can't grab him while he's onto you" } else { "the grab is from behind" };
             let line2 = if !click.is_empty() { format!("{}  ·  {}", click, why) } else { String::from(why) };
-            verbs.push(Interactable { verb: None, running: Some(false), progress: None, line2, in_reach: true, ..it.clone() });
+            verbs.push(crate::player::said(&it, &line2));
         }
-        note_best(g, &o);
+        note_best(g, &at);
     }
-    offer(g, it, verbs);
+    o.add(it, verbs);
 }
 
 /// The line that says what the held click does.

@@ -76,25 +76,6 @@ pub enum CloseRmb {
     Hold,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct CloseRowsRowOver {
-    pub kind: Option<crate::game::InteractableKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CloseCivGate {
     pub behind: bool,
