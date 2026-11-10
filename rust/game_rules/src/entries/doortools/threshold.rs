@@ -721,6 +721,12 @@ fn word_shared(g: &Game, seat: &crate::seats::SeatRef, op: DoorOpId) -> bool {
 }
 fn last_held(g: &Game, op: DoorOpId) -> bool { o!(g, op).last_stack == Some(true) || o!(g, op).last_hold == Some(true) }
 
+/// Does the order go in its own time: no last warning has hurried it, nobody in there is about to be shot, and no other order goes on its word.
+pub(super) fn door_tools_own_time(g: &mut Game, op: DoorOpId) -> bool {
+    let d = o!(g, op).door;
+    !last_held(g, op) && !crate::mission::last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
+}
+
 /// is the word's step in waiting for the jamb men's cuts
 pub(super) fn door_tools_cuts_owe(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let r = &o!(g, op);
@@ -731,17 +737,13 @@ pub(super) fn door_tools_cuts_owe(g: &mut crate::game::Game, op: DoorOpId) -> bo
     for c in g.sets[g.seat].door_tools.set.clone() {   // (a set charge goes on this same word: they go in behind its blast)
         if !door_tools_on_pending_word(g, &crate::seats::here(g), c) && door_tools_key_is(g, &crate::seats::here(g), c) { return false; }
     }
-    if last_held(g, op) { return false; }
-    let d = o!(g, op).door;
-    !crate::mission::last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
+    door_tools_own_time(g, op)
 }
 
 /// is the stage waiting for men who ran from a grenade
 pub(super) fn door_tools_thr_frag_wait(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let th = o!(g, op).thr.as_ref().unwrap();
-    if !(th.fled.as_ref().map_or(false, |f| !f.is_empty()) && th.hand_done != Some(true) && th.hand_w.unwrap_or(0.0) < g.k.doortools.thr_hand_wait && !last_held(g, op)) { return false; }
-    let d = o!(g, op).door;
-    !crate::mission::last_warning(g, d) && !word_shared(g, &crate::seats::here(g), op)
+    th.fled.as_ref().is_some_and(|f| !f.is_empty()) && th.hand_done != Some(true) && th.hand_w.unwrap_or(0.0) < g.k.doortools.thr_hand_wait && door_tools_own_time(g, op)
 }
 
 /// is this order waiting for men who ran from a grenade (Sam's own squad only)

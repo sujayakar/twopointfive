@@ -13,7 +13,7 @@ fn flat(a: &[f64], b: &[f64]) -> f64 {
 }
 
 /// A door blown off its hinges: no leaf to walk round.
-fn gone(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn gone(g: &crate::game::Game, d: DoorId) -> bool {
     g.dr[d].leaf.off
 }
 
@@ -52,7 +52,7 @@ fn door_path_leaf(g: &crate::game::Game, d: DoorId) -> [V3; 2] {
 }
 
 /// Every leaf standing within 2.5 m of the segment near→far.
-fn door_path_leaves(g: &mut crate::game::Game, near: V3, far: V3) -> Vec<[V3; 2]> {
+fn door_path_leaves(g: &crate::game::Game, near: V3, far: V3) -> Vec<[V3; 2]> {
     let mut out: Vec<[V3; 2]> = Vec::new();
     let mut i = 0;
     while i < g.doors.list.len() {
@@ -115,7 +115,7 @@ fn leg_ok(p: V3, q: V3, dp: f64, dq: f64, c: f64, l: &[[V3; 2]]) -> bool {
 }
 
 /// From a to b keeping `leafClear` off every leaf nearby: the corners to walk (b last), or None when no way round was found.
-fn door_path_round_leaves(g: &mut crate::game::Game, a: V3, b: V3) -> Option<crate::doorpath::DoorPathRoundLeaves> {
+fn door_path_round_leaves(g: &crate::game::Game, a: V3, b: V3) -> Option<crate::doorpath::DoorPathRoundLeaves> {
     let k = g.k.doorpath;
     let c = k.leaf_clear;
     let l = door_path_leaves(g, a, b);
@@ -187,7 +187,7 @@ fn door_path_round_leaves(g: &mut crate::game::Game, a: V3, b: V3) -> Option<cra
 }
 
 /// From a to b for a man's feet: clear of the leaves and of the level, by the nav grid's path where the straight leg is not open.
-fn door_path_way(g: &mut crate::game::Game, a: V3, b: V3) -> Option<crate::doorpath::DoorPathWay> {
+fn door_path_way(g: &crate::game::Game, a: V3, b: V3) -> Option<crate::doorpath::DoorPathWay> {
     let r = door_path_round_leaves(g, a, b)?;
     let mut prev = a;
     let mut clear = true;
@@ -317,7 +317,7 @@ fn door_path_lay(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) {
 }
 
 /// A leaf still swinging within 2.5 m of this leg.
-fn leaf_swinging(g: &mut Game, from: V3, pod: V3) -> bool {
+fn leaf_swinging(g: &Game, from: V3, pod: V3) -> bool {
     let mut i = 0;
     while i < g.doors.list.len() {
         let x = g.doors.list[i];
@@ -604,10 +604,6 @@ fn door_path_own(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) -> bo
 /// The walk is over early: handed back to the nav, and the order's way round to the order if he is not yet through.
 fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: crate::doorpath::DoorPathDropWhy) {
     g.door_path.walks.delete(w.gd);
-    match why {
-        crate::doorpath::DoorPathDropWhy::Taken => {},
-        crate::doorpath::DoorPathDropWhy::GaveUp => {},
-    }
     if why == crate::doorpath::DoorPathDropWhy::GaveUp {
         // (the line under him was this walk's own: left there, goTo sees its goal met and never plans)
         crate::game::guard_set_path(g, w.gd, Vec::new());
@@ -648,7 +644,7 @@ fn path_is_arr(g: &Game, gd: GuardId, w: &crate::doorpath::Walk) -> bool {
 }
 
 /// The leaves by his line have moved since it was laid.
-fn near_moved(g: &mut Game, w: &crate::doorpath::Walk) -> bool {
+fn near_moved(g: &Game, w: &crate::doorpath::Walk) -> bool {
     for x in w.near.iter() {
         if gone(g, x.d) || m::abs(g.dr[x.d].leaf.angle - x.angle) > 0.05 {
             return true;
@@ -660,17 +656,46 @@ fn near_moved(g: &mut Game, w: &crate::doorpath::Walk) -> bool {
 /// One walk's frame; false when the walk has left the table.
 fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, dt: f64) -> bool {
     let k = g.k.doorpath;
-    let c = g.gd[gd].ch;
-    let p = g.ch[c].pos;
     if crate::condition::down(g, g.gd[gd].ch) || t < w.t0 || !g.guards.contains(&gd) {
         g.door_path.walks.delete(gd); // (dead · the clock has gone back · not on the floor any more)
         return false;
     }
+    if let Some(stays) = not_walking(g, gd, w, t) { return stays; }
+    laid_afresh(g, gd, w, t);
+    let (p, left) = (g.ch[g.gd[gd].ch].pos, door_path_total(w) - w.s);
+    let (carrot, first) = path_ahead(g, gd, w);
+    side_step(g, gd, first);
+    if w.wait {   // a leaf still swinging by his line: he stands at the lane's end until it stands
+        w.waited += dt;
+        if left < 0.3 {
+            g.gd[gd].script.as_mut().unwrap().speed = Some(0.0);
+            hold_clocks(g, gd, t, p);
+        }
+    }
+    if w.held < k.cap {   // the file: room for the man sent before him
+        let f = room_ahead(g, gd, w, carrot);
+        if f < 1.0 {
+            let walk = g.tune.guard_walk;
+            let s = g.gd[gd].script.as_mut().unwrap();
+            s.speed = Some(s.speed.unwrap_or(walk) * f);
+            if f < 0.5 {
+                w.held += dt;
+                hold_clocks(g, gd, t, p);
+            }
+        }
+    }
+    true
+}
+
+/// Is he off his walk this frame: off the order for a moment or for good, there, or let go by somebody else's path. Some(whether the walk stays).
+fn not_walking(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64) -> Option<bool> {
+    let k = g.k.doorpath;
+    let p = g.ch[g.gd[gd].ch].pos;
     if g.gd[gd].script.is_some() && door_path_own(g, w) {
         // (back from the fight, the order laid its own way round again)
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
         let goal = g.tab.orders_assignment[a].goal;
-        g.tab.orders_assignment[a].new_leg = false;   // (`s.goal = A.goal`: the same object, as in `move` above)
+        g.tab.orders_assignment[a].new_leg = false;   // (the goal it is told is the order's own)
         let s = g.gd[gd].script.as_mut().unwrap();
         s.goal = Some(goal);
         s.arrived = Some(false);
@@ -685,60 +710,59 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
             w.off_t = t;
         } else if t - w.off_t > 1.5 {
             door_path_drop(g, w, crate::doorpath::DoorPathDropWhy::Taken);
-            return false;
+            return Some(false);
         }
         w.arr = None;
-        return true;
+        return Some(true);
     }
     if !w.off_t.is_nan() {
         w.off_t = m::NAN;
         door_path_lay(g, w);
     }
-    if flat(&p, &w.pod) < m::max(0.3, k.look * 0.6) && door_path_total(w) - w.s < k.look + 0.3 {
-        g.door_path.walks.delete(gd); 
-        return false;
-    }
-    if t < w.yield_t {
-        return true;
-    }
-    if !w.wait && path_is_arr(g, gd, w) && g.gd[gd].path.len() == 1 && g.gd[gd].path_i >= 1 {
-        g.door_path.walks.delete(gd); 
-        return false;
+    let there = flat(&p, &w.pod) < m::max(0.3, k.look * 0.6) && door_path_total(w) - w.s < k.look + 0.3;
+    if !there && t < w.yield_t { return Some(true); }
+    if there || (!w.wait && path_is_arr(g, gd, w) && g.gd[gd].path.len() == 1 && g.gd[gd].path_i >= 1) {
+        g.door_path.walks.delete(gd);
+        return Some(false);
     }
     if w.arr.is_some() && !g.gd[gd].path.is_empty() && (!path_is_arr(g, gd, w) || g.gd[gd].path.len() as f64 != w.arr_n) {
         // somebody else has laid a path under him: the watchdog's side-step, or its re-plan
         w.yields += 1.0;
         if w.yields > 2.0 {
             door_path_drop(g, w, crate::doorpath::DoorPathDropWhy::GaveUp);
-            return false;
+            return Some(false);
         }
         w.yield_t = t + 0.8;
         w.arr = None;
-        return true;
+        return Some(true);
     }
-    if w.arr.is_none() && js::truthy(w.yields) && t >= w.yield_t {
-        door_path_lay(g, w);
-    }
-    // the leaves have moved under the line: laid afresh from here
-    if t - w.laid_t > 0.2 && (w.wait || near_moved(g, w)) {
-        door_path_lay(g, w);
-    }
-    // a man has dropped on his point: it is moved a body's width off him
+    None
+}
+
+/// The line laid again from where he is: after he yielded, when a leaf by it has moved, when a man has dropped on his point, and once he is off it.
+fn laid_afresh(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64) {
+    let k = g.k.doorpath;
+    let p = g.ch[g.gd[gd].ch].pos;
+    if w.arr.is_none() && js::truthy(w.yields) && t >= w.yield_t { door_path_lay(g, w); }
+    if t - w.laid_t > 0.2 && (w.wait || near_moved(g, w)) { door_path_lay(g, w); }
     if k.body_m > 0.0 && t - w.body_t > 0.25 && flat(&p, &w.pod) > 0.6 {
         w.body_t = t;
         if !door_path_fallen(g, w.pod, k.body_m).is_empty() {
-            if let Some(q) = door_path_stand(g, w, [p[0], 0.0, p[2]], Some(k.body_move)) {
+            if let Some(q) = door_path_stand(g, w, [p[0], 0.0, p[2]], Some(k.body_move)) {   // (a body's width off him)
                 door_path_move(g, w, q);
                 door_path_lay(g, w);
             }
         }
     }
     let off_line = if w.pts.len() > 1 { door_path_advance(g, w) } else { 0.0 };
-    if off_line > 0.6 {
-        door_path_lay(g, w);
-    }
-    let end = w.pts[w.pts.len() - 1];
-    let tot = door_path_total(w);
+    if off_line > 0.6 { door_path_lay(g, w); }
+}
+
+/// The path under him: a point of the line a look ahead, then its end. Answers that point, and the first of the path.
+fn path_ahead(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk) -> (V3, V3) {
+    let k = g.k.doorpath;
+    let p = g.ch[g.gd[gd].ch].pos;
+    let (end, tot) = (w.pts[w.pts.len() - 1], door_path_total(w));
     let near = tot - w.s <= k.look;
     let mut cs = w.s + k.look;
     let mut carrot = if near { end } else { door_path_point_at(w, cs) };
@@ -747,63 +771,47 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
         cs += 0.05;
         carrot = door_path_point_at(w, cs);
     }
-    let arr: Vec<V3> = if near || cs >= tot { vec![[end[0], 0.0, end[2]]] } else { vec![carrot, [end[0], 0.0, end[2]]] };
+    let last = [end[0], 0.0, end[2]];
+    let arr: Vec<V3> = if near || cs >= tot { vec![last] } else { vec![carrot, last] };
+    let (first, n) = (arr[0], arr.len() as f64);
     let goal = g.gd[gd].script.unwrap().goal.unwrap();
-    let first = arr[0];
-    let arr_n = arr.len() as f64;
     crate::game::guard_set_path(g, gd, arr);
     let man = &mut g.gd[gd];
     man.path_i = 0;
     man.path_goal = Some([goal[0], goal[1], goal[2]]);
     man.path_goal_orbit = false;
     w.arr = Some(man.path_serial);
-    w.arr_n = arr_n;
-    // his feet stay on the line: until his chest is round he side-steps along it, as the fight had him
+    w.arr_n = n;
+    (carrot, first)
+}
+
+/// His feet stay on the line: until his chest is round he side-steps along it, as the fight had him.
+fn side_step(g: &mut Game, gd: GuardId, first: V3) {
+    let c = g.gd[gd].ch;
+    let p = g.ch[c].pos;
     let yaw = m::atan2(first[0] - p[0], first[2] - p[2]);
-    if flat(&p, &first) > 0.05 && m::cos(yaw - crate::character::character_want_body(g, c)) < 0.7 {
-        let s = g.gd[gd].script.as_mut().unwrap();
-        s.strafe = Some(true);
-        s.face = Some(yaw);
+    if !(flat(&p, &first) > 0.05 && m::cos(yaw - crate::character::character_want_body(g, c)) < 0.7) { return; }
+    let s = g.gd[gd].script.as_mut().unwrap();
+    s.strafe = Some(true);
+    s.face = Some(yaw);
+}
+
+/// How much of his pace the men sent before him through this door leave him: one beside or behind him is not in his way.
+fn room_ahead(g: &Game, gd: GuardId, w: &crate::doorpath::Walk, carrot: V3) -> f64 {
+    let k = g.k.doorpath;
+    let p = g.ch[g.gd[gd].ch].pos;
+    let mut f = 1.0;
+    for (key, v) in g.door_path.walks.iter() {
+        if key == gd || v.door != w.door || v.t0 > w.t0 || (v.t0 == w.t0 && v.n >= w.n) { continue; }
+        let q = g.ch[g.gd[v.gd].ch].pos;
+        let dd = flat(&p, &q);
+        if dd > k.short_m || dd < 1e-3 { continue; }
+        let (hx, hz) = (carrot[0] - p[0], carrot[2] - p[2]);
+        let hl = js::or(m::hyp2(hx, hz), 1.0);
+        if ((q[0] - p[0]) * hx + (q[2] - p[2]) * hz) / (hl * dd) < 0.2 { continue; }
+        f = m::min(f, m::max(0.0, (dd - (k.short_m - 0.35)) / 0.35));
     }
-    // a leaf still swinging by his line: he stands at the lane's end until it stands
-    if w.wait {
-        w.waited += dt;
-        if tot - w.s < 0.3 {
-            g.gd[gd].script.as_mut().unwrap().speed = Some(0.0);
-            hold_clocks(g, gd, t, p);
-        }
-    }
-    // the file: room for the man sent before him
-    if w.held < k.cap {
-        let mut f = 1.0;
-        for (key, v) in g.door_path.walks.iter() {
-            if key == gd || v.door != w.door || v.t0 > w.t0 || (v.t0 == w.t0 && v.n >= w.n) {
-                continue;
-            }
-            let q = g.ch[g.gd[v.gd].ch].pos;
-            let dd = flat(&p, &q);
-            if dd > k.short_m || dd < 1e-3 {
-                continue;
-            }
-            let hx = carrot[0] - p[0];
-            let hz = carrot[2] - p[2];
-            let hl = js::or(m::hyp2(hx, hz), 1.0);
-            if ((q[0] - p[0]) * hx + (q[2] - p[2]) * hz) / (hl * dd) < 0.2 {
-                continue; // (beside or behind him: not in his way)
-            }
-            f = m::min(f, m::max(0.0, (dd - (k.short_m - 0.35)) / 0.35));
-        }
-        if f < 1.0 {
-            let walk = g.tune.guard_walk;
-            let s = g.gd[gd].script.as_mut().unwrap();
-            s.speed = Some(s.speed.unwrap_or(walk) * f);
-            if f < 0.5 {
-                w.held += dt;
-                hold_clocks(g, gd, t, p);
-            }
-        }
-    }
-    true
+    f
 }
 
 /// Once a frame, after the orders have posed their men and before anybody moves.

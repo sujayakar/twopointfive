@@ -308,11 +308,6 @@ pub struct WallChargeBlow {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct WallChargeBlowRaw {
-    pub hole: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeHoleAt {
     pub du: f64,
     pub half: f64,
