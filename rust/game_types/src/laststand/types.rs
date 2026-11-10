@@ -1,9 +1,9 @@
 //! The types of `laststand`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what a line makes true for the HUD as it is said (laststand.ts net `then`); st and g are the caller's. NameAtUnlessFree reads d's mode when the line is said; NameAt's w was settled when the line was made
+/// what a line makes true for the HUD as it is said; st and g are the caller's. NameAtUnlessFree reads d's mode when the line is said; NameAt's w was settled when the line was made
 #[derive(Clone, Debug, ToBytes)]
 pub enum LaterThen {
     MovedFree { d: RoomfightDefId },
@@ -11,7 +11,7 @@ pub enum LaterThen {
     NameAt { d: RoomfightDefId, w: Option<crate::laststand::Spoken> },
     NameAtUnlessFree { d: RoomfightDefId, w: crate::laststand::Spoken },
 }
-/// the wording a line that says where its man stands fills in, asked with spoken(g, d's position) when made and again as it is said (laststand.ts netAt `f`, Later.redo)
+/// the wording a line that says where its man stands fills in, asked with spoken(g, d's position) when made and again as it is said
 #[derive(Clone, Debug, ToBytes)]
 pub enum LaterRedo {
     MovedAt { d: RoomfightDefId },
@@ -161,16 +161,8 @@ pub struct NetRedoRet {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LaststandMod {
-    /// (src/game/laststand.ts:170 STATES)
     pub states: Option<crate::laststand::State>,
-}
-impl LaststandMod {
-    pub fn blank() -> Self {
-        LaststandMod {
-            states: None,
-        }
-    }
 }
 

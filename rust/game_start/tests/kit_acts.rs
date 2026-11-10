@@ -29,7 +29,7 @@ fn stood(level: &str, words: &str) -> Play {
 /// a frame, and what it told the host
 fn frame_out(p: &mut Play) -> Vec<OutEvent> { let h = p.host; game_start::stand::frame(&mut p.g, &h, 1.0 / 60.0) }
 /// the file as team indexes
-fn file(p: &Play) -> Vec<usize> { let team = game::scenario_run::team_of(&p.g); st(p).order.iter().map(|x| team.iter().position(|t| t == x).unwrap()).collect() }
+fn file(p: &Play) -> Vec<usize> { let team = p.g.staged.team.clone(); st(p).order.iter().map(|x| team.iter().position(|t| t == x).unwrap()).collect() }
 /// this man stood `d` m out from his place, this very tick
 fn hold_off(p: &mut Play, x: game::ids::GuardId, d: f64) {
     let (h, n) = { let s = st(p); (walk::home_of(&p.g, s, x).0, s.n) };
@@ -47,7 +47,7 @@ fn off_places(p: &Play) -> f64 {
     for &x in &s.order { d = d.max(flat(p.g.ch[p.g.gd[x].ch].pos, walk::home_of(&p.g, s, x).0)); }
     d
 }
-fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| p.g.gd[x].state != GuardState::Dead) && !p.g.pl[p.g.player].down }
+fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| !game::condition::down(&p.g, p.g.gd[x].ch)) && !game::condition::down(&p.g, p.g.pl[p.g.player].ch) }
 
 /// a wall way and a gap way on a small set of a level's own
 fn with_way(level: &str, way: &str, set: &str) -> String {
@@ -204,7 +204,7 @@ fn a_pick_cuts() {
 fn the_card_switch_walks() {
     let mut p = stood("records.json", "roomclear&squad4");
     let serial = st(&p).a.restages;
-    let team = game::scenario_run::team_of(&p.g);
+    let team = p.g.staged.team.clone();
     for &who in &[1u32, 2, 3, 4, 0] {
         kitstage::open(&mut p.g, who, "");
         let mut t = 0.0;
@@ -240,7 +240,7 @@ fn a_card_changed_is_written_live() {
     use game::kit::{KitWeapon, SuitId, TrimId};
     let mut p = stood("records.json", "roomclear&squad4");
     let serial = st(&p).a.restages;
-    let team = game::scenario_run::team_of(&p.g);
+    let team = p.g.staged.team.clone();
     kitstage::open(&mut p.g, 1, "weapon");
     p.run(4.0);
     let x = team[0];
@@ -334,11 +334,11 @@ fn goggles_off_and_on_again_he_wears_them() {
     let under = |p: &mut Play| { kitstage::under(&mut p.g); p.frame(); };
     tell(&mut p, &mut |m| m.nvg = false, 1, -1);
     under(&mut p);
-    let x = game::scenario_run::team_of(&p.g)[0];
+    let x = p.g.staged.team[0];
     assert!(!game::kit::kit_goggles(&p.g, x), "off: he has none");
     tell(&mut p, &mut |m| m.nvg = true, 1, -1);
     under(&mut p);
-    let x = game::scenario_run::team_of(&p.g)[0];
+    let x = p.g.staged.team[0];
     assert!(game::kit::kit_goggles(&p.g, x), "on again: he wears them");
 }
 

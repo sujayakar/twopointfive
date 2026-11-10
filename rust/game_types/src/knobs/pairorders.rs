@@ -22,13 +22,12 @@ pub struct PairK {
     #[k(0.3)] pub stalk_every: f64,
     #[k(20.0)] pub stalk_wait: f64,
     #[k(2.4)] pub ring_m: f64,
-    /// HE DOES NOT TURN ABOUT ON HIS WAY (the maintainer, 10-22, the pair lesson: "partner seems to be very paranoid about always turning around to check the
-    ///  other guy"). Two things turned him (the lesson's scripted run, sampled): the way to a man's back handed out with a corner he had already passed first —
-    ///  the way he is kept on picks its nearest CORNER, and with that a pace behind him he turned right round to walk back to it and round again the next time
-    ///  the way was read; and each time the way read watched he parked and at once squared to the man, sixty to a hundred degrees, and squared back to walk a
-    ///  third of a second later. So: on the kept way a corner he is already past along its own leg is dropped, where the way on from the next is as plain and
-    ///  as cheap a walk from where he stands (priced as any kept way is); and parked on a watched way he keeps the heading he has for `steadyFaceSecs` — only a wait that lasts turns him to watch
-    ///  his man. The page: on (`?pairsteady=0`); false here and on the frozen harness stand (`TPS_PAIRSTEADY=1`; a FROZEN_HOLDS row). false = as it was
+    /// HE DOES NOT TURN ABOUT ON HIS WAY (the maintainer, 10-22, the pair lesson: "partner seems to be very paranoid about always turning around to check the other guy"). Two things turned him
+    /// (the lesson's scripted run, sampled): the way to a man's back handed out with a corner he had already passed first — the way he is kept on picks its nearest CORNER, and with that a pace
+    /// behind him he turned right round to walk back to it and round again the next time the way was read; and each time the way read watched he parked and at once squared to the man, sixty to a
+    /// hundred degrees, and squared back to walk a third of a second later. So: on the kept way a corner he is already past along its own leg is dropped, where the way on from the next is as
+    /// plain and as cheap a walk from where he stands (priced as any kept way is); and parked on a watched way he keeps the heading he has for `steadyFaceSecs` — only a wait that lasts turns him
+    /// to watch his man.
     #[k(1.2)] pub steady_face_secs: f64,
     #[k(1.2)] pub watch_secs: f64,
     #[k(0.25)] pub watch_aw: f64,

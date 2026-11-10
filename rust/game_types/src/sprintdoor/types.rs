@@ -34,20 +34,14 @@ pub struct SprintdoorStats {
     pub kicks: i32,
 }
 
-/// (src/game/sprintdoor.ts:61 KICK_OFF)
 pub const KICK_OFF: f64 = 0.76;
 
-/// (src/game/sprintdoor.ts:61 KICK_EASE)
 pub const KICK_EASE: f64 = 12.0;
 
-/// (src/game/sprintdoor.ts:64 KICK_NEAR)
 pub const KICK_NEAR: f64 = 0.06;
 
-/// (src/game/sprintdoor.ts:89 AGAIN)
 pub const AGAIN: f64 = 0.4;
 
-/// (src/game/sprintdoor.ts:91 SETTLE)
 pub const SETTLE: f64 = 0.2;
 
-/// (src/game/sprintdoor.ts:133 HEAD_SIGN)
 pub const HEAD_SIGN: f64 = -1.0;

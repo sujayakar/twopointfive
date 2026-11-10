@@ -32,20 +32,6 @@ pub struct DecalOpts {
     pub pane: Option<f64>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Decals {
-    pub enabled: bool,
-}
-impl Decals {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Decals {
-            enabled: true,
-        }
-    }
-}
-impl Default for Decals { fn default() -> Self { Self::blank() } }
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WEARMARK {
     pub look: f64,
@@ -55,6 +41,5 @@ pub struct WEARMARK {
     pub max_half: f64,
 }
 
-/// (src/render/decals.ts:96 WEAR_MARK: a table nothing writes)
 pub fn wear_mark() -> crate::render_decals::WEARMARK { crate::render_decals::WEARMARK { look: 3.0, reach0: 0.09, reach1: 0.21, min_half: 0.035, max_half: 0.09 } }
 

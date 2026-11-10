@@ -3,12 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, Debug)]
-pub enum FriendInCone {
-    Guard(GuardId),
-    Player,
-}
-
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct FriendlyfireStats {

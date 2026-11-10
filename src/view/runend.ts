@@ -56,8 +56,8 @@ export interface RunEnd {
   down: boolean;
   /** the course's par, where the level has one and the run was timed against it: its medal, its line, and the line with how it stands on this machine */
   par: { medal: string; line: string; shown: string } | null;
-  /** a quiet mission's holder, as its words have it (null: the plain night) */
-  quiet: { holder: string } | null;
+  /** what the thing to take is in, as the mission calls it ('': a fight, with no errand) */
+  holder: string;
   marks: RunMark[];
   /** the walked floor, a cell at a time: does nothing walk there, is it indoors */
   floor: { w: number; h: number; cell: number; blocked(x: number, z: number): boolean; indoors(x: number, z: number): boolean };

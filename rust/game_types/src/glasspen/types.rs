@@ -1,22 +1,13 @@
 //! The types of `glasspen`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum PaneType {
     #[default] Annealed,
     Laminated,
     Tempered,
-}
-impl PaneType {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PaneType::Annealed => "annealed",
-            PaneType::Laminated => "laminated",
-            PaneType::Tempered => "tempered",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -88,17 +79,9 @@ pub struct ArmThroughGlass {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlasspenMod {
-    /// (src/game/glasspen.ts:152 states)
     pub states: Option<crate::glasspen::PenState>,
-}
-impl GlasspenMod {
-    pub fn blank() -> Self {
-        GlasspenMod {
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -114,14 +97,5 @@ pub struct GlasspenStats {
     pub shell_joined: i32,
 }
 
-/// (src/game/glasspen.ts:186 PANE_TYPES: a table nothing writes)
 pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
 
-/// (src/game/glasspen.ts:191 CROSS)
-pub const CROSS: f64 = 25.0;
-
-/// (src/game/glasspen.ts:191 LEG)
-pub const LEG: f64 = 9.0;
-
-/// (src/game/glasspen.ts:191 MAX_CROSS)
-pub const MAX_CROSS: f64 = 16.0;

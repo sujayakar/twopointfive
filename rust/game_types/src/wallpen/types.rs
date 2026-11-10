@@ -1,26 +1,15 @@
 //! The types of `wallpen`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ThinStuff {
     #[default] Wood,
     Cardboard,
     Drywall,
     Fabric,
     Foliage,
-}
-impl ThinStuff {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ThinStuff::Wood => "wood",
-            ThinStuff::Cardboard => "cardboard",
-            ThinStuff::Drywall => "drywall",
-            ThinStuff::Fabric => "fabric",
-            ThinStuff::Foliage => "foliage",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -83,17 +72,9 @@ pub enum ThinLine2 {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallpenMod {
-    /// (src/game/wallpen.ts:87 LOG)
     pub log: Vec<String>,
-}
-impl WallpenMod {
-    pub fn blank() -> Self {
-        WallpenMod {
-            log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -107,8 +88,6 @@ pub struct WallpenStats {
     pub harder: i32,
 }
 
-/// (src/game/wallpen.ts:169 EXIT_EPS)
 pub const EXIT_EPS: f64 = 0.001;
 
-/// (src/game/wallpen.ts:170 embedScratch: a table nothing writes)
 pub fn embed_scratch() -> Vec<i32> { alloc::vec![0; 64] }

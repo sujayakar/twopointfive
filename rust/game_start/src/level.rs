@@ -188,9 +188,6 @@ fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
     let mut level = Level::default();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
     level.devices = Some(f.devices); level.vents = f.vents; level.hums = f.hums; level.civilians = f.civilians; level.breach = f.plans.breach.map(|p| p.plan);
-    level.daylight = f.daylight.map(|d| DaylightDef {
-        sun: light_of(d.sun), sky: DaylightDefSky { zenith: d.sky.zenith, horizon: d.sky.horizon }, groups_on: d.groups_on, groups_off: d.groups_off, lights_off: d.lights_off, haze: d.haze, exposure: d.exposure,
-    });
     level.breaker = LevelBreaker { pos: f.breaker.pos, boxes: vec![bx(&f.breaker.panel), bx(&f.breaker.led)], fumble: f.breaker.fumble };
     level.beacons = f.beacons.iter().map(|b| LevelBeaconsItem { pos: b.pos, box_: bx(&b.box_) }).collect();
     level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(f.plans.room_clear.into_iter().map(|p| p.plan).collect());
@@ -199,10 +196,11 @@ fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
     level.sky = LevelSky { zenith: f.sky.zenith, horizon: f.sky.horizon };
     let m = f.mission;
     level.player_spawn = m.player_spawn;
-    level.mission = game::quiet::QuietMissionAuthoredMission {
-        server_room: game::quiet::QuietMissionAuthoredMissionServerRoom { x0: m.reach.area.x0, x1: m.reach.area.x1, z0: m.reach.area.z0, z1: m.reach.area.z1 }, entry_door: m.reach.door,
-        rack: game::quiet::QuietMissionAuthoredMissionRack { index: m.drive.rack_index, front: m.drive.front, half_w: m.drive.half_w },
-        exfil_door: m.exfil.door, exfil_x: m.exfil.x, exfil_z: m.exfil.z, exfil_out: m.exfil.out,
+    let (said, x) = (|name: Option<String>, else_: &str| name.unwrap_or_else(|| String::from(else_)), m.exfil);
+    level.errand = game::mission::Errand {
+        place: said(m.reach.name, "the marked room"), area: m.reach.area, door: m.reach.door,
+        thing: said(m.drive.name, "what's there"), holder: said(m.drive.holder, "the marked place"), index: m.drive.rack_index, front: m.drive.front, half_w: m.drive.half_w, told: true,
+        exits: vec![game::scene_scenarios::QuietExit { name: said(x.name, "the way out"), door: x.door, x: x.x, z: x.z, out: x.out.unwrap_or([1.0, 0.0]), half_w: None }],
     };
     level.mark_texel = f.meta.mark_texel;
     level.kept = f.meta.kept;

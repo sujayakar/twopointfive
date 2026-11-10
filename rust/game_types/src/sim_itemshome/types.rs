@@ -1,23 +1,13 @@
 //! The types of `sim_itemshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ItemStore {
     pub o: crate::sim_itemshome::ItemStoreO,
     pub cap: f64,
 }
-impl ItemStore {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        ItemStore {
-            o: crate::sim_itemshome::ItemStoreO::default(),
-            cap: 0.0,
-        }
-    }
-}
-impl Default for ItemStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ItemStoreO {
@@ -102,49 +92,30 @@ pub struct ItemCols {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimItemshomeMod {
-    /// (src/sim/itemshome.ts:137 ITEMS_STEPPED)
-    pub items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED,
-}
-impl SimItemshomeMod {
-    pub fn blank() -> Self {
-        SimItemshomeMod {
-            items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED { there: 0.0, host: 0.0, walks: 0.0, rays: 0.0, thing_rays: 0.0, substeps: 0.0, rested: 0.0, events: 0.0, steps_there: 0.0 },
-        }
-    }
+    #[is(crate::sim_itemshome::SimItemshomeModITEMSSTEPPED { there: 0.0, host: 0.0, walks: 0.0, rays: 0.0, thing_rays: 0.0, substeps: 0.0, rested: 0.0, events: 0.0, steps_there: 0.0 })] pub items_stepped: crate::sim_itemshome::SimItemshomeModITEMSSTEPPED,
 }
 
-/// (src/sim/itemshome.ts:31 ITEM_CAP)
 pub const ITEM_CAP: f64 = 32.0;
 
-/// (src/sim/itemshome.ts:33 ITEM_ROWS)
 pub const ITEM_ROWS: f64 = 64.0;
 
-/// (src/sim/itemshome.ts:36 ITEM_F64: a table nothing writes)
 pub fn item_f64() -> [String; 20] { [String::from("px"), String::from("py"), String::from("pz"), String::from("vx"), String::from("vy"), String::from("vz"), String::from("yaw"), String::from("spin"), String::from("tumble"), String::from("tumbleRate"), String::from("age"), String::from("life"), String::from("radius"), String::from("restitution"), String::from("friction"), String::from("heading"), String::from("onPose"), String::from("fuse"), String::from("emitT"), String::from("fill")] }
 
-/// (src/sim/itemshome.ts:37 ITEM_U32: a table nothing writes)
 pub fn item_u32() -> [String; 6] { [String::from("flags"), String::from("kind"), String::from("bounces"), String::from("who"), String::from("on"), String::from("serial")] }
 
-/// (src/sim/itemshome.ts:39 ITEM_HEAD)
 pub const ITEM_HEAD: f64 = 16.0;
 
-/// (src/sim/itemshome.ts:41 ITF: a table nothing writes)
 pub fn itf() -> crate::sim_itemshome::ITF { crate::sim_itemshome::ITF { settled: 1.0, fired: 2.0, carried: 4.0 } }
 
-/// (src/sim/itemshome.ts:43 ITEM_KINDS: a table nothing writes)
 pub fn item_kinds() -> [String; 9] { [String::from("smoke"), String::from("mag"), String::from("flash"), String::from("frag"), String::from("pistol"), String::from("torch"), String::from("rifle"), String::from("ring"), String::from("shell")] }
 
-/// (src/sim/itemshome.ts:49 IC: a table nothing writes)
 pub fn ic() -> JsMap<String, f64> { { let mut t = JsMap::default(); for (i, k) in crate::sim_itemshome::item_f64().into_iter().chain(crate::sim_itemshome::item_u32()).enumerate() { t.set(k, i as f64); } t } }
 
-/// (src/sim/itemshome.ts:50 NF)
 pub const NF: f64 = 20.0;
 
-/// (src/sim/itemshome.ts:50 NC)
 pub const NC: f64 = 26.0;
 
-/// (src/sim/itemshome.ts:108 ITEM_ROOFS)
 pub const ITEM_ROOFS: f64 = 4.0;
 

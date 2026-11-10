@@ -1,6 +1,6 @@
 // THE QUALITY LADDER'S ONE CHECK: what src/ui/quality.ts decides, which preset at which scale and when it steps. No GPU: the real class over a stub engine, fed frame times and GPU unions.
 //
-//   bun run tools/qa/quality-check.ts      every check, on synthetic machines (exit 1 on a FAIL). ADAPT_BREAK, LADDERHELD_BREAK, ONEGRID_BREAK, ONESOLVE_BREAK, FIRESHED_BREAK, FOGROWS_BREAK, LADDERSHED_BREAK, LADDERHOLD_BREAK = 1: each must fail
+//   bun run tools/qa/quality-check.ts      every check, on synthetic machines (exit 1 on a FAIL). ADAPT_BREAK, LADDERHELD_BREAK, ONEGRID_BREAK, ONESOLVE_BREAK, FIRESHED_BREAK, FOGROWS_BREAK, LADDERSHED_BREAK, LADDERHOLD_BREAK, CALIB_BREAK = 1: each must fail
 //   bun run tools/qa/quality-check.ts --plan [--budget 15] [--k 4.5 --css 1440x900 --dpr 2]     the cost table and plan()'s picks for machines (the flags add one of your own)
 //   bun run tools/qa/quality-check.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--shed on|off] [--sharpk N] [--sweeps] [--check] [--timeline] [--hold k=v,…]
 //
@@ -54,7 +54,7 @@ function mkEngine(w: Win, settings: Record<string, any>) {
   G.window.devicePixelRatio = w.dpr;
   const E: any = { settings: { ...defaults(), ...settings }, rc: { cfg: { ...defaultRcConfig } }, rebuildRc(cfg: any) { this.rc.cfg = cfg; }, gpu: { canvas: { clientHeight: w.cssH, clientWidth: w.cssW } },
     get capScale() { return Math.min(1, this.settings.maxInternalHeight / (w.cssH * w.dpr)); }, get effectiveScale() { return this.capScale * Math.min(1, this.settings.renderScale); },
-    timer: { enabled: true, results: new Map<string, number>(), total(excl: string[]) { let s = 0; for (const [n, v] of this.results) if (!excl.includes(n)) s += v; return s; }, unionMs() { return 0; } } };
+    timer: { enabled: true, results: new Map<string, number>(), lastFrame: new Map<string, number>(), resolved: 0, overlap: 1,  unionMs(excl: string[] = []) { let s = 0; for (const [n, v] of this.lastFrame) if (!excl.includes(n)) s += v; return s / this.overlap; } } };   // (overlap: the passes' sum ÷ the span the GPU was busy for)
   return E;
 }
 /** a Quality standing where a session stands once its boot is behind it: `preset` applied, calibration done, auto or pinned-with-adaptive, then the recording's own settings laid over */
@@ -246,7 +246,8 @@ const W2: Win = { cssW: 1440, cssH: 900, dpr: 2 };
 /** a stub engine and a real Quality on a machine `k`× the reference on 1440×900 @2. `aim` = settings.ladderAim, null = the page's default. E.tick refreshes the timer for this frame: what the cost model says the current preset costs at the effective scale, its per-pixel part + its fixed part, × k */
 function machine(k: number, aim: number | null = null) {
   const E = mkEngine(W2, aim === null ? {} : { ladderAim: aim }), q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
-  E.tick = () => { const name = q.current as QualityName, eff = E.effectiveScale, mpx = (W2.cssW * W2.dpr * eff) * (W2.cssH * W2.dpr * eff) / 1e6, R = E.timer.results; R.clear(); R.set('direct', k * COST[name].pixel * mpx / REF.mpx); R.set('rc c0', k * COST[name].fixed * 0.9); R.set('probe', k * COST[name].fixed * 0.1); R.set('composite', 16); };   // (a render pass, excluded from the total like the real ones)
+  E.tick = () => { const name = q.current as QualityName, eff = E.effectiveScale, mpx = (W2.cssW * W2.dpr * eff) * (W2.cssH * W2.dpr * eff) / 1e6, R = E.timer.results, o = E.timer.overlap * k; R.clear(); R.set('direct', o * COST[name].pixel * mpx / REF.mpx); R.set('rc c0', o * COST[name].fixed * 0.9); R.set('probe', o * COST[name].fixed * 0.1);
+    R.set('composite', 16); R.set('present', 12); E.timer.lastFrame = new Map(R); E.timer.resolved++; };   // (render passes, excluded from the total like the real ones; `overlap` is how many times the passes' spans run over one another)
   return { E, q };
 }
 /** calibration done, the tier on, nothing else: pinned high with adaptive resolution on */
@@ -679,7 +680,7 @@ function selftest(): boolean {
     const { E, q } = machine(1);
     pump(E, q, 100); const settledAt = q.current as QualityName;
     q.auto = false; q.apply('medium'); q.setAuto(); const from = q.current, cal = q.calibrating;
-    const dd = pump(E, q, 100); check(settledAt === 'high' && from === settledAt && cal && dd === 1 && q.current === settledAt && Math.abs(E.settings.renderScale - PRESETS[settledAt].scale) < 1e-6, `setAuto on the fast machine: from its remembered ${from}, calibrating ${cal}, settles once: ${q.current} ×${E.settings.renderScale.toFixed(2)} (${settledAt} at its own starting scale ×${PRESETS[settledAt].scale})`);
+    const dd = pump(E, q, 100); check(settledAt === 'high' && from === settledAt && cal && dd === 1 && q.current === settledAt && PRESETS[settledAt].scale - E.settings.renderScale < SCALE_STEP - 1e-6, `setAuto on the fast machine: from its remembered ${from}, calibrating ${cal}, settles once: ${q.current} ×${E.settings.renderScale.toFixed(2)} (${settledAt}, starting at ×${PRESETS[settledAt].scale}, within the band the ladder would cut it out of)`);
   }
   // (D1) STANDS IN: while a program asked for through the later lane is still compiling (gpu/device.ts laterProgress) the ladder takes no step and judges none — for at most STANDS_IN.maxSecs
   {
@@ -800,6 +801,23 @@ function selftest(): boolean {
     { const { E, q } = settledOn('medium');
       const log: Ev[] = []; const T = { t: 0 }; const p0 = q.current; drive(q, E, 20, 60.0, 6.0, log, T);
       check(p0 === 'medium' && q.current === 'high' && !log.some(e => /climb ↑ scale/.test(e.note) && e.t < (log.find(x => /preset|auto ↑/.test(x.note))?.t ?? 1e9)), `auto at medium, 60.0 fps (a 60 Hz panel), ∪ 6 ms: ${p0} → ${q.current} by the cruising rule before any scale climb (${log.map(e => e.note.split(' (')[0]).join(' | ')})`); }
+    // E7a WHAT AUTO PICKS (CALIB_BREAK=1: the boot's measure is the passes' sum again, and the first line must fail). The boot measures the frames the ladder is fed (the span the GPU was busy, not the
+    // sum of the passes, whose spans run over one another), so a tier that fits is picked at a smaller picture before the tier under it
+    { const brk = process.env.CALIB_BREAK === '1', boot = (k: number, from: QualityName, overlap: number) => { store.clear(); store.set('twopointsix.quality', 'auto'); store.set('twopointsix.autoPreset', from); const x = machine(k); x.E.timer.overlap = overlap; if (brk) x.E.timer.unionMs = function (excl: string[] = []) { let t = 0; for (const [n, v] of this.lastFrame) if (!excl.includes(n)) t += v; return t; };
+        pump(x.E, x.q, 100); return { ...x, pick: `${x.q.current} ×${x.E.settings.renderScale.toFixed(2)}` }; };
+      const his = (() => { store.clear(); store.set('twopointsix.autoPreset', 'medium'); store.set('twopointsix.autoScaleRel', '0.67'); const t = machine(1); t.E.tick(); const one = t.E.timer.unionMs(['composite', 'present']); return boot(8.9 / one, 'medium', 1.34); })();   // (the recording: The Pass on an M4 Max, Medium ×0.67, 8.9 ms a frame where the passes sum to 11.9)
+      check(/^high/.test(his.pick) && /measured 8\.9 ms of GPU a frame on medium ×0\.67/.test(his.q.lastChange), `a machine that draws Medium ×0.67 in 8.9 ms a frame, its passes summing to 11.9, is High: ${his.pick} (“${his.q.lastChange}”)`);
+      const same = [0.35, 0.6, 1, 1.5, 2.5, 4].map(k => { const picks = (['high', 'medium', 'low'] as QualityName[]).flatMap(n => [1, 1.4].map(o => boot(k, n, o).pick)); return { k, picks: [...new Set(picks)] }; });
+      check(same.every(r => r.picks.length === 1), `the pick doesn't hang on the tier it was measured at, nor on how much the passes overlap: ${same.map(r => `×${r.k} ${r.picks.join(' / ')}`).join(' · ')}`);
+      // closed loop: whatever the machine, auto settles (the tier doesn't go to and fro)
+      const settled = [0.4, 0.7, 1, 1.4, 2, 3, 5].map(k => { const x = boot(k, 'medium', 1.3); const log: Ev[] = [], T = { t: 0 }; let last = x.q.current, hops = 0; for (let s = 0; s < 180; s++) { const u = liveUnion(x.q, x.E, k), fps = Math.min(60, 1000 / Math.max(1000 / 60, u + 2.8)); drive(x.q, x.E, 1, fps, u, log, T); if (x.q.current !== last) { hops++; last = x.q.current; } } return { k, pick: x.pick, hops, end: `${x.q.current} ×${x.E.settings.renderScale.toFixed(2)}`, held: PRESETS[x.q.current as QualityName].scale - x.E.settings.renderScale <= 0.14 + 1e-6 && x.E.settings.renderScale >= parseFloat(x.pick.split('×')[1]) - SCALE_STEP - 1e-6, u: liveUnion(x.q, x.E, k) }; });
+      check(settled.every(r => r.hops <= 1 && r.held), `what is picked is not cut again: three minutes of steady play on machines from fast to slow: ${settled.map(r => `×${r.k} ${r.pick} → ${r.end} (∪ ${r.u.toFixed(1)}, ${r.hops} hop${r.hops === 1 ? '' : 's'})`).join(' · ')}`);
+      // a tier the model is wrong about: the first window drawn at it corrects the price, for a while
+      { const dear = 1.35; store.clear(); store.set('twopointsix.autoPreset', 'medium'); const m = machine(1); calibrated(m.q);
+        const k = 7.2 / liveUnion(m.q, m.E, 1), cost = () => liveUnion(m.q, m.E, k) * (m.q.current === 'high' ? dear : 1); const log: Ev[] = [], T = { t: 0 };
+        for (let s = 0; s < 40 && m.q.current !== 'high'; s++) drive(m.q, m.E, 1, 60, cost(), log, T); const priced = () => (m.q.costs.get('medium>high')?.until ?? -1) > m.q.clock ? m.q.costs.get('medium>high').k : undefined, hopped = m.q.current, before = priced(); for (let s = 0; s < 8; s++) drive(m.q, m.E, 1, 60, cost(), log, T);
+        const kept = priced(); m.q.clock += 200;
+        check(hopped === 'high' && before === undefined && kept > 1.05 && kept < dear && priced() === undefined, `a tier that costs ${dear}× what it is priced at: after a hop up it is known to (${before ?? 'unknown'} → ${kept}), and some minutes on it is asked again`); } }
     // E7b (CLOSED LOOP — the union follows what is rendered): a medium machine whose union is 9.5 ms at ×0.67: high is priced ~×1.7 = 16 ms → no hop; the scale climbs a rung or two on the
     // room there is, each rung making the window dearer, and — union × hopRatio being invariant under its own rungs — it never talks itself into the hop; a LOW machine at 9.5 ms likewise
     // (medium ≈ ×2.1: the flat '×2' rule hopped it, fell to ~41 fps, came back and cycled every ~15 s); WITHOUT timings (union 0) the rate alone decides, over twice the windows

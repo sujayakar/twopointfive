@@ -1,6 +1,6 @@
 //! The types of `doze`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -70,32 +70,14 @@ pub enum WakeWhy {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DozeMod {
-    /// (src/game/doze.ts:83 REC)
     pub rec: JsMap<GuardId, crate::doze::Doze>,
-    /// (src/game/doze.ts:84 SAID)
     pub said: Option<Vec<f64>>,
-    /// (src/game/doze.ts:87 PULLS)
     pub pulls: Option<Vec<[f64; 2]>>,
-    /// (src/game/doze.ts:87 PULLS_M)
-    pub pulls_m: f64,
-    /// (src/game/doze.ts:87 PULLS_E)
-    pub pulls_e: f64,
-    /// (src/game/doze.ts:117 LEFT)
+    #[is(-1.0)] pub pulls_m: f64,
+    #[is(-1.0)] pub pulls_e: f64,
     pub left: Option<JsMap<FixtureId, f64>>,
-}
-impl DozeMod {
-    pub fn blank() -> Self {
-        DozeMod {
-            rec: JsMap::new(),
-            said: None,
-            pulls: None,
-            pulls_m: -1.0,
-            pulls_e: -1.0,
-            left: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -109,11 +91,8 @@ pub struct DozeStats {
     pub woke: [i32; 6],
 }
 
-/// (src/game/doze.ts:85 TOUCH: a table nothing writes)
 pub fn touch() -> Vec<i32> { alloc::vec![0; 96] }
 
-/// (src/game/doze.ts:129 SCREEN_LINES: a table nothing writes)
 pub fn screen_lines() -> Vec<String> { alloc::vec![String::from("password expired. of course it has."), String::from("reply all. he replied all."), String::from("…and it's frozen. wonderful."), String::from("who formats a duty roster like this."), String::from("no. no, I saved that."), String::from("page two of two. there is no page two."), String::from("the overtime form wants a form."), String::from("mandatory fun. who writes these."), String::from("loading… still loading."), String::from("printer offline. it's right there."), String::from("one more hand. then the rounds."), String::from("unread, unread, unread. all him.")] }
 
-/// (src/game/doze.ts:331 WHOLE: a table nothing writes)
 pub fn whole() -> [f64; 2] { [1.0, 1.0] }

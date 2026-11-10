@@ -53,7 +53,7 @@ fn a_restart_begins_with_no_saves() {
     h.run(0.5);
     control::ask_save(&mut h.p.g);
     h.frame();
-    game::game::game_restart(&mut h.p.g, None);
+    game::game::game_restart(&mut h.p.g);
     h.run(0.2);
     assert!(control::timeline(&h.p.g).is_empty(), "the fresh run has the old one's save");
     assert!(control::ask_load(&mut h.p.g, "manual.0").is_some(), "and it can be loaded");
@@ -71,7 +71,7 @@ fn the_ring_rolls_and_a_man_down_saves_nothing() {
     assert_eq!(control::timeline(&h.p.g).len(), n);
     assert_eq!(h.saved.last().unwrap(), "manual.0", "past the ring's end the oldest goes");
     let pl = h.p.g.player;
-    h.p.g.pl[pl].down = true;
+    h.p.g.cond[h.p.g.pl[pl].ch].down = true;
     let before = h.saved.len();
     control::ask_save(&mut h.p.g);
     match control::tick(&mut h.p.g, 1.0 / 60.0) { Some(Do::Say(words)) => assert!(words.starts_with("not saved: "), "{words}"), _ => panic!("a man down was saved, or nothing was said") }

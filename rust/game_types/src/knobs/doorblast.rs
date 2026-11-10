@@ -48,15 +48,14 @@ pub struct DoorblastKTearM {
 ///  leaf stands `leafTough()` of it — `toll` times plasterboard's own number (or wood's if that were ever less) — ONE count for the whole leaf, wherever
 ///  on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. With `flat` the count is A COST and the same wherever the
 ///  Tab 'chaos' slider stands above nothing (a wall's still rides it: at its top drywall opens in three while a leaf asks its twelve); without, as a wall's. A
-///  round that goes on through (wallpen.ts) counts as one that stops; so does one fired with the gun pressed through the leaf (combat.ts wallAcrossArm).
+///  round that goes on through counts as one that stops; so does one fired with the gun pressed through the leaf.
 ///  Past half its toll the leaf sheds splinters with every round. Then it goes IN PIECES, by the destruction's own gradient: strips along the grain cut
 ///  to uneven lengths and thrown the way the round was going as rigid debris (the pool's own cap: what it refuses goes as splinters), each TAGGED WOOD and
 ///  dressed by the break table (breakTable.ts retag + dress: a snapped end, a splinter's taper, a board's torn corners — a door's paint would otherwise
 ///  read as masonry or sheet metal), then slivers, then dust-fine splinters; where the cuts fall goes by where the last round struck, so no two doors break alike. What is left is
 ///  the LOCK RAIL lying by the frame with the handles on it — the leaf's own box, so to every reader this is a door off its hinges (Door.off: an open
 ///  doorway to sight, shots, sound, smoke, the AI and every door order; reset() hangs it; a checkpoint files the rail where it lies and a leaf's count
-///  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (wallBreakOn: the destruction switch, never
-///  under a showcase).
+///  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (wallBreakOn: the destruction switch).
 #[derive(Clone, Debug, ToBytes, Knobs)]
 pub struct DoorshotK {
     /// how many times plasterboard's toll a wooden leaf stands (2 = twelve rifle rounds, twenty-four pistol; 1 = drywall's own six and twelve, what a recording from

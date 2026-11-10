@@ -107,7 +107,7 @@ a `word` is that need.
 "this tutorial level just looks really *flat*". A thing's shape is the shadow it throws on the ground, and one raking light carries a room. These are guidelines for
 the eye, from the play camera at the mission's hour. None has been seen on a GPU here.
 
-- **Judge the light at the hour the mission plays at.** A row's own `hour` and `weather` are written over the link (`rowset/`), and `lamps_out` has every `exterior`
+- **Judge the light at the hour the mission plays at.** A row's own `hour` and `weather` are written over the link (`rowset.rs`), and `lamps_out` has every `exterior`
   lamp out at an hour whose `lamps` is false, so a level's file may be a night nobody plays.
 - **The key comes in low.** `hours` has dawn and dusk at 22 degrees and midday at 56, and the kit's `moon` is near 30. A level that has to play at midday gets its
   shape from paint and ground.
@@ -153,7 +153,7 @@ floor.
 
 ## 8. The team and its kit
 
-- **A level does not deal the squad's kit.** There is one issue (`issued_card` in `rust/game_rules/src/kit`). A level changes it in two places:
+- **A level does not deal the squad's kit.** There is one issue (`issued_card` in `rust/game_rules/src/outfit/kit`). A level changes it in two places:
   `scenarios.issue.members` and `roomClear.wallCharges`. Read the card on Team & kit at every size the row offers. Test: `level_rules.rs`.
 - **Its own cards are for a mission built around a kit,** and one that changes a counted thing is not shared out, so write one for every man who comes. A `shield`
   key is a fault of the file. By eye, at each size.
@@ -169,7 +169,7 @@ floor.
 
 - **`mission`: the row, in the one list.** `scenarios` (or `quiet_missions`, `tutorial_missions`) in `rust/game_types/src/scene_scenario_list/rows.rs`. The page, the
   level tools and the checks ask the game's module for it, so make the module (`bun run tools/blitz/face-build.ts --profile play`), then `gate pin`
-  (only that writes the list of rows). `cargo test -p game_run --test desk` in `rust/` holds the desk.
+  (only that writes the list of rows). `cargo test --test desk` in `rust/game_start` holds the desk.
 - **`row`: every word on it is true to the file:** `title`, `place` (6 to 64 letters), `blurb` (the premise, never the answer; 20 to 140 on a squad row, 160 on a
   quiet one), `defenders`, `lean`, `ways` (one name per start), `squads` exactly when the file has them, and `untuned` until somebody has played it. A group draws
   eight rows at most; `offList` rows do not count. No digit above 5 on a menu. Check: `bun run tools/qa/checks.ts mystery writing`, and "Show, not tell".
@@ -180,17 +180,17 @@ floor.
   reach, so say that in the commit.
 - **`picture`: `public/assets/menu/<row>.jpg` and its row in `stills.json`,** from `bun run tools/menu-art.ts <row>` on the CPU.
 - **`look`: built on `gwotKit.ts`,** or the plain kit with `tools/levels/gwotSkin.ts` over it, with one accent no other level has (`row_of` in
-  `rust/game_rules/src/doors/paint.rs`). `LOUD_LEVELS` in `tools/levels/dress.ts` says who gets wreckable dressing.
-- **Hard, the short list, the par clock,** where the level has them: `squad_hard`, `PICKS` in `rust/game_rules/src/scene_scenario_list/short.rs`, and `scenarios.par`
+  `rust/game_rules/src/fittings/doors/paint.rs`). `LOUD_LEVELS` in `tools/levels/dress.ts` says who gets wreckable dressing.
+- **Hard, the short list, the par clock,** where the level has them: `squad_hard`, `PICKS` in `rust/game_rules/src/missions/scene_scenario_list/short.rs`, and `scenarios.par`
   (`par.rs`, `gate par`).
 
 ## 10. Measure it, then say it
 
 - **Run the checks:** `level-needs.ts <name> --run`, `levels stacks <mission>`, `gate "start <row>"`, and the row's other `gate` rows.
 - **Read a change of play side by side.** `missions --seeds 1-8 <level> > after.tsv` (`--bin missions`), then `missions diff before.tsv after.tsv`. Read eight seeds,
-  and the sums first. A row is never a claim about how hard a mission is. It asks only the names in `LEVELS` in `missions.rs`, so add a new room clear there.
-- **Some lists name their levels by hand** (`RUNS` and `SEATS` in `rows.rs`, `coop.rs`, `kit_stage.rs`). A new level is in none until added: `git grep -n "depot"`
-  shows where one is.
+  and the sums first. A row is never a claim about how hard a mission is. It asks every room clear of the mission list, so a new row is in.
+- **Some lists are chosen cases** (`RUNS` and `SEATS` in `rows.rs`, the table in `kit_stage.rs`). A new level is in none until added: `gate list` ends with the missions no run and no seats
+  row plays, and `kit_levels.rs` holds every level with a kit picture.
 - **Boot the real page once** on the mission's address, with no console or GPU errors (`.claude/skills/verify/SKILL.md`). `startpage-look.cjs` walks every row
   through its loadout, and `play-check.ts` starts every mission on the module. Say "never seen on a GPU" of what was not.
 

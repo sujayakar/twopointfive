@@ -95,11 +95,11 @@ impl Lesson {
                 }
             }).collect());
             for s in moved { p.say(s); }
-            if p.seen(|g, s| g.pl[s.player].down) {
+            if p.seen(|g, s| game::condition::down(g, g.pl[s.player].ch)) {
                 if down_for == 0.0 {
                     let by = p.ask(|g| g.chronicle.counts.down_by.clone());
                     let shooter = p.ask(|g| g.guards.iter().find(|&&x| by == g.gd[x].callsign).map(|&x| g.ch[g.gd[x].ch].pos));
-                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| g.gd[x].team != Team::Operative && g.gd[x].state != GuardState::Dead).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.ch[g.gd[x].ch].pos), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
+                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| g.gd[x].team != Team::Operative && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.ch[g.gd[x].ch].pos), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
                 }
                 down_for += 1.0 / 60.0;
                 if down_for > 2.0 { p.failure(format!("the player went down at {} (mission stage {})", at(p.pos()), p.ask(|g| g.mission.stage.as_str()))); }
@@ -186,9 +186,9 @@ impl Bot {
 
     // ---- him
     pub fn me<R>(&self, f: impl FnOnce(&game::game::Player) -> R) -> R { self.seen(|g, s| f(&g.pl[s.player])) }
-    pub fn is_down(&self) -> bool { self.me(|p| p.down) }
+    pub fn is_down(&self) -> bool { self.seen(|g, s| g.cond[g.pl[s.player].ch].down) }
     pub fn on_wall(&self) -> bool { self.me(|p| p.wall.is_some()) }
-    pub fn lit(&self) -> f64 { self.me(|p| p.visibility) }
+    pub fn lit(&self) -> f64 { self.seen(|g, s| g.shown[g.pl[s.player].ch].visibility) }
     pub fn rifle(&self) -> FirearmId { self.me(|p| p.rifle) }
     /// the gun in his hands, or the rifle where none is
     pub fn gun(&self) -> FirearmId { self.me(|p| if p.slot == SlotKind::Pistol { p.pistol } else { p.rifle }) }
@@ -196,13 +196,13 @@ impl Bot {
     pub fn reloading(&self) -> bool { let w = self.gun(); self.ask(|g| game::weapons::firearm_reloading(g, w)) }
     pub fn holding(&self) -> bool { self.me(|p| p.holding.is_some()) }
     pub fn held_fast(&self) -> bool { self.me(|p| p.holding.as_ref().is_some_and(|h| h.phase == game::character::HoldPhase::Held)) }
-    pub fn dark(&self) -> bool { self.ask(game::sim_lightshome::mains_active) }
+    pub fn dark(&self) -> bool { self.ask(|g| g.light_home.mains.active) }
     pub fn has_code(&self, code: &str) -> bool { self.me(|p| p.codes.has(String::from(code))) }
     pub fn stage(&self) -> MissionStage { self.ask(|g| g.mission.stage) }
 
     // ---- men
     pub fn men(&self) -> Vec<GuardId> { self.ask(|g| g.guards.clone()) }
-    pub fn up(&self, x: GuardId) -> bool { self.ask(|g| g.gd[x].state != GuardState::Dead) }
+    pub fn up(&self, x: GuardId) -> bool { self.ask(|g| !game::condition::down(g, g.gd[x].ch)) }
     pub fn state(&self, x: GuardId) -> GuardState { self.ask(|g| g.gd[x].state) }
     pub fn awareness(&self, x: GuardId) -> f64 { self.ask(|g| g.gd[x].awareness) }
     pub fn called(&self, x: GuardId) -> String { self.ask(|g| g.gd[x].callsign.clone()) }
@@ -215,7 +215,7 @@ impl Bot {
     pub fn on_route(&self, name: &str) -> Option<GuardId> { self.ask(|g| g.guards.iter().copied().find(|&x| g.gd[x].unit.is_none() && g.tab.route[g.gd[x].route].name == name)) }
     pub fn named(&self, names: &[&str]) -> Vec<GuardId> { names.iter().filter_map(|n| self.ask(|g| g.guards.iter().copied().find(|&x| g.gd[x].callsign == *n))).collect() }
     /// his teammates still up
-    pub fn squad(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_some() && g.gd[x].team == Team::Operative && g.gd[x].state != GuardState::Dead).collect()) }
+    pub fn squad(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_some() && g.gd[x].team == Team::Operative && !game::condition::down(g, g.gd[x].ch)).collect()) }
     pub fn chest(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([g.ch[c].pos[0], 1.25, g.ch[c].pos[2]]) }) }
     pub fn head(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]]) }) }
     /// he has a clear line from his head to the man's chest
@@ -240,10 +240,10 @@ impl Bot {
     pub fn stacked(&self) -> bool { self.squad().into_iter().all(|x| self.order_of(x).is_some_and(|a| a.order == "stack" && a.arrived)) }
     pub fn following(&self) -> bool { self.squad().into_iter().all(|x| self.ordered(x) == "fallIn") }
     pub fn men_in(&self, r: [f64; 4]) -> usize { self.squad().into_iter().filter(|&x| { let p = self.man_at(x); p[0] > r[0] && p[0] < r[1] && p[2] > r[2] && p[2] < r[3] }).count() }
-    pub fn cleared(&self, room: &str) -> bool { self.ask(|g| g.room_clear.rooms.iter().any(|r| r.def.id == room && r.cleared)) }
+    pub fn cleared(&self, room: &str) -> bool { self.ask(|g| g.staged.rooms.iter().any(|r| r.def.id == room && r.cleared)) }
     /// a room is theirs: cleared, or three of them are in it
     pub fn taken(&self, room: &str) -> bool {
-        let b = self.ask(|g| g.room_clear.rooms.iter().find(|r| r.def.id == room).map(|r| (r.cleared, [r.def.bounds.x0, r.def.bounds.x1, r.def.bounds.z0, r.def.bounds.z1])));
+        let b = self.ask(|g| g.staged.rooms.iter().find(|r| r.def.id == room).map(|r| (r.cleared, [r.def.bounds.x0, r.def.bounds.x1, r.def.bounds.z0, r.def.bounds.z1])));
         let Some((cleared, b)) = b else { return false };
         cleared || self.men_in(b) >= 3
     }

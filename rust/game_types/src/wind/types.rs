@@ -1,6 +1,6 @@
 //! The types of `wind`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -45,42 +45,20 @@ pub enum WindSourceKind {
     Storm,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Wind {
     pub all: Vec<WindWindSourceId>,
     pub active: Vec<WindWindSourceId>,
-    pub storm: WindWindSourceId,
+    #[is(WindWindSourceId(0))] pub storm: WindWindSourceId,
     pub lv_roofs: Option<Vec<Vec<f64>>>,
     pub annexed: Vec<DoorId>,
     pub extra: Vec<WindWindSourceId>,
 }
-impl Wind {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Wind {
-            all: Vec::new(),
-            active: Vec::new(),
-            storm: WindWindSourceId(0),
-            lv_roofs: None,
-            annexed: Vec::new(),
-            extra: Vec::new(),
-        }
-    }
-}
-impl Default for Wind { fn default() -> Self { Self::blank() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WindMod {
-    /// (src/game/wind.ts:38 SHAPE)
     pub shape: Option<Vec<f64>>,
-}
-impl WindMod {
-    pub fn blank() -> Self {
-        WindMod {
-            shape: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -93,8 +71,6 @@ pub struct WindStats {
     pub storm_frames: i32,
 }
 
-/// (src/game/wind.ts:111 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/wind.ts:309 UNIT_X: a table nothing writes)
 pub fn unit_x() -> V3 { [1.0, 0.0, 0.0] }

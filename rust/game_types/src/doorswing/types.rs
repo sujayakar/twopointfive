@@ -1,6 +1,6 @@
 //! The types of `doorswing`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,7 +12,7 @@ pub struct SwingDeal {
     pub clear: Option<alloc::boxed::Box<crate::doorswing::SwingDeal>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SwingWhy {
     #[default] Mission,
     Floor,
@@ -23,27 +23,9 @@ pub enum SwingWhy {
     Room,
     Hostages,
     Lock,
-    StandsOpen,
+    #[word("stands open")] StandsOpen,
     Wider,
-    LeafRoom,
-}
-impl SwingWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SwingWhy::Mission => "mission",
-            SwingWhy::Floor => "floor",
-            SwingWhy::Authored => "authored",
-            SwingWhy::Folds => "folds",
-            SwingWhy::Outside => "outside",
-            SwingWhy::Plan => "plan",
-            SwingWhy::Room => "room",
-            SwingWhy::Hostages => "hostages",
-            SwingWhy::Lock => "lock",
-            SwingWhy::StandsOpen => "stands open",
-            SwingWhy::Wider => "wider",
-            SwingWhy::LeafRoom => "leaf room",
-        }
-    }
+    #[word("leaf room")] LeafRoom,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -60,32 +42,22 @@ pub struct FloorsValue {
     pub minus: f64,
 }
 
-/// (src/game/doorswing.ts:38 MIN_OPEN)
 pub const MIN_OPEN: f64 = 0.9;
 
-/// (src/game/doorswing.ts:51 ROOF_PTS)
 pub const ROOF_PTS: f64 = 6.0;
 
-/// (src/game/doorswing.ts:51 ROOF_UNDER)
 pub const ROOF_UNDER: f64 = 1.9;
 
-/// (src/game/doorswing.ts:108 LEAF_MAN)
 pub const LEAF_MAN: f64 = 0.3;
 
-/// (src/game/doorswing.ts:108 LEAF_STEP)
 pub const LEAF_STEP: f64 = 0.1;
 
-/// (src/game/doorswing.ts:108 LEAF_WIN)
 pub const LEAF_WIN: f64 = 4.0;
 
-/// (src/game/doorswing.ts:108 LEAF_REST)
 pub const LEAF_REST: f64 = 1.84;
 
-/// (src/game/doorswing.ts:108 LEAF_CUT)
 pub const LEAF_CUT: f64 = 1.0;
 
-/// (src/game/doorswing.ts:108 LEAF_RING)
 pub const LEAF_RING: f64 = 0.25;
 
-/// (src/game/doorswing.ts:108 LEAF_WALL)
 pub const LEAF_WALL: f64 = 0.5;

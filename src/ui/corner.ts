@@ -3,14 +3,13 @@
 // no line per man of the squad, no counts of what the squad carries, no alternative under a key's line.
 //
 // This file is the reduction, with no page under it (ui/overlay.ts feeds it the rows it would have listed and draws what comes back).
-// Whether the panel is these three things at all is the view's (`interact.corner`).
 
 import type { ThingKind } from '../view/read';
 
 /** One block of the interaction panel — one ROW of the list (a verb Space can do, or a running one): what the thing is (`label`, shown only on the first row of a thing — `cont` marks the rows of the same
  *  thing under it), the key → action pair plus hint lines (`opts`; key '' = a status / hint line such as 'picking… 40%' or 'or sprint into it'), whether it is within reach (else greyed, with `dist` in
  *  metres when known), `off` (a thrown breaker), and `progress` 0‥1 for a bar (a lock being picked, the drive coming out, the leaf easing round). */
-export interface InteractRow { kind: ThingKind; label: string; opts: { key: string; text: string; tone?: string; /** a squad man down: his line is struck */ gone?: boolean }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (rust/game_rules/src/orders Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string;
+export interface InteractRow { kind: ThingKind; label: string; opts: { key: string; text: string; tone?: string; /** a squad man down: his line is struck */ gone?: boolean }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (rust/game_rules/src/squad_orders/orders Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string;
   /** a block under no heading: a line a key gives, or the lines no key gives (its label alone where it has none) · the objective's section · the clock in front of the objective */ one?: boolean; sec?: boolean; note?: string; /** … and the mission's stage, for its colour */ stage?: string }
 
 /** The objective line in its parts (null: none). The line's own word ends on '▸' ('objective ▸ …', 'training 2/7 ▸ …' — the Rust game's
@@ -23,12 +22,12 @@ export function objectiveParts(line: string): { label: string; note: string; tex
 }
 type Opt = InteractRow['opts'][number];
 /** The corner as HANDRING.corner has it. `mine`: his own rows as the panel listed them (the highlighted row, a running verb's, a line no key gives,
- *  the word an empty tap left) · `primary`: which of them is the highlighted one (-1 none) · `squad`: the squad's block (a man's line, the notes, the quick key's: game.view.squad) ·
+ *  why a press did nothing) · `primary`: which of them is the highlighted one (-1 none) · `squad`: the squad's block (a man's line, the notes, the quick key's: game.view.squad) ·
  *  `notes`: what the block and a door's heading say that the corner would lose, as a key's line or a warning under none (game.view.corner) · `objective`: the mission's line ('' =
  *  none, or a lesson's own line is up) · `stage`: the mission's stage, for the section's colour ('done', 'failed').
  *  Back: the objective as a section; then of his rows every line a key gives (the key's own, the two clicks on a man in reach) each by itself, and a
- *  row no key gives whole under no heading (a running verb's words and its bar, a committed move's, the word an empty tap left with how far); then
- *  the squad's lines a key gives (the quick key's, a plan's go, a charge to blow) and a set charge's warning; then its men lost, struck as they were (rust/game_rules/src/deathrecap). */
+ *  row no key gives whole under no heading (a running verb's words and its bar, a committed move's, why a press did nothing with how far); then
+ *  the squad's lines a key gives (the quick key's, a plan's go, a charge to blow) and a set charge's warning; then its men lost, struck as they were (rust/game_rules/src/speech/deathrecap.rs). */
 export function cornerRows(mine: InteractRow[], primary: number, squad: InteractRow[], objective: string, notes: Opt[] = [], stage = ''): { rows: InteractRow[]; primary: number } {
   const rows: InteractRow[] = []; let lit = -1; const O = objectiveParts(objective);
   if (O) rows.push({ kind: 'objective', label: O.label, opts: [{ key: '', text: O.text }], inReach: true, off: false, sec: true, note: O.note, stage });

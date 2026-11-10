@@ -1,6 +1,6 @@
 //! The types of `wallskin`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -14,7 +14,7 @@ pub struct Seat {
     pub r: [f64; 4],
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallSkin {
     pub cut: JsMap<crate::Num, Vec<FrameBoxId>>,
     pub out: JsSet<crate::Num>,
@@ -25,34 +25,12 @@ pub struct WallSkin {
     pub cand: Vec<f64>,
     pub solid: Vec<u8>,
     pub last: f64,
-    pub room: f64,
+    #[is(1000000000.0)] pub room: f64,
     pub was: bool,
     pub failed: bool,
     pub marked: JsSet<crate::Num>,
-    pub stats: crate::wallskin::WallSkinStats,
+    #[is(crate::wallskin::WallSkinStats { cut: 0.0, whole: 0.0, pieces: 0.0, capped: 0.0, coarse: 0.0, uncut: 0.0 })] pub stats: crate::wallskin::WallSkinStats,
 }
-impl WallSkin {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        WallSkin {
-            cut: JsMap::new(),
-            out: JsSet::new(),
-            laid: JsMap::new(),
-            seats: JsMap::new(),
-            on: JsMap::new(),
-            dirty: JsSet::new(),
-            cand: Vec::new(),
-            solid: Vec::new(),
-            last: 0.0,
-            room: 1000000000.0,
-            was: false,
-            failed: false,
-            marked: JsSet::new(),
-            stats: crate::wallskin::WallSkinStats { cut: 0.0, whole: 0.0, pieces: 0.0, capped: 0.0, coarse: 0.0, uncut: 0.0 },
-        }
-    }
-}
-impl Default for WallSkin { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallSkinLaidValueItem {
@@ -70,14 +48,10 @@ pub struct WallSkinStats {
     pub uncut: f64,
 }
 
-/// (src/game/wallskin.ts:78 EPS)
 pub const EPS: f64 = 0.0001;
 
-/// (src/game/wallskin.ts:78 ALL: a table nothing writes)
 pub fn all() -> [f64; 4] { [-1000000000.0, 1000000000.0, -1000000000.0, 1000000000.0] }
 
-/// (src/game/wallskin.ts:78 SLOTS)
 pub const SLOTS: f64 = 16.0;
 
-/// (src/game/wallskin.ts:80 FLUSH)
 pub const FLUSH: f64 = 0.002;

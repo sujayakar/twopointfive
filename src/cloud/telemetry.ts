@@ -7,8 +7,8 @@
 //   boot    once, when the boot is over: its timeline as the page already takes it (ui/boot.ts) — ms to interactive, the ms it waited on shader pipelines, how
 //           many there were and how many failed, the three slowest by name, the longest frozen stretch, the first frame's GPU wait, and whether the
 //           visit was a reload (a browser keeps compiled shaders between loads, or does not: that is what this record is for)
-//   run     when a mission ends: how (done / failed), its seconds and its own tally (rust/game_rules/src/mission stats), the quality it was drawn at, and `over`: the
-//           run's verdict in brief (rust/game_rules/src/verdict: its kind, the word, won or lost, seconds, the way it was won, a cheat on or not, men lost of how many,
+//   run     when a mission ends: how (done / failed), its seconds and its own tally (rust/game_rules/src/missions/mission.rs stats), the quality it was drawn at, and `over`: the
+//           run's verdict in brief (rust/game_rules/src/missions/verdict.rs: its kind, the word, won or lost, seconds, the way it was won, a cheat on or not, men lost of how many,
 //           defenders down of how many, hostages alive of how many). THE END IS THE VERDICT'S where one is given (`endStage`): only the stealth mission
 //           moves the mission's stage word into an end, so a house taken, a rescue and a team wiped wrote no record at all until the page read the verdict
 //   perf    once every `perfSecs` of LIVE play: frames, their mean and 50th / 95th / 99th / worst time in ms, how many ran past 33 / 50 / 100 ms, the quality tier
@@ -48,7 +48,7 @@
 //           moves inside it (a real Mac's first minute ended on medium at half size, and nothing said whether it fell there in the first seconds,
 //           while programs were still building, or was pushed there by the play). `from` = the page's word for its rung as the stretch began
 //           (host/drawpage.ts: preset, scale, the size drawn, 'sharp', 'shed', 'pinned') and `why` = the ladder's own last line by then (ui/quality.ts
-//           `lastChange`: 'calibrated (…): 10.0 ms compute at high → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
+//           `lastChange`: 'calibrated: measured 10.0 ms of GPU a frame on high ×0.77 → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
 //           the ladder's line for it] for each change of either, the first `moves` of them, `more` = how many after that. A fourth entry, 1, marks a
 //           change made WHILE PLAY WAS NOT LIVE (a menu, a held brief): its second is where play stood, not when it happened. The page is asked a
 //           few times a second on live frames, never every frame
@@ -75,7 +75,7 @@ export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warni
 
 export interface PlayFacts {
   scenario: string;
-  /** the mission's stage word (rust/game_rules/src/game MissionStage) and whether a run is live in the player's hands */
+  /** the mission's stage word (rust/game_rules/src/tick/game MissionStage) and whether a run is live in the player's hands */
   stage: string; live: boolean;
   stats: Record<string, unknown>;
   preset: string; scale: number; auto: boolean;

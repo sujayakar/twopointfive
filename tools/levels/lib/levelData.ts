@@ -60,15 +60,15 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
  *  prop's part that wears the row does that, unless it says its own (BoxData.does). Absent = the default row. The rules' alone, never worked out from
  *  `stuff` or from the colour: the loader writes it onto each box, and from then on the box says it. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string; }
-/** What is underfoot for everyone who listens to a footstep (rust/game_rules/src/floor: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
- *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY rust/game_rules/src/floor still owns its copy of these
- *  numbers (FINISHES / BUILDING / GRASS_EDGE); wiring rust/game_rules/src/floor to read this is a follow-up. */
+/** What is underfoot for everyone who listens to a footstep (rust/game_rules/src/world/floor.rs: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
+ *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY rust/game_rules/src/world/floor.rs still owns its copy of these
+ *  numbers (FINISHES / BUILDING / GRASS_EDGE); wiring rust/game_rules/src/world/floor.rs to read this is a follow-up. */
 export interface SurfacesData { building: Rect; grassEdge: number; inside: SurfaceMat; outside: SurfaceMat; verge: SurfaceMat; zones: { id: string; mat: SurfaceMat; x0: number; z0: number; x1: number; z1: number; notes?: string }[]; }
 export type SurfaceMat = 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass';
 
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
 export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** as BoxData.does */ does?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
-/** Loose furniture (rust/game_rules/src/props): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
+/** Loose furniture (rust/game_rules/src/fittings/props.rs): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
  *  (levelLoad.ts fitPropFootprint — the generator's own rule); store them only to override the fit (a plant's footprint is its foliage's flat sides). */
 export interface PropData { id: string; kind: PropKindName; /** PropDef.name; absent = id */ name?: string; floor?: string; x: number; z: number; /** heading; absent = 0 */ yaw?: number; mass: number; parts: PropPartData[]; half?: [number, number]; height?: number; }
 
@@ -77,33 +77,33 @@ export interface SwitchableData { id: string; boxes: string[]; group: string; on
 /** One man's beat (level.ts PatrolRoute). `id` doubles as the route name the radio uses unless `name` says otherwise. */
 export interface RouteData { id: string; name?: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
 export interface ChokepointData { id: string; name?: string; floor?: string; pos: Vec3; yaw: number; }
-/** One of the building's night people (level.ts CivilianDef — rust/game_rules/src/civilians): her loop is a route's shape (points walked, wait stood at each) plus what
+/** One of the building's night people (level.ts CivilianDef — rust/game_rules/src/people/civilians): her loop is a route's shape (points walked, wait stood at each) plus what
  *  she does at each waypoint (`tasks`, one per point, CIVILIAN_TASKS) facing which way (`face`, yaws, one per point). `name` = what the men call her (the id if absent). */
 export interface CivilianData { id: string; name?: string; kind: 'cleaner' | 'worker'; floor?: string; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; notes?: string; }
 /** A NAMED MARK (level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
- *  way (rust/game_draw/src/traffic.rs) and a level script's place (rust/game_rules/src/director). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
+ *  way (rust/game_draw/src/traffic.rs) and a level script's place (rust/game_rules/src/missions/director). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
 export interface MarkData { id: string; pos: Vec3; yaw?: number; }
 /** Authored volumes (none in the office yet): a hide spot the AI treats as cover-dark, a utility closet, a scripted trigger. Oriented box on a floor. */
 export interface VolumeData { id: string; kind: 'hide' | 'utility' | 'trigger'; floor?: string; c: Vec3; h: Vec3; yaw?: number; notes?: string; }
 
-/** The level-design devices (rust/game_rules/src/devices runs them; docs/level-format.md 'Devices'). Every one is drawn by the game itself from its record (a camera's body,
+/** The level-design devices (rust/game_rules/src/stealth/devices.rs runs them; docs/level-format.md 'Devices'). Every one is drawn by the game itself from its record (a camera's body,
  *  lens and LED; a keypad's plate and LED; a laser's emitter, receiver and beam) — none of it is in `boxes` — and every one but the keypad is a light TARGET
- *  (rust/game_rules/src/game LightTarget kind 'device'): the pistol's OCP knocks it out for the OCP's spell, a round kills it for the encounter, `mains` (absent = true) puts
- *  it on the breaker so a blackout takes it down and the restrike brings it back; `group` (absent = 'security') is the Lights-panel / daylight group.
+ *  (rust/game_rules/src/tick/game LightTarget kind 'device'): the pistol's OCP knocks it out for the OCP's spell, a round kills it for the encounter, `mains` (absent = true) puts
+ *  it on the breaker so a blackout takes it down and the restrike brings it back; `group` (absent = 'security') is the Lights-panel group.
  *   camera  at `pos` (the lens), looking along `yaw` (Character convention: forward = [sin yaw, 0, cos yaw]) tilted `pitch` (radians, negative = down; absent
  *           −0.35), panning between `sweep[0]`‥`sweep[1]` (absolute yaws) over `sweepPeriod` seconds there and back (absent 9; no sweep = fixed); `fovDeg` = the full cone
- *           (absent 70), `range` metres (absent 14). It sees Sam through the guards' own eye test and light meter (rust/game_rules/src/devices).
+ *           (absent 70), `range` metres (absent 14). It sees Sam through the guards' own eye test and light meter (rust/game_rules/src/stealth/devices.rs).
  *   keypad  the plate at `pos` facing `yaw` (out of the wall) beside DoorData `door`, which must be `locked` with `lock` = this keypad's id (the lock IS the
- *           link: rust/game_rules/src/doors Door.lockId); `code` = four digits. Sam opens it once he knows the code (interrogation / overheard); staff always do.
+ *           link: rust/game_rules/src/fittings/doors Door.lockId); `code` = four digits. Sam opens it once he knows the code (interrogation / overheard); staff always do.
  *   laser   a beam from `from` (the emitter) to `to` (the receiver) — its height is simply their y (0.35 = shin: no way over; ~1.0 = waist: crouch under);
  *           `alarm` = what breaking it does (absent 'suspicion': the radio and the nearest man over; 'alarm': the floor goes up a step). */
 export type DeviceData =
   | { id: string; kind: 'camera'; floor?: string; pos: Vec3; yaw: number; pitch?: number; sweep?: [number, number]; sweepPeriod?: number; fovDeg?: number; range?: number; group?: string; mains?: boolean; notes?: string }
   | { id: string; kind: 'keypad'; floor?: string; pos: Vec3; yaw: number; /** DoorData.id it unlocks */ door: string; code: string; notes?: string }
   | { id: string; kind: 'laser'; floor?: string; from: Vec3; to: Vec3; group?: string; mains?: boolean; alarm?: 'suspicion' | 'alarm'; notes?: string };
-/** the defaults an absent optional device field means (rust/game_rules/src/devices and the editor read them from here) */
+/** the defaults an absent optional device field means (rust/game_rules/src/stealth/devices.rs and the editor read them from here) */
 export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPeriod: 9, group: 'security', alarm: 'suspicion' as 'suspicion' | 'alarm' };
-/** An HVAC supply VENT (rust/game_rules/src/wind runs the air; docs/level-format.md 'Vents'; level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
+/** An HVAC supply VENT (rust/game_rules/src/air/wind.rs runs the air; docs/level-format.md 'Vents'; level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
  *  just under the ceiling for a ceiling one) blowing along `dir` (need not be unit) at `speed` m/s at the face, a cone of half-angle `spread` DEGREES; the air slows to
  *  half by `reach` m and is gone by 2.5 × reach; a jet aimed down turns along its floor in its last half metre. `size?` = face width (m, absent 0.6), `period?` /
  *  `duty?` / `phase?` = slow cycling (seconds, on-fraction 0‥1, offset s; absent = steady), `mains?` (absent = true: on the breaker — a blackout stops the air),
@@ -111,16 +111,14 @@ export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPerio
 export interface VentData { id: string; floor?: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; notes?: string; }
 /** What HUMS in a room (rust/game_draw Lasting; docs/level-format.md): a sound that goes on at `pos` at `level` (0‥1), dying to nothing `radius` m off; `mains?` (absent = true): it is on the breaker. */
 export interface HumData { id: string; kind: 'hum' | 'servers' | 'buzz' | 'wind'; floor?: string; pos: Vec3; level: number; radius: number; mains?: boolean; notes?: string; }
-/** The one mission thread, as objectives the fixed stage machine (rust/game_rules/src/mission) maps onto: v1 wants exactly one of each kind. */
+/** The one mission thread, as objectives the fixed stage machine (rust/game_rules/src/missions/mission.rs) maps onto: v1 wants exactly one of each kind. */
 export type ObjectiveData =
-  | { id: string; kind: 'reach'; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
-  | { id: string; kind: 'drive'; /** rack n → switchables rack<n>_leds / rack<n>_glow go dark */ rackIndex: number; /** marker point on its LED face */ front: Vec3; halfW: number }
-  | { id: string; kind: 'exfil'; door: string; /** past this x you are out */ x: number; z: number; /** the way out through it, a unit (dx, dz); absent = east: past x */ out?: [number, number] };
+  | { id: string; kind: 'reach'; /** what the room is called */ name?: string; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
+  | { id: string; kind: 'drive'; /** what the thing is called */ name?: string; /** …and what it is in */ holder?: string; /** rack n → switchables rack<n>_leds / rack<n>_glow go dark */ rackIndex: number; /** marker point on its LED face */ front: Vec3; halfW: number }
+  | { id: string; kind: 'exfil'; /** what the way out is called */ name?: string; door: string; /** past this point, going `out`, you are out */ x: number; z: number; /** the way out through it, a unit (dx, dz); absent = east: past x */ out?: [number, number] };
 export interface MissionData { playerSpawn: Vec3; objectives: ObjectiveData[]; }
 
 export interface SkyData { zenith: Vec3; horizon: Vec3; }
-/** The daytime variant (level.ts DaylightDef): the sun is a LightData of kind 'dir'. */
-export interface DaylightData { sun: LightData; sky: SkyData; groupsOn: string[]; groupsOff: string[]; /** LightData.id list */ lightsOff: string[]; haze: number; exposure: number; }
 
 /** The drill plans are the RUNTIME structs verbatim (level.ts RoomClearPlan / BreachPlan — marks, facings, aim lists, lines) plus an id; `door` is a
  *  DoorData.id. Typed BY REFERENCE and written generically below (canonical order = known keys first, anything else after, alphabetically): a plan that grows
@@ -142,13 +140,13 @@ export interface LevelData {
   doors: DoorData[];
   routes: RouteData[];
   chokepoints: ChokepointData[];
-  /** the cleaner / the late worker (rust/game_rules/src/civilians) — absent = nobody but the shift on the floor */
+  /** the cleaner / the late worker (rust/game_rules/src/people/civilians) — absent = nobody but the shift on the floor */
   civilians?: CivilianData[];
   volumes: VolumeData[];
   /** named marks — optional block: absent = the level names none (every file before the key) */
   marks?: MarkData[];
   devices: DeviceData[];
-  /** HVAC supply vents (rust/game_rules/src/wind) — optional block: absent = still air indoors */
+  /** HVAC supply vents (rust/game_rules/src/air/wind.rs) — optional block: absent = still air indoors */
   vents?: VentData[];
   /** what hums in its rooms — optional block: absent = nothing does */
   hums?: HumData[];
@@ -158,10 +156,9 @@ export interface LevelData {
   /** the mains panel: `panel` / `led` are BoxData ids (OCP the panel for a blackout, shoot it for a permanent one); `fumble?` = seconds a man sent to the
    *  tripped panel works at it before the mains come back (absent = 2.2, as on every level before the key; 7 at most) */
   breaker: { pos: Vec3; panel: string; led: string; fumble?: number };
-  /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/game slaves the beam to that target) */
+  /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (rust/game_rules/src/tick/game slaves the beam to that target) */
   beacons: { id: string; pos: Vec3; box: string }[];
   sky: SkyData;
-  daylight?: DaylightData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
   /** what the playtest scenarios take from this level (lib/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
    *  a level without the block stages none of them */
@@ -173,7 +170,7 @@ export interface LevelData {
  *  game's reader's to say. Adding a field to the format = the reader's line (rust/game_start file.rs, records.rs), its interface above, this list, and both directions in levelLoad.ts. The drill plans
  *  are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -186,8 +183,8 @@ export const KEYS = {
   route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'], hum: ['id', 'kind', 'floor', 'pos', 'level', 'radius', 'mains', 'notes'],
-  mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
-  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
+  mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'name', 'area', 'door'], drive: ['id', 'kind', 'name', 'holder', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'name', 'door', 'x', 'z', 'out'],
+  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is lib/scenarios.ts's, carried as written)
 } as const;
@@ -258,7 +255,6 @@ export function canonicalLevelData(d: LevelData): LevelData {
     breaker: pick(d.breaker, KEYS.breaker),
     beacons: d.beacons.map(b => pick(b, KEYS.beacon)),
     sky: pick(d.sky, KEYS.sky),
-    ...(d.daylight ? { daylight: { ...pick(d.daylight, KEYS.daylight), sun: canonLight(d.daylight.sun), sky: pick(d.daylight.sky, KEYS.sky) } } : {}),
     plans: { roomClear: d.plans.roomClear.map(canonPlan), ...(d.plans.breach ? { breach: canonPlan(d.plans.breach) } : {}) },
     ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — lib/scenarios.ts is their shape)
   };
@@ -285,8 +281,8 @@ export function serializeLevelData(data: LevelData): string {
     if (Array.isArray(v)) {
       if (!v.length) { lines.push(`  ${JSON.stringify(k)}: []${last}`); return; }
       lines.push(`  ${JSON.stringify(k)}: [`); v.forEach((e, i) => lines.push(`    ${compact(e)}${i === v.length - 1 ? '' : ','}`)); lines.push(`  ]${last}`);
-    } else if (v && typeof v === 'object' && (k === 'materials' || k === 'plans' || k === 'daylight' || k === 'surfaces' || k === 'mission')) {
-      // records of records: one member per line (materials by name; plans.roomClear one plan per line; daylight / surfaces / mission field per line)
+    } else if (v && typeof v === 'object' && (k === 'materials' || k === 'plans' || k === 'surfaces' || k === 'mission')) {
+      // records of records: one member per line (materials by name; plans.roomClear one plan per line; surfaces / mission field per line)
       const o = v as Record<string, unknown>; const oks = Object.keys(o).filter(x => o[x] !== undefined);
       lines.push(`  ${JSON.stringify(k)}: {`);
       oks.forEach((x, i) => {

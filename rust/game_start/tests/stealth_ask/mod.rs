@@ -321,7 +321,7 @@ impl StealthAsk for Play {
     }
     fn eyes_take_in(&mut self, h: GuardId, m: GuardId) -> bool {
         let c = self.g.gd[m].ch;
-        let v = game::guards::can_see_char(&mut self.g, h, c, false);
+        let v = game::guards::can_see_char(&mut self.g, h, c);
         v.visible && game::guards::sight_gain_on(&mut self.g, h, m, v.dist) > 0.05
     }
     fn free_near(&self, at: [f64; 2], r: f64) -> [f64; 2] {
@@ -394,7 +394,7 @@ impl StealthAsk for Play {
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: Some(th), serial: 0 });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
     }
-    fn mains_out(&self) -> bool { game::sim_lightshome::mains_active(&self.g) }
+    fn mains_out(&self) -> bool { self.g.light_home.mains.active }
     fn sent_to_the_breaker(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Breaker, .. })))) }
     fn errand_at(&self, gd: GuardId) -> [f64; 3] { match &self.g.gd[gd].task { Some(game::game::GuardTask::Arm0(k)) => k.pos, _ => panic!("no errand") } }
     fn walks_to_a_sound(&mut self, gd: GuardId, spot: [f64; 3]) {
@@ -424,7 +424,7 @@ impl StealthAsk for Play {
         let h = &mut self.g.gd[gd];
         h.hold = true;
         h.pinned = true;
-        h.dazzled_until = 1e9;
+        self.g.cond[h.ch].blind_until = 1e9;
         h.heard_up_to = 1e12;
     }
     fn let_go(&mut self, gd: GuardId) {
@@ -432,7 +432,7 @@ impl StealthAsk for Play {
         let h = &mut self.g.gd[gd];
         h.hold = false;
         h.pinned = false;
-        h.dazzled_until = -1.0;
+        self.g.cond[h.ch].blind_until = -1.0;
         h.heard_up_to = seq;
     }
     fn round_past(&mut self, shooter: game::ids::CharId, man: GuardId, off: f64, from: f64) {
@@ -460,7 +460,7 @@ impl StealthAsk for Play {
         h.state = game::game::GuardState::Alert;
         h.awareness = 1.0;
         h.react_t = 0.0;
-        h.fire_cd = 0.5;
+        self.g.arms[h.ch].fire_cd = 0.5;
         h.last_known = Some([fix[0], 0.0, fix[1]]);
         h.last_seen_t = -100.0;
         h.sight_t = -100.0;
@@ -483,7 +483,7 @@ impl StealthAsk for Play {
     }
     fn run_of(&self, gd: GuardId) -> Option<game::runner::Run> { self.g.m.runner.state_of.get(gd).cloned() }
     fn last_cam(&self) -> ([f64; 3], f64, bool) { let pl = &self.g.pl[self.g.player]; let c = *pl.cams.last().expect("a camera out"); let r = &self.g.tab.stickycam_sticky_cam[c]; (r.pos, r.si, r.vel.is_none()) }
-    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].stagger_until }
+    fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn loud_report(&mut self) {
         let (at, time, serial, who) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.time, self.g.serial(), self.g.ch[self.g.pl[self.g.player].ch].id);
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::default() });

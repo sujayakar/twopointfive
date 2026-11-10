@@ -11,7 +11,7 @@ fn office(seed: u32) -> Play {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() });
     p.sam_unhurt();
     p.run(0.5);
-    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.gd[gd].dazzled_until = 1e9; } }
+    for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
     p
 }
 
@@ -102,7 +102,7 @@ fn a_stack_of_four_keeps_its_rear() {
         let mut p = Play::mission(level, &format!("?levelFile={level}&roomclear&squad4"), &Opts { seed: 5, ..Default::default() });
         p.sam_unhurt();
         p.run(0.5);
-        for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.gd[gd].dazzled_until = 1e9; } }
+        for gd in p.g.guards.clone() { if p.g.gd[gd].team == game::teams::Team::Hostile { p.g.cond[p.g.gd[gd].ch].blind_until = 1e9; } }
         let d = p.g.doors.list.iter().copied().find(|&d| p.g.dr[d].def.name == door).unwrap_or_else(|| panic!("{level} has the door {door}"));
         let c = p.g.dr[d].frame_centre;
         p.order("stack", [c[0], c[2]], Who::All);

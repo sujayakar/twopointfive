@@ -1,4 +1,4 @@
-//! THE WALL CHARGE CATCHES WHOM ITS WARNING NAMED (rust/game_rules/src/wallcharge/p_03.rs, `wall_charge_blow_raw`).
+//! THE WALL CHARGE CATCHES WHOM ITS WARNING NAMED (rust/game_rules/src/entries/wallcharge/blow.rs, `wall_charge_blow_raw`).
 //!
 //! What this holds. In the office a charge is set on a partition (the level's wall 131, at x 12). Sam is put 2.5 m along that wall on the charge's
 //! side, but round the corner of a second partition (the wall along z 12.2), which stands on the line from the charge to him. The TOO CLOSE

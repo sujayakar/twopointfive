@@ -1,24 +1,24 @@
 //! The types of `doortools`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// the step onto the diagonals, kept until the first can's burst has run dry (doortools.ts toThreshold's `out`)
+/// the step onto the diagonals, kept until the first can's burst has run dry
 #[derive(Clone, Debug, ToBytes)]
 pub enum ThresholdOut {
     Step { lead: GuardId, f: Option<crate::doortools::DoorToolsThrFar>, sl: crate::doortools::DoorToolsDoneItemSliceValue, sf: Option<crate::doortools::DoorToolsDoneItemSliceValue>, light: bool, name: String },
 }
-/// walkLen for one deal's worth of questions, each pair of places measured once (doortools.ts walks); held in a local of the deal, never in a field
+/// walkLen for one deal's worth of questions, each pair of places measured once; held in a local of the deal, never in a field
 #[derive(Clone, Debug)]
 pub enum Walks {
     Memo { memo: JsMap<String, f64>, lim: f64 },
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorTools {
-    pub charges: f64,
-    pub bangs: f64,
-    pub frags: f64,
+    #[is(2.0)] pub charges: f64,
+    #[is(3.0)] pub bangs: f64,
+    #[is(2.0)] pub frags: f64,
     pub frag_next: bool,
     pub big_next: bool,
     pub big_row: Option<bool>,
@@ -27,81 +27,32 @@ pub struct DoorTools {
     pub set: Vec<ChargeId>,
     pub linked: Vec<DoorId>,
     pub lights: Option<bool>,
-    pub stats: crate::doortools::DoorToolsStats,
+    #[is(crate::doortools::DoorToolsStats { orders: 0.0, opened: 0.0, kicks: 0.0, shot: 0.0, picks: 0.0, no_boot: 0.0, hand_kept: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, own_flashed: 0.0, frags: 0.0, blown: 0.0, knocked: 0.0, stunned: 0.0, backblast: 0.0, entries: 0.0, words: 0.0, stepped_back: 0.0, pods_moved: 0.0, sectors: 0.0, sent_on: 0.0, sent_pair: 0.0, not_sent: 0.0, flowed: 0.0, closed_up: 0.0, flow_late: 0.0 })] pub stats: crate::doortools::DoorToolsStats,
     pub roster: Vec<GuardId>,
     pub seen: Option<crate::floorseen::FloorSeen>,
-    pub led: crate::doortools::DoorToolsLed,
+    #[is(crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 })] pub led: crate::doortools::DoorToolsLed,
     pub go_key: Option<Option<String>>,
     pub words: Vec<WordId>,
-    pub word_key_t: f64,
+    #[is(-1000000000.0)] pub word_key_t: f64,
     pub thr_key: Option<String>,
-    pub thr_sig: f64,
+    #[is(-1.0)] pub thr_sig: f64,
     pub sam_of: Option<PlayerId>,
     pub sam_spent: f64,
     pub tried: JsMap<DoorId, f64>,
     pub gate_asked: JsSet<DoorOpId>,
     pub held: JsMap<GuardId, crate::doortools::DoorToolsHeldValue>,
     pub watches: Vec<DoorOpId>,
-    pub away_why: String,
+    #[is(String::from(""))] pub away_why: String,
     pub away_far: bool,
     pub big_said: JsSet<DoorOpId>,
 }
-impl DoorTools {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        DoorTools {
-            charges: 2.0,
-            bangs: 3.0,
-            frags: 2.0,
-            frag_next: false,
-            big_next: false,
-            big_row: None,
-            ops: Vec::new(),
-            done: Vec::new(),
-            set: Vec::new(),
-            linked: Vec::new(),
-            lights: None,
-            stats: crate::doortools::DoorToolsStats { orders: 0.0, opened: 0.0, kicks: 0.0, shot: 0.0, picks: 0.0, no_boot: 0.0, hand_kept: 0.0, tested: 0.0, halted: 0.0, bangs: 0.0, own_flashed: 0.0, frags: 0.0, blown: 0.0, knocked: 0.0, stunned: 0.0, backblast: 0.0, entries: 0.0, words: 0.0, stepped_back: 0.0, pods_moved: 0.0, sectors: 0.0, sent_on: 0.0, sent_pair: 0.0, not_sent: 0.0, flowed: 0.0, closed_up: 0.0, flow_late: 0.0 },
-            roster: Vec::new(),
-            seen: None,
-            led: crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 },
-            go_key: None,
-            words: Vec::new(),
-            word_key_t: -1000000000.0,
-            thr_key: None,
-            thr_sig: -1.0,
-            sam_of: None,
-            sam_spent: 0.0,
-            tried: JsMap::new(),
-            gate_asked: JsSet::new(),
-            held: JsMap::new(),
-            watches: Vec::new(),
-            away_why: String::from(""),
-            away_far: false,
-            big_said: JsSet::new(),
-        }
-    }
-}
-impl Default for DoorTools { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DoorToolKind {
     #[default] Charge,
-    Outside,
     BangClear,
     OpenClear,
     Threshold,
-}
-impl DoorToolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolKind::Charge => "charge",
-            DoorToolKind::Outside => "outside",
-            DoorToolKind::BangClear => "bangClear",
-            DoorToolKind::OpenClear => "openClear",
-            DoorToolKind::Threshold => "threshold",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -194,9 +145,7 @@ pub struct DoorToolsDoneItemLaneBackTriesOn {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    #[default] Slice,
-    Kick,
-    Held,
+    #[default] Kick,
     Stack,
     Wait,
     Place,
@@ -510,18 +459,10 @@ pub struct KnownThreat {
     pub how: crate::doortools::KnownThreatHow,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum KnownThreatHow {
     #[default] Shot,
     Seen,
-}
-impl KnownThreatHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KnownThreatHow::Shot => "shot",
-            KnownThreatHow::Seen => "seen",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -578,36 +519,18 @@ pub struct DoortoolsModSKYValue {
     pub open: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsTakeWhat {
     Frag,
     Bang,
     Charge,
 }
-impl DoorToolsTakeWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsTakeWhat::Frag => "frag",
-            DoorToolsTakeWhat::Bang => "bang",
-            DoorToolsTakeWhat::Charge => "charge",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsRefundWhat {
     Frag,
     Bang,
     Charge,
-}
-impl DoorToolsRefundWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsRefundWhat::Frag => "frag",
-            DoorToolsRefundWhat::Bang => "bang",
-            DoorToolsRefundWhat::Charge => "charge",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -616,18 +539,10 @@ pub enum DoorToolsStackable {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsBigWord {
     Shotgun,
     Hammer,
-}
-impl DoorToolsBigWord {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsBigWord::Shotgun => "shotgun",
-            DoorToolsBigWord::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -644,20 +559,11 @@ pub struct DoorToolsStackLeftPostValue {
     pub stack_side: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsEntryVerb {
     Pick,
     Kick,
     Open,
-}
-impl DoorToolsEntryVerb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsEntryVerb::Pick => "pick",
-            DoorToolsEntryVerb::Kick => "kick",
-            DoorToolsEntryVerb::Open => "open",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -717,22 +623,11 @@ pub enum DoorToolsIssue {
     Arm1(()),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsOrderKind {
-    Outside,
     BangClear,
     OpenClear,
     Threshold,
-}
-impl DoorToolsOrderKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorToolsOrderKind::Outside => "outside",
-            DoorToolsOrderKind::BangClear => "bangClear",
-            DoorToolsOrderKind::OpenClear => "openClear",
-            DoorToolsOrderKind::Threshold => "threshold",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -763,7 +658,6 @@ pub enum DoorToolsCanThreshold {
 pub enum DoorToolsThresholdThenWhat {
     Bang,
     Step,
-    Leave,
 }
 
 #[derive(Clone, Debug)]
@@ -796,7 +690,6 @@ pub enum DoorToolsThenOnWord {
 pub enum DoorToolsCanThresholdThenWhat {
     Bang,
     Step,
-    Leave,
 }
 
 #[derive(Clone, Debug)]
@@ -953,54 +846,33 @@ pub struct DoorToolsPocketOf {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoortoolsMod {
-    /// (src/game/doortools.ts:761 SKY)
     pub sky: JsMap<RoomfightRoomId, crate::doortools::DoortoolsModSKYValue>,
 }
-impl DoortoolsMod {
-    pub fn blank() -> Self {
-        DoortoolsMod {
-            sky: JsMap::new(),
-        }
-    }
-}
 
-/// (src/game/doortools.ts:601 LEAF_EDGE)
 pub const LEAF_EDGE: f64 = 0.1;
 
-/// (src/game/doortools.ts:601 LEAF_FROM)
 pub const LEAF_FROM: f64 = 1.45;
 
-/// (src/game/doortools.ts:601 LEAF_STEP)
 pub const LEAF_STEP: f64 = 0.1;
 
-/// (src/game/doortools.ts:601 LEAF_COST)
 pub const LEAF_COST: f64 = 4.0;
 
-/// (src/game/doortools.ts:601 LEAF_POSTS: a table nothing writes)
 pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc::vec![0.5, 2.4]] }
 
-/// (src/game/doortools.ts:603 SAM_SHIFT)
 pub const SAM_SHIFT: f64 = 0.35;
 
-/// (src/game/doortools.ts:609 BIG_KEY)
 pub const BIG_KEY: &str = "KeyH";
 
-/// (src/game/doortools.ts:612 THR_PAGE)
 pub const THR_PAGE: &str = "thr";
 
-/// (src/game/doortools.ts:614 PIE_WAIT)
 pub const PIE_WAIT: f64 = 2.5;
 
-/// (src/game/doortools.ts:614 PIE_GUN: a table nothing writes)
 pub fn pie_gun() -> crate::doortools::PIEGUN { crate::doortools::PIEGUN { after: 0.2, step: 0.12, most: 3.0, every: 0.4 } }
 
-/// (src/game/doortools.ts:757 OPEN_RAD)
 pub const OPEN_RAD: f64 = 0.6;
 
-/// (src/game/doortools.ts:759 N4: a table nothing writes)
 pub fn n4() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] }
 
-/// (src/game/doortools.ts:3855 WORD_LEAD)
 pub const WORD_LEAD: f64 = 0.15;

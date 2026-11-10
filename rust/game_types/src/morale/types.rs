@@ -1,6 +1,6 @@
 //! The types of `morale`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -73,7 +73,7 @@ pub struct Blast {
     pub who: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum LineKind {
     Clear,
     Out,
@@ -84,21 +84,6 @@ pub enum LineKind {
     Duck,
     Call,
     Okay,
-}
-impl LineKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineKind::Clear => "clear",
-            LineKind::Out => "out",
-            LineKind::Lost => "lost",
-            LineKind::Spent => "spent",
-            LineKind::Order => "order",
-            LineKind::Again => "again",
-            LineKind::Duck => "duck",
-            LineKind::Call => "call",
-            LineKind::Okay => "okay",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -150,23 +135,11 @@ pub struct MoraleOf {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct MoraleMod {
-    /// (src/game/morale.ts:128 stateOf)
     pub state_of: JsMap<GuardId, crate::morale::Mind>,
-    /// (src/game/morale.ts:132 blastsOf)
     pub blasts_of: Option<Vec<crate::morale::Blast>>,
-    /// (src/game/morale.ts:219 mixAt)
     pub mix_at: Option<crate::morale::MoraleModMixAtValue>,
-}
-impl MoraleMod {
-    pub fn blank() -> Self {
-        MoraleMod {
-            state_of: JsMap::new(),
-            blasts_of: None,
-            mix_at: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -186,12 +159,9 @@ pub struct MoraleStats {
     pub flinches: i32,
 }
 
-/// (src/game/morale.ts:106 MORALE_AT: a table nothing writes)
 pub fn morale_at() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("standard"), String::from("mixed")); t.set(String::from("hard"), String::from("hard")); t } }
 
-/// (src/game/morale.ts:108 ALERT_AW)
 pub const ALERT_AW: f64 = 0.85;
 
-/// (src/game/morale.ts:142 LINES: a table nothing writes)
 pub fn lines() -> JsMap<String, crate::morale::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("duck"), crate::morale::LINESValue { say: alloc::vec![String::from("down! get down!"), String::from("get down — stay down!"), String::from("heads down!")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("call"), crate::morale::LINESValue { say: Vec::new(), he: Some(alloc::vec![String::from("he's coming in — I've got nobody in here!"), String::from("anyone on this net? he's right on top of me!")]), they: Some(alloc::vec![String::from("they're coming in — I've got nobody in here!"), String::from("anyone on this net? they're right on top of me!")]), dark: Some(alloc::vec![String::from("can't see a thing — somebody get in here!")]), lit: Some(alloc::vec![String::from("right in my room — somebody get in here!")]), now: None }); t.set(String::from("again"), crate::morale::LINESValue { say: alloc::vec![String::from("is anybody there? answer me!"), String::from("nobody's coming. nobody's coming—"), String::from("please — somebody answer!")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("out"), crate::morale::LINESValue { say: alloc::vec![String::from("I'm out! I'm out!"), String::from("empty — I'm empty!"), String::from("I'm dry! changing!")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("spent"), crate::morale::LINESValue { say: alloc::vec![String::from("no — no, stay back!"), String::from("keep away from me!"), String::from("don't — don't come in!")], he: None, they: None, dark: None, lit: None, now: Some(alloc::vec![String::from("no — no, stay back!"), String::from("stay away from me!"), String::from("don't — don't come in!")]) }); t.set(String::from("clear"), crate::morale::LINESValue { say: alloc::vec![String::from("breach on my room. I'm alone in here.")], he: Some(alloc::vec![String::from("he's breached. I'm on my own in here."), String::from("he's through. holding it on my own.")]), they: Some(alloc::vec![String::from("they've breached. I'm on my own in here."), String::from("they're through. holding it on my own.")]), dark: None, lit: None, now: None }); t.set(String::from("lost"), crate::morale::LINESValue { say: alloc::vec![String::from("they got him! they got him!"), String::from("he's down. oh no, he's down."), String::from("we've lost him! what do we do?")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("order"), crate::morale::LINESValue { say: alloc::vec![String::from("get up. watch that hole. breathe."), String::from("on your feet. eyes on that hole."), String::from("up. gun on the hole. breathe.")], he: None, they: None, dark: None, lit: None, now: None }); t.set(String::from("okay"), crate::morale::LINESValue { say: alloc::vec![String::from("okay — okay."), String::from("yeah. yeah, I'm up."), String::from("I'm up. I'm up.")], he: None, they: None, dark: None, lit: None, now: None }); t } }
 

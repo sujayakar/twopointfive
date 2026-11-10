@@ -59,7 +59,7 @@ fn the_team_is_down_when_all_of_it_is() {
             p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
             assert!(game::doze::live(&mut p.g), "seed {s}: CONTROL: both up, a calm floor dozes");
             let m = man(&p, seat);
-            p.g.pl[m].down = true;
+            p.g.cond[p.g.pl[m].ch].down = true;
             assert!(game::doze::live(&mut p.g), "seed {s}: seat {seat}'s man down and the other up: the floor is still calm");
             p.g.gd[t1].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
             p.g.alarm.episode = true;
@@ -70,8 +70,8 @@ fn the_team_is_down_when_all_of_it_is() {
             drop(p);
             let (mut q, t2) = two(s);
             let (a, b) = (man(&q, 0), man(&q, 1));
-            q.g.pl[a].down = true;
-            q.g.pl[b].down = true;
+            q.g.cond[q.g.pl[a].ch].down = true;
+            q.g.cond[q.g.pl[b].ch].down = true;
             assert!(!game::doze::live(&mut q.g), "seed {s}: CONTROL: both down, nobody is left to doze for");
             q.g.gd[t2].team = game::teams::Team::Guard;
             q.g.alarm.episode = true;
@@ -212,13 +212,13 @@ fn an_eye_sees_a_man_up_with_the_other_down() {
             let (mut p, _) = two(s);
             let m = man(&p, seat);
             let other = man(&p, 1 - seat);
-            p.g.pl[other].down = true;
+            p.g.cond[p.g.pl[other].ch].down = true;
             p.seat_stands(seat, [16.0, AISLE]);
             let pc = p.g.pl[m].ch;
             let (from, chest) = ([20.0, 1.5, AISLE], [16.0, 1.2, AISLE]);
             let look = game::v3::normalize(game::v3::sub(chest, from));
             let e = game::guards::Eye { pos: from, look, range: 20.0, half_deg: 45.0, near_m: 0.0, near_deg: 45.0, v_half_deg: Some(45.0) };
-            let vis = game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None);
+            let vis = game::guards::eye_contact(&mut p.g, e, pc, false, 1.0, None);
             assert!(vis.visible, "seed {s}: seat {seat}'s man stands in the cone, up, with the other down");
         }
     }
@@ -415,7 +415,7 @@ fn a_camera_sees_any_player_in_its_cone() {
             let (mut p, _) = two(s);
             let c = *p.g.devices.cameras.first().expect("the office has a camera");
             let def = p.g.tab.devices_camera_rt[c].def.clone();
-            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let yaw = p.g.tab.devices_camera_rt[c].yaw;
             let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(game::scene_level_data::device_defaults().pitch));
             let m = man(&p, seat);
             for x in p.mates() { p.man_stands(x, [3.5, 3.5]); }
@@ -426,15 +426,15 @@ fn a_camera_sees_any_player_in_its_cone() {
             p.frame();
             let pc = p.g.pl[m].ch;
             let spot = p.g.ch[pc].pos;
-            p.g.pl[m].visibility = 1.0;
+            p.g.shown[p.g.pl[m].ch].visibility = 1.0;
             let dd = game::scene_level_data::device_defaults();
             let half = def.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
-            let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
+            let yaw = p.g.tab.devices_camera_rt[c].yaw;
             let look = game::devices::lens_dir(yaw, def.pitch.unwrap_or(dd.pitch));
             let e = game::guards::Eye { pos: def.pos, look, range: def.range.unwrap_or(dd.range), half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
-            assert!(game::guards::eye_contact(&mut p.g, e, pc, true, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
+            assert!(game::guards::eye_contact(&mut p.g, e, pc, false, 1.0, None).visible, "seed {s}: CONTROL: the lens has seat {seat}'s man in its cone at {spot:?}");
             game::devices::update_camera(&mut p.g, c, 1.0 / 60.0, true);
-            let last = game::sim_lightshome::camera_machine_last_seen(&p.g, c);
+            let last = p.g.tab.devices_camera_rt[c].last_seen;
             assert!(last.map_or(false, |l| (l[0] - spot[0]).abs() < 0.1 && (l[2] - spot[2]).abs() < 0.1), "seed {s}: seat {seat}'s man stands at {spot:?} in the cone, the other behind the lens, and the camera last saw {last:?}");
         }
     }

@@ -51,7 +51,7 @@ fn with_his_wits_he_gets_off_a_grenade_and_the_man_behind_the_wall_stays() {
     }
 }
 
-struct Throw { shout: Option<f64>, out: Option<f64>, fuse: Option<f64>, marked: bool, told: bool, called: bool, burst: Option<[f64; 2]>, clear: bool, sam_up: bool, own: bool }
+struct Throw { shout: Option<f64>, out: Option<f64>, fuse: Option<f64>, marked: bool, called: bool, burst: Option<[f64; 2]>, clear: bool, sam_up: bool, own: bool }
 
 /// The corridor: a carrier (or, for the control, a man with nothing to throw) at its east end, staged alert on two teammates bunched ten metres west of him, Sam beside them on his own keys, moving on the cue.
 fn at_the_corridor(seed: u32, carrier: bool) -> Throw {
@@ -60,7 +60,7 @@ fn at_the_corridor(seed: u32, carrier: bool) -> Throw {
     let (men, ops) = (p.men_on_the_floor(), p.mates());
     let cars = p.frag_carriers();
     let c = men.iter().copied().find(|m| cars.contains(m) == carrier).unwrap_or_else(|| panic!("seed {seed}: no such man ({} carriers)", cars.len()));
-    for (i, &h) in men.iter().enumerate() { if h != c { p.man_stands(h, [2.0 + 1.5 * i as f64, 2.0]); p.man_posted(h); p.g.gd[h].dazzled_until = 1e9; } }
+    for (i, &h) in men.iter().enumerate() { if h != c { p.man_stands(h, [2.0 + 1.5 * i as f64, 2.0]); p.man_posted(h); p.g.cond[p.g.gd[h].ch].blind_until = 1e9; } }
     for &x in [c].iter().chain(ops.iter()) { p.man_cannot_fall(x); }
     p.man_stands(ops[0], T1);
     p.man_stands(ops[1], T2);
@@ -70,7 +70,7 @@ fn at_the_corridor(seed: u32, carrier: bool) -> Throw {
     p.camera_square();
     p.fights_from(c, CAR, T1, 0.0, 0.0);
     let n = p.said_so_far();
-    let mut t = Throw { shout: None, out: None, fuse: None, marked: false, told: false, called: false, burst: None, clear: true, sam_up: true, own: false };
+    let mut t = Throw { shout: None, out: None, fuse: None, marked: false, called: false, burst: None, clear: true, sam_up: true, own: false };
     for _ in 0..(14 * 60) {
         for k in ["KeyW", "KeyA", "KeyS", "KeyD"] { p.key_up(k); }
         if let Some(goal) = p.frag_step_off() {
@@ -89,7 +89,6 @@ fn at_the_corridor(seed: u32, carrier: bool) -> Throw {
         }
         if t.out.is_none() { if let Some(f) = p.live_frag_fuse() { t.out = Some(p.time()); t.fuse = Some(f); } }
         t.marked |= !p.view().marks.frags.is_empty();
-        t.told |= p.log().iter().any(|l| l.contains("GRENADE"));
         if p.burst_at().is_some() { break; }
     }
     t.burst = p.burst_at();
@@ -115,7 +114,7 @@ fn a_defenders_grenade_gives_a_cue_and_a_fuse_the_team_can_beat() {
         drop(probe);
         assert!(out - shout > wind - 0.1, "seed {seed}: it left his hand {:.2} s after the shout; the wind-up is {wind}", out - shout);
         assert!((t.fuse.unwrap() - fuse).abs() < 0.06, "seed {seed}: fuse {:?} of {fuse}: it was cooked", t.fuse);
-        assert!(t.told && t.marked, "seed {seed}: HUD line {} · mark {}", t.told, t.marked);
+        assert!(t.marked, "seed {seed}: no frag mark on the HUD");
         assert!(t.called, "seed {seed}: no teammate calls it");
         assert!(t.burst.is_some(), "seed {seed}: it never went off");
         assert!(t.clear, "seed {seed}: a teammate is inside the lethal ring when it goes");

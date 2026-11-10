@@ -1,6 +1,6 @@
 //! The types of `winbars`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -17,35 +17,17 @@ pub struct BarMet {
     pub flags: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum BreakBarCause {
     Blast,
     Round,
 }
-impl BreakBarCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BreakBarCause::Blast => "blast",
-            BreakBarCause::Round => "round",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WinbarsMod {
-    /// (src/game/winbars.ts:57 LOG)
     pub log: Vec<String>,
-    /// (src/game/winbars.ts:64 STATE)
     pub state: Option<crate::winbars::BarState>,
-}
-impl WinbarsMod {
-    pub fn blank() -> Self {
-        WinbarsMod {
-            log: Vec::new(),
-            state: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -59,5 +41,4 @@ pub struct WinbarsStats {
     pub spared: i32,
 }
 
-/// (src/game/winbars.ts:60 HIDE)
 pub const HIDE: f64 = 3.0;

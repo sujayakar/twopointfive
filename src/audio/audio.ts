@@ -275,8 +275,8 @@ export class AudioEngine implements GameAudioLike {
    *  the roof and the cars, built by the backend on first use, its gain eased toward `level` × its own ceiling on the ambience bus (src/audio/webaudio.ts rainLevel). */
   rain(level: number) { this.backend?.rainLevel(level); }
 
-  /** One footfall. The floor it lands on comes from the shared material map (rust/game_rules/src/floor — the same map the guards' ears and the SOUND meter read; `mat` arrives
-   *  resolved by the caller, rust/game_rules/src/floor tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
+  /** One footfall. The floor it lands on comes from the shared material map (rust/game_rules/src/world/floor.rs — the same map the guards' ears and the SOUND meter read; `mat` arrives
+   *  resolved by the caller, rust/game_rules/src/world/floor.rs tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
    *  sample runs a touch brighter on stone / duller on carpet. `loudness` already carries the material's share (carpet 0.6 ×, stone 1.1 × …), so it goes straight to the gain. */
   footstep(pos: Vec3, loudness: number, isPlayer: boolean, mat: FloorMat) {
     const f = FLOOR[mat];

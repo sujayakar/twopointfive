@@ -1,6 +1,6 @@
 //! The types of `wet`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -13,20 +13,10 @@ pub struct WetMem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WetMod {
-    /// (src/game/wet.ts:53 mem)
     pub mem: JsMap<CharId, crate::wet::WetMem>,
-    /// (src/game/wet.ts:127 dripN)
     pub drip_n: f64,
-}
-impl WetMod {
-    pub fn blank() -> Self {
-        WetMod {
-            mem: JsMap::new(),
-            drip_n: 0.0,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -4,7 +4,7 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct StacklineK {
-    /// a leaf at this angle or more (rad), unlatched, STANDS OPEN (rearwatch.ts's own figure); one off its hinges always does
+    /// a leaf at this angle or more (rad), unlatched, STANDS OPEN; one off its hinges always does
     #[k(0.6)] pub ajar: f64,
     /// strips the opening is cut into · the height a line is asked at (m) · how far short of the frame line a sight line to a strip ends (so the frame's own
     ///  jambs are not in it)

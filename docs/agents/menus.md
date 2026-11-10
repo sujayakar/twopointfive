@@ -27,7 +27,7 @@ replays are `replays.md`, co-op is `net.md`, how text is worded is `writing.md`.
 | `src/ui/loadout.ts`, `kitCard.ts`, `kitDense.ts`, `kitIcons.ts` | the kit step: team, squad kit, chips, Deploy; a man's card, its lay-out, its drawings |
 | `kitBrief.ts` | the job and map kept in sight over the kit |
 | `kitView.ts`, `src/host/kitpage.ts`, `kitguard.ts` | the team at the door: the kit screen's half, the window's half, the window's read-only stores |
-| `rust/game_run/src/desk.rs`, `src/view/desk.ts` | the desk: what the cards before a game ask and press |
+| `rust/game_start/src/host/desk.rs`, `src/view/desk.ts` | the desk: what the cards before a game ask and press |
 | `start_list/`, `kit/`, `loadout/`, `kitstage/` (rules) | the list and its settings, the cards, a mission's link and size, the staged picture |
 | `src/ui/loadbrief.ts`, `startwait.ts`, `settle.ts` | the brief; the start waits for its picture |
 | `src/ui/pausecard.ts`, `runcard.ts`, `debrief.ts`, `verdictCard.ts`, `recap.ts` | the pause and end cards, the saves on them, the end card's contents |
@@ -37,19 +37,19 @@ replays are `replays.md`, co-op is `net.md`, how text is worded is `writing.md`.
 | `src/ui/tabcard.ts`, `src/host/drawhud.ts` | Tab's card; the page's HUD |
 | `src/ui/overlay.ts`, `corner.ts`, `handbox.ts`, `bubbles.ts` | the HUD's DOM, the corner panel's reduction, the kit column, speech |
 | `cmdring.ts`, `ringlone.ts`, `planfloor.ts`, `squadthrowviz.ts`, `attentionviz.ts` | on the floor's layer: both rings, a ring with one row, the plan, a squad throw, a guard's attention |
-| `src/view/`, `rust/game_rules/src/view/` | the view as the page reads it (`read.ts` is written from `rust/game_types/src/view/`); `tick_view`, `debrief_view` |
+| `src/view/`, `rust/game_rules/src/tick/view/` | the view as the page reads it (`read.ts` is written from `rust/game_types/src/view/`); `tick_view`, `debrief_view` |
 | `src/host/debugger.ts`, `src/ui/panel.ts`, `graphicspanel.ts`, `lookpanel.ts`, `netrows.ts` | the debugger: its rows, the panel, its other pages |
-| `rust/game_run/src/shown.rs`, `actions.rs`, `knobs.rs` | its rows of numbers, its buttons, every knob by name |
-| `src/host/sandbox.ts`, `src/host/machine.ts` | what this machine keeps of the cheats and how it plays, as the commands a game is handed |
+| `rust/game_start/src/host/shown.rs`, `actions.rs`, `knobs.rs` | its rows of numbers, its buttons, every knob by name |
+| `src/host/sandbox.ts`, `src/host/machine.ts` | what this machine keeps of the cheats and how it plays: the record a start is handed (`Kept`, `host/kept.rs`) |
 | `src/ui/textsize.ts`, `src/ui/theme.ts` | the text size; the one look (`--m-accent`, `--m-head`) |
 | `src/ui/readout.ts`, `src/host/measure.ts`, `capture.ts`, `src/ui/bench.ts` | the frame-rate readout (`?hud`), F8 and F9, F6, the benchmark |
 | `index.html` | the styles of `#menu`, `#missions` and the HUD. Other screens inject their own |
 
 ## How it works
 
-**No game behind a card.** A card holds no rule. `Desk` is one blank game in the module, done the same commands a start is done, so a man is staged with what his card shows.
+**No game behind a card.** A card holds no rule. `Desk` is one blank game in the module, laid what a start is laid (`host::lay`), so a man is staged with what his card shows.
 The page asks by the `asks!` list (`src/draw/asks.ts` is made from it). A press answers `Pressed`; where it changed what the machine keeps, `kept` carries the text to
-localStorage, and the next page's `machineBefore` gives it back as commands. A mission row is a link (`StartRow.link`), and Deploy loads the address `deploy_link` made, so a
+localStorage, and the next page's `machineKept` gives it back as the record. A mission row is a link (`StartRow.link`), and Deploy loads the address `deploy_link` made, so a
 pasted address starts the same run.
 
 **The kit picture is a second page.** `kitView.ts` opens an iframe of this page on Deploy's address plus `kitview`. The module stages the team at the way in, and the man whose
@@ -79,11 +79,11 @@ the tick; otherwise it is the card. `stopped` is every reason the world holds st
 drawn, through the camera that drew it. `HudPage` and `pageSay` are the little the page adds. `locked` and `offered` are how a tutorial shuts keys and rows.
 The corner panel is `cornerRows`.
 
-**The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring/` and `interact/`. A tap does the default;
+**The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring.rs` and `interact/`. A tap does the default;
 the key kept down a moment puts the ring up. Let go on a wedge does it; let go in the middle leaves the ring up, and 1 to 5 or a click picks. The whistle is the last wedge of
 his own ring (`whistle_wedge`). The squad's key tapped twice is fall in (`twice`), and Shift with it sends part of the squad.
 
-**The kit column** is `kit_view`, drawn by `drawHandBox`. The gun's digit pressed again opens its setup (`slotsetup/`), above the column. On every gun 1 is the selector, 2 the
+**The kit column** is `kit_view`, drawn by `drawHandBox`. The gun's digit pressed again opens its setup (`slotsetup.rs`), above the column. On every gun 1 is the selector, 2 the
 load, 3 the light.
 
 **A run's end.** `View.ended` moves, `onEnded` runs `pause.end()`, and `drawEnd` asks the module once. `renderDebrief` lays it out, and Run so far is the same record. `RunBooks`
@@ -124,7 +124,7 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
 - **A key:** `KEY_ACTS` for a row, `KEYS` in `options.ts` for its words. Ask the game for a code. `?keybinds=0`, `?qfree=0`, `?camspace=0`, `?slotsetup=0`, `?qonly=0`,
   `?menuletters=0`, `?pinchonly=0` and `?bkey` turn the board's rules off for a visit.
 - **A setting:** a `flip`, `seg` or `range` in its tab's branch of `render`, kept by `keep`. One a game holds goes on `OptionsGame` and `settingsOf`, with a command in
-  `rust/game_run/src/command.rs` and a word in `rust/game_draw/src/view.rs`.
+  `rust/game_start/src/host/command.rs` and a word in `rust/game_draw/src/view.rs`.
 - **Something a card asks:** a line of `asks!` with the next number, then `bun run tools/draw/gen.ts`.
 - **Something the HUD says:** its struct in `rust/game_types/src/view/types.rs`, filled by its rule's own module, its line in `tick_view`, `bun run tools/draw/gen.ts`, the read in
   `overlay.ts`. After Rust, `bun run tools/blitz/face-build.ts`.
@@ -135,8 +135,8 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
 
 | native test | what it holds |
 |---|---|
-| `rust/game_run/tests/desk.rs`, `staged.rs` | the desk by its bytes; a man is staged with what his card shows, on every mission |
-| `rust/game_run/tests/shown.rs`, `words_start.rs` | each panel row is a number of the game; the address's words at a start |
+| `rust/game_start/tests/desk.rs`, `staged.rs` | the desk by its bytes; a man is staged with what his card shows, on every mission |
+| `rust/game_start/tests/shown.rs`, `words_start.rs` | each panel row is a number of the game; the address's words at a start |
 | `kit.rs`, `kit_view.rs`, `kit_stage.rs`, `kit_acts.rs`, `kit_levels.rs` | the kit and its column; the kit picture on every level and way |
 | `view.rs`, `hud.rs`, `hud_marks.rs`, `cursor.rs`, `rings.rs`, `lesson_view.rs` | what the HUD is told |
 | `order_keys.rs`, `menu.rs` | the order keys; one menu row a table row |

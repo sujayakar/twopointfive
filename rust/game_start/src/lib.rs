@@ -12,7 +12,6 @@ pub mod gltf;
 pub mod file;
 pub mod level;
 pub mod passes;
-pub mod settings;
 pub mod stand;
 pub mod handed;
 #[cfg(feature = "std")]
@@ -28,6 +27,7 @@ pub mod play;
 pub mod hand;
 pub mod block;
 pub mod hands_off;
+pub mod host;
 pub mod figures;
 pub mod owes;
 pub mod parts;

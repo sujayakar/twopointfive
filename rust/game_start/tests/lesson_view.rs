@@ -1,4 +1,4 @@
-//! WHAT THE HUD IS TOLD OF A LESSON (the view's `lesson` section: rust/game_rules/src/lesson `lesson_view`, src/rails `rails_view`): the step that is up, its
+//! WHAT THE HUD IS TOLD OF A LESSON (the view's `lesson` section: rust/game_rules/src/missions/lesson.rs `lesson_view`, src/rails `rails_view`): the step that is up, its
 //! line, its card and its arrow, the actions open, the men the line keeps clear of. The page words none of it again.
 use game::orders::Who;
 use game::view::{LessonView, RailsView};
@@ -39,7 +39,7 @@ fn the_hud_is_told_the_step_that_is_up_and_what_it_opens() {
         let line = f.prompt.as_ref().expect("the run is on");
         assert!(line.line.starts_with("Hold [Ctrl]") && line.n == 1 && line.of == 12 && !line.watch && line.note.is_none(), "seed {}: {:?}", seed, line);
         // (the mission's line words the key the same way, by its code: the page has the player's keys)
-        let row = p.view().mission.expect("the lesson's row").text;
+        let row = p.view().mission.text;
         assert!(row.starts_with("training 1/12 \u{25b8} Hold [Ctrl]"), "seed {}: {:?}", seed, row);
         assert!(opens(&v, "zoom") && opens(&v, "camera") && !opens(&v, "order") && !opens(&v, "word"), "seed {}: {:?}", seed, f.open);
         assert!(p.view().squad.map_or(true, |q| q.quick.is_none()), "seed {}: the lesson holds the squad's key back, and its line is told", seed);
@@ -241,7 +241,7 @@ fn in_a_game_of_two_each_hud_is_told_of_its_own_seat() {
 
         // the second man down: the run is over for him alone
         let him = game::seats::seat(&p.g, s).player;
-        p.g.pl[him].down = true;
+        p.g.cond[p.g.pl[him].ch].down = true;
         let (a, b) = (p.view_of(0).lesson.unwrap(), p.view_of(1).lesson.unwrap());
         assert!(b.over && frame_of(&b).prompt.is_none(), "seed {}: {:?}", seed, b);
         assert!(!a.over && frame_of(&a).prompt.is_some(), "seed {}: {:?}", seed, a);

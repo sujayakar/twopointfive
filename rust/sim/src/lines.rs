@@ -12,20 +12,21 @@
 //! WHETHER A PANE IS OPEN where a line or a ray meets it is answered here (glass.rs, over the copy of every pane that is no longer whole): a line that
 //! crosses a hole is not stopped by the pane, and a ray flies on through it to what stands beyond, as the TypeScript's own walks do pane by pane.
 //!
-//! What is not here is a rule of play that is still TypeScript: whether a round gets through the panes on its line (game/glasspen.ts). The module asks
+//! What is not here is a rule of play that is still TypeScript: whether a round gets through the panes on its line. The module asks
 //! nobody (it imports nothing): for a line of fire the walk LISTS the glass the line crosses that is not open there — which pane, and where the line
 //! enters it — and goes on; the host judges the list when the walk is back.
 
+use game_types::knobs::Knobs;
 use crate::glass;
 use crate::maths::hypot3;
 use crate::world::*;
 use prim::{floor, sqrt};
 
-/// how far past a box's own bounds the early rejects still count it as near (collision.ts SEG_PAD)
+/// how far past a box's own bounds the early rejects still count it as near
 const SEG_PAD: f64 = 0.05;
 const INF: f64 = f64::INFINITY;
 
-/// collision.ts segClear: can the segment be said, without the slab test, to come nowhere near the box
+/// Can the segment be said, without the slab test, to come nowhere near the box
 #[inline(always)]
 fn seg_clear(a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, b: &[f64], pad: f64) -> bool {
     let hy = neg_up(b[R_H + 1]);
@@ -70,7 +71,7 @@ fn slab(h: f64, o: f64, inv: f64, t0: &mut f64, t1: &mut f64, entered: &mut bool
     !(*t0 > *t1)
 }
 
-/// collision.ts rayBoxHits: does the ray enter this yawed box within tmax
+/// Does the ray enter this yawed box within tmax
 #[inline(always)]
 fn ray_box_hits(a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64], tmax: f64) -> bool {
     let (cs, sn) = (b[R_COS], b[R_SIN]);
@@ -112,7 +113,7 @@ fn to_local(a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64]) -> 
     }
 }
 
-/// cut.ts cutClip: the interval cut down by the record's planes. (t0, t1, k) — k the plane entered through, −1 if t0 did not move — or None = nothing left
+/// The interval cut down by the record's planes. (t0, t1, k) — k the plane entered through, −1 if t0 did not move — or None = nothing left
 #[inline]
 fn cut_clip(planes: &[f64], n: usize, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, mut t0: f64, mut t1: f64) -> Option<(f64, f64, i32)> {
     let mut k = -1i32;
@@ -158,7 +159,7 @@ fn ray_box_t(cut: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, 
     ray_box_n(cut, a0, a1, a2, r0, r1, r2, b, tmax).map(|h| h.0)
 }
 
-/// collision.ts lineBox: the interval [t0, t1] over which the LINE lies inside the box, and how deep inside it the origin sits; None = the line misses it
+/// The interval [t0, t1] over which the LINE lies inside the box, and how deep inside it the origin sits; None = the line misses it
 pub fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64]) -> Option<(f64, f64, f64)> {
     let cut = &o.cut[..];
     let kind = b[R_KIND] as u32;
@@ -244,7 +245,7 @@ pub fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64,
     Some((t0, t1, depth))
 }
 
-/// collision.ts dynamicHit: one loose box against a segment already reduced to origin + unit direction + length
+/// One loose box against a segment already reduced to origin + unit direction + length
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 fn loose_hit(cut: &[f64], b: &[f64], a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, uu: f64, su: f64, lu: f64) -> bool {
@@ -311,10 +312,10 @@ pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, and
 /// list of panes is full
 #[inline]
 #[allow(clippy::too_many_arguments)]
-fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64) -> i32 {
+fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tune: &Knobs) -> i32 {
     if rule {
         let te = js_max(0.0, t0);
-        if glass::open(o, bi, a0 + r0 * te, a1 + r1 * te, a2 + r2 * te) {
+        if glass::open(o, bi, a0 + r0 * te, a1 + r1 * te, a2 + r2 * te, tune) {
             return 0;
         }
     }
@@ -331,12 +332,12 @@ fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0
 /// collision.ts segmentBlocked, past its length (`len` = the host's own length of b − a, at least 1e-4 and finite): −1 = something solid is in the way ·
 /// n ≥ 0 = nothing solid is, and n panes of glass are (listed in pane_bi / pane_t: 0 unless it is a line of fire) · −2 = more glass than the list holds
 /// (the host asks its own walk instead)
-pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
-    blocked_over(w, &Over::with(set), a0, a1, a2, b0, b1, b2, len, shrink, through, ask)
+pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32, tune: &Knobs) -> i32 {
+    blocked_over(w, &Over::with(set), a0, a1, a2, b0, b1, b2, len, shrink, through, ask, tune)
 }
 /// …of the world as the question takes it: the leaves it lets through, the statics it lets through, the boxes it adds
 #[allow(clippy::too_many_arguments)]
-pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, ask: u32) -> i32 {
+pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, ask: u32, tune: &Knobs) -> i32 {
     let (o, s) = (world_read(w), asking(w));
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
     let il = 1.0 / len;
@@ -398,7 +399,7 @@ pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: 
             }
             if t1 > shrink && t0 < len - shrink {
                 if fl & F_GLASS != 0 {
-                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2, tune) {
                         0 => continue,
                         said => return said,
                     }
@@ -597,7 +598,7 @@ pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: 
             }
             if t1 > shrink && t0 < len - shrink {
                 if fl & F_GLASS != 0 {
-                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2, tune) {
                         0 => continue,
                         said => return said,
                     }
@@ -623,34 +624,34 @@ fn walked(a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Result<f64, O
         Ok(len)
     }
 }
-/// IS A MAN HIDDEN FROM AN EYE (fogofwar.ts lineToMan, guards.ts eyeContact): the chest first, and the head only behind a blocked chest
+/// IS A MAN HIDDEN FROM AN EYE: the chest first, and the head only behind a blocked chest
 #[inline]
 #[allow(clippy::too_many_arguments)]
-pub fn man_hidden(w: usize, set: i32, through: u32, e0: f64, e1: f64, e2: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> Option<bool> {
-    match sight_line(w, set, through, e0, e1, e2, c0, c1, c2) {
-        Some(true) => sight_line(w, set, through, e0, e1, e2, h0, h1, h2),
+pub fn man_hidden(w: usize, set: i32, through: u32, e0: f64, e1: f64, e2: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64, tune: &Knobs) -> Option<bool> {
+    match sight_line(w, set, through, e0, e1, e2, c0, c1, c2, tune) {
+        Some(true) => sight_line(w, set, through, e0, e1, e2, h0, h1, h2, tune),
         said => said,
     }
 }
 /// collision.ts segmentBlocked(a, b, 0.02, through) for a line that PASSES glass (`through` carries the glass flag, so no pane is ever the host's to judge):
 /// the length is the game's own, worked out here. None = not a line this module walks (a length that is no length of this world's): the host asks its own.
 #[inline]
-pub fn sight_line(w: usize, set: i32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+pub fn sight_line(w: usize, set: i32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
         Ok(len) => len,
         Err(said) => return said,
     };
-    Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0) == -1)
+    Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0, tune) == -1)
 }
 /// collision.ts solidBlocked(a, b): the same line with nothing passed. `ask` = ASK_GLASS where the game has a rule for an open pane. None = a line too
 /// long to be a line of this world: the host's to judge.
 #[inline]
-pub fn solid_line(w: usize, set: i32, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+pub fn solid_line(w: usize, set: i32, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
         Ok(len) => len,
         Err(said) => return said,
     };
-    match blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, 0, set, ask) {
+    match blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, 0, set, ask, tune) {
         -1 => Some(true),
         0 => Some(false),
         _ => None,
@@ -666,7 +667,7 @@ pub fn leaf_line(w: usize, set: i32, need: u32, a0: f64, a1: f64, a2: f64, b0: f
     Some(leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set))
 }
 
-// ---- THE RAY: the nearest thing along it, how far, and the face it is entered by (collision.ts raycast, boxes.ts rayBox)
+// ---- THE RAY: the nearest thing along it, how far, and the face it is entered by
 
 /// one slab of rayBox with the face it enters by: the interval cut down by the faces at ±h along axis `k`; the entry's axis and sign kept. false = nothing left
 #[inline(always)]
@@ -841,25 +842,25 @@ pub const RAY_LEAF: i32 = 1_000_000;
 /// …and a box the question added
 pub const RAY_EXTRA: i32 = 2_000_000;
 
-/// collision.ts raycast: the nearest thing the ray from a along the unit r meets within tmax — the leaves of list `set` first (−1: none), then the statics of
+/// The nearest thing the ray from a along the unit r meets within tmax — the leaves of list `set` first (−1: none), then the statics of
 /// the cells round the ray, walked in half-metre steps UNTIL THE RAY HAS LEFT THE LEVEL FOR GOOD (so no length is too long: a ray of a thousand
 /// kilometres is walked as far as the level reaches and no farther; one straight up or down is one sample). → RAY_NONE · RAY_HOST (a ray that is no number: there is no answer to give) · the
 /// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. `ask` = the game has a rule for an open pane: a pane
 /// met where it is open is passed, and the ray flies on to what stands beyond.
 #[allow(clippy::too_many_arguments)]
-pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: bool, out: &mut [f64]) -> i32 {
-    ray_over(w, &Over::with(set), a0, a1, a2, r0, r1, r2, tmax, ask, out)
+pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
+    ray_over(w, &Over::with(set), a0, a1, a2, r0, r1, r2, tmax, ask, out, tune)
 }
 /// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
 /// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
+pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     let one = [but as u32];
-    ray_over(w, &Over { but: if but >= 0 { &one } else { &[] }, ..Over::with(set) }, a0, a1, a2, r0, r1, r2, tmax, ask, out)
+    ray_over(w, &Over { but: if but >= 0 { &one } else { &[] }, ..Over::with(set) }, a0, a1, a2, r0, r1, r2, tmax, ask, out, tune)
 }
 /// …of the world as the question takes it. A box it adds is RAY_EXTRA + its place.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, ask: bool, out: &mut [f64]) -> i32 {
+pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     let (o, q) = (world_read(w), asking(w));
     let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
     if v.set >= 0 {
@@ -930,7 +931,7 @@ pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64,
                     }
                     if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
                         if t < best {
-                            if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t) {
+                            if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t, tune) {
                                 continue;
                             }
                             best = t;
@@ -959,16 +960,16 @@ pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64,
 /// so, and the host names the mistake). `set`, `but` and `ask` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the
 /// leaf's; `out` as ray writes it.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
+pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     if !(tmax > 0.0) {
         return RAY_NONE;
     }
-    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out)
+    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out, tune)
 }
 
 /// where ray_things says which part it met, after how far along and the normal
 pub const RAY_PART: usize = 4;
-/// game/props.ts PropSystem.raycast: the nearest PART of any thing of furniture the ray from a along the unit r meets within tmax — the things in the
+/// The nearest PART of any thing of furniture the ray from a along the unit r meets within tmax — the things in the
 /// furniture's own order (the world's `thing_live`), each passed by if the upright cylinder that holds it is clear of the ray in plan or lies behind it
 /// or beyond the best so far, its parts (list THING_SET of the leaves) in their order. → −1, or which thing of the level's list; and into `out` how far
 /// along, the face's normal, and which part of the list.

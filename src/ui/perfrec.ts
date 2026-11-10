@@ -257,7 +257,7 @@ export class PerfRecorder {
     if (this.quality.label !== this.lastPreset) { this.event('preset', `${this.lastPreset} → ${this.quality.label}`); this.lastPreset = this.quality.label; }
     if (Math.abs(E.effectiveScale - this.lastEff) > 0.004) { this.event('scale', `effective ×${this.lastEff.toFixed(2)} → ×${E.effectiveScale.toFixed(2)} = ${E.width}×${E.height} (render scale ×${E.settings.renderScale.toFixed(2)} of the cap; ${E.settings.keepHistories ? 'histories resampled, targets from the pool' : 'keepHistories OFF: histories restarted, targets reallocated → expect one slow frame'})`); this.lastEff = E.effectiveScale; }
     const qn = this.quality.lastChange ?? ''; if (qn && qn !== this.lastQualityNote) { this.event('ladder', qn); this.lastQualityNote = qn; }
-    // a checkpoint written or put back in this step (rust/game_rules/src/savestate Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
+    // a checkpoint written or put back in this step (rust/game_rules/src/tick/savestate Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
     const sv = g.saves?.stats, nSave = (sv?.autosaves ?? 0) + (sv?.manual ?? 0), nLoad = sv?.loads ?? 0;
     if (nSave !== this.lastSaves) { if (this.lastSaves >= 0 && nSave > this.lastSaves) this.event('save', `a checkpoint was written (${sv?.autosaves ?? 0} by the game, ${sv?.manual ?? 0} by hand in this run)`); this.lastSaves = nSave; }
     if (nLoad !== this.lastLoads) { if (this.lastLoads >= 0 && nLoad > this.lastLoads) this.event('load', 'a checkpoint was put back'); this.lastLoads = nLoad; }

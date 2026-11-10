@@ -1,4 +1,4 @@
-//! MEN ON THE MOVE KEEP A GUN ON AN OPEN WAY THEY PASS (rust/game_rules/src/cover/): a doorway, a gap, a hole just blown. Nobody tells them to.
+//! MEN ON THE MOVE KEEP A GUN ON AN OPEN WAY THEY PASS (rust/game_rules/src/teammates/cover/): a doorway, a gap, a hole just blown. Nobody tells them to.
 use game::orders::Who;
 use game_start::play::{dist, Opts, Play};
 

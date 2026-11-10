@@ -1,20 +1,20 @@
 //! The types of `verdict`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Verdict {
     pub run: Option<u32>,
-    pub t0: f64,
+    #[is(f64::NAN)] pub t0: f64,
     pub origin: V3,
     pub order0: Option<u32>,
     pub origins: Vec<V3>,
     pub fired0: f64,
     pub resumed: bool,
     pub cheat: bool,
-    pub found_at: f64,
-    pub dark_at: f64,
+    #[is(-1.0)] pub found_at: f64,
+    #[is(-1.0)] pub dark_at: f64,
     pub dark_when_found: bool,
     pub through: bool,
     pub wall_serial: f64,
@@ -24,38 +24,9 @@ pub struct Verdict {
     pub fell: JsSet<GuardId>,
     pub fell_at: Vec<f64>,
     pub res: Option<crate::verdict::RunVerdict>,
-    pub card_at: f64,
+    #[is(-1.0)] pub card_at: f64,
     pub kept: Option<crate::verdict::KeptNote>,
 }
-impl Verdict {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Verdict {
-            run: None,
-            t0: f64::NAN,
-            origin: [0.0, 0.0, 0.0],
-            order0: None,
-            origins: Vec::new(),
-            fired0: 0.0,
-            resumed: false,
-            cheat: false,
-            found_at: -1.0,
-            dark_at: -1.0,
-            dark_when_found: false,
-            through: false,
-            wall_serial: 0.0,
-            holes: Vec::new(),
-            tracks: JsMap::new(),
-            foes: JsSet::new(),
-            fell: JsSet::new(),
-            fell_at: Vec::new(),
-            res: None,
-            card_at: -1.0,
-            kept: None,
-        }
-    }
-}
-impl Default for Verdict { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Track {
@@ -75,25 +46,16 @@ pub struct Track {
     pub next: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum ManState {
     #[default] Dead,
     Out,
     Up,
 }
-impl ManState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManState::Dead => "dead",
-            ManState::Out => "out",
-            ManState::Up => "up",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunVerdict {
-    pub kind: Option<crate::verdict::RunVerdictKind>,
+    pub kind: Option<crate::scene_scenarios::MissionKind>,
     pub won: bool,
     pub word: String,
     pub why: String,
@@ -109,40 +71,12 @@ pub struct RunVerdict {
     pub start: [f64; 2],
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
-pub enum RunVerdictKind {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl RunVerdictKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunVerdictKind::Nightbreach => "nightbreach",
-            RunVerdictKind::Roomclear => "roomclear",
-            RunVerdictKind::Rescue => "rescue",
-            RunVerdictKind::Quiet => "quiet",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum Approach {
     Doors,
     Quiet,
     Walls,
     Dark,
-}
-impl Approach {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Approach::Doors => "doors",
-            Approach::Quiet => "quiet",
-            Approach::Walls => "walls",
-            Approach::Dark => "dark",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

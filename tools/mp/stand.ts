@@ -6,25 +6,22 @@ import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { WireCmd, Outcome } from '../../src/net/wire.ts';
 import type { Ahead } from '../../src/net/foresee.ts';
-import { commandBytes, commandText, startWhy, type NetStart } from '../../src/net/start.ts';
+import { startWhy, type NetStart } from '../../src/net/start.ts';
 import { NetGame, type NetFace } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
-import { Commands } from '../../src/draw/commands.ts';
-import { machineBefore } from '../../src/host/machine.ts';
 import { toolDesk, toolModule } from '../desk.ts';
 import { characterFiles, pack } from '../blitz/start-pack.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
-/** what whoever makes a game says of it: the page's address for the mission, the die, and what the host has set before the game is made (its commands' bytes as base64; none said: what
- *  the address itself says of it, on a machine that keeps nothing) */
-export interface StartSetup { search: string; seed: number; commands?: string }
+/** what whoever makes a game says of it: the page's address for the mission, the die, and what the host's machine keeps (its one text; none said: nothing, and the
+ *  address itself says what it says) */
+export interface StartSetup { search: string; seed: number; kept?: string }
 /** a game is of a mission: the game says whether the words name one */
 const namesNone = (s: NetStart): string => toolDesk().kind(s.words) ? '' : `the words ${s.words.slice(0, 60)} name no mission`;
 export function freshStart(setup: StartSetup): NetStart {
-  const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json', C = new Commands();
-  if (setup.commands === undefined) machineBefore(q, named, C);
-  const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? commandText(C.take()) };
+  const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json';
+  const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), kept: setup.kept ?? '' };
   const why = startWhy(start) || namesNone(start); if (why) throw new Error(`the setup: ${why}`);
   return start;
 }
@@ -62,7 +59,7 @@ export async function standStart(start: NetStart): Promise<Stood> {
   const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
   const raw = new WebAssembly.Instance(toolModule()).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
-  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), commandBytes(start)]);
+  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), new TextEncoder().encode(start.kept)]);
   const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
   const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
   X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);

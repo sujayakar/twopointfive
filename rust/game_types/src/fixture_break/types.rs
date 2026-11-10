@@ -1,6 +1,6 @@
 //! The types of `fixture_break`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -130,23 +130,11 @@ pub struct GlowAtOut {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FixtureBreakMod {
-    /// (src/game/fixtureBreak.ts:28 FIXLOOK)
-    pub fixlook: crate::fixture_break::FixtureBreakModFIXLOOK,
-    /// (src/game/fixtureBreak.ts:64 STATE)
+    #[is(crate::fixture_break::FixtureBreakModFIXLOOK { on: true, max_panels: 12.0, rest_deg: [55.0, 65.0], swing_k: 30.0, swing_c: 2.2, kick: 3.4, hang_secs: 1.9, slide: 0.35, skew: 0.5, pops: alloc::vec![0.62, 1.0, 1.5, 2.2, 3.1], pop_sparks: alloc::vec![30.0, 22.0, 13.0, 9.0, 6.0], pop_gain: alloc::vec![1.0, 0.8, 0.55, 0.4, 0.3], pop_tau: 0.07, glow_tip: 12.0, spark: crate::fixture_break::FixtureBreakModFIXLOOKSpark { speed: 6.0, speed_jit: 0.6, spread: 1.15, life: 0.42, life_jit: 0.5, size: 0.002 }, spark_aside: 0.9, spark_down: 0.55, spark_up: 0.5, lead: [0.018, 0.008, 0.012], spit_from: 3.6, spit_secs: 45.0, spit_tau: 16.0, spit_rate: 0.22, spit_gain: 0.2, glass: 26.0, glass_size: 0.013, glass_at: 0.15, shards: 5.0, tray: [0.4, 0.41, 0.42], cover: [0.55, 0.55, 0.56], face: [0.78, 0.78, 0.75], tube: [0.8, 0.8, 0.78], soot: [0.06, 0.055, 0.05], diffuser: [0.8, 0.83, 0.86], shard: [0.85, 0.9, 0.9] })] pub fixlook: crate::fixture_break::FixtureBreakModFIXLOOK,
     pub state: Option<crate::fixture_break::State>,
-    /// (src/game/fixtureBreak.ts:92 FLOOR)
-    pub floor: crate::fixture_break::FixtureBreakModFLOOR,
-}
-impl FixtureBreakMod {
-    pub fn blank() -> Self {
-        FixtureBreakMod {
-            fixlook: crate::fixture_break::FixtureBreakModFIXLOOK { on: true, max_panels: 12.0, rest_deg: [55.0, 65.0], swing_k: 30.0, swing_c: 2.2, kick: 3.4, hang_secs: 1.9, slide: 0.35, skew: 0.5, pops: alloc::vec![0.62, 1.0, 1.5, 2.2, 3.1], pop_sparks: alloc::vec![30.0, 22.0, 13.0, 9.0, 6.0], pop_gain: alloc::vec![1.0, 0.8, 0.55, 0.4, 0.3], pop_tau: 0.07, glow_tip: 12.0, spark: crate::fixture_break::FixtureBreakModFIXLOOKSpark { speed: 6.0, speed_jit: 0.6, spread: 1.15, life: 0.42, life_jit: 0.5, size: 0.002 }, spark_aside: 0.9, spark_down: 0.55, spark_up: 0.5, lead: [0.018, 0.008, 0.012], spit_from: 3.6, spit_secs: 45.0, spit_tau: 16.0, spit_rate: 0.22, spit_gain: 0.2, glass: 26.0, glass_size: 0.013, glass_at: 0.15, shards: 5.0, tray: [0.4, 0.41, 0.42], cover: [0.55, 0.55, 0.56], face: [0.78, 0.78, 0.75], tube: [0.8, 0.8, 0.78], soot: [0.06, 0.055, 0.05], diffuser: [0.8, 0.83, 0.86], shard: [0.85, 0.9, 0.9] },
-            state: None,
-            floor: crate::fixture_break::FixtureBreakModFLOOR { on: None },
-        }
-    }
+    #[is(crate::fixture_break::FixtureBreakModFLOOR { on: None })] pub floor: crate::fixture_break::FixtureBreakModFLOOR,
 }
 
 /// the counters this module keeps for the checks
@@ -159,12 +147,9 @@ pub struct FixtureBreakStats {
     pub sparks: i32,
 }
 
-/// (src/game/fixtureBreak.ts:68 LOOK)
 pub const LOOK: f64 = 10.0;
 
-/// (src/game/fixtureBreak.ts:69 DOWN: a table nothing writes)
 pub fn down() -> V3 { [0.0, -1.0, 0.0] }
 
-/// (src/game/fixtureBreak.ts:99 REST_AT: a table nothing writes)
 pub fn rest_at() -> Vec<f64> { alloc::vec![0.15, 0.5, 0.85] }
 

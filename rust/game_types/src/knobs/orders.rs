@@ -16,7 +16,7 @@ pub struct OrdersK {
     #[k(String::from("KeyB"))] pub quick_key: String,
     /// press, with the menu up on a door's tools (the squad of four): the door tools given from this page WAIT on the door for the word (a row of its own,
     ///  toggled — never a key held down). The menu stays up; the rows it changes say so. `waitKey`: the row's digit, on its page (taken only while no order of
-    ///  the page is on it; a digit above ORDER_DIGITS is no key at all — nothing of the menu is up there; a key that is not a digit works and is shown as itself). `waitAlt`: a second key for it — the word's own (doortools.ts blowKey), so 'on F' is one key to learn: with a DOOR menu up it is
+    ///  the page is on it; a digit above ORDER_DIGITS is no key at all — nothing of the menu is up there; a key that is not a digit works and is shown as itself). `waitAlt`: a second key for it — the word's own, so 'on F' is one key to learn: with a DOOR menu up it is
     ///  'wait for my word' (on the door's first page it turns to the tools with the row already on; on the tools it flips it) and it gives the word everywhere
     ///  else ('' = none)
     #[k(String::from("Digit5"))] pub wait_key: String,
@@ -44,7 +44,7 @@ pub struct OrdersK {
     #[k(0.4)] pub crumb: f64,
     #[k(10.0)] pub trail_m: f64,
     /// fall in's pace: Sam's own speed plus `gain` × how far the man is off his place, between the walk and `run` — which is no run: the most a teammate's legs
-    ///  are asked for (guards.ts PACE.max), so a Sam who sprints (4.7) leaves his file behind and it closes up at its own pace when he stops (it was 4.7: the file
+    ///  are asked for, so a Sam who sprints (4.7) leaves his file behind and it closes up at its own pace when he stops (it was 4.7: the file
     ///  sprinted with him) — no gear changes in view. With teampace.ts on the pace is teamFollow's: a share of his walk, and a run while he runs
     #[k(2.2)] pub run: f64,
     #[k(1.5)] pub walk: f64,

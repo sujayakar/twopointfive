@@ -18,18 +18,18 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | his row | `Guard`, `g.gd[gd]` | every man of any side but Sam (`g.pl`): `state`, `awareness`, `last_known`, `foe`, `script`, `hold`, `pinned`, `task`, his clocks |
 | his body | `Character`, `g.ch[c]` | where he is, his bones, his animation |
 | his mind, written | `mind.rs` | the one door to awareness, state, fix and foe, and who last moved each (`Note`) |
-| his duty's aim | `belief/` | `covers`, said anew each tick; `gun_point`; a report that places him (`word`) |
-| his senses | `guards/senses/`, `sense/`, `guards/p_04.rs` | ears and eyes of one man; the game's own smoke and light; `can_see`, `look_of` |
-| his eye | `attention/` | what small thing holds a calm man's eye (`stealth.md`) |
-| how he is | `condition/` | worked out when asked (`condition_of`), never kept |
-| whose man he is | `owner/`, `taskers!` in its types | one word on his row of the block (`man_owner`), a bit a tasker |
+| his duty's aim | `belief.rs` | `covers`, said anew each tick; `gun_point`; a report that places him (`word`) |
+| his senses | `guards/senses/`, `sense.rs`, `guards/feet.rs` | ears and eyes of one man; the game's own smoke and light; `can_see`, `look_of` |
+| his eye | `attention.rs` | what small thing holds a calm man's eye (`stealth.md`) |
+| how he is | `Cond`, `g.cond[c]`, `condition.rs` | down, hurt, blind, folded, the fire on him: a table by body, for the player, guards and civilians |
+| whose man he is | `owner.rs`, `taskers!` in its types | one word on his row of the block (`man_owner`), a bit a tasker |
 | who has his body | `control/` | `Control`, the list of rules and the arbiter (`g.ctl`) |
 | what he belongs to | `team`, `unit`; `Squad` (`enemysquads/`); `Def`, `Op` (`roomfight/`); `Assignment` (`orders/`) | his side; his squad; his place in a room fight; his post under an order |
 | a rule's own row | `g.m.morale.state_of`, `g.m.startle.state_of`; `PerMan` in `Rows` of `control/` | what one module keeps of him |
 
 And `guards/frame.rs` (one man's frame), `guards/behave/` (what he does by his state), `guards/looks.rs` (`LOOKS`, where some module has him look),
 `control/man.rs` (what a rule may ask of a man), `control/frag.rs`, `runner.rs`, `morale.rs`, `startle.rs`, `duck.rs` (the rules; their code is in
-`frag/`, `runner/`, `morale/`, `startle/`, `suppression/`), `squad/` (`order`, `end_guard_script`, `run_guard_script`: a man's own script) and
+`frag/`, `runner.rs`, `morale.rs`, `startle.rs`, `suppression.rs`), `squad/` (`order`, `end_guard_script`, `run_guard_script`: a man's own script) and
 `dice.rs`.
 
 ## How it works
@@ -50,7 +50,7 @@ And `guards/frame.rs` (one man's frame), `guards/behave/` (what he does by his s
 A teammate on a script, or a man of the response team on his, has his senses kept by that system (`kept_elsewhere`).
 
 **The layers, as far as they exist.** Sense and belief are one step: a sense moves his mind through `mind.rs` as it runs. Groups think in their own
-ticks in `step_seats_on_first` (`game/p_06.rs`), before any man's frame: `squads_tick`, `squad_orders_tick`, `room_fight_tick`, `lanes_tick`,
+ticks in `step_seats_on_first` (`game/tick.rs`), before any man's frame: `squads_tick`, `squad_orders_tick`, `room_fight_tick`, `lanes_tick`,
 `frag_tick` and others. They answer by setting his script, his flags and their own rows. Then each man's whole frame runs before the next man's.
 Decide and act are together in `lent` and `behave::act`.
 
@@ -58,13 +58,15 @@ Decide and act are together in `lent` and `behave::act`.
 news), `foe`. Each takes the writer's name. Anybody can read the fields, and no rule writes them any other way.
 
 **Who moves him now: the list.** `rules!` in `control/mod.rs` is one line a rule, and the line's place is its rank: `frag`, `runner`, `morale`,
-`startle`, `duck`. What a rule asks for decides where it is asked, and the compiler holds it to that:
+`startle`, `duck`, `lost`, `rally`. What a rule asks for decides where it is asked, and the compiler holds it to that:
 
 - A rule whose `Ask` is `GuardScript` is `Stage::Body`, asked in `lent` by `grant_body`, above his own script. His whole body follows that script for
   the tick (`run_lent_script`), and his own waits.
 - A rule whose `Ask` is `TakeCover` is `Stage::Cover`, asked at the top of `alert` by `grant_cover`, so only of a man who is alert with no script and
   no body rule. He gets down (`TakeCover::down`) or goes crouched to a spot (`TakeCover::to`), gun lowered, firing nothing, hands free to reload. A
   blind or staggered man gets down wherever it sends him.
+- A rule whose `Ask` is `LeavePost` is `Stage::Post`, asked by `grant_post` of a defender at his post who can see, once he has looked and reacted. He
+  goes on a leg or loose, once: on the leg, his script has him.
 
 `grant_from` is the arbiter: from the top, it runs a rule's `transition`, then asks its `propose`, and the first answer has him. A rule below the
 winner is neither moved nor asked. `record` writes the `Holder` once a tick (`Dead`, `Held`, a rule, `Script`, `Own`) and tells a rule that had him
@@ -80,7 +82,8 @@ above it in the list. `claim` itself refuses nobody, so the list decides only wh
 the last man ask it; other rules ask `has` of those they give way to.
 
 **Posts.** `hold` (he stays where he stands) and `pinned` (the room fight has him this tick) go through `set_hold` and `set_pinned`, which note the
-writer.
+writer. A defender leaves his post and comes back by `roomfight/post.rs` alone: `send` (on a `Leg`), `loose` (on the fight's own hunt), `back_on`. No
+rule writes his `mode`. A leg keeps who sent him (`on_leg_of`): sent elsewhere, the first errand is over.
 
 **Limits have no one home.** What a man may do is asked of the module that knows: `lane_bars`, `round_held`, `silent_holds_glass`,
 `room_fight_cover_passes`, `press_keeps_home`, `stays_in_rooms`. A new rule that moves a man asks them for itself.
@@ -98,7 +101,7 @@ man. No panel of the page shows any of this: ask from a native test.
 - **What it is for.** "having a nicer architecture for the AI feels important too, more for understandability and having good emergent behavior, not
   just LOC".
 - **One way of sensing.** "we should make one way for sensing". The rules ask the simulation how lit a point is and how much smoke is on a line
-  (`sense/`, `light_estimate_at`). Every eye looks along `look_of`, which is the fog's `gaze_of`, so what the picture shows of where a man looks is
+  (`sense.rs`, `light_estimate_at`). Every eye looks along `look_of`, which is the fog's `gaze_of`, so what the picture shows of where a man looks is
   what he sees.
 - **No micromanaging.** "we expect squad mates to be very smart on their own and not need micromanaging like this". A behavior a player would have to
   order by hand belongs in the man.
@@ -119,7 +122,7 @@ man. No panel of the page shows any of this: ask from a native test.
 
 1. `control/<name>.rs` with `pub struct Rule` and its `impl Reaction`. Copy `control/duck.rs`, the fullest: `transition` asks `head_down` once,
    because asking moves clocks and may draw, and keeps the answer in its `Row`; `propose` reads the row; `commit` ends the shift on `Outcome::Arrived`
-   or `Outcome::GoingNowhere`. `control/startle.rs` shows the other form: an empty `Row`, the state in `startle/`, and `commit` handing back the
+   or `Outcome::GoingNowhere`. `control/startle.rs` shows the other form: an empty `Row`, the state in `startle.rs`, and `commit` handing back the
    script as the walk left it (`startle_script_ran`).
 2. A line in `rules!` at its rank: its file's name and the words that name it. Nothing else names it. 
 3. If it also tasks him, a line of `taskers!`, with `claim`, `release` and `kept` where it takes and lets go.
@@ -128,7 +131,7 @@ man. No panel of the page shows any of this: ask from a native test.
 First count how often the thing happens: a rule almost nobody meets is not worth its row.
 
 **A new order:** `orders/rows/<name>.rs` with `pub const ORDER` a `Row` made by `Row::new`, and a line of `rows!`. Its `issue` hands each man an
-`Assignment` (`rows::assign`). `orders/rows/cover.rs` has it all in one file; `orders/rows/shell40.rs` hands its functions on to `squad40/`. Read `Is`
+`Assignment` (`rows::assign`). `orders/rows/cover.rs` has it all in one file; `orders/rows/shell40.rs` hands its functions on to `squad40.rs`. Read `Is`
 once and decide what the rest of the game may ask of it. The test gives it by `Play::order` and must include contact: posture alone proves nothing.
 
 **How he behaves when nothing has taken him:** his state's file in `guards/behave/`. A new sense is a file of `guards/senses/` and a line in `notice`.
@@ -160,10 +163,11 @@ Native tests in `rust/game_start/tests/`:
 | `men_under_fire.rs` | the duck, the startled beat, the blast, the man who drops it and runs |
 | `hands.rs` | a reload goes on and begins by itself |
 | `attention.rs`, `witness.rs`, `senses.rs` | a calm man's eye, who knows what, smoke and light |
+| `post.rs` | a defender sent from his post, and what takes him off it |
 | `orders.rs` | the 40 mm order in a fight; `every_row_holds_its_own_order` |
 | `squads.rs`, `squads_radio.rs`, `net_quiet.rs`, `pursuit.rs` | groups: the net, the radio check, two men on one fix |
 
-Inside the crate: `control/mod.rs` (the arbiter, the record, the ranks), `owner/p_01.rs`, `mind.rs`, `dice.rs`.  `gate`'s pins move if a man does
+Inside the crate: `control/mod.rs` (the arbiter, the record, the ranks), `owner.rs`, `mind.rs`, `dice.rs`.  `gate`'s pins move if a man does
 anything else.
 
 ## Where it is going
@@ -183,7 +187,7 @@ Agreed and not built. Assume none of it.
 - **The arbiter's care:** suspend and resume, a minimum grant, reservations of a spot or a door, every `transition` run every tick.
 - **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. `Foe`
   names a man (`Foe::Player` does not). A squad's knowledge is one record of contacts.
-- **A report step:** a rule emits events, and the log, the sounds, the chronicle and the tally apply them after.
+- **A report step:** a rule emits events, and the sounds, the chronicle and the tally apply them after.
 
 ## Not seen
 

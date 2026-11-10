@@ -38,7 +38,7 @@ export class DrawPlay {
   start(own: Pick<Start, 'mannequin' | 'mannequinBin' | 'cast' | 'castLook'>): void {
     const S = this.walk.start, o: Start = { ...own, level: S.level, words: S.words, seed: S.seed, seats: S.seats }, other = this.walk.other(partsOf(o));
     if (other) throw new TapeRefused(ANOTHER);
-    this.game.commands.take(); this.game.commands.put(S.commands); this.game.start(o); this.game.walked = true; this.hold();
+    this.game.commands.take(); this.game.start({ ...o, kept: S.kept }); this.game.walked = true; this.hold();
   }
   /** what the hand of the next tick will be, read ahead: where the view goes from here (at the tape's end, its last) */
   get next(): Float64Array { return (this.lost ? null : this.ahead()?.hand) ?? this.rows.last; }

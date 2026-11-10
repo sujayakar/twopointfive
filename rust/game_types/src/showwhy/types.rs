@@ -1,6 +1,6 @@
 //! The types of `showwhy`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -75,34 +75,10 @@ pub struct State {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct SHOWWHYLINES {
-    pub line: String,
-    pub door: String,
-    pub hurt: String,
-    pub lag: String,
-    pub keep: String,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ShowwhyMod {
-    /// (src/game/showwhy.ts:112 mem)
     pub mem: JsMap<GuardId, crate::showwhy::Mem>,
-    /// (src/game/showwhy.ts:113 opMem)
     pub op_mem: JsMap<DoorOpId, crate::showwhy::OpMem>,
-    /// (src/game/showwhy.ts:114 states)
     pub states: JsMap<PlayerId, crate::showwhy::State>,
 }
-impl ShowwhyMod {
-    pub fn blank() -> Self {
-        ShowwhyMod {
-            mem: JsMap::new(),
-            op_mem: JsMap::new(),
-            states: JsMap::new(),
-        }
-    }
-}
-
-/// (src/game/showwhy.ts:81 SHOWWHY_LINES: a table nothing writes)
-pub fn showwhy_lines() -> crate::showwhy::SHOWWHYLINES { crate::showwhy::SHOWWHYLINES { line: String::from("you're in my line."), door: String::from("after you."), hurt: String::from("I'm hit."), lag: String::from("I can't keep up."), keep: String::from("I've got this door.") } }

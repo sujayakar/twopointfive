@@ -19,13 +19,13 @@ The rules' half, in `rust/`:
 
 | module | what it does |
 |---|---|
-| `audio_iface/` | the calls a rule makes: `game_audio_like_play`, `game_audio_like_footstep`, `game_audio_like_rain`; `PlayOpts` |
-| `out_events/` | what a tick tells its host (`OutEvent`) |
-| `floor/` | what is underfoot; `tread`, one footfall for the mixer and the hearing rule alike |
-| `scene_collision/` | `sound_paths_propagate` for the rules, `heard_shared_by` for a question that changes nothing, `Propagation` |
+| `audio_iface.rs` | the calls a rule makes: `game_audio_like_play`, `game_audio_like_footstep`, `game_audio_like_rain`; `PlayOpts` |
+| `out_events.rs` | what a tick tells its host (`OutEvent`) |
+| `floor.rs` | what is underfoot; `tread`, one footfall for the mixer and the hearing rule alike |
+| `scene_collision.rs` | `sound_paths_propagate` for the rules, `heard_shared_by` for a question that changes nothing, `Propagation` |
 | `rust/sim/src/hear.rs` | the two halves of a sound's path: `direct` and `route` |
-| `ask/` | `hear_kept`, the mixer's question, reached by `face_hear` in `rust/game_face/src/ask.rs` |
-| `game/` (`p_05.rs`) | `game_roll_tick` and `game_on_prop_event`: furniture's noise, the chair's voice |
+| `ask.rs` | `hear_kept`, the mixer's question, reached by `face_hear` in `rust/game_face/src/ask.rs` |
+| `game/restart.rs` | `game_roll_tick` and `game_on_prop_event`: furniture's noise, the chair's voice |
 | `rust/game_draw/src/events.rs` | the rows the page reads: `Sound`, `Footfall`, `Lasting`, `Heard`; `tension` for the score |
 
 The page's half, in `src/audio/` unless it says:
@@ -65,7 +65,7 @@ row once (`Played`), so a tick run again does not sound twice, and calls `AudioE
   shut (`SOUND_SEAL` in `rust/sim/src/doors.rs`).
 
 `carry` is what the rules take from it. Whole glass stops a sound and a hole lets it through, where the level's pane rule is up. Rules ask through
-`hear_path` in `weather/`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:
+`hear_path` in `weather.rs`, which also lengthens the path in rain (`weather_hear_mask`), and keep a routed answer half a second. The mixer asks `hear_kept`:
 no weather, and one search a tick between two cells of the floor. Both come to the same two calls of `sim::hear`.
 
 **The mixer's law** (`mixlaw.ts`, `AudioEngine.play`). From `muffle` and `pathLen`: a low-pass (`cutoffOf`), less gain (`occludedGain`), more reverb
@@ -154,7 +154,7 @@ Native tests in `rust/game_start/tests/`; `p.sounds` in `play.rs` is every sound
 | `weather.rs`, `guns_and_debris.rs` | `rain_masks_a_sound`, `debris_is_heard_where_it_lands` |
 | `pair.rs` | `a_man_hears_the_other_sides_chair_and_door_and_not_his_own` |
 | `the_grab.rs`, `kit.rs` | the sounds of a gun taken off a man; a refusal is `deny` |
-| `hud.rs` | the word for the floor underfoot; `floor/` has tests of its own |
+| `hud.rs` | the word for the floor underfoot; `floor.rs` has tests of its own |
 
 `bun run tools/qa/checks.ts sound` runs four: `lasting-check.ts` (the mixer holds what goes on; `LASTING_BREAK=1`), `gunfire-table-check.ts` (the three tables),
 `sfxwarm-check.ts` (a voice made alone is the same voice, in another

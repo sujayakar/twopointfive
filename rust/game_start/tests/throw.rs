@@ -1,4 +1,4 @@
-//! A SQUAD THROW IS ONE PLAN (rust/game_rules/src/squadthrow/plan.rs): who throws, from where, where it comes to rest and whom it catches is worked
+//! A SQUAD THROW IS ONE PLAN (rust/game_rules/src/squad_orders/squadthrow/plan.rs): who throws, from where, where it comes to rest and whom it catches is worked
 //! out once, and the menu's row, its refusal, its warning, the picture of it and the order given are all read off that.
 use game_start::play::{dist, Opts, Play};
 

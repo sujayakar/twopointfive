@@ -33,8 +33,8 @@ function dice(n: number): () => number { return () => { n = Math.imul(n ^ n >>> 
 for (const [level, words] of Object.entries(WORDS)) { if (only.length && !only.includes(level)) continue;
   const g = fresh(), roll = dice(7), cam = new FollowCamera(), canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, D = g.drawn;
   const input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 };
-  g.tape = new HandTape(HAND.count); g.commands.god(1); g.commands.difficulty(1);
-  g.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', level))), words, ...own, seed: 11, named: { level, build: 'check' } });
+  g.tape = new HandTape(HAND.count); g.commands.god(1);
+  g.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', level))), words, kept: '{"hard":true}', ...own, seed: 11, named: { level, build: 'check' } });
   for (let i = 0; i < TICKS; i++) {
     if (i % 40 === 0) { input.keys.clear(); for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) if (roll() < 0.35) input.keys.add(k); if (roll() < 0.3) { input.buttons = 1; input.clicked = 1; } else input.buttons = 0; }
     if (roll() < 0.02) input.pressed.add(['KeyR', 'KeyC', 'Digit1', 'Digit2', 'KeyQ', 'KeyE', 'KeyF'][Math.floor(roll() * 7)]);

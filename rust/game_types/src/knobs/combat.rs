@@ -7,7 +7,7 @@ use game_derive::Knobs;
 ///    BLIND   `secs` seconds (Guard.dazzledUntil: sees nobody, fires at nobody he can name) — to anybody the fireball has a line to: from the can itself, or from
 ///            `lift` metres over it when the can can see that point (a can on the floor behind a desk still fills the room over the desk);
 ///    STUNNED `stagger` seconds of it doubled over (Guard.staggerUntil: rooted, gun down, NO round — so the blind burst a defender owes the door he was watching
-///            (nightbreach.ts BLIND) is mostly or wholly lost: its turns come due while he is folded) — it was a dazzle only, and the room answered every bang with
+///             is mostly or wholly lost: its turns come due while he is folded) — it was a dazzle only, and the room answered every bang with
 ///            twelve rounds a man back through the doorway;
 ///    THE BANG WITHOUT THE FLASH: a man the fireball has no line to (round the end of a cabinet, behind a partition) but who shares its air — within `concussM` by
 ///            the sound's own path (collision.ts SoundPaths: over furniture, round corners, never through a wall or a shut leaf) — takes `concussK` of both.

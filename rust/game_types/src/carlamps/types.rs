@@ -1,6 +1,6 @@
 //! The types of `carlamps`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -25,18 +25,10 @@ pub struct FoundLamp {
     pub lit: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum FoundLampWhat {
-    #[default] HeadLamp,
-    TailLamp,
-}
-impl FoundLampWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FoundLampWhat::HeadLamp => "head lamp",
-            FoundLampWhat::TailLamp => "tail lamp",
-        }
-    }
+    #[word("head lamp")] #[default] HeadLamp,
+    #[word("tail lamp")] TailLamp,
 }
 
 /// the counters this module keeps for the checks
@@ -50,5 +42,4 @@ pub struct CarlampsStats {
     pub painted: i32,
 }
 
-/// (src/game/carlamps.ts:39 VEHICLE_GROUP)
 pub const VEHICLE_GROUP: &str = "vehicle";

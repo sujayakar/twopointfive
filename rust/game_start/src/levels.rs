@@ -171,7 +171,7 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
     for q in queries.iter().rev() {
         drop(p.take());
         let mut s = staged(level, q);
-        let at: Vec<[f64; 2]> = s.g.guards.iter().filter(|&&gd| s.g.gd[gd].team != game::teams::Team::Operative && s.g.gd[gd].state != GuardState::Dead).map(|&gd| s.at(gd)).collect();
+        let at: Vec<[f64; 2]> = s.g.guards.iter().filter(|&&gd| s.g.gd[gd].team != game::teams::Team::Operative && !game::condition::down(&s.g, s.g.gd[gd].ch)).map(|&gd| s.at(gd)).collect();
         let mut here: HashMap<usize, usize> = HashMap::new();
         for a in at { if let Some(r) = room_at(&mut s.g, a[0], a[1]) { *here.entry(key_of(&s.g, r)).or_default() += 1; } }
         for (k, c) in here { let m = men.entry(k).or_default(); *m = (*m).max(c); }
@@ -472,7 +472,7 @@ fn stacks(ids: &[String]) -> Verdicts {
     for e in missions().into_iter().filter(|e| ids.is_empty() || ids.contains(&e.id)) {
         let mut p = staged(&level_of(&e), &query_of(&e));
         let g: &mut Game = &mut p.g;
-        let men: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| g.gd[gd].team == game::teams::Team::Operative && g.gd[gd].state != GuardState::Dead).collect();
+        let men: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| g.gd[gd].team == game::teams::Team::Operative && !game::condition::down(g, g.gd[gd].ch)).collect();
         let crews: Vec<(&[GuardId], &str)> = if men.len() > 2 { vec![(&men[..], ""), (&men[..2], " pair"), (&men[..1], " one")] } else if men.is_empty() { vec![] } else { vec![(&men[..], ""), (&men[..1], " one")] };
         let (mut marks, mut faces, mut refused, mut far): (usize, usize, usize, Vec<String>) = (0, 0, 0, vec![]);
         let list_ = g.doors.list.clone();
@@ -558,9 +558,9 @@ fn stands(levels: &[String]) -> Verdicts {
             let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&{words}"), &Opts { squad: 2, ..Default::default() });
             let (on, faults) = match key {
                 "roomClear" => (game::roomclear::room_clear_scenario_active(&p.g), game::roomclear::check_structure(&mut p.g, None)),
-                "rescue" => (p.g.rescue.active, game::rescue::check_rescue(&mut p.g, None)),
-                "nightBreach" => (p.g.night_breach.active, vec![]),
-                _ => { let on = p.g.quiet.active; drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
+                "rescue" => (game::rescue::rescue_up(&p.g), game::rescue::check_rescue(&mut p.g, None)),
+                "nightBreach" => (game::nightbreach::night_breach_up(&p.g), vec![]),
+                _ => { let on = game::quiet::quiet_of(&p.g); drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
             };
             if !on { bad.push(format!("{key}: it did not start")); }
             for f in faults { if f.contains(": standing in ") { said.push(f); } else { bad.push(format!("{key}: {f}")); } }
@@ -771,7 +771,7 @@ fn rain(levels: &[String]) -> Verdicts {
     let mut v = Verdicts::default();
     let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
     let wd = game::scene_world::world();
-    let ceiling = 3.0;   // (src/scene/world.ts WORLD.ceilingY)
+    let ceiling = 3.0;
     let (mut walls, mut faces, mut inners) = (0, 0, 0);
     for level in &levels {
         let mut p = Play::level(&format!("{level}.json"), false, &Opts { dress: true, ..Default::default() });

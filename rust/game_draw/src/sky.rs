@@ -32,7 +32,7 @@ section! {
         pub own_horizon: [f32; 3],
         pub kept: f32,
         pub mark_texel: f32,
-        /// the weather in the open air (render/frame.ts WeatherFrame, in its order)
+        /// the weather in the open air
         pub weather: u32,
         pub rain: f32,
         pub snow: f32,
@@ -54,11 +54,11 @@ section! {
 pub fn fill(g: &Game, out: &mut Vec<Sky>) {
     let f3 = |v: [f64; 3]| v.map(|x| x as f32);
     let f4 = |v: [f64; 4]| v.map(|x| x as f32);
-    let s = &g.engine.settings;
+    let s = game::hours::told::told(g);
     let mut r = Sky::ZERO;
-    r.zenith = f3(s.sky_zenith);
-    r.horizon = f3(s.sky_horizon);
-    r.haze = s.haze_density as f32;
+    r.zenith = f3(s.zenith);
+    r.horizon = f3(s.horizon);
+    r.haze = s.haze as f32;
     r.exposure = s.exposure as f32;
     r.gloss = s.gloss as u32;
     r.hour = match game::hours::hour_of(g) { HourId::Night => 0, HourId::Dawn => 1, HourId::Midday => 2, HourId::Overcast => 3, HourId::Dusk => 4 };

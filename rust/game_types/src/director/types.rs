@@ -1,9 +1,9 @@
 //! The types of `director`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured (director.ts EventFilter)
+/// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured
 #[derive(Clone, Debug, ToBytes)]
 pub enum EventFilter {
     InBox { x0: f64, x1: f64, z0: f64, z1: f64 },
@@ -86,7 +86,7 @@ pub enum ScriptVars {
     TutTeam(crate::script_tut_team::TutTeamVars),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum EventKind {
     #[default] Shot,
     Bang,
@@ -99,24 +99,8 @@ pub enum EventKind {
     Whistle,
     Glass,
 }
-impl EventKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventKind::Shot => "shot",
-            EventKind::Bang => "bang",
-            EventKind::Kick => "kick",
-            EventKind::Door => "door",
-            EventKind::LightOut => "lightOut",
-            EventKind::GuardShot => "guardShot",
-            EventKind::Step => "step",
-            EventKind::Prop => "prop",
-            EventKind::Whistle => "whistle",
-            EventKind::Glass => "glass",
-        }
-    }
-}
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Director {
     pub manifest: Option<crate::director::Manifest>,
     pub problems: Vec<crate::director::LintProblem>,
@@ -124,35 +108,10 @@ pub struct Director {
     pub log: Vec<crate::director::LogRow>,
     pub run: Option<DirectorRunId>,
     pub last_run: Option<crate::director::DirectorLastRun>,
-    pub frame: Option<crate::director::DirectorFrame>,
     pub serial: f64,
     pub seen: JsSet<u32>,
     pub exiting: bool,
-    pub due_keys: JsSet<String>,
-    pub due_clicks: f64,
-    pub shown: JsSet<GuardId>,
 }
-impl Director {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Director {
-            manifest: None,
-            problems: Vec::new(),
-            armed: false,
-            log: Vec::new(),
-            run: None,
-            last_run: None,
-            frame: None,
-            serial: 0.0,
-            seen: JsSet::new(),
-            exiting: false,
-            due_keys: JsSet::new(),
-            due_clicks: 0.0,
-            shown: JsSet::new(),
-        }
-    }
-}
-impl Default for Director { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Manifest {
@@ -164,7 +123,6 @@ pub struct Manifest {
     pub plans: JsMap<String, crate::director::PlanKind>,
     pub loadouts: JsMap<String, crate::director::LoadoutSpec>,
     pub groups: JsSet<String>,
-    pub variants: JsSet<String>,
     pub programs: JsMap<String, crate::director::ProgramDef>,
     pub expects: Vec<crate::director::ManifestExpectsItem>,
     pub systems: JsMap<&'static str, bool>,
@@ -192,23 +150,13 @@ pub struct LoadoutSpec {
     pub tint2: Option<V3>,
     pub light: Option<bool>,
     pub trained: Option<bool>,
-    pub god: Option<bool>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ProgramDef {
     pub name: String,
-    pub opts: crate::director::ProgramOpts,
     pub beats: JsMap<String, crate::director::ProgramDefBeatsValue>,
     pub triggers: Vec<crate::director::TriggerDef>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ProgramOpts {
-    pub showcase: Option<bool>,
-    pub end_veil: Option<f64>,
-    pub end_hold: Option<f64>,
-    pub fresh_encounter: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -229,7 +177,7 @@ pub struct TriggerDef {
     pub label: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TriggerDefKind {
     #[default] Start,
     Enter,
@@ -237,18 +185,6 @@ pub enum TriggerDefKind {
     Event,
     Signal,
     When,
-}
-impl TriggerDefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TriggerDefKind::Start => "start",
-            TriggerDefKind::Enter => "enter",
-            TriggerDefKind::After => "after",
-            TriggerDefKind::Event => "event",
-            TriggerDefKind::Signal => "signal",
-            TriggerDefKind::When => "when",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -308,10 +244,6 @@ pub struct DirectorLastRun {
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
-pub struct DirectorFrame {
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
 pub struct MarkRef {
     pub id: String,
 }
@@ -324,18 +256,6 @@ pub struct DoorRef {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct VolumeRef {
     pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum VariantRefId {
-    #[default] Daylight,
-}
-impl VariantRefId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VariantRefId::Daylight => "daylight",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -375,7 +295,7 @@ pub struct EventView {
     pub name: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum EventViewKind {
     #[default] Shot,
     Bang,
@@ -388,23 +308,6 @@ pub enum EventViewKind {
     Whistle,
     Glass,
     Signal,
-}
-impl EventViewKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventViewKind::Shot => "shot",
-            EventViewKind::Bang => "bang",
-            EventViewKind::Kick => "kick",
-            EventViewKind::Door => "door",
-            EventViewKind::LightOut => "lightOut",
-            EventViewKind::GuardShot => "guardShot",
-            EventViewKind::Step => "step",
-            EventViewKind::Prop => "prop",
-            EventViewKind::Whistle => "whistle",
-            EventViewKind::Glass => "glass",
-            EventViewKind::Signal => "signal",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -451,7 +354,7 @@ pub struct CondArm3 {
     pub tick0: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CondArm3Kind {
     #[default] Shot,
     Bang,
@@ -464,23 +367,6 @@ pub enum CondArm3Kind {
     Whistle,
     Glass,
     Signal,
-}
-impl CondArm3Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm3Kind::Shot => "shot",
-            CondArm3Kind::Bang => "bang",
-            CondArm3Kind::Kick => "kick",
-            CondArm3Kind::Door => "door",
-            CondArm3Kind::LightOut => "lightOut",
-            CondArm3Kind::GuardShot => "guardShot",
-            CondArm3Kind::Step => "step",
-            CondArm3Kind::Prop => "prop",
-            CondArm3Kind::Whistle => "whistle",
-            CondArm3Kind::Glass => "glass",
-            CondArm3Kind::Signal => "signal",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -501,18 +387,10 @@ pub struct CondArm5 {
     pub of: Vec<crate::director::Cond>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CondArm5K {
     #[default] All,
     Any,
-}
-impl CondArm5K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm5K::All => "all",
-            CondArm5K::Any => "any",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -529,35 +407,6 @@ pub enum BeatState {
     Cancelled,
 }
 
-#[derive(Clone, Debug, ToBytes)]
-pub struct CameraShotSpec {
-    pub look_y: Option<f64>,
-    pub track: Option<f64>,
-    pub yaw: f64,
-    pub yaw_to: Option<f64>,
-    pub pitch: f64,
-    pub dist: f64,
-    pub dist_to: Option<f64>,
-    pub dur: f64,
-    /// INVENTED by a review: see the proposals
-    pub look: crate::director::Place,
-}
-impl Default for CameraShotSpec {
-    fn default() -> Self {
-        CameraShotSpec {
-            look_y: None,
-            track: None,
-            yaw: 0.0,
-            yaw_to: None,
-            pitch: 0.0,
-            dist: 0.0,
-            dist_to: None,
-            dur: 0.0,
-            look: crate::director::Place::List([0.0; 3]),
-        }
-    }
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LiveBeat {
     pub name: String,
@@ -568,7 +417,6 @@ pub struct LiveBeat {
     pub step: f64,
     pub state: crate::director::BeatState,
     pub touched: JsSet<crate::Num>,
-    pub pinned_camera: bool,
     pub flow: crate::director::LiveBeatFlow,
 }
 
@@ -580,57 +428,6 @@ pub struct LiveBeatFlow {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnitRec {
     pub gd: GuardId,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct Shot {
-    pub spec: crate::director::CameraShotSpec,
-    pub t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct ShowState {
-    pub saved: crate::director::ShowStateSaved,
-    pub look: V3,
-    pub shot: Option<crate::director::Shot>,
-    pub fade: f64,
-    pub fade_to: f64,
-    pub fade_rate: f64,
-    pub ending: Option<crate::director::ShowStateEnding>,
-    pub benched: Option<Vec<GuardId>>,
-    pub variant_on: bool,
-    pub puppet: bool,
-    pub weather_saved: Option<crate::director::ShowStateWeatherSaved>,
-    pub handed_over: bool,
-    pub chaos_set: bool,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateSaved {
-    pub ai: bool,
-    pub god: bool,
-    pub invisible: bool,
-    pub quiet: bool,
-    pub touring: bool,
-    pub cam: Option<crate::director::ShowStateSavedCam>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateSavedCam {
-    pub yaw: f64,
-    pub pitch: f64,
-    pub dist: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateEnding {
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateWeatherSaved {
-    pub storm: f64,
-    pub rain: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -650,12 +447,10 @@ pub struct Run {
     pub units: JsMap<crate::Num, crate::director::UnitRec>,
     pub bursts: Vec<crate::director::RunBurstsItem>,
     pub kicks: Vec<crate::director::RunKicksItem>,
-    pub show: Option<crate::director::ShowState>,
     pub objective: Option<crate::director::RunObjective>,
     pub systems_saved: Option<JsMap<&'static str, bool>>,
     pub ended: bool,
     pub finishing: bool,
-    pub failed_show: bool,
     /// INVENTED: the manifest's, for a beat's step to read
     pub vars: crate::director::ScriptVars,
 }
@@ -722,7 +517,6 @@ pub struct LintManifestLevel {
     pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
     pub clear_plans: Option<Vec<crate::scene_level::RoomClearPlan>>,
-    pub daylight: Option<crate::scene_level::DaylightDef>,
     pub volumes: Option<Vec<crate::scene_level::VolumeDef>>,
 }
 
@@ -779,18 +573,13 @@ pub struct SignalViewS {
     pub name: String,
 }
 
-/// (src/game/director.ts:335 TEAMS: a table nothing writes)
 pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile")] }
 
-/// (src/game/director.ts:394 MAX_RESUMES)
 pub const MAX_RESUMES: f64 = 64.0;
 
-/// (src/game/director.ts:396 LOG_CAP)
 pub const LOG_CAP: f64 = 2500.0;
 
-/// (src/game/director.ts:396 MAX_WHEN)
 pub const MAX_WHEN: f64 = 32.0;
 
-/// (src/game/director.ts:396 MAX_PASSES)
 pub const MAX_PASSES: f64 = 8.0;
 

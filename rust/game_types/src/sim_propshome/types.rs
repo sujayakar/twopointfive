@@ -1,6 +1,6 @@
 //! The types of `sim_propshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -23,21 +23,11 @@ pub struct PropCols {
     pub row: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct PropStore {
     pub total: f64,
     pub o: crate::sim_propshome::PropStoreO,
 }
-impl PropStore {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PropStore {
-            total: 0.0,
-            o: crate::sim_propshome::PropStoreO::default(),
-        }
-    }
-}
-impl Default for PropStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropStoreO {
@@ -101,51 +91,30 @@ pub struct SimPropshomeModPROPSSTEPPED {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimPropshomeMod {
-    /// (src/sim/propshome.ts:103 IO)
     pub io: Option<crate::sim_propshome::PropIo>,
-    /// (src/sim/propshome.ts:120 PROPS_STEPPED)
-    pub props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED,
-}
-impl SimPropshomeMod {
-    pub fn blank() -> Self {
-        SimPropshomeMod {
-            io: None,
-            props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED { there: 0.0, noises: 0.0, swept: 0.0, guided: 0.0, pairs: 0.0, walls: 0.0, held: 0.0, substeps: 0.0, settled: 0.0, settle_walls: 0.0 },
-        }
-    }
+    #[is(crate::sim_propshome::SimPropshomeModPROPSSTEPPED { there: 0.0, noises: 0.0, swept: 0.0, guided: 0.0, pairs: 0.0, walls: 0.0, held: 0.0, substeps: 0.0, settled: 0.0, settle_walls: 0.0 })] pub props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED,
 }
 
-/// (src/sim/propshome.ts:23 PROP_CAP)
 pub const PROP_CAP: f64 = 128.0;
 
-/// (src/sim/propshome.ts:27 PROP_PARTS)
 pub const PROP_PARTS: f64 = 512.0;
 
-/// (src/sim/propshome.ts:30 PROP_F64: a table nothing writes)
 pub fn prop_f64() -> [String; 11] { [String::from("x"), String::from("z"), String::from("yaw"), String::from("vx"), String::from("vz"), String::from("w"), String::from("cs"), String::from("sn"), String::from("idle"), String::from("pushT"), String::from("noiseT")] }
 
-/// (src/sim/propshome.ts:31 PROP_U32: a table nothing writes)
 pub fn prop_u32() -> [String; 4] { [String::from("flags"), String::from("who"), String::from("id"), String::from("row")] }
 
-/// (src/sim/propshome.ts:33 PROP_HEAD)
 pub const PROP_HEAD: f64 = 16.0;
 
-/// (src/sim/propshome.ts:87 PD: a table nothing writes)
 pub fn pd() -> crate::sim_propshome::PD { crate::sim_propshome::PD { chair: 10.0 } }
 
-/// (src/sim/propshome.ts:89 PK: a table nothing writes)
 pub fn pk() -> crate::sim_propshome::PK { crate::sim_propshome::PK { quiet: 7.0 } }
 
-/// (src/sim/propshome.ts:91 PY: a table nothing writes)
 pub fn py() -> crate::sim_propshome::PY { crate::sim_propshome::PY { half: 4.0 } }
 
-/// (src/sim/propshome.ts:93 PE: a table nothing writes)
 pub fn pe() -> crate::sim_propshome::PE { crate::sim_propshome::PE { rolling: 9.0 } }
 
-/// (src/sim/propshome.ts:94 PROP_EV)
 pub const PROP_EV: f64 = 10.0;
 
-/// (src/sim/propshome.ts:99 PROP_PARS)
 pub const PROP_PARS: f64 = 24.0;

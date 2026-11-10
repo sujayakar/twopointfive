@@ -67,7 +67,7 @@
 // LIMITS IT IS BUILT INSIDE (not lifted here): the world is 40 × 28 m (scene/world.ts — the trace grid, the nav grid and the shaders' bounds), so the wall
 // stands on the office's own shell line (x 4 / 36, z 4 / 24) and the 4 m outside it is the team's approach. weather.ts INTERIOR is that same rectangle: it
 // rains OUTSIDE the wall and not in the yard, nobody gets wet in it, and the storm's wind stops at the wall. weather.ts ANNEX (x 1.1..4, z 9.33..12.87: the
-// office's stair tower) is a dry patch on the grass outside the west wall; the west gate is cut south of it. rust/game_rules/src/destruction takes the same rectangle for
+// office's stair tower) is a dry patch on the grass outside the west wall; the west gate is cut south of it. rust/game_rules/src/breakage/destruction takes the same rectangle for
 // "indoors": at chaos above 0 a burst in the YARD can drop a ceiling tile out of the sky and raise drywall dust (the room clear's own chaos setting decides
 // whether that is ever seen). The light list holds 64 with every man's torch in it: the level keeps to a handful of fixtures. With eleven defenders, five of
 // the team and Sam the light probe is asked for more queries a frame than it answers (49 against 32: Sam's own meter is the one dropped) and only the first 8
@@ -441,7 +441,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'gate_w', hinge: [4.0, 14.32], closedDir: Z, width: 1.16, exterior: true },
     { name: 'gate_n', hinge: [23.82, 4.0], closedDir: X, width: 1.16, exterior: true },
   ];
-  // `exterior` is for the two leaves in the PERIMETER wall only: it is what the game reads as "opens onto the weather" (rust/game_rules/src/wind gives each one a gust by the
+  // `exterior` is for the two leaves in the PERIMETER wall only: it is what the game reads as "opens onto the weather" (rust/game_rules/src/air/wind.rs gives each one a gust by the
   // office's INTERIOR rectangle, which is this wall's own line; a door of the house stands wholly inside that rectangle and would get one blowing an arbitrary
   // way). The house's and the outbuildings' outside doors stand in 0.24 walls like the gates, so their FRAMES are cut the thick way all the same.
   const THICK = new Set(['front', 's_w', 'p_back', 'g_n', 'g_e', 'shed_s', 'shed_e', 'hut_w', 'hut_e', 'yard_sw']);
@@ -878,7 +878,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'keep', name: 'Keep', rooms: ['office', 'bunk', 'back'], rally: [29.9, 0, 8.3], barricade: ['o_n', 'a_s', 'b_s'], mayLeave: false },   // the east end: they stay, and wedge only their corridor doors
     ],
   };
-  // THE FILE ORDER OF THE ROOMS is the order the objective marker walks them from the west gate (rust/game_rules/src/roomclear: the first still held): THE HOUSE FIRST, the
+  // THE FILE ORDER OF THE ROOMS is the order the objective marker walks them from the west gate (rust/game_rules/src/missions/roomclear.rs: the first still held): THE HOUSE FIRST, the
   // sala leading — the marker stands on what the mission is, and names neither outbuilding (it stood on the shed, the first room of one of the answers).
   // A room's own marks keep their order: the placement is theirs.
   roomClear.rooms = ['sala', 'kitchen', 'office', 'bunk', 'back', 'garage', 'shed', 'hut'].map(id => roomClear.rooms.find(r => r.id === id)!);
@@ -892,10 +892,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'alley', bounds: { x0: 33.12, x1: 35.88, z0: 4.12, z1: 23.88 } }, { name: 'alley', bounds: { x0: 30.62, x1: 33.12, z0: 19.12, z1: 23.88 } },
     { name: 'forecourt', bounds: { x0: 10.5, x1: 30.62, z0: 19.12, z1: 23.88 } },
   ] };
-  // what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name)
+  // what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
   const doorNames = [{ door: 'p_back', name: 'pantry back door' }, { door: 'c_n', name: 'spare room door' }, { door: 'hall_n', name: 'corridor-side front hall door' }, { door: 'p_s', name: 'corridor-side pantry door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'gate_n', name: 'back gate' }];
   const scenarios: LevelScenarios = { roomClear, places, kitView: COMPOUND_KITVIEW, doorNames };
-  // ---------------- what is underfoot (rust/game_rules/src/floor: which step sounds, and how far it carries to their ears) ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs: which step sounds, and how far it carries to their ears) ----------------
   // `building` is everything inside the perimeter wall and its base is the YARD: packed earth, which the six materials have no word for — 'asphalt' is the
   // nearest (hard, a little under lino; 'grass' would hand the team a silent approach the picture does not promise). Over it: the house's tiled floor and the
   // three outbuildings' bare slabs. Outside the wall: the scrub north and west (x or z under 3.2, where the grass slabs are — the team starts on it), asphalt

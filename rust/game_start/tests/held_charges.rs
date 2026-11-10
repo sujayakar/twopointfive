@@ -21,7 +21,7 @@ fn alone(door: &str, n: f64, s: u32) -> (Play, game::ids::DoorId, f64) {
 /// The row given and held to its end; the frames his hands had nothing in them out of all of them.
 fn sets(p: &mut Play) -> (usize, usize) {
     assert!(p.takes_door_row(Verb::Charge), "no door row sets a charge: {:?}", p.rows());
-    p.until(1.0, |p| p.sam_charging()).unwrap_or_else(|| panic!("the row began no job: {:?}", p.log()));
+    p.until(1.0, |p| p.sam_charging()).unwrap_or_else(|| panic!("the row began no job: {:?}", p.rows()));
     let (mut away, mut all) = (0, 0);
     while p.sam_charging() && all < 8 * 60 { p.frame(); all += 1; if p.sam_charging() && p.in_hand() == "nothing" { away += 1; } }
     (away, all)
@@ -90,7 +90,7 @@ fn his_own_charge_goes_off_from_his_own_actions_and_the_squads_on_the_squads_key
         p.sam_at_door(d, side, 0.75);
         let _ = sets(&mut p);
         p.run(0.05);
-        assert_eq!(p.seat_door_charges(0), 1, "seed {s}: the charge is not on the door: {:?}", p.log());
+        assert_eq!(p.seat_door_charges(0), 1, "seed {s}: the charge is not on the door: {:?}", p.rows());
         p.sam_put(p.off_the_door(d, side, 2.6, 1.0));
         p.run(0.15);
         p.tap("KeyF");

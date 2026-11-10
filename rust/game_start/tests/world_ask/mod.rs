@@ -152,7 +152,7 @@ impl GlassAsk for Play {
         game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn hit_of(&self, r: &game::frag::BlastReport, gd: GuardId) -> Option<game::frag::BlastHit> { let id = self.id_of(gd); r.hits.iter().find(|h| h.id == id).cloned() }
-    fn reeled_at(&self, gd: GuardId) -> f64 { self.g.gd[gd].stagger_until }
+    fn reeled_at(&self, gd: GuardId) -> f64 { self.g.cond[self.g.gd[gd].ch].fold_until }
     fn share_open(&mut self, from: [f64; 2], feet: [f64; 2]) -> f64 {
         let lift = self.g.k.frag.lift;
         game::frag::exposure(&mut self.g, [from[0], 0.05 + lift, from[1]], [feet[0], 0.0, feet[1]], [feet[0], 1.6, feet[1]], Some(game::frag::GlassView::Whole))
@@ -322,7 +322,7 @@ pub trait YardAsk {
     /// a place's own light, every carried light left out, by the meter: (bare, with the moon, through a tube)
     fn place_light(&mut self, at: [f64; 2]) -> (f64, f64, f64);
     /// how the first camera stands
-    fn camera_state(&self) -> game::sim_lightshome::CameraState;
+    fn camera_state(&self) -> game::fixtures::CameraState;
     /// how much it has seen
     fn camera_seen(&self) -> f64;
     /// how many times the beam has been tripped, by its place in the level's list
@@ -341,19 +341,19 @@ impl YardAsk for Play {
     fn parked_far(&mut self, gd: GuardId, k: usize) {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
-        (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
     }
     fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
         self.man_put(gd, at, face);
         let h = &mut self.g.gd[gd];
-        (h.pinned, h.dazzled_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
         (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
         (h.script, h.task, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (false, false, -1.0, 1e12);
+        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
         (h.script, h.task, h.body_duty) = (None, None, None);
         (h.state, h.search_t, h.react_t, h.awareness, h.search_plan, h.fix_ref) = (game::game::GuardState::Search, 0.0, 0.0, 0.8, None, None);
         h.last_known = Some([fix[0], 0.0, fix[1]]);
@@ -379,9 +379,9 @@ impl YardAsk for Play {
         let (e, m) = (a.0.max(b.0), a.1.max(b.1));
         (game::game::game_visibility_of(&self.g, e), game::game::game_visibility_of(&self.g, m), game::nvg::tube_vis(&self.g, m))
     }
-    fn camera_state(&self) -> game::sim_lightshome::CameraState { game::sim_lightshome::camera_machine_state(&self.g, self.g.devices.cameras[0]) }
-    fn camera_seen(&self) -> f64 { game::sim_lightshome::camera_machine_seen(&self.g, self.g.devices.cameras[0]) }
-    fn beam_trips(&self, k: usize) -> f64 { game::sim_lightshome::laser_machine_trips(&self.g, self.g.devices.lasers[k]) }
+    fn camera_state(&self) -> game::fixtures::CameraState { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].state }
+    fn camera_seen(&self) -> f64 { self.g.tab.devices_camera_rt[self.g.devices.cameras[0]].seen }
+    fn beam_trips(&self, k: usize) -> f64 { self.g.tab.devices_laser_rt[self.g.devices.lasers[k]].trips as f64 }
     fn level_nav(&self) -> u64 { self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64)) }
     fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Device, .. })))) }
     fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
@@ -479,7 +479,7 @@ pub trait NetAsk {
 }
 
 impl NetAsk for Play {
-    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.staged.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn shaken(&self, gd: GuardId) -> f64 { self.g.m.morale.state_of.get(gd).map_or(0.0, |m| m.shock) }
     fn steady(&mut self, gd: GuardId) -> bool { game::morale::training_of(&mut self.g, gd) == game::morale::TrainingOf::Steady }
     fn net_line(&self, text: &str, kind: &str, name: &str) -> bool { game::netquiet::lines().get(String::from(kind)).map_or(false, |r| r.iter().any(|l| l.replace("{name}", name) == text)) }
@@ -524,15 +524,15 @@ pub trait RescueAsk {
 
 impl RescueAsk for Play {
     fn hostage_room_falls(&mut self, loud: bool) {
-        let cast: Vec<GuardId> = game::rescue::rescue_cast(&self.g).into_iter().filter(|c| c.in_room).map(|c| c.gd).collect();
+        let cast: Vec<GuardId> = self.g.staged.foes.iter().copied().filter(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).collect();
         for m in cast {
             let how = if loud { game::game::DownKind::Shot } else { game::game::DownKind::Struck };
             game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), None);
         }
     }
     fn hostage_room_middle(&self) -> [f64; 2] { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0] }
-    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
-    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
+    fn hostages_up(&self) -> Vec<GuardId> { self.g.staged.captives.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
+    fn theirs_up(&self) -> Vec<GuardId> { self.g.staged.foes.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
     fn in_hostage_room(&self, at: [f64; 2]) -> bool { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 }
     fn rescue_said(&self, starts: &str) -> Option<f64> { self.g.rescue.log.iter().find(|l| l.what.starts_with(starts)).map(|l| l.t) }
     fn rescue_lines(&self, starts: &str) -> Vec<String> { self.g.rescue.log.iter().filter(|l| l.what.starts_with(starts)).map(|l| l.what.clone()).collect() }
@@ -566,7 +566,7 @@ impl RescueAsk for Play {
         }
     }
     fn a_loud_round_at_the_room(&mut self) {
-        let m = game::rescue::rescue_cast(&self.g).into_iter().find(|c| c.in_room).expect("a man in the room").gd;
+        let m = self.g.staged.foes.iter().copied().find(|&m| self.g.rescue.defs.get(m).is_some_and(|d| d.in_room)).expect("a man in the room");
         let (at, time, serial) = (self.at(m), self.g.time, self.g.serial());
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::default() });
     }
@@ -581,8 +581,8 @@ pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
     let g = &p.g;
     let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
     let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
-    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", game::sim_lightshome::fixture_on(g, t), game::sim_lightshome::fixture_broken(g, t))).collect();
-    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", game::sim_lightshome::mains_active(g))), ("statics", statics), ("props", props), ("walk grid", nav),
+    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", g.tab.fixture[t].on, g.tab.fixture[t].broken)).collect();
+    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", g.light_home.mains.active)), ("statics", statics), ("props", props), ("walk grid", nav),
         ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.wall_charge.set.len())), ("glass hits", format!("{hits}"))]
 }
 
@@ -611,10 +611,10 @@ pub trait ReviewAsk {
 }
 
 impl ReviewAsk for Play {
-    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| game::sim_lightshome::fixture_on(&self.g, t) && self.g.tab.sim_lightshome_fixture[t].kind != game::sim_lightshome::FixtureKind::Breaker).expect("a lamp lit") }
+    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| self.g.tab.fixture[t].on && self.g.tab.fixture[t].kind != game::fixtures::FixtureKind::Breaker).expect("a lamp lit") }
     fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
     fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
-    fn lamp_disabled(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_disabled_until(&self.g, t) > self.g.time }
+    fn lamp_disabled(&self, t: FixtureId) -> bool { self.g.tab.fixture[t].blind_until > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
         let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::default() };
         game::throwables::throwables_spawn(&mut self.g, kind, [5.0, 0.5, 5.0], [0.0; 3], Some(o))

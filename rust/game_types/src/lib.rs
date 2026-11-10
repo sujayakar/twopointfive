@@ -4,6 +4,7 @@
 extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
+pub use game_derive::{Blank, Words};
 pub mod bytes;
 pub mod ids;
 pub mod js;
@@ -109,7 +110,6 @@ pub mod furnblast { pub mod types; pub use types::*; }
 pub mod game { pub mod types; pub use types::*; }
 pub mod gear { pub mod types; pub use types::*; }
 pub mod glass { pub mod types; pub use types::*; }
-pub mod glass_pattern { pub mod types; pub use types::*; }
 pub mod glassbreak { pub mod types; pub use types::*; }
 pub mod glasspen { pub mod types; pub use types::*; }
 pub mod guards { pub mod types; pub use types::*; }
@@ -149,7 +149,6 @@ pub mod lightswitch { pub mod types; pub use types::*; }
 pub mod marks { pub mod types; pub use types::*; }
 pub mod math_dice { pub mod types; pub use types::*; }
 pub mod math_exact { pub mod types; pub use types::*; }
-pub mod math_hyp { pub mod types; pub use types::*; }
 pub mod math_side { pub mod types; pub use types::*; }
 pub mod mission { pub mod types; pub use types::*; }
 pub mod morale { pub mod types; pub use types::*; }
@@ -190,7 +189,6 @@ pub mod render_lights { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
-pub mod rescuecheck { pub mod types; pub use types::*; }
 pub mod rescueend { pub mod types; pub use types::*; }
 pub mod rescueflow { pub mod types; pub use types::*; }
 pub mod rescueflush { pub mod types; pub use types::*; }
@@ -200,10 +198,8 @@ pub mod roomclear { pub mod types; pub use types::*; }
 pub mod roomfight { pub mod types; pub use types::*; }
 pub mod roomfit { pub mod types; pub use types::*; }
 pub mod roomread { pub mod types; pub use types::*; }
-pub mod root_settings { pub mod types; pub use types::*; }
 pub mod rowset { pub mod types; pub use types::*; }
 pub mod runner { pub mod types; pub use types::*; }
-pub mod rustknobs { pub mod types; pub use types::*; }
 pub mod samlook { pub mod types; pub use types::*; }
 pub mod samstun { pub mod types; pub use types::*; }
 pub mod savestate { pub mod types; pub use types::*; }
@@ -247,12 +243,11 @@ pub mod silent { pub mod types; pub use types::*; }
 pub mod sim_doorshome { pub mod types; pub use types::*; }
 pub mod sim_fallshome { pub mod types; pub use types::*; }
 pub mod sim_itemshome { pub mod types; pub use types::*; }
-pub mod sim_lightshome { pub mod types; pub use types::*; }
+pub mod fixtures { pub mod types; pub use types::*; }
 pub mod sim_propshome { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
 pub mod sim_slabshome { pub mod types; pub use types::*; }
 pub mod sim_state { pub mod types; pub use types::*; }
-pub mod sim_weatherhome { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }

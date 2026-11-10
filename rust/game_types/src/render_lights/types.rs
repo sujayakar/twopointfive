@@ -1,25 +1,14 @@
 //! The types of `render_lights`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightSet {
     pub lights: Vec<LightId>,
     pub ir: Vec<LightId>,
-    pub fog_team: crate::render_lights::LightSetFogTeam,
+    #[is(crate::render_lights::LightSetFogTeam { on: false, owners: JsSet::new(), lights: JsSet::new() })] pub fog_team: crate::render_lights::LightSetFogTeam,
 }
-impl LightSet {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        LightSet {
-            lights: Vec::new(),
-            ir: Vec::new(),
-            fog_team: crate::render_lights::LightSetFogTeam { on: false, owners: JsSet::new(), lights: JsSet::new() },
-        }
-    }
-}
-impl Default for LightSet { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LightSetFogTeam {
@@ -78,6 +67,5 @@ pub struct RtLightPortal {
     pub share: f64,
 }
 
-/// (src/render/lights.ts:76 MAX_LIGHTS)
 pub const MAX_LIGHTS: f64 = 64.0;
 

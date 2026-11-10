@@ -1,4 +1,4 @@
-//! A MAN HEARS AND SEES WHOEVER HAS HIS BODY (rust/game_rules/src/guards/senses/ `sense`): his ears and eyes run every tick, before any rule of the list or any
+//! A MAN HEARS AND SEES WHOEVER HAS HIS BODY (rust/game_rules/src/people/guards/senses/ `sense`): his ears and eyes run every tick, before any rule of the list or any
 //! script is asked.
 use game::ids::GuardId;
 use game_start::play::{nudge, Button, Opts, Play};

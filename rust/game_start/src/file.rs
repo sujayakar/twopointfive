@@ -104,12 +104,12 @@ json_struct!(game::scene_level::VolumeDef { name: "id", c: "c", h: "h", yaw: "ya
 json_struct!(game::scene_level::MarkDef { name: "id", pos: "pos" } drops { "yaw": Option<f64> });
 
 /// the one mission thread: a file says one objective of each kind (found by its kind: the file's id for it names nothing in the game)
-pub struct Reach { pub area: game::scene_level_data::Rect, pub door: String }
-json_struct!(Reach { area: "area", door: "door" } drops { "id": String });
-pub struct Drive { pub rack_index: f64, pub front: V3, pub half_w: f64 }
-json_struct!(Drive { rack_index: "rackIndex", front: "front", half_w: "halfW" } drops { "id": String });
-pub struct Exfil { pub door: String, pub x: f64, pub z: f64, pub out: Option<[f64; 2]> }
-json_struct!(Exfil { door: "door", x: "x", z: "z", out: "out" } drops { "id": String });
+pub struct Reach { pub name: Option<String>, pub area: game::scene_scenarios::Rect, pub door: String }
+json_struct!(Reach { name: "name", area: "area", door: "door" } drops { "id": String });
+pub struct Drive { pub name: Option<String>, pub holder: Option<String>, pub rack_index: f64, pub front: V3, pub half_w: f64 }
+json_struct!(Drive { name: "name", holder: "holder", rack_index: "rackIndex", front: "front", half_w: "halfW" } drops { "id": String });
+pub struct Exfil { pub name: Option<String>, pub door: String, pub x: f64, pub z: f64, pub out: Option<[f64; 2]> }
+json_struct!(Exfil { name: "name", door: "door", x: "x", z: "z", out: "out" } drops { "id": String });
 pub struct Mission { pub player_spawn: V3, pub reach: Reach, pub drive: Drive, pub exfil: Exfil }
 impl FromJson for Mission {
     fn from_json(j: &Json, at: &At) -> Self {
@@ -137,8 +137,6 @@ pub struct Beacon { pub id: String, pub pos: V3, pub box_: String }
 json_struct!(Beacon { id: "id", pos: "pos", box_: "box" });
 pub struct Sky { pub zenith: V3, pub horizon: V3 }
 json_struct!(Sky { zenith: "zenith", horizon: "horizon" });
-pub struct Daylight { pub sun: LightData, pub sky: Sky, pub groups_on: Vec<String>, pub groups_off: Vec<String>, pub lights_off: Vec<String>, pub haze: f64, pub exposure: f64 }
-json_struct!(Daylight { sun: "sun", sky: "sky", groups_on: "groupsOn", groups_off: "groupsOff", lights_off: "lightsOff", haze: "haze", exposure: "exposure" });
 
 /// a drill's plan and the file's id of it
 pub struct Plan<T> { pub id: String, pub plan: T }
@@ -170,12 +168,12 @@ pub struct LevelFile {
     pub version: f64, pub name: String, pub meta: Meta, pub floors: Vec<Floor>, pub materials: JsMap<String, Material>, pub surfaces: Option<SurfacesData>,
     pub boxes: Vec<BoxData>, pub props: Vec<Prop>, pub lights: Vec<LightData>, pub switchables: Vec<Switchable>, pub doors: Vec<DoorData>, pub routes: Vec<Route>, pub chokepoints: Vec<Chokepoint>,
     pub civilians: Option<Vec<CivilianDef>>, pub volumes: Vec<game::scene_level::VolumeDef>, pub marks: Option<Vec<game::scene_level::MarkDef>>, pub devices: Vec<DeviceDef>, pub vents: Option<Vec<VentDef>>, pub hums: Option<Vec<HumDef>>,
-    pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub daylight: Option<Daylight>, pub plans: Plans, pub scenarios: Option<Scenarios>,
+    pub connectors: Vec<Nothing>, pub mission: Mission, pub breaker: Breaker, pub beacons: Vec<Beacon>, pub sky: Sky, pub plans: Plans, pub scenarios: Option<Scenarios>,
 }
 json_struct!(LevelFile {
     version: "version", name: "name", meta: "meta", floors: "floors", materials: "materials", surfaces: "surfaces", boxes: "boxes", props: "props", lights: "lights", switchables: "switchables", doors: "doors",
     routes: "routes", chokepoints: "chokepoints", civilians: "civilians", volumes: "volumes", marks: "marks", devices: "devices", vents: "vents", hums: "hums", connectors: "connectors", mission: "mission",
-    breaker: "breaker", beacons: "beacons", sky: "sky", daylight: "daylight", plans: "plans", scenarios: "scenarios",
+    breaker: "breaker", beacons: "beacons", sky: "sky", plans: "plans", scenarios: "scenarios",
 });
 
 /// THE FILE READ: the level it is, where nothing about the reading is wrong, and every fault of the reading (a value that is not what its place wants, a member the game has no reading of).

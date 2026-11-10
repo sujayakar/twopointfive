@@ -1,6 +1,6 @@
 //! The types of `shards`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -12,49 +12,6 @@ pub struct PaneCrossLike {
     pub take: f64,
     pub e_out: f64,
     pub hole: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct GlassFragmentLike {
-    pub type_: crate::glasspen::PaneType,
-    pub kind: crate::shards::GlassFragmentLikeKind,
-    pub outline: Vec<V3>,
-    pub centre: V3,
-    pub normal: V3,
-    pub thickness: f64,
-    pub area: f64,
-    pub velocity: V3,
-    pub spin: V3,
-    pub tint: V3,
-    pub grain: f64,
-    pub cause: crate::shards::GlassFragmentLikeCause,
-    pub who: f64,
-    pub seed: f64,
-    pub fall: Option<crate::shards::GlassFragmentLikeFall>,
-    pub landed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentLikeKind {
-    #[default] Piece,
-    Sheet,
-    Dagger,
-    Clump,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentLikeCause {
-    #[default] Blast,
-    Hit,
-    Dice,
-    Support,
-    Rake,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GlassFragmentLikeFall {
-    pub t: f64,
-    pub pos: V3,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -74,7 +31,7 @@ pub struct Life {
     pub n: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassShards {
     pub lives: Vec<crate::shards::Life>,
     pub live_est: f64,
@@ -89,26 +46,6 @@ pub struct GlassShards {
     pub log: Vec<String>,
     pub serial: f64,
 }
-impl GlassShards {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        GlassShards {
-            lives: Vec::new(),
-            live_est: 0.0,
-            breaks: Vec::new(),
-            recs_this_frame: 0.0,
-            sounds_this_frame: 0.0,
-            sound_at: JsMap::new(),
-            sound_owed: JsMap::new(),
-            deferred: Vec::new(),
-            deferred_n: 0.0,
-            crunch_n: 0.0,
-            log: Vec::new(),
-            serial: 0.0,
-        }
-    }
-}
-impl Default for GlassShards { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassShardsBreaksItem {
@@ -208,5 +145,4 @@ pub struct ShardsStats {
     pub peak_plates: i32,
 }
 
-/// (src/game/shards.ts:677 EDGE_GREEN: a table nothing writes)
 pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

@@ -7,6 +7,12 @@
 //!   #[derive(Knobs)]             a table of numbers (game_types `knobs`): what it ships at, and each number by its dotted name
 //!   #[k(value)]                  on a field: what it ships at. A field with none is a table of its own
 //!
+//!   #[derive(Words)]             an enum's words (`as_str`)
+//!   #[word("…")]                 on an arm: its word, where that is not its name with a small first letter
+//!
+//!   #[derive(Blank)]             what a new record holds (`blank`, `Default`)
+//!   #[is(value)]                 on a field: what it starts at, where that is not its type's own start
+//!
 //! It reads a declaration as tokens and needs no parser of the language: attributes, names, and where one field ends.
 extern crate proc_macro;
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
@@ -99,6 +105,53 @@ pub fn knobs(item: TokenStream) -> TokenStream {
                  #[allow(unused_variables)] fn get(&self, name: &str) -> ::core::option::Option<f64> {{ match ::game_types::knobs::first_part(name) {{ {get} _ => None }} }} \
                  #[allow(unused_variables)] fn set(&mut self, name: &str, v: f64) -> bool {{ match ::game_types::knobs::first_part(name) {{ {set} _ => false }} }} \
              }}").parse().unwrap()
+}
+/// an enum's word for each arm: its name with a small first letter, or what `#[word("…")]` says
+#[proc_macro_derive(Words, attributes(word))]
+pub fn words(item: TokenStream) -> TokenStream {
+    let (name, body) = named(item, "enum");
+    let arms: String = split(body).into_iter().map(|arm| {
+        let mut t = arm.into_iter().peekable();
+        let said = said(&mut t, "word");
+        let arm = word(t.next());
+        let w = said.unwrap_or_else(|| format!("{:?}", arm[..1].to_lowercase() + &arm[1..]));
+        format!("Self::{arm} => {w}, ")
+    }).collect();
+    format!("impl {name} {{ pub const fn as_str(self) -> &'static str {{ match self {{ {arms} }} }} }}").parse().unwrap()
+}
+/// what a new record holds (`blank`, and its `Default`): each field at its type's own start, or at what `#[is(…)]` says
+#[proc_macro_derive(Blank, attributes(is))]
+pub fn blank(item: TokenStream) -> TokenStream {
+    let (name, body) = named(item, "struct");
+    let fields: String = split(body).into_iter().map(|f| {
+        let mut t = f.into_iter().peekable();
+        let value = said(&mut t, "is").unwrap_or_else(|| String::from("::core::default::Default::default()"));
+        visibility(&mut t);
+        format!("{}: {value}, ", word(t.next()))
+    }).collect();
+    format!("impl {name} {{ pub fn blank() -> Self {{ Self {{ {fields} }} }} }} impl ::core::default::Default for {name} {{ fn default() -> Self {{ Self::blank() }} }}").parse().unwrap()
+}
+/// a declaration of this kind with a body in braces: its name and what is in them
+fn named(item: TokenStream, kind: &str) -> (String, TokenStream) {
+    let mut t = item.into_iter().peekable();
+    attributes(&mut t, &["parts"]);
+    visibility(&mut t);
+    let (is, name) = (word(t.next()), word(t.next()));
+    match t.next() {
+        Some(TokenTree::Group(g)) if is == kind && g.delimiter() == Delimiter::Brace => (name, g.stream()),
+        _ => panic!("this derive is for a {kind} with no parameters of its own: {name}"),
+    }
+}
+/// the attributes a field or an arm opens with are passed; what the one of this name holds is the answer
+fn said(t: &mut Tokens, name: &str) -> Option<String> {
+    let mut said = None;
+    while matches!(t.peek(), Some(TokenTree::Punct(p)) if p.as_char() == '#') {
+        t.next();
+        let Some(TokenTree::Group(g)) = t.next() else { panic!("an attribute with nothing in it") };
+        let mut a = g.stream().into_iter();
+        if word(a.next()) == name { if let Some(TokenTree::Group(v)) = a.next() { said = Some(v.stream().to_string()); } }
+    }
+    said
 }
 /// the fields of a struct that are written, as they are named after `self.`
 fn kept(f: &Fields) -> Vec<String> {

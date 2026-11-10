@@ -1,6 +1,6 @@
 //! The types of `close`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -11,22 +11,12 @@ pub enum CloseKind {
     Seat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CloseId {
     #[default] Behind,
     Front,
     Left,
     Right,
-}
-impl CloseId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseId::Behind => "behind",
-            CloseId::Front => "front",
-            CloseId::Left => "left",
-            CloseId::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -114,7 +104,7 @@ pub struct CloseRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum CloseRowsRowOverKind {
     Cam,
     Guard,
@@ -128,24 +118,6 @@ pub enum CloseRowsRowOverKind {
     Switch,
     Charge,
     Cancel,
-}
-impl CloseRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseRowsRowOverKind::Cam => "cam",
-            CloseRowsRowOverKind::Guard => "guard",
-            CloseRowsRowOverKind::Breaker => "breaker",
-            CloseRowsRowOverKind::Door => "door",
-            CloseRowsRowOverKind::Light => "light",
-            CloseRowsRowOverKind::Body => "body",
-            CloseRowsRowOverKind::Objective => "objective",
-            CloseRowsRowOverKind::Held => "held",
-            CloseRowsRowOverKind::Wall => "wall",
-            CloseRowsRowOverKind::Switch => "switch",
-            CloseRowsRowOverKind::Charge => "charge",
-            CloseRowsRowOverKind::Cancel => "cancel",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -173,20 +145,10 @@ pub enum CloseTookWhat {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CloseMod {
-    /// (src/game/close.ts:146 STATE)
     pub state: JsMap<PlayerId, crate::close::State>,
-    /// (src/game/close.ts:148 SEATED)
     pub seated: Option<JsMap<GuardId, crate::close::Seat>>,
-}
-impl CloseMod {
-    pub fn blank() -> Self {
-        CloseMod {
-            state: JsMap::new(),
-            seated: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -202,11 +164,8 @@ pub struct CloseStats {
     pub unseats: i32,
 }
 
-/// (src/game/close.ts:40 DEGR)
 pub const DEGR: f64 = 0.017453292519943295;
 
-/// (src/game/close.ts:117 BEHIND_COS)
 pub const BEHIND_COS: f64 = -0.25;
 
-/// (src/game/close.ts:446 SIT_CLIP: a table nothing writes)
 pub fn sit_clip() -> crate::close::SITCLIP { crate::close::SITCLIP { clip: String::from("Sitting_Idle_Loop"), loop_: true, rate: 1.0, in_: 0.7, out: 0.8 } }

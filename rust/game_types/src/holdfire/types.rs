@@ -1,6 +1,6 @@
 //! The types of `holdfire`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -29,17 +29,9 @@ pub struct HoldFireOrderO {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct HoldfireMod {
-    /// (src/game/holdfire.ts:74 states)
     pub states: JsMap<PlayerId, crate::holdfire::State>,
-}
-impl HoldfireMod {
-    pub fn blank() -> Self {
-        HoldfireMod {
-            states: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

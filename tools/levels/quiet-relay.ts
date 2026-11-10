@@ -102,7 +102,7 @@ export const RELAY_ROOMS: Record<'comms' | 'ops' | 'bunk' | 'shed', Rect> = {
 };
 const R = RELAY_ROOMS;
 
-/** THE SEVEN BEATS (level.routes: the union of every patrol set; seven and no more — a level's men are named off rust/game_rules/src/game CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks; he faces the way he arrived.
+/** THE SEVEN BEATS (level.routes: the union of every patrol set; seven and no more — a level's men are named off rust/game_rules/src/tick/game CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks; he faces the way he arrived.
  *  ON THE FIRST LAP a man stands on waypoint 0 from the first frame and has not 'arrived' from anywhere (he faces down his first leg, or wherever a settling step leaves him): so every long stand
  *  here is waypoint 1 or later, behind a lead-in waypoint with no wait a stride short of it, and is come at on the first lap as on every other. (The walker's and the fuel man's short first stands are not.)
  *  The route called 'mast' is the generator man's (it keeps its first name: sets and traces say 'mast'). */
@@ -116,9 +116,9 @@ export const RELAY_ROUTES: PatrolRoute[] = [
   // His back is the east mouth of the alley behind the blast wall: the far side of the light from the doors
   // (THE LAP STARTS ON THE LEAD-IN, a stride and a half due SOUTH of the stand: he is on his stand looking north from the second second of a run and has looked nowhere
   //  else first. It used to start at the east end of the few paces: ten seconds looking south-west and west before the first stand, and a partner ordered to his
-  //  back in that time — rust/game_rules/src/pairorders goes for the back of the way a man MOSTLY faces — was sent to his EAST side, across the dark band in front of him and
+  //  back in that time — rust/game_rules/src/squad_orders/pairorders.rs goes for the back of the way a man MOSTLY faces — was sent to his EAST side, across the dark band in front of him and
   //  into the near field of his eye when he looked north. THE LEAD-IN IS DUE SOUTH ON PURPOSE: a standing man keeps the yaw of the leg he walked in by
-  //  (rust/game_rules/src/guards never turns him on a stand), and pairorders calls the floor inside 2.4 m of a man whose head sweeps watched, all but 25 degrees either
+  //  (rust/game_rules/src/people/guards never turns him on a stand), and pairorders calls the floor inside 2.4 m of a man whose head sweeps watched, all but 25 degrees either
   //  side of dead astern. From the south-east (27.6, 22.4) he faced 36 to 51 degrees west of north and the strip behind the blast wall came out 45 degrees off
   //  his stern: an early order onto him never set. From due south the strip is inside the free wedge and the first order sets. The price: the lit door is
   //  53 degrees off his axis, so on his own (door camera out) he is about a second slower onto a man there.)
@@ -152,7 +152,7 @@ export const QUIET: QuietData = {
     { name: 'the road', sam: [35.2, 0, 27.1], samYaw: -Math.PI / 2, mate: [36.4, 0, 27.2] },
   ],
   spots: [
-    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — rust/game_rules/src/takecheck; a safe and a locker tell nobody)
+    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — rust/game_rules/src/missions/takecheck.rs; a safe and a locker tell nobody)
     { place: 'the ops room', area: R.ops, door: 'ops', holder: 'the safe', rackIndex: 1, front: [25.9, 1.0, 9.77], halfW: 0.3 },
     { place: 'the bunk hut', area: R.bunk, door: 'bunk', holder: 'the steel locker', rackIndex: 2, front: [4.77, 1.0, 6.5], halfW: 0.3 },
   ],
@@ -333,7 +333,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.pickup(32.0, 25.3, Math.PI, 'truckWhite');                                            // left on the road for the night, against the wall: the road start is behind it and the way west passes south of it
   G.bush(2.4, 22.6, 1.1); G.bush(37.6, 9.0); G.bush(14.0, 2.0, 0.9); G.bush(31.0, 2.2, 1.2); G.bush(2.2, 7.4); G.rubble(37.4, 15.0, 0.9, 8);
 
-  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/game rack_targets: the switchables named rack<rackIndex>_leds): a tell-tale on each holder ----------------
+  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/tick/game rack_targets: the switchables named rack<rackIndex>_leds): a tell-tale on each holder ----------------
   grp('objective');
   for (const s of QUIET.spots) { const f = s.front, onX = s.rackIndex === 2;
     const led = add({ c: onX ? [f[0] + 0.006, 1.45, f[2] + 0.2] : [f[0] + 0.2, 1.45, f[2] + 0.006], h: onX ? [0.004, 0.012, 0.03] : [0.03, 0.012, 0.004], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
@@ -373,7 +373,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'gate_n', hinge: [22.32, 4.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'gate_s', hinge: [19.42, 24.0], closedDir: 0, width: 1.16, exterior: true },
   ];
-  // (`exterior` is for the leaves in the COMPOUND wall: rust/game_rules/src/wind gives each a gust; the huts' outside doors stand in 0.24 walls too, so their FRAMES are cut the thick way)
+  // (`exterior` is for the leaves in the COMPOUND wall: rust/game_rules/src/air/wind.rs gives each a gust; the huts' outside doors stand in 0.24 walls too, so their FRAMES are cut the thick way)
   const THICK = new Set(['comms', 'ops', 'bunk', 'shed']);
   for (const d of doors) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
@@ -401,11 +401,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     playerSpawn: [START.sam[0], 0, START.sam[2]],
     routes: RELAY_ROUTES.map(r => ({ ...r, points: r.points.map(p => [...p] as Vec3), wait: [...r.wait] })), chokepoints: [], clearPlans: [],
     sky: { zenith: [0.012, 0.02, 0.045], horizon: [0.04, 0.045, 0.07] },
-    // the level's own mission in the shape every level file carries: spots[0] and exits[0], as rust/game_rules/src/quiet writes a deal
+    // the level's own mission in the shape every level file carries: spots[0] and exits[0], as rust/game_rules/src/missions/quiet.rs writes a deal
     mission: { serverRoom: { ...SPOT.area }, entryDoor: SPOT.door, rack: { index: SPOT.rackIndex, front: [...SPOT.front] as Vec3, halfW: SPOT.halfW }, exfilDoor: EXIT.door, exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: [EXIT.out[0], EXIT.out[1]] },
   };
 
-  // ---------------- what is underfoot (rust/game_rules/src/floor): the six materials have no word for earth: 'asphalt' for dirt and gravel, 'stone' for a slab or a
+  // ---------------- what is underfoot (rust/game_rules/src/world/floor.rs): the six materials have no word for earth: 'asphalt' for dirt and gravel, 'stone' for a slab or a
   //                  beaten floor, 'carpet' for the bunk hut's felt ----------------
   const surfaces: SurfacesData = {
     building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
@@ -452,7 +452,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [4.75, 2.2, 11.8], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 13, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
   const kitView: KitViewData = { ways: [{ door: 'gate_w', ref: [1.8, 16.6], side: -1, add: kitAdd }] };
-  // what a row calls the four ways through the wall (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): by what is outside or just inside each
+  // what a row calls the four ways through the wall (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): by what is outside or just inside each
   const doorNames = [{ door: 'gate_s', name: 'wicket' }, { door: 'gate_w', name: 'track gate' }, { door: 'gate_n', name: 'back strip gate' }, { door: 'gate_e', name: 'dish gate' }];
   return { level, scenarios: { quiet: QUIET, kitView, doorNames }, groups: trace.groups, surfaces };
 }

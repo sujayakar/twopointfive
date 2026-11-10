@@ -46,12 +46,9 @@ pub struct RoomfitStats {
     pub moved: i32,
 }
 
-/// (src/game/roomfit.ts:81 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/roomfit.ts:81 CHEST)
 pub const CHEST: f64 = 1.1;
 
-/// (src/game/roomfit.ts:81 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 

@@ -4,7 +4,7 @@
     python3 tools/blitz/sweeps/dice-who.py [--check]
 
 Some draws are made by a small helper (`pick(g, range)`: a number in a range) that many rules call. The helper does not
-know whom it draws for, so under keyed draws (rust/game_rules/src/dice.rs) all its callers would share one site and nobody,
+know whom it draws for, so under keyed draws (rust/game_rules/src/tick/dice.rs) all its callers would share one site and nobody,
 and the order two men reached it in one tick would still be play. This program gives each helper below a second
 parameter, `who: crate::dice::Who`, and writes at each call the man its caller is about:
 

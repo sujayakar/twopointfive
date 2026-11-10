@@ -77,9 +77,8 @@ fn a_lamp_put_out_takes_its_light_off_the_walls_a_slice_at_a_time() {
     let at = [11.2, 1.2, 15.2];
     let lit = round(&mut p, at);
     assert!(lit > 0.01, "a lit room's corner has light off its walls ({lit})");
-    let bulb = p.g.targets.clone().into_iter().find(|&t| game::sim_lightshome::fixture_on(&mut p.g, t)).expect("the bulb");
-    let on = game::sim_lightshome::light_in().on;
-    game::sim_lightshome::light_home_in(&mut p.g, on, Some(bulb), Some(0.0), None, None, None);
+    let bulb = p.g.targets.clone().into_iter().find(|&t| p.g.tab.fixture[t].on).expect("the bulb");
+    p.g.tab.fixture[bulb].on = false;
     let mut most = 0;
     for _ in 0..300 { p.frame(); most = most.max(sim::glow::swept()[0]); }
     let left = round(&mut p, at);
@@ -191,7 +190,7 @@ fn smoke_hides_a_lit_man_from_a_guard() {
     can(&mut p, [15.5, 0.2, 13.0], 30.0);
     // (the sentry is held blind while the smoke fills the room between them)
     let post = p.guard("post");
-    for _ in 0..360 { p.g.gd[post].dazzled_until = p.g.time + 0.1; p.frame(); }
+    for _ in 0..360 { p.g.cond[p.g.gd[post].ch].blind_until = p.g.time + 0.1; p.frame(); }
     let eye = { let a = p.at(post); [a[0], 1.65, a[1]] };
     let sam = { let a = p.sam_at(); [a[0], 1.2, a[1]] };
     assert!(through(&mut p, eye, sam) < 0.05, "the scene: six seconds on, {:.3} of the light comes through the smoke", through(&mut p, eye, sam));
@@ -298,7 +297,7 @@ fn a_fire_fights_wisps_leave_room_for_dust() {
 
 
 /// A FAILURE MEANS: asking what light stands on a point changes the game. A page's throw preview asks it for a block of floor at a time, whenever a menu is up, and the host
-/// takes no state back after it (src/view/worldask.ts `light`): a question that writes would part two machines of one game, and a replay from its run.
+/// takes no state back after it: a question that writes would part two machines of one game, and a replay from its run.
 #[test]
 fn asking_the_light_writes_nothing() {
     for seed in [1u32, 2, 3] {

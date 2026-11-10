@@ -1,6 +1,6 @@
 //! The types of `workthings`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -12,39 +12,19 @@ pub struct WorkThing {
     pub name: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum WorkThingKind {
     #[default] Breaker,
     Objective,
 }
-impl WorkThingKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WorkThingKind::Breaker => "breaker",
-            WorkThingKind::Objective => "objective",
-        }
-    }
-}
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WorkThings {
-    pub row: OrdersOrderDefId,
+    #[is(OrdersOrderDefId(0))] pub row: OrdersOrderDefId,
     pub jobs: JsMap<GuardId, crate::workthings::Job>,
     pub hands: JsMap<CharId, crate::workthings::WorkThingsHandsValue>,
     pub cache: Option<crate::workthings::WorkThingsCache>,
 }
-impl WorkThings {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        WorkThings {
-            row: OrdersOrderDefId(0),
-            jobs: JsMap::new(),
-            hands: JsMap::new(),
-            cache: None,
-        }
-    }
-}
-impl Default for WorkThings { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Job {
@@ -55,20 +35,11 @@ pub struct Job {
     pub last_t: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum WorkVerb {
     #[default] Drive,
     BreakerOff,
     BreakerOn,
-}
-impl WorkVerb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WorkVerb::Drive => "drive",
-            WorkVerb::BreakerOff => "breakerOff",
-            WorkVerb::BreakerOn => "breakerOn",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -158,17 +129,9 @@ impl Default for WorkNear {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WorkthingsMod {
-    /// (src/game/workthings.ts:136 errands)
     pub errands: Option<crate::workthings::WorkthingsModErrandsValue>,
-}
-impl WorkthingsMod {
-    pub fn blank() -> Self {
-        WorkthingsMod {
-            errands: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

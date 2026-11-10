@@ -1,6 +1,6 @@
 //! The types of `particle_fx`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug)]
@@ -90,42 +90,6 @@ pub struct ParticleFxModDUSTLOOK {
     pub soft: f64,
     pub wrap: f64,
     pub ambient: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct STUFFSURF {
-    pub carpet: Option<String>,
-    pub grass: Option<String>,
-    pub rubber: Option<String>,
-    pub metal: Option<String>,
-    pub glass: Option<String>,
-    pub wood: Option<String>,
-    pub plastic: Option<String>,
-    pub fabric: Option<String>,
-    pub steel: Option<String>,
-    pub enamel: Option<String>,
-    pub tarmac: Option<String>,
-    pub mud_wall: Option<String>,
-    pub plaster: Option<String>,
-    pub block: Option<String>,
-    pub earth: Option<String>,
-    pub gravel: Option<String>,
-    pub slab: Option<String>,
-    pub sheet: Option<String>,
-    pub cloth: Option<String>,
-    pub paint: Option<String>,
-    pub veneer: Option<String>,
-    pub carpaint: Option<String>,
-    pub stucco: Option<String>,
-    pub skim: Option<String>,
-    pub gloss_block: Option<String>,
-    pub board_concrete: Option<String>,
-    pub cast_panel: Option<String>,
-    pub paver: Option<String>,
-    pub brushed: Option<String>,
-    pub louvre: Option<String>,
-    pub plain: Option<String>,
-    pub waits: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -238,52 +202,19 @@ pub struct EmberFxO {
     pub life: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PendingTinksItem {
-    pub t: f64,
-    pub pos: V3,
-}
-
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ParticleFxMod {
-    /// (src/game/particleFx.ts:35 DUST)
-    pub dust: crate::particle_fx::ParticleFxModDUST,
-    /// (src/game/particleFx.ts:39 DUST_LOOK)
-    pub dust_look: crate::particle_fx::ParticleFxModDUSTLOOK,
-    /// (src/game/particleFx.ts:144 PFX)
-    pub pfx: crate::particle_fx::ParticleFxModPFX,
-    /// (src/game/particleFx.ts:290 STATE)
+    #[is(crate::particle_fx::ParticleFxModDUST { count: 1.0, size: 1.0, life: 1.0, speed: 1.0, rise: 1.0, spread: 1.0 })] pub dust: crate::particle_fx::ParticleFxModDUST,
+    #[is(crate::particle_fx::ParticleFxModDUSTLOOK { opacity: 0.3, growth: 0.6, fade_in: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 })] pub dust_look: crate::particle_fx::ParticleFxModDUSTLOOK,
+    #[is(crate::particle_fx::ParticleFxModPFX { impact_scale_rifle: 1.4, spark_size: 0.003, spark_life: 0.38, spark_spread: 0.9, chip_speed: 1.7, chip_life: 18.0, chip_size: 0.007, chip_spread: 1.0, dust_speed: 0.3, dust_life: 1.0, dust_size: 0.1, muzzle_spark_size: 0.002, bang_sparks: 160.0, bang_spark_size: 0.0025, bang_ring: 40.0, bang_ring_radius: 0.25, bang_ring_speed: 3.2, bang_ring_life: 1.7, bang_ring_size: 0.16, bang_puff: 10.0, kick_dust: 9.0, kick_splinters: 14.0, lock_splinters: 22.0, lock_splinters_back: 6.0, lock_screws: 4.0, tube_shards: 34.0, bulb_shards: 18.0, tube_sparks: 16.0, breaker_sparks: 70.0, clack_sparks: 5.0, casing_life: 45.0, tink_gain: 0.16, ember_size: 0.0025 })] pub pfx: crate::particle_fx::ParticleFxModPFX,
     pub state: Option<crate::particle_fx::FxState>,
 }
-impl ParticleFxMod {
-    pub fn blank() -> Self {
-        ParticleFxMod {
-            dust: crate::particle_fx::ParticleFxModDUST { count: 1.0, size: 1.0, life: 1.0, speed: 1.0, rise: 1.0, spread: 1.0 },
-            dust_look: crate::particle_fx::ParticleFxModDUSTLOOK { opacity: 0.3, growth: 0.6, fade_in: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 },
-            pfx: crate::particle_fx::ParticleFxModPFX { impact_scale_rifle: 1.4, spark_size: 0.003, spark_life: 0.38, spark_spread: 0.9, chip_speed: 1.7, chip_life: 18.0, chip_size: 0.007, chip_spread: 1.0, dust_speed: 0.3, dust_life: 1.0, dust_size: 0.1, muzzle_spark_size: 0.002, bang_sparks: 160.0, bang_spark_size: 0.0025, bang_ring: 40.0, bang_ring_radius: 0.25, bang_ring_speed: 3.2, bang_ring_life: 1.7, bang_ring_size: 0.16, bang_puff: 10.0, kick_dust: 9.0, kick_splinters: 14.0, lock_splinters: 22.0, lock_splinters_back: 6.0, lock_screws: 4.0, tube_shards: 34.0, bulb_shards: 18.0, tube_sparks: 16.0, breaker_sparks: 70.0, clack_sparks: 5.0, casing_life: 45.0, tink_gain: 0.16, ember_size: 0.0025 },
-            state: None,
-        }
-    }
-}
 
-/// (src/game/particleFx.ts:69 PROP_SURF: a table nothing writes)
-pub fn prop_surf() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("chair"), String::from("fabric")); t.set(String::from("cardboard"), String::from("cardboard")); t.set(String::from("bin"), String::from("metal")); t.set(String::from("plant"), String::from("foliage")); t } }
-
-/// (src/game/particleFx.ts:96 STUFF_SURF: a table nothing writes)
-pub fn stuff_surf() -> crate::particle_fx::STUFFSURF { crate::particle_fx::STUFFSURF { carpet: Some(String::from("carpet")), grass: None, rubber: Some(String::from("plastic")), metal: Some(String::from("metal")), glass: Some(String::from("glass")), wood: Some(String::from("wood")), plastic: Some(String::from("plastic")), fabric: Some(String::from("fabric")), steel: Some(String::from("metal")), enamel: None, tarmac: Some(String::from("concrete")), mud_wall: Some(String::from("concrete")), plaster: Some(String::from("drywall")), block: Some(String::from("concrete")), earth: None, gravel: None, slab: Some(String::from("concrete")), sheet: Some(String::from("metal")), cloth: Some(String::from("carpet")), paint: None, veneer: Some(String::from("wood")), carpaint: Some(String::from("metal")), stucco: Some(String::from("concrete")), skim: Some(String::from("drywall")), gloss_block: Some(String::from("concrete")), board_concrete: Some(String::from("concrete")), cast_panel: Some(String::from("concrete")), paver: Some(String::from("concrete")), brushed: Some(String::from("metal")), louvre: Some(String::from("metal")), plain: None, waits: None } }
-
-/// (src/game/particleFx.ts:102 HIT_STUFFS: a table nothing writes)
-pub fn hit_stuffs() -> Vec<String> { alloc::vec![String::from("carpaint"), String::from("steel"), String::from("metal"), String::from("sheet"), String::from("brushed"), String::from("louvre"), String::from("glass"), String::from("rubber"), String::from("plastic"), String::from("wood"), String::from("veneer"), String::from("fabric"), String::from("cloth"), String::from("carpet"), String::from("plaster"), String::from("skim"), String::from("stucco"), String::from("mud wall"), String::from("block"), String::from("gloss block"), String::from("board concrete"), String::from("cast panel"), String::from("slab"), String::from("paver"), String::from("tarmac")] }
-
-/// (src/game/particleFx.ts:109 SOLID_GLASS_CHIPS)
 pub const SOLID_GLASS_CHIPS: f64 = 3.0;
 
-/// (src/game/particleFx.ts:113 SOLID_GLASS_CRACK: a table nothing writes)
 pub fn solid_glass_crack() -> crate::particle_fx::SOLIDGLASSCRACK { crate::particle_fx::SOLIDGLASSCRACK { look: 9.0, pistol: 0.085, rifle: 0.11, pellet: 0.035, strength: 0.9 } }
 
-/// (src/game/particleFx.ts:131 IMPACT: a table nothing writes)
 pub fn impact() -> JsMap<String, crate::particle_fx::ImpactRecipe> { { let mut t = JsMap::new(); t.set(String::from("metal"), crate::particle_fx::ImpactRecipe { sparks: 16.0, chips: 2.0, dust: 0.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.08, 0.08, 0.09]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.5, 0.5, 0.5]), spark_speed: Some(6.0), chip_size: Some(0.005) }); t.set(String::from("plastic"), crate::particle_fx::ImpactRecipe { sparks: 6.0, chips: 5.0, dust: 1.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.5, 0.5, 0.5]), spark_speed: None, chip_size: None }); t.set(String::from("glass"), crate::particle_fx::ImpactRecipe { sparks: 4.0, chips: 9.0, dust: 0.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.1, 0.11, 0.12]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.5, 0.5, 0.5]), spark_speed: None, chip_size: Some(0.006) }); t.set(String::from("wood"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 12.0, dust: 3.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.66, 0.52, 0.34]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.62, 0.52, 0.4]), spark_speed: None, chip_size: None }); t.set(String::from("cardboard"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 8.0, dust: 3.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.6, 0.5, 0.36]), spark_speed: None, chip_size: None }); t.set(String::from("drywall"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 10.0, dust: 6.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Pale, dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.8, 0.78, 0.74]), spark_speed: None, chip_size: None }); t.set(String::from("concrete"), crate::particle_fx::ImpactRecipe { sparks: 5.0, chips: 10.0, dust: 5.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.45, 0.44, 0.42]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.55, 0.54, 0.52]), spark_speed: Some(5.0), chip_size: None }); t.set(String::from("carpet"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 4.0, dust: 4.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::Albedo, spark_speed: None, chip_size: None }); t.set(String::from("fabric"), crate::particle_fx::ImpactRecipe { sparks: 2.0, chips: 5.0, dust: 3.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::Albedo, spark_speed: None, chip_size: None }); t.set(String::from("foliage"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 10.0, dust: 2.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.14, 0.32, 0.1]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.3, 0.22, 0.14]), spark_speed: None, chip_size: None }); t } }
 
-/// (src/game/particleFx.ts:269 CASINGS: a table nothing writes)
 pub fn casings() -> crate::particle_fx::CASINGS { crate::particle_fx::CASINGS { fiveseven: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.008, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.9, -0.25], speed: 2.6, tink: 0.5 }), guard9mm: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.8, -0.2], speed: 3.0, tink: 0.5 }), aks74u: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.01, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.45, 0.5], speed: 4.8, tink: 0.55 }), ak74m: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.01, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.45, 0.5], speed: 4.8, tink: 0.55 }), akms: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.0113, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.45, 0.5], speed: 4.5, tink: 0.55 }), fn2000: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Muzzle, ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1.0], speed: 1.1, tink: 0.4 }), m870: None, mk12: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.5, 0.15], speed: 3.4, tink: 0.5 }), mp7: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0075, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.1, up: 0.06, right: 0.02, dir: [1.0, 0.7, -0.1], speed: 3.0, tink: 0.5 }), mk46: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.02, right: 0.03, dir: [1.0, -0.1, 0.1], speed: 3.0, tink: 0.45 }), m1014: Some(crate::particle_fx::CasingSpec { color: [0.55, 0.06, 0.04], diameter: 0.02, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.14, up: 0.07, right: 0.03, dir: [1.0, 0.35, 0.1], speed: 2.6, tink: 0.5 }), hk45: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.012, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.8, -0.2], speed: 2.6, tink: 0.5 }), g18: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.8, -0.2], speed: 3.0, tink: 0.5 }), pkm: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.0124, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.05, right: -0.03, dir: [-1.0, 0.2, 0.1], speed: 3.6, tink: 0.5 }), mk18bare: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Muzzle, ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1.0], speed: 1.1, tink: 0.4 }), g19bare: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.008, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.9, -0.25], speed: 2.6, tink: 0.5 }) } }

@@ -1,6 +1,6 @@
 //! The types of `lightswitch`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -66,7 +66,7 @@ pub struct SwitchRowsRowOver {
     pub framed: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SwitchRowsRowOverKind {
     Cam,
     Guard,
@@ -81,37 +81,11 @@ pub enum SwitchRowsRowOverKind {
     Charge,
     Cancel,
 }
-impl SwitchRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SwitchRowsRowOverKind::Cam => "cam",
-            SwitchRowsRowOverKind::Guard => "guard",
-            SwitchRowsRowOverKind::Breaker => "breaker",
-            SwitchRowsRowOverKind::Door => "door",
-            SwitchRowsRowOverKind::Light => "light",
-            SwitchRowsRowOverKind::Body => "body",
-            SwitchRowsRowOverKind::Objective => "objective",
-            SwitchRowsRowOverKind::Held => "held",
-            SwitchRowsRowOverKind::Wall => "wall",
-            SwitchRowsRowOverKind::Switch => "switch",
-            SwitchRowsRowOverKind::Charge => "charge",
-            SwitchRowsRowOverKind::Cancel => "cancel",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightswitchMod {
-    /// (src/game/lightswitch.ts:90 states)
     pub states: Option<crate::lightswitch::St>,
-}
-impl LightswitchMod {
-    pub fn blank() -> Self {
-        LightswitchMod {
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -124,17 +98,12 @@ pub struct LightswitchStats {
     pub gone: i32,
 }
 
-/// (src/game/lightswitch.ts:121 WALL_TOP)
 pub const WALL_TOP: f64 = 2.2;
 
-/// (src/game/lightswitch.ts:303 PLATE: a table nothing writes)
 pub fn plate() -> V3 { [0.62, 0.6, 0.55] }
 
-/// (src/game/lightswitch.ts:303 ROCKER: a table nothing writes)
 pub fn rocker() -> V3 { [0.74, 0.72, 0.66] }
 
-/// (src/game/lightswitch.ts:303 GLOW: a table nothing writes)
 pub fn glow() -> V3 { [1.6, 0.8, 0.16] }
 
-/// (src/game/lightswitch.ts:304 SW_KEY)
 pub const SW_KEY: f64 = 4194304.0;

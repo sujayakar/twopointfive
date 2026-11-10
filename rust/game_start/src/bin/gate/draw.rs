@@ -12,8 +12,8 @@
 //!   src/draw/marks.ts           the decal words when `moved` (mirrored)
 //!   src/draw/smoke.ts           the plan and the bricks where `made` is another (mirrored)
 //!   src/draw/sky.ts             the weather's rows where the row says `weather` (mirrored: a game that has told a weather goes on telling one)
-//! Once, as the level opens, and so held to nothing here: traffic (levellook.ts) and the doorways (reach.ts).
-//! What it reads every frame or by a value it compares itself, so that no mark can leave it behind, and is not mirrored: visible, info (world.ts) · dust (levellook.ts) · fog.ts · lights.ts ·
+//! Once, as the level opens, and so held to nothing here: traffic and the doorways.
+//! What it reads every frame or by a value it compares itself, so that no mark can leave it behind, and is not mirrored: visible, info · dust · fog.ts · lights.ts ·
 //! men.ts (materials by the row's own words) · rims.ts · winds.ts · sky.ts's sky, haze, gloss, exposure · src/picture/air.ts, rain.ts's roofs, fire.ts (a key of the rows they read).
 //! What is told by an id, once, and is no table: events.ts and src/picture/snow's feet, things and blasts. Snow's words (`sayOf`) are read as they lie.
 //!
@@ -43,7 +43,7 @@ const LOOK_AGAIN: usize = 600;
 const PAGE_LOOK: [f64; game_draw::LOOK] = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.02, 0.05, 0.025,
     26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0,
     -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
-    1.0, 2.0, 1.0, 1.0];
+    1.0, 2.0, 1.0, 1.0, 1.0];
 
 /// a row as words: two rows are the same where their bits are (a NaN is the same as itself)
 fn same<T>(a: &T, b: &T) -> bool { unsafe { std::slice::from_raw_parts(a as *const T as *const u8, size_of::<T>()) == std::slice::from_raw_parts(b as *const T as *const u8, size_of::<T>()) } }

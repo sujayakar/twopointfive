@@ -1,6 +1,6 @@
 //! THE FLOODLIT YARD, AND WHAT WATCHES A FLOOR: the yard is dark with the mains out; a camera and a beam see what the light and the line let them.
 mod world_ask;
-use game::sim_lightshome::CameraState;
+use game::fixtures::CameraState;
 use game::workthings::WorkThingKind;
 use game_start::json::{b, n, nums, obj, s as text, Json};
 use game_start::play::{nudge, Opts, Play};
@@ -89,7 +89,7 @@ fn a_camera_sees_what_the_light_and_the_line_let_it() {
         let t = p.until(6.0, |p| p.camera_state() != CameraState::Idle).unwrap_or_else(|| panic!("seed {s}: lit in its picture and the camera is idle: seen {:.2}, Sam's light {:.2}", p.camera_seen(), p.sam_light()));
         assert!(t > 0.3, "seed {s}: it called him at once ({t:.2} s)");
         p.run(0.1);
-        assert!(p.sent_to_look().is_some() && p.log().iter().any(|l| l.contains("has movement")), "seed {s}: nobody sent: {:?}", p.log());
+        assert!(p.sent_to_look().is_some() && p.view().radio.iter().any(|l| l.text.contains("has movement")), "seed {s}: nobody sent: {:?}", p.view().radio);
         drop(p);
         for (lit, wall, what) in [(false, false, "in the dark"), (true, true, "behind a wall")] {
             let mut p = watched(s, lit, wall);

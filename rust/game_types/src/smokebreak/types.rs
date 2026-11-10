@@ -1,6 +1,6 @@
 //! The types of `smokebreak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -47,15 +47,7 @@ pub struct MouthOf {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SmokebreakMod {
-    /// (src/game/smokebreak.ts:69 states)
     pub states: Option<crate::smokebreak::State>,
-}
-impl SmokebreakMod {
-    pub fn blank() -> Self {
-        SmokebreakMod {
-            states: None,
-        }
-    }
 }

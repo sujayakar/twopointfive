@@ -114,9 +114,9 @@ async fn deed(b: &Bot, id: &str) {
         "pistol" => b.take("Digit1").await,
         // the lamp on its pole by the shop's front, from behind the barrier: a round a press until it is dark
         "lamp" => {
-            let t = b.ask(|g| g.targets.iter().copied().find(|&f| g.tab.sim_lightshome_fixture[f].name == "lamp_shop"));
+            let t = b.ask(|g| g.targets.iter().copied().find(|&f| g.tab.fixture[f].name == "lamp_shop"));
             let Some(t) = t else { b.fail(String::from("no lamp_shop among the light targets")).await; return };
-            let lit = || b.ask(|g| game::sim_lightshome::fixture_on(g, t) && !game::sim_lightshome::fixture_broken(g, t) && game::sim_lightshome::fixture_factor(g, t) > 0.05);
+            let lit = || b.ask(|g| g.tab.fixture[t].on && !g.tab.fixture[t].broken && g.tab.fixture[t].factor > 0.05);
             for _ in 0..10 {
                 if !lit() { break; }
                 b.aim(LAMP);
@@ -172,7 +172,7 @@ async fn deed(b: &Bot, id: &str) {
             b.until(|| b.thrown(ItemKind::Flash), 2.0).await;   // (once it has left his hand: the cursor is the throw's aim until it does)
             b.to([26.8, 0.0, AXIS + 1.5], 4.0).await;
             b.landed(ItemKind::Flash, 3.4).await;
-            if b.seen(|g, s| g.pl[s.player].dazzled_until > g.time) { b.fail(String::from("he stepped aside as the line says and his own stun grenade still blinded him")).await; }
+            if b.seen(|g, s| g.cond[g.pl[s.player].ch].blind_until > g.time) { b.fail(String::from("he stepped aside as the line says and his own stun grenade still blinded him")).await; }
         }
         // the pistol, and INTO the room (a gun in a doorway has no room to come up across the jamb)
         "store" => {
@@ -205,7 +205,7 @@ async fn deed(b: &Bot, id: &str) {
             b.wait(0.5).await;
             b.hold_button(RIGHT, b.chest(x), 0.5).await;
             b.wait(1.5).await;
-            if b.ask(|g| g.messages.iter().any(|m| m.text.contains("too close to arm") || m.text.contains("was a dud"))) { b.fail(String::from("the launcher's grenade was a dud from where the line before stood him: the doorway is inside the 8 m it needs to arm")).await; }
+            if b.ask(|g| g.stats.he40.duds > 0) { b.fail(String::from("the launcher's grenade was a dud from where the line before stood him: the doorway is inside the 8 m it needs to arm")).await; }
         }
         // whoever the grenade left: the rifle, from the arch, and after him if he will not come
         "last" => {

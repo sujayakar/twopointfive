@@ -6,7 +6,7 @@
 //            `defenders`, any such number past five, "against eleven", "eleven hold". A smaller number is a part of the puzzle and stays ("two sentries
 //            who watch each other"). The training and tutorial rows are lessons: their numbers are the exercise, listed and not judged
 //   asks     no screen reads a row's `defenders` or the tally's roster for itself: nothing under src/ui names `.defenders` or `.roster`
-// MYSTERY_BREAK=1 reads the old rows as theirs: 'total' must FAIL. What Hard says is the desk's (rust/game_run), and no check reads it for a number today.
+// MYSTERY_BREAK=1 reads the old rows as theirs: 'total' must FAIL. What Hard says is the desk's (rust/game_start/src/host/desk.rs), and no check reads it for a number today.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 import { readFileSync, readdirSync } from 'node:fs';
 

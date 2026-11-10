@@ -1,23 +1,13 @@
 //! The types of `moths`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Moths {
     pub lamps: Vec<crate::moths::MothsLampsItem>,
     pub moths: Vec<crate::moths::Moth>,
 }
-impl Moths {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Moths {
-            lamps: Vec::new(),
-            moths: Vec::new(),
-        }
-    }
-}
-impl Default for Moths { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MothsLampsItem {
@@ -69,5 +59,4 @@ pub struct MothsStats {
     pub shown: i32,
 }
 
-/// (src/game/moths.ts:14 MOTHS: a table nothing writes)
 pub fn moths() -> crate::moths::MOTHS { crate::moths::MOTHS { max: 12.0, per_lamp: 7.0, r_min: 0.14, r_max: 0.5, below: 0.25, bob: 0.16, omega_min: 2.2, omega_max: 4.6, flap_hz: 9.0, wing: 0.016, gather_secs: 2.5, scatter_secs: 1.2, gale_ms: [3.0, 6.0], rain_max: 0.92, albedo: [0.62, 0.56, 0.42] } }

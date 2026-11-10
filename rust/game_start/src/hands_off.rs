@@ -6,7 +6,7 @@
 //! through the keys. The beat between a man showing and the first round is rolled on a die of his own.
 //!
 //! He is a script of the one scripted player (`player.rs`).
-use crate::player::{at, flat, Feet, Player, Script, Walk, MOVE, V3};
+use crate::player::{at, flat, Feet, Player, Script, Walk, V3};
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
@@ -60,7 +60,7 @@ struct Me {
 impl Deref for Me { type Target = Player; fn deref(&self) -> &Player { &self.p } }
 impl Me {
     /// his teammates still up
-    fn up(&self) -> Vec<GuardId> { self.seen(|g, s| game::orders::squad_orders_squad(g, s).into_iter().filter(|&m| g.gd[m].state != GuardState::Dead).collect()) }
+    fn up(&self) -> Vec<GuardId> { self.seen(|g, s| game::orders::squad_orders_squad(g, s).into_iter().filter(|&m| !game::condition::down(g, g.gd[m].ch)).collect()) }
     /// defenders still up
     fn left(&self) -> Vec<GuardId> { self.ask(left) }
     fn orders(&self) -> usize { self.seen(|_, s| s.orders.log.len()) }
@@ -81,7 +81,7 @@ impl Me {
                 let def = &g.tab.roomfight_def[d];
                 let Some(room) = def.room else { continue };
                 let r = &g.tab.roomfight_room[room];
-                if r.entries.is_empty() || r.cells.len() > 500 || g.gd[def.gd].state == GuardState::Dead { continue; }
+                if r.entries.is_empty() || r.cells.len() > 500 || game::condition::down(g, g.gd[def.gd].ch) { continue; }
                 match out.iter_mut().find(|h| h.room == room) { Some(h) => h.men.push(def.gd), None => out.push(Held { room, entries: r.entries.clone(), men: vec![def.gd] }) }
             }
             out
@@ -216,7 +216,7 @@ impl Me {
     }
     /// the breaker thrown by a teammate: the quick key on its panel, then the wait for the dark
     async fn breaker(&self) {
-        let dark = || self.ask(|g| game::sim_lightshome::mains_active(g));
+        let dark = || self.ask(|g| g.light_home.mains.active);
         if dark() || self.up().is_empty() { return; }
         let p = self.ask(|g| g.level.breaker.pos);
         if p == [0.0; 3] { return; }
@@ -314,7 +314,7 @@ impl Me {
 struct Held { room: RoomfightRoomId, entries: Vec<Entry>, men: Vec<GuardId> }
 impl Held { fn held(&self, me: &Me) -> bool { self.men.iter().any(|&m| !me.dead(m)) } }
 
-fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.gd[m].team == Team::Hostile && g.gd[m].state != GuardState::Dead).collect() }
+fn left(g: &Game) -> Vec<GuardId> { g.guards.iter().copied().filter(|&m| g.gd[m].team == Team::Hostile && !game::condition::down(g, g.gd[m].ch)).collect() }
 fn out_pt(e: &Entry, back: f64, lat: f64) -> V3 { [e.at[0] + e.out[0] * back - e.out[1] * lat, 0.0, e.at[2] + e.out[1] * back + e.out[0] * lat] }
 /// a question that costs a search of the floor, asked four times a second and not every tick
 fn slow<'a>(me: &'a Me, mut f: impl FnMut() -> bool + 'a) -> impl FnMut() -> bool + 'a {
@@ -361,7 +361,7 @@ impl HandsOff {
 
     /// THE HAND OF THE TICK ABOUT TO RUN: what the host sampled, with his keys, his button and his cursor over it. The box world's copy stands (`scene_collision::stands`).
     pub fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64) {
-        cmd.keys.retain(|k| !MOVE.contains(&k.as_str()));
+        cmd.keys.retain(|k| !game::player::WALK_KEYS.contains(&k.as_str()));
         cmd.buttons = (cmd.buttons as u32 & !1) as f64;
         if self.end.is_some() { return; }
         // (a world he may not ask of ends his scene, and not the game)
@@ -370,7 +370,7 @@ impl HandsOff {
         self.heard = g.time;
         let me = self.me.clone();
         let pl = game::seats::seat(g, me.seat).player;
-        if g.pl[pl].down { return self.stop(End::Sam); }
+        if game::condition::down(g, g.pl[pl].ch) { return self.stop(End::Sam); }
         if g.room_clear.end == Some(game::roomclear::RoomClearEnd::Taken) || (self.t() > 0.0 && left(g).is_empty()) { return self.stop(End::Taken); }
         if self.t() >= self.cap { return self.stop(End::Cap); }
         me.open(g, cmd);
@@ -391,7 +391,7 @@ impl HandsOff {
         let mut best: Option<(f64, GuardId)> = None;
         let world = WorldAsk::of(g);
         for h in g.guards.iter().copied().filter(|&h| g.gd[h].team == Team::Hostile) {
-            if g.gd[h].state == GuardState::Dead { self.shown.retain(|s| s.0 != h); continue; }
+            if game::condition::down(g, g.gd[h].ch) { self.shown.retain(|s| s.0 != h); continue; }
             let (c, d) = (chest(h), flat(pos, g.ch[g.gd[h].ch].pos));
             if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || world.line(eye, c, Line::Solid) { continue; }
             let fresh = !self.shown.iter().any(|s| s.0 == h && t - s.1.last <= 1.0);

@@ -194,7 +194,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // then took the floor 3 times in 24 seeds, against 7 in 24 before the shutters and 7 in 24 with them folded back. A shut leaf costs the team too (not
   // traced further: a look, a shot and the window's daylight all stop at it). So a window is shut only where its mission's tally is read with it shut.
   { const G = gwotKit(gwotOfOffice(K)); G.shutters('z', 4, 16.5, 19.5, -1, 'open', 'paintGreen', 0.9, 2.4); G.splitWood('z', 4, 16.7, 19.3, -1, 3); }
-  // the west stairwell's landing outside that door (officeGen.ts's, box for box: rust/game_rules/src/qrf QRF_MARKS stands a team in it)
+  // the west stairwell's landing outside that door (officeGen.ts's, box for box: rust/game_rules/src/pursuit/qrf QRF_MARKS stands a team in it)
   slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, C.concrete);
   wallX(9.45, 1.1, 3.88, 0.24, ext); wallX(12.75, 1.1, 3.88, 0.24, ext); wallZ(1.22, 9.57, 12.63, 0.24, ext);
   slab(1.1, H, 9.33, 3.88, H + 0.2, 12.87, C.ceiling, { flags: BoxFlag.NoPrimary });
@@ -336,14 +336,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     beacons.push({ pos: [x, H - 0.3, z], box: dome });
   };
   beacon(18.0, 13.2); beacon(30.0, 13.2); beacon(7.5, 14.0);
-  // one in every held room's FAR leg, clear of both its men (a beacon is a beam tilted 27° down that turns about the vertical, rust/game_rules/src/game: it lights nothing within
+  // one in every held room's FAR leg, clear of both its men (a beacon is a beam tilted 27° down that turns about the vertical, rust/game_rules/src/tick/game: it lights nothing within
   // a metre of its own foot — the store's stood over its B man and never lit him). With the mains out it sweeps the far leg and on out through the turn; the
   // near leg is black down its length but not at the turn (the head comment has the readings)
   beacon(18.4, 5.0); beacon(28.4, 5.0); beacon(19.4, 20.2); beacon(33.2, 21.4);
 
-  // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so rust/game_rules/src/doornames says them as the rooms they join: 'hall-side mess
-  // door'). Every other door's id is SAID as it stands (rust/game_rules/src/orders door_id_words: 'kitchen to hall door'), so it is the two places it joins and carries no compass
-  // letter. (rust/game_rules/src/doornames shorthand_id counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
+  // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so rust/game_rules/src/speech/doornames.rs says them as the rooms they join: 'hall-side mess
+  // door'). Every other door's id is SAID as it stands (rust/game_rules/src/squad_orders/orders door_id_words: 'kitchen to hall door'), so it is the two places it joins and carries no compass
+  // letter. (rust/game_rules/src/speech/doornames.rs shorthand_id counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
   const doorDefs: LevelDoorDef[] = [
     { name: 'm_s', hinge: [12.82, 12.0], closedDir: 0, width: 1.16 },                       // hall → the mess (its near leg)
     { name: 'kitchen_to_hall', hinge: [16.82, 12.0], closedDir: 0, width: 1.16, swing: 1 },               // hall → the kitchen
@@ -629,7 +629,7 @@ export const NAME = 'block';
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = BLOCK_ROOMS;
-/** the one accent (a word to change it — and the outside doors' paint beside it: rust/game_rules/src/doors/paint.rs) */
+/** the one accent (a word to change it — and the outside doors' paint beside it: rust/game_rules/src/fittings/doors/paint.rs) */
 const ACCENT: GwotMat = 'prodGreen';
 /** THE ROOMS' OWN FLOORS (block.ts lays one wall to wall in each lived room, in a colour of its own): what each is made of, by the colour it was written in.
  *  The shared rules ask a lived thing the furniture questions, and a floor is no furniture: the switch room's grey-green read as a cot's blanket and was

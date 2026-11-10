@@ -6,18 +6,16 @@ export class Input {
   pressed = new Set<string>();     // edge-triggered this frame
   mouseX = 0; mouseY = 0;          // CSS pixels relative to canvas
   orbitDX = 0;                     // horizontal mouse travel this frame WHILE the camera's key is held (Ctrl, or the Space bar while it is spare — host/keymap.ts camKey; the loop consumes it)
-  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (rust/game_rules/src/player)
+  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (rust/game_rules/src/sam/player)
   buttons = 0; clicked = 0;        // held / edge-this-frame button bits, 1 << MouseEvent.button: 1 = LMB, 2 = MMB, 4 = RMB (see mmb() / rmb())
   suppressClick = false;           // set by the title card: swallow the very next mouse press
   wheel = 0;
   hasFocus = true;
-  /** when set, real keyboard / mouse input is ignored except these key codes (the showcase tour drives the player itself; P still stops it).
+  /** when set, real keyboard / mouse input is ignored except these key codes (a benchmark's scene plays itself).
    *  Synthetic input (pressed.add / clicked |= / mouseX =) is unaffected. */
   lockExcept: Set<string> | null = null;
-  /** is F5 the game's right now (the save by hand — rust/game_rules/src/savestate SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
+  /** is F5 the game's right now (the save by hand — rust/game_rules/src/tick/savestate SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
   saveKey: (() => boolean) | null = null;
-  /** called (rate-limited by the owner) when a real key / click is swallowed by the lock — lets the page tell the viewer why nothing happened */
-  onLockedInput: (() => void) | null = null;
   /** asked about every real key before the game reads it: true = a UI surface took it (host/debugger.ts hands the panel's onKey — ← / → over the panel walk its
    *  systems; a typed letter is the game's unless a field of the panel was clicked) and the game never sees it. Order-independent, unlike a second capture listener on window. */
   keyVeto: ((e: KeyboardEvent) => boolean) | null = null;
@@ -71,15 +69,15 @@ export class Input {
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || (code && code !== e.code)) e.preventDefault(); }   // (a key he gave a row is the game's whole: Backspace goes back a page nowhere, ' and / open no find bar)
       if (ours && !e.repeat && e.code === camKey()) this.camHeld = e.code;   // (held, it is the camera's: the mouse turns the view, the wheel zooms — below)
       if (!code) { this.heldAs.set(e.code, ''); return; }   // (…and let go, it lets go of nothing: the key his row moved TO may be down)
-      if (this.lockExcept && !this.lockExcept.has(code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
-      if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
+      if (this.lockExcept && !this.lockExcept.has(code)) return;   // (menu keyboard nav still works)
+      if (e.repeat) return;   // OS auto-repeat is never a fresh press
       if (!this.keys.has(code) || this.heldAs.has(e.code)) this.pressed.add(code);   // (…a key that goes down again with no repeat in it came up unseen — a system shortcut, a menu of the system's took its key-up: a fresh press, not a key dead until the window is left)
       this.keys.add(code); this.heldAs.set(e.code, code);
     }, { capture: true });
     window.addEventListener('keyup', e => { if (e.code === this.camHeld) this.camHeld = ''; { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
     window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.camHeld = ''; this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
-    el.addEventListener('mousemove', e => { this.modsUp(e); const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (!this.lockExcept && (this.camHeld ? !!camKey() || e.ctrlKey : e.ctrlKey && !camKey())) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
-    el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) { this.onLockedInput?.(); return; } if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
+    el.addEventListener('mousemove', e => { this.modsUp(e); const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (!this.lockExcept && (this.camHeld ? !!camKey() || e.ctrlKey : e.ctrlKey && !camKey())) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock, so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
+    el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) return; if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });
     el.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('contextmenu', () => { this.camHeld = ''; }, { capture: true });   // (a browser menu opened off the canvas swallows the key's coming up: the camera is let go of there, not left turning with every move of the mouse)

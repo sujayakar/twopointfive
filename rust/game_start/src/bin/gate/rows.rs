@@ -97,6 +97,13 @@ pub fn all() -> Vec<Row> {
     out.push(level("file"));
     out
 }
+/// the last line of `gate list`: the missions of the list that no run and no seats row plays
+pub fn unplayed_line() -> String {
+    let long: Vec<String> = played::his_missions().into_iter().chain(played::lessons().into_iter().map(String::from)).collect();
+    let unplayed: Vec<String> = all_missions().into_iter().map(|e| e.id).filter(|id| !RUNS.iter().any(|r| r.0 == id) && !SEATS.contains(&id.as_str())).collect();
+    let nowhere: Vec<&str> = unplayed.iter().filter(|id| !long.contains(id)).map(String::as_str).collect();
+    format!("no run and no seats row plays: {} (each has its start rows; `gate long` plays them too, but for: {})", unplayed.join(" "), nowhere.join(" "))
+}
 /// the rows of `gate long` beyond these: a merge has no time for them
 pub fn long() -> Vec<Row> {
     let mut out = Vec::new();
@@ -324,7 +331,7 @@ fn plant(p: &mut Play, f: Flags) {
     if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
     if f.breaks("die") { game::math_dice::sim_random(&mut p.g); }
     if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
-    if f.breaks("lamps") { sim::state::state(p.g.sim).lights.bits[0] ^= sim::lights::T_ON; }
+    if f.breaks("lamps") { let f = &mut p.g.tab.fixture[game::ids::FixtureId(0)]; f.on = !f.on; }
     if f.breaks("smoke") { let c = p.g.ch[p.g.gd[man].ch].pos; game::smoke_types::smoke_system_like_emit(&mut p.g, &game::smoke_types::SmokeEmitter { pos: [c[0], 0.2, c[2]], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() }); }
     if f.breaks("destroyed") { let b = p.g.engine.world.statics[0]; p.g.tab.boxes[b].flags = 3.0; }
 }

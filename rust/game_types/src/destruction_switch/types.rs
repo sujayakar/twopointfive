@@ -1,6 +1,6 @@
 //! The types of `destruction_switch`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -9,16 +9,8 @@ pub struct DestructionSwitchModBLASTPACE {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DestructionSwitchMod {
-    /// (src/game/destructionSwitch.ts:47 BLAST_PACE)
-    pub blast_pace: crate::destruction_switch::DestructionSwitchModBLASTPACE,
-}
-impl DestructionSwitchMod {
-    pub fn blank() -> Self {
-        DestructionSwitchMod {
-            blast_pace: crate::destruction_switch::DestructionSwitchModBLASTPACE { on: true },
-        }
-    }
+    #[is(crate::destruction_switch::DestructionSwitchModBLASTPACE { on: true })] pub blast_pace: crate::destruction_switch::DestructionSwitchModBLASTPACE,
 }
 

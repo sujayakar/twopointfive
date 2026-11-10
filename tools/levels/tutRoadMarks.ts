@@ -1,5 +1,5 @@
 // TUT-ROAD'S PLACES: where its fights' men come in, stand and shoot, which the generator lays the level round (tools/levels/tut-road.ts). The game's program of those fights holds the same numbers
-// (rust/game_rules/src/script_tut_road).
+// (rust/game_rules/src/missions/script_tut_road.rs).
 import type { Vec3 } from '../../src/math/vec';
 
 /** the truck's flank as the sentry sees it through the gateway: every line to it is clear of both jambs, and passes a man's width and more from where the

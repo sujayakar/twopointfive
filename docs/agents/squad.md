@@ -18,17 +18,17 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | module | what it does |
 |---|---|
-| `orders/` | the book: targets, the menu, giving an order, each man walked and posed. `p_04.rs` is the ring's input, `p_05.rs` the tick |
+| `orders/` | the book: targets, the menu, giving an order, each man walked and posed. `orders/ring.rs` is the ring's input, `orders/tick.rs` the tick |
 | `orders/rows/` | every order: a file, a `Row` |
-| `cmdring/`, `ringlone/` | the ring's arithmetic: which wedge the cursor lights, which row sits on it, a ring with one row |
-| `autopilot/` | a tap: `auto_pick`, `quick` |
-| `planmode/` | Shift: `goal_men` says who takes it. There is no plan mode |
-| `pairorders/`, `pairup/` | quiet orders for one partner, and the switch that raises them with `sneak/` |
-| `squadthrow/`, `squadsmoke/`, `squad40/` | frag and stun, smoke, a 40 mm shell on order |
-| `shutdoor/`, `wandorder/`, `workthings/` | one man shuts a door, looks under one, works a thing |
-| `teampace/`, `noshove/` | how fast a teammate goes, and giving way to Sam |
-| `cover/`, `rearwatch/` | angles covered unasked, the way behind a stack, a taken room's other door |
-| `squadcast/` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
+| `cmdring.rs`, `ringlone.rs` | the ring's arithmetic: which wedge the cursor lights, which row sits on it, a ring with one row |
+| `autopilot.rs` | a tap: `auto_pick`, `quick` |
+| `planmode.rs` | Shift: `goal_men` says who takes it. There is no plan mode |
+| `pairorders.rs`, `pairup.rs` | quiet orders for one partner, and the switch that raises them with `sneak/` |
+| `squadthrow/`, `squadsmoke.rs`, `squad40.rs` | frag and stun, smoke, a 40 mm shell on order |
+| `shutdoor.rs`, `wandorder.rs`, `workthings.rs` | one man shuts a door, looks under one, works a thing |
+| `teampace.rs`, `noshove.rs` | how fast a teammate goes, and giving way to Sam |
+| `cover/`, `rearwatch.rs`, `cleared/looked.rs` | angles covered unasked, the way behind a stack, a taken room's other door |
+| `squadcast.rs` | `squad_cast`: a second book and door tools, for the response team (`qrf/`), with `every_key` |
 
 The page draws what the tick tells it: `view/rings.rs` and `view/plan.rs` go to `src/ui/cmdring.ts` and `src/ui/planfloor.ts`, `orders/hud.rs` to the
 block in `src/ui/overlay.ts`. `src/host/keymap.ts` turns Q into the code the game asks for, `KeyB` (`?bkey` leaves it on B).
@@ -53,10 +53,10 @@ a last wedge, more. Only a tutorial can ask for pages (`squad_orders_flat_ring`)
 
 **Giving** (`squad_orders_give`) is one path for tap, ring and word: `only` narrows who is asked, `squad_orders_for_men` picks the face of a door,
 `can` and `valid` may refuse, `issue` hands each man his `Assignment` (`squad_orders_assign`, which finds his way), `squad_orders_same_ways` puts men
-sent together on one way, then one man assents.
+sent together on one way, then one man assents. A refusal is said by the man it is about, and "nobody's free for that." by the nearest (`say_why`).
 
 **The tick** (`squad_orders_tick`) runs after the door tools, `rear_watch_tick`, `cover_tick` and `pair_orders_tick`. For each man: give way to the
-fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted/` and `fireline/` may
+fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted.rs` and `fireline.rs` may
 take his gun or feet, the muzzle drops off Sam, and `order` writes it all. When the last man of a `group` arrives he says "set."
 
 **Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_whole`: no key picks a pair), unless the cursor is on one teammate or
@@ -66,7 +66,7 @@ Shift picks a part. `goal_men` decides: the man under the cursor; everyone, on S
 a game of two, `deal_seats` deals them out, and each seat has its own men (`in_seat`), book and share (`seat_share`).
 
 **A way** (`squad_orders_route`) goes round doors locked against Sam's keys, rooms nobody has been in (`cleared_rooms_dear_for`, `round_cap`), lanes,
-and lit floor an uncleared room can see (`seenwalk/`). His steps go round furniture (`prop_way`). A door nobody has tried is walked up to and tried
+and lit floor an uncleared room can see (`seenwalk.rs`). His steps go round furniture (`prop_way`). A door nobody has tried is walked up to and tried
 (`squad_orders_walk_try`).
 
 ### The orders
@@ -86,7 +86,7 @@ and lit floor an uncleared room can see (`seenwalk/`). His steps go round furnit
 | `throwopen`, `fragthere`, `stunthere` | one plan (`ThrowPlan`): the nearest man with a throw onto the spot, else the shortest walk to one (`walk_spot`). A frag that catches our own is refused |
 | `smokethere` | only with cans issued (`squad_smoke_stage`): the nearest man with an arc |
 | `shell40` | a man with a launcher up, a round and a shot (`ShellPlan`) turns and fires (`turn_tick`). No rounds, no row |
-| `silent`, `loud` | the whole squad, one in the other's place (`silent/`) |
+| `silent`, `loud` | the whole squad, one in the other's place (`silent.rs`) |
 | `pairmark`, `pairtake`, `pairwatch`, `pairdark` | below |
 | `wallrow`, `walltools` | wall charge (`destruction.md`) |
 
@@ -101,7 +101,7 @@ tap on a door they stand stacked on is answered and moves nobody (`squad_orders_
 
 **How it ends.** Another order replaces it, and a job that finishes hands him a plain hold or the file. A man stopped short of his mark for
 `stuck_secs` takes where he stands as his mark. If that is a metre or more off he says "can't get through." and his group calls no "set."
-`squad_orders_drop` lets go of a dead man or one a drill takes (`nightbreach_owns`). In a fight the AI has him, a posted man pinned to his post
+`squad_orders_drop` lets go of a dead man or one a drill takes (`mission::has`). In a fight the AI has him, a posted man pinned to his post
 (`set_pinned`); `cold_secs` after he last saw or heard anything, never mid-reload, he walks back by his order's route.
 
 ### The file
@@ -111,13 +111,13 @@ tap on a door they stand stacked on is answered and moves nobody (`squad_orders_
 frame or a leaf's sweep (`squad_orders_rest_clear`). Sam walking at a man moves him `aside_off` off the line (`squad_orders_aside`). A man far from
 his place goes round unknown rooms or by the doors Sam took (`squad_orders_round_rooms`, `squad_orders_trail_way`).
 
-**Pace** (`teampace/`). To a mark he goes at Sam's walk, slower if Sam walks after him from behind, faster if Sam is ahead of him and bound for the
+**Pace** (`teampace.rs`). To a mark he goes at Sam's walk, slower if Sam walks after him from behind, faster if Sam is ahead of him and bound for the
 same mark (`team_walk_of`). A follower closes at `follow_k` of Sam's walk and runs only while Sam sprints (`team_follow`). At `run_at` his gun goes
 low. A run needs a reason (`RunWhy`): a grenade, cover (`team_dash`), following, a mission's order (`team_told`). A man bound for a stack stays under
-the run (`door_brisk`). `sneak/` and `unseen/` cap all of it while the squad is quiet.
+the run (`door_brisk`). `sneak/` and `unseen.rs` cap all of it while the squad is quiet.
 
 **Sam is not pushed.** A man under fall in yields (`falling_in_yields`): he goes round, stops short or squeezes past (`no_shove_keep`). Sam is put
-back only by what his own legs closed on him (`no_shove_back`). `walkahead/` is a networked client's guess at its own man: `net.md`.
+back only by what his own legs closed on him (`no_shove_back`). `walkahead.rs` is a networked client's guess at its own man: `net.md`.
 
 ### Covering without being told
 
@@ -125,9 +125,10 @@ back only by what his own legs closed on him (`no_shove_back`). `walkahead/` is 
 his order names nothing to watch and no door, on the walk to any mark and on the mark under `Is::LooksAbout` (`cover_eyes_free`), or if it left him
 spare (`cover_spare`). Nearer weighs more, a shut door less, one under Sam's gun or a posted man's little (`sam_k`, `held_k`). A dealt man moves his
 gun and not his feet (`cover_pose_for`). One man steps aside to see through an open door nobody has a line into (`cover_step_deal`), and his mark
-stays.
+stays. A man with nothing dealt him turns to floor of his room that nobody of the team has looked over (`unlooked_by`), off the record `look_over` keeps:
+a mark a cell within 11 m of whoever has it in his eyes.
 
-**`rearwatch/`** keeps a stack's back man on the way behind it (`rear_watch_tick`, `rear_ways`). With no door behind, he watches a way in
+**`rearwatch.rs`** keeps a stack's back man on the way behind it (`rear_watch_tick`, `rear_ways`). With no door behind, he watches a way in
 (`cover_read_rear`). On an entry of three or more he goes in last (`rear_last`). As the squad leaves a taken room one man keeps its other door, then
 follows last (`room_keep_tick`, `room_kept`, `room_secs`).
 
@@ -153,7 +154,7 @@ follows last (`room_keep_tick`, `room_kept`, `room_secs`).
   `?pacing=0`, `?nosquadthrow`. `?squad=4` is the team's size.
 - **A new order:** a file in `orders/rows/` with `pub const ORDER: Row`, a line in `rows!` in its `mod.rs`, and its row on the menu: `rows::def` in
   `squad_orders_new`, or `list` from its `frame`. What other rules need to know of it goes in `Is`.
-- **A place on the ring:** `flat_top` and `flat_left` in `cmdring/p_01.rs`.
+- **A place on the ring:** `flat_top` and `flat_left` in `cmdring.rs`.
 - **What a tap means:** `auto_pick`. The HUD's word reads the same pick (`auto_hint`).
 - **A man's mark:** `squad_orders_assign`, never his script, or the route and the status are left behind.
 
@@ -171,6 +172,7 @@ Native tests in `rust/game_start/tests/`:
 | `throw.rs`, `throw_walk.rs`, `throws.rs`, `squad_smoke.rs` | the throw shown is the one given, a walked throw, a shell, smoke |
 | `rooms_held.rs` | cover keeps its angle, an order under fire stands, shutting a door |
 | `held_team.rs`, `men_by_sam.rs` | the team's pace, going round Sam and a chair |
+| `corners.rs` | a squad that follows looks over the whole room |
 | `held_cover.rs`, `passing.rs`, `taken.rs` | openings dealt, cover on the walk, an order taken away |
 
 `squadkeys-check.ts` (a `tools/qa/checks.ts` row) holds the controls list to the keys.

@@ -1,24 +1,14 @@
 //! The types of `teampace`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RunWhy {
     #[default] Blast,
     Cover,
     Follow,
     Told,
-}
-impl RunWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunWhy::Blast => "blast",
-            RunWhy::Cover => "cover",
-            RunWhy::Follow => "follow",
-            RunWhy::Told => "told",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -28,7 +18,7 @@ pub struct Leave {
     pub until: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum LeaveWhy {
     #[default] Blast,
     Cover,
@@ -36,18 +26,6 @@ pub enum LeaveWhy {
     Told,
     Close,
     Fight,
-}
-impl LeaveWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LeaveWhy::Blast => "blast",
-            LeaveWhy::Cover => "cover",
-            LeaveWhy::Follow => "follow",
-            LeaveWhy::Told => "told",
-            LeaveWhy::Close => "close",
-            LeaveWhy::Fight => "fight",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -73,29 +51,13 @@ pub struct TeampaceModAimSeenValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct TeampaceMod {
-    /// (src/game/teampace.ts:112 leave)
     pub leave: JsMap<GuardId, crate::teampace::Leave>,
-    /// (src/game/teampace.ts:114 ran)
     pub ran: JsMap<GuardId, crate::teampace::TeampaceModRanValue>,
-    /// (src/game/teampace.ts:116 dash)
     pub dash: JsMap<GuardId, crate::teampace::TeampaceModDashValue>,
-    /// (src/game/teampace.ts:118 reasonT)
     pub reason_t: JsMap<GuardId, f64>,
-    /// (src/game/teampace.ts:128 aimSeen)
     pub aim_seen: JsMap<GuardId, crate::teampace::TeampaceModAimSeenValue>,
-}
-impl TeampaceMod {
-    pub fn blank() -> Self {
-        TeampaceMod {
-            leave: JsMap::new(),
-            ran: JsMap::new(),
-            dash: JsMap::new(),
-            reason_t: JsMap::new(),
-            aim_seen: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -108,11 +70,8 @@ pub struct TeampaceStats {
     pub secs: f64,
 }
 
-/// (src/game/teampace.ts:120 FRAME)
 pub const FRAME: f64 = 0.1;
 
-/// (src/game/teampace.ts:126 AIM_SHORT)
 pub const AIM_SHORT: f64 = 0.5;
 
-/// (src/game/teampace.ts:126 WALK_AHEAD)
 pub const WALK_AHEAD: f64 = 3.0;

@@ -1,6 +1,6 @@
 //! The types of `sim_doorshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -99,55 +99,33 @@ pub struct SimDoorshomeModDOORSSTEPPED {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimDoorshomeMod {
-    /// (src/sim/doorshome.ts:71 IO)
     pub io: Option<crate::sim_doorshome::DoorIo>,
-    /// (src/sim/doorshome.ts:83 DOORS_STEPPED)
-    pub doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED,
-}
-impl SimDoorshomeMod {
-    pub fn blank() -> Self {
-        SimDoorshomeMod {
-            io: None,
-            doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED { there: 0.0, here: 0.0, turned: 0.0, noises: 0.0 },
-        }
-    }
+    #[is(crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED { there: 0.0, here: 0.0, turned: 0.0, noises: 0.0 })] pub doors_stepped: crate::sim_doorshome::SimDoorshomeModDOORSSTEPPED,
 }
 
-/// (src/sim/doorshome.ts:16 DOOR_CAP)
 pub const DOOR_CAP: f64 = 64.0;
 
-/// (src/sim/doorshome.ts:18 DC: a table nothing writes)
 pub fn dc() -> crate::sim_doorshome::DC { crate::sim_doorshome::DC { drive_who: 34.0, drive_dir: 35.0, drive_kind: 36.0, drive_t: 37.0, drive_from: 38.0, drive_quiet: 39.0, drive_side: 40.0, drive_rate: 41.0, drive_px: 42.0, drive_pz: 43.0, drive_hit: 44.0 } }
 
-/// (src/sim/doorshome.ts:24 DRIVE_KINDS: a table nothing writes)
 pub fn drive_kinds() -> [String; 4] { [String::from("boot"), String::from("swing"), String::from("body"), String::from("hand")] }
 
-/// (src/sim/doorshome.ts:26 DOOR_SOUNDS: a table nothing writes)
 pub fn door_sounds() -> [String; 10] { [String::from("creak"), String::from("bang"), String::from("latch"), String::from("bash"), String::from("rattle"), String::from("pick"), String::from("unlock"), String::from("kick"), String::from("clang"), String::from("thud")] }
 
-/// (src/sim/doorshome.ts:28 STRIKE_TIERS: a table nothing writes)
 pub fn strike_tiers() -> [String; 3] { [String::from("open"), String::from("slam"), String::from("boot")] }
 
-/// (src/sim/doorshome.ts:50 DO: a table nothing writes)
 pub fn do_() -> crate::sim_doorshome::DO { crate::sim_doorshome::DO { placed: 0.0, h1x: 1.0, h1z: 2.0, h2x: 3.0, h2z: 4.0 } }
 
-/// (src/sim/doorshome.ts:52 DK: a table nothing writes)
 pub fn dk() -> crate::sim_doorshome::DK { crate::sim_doorshome::DK { x: 0.0, z: 2.0, man: 12.0, blocked_by: 15.0, bashed: 16.0, ripped: 17.0, bashed_at: 18.0, struck: 19.0, struck_by: 20.0, struck_tier: 21.0, struck_floor: 22.0, struck_dx: 23.0, struck_dz: 24.0, moved: 25.0, man_asked: 26.0 } }
 
-/// (src/sim/doorshome.ts:56 DE: a table nothing writes)
 pub fn de() -> crate::sim_doorshome::DE { crate::sim_doorshome::DE { door: 0.0, sound: 1.0, who: 2.0, level: 3.0, px: 4.0, pz: 5.0 } }
 
-/// (src/sim/doorshome.ts:57 DOOR_EV)
 pub const DOOR_EV: f64 = 6.0;
 
-/// (src/sim/doorshome.ts:59 DP: a table nothing writes)
 pub fn dp() -> crate::sim_doorshome::DP { crate::sim_doorshome::DP { carried: 17.0, stopped: 18.0, passed: 19.0, reached: 20.0, held: 21.0, aside: 22.0, rounds: 23.0, turned: 25.0 } }
 
-/// (src/sim/doorshome.ts:63 MAN_UNASKED)
 pub const MAN_UNASKED: f64 = -1.0;
 
-/// (src/sim/doorshome.ts:66 DOOR_OUTS)
 pub const DOOR_OUTS: f64 = 5.0;
 

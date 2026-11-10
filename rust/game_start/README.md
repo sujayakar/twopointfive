@@ -73,7 +73,7 @@ Meters, in the world a level must fit (40 by 28; x east, z south). The pieces ar
 A scene is one of two kinds, never both: a NIGHT (Sam and guards on routes, as a level's file has them) or a ROOM CLEAR (a team and posted
 defenders, started by the game's own `start_scenario`). The room clear's staging takes every man who is not its own off the floor, so the builder
 refuses a scene that says both. A scene has at least one door (a level's mission names one). A ROOM CLEAR IS REFUSED BY THE GAME (the start stops
-with the staging's own words, `roomclear/p_01.rs`) unless some room has more than one way in and every room has a defender: two rooms side by side
+with the staging's own words, `roomclear.rs`) unless some room has more than one way in and every room has a defender: two rooms side by side
 with a door between them and a door each to the yard, a defender in each, is the smallest that stands (`yard` in `tests/orders.rs`).
 
 `scene.level_text()` is the level file, ready to be saved under `levels/`.
@@ -101,7 +101,7 @@ with a door between them and a door each to the yard, a defender in each, is the
   `p.sam_at()`, `p.sam_light()`, `p.frag_fuse()`, `p.floor()` (what stands on the level: round things, shaped boxes, trim, civilians, devices).
   `p.lines(man)` and `p.said` are every line a man spoke (read off the speech bubbles after each frame), `p.sounds` every sound the game asked its host
   to play, `p.end_cards` when it told its host to open the end card. `p.debrief_view(seat)` is what the end card shows that seat.
-  The mission: `p.view()` and `p.view_of(seat)` (all a HUD is told), `p.objective()` (its row), `p.log()` (the lines on the game's log),
+  The mission: `p.view()` and `p.view_of(seat)` (all a HUD is told), `p.objective()` (its row),
   `p.room_clear_end()`, `p.hostiles()`. The par clock: `p.par_live()`, `p.par_bars()`, `p.par_started()`, `p.par_result()`, `p.par_counts()`.
 - **Do:** `p.order("stack", place, Who::Red)` is the order menu's own call; `p.frag_lands(place)` and `p.flash_lands(place)` the sandbox's;
   `p.sam_fires_at(place, settle)`, `p.point_at`, `p.press`, `p.key_down` move Sam as a player's hand does, through the host's Input. An order pointed
@@ -126,18 +126,19 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
 
 ## The start (`src/stand.rs`)
 
-`stand(level, assets, opts)` makes a game on a host with no picture. A host that hands knob tables and commands first starts by `stand_handed`
+`stand(level, assets, opts)` makes a game on a host with no picture. A host that hands what it has as one run of bytes starts by `stand_handed`
 (`src/handed.rs`), which is what `face_start` calls. In order:
 
+0. **`host::lay`** (`src/host/mod.rs`), alone: what the machine keeps (`StartOpts.kept`, one JSON text across a host) and the address's words, the address always over it.
+   Kept rows and picks, the address's numbers, the level, the levers, the cards, the quiet picks. A lesson keeps no lever, and hard only with `lessonhard`. The desk uses it too.
+
 1. The address's words, where one is handed (`StartOpts.link`), BEFORE the game is made: the game's `address_before_game` (the row's own hour and
-   weather onto the words, the weather the game is born in, the visit's hour), then `difficulty_of_address`, the difficulty it asks for, on this game's
-   own knob tables, unless `StartOpts.difficulty` is false: a host that handed commands has read its address onto them itself. An address that says
+   weather onto the words, the weather the game is born in, the visit's hour). An address that says
    `kitview` first builds the level the kit picture needs and dresses the men for it (`src/kit_stage.rs`).
 2. The block of `rust/sim` the game stands in, zeroed under the layout's word (`stand.rs`).
 3. The character: skeleton, skin, clips, the cast's meshes and variants, from the glTF files' bytes (`gltf.rs`). The page reads the same files for its
    own drawing with `src/anim/gltf.ts`.
-4. The host: an empty box world and light set, the picture's settings (the game's `box_world_new`; `settings.rs`, a copy of the values of
-   `defaultSettings` in `src/settings.ts`, kept by hand: no check holds the two equal).
+4. The host: an empty box world and light set (the game's `box_world_new`).
 5. The level file read into the `Level`, its boxes and routes as rows (`level.rs`). The records the game keeps as its own types (a mission's `scenarios`,
    the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and
    markings, a light, a door) go through `read.rs` and `records.rs`, a line a type.
@@ -145,7 +146,7 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
    (`passes.rs`; the game's `cut_record`, `box_world_add_static`, `light_from_def`).
 7. The die, seeded before the men are made (the game's `sim_dice_new`).
 8. Collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module: **the game's own
-   constructor, `game_new`** (`rust/game_rules/src/game/p_04.rs`).
+   constructor, `game_new`** (`rust/game_rules/src/tick/game/stand.rs`).
 9. The moving state at home in the block (`settle`: the die, the pose pool, the smoke grid).
 10. With no address, the solo night's card (`kit_solo_stand`). The visit's hour over the level's own night (`apply_hour`).
 11. The host's Input and camera (the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild`).
@@ -206,13 +207,13 @@ cargo run --release --bin hold -- check /tmp/held --but PART,PART   # … with t
 cargo run --release --bin hold -- draw /tmp/drawn       # play, draw every frame, and say what it cost and whether it changed anything
 ```
 
-`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands/`, and writes, for every frame, the state's words
+`keep` stands each level by this crate's start, plays it for 90 s under each hand of `hands.rs`, and writes, for every frame, the state's words
 (`game::state_words`: a hash of every part of the game that a host does not hand in, with `rust/sim`'s block a part at a time) folded to one number
 and one byte of each part. `check` reads the folder's own list of runs and its copies of the hands, plays them on the build it is, and says of each run
 `the same after every frame`, or the first frame that differs and the names of the parts that differ in it (`FIRST DIFFERS AT FRAME 2181 (36.35 s) in
 guards, chars, dice`). It exits 0 only if every run is the same. Levels, hands, seeds and the length are arguments
-(`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is `DEFAULT_LEVELS` (a `:clear` starts a room clear) by every
-hand by seed 1. A run is a process of its own, four at a time. Fewer hands make it shorter: `--hand push --hand bangs --hand rest`.
+(`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is `DEFAULT_LEVELS` (a `:clear` starts a room clear, a
+mission's id that mission) by every hand by seed 1. A run is a process of its own, four at a time. Fewer hands: `--hand push --hand bangs`.
 
 `draw` keeps nothing but the hands it plays, in a folder of its own. After every frame it makes every section of what the picture is told
 (`rust/game_draw`), as a host does that draws at twice the tick's rate, and once a second it holds the game's own words to what they were before.
@@ -252,10 +253,10 @@ line says what was not compared. A name that is a part of neither build is refus
 ## Missions: what a change of play does (`src/bin/missions.rs`)
 
 `cargo run --release --bin missions > before.tsv` on the tree before a change of play, the same to `after.tsv` on the tree after it, then
-`… --bin missions -- diff before.tsv after.tsv`: the room clears of `LEVELS` as the page stands them, standard and hard, over several seeds, under a
+`… --bin missions -- diff before.tsv after.tsv`: every room clear of the list, the rescues and the night breach, standard and hard, over several seeds, under a
 commander who gives the squad the same orders on every build. A row says who was up at the end, when the first man fell, when the floor was clear, the
-rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says what it does not see: stealth, Sam's gun, the
-rescues, a commander who waits. `hold` says whether a build is the same game; this says what the other game came to.
+rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says what it does not see. `hold` says whether a
+build is the same game; this says what the other game came to.
 
 `src/bin/blastcost.rs` prices the tick of a wall blast against a quiet tick, natively.
 
@@ -271,7 +272,7 @@ gate save            # only rows whose name starts with a word: `gate start`, `g
 gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
 gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`, `level …`)
-gate list            # the rows
+gate list            # the rows, then the missions no run plays
 gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
 

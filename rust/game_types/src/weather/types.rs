@@ -1,6 +1,6 @@
 //! The types of `weather`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -34,53 +34,39 @@ pub struct WeatherSnapStats {
     pub barks: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Weather {
-    pub on: bool,
+    #[is(true)] pub on: bool,
     pub kind_now: Option<crate::weather_kinds::WeatherKind>,
     pub roof_rects: Vec<[f64; 4]>,
     pub fog_spec: Option<crate::weather_kinds::FogSpec>,
     pub fog_word: f64,
-    pub fog_glow: f64,
-    pub wind: [f64; 2],
-    pub wet_gloss: bool,
+    pub storm: f64,
+    pub rain_rate: f64,
+    /// the rain falling on the game this tick (0 with the storm off or held for the day): what the frame draws, and what soaks a man
+    pub rain_now: f64,
+    /// how wet the lot is
+    pub wet: f64,
+    /// game time until which a thunderclap is drowning the small noises
+    #[is(-1e9)] pub thunder_until: f64,
+    #[is(-1.0)] pub next_flash_at: f64,
+    #[is(-1e9)] pub last_bark_t: f64,
+    /// on its way, oldest first
+    pub thunders: Vec<crate::weather::Thunder>,
+    /// the storm's own die: never the game's, whose stream a storm must not shift
+    pub die: u32,
+    #[is(1.0)] pub fog_glow: f64,
+    #[is([1.1, 0.45])] pub wind: [f64; 2],
+    #[is(true)] pub wet_gloss: bool,
     pub flash: Option<crate::weather::Flash>,
-    pub stats: crate::weather::WeatherStats,
-    pub suspended: bool,
+    #[is(crate::weather::WeatherStats { flashes: 0.0, thunders: 0.0, barks: 0.0, last_thunder: None })] pub stats: crate::weather::WeatherStats,
     pub touched: Vec<crate::weather::WeatherTouchedItem>,
-    pub gloss_was: Option<bool>,
     pub snow_rate: f64,
     pub own: bool,
     pub fits: Option<bool>,
     pub wet_on: bool,
     pub lot: Option<BoxId>,
 }
-impl Weather {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Weather {
-            on: true,
-            kind_now: None,
-            roof_rects: Vec::new(),
-            fog_spec: None,
-            fog_word: 0.0,
-            fog_glow: 1.0,
-            wind: [1.1, 0.45],
-            wet_gloss: true,
-            flash: None,
-            stats: crate::weather::WeatherStats { flashes: 0.0, thunders: 0.0, barks: 0.0, last_thunder: None },
-            suspended: false,
-            touched: Vec::new(),
-            gloss_was: None,
-            snow_rate: 0.0,
-            own: false,
-            fits: None,
-            wet_on: false,
-            lot: None,
-        }
-    }
-}
-impl Default for Weather { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Flash {
@@ -139,50 +125,34 @@ pub struct WeatherStrikeOpts {
     pub peak: Option<f64>,
 }
 
-/// (src/game/weather.ts:63 LEGACY: a table nothing writes)
 pub fn legacy() -> crate::weather::LEGACY { crate::weather::LEGACY { storm: 0.7, rain: 0.55, wind: [1.1, 0.45], cloud: 0.95 } }
 
-/// (src/game/weather.ts:64 NO_RECT: a table nothing writes)
 pub fn no_rect() -> [f64; 4] { [1000000.0, 1000000.0, -1000000.0, -1000000.0] }
 
-/// (src/game/weather.ts:102 INTERIOR: a table nothing writes)
 pub fn interior() -> [f64; 4] { [4.0, 4.0, 36.0, 24.0] }
 
-/// (src/game/weather.ts:105 ANNEX: a table nothing writes)
 pub fn annex() -> [f64; 4] { [1.1, 9.33, 4.0, 12.87] }
 
-/// (src/game/weather.ts:106 RAIN_TOP)
 pub const RAIN_TOP: f64 = 7.0;
 
-/// (src/game/weather.ts:107 RAIN_V)
 pub const RAIN_V: f64 = 9.0;
 
-/// (src/game/weather.ts:108 WET_ROUGH)
 pub const WET_ROUGH: f64 = 0.22;
 
-/// (src/game/weather.ts:109 WET_ALBEDO)
 pub const WET_ALBEDO: f64 = 0.5;
 
-/// (src/game/weather.ts:110 FLASH_COLOR: a table nothing writes)
 pub fn flash_color() -> V3 { [0.78, 0.86, 1.0] }
 
-/// (src/game/weather.ts:111 FLASH_SECS)
 pub const FLASH_SECS: f64 = 0.5;
 
-/// (src/game/weather.ts:113 SKY_FLASH_K)
 pub const SKY_FLASH_K: f64 = 0.045;
 
-/// (src/game/weather.ts:114 THUNDER_LINES: a table nothing writes)
 pub fn thunder_lines() -> Vec<String> { alloc::vec![String::from("lovely night for it."), String::from("that one was close."), String::from("glad I'm not out in that."), String::from("it's really coming down."), String::from("storm's right on top of us.")] }
 
-/// (src/game/weather.ts:116 THUNDER_OUT)
 pub const THUNDER_OUT: &str = "no let-up, is there.";
 
-/// (src/game/weather.ts:116 THUNDER_OUT_GUIDE)
 pub const THUNDER_OUT_GUIDE: &str = "it's not letting up, huh.";
 
-/// (src/game/weather.ts:117 BARK_COOLDOWN)
 pub const BARK_COOLDOWN: f64 = 45.0;
 
-/// (src/game/weather.ts:118 BARK_CHANCE)
 pub const BARK_CHANCE: f64 = 0.35;

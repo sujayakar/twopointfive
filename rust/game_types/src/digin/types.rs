@@ -1,6 +1,6 @@
 //! The types of `digin`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -56,24 +56,13 @@ pub struct Man {
     pub stalls: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
 pub enum Cue {
     Kick,
     Scrape,
     Radio,
     Shout,
     Tried,
-}
-impl Cue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Cue::Kick => "kick",
-            Cue::Scrape => "scrape",
-            Cue::Radio => "radio",
-            Cue::Shout => "shout",
-            Cue::Tried => "tried",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -161,23 +150,11 @@ pub struct DigInRefuge {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DiginMod {
-    /// (src/game/digin.ts:189 DIGIN_LOG)
     pub digin_log: Vec<crate::digin::DiginModDIGINLOGItem>,
-    /// (src/game/digin.ts:192 DIGIN_SHUT)
-    pub digin_shut: crate::digin::DiginModDIGINSHUT,
-    /// (src/game/digin.ts:220 states)
+    #[is(crate::digin::DiginModDIGINSHUT { })] pub digin_shut: crate::digin::DiginModDIGINSHUT,
     pub states: Option<crate::digin::St>,
-}
-impl DiginMod {
-    pub fn blank() -> Self {
-        DiginMod {
-            digin_log: Vec::new(),
-            digin_shut: crate::digin::DiginModDIGINSHUT {  },
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -225,11 +202,8 @@ pub struct DiginStats {
     pub wedged_away: i32,
 }
 
-/// (src/game/digin.ts:163 DIGIN_DEFAULTS: a table nothing writes)
 pub fn digin_defaults() -> crate::knobs::DiginK { crate::knobs::DiginK::page() }
 
-/// (src/game/digin.ts:639 HAUL_NEAR)
 pub const HAUL_NEAR: f64 = 0.9;
 
-/// (src/game/digin.ts:639 HOME_REACH)
 pub const HOME_REACH: f64 = 1.2;

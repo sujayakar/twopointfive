@@ -15,6 +15,7 @@ export const PAGES: readonly PageRow[] = [
   ['loadbrief-page.cjs', 'boot', "a mission's own address as a visitor opens it: the brief, then the block goes live", 5.6],
   ['wgsl-compile.cjs', 'boot', "every shader text compiles", 0.1],
   ['tut-road-page.cjs', 'play', "the first tutorial mission with real keys, first line to debrief", 1.6],
+  ['../draw/rows-page.cjs', 'play', "the panel's rows and picks, the address's words, what this machine keeps over a restart and a load", 5],
   ['../draw/weather-page.cjs', 'play', "a snow level, a wet night and a fire reach the picture", 4.5],
   ['panel-keys.cjs', 'play', "the debugger's key and Tab, pressed for real", 1.5],
   ['runbooks-page.cjs', 'play', "a run's page is nobody's try: no end card, nothing on the books", 3.1],

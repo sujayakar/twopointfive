@@ -1,13 +1,13 @@
 //! The types of `civilians`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CivState {
     #[default] Held,
     Work,
@@ -20,24 +20,8 @@ pub enum CivState {
     Evacuate,
     Gone,
 }
-impl CivState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CivState::Held => "held",
-            CivState::Work => "work",
-            CivState::Startled => "startled",
-            CivState::Alarmed => "alarmed",
-            CivState::Flee => "flee",
-            CivState::Report => "report",
-            CivState::Phone => "phone",
-            CivState::Cower => "cower",
-            CivState::Evacuate => "evacuate",
-            CivState::Gone => "gone",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum CivCause {
     Shot,
     Bang,
@@ -49,22 +33,6 @@ pub enum CivCause {
     Noise,
     Grabbed,
     Panel,
-}
-impl CivCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CivCause::Shot => "shot",
-            CivCause::Bang => "bang",
-            CivCause::Body => "body",
-            CivCause::Sam => "sam",
-            CivCause::Gun => "gun",
-            CivCause::Gunfire => "gunfire",
-            CivCause::Scream => "scream",
-            CivCause::Noise => "noise",
-            CivCause::Grabbed => "grabbed",
-            CivCause::Panel => "panel",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -244,18 +212,10 @@ pub struct PickTargetOpts {
     pub exits_only: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DeliverReportHow {
     Found,
     Told,
-}
-impl DeliverReportHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DeliverReportHow::Found => "found",
-            DeliverReportHow::Told => "told",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -282,20 +242,10 @@ pub enum CivPanicWhat {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CiviliansMod {
-    /// (src/game/civilians.ts:78 ownSpots)
     pub own_spots: Option<crate::civilians::CivSpots>,
-    /// (src/game/civilians.ts:443 floors)
     pub floors: Option<crate::civilians::CiviliansModFloorsValue>,
-}
-impl CiviliansMod {
-    pub fn blank() -> Self {
-        CiviliansMod {
-            own_spots: None,
-            floors: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -321,21 +271,15 @@ pub struct CiviliansStats {
     pub sam_seen: i32,
 }
 
-/// (src/game/civilians.ts:57 CIV_SPOTS: a table nothing writes)
 pub fn civ_spots_table() -> crate::civilians::CivSpots { crate::civilians::CivSpots { phones: alloc::vec![crate::civilians::CivSpot { name: String::from("the reception phone"), pos: [8.9, 0.0, 13.8], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the break-room phone"), pos: [34.6, 0.0, 16.2], face: 1.5707963267948966 }], exits: alloc::vec![crate::civilians::CivSpot { name: String::from("the fire exit"), pos: [38.2, 0.0, 23.2], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the outside door"), pos: [34.0, 0.0, 25.0], face: 1.5707963267948966 }] } }
 
-/// (src/game/civilians.ts:122 CIV_ID0)
 pub const CIV_ID0: f64 = 40.0;
 
-/// (src/game/civilians.ts:435 NONE: a table nothing writes)
 pub fn none() -> Vec<GuardId> { Vec::new() }
 
-/// (src/game/civilians.ts:667 SIT_ADVANCE)
 pub const SIT_ADVANCE: f64 = 0.33;
 
-/// (src/game/civilians.ts:676 TASK_CLIP: a table nothing writes)
 pub fn task_clip() -> JsMap<String, Option<crate::civilians::TASKCLIPValue>> { { let mut t = JsMap::new(); t.set(String::from("stand"), None); t.set(String::from("wipe"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Interact"), loop_: Some(true), rate: Some(0.85), in_: Some(0.4), out: Some(0.4), rise: None })); t.set(String::from("bin"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Fixing_Kneeling"), loop_: Some(true), rate: Some(0.8), in_: Some(0.6), out: Some(0.7), rise: Some(0.8) })); t.set(String::from("sit"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Sitting_Idle_Loop"), loop_: Some(true), rate: Some(1.0), in_: Some(0.7), out: Some(0.8), rise: Some(1.0) })); t.set(String::from("cooler"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Interact"), loop_: Some(true), rate: Some(0.6), in_: Some(0.4), out: Some(0.4), rise: None })); t.set(String::from("printer"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Interact"), loop_: Some(true), rate: Some(0.7), in_: Some(0.4), out: Some(0.4), rise: None })); t.set(String::from("shelf"), Some(crate::civilians::TASKCLIPValue { clip: String::from("PickUp_Table"), loop_: Some(true), rate: Some(0.7), in_: Some(0.4), out: Some(0.5), rise: None })); t } }
 
-/// (src/game/civilians.ts:1072 DIGIT_WORDS: a table nothing writes)
 pub fn digit_words() -> Vec<String> { alloc::vec![String::from("oh"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six"), String::from("seven"), String::from("eight"), String::from("nine")] }
 

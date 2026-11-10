@@ -1,6 +1,6 @@
 //! The types of `squad40`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -93,20 +93,12 @@ pub struct ShellPlan {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Squad40Mod {
     /// (src/game/squad40.ts:87 states)
     pub states: JsMap<PlayerId, crate::squad40::State>,
     /// (src/game/squad40.ts:90 SQUAD40_LOG)
     pub squad40_log: Vec<crate::squad40::Squad40ModSQUAD40LOGItem>,
-}
-impl Squad40Mod {
-    pub fn blank() -> Self {
-        Squad40Mod {
-            states: JsMap::new(),
-            squad40_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

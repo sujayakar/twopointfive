@@ -1,6 +1,6 @@
 //! The types of `pressure`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -30,18 +30,10 @@ pub struct Man {
     pub ear_t: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum ManRole {
     #[default] Press,
     Flank,
-}
-impl ManRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ManRole::Press => "press",
-            ManRole::Flank => "flank",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -278,39 +270,22 @@ pub struct Aim {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PressureMod {
-    /// (src/game/pressure.ts:297 STATES)
     pub states: Option<crate::pressure::State>,
-    /// (src/game/pressure.ts:305 KITTED)
     pub kitted: JsSet<GuardId>,
 }
-impl PressureMod {
-    pub fn blank() -> Self {
-        PressureMod {
-            states: None,
-            kitted: JsSet::new(),
-        }
-    }
-}
 
-/// (src/game/pressure.ts:306 ROOM_CELLS)
 pub const ROOM_CELLS: f64 = 500.0;
 
-/// (src/game/pressure.ts:307 STAND_OFF_BAND)
 pub const STAND_OFF_BAND: f64 = 7.0;
 
-/// (src/game/pressure.ts:307 STAND_OFF_TRIES)
 pub const STAND_OFF_TRIES: f64 = 10.0;
 
-/// (src/game/pressure.ts:308 PAIR_WAIT_SECS)
 pub const PAIR_WAIT_SECS: f64 = 6.0;
 
-/// (src/game/pressure.ts:309 CUE_FIRST_SECS)
 pub const CUE_FIRST_SECS: f64 = 1.0;
 
-/// (src/game/pressure.ts:1001 CALLED_SECS)
 pub const CALLED_SECS: f64 = 30.0;
 
-/// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
 pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::PressureK::page() }

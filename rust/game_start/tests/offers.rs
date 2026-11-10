@@ -71,7 +71,7 @@ fn bunk(seed: u32) -> (Play, game::ids::RoomfightDefId, game::ids::DoorId) {
     let mut p = Play::mission("compound.json", &format!("?levelFile=compound.json&roomclear={seed}&squad4"), &Opts { seed, ..Default::default() });
     p.g.god_mode = true;
     p.run(1.0);
-    let man = p.g.room_clear.rooms.iter().find(|r| r.def.id == "bunk").unwrap().defenders[0];
+    let man = p.g.staged.rooms.iter().find(|r| r.def.id == "bunk").unwrap().defenders[0];
     let def = p.g.fight.defs.iter().copied().find(|&d| p.g.tab.roomfight_def[d].gd == man).unwrap();
     let room = p.g.tab.roomfight_def[def].room.unwrap();
     let e = p.g.tab.roomfight_room[room].entries.iter().copied().find(|e| p.g.dr[e.door].def.name == "a_s").unwrap();

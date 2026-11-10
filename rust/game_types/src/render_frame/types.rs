@@ -1,6 +1,6 @@
 //! The types of `render_frame`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -27,16 +27,8 @@ pub struct RenderFrameModLookConfig {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct RenderFrameMod {
-    /// (src/render/frame.ts:351 lookConfig)
-    pub look_config: crate::render_frame::RenderFrameModLookConfig,
-}
-impl RenderFrameMod {
-    pub fn blank() -> Self {
-        RenderFrameMod {
-            look_config: crate::render_frame::RenderFrameModLookConfig { fire_snow: 1.0 },
-        }
-    }
+    #[is(crate::render_frame::RenderFrameModLookConfig { fire_snow: 1.0 })] pub look_config: crate::render_frame::RenderFrameModLookConfig,
 }
 

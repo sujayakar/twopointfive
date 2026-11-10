@@ -2,7 +2,7 @@
 // whitewashed block building whose whole front is glazed (the glasshouse, a long room of seedling benches behind six tall panes, 0.3 m off the ground to
 // 2.4) and whose inside walls between the glasshouse, the lab and the office are glass from 0.5 m to 2.4. Seven men. The forecourt is floodlit off the eaves
 // and the glazed rooms are dark, so whoever walks onto the forecourt is seen from three rooms at once by men he cannot see, and their rounds come through
-// the panes (rust/game_rules/src/glasspen; a pane is a toll, not a wall). The other three sides are blank block wall. The store, on the back, is the one room with no
+// the panes (rust/game_rules/src/guns/glasspen.rs; a pane is a toll, not a wall). The other three sides are blank block wall. The store, on the back, is the one room with no
 // glass in any wall; it has its own door on the dark back lot, and a row of seed racks stands between that room and its door to the lab.
 // TWO WAYS IN (scenarios.roomClear.team / starts[0]), BOTH IN THE DARK AND OUT OF EVERY DEFENDER MARK'S SIGHT: the side of the building, round the corner
 // from the glass (stepping onto the lit forecourt in front of the panes is the player's own decision); or the back lot, on the back door.
@@ -52,7 +52,7 @@ const LAB_S: Vec3 = [22.75, 1.1, 13.1], LAB_N: Vec3 = [22.75, 1.1, 12.9], STORE_
 const OFFICE_E: Vec3 = [24.1, 1.1, 11.25], BACK_IN: Vec3 = [14.25, 1.1, 8.2], RACK_END: Vec3 = [15.85, 1.1, 12.2];
 
 /** THE ROOM CLEAR (lib/scenarios.ts StructureData). Seven men: glasshouse 3, lab 2, office 1, store 1.
- *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
+ *  THE HAND PLACEMENT (rust/game_rules/src/missions/roomclear.rs place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: men in the dark watch a floodlit forecourt through glass that stops no round.
  *  (The answers: come in through a wall that is not glass — the back door, or a hole of your own in the blank end wall — or put the light out.)
  *  · THE FORECOURT (the obvious plan: the short walk along the lit panes to the front door) is under four guns in three rooms from the first pane on:
@@ -299,7 +299,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the office, a point on its back wall, the front door
     mission: { serverRoom: { ...OFFICE }, entryDoor: 'office', rack: { index: 0, front: [28.2, 1.0, 8.5], halfW: 0.3 }, exfilDoor: 'front', exfilX: 20.0, exfilZ: 18.6, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (rust/game_rules/src/floor): gravel and dirt outside are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab
+  // ---- what is underfoot (rust/game_rules/src/world/floor.rs): gravel and dirt outside are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab
   // ('stone'), lino laid in the lab and the office, the glasshouse's mat a carpet
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',

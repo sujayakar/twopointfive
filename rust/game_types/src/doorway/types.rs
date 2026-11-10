@@ -1,9 +1,9 @@
 //! The types of `doorway`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a walk's price list, nav.findPath's penalty: a cell in the lane of a door of `open` costs doormanners.lane_dear, any other 1. The doors and the knobs are read live from g when priced; `memo` keeps each cell's first answer, by nav.idx, for this one value (doorway.ts doorwayLanePrice)
+/// a walk's price list, nav.findPath's penalty: a cell in the lane of a door of `open` costs doormanners.lane_dear, any other 1. The doors and the knobs are read live from g when priced; `memo` keeps each cell's first answer, by nav.idx, for this one value
 #[derive(Clone, Debug)]
 pub enum DoorwayLanePrice {
     Lanes { open: Vec<DoorId>, memo: JsMap<crate::Num, f64> },
@@ -81,20 +81,10 @@ pub struct Through {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorwayMod {
-    /// (src/game/doorway.ts:138 STACK_OWN)
-    pub stack_own: crate::doorway::DoorwayModSTACKOWN,
-    /// (src/game/doorway.ts:152 states)
+    #[is(crate::doorway::DoorwayModSTACKOWN { leaf: 0.0, mark: 0.0, fur: 0.0, back: 0.0, queue: 0.0 })] pub stack_own: crate::doorway::DoorwayModSTACKOWN,
     pub states: JsMap<GuardId, crate::doorway::St>,
-}
-impl DoorwayMod {
-    pub fn blank() -> Self {
-        DoorwayMod {
-            stack_own: crate::doorway::DoorwayModSTACKOWN { leaf: 0.0, mark: 0.0, fur: 0.0, back: 0.0, queue: 0.0 },
-            states: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -114,5 +104,4 @@ pub struct DoorwayStats {
     pub leaf_stall: i32,
 }
 
-/// (src/game/doorway.ts:238 ROUND_PACE)
 pub const ROUND_PACE: f64 = 0.5;

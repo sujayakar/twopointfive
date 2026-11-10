@@ -91,7 +91,7 @@ export const enum View {
   cuts = 19,
   /** f32 × 3 */
   cut = 20,
-  /** u32: a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does) */
+  /** u32: the kit picture holds the view here: where it looks, and from how far and which way (0: nobody does) */
   pinned = 23,
   /** f32 × 3 */
   pin = 24,
@@ -113,7 +113,7 @@ export const enum View {
   target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 37,
-  /** u32: the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view */
+  /** u32: the back key is the game's now: it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) */
   backs = 38,
   /** u32: saves made of this game so far: moves when there is another */
   saves = 39,
@@ -187,7 +187,7 @@ export const enum Sky {
   kept = 24,
   /** f32 */
   markTexel = 25,
-  /** u32: the weather in the open air (render/frame.ts WeatherFrame, in its order) */
+  /** u32: the weather in the open air */
   weather = 26,
   /** f32 */
   rain = 27,
@@ -333,7 +333,7 @@ export const enum Light {
   key = 0,
   /** u32: 0 a point, 1 a spot, 2 the sky's, 3 a panel */
   kind = 1,
-  /** u32: what it is by day (render/photometry.ts lightClass): 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face */
+  /** u32: what it is by day: 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face */
   class = 2,
   /** u32: 1 it burns · 2 transient · 4 broad · 8 a carried spot · 16 infrared · 32 it moves (a hand's, Sam's own) */
   says = 3,
@@ -863,7 +863,7 @@ export const enum Reset {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 1 the level: every history · 2 the smoke · 4 the snow's blasts · 8 the things' marks · 16 the prints · 32 the cans venting stop, what they let out left in the air */
+  /** u32: 1 the smoke · 2 the cans venting stop, what they let out left in the air */
   what = 2,
   /** words a row */
   row = 3,

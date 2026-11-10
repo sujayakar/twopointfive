@@ -1,6 +1,6 @@
 //! The types of `scene_box_mirror`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Blank, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Default)]
@@ -13,9 +13,9 @@ pub struct PaneView {
 pub struct PaneSource {
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct BoxMirror {
-    pub slot: f64,
+    #[is(-1.0)] pub slot: f64,
     pub live: bool,
     pub lines: bool,
     pub rays: bool,
@@ -39,94 +39,35 @@ pub struct BoxMirror {
     pub lamp_cap: f64,
     pub wind_cap: f64,
     pub nav_cap: f64,
-    pub lamp_set: f64,
+    #[is(-2.0)] pub lamp_set: f64,
     pub lamp_n: f64,
-    pub rule_set: f64,
+    #[is(-1.0)] pub rule_set: f64,
     pub rule_panes: f64,
     pub copy: f64,
     pub grid_over: bool,
-    pub cells_wrote: bool,
+    #[is(true)] pub cells_wrote: bool,
     pub grid_of: Option<crate::scene_box_mirror::BoxMirrorGridOf>,
     pub used: f64,
-    pub caps: crate::scene_box_mirror::BoxMirrorCaps,
-    pub things_at: f64,
+    #[is(crate::scene_box_mirror::BoxMirrorCaps { boxes: 0.0, leaves: 0.0, cuts: 0.0, panes: 0.0, cells: 0.0, items: 0.0, tilted: 0.0, things: 0.0, glass: 0.0, view: 0.0 })] pub caps: crate::scene_box_mirror::BoxMirrorCaps,
+    #[is(-1.0)] pub things_at: f64,
     pub things_ok: bool,
-    pub things_all: bool,
-    pub snow_len: f64,
+    #[is(true)] pub things_all: bool,
+    #[is(-1.0)] pub snow_len: f64,
     pub boxes: f64,
     pub n_tilted: f64,
-    pub epoch: f64,
-    pub put_backs: f64,
+    #[is(-1.0)] pub epoch: f64,
+    #[is(-1.0)] pub put_backs: f64,
     pub cut_of: Vec<i32>,
     pub cut_free: Vec<f64>,
     pub cut_next: f64,
     pub own: Option<Vec<BoxId>>,
     pub own_len: f64,
-    pub own_at: f64,
+    #[is(-1.0)] pub own_at: f64,
     pub played: bool,
     pub of: Option<String>,
     /// the module's world as this game wrote it last (world.rs `stood`): a number of this process's, on no wire and in no word of the state
     pub stood: u32,
 }
-impl BoxMirror {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        BoxMirror {
-            slot: -1.0,
-            live: false,
-            lines: false,
-            rays: false,
-            circles: false,
-            owes: false,
-            glass: None,
-            sheets_in: None,
-            block: None,
-            owed: 0.0,
-            glass_busy: 0.0,
-            glass_angles: false,
-            view_lengths: false,
-            glass_n: 0.0,
-            glass_bis: Vec::new(),
-            row_lines: false,
-            row_rays: false,
-            row_circles: false,
-            walk: None,
-            list_cap: 0.0,
-            scratch_len: 0.0,
-            lamp_cap: 0.0,
-            wind_cap: 0.0,
-            nav_cap: 0.0,
-            lamp_set: -2.0,
-            lamp_n: 0.0,
-            rule_set: -1.0,
-            rule_panes: 0.0,
-            copy: 0.0,
-            grid_over: false,
-            cells_wrote: true,
-            grid_of: None,
-            used: 0.0,
-            caps: crate::scene_box_mirror::BoxMirrorCaps { boxes: 0.0, leaves: 0.0, cuts: 0.0, panes: 0.0, cells: 0.0, items: 0.0, tilted: 0.0, things: 0.0, glass: 0.0, view: 0.0 },
-            things_at: -1.0,
-            things_ok: false,
-            things_all: true,
-            snow_len: -1.0,
-            boxes: 0.0,
-            n_tilted: 0.0,
-            epoch: -1.0,
-            put_backs: -1.0,
-            cut_of: Vec::new(),
-            cut_free: Vec::new(),
-            cut_next: 0.0,
-            own: None,
-            own_len: 0.0,
-            own_at: -1.0,
-            played: false,
-            of: None,
-            stood: 0,
-        }
-    }
-}
-impl Default for BoxMirror { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct BoxMirrorGridOf {
@@ -170,136 +111,85 @@ pub struct SceneBoxMirrorModTHINGS {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SceneBoxMirrorMod {
-    /// (src/scene/boxMirror.ts:55 CLOCK)
-    pub clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK,
-    /// (src/scene/boxMirror.ts:57 COPIES)
-    pub copies: crate::scene_box_mirror::SceneBoxMirrorModCOPIES,
-    /// (src/scene/boxMirror.ts:59 LEAVES)
-    pub leaves: crate::scene_box_mirror::SceneBoxMirrorModLEAVES,
-    /// (src/scene/boxMirror.ts:65 THINGS)
-    pub things: crate::scene_box_mirror::SceneBoxMirrorModTHINGS,
-}
-impl SceneBoxMirrorMod {
-    pub fn blank() -> Self {
-        SceneBoxMirrorMod {
-            clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK { n: 0.0 },
-            copies: crate::scene_box_mirror::SceneBoxMirrorModCOPIES { n: 0.0 },
-            leaves: crate::scene_box_mirror::SceneBoxMirrorModLEAVES { n: 0.0 },
-            things: crate::scene_box_mirror::SceneBoxMirrorModTHINGS { n: 0.0 },
-        }
-    }
+    #[is(crate::scene_box_mirror::SceneBoxMirrorModCLOCK { n: 0.0 })] pub clock: crate::scene_box_mirror::SceneBoxMirrorModCLOCK,
+    #[is(crate::scene_box_mirror::SceneBoxMirrorModCOPIES { n: 0.0 })] pub copies: crate::scene_box_mirror::SceneBoxMirrorModCOPIES,
+    #[is(crate::scene_box_mirror::SceneBoxMirrorModLEAVES { n: 0.0 })] pub leaves: crate::scene_box_mirror::SceneBoxMirrorModLEAVES,
+    #[is(crate::scene_box_mirror::SceneBoxMirrorModTHINGS { n: 0.0 })] pub things: crate::scene_box_mirror::SceneBoxMirrorModTHINGS,
 }
 
-/// (src/scene/boxMirror.ts:38 REC)
 pub const REC: f64 = 16.0;
 
-/// (src/scene/boxMirror.ts:38 R_COS)
 pub const R_COS: f64 = 6.0;
 
-/// (src/scene/boxMirror.ts:38 R_SIN)
 pub const R_SIN: f64 = 7.0;
 
-/// (src/scene/boxMirror.ts:38 R_YAW)
 pub const R_YAW: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:38 R_ROT)
 pub const R_ROT: f64 = 9.0;
 
-/// (src/scene/boxMirror.ts:38 R_CUT)
 pub const R_CUT: f64 = 13.0;
 
-/// (src/scene/boxMirror.ts:38 R_CUTN)
 pub const R_CUTN: f64 = 14.0;
 
-/// (src/scene/boxMirror.ts:38 R_KIND)
 pub const R_KIND: f64 = 15.0;
 
-/// (src/scene/boxMirror.ts:38 K_ROT)
 pub const K_ROT: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:38 K_ROUND)
 pub const K_ROUND: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:38 K_CUT)
 pub const K_CUT: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:38 K_WALK)
 pub const K_WALK: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:38 F_GLASS)
 pub const F_GLASS: f64 = 131072.0;
 
-/// (src/scene/boxMirror.ts:39 T_REC)
 pub const T_REC: f64 = 0.0;
 
-/// (src/scene/boxMirror.ts:39 T_LEAF)
 pub const T_LEAF: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:39 T_CUT)
 pub const T_CUT: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:39 T_PANE_T)
 pub const T_PANE_T: f64 = 3.0;
 
-/// (src/scene/boxMirror.ts:39 T_START)
 pub const T_START: f64 = 6.0;
 
-/// (src/scene/boxMirror.ts:39 T_ITEMS)
 pub const T_ITEMS: f64 = 7.0;
 
-/// (src/scene/boxMirror.ts:39 T_TILTED)
 pub const T_TILTED: f64 = 8.0;
 
-/// (src/scene/boxMirror.ts:39 T_LIST)
 pub const T_LIST: f64 = 13.0;
 
-/// (src/scene/boxMirror.ts:39 T_THING)
 pub const T_THING: f64 = 14.0;
 
-/// (src/scene/boxMirror.ts:40 T_GLASS)
 pub const T_GLASS: f64 = 16.0;
 
-/// (src/scene/boxMirror.ts:40 T_VIEW)
 pub const T_VIEW: f64 = 19.0;
 
-/// (src/scene/boxMirror.ts:45 THING_SET)
 pub const THING_SET: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:45 TH)
 pub const TH: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:45 TL)
 pub const TL: f64 = 3.0;
 
-/// (src/scene/boxMirror.ts:47 OWE_BOXES)
 pub const OWE_BOXES: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:47 OWE_GLASS)
 pub const OWE_GLASS: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:47 OWE_VIEW)
 pub const OWE_VIEW: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:50 PANE_CAP)
 pub const PANE_CAP: f64 = 256.0;
 
-/// (src/scene/boxMirror.ts:51 PLANE)
 pub const PLANE: f64 = 4.0;
 
-/// (src/scene/boxMirror.ts:51 CUT_ROW)
 pub const CUT_ROW: f64 = 32.0;
 
-/// (src/scene/boxMirror.ts:79 VIEW_NONE)
 pub const VIEW_NONE: f64 = 0.0;
 
-/// (src/scene/boxMirror.ts:79 VIEW_BLOWN)
 pub const VIEW_BLOWN: f64 = 1.0;
 
-/// (src/scene/boxMirror.ts:79 VIEW_GIVES)
 pub const VIEW_GIVES: f64 = 2.0;
 
-/// (src/scene/boxMirror.ts:101 MIRRORED: a table nothing writes)
 pub fn mirrored() -> f64 { 4294901770.0 }
 

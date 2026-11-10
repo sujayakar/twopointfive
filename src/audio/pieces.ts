@@ -11,7 +11,7 @@
 //                 two pieces written down for it; play opens on the first (off the menu, or on a page that loads straight in), the next takes over once a piece has had MUSIC.minutes at a calm phrase end (twice
 //                 that whatever the floor is doing), in the list's order and round again. The theme is on no list: it is the main menu's. A new mission on the same page
 //                 keeps the music it has.
-//   how tense     the tension the score follows is the game's (rust/game_rules/src/guards tension), handed over each frame: how roused the men against the player are.
+//   how tense     the tension the score follows is the game's (rust/game_rules/src/people/guards tension), handed over each frame: how roused the men against the player are.
 // A PIECE is data plus one `tick`: called once per sixteenth with the bar, the step in it, the smoothed intensity x and the chord's root, it plays through `Hands` (the voices
 // with the sequencer's die behind them — every random number a voice or a decision takes is drawn there, in the order asked). A piece keeps what it must remember between
 // steps in `h.m` (cleared when a piece begins).

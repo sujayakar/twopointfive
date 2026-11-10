@@ -1,4 +1,4 @@
-// THE COUNTING HOUSE — a quiet mission, alone, built round the DEVICES (rust/game_rules/src/devices): wall cameras that see by the light on him, a strongroom on a
+// THE COUNTING HOUSE — a quiet mission, alone, built round the DEVICES (rust/game_rules/src/stealth/devices.rs): wall cameras that see by the light on him, a strongroom on a
 // keypad whose code a man gives up, tripwire beams. A money changer's house in a walled yard at night (the shared walled yard of tools/levels/train-ground.ts,
 // GWOT kit): the counting room in front, the strongroom behind it, a kitchen court against the back wall. THREE men (every one of them knows the code): the clerk, who comes out
 // to smoke in a dark corner of the yard), a man who walks the south side and the east yard, there and back (never the north strip, never up the west yard),
@@ -83,7 +83,7 @@ export function build() {
   T.add({ c: [21.5, 0.67, 9.52], h: [0.44, 0.55, 0.34], ...GWOT_MATERIALS.iron });
   T.add({ c: [21.5, 0.67, 9.87], h: [0.36, 0.46, 0.012], ...GWOT_MATERIALS.galv, flags: BoxFlag.NoShadow });
   T.add({ c: [21.66, 0.72, 9.895], h: [0.07, 0.07, 0.014], ...GWOT_MATERIALS.iron, flags: BoxFlag.NoShadow });
-  // the holder's tell-tale (rust/game_rules/src/game rack_targets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
+  // the holder's tell-tale (rust/game_rules/src/tick/game rack_targets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
   { const led = T.add({ c: [21.26, 1.04, 9.888], h: [0.03, 0.012, 0.006], ...GWOT_MATERIALS.iron, emissive: [3, 0.4, 0.2], flags: BoxFlag.NoShadow });
     T.switchables.push({ name: 'rack0_leds', boxes: [led], group: 'objective', on: true, baseEmissive: [3, 0.4, 0.2], mains: false }); }
   G.crates(23.3, 10.2, HALF, 3, 'olive'); G.crates(23.3, 12.2, HALF + 0.06, 2, 'ply'); G.sacks(19.8, 15.9, 0.2, 3); G.trunk(19.7, 10.2, HALF, 'paintGreen');

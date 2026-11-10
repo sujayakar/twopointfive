@@ -22,18 +22,18 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `character/` | a man: his animator (`Anim`), the order of its layers, his turn, his bones, his falls |
-| `anim_skeleton/`, `posehome/` | poses, masks, sampling a clip, blending, joint matrices; a man's poses kept in the game's pool |
-| `ragdoll/` | the dead body: sixteen weighted points, sticks, floor and walls |
-| `condition/` | hurt, shaken and folded, told to the figure every frame (`condition_pose`) |
-| `stealthfeed/`, `kitanim/`, `handwork/` | what the game tells Sam's stealth poses; his errands (draw, stow, reload, goggles, sling); where hands go on a thing |
-| `rig_props/`, `gunlook/` | what he holds and wears as boxes (`rig_boxes`), a gun's grip and muzzle; which models a man has (`gun_look_of`) |
-| `cast/`, `anim_gltf/`, `stature/`, `char_look/` | his outfit and part mask; his drawn height; which side's dress a team wears |
+| `anim_skeleton.rs`, `posehome.rs` | poses, masks, sampling a clip, blending, joint matrices; a man's poses kept in the game's pool |
+| `ragdoll.rs` | the dead body: sixteen weighted points, sticks, floor and walls |
+| `condition.rs` | hurt, shaken and folded, told to the figure every frame (`condition_pose`) |
+| `stealthfeed.rs`, `kitanim.rs`, `handwork.rs` | what the game tells Sam's stealth poses; his errands (draw, stow, reload, goggles, sling); where hands go on a thing |
+| `rig_props/`, `gunlook.rs` | what he holds and wears as boxes (`rig_boxes`), a gun's grip and muzzle; which models a man has (`gun_look_of`) |
+| `cast.rs`, `anim_gltf.rs`, `stature.rs`, `char_look.rs` | his outfit and part mask; his drawn height; which side's dress a team wears |
 
 | file | what it does |
 |---|---|
 | `rust/sim/src/layers.rs` | the layers themselves, each pose written in place |
 | `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
-| `rust/sim/src/knobs.rs`, `rustknobs/` | the numbers and named nodes a layer reads, and who writes them there |
+| `rust/sim/src/roles.rs` | the named nodes of a rig a layer reads (its numbers are the game's own tables, by their names) |
 | `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
 | `rust/game_draw/src/men.rs` | what the picture is told of a man: sections `Man`, `Inst`, `Bones`, `Cap` |
 | `src/draw/men.ts`, `src/anim/characters.ts`, `src/anim/gltf.ts` | those sections handed to the GPU; the mesh's buffers; the mesh read for the page |
@@ -57,8 +57,8 @@ clips; stance, wall, kick, carry, long gun; lock work, the hold and the held; th
 poses; ready pose, kit errands, reload, throw, blow, hit; the big tool, a lean; the reactions; a whole-body clip (`anim_act_layer`); fingers (`anim_hands_pass`);
 goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stands down, by an eased weight, for whatever else has the arms.
 
-**A layer has two halves.** An `anim_*` function in `character/` puts its numbers and kept springs on the bench's `args` and calls the layer in `layers.rs`, which
-works on the pose where it lies. What a layer keeps stays in `Anim` and crosses as columns (`lean_cols_get`). It reads numbers by `k(NAME)` and nodes by `role(NAME)`.
+**A layer** is a function of `layers.rs` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only this
+call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
 
 **A pose** is ten columns of singles, a row a node. A man's poses live in the game's block (`Poses`), so a rollback restores them. `pose_home_tend` rebuilds the pool when
 a man has left, and `stage_open` lends a place to a man made inside the tick. Clips are authored data outside any game, one copy a process.
@@ -69,7 +69,7 @@ pose under them (`anim_under_pose`), so the game reads joints with `character_jo
 
 **The turn.** Between a man's updates `body_yaw` and `aim_yaw` hold the weighed yaws. `character_turn_begin`, at the head of `update_guard`, puts his AI's wish back. Then
 `character_turn_weigh` steps body and gun toward the wish with acceleration, a top speed and a brake (`k.turn`, `handling_of`, `anim.trained`). It is on for the guards list but
-a held man or a show. Sam and civilians have no turn.
+a held man. Sam and civilians have no turn.
 
 **The long gun.** A set of springs toward one of `LongStance` (`long_targets`). `anim_long_body` sets the trunk and `anim_long_arms` puts both hands on the grip. A pistol's
 reload is its clip. A long gun plays none: `anim_reload_carry` brings the gun and head round and `anim_reload_arm` works the support hand, by `reload_at` where the game deals it.
@@ -118,10 +118,11 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
 ## To change it
 
 - **A number:** `knobs/character.rs` (`hold`, `moves`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
-  `?knob.moves.steady=0` turns one. Tables with no panel are functions in `rust/game_types/src/character/types.rs`: `stances`, `blend`, `sneak`, `creep`, `life`, `mv2`, `long_reload`.
-- **A number for a layer:** a line in `rust/sim/src/knobs.rs` and its `k[…]` line in `rustknobs/base.rs`.
-- **A new layer:** a `pub fn` in `layers.rs`; an `anim_*` and `anim_*_ask` pair (copy `anim_lean_body`); a line in `anim_update_standing` where it should write over what is
-  under it; its kept springs in `Anim`, with columns. Add it to the stand-down lists of what it gives way to.
+  `?knob.moves.steady=0` turns one. Tables with no panel stand in `rust/game_types/src/character/types.rs`: statics (`SNEAK`, `CREEP`, `LIFE`, `MV2`) and functions (`stances`,
+  `blend`, `long_reload`).
+- **A number for a layer:** a field of its knob table, read as `tune.kit.close.drift`; one nobody turns is in a static of `character/types.rs` (`LIFE`, `CREEP`).
+- **A new layer:** a `pub fn` in `layers.rs` (copy `lean_body`); an `anim_*` that calls it by `anim_layer`; a line in `anim_update_standing` where it should write over what is
+  under it; its kept springs in `Anim`. Add it to the stand-down lists of what it gives way to.
 - **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.
 - **A new clip:** put the animation in `AnimationLibrary_Godot_Standard.gltf`. `gltf.rs` takes every animation by name. For a whole-body clip a rule sets `anim.act` to an `AnimAct`
   with its name. In a layer, call `sample_clip` with `clip_of` and blend under a mask. A clip the game cannot do without goes in `need` in `anim_new`, which panics without it.
@@ -145,8 +146,10 @@ Native tests in `rust/game_start/tests/`:
 | `held_takedown.rs`, `the_grab.rs` | a blow lands inside its takedown, a choke lowers a man to the floor |
 | `kit.rs` | what a player's hands do, which carriage a gun shows |
 | `draw.rs` | drawing changes nothing, and what is drawn between two ticks stands between them |
+| `poses.rs` | what a player sees of a pose: feet that stay, a step that lands, a hand on its rifle, a lean that comes back, limbs in their limits, no jump in a frame, a fall that lies still |
 
-Unit tests stand beside the code (`swap_clock_beats`, `blend_is_the_typescripts_bits`, `a_blast_leaves_a_man_hurt_and_writes_his_stamp`). `gate`'s pins move when a pose moves what the game reads.
+Unit tests stand beside the code (`swap_clock_beats`, `a_blend_goes_from_one_pose_to_the_other_by_its_weight`, `a_blast_leaves_a_man_hurt_and_writes_his_stamp`).
+`gate`'s pins move when a pose moves what the game reads.
 Rows of `tools/qa/checks.ts`: `cast-probes.ts`, `charmats-probes.ts`, `sdfrig-probes.ts`, `frame-layout.ts`. By hand: `tools/chars/check_cast.py`.
 No script of `tools/qa/pages.ts` is this system's own.
 

@@ -86,7 +86,7 @@ only; the file's `extras.cast.variants` carries `side` and `parts` and nothing e
 
 The game draws the men out of one of two files by where the page booted (`lookDress` in `src/scene/look.ts`, `look_dress` on the Rust side):
 `cast-gwot.gltf` in every place but the office family, `cast.gltf` there. Both keep the same contract, with the same 14 variant names on the same
-sides in the same order, so `rust/game_rules/src/cast` deals a man the same variant name under either. Operators, responders and civilians have the
+sides in the same order, so `rust/game_rules/src/outfit/cast.rs` deals a man the same variant name under either. Operators, responders and civilians have the
 same part lists in both. Colors are in `src/render/charMaterials.ts` (`CHAR_MATS`, `CHAR_MATS_LOOK`).
 
 ### Variants of `cast.gltf`

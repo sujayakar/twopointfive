@@ -2,7 +2,7 @@
 //! of); where the file reads whole, the rules a file can be held to by itself: ids that are one thing's, names that point at something, numbers in their range, lists that go together.
 //!
 //! It judges the FILE. What the built floor says (a mark on free floor, a way on foot, a light in a wall) is asked of the game: `levels`, and tools/qa/level-lint.ts.
-use crate::file::{self, BoxData, FlagName, LevelFile, LightData, LightDataKind, Plan};
+use crate::file::{self, BoxData, FlagName, LevelFile, LightData, Plan};
 use crate::json::Json;
 use crate::kit_file::*;
 use crate::level::{does_word, stuff_word, Said};
@@ -419,6 +419,7 @@ impl<'a> Rules<'a> {
         self.door("mission.objectives[reach].door", &m.reach.door);
         if !whole(m.drive.rack_index) || m.drive.rack_index < 0.0 { self.say("mission.objectives[drive].rackIndex", "a whole number, 0 or more"); }
         if m.drive.half_w < 0.0 { self.say("mission.objectives[drive].halfW", "0 or more"); }
+        for (w, name) in [("reach].name", &m.reach.name), ("drive].name", &m.drive.name), ("drive].holder", &m.drive.holder), ("exfil].name", &m.exfil.name)] { self.word(&format!("mission.objectives[{w}"), name); }
         self.door("mission.objectives[exfil].door", &m.exfil.door);
         if m.exfil.out.is_some_and(|o| !unit2(o)) { self.say("mission.objectives[exfil].out", "a unit vector, dx dz"); }
         self.a_box("breaker.panel", &f.breaker.panel);
@@ -429,15 +430,6 @@ impl<'a> Rules<'a> {
             let w = format!("{}.box", named(i, "beacons", &b.id));
             self.a_box(&w, &b.box_);
             if self.boxes.contains(b.box_.as_str()) && !self.switched.contains_key(b.box_.as_str()) { self.say(w, format!("'{}' is no switchable's box (the beam goes with that fixture)", b.box_)); }
-        }
-        if let Some(d) = &f.daylight {
-            self.lamp("daylight.sun", &d.sun, &BTreeSet::new());
-            if d.sun.kind != LightDataKind::Dir { self.say("daylight.sun.kind", "dir"); }
-            self.text("daylight.sun.id", &d.sun.id);
-            for (k, l) in [("groupsOn", &d.groups_on), ("groupsOff", &d.groups_off)] { for w in l { self.text(format!("daylight.{k}"), w); } }
-            for id in &d.lights_off { if !self.lights.contains(id.as_str()) { self.say("daylight.lightsOff", format!("no light of the level is called '{id}'")); } }
-            if d.haze < 0.0 { self.say("daylight.haze", "0 or more"); }
-            if d.exposure <= 0.0 { self.say("daylight.exposure", "over 0"); }
         }
     }
 
@@ -470,7 +462,7 @@ impl<'a> Rules<'a> {
         }
         if let Some(r) = &s.room_clear { self.room_clear(r, s); }
         if let Some(q) = &s.quiet { self.quiet(q); }
-        if let Some(l) = &s.lesson { self.lesson(l); }
+        if let Some(l) = &s.lesson { self.lesson(l, s); }
         if let Some(p) = &s.par {
             if !(p.gold > 0.0 && p.gold < p.silver && p.silver < p.bronze) { self.say("scenarios.par", "gold under silver under bronze, seconds over 0"); }
             if p.loss_secs < 0.0 { self.say("scenarios.par.lossSecs", "seconds, 0 or more"); }
@@ -613,8 +605,25 @@ impl<'a> Rules<'a> {
         for (k, l) in [("phones", &q.phones), ("wayouts", &q.wayouts)] { for (i, s) in l.iter().flatten().enumerate() { stand(format!("{w}.{k}[{i}]"), s, false); } }
     }
 
-    /// the shapes alone: whether a test's doors, lights and areas are there is `lesson::check_lesson`'s, against the built floor
-    fn lesson(&self, l: &LessonData) {
+    /// a step's test: what no deed could ever answer, and a door, a room or a route this file has not. (A light and a man the mission stands: `tests/lessons.rs` asks of those)
+    fn lesson_test(&self, at: &str, t: &game::lesson::LessonTest, s: &LevelScenarios) {
+        use game::lesson::LessonTest as T;
+        let door = |d: &str| if !self.doors.contains(d) { self.say(at, format!("no door of the level is called '{d}'")); };
+        match t {
+            T::In { area: r } | T::Body { area: r } | T::Squad { area: r, .. } => if !(r.x0 < r.x1 && r.z0 < r.z1) { self.say(at, format!("an area that holds nothing: {r:?}")); },
+            T::Near { r: Some(r), .. } if *r <= 0.0 => self.say(at, format!("no man can be nearer than {r}")),
+            T::Men { down: Some(n) } if *n < 1.0 => self.say(at, "down: how many, at least one"),
+            T::Door { door: d, .. } | T::StackOn { door: d, .. } => door(d),
+            T::Stacks { doors, .. } => doors.iter().for_each(|d| door(d)),
+            T::Did { what, on: Some(d), .. } => { if !what.starts_with("order:") { self.say(at, format!("on: an order is given on a door, and '{what}' is none")); } door(d); }
+            T::Taken { room } => if !s.room_clear.as_ref().is_some_and(|c| c.rooms.iter().any(|r| r.id == *room)) { self.say(at, format!("no room of the level is called '{room}'")); },
+            T::Calm { route: Some(n) } => if !self.f.routes.iter().any(|r| r.name.as_deref().unwrap_or(&r.id) == n) { self.say(at, format!("no route of the level is called '{n}'")); },
+            T::All { of } | T::Any { of } => { if of.is_empty() { self.say(at, "a list of no tests"); } for x in of { self.lesson_test(at, x, s); } }
+            _ => {}
+        }
+    }
+
+    fn lesson(&self, l: &LessonData, s: &LevelScenarios) {
         let w = "scenarios.lesson";
         self.text(format!("{w}.title"), &l.title);
         if let Some(r) = &l.rails {
@@ -627,6 +636,7 @@ impl<'a> Rules<'a> {
             let at = named(i, &format!("{w}.steps"), &t.id);
             self.text(format!("{at}.id"), &t.id);
             self.text(format!("{at}.line"), &t.line);
+            self.lesson_test(&format!("{at}.done"), &t.done, s);
             if !ids.insert(&t.id) { self.say(&at, "the id is another step's already"); }
             for (k, v) in [("cue", &t.cue), ("checkpoint", &t.checkpoint), ("setupLine", &t.setup_line), ("ringLine", &t.ring_line), ("blowLine", &t.blow_line), ("menuLine", &t.menu_line), ("pageLine", &t.page_line),
                 ("flatLine", &t.flat_line), ("noTap", &t.no_tap), ("atMan", &t.at_man)] { self.word(&format!("{at}.{k}"), v); }

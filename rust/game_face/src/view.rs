@@ -38,7 +38,7 @@ pub unsafe extern "C" fn face_cursor_view(h: u32, seat: i32, p: *const u8) {
         told(&game::view::cursor_view(g, &game::seats::seat(g, s), &now))
     }));
 }
-/// THE MISSION'S VERDICT, for a host with no puppet (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the latched record is
+/// THE MISSION'S VERDICT, for a host with no picture (a server): 0 while the mission is being played, 1 lost, 2 won; when not 0 the latched record is
 /// at face_out as lines (game::verdict::verdict_lines: the end's word, the why, the seconds, the way won, the counts, the men). The game's own tick
 /// latches it: the first end of a run stays. While it is 0 nothing is allocated and face_out is left as it was.
 #[no_mangle]
@@ -66,7 +66,7 @@ pub extern "C" fn face_tally(h: u32) {
 pub extern "C" fn face_knobs(h: u32) {
     let b = super::with(h, |x| {
         let mut b = Vec::new();
-        for (name, yes, v) in game_run::knobs::all(&x.g) {
+        for (name, yes, v) in game_start::host::knobs::all(&x.g) {
             b.extend_from_slice(&(name.len() as u32 | (yes as u32) << 31).to_le_bytes());
             b.extend_from_slice(name.as_bytes());
             b.extend_from_slice(&v.to_le_bytes());
@@ -75,21 +75,21 @@ pub extern "C" fn face_knobs(h: u32) {
     });
     super::out(b);
 }
-/// the panel's rows of the game's numbers (game_run shown.rs), at face_out: each its name, label, section and title (a u32 length, the text), then what it runs over and shows (lo, hi, step, scale: f64), and is it kept on this machine (bit 0) and advanced (bit 1, a u32)
+/// the panel's rows of the game's numbers (game_start host/shown.rs), at face_out: each its name, label, section and title (a u32 length, the text), then what it runs over and shows (lo, hi, step, scale: f64), and is it kept on this machine (bit 0) and advanced (bit 1, a u32)
 #[no_mangle]
 pub extern "C" fn face_shown() {
     let mut b = Vec::new();
-    for r in game_run::shown::ROWS {
+    for r in game_start::host::shown::ROWS {
         for t in [r.name, r.label, r.section, r.title] { b.extend_from_slice(&(t.len() as u32).to_le_bytes()); b.extend_from_slice(t.as_bytes()); }
-        for v in [r.lo, r.hi, r.step, r.scale, game_run::knobs::shipped(r.name).unwrap_or(f64::NAN)] { b.extend_from_slice(&v.to_le_bytes()); }
+        for v in [r.lo, r.hi, r.step, r.scale, game_start::host::knobs::shipped(r.name).unwrap_or(f64::NAN)] { b.extend_from_slice(&v.to_le_bytes()); }
         b.extend_from_slice(&(r.kept as u32 | (r.adv as u32) << 1).to_le_bytes());
     }
     super::out(b);
 }
-/// the panel's actions (game_run actions.rs), at face_out: each its name, label, section and title (a u32 length, the text), then how it is drawn (u32: 0 a button, 1 a button a word, 2 a pick of words, 3 a count, 4 a pick that is a new page), and what that takes: the words (a u32 count, each as text), and for a pick which stands now (text); lo, hi, step, start (f64); the address's word (text), then the words
+/// the panel's actions (game_start host/actions.rs), at face_out: each its name, label, section and title (a u32 length, the text), then how it is drawn (u32: 0 a button, 1 a button a word, 2 a pick of words, 3 a count, 4 a pick that is a new page), and what that takes: the words (a u32 count, each as text), and for a pick which stands now (text); lo, hi, step, start (f64); the address's word (text), then the words
 #[no_mangle]
 pub extern "C" fn face_actions(h: u32) {
-    use game_run::actions::{Takes, ACTIONS};
+    use game_start::host::actions::{Takes, ACTIONS};
     let b = super::with(h, |x| {
         let mut b = Vec::new();
         fn text(b: &mut Vec<u8>, t: &str) { b.extend_from_slice(&(t.len() as u32).to_le_bytes()); b.extend_from_slice(t.as_bytes()); }
@@ -111,6 +111,6 @@ pub extern "C" fn face_actions(h: u32) {
 /// what each of those rows stands at now, as a row shows it (f64 each, in their order), at face_out
 #[no_mangle]
 pub extern "C" fn face_shown_now(h: u32) {
-    let b = super::with(h, |x| { let mut b = Vec::new(); for r in game_run::shown::ROWS { b.extend_from_slice(&(game_run::knobs::get(&x.g, r.name).unwrap_or(0.0) * r.scale).to_le_bytes()); } b });
+    let b = super::with(h, |x| { let mut b = Vec::new(); for r in game_start::host::shown::ROWS { b.extend_from_slice(&(game_start::host::knobs::get(&x.g, r.name).unwrap_or(0.0) * r.scale).to_le_bytes()); } b });
     super::out(b);
 }

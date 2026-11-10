@@ -80,7 +80,7 @@ pub struct ShardsK {
     /// at rest the face's colour is taken this far from the dark body toward the pale edge colour: a faint sheen, a sheet lying flat under the ceiling's light (0 = the dark body, as in flight)
     #[k(0.3)] pub cut_rest_body: f64,
     #[k(2.0)] pub max_gen: f64,
-    /// glass on a hard floor: slides on, hops a little (debris.ts's own are 0.55 / 0.8 / 0.22)
+    /// glass on a hard floor: slides on, hops a little
     pub contact: ShardsKContact,
     /// ---- sound + hearing
     #[k(3.0)] pub sounds_per_frame: f64,
@@ -105,7 +105,7 @@ pub struct ShardsK {
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct ShardsKContact {
-    /// glass on a hard floor: slides on, hops a little (debris.ts's own are 0.55 / 0.8 / 0.22)
+    /// glass on a hard floor: slides on, hops a little
     #[k(0.72)] pub keep_floor: f64,
     #[k(0.85)] pub keep_wall: f64,
     #[k(0.3)] pub rest: f64,

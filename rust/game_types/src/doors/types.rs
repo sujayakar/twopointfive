@@ -1,6 +1,6 @@
 //! The types of `doors`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -39,22 +39,12 @@ pub struct DoorDrive {
     pub hit: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum DoorDriveKind {
     #[default] Boot,
     Body,
     Hand,
     Swing,
-}
-impl DoorDriveKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorDriveKind::Boot => "boot",
-            DoorDriveKind::Body => "body",
-            DoorDriveKind::Hand => "hand",
-            DoorDriveKind::Swing => "swing",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -145,7 +135,7 @@ pub struct SlabSeen {
     pub wedged: Option<f64>,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Door {
     pub i: f64,
     pub key_side: f64,
@@ -154,40 +144,16 @@ pub struct Door {
     pub thick: f64,
     pub min_auth: f64,
     pub max_auth: f64,
-    pub drive_cols: DriveColsId,
-    pub box_: BoxId,
+    #[is(DriveColsId(0))] pub drive_cols: DriveColsId,
+    #[is(BoxId(0))] pub box_: BoxId,
     pub handle_boxes: Vec<BoxId>,
-    pub slab_row: SlabRowId,
+    #[is(SlabRowId(0))] pub slab_row: SlabRowId,
     pub leaf_h: V3,
     pub leaf_marks: Option<Vec<crate::scene_markings::MarkingDef>>,
     pub def: crate::doors::DoorDef,
-    pub pos_at: V3,
+    #[is([0.0, 1.0, 0.0])] pub pos_at: V3,
     pub frame_centre: V3,
 }
-impl Door {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Door {
-            i: 0.0,
-            key_side: 0.0,
-            lock_id: String::new(),
-            height: 0.0,
-            thick: 0.0,
-            min_auth: 0.0,
-            max_auth: 0.0,
-            drive_cols: DriveColsId(0),
-            box_: BoxId(0),
-            handle_boxes: Vec::new(),
-            slab_row: SlabRowId(0),
-            leaf_h: [0.0; 3],
-            leaf_marks: None,
-            def: crate::doors::DoorDef::default(),
-            pos_at: [0.0, 1.0, 0.0],
-            frame_centre: [0.0; 3],
-        }
-    }
-}
-impl Default for Door { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DoorSwing {
@@ -199,25 +165,13 @@ pub struct DoorSwing {
     pub one_way: bool,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Doors {
     pub list: Vec<DoorId>,
     pub slabs: crate::sim_slabshome::SlabStore,
     pub rounds: f64,
-    pub solids: crate::doors::DoorsSolids,
+    #[is(crate::doors::DoorsSolids { carried: 0.0, stopped: 0.0, passed: 0.0, reached: 0.0, held: 0.0, aside: 0.0 })] pub solids: crate::doors::DoorsSolids,
 }
-impl Doors {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Doors {
-            list: Vec::new(),
-            slabs: crate::sim_slabshome::SlabStore::blank(),
-            rounds: 0.0,
-            solids: crate::doors::DoorsSolids { carried: 0.0, stopped: 0.0, passed: 0.0, reached: 0.0, held: 0.0, aside: 0.0 },
-        }
-    }
-}
-impl Default for Doors { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorsSolids {
@@ -235,7 +189,7 @@ pub struct SIDEKICK {
     pub out: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SlabRowGK {
     T,
     A,
@@ -254,29 +208,6 @@ pub enum SlabRowGK {
     Bw,
     Bl,
     Bx,
-}
-impl SlabRowGK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SlabRowGK::T => "t",
-            SlabRowGK::A => "a",
-            SlabRowGK::Vx => "vx",
-            SlabRowGK::Vz => "vz",
-            SlabRowGK::By => "by",
-            SlabRowGK::Px => "px",
-            SlabRowGK::Py => "py",
-            SlabRowGK::Pz => "pz",
-            SlabRowGK::Vy => "vy",
-            SlabRowGK::Spin => "spin",
-            SlabRowGK::Wedged => "wedged",
-            SlabRowGK::Tip => "tip",
-            SlabRowGK::TipV => "tipV",
-            SlabRowGK::Ang => "ang",
-            SlabRowGK::Bw => "bw",
-            SlabRowGK::Bl => "bl",
-            SlabRowGK::Bx => "bx",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -316,59 +247,40 @@ pub enum DoorsTornCause {
     Fire,
 }
 
-/// (src/game/doors.ts:1056 DOORS_PICK_SECS)
 pub const DOORS_PICK_SECS: f64 = 4.2;
 
-/// (src/game/doors.ts:1061 DOORS_PICK_LEVEL)
 pub const DOORS_PICK_LEVEL: f64 = 0.16;
 
-/// (src/game/doors.ts:1061 DOORS_UNLOCK_LEVEL)
 pub const DOORS_UNLOCK_LEVEL: f64 = 0.3;
 
-/// (src/game/doors.ts:1061 DOORS_KEY_LEVEL)
 pub const DOORS_KEY_LEVEL: f64 = 0.12;
 
-/// (src/game/doors.ts:1183 DOORS_USE_REACH)
 pub const DOORS_USE_REACH: f64 = 1.35;
 
-/// (src/game/doors.ts:81 SIDE_KICK: a table nothing writes)
 pub fn side_kick() -> crate::doors::SIDEKICK { crate::doors::SIDEKICK { past: 0.3, out: 0.55 } }
 
-/// (src/game/doors.ts:85 PULL_VEL)
 pub const PULL_VEL: f64 = 3.9;
 
-/// (src/game/doors.ts:85 PULL_VEL_QUIET)
 pub const PULL_VEL_QUIET: f64 = 2.2;
 
-/// (src/game/doors.ts:85 PULL_SECS)
 pub const PULL_SECS: f64 = 0.7;
 
-/// (src/game/doors.ts:88 DRIVEN_SECS)
 pub const DRIVEN_SECS: f64 = 0.25;
 
-/// (src/game/doors.ts:102 SHUT_HOME)
 pub const SHUT_HOME: f64 = 0.05;
 
-/// (src/game/doors.ts:134 FLOOR_KEY)
 pub const FLOOR_KEY: &str = "floor";
 
-/// (src/game/doors.ts:208 MAN_SIDE)
 pub const MAN_SIDE: f64 = 3.0;
 
-/// (src/game/doors.ts:208 MAN_FOLDED)
 pub const MAN_FOLDED: f64 = 4.0;
 
-/// (src/game/doors.ts:208 MAN_BRACED)
 pub const MAN_BRACED: f64 = 8.0;
 
-/// (src/game/doors.ts:208 MAN_CALM)
 pub const MAN_CALM: f64 = 16.0;
 
-/// (src/game/doors.ts:208 MAN_HELD)
 pub const MAN_HELD: f64 = 32.0;
 
-/// (src/game/doors.ts:294 DRIVE_COLS: a table nothing writes)
 pub fn drive_cols() -> Vec<f64> { alloc::vec![34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0] }
 
-/// (src/game/doors.ts:526 FLOOR_Y0)
 pub const FLOOR_Y0: f64 = 0.2;

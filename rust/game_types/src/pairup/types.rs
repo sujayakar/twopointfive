@@ -1,6 +1,6 @@
 //! The types of `pairup`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -19,17 +19,9 @@ pub struct PairupModPAIRHELD {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PairupMod {
-    /// (src/game/pairup.ts:72 PAIR_HELD)
-    pub pair_held: crate::pairup::PairupModPAIRHELD,
-}
-impl PairupMod {
-    pub fn blank() -> Self {
-        PairupMod {
-            pair_held: crate::pairup::PairupModPAIRHELD { row: None },
-        }
-    }
+    #[is(crate::pairup::PairupModPAIRHELD { row: None })] pub pair_held: crate::pairup::PairupModPAIRHELD,
 }
 
 /// the counters this module keeps for the checks

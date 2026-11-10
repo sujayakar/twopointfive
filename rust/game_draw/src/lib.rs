@@ -151,7 +151,7 @@ sections! {
 }
 
 /// the numbers of a page's look (src/draw/look.ts writes them in this order): the boxes', then the men's
-pub const LOOK: usize = boxes::LOOK + 4;
+pub const LOOK: usize = boxes::LOOK + 5;
 
 /// what one host of one game draws it from
 #[derive(Default)]
@@ -242,7 +242,7 @@ impl Drawn {
     /// the game is another than the one last drawn (a start, a game put back, another seat): nothing is drawn through it
     pub fn cut(&mut self) { self.boxes.cut(); self.lights.cut(); self.men.cut(); self.events.cut(); self.marks.cut(); self.smoke.cut(); self.lead.rest(); self.tick = None; self.stood += 1; }
     /// what the page says of its look
-    pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); }
+    pub fn look(&mut self, v: &[f64]) { let (boxes, men) = v.split_at(boxes::LOOK); self.boxes.set_look(boxes::Look::read(boxes)); self.men.swaps = core::array::from_fn(|i| men[i] as u32); self.men.dry_look = men[4] == 0.0; }
     pub fn table(&mut self) -> &[u32] {
         let mut t = core::mem::take(&mut self.table);
         table(self, &mut t);

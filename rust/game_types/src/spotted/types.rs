@@ -1,6 +1,6 @@
 //! The types of `spotted`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -87,23 +87,11 @@ pub struct FreshItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SpottedMod {
-    /// (src/game/spotted.ts:119 men)
     pub men: JsMap<GuardId, crate::spotted::Man>,
-    /// (src/game/spotted.ts:122 SPOTTED_LOG)
     pub spotted_log: Vec<crate::spotted::SpottedModSPOTTEDLOGItem>,
-    /// (src/game/spotted.ts:312 drops)
     pub drops: Option<crate::spotted::SpottedModDropsValue>,
-}
-impl SpottedMod {
-    pub fn blank() -> Self {
-        SpottedMod {
-            men: JsMap::new(),
-            spotted_log: Vec::new(),
-            drops: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

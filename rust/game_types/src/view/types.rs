@@ -1,4 +1,4 @@
-//! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/view).
+//! The types of `view`: what a machine is shown of the game beside what it draws (rust/game_rules/src/tick/view).
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -117,7 +117,7 @@ pub struct RailsView {
     pub arrow: Option<V3>,
     /// the player's own men on the floor, by their characters' ids: the big line keeps clear of them
     pub line_men: Vec<f64>,
-    /// the actions that work now (rails.ts ACTS). An action not here is locked, and the HUD names no key of it
+    /// the actions that work now. An action not here is locked, and the HUD names no key of it
     pub open: Vec<String>,
     /// the verbs the interaction key offers rows of. (None: every row)
     pub rows: Option<Vec<String>>,
@@ -450,8 +450,7 @@ impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles
 /// WHAT A SEAT'S HUD IS TOLD OF THE GAME AS A TICK LEFT IT: a section for each kind of thing a HUD words. Nothing in it is kept by the game.
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TickView {
-    /// (None: a show runs)
-    pub mission: Option<crate::view::MissionView>,
+    pub mission: crate::view::MissionView,
     /// the lesson that is live. (None: none is)
     pub lesson: Option<crate::view::LessonView>,
     /// the radio strip, oldest first
@@ -486,8 +485,6 @@ pub struct TickView {
     pub plan: crate::view::PlanView,
     /// the run is live (no show, no menu's game, not over)
     pub live: bool,
-    /// a quiet mission's words for its room, its holder, its thing and its ways out
-    pub quiet: Option<crate::view::QuietView>,
     /// his own list: what the key would do now, and the things it could be done to
     pub interact: crate::view::InteractView,
     /// the alarm's stage (None: calm)
@@ -1244,16 +1241,6 @@ pub struct PlanView {
     pub others: Vec<crate::view::SeatPlan>,
 }
 
-/// a quiet mission's own words
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct QuietView {
-    pub place: String,
-    pub holder: String,
-    pub thing: String,
-    pub outs: String,
-    pub bare: String,
-}
-
 /// what sort of thing the key is about
 #[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
 pub enum ThingKind { #[default] Cam, Guard, Breaker, Door, Light, Body, Objective, Held, Wall, Switch, Charge, Cancel }
@@ -1338,8 +1325,6 @@ pub struct InteractView {
     pub more: f64,
     /// the selector is open: he holds the key and the list is its rows
     pub open: bool,
-    /// the panel is the corner's three things (a tour's puppet keeps the list as it was)
-    pub corner: bool,
     /// (None: no thing, or a row about none)
     pub ring: Option<crate::view::ThingRing>,
     pub dots: Vec<crate::view::ThingDot>,

@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// THE PLAN ON THE FLOOR'S NUMBERS. What it lists is the Rust game's (rust/game_rules/src/view/plan.rs, `view.plan`) and ui/planfloor.ts draws it: its men's ways, marks and fans, what waits on the
+/// THE PLAN ON THE FLOOR'S NUMBERS. What it lists is the Rust game's (rust/game_rules/src/tick/view/plan.rs, `view.plan`) and ui/planfloor.ts draws it: its men's ways, marks and fans, what waits on the
 /// key, the throws. The maintainer (10-13): "it would be good to have the squad move to do a throw (and maybe visualize who's doing it and the path on the ground?)"; the Door Kickers 2
 /// focus list's item 6: "four placed men are four lines of text. Done looks like: cover the top-left corner: you still know each man's mark, sector and which door waits on F. Our men only."
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

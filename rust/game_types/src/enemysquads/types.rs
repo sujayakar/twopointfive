@@ -1,14 +1,14 @@
 //! The types of `enemysquads`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then (enemysquads.ts roundCtx); rear is RoundCtx.rear
+/// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then; rear is RoundCtx.rear
 #[derive(Clone, Debug)]
 pub enum RoundHot {
     Places { known: Vec<crate::enemysquads::Known>, ajar: Vec<V3> },
 }
-/// what RoundCtx.hotCell closed over: its memo of hot by nav cell, filled as a search reaches each cell and kept for as long as the record (enemysquads.ts roundCtx)
+/// what RoundCtx.hotCell closed over: its memo of hot by nav cell, filled as a search reaches each cell and kept for as long as the record
 #[derive(Clone, Debug)]
 pub enum RoundHotCell {
     Memo { hot_at: JsMap<crate::Num, bool> },
@@ -26,7 +26,7 @@ pub enum SquadChoice {
     Help,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SquadState {
     #[default] Down,
     Contact,
@@ -35,19 +35,6 @@ pub enum SquadState {
     Barricade,
     Flank,
     Help,
-}
-impl SquadState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadState::Down => "down",
-            SquadState::Contact => "contact",
-            SquadState::Hold => "hold",
-            SquadState::Alerted => "alerted",
-            SquadState::Barricade => "barricade",
-            SquadState::Flank => "flank",
-            SquadState::Help => "help",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -107,7 +94,7 @@ pub struct SquadEvent {
     pub what: crate::enemysquads::SquadEventWhat,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum SquadEventWhat {
     #[default] Down,
     Back,
@@ -121,7 +108,7 @@ pub enum SquadEventWhat {
     Flank,
     Help,
     Reinforce,
-    InPosition,
+    #[word("in position")] InPosition,
     Met,
     Rally,
     Stays,
@@ -129,50 +116,15 @@ pub enum SquadEventWhat {
     Check,
     Asks,
     Looks,
-    NoSign,
+    #[word("no sign")] NoSign,
     Glimpse,
     Calls,
-    CutOff,
-    NetCheck,
-    NetQuery,
-    NetAsks,
-    NetLooks,
-    NetHelp,
-}
-impl SquadEventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadEventWhat::Down => "down",
-            SquadEventWhat::Back => "back",
-            SquadEventWhat::Contact => "contact",
-            SquadEventWhat::Lost => "lost",
-            SquadEventWhat::Quiet => "quiet",
-            SquadEventWhat::Found => "found",
-            SquadEventWhat::Said => "said",
-            SquadEventWhat::Sweep => "sweep",
-            SquadEventWhat::Barricade => "barricade",
-            SquadEventWhat::Flank => "flank",
-            SquadEventWhat::Help => "help",
-            SquadEventWhat::Reinforce => "reinforce",
-            SquadEventWhat::InPosition => "in position",
-            SquadEventWhat::Met => "met",
-            SquadEventWhat::Rally => "rally",
-            SquadEventWhat::Stays => "stays",
-            SquadEventWhat::Follows => "follows",
-            SquadEventWhat::Check => "check",
-            SquadEventWhat::Asks => "asks",
-            SquadEventWhat::Looks => "looks",
-            SquadEventWhat::NoSign => "no sign",
-            SquadEventWhat::Glimpse => "glimpse",
-            SquadEventWhat::Calls => "calls",
-            SquadEventWhat::CutOff => "cut off",
-            SquadEventWhat::NetCheck => "net check",
-            SquadEventWhat::NetQuery => "net query",
-            SquadEventWhat::NetAsks => "net asks",
-            SquadEventWhat::NetLooks => "net looks",
-            SquadEventWhat::NetHelp => "net help",
-        }
-    }
+    #[word("cut off")] CutOff,
+    #[word("net check")] NetCheck,
+    #[word("net query")] NetQuery,
+    #[word("net asks")] NetAsks,
+    #[word("net looks")] NetLooks,
+    #[word("net help")] NetHelp,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -496,54 +448,30 @@ pub struct NetSend {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct EnemysquadsMod {
-    /// (src/game/enemysquads.ts:281 STATES)
     pub states: Option<crate::enemysquads::State>,
-    /// (src/game/enemysquads.ts:513 CTX)
     pub ctx: Option<crate::enemysquads::RoundCtx>,
-    /// (src/game/enemysquads.ts:879 BANGS)
     pub bangs: JsMap<GuardId, crate::enemysquads::EnemysquadsModBANGSValue>,
-    /// (src/game/enemysquads.ts:1130 GLIMPSED)
     pub glimpsed: JsMap<GuardId, f64>,
 }
-impl EnemysquadsMod {
-    pub fn blank() -> Self {
-        EnemysquadsMod {
-            states: None,
-            ctx: None,
-            bangs: JsMap::new(),
-            glimpsed: JsMap::new(),
-        }
-    }
-}
 
-/// (src/game/enemysquads.ts:613 COUNT: a table nothing writes)
 pub fn count() -> Vec<String> { alloc::vec![String::from("nobody"), String::from("one"), String::from("two"), String::from("three"), String::from("four")] }
 
-/// (src/game/enemysquads.ts:616 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("Zero"), String::from("One"), String::from("Two"), String::from("Three"), String::from("Four"), String::from("Five"), String::from("Six"), String::from("Seven"), String::from("Eight"), String::from("Nine"), String::from("Ten"), String::from("Eleven"), String::from("Twelve"), String::from("Thirteen"), String::from("Fourteen"), String::from("Fifteen"), String::from("Sixteen")] }
 
-/// (src/game/enemysquads.ts:1040 LOOK_AT_M)
 pub const LOOK_AT_M: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1040 LOOK_NEAR_M)
 pub const LOOK_NEAR_M: f64 = 2.5;
 
-/// (src/game/enemysquads.ts:1040 LOOK_ROUND_M)
 pub const LOOK_ROUND_M: f64 = 3.5;
 
-/// (src/game/enemysquads.ts:1043 LOOK_SECS)
 pub const LOOK_SECS: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1193 NET_OUT_SECS)
 pub const NET_OUT_SECS: f64 = 90.0;
 
-/// (src/game/enemysquads.ts:1195 HUNG_SECS)
 pub const HUNG_SECS: f64 = 10.0;
 
-/// (src/game/enemysquads.ts:1264 NET_BREATH)
 pub const NET_BREATH: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1292 NET_TRIES)
 pub const NET_TRIES: f64 = 2.0;

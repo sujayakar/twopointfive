@@ -1,9 +1,9 @@
 //! The types of `stalk`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Words)]
 pub enum Why {
     Keys,
     Wall,
@@ -12,19 +12,6 @@ pub enum Why {
     Turned,
     Hands,
     Far,
-}
-impl Why {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Why::Keys => "keys",
-            Why::Wall => "wall",
-            Why::Let => "let",
-            Why::Him => "him",
-            Why::Turned => "turned",
-            Why::Hands => "hands",
-            Why::Far => "far",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -80,17 +67,9 @@ pub struct StalkWait {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StalkMod {
-    /// (src/game/stalk.ts:142 STATE)
     pub state: JsMap<PlayerId, crate::stalk::St>,
-}
-impl StalkMod {
-    pub fn blank() -> Self {
-        StalkMod {
-            state: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
