@@ -40,8 +40,7 @@ pub struct Checkpoints {
     #[is(-1000000000.0)] pub last_save_t: f64,
     pub pending: Option<crate::savestate::CheckpointsPending>,
     pub flash: Option<crate::savestate::CheckpointsFlash>,
-    pub log: Vec<crate::savestate::CheckpointsLogItem>,
-    #[is(crate::savestate::CheckpointsStats { requests: 0.0, autosaves: 0.0, manual: 0.0, loads: 0.0, dropped: 0.0, refused: 0.0, deferred_frames: 0.0, regretted: 0.0 })] pub stats: crate::savestate::CheckpointsStats,
+    #[is(crate::savestate::CheckpointsStats { autosaves: 0.0, manual: 0.0, loads: 0.0, refused: 0.0 })] pub stats: crate::savestate::CheckpointsStats,
     pub mission_ref: Option<u32>,
     #[is(crate::game::MissionStage::Infiltrate)] pub stage_ref: crate::game::MissionStage,
     #[is(String::from(""))] pub room_ref: String,
@@ -70,20 +69,12 @@ pub struct CheckpointsFlash {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct CheckpointsLogItem {
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CheckpointsStats {
-    pub requests: f64,
     pub autosaves: f64,
     pub manual: f64,
     pub loads: f64,
-    pub dropped: f64,
     pub refused: f64,
-    pub deferred_frames: f64,
-    pub regretted: f64,
 }
 
 #[derive(Clone, Debug, Default)]

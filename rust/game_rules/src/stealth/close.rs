@@ -9,11 +9,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 
 /// What a new State holds: the TypeScript's own literal.
 fn fresh_state() -> crate::close::State {
-    crate::close::State { t: -1.0, best: None, mode: None, mode_d: m::INF, rmb_t: -1.0 }
-}
-
-/// The log of what was taken, the debugger's.
-fn note(g: &crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
+    crate::close::State { t: -1.0, best: None, mode: None, rmb_t: -1.0 }
 }
 
 /// The men sat down, made if none yet: the table itself.
@@ -176,8 +172,6 @@ pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt:
 }
 
 /// A blow landed: the tally.
-pub fn close_blow(g: &mut crate::game::Game, lethal: bool) { g.stats.close.blows[if lethal { 0 } else { 1 }] += 1; }
-
 /// The way in an offer was made by; none is from behind.
 pub fn close_kind_of(o: Option<&crate::close::CloseOffer>) -> crate::close::CloseKind {
     match o.and_then(|o| o.win) { Some(w) => w.kind, None => crate::close::CloseKind::Behind }
@@ -193,7 +187,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     let far = m::hyp2(p[0] - gp[0], p[2] - gp[2]);
     if far >= 2.4 {
         if !busy && far < crate::stalk::stalk_begin_m(g) && crate::stalk::stalk_could(g, gd) {
-            let line2 = sneak_hint(g);
+            let line2 = sneak_hint();
             let it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, 1.35, 0.0]), line1: String::from("guard"), line2, in_reach: false, off: false, guard: Some(gd), ..Interactable::default() };
             offer(g, it, Vec::new());
         }
@@ -207,7 +201,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     let line1 = format!("guard{}{}", if alert { " · alert" } else if seated { " · seated" } else { "" }, if alert { "" } else { where_ });
     let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: o.why.clone(), in_reach: o.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::default() };
     let sneak = !busy && crate::stalk::stalk_could(g, gd);
-    if sneak && !o.can { it.line2 = sneak_hint(g); }
+    if sneak && !o.can { it.line2 = sneak_hint(); }
     let mut verbs: Vec<Interactable> = Vec::new();
     if o.can && !busy {
         let is_civ = g.gd[gd].civ.is_some();
@@ -255,7 +249,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
 }
 
 /// The line that says what the held click does.
-fn sneak_hint(g: &crate::game::Game) -> String {
+fn sneak_hint() -> String {
     String::from("LMB  hold to sneak up on him")
 }
 
@@ -315,7 +309,6 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
 
 /// Who holds the mode now: the nearest living man in range with nothing solid between.
 fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
-    g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
     if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
@@ -336,7 +329,6 @@ fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
         best = Some(gd);
         bd = d;
     }
-    g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = bd;
     best
 }
 
@@ -414,7 +406,6 @@ pub fn close_tick(g: &mut crate::game::Game) {
         };
         g.ch[c].anim.spring = spring;
     }
-    if r.is_some() { g.stats.close.ready_frames += 1; }
     let m_ = if g.pl[pl].takedown.is_some() { state_of(g).mode } else { mode_now(g, pl) };
     state_of(g).mode = m_;
     g.ch[c].anim.creep = m_.is_some();
@@ -423,7 +414,6 @@ pub fn close_tick(g: &mut crate::game::Game) {
         let ch = g.ch[mc].bones.get(Bone::Chest).copied();
         let pos = g.ch[mc].pos;
         g.ch[c].anim.creep_at = Some(match ch { Some(ch) => [ch[0], ch[1], ch[2]], None => [pos[0], pos[1] + 1.2, pos[2]] });
-        g.stats.close.mode_frames += 1;
     } else {
         g.ch[c].anim.creep_at = None;
     }
@@ -434,7 +424,6 @@ pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let st = g.gd[gd].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || dist < g.k.close.touch_m { return 1.0; }
     let k = v3::smoothstep(g.k.close.dark_at, g.k.close.lit_at, g.shown[g.pl[g.player].ch].visibility);
-    if k < 1.0 { g.stats.close.dark_passes += 1; }
     k
 }
 
@@ -461,11 +450,9 @@ pub fn close_noise(g: &crate::game::Game, kind: crate::close::CloseKind, was_ale
 }
 
 /// The tallies of what a take or a grab made.
-pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::CloseTookWhat, kind: crate::close::CloseKind, bearing: f64, dist: f64) {
+pub fn close_took(what: crate::close::CloseTookWhat) {
     // the tallies' rows are in CLOSE_STATS's written order, which is CloseKind's
-    match what { crate::close::CloseTookWhat::Take => g.stats.close.takes[kind as usize] += 1, crate::close::CloseTookWhat::Grab => g.stats.close.grabs[kind as usize] += 1 }
-    let what = match what { crate::close::CloseTookWhat::Take => crate::close::NoteWhat::Take, crate::close::CloseTookWhat::Grab => crate::close::NoteWhat::Grab };
-    note(g, gd, what, Some(kind), Some(bearing), Some(dist));
+    match what { crate::close::CloseTookWhat::Take => {}, crate::close::CloseTookWhat::Grab => {}}
 }
 
 /// A man calm enough to sit.
@@ -489,8 +476,6 @@ pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, fa
     };
     seated_of(g).set(gd, st);
     crate::control::set_hold(g, gd, true, "close");
-    g.stats.close.seats += 1;
-    note(g, gd, crate::close::NoteWhat::Seat, None, None, None);
     true
 }
 
@@ -506,8 +491,6 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
         g.ch[c].pos[0] = st.at[0];
         g.ch[c].pos[2] = st.at[2];
     }
-    g.stats.close.unseats += 1;
-    note(g, gd, crate::close::NoteWhat::Unseat, None, None, None);
 }
 
 #[cfg(test)]

@@ -58,14 +58,6 @@ pub struct St {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunHoldStats {
-    pub armed: f64,
-    pub ran: f64,
-    pub no_cover: f64,
-    pub rounds: f64,
-    pub no_way: f64,
-    pub looks: f64,
-    pub gone: f64,
-    pub lines: f64,
     pub free_t: f64,
 }
 
@@ -127,7 +119,7 @@ pub struct GunHoldFeet {
 pub struct GunholdMod {
     pub knowns: JsMap<u32, crate::gunhold::Known>,
     pub states: JsMap<GuardsStandoffId, crate::gunhold::St>,
-    #[is(Some(crate::gunhold::GunHoldStats { armed: 0.0, ran: 0.0, no_cover: 0.0, rounds: 0.0, no_way: 0.0, looks: 0.0, gone: 0.0, lines: 0.0, free_t: -1.0 }))] pub stats_of: Option<crate::gunhold::GunHoldStats>,
+    #[is(Some(crate::gunhold::GunHoldStats { free_t: -1.0 }))] pub stats_of: Option<crate::gunhold::GunHoldStats>,
     pub planned: Option<f64>,
 }
 

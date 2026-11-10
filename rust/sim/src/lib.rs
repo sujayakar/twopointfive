@@ -41,12 +41,9 @@ pub mod panes;
 pub mod pattern;
 pub mod pen;
 pub mod poses;
-pub mod props;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
-pub mod items;
-pub mod slabs;
 pub mod snow;
 pub mod state;
 pub mod weather;
@@ -120,45 +117,11 @@ pub fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64, tune: &Knobs) -> u3
     ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z, tune)) as u32
 }
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
-/// a block's length in bytes
-pub fn state_len() -> usize {
-    state::LEN
-}
-/// how many blocks the module holds at once
-pub fn state_games() -> usize {
-    state::GAMES
-}
-/// the layout's word
-pub fn state_layout() -> u32 {
-    state::LAYOUT
-}
-/// how many parts a block has
-pub fn state_parts() -> usize {
-    state::PARTS.len()
-}
-/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes; whether it is a pool, its first word the bytes of it in use (2)
-pub fn state_part(i: usize, what: u32) -> usize {
-    if i >= state::PARTS.len() {
-        return 0;
-    }
-    match what {
-        0 => state::PARTS[i].off,
-        1 => state::PARTS[i].len,
-        _ => state::PARTS[i].pool as usize,
-    }
-}
-
 
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// how many rows a table holds (5: the columns of the doors' part of a block)
 pub fn doors_cap(table: u32) -> usize {
     doors::cap(table)
-}
-// ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
-/// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
-/// where column k of the part starts (100 + k)
-pub fn props_cap(table: u32) -> usize {
-    props::cap(table)
 }
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 /// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)

@@ -87,7 +87,6 @@ pub fn recap_round(g: &mut Game, victim: Option<CharId>, was_down: bool, shooter
     let Some(victim) = victim else { return; };
     if was_down { return; }
     this_run(g);
-    g.stats.deathrecap.rounds += 1;
     let (id, by, by_at, t) = (g.ch[victim].id, g.ch[shooter].id, xz(g.ch[shooter].pos), g.time);
     g.recap.rounds.set(Num(id), Round { t, by, by_at, from: xz(muzzle), to: xz(hit), weapon: crate::gear::plain_short(def), blind: blind.unwrap_or(false), loud: def.report.level >= 1.0 });
 }
@@ -367,7 +366,6 @@ fn witness(g: &mut Game) {
         g.recap.lost[i].done = true;
         g.recap.lost_live[i].known_at = now;
         g.recap.lost_live[i].from = src;
-        g.stats.deathrecap.known += 1;
         let (Some(u), Some(by)) = (src, by) else { continue; };
         if player_saw || pl_down { continue; }
         let p = g.ch[g.pl[pl].ch].pos;

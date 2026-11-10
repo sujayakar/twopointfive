@@ -52,7 +52,7 @@ fn big_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<KitBig> {
 pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
     let (pl, p) = (seat.player, &g.pl[seat.player]);
     let up = |k: SlotKind| p.slot == k && !p.holstered;
-    let gun_slot = |thing, key: &str, id: FirearmId, k: SlotKind| KitSlot { thing, key: String::from(key), name: crate::gear::gear_text(g, &g.m.weapons.weapons.get(g.fa[id].def).unwrap().short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
+    let gun_slot = |thing, key: &str, id: FirearmId, k: SlotKind| KitSlot { thing, key: String::from(key), name: crate::gear::gear_text(&g.m.weapons.weapons.get(g.fa[id].def).unwrap().short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
     let rifle = if p.has_rifle { gun_slot(KitThing::Rifle, "Digit2", p.rifle, SlotKind::Rifle) } else { KitSlot { thing: KitThing::Rifle, key: String::from("Digit2"), name: String::from("—"), absent: true, ..KitSlot::default() } };
     let mut slots = vec![
         KitSlot { thing: KitThing::Hands, key: String::from(crate::handslot::HANDSLOT_KEY), up: p.holstered, ..KitSlot::default() },

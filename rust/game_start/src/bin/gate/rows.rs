@@ -328,7 +328,7 @@ fn plant(p: &mut Play, f: Flags) {
     if f.breaks("aside") { let c = p.g.gd[man].ch; p.g.ch[c].pos[0] += 0.01; }
     if f.breaks("round") { let gun = p.g.gd[man].weapon; p.g.fa[gun].chamber -= 1.0; }
     if f.breaks("door") { let d = p.g.doors.list[0]; let a = game::doors::door_angle(&p.g, d); game::doors::door_set_angle(&mut p.g, d, a + 0.1); }
-    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
+    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
     if f.breaks("die") { game::math_dice::sim_random(&mut p.g); }
     if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
     if f.breaks("lamps") { let f = &mut p.g.tab.fixture[game::ids::FixtureId(0)]; f.on = !f.on; }

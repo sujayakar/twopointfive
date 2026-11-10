@@ -78,15 +78,14 @@ pub fn find_car_lamps(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::
 /// The light targets of a level's vehicle lamps: emissive, off the mains, no stagger, no die drawn.
 pub fn car_lamp_targets(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<crate::fixtures::Fixture> {
     let t = &mut g.stats.carlamps;
-    t.found = 0; t.head = 0; t.tail = 0; t.lit = 0;
+    t.found = 0;   
     let (mut heads, mut tails) = (0, 0);
     let found = find_car_lamps(g, boxes);
     let mut out: Vec<crate::fixtures::Fixture> = Vec::with_capacity(found.len());
     for l in found {
         let b = boxes[l.box_ as usize];
         g.stats.carlamps.found += 1;
-        let n = if l.what == FoundLampWhat::HeadLamp { g.stats.carlamps.head += 1; heads += 1; heads } else { g.stats.carlamps.tail += 1; tails += 1; tails };
-        if l.lit { g.stats.carlamps.lit += 1; }
+        let n = if l.what == FoundLampWhat::HeadLamp {  heads += 1; heads } else {  tails += 1; tails };
         let (c, emissive, albedo) = { let x = seam_box_row(g, b); (x.c, x.emissive, x.albedo) };
         out.push(crate::fixtures::Fixture {
             name: alloc::format!("{} {}", l.what.as_str(), n),
@@ -127,7 +126,6 @@ pub(super) fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
     if !near3(&albedo, &want, 0.0) {
         seam_box_row(g, b).albedo = want;
         crate::scene_collision::wrote(g);   // (what it sends back of the light is of the box world's row)
-        if broken { g.stats.carlamps.painted += 1; }
     }
 }
 

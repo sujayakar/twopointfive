@@ -41,7 +41,7 @@ fn blank(t: f64) -> crate::showwhy::Mem {
 
 /// Nothing shown yet.
 fn fresh() -> crate::showwhy::ShowWhyStats {
-    ShowWhyStats { waves: 0, squeezes: 0, fists: 0, ways: 0, lines: 0, holds: 0 }
+    ShowWhyStats {  }
 }
 
 /// This seat's state, made if there is none: the row itself.
@@ -60,11 +60,6 @@ fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// One row of the log, which keeps its last 120 to 200.
-fn note(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, signal: Option<crate::character::SignalKind>, line: Option<&str>) {
-    let st = st_row(g, pl);
-}
-
 /// His words are over him this frame, asked of the bubble's clock.
 fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
     match &g.gd[gd].bubble {
@@ -74,22 +69,19 @@ fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// His line through the game's own say; false where it did not land (a man with no voice).
-fn say(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, text: &str) -> bool {
+fn say(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
     crate::game::game_say(g, gd, text, None, None);
     if g.gd[gd].bubble.as_ref().map(|b| b.text.as_str()) != Some(text) {
         return false;
     }
-    st_row(g, pl).stats.lines += 1;
-    note(g, pl, gd, why, None, Some(text));
     true
 }
 
 /// His free hand's signal, and its row in the log.
-fn sign(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, kind: crate::character::SignalKind, side: Option<f64>) {
+fn sign(g: &mut crate::game::Game, gd: GuardId, kind: crate::character::SignalKind, side: Option<f64>) {
     let side = side.unwrap_or(1.0);
     let c = g.gd[gd].ch;
     crate::character::anim_signal(g, c, kind, Some(side));
-    note(g, pl, gd, why, Some(kind), None);
 }
 
 /// `g.fight.opOf(gd)?.tgt`: the man the room fight has him on.
@@ -218,7 +210,7 @@ fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) {
         return false;
     }
-    let a = match crate::orders::squad_orders_of(g, seat, gd) {
+    let a = match crate::orders::squad_orders_of(seat, gd) {
         Some(a) => a,
         None => return false,
     };
@@ -256,7 +248,7 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
 }
 
 /// STACK: the squeezes up the file of each order made and waiting, then the lead's fist.
-fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
+fn stacks(g: &mut crate::game::Game) {
     let k = g.k.showwhy;
     let t = g.time;
     let mut i = 0;
@@ -290,7 +282,6 @@ fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
         if begins {
             // it waits from now (or the clock went back under it)
             g.m.showwhy.op_mem.set(op, OpMem { t, turns: Vec::new(), fist_t: 0.0, fists: 0 });
-            st_row(g, pl).stats.holds += 1;
             let door = g.dr[g.tab.doortools_door_op[op].door].frame_centre;
             let mut at = t + 0.15;
             let lead = g.tab.doortools_door_op[op].lead;
@@ -302,12 +293,10 @@ fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
                 }
             }
             js::sort_by(&mut file, |a, b| b.1 - a.1);
-            if js::truthy(g.k.moves.squeeze) {
-                for &(man, _) in &file {
-                    if man_ahead(g, op, man) {
-                        g.m.showwhy.op_mem.get_mut(op).unwrap().turns.push(OpMemTurnsItem { gd: man, at });
-                        at += k.squeeze_gap;
-                    }
+            for &(man, _) in &file {
+                if man_ahead(g, op, man) {
+                    g.m.showwhy.op_mem.get_mut(op).unwrap().turns.push(OpMemTurnsItem { gd: man, at });
+                    at += k.squeeze_gap;
                 }
             }
             g.m.showwhy.op_mem.get_mut(op).unwrap().fist_t = at + k.fist_after;
@@ -323,8 +312,7 @@ fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
                 None => break,
             };
             if stands_free(g, &crate::seats::here(g), op, turn.gd) && man_ahead(g, op, turn.gd) {
-                sign(g, pl, turn.gd, Why::Stack, crate::character::SignalKind::Squeeze, None);
-                st_row(g, pl).stats.squeezes += 1;
+                sign(g, turn.gd, crate::character::SignalKind::Squeeze, None);
             }
         }
         let (none_left, fists, fist_t) = {
@@ -334,8 +322,7 @@ fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
         if none_left && (fists as f64) < k.hold_max && t >= fist_t {
             let lead = g.tab.doortools_door_op[op].lead;
             if stands_free(g, &crate::seats::here(g), op, lead) {
-                sign(g, pl, lead, Why::Stack, crate::character::SignalKind::Hold, None);
-                st_row(g, pl).stats.fists += 1;
+                sign(g, lead, crate::character::SignalKind::Hold, None);
                 let r = g.m.showwhy.op_mem.get_mut(op).unwrap();
                 r.fists += 1;
                 r.fist_t = t + k.hold_every * fist_doubling(r.fists);
@@ -355,7 +342,7 @@ fn fist_doubling(fists: i32) -> f64 {
 /// Once a frame, after the orders, the door tools and the room fight have had theirs.
 pub fn show_why_tick(g: &mut crate::game::Game) {
     let k = g.k.showwhy;
-    if !crate::orders::squad_orders_sams(g, &crate::seats::here(g)) {
+    if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
         return;
     }
     let (t, pl) = (g.time, g.player);
@@ -367,7 +354,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
         st.line_say_t = -100.0;
     }
     st.t = t;
-    stacks(g, pl);
+    stacks(g);
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -376,7 +363,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
             continue;
         }
         // a man no order of the player's poses is his drill's
-        let a = match crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
+        let a = match crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
             Some(a) => a,
             None => continue,
         };
@@ -429,8 +416,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
             } else {
                 if t >= g.m.showwhy.mem.get(gd).unwrap().wave_t && crate::character::anim_signal_free(g, c) {
                     let side = line_side(g, &crate::seats::here(g), gd);
-                    sign(g, pl, gd, Why::Line, crate::character::SignalKind::Aside, Some(side));
-                    st_row(g, pl).stats.waves += 1;
+                    sign(g, gd, crate::character::SignalKind::Aside, Some(side));
                     let r = g.m.showwhy.mem.get_mut(gd).unwrap();
                     r.waves += 1;
                     r.wave_t = t + if r.waves < 2 { k.wave_every } else { k.wave_later };
@@ -439,7 +425,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                     // it stands while it is true
                     let b = g.gd[gd].bubble.as_mut().unwrap();
                     b.dur = m::max(b.dur, t - b.t + 0.6);
-                } else if quiet && t >= st_row(g, pl).line_say_t && !line_said_by(g, gd) && say(g, pl, gd, Why::Line, LINE_LINE) {
+                } else if quiet && t >= st_row(g, pl).line_say_t && !line_said_by(g, gd) && say(g, gd, LINE_LINE) {
                     // one voice: a mate who has it up says it for all of them
                     let bt = g.gd[gd].bubble.as_ref().unwrap().t;
                     g.m.showwhy.mem.get_mut(gd).unwrap().line_b = bt;
@@ -474,8 +460,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 r.door_shown = true;
                 r.door_t = t + k.door_every;
             }
-            sign(g, pl, gd, Why::Door, crate::character::SignalKind::Go, None);
-            st_row(g, pl).stats.ways += 1;
+            sign(g, gd, crate::character::SignalKind::Go, None);
             if t >= st_row(g, pl).after_you_t {
                 owe(g.m.showwhy.mem.get_mut(gd).unwrap(), LINE_DOOR, Why::Door, t + 1.5);
             }
@@ -552,7 +537,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 break;
             }
             g.m.showwhy.mem.get_mut(gd).unwrap().owed.remove(0);
-            if say(g, pl, gd, why, &text) {
+            if say(g, gd, &text) {
                 if why == Why::Door {
                     st_row(g, pl).after_you_t = t + k.after_you_gap;
                 } else if why == Why::Keep {

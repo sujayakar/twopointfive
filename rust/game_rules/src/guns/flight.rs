@@ -164,7 +164,7 @@ fn double_over(g: &mut Game, gd: GuardId, from: V3) {
     if g.ai_enabled { g.gd[gd].witness.heard.small += 1.0; }
     let all = crate::launcher::stagger_lines_table();
     let now: Vec<String> = if g.gd[gd].state == GuardState::Alert { all.iter().filter(|t| !t.contains("who's there")).cloned().collect() } else { all.clone() };
-    let pool = crate::words::w(g, &now, &all);
+    let pool = crate::words::w(g, &now);
     let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
     let line = &pool[js::rem(roll, pool.len() as f64) as usize];
     crate::game::game_say(g, gd, line, None, None);

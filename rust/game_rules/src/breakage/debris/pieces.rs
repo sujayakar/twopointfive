@@ -60,7 +60,7 @@ pub fn hash01(x: f64) -> f64 {
 }
 
 /// A new pool.
-pub(in crate::breakage) fn debris_new(g: &crate::game::Game) -> crate::debris::Debris { crate::debris::Debris::blank() }
+pub(in crate::breakage) fn debris_new() -> crate::debris::Debris { crate::debris::Debris::blank() }
 
 /// The pool's size.
 pub const DEBRIS_CAP: f64 = 64.0;
@@ -82,7 +82,7 @@ pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, b
     let mut v = v;
     if let Some(f) = g.destr.debris.fling { v = v3::add(v, f); }
     debris_thrown(g, kind, box_, v, level, who);
-    debris_spawn_raw(g, kind, box_, v, w, Some(who), Some(true))
+    debris_spawn_raw(g, kind, box_, v, w, Some(who))
 }
 
 /// The simulation's half of a piece that is thrown: its one landing, put in the game's falls.
@@ -96,7 +96,7 @@ fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_
     if !js::truthy(lv) { lv = l.level; }
     if !js::truthy(lv) { lv = landing_of(kind).level; }
     let t = g.time + f.t;
-    if crate::sim_fallshome::fall_store_schedule(g, t, f.pos[0], f.pos[1], f.pos[2], crate::sim_fallshome::FallSound::Empty, 0.0, 1.0, 0.0, who, crate::sim_fallshome::FALL_HEARD, lv, crate::sim_fallshome::FALL_MAXP, Some(crate::sim_fallshome::FALL_PIECES), Some(l.dust)) {
+    if crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Pieces, crate::falls::Landing { t, pos: f.pos, sound: crate::falls::FallSound::Empty, gain: 0.0, rate: 1.0, amount: 0.0, who, told: crate::falls::FallTold::Always, level: lv, dust: l.dust }, crate::falls::MAX_WAITING as f64) {
         g.destr.debris.stats.told += 1.0;
     }
 }
@@ -104,7 +104,7 @@ fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_
 /// The thrown pieces whose landing has come: the floor is told of each.
 pub(in crate::breakage) fn debris_landings(g: &mut crate::game::Game) {
     let time = g.time;
-    let due = crate::sim_fallshome::fall_store_due(g, time, 0.0, 0.0, Some(crate::sim_fallshome::FALL_PIECES));
+    let due = crate::falls::due(&mut g.falls, crate::falls::FallKind::Pieces, time, 0.0, 0.0);
     for p in due {
         if p.heard {
             let (time, serial) = (g.time, g.serial());
@@ -117,7 +117,7 @@ pub(in crate::breakage) fn debris_landings(g: &mut crate::game::Game) {
 }
 
 /// spawn() without the glass door; `told` = the simulation has this piece's landing.
-pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
+pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
@@ -165,7 +165,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
 
 /// Back to an empty pool; `serial` runs on.
 pub(in crate::breakage) fn debris_clear(g: &mut crate::game::Game) {
-    crate::sim_fallshome::fall_store_clear(g, Some(false), Some(crate::sim_fallshome::FALL_PIECES));
+    crate::falls::clear(&mut g.falls, crate::falls::FallKind::Pieces);
     let d = &mut g.destr.debris;
     d.fling = None;
     d.list.clear();
@@ -232,7 +232,6 @@ pub(in crate::breakage) fn debris_impulse(g: &mut crate::game::Game, imp: crate:
         crate::break_table::breaks_kicked(g, c, kick.s);
         n += 1.0;
     }
-    g.destr.debris.stats.kicked += n;
     n
 }
 
@@ -624,7 +623,6 @@ fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
 pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
     if g.destr.debris.list.is_empty() { return; }
     g.destr.debris.frame += 1.0;
-    let mut moving = 0.0;
     for i in (0..g.destr.debris.list.len()).rev() {
         let c = g.destr.debris.list[i];
         g.tab.debris_chunk[c].age += dt;
@@ -653,7 +651,6 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
             }
             continue;
         }
-        if !is_on(g.tab.debris_chunk[c].foot) { moving += 1.0; }
         let sub = 2;
         let h = dt / sub as f64;
         let mut s = 0;
@@ -668,10 +665,6 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
             if g.tab.debris_chunk[c].glass.is_some() { crate::shards::glass_shards_gone(g, c); }
         }
     }
-    let live = g.destr.debris.list.len() as f64;
-    let st = &mut g.destr.debris.stats;
-    st.peak_live = m::max(st.peak_live, live);
-    st.peak_moving = m::max(st.peak_moving, moving);
 }
 
 fn box_add_c(g: &mut Game, b: AnyBoxId, d: V3) {

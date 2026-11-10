@@ -12,16 +12,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// A box's row (Box.* in the TypeScript).
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// the slabs' hand-over in rust/sim's memory (sim::slabs::addr(0), the same doubles the page's `slabMem()` reads); sim::slabs::par is private.
-/// Got afresh each side of the step, whose own par() makes a second &mut of the same static.
-fn slab_par() -> &'static mut [f64; sim::slabs::NPAR] {
-    unsafe { &mut *(sim::slabs::addr(0) as *mut [f64; sim::slabs::NPAR]) }
-}
-/// the same doubles, to read
-fn slab_par_read() -> &'static [f64; sim::slabs::NPAR] {
-    unsafe { &*(sim::slabs::addr(0) as *const [f64; sim::slabs::NPAR]) }
-}
-
 /// Keeps a line of what the doors' blasts did.
 fn note(g: &mut crate::game::Game, s: &str) {
     let line = format!("{}s {}", js::to_fixed(g.time, 2), s);
@@ -85,10 +75,7 @@ fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64
     None
 }
 
-/// A step that has met nothing yet.
-fn nothing_met() -> crate::doorblast::SlabMet {
-    crate::doorblast::SlabMet { landed: false, lx: 0.0, lz: 0.0, rested: false, nudged: 0.0, nudge_max: 0.0, laid: 0.0 }
-}
+
 
 /// The doors' side of a blast: every leaf within `tear_m` that it reaches comes off.
 pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
@@ -96,7 +83,6 @@ pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f6
     if !(tear_m > 0.0) {
         return out;
     }
-    g.stats.doorblast.doorblast_blasts += 1;
     for item in door_blast_reach(g, at, tear_m) {
         if tear_off(g, item.d, at, who, Some(item.k)) {
             out.push(item.d);
@@ -251,10 +237,7 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
     let (up, spin, tip) = (g.k.doorblast.up, g.k.doorblast.spin, g.k.doorblast.tip);
     let p: V3 = [cx, support(g, d, 0.0), cz];
     let ang = crate::doors::door_angle(g, d);
-    crate::doors::door_set_slab(
-        g,
-        d,
-        Some(crate::doors::SlabSeen {
+    g.dr[d].slab = Some(crate::doors::Slab {
             p,
             v: [dx * sp, up, dz * sp],
             a,
@@ -268,14 +251,9 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
             t: 0.0,
             ang,
             bits: None,
-            wedged: None,
-        }),
-    );
+            wedged: 0.0,
+    });
     hands_off(g, d);
-    g.stats.doorblast.doorblast_torn += 1;
-    if back {
-        g.stats.doorblast.doorblast_back += 1;
-    }
     let said = if back { format!("no room ahead ({} m): falls back", js::to_fixed(ahead, 2)) } else { format!("{} m ahead", js::to_fixed(ahead, 2)) };
     let line = format!("{} off its hinges · k {} · {}", g.dr[d].def.name, js::to_fixed(k, 2), said);
     note(g, &line);
@@ -308,7 +286,6 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
     let was = crate::doors::door_shot(g, d);
     let chaos = crate::destruction::chaos_of(g);
     crate::doors::door_set_shot(g, d, was + w / (2.0 * m::max(1e-3, chaos)));
-    g.stats.doorblast.doorshot_rounds += 1;
     let share = crate::doors::door_shot(g, d) / leaf_tough(g);
     if share >= 1.0 {
         splinter(g, d, dir, who, Some(hit_p));
@@ -467,7 +444,6 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
                     crate::break_table::breaks_dress(g, c);
                 }
                 None => {
-                    g.stats.doorblast.doorshot_demoted += 1;
                     crate::render_particles::particles_emit(
                         g,
                         crate::render_particles::PKind::Debris,
@@ -556,10 +532,7 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
     }
     leaf_is_off(g, d, fly);
     let ang = crate::doors::door_angle(g, d);
-    crate::doors::door_set_slab(
-        g,
-        d,
-        Some(crate::doors::SlabSeen {
+    g.dr[d].slab = Some(crate::doors::Slab {
             p: [px, t_ / 2.0 + LIFT, pz],
             v: [0.0, 0.0, 0.0],
             a: ra,
@@ -573,11 +546,9 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
             t: 0.0,
             ang,
             bits: Some(bits),
-            wedged: None,
-        }),
-    );
+            wedged: 0.0,
+    });
     hands_off(g, d);
-    g.stats.doorblast.doorshot_splintered += 1;
     let line = format!("{} splintered by gunfire · {} pieces so far", g.dr[d].def.name, g.stats.doorblast.doorshot_chunks);
     note(g, &line);
     pose_slab(g, d);
@@ -605,50 +576,40 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
 
 /// Once a frame: every loose slab still moving is stepped and posed, in the order of their doors.
 pub fn door_slabs(g: &mut crate::game::Game, dt: f64) {
-    let n = crate::sim_slabshome::slab_store_fly(g);
-    if n == 0.0 {
-        return;
-    }
-    let mut ids: Vec<f64> = Vec::new();
-    let mut r = 0.0;
-    while r < n {
-        ids.push(crate::sim_slabshome::slab_store_door_at(g, r));
-        r += 1.0;
-    }
-    for i in ids {
-        let d = g.doors.list[i as usize];
-        if !crate::doors::door_off(g, d) {
-            continue;
+    for at in 0..g.doors.list.len() {
+        let d = g.doors.list[at];
+        if g.dr[d].slab.is_some_and(|s| !s.rest) && crate::doors::door_off(g, d) {
+            fly_slab(g, d, dt);
+            pose_slab(g, d);
         }
-        fly_slab(g, d, dt);
-        pose_slab(g, d);
     }
 }
 
 /// One slab's step, and what it met said in one place: the tallies, the slam for the floor to hear, the log line.
 fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
-    let i = g.dr[d].i;
-    let r = crate::sim_slabshome::slab_store_row_of(g, i);
-    if r < 0.0 {
-        return;
-    }
-    let met = match slab_there(g, d) {
-        Some(w) => step_there(g, d, r, dt, w),
-        None => {
-            g.m.sim_slabshome.slabs_stepped.here += 1.0;
-            step_here(g, d, r, dt)
-        }
+    let dyn_ = g.col.dynamic_boxes.clone();
+    crate::scene_collision::rules_world(g, &dyn_);
+    let ask = crate::scene_collision::rules_panes(g);
+    let box_ = g.dr[d].box_;
+    let but = dyn_.iter().position(|x| *x == box_).map_or(-1, |i| i as i32);
+    let door = &mut g.dr[d];
+    let flight = crate::slab::Flight {
+        w: g.col.mirror.slot as usize,
+        height: door.height,
+        thick: door.thick,
+        hu: door.leaf_h[0],
+        closed: door.def.closed_dir,
+        fcx: door.frame_centre[0],
+        fcz: door.frame_centre[2],
+        but,
+        ask: ask != 0.0,
+        tune: &g.k,
+        k: &g.k.doorblast,
     };
-    let s = crate::doors::door_slab(g, d).unwrap();
-    if s.rest {
-        crate::sim_slabshome::slab_store_rest(g, i);
-    }
-    let a = &mut g.stats.doorblast;
-    a.doorblast_nudged += met.nudged as i32;
-    a.doorblast_nudge_max = m::max(a.doorblast_nudge_max, met.nudge_max);
-    a.doorblast_laid += met.laid as i32;
+    let s = door.slab.as_mut().expect("a slab in the air");
+    let met = crate::slab::step(&flight, s, dt);
+    let s = *s;
     if met.landed {
-        g.stats.doorblast.doorblast_landed += 1;
         let at: V3 = [met.lx, 0.1, met.lz];
         let level = g.k.doorblast.land_level;
         let who = s.who;
@@ -660,110 +621,9 @@ fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     }
 }
 
-/// The row read out, stepped, written back.
-fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::doorblast::SlabMet {
-    let mut s = crate::sim_slabshome::slab_store_load(g, r);
-    let mut met = nothing_met();
-    step_slab(g, d, &mut s, dt, &mut met);
-    crate::sim_slabshome::slab_store_save(g, r, s);
-    met
-}
-
-/// Can this slab's step run in the module: the world standing with the game's own leaves in it, which of them is the slab's own box (−1: none), and the pane's rule; None: a pane rule the module cannot judge by.
-fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> {
-    let dyn_ = g.col.dynamic_boxes.clone();
-    crate::scene_collision::rules_world(g, &dyn_);
-    let ask = crate::scene_collision::rules_panes(g);
-    if ask < 0.0 {
-        return None;
-    }
-    let b = g.dr[d].box_;
-    let but = dyn_.iter().position(|x| *x == b).map_or(-1.0, |i| i as f64);
-    Some(crate::doorblast::SlabThere { but, ask })
-}
-
-/// The step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back.
-fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
-    let q = slab_par();
-    q[sim::slabs::P_DT] = dt;
-    q[sim::slabs::P_ROW] = r;
-    q[sim::slabs::P_HEIGHT] = g.dr[d].height;
-    q[sim::slabs::P_THICK] = g.dr[d].thick;
-    q[sim::slabs::P_HU] = g.dr[d].leaf_h[0];
-    q[sim::slabs::P_CLOSED] = g.dr[d].def.closed_dir;
-    q[sim::slabs::P_FCX] = g.dr[d].frame_centre[0];
-    q[sim::slabs::P_FCZ] = g.dr[d].frame_centre[2];
-    q[sim::slabs::P_BUT] = w.but;
-    q[sim::slabs::P_ASK] = w.ask;
-    q[sim::slabs::P_SCRAPE] = g.k.doorblast.scrape;
-    q[sim::slabs::P_SLAM] = g.k.doorblast.slam;
-    q[sim::slabs::P_SLIDE] = g.k.doorblast.slide;
-    q[sim::slabs::P_BOUNCE] = g.k.doorblast.bounce;
-    q[sim::slabs::P_TIP] = g.k.doorblast.tip;
-    let a = sim::slabs::step(g.sim, g.col.mirror.slot as usize, &g.k);
-    let q = slab_par_read();
-    let c = &mut g.m.sim_slabshome.slabs_stepped;
-    c.rays += q[sim::slabs::P_RAYS];
-    c.gathers += q[sim::slabs::P_GATHERS];
-    c.substeps += q[sim::slabs::P_SUBSTEPS];
-    if a == sim::slabs::HOST {
-        c.host += 1.0;
-        panic!("{}", crate::scene_collision::no_number(None, None, None));
-    }
-    if a != sim::slabs::STEPPED {
-        panic!("the Rust module was asked to step row {} of the slabs, which is no slab in the air", r);
-    }
-    c.there += 1.0;
-    if q[sim::slabs::P_LANDED] != 0.0 {
-        c.landed += 1.0;
-    }
-    if q[sim::slabs::P_RESTED] != 0.0 {
-        c.rested += 1.0;
-    }
-    crate::doorblast::SlabMet {
-        landed: q[sim::slabs::P_LANDED] != 0.0,
-        lx: q[sim::slabs::P_LAND_X],
-        lz: q[sim::slabs::P_LAND_Z],
-        rested: q[sim::slabs::P_RESTED] != 0.0,
-        nudged: q[sim::slabs::P_NUDGED],
-        nudge_max: q[sim::slabs::P_NUDGE_MAX],
-        laid: q[sim::slabs::P_LAID],
-    }
-}
-
-/// TWIN of sim::slabs::step: `s` put in the door's row, stepped there and read back, what it met added to `t`.
-fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) {
-    if s.rest {
-        return;
-    }
-    let i = g.dr[d].i;
-    let r = crate::sim_slabshome::slab_store_row_of(g, i);
-    crate::sim_slabshome::slab_store_save(g, r, *s);
-    let w = match slab_there(g, d) {
-        Some(w) => w,
-        None => panic!("a slab's step met a pane's rule the module cannot judge by: no glass stands behind it"),
-    };
-    let met = step_there(g, d, r, dt, w);
-    *s = crate::sim_slabshome::slab_store_load(g, r);
-    if met.landed {
-        t.landed = true;
-        t.lx = met.lx;
-        t.lz = met.lz;
-    }
-    t.rested = t.rested || met.rested;
-    t.nudged += met.nudged;
-    t.nudge_max = m::max(t.nudge_max, met.nudge_max);
-    t.laid += met.laid;
-}
-
 /// The slab's box (and the two handles on it) where the slab is: tilted while it topples, then an ordinary yaw-only box lying flat.
 fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
-    let i = g.dr[d].i;
-    let r = crate::sim_slabshome::slab_store_row_of(g, i);
-    if r < 0.0 {
-        return;
-    }
-    let s = crate::sim_slabshome::slab_store_load(g, r);
+    let Some(s) = g.dr[d].slab else { return };
     let b = g.dr[d].box_;
     let (w, t_, height) = (g.dr[d].def.width, g.dr[d].thick, g.dr[d].height);
     let (ux, uz) = (m::cos(s.a), m::sin(s.a));

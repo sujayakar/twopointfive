@@ -118,7 +118,7 @@ pub(super) fn door_tools_sam_behind(g: &mut crate::game::Game, d: DoorId, side: 
     if crate::condition::down(g, g.pl[g.player].ch) {
         return false;
     }
-    if !crate::orders::squad_orders_sams(g, &crate::seats::here(g)) {
+    if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
         return false;
     }
     let p = sam_pos(g, &crate::seats::here(g));
@@ -148,7 +148,7 @@ fn entry_own(g: &mut Game, op: DoorOpId, x: GuardId) -> bool {
 /// a living teammate in the can's reach who is no part of this entry
 pub(super) fn door_tools_mate_behind(g: &mut crate::game::Game, op: DoorOpId) -> Option<GuardId> {
     let d = dop!(g, op).door;
-    if !crate::orders::squad_orders_sams(g, &crate::seats::here(g)) {
+    if !crate::orders::squad_orders_sams(&crate::seats::here(g)) {
         return None;
     }
     let side = dop!(g, op).side;
@@ -198,7 +198,7 @@ fn door_tools_waiting4(g: &crate::game::Game, seat: &crate::seats::SeatRef, men:
 pub(super) fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, men: &[GuardId]) -> Vec<crate::doortools::DoorToolsStacksOfItem> {
     let mut by: JsMap<DoorId, [Vec<GuardId>; 2]> = JsMap::new();
     for &gd in men {
-        let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
+        let Some(a) = crate::orders::squad_orders_of(seat, gd) else { continue };
         if crate::condition::down(g, g.gd[gd].ch) {
             continue;
         }
@@ -325,7 +325,7 @@ pub(in crate::entries) fn door_tools_waits_on(g: &crate::game::Game, men: &[Guar
     let st = st?;
     let mut set = true;
     for &m in &st {
-        let on = match crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
+        let on = match crate::orders::squad_orders_of(&crate::seats::here(g), m) {
             Some(a) => match g.tab.orders_assignment[a].post {
                 Some(post) => {
                     let arrived = g.tab.orders_assignment[a].arrived;
@@ -493,7 +493,6 @@ fn door_tools_word_on_hold(g: &mut crate::game::Game, men: &[GuardId]) -> bool {
         if door_tools_word_steps(g, op) {
             door_tools_word_step_in(g, op);
         } else {
-            thr!(g, op).asked = Some(true);
             door_tools_to_pockets(g, op);
         }
         any = true;
@@ -546,7 +545,6 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
     crate::holdfire::hold_fire_order(g, crate::orders::rows::go::ORDER.id, None);
     let w = g.tab.doortools_word.push(Word { t0: g.time, go1: f64::NAN, fled_t: None });
     g.door_tools.words.push(w);
-    g.door_tools.stats.words += 1.0;
     for x in list {
         let op = match x {
             DoorToolsWaitingAnyItem::Arm1(s) => door_tools_from_stack(g, &s.men, s.stack),
@@ -576,7 +574,6 @@ pub fn door_tools_go_men(g: &mut crate::game::Game, men: &[GuardId], only: Optio
             went.push(format!("{} {}", dop!(g, o).kind.as_str(), g.dr[door].def.name));
         }
     }
-    door_tools_note(g, &format!("go · {}", went.join(" + ")));
     door_tools_word_tick(g);
     None
 }
@@ -589,7 +586,7 @@ fn go_list(g: &Game, men: &[GuardId], only: Option<&[DoorToolsGoMenOnlyItem]>) -
 }
 /// a pair standing on a plain 'stack up' becomes an open-and-clear from the very marks it stands on
 fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) -> Option<DoorOpId> {
-    let first = men.first().copied().and_then(|m| crate::orders::squad_orders_of(g, &crate::seats::here(g), m))?;
+    let first = men.first().copied().and_then(|m| crate::orders::squad_orders_of(&crate::seats::here(g), m))?;
     let first_post = g.tab.orders_assignment[first].post?;
     let side = crate::orders::side_of(g, d, first_post);
     let name = crate::orders::door_words(g, d);
@@ -597,7 +594,7 @@ fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) 
     let mut posts: Vec<crate::orders::StackPost> = Vec::new();
     let mut on: Vec<bool> = Vec::new();
     for &gd in men {
-        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
+        let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
         let body = g.gd[gd].ch;
         let A = &g.tab.orders_assignment[a];
         posts.push(crate::orders::StackPost {
@@ -609,7 +606,7 @@ fn door_tools_from_stack(g: &mut crate::game::Game, men: &[GuardId], d: DoorId) 
         });
     }
     for &gd in men {
-        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
+        let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
         on.push(g.tab.orders_assignment[a].arrived);
     }
     let op = door_tools_new_op(g, DoorToolKind::OpenClear, d, side, men, Phase::Stack);
@@ -689,7 +686,7 @@ fn door_tools_word_tick(g: &mut crate::game::Game) {
                         return false;
                     }
                     match dop!(g, o).can {
-                        Some(c) => !crate::throwables::item_fired(g, c),
+                        Some(c) => !g.tab.item[c].fired,
                         None => true,
                     }
                 }))
@@ -732,7 +729,6 @@ fn word_goes(g: &mut Game, op: DoorOpId) {
             if door_tools_word_steps(g, op) {
                 door_tools_word_step_in(g, op);
             } else {
-                thr!(g, op).asked = Some(true);
                 door_tools_to_pockets(g, op);
             }
         }
@@ -764,7 +760,7 @@ fn word_opens_now(g: &mut Game, op: DoorOpId, door: DoorId, side: f64) -> bool {
     }
     let lead = dop!(g, op).lead;
     let at = pos_of(g, lead);
-    crate::handleside::tool_spot(g, door, side, at, Some(true), Some(true)).is_some()
+    crate::handleside::tool_spot(g, door, side, at, Some(true)).is_some()
 }
 /// on his door, ready: the leaf is opened, by the shove or the boot from the kick spot when it is locked
 pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
@@ -867,7 +863,7 @@ pub(super) fn door_tools_open(g: &mut crate::game::Game, op: DoorOpId) {
 pub(super) fn door_tools_to_handle(g: &mut crate::game::Game, op: DoorOpId, gate: bool) -> bool {
     let (d, lead, side) = (dop!(g, op).door, dop!(g, op).lead, dop!(g, op).side);
     let at = pos_of(g, lead);
-    let Some(hs) = crate::handleside::tool_spot(g, d, side, at, Some(false), Some(true)) else { return false };
+    let Some(hs) = crate::handleside::tool_spot(g, d, side, at, Some(true)) else { return false };
     dop!(g, op).kick = Some(DoorToolsDoneItemKick { pos: hs.pos, yaw: hs.yaw, t: f64::NAN, hand: Some(true), gate: Some(gate), ..Default::default() });
     dop!(g, op).phase = Phase::Kick;
     dop!(g, op).t0 = g.time;
@@ -1422,7 +1418,7 @@ fn tick_op(g: &mut Game, op: DoorOpId) {
             continue;
         }
         // (`S.of(gd) === op.mine.get(gd)`: null is never undefined, so a man with neither is off the order)
-        let keep = match (crate::orders::squad_orders_of(g, &crate::seats::here(g), gd), dop!(g, op).mine.get(gd).copied()) {
+        let keep = match (crate::orders::squad_orders_of(&crate::seats::here(g), gd), dop!(g, op).mine.get(gd).copied()) {
             (Some(a), Some(b)) => a == b,
             _ => false,
         };

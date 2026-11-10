@@ -52,15 +52,6 @@ pub(super) fn one_of<T: Clone + core::fmt::Debug>(g: &mut Game, who: crate::dice
 /// The point at this height.
 fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 
-/// A line in the file's log, capped, and in the fight's.
-pub(super) fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
-    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { what: String::from(what) });
-    if g.m.digin.digin_log.len() > 400 {
-        g.m.digin.digin_log.drain(0..150);
-    }
-    crate::roomfight::room_fight_note(g, gd, &alloc::format!("dig-in: {}", what));
-}
-
 // ---------------------------------------------------------------- who can hear it
 
 /// Every player who is up and the living teammates, with their ears.
@@ -83,18 +74,18 @@ pub(super) fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
 }
 
 /// The nearest ear a sound of this reach gets to.
-pub(super) fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::HeardBy> {
-    let mut best = None;
+pub(super) fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> bool {
+    let mut heard = false;
     let mut bd = m::INF;
     for l in listeners(g) {
         if flat(src, l.head) > reach_m { continue; }
         let p = crate::weather::hear_path(g, at(src, 1.2), l.head, None);
         if p.path_len < reach_m * p.carry && p.path_len < bd {
             bd = p.path_len;
-            best = Some(crate::digin::HeardBy {  });
+            heard = true;
         }
     }
-    best
+    heard
 }
 
 /// The same by the hearing model's law for door and furniture noise.
@@ -128,14 +119,11 @@ pub(super) fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate:
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let reach = g.k.digin.shout_m;
-    if heard_by(g, pos, reach).is_some() {
+    if heard_by(g, pos, reach) {
         crate::game::game_say(g, gd, text, None, None);
-        g.stats.digin.shouts += 1;
         cue(g, r, crate::digin::Cue::Shout);
-        log(g, Some(gd), &alloc::format!("shouts (heard): {}", text));
         return true;
     }
-    log(g, Some(gd), &alloc::format!("shouts (nobody to hear it): {}", text));
     false
 }
 
@@ -475,7 +463,7 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
     let mut bd = m::INF;
     for p in g.props.props.clone() {
         if state_of(g).used.has(p) || skip.map_or(false, |s| s.has(p)) { continue; }
-        let pp: V3 = [crate::props::prop_x(g, p), 0.0, crate::props::prop_z(g, p)];
+        let pp: V3 = [g.tab.props_prop[p].x, 0.0, g.tab.props_prop[p].z];
         if !crate::roomfight::room_fight_in_room(g, room, pp) {
             let inside = match crate::roomfight::room_fight_free_near(g, pp) {
                 Some(q) => crate::roomfight::room_fight_in_room(g, room, q),
@@ -498,7 +486,7 @@ pub(super) fn nearest_prop(g: &mut Game, d: RoomfightDefId, e: crate::roomfight:
 pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut crate::digin::RoomSt>, thud: Option<bool>) {
     let thud = thud.unwrap_or(false);
     let p = m.prop.unwrap();
-    let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
+    let (px, pz) = (g.tab.props_prop[p].x, g.tab.props_prop[p].z);
     let pos: V3 = [px, 0.3, pz];
     let level = if thud { m::min(1.0, g.k.digin.scrape_level + 0.1) } else { g.k.digin.scrape_level };
     let tune_rate = if thud { g.tab.props_prop[p].tune.thud_rate } else { g.tab.props_prop[p].tune.scrape_rate };
@@ -516,7 +504,6 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
         serial,
         ..crate::game::GameEvent::default()
     });
-    g.stats.digin.scrapes += 1;
     let l = match heard_noise(g, pos, level) {
         Some(l) => l,
         None => return,
@@ -526,10 +513,8 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
     if let (Some(by), Some(rm)) = (l.gd, r) {
         if !rm.callout {
             rm.callout = true;
-            g.stats.digin.callouts += 1;
             let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
             crate::game::game_say(g, by, line, Some(true), None);
-            log(g, Some(by), "calls the furniture he hears");
         }
     }
 }
@@ -549,12 +534,7 @@ pub(super) fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &m
     crate::doors::door_set_locked(g, door, true);
     crate::doors::door_set_pick(g, door, 0.0);
     r.wedged += 1.0;
-    if !crate::doors::doors_pull_face(g, door, [e.at[0] - e.out[0] * 0.8, 0.0, e.at[2] - e.out[1] * 0.8]) {
-        g.stats.digin.wedged_away += 1;
-    }
-    g.stats.digin.braced += 1;
     scrape(g, gd, m, Some(r), Some(true));
-    log(g, Some(gd), &alloc::format!("wedges {}", name));
 }
 
 /// May this door be wedged.
@@ -578,12 +558,12 @@ pub(super) fn heard_at(g: &Game, d: RoomfightDefId, m: crate::digin::Man) -> V3 
 // ---------------------------------------------------------------- doors (DIGIN.shutOpen is settled off on the page: the rule folds away)
 
 /// The entry his hands are on or he is on his way to.
-pub(super) fn door_of(g: &Game, m: crate::digin::Man) -> f64 {
+pub(super) fn door_of(m: crate::digin::Man) -> f64 {
     if m.brace >= 0.0 { m.brace } else { m.entry }
 }
 
 /// Seconds a hand waits on a pulled leaf.
-fn latch_secs(g: &mut Game) -> f64 { 2.5 }
+fn latch_secs() -> f64 { 2.5 }
 
 /// His hand goes on the leaf: pulled to, the wait begun.
 pub(super) fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: DoorId) {
@@ -591,19 +571,14 @@ pub(super) fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man
     let c = g.gd[gd].ch;
     let who = g.ch[c].id;
     crate::doors::doors_pull_to(g, d_2, who);
-    g.stats.digin.pulled_to += 1;
     let now = g.time;
     m.phase = crate::digin::Phase::Shut;
-    m.until = now + latch_secs(g);
-    m.hand_t = Some(now);
-    m.pull_t = Some(now);
-    m.pushes = Some(0.0);
+    m.until = now + latch_secs();
     m.pull_a = Some(m::abs(crate::doors::door_angle(g, d_2)));
-    m.stalls = Some(0.0);
 }
 
 /// …and stays on it: true = still waiting for the latch. A man with furniture to wedge it with stays while the leaf is still coming home: from wide open that takes about five seconds, and it can be wedged only once it latches. His clock is for a leaf a body has stopped, and for a man who only came to shut it, whose pull finishes without him.
-pub(super) fn hand_waits(g: &Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
+pub(super) fn hand_waits(g: &Game, m: &crate::digin::Man, d_2: DoorId) -> bool {
     !crate::doors::door_latched(g, d_2) && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
 }
 

@@ -1,6 +1,5 @@
 //! A HAND: a small file of what is done to the game from outside, a line each (`hands/*.hand`; the head of `src/bin/hold.rs` is its grammar). What plays one is `hold` and the gate.
 use crate::play::{dist, Button, Play};
-use game::game::GuardState;
 use std::string::{String, ToString};
 use std::vec::Vec;
 

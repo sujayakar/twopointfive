@@ -59,12 +59,11 @@ pub enum ManMoved {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Cues {
     pub rows: Vec<crate::cues::CueRow>,
-    #[is(crate::cues::CuesStats { heard: 0.0, heard_drawn: 0.0, shouts: 0.0, shouts_drawn: 0.0, cues: 0.0, cue_net: 0.0, cue_drawn: 0.0, dup: 0.0, gap: 0.0, full: 0.0, bumped: 0.0, bumped_young: 0.0, filed: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], drawn: alloc::vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] })] pub stats: crate::cues::CuesStats,
+    #[is(crate::cues::CuesStats { cues: 0.0, dup: 0.0, gap: 0.0, full: 0.0 })] pub stats: crate::cues::CuesStats,
     #[is(crate::cues::CuesKinds { calm: None, cover: None, flinch: None, still: None, hunt_over: None, fell_back: None, planted: None, pinned_in: None, squad_hears: None, squad_copies: None, squad_waits: None, squad_copies_waits: None, squad_stays: None, squad_quiet: None, surprised: None })] pub kinds: crate::cues::CuesKinds,
     pub log: Vec<crate::cues::CuesLogItem>,
     pub bubbles: JsMap<GuardId, crate::cues::Bubble>,
     pub men: JsMap<GuardId, crate::cues::Man>,
-    pub last_note: Option<crate::roomfight::FightNote>,
     #[is(-1.0)] pub last_t: f64,
     pub said: JsMap<String, f64>,
     pub class_t: Vec<Option<f64>>,
@@ -79,20 +78,10 @@ pub struct Cues {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CuesStats {
-    pub heard: f64,
-    pub heard_drawn: f64,
-    pub shouts: f64,
-    pub shouts_drawn: f64,
     pub cues: f64,
-    pub cue_net: f64,
-    pub cue_drawn: f64,
     pub dup: f64,
     pub gap: f64,
     pub full: f64,
-    pub bumped: f64,
-    pub bumped_young: f64,
-    pub filed: Vec<f64>,
-    pub drawn: Vec<f64>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

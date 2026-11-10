@@ -23,7 +23,6 @@ pub struct RoomState {
     pub def: crate::scene_scenarios::StructureRoom,
     pub defenders: Vec<GuardId>,
     pub cleared: bool,
-    pub cleared_at: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Blank)]

@@ -51,15 +51,13 @@ fn step_listed(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd
 /// THE TICK'S LAST LINE: every flash's envelope for the frame, and its retirement. The next tick's light reads what it leaves, so it is a rule's state and the tick steps it, on every host at
 /// the same moment, with no host's call round it.
 fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
-    let now = g.time;
-    crate::render_lights::light_set_update(g, dt, now);
+    crate::render_lights::light_set_update(g, dt);
 }
 
 /// The tick's lines, with the first seat on Game.
 fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
-    g.ticking = true;
     crate::scene_collision::tick_open(g);
     // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; the pool's tenant tends it: a man who left the lists is out of it, one who
     //  arrived is in)
@@ -71,7 +69,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         let s = seats[i];
         let near = if g.tab.cmd_seat[s].remote { let c = man_char(g, s); Some(g.ch[c].pos) } else { None };
         let r = crate::cmd::check_cmd(g, Some(&cmds[i]), near);
-        if js::truthy(r.fixed) { g.tab.cmd_seat[s].fixed += r.fixed; g.tab.cmd_seat[s].fixed_cmds += 1.0; }
         checked.push(r.cmd);
     }
     crate::math_dice::use_dice(g);
@@ -88,7 +85,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         in_seat(g, s, |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
     }
     g.time += dt;
-    g.ocp_cooldown = m::max(0.0, g.ocp_cooldown - dt);
     let now = g.time;
     crate::scene_collision::sound_paths_tick(g, now);
     crate::belief::duties_anew(g);   // what a man covers is said anew each tick
@@ -159,7 +155,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::lanes::lanes_tick(g, dt);
     crate::darkfoe::dark_foe_tick(g, dt);
     crate::nvg::nvg_tick(g);
-    crate::tactics::tactics_tick(g, dt);
+    crate::tactics::tactics_tick(g);
     crate::doze::doze_tick(g, dt);
     crate::close::close_seat_tick(g, dt);
     crate::needs::needs_tick(g, dt);
@@ -181,10 +177,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::game::game_update_doors(g, dt);
     crate::lighting::lens_recheck(g);
     crate::irlight::ir_light_tick(g);
-    in_seat(g, seats[0], |g| crate::mission::update_mission(g, dt, input));
+    in_seat(g, seats[0], |g| crate::mission::update_mission(g, dt));
     crate::par::par_tick(g);   // (right after the mission's update: this tick's orders and the room clear's end are in)
     crate::lesson::lesson_tick(g, dt);
-    crate::rails::rails_tick(g, dt);
+    crate::rails::rails_tick(g);
     crate::game::game_update_props(g, dt);
     crate::destruction::destruction_update(g, dt);
     crate::air_dust::air_dust_update(g, dt);
@@ -207,7 +203,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if g.m.dress.dress.moths { crate::moths::moths_update(g, dt); }
     crate::combat::update_items(g, dt);
     crate::glass::update_glass(g);
-    crate::glassbreak::glass_break_update(g, dt);
+    crate::glassbreak::glass_break_update(g);
     crate::shards::glass_shards_update(g, dt);
     crate::fogofwar::fog_of_war_update(g, dt);
     // characters: the seats' men, the guards, civilians last
@@ -215,8 +211,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats { let c = man_char(g, s); all.push(c); }
     for j in 0..g.guards.len() { let gd = g.guards[j]; all.push(g.gd[gd].ch); }
     for gd in crate::civilians::civilians_shown(g) { all.push(g.gd[gd].ch); }
-    let statured = crate::game::game_step_fx_and_dyn_boxes(g, &all, dt);
-    crate::game::game_draw_characters(g, &all, statured);
+    crate::game::game_step_fx_and_dyn_boxes(g, &all, dt);
+    crate::game::game_draw_characters(g, &all);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);
     // (every seat's list of things its men can work, before anybody's orders are read: what a point or a cursor is on is asked of it, inside a tick and between two)
@@ -229,11 +225,11 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     // (game.ts:1720, :1721: the squad's net and the defenders' cues, read off the settled frame. Their books are the same books the rules' own entries
     //  write (a line said, a cue called), so the step that settles them runs where those do, under its row.)
     if g.m.dress.dress.net { crate::squadnet::squad_net_tick(g); }
-    if g.m.dress.dress.cues { crate::cues::cues_tick(g); }
+    let news = core::mem::take(&mut g.fight.news);
+    if g.m.dress.dress.cues { crate::cues::cues_tick(g, &news); }
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
-    crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)
-    g.ticking = false;
+    crate::render_decals::marks_settle(g);   
     crate::scene_collision::tick_shut(g);
 }
 
@@ -334,7 +330,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
                     Some(k) => k,
                     None => {
                         let gr = crate::rig_props::model_grip(g, mo, None, None).map(|x| AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back });
-                        let a = crate::rig_props::model_muzzle_ahead(g, mo, None);
+                        let a = crate::rig_props::model_muzzle_ahead(mo, None);
                         grip_own.push((mo, gr, a)); grip_own.len() - 1
                     }
                 };
@@ -358,7 +354,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         g.ch[c].anim.reload_back = false;
         let pellets = weapon_row(g, def).pellets.is_some();
         g.ch[c].anim.reload_mag = !pellets;
-        let (dead, now) = (crate::condition::down(g, g.gd[gd].ch), g.time);
+        let dead = crate::condition::down(g, g.gd[gd].ch);
         // (MOVES.on, page 1: the block always runs)
         {
             let w = g.gd[gd].weapon;
@@ -370,10 +366,6 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             an.reload_row = Some(row);
             an.reload_at = at;
         }
-        // (MOVES.on, page 1)
-        let dip = g.k.moves.entry > 0.5 && cb && g.gd[gd].held.is_none() && !dead && team == Team::Operative
-            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
-        g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
         let from = g.gd[gd].last_known.unwrap_or(g.ch[c].pos);
         crate::condition::stun_pose(g, c, !dead, from);
         {
@@ -440,8 +432,8 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
 }
 
 /// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world
-pub(super) fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
-    game_draw_men(g, all, statured, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
+pub(super) fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId]) {
+    game_draw_men(g, all);   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
     let mut list = core::mem::take(&mut g.dyn_boxes);
     crate::fogofwar::picture::keep_raw(g, &list);
     let dynamics = crate::fogofwar::fog_of_war_things(g, &mut list);

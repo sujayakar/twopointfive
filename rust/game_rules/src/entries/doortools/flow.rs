@@ -19,7 +19,7 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn has_over(g: &Game, gd: GuardId) -> bool { g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some()) }
 /// S.of(m)?.post ?? m.char.pos
 fn where_of(g: &mut Game, m: GuardId) -> V3 {
-    let post = crate::orders::squad_orders_of(g, &crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
+    let post = crate::orders::squad_orders_of(&crate::seats::here(g), m).and_then(|a| g.tab.orders_assignment[a].post);
     post.unwrap_or_else(|| pos_of(g, m))
 }
 /// where every order has `m` going, in the orders' order
@@ -82,7 +82,7 @@ pub(super) fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: Doort
 }
 
 /// a man on his point: his muzzle travels to the unseen floor he has a line to that needs the least turn; false when he has none left
-pub(super) fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
+pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let (look_m, scan_rate, now) = (g.k.doortools.look_m, g.k.doortools.scan_rate, g.time);
     let c = g.gd[gd].ch;
     let (p, aim) = (g.ch[c].pos, g.ch[c].aim_yaw);
@@ -565,9 +565,6 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             search(g, sr).yaw.delete(who);
             door_tools_send_on(g, op, who, &mut pod, "clearing the room");
         }
-        g.door_tools.stats.sent_on += 1.0;
-        g.door_tools.stats.flowed += 1.0;
-        if mate.is_some() { g.door_tools.stats.sent_pair += 1.0; }
         if search(g, sr).flow_said != Some(true) {
             search(g, sr).flow_said = Some(true);
             crate::game::game_say(g, gd, "pushing through.", None, None);
@@ -612,7 +609,6 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             let s = search(g, sr);
             s.closes = Some(s.closes.unwrap_or(0.0) + 1.0);
             s.left_at_move = f64::INFINITY;
-            g.door_tools.stats.closed_up += n as f64;
             let said = format!("close up:{} · on {}", who.join(", "), g.gd[lead].callsign);
             door_tools_beat(g, op, &said);
             return true;
@@ -716,7 +712,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         let chosen = if swap { cl.unwrap() } else { top };
         let best = chosen.p;
         let mut pod = pod_at([best[0], 0.0, best[2]], v3::yaw_to(best, mid));
-        if swap { crate::entrypoints::entry_points_swapped(g, &mut pod); }
+        if swap { crate::entrypoints::entry_points_swapped(&mut pod); }
         crate::entrypoints::entry_points_dealt(g, pod, None);
         {
             let s = search(g, sr);
@@ -725,9 +721,7 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
             s.left_at_move = s.left;
         }
         door_tools_send_on(g, op, gd, &mut pod, "clearing the room");
-        g.door_tools.stats.sent_on += 1.0;
         if let Some(PointMate::With(x, mut xp)) = mates.get(chosen.i).copied() {
-            g.door_tools.stats.sent_pair += 1.0;
             crate::entrypoints::entry_points_dealt(g, xp, None);
             search(g, sr).yaw.delete(x);
             door_tools_send_on(g, op, x, &mut xp, "clearing the room");
@@ -739,7 +733,6 @@ pub(super) fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Do
         }
         return true;
     }
-    if refused { g.door_tools.stats.not_sent += 1.0; }
     false
 }
 
@@ -913,12 +906,10 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
         return;
     }
     let first = door_tools_first_in(g, op, Some(pods[0].pos), None);
-    g.door_tools.led.entries += 1.0;
     if first != lead && crate::gunroles::gun_before(g, first, lead) && door_tools_first_in(g, op, Some(pods[0].pos), Some(false)) != first {
         let said = format!("first:{} · his gun is the room's", g.gd[first].callsign);
         door_tools_beat(g, op, &said);
     } else if first != lead {
-        g.door_tools.led.by_seen += 1.0;
         let said = format!("first:{} · has seen most of the room", g.gd[first].callsign);
         door_tools_beat(g, op, &said);
     }
@@ -991,15 +982,13 @@ pub(super) fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pod
     }
     for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
         if g.tab.doortools_door_op[op].men.contains(&gd) { continue; }
-        if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
+        if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
             let (post, arrived) = (g.tab.orders_assignment[a].post, g.tab.orders_assignment[a].arrived);
             if let Some(post) = post { if arrived && off_of(g, door, post, side) < 0.0 { taken.push(post); } }
         }
     }
     // (by index: the TypeScript tells a point from another by the object)
     let clear: Vec<usize> = (0..pods.len()).filter(|&i| !taken.iter().any(|&q| flat(q, pods[i].pos) < pod_apart)).collect();
-    let first = if n < pods.len() as f64 { n as usize } else { pods.len() };
-    if clear.len() < first || clear.iter().take(n as usize).enumerate().any(|(k, &i)| i != k) { g.door_tools.stats.pods_moved += 1.0; }
     if clear.len() as f64 >= n { return clear.iter().map(|&i| pods[i]).collect(); }
     let mut out: Vec<crate::entrypoints::Pod> = clear.iter().map(|&i| pods[i]).collect();
     for i in 0..pods.len() { if !clear.contains(&i) { out.push(pods[i]); } }
@@ -1007,11 +996,10 @@ pub(super) fn door_tools_pods_apart(g: &mut crate::game::Game, op: DoorOpId, pod
 }
 
 /// Sam's trigger: the set charge nearest him (or the one given) goes; what it did, null with none set
-pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlow> {
+pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) {
     let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
     let who = g.ch[g.pl[g.player].ch].id;
-    let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
-    r.map(|x| DoorToolsBlow {  })
+    crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
 }
 
 #[cfg(test)]

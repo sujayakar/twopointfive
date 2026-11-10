@@ -48,18 +48,6 @@ fn count_word(n: usize) -> String {
 fn pos(g: &Game, m: GuardId) -> V3 {
     g.ch[g.gd[m].ch].pos
 }
-/// `names.join(' and ')` of the men's callsigns
-fn callsigns(g: &Game, men: &[GuardId]) -> String {
-    let mut out = String::new();
-    for (i, x) in men.iter().enumerate() {
-        if i > 0 {
-            out.push_str(" and ");
-        }
-        out.push_str(&g.gd[*x].callsign);
-    }
-    out
-}
-
 /// the row of Q.sent of the man `s`: a Sent is named by its man (home() keeps a man off a second row)
 fn sent_of(g: &mut Game, q: EnemysquadsSquadId, s: GuardId) -> &mut crate::enemysquads::Sent {
     sq!(g, q).sent.iter_mut().find(|x| x.gd == s).unwrap()
@@ -157,10 +145,6 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
         pair = m.pair;
     }
     let mut names: Vec<GuardId> = Vec::new();
-    let door = match sent_of(g, q, s).door {
-        Some(dr) => g.dr[dr].def.name.clone(),
-        None => String::from("the door"),
-    };
     for x in pair.iter() {
         let x = *x;
         let xd = match def_of(g, x) {
@@ -201,25 +185,7 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
         format!("{}: they've left it — back on our doors!", q_name)
     };
     crate::game::game_say(g, gd, &line, Some(true), None);
-    let (s_aim, since) = {
-        let row = sent_of(g, q, s);
-        (row.aim, row.set_t.unwrap_or(row.t0))
-    };
-    let why = if gone {
-        format!("{} is not answering", sq!(g, ally.unwrap()).name)
-    } else {
-        let from = s_aim.unwrap_or(pos(g, gd));
-        format!("the team was heard {} m off, going on", js::to_fixed(flat(at, from), 0))
-    };
-    let text = format!(
-        "{} leave{} {}: {}, {} s after setting",
-        callsigns(g, &names),
-        if names.len() > 1 { "" } else { "s" },
-        door,
-        why,
-        js::to_fixed(g.time - since, 1)
-    );
-    event(g, q, SquadEventWhat::Back, &text, Some(gd));
+    event(g, q, SquadEventWhat::Back, Some(gd));
 }
 
 /// A drilled garrison goes and looks: once a tick the word of the team is kept, and gone quiet a pair is called and sent.
@@ -288,7 +254,6 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
             let w = wd!(g);
             w.lost = true;
             w.out = None;
-            note(g, None, "go and look: a man of the look is down — no squad sends another");
         } else {
             let any = squads.iter().any(|sid| sq!(g, *sid).sent.iter().any(|s| s.role == SentRole::Look));
             if !any {
@@ -370,8 +335,7 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
             sq!(g, c.q).sent.push(row);
             crate::roomfight::loose_at(g, x, c.at);
         }
-        let text = format!("{} go to where the team was last seen or heard, {} s after the last word of them", callsigns(g, &men), js::to_fixed(g.time - c.w, 0));
-        event(g, c.q, SquadEventWhat::Sweep, &text, Some(men[0]));
+        event(g, c.q, SquadEventWhat::Sweep, Some(men[0]));
         return;
     }
     let (w_t, w_at, w_done, w_said) = {
@@ -564,15 +528,13 @@ fn small0_of(g: &Game, q: EnemysquadsSquadId) -> JsMap<GuardId, f64> {
     out
 }
 /// A man of the squad has gone quiet: where he stood, when, and what each mate's ears had counted by then. Nobody is told by it.
-pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>, broke: Option<bool>) {
+pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>) {
     let at = match at {
         Some(a) => a,
         None => pos(g, m),
     };
-    let broke = broke.unwrap_or(false);
     rc_of(g, q);
     let was = rc!(g, q).silent.iter().position(|r| r.gd == m);
-    let name = sq!(g, q).name.clone();
     if let Some(ix) = was {
         let held = rc!(g, q).silent[ix].held;
         if held && !alive(g, m) {
@@ -588,8 +550,6 @@ pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: G
                 r.small0 = small0;
             }
             rc!(g, q).looked.delete(m);
-            let text = format!("{}: {}, not answering since he was taken, is down in its rooms: a new silence, looked for where he fell", name, g.gd[m].callsign);
-            note(g, Some(m), &text);
             let mut i = 0;
             while i < rc!(g, q).look.len() {
                 let (who, back, man) = {
@@ -618,15 +578,6 @@ pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: G
     let small0 = small0_of(g, q);
     let now = g.time;
     rc!(g, q).silent.push(crate::enemysquads::Quiet { gd: m, at: [at[0], 0.0, at[2]], t: now, heard: false, held: up, small0 });
-    let up = alive(g, m);
-    let text = format!(
-        "{}: {} goes quiet ({}) {}",
-        name,
-        g.gd[m].callsign,
-        if up { "taken" } else { "down" },
-        if broke { "with his call broken off: his mates heard that much, and no more" } else { "and nobody of the squad knows it" }
-    );
-    note(g, Some(m), &text);
 }
 /// A line of the check on the squad's net: the debrief's row and the strip's, never his bubble.
 pub(super) fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bool>) {
@@ -810,8 +761,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
                 }
             }
             rc!(g, q).known.add(who);
-            let text = format!("{} has {} in sight, down {} m from him, {} s after he dropped", g.gd[by].callsign, g.gd[who].callsign, js::to_fixed(flat(pos(g, by), at), 1), js::to_fixed(age, 1));
-            event(g, q, SquadEventWhat::Found, &text, Some(by));
+            event(g, q, SquadEventWhat::Found, Some(by));
             seen = Some(crate::enemysquads::RadioCheck { at, room: room_of(g, q, at, Some(1.0)) });
             continue;
         }
@@ -834,13 +784,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
         }
         if let Some(shot) = shot {
             rc!(g, q).known.add(who);
-            let text = format!(
-                "{} heard the {} that dropped {}",
-                g.gd[shot].callsign,
-                if g.gd[shot].witness.heard.last_shot_t >= r_t - 0.2 { "shot" } else { "blast" },
-                g.gd[who].callsign
-            );
-            event(g, q, SquadEventWhat::Found, &text, Some(shot));
+            event(g, q, SquadEventWhat::Found, Some(shot));
             seen = Some(crate::enemysquads::RadioCheck { at: r_at, room: room_of(g, q, r_at, Some(1.0)) });
             continue;
         }
@@ -887,8 +831,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
                 c.who = Some(who);
                 c.t0 = t0;
             }
-            let text = format!("{} heard something where {} stands: he asks for him in {} s", g.gd[ear].callsign, g.gd[who].callsign, js::to_fixed(t0 + k.check_ask - now, 1));
-            event(g, q, SquadEventWhat::Check, &text, Some(ear));
+            event(g, q, SquadEventWhat::Check, Some(ear));
         }
     }
     if busy {
@@ -902,18 +845,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
     if busy || seen.is_some() {
         let promised = rc!(g, q).promised.as_ref().map(|p| p.keys());
         if let Some(promised) = promised {
-            if !promised.is_empty() {
-                for x in promised.iter() {
-                    let text = format!(
-                        "{}: nobody asks for {} after all — {} first, and counts its men as a squad in a fight does",
-                        name,
-                        g.gd[*x].callsign,
-                        if busy { "the squad is in contact" } else { "a man of it is seen down" }
-                    );
-                    note(g, Some(*x), &text);
-                }
-                rc!(g, q).promised = None;
-            }
+            if !promised.is_empty() { rc!(g, q).promised = None; }
         }
         let now = g.time;
         let c = rc!(g, q);
@@ -959,21 +891,15 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
         let x = *x;
         if alive(g, x) && g.gd[x].held.is_some() && !rc!(g, q).looked.has(x) && !sq!(g, q).sent.iter().any(|s| s.gd == x) {
             let station = def_of(g, x).map(|d| def!(g, d).station);
-            went_silent(g, q, x, station, None);
+            went_silent(g, q, x, station);
         }
     }
     // the squad has heard of the team since the check was called and its word is due: nobody is asked for over that
     if rc!(g, q).stage != CheckStage::Idle && sq!(g, q).state == SquadState::Alerted {
-        let (caller, who, stage, by_ear) = {
+        let (who, stage, by_ear) = {
             let c = rc!(g, q);
-            (c.caller, c.who, c.stage, c.by_ear)
+            (c.who, c.stage, c.by_ear)
         };
-        let about = match who {
-            Some(w) => format!(", {} {}", g.gd[w].callsign, if stage == CheckStage::Asked { "asked for and nobody sent" } else { "not asked for" }),
-            None => String::new(),
-        };
-        let text = format!("{} check dropped{}: the squad has heard of the team since it was called", name, about);
-        note(g, caller, &text);
         if stage == CheckStage::Called && who.is_some() && !by_ear && cut_on {
             let now = g.time;
             rc!(g, q).cut.get_or_insert_with(Vec::new).insert(0, CheckCutItem { who: who.unwrap(), at: now });
@@ -1030,9 +956,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
                         c.who = Some(x.who);
                         c.t0 = m::max(now, x.at) - k.check_ask;
                     }
-                    let when = if x.at > now { format!(" in {} s", js::to_fixed(x.at - now, 1)) } else { String::new() };
-                    let text = format!("{} has not forgotten the call that broke off: he asks for {}{}", g.gd[caller].callsign, g.gd[x.who].callsign, when);
-                    event(g, q, SquadEventWhat::Check, &text, Some(caller));
+                    event(g, q, SquadEventWhat::Check, Some(caller));
                     return None;
                 }
             }
@@ -1059,8 +983,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
                 c.who = None;
             }
             on_net(g, caller, &format!("{}: radio check — sound off", name), Some(6.0), None);
-            let text = format!("{} calls the squad's radio check", g.gd[caller].callsign);
-            event(g, q, SquadEventWhat::Check, &text, Some(caller));
+            event(g, q, SquadEventWhat::Check, Some(caller));
             None
         }
         CheckStage::Called => {
@@ -1075,19 +998,6 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
                 }
             {
                 let who0 = rc!(g, q).who;
-                let text = format!(
-                    "{} check dropped: {} who heard something where {} stands is off the net before he asked",
-                    name,
-                    match caller0 {
-                        Some(c) => g.gd[c].callsign.clone(),
-                        None => String::from("the man"),
-                    },
-                    match who0 {
-                        Some(w) => g.gd[w].callsign.clone(),
-                        None => String::from("a mate"),
-                    }
-                );
-                note(g, caller0, &text);
                 let c = rc!(g, q);
                 if let Some(w) = who0 {
                     if let Some(r) = c.silent.iter_mut().find(|x| x.gd == w) {
@@ -1161,19 +1071,18 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
             let said = mate(g, who);
             let said2 = mate(g, who);
             on_net(g, caller, &format!("{}: {}? … {}, sound off", name, said, said2), Some(2.0), None);
-            let text = format!("no answer from {}: {} asks for him by name", g.gd[who].callsign, g.gd[caller].callsign);
-            event(g, q, SquadEventWhat::Asks, &text, Some(caller));
+            event(g, q, SquadEventWhat::Asks, Some(caller));
             crate::netquietfeed::net_feed_asked(g, Some(caller), who, &men);
             None
         }
         CheckStage::Asked => {
             let who = rc!(g, q).who;
             let row = match who {
-                Some(w) => rc!(g, q).silent.iter().find(|x| x.gd == w).map(|r| (r.at, r.t)),
+                Some(w) => rc!(g, q).silent.iter().find(|x| x.gd == w).map(|r| r.at),
                 None => None,
             };
-            let (who, r_at, r_t) = match (who, row) {
-                (Some(w), Some((at, t))) if !rc!(g, q).known.has(w) => (w, at, t),
+            let (who, r_at) = match (who, row) {
+                (Some(w), Some(at)) if !rc!(g, q).known.has(w) => (w, at),
                 _ => {
                     let beat = rc_beat(g, q);
                     return idle(g, q, beat, false);
@@ -1206,15 +1115,7 @@ pub(super) fn radio_check(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy
             }
             let line = format!("{}: nothing from {} — {} moving to his post!", name, mate(g, who), count_word(go.len()));
             on_net(g, men_go[0], &line, None, None);
-            let text = format!(
-                "{} walk{} to where {} stood, {} m off, {} s after he went quiet: nothing is said to the other squads",
-                callsigns(g, &men_go),
-                if go.len() > 1 { "" } else { "s" },
-                g.gd[who].callsign,
-                js::to_fixed(flat(pos(g, men_go[0]), r_at), 0),
-                js::to_fixed(g.time - r_t, 1)
-            );
-            event(g, q, SquadEventWhat::Looks, &text, Some(men_go[0]));
+            event(g, q, SquadEventWhat::Looks, Some(men_go[0]));
             let beat = rc_beat(g, q);
             idle(g, q, beat, false)
         }
@@ -1328,7 +1229,7 @@ fn lying(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<Enemysquads
     }
 }
 /// he has the body: true = no longer a looker (the squad is in contact)   (looks' `found`)
-fn found(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<EnemysquadsSquadId>, t0: f64, body: GuardId) -> bool {
+fn found(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<EnemysquadsSquadId>, body: GuardId) -> bool {
     let at = crate::guards::body_pos(g, body);
     let room = room_of(g, q, at, Some(1.0));
     if key_up(g, q, gd, at, room.as_ref(), Some(body)) {
@@ -1338,19 +1239,7 @@ fn found(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<Enemysquads
     if let Some(x) = x {
         seen_to(g, x, body);
     }
-    let posts = match x {
-        Some(x) => format!(" at {}'s posts", sq!(g, x).name),
-        None => String::new(),
-    };
-    let text = format!(
-        "{}, sent to look{}, has {} down {} m from him, {} s after he set off",
-        g.gd[gd].callsign,
-        posts,
-        g.gd[body].callsign,
-        js::to_fixed(flat(pos(g, gd), at), 1),
-        js::to_fixed(g.time - t0, 1)
-    );
-    event(g, q, SquadEventWhat::Found, &text, Some(gd));
+    event(g, q, SquadEventWhat::Found, Some(gd));
     let room = room_of(g, q, at, Some(1.0));
     contact(g, q, at, room.as_ref(), Some(true), if x.is_some() { Some(gd) } else { None }, None);
     true
@@ -1361,7 +1250,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
     let who = look_of(g, q, l).who;
     let dd = def_of(g, gd);
     if !alive(g, gd) {
-        went_silent(g, q, gd, None, None);
+        went_silent(g, q, gd, None);
         let (now, ask) = (g.time, g.k.squads.check_ask);
         let c = rc!(g, q);
         c.next_at = m::min(c.next_at, now + ask);
@@ -1372,16 +1261,16 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
         None => return true,
     };
     if g.gd[gd].held.is_some() {
-        went_silent(g, q, gd, None, None);
+        went_silent(g, q, gd, None);
         return true;
     }
     let step_t = look_of(g, q, l).step_t;
     let step_t = crate::roomfight::boots(g, gd, step_t);
     look_of(g, q, l).step_t = step_t;
     // (back, spot and from move only just before a return below: these are his row as it stands all the way down)
-    let (l_back, l_spot, l_from, l_t0, l_news0, x, all) = {
+    let (l_back, l_spot, l_from, l_news0, x, all) = {
         let r = look_of(g, q, l);
-        (r.back, r.spot, r.from, r.t0, r.news0, r.about, r.all == Some(true))
+        (r.back, r.spot, r.from, r.news0, r.about, r.all == Some(true))
     };
     if sq!(g, q).state == SquadState::Contact {
         if crate::roomfight::on_leg_of(g, d, crate::owner::by::SQUAD_LEG) {
@@ -1424,12 +1313,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
             turn_back(g, q, who);
             let said = if all { sq!(g, x.unwrap()).name.clone() } else { mate(g, who) };
             on_net(g, gd, &format!("{}: {}'s answering — back on our doors!", name, said), None, None);
-            let text = if all {
-                format!("somebody of {} is on the net again: the men who went to its posts go back", sq!(g, x.unwrap()).name)
-            } else {
-                format!("{} is on the net again: the men who went for him go back", g.gd[who].callsign)
-            };
-            event(g, q, SquadEventWhat::NoSign, &text, Some(gd));
+            event(g, q, SquadEventWhat::NoSign, Some(gd));
             return false;
         }
     }
@@ -1450,7 +1334,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
         r.n = Some(n);
         if js::rem(n, 6.0) == 0.0 {
             if let Some(body) = lying(g, q, gd, x, who, false) {
-                return found(g, q, gd, x, l_t0, body);
+                return found(g, q, gd, x, body);
             }
         }
     }
@@ -1475,7 +1359,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
     let now = g.time;
     let look_t = *look_of(g, q, l).look_t.get_or_insert(now);
     if let Some(body) = lying(g, q, gd, x, who, true) {
-        return found(g, q, gd, x, l_t0, body);
+        return found(g, q, gd, x, body);
     }
     if g.time - look_t < LOOK_SECS {
         let arrived = g.gd[gd].script.as_ref().map_or(false, |s| s.arrived == Some(true));
@@ -1536,14 +1420,6 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
             r.tries = 0.0;
         }
         walk(g, d, l_from);
-        let text = format!(
-            "{}: {} {} {} and goes back; his mate is still on his way to look",
-            name,
-            g.gd[gd].callsign,
-            if reached { "sees nothing of" } else { "finds no way to" },
-            g.gd[who].callsign
-        );
-        note(g, Some(gd), &text);
         return false;
     }
     // no body to see, or no way to his post: they go back, he is not asked for again, and the squad is ready
@@ -1551,20 +1427,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId
     turn_back(g, q, who);
     let said = if all { sq!(g, x.unwrap()).name.clone() } else { mate(g, who) };
     on_net(g, gd, &format!("{}: {} {} — back on our doors!", name, if reached { "no sign of" } else { "can't get to" }, said), None, None);
-    let what = if all {
-        let xn = &sq!(g, x.unwrap()).name;
-        if reached {
-            format!("nobody of {} is at its posts", xn)
-        } else {
-            format!("no way to {}'s posts", xn)
-        }
-    } else if reached {
-        format!("{} is not where he stood", g.gd[who].callsign)
-    } else {
-        format!("no way to {}'s post", g.gd[who].callsign)
-    };
-    let text = format!("{}: {} and whoever came with him go back to their posts, the squad ready for a call", what, g.gd[gd].callsign);
-    event(g, q, SquadEventWhat::NoSign, &text, Some(gd));
+    event(g, q, SquadEventWhat::NoSign, Some(gd));
     if let Some(x) = x {
         sq!(g, x).trouble = None;
     }
@@ -1584,13 +1447,7 @@ pub(super) fn glimpse(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: Guard
     let now = g.time;
     g.m.enemysquads.glimpsed.set(m, now);
     if now - last > 3.0 {
-        let text = format!(
-            "{} has one of them in his eye and has not made him out (awareness {}, {}): nothing is called",
-            g.gd[m].callsign,
-            js::to_fixed(g.gd[m].awareness, 2),
-            g.gd[m].state.as_str()
-        );
-        event(g, q, SquadEventWhat::Glimpse, &text, Some(m));
+        event(g, q, SquadEventWhat::Glimpse, Some(m));
     }
     false
 }

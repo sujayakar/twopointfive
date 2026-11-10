@@ -5,14 +5,14 @@ use crate::ids::*;
 use crate::m;
 
 /// Is the rule live for this man: not while he is down.
-fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
+fn live(pl: crate::sprintdoor::LivePl) -> bool {
     !pl.down
 }
 
 /// What his door contact carries this frame: the rule's numbers while he is at a sprint, nothing otherwise.
 pub fn sprint_door_run(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate::doors::DoorContactRun> {
     let down = crate::condition::down(g, g.pl[pl].ch);
-    if live(g, crate::sprintdoor::LivePl { down }) && g.pl[pl].sprinting {
+    if live(crate::sprintdoor::LivePl { down }) && g.pl[pl].sprinting {
         Some(crate::doors::DoorContactRun { bash: g.k.sprintdoor.bash_vel, rip: g.k.sprintdoor.rip_vel, rip_level: g.k.sprintdoor.rip_level })
     } else {
         None
@@ -22,7 +22,7 @@ pub fn sprint_door_run(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate:
 /// THE BOOT AT THE RUN: the leaf his sprint is about to meet from the face it opens toward, when a boot is the thing to do about it. None = no kick this frame.
 pub fn sprint_door_kick(g: &mut crate::game::Game, pl: PlayerId) -> Option<DoorId> {
     let down = crate::condition::down(g, g.pl[pl].ch);
-    if !live(g, crate::sprintdoor::LivePl { down }) || !g.pl[pl].sprinting { return None; }
+    if !live(crate::sprintdoor::LivePl { down }) || !g.pl[pl].sprinting { return None; }
     {
         let p = &g.pl[pl];
         if p.kick.is_some() || p.picking.is_some() || p.coding.is_some() || p.takedown.is_some() || p.holding.is_some() { return None; }
@@ -93,7 +93,7 @@ pub fn sprint_door_after(g: &mut crate::game::Game, pl: PlayerId, own: &crate::d
 /// The share of his top speed his run is held to this frame: `ripPace` while his hand is ripping a leaf round, else 1.
 pub fn sprint_door_pace(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> f64 {
     let now = now.unwrap_or(g.time);
-    if live(g, crate::sprintdoor::LivePl { down: pl.down }) && now < pl.door_rip_until { g.k.sprintdoor.rip_pace } else { 1.0 }
+    if live(crate::sprintdoor::LivePl { down: pl.down }) && now < pl.door_rip_until { g.k.sprintdoor.rip_pace } else { 1.0 }
 }
 
 /// Is the turn of his shoulder into a leaf (or his head coming back off it) still running.

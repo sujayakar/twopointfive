@@ -83,8 +83,6 @@ pub fn read(g: &mut Game, text: &str) {
     m.hand = None;
     m.loud_you = None;
     m.stealth_you = None;
-    m.kept0 = None;
-    m.kept_wand = Vec::new();
     m.deal_own = false;
     m.team = (m.kit.members.len() - 1) as f64;
     let j = parse(text).unwrap_or(Json::Null);

@@ -41,8 +41,8 @@ static LINES: &[(LineKind, f64, &[&str], Option<&[&str]>, Option<&[&str]>)] = &[
 /// the closures of lines 264, 265, 360, 374, 395, 409 and part 2's: a line naming where its man is has been said
 fn run_then(g: &mut Game, then: LaterThen) {
     match then {
-        LaterThen::MovedFree { d } => { st_of(g).stats.moved += 1.0; name(g, d, None); }
-        LaterThen::MovedAt { d, w } => { st_of(g).stats.moved += 1.0; name_at(g, d, Some(&w)); }
+        LaterThen::MovedFree { d } => {  name(g, d, None); }
+        LaterThen::MovedAt { d, w } => {  name_at(g, d, Some(&w)); }
         LaterThen::NameAt { d, w } => name_at(g, d, w.as_ref()),
         LaterThen::NameAtUnlessFree { d, w } => {
             let free = crate::roomfight::is_loose(g, d);
@@ -117,9 +117,8 @@ fn the_word(n: &str) -> String {
 /// a new tally of the endgame
 fn new_stats() -> crate::laststand::StateStats {
     StateStats {
-        t0: f64::NAN, up0: 0.0, checks: 0.0, answers: 0.0, silent: 0.0, last_man: 0.0,
-        moved: 0.0,
-        stand_t: f64::NAN, set_t: f64::NAN, lines: 0.0,
+        t0: f64::NAN, checks: 0.0, last_man: 0.0,
+        stand_t: f64::NAN, set_t: f64::NAN,
     }
 }
 
@@ -135,14 +134,6 @@ fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 /// a beat between two numbers, off the state's own die
 fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
     r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
-}
-
-/// a row of the room fight's log
-fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd { Some(gd) => g.gd[gd].callsign.clone(), None => String::from("-") };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: alloc::format!("[last] {}", what) });
-    if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
 }
 
 /// fit to speak or be spoken to: up, not held, his wits about him
@@ -201,14 +192,12 @@ fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
 }
 
 /// a line on their net: the strip's row, the list the checks read
-fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, text: &str, cls: f64) {
+fn voice(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let callsign = g.gd[gd].callsign.clone();
     crate::cues::cues_net(g, gd, text, cls);
     let st = st_of(g);
     st.said.push(LastStandSaid { who: callsign, text: String::from(text) });
     if st.said.len() > 200 { st.said.drain(0..50); }
-    st.stats.lines += 1.0;
-    note(g, Some(gd), &alloc::format!("net: {}", text));
 }
 
 /// a line's words with its {names} filled, an unknown name by nothing
@@ -238,7 +227,7 @@ fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind,
     if at > t0 {
         st_of(g).later.push(Later { at, t0, gd, kind, text, cls, then: then.cloned(), tpl: String::from(tpl), redo: redo.cloned() });
     } else {
-        voice(g, gd, kind, &text, cls);
+        voice(g, gd, &text, cls);
         if let Some(t) = then { run_then(g, t.clone()); }
     }
 }
@@ -261,7 +250,7 @@ fn tick_later(g: &mut crate::game::Game) {
         let w = crate::cues::cues_net_wait(g, l.cls);
         if w > 0.0 && g.time - l.t0 < 8.0 { l.at = g.time + w; kept.push(l); continue; }
         if let Some(r) = l.redo.take() { let a = redo_words(g, &r); l.text = fill(&l.tpl, &a.vars); l.then = a.then; }
-        voice(g, l.gd, l.kind, &l.text, l.cls);
+        voice(g, l.gd, &l.text, l.cls);
         if let Some(t) = l.then { run_then(g, t); }
     }
     st_of(g).later = kept;
@@ -333,7 +322,6 @@ fn start_check(g: &mut crate::game::Game) {
     let first = st.stats.checks == 0.0;
     let lone_now = st.lone_said && st.known.len() <= 1;
     st.stats.checks += 1.0;
-    let checks = st.stats.checks;
     let caller_gd = g.tab.roomfight_def[caller].gd;
     if lone_now { net_at(g, caller, LineKind::CheckLoneAt, &LaterRedo::CheckLone { d: caller }); }
     else { net(g, caller_gd, if first { LineKind::Check1 } else { LineKind::CheckN }, None, None, None); }
@@ -349,7 +337,6 @@ fn start_check(g: &mut crate::game::Game) {
     }
     let close_at = (match due.last() { Some(x) => x.at, None => g.time + 1.2 }) + pick(g, listen);
     st_of(g).check = Some(Check { caller, close_at, due, got: Vec::new() });
-    note(g, Some(caller_gd), &alloc::format!("asks the net who is up (check {}, {} up)", checks, men.len()));
 }
 
 /// the answers on their beats; at its close what the survivors know of each other. C is st.check, read by its path
@@ -361,7 +348,6 @@ fn tick_check(g: &mut crate::game::Game) {
         let st = st_of(g);
         st.check = None;
         st.next_at = time + 4.0;
-        note(g, Some(caller_gd), "down mid-check");
         return;
     }
     for i in 0..check_of(g).due.len() {
@@ -373,7 +359,6 @@ fn tick_check(g: &mut crate::game::Game) {
         let free = crate::roomfight::is_loose(g, d);
         net_at(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, &LaterRedo::Answer { d, free });
         check_of(g).got.push(d);
-        st_of(g).stats.answers += 1.0;
     }
     if g.time < check_of(g).close_at { return; }
     let (time, every) = (g.time, g.k.laststand.every);
@@ -385,12 +370,10 @@ fn tick_check(g: &mut crate::game::Game) {
     for &d in &got { if alive(g, d) { heard.push(d); } }
     let mut known = JsSet::new();
     for &d in &heard { known.add(d); }
-    let up = up_defs(g).len() as f64;
     let silent: Vec<GuardId> = g.fight.defs.iter().filter(|&&d| !known.has(d)).map(|&d| g.tab.roomfight_def[d].gd).collect();
     let heard_gds: Vec<GuardId> = heard.iter().map(|&d| g.tab.roomfight_def[d].gd).collect();
     let st = st_of(g);
     st.known = known.clone();
-    st.stats.silent += up - known.len() as f64;
     crate::netquiet::net_quiet_closed(g, caller_gd, &silent, &heard_gds);
     let st = st_of(g);
     let mut names = st.named.keys();
@@ -398,8 +381,6 @@ fn tick_check(g: &mut crate::game::Game) {
     for d in names {
         if !known.has(d) { name(g, d, None); }
     }
-    let signs: Vec<String> = known.keys().iter().map(|&d| g.gd[g.tab.roomfight_def[d].gd].callsign.clone()).collect();
-    note(g, Some(caller_gd), &alloc::format!("check closes: {} known up ({})", known.len(), signs.join(", ")));
     if !calm(g, caller) {
         let time = g.time;
         let st = st_of(g);
@@ -542,11 +523,9 @@ fn step_stand(g: &mut crate::game::Game) {
         g.m.laststand.states = Some(row);
         let t = g.time;
         st(g).stats.t0 = t;
-        st(g).stats.up0 = up as f64;
         let first = g.k.laststand.first;
         let at = t + pick(g, first);
         st(g).next_at = at;
-        note(g, None, &alloc::format!("most are down: {} of {} up", up, all.len()));
     }
     let defs = g.fight.defs.clone();
     if !defs.iter().any(|&d| alive(g, d)) { return; }

@@ -8,16 +8,8 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A new tracker: nothing known.
-pub fn entry_points_new(g: &crate::game::Game) -> crate::entrypoints::EntryPoints {
+pub fn entry_points_new() -> crate::entrypoints::EntryPoints {
     EntryPoints::blank()
-}
-
-/// Nothing known: a restart. A point already marked moved stays so, as in the TypeScript.
-pub fn entry_points_reset(g: &mut crate::game::Game) {
-    g.entry.been.clear();
-    g.entry.last = -1.0;
-    g.entry.stats = EntryPointsStats { pods: 0.0, risky: 0.0, moved: 0.0, kept: 0.0 };
-    g.entry.log.clear();
 }
 
 /// Four times a second: where the squad stands is known ground.
@@ -165,46 +157,21 @@ pub(super) fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: 
             continue;
         };
         out[i] = Pod { pos: best, face: pod.face, watch: Some(watch), moved: true };
-        let line = alloc::format!(
-            "{} · ({}, {}) → ({}, {}) · off {}",
-            g.dr[d].def.name,
-            js::to_fixed(pod.pos[0], 1),
-            js::to_fixed(pod.pos[2], 1),
-            js::to_fixed(best[0], 1),
-            js::to_fixed(best[2], 1),
-            g.tab.cover_opening[by].id
-        );
-        g.entry.log.push(line);
-        if g.entry.log.len() > 60 { g.entry.log.remove(0); }
     }
     out
 }
 
 /// A search point taken over a better-seeing one by an uncleared opening: it counts as moved.
-pub(super) fn entry_points_swapped(g: &crate::game::Game, pod: &mut crate::entrypoints::Pod) {
+pub(super) fn entry_points_swapped(pod: &mut crate::entrypoints::Pod) {
     pod.moved = true;
 }
 
 /// A point an entry has just dealt to a man: the tallies.
 pub(super) fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) {
-    g.entry.stats.pods += 1.0;
     let risky = entry_points_risk_at(g, pod.pos, skip, None).is_some();
-    if risky { g.entry.stats.risky += 1.0; }
     if pod.moved {
-        g.entry.stats.moved += 1.0;
     } else if risky {
-        g.entry.stats.kept += 1.0;
     }
-}
-
-/// The tallies in a line.
-fn entry_points_summary(g: &crate::game::Game) -> String {
-    let s = g.entry.stats;
-    let n = g.entry.been.values().filter(|&&v| js::truthy(v)).count();
-    alloc::format!(
-        "entry points: {} dealt · {} by an uncleared opening · {} moved off one · {} with nowhere to go · {} openings known",
-        s.pods, s.risky, s.moved, s.kept, n
-    )
 }
 
 fn opening_shape(g: &Game, o: CoverOpeningId) -> (V3, [f64; 2], f64) {
@@ -229,24 +196,4 @@ mod tests {
         assert_eq!(side_of(at, n, [5.0, 0.0, 1.0]), -1.0);
     }
 
-    /// Bit 1 is the +n side, bit 2 the -n side; `far_known` asks after the side `p` is not on, and `reset` forgets.
-    #[test]
-    fn far_known_reads_the_other_side_and_reset_forgets() {
-        let mut g = Game::blank();
-        let o = g.tab.cover_opening.push(crate::cover::Opening { at: [1.0, 0.0, 2.0], n: [0.0, 1.0], half: 0.5, ..crate::cover::Opening::default() });
-        let (plus, minus): (V3, V3) = ([1.0, 0.0, 3.0], [1.0, 0.0, 1.0]);
-        assert!(!entry_points_far_known(&mut g, o, plus));
-        g.entry.been.set(o, 1.0);
-        assert!(entry_points_far_known(&mut g, o, minus));
-        assert!(!entry_points_far_known(&mut g, o, plus));
-        g.entry.been.set(o, 3.0);
-        assert!(entry_points_far_known(&mut g, o, plus));
-        assert!(entry_points_summary(&mut g).ends_with("· 1 openings known"));
-        g.entry.last = 9.0;
-        g.entry.stats.pods = 4.0;
-        g.entry.log.push(String::from("x"));
-        entry_points_reset(&mut g);
-        assert!(!entry_points_far_known(&mut g, o, plus));
-        assert_eq!((g.entry.last, g.entry.stats.pods, g.entry.log.len()), (-1.0, 0.0, 0));
-    }
 }

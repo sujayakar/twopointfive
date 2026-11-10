@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 
 /// A blank row of counts.
 fn fresh() -> crate::smokebreak::SmokeBreakStats {
-    SmokeBreakStats { men: 0.0, lit: 0.0, draws: 0.0, flames: 0.0, embers: 0.0, breaths: 0.0, frames: 0.0 }
+    SmokeBreakStats { lit: 0.0, draws: 0.0, flames: 0.0, embers: 0.0, breaths: 0.0 }
 }
 
 /// Make the game's row if it has none yet.
@@ -22,17 +22,6 @@ fn ensure_state(g: &mut Game) {
 pub fn state_of(g: &mut crate::game::Game) -> crate::smokebreak::State {
     ensure_state(g);
     g.m.smokebreak.states.clone().unwrap()
-}
-
-/// A word's bits, stirred. Everything is modulo 2^32 in the TypeScript too, so u32 arithmetic gives its bits.
-fn mix(x: f64) -> f64 {
-    let x0 = js::to_u32(x);
-    let mut x = (x0 ^ 61) ^ (x0 >> 16);
-    x = x.wrapping_add(x << 3);
-    x ^= x >> 4;
-    x = x.wrapping_mul(0x27d4eb2d);
-    x ^= x >> 15;
-    x as f64
 }
 
 /// `gd.script?.smoke`, as a condition.
@@ -142,7 +131,6 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         }
     }
     if js::truthy(now.up) && !js::truthy(was.up) && now.cycle >= 0.0 {
-        mn.draws += 1.0;
         t.draws += 1.0;
     }
     if hidden {
@@ -165,7 +153,6 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
     // what he breathes out: after the lighting and after every draw, as the hand comes down
     let due = if js::truthy(was.up) && !js::truthy(now.up) { mn.t } else { -1.0 };
     if due >= 0.0 {
-        mn.outs += 1.0;
         mn.out_at = Some(mn.t + k.out_after);
     }
     if let Some(out_at) = mn.out_at {
@@ -204,8 +191,6 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
     }
     ensure_state(g);
     let mut t = g.m.smokebreak.states.as_ref().unwrap().stats;
-    t.frames += 1.0;
-    let mut men = 0.0;
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -228,44 +213,19 @@ pub fn update_smoke_break(g: &mut crate::game::Game, dt: f64) {
             Some(x) => x,
             None => {
                 t.lit += 1.0;
-                Man { t: 0.0, flamed: false, draws: 0.0, outs: 0.0, ember_t: 0.0, live: true, out_at: None }
+                Man { t: 0.0, flamed: false, ember_t: 0.0, live: true, out_at: None }
             }
         };
         mn.live = true;
-        men += 1.0;
         smoke_one(g, gd, c, dt, &mut mn, &mut t);
         g.m.smokebreak.states.as_mut().unwrap().men.set(c, mn);
     }
-    t.men = men;
     g.m.smokebreak.states.as_mut().unwrap().stats = t;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// (input, the TypeScript's bits): its own line of the file, run under bun.
-    #[test]
-    fn mix_gives_the_typescripts_bits() {
-        let rows: [(f64, u64); 13] = [
-            (0f64, 0x41e815292d400000),
-            (1f64, 0x41c3c9164e800000),
-            (5333118f64, 0x41ee72ec94a00000),
-            (4294967295f64, 0x41dc3d2674c00000),
-            (2147483648f64, 0x41e5a2d542800000),
-            (1234567f64, 0x41ed94702b400000),
-            (-1f64, 0x41dc3d2674c00000),
-            (3.7f64, 0x41e0fa0df7c00000),
-            (4294967301f64, 0x41e8c15dd1a00000),
-            (16f64, 0x41e3ab5e65600000),
-            (61f64, 0x0000000000000000),
-            (2147483647f64, 0x41b8ce91a6000000),
-            (2618109713f64, 0x41c4299574800000),
-        ];
-        for (x, bits) in rows {
-            assert_eq!(mix(x).to_bits(), bits, "mix({x})");
-        }
-    }
 
     /// The hand's beats on the page's numbers, against the TypeScript's handAt: (t, up, drawn, cycle, into's bits).
     #[test]

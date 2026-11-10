@@ -32,11 +32,6 @@ fn two_ops(t: &crate::scene_scenarios::TeamStart) -> bool {
     t.ops.as_ref().map_or(false, |o| o.len() >= 2)
 }
 
-/// the placement seed a fresh start deals for a Game's die
-fn fresh_seed_of(dice_seed: f64) -> f64 {
-    1.0 + js::rem(js::to_u32(dice_seed) as f64, 9973.0)
-}
-
 /// WHO STANDS WHERE, a pure function of (seed, attempt)
 /// The rooms are the level's own (`level.scenarios.roomClear`), handed in: this module holds no level's rooms of its own.
 fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::PlaceDefendersS) -> Vec<crate::roomclear::Placement> {
@@ -348,7 +343,7 @@ pub(super) fn room_clear_scenario_start_now(g: &mut crate::game::Game) -> Option
 }
 
 /// the scenario, its layout named
-pub fn room_clear_scenario_new(g: &crate::game::Game) -> crate::roomclear::RoomClearScenario {
+pub fn room_clear_scenario_new() -> crate::roomclear::RoomClearScenario {
     crate::roomclear::RoomClearScenario::blank()
 }
 
@@ -425,10 +420,6 @@ fn room_clear_scenario_clear(g: &mut crate::game::Game) {
     s.team_said = false;
 }
 
-/// what happened when, on the game clock
-fn room_clear_scenario_note(g: &crate::game::Game, what: &str) {
-}
-
 /// the night breach's staging asks who the defenders are: every staging is the knob's placement, first attempt (SAMESTART)
 pub(super) fn room_clear_scenario_deal(g: &mut crate::game::Game) -> Vec<crate::nightbreach::NightBreachMark> {
     g.staged.way = room_clear_scenario_way_now(g);
@@ -483,14 +474,11 @@ pub(super) fn room_clear_scenario_on_staged(g: &mut crate::game::Game) {
             def: def.clone(),
             defenders: hostiles.iter().enumerate().filter(|(i, _)| dealt_rooms.get(*i) == Some(&def.id)).map(|(_, h)| *h).collect(),
             cleared: false,
-            cleared_at: f64::NAN,
         })
         .collect();
     let lesson = g.level.lesson().is_some();
     let cut = crate::squaddeal::squad_deal(g, Some(&s), &dealt_rooms, Some(lesson));
     crate::enemysquads::squads_stage(g, cut.as_ref(), &hostiles, &dealt_rooms);
-    let line = format!("staged:{}/{}", js::num_str(g.room_clear.seed), js::num_str(g.room_clear.attempt));
-    room_clear_scenario_note(g, &line);
 }
 
 /// Once a frame, right after the night breach's own tick: the rooms' state and the two ends
@@ -513,11 +501,7 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
             i += 1;
             continue;
         }
-        let now = g.time;
         g.staged.rooms[i].cleared = c;
-        g.staged.rooms[i].cleared_at = if c { now } else { f64::NAN };
-        let id = g.staged.rooms[i].def.id.clone();
-        room_clear_scenario_note(g, &format!("{}:{}", if c { "cleared" } else { "lost" }, id));
         i += 1;
     }
     let pair_up = ops_up(g);
@@ -525,7 +509,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     let play = g.room_clear.end.is_none() && !crate::seats::all_down(g) && !live.is_empty();
     if !g.room_clear.pair_said && pair_up == 0 && ops > 0 {
         g.room_clear.pair_said = true;
-        room_clear_scenario_note(g, "pair:down");
     }
     if !g.room_clear.entry_said && crate::nightbreach::night_breach_state(g) == crate::nightbreach::NightBreachState::Failed {
         g.room_clear.entry_said = true;
@@ -550,7 +533,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
         room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Taken, &why);
     } else if live.is_empty() && !g.room_clear.team_said {
         g.room_clear.team_said = true;
-        room_clear_scenario_note(g, "team-up");
     }
 }
 
@@ -584,7 +566,6 @@ fn room_clear_scenario_finish(g: &mut crate::game::Game, end: crate::roomclear::
     g.staged.over = true;
     g.room_clear.end_at = g.time;
     g.room_clear.end_why = String::from(why);
-    room_clear_scenario_note(g, &format!("end:{}", end.as_str()));
     let down = end == Wiped && crate::seats::all_down(g) && ops_up(g) > 0;
     g.room_clear.end_say = String::from(if down { "player down" } else { "team wiped" });
 }
@@ -709,16 +690,6 @@ mod tests {
         }
         assert!(deals.iter().any(|(s, a)| line(*s, *a) != line(0.0, 1.0)), "another seed deals another fight");
         assert_ne!(line(1.0, 1.0), line(1.0, 2.0), "and another attempt another");
-    }
-
-    /// A fresh start is a dealt fight, never the file's own marks (seed nothing): whatever the game's die was seeded with, a seed from 1 up to 9973.
-    #[test]
-    fn a_fresh_start_is_never_the_authored_deal() {
-        assert_eq!((fresh_seed_of(0.0), fresh_seed_of(9972.0), fresh_seed_of(9973.0)), (1.0, 9973.0, 1.0));
-        for x in [-1.0, 3.7e9, 4294967296.0, 1.5] {
-            let seed = fresh_seed_of(x);
-            assert!((1.0..=9973.0).contains(&seed) && seed == m::floor(seed), "{x}: {seed}");
-        }
     }
 
     /// How far a mark stands from a prop where it rests: none inside it, measured from its edge, on the prop's own turn.

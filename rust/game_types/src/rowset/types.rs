@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RowSettings {
-    pub hour: Option<crate::hours::HourId>,
     pub weather: Option<crate::weather_kinds::WeatherKind>,
 }
 

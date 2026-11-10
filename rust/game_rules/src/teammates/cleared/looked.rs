@@ -14,6 +14,9 @@ const NEAR_M: f64 = 1.2;
 const EYE: f64 = 1.5;
 /// what could be there: a man's middle
 const THERE: f64 = 1.0;
+/// a man who walks in looks where he goes from this far on his walk before the room, while so much of its floor near the way in has not been looked over: a man could be anywhere on it
+const AHEAD_M: f64 = 2.5;
+const FLOOR_M2: f64 = 2.0;
 /// two men do not look at the same corner: this far from another's
 const APART_M: f64 = 2.0;
 
@@ -68,4 +71,27 @@ pub fn unlooked_by(g: &mut Game, gd: GuardId, taken: &[V3]) -> Option<V3> {
     let mut cells: Vec<V3> = unseen_by(g, p, Some(room)).into_iter().map(|(_, q)| q).filter(|&q| v3::dist_xz(p, q) > NEAR_M && !taken.iter().any(|&t| v3::dist_xz(t, q) < APART_M)).collect();
     crate::js::sort_by(&mut cells, |a, b| turn(*a) - turn(*b));
     cells.into_iter().find(|&q| !crate::scene_collision::segment_blocked(g, [p[0], EYE, p[2]], q, None, None, None))
+}
+
+/// His walk takes him into another room within AHEAD_M, and it has floor there that nobody has looked over.
+pub fn walks_in(g: &mut Game, gd: GuardId) -> bool {
+    let mut a = g.ch[g.gd[gd].ch].pos;
+    let here = super::cleared_rooms_room_at(g, a);
+    let cs = g.col.nav.cell;
+    let (mut left, mut i) = (AHEAD_M, g.gd[gd].path_i);
+    while let Some(&b) = g.gd[gd].path.get(i) {
+        let l = v3::dist_xz(a, b);
+        let n = m::max(1.0, m::ceil(m::min(l, left) / cs)) as i32;
+        for k in 1..=n {
+            let u = m::min(l, left) * (k as f64 / n as f64) / m::max(l, 1e-6);
+            let q = [a[0] + (b[0] - a[0]) * u, 0.0, a[2] + (b[2] - a[2]) * u];
+            let room = super::cleared_rooms_room_at(g, q);
+            if room > 0.0 && room != here { return unseen_by(g, q, Some(room as u16)).len() as f64 * cs * cs > FLOOR_M2; }
+        }
+        left -= l;
+        if left <= 0.0 { break; }
+        a = b;
+        i += 1;
+    }
+    false
 }

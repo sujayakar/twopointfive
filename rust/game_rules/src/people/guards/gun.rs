@@ -385,7 +385,7 @@ pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarr
 pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
     let dropped = g.gd[gd].dropped;
     if let Some(d) = dropped {
-        if crate::throwables::item_kind(g, d) != crate::throwables::ItemKind::Torch {
+        if g.tab.item[d].kind != crate::throwables::ItemKind::Torch {
             if let Some(i) = g.items.items.iter().position(|&x| x == d) {
                 g.items.items.remove(i);
                 g.gd[gd].dropped = None;
@@ -424,7 +424,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
     let def = def_row(g, w);
-    if !crate::gunreload::feed_starts(g, &def) {
+    if !crate::gunreload::feed_starts(&def) {
         let at = g.ch[c].pos;
         crate::audio_iface::game_audio_like_play(g, "magOut", Some(at), Some(0.5), None);
     }
@@ -437,7 +437,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
     let before = rr.dur - g.gd[gd].reload_t;
     g.gd[gd].reload_t -= dt;
     let def = def_row(g, w);
-    let drop = crate::gunreload::feed_drop(g, &def);
+    let drop = crate::gunreload::feed_drop(&def);
     let c = g.gd[gd].ch;
     let gun = if g.ch[c].anim.long_gun { Some(w) } else { None };
     crate::gunreload::feed_deal(g, c, gun, Some(true));
@@ -563,7 +563,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     let opts = if b.off.is_some() {
         crate::combat::FireOpts { spread: Some(0.0), steady: Some(true), ..Default::default() }
     } else {
-        crate::aim::guard_round(g, gd, grow + mods.spread, Some(b.idx == 0.0))
+        crate::aim::guard_round(g, gd, grow + mods.spread)
     };
     crate::combat::fire_weapon(g, c, aim, Some(&opts));
     if b.off.is_none() { crate::aim::note_bore(g, gd, aim); }
@@ -640,9 +640,9 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
     if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {
-            let (yaw, tumble) = (crate::throwables::item_yaw(g, it), crate::throwables::item_tumble(g, it));
+            let (yaw, tumble) = (g.tab.item[it].yaw, g.tab.item[it].tumble);
             let hd: V3 = [m::sin(yaw) * m::cos(tumble), -m::sin(tumble), m::cos(yaw) * m::cos(tumble)];
-            let at = crate::throwables::item_pos(g, it);
+            let at = g.tab.item[it].pos;
             g.tab.light[fl].pos = v3::mad(at, hd, 0.1);
             g.tab.light[fl].dir = hd;
             held = Some(at);
@@ -678,7 +678,6 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     }
     if wall_dark(g, gd, held) && g.tab.light[fl].enabled {
         g.tab.light[fl].enabled = false;
-        if let Some(s) = g.m.guards.wall_seen.get_mut(gd) { s.out = Some(true); }
     }
     if g.tab.light[fl].enabled && crate::doze::doze_dark(g, gd) { g.tab.light[fl].enabled = false; }
     let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
@@ -706,15 +705,15 @@ pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
         for s in seats {
-            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(g, &crate::seats::here(g), p)) { return true; }
+            if crate::seats::with_seat(g, s, &mut |g: &mut Game| in_game_view(&crate::seats::here(g), p)) { return true; }
         }
         return false;
     }
-    in_game_view(g, &crate::seats::here(g), p)
+    in_game_view(&crate::seats::here(g), p)
 }
 
 /// inView of the view on Game: of the seat this pass is about.
-fn in_game_view(g: &Game, seat: &crate::seats::SeatRef, p: V3) -> bool {
+fn in_game_view(seat: &crate::seats::SeatRef, p: V3) -> bool {
     match seat.view_proj {
         None => false,
         Some(crate::game::GameViewProj::Array(v)) => in_view_of(|i| v[i], p),

@@ -175,7 +175,7 @@ export function build() {
   return out;
 }
 
-// ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// ---- LIVED IN (lib/lived.ts: group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The house's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND: from above the yard was one sheet of dirt
 // and the land round the wall one sheet of dust, and at night the ground is where the three lamps' pools and the moon show. So this is what a household
 // leaves on its ground, every piece the kit's own by name: the carts' ruts on the track, the water that runs out under the wall from the

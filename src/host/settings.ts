@@ -12,7 +12,6 @@ export function settingsOf(game: DrawGame, dots: { showLightDots: boolean } = { 
     get thinks() { return set(View.thinks); }, set thinks(v) { C.ai(n(v)); game.tell(); },
     get ammo() { return set(View.ammo); }, set ammo(v) { C.ammo(n(v)); game.tell(); },
     get autosave() { return set(View.autosave); }, set autosave(v) { keepAutosave(v); C.autosave(n(v)); game.tell(); },
-    get wallFeel() { return set(View.wallFeel); },
     get wallPress() { return set(View.wallPress); }, set wallPress(v) { game.turn('wallsnap.press', n(v)); game.tell(); },
     get fallIn() { return set(View.fallIn); },
     get hints() { return dots.showLightDots; }, set hints(v) { dots.showLightDots = v; },

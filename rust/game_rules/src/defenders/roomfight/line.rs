@@ -83,7 +83,7 @@ pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId
 /// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him.
 pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: RoomfightOpId, h: GuardId) -> bool {
     let r = g.k.roomfight;
-    let a = match crate::orders::squad_orders_of(g, seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
+    let a = match crate::orders::squad_orders_of(seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };
     let (watch, post) = {
         let row = &g.tab.orders_assignment[a];
         if !crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) { return false; }

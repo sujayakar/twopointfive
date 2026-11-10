@@ -230,7 +230,7 @@ impl Bot {
     pub fn sightings(&self) -> usize { self.ask(|g| g.chronicle.events.iter().filter(|e| matches!(e.kind, game::chronicle::ChronKind::Spotted | game::chronicle::ChronKind::Contact)).count()) }
 
     // ---- orders
-    pub fn order_of(&self, x: GuardId) -> Option<Assignment> { self.seen(|g, s| game::orders::squad_orders_of(g, s, x).map(|a: OrdersAssignmentId| g.tab.orders_assignment[a].clone())) }
+    pub fn order_of(&self, x: GuardId) -> Option<Assignment> { self.seen(|g, s| game::orders::squad_orders_of(s, x).map(|a: OrdersAssignmentId| g.tab.orders_assignment[a].clone())) }
     pub fn ordered(&self, x: GuardId) -> String { self.order_of(x).map_or(String::from("-"), |a| a.order) }
     pub fn orders_log(&self) -> usize { self.seen(|_, s| s.orders.log.len()) }
     /// the last order on the book, and what it was given on
@@ -261,7 +261,7 @@ impl Bot {
     pub fn closed(&self, d: DoorId) -> bool { self.ask(|g| game::doors::door_is_closed(g, d)) }
     pub fn locked_door(&self, d: DoorId) -> bool { self.ask(|g| game::doors::door_locked(g, d)) }
     pub fn angle(&self, d: DoorId) -> f64 { self.ask(|g| game::doors::door_angle(g, d)) }
-    pub fn thrown(&self, kind: ItemKind) -> bool { self.ask(|g| g.items.items.iter().any(|&i| game::throwables::item_kind(g, i) == kind && !game::throwables::item_fired(g, i))) }
+    pub fn thrown(&self, kind: ItemKind) -> bool { self.ask(|g| g.items.items.iter().any(|&i| g.tab.item[i].kind == kind && !g.tab.item[i].fired)) }
     /// the can in the air, until it has gone off (or `secs`)
     pub async fn landed(&self, kind: ItemKind, secs: f64) {
         let mut seen = false;

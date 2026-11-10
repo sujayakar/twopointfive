@@ -131,7 +131,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
 }
 
 /// where a span's foot is asked from: a test that begins at the feet begins at the bake's height. UNDERFOOT.on is settled on.
-fn foot_band(g: &crate::game::Game, y0: f64) -> f64 {
+fn foot_band(y0: f64) -> f64 {
     if y0 >= FEET_Y && y0 < BAKE_Y { BAKE_Y } else { y0 }
 }
 
@@ -196,7 +196,7 @@ pub fn new(g: &mut crate::game::Game, boxes: &[BoxId], of: Option<&str>) -> crat
         }
     }
     g.col.nav = nav_grid_new(g);
-    g.col.sound = sound_paths_new(g);
+    g.col.sound = sound_paths_new();
     core::mem::take(&mut g.col)
 }
 
@@ -273,7 +273,7 @@ fn open_copy(g: &mut Game, rows: bool) {
     let glass = glass_panes(g);
     let mut rule = walk_rule;
     let walk: Option<&mut dyn FnMut(&mut Game, f64) -> bool> = if g.col.glass_walkable.is_some() { Some(&mut rule) } else { None };
-    crate::scene_box_mirror::box_mirror_open(g, &ids, &cells, &tilted, gw, gh, gc, &leaves, walk, glass.as_ref(), rows, rows, rows);
+    crate::scene_box_mirror::box_mirror_open(g, &ids, &cells, &tilted, gw, gh, gc, &leaves, walk, glass.as_ref(), rows, rows);
     g.col.cells = cells;
     g.col.tilted_at = tilted;
 }
@@ -352,8 +352,8 @@ fn fell_why(g: &crate::game::Game) -> String {
 }
 
 /// the foot of a span as the statics are asked it.
-pub fn foot_of(g: &crate::game::Game, y0: f64) -> f64 {
-    foot_band(g, y0)
+pub fn foot_of(y0: f64) -> f64 {
+    foot_band(y0)
 }
 
 /// A TICK SHUTS AND THE COPY STANDS: its debts are paid, so that whoever asks before the next tick asks it of the game shared (`ask::WorldAsk`). A writer that
@@ -405,10 +405,8 @@ fn lone(g: &mut crate::game::Game, must: Option<bool>) -> bool {
     stand(g);
     if !standing(g) { return false; }
     if g.col.windowed {
-        g.m.scene_collision.anytime.windows += 1.0;
         return false;
     }
-    g.m.scene_collision.anytime.proofs += 1.0;
     true
 }
 
@@ -472,7 +470,7 @@ fn circle_touches_ask(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64
 /// TWIN: the module's touches; `out` is left as the two steps leave it (the touching ones, then what the gather put past them).
 fn circle_touches_here(g: &mut crate::game::Game, x: f64, z: f64, r: f64, y0: f64, y1: f64, out: &mut Vec<i32>) -> f64 {
     let w = slot(g);
-    let y0 = foot_band(g, y0);
+    let y0 = foot_band(y0);
     let cap = if out.len() > sim::world::MAX_LIST { sim::world::MAX_LIST } else { out.len() };
     let v = sim::collide::touches(w, x, z, r, y0, y1, cap);
     let full = v < 0;
@@ -503,7 +501,7 @@ fn collide_circle_ask(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1
 /// TWIN: the module's push, and where it ended read back.
 fn collide_circle_here(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y1: f64, iterations: f64) -> bool {
     let w = slot(g);
-    let y0 = foot_band(g, y0);
+    let y0 = foot_band(y0);
     let hit = sim::collide::circle(w, p[0], p[2], r, y0, y1, js::to_u32(iterations)) != 0;
     let pt = sim::world::asking(w).pt;
     p[0] = pt[0];
@@ -512,7 +510,7 @@ fn collide_circle_here(g: &mut crate::game::Game, p: &mut V3, r: f64, y0: f64, y
 }
 
 /// a circle kept on the world's floor rectangle; true = it had to move.
-pub fn clamp_to_world(g: &crate::game::Game, p: &mut V3, r: f64) -> bool {
+pub fn clamp_to_world(p: &mut V3, r: f64) -> bool {
     let wd = crate::scene_world::world();
     let x = m::min(wd.max[0] - r, m::max(wd.min[0] + r, p[0]));
     let z = m::min(wd.max[2] - r, m::max(wd.min[2] + r, p[2]));
@@ -538,7 +536,7 @@ pub fn glass_rule(g: &mut crate::game::Game, rule: Option<crate::scene_collision
 fn glass_panes(g: &mut crate::game::Game) -> Option<crate::scene_box_mirror::PaneSource> {
     match g.col.pane_rows {
         Some(PaneRows::GlassBreak) => {
-            let (view, home, sheets) = (crate::glassbreak::glass_break_view(g), crate::glassbreak::glass_break_home(g), crate::glassbreak::glass_break_sheets(g));
+            crate::glassbreak::glass_break_sheets(g);
             Some(crate::scene_box_mirror::PaneSource {  })
         }
         None => None,
@@ -656,41 +654,6 @@ fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Op
     Some(Some(ThingsAsk { row: k as f64, t: out[0], n: [out[1], out[2], out[3]], box_ }))
 }
 
-/// segClear over the row's numbers
-fn seg_clear_at(c: V3, h: V3, tilted: bool, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, pad: f64) -> bool {
-    let hy = if h[1] < 0.0 { -h[1] } else { h[1] };
-    let m1 = c[1] - a1;
-    if !tilted {
-        let e1 = r1 * len;
-        let off = if e1 > 0.0 { m1 - hy > e1 + pad || m1 + hy < -pad } else { m1 - hy > pad || m1 + hy < e1 - pad };
-        if off { return true; }
-    }
-    let rr = (if h[0] < 0.0 { -h[0] } else { h[0] }) + hy + (if h[2] < 0.0 { -h[2] } else { h[2] }) + pad;
-    let (m0, m2) = (c[0] - a0, c[2] - a2);
-    let s = m0 * r0 + m1 * r1 + m2 * r2;
-    if s < -rr || s > len + rr { return true; }
-    m0 * m0 + m1 * m1 + m2 * m2 - s * s > rr * rr
-}
-
-/// rayBoxHits over the row's numbers
-fn ray_box_hits_at(c: V3, h: V3, yaw: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64) -> bool {
-    let (cs, sn) = (m::cos(yaw), m::sin(yaw));
-    let (px, py, pz) = (a0 - c[0], a1 - c[1], a2 - c[2]);
-    let (lx, lz, ly) = (cs * px - sn * pz, sn * px + cs * pz, py);
-    let (dx, dz, dy) = (cs * r0 - sn * r2, sn * r0 + cs * r2, r1);
-    let (ix, iy, iz) = (1.0 / js::or(dx, 1e-20), 1.0 / js::or(dy, 1e-20), 1.0 / js::or(dz, 1e-20));
-    let (mut t0, mut t1) = (0.0, tmax);
-    let mut entered = false;
-    for (ax, l, inv) in [(0, lx, ix), (1, ly, iy), (2, lz, iz)] {
-        let (mut ta, mut tb) = ((-h[ax] - l) * inv, (h[ax] - l) * inv);
-        if ta > tb { core::mem::swap(&mut ta, &mut tb); }
-        if ta > t0 { t0 = ta; entered = true; }
-        if tb < t1 { t1 = tb; }
-        if t0 > t1 { return false; }
-    }
-    entered
-}
-
 /// the module's line a→b, past the proof. Panes in the way are added to `panes` where it is given (static, metres along).
 fn line(g: &mut Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (a0, a1, a2) = (a[0], a[1], a[2]);
@@ -780,7 +743,6 @@ pub fn raycast(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<c
 pub fn raycast_over(g: &mut crate::game::Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     if !(tmax > 0.0) { return None; }
     let r = proven(g, |g| raycast_here(g, over, ro, rd, tmax));
-    g.m.scene_collision.rays.n += 1.0;
     r
 }
 /// the module's ray. A ray that is no number is the caller's mistake, by name.
@@ -823,7 +785,7 @@ fn sense_panes(g: &mut crate::game::Game, row: &str) -> f64 {
 }
 
 /// an eye's line, and the fog's: it passes glass, and is asked by flags the copy keeps.
-fn eye_line(g: &crate::game::Game, row: &str, through: f64) {
+fn eye_line(row: &str, through: f64) {
     if js::to_u32(through) & !js::to_u32(crate::scene_box_mirror::mirrored()) != 0 || js::to_u32(through) & sim::world::F_GLASS == 0 {
         panic!("{}: an eye's line passes glass and names only flags the copy keeps (asked through {}): one that stops at glass is no eye's, and is asked as a line (segmentBlocked)", row, js::num_str(through));
     }
@@ -854,7 +816,7 @@ pub fn sight_eye(g: &mut crate::game::Game, k: f64, pos: V3, look: V3, look_len:
 
 /// which eyes have a line: how many × 2²⁸ + those eyes, four bits each.
 pub fn eyes_see(g: &mut crate::game::Game, order: f64, n: f64, want: f64, kind: f64, through: f64, a: V3, b: V3) -> f64 {
-    eye_line(g, "fog", through);
+    eye_line("fog", through);
     let set = sense(g, "fog") as i32;
     let r = sim::fog::see(slot(g), set, js::to_u32(order), js::to_u32(n), js::to_u32(want), js::to_u32(kind), js::to_u32(through), a[0], a[1], a[2], b[0], b[1], b[2], &g.k);
     if r == ASK_HOST { panic!("{}", handed_back_words("fog", "a length that is no length of this world's, or more eyes than a question names", &a, &b)); }
@@ -863,7 +825,7 @@ pub fn eyes_see(g: &mut crate::game::Game, order: f64, n: f64, want: f64, kind: 
 
 /// an eye on a man's chest and head as one question.
 pub fn eye_contact(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> crate::scene_collision::EyeContact {
-    eye_line(g, "sight", through);
+    eye_line("sight", through);
     let q = EyeContactAskE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
     let alone_now = !standing(g) && lone(g, Some(true));
     let c = eye_contact_ask(g, q, chest, head, unseen, smoked, through);
@@ -877,7 +839,6 @@ fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::EyeCont
     let mut dist = 0.0;
     let r = sim::sight::contact(slot(g), set, js::to_u32(through), q, e.pos, e.look, e.range, e.half_deg, e.near_m, e.near_deg, e.v_half_deg.unwrap_or(0.0), chest, head, &mut dist, &g.k);
     if r == ASK_HOST { panic!("{}", handed_back_words("sight", "a line too long to be one, or of no number", &e.pos, &chest)); }
-    g.m.scene_collision.sensed.sight += 1.0;
     EyeContactAsk { visible: r & sim::sight::A_VISIBLE != 0, dist, in_cone: r & sim::sight::A_IN_CONE != 0 }
 }
 
@@ -935,7 +896,6 @@ pub fn lamp(g: &mut crate::game::Game, pos: V3, range: f64, radius: f64, kind: f
     let rows = rows.unwrap_or(0.0);
     if g.col.mirror.lamp_n as usize >= sim::light::MAX_LAMPS {
         if !g.col.lamp_q.on { return false; }
-        g.m.scene_collision.lamps.parts += 1.0;
         lamps_part(g, None);
     }
     let at = sim::light::lamps_addr();
@@ -957,7 +917,6 @@ pub fn lamps_on(g: &mut crate::game::Game, acc: &mut Vec<f64>) {
     for k in 0..6 {
         if k < acc.len() { acc[k] = out[k]; } else { acc.push(out[k]); }
     }
-    g.m.scene_collision.sensed.light += 1.0;
 }
 
 /// a sound's or a search's question: the leaves' list and the pane rule to ask with.
@@ -1059,7 +1018,7 @@ pub fn light_ready(g: &mut crate::game::Game) {
 
 // ---- how a sound reaches a listener
 
-fn sound_paths_new(g: &crate::game::Game) -> crate::scene_collision::SoundPaths {
+fn sound_paths_new() -> crate::scene_collision::SoundPaths {
     SoundPaths::blank()
 }
 
@@ -1092,7 +1051,7 @@ fn sound_paths_propagate_ask(g: &mut crate::game::Game, src: V3, dst: V3, keep: 
     let s = sense_for(g, SenseForRow::Sound);
     let (set, ask) = (s.set as i32, s.ask as u32);
     let straight = match heard_straight(g, set, ask, src, dst) {
-        Ok((r, asked)) => { if asked { g.m.scene_collision.sensed.sound += 1.0; } return r; }
+        Ok((r, asked)) => {  return r; }
         Err(straight) => straight,
     };
     let key = route_key(g, src, dst);
@@ -1100,7 +1059,6 @@ fn sound_paths_propagate_ask(g: &mut crate::game::Game, src: V3, dst: V3, keep: 
         if m::abs(g.col.sound.now - hit.t) < 0.5 { return hit.r; }
     }
     let Some(r) = heard_round(g, set, ask, src, dst, straight) else { panic!("{}", handed_back_words("sound", "a line of its way round too long to be one", &src, &dst)) };
-    g.m.scene_collision.sensed.sound += 1.0;
     if keep && !g.col.sound.asking {
         let t = g.col.sound.now;
         g.col.sound.cache.set(key, SoundPathsCacheValue { t, r });
@@ -1332,17 +1290,14 @@ fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64
         if n == sim::nav::NEED {
             g.m.scene_collision.priced.waits = true;
             while n == sim::nav::NEED {
-                g.m.scene_collision.priced.needs += 1.0;
                 let k = sim::nav::need_len() as f64;
                 nav_grid_price_these(g, k, &mut **penalty.as_mut().unwrap());
                 n = sim::nav::resume();
             }
             g.m.scene_collision.priced.waits = false;
         }
-        if n != sim::nav::ASK_HOST { g.m.scene_collision.priced.n += 1.0; }
     }
     if n == sim::nav::ASK_HOST { panic!("{}", handed_back_words("paths", "a point that is no number, or a line too long to be one", &a, &b)); }
-    g.m.scene_collision.sensed.paths += 1.0;
     if n == sim::nav::NO_WAY { return None; }
     let at = sim::nav::way_addr();
     let mut out: Vec<V3> = Vec::with_capacity(n as usize);
@@ -1360,7 +1315,6 @@ fn nav_grid_price_these(g: &mut crate::game::Game, k: f64, penalty: &mut dyn FnM
         let v = penalty(g, (c % nw) as f64, (c / nw) as f64);
         put_f64(sim::nav::price_addr(), c as usize, v);
     }
-    g.m.scene_collision.priced.cells += k;
 }
 
 /// the free cell nearest by ring to a shut one; with the point that asked, on its own side of the wall.
@@ -1476,27 +1430,6 @@ mod tests {
         let mut cells = vec![vec![0.0, 5.0, 2.0, 7.0], vec![6.0]];
         cut_cells(&mut cells, 5.0);
         assert_eq!(cells, vec![vec![0.0, 2.0], vec![]]);
-    }
-
-    #[test]
-    fn the_twins_helpers_answer_as_the_typescripts_do() {
-        // (the answers of segClear and rayBoxHits under bun with EXACT.on, over the same 256 made-up lines and boxes)
-        let want_clear = "1010101111011110101111111011101100111001101000111011111111111011111001111101101111011111001111110011011011111010111011101110111100011111110011110111011011111111011100000111111000110000111011110000101101110111111101101001011111111111001010110110110111011111";
-        let want_hits = "0000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000100000000100000000000000000000100000000000000000000000000000000000011000000010000001000000000101000000001000000000010000000000000000000000000000000000000000";
-        let mut x = 12345.0;
-        let mut r = |lo: f64, hi: f64| { x = js::rem(x * 16807.0, 2147483647.0); lo + (hi - lo) * (x / 2147483647.0) };
-        let (mut clear, mut hits) = (String::new(), String::new());
-        for i in 0..256 {
-            let (a, e): (V3, V3) = ([r(0.0, 12.0), r(0.0, 3.0), r(0.0, 12.0)], [r(0.0, 12.0), r(0.0, 3.0), r(0.0, 12.0)]);
-            let d = [e[0] - a[0], e[1] - a[1], e[2] - a[2]];
-            let len = m::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
-            let u = [d[0] / len, if i % 7 == 0 { 0.0 } else { d[1] / len }, d[2] / len];
-            let (c, h, yaw) = ([r(0.0, 12.0), r(0.0, 3.0), r(0.0, 12.0)], [r(0.1, 2.0), r(0.1, 1.5), r(0.1, 2.0)], r(-3.0, 3.0));
-            clear.push(if seg_clear_at(c, h, i % 5 == 0, a[0], a[1], a[2], u[0], u[1], u[2], len, 0.05) { '1' } else { '0' });
-            hits.push(if ray_box_hits_at(c, h, yaw, a[0], a[1], a[2], u[0], u[1], u[2], len) { '1' } else { '0' });
-        }
-        assert_eq!(clear, want_clear);
-        assert_eq!(hits, want_hits);
     }
 
     #[test]

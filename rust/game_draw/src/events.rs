@@ -271,10 +271,10 @@ impl Events {
         for (ix, &f) in g.targets.iter().enumerate() {
             if game::fire::is_fire(g, f) && game::fire::burns(g, f) { self.goes("fireBed", ix as u32, game::fire::mouth_of(g, f).pos, g.k.fire.bed, game::fire::heat_of(g, f) * 2.0 / 3.0, [FOREVER; 2], 0.0); }
         }
-        for &i in g.items.items.iter().filter(|&&i| t::item_kind(g, i) == t::ItemKind::Smoke && t::item_fired(g, i) && t::item_emit_t(g, i) > 0.0) {
+        for &i in g.items.items.iter().filter(|&&i| g.tab.item[i].kind == t::ItemKind::Smoke && g.tab.item[i].fired && g.tab.item[i].emit_t > 0.0) {
             // (one let go under other numbers than a can's now: nobody knows how long ago)
-            let (left, all) = (t::item_emit_t(g, i), game::combat::can_params(g).canister_duration);
-            self.goes("smokeHiss", t::item_serial(g, i) as u32, game::v3::add(t::item_pos(g, i), [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
+            let (left, all) = (g.tab.item[i].emit_t, game::combat::can_params(g).canister_duration);
+            self.goes("smokeHiss", g.tab.item[i].serial as u32, game::v3::add(g.tab.item[i].pos, [0.0, 0.1, 0.0]), 1.0, 1.0, [if left > all { FOREVER } else { all - left }, left], 0.0);
         }
         let dark = g.light_home.mains.active;
         for (ix, h) in g.level.hums.iter().flatten().enumerate().filter(|(_, h)| !dark || h.mains == Some(false)) { self.goes(h.kind.as_str(), ix as u32, h.pos, h.level, 1.0, [FOREVER; 2], h.radius); }

@@ -31,7 +31,7 @@ fn layout_team(g: &mut Game, layout: Option<&NightBreachLayout>) -> Option<crate
 fn in_his_book(g: &mut Game, gd: GuardId) -> bool {
     let man = crate::seats::orders_of(g, gd);
     let s = crate::seats::seat_of_man(g, man);
-    crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(v, &crate::seats::here(v), gd))
+    crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(&crate::seats::here(v), gd))
 }
 
 /// Teammate i's mark; Err is the TypeScript's throw.
@@ -175,9 +175,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     let live = staged_live();
     g.night_breach.bang_taken = false;
     g.night_breach.bang_by = None;
-    g.night_breach.blind = true;
     g.night_breach.bursts = g.staged.foes.iter().map(|_| BlindBurst { until: -1.0, n: 0.0, next: 0.0 }).collect();
-    g.night_breach.blind_rounds = 0.0;
     crate::roomfight::room_fight_reset(g);
     g.fight.blind_fire = true;
     let drilled = plan.is_some() && g.staged.team.len() >= 2;
@@ -200,7 +198,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
                 .map(|(_, h)| *h)
                 .collect();
             let (a, b) = (g.staged.team[0], g.staged.team[1]);
-            let drill = crate::breach::breach_drill_new(g, p, a, b, &men, live);
+            let drill = crate::breach::breach_drill_new(p, a, b, &men, live);
             g.night_breach.drill = Some(drill);
             crate::breach::breach_drill_start(g);
         }
@@ -230,7 +228,6 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
         g.pl[pl].holstered = false;
     };
     crate::seats::stage_men(g, sam_at, sam_yaw, Some(&mut each));
-    g.night_breach.staged += 1.0;
     g.night_breach.beats_seen = 0.0;
     g.night_breach.said.clear();
     g.night_breach.cut = true;
@@ -319,7 +316,7 @@ pub fn night_breach_drill_ops(g: &crate::game::Game) -> Vec<GuardId> {
 }
 
 /// A new one: its initialisers.
-pub fn night_breach_new(g: &crate::game::Game) -> crate::nightbreach::NightBreach {
+pub fn night_breach_new() -> crate::nightbreach::NightBreach {
     NightBreach::blank()
 }
 
@@ -371,7 +368,6 @@ pub(super) fn night_breach_start(g: &mut crate::game::Game, layout: Option<&crat
     crate::civilians::civilians_leave(g);
     let rooms = layout.is_some();
     g.staged.begin(if rooms { MissionKind::Roomclear } else { MissionKind::Nightbreach }, Facts { fight: true, raid: true, own_rule: rooms, drilled: !rooms, ..Facts::default() });
-    g.night_breach.staged = 0.0;
     g.night_breach.log.clear();
     g.night_breach.failure = None;
     night_breach_stage(g);
@@ -479,7 +475,7 @@ fn night_breach_order(g: &mut crate::game::Game) -> Option<crate::nightbreach::N
     if live_of(g).orders == 1.0 {
         live_set_orders(g, 2.0);
         night_breach_note(g, "order:go");
-        crate::seats::each_seat(g, &mut |v| crate::holdfire::hold_fire_drill(v, None));
+        crate::seats::each_seat(g, &mut |v| crate::holdfire::hold_fire_drill(v));
         if live_of(g).stun {
             let by = crate::seats::first_of(g, &mut |v| {
                 if crate::doortools::door_tools_take(v, crate::doortools::DoorToolsTakeWhat::Bang) { Some(v.seat) } else { None }
@@ -536,7 +532,6 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
         NightBreachState::Inside => {
             let d = g.night_breach.drill.as_mut().unwrap();
             d.phase = crate::breach::Phase::Done;
-            d.t_done = d.t;
             d.beats.push(crate::breach::BreachDrillBeatsItem { what: String::from("recalled") });
             None
         }
@@ -545,7 +540,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
 }
 
 /// Once a frame from Game.update, after the Director and before the guards move.
-pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
+pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, cam: Option<CameraId>) {
     if !crate::nightbreach::night_breach_up(g) { return; }
     if g.night_breach.cut && cam.is_some() {
         g.night_breach.cut = false;
@@ -583,7 +578,6 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     }
     if drilled { crate::breach::breach_drill_tick(g, dt); }
     if own {
-        g.night_breach.blind_rounds = g.fight.blind_rounds;
     } else {
         night_breach_blind_fire(g);
     }
@@ -624,9 +618,8 @@ fn night_breach_blind_fire(g: &mut crate::game::Game) {
     for k in 0..n {
         let Some(h) = g.staged.foes.get(k).copied() else { break };
         let (Some(mut b), Some(door)) = (g.night_breach.bursts.get(k).copied(), g.night_breach.marks.get(k).map(|m| m.aim_at)) else { continue };
-        let fired = blind_turn(g, h, k as f64, &mut b, door);
+        blind_turn(g, h, k as f64, &mut b, door);
         if let Some(row) = g.night_breach.bursts.get_mut(k) { *row = b; }
-        if fired { g.night_breach.blind_rounds += 1.0; }
     }
 }
 

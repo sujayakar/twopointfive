@@ -24,10 +24,6 @@ fn fresh() -> crate::nvg::Team {
     }
 }
 
-/// One row of the QA log, the last 200.
-fn note(g: &crate::game::Game, gd: Option<GuardId>, what: &str) {
-}
-
 /// Is the team's state this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again).
 fn is_live(g: &Game) -> bool {
     match &g.m.nvg.teams {
@@ -252,8 +248,6 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
     team.mode = mode;
     team.why = why;
     if mode != was {
-        let word = if mode == Mode::Dark { "dark" } else { "lights free" };
-        note(g, None, &format!("team {} ({})", word, why.as_str()));
         g.m.nvg.teams.as_mut().unwrap().call_due = mode == Mode::Dark && was == Mode::Free;
     }
     // ---- each man
@@ -268,16 +262,6 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         read_place(g, gd, &mut row);   // (the row lives in g: lent by copy, written back at the foot of this walk. It writes only at its own foot and nothing it calls writes a row)
         let ruled = crate::guards::light_ruled(g, gd);
         let dark = mode == Mode::Dark && ruled && !(lead.is_none() && row.black);
-        if dark != row.dark {
-            let what = if dark {
-                "dark"
-            } else if mode == Mode::Dark && ruled {
-                "lights: too dark for the tube"
-            } else {
-                "light his own again"
-            };
-            note(g, Some(gd), what);
-        }
         row.dark = dark;
         if dark && caller.is_none() {
             caller = Some(gd);
@@ -291,7 +275,6 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         } else if g.time - row.agree_t >= (if want { g.k.nvg.down_secs } else { g.k.nvg.up_secs }) {
             row.down = want;
             row.agree_t = g.time;
-            note(g, Some(gd), if want { "goggles down" } else { "goggles up" });
         }
         *g.m.nvg.teams.as_mut().unwrap().men.get_mut(gd).unwrap() = row;
     }

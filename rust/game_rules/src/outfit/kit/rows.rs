@@ -80,7 +80,7 @@ pub(super) fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
         KitField::Weapon if i == 0.0 => {
             let t = value_text(v);
             let line = you_guns().get(t).cloned().unwrap_or_default();
-            crate::gear::gear_text(g, &line)
+            crate::gear::gear_text(&line)
         }
         KitField::Suppressed | KitField::SideCan => String::from(if value_truthy(v) { "on" } else { "off" }),
         KitField::Light => String::from(if value_truthy(v) { "fitted" } else { "none" }),
@@ -106,7 +106,7 @@ pub(super) fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
         }
         KitField::Primary | KitField::Secondary => {
             let word = crate::gunslots::pick_word(g, &value_text(v), None);
-            crate::gear::gear_text(g, &word)
+            crate::gear::gear_text(&word)
         }
         _ => value_text(v),
     }
@@ -122,7 +122,7 @@ pub(super) fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
     let id = slot_pick(m, slot);
     if can_choice(g, id) { return String::new(); }
     let word = crate::gunslots::pick_word(g, id, None);
-    let name = crate::gear::gear_text(g, &word);
+    let name = crate::gear::gear_text(&word);
     let says = if kit_slot_can(g, m, slot) { "made with it" } else { "none fits it" };
     alloc::format!("{}: {}", name, says)
 }
@@ -371,7 +371,7 @@ fn plural(n: f64) -> &'static str {
 fn gun_words(g: &Game, m: &MemberKit, slot: crate::gunslots::GunSlot) -> String {
     let id = slot_pick(m, slot);
     let word = crate::gunslots::pick_word(g, id, None);
-    let name = crate::gear::gear_text(g, &word);
+    let name = crate::gear::gear_text(&word);
     let bare = can_choice(g, id) && !kit_slot_can(g, m, slot);
     alloc::format!("{}{}", name, if bare { " bare" } else { "" })
 }
@@ -389,13 +389,13 @@ fn guns_words(g: &Game, m: &MemberKit) -> String {
 /// A pick's name in a card's words.
 fn pick_words(g: &Game, id: &str) -> String {
     let word = crate::gunslots::pick_word(g, id, None);
-    crate::gear::gear_text(g, &word)
+    crate::gear::gear_text(&word)
 }
 
 /// GUN_SHORT[w] in a card's words.
-fn gun_short_words(g: &Game, w: crate::weapons::WeaponId) -> String {
+fn gun_short_words(w: crate::weapons::WeaponId) -> String {
     let short = gun_short().get(String::from(w.as_str())).cloned().unwrap_or_default();
-    crate::gear::gear_text(g, &short)
+    crate::gear::gear_text(&short)
 }
 
 /// A card in a line.
@@ -423,7 +423,7 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
             }
         } else {
             let line = you_guns().get(String::from(m.weapon.as_str())).cloned().unwrap_or_default();
-            crate::gear::gear_text(g, &line)
+            crate::gear::gear_text(&line)
         };
         let or_no = |x: f64| if js::truthy(x) { alloc::format!("{}", x) } else { String::from("no") };
         let shells = if slots_on && js::truthy(m.shells) { alloc::format!(", {}\u{a0}×\u{a0}40\u{a0}mm", m.shells) } else { String::new() };
@@ -448,9 +448,9 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
         guns_words(g, &m)
     } else {
         let w = kit_gun(g, &m);
-        let first = gun_short_words(g, w);
+        let first = gun_short_words(w);
         match kit_side(g, &m) {
-            Some(side) => alloc::format!("{} + {}", first, gun_short_words(g, side)),
+            Some(side) => alloc::format!("{} + {}", first, gun_short_words(side)),
             None => first,
         }
     };

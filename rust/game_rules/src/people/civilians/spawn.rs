@@ -38,17 +38,6 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
     crate::civilians::CivSpots { phones: stands(&q.phones), exits: stands(&q.wayouts) }
 }
 
-
-/// One line of what happened to her, kept on the record, the last few only.
-pub(super) fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
-    let line = format!("{} {}", js::to_fixed(g.time, 1), what);
-    let c = g.gd[gd].civ.unwrap();
-    g.cv[c].log.push(line);
-    if g.cv[c].log.len() > 40 {
-        g.cv[c].log.drain(0..10);
-    }
-}
-
 /// A civilian comes into a game here and nowhere else; one more than a step of the doors can be handed is a level too big.
 fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
     let most = crate::levelfit::civ_most(g);
@@ -71,7 +60,6 @@ pub fn spawn_civilians(g: &mut crate::game::Game) {
     for (i, def) in defs.iter().enumerate() {
         let gd = make_civilian(g, def, i as f64);
         join(g, gd);
-        g.stats.civilians.spawned += 1;
     }
 }
 
@@ -81,42 +69,6 @@ pub fn civilians_leave(g: &mut crate::game::Game) {
         let c = g.gd[cv].ch;
         crate::sim_men_store::man_leaves(g, c);
     }
-}
-
-/// Whoever a seat has hold of or is hauling let go of, then fresh civilians.  
-pub fn reset_civilians(g: &mut crate::game::Game) {
-    for s in g.seats.clone() {
-        let pl = crate::cmd::seat_man(g, s);
-        if let Some(h) = g.pl[pl].holding.as_ref().map(|h| h.g) {
-            if g.gd[h].civ.is_some() {
-                g.gd[h].held = None;
-                let hc = g.gd[h].ch;
-                g.ch[hc].anim.held_pose = None;
-                g.pl[pl].holding = None;
-                let pc = g.pl[pl].ch;
-                g.ch[pc].anim.hold_pose = None;
-            }
-        }
-        if let Some(d) = g.pl[pl].dragging {
-            if g.gd[d].civ.is_some() {
-                crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::game::game_toggle_drag(g, None));
-            }
-        }
-        if let Some(t) = g.pl[pl].takedown.as_ref().map(|t| t.g) {
-            if g.gd[t].civ.is_some() {
-                g.pl[pl].takedown = None;
-            }
-        }
-    }
-    for cv in g.civilians.clone() {
-        let c = g.gd[cv].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
-    let floor = floor_of(g);
-    floor.evac_told = false;
-    floor.greet_at = -1e9;
-    floor.pending.clear();
-    spawn_civilians(g);
 }
 
 /// A civilian of the usual make at her first mark, doing what she does there.
@@ -160,7 +112,6 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
         her: String::from(if worker { "him" } else { "her" }),
         state: CivState::Work,
         state_at: g.time,
-        task_t: 0.0,
         rise_t: 0.0,
         seated: false,
         settle_t: -1.0,
@@ -169,7 +120,6 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
         shrug_at: -1e9,
         cause: None,
         cause_pos: None,
-        cause_at: -1.0,
         armed: false,
         alarm_n: 0.0,
         seen_at: -1e9,
@@ -198,13 +148,11 @@ fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDe
         scream_at: -1e9,
         whimper_at: -1e9,
         greet_at: -1e9,
-        last_line_at: -1e9,
         told: JsMap::new(),
         known_bodies: JsSet::new(),
         intel_n: 0,
         vis: 0.0,
         dice: crate::dice::Die::new(js::to_i32(crate::math_dice::hash_str(&format!("civdice:{}", def.name))) as u32),
-        log: Vec::new(),
     };
     let c = g.cv.push(civ);
     g.gd[gd].civ = Some(c);

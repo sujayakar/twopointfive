@@ -178,7 +178,6 @@ pub struct Witness {
     pub saw_body: Option<crate::game::WitnessSawBody>,
     pub called_to_body: Option<crate::game::WitnessCalledToBody>,
     pub saw_held: Option<crate::game::WitnessSawHeld>,
-    pub was_held: f64,
     pub dazzled: f64,
 }
 
@@ -359,7 +358,7 @@ pub struct Game {
     #[is(crate::Opaque)] pub men: crate::Opaque,
     pub light_home: crate::fixtures::LightHome,
     pub pose_sets: Vec<PoseSetId>,
-    pub falls: crate::sim_fallshome::FallStore,
+    pub falls: crate::falls::Falls,
     #[is(true)] pub ai_enabled: bool,
     pub god_mode: bool,
     pub infinite_ammo: bool,
@@ -402,11 +401,10 @@ pub struct Game {
     pub beacons: Vec<crate::game::GameBeaconsItem>,
     pub items: crate::throwables::Throwables,
     pub fx: Vec<crate::game::GameFxItem>,
-    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
+    #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
     pub weather: crate::weather::Weather,
     #[is(1.0)] pub fx_seed: f64,
-    pub ocp_cooldown: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
     #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
@@ -479,7 +477,6 @@ pub struct Game {
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
     pub local_seat: Option<SeatId>,
-    pub ticking: bool,
     /// (worked out again from the rest, or only counted: in no bytes)
     #[bytes(skip)]
     pub alone_own: crate::game::AsideOwn,
@@ -692,7 +689,6 @@ pub enum Temperament {
     Nervy,
     Hard,
 }
-
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Player {
@@ -1040,7 +1036,7 @@ pub struct Guard {
     pub found: bool,
     pub down_kind: Option<crate::game::DownKind>,
     pub down_by: Option<crate::game::DownBy>,
-    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 })] pub witness: crate::game::Witness,
+    #[is(crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, dazzled: 0.0 })] pub witness: crate::game::Witness,
     #[is(GameTalkId(0))] pub talk: GameTalkId,
     pub keys: JsSet<String>,
     #[is(-1.0)] pub missed_at: f64,
@@ -1152,8 +1148,6 @@ pub struct GuardHeld {
     pub by: crate::game::GuardHeldBy,
     pub since: f64,
     pub variant: crate::character::HoldVariant,
-    pub phase: crate::character::HoldPhase,
-    pub reverse: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -1402,9 +1396,6 @@ pub struct Mods {
     pub sim_sim: crate::sim_sim::SimSimMod,
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
-    pub sim_propshome: crate::sim_propshome::SimPropshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
     pub scene_box_mirror: crate::scene_box_mirror::SceneBoxMirrorMod,
     /// (counts of what was asked: in no bytes)
     #[bytes(skip)]
@@ -1418,9 +1409,6 @@ pub struct Mods {
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
     pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
     pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
@@ -1428,12 +1416,7 @@ pub struct Mods {
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_fallshome: crate::sim_fallshome::SimFallshomeMod,
     pub edge_look: crate::edge_look::EdgeLookMod,
-    pub wallbreak: crate::wallbreak::WallbreakMod,
-    pub furnblast: crate::furnblast::FurnblastMod,
     pub doorblast: crate::doorblast::DoorblastMod,
     pub fire: crate::fire::FireMod,
     pub winbars: crate::winbars::WinbarsMod,
@@ -1491,17 +1474,14 @@ pub struct Mods {
     pub doorforce: crate::doorforce::DoorforceMod,
     pub glassbreak: crate::glassbreak::GlassbreakMod,
     pub glass: crate::glass::GlassMod,
-    pub wallpen: crate::wallpen::WallpenMod,
     pub suppression: crate::suppression::SuppressionMod,
     pub enemysquads: crate::enemysquads::EnemysquadsMod,
     pub morale: crate::morale::MoraleMod,
     pub doortools: crate::doortools::DoortoolsMod,
-    pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
-    pub pairup: crate::pairup::PairupMod,
     pub sneak: crate::sneak::SneakMod,
     pub silent: crate::silent::SilentMod,
     pub cast: crate::cast::CastMod,
@@ -1510,9 +1490,6 @@ pub struct Mods {
     pub combat: crate::combat::CombatMod,
     pub scene_level_load: crate::scene_level_load::SceneLevelLoadMod,
     pub snow_bog: crate::snow_bog::SnowBogMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub sim_itemshome: crate::sim_itemshome::SimItemshomeMod,
     pub frag: crate::frag::FragMod,
     pub teampace: crate::teampace::TeampaceMod,
     pub squad: crate::squad::SquadMod,
@@ -1542,102 +1519,50 @@ pub struct Mods {
 /// each module's counters: g.stats.<module>
 #[derive(Clone, Debug, Default)]
 pub struct Stats {
-    pub wand: crate::wand::WandStats,
-    pub cmdring: crate::cmdring::CmdringStats,
     pub workstow: crate::workstow::WorkstowStats,
-    pub holdfire: crate::holdfire::HoldfireStats,
     pub picture: crate::picture::PictureStats,
-    pub shards: crate::shards::ShardsStats,
     pub carlamps: crate::carlamps::CarlampsStats,
-    pub edge_look: crate::edge_look::EdgeLookStats,
-    pub wallbreak: crate::wallbreak::WallbreakStats,
-    pub furnblast: crate::furnblast::FurnblastStats,
     pub doorblast: crate::doorblast::DoorblastStats,
-    pub winbars: crate::winbars::WinbarsStats,
     pub destruction: crate::destruction::DestructionStats,
-    pub break_table: crate::break_table::BreakTableStats,
-    pub wind: crate::wind::WindStats,
     pub glasspen: crate::glasspen::GlasspenStats,
-    pub gunroles: crate::gunroles::GunrolesStats,
     pub doorway: crate::doorway::DoorwayStats,
-    pub handleside: crate::handleside::HandlesideStats,
-    pub aimcost: crate::aimcost::AimcostStats,
-    pub runner: crate::runner::RunnerStats,
     pub netquiet: crate::netquiet::NetquietStats,
     pub stackroom: crate::stackroom::StackroomStats,
-    pub rearwatch: crate::rearwatch::RearwatchStats,
-    pub roomfit: crate::roomfit::RoomfitStats,
     pub gunslots: crate::gunslots::GunslotsStats,
     pub coverfire: crate::coverfire::CoverfireStats,
-    pub wallreact: crate::wallreact::WallreactStats,
     pub tactics: crate::tactics::TacticsStats,
-    pub digin: crate::digin::DiginStats,
-    pub stickycam: crate::stickycam::StickycamStats,
     pub par: crate::par::ParStats,
-    pub aimweight: crate::aimweight::AimweightStats,
-    pub calmtorch: crate::calmtorch::CalmtorchStats,
-    pub darkfoe: crate::darkfoe::DarkfoeStats,
     pub whistle: crate::whistle::WhistleStats,
     pub attention: crate::attention::AttentionStats,
-    pub doze: crate::doze::DozeStats,
-    pub needs: crate::needs::NeedsStats,
-    pub gunwall: crate::gunwall::GunwallStats,
-    pub lightswitch: crate::lightswitch::LightswitchStats,
     pub samstun: crate::samstun::SamstunStats,
-    pub stalk: crate::stalk::StalkStats,
     pub darkdoor: crate::darkdoor::DarkdoorStats,
-    pub startle: crate::startle::StartleStats,
     pub flinch: crate::flinch::FlinchStats,
     pub sprintdoor: crate::sprintdoor::SprintdoorStats,
-    pub seenwalk: crate::seenwalk::SeenwalkStats,
-    pub wet: crate::wet::WetStats,
     pub he40: crate::he40::He40Stats,
-    pub stackline: crate::stackline::StacklineStats,
     pub unseen: crate::unseen::UnseenStats,
-    pub squadsmoke: crate::squadsmoke::SquadsmokeStats,
-    pub squad40: crate::squad40::Squad40Stats,
-    pub throwplan: crate::throwplan::ThrowplanStats,
-    pub squadthrow: crate::squadthrow::SquadthrowStats,
-    pub autopilot: crate::autopilot::AutopilotStats,
     pub kitanim: crate::kitanim::KitanimStats,
-    pub peeksight: crate::peeksight::PeeksightStats,
     pub friends: crate::friends::FriendsStats,
     pub friendlyfire: crate::friendlyfire::FriendlyfireStats,
     pub cleanrestart: crate::cleanrestart::CleanrestartStats,
     pub fireline: crate::fireline::FirelineStats,
-    pub noshove: crate::noshove::NoshoveStats,
-    pub doorforce: crate::doorforce::DoorforceStats,
     pub wallpen: crate::wallpen::WallpenStats,
     pub condition: crate::condition::ConditionStats,
     pub morale: crate::morale::MoraleStats,
     pub shotgun: crate::shotgun::ShotgunStats,
     pub bigkit: crate::bigkit::BigkitStats,
-    pub close: crate::close::CloseStats,
     pub takedown: crate::takedown::TakedownStats,
     pub spotted: crate::spotted::SpottedStats,
     pub pairorders: crate::pairorders::PairordersStats,
     pub pairup: crate::pairup::PairupStats,
     pub sneak: crate::sneak::SneakStats,
     pub silent: crate::silent::SilentStats,
-    pub lesson: crate::lesson::LessonStats,
     pub rails: crate::rails::RailsStats,
     pub frag: crate::frag::FragStats,
     pub teampace: crate::teampace::TeampaceStats,
-    pub quiet: crate::quiet::QuietStats,
-    pub workthings: crate::workthings::WorkthingsStats,
-    pub lighting: crate::lighting::LightingStats,
-    pub handwork: crate::handwork::HandworkStats,
     pub wandorder: crate::wandorder::WandorderStats,
     pub civilians: crate::civilians::CiviliansStats,
     pub deathrecap: crate::deathrecap::DeathrecapStats,
-    pub planmode: crate::planmode::PlanmodeStats,
     pub doorthrow: crate::doorthrow::DoorthrowStats,
-    pub shutdoor: crate::shutdoor::ShutdoorStats,
-    pub fixture_break: crate::fixture_break::FixtureBreakStats,
-    pub moths: crate::moths::MothsStats,
-}
-impl Stats {
-    pub fn blank() -> Self { Self::default() }
 }
 
 #[cfg(test)]

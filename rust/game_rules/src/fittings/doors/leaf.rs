@@ -158,46 +158,6 @@ fn door_set_mirrored(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g,
 pub fn door_off(g: &crate::game::Game, id: DoorId) -> bool { col(g, id, ::sim::doors::OFF) != 0.0 }
 pub(in crate::fittings) fn door_set_off(g: &mut crate::game::Game, id: DoorId, v: bool) { set_flag(g, id, ::sim::doors::OFF, v) }
 
-/// the loose slab while the leaf is off. A COPY of the row as it stands now, where the TypeScript hands a view that reads the row at each field
-pub fn door_slab(g: &mut crate::game::Game, id: DoorId) -> Option<crate::doors::SlabSeen> {
-    let (i, r) = (g.dr[id].i, g.dr[id].slab_row);
-    if crate::sim_slabshome::slab_store_row_of(g, i) < 0.0 { return None; }
-    Some(crate::doors::SlabSeen {
-        p: slab_row_p(g, r),
-        v: slab_row_v(g, r),
-        a: slab_row_a(g, r),
-        spin: slab_row_spin(g, r),
-        tip: slab_row_tip(g, r),
-        tip_v: slab_row_tip_v(g, r),
-        side: slab_row_side(g, r),
-        rest: slab_row_rest(g, r),
-        landed: slab_row_landed(g, r),
-        who: slab_row_who(g, r),
-        t: slab_row_t(g, r),
-        ang: slab_row_ang(g, r),
-        bits: slab_row_bits(g, r),
-        wedged: Some(slab_row_wedged(g, r)),
-    })
-}
-/// `a` and `b` are the same numbers, to the bit (what `s === this.slabRow` asked)
-fn same_slab(a: &crate::doors::SlabSeen, b: &crate::doors::SlabSeen) -> bool {
-    fn same(x: &[f64], y: &[f64]) -> bool { x.iter().zip(y.iter()).all(|(p, q)| p.to_bits() == q.to_bits()) }
-    same(&a.p, &b.p) && same(&a.v, &b.v)
-        && same(&[a.a, a.spin, a.tip, a.tip_v, a.side, a.who, a.t, a.ang], &[b.a, b.spin, b.tip, b.tip_v, b.side, b.who, b.t, b.ang])
-        && a.rest == b.rest && a.landed == b.landed
-        && match (&a.bits, &b.bits) { (Some(x), Some(y)) => same(x, y), (None, None) => true, _ => false }
-        && a.wedged.unwrap_or(0.0).to_bits() == b.wedged.unwrap_or(0.0).to_bits()
-}
-/// sets a row whole, or with None gives the row up. Setting a door's slab to what `door_slab` just answered is nothing
-pub(in crate::fittings) fn door_set_slab(g: &mut crate::game::Game, id: DoorId, s: Option<crate::doors::SlabSeen>) {
-    let i = g.dr[id].i;
-    let Some(s) = s else { crate::sim_slabshome::slab_store_leave(g, i); return; };
-    if let Some(row) = door_slab(g, id) { if same_slab(&s, &row) { return; } }
-    let now = crate::sim_slabshome::SlabNow { p: s.p, v: s.v, a: s.a, spin: s.spin, tip: s.tip, tip_v: s.tip_v, side: s.side, rest: s.rest, landed: s.landed, who: s.who, t: s.t, ang: s.ang, wedged: s.wedged, bits: s.bits };
-    let r = crate::sim_slabshome::slab_store_enter(g, i, !now.rest);
-    crate::sim_slabshome::slab_store_save(g, r, now);
-}
-
 /// the rounds' work this leaf has taken
 pub(in crate::fittings) fn door_shot(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::SHOT) }
 pub fn door_set_shot(g: &mut crate::game::Game, id: DoorId, v: f64) { set_col(g, id, ::sim::doors::SHOT, v) }
@@ -209,8 +169,6 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
     let index = index.unwrap_or(0.0);
     let mut door = crate::doors::Door::blank();
     door.i = index;
-    door.slab_row = slab_row_new(g, index);
-    door.drive_cols = drive_cols_new(g, index);
     door.def = def.clone();
     let id = g.dr.push(door);
     // (what the fields' own initialisers were)
@@ -301,7 +259,7 @@ pub fn door_reset(g: &mut crate::game::Game, id: DoorId) {
     door_set_shot(g, id, 0.0);
     if door_off(g, id) {   // hung again, as authored
         door_set_off(g, id, false);
-        door_set_slab(g, id, None);
+        g.dr[id].slab = None;
         let (b, h, marks) = (g.dr[id].box_, g.dr[id].leaf_h, g.dr[id].leaf_marks.clone());
         let leaf = seam_box(g, b);
         leaf.h = h;
@@ -394,8 +352,7 @@ fn pose_of(hinge: [f64; 2], w: f64, closed_dir: f64, thick: f64, height: f64, an
 
 /// the level's doors: their columns a part of the game's one block, `g.sim`. `emit` is not kept: the word is `Doors.sound`'s to say, by name
 pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::doors::DoorEvent)) -> crate::doors::Doors {
-    let store = crate::sim_doorshome::door_store_new(g, crate::Opaque, defs.len() as f64);
-    let slabs = crate::sim_slabshome::slab_store_new(g, crate::Opaque, defs.len() as f64);
+    crate::sim_doorshome::door_store_new(defs.len() as f64);
     let mut list = Vec::with_capacity(defs.len());
     for (i, d) in defs.iter().enumerate() {
         list.push(door_new(g, d, Some(i as f64)));
@@ -407,7 +364,7 @@ pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit
         seam_box(g, h0).mkey = Some(key + i as f64 * 4.0 + 1.0);
         seam_box(g, h1).mkey = Some(key + i as f64 * 4.0 + 2.0);
     }
-    crate::doors::Doors { list, slabs, ..crate::doors::Doors::blank() }
+    crate::doors::Doors { list, ..crate::doors::Doors::blank() }
 }
 pub fn doors_by_name(g: &crate::game::Game, n: &str) -> Option<DoorId> {
     for i in 0..g.doors.list.len() {
@@ -536,7 +493,7 @@ fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors:
     let (n, nc) = (g.doors.list.len(), contacts.len());
     for i in 0..n {
         let d = g.doors.list[i];
-        let slab = door_slab(g, d);
+        let slab = g.dr[d].slab;
         {
             let dd = &g.dr[d];
             let f = &dd.def;
@@ -630,7 +587,7 @@ fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors:
     io.par[::sim::doors::P_WMAX_X] = world.max[0];
     io.par[::sim::doors::P_WMIN_Z] = world.min[2];
     io.par[::sim::doors::P_WMAX_Z] = world.max[2];
-    io.par[::sim::doors::P_FOOT] = crate::scene_collision::foot_of(g, FLOOR_Y0);
+    io.par[::sim::doors::P_FOOT] = crate::scene_collision::foot_of(FLOOR_Y0);
     let first = g.seats[0];   // (game.ts:1205 settleY1: the head of the span the settled man is pushed out of the statics over, of the first seat's man)
     let man = crate::cmd::seat_man(g, first);
     io.par[::sim::doors::P_SETTLE_Y1] = if g.pl[man].crouch { 1.0 } else { 1.7 };
@@ -671,7 +628,6 @@ mod tests {
         for (n, k) in [(0.0, crate::doors::DoorDriveKind::Boot), (1.0, crate::doors::DoorDriveKind::Swing), (2.0, crate::doors::DoorDriveKind::Body), (3.0, crate::doors::DoorDriveKind::Hand)] {
             assert_eq!(drive_kind_of(n), k);
             assert_eq!(drive_kind_num(k), n);
-            assert_eq!(crate::sim_doorshome::drive_kinds()[n as usize], k.as_str());
         }
     }
 

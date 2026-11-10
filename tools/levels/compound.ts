@@ -447,8 +447,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const THICK = new Set(['front', 's_w', 'p_back', 'g_n', 'g_e', 'shed_s', 'shed_e', 'hut_w', 'hut_e', 'yard_sw']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them all
-  // out with the switch off, and then this is the compound above, box for box). A FARMER'S WALLED HOUSE THAT A FAMILY STILL LIVES IN: each room is furnished for the
+  // ---------------- LIVED IN (lib/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…').
+  // A FARMER'S WALLED HOUSE THAT A FAMILY STILL LIVES IN: each room is furnished for the
   // family first (the household on the ground: cushions, quilts, trays, sacks, brass and blue tin), and the gunmen are guests — one or two of their things laid on
   // a family thing in a room (a rifle across a flowered blanket, a chest rig on the loom, boots dumped in the shoe hall). Rules kept: nothing within 1.1 m of a
   // door's line or in a leaf's sweep, the wall a pair stacks on beside a jamb stays bare, nothing solid on a mark or across its aim; what lies on marks, lanes

@@ -122,28 +122,21 @@ pub struct Loaded {
 }
 
 /// THE LEVEL FILE `data` INTO `g`: its boxes and routes as rows, `g.level`, the level's name and its script. Refuses a file it cannot read whole.
-/// `dressing` / `lived`: the two switches a file's optional furniture stands under.
-pub fn load(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> Loaded {
+pub fn load(g: &mut Game, data: &Json) -> Loaded {
     let (read, faults) = file::read(data);
     match read {
-        Some(f) => lay(g, f, dressing, lived),
+        Some(f) => lay(g, f),
         None => panic!("level '{}': {} faults in the file:\n  {}", data.get("name").str().unwrap_or("?"), faults.len(), faults.join("\n  ")),
     }
 }
 
-/// the furniture that makes a room a level's own: a box by its group, a prop, a light or a switchable by its id
-fn is_lived(tag: &str) -> bool { tag == "lived" || tag.starts_with("lived.") }
-
-fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
+fn lay(g: &mut Game, f: LevelFile) -> Loaded {
     let name = f.name;
     let paint = Paint { name: &name, mats: &f.materials };
-    // (the DRESSING and the LIVED things come last in the file and are left out with their switch off: every other box keeps its index)
-    let keep = |id: &str| lived || !is_lived(id);
-    let stays = |b: &BoxData| (dressing || b.group.as_deref() != Some("dressing")) && b.group.as_deref().map_or(true, keep);
     // boxes, in file order (index i of the file IS static box i)
     let mut ids: Vec<String> = Vec::new();
     let mut boxes: Vec<BoxId> = Vec::new();
-    for b in f.boxes.into_iter().filter(stays) {
+    for b in f.boxes {
         let said = Said::from(&b);
         let mut p = MakeBoxP { c: b.c, h: b.h, ..blank_box() };
         p.yaw = Some(b.yaw.unwrap_or(0.0));
@@ -159,7 +152,7 @@ fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
     }
     let bx = |id: &str| -> f64 { ids.iter().position(|x| x == id).unwrap_or_else(|| panic!("level '{}': unknown box '{}'", name, id)) as f64 };
     // loose props
-    let props: Vec<PropDef> = f.props.into_iter().filter(|p| keep(&p.id)).map(|p| {
+    let props: Vec<PropDef> = f.props.into_iter().map(|p| {
         let parts: Vec<PropPart> = p.parts.into_iter().map(|q| {
             let said = Said::from(&q);
             PropPart { off: q.off, h: q.h, yaw: q.yaw.unwrap_or(0.0), albedo: paint.albedo(&said), stuff: paint.stuff(&said), does: paint.does(&said), marks: laid_markings(q.markings) }
@@ -175,8 +168,8 @@ fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
         pos: l.pos, dir: l.dir, color: l.color, intensity: l.intensity, range: l.range, inner_deg: l.inner_deg, outer_deg: l.outer_deg, name: l.id, group: l.group,
         enabled: l.enabled, volumetric: l.volumetric, fixture_box: l.fixture.as_deref().map(bx), radius: l.radius, mains: l.mains, broad: l.broad,
     };
-    let lights: Vec<LightDef> = f.lights.into_iter().filter(|l| keep(&l.id)).map(light_of).collect();
-    let switchables: Vec<LevelSwitchablesItem> = f.switchables.into_iter().filter(|s| keep(&s.id)).map(|s| LevelSwitchablesItem {
+    let lights: Vec<LightDef> = f.lights.into_iter().map(light_of).collect();
+    let switchables: Vec<LevelSwitchablesItem> = f.switchables.into_iter().map(|s| LevelSwitchablesItem {
         name: s.id, boxes: s.boxes.iter().map(|b| bx(b)).collect(), group: s.group, on: s.on, base_emissive: s.base_emissive, flicker: s.flicker, mains: s.mains,
     }).collect();
     let doors: Vec<LevelDoorDef> = f.doors.into_iter().map(|d| LevelDoorDef {

@@ -20,16 +20,16 @@ fn plain_fog(q: &crate::query::Query) -> bool {
 }
 
 /// The link is one the quiet fog reads: a quiet mission's, or the solo night's own.
-fn quiet_like(g: &crate::game::Game, q: &crate::query::Query) -> bool {
+fn quiet_like(q: &crate::query::Query) -> bool {
     match crate::scene_scenario_list::spec_of(q) {
         Some(s) => s.kind == crate::scene_scenarios::MissionKind::Quiet,
-        None => crate::quietfog::solo_fog_link(g, q),
+        None => crate::quietfog::solo_fog_link(q),
     }
 }
 
 /// The sticky cameras a link hands the player for the visit where its fog runs.
 pub fn quiet_cams_of_link(g: &crate::game::Game, q: &crate::query::Query) -> f64 {
-    if quiet_like(g, q) {
+    if quiet_like(q) {
         let lesson = lesson_level(q);
         crate::quietfog::quiet_cams_of_query(g, q, Some(lesson))
     } else {
@@ -39,7 +39,7 @@ pub fn quiet_cams_of_link(g: &crate::game::Game, q: &crate::query::Query) -> f64
 
 /// The rung of the fog lever a quiet mission's query asks to be played under.
 pub(super) fn quiet_rung_of_query(g: &crate::game::Game, q: &crate::query::Query) -> crate::quietfog::QuietRung {
-    if quiet_like(g, q) {
+    if quiet_like(q) {
         let lesson = lesson_level(q);
         crate::quietfog::quiet_fog_of_query(g, q, Some(lesson))
     } else {
@@ -49,7 +49,7 @@ pub(super) fn quiet_rung_of_query(g: &crate::game::Game, q: &crate::query::Query
 
 /// Fog of war as a query string asks for it, the squad's fog lever heard.
 pub fn fog_of_query(g: &crate::game::Game, q: &crate::query::Query) -> bool {
-    if crate::difficulty::fog_off_now(g) && !quiet_like(g, q) && !lesson_level(q) && !plain_fog(q) {
+    if crate::difficulty::fog_off_now(g) && !quiet_like(q) && !lesson_level(q) && !plain_fog(q) {
         return false;
     }
     fog_of_link(g, q)
@@ -100,7 +100,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
         StartFromQuerySearch::Text(s) => crate::query::Query::parse(s),
         StartFromQuerySearch::URLSearchParams(q) => q.clone(),
     };
-    crate::rowset::row_settings(g, &mut q);
+    crate::rowset::row_settings(&mut q);
     let q = &q;
     crate::hours::hour_from_query(g, q);
     let fog = fog_of_query(g, q);
@@ -136,7 +136,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 /// address's for the life of a game this start stands, as a page's is), and the visit's hour (`?hour=`, `?sun=`), which the stand lays over the level. A Weather born in its kind lays its roofs, its wet ground and its wind once; a host that stood the level's
 /// own storm first and changed the kind afterwards had another box table than a page.
 pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
-    crate::rowset::row_settings(g, q);
+    crate::rowset::row_settings(q);
     // (a Training level's stagings wear what its lesson asks: kit.ts kitLessonPage)
     crate::kit::kit_lesson_page(g, lesson_of_address(q).is_some());
     // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)

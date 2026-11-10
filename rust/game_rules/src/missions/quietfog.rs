@@ -11,18 +11,13 @@ fn rung_of(v: Option<&str>) -> Option<QuietRung> {
 }
 
 /// A link is the solo night's own, to be read as a quiet row's: `solo` on it, nothing else staged by it.
-pub(super) fn solo_fog_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
+pub(super) fn solo_fog_link(q: &crate::query::Query) -> bool {
     q.has("solo") && !not_solo().iter().any(|k| q.has(k))
 }
 
 /// A quiet mission that hands out its cameras hands the player a wand as well.
 pub fn quiet_wand(g: &crate::game::Game) -> bool {
     crate::stickycam::sticky_visit(g) > 0.0
-}
-
-/// Is this word one of the lever's rungs?
-fn is_rung(v: Option<&str>) -> bool {
-    quiet_rungs().iter().any(|r| Some(r.id.as_str()) == v)
 }
 
 /// The line beside the lever for a rung ('' = none).
@@ -60,7 +55,6 @@ pub(super) fn quiet_cams_default(g: &crate::game::Game) -> bool {
 
 /// Does this machine's quiet mission come with its cameras? Only ever with a rung up. The store's read is the host's.
 pub(super) fn quiet_cams(g: &mut crate::game::Game) -> bool {
-    g.m.quietfog.cams_read = true;
     let cams = match g.m.quietfog.cams {
         Some(c) => c,
         None => quiet_cams_default(g),
@@ -69,18 +63,17 @@ pub(super) fn quiet_cams(g: &mut crate::game::Game) -> bool {
 }
 
 /// The cameras' button: pressed with the lever on 'off' it moves the lever up. The store's write is the host's.
-pub(super) fn set_quiet_cams(g: &mut crate::game::Game, on: bool, keep: Option<bool>) {
+pub(super) fn set_quiet_cams(g: &mut crate::game::Game, on: bool) {
     g.m.quietfog.cams = Some(on);
-    g.m.quietfog.cams_read = true;
     if on && quiet_fog(g) == QuietRung::Off {
         let rung = if quiet_cams_default(g) { quiet_fog_default(g) } else { QuietRung::Team };
-        set_quiet_fog(g, rung, keep);
+        set_quiet_fog(g, rung);
     }
 }
 
 /// The cameras a quiet mission's query asks to be handed: none named is the default's, `cams=N` is N within what can be carried.
 pub(super) fn quiet_cams_of_query(g: &crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> f64 {
-    if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return 0.0; }
+    if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(q)) { return 0.0; }
     if quiet_fog_of_query(g, q, lesson) == QuietRung::Off { return 0.0; }
     if !q.has(PARAM_CAMS) {
         return if quiet_cams_default(g) { g.k.sticky.issue } else { 0.0 };
@@ -90,14 +83,13 @@ pub(super) fn quiet_cams_of_query(g: &crate::game::Game, q: &crate::query::Query
 }
 
 /// Move the lever on a quiet row. On 'off', where the cameras are a button, the press goes too. The store's writes are the host's.
-pub(super) fn set_quiet_fog(g: &mut crate::game::Game, rung: crate::quietfog::QuietRung, keep: Option<bool>) {
+pub(super) fn set_quiet_fog(g: &mut crate::game::Game, rung: crate::quietfog::QuietRung) {
     let def = quiet_fog_default(g);
     g.m.quietfog.pick = Some(rung);
     g.m.quietfog.pick_def = def;
     g.m.quietfog.kept = rung != def;
     if rung == QuietRung::Off && !quiet_cams_default(g) {
         g.m.quietfog.cams = None;
-        g.m.quietfog.cams_read = true;
     }
 }
 
@@ -112,7 +104,6 @@ pub fn quiet_fog_kept(g: &mut crate::game::Game, word: &str) {
 /// What this machine keeps of the cameras, as the store's read takes it: no lever moves.
 pub fn quiet_cams_kept(g: &mut crate::game::Game, on: bool) {
     g.m.quietfog.cams = Some(on);
-    g.m.quietfog.cams_read = true;
 }
 
 /// The text this machine keeps of the rung ('' = none: the default's own stores nothing).
@@ -124,14 +115,6 @@ pub(super) fn quiet_fog_text(g: &mut crate::game::Game) -> String {
 /// The text this machine keeps of the cameras just pressed ('' = none: the default's own stores nothing).
 pub(super) fn quiet_cams_text(g: &crate::game::Game, on: bool) -> String {
     if on == quiet_cams_default(g) { String::new() } else { String::from(if on { "1" } else { "0" }) }
-}
-
-/// The pick forgotten, to be read again.
-fn quiet_fog_forget(g: &mut crate::game::Game) {
-    g.m.quietfog.pick = None;
-    g.m.quietfog.kept = false;
-    g.m.quietfog.cams = None;
-    g.m.quietfog.cams_read = false;
 }
 
 /// A mission link with the quiet pick put right on it: a rung it carried is dropped, and on a quiet mission's link this machine's pick goes on where it is not the default's.
@@ -163,7 +146,7 @@ pub(super) fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool)
 
 /// The rung a query asks its quiet mission to be played under: none named is the default's; 'off' for what is not a quiet mission, or a lesson.
 pub(super) fn quiet_fog_of_query(g: &crate::game::Game, q: &crate::query::Query, lesson: Option<bool>) -> crate::quietfog::QuietRung {
-    if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(g, q)) { return QuietRung::Off; }
+    if lesson.unwrap_or(false) || !(q.has("quiet") || solo_fog_link(q)) { return QuietRung::Off; }
     match rung_of(q.get(PARAM)) {
         Some(rung) => rung,
         None => quiet_fog_default(g),
@@ -192,7 +175,7 @@ fn lift(g: &mut crate::game::Game, h: &mut crate::quietfog::Held) {
 pub(super) fn quiet_fog_start(g: &mut crate::game::Game, q: &crate::query::Query, rung: crate::quietfog::QuietRung) {
     quiet_fog_end(g);
     if rung == QuietRung::Off { return; }
-    let serial = g.serial();
+    g.serial();
     g.m.quietfog.held = Some(Held { cone: None, own: None });
     if !q.has("fogcone") {
         let put = rung != QuietRung::Team;
@@ -227,11 +210,11 @@ mod tests {
         assert_eq!(quiet_fog_href(&mut g, "/?quietfog=0&quietfog=own", false), "/?quietfog=0");
         assert_eq!(quiet_fog_href(&mut g, "/?cams=2", false), "/");
         assert_eq!(quiet_fog_href(&mut g, "/?a&&b", false), "/?a&&b");
-        set_quiet_fog(&mut g, QuietRung::Own, Some(false));
+        set_quiet_fog(&mut g, QuietRung::Own);
         assert_eq!(quiet_fog_href(&mut g, "/?quiet=a", true), "/?quiet=a&quietfog=own");
-        set_quiet_cams(&mut g, false, Some(false));
+        set_quiet_cams(&mut g, false);
         assert_eq!(quiet_fog_href(&mut g, "/", true), "/?quietfog=own&cams=0");
-        set_quiet_fog(&mut g, QuietRung::Off, Some(false));
+        set_quiet_fog(&mut g, QuietRung::Off);
         assert_eq!(quiet_fog_href(&mut g, "/", true), "/?quietfog=off");
     }
 
@@ -242,26 +225,10 @@ mod tests {
         assert!(!g.m.quietfog.kept);
         g.k.quietfog.def = QuietRung::Off;
         assert_eq!(quiet_fog(&mut g), QuietRung::Off);
-        set_quiet_fog(&mut g, QuietRung::Cones, None);
+        set_quiet_fog(&mut g, QuietRung::Cones);
         assert!(g.m.quietfog.kept);
         g.k.quietfog.def = QuietRung::Team;
         assert_eq!(quiet_fog(&mut g), QuietRung::Cones);
-    }
-
-    #[test]
-    fn the_cameras_only_ever_come_with_a_rung_up() {
-        let mut g = Game::blank();
-        assert!(quiet_cams(&mut g));
-        set_quiet_fog(&mut g, QuietRung::Off, None);
-        assert!(!quiet_cams(&mut g));
-        set_quiet_cams(&mut g, true, None);
-        assert_eq!(quiet_fog(&mut g), QuietRung::Team);
-        g.k.quietfog.def = QuietRung::Off;
-        quiet_fog_forget(&mut g);
-        set_quiet_cams(&mut g, true, None);
-        assert_eq!(quiet_fog(&mut g), QuietRung::Team);
-        set_quiet_fog(&mut g, QuietRung::Off, None);
-        assert_eq!(g.m.quietfog.cams, None);
     }
 
     #[test]
@@ -280,8 +247,6 @@ mod tests {
 
     #[test]
     fn the_rungs_words() {
-        assert!(is_rung(Some("own")) && is_rung(Some("off")));
-        assert!(!is_rung(Some("0")) && !is_rung(None));
         assert_eq!(rung_of(Some("cones")), Some(QuietRung::Cones));
         assert_eq!(rung_of(Some("x")), None);
         assert_eq!(quiet_fog_words(None), "");

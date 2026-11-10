@@ -40,12 +40,6 @@ pub struct ShellEndsItem {
     pub at: V3,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct ShotgunModSHOTGUNLAST {
-    pub ends: Vec<crate::shotgun::ShellEndsItem>,
-    pub glass: JsMap<crate::Num, Vec<f64>>,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BreachSpotClose {
     Shotgun,
@@ -61,21 +55,12 @@ pub struct BreachSpot {
     pub own: bool,
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct ShotgunMod {
-    #[is(crate::shotgun::ShotgunModSHOTGUNLAST { ends: Vec::new(), glass: JsMap::new() })] pub shotgun_last: crate::shotgun::ShotgunModSHOTGUNLAST,
-}
-
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct ShotgunStats {
-    pub shells: i32,
-    pub pellets: i32,
     pub in_men: i32,
     pub dropped: i32,
     pub peppered: i32,
-    pub locks: i32,
 }
 
 pub const LOCK_PROUD: f64 = 0.06;

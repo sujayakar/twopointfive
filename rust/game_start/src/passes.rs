@@ -179,7 +179,7 @@ fn form_box(b: &mut Box, f: &Form) {
     else if let Some(arc) = f.arc { let w = if arc.axis == 1.0 { b.h[2] } else { b.h[0] }; let r = (w * w + arc.rise * arc.rise) / (2.0 * arc.rise); b.cut_round = Some(arc.axis); b.cut_arc = Some(r - b.h[1]); }
     if f.old == Some(true) { b.cut_old = Some(true); }
 }
-/// A LEVEL'S SHAPES (shapes.ts shapeLevel with the switch up): each box that says a shape is given its record, and its pieces of trim follow the
+/// A LEVEL'S SHAPES (shapes.ts shapeLevel): each box that says a shape is given its record, and its pieces of trim follow the
 /// level's last box, so no box changes its number. Never a tilted box, a box cut already or a window's bar. Answers how many
 /// boxes are shaped; `ids` grows by the pieces.
 pub fn shape_level(g: &mut Game, ids: &mut Vec<BoxId>) -> usize {

@@ -45,7 +45,7 @@ pub(super) fn big_broken() -> bool {
 }
 
 /// The big slot's tool that opens this door from where you stand.
-pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, p: Option<V3>) -> Option<crate::bigkit::SamBig> {
+pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<crate::bigkit::SamBig> {
     let pid = seat.player;
     let kit = g.pl[pid].big_kit;
     if !g.k.bigslot.on
@@ -179,7 +179,7 @@ pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate:
     if m::min(v3::dist_xz(door, p), v3::dist_xz(g.dr[d].frame_centre, p)) >= g.k.bigslot.reach {
         return None;
     }
-    let tool = sam_big(g, &crate::seats::here(g), d, Some(p))?;
+    let tool = sam_big(g, &crate::seats::here(g), d)?;
     let (asked, answer) = match tool {
         SamBig::Shotgun => (SamBigSpotTool::Shotgun, SamBigFar::Shotgun),
         SamBig::Hammer => (SamBigSpotTool::Hammer, SamBigFar::Hammer),
@@ -210,7 +210,6 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
     let l = m::hyp2(dx, dz);
     if via.is_none() && l < 0.06 {
         mv.arrived = true;
-        g.stats.bigkit.sam_walks += 1;
         return yaw;
     }
     let step = m::min(l, MOVE_WALK * dt);
@@ -364,7 +363,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
 
 /// The row performed: the beat begins, the kick's verb with the tool in the boot's place.
 pub fn sam_big_start(g: &mut crate::game::Game, d: DoorId) {
-    let tool = match sam_big(g, &crate::seats::here(g), d, None) {
+    let tool = match sam_big(g, &crate::seats::here(g), d) {
         Some(SamBig::Shotgun) => crate::player::StartKickTool::Shotgun,
         Some(SamBig::Hammer) => crate::player::StartKickTool::Hammer,
         None => return,
@@ -486,7 +485,6 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
         }
         if gave {
-            g.stats.bigkit.sam_shot += 1;
             on_tool(g, pid, |t| t.gave = Some(true));
             over(g, pid, TAIL, true);
         } else if n >= g.k.bigslot.shells {
@@ -513,7 +511,6 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let pos = g.ch[c].pos;
     crate::marks::kick_scuff(g, d, pos);
     if gave {
-        g.stats.bigkit.sam_hammered += 1;
         on_tool(g, pid, |t| t.gave = Some(true));
         crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
     }
@@ -589,7 +586,6 @@ pub(super) fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let s = g.gd[gd].slung.as_mut().unwrap();
         s.out = true;
         s.t = now;
-        g.stats.bigkit.drawn += 1;
     }
     let up_at = g.gd[gd].slung.as_ref().unwrap().t;
     g.time - up_at >= big_equip(g, BigEquipKind::Shotgun)
@@ -603,7 +599,6 @@ pub(super) fn gun_down(g: &mut crate::game::Game, gd: GuardId) {
     }
     s.out = false;
     let (own, own_id, ahead) = (s.own, s.own_id, s.ahead);
-    g.stats.bigkit.slung += 1;
     if crate::condition::down(g, g.gd[gd].ch) {
         return;
     }
@@ -640,7 +635,6 @@ pub(super) fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 
     if g.gd[gd].big_out.as_ref().map_or(true, |h| h.end >= 0.0) {
         let t0 = g.time;
         g.gd[gd].big_out = Some(crate::game::GuardBigOut { t0, blows: Vec::new(), end: -1.0, at });
-        g.stats.bigkit.hammers_out += 1;
     }
     g.gd[gd].big_out.as_ref().unwrap().t0
 }
@@ -649,9 +643,6 @@ pub(super) fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 
 pub(super) fn hammer_in(g: &mut crate::game::Game, gd: GuardId, hard: Option<bool>) {
     let hard = hard.unwrap_or(false);
     let Some((t0, end)) = g.gd[gd].big_out.as_ref().map(|h| (h.t0, h.end)) else { return };
-    if end < 0.0 {
-        g.stats.bigkit.hammers_in += 1;
-    }
     if hard {
         let c = g.gd[gd].ch;
         g.gd[gd].big_out = None;

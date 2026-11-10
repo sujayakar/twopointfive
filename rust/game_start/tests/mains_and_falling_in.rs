@@ -41,7 +41,7 @@ fn the_mains_go_and_no_posted_man_walks() {
 
 /// The panel as it hangs: a point just off its face, chest high, and the way out of it.
 fn panel_of(p: &Play) -> ([f64; 3], [f64; 3], [f64; 3]) {
-    let th = work_things_things(&p.g, &game::seats::here(&p.g)).into_iter().find(|x| x.kind == WorkThingKind::Breaker).expect("a panel");
+    let th = work_things_things(&game::seats::here(&p.g)).into_iter().find(|x| x.kind == WorkThingKind::Breaker).expect("a panel");
     ([th.face[0] + th.n[0] * 0.05, 1.0, th.face[2] + th.n[2] * 0.05], th.face, th.n)
 }
 
@@ -87,7 +87,7 @@ fn where_the_fixed_spot_is_good_the_errand_keeps_it() {
 }
 
 fn order_of(p: &Play, m: GuardId) -> Option<(String, Option<[f64; 3]>)> {
-    game::orders::squad_orders_of(&p.g, &game::seats::here(&p.g), m).map(|a| { let a = &p.g.tab.orders_assignment[a]; (a.order.clone(), a.post) })
+    game::orders::squad_orders_of(&game::seats::here(&p.g), m).map(|a| { let a = &p.g.tab.orders_assignment[a]; (a.order.clone(), a.post) })
 }
 
 /// THE RULE (a settled rule): on the staging's own frame every living teammate is on the menu's fall in, no post, and nobody said it: no row in the orders' log and no line. Three seconds on with Sam standing still they're still on it and with him.

@@ -11,7 +11,6 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
     g.light_home = crate::fixtures::LightHome::blank();
-    g.falls = crate::sim_fallshome::fall_store_new(g, crate::Opaque);
     // level.boxes and col.boxes are one list in the TypeScript: here g.col.boxes, as the caller left it. `ids[i]` is what `level.boxes[i]` names
     let ids: Vec<BoxId> = g.col.boxes.clone();
     if let Some(over) = crate::levelfit::level_over(g, &level_counts_of(&level, &ids)) { panic!("{}", over); }
@@ -20,8 +19,6 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.local_seat = Some(g.seats[0]);
     // what this machine kept.
     crate::difficulty::levers_fog(g);
-    crate::fogofwar::fog_flags(g);
-    crate::irlight::ir_flags(g);
     crate::destruction::load_chaos(g);
     g.tune.wind = g.k.wind.def;   // (loadWind's first line; the rest of it is storage and it left the game)
     let name = crate::scene_level_load::level_name_of(g);
@@ -30,8 +27,8 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     let spawn = level.player_spawn;
     g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
     // loose furniture and thrown things: never collision occluders
-    g.props = crate::props::prop_system_new(g, &level.props, Some(crate::Opaque));
-    g.items = crate::throwables::throwables_new(g, Some(crate::Opaque));
+    g.props = crate::props::prop_system_new(g, &level.props);
+    g.items = crate::throwables::Throwables::blank();
     g.tracers = crate::tracers::tracers_new(g, None);   // (its lights and its sparks are reached by path)
     g.weather = crate::weather::weather_new(g);
     let p = g.player;
@@ -235,7 +232,6 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.rack_targets = targets.iter().copied().filter(|&t| { let f = &g.tab.fixture[t]; f.name == leds || f.name == glow }).collect();
     g.destr = crate::destruction::destruction_new(g);   // after the targets and devices exist: a lit screen dies through its target
     g.glass_break = crate::glassbreak::glass_break_new(g);
-    crate::glasspen::load_glass_pen(g);
     crate::winbars::boot_bars(g);
     g.shards = crate::shards::glass_shards_new(g);
     g.wind = crate::wind::wind_new(g);            // after the doors exist
@@ -243,21 +239,21 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.moths = crate::moths::moths_new(g);   // moths at the lamps: after the targets (the lamps are light targets)
     crate::game::game_stand_lights(g);   // the lamps the fixtures feed, as rows in the list's order (rust/sim/src/lights.rs); a fixture's authored bit is said by its `add` now
     crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
-    g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
+    g.fog_of_war = crate::fogofwar::fog_of_war_new();
     g.fog_picture = crate::fogofwar::FogPicture::blank();
     g.staged = crate::mission::Staged::default();
-    g.rails = crate::rails::rails_new(g);
-    g.lesson = crate::lesson::lesson_new(g);
-    g.night_breach = crate::nightbreach::night_breach_new(g);
-    g.room_clear = crate::roomclear::room_clear_scenario_new(g);
+    g.rails = crate::rails::rails_new();
+    g.lesson = crate::lesson::lesson_new();
+    g.night_breach = crate::nightbreach::night_breach_new();
+    g.room_clear = crate::roomclear::room_clear_scenario_new();
     stand_each_seat(g, &mut |v: &mut Game| { v.orders = crate::orders::squad_orders_new(v, None); });
-    g.fight = crate::roomfight::room_fight_new(g);
-    g.cues = crate::cues::cues_new(g);
-    g.squad_net = crate::squadnet::squad_net_new(g);
+    g.fight = crate::roomfight::room_fight_new();
+    g.cues = crate::cues::cues_new();
+    g.squad_net = crate::squadnet::squad_net_new();
     g.cover = crate::cover::cover_new(g);
-    g.entry = crate::entrypoints::entry_points_new(g);
-    g.cleared = crate::cleared::cleared_rooms_new(g);
-    g.rescue = crate::rescue::rescue_new(g);
+    g.entry = crate::entrypoints::entry_points_new();
+    g.cleared = crate::cleared::cleared_rooms_new();
+    g.rescue = crate::rescue::rescue_new();
     stand_each_seat(g, &mut |v: &mut Game| { v.door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
     crate::pairup::pair_up_apply(g, None);
     stand_each_seat(g, &mut |v: &mut Game| { v.pair = crate::pairorders::pair_orders_new(v); });   // (the people and the note are each seat's; the jobs are one book)

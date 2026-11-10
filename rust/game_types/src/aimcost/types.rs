@@ -10,9 +10,3 @@ pub struct RoundLeg {
     pub end: f64,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct AimcostStats {
-    pub lamp_hits: i32,
-    pub lamp_near: i32,
-}

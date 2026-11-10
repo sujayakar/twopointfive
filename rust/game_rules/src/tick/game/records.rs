@@ -29,37 +29,6 @@ pub fn fmt_clock(sec: f64) -> String {
     alloc::format!("{}:{}{}", js::num_str(m::floor(s / 60.0)), pad, tail)
 }
 
-/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.
-pub(super) fn new_mission(t0: f64) -> crate::game::Mission {
-    crate::game::Mission {
-        stage: crate::game::MissionStage::Infiltrate,
-        t0,
-        drive_t: -1.0,
-        pulled: false,
-        alarm_on: false,
-        sweep_at: -1.0,
-        spotted_t: -100.0,
-        down_card_at: -1.0,
-        hands_on: false,
-        stats: crate::game::MissionStats {
-            qrf_who: None,
-            elapsed: 0.0,
-            alerts: 0.0,
-            spotted: 0.0,
-            bodies: 0.0,
-            shots: 0.0,
-            kills: 0.0,
-            knockouts: 0.0,
-            keys: 0.0,
-            blackout: false,
-            sandbox: false,
-            qrf: 0.0,
-            qrf_at: -1.0,
-        },
-        serial: 0,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,28 +123,6 @@ pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate:
     }
 }
 
-/// A living friend stands in the lane his gun points down. Geometry only.
-pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
-    let c = g.gd[gd].ch;
-    let y = crate::character::character_gun_yaw(g, c);
-    let at = g.ch[c].pos;
-    let team = g.gd[gd].team;
-    for &o in &g.guards {
-        if o != gd && !crate::condition::down(g, g.gd[o].ch) && g.gd[o].team == team && in_lane(g.ch[g.gd[o].ch].pos, at, y) {
-            return true;
-        }
-    }
-    if crate::teams::hostile_to(g, gd, crate::teams::Team::Player) {
-        return false;
-    }
-    crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && in_lane(g.ch[g.pl[pl].ch].pos, at, y))
-}
-
-/// The `lane` closure of friendBeforeMuzzle.
-fn in_lane(p: V3, at: V3, y: f64) -> bool {
-    crate::character::in_dip_lane(p[0] - at[0], p[2] - at[2], y)
-}
-
 /// Down but breathing: put out cold, not shot. False for a living man and for a corpse.
 pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::condition::down(g, g.gd[gd].ch)
@@ -194,7 +141,6 @@ fn new_witness() -> crate::game::Witness {
         saw_body: None,
         called_to_body: None,
         saw_held: None,
-        was_held: 0.0,
         dazzled: 0.0,
     }
 }

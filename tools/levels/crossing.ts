@@ -440,7 +440,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------
 // What each place of the crossing is FOR, seen from above (lib/lived.ts: every box here is in a group `lived.<place>`, every prop is named
-// `lived.<place>.<what>`, all of it the tail of the lists and left out with the switch off). No light and no change to one: the hiding dark is the level.
+// `lived.<place>.<what>`, all of it the tail of the lists). No light and no change to one: the hiding dark is the level.
 // Outdoors everything is low or against a wall — the lane is a lit kill zone and the lot is the pair's cover as it was dealt.
 // A SOLID thing's top is either under 0.2 m (feet and the nav grid both pass over it) or over 0.25 (both go round): between the two a body is stopped by floor the grid calls free.
 function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>): void {

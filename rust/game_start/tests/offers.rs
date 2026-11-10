@@ -91,7 +91,7 @@ fn wedged(p: &Play, door: game::ids::DoorId) -> bool { p.g.m.digin.states.as_ref
 fn a_defender_stays_with_a_closing_door_and_wedges_it() {
     for s in SEEDS {
         let (mut p, _, door) = bunk(s);
-        p.until(30.0, |p| wedged(p, door)).unwrap_or_else(|| panic!("seed {s}: 30 s and {} is not wedged: {:?}", p.g.dr[door].def.name, p.g.m.digin.digin_log.iter().map(|l| l.what.clone()).collect::<Vec<_>>()));
+        p.until(30.0, |p| wedged(p, door)).unwrap_or_else(|| panic!("seed {s}: 30 s and {} is not wedged", p.g.dr[door].def.name));
         assert!(game::doors::door_locked(&mut p.g, door), "seed {s}: wedged and not locked");
     }
 }
@@ -104,11 +104,11 @@ fn a_defender_lets_go_of_a_leaf_a_body_has_stopped() {
         let c = p.g.dr[door].frame_centre;
         let man = p.g.tab.roomfight_def[def].gd;
         let mate = p.g.guards.iter().copied().find(|&gd| gd != man && p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd)).unwrap();
-        let mut put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
+        let put = |p: &mut Play| { p.g.gd[mate].hold = true; p.g.gd[mate].pinned = true; let b = p.g.gd[mate].ch; p.g.ch[b].pos = [c[0], 0.0, c[2]]; };
         let shut = |p: &Play| phase(p, def) == game::digin::Phase::Shut;
         let mut n = 0;
         while !shut(&p) && n < 30 * 60 { put(&mut p); p.frame(); n += 1; }
-        assert!(shut(&p), "seed {s}: 30 s and his hand never went on the leaf: {:?}", p.g.m.digin.digin_log.iter().map(|l| l.what.clone()).collect::<Vec<_>>());
+        assert!(shut(&p), "seed {s}: 30 s and his hand never went on the leaf");
         let him = p.g.m.digin.states.as_ref().unwrap().men.get(man).unwrap();
         assert!(him.brace >= 0.0 && him.prop.is_some(), "seed {s}: the staging is wrong: he has no furniture to wedge it with");
         let on = p.time();

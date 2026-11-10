@@ -108,7 +108,7 @@ pub struct LightAs { pub light: LightId, pub intensity: f64 }
 #[derive(Clone, Debug, Default)]
 pub struct KitStage {
     /// the plan of the way (none: nothing to stage), the way's index
-    pub plan: Option<Planned>, pub way: usize,
+    pub plan: Option<Planned>, 
     /// what the way writes of the light · the way's own lamps the hour has out · the link's quiet kind (1 a quiet mission, 2 the solo night, 0 loud) · the link asks for no mission
     pub over: WayLights, pub way_room_lights: Option<f64>, pub day_out: Vec<String>, pub quiet_kind: u8, pub asks_none: bool,
     /// the men by slot · their places and yaws · Sam's place and yaw · a partner's rest · the foot of the door · the men already sent to their places
@@ -118,7 +118,7 @@ pub struct KitStage {
     /// what the staging wrote each time, so that the tick cannot move them: the moon, the fill, Sam's mark and his aim's point on the wall, the sky
     pub moon_at: Option<LightAs>, pub fill_at: f64, pub sam_on: bool, pub sam_intensity: f64, pub sam_inner: f64, pub sam_outer: f64, pub sam_volumetric: f64, pub sam_aim: V3, pub sky_at: Option<(V3, V3)>,
     /// THE QUIET PICTURE: it is staged · the pool lamp as a fixture of the game's · the lamps put out · the lamps dimmed, and as they were · the share the room burns at
-    pub quiet: bool, pub pool: Option<FixtureId>, pub out: Vec<String>, pub lit_in: Vec<LampAs>, pub share: f64,
+    pub quiet: bool, pub pool: Option<FixtureId>,  pub lit_in: Vec<LampAs>, 
     /// where the camera is framed: the plan's pin as it was asked · the anchor's two ends · the places · the stack falls right of the anchor · the anchor's framed height · the fixture and Sam for one subject
     pub look: V3, pub yaw: f64, pub pitch: f64, pub dist: f64, pub doorway: Vec<V2>, pub stand: Vec<V2>, pub hand_right: bool, pub top_y: f64, pub fit: Option<(V3, V2)>,
     /// the page's ask, and its view's aspect (0: as the camera has it) · the pin worked out
@@ -191,7 +191,7 @@ pub struct GunSwap { pub man: GuardId, pub id: crate::weapons::WeaponId, pub at:
 pub struct Scan { pub key: Option<GuardId>, pub k: usize, pub from: f64, pub to: f64, pub t0: f64, pub next: f64, pub v: f64, pub on: bool }
 /// loud kit's cost as it last played
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CostSeen {    pub leaf: f64, pub up: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
+pub struct CostSeen {    pub leaf: f64, pub up: bool,   pub moved: f64, }
 
 /// SAM LED: the place his keys walk him to, the point his hand is on, and whether he is to be down
 #[derive(Clone, Copy, Debug, Default)]

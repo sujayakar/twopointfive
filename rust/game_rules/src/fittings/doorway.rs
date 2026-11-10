@@ -210,7 +210,6 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let s = st!(g, gd);
         s.leaf_by = t + push;
         s.leaf_t = t;
-        g.stats.doorway.leaf_stall += 1;
         return true;
     }
     false
@@ -360,7 +359,7 @@ fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
 
 /// The mark his order gave him, if any.
 fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3> {
-    let a = crate::orders::squad_orders_of(g, seat, gd)?;
+    let a = crate::orders::squad_orders_of(seat, gd)?;
     g.tab.orders_assignment[a].post
 }
 
@@ -502,8 +501,6 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
                 if nav_blocked(g, cand[0], cand[2]) || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [cand[0], 0.45, cand[2]], None) || !spot_free(g, &crate::seats::here(g), gd, cand, 0.6) { continue; }
                 let at = g.gd[gd].path_i;
                 g.gd[gd].path.insert(at, cand);
-                g.stats.doorway.round += 1;
-                if round_own { g.stats.doorway.round_own += 1; }
                 break;
             }
         }
@@ -511,14 +508,12 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     let held = scale < 0.2 || (waiting && hold);   // a man at a jamb is held as long as the frame is not his
     if held {
         st!(g, gd).by = Some(who);
-        if st!(g, gd).held_t == 0.0 { g.stats.doorway.held += 1; }
         st!(g, gd).held_t += dt;
         if st!(g, gd).held_t >= patience {
             let rest = g.k.doormanners.rest;
             let s = st!(g, gd);
             s.held_t = 0.0;
             s.pass = t + rest;
-            g.stats.doorway.passed += 1;
             if waiting { release(g, gd, true); }
             return Some(speed);
         }
@@ -548,7 +543,6 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
                 s.door = Some(x.d);
                 s.side = x.side;
                 s.path = Some(walk);
-                g.stats.doorway.aside += 1;
                 step_to(g, gd, p, m::min(speed, step), dt, turn);
                 return None;
             }
@@ -663,7 +657,6 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
                 if cov {
                     let e = exposed(g, aim_at, p);
                     if if cover { e > 0 } else { e > here } {
-                        if !cover && e == 1 { g.stats.doorway.step_glass += 1; }
                         continue;
                     }
                 }
@@ -672,8 +665,6 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
                     st.step = Some(p);
                     st.step_by = t + 1.5;
                 }
-                g.stats.doorway.stepped += 1;
-                if cover { g.stats.doorway.step_cover += 1; }
                 step_to(g, gd, p, pace, dt, false);
                 return true;
             }

@@ -306,7 +306,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 // ---------------------------------------------------------------- spent cases
 
 /// The empty a row's gun throws, or None.
-fn casing_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
+fn casing_of(def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
     let c = casing_row(def.id)?;
     Some(c)
 }
@@ -342,7 +342,7 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxS
 
 /// One spent case out of the shooter's gun, and the sound of it landing `tink` seconds later where it will roughly come down.
 pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapons::WeaponDef) {
-    let Some(c) = casing_of(g, def) else { return; };
+    let Some(c) = casing_of(def) else { return; };
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
     let right = v3::scale(f.x, -1.0);
@@ -382,7 +382,6 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
 /// Encounter restart: nothing in the air, nothing on the floor, nothing waiting to be heard.
 pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
-    crate::render_particles::particles_clear(g);
 }
 
 /// a box's row, to read and to write through

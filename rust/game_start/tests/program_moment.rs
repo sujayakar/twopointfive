@@ -1,7 +1,7 @@
 //! A PICTURE OF A GAME TOUCHES NOTHING, AND HOLDS ITS PROGRAM WHOLE. A level's program in the middle of a beat goes on through a checkpoint as if none were taken, every man as he was, and a game put
 //! back, in a fresh slot after another game has stood and gone, goes on as the game that was not put back did. A beat's place is plain data (`BeatFrame`), so nothing has to be stopped for a picture, or started again after one.
 //! `PROGRAM_MOMENT_BREAK=1`: the moment comes back with a beat's place lost, and the tests must fail on it.
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::savestate::control;
 use game::scene_scenario_list::{all_missions, pick_search};
 use game::savestate::control::Moment;

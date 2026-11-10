@@ -102,7 +102,7 @@ pub(super) fn room_fight_sam_speed_of(g: &crate::game::Game, ch: CharId) -> f64 
 }
 
 /// A new room fight: the class's field initialisers; its constructor only keeps `g`.
-pub fn room_fight_new(g: &crate::game::Game) -> crate::roomfight::RoomFight {
+pub fn room_fight_new() -> crate::roomfight::RoomFight {
     crate::roomfight::RoomFight::blank()
 }
 
@@ -113,13 +113,8 @@ pub fn room_fight_on(g: &crate::game::Game) -> bool {
     !(show_runs && !crate::rails::rails_live(g))
 }
 
-/// A line of the fight's log, kept to its last few hundred.
-pub(in crate::defenders) fn room_fight_note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd { Some(x) => g.gd[x].callsign.clone(), None => String::from("-") };
-    let t = g.time;
-    g.fight.log.push(crate::roomfight::FightNote { t, who, what: String::from(what) });
-    if g.fight.log.len() > 600 { g.fight.log.drain(0..200); }
-}
+/// What a man or a squad of the fight has just done, for who would say it aloud (cues.rs). It lasts the tick.
+pub fn tell_news(g: &mut crate::game::Game, news: News) { g.fight.news.push(news); }
 
 /// `this.ops.find(o => o.gd === gd)`: the first operative's row for this man.
 pub(super) fn op_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightOpId> {
@@ -330,7 +325,7 @@ fn room_fight_stop(g: &mut crate::game::Game) {
 /// a fresh staging.
 pub fn room_fight_reset(g: &mut crate::game::Game) {
     room_fight_stop(g);
-    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::default();
+    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.stats = RoomFightStats::default();
 }
 
 #[cfg(test)]

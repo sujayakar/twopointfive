@@ -1,5 +1,3 @@
-pub use ::game_types::peeksight::types;
-pub use types::*;
 use crate::game::Game;
 use crate::m;
 use crate::v3::{self, Quat, V3};
@@ -21,9 +19,7 @@ pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) 
             if crate::scene_collision::solid_blocked(g, own.at, lean_at(own.at, t, n, along, inward, mid), None) { hi = mid; } else { lo = mid; }
         }
         reach = m::max(0.0, lo - 0.08);
-        g.stats.peeksight.short += 1;
     }
-    g.stats.peeksight.frames += 1;
     let p = lean_at(own.at, t, n, along, inward, reach);
     if matches!(w.kind, Some(crate::player::WallHoldKind::Stack)) { return Some(eye_at(own, p, own.look)); }
     Some(eye_at(own, p, turned_look(own.look, s, t, n, e, turn_deg)))

@@ -331,19 +331,6 @@ pub fn rescue_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     g.rescue.result.as_ref().map(|r| if r.state == RescueResultState::Rescued { (true, "RESCUED", r.why.clone()) } else { (false, "LOST", r.why.clone()) })
 }
 
-/// where it stands, in one word
-pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
-    if !crate::rescue::rescue_up(g) { return RescueState::Off; }
-    if let Some(r) = &g.rescue.result {
-        return match r.state {
-            RescueResultState::Lost => RescueState::Lost,
-            RescueResultState::Rescued => RescueState::Rescued,
-        };
-    }
-    if !g.rescue.secured_at.is_nan() { return RescueState::Secured; }
-    if g.rescue.t0.is_nan() { RescueState::Staged } else { RescueState::Running }
-}
-
 /// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds
 pub(in crate::missions) fn rescue_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::rescue::RescueObjective> {
     if !crate::rescue::rescue_up(g) { return None; }

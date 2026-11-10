@@ -9,9 +9,6 @@ pub struct BlastReport {
     pub hits: Vec<crate::frag::BlastHit>,
     pub killed: f64,
     pub finished: f64,
-    pub wounded: f64,
-    pub shielded: f64,
-    pub stunned: f64,
     pub player: Option<crate::frag::BlastResult>,
 }
 
@@ -21,7 +18,6 @@ pub struct BlastHit {
     pub team: crate::teams::Team,
     pub exposed: f64,
     pub result: crate::frag::BlastResult,
-    pub behind: Option<crate::frag::BlastHitBehind>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -242,21 +238,11 @@ pub struct FragMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct FragStats {
-    pub thrown: i32,
     pub bursts: i32,
-    pub killed: i32,
-    pub wounded: i32,
-    pub shielded: i32,
-    pub shouts: i32,
     pub fled: i32,
     pub by_door: i32,
-    pub door_walks: i32,
     pub own: i32,
-    pub theirs: i32,
     pub cues: i32,
-    pub held: i32,
-    pub sam_stunned: i32,
-    pub stunned: i32,
 }
 
 pub fn shouts() -> Vec<String> { alloc::vec![String::from("frag out!"), String::from("grenade out!"), String::from("fire in the hole!")] }

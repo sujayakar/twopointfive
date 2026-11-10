@@ -128,15 +128,10 @@ pub struct Hint {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateStats {
     pub t0: f64,
-    pub up0: f64,
     pub checks: f64,
-    pub answers: f64,
-    pub silent: f64,
     pub last_man: f64,
-    pub moved: f64,
     pub stand_t: f64,
     pub set_t: f64,
-    pub lines: f64,
 }
 
 #[derive(Clone, Debug, Default)]

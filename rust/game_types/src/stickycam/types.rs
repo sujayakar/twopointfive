@@ -59,17 +59,6 @@ pub struct StickycamMod {
     pub visit: Option<f64>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct StickycamStats {
-    pub fired: i32,
-    pub stuck: i32,
-    pub dropped: i32,
-    pub retired: i32,
-    pub blind: i32,
-    pub taken: i32,
-}
-
 pub const EYE_ID: f64 = 200.0;
 
 pub fn none() -> Vec<crate::fogofwar::FogEye> { Vec::new() }

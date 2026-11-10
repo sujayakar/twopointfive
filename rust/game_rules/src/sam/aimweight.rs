@@ -89,7 +89,6 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
         w.y = ap[1];
     }
     g.pl[pl].aimw.live = true;
-    g.stats.aimweight.steps += 1;
     let mut err = 0.0;
     if d > 0.25 && dt > 0.0 {
         let y0 = g.ch[c].aim_yaw;
@@ -130,7 +129,6 @@ pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let dz = tgt[2] - pos[2];
     let cs = m::cos(w.err);
     let sn = m::sin(w.err);
-    g.stats.aimweight.off_shots += 1;
     [pos[0] + dx * cs - dz * sn, tgt[1], pos[2] + dz * cs + dx * sn]
 }
 

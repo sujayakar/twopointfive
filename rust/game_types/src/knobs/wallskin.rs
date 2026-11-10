@@ -4,7 +4,6 @@ use game_derive::Knobs;
 
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct WallskinK {
-    #[k(true)] pub on: bool,
     /// m: a sheet is no deeper than this across the face it lies on: a coat of paint, a run of conduit and its clips, a board of card. Deeper is a body
     ///  (a duct, a case, a cabinet's drawn front) and stays the hangers' alone
     #[k(0.04)] pub thick: f64,

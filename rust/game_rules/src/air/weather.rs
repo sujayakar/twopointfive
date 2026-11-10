@@ -521,7 +521,6 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
     let opts = crate::audio_iface::PlayOpts::Thunder { lowpass, rate, pan: v3::clamp(right * 0.6, -0.6, 0.6), wet: if near { 0.35 } else { 0.55 } };
     crate::audio_iface::game_audio_like_play(g, name, None, Some(gain), Some(&opts));
     g.weather.stats.thunders += 1.0;
-    g.weather.stats.last_thunder = Some(WeatherStatsLastThunder {  });
     // the three dice for a remark are thrown on EVERY thunder, whoever is on screen: same seed, same storm
     let [r_bark, r_who, r_line] = remark;
     if th.loud > 0.45 && g.time - g.weather.last_bark_t > BARK_COOLDOWN && r_bark < BARK_CHANCE {
@@ -569,8 +568,6 @@ fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
         for t in &touched { paint(g, t.box_, t.albedo, t.flags, t.rough, t.aniso); }
         g.weather.lot = None;
     }
-    // the rest of the wet ground is the picture's and follows in this very call
-    crate::wet_ground::wet_ground_follow(g);
 }
 
 /// Darkens a box and remembers what to put back.

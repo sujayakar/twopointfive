@@ -3,7 +3,7 @@
 use crate::Row;
 use alloc::vec::Vec;
 use game::anim_gltf::CastSide;
-use game::game::{Game, GuardState};
+use game::game::Game;
 use game::ids::*;
 use game::m;
 
@@ -226,7 +226,6 @@ fn dress(g: &Game, c: CharId) -> (CastSide, bool) {
     (CastSide::Civilian, false)
 }
 fn suit(g: &Game, c: CharId, player: bool) -> bool {
-    if !g.k.look.on { return false; }
     let quiet = match game::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),
         None => g.staged.up.map(|_| g.staged.facts.unseen),

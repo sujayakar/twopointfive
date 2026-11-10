@@ -134,10 +134,3 @@ pub struct WorkthingsMod {
     pub errands: Option<crate::workthings::WorkthingsModErrandsValue>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WorkthingsStats {
-    pub given: i32,
-    pub done: i32,
-    pub moot: i32,
-}

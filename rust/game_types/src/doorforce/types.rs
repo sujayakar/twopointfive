@@ -96,16 +96,3 @@ pub struct DoorforceMod {
     pub states: Option<crate::doorforce::State>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct DoorforceStats {
-    pub heard: i32,
-    pub seen: i32,
-    pub stands: i32,
-    pub shots: i32,
-    pub held_friend: i32,
-    pub kicks: i32,
-    pub gave: i32,
-    pub no_kick: i32,
-}
-

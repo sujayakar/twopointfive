@@ -25,9 +25,9 @@ impl Reaction for Rule {
     /// The shift ends where he arrives, where he is going nowhere, or when it has taken too long.
     fn commit(g: &mut Game, gd: GuardId, o: Outcome) {
         match o {
-            Outcome::Arrived => crate::suppression::end_displace(g, gd, "there"),
-            Outcome::GoingNowhere => crate::suppression::end_displace(g, gd, "going nowhere"),
-            Outcome::Moving => if g.time - g.cond[g.gd[gd].ch].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); },
+            Outcome::Arrived => crate::suppression::end_displace(g, gd),
+            Outcome::GoingNowhere => crate::suppression::end_displace(g, gd),
+            Outcome::Moving => if g.time - g.cond[g.gd[gd].ch].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd); },
             Outcome::Down | Outcome::Script(_) | Outcome::Left => {}
         }
     }

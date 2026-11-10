@@ -39,7 +39,7 @@ fn has_bearing(s: &str) -> bool {
 }
 
 /// True = this door id is its author's shorthand, not words to say.
-pub fn shorthand_id(g: &crate::game::Game, id_2: &str) -> bool {
+pub fn shorthand_id(id_2: &str) -> bool {
     id_is_shorthand(id_2)
 }
 
@@ -158,9 +158,6 @@ pub fn name_doors(g: &mut crate::game::Game, office: bool, doors: &[DoorId]) {
         names.clone()
     };
     for (&d, id) in doors.iter().zip(ids.iter()) {
-        if let Some(n) = names.get(id.clone()) {
-            g.m.doornames.said.set(d, n.clone());
-        }
         if let Some(u) = up.get(id.clone()) {
             g.m.doornames.said_up.set(d, u.clone());
         }

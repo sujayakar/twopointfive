@@ -576,7 +576,7 @@ fn a_civilian_put_down_is_said_by_a_teammate() {
         let mut p = quiet_with_a_partner(s);
         let m = p.g.civilians[0];
         let men = p.men();
-        let cid = p.g.gd[m].civ.unwrap();
+        let _cid = p.g.gd[m].civ.unwrap();
         p.falls_as(m, DownKind::Struck, true, DownBy::Player);
         p.frame();
         assert!(said_by_one_of(&p, &men, "civilian's out. still breathing."), "seed {s}: {:?}", p.said.iter().map(|l| l.text.as_str()).collect::<Vec<_>>());

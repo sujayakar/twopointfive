@@ -16,10 +16,6 @@ pub struct StowFightOp {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct WorkstowStats {
-    pub sam_down: i32,
-    pub sam_up: i32,
-    pub sam_kept: i32,
     pub mate_down: i32,
     pub mate_up: i32,
-    pub mate_fired: i32,
 }

@@ -234,8 +234,8 @@ pub trait DoorsAsk {
     fn rescue_on(&mut self, first: f64, second: f64, set: f64);
     /// STAGING: no man abroad to meet the pair, and the door's man inside
     fn rescue_quiet_floor(&mut self);
-    /// the room fight's notes of a man
-    fn fight_notes(&self, name: &str) -> Vec<String>;
+    /// is he on his way out of a room he has given up
+    fn falls_back(&self, name: &str) -> bool;
     /// how long he lines up on her
     fn rescue_aim(&self) -> f64;
     /// STAGING: a flash has his eyes for so long
@@ -427,8 +427,8 @@ impl DoorsAsk for Play {
     fn op_phase(&self, op: DoorOpId) -> Phase { self.g.tab.doortools_door_op[op].phase }
     fn op_lead(&self, op: DoorOpId) -> GuardId { self.g.tab.doortools_door_op[op].lead }
     fn op_beats(&self, op: DoorOpId) -> Vec<String> { self.g.tab.doortools_door_op[op].beats.iter().map(|b| b.what.clone()).collect() }
-    fn doing(&self, gd: GuardId) -> Option<String> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].order.clone()) }
-    fn order_door(&self, gd: GuardId) -> Option<DoorId> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].door) }
+    fn doing(&self, gd: GuardId) -> Option<String> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].order.clone()) }
+    fn order_door(&self, gd: GuardId) -> Option<DoorId> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].door) }
     fn along(&self, d: DoorId, at: [f64; 2]) -> f64 { let f = game::guards::frame_of(&self.g, d); (at[0] - f.hx) * f.ux + (at[1] - f.hz) * f.uz }
     fn off(&self, d: DoorId, at: [f64; 2], side: f64) -> f64 { let f = game::guards::frame_of(&self.g, d); ((at[0] - f.hx) * f.nx + (at[1] - f.hz) * f.nz) * side }
     fn door_w(&self, d: DoorId) -> f64 { self.g.dr[d].def.width }
@@ -481,9 +481,9 @@ impl DoorsAsk for Play {
     fn hung_toward(&mut self, d: DoorId, toward: [f64; 2]) {
         if !self.pull_face(d, toward) { let s = game::doors::door_swing(&self.g, d); game::doors::door_set_swing(&mut self.g, d, -s, None, None); }
     }
-    fn post_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].post).map(|p| [p[0], p[2]]) }
-    fn there_of(&self, gd: GuardId) -> String { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map_or(String::new(), |a| self.g.tab.orders_assignment[a].there.clone()) }
-    fn arrived(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].arrived) }
+    fn post_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].post).map(|p| [p[0], p[2]]) }
+    fn there_of(&self, gd: GuardId) -> String { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map_or(String::new(), |a| self.g.tab.orders_assignment[a].there.clone()) }
+    fn arrived(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].arrived) }
     fn tools_k(&self) -> game::knobs::DoortoolsK { self.g.k.doortools.clone() }
     fn latched(&self, d: DoorId) -> bool { game::doors::door_latched(&self.g, d) }
     fn leaf_angle(&self, d: DoorId) -> f64 { game::doors::door_angle(&self.g, d) }
@@ -496,10 +496,10 @@ impl DoorsAsk for Play {
     fn door_name(&self, d: DoorId) -> String { self.g.dr[d].def.name.clone() }
     fn handle_place(&mut self, d: DoorId, side: f64) -> Option<([f64; 2], bool, bool)> { game::handleside::handle_spot(&mut self.g, d, side).map(|s| ([s.pos[0], s.pos[2]], s.pull, s.far.unwrap_or(false))) }
     fn op_is_can(&self, op: DoorOpId) -> bool { self.g.tab.doortools_door_op[op].kind == game::doortools::DoorToolKind::BangClear }
-    fn can_out(&self, op: DoorOpId) -> Option<(ItemId, f64, bool)> { let c = self.g.tab.doortools_door_op[op].can?; Some((c, game::throwables::item_fuse(&self.g, c), game::throwables::item_fired(&self.g, c))) }
-    fn can_now(&self, can: ItemId) -> (f64, bool) { (game::throwables::item_fuse(&self.g, can), game::throwables::item_fired(&self.g, can)) }
+    fn can_out(&self, op: DoorOpId) -> Option<(ItemId, f64, bool)> { let c = self.g.tab.doortools_door_op[op].can?; Some((c, self.g.tab.item[c].fuse, self.g.tab.item[c].fired)) }
+    fn can_now(&self, can: ItemId) -> (f64, bool) { (self.g.tab.item[can].fuse, self.g.tab.item[can].fired) }
     fn gun_yaw(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].aim_yaw }
-    fn watch_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].watch).map(|p| [p[0], p[2]]) }
+    fn watch_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].watch).map(|p| [p[0], p[2]]) }
     fn floor_free(&self, at: [f64; 2]) -> bool { !game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
     fn orders_given(&self) -> usize { self.g.orders.log.len() }
     fn menu_up(&self) -> Option<(Option<String>, usize)> { self.g.orders.menu.as_ref().map(|m| (m.page.clone(), m.rows.len())) }
@@ -516,7 +516,7 @@ impl DoorsAsk for Play {
         self.g.k.pairup.on = true;
         game::pairup::pair_up_apply(&mut self.g, None);
         self.g.k.silent.on = true;
-        game::silent::set_silent(&mut self.g, true, None);
+        game::silent::set_silent(&mut self.g, true);
     }
     fn job(&self, gd: GuardId) -> Option<(bool, f64, Option<GuardId>)> { game::pairorders::pair_orders_job_of(&self.g, gd).map(|j| (j.set, j.t0, j.watcher)) }
     fn gripped(&mut self, gd: GuardId) -> bool { game::pairorders::pair_gripped(&mut self.g, gd) }
@@ -538,8 +538,8 @@ impl DoorsAsk for Play {
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), Some(&o)) { panic!("'{id}' on the word was refused: {why}"); }
     }
     fn op_pods(&self, op: DoorOpId) -> Vec<[f64; 2]> { self.g.tab.doortools_door_op[op].pod.values().map(|p| [p.pos[0], p.pos[2]]).collect() }
-    fn muzzle_down(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].low) }
-    fn light_on(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].light.unwrap_or(false)) }
+    fn muzzle_down(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].low) }
+    fn light_on(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].light.unwrap_or(false)) }
     fn callsign(&self, gd: GuardId) -> String { self.g.gd[gd].callsign.clone() }
     fn silent(&self) -> bool { game::silent::squad_silent(&self.g, &game::seats::here(&self.g)) }
     fn gun_walled(&mut self, gd: GuardId, reach: f64) -> bool {
@@ -550,13 +550,12 @@ impl DoorsAsk for Play {
         let d = |p: PropId| { let q = self.prop_at(p); (q[0] - at[0]).hypot(q[1] - at[1]) };
         self.g.props.props.iter().copied().min_by(|a, b| d(*a).partial_cmp(&d(*b)).unwrap()).expect("the level has movable things")
     }
-    fn prop_at(&self, prop: PropId) -> [f64; 2] { [game::props::prop_x(&self.g, prop), game::props::prop_z(&self.g, prop)] }
+    fn prop_at(&self, prop: PropId) -> [f64; 2] { [self.g.tab.props_prop[prop].x, self.g.tab.props_prop[prop].z] }
     fn prop_put(&mut self, prop: PropId, at: [f64; 2]) {
-        game::props::prop_set_x(&mut self.g, prop, at[0]);
-        game::props::prop_set_z(&mut self.g, prop, at[1]);
-        game::props::prop_set_vx(&mut self.g, prop, 0.0);
-        game::props::prop_set_vz(&mut self.g, prop, 0.0);
-        game::props::prop_set_w(&mut self.g, prop, 0.0);
+        game::props::prop_move_to(&mut self.g, prop, at[0], at[1]);
+        self.g.tab.props_prop[prop].vx = 0.0;
+        self.g.tab.props_prop[prop].vz = 0.0;
+        self.g.tab.props_prop[prop].w = 0.0;
     }
     fn order_floor(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) {
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at: [at[0], 0.0, at[1]], ..game::orders::OrderTargetFloor::default() });
@@ -598,13 +597,13 @@ impl DoorsAsk for Play {
     }
     fn choice_on(&mut self, who: game::orders::Who) { self.g.orders.who = who; }
     fn corner_in_his_way(&mut self, gd: GuardId, at: [f64; 2]) {
-        let a = game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).expect("his order");
+        let a = game::orders::squad_orders_of(&game::seats::here(&self.g), gd).expect("his order");
         let c = [at[0], 0.0, at[1]];
         self.g.tab.orders_assignment[a].via = vec![c];
         self.g.tab.orders_assignment[a].goal = c;
     }
     fn fight_has(&mut self, gd: GuardId) { game::squad::end_guard_script(&mut self.g, gd, Some(game::squad::EndGuardScriptState::Alert)); }
-    fn order_waits_on_fight(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].yield_t >= 0.0) }
+    fn order_waits_on_fight(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| self.g.tab.orders_assignment[a].yield_t >= 0.0) }
     fn rescue_log(&self) -> Vec<(f64, String)> { self.g.rescue.log.iter().map(|l| (l.t, l.what.clone())).collect() }
     fn rescue_t0(&self) -> f64 { self.g.rescue.t0 }
     fn rescue_clock(&self) -> f64 { self.g.rescue.resolve }
@@ -618,7 +617,9 @@ impl DoorsAsk for Play {
         (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
         game::savestate::control::restart(&mut self.g);
     }
-    fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
+    fn falls_back(&self, name: &str) -> bool {
+        self.g.fight.defs.iter().any(|&d| { let r = &self.g.tab.roomfight_def[d]; self.g.gd[r.gd].callsign == name && game::roomfight::on_leg(&self.g, d) && r.move_kind == game::roomfight::DefMoveKind::Fallback })
+    }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
     fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
     fn room_cleared(&self, id: &str) -> bool { self.g.staged.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
@@ -631,7 +632,7 @@ impl DoorsAsk for Play {
         self.g.gd[foe].god = true;
         for o in self.g.fight.ops.clone() { self.g.tab.roomfight_op[o].ready_at = t + 1.0; }
         self.g.fight.hot_t = t;
-        for m in self.mates() { let c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
+        for m in self.mates() { let _c = self.g.gd[m].ch; self.g.gd[foe].god = true; }
     }
     fn blind_now(&mut self, gd: GuardId) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + 9.0; }
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {
@@ -730,7 +731,7 @@ impl DoorsAsk for Play {
     fn stack_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn tool_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::doortools::door_tools_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn walls_own_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts_on(&mut self.g, &game::ask::Over::OWN, d, side, men, &[], false, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
-    fn item_at(&self, it: ItemId) -> [f64; 2] { let q = game::throwables::item_pos(&self.g, it); [q[0], q[2]] }
+    fn item_at(&self, it: ItemId) -> [f64; 2] { let q = self.g.tab.item[it].pos; [q[0], q[2]] }
     fn shift_tap(&mut self, at: [f64; 3]) {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
@@ -764,8 +765,8 @@ impl DoorsAsk for Play {
     fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.clone(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
     fn smoke_left(&self) -> f64 { game::squadsmoke::squad_smoke_left(&self.g, &game::seats::here(&self.g)) }
     fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)> {
-        let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Smoke).collect();
-        list.into_iter().map(|i| { let q = game::throwables::item_pos(&self.g, i); ([q[0], q[2]], game::throwables::item_emit_t(&mut self.g, i) > 0.0) }).collect()
+        let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Smoke).collect();
+        list.into_iter().map(|i| { let q = self.g.tab.item[i].pos; ([q[0], q[2]], self.g.tab.item[i].emit_t > 0.0) }).collect()
     }
     fn cards_carry(&mut self, cards: &[(usize, f64)]) {
         for &(i, n) in cards {
@@ -788,7 +789,7 @@ impl DoorsAsk for Play {
         let q = t.post?;
         Some((t.gd, [q[0], q[2]]))
     }
-    fn frags_out(&self) -> Vec<[f64; 2]> { self.g.items.items.iter().copied().filter(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Frag).map(|i| { let q = game::throwables::item_pos(&self.g, i); [q[0], q[2]] }).collect() }
+    fn frags_out(&self) -> Vec<[f64; 2]> { self.g.items.items.iter().copied().filter(|&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Frag).map(|i| { let q = self.g.tab.item[i].pos; [q[0], q[2]] }).collect() }
     fn shell_stats(&self) -> (i32, i32, i32) { let s = &self.g.stats.shotgun; (s.in_men, s.dropped, s.peppered) }
     fn shell_from(&mut self, m: GuardId, from: [f64; 2], at: [f64; 3], spread: f64) {
         let c = self.g.gd[m].ch;
@@ -850,19 +851,19 @@ impl DoorsAsk for Play {
     fn blast_tears(&mut self, at: [f64; 2]) -> Vec<DoorId> { game::doors::doors_blast(&mut self.g, [at[0], 1.0, at[1]], 1.5, -1.0) }
     fn lane_half(&self, along: f64) -> f64 { let (ff, fl) = (&self.g.k.friendlyfire, &self.g.k.fireline); ff.body_m + fl.clear_m + along * ff.cone_k * fl.spread }
     fn sam_rounds(&self) -> f64 { self.g.fa[self.g.pl[self.g.player].rifle].shots_fired }
-    fn file_place(&self, gd: GuardId) -> Option<f64> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].follow) }
+    fn file_place(&self, gd: GuardId) -> Option<f64> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map(|a| self.g.tab.orders_assignment[a].follow) }
     fn sam_clicks(&mut self) { let pl = self.g.player; self.g.arms[self.g.pl[pl].ch].fire_cd = 0.0; self.press(game_start::play::Button::Left); }
     fn in_doorway(&self, d: DoorId, at: [f64; 2]) -> bool { let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); a > -0.05 && a < self.door_w(d) + 0.05 && o.abs() < 0.3 }
     fn in_sweep(&self, d: DoorId, at: [f64; 2]) -> bool { game::doors::door_swing_sweeps(&game::doors::doors_swing_of(&self.g, d), at[0], at[1], Some(BODY_R)) }
     fn from_handle(&self, d: DoorId, at: [f64; 2]) -> f64 { let f = game::guards::frame_of(&self.g, d); let (a, o) = (self.along(d, at), self.off(d, at, 1.0)); ((a - (f.w - HANDLE_IN)).powi(2) + o * o).sqrt() }
     fn door_rows(&self, d: DoorId) -> usize { self.g.nearby.iter().filter(|r| r.door == Some(d)).count() }
-    fn slab_rest(&mut self, d: DoorId, side: f64) -> Option<(bool, f64)> { let s = game::doors::door_slab(&mut self.g, d)?; let at = [s.p[0], s.p[2]]; Some((s.rest, self.off(d, at, side))) }
+    fn slab_rest(&mut self, d: DoorId, side: f64) -> Option<(bool, f64)> { let s = self.g.dr[d].slab?; let at = [s.p[0], s.p[2]]; Some((s.rest, self.off(d, at, side))) }
     fn clear_line(&mut self, a: [f64; 2], b: [f64; 2]) -> bool { !game::scene_collision::segment_blocked(&mut self.g, [a[0], 1.1, a[1]], [b[0], 1.1, b[1]], None, None, None) }
     fn first_over(&self, op: DoorOpId) -> Option<GuardId> { let c = &self.g.tab.doortools_door_op[op].crossed; c.keys().into_iter().min_by(|a, b| c.get(*a).unwrap().partial_cmp(c.get(*b).unwrap()).unwrap()) }
     fn seen_of_room(&mut self, gd: GuardId, at: [f64; 2]) -> f64 {
         let Some(room) = game::roomfight::room_fight_room_at(&mut self.g, [at[0], 0.0, at[1]]) else { return 0.0 };
         let cells: Vec<f64> = self.g.tab.roomfight_room[room].cells.iter().map(|c| c.0).collect();
-        game::floorseen::floor_seen_count(&self.g, &game::seats::here(&self.g), gd, &cells, self.g.time - self.g.k.doortools.lead_seen_secs)
+        game::floorseen::floor_seen_count(&game::seats::here(&self.g), gd, &cells, self.g.time - self.g.k.doortools.lead_seen_secs)
     }
 }
 

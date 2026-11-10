@@ -126,7 +126,7 @@ fn a_suppressor_row_that_cannot_move_says_why() {
                 let moved = game::kit::kit_set(&mut p.g, 1.0, can, &peek.value);
                 assert!(moved, "{id} has the choice and the row would not move");
             } else {
-                let name = game::gear::gear_text(&p.g, &game::gunslots::pick_word(&p.g, &id, None));
+                let name = game::gear::gear_text(&game::gunslots::pick_word(&p.g, &id, None));
                 assert!(peek.why == format!("{name}: made with it") || peek.why == format!("{name}: none fits it"), "{id}: the row says {:?}", peek.why);
                 let flipped = match peek.value { KitValue::Bool(b) => KitValue::Bool(!b), v => panic!("{id}: a suppressor row holds {v:?}") };
                 assert!(!game::kit::kit_set(&mut p.g, 1.0, can, &flipped), "{id}: the row said no and moved");

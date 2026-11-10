@@ -19,10 +19,3 @@ pub struct CalmtorchMod {
     pub posing: bool,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct CalmtorchStats {
-    pub clicks_on: i32,
-    pub clicks_off: i32,
-    pub asks: i32,
-}

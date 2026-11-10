@@ -20,12 +20,8 @@ use game_derive::Knobs;
 /// row and the squad's block under it are as they were.
 /// THE KEY: while this rule is on the whistle's row has no key, and while the empty-hands slot is on as
 /// well the E key gives the interaction's code and the Space key gives the game nothing; the game goes on asking for the code it always asked for
-/// On (`?handring=0`: the list on a held Space, the corner list, the
-/// whistle on its key, as it was). Registered in knobs.ts; a recording from before the key replays with it off.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HandringK {
-    /// the interaction key held is a ring that stays; the whistle is its last wedge; the corner shows the default action alone
-    #[k(true)] pub on: bool,
     /// the key down this long (s) puts the ring up; let go sooner it is the tap. The squad ring's own number for a ring that stays
     #[k(0.3)] pub hold_secs: f64,
     /// s more than the hand's own time that a turn may add (a half turn at the plant's 10 rad/s is 0.31 s, the step in the rest)

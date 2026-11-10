@@ -316,7 +316,6 @@ pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut 
 /// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.
 pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallCharge {
     let mut wc = crate::wallcharge::WallCharge::blank();
-    wc.knobs = g.k.wallcharge.clone();
     wc.opener = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::walltools::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),

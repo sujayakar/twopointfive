@@ -36,10 +36,6 @@ fn hash_key(seed: f64, k: f64) -> f64 { m::imul(js::to_i32(seed + k), js::to_i32
 fn choice(seed: f64, k: f64) -> f64 { crate::debris::hash01(hash_key(seed, k)) }
 /// nothing of a pane's stands in this game's block   (glassbreak.ts panesUntouched; its stub takes no slot, see notes)
 fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
-/// the module's answers: `x.sim_scratch()` over `f64()`, its `o` being 0 here. Read before any other call into the module
-fn scratch() -> &'static [f64] {
-    unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
-}
 
 // ---------------------------------------------------------------- the part
 /// The game's row, made if it is not there.
@@ -103,7 +99,6 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
     crate::scene_collision::wrote(g);
     for m in met {
         if m.t > t_hit + 1e-6 {
-            g.stats.winbars.spared += 1;
             continue;
         }
         if break_bar(g, m.index, m.at, m.dir, who, BreakBarCause::Round) {
@@ -125,8 +120,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
     let flags = seam_box(g, b).flags;
     seam_box(g, b).flags = bor(flags, HIDE);
     changed(g);
-    g.stats.winbars.broken += 1;
-    if cause == BreakBarCause::Round { g.stats.winbars.by_round += 1; } else { g.stats.winbars.by_blast += 1; }
+    if cause == BreakBarCause::Round {  } else {  }
 
     // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
     let k_ = g.k.winbars;
@@ -181,7 +175,6 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
         let w: V3 = [(r1 - 0.5) * k_.spin, (r2 - 0.5) * 0.5 * k_.spin, (r3 - 0.5) * k_.spin];
         let got = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Chunk, f, v, w, Some(who), Some(land.level));
         if let Some(c) = got {
-            g.stats.winbars.chunks += 1;
             let chunk = &mut g.tab.debris_chunk[c];
             chunk.level = land.level;
             chunk.sfx = land.sfx.iter().map(|s| crate::debris::ChunkSfxItem { name: s.name.clone(), rate: s.rate, gain: s.gain }).collect();
@@ -192,7 +185,6 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
             }
             crate::break_table::breaks_dress(g, c);
         } else {
-            g.stats.winbars.demoted += 1;
             {
                 let o = crate::render_particles::EmitOpts { speed: 2.2, speed_jit: Some(0.7), spread: Some(1.1), life: 18.0, life_jit: Some(0.3), size: 0.006, size_jit: Some(0.6), aspect: Some(3.0), color: Some(v3::copy(albedo)), owner: Some(who), ..Default::default() };
                 crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, fc, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), 10.0, o);

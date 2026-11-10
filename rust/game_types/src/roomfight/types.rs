@@ -18,8 +18,9 @@ pub struct RoomFight {
     pub blind_rounds: f64,
     pub defs: Vec<RoomfightDefId>,
     pub ops: Vec<RoomfightOpId>,
-    pub log: Vec<crate::roomfight::FightNote>,
-    #[is(crate::roomfight::RoomFightStats { op_rounds: 0.0, held_for_friend: 0.0, fell_back: 0.0, fall_back_out: 0.0, took_cover: 0.0, surprised: 0.0, broke: 0.0, stepped: 0.0, startled: 0.0 })] pub stats: crate::roomfight::RoomFightStats,
+    /// what this tick has done that somebody would say aloud. Empty between two ticks
+    pub news: Vec<crate::roomfight::News>,
+    #[is(crate::roomfight::RoomFightStats { fall_back_out: 0.0 })] pub stats: crate::roomfight::RoomFightStats,
     pub rooms: Vec<RoomfightRoomId>,
     pub room_of_cell: JsMap<crate::Num, RoomfightRoomId>,
     #[is(alloc::vec![0; 0])] pub fill_mark: Vec<u8>,
@@ -61,24 +62,32 @@ pub struct FightSkill {
     pub line: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct FightNote {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
+/// What a man of the fight has just done, or what a squad of them has decided (the man who has the word, if it is one man's)
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
+pub enum News { Man(GuardId, crate::roomfight::Did), Squad(EnemysquadsSquadId, Option<GuardId>, crate::roomfight::Word) }
+
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
+pub enum Did {
+    HoldsWhereHeIs,
+    FallsBack,
+    TakesCover,
+    /// a man on the move is where he will fight from; `fighting`: an enemy seen close stopped him
+    Plants { fighting: bool },
+    Surprised,
+    Flinches,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
+pub enum Word {
+    /// `ally`: whose call it heard. `waits`: it holds its answer on purpose
+    Hears { ally: Option<EnemysquadsSquadId>, waits: bool },
+    Stays,
+    Quiet,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RoomFightStats {
-    pub op_rounds: f64,
-    pub held_for_friend: f64,
-    pub fell_back: f64,
     pub fall_back_out: f64,
-    pub took_cover: f64,
-    pub surprised: f64,
-    pub broke: f64,
-    pub stepped: f64,
-    pub startled: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -214,8 +223,6 @@ pub struct Op {
     pub step_until: f64,
     pub said_t: f64,
     pub rounds: f64,
-    pub held_for_friend: f64,
-    pub held_for_line: f64,
     pub block_t: f64,
     pub feet_sm: Option<f64>,
     pub feet_t: Option<f64>,

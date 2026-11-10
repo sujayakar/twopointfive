@@ -112,23 +112,7 @@ pub struct PictureMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct PictureStats {
-    pub looks: i32,
-    pub seen: i32,
-    pub heard: i32,
-    pub told: i32,
-    pub fixes: i32,
-    pub lost: i32,
-    pub downs: i32,
-    pub forgot: i32,
     pub asks: i32,
     pub lines: i32,
     pub moved: i32,
-    pub shot_placed: i32,
-    pub shot_off: i32,
-    pub shot_kept: i32,
-    pub ran: i32,
-    pub ran_off: i32,
-    pub stepped: i32,
-    pub filed: i32,
-    pub filed_hinge: i32,
 }

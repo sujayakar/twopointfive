@@ -23,7 +23,7 @@ pub const SNOW_BANK: u8 = 4;
 pub const MAX_LEAVES: usize = 512;
 pub const LEAF_SETS: usize = 3;
 pub const THING_SET: usize = 2;
-/// things of furniture a world can hold (props.rs CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
+/// things of furniture a world can hold (a level of more is refused: PROP_CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
 /// cylinder that holds it), and the words of each IN THE LEVEL NOW, in the furniture's order (its id, where its parts start in list THING_SET, how many)
 pub const MAX_THINGS: usize = 128;
 pub const TH: usize = 4;
@@ -134,7 +134,7 @@ pub struct World {
     /// …and with those, a burst's view is its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it (panes.rs gives)
     pub view_at: [f64; 6],
     /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
-    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
+    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (snow.rs bog_of)
     pub snow: [u8; MAX_BOXES],
     /// WHAT A STATIC SENDS BACK of the light on it, of 255: its colour by luminance (glow.rs)
     pub back: [u8; MAX_BOXES],
