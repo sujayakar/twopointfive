@@ -175,16 +175,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
             if !hot.is_empty() && hot != g.k.orders.wait_alt { pressed_delete(g, input, &hot); }
         }
     }
-    if js::truthy(g.tab.input[input].wheel) {
-        let turned = g.tab.input[input].wheel;
-        g.tab.input[input].wheel = 0.0;
-        let menu = g.sets[g.seat].orders.menu.as_mut().unwrap();
-        menu.wheel_acc = m::max(-2.0 * WHEEL_STEP, m::min(2.0 * WHEEL_STEP, menu.wheel_acc + turned));
-        if m::abs(menu.wheel_acc) >= WHEEL_STEP {
-            let wheel = m::sign(menu.wheel_acc);
-            menu.wheel_acc -= wheel * WHEEL_STEP;
-        }
-    }
+    g.tab.input[input].wheel = 0.0;
     let stale = {
         let read_t = g.sets[g.seat].orders.menu.as_ref().unwrap().read_t;
         g.time - read_t >= g.k.orders.refresh_secs || {
@@ -226,7 +217,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
                     menu.target = OrderTarget::None(OrderTargetNone { at, man: None });
                 }
             }
-            if menu.page.is_some() { squad_orders_turn(g, None, None); } else { squad_orders_refresh(g); }
+            if menu.page.is_some() { squad_orders_turn(g, None); } else { squad_orders_refresh(g); }
             if g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; return true; }
             if let Some(r) = g.sets[g.seat].orders.cmd_ring.as_mut() {
                 r.more = Some(false);
@@ -266,7 +257,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
                 if g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; return true; }
             }
         } else if text(&opens) {
-            squad_orders_turn(g, opens.as_deref(), None);
+            squad_orders_turn(g, opens.as_deref());
             turned = true;
             if g.sets[g.seat].orders.menu.is_none() { g.sets[g.seat].orders.cmd_ring = None; return true; }
         } else if i >= 0.0 {
@@ -321,7 +312,6 @@ fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
 fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool {
     let flat = squad_orders_flat_ring(g);
     if !squad_orders_open(g, Some(t), Some(flat), g_2.map(|p| p.men.as_slice())) { return false; }
-    g.sets[g.seat].orders.menu.as_mut().unwrap().on_word = false;
     let (w, h) = (canvas.client_width, canvas.client_height);
     let r = crate::cmdring::ring_open(g, input, w, h, t0, None);
     g.sets[g.seat].orders.cmd_ring = Some(r);

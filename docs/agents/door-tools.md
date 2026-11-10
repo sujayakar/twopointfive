@@ -5,8 +5,8 @@ What the squad does at a door on order: where each man stands, how the door gets
 
 ## What the player gets
 
-- On a door the ring offers stack up, the wand and a page of door tools: open and clear, bang and clear, a charge, frag and clear on G, clear from outside, and
-  on H a hammer or breaching shotgun if somebody carries one.
+- On a door the ring offers stack up, the wand and a page of door tools: open and clear, bang and clear, a charge, frag and clear, clear from outside, and
+  a hammer or breaching shotgun if somebody carries one.
 - A **stack** is the men on their marks at a **jamb**, the wall beside the frame. F, **the word**, sends a stacked team through by plain open and clear.
 - A door found locked stops the order at the handle. The man says what he found, and the same row then says kick or pick.
 - A bang goes off in the air inside, and nobody crosses until the blind burst has run dry. A charge waits for the player to blow it.
@@ -28,7 +28,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `entrypoints.rs` | which openings the squad has been beyond; `entry_points_clear_of` moves a point off an uncleared one |
 | `roomread.rs`, `roomfit.rs` | the space round a spot; marks for the move-there order and what a rear man can watch. A door order does not use them |
 | `rearwatch.rs` | who keeps the way behind a stack (`rear_watch_tick`); a taken room's other door as the squad leaves (`room_keep_tick`) |
-| `wandorder.rs` | the wand on order: its row is `wand.rs`, on V (`stealth.md`) |
+| `wandorder.rs` | the wand on order: its row is `wand.rs` (`stealth.md`) |
 
 Other systems use the same machine through `door_tools_order`: `rescue/` starts its doors on a `DoorGate`, `qrf/` runs a response team with its own counts. The page has no
 rule here: the ring and its marks come through `view/`, and `door_tools_draw_charge` shows a set charge.

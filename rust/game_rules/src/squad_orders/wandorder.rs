@@ -319,8 +319,8 @@ fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
 }
 
 /// Once a frame per seat: keeps the row on the menus only while a living squad man carries a wand and there is a fog; takes the lens out of a man the
-/// fight or another order has; reads the row's key while a menu lists it. True = the key was the order's (and is eaten).
-pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
+/// fight or another order has.
+pub fn wand_order_frame(g: &mut crate::game::Game) {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     let mut want = false;
     if live(g) {
@@ -333,7 +333,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     }
     if !g.m.wandorder.states.has(k) {
         if !want {
-            return false;
+            return;
         }
         g.m.wandorder.states.set(k, State { jobs: JsMap::new() });
     }
@@ -373,21 +373,6 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
             }
         }
     }
-    if !want {
-        return false;
-    }
-    if g.sets[g.seat].orders.menu.is_none() {
-        return false;
-    }
-    let key = g.k.wand.order_key.clone();
-    if !crate::input::input_hit(g, input, &key) {
-        return false;
-    }
-    let i = g.sets[g.seat].orders.menu.as_ref().unwrap().rows.iter().position(|&d| g.tab.orders_order_def[d].id == WAND_ORDER);
-    let Some(i) = i else { return false };
-    g.tab.input[input].pressed.delete(key);
-    crate::orders::squad_orders_pick(g, Some(i as f64));
-    true
 }
 
 /// His lens as his eye among the fog's, or None while he is not looking: the player's lens by every number, swept over its arc on the game's clock.

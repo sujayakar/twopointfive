@@ -59,7 +59,8 @@ fn an_ordered_frag_shows_who_and_where_and_goes_when_it_leaves_his_hand() {
 fn lit_frag(p: &mut Play, at: [f64; 2]) -> bool {
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     if !game::orders::squad_orders_open(&mut p.g, Some(&t), None, None) { return false; }
-    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE), None);
+    p.ring_over_menu();
+    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE));
     let row = p.g.sets[p.g.seat].orders.menu.as_ref().and_then(|m| m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere"));
     match (row, p.g.sets[p.g.seat].orders.menu.as_mut()) { (Some(i), Some(m)) => { m.sel = i as f64; true } _ => false }
 }
@@ -103,7 +104,8 @@ fn a_lit_shell_row_previews_its_kept_plan_and_nothing_when_refused() {
     let lit_shell = |p: &mut Play, at: [f64; 2]| {
         let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
         assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None, None));
-        game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE), None);
+        p.ring_over_menu();
+        game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE));
         let rows = p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().rows.clone();
         p.g.sets[p.g.seat].orders.menu.as_mut().unwrap().sel = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the page") as f64;
     };

@@ -23,9 +23,6 @@ const LOAD_KEYS: &str = "press 2, then 2";
 /// Where your light is worked from.
 const LIGHT_KEYS: &str = "its gun's key again, then 3";
 
-/// A key's code as a line says it.
-fn key_word(code: &str) -> &str { code.strip_prefix("Key").unwrap_or(code) }
-
 /// The gun slot a row is.
 fn gun_slot(field: KitField) -> Option<GunSlot> {
     match field {
@@ -83,7 +80,7 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Smoke if you => if js::truthy(m.smoke) { "on 3: a cloud to cross a lane in, or to leave a room under" } else { "none: nothing to hide in" },
         KitField::Smoke => {
             if !js::truthy(m.smoke) { return String::from("none: the squad has no smoke to throw on order"); }
-            return format!("added to the squad's smoke: X on a spot of floor, then {} — the nearest man with a throw tosses one there", key_word(&crate::squadsmoke::squadsmoke().order_key));
+            return String::from("point at the floor and pick smoke on the squad's ring, and the nearest teammate will throw one there.");
         }
         KitField::Bangs if you => if js::truthy(m.bangs) { "on 4: blinds a room before you go in" } else { "none of your own: the squad's are on the door tools" },
         KitField::Bangs | KitField::Charges => "added to the squad count the door tools spend",
@@ -92,7 +89,7 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Wand if you => if m.wand { "at a shut door, Space: a look under it" } else { "none in your pouches" },
         KitField::Wand => {
             if !m.wand { return String::from("none in his pouches"); }
-            return format!("X on a shut door, then {}: he looks under it", key_word(&g.k.wand.order_key));
+            return String::from("point at a shut door and pick the wand on the squad's ring, and he'll look under it.");
         }
         KitField::Suit => "looks only: nobody sees a colour",
         KitField::Trim if you => if m.trim == TrimId::Issued { "your own green joints" } else { "the joints: how you pick yourself out from above" },

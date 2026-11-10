@@ -19,7 +19,6 @@ pub struct SeatHand {
     pub f_held: bool,
     pub aim_held: bool,
     pub throw_held: bool,
-    pub throw_eaten: bool,
     pub throw_preview: Option<crate::throwables::ThrowSolution>,
     pub friend_low: bool,
     #[is(-10.0)] pub friend_t: f64,

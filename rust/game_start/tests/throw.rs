@@ -14,7 +14,8 @@ fn flat(p: game::V3) -> [f64; 2] { [p[0], p[2]] }
 fn lit(p: &mut Play, at: [f64; 2]) -> bool {
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     if !game::orders::squad_orders_open(&mut p.g, Some(&t), None, None) { return false; }
-    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE), None);
+    p.ring_over_menu();
+    game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE));
     let row = p.g.sets[p.g.seat].orders.menu.as_ref().and_then(|m| m.rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "fragThere"));
     match (row, p.g.sets[p.g.seat].orders.menu.as_mut()) { (Some(i), Some(m)) => { m.sel = i as f64; true } _ => false }
 }
