@@ -1,6 +1,5 @@
 pub use ::game_types::he40::types;
 pub use types::*;
-use crate::combat::BodyHitContact;
 use crate::flight::Met;
 use crate::game::Game;
 use crate::ids::*;
@@ -181,14 +180,13 @@ fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::
 }
 
 /// Not armed and stopped: a 'shell' item with what motion is left, and a noise the room hears. (he40.ts dud)
-fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet, noise: Option<f64>, who: Option<f64>) {
-    let noise = noise.unwrap_or(g.k.he40.dud_noise);
-    let who = who.unwrap_or(0.0);
+fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet) {
     let most = g.k.he40.spent_speed_max;
     crate::flight::to_item(g, crate::throwables::ItemKind::Shell, sh.shooter, at, vel, most, crate::throwables::ItemBounce::ShellSkitter);
     crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::particle_fx::clack_fx(g, at);
-    if noise > 0.0 { crate::flight::noise(g, [at[0], 0.0, at[2]], noise, who, None); }
+    let level = g.k.he40.dud_noise;
+    if met != ShellEndMet::Man { crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, None); }   // (a man is its noise)
     g.stats.he40.duds += 1;
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: false, met });
 }
@@ -215,7 +213,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
             g.shells[i].spin += 40.0 * h;
             let Shell { pos, mut vel, shooter, .. } = g.shells[i];
             let bodies = crate::flight::bodies(g, shooter);
-            let leg = crate::flight::leg(g, &b, h, pos, &mut vel, &bodies, BodyHitContact::Flight { radius: b.radius });
+            let leg = crate::flight::leg(g, &b, h, pos, &mut vel, &bodies);
             g.shells[i].vel = vel;
             let Some(leg) = leg else { continue };
             let Some(met) = leg.met else {
@@ -238,7 +236,10 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
             match met {
                 Met::Man(c, t) => {
                     let at = v3::mad(pos, leg.dir, t);
-                    if armed { burst(g, sh, v3::mad(at, leg.dir, -r_k.standoff), ShellEndMet::Man); } else { dud_hits_character(g, sh, c, leg.dir, at); }
+                    if armed { burst(g, sh, v3::mad(at, leg.dir, -r_k.standoff), ShellEndMet::Man); } else {
+                        crate::flight::struck(g, c, leg.dir, shooter);
+                        dud(g, sh, v3::mad(at, leg.dir, -0.06), [-leg.dir[0] * 1.2, 0.8, -leg.dir[2] * 1.2], ShellEndMet::Man);
+                    }
                 }
                 Met::Prop(ph) => {
                     let hit_p = v3::mad(pos, leg.dir, ph.t);
@@ -248,7 +249,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                         let who = g.ch[shooter].id;
                         crate::props::prop_system_apply_impulse(g, ph.prop, hit_p, [leg.dir[0] * r_k.prop_j, 0.0, leg.dir[2] * r_k.prop_j], who, Some(true));
                         crate::marks::chip_mark(g, hit_p, ph.n, Some(crate::marks::Surface2 { box_: ph.box_, dynamic: true }), None);
-                        dud(g, sh, v3::mad(pos, leg.dir, m::max(0.0, ph.t - b.radius)), off(sh.vel, ph.n), ShellEndMet::Prop, None, None);
+                        dud(g, sh, v3::mad(pos, leg.dir, m::max(0.0, ph.t - b.radius)), off(sh.vel, ph.n), ShellEndMet::Prop);
                     }
                 }
                 Met::Static(st) => {
@@ -259,12 +260,12 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                     } else {
                         let surface = crate::marks::static_surface(g, st.index);
                         crate::marks::chip_mark(g, hit_p, st.n, surface, None);
-                        dud(g, sh, v3::mad(pos, leg.dir, m::max(0.0, st.t - b.radius)), off(sh.vel, st.n), ShellEndMet::Static, None, None);
+                        dud(g, sh, v3::mad(pos, leg.dir, m::max(0.0, st.t - b.radius)), off(sh.vel, st.n), ShellEndMet::Static);
                     }
                 }
                 Met::Floor => {
                     let at: V3 = [leg.to[0], b.radius, leg.to[2]];
-                    if armed { burst(g, sh, [at[0], r_k.standoff, at[2]], ShellEndMet::Floor); } else { dud(g, sh, at, off(sh.vel, [0.0, 1.0, 0.0]), ShellEndMet::Floor, None, None); }
+                    if armed { burst(g, sh, [at[0], r_k.standoff, at[2]], ShellEndMet::Floor); } else { dud(g, sh, at, off(sh.vel, [0.0, 1.0, 0.0]), ShellEndMet::Floor); }
                 }
             }
         }
@@ -279,41 +280,6 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
             g.shells.remove(i);
         }
     }
-}
-
-/// A round that had not armed has found a man: he folds or flinches, it never wounds, and it drops at his feet. (he40.ts dudHitsCharacter)
-fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c: CharId, dir: V3, at: V3) {
-    let gd = crate::character::guard_of(g, c);
-    match gd {
-        None => {
-            crate::character::anim_hit(g, c);
-            crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
-        }
-        Some(id) if g.gd[id].civ.is_some() => {
-            crate::character::anim_hit(g, c);
-            let pos = g.ch[c].pos;
-            crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(v3::add(pos, [0.0, 1.1, 0.0])), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
-            if g.gd[id].held.is_none() {
-                let pos = g.ch[c].pos;
-                crate::civilians::to_alarmed(g, id, crate::civilians::CivCause::Noise, [pos[0] - dir[0] * 4.0, 0.0, pos[2] - dir[2] * 4.0], false);
-            }
-        }
-        Some(id) => crate::launcher::stagger_guard(g, id, dir, r.shooter),
-    }
-    let noise = match gd {
-        Some(id) if g.gd[id].civ.is_none() => 0.0,
-        _ => g.k.he40.dud_hit_noise,
-    };
-    let who = g.ch[r.shooter].id;
-    dud(
-        g,
-        r,
-        v3::mad(at, dir, -0.06),
-        [-dir[0] * 1.2, 0.8, -dir[2] * 1.2],
-        crate::he40::ShellEndMet::Man,
-        Some(noise),
-        Some(who),
-    );
 }
 
 /// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight. Picture only; nothing in the tick calls it. (he40.ts shellBoxes)
