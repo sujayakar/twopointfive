@@ -320,14 +320,14 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     let shy = g.k.runner.shy_m;
     let cs = g.col.nav.cell;
     let pos = g.ch[g.gd[gd].ch].pos;
-    let mut pen = |_g: &mut Game, ix: f64, iz: f64| -> f64 {
+    let mut pen = |_g: &Game, ix: f64, iz: f64| -> f64 {
         let (x, z) = ((ix + 0.5) * cs, (iz + 0.5) * cs);
         for f in e {
             if m::hyp2(f.pos[0] - x, f.pos[2] - z) < shy { return 20.0; }
         }
         1.0
     };
-    let pen_arg: Option<&mut dyn FnMut(&mut Game, f64, f64) -> f64> = if e.is_empty() { None } else { Some(&mut pen) };
+    let pen_arg: Option<&mut dyn FnMut(&Game, f64, f64) -> f64> = if e.is_empty() { None } else { Some(&mut pen) };
     let p = crate::scene_collision::nav_grid_find_path(g, pos, goal, Some(12000.0), pen_arg);
     {
         let r = run!(g, gd);
@@ -342,7 +342,7 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     //  stale row stays, and the next read replaces it. STAND-IN by value: with the same numbers the TypeScript keeps a stale row until that read and
     //  this side has none; it belongs to the identity device.)
     if g.m.squad.settle_watch.get(gd).map_or(false, |w| w.goal == goal) { g.m.squad.settle_watch.delete(gd); }
-    let mut free = |g: &mut Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
+    let mut free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let path = crate::doors::doors_thread_path(g, p.as_deref().unwrap_or(&[]), pos, Some(&mut free));
     let o = &mut g.gd[gd];
     o.path = path;

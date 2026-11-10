@@ -1143,7 +1143,7 @@ pub struct EmptyView {
     pub dist: Option<f64>,
 }
 
-/// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`WorldAsk::way`)
+/// the way an order walks a man, for the HUD to draw: his own path where it is this order's, else the stops it goes through, each leg of which is a question of the floor (`scene_collision::way_host`)
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct PlanWay {
     /// his feet

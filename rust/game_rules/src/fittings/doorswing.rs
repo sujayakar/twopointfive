@@ -52,9 +52,6 @@ fn area(r: crate::doorswing::Rect) -> f64 {
 /// What roofOver reads of a static: c, h, yaw, flags.
 type BoxNumbers = (V3, V3, f64, f64);
 
-/// A static's numbers by its ID.
-fn seam_box_numbers(g: &Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
-
 /// roofOver's count over the statics' numbers.
 fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {
     let c = def.closed_dir;
@@ -89,7 +86,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
 /// How many of ROOF_PTS points just off face `s` of a door have a roof over them.
 fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
-    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
+    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }).collect();
     roof_points(&boxes, &g.dr[d].def, s)
 }
 
@@ -537,11 +534,7 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
 
 /// Deal every door of the level its side (Door.setSwing) and say why.
 pub fn deal_swings(g: &mut crate::game::Game) -> Vec<crate::doorswing::SwingDeal> {
-    if !g.doors.list.is_empty() {
-        crate::scene_collision::window(g, &mut |g| deal_all(g))
-    } else {
-        deal_all(g)
-    }
+    deal_all(g)
 }
 
 #[cfg(test)]

@@ -116,14 +116,15 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         if g.tab.fixture[t].lens.is_some() { crate::carlamps::car_lamp_paint(g, t); }
         if g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker {
             let e: V3 = if g.tab.fixture[t].broken { [0.0, 0.0, 0.0] } else if g.light_home.mains.active { [5.0, 0.3, 0.1] } else { [0.3, 4.0, 0.6] };
-            for bi in g.tab.fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes[b].emissive = e; }
+            for bi in g.tab.fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes.edit(b).emissive = e; }
             continue;
         }
         let base = g.tab.fixture[t].base_emissive;
         for bi in g.tab.fixture[t].boxes.clone() {
             let b = g.engine.world.statics[bi as usize];
-            g.tab.boxes[b].emissive = [base[0] * f, base[1] * f, base[2] * f];
-            g.tab.boxes[b].mark_gain = Some(f);
+            let mut lens = g.tab.boxes.edit(b);
+            lens.emissive = [base[0] * f, base[1] * f, base[2] * f];
+            lens.mark_gain = Some(f);
         }
     }
 }

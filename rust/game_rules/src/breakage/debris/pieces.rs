@@ -17,15 +17,13 @@ fn sfx_of(l: &LANDINGValue) -> Vec<ChunkSfxItem> {
 
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot do
 
-/// A box's row (Box.* in the TypeScript).
-fn seam_box(g: &mut Game, b: impl Into<AnyBoxId>) -> &mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 // ---------------------------------------------------------------- the arithmetic of a box's attitude
 
 fn rot_of(g: &mut Game, b: AnyBoxId) -> Quat {
-    match seam_box(g, b).rot {
+    match g.tab[b].rot {
         Some(r) => r,
-        None => v3::quat::yaw(seam_box(g, b).yaw),
+        None => v3::quat::yaw(g.tab[b].yaw),
     }
 }
 fn axes_of(q: Quat) -> [V3; 3] {
@@ -87,7 +85,7 @@ pub fn debris_spawn(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, b
 
 /// The simulation's half of a piece that is thrown: its one landing, put in the game's falls.
 fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, level: f64, who: f64) {
-    let c = seam_box(g, box_).c;
+    let c = g.tab.boxes[box_].c;
     let f = crate::falling::flight_of(g, c, v, G, crate::falling::FallWorld::StaticsAndProps);
     let down = m::sqrt(v[1] * v[1] + 2.0 * G * m::max(0.0, c[1] - f.pos[1]));
     if !(down > g.k.debris.min_speed) { return; }
@@ -131,7 +129,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
     let serial = g.destr.debris.serial;
     g.destr.debris.serial += 1.0;
     let (c0, h0, yaw, rot0, albedo, stuff, does) = {
-        let bx = seam_box(g, box_);
+        let bx = &g.tab.boxes[box_];
         (bx.c, bx.h, bx.yaw, bx.rot, bx.albedo, bx.stuff.clone(), bx.does.clone())
     };
     let rot = match rot0 { Some(r) => r, None => v3::quat::yaw(yaw) };
@@ -181,11 +179,11 @@ pub(in crate::breakage) fn debris_boxes(g: &mut crate::game::Game, out: &mut Vec
     let list = g.destr.debris.list.clone();
     for c in list {
         let (b, dress, mate) = { let ch = &g.tab.debris_chunk[c]; (ch.box_, is_on(ch.dress), ch.mate) };
-        if dress { seam_box(g, b).dress = Some(true); }
+        if dress { g.tab.edit(b).dress = Some(true); }
         out.push(b);
         if let Some(mt) = mate {
-            let (bc, by, br, bd) = { let bx = &seam_box(g, b); (bx.c, bx.yaw, bx.rot, bx.dress) };
-            let row = &mut seam_box(g, mt);
+            let (bc, by, br, bd) = { let bx = &g.tab[b]; (bx.c, bx.yaw, bx.rot, bx.dress) };
+            let mut row = g.tab.edit(mt);
             row.c = bc;
             row.yaw = by;
             row.rot = br;
@@ -210,7 +208,7 @@ pub(in crate::breakage) fn debris_impulse(g: &mut crate::game::Game, imp: crate:
         i += 1;
         if g.tab.debris_chunk[c].age <= 0.0 { continue; }
         let b = g.tab.debris_chunk[c].box_;
-        let bc = seam_box(g, b).c;
+        let bc = g.tab[b].c;
         let kick = match crate::sheet_model::impulse_kick(imp, bc, resp, None) { Some(x) => x, None => continue };
         if kick.s < di.wake { continue; }
         if let Some(f) = blocked.as_mut() {
@@ -259,8 +257,8 @@ pub(in crate::breakage) fn debris_feet(g: &mut crate::game::Game, men: &[crate::
         if !(rest || foot) || age <= 0.0 || on.is_some() || glass { continue; }
         let since = match foot_at { None => m::INF, Some(at) => age - at };
         if since < (if foot_n.unwrap_or(0.0) >= k.give_up { k.give_up_secs } else { k.cooldown }) { continue; }
-        let bh = seam_box(g, b).h;
-        let bc = seam_box(g, b).c;
+        let bh = g.tab[b].h;
+        let bc = g.tab[b].c;
         let mass = bh[0] * bh[1] * bh[2] * 8.0 * 600.0;
         let heavy = mass > k.heavy;   // (no boot moves it; what lies on a man down goes whatever it weighs)
         let far = bound_of(bh) + k.radius + k.reach + 0.05;
@@ -416,7 +414,7 @@ pub(in crate::breakage) fn debris_foot_step(g: &mut crate::game::Game, c_2: Debr
 /// The shortest way off the men down for a piece that lies on one, of sixteen, that it would slide free: its direction, and how far. A way is as long as it takes to come clear of every bone in the piece's
 /// path that way, not only of those it lies on now: so a slide leaves less to slide, and the next is never back over him.
 fn way_off(g: &mut Game, b: AnyBoxId, f: &Footprint, bones: &[V3]) -> Option<(f64, f64, f64)> {
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     let span = |x: f64, z: f64| m::abs(x * f.d1x + z * f.d1z) * f.e1 + m::abs(x * -f.d1z + z * f.d1x) * f.e2;
     let mut ways: Vec<(f64, f64, f64)> = (0..16).map(|i| {
         let (c, s) = (m::cos(i as f64 * m::PI / 8.0), m::sin(i as f64 * m::PI / 8.0));
@@ -432,7 +430,7 @@ fn way_off(g: &mut Game, b: AnyBoxId, f: &Footprint, bones: &[V3]) -> Option<(f6
 
 /// Would `debris_slide` carry the piece `d` that way: no static, leaf or furniture before its middle, a floor under it all along, and no corner of it in a static it is clear of now.
 fn slides_free(g: &mut Game, b: AnyBoxId, f: &Footprint, way: [f64; 2], d: f64) -> bool {
-    let c0 = seam_box(g, b).c;
+    let c0 = g.tab[b].c;
     let from = [c0[0], m::max(c0[1], c0[1] - f.hy + 0.05), c0[2]];
     let (ray, reach) = ([way[0], 0.0, way[1]], d + m::abs(way[0] * f.d1x + way[1] * f.d1z) * f.e1 + m::abs(way[1] * f.d1x - way[0] * f.d1z) * f.e2);
     if crate::scene_collision::raycast(g, from, ray, reach).is_some() || crate::props::prop_system_raycast(g, from, ray, reach).is_some() { return false; }
@@ -442,17 +440,17 @@ fn slides_free(g: &mut Game, b: AnyBoxId, f: &Footprint, way: [f64; 2], d: f64) 
     let mut k = 1.0;
     while free && k <= n {
         let c = [c0[0] + way[0] * d * k / n, c0[1], c0[2] + way[1] * d * k / n];
-        seam_box(g, b).c = c;
+        g.tab.edit(b).c = c;
         free = crate::scene_collision::raycast(g, [c[0], c[1] + 0.05, c[2]], [0.0, -1.0, 0.0], 0.05 + f.hy + 0.3).is_some() && !(clear && debris_foot_in(g, b));
         k += 1.0;
     }
-    seam_box(g, b).c = c0;
+    g.tab.edit(b).c = c0;
     free
 }
 
 /// A man's circle against a piece's footprint: the gap, the way out, the boot's lever.
 fn debris_foot_gap(g: &mut crate::game::Game, b: AnyBoxId, px: f64, pz: f64, d1x: f64, d1z: f64, e1: f64, e2: f64, radius: f64) -> crate::debris::DebrisFootGap {
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     let (d2x, d2z) = (-d1z, d1x);
     let (rx, rz) = (px - bc[0], pz - bc[2]);
     let u = rx * d1x + rz * d1z;
@@ -477,9 +475,9 @@ fn debris_foot_gap(g: &mut crate::game::Game, b: AnyBoxId, px: f64, pz: f64, d1x
 
 /// slide's `back`: the piece where it was.
 fn slide_back(g: &mut Game, b: AnyBoxId, c0: V3, rot0: Option<Quat>, yaw0: f64) {
-    seam_box(g, b).c = c0;
-    seam_box(g, b).rot = rot0;
-    seam_box(g, b).yaw = yaw0;
+    g.tab.edit(b).c = c0;
+    g.tab.edit(b).rot = rot0;
+    g.tab.edit(b).yaw = yaw0;
 }
 
 /// A boot's piece for `h` seconds: a slider on the floor it lay on.
@@ -492,17 +490,17 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     if sp < SLEEP_V * 0.25 && m::abs(g.tab.debris_chunk[c].w[1]) < 0.5 {
         // stopped: asleep, laid flat, unless lying down would put a corner of it into a wall it is clear of
         let clear = !debris_foot_in(g, b);
-        let r0 = seam_box(g, b).rot;
-        let y0 = seam_box(g, b).c[1];
-        let w0 = seam_box(g, b).yaw;
+        let r0 = g.tab[b].rot;
+        let y0 = g.tab[b].c[1];
+        let w0 = g.tab[b].yaw;
         debris_sleep(g, c, up, None);
         if clear && debris_foot_in(g, b) {
-            seam_box(g, b).rot = r0;
-            seam_box(g, b).yaw = w0;
-            let mut bc = seam_box(g, b).c;
+            g.tab.edit(b).rot = r0;
+            g.tab.edit(b).yaw = w0;
+            let mut bc = g.tab[b].c;
             bc[1] = y0;
-            seam_box(g, b).c = bc;
-            if let Some(y) = debris_seat(g, c, false).0 { bc[1] = y; seam_box(g, b).c = bc; }   // (tipped as it was, on what lies there)
+            g.tab.edit(b).c = bc;
+            if let Some(y) = debris_seat(g, c, false).0 { bc[1] = y; g.tab.edit(b).c = bc; }   // (tipped as it was, on what lies there)
             let ch = &mut g.tab.debris_chunk[c];
             ch.rest = true;
             ch.foot = Some(false);
@@ -511,15 +509,15 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
         }
         return;
     }
-    let c0 = seam_box(g, b).c;
-    let rot0 = seam_box(g, b).rot;
-    let yaw0 = seam_box(g, b).yaw;
+    let c0 = g.tab[b].c;
+    let rot0 = g.tab[b].rot;
+    let yaw0 = g.tab[b].yaw;
     let in0 = debris_foot_in(g, b);
     if face_tilt(g, b, up) > 1e-3 { lay_flat(g, b, up, 0.2); }
     if m::abs(g.tab.debris_chunk[c].w[1]) > 1e-4 {
         let a = g.tab.debris_chunk[c].w[1] * h;
         let r = rot_of(g, b);
-        seam_box(g, b).rot = Some(v3::quat::normalize(v3::quat::mul([0.0, m::sin(a / 2.0), 0.0, m::cos(a / 2.0)], r)));
+        g.tab.edit(b).rot = Some(v3::quat::normalize(v3::quat::mul([0.0, m::sin(a / 2.0), 0.0, m::cos(a / 2.0)], r)));
         g.tab.debris_chunk[c].w[1] *= m::max(0.0, 1.0 - 5.0 * h);
     }
     let sup = support_along(g, b, up);
@@ -528,7 +526,7 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
         let (dx, dz) = (v[0] / sp, v[2] / sp);
         let d = sp * h;
         let ahead = support_along(g, b, [dx, 0.0, dz]);
-        let bc = seam_box(g, b).c;
+        let bc = g.tab[b].c;
         let from: V3 = [bc[0], m::max(bc[1], bc[1] - sup + 0.05), bc[2]];
         let st = crate::scene_collision::raycast(g, from, [dx, 0.0, dz], d + ahead);
         let ph = crate::props::prop_system_raycast(g, from, [dx, 0.0, dz], match &st { Some(s) => s.t, None => d + ahead });
@@ -543,7 +541,7 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
             let t = m::max(0.0, ht - ahead);
             nc[0] += dx * t;
             nc[2] += dz * t;
-            seam_box(g, b).c = nc;
+            g.tab.edit(b).c = nc;
             let ch = &mut g.tab.debris_chunk[c];
             let vn = ch.v[0] * hn[0] + ch.v[2] * hn[2];
             if vn < 0.0 {
@@ -553,10 +551,10 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
         } else {
             nc[0] += dx * d;
             nc[2] += dz * d;
-            seam_box(g, b).c = nc;
+            g.tab.edit(b).c = nc;
         }
     }
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     let top: V3 = [bc[0], c0[1] + 0.05, bc[2]];
     let fl = crate::scene_collision::raycast(g, top, [0.0, -1.0, 0.0], 0.05 + sup + 0.3);
     let fl = match fl {
@@ -574,7 +572,7 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     // (it goes at the height it lay at, off a pile, and comes down to the floor by a fall's pace and not at a stroke)
     let floor = top[1] - fl.t + sup + 0.0015 + g.tab.debris_chunk[c].lift.unwrap_or(0.0);
     nc[1] = m::max(floor, m::min(c0[1], nc[1]) - G * h * 0.25);
-    seam_box(g, b).c = nc;
+    g.tab.edit(b).c = nc;
     if !in0 && debris_foot_in(g, b) {
         slide_back(g, b, c0, rot0, yaw0);
         let ch = &mut g.tab.debris_chunk[c];
@@ -592,8 +590,8 @@ fn debris_slide(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
 /// Does a piece's footprint reach into a static? Level rays from its middle to its four corners.
 fn debris_foot_in(g: &mut crate::game::Game, b: AnyBoxId) -> bool {
     let q = rot_of(g, b);
-    let bh = seam_box(g, b).h;
-    let bc = seam_box(g, b).c;
+    let bh = g.tab[b].h;
+    let bc = g.tab[b].c;
     let a = axes_of(q);
     let mut iu = 0usize;
     for i in 1..3 { if m::abs(a[i][1]) > m::abs(a[iu][1]) { iu = i; } }
@@ -628,7 +626,7 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
         g.tab.debris_chunk[c].age += dt;
         if g.tab.debris_chunk[c].rest {
             let (b, on, on_pose, serial) = { let ch = &g.tab.debris_chunk[c]; (ch.box_, ch.on, ch.on_pose, ch.serial) };
-            let bc = seam_box(g, b).c;
+            let bc = g.tab[b].c;
             if let Some(p) = on {
                 // on furniture: it drops again once that piece has moved out from under it
                 if pose_key(g, p) != on_pose {
@@ -659,7 +657,7 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
             s += 1;
         }
         let b = g.tab.debris_chunk[c].box_;
-        let y = seam_box(g, b).c[1];
+        let y = g.tab[b].c[1];
         if y < -1.0 || g.tab.debris_chunk[c].age > 600.0 {
             if i < g.destr.debris.list.len() { g.destr.debris.list.remove(i); }
             if g.tab.debris_chunk[c].glass.is_some() { crate::shards::glass_shards_gone(g, c); }
@@ -668,11 +666,11 @@ pub(in crate::breakage) fn debris_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 fn box_add_c(g: &mut Game, b: AnyBoxId, d: V3) {
-    let mut c = seam_box(g, b).c;
+    let mut c = g.tab[b].c;
     c[0] += d[0];
     c[1] += d[1];
     c[2] += d[2];
-    seam_box(g, b).c = c;
+    g.tab.edit(b).c = c;
 }
 
 /// A thrown chunk for `h` seconds: ballistic flight with a swept contact.
@@ -687,7 +685,7 @@ fn debris_step(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
         let a = wl * h;
         let s = m::sin(a / 2.0) / wl;
         let r = rot_of(g, b);
-        seam_box(g, b).rot = Some(v3::quat::normalize(v3::quat::mul([w0[0] * s, w0[1] * s, w0[2] * s, m::cos(a / 2.0)], r)));
+        g.tab.edit(b).rot = Some(v3::quat::normalize(v3::quat::mul([w0[0] * s, w0[1] * s, w0[2] * s, m::cos(a / 2.0)], r)));
     }
     // move with a swept contact: the centre ray, met `support` short of the surface
     let mv = v3::scale(g.tab.debris_chunk[c].v, h);
@@ -695,7 +693,7 @@ fn debris_step(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     if len < 1e-7 { debris_settle_tick(g, c, h, None); return; }
     let dir = v3::scale(mv, 1.0 / len);
     let reach = len + bound_r(g, b) * 1.05;
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     let st = crate::scene_collision::raycast(g, bc, dir, reach);
     let ph = crate::props::prop_system_raycast(g, bc, dir, match &st { Some(s) => s.t, None => reach });
     let hit: Option<(f64, V3, Option<PropId>)> = match (&ph, &st) {
@@ -714,7 +712,7 @@ fn debris_step(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
                 let speed = -vn;
                 if let Some(p) = hit_prop {
                     if !is_on(g.tab.debris_chunk[c].dress) {
-                        let at = seam_box(g, b).c;
+                        let at = g.tab[b].c;
                         let j = v3::scale(n, vn * 0.4 * mass_of(g, b));
                         crate::props::prop_system_apply_impulse(g, p, at, j, 0.0, None);
                     }
@@ -761,11 +759,11 @@ fn debris_step(g: &mut crate::game::Game, c_2: DebrisChunkId, h: f64) {
     }
     // the world's floor as a last resort
     let sup = support_along(g, b, [0.0, 1.0, 0.0]);
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     if bc[1] < sup {
         let mut nc = bc;
         nc[1] = sup + 0.001;
-        seam_box(g, b).c = nc;
+        g.tab.edit(b).c = nc;
         if g.tab.debris_chunk[c].v[1] < 0.0 {
             let sp = -g.tab.debris_chunk[c].v[1];
             {
@@ -815,9 +813,9 @@ fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3, on: Option
     lay_flat(g, b, n, 1.0);
     {   // (a sheet does not stand on its edge; but one that going down would put through a wall it is clear of leans on that wall)
         let clear = !debris_foot_in(g, b);
-        let (r0, y0) = (seam_box(g, b).rot, seam_box(g, b).yaw);
+        let (r0, y0) = (g.tab[b].rot, g.tab[b].yaw);
         lay_sheet(g, b, n);
-        if clear && debris_foot_in(g, b) { seam_box(g, b).rot = r0; seam_box(g, b).yaw = y0; }
+        if clear && debris_foot_in(g, b) { g.tab.edit(b).rot = r0; g.tab.edit(b).yaw = y0; }
     }
     let on_pose = match on { Some(p) => pose_key(g, p), None => 0.0 };
     {
@@ -832,9 +830,9 @@ fn debris_sleep(g: &mut crate::game::Game, c_2: DebrisChunkId, n: V3, on: Option
     // sit exactly on the surface under it, and on whatever already lies there
     let (seat, ph) = debris_seat(g, c, false);
     if let Some(y) = seat {
-        let mut nc = seam_box(g, b).c;
+        let mut nc = g.tab[b].c;
         nc[1] = y;
-        seam_box(g, b).c = nc;
+        g.tab.edit(b).c = nc;
     }
     if let Some(p) = ph {
         let k = pose_key(g, p.prop);
@@ -861,7 +859,7 @@ const PILE: f64 = 0.3;
 fn debris_seat(g: &mut Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Option<crate::props::PropSystemRaycast>) {
     let b = g.tab.debris_chunk[c].box_;
     let sup = support_along(g, b, [0.0, 1.0, 0.0]);
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     let from: V3 = [bc[0], bc[1] + 0.05, bc[2]];
     let reach = sup + (if seated { 1.0 } else { 0.4 });   // (seated, it may lie on a pile well over the surface)
     let st = crate::scene_collision::raycast(g, from, [0.0, -1.0, 0.0], reach);
@@ -880,13 +878,13 @@ fn debris_seat(g: &mut Game, c: DebrisChunkId, seated: bool) -> (Option<f64>, Op
 /// The top of what lies on `surface` over box b's footprint; the surface itself where nothing does. `rubble`: the wall's rubble counts as well as the pool's pieces.
 fn pile_top(g: &mut Game, b: AnyBoxId, surface: f64, seated: bool, rubble: bool) -> f64 {
     let mine = footprint(g, b);
-    let (bc, sup) = (seam_box(g, b).c, mine.hy);
+    let (bc, sup) = (g.tab[b].c, mine.hy);
     let mut top = surface;
     let lies: Vec<AnyBoxId> = g.destr.debris.list.iter().map(|&o| &g.tab.debris_chunk[o]).filter(|o| o.rest && o.glass.is_none() && o.box_ != b).map(|o| o.box_)
         .chain(g.destr.edge_look.rubble.iter().filter(|r| rubble && r.t >= r.t_2 && AnyBoxId::Frame(r.box_) != b).map(|r| AnyBoxId::Frame(r.box_))).collect();
     for o in lies {
-        let oc = seam_box(g, o).c;
-        let (ob, oh) = (bound_of(seam_box(g, o).h), bound_of(seam_box(g, b).h));
+        let oc = g.tab[o].c;
+        let (ob, oh) = (bound_of(g.tab[o].h), bound_of(g.tab[b].h));
         if m::abs(oc[0] - bc[0]) > ob + oh || m::abs(oc[2] - bc[2]) > ob + oh { continue; }
         let theirs = footprint(g, o);
         if oc[1] - theirs.hy > surface + PILE || !footprints_meet(bc, &mine, oc, &theirs) { continue; }
@@ -909,10 +907,10 @@ pub(in crate::breakage) fn debris_rubble_height(g: &mut crate::game::Game, b: An
 pub(in crate::breakage) fn debris_resettle(g: &mut crate::game::Game, c: DebrisChunkId) {
     let b = g.tab.debris_chunk[c].box_;
     let sup = support_along(g, b, [0.0, 1.0, 0.0]);
-    let bc = seam_box(g, b).c;
+    let bc = g.tab[b].c;
     if bc[1] <= sup + 0.02 { return; }
     match debris_seat(g, c, true).0 {
-        Some(y) if bc[1] - y < 0.1 => { let mut nc = bc; nc[1] = y; seam_box(g, b).c = nc; }
+        Some(y) if bc[1] - y < 0.1 => { let mut nc = bc; nc[1] = y; g.tab.edit(b).c = nc; }
         _ => {
             let ch = &mut g.tab.debris_chunk[c];
             ch.rest = false;
@@ -925,7 +923,7 @@ pub(in crate::breakage) fn debris_resettle(g: &mut crate::game::Game, c: DebrisC
 #[derive(Clone, Copy)]
 struct Footprint { d1x: f64, d1z: f64, e1: f64, e2: f64, hy: f64 }
 fn footprint(g: &mut Game, b: AnyBoxId) -> Footprint {
-    let bh = seam_box(g, b).h;
+    let bh = g.tab[b].h;
     let a = axes_of(rot_of(g, b));
     let mut iu = 0usize;
     for i in 1..3 { if m::abs(a[i][1]) > m::abs(a[iu][1]) { iu = i; } }
@@ -966,7 +964,7 @@ fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     crate::break_table::breaks_landed(g, c, speed);
     if g.tab.debris_chunk[c].glass.is_some() && crate::shards::glass_shards_landed(g, c, speed) { return; }
     let b = g.tab.debris_chunk[c].box_;
-    let p = v3::copy(seam_box(g, b).c);
+    let p = v3::copy(g.tab[b].c);
     let (sfx, serial) = { let ch = &g.tab.debris_chunk[c]; (ch.sfx.clone(), ch.serial) };
     for s in sfx.iter() {
         let gain = m::min(1.0, s.gain * (0.6 + speed * 0.15));
@@ -981,7 +979,7 @@ fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
 /// The box's half extent along world direction n.
 pub(in crate::breakage) fn support_along(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let r = rot_of(g, b);
-    support_of(r, seam_box(g, b).h, n)
+    support_of(r, g.tab[b].h, n)
 }
 
 /// A slot the pool may take: at rest, or one only a boot has set sliding.
@@ -990,15 +988,15 @@ fn evictable(g: &crate::game::Game, c_2: DebrisChunkId) -> bool {
     ch.rest || ch.foot == Some(true)
 }
 
-fn bound_r(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { bound_of(seam_box(g, b).h) }
+fn bound_r(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { bound_of(g.tab[b].h) }
 
 /// A nominal mass off the volume, clamped.
-fn mass_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { mass_from(seam_box(g, b).h) }
+fn mass_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 { mass_from(g.tab[b].h) }
 
 /// Radians between n and the box axis layFlat would settle onto it.
 fn face_tilt(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
     let q = rot_of(g, b);
-    face_tilt_of(q, seam_box(g, b).h, n)
+    face_tilt_of(q, g.tab[b].h, n)
 }
 
 #[cfg(test)]

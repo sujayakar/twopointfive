@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ small private helpers
 
 /// Lends a skip_owner on for one call, keeping it for the next.
-fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&mut Game, f64) -> bool + 'b)>) -> Option<&'a mut (dyn FnMut(&mut Game, f64) -> bool + 'a)> {
+fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&Game, f64) -> bool + 'b)>) -> Option<&'a mut (dyn FnMut(&Game, f64) -> bool + 'a)> {
     match s {
         Some(f) => Some(&mut **f),
         None => None,
@@ -85,14 +85,14 @@ fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
 // ------------------------------------------------------------ the light meter
 
 /// THE LIGHT ON A POINT, by which every eye judges how well it is seen: what stands on it (`light_at`), as eyes used to the place see it (`eyes_at`).
-pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> f64 {
+pub fn light_estimate_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> f64 {
     let (e, place) = light_at(g, p, skip_owner, steady_only, leave);
     e * eyes_at(g, place)
 }
 /// How many times brighter than it stands the light of the place about a point is seen by whoever is there (`eyes_at`).
 pub fn eyes_in(g: &mut crate::game::Game, p: V3) -> f64 {
     if crate::hours::exposure(g) >= 1.0 { return 1.0; }
-    let field = crate::scene_collision::window(g, &mut |g: &mut Game| crate::sense::under_roof(g, p));
+    let field = crate::sense::under_roof(g, p);
     eyes_at(g, field.map(|f| f.place))
 }
 /// EYES GET USED TO A PLACE: how many times brighter a place under a roof that holds `place` of light is seen than an hour's light stands at, by whoever is in it: up
@@ -113,23 +113,14 @@ fn eyes_at(g: &crate::game::Game, place: Option<f64>) -> f64 {
 /// WHAT LIGHT STANDS ON A POINT, at the hour's exposure: the best of the six axis faces under every lamp that reaches it (each dimmed by the smoke on its way),
 /// the sun's or the moon's beam and the sky, a stroke of lightning, and what comes round; and, under a roof, how light the place is. `skip_owner` = whose carried lamps are
 /// left out; `steady_only` = what the place lights, with nothing that passes; `leave` = lamps of the level's own left out, by what feeds them.
-pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> (f64, Option<f64>) {
-    let mut skip_owner = skip_owner;
-    let steady_only = steady_only.unwrap_or(false);
-    let leave = leave.unwrap_or(0.0);
-    if crate::scene_collision::standing(g) {
-        light_in(g, p, lend(&mut skip_owner), steady_only, leave)
-    } else {
-        crate::scene_collision::window(g, &mut |g: &mut Game| light_in(g, p, lend(&mut skip_owner), steady_only, leave))
-    }
+pub fn light_at(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: Option<bool>, leave: Option<f64>) -> (f64, Option<f64>) {
+    light_in(g, p, skip_owner, steady_only.unwrap_or(false), leave.unwrap_or(0.0))
 }
 
 /// The lamps, the sun's beam or the moon's, the stroke, onto six faces, with the sky's under the open sky; the best of them. Under a roof the sky is what the
 /// openings show of it, and with all that comes round it is the field's (sim/glow.rs): its mean with the best face of the beams, or its own best face.
-fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
-    let mut skip_owner = skip_owner;
-    let mut acc: Vec<f64> = vec![0.0; 6];
-    lamps_on(g, p, lend(&mut skip_owner), steady_only, &mut acc, leave);
+fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool, leave: f64) -> (f64, Option<f64>) {
+    let mut acc = lamps_on(g, p, skip_owner, steady_only, leave);
     crate::hours::sun_light(g, p, &mut acc);
     let field = crate::sense::under_roof(g, p);
     if field.is_none() || leave != 0.0 { crate::hours::dome_light(g, p, &mut acc); }
@@ -141,7 +132,7 @@ fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(
 }
 
 /// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`).
-fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
+fn lamp_asked(g: &crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool) -> bool {
     if !g.tab.light[l].enabled || g.tab.light[l].intensity <= 0.0 || g.tab.light[l].kind == 2.0 { return false; }
     if let Some(f) = skip_owner {
         let owner = g.tab.light[l].owner;
@@ -156,15 +147,13 @@ fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
-/// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full.
-fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
+/// A light question's own lamps, in the list's order, each with how many of the level's rows stand before it; the rows themselves are read where they stand.
+fn own_lamps(g: &Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool) -> Vec<[f64; sim::light::LAMP]> {
     let mut skip_owner = skip_owner;
     let exposure = crate::hours::exposure(g);
+    let mut lamps = Vec::new();
     let mut rows = 0.0;
-    let mut i = 0;
-    while i < g.engine.lights.lights.len() {
-        let l = g.engine.lights.lights[i];
-        i += 1;
+    for &l in &g.engine.lights.lights {
         if let Some(r) = g.tab.light[l].row {
             if r != rows { panic!("light: the lamp '{}' is row {} of the level's lights and stands after {} of them in the engine's list: the rows are that list's order (sim/lightshome.ts stand)", g.tab.light[l].name, r, rows); }
             rows += 1.0;
@@ -180,24 +169,20 @@ fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut
             let (dx, dy, dz) = (lp[0] - q[0], lp[1] - q[1], lp[2] - q[2]);
             if dx > range || -dx > range || dy > range || -dy > range || dz > range || -dz > range { continue; }
         }
-        if !crate::scene_collision::lamp(g, lp, range, radius, kind, dir, outer, inner, color, intensity, Some(rows)) { return false; }
+        lamps.push([lp[0], lp[1], lp[2], range, radius, kind, dir[0], dir[1], dir[2], outer, inner, color[0], color[1], color[2], intensity, rows]);
     }
-    true
+    lamps
 }
 
-/// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds.
-pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
-    if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
-    crate::guards::SteadyLamps::LampRows(rows_of(true, 0.0))
+/// The lamps the light that comes round is swept from: the few of nobody's fixture, and how the rows are read.
+pub fn steady_lamps(g: &Game) -> (Vec<[f64; sim::light::LAMP]>, crate::scene_collision::LampRows) {
+    (own_lamps(g, None, Some(&mut |_: &Game, _: f64| true), true), rows_of(true, 0.0))
 }
 
-/// The lamps' part of the light on a point: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
-fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
-    let shade = crate::sense::smoky(g);
-    let rows = rows_of(steady_only, leave);
-    crate::scene_collision::lamps_begin(g, p, shade, Some(rows));
-    write_lamps(g, Some(p), skip_owner, steady_only);
-    crate::scene_collision::lamps_on(g, acc);
+/// The lamps' part of the light on a point: the question's own and the level's, summed onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
+fn lamps_on(g: &Game, p: V3, skip_owner: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady_only: bool, leave: f64) -> [f64; 6] {
+    let lamps = own_lamps(g, Some(p), skip_owner, steady_only);
+    crate::scene_collision::lamps_on(g, p, &lamps, crate::sense::smoky(g), rows_of(steady_only, leave))
 }
 
 /// The light on one body, the brighter of his chest and his head: what stands on him, and what eyes used to the place see him by.

@@ -121,7 +121,7 @@ fn a_mark_on_a_leaf_rides_it() {
     let centre = [f32::from_bits(g[0]), f32::from_bits(g[1]), f32::from_bits(g[2])];
     assert_eq!(centre, [c[0] as f32, c[1] as f32, c[2] as f32], "box {on} of the list is not the leaf");
     let was = [f(d.marks.words[REC0].w), f(d.marks.words[REC0 + 2].w)];
-    p.g.tab.boxes[leaf].c[0] += 1.0;
+    p.g.tab.boxes.edit(leaf).c[0] += 1.0;
     let d = drawn(&p);
     assert!((f(d.marks.words[REC0].w) - was[0] - 1.0).abs() < 1e-5 && (f(d.marks.words[REC0 + 2].w) - was[1]).abs() < 1e-5, "the mark stayed where the leaf was");
     p.g.engine.world.dynamics.retain(|b| *b != leaf.into());

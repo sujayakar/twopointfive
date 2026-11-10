@@ -279,35 +279,21 @@ impl Moment {
         let block = unsafe { core::slice::from_raw_parts(::sim::state::addr(g.sim) as *const u8, core::mem::size_of::<::sim::state::State>()) }.to_vec();
         Moment { game, block }
     }
-    /// the moment in `slot`, and a game that holds it. The box world's copy in rust/sim stands outside the block and is the abandoned moment's: written whole again by `whole`, which
-    /// `over` and `stand` do, or a host may have something to say of the game first
+    /// the moment in `slot`, and a game that holds it.
     pub fn laid(&self, slot: usize) -> Box<Game> {
         ::sim::state::put(slot, &self.block);
         let mut g = self.game.clone();
         crate::game::stand_in(&mut g, slot);
-        g.col.mirror.put_backs = -1.0;
-        g
-    }
-    /// the game stands at this moment again, in `slot`
-    pub fn stands(&self, slot: usize) -> Box<Game> {
-        let mut g = self.laid(slot);
-        whole(&mut g);
         g
     }
 }
-/// the box world's copy with it: it stands again, of this moment, before anybody asks
-fn whole(g: &mut Game) {
-    crate::scene_collision::unstand(g);
-    crate::scene_collision::stands(g);
-}
-/// The game `g` is this one now, standing where it stood: the serial counter never goes back in a game (what was dealt after is still held on the host's side, and a number means one thing), and the box world's copy stands again of this moment
+/// The game `g` is this one now, standing where it stood: the serial counter never goes back in a game (what was dealt after is still held on the host's side, and a number means one thing)
 pub fn over(g: &mut Game, mut new: Box<Game>) {
     new.serial_next = new.serial_next.max(g.serial_next);
     stand(g, new);
 }
-/// `new` is the game now, with its box world's copy standing of this moment.
+/// `new` is the game now
 pub fn stand(g: &mut Game, mut new: Box<Game>) {
-    whole(&mut new);
     core::mem::swap(g, &mut *new);
 }
 
@@ -416,8 +402,6 @@ pub fn restart(g: &mut Game) -> bool {
     crate::quiet::quiet_mission_release(g);
     let was = Survivors::of(g);
     let host = (g.host_cam, g.host_input);
-    // (no box world's copy stands yet of a level with no men: the lines open it, as they did)
-    crate::scene_collision::unstand(g);
     let mut new = first.image.laid(slot);
     new.serial_next = new.serial_next.max(g.serial_next);
     core::mem::swap(g, &mut *new);
@@ -444,7 +428,6 @@ pub fn again(g: &mut Game, size: Option<u32>) -> bool {
     let (slot, of) = (g.sim, stood(g));
     let (Some(first), Some(stage)) = (held(of).first.clone(), held(of).stage.clone()) else { return false };
     let (kit, k, out, cmd) = (g.m.kit.clone(), g.k.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
-    crate::scene_collision::unstand(g);
     let mut new = first.image.laid(slot);
     new.serial_next = new.serial_next.max(g.serial_next);
     core::mem::swap(g, &mut *new);

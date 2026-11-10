@@ -49,7 +49,6 @@ pub struct BoxWorld {
     pub dynamics: Vec<AnyBoxId>,
     pub max_boxes: f64,
     pub geom_serial: f64,
-    pub glass_open: Option<crate::scene_collision::PaneRule>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

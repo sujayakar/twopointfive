@@ -153,7 +153,7 @@ pub(super) fn eyes_for(g: &crate::game::Game, gd: GuardId) -> Vec<GuardId> {
 }
 
 /// How lit two points are, the brighter, on the meter's own curve.
-pub(super) fn cpu_lit(g: &mut crate::game::Game, a: V3, b: V3, own: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady: Option<bool>) -> f64 {
+pub(super) fn cpu_lit(g: &mut crate::game::Game, a: V3, b: V3, own: Option<&mut dyn FnMut(&Game, f64) -> bool>, steady: Option<bool>) -> f64 {
     let steady = steady.unwrap_or(true);
     let mut own = own;
     let at_a = match own.as_mut() {
@@ -203,7 +203,7 @@ pub(super) fn stand_in(p: V3, low: bool) -> crate::sneak::Target {
 }
 
 /// guards.ts eyeContact asked of what the sneak's eye test takes: a man's own body, or a spot (standIn: alive, never the player, so only `blind` shuts the eye).
-fn ask(g: &mut Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
+fn ask(g: &Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
     match *pc {
         Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
         Target::Spot { chest, head } => {
@@ -268,7 +268,7 @@ pub(super) fn eye_gains(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, 
 }
 
 /// Is a man on a spot this lit, this far from this eye, seen as the sneak reads a step.
-fn lit_seen(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool {
+fn lit_seen(g: &crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool {
     if lit < g.k.sneak.lit_at { return false; }
     eye_gains(g, h, lit, dist, keen, low, card, pad)
 }
@@ -369,7 +369,7 @@ fn kept_of(g: &mut Game, h: GuardId, low: bool, x: f64, z: f64) {
 }
 fn walk_lit_of(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64, age: Option<f64>) -> f64 { lit_cell(g, x, z, w.low, age) }
 /// The cheap part first (reach, and the cone in plan with a little slack), then the eye test's own cone.
-fn walk_in_cone(g: &mut Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: &Target) -> bool {
+fn walk_in_cone(g: &Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: &Target) -> bool {
     let l = mm.looks[k];
     let e = if wider { l.ew } else { l.e };
     let dx = x - mm.x;

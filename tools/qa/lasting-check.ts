@@ -14,7 +14,7 @@ const graph: AudioBackend = { sampleRate: 24000, now: () => now, sfxContext: sfx
   play: o => { const v: V = { buffer: o.buffer, loop: !!o.loop, gain: o.gain, rate: o.rate, stopped: false, released: false, pos: [...(o.pos ?? [])] }; voices.push(v); return v as unknown as BackendVoice; },
   setVoice: (v, p) => { const w = v as unknown as V; if (p.pos) w.pos = [...p.pos]; if (p.gain !== undefined) w.gain = p.gain; if (p.rate !== undefined) w.rate = p.rate; }, stop: v => { (v as unknown as V).stopped = true; }, release: v => { (v as unknown as V).released = true; },
   setListener() {}, setBus() {}, setReverb() {}, rainLevel() {} };
-const ask = { hear: (p: number[]) => ({ apparent: p, muffle: 0, pathLen: 1, routed: false }), ray: () => null, together: (f: () => void) => f(), blocked: () => false };
+const ask = { hear: (p: number[]) => ({ apparent: p, muffle: 0, pathLen: 1, routed: false }), ray: () => null, blocked: () => false };
 const A = new AudioEngine(ask as never, () => graph); A.start(); A.setListener([0, 1.6, 0], [0, 0, -1]); A.tap = a => { asks.push(a); };
 const can = (age: number, o: Partial<LastingSound> = {}): LastingSound => ({ name: 'smokeHiss', id: 7, pos: [2, 0.1, 0], gain: 1, hard: 1, age, left: 32 - age, reach: 0, ...o });
 const chair = (hard: number, id = 1, x = 3): LastingSound => ({ name: 'chairRoll', id, pos: [x, 0, 0], gain: 0.5, hard, age: Infinity, left: Infinity, reach: 0 });

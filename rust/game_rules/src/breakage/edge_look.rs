@@ -171,7 +171,7 @@ pub(super) fn edge_look_feet(g: &mut crate::game::Game, men: &[crate::debris::Fo
         // a slab that casts a shadow and was slid to a tripwire's beam casts none from here on (shed()'s rule, kept true under the boots)
         let bx = g.tab.debris_chunk[c].box_;
         let (flags, bc, bh) = { let b = &g.tab[bx]; (js::to_i32(b.flags), b.c, b.h) };
-        if slid && flags & no_shadow == 0 && edge_look_in_beam(g, bc, m::max(bh[0], bh[2])) { g.tab[bx].flags = (flags | no_shadow) as f64; }
+        if slid && flags & no_shadow == 0 && edge_look_in_beam(g, bc, m::max(bh[0], bh[2])) { g.tab.edit(bx).flags = (flags | no_shadow) as f64; }
     }
 }
 

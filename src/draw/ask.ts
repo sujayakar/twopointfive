@@ -12,6 +12,5 @@ export function askOf(game: DrawGame): WorldAsk {
     hear: (from, to): Heard => { X.face_hear(game.h, from[0], from[1], from[2], to[0], to[1], to[2]); return heardOf(doubles(10)); },
     way: (a, b, maxIter) => { const n = X.face_way(game.h, a[0], a[2], b[0], b[2], maxIter); return n < 0 ? null : wayOf(n ? doubles(n * 2) : []); },
     light: (p, owners, steady, leave): number => { const n = owners.length * 8, q = n ? X.face_alloc(n) >>> 0 : 0; if (n) new Float64Array(game.memory.buffer, q, owners.length).set(owners); try { return X.face_light(game.h, p[0], p[1], p[2], steady ? 1 : 0, leave, q, n); } finally { if (n) X.face_free(q, n); } },
-    together: f => f(),
   };
 }

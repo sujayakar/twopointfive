@@ -8,7 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
 
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ------------------------------------------------------------------ small helpers of this part
 
@@ -95,18 +94,18 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
             _ => crate::scene_materials::Surf::Foliage,
         };
         box_ = hit.box_.or_else(|| g.tab.props_prop[prop].boxes.first().copied());
-        if let Some(b) = box_ { albedo = seam_box(g, b).albedo; }
+        if let Some(b) = box_ { albedo = g.tab.boxes[b].albedo; }
     } else if let Some(index) = hit.index {
         if index >= 1e6 {
             surf = crate::scene_materials::Surf::Wood;
             box_ = box_at(g.col.dynamic_boxes.len(), index - 1e6).map(|k| g.col.dynamic_boxes[k]);
-            if let Some(b) = box_ { albedo = seam_box(g, b).albedo; }
+            if let Some(b) = box_ { albedo = g.tab.boxes[b].albedo; }
         } else {
             bi = index;
             box_ = box_at(g.col.boxes.len(), bi).map(|k| g.col.boxes[k]);
             if let Some(b) = box_ {
-                albedo = seam_box(g, b).albedo;
-                let word = seam_box(g, b).does;
+                albedo = g.tab.boxes[b].albedo;
+                let word = g.tab.boxes[b].does;
                 surf = if crate::scene_materials::does_of(g, word).wall == Some(crate::scene_materials::DoesWall::Screen) { crate::scene_materials::Surf::Fabric } else { crate::particle_fx::surf_at(g, b) };
             }
         }
@@ -181,7 +180,7 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
 pub fn destruction_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult {
     let opts = opts.unwrap_or_default();
     let who = opts.who;
-    crate::scene_collision::window(g, &mut |g: &mut Game| crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts)))
+    crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts))
 }
 
 /// The call list, the doors, the walls and cover, the furniture, then the lane's bang and pall.
@@ -322,7 +321,7 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     }
     let eye: V3 = [at[0], m::max(at[1] + 0.3, 0.95), at[2]];
     for d in &wide {
-        let c = seam_box(g, d.box_).c;
+        let c = g.tab.boxes[d.box_].c;
         let dd = v3::dist(c, at);
         let over = top_of(g, d.box_);
         if d.kind == DKind::Paper && dd < 2.6 * reach && !crate::scene_collision::solid_blocked(g, eye, over, None) {
@@ -423,7 +422,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>) 
 fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate::scene_materials::Surf, box_: BoxId, dynamic: bool, rifle: bool, item: Option<&crate::destruction::Destructible>) {
     let is_crack = matches!(item, Some(it) if it.kind == DKind::Screen || it.kind == DKind::Tv);   // (`m === LANE_MARK.crack`)
     let mut mark = if is_crack { lane("crack") } else if surf == crate::scene_materials::Surf::Metal { lane("dent") } else if surf == crate::scene_materials::Surf::Fabric { lane("shred") } else { return; };
-    if js::to_i32(seam_box(g, box_).flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
+    if js::to_i32(g.tab.boxes[box_].flags) & js::to_i32(hidden_bits()) != 0 && !is_crack { return; }
     let rj = destruction_hash(g);
     if !destruction_take(g, crate::destruction::RateCapN::Decal) { return; }
     let attach = if dynamic { Some(box_) } else { None };
@@ -480,8 +479,8 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
     let mut list: Vec<Destructible> = Vec::new();
     for d in destruction_near(g, hit_p, &mut list) {
         if d.kind != DKind::Paper { continue; }
-        let c = seam_box(g, d.box_).c;
-        let h = seam_box(g, d.box_).h;
+        let c = g.tab.boxes[d.box_].c;
+        let h = g.tab.boxes[d.box_].h;
         let dd = m::hyp3(c[0] - hit_p[0], (c[1] - hit_p[1]) * 0.5, c[2] - hit_p[2]);
         let mut hit_it = dd < g.k.chaos.paper_reach_m * (0.6 + 0.4 * m::min(1.0, e / 3.0)) && !crate::scene_collision::solid_blocked(g, v3::mad(hit_p, dir, -0.05), [c[0], c[1] + h[1] + 0.05, c[2]], None);
         if !hit_it {
@@ -504,7 +503,7 @@ pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destructi
     if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, crate::destruction::RateCapN::Paper) { return false; }
     destruction_hide(g, d);
     dlog(g, &alloc::format!("paper {} scattered", d.i));
-    let (c, h, albedo) = { let b = seam_box(g, d.box_); (b.c, b.h, b.albedo) };
+    let (c, h, albedo) = { let b = &g.tab.boxes[d.box_]; (b.c, b.h, b.albedo) };
     let count = m::round(g.k.chaos.sheets_per_stack * m::min(1.6, m::max(0.5, (h[0] * h[2]) / (0.11 * 0.15))) * (0.7 + 0.6 * chaos));
     let w = m::min(0.22, m::max(0.12, 2.0 * m::min(h[0], h[2]) * 0.95));
     let asp = m::max(1.0, m::max(h[0], h[2]) / m::max(0.04, m::min(h[0], h[2])));
@@ -519,18 +518,17 @@ pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destructi
 pub(super) fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destructible) {
     let bits = hidden_bits();
     let b = g.col.boxes[d.i as usize];
-    let f = seam_box(g, b).flags;
+    let f = g.tab.boxes[b].flags;
     g.destr.hidden.set(crate::Num(d.i), f);
-    seam_box(g, b).flags = or_bits(f, bits);
+    g.tab.boxes.edit(b).flags = or_bits(f, bits);
     if let (Some(mate), DKind::Housing) = (d.mate, d.kind) {
         let s = g.col.boxes[mate as usize];
         if !g.destr.hidden.has(crate::Num(mate)) {
-            let sf = seam_box(g, s).flags;
+            let sf = g.tab.boxes[s].flags;
             g.destr.hidden.set(crate::Num(mate), sf);
-            seam_box(g, s).flags = or_bits(sf, bits);
+            g.tab.boxes.edit(s).flags = or_bits(sf, bits);
         }
     }
-    crate::scene_collision::wrote(g);
 }
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.

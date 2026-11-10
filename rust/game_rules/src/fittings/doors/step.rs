@@ -6,7 +6,7 @@ use crate::ids::*;
 use crate::m::{self, cos, exp, floor, hyp2 as hypot2, sin, sqrt};
 use crate::v3::{clamp, V3};
 use alloc::{vec, vec::Vec};
-use ::sim::{collide, world::{asking, js_abs, js_max, js_min, world, REC, R_C, R_COS, R_SIN, R_YAW}};
+use ::sim::{collide, world::{asking, js_abs, js_max, js_min, World}};
 use DoorDriveKind::*;
 
 const SOLID_SLIDE: f64 = 2.2;
@@ -37,8 +37,6 @@ const BODY_R: f64 = 0.42;
 const DOOR_R: f64 = 0.3;
 const DOOR_FIT_LAT: [f64; 2] = [0.12, 0.5];
 const DOOR_FIT_OUT: [f64; 2] = [0.55, 1.0];
-/// a box that seals sound
-const SOUND_SEAL: u32 = 1 << 16;
 
 /// the step's answer of `sign`: 0 for 0
 fn js_sign(x: f64) -> f64 { m::sign(x) }
@@ -78,13 +76,14 @@ struct Step<'a> {
     man_last: Vec<Option<i32>>,
     k: crate::knobs::DoorthrowK,
     world: crate::scene_world::WORLD,
-    w: usize,
+    w: &'a World,
     dt: f64,
     n: usize,
     nc: usize,
     foot: f64,
     settle_y1: f64,
-    placed: Vec<Option<[V3; 2]>>,
+    /// where each leaf that moved now stands, and whether it seals its doorway
+    placed: Vec<Option<(crate::doors::DoorPoseAt, bool)>>,
     ev: Vec<(usize, DoorEvent)>,
     rounds: f64,
 }
@@ -180,7 +179,7 @@ impl Step<'_> {
     /// (x, z) pushed out of the statics over [0.2, y1]
     fn collide(&self, x: &mut f64, z: &mut f64, r: f64, y1: f64, iterations: u32) -> bool {
         let hit = collide::circle(self.w, *x, *z, r, self.foot, y1, iterations) != 0;
-        let pt = asking(self.w).pt;
+        let pt = asking().pt;
         *x = pt[0];
         *z = pt[1];
         hit
@@ -334,7 +333,7 @@ impl Step<'_> {
         false
     }
 
-    /// The leaf's row of the box world written where it now stands, and its handles handed back
+    /// The leaf where it now stands, and its handles
     fn place(&mut self, i: usize) {
         if self.leaf[i].off {
             return;
@@ -346,16 +345,7 @@ impl Step<'_> {
         let jig = if rt > 0.35 { sin(rt * 90.0) * 0.005 } else { 0.0 };
         let d = self.dr[i];
         let p = pose_of(d.def.hinge, d.def.width, d.def.closed_dir, d.thick, d.height, self.leaf[i].angle + jig);
-        let seal = js_abs(self.leaf[i].angle) < 0.3;
-        // the box world's row (list 0 of the leaves: the game's own, a door at its own index)
-        let o = world(self.w);
-        let b = &mut o.leaf[i * REC..i * REC + REC];
-        b[R_C..R_C + 3].copy_from_slice(&p.c);
-        b[R_COS] = cos(p.yaw);
-        b[R_SIN] = sin(p.yaw);
-        b[R_YAW] = p.yaw;
-        o.leaf_flags[i] = if seal { o.leaf_flags[i] | SOUND_SEAL } else { o.leaf_flags[i] & !SOUND_SEAL };
-        self.placed[i] = Some(p.handles);
+        self.placed[i] = Some((p, js_abs(self.leaf[i].angle) < 0.3));
     }
 
     /// the step of door i
@@ -974,7 +964,6 @@ fn shove(pen: f64, dt: f64, exact: bool) -> f64 {
     }
 }
 
-
 /// Resolve contacts, integrate swing, closer, latch; then what the leaves made heard and where their boxes stand.
 pub fn doors_update(g: &mut Game, dt: f64, contacts: &mut Vec<DoorContact>) {
     for c in contacts.iter_mut() {
@@ -985,9 +974,6 @@ pub fn doors_update(g: &mut Game, dt: f64, contacts: &mut Vec<DoorContact>) {
         c.man = None;
     }
     if g.doors.list.is_empty() { return; }   // (a level with no door has no step, only that reset)
-    let leaves = g.col.dynamic_boxes.clone();
-    debug_assert!(leaves.len() == g.doors.list.len() && g.doors.list.iter().zip(leaves.iter()).all(|(&d, &b)| g.dr[d].box_ == b), "the leaves in the box world are not this level's doors");
-    crate::scene_collision::rules_world(g, &leaves);
     let (ids, n, nc) = (g.doors.list.clone(), g.doors.list.len(), contacts.len());
     let slab: Vec<Option<f64>> = ids.iter().map(|&d| g.dr[d].slab.map(|s| s.ang)).collect();
     // (asked only where a rule of this step can want it: something was written onto the leaf since the last one)
@@ -1002,7 +988,7 @@ pub fn doors_update(g: &mut Game, dt: f64, contacts: &mut Vec<DoorContact>) {
     let man = crate::cmd::seat_man(g, g.seats[0]);   // (the head of the span the settled man is pushed out of the statics over, of the first seat's man)
     let mut s = Step {
         dr: ids.iter().map(|&d| &g.dr[d]).collect(), leaf: ids.iter().map(|&d| g.dr[d].leaf).collect(), ids: &ids, con: contacts, asked, slab, man_last,
-        k: g.k.doorthrow, world: crate::scene_world::world(), w: g.col.mirror.slot as usize, dt, n, nc,
+        k: g.k.doorthrow, world: crate::scene_world::world(), w: g.tab.boxes.world(), dt, n, nc,
         foot: crate::scene_collision::foot_of(FLOOR_Y0), settle_y1: if g.pl[man].crouch { 1.0 } else { 1.7 },
         placed: vec![None; n], ev: Vec::new(), rounds: 0.0,
     };
@@ -1010,20 +996,14 @@ pub fn doors_update(g: &mut Game, dt: f64, contacts: &mut Vec<DoorContact>) {
     let (leaf, placed, ev, rounds) = (s.leaf, s.placed, s.ev, s.rounds);
     for (i, &d) in ids.iter().enumerate() { g.dr[d].leaf = leaf[i]; }
     g.doors.rounds += rounds;
-    // (a listener may ask the world, which copies the leaves from their boxes over the rows the step placed: so the rows are read first)
-    let rows: Vec<Option<Vec<f64>>> = (0..n).map(|i| placed[i].map(|_| crate::scene_box_mirror::box_mirror_leaf_row(g, i as f64))).collect();
-    if !ev.is_empty() { crate::scene_box_mirror::box_mirror_leaves_turned(g); }
+    // (a leaf is put where it now stands as its own sounds have been heard: a listener may ask the world)
     let mut heard = ev.iter().peekable();
     for i in 0..n {
         while let Some((_, e)) = heard.next_if(|e| e.0 == i) {
             doors_sound(g, e.door, e.sound, e.pos, e.who, e.level);
         }
-        let (Some(r), Some(handles)) = (&rows[i], placed[i]) else { continue };
-        let (b, hb) = (g.dr[ids[i]].box_, g.dr[ids[i]].handle_boxes.clone());
-        let yaw = crate::scene_box_mirror::box_mirror_follow_row(g, b, r);
-        for s in 0..2 { let h = &mut g.tab.boxes[hb[s]]; h.c = handles[s]; h.yaw = yaw; }
+        if let Some((p, seal)) = &placed[i] { super::leaf::leaf_stands(g, ids[i], p, *seal); }
     }
-    if !ev.is_empty() { crate::scene_box_mirror::box_mirror_leaves_turned(g); }
 }
 
 /// somebody drove `d` open

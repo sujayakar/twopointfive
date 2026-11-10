@@ -219,7 +219,7 @@ impl Play {
         }
     }
     /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
-    /// with the box world's copy standing for his questions, the game stepped on them, its checkpoints, the cameras after their men.
+    /// the game stepped on them, its checkpoints, the cameras after their men.
     pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
         self.lens_of(script, 0);
         let mut cmds = self.net_sample();
@@ -230,10 +230,8 @@ impl Play {
         self.hear();
         self.lens_and_keys();
     }
-    /// his hand over what the host sampled for his seat, with the box world's copy standing for his questions
+    /// his hand over what the host sampled for his seat
     pub fn hand_by(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
-        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
-        game::scene_box_mirror::box_mirror_things(&mut self.g);
         script.hand(&self.g, cmd, DT);
     }
     /// the view of the seat turned and pulled back as he asked since his last hand

@@ -6,8 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// a box's row
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// THE SIDE IT OPENS INTO: the sign of every angle it can stand at; the page's DOORWAY: exitsOut off, leafWay on
 pub fn door_swing(g: &crate::game::Game, id: DoorId) -> f64 {
@@ -86,7 +84,7 @@ fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Optio
         }));
     }
     g.dr[id].handle_boxes = handles;
-    let marks = seam_box(g, leaf).marks.clone();
+    let marks = g.tab.boxes[leaf].marks.clone();
     g.dr[id].leaf_marks = marks;
     g.dr[id].frame_centre = [def.hinge[0] + m::cos(def.closed_dir) * def.width * 0.5, 1.0, def.hinge[1] + m::sin(def.closed_dir) * def.width * 0.5];
     door_place(g, id);
@@ -111,11 +109,12 @@ pub fn door_reset(g: &mut crate::game::Game, id: DoorId) {
     if g.dr[id].leaf.off {   // hung again, as authored
         g.dr[id].slab = None;
         let (b, h, marks) = (g.dr[id].box_, g.dr[id].leaf_h, g.dr[id].leaf_marks.clone());
-        let leaf = seam_box(g, b);
+        let mut leaf = g.tab.boxes.edit(b);
         leaf.h = h;
         leaf.marks = marks;
         leaf.rot = None;
-        for s in 0..g.dr[id].handle_boxes.len() { let hb = g.dr[id].handle_boxes[s]; seam_box(g, hb).rot = None; }
+        drop(leaf);
+        for s in 0..g.dr[id].handle_boxes.len() { let hb = g.dr[id].handle_boxes[s]; g.tab.boxes.edit(hb).rot = None; }
     }
     let d = &mut g.dr[id];
     // (which side it opens into and how far it was picked stay: they are the level's and the night's)
@@ -159,20 +158,21 @@ pub fn door_place(g: &mut crate::game::Game, id: DoorId) {
     let rattle = g.dr[id].leaf.rattle_t;
     let jig = if rattle > 0.35 { m::sin(rattle * 90.0) * 0.005 } else { 0.0 };   // the handle being tried: the leaf works a hair in its frame
     let p = door_pose_at(g, id, a + jig);
-    let b = g.dr[id].box_;
+    leaf_stands(g, id, &p, m::abs(a) < 0.3);
+}
+/// the leaf's box and its handles put at `p` (an open leaf standing in the room does not seal the doorway acoustically)
+pub(super) fn leaf_stands(g: &mut Game, id: DoorId, p: &crate::doors::DoorPoseAt, seals: bool) {
+    let d = &g.dr[id];
     let seal = js::to_i32(crate::scene_boxes::box_flag().sound_seal);
-    let leaf = seam_box(g, b);
-    leaf.c = p.c;
-    leaf.yaw = p.yaw;
+    let mut leaf = g.tab.boxes.edit(d.box_);
+    (leaf.c, leaf.yaw) = (p.c, p.yaw);
     let flags = js::to_i32(leaf.flags);
-    leaf.flags = (if m::abs(a) < 0.3 { flags | seal } else { flags & !seal }) as f64;   // an open leaf standing in the room does not seal the doorway acoustically
-    for s in 0..2 {
-        let hb = g.dr[id].handle_boxes[s];
-        let handle = seam_box(g, hb);
-        handle.c = p.handles[s];
-        handle.yaw = p.yaw;
+    leaf.flags = (if seals { flags | seal } else { flags & !seal }) as f64;
+    drop(leaf);
+    for (&hb, &c) in d.handle_boxes.iter().zip(&p.handles) {
+        let mut handle = g.tab.boxes.edit(hb);
+        (handle.c, handle.yaw) = (c, p.yaw);
     }
-    crate::scene_box_mirror::leaf_wrote(g);
 }
 /// Where the leaf's box and its two handles stand with the leaf at `angle`
 pub fn door_pose_at(g: &crate::game::Game, id: DoorId, angle: f64) -> crate::doors::DoorPoseAt {
@@ -204,9 +204,9 @@ pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit
     let key = crate::scene_boxes::mkey().door;
     for (i, &d) in list.iter().enumerate() {   // motion identity for the leaf and its handles
         let (b, h0, h1) = (g.dr[d].box_, g.dr[d].handle_boxes[0], g.dr[d].handle_boxes[1]);
-        seam_box(g, b).mkey = Some(key + i as f64 * 4.0);
-        seam_box(g, h0).mkey = Some(key + i as f64 * 4.0 + 1.0);
-        seam_box(g, h1).mkey = Some(key + i as f64 * 4.0 + 2.0);
+        g.tab.boxes.edit(b).mkey = Some(key + i as f64 * 4.0);
+        g.tab.boxes.edit(h0).mkey = Some(key + i as f64 * 4.0 + 1.0);
+        g.tab.boxes.edit(h1).mkey = Some(key + i as f64 * 4.0 + 2.0);
     }
     crate::doors::Doors { list, ..crate::doors::Doors::blank() }
 }

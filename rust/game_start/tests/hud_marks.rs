@@ -209,7 +209,7 @@ fn the_launchers_arc_is_told_whether_it_arms() {
     }
 }
 
-/// A FAILURE MEANS: asking with an arc up writes the game: the rest is the one question of the view that rolls a can, and the reader goes by the copy that stands.
+/// A FAILURE MEANS: asking with an arc up writes the game: the rest is the one question of the view that rolls a can.
 #[test]
 fn asking_with_an_arc_up_writes_nothing() {
     let run = |ask: bool| -> Vec<Vec<u32>> {

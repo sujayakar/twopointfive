@@ -8,8 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot do
 
-/// A box's row (Box.* in the TypeScript).
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// A box held by value, as a row, for a stub that takes an ID. `g.tab.boxes.push(cell.clone())`.
 fn seam_box_push(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
 
@@ -24,12 +22,12 @@ fn without_bits(flags: f64, mask: f64) -> f64 { (js::to_i32(flags) & !js::to_i32
 /// g.col.boxes[i]: a place in the level's list, which holds the box's ID
 fn box_at(g: &Game, i: f64) -> BoxId { g.col.boxes[i as usize] }
 /// aabbOf(box), for a box named by its ID: aabb_of takes g and the row, which cannot both be lent
-fn aabb(g: &mut Game, b: BoxId) -> AABB { let row = seam_box(g, b).clone(); aabb_of(&row) }
+fn aabb(g: &mut Game, b: BoxId) -> AABB { let row = g.tab.boxes[b].clone(); aabb_of(&row) }
 /// `owner.get(j)`: the breakable a static belongs to
 fn owner_of(g: &Game, j: f64) -> Option<WallbreakBreakableId> { g.destr.walls.owner.get(crate::Num(j)).copied() }
 /// `B.nx > 1 || B.box.h[0] >= B.box.h[2]`
 fn along_x(g: &mut Game, nx: f64, bx: BoxId) -> bool {
-    let h = seam_box(g, bx).h;
+    let h = g.tab.boxes[bx].h;
     nx > 1.0 || h[0] >= h[2]
 }
 /// `under` of restsOn: its top at a's bottom AND its middle below it
@@ -71,8 +69,8 @@ fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
         let i = g.destr.walls.ghosts[at];
         if i == j { continue; }
         let o = box_at(g, i);
-        if any_bit(seam_box(g, o).flags, primary) { continue; }
-        let c = seam_box(g, o).c;
+        if any_bit(g.tab.boxes[o].flags, primary) { continue; }
+        let c = g.tab.boxes[o].c;
         if m::abs(c[0] - (a.x0 + a.x1) / 2.0) > 3.0 || m::abs(c[2] - (a.z0 + a.z1) / 2.0) > 3.0 { continue; }
         let b = aabb(g, o);
         if under(a, b) { out.push(b); }
@@ -129,8 +127,8 @@ fn wall_break_near(g: &mut crate::game::Game, a: crate::wallbreak::AABB) -> Vec<
     for at in 0..g.destr.walls.ghosts.len() {
         let i = g.destr.walls.ghosts[at];
         let o = box_at(g, i);
-        if any_bit(seam_box(g, o).flags, primary) { continue; }
-        let c = seam_box(g, o).c;
+        if any_bit(g.tab.boxes[o].flags, primary) { continue; }
+        let c = g.tab.boxes[o].c;
         if m::abs(c[0] - (a.x0 + a.x1) / 2.0) > 4.0 || m::abs(c[2] - (a.z0 + a.z1) / 2.0) > 4.0 { continue; }
         if touches(a, aabb(g, o), e) && !out.contains(&i) { out.push(i); }
     }
@@ -167,7 +165,7 @@ fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId>, q
                 if row.n_open == row.open.len() as f64 { continue; }
             }
             let bx = box_at(g, j);
-            let flags = seam_box(g, bx).flags;
+            let flags = g.tab.boxes[bx].flags;
             if any_bit(flags, glass) { continue; }
             if c.is_none() && any_bit(flags, primary) { continue; }   // (already gone)
             let a = aabb(g, bx);
@@ -187,7 +185,7 @@ fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> V
     let k_ = g.k.walls.hung;
     let wa = aabb(g, bx);
     let along = along_x(g, nx, bx);
-    let bc = seam_box(g, bx).c;
+    let bc = g.tab.boxes[bx].c;
     let side = if (if along { at[2] - bc[2] } else { at[0] - bc[0] }) >= 0.0 { 1.0 } else { -1.0 };
     let mut list = scratch();
     let n = crate::scene_collision::gather(g, at[0] - r - 0.4, at[2] - r - 0.4, at[0] + r + 0.4, at[2] + r + 0.4, 0.25, wa.y1, &mut list) as usize;
@@ -197,7 +195,7 @@ fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> V
         let j = list[k] as f64;
         if !wall_break_board_like(g, j) { continue; }
         let b = box_at(g, j);
-        if any_bit(seam_box(g, b).flags, primary) { continue; }
+        if any_bit(g.tab.boxes[b].flags, primary) { continue; }
         let a = aabb(g, b);
         if a.y0 > at[1] + 0.35 || a.y1 < at[1] - 0.05 { continue; }
         if (if along { a.z1 - a.z0 } else { a.x1 - a.x0 }) > k_.deep || (if along { a.x1 - a.x0 } else { a.z1 - a.z0 }) < k_.long { continue; }
@@ -215,8 +213,8 @@ fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> V
 fn wall_break_board_like(g: &mut crate::game::Game, j: f64) -> bool {
     if j < 0.0 || j >= g.col.boxes.len() as f64 || j >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(j)) { return false; }
     let b = box_at(g, j);
-    if seam_box(g, b).rot.is_some() { return false; }
-    let flags = seam_box(g, b).flags;
+    if g.tab.boxes[b].rot.is_some() { return false; }
+    let flags = g.tab.boxes[b].flags;
     let f0 = match crate::destruction::destruction_flags0(g, j) {
         Some(f) => f,
         None => if crate::furnblast::furniture_broken(g, j) { without_bits(flags, HIDE) } else { flags },   // (as authored: one that a blast has since hidden is a board still)
@@ -242,16 +240,16 @@ fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: 
     for at in 0..g.destr.walls.ghosts.len() {
         let j = g.destr.walls.ghosts[at];
         let o = box_at(g, j);
-        if any_bit(seam_box(g, o).flags, primary) { continue; }
-        let c = seam_box(g, o).c;
+        if any_bit(g.tab.boxes[o].flags, primary) { continue; }
+        let c = g.tab.boxes[o].c;
         if c[0] > rect.x0 - 2.0 && c[0] < rect.x1 + 2.0 && c[2] > rect.z0 - 2.0 && c[2] < rect.z1 + 2.0 { cand.push(j); }
     }
     js::sort_by(&mut cand, |x, y| *x - *y);
-    let bc1 = seam_box(g, bx).c[1];
+    let bc1 = g.tab.boxes[bx].c[1];
     for j in cand {
         if g.destr.walls.owner.has(crate::Num(j)) { continue; }
         let bj = box_at(g, j);
-        if any_bit(seam_box(g, bj).flags, with_bits(glass, primary)) { continue; }
+        if any_bit(g.tab.boxes[bj].flags, with_bits(glass, primary)) { continue; }
         let a = aabb(g, bj);
         if a.y0 < 0.25 { continue; }
         if m::min(a.x1, rect.x1 + 0.3) - m::max(a.x0, rect.x0 - 0.3) < 0.0 || m::min(a.z1, rect.z1 + 0.3) - m::max(a.z0, rect.z0 - 0.3) < 0.0 { continue; }
@@ -317,15 +315,15 @@ fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB,
         rects.push([a.x0, a.z0, a.x1, a.z1]);
         return true;
     }
-    let h = seam_box(g, b).h;
+    let h = g.tab.boxes[b].h;
     let vol = h[0] * h[1] * h[2] * 8.0;
     if vol > g.k.walls.fall_max_vol {  return false; }   // too big to throw about: it stays
     if g.destr.walls.fixture_boxes.has(crate::Num(j)) && !quiet { crate::destruction::destruction_break_fixture_box(g, j); }
-    let flags = seam_box(g, b).flags;
+    let flags = g.tab.boxes[b].flags;
     g.destr.walls.hidden.set(crate::Num(j), flags);
-    seam_box(g, b).flags = with_bits(flags, HIDE);
+    g.tab.boxes.edit(b).flags = with_bits(flags, HIDE);
     wall_break_bump(g);
-    let c = seam_box(g, b).c;
+    let c = g.tab.boxes[b].c;
     rects.push([a.x0, a.z0, a.x1, a.z1]);
     let hung = if quiet { None } else { g.destr.walls.hung_now.as_ref().filter(|n| n.set.contains(&j)).map(|n| (n.at, n.n)) };
     if let Some((at, n)) = hung {
@@ -341,7 +339,7 @@ fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB,
         let got = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Chunk, b, v, w, Some(who), None);
         if got.is_some() {
         } else {
-            let albedo = seam_box(g, b).albedo;
+            let albedo = g.tab.boxes[b].albedo;
             crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, c, [0.0, 1.0, 0.0], 8.0, crate::render_particles::EmitOpts { speed: 1.8, speed_jit: Some(0.7), spread: Some(1.2), life: 16.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), color: Some(albedo), owner: Some(who), ..Default::default() });
         }
     }
@@ -388,12 +386,10 @@ fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
     // (the boards stand in no line of the plan: hidden as the engine hides a static, and put back)
     let own: Vec<BoxId> = own.iter().map(|&j| box_at(g, j)).collect();
     let mut was: Vec<f64> = Vec::new();
-    for &b in &own { was.push(seam_box(g, b).flags); }
-    for k in 0..own.len() { seam_box(g, own[k]).flags = with_bits(was[k], HIDE); }
-    crate::scene_collision::wrote(g);
+    for &b in &own { was.push(g.tab.boxes[b].flags); }
+    for k in 0..own.len() { g.tab.boxes.edit(own[k]).flags = with_bits(was[k], HIDE); }
     let plan = wall_break_plan_of(g, at, opts, r);
-    for k in 0..own.len() { seam_box(g, own[k]).flags = was[k]; }
-    crate::scene_collision::wrote(g);
+    for k in 0..own.len() { g.tab.boxes.edit(own[k]).flags = was[k]; }
     plan.into_iter().map(as_item).collect()
 }
 
@@ -452,7 +448,7 @@ fn wall_break_plan_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak:
             if opts.breach != Some(id) || d_b > k_.contact_m { continue; }
             let along = along_x(g, nx, bx);
             let nn = if along { nx } else { nz };
-            let h = seam_box(g, bx).h;
+            let h = g.tab.boxes[bx].h;
             let col_w = 2.0 * (if along { h[0] } else { h[2] }) / nn;
             let u = (if along { (at[0] - a.x0) / (a.x1 - a.x0) } else { (at[2] - a.z0) / (a.z1 - a.z0) }) * nn;
             let (lo, n) = hard_hole(nn, col_w, k_.min_hole, col, u);
@@ -464,7 +460,7 @@ fn wall_break_plan_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak:
         } else if kind == BKind::Wall {
             let along = along_x(g, nx, bx);
             let nn = if along { nx } else { nz };
-            let (bc1, bh1) = (seam_box(g, bx).c[1], seam_box(g, bx).h[1]);
+            let (bc1, bh1) = (g.tab.boxes[bx].c[1], g.tab.boxes[bx].h[1]);
             let mut full: Vec<f64> = Vec::new();
             let (mut nearest, mut nd) = (-1.0, 1e9);
             let mut k = 0.0;
@@ -544,7 +540,7 @@ pub(in crate::breakage) fn wall_break_would_open(g: &mut crate::game::Game, at: 
         let standing: Vec<BoxId> = if n_open == 0.0 { vec![bx] } else { g.tab.wallbreak_breakable[b].slots[..live as usize].iter().map(|&i| box_at(g, i)).collect() };
         let mut left: Vec<BoxId> = Vec::new();
         if n_open + n < open.len() as f64 {
-            let (yaw, albedo, stuff, does) = { let o = &*seam_box(g, bx); (o.yaw, o.albedo, o.stuff, o.does) };
+            let (yaw, albedo, stuff, does) = { let o = &g.tab.boxes[bx]; (o.yaw, o.albedo, o.stuff, o.does) };
             let word = crate::scene_boxes::word_of(crate::scene_boxes::WordOfB { stuff, does });
             for rect in wall_break_pieces(g, b, Some(&open)) {
                 let rb = wall_break_rect_box(g, b, rect);
@@ -579,7 +575,7 @@ fn wall_break_blast_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak
         Some(k) if !hung.is_empty() => {
             let (wall, nx, bx) = { let b = &g.tab.wallbreak_breakable[k]; (b.id, b.nx, b.box_) };
             let ax = along_x(g, nx, bx);
-            let c = seam_box(g, bx).c;
+            let c = g.tab.boxes[bx].c;
             let n: V3 = if ax { [0.0, 0.0, if at[2] >= c[2] { 1.0 } else { -1.0 }] } else { [if at[0] >= c[0] { 1.0 } else { -1.0 }, 0.0, 0.0] };
             Some(WallBreakHungNow { wall, at, n, set: hung.clone() })
         }
@@ -591,7 +587,7 @@ fn wall_break_blast_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak
     for item in plan {
         let b = item.b;
         let (b0, kind, surf, bx, nx, nz, hard) = { let r = &g.tab.wallbreak_breakable[b]; (r.n_open, r.kind, r.surf, r.box_, r.nx, r.nz, r.hard) };
-        let c = seam_box(g, bx).c;
+        let c = g.tab.boxes[bx].c;
         let mut dir = v3::sub(c, at);
         dir[1] = 0.0;
         if hard == Some(true) {   // (what a long wall throws leaves through its far face)
@@ -658,7 +654,7 @@ pub(in crate::breakage) fn wall_break_reset(g: &mut crate::game::Game, silent: O
     let authored = g.destr.walls.authored;
     if !g.destr.walls.dirty && g.col.boxes.len() as f64 == authored { let_go(g); return; }
     let hidden: Vec<(crate::Num, f64)> = g.destr.walls.hidden.iter().map(|(i, f)| (i, *f)).collect();
-    for (i, f) in hidden { let b = box_at(g, i.0); seam_box(g, b).flags = f; }
+    for (i, f) in hidden { let b = box_at(g, i.0); g.tab.boxes.edit(b).flags = f; }
     g.destr.walls.hidden.clear();
     let mut any = false;
     for k in 0..g.destr.walls.list.len() {
@@ -668,7 +664,7 @@ pub(in crate::breakage) fn wall_break_reset(g: &mut crate::game::Game, silent: O
             if b.n_open != 0.0 || !b.slots.is_empty() { any = true; }
             (b.box_, b.flags0)
         };
-        seam_box(g, bx).flags = flags0;
+        g.tab.boxes.edit(bx).flags = flags0;
         let b = &mut g.tab.wallbreak_breakable[id];
         b.open.fill(0);
         b.dmg.fill(0.0);

@@ -95,7 +95,7 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
         let Some(&b) = list.get(i) else { continue };
         // (index for index the level's boxes head the world's: one that is not is left alone)
         if st.sunk.contains(&i) || g.engine.world.statics.get(i) != Some(&b) { continue; }
-        let row = &mut g.tab.boxes[b];
+        let mut row = g.tab.boxes.edit(b);
         let r = m::hyp2(row.h[0], row.h[2]);
         x0 = m::min(x0, row.c[0] - r); x1 = m::max(x1, row.c[0] + r); z0 = m::min(z0, row.c[2] - r); z1 = m::max(z1, row.c[2] + r);
         row.c[1] -= 30.0;
@@ -112,7 +112,6 @@ pub fn sunk(g: &mut Game, idx: &[usize]) {
 /// the game's own word that a static was written: the mirror compares them again, and what is drawn off the list sees it
 fn box_changed(g: &mut Game) {
     g.engine.world.geom_serial += 1.0;
-    crate::scene_collision::wrote(g);
 }
 pub(super) fn drop_props(g: &mut Game, hidden: &[usize]) {
     for &i in hidden { if let Some(&p) = g.props.all.get(i) { crate::props::prop_system_remove(g, p); } }
@@ -336,8 +335,8 @@ let (intensity, emissive) = (g.tab.fixture[t].base_intensity, g.tab.fixture[t].b
         for i in roofs {
             let b = g.col.boxes[i];
             if g.engine.world.statics.get(i) != Some(&b) { continue; }
-            let f = &mut g.tab.boxes[b].flags;
-            *f = (js::to_i32(*f) & !np) as f64;
+            let mut b = g.tab.boxes.edit(b);
+            b.flags = (js::to_i32(b.flags) & !np) as f64;
         }
         if any { box_changed(g); }
     }

@@ -6,8 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// a box's row
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A word of a box's flags against a mask.
 fn has_flag(flags: f64, mask: i32) -> bool {
@@ -16,7 +14,7 @@ fn has_flag(flags: f64, mask: i32) -> bool {
 
 /// What a box does, by its word.
 fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
-    let word = seam_box(g, b).does;
+    let word = g.tab.boxes[b].does;
     crate::scene_materials::does_of(g, word)
 }
 
@@ -48,7 +46,7 @@ pub(super) fn imp_k(g: &crate::game::Game, chaos: f64) -> f64 {
 
 /// The point just over a box's top, where line-of-sight targets aim.
 pub(super) fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
-    let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+    let (c, h) = (g.tab.boxes[b].c, g.tab.boxes[b].h);
     [c[0], c[1] + h[1] + 0.05, c[2]]
 }
 
@@ -152,15 +150,15 @@ fn destruction_index(g: &mut crate::game::Game) {
     let mut screens: Vec<usize> = Vec::new();
     for i in 0..boxes_len {
         let b = BoxId::from_ix(i);
-        let h = seam_box(g, b).h;
+        let h = g.tab.boxes[b].h;
         let max_h = m::max_n(&h);
         let min_h = m::min_n(&h);
-        let flags = seam_box(g, b).flags;
-        if has_flag(flags, skip) || seam_box(g, b).piece == Some(true) {
+        let flags = g.tab.boxes[b].flags;
+        if has_flag(flags, skip) || g.tab.boxes[b].piece == Some(true) {
             continue;
         }
-        let bottom = seam_box(g, b).c[1] - h[1];
-        let e = seam_box(g, b).emissive;
+        let bottom = g.tab.boxes[b].c[1] - h[1];
+        let e = g.tab.boxes[b].emissive;
         let dark = e[0] + e[1] + e[2] == 0.0;
         let does = does_of_box(g, b);
         let kind = if has_flag(flags, no_shadow) && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
@@ -187,7 +185,7 @@ fn destruction_index(g: &mut crate::game::Game) {
     // each desk screen with the housing slab just behind it
     for si in screens {
         let s = BoxId::from_ix(si);
-        let (s_yaw, s_h, s_c) = (seam_box(g, s).yaw, seam_box(g, s).h, seam_box(g, s).c);
+        let (s_yaw, s_h, s_c) = (g.tab.boxes[s].yaw, g.tab.boxes[s].h, g.tab.boxes[s].c);
         let mut best: Option<usize> = None;
         let mut bd = 0.08;
         for i in si.saturating_sub(6)..core::cmp::min(boxes_len, si + 6) {
@@ -195,11 +193,11 @@ fn destruction_index(g: &mut crate::game::Game) {
                 continue;
             }
             let b = BoxId::from_ix(i);
-            let h = seam_box(g, b).h;
-            if m::abs(seam_box(g, b).yaw - s_yaw) > 1e-3 || h[0] < s_h[0] || h[1] < s_h[1] || h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
+            let h = g.tab.boxes[b].h;
+            if m::abs(g.tab.boxes[b].yaw - s_yaw) > 1e-3 || h[0] < s_h[0] || h[1] < s_h[1] || h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
                 continue;
             }
-            let dd = v3::dist(seam_box(g, b).c, s_c);
+            let dd = v3::dist(g.tab.boxes[b].c, s_c);
             if dd < bd {
                 bd = dd;
                 best = Some(i);
@@ -227,16 +225,16 @@ fn destruction_index(g: &mut crate::game::Game) {
     let mut fixtures: Vec<(V3, V3, f64)> = Vec::new();
     for fi in fixture_boxes.iter() {
         if (fi.0 as usize) < boxes_len {
-            let f = &seam_box(g, BoxId::from_ix(fi.0 as usize));
+            let f = &g.tab.boxes[BoxId::from_ix(fi.0 as usize)];
             fixtures.push((f.c, f.h, f.yaw));
         }
     }
-    crate::scene_collision::window(g, &mut |g: &mut Game| index_prune(g, &fixtures));
+    index_prune(g, &fixtures);
     // things standing on or against each other go together
     let mut smalls: Vec<(f64, V3, V3)> = Vec::new();
     let small_rows: Vec<(f64, BoxId)> = g.destr.items.values().filter(|d| d.kind == DKind::Clutter || d.kind == DKind::Binder).map(|d| (d.i, d.box_)).collect();
     for (i, b) in small_rows {
-        smalls.push((i, seam_box(g, b).c, seam_box(g, b).h));
+        smalls.push((i, g.tab.boxes[b].c, g.tab.boxes[b].h));
     }
     for d in 0..smalls.len() {
         for o in 0..smalls.len() {
@@ -257,7 +255,7 @@ fn destruction_index(g: &mut crate::game::Game) {
     // the 1 m cells
     let rows: Vec<(f64, BoxId)> = g.destr.items.iter().map(|(i, d)| (i.0, d.box_)).collect();
     for (i, b) in rows {
-        let c = seam_box(g, b).c;
+        let c = g.tab.boxes[b].c;
         let cx = m::floor((c[0] - world.min[0]) / g.destr.cs);
         let cz = m::floor((c[2] - world.min[2]) / g.destr.cs);
         if cx >= 0.0 && cz >= 0.0 && cx < g.destr.w && cz < world.grid_h {
@@ -274,7 +272,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
             let d = g.destr.items.get(i).unwrap();
             (d.box_, d.kind)
         };
-        let c = seam_box(g, b).c;
+        let c = g.tab.boxes[b].c;
         if destruction_roof_y(g, c[0], c[2]).is_none() {
             g.destr.items.delete(i);
             continue;
@@ -296,7 +294,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
         }
         let housings: Vec<BoxId> = g.destr.items.values().filter(|o| o.kind == DKind::Housing).map(|o| o.box_).collect();
         for hb in housings {
-            let oc = seam_box(g, hb).c;
+            let oc = g.tab.boxes[hb].c;
             if m::hyp2(oc[0] - c[0], oc[2] - c[2]) < 0.12 && oc[1] > c[1] {
                 g.destr.items.delete(i);
                 break;
@@ -528,9 +526,8 @@ pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 pub fn destruction_reset(g: &mut crate::game::Game) {
     for i in g.destr.hidden.keys() {
         let f = *g.destr.hidden.get(i).unwrap();
-        seam_box(g, BoxId::from_ix(i.0 as usize)).flags = f;
+        g.tab.boxes.edit(BoxId::from_ix(i.0 as usize)).flags = f;
     }
-    crate::scene_collision::wrote(g);
     g.destr.hidden.clear();
     crate::debris::debris_clear(g);
     for x in g.destr.heat.iter_mut() {

@@ -9,10 +9,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ seams: what skeleton 5 cannot say yet
-
-fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
-
 // ------------------------------------------------------------ small local helpers
 
 /// a man's feet
@@ -81,7 +77,7 @@ fn panel_face(g: &crate::game::Game) -> crate::workthings::PanelFace {
     let mut n: V3 = [0.0, 0.0, -1.0];
     let mut face: V3 = [bp[0], bp[1], bp[2]];
     if let Some(bx) = bx {
-        let (c, h) = seam_box_c_h(g, bx);
+        let (c, h) = { let x = &g.tab.boxes[bx]; (x.c, x.h) };
         let dx = bp[0] - c[0];
         let dz = bp[2] - c[2];
         if m::abs(dx) > m::abs(dz) {

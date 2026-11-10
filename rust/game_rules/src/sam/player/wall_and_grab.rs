@@ -44,8 +44,7 @@ fn lose_path(g: &mut Game, gd: GuardId) {
 }
 
 /// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?
-fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
-    let g = a.game();
+fn stack_in_way(g: &Game, p: PlayerId, ap: V3) -> bool {
     let c = g.pl[p].ch;
     let pos = g.ch[c].pos;
     let (dx, dz) = (ap[0] - pos[0], ap[2] - pos[2]);
@@ -53,7 +52,7 @@ fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
     let hit = if d > 0.25 {
         let h = if g.pl[p].crouch { 0.85 } else { 1.3 };
         let bore = g.k.wallsnap.bore;
-        a.ray([pos[0], h, pos[2]], [dx / d, 0.0, dz / d], bore)
+        crate::scene_collision::raycast(g, [pos[0], h, pos[2]], [dx / d, 0.0, dz / d], bore)
     } else {
         None
     };
@@ -64,8 +63,7 @@ fn stack_in_way(a: &mut impl crate::ask::Asker, p: PlayerId, ap: V3) -> bool {
 }
 
 /// His gun cannot get a round out this frame (the aim ring's bar). Read only.
-pub fn gun_shut(world: &mut crate::ask::WorldAsk, seat: &crate::seats::SeatRef) -> bool {
-    let g = world.shared();
+pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let p = seat.player;
     let c = g.pl[p].ch;
     if g.pl[p].holstered { return false; }
@@ -74,7 +72,7 @@ pub fn gun_shut(world: &mut crate::ask::WorldAsk, seat: &crate::seats::SeatRef) 
         if w.kind == Some(WallHoldKind::Stack) {
             if yes(w.lean_want) || un(w.lean) > 0.0 || un(w.lean_dwell) > 0.0 {
                 if un(w.lean) < 1.0 { return false; }
-            } else if w.settle >= 1.0 && stack_in_way(world, p, seat.aim_point) {
+            } else if w.settle >= 1.0 && stack_in_way(g, p, seat.aim_point) {
                 return true;
             }
         }
@@ -87,7 +85,7 @@ pub fn gun_shut(world: &mut crate::ask::WorldAsk, seat: &crate::seats::SeatRef) 
         None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
     };
     let muzzle = g.ch[c].muzzle;
-    crate::gunwall::wood_between(world, a, muzzle)
+    crate::gunwall::wood_between(g, a, muzzle)
 }
 
 /// `hold()` of stackUp: the fire sites' 'still coming into the hands' beat.

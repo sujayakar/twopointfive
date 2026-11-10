@@ -347,8 +347,8 @@ fn box_of(g: &mut crate::game::Game) -> crate::hours::SkyStateBox {
     while i < g.engine.world.statics.len() {
         let s = g.engine.world.statics[i];
         i += 1;
-        if js::to_i32(seam_box(g, s).flags) & no_shadow != 0 { continue; }
-        let (c, h) = { let row = seam_box(g, s); (row.c, row.h) };
+        if js::to_i32(g.tab.boxes[s].flags) & no_shadow != 0 { continue; }
+        let (c, h) = { let row = &g.tab.boxes[s]; (row.c, row.h) };
         let r = m::hyp2(h[0], h[2]);
         b.x0 = m::min(b.x0, c[0] - r);
         b.x1 = m::max(b.x1, c[0] + r);
@@ -389,9 +389,9 @@ fn sky_in_force(g: &Game) -> Sky {
     Sky { sun: moon, to_sun, dome: Some(dome) }
 }
 
-/// What is kept of the sky's reach is of the statics as the copy has them now, and of this sun.
+/// What is kept of the sky's reach is of the statics as they stand, and of this sun.
 fn reach_fresh(g: &mut Game, to_sun: V3) {
-    let wrote = ::sim::world::world_read(g.sim).wrote as f64;
+    let wrote = g.tab.boxes.world().wrote;
     if g.m.hours.reach.wrote == wrote && g.m.hours.reach.to_sun == to_sun { return; }
     let box_ = box_of(g);
     g.m.hours.reach = crate::hours::SkyReach { wrote, to_sun, box_, cells: JsMap::new(), fine: JsMap::new() };
@@ -452,7 +452,7 @@ pub fn exposure(g: &crate::game::Game) -> f64 {
 }
 
 /// The sky's one directional light on P's six faces, where P has a line to it.
-pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
+pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let st = sky_in_force(g);
     let i_sun = sun_of(g, &st);
     if i_sun <= 0.002 { return; }
@@ -468,9 +468,8 @@ pub fn sun_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
 }
 
 /// The ambient of P's cell on P's six faces: the sky's dome and the ground, as far as P's cell sees them.
-pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
+pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let st = sky_in_force(g);
-    // (a line first: the copy is brought up to date by the question, and what is kept is of the copy)
     let ix = m::floor(p[0] / CELL);
     let iz = m::floor(p[2] / CELL);
     let c: V3 = [(ix + 0.5) * CELL, CELL_Y, (iz + 0.5) * CELL];
@@ -499,7 +498,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     while i < g.col.dynamic_boxes.len() {
         let db = g.col.dynamic_boxes[i];
         i += 1;
-        let dc = seam_box(g, db).c;
+        let dc = g.tab.boxes[db].c;
         if m::hyp2(dc[0] - p[0], dc[2] - p[2]) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
     }
     let (sky_rays, gnd_rays) = (sky(), gnd());
@@ -537,8 +536,6 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
 
 // ---------------------------------------------------------------- seams: what the skeleton still lacks
 
-/// A box's row (Box.* in the TypeScript). On a skeleton with the table `g.tab.boxes` (5.1), the body is `&mut g.tab.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {

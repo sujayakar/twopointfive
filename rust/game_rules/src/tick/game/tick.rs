@@ -58,7 +58,6 @@ fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
 fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
-    crate::scene_collision::tick_open(g);
     // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; the pool's tenant tends it: a man who left the lists is out of it, one who
     //  arrived is in)
     crate::posehome::pose_home_tend(g);
@@ -226,7 +225,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
     crate::render_decals::marks_settle(g);   
-    crate::scene_collision::tick_shut(g);
+    debug_assert_eq!(crate::scene_collision::astray(g), None, "the box world is not the boxes as they stand");
 }
 
 /// threat proximity → how deliberately Sam moves

@@ -73,7 +73,7 @@ pub fn paint_leaves(g: &mut Game) {
         let old = !outside && (h >> 10) % 4 == 0;
         let a = if outside { accent } else if old { faded } else { wood };
         let stuff = if let Some(Row { stuff: Said::All(w), .. }) = row { Some(w) } else if old { None } else { said(outside).or_else(|| own(outside)) };
-        let b = &mut g.tab.boxes[leaf];
+        let mut b = g.tab.boxes.edit(leaf);
         b.albedo = a.map(|x| x * k);
         b.stuff = stuff;
     }

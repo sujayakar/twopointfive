@@ -313,7 +313,7 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
     assert!(p.g.falls.glass.waiting.len() != waiting, "the staging is wrong: nothing landed in two seconds");
-    p.g = kept.stands(p.g.sim);
+    p.g = kept.laid(p.g.sim);
     assert_eq!(p.g.falls.glass.waiting.len(), waiting, "put back: the landings waiting");
     for (k, want) in first.iter().enumerate() {
         p.frame();

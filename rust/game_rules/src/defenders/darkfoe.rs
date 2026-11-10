@@ -44,7 +44,7 @@ pub fn dark_foe_lit(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The meter's reading of a point of floor: everything steady but the lights `skip` names.
-fn floor_light(g: &mut crate::game::Game, x: f64, z: f64, skip: &mut dyn FnMut(&mut crate::game::Game, f64) -> bool) -> f64 {
+fn floor_light(g: &mut crate::game::Game, x: f64, z: f64, skip: &mut dyn FnMut(&Game, f64) -> bool) -> f64 {
     let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(skip), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
@@ -55,7 +55,7 @@ pub fn dark_foe_blind(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let (pos, aim_yaw, me) = (g.ch[c].pos, g.ch[c].aim_yaw, g.ch[c].id);
     let eye: V3 = [pos[0], 1.5, pos[2]];
-    let mut skip = move |_: &mut Game, owner: f64| owner == me;   // (TS: mine(gd))
+    let mut skip = move |_: &Game, owner: f64| owner == me;   // (TS: mine(gd))
     let mut n: i32 = 0;
     let mut lit: i32 = 0;
     for off in [0.0, -k.fan_rad, k.fan_rad] {
@@ -132,7 +132,7 @@ fn lit_in_view(g: &mut crate::game::Game, p: V3) -> bool {
             let a = ((i as f64) + turn) * m::PI / 4.0;
             let qx = p[0] + m::sin(a) * r;
             let qz = p[2] + m::cos(a) * r;
-            if !crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) && floor_light(g, qx, qz, &mut |_: &mut Game, _: f64| true) >= k.lit_at {
+            if !crate::scene_collision::segment_blocked(g, eye, [qx, 1.5, qz], None, None, None) && floor_light(g, qx, qz, &mut |_: &Game, _: f64| true) >= k.lit_at {
                 return true;
             }
         }
@@ -143,7 +143,7 @@ fn lit_in_view(g: &mut crate::game::Game, p: V3) -> bool {
 /// Floor a man can see from: the place's own light on it, or lit floor in plain view; `edge`: only the second.
 fn dark_foe_sees(g: &mut crate::game::Game, p: V3, edge: Option<bool>) -> bool {
     let edge = edge.unwrap_or(false);
-    let lit = floor_light(g, p[0], p[2], &mut |_: &mut Game, _: f64| true) >= g.k.darkfoe.lit_at;
+    let lit = floor_light(g, p[0], p[2], &mut |_: &Game, _: f64| true) >= g.k.darkfoe.lit_at;
     if edge { !lit && lit_in_view(g, p) } else { lit || lit_in_view(g, p) }
 }
 

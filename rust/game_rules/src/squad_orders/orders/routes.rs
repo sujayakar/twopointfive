@@ -28,7 +28,7 @@ fn price(g: &Game, pen: Pen<'_>, ix: f64, iz: f64) -> f64 {
 }
 fn find_path(g: &mut Game, a: V3, b: V3, max_iter: Option<f64>, pen: Option<Pen<'_>>) -> Option<Vec<V3>> {
     match pen {
-        Some(p) => crate::scene_collision::nav_grid_find_path(g, a, b, max_iter, Some(&mut |g: &mut Game, x: f64, z: f64| price(g, p, x, z))),
+        Some(p) => crate::scene_collision::nav_grid_find_path(g, a, b, max_iter, Some(&mut |g: &Game, x: f64, z: f64| price(g, p, x, z))),
         None => crate::scene_collision::nav_grid_find_path(g, a, b, max_iter, None),
     }
 }
@@ -475,7 +475,7 @@ fn lane_only(g: &mut Game, w: Way<'_>, base: &[V3], pen: Option<Pen<'_>>) -> Opt
     let mut lanes = crate::doorway::doorway_lane_price(g, Some(&mut |_g: &mut Game, d: DoorId| mine.contains(&d)))?;
     let lane_m = along_lanes(g, w.from, base, &mut lanes);
     if lane_m < 1.0 { return None; }
-    let way = crate::scene_collision::nav_grid_find_path(g, w.from, w.to, Some(ROUND_ITER), Some(&mut |g: &mut Game, x: f64, z: f64| match pen {
+    let way = crate::scene_collision::nav_grid_find_path(g, w.from, w.to, Some(ROUND_ITER), Some(&mut |g: &Game, x: f64, z: f64| match pen {
         Some(p) => { let a = price(g, p, x, z); a * crate::doorway::doorway_lane_price_at(g, &mut lanes, x, z) }
         None => crate::doorway::doorway_lane_price_at(g, &mut lanes, x, z),
     }))?;
@@ -495,14 +495,14 @@ fn seen_way(g: &mut Game, w: Way<'_>, now: &[V3], base: &[V3], pen: Option<Pen<'
     if m_s < less { return None; }
     let mine = doors_on(g, w.from, base);
     let mut lanes = crate::doorway::doorway_lane_price(g, Some(&mut |_g: &mut Game, d: DoorId| mine.contains(&d)));
-    let way = crate::scene_collision::nav_grid_find_path(g, w.from, w.to, Some(ROUND_ITER), Some(&mut |g: &mut Game, x: f64, z: f64| {
+    let way = crate::scene_collision::way_priced(&mut *g, w.from, w.to, ROUND_ITER, &mut |g, x: f64, z: f64| {
         let a = match pen { Some(p) => Some(price(g, p, x, z)), None => None };
         let both = match lanes.as_mut() {
             Some(l) => { let v = crate::doorway::doorway_lane_price_at(g, l, x, z); m::max(v, crate::seenwalk::seen_price_at(g, &seen, x, z)) }
             None => crate::seenwalk::seen_price_at(g, &seen, x, z),
         };
         match a { Some(a) => a * both, None => both }
-    }))?;
+    })?;
     if shut(g, w.from, w.ring, &way).is_some() || doors_on(g, w.from, &way).iter().any(|d| !mine.contains(d)) || along_seen(g, w.from, &way, &seen) > m_s - less { return None; }
     if let Some(l) = lanes.as_mut() {
         let a = along_lanes(g, w.from, &way, l);

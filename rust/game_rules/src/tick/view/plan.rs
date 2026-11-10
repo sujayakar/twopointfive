@@ -1,6 +1,6 @@
 //! THE SQUAD'S PLAN ON THE FLOOR, as a seat is told it: per man with a mark his way, his mark and what he watches; everything waiting on the player's key, with whether the key pressed
 //! now would send it; the throws. Only men of the seat's own squad are listed, and nothing of an enemy the team cannot see. A leg of a man's way that is not his own path is a question
-//! of the floor the HUD asks (`ask::WorldAsk::way`) and keeps by its own clock; nothing here searches.
+//! of the floor the HUD asks (`scene_collision::way_host`) and keeps by its own clock; nothing here searches.
 //!
 //! `waits_on_key` repeats the rules of the press as a reader (the pair's mark first, then the nearest set charge of a wall or a door's, then the word, the drill and the rescue's entry).
 use super::*;

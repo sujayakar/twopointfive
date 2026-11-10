@@ -18,7 +18,6 @@ use core::future::Future;
 use core::ops::Deref;
 use core::pin::Pin;
 use core::task::{Context, Waker};
-use game::ask::{Line, WorldAsk};
 use game::cmd::PlayerCmd;
 use game::dice::Die;
 use game::game::{Game, InteractableKind, Verb};
@@ -361,13 +360,11 @@ impl HandsOff {
         self.me.say(format!("ended: {}", end.as_str()));
     }
 
-    /// THE HAND OF THE TICK ABOUT TO RUN: what the host sampled, with his keys, his button and his cursor over it. The box world's copy stands (`scene_collision::stands`).
+    /// THE HAND OF THE TICK ABOUT TO RUN: what the host sampled, with his keys, his button and his cursor over it.
     pub fn hand(&mut self, g: &Game, cmd: &mut PlayerCmd, dt: f64) {
         cmd.keys.retain(|k| !game::player::WALK_KEYS.contains(&k.as_str()));
         cmd.buttons = (cmd.buttons as u32 & !1) as f64;
         if self.end.is_some() { return; }
-        // (a world he may not ask of ends his scene, and not the game)
-        if WorldAsk::try_of(g).is_err() { return self.stop(End::Spent); }
         for e in g.events.iter().filter(|e| e.time > self.heard) { if matches!(e.kind, game::director::EventKind::GuardShot) || (matches!(e.kind, game::director::EventKind::Shot) && e.loud) { self.shot_at = self.t(); } }
         self.heard = g.time;
         let me = self.me.clone();
@@ -391,11 +388,10 @@ impl HandsOff {
         // (he shoots only a man the fog shows, on the screen, with nothing solid between them and no whole pane, a beat after he shows)
         let eye = [pos[0], 1.45, pos[2]];
         let mut best: Option<(f64, GuardId)> = None;
-        let world = WorldAsk::of(g);
         for h in g.guards.iter().copied().filter(|&h| g.team(h) == Team::Hostile) {
             if game::condition::down(g, g.gd[h].ch) { self.shown.retain(|s| s.0 != h); continue; }
             let (c, d) = (chest(h), flat(pos, g.ch[g.gd[h].ch].pos));
-            if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || world.line(eye, c, Line::Solid) { continue; }
+            if game::fogofwar::fog_of_war_hides(g, h) || !me.on_screen(c) || game::scene_collision::solid_blocked(g, eye, c, None) { continue; }
             let fresh = !self.shown.iter().any(|s| s.0 == h && t - s.1.last <= 1.0);
             if fresh { self.shown.retain(|s| s.0 != h); let need = REACT * (0.75 + 0.5 * self.die.roll()); self.shown.push((h, Shown { first: t, last: t, need })); }
             let s = &mut self.shown.iter_mut().find(|s| s.0 == h).unwrap().1;

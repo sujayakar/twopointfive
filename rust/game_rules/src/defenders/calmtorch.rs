@@ -10,7 +10,7 @@ use crate::v3::{self, Quat, V3};
 
 /// The place's steady light at a point of floor, on the meter's scale.
 pub fn place_light(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
-    let mut skip = |_: &mut Game, _: f64| true;
+    let mut skip = |_: &Game, _: f64| true;
     let e = crate::guards::light_estimate_at(g, [x, 1.2, z], Some(&mut skip), Some(true), None);
     crate::game::game_visibility_of(g, e)
 }
