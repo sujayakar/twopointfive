@@ -4,7 +4,7 @@ struct SeamK { n: u32, frame: u32, px: f32, pad: u32, c: array<vec4f, 48> };    
 /** the coarser levels' error here: what the pixel's own level of this mesh is off, and the one so many coarser */
 fn errorAt(h: Hit, more: u32, px: f32) -> f32 { let p = &pieces[h.piece]; let head = mrowU((*p).planes); let c = head.z + ((h.code & 0x7fffffffu) >> head.y) * 4u; let c3 = mrowU(c + 3u); let n = bitcast<vec4u>(mrow(c3.x)).w; let k = (*p).quad.x * bitcast<f32>(c3.z); meshMore = more; let l = meshPick(c3.x, n, px / k); meshMore = 0u; return mrow(c3.x + 4u + l).x * k; }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let dim = vec2u(frame.size.zw); if (id.x >= dim.x || id.y >= dim.y) { return; } let at = id.y * dim.x + id.x; let rd = camRay((vec2f(id.xy) + 0.5) / vec2f(dim)); let ro = frame.camPos.xyz; leafMode = 1u;
+  let dim = vec2u(frame.size.zw); if (id.x >= dim.x || id.y >= dim.y) { return; } let at = id.y * dim.x + id.x; let rd = camRay((vec2f(id.xy) + 0.5) / vec2f(dim)); let ro = frame.camPos.xyz; leafMode = 2u;
   if (seamK.frame == 0u) {
     let h = nearest(ro, rd, 1e-3, 2000.0, 0u, 1e9); var s: Surf; if (h.piece != NOTHING) { s = surfaceAt(ro, rd, h, 2.0 * length(frame.camUp.xyz) / frame.size.w * h.t); }
     first[at * 3u] = vec4u(bitcast<vec3u>(s.x), select(0u, h.piece + 1u, h.piece != NOTHING && (pieces[h.piece].flags & MESH) != 0u)); first[at * 3u + 1u] = vec4u(octPack(s.n), octPack(s.ng), h.code, bitcast<u32>(select(h.t, 1e6, h.piece == NOTHING))); first[at * 3u + 2u] = bitcast<vec4u>(vec4f(s.albedo, 0.0)); return;

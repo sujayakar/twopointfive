@@ -1,0 +1,1 @@
+[{"w": 960, "h": 540, "samples": 300, "tick": 600, "signal": "bounceH", "name": "dusk", "dist": 56, "hour": 18.3, "yaw": 0.9, "pitch": 0.62, "methods": ["all", "miss", "coarse"]}, {"w": 960, "h": 540, "samples": 300, "tick": 600, "signal": "bounceH", "name": "night", "dist": 34, "hour": 21.5, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "methods": ["all", "miss", "coarse"]}]

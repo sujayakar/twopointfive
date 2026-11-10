@@ -8,10 +8,8 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
   let S = frame.sunDir.xyz; let q = sunMap(x); if (any(q.xy < vec2f(0.002)) || any(q.xy > vec2f(0.998))) { return 1.0; } let d = vec2f(textureDimensions(sunLeaves)); let bs = basis(S); let ns = dot(n, S); let tilt = select(-1.0, 1.0, ns >= 0.0) / max(abs(ns), 0.12); var s = 0.0; let a = r.x * 6.2832; let m = mat2x2f(cos(a), sin(a), -sin(a), cos(a));
   // how far up the first leaves are says how soft their edges are: the sun is a disc
   var up = 0.0; var un = 0.0; let px = SUN_WIDE / d.x; for (var k = 0u; k < 4u; k++) { let off = m * (array<vec2f, 4>(vec2f(2.1, 0.9), vec2f(-1.2, 2.4), vec2f(-2.5, -1.0), vec2f(1.3, -2.6))[k]); let p = vec2i(vec2f(q.x, 1.0 - q.y) * d + off); let over = (textureLoad(sunLeaves, p, 0) - q.z) * 80.0; if (over > 0.3) { up += over; un += 1.0; } }
-  let wide = max(0.8, select(0.0, up / max(un, 1.0) * frame.sunDir.w / px, un > 0.0)); var far = 0.0;
-  for (var k = 0u; k < 4u; k++) { let off = m * (array<vec2f, 4>(vec2f(0.375, 0.125), vec2f(-0.25, 0.69), vec2f(-0.94, -0.375), vec2f(0.56, -1.0))[k] * 0.9 * wide); let p = vec2i(vec2f(q.x, 1.0 - q.y) * d + off); let e = ((vec2f(p) + 0.5) / d - vec2f(q.x, 1.0 - q.y)) * SUN_WIDE; let h = -dot(bs[0] * e.x - bs[1] * e.y, n) * tilt; let over = (textureLoad(sunLeaves, p, 0) - q.z) * 80.0 - h; if (over < 0.014) { s += 1.0; } else if (over > 0.3) { far += 1.0; } else { s += 0.07 * exp(-7.0 * over) + 0.005; } }
-  // what is under leaves some way up gets what they let through: one leaf a seventh, more of them less, by how thick they stand that way
-  if (far > 0.0) { let tau = -log(max(folWalk(x, S, 60.0, false).T.y, 1e-4)) / 0.86; s += far * clamp((exp(-0.87 * tau) - exp(-tau)) / max(1.0 - exp(-tau), 1e-3), 0.0, 0.13); }
+  let wide = max(0.8, select(0.0, up / max(un, 1.0) * frame.sunDir.w / px, un > 0.0));
+  for (var k = 0u; k < 4u; k++) { let off = m * (array<vec2f, 4>(vec2f(0.375, 0.125), vec2f(-0.25, 0.69), vec2f(-0.94, -0.375), vec2f(0.56, -1.0))[k] * 0.9 * wide); let p = vec2i(vec2f(q.x, 1.0 - q.y) * d + off); let e = ((vec2f(p) + 0.5) / d - vec2f(q.x, 1.0 - q.y)) * SUN_WIDE; let h = -dot(bs[0] * e.x - bs[1] * e.y, n) * tilt; let over = (textureLoad(sunLeaves, p, 0) - q.z) * 80.0 - h; s += select(0.0, 1.0, over < 0.014); }
   return s * 0.25;
 }
 const SUN_LAMP = 255u;
@@ -37,8 +35,8 @@ const SUN_LAMP = 255u;
     else if (torch) { if (W.y < 0.01 * lampsW || ti[t] < 0 || tw[t] < 0.03 * tw.x) { continue; } l = u32(ti[t]); }
     else { if (pick.z < 0 || WC < 0.01 * (lampsW * lum(p.albedo) * 0.32 + 2e-4)) { continue; } l = u32(pick.z); }
     var d: vec3f; var far = 400.0; let sun = l == SUN_LAMP; let fine = ((u32(FINE) >> select(select(k, 2u, torch), 0u, sun)) & 1u) != 0u; var slot = 99u; if (torch) { slot = (torchK[3u + (l >> 4u)][(l >> 2u) & 3u] >> (8u * (l & 3u))) & 255u; } let exact = fine && slot > 98u; leafMode = select(2u, 0u, exact); noLeaves = (sun && !fine) || slot < 99u;     /* (a torch has a picture of the leaves, as the sun has) */
-    let pw = 2.0 * length(frame.camUp.xyz) / frame.size.y * p.t; if (sun) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); foot(pw, 2.0 * frame.sunDir.w); }
-    else { var a: vec4f; if (k == 3u) { a = aimCoat(l, s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(l, p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), torch)); } d = a.xyz; far = a.w - 0.02; foot(pw, select(2.0 * lamps[l].area, sqrt(lamps[l].area), lamps[l].kind == 0u) / max(a.w, 0.1)); } leafTo = select(0.0, 1e9, exact);
+    let pw = 2.0 * length(frame.camUp.xyz) / frame.size.y * p.t; if (sun) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); footSharp(pw, 2.0 * frame.sunDir.w); }
+    else { var a: vec4f; if (k == 3u) { a = aimCoat(l, s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(l, p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), torch)); } d = a.xyz; far = a.w - 0.02; footSharp(pw, lampSize(l) / max(a.w, 0.1)); } leafTo = select(0.0, 1e9, exact); blkOn = !exact;
     var T = 0.0; if (dot(p.ng, d) > 0.0 || p.leaf) { let side = select(-1.0, 1.0, dot(p.ng, d) > 0.0); T = lum(visible(p.x + p.ng * (o0 * side), d, 1e-3, far)); if (T > 0.0 && sun && noLeaves) { T *= leafSun(p.x, p.ng * side, b3); } else if (T > 0.0 && slot < 99u) { T *= leafTorch(slot, l, p.x, p.ng * side, b3); } }
     if (k == 0u) { v.w = T; } else if (torch) { tv += vec2f(T, 1.0) * tw[t]; } else if (k == 1u) { v.x = T; } else { v.z = T; }
   }

@@ -18,8 +18,9 @@ import { torchStages, torchCode, torchView, torchLeaves } from './torches';
 import airlight from './airlight.wgsl' with { type: 'text' };
 import haze from './haze.wgsl' with { type: 'text' };
 import type { Place } from '../scene/place';
-import foliage from './foliage.wgsl' with { type: 'text' };
-import { SLOT_ROWS } from '../scene/foliage';
+import cellsCode from './cells.wgsl' with { type: 'text' };
+import smokeMean from './smokemean.wgsl' with { type: 'text' };
+import { lightRow, smokeRow, SMOKE_ROWS } from '../scene/blocks';
 import gather from './gather.wgsl' with { type: 'text' };
 import mirror from './mirror.wgsl' with { type: 'text' };
 import temporal from './temporal.wgsl' with { type: 'text' };
@@ -94,7 +95,7 @@ export const svgf: DenoisePart = {
   stages({ signal, second, div, cap, rounds, narrow, fractions, layer }, g) {
     const size: Size = div === 2 ? 'half' : 'render', N = narrow ? 1 : 0, two = (code: string) => code.replace(/^\s*\/\/2 /gm, second ? '  ' : '  // '), S2 = second ?? ''; if (second) g.signal(S2 + 'H', 'rgba16float', size, true).signal(S2 + 'A', 'rgba16float', size).signal(S2 + 'B', 'rgba16float', size); g.signal(signal + 'H', 'rgba16float', size, true).signal(signal + 'M', 'rgba16float', size, true).signal(signal + 'A', 'rgba16float', size).signal(signal + 'B', 'rgba16float', size);
     const stages: Stage[] = [{ name: signal + ' history', over: size, reads: { [signal]: 'cur', [signal + 'H@prev']: 'hist', [signal + 'M@prev']: 'momPrev', surf: 'surf', 'surf@prev': 'surfPrev', aux: 'auxT', front: 'frontT', ...(second ? { [S2]: 'cur2', [S2 + 'H@prev']: 'hist2' } : {}) }, writes: { outH: signal + 'H', outM: signal + 'M', ...(second ? { outH2: S2 + 'H' } : {}) }, buffers: CHANGES, consts: { DIV: div, CAP: cap, SPREAD: narrow ? 1.6 : 1.25, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0, AIR: 0 }, code: signals + 'fn airAt2(p: vec2u) -> vec2f { return vec2f(0.0); }\nfn airWas(p: vec2u) -> vec2f { return vec2f(0.0); }\n' + two(temporal).replace('CAP_NOW', fractions ? '@tune.visFrames' : narrow ? '@tune.mirrorFrames' : '@tune.bounceFrames') }];
-    let from = signal + 'H', from2 = S2 + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'), to2 = S2 + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT', ...(fractions ? { lampU: 'lampU' } : {}), ...(second ? { [from2]: 'src2' } : {}) }, writes: { outB: to, ...(second ? { outB2: to2 } : {}) }, buffers: CHANGES, consts: { BROAD: 1e6, DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0 }, code: signals + (fractions ? 'fn lightOf(q: vec2i) -> vec4f { let t = textureLoad(lampU, q, 0); let u = lightAll(t); let f = lightFirst(t); let a = lum(u.rgb) + 1e-4; firstNow = f.a; return vec4f(a, u.a + 1e-4, a + lum(f.rgb), 1.0); }\nvar<private> firstNow = 0.0;\n' : 'fn lightOf(q: vec2i) -> vec4f { return vec4f(1.0); }\nvar<private> firstNow = 0.0;\n') + two(blur) }); from = to; from2 = to2; }
+    let from = signal + 'H', from2 = S2 + 'H'; for (let i = 0; i < rounds; i++) { const to = signal + (i % 2 ? 'B' : 'A'), to2 = S2 + (i % 2 ? 'B' : 'A'); stages.push({ name: signal + ' blur', over: size, reads: { [from]: 'src', [signal + 'M']: 'mom', surf: 'surf', front: 'frontT', ...(fractions ? { lampU: 'lampU' } : {}), ...(second ? { [from2]: 'src2' } : {}) }, writes: { outB: to, ...(second ? { outB2: to2 } : {}) }, buffers: CHANGES, consts: { DIV: div, STRIDE: 1 << i, SHARE: narrow ? 2.5 : 3.0, NARROW: N, KIND: fractions ? 1 : 0, LAYER: layer ?? 0 }, code: signals + (fractions ? 'fn lightOf(q: vec2i) -> vec4f { let t = textureLoad(lampU, q, 0); let u = lightAll(t); let f = lightFirst(t); let a = lum(u.rgb) + 1e-4; firstNow = f.a; return vec4f(a, u.a + 1e-4, a + lum(f.rgb), 1.0); }\nvar<private> firstNow = 0.0;\n' : 'fn lightOf(q: vec2i) -> vec4f { return vec4f(1.0); }\nvar<private> firstNow = 0.0;\n') + two(blur) }); from = to; from2 = to2; }
     return { stages, result: from, ...(second ? { second: from2 } : {}) };
   },
 };
@@ -111,15 +112,20 @@ function airLightStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: stri
   const p = lab.building.place, g = airGrid(p), many = g.n[0]! * g.n[1]! * g.n[2]!, groups = Math.ceil(many / 64); lab.buffer('airKept', many * 16); if (!lab.graph.signals.has('airLight')) lab.graph.bind('airLight', lab.gpu.device.createTexture({ label: 'air light', dimension: '3d', size: g.n as [number, number, number], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC }));
   return [{ name: 'air light', over: { groups: () => [Math.min(65535, groups), Math.ceil(groups / 65535), 1] }, code: signals + airLightCode(p) + lib + bounceLib + airlight, buffers: { ...bind, kept: ['airKept', 'array<vec4u>', 'read_write'] }, writes: { outLight: 'airLight' } }];
 }
-/** the light in the foliage: a look more a slot, then handed to where every ray reads it */
-function foliageStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string): Stage[] {
-  const f = lab.scene.foliage, bytes = f.slots * SLOT_ROWS * 16; lab.buffer('foliage', bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('foliageAt', f.at.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('foliageAt')!, 0, f.at);
-  return [{ name: 'foliage', over: { groups: () => [Math.ceil(f.slots / 64), 1, 1] }, code: signals + lib + bounceLib + foliage, buffers: { ...bind, field: ['foliage', 'array<u32>', 'read_write'], folAt: ['foliageAt', 'array<vec4f>', 'read'] } },
-    { name: 'foliage', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { enc.copyBufferToBuffer(lab.graph.buffers.get('foliage')!, 0, lab.scene.extraBuffer, lab.scene.folSlots * 16, bytes); }; } }];
+/** the light in the cells: one more look at some, then handed to where every ray reads it. `go`: is it their turn this frame? */
+function cellStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string, go: () => boolean): Stage[] {
+  const { many, at } = lab.litCells, bytes = Math.max(1, many) * 48, b = lab.scene.blocks, RW = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST; lab.buffer('cellLight', bytes, RW); lab.buffer('cellsAt', Math.max(32, at.byteLength), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('cellsAt')!, 0, at); lab.uniform('cellsMany', new Uint32Array([many, 0, 0, 0]));
+  return [{ name: 'cells', over: { groups: () => [Math.ceil(many / 8), 1, 1] }, when: () => many > 0 && go(), code: signals + lib + bounceLib + cellsCode, buffers: { ...bind, field: ['cellLight', 'array<u32>', 'read_write'], places: ['cellsAt', 'array<vec4f>', 'read'], many: ['cellsMany', 'vec4u', 'uniform'] } },
+    { name: 'cells', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { if (many && go()) enc.copyBufferToBuffer(lab.graph.buffers.get('cellLight')!, 0, lab.scene.extraBuffer, lightRow(b, lab.scene.blockRow) * 16, many * 48); }; } }];
+}
+/** a brick of smoke as one cell, for rays wider than it */
+function smokeMeanStages(lab: Lab): Stage[] {
+  const when = () => lab.smoke.on; lab.buffer('smokeMean', SMOKE_ROWS * 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST);
+  return [{ name: 'smoke mean', over: { groups: () => [SMOKE_ROWS, 1, 1] }, when, code: smokeMean, buffers: { mean: ['smokeMean', 'array<vec4f>', 'read_write'] } }, { name: 'smoke mean', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { if (when()) enc.copyBufferToBuffer(lab.graph.buffers.get('smokeMean')!, 0, lab.scene.extraBuffer, smokeRow(lab.scene.blocks, lab.scene.blockRow) * 16, SMOKE_ROWS * 16); }; } }];
 }
 /** `edit` changes a stage's text before it is built: for asking what a part of it costs */
 export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart; edit?: (s: Stage) => Stage } = {}): Method & { glow: string } {
-  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64);
+  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64), turn = 0, since = 0, light = '', beat = 0;
   const m: Method & { glow: string; warm?: Promise<void> } = {
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
@@ -137,7 +143,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         ...looseStages(lab, g), raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
-        ...cache.stages, ...foliageStages(lab, c, cache.lib), ...lab.smoke.stages(g, c, cache.lib, bounceLib),
+        ...cache.stages, ...cellStages(lab, c, cache.lib, () => turn === 0), ...lab.smoke.stages(g, c, cache.lib, bounceLib), ...smokeMeanStages(lab),
         ...sightStages(lab), S('lamps', torchView + torchLeaves + lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves', torchLeaves: 'torchTex' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, { torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }, { FINE: 4 }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce', outV: 'bounceV' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
@@ -153,11 +159,13 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     },
     frame(lab) {
       rainKnobs(lab); lab.smoke.frame();
+      // cells look every fourth frame (what a look costs is mostly waiting), every one, and with a short memory, while the light changes: doors, lamps, the hour, the weather
+      { const now = [lab.lampsMode, lab.hour.toFixed(2), lab.mains, lab.moon.toFixed(1), lab.rainNow.toFixed(1), lab.snowNow.toFixed(1), lab.wet.toFixed(1), lab.snow.toFixed(1), ...lab.building.doors.map(d => d.open.toFixed(2)), ...lab.building.world.lamps.map((l, i) => /fire|flash/.test(l.name) || l.kind === 'spot' ? 0 : lab.scene.lampOn[i]!.toFixed(1))].join(); if (now !== light || fresh) { light = now; since = 0; } else since++; const hurry = since < 60; turn = hurry ? 0 : (turn + 1) % 4; if (turn === 0) beat++; lab.uniform('cellsMany', new Uint32Array([lab.litCells.many, beat, hurry && since > 0 ? 1 : 0, 0])); }
       // where each moving piece was; and what changed
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }
-      lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
-      const drift = lastHour < 0 ? 0 : Math.abs(lab.hour - lastHour), key = lab.lampsMode; lastHour = lab.hour; if (key !== last || drift > 0.02) { last = key; quiet = 40; if (drift > 0.1) ch[33] = 1; } quiet = Math.max(0, quiet - 1); ch[32] = 1 - Math.max(0.85 * Math.min(1, quiet / 24), Math.min(0.6, drift * 110)); lab.uniform('changes', ch);
+      let many = 0; lab.building.world.lamps.forEach((l, i) => { if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && l.name !== 'flash' && l.name !== 'fire') many++; if (Math.abs(lab.scene.lampOn[i]! - prevOn[i]!) > 0.02 && l.kind !== 'spot' && n < 8) { ch.set([...l.at, 9], n * 4); n++; } }); prevOn = lab.scene.lampOn.slice();
+      const drift = lastHour < 0 ? 0 : Math.abs(lab.hour - lastHour), key = lab.lampsMode + lab.mains + lab.moon; lastHour = lab.hour; if (key !== last || drift > 0.02 || many > 5) { const turned = key !== last && last !== ''; last = key; quiet = 40; if (drift > 0.1 || many > 5 || turned) ch[33] = 1; }      /* (more lamps switched than can be told of one by one: everything forgets) */ quiet = Math.max(0, quiet - 1); ch[32] = 1 - Math.max(0.85 * Math.min(1, quiet / 24), Math.min(0.6, drift * 110)); lab.uniform('changes', ch);
       lab.uniform('taauK', new Float32Array([0.25 * (lab.exposure || 1), fresh ? 1 : 0, 0.2 + 0.8 * ch[32]!, 0])); fresh = false; cache.rush = quiet > 0 ? 3 : 0;
     },
     reset() { fresh = true; },
