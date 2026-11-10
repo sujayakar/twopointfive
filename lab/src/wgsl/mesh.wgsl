@@ -1,7 +1,7 @@
 // MESHES, as one more kind of piece: what a ray meets of one, and what is there. Rows are those of mesh/pack.ts, from MESH_ROW on.
 //   object   n levels, bits, children's row, children · a ball round it · the width at which it is gone, its class · then a level each: error, tree, first child, children
 //   child    three rows object → mesh (scaled) · mesh, tint, scale, what its level of the object is off
-//   mesh     corner, levels · a step of its grid, clusters' row · triangles' row, picking row and entries, clusters · ball · then a level each: error, tree, triangles, spread
+//   mesh     corner, levels · a step of its grid, clusters' row · triangles' row, picking row and entries, clusters · ball · then a level each: error, tree, error as it is seen, spread
 //   cluster  vertices' row, triangles, vertices | level << 16, how far it stands off      triangle  three vertices of its cluster, a byte each
 //   vertex   x y, z and spread, normal, color               node      both children: least corner, what it is · greatest corner
 // (what it is: a node's row, or 1 << 31 | first << 4 | how many triangles, or children of the object)
@@ -16,7 +16,7 @@ var<private> meshError = 0.0; var<private> meshFoot = 0.0; var<private> meshLeve
 /** and so many levels coarser than that: for the seam's study */
 var<private> meshMore = 0u;
 /** the object's level, counted from the finest (1), whatever the width: for measuring what each loses (0 = by the width) */
-var<private> meshObject = 0u;
+var<private> meshObject = 0u; var<private> meshDrawn = false;      /* (and levels as the raster picks them) */
 /** how wide the ray's answer is there, in metres that a level may be off */
 fn meshWide(t: f32) -> f32 { return max(max(meshError, frame.knobs.x), (meshFoot + frame.knobs.y) * footAt(t)); }
 /** as far as this a ray does not meet the backs of triangles: it began under them, on a finer level */
@@ -26,7 +26,7 @@ var<private> meshOwn = true;
 
 fn meshVertex(row: u32, mn: vec3f, st: vec3f) -> vec3f { let v = mrowU(row); return mn + st * vec3f(f32(v.x & 0xffffu), f32(v.x >> 16u), f32(v.y & 0xffffu)); }
 /** which level of a mesh stands within `e` of its finest */
-fn meshPick(h: u32, n: u32, e: f32) -> u32 { if (meshLevel > 0u) { return min(meshLevel - 1u, n - 1u); } var l = n - 1u; loop { if (l == 0u || mrow(h + 4u + l).x <= e) { break; } l -= 1u; } return min(l + meshMore, n - 1u); }
+fn meshPick(h: u32, n: u32, e: f32) -> u32 { if (meshLevel > 0u) { return min(meshLevel - 1u, n - 1u); } var l = n - 1u; loop { let v = mrow(h + 4u + l); if (l == 0u || select(v.x, v.z, meshDrawn) <= e) { break; } l -= 1u; } return min(l + meshMore, n - 1u); }
 fn boxSpan(a: vec3f, b: vec3f, o: vec3f, inv: vec3f) -> vec2f { let p = (a - o) * inv; let q = (b - o) * inv; return vec2f(max3(min(p, q)), min3(max(p, q))); }
 fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
   let p = &pieces[k]; let sc = (*p).quad.x; let oo = vec3f(dot((*p).r0.xyz, ro) + (*p).r0.w, dot((*p).r1.xyz, ro) + (*p).r1.w, dot((*p).r2.xyz, ro) + (*p).r2.w) / sc; let od = vec3f(dot((*p).r0.xyz, rd), dot((*p).r1.xyz, rd), dot((*p).r2.xyz, rd)) / sc;

@@ -3,7 +3,7 @@ import { type Cluster, type Dag, CLUSTER, cutAt, errorFor, parts, around, type B
 import type { V3, Rot } from '../math';
 
 /** a level a ray may meet: the most it stands off the finest (metres at scale 1), how many triangles, and how much its normals no longer say (mean of 1 − cos) */
-export interface Level { error: number; triangles: number; spread: number; root: number }
+export interface Level { error: number; /** the same as it is seen, by which the raster picks */ seen: number; triangles: number; spread: number; root: number }
 export interface Packed { header: number; levels: Level[]; clusters: number; triangles: number; ball: Ball; mn: V3; mx: V3; depth: number }
 /** one mesh somewhere in an object: child = scale⁻¹ · rotᵀ · (object − at) */
 export interface Child { mesh: Packed; at: V3; rot: Rot; scale: number; tint: V3 }
@@ -108,10 +108,10 @@ export function packMesh(s: Store, d: Dag): Packed {
     const e = k === 0 ? 0 : errorFor(d, d.triangles / 2 ** k); const cs = cutAt(d, e), tris = cs.reduce((a, c) => a + c.tri.length / 3, 0); if (k > 0 && tris > levels[levels.length - 1]!.triangles * 0.8) continue;
     const at = cs.map(c => index.get(c)!), boxes = new Float64Array(cs.length * 6); at.forEach((c, i) => boxes.set(subBox[c]!, i * 6)); const tr = tree(boxes, cs.length, 1), root = lay(s, tr.root, 'ray trees', f => sub[at[tr.order[f]!]!]!);
     let sp = 0, sn = 0; for (const c of cs) for (const v of c.tri) { sp += P.spread[v]!; sn++; }
-    levels.push({ error: Math.max(...cs.map(c => c.apart)), triangles: tris, spread: sp / sn, root });
+    levels.push({ error: Math.max(...cs.map(c => c.apart)), seen: e, triangles: tris, spread: sp / sn, root });
   }
   const h = header * 4, whole = around(d.clusters.filter(c => c.level === 0).map(c => c.bound)); s.f.set(mn, h); s.u[h + 3] = levels.length; s.f.set(st, h + 4); s.u[h + 7] = s.base + rec; s.u[h + 8] = s.base + idx; s.u[h + 9] = s.base + top; s.u[h + 10] = tops.length; s.u[h + 11] = n; s.f.set([whole.x, whole.y, whole.z, whole.r], h + 12);
-  levels.forEach((l, i) => { s.f[h + 16 + i * 4] = l.error; s.u[h + 17 + i * 4] = l.root; s.u[h + 18 + i * 4] = l.triangles; s.f[h + 19 + i * 4] = l.spread; });
+  levels.forEach((l, i) => { s.f[h + 16 + i * 4] = l.error; s.u[h + 17 + i * 4] = l.root; s.f[h + 18 + i * 4] = l.seen; s.f[h + 19 + i * 4] = l.spread; });
   return { header: s.base + header, levels, clusters: n, triangles: d.triangles, ball: whole, mn, mx, depth: deepest };
 }
 /** an object: its children's rows, a tree over each level's, and its header */
