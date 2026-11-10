@@ -2,6 +2,8 @@ pub use ::game_types::launcher::types;
 pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
+use crate::combat::BodyHitContact;
+use crate::flight::Met;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
@@ -15,12 +17,6 @@ fn ballistics_of(k: &crate::knobs::RingK) -> Ballistics {
 /// g.audio.play(name, at, gain, { rate }).
 fn play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-}
-
-/// A 'prop' noise in the room's business, dealt its serial here at its birth.
-fn prop_event(g: &mut Game, pos: V3, level: f64, who: f64, lure: Option<bool>) {
-    let (time, serial) = (g.time, g.serial());
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos, time, loud: false, level: Some(level), who: Some(who), lure, serial, ..crate::game::GameEvent::default() });
 }
 
 /// The launch velocity to pass through `target`: dead at it, raised by however far a simulated flight falls short, solveIters times.
@@ -129,139 +125,70 @@ pub fn fire_ring(g: &mut crate::game::Game, shooter: CharId, from: V3, target: V
     let spin = crate::dice::draw_body(g, "launcher::fire_ring#1", shooter) * m::PI;
     let ring = Ring { pos: v3::copy(from), vel, age: 0.0, shooter, spin };
     g.rings.push(ring);
-    crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(0.8), None);
-    let (pos, level, who) = (v3::copy(g.ch[shooter].pos), g.k.ring.launch_noise, g.ch[shooter].id);
-    prop_event(g, pos, level, who, None);
-    let pl = g.player;
-    if shooter == g.pl[pl].ch { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+    let level = g.k.ring.launch_noise;
+    crate::flight::launched(g, shooter, from, 0.8, None, level);
     ring
 }
 
-/// tryChar of updateRings: the nearest living man along this substep, other than the shooter.
-fn try_char(g: &mut Game, r: &Ring, radius: f64, dir: V3, reach: f64, c: CharId, gd: Option<GuardId>, best: &mut f64, hit_c: &mut Option<CharId>, hit_g: &mut Option<GuardId>) {
-    if c == r.shooter || !g.ch[c].alive { return; }
-    let t = crate::combat::body_hit(g, c, r.pos, dir, reach, Some(crate::combat::BodyHitContact::Flight { radius }));
-    if t >= 0.0 && t < *best {
-        *best = t;
-        *hit_c = Some(c);
-        *hit_g = gd;
-    }
-}
-
-/// One frame of every ring in the air: drag and gravity in substeps, and along each substep's segment the first man, static, leaf, prop or floor it meets.
+/// One frame of every ring in the air.
 pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
+    let k = g.k.ring;
+    let b = ballistics_of(&k);
+    let h = dt / b.substeps;
+    let off = |v: V3, n: V3| crate::flight::bounce(v, n, k.restitution, k.keep_tangent);
     let mut i = g.rings.len();
     while i > 0 {
         i -= 1;
         let mut r = g.rings[i];
         let mut done = false;
-        let (substeps, drag, gravity, radius, life, prop_j) = (g.k.ring.substeps, g.k.ring.drag, g.k.ring.gravity, g.k.ring.radius, g.k.ring.life, g.k.ring.prop_j);
-        let h = dt / substeps;
         let mut s = 0.0;
-        while s < substeps && !done {
+        while s < b.substeps && !done {
             s += 1.0;
             r.age += h;
             r.spin += 25.0 * h;
-            let k = m::exp(-drag * h);
-            r.vel = [r.vel[0] * k, r.vel[1] * k - gravity * h, r.vel[2] * k];
-            let seg = v3::scale(r.vel, h);
-            let len = v3::len(seg);
-            if len < 1e-6 { continue; }
-            let dir = v3::scale(seg, 1.0 / len);
-            let reach = len + radius;
-            let mut best = m::INF;
-            let mut hit_c: Option<CharId> = None;
-            let mut hit_g: Option<GuardId> = None;
-            let mut j = 0;
-            while j < g.guards.len() {
-                let gd = g.guards[j];
-                j += 1;
-                if !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].team != crate::teams::Team::Operative {
-                    let c = g.gd[gd].ch;
-                    try_char(g, &r, radius, dir, reach, c, Some(gd), &mut best, &mut hit_c, &mut hit_g);
-                }
-            }
-            for cv in crate::civilians::civilian_bodies(g) {
-                let c = g.gd[cv].ch;
-                try_char(g, &r, radius, dir, reach, c, Some(cv), &mut best, &mut hit_c, &mut hit_g);
-            }
-            for pl in crate::seats::men(g) {
-                if !crate::condition::down(g, g.pl[pl].ch) {
-                    let c = g.pl[pl].ch;
-                    try_char(g, &r, radius, dir, reach, c, None, &mut best, &mut hit_c, &mut hit_g);
-                }
-            }
-            let st = crate::scene_collision::raycast(g, r.pos, dir, reach);
-            let ph = crate::props::prop_system_raycast(g, r.pos, dir, reach);
-            let t_s = match st { Some(s) => s.t, None => m::INF };
-            let t_p = match ph { Some(p) => p.t, None => m::INF };
-            if let Some(c) = hit_c {
-                if best <= t_s && best <= t_p {
-                    ring_hits_character(g, r, c, hit_g, dir, v3::mad(r.pos, dir, best));
-                    done = true;
-                    break;
-                }
-            }
-            if let Some(ph) = ph {
-                if t_p <= t_s {
-                    let at = v3::mad(r.pos, dir, m::max(0.0, t_p - radius));
+            let bodies = crate::flight::bodies(g, r.shooter);
+            let Some(leg) = crate::flight::leg(g, &b, h, r.pos, &mut r.vel, &bodies, BodyHitContact::Flight { radius: b.radius }) else { continue };
+            let Some(met) = leg.met else { r.pos = leg.to; continue };
+            done = true;
+            match met {
+                Met::Man(c, t) => ring_hits_character(g, r, c, leg.dir, v3::mad(r.pos, leg.dir, t)),
+                Met::Prop(ph) => {
+                    let at = v3::mad(r.pos, leg.dir, m::max(0.0, ph.t - b.radius));
                     let who = g.ch[r.shooter].id;
-                    crate::props::prop_system_apply_impulse(g, ph.prop, at, [dir[0] * prop_j, 0.0, dir[2] * prop_j], who, Some(true));
+                    crate::props::prop_system_apply_impulse(g, ph.prop, at, [leg.dir[0] * k.prop_j, 0.0, leg.dir[2] * k.prop_j], who, Some(true));
                     clack(g, at, None);
-                    crate::marks::chip_mark(g, v3::mad(r.pos, dir, t_p), ph.n, Some(crate::marks::Surface2 { box_: ph.box_, dynamic: true }), None);
-                    let back = bounce_off(g, r.vel, ph.n);
-                    spend(g, r, at, back);
-                    done = true;
-                    break;
+                    crate::marks::chip_mark(g, v3::mad(r.pos, leg.dir, ph.t), ph.n, Some(crate::marks::Surface2 { box_: ph.box_, dynamic: true }), None);
+                    spend(g, r, at, off(r.vel, ph.n));
                 }
-            }
-            if let Some(st) = st {
-                let at = v3::mad(r.pos, dir, m::max(0.0, t_s - radius));
-                clack(g, at, None);
-                let surface = crate::marks::static_surface(g, st.index);
-                crate::marks::chip_mark(g, v3::mad(r.pos, dir, t_s), st.n, surface, None);
-                let back = bounce_off(g, r.vel, st.n);
-                spend(g, r, at, back);
-                done = true;
-                break;
-            }
-            r.pos = v3::add(r.pos, seg);
-            if r.pos[1] < radius {
-                let at: V3 = [r.pos[0], radius, r.pos[2]];
-                clack(g, at, Some(0.6));
-                let back = bounce_off(g, r.vel, [0.0, 1.0, 0.0]);
-                spend(g, r, at, back);
-                done = true;
-                break;
+                Met::Static(st) => {
+                    let at = v3::mad(r.pos, leg.dir, m::max(0.0, st.t - b.radius));
+                    clack(g, at, None);
+                    let surface = crate::marks::static_surface(g, st.index);
+                    crate::marks::chip_mark(g, v3::mad(r.pos, leg.dir, st.t), st.n, surface, None);
+                    spend(g, r, at, off(r.vel, st.n));
+                }
+                Met::Floor => {
+                    let at: V3 = [leg.to[0], b.radius, leg.to[2]];
+                    clack(g, at, Some(0.6));
+                    spend(g, r, at, off(r.vel, [0.0, 1.0, 0.0]));
+                }
             }
         }
-        if !done && r.age > life {
+        if !done && r.age > b.life {
             spend(g, r, r.pos, v3::scale(r.vel, 0.3));
             done = true;
         }
-        // JavaScript's splice past the end is nothing (a restart under this walk empties g.rings); the row is the walked copy until here
+        // (a restart under this walk empties g.rings; the row is the walked copy until here)
         if i < g.rings.len() {
             if done { g.rings.remove(i); } else { g.rings[i] = r; }
         }
     }
 }
 
-/// Velocity coming back off a surface: the normal share reversed × restitution, the slide × keepTangent.
-fn bounce_off(g: &crate::game::Game, v: V3, n: V3) -> V3 {
-    let vn = v3::dot(v, n);
-    let v_n = v3::scale(n, vn);
-    let v_t = v3::sub(v, v_n);
-    v3::add(v3::scale(v_t, g.k.ring.keep_tangent), v3::scale(v_n, if vn < 0.0 { -g.k.ring.restitution } else { 1.0 }))
-}
-
-/// The ring's flight is over at `at`: from here it is a 'ring' item with its motion capped.
+/// The ring's flight is over at `at`.
 fn spend(g: &mut crate::game::Game, r: crate::launcher::Ring, at: V3, vel: V3) {
-    let mut vel = vel;
-    let sp = v3::len(vel);
-    if sp > g.k.ring.spent_speed_max { vel = v3::scale(vel, g.k.ring.spent_speed_max / sp); }
-    let who = g.ch[r.shooter].id;
-    let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Ring, v3::copy(at), vel, Some(crate::throwables::ThrowablesSpawnOpts { who: Some(who), heading: Some(v3::yaw_of(vel)), ..crate::throwables::ThrowablesSpawnOpts::default() }));
-    g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::RingSkitter);
+    let most = g.k.ring.spent_speed_max;
+    crate::flight::to_item(g, crate::throwables::ItemKind::Ring, r.shooter, at, vel, most, crate::throwables::ItemBounce::RingSkitter);
 }
 
 /// The ring meeting something hard: a clack, sparks, and a noise the room goes to look at.
@@ -270,17 +197,15 @@ pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
     play_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
     crate::particle_fx::clack_fx(g, at);
     let level = g.k.ring.clack_noise * k;
-    prop_event(g, [at[0], 0.0, at[2]], level, 0.0, Some(true));
+    crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, Some(true));
 }
 
 /// A ring has found a man at `at`: high is out cold, low the stagger, a civilian low a fright, the player a flinch; the ring drops at his feet.
-fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2: CharId, gd: Option<GuardId>, dir: V3, at: V3) {
-    let c = c_2;
-    let shooter_id = g.ch[r.shooter].id;
-    let by_player = crate::seats::is_man_id(g, shooter_id);
+fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c: CharId, dir: V3, at: V3) {
+    let by_player = crate::character::is_player(g, r.shooter);
     let neck = match g.ch[c].bones.get(crate::character::Bone::Neck) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.42, 0.0]) };
     let high = at[1] >= neck[1] - g.k.ring.ko_below_neck;
-    match gd {
+    match crate::character::guard_of(g, c) {
         None => {
             crate::character::anim_hit(g, c);
             play_rate(g, "bodyHit", at, 0.5, 1.1);
@@ -294,9 +219,8 @@ fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2:
                 let p = g.ch[c].pos;
                 crate::civilians::to_alarmed(g, gd, crate::civilians::CivCause::Noise, [p[0] - dir[0] * back, 0.0, p[2] - dir[2] * back], false);
             }
-            let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.hit_noise);
-            prop_event(g, pos, level, shooter_id, None);
-            if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+            let level = g.k.ring.hit_noise;
+            thump_at(g, c, level, r.shooter);
         }
         Some(gd) if high => {
             play_rate(g, "bodyHit", at, 0.6, 0.75);
@@ -305,17 +229,23 @@ fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2:
                 None => format!("ring to the head — {} is out cold", g.gd[gd].callsign),
             };
             crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(if by_player { crate::game::DownBy::Player } else { crate::game::DownBy::Guard }), Some(&line));
-            let (pos, level) = (v3::copy(g.ch[c].pos), g.k.ring.ko_noise);
-            prop_event(g, pos, level, shooter_id, None);
-            if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
+            let level = g.k.ring.ko_noise;
+            thump_at(g, c, level, r.shooter);
         }
         Some(gd) => stagger_guard(g, gd, dir, r.shooter),
     }
     let drop_at = v3::mad(at, dir, -0.05);
-    let vx = -dir[0] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#1", c_2) - 0.5);
-    let vy = 1.0 + crate::dice::draw_body(g, "launcher::ring_hits_character#2", c_2);
-    let vz = -dir[2] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#3", c_2) - 0.5);
+    let vx = -dir[0] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#1", c) - 0.5);
+    let vy = 1.0 + crate::dice::draw_body(g, "launcher::ring_hits_character#2", c);
+    let vz = -dir[2] * 1.5 + (crate::dice::draw_body(g, "launcher::ring_hits_character#3", c) - 0.5);
     spend(g, r, drop_at, [vx, vy, vz]);
+}
+
+/// A noise where the man struck stands, laid on whoever sent the thing.
+fn thump_at(g: &mut Game, c: CharId, level: f64, by: CharId) {
+    let (pos, who) = (v3::copy(g.ch[c].pos), g.ch[by].id);
+    crate::flight::noise(g, pos, level, who, None);
+    crate::flight::louder(g, by, level);
 }
 
 /// A ring in the body: he doubles over, rooted, gun down, alert, with a fix back up the ring's line; a yelp and a noise at him. A man held only flinches.
@@ -355,10 +285,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
     let line = &pool[js::rem(roll, pool.len() as f64) as usize];
     crate::game::game_say(g, gd, line, None, None);
-    let shooter_id = g.ch[shooter].id;
-    let pos = v3::copy(g.ch[c].pos);
-    prop_event(g, pos, hit_noise, shooter_id, None);
-    if let Some(pl) = crate::seats::man_by_id(g, shooter_id) { g.pl[pl].noise = m::max(g.pl[pl].noise, hit_noise); }
+    thump_at(g, c, hit_noise, shooter);
 }
 
 /// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this.
