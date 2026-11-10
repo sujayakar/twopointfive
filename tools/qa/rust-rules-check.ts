@@ -29,7 +29,7 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
  *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
 const STATICS: Readonly<Record<string, string>> = {
   'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
-  'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists',
+  'sim/src/world.rs ASKING': 'SCRATCH · one question of the box world: what it has met, the cells it walked, the panes and statics it lists; and what stopped the last line like it, asked first of the next, which changes no answer',
   'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
   'sim/src/clips.rs ALL': 'COPY · a character file\'s clips, authored data nothing writes after the file is loaded (src/anim/gltf.ts): copied in once by src/anim/skeleton.ts as a clip is first sampled, the same for every game and in no snapshot; the same for every game',
   'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
