@@ -2,7 +2,6 @@
 import { Lab, type Method } from './lab';
 import { pathTracer } from './stages/path';
 import { Present } from './present';
-import { STUDY } from './scene/blocks';
 import { realtime, svgf, noDenoise, noCache, bilinear } from './stages/realtime';
 import { norm, type V3 } from './math';
 import { bench, poison, run, trace, watched, spoilt, flicker, moving, converge, refFloor, tableTruth } from './bench';
@@ -34,8 +33,8 @@ methods.nearlin = () => nearStart('nearlin', { upscale: bilinear }); methods.nea
 for (const [n, o] of [['sunnear', '0.0008'], ['sunfar', '0.008']] as const) methods[n] = () => realtime({ name: n, upscale: bilinear, edit: st => st.name === 'lamps' ? { ...st, code: st.code.replace('let o0 = 0.003 * (1.0 + p.t * 0.02)', 'let o0 = ' + o) } : st });
 methods.rasteronly = rasterOnly; methods.fineraster = () => ({ name: 'fineraster', result: 'id', signals() {}, stages: lab => [rasterStage(lab, lab.graph), ...(lab.fine ? [fineStage(lab, lab.graph)] : [])] }); methods.fine = () => withFine(realtime({ name: 'fine' })); methods.finelin = () => withFine(realtime({ name: 'finelin', upscale: bilinear })); methods.standlin = () => withMeshes(realtime({ name: 'standlin', upscale: bilinear }), true); methods.stand = () => withMeshes(realtime({ name: 'stand' }), true); methods.near = () => withMeshes(realtime({ name: 'near' }), 'near'); for (const [k, f] of Object.entries(methods).filter(([k]) => k !== 'rasteronly' && k !== 'stand' && k !== 'near' && k !== 'standlin' && k !== 'fine' && k !== 'finelin' && k !== 'fineraster')) methods[k] = () => withMeshes(f());
 
-export async function shots(o: { guard?: 'kept' | 'all' | 'off'; spoil?: { stage: string; signal: string; frame: number }; scene?: string; load?: Record<string, number>; /** no: cells hold leaves alone */ solids?: boolean; /** how fine the meshes are made */ fine?: Partial<typeof FINE> } = {}) {
-  Object.assign(FINE, o.fine ?? {}); STUDY.solids = o.solids ?? true; const lab = new Lab(); await lab.open(null, o.scene, o.load ?? null); lab.graph.guard = o.guard ?? 'kept'; lab.graph.spoil = o.spoil ?? null; const present = new Present(lab.gpu); await present.init();
+export async function shots(o: { guard?: 'kept' | 'all' | 'off'; spoil?: { stage: string; signal: string; frame: number }; scene?: string; load?: Record<string, number>; /** how fine the meshes are made */ fine?: Partial<typeof FINE> } = {}) {
+  Object.assign(FINE, o.fine ?? {}); const lab = new Lab(); await lab.open(null, o.scene, o.load ?? null); lab.graph.guard = o.guard ?? 'kept'; lab.graph.spoil = o.spoil ?? null; const present = new Present(lab.gpu); await present.init();
   const made = new Map<string, Method>();
   const shot = async (v: View) => {
     lab.knobs[1] = v.rays ?? 0;    lab.moon = v.moon ?? 1; lab.mains = v.mains ?? true; if (v.groups) lab.lampGroup = v.groups; else if (!v.go) lab.lampGroup = {};

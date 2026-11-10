@@ -1,7 +1,7 @@
 // THE WORLD, as data: pieces, leaf clusters, lamps, openings, marks. Nothing here knows about the GPU.
 import { type V3, type Rot, ID, add, mul, apply, norm, cross, sub } from '../math';
 import { buildBvh, type Bounds, type Bvh } from '../bvh';
-import { classOf } from './blocks';
+import { thin } from './blocks';
 
 /** what a piece is to a ray */
 export const F = { /** its slanting faces are where it broke: what it is made of, not what it is painted with */ BROKEN: 1 << 7, GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29, /** a mesh's, or stands in for one (which has no `mesh`): neither is drawn as a box, nor breaks as one */ MESH: 1 << 6, /** and triangles: what it is stands in the rows at `mesh` (quad's first is its scale) */ TRIANGLES: 3 << 4 } as const;
@@ -62,7 +62,7 @@ export function packBend(b: number[], u: Uint32Array, o: number) { for (let i = 
 /** a piece as the shaders read it: three rows world → local, half + flags, quadric, (material | marks, tint, planes, lamp | seed) */
 export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, planeAt: number, markAt: number) {
   for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f[o + k * 4] = r[0]; f[o + k * 4 + 1] = r[1]; f[o + k * 4 + 2] = r[2]; f[o + k * 4 + 3] = -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2]); }
-  f.set(p.half, o + 12); u[o + 15] = (p.flags | (p.planes?.length ?? 0) | ((p.curves?.length ?? 0) << 4) | (classOf(p) << 30)) >>> 0;
+  f.set(p.half, o + 12); u[o + 15] = (p.flags | (p.planes?.length ?? 0) | ((p.curves?.length ?? 0) << 4) | (thin(p) ? 0x40000000 : 0) | 0x80000000) >>> 0;       /* (THIN, and: a piece, for whoever wants leaves alone) */
   if (p.bend) packBend(p.bend, u, o); else f.set(p.quad ?? [0, 0, 0, 0], o + 16);
   const t = p.tint ?? [1, 1, 1], q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
   u[o + 20] = (p.mat | ((p.marks?.length ?? 0) << 8) | (markAt << 12)) >>> 0;

@@ -14,7 +14,7 @@ import { LOOSE } from './stages/loose';
 import ltc from './ltc.json';
 import { JOIN_ROWS } from './joins';
 import { SKY_ROWS, TROD_ROWS } from './scene/skymap';
-import { layBlocks, spotRow, SPOT_ROWS, classOf, joinRuns, type Blocks } from './scene/blocks';
+import { layBlocks, spotRow, SPOT_ROWS, type Blocks } from './scene/blocks';
 
 /** how many pieces may yet come to stand (what is left of broken walls), how many may yet move (rubble), and rows kept for the planes and marks of each */
 export const SPARE = { stand: 480, move: 160, rows: 14 } as const;
@@ -30,7 +30,7 @@ export class SceneGpu {
   constructor(private g: Gpu, readonly world: World, sky: GPUTexture, caustic: GPUTexture, airRowsN = 0, heights: Float32Array | null = null, ripN = 1) {
     const d = g.device, S = GPUBufferUsage.STORAGE, U = GPUBufferUsage.UNIFORM;
     // ---- what stands: pieces in the tree's order
-    for (const p of world.pieces) if (p.ghost) p.flags |= F.MESH; joinRuns(world.pieces); const sets = [world.pieces.filter(p => p.flags & F.CUT), world.pieces.filter(p => !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2, 8, s.map(classOf))), order = this.standing = [...bs[0]!.order.map(i => sets[0]![i]!), ...Array.from({ length: SPARE.stand }, nowhere), ...bs[1]!.order.map(i => sets[1]![i]!)]; this.firstSpare = sets[0]!.length; this.oldNodes = bs[0]!.perOctant; this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
+    for (const p of world.pieces) if (p.ghost) p.flags |= F.MESH; const sets = [world.pieces.filter(p => p.flags & F.CUT), world.pieces.filter(p => !(p.flags & F.CUT))], bs = sets.map(s => buildBvh(s.map(boundsOf), 2, 8)), order = this.standing = [...bs[0]!.order.map(i => sets[0]![i]!), ...Array.from({ length: SPARE.stand }, nowhere), ...bs[1]!.order.map(i => sets[1]![i]!)]; this.firstSpare = sets[0]!.length; this.oldNodes = bs[0]!.perOctant; this.maxMoving = world.moving.length; this.maxInst = world.instances.length;
     // ---- leaves, planes, marks share one buffer
     if (!world.clusters.some(c => c.leaves.length === 1)) world.clusters.push({ leaves: [{ at: [0, 0, 0], n: [0, 1, 0], t: [1, 0, 0], size: 1, tone: 0.55 }], kind: 0 });
     const packed = world.clusters.map(packCluster); let leafRows = 0; for (const p of packed) leafRows += p.data.byteLength / 16;
@@ -79,7 +79,7 @@ export class SceneGpu {
     const d = this.g.device, put = (i: number, p: Piece) => { const f = new Float32Array(PIECE_FLOATS), u = new Uint32Array(f.buffer); packPiece(p, f, u, 0, this.planeAt.get(p) ?? 0, this.markAt.get(p) ?? 0); d.queue.writeBuffer(this.pieces, i * PIECE_FLOATS * 4, f); this.standing[i] = p; const b = boundsOf(p); this.box.set([p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), (b.mx[1] - b.mn[1]) / 2], i * 5); };
     const was = new Set(gone), kept = this.came.filter(p => !was.has(p)); if (kept.length + come.length > SPARE.stand) return false;
     for (const p of gone) { if (this.came.includes(p)) continue; const i = this.standing.indexOf(p); if (i >= 0) put(i, nowhere()); }
-    this.came = [...kept, ...come]; const n = this.came.length, b = buildBvh(this.came.map(boundsOf), 2, 8, this.came.map(classOf)), order = b.order.map(i => this.came[i]!);
+    this.came = [...kept, ...come]; const n = this.came.length, b = buildBvh(this.came.map(boundsOf), 2, 8), order = b.order.map(i => this.came[i]!);
     for (let i = 0; i < SPARE.stand; i++) { const p = order[i] ?? nowhere(), row = this.spareRow + i * SPARE.rows; if (i < n) { this.planeAt.set(p, row); this.planesOf(p, row); } if (i < n || this.standing[this.firstSpare + i]!.at[1] > -100) put(this.firstSpare + i, p); } this.came = order;
     const nodes = b.nodes.slice(0), u = new Uint32Array(nodes), step = this.stepOf[0]; for (let q = 0; q < 8 * b.perOctant; q++) { const o = q * 8; u[o + 3] = u[o + 3]! + this.oldNodes; const leaf = u[o + 7]!; if (leaf & 15) u[o + 7] = (((leaf >>> 4) + this.firstSpare) << 4) | (leaf & 15); }
     for (let q = 0; q < 8; q++) d.queue.writeBuffer(this.nodes, (this.node0[0] + q * step + this.oldNodes) * 32, nodes, q * b.perOctant * 32, b.perOctant * 32); this.per[0] = this.oldNodes + (n ? b.perOctant : 0); return true;
@@ -116,7 +116,7 @@ export class SceneGpu {
       const n = w.moving.length, mb = this.moveBox; for (let i = 0, o = 0; i < n; i++, o += 6) { const p = w.moving[i]!, h = p.half, r = p.rot, x = r[0], y = r[1], z = r[2]; for (let k = 0; k < 3; k++) { const e = Math.abs(x[k]!) * h[0] + Math.abs(y[k]!) * h[1] + Math.abs(z[k]!) * h[2] + 1e-4; mb[o + k] = p.at[k]! - e; mb[o + 3 + k] = p.at[k]! + e; } }
       // the tree keeps its shape while it is still a good one: its bounds are made anew every frame
       let fresh = false; if (this.moveTree) { const a = refitFlat(this.moveTree, mb); if (++this.moveAge > 30 && a > this.moveArea * 1.7) fresh = true; } else fresh = true; if (this.freshMove) { fresh = true; this.freshMove = false; }
-      if (fresh) { this.moveTree = buildBvh(Array.from({ length: n }, (_, i) => ({ mn: [mb[i * 6]!, mb[i * 6 + 1]!, mb[i * 6 + 2]!], mx: [mb[i * 6 + 3]!, mb[i * 6 + 4]!, mb[i * 6 + 5]!] })), 2, 1, w.moving.map(classOf)); this.moveAge = 0; this.moveArea = refitFlat(this.moveTree, mb); this.moveSlots = new Map(); this.moveTree.order.forEach((src, i) => { const p = w.moving[src]!; packPiece(p, this.moveF, this.moveU, i * PIECE_FLOATS, this.planeAt.get(p) ?? 0, this.markAt.get(p) ?? 0); this.moveSlots.set(p, this.piece0[2] + i); }); }
+      if (fresh) { this.moveTree = buildBvh(Array.from({ length: n }, (_, i) => ({ mn: [mb[i * 6]!, mb[i * 6 + 1]!, mb[i * 6 + 2]!], mx: [mb[i * 6 + 3]!, mb[i * 6 + 4]!, mb[i * 6 + 5]!] })), 2, 1); this.moveAge = 0; this.moveArea = refitFlat(this.moveTree, mb); this.moveSlots = new Map(); this.moveTree.order.forEach((src, i) => { const p = w.moving[src]!; packPiece(p, this.moveF, this.moveU, i * PIECE_FLOATS, this.planeAt.get(p) ?? 0, this.markAt.get(p) ?? 0); this.moveSlots.set(p, this.piece0[2] + i); }); }
       const t = this.moveTree!, f = this.moveF; for (let i = 0; i < n; i++) { const p = w.moving[t.order[i]!]!, o = i * PIECE_FLOATS, c = p.at, r = p.rot; for (let k = 0; k < 3; k++) { const q = r[k]!, m = o + k * 4; f[m] = q[0]; f[m + 1] = q[1]; f[m + 2] = q[2]; f[m + 3] = -(q[0] * c[0] + q[1] * c[1] + q[2] * c[2]); } if (p.bend) packBend(p.bend, this.moveU, o); }
       d.queue.writeBuffer(this.pieces, this.piece0[2] * PIECE_FLOATS * 4, f); this.per[2] = t.perOctant; d.queue.writeBuffer(this.nodes, this.node0[2] * 32, t.nodes);
     }

@@ -1,15 +1,14 @@
-// Rays through every cell of the block, from all six sides, see what stands in it: how much they meet, what color it is, how tightly it can be boxed, how much of it is leaves.
+// Rays through every cell of the block, from all six sides, see what leaves are in it: how much they meet, what color they are, how tightly they can be boxed.
 import type { Lab } from './lab';
 import { buffer, readBuffer } from './gpu';
 import { cellRow, FINEST } from './scene/blocks';
 
 const code = (grid: number) => `
 @group(1) @binding(0) var<storage, read> places: array<vec4f>; @group(1) @binding(1) var<storage, read_write> made: array<u32>; @group(1) @binding(2) var<uniform> most: vec4u;
-const GRID = ${grid}u; const RAYS = ${grid * grid}u;
+const THIN = 0x40000000u; const SOLID = 0x80000000u; const GRID = ${grid}u; const RAYS = ${grid * grid}u;
 var<workgroup> met: array<atomic<u32>, 6>; var<workgroup> red: array<atomic<u32>, 6>; var<workgroup> green: array<atomic<u32>, 6>; var<workgroup> blue: array<atomic<u32>, 6>; var<workgroup> leafy: atomic<u32>; var<workgroup> grass: atomic<u32>; var<workgroup> low: array<atomic<u32>, 3>; var<workgroup> high: array<atomic<u32>, 3>;
-fn sends(s: Surf) -> vec3f { let f = coatF0(s); let r = s.rough; let a = f * (0.955 / (1.0 + 1.346 * pow(r, 3.67))) + vec3f(0.0476 * exp(-3.55 * r * r)); let lf = lum(f); return min(matteOf(s) * matteMean(s.kind, s.albedo) * (1.0 - lf - (1.0 - lf) / 21.0) + a, vec3f(1.0)); }
 /** is there nothing that stands for good between two places? */
-fn together(a: vec3f, b: vec3f) -> bool { let d = b - a; let l = length(d); if (l < 0.03) { return true; } lim = vec4f(0.0, 0.0, 0.0, 1e9); leafMode = 2u; let h = nearest(a, d / l, 0.002, l - 0.002, GLASS | WATER | MOVES, 1e9); return h.piece == NOTHING; }
+fn together(a: vec3f, b: vec3f) -> bool { let d = b - a; let l = length(d); if (l < 0.03) { return true; } leafMode = 2u; let h = nearest(a, d / l, 0.002, l - 0.002, GLASS | WATER | MOVES | THIN, 1e9); return h.piece == NOTHING; }
 var<workgroup> firstHit: atomic<u32>; var<workgroup> refAt: vec3f; var<workgroup> joinedTo: atomic<u32>; var<workgroup> total: atomic<u32>;
 var<workgroup> need: array<f32, 13>; var<workgroup> crossed: array<atomic<u32>, 3>; var<workgroup> stopped: array<u32, 64>; var<workgroup> badOf: array<f32, 64>;
 /** thirteen ways through a cell */
@@ -22,14 +21,14 @@ fn tries(i: u32, solid: bool) -> vec2f { if (solid) { return vec2f(1.0 - 0.04 * 
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
   let cell = min(wg.x + most.y, most.x - 1u); let at = places[cell]; let level = u32(at.w); let h = FINEST * f32(1u << level);
   if (li < 6u) { atomicStore(&met[li], 0u); atomicStore(&red[li], 0u); atomicStore(&green[li], 0u); atomicStore(&blue[li], 0u); } if (li < 3u) { atomicStore(&low[li], 255u); atomicStore(&high[li], 0u); } if (li == 6u) { atomicStore(&leafy, 0u); atomicStore(&firstHit, 999u); } if (li < 3u) { atomicStore(&crossed[li], 0u); } if (li == 7u) { atomicStore(&grass, 0u); atomicStore(&joinedTo, 0u); atomicStore(&total, 0u); } workgroupBarrier();
-  var hit: array<vec3f, 6>; var color: array<vec3f, 6>; var kind: array<u32, 6>; var got = false;          /* kind: 0 nothing, 1 solid, 2 leaf, 3 grass */
+  var hit: array<vec3f, 6>; var color: array<vec3f, 6>; var kind: array<u32, 6>; var got = false;          /* kind: 0 nothing, 2 leaf, 3 grass */
   rngKey(cell * 64u + li, 77u);
   for (var k = 0u; k < 6u; k++) {
-    kind[k] = 0u; if (li >= RAYS) { continue; } leafMode = 0u; blkOn = false; blk = vec4f(1e9); lim = vec4f(1e9, select(0.0, 1e9, level > 0u), 0.0, 0.0);   /* (only what this level holds) */
+    kind[k] = 0u; if (li >= RAYS) { continue; } leafMode = 0u; blkOn = false; blk = vec2f(1e9);
     let a = k >> 1u; let b = (a + 1u) % 3u; let c = (a + 2u) % 3u; let j = (vec2f(f32(li % GRID), f32(li / GRID)) + rnd2()) / f32(GRID); var o = at.xyz; o[b] += j.x * h; o[c] += j.y * h; var d = vec3f(0.0); if ((k & 1u) == 0u) { o[a] += h; d[a] = -1.0; } else { d[a] = 1.0; }      /* (even: seen from the + side) */
-    let q = nearest(o, d, 0.0, h, GLASS | WATER | MOVES, 1e9); if (q.piece == NOTHING) { continue; }
-    let leaf = (q.piece & LEAF_HIT) != 0u; let s = surfaceAt(o, d, q, 1.0); color[k] = select(sends(s), s.albedo, leaf); kind[k] = 1u; if (leaf) { kind[k] = select(2u, 3u, s.kind == 20u || ((insts[q.piece & 0x7fffffffu].tint >> 25u) & 1u) != 0u); } hit[k] = o + d * (q.t - 0.004); got = true; atomicAdd(&total, 1u);
-    if (leaf) { var t = q.t; for (var w = 0u; w < 12u; w++) { atomicAdd(&crossed[a], 1u); let z = nearest(o, d, t + 2e-4, h, GLASS | WATER | MOVES, 1e9); if (z.piece == NOTHING || (z.piece & LEAF_HIT) == 0u) { break; } t = z.t; } }      /* (how many leaves stand behind one another: they clump, and what is hidden by another gets no sun) */
+    let q = nearest(o, d, 0.0, h, SOLID, 1e9); if (q.piece == NOTHING) { continue; }
+    let s = surfaceAt(o, d, q, 1.0); color[k] = s.albedo; { kind[k] = select(2u, 3u, s.kind == 20u || ((insts[q.piece & 0x7fffffffu].tint >> 25u) & 1u) != 0u); } hit[k] = o + d * (q.t - 0.004); got = true; atomicAdd(&total, 1u);
+    { var t = q.t; for (var w = 0u; w < 12u; w++) { atomicAdd(&crossed[a], 1u); let z = nearest(o, d, t + 2e-4, h, SOLID, 1e9); if (z.piece == NOTHING) { break; } t = z.t; } }      /* (how many leaves stand behind one another: they clump, and what is hidden by another gets no sun) */
   }
   if (got) { atomicMin(&firstHit, li); } workgroupBarrier(); if (li == atomicLoad(&firstHit)) { for (var k = 0u; k < 6u; k++) { if (kind[k] > 0u) { refAt = hit[k]; break; } } } workgroupBarrier();
   // a wall may part what is in it: then it holds the side that has more of it
@@ -45,7 +44,7 @@ fn tries(i: u32, solid: bool) -> vec2f { if (solid) { return vec2f(1.0 - 0.04 * 
   for (var a = 0u; a < 3u; a++) { let face = wide[(a + 1u) % 3u] * wide[(a + 2u) % 3u]; let c = min(max(n[2u * a], n[2u * a + 1u]) / f32(RAYS) / max(face, 1e-3), 0.9984); deep[a] = -log(1.0 - c); }
   // a box round a round thing is too wide from a corner: rays from thirteen ways draw in the sides that stand free (not those that go on into the next cell)
   let mend = all > 0.5; let solid = max3(deep) > 2.5; let L = vec3f(lo) / 256.0; let H = vec3f(hi + vec3u(1u)) / 256.0; let mid = (L + H) * 0.5; let half = (H - L) * 0.5;
-  var bits = 0u; if (mend) { for (var k = 0u; k < 5u; k++) { let t = through(cell, li * 5u + k); leafMode = 0u; lim = vec4f(1e9, select(0.0, 1e9, level > 0u), 0.0, 0.0); let o = at.xyz + t.o * h; let q = nearest(o, t.d, 0.0, t.far * h, GLASS | WATER | MOVES, 1e9); if (q.piece != NOTHING && together(refAt, o + t.d * (q.t - 0.004)) == want) { bits |= 1u << k; } } } stopped[li] = bits; workgroupBarrier();
+  var bits = 0u; if (mend) { for (var k = 0u; k < 5u; k++) { let t = through(cell, li * 5u + k); leafMode = 0u; let o = at.xyz + t.o * h; let q = nearest(o, t.d, 0.0, t.far * h, SOLID, 1e9); if (q.piece != NOTHING && together(refAt, o + t.d * (q.t - 0.004)) == want) { bits |= 1u << k; } } } stopped[li] = bits; workgroupBarrier();
   var bad = 1e9; if (mend && li < select(24u, 9u, solid)) {
     let c = tries(li, solid); let p0 = select(L, mid - half * c.x, L > vec3f(0.02)); let p1 = select(H, mid + half * c.x, H < vec3f(0.98)); let sg = deep / max(p1 - p0, vec3f(1e-4)); var got: array<f32, 13>; var wish: array<f32, 13>; var ws: array<f32, 13>;
     for (var i = 0u; i < 320u; i++) { let t = through(cell, i); let iv = safeInv(t.d); let u = (p0 - t.o) * iv; let v = (p1 - t.o) * iv; let ta = max(max3(min(u, v)), 0.0); let tb = min(min3(max(u, v)), t.far); if (tb > ta) { got[t.way] += (1.0 - exp(-c.y * length(sg * t.d) * (tb - ta))) * t.w; } if (((stopped[i / 5u] >> (i % 5u)) & 1u) != 0u) { wish[t.way] += t.w; } ws[t.way] += t.w; }
@@ -53,7 +52,7 @@ fn tries(i: u32, solid: bool) -> vec2f { if (solid) { return vec2f(1.0 - 0.04 * 
   } badOf[li] = bad;
   workgroupBarrier(); var bi = 0u; for (var i = 1u; i < 24u; i++) { if (badOf[i] < badOf[bi]) { bi = i; } }
   // leaves hang in sheets that stand askew of the axes: how thick the cell is, each of the thirteen ways, as rays found it
-  let sheets = mend && !solid && f32(atomicLoad(&leafy)) > 0.5 * all;
+  let sheets = mend && !solid;
   if (sheets && li < 13u) {
     let c = tries(bi, solid); let p0 = select(L, mid - half * c.x, L > vec3f(0.02)); let p1 = select(H, mid + half * c.x, H < vec3f(0.98)); var chord: array<f32, 25>; var wt: array<f32, 25>; var wish = 0.0; var ws = 0.0; var m = 0u;
     for (var i = li; i < 320u; i += 13u) { let t = through(cell, i); let iv = safeInv(t.d); let u = (p0 - t.o) * iv; let v = (p1 - t.o) * iv; chord[m] = max(min(min3(max(u, v)), t.far) - max(max3(min(u, v)), 0.0), 0.0); wt[m] = t.w; ws += t.w; if (((stopped[i / 5u] >> (i % 5u)) & 1u) != 0u) { wish += t.w; } m++; }
@@ -70,7 +69,7 @@ fn tries(i: u32, solid: bool) -> vec2f { if (solid) { return vec2f(1.0 - 0.04 * 
       let s = sqrt(max(vec3f(S[0], S[1], S[2]), vec3f(1e-3))); deep = s * (p1 - p0); tie = vec3u(clamp(vec3f(S[3] / (s.x * s.y), S[4] / (s.x * s.z), S[5] / (s.y * s.z)), vec3f(-1.0), vec3f(1.0)) * 15.0 + 15.5);
     } }
   let tau = vec3u(clamp(deep * (255.0 / 6.4) + 0.5, vec3f(0.0), vec3f(255.0)));
-  out[0] = tau.x | (tau.y << 8u) | (tau.z << 16u) | (u32(f32(atomicLoad(&leafy)) / all * 255.0) << 24u); out[1] = lo.x | (lo.y << 8u) | (lo.z << 16u) | (select(0u, 1u, atomicLoad(&grass) * 2u > atomicLoad(&leafy)) << 24u) | (tie.x << 25u) | ((tie.z & 3u) << 30u); out[2] = hi.x | (hi.y << 8u) | (hi.z << 16u) | (tie.y << 24u) | ((tie.z >> 2u) << 29u);
+  out[0] = tau.x | (tau.y << 8u) | (tau.z << 16u); out[1] = lo.x | (lo.y << 8u) | (lo.z << 16u) | (select(0u, 1u, atomicLoad(&grass) * 2u > atomicLoad(&leafy)) << 24u) | (tie.x << 25u) | ((tie.z & 3u) << 30u); out[2] = hi.x | (hi.y << 8u) | (hi.z << 16u) | (tie.y << 24u) | ((tie.z >> 2u) << 29u);
   /* (how much leaf there is, one behind another: lit by how much of it shows) */ { var A = 0.0; for (var a = 0u; a < 3u; a++) { A += f32(atomicLoad(&crossed[a])) / (2.0 * f32(RAYS)) / max(wide[(a + 1u) % 3u] * wide[(a + 2u) % 3u], 1e-3) / 3.0; } out[6] = u32(clamp(A * 256.0, 0.0, 65535.0)); }
   var mean = vec3f(0.0); for (var k = 0u; k < 6u; k++) { mean += vec3f(f32(atomicLoad(&red[k])), f32(atomicLoad(&green[k])), f32(atomicLoad(&blue[k]))); } mean /= all;
   for (var k = 0u; k < 6u; k++) { let c = select(mean, vec3f(f32(atomicLoad(&red[k])), f32(atomicLoad(&green[k])), f32(atomicLoad(&blue[k]))) / max(n[k], 1.0), n[k] > 0.5) / 4095.0; let v = sqrt(c); let w = u32(v.x * 31.0 + 0.5) | (u32(v.y * 63.0 + 0.5) << 5u) | (u32(v.z * 31.0 + 0.5) << 11u); let z = 3u + (k >> 1u); out[z] = out[z] | (w << select(0u, 16u, (k & 1u) == 0u)); }
@@ -92,7 +91,7 @@ export async function mapBlocks(lab: Lab, most8 = 8): Promise<string> {
     if (!(r[i * 8]! & 0xffffff)) { B.bricks[B.said[i]!] = 0; continue; } B.bricks[B.said[i]!] = ++many; for (let k = 0; k < 8; k++) rows.push(r[i * 8 + k]!);
     const h = FINEST * 2 ** B.cells[i * 4 + 3]!, y = r[i * 8 + 1]!, z = r[i * 8 + 2]!, lo = [y & 255, (y >> 8) & 255, (y >> 16) & 255], hi = [z & 255, (z >> 8) & 255, (z >> 16) & 255]; for (let k = 0; k < 3; k++) at.push(B.cells[i * 4 + k]! + h * (lo[k]! + hi[k]! + 1) / 512); at.push(h); for (let k = 0; k < 3; k++) at.push(h * (hi[k]! + 1 - lo[k]!) / 256); at.push(0);
   }
-  const green = new Uint8Array(B.bricks.length / 588); for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff && r[i * 8]! >>> 24) green[Math.floor(B.said[i]! / 588)] = 1; for (let i = 0; i < B.page.length; i++) { const p = B.page[i]! & 0x7fffffff; B.page[i] = p ? (p | (green[p - 1] ? 0x80000000 : 0)) >>> 0 : 0; } scene.writeExtra(scene.blockRow, new Uint8Array(B.page.buffer));
+  scene.writeExtra(scene.blockRow, new Uint8Array(B.page.buffer));
   // an empty cell says how far round it there is nothing (within its brick), so that rays go by in strides
   const far = new Uint8Array(512);
   for (let b = 0; b < B.bricks.length; b += 588) for (const [from, per] of [[0, 8], [512, 4]] as const) {
@@ -101,6 +100,6 @@ export async function mapBlocks(lab: Lab, most8 = 8): Promise<string> {
     for (let i = 0; i < n; i++) if (far[i]) B.bricks[b + from + i] = (0x80000000 | far[i]!) >>> 0;
   }
   scene.writeExtra(scene.blockRow + B.page.length / 4, new Uint8Array(B.bricks.buffer)); scene.writeExtra(cellRow(B, scene.blockRow), new Uint8Array(Uint32Array.from(rows).buffer)); lab.litCells = { many, at: Float32Array.from(at) };
-  let leafy = 0; const by = [0, 0]; for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff) { by[B.cells[i * 4 + 3]!]!++; if (r[i * 8]! >>> 31) leafy++; }
-  return `${many} of ${B.many} cells have something in them (${by.join(', ')} by level), ${leafy} mostly leaves; ${B.bricks.length / 588} bricks; ${((B.page.length + B.bricks.length + many * 20) * 4 / 1e6).toFixed(2)} MB with its light; ${(performance.now() - t0).toFixed(0)} ms`;
+  const by = [0, 0]; for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff) by[B.cells[i * 4 + 3]!]!++;
+  return `${many} of ${B.many} cells have leaves in them (${by.join(', ')} by level); ${B.bricks.length / 588} bricks; ${((B.page.length + B.bricks.length + many * 20) * 4 / 1e6).toFixed(2)} MB with its light; ${(performance.now() - t0).toFixed(0)} ms`;
 }

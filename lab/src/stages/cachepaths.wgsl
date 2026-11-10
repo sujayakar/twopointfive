@@ -4,7 +4,7 @@ struct Cached { E: vec3f, sun: f32, torch: vec3f, n: f32 };
 fn cacheRead(x0: vec3f, n0: vec3f, j: vec2f) -> Cached { return follow(x0, n0); }
 fn cacheSmooth(x0: vec3f, n0: vec3f) -> Cached { return follow(x0, n0); }
 fn follow(x0: vec3f, n0: vec3f) -> Cached {
-  let was = vec4f(footW, footS, leafTo, 0.0); let was1 = lim; let was2 = blk; let was3 = leafOnly; let br = byReach; byReach = false; var c: Cached; c.n = 100.0; var x = x0 + n0 * 0.012; var n = n0; var thr = vec3f(1.0); var thrSun = vec3f(0.0); let most = 1e4;
+  let was = vec4f(footW, footS, leafTo, 0.0); let was2 = blk; let br = byReach; byReach = false; var c: Cached; c.n = 100.0; var x = x0 + n0 * 0.012; var n = n0; var thr = vec3f(1.0); var thrSun = vec3f(0.0); let most = 1e4;
   for (var v = 0u; v < BOUNCES; v++) {
     let cs = dot(n, frame.sunDir.xyz);
     for (var k = 0u; k < 2u; k++) {
@@ -21,5 +21,5 @@ fn follow(x0: vec3f, n0: vec3f) -> Cached {
     let p = sentParts(q, w.xyz); thrSun = thr * p[1]; thr *= p[0]; n = q.ng; x = q.x + n * 0.012;
     if (v >= 3u) { let k = clamp(max3(thr) * 1.5, 0.05, 0.95); if (rnd() > k) { break; } thr /= k; thrSun /= k; }
   }
-  footW = was.x; footS = was.y; leafTo = was.z; lim = was1; blk = was2; leafOnly = was3; byReach = br; return c;
+  footW = was.x; footS = was.y; leafTo = was.z; blk = was2; byReach = br; return c;
 }

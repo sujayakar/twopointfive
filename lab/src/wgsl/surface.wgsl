@@ -40,14 +40,13 @@ fn leafThrough(alb: vec3f, grass: bool) -> vec3f { let k = select(1.45 * (1.0 - 
 fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); }
 /** how leaves that face every way send a beam on, by the angle between its way and the way out (Ross): back off their faces, forward through them */
 fn leafPhase(q: Surf, rd: vec3f) -> vec3f { let c = dot(frame.sunDir.xyz, rd); let b = acos(clamp(c, -1.0, 1.0)); return max((q.albedo + q.through) * ((sin(b) - b * c) / (3.0 * PI)) + q.through * (c / 3.0), vec3f(0.0)) * (2.0 / PI); }
-/** what a ray that stopped in a cell finds there: one facet of its contents, drawn as they face the ray (an ellipsoid's facets), with their color from that side */
+/** what a ray that stopped in a cell finds there: one leaf of it, drawn as they face the ray (an ellipsoid's facets), with their color from that side */
 fn cellSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
   let cell = h.piece & 0x7fffffffu; let r = extra[BLK_CELLS + (cell - 1u) * 2u]; let r2 = extra[BLK_CELLS + (cell - 1u) * 2u + 1u]; let B = cellBox(r, vec3f(0.0), 1.0); let sg = max(B.sigma, vec3f(1e-3) * max3(B.sigma)); var s: Surf;
   let q = normalize(sg * rd); let u = rnd2(); let k = sqrt(u.x); let m = basis(-q) * vec3f(k * cos(6.2831853 * u.y), k * sin(6.2831853 * u.y), sqrt(max(1.0 - u.x, 0.0))); s.n = normalize(sg * m); s.ng = s.n; s.x = x;
   let n2 = s.n * s.n; var c = vec3f(0.0);
   for (var i = 0u; i < 3u; i++) { c += cellColor(r, r2, i, s.n[i] > 0.0) * n2[i]; }
-  s.albedo = c; s.through = vec3f(0.0); s.rough = 1.0; s.f0 = 0.0; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 0u; s.piece = h.piece; s.flags = 0u; s.ao = vec2f(1.0); fromCell = cell;
-  if (rnd() < cellShare(r)) { let l = cellLeaf(c, r); s.albedo = l[0]; s.through = l[1]; s.kind = 14u; fromCell = NOTHING; }
+  let l = cellLeaf(c, r); s.albedo = l[0]; s.through = l[1]; s.rough = 1.0; s.f0 = 0.0; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 14u; s.piece = h.piece; s.flags = 0u; s.ao = vec2f(1.0);
   return s;
 }
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
