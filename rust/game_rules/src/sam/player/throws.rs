@@ -3,6 +3,7 @@ use super::*;
 use crate::game::{Game, SlotKind, ThrowKind};
 use crate::ids::*;
 use crate::m;
+use crate::v3::{self, V3};
 
 /// His cans this tick. `arc`: the launcher's, shown when no can's is.
 pub(super) fn throws(g: &mut Game, t: Tick, a: Aim, arc: Option<crate::throwables::ThrowSolution>) {
@@ -86,4 +87,35 @@ pub(in crate::sam) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
         can_back(g, pl, kind);
         g.pl[pl].pending_throw = None;
     }
+}
+
+/// Throw origin, right hand-ish.
+pub(super) fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
+    let pl = seat.player;
+    let c = g.pl[pl].ch;
+    let f = crate::character::character_forward(g, c);
+    let pos = g.ch[c].pos;
+    [pos[0] + f[0] * 0.32, pos[1] + (if g.pl[pl].crouch { 1.05 } else { 1.5 }), pos[2] + f[2] * 0.32]
+}
+
+/// The wind-up of a throw: the can counted now, it leaves the hand at THROW_RELEASE along the arc previewed.
+pub(super) fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution, kind: crate::game::ThrowKind) {
+    let pl = g.player;
+    if crate::game::game_throw_count(g, &crate::seats::here(g), kind) <= 0.0 {
+        return;
+    }
+    if g.pl[pl].pending_throw.is_some() {
+        return;
+    }
+    match kind {
+        crate::game::ThrowKind::Frag => g.pl[pl].frags -= 1.0,
+        crate::game::ThrowKind::Flash => g.pl[pl].flashbangs -= 1.0,
+        _ => g.pl[pl].canisters -= 1.0,
+    }
+    let c = g.pl[pl].ch;
+    let dist = v3::dist_xz(g.ch[c].pos, sol.land);
+    crate::character::anim_throw_item(g, c, Some(dist), Some(m::hyp2(sol.v0[0], sol.v0[2])));
+    g.pl[pl].pending_throw = Some(crate::game::PlayerPendingThrow { t: crate::character::THROW_RELEASE, sol: sol.clone(), kind });
+    let at = throw_origin(g, &crate::seats::here(g));
+    crate::audio_iface::game_audio_like_play(g, "throw", Some(at), Some(0.7), None);
 }
