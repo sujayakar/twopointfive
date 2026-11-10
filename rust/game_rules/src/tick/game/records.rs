@@ -81,7 +81,7 @@ pub fn player_gun_in_hand(g: &crate::game::Game, id: PlayerId) -> Option<Firearm
         None
     } else if g.pl[id].slot == crate::game::SlotKind::Pistol {
         Some(g.pl[id].pistol)
-    } else if player_rifle_sel(g, id) && g.pl[id].dragging.is_none() {
+    } else if player_rifle_sel(g, id) && g.pl[id].dragging().is_none() {
         Some(g.pl[id].rifle)
     } else {
         None
@@ -100,7 +100,7 @@ pub fn player_rifle_sel(g: &crate::game::Game, id: PlayerId) -> bool {
 
 /// The FN2000 is in both hands.
 pub fn player_rifle_up(g: &crate::game::Game, id: PlayerId) -> bool {
-    player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging.is_none() && !crate::condition::down(g, g.pl[id].ch)
+    player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging().is_none() && !crate::condition::down(g, g.pl[id].ch)
 }
 
 /// Braced on the foregrip, on his own legs this tick.
@@ -111,7 +111,7 @@ pub fn player_braced(g: &crate::game::Game, id: PlayerId) -> bool {
 
 /// Braced, asked of legs that are or are not at a run.
 pub fn player_braced_at(g: &crate::game::Game, id: PlayerId, sprinting: bool) -> bool {
-    player_rifle_up(g, id) && !sprinting && g.pl[id].kick.is_none()
+    player_rifle_up(g, id) && !sprinting && g.pl[id].kick().is_none()
 }
 
 /// The canister the selected slot puts in the fist, None with a gun selected.

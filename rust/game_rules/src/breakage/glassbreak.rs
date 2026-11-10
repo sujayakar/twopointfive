@@ -357,7 +357,7 @@ pub fn glass_break_update(g: &mut crate::game::Game) {
         // who may walk into what is left of a pane: any player's man, on his feet with his hands free
         let men: Vec<panes::Walker> = crate::seats::men(g).into_iter().filter(|&pl| {
             let p = &g.pl[pl];
-            !crate::condition::down(g, p.ch) && p.holding.is_none() && p.dragging.is_none() && p.wall.is_none()
+            !crate::condition::down(g, p.ch) && p.holding().is_none() && p.dragging().is_none() && p.wall.is_none()
         }).map(|pl| { let c = &g.ch[g.pl[pl].ch]; panes::Walker { pos: c.pos, vel: c.vel, id: c.id } }).collect();
         for r in 0..n { glass_break_asking(g, |cx, k| panes::step_row(cx, r, &men, k)); }
     }

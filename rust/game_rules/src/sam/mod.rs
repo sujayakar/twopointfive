@@ -3,6 +3,7 @@ pub mod aim;
 pub mod aimcost;
 pub mod aimweight;
 pub mod backkey;
+pub mod deed;
 pub mod gunwall;
 pub mod hands;
 pub mod handwork;

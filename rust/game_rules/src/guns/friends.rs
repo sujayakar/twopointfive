@@ -67,8 +67,8 @@ pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64)
     let pl = g.player;
     let live = up
         && !g.pl[pl].wall.is_some()
-        && !g.pl[pl].holding.is_some()
-        && !g.pl[pl].dragging.is_some()
+        && !g.pl[pl].holding().is_some()
+        && !g.pl[pl].dragging().is_some()
         && !friends_in_fight(g, &crate::seats::here(g));
     let o = if live { friend_in_sams_line(g, c_2).or_else(|| friend_under_cursor(g, c_2)) } else { None };
     if o.is_some() {

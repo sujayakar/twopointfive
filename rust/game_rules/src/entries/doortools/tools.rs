@@ -264,7 +264,7 @@ pub fn door_tools_close_words(g: & crate::game::Game, c_2: ChargeId) -> String {
 /// The face of this door the player could set a charge on by hand right now (None: none).
 fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
     let pl = g.player;
-    if g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.dr[d].leaf.off || g.dr[d].def.steel == Some(true)
+    if g.pl[pl].dragging().is_some() || g.pl[pl].holding().is_some() || g.dr[d].leaf.off || g.dr[d].def.steel == Some(true)
         || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() || charge_order_on(g, &crate::seats::here(g), d) { return None; }
     door_tools_sync(g);
     if g.sets[g.seat].door_tools.charges <= 0.0 { return None; }
@@ -315,7 +315,7 @@ pub fn door_tools_sam_where(g: &crate::game::Game, c_2: ChargeId) -> String {
 /// The charge going on under his hands: where on the leaf, and the face's normal.
 pub fn door_tools_sam_job(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::doortools::DoorToolsSamJob> {
     let pl = seat.player;
-    let s = g.pl[pl].charging.clone()?;
+    let s = g.pl[pl].charging().copied()?;
     let d = s.door;
     let o = door_pt(g, d, 0.0, 0.0, s.side, None);
     let n1 = door_pt(g, d, 0.0, 1.0, s.side, None);
@@ -327,14 +327,14 @@ pub fn door_tools_sam_job(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 /// How far along it is, 0 to 1.
 pub fn door_tools_sam_progress(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     let pl = seat.player;
-    match &g.pl[pl].charging { Some(s) => v3::clamp((g.time - s.t0) / g.k.doortools.set_secs, 0.0, 1.0), None => 0.0 }
+    match g.pl[pl].charging() { Some(s) => v3::clamp((g.time - s.t0) / g.k.doortools.set_secs, 0.0, 1.0), None => 0.0 }
 }
 
 /// Let go of it: nothing was spent (true: there was one).
 pub fn door_tools_cancel_sam(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
-    if g.pl[pl].charging.is_none() { return false; }
-    g.pl[pl].charging = None;
+    if g.pl[pl].charging().is_none() { return false; }
+    g.pl[pl].charging_over();
     true
 }
 
@@ -346,7 +346,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
         Some(a) => (true, a.door, a.kind == crate::game::InteractableKind::Door && a.verb == Some(crate::game::Verb::Charge) && a.door.is_some()),
         None => (false, None, false),
     };
-    let s = match g.pl[pl].charging.clone() {
+    let s = match g.pl[pl].charging().copied() {
         Some(s) => s,
         None => {
             if !mine || crate::wallcharge::wall_charge_setting(&crate::seats::here(g)) { return; }
@@ -354,14 +354,14 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
             let side = match door_tools_sam_face(g, d) { Some(x) => x, None => return };
             let p = g.ch[g.pl[pl].ch].pos;
             let t0 = g.time;
-            g.pl[pl].charging = Some(crate::game::PlayerCharging { door: d, side, t0, at: [p[0], 0.0, p[2]] });
+            crate::deed::begin(g, crate::game::Deed::Charge(crate::game::PlayerCharging { door: d, side, t0, at: [p[0], 0.0, p[2]] }));
             return;
         }
     };
     let d = s.door;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].takedown().is_some() || g.pl[pl].kick().is_some()
         || g.dr[d].leaf.off || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some()
         || charge_order_on(g, &crate::seats::here(g), d)
         || off_of(g, d, p, s.side) <= 0.0 || flat(p, s.at) > SAM_SHIFT || (act_some && !(mine && act_door == Some(d))) {
@@ -370,7 +370,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     }
     if crate::workstow::sam_stowing(g, &crate::seats::here(g)) {
         let t = g.time;
-        if let Some(x) = g.pl[pl].charging.as_mut() { x.t0 = t; }
+        if let Some(x) = g.pl[pl].charging_mut() { x.t0 = t; }
         return;
     }
     let j = door_tools_sam_job(g, &crate::seats::here(g)).unwrap();
@@ -378,7 +378,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let el = g.time - s.t0;
     crate::handwork::charge_hands(g, c, j.p, j.n, el, set_secs, hand);
     if g.time - s.t0 < set_secs { return; }
-    g.pl[pl].charging = None;
+    g.pl[pl].charging_over();
     if !door_tools_take(g, crate::doortools::DoorToolsCan::Charge) { return; }
     g.sets[g.seat].door_tools.sam_spent += 1.0;
     let row = SetCharge { door: d, side: s.side, by: String::from(crate::ownblow::SAM_BY) };

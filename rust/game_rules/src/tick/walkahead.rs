@@ -30,8 +30,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         backpedal: g.pl[pl].backpedal,
         speed_sm: g.pl[pl].speed_sm,
         pace: 1.0, // TWOGEARS.on is settled on the page
-        dragging: None,
-        haul: None,
+        tow: None,
         shoved: [0.0, 0.0],
         shoved_t: -1.0,
         shoved_from: [0.0, 0.0],

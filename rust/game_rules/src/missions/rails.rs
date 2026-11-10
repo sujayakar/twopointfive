@@ -268,7 +268,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     if hand_up { buttons |= 4; }
     let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.sets[g.seat].hand.setup.clone() } else { None };
     let rows = match &setup { Some(s) => crate::slotsetup::setup_rows(g, p, s.gun), None => Vec::new() };
-    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown.is_none() && g.sets[g.seat].orders.cmd_ring.is_none() && g.sets[g.seat].orders.menu.is_none() && {
+    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown().is_none() && g.sets[g.seat].orders.cmd_ring.is_none() && g.sets[g.seat].orders.menu.is_none() && {
         let ik = String::from(crate::consts::INTERACT_KEY);
         let (down_t, f_held) = (g.sets[g.seat].hand.sel.down_t, g.sets[g.seat].hand.f_held);
         let i = &g.tab.input[input];

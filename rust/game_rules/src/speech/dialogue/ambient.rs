@@ -23,7 +23,7 @@ fn ambient_live(g: &crate::game::Game) -> bool {
     if g.alarm.episode { return false; }
     if g.light_home.mains.active { return false; }
     let men = crate::seats::men(g);
-    !men.iter().any(|&p| g.pl[p].holding.is_some() || crate::condition::down(g, g.pl[p].ch))
+    !men.iter().any(|&p| g.pl[p].holding().is_some() || crate::condition::down(g, g.pl[p].ch))
 }
 
 /// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script.

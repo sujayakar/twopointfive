@@ -238,7 +238,7 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
             if at.is_some() { who = Some("player"); by = Some(pl); }
         }
         if who.is_none() {
-            if let Some(dg) = g.pl[pl].dragging {
+            if let Some(dg) = g.pl[pl].dragging() {
                 let c = g.gd[dg].ch;
                 at = body_breaks(g, c, d.from, end);
                 if at.is_some() { who = Some("body"); }
@@ -398,7 +398,7 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     let sign = callsign_of(g, from);
     let door_says = pad_door_name(g, &k);
     // (not with a man in his arm: Sam's bubble holds back the next question, and the man's own answer has just said it)
-    if g.pl[pl].holding.is_none() {
+    if g.pl[pl].holding().is_none() {
         let time = g.time;
         crate::player::say_over_sam(g, &format!("got the {} code.", door_says), time);
     }
@@ -453,14 +453,12 @@ pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
     let here = g.ch[g.pl[pl].ch].pos;
     let st = pad_state(g, &crate::seats::here(g), d, here);
-    let p = &mut g.pl[pl];
     match st {
-        Some(s) if s.known && p.coding.is_none() && !g.cond[p.ch].down => {}
+        Some(s) if s.known && g.pl[pl].coding().is_none() && !g.cond[g.pl[pl].ch].down => {}
         _ => return false,
     }
-    p.coding = Some(d);
-    p.code_t = 0.0;
-    p.hand_wait = 0.0;
+    crate::deed::begin(g, crate::game::Deed::Code(crate::game::Coding { door: d, t: 0.0 }));
+    g.pl[pl].hand_wait = 0.0;
     g.sets[g.seat].hand.f_held = true;
     true
 }
@@ -474,35 +472,28 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::default() });
     g.pl[pl].noise = m::max(g.pl[pl].noise, DENY_LEVEL);
 }
-/// Break off keying.
-pub fn stop_coding(g: &mut crate::game::Game) {
-    let pl = g.player;
-    if g.pl[pl].coding.is_none() { return; }
-    g.pl[pl].coding = None;
-    g.pl[pl].code_t = 0.0;
-}
 /// Once a frame: the code going in, the door on the last key; broken off if he leaves or the door stops being against him.
 fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
-    let d = match g.pl[pl].coding { Some(d) => d, None => return };
+    let Some(&crate::game::Coding { door: d, t: before }) = g.pl[pl].coding() else { return };
     let pad = devices_pad_of(g, d);
     let p = g.ch[g.pl[pl].ch].pos;
     let door_at = crate::doors::door_pos(g, d);
     let in_reach = m::min(v3::dist_xz(door_at, p), v3::dist_xz(g.dr[d].frame_centre, p)) < PAD_REACH + 0.25;
     let k = match pad {
-        Some(k) if !crate::condition::down(g, g.pl[pl].ch) && in_reach && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none() => k,
-        _ => { stop_coding(g); return; }
+        Some(k) if !crate::condition::down(g, g.pl[pl].ch) && in_reach && g.pl[pl].holding().is_none() && g.pl[pl].takedown().is_none() => k,
+        _ => { g.pl[pl].coding_over(); return; }
     };
-    if !crate::doors::doors_locked_out(g, d, p, None) { stop_coding(g); return; }
+    if !crate::doors::doors_locked_out(g, d, p, None) { g.pl[pl].coding_over(); return; }
     // HANDWORK settled on: his finger on the pad's own keys (the page's branch; the plain clock is not translated)
-    let before = g.pl[pl].code_t;
     let hands = crate::handwork::PadHandsPad { def: crate::handwork::PadHandsPadDef { pos: k.def.pos, code: k.def.code.clone(), yaw: k.def.yaw }, n: k.n };
-    let more = crate::handwork::pad_hands(g, &hands, dt, CODE_SECS);
-    g.pl[pl].code_t = before + more;
-    if g.pl[pl].code_t < CODE_SECS { return; }
+    let more = crate::handwork::pad_hands(g, &hands, before, dt, CODE_SECS);
+    if before + more < CODE_SECS {
+        if let Some(c) = g.pl[pl].coding_mut() { c.t = before + more; }
+        return;
+    }
     // accepted
-    g.pl[pl].coding = None;
-    g.pl[pl].code_t = 0.0;
+    g.pl[pl].coding_over();
     crate::audio_iface::game_audio_like_play(g, "padOpen", Some(k.def.pos), Some(0.6), None);
     let mut keys: JsSet<String> = JsSet::new();
     keys.add(g.dr[d].lock_id.clone());
@@ -556,7 +547,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::default() }).into());
         let locked = g.dr[k.door].leaf.locked && g.dr[k.door].leaf.latched;
-        let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
+        let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding().map(|c| c.door) == Some(k.door));
         let led: V3 = if busy { v3::scale(amber(), if m::sin(g.time * 30.0) > 0.0 { 1.0 } else { 0.2 }) } else if locked { red() } else { green() };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::default() }).into());
     }

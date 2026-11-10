@@ -186,8 +186,8 @@ fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     // ---- everybody else: seen by any of them?
     g.fog_of_war.hidden_chars.clear();
     let pl = players(g);
-    let held = g.pl[pl[0]].holding.as_ref().map(|h| h.g);
-    let held_too = if pl.len() > 1 { g.pl[pl[1]].holding.as_ref().map(|h| h.g) } else { None };
+    let held = g.pl[pl[0]].holding().map(|h| h.g);
+    let held_too = if pl.len() > 1 { g.pl[pl[1]].holding().map(|h| h.g) } else { None };
     // (1) lines of sight
     let mut men: Vec<GuardId> = Vec::new();
     let mut i = 0;
@@ -435,7 +435,7 @@ fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
         if crate::condition::down(g, g.gd[h].ch) || !g.ch[g.gd[h].ch].alive { continue; }
         if !g.team(h).theirs() { continue; }
         let pl = players(g);
-        if pl.iter().any(|&p| g.pl[p].holding.as_ref().map(|x| x.g) == Some(h)) { continue; }
+        if pl.iter().any(|&p| g.pl[p].holding().map(|x| x.g) == Some(h)) { continue; }
         if crate::runner::runner_nobody(g, h) { continue; }
         foes.push(h);
     }

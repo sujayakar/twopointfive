@@ -21,7 +21,7 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 {
 /// His head is his own to turn.
 fn free(g: &mut crate::game::Game) -> bool {
     let pl = &g.pl[g.player];
-    !g.cond[pl.ch].down && !pl.sprinting && pl.holding.is_none() && pl.takedown.is_none() && pl.kick.is_none() && pl.picking.is_none() && pl.wanding.is_none() && pl.coding.is_none() && pl.wall.is_none() && pl.dragging.is_none() && pl.door_move.is_none() && pl.breaker_move.is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
+    !g.cond[pl.ch].down && !pl.sprinting && pl.holding().is_none() && pl.takedown().is_none() && pl.kick().is_none() && pl.picking().is_none() && pl.wanding().is_none() && pl.coding().is_none() && pl.wall.is_none() && pl.dragging().is_none() && pl.door_move().is_none() && pl.breaker_move().is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
 }
 
 /// A man who is onto him, or has him in view this moment with his notice risen.

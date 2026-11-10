@@ -130,7 +130,7 @@ async fn deed(b: &Bot, id: &str) {
             if !b.scripted(a) { b.fail(format!("{} turned from his smoke as the player came up crouched ({:?})", b.called(a), b.state(a))).await; }
             let q = b.man_at(a);
             if !b.tap(InteractableKind::Guard, Verb::Grab, Some([q[0], 1.35, q[2]])).await { b.fail(String::from("no grab row behind the first man")).await; }
-            if !b.until(|| b.held_fast(), 4.0).await { b.fail(format!("the grab did not take ({:?}; {} {:?}, {:.2} m off)", b.me(|p| p.holding.as_ref().map(|h| h.phase)), b.called(a), b.state(a), flat(b.pos(), b.man_at(a)))).await; }
+            if !b.until(|| b.held_fast(), 4.0).await { b.fail(format!("the grab did not take ({:?}; {} {:?}, {:.2} m off)", b.me(|p| p.holding().map(|h| h.phase)), b.called(a), b.state(a), flat(b.pos(), b.man_at(a)))).await; }
             b.say(format!("  held {:.1} s after the whistle", b.t() - t0));
         }
         "ask" => {

@@ -152,7 +152,7 @@ fn scan(g: &mut Game, f: &ScanOf, t_hit: f64, c: CharId, own: bool) -> f64 {
 }
 
 /// The man in the arm of the player whose seat this is.
-fn shield_of(g: &Game) -> Option<CharId> { g.pl[g.player].holding.as_ref().map(|h| g.gd[h.g].ch) }
+fn shield_of(g: &Game) -> Option<CharId> { g.pl[g.player].holding().map(|h| g.gd[h.g].ch) }
 
 /// Whom a round of this man's can find, his enemies first, each with whether he is of the shooter's own side. A man in a player's arm is in front of
 /// him, for anybody's rounds but his; a civilian is found by a player's alone; a teammate and Sam by each other's (friendlyfire).
@@ -209,9 +209,7 @@ fn sam_hit(g: &mut Game, pl: PlayerId, r: &crate::shotgun::RoundIn) {
     let (c, dir) = (r.c, r.dir);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[pl].hit_flash = 1.0;
-    let his = crate::seats::seat_of_man(g, pl);
-    if g.pl[pl].picking.is_some() { g.pl[pl].picking = None; g.sets[his].hand.f_held = true; }
-    if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.sets[his].hand.f_held = true; }
+    crate::deed::shaken_off(g, pl);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(r.hit_p), Some(0.9), None);
     if !g.god_mode {
         let seat = crate::seats::seat_of_man(g, pl);

@@ -143,7 +143,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64) {
                     crate::chronicle::chron_objective(g, &format!("hands on {}", thing), Some(rf));
                 }
             }
-        } else if !in_reach || g.pl[pl].dragging.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].sprinting {
+        } else if !in_reach || g.pl[pl].dragging().is_some() || g.pl[pl].takedown().is_some() || g.pl[pl].holding().is_some() || g.pl[pl].sprinting {
             cancel_drive(g);
         } else {
             g.mission.drive_t += dt;
