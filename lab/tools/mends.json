@@ -9,8 +9,7 @@
 "mend1",
 "mend2",
 "mend4",
-"mend7",
-"mend0"
+"mend7"
 ],
 "paths": 900,
 "name": "garden",
@@ -33,8 +32,7 @@
 "mend1",
 "mend2",
 "mend4",
-"mend7",
-"mend0"
+"mend7"
 ],
 "paths": 900,
 "name": "roof day",
@@ -51,8 +49,7 @@
 "mend1",
 "mend2",
 "mend4",
-"mend7",
-"mend0"
+"mend7"
 ],
 "paths": 900,
 "name": "ground day",
@@ -76,8 +73,7 @@
 "mend1",
 "mend2",
 "mend4",
-"mend7",
-"mend0"
+"mend7"
 ],
 "paths": 900,
 "name": "ground night",
