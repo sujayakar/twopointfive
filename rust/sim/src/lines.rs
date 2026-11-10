@@ -283,7 +283,7 @@ fn leaves_blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, 
 
 /// what the walk was asked beside the segment
 pub const ASK_GLASS: u32 = 1; // the game has a rule for an open pane (glass.rs): glass crossed where it is open is not in the way
-pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, and every cell is walked in the old order (the list's order is the scan's)
+pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, in the order the old walk comes on it
 
 /// A PANE OF GLASS IN THE WAY OF A LINE that entered it `t0` along (collision.ts segmentBlocked's three statements for one): 0 = the line goes on (the
 /// pane is open there by the game's rule, or it is a line of fire and the pane is noted for the penetration rule) · −1 = the pane stops it · −2 = the
@@ -324,7 +324,7 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
         return -1;
     }
     let uu = r0 * r0 + r2 * r2;
-    let seg = Seg {
+    let mut seg = Seg {
         o,
         v,
         tune,
@@ -346,34 +346,26 @@ pub fn blocked_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1:
         rule: ask & ASK_GLASS != 0,
     };
     s.panes = 0;
-    let n = if seg.inside() {
-        if let Some(said) = seg.tilted(s) {
-            return said;
-        }
-        seg.cells_along(s)
-    } else {
-        seg.cells_round(s)
-    };
-    for j in 0..n {
-        let cell = s.seg_cells[j] as usize;
-        for k in o.start[cell] as usize..o.start[cell + 1] as usize {
-            let bi = o.items[k] as usize;
-            if s.stamp[bi] == seg.id {
-                continue;
-            }
-            s.stamp[bi] = seg.id;
-            if seg.passes(bi) {
-                continue;
-            }
-            let Some(span) = seg.span(&o.rec[bi * REC..bi * REC + REC]) else {
-                continue;
-            };
-            if let Some(said) = seg.meets(s, bi, span) {
-                return said;
-            }
-        }
+    let (foot, top) = if d1 < 0.0 { (b1 - seg.pad, a1 + seg.pad) } else { (a1 - seg.pad, b1 + seg.pad) };
+    if !seg.inside() {
+        let n = seg.cells_round(s);
+        return seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32);
     }
-    s.panes as i32
+    let said = match seg.tilted(s) {
+        Some(said) => said,
+        None => {
+            let n = seg.cells_along(s);
+            seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32)
+        }
+    };
+    if said < 2 {
+        return said;
+    }
+    // (the order of one pane is no order; of more it is the old walk's)
+    seg.id = s.ask();
+    s.panes = 0;
+    let n = seg.cells_round(s);
+    seg.stopped(s, n, foot, top).unwrap_or(s.panes as i32)
 }
 
 /// A SEGMENT BEING WALKED: its ends, the way along it and its unit direction, what it passes, and the numbers a box is refused by.
@@ -401,13 +393,39 @@ struct Seg<'a> {
     rule: bool,
 }
 impl Seg<'_> {
-    /// whether it lies well inside the level, so that its cells can be listed by their columns (a line of fire is walked in the old order always)
+    /// What the statics of the cells listed say of it: None = it goes on past them all.
+    #[inline(always)]
+    fn stopped(&self, s: &mut Asking, n: usize, foot: f64, top: f64) -> Option<i32> {
+        let o = self.o;
+        for j in 0..n {
+            let cell = s.seg_cells[j] as usize;
+            for k in o.start[cell] as usize..o.start[cell + 1] as usize {
+                let bi = o.items[k] as usize;
+                // (one that stands over or under the whole of the line is none of its)
+                if o.tall[bi][0] > top || o.tall[bi][1] < foot || s.stamp[bi] == self.id {
+                    continue;
+                }
+                s.stamp[bi] = self.id;
+                if self.passes(bi) {
+                    continue;
+                }
+                let Some(span) = self.span(&o.rec[bi * REC..bi * REC + REC]) else {
+                    continue;
+                };
+                if let Some(said) = self.meets(s, bi, span) {
+                    return Some(said);
+                }
+            }
+        }
+        None
+    }
+    /// whether it lies well inside the level, so that its cells can be listed by their columns
     #[inline(always)]
     fn inside(&self) -> bool {
         let (o, a, b, pad) = (self.o, &self.a, &self.b, self.pad);
         let lxz = sqrt(self.d[0] * self.d[0] + self.d[2] * self.d[2]);
         let (gx, gz, g0) = (o.w as f64 * o.cs - pad - 0.25, o.h as f64 * o.cs - pad - 0.25, pad + 0.25);
-        !self.panes && lxz > 1e-6 && pad < 0.5 && a[0] > g0 && a[0] < gx && b[0] > g0 && b[0] < gx && a[2] > g0 && a[2] < gz && b[2] > g0 && b[2] < gz
+        lxz > 1e-6 && pad < 0.5 && a[0] > g0 && a[0] < gx && b[0] > g0 && b[0] < gx && a[2] > g0 && a[2] < gz && b[2] > g0 && b[2] < gz
     }
     /// whether it passes a static whatever lies between: of a kind it was told to pass, or one the question lets it through
     #[inline(always)]
@@ -906,9 +924,12 @@ pub fn ray_over(w: &World, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64
                 }
                 let c = cz as usize * wi + cx as usize;
                 let (k0, k1) = (o.start[c] as usize, o.start[c + 1] as usize);
+                // (as low and as high as the ray goes before the best so far)
+                let end = a1 + r1 * best;
+                let (foot, top) = if r1 < 0.0 { (end - SEG_PAD, a1 + SEG_PAD) } else { (a1 - SEG_PAD, end + SEG_PAD) };
                 for k in k0..k1 {
                     let b = o.items[k] as usize;
-                    if q.stamp[b] == id {
+                    if o.tall[b][0] > top || o.tall[b][1] < foot || q.stamp[b] == id {
                         continue;
                     }
                     q.stamp[b] = id;
