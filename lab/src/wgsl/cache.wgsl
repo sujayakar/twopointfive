@@ -2,12 +2,12 @@
 // the point it looks from roams: to wherever a ray last landed in it. It is CELL long and wide but THIN along its normal, and where walls part it up to TRIES entries stand for one cell, each for the places
 // joined to where it began. Nothing outside this file and the cache stages knows how it is kept: readers call cacheRead, rays that land call cacheTell (cachetell.wgsl). What was measured: notes/kept.md.
 //   keys[slot]   the key (31 bits), 0 = empty          cand[slot]   who asks to found it or move it, until claimed
-//   cells[2s]    E.rgb, samples                        cells[2s+1]  where it began, sun seen         spot[slot]  where it looks from now; its normal and when it was last called for (0: founded by nobody yet)
+//   cells[2s]    E.rgb, samples                        cells[2s+1]  where it began, sun seen         spot[slot]  where it looks from now, and its normal (0: founded by nobody yet)
 //   (a round reads cells and writes fresh, which is then copied over: what an entry sees of another never depends on which ran first. No rule here goes by slot, which is where a race put it: so a run repeats)
-const SLOTS = 262144u; const REACH = 128u; const CELL = 0.64; const THIN = 0.2; const FAR_CELL = 6.0; const TRIES = 4u; const LEAST = 3.0;
-// how wide its own ray begins · how much more a later sample weighs (2: as its number; more: the first ones, lit by a table that was still dark, are forgotten sooner) · from how many samples on it looks every fourth
-// and every eighth frame · how many it keeps when the light changes near it · after how long it sleeps when no ray has landed in it (in eights of a frame; it then looks every 64th)
-const START = 0.32; const RISE = 2.0; const FOURTH = 24.0; const EIGHTH = 60.0; const FORGET = 7.0; const SLEEP = 75u;
+const SLOTS = 393216u; const REACH = 128u; const CELL = 0.32; const THIN = 0.2; const FAR_CELL = 6.0; const TRIES = 4u; const LEAST = 3.0;
+// how wide its own ray begins (a point: the dice go over the patch) · how much more a later sample weighs (2: as its number; 4: the first ones, lit by a table that was still dark, are soon forgotten) · from
+// how many samples on it looks every fourth and every eighth frame · how many it keeps when the light changes near it
+const START = 0.02; const RISE = 4.0; const FOURTH = 24.0; const EIGHTH = 60.0; const FORGET = 7.0;
 fn facing(n: vec3f) -> u32 { let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
 /** the level and its roofs are kept finely; the city only coarsely, or it would fill the table by itself */
 fn cacheNear(x: vec3f) -> bool { return abs(x.x) < 20.0 && abs(x.z) < 15.0 && x.y > -0.6 && x.y < 12.0; }
@@ -23,9 +23,6 @@ fn speaksFor(p: vec3f, x: vec3f, n: vec3f) -> bool { if (!cacheNear(x)) { return
 fn cacheEntry(x: vec3f, n: vec3f) -> vec2u {
   for (var v = 0u; v < TRIES; v++) { let s = cacheFind(cacheKey(x, n, v)); if (s == NOTHING) { return vec2u(NOTHING, v); } let p = cells[2u * s + 1u].xyz; if (all(p == vec3f(0.0)) || speaksFor(p, x, n)) { return vec2u(s, v); } } return vec2u(NOTHING, TRIES);
 }
-fn spotPack(n: vec3f) -> u32 { let q = vec2u(octEnc(n) * 1022.0 + 0.5); return 1u | (q.x << 1u) | (q.y << 11u) | (((frame.counts.z >> 3u) & 2047u) << 21u); }
-fn spotNormal(w: u32) -> vec3f { return octDec(vec2f(f32((w >> 1u) & 1023u), f32((w >> 11u) & 1023u)) / 1022.0); }
-fn asleep(w: u32) -> bool { return (((frame.counts.z >> 3u) - (w >> 21u)) & 2047u) > SLEEP; }
 struct Cached { E: vec3f, sun: f32, n: f32 };
 fn entryLight(s: u32, least: f32) -> Cached { var c: Cached; let a = cells[2u * s]; if (bad4(a) || a.w < least) { return c; } c.E = a.xyz; c.n = a.w; c.sun = finite(cells[2u * s + 1u].w, 1.0); return c; }
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring patches, so that their edges blend */

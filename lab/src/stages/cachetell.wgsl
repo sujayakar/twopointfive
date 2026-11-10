@@ -10,5 +10,5 @@ fn cacheFound(key: u32, id: u32) {
   }
 }
 /** a ray landed at x: the entry for that place is founded, or asked to move there. `at`: where in hits it may leave word; `id`: who calls */
-fn tellAs(at: u32, id: u32, x: vec3f, n: vec3f) { let e = cacheEntry(x, n); if (e.x == NOTHING && e.y >= TRIES) { return; } hits[at] = vec4u(bitcast<vec3u>(x), octPack(n)); cacheFound(cacheKey(x, n, e.y), id); }
+fn tellAs(at: u32, id: u32, x: vec3f, n: vec3f) { let e = cacheEntry(x, n); if (e.x == NOTHING && e.y >= TRIES) { return; } hits[at] = vec4u(bitcast<vec3u>(x), octPack(n) | 1u); cacheFound(cacheKey(x, n, e.y), id); }
 fn cacheTell(who: u32, x: vec3f, n: vec3f) { if (who < HITS) { tellAs(who, who, x, n); } }

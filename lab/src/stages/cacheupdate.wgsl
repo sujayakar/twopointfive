@@ -3,7 +3,7 @@
 var<workgroup> todo: array<u32, 256>; var<workgroup> many: atomic<u32>;
 fn itsTurn(s: u32) -> bool {
   if (spot[s].w == 0u) { return false; } let home = cells[2u * s + 1u].xyz; if (all(home == vec3f(0.0))) { return false; }   // (founded this frame: where it began is not in cells yet)
-  let w = cells[2u * s].w; let quiet = steady(home) > 0.9; var m = 0u; if (w > FOURTH && quiet) { m = select(3u, 7u, w > EIGHTH); } if (w > 4.0 && asleep(spot[s].w)) { m = 63u; } return (atomicLoad(&keys[s]) & m) == (frame.counts.z & m);
+  let w = cells[2u * s].w; if (w > FOURTH && steady(home) > 0.9) { let m = select(3u, 7u, w > EIGHTH); return (atomicLoad(&keys[s]) & m) == (frame.counts.z & m); } return true;
 }
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) g: vec3u, @builtin(local_invocation_index) li: u32) {
   if (li == 0u) { atomicStore(&many, 0u); } workgroupBarrier();
@@ -11,7 +11,7 @@ fn itsTurn(s: u32) -> bool {
   workgroupBarrier(); let n = atomicLoad(&many); for (var i = li; i < n; i += 64u) { oneMore(todo[i]); }
 }
 fn oneMore(s: u32) {
-  var a = cells[2u * s]; var b = cells[2u * s + 1u]; let sp = spot[s]; let x0 = bitcast<vec3f>(sp.xyz); let n = spotNormal(sp.w); let st = steady(b.xyz); let key = atomicLoad(&keys[s]);
+  var a = cells[2u * s]; var b = cells[2u * s + 1u]; let sp = spot[s]; let x0 = bitcast<vec3f>(sp.xyz); let n = octUnpack(sp.w & 0xfffffffeu); let st = steady(b.xyz); let key = atomicLoad(&keys[s]);
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); } if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
   rngKey(key, 91u); leafMode = 2u; let x = x0 + n * 0.012; var sun = 0.0; var E = vec3f(0.0); let cs = dot(n, frame.sunDir.xyz);
   for (var k = 0u; k < 2u; k++) {
@@ -26,6 +26,6 @@ fn oneMore(s: u32) {
     if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * fo.T * (w.w * sm.a); }
     else { let q = surfaceMean(x, w.xyz, h); let own = (pieces[h.piece].lamp & 255u) != 255u; E += min((select(q.glow, vec3f(0.0), own) + sentBack(q, rnd2())) * h.thru * fo.T * (w.w * sm.a), vec3f(60.0)); tellAs(HITS + s, 0x80000000u | key, q.x, q.ng); /* (tells) */ }
   }
-  let most = @tune.keep * (0.5 * RISE); var cap = mix(min(FORGET, most), most, st); if (asleep(sp.w)) { cap = min(cap, 8.0); } let m = min(a.w + 1.0, cap); let k = min(1.0, RISE / (m + RISE - 1.0));
+  let most = @tune.keep * (0.5 * RISE); let cap = mix(min(FORGET, most), most, st); let m = min(a.w + 1.0, cap); let k = min(1.0, RISE / (m + RISE - 1.0));
   let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[2u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); fresh[2u * s + 1u] = vec4f(b.xyz, clamp(finite(mix(b.w, sun, k), 1.0), 0.0, 1.0));
 }
