@@ -31,7 +31,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | file | what it does |
 |---|---|
-| `rust/sim/src/layers.rs` | the layers themselves, each pose written in place |
+| `rust/sim/src/layers/` | the layers themselves, a file a family, each pose written in place |
 | `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
 | `rust/sim/src/roles.rs` | the named nodes of a rig a layer reads (its numbers are the game's own tables, by their names) |
 | `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
@@ -61,8 +61,10 @@ goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stan
 thigh, shin and foot. `life_layer`'s standing lock and `run_plant` stay under it, because the layers above are posed over their legs. No address word; never seen on a GPU.
 A round and the cursor's ray meet a leg where it is drawn, and a man falls from where his legs are: a change of play, `tests/poses.rs` its check, `missions` before and after.
 
-**A layer** is a function of `layers.rs` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only this
-call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
+**A layer** is a function of `rust/sim/src/layers/` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only
+this call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
+A long one reads as a list of its stages, each a function under it; what a stage hands on to the next is a struct over it (`Throw`, `Feet`). `anim_update_standing` is one too
+(`character/stages.rs`). Vectors are the game's own (`v3`, `quat`).
 
 **A pose** is ten columns of singles, a row a node. A man's poses live in the game's block (`Poses`), so a rollback restores them. `pose_home_tend` rebuilds the pool when
 a man has left, and `stage_open` lends a place to a man made inside the tick. Clips are authored data outside any game, one copy a process.
@@ -123,8 +125,8 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
   `?knob.mv.steady.roll=0` turns one. Tables with no panel stand in `rust/game_types/src/character/types.rs`: statics (`SNEAK`, `CREEP`, `LIFE`, `MV2`) and functions (`stances`,
   `blend`, `long_reload`).
 - **A number for a layer:** a field of its knob table, read as `tune.kit.close.drift`; one nobody turns is in a static of `character/types.rs` (`LIFE`, `CREEP`).
-- **A new layer:** a `pub fn` in `layers.rs` (copy `lean_body`); an `anim_*` that calls it by `anim_layer`; a line in `anim_update_standing` where it should write over what is
-  under it; its kept springs in `Anim`. Add it to the stand-down lists of what it gives way to.
+- **A new layer:** a `pub fn` in its family's file of `rust/sim/src/layers/` (copy `lean_body`); an `anim_*` that calls it by `anim_layer`; a line in `anim_update_standing`
+  where it should write over what is under it; its kept springs in `Anim`. Add it to the stand-down lists of what it gives way to.
 - **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.
 - **A new clip:** put the animation in `AnimationLibrary_Godot_Standard.gltf`. `gltf.rs` takes every animation by name. For a whole-body clip a rule sets `anim.act` to an `AnimAct`
   with its name. In a layer, call `sample_clip` with `clip_of` and blend under a mask. A clip the game cannot do without goes in `need` in `anim_new`, which panics without it.
