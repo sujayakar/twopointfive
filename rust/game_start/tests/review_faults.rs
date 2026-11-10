@@ -205,7 +205,7 @@ fn a_door_put_back_forgets_who_touched_it() {
         let mut p = Play::scene(&sc, &seed(s));
         p.run(0.1);
         let d = game::doors::doors_by_name(&p.g, "d").unwrap();
-        let (at, who) = (p.sam_at(), p.g.ch[p.g.pl[p.g.player].ch].id);
+        let (at, who) = (p.sam_at(), p.g.player_id(p.g.player));
         game::doors::doors_use(&mut p.g, d, [at[0], 0.0, at[1]], who, None);
         p.run(0.3);
         assert!(p.g.dr[d].leaf.last_who == who && !p.g.dr[d].leaf.latched, "seed {s}: used by Sam: last who {}, latched {}", p.g.dr[d].leaf.last_who, p.g.dr[d].leaf.latched);

@@ -86,7 +86,7 @@ fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
 /// game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the kick written to the camera. A wall charge and every
 /// later stage of its blast are the team's doing: the fog's begin / done round it.
 pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_feel_tick_raw(g, cam);
     crate::fogofwar::fog_of_war_done(g, was);
@@ -145,7 +145,7 @@ fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3>
 fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let k = g.m.blast_feel.feel.sound;
     let c = g.pl[pl].ch;
-    let ear = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
+    let ear = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let d = v3::dist(ear, at);
     let _late = m::min(k.late_max, d / k.c);   // (STAND-IN, the head of this file: the report is played at once, not `late` seconds on)
     let dull = 1.0 / (1.0 + (d / k.dull_m) * (d / k.dull_m));

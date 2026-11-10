@@ -75,7 +75,7 @@ pub fn unlooked_by(g: &mut Game, gd: GuardId, taken: &[V3]) -> Option<V3> {
 
 /// His walk takes him into another room within AHEAD_M, and it has floor there that nobody has looked over.
 pub fn walks_in(g: &mut Game, gd: GuardId) -> bool {
-    let mut a = g.ch[g.gd[gd].ch].pos;
+    let mut a = g.pos_of(gd);
     let here = super::cleared_rooms_room_at(g, a);
     let cs = g.col.nav.cell;
     let (mut left, mut i) = (AHEAD_M, g.gd[gd].path_i);

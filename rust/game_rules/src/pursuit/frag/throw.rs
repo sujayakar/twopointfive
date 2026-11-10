@@ -27,7 +27,7 @@ fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) ->
     let (mut stay, mut go): (Vec<V3>, Vec<V3>) = (Vec::new(), Vec::new());
     let from: V3 = [dz[0], dz[1] + g.k.frag.lift, dz[2]];
     let team = g.team(gd);
-    let me = g.ch[g.gd[gd].ch].pos;
+    let me = g.pos_of(gd);
     let mut n = 0;
     while n < g.guards.len() {
         let o = g.guards[n]; n += 1;
@@ -43,7 +43,7 @@ fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) ->
     }
     if team.ours() {
         for pl in crate::seats::men(g) {
-            let pp = g.ch[g.pl[pl].ch].pos;
+            let pp = g.player_pos(pl);
             if dist_xz(pp, me) <= 8.5 { stay.push(pp); }
         }
     }
@@ -155,13 +155,13 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
 
 /// WHEN HE KNOWS OF IT: at once if it is his own side's; else if he sees it or hears it land, after his own beat. None: not yet.
 fn notices(g: &mut Game, u: &Under) -> Option<f64> {
-    let d = m::hyp2(u.pos[0] - u.at[0], u.pos[2] - u.at[2]);
+    let d = v3::dist_xz(u.pos, u.at);
     let k = g.k.frag.clone();
     if d > m::max(k.see_m, k.flee_m) { return None; }
     if live!(g, u.i).side == u.team { return Some(g.time + 0.1); }
     if crate::control::man::blind(g, u.gd) { return None; }
     let head = g.ch[u.c].bone_or(crate::character::Bone::Head, 1.6);
-    let to = m::atan2(u.at[0] - u.pos[0], u.at[2] - u.pos[2]);
+    let to = v3::yaw_to(u.pos, u.at);
     let mut off = to - g.ch[u.c].aim_yaw;
     off = m::atan2(m::sin(off), m::cos(off));
     let told = g.m.frag.warned.get(u.gd).copied().unwrap_or(-1.0) > g.time;
@@ -367,7 +367,7 @@ fn cue_here(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     let pc = g.pl[pl].ch;
     if crate::condition::down(g, g.pl[pl].ch) { return; }
     let pos = g.ch[pc].pos;
-    let d = m::hyp2(pos[0] - eye_at[0], pos[2] - eye_at[2]);
+    let d = v3::dist_xz(pos, eye_at);
     if d > g.k.frag.cue_m { return; }
     let head = g.ch[pc].bone_or(crate::character::Bone::Head, 1.6);
     let mut knows = !crate::scene_collision::segment_blocked(g, head, eye_at, None, None, None);
@@ -392,7 +392,7 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
         let wise = rest_of(g, i);
         let at = wise.at;
         let pos = g.ch[pc].pos;
-        if m::hyp2(pos[0] - at[0], pos[2] - at[2]) > g.k.frag.wound_m { continue; }
+        if v3::dist_xz(pos, at) > g.k.frag.wound_m { continue; }
         let head = g.ch[pc].bone_or(crate::character::Bone::Head, 1.6);
         if exposed_to(g, [at[0], at[1] + g.k.frag.lift, at[2]], pos, head, None) <= 0.0 { continue; }
         let fuse = g.tab.item[it].fuse;
@@ -412,7 +412,7 @@ pub fn defenders_of(g: &crate::game::Game) -> Vec<GuardId> {
 fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) {
     let men = defenders_of(g);
     let n = m::min(g.k.frag.def_max, m::ceil(men.len() as f64 / m::max(1.0, g.k.frag.def_share)));
-    let mut sorted: Vec<(GuardId, f64)> = men.iter().map(|&gd| (gd, g.ch[g.gd[gd].ch].id)).collect();
+    let mut sorted: Vec<(GuardId, f64)> = men.iter().map(|&gd| (gd, g.char_id(gd))).collect();
     js::sort_by(&mut sorted, |a, b| js::or(hash01(a.1, 9173.0) - hash01(b.1, 9173.0), a.1 - b.1));
     let take = (n as usize).min(sorted.len());
     let carriers: Vec<crate::frag::Carrier> = sorted[..take].iter().map(|&(gd, _)| crate::frag::Carrier {
@@ -492,7 +492,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
             let op = g.ch[oc].pos;
             if dist_xz(op, fix) > g.k.frag.def_bunch { continue; }
             if !(g.gd[gd].foe == Some(g.gd[o].ch) || g.shown[g.gd[o].ch].visibility > 0.2) { continue; }
-            let oh = g.ch[oc].bones.get(crate::character::Bone::Head).copied();
+            let oh = g.ch[oc].bone(crate::character::Bone::Head);
             if crate::guards::can_see_char(g, gd, oc).visible || sights(g, gd, c, head, op, oh) { bunch += 1; }
         }
     }
@@ -530,7 +530,7 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
         else { let yaw = g.ch[c].aim_yaw; [pos[0] + m::sin(yaw) * 0.35, pos[1] + 1.5, pos[2] + m::cos(yaw) * 0.35] };
     let mut sol = crate::throwables::throwables_solve(g, from, wd.at, Some(11.0));
     if wd.toward.is_none() && crate::character::anim_throw_off(g, c) {   // thrown with the free hand, it leaves THAT hand, where the hand has the same arc to the same spot
-        if let Some(h) = g.ch[c].bones.get(crate::character::Bone::HandL).copied() {
+        if let Some(h) = g.ch[c].bone(crate::character::Bone::HandL) {
             if dist_xz(h, pos) < 1.0 && !crate::scene_collision::solid_blocked(g, [pos[0], h[1], pos[2]], h, None) {
                 let sh = crate::throwables::throwables_solve(g, h, wd.at, Some(11.0));
                 if lands(g, sh.land, wd.at, 2.0) { from = h; sol = sh; }
@@ -555,7 +555,7 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
 /// Along his own gun line: within 45 degrees of his aim, a line to the man, his eyes not full of magnesium.
 fn sights(g: &Game, gd: GuardId, c: CharId, head: V3, p: V3, hd: Option<V3>) -> bool {
     let pos = g.ch[c].pos;
-    let mut off = m::atan2(p[0] - pos[0], p[2] - pos[2]) - g.ch[c].aim_yaw;
+    let mut off = v3::yaw_to(pos, p) - g.ch[c].aim_yaw;
     off = m::atan2(m::sin(off), m::cos(off));
     m::abs(off) < 0.785 && !crate::control::man::blind(g, gd) && dist_xz(p, pos) < 16.0 && !crate::scene_collision::segment_blocked(g, head, hd.unwrap_or_else(|| v3::add(p, [0.0, 1.5, 0.0])), None, None, None)
 }
@@ -567,7 +567,7 @@ fn seat_in_bunch(v: &mut Game, gd: GuardId, c: CharId, head: V3, fix: V3) -> boo
     let p = v.ch[pc].pos;
     if v.cond[v.pl[pl].ch].down || v.player_invisible || dist_xz(p, fix) > v.k.frag.def_bunch { return false; }
     if !(crate::teams::foe_is_player(v, gd) || v.shown[v.pl[pl].ch].visibility > 0.2) { return false; }
-    let ph = v.ch[pc].bones.get(crate::character::Bone::Head).copied();
+    let ph = v.ch[pc].bone(crate::character::Bone::Head);
     crate::guards::can_see_char(v, gd, pc).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
 }
 
@@ -733,7 +733,7 @@ fn lands(g: &crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
 /// A live hostage in what a grenade there would reach.
 fn hostage_near(g: &crate::game::Game, p: V3) -> bool {
     let reach = g.k.frag.wound_m + g.k.frag.def_scatter[1];
-    crate::mission::captives_up(g).iter().any(|&h| dist_xz(g.ch[g.gd[h].ch].pos, p) < reach)
+    crate::mission::captives_up(g).iter().any(|&h| dist_xz(g.pos_of(h), p) < reach)
 }
 
 /// Nobody of the thrower's own side within defOwnM of where it would land with a line to it, and he not within his own arm's error.

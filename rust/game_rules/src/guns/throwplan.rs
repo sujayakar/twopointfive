@@ -131,7 +131,7 @@ fn hand_at(g: &crate::game::Game, gd: GuardId, p: V3, aim: V3) -> Option<V3> {
     let d = v3::dist_xz(p, aim);
     let ahead = if d > 1e-3 { k.hand_ahead / d } else { 0.0 };
     let c = g.gd[gd].ch;
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied();
+    let head = g.ch[c].bone(crate::character::Bone::Head);
     let high = match head { Some(hd) => hd[1] - g.ch[c].pos[1] - k.head_drop, None => k.hand_up };
     let up = m::max(0.6, m::min(k.hand_up, high));
     let from: V3 = [p[0] + (aim[0] - p[0]) * ahead, p[1] + up, p[2] + (aim[2] - p[2]) * ahead];

@@ -180,10 +180,10 @@ pub fn fire_struck(g: &crate::game::Game, t: FixtureId, p: V3, ix: f64) -> bool 
     let r = m::max(mouth.lid * 1.7, 0.3);
     let Some(b) = b else { return false };
     let c = g.tab.boxes[b].c;
-    if m::hyp2(c[0] - mouth.pos[0], c[2] - mouth.pos[2]) > 0.05 || c[1] > mouth.pos[1] {
+    if v3::dist_xz(c, mouth.pos) > 0.05 || c[1] > mouth.pos[1] {
         return false;
     }
-    p[1] <= mouth.pos[1] + 0.05 && m::hyp2(p[0] - mouth.pos[0], p[2] - mouth.pos[2]) <= r
+    p[1] <= mouth.pos[1] + 0.05 && v3::dist_xz(p, mouth.pos) <= r
 }
 
 /// A hit on a burning fire: a crack now and a throw of embers on its next frame, by the host's book.

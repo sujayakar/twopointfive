@@ -27,7 +27,7 @@ fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
         Some(d) => d,
         None => return 0.0,
     };
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     crate::orders::squad_orders_new_group(g);
     let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
     if crate::orders::order_issue(g, def, &up, &t, None).is_some() { return 0.0; }

@@ -188,7 +188,7 @@ fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, c
 
 /// The level changed where a bar stood: whoever keeps an answer about the level's boxes asks again.
 fn changed(g: &mut crate::game::Game) {
-    g.engine.world.geom_serial += 1.0;
+    g.boxes_changed();
     crate::scene_collision::sound_paths_invalidate(g);
 }
 

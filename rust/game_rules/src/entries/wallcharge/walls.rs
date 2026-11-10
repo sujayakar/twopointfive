@@ -169,7 +169,7 @@ pub(super) fn room_beyond(g: &mut crate::game::Game, w: &crate::wallcharge::Wall
 
 /// The wall at a point: the full-height unrotated wall whose footprint the point is on, a partition or structure with the word for what it is.
 pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<crate::wallcharge::WallSpot> {
-    let from = from.unwrap_or_else(|| g.ch[g.pl[g.player].ch].pos);
+    let from = from.unwrap_or_else(|| g.player_pos(g.player));
     let mut asked = Vec::new();
     let r = wall_at_of(g, at, from, &mut asked);
     sky_kept(g, asked);
@@ -272,7 +272,7 @@ pub fn wall_target(g: &crate::game::Game, seat: &crate::seats::SeatRef, at: V3, 
     if !wall_charge_on(g) {
         return base.clone();
     }
-    match wall_at_of(g, at, g.ch[g.pl[seat.player].ch].pos, asked) {
+    match wall_at_of(g, at, g.seat_pos(seat), asked) {
         Some(w) => crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor { wall: Some(w), ..floor.clone() }),
         None => base.clone(),
     }

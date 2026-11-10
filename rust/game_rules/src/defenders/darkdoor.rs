@@ -150,7 +150,7 @@ fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
         i += 1;
         if o != gd && g.team(o) == g.team(gd) && can_come(g, o) && !tried.contains(&o) && dist_xz(g.pos_of(o), p) <= k.mate_m { near.push(o); }
     }
-    js::sort_by(&mut near, |a, b| dist_xz(g.ch[g.gd[*a].ch].pos, p) - dist_xz(g.ch[g.gd[*b].ch].pos, p));
+    js::sort_by(&mut near, |a, b| dist_xz(g.pos_of(*a), p) - dist_xz(g.pos_of(*b), p));
     near.truncate(m::max(1.0, m::round(k.mate_try)) as usize);
     let mut best = None;
     let mut bl = k.mate_m;

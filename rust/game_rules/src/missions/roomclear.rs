@@ -488,7 +488,7 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     let mut i = 0;
     while i < g.staged.rooms.len() {
         let bounds = g.staged.rooms[i].def.bounds;
-        let c = !g.staged.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.ch[g.gd[*h].ch].pos, bounds));
+        let c = !g.staged.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.pos_of(*h), bounds));
         if c == g.staged.rooms[i].cleared {
             i += 1;
             continue;

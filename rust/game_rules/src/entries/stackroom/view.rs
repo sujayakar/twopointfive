@@ -121,7 +121,7 @@ fn stood_marks(g: &Game, x: &View, men: &[GuardId]) -> Vec<V3> {
         let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), man) else { continue };
         if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(x.d) { continue; }
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if v3::dist_xz(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, x.d, post, x.side) > 0.0 { stood.push(post); }
+        if v3::dist_xz(g.pos_of(man), post) < 0.6 && crate::doortools::off_of(g, x.d, post, x.side) > 0.0 { stood.push(post); }
     }
     stood
 }
@@ -138,7 +138,7 @@ fn across_marks(g: &Game, x: &View, k: &mut Deal, men: &[GuardId]) {
     let s = g.k.stackroom;
     let mut on: Vec<f64> = Vec::new();
     for &man in men {
-        let p = g.ch[g.gd[man].ch].pos;
+        let p = g.pos_of(man);
         if !(crate::doortools::off_of(g, x.d, p, x.side) > 0.0) || v3::dist_xz(p, x.c) > s.view_men { continue; }
         let a = crate::doortools::along_of(g, x.d, p);
         on.push(if a >= x.w + s.view_out { 1.0 } else if a <= -s.view_out { -1.0 } else { 0.0 });

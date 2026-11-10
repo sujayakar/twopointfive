@@ -67,7 +67,7 @@ fn start_at(g: &Game) -> Option<V3> {
 /// A new run: everything this module holds of the last one goes.
 fn fresh(g: &mut Game, tail: Option<u32>) {
     let men = crate::seats::men(g);
-    let origins: Vec<V3> = men.iter().map(|&pl| g.ch[g.pl[pl].ch].pos).collect();
+    let origins: Vec<V3> = men.iter().map(|&pl| g.player_pos(pl)).collect();
     let p0 = origins[0];
     let p = start_at(g).unwrap_or(p0);
     let (wall_serial, fired0, resumed) = (g.destr.walls.serial, super::par::fired(g), g.chronicle.counts.loads > 0.0);
@@ -91,7 +91,7 @@ fn track(id: f64, name: String, tone: Option<crate::host_findme::OutlineHue>, hu
 fn roster(g: &mut Game) {
     use crate::host_findme::OutlineHue as Hue;
     for pl in crate::seats::men(g) {
-        let id = g.ch[g.pl[pl].ch].id;
+        let id = g.player_id(pl);
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
         let seat = crate::seats::seat_of_man(g, pl);
         // (seats.ts SEAT_TONES: 'you', 'purple', by the seat's place)
@@ -101,7 +101,7 @@ fn roster(g: &mut Game) {
     }
     let paired = team_paired(g, &crate::seats::here(g));
     for gd in g.staged.team.clone() {
-        let id = g.ch[g.gd[gd].ch].id;
+        let id = g.char_id(gd);
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
         let tone = if paired { match g.gd[gd].unit.as_ref().and_then(|u| u.pair) { Some(crate::game::PairId::Red) => Some(Hue::Red), Some(crate::game::PairId::Blue) => Some(Hue::Blue), None => None } } else { None };
         let name = g.gd[gd].callsign.clone();
@@ -132,11 +132,11 @@ fn watch(g: &mut Game) {
         if state == crate::game::GuardState::Dead {
             if !g.verdict.fell.has(h) {
                 g.verdict.fell.add(h);
-                let p = g.ch[g.gd[h].ch].pos;
+                let p = g.pos_of(h);
                 g.verdict.fell_at.push(p[0]); g.verdict.fell_at.push(p[2]);
                 let killer = crate::Num(g.gd[h].killer_id);
                 let by = if g.verdict.tracks.has(killer) { Some(killer) } else {
-                    let sam = crate::Num(g.ch[g.pl[g.player].ch].id);
+                    let sam = crate::Num(g.player_id(g.player));
                     if g.gd[h].killer_id < 0.0 && g.gd[h].down_by == Some(crate::game::DownBy::Player) && g.verdict.tracks.has(sam) { Some(sam) } else { only_mate(g, h) }
                 };
                 if let Some(k) = by { if let Some(t) = g.verdict.tracks.get_mut(k) { t.drops.push(now); } }
@@ -159,10 +159,10 @@ fn watch(g: &mut Game) {
     for key in g.verdict.tracks.keys() {
         let (id, human, gd, up) = { let t = g.verdict.tracks.get(key).unwrap(); (t.id, t.human, t.gd, t.state == ManState::Up) };
         if !up { continue; }
-        let pl = if human { men.iter().copied().find(|&x| g.ch[g.pl[x].ch].id == id) } else { None };
+        let pl = if human { men.iter().copied().find(|&x| g.player_id(x) == id) } else { None };
         let c = match (pl, gd) { (Some(pl), _) => g.pl[pl].ch, (None, Some(gd)) => g.gd[gd].ch, (None, None) => continue };
         let pos = g.ch[c].pos;
-        let p = g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(pos);
+        let p = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(pos);
         let down = match pl { Some(pl) => crate::condition::down(g, g.pl[pl].ch), None => crate::condition::down(g, g.gd[gd.unwrap()].ch) };
         if down {
             let state = match pl {
@@ -172,7 +172,7 @@ fn watch(g: &mut Game) {
             let room = crate::chronicle::room_of(g, p);
             let by = match pl {
                 Some(_) => g.chronicle.counts.down_by.clone(),
-                None => { let k = g.gd[gd.unwrap()].killer_id; g.guards.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == k).map(|x| g.gd[x].callsign.clone()).unwrap_or_default() }
+                None => { let k = g.gd[gd.unwrap()].killer_id; g.guards.iter().copied().find(|&x| g.char_id(x) == k).map(|x| g.gd[x].callsign.clone()).unwrap_or_default() }
             };
             let t = g.verdict.tracks.get_mut(key).unwrap();
             t.state = state; t.down_at = now; t.down_pos = Some([p[0], p[2]]); t.down_room = room; t.down_by = by;
@@ -240,7 +240,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
         let men = crate::seats::men(g);
         let mut moved = false;
         for (i, &pl) in men.iter().enumerate() {
-            let p = g.ch[g.pl[pl].ch].pos;
+            let p = g.player_pos(pl);
             let o = if i > 0 { g.verdict.origins.get(i).copied().unwrap_or(p) } else { g.verdict.origin };
             if ::sim::maths::hypot2(p[0] - o[0], p[2] - o[2]) > crate::par::PAR_START_M { moved = true; break; }
         }

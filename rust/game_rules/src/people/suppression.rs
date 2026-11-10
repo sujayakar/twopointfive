@@ -77,10 +77,7 @@ struct Round {
 /// One man's share of one round.
 fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool, team: crate::teams::Team) {
     if c == r.shooter || Some(c) == r.hit || !g.ch[c].alive || held { return; }
-    let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(&b) => b,
-        None => v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]),
-    };
+    let chest = g.ch[c].bone_or(crate::character::Bone::Chest, 1.1);
     let s = v3::clamp(v3::dot(v3::sub(chest, r.from), r.dir), 0.0, r.t_hit);
     let foe = r.shooter_team.foe_of(team);
     let min_travel = g.k.suppression.min_travel;
@@ -510,7 +507,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
     let from = g.ch[c].pos;
     let t: V3 = [threat[0], 1.15, threat[2]];
     let d0 = v3::dist_xz(from, threat);
-    let away = m::atan2(from[0] - threat[0], from[2] - threat[2]);
+    let away = v3::yaw_to(threat, from);
     let mut plans: i32 = 0;
     let (displace_min, displace_max, min_travel) = (g.k.suppression.displace_min, g.k.suppression.displace_max, g.k.suppression.min_travel);
     for da in [1.2, -1.2, 0.8, -0.8, 1.65, -1.65, 0.4, -0.4, 0.0, 2.1, -2.1] {

@@ -40,7 +40,7 @@ pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) 
         if lvl >= 2.0 {
             for i in 0..g.guards.len() {
                 let o = g.guards[i];
-                if g.gd[o].leader == Some(gd) && g.gd[o].state == St::Patrol && v3::dist(g.ch[g.gd[o].ch].pos, g.ch[c].pos) > 4.0 { pace = walk * 0.55; }
+                if g.gd[o].leader == Some(gd) && g.gd[o].state == St::Patrol && v3::dist(g.pos_of(o), g.ch[c].pos) > 4.0 { pace = walk * 0.55; }
             }
         }
         if follow_path(g, gd, dt, pace) {

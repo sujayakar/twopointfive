@@ -169,8 +169,8 @@ fn walled_now(g: &mut crate::game::Game, c_2: CharId, up: crate::gunwall::GunUp,
         if same && (if hd.hot { panel(g, hd.a, hd.b) } else { cast(g, to, deep, hd.a, hd.b, 0.0) }) { return true; }
         row(g, c).hold = None;
     }
-    let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
-    let sh = g.ch[c].bones.get(crate::character::Bone::UpperArmR).copied();
+    let hand = g.ch[c].bone(crate::character::Bone::HandR);
+    let sh = g.ch[c].bone(crate::character::Bone::UpperArmR);
     let bb = g.ch[c].bones_at;
     let (pos, muzzle) = (g.ch[c].pos, g.ch[c].muzzle);
     let settled = up == GunUp::Aim && hand.is_some() && sh.is_some()
@@ -265,7 +265,7 @@ pub fn gun_wall_check(g: &mut crate::game::Game, gd: GuardId, up: Option<crate::
     let hot = hot.unwrap_or(false) || fight_on(g);
     let c = g.gd[gd].ch;
     let def = g.fa[g.gd[gd].weapon].def;
-    let deep = g.m.weapons.weapons.get(def).unwrap().pellets.is_some();
+    let deep = g.weapon(def).pellets.is_some();
     let low = gun_walled(g, c, up, to, dt, Some(hot), Some(deep));
     if low {
         g.gd[gd].muzzle_down = true;

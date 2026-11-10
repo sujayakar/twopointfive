@@ -20,7 +20,7 @@ fn floor(level: &str, seed: u32) -> Play {
 fn events(p: &Play, what: What) -> Vec<f64> { p.squad_names().iter().flat_map(|q| p.squad_events(q)).filter(|e| e.0 == what).map(|e| e.1).collect() }
 /// how far a man has to go
 fn walk(p: &mut Play, m: GuardId, to: [f64; 2]) -> f64 {
-    let from = p.g.ch[p.g.gd[m].ch].pos;
+    let from = p.g.pos_of(m);
     let way = game::scene_collision::nav_grid_find_path(&mut p.g, from, [to[0], 0.0, to[1]], None, None).expect("a way");
     way.iter().fold((0.0, p.at(m)), |(l, q), w| (l + dist(q, [w[0], w[2]]), [w[0], w[2]])).0
 }
@@ -88,7 +88,7 @@ fn due(p: &Play) -> Vec<(game::ids::EnemysquadsSquadId, GuardId, String)> {
 }
 /// the room of his squad's he stands in
 fn his_room(p: &Play, q: game::ids::EnemysquadsSquadId, m: GuardId) -> Option<String> {
-    game::enemysquads::room_of(&p.g, q, p.g.ch[p.g.gd[m].ch].pos, None).map(|r| r.name)
+    game::enemysquads::room_of(&p.g, q, p.g.pos_of(m), None).map(|r| r.name)
 }
 
 /// THE RULE: a man about to leave for another room's fight stays when his own room is hit, and goes to the last room hit when that is another again.

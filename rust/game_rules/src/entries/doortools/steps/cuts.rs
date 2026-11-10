@@ -173,7 +173,7 @@ fn step_in(g: &mut Game, w: &Walk, m_: &Man) -> Option<V3> {
     let at = sl!(g, op, gd).pts[m_.i];
     let (inw, steps) = { let r = pie!(g, op, gd); (r.inw, r.gun) };
     let q: V3 = [at[0] + inw[0] * pie_gun().step, 0.0, at[2] + inw[2] * pie_gun().step];
-    if steps >= pie_gun().most || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [q[0], 0.45, q[2]], None) { return None; }
+    if steps >= pie_gun().most || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, at, q) { return None; }
     let apart = g.k.doortools.thr_pie_apart;
     let Some(x) = w.jamb.iter().copied().find(|&x| x != gd && !crate::condition::down(g, g.gd[x].ch)) else { return Some(q) };
     let his = o!(g, op).slice.get(x).map(|s| s.pts[s.i as usize]);

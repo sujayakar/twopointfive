@@ -216,13 +216,13 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
     g.cleared.last = g.time;
     for gd in crate::seats::team_squad(g, &crate::seats::here(g)) {
         if !crate::condition::down(g, g.gd[gd].ch) {
-            let p = g.ch[g.gd[gd].ch].pos;
+            let p = g.pos_of(gd);
             cleared_rooms_mark(g, p);
         }
     }
     for pl in crate::seats::men(g) {
         if !crate::condition::down(g, g.pl[pl].ch) {
-            let p = g.ch[g.pl[pl].ch].pos;
+            let p = g.player_pos(pl);
             cleared_rooms_mark(g, p);
         }
     }
@@ -255,7 +255,7 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
     let mut metres = 0.0;
     let mut a = from;
     for &b in path {
-        let l = m::hyp2(b[0] - a[0], b[2] - a[2]);
+        let l = v3::dist_xz(b, a);
         let n = m::max(1.0, m::ceil(l / 0.25));
         let mut i = 1.0;
         while i <= n {

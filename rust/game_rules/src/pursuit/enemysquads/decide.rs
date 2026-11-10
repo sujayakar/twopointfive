@@ -651,7 +651,7 @@ pub(in crate::pursuit) fn mate(g: &crate::game::Game, m: GuardId) -> String {
     }
     cs.clone()
 }
-pub(super) fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.ch[g.gd[gd].ch].id, room.name) }
+pub(super) fn stay_key(g: &crate::game::Game, gd: GuardId, room: &crate::enemysquads::StayKeyRoom) -> String { format!("{}|{}", g.char_id(gd), room.name) }
 /// × a squad's beats on the net: a drilled garrison's `netK`, read off the map's own rows
 pub(super) fn net_k(g: &crate::game::Game) -> f64 { match squad_drill(g) { Some(k) if k.drill_net => k.net_k, _ => 1.0 } }
 /// × the beat of a hit squad's own men in its other rooms

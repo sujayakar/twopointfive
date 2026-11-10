@@ -521,7 +521,7 @@ impl KitAsk for Play {
     }
     fn sam_in_a_wall(&mut self) -> f64 {
         let pl = self.g.player;
-        let p = self.g.ch[self.g.pl[pl].ch].pos;
+        let p = self.g.player_pos(pl);
         let (r, y1) = (game::player::body_r(&self.g, p), if self.g.pl[pl].crouch { 1.0 } else { 1.7 });
         let mut q = p;
         game::scene_collision::collide_circle(&mut self.g, &mut q, r, 0.2, y1, Some(1.0));
@@ -586,7 +586,7 @@ impl KitAsk for Play {
     fn off_the_door(&self, d: DoorId, side: f64, along: f64, off: f64) -> [f64; 2] { let at = game::doortools::door_pt(&self.g, d, self.g.dr[d].def.width / 2.0 + along, off, side, None); [at[0], at[2]] }
     fn pistol_rounds(&self) -> f64 { game::weapons::firearm_rounds_ready(&self.g, self.g.pl[self.g.player].pistol) }
     fn gun_light(&self) -> ([f64; 3], f64, bool) { let l = self.g.pl[self.g.player].light; let t = &self.g.tab.light[l]; (t.pos, t.radius, t.enabled) }
-    fn sam_shoulder(&self) -> [f64; 3] { let c = self.g.pl[self.g.player].ch; self.g.ch[c].bones.get(game::character::Bone::UpperArmR).copied().expect("he has a shoulder") }
+    fn sam_shoulder(&self) -> [f64; 3] { let c = self.g.pl[self.g.player].ch; self.g.ch[c].bone(game::character::Bone::UpperArmR).expect("he has a shoulder") }
     fn solid_between(&mut self, a: [f64; 3], b: [f64; 3]) -> bool {
         let (d, l) = ([b[0] - a[0], b[1] - a[1], b[2] - a[2]], ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt());
         game::scene_collision::raycast(&mut self.g, a, [d[0] / l, d[1] / l, d[2] / l], l).is_some()
@@ -644,13 +644,13 @@ impl KitAsk for Play {
     fn frag_step_off(&mut self) -> Option<[f64; 2]> { game::frag::frag_step_off(&mut self.g, None).map(|p| [p[0], p[2]]) }
     fn sam_down(&self) -> bool { game::condition::down(&self.g, self.g.pl[self.g.player].ch) }
     fn side_table(&self) -> (f64, f64, f64) { let k = &self.g.k.gunslots; (k.near, k.out, k.lull) }
-    fn pistol_in_hand(&self, gd: GuardId) -> bool { let d = self.g.fa[self.g.gd[gd].weapon].def; self.g.m.weapons.weapons.get(d).unwrap().cls == game::weapons::WeaponClass::Pistol }
+    fn pistol_in_hand(&self, gd: GuardId) -> bool { let d = self.g.fa[self.g.gd[gd].weapon].def; self.g.weapon(d).cls == game::weapons::WeaponClass::Pistol }
     fn side_out(&self, gd: GuardId) -> bool { self.g.gd[gd].second.is_some_and(|s| s.out) }
     fn long_gun_hung(&self, gd: GuardId) -> bool { game::gunslots::side_hung(&self.g, gd).is_some() }
     fn hands_busy(&self, gd: GuardId) -> bool { game::gunslots::side_locked(&self.g, gd) }
     fn rounds_ready(&self, gd: GuardId) -> f64 { game::weapons::firearm_rounds_ready(&self.g, self.g.gd[gd].weapon) }
-    fn gun_full(&self, gd: GuardId) -> bool { let w = self.g.gd[gd].weapon; game::weapons::firearm_rounds_ready(&self.g, w) >= self.g.m.weapons.weapons.get(self.g.fa[w].def).unwrap().mag_capacity }
-    fn reload_secs(&self, gd: GuardId) -> f64 { let d = self.g.fa[self.g.gd[gd].weapon].def; self.g.m.weapons.weapons.get(d).unwrap().reload.dur }
+    fn gun_full(&self, gd: GuardId) -> bool { let w = self.g.gd[gd].weapon; game::weapons::firearm_rounds_ready(&self.g, w) >= self.g.weapon(self.g.fa[w].def).mag_capacity }
+    fn reload_secs(&self, gd: GuardId) -> f64 { let d = self.g.fa[self.g.gd[gd].weapon].def; self.g.weapon(d).reload.dur }
     fn goes_to_his_sidearm(&mut self, gd: GuardId, dist: f64) -> bool { game::gunslots::side_out(&mut self.g, gd, dist) }
     fn man_in_front_of(&mut self, gd: GuardId) { game::gunslots::side_seen(&mut self.g, gd); }
     fn sidearm_counts(&self) -> (i32, i32) { (self.g.stats.gunslots.out, self.g.stats.gunslots.back) }
@@ -660,7 +660,7 @@ impl KitAsk for Play {
     fn forty_duds(&self) -> usize { self.g.items.items.iter().filter(|&&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Shell).count() }
     fn forty_end(&self) -> Option<(bool, f64, bool)> { self.g.m.he40.he40_log.last().map(|e| (e.armed, e.flown, e.met == game::he40::ShellEndMet::Man)) }
     fn forty_ends(&self) -> usize { self.g.m.he40.he40_log.len() }
-    fn chest(&self, gd: GuardId) -> [f64; 3] { let c = self.g.gd[gd].ch; self.g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([self.g.ch[c].pos[0], 1.2, self.g.ch[c].pos[2]]) }
+    fn chest(&self, gd: GuardId) -> [f64; 3] { let c = self.g.gd[gd].ch; self.g.ch[c].bone(game::character::Bone::Chest).unwrap_or([self.g.ch[c].pos[0], 1.2, self.g.ch[c].pos[2]]) }
     fn blasts(&self) -> usize { self.g.m.frag.frag_log.len() }
     fn burst_took(&self, gd: GuardId) -> (bool, bool) {
         let id = self.id_of(gd);
@@ -698,7 +698,7 @@ impl KitAsk for Play {
     }
     fn body_of(&self, gd: GuardId) -> game::ids::CharId { self.g.gd[gd].ch }
     fn body_of_sam(&self) -> game::ids::CharId { self.g.pl[self.g.player].ch }
-    fn hips_of(&self, c: game::ids::CharId) -> [f64; 3] { self.g.ch[c].bones.get(game::character::Bone::Hips).copied().unwrap_or(self.g.ch[c].pos) }
+    fn hips_of(&self, c: game::ids::CharId) -> [f64; 3] { self.g.ch[c].bone(game::character::Bone::Hips).unwrap_or(self.g.ch[c].pos) }
     fn joints(&self, c: game::ids::CharId) -> Vec<[f64; 3]> { self.g.ch[c].bones.iter().map(|(_, p)| *p).collect() }
     fn paces(&self) -> (f64, f64, f64, f64, f64) { let t = &self.g.tune; (self.g.k.twogears.crouch, self.g.k.crouchrun.pace, t.player_walk, t.player_sprint, t.guard_walk) }
     fn footfalls_now(&self) -> Vec<f64> { let now = self.g.time; self.g.events.iter().filter(|e| e.kind == game::director::EventKind::Step && e.time == now).filter_map(|e| e.level).collect() }
@@ -723,7 +723,7 @@ impl KitAsk for Play {
     fn on_a_knee(&self, gd: GuardId) -> bool { self.g.gd[gd].door_down_until > self.g.time }
     fn walking_to_boot(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).and_then(|m| m.kick.as_ref()).map_or(false, |k| k.phase == game::doorforce::KickPhase::Walk) }
     fn on_a_door(&self, gd: GuardId) -> bool { self.g.m.doorforce.states.as_ref().and_then(|s| s.men.get(gd)).map_or(false, |m| m.on.is_some()) }
-    fn head(&self, gd: GuardId) -> [f64; 3] { let c = self.g.gd[gd].ch; self.g.ch[c].bones.get(game::character::Bone::Head).copied().expect("a man has a head") }
+    fn head(&self, gd: GuardId) -> [f64; 3] { let c = self.g.gd[gd].ch; self.g.ch[c].bone(game::character::Bone::Head).expect("a man has a head") }
     fn out_cold(&self, gd: GuardId) -> bool { game::condition::down(&self.g, self.g.gd[gd].ch) && game::game::is_breathing(&self.g, gd) }
     fn rings_on_floor(&self) -> usize { self.g.items.items.iter().filter(|&&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Ring).count() }
     fn rings_in_air(&self) -> usize { self.g.rings.len() }

@@ -33,10 +33,7 @@ pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
             }
         }
         let c = g.gd[gd].ch;
-        let eye: V3 = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(head) => *head,
-            None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-        };
+        let eye: V3 = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
         let look = crate::guards::look_of(g, c);
         let (lx, lz) = (look[0], look[2]);
         let (half_deg, near_deg, near_m) = (g.k.guard_eye.half_deg, g.k.guard_eye.near_deg, g.k.guard_eye.near_m);

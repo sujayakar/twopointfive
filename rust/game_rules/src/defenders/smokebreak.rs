@@ -79,7 +79,7 @@ fn mouth_of(g: &crate::game::Game, c_2: CharId) -> crate::smokebreak::MouthOf {
 pub fn tip_of(g: &crate::game::Game, c_2: CharId) -> Option<V3> {
     let c = c_2;
     let h = *g.ch[c].bones.get(crate::character::Bone::HandL)?;
-    let e = g.ch[c].bones.get(crate::character::Bone::ForearmL).copied();
+    let e = g.ch[c].bone(crate::character::Bone::ForearmL);
     let k = &g.k.smokebreak;
     let body_yaw = g.ch[c].body_yaw;
     let mut d: V3 = [m::sin(body_yaw), 0.0, m::cos(body_yaw)];

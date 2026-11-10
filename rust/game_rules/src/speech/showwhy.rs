@@ -101,7 +101,7 @@ fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
     {
         return false;
     }
-    let to = g.ch[g.gd[h].ch].pos;
+    let to = g.pos_of(h);
     if mate_nearer(g, &crate::seats::here(g), gd, to) {
         return false;
     }
@@ -114,8 +114,8 @@ fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// A mate stands in this man's line to `to` nearer to him than the player does.
 fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: V3) -> bool {
-    let c = g.ch[g.gd[gd].ch].pos;
-    let pl = g.ch[g.pl[seat.player].ch].pos;
+    let c = g.pos_of(gd);
+    let pl = g.seat_pos(seat);
     let dx = to[0] - c[0];
     let dz = to[2] - c[2];
     let l = m::hyp2(dx, dz);
@@ -131,7 +131,7 @@ fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId,
         if o == gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != team {
             continue;
         }
-        let op = g.ch[g.gd[o].ch].pos;
+        let op = g.pos_of(o);
         let x = op[0] - c[0];
         let z = op[2] - c[2];
         let a = x * ux + z * uz;
@@ -145,13 +145,13 @@ fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId,
 /// The side of his line to his man the player stands on: 1 his left, -1 his right.
 fn line_side(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
     let h = op_tgt(g, gd);
-    let c = g.ch[g.gd[gd].ch].pos;
-    let pl = g.ch[g.pl[seat.player].ch].pos;
+    let c = g.pos_of(gd);
+    let pl = g.seat_pos(seat);
     let h = match h {
         Some(h) => h,
         None => return 1.0,
     };
-    let hp = g.ch[g.gd[h].ch].pos;
+    let hp = g.pos_of(h);
     let dx = hp[0] - c[0];
     let dz = hp[2] - c[2];
     if ((pl[0] - c[0]) * dz - (pl[2] - c[2]) * dx) / m::max(1e-3, m::hyp2(dx, dz)) >= -0.15 {
@@ -225,12 +225,12 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
         if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
-        let o_pos = g.ch[g.gd[o].ch].pos;
+        let o_pos = g.pos_of(o);
         let d = v3::dist_xz(pos, o_pos);
         if d < 0.3 || d > reach || v3::dist_xz(o_pos, door) > d0 - 0.1 {
             continue;
         }
-        if m::abs(v3::wrap_angle(m::atan2(o_pos[0] - pos[0], o_pos[2] - pos[2]) - yaw)) < 1.0 {
+        if m::abs(v3::wrap_angle(v3::yaw_to(pos, o_pos) - yaw)) < 1.0 {
             return true;
         }
     }
@@ -256,7 +256,7 @@ fn op_mem(g: &mut Game, op: DoorOpId) -> &mut OpMem { g.m.showwhy.op_mem.get_mut
 fn stack_begins(g: &mut Game, op: DoorOpId, men: &[GuardId]) {
     let (k, t) = (g.k.showwhy, g.time);
     let (lead, door) = { let o = &g.tab.doortools_door_op[op]; (o.lead, g.dr[o.door].frame_centre) };
-    let mut file: Vec<(GuardId, f64)> = men.iter().filter(|&&gd| gd != lead && !crate::condition::down(g, g.gd[gd].ch)).map(|&gd| (gd, v3::dist_xz(g.ch[g.gd[gd].ch].pos, door))).collect();
+    let mut file: Vec<(GuardId, f64)> = men.iter().filter(|&&gd| gd != lead && !crate::condition::down(g, g.gd[gd].ch)).map(|&gd| (gd, v3::dist_xz(g.pos_of(gd), door))).collect();
     js::sort_by(&mut file, |a, b| b.1 - a.1);
     let mut r = OpMem { t, turns: Vec::new(), fist_t: 0.0, fists: 0 };
     let mut at = t + 0.15;

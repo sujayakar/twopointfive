@@ -37,9 +37,9 @@ pub fn lit(g: &Game, seat: &crate::seats::SeatRef) -> Option<(Vec<GuardId>, V3, 
 fn read_of(g: &Game, kind: SquadThrowKind) -> String {
     let mut s = js::num_str(left(g, kind));
     let mut at = |p: V3, up: bool| { s.push_str(&format!(";{},{}{}", js::num_str(m::floor(p[0] * 2.0)), js::num_str(m::floor(p[2] * 2.0)), if up { "" } else { "x" })); };
-    at(g.ch[g.pl[g.player].ch].pos, !crate::condition::down(g, g.pl[g.player].ch));
+    at(g.player_pos(g.player), !crate::condition::down(g, g.pl[g.player].ch));
     for &gd in g.guards.iter() {
-        if g.team(gd).ours() { at(g.ch[g.gd[gd].ch].pos, !crate::condition::down(g, g.gd[gd].ch)); }
+        if g.team(gd).ours() { at(g.pos_of(gd), !crate::condition::down(g, g.gd[gd].ch)); }
     }
     s
 }
@@ -89,7 +89,7 @@ fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Op
         None => refuse = Some(String::from(if left(g, kind) > 0.0 { "no throw from here." } else { none(kind).as_str() })),
         Some(th) => {
             if kind == SquadThrowKind::Frag {
-                let stands = th.post.unwrap_or(g.ch[g.gd[th.gd].ch].pos);
+                let stands = th.post.unwrap_or(g.pos_of(th.gd));
                 refuse = squad_frag_catches(g, th.rest, at, Some(SquadFragCatchesMoved { gd: th.gd, at: stands }), Some(false), None, None);
                 if squad_frag_on_sam(g, th.rest, at) { warn = Some(String::from(" · too close: you")); }
             } else {

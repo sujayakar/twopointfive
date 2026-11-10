@@ -361,7 +361,7 @@ fn cues_ears(g: &crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
-        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.ch[g.pl[pl].ch].pos)); }
+        if !crate::condition::down(g, g.pl[pl].ch) { out.push(at(g.player_pos(pl))); }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -395,7 +395,7 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
     if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done("gap"); }
     let secs = g.k.cues.secs;
     if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done("full"); }
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let mouth: V3 = [p[0], p[1] + 1.2, p[2]];
     let reach = g.k.digin.shout_m;
     let mut reached = false;
@@ -605,10 +605,10 @@ pub fn cues_tick(g: &mut crate::game::Game, news: &[News]) {
             if cues_cue(g, gd, CueKind::Calm, None) { cues_man(g, gd).stood_t = t; }
         } else if on_player && faced_down(g).is_some() && state == crate::game::GuardState::Alert && !cues_man(g, gd).covered && still && {
             let f = crate::seats::faced_man(g, gd);
-            v3::dist_xz(g.ch[c].pos, g.ch[g.pl[f].ch].pos) < 3.5
+            v3::dist_xz(g.ch[c].pos, g.player_pos(f)) < 3.5
         } {
             let f = crate::seats::faced_man(g, gd);
-            let p = g.ch[g.pl[f].ch].pos;
+            let p = g.player_pos(f);
             let at = cues_at(g, p);
             // (said, or a man beside him has just said it for both)
             if cues_cue(g, gd, CueKind::Cover, Some(&at_vars(&at))) || cues_kind_busy(g, CueKind::Cover) { cues_man(g, gd).covered = true; }
@@ -663,7 +663,7 @@ fn cues_man_did(g: &mut crate::game::Game, gd: GuardId, did: Did) {
     let Some(d) = crate::roomfight::def_of(g, gd) else { return };
     if crate::condition::down(g, g.gd[gd].ch) { return; }
     cues_man(g, gd);
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     match did {
         Did::HoldsWhereHeIs => {
             if g.time - cues_man(g, gd).stood_t > 15.0 {

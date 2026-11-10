@@ -123,7 +123,7 @@ fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let pos = g.ch[hc].pos;
     let stale = match &row {
         None => true,
-        Some(r) => now - r.t > meter.gap_secs && m::hyp2(r.at[0] - pos[0], r.at[2] - pos[2]) > meter.moved_m,
+        Some(r) => now - r.t > meter.gap_secs && v3::dist_xz(r.at, pos) > meter.moved_m,
     };
     if stale {
         row = None;
@@ -169,7 +169,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     }
     let now = g.time;
     let pl = g.player;
-    let pp = g.ch[g.pl[pl].ch].pos;
+    let pp = g.player_pos(pl);
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
@@ -279,7 +279,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
         crate::mind::raise(g, o, 0.92, "guards");
         crate::belief::word(g, o, p.sam);
         if was_calm {
-            let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
+            let d = v3::dist(g.pos_of(o), p.sam);
             let roll = crate::dice::draw_of(g, "guards::hostage_call#1", gd);
             g.gd[o].react_t = m::max(g.gd[o].react_t, 0.25 + m::min(1.2, d / 25.0) + roll * 0.4);
         }
@@ -331,8 +331,8 @@ fn pick_side(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 
         }
     }
     let c_2 = p.centre;
-    let pos = g.ch[g.gd[gd].ch].pos;
-    let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);
+    let pos = g.pos_of(gd);
+    let brg = v3::yaw_to(c_2, pos);
     let to_rear = v3::wrap_angle(p.facing + m::PI - brg);
     let short = if to_rear < 0.0 { -1.0 } else { 1.0 };
     let (rs_n, rs_full) = ring_room(g, c_2, brg, to_rear, short, short);
@@ -375,7 +375,7 @@ pub(super) fn flank_shot(g: &crate::game::Game, gd: GuardId, p: crate::guards::P
     let pos = g.ch[c].pos;
     let from = crate::combat::shoulder(g, c);
     let dist = v3::dist_xz(pos, p.centre);
-    let brg = m::atan2(pos[0] - p.sam[0], pos[2] - p.sam[2]);
+    let brg = v3::yaw_to(p.sam, pos);
     let rear = m::abs(v3::wrap_angle(brg - (p.facing + m::PI)));
     let to = p.aim;
     let d = v3::sub(to, from);
@@ -544,10 +544,10 @@ pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f
 
 /// The next point on the ring for this man, an arc's step toward dead astern of them; None = planted or cornered.
 pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, p: crate::guards::Pair) -> Option<V3> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let c_2 = p.centre;
     let dist = v3::dist_xz(pos, c_2);
-    let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);
+    let brg = v3::yaw_to(c_2, pos);
     let to_rear = v3::wrap_angle(p.facing + m::PI - brg);
     let short = if to_rear < 0.0 { -1.0 } else { 1.0 };
     let round = m::abs(to_rear) < STANDOFF_SETTLE_DEG * v3::DEG;
@@ -642,7 +642,7 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
 /// The point on this man's own nav path to `C` where it first comes within the ring, if they are in sight from there.
 fn approach_point(g: &crate::game::Game, gd: GuardId, c_2: V3, need_sight: Option<bool>) -> Option<V3> {
     let need_sight = need_sight.unwrap_or(true);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let path = crate::scene_collision::nav_grid_find_path(g, pos, c_2, None, None)?;
     if path.is_empty() {
         return None;
@@ -687,9 +687,9 @@ fn open_floor(g: &Game, pos: V3, q: V3) -> bool {
 
 /// Where a man too close to the pair backs off to; None = boxed in.
 pub(super) fn retreat_goal(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> Option<V3> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let c_2 = p.centre;
-    let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);
+    let brg = v3::yaw_to(c_2, pos);
     for da in [0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5] {
         for r in [STANDOFF_MIN_M + 0.7, STANDOFF_MIN_M + 0.2, STANDOFF_MIN_M + 1.4] {
             let a = brg + da;

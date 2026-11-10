@@ -99,7 +99,7 @@ mod tests {
     use crate::weapons::GunModelId as Id;
     use crate::weapons::{WeaponDef, WeaponId as W};
 
-    fn row(g: &Game, id: W) -> WeaponDef { g.m.weapons.weapons.get(id).unwrap().clone() }
+    fn row(g: &Game, id: W) -> WeaponDef { g.weapon(id).clone() }
 
     /// A FAILURE MEANS: a gun is drawn twice over, or finds no model at all.
     #[test]

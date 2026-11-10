@@ -101,7 +101,7 @@ pub fn wall_charge_can_of(g: &mut crate::game::Game, gd: GuardId, t: &crate::ord
     let cs = g.col.nav.cell;
     let said = if wall_charge_kept_for(g, t).is_some() {
         let p = g.pos_of(gd);
-        let key = format!("r|{}|{},{}|{},{}", g.ch[g.gd[gd].ch].id, m::floor(p[0] / cs), m::floor(p[2] / cs), spot[0], spot[2]);
+        let key = format!("r|{}|{},{}|{},{}", g.char_id(gd), m::floor(p[0] / cs), m::floor(p[2] / cs), spot[0], spot[2]);
         kept_reach(g, key, gd, spot)
     } else { crate::orders::squad_orders_reach(g, gd, spot) };
     match said { Some(s) => WallChargeCanOf::Text(s), None => WallChargeCanOf::Bool(true) }
@@ -374,7 +374,7 @@ fn wall_charge_waiting(g: &crate::game::Game, op: WallOpId, el: f64) -> bool {
 // ------------------------------------------------------------ Sam's key, the frame
 /// the set charge nearest Sam (null: none)
 pub(super) fn wall_charge_nearest(g: &mut crate::game::Game, of: Option<&mut dyn FnMut(&mut crate::game::Game, WallChargeId) -> bool>) -> Option<WallChargeId> {
-    let sam = g.ch[g.pl[g.player].ch].pos;
+    let sam = g.player_pos(g.player);
     let mut list: Vec<WallChargeId> = Vec::new();
     match of {
         Some(f) => for c in g.sets[g.seat].wall_charge.set.clone() { if f(g, c) { list.push(c); } },
@@ -405,7 +405,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     if let Some(rows) = g.sets[g.seat].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
         if rows.iter().any(|&d| g.tab.orders_order_def[d].word) { return; }
     }
-    let sam = g.ch[g.pl[g.player].ch].pos;
+    let sam = g.player_pos(g.player);
     let c = match wall_charge_nearest(g, Some(&mut |g: &mut Game, x: WallChargeId| wall_charge_key_is(g, &crate::seats::here(g), x))) { Some(c) => c, None => return };
     let wall = g.tab.wallcharge_set_wall_charge[c].wall.clone();
     let foot = wall_pt(g, &wall, 0.0, 0.0, None);

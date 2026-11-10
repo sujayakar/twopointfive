@@ -90,7 +90,7 @@ pub fn side_out_alert(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(k) = k else { return false };
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    side_out(g, gd, m::hyp2(k[0] - p[0], k[2] - p[2]))
+    side_out(g, gd, crate::v3::dist_xz(k, p))
 }
 
 /// DRY ON A MAN: the sidearm comes out instead of the reload; true, and no round goes for `out` seconds. GUNSLOTS.on and .dry are settled true.

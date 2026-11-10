@@ -28,7 +28,7 @@ fn guard_at(g: &Game, i: f64) -> Option<GuardId> {
 
 /// his id's share of 0‥1, no dice.
 fn id_share(g: &crate::game::Game, gd: GuardId) -> f64 {
-    v3::frac(g.ch[g.gd[gd].ch].id * 0.6180339887)
+    v3::frac(g.char_id(gd) * 0.6180339887)
 }
 
 /// a living man who has not fled the level.
@@ -808,7 +808,7 @@ fn works_the_lever(g: &mut Game, o: OnErrand) {
     }
     let bp = g.level.breaker.pos;
     let p = g.pos_of(o.gd);
-    let face = m::atan2(bp[0] - p[0], bp[2] - p[2]);
+    let face = v3::yaw_to(p, bp);
     crate::squad::order(g, o.gd, crate::squad::OrderPatch { face: Some(Some(face)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::None)), ..Default::default() });
     if g.light_home.mains.permanent && g.time - there_t > g.k.powerout.look_secs {
         st(g).word = true;

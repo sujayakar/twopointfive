@@ -498,7 +498,7 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
             let along = -v3::dot(to, dir);
             if along > 0.0 && along < seg_len {
                 let q = v3::mad(hit_p, dir, -along);
-                if m::hyp2(q[0] - c[0], q[2] - c[2]) < m::max(h[0], h[2]) + 0.06 && q[1] > c[1] - 0.05 && q[1] < c[1] + 0.35 { hit_it = true; }
+                if v3::dist_xz(q, c) < m::max(h[0], h[2]) + 0.06 && q[1] > c[1] - 0.05 && q[1] < c[1] + 0.35 { hit_it = true; }
             }
         }
         if !hit_it { continue; }

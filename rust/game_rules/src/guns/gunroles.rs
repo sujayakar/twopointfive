@@ -165,7 +165,7 @@ pub fn gun_keeps_post(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// What this dealing of men to stack marks costs for the guns in it.
 pub fn gun_file_cost(g: &crate::game::Game, r: &[f64], spots: &[V3], front: V3) -> f64 {
-    let d: Vec<f64> = spots.iter().map(|s| m::hyp2(s[0] - front[0], s[2] - front[2])).collect();
+    let d: Vec<f64> = spots.iter().map(|s| v3::dist_xz(*s, front)).collect();
     let file_cost = g.k.gunroles.file_cost;
     let mut c = 0.0;
     for a in 0..r.len() {

@@ -31,7 +31,7 @@ fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: 
     let i = i as usize;
     let c = g.gd[gd].ch;
     let leans = g.gd[gd].script.as_ref().and_then(|s| s.lean).map_or(false, js::truthy);
-    let hd: Option<V3> = if leans { g.ch[c].bones.get(crate::character::Bone::Head).copied() } else { None };
+    let hd: Option<V3> = if leans { g.ch[c].bone(crate::character::Bone::Head) } else { None };
     let p = hd.unwrap_or(g.ch[c].pos);
     let s = &mut g.tab.doortools_room_search[sr];
     let stale = match s.los.get(gd) {
@@ -114,7 +114,7 @@ pub(super) fn door_tools_scan(g: &mut crate::game::Game, sr: DoortoolsRoomSearch
 fn door_tools_walk_len(g: &crate::game::Game, a: V3, b: V3, lim: f64) -> f64 {
     let d = dist_xz(a, b);
     if d > lim { return f64::INFINITY; }
-    if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) { return d; }
+    if !crate::scene_collision::low_blocked(g, a, b) { return d; }
     let path = match crate::scene_collision::nav_grid_find_path(g, a, b, Some(3000.0), None) { Some(p) => p, None => return f64::INFINITY };
     let l = crate::places::walk_len(a, &path) + dist_xz(path.last().copied().unwrap_or(a), b);
     if l > lim { f64::INFINITY } else { l }
@@ -239,7 +239,7 @@ pub(super) fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64,
             let a = k as f64 * m::PI / 6.0;
             let q: V3 = [p[0] + m::sin(a) * r, 0.0, p[2] + m::cos(a) * r];
             if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || !in_room(g, q)
-                || crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None)
+                || crate::scene_collision::low_blocked(g, p, q)
                 || taken.iter().any(|&t| dist_xz(t, q) < apart)
                 || dist_xz(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g)), q) < 1.0 { continue; }
             if crate::entrypoints::entry_points_risk_at(g, q, None, None).is_some() { continue; }
@@ -682,7 +682,7 @@ pub(super) fn door_tools_pods_apart(g: &crate::game::Game, op: DoorOpId, pods: &
 /// Sam's trigger: the set charge nearest him (or the one given) goes; what it did, null with none set
 pub(super) fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) {
     let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
 }
 

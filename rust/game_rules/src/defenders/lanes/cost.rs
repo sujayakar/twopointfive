@@ -115,10 +115,7 @@ pub(super) fn lanes_gone(g: &mut crate::game::Game) {
 /// Where he looks from.
 pub(super) fn eye_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(p) => *p,
-        None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Head, 1.65)
 }
 
 /// The nav cell a point lies in, −1 off the grid.
@@ -156,7 +153,7 @@ pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let Some(fc) = g.gd[gd].foe else { return false };
-    dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
+    dist_xz(g.pos_of(gd), g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
 }
 
 /// He is going in behind a charge; a lapsed entry is dropped as it is asked.
@@ -212,7 +209,7 @@ pub(super) fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
             None => false,
         };
     }
-    g.guards.iter().any(|&o| g.ch[g.gd[o].ch].id == id_2 && !crate::condition::down(g, g.gd[o].ch))
+    g.guards.iter().any(|&o| g.char_id(o) == id_2 && !crate::condition::down(g, g.gd[o].ch))
 }
 
 pub use crate::roomfight::def_of;
@@ -710,10 +707,7 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
             }
             let c = g.gd[gd].ch;
             let p = if dead {
-                match g.ch[c].bones.get(crate::character::Bone::Hips) {
-                    Some(x) => *x,
-                    None => g.ch[c].pos,
-                }
+                g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos)
             } else {
                 g.ch[c].pos
             };

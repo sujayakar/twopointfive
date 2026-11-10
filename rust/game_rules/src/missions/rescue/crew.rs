@@ -250,8 +250,8 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
 
 /// This frame's loud things: the last one the team did is where a roamer goes.
 fn rescue_hear(g: &mut crate::game::Game) {
-    let mut mine: Vec<f64> = vec![g.ch[g.pl[g.player].ch].id];
-    for &o in &g.staged.team { mine.push(g.ch[g.gd[o].ch].id); }
+    let mut mine: Vec<f64> = vec![g.player_id(g.player)];
+    for &o in &g.staged.team { mine.push(g.char_id(o)); }
     let mut i = 0;
     while i < g.events.len() {
         let e = g.events[i];
@@ -549,7 +549,7 @@ fn going_in_to_the_room(g: &mut Game, man: &CrewMan, bounds: Option<crate::scene
         if !g.dr[dr].leaf.latched && !g.dr[dr].leaf.closing && in_rect(g.pos_of(h), bounds) {
             let (at, fc) = (g.pos_of(h), g.dr[dr].frame_centre);
             if v3::dist_xz(at, fc) > 1.1 && v3::dist_xz(at, fc) < 3.0 {
-                let who = g.ch[g.gd[h].ch].id;
+                let who = g.char_id(h);
                 crate::doors::doors_pull_to(g, dr, who);
             }
         }

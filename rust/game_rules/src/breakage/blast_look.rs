@@ -29,7 +29,7 @@ fn live(g: &crate::game::Game) -> bool { blast().on && crate::destruction::chaos
 /// NOT a boundary no-op, though it is "look only": a set charge's thirteen boxes are on the FRAME'S LIST (which the fog of war, the listing of the box
 /// world and every table numbered by reach count), and the flash it warms is a light of the engine's list, which the light estimate reads.
 pub fn blast_look_tick(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
     blast_look_tick_raw(g, out);
     crate::fogofwar::fog_of_war_done(g, was);

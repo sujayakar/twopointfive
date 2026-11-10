@@ -148,8 +148,8 @@ fn far(g: &Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> f64 {
     let at = t.at();
     let mut s = 0.0;
     for &m in men {
-        let p = g.ch[g.gd[m].ch].pos;
-        s = s + m::hyp2(p[0] - at[0], p[2] - at[2]);
+        let p = g.pos_of(m);
+        s = s + v3::dist_xz(p, at);
     }
     s / men.len() as f64
 }

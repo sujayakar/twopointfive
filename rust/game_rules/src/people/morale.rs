@@ -70,7 +70,7 @@ pub(super) fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
 /// his row, made the first time he is met: the row itself, for a few lines
 fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::morale::Mind {
     if !g.m.morale.state_of.has(gd) {
-        let id = g.ch[g.gd[gd].ch].id;
+        let id = g.char_id(gd);
         let s = Mind { shock: 0.0, alone: false, dark: false, lit: 0.0, ask: js::rem(id, 4.0) / 4.0 * g.k.morale.ask_secs, rung: 0.0, green: false, leader_down: false, fall: -1.0, lost: false, by: None, heard: -1.0, said: false, broke_t: 0.0,
             act: MoraleAct::None, t: 0.0, hole: None, goal: None, rounds: 0.0, next: 0.0, calls: 0.0, call_t: 0.0, baits: 0.0, at_hole: false, bark: g.k.morale.bark_secs, shout: false,
             drive: false, drive_t: -1.0, script: crate::game::GuardScript::default() };
@@ -254,7 +254,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
         if (st.act == MoraleAct::None || st.act == MoraleAct::Duck) && reacts(g, gd) {
             begin(g, gd, MoraleAct::Flinch, Some(at));
         }
-        let d = dist_xz(g.ch[g.gd[gd].ch].pos, at);
+        let d = dist_xz(g.pos_of(gd), at);
         if d < nd { nd = d; near = Some(gd); }
     }
     if let Some(n) = near {
@@ -346,7 +346,7 @@ fn feed(g: &mut crate::game::Game, b: crate::morale::Blast) {
     }
     for &gd in fed.iter() {
         let st = now(g, gd);
-        let d = dist_xz(g.ch[g.gd[gd].ch].pos, b.at);
+        let d = dist_xz(g.pos_of(gd), b.at);
         if st.act == MoraleAct::Duck && st.t == 0.0 && d < cd { cd = d; caller = Some(gd); }
     }
     if let Some(c) = caller { mind(g, c).shout = true; }
@@ -440,7 +440,7 @@ fn clear_run(g: &crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64) -> 
         if crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [p[0] + dx * r, 0.45, p[2] + dz * r], None) || crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [p[0] + dx * r, 1.0, p[2] + dz * r], None) { break; }
         let mut blocked = false;
         for &o in g.guards.iter() {
-            if o != gd && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.ch[g.gd[o].ch].pos, [x, 0.0, z]) < 0.6 { blocked = true; break; }
+            if o != gd && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.pos_of(o), [x, 0.0, z]) < 0.6 { blocked = true; break; }
         }
         if blocked { break; }
         far = s;
@@ -555,7 +555,7 @@ fn bait(g: &mut crate::game::Game, gd: GuardId) {
     }
     if st.baits == 1.0 {
         begin(g, gd, MoraleAct::Bait, None);
-        let cap = g.m.weapons.weapons.get(g.fa[w].def).unwrap().mag_capacity;
+        let cap = g.weapon(g.fa[w].def).mag_capacity;
         g.m.morale.state_of.get_mut(gd).unwrap().rounds = cap + 1.0;
     } else if st.baits == 2.0 {
         begin(g, gd, MoraleAct::Bait, None);
@@ -571,7 +571,7 @@ fn pose(g: &mut crate::game::Game, gd: GuardId, rooted: bool) {
     let hole = st.hole.unwrap();
     let low = rooted || st.act == MoraleAct::Duck || st.act == MoraleAct::Flinch || (st.act == MoraleAct::Down && folds(g, gd)) || st.act == MoraleAct::Reload;
     let walks = st.act == MoraleAct::Back || st.act == MoraleAct::Stand;
-    let face = v3::yaw_to(g.ch[g.gd[gd].ch].pos, hole);
+    let face = v3::yaw_to(g.pos_of(gd), hole);
     let speed = g.k.morale.back_speed;
     let sc = &mut g.m.morale.state_of.get_mut(gd).unwrap().script;
     sc.goal = if walks && !rooted { st.goal } else { None };
@@ -861,7 +861,7 @@ fn shoots_at_the_bait(g: &mut Game, gd: GuardId, hole: V3, dt: f64) {
     let mut over = !round(g, gd, dt, every);
     if !over {
         let w = g.fa[g.gd[gd].weapon].def;
-        let cap = g.m.weapons.weapons.get(w).unwrap().mag_capacity;
+        let cap = g.weapon(w).mag_capacity;
         over = row(g, gd).t > (cap + 1.0) * g.k.morale.bait_every + 2.0;
     }
     if over {

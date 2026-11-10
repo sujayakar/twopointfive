@@ -11,7 +11,7 @@ fn run(shown: usize) -> Vec<Vec<u32>> {
     let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed: 7, seats: 2, dress: true, ..Default::default() });
     p.sam_unhurt();
     game::wallcharge::wall_charge_raise_carried(&mut p.g, 2.0);
-    let who = p.g.ch[p.g.pl[p.g.player].ch].id;
+    let who = p.g.player_id(p.g.player);
     let mut out = Vec::with_capacity(FRAMES / EVERY);
     let mut blown = false;
     for k in 0..FRAMES {

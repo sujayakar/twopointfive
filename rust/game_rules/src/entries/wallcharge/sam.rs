@@ -143,7 +143,7 @@ pub fn wall_charge_sam_words(g: &crate::game::Game, c_2: WallChargeId) -> String
 /// Would it put HIM down where he stands
 pub fn wall_charge_sam_fatal(g: &crate::game::Game, c_2: WallChargeId) -> bool {
     if g.god_mode { return false; }
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let at = wall_pt(g, &w, 0.0, 0.0, None);
     let off = wall_off(g, &w, p);
@@ -161,7 +161,7 @@ pub fn wall_charge_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef
     if W.set.is_empty() { return out; }
     let mark = !crate::pairorders::pair_orders_waiting(g, seat).is_empty();   // (while his partner waits on a mark, the key is the mark first: the note says so)
     let f = g.k.doortools.blow_key.replacen("Key", "", 1);
-    let p = g.ch[g.pl[seat.player].ch].pos;
+    let p = g.seat_pos(seat);
     for own in [false, true] {
         let of: Vec<WallChargeId> = W.set.iter().copied().filter(|&c| wall_charge_key_is(g, seat, c) != own).collect();
         if of.is_empty() { continue; }

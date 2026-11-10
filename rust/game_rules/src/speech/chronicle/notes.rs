@@ -247,7 +247,7 @@ fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 /// The first player's feet.
 fn pos_of(g: &crate::game::Game) -> V3 {
     let man = crate::seats::man_here(&crate::seats::here(g));
-    g.ch[g.pl[man].ch].pos
+    g.player_pos(man)
 }
 
 /// The generic entry: `kind` at `pos` (his feet by default) with `data`.
@@ -418,7 +418,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, into_man: bool, hit_p
             let gd = g.guards[i];
             if crate::condition::down(g, g.gd[gd].ch) { continue; }
             let c = g.gd[gd].ch;
-            let at = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[c].pos };
+            let at = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or(g.ch[c].pos);
             let d = v3::dist(at, hit_p);
             if d < bd { bd = d; near = true; nearest = g.gd[gd].callsign.clone(); }
         }
@@ -525,7 +525,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
         _ => {
             let man = crate::seats::man_here(&crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
-                Some(gun) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()),
+                Some(gun) => crate::gear::plain_short(g.weapon(g.fa[gun].def)),
                 None => String::from("a round"),
             }
         }
@@ -536,7 +536,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
 /// A body discovered: whose, by whom, found breathing or not.
 pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let c = g.gd[body].ch;
-    let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[c].pos };
+    let h = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let breathing = match g.gd[body].down_kind { Some(k) => k != crate::game::DownKind::Shot, None => false };
     let pairs = vec![("who", tx(&g.gd[body].callsign.clone())), ("by", tx(&g.gd[by].callsign.clone())), ("breathing", yes(breathing))];
     live_row(g, ChronKind::BodyFound, row_data(pairs), Some([h[0], 0.0, h[2]]))

@@ -27,7 +27,7 @@ fn stages(g: &mut Game) -> &mut Stages { let s: &mut Stages = g.feel.at(); if s.
 fn draw(g: &mut Game) -> f64 { let s = stages(g); let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 fn seed(g: &mut Game) -> f64 { let s = stages(g); let n = s.serial; s.serial += 1.0; hash_u(m::imul(crate::js::to_i32(n), crate::js::to_i32(2654435761.0)) as f64) }
 /// the team's doing, as the blast is
-fn ours(g: &Game, seat: &crate::seats::SeatRef) -> bool { let who = g.ch[g.pl[seat.player].ch].id; crate::fogofwar::fog_of_war_ours_id(g, Some(who)) }
+fn ours(g: &Game, seat: &crate::seats::SeatRef) -> bool { let who = g.seat_id(seat); crate::fogofwar::fog_of_war_ours_id(g, Some(who)) }
 
 /// one record, with a seed of this half's own
 fn emit(g: &mut Game, kind: PKind, pos: V3, dir: V3, count: f64, o: EmitOpts) {

@@ -25,7 +25,7 @@ fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -
     let t_at = t.at();
     let watch: V3 = [t_at[0], 1.1, t_at[2]];
     for &gd in men {
-        let p = g.ch[g.gd[gd].ch].pos;
+        let p = g.pos_of(gd);
         let yaw = v3::yaw_to(p, watch);
         let (place, door) = match t {
             OrderTarget::Door(x) => (door_words(g, x.door), Some(x.door)),

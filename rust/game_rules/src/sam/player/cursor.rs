@@ -34,7 +34,7 @@ impl Cursor {
     fn of(g: &Game, input: InputId, cam: CameraId, view: crate::host_hud::View) -> Cursor {
         let at = [g.tab.input[input].mouse_x, g.tab.input[input].mouse_y];
         let ray = crate::camera::follow_camera_ray(g, cam, at[0] / m::max(1.0, view.client_width), at[1] / m::max(1.0, view.client_height));
-        let own = g.ch[g.pl[g.player].ch].id;
+        let own = g.player_id(g.player);
         let hit = cursor_hit(g, crate::player::CursorHitRay { ro: ray.ro, rd: ray.rd }, own);
         Cursor { cam, view, at, ray, hit_t: hit.as_ref().map(|h| h.t), hit_box: hit.as_ref().map(|h| h.index) }
     }
@@ -98,7 +98,7 @@ fn lamp_under(g: &Game, q: &Cursor, taken_at: Option<[f64; 2]>, r: &mut Reticle)
 
 /// The man nearest the cursor, if he is nearer than the lamp and nothing stands between.
 fn man_near(g: &Game, q: &Cursor, r: &mut Reticle) {
-    let eye = v3::add(g.ch[g.pl[g.player].ch].pos, [0.0, 1.3, 0.0]);
+    let eye = v3::add(g.player_pos(g.player), [0.0, 1.3, 0.0]);
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
         if crate::condition::down(g, g.gd[gd].ch) || in_his_arm(g, gd) || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend(g, gd) { continue; }
@@ -133,10 +133,7 @@ fn man_on_ray(g: &Game, q: &Cursor, r: &mut Reticle) {
 /// A man's centre of mass: his chest bone, or his feet raised by `up` before he has bones.
 fn chest_or(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(b) => *b,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Chest, up)
 }
 
 #[cfg(test)]

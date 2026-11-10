@@ -104,7 +104,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     let angles: Vec<f64> = g.doors.list.iter().map(|&d| g.dr[d].leaf.angle).collect();
     for &s in seats.iter() { let input = g.tab.cmd_seat[s].input; crate::seats::with_seat(g, s, &mut |g| game_door_acts(g, dt, input)); }
     if g.door_was.len() < 2 * n { g.door_was.resize(2 * n, 0.0); }
-    for i in 0..n { let pl = crate::cmd::seat_man(g, seats[i]); let p = g.ch[g.pl[pl].ch].pos; g.door_was[2 * i] = p[0]; g.door_was[2 * i + 1] = p[2]; }
+    for i in 0..n { let pl = crate::cmd::seat_man(g, seats[i]); let p = g.player_pos(pl); g.door_was[2 * i] = p[0]; g.door_was[2 * i + 1] = p[2]; }
     // (…as the step opens: this frame's verbs have moved them)
     for (c, of) in t.contacts.iter_mut().zip(t.of.iter()) { if let Some(m) = *of { c.pos = g.ch[m].pos; if c.vel.is_some() { c.vel = Some(g.ch[m].vel); } } }
     crate::doors::doors_update(g, dt, &mut t.contacts);
@@ -115,7 +115,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     game_hands_on_doors(g, &angles);
     for i in 0..n {
         let s = seats[i];
-        let pl = crate::cmd::seat_man(g, s); let at = g.ch[g.pl[pl].ch].pos;
+        let pl = crate::cmd::seat_man(g, s); let at = g.player_pos(pl);
         let own = g.door_owns[i];
         if let Some(k) = own { t.contacts[k].pos = at; }   // (his: wherever he now is)
         let (bx, bz) = (g.door_was[2 * i], g.door_was[2 * i + 1]);
@@ -210,11 +210,11 @@ fn bodies_woken(g: &mut Game, bodies: &[CharId], angles: &[f64]) {
         if slab.is_none() && m::abs(g.dr[d].leaf.angle - angles[k]) < 1e-3 { continue; }
         let (hinge, width, height) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].height);
         for &ch in bodies.iter() {
-            let h = g.ch[ch].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[ch].pos);
+            let h = g.ch[ch].bone(crate::character::Bone::Hips).unwrap_or(g.ch[ch].pos);
             let rag = g.ch[ch].ragdoll.unwrap();
             let sleeping = g.tab.ragdoll[rag].sleeping;
             if sleeping && (m::hyp2(h[0] - hinge[0], h[2] - hinge[1]) < width + 1.2
-                || slab.as_ref().map_or(false, |s| m::hyp2(h[0] - s.p[0], h[2] - s.p[2]) < height / 2.0 + 0.8)) {
+                || slab.as_ref().map_or(false, |s| v3::dist_xz(h, s.p) < height / 2.0 + 0.8)) {
                 crate::ragdoll::ragdoll_wake(g, rag);
             }
         }
@@ -312,7 +312,7 @@ fn act_grab(g: &mut Game, act: Option<&Interactable>, dt: f64, input: InputId) {
     let in_reach: Option<Interactable> = if g.pl[pl].holstered { click_row(g, &crate::seats::here(g)) } else { None };
     let choke_on = match in_reach.as_ref().and_then(|r| r.guard) {
         Some(gd) if g.gd[gd].civ.is_none() && crate::rails::rails_offers(g, "grab") => {
-            let p = g.ch[g.pl[pl].ch].pos;
+            let p = g.player_pos(pl);
             crate::close::close_at(g, gd, &p).grab
         }
         _ => false,

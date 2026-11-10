@@ -285,7 +285,7 @@ fn furniture_exposed_box(g: &crate::game::Game, origins: &[V3], a: crate::furnbl
 pub(super) fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource, who: f64, chaos: f64) {
     if !(chaos > 0.0) { return; }
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return; }
-    if let Some(l) = g.destr.furn.last { if l.t == g.time && m::hyp2(at[0] - l.at[0], at[2] - l.at[2]) <= g.k.furn.merge_m && k <= l.k {  return; } }
+    if let Some(l) = g.destr.furn.last { if l.t == g.time && v3::dist_xz(at, l.at) <= g.k.furn.merge_m && k <= l.k {  return; } }
     g.destr.furn.last = Some(FurnitureLast { t: g.time, at: v3::copy(at), k }); 
     g.destr.furn.fling = g.k.furn.fling.get(src).copied().unwrap_or(1.0);
     let who = js::or(who, crate::consts::NOBODY_ID);
@@ -298,7 +298,7 @@ pub(super) fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::fur
     while ci < g.destr.walls.changes.len() {
         let (t, kind, cause, pos, rect, id) = { let c = &g.destr.walls.changes[ci]; (c.t, c.kind, c.cause, c.pos, c.rect, c.id) };
         ci += 1;
-        if t != g.time || kind != LevelChangeKind::Hole || cause != LevelChangeCause::Blast || m::hyp2(pos[0] - at[0], pos[2] - at[2]) > 3.0 { continue; }
+        if t != g.time || kind != LevelChangeKind::Hole || cause != LevelChangeCause::Blast || v3::dist_xz(pos, at) > 3.0 { continue; }
         let ax: usize = if rect[2] - rect[0] < rect[3] - rect[1] { 0 } else { 2 }; let s = if pos[ax] - at[ax] >= 0.0 { 1.0 } else { -1.0 };
         let mut mo: V3 = [pos[0], 1.0, pos[2]];
         mo[ax] = (if s > 0.0 { m::max(rect[if ax == 0 { 2 } else { 3 }], pos[ax]) } else { m::min(rect[if ax == 0 { 0 } else { 1 }], pos[ax]) }) + s * mouth_m;

@@ -136,7 +136,7 @@ pub fn standoff_on_feet(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if st.phase != Phase::Cover && st.phase != Phase::Line {
         return true;
     }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let k = match lend_known(g, key) {
         Some(k) => k,
         None => return false,
@@ -215,12 +215,12 @@ fn centre(g: &crate::game::Game, i: f64) -> V3 {
 
 /// Is the pistol turned this man's way: within faceDeg of where the pair faces.
 fn faces_him(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
-    m::abs(v3::wrap_angle(m::atan2(p[0] - k.sam[0], p[2] - k.sam[2]) - k.facing)) < g.k.gunhold.face_deg * v3::DEG
+    m::abs(v3::wrap_angle(v3::yaw_to(k.sam, p) - k.facing)) < g.k.gunhold.face_deg * v3::DEG
 }
 
 /// Forward of Sam's rear arc.
 fn front(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
-    m::abs(v3::wrap_angle(m::atan2(p[0] - k.sam[0], p[2] - k.sam[2]) - (k.facing + m::PI))) > g.k.gunhold.rear_deg * v3::DEG
+    m::abs(v3::wrap_angle(v3::yaw_to(k.sam, p) - (k.facing + m::PI))) > g.k.gunhold.rear_deg * v3::DEG
 }
 
 /// Is a man standing (or, behind low cover, crouched) at `p` in Sam's line of fire, forward of his rear arc.
@@ -259,7 +259,7 @@ fn price_at(g: &Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
 
 /// A way to `goal` at that price; its length and the longest unbroken stretch of it across floor Sam's gun covers in front of him.
 fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
-    let start = g.ch[g.gd[gd].ch].pos;
+    let start = g.pos_of(gd);
     let path = crate::scene_collision::nav_grid_find_path(g, start, goal, Some(8000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)))?;
     if path.is_empty() || dist_xz(path[path.len() - 1], goal) > 0.6 {
         return None;
@@ -291,7 +291,7 @@ fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goa
 
 /// Sets his path: no pathGoal, so a man stuck on this way is planned again at this rule's price.
 fn take(g: &mut crate::game::Game, gd: GuardId, path: &[V3]) {
-    let start = g.ch[g.gd[gd].ch].pos;
+    let start = g.pos_of(gd);
     let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
     crate::game::guard_set_path(g, gd, threaded);
     let man = &mut g.gd[gd];
@@ -338,7 +338,7 @@ struct Reached {
 
 /// The nearest floor, by walking, where Sam's gun has no line to him; `edge` = the open cell he came off to get there.
 fn pick_cover(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known, round: bool) -> Option<crate::gunhold::PickCover> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let start = walk_starts_at(g, pos)?;
     let (mates, rivals) = spots_taken(g, gd, s);
     let d0 = dist_xz(pos, k.sam);
@@ -383,7 +383,7 @@ fn spots_taken(g: &Game, gd: GuardId, s: GuardsStandoffId) -> (Vec<V3>, Vec<V3>)
         if let Some(spot) = spot {
             mates.push(spot);
         } else {
-            let at = g.ch[g.gd[o].ch].pos;
+            let at = g.pos_of(o);
             mates.push(at);
             if let Some(os) = of {
                 if g.tab.guards_standoff[os].pair == pair {
@@ -499,7 +499,7 @@ fn cover_score(g: &Game, k: &mut Known, look: &CoverLook, c: Reached) -> Option<
         score += 3.0;
     }
     if look.round {
-        score += 0.7 * m::abs(v3::wrap_angle(look.rear - m::atan2(p[0] - k.sam[0], p[2] - k.sam[2])));
+        score += 0.7 * m::abs(v3::wrap_angle(look.rear - v3::yaw_to(k.sam, p)));
     }
     Some(score)
 }
@@ -524,7 +524,7 @@ fn open_cell_behind(g: &Game, k: &mut Known, came: &JsMap<crate::Num, f64>, best
 fn plan_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known) -> bool {
     let rear = k.facing + m::PI;
     let mut plans = 0;
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let max_run = if !faces_him(g, k, pos) {
         g.k.gunhold.dash_m
     } else if k.shot_t >= 0.0 && g.time - k.shot_t < g.k.gunhold.shy_s {
@@ -592,8 +592,8 @@ fn goes_round(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut c
         let mut b = m::INF;
         k.talker = None;
         for &man in &men {
-            let at = g.ch[g.gd[man].ch].pos;
-            let a = m::abs(v3::wrap_angle(m::atan2(at[0] - k.sam[0], at[2] - k.sam[2]) - k.facing));
+            let at = g.pos_of(man);
+            let a = m::abs(v3::wrap_angle(v3::yaw_to(k.sam, at) - k.facing));
             if a < b {
                 b = a;
                 k.talker = Some(man);
@@ -682,11 +682,11 @@ fn along_path(g: &Game, f: Feet, k: &Known) -> V3 {
     }
     let wp = g.gd[f.gd].path[path_i];
     let pos = g.ch[f.c].pos;
-    let yaw = m::atan2(wp[0] - pos[0], wp[2] - pos[2]);
+    let yaw = v3::yaw_to(pos, wp);
     if g.tab.guards_standoff[f.s].seen_t == f.now && !front(g, k, pos) {
         return f.look;
     }
-    if m::abs(v3::wrap_angle(m::atan2(f.look[0] - pos[0], f.look[2] - pos[2]) - yaw)) > 75.0 * v3::DEG {
+    if m::abs(v3::wrap_angle(v3::yaw_to(pos, f.look) - yaw)) > 75.0 * v3::DEG {
         [pos[0] + m::sin(yaw) * 4.0, f.look[1], pos[2] + m::cos(yaw) * 4.0]
     } else {
         f.look
@@ -911,7 +911,7 @@ fn scrambles_off(g: &mut Game, f: Feet) -> bool {
     }
     let wp = g.gd[f.gd].path[g.gd[f.gd].path_i];
     let at = g.ch[f.c].pos;
-    let yaw_to = m::atan2(wp[0] - at[0], wp[2] - at[2]);
+    let yaw_to = v3::yaw_to(at, wp);
     if m::abs(v3::wrap_angle(yaw_to - g.ch[f.c].body_yaw)) <= 50.0 * v3::DEG {
         return false;
     }
@@ -1048,10 +1048,7 @@ fn peeks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
 /// Has he a clear view from his eyes to where the pair was last known.
 fn sees_where_they_were(g: &Game, f: Feet, k: &Known) -> bool {
     let at = g.ch[f.c].pos;
-    let eye = match g.ch[f.c].bones.get(crate::character::Bone::Head) {
-        Some(&head) => head,
-        None => v3::add(at, [0.0, 1.65, 0.0]),
-    };
+    let eye = g.ch[f.c].bone(crate::character::Bone::Head).unwrap_or(v3::add(at, [0.0, 1.65, 0.0]));
     !crate::scene_collision::segment_blocked(g, eye, [k.sam[0], 1.2, k.sam[2]], None, None, None)
 }
 

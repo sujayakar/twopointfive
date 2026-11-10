@@ -89,7 +89,7 @@ pub fn squad_orders_spots_at(g: &crate::game::Game, at: V3, face: f64, n: f64) -
 /// spotsAt's `tries.find(q => ok(q) && apart(q)) ?? v3.copy(at)`
 fn spot_of(g: &Game, at: V3, tries: &[V3], out: &[V3]) -> V3 {
     for q in tries.iter().copied() {
-        let ok = !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [q[0], 0.45, q[2]], None);
+        let ok = !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, at, q);
         if ok && !out.iter().any(|o| v3::dist_xz(*o, q) < 0.6) { return q; }
     }
     v3::copy(at)
@@ -165,7 +165,7 @@ fn squad_orders_stack_seen(g: &mut crate::game::Game, d: DoorId, side: f64, men:
     if s0 < 0.5 { return Some(dealt); }
     let on: Vec<f64> = if crate::stackroom::stack_view_open(g, d) {
         let (view_men, view_out) = (g.k.stackroom.view_men, g.k.stackroom.view_out);
-        men.iter().map(|m_| g.ch[g.gd[*m_].ch].pos)
+        men.iter().map(|m_| g.pos_of(*m_))
             .filter(|p| (p[0] - c[0]) * n[0] + (p[2] - c[2]) * n[1] > 0.0 && v3::dist_xz(*p, c) <= view_men)
             .map(|p| hand_of(p, view_out))
             .collect()
@@ -303,7 +303,7 @@ pub fn squad_orders_own_marks(g: &crate::game::Game, seat: &crate::seats::SeatRe
         let a = &g.tab.orders_assignment[id];
         if a.door != Some(d) { continue; }
         let post = match a.post { Some(p) => p, None => continue };
-        let p = g.ch[g.gd[gd].ch].pos;
+        let p = g.pos_of(gd);
         if v3::dist_xz(p, post) < 0.6 && (post[0] - c[0]) * nx + (post[2] - c[2]) * nz > 0.0 { out.push(post); }
     }
     out

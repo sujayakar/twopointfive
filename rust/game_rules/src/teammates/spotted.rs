@@ -435,7 +435,7 @@ fn hands(g: &mut crate::game::Game, gd: GuardId) {
             man(g, gd).take = None;
             crate::takedown::partner_fall(g, h, true, Some(gd));
             crate::combat::kill_guard(g, h, [-dx / d, 0.0, -dz / d], Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Guard), crate::game::With::Hand);
-            g.gd[h].killer_id = g.ch[g.gd[gd].ch].id;
+            g.gd[h].killer_id = g.char_id(gd);
         }
     } else {
         if t0 >= 0.0 { crate::takedown::partner_cancel(g, gd, h); }

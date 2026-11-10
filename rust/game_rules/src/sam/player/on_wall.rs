@@ -67,10 +67,7 @@ pub fn gun_shut(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let raised = g.ch[c].anim.upper == crate::character::UpperMode::Aim
         || (crate::game::player_rifle_up(g, p) && g.ch[c].anim.long_stance == Some(crate::character::LongStance::Shoulder));
     if !raised { return false; }
-    let a = match g.ch[c].bones.get(crate::character::Bone::UpperArmR) {
-        Some(a) => *a,
-        None => v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]),
-    };
+    let a = g.ch[c].bone_or(crate::character::Bone::UpperArmR, 1.4);
     let muzzle = g.ch[c].muzzle;
     crate::gunwall::wood_between(g, a, muzzle)
 }
@@ -200,9 +197,9 @@ fn steps_out(g: &mut Game, p: PlayerId, w: &crate::player::WallHold, at: V3, dt:
 /// From past the end, the start of the way to it is open.
 fn buys_line(g: &Game, p: PlayerId, w: &crate::player::WallHold, at: V3, there: f64) -> bool {
     let h = if g.pl[p].crouch { 0.85 } else { 1.3 };
-    let pos = g.ch[g.pl[p].ch].pos;
+    let pos = g.player_pos(p);
     let a: V3 = [pos[0] + w.along[0] * there, h, pos[2] + w.along[2] * there];
-    let d = m::hyp2(at[0] - a[0], at[2] - a[2]);
+    let d = v3::dist_xz(at, a);
     let r = m::min(1.0, g.k.wallsnap.lean_clear_m / m::max(d, 1e-3));
     d >= 0.2 && !crate::scene_collision::shot_blocked(g, a, [a[0] + (at[0] - a[0]) * r, h + (at[1] - h) * r, a[2] + (at[2] - a[2]) * r], None, None)
 }
@@ -298,7 +295,7 @@ impl Face {
 /// Where he actually is, read back into the hold; shoved off the face or past its end he lets go (false). `firm`: what stopped him stops his pace too.
 fn wall_take_back(g: &mut Game, p: PlayerId, f: Face, firm: bool, dir: f64) -> bool {
     let w0 = g.pl[p].wall.unwrap();
-    let pos = g.ch[g.pl[p].ch].pos;
+    let pos = g.player_pos(p);
     let u = f.along(pos) - w0.lean_off.unwrap_or(0.0);
     let off = f.out(pos) - f.base;
     if u < f.lo - 0.25 || u > f.hi + 0.25 || off > WALL_SHOVE_OFF {
@@ -337,7 +334,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     collide_player(g, f.y1);
     keep_off_guards(g, dt, f.y1, None);
     if lean != 0.0 || truthy_opt(g.pl[p].wall.unwrap().lean_off) {
-        let got = f.along(g.ch[g.pl[p].ch].pos) - w!(g, p).u;
+        let got = f.along(g.player_pos(p)) - w!(g, p).u;
         w!(g, p).lean_off = Some(if lean > 0.0 { v3::clamp(got, 0.0, lean) } else if lean < 0.0 { v3::clamp(got, lean, 0.0) } else { 0.0 });
     }
     if g.pl[p].wall.unwrap().settle >= 1.0 && !wall_take_back(g, p, f, true, dir) { return false; }
@@ -455,7 +452,7 @@ fn onto_face(g: &mut Game, p: PlayerId, f: Face, u: f64, u_was: f64, to: V3, e_p
     let pos = g.ch[c].pos;
     let (mut x, mut z) = ((to[0] - pos[0]) * k, (to[2] - pos[2]) * k);
     let l = m::hyp2(x, z);
-    let most = m::hyp2(to[0] - w.from[0], to[2] - w.from[2]) * (e - e_prev) + 0.02;
+    let most = v3::dist_xz(to, w.from) * (e - e_prev) + 0.02;
     if l > most { x *= most / l; z *= most / l; }
     crate::character::pos_replace(g, c, [pos[0] + x, pos[1], pos[2] + z]);
 }

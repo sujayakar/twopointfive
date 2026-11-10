@@ -61,7 +61,7 @@ fn an_errand_is_walked_to_its_end_and_he_stands_there() {
     for s in SEEDS {
         let (mut p, d) = consulate(s);
         let (to, gd) = (elsewhere(&p, d), p.g.tab.roomfight_def[d].gd);
-        let way = p.g.ch[p.g.gd[gd].ch].pos;
+        let way = p.g.pos_of(gd);
         let far = ((to[0] - way[0]).powi(2) + (to[2] - way[2]).powi(2)).sqrt();
         send(&mut p.g, d, Leg { stays: true, ..Leg::errand(to, far / 14.0) }, by::BREAKER);
         assert_eq!(leg_ended(&p.g, d, by::BREAKER), None, "seed {s}: on his way");
@@ -110,7 +110,7 @@ fn boots_on_a_leg_are_heard() {
     for s in SEEDS {
         let (mut p, d) = consulate(s);
         let (to, gd) = (elsewhere(&p, d), p.g.tab.roomfight_def[d].gd);
-        let who = p.g.ch[p.g.gd[gd].ch].id;
+        let who = p.g.char_id(gd);
         send(&mut p.g, d, Leg::to(to, 3.0), by::LAST_MAN);
         let mut steps = 0;
         for _ in 0..180 { p.frame(); steps += p.g.events.iter().filter(|e| e.who == Some(who) && e.kind == game::director::EventKind::Step && e.time == p.g.time).count(); }
