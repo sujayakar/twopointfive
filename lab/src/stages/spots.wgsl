@@ -3,7 +3,7 @@
 // one by what it would send, and asks whether it is seen. The list lies in `extra`, so that every ray's hit can ask.
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
   let k = wg.x >> 2u; let i = (wg.x & 3u) * 64u + li; let o = (k * 256u + i) * 2u; spots[o] = vec4u(0u); spots[o + 1u] = vec4u(0u); if (k >= torchK[0].x) { return; }
-  let l = torchK[1u + (k >> 2u)][k & 3u]; let lamp = &lamps[l]; let n0 = (*lamp).n; let bs = basis(n0); let wide = torchWide(l); let cell = 2.0 * wide / 16.0; leafMode = 2u; rngKey(o, 41u);
+  let l = torchK[1u + (k >> 2u)][k & 3u]; let lamp = &lamps[l]; let n0 = (*lamp).n; let bs = basis(n0); let wide = torchWide(l); let cell = 2.0 * wide / 16.0; leafMode = 2u; rngState = pcg(o + pcg(41u));       /* (the same places of the cone every frame: what changes, changed) */
   let p = ((vec2f(f32(i & 15u), f32(i >> 4u)) + rnd2()) / 16.0 * 2.0 - 1.0) * wide; let d = normalize(n0 + bs[0] * p.x + bs[1] * p.y); let c = dot(d, n0); let part = smoothstep((*lamp).cone, mix((*lamp).cone, 1.0, 0.55), c) * (0.35 + 0.65 * smoothstep(0.9, 1.0, c)); if (part <= 0.0) { return; }
   foot(0.0, cell); let h = nearest((*lamp).at, d, 0.08, 24.0, 0u, 1e9); if (h.piece == NOTHING) { return; }
   let q = surfaceMean((*lamp).at, d, h); let dw = cell * cell * c * c * c; let sent = (*lamp).radiance * ((*lamp).on * PI * (*lamp).area * (*lamp).area * part * dw) * returns(q) * h.thru * blkT; let face = -dot(q.ng, d); if (face <= 0.02 || max3(sent) <= 0.0) { return; }

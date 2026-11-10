@@ -37,12 +37,12 @@ export function layBlocks(w: World): Blocks {
   return { lo: mul(lo, BRICK), n, page, bricks, cells: Float32Array.from(cells), said: Uint32Array.from(said), many: cells.length / 4 };
 }
 export const blockRows = (b: Blocks) => b.page.length / 4 + b.bricks.length / 4 + Math.max(1, b.many) * CELL_ROWS + b.many * LIGHT_ROWS + SMOKE_ROWS;
-/** what torches light, after them: five torches, 256 places each, two rows a place (stages/spots.wgsl) */
-export const SPOT_TORCHES = 5, SPOT_ROWS = SPOT_TORCHES * 256 * 2, spotRow = (b: Blocks, row: number) => row + blockRows(b);
+/** what torches light, after them: five torches, 256 places each, two rows a place (stages/spots.wgsl); and after them what it was a frame ago */
+export const SPOT_TORCHES = 5, SPOT_ROWS = SPOT_TORCHES * 256 * 2 * 2, spotRow = (b: Blocks, row: number) => row + blockRows(b);
 /** where they lie in extra, for the shaders */
 export function blockCode(b: Blocks, row: number): string {
   const page = row, bricks = page + b.page.length / 4, cells = bricks + b.bricks.length / 4, f = (v: number) => v.toFixed(4);
-  return `const BLK_LO = vec3f(${b.lo.map(f).join(', ')}); const BLK_N = vec3i(${b.n.join(', ')}); const BLK_PAGE = ${page}u; const BLK_BRICKS = ${bricks}u; const BLK_CELLS = ${cells}u; const BLK_MANY = ${b.many}u; const BLK_LIGHT = ${lightRow(b, row)}u; const BLK_SMOKE = ${smokeRow(b, row)}u; const SPOT_ROW = ${spotRow(b, row)}u;\n`;
+  return `const BLK_LO = vec3f(${b.lo.map(f).join(', ')}); const BLK_N = vec3i(${b.n.join(', ')}); const BLK_PAGE = ${page}u; const BLK_BRICKS = ${bricks}u; const BLK_CELLS = ${cells}u; const BLK_MANY = ${b.many}u; const BLK_LIGHT = ${lightRow(b, row)}u; const BLK_SMOKE = ${smokeRow(b, row)}u; const SPOT_ROW = ${spotRow(b, row)}u; const SPOT_WAS = ${SPOT_ROWS / 2}u; const SPOT_TORCHES = ${SPOT_TORCHES}u;\n`;
 }
 export const cellRow = (b: Blocks, row: number) => row + b.page.length / 4 + b.bricks.length / 4;
 export const lightRow = (b: Blocks, row: number) => cellRow(b, row) + Math.max(1, b.many) * CELL_ROWS;

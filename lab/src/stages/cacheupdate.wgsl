@@ -2,7 +2,7 @@
 //   Each group looks over 256 slots, lists the few whose turn it is, then works through the list: rays of neighbours in the list keep all its lanes busy.
 var<workgroup> todo: array<u32, 256>; var<workgroup> many: atomic<u32>;
 /** how many samples of what torches light are kept: they move */
-const TORCHES = 8.0;
+const TORCHES = 16.0;
 fn disturbed(x: vec3f) -> bool { for (var i = 0u; i < 8u; i++) { let c = changes.at[i]; if (c.w > 0.0 && distance(x, c.xyz) < c.w) { return true; } } return false; }
 /** how many samples an entry keeps where light is so steady */
 fn keeps(st: f32) -> f32 { let most = @tune.keep * (0.5 * RISE); return mix(min(FORGET, most), most, st); }
@@ -45,5 +45,6 @@ fn oneMore(s: u32) {
     else { let q = surfaceMean(x, w.xyz, h); let own = (pieces[h.piece].lamp & 255u) != 255u; let thru = h.thru * fo.T * (w.w * sm.a); let sent = sentBack(q, rnd2(), w.xyz); E += min((select(q.glow, vec3f(0.0), own) + sent - sentTorch) * thru, vec3f(60.0)); F += min(sentTorch * thru, vec3f(60.0)); tellAs(HITS + s, 0x80000000u | key, q.x, q.ng); /* (tells) */ }
   }
   let m = min(a.w + 1.0, keeps(st)); let k = min(1.0, RISE / (m + RISE - 1.0));
-  let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[3u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); let mt = min(t.w + 1.0, TORCHES); fresh[3u * s + 2u] = max(finite4(vec4f(mix(t.xyz, F, 1.0 / mt), mt), 1e4), vec4f(0.0)); fresh[3u * s + 1u] = vec4f(b.xyz, clamp(finite(mix(b.w, sun, k), 1.0), 0.0, 1.0));
+  let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[3u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); let mt = min(t.w * max(1.0 - 2.0 * spotChange(x, n), 0.0) + 1.0, TORCHES);       /* (where what they light has changed, what is kept is of other light) */
+  fresh[3u * s + 2u] = max(finite4(vec4f(mix(t.xyz, F, 1.0 / mt), mt), 1e4), vec4f(0.0)); fresh[3u * s + 1u] = vec4f(b.xyz, clamp(finite(mix(b.w, sun, k), 1.0), 0.0, 1.0));
 }
