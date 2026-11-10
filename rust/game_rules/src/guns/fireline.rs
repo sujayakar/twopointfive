@@ -46,7 +46,7 @@ pub fn fire_line_tick(g: &mut crate::game::Game) {
 }
 
 /// The lane of the player's fire this frame, or None: he is not firing.
-fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
+fn lane_of(g: &crate::game::Game) -> Option<crate::fireline::Lane> {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let gun = crate::game::player_gun_in_hand(g, pl);
@@ -77,12 +77,12 @@ fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, mor
 }
 
 /// Would a round of this lane reach the point.
-fn reaches(g: &mut Game, l: Lane, p: V3) -> bool {
+fn reaches(g: &Game, l: Lane, p: V3) -> bool {
     !crate::scene_collision::shot_blocked(g, l.m, p, Some(0.02), l.energy) || (l.thin >= 0.0 && crate::wallpen::thin_line(g, l.m, p, l.thin, None, None).is_some())
 }
 
 /// Would a round reach a man standing here: his chest, or either edge of his column.
-fn in_lane(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
+fn in_lane(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     if !in_shape(g, l, x, z, more) {
         return false;
     }
@@ -118,12 +118,12 @@ fn along(from: V3, pts: &[V3], far: f64, hit: &mut dyn FnMut(f64, f64) -> bool) 
 }
 
 /// Where the walk first comes into the lane.
-fn cross_at(g: &mut crate::game::Game, l: crate::fireline::Lane, from: V3, pts: &[V3], far: f64, more: Option<f64>) -> f64 {
+fn cross_at(g: &crate::game::Game, l: crate::fireline::Lane, from: V3, pts: &[V3], far: f64, more: Option<f64>) -> f64 {
     along(from, pts, far, &mut |x, z| in_lane(g, l, x, z, more))
 }
 
 /// Where the walk first stands in a doorway.
-fn door_at(g: &mut crate::game::Game, from: V3, pts: &[V3], far: f64) -> f64 {
+fn door_at(g: &crate::game::Game, from: V3, pts: &[V3], far: f64) -> f64 {
     along(from, pts, far, &mut |x, z| in_doorway(g, x, z))
 }
 
@@ -163,7 +163,7 @@ fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }
 /// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None.
-fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
+fn way_round(g: &crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
     let cs = g.col.nav.cell;
     let p = g.ch[g.gd[gd].ch].pos;
     let berth_m = g.k.fireline.berth_m;

@@ -86,7 +86,7 @@ fn learns(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Or for now: the net's word on the dark, or a burning lamp of a mate who knows in his view.
-fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn has_word(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::powerout::power_out_word(g, gd) { return true; }
     let c = g.gd[gd].ch;
     let (pos, aim_yaw) = (g.ch[c].pos, g.ch[c].aim_yaw);
@@ -148,7 +148,7 @@ fn dark_foe_sees(g: &mut crate::game::Game, p: V3, edge: Option<bool>) -> bool {
 }
 
 /// Is a point in his room; a man with no room is everywhere in it.
-fn in_room(g: &mut crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
+fn in_room(g: &crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
     let Some(room) = g.tab.roomfight_def[d].room else { return true };
     let cell = g.col.nav.cell;
     let key = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));
@@ -178,7 +178,7 @@ fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
 }
 
 /// A way of no more than `walkM` to a spot, never by a doorway of his room nor out of it.
-fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
+fn way_to(g: &crate::game::Game, d: RoomfightDefId, q: V3) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     let c = g.gd[gd].ch;
     let start = g.ch[c].pos;

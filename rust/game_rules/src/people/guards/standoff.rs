@@ -300,7 +300,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
 }
 
 /// pickSide's `room`: how far round the ring is open going way `d`, every 20°, and whether all of it to their rear is.
-fn ring_room(g: &mut Game, c_2: V3, brg: f64, to_rear: f64, short: f64, d: f64) -> (i32, bool) {
+fn ring_room(g: &Game, c_2: V3, brg: f64, to_rear: f64, short: f64, d: f64) -> (i32, bool) {
     let span = if d == short { m::abs(to_rear) } else { 2.0 * m::PI - m::abs(to_rear) };
     let (mut n, mut full) = (0, true);
     let mut a = 20.0 * v3::DEG;
@@ -318,12 +318,12 @@ fn ring_room(g: &mut Game, c_2: V3, brg: f64, to_rear: f64, short: f64, d: f64) 
 }
 
 /// Is something solid between chest height over (x, z) and chest height over the ring's centre?
-fn no_sight_at(g: &mut Game, x: f64, z: f64, c_2: V3) -> bool {
+fn no_sight_at(g: &Game, x: f64, z: f64, c_2: V3) -> bool {
     crate::scene_collision::segment_blocked(g, [x, 1.2, z], [c_2[0], 1.2, c_2[2]], None, None, None)
 }
 
 /// Which way round the ring this man works: the other way from a colleague on this pair; else the short way to their rear if open, else whichever has more open ring.
-fn pick_side(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 {
+fn pick_side(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 {
     for i in 0..g.guards.len() {
         let o = g.guards[i];
         if o == gd || crate::condition::down(g, g.gd[o].ch) {
@@ -375,7 +375,7 @@ fn axis_to_segment(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> f64 {
 }
 
 /// The fire rule: may this man's round go, at Sam, past the colleague in his arm?
-pub(super) fn flank_shot(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> crate::guards::FlankShot {
+pub(super) fn flank_shot(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> crate::guards::FlankShot {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let from = bone(g, c, crate::character::Bone::UpperArmR).unwrap_or_else(|| v3::add(pos, [0.0, 1.4, 0.0]));
@@ -645,7 +645,7 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
 }
 
 /// The point on this man's own nav path to `C` where it first comes within the ring, if they are in sight from there.
-fn approach_point(g: &mut crate::game::Game, gd: GuardId, c_2: V3, need_sight: Option<bool>) -> Option<V3> {
+fn approach_point(g: &crate::game::Game, gd: GuardId, c_2: V3, need_sight: Option<bool>) -> Option<V3> {
     let need_sight = need_sight.unwrap_or(true);
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = crate::scene_collision::nav_grid_find_path(g, pos, c_2, None, None)?;
@@ -684,14 +684,14 @@ fn approach_point(g: &mut crate::game::Game, gd: GuardId, c_2: V3, need_sight: O
 }
 
 /// retreatGoal's `open`: a free cell he can walk to straight over open floor.
-fn open_floor(g: &mut Game, pos: V3, q: V3) -> bool {
+fn open_floor(g: &Game, pos: V3, q: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
         && crate::scene_collision::nav_grid_walkable(g, pos, q)
         && !crate::scene_collision::solid_blocked(g, [pos[0], 0.5, pos[2]], [q[0], 0.5, q[2]], None)
 }
 
 /// Where a man too close to the pair backs off to; None = boxed in.
-pub(super) fn retreat_goal(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> Option<V3> {
+pub(super) fn retreat_goal(g: &crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> Option<V3> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let c_2 = p.centre;
     let brg = m::atan2(pos[0] - c_2[0], pos[2] - c_2[2]);

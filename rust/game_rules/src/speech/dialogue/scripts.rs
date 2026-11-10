@@ -57,7 +57,7 @@ fn played_n(ctx: &DialogueCtx, key: &str) -> f64 {
 }
 
 /// Does this script fit the man and the moment, and does every line it would say to him resolve now.
-fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
+fn script_fits(g: &crate::game::Game, sc: &crate::dialogue::Script, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     if sc.t != ctx.t || !sc.k.contains(&ctx.k) { return false; }
     if let Some(band) = &sc.band { if !band.contains(&ctx.band) { return false; } }
     if let Some(needs) = &sc.needs { if needs.iter().any(|n| !fact(ctx, *n)) { return false; } }

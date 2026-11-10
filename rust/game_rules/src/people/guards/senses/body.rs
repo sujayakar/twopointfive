@@ -73,7 +73,7 @@ pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool,
 }
 
 /// what the finder calls in: `n` men here, `cold` of them breathing
-fn words(g: &mut Game, o: GuardId, n: i32, cold: i32) -> String {
+fn words(g: &Game, o: GuardId, n: i32, cold: i32) -> String {
     let in_here = if !crate::dialogue::is_office(g) { "someone's here" } else { "someone's in here" };
     let who = crate::teams::spoken_name(g, o).unwrap_or_else(|| String::from("one of ours"));
     if n > 1 {

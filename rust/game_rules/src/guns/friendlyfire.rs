@@ -24,7 +24,7 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
 }
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
-pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<CharId> {
+pub fn friend_in_cone(g: &crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<CharId> {
     if !ff_side(g, Some(self_)) {
         return None;
     }
@@ -77,7 +77,7 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
 
 /// The closure `ask` of friendInCone: is this man nearer along the line than the best so far, in the cone and not behind anything solid.
 #[allow(clippy::too_many_arguments)]
-fn ask(g: &mut Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64, past: f64, energy: Option<f64>, thin: f64, best: &mut Option<CharId>, bt: &mut f64) {
+fn ask(g: &Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64, past: f64, energy: Option<f64>, thin: f64, best: &mut Option<CharId>, bt: &mut f64) {
     let pos = g.ch[c].pos;
     let hips = g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(pos);
     let chest_bone = g.ch[c].bones.get(crate::character::Bone::Chest).copied();
@@ -120,7 +120,7 @@ fn ask(g: &mut Game, c: CharId, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64,
 }
 
 /// The closure `reaches` of friendInCone: level geometry only, less what the round goes through.
-fn reaches(g: &mut Game, muzzle: V3, p: V3, energy: Option<f64>, thin: f64) -> bool {
+fn reaches(g: &Game, muzzle: V3, p: V3, energy: Option<f64>, thin: f64) -> bool {
     !crate::scene_collision::shot_blocked(g, muzzle, p, Some(0.02), energy) || (thin >= 0.0 && crate::wallpen::thin_line(g, muzzle, p, thin, None, None).is_some())
 }
 

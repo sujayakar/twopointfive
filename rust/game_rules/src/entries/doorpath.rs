@@ -70,14 +70,14 @@ fn door_path_leaves(g: &mut crate::game::Game, near: V3, far: V3) -> Vec<[V3; 2]
 }
 
 /// A man can stand here: clear of every static at his own width.
-fn door_path_free(g: &mut crate::game::Game, p: V3) -> bool {
+fn door_path_free(g: &crate::game::Game, p: V3) -> bool {
     let mut q: V3 = [p[0], 0.0, p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, Some(3.0));
     flat(&q, &p) < 0.03
 }
 
 /// A man's width of open floor from a to b.
-fn door_path_open(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn door_path_open(g: &crate::game::Game, a: V3, b: V3) -> bool {
     if crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) {
         return false;
     }
@@ -508,7 +508,7 @@ fn door_path_depth(g: &crate::game::Game, d: DoorId, side: f64, p: &[f64]) -> f6
 }
 
 /// May the queue's i-th man be let go now? One at a time, in the order dealt, each once the man before him has his start.
-pub(super) fn door_path_may_go(g: &mut crate::game::Game, op: DoorOpId, q: crate::doorpath::DoorPathMayGoQ, i: f64) -> bool {
+pub(super) fn door_path_may_go(g: &crate::game::Game, op: DoorOpId, q: crate::doorpath::DoorPathMayGoQ, i: f64) -> bool {
     if i != 0.0 {
         return false;
     }

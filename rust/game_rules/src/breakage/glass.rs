@@ -86,14 +86,14 @@ pub fn is_pane(g: &crate::game::Game, b: Option<BoxId>) -> bool {
 }
 
 /// a pane that can craze (thin); solid glass is glass but no sheet
-pub fn is_sheet(g: &mut crate::game::Game, b: Option<BoxId>) -> bool {
+pub fn is_sheet(g: &crate::game::Game, b: Option<BoxId>) -> bool {
     if !is_pane(g, b) { return false; }
     let h = g.tab.boxes[b.unwrap()].h;
     m::min(h[0], h[2]) <= THICK_GLASS_HALF
 }
 
 /// the pane's unit normal: the world direction of its thin axis, sign arbitrary
-fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
+fn pane_normal(g: &crate::game::Game, b: BoxId) -> V3 {
     let (yaw, h) = { let row = &g.tab.boxes[b]; (row.yaw, row.h) };
     normal_of(yaw, h)
 }
@@ -114,7 +114,7 @@ pub(super) fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f6
 }
 
 /// nearest point of box b (yawed, no rot) to p, and the distance
-fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
+fn nearest_on_box(g: &crate::game::Game, b: BoxId, p: V3) -> crate::glass::NearestOnBox {
     let (yaw, c, h) = { let row = &g.tab.boxes[b]; (row.yaw, row.c, row.h) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let (dx, dy, dz) = (p[0] - c[0], p[1] - c[1], p[2] - c[2]);
@@ -126,7 +126,7 @@ fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glass::N
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre
-pub(super) fn box_seed(g: &mut crate::game::Game, b: BoxId) -> f64 {
+pub(super) fn box_seed(g: &crate::game::Game, b: BoxId) -> f64 {
     let (c, hs) = { let row = &g.tab.boxes[b]; (row.c, row.h) };
     box_word(c, hs)
 }
@@ -137,7 +137,7 @@ fn point_seed(word: f64, p: V3) -> f64 {
 }
 
 /// a 32-bit hash of where a box was hit
-pub fn hit_seed(g: &mut crate::game::Game, b: BoxId, p: V3) -> f64 {
+pub fn hit_seed(g: &crate::game::Game, b: BoxId, p: V3) -> f64 {
     point_seed(box_seed(g, b), p)
 }
 

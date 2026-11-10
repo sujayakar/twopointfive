@@ -459,7 +459,7 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
 }
 
 /// `g.level.boxes[bi]?.albedo ?? the pale default`. That list and `g.col.boxes` are one array in the TypeScript; off the list (a negative, fractional or NaN index) is undefined
-fn level_box_albedo(g: &mut Game, bi: f64) -> V3 {
+fn level_box_albedo(g: &Game, bi: f64) -> V3 {
     let ix = bi as usize;
     let row = if ix as f64 == bi { g.col.boxes.get(ix).copied() } else { None };
     match row { Some(b) => g.tab.boxes[b].albedo, None => [0.72, 0.8, 0.82] }
@@ -487,7 +487,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
 }
 
 /// `want` births inside the live budget.
-fn glass_shards_budget(g: &mut crate::game::Game, want: f64) -> f64 {
+fn glass_shards_budget(g: &crate::game::Game, want: f64) -> f64 {
     if want <= 0.0 { return 0.0; }
     let cap = g.k.shards.live_cap;
     let have = g.shards.live_est + g.shards.deferred_n;
@@ -527,7 +527,7 @@ fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o:
 }
 
 /// Where and when a fragment let go at `c` with velocity `v` reaches what is under it.
-fn glass_shards_fall_of(g: &mut crate::game::Game, c_2: V3, v: V3) -> crate::shards::GlassShardsFallOf {
+fn glass_shards_fall_of(g: &crate::game::Game, c_2: V3, v: V3) -> crate::shards::GlassShardsFallOf {
     let gravity = crate::shard_model::shard().gravity;
     let r = crate::falling::fall_of(g, c_2, v, gravity, 0.8, crate::falling::FallWorld::Statics);
     GlassShardsFallOf { t: r.t, pos: r.pos }
@@ -646,7 +646,7 @@ pub fn glass_shards_clear(g: &mut crate::game::Game) {
 }
 
 /// The albedo of the static under `p`, or a neutral floor.
-fn glass_shards_under_albedo(g: &mut crate::game::Game, p: V3) -> V3 {
+fn glass_shards_under_albedo(g: &crate::game::Game, p: V3) -> V3 {
     let hit = crate::scene_collision::raycast(g, [p[0], p[1] + 0.05, p[2]], [0.0, -1.0, 0.0], p[1] + 0.6);
     let b = match hit { Some(h) if h.index >= 0.0 => g.engine.world.statics.get(h.index as usize).copied(), _ => None };
     match b { Some(b) => g.tab.boxes[b].albedo, None => [0.4, 0.4, 0.4] }

@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// `nav.isBlocked` over the game's nav grid
-fn blocked(g: &mut Game, x: f64, z: f64) -> bool {
+fn blocked(g: &Game, x: f64, z: f64) -> bool {
     crate::scene_collision::nav_grid_is_blocked(g, x, z)
 }
 /// `inBounds(p, rect)`: a structure's Rect is the same four numbers as the plan's bounds the squad's function takes
@@ -65,7 +65,7 @@ fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::PlaceD
 }
 
 /// The structure against the level it stands in, every problem in words (empty = sound)
-pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::CheckStructureS>) -> Vec<String> {
+pub fn check_structure(g: &crate::game::Game, s: Option<&crate::roomclear::CheckStructureS>) -> Vec<String> {
     let s: crate::roomclear::CheckStructureS = match s {
         Some(s) => s.clone(),
         None => match g.level.scenarios.as_ref().and_then(|c| c.room_clear.as_ref()) {
@@ -184,7 +184,7 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
 }
 
 /// The squads block against the floor. Empty = sound; no squads block = nothing to say.
-fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquadsS) -> Vec<String> {
+fn check_squads(g: &crate::game::Game, s: &crate::roomclear::CheckSquadsS) -> Vec<String> {
     let squads = match &s.squads {
         Some(q) if !q.is_empty() => q,
         _ => return Vec::new(),
@@ -318,7 +318,7 @@ pub fn way_of_address(q: &crate::query::Query) -> usize {
 pub fn way_taken(asked: usize, ways: usize) -> usize { asked.min(ways.saturating_sub(1)) }
 
 /// the way in a staging made now would take: the one the address asked for, on this level
-fn room_clear_scenario_way_now(g: &mut crate::game::Game) -> f64 {
+fn room_clear_scenario_way_now(g: &crate::game::Game) -> f64 {
     let asked = g.stood.way;
     let s = room_clear_scenario_structure(g);
     let n = match &s {
@@ -329,7 +329,7 @@ fn room_clear_scenario_way_now(g: &mut crate::game::Game) -> f64 {
 }
 
 /// the team start a staging made now stands the team on
-pub(super) fn room_clear_scenario_start_now(g: &mut crate::game::Game) -> Option<crate::scene_scenarios::TeamStart> {
+pub(super) fn room_clear_scenario_start_now(g: &crate::game::Game) -> Option<crate::scene_scenarios::TeamStart> {
     let s = room_clear_scenario_structure(g);
     let k = room_clear_scenario_way_now(g);
     let s = s?;
@@ -361,7 +361,7 @@ pub fn room_clear_scenario_active(g: &crate::game::Game) -> bool {
 }
 
 /// why it cannot start right now (None = it can)
-fn room_clear_scenario_can_start(g: &mut crate::game::Game) -> Option<String> {
+fn room_clear_scenario_can_start(g: &crate::game::Game) -> Option<String> {
     if crate::nightbreach::night_breach_up(g) {
         return Some(String::from("the night breach is already staged — stop it first"));
     }

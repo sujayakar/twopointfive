@@ -299,7 +299,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
 }
 
 /// The infrared light at a point, W/m² as the light meter would report it if it read infrared. `skip`: a carrier's own light is not asked.
-pub fn ir_light_at(g: &mut crate::game::Game, p: V3, skip: Option<f64>) -> f64 {
+pub fn ir_light_at(g: &crate::game::Game, p: V3, skip: Option<f64>) -> f64 {
     let mut total = 0.0;
     let mut i = 0;
     while i < g.engine.lights.ir.len() {

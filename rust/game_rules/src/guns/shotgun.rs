@@ -162,7 +162,7 @@ fn spot(at: V3, pos: V3, beside: bool, own: bool) -> crate::shotgun::BreachSpot 
 }
 
 /// Floor under `pos` and a clear line from chest height to the lock. (breachSpot's `stands`)
-fn stands(g: &mut Game, at: V3, pos: V3) -> bool {
+fn stands(g: &Game, at: V3, pos: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) && !crate::scene_collision::solid_blocked(g, [pos[0], 1.2, pos[2]], at, None)
 }
 

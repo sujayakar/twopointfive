@@ -17,7 +17,7 @@ pub fn walk_len(from: V3, path: &[V3]) -> f64 {
 }
 
 /// The metres on foot from `a` to `b`, or to the free floor nearest it; infinite with no way there.
-pub fn on_foot(g: &mut Game, a: V3, b: V3) -> f64 {
+pub fn on_foot(g: &Game, a: V3, b: V3) -> f64 {
     crate::scene_collision::nav_grid_find_path(g, a, b, None, None).map_or(m::INF, |path| walk_len(a, &path))
 }
 
@@ -29,7 +29,7 @@ pub struct Walk {
 }
 
 /// His walk from `from` to `p`, if there is one and it ends within `near` of it.
-pub fn walk(g: &mut Game, from: V3, p: V3, near: f64) -> Option<Walk> {
+pub fn walk(g: &Game, from: V3, p: V3, near: f64) -> Option<Walk> {
     let path = crate::scene_collision::nav_grid_find_path(g, from, p, None, None)?;
     let end = *path.last()?;
     if v3::dist_xz(end, p) > near { return None; }

@@ -27,11 +27,11 @@ fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Ve
 /// `g.say(gd, text, true)`
 fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 /// `g.col.segmentBlocked(a, b)`
-fn seg_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
+fn seg_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 /// `g.col.solidBlocked(a, b)`
-fn solid_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
+fn solid_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
 /// `L.guns.every(m => spotSeen(g, eye, m))`
-fn all_spots_seen(g: &mut Game, l: LanesLaneId, eye: V3) -> bool {
+fn all_spots_seen(g: &Game, l: LanesLaneId, eye: V3) -> bool {
     let guns = g.tab.lanes_lane[l].guns.clone();
     for q in guns { if !spot_seen(g, eye, q) { return false; } }
     true
@@ -204,7 +204,7 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// where a lane opens before a man standing at `p`: the nearest of its floor he has a line to, of the ten nearest; else the nearest
-pub(super) fn mouth_of(g: &mut crate::game::Game, l: LanesLaneId, p: V3) -> V3 {
+pub(super) fn mouth_of(g: &crate::game::Game, l: LanesLaneId, p: V3) -> V3 {
     let (cell, w) = (g.col.nav.cell, g.col.nav.w);
     let mut near: Vec<(f64, f64, f64)> = Vec::new();   // (d, x, z)
     if let Some(cells) = g.tab.lanes_lane[l].cells.as_ref() {
@@ -381,7 +381,7 @@ fn ahead(g: &crate::game::Game, m: &[u8], gd: GuardId, inside: bool) -> Option<V
 }
 
 /// He is held short of a lane his side knows is covered, and what wants him (`to`; none = anything) lies at its guns or down it.
-pub fn lane_bars(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
+pub fn lane_bars(g: &crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
     if crate::gunroles::gun_keeps_post(g, gd) { return true; }
     if g.m.lanes.states.is_none() || !live(g) || !crate::owner::has(g, gd, crate::owner::by::LANE) { return false; }
     let Some(l) = lane_of(g, gd) else { return false };
@@ -393,7 +393,7 @@ pub fn lane_bars(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) -> bool
 }
 
 /// He has shouted for a lane and the wind-up still has his arm: the dig-in does not adopt him.
-pub(in crate::defenders) fn lane_throws(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(in crate::defenders) fn lane_throws(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(st) = g.m.lanes.states.as_ref() else { return false };
     if st.peek.is_empty() { return false; }
     if !live(g) { return false; }
@@ -403,7 +403,7 @@ pub(in crate::defenders) fn lane_throws(g: &mut crate::game::Game, gd: GuardId) 
 }
 
 /// The noise he would walk over to by himself is at the guns of a lane he knows is covered, or down it.
-pub fn lane_known_at(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
+pub fn lane_known_at(g: &crate::game::Game, gd: GuardId, to: Option<V3>) -> bool {
     let Some(to) = to else { return false };
     if no_lanes(g) || !live(g) || !mine(g, gd) { return false; }
     let i = cell_at(g, to);

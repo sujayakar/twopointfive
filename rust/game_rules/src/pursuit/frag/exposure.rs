@@ -42,9 +42,9 @@ fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V
 }
 
 /// Is a burst's line from a to b stopped: by anything solid, and by glass as glass is to a burst.
-fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
+fn burst_blocked(g: &crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
 /// …of the world as the question takes it
-fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
+fn burst_blocked_over(g: &Game, over: &Over, a: V3, b: V3) -> bool {
     if !crate::glassbreak::glass_break_live(g) {
         return crate::scene_collision::shot_blocked_over(g, over, a, b, None, None);
     }
@@ -78,7 +78,7 @@ pub(super) fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head:
 }
 
 /// The closure `exposure` and `lyingShows` both hand the glass: the share of `pts` with a clear line.
-fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
+fn share_clear(g: &Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
     let mut n = 0.0;
     for &p in pts {
         if !burst_blocked_over(g, over, from, p) {
@@ -89,7 +89,7 @@ fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
 }
 
 /// The leaves a hand grenade bursting at `from` would take off its hinges.
-fn leaves_for(g: &mut crate::game::Game, from: V3) -> Vec<BoxId> {
+fn leaves_for(g: &crate::game::Game, from: V3) -> Vec<BoxId> {
     let opts = crate::destruction::DestructionDoorsForOpts { radius: Some(g.k.frag.destr_m), power: Some(1.0) };
     let doors = crate::destruction::destruction_doors_for(g, from, Some(opts));
     doors.into_iter().map(|d| g.dr[d].box_).collect()

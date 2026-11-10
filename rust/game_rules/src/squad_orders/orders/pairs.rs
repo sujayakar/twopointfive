@@ -47,7 +47,7 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
 }
 
 /// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.
-pub(super) fn squad_orders_has_line(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
+pub(super) fn squad_orders_has_line(g: &crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
     let p = man_pos(g, gd);
     let (at, door) = match t {
         OrderTarget::Floor(x) => (x.at, false),
@@ -72,14 +72,14 @@ fn find(root: &mut [usize], i: usize) -> usize {
 }
 
 /// orders.ts:2518 `walk`: the metres of his way there
-fn file_walk(g: &mut Game, gd: GuardId, to: V3) -> f64 {
+fn file_walk(g: &Game, gd: GuardId, to: V3) -> f64 {
     let p = man_pos(g, gd);
     let Some(w) = crate::scene_collision::nav_grid_find_path(g, p, to, None, None) else { return 1e6; };
     crate::places::walk_len(p, &w) + flat(w.last().copied().unwrap_or(p), to)
 }
 
 /// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.
-fn squad_orders_file_cross(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
+fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3]) -> Option<crate::orders::FileCross> {
     let n = spots.len();
     let gap = g.k.orders.file_queue_gap;
     let cost = g.k.orders.file_queue_cost;
@@ -208,7 +208,7 @@ fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
 }
 
 /// Men to spots, the pairing that walks the least in all (`groups`: which spots belong together; `front`: the frame a stack's marks stand on).
-pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3], groups: Option<&[f64]>, front: Option<V3>) -> Vec<(GuardId, V3)> {
+pub fn squad_orders_pair(g: &crate::game::Game, men: &[GuardId], spots: &[V3], groups: Option<&[f64]>, front: Option<V3>) -> Vec<(GuardId, V3)> {
     let mut cross = if front.is_some() { squad_orders_file_cross(g, men, spots) } else { None };
     if men.len() > 2 && men.len() <= 4 && spots.len() >= men.len() {
         let n = men.len();

@@ -36,18 +36,18 @@ pub(super) fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A man the rule is for: a defender of a live room fight, on his feet.
-pub(super) fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn mine(g: &crate::game::Game, gd: GuardId) -> bool {
     let r = &g.gd[gd];
     g.ch[r.ch].team == SIDE && !g.cond[r.ch].down && r.held.is_none()
 }
 
 /// One of his who is neither dazzled nor staggering.
-pub(super) fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn fit(g: &crate::game::Game, gd: GuardId) -> bool {
     mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
 /// The rule runs: a room fight is live, the AI on. (LANES.on settled on.)
-pub(super) fn live(g: &mut crate::game::Game) -> bool {
+pub(super) fn live(g: &crate::game::Game) -> bool {
     crate::roomfight::fight_live(g) && g.ai_enabled
 }
 
@@ -222,7 +222,7 @@ pub(super) fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
 pub use crate::roomfight::def_of;
 
 /// The floor one gun at `from` covers along the line to `at`: nav cells in the wedge with a line of fire from the gun.
-pub(super) fn wedge(g: &mut crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, at: V3, e: Option<f64>) {
+pub(super) fn wedge(g: &crate::game::Game, into: &mut JsSet<crate::Num>, from: V3, at: V3, e: Option<f64>) {
     let k = g.k.lanes;
     let (c, w, h) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
     let mut dx = at[0] - from[0];
@@ -336,7 +336,7 @@ pub(super) fn mask_of(g: &mut crate::game::Game, gd: GuardId) -> Option<Vec<u8>>
 }
 
 /// One of a lane's guns has a line of fire to a man standing at `p`.
-pub(super) fn gun_on(g: &mut crate::game::Game, l: LanesLaneId, p: V3, wide: Option<f64>) -> bool {
+pub(super) fn gun_on(g: &crate::game::Game, l: LanesLaneId, p: V3, wide: Option<f64>) -> bool {
     let wide = wide.unwrap_or(0.0);
     let q: V3 = [p[0], 1.1, p[2]];
     let reach = g.k.lanes.reach_m;
@@ -589,7 +589,7 @@ fn remask_or_bump(g: &mut Game, l: LanesLaneId) {
 }
 
 /// A fit man of the side has a line to what happened at `at`, inside `reach` and not behind his back.
-pub(super) fn sees(g: &mut crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
+pub(super) fn sees(g: &crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
     let d = flat(pos, at);

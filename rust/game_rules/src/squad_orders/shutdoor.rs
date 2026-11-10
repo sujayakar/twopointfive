@@ -26,7 +26,7 @@ fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V
 }
 
 /// Where the door's handle comes to.
-fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
+fn handle_of(g: &crate::game::Game, d: DoorId) -> V3 {
     let w = g.dr[d].def.width;
     pt_of(g, d, w - k().handle_in, 0.0, 1.0)
 }
@@ -52,12 +52,12 @@ fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f
 }
 
 /// A wall, a sill or a pane between two floor points at shin height, the level's statics only.
-fn walled(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn walled(g: &crate::game::Game, a: V3, b: V3) -> bool {
     crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
 }
 
 /// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body.
-fn stands(g: &mut crate::game::Game, p: V3) -> bool {
+fn stands(g: &crate::game::Game, p: V3) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     let mut q: V3 = [p[0], 0.0, p[2]];
     crate::scene_collision::collide_circle(g, &mut q, 0.3, 0.2, 1.5, None);
@@ -65,12 +65,12 @@ fn stands(g: &mut crate::game::Game, p: V3) -> bool {
 }
 
 /// shutSpot's `ok`: clear of the leaf's way, a place to stand, nothing of the level between it and the door.
-fn spot_ok(g: &mut Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
+fn spot_ok(g: &Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
     !in_shut_swing(g, d, p[0], p[2], Some(pad)) && stands(g, p) && !walled(g, ref_, p)
 }
 
 /// The place d is shut from on face `side`, as it stands now; None: none.
-fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
+fn shut_spot(g: &crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
     let w = g.dr[d].def.width;
     let hd = handle_of(g, d);
     let ref_ = pt_of(g, d, w - k().handle_in, 0.2, side);
@@ -128,7 +128,7 @@ fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor:
 }
 
 /// The length of his walk to p by the walkers' grid (infinity: no way).
-fn walk(g: &mut crate::game::Game, gd: GuardId, p: V3) -> f64 {
+fn walk(g: &crate::game::Game, gd: GuardId, p: V3) -> f64 {
     let at = pos_of(g, gd);
     if flat(at, p) < 0.5 { return flat(at, p); }
     let path = match crate::scene_collision::nav_grid_find_path(g, at, p, None, None) { Some(path) => path, None => return f64::INFINITY };
@@ -191,7 +191,7 @@ fn body_in_swing(g: &Game, d: DoorId, c: CharId) -> bool {
 }
 
 /// Who or what is in the leaf's way shut (None: nothing); `seen`: the menu's question, an enemy the picture does not show is not given away.
-fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
+fn in_the_way(g: &crate::game::Game, d: DoorId, but: Option<GuardId>, seen: Option<bool>) -> Option<String> {
     let seen = seen.unwrap_or(false);
     let player = g.player;
     let sam_ch = g.pl[player].ch;
@@ -221,7 +221,7 @@ fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: 
 }
 
 /// An enemy somebody of the team has in sight right now through that doorway.
-fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
+fn contact_through(g: &crate::game::Game, d: DoorId) -> bool {
     let player = g.player;
     let sam_ch = g.pl[player].ch;
     for h in g.guards.clone() {
@@ -320,7 +320,7 @@ fn end(g: &mut Game, gd: GuardId, d: DoorId, j: Job, line: Option<&str>, shut: b
     finish(g, gd, Some(j));
 }
 /// tick's `clearOf`: is p out of the leaf's way
-fn clear_of(g: &mut Game, d: DoorId, p: V3) -> bool {
+fn clear_of(g: &Game, d: DoorId, p: V3) -> bool {
     !in_shut_swing(g, d, p[0], p[2], Some(k().body))
 }
 /// The job is one row of the table, written in place in the TypeScript: every change of the local copy goes back to it.

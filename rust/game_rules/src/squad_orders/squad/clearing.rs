@@ -361,7 +361,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
 }
 
 /// the approach's `nearest`: which of ps is the shortest walk from `at`; the first when there is no choice
-fn nearest(g: &mut Game, ps: &[crate::scene_level::RoomClearPlan], at: V3, to: fn(&crate::scene_level::RoomClearPlan) -> V3) -> usize {
+fn nearest(g: &Game, ps: &[crate::scene_level::RoomClearPlan], at: V3, to: fn(&crate::scene_level::RoomClearPlan) -> V3) -> usize {
     let mut best = 0;
     let mut bl = f64::INFINITY;
     if ps.len() > 1 {

@@ -68,13 +68,13 @@ fn scatter(seed: f64, a: f64, d: V3) -> V3 {
 // ---------------------------------------------------------------- the skeleton's functions
 
 /// The thin level axis of a box in the world.
-fn thin_n(g: &mut crate::game::Game, b: BoxId) -> V3 {
+fn thin_n(g: &crate::game::Game, b: BoxId) -> V3 {
     let bx = &g.tab.boxes[b];
     thin_n_of(bx.h, bx.yaw)
 }
 
 /// The outward face of `b` that `p` lies on.
-fn face_n(g: &mut crate::game::Game, b: BoxId, p: V3) -> V3 {
+fn face_n(g: &crate::game::Game, b: BoxId, p: V3) -> V3 {
     let bx = &g.tab.boxes[b];
     face_n_of(bx.c, bx.h, bx.yaw, p)
 }
@@ -89,7 +89,7 @@ fn roofed(g: &crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// The stuff of static `index` if a round goes through such a thing at all, by its paint and where it stands.
-fn stuff_of(g: &mut crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpen::ThinStuff> {
+fn stuff_of(g: &crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpen::ThinStuff> {
     let bf = crate::scene_boxes::box_flag();
     let mask = js::to_i32(bf.glass) | js::to_i32(bf.no_primary) | js::to_i32(bf.no_shadow) | js::to_i32(bf.dynamic);
     let bx = &g.tab.boxes[b];
@@ -127,7 +127,7 @@ fn stuff_of(g: &mut crate::game::Game, index: f64, b: BoxId) -> Option<crate::wa
 }
 
 /// The box behind an index a raycast reports (>= 1e6: a door leaf), and its stuff.
-fn thing_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen::ThingAt> {
+fn thing_at(g: &crate::game::Game, index: f64) -> Option<crate::wallpen::ThingAt> {
     if index >= 1e6 {
         let b = leaf_at(g, index - 1e6)?;
         let bx = &g.tab.boxes[b];
@@ -140,7 +140,7 @@ fn thing_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen::Thi
 }
 
 /// What thing `index` takes from a round of energy `e` at `at` flying `d`; None = the round is spent in it.
-fn thin_toll(g: &mut crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Option<crate::wallpen::ThinToll> {
+fn thin_toll(g: &crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Option<crate::wallpen::ThinToll> {
     let t = thing_at(g, index)?;
     let b = t.b;
     let h = g.tab.boxes[b].h;
@@ -165,7 +165,7 @@ fn thin_toll(g: &mut crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Op
 }
 
 /// What a round leaving a thing at `p` along `d` is born inside: -1 = open air, else a static's index or a leaf's.
-fn born_in(g: &mut crate::game::Game, p: V3, d: V3, self_: f64) -> f64 {
+fn born_in(g: &crate::game::Game, p: V3, d: V3, self_: f64) -> f64 {
     let mut scratch = embed_scratch();
     let n = crate::scene_collision::gather(g, p[0] - 0.02, p[2] - 0.02, p[0] + 0.02, p[2] + 0.02, p[1] - 0.02, p[1] + 0.02, &mut scratch);
     let bf = crate::scene_boxes::box_flag();
@@ -199,14 +199,14 @@ fn born_in(g: &mut crate::game::Game, p: V3, d: V3, self_: f64) -> f64 {
 }
 
 /// The turn: a hashed scatter inside the cone the toll opens, unit vector out.
-fn deflect(g: &mut crate::game::Game, b: BoxId, at: V3, d: V3, take: f64, e_in: f64) -> V3 {
+fn deflect(g: &crate::game::Game, b: BoxId, at: V3, d: V3, take: f64, e_in: f64) -> V3 {
     let a = g.k.wallpen.deflect_deg * m::PI / 180.0 * v3::clamp(take / m::max(e_in, 1e-6), 0.0, 1.0);
     if a < 1e-6 { return d; }
     scatter(crate::glass::hit_seed(g, b, at), a, d)
 }
 
 /// One thin thing met at `t` along the leg `o` + `d`, or None: the round is spent in it.
-fn crossing(g: &mut crate::game::Game, index: f64, o: V3, d: V3, t: f64, n: V3, e: f64) -> Option<crate::wallpen::WallCross> {
+fn crossing(g: &crate::game::Game, index: f64, o: V3, d: V3, t: f64, n: V3, e: f64) -> Option<crate::wallpen::WallCross> {
     let at = v3::mad(o, d, t);
     let toll = thin_toll(g, index, at, d, e)?;
     let exit = v3::mad(at, d, toll.thru + EXIT_EPS);
@@ -223,7 +223,7 @@ fn crossing(g: &mut crate::game::Game, index: f64, o: V3, d: V3, t: f64, n: V3, 
 }
 
 /// The flight of a round over panes and thin things; None = it crosses nothing. Pure: nothing is filed until commitWalls.
-pub(super) fn thin_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::wallpen::ThinPath> {
+pub(super) fn thin_path(g: &crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::wallpen::ThinPath> {
     let nth0 = nth0.unwrap_or(0.0);
     let mut hit: Option<crate::glasspen::RoundPathSt> = match first {
         Some(f) => f,
@@ -305,7 +305,7 @@ pub(super) fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::W
 }
 
 /// Would a round of `energy` from `from` get to `to`: Clear, a ThinLine through thin things, or None. Reads only.
-pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short: Option<f64>, first: Option<crate::wallpen::ThinLineFirst>) -> Option<crate::wallpen::ThinLine2> {
+pub fn thin_line(g: &crate::game::Game, from: V3, to: V3, energy: f64, short: Option<f64>, first: Option<crate::wallpen::ThinLineFirst>) -> Option<crate::wallpen::ThinLine2> {
     let short = short.unwrap_or(0.3);
     let d = v3::sub(to, from);
     let l = v3::len(d);
@@ -332,7 +332,7 @@ pub fn top_energy(g: &crate::game::Game) -> f64 {
 }
 
 /// How far a round flies from `from` along `dir`: to the first thing that stops it.
-pub fn flight_len(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64) -> f64 {
+pub fn flight_len(g: &crate::game::Game, from: V3, dir: V3, range: f64, energy: f64) -> f64 {
     let Some(first) = crate::scene_collision::raycast(g, from, dir, range) else { return range };
     let first_t = first.t;
     match thin_path(g, from, dir, range, energy, Some(Some(hit_of(first))), None) {

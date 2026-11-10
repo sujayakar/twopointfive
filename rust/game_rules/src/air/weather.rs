@@ -262,7 +262,7 @@ pub fn weather_under_roof(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// HEARING: the factor (>= 1) a sound's path is stretched by for a listener at `ear`.
-pub fn weather_hear_mask(g: &mut crate::game::Game, ear: V3) -> f64 {
+pub fn weather_hear_mask(g: &crate::game::Game, ear: V3) -> f64 {
     let w = &g.weather;
     if w.kind_now.is_none() { return 1.0; }
     let mut k = 1.0 + g.k.wx_sim.rain_k * rain_bed(g, ear[0], ear[2]);
@@ -621,13 +621,13 @@ pub fn hear_path(g: &mut crate::game::Game, src: V3, ear: V3, keep: Option<bool>
 }
 
 /// The length a loud sound's path is taken at: the weather's stretch taken back out.
-pub fn loud_len(g: &mut crate::game::Game, path_len: f64, ear: V3) -> f64 {
+pub fn loud_len(g: &crate::game::Game, path_len: f64, ear: V3) -> f64 {
     let k = weather_hear_mask(g, ear);
     if k == 1.0 { path_len } else { path_len / k }
 }
 
 /// A stroke of lightning under a picked weather, added to the six faces of the light meter's stand-in.
-pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
+pub fn stroke_light(g: &crate::game::Game, p: V3, acc: &mut [f64; 6]) {
     let l = if g.weather.kind_now.is_some() { g.weather.flash.as_ref().map(|f| f.light) } else { None };
     let Some(l) = l else { return };
     let (enabled, color, intensity, dir) = { let r = &g.tab.light[l]; (r.enabled, r.color, r.intensity, r.dir) };

@@ -45,7 +45,7 @@ fn thing_target(th: WorkThing) -> crate::orders::OrderTargetFloor {
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// Where he stands to work a thing on a face: the free nav cell nearest `standM` off it with a clear line.
-fn stand_for(g: &mut crate::game::Game, face: V3, n: Option<V3>, area: Option<crate::workthings::Area>) -> Option<V3> {
+fn stand_for(g: &crate::game::Game, face: V3, n: Option<V3>, area: Option<crate::workthings::Area>) -> Option<V3> {
     let e = 0.3;
     let mut best: Option<V3> = None;
     let mut bs = m::INF;
@@ -572,7 +572,7 @@ pub fn work_passes(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
 }
 
 /// The man is walking to the breaker and this teammate is stood on that walk: he is not held for him.
-pub fn work_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+pub fn work_coming(g: &crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     let end = match &g.gd[h].task {
         Some(crate::game::GuardTask::Arm0(t)) if t.kind == crate::game::GuardTaskArm0Kind::Breaker => t.pos,
         _ => return false,

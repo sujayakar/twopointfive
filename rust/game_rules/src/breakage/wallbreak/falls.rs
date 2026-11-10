@@ -22,11 +22,11 @@ fn without_bits(flags: f64, mask: f64) -> f64 { (js::to_i32(flags) & !js::to_i32
 /// g.col.boxes[i]: a place in the level's list, which holds the box's ID
 fn box_at(g: &Game, i: f64) -> BoxId { g.col.boxes[i as usize] }
 /// aabbOf(box), for a box named by its ID: aabb_of takes g and the row, which cannot both be lent
-fn aabb(g: &mut Game, b: BoxId) -> AABB { let row = g.tab.boxes[b].clone(); aabb_of(&row) }
+fn aabb(g: &Game, b: BoxId) -> AABB { let row = g.tab.boxes[b].clone(); aabb_of(&row) }
 /// `owner.get(j)`: the breakable a static belongs to
 fn owner_of(g: &Game, j: f64) -> Option<WallbreakBreakableId> { g.destr.walls.owner.get(crate::Num(j)).copied() }
 /// `B.nx > 1 || B.box.h[0] >= B.box.h[2]`
-fn along_x(g: &mut Game, nx: f64, bx: BoxId) -> bool {
+fn along_x(g: &Game, nx: f64, bx: BoxId) -> bool {
     let h = g.tab.boxes[bx].h;
     nx > 1.0 || h[0] >= h[2]
 }
@@ -52,7 +52,7 @@ pub(super) fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId
 // ---------------------------------------------------------------- what stood on it / hung on it
 
 /// What `a` (static j) rests on; `extra` counts as still standing.
-fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> Vec<crate::wallbreak::AABB> {
+fn wall_break_rests_on(g: &crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> Vec<crate::wallbreak::AABB> {
     let mine = owner_of(g, j);
     let mut out: Vec<AABB> = Vec::new();
     let mut list = scratch();
@@ -80,7 +80,7 @@ fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
 }
 
 /// Is static j (bounds a) held up, by what it rests on or what it hangs from?
-fn wall_break_held(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> bool {
+fn wall_break_held(g: &crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> bool {
     if a.y0 <= 0.06 { return true; }
     let rest = wall_break_rests_on(g, j, a, extra);
     if !rest.is_empty() {
@@ -110,7 +110,7 @@ fn wall_break_held(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB,
 }
 
 /// Authored statics touching `a`, ghosts and part-gone cover included, in index order.
-fn wall_break_near(g: &mut crate::game::Game, a: crate::wallbreak::AABB) -> Vec<f64> {
+fn wall_break_near(g: &crate::game::Game, a: crate::wallbreak::AABB) -> Vec<f64> {
     let e = 0.05;
     let mut out: Vec<f64> = Vec::new();
     let mut list = scratch();
@@ -178,7 +178,7 @@ fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId>, q
 }
 
 /// The boards hung on the charge's face of `wall`, within `r` of the charge. Pure.
-fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> Vec<f64> {
+fn wall_break_hung_at(g: &crate::game::Game, wall: f64, at: V3, r: f64) -> Vec<f64> {
     let row = match owner_of(g, wall) { Some(b) => b, None => return Vec::new() };
     let (kind, nx, bx) = { let b = &g.tab.wallbreak_breakable[row]; (b.kind, b.nx, b.box_) };
     if kind != BKind::Wall { return Vec::new(); }
@@ -210,7 +210,7 @@ fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> V
 }
 
 /// Could authored static `j` be a board hung on a wall, by what it was authored as?
-fn wall_break_board_like(g: &mut crate::game::Game, j: f64) -> bool {
+fn wall_break_board_like(g: &crate::game::Game, j: f64) -> bool {
     if j < 0.0 || j >= g.col.boxes.len() as f64 || j >= g.destr.walls.authored || g.destr.walls.owner.has(crate::Num(j)) { return false; }
     let b = box_at(g, j);
     if g.tab.boxes[b].rot.is_some() { return false; }
@@ -394,7 +394,7 @@ fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
 }
 
 /// `exposed` of planOf: does the blast's eye reach `p` on B, by a line that meets nothing but B?
-fn exposed(g: &mut Game, b: WallbreakBreakableId, eye: V3, p: V3) -> bool {
+fn exposed(g: &Game, b: WallbreakBreakableId, eye: V3, p: V3) -> bool {
     let d = v3::sub(p, eye);
     let l = v3::len(d);
     if l < 0.05 { return true; }
@@ -426,7 +426,7 @@ fn widen_hole(full: &[f64], nearest: f64, min_hole: f64, nn: f64) -> (f64, f64) 
 }
 
 /// The plan of a blast at `at`: which cells of which breakables it opens, nearest first. Pure.
-fn wall_break_plan_of(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts, r: f64) -> Vec<crate::wallbreak::WallBreakPlanOfItem> {
+fn wall_break_plan_of(g: &crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts, r: f64) -> Vec<crate::wallbreak::WallBreakPlanOfItem> {
     let k_ = g.k.walls.blast;
     let col = g.k.walls.col;
     let eye: V3 = [at[0], m::max(0.3, m::min(at[1] + 0.3, crate::scene_world::world().ceiling_y - 0.3)), at[2]];

@@ -11,7 +11,7 @@ fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone.
-pub(super) fn thing_key_of(g: &mut crate::game::Game, b: AnyBoxId) -> f64 {
+pub(super) fn thing_key_of(g: &crate::game::Game, b: AnyBoxId) -> f64 {
     let k = g.tab[b].mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
     key_of_mkey(g, k)
 }
@@ -502,13 +502,13 @@ pub fn fog_of_war_reset(g: &mut crate::game::Game) {
 }
 
 /// The fog's own line: anything solid between an eye and a point. (FogOfWar.sightBlocked)
-pub(super) fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+pub(super) fn fog_of_war_sight_blocked(g: &crate::game::Game, a: V3, b: V3) -> bool {
     let through = fog_through();
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
 /// One eye on one living man, walls and leaves only, inside the eye's field. (FogOfWar.lineToMan)
-fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
+fn fog_of_war_line_to_man(g: &crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
     let pc = g.gd[gd].ch;
     if !fog_of_war_in_field(g, e, chest) { return false; }
     let to = v3::sub(chest, e.pos);
@@ -538,7 +538,7 @@ fn body_at(g: &crate::game::Game, gd: GuardId) -> V3 {
 }
 
 /// The eyes with a line to a man (`chest` given) or his body (None), one question to the module: how many × 2^28 + those eyes, four bits each. (FogOfWar.sees)
-fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
+fn fog_of_war_sees(g: &crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
     let pc = g.gd[gd].ch;
     let (a, b, kind): (V3, V3, f64) = match chest {
         Some(c) => (c, bone_or(g, pc, crate::character::Bone::Head, 1.6), if g.ch[pc].alive { 3.0 } else { 1.0 }),
@@ -552,7 +552,7 @@ fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], 
 }
 
 /// The eyes of a pass handed to the module, each with the field `in_field` holds it to. (FogOfWar.handEyes)
-fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye]) {
+fn fog_of_war_hand_eyes(g: &crate::game::Game, eyes: &[crate::fogofwar::FogEye]) {
     crate::scene_collision::sight_open(eyes.len() as f64);
     for (k, e) in eyes.iter().enumerate() {
         let fov = match e.fov { Some(f) => f, None => field_deg(g) };
@@ -563,13 +563,13 @@ fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogE
 }
 
 /// One eye on a body: a clear line to a hand's height over where it lies, inside the eye's field. (FogOfWar.eyeOnBody)
-fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId) -> bool {
+fn fog_of_war_eye_on_body(g: &crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId) -> bool {
     let at = body_at(g, gd);
     fog_of_war_in_field(g, e, at) && !fog_of_war_sight_blocked(g, e.pos, at)
 }
 
 /// Does anybody on the team see this door: a line to the leaf where it stands or where the picture has it. (FogOfWar.doorSeen)
-fn fog_of_war_door_seen(g: &mut crate::game::Game, d: DoorId, shown: f64) -> bool {
+fn fog_of_war_door_seen(g: &crate::game::Game, d: DoorId, shown: f64) -> bool {
     let (hinge, w, closed) = { let def = &g.dr[d].def; (def.hinge, def.width, def.closed_dir) };
     let (hx, hz) = (hinge[0], hinge[1]);
     let eyes = g.fog_of_war.eyes.clone();

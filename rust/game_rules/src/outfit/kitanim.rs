@@ -6,7 +6,7 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.
-fn nv_hand_free(g: &mut crate::game::Game) -> bool {
+fn nv_hand_free(g: &crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     if crate::condition::down(g, g.pl[p].ch)
@@ -46,7 +46,7 @@ pub fn kit_nv(g: &mut crate::game::Game) {
 }
 
 /// The tube is at his eyes: what the picture follows; a flip no longer live is let go of here.
-pub fn kit_nv_eye(g: &mut crate::game::Game) -> bool {
+pub fn kit_nv_eye(g: &crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     let k = match g.ch[c].anim.nv_shown {
@@ -103,7 +103,7 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
 }
 
 /// The rifle hangs in front of him on its sling when not in his hands; a fact of the mission.
-pub fn kit_sling_front(g: &mut crate::game::Game) -> bool {
+pub fn kit_sling_front(g: &crate::game::Game) -> bool {
     if js::truthy(g.k.kitanim.sling) {
         return g.k.kitanim.sling == 1.0;
     }
@@ -374,7 +374,7 @@ pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.
-pub fn kit_reload(g: &mut crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
+pub fn kit_reload(g: &crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
     if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() {
         return None;
     }

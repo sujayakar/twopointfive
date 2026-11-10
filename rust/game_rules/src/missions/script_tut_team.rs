@@ -105,7 +105,7 @@ fn block(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, spawn: bool) -> 
     Ok(out)
 }
 /// the squad's men on their feet
-fn squad(g: &mut Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
+fn squad(g: &Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
     let mut out = Vec::new();
     for name in SQUAD {
         if let Some(u) = crate::director::director_beat_unit(g, name) {
@@ -153,14 +153,14 @@ fn wait_or(g: &Game, r: DirectorRunId, secs: f64, id: u32) -> Result<crate::dire
     Ok(crate::director::director_beat_any(vec![wait, until(id)]))
 }
 /// `c.unit('Red One') ?? squad(c)[0]`, the man who speaks for the squad
-fn speaker(g: &mut Game, r: DirectorRunId) -> Option<crate::director::UnitRef> {
+fn speaker(g: &Game, r: DirectorRunId) -> Option<crate::director::UnitRef> {
     match crate::director::director_beat_unit(g, "Red One") {
         Some(u) => Some(u),
         None => squad(g, r).into_iter().next(),
     }
 }
 /// hold's closure met
-fn hold_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
+fn hold_met(g: &Game, r: DirectorRunId) -> Result<bool, String> {
     let door = tut_team_vars(g, r).bunk_door.clone().unwrap();
     if crate::director::director_query_door(g, &door)?.open {
         return Ok(true);
@@ -173,7 +173,7 @@ fn hold_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
     Ok(false)
 }
 /// cook's closure met
-fn cook_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
+fn cook_met(g: &Game, r: DirectorRunId) -> Result<bool, String> {
     let (pass, kitchen) = {
         let v = tut_team_vars(g, r);
         (v.pass_door.clone().unwrap(), v.kitchen_door.clone().unwrap())
@@ -258,7 +258,7 @@ pub(super) fn tut_team_hold_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// (P.beat 'hold') 1: met
-pub(super) fn tut_team_hold_test(g: &mut crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_hold_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => hold_met(g, r),
         _ => Err(String::from("tut-team hold: no such test")),
@@ -301,7 +301,7 @@ pub(super) fn tut_team_cook_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// (P.beat 'cook') 1: he is down, or met
-pub(super) fn tut_team_cook_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_team::TutTeamCookFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_cook_test(g: &crate::game::Game, r: DirectorRunId, f: &crate::script_tut_team::TutTeamCookFrame, id: u32) -> Result<bool, String> {
     match id {
         1 => {
             let u = f.u.clone().unwrap();
@@ -512,7 +512,7 @@ pub(super) fn tut_team_break_step(g: &mut crate::game::Game, r: DirectorRunId, b
 }
 
 /// (P.beat 'break') 1: broke; 2: every man of the squad in the yard
-pub(super) fn tut_team_break_test(g: &mut crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
+pub(super) fn tut_team_break_test(g: &crate::game::Game, r: DirectorRunId, id: u32) -> Result<bool, String> {
     match id {
         1 => Ok(flag(g, r, "broke")),
         2 => {

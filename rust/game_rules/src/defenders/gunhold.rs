@@ -90,7 +90,7 @@ pub fn gun_hold_see(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
 }
 
 /// A round from the hold reaches the side's knowledge through a man who sensed it, while it is fresh.
-fn learn_shot(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, shot_t: f64, sensed: bool) {
+fn learn_shot(g: &crate::game::Game, k: &mut crate::gunhold::Known, shot_t: f64, sensed: bool) {
     if !(shot_t > k.shot_t) || !sensed || g.time - shot_t > FRESH_S {
         return;
     }
@@ -101,7 +101,7 @@ fn learn_shot(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, shot_t: 
 }
 
 /// Is this man's standoff one the rule has (the pistol known in the hold, a part dealt him): the keys of the hold's Known and of his St.
-fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
+fn part_of(g: &crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
     let s = g.gd[gd].standoff?;
     let (held, key) = g.pl[g.player].holding().map(|h| (h.g, h.serial))?;
     if held != g.tab.guards_standoff[s].pair {
@@ -115,7 +115,7 @@ fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandof
 }
 
 /// Behind cover on purpose the standoff is kept while somebody of his side has seen the pair lately and no look found them gone.
-pub fn standoff_fix_kept(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn standoff_fix_kept(g: &crate::game::Game, gd: GuardId) -> bool {
     let (key, s) = match part_of(g, gd) {
         Some(p) => p,
         None => return false,
@@ -212,7 +212,7 @@ fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
 }
 
 /// The floor point at a nav cell's middle.
-fn centre(g: &mut crate::game::Game, i: f64) -> V3 {
+fn centre(g: &crate::game::Game, i: f64) -> V3 {
     let n = &g.col.nav;
     [(js::rem(i, n.w) + 0.5) * n.cell, 0.0, (js::to_i32(i / n.w) as f64 + 0.5) * n.cell]
 }
@@ -228,7 +228,7 @@ fn front(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3) -> bool {
 }
 
 /// Is a man standing (or, behind low cover, crouched) at `p` in Sam's line of fire, forward of his rear arc.
-fn shown(g: &mut crate::game::Game, k: &crate::gunhold::Known, p: V3, low: bool) -> bool {
+fn shown(g: &crate::game::Game, k: &crate::gunhold::Known, p: V3, low: bool) -> bool {
     if !front(g, k, p) {
         return false;
     }
@@ -262,7 +262,7 @@ fn price_at(g: &Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
 }
 
 /// A way to `goal` at that price; its length and the longest unbroken stretch of it across floor Sam's gun covers in front of him.
-fn way_to(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
+fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
     let start = g.ch[g.gd[gd].ch].pos;
     let path = crate::scene_collision::nav_grid_find_path(g, start, goal, Some(8000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)))?;
     if path.is_empty() || flat(path[path.len() - 1], goal) > 0.6 {
@@ -318,7 +318,7 @@ fn blocked_at(g: &Game, i: f64) -> bool {
 }
 
 /// The nearest floor, by walking, where Sam's gun has no line to him; `edge` = the open cell he came off to get there.
-fn pick_cover(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known, round: bool) -> Option<crate::gunhold::PickCover> {
+fn pick_cover(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut crate::gunhold::Known, round: bool) -> Option<crate::gunhold::PickCover> {
     let (w, h, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let pos = g.ch[g.gd[gd].ch].pos;
     let mut start = cell_of(g, pos);
@@ -1038,7 +1038,7 @@ fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsSt
 }
 
 /// QA and the standoff's muzzle: this man's part, by name.
-pub fn gun_hold_phase(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::gunhold::Phase> {
+pub fn gun_hold_phase(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunhold::Phase> {
     let (_, s) = part_of(g, gd)?;
     g.m.gunhold.states.get(s).map(|st| st.phase)
 }

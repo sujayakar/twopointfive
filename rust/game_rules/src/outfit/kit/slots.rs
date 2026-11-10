@@ -114,7 +114,7 @@ fn pick_of(m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> &str {
 // ---- the part
 
 /// What member i is issued.
-pub(super) fn issued_card(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
+pub(super) fn issued_card(g: &crate::game::Game, i: f64) -> crate::kit::MemberKit {
     if i == 0.0 {
         if let Some(h) = g.m.kit.hand {
             return stealth_issue(g, h);
@@ -124,7 +124,7 @@ pub(super) fn issued_card(g: &mut crate::game::Game, i: f64) -> crate::kit::Memb
 }
 
 /// A fresh copy of what member i is issued.
-pub(super) fn kit_default(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
+pub(super) fn kit_default(g: &crate::game::Game, i: f64) -> crate::kit::MemberKit {
     issued_card(g, i)
 }
 

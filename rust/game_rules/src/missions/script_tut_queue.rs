@@ -108,13 +108,13 @@ fn alive(g: &Game, r: DirectorRunId, u: &Option<crate::director::UnitRef>) -> bo
 }
 
 /// `s.open || s.broken` of a door
-fn is_open(g: &mut Game, d: &crate::director::DoorRef) -> Result<bool, String> {
+fn is_open(g: &Game, d: &crate::director::DoorRef) -> Result<bool, String> {
     let s = crate::director::director_query_door(g, d)?;
     Ok(s.open || s.broken)
 }
 
 /// The hall's men still standing, m before n (tut-queue.script.ts gun's up)
-fn up(g: &mut Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFrame) -> Vec<crate::director::UnitRef> {
+fn up(g: &Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFrame) -> Vec<crate::director::UnitRef> {
     let mut l = Vec::new();
     for u in [&f.m, &f.n] {
         if let Some(u) = u {
@@ -295,7 +295,7 @@ pub(super) fn tut_queue_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b:
 }
 
 /// The 'gun' beat's c.until tests.
-pub(super) fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_queue_gun_test(g: &crate::game::Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGunFrame, id: u32) -> Result<bool, String> {
     let (front, back) = {
         let v = crate::script_tut_queue::tut_queue_vars(g, r);
         (v.front.clone().unwrap(), v.back.clone().unwrap())
@@ -310,7 +310,7 @@ pub(super) fn tut_queue_gun_test(g: &mut crate::game::Game, r: DirectorRunId, f:
 }
 
 /// `men.filter(u => q.alive(u) && !q.routed(u))` (tut-queue.script.ts gates' left)
-fn left(g: &mut Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
+fn left(g: &Game, r: DirectorRunId, men: &[crate::director::UnitRef]) -> Vec<crate::director::UnitRef> {
     let mut l = Vec::new();
     for u in men {
         if crate::director::director_query_alive(g, r, u) && !crate::director::director_query_routed(g, r, u) { l.push(u.clone()); }
@@ -476,7 +476,7 @@ pub(super) fn tut_queue_gates_step(g: &mut crate::game::Game, r: DirectorRunId, 
 }
 
 /// The 'gates' beat's c.until tests.
-pub(super) fn tut_queue_gates_test(g: &mut crate::game::Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
+pub(super) fn tut_queue_gates_test(g: &crate::game::Game, r: DirectorRunId, f: &crate::script_tut_queue::TutQueueGatesFrame, id: u32) -> Result<bool, String> {
     match id {
         GATES_INSIDE | GATES_OPEN => {
             for u in left(g, r, &f.men).iter() {

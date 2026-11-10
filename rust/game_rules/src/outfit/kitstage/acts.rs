@@ -432,7 +432,7 @@ fn order_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Stri
     }
     Ok(())
 }
-fn order_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
+fn order_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let d = the_door(st);
     let gone = door_op(g, &crate::seats::here(g), d).map_or(true, |o| g.tab.doortools_door_op[o].phase == crate::doortools::Phase::Enter);
     let (word, after) = if b.row == Act::BangOrder { ("bang", K.after_stun) } else { ("frag", K.aftermath) };
@@ -449,13 +449,13 @@ fn reaches_sam(g: &mut Game, p: V3) -> bool {
     let lift = g.k.frag.lift;
     crate::frag::exposed_to(g, [p[0], p[1] + lift, p[2]], feet, head, Some(crate::frag::GlassView::Blown)) > 0.0
 }
-fn takes_leaf(g: &mut Game, st: &KitStage, p: V3) -> bool {
+fn takes_leaf(g: &Game, st: &KitStage, p: V3) -> bool {
     let Some(d) = st.door else { return false };
     let radius = g.k.frag.destr_m;
     crate::destruction::destruction_doors_for(g, p, Some(crate::destruction::DestructionDoorsForOpts { radius: Some(radius), power: Some(1.0), ..Default::default() })).contains(&d)
 }
 /// SAM'S FRAG, AIMED THROUGH THE GATE: the leaf held open stands in the room on the hinge's side, so the way in is between the latch jamb and the leaf's free edge; the grenade is aimed from his hand through the middle of that gap. True once the arc the game has solved first lands `frag_land` inside
-fn frag_aim(g: &mut Game, st: &KitStage, b: &mut Beat) -> bool {
+fn frag_aim(g: &Game, st: &KitStage, b: &mut Beat) -> bool {
     let Some(pv) = g.sets[g.seat].hand.throw_preview.as_ref() else { return false };
     let Some(&o) = pv.points.first() else { return false };
     let land = pv.land;
@@ -586,7 +586,7 @@ fn thrown_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
 }
 // ------------------------------------------------------------ door charges
 /// the stack a slot back from the door, rearmost first, facing it. All of them or none
-fn stand_off(g: &mut Game, st: &mut KitStage, b: &mut Beat) {
+fn stand_off(g: &Game, st: &mut KitStage, b: &mut Beat) {
     let ns = m::min(3.0, st.order.len() as f64) as usize;
     if ns == 0 { return; }
     let back = |st: &KitStage, k: usize| -> V2 { [st.spots[k][0] + st.s[0] * ST.gap, st.spots[k][1] + st.s[1] * ST.gap] };
@@ -610,7 +610,7 @@ fn charge_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
     Step::On
 }
-fn charge_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn charge_sam_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     let q = at(st, [K.own_post[0] * st.latch, K.own_post[1], 0.0]);
     if !free(g, v2(q)) { return Err(String::from("no room at the door")); }
     let d = the_door(st);
@@ -658,7 +658,7 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     Step::On
 }
 // ------------------------------------------------------------ the wand
-fn tiles(g: &mut Game, i: u32) -> Vec<&'static str> { crate::kit::kit_rows(g, i as f64).iter().map(|r| r.field.as_str()).collect() }
+fn tiles(g: &Game, i: u32) -> Vec<&'static str> { crate::kit::kit_rows(g, i as f64).iter().map(|r| r.field.as_str()).collect() }
 fn fog_on(g: &mut Game, st: &mut KitStage) { st.a.fog_up = true; g.fog_picture.viewer = true; g.fog_of_war.on = true; }
 fn wand_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     let q = at(st, [K.wand_post[0], K.wand_post[1], 0.0]);
@@ -788,7 +788,7 @@ fn tube(g: &mut Game, st: &mut KitStage, load: RifleAttachment) -> bool {
     true
 }
 /// the camera's wall, from where he stands: the nearest wall inside by a ray through the opening that clears both jambs and the leaf as it will stand
-fn cam_spot(g: &mut Game, st: &KitStage, p: V2) -> Option<V3> {
+fn cam_spot(g: &Game, st: &KitStage, p: V2) -> Option<V3> {
     let d = st.door?;
     let out = out_of(st, p);
     let hw = st.width / 2.0 - K.cam_clear;
@@ -874,7 +874,7 @@ fn cam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if el >= K.cam_hold { Step::Done } else { Step::On }
 }
 fn tube_load(a: Act) -> RifleAttachment { if a == Act::Ring { RifleAttachment::Ring } else { RifleAttachment::He40 } }
-fn tube_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn tube_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     let pl = g.player;
     let rifle = g.pl[pl].rifle;
     let a = K.shell_yard * R;
@@ -1101,7 +1101,7 @@ fn big_mate_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     crack(g, st, b, K.wide_light);
     if now - b.mark_t >= K.aftermath { Step::Done } else { Step::On }
 }
-fn big_sam_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn big_sam_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     let f = at(st, [K.own_post[0] * st.latch, K.own_post[1], 0.0]);
     let Some(tool) = big_of(st, 0) else { return Err(String::from("nothing for a door in his big slot")) };
     let d = the_door(st);
@@ -1179,7 +1179,7 @@ fn swap_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     if b.phase == "stow" { super::cards::sam_card(g, st); to(g, b, "draw"); sam_draw(st); return Step::On; }
     swap_up(g, st, b)
 }
-fn turn_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+fn turn_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     let (a, c) = (b.yaw + K.turn_deg * R, b.yaw - K.turn_deg * R);
     let y = if m::sin(a) * st.n[0] + m::cos(a) * st.n[1] >= m::sin(c) * st.n[0] + m::cos(c) * st.n[1] { a } else { c };
     b.quiet = true; b.turn = true; b.h_to = 1.1;

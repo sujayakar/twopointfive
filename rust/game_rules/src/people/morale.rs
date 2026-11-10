@@ -36,7 +36,7 @@ fn lines_of(kind: LineKind) -> &'static Lines {
     &LINES[i].1
 }
 /// his row as it stands, a copy to read: a writer writes the row
-fn now(g: &mut Game, gd: GuardId) -> Mind { *g.m.morale.state_of.get(gd).unwrap() }
+fn now(g: &Game, gd: GuardId) -> Mind { *g.m.morale.state_of.get(gd).unwrap() }
 
 /// one line of a kind from this man, unless he said one inside `barkSecs`
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, radio: bool, force: Option<bool>) -> bool {
@@ -109,7 +109,7 @@ fn in_the_dark(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// has he company
-pub fn has_mate(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn has_mate(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let eye = head_of(g, c);
     let mut i = 0;
@@ -180,7 +180,7 @@ fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// the first slice's sequence is a green man's
-fn folds(g: &mut crate::game::Game, gd: GuardId) -> bool { now(g, gd).green || g.k.morale.training == Training::None }
+fn folds(g: &crate::game::Game, gd: GuardId) -> bool { now(g, gd).green || g.k.morale.training == Training::None }
 
 /// what a shock of `x` is to these men
 fn nerved(g: &crate::game::Game, x: f64) -> f64 {
@@ -209,10 +209,10 @@ fn stand(g: &mut crate::game::Game, gd: GuardId, first: Option<bool>) {
 }
 
 /// does he know something is up
-fn roused(g: &mut crate::game::Game, gd: GuardId) -> bool { now(g, gd).shock > 0.0 || g.gd[gd].state != crate::game::GuardState::Patrol }
+fn roused(g: &crate::game::Game, gd: GuardId) -> bool { now(g, gd).shock > 0.0 || g.gd[gd].state != crate::game::GuardState::Patrol }
 
 /// where he stands, as dread
-fn standing(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+fn standing(g: &crate::game::Game, gd: GuardId) -> f64 {
     if !roused(g, gd) { return 0.0; }
     let s = now(g, gd);
     let k = &g.k.morale;
@@ -220,13 +220,13 @@ fn standing(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// shock and standing, 0 to 1
-fn dread(g: &mut crate::game::Game, gd: GuardId) -> f64 { let shock = now(g, gd).shock; v3::clamp(shock + standing(g, gd), 0.0, 1.0) }
+fn dread(g: &crate::game::Game, gd: GuardId) -> f64 { let shock = now(g, gd).shock; v3::clamp(shock + standing(g, gd), 0.0, 1.0) }
 
 /// may he break, whatever his shock
 fn may_break(s: crate::morale::Mind) -> bool { if s.green { s.alone || (s.leader_down && s.lost) } else { s.alone && s.dark } }
 
 /// the rung his dread reads, with hysteresis
-pub fn rung_now(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn rung_now(g: &crate::game::Game, gd: GuardId) -> f64 {
     let s = now(g, gd);
     let d = dread(g, gd);
     let k = &g.k.morale;
@@ -425,7 +425,7 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
 }
 
 /// a thing somebody else threw, on the move by the hole, in his view
-fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
+fn thrown(g: &crate::game::Game, gd: GuardId, hole: V3) -> bool {
     let c = g.gd[gd].ch;
     let eye = head_of(g, c);
     let me = g.ch[c].id;
@@ -443,7 +443,7 @@ fn thrown(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> bool {
 }
 
 /// how far he can go from where he stands along (dx, dz)
-fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64) -> f64 {
+fn clear_run(g: &crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64) -> f64 {
     let c = g.gd[gd].ch;
     let (p, radius) = (g.ch[c].pos, g.ch[c].radius);
     let prop = match crate::props::prop_system_raycast(g, [p[0], 0.45, p[2]], [dx, 0.0, dz], max + radius) { Some(h) => h.t, None => f64::INFINITY };
@@ -473,7 +473,7 @@ fn away_from(g: &crate::game::Game, c_2: CharId, hole: V3) -> [f64; 2] {
 }
 
 /// where the scrabble ends: straight back, else the longest run of a small fan
-fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3> {
+fn back_goal(g: &crate::game::Game, gd: GuardId, hole: V3) -> Option<V3> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let [dx, dz] = away_from(g, c, hole);
@@ -497,7 +497,7 @@ fn back_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3) -> Option<V3> {
 }
 
 /// the leader's one side step off the hole's line
-fn side_goal(g: &mut crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardId>) -> Option<V3> {
+fn side_goal(g: &crate::game::Game, gd: GuardId, hole: V3, to: Option<GuardId>) -> Option<V3> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let [dx, dz] = away_from(g, c, hole);
@@ -679,18 +679,18 @@ mod tests {
 }
 
 /// The row as it stands now, for reading: every read comes fresh from the table, every write goes through it. `step` and `drive` are called on a man who has one.
-fn row(g: &mut Game, gd: GuardId) -> Mind {
+fn row(g: &Game, gd: GuardId) -> Mind {
     *g.m.morale.state_of.get(gd).unwrap()
 }
 
 /// Where a man's body stands.
-fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
+fn pos_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     g.ch[c].pos
 }
 
 /// His men whose duck waits on his order, nearest first.
-fn his(g: &mut Game, gd: GuardId) -> Vec<GuardId> {
+fn his(g: &Game, gd: GuardId) -> Vec<GuardId> {
     let mut men: Vec<GuardId> = Vec::new();
     for i in 0..g.guards.len() {
         let o = g.guards[i];
@@ -913,7 +913,7 @@ pub(super) fn morale_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate
 }
 
 /// his dread while an event's shock is still on him, 0 otherwise
-pub fn shaken_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
+pub fn shaken_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd).copied() {
         Some(s) if s.shock > 0.0 => dread(g, gd),
         _ => 0.0,

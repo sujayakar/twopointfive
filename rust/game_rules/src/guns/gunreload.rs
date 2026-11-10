@@ -206,7 +206,7 @@ pub fn feed_deal(g: &mut crate::game::Game, ch: CharId, gun: Option<FirearmId>, 
 }
 
 /// what the player's reload of `gun` on `row` is to sound like and to drop, asked before startReload
-pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons::WeaponDefReload, shells: Option<crate::gunreload::FeedPlanShells>) -> Option<crate::gunreload::FeedPlan> {
+pub fn feed_plan(g: &crate::game::Game, gun: FirearmId, row: crate::weapons::WeaponDefReload, shells: Option<crate::gunreload::FeedPlanShells>) -> Option<crate::gunreload::FeedPlan> {
     let def = gun_def(g, gun);
     let f = feed_of(&def)?;
     let n = match shells {
@@ -230,7 +230,7 @@ pub fn feed_plan(g: &mut crate::game::Game, gun: FirearmId, row: crate::weapons:
 }
 
 /// feedPlan's `best`: the same sums as startReload's, the fullest spare, as much of it as the gun may hold
-fn plan_best(g: &mut Game, gun: FirearmId, def: &crate::weapons::WeaponDef) -> f64 {
+fn plan_best(g: &Game, gun: FirearmId, def: &crate::weapons::WeaponDef) -> f64 {
     let x = if !g.fa[gun].spare.is_empty() {
         m::max_n(&g.fa[gun].spare)
     } else if crate::weapons::firearm_bottomless(g, gun) {
@@ -253,7 +253,7 @@ fn reload_of(r: &ShellRow) -> crate::weapons::WeaponDefReload {
 }
 
 /// a tube gun's reload as it stands now, by the shell; None: not a tube gun with `reload.shell`
-pub fn shell_plan(g: &mut crate::game::Game, gun: FirearmId, free: Option<bool>, max: Option<f64>) -> Option<crate::gunreload::ShellPlan> {
+pub fn shell_plan(g: &crate::game::Game, gun: FirearmId, free: Option<bool>, max: Option<f64>) -> Option<crate::gunreload::ShellPlan> {
     let free = free.unwrap_or(false);
     let max = max.unwrap_or(f64::INFINITY);
     let def = gun_def(g, gun);

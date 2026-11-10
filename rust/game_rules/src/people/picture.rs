@@ -704,7 +704,7 @@ fn known_put(best: &mut JsMap<CharId, (V3, f64, bool)>, who: CharId, at: V3, t: 
     }
 }
 /// knownPlaces's `of`, over a picture's ideas copied
-fn known_of(g: &mut Game, best: &mut JsMap<CharId, (V3, f64, bool)>, ideas: Vec<Idea>, now: f64, max_age: f64) {
+fn known_of(g: &Game, best: &mut JsMap<CharId, (V3, f64, bool)>, ideas: Vec<Idea>, now: f64, max_age: f64) {
     for i in ideas {
         if now - i.t <= max_age && !gone(g, i.who) {
             known_put(best, i.who, i.at, i.t, i.lost);

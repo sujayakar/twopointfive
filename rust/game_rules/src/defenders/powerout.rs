@@ -109,7 +109,7 @@ fn event(g: &mut crate::game::Game, what: crate::powerout::PowerOutEventWhat, gd
 }
 
 /// a mains-fed fixture that was burning, in his plain view inside `seeM`.
-fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn saw_them_die(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = pos_of(g, gd);
     let eye: V3 = [c[0], 1.5, c[2]];
     let mut i = 0;
@@ -210,7 +210,7 @@ fn lever_spot(g: &mut crate::game::Game) -> V3 {
 }
 
 /// the way from a man to a spot as the walk grid stands, and its length; None = none that ends there.
-fn way_to(g: &mut crate::game::Game, from: V3, to: V3) -> Option<crate::powerout::WayTo> {
+fn way_to(g: &crate::game::Game, from: V3, to: V3) -> Option<crate::powerout::WayTo> {
     if flat(from, to) < 0.5 {
         return Some(WayTo { path: vec![to], l: flat(from, to) });
     }

@@ -8,14 +8,14 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
-fn hole_open(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
+fn hole_open(g: &Game, w: &WallSpot, t: f64, du: f64) -> bool {
     let (a, b) = (wall_pt(g, w, du, FACE, Some(0.35)), wall_pt(g, w, du, -(t + FACE), Some(0.35)));
     if crate::scene_collision::solid_blocked(g, a, b, None) { return false; }
     let (a, b) = (wall_pt(g, w, du, FACE, Some(1.3)), wall_pt(g, w, du, -(t + FACE), Some(1.3)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
 /// holeAt's `through`: floor at both mouths
-fn hole_through(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
+fn hole_through(g: &Game, w: &WallSpot, t: f64, du: f64) -> bool {
     let mouth_in = g.k.wallcharge.mouth_in;
     let far = xz(wall_pt(g, w, du, -(t + mouth_in), None));
     if crate::scene_collision::nav_grid_is_blocked(g, far[0], far[1]) { return false; }
@@ -23,7 +23,7 @@ fn hole_through(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, near[0], near[1])
 }
 /// holeAt's `shut`: an open run ends at `to`; if a man fits, the way through nearest its middle
-fn hole_shut(g: &mut Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best: &mut Option<WallChargeHoleAt>, to: f64) {
+fn hole_shut(g: &Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best: &mut Option<WallChargeHoleAt>, to: f64) {
     if run.is_nan() { return; }
     let a = *run - step / 2.0;
     let b = to - step / 2.0;
@@ -46,7 +46,7 @@ fn hole_shut(g: &mut Game, w: &WallSpot, t: f64, step: f64, run: &mut f64, best:
 }
 
 /// The gap a man fits through nearest the charge, read off the wall as it stands
-pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<crate::wallcharge::WallChargeHoleAt> {
+pub fn wall_charge_hole_at(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<crate::wallcharge::WallChargeHoleAt> {
     let t = thick(g, w);
     let (step, r) = (0.125, 2.5);
     let mut best: Option<WallChargeHoleAt> = None;
@@ -129,19 +129,19 @@ pub fn wall_charge_sam_set(g: &mut crate::game::Game) -> Option<WallChargeId> {
 }
 
 /// Where a set charge sits
-pub fn wall_charge_sam_at(g: &mut crate::game::Game, c_2: WallChargeId) -> V3 {
+pub fn wall_charge_sam_at(g: &crate::game::Game, c_2: WallChargeId) -> V3 {
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
     let height = g.k.wallcharge.height;
     wall_pt(g, &w, 0.0, 0.0, Some(height))
 }
 
 /// Who stands inside its radius, in words
-pub fn wall_charge_sam_words(g: &mut crate::game::Game, c_2: WallChargeId) -> String {
+pub fn wall_charge_sam_words(g: &crate::game::Game, c_2: WallChargeId) -> String {
     wall_charge_close_words(g, Some(c_2), None)
 }
 
 /// Would it put HIM down where he stands
-pub fn wall_charge_sam_fatal(g: &mut crate::game::Game, c_2: WallChargeId) -> bool {
+pub fn wall_charge_sam_fatal(g: &crate::game::Game, c_2: WallChargeId) -> bool {
     if g.god_mode { return false; }
     let p = g.ch[g.pl[g.player].ch].pos;
     let w = g.tab.wallcharge_set_wall_charge[c_2].wall.clone();
@@ -300,7 +300,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
 }
 
 /// The charge Sam is setting by hand, for whoever stands him at it. `at` is a copy: see notes, player.ts:2145
-pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
+pub fn wall_charge_sam_job(g: &crate::game::Game) -> Option<crate::wallcharge::WallChargeSamJob> {
     let height = g.k.wallcharge.height;
     let (wall, at) = g.pl[g.player].wall_work().map(|s| (s.wall.clone(), s.at))?;
     Some(WallChargeSamJob { p: wall_pt(g, &wall, 0.0, 0.0, Some(height)), n: wall_n(&wall), at })

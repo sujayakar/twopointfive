@@ -153,6 +153,6 @@ pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p
 }
 
 /// g.col.segmentBlocked(a, b) with its defaults.
-fn seg(g: &mut Game, a: V3, b: V3) -> bool {
+fn seg(g: &Game, a: V3, b: V3) -> bool {
     crate::scene_collision::segment_blocked(g, a, b, None, None, None)
 }

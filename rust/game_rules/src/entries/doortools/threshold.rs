@@ -29,7 +29,7 @@ fn callsign_or(g: &Game, gd: GuardId) -> String { if g.gd[gd].callsign.is_empty(
 fn names(g: &Game, men: &[GuardId]) -> String { men.iter().map(|m| g.gd[*m].callsign.clone()).collect::<Vec<String>>().join(", ") }
 fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// the `floor` closure of pieSet, toThreshold and thrFar's test: floor there and a clear step to it
-fn floor_ok(g: &mut Game, from: V3, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked(g, [from[0], 0.45, from[2]], [p[0], 0.45, p[2]], None) }
+fn floor_ok(g: &Game, from: V3, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked(g, [from[0], 0.45, from[2]], [p[0], 0.45, p[2]], None) }
 /// the `mark` closure: his post of the order, or where he stands
 fn mark_of(g: &Game, op: DoorOpId, gd: GuardId) -> V3 { match o!(g, op).post.get(gd) { Some(p) => p.pos, None => { let p = pos_of(g, gd); [p[0], 0.0, p[2]] } } }
 /// the `hi` closure: is his mark on the latch half of the opening
@@ -310,7 +310,7 @@ fn door_tools_thr_spot(g: &crate::game::Game, op: DoorOpId, sgn: f64, mark: V3) 
 }
 
 /// the far jamb's man, the side of the opening he stands off, and his diagonal
-fn door_tools_thr_far(g: &mut crate::game::Game, op: DoorOpId) -> Option<crate::doortools::DoorToolsThrFar> {
+fn door_tools_thr_far(g: &crate::game::Game, op: DoorOpId) -> Option<crate::doortools::DoorToolsThrFar> {
     let (d, lead) = (o!(g, op).door, o!(g, op).lead);
     let fc = g.dr[d].frame_centre;
     let hl = hi_of(g, op, lead);
@@ -336,7 +336,7 @@ pub(super) fn door_tools_last_call(g: &mut crate::game::Game, op: DoorOpId) -> b
 }
 
 fn stack_on(g: &Game, op: DoorOpId, m_: GuardId) -> bool { match o!(g, op).post.get(m_) { Some(p) => v3::dist_xz(pos_of(g, m_), p.pos) <= 0.6, None => false } }
-fn stack_off2(g: &mut Game, op: DoorOpId, m_: GuardId) -> bool {
+fn stack_off2(g: &Game, op: DoorOpId, m_: GuardId) -> bool {
     let p = match o!(g, op).post.get(m_) { Some(p) => p.pos, None => return false };
     !door_tools_arrived(g, op, m_) && v3::dist_xz(pos_of(g, m_), p) > g.k.doortools.thr_last_m
 }
@@ -497,7 +497,7 @@ pub fn door_tools_to_threshold(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// does this door get a can before anybody shows in its opening
-fn door_tools_can_first(g: &mut crate::game::Game, op: DoorOpId) -> bool {
+fn door_tools_can_first(g: &crate::game::Game, op: DoorOpId) -> bool {
     let r = &o!(g, op);
     if g.k.doortools.thr_first <= 0.0 || g.k.doortools.thr_bangs <= 0.0 || g.sets[g.seat].door_tools.bangs <= 0.0 || r.word.is_some() || r.worded == Some(true) || r.gate.is_some() || r.thr_hold == Some(true) { return false; }
     if crate::silent::silent_no_cans(g, &crate::seats::here(g)) { return false; }
@@ -708,7 +708,7 @@ pub(super) fn door_tools_thr_thrower(g: &mut crate::game::Game, op: DoorOpId) ->
 }
 
 /// is this man BACK: at the door, or on his own mark of the order
-pub(super) fn door_tools_thr_back(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
+pub(super) fn door_tools_thr_back(g: &crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     let a = o!(g, op).mine.get(m).copied();
     if door_tools_thr_at(g, op, m) { return true; }
     match a.and_then(|a| g.tab.orders_assignment[a].post) { Some(p) => v3::dist_xz(pos_of(g, m), p) <= 0.6, None => false }
@@ -788,7 +788,7 @@ pub(super) fn door_tools_frag_holds(g: &crate::game::Game, op: DoorOpId) -> bool
 }
 
 /// back: on his own mark of the order (a man with no mark is back once he has stopped running)
-pub(super) fn door_tools_frag_back(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
+pub(super) fn door_tools_frag_back(g: &crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     match o!(g, op).mine.get(m).copied().and_then(|a| g.tab.orders_assignment[a].post) { None => true, Some(p) => v3::dist_xz(pos_of(g, m), p) <= 0.8 }
 }
 

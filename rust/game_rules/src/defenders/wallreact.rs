@@ -501,7 +501,7 @@ fn wall_react_face_of(g: &Game, b: WallreactBreachId, from: V3, y: Option<f64>) 
     [r.at[0] + r.n[0] * s * 0.3, y, r.at[2] + r.n[1] * s * 0.3]
 }
 
-fn wall_react_sees(g: &mut Game, b: WallreactBreachId, from: V3, yaw: Option<f64>) -> bool {
+fn wall_react_sees(g: &Game, b: WallreactBreachId, from: V3, yaw: Option<f64>) -> bool {
     let (see_m, fov) = (g.k.wallreact.see_m, g.k.wallreact.fov_deg);
     let r = &g.tab.wallreact_breach[b];
     let (at, n, u, half) = (r.at, r.n, r.u, r.half);
@@ -862,7 +862,7 @@ fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3) ->
 }
 
 /// open to `threat` along a line through what went, a chest at `h` over `at`
-fn wall_react_open_gone(g: &mut Game, threat: V3, at: V3, h: f64, x: Gone) -> bool {
+fn wall_react_open_gone(g: &Game, threat: V3, at: V3, h: f64, x: Gone) -> bool {
     seg_rect(threat, at, x.rect, 0.45) && !crate::scene_collision::segment_blocked(g, [threat[0], 1.15, threat[2]], [at[0], h, at[2]], None, None, None)
 }
 
@@ -942,7 +942,7 @@ fn wall_react_step_out(g: &mut Game, gd: GuardId, from: V3, threat: V3, h: f64, 
 }
 
 /// is a chest at `h` over `p` open THROUGH the breach to the floor just beyond it
-fn wall_react_open_through(g: &mut Game, b: WallreactBreachId, p: V3, h: f64) -> bool {
+fn wall_react_open_through(g: &Game, b: WallreactBreachId, p: V3, h: f64) -> bool {
     let r = &g.tab.wallreact_breach[b];
     let (at, n, u, half) = (r.at, r.n, r.u, r.half);
     let d = (p[0] - at[0]) * n[0] + (p[2] - at[2]) * n[1];
@@ -1158,7 +1158,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> crate::wallreact::Reconside
 }
 
 /// One of a plan's men has learned, since it was dealt, of a hole a man fits through
-fn wall_react_replan(g: &mut Game, team: crate::teams::Team, since: f64, men: &[GuardId]) -> bool {
+fn wall_react_replan(g: &Game, team: crate::teams::Team, since: f64, men: &[GuardId]) -> bool {
     for b in breaches_of(g) {
         let r = &g.tab.wallreact_breach[b];
         if !r.walk { continue; }
@@ -1226,7 +1226,7 @@ pub(super) fn wall_react_look_2(g: &mut crate::game::Game, gd: GuardId, pt: &mut
 }
 
 /// Is this plan stale by a hole one of its men has learned of since it was dealt.
-pub fn wall_react_replan_2(g: &mut crate::game::Game, team: crate::teams::Team, since: f64, men: &[GuardId]) -> bool {
+pub fn wall_react_replan_2(g: &crate::game::Game, team: crate::teams::Team, since: f64, men: &[GuardId]) -> bool {
     !g.m.wallreact.wall_react.breaches.is_empty() && wall_react_replan(g, team, since, men)
 }
 

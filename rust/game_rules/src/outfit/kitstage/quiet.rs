@@ -116,7 +116,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     quiet_tick(g, st, b)
 }
 /// THE SUIT, THE TRIM: no walk, no turn: he leans half a step toward the pool so that a shoulder catches it, holds, and leans back (down throughout)
-pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+pub(super) fn lean_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     let face = st.plan.as_ref().map_or(0.0, |x| x.wall.face);
     let t = at(st, [0.0, face + KIT_PLAN.off_face, 0.0]);
@@ -130,7 +130,7 @@ pub(super) fn lean_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Resul
     sam_stand(g, st);
     Ok(())
 }
-pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
+pub(super) fn lean_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
     let el = g.time - b.pt;
@@ -149,7 +149,7 @@ pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
 }
 /// SAM'S WEAPON LIGHT on the quiet picture: one blink: the gun out, the beam on as his aim reaches the door's far jamb, across to the near one, held and off. No step, no hand on the leaf, no cost.
-pub(super) fn light_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
+pub(super) fn light_start(g: &Game, st: &mut KitStage, b: &mut Beat) -> Result<(), String> {
     if b.man.is_some() { return Err(String::from("Sam's")); }
     if !st.quiet || (st.walled && !st.hole) { return Err(String::from("no door to cross")); }
     if !in_hand(g, &crate::seats::here(g)) { return Err(String::from("no gun in his hand")); }
@@ -159,7 +159,7 @@ pub(super) fn light_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Resu
     if g.pl[g.player].holstered { press(st, draw_key(g, &crate::seats::here(g))); }
     Ok(())
 }
-pub(super) fn light_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
+pub(super) fn light_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let el = g.time - b.pt;

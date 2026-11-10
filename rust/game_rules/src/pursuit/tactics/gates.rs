@@ -213,14 +213,14 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
 }
 
 /// Eyes and muzzle down and away from the opening: the foot of the wall behind him along it.
-fn away_look(g: &mut crate::game::Game, d: DoorId, g_2: &crate::tactics::Gate, pos: V3) -> V3 {
+fn away_look(g: &crate::game::Game, d: DoorId, g_2: &crate::tactics::Gate, pos: V3) -> V3 {
     let f = crate::guards::frame_of(g, d);
     let out = if g_2.near_a <= 0.0 { -1.0 } else { 1.0 };
     [pos[0] + f.ux * out * 1.4 + f.nx * g_2.side * 0.4, 0.15, pos[2] + f.uz * out * 1.4 + f.nz * g_2.side * 0.4]
 }
 
 /// Across the opening, or straight to the cross where there is no floor for it or the leaf is shut.
-fn begin_slice(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
+fn begin_slice(g: &crate::game::Game, g_2: &mut crate::tactics::Gate) {
     let st = slice_stations(g, g_2.door, g_2.side, g_2.near_a);
     let st = match st {
         Some(st) if !crate::doors::door_is_closed(g, g_2.door) => st,
@@ -234,7 +234,7 @@ fn begin_slice(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
 }
 
 /// The legs through the doorway; a second goes half a second behind.
-fn begin_cross(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
+fn begin_cross(g: &crate::game::Game, g_2: &mut crate::tactics::Gate) {
     let k = if g_2.role == GateRole::Lead { 0.0 } else { 1.0 };
     let plan = plan_for(g, g_2.door, g_2.side, g_2.near_a);
     g_2.legs = entry_legs(g, g_2.door, g_2.side, g_2.near_a, k, plan.as_ref());

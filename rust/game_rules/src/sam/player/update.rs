@@ -8,9 +8,9 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- small lookups of the tick ----
 
-fn hit(g: &mut Game, input: InputId, code: &str) -> bool { crate::input::input_hit(g, input, code) }
-fn down(g: &mut Game, input: InputId, code: &str) -> bool { crate::input::input_down(g, input, code) }
-fn shift_down(g: &mut Game, input: InputId) -> bool { down(g, input, "ShiftLeft") || down(g, input, "ShiftRight") }
+fn hit(g: &Game, input: InputId, code: &str) -> bool { crate::input::input_hit(g, input, code) }
+fn down(g: &Game, input: InputId, code: &str) -> bool { crate::input::input_down(g, input, code) }
+fn shift_down(g: &Game, input: InputId) -> bool { down(g, input, "ShiftLeft") || down(g, input, "ShiftRight") }
 /// g.audio.play(name, at, vol)
 fn play(g: &mut Game, name: &str, at: Option<V3>, vol: f64) { crate::audio_iface::game_audio_like_play(g, name, at, Some(vol), None) }
 /// a gun's def: its row of WEAPONS
@@ -45,7 +45,7 @@ fn own_legs<R>(g: &mut Game, pl: PlayerId, f: impl FnOnce(&mut Game, &mut crate:
     r
 }
 /// collideMan(g, m, y1) on a Legs: its stub takes the two fields it moves
-fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
+fn collide_legs(g: &Game, m: &mut crate::player::Legs, y1: f64) {
     let mut pl = crate::player::CollideManPl { char: crate::player::CollideManPlChar { pos: m.char.pos }, safe: m.safe };
     collide_man(g, &mut pl, y1);
     m.char.pos = pl.char.pos; m.safe = pl.safe;
@@ -56,7 +56,7 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 /// how a player steps to the launcher's next load
 
 /// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.
-pub fn legs_own(g: &mut crate::game::Game) -> bool {
+pub fn legs_own(g: &crate::game::Game) -> bool {
     let pl = g.player;
     let busy = crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].planted() || g.pl[pl].wall.is_some() || g.pl[pl].tow.is_some() || g.pl[pl].door_move().is_some();
     !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
@@ -95,7 +95,7 @@ pub fn keys_way(fwd: V3, right: V3, w: bool, s: bool, d: bool, a: bool) -> [f64;
 }
 
 /// C: down, or up where there is the headroom; false: no room to stand.
-pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> bool {
+pub fn crouch_key(g: &crate::game::Game, m: &mut crate::player::Legs) -> bool {
     if !m.crouch { m.crouch = true; }
     else if can_stand_at(g, m.char.pos) { m.crouch = false; }
     else { return false; }
@@ -103,7 +103,7 @@ pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> boo
 }
 
 /// His stance for this stride: Shift and a direction stands him up to run, or keeps him down and quick; a body in his hands sets it.
-pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, want_sprint: bool, stalk: bool) {
+pub fn sprint_stance(g: &crate::game::Game, m: &mut crate::player::Legs, want_sprint: bool, stalk: bool) {
     let dragging = m.tow.is_some();
     if dragging { m.crouch = crate::hands::haul_crouch(g); }
     m.sprinting = want_sprint && !m.crouch;

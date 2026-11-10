@@ -38,7 +38,7 @@ pub fn bodies(g: &Game, by: CharId) -> Vec<CharId> {
 }
 
 /// `h` seconds of it: drag and gravity on its velocity, then the first thing along the way. None: it does not move.
-pub fn leg(g: &mut Game, b: &Ballistics, h: f64, pos: V3, vel: &mut V3, bodies: &[CharId]) -> Option<Leg> {
+pub fn leg(g: &Game, b: &Ballistics, h: f64, pos: V3, vel: &mut V3, bodies: &[CharId]) -> Option<Leg> {
     let k = m::exp(-b.drag * h);
     *vel = [vel[0] * k, vel[1] * k - b.gravity * h, vel[2] * k];
     let seg = v3::scale(*vel, h);

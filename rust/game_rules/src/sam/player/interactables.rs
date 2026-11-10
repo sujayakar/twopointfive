@@ -128,7 +128,7 @@ fn civ_whose(g: &Game, cv: CivId) -> String {
 }
 
 /// the closure interactOrder returns (interactOrder is not in the game: this is the ordering): in reach first, then by what matters (INTERACT_PRIORITY, lower = higher up), then nearest
-fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::game::Interactable, b: &crate::game::Interactable) -> f64 {
+fn interact_cmp(g: &Game, p: V3, priority: &JsMap<String, f64>, a: &crate::game::Interactable, b: &crate::game::Interactable) -> f64 {
     if a.in_reach != b.in_reach { return if a.in_reach { -1.0 } else { 1.0 }; }
     let rank = |k: crate::game::InteractableKind| *priority.get(String::from(k.as_str())).unwrap();
     let by_rank = rank(a.kind) - rank(b.kind);
@@ -803,7 +803,7 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
 }
 
 /// pushed out of whatever is there: did that converge (false: a gap the body cannot fit)
-fn settle(g: &mut Game, q: &mut V3) -> bool {
+fn settle(g: &Game, q: &mut V3) -> bool {
     crate::scene_collision::clamp_to_world(q, BODY_R);
     let r = body_r(g, *q);
     crate::scene_collision::collide_circle(g, q, r, 0.05, 2.2, Some(6.0));

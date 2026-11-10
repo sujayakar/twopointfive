@@ -18,8 +18,8 @@ fn eye_of(g: &Game, m: GuardId) -> V3 {
     match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => [g.ch[c].pos[0], 1.6, g.ch[c].pos[2]] }
 }
 fn blocked_at(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
-fn solid_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
-fn segment_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
+fn solid_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
+fn segment_blocked(g: &Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 
 /// the men of the orders let go on this order's word
 fn word_ops(g: &Game, seat: &crate::seats::SeatRef, op: DoorOpId) -> Vec<DoorOpId> {
@@ -100,7 +100,7 @@ pub(super) fn door_tools_opened(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// Where the canister is thrown to.
-pub(super) fn door_tools_land_at(g: &mut crate::game::Game, op: DoorOpId, deep: Option<f64>) -> V3 {
+pub(super) fn door_tools_land_at(g: &crate::game::Game, op: DoorOpId, deep: Option<f64>) -> V3 {
     let deep = deep.unwrap_or(g.k.doortools.bang_in);
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
     door_tools_land_for(g, d, side, deep)
@@ -197,7 +197,7 @@ fn plan_toss(g: &Game, name: &str) -> Option<(V3, V3)> {
 }
 
 /// How far in the floor runs clear from a door, for a can's landing.
-pub(super) fn door_tools_land_for(g: &mut crate::game::Game, d: DoorId, side: f64, deep: f64) -> V3 {
+pub(super) fn door_tools_land_for(g: &crate::game::Game, d: DoorId, side: f64, deep: f64) -> V3 {
     let w = g.dr[d].def.width;
     let mut best = door_pt(g, d, w / 2.0, 0.6, -side, None);
     let mut prev = best;
@@ -415,7 +415,7 @@ pub(super) fn door_tools_threat_note(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// One of the order's men still up has a line from his eyes to a man on the floor there.
-fn door_tools_sees(g: &mut crate::game::Game, op: DoorOpId, p: V3) -> bool {
+fn door_tools_sees(g: &crate::game::Game, op: DoorOpId, p: V3) -> bool {
     let at: V3 = [p[0], 0.4, p[2]];
     for x in dop!(g, op).men.clone() {
         if crate::condition::down(g, g.gd[x].ch) { continue; }

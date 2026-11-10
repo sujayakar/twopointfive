@@ -56,7 +56,7 @@ pub(super) fn rifle_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
 }
 
 /// how far your centre can travel that way before your circle meets a static or a leaf at shin height (keepOffGuards `room`)
-fn room(g: &mut Game, p: V3, sx: f64, sz: f64) -> f64 {
+fn room(g: &Game, p: V3, sx: f64, sz: f64) -> f64 {
     let hit = crate::scene_collision::raycast(g, [p[0], 0.45, p[2]], [sx, 0.0, sz], 1.5);
     (match hit { Some(h) => h.t, None => 1.5 }) - BODY_R
 }
@@ -132,7 +132,7 @@ pub(super) fn keep_off_guards(g: &mut crate::game::Game, dt: f64, y1: f64, m: Op
 }
 
 /// a level ray straight into the plane from the point (ox, y, oz), if it meets a face within `tol` of it, facing back out along n (faceAt `cast`)
-fn face_cast(g: &mut Game, ox: f64, oz: f64, n: V3, y: f64, tol: f64) -> Option<crate::scene_collision::Raycast> {
+fn face_cast(g: &Game, ox: f64, oz: f64, n: V3, y: f64, tol: f64) -> Option<crate::scene_collision::Raycast> {
     const OFF: f64 = 0.3;
     let dir: V3 = [-n[0], 0.0, -n[2]];
     let h = crate::scene_collision::raycast(g, [ox, y, oz], dir, OFF + tol + 0.02)?;
@@ -182,7 +182,7 @@ fn trace_face(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u0: f64, look: Op
 }
 
 /// Is the way on past an end of the face open (an outside corner, a doorway) or shut off?
-fn end_open(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u_end: f64, s: f64) -> bool {
+fn end_open(g: &crate::game::Game, n: V3, d: f64, t: V3, u_end: f64, s: f64) -> bool {
     let (px, pz) = (t[0] * u_end + n[0] * (d + BODY_R + WALL_GAP), t[2] * u_end + n[2] * (d + BODY_R + WALL_GAP));
     let dir: V3 = [t[0] * s, 0.0, t[2] * s];
     for y in [KNEE_Y, 1.0] {
@@ -452,7 +452,7 @@ fn wall_refused(g: &mut Game, blocked: bool) {
 }
 
 /// the face a ray from his knee along the stick meets, or None on open floor, a door's leaf, or a face the stick is more along than at.
-fn press_face(g: &mut crate::game::Game, mx: f64, mz: f64) -> Option<crate::player::PressFace> {
+fn press_face(g: &crate::game::Game, mx: f64, mz: f64) -> Option<crate::player::PressFace> {
     let c = g.pl[g.player].ch;
     let (p, v) = (g.ch[c].pos, g.ch[c].vel);
     let cos_min = m::cos(g.k.wallsnap.press_deg * v3::DEG);

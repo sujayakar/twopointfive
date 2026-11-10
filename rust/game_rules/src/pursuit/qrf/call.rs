@@ -220,7 +220,7 @@ pub(super) fn bodies_found(g: &crate::game::Game) -> f64 {
 }
 
 /// The run is Sam's to answer for.
-pub(super) fn live(g: &mut crate::game::Game) -> bool {
+pub(super) fn live(g: &crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }

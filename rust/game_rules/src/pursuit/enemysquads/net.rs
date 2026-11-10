@@ -21,12 +21,12 @@ fn answers(g: &Game, x: EnemysquadsSquadId) -> bool {
     false
 }
 /// `home(g, Q).find(D => D.gd !== m)?.gd`
-fn home_but(g: &mut Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
+fn home_but(g: &Game, q: EnemysquadsSquadId, m: GuardId) -> Option<GuardId> {
     let h = home(g, q);
     h.into_iter().map(|d| def_gd(g, d)).find(|&x| x != m)
 }
 /// `home(g, Q)[0]?.gd`
-fn home_first(g: &mut Game, q: EnemysquadsSquadId) -> Option<GuardId> {
+fn home_first(g: &Game, q: EnemysquadsSquadId) -> Option<GuardId> {
     let h = home(g, q);
     h.first().map(|&d| def_gd(g, d))
 }
@@ -369,7 +369,7 @@ fn nc_silent(g: &Game, x: EnemysquadsSquadId) -> bool {
 }
 /// (netCheck's posts) the places of X's men, as its own side knows them
 struct Post { at: V3, m: GuardId }
-fn posts(g: &mut Game, x: EnemysquadsSquadId) -> Vec<Post> {
+fn posts(g: &Game, x: EnemysquadsSquadId) -> Vec<Post> {
     let mut p: Vec<Post> = Vec::new();
     let men = g.tab.enemysquads_squad[x].men.clone();
     for m in men {
@@ -381,7 +381,7 @@ fn posts(g: &mut Game, x: EnemysquadsSquadId) -> Vec<Post> {
     p
 }
 /// the man who asks: the man at home nearest X's posts, of any other squad   (netCheck's asker)
-fn asker(g: &mut Game, x: EnemysquadsSquadId) -> Option<GuardId> {
+fn asker(g: &Game, x: EnemysquadsSquadId) -> Option<GuardId> {
     let p = posts(g, x);
     let (mut best, mut bd) = (None, f64::INFINITY);
     let squads = the_state(g).squads.clone();

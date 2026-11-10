@@ -365,7 +365,7 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
 }
 
 /// Every ear of the team's a shout could reach.
-fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
+fn cues_ears(g: &crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {

@@ -23,7 +23,7 @@ fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// Metres by walking a → b over the nav grid; infinity if there is no way.
-fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+fn way_len(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     let p = if crate::scene_collision::nav_grid_is_blocked(g, a[0], a[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, a[0], a[2]).unwrap_or(a) } else { a };
     let q = if crate::scene_collision::nav_grid_is_blocked(g, b[0], b[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, b[0], b[2]).unwrap_or(b) } else { b };
     let path = match crate::scene_collision::nav_grid_find_path(g, p, q, Some(8000.0), None) {
@@ -50,7 +50,7 @@ fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening
 }
 
 /// The first walkable point along his route at least the clear radius from the spawn by walking.
-fn find_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::FindSpot> {
+fn find_spot(g: &crate::game::Game, gd: GuardId) -> Option<crate::opening::FindSpot> {
     let route = g.gd[gd].route;
     let pts = g.tab.route[route].points.clone();
     let n = pts.len();

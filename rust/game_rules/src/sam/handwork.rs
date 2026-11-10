@@ -168,7 +168,7 @@ fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
 }
 
 /// What Sam's hands are on, if a verb of his that plants him is running.
-pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
+pub fn sam_work(g: &crate::game::Game) -> Option<crate::handwork::SamWork> {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
