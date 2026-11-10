@@ -489,7 +489,7 @@ pub mod flags {
     /// the order menu is up
     pub fn menu(g: &mut crate::game::Game) -> bool { g.sets[g.seat].orders.menu.is_some() }
     /// his own ring is up, with or without a key down
-    pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.pl[seat.player].sel; sel.open && sel.ring.is_some() }
+    pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.sets[seat.id].hand.sel; sel.open && sel.ring.is_some() }
     /// the squad's posture is SILENT
     pub fn silent(g: &mut crate::game::Game) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
 }
@@ -743,7 +743,7 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
         }
         if s.held_at < 0.0 {
             let p = who(g, &crate::seats::here(g));
-            if g.pl[p].throw_held {
+            if g.sets[crate::seats::seat_of_man(g, p)].hand.throw_held {
                 s.held_at = len;
             }
         }

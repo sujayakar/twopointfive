@@ -56,8 +56,8 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
         crate::game::game_toggle_drag(g, None);
     }
     cancel_reloads(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].easing = None;
     crate::wand::wand_drop(g, pl);
@@ -133,8 +133,8 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
         crate::game::game_toggle_drag(g, None);
     }
     cancel_reloads(g, pl);
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].easing = None;
     g.pl[pl].picking = None;
@@ -333,9 +333,9 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     g.pl[pl].easing = None;
     g.pl[pl].sprinting = false;
     g.pl[pl].crouch = false;
-    g.pl[pl].throw_held = false;
-    g.pl[pl].throw_preview = None;
-    g.pl[pl].f_held = true;
+    g.sets[g.seat].hand.throw_held = false;
+    g.sets[g.seat].hand.throw_preview = None;
+    g.sets[g.seat].hand.f_held = true;
     g.pl[pl].speed_sm = 0.0;
     cancel_reloads(g, pl);
     g.pl[pl].door_kick_tail = false;

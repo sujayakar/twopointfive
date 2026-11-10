@@ -351,7 +351,7 @@ impl Bot {
     pub async fn tap(&self, kind: InteractableKind, verb: Verb, aim: Option<V3>) -> bool {
         let has = || self.seen(|_, s| s.nearby.iter().any(|r| r.kind == kind && r.verb == Some(verb) && r.in_reach));
         for _ in 0..60 { if has() { break; } if let Some(p) = aim { self.aim(p); } self.tick().await; }
-        let lit = self.seen(|g, s| s.nearby.get(g.pl[s.player].near_sel.max(0) as usize).map(|r| (r.kind, r.verb)));
+        let lit = self.seen(|_, s| s.nearby.get(s.hand.near_sel.max(0) as usize).map(|r| (r.kind, r.verb)));
         if let (true, Some(l)) = (has(), lit) { if l != (kind, Some(verb)) { self.fail(format!("a tap of the interaction key here does '{}', and the line means '{}'", l.1.map_or("-", |v| v.as_str()), verb.as_str())).await; } }
         self.verb(kind, verb, aim).await
     }

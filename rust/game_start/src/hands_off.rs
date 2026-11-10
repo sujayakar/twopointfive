@@ -201,7 +201,7 @@ impl Me {
             // (the highlight walked to the boot by its key, as a hand walks it)
             let end = self.t() + 2.0;
             while self.t() < end && shut() {
-                let on = self.seen(|g, s| s.nearby.get(g.pl[s.player].near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
+                let on = self.seen(|_, s| s.nearby.get(s.hand.near_sel.max(0) as usize).is_some_and(|r| r.kind == InteractableKind::Door && r.verb == Some(Verb::Kick)));
                 self.down(if on { game::consts::INTERACT_KEY } else { "ArrowDown" });
                 if on { self.until(|| !shut(), 2.5).await; break; }
                 self.ticks(3).await;

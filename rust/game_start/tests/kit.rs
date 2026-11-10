@@ -176,9 +176,9 @@ fn the_setups_load_row_steps_to_the_next_load_he_has() {
     let load = |p: &Play| game::weapons::rifle_attachment(&p.g, rf);
     assert_eq!(load(&p), Some(A::Ring));
     tap(&mut p, "Digit2");
-    assert!(p.g.pl[pl].setup.is_some() && load(&p) == Some(A::Ring), "2 opens the setup and moves nothing");
+    assert!(p.g.sets[p.g.seat].hand.setup.is_some() && load(&p) == Some(A::Ring), "2 opens the setup and moves nothing");
     tap(&mut p, "Digit2");
-    assert!(p.g.pl[pl].setup.is_none() && load(&p) == Some(A::He40), "2 again: the next load, and the setup shut");
+    assert!(p.g.sets[p.g.seat].hand.setup.is_none() && load(&p) == Some(A::He40), "2 again: the next load, and the setup shut");
 
     // the cameras, handed over as a mission hands them; the launcher then empty: from the camera to the ring, and from the ring past the 40 mm
     game::stickycam::sticky_issue(&mut p.g, pl, 2.0, None);

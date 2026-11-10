@@ -97,7 +97,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
     (r.god, r.thinks, r.ammo, r.autosave) = (g.god_mode as u32, g.ai_enabled as u32, g.infinite_ammo as u32, g.saves.enabled as u32);
     r.labels = g.show_debug as u32;
     (r.wall_press, r.fall_in) = (g.k.wallsnap.press as u32, game::orders::squad_orders_twice_on(g) as u32);
-    { let s = game::seats::seat(g, seat); r.backs = (s.orders.menu.is_some() || g.pl[pl].launch_held.is_some() || game::interact::backable_interact(g, &s) || g.pl[pl].setup.is_some()) as u32; }
+    { let s = game::seats::seat(g, seat); r.backs = (s.orders.menu.is_some() || g.pl[pl].launch_held.is_some() || game::interact::backable_interact(g, &s) || s.hand.setup.is_some()) as u32; }
     r.locks = game::rails::rails_locks(g, "camera") as u32 | (game::rails::rails_locks(g, "zoom") as u32) << 1;
     out.push(View {
         tick: crate::tick(g),

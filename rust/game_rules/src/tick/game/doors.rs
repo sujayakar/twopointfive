@@ -55,7 +55,7 @@ pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
 pub fn game_select_verb(g: &mut crate::game::Game, kind: crate::game::InteractableKind, verb: Option<crate::game::Verb>) -> bool {
     let at = g.sets[g.seat].nearby.iter().position(|r| r.kind == kind && (verb.is_none() || r.verb == verb));
     let Some(i) = at else { return false; };
-    let pl = g.player; g.pl[pl].near_sel = i as i32;
+    let pl = g.player; g.sets[g.seat].hand.near_sel = i as i32;
     crate::player::pick_hover(g);
     true
 }
