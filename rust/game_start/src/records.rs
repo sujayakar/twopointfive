@@ -97,7 +97,6 @@ impl FromJson for game::lesson::LessonTest {
             "near" => T::Near { at: field(j, "at", at), r: field(j, "r", at) },
             "flag" => T::Flag { flag: field(j, "flag", at), value: field(j, "value", at) },
             "slot" => T::Slot { slot: field(j, "slot", at), drawn: field(j, "drawn", at) },
-            "pace" => T::Pace { below: field(j, "below", at), above: field(j, "above", at) },
             "meter" => T::Meter { which: field(j, "which", at), below: field(j, "below", at), above: field(j, "above", at) },
             "stage" => T::Stage { stage: field(j, "stage", at) },
             "door" => T::Door { door: field(j, "door", at), state: field(j, "state", at) },

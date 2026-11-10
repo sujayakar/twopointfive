@@ -7,8 +7,8 @@
 unhurt
 at 1               order silent sam all
 every 20 from 2    order move nearest all
-every 20 from 9    order stunThere nearest all
-every 20 from 13   order fragThere nearest all
+every 6 from 9     order stunThere ahead all
+every 6 from 12    order fragThere ahead all
 every 20 from 16   order cover nearest all
 every 40 from 25   order loud sam all
 every 40 from 27   order hold sam all

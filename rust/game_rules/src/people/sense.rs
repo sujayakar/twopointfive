@@ -33,7 +33,7 @@ pub fn smoke_between(g: &crate::game::Game, a: V3, b: V3) -> f64 {
 
 /// Is there anything in the air an eye could lose a man in: smoke anywhere, or a picked weather's fog or dust.
 pub fn hazy(g: &crate::game::Game) -> bool {
-    smoky(g) || g.weather.fog_spec.is_some()
+    smoky(g) || crate::weather::weather_fog(g).is_some()
 }
 
 /// HOW MUCH OF THE LIGHT ALONG a → b THE AIR LETS THROUGH (1 = clear): the smoke and the weather's fog and dust, one over the other. What every eye asks, a
@@ -104,13 +104,6 @@ pub fn smoke_ways(g: &mut crate::game::Game) {
 pub fn smoke_clear(g: &mut crate::game::Game) {
     if smoky(g) {
         sim::bricks::empty(g.sim);
-    }
-}
-
-/// A new encounter: no smoke, on no plan, nothing swept. (A game no tick has opened has no smoke's part yet.)
-pub fn smoke_renew(g: &mut crate::game::Game) {
-    if sim::state::state_read(g.sim).smoke.live != 0 {
-        sim::bricks::reset(g.sim, true);
     }
 }
 

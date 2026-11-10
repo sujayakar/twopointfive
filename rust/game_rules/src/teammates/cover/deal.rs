@@ -58,6 +58,7 @@ pub fn cover_reset(g: &mut Game) {
     c.no_step = JsMap::new();
     c.door_try = JsMap::new();
     c.rears.clear();
+    c.floors.clear();
     c.reads = JsMap::new();
     c.kept.clear();
     c.outs.clear();
@@ -277,7 +278,7 @@ pub fn cover_tick(g: &mut Game) {
 /// Does it give onto floor nobody of the team has been on, with nothing shut in it.
 fn onto_unknown(g: &mut Game, o: CoverOpeningId) -> bool {
     let row = &g.tab.cover_opening[o];
-    if row.kind == OpeningKind::Rear { return false; }
+    if matches!(row.kind, OpeningKind::Rear | OpeningKind::Floor) { return false; }
     let (at, n, door) = (row.at, row.n, row.door);
     if door.map_or(false, |d| m::abs(crate::doors::door_angle(g, d)) < 0.5) { return false; }
     for s in [1.0, -1.0] {
@@ -332,7 +333,7 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn in_frame(g: &Game, o: CoverOpeningId, p: V3) -> bool {
     let row = &g.tab.cover_opening[o];
     let (dx, dz) = (p[0] - row.at[0], p[2] - row.at[2]);
-    if row.kind == OpeningKind::Rear { return m::hyp2(dx, dz) < g.k.cover.in_m; }
+    if matches!(row.kind, OpeningKind::Rear | OpeningKind::Floor) { return m::hyp2(dx, dz) < g.k.cover.in_m; }
     m::abs(dx * row.n[0] + dz * row.n[1]) < FRAME_DEEP && m::abs(dx * row.n[1] - dz * row.n[0]) < row.half + FRAME_WIDE
 }
 
@@ -385,7 +386,7 @@ fn fast(g: &Game, cx: &Cx, gd: GuardId) -> bool {
 fn runs(g: &Game, cx: &Cx, gd: GuardId, at: V3) -> bool { fast(g, cx, gd) && behind_of(g, cx, gd, at) }
 
 fn sam_on(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
-    if g.tab.cover_opening[o].kind == OpeningKind::Rear { return false; }
+    if matches!(g.tab.cover_opening[o].kind, OpeningKind::Rear | OpeningKind::Floor) { return false; }
     let at = g.tab.cover_opening[o].at;
     for &sam in &cx.sams {
         let (sp, sy) = (g.ch[sam].pos, g.ch[sam].aim_yaw);
@@ -398,7 +399,7 @@ fn sam_on(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
 }
 
 fn held_by(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
-    if g.tab.cover_opening[o].kind == OpeningKind::Rear { return false; }
+    if matches!(g.tab.cover_opening[o].kind, OpeningKind::Rear | OpeningKind::Floor) { return false; }
     let (at, door) = (g.tab.cover_opening[o].at, g.tab.cover_opening[o].door);
     for &gd in &cx.squad {
         if cx.men.contains(&gd) { continue; }
@@ -750,6 +751,19 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
         }
         if let Some((i, _)) = best { got.set(gd, i); }
     }
+    // (and one with nothing at all: floor of his room that nobody has looked over)
+    let mut taken: Vec<V3> = Vec::new();
+    for &gd in &cx.men {
+        if got.has(gd) || cover_walk_only(g, gd, *cx.asg_of.get(gd).unwrap()) { continue; }
+        let Some(to) = crate::cleared::unlooked_by(g, gd, &taken) else { continue };
+        if runs(g, cx, gd, to) { continue; }
+        taken.push(to);
+        let o = floor_row(g, gd, to);
+        let mut at = JsMap::new();
+        at.set(gd, to);
+        live.push(LiveOpening { o, w: 1.0, can: vec![gd], edge: Vec::new(), at, by: Some(gd), edge_by: None, sam: false, held: false });
+        got.set(gd, live.len() - 1);
+    }
     // ---- hand the jobs out
     for &gd in &cx.men {
         let li = got.get(gd).copied();
@@ -790,6 +804,21 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
     let near_m = k.near_m;
     let mut w_of = |g: &mut Game, o: CoverOpeningId| 1.0 / (1.0 + near(bodies, g.tab.cover_opening[o].at) / near_m);
     cover_step_deal(g, list, &cx.asg_of, &got_ids, &live, &open_doors, bodies, &cx.spd, &mut w_of, if rear_l.is_some() { last } else { None });
+}
+
+/// his row for the floor he looks over, at that place now
+fn floor_row(g: &mut Game, gd: GuardId, to: V3) -> CoverOpeningId {
+    let o = match g.cover.floors.get(gd) {
+        Some(&o) => o,
+        None => {
+            let id = alloc::format!("floor:{}", g.gd[gd].callsign);
+            let o = g.tab.cover_opening.push(Opening { id, kind: OpeningKind::Floor, at: to, n: [0.0, 1.0], half: 1.0, door: None, pass: None, far: None });
+            g.cover.floors.set(gd, o);
+            o
+        }
+    };
+    g.tab.cover_opening[o].at = to;
+    o
 }
 
 /// The row he was dealt: `got` names its opening, `live` holds it, one row an opening.
@@ -1193,6 +1222,7 @@ pub fn cover_pose_for(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Opti
 fn cover_name_of(g: &Game, o: CoverOpeningId, from: Option<V3>) -> String {
     let (kind, door, at) = (g.tab.cover_opening[o].kind, g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if kind == OpeningKind::Rear { return String::from("the rear"); }
+    if kind == OpeningKind::Floor { return String::from("the corner"); }
     if let Some(d) = door { return alloc::format!("the {}", crate::orders::door_words(g, d)); }
     let from = match from { Some(f) => f, None => return alloc::format!("{} ({}, {})", kind.as_str(), js::to_fixed(at[0], 1), js::to_fixed(at[2], 1)) };
     let what = if kind == OpeningKind::Mouth { "aisle" } else { "gap" };

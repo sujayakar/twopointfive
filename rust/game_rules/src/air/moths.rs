@@ -29,10 +29,10 @@ fn smooth(a: f64, b: f64, x: f64) -> f64 { let t = m::max(0.0, m::min(1.0, (x - 
 pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
     let k = moths(); let mut out = Moths::blank();
     for t in g.targets.clone() {
-        let (kind, group, light) = { let f = &g.tab.fixture[t]; (f.kind, f.group.clone(), f.light) };
+        let (kind, group, light) = { let f = &g.tab.sim_lightshome_fixture[t]; (f.kind, f.group.clone(), f.light) };
         let Some(l) = light else { continue; };
         let (lk, lp) = { let x = &g.tab.light[l]; (x.kind, x.pos) };
-        if kind == crate::fixtures::FixtureKind::Analytic && lk == 1.0 && group == "exterior" && lp[1] > 3.5 { out.lamps.push(MothsLampsItem { target: t, light: l, head: [lp[0], lp[1] + 0.08, lp[2]], act: 0.0 }); }
+        if kind == crate::sim_lightshome::FixtureKind::Analytic && lk == 1.0 && group == "exterior" && lp[1] > 3.5 { out.lamps.push(MothsLampsItem { target: t, light: l, head: [lp[0], lp[1] + 0.08, lp[2]], act: 0.0 }); }
     }
     let fl = crate::scene_boxes::box_flag();
     let mut i = 0.0;
@@ -62,11 +62,11 @@ pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     if g.moths.lamps.is_empty() { return; }
     let k = moths();
     let on = g.tune.moths;
-    let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { g.weather.rain_rate } } else { 0.0 };   // (no moths at a lamp in falling snow)
+    let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { crate::weather::weather_rain_rate(g) } } else { 0.0 };   // (no moths at a lamp in falling snow)
     // each lamp's pull on its moths: lit × night × calm enough × not a downpour, eased so they gather and scatter over seconds
     for li in 0..g.moths.lamps.len() {
         let (t, l, head, act) = { let x = &g.moths.lamps[li]; (x.target, x.light, x.head, x.act) };
-        let lit = on && g.tab.fixture[t].factor > 0.05 && !g.tab.fixture[t].broken && g.tab.light[l].enabled;
+        let lit = on && crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t) && g.tab.light[l].enabled;
         let mut a = if lit { 1.0 } else { 0.0 };
         if a > 0.0 {
             let wv = crate::wind::wind_at(g, head, None);

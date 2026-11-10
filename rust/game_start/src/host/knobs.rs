@@ -25,9 +25,9 @@ pub fn all(g: &Game) -> Vec<(String, bool, f64)> {
 fn live(g: &Game, name: &str) -> Option<f64> {
     let (t, p) = (&g.tune, &g.m.particle_fx.pfx);
     Some(match name {
-        "tune.flash_intensity" => t.flash_intensity, "tune.player_light" => t.player_light, "tune.flash_outer" => t.flash_outer, "tune.flash_inner" => t.flash_inner, "tune.ocp_duration" => t.ocp_duration, "wind.def" => t.wind, "weather.on" => g.weather.on as u8 as f64,
+        "tune.flash_intensity" => t.flash_intensity, "tune.player_light" => t.player_light, "tune.flash_outer" => t.flash_outer, "tune.flash_inner" => t.flash_inner, "tune.ocp_duration" => t.ocp_duration, "wind.def" => t.wind, "weather.on" => game::weather::weather_enabled(g) as u8 as f64,
         "pfx.impact_scale_rifle" => p.impact_scale_rifle, "pfx.chip_size" => p.chip_size, "pfx.chip_life" => p.chip_life, "pfx.dust_size" => p.dust_size, "pfx.bang_sparks" => p.bang_sparks, "pfx.bang_ring" => p.bang_ring, "pfx.casing_life" => p.casing_life, "pfx.tink_gain" => p.tink_gain,
-        "weather.storm" => g.weather.storm, "weather.rain_rate" => g.weather.rain_rate, "weather.wind.0" => g.weather.wind[0], "weather.wind.1" => g.weather.wind[1],
+        "weather.storm" => game::weather::weather_storm(g), "weather.rain_rate" => game::weather::weather_rain_rate(g), "weather.wind.0" => game::weather::weather_wind(g)[0], "weather.wind.1" => game::weather::weather_wind(g)[1],
         _ => return None,
     })
 }
@@ -44,10 +44,10 @@ fn set_live(g: &mut Game, name: &str, v: f64) -> bool {
         "pfx.bang_sparks" => g.m.particle_fx.pfx.bang_sparks = v, "pfx.bang_ring" => g.m.particle_fx.pfx.bang_ring = v, "pfx.casing_life" => g.m.particle_fx.pfx.casing_life = v, "pfx.tink_gain" => g.m.particle_fx.pfx.tink_gain = v,
         // (a storm turned by hand strikes on its own new clock)
         "weather.on" => game::weather::weather_set_enabled_2(g, v >= 0.5),
-        "weather.storm" => if g.weather.storm != v { g.weather.storm = v; g.weather.next_flash_at = -1.0; },
-        "weather.rain_rate" => g.weather.rain_rate = v,
-        "weather.wind.0" => { let w = g.weather.wind; g.weather.wind = [v, w[1]]; }
-        "weather.wind.1" => { let w = g.weather.wind; g.weather.wind = [w[0], v]; }
+        "weather.storm" => if game::weather::weather_storm(g) != v { game::weather::weather_set_storm(g, v); game::weather::weather_set_next_flash_at(g, -1.0); },
+        "weather.rain_rate" => game::weather::weather_set_rain_rate(g, v),
+        "weather.wind.0" => { let w = game::weather::weather_wind(g); game::weather::weather_set_wind(g, [v, w[1]]); }
+        "weather.wind.1" => { let w = game::weather::weather_wind(g); game::weather::weather_set_wind(g, [w[0], v]); }
         _ => return false,
     }
     true

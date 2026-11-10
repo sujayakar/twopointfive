@@ -44,9 +44,7 @@ pub(super) fn hold_out_rate(g: &crate::game::Game, last: crate::character::HoldP
 /// hold_out_rate's choice, over what it reads of the game.
 fn out_rate(last: crate::character::HoldPose, speed: f64, busy: bool, show: crate::character::CharacterModHOLDSHOW, hold: &crate::knobs::HoldK) -> f64 {
     if busy || last.variant == Some(crate::character::HoldVariant::Gun) { return 16.0; }
-    let slow = if last.phase == crate::character::HoldPhase::Kill && last.kill.unwrap_or(show.kill) {
-        hold.kill.after
-    } else if last.phase == crate::character::HoldPhase::Choke && last.t > 0.9 * hold.secs.choke && last.beats.unwrap_or(show.beats) {
+    let slow = if last.phase == crate::character::HoldPhase::Choke && last.t > 0.9 * hold.secs.choke && last.beats.unwrap_or(show.beats) {
         hold.beats.after
     } else {
         16.0
@@ -230,8 +228,6 @@ mod tests_2 {
     const DELTA_A: [u32; 50] = [0x3f3684ef, 0x3e89360e, 0xbf4832bb, 0x00000000, 0x00000000, 0x3f30c908, 0xbefa9df3, 0xbf107ea2, 0x00000000, 0x00000000, 0x3d084063, 0xbf4c03b7, 0x3e3039ee, 0x00000000, 0x00000000, 0x3f313ce6, 0xbd741d59, 0xbf000fe0, 0x00000000, 0x00000000, 0x3ec6dfb8, 0xbf163dab, 0x3ec929bd, 0x00000000, 0x00000000, 0x3f189b2e, 0xbe6e5839, 0xbf0a7b3b, 0x00000000, 0x00000000, 0x3df61b63, 0xbf45f0bb, 0xbf0cdcef, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
     const DELTA_B: [u32; 50] = [0x3f18b86e, 0xbf1afe3f, 0xbee18f90, 0x00000000, 0x00000000, 0xbe0139ab, 0xbf446340, 0x3ea5d397, 0x00000000, 0x00000000, 0xbf3ba17b, 0xbe64e5ad, 0x3f4a607a, 0x00000000, 0x00000000, 0xbf09d154, 0xbf053c7b, 0x3ee0f3ba, 0x00000000, 0x00000000, 0xbeb8d0b4, 0x3eea03b3, 0xbf1bbd86, 0x00000000, 0x00000000, 0x3f0a960d, 0x3ef1d222, 0xbf09427e, 0x00000000, 0x00000000, 0xbf091a26, 0xbf0b8cb1, 0x3ec5e32e, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
     const DELTA_OUT: [u32; 50] = [0x3e751c41, 0x3f30c908, 0xbe8e380d, 0x00000000, 0x00000000, 0x3e905ddb, 0x3d084063, 0xbe7c161e, 0x00000000, 0x00000000, 0x3d85cacc, 0xbf279549, 0x3c4083eb, 0x00000000, 0x00000000, 0x3e9845ea, 0x3f23a93d, 0xbe112cac, 0x00000000, 0x00000000, 0x3e4fc5d9, 0xbf2279f4, 0x3f75f4de, 0x00000000, 0x00000000, 0xbee3ec93, 0xbedda096, 0xbe40f878, 0x00000000, 0x00000000, 0x3f51e3d2, 0x3d088706, 0xbe157ef2, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000, 0x3f800000, 0x3f800000, 0x3f800000, 0x00000000, 0x00000000];
-    const OUT_KILL_SHOWN: [u64; 6] = [0x401c000000000000, 0x401c000000000000, 0x40245604189374bc, 0x402c1cac083126e9, 0x4030000000000000, 0x4030000000000000];
-    const OUT_KILL_OFF: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
     const OUT_CHOKE_END: [u64; 6] = [0x4004cccccccccccd, 0x4004cccccccccccd, 0x401d4467381d7dc0, 0x402a36113404ea4a, 0x4030000000000000, 0x4030000000000000];
     const OUT_CHOKE_SHOW_OFF: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
     const OUT_CHOKE_EARLY: [u64; 6] = [0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000, 0x4030000000000000];
@@ -337,14 +333,12 @@ mod tests_2 {
         let show = crate::character::CharacterModHOLDSHOW { kill: true, beats: false };
         let speeds = [0.0, 0.1, 0.3, -0.45, 0.6, 2.0];
         let pose = |phase, t, kill, beats, variant| HoldPose { phase, t, kill, beats, variant, ..HoldPose::default() };
-        let cases: [(HoldPose, bool, &[u64; 6]); 7] = [
-            (pose(HoldPhase::Kill, 0.0, None, None, None), false, &OUT_KILL_SHOWN),
-            (pose(HoldPhase::Kill, 0.0, Some(false), None, None), false, &OUT_KILL_OFF),
+        let cases: [(HoldPose, bool, &[u64; 6]); 5] = [
             (pose(HoldPhase::Choke, 2.5, None, Some(true), None), false, &OUT_CHOKE_END),
             (pose(HoldPhase::Choke, 2.5, None, None, None), false, &OUT_CHOKE_SHOW_OFF),
             (pose(HoldPhase::Choke, 2.3, None, Some(true), None), false, &OUT_CHOKE_EARLY),
-            (pose(HoldPhase::Kill, 0.0, Some(true), None, Some(HoldVariant::Gun)), false, &OUT_GUN),
-            (pose(HoldPhase::Kill, 0.0, Some(true), None, None), true, &OUT_BUSY),
+            (pose(HoldPhase::Held, 0.0, Some(true), None, Some(HoldVariant::Gun)), false, &OUT_GUN),
+            (pose(HoldPhase::Held, 0.0, Some(true), None, None), true, &OUT_BUSY),
         ];
         for (last, busy, want) in cases {
             for i in 0..6 { assert_eq!(out_rate(last, speeds[i], busy, show, &hold).to_bits(), want[i]); }

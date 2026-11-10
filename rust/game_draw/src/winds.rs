@@ -135,7 +135,11 @@ impl Winds {
         let list = (statics.len(), g.engine.world.geom_serial);
         if self.of != list {
             self.of = list; self.ceilings.clear();
-            for r in game::weather::roofs_among(statics.iter().map(|&id| (all[id].c, all[id].h))) { self.ceilings.push(Rect { r: r.map(|x| x as f32) }); }
+            ::sim::weather::roofs_begin();
+            for &id in statics { let b = &all[id]; ::sim::weather::roofs_box(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2], game::scene_world::world().ceiling_y); }
+            let mut v = [0.0; ::sim::weather::ROOFS * 4];
+            let n = ::sim::weather::roofs_end(&mut v);
+            for i in 0..n { self.ceilings.push(Rect { r: [v[i * 4] as f32, v[i * 4 + 1] as f32, v[i * 4 + 2] as f32, v[i * 4 + 3] as f32] }); }
         }
         for &d in &g.doors.list { let b = &all[g.dr[d].box_]; if b.rot.is_none() { self.leaves.push(crate::boxes::Leaf { c: b.c.map(|x| x as f32), h: b.h.map(|x| x as f32), yaw: b.yaw as f32, flags: b.flags as i64 as u32, key: d.ix() as u32 }); } }
         if ::sim::state::state_read(g.sim).panes.used != 0 {

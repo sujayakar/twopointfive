@@ -68,7 +68,7 @@ id! {
     SeatId,
     /// RtLight: g.tab.light
     LightId,
-    /// Fixture: g.tab.fixture
+    /// Fixture: g.tab.sim_lightshome_fixture
     FixtureId,
     /// CameraRt: g.tab.devices_camera_rt
     CameraRtId,

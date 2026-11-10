@@ -388,29 +388,13 @@ pub(super) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<
         Some(x) if x.is_finite() => Some(m::floor(x)),
         _ => None,
     };
-    if room_clear_scenario_active(g) {
-        if let Some(want) = want {
-            g.k.roomclear.seed = want;
-            g.room_clear.fresh = 0.0;
-            // (against the seed ON THE FLOOR, not the knob)
-            if want != g.room_clear.seed || room_clear_scenario_way_now(g) != g.staged.way {
-                room_clear_scenario_restage(g);
-            }
-        }
-        return None;
-    }
+    if room_clear_scenario_active(g) { return None; }
     let seed0 = g.k.roomclear.seed;
-    let fresh0 = g.room_clear.fresh;
     if let Some(want) = want {
         g.k.roomclear.seed = want;
     }
-    g.room_clear.fresh = match (want, g.dice.as_ref()) {
-        (None, Some(d)) => fresh_seed_of(d.seed),
-        _ => 0.0,
-    };
     if let Some(why) = room_clear_scenario_can_start(g) {
         g.k.roomclear.seed = seed0;
-        g.room_clear.fresh = fresh0;
         return Some(why);
     }
     g.room_clear.attempt = 0.0;
@@ -423,13 +407,6 @@ pub(super) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<
         return Some(r.unwrap_or_else(|| String::from("the staging failed")));
     }
     None
-}
-
-/// Stage it afresh
-pub fn room_clear_scenario_restage(g: &mut crate::game::Game) {
-    if room_clear_scenario_active(g) {
-        crate::nightbreach::night_breach_restage(g);
-    }
 }
 
 /// the score wiped
@@ -527,7 +504,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     if g.staged.rooms.is_empty() || g.staged.foes.len() != g.room_clear.placement.len() {
         return;
     }
-    crate::enemysquads::squads_tick(g);
     let live: Vec<GuardId> = g.staged.foes.iter().copied().filter(|h| holds(g, *h)).collect();
     let mut i = 0;
     while i < g.staged.rooms.len() {

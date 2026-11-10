@@ -1,6 +1,6 @@
 //! THE FLOODLIT YARD, AND WHAT WATCHES A FLOOR: the yard is dark with the mains out; a camera and a beam see what the light and the line let them.
 mod world_ask;
-use game::fixtures::CameraState;
+use game::sim_lightshome::CameraState;
 use game::workthings::WorkThingKind;
 use game_start::json::{b, n, nums, obj, s as text, Json};
 use game_start::play::{nudge, Opts, Play};

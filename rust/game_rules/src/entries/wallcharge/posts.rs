@@ -634,7 +634,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
     if crate::fogofwar::fog_of_war_active(g) {
         let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.gd[*m].team == crate::teams::Team::Operative).collect();
         for k in crate::picture::known_places(g, &men, known_s) {
-            if let crate::picture::Who::Guard(h) = k.who { if counts(g, h, held) { out.push(k.at); } }
+            if let Some(h) = crate::character::guard_of(g, k.who) { if counts(g, h, held) { out.push(k.at); } }
         }
         return out;
     }

@@ -148,7 +148,6 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
             for x in g.guards.clone() { if g.ch[g.gd[x].ch].id == b.who { by = Some(g.gd[x].callsign.clone()); break; } }
             let by = by.unwrap_or_else(|| if b.mine { String::from("his own grenade") } else { b.name.clone() });
             crate::chronicle::chron_hit(g, Some(&by));
-            if !crate::condition::down(g, g.pl[pl].ch) { rep.player = Some(BlastResult::Wounded); }
         }
     }
     if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, c); }

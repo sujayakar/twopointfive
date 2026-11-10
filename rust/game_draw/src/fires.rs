@@ -55,7 +55,7 @@ pub fn fill(g: &Game, out: &mut Vec<Fire>, table: &mut Vec<FireTable>, bared: bo
     table.clear();
     let time = g.time;
     for (ix, &t) in g.targets.iter().filter(|&&t| is_fire(g, t)).enumerate() {
-        let l = g.tab.fixture[t].light.unwrap();
+        let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
         let (lamp, lit) = (&g.tab.light[l], burns(g, t));
         // (out, and nobody on the team saw it go out: where the team does not see, the fog's picture has its lamp lit still and its flame on it)
         if !lit && (bared || !(lamp.fog_ghost.unwrap_or(0.0) > 0.0)) { continue; }

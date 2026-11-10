@@ -69,7 +69,7 @@ fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueO
             return None;
         }
     }
-    if let Some(&o) = on.iter().find(|&&o| g.tab.doortools_door_op[o].kind != crate::doortools::DoorToolKind::Outside) {
+    if let Some(&o) = on.first() {
         let by = g.tab.doortools_door_op[o].men.first().copied();
         crate::interact::say_why(g, by, crate::view::ThingKind::Door, "we're on that door already.", "they're on that door already");
         return None;
@@ -230,7 +230,6 @@ fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
 /// Once a frame from the game's update.
 pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !crate::rescue::rescue_up(g) { return; }
-    crate::rescuecheck::rescue_check_say(g);
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
     if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
@@ -301,7 +300,7 @@ fn rescue_defenders(g: &mut crate::game::Game) {
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
         }
-        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) && !crate::owner::has(g, h, crate::owner::by::WALK) {
+        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) {
             g.rescue.defs.get_mut(h).unwrap().learned = g.time;
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
@@ -966,14 +965,6 @@ fn rescue_end_entry(g: &mut crate::game::Game, called: bool) {
 
 /// The last loud thing the team did.
 pub(in crate::missions) fn rescue_noise_at(g: &crate::game::Game) -> Option<V3> { g.rescue.noise }
-
-/// The living and the dead of the cast as their radio check reads them.
-pub fn rescue_cast(g: &crate::game::Game) -> Vec<crate::rescuecheck::CastItem> {
-    g.staged.foes.iter().map(|&gd| {
-        let d = def_of(g, gd);
-        crate::rescuecheck::CastItem { gd, role: d.role, in_room: d.in_room, post: d.mark.pos, learned_at: d.learned, released: d.released, crewed: d.crew != DefCrew::Empty }
-    }).collect()
-}
 
 /// A man the flush sends is nobody's to send again.
 pub(in crate::missions) fn rescue_let_go(g: &mut crate::game::Game, gd: GuardId) {

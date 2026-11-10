@@ -54,7 +54,7 @@ fn stacked_a(post: V3, face: f64, watch: V3, stance: crate::character::Stance, s
 
 /// the `kind` of an order given by code, as a kind of order
 fn order_kind(kind: crate::doortools::DoorToolsOrderKind) -> crate::doortools::DoorToolKind {
-    match kind { crate::doortools::DoorToolsOrderKind::Outside => crate::doortools::DoorToolKind::Outside, crate::doortools::DoorToolsOrderKind::BangClear => crate::doortools::DoorToolKind::BangClear, crate::doortools::DoorToolsOrderKind::OpenClear => crate::doortools::DoorToolKind::OpenClear, crate::doortools::DoorToolsOrderKind::Threshold => crate::doortools::DoorToolKind::Threshold }
+    match kind { crate::doortools::DoorToolsOrderKind::BangClear => crate::doortools::DoorToolKind::BangClear, crate::doortools::DoorToolsOrderKind::OpenClear => crate::doortools::DoorToolKind::OpenClear, crate::doortools::DoorToolsOrderKind::Threshold => crate::doortools::DoorToolKind::Threshold }
 }
 
 /// `t` as canThresholdThen takes it
@@ -672,24 +672,22 @@ pub fn door_tools_held_men(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
 /// what next, to men working a room from the threshold: step in, bang then step in, or off the door. A reason when there is nothing to tell
 pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::doortools::DoorToolsThresholdThenWhat, men: &[GuardId], t: Option<&crate::doortools::DoorToolsThresholdThenT>) -> crate::doortools::DoorToolsThresholdThen {
     door_tools_sync(g);
-    let ask = match what { crate::doortools::DoorToolsThresholdThenWhat::Bang => crate::doortools::DoorToolsCanThresholdThenWhat::Bang, crate::doortools::DoorToolsThresholdThenWhat::Step => crate::doortools::DoorToolsCanThresholdThenWhat::Step, crate::doortools::DoorToolsThresholdThenWhat::Leave => crate::doortools::DoorToolsCanThresholdThenWhat::Leave };
+    let ask = match what { crate::doortools::DoorToolsThresholdThenWhat::Bang => crate::doortools::DoorToolsCanThresholdThenWhat::Bang, crate::doortools::DoorToolsThresholdThenWhat::Step => crate::doortools::DoorToolsCanThresholdThenWhat::Step};
     let can = t.map(can_t_then);
     if let crate::doortools::DoorToolsCanThresholdThen::Text(s) = door_tools_can_threshold_then(g, ask, can.as_ref(), men) { return crate::doortools::DoorToolsThresholdThen::Text(s); }
     let door = match t { Some(crate::doortools::DoorToolsThresholdThenT::Door(x)) => Some(x.door), _ => None };
     let ops = door_tools_threshold_held(g, &crate::seats::here(g), men, door);
-    let w = if what != crate::doortools::DoorToolsThresholdThenWhat::Leave && ops.len() > 1 {
+    let w = if ops.len() > 1 {
         let now = g.time;
         let id = g.tab.doortools_word.push(crate::doortools::Word { t0: now, go1: now, ..Default::default() });
         g.door_tools.words.push(id);
         Some(id)
     } else { None };
     for op in ops {
-        let told = match what { crate::doortools::DoorToolsThresholdThenWhat::Step => "step in", crate::doortools::DoorToolsThresholdThenWhat::Bang => "bang and step in", crate::doortools::DoorToolsThresholdThenWhat::Leave => "leave it" };
+        let told = match what { crate::doortools::DoorToolsThresholdThenWhat::Step => "step in", crate::doortools::DoorToolsThresholdThenWhat::Bang => "bang and step in"};
         door_tools_beat(g, op, &format!("told · {}", told));
-        if what != crate::doortools::DoorToolsThresholdThenWhat::Leave {
-            g.tab.doortools_door_op[op].word = w;
-            g.tab.doortools_door_op[op].hold = 0.0;
-        }
+        g.tab.doortools_door_op[op].word = w;
+        g.tab.doortools_door_op[op].hold = 0.0;
         let thr = g.tab.doortools_door_op[op].thr.as_mut().unwrap();
         let owed = thr.step_owed.unwrap_or(false);
         thr.step_owed = Some(false);
@@ -702,18 +700,6 @@ pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::
             }
             crate::doortools::DoorToolsThresholdThenWhat::Step => {
                 if owed { door_tools_word_step_go(g, op); } else { door_tools_held_beat(g, op); door_tools_to_step(g, op); }
-            }
-            crate::doortools::DoorToolsThresholdThenWhat::Leave => {
-                door_tools_held_beat(g, op);
-                let lead = g.tab.doortools_door_op[op].lead;
-                crate::game::game_say(g, lead, "coming off the door.", None, None);
-                door_tools_end(g, op, "stood down");
-                let them = g.tab.doortools_door_op[op].men.clone();
-                let mut left = Vec::new();
-                for m in them {
-                    if !crate::condition::down(g, g.gd[m].ch) && g.tab.doortools_door_op[op].post.has(m) && still_mine(g, &crate::seats::here(g), op, m) { left.push(m); }
-                }
-                door_tools_plain_stack(g, op, &left, None);
             }
         }
     }
@@ -822,64 +808,6 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
     let the_lead = g.tab.doortools_door_op[op].lead;
     let mut filed: JsSet<GuardId> = JsSet::new();
     let bang_file = g.k.doortools.bang_file;
-    if kind == crate::doortools::DoorToolKind::Outside && men.len() > 2 {
-        // three or more working a door from outside: the lead and one man behind him on his wall, the rest on down that wall, backs to the file
-        let l = *g.tab.doortools_door_op[op].post.get(the_lead).unwrap();
-        let al = along_of(g, d, l.pos);
-        let w = g.dr[d].def.width;
-        let dir: f64 = if al > w / 2.0 { 1.0 } else { -1.0 };
-        let lead_pair = crate::orders::squad_orders_pair_of(g, the_lead);
-        let mut rest: Vec<(GuardId, f64, f64)> = Vec::new();
-        for &m in men {
-            if m == the_lead { continue; }
-            let pair = crate::orders::squad_orders_pair_of(g, m);
-            let mate = if pair.is_some() && pair == lead_pair { 0.0 } else { 1.0 };
-            let dist = v3::dist_xz(g.tab.doortools_door_op[op].post.get(m).unwrap().pos, l.pos);
-            rest.push((m, mate, dist));
-        }
-        js::sort_by(&mut rest, |a, b| js::or(a.1 - b.1, a.2 - b.2));
-        let mut k = 0.0;
-        for (gd, _, _) in rest {
-            k += 1.0;
-            let rear = k >= 2.0;
-            if rear { g.tab.doortools_door_op[op].rear.add(gd); }
-            let pp = g.tab.doortools_door_op[op].post.get(gd).copied().unwrap_or_default();
-            let off = off_of(g, d, l.pos, t_side);
-            let mut q = door_pt(g, d, al + dir * k * bang_file, off, t_side, None);
-            if !floor_at(g, d, t_side, l.pos, q) {
-                if !rear { continue; }
-                let far = door_pt(g, d, w - al, off, t_side, None);
-                let mut found: Option<V3> = None;
-                let mut j = 1.0;
-                while j <= 4.0 && found.is_none() {
-                    let c = door_pt(g, d, w - al - dir * j * bang_file, off, t_side, None);
-                    if floor_at(g, d, t_side, far, c) && !men.iter().any(|&m| m != gd && v3::dist_xz(g.tab.doortools_door_op[op].post.get(m).unwrap().pos, c) < 0.7) { found = Some(c); }
-                    j += 1.0;
-                }
-                let Some(c) = found else { continue };
-                q = c;
-            }
-            let out = door_pt(g, d, w / 2.0 + (if k == 2.0 { dir } else { -dir }) * 4.0, 7.0, t_side, Some(1.05));
-            let qq = crate::orders::StackPost { pos: q, face: if rear { v3::yaw_to(q, out) } else { l.face }, stack_side: l.stack_side, lead: false, ..pp };
-            g.tab.doortools_door_op[op].post.set(gd, qq);
-            filed.add(gd);
-            let a = if rear {
-                crate::doortools::DoorToolsAssignA {
-                    post: Some(q),
-                    face: Some(qq.face),
-                    watch: Some(out),
-                    stance: Some(crate::character::Stance::None),
-                    upper: Some(crate::character::UpperMode::Aim),
-                    going: format!("rear security · {}", name),
-                    there: format!("rear security · {}", name),
-                    ..Default::default()
-                }
-            } else {
-                stacked_a(q, qq.face, watch, crate::character::Stance::HighReady, qq.stack_side, &name)
-            };
-            door_tools_assign(g, op, gd, &a);
-        }
-    }
     let split = kind == crate::doortools::DoorToolKind::OpenClear || kind == crate::doortools::DoorToolKind::Threshold;
     if !split && men.len() > 2 {
         // behind a bang (or a man the file above had no floor for): the men on the other jamb stand back a place along their own wall

@@ -53,42 +53,21 @@ pub fn team_of_id(g: &crate::game::Game, id_2: f64) -> crate::teams::Team {
 /// Is a man of `side` an enemy of this man's side.
 pub fn hostile_to(g: &crate::game::Game, gd: GuardId, side: crate::teams::Team) -> bool { is_hostile(g, g.gd[gd].team, side) }
 
-/// The body his foe is: the player he has in mind, or the hostile AI man; none when he has nobody.
-pub fn foe_char(g: &crate::game::Game, gd: GuardId) -> Option<CharId> {
-    match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => {
-            let p = crate::seats::faced_man(g, gd);
-            Some(g.pl[p].ch)
-        }
-        Some(crate::game::Foe::Guard(f)) => Some(g.gd[f].ch),
-        None => None,
-    }
-}
+/// Is the man he has in mind a player's.
+pub fn foe_is_player(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].foe.is_some_and(|f| crate::character::is_player(g, f)) }
 
-/// His foe is out of the fight: the player down, or the man dead. False with nobody.
-pub fn foe_down(g: &crate::game::Game, gd: GuardId) -> bool {
-    match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => {
-            let p = crate::seats::faced_man(g, gd);
-            crate::condition::down(g, g.pl[p].ch)
-        }
-        Some(crate::game::Foe::Guard(f)) => crate::condition::down(g, g.gd[f].ch),
-        None => false,
-    }
-}
+/// The AI man he has in mind; a player's is none.
+pub fn foe_guard(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> { crate::character::guard_of(g, g.gd[gd].foe?) }
+
+/// His foe is out of the fight. False with nobody.
+pub fn foe_down(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].foe.is_some_and(|f| crate::condition::down(g, f)) }
 
 /// His foe is crouched: the player's crouch, or the AI man's crouch pose.
 pub fn foe_crouched(g: &crate::game::Game, gd: GuardId) -> bool {
-    match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => {
-            let p = crate::seats::faced_man(g, gd);
-            g.pl[p].crouch
-        }
-        Some(crate::game::Foe::Guard(f)) => {
-            let c = g.gd[f].ch;
-            g.ch[c].anim.crouch > 0.5
-        }
-        None => false,
+    let Some(f) = g.gd[gd].foe else { return false };
+    match g.ch[f].who {
+        crate::character::Who::Player(p) => g.pl[p].crouch,
+        crate::character::Who::Guard(_) => g.ch[f].anim.crouch > 0.5,
     }
 }
 

@@ -114,9 +114,9 @@ async fn deed(b: &Bot, id: &str) {
         "pistol" => b.take("Digit1").await,
         // the lamp on its pole by the shop's front, from behind the barrier: a round a press until it is dark
         "lamp" => {
-            let t = b.ask(|g| g.targets.iter().copied().find(|&f| g.tab.fixture[f].name == "lamp_shop"));
+            let t = b.ask(|g| g.targets.iter().copied().find(|&f| g.tab.sim_lightshome_fixture[f].name == "lamp_shop"));
             let Some(t) = t else { b.fail(String::from("no lamp_shop among the light targets")).await; return };
-            let lit = || b.ask(|g| g.tab.fixture[t].on && !g.tab.fixture[t].broken && g.tab.fixture[t].factor > 0.05);
+            let lit = || b.ask(|g| game::sim_lightshome::fixture_on(g, t) && !game::sim_lightshome::fixture_broken(g, t) && game::sim_lightshome::fixture_factor(g, t) > 0.05);
             for _ in 0..10 {
                 if !lit() { break; }
                 b.aim(LAMP);

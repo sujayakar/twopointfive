@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) {
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
-    g.light_home = crate::fixtures::LightHome::blank();
+    g.light_home = crate::sim_lightshome::light_home_new(g, crate::Opaque);
     g.falls = crate::sim_fallshome::fall_store_new(g, crate::Opaque);
     // level.boxes and col.boxes are one list in the TypeScript: here g.col.boxes, as the caller left it. `ids[i]` is what `level.boxes[i]` names
     let ids: Vec<BoxId> = g.col.boxes.clone();
@@ -48,7 +48,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
         let mains = light_def_mains(&level, &name);
         let fixture_box = g.tab.light[l].fixture_box;
         let base_emissive = if fixture_box >= 0.0 { seam_box_row(g, ids[fixture_box as usize]).emissive } else { [0.0, 0.0, 0.0] };
-        let def = crate::fixtures::Fixture {
+        let def = crate::sim_lightshome::FixtureDef {
             name,
             pos: v3::copy(g.tab.light[l].pos),
             light: Some(l),
@@ -56,50 +56,59 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
             base_emissive,
             base_intensity: g.tab.light[l].intensity,
             on: g.tab.light[l].enabled,
+            broken: false,
+            disabled_until: -1.0,
+            fluorescent_flicker: false,
             factor: 1.0,
             mains,
             stagger: stagger_of(g, &mut group_stagger, &group),
             interactive: true,
-            kind: crate::fixtures::FixtureKind::Analytic,
+            kind: crate::sim_lightshome::FixtureDefKind::Analytic,
             group,
-            ..crate::fixtures::Fixture::blank()
+            area_lights: None,
+            lens: None,
         };
-        let t = crate::fixtures::fixture_add(g, def);
+        let t = crate::sim_lightshome::light_home_add(g, &def);
         g.targets.push(t);
     }
     for sw in level.switchables.iter() {
         let pos = seam_box_row(g, ids[sw.boxes[0] as usize]).c;
-        let def = crate::fixtures::Fixture {
+        let def = crate::sim_lightshome::FixtureDef {
             name: sw.name.clone(),
             group: sw.group.clone(),
-            kind: crate::fixtures::FixtureKind::Emissive,
+            kind: crate::sim_lightshome::FixtureDefKind::Emissive,
             pos,
+            light: None,
             boxes: sw.boxes.clone(),
             base_emissive: sw.base_emissive,
+            base_intensity: 0.0,
             on: sw.on,
-            flicker: sw.flicker == Some(true),
+            broken: false,
+            disabled_until: -1.0,
+            fluorescent_flicker: sw.flicker == Some(true),
             factor: if sw.on { 1.0 } else { 0.0 },
             mains: sw.mains != Some(false),
             stagger: stagger_of(g, &mut group_stagger, &sw.group),
             interactive: sw.group != "server_leds" && sw.group != "server_glow",
-            ..crate::fixtures::Fixture::blank()
+            area_lights: None,
+            lens: None,
         };
-        let t = crate::fixtures::fixture_add(g, def);
+        let t = crate::sim_lightshome::light_home_add(g, &def);
         g.targets.push(t);
     }
     let car_lamps = crate::carlamps::car_lamp_targets(g, &ids);   // (the lamps of the level's cars: one target each, no die, none on the mains)
-    for def in car_lamps {
-        let t = crate::fixtures::fixture_add(g, def);
+    for def in car_lamps.iter() {
+        let t = crate::sim_lightshome::light_home_add(g, def);
         g.targets.push(t);
     }
     // flat emissive fixtures light the scene through analytic one-sided area lights; their boxes keep glowing, rays ignore the emissive term
     let targets: Vec<FixtureId> = g.targets.clone();
     for &t in targets.iter() {
         let (kind, group, name, boxes, e) = {
-            let f = &g.tab.fixture[t];
+            let f = &g.tab.sim_lightshome_fixture[t];
             (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone(), f.base_emissive)
         };
-        if kind != crate::fixtures::FixtureKind::Emissive { continue; }
+        if kind != crate::sim_lightshome::FixtureKind::Emissive { continue; }
         for &bi in boxes.iter() {
             let (h, c, yaw) = { let b = seam_box_row(g, ids[bi as usize]); (b.h, b.c, b.yaw) };
             let Some(panel) = crate::levelfit::flat_panel(&group, &h) else { continue };   // (levelfit.ts: the one rule for which fixture box is an area light; the lamp bound asks it too)
@@ -116,21 +125,21 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
             };
             let maxc = m::max_n(&[e[0], e[1], e[2], 1e-3]);
             let i0 = maxc * area;   // radiance x area = on-axis intensity
-            let on = g.tab.fixture[t].on;
+            let on = crate::sim_lightshome::fixture_on(g, t);
             let light = add_light(g, &format!("{}_area{}", name, bi as i64), &group, 3.0, v3::mad(c, n, h[thin] + 0.07), n, [e[0] / maxc, e[1] / maxc, e[2] / maxc], i0,
                 v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
                 m::max(0.1, m::min(m::sqrt(area / m::PI), m::min(h[a0], h[a1]) + 0.02)), 0.0, on, i0, true, None);
-            g.tab.fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::fixtures::FixtureLight { light, base: i0 });
+            g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
             mark_area_lit(g, ids[bi as usize]);
         }
     }
     // emissive markings are lights: a switchable box's marking with `emit` registers an emitter over its rect, on the same target's supply
     for &t in targets.iter() {
         let (kind, group, name, boxes) = {
-            let f = &g.tab.fixture[t];
+            let f = &g.tab.sim_lightshome_fixture[t];
             (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone())
         };
-        if kind != crate::fixtures::FixtureKind::Emissive || group == "emergency" { continue; }
+        if kind != crate::sim_lightshome::FixtureKind::Emissive || group == "emergency" { continue; }
         for &bi in boxes.iter() {
             let (marks, tilted, albedo, c, h, yaw) = { let b = seam_box_row(g, ids[bi as usize]); (b.marks.clone(), b.rot.is_some(), b.albedo, b.c, b.h, b.yaw) };
             let Some(marks) = marks else { continue };
@@ -144,40 +153,48 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
                 if st.area < 0.01 || i0 < crate::game::MARK_LIGHT_MIN_I0 { continue; }   // LED rows, UI bars, buttons: they glow, they light nothing
                 let r = crate::scene_markings::mark_world_rect(mk, c, h, yaw, Some(mk_texel));
                 let n = r.n;
-                let on = g.tab.fixture[t].on;
+                let on = crate::sim_lightshome::fixture_on(g, t);
                 let light = add_light(g, &format!("{}_mark{}_{}", name, bi as i64, k), &group, 3.0, v3::mad(r.centre, n, 0.07), n, [st.mean_l[0] / maxc, st.mean_l[1] / maxc, st.mean_l[2] / maxc], i0,
                     v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
                     m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0, true,
                     if bi < 4096.0 && k < 4 { Some(((js::to_i32(bi) << 2) | k as i32) as f64) } else { None });
-                g.tab.fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::fixtures::FixtureLight { light, base: i0 });
+                g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
                 g.m.scene_markings.area_lit_marks.add(crate::scene_markings::mark_key(mk));
             }
         }
     }
     for b in level.beacons.iter() { mark_area_lit(g, ids[b.box_ as usize]); }   // dome glow is screen-only; the beam is the spot light
     // mains breaker (OCP: temporary blackout, bullet: permanent) and the emergency beacons it brings up
-    let breaker = crate::fixtures::Fixture {
+    let breaker = crate::sim_lightshome::FixtureDef {
         name: String::from("breaker"),
         group: String::from("mains"),
-        kind: crate::fixtures::FixtureKind::Breaker,
+        kind: crate::sim_lightshome::FixtureDefKind::Breaker,
         pos: level.breaker.pos,
+        light: None,
         boxes: vec![level.breaker.boxes[1]],
         base_emissive: [0.3, 4.0, 0.6],
+        base_intensity: 0.0,
         on: true,
+        broken: false,
+        disabled_until: -1.0,
+        fluorescent_flicker: false,
         factor: 1.0,
+        mains: false,
+        stagger: 0.0,
         interactive: true,
-        ..crate::fixtures::Fixture::blank()
+        area_lights: None,
+        lens: None,
     };
-    let t = crate::fixtures::fixture_add(g, breaker);
+    let t = crate::sim_lightshome::light_home_add(g, &breaker);
     g.targets.push(t);
     for (i, b) in level.beacons.iter().enumerate() {
         let mut target: Option<FixtureId> = None;
         for &t in g.targets.iter() {
-            let f = &g.tab.fixture[t];
-            if f.kind == crate::fixtures::FixtureKind::Emissive && f.boxes.contains(&b.box_) { target = Some(t); break; }
+            let f = &g.tab.sim_lightshome_fixture[t];
+            if f.kind == crate::sim_lightshome::FixtureKind::Emissive && f.boxes.contains(&b.box_) { target = Some(t); break; }
         }
         let Some(target) = target else { panic!("beacon {}: no switchable owns box {}", i, b.box_) };
-        let (name, group) = { let f = &g.tab.fixture[target]; (f.name.clone(), f.group.clone()) };
+        let (name, group) = { let f = &g.tab.sim_lightshome_fixture[target]; (f.name.clone(), f.group.clone()) };
         let light = add_light(g, &name, &group, 1.0, b.pos, [1.0, 0.0, 0.0], [1.0, 0.22, 0.06], 55.0, 14.0, 9.0, 24.0, 0.06, 1.0, false, 55.0, false, None);
         g.beacons.push(crate::game::GameBeaconsItem { light, phase: i as f64 * 1.7, target });
     }
@@ -232,7 +249,7 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     let n = level.errand.index;
     let (leds, glow) = (format!("rack{}_leds", n), format!("rack{}_glow", n));
     let targets: Vec<FixtureId> = g.targets.clone();
-    g.rack_targets = targets.iter().copied().filter(|&t| { let f = &g.tab.fixture[t]; f.name == leds || f.name == glow }).collect();
+    g.rack_targets = targets.iter().copied().filter(|&t| { let f = &g.tab.sim_lightshome_fixture[t]; f.name == leds || f.name == glow }).collect();
     g.destr = crate::destruction::destruction_new(g);   // after the targets and devices exist: a lit screen dies through its target
     g.glass_break = crate::glassbreak::glass_break_new(g);
     crate::glasspen::load_glass_pen(g);
@@ -246,7 +263,6 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
     g.fog_picture = crate::fogofwar::FogPicture::blank();
     g.staged = crate::mission::Staged::default();
-    g.quiet = crate::quiet::quiet_mission_new(g);
     g.rails = crate::rails::rails_new(g);
     g.lesson = crate::lesson::lesson_new(g);
     g.night_breach = crate::nightbreach::night_breach_new(g);

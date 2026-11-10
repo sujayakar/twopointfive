@@ -198,7 +198,7 @@ fn stand_and_fight(g: &mut crate::game::Game) {
         let pos = g.ch[c].pos;
         let mine = cell_of(g, pos);
         let d_at = dc.get(crate::Num(at)).copied();
-        let Some(fc) = crate::teams::foe_char(g, gd) else { continue };
+        let Some(fc) = g.gd[gd].foe else { continue };
         let t = k.room;
         if g.tab.roomfight_room[t].cells.has(crate::Num(at)) || g.tab.roomfight_room[t].cells.has(crate::Num(mine)) || dc.has(crate::Num(mine)) { continue; }   // (never in a door frame himself: his mates need it)
         if let Some(door) = d_at {
@@ -234,7 +234,6 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
 
 /// GO AND LOOK, once a frame after the press's own rules: the word is kept every frame; a look is called when it has gone quiet
 fn go_look(g: &mut crate::game::Game) {
-    if g.staged.facts.leads_foes { return; }
     let mut up = 0.0;
     let mut i = 0;
     while i < g.fight.defs.len() {

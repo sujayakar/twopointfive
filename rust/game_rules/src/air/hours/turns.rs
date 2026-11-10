@@ -5,11 +5,11 @@ use crate::m;
 use crate::v3;
 
 /// the cover of the weather that is picked, or nothing: none is
-pub fn cover(g: &Game) -> Option<f64> { g.weather.kind_now.map(|_| crate::weather::weather_cloud(g)) }
+pub fn cover(g: &Game) -> Option<f64> { crate::weather::weather_kind(g).map(|_| crate::weather::weather_cloud(g)) }
 
 /// the picked weather covers this much of the sky, and the hour's sun follows it
 pub fn set_cover(g: &mut Game, c: f64) {
-    let Some(k) = g.weather.kind_now else { return };
+    let Some(k) = crate::weather::weather_kind(g) else { return };
     if !c.is_finite() { return; }
     if let Some(p) = g.m.weather_kinds.weather_presets.get_mut(k) { p.cloud = v3::clamp(c, 0.0, 1.0); }
     super::sun_to_cloud(g);

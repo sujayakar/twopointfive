@@ -181,7 +181,8 @@ fn a_rifleman_who_has_given_up_runs_no_matter_what_and_drops_both_guns() {
         p.sam_put([8.6, 13.9]);
         p.run(0.1);
         let door = [33.3, 0.0, 12.0];
-        game::picture::picture_tell(&mut p.g, a, game::picture::Who::Player, door, None);
+        let sam = p.g.pl[p.g.player].ch;
+        game::picture::picture_tell(&mut p.g, a, sam, door, None);
         assert!(game::runner::runner_break(&mut p.g, a), "seed {s}: he would not break");
         let from = p.at(a);
         p.until(25.0, |p| !p.g.guards.contains(&a) || dist(p.at(a), from) > 8.0).unwrap_or_else(|| panic!("seed {s}: 25 s and he has not run: {}", p.why(a)));

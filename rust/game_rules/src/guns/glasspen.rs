@@ -22,14 +22,18 @@ fn energy_by(k: &crate::knobs::GlasspenK, id: crate::weapons::WeaponId, cls: Opt
     }
     k.default_energy
 }
-/// `g.col.raycast(ro, rd, tmax)` in this file's shape of a hit
-fn cast(g: &mut Game, ro: V3, rd: V3, tmax: f64) -> Option<RoundPathSt> {
-    crate::scene_collision::raycast(g, ro, rd, tmax).map(|h| RoundPathSt { t: h.t, index: h.index, n: h.n })
-}
 /// a new state: no log, rev 0
 fn fresh_state() -> PenState { PenState { log: Vec::new(), rev: 0.0 } }
 /// `panesUntouched(g.sim)`: the part's first word. The skeleton's `panes_untouched(b: Opaque)` cannot carry the slot, and the slot is `g.sim`
 fn untouched(g: &Game) -> bool { ::sim::state::state_read(g.sim).panes.used == 0 }
+/// `PANE_TYPES[i]`, the module's number for a glass (rust/sim/src/panes.rs ANNEALED, TEMPERED, LAMINATED)
+fn pane_type_word(i: f64) -> PaneType {
+    if i == 1.0 { PaneType::Tempered } else if i == 2.0 { PaneType::Laminated } else { PaneType::Annealed }
+}
+/// the module's scratch as the TypeScript reads it through `f64()`, from its first double (`a = x.sim_scratch() / 8` is 0 here). The last call's answer: read it before the next call
+fn scratch() -> &'static [f64] {
+    unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
+}
 /// the shell rule on one pane's marks, five numbers each: x, y, z, went-through, filed-a-mark
 fn mark_on(mk: &mut Vec<f64>, at: V3, through: bool, r2: f64) -> ShellMark {
     let (mut marks, mut join) = (0, false);
@@ -116,23 +120,29 @@ pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
 /// remember a crossing on pane `bi`: the module keeps it, the oldest going past `holes`
 fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
     state_of(g).rev += 1.0;
-    crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::pen::add_hole(cx.g, js::to_u32(bi), p, &g.k));
+    crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, s: f64, _w: f64| ::sim::pen::add_hole(s as usize, js::to_u32(bi), p, &g.k));
 }
 
 // ---------------------------------------------------------------- the toll
 
-/// a crossing, as a round's path keeps it
-fn crossing(x: &::sim::pen::Crossing) -> PaneCross {
-    let type_ = match x.t.ty { 1 => PaneType::Tempered, 2 => PaneType::Laminated, _ => PaneType::Annealed };
+/// a crossing as the module lists it (rust/sim/src/pen.rs write_cross; glasspen.ts crossAt)
+fn cross_at(m: &[f64], o: f64, into: f64) -> crate::glasspen::PaneCross {
+    let o = o as usize;
     PaneCross {
-        type_, n: x.t.n, cos: x.t.cos, take: x.t.take, e_out: x.t.e_out, hole: x.t.hole, bi: x.bi as f64, t: x.at_t, at: x.at, exit: x.exit, dir_in: x.dir_in, dir_out: x.dir_out,
-        e_in: x.e_in, turn_deg: x.turn_deg, thru: x.thru, into: x.into as f64,
+        type_: pane_type_word(m[o]), n: [m[o + 1], m[o + 2], m[o + 3]], cos: m[o + 4], take: m[o + 5], e_out: m[o + 6], hole: m[o + 7] != 0.0,
+        bi: m[o + 8], t: m[o + 9],
+        at: [m[o + 10], m[o + 11], m[o + 12]], exit: [m[o + 13], m[o + 14], m[o + 15]], dir_in: [m[o + 16], m[o + 17], m[o + 18]], dir_out: [m[o + 19], m[o + 20], m[o + 21]],
+        e_in: m[o + 22], turn_deg: m[o + 23], thru: m[o + 24], into,
     }
 }
 
 /// one pane on a round's flight: what it takes and where the round leaves it, or None: spent in it
 pub(super) fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
-    crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::pen::pane_crossing(cx, js::to_u32(bi), o, d, t, e, nth as usize, &g.k).map(|x| crossing(&x)))
+    crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> Option<PaneCross> {
+        if ::sim::pen_cross(js::to_u32(bi), o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth as usize, &g.k) == 0 { return None; }
+        let m = scratch();
+        Some(cross_at(m, 0.0, m[CROSS as usize]))
+    })
 }
 
 // ---------------------------------------------------------------- the round's flight
@@ -217,7 +227,14 @@ pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3,
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&p) => p, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
-    let w = crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::pen::arm_walk(cx, from, mz, dir, energy, &g.k).map(|(e, l)| (e, l.iter().map(crossing).collect::<Vec<PaneCross>>())));
+    let w = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> Option<(f64, Vec<PaneCross>)> {
+        let n = ::sim::pen_arm(from[0], from[1], from[2], mz[0], mz[1], mz[2], dir[0], dir[1], dir[2], energy, &g.k);
+        if n < 0 { return None; }
+        let m = scratch();
+        let mut cross: Vec<PaneCross> = Vec::new();
+        for i in 0..n { cross.push(cross_at(m, i as f64 * CROSS, -1.0)); }
+        Some((m[::sim::sim_scratch_len() - 1], cross))
+    });
     let (e, cross) = w?;
     if cross.is_empty() { return Some(ArmThroughGlass { e: energy, panes: 0.0 }); }
     let id = g.ch[c_2].id;
@@ -230,8 +247,14 @@ pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3,
 pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::scene_collision::SegmentBlockedPanesItem], energy: Option<f64>) -> bool {
     let energy = energy.unwrap_or(g.k.glasspen.default_energy);
     g.stats.glasspen.shot_asked += 1;
-    let list: Vec<(u32, f64)> = panes.iter().map(|p| (js::to_u32(p.bi), p.t)).collect();
-    let ok = crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::pen::shot_passes(cx, a, rd, &list, energy, &g.k));
+    let ok = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> bool {
+        let m = unsafe { core::slice::from_raw_parts_mut(::sim::sim_scratch(), ::sim::sim_scratch_len()) };
+        for k in 0..panes.len() {
+            m[2 * k] = panes[k].bi;
+            m[2 * k + 1] = panes[k].t;
+        }
+        ::sim::pen_passes(a[0], a[1], a[2], rd[0], rd[1], rd[2], panes.len(), energy, &g.k) == 1
+    });
     if ok { g.stats.glasspen.shot_through += 1; } else { g.stats.glasspen.shot_refused += 1; }
     ok
 }
@@ -296,5 +319,33 @@ mod tests {
         // far off on the pane: another mark
         assert_eq!(mark_on(&mut mk, [1.0, 0.0, 0.0], false, r2), ShellMark::More);
         assert_eq!(mk.len(), 25);
+    }
+
+    // the module's numbers for a glass and this file's table are one list
+    #[test]
+    fn a_glass_number_is_the_module_s() {
+        assert_eq!(pane_type_word(::sim::panes::ANNEALED as f64), PaneType::Annealed);
+        assert_eq!(pane_type_word(::sim::panes::TEMPERED as f64), PaneType::Tempered);
+        assert_eq!(pane_type_word(::sim::panes::LAMINATED as f64), PaneType::Laminated);
+        let words = pane_types();
+        for i in 0..words.len() { assert_eq!(words[i].as_str(), pane_type_word(i as f64).as_str()); }
+    }
+
+    // the layout this file reads is the one rust/sim writes, field by field, and the sizes agree
+    #[test]
+    fn a_crossing_reads_as_the_module_writes_it() {
+        assert_eq!(CROSS, ::sim::pen::CROSS as f64);
+        assert_eq!(MAX_CROSS, ::sim::pen::MAX_CROSS as f64);
+        let x = ::sim::pen::Crossing {
+            t: ::sim::pen::Toll { ty: ::sim::panes::LAMINATED, n: [1.0, 2.0, 3.0], cos: 4.0, take: 5.0, e_out: 6.0, hole: true },
+            bi: 7, at_t: 8.0, at: [9.0, 10.0, 11.0], exit: [12.0, 13.0, 14.0], dir_in: [15.0, 16.0, 17.0], dir_out: [18.0, 19.0, 20.0], e_in: 21.0, turn_deg: 22.0, thru: 23.0, into: -1,
+        };
+        let mut m = [0.0; 3 + ::sim::pen::CROSS];
+        ::sim::pen::write_cross(&x, &mut m[3..]);
+        let c = cross_at(&m, 3.0, -1.0);
+        assert_eq!(c.type_, PaneType::Laminated);
+        assert_eq!((c.n, c.cos, c.take, c.e_out, c.hole), ([1.0, 2.0, 3.0], 4.0, 5.0, 6.0, true));
+        assert_eq!((c.bi, c.t, c.at, c.exit, c.dir_in, c.dir_out), (7.0, 8.0, [9.0, 10.0, 11.0], [12.0, 13.0, 14.0], [15.0, 16.0, 17.0], [18.0, 19.0, 20.0]));
+        assert_eq!((c.e_in, c.turn_deg, c.thru, c.into), (21.0, 22.0, 23.0, -1.0));
     }
 }

@@ -249,9 +249,9 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         }
     }
     if kind == Some(InteractableKind::Breaker) && !crate::handwork::breaker_start(g, verb == Some(Verb::BreakerOn)) {
-        if verb == Some(Verb::BreakerOn) && g.light_home.mains.active && !g.light_home.mains.permanent {
+        if verb == Some(Verb::BreakerOn) && crate::sim_lightshome::mains_active(g) && !crate::sim_lightshome::mains_permanent(g) {
             crate::game::game_end_blackout(g);
-        } else if verb == Some(Verb::BreakerOff) && !g.light_home.mains.active {
+        } else if verb == Some(Verb::BreakerOff) && !crate::sim_lightshome::mains_active(g) {
             crate::game::game_set_blackout(g, 86400.0, GameSetBlackoutCause::Hand);
         }
     }

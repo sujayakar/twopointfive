@@ -62,15 +62,15 @@ fn the_errand_is_to_the_panels_own_face() {
         p.g.shown[p.g.pl[p.g.player].ch].visibility = 0.0;
         p.frame();
         for m in p.g.guards.clone() {
-            if p.g.light_home.mains.active && breaker_reset_near(&mut p.g, m) {
+            if game::sim_lightshome::mains_active(&p.g) && breaker_reset_near(&mut p.g, m) {
                 let q = p.at(m);
                 from = Some(q);
                 if solid_blocked(&mut p.g, [q[0], 1.0, q[1]], at, None) { through += 1; }
             }
         }
-        if !p.g.light_home.mains.active { break; }
+        if !game::sim_lightshome::mains_active(&p.g) { break; }
     }
-    assert!(!p.g.light_home.mains.active, "45 s and the mains are not back: {}", p.roll());
+    assert!(!game::sim_lightshome::mains_active(&p.g), "45 s and the mains are not back: {}", p.roll());
     let q = from.expect("a man worked it");
     assert_eq!(through, 0, "frames a man worked the lever with something solid between");
     assert!((q[0] - face[0]) * n[0] + (q[1] - face[2]) * n[2] > 0.0, "he worked it from behind its face: {q:?}");

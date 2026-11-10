@@ -149,15 +149,15 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
     while ti < g.targets.len() {
         let t = g.targets[ti];
         ti += 1;
-        if g.tab.fixture[t].broken || !g.tab.fixture[t].interactive { continue; }
-        let (name, pos) = (g.tab.fixture[t].name.clone(), g.tab.fixture[t].pos);
+        if crate::sim_lightshome::fixture_broken(g, t) || !g.tab.sim_lightshome_fixture[t].interactive { continue; }
+        let (name, pos) = (g.tab.sim_lightshome_fixture[t].name.clone(), g.tab.sim_lightshome_fixture[t].pos);
         if crate::carlamps::dead_lamp(g, t) {
             let mut it = mark(crate::game::InteractableKind::Light, pos, name, String::from("click  shoot"), true, true);
             it.target = Some(t);
             list.push(it);
             continue;
         }
-        let factor = g.tab.fixture[t].factor;
+        let factor = crate::sim_lightshome::fixture_factor(g, t);
         let mut it = mark(crate::game::InteractableKind::Light, pos, format!("{}{}", name, if factor > 0.0 { "" } else { " (off)" }), String::from("right-click  OCP (the pistol's)  ·  click  shoot"), true, factor <= 0.0);
         it.target = Some(t);
         list.push(it);
@@ -190,8 +190,6 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             rows.push(status(&base, if gun { "the pistol coming up to his head…" } else { "holstering it to get both hands on him again…" }));
         } else if hold.phase == crate::character::HoldPhase::Choke || (hold.wind_t >= 0.0 && !gun) {
             rows.push(running(&base, crate::game::Verb::Choke, "choking him out… — Space or a step and he breathes again", Some(if hold.phase == crate::character::HoldPhase::Choke { hold.t / k.choke } else { 0.0 })));
-        } else if hold_killing(&hold) {
-            rows.push(status(&base, "the knife…"));
         } else if hold.phase == crate::character::HoldPhase::Whip || (hold.wind_t >= 0.0 && gun) {
             rows.push(running(&base, crate::game::Verb::Whip, "pistol-whip… — Space or a step checks it", Some(if hold.phase == crate::character::HoldPhase::Whip { hold.t / k.whip } else { 0.0 })));
         } else if let (Some(cv), true) = (cv, gun) {
@@ -547,8 +545,8 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             let bp = g.level.breaker.pos;
             let face: V3 = [bp[0], bp[1], bp[2] - 0.18];
             let eye: V3 = [p[0], if crouch { 0.9 } else { 1.3 }, p[2]];
-            let active = g.light_home.mains.active;
-            let gone_for_good = active && g.light_home.mains.permanent;
+            let active = crate::sim_lightshome::mains_active(g);
+            let gone_for_good = active && crate::sim_lightshome::mains_permanent(g);
             if !gone_for_good && v3::dist_xz(bp, p) < NEARBY_M && (!crate::scene_collision::solid_blocked(g, eye, face, None) || match crate::workthings::sam_panel_point(g, p) { Some(at) => !crate::scene_collision::solid_blocked(g, eye, at, None), None => false }) {
                 let reach = v3::dist_xz(bp, p) < 1.15 && !dragging_any && !sprinting && g.pl[pl].takedown.is_none() && g.pl[pl].holding.is_none();
                 let it = mark(crate::game::InteractableKind::Breaker, [bp[0], bp[1] + 0.35, bp[2]], String::from(if active { "breaker · thrown" } else { "breaker · power on" }), String::from(if reach { "" } else { "step closer" }), reach, active);

@@ -195,7 +195,6 @@ pub enum HoldPhase {
     Grab,
     Choke,
     Whip,
-    Kill,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]

@@ -95,7 +95,6 @@ pub(super) fn door_tools_opened(g: &mut crate::game::Game, op: DoorOpId) {
     match dop!(g, op).kind {
         DoorToolKind::OpenClear => door_tools_enter(g, op),
         DoorToolKind::BangClear => dop!(g, op).phase = Phase::Toss,
-        DoorToolKind::Outside => door_tools_to_slice(g, op),
         DoorToolKind::Threshold => door_tools_to_threshold(g, op),
         _ => {}
     }

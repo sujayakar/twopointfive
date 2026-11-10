@@ -156,7 +156,7 @@ pub struct Def {
     pub free_at: f64,
     pub burst: crate::roomfight::DefBurst,
     pub bolt_until: f64,
-    pub bolt_from: Option<crate::game::Foe>,
+    pub bolt_from: Option<CharId>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

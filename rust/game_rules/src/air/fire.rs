@@ -50,8 +50,8 @@ fn h01(x: f64) -> f64 {
 
 /// Is this light target an open fire, by its name.
 pub fn is_fire(g: &crate::game::Game, t: FixtureId) -> bool {
-    let row = &g.tab.fixture[t];
-    if row.kind != crate::fixtures::FixtureKind::Analytic || row.light.is_none() {
+    let row = &g.tab.sim_lightshome_fixture[t];
+    if row.kind != crate::sim_lightshome::FixtureKind::Analytic || row.light.is_none() {
         return false;
     }
     for n in &g.k.fire.names {
@@ -64,7 +64,7 @@ pub fn is_fire(g: &crate::game::Game, t: FixtureId) -> bool {
 
 /// A fire's own seed, 0 to 1, off where it stands.
 pub fn fire_seed(g: &crate::game::Game, t: FixtureId) -> f64 {
-    let p = g.tab.fixture[t].pos;
+    let p = g.tab.sim_lightshome_fixture[t].pos;
     seed_at(p)
 }
 fn seed_at(p: V3) -> f64 {
@@ -136,7 +136,7 @@ fn static_at(g: &Game, ix: f64) -> Option<BoxId> {
 
 /// Where the fire's mouth is and how wide: the glowing box hung on the lamp, or a hand under the lamp.
 pub fn mouth_of(g: &crate::game::Game, t: FixtureId) -> crate::fire::MouthOf {
-    let first = g.tab.fixture[t].boxes.first().copied();
+    let first = g.tab.sim_lightshome_fixture[t].boxes.first().copied();
     let b = match first {
         Some(i) => static_at(g, i),
         None => None,
@@ -146,13 +146,13 @@ pub fn mouth_of(g: &crate::game::Game, t: FixtureId) -> crate::fire::MouthOf {
         let (c, h) = { let x = &g.tab.boxes[b]; (x.c, x.h) };
         return crate::fire::MouthOf { pos: [c[0], c[1] + h[1], c[2]], r: m::min(h[0], h[2]) * mouth, lid: m::min(h[0], h[2]) };
     }
-    let p = g.tab.fixture[t].pos;
+    let p = g.tab.sim_lightshome_fixture[t].pos;
     crate::fire::MouthOf { pos: [p[0], p[1] - 0.16, p[2]], r: 0.19 * mouth, lid: 0.0 }
 }
 
 /// How hot a fire burns, 0 to 1: its lamp's share of its authored strength.
 pub fn heat_of(g: &crate::game::Game, t: FixtureId) -> f64 {
-    m::max(0.0, m::min(1.0, g.tab.fixture[t].factor))
+    m::max(0.0, m::min(1.0, crate::sim_lightshome::fixture_factor(g, t)))
 }
 
 /// Whether it burns at all.
@@ -160,7 +160,7 @@ pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
     if !(heat_of(g, t) > 0.001) {
         return false;
     }
-    let l = g.tab.fixture[t].light.unwrap();
+    let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     g.tab.light[l].enabled
 }
 
@@ -189,7 +189,7 @@ pub fn fire_holds(g: &crate::game::Game, t: FixtureId) -> bool {
 
 /// Did a round that stopped at `p`, in static `ix`, stop in this fire: its own box, or the drum under its mouth.
 pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> bool {
-    if g.tab.fixture[t].boxes.contains(&ix) {
+    if g.tab.sim_lightshome_fixture[t].boxes.contains(&ix) {
         return true;
     }
     let mouth = mouth_of(g, t);
@@ -238,8 +238,8 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
 
 /// Out but still lit in the fog's picture: the remembered pool stays a fire's.
 fn held(g: &mut crate::game::Game, t: FixtureId) {
-    let l = g.tab.fixture[t].light.unwrap();
-    let tp = g.tab.fixture[t].pos;
+    let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
+    let tp = g.tab.sim_lightshome_fixture[t].pos;
     if g.tab.light[l].steady.is_none() {
         let lt = &mut g.tab.light[l];
         lt.steady = Some(crate::render_lights::RtLightSteady { intensity: 0.0, pos: [tp[0], tp[1], tp[2]], radius: lt.radius, color: Some(lt.color), range: Some(lt.range), out: None });
@@ -254,7 +254,7 @@ fn held(g: &mut crate::game::Game, t: FixtureId) {
     };
     let warm = |i: usize, g: &Game| g.k.fire.warm.get(i).copied().unwrap_or(1.0);
     let w = [warm(0, g), warm(1, g), warm(2, g)];
-    let intensity = m::max(1e-4, g.tab.fixture[t].base_intensity * g.k.fire.bright);
+    let intensity = m::max(1e-4, crate::sim_lightshome::fixture_base_intensity(g, t) * g.k.fire.bright);
     g.tab.light[l].steady.as_mut().unwrap().intensity = intensity;
     let radius = m::max(s_radius, g.k.fire.size * mouth_of(g, t).r);
     let (lift, reach) = (g.k.fire.lift, g.k.fire.reach);
@@ -271,8 +271,8 @@ fn held(g: &mut crate::game::Game, t: FixtureId) {
 
 /// The lamp back as the level hung it, and nothing said to the steady readers.
 fn plain(g: &mut crate::game::Game, t: FixtureId) {
-    let l = g.tab.fixture[t].light.unwrap();
-    let tp = g.tab.fixture[t].pos;
+    let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
+    let tp = g.tab.sim_lightshome_fixture[t].pos;
     let lt = &mut g.tab.light[l];
     lt.pos = [tp[0], tp[1], tp[2]];
     let Some(s) = lt.steady.take() else { return };
@@ -374,10 +374,10 @@ mod tests {
     fn stand() -> (crate::game::Game, FixtureId, LightId) {
         let mut g = crate::game::Game::blank();
         let l = g.tab.light.push(crate::render_lights::RtLight::default());
-        let mut f = crate::fixtures::Fixture::blank();
+        let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
-        let t = g.tab.fixture.push(f);
+        let t = g.tab.sim_lightshome_fixture.push(f);
         (g, t, l)
     }
 
@@ -396,7 +396,7 @@ mod tests {
         assert!(!fire_struck(&mut g, t, [1.0, 2.0, 3.0], 9.0));
         assert!(!fire_struck(&mut g, t, [1.0, 2.0, 3.0], 0.5));
         // its own box, wherever the round stopped (decided by the index, no row read)
-        g.tab.fixture[t].boxes.push(0.0);
+        g.tab.sim_lightshome_fixture[t].boxes.push(0.0);
         assert!(fire_struck(&mut g, t, [50.0, 50.0, 50.0], 0.0));
     }
 
@@ -433,7 +433,7 @@ mod tests_need_box_rows {
     fn stand() -> (crate::game::Game, FixtureId) {
         let mut g = crate::game::Game::blank();
         let l = g.tab.light.push(crate::render_lights::RtLight::default());
-        let mut f = crate::fixtures::Fixture::blank();
+        let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
         let mut b = crate::scene_boxes::Box::default();
@@ -442,7 +442,7 @@ mod tests_need_box_rows {
         let id = g.tab.boxes.push(b);
         g.engine.world.statics.push(id);
         f.boxes.push(0.0);
-        let t = g.tab.fixture.push(f);
+        let t = g.tab.sim_lightshome_fixture.push(f);
         (g, t)
     }
 
@@ -582,7 +582,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         if !is_fire(g, t) { continue; }
         let ix = fires as usize;
         fires += 1.0;
-        let l = g.tab.fixture[t].light.unwrap();
+        let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
         let heat = heat_of(g, t);
         if !burns(g, t) {
             // out: while the fog's picture has it lit it is held as a fire's lamp, and for the one frame before the fog has had its say
@@ -594,7 +594,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             } else {
                 plain(g, t);
             }
-            crate::fixtures::light_home_feed_burning(g, l);
+            crate::sim_lightshome::light_home_feed_burning(g, l);
             continue;
         }
         lit += 1.0;
@@ -602,7 +602,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let fl = fire_flicker(g, seed, time);
         let mouth = mouth_of(g, t);
         let si = m::floor(seed * 65535.0);
-        let hung = g.tab.fixture[t].pos;
+        let hung = g.tab.sim_lightshome_fixture[t].pos;
         // the light: the authored lamp x the flicker, its place wandering with the flames; a reader of the place's steady light takes it for the authored lamp
         if g.tab.light[l].steady.is_none() {
             let lamp = &mut g.tab.light[l];
@@ -613,7 +613,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         g.tab.light[l].steady.as_mut().unwrap().out = Some(false);
         let radius = m::max(g.tab.light[l].steady.unwrap().radius, g.k.fire.size * mouth.r);
         g.tab.light[l].radius = radius;
-        let intensity = g.tab.fixture[t].base_intensity * g.tab.fixture[t].factor * g.k.fire.bright;
+        let intensity = crate::sim_lightshome::fixture_base_intensity(g, t) * crate::sim_lightshome::fixture_factor(g, t) * g.k.fire.bright;
         g.tab.light[l].steady.as_mut().unwrap().intensity = intensity;
         let st = g.tab.light[l].steady.unwrap();
         let c0 = match st.color { Some(c) => c, None => g.tab.light[l].color };
@@ -628,13 +628,13 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let z = wander_across(hung[2], wander, 0.71, h01(si + 7.0), 3.3, h01(si + 8.0), time);
         let y = wander_height(hung[1], g.k.fire.lift, g.k.fire.wander_up, fl, g.k.fire.depth);
         g.tab.light[l].pos = [x, y, z];
-        crate::fixtures::light_home_feed(g, l);
+        crate::sim_lightshome::light_home_feed(g, l);
         // the coals, at this share of the glow updateTargets painted
-        let ck = coal_share(g.tab.fixture[t].factor, g.k.fire.coals, g.k.fire.coal_swing, fl);
-        let glow = g.tab.fixture[t].base_emissive;
+        let ck = coal_share(crate::sim_lightshome::fixture_factor(g, t), g.k.fire.coals, g.k.fire.coal_swing, fl);
+        let glow = g.tab.sim_lightshome_fixture[t].base_emissive;
         let mut b = 0;
-        while b < g.tab.fixture[t].boxes.len() {
-            let bi = g.tab.fixture[t].boxes[b];
+        while b < g.tab.sim_lightshome_fixture[t].boxes.len() {
+            let bi = g.tab.sim_lightshome_fixture[t].boxes[b];
             b += 1;
             if let Some(&bx) = g.engine.world.statics.get(bi as usize) {
                 seam_box_set_emissive(g, bx, [glow[0] * ck, glow[1] * ck, glow[2] * ck]);

@@ -11,9 +11,9 @@ fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes
 
 /// Is the fixture lit, as it stands.
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
-    let on = g.tab.fixture[t].on;
-    let broken = g.tab.fixture[t].broken;
-    let until = g.tab.fixture[t].blind_until;
+    let on = crate::sim_lightshome::fixture_on(g, t);
+    let broken = crate::sim_lightshome::fixture_broken(g, t);
+    let until = crate::sim_lightshome::fixture_disabled_until(g, t);
     on && !broken && !(until > 0.0 && g.time < until)
 }
 
@@ -479,7 +479,7 @@ mod tests {
     #[test]
     fn a_lamp_is_first_known_as_it_stands() {
         let mut g = game();
-        let t = g.tab.fixture.push(crate::fixtures::Fixture::blank());
+        let t = g.tab.sim_lightshome_fixture.push(crate::sim_lightshome::Fixture::blank());
         assert!(fog_of_war_lamp_known(&mut g, t, true));
         assert!(fog_of_war_lamp_known(&mut g, t, true));
         assert_eq!(g.fog_of_war.lamp_recs.get(t).copied(), Some(true));

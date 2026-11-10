@@ -85,7 +85,7 @@ else: a mud partition a charge cuts beside a mud shell. `finish` is usually `ski
 `MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own, by name
 (`snow_level`).
 
-**Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_among` asks only
+**Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_box` asks only
 height and size: underside from `ceiling_y` less 0.25 m, top at most 0.45 m over, 0.9 m across or more. A drawn slab in that band stops the rain and
 hides the room. The rain reads `MAX_ROOFS` of them. Open sky is no slab.
 

@@ -316,7 +316,7 @@ fn fog_of_war_lamps_known(g: &mut crate::game::Game) {
     while i < g.targets.len() {
         let t = g.targets[i];
         i += 1;
-        let row = &g.tab.fixture[t];
+        let row = &g.tab.sim_lightshome_fixture[t];
         if row.light.is_none() && row.area_lights.is_none() { continue; }
         let lit = fog_of_war_lamp_lit(g, t);
         fog_of_war_lamp_known(g, t, lit);
@@ -700,7 +700,7 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>)
 
 /// Has the team a look at this fixture: an eye on the floor under it, a line to the fixture itself, or seen floor within two metres that it lights. (FogOfWar.lampSeen)
 pub(super) fn fog_of_war_lamp_seen(g: &mut crate::game::Game, t: FixtureId) -> bool {
-    let pos = g.tab.fixture[t].pos;
+    let pos = g.tab.sim_lightshome_fixture[t].pos;
     let (x, y, z) = (pos[0], pos[1], pos[2]);
     if fog_of_war_spot_seen(g, x, z) { return true; }
     let mut n = 0;

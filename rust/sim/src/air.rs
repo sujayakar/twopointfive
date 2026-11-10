@@ -62,7 +62,7 @@ static mut PLANS: [Plan; GAMES] = [const { Plan { made: 0.0, sig: 0.0, cells: [0
 
 /// THE TABLES OF SLOT `g` ARE THE BLOCK'S THAT STANDS THERE: made from the block of this `stamp`, or made again now (no roofed list in the block: none here either). The leaves'
 /// half is owed: the next look at them reads them.
-pub fn plan(g: usize, stamp: f64, air: &Air, roofs: &[[f64; 4]]) -> &'static mut Plan {
+pub fn plan(g: usize, stamp: f64, air: &Air, roofs: &[f64], n: usize) -> &'static mut Plan {
     let p = unsafe { &mut (*core::ptr::addr_of_mut!(PLANS))[g] };
     if p.made != stamp {
         p.made = stamp;
@@ -71,7 +71,7 @@ pub fn plan(g: usize, stamp: f64, air: &Air, roofs: &[[f64; 4]]) -> &'static mut
         if air.n_cells == 0.0 && air.n_edges == 0.0 {
             p.indoor.fill(0);
         } else {
-            p.make(|x, z| crate::weather::under_any(roofs, x, z));
+            p.make(|x, z| crate::weather::under(roofs, n, x, z));
         }
     }
     p
@@ -142,6 +142,14 @@ fn or_zero(x: f64) -> f64 {
     }
 }
 
+impl Said {
+    pub fn tell(&self, out: &mut [f64]) {
+        out[0] = self.moved;
+        out[1] = self.steps;
+        out[2] = self.probes;
+        out[3] = self.open;
+    }
+}
 
 impl Air {
     /// airDust.ts build's head: its switch, nothing owed, no opening known yet

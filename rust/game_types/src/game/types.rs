@@ -330,7 +330,7 @@ pub struct Game {
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
     #[is(crate::Opaque)] pub men: crate::Opaque,
-    pub light_home: crate::fixtures::LightHome,
+    pub light_home: crate::sim_lightshome::LightHome,
     pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::sim_fallshome::FallStore,
     #[is(true)] pub ai_enabled: bool,
@@ -659,12 +659,6 @@ pub struct GameDoorHandRecsValue {
     pub crack: bool,
     pub hand: f64,
     pub move_: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, ToBytes)]
-pub enum Foe {
-    Guard(GuardId),
-    Player,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -1007,8 +1001,8 @@ pub struct Guard {
     #[is(crate::game::GuardState::Patrol)] pub state: crate::game::GuardState,
     pub callsign: String,
     #[is(crate::teams::Team::Guard)] pub team: crate::teams::Team,
-    /// may name a man who has left: a GuardId stays readable, tables never shrink
-    #[is(Some(crate::game::Foe::Player))] pub foe: Option<crate::game::Foe>,
+    /// the man he has in mind: a player's or an AI man. He may be a man who has left: a body stays readable, tables never shrink
+    pub foe: Option<CharId>,
     pub faces: Option<f64>,
     #[is(RouteId(0))] pub route: RouteId,
     pub unit: Option<crate::game::UnitInfo>,
@@ -1285,12 +1279,11 @@ pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
 impl Guard {
-    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
+    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
     pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
         let mut g = Guard::blank();
         g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
         if let Some(t) = team { g.team = t; }
-        if g.team != crate::teams::Team::Guard && g.team != crate::teams::Team::Hostile { g.foe = None; }
         g.keys = keys; g.weapon = weapon; g.talk = talk;
         g
     }
@@ -1301,7 +1294,7 @@ mod tests {
     #[test]
     fn a_new_man_holds_what_the_typescript_gives_him() {
         let g = Guard::blank();
-        assert!(matches!(g.foe, Some(Foe::Player)));
+        assert!(g.foe.is_none());
         assert_eq!((g.last_seen_t, g.gun_lost_at, g.torch_lost_at, g.killer_id, g.fire_cd), (-100.0, -1.0, -1.0, -1.0, 1.0));
         assert_eq!(g.state, GuardState::Patrol);
         assert_eq!(g.beam_dir, [0.0, -0.3, 1.0]);
@@ -1355,7 +1348,7 @@ pub struct Tabs {
     pub debris_chunk: Tab<DebrisChunkId, crate::debris::Chunk>,
     pub cmd_seat: Tab<SeatId, crate::cmd::Seat>,
     pub light: Tab<LightId, crate::render_lights::RtLight>,
-    pub fixture: Tab<FixtureId, crate::fixtures::Fixture>,
+    pub sim_lightshome_fixture: Tab<FixtureId, crate::sim_lightshome::Fixture>,
     pub devices_camera_rt: Tab<CameraRtId, crate::devices::CameraRt>,
     pub devices_laser_rt: Tab<LaserRtId, crate::devices::LaserRt>,
     pub wallbreak_breakable: Tab<WallbreakBreakableId, crate::wallbreak::Breakable>,
@@ -1491,7 +1484,6 @@ pub struct Mods {
     pub startle: crate::startle::StartleMod,
     pub flinch: crate::flinch::FlinchMod,
     pub rescue: crate::rescue::RescueMod,
-    pub rescuecheck: crate::rescuecheck::RescuecheckMod,
     pub seenwalk: crate::seenwalk::SeenwalkMod,
     pub wet: crate::wet::WetMod,
     pub he40: crate::he40::He40Mod,

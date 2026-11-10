@@ -287,9 +287,9 @@ pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Ga
     while at < g.targets.len() {
         let t = g.targets[at];
         at += 1;
-        if g.tab.fixture[t].boxes.iter().any(|&b| b == i) && !g.tab.fixture[t].broken {
+        if g.tab.sim_lightshome_fixture[t].boxes.iter().any(|&b| b == i) && !crate::sim_lightshome::fixture_broken(g, t) {
             if destruction_break_target(g, t) {
-                let pos = g.tab.fixture[t].pos;
+                let pos = g.tab.sim_lightshome_fixture[t].pos;
                 crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.6), None);
             }
         }
@@ -362,14 +362,14 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
             let t = g.targets[at_t];
             at_t += 1;
             let fire = crate::fire::fire_holds(g, t);
-            let pos = g.tab.fixture[t].pos;
+            let pos = g.tab.sim_lightshome_fixture[t].pos;
             if !(fire || destruction_fixture_live(g, t)) || v3::dist(pos, at) > r { continue; }
             let to = v3::sub(pos, eye);
             let len = v3::len(to);
             if len > 0.3 {
                 if let Some(hit) = crate::scene_collision::raycast(g, eye, v3::scale(to, 1.0 / len), len) {
                     // (the first solid thing on the line is the fixture itself, or nothing)
-                    if hit.t < len - 0.06 && !g.tab.fixture[t].boxes.iter().any(|&b| b == hit.index) { continue; }
+                    if hit.t < len - 0.06 && !g.tab.sim_lightshome_fixture[t].boxes.iter().any(|&b| b == hit.index) { continue; }
                 }
             }
             if fire { crate::fire::fire_stir(g, t); } else { destruction_kill_fixture(g, t, at, "blast", Some(true)); }
@@ -460,9 +460,9 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
 
 /// A lit screen's light target out, remembered for reset(). True = a light went out.
 pub(super) fn destruction_break_target(g: &mut crate::game::Game, t: FixtureId) -> bool {
-    if g.tab.fixture[t].broken { return false; }
-    let was_lit = g.tab.fixture[t].interactive && (g.tab.fixture[t].on || g.tab.fixture[t].factor > 0.0);
-    g.tab.fixture[t].broken = true;
+    if crate::sim_lightshome::fixture_broken(g, t) { return false; }
+    let was_lit = g.tab.sim_lightshome_fixture[t].interactive && (crate::sim_lightshome::fixture_on(g, t) || crate::sim_lightshome::fixture_factor(g, t) > 0.0);
+    crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().break_, Some(t), None, None, None, None);
     g.destr.broke.add(t);
     if was_lit { crate::game::game_light_event(g, t, None, None); }
     was_lit
@@ -471,13 +471,13 @@ pub(super) fn destruction_break_target(g: &mut crate::game::Game, t: FixtureId) 
 /// A monitor or TV that took a round: dead, a fizz of sparks.
 fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction::Destructible, hit_p: V3, n: V3, by_player: bool) {
     if let Some(t) = item.target {
-        if !g.tab.fixture[t].broken {
+        if !crate::sim_lightshome::fixture_broken(g, t) {
             let lit = destruction_break_target(g, t);
-            let pos = g.tab.fixture[t].pos;
+            let pos = g.tab.sim_lightshome_fixture[t].pos;
             crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
             if lit {
                 crate::render_lights::light_set_flash(g, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
-                let name = g.tab.fixture[t].name.clone();
+                let name = g.tab.sim_lightshome_fixture[t].name.clone();
                 dlog(g, &alloc::format!("screen {} shot dead", name));
                 if by_player {
                     crate::chronicle::chron_light_shot(g, t);

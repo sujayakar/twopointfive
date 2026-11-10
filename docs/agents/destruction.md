@@ -31,7 +31,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `break_table/`, `debris/`, `falling.rs` | what a broken thing throws and its shapes (`Mat`, `break_row`); the pool of pieces; where a thing comes down |
 | `furnblast.rs` | furniture and a blast |
 | `frag/`, `he40.rs` | a burst and whom it takes (`blast`); the 40 mm's flight, arming and dud |
-| `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
+| `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `glass_pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
 | `shards/`, `shard_model.rs`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
 | `fixture_break.rs`, `blast_look.rs`, `blast_feel/`, `dust_look.rs`, `floormess.rs` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
 | `marks.rs`, `render_decals/` | who asks for a mark, the list of marks |
@@ -97,7 +97,8 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 
 **Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and `fall_store_schedule` keeps the landing in the game's
 falls. `debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
-piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down.
+piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
+one he and a wall pin slides along it (`off_along_wall`).
 
 **Glass.** A pane's state is a row in the block (`panes.rs`). `glass_impact` is the way in for a blow, `glass_break_blast` for a blast,
 `glass_break_bang` for a stun. `place_rule` deals its kind: narrow is laminated; a foot near the floor or glass by a door is toughened; the rest is

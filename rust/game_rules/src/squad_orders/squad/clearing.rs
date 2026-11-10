@@ -11,7 +11,7 @@ macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
 
 /// g.blackout.active
 fn blackout_active(g: &Game) -> bool {
-    g.light_home.mains.active
+    crate::sim_lightshome::mains_active(g)
 }
 /// gd.task.pos, which every arm of the union has
 fn task_pos(t: &crate::game::GuardTask) -> V3 {

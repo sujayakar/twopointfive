@@ -11,13 +11,8 @@ pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let Some(h) = g.pl[pl].holding.as_ref() else { return };
-    let (killing, h_t, h_g) = (hold_killing(h), h.t, h.g);
+    let h_g = h.g;
     let shot = why == crate::player::FreeHeldWhy::Shot;
-    if shot && killing && h_t >= kill_cut(g) {
-        kill_out(g);
-        g.ch[c].anim.hold_pose = None;
-        return;
-    }
     hand_back(g, h_g, if shot { 0.6 } else { 0.3 });
     g.pl[pl].holding = None;
     g.ch[c].anim.hold_pose = None;
@@ -643,7 +638,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
             if d >= best_px {
                 continue;
             }
-            let on = d < reach || hit_index.map_or(false, |x| g.tab.fixture[target].boxes.contains(&x));
+            let on = d < reach || hit_index.map_or(false, |x| g.tab.sim_lightshome_fixture[target].boxes.contains(&x));
             if !on && Some(target) != kept {
                 continue;
             }

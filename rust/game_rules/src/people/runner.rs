@@ -63,7 +63,7 @@ fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// nobody's to take: the men a mission leads itself and the response team
 fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.staged.leads(gd) || crate::qrf::qrf_owns(g, gd)
+    crate::mission::leads(g, gd) || crate::qrf::qrf_owns(g, gd)
 }
 
 /// may the sequence start on him this frame
@@ -78,9 +78,9 @@ fn mate_of(g: &crate::game::Game, gd: GuardId, o: GuardId) -> bool {
 }
 
 /// an enemy as a run reckons with him
-fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> crate::runner::Foe {
-    let eye = head_of(g, c_2);
-    Foe { pos: g.ch[c_2].pos, eye, who }
+fn foe_at(g: &crate::game::Game, who: CharId) -> crate::runner::Foe {
+    let eye = head_of(g, who);
+    Foe { pos: g.ch[who].pos, eye, who }
 }
 
 /// his enemies on the floor: the player and every living man of a side hostile to his
@@ -88,8 +88,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
     if crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
-        // (a man's picture holds one place for "the player": the one nearest him)
-        if let Some(pl) = crate::seats::nearest_man(g, &g.ch[g.gd[gd].ch].pos) { let c = g.pl[pl].ch; out.push(foe_at(g, c, crate::picture::Who::Player)); }
+        if let Some(pl) = crate::seats::nearest_man(g, &g.ch[g.gd[gd].ch].pos) { let c = g.pl[pl].ch; out.push(foe_at(g, c)); }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -98,7 +97,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
         let ot = g.gd[o].team;
         if !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, ot) {
             let c = g.gd[o].ch;
-            out.push(foe_at(g, c, crate::picture::Who::Guard(o)));
+            out.push(foe_at(g, c));
         }
     }
     out

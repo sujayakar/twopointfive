@@ -68,8 +68,9 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let mut i = 0;
         while i < g.rack_targets.len() {
             let t = g.rack_targets[i];
-            if g.tab.fixture[t].on {
-                g.tab.fixture[t].on = false;
+            if crate::sim_lightshome::fixture_on(g, t) {
+                let on = crate::sim_lightshome::light_in().on;
+                crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
             }
             i += 1;
         }
@@ -184,7 +185,8 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.rack_targets.len() {
         let t = g.rack_targets[i];
-        g.tab.fixture[t].on = false;
+        let on = crate::sim_lightshome::light_in().on;
+        crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
         i += 1;
     }
     crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
@@ -281,11 +283,14 @@ pub fn captives_up(g: &crate::game::Game) -> Vec<GuardId> { g.staged.captives.it
 /// Who holds the captives now.
 pub fn captor(g: &mut crate::game::Game) -> Option<GuardId> { if g.staged.captives.is_empty() { None } else { crate::rescue::rescue_captor(g) } }
 
+/// A man of its foes whom the mission that is up leads itself (with the captives, or on their captor's word): it has claimed him, and no rule of a garrison has him.
+pub fn leads(g: &crate::game::Game, gd: GuardId) -> bool { crate::owner::has(g, gd, crate::owner::by::MISSION) }
+
 /// He lies in wait, and nothing said on the net may give his place away.
-pub fn lies_in_wait(g: &crate::game::Game, gd: GuardId) -> bool { g.staged.leads(gd) && crate::rescue::rescue_crew_hides(g, gd) }
+pub fn lies_in_wait(g: &crate::game::Game, gd: GuardId) -> bool { crate::mission::leads(g, gd) && crate::rescue::rescue_crew_hides(g, gd) }
 
 /// The mission's own place for his gun, where it leads him and has one.
-pub fn gun_place(g: &crate::game::Game, gd: GuardId) -> Option<V3> { if g.staged.leads(gd) { crate::rescue::rescue_crew_look(g, gd) } else { None } }
+pub fn gun_place(g: &crate::game::Game, gd: GuardId) -> Option<V3> { if crate::mission::leads(g, gd) { crate::rescue::rescue_crew_look(g, gd) } else { None } }
 
 /// The last warning before a captive dies, as the men at a door have it.
 pub fn last_warning(g: &mut crate::game::Game, d: DoorId) -> bool { !g.staged.captives.is_empty() && crate::rescue::rescue_last_warning(g, d) }

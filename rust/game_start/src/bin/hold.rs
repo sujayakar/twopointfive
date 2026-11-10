@@ -19,7 +19,7 @@
 //!   order ID WHERE all|red|blue         the menu's own call: an order's id ("move", "stack", "fallIn") on what stands at WHERE
 //!   fire WHERE                          Sam's rifle comes up, the cursor goes to WHERE, one round
 //!   frag WHERE | flash WHERE            a live can lands at WHERE
-//! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `door` (the door nearest that
+//! WHERE is `nearest` (the nearest man standing who is not of Sam's squad, as that frame finds him), `ahead` (four metres on toward him from the squad's first man), `door` (the door nearest that
 //! man: the way to him; with nobody left, the door nearest Sam), `opendoor` (the same of the doors that stand open), `sam`, or `X,Z`.
 //! A line that cannot be done (nobody is left, the menu refuses the order) is counted and the run goes on; a line that was NEVER done on
 //! a floor is named in that run's line with the game's own reason, so a hand is not trusted there for what it only names.
@@ -41,7 +41,7 @@ use game_start::parts;
 use game_start::play::{Opts, Play};
 use std::io::{Read, Write};
 
-/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, whose defenders are in no squad, and four quiet nights)
+/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, and four quiet nights)
 const DEFAULT_LEVELS: [&str; 21] = ["barracks:clear", "block:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
     "hostage-rescue", "rescue-consulate", "rescue-registry", "night-breach", "bazaar-quiet", "lights-out-two", "quiet-crossing-two", "police-post-quiet"];

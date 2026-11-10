@@ -145,7 +145,7 @@ fn watch(g: &mut Game) {
         } else if state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search { hunting = true; }
     }
     if g.mission.stats.blackout && g.verdict.dark_at < 0.0 { g.verdict.dark_at = now; }
-    if hunting && g.verdict.found_at < 0.0 { g.verdict.found_at = now; g.verdict.dark_when_found = g.verdict.dark_at >= 0.0 && g.light_home.mains.active; }
+    if hunting && g.verdict.found_at < 0.0 { g.verdict.found_at = now; g.verdict.dark_when_found = g.verdict.dark_at >= 0.0 && crate::sim_lightshome::mains_active(g); }
     // holes a blast opened in walls since the run began
     let serial = g.destr.walls.serial;
     if serial != g.verdict.wall_serial {

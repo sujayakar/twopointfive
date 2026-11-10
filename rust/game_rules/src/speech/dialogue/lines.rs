@@ -81,7 +81,7 @@ pub(super) fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::
     if g.gd[gd].witness.heard.kick + g.gd[gd].witness.heard.bang > 0.0 { add(&mut a, &mut why, 0.1, "bangs"); }
     if g.gd[gd].witness.dazzled > 0.0 { add(&mut a, &mut why, 0.15, "dazzled"); }
     if missing_known_to(g, gd).is_some() { add(&mut a, &mut why, 0.1, "missing"); }
-    if g.light_home.mains.active { add(&mut a, &mut why, 0.08, "blackout"); }
+    if crate::sim_lightshome::mains_active(g) { add(&mut a, &mut why, 0.08, "blackout"); }
     let hs = held_since_of(g, gd);
     let held = if hs >= 0.0 { m::max(0.0, g.time - hs) } else { 0.0 };
     if held > 0.0 {

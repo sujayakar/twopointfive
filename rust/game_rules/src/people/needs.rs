@@ -168,7 +168,7 @@ fn needs_live(g: &crate::game::Game) -> bool {
 
 /// Would a man leave his route on this floor?
 fn floor_calm(g: &crate::game::Game) -> bool {
-    crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !g.light_home.mains.active
+    crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !crate::sim_lightshome::mains_active(g)
 }
 
 /// Is he calm and free?
@@ -213,7 +213,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if g.alarm.episode {
         return Some(key("an alarm"));
     }
-    if g.light_home.mains.active {
+    if crate::sim_lightshome::mains_active(g) {
         return Some(key("the lights went"));
     }
     let x = &g.gd[gd];

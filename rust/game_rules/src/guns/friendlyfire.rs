@@ -140,7 +140,7 @@ pub(super) fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzl
             return false; // a shell put into a lock at arm's length is the door tool's
         }
     }
-    let foe = crate::teams::foe_char(g, sg);
+    let foe = g.gd[sg].foe;
     if friend_in_cone(g, sg, muzzle, to, spread, Some(def.id), foe).is_none() {
         return false;
     }

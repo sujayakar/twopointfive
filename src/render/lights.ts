@@ -36,7 +36,7 @@ export interface RtLight {
   enabled: boolean;
   fixtureBox: number;         // emissive glow-card box index or -1
   flicker: number;            // 0 = steady; >0 = flicker amount (runtime modulation)
-  /** a lamp a fixture feeds: its row in the module's lights (rust/game_rules/src/air/fixtures.rs stand), which the question about the light on a point reads where it lives. undefined = a lamp of nobody's fixture */
+  /** a lamp a fixture feeds: its row in the module's lights (rust/game_rules/src/air/sim_lightshome.rs stand), which the question about the light on a point reads where it lives. undefined = a lamp of nobody's fixture */
   row?: number;
   /** transient lights (muzzle flashes) expire when ttl hits 0 */
   ttl: number; age: number; peakIntensity: number;

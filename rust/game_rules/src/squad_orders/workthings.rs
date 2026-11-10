@@ -19,8 +19,8 @@ fn seam_box_c_h(g: &Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c,
 fn pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 /// the mains' two flags, `bo.active` and `bo.permanent`
 fn mains(g: &Game) -> (bool, bool) {
-    let active = g.light_home.mains.active;
-    let permanent = g.light_home.mains.permanent;
+    let active = crate::sim_lightshome::mains_active(g);
+    let permanent = crate::sim_lightshome::mains_permanent(g);
     (active, permanent)
 }
 /// `t.at`, which every arm of the union has

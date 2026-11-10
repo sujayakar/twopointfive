@@ -24,7 +24,7 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 | module | what it does |
 |---|---|
 | `roomfight/` | the fight: `operative.rs` is a teammate, `fight.rs` the tick and what he hears, `line.rs` who stands in a round's way, `rooms.rs` its rooms |
-| `cleared.rs` | the level's rooms, flooded from each door, and which the team has stood in |
+| `cleared/` | the level's rooms, flooded from each door, and which the team has stood in |
 | `roomread.rs` | the space round a point and its ways out, for `roomfit.rs` |
 | `seenwalk.rs` | what lit floor in view of an unknown room costs a walk |
 | `coverfire.rs` | rounds into breakable cover at a man known to be behind it |

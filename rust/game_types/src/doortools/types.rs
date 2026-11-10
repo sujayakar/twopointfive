@@ -50,7 +50,6 @@ pub struct DoorTools {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum DoorToolKind {
     #[default] Charge,
-    Outside,
     BangClear,
     OpenClear,
     Threshold,
@@ -146,9 +145,7 @@ pub struct DoorToolsDoneItemLaneBackTriesOn {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    #[default] Slice,
-    Kick,
-    Held,
+    #[default] Kick,
     Stack,
     Wait,
     Place,
@@ -628,7 +625,6 @@ pub enum DoorToolsIssue {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum DoorToolsOrderKind {
-    Outside,
     BangClear,
     OpenClear,
     Threshold,
@@ -662,7 +658,6 @@ pub enum DoorToolsCanThreshold {
 pub enum DoorToolsThresholdThenWhat {
     Bang,
     Step,
-    Leave,
 }
 
 #[derive(Clone, Debug)]
@@ -695,7 +690,6 @@ pub enum DoorToolsThenOnWord {
 pub enum DoorToolsCanThresholdThenWhat {
     Bang,
     Step,
-    Leave,
 }
 
 #[derive(Clone, Debug)]

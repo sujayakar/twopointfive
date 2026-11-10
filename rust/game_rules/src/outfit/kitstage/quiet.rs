@@ -9,13 +9,14 @@ use crate::doors::door_off;
 use crate::game::{Game, GamePuppet, SlotKind};
 use crate::ids::*;
 use crate::m;
+use crate::sim_lightshome::{self as home, light_in};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
 fn smooth(u: f64) -> f64 { let x = clamp(u, 0.0, 1.0); x * x * (3.0 - 2.0 * x) }
 fn lamp_up(g: &Game, st: &KitStage) -> bool {
-    st.pool.map_or(false, |p| g.tab.fixture[p].on && !g.tab.fixture[p].broken && g.tab.fixture[p].blind_until < g.time && g.tab.fixture[p].light.is_some())
+    st.pool.map_or(false, |p| home::fixture_on(g, p) && !home::fixture_broken(g, p) && home::fixture_disabled_until(g, p) < g.time && g.tab.sim_lightshome_fixture[p].light.is_some())
 }
 fn gun_def(g: &Game, seat: &crate::seats::SeatRef) -> crate::weapons::WeaponId { let pl = seat.player; g.fa[if g.pl[pl].slot == SlotKind::Rifle { g.pl[pl].rifle } else { g.pl[pl].pistol }].def }
 fn in_hand(g: &Game, seat: &crate::seats::SeatRef) -> bool { matches!(g.pl[seat.player].slot, SlotKind::Pistol | SlotKind::Rifle) }
@@ -41,7 +42,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     let el = now - b.pt;
     let p = g.ch[c].pos;
     let Some(lamp) = st.pool else { return Step::Done };
-    let lamp_pos = g.tab.fixture[lamp].pos;
+    let lamp_pos = g.tab.sim_lightshome_fixture[lamp].pos;
     if b.phase == "draw" {
         let busy = crate::character::anim_kit_busy(g, c);
         let at_home = flat(p, st.sam) <= K.on_slot;
@@ -74,7 +75,7 @@ pub(super) fn gun_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
     if b.phase == "shot" {
         st.a.rise = 1.0;
-        if g.tab.fixture[lamp].broken {
+        if home::fixture_broken(g, lamp) {
             b.marks.push("dark");
             if b.mark_t.is_nan() { b.mark_t = now; }
             st.a.lift_at = now;
@@ -223,8 +224,9 @@ pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
     st.a.cost_t = f64::NAN;
     if let Some(l) = st.a.cost_lamp.take() { crate::render_lights::light_set_remove(g, l); }
     if let (Some((i, e)), Some(p)) = (st.a.cost_pool.take(), st.pool) {
-        g.tab.fixture[p].base_intensity = i;
-        g.tab.fixture[p].base_emissive = e;
+        let li = light_in();
+        home::light_home_in(g, li.base, Some(p), Some(i), None, None, None);
+        g.tab.sim_lightshome_fixture[p].base_emissive = e;
     }
 }
 pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage, b: &Beat) {
@@ -263,11 +265,12 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
             }
             if !last.up {
                 super::stage::quiet_inside(g, st, a.share, 0.0);
-                if let Some(p) = st.pool { if !g.tab.fixture[p].broken && a.pool < 1.0 {
-                    let (i, e) = (g.tab.fixture[p].base_intensity, g.tab.fixture[p].base_emissive);
+                if let Some(p) = st.pool { if !home::fixture_broken(g, p) && a.pool < 1.0 {
+                    let (i, e) = (home::fixture_base_intensity(g, p), g.tab.sim_lightshome_fixture[p].base_emissive);
                     st.a.cost_pool = Some((i, e));
-                    g.tab.fixture[p].base_intensity = i * a.pool;
-                    g.tab.fixture[p].base_emissive = [e[0] * a.pool, e[1] * a.pool, e[2] * a.pool];
+                    let li = light_in();
+                    home::light_home_in(g, li.base, Some(p), Some(i * a.pool), None, None, None);
+                    g.tab.sim_lightshome_fixture[p].base_emissive = [e[0] * a.pool, e[1] * a.pool, e[2] * a.pool];
                     last.pool = true;
                 } }
             }

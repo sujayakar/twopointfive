@@ -151,8 +151,9 @@ fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn
 }
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
-fn rows_of(steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
-    let leave = if steady_only { (js::to_i32(leave) | ::sim::lights::R_PASSING as i32) as f64 } else { leave };
+fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
+    let st = crate::sim_lightshome::light_home_block(g);
+    let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
@@ -188,13 +189,13 @@ fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut
 /// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds.
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
     if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
-    crate::guards::SteadyLamps::LampRows(rows_of(true, 0.0))
+    crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
 }
 
 /// The lamps' part of the light on a point: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
 fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
     let shade = crate::sense::smoky(g);
-    let rows = rows_of(steady_only, leave);
+    let rows = rows_of(g, steady_only, leave);
     crate::scene_collision::lamps_begin(g, p, shade, Some(rows));
     write_lamps(g, Some(p), skip_owner, steady_only);
     crate::scene_collision::lamps_on(g, acc);
@@ -222,15 +223,15 @@ pub fn light_meter(g: &mut crate::game::Game, c: CharId, dt: f64) {
 // ------------------------------------------------------------ a unit's foe
 
 /// The closure of acquireFoe: one enemy looked at; the most salient is kept.
-fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &mut Option<crate::game::Foe>, best_rate: &mut f64, cur_visible: &mut bool) {
-    let rate = match f {
-        crate::game::Foe::Player => {
+fn consider(g: &mut Game, gd: GuardId, f: CharId, best: &mut Option<CharId>, best_rate: &mut f64, cur_visible: &mut bool) {
+    let rate = match crate::character::guard_of(g, f) {
+        None => {
             let vis = can_see(g, gd);
             if !vis.visible { return; }
             sight_gain(g, gd, vis.dist)
         }
-        crate::game::Foe::Guard(o) => {
-            let vis = can_see_char(g, gd, ch);
+        Some(o) => {
+            let vis = can_see_char(g, gd, f);
             if !vis.visible { return; }
             sight_gain_on(g, gd, o, vis.dist)
         }
@@ -244,12 +245,9 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
 
 /// A unit's foe this frame: off a man who is gone, then on the most salient enemy he can see; a fight his eyes have won ends here.
 pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
-    use crate::game::{Foe, GuardState};
+    use crate::game::GuardState;
     use crate::teams::Team;
-    let cur_man = match g.gd[gd].foe {
-        Some(Foe::Guard(o)) => Some(o),
-        _ => None,
-    };
+    let cur_man = crate::teams::foe_guard(g, gd);
     let (mut lost_man, mut mine) = (false, false);
     let knee = match cur_man {
         Some(o) => crate::rails::rails_down(g, o),
@@ -267,11 +265,11 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
             lost_man = true;
         }
     }
-    let (mut best, mut best_rate, mut cur_visible): (Option<Foe>, f64, bool) = (None, 0.05, false);
+    let (mut best, mut best_rate, mut cur_visible): (Option<CharId>, f64, bool) = (None, 0.05, false);
     let team = g.gd[gd].team;
     if crate::teams::is_hostile(g, team, Team::Player) && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
         let ch = g.pl[g.player].ch;
-        consider(g, gd, Foe::Player, ch, &mut best, &mut best_rate, &mut cur_visible);
+        consider(g, gd, ch, &mut best, &mut best_rate, &mut cur_visible);
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -282,7 +280,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if !g.ch[och].alive { continue; }
         let oteam = g.gd[o].team;
         if crate::teams::is_hostile(g, team, oteam) && !g.gd[o].fled && !crate::rails::rails_down(g, o) {
-            consider(g, gd, Foe::Guard(o), och, &mut best, &mut best_rate, &mut cur_visible);
+            consider(g, gd, och, &mut best, &mut best_rate, &mut cur_visible);
         }
     }
     let op = team == Team::Operative;
@@ -297,7 +295,8 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     }
     if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !crate::condition::down(g, g.pl[g.player].ch) {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
-        crate::mind::foe(g, gd, Some(Foe::Player), "guards");
+        let c = g.pl[g.player].ch;
+        crate::mind::foe(g, gd, Some(c), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
         if mine { crate::game::game_say(g, gd, "got him!", None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
@@ -509,7 +508,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;
         let wide = g.tune.suppress_first && opening && {
-            let foe = match crate::teams::foe_char(g, gd) {
+            let foe = match g.gd[gd].foe {
                 Some(f) => f,
                 None => g.pl[g.player].ch,
             };

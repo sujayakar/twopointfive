@@ -145,7 +145,7 @@ pub(super) fn unpack_fog(w: f64) -> Option<crate::weather_kinds::FogSpec> {
 
 /// Optical depth of the fog along a → b, before any roof: the module's.
 fn fog_tau(f: crate::weather_kinds::FogSpec, a: V3, b: V3) -> f64 {
-    crate::weather::fog_tau(f.sigma, f.h, a, b)
+    ::sim::weather::fog_tau(f.sigma, f.h, a, b)
 }
 
 /// A roof's footprint in 32 bits, rounded outward; 0 = none.

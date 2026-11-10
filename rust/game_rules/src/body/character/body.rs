@@ -65,6 +65,11 @@ fn limb_rows(n: &AnimNodes) -> Vec<(usize, f64, usize, usize)> {
 }
 // ---- construction and the plain frames ----
 
+/// The man of the floor behind this body; a player's is none.
+pub fn guard_of(g: &crate::game::Game, c: CharId) -> Option<GuardId> {
+    match g.ch[c].who { crate::character::Who::Guard(gd) => Some(gd), crate::character::Who::Player(_) => None }
+}
+
 /// Is a player's hand on this man.
 pub fn is_player(g: &crate::game::Game, c: CharId) -> bool { matches!(g.ch[c].who, crate::character::Who::Player(_)) }
 

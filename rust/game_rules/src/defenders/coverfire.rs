@@ -9,19 +9,11 @@ use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- local helpers
 
-/// `a === b` of two Whos
-fn same_who(a: crate::game::Foe, b: crate::game::Foe) -> bool {
-    match (a, b) {
-        (crate::game::Foe::Player, crate::game::Foe::Player) => true,
-        (crate::game::Foe::Guard(x), crate::game::Foe::Guard(y)) => x == y,
-        _ => false,
-    }
-}
 /// `!who || K.who === who`
-fn who_passes(who: Option<crate::game::Foe>, k: crate::game::Foe) -> bool {
+fn who_passes(who: Option<CharId>, k: CharId) -> bool {
     match who {
         None => true,
-        Some(w) => same_who(k, w),
+        Some(w) => k == w,
     }
 }
 /// what manOf makes for a man new to the books
@@ -74,13 +66,8 @@ fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
     let row = g.m.coverfire.states.as_mut().and_then(|s| s.men.get_mut(gd)).and_then(|m| m.chew.as_mut());
     if let Some(cw) = row { f(cw); }
 }
-/// is he up, for a reader that holds the state
-fn up_now(g: &Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> bool {
-    match who {
-        crate::game::Foe::Player => !crate::condition::down(g, g.pl[seat.player].ch),
-        crate::game::Foe::Guard(x) => !crate::condition::down(g, g.gd[x].ch) && g.ch[g.gd[x].ch].alive,
-    }
-}
+/// is he up
+fn up_now(g: &Game, who: CharId) -> bool { !crate::condition::down(g, who) && g.ch[who].alive }
 
 // ---------------------------------------------------------------- the module's own
 
@@ -161,21 +148,8 @@ fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// whose body
-fn char_of(g: &crate::game::Game, gd: GuardId, who: crate::game::Foe) -> CharId {
-    match who {
-        crate::game::Foe::Player => g.pl[crate::seats::faced_man(g, gd)].ch,
-        crate::game::Foe::Guard(x) => g.gd[x].ch,
-    }
-}
-
 /// his name
-fn name_of(g: &crate::game::Game, who: crate::game::Foe) -> String {
-    match who {
-        crate::game::Foe::Player => String::from("Player"),
-        crate::game::Foe::Guard(x) => g.gd[x].callsign.clone(),
-    }
-}
+fn name_of(g: &crate::game::Game, who: CharId) -> String { crate::character::guard_of(g, who).map_or_else(|| String::from("Player"), |x| g.gd[x].callsign.clone()) }
 
 /// QA: the run's line of what the rule did
 fn log(g: &mut crate::game::Game, s: &str) {
@@ -195,8 +169,8 @@ fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 // ---------------------------------------------------------------- what he knows
 
 /// a sighting of `who` copied into what `gd` knows
-fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool) {
-    let c = char_of(g, gd, who);
+fn see(g: &mut crate::game::Game, gd: GuardId, who: CharId, low: bool) {
+    let c = who;
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let trunk = match g.ch[c].bones.get(crate::character::Bone::Spine2) {
         Some(t) => *t,
@@ -205,7 +179,7 @@ fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool)
     let at: V3 = [trunk[0], pos[1] + (if low { 0.8 } else { 1.25 }), trunk[2]];
     let t = g.time;
     let m = man_of(g, gd);
-    if let Some(k) = m.know.iter_mut().find(|k| same_who(k.who, who)) {
+    if let Some(k) = m.know.iter_mut().find(|k| k.who == who) {
         k.at = at;
         k.y0 = pos[1];
         k.v = [vel[0], vel[2]];
@@ -219,7 +193,7 @@ fn see(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, low: bool)
 /// a mate's call he acts on becomes a place he knows, and stays a call
 fn heard(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know) {
     let m = man_of(g, gd);
-    if let Some(mine) = m.know.iter_mut().find(|x| same_who(x.who, k.who)) {
+    if let Some(mine) = m.know.iter_mut().find(|x| x.who == k.who) {
         if mine.t < k.t {
             mine.at = k.at;
             mine.y0 = k.y0;
@@ -233,7 +207,7 @@ fn heard(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know) {
 }
 
 /// the places he may spend rounds on, freshest first: his own, then what a mate with eyes on is calling
-fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>) -> Vec<crate::coverfire::KnownItem> {
+fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<crate::coverfire::KnownItem> {
     state_of(g);
     let g: &Game = g;   // nothing below writes: the state and the men are read side by side
     let s = g.m.coverfire.states.as_ref().unwrap();
@@ -242,7 +216,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>) 
     let mut out: Vec<KnownItem> = Vec::new();
     if let Some(own) = s.men.get(gd) {
         for k in own.know.iter() {
-            if who_passes(who, k.who) && time - k.t <= stale_secs && up_now(g, &crate::seats::here(g), k.who) {
+            if who_passes(who, k.who) && time - k.t <= stale_secs && up_now(g, k.who) {
                 out.push(KnownItem { k: *k, call: k.call.unwrap_or(false) });
             }
         }
@@ -256,8 +230,8 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>) 
             if !k.call.unwrap_or(false)
                 && who_passes(who, k.who)
                 && time - k.t <= call_secs
-                && up_now(g, &crate::seats::here(g), k.who)
-                && !out.iter().any(|o| same_who(o.k.who, k.who) && o.k.t >= k.t)
+                && up_now(g, k.who)
+                && !out.iter().any(|o| o.k.who == k.who && o.k.t >= k.t)
             {
                 out.push(KnownItem { k: *k, call: true });
             }
@@ -436,7 +410,7 @@ fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, cal
         }
     }
     let row = man_of(g, gd);
-    let held = row.chew.as_ref().map_or(false, |c| same_who(c.who, k.who) && (k.t <= c.kt + 1e-9 || flat(c.to, k.at) < same_m));
+    let held = row.chew.as_ref().map_or(false, |c| c.who == k.who && (k.t <= c.kt + 1e-9 || flat(c.to, k.at) < same_m));
     let held_to = if held { row.chew.as_ref().map(|c| c.to) } else { None };
     let mut to = k.at;
     let a: Option<Ask2>;
@@ -564,14 +538,14 @@ fn choose(g: &mut crate::game::Game, gd: GuardId, k: crate::coverfire::Know, cal
 // ---------------------------------------------------------------- the hooks
 
 /// EYES ON, NO LINE: may the round go at `to` anyway, because what blocks it is breakable and worth the rounds
-pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>, to: V3) -> bool {
+pub fn cover_seen(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>, to: V3) -> bool {
     if !live(g) { return false; }
     let who = match who {
         None => return false,
         Some(who) => who,
     };
     state_of(g);
-    let c = char_of(g, gd, who);
+    let c = who;
     let k = Know { who, at: to, y0: g.ch[c].pos[1], v: [0.0, 0.0], t: g.time, call: None };
     let cw = match choose(g, gd, k, false, true) {
         Some(cw) => cw,
@@ -672,9 +646,9 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let c = g.gd[gd].ch;
     state_of(g);
     let mut cw: Option<Chew> = None;
-    let mut who: Option<crate::game::Foe> = None;
+    let mut who: Option<CharId> = None;
     for item in known(g, gd, None) {
-        if let crate::game::Foe::Guard(h) = item.k.who {
+        if let Some(h) = crate::character::guard_of(g, item.k.who) {
             if crate::silent::round_held(g, gd, h) {
                 bump(g, BumpK::HeldSilent);
                 continue;
@@ -701,7 +675,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
         bump(g, BumpK::HeldFriend);
         return false;
     }
-    if let crate::game::Foe::Guard(h) = who {
+    if let Some(h) = crate::character::guard_of(g, who) {
         if crate::silent::silent_holds_glass(g, gd, h, c, to) {
             bump(g, BumpK::HeldSilent);
             return false;
@@ -833,7 +807,8 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             for (h, mv, seen_t) in meters {
                 if !crate::condition::down(g, g.gd[h].ch) && seen_now(g.time, dt, seen_t) && (tgt == Some(h) || mv >= notice) {
                     let low = g.ch[g.gd[h].ch].anim.crouch > 0.5;
-                    see(g, op, crate::game::Foe::Guard(h), low);
+                    let c = g.gd[h].ch;
+                    see(g, op, c, low);
                 }
             }
         }
@@ -926,11 +901,6 @@ pub(super) fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::
     Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
 }
 
-/// a restart or a checkpoint load: forget everything about this game
-pub fn coverfire_reset(g: &mut crate::game::Game) {
-    g.m.coverfire.states = None;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -938,7 +908,7 @@ mod tests {
     #[test]
     fn a_new_man_and_a_call_kept_as_a_call() {
         let mut g = Game::blank();
-        let (gd, foe) = (GuardId(0), crate::game::Foe::Player);
+        let (gd, foe) = (GuardId(0), CharId(0));
         assert_eq!(man_of(&mut g, gd).said_t, -100.0);
         let k = Know { who: foe, at: [1.0, 2.0, 3.0], y0: 0.5, v: [4.0, 5.0], t: 10.0, call: None };
         heard(&mut g, gd, k);

@@ -130,31 +130,6 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     });
 }
 
-/// A fresh shift: every system's memory of the old one goes, the response team first.
-pub(super) fn game_reset_guards(g: &mut crate::game::Game) {
-    crate::powerout::power_out_reset(g);
-    crate::rescuecheck::rescue_check_reset(g);
-    crate::doze::doze_reset(g, None);
-    crate::seats::each_seat(g, &mut |v: &mut Game| {
-        crate::close::close_reset(v);
-        crate::stalk::stalk_reset(v);
-    });
-    crate::roomfight::room_fight_reset(g);
-    crate::cover::cover_reset(g);
-    crate::entrypoints::entry_points_reset(g);
-    crate::cleared::cleared_rooms_reset(g);
-    crate::doorpath::door_path_reset(g);
-    crate::wallreact::wall_react_reset_2(g);
-    crate::coverfire::coverfire_reset(g);
-    crate::doorforce::door_force_reset(g);
-    crate::qrf::reset_qrf(g);
-    crate::guards::reset_guards(g);
-    crate::civilians::reset_civilians(g);
-    crate::tactics::tactics_reset(g);
-    crate::lanes::lanes_reset(g);
-    crate::picture::picture_reset(g);
-}
-
 /// Panel: one level up by hand.
 pub fn game_escalate(g: &mut crate::game::Game) {
     let to = if g.escalation >= 1.0 { 2.0 } else { 1.0 };
@@ -273,49 +248,15 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
 }
 
 /// Was this fixture's switch on in the level as authored.
-pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { g.tab.fixture[t].authored }
+pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
 /// The lights' rows stood on the list as it is: as the level is built, and again when a fixture is hung after that.
 pub fn game_stand_lights(g: &mut crate::game::Game) {
     let list: Vec<LightId> = g.engine.lights.lights.clone();
     let targets: Vec<FixtureId> = g.targets.clone();
-    let cones: Vec<(LightId, FixtureId)> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; (r.cone, r.target) }).collect();
-    crate::fixtures::light_home_stand(g, &list, &targets, &cones);
-}
-
-/// The level as authored: every switch back, every door, the marks, the panes, the debris.
-fn game_reset_level_state(g: &mut crate::game::Game) {
-    let targets = g.targets.clone();
-    for t in targets {
-        let a = g.tab.fixture[t].authored;
-        g.tab.fixture[t].on = a;
-    }
-    let doors = g.doors.list.clone();
-    for d in doors { crate::doors::door_reset(g, d); }
-    crate::render_decals::decals_clear(g);
-    crate::glass::reset_glass(g);
-    crate::glasspen::reset_glass_pen(g);
-    crate::winbars::reset_bars(g);
-    crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
-    crate::destruction::destruction_reset(g);
-    crate::shards::glass_shards_reset(g);
-    crate::snow_blast::clear_snow_blast(g);
-    crate::snow_marks::clear_snow_marks(g);
-    g.out.push(crate::out_events::OutEvent::ClearSnowTracks);   // (the prints are the picture's: the game says they go, on a level with them or not)
-    crate::hours::hour_after_reset(g);
-    crate::air_dust::air_dust_reset(g);
-}
-
-/// The clocks the last try left running, as a new Game has them.
-fn game_clean_slate(g: &mut crate::game::Game) {
-    g.alarm.raised_at = -100.0;
-    g.alarm.pos = [0.0, 0.0, 0.0];
-    let seats = g.seats.clone();
-    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.torch_on_t = -100.0); }
-    g.last_sting_t = -100.0;
-    crate::gunwall::gun_wall_fresh(g);
-    crate::seats::each_seat(g, &mut |v: &mut Game| crate::guards::ground_fresh(v));
-    crate::wind::wind_fresh(g);
+    let beacons: Vec<crate::sim_lightshome::BeaconFact> = g.beacons.iter().map(|b| crate::sim_lightshome::BeaconFact { light: b.light, phase: b.phase, target: b.target }).collect();
+    let cones: Vec<crate::sim_lightshome::LightHomeStandConesItem> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; crate::sim_lightshome::LightHomeStandConesItem { light: r.cone, target: r.target, slot: r.slot } }).collect();
+    crate::sim_lightshome::light_home_stand(g, &list, &targets, &beacons, &cones);
 }
 
 /// The player's restart, from outside a step: the run's first step stands again with what an evening keeps (savestate/control.rs). In a step it is asked for, and made as the step ends.
@@ -332,75 +273,9 @@ pub fn game_cut_to_men(g: &mut crate::game::Game) {
         let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
         cut_lens(g, lens, p);
     }
-    g.stats.cleanrestart.cuts += 1;
 }
 
-/// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.
-pub fn game_restart_encounter(g: &mut crate::game::Game) {
-    crate::math_dice::use_dice(g);
-    crate::quiet::quiet_mission_current(g);
-    g.stats.cleanrestart.restarts += 1;
-    crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
-    let seats = g.seats.clone();
-    for &s in &seats {
-        let old = crate::cmd::seat_man(g, s);
-        let light = g.pl[old].light;
-        let c = g.pl[old].ch;
-        crate::sim_men_store::man_leaves(g, c);   // (his row is free for the fresh man)
-        let spawn = g.level.player_spawn;
-        let index = g.tab.cmd_seat[s].index;
-        let at = crate::seats::spot_beside(g, spawn, index);
-        let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let pl = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
-        crate::seats::with_seat(g, s, &mut |g| {
-            g.player = pl;
-            crate::seats::view_rekey(g, old, pl);   // (what the modules keep for this seat's view stays the seat's: seats.ts SEAT_TABLES)
-            g.pl[pl].light = light;
-            crate::kit::kit_fresh(g);
-            let c = g.pl[pl].ch;
-            crate::character::character_update(g, c, 0.0);   // pose and bones exist before this frame's capsule upload
-        });
-    }
-    crate::cues::cues_reset(g);
-    crate::squadnet::squad_net_reset(g);
-    crate::seats::each_seat(g, &mut |v: &mut Game| { crate::holdfire::hold_fire_reset(v); crate::showwhy::reset_show_why(v); });
-    crate::dialogue::ambient_restart(g);
-    crate::fogofwar::fog_of_war_reset(g);
-    crate::game::game_reset_guards(g);
-    if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
-    game_reset_level_state(g);
-    crate::lightswitch::light_switch_reset(g);
-    crate::props::prop_system_reset(g);
-    for r in g.rolls.iter_mut() { r.voice = 0.0; }
-    g.rolls.clear();
-    g.events.clear();
-    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.use_door = None); }
-    g.called_in = false;
-    g.stood_down = false;
-    // anything still in the air or venting belongs to the encounter that just ended
-    game_clear_aftermath(g);
-    crate::smoke_types::smoke_system_like_clear_all(g);
-    crate::out_events::push_smoke_system_like_clear_all(g);   // (game.ts:1505: the host's solver hears it too)
-    crate::sense::smoke_renew(g);
-    g.engine.host_books = None;
-    for &s in &seats {
-        crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });
-    }
-    game_clean_slate(g);
-    crate::devices::devices_reset(g);
-    let t = g.time;
-    g.mission = crate::game::new_mission(t);
-    g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
-    g.chronicle = crate::chronicle::Chronicle::blank();
-    crate::director::director_on_encounter_restart(g);
-    crate::nightbreach::night_breach_on_encounter_restart(g);
-    crate::rescue::rescue_on_encounter_restart(g);
-    crate::quiet::quiet_mission_on_encounter_restart(g);
-    crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
-    crate::fire::update_fire(g, 0.0);
-}
-
+///
 pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
     let cause = match cause {
         crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,

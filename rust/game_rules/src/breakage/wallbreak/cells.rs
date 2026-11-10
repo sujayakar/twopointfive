@@ -114,7 +114,7 @@ fn div(len: f64, col: f64) -> f64 { m::max(1.0, m::round(len / col)) }
 /// Finds what can break, by shape and by the box's word, as the level stands. (WallBreak.index)
 fn wall_break_index(g: &mut crate::game::Game) {
     for t in g.targets.clone() {
-        for bi in g.tab.fixture[t].boxes.clone() { g.destr.walls.fixture_boxes.add(crate::Num(bi)); }
+        for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() { g.destr.walls.fixture_boxes.add(crate::Num(bi)); }
     }
     for k in 0..g.level.lights.len() {
         if let Some(fb) = g.level.lights[k].fixture_box { if fb >= 0.0 { g.destr.walls.fixture_boxes.add(crate::Num(fb)); } }

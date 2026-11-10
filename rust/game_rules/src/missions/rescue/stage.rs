@@ -226,15 +226,16 @@ pub(in crate::missions) fn rescue_start(g: &mut crate::game::Game) -> Option<Str
         }
     }
     rescue_bench(g);
-    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, leads_foes: true, ..Default::default() });
+    crate::civilians::civilians_leave(g);
+    g.staged.begin(crate::scene_scenarios::MissionKind::Rescue, crate::mission::Facts { fight: true, own_rule: true, ..Default::default() });
     g.rescue.staged = 0.0;
     g.rescue.log.clear();
     g.rescue.failure = None;
-    crate::game::game_restart_encounter(g);
+    rescue_stage(g);
     if crate::rescue::rescue_up(g) { None } else { Some(g.rescue.failure.clone().unwrap_or_else(|| String::from("the staging failed"))) }
 }
 
-/// Stop it: the cast gone, the shift back, a fresh night encounter.
+/// Stop it: the cast gone, the shift back.
 fn rescue_stop(g: &mut crate::game::Game) {
     if !crate::rescue::rescue_up(g) { return; }
     g.staged.down();
@@ -247,17 +248,11 @@ fn rescue_stop(g: &mut crate::game::Game) {
         benched.extend_from_slice(&g.guards);
         g.guards = benched;
     }
-    crate::game::game_restart_encounter(g);
+    crate::civilians::spawn_civilians(g);
 }
 
-/// Stage it afresh: a restart of the encounter, which stages.
-pub fn rescue_restage(g: &mut crate::game::Game) {
-    if crate::rescue::rescue_up(g) { crate::game::game_restart_encounter(g); }
-}
-
-/// restartEncounter's last act: stages on the fresh encounter; a staging that fails ends it cleanly.
-pub fn rescue_on_encounter_restart(g: &mut crate::game::Game) {
-    if !crate::rescue::rescue_up(g) { return; }
+/// Stage it; a staging that fails ends it cleanly.
+fn rescue_stage(g: &mut crate::game::Game) {
     if let Err(e) = stage_tried(g) {
         let failure = format!("the staging failed: {}", e);
         g.rescue.failure = Some(failure.clone());
@@ -303,6 +298,7 @@ fn rescue_clear_cast(g: &mut crate::game::Game) {
     }
     let hostages = g.staged.captives.clone();
     g.civilians.retain(|c| !hostages.contains(c));
+    crate::enemysquads::squads_stop(g);
     g.staged.team = Vec::new();
     g.staged.foes = Vec::new();
     g.staged.captives = Vec::new();
@@ -436,6 +432,10 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         gd: *gd, watch: cast[k].mark.aim_at, hostage: Some(cast[k].role == Role::Captor),
     }).collect();
     crate::gunroles::gun_deal(g, &deal);
+    let men = g.staged.foes.clone();
+    crate::squaddeal::squads_by_rooms(g, &men);
+    // (the men with the hostages are the rescue's to lead)
+    for &h in &men { if g.rescue.defs.get(h).map_or(false, |d| d.in_room) { let t = g.time; crate::owner::claim(g, h, crate::owner::by::MISSION, t, None); } }
     let cap_set = g.k.rescue.start == crate::knobs::RescueKStart::Hot;
     if cap_set {
         let captor = g.staged.foes[0];

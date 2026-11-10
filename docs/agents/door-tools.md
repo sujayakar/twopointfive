@@ -163,5 +163,4 @@ Native tests in `rust/game_start/tests/`:
 
 ## Not seen
 
-All of this is held by numbers. How a stack or a thrown can looks has to be judged on a GPU. The `Outside` kind with `Phase::Slice` and `Phase::Held`, and the
-`held` row's page with `thrWord`, cannot be reached from the ring.
+All of this is held by numbers. How a stack or a thrown can looks has to be judged on a GPU.

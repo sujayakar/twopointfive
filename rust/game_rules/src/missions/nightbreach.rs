@@ -234,7 +234,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     g.night_breach.beats_seen = 0.0;
     g.night_breach.said.clear();
     g.night_breach.cut = true;
-    if layout.is_some() { crate::roomclear::room_clear_scenario_on_staged(g); }
+    if layout.is_some() { crate::roomclear::room_clear_scenario_on_staged(g); } else { let men = g.staged.foes.clone(); crate::squaddeal::squads_by_rooms(g, &men); }
     let men: Vec<crate::gunroles::DealMan> = g.staged.foes.iter().enumerate()
         .map(|(i, gd)| crate::gunroles::DealMan { gd: *gd, watch: marks[i].aim_at, hostage: None })
         .collect();
@@ -369,17 +369,18 @@ pub(super) fn night_breach_start(g: &mut crate::game::Game, layout: Option<&crat
     g.night_breach.layout = layout.cloned();
     night_breach_apply_team(g, layout);
     night_breach_bench(g);
+    crate::civilians::civilians_leave(g);
     let rooms = layout.is_some();
     g.staged.begin(if rooms { MissionKind::Roomclear } else { MissionKind::Nightbreach }, Facts { fight: true, raid: true, own_rule: rooms, drilled: !rooms, ..Facts::default() });
     g.night_breach.staged = 0.0;
     g.night_breach.log.clear();
     g.night_breach.failure = None;
-    crate::game::game_restart_encounter(g);
+    night_breach_stage(g);
     if crate::nightbreach::night_breach_up(g) { return None; }
     Some(g.night_breach.failure.clone().unwrap_or_else(|| String::from("the staging failed")))
 }
 
-/// Stop it: the cast gone, the shift back, a fresh night encounter.
+/// Stop it: the cast gone, the shift back.
 fn night_breach_stop(g: &mut crate::game::Game) {
     if !crate::nightbreach::night_breach_up(g) { return; }
     g.staged.down();
@@ -388,6 +389,7 @@ fn night_breach_stop(g: &mut crate::game::Game) {
     g.night_breach.drill = None;
     let mut cast = g.staged.team.clone();
     cast.extend_from_slice(&g.staged.foes);
+    crate::enemysquads::squads_stop(g);
     for gd in cast { crate::guards::despawn_unit(g, gd); }
     g.staged.team = Vec::new();
     g.staged.foes = Vec::new();
@@ -401,7 +403,7 @@ fn night_breach_stop(g: &mut crate::game::Game) {
         guards.extend_from_slice(&g.guards);
         g.guards = guards;
     }
-    crate::game::game_restart_encounter(g);
+    crate::civilians::spawn_civilians(g);
 }
 
 /// A man stood on this floor after the staging joins the defenders.
@@ -412,14 +414,8 @@ pub fn night_breach_adopt(g: &mut crate::game::Game, gd: GuardId, mark: &crate::
     g.night_breach.bursts.push(BlindBurst { until: -1.0, n: 0.0, next: 0.0 });
 }
 
-/// Stage it afresh: a restart of the encounter, which stages.
-pub(super) fn night_breach_restage(g: &mut crate::game::Game) {
-    if crate::nightbreach::night_breach_up(g) { crate::game::game_restart_encounter(g); }
-}
-
-/// restartEncounter's last act: stage, and a staging that fails ends the scenario.
-pub fn night_breach_on_encounter_restart(g: &mut crate::game::Game) {
-    if !crate::nightbreach::night_breach_up(g) { return; }
+/// Stage it, and a staging that fails ends the scenario.
+fn night_breach_stage(g: &mut crate::game::Game) {
     if let Err(e) = stage_checked(g) {
         let failure = format!("the staging failed: {}", e);
         g.night_breach.failure = Some(failure.clone());

@@ -29,6 +29,14 @@ fn opt_text(s: &Option<String>) -> Option<ChronDeviceDataValue> { s.as_ref().map
 fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
+/// A camera of the level: its machine is rust/sim's row `slot`.
+fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId) -> CameraRtId {
+    g.tab.devices_camera_rt.push(CameraRt { def: def.clone(), index, target, cone, slot, st })
+}
+/// A tripwire of the level: its machine is rust/sim's row `slot`.
+fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
+    g.tab.devices_laser_rt.push(LaserRt { def: def.clone(), target, dir, len, slot, st })
+}
 /// Append a report to the capped log with its sequence number.
 fn devices_note(g: &mut crate::game::Game, r: &crate::devices::DevicesNoteR) {
     g.devices.seq += 1.0;
@@ -45,12 +53,11 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
         match dv {
             crate::scene_level::DeviceDef::Camera(d) => {
                 let dd = crate::scene_level_data::device_defaults();
-                let fix = crate::fixtures::Fixture {
-                    name: d.name.clone(), group: d.group.clone().unwrap_or(dd.group.clone()), kind: crate::fixtures::FixtureKind::Device, pos: v3::copy(d.pos),
-                    on: true, factor: 1.0, mains: d.mains != Some(false), interactive: true, stagger: 1.4 + 0.3 * ci,
-                    ..crate::fixtures::Fixture::blank()
+                let fix = crate::sim_lightshome::FixtureDef {
+                    name: d.name.clone(), group: d.group.clone().unwrap_or(dd.group.clone()), kind: crate::sim_lightshome::FixtureDefKind::Device, pos: v3::copy(d.pos), light: None, boxes: Vec::new(), base_emissive: [0.0, 0.0, 0.0], base_intensity: 0.0,
+                    on: true, broken: false, disabled_until: -1.0, fluorescent_flicker: false, factor: 1.0, mains: d.mains != Some(false), interactive: true, stagger: 1.4 + 0.3 * ci, area_lights: None, lens: None,
                 };
-                let target = crate::fixtures::fixture_add(g, fix);
+                let target = crate::sim_lightshome::light_home_add(g, &fix);
                 g.targets.push(target);
                 let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
                 let k = cone();
@@ -58,24 +65,24 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                     inner_deg: m::max(1.0, m::min(half, k.outer_max_deg) - 6.0), outer_deg: m::min(half, k.outer_max_deg), radius: k.radius, volumetric: k.volumetric, owner: 0.0, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: k.intensity, ..crate::render_lights::RtLight::default() });
                 crate::render_lights::light_set_add(g, lamp);
                 let cone = lamp;
+                let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
                 ci += 1.0;
-                let (rest, period, pitch) = (d.yaw, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch));
-                let rt = g.tab.devices_camera_rt.push(CameraRt { def: d.clone(), index: ci, target, cone, rest, sweep: d.sweep, period, pitch, yaw: rest, ..CameraRt::blank() });
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone);
                 this.cameras.push(rt);
             }
             crate::scene_level::DeviceDef::Laser(d) => {
                 let dd = crate::scene_level_data::device_defaults();
-                let fix = crate::fixtures::Fixture {
-                    name: d.name.clone(), group: d.group.clone().unwrap_or(dd.group.clone()), kind: crate::fixtures::FixtureKind::Device, pos: v3::copy(d.from),
-                    on: true, factor: 1.0, mains: d.mains != Some(false), interactive: true, stagger: 1.1 + 0.3 * li,
-                    ..crate::fixtures::Fixture::blank()
+                let fix = crate::sim_lightshome::FixtureDef {
+                    name: d.name.clone(), group: d.group.clone().unwrap_or(dd.group.clone()), kind: crate::sim_lightshome::FixtureDefKind::Device, pos: v3::copy(d.from), light: None, boxes: Vec::new(), base_emissive: [0.0, 0.0, 0.0], base_intensity: 0.0,
+                    on: true, broken: false, disabled_until: -1.0, fluorescent_flicker: false, factor: 1.0, mains: d.mains != Some(false), interactive: true, stagger: 1.1 + 0.3 * li, area_lights: None, lens: None,
                 };
-                let target = crate::fixtures::fixture_add(g, fix);
+                let target = crate::sim_lightshome::light_home_add(g, &fix);
                 g.targets.push(target);
                 let seg = v3::sub(d.to, d.from);
                 let len = v3::len(seg);
+                let slot = crate::sim_lightshome::light_home_laser(g, target, len);
                 li += 1.0;
-                let rt = g.tab.devices_laser_rt.push(LaserRt { def: d.clone(), target, dir: v3::scale(seg, 1.0 / m::max(len, 1e-6)), len, cut: len, ..LaserRt::blank() });
+                let rt = laser_rt_new(g, slot, crate::Opaque, d, li, target, v3::scale(seg, 1.0 / m::max(len, 1e-6)), len);
                 this.lasers.push(rt);
             }
             crate::scene_level::DeviceDef::Keypad(d) => {
@@ -109,23 +116,9 @@ pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
-/// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).
-pub fn devices_reset(g: &mut crate::game::Game) {
-    for c in g.devices.cameras.clone() {
-        let r = &mut g.tab.devices_camera_rt[c];
-        (r.yaw, r.phase, r.seen, r.saw, r.last_seen, r.state, r.reported_at, r.dead) = (r.def.yaw, 0.0, 0.0, false, None, crate::fixtures::CameraState::Idle, -100.0, false);
-    }
-    for l in g.devices.lasers.clone() {
-        let r = &mut g.tab.devices_laser_rt[l];
-        (r.last_trip_at, r.trips, r.dead, r.held) = (-100.0, 0, false, false);
-    }
-    g.devices.log.clear();
-    g.devices.radio_count = 0.0;
-}
-
 /// Powered, unbroken, not knocked out: the device works this frame.
 fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
-    g.tab.fixture[t].factor > 0.05 && !g.tab.fixture[t].broken
+    crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
 /// Live play: devices sense.
 fn sensing(g: &crate::game::Game) -> bool {
@@ -155,15 +148,16 @@ pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
 pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: bool) {
     let c = c_2;
     let d = g.tab.devices_camera_rt[c].def.clone();
-    let index = g.tab.devices_camera_rt[c].index;
+    let (slot, index, lamp) = (g.tab.devices_camera_rt[c].slot, g.tab.devices_camera_rt[c].index, g.tab.devices_camera_rt[c].cone);
     let cones = g.tune.device_cones;
-    let (ok, down) = crate::fixtures::camera_pan(g, c, dt, live, cones);
-    if down && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
-    if !ok || !live { return; }
+    let pan = crate::sim_lightshome::light_home_camera_pan(g, slot, lamp, dt, live, cones);
+    let bit = crate::sim_lightshome::cam();
+    if has(pan, bit.down) && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
+    if !has(pan, bit.ok) || !live { return; }
     let dd = crate::scene_level_data::device_defaults();
     let range = d.range.unwrap_or(dd.range);
     let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
-    let look = lens_dir(g.tab.devices_camera_rt[c].yaw, d.pitch.unwrap_or(dd.pitch));
+    let look = lens_dir(crate::sim_lightshome::camera_machine_yaw(g, c), d.pitch.unwrap_or(dd.pitch));
     let e = crate::guards::Eye { pos: d.pos, look, range, half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
     // (every player the lens can see: the feed goes by the one it sees best; none in sight, by the nearest, as a lens with nobody in it)
     let first = crate::seats::nearest_or_first(g, &d.pos);
@@ -178,17 +172,17 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
         let got = lens_gain(g, &crate::seats::seat(g, crate::seats::seat_of_man(g, pl)), vis.dist, range, air);
         if !seen || got > gain { (pc, seen, gain) = (c, true, got); }
     }
-    let at = g.ch[pc].pos;
-    let (suspect, alarm) = crate::fixtures::camera_see(g, c, dt, seen, gain, at);
-    if suspect { camera_suspect(g, c); }
-    if alarm { camera_alarm(g, c); }
+    let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
+    let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, seen, gain, at, sus, alarm);
+    if has(r, bit.suspect) { camera_suspect(g, c); }
+    if has(r, bit.alarm) { camera_alarm(g, c); }
 }
 /// The picture has movement: a man sent, the radio, the debrief.
 fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
     let index = g.tab.devices_camera_rt[c].index;
     let name = g.tab.devices_camera_rt[c].def.name.clone();
-    let seen = g.tab.devices_camera_rt[c].last_seen.unwrap();
+    let seen = crate::sim_lightshome::camera_machine_last_seen(g, c).unwrap();
     let where_ = crate::chronicle::room_of(g, seen);
     let sent = send_to_look(g, seen, &format!("camera {}", index));
     let sign = callsign_of(g, sent);
@@ -203,7 +197,7 @@ fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
     let index = g.tab.devices_camera_rt[c].index;
     let name = g.tab.devices_camera_rt[c].def.name.clone();
-    let p = g.tab.devices_camera_rt[c].last_seen.unwrap();
+    let p = crate::sim_lightshome::camera_machine_last_seen(g, c).unwrap();
     let where_ = crate::chronicle::room_of(g, p);
     control(g, &format!("camera {}: that's him — the {}. all posts, the {}", index, where_, where_));
     g.alarm.pos[0] = p[0];
@@ -236,13 +230,14 @@ fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
 /// One beam's frame: where it ends, what breaks it, the trip.
 fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     let d = g.tab.devices_laser_rt[l].def.clone();
-    let (dir, len) = (g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
-    let (ok, down) = crate::fixtures::laser_open(g, l);
-    if down && sensing(g) {
+    let (slot, dir, len) = (g.tab.devices_laser_rt[l].slot, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
+    let open = crate::sim_lightshome::light_home_laser_open(g, slot);
+    let bit = crate::sim_lightshome::laser();
+    if has(open, bit.down) && sensing(g) {
         let room = crate::chronicle::room_of(g, d.from);
         device_down(g, &d.name, &format!("the {} beam", room), d.from);
     }
-    if !ok { return; }
+    if !has(open, bit.ok) { return; }
     let mut reach = len;
     let no_shadow = crate::scene_boxes::box_flag().no_shadow;
     if let Some(wh) = crate::scene_boxes::box_world_raycast(g, v3::mad(d.from, dir, 0.03), dir, Some(reach), Some(no_shadow), None, None) { reach = m::min(reach, wh.t + 0.03); }
@@ -297,7 +292,8 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
         let t = crate::character::character_ray_hit(g, c, d.from, dir, cut);
         if t >= 0.0 { cut = m::min(cut, t); }
     }
-    if crate::fixtures::laser_close(g, l, live, cut, who.is_some()) {
+    let now = g.time;
+    if has(crate::sim_lightshome::light_home_laser_close(g, slot, now, live, cut, sense, who.is_some()), bit.trip) {
         laser_trip(g, l, who.unwrap(), by, at.unwrap());
     }
 }
@@ -574,7 +570,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let target = g.tab.devices_camera_rt[c].target;
         let ok = alive(g, target);
         let pitch = d.pitch.unwrap_or(crate::scene_level_data::device_defaults().pitch);
-        let yaw = g.tab.devices_camera_rt[c].yaw;
+        let yaw = crate::sim_lightshome::camera_machine_yaw(g, c);
         let look = lens_dir(yaw, pitch);
         let back: V3 = [-m::sin(d.yaw), 0.0, -m::cos(d.yaw)];
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::default() }).into());
@@ -582,9 +578,9 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let y = v3::cross(look, x);
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::default() }).into());
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::default() }).into());
-        let seen = g.tab.devices_camera_rt[c].seen;
+        let seen = crate::sim_lightshome::camera_machine_seen(g, c);
         let hot = seen > 0.02;
-        let blink = if g.tab.devices_camera_rt[c].state != crate::fixtures::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
+        let blink = if crate::sim_lightshome::camera_machine_state(g, c) != crate::sim_lightshome::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
         let led: V3 = if !ok { [0.0, 0.0, 0.0] } else {
             v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
         };
@@ -608,7 +604,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let yaw = v3::yaw_of(dir);
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
-        let (last, cut) = (g.tab.devices_laser_rt[l].last_trip_at, g.tab.devices_laser_rt[l].cut);
+        let (last, cut) = (crate::sim_lightshome::laser_machine_last_trip_at(g, l), crate::sim_lightshome::laser_machine_cut(g, l));
         let glow: V3 = if ok { if g.time - last < 1.5 { v3::scale(red(), if m::sin(g.time * 40.0) > 0.0 { 2.0 } else { 0.2 }) } else { [1.5, 0.1, 0.05] } } else { [0.0, 0.0, 0.0] };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::default() }).into());
         if ok && cut > 0.05 { crate::combat::beam_boxes(g, d.from, dir, cut, out, cut < len - 0.05, None, None); }

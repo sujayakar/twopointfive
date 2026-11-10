@@ -100,7 +100,7 @@ fn stuff_of(g: &mut crate::game::Game, index: f64, b: BoxId) -> Option<crate::wa
     let w = crate::scene_world::world();
     if c[0] < w.min[0] || c[0] > w.max[0] || c[2] < w.min[2] || c[2] > w.max[2] || crate::destruction::destruction_item_of(g, index).is_some() { return None; }
     for &t in &g.targets {
-        if g.tab.fixture[t].boxes.contains(&index) { return None; }
+        if g.tab.sim_lightshome_fixture[t].boxes.contains(&index) { return None; }
     }
     let does = crate::scene_materials::does_of(g, word);
     match does.surf {

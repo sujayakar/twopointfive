@@ -30,8 +30,8 @@ fn aim(g: &Game) -> [f64; 3] { g.aim_point }
 fn every_group(g: &Game) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for &t in g.targets.iter() {
-        let f = &g.tab.fixture[t];
-        if f.group == "emergency" || matches!(f.kind, game::fixtures::FixtureKind::Breaker) || out.contains(&f.group) { continue; }
+        let f = &g.tab.sim_lightshome_fixture[t];
+        if f.group == "emergency" || matches!(f.kind, game::sim_lightshome::FixtureKind::Breaker) || out.contains(&f.group) { continue; }
         out.push(f.group.clone());
     }
     out
@@ -132,7 +132,7 @@ fn stand_extra(g: &mut Game, n: f64) {
 }
 
 pub static ACTIONS: &[Action] = &[
-    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if g.light_home.mains.active { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, GameSetBlackoutCause::Debug) } },
+    Action { name: "mains", label: "trip or restore the mains", section: "Sandbox", title: "everything on the breaker goes dark for 30 s", takes: Takes::Press, run: |g, _, _| if game::sim_lightshome::mains_active(g) { game::game::game_end_blackout(g) } else { game::game::game_set_blackout(g, 30.0, GameSetBlackoutCause::Debug) } },
     Action { name: "smoke", label: "smoke at the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::sense::sense_tool(g, 2.0, &[a[0], a[1] + 0.12, a[2]]); } },
     Action { name: "clearsmoke", label: "clear smoke", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { game::sense::sense_tool(g, 3.0, &[]); } },
     Action { name: "teleport", label: "teleport to the cursor", section: "Sandbox", title: "", takes: Takes::Press, run: |g, _, _| { let a = aim(g); game::game::game_teleport_player(g, a); } },

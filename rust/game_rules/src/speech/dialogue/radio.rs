@@ -32,7 +32,7 @@ fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::Rad
         r.reply = None;
         r.last_at = -100.0;
         let esc = crate::guards::escalation_of(g);
-        let blackout = g.light_home.mains.active;
+        let blackout = crate::sim_lightshome::mains_active(g);
         let found = found_count(g);
         let r = row(g);
         r.esc = esc;
@@ -79,7 +79,6 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     if pool.is_empty() { return false; }
     let dealt = crate::math_dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];
-    let rack = js::num_str(g.level.errand.index + 1.0);
     let own = !crate::dialogue::is_office(g);
     let h_now = l.h_now.as_deref().unwrap_or(&l.h);
     let h = if own { l.h_own.as_deref().unwrap_or(h_now) } else { h_now };
@@ -87,10 +86,10 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let r = row(g);
     r.done.add(beat);
     r.last_at = now;
-    crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h.replace("{rack}", &rack)));
+    crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
     let at = g.time + crate::dialogue::RADIO_REPLY_SECS;
-    row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: s.replace("{rack}", &rack) });
+    row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: String::from(s) });
     true
 }
 
@@ -102,7 +101,7 @@ pub(super) fn tick_radio(g: &mut crate::game::Game) {
         handler_beat(g, if esc >= 2.0 { crate::dialogue::HandlerBeat::Lockdown } else { crate::dialogue::HandlerBeat::Alarm }, Some(crate::dialogue::RADIO_EDGE_DELAY));
     }
     row(g).esc = esc;
-    let bo = g.light_home.mains.active;
+    let bo = crate::sim_lightshome::mains_active(g);
     if bo && !row(g).blackout {
         handler_beat(g, crate::dialogue::HandlerBeat::Blackout, Some(crate::dialogue::RADIO_EDGE_DELAY));
     }

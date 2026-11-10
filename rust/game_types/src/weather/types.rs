@@ -41,20 +41,6 @@ pub struct Weather {
     pub roof_rects: Vec<[f64; 4]>,
     pub fog_spec: Option<crate::weather_kinds::FogSpec>,
     pub fog_word: f64,
-    pub storm: f64,
-    pub rain_rate: f64,
-    /// the rain falling on the game this tick (0 with the storm off or held for the day): what the frame draws, and what soaks a man
-    pub rain_now: f64,
-    /// how wet the lot is
-    pub wet: f64,
-    /// game time until which a thunderclap is drowning the small noises
-    #[is(-1e9)] pub thunder_until: f64,
-    #[is(-1.0)] pub next_flash_at: f64,
-    #[is(-1e9)] pub last_bark_t: f64,
-    /// on its way, oldest first
-    pub thunders: Vec<crate::weather::Thunder>,
-    /// the storm's own die: never the game's, whose stream a storm must not shift
-    pub die: u32,
     #[is(1.0)] pub fog_glow: f64,
     #[is([1.1, 0.45])] pub wind: [f64; 2],
     #[is(true)] pub wet_gloss: bool,

@@ -31,16 +31,17 @@ fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit::Han
 
 /// How many of each counted thing the game holds.
 pub fn level_caps() -> crate::levelfit::LevelFit {
+    let l = crate::sim_lightshome::light_caps();
     crate::levelfit::LevelFit {
         doors: crate::sim_doorshome::DOOR_CAP,
         things: crate::sim_propshome::PROP_CAP,
         parts: crate::sim_propshome::PROP_PARTS,
         sheets: crate::scene_box_mirror::PANE_CAP,
-        fixtures: crate::fixtures::FIXTURES as f64,
-        cameras: crate::fixtures::CAMERAS as f64,
-        lasers: crate::fixtures::LASERS as f64,
-        beacons: crate::fixtures::BEACONS as f64,
-        lamps: ::sim::lights::ROWS as f64,
+        fixtures: l.targets,
+        cameras: l.cameras,
+        lasers: l.lasers,
+        beacons: l.beacons,
+        lamps: l.rows,
     }
 }
 

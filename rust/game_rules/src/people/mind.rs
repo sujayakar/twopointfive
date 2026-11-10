@@ -113,7 +113,7 @@ pub fn fix_keep(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
 
 /// HIS MAN: whom he is fighting, or `None`. A burst is at one man: when he has another, or none, the burst he was firing ends, and the next man has to be
 /// aimed at like the first.
-pub fn foe(g: &mut Game, gd: GuardId, to: Option<crate::game::Foe>, by: &'static str) {
+pub fn foe(g: &mut Game, gd: GuardId, to: Option<crate::ids::CharId>, by: &'static str) {
     let was = g.gd[gd].foe;
     g.gd[gd].foe = to;
     if was == to { return; }

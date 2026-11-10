@@ -98,7 +98,7 @@ fn dust_comes_in_at_a_door() {
     game::air_dust::air_dust_reseed(&mut p.g);
     p.run(1.0);
     let (name, c, n) = outside_door(&mut p);
-    let leak = p.g.weather.fog_spec.expect("dust has a fog row").leak;
+    let leak = game::weather::weather_fog(&p.g).expect("dust has a fog row").leak;
     let at = |m: f64| [c[0] + n[0] * m, 1.5, c[2] + n[1] * m];
     let before = dust_at(&mut p, at(0.75));
     assert!(before < leak + 0.05, "{name}, shut: the threshold reads {before} (leak {leak})");
@@ -113,15 +113,15 @@ fn dust_comes_in_at_a_door() {
 #[test]
 fn snow_touches_no_ear() {
     let mut p = born("pass.json", "");
-    assert_eq!(p.g.weather.kind_now, Some(WeatherKind::Snow), "the pass is not in snow");
-    assert_eq!(p.g.weather.rain_rate, 0.0, "it rains in the snow");
+    assert_eq!(game::weather::weather_kind(&p.g), Some(WeatherKind::Snow), "the pass is not in snow");
+    assert_eq!(game::weather::weather_rain_rate(&p.g), 0.0, "it rains in the snow");
     for (a, b) in [([20.0, 1.6, 20.0], [40.0, 1.1, 20.0]), ([20.0, 1.6, 20.0], [20.5, 1.1, 20.0])] {
         assert_eq!(air(&mut p.g, a, b), 1.0, "snow stands between eyes");
         assert_eq!(mask(&mut p.g, a), 1.0, "snow masks a sound");
     }
     drop(p);
     let p = born("office.json", "");
-    assert_ne!(p.g.weather.kind_now, Some(WeatherKind::Snow), "snow on a level not built for it");
+    assert_ne!(game::weather::weather_kind(&p.g), Some(WeatherKind::Snow), "snow on a level not built for it");
 }
 
 /// THE RULE: a weather picked by word runs at any hour: rain at midday rains, fog at dawn stands. CONTROL: with nothing picked a daylight hour holds the level's own storm off.
@@ -131,11 +131,11 @@ fn a_picked_weather_runs_at_every_hour() {
     for (hour, word, kind) in [("midday", "rain", WeatherKind::Rain), ("dawn", "fog", WeatherKind::Fog), ("dusk", "dust", WeatherKind::Dust)] {
         let mut p = born("compound.json", &format!("&hour={hour}&weather={word}"));
         p.run(0.5);
-        assert!(p.g.weather.on && p.g.weather.kind_now == Some(kind), "{hour} + {word}: on {}, kind {:?}", p.g.weather.on, p.g.weather.kind_now);
-        assert_eq!(p.g.weather.rain_rate > 0.0, word == "rain", "{hour} + {word}: rain {}", p.g.weather.rain_rate);
+        assert!(game::weather::weather_enabled(&p.g) && game::weather::weather_kind(&p.g) == Some(kind), "{hour} + {word}: on {}, kind {:?}", game::weather::weather_enabled(&p.g), game::weather::weather_kind(&p.g));
+        assert_eq!(game::weather::weather_rain_rate(&p.g) > 0.0, word == "rain", "{hour} + {word}: rain {}", game::weather::weather_rain_rate(&p.g));
         drop(p);
     }
     let mut p = born("compound.json", "&hour=midday");
     p.run(0.5);
-    assert!(!p.g.weather.on, "midday with nothing picked: the level's own storm is on");
+    assert!(!game::weather::weather_enabled(&p.g), "midday with nothing picked: the level's own storm is on");
 }

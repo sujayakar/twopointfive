@@ -780,9 +780,11 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
                 if room_of(g, q, p, Some(0.05)).map_or(false, |r| r.id == l.id) { up_in += 1; }   // (`===` of a room: its id, a room is one row of the structure)
             }
         }
-        let drill = squad_drill(g);
-        if let (Some(k), Some(l)) = (&drill, &lost) {
-            if k.drill_own && (up_in as f64) < k.own_up {
+        // one man alone does not walk into a room nobody of theirs is left in, and a drilled squad's into one that is as good as lost
+        let mates = { let x = &g.tab.enemysquads_squad[q]; x.due.iter().any(|o| same_room(&o.room, &due.room)) || x.sent.iter().any(|s| s.role == SentRole::Reinforce && g.time - s.t0 < TOGETHER_SECS) };
+        let least = match squad_drill(g) { Some(k) if k.drill_own => k.own_up, _ => if mates { 0.0 } else { 1.0 } };
+        if let Some(l) = &lost {
+            if (up_in as f64) < least {
                 let said = g.tab.enemysquads_squad[q].own_said;
                 if said.map_or(true, |t| !js::truthy(t) || g.time - t > 20.0) {
                     g.tab.enemysquads_squad[q].own_said = Some(g.time);

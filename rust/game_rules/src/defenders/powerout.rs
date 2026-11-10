@@ -25,15 +25,15 @@ fn pos_of(g: &Game, gd: GuardId) -> V3 {
 }
 /// `bo.active`: a getter over the mains' columns, read live every time as the TypeScript's `bo` is
 fn bo_active(g: &Game) -> bool {
-    g.light_home.mains.active
+    crate::sim_lightshome::mains_active(g)
 }
 /// `bo.since`, read live
 fn bo_since(g: &Game) -> f64 {
-    g.light_home.mains.since
+    crate::sim_lightshome::mains_since(g)
 }
 /// `bo.permanent`, read live
 fn bo_permanent(g: &Game) -> bool {
-    g.light_home.mains.permanent
+    crate::sim_lightshome::mains_permanent(g)
 }
 /// `g.guards[i]` for an index kept in `seen` (−1 or off the end of the list: nobody)
 fn guard_at(g: &Game, i: f64) -> Option<GuardId> {
@@ -129,16 +129,16 @@ fn saw_them_die(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.targets.len() {
         let t = g.targets[i];
         i += 1;
-        if !g.tab.fixture[t].mains
-            || !g.tab.fixture[t].on
-            || g.tab.fixture[t].broken
-            || !(g.tab.fixture[t].factor > 0.3)
-            || g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Breaker
-            || g.tab.fixture[t].kind == crate::fixtures::FixtureKind::Device
+        if !g.tab.sim_lightshome_fixture[t].mains
+            || !crate::sim_lightshome::fixture_on(g, t)
+            || crate::sim_lightshome::fixture_broken(g, t)
+            || !(crate::sim_lightshome::fixture_factor(g, t) > 0.3)
+            || g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Breaker
+            || g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Device
         {
             continue;
         }
-        let tp = g.tab.fixture[t].pos;
+        let tp = g.tab.sim_lightshome_fixture[t].pos;
         if flat(tp, pos_of(g, gd)) > g.k.powerout.see_m {
             continue;
         }
@@ -469,12 +469,6 @@ pub(super) fn power_out_word(g: &crate::game::Game, gd: GuardId) -> bool {
     }
     let team = g.gd[gd].team;
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
-}
-
-/// a fresh start.
-pub fn power_out_reset(g: &mut crate::game::Game) {
-    g.m.powerout.states = None;
-    breaker_say(g);
 }
 
 /// who the breaker's party has, on the one record: out for the lights, or waiting to be sent.

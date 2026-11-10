@@ -362,7 +362,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     let office = shift && is_office(g);
     let weapon = g.gd[gd].weapon;
     let drew_on_you = crate::weapons::firearm_spent(g, weapon) > 0.0;
-    let blackout = g.light_home.mains.active;
+    let blackout = crate::sim_lightshome::mains_active(g);
     let saw_kind = w.saw_act.as_ref().map(|x| x.kind);
     let facts = DialogueCtxFacts {
         floor_up: Some(lvl >= 1.0), lockdown: Some(lvl >= 2.0), episode: Some(g.alarm.episode),

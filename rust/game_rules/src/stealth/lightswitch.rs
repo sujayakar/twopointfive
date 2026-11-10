@@ -16,10 +16,10 @@ fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.
 // ---------------------------------------------------------------- finding them
 /// Is this fixture one a wall switch works: on the mains and a light of the room.
 fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
-    let f = &g.tab.fixture[t];
+    let f = &g.tab.sim_lightshome_fixture[t];
     if !f.mains || f.group == "exterior" || f.group == "emergency" { return false; }
-    if f.kind == crate::fixtures::FixtureKind::Analytic { return f.light.is_some(); }
-    if f.kind != crate::fixtures::FixtureKind::Emissive || f.boxes.is_empty() { return false; }
+    if f.kind == crate::sim_lightshome::FixtureKind::Analytic { return f.light.is_some(); }
+    if f.kind != crate::sim_lightshome::FixtureKind::Emissive || f.boxes.is_empty() { return false; }
     let first = f.boxes[0] as usize;
     let (c, h, _) = seam_level_box(g, first);
     h[1] <= h[0] && h[1] <= h[2] && c[1] > 1.5
@@ -27,7 +27,7 @@ fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
 
 /// The room a fixture hangs in: of the floor under it, or of the nearest floor it has a clear line down to.
 fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
-    let pos = g.tab.fixture[t].pos;
+    let pos = g.tab.sim_lightshome_fixture[t].pos;
     let r = crate::cleared::cleared_rooms_room_at(g, pos);
     if js::truthy(r) { return r; }
     let cs = g.col.nav.cell;
@@ -199,16 +199,16 @@ fn build(g: &mut crate::game::Game) -> Vec<crate::lightswitch::WallSwitch> {
         let all = lights.get(r).unwrap();
         let mut by: JsMap<String, Vec<Plate>> = JsMap::default();
         for p in ps {
-            let mut best = g.tab.fixture[all[0]].group.clone();
+            let mut best = g.tab.sim_lightshome_fixture[all[0]].group.clone();
             let mut bd = m::INF;
             for &t in all {
-                let dd = v3::dist_xz(g.tab.fixture[t].pos, p.pos);
-                if dd < bd { bd = dd; best = g.tab.fixture[t].group.clone(); }
+                let dd = v3::dist_xz(g.tab.sim_lightshome_fixture[t].pos, p.pos);
+                if dd < bd { bd = dd; best = g.tab.sim_lightshome_fixture[t].group.clone(); }
             }
             by.get_or_insert_with(best, Vec::new).push(*p);
         }
         for grp in by.keys() {
-            let targets: Vec<FixtureId> = all.iter().copied().filter(|&t| g.tab.fixture[t].group == grp).collect();
+            let targets: Vec<FixtureId> = all.iter().copied().filter(|&t| g.tab.sim_lightshome_fixture[t].group == grp).collect();
             let gps = by.get(grp).unwrap();
             for p in fewest(g, gps) {
                 let id = out.len() as f64;
@@ -254,21 +254,10 @@ fn wall_stands(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -
     }
 }
 
-/// A restart: the plates are found again on the level as dealt, and no fixture is a hand's.
-pub fn light_switch_reset(g: &mut crate::game::Game) {
-    g.m.lightswitch.states = None;
-    let targets = g.targets.clone();
-    for t in targets {
-        if g.tab.fixture[t].hand_off.is_some() {
-            g.tab.fixture[t].hand_off = None;
-        }
-    }
-}
-
 // ---------------------------------------------------------------- the flip
 /// Are the room's lights on at the switch: any fixture of it switched on.
 pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
-    sw.targets.iter().any(|&t| g.tab.fixture[t].on)
+    sw.targets.iter().any(|&t| crate::sim_lightshome::fixture_on(g, t))
 }
 
 /// May Sam be planted at a plate for his hand's move: not from a wall hold.
@@ -318,14 +307,14 @@ pub fn switch_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
 pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch, on: bool, by: CharId) {
     if !on {
         for &t in &sw.targets {
-            if g.tab.fixture[t].on && g.tab.fixture[t].factor > 0.0 {
+            if crate::sim_lightshome::fixture_on(g, t) && crate::sim_lightshome::fixture_factor(g, t) > 0.0 {
                 crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Shot), Some(sw.floor));
                 g.stats.lightswitch.events += 1;
             }
         }
     }
     let time = g.time;
-    crate::fixtures::light_home_flip(g, &sw.targets, on, time, true);
+    crate::sim_lightshome::light_home_flip(g, &sw.targets, on, time, true);
     crate::audio_iface::game_audio_like_play(g, "click", Some(sw.pos), Some(0.8), None);
     if !on { crate::audio_iface::game_audio_like_play(g, "lightOff", Some(sw.pos), Some(0.5), None); }
     if g.m.lightswitch.states.is_some() {
@@ -438,12 +427,12 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
         g.m.lightswitch.states.as_mut().unwrap().list = l.clone();
     }
     // a room the level had lit and a hand put out: a calm defender at its switch puts it back, a beat after the hand at the soonest
-    if !g.light_home.mains.active && g.ai_enabled {
+    if !crate::sim_lightshome::mains_active(g) && g.ai_enabled {
         for sw in &l {
             let mut since = -1.0;
             for &t in &sw.targets {
-                if let Some(off) = g.tab.fixture[t].hand_off {
-                    if !g.tab.fixture[t].on && crate::game::game_authored_on(g, t) { since = m::max(since, g.time - off); }
+                if let Some(off) = crate::sim_lightshome::fixture_hand_off(g, t) {
+                    if !crate::sim_lightshome::fixture_on(g, t) && crate::game::game_authored_on(g, t) { since = m::max(since, g.time - off); }
                 }
             }
             if since < g.k.lightswitch.guard_secs { continue; }

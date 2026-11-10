@@ -110,6 +110,7 @@ pub mod furnblast { pub mod types; pub use types::*; }
 pub mod game { pub mod types; pub use types::*; }
 pub mod gear { pub mod types; pub use types::*; }
 pub mod glass { pub mod types; pub use types::*; }
+pub mod glass_pattern { pub mod types; pub use types::*; }
 pub mod glassbreak { pub mod types; pub use types::*; }
 pub mod glasspen { pub mod types; pub use types::*; }
 pub mod guards { pub mod types; pub use types::*; }
@@ -190,7 +191,6 @@ pub mod render_lights { pub mod types; pub use types::*; }
 pub mod render_particles { pub mod types; pub use types::*; }
 pub mod render_snow_field { pub mod types; pub use types::*; }
 pub mod rescue { pub mod types; pub use types::*; }
-pub mod rescuecheck { pub mod types; pub use types::*; }
 pub mod rescueend { pub mod types; pub use types::*; }
 pub mod rescueflow { pub mod types; pub use types::*; }
 pub mod rescueflush { pub mod types; pub use types::*; }
@@ -245,11 +245,12 @@ pub mod silent { pub mod types; pub use types::*; }
 pub mod sim_doorshome { pub mod types; pub use types::*; }
 pub mod sim_fallshome { pub mod types; pub use types::*; }
 pub mod sim_itemshome { pub mod types; pub use types::*; }
-pub mod fixtures { pub mod types; pub use types::*; }
+pub mod sim_lightshome { pub mod types; pub use types::*; }
 pub mod sim_propshome { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
 pub mod sim_slabshome { pub mod types; pub use types::*; }
 pub mod sim_state { pub mod types; pub use types::*; }
+pub mod sim_weatherhome { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }

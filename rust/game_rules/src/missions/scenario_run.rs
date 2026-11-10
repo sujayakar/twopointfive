@@ -7,11 +7,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use alloc::{string::String, vec::Vec};
 
-/// A scenario's name in the player's words, by its kind's word.
-fn word(kind: &str) -> String {
-    words().get(String::from(kind)).cloned().expect("a scenario kind with no word")
-}
-
 /// The query's level is a Training lesson's.
 fn lesson_level(q: &crate::query::Query) -> bool {
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
@@ -113,7 +108,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
     let rung = if g.fog_of_war.on { quiet_rung_of_query(g, q) } else { crate::quietfog::QuietRung::Off };
     crate::quietfog::quiet_fog_start(g, q, rung);
     if let Some(wx) = crate::weather_kinds::weather_of(q) {
-        if g.weather.kind_now != Some(wx) {
+        if crate::weather::weather_kind(g) != Some(wx) {
             crate::weather::weather_set_kind_2(g, Some(wx));
         }
     }

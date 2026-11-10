@@ -175,7 +175,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         w.all.push(s);
     }
     if crate::weather::weather_level_roofs(g) {
-        let roofs = g.weather.roof_rects.clone();
+        let roofs = crate::weather::weather_roofs(g);
         let own = crate::weather::weather_own_storm(g);
         let before = core::mem::replace(&mut g.wind, w);
         wind_reroof(g, Some(&roofs), Some(own));
@@ -382,10 +382,10 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
 
 /// Does the weather blow at all.
 fn wind_blows(g: &crate::game::Game) -> bool {
-    if !g.weather.on {
+    if !crate::weather::weather_enabled(g) {
         return false;
     }
-    g.weather.kind_now.is_some() || g.weather.rain_rate > 0.001 || g.weather.storm > 0.01
+    crate::weather::weather_kind(g).is_some() || crate::weather::weather_rain_rate(g) > 0.001 || crate::weather::weather_storm(g) > 0.01
 }
 
 /// The storm's wind vector when it should be felt, none otherwise.
@@ -444,7 +444,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 if !due {
                     target = 0.0;
                 }
-                if mains && g.light_home.mains.active {
+                if mains && crate::sim_lightshome::mains_active(g) {
                     target = 0.0;
                 }
                 let s = &mut g.tab.wind_wind_source[id];
@@ -545,18 +545,6 @@ pub(super) fn wind_sum(g: &crate::game::Game, p: V3) -> V3 {
 /// The source called `name`.
 pub fn wind_by_name(g: &crate::game::Game, name: &str) -> Option<WindWindSourceId> {
     g.wind.all.iter().copied().find(|&s| g.tab.wind_wind_source[s].name == name)
-}
-
-/// A restart: every vent at once where its own cycle has it, with the mains in.
-pub fn wind_fresh(g: &mut crate::game::Game) {
-    let t = g.time;
-    for k in 0..g.wind.all.len() {
-        let id = g.wind.all[k];
-        let s = &mut g.tab.wind_wind_source[id];
-        if s.why == WindWhy::Vent {
-            s.on = if vent_due(s.vent.as_ref().unwrap(), t) { 1.0 } else { 0.0 };
-        }
-    }
 }
 
 /// One line per source for the panel.

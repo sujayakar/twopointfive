@@ -232,7 +232,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
             continue;
         }
         let now = time - g.gd[gd].last_seen_t < dt * 0.5 + 1e-6;
-        let pc = crate::teams::foe_char(g, gd);
+        let pc = g.gd[gd].foe;
         let alert = g.gd[gd].state == crate::game::GuardState::Alert;
         if alert {
             if let Some(pc) = pc {
@@ -588,9 +588,6 @@ fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f6
     let t = g.time - age;
     man_of(g, gd).saw = Some(ManSaw { at: [at[0], 0.0, at[2]], t, used: false });
 }
-
-/// A restart or a checkpoint load: forget everything about this game.
-pub fn door_force_reset(g: &mut crate::game::Game) { g.m.doorforce.states = None; }
 
 #[cfg(test)]
 mod tests {

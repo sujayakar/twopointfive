@@ -15,7 +15,7 @@ fn flush(g: &mut Game, gd: GuardId, d: Doze) {
 }
 /// g.lightHome.in(LIGHT_IN.on, t, v)
 fn switch(g: &mut Game, t: FixtureId, v: f64) {
-    g.tab.fixture[t].on = v != 0.0;
+    crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().on, Some(t), Some(v), None, None, None);
 }
 fn is_held_seat(p: Phase) -> bool { p != Phase::No && p != Phase::Spent && p != Phase::Stir }
 fn why_word(w: WakeWhy) -> DozeWhy {
@@ -75,7 +75,7 @@ pub fn live(g: &mut crate::game::Game) -> bool {
     g.ai_enabled && !g.puppet.is_some() && !crate::seats::all_down(g)
         && g.level.lesson().is_none()
         && crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode
-        && !g.light_home.mains.active
+        && !crate::sim_lightshome::mains_active(g)
 }
 /// a staff man on a calm patrol with nothing on his mind or in his hands
 fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
@@ -105,15 +105,9 @@ fn left_lit(g: &mut crate::game::Game, gd: GuardId) {
     let Some(d) = g.m.doze.rec.get(gd).copied() else { return };
     if d.phase != Phase::Work || d.mon_was { return; }
     let Some(mon) = d.mon else { return };
-    if !g.tab.fixture[mon].on || g.tab.fixture[mon].broken { return; }
+    if !crate::sim_lightshome::fixture_on(g, mon) || crate::sim_lightshome::fixture_broken(g, mon) { return; }
     let until = g.time + g.k.doze.idle_secs;
     g.m.doze.left.get_or_insert_with(JsMap::new).set(mon, until);
-}
-/// every left screen off, the table gone
-fn left_off(g: &mut crate::game::Game) {
-    let Some(l) = g.m.doze.left.as_ref() else { return };
-    for t in l.keys() { switch(g, t, 0.0); }
-    g.m.doze.left = None;
 }
 /// a left screen blanks when its time comes, or is gone when it is dead
 fn left_tick(g: &mut crate::game::Game) {
@@ -121,8 +115,8 @@ fn left_tick(g: &mut crate::game::Game) {
     let mut walk = 0usize;
     while let Some(t) = g.m.doze.left.as_ref().and_then(|l| l.next_key(&mut walk)) {
         let Some(&at) = g.m.doze.left.as_ref().and_then(|l| l.get(t)) else { continue };
-        if g.time >= at || !g.tab.fixture[t].on || g.tab.fixture[t].broken {
-            if g.tab.fixture[t].on && !g.tab.fixture[t].broken { switch(g, t, 0.0); }
+        if g.time >= at || !crate::sim_lightshome::fixture_on(g, t) || crate::sim_lightshome::fixture_broken(g, t) {
+            if crate::sim_lightshome::fixture_on(g, t) && !crate::sim_lightshome::fixture_broken(g, t) { switch(g, t, 0.0); }
             if let Some(l) = g.m.doze.left.as_mut() { l.delete(t); }
         }
     }
@@ -158,14 +152,14 @@ fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crat
     let targets = g.targets.len();
     for ti in 0..targets {
         let t = g.targets[ti];
-        { let f = &g.tab.fixture[t];
-          if f.group != "monitors" || f.kind != crate::fixtures::FixtureKind::Emissive { continue; } }
-        if g.tab.fixture[t].broken { continue; }
-        let tpos = g.tab.fixture[t].pos;
+        { let f = &g.tab.sim_lightshome_fixture[t];
+          if f.group != "monitors" || f.kind != crate::sim_lightshome::FixtureKind::Emissive { continue; } }
+        if crate::sim_lightshome::fixture_broken(g, t) { continue; }
+        let tpos = g.tab.sim_lightshome_fixture[t].pos;
         if flat(&tpos, px, pz) > screen_m + pull_m { continue; }
         let used = g.m.doze.rec.values().any(|d| d.mon == Some(t) && is_held_seat(d.phase));
         if used { continue; }
-        let first = g.tab.fixture[t].area_lights.as_ref().and_then(|a| a.first()).map(|a| a.light);
+        let first = g.tab.sim_lightshome_fixture[t].area_lights.as_ref().and_then(|a| a.first()).map(|a| a.light);
         let n = first.map(|l| g.tab.light[l].dir);
         let eye = first.map_or(tpos, |l| g.tab.light[l].pos);
         for off in pulls(g).iter() {
@@ -470,7 +464,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                     d.t = 0.0;
                     flush(g, gd, d);
                     // (`on && !LEFT.delete`: the delete runs only for a screen that is on)
-                    d.mon_was = g.tab.fixture[mon].on && !g.m.doze.left.as_mut().map_or(false, |l| l.delete(mon).is_some());
+                    d.mon_was = crate::sim_lightshome::fixture_on(g, mon) && !g.m.doze.left.as_mut().map_or(false, |l| l.delete(mon).is_some());
                     flush(g, gd, d);
                     switch(g, mon, 1.0);
                     let first = g.k.doze.say_first.clone();
@@ -492,12 +486,12 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
         if d.phase == Phase::Work {
             g.ch[c].anim.slump = 0.3;
             if let Some(mon) = d.mon {
-                if g.tab.fixture[mon].broken || !g.tab.fixture[mon].on || (d.t > 1.0 && g.tab.fixture[mon].factor < 0.5) {
-                    let at = g.tab.fixture[mon].pos;
+                if crate::sim_lightshome::fixture_broken(g, mon) || !crate::sim_lightshome::fixture_on(g, mon) || (d.t > 1.0 && crate::sim_lightshome::fixture_factor(g, mon) < 0.5) {
+                    let at = g.tab.sim_lightshome_fixture[mon].pos;
                     wake(g, gd, WakeWhy::Light, Some(&at[..]));
                     continue;
                 }
-                let at = g.tab.fixture[mon].pos;
+                let at = g.tab.sim_lightshome_fixture[mon].pos;
                 crate::attention::attention_lend(g, gd, at, Some(crate::attention::AttentionLendO { ears: Some(1.0), noises: Some(1.0) }));
             }
             let bubble_up = match g.gd[gd].bubble.as_ref() { Some(b) => g.time - b.t < b.dur + 1.0, None => false };
@@ -553,7 +547,7 @@ fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let me = g.ch[g.gd[gd].ch].id;
     let team = g.gd[gd].team;
     let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
-    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(::sim::lights::R_SCREEN as f64));
+    let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), Some(false), Some(crate::sim_lightshome::row_bit().screen));
     crate::game::game_visibility_of(g, est)
 }
 /// a man of this team carries the lamp with this owner
@@ -607,19 +601,6 @@ pub(super) fn doze_ear(g: &crate::game::Game, gd: GuardId) -> [f64; 2] {
     }
     whole()
 }
-/// everybody up, the records gone
-pub fn doze_reset(g: &mut crate::game::Game, load: Option<bool>) {
-    let load = load.unwrap_or(false);
-    g.m.doze.said = None;
-    if load { g.m.doze.left = None; } else { left_off(g); }
-    let rows: Vec<(GuardId, Doze)> = g.m.doze.rec.iter().map(|(k, v)| (k, *v)).collect();
-    for (gd, d) in rows {
-        if !load { dark(g, gd); }
-        if seated(d) { up(g, gd); }
-        drop(g, gd);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

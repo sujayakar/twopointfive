@@ -1,0 +1,83 @@
+//! A SQUAD COMES TO A FIGHT TOGETHER (rust/game_rules/src/pursuit/enemysquads): its men in its other rooms are there at the same time, and one alone keeps his own door.
+mod stealth_ask;
+use game::enemysquads::SquadEventWhat as What;
+use game::game::DownBy;
+use game::ids::GuardId;
+use game_start::play::{dist, Opts, Play};
+use stealth_ask::StealthAsk;
+
+const SEEDS: [u32; 3] = [1, 2, 3];
+
+/// a room clear, nobody looking for anybody
+fn floor(level: &str, seed: u32) -> Play {
+    let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&roomclear&squad4"), &Opts { seed, ..Default::default() });
+    p.sam_unhurt();
+    p.sam_unseen();
+    p.run(0.5);
+    for o in p.mates() { p.parked(o); }
+    p
+}
+fn events(p: &Play, what: What) -> Vec<f64> { p.squad_names().iter().flat_map(|q| p.squad_events(q)).filter(|e| e.0 == what).map(|e| e.1).collect() }
+/// how far a man has to go
+fn walk(p: &mut Play, m: GuardId, to: [f64; 2]) -> f64 {
+    let from = p.g.ch[p.g.gd[m].ch].pos;
+    let way = game::scene_collision::nav_grid_find_path(&mut p.g, from, [to[0], 0.0, to[1]], None, None).expect("a way");
+    way.iter().fold((0.0, p.at(m)), |(l, q), w| (l + dist(q, [w[0], w[2]]), [w[0], w[2]])).0
+}
+
+/// THE RULE: called to one of their rooms, two men of a squad from its other rooms are there within a moment of each other: the near one leaves later, up to five seconds.
+/// A FAILURE MEANS: they come in one at a time, and are shot one at a time.
+#[test]
+fn a_squads_men_are_there_together() {
+    let mut pairs = 0;
+    for s in SEEDS {
+        for level in ["compound", "office", "pass"] {
+            let mut p = floor(level, s);
+            let hit = p.hostiles()[0];
+            let at = p.at(hit);
+            p.flash_lands([at[0] + 1.0, at[1]]);
+            if p.until(6.0, |p| p.g.tab.enemysquads_squad.iter().any(|(_, q)| q.due.len() >= 2)).is_none() { continue; }
+            let due: Vec<(GuardId, f64, [f64; 2])> = p.g.tab.enemysquads_squad.iter().find(|(_, q)| q.due.len() >= 2).map(|(_, q)| q.due.iter().map(|d| (d.gd, d.t, [d.at[0], d.at[2]])).collect()).unwrap();
+            let now = p.time();
+            let pace = p.g.tune.guard_chase;
+            let there: Vec<(f64, f64)> = due.iter().map(|&(m, t, to)| (t + walk(&mut p, m, to) / pace, t - now)).collect();
+            let last = there.iter().map(|x| x.0).fold(0.0, f64::max);
+            for &(arrives, leaves_in) in &there { assert!(last - arrives < 0.3 || leaves_in > 5.0, "{level}, seed {s}: one is there {:.1} s before the last, and left after {leaves_in:.1} s", last - arrives); }
+            pairs += 1;
+        }
+    }
+    assert!(pairs >= 3, "the staging is wrong: {pairs} squads with two men called");
+}
+
+/// THE RULE: one man of a squad left, and nobody of theirs up in the room that was hit: he stays on his door.
+/// CONTROL: a mate up in that room, and he comes.
+/// A FAILURE MEANS: the last of them walk into a lost room by themselves, one after the other.
+#[test]
+fn one_man_alone_keeps_his_door() {
+    let (mut stayed, mut came) = (0, 0);
+    for s in SEEDS {
+        for lost in [true, false] {
+            let mut p = floor("office", s);
+            let men = p.hostiles();
+            // (the man who stands most by himself, so that nobody dropped here is of his room, and the man nearest him)
+            let gap = |p: &Play, m: GuardId| men.iter().filter(|&&o| o != m).map(|&o| dist(p.at(m), p.at(o))).fold(f64::MAX, f64::min);
+            let other = *men.iter().max_by(|&&a, &&b| gap(&p, a).total_cmp(&gap(&p, b))).unwrap();
+            let hit = *men.iter().filter(|&&m| m != other).min_by(|&&a, &&b| dist(p.at(a), p.at(other)).total_cmp(&dist(p.at(b), p.at(other)))).unwrap();
+            // (the rest have run: gone, and nothing heard of it)
+            for &m in men.iter().filter(|&&m| m != hit && m != other) { p.g.gd[m].fled = true; p.man_stands(m, [2.0, 2.0]); }
+            p.run(0.2);
+            let at = p.at(hit);
+            p.flash_lands([at[0] + 1.0, at[1]]);
+            p.until(6.0, |p| !events(p, What::Contact).is_empty()).unwrap_or_else(|| panic!("seed {s}: no contact"));
+            if lost { p.falls(hit, DownBy::Player); }
+            p.run(4.0);
+            if lost {
+                assert!(events(&p, What::Reinforce).is_empty(), "seed {s}: he goes in alone");
+                stayed += events(&p, What::Stays).len();
+            } else {
+                came += events(&p, What::Reinforce).len();
+            }
+        }
+    }
+    assert!(stayed >= 2 && came >= 2, "the staging is wrong: {stayed} stayed, {came} came");
+}

@@ -117,9 +117,9 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
 /// Bar `index` goes: hidden to every question, its pieces thrown the way `dir` from where it was struck. False = gone already or no standing bar.
 fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f64, cause: crate::winbars::BreakBarCause) -> bool {
     let Some(b) = box_of(g, index) else { return false };
-    let taken = crate::glassbreak::glass_break_asking(g, &mut |g, cx| {
+    let taken = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
         let flags = seam_box(g, b).flags;
-        ::sim::panes::bar_take(cx, js::to_u32(index), js::to_u32(flags))
+        ::sim::bars_take(js::to_u32(index), js::to_u32(flags)) == 1
     });
     if !taken { return false; }
     let flags = seam_box(g, b).flags;
@@ -220,9 +220,14 @@ pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastE
     if g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
-    let took = crate::glassbreak::glass_break_asking(g, &mut |g, cx| ::sim::panes::bars_blast(cx, from, r, built_boxes(g), &g.k));
+    let took: Vec<(f64, V3)> = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
+        let n = ::sim::bars_blast(from[0], from[1], from[2], r, built_boxes(g), &g.k);
+        let m = scratch();
+        let mut out = Vec::new();
+        for k in 0..n { out.push((m[4 * k], [m[4 * k + 1], m[4 * k + 2], m[4 * k + 3]])); }
+        out
+    });
     for (i, at) in took {
-        let i = i as f64;
         let b = box_at(g, i);
         let c = seam_box(g, b).c;
         let (dx, dz) = (c[0] - from[0], c[2] - from[2]);
@@ -230,20 +235,6 @@ pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastE
         let dir: V3 = if l > 1e-3 { [dx / l, 0.0, dz / l] } else { [0.0, 0.0, 0.0] };
         break_bar(g, i, at, dir, js::or(ev.who, crate::consts::NOBODY_ID), BreakBarCause::Blast);
     }
-}
-
-/// As a level resets: every bar stands again.
-pub fn reset_bars(g: &mut crate::game::Game) {
-    if let Some(s) = g.m.winbars.state.as_mut() { s.met.clear(); }
-    if untouched(g) { return; }
-    let s = g.sim;
-    for k in 0..::sim::panes::bars_gone(s) as usize {
-        if let Some(b) = box_of(g, ::sim::panes::bar_gone(s, k) as f64) {
-            seam_box(g, b).flags = ::sim::panes::bar_flags(s, k) as f64;
-            changed(g);
-        }
-    }
-    ::sim::panes::bars_clear(s);
 }
 
 #[cfg(test)]
