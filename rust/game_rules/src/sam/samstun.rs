@@ -56,7 +56,7 @@ pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
 /// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.
 pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
-    if !live(g, &crate::seats::here(g)) { return false; }
+    if !live(g, seat) { return false; }
     let p = seat.player;
     now < g.cond[g.pl[p].ch].fold_until
 }
