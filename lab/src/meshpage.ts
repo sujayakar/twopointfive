@@ -34,7 +34,7 @@ async function page() {
   const rt = withLook(withMeshes(realtime())), ref = pathTracer(), raster = rasterOnly(), cap = Number(Q.get('cap') ?? 2.4e6); let measuring = false, wasHour = -1, wasLens = 0; let scale = Number(Q.get('scale') ?? 0.8);
   const fit = () => { if (measuring) return; const dpr = window.devicePixelRatio || 1, w = Math.max(64, innerWidth * dpr), h = Math.max(64, innerHeight * dpr), k = Math.min(1, Math.sqrt(cap / (w * h))), ow = Math.round(w * k), oh = Math.round(h * k); if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; } lab.resize([Math.round(ow * scale), Math.round(oh * scale)], [ow, oh]); };
   fit(); $('what').textContent = 'Compiling'; await lab.use(rt); await wait();
-  const c = lab.camera, s = lab.building.place.start; Object.assign(c.want, { look: [...s.look], yaw: s.yaw, pitch: s.pitch, dist: 9 }); c.snap(); lab.smooth = true;
+  const c = lab.camera, s = lab.building.place.start; Object.assign(c.want, { look: [...s.look], yaw: s.yaw, pitch: s.pitch, dist: 9 }); c.snap(); lab.smooth = true; lab.haze = 0;       // (the path tracer knows no air: with the evening's haze on one side only, the two could not be set beside each other)
   // ---- near by coming nearer to four metres, then by a longer lens
   let near = 9; const zoom = () => { c.want.dist = Math.max(4, near); lens = Math.min(0.4, 0.4 * near / 4); }; let lens = 0.4;
   const mm = () => 2 * Math.tan(c.fov / 2) * c.dist / lab.graph.render[1] * 1000;
