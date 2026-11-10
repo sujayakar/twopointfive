@@ -7,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// One live grenade's book, by its place in the list (the row is never held across a call that takes `g`).
-macro_rules! live { ($g:ident, $i:ident) => { $g.m.frag.books.as_mut().unwrap()[$i] }; }
+macro_rules! live { ($g:ident, $i:expr) => { $g.m.frag.books.as_mut().unwrap()[$i] }; }
 /// The defenders' book, and one carrier of it by place.
 macro_rules! book { ($g:ident) => { $g.m.frag.def_books.as_mut().unwrap() }; }
 macro_rules! car { ($g:ident, $ci:ident) => { $g.m.frag.def_books.as_mut().unwrap().carriers[$ci] }; }
@@ -113,150 +113,177 @@ fn tick_book(g: &mut Game, i: usize) {
     let at = g.tab.item[it].pos;
     let eye_at: V3 = [at[0], at[1] + 0.12, at[2]];
     let wise = rest_of(g, i);
-    let dz = wise.at;
     if !live!(g, i).cued && live!(g, i).side == crate::teams::Team::Hostile { sam_cue(g, i, eye_at); }
     if !g.ai_enabled { return; }
     let mut n = 0;
     while n < g.guards.len() {
         let gd = g.guards[n]; n += 1;
-        tick_man(g, i, it, at, eye_at, &wise, dz, gd);
+        tick_man(g, i, it, at, eye_at, &wise, gd);
+    }
+}
+
+/// a man under a live grenade: its book's place, where it is and where it will lie (`dz`), and where he is
+#[derive(Clone, Copy)]
+struct Under { i: usize, it: ItemId, at: V3, eye_at: V3, dz: V3, gd: GuardId, c: CharId, pos: V3, team: crate::teams::Team }
+impl Under {
+    fn fuse(&self, g: &Game) -> f64 { g.tab.item[self.it].fuse }
+    /// where it bursts
+    fn burst(&self, g: &Game) -> V3 { [self.dz[0], self.dz[1] + g.k.frag.lift, self.dz[2]] }
+    /// has it a line to him where he stands
+    fn in_its_line(&self, g: &mut Game) -> bool {
+        let (from, h) = (self.burst(g), head_of(g, self.c));
+        exposed_to(g, from, self.pos, h, None) > 0.0
     }
 }
 
 /// One man's turn under one grenade: noticing, the shout, and his legs.
-fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate::frag::Rest, dz: V3, gd: GuardId) {
+fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate::frag::Rest, gd: GuardId) {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() { return; }
     let c = g.gd[gd].ch;
-    let pos = g.ch[c].pos;
-    let team = g.team(gd);
-    let serial = g.tab.item[it].serial;
-    let d = m::hyp2(pos[0] - at[0], pos[2] - at[2]);
+    let u = Under { i, it, at, eye_at, dz: wise.at, gd, c, pos: g.ch[c].pos, team: g.team(gd) };
     if !live!(g, i).knows.has(gd) {
-        if d > m::max(g.k.frag.see_m, g.k.frag.flee_m) { return; }
-        let mut when = -1.0;
-        if live!(g, i).side == team { when = g.time + 0.1; }
-        else if !crate::control::man::blind(g, gd) {
-            let head = head_of(g, c);
-            let to = m::atan2(at[0] - pos[0], at[2] - pos[2]);
-            let mut off = to - g.ch[c].aim_yaw;
-            off = m::atan2(m::sin(off), m::cos(off));
-            let told = g.m.frag.warned.get(gd).copied().unwrap_or(-1.0) > g.time;
-            let hear_m = if told { g.k.frag.hear_m * 2.0 } else { g.k.frag.hear_m };
-            let sees = d <= g.k.frag.see_m && (told || d < 3.0 || m::abs(off) < 1.9) && !crate::scene_collision::segment_blocked(g, head, eye_at, None, None, None);
-            let mut hears = false;
-            if !sees && g.tab.item[it].bounces > 0.0 && d <= hear_m {
-                let pr = crate::scene_collision::sound_paths_propagate(g, eye_at, head, None);
-                hears = pr.muffle < 0.5 && pr.path_len <= hear_m + 1.0;
-            }
-            if sees || hears {
-                let react = if g.gd[gd].trained || team.ours() { g.k.frag.react[0] } else { g.k.frag.react[1] };
-                when = g.time + react + hash01(serial, g.ch[c].id) * g.k.frag.react_jit;
-            }
-        }
-        if when >= 0.0 { live!(g, i).knows.set(gd, when); }
+        let Some(when) = notices(g, &u) else { return };
+        live!(g, i).knows.set(gd, when);
     }
-    match live!(g, i).knows.get(gd).copied() { Some(k) if g.time >= k => {} _ => return }
-    if !live!(g, i).shouted.has(team) && live!(g, i).side != team && !crate::control::man::staggered(g, gd) {
-        live!(g, i).shouted.add(team);
-        crate::game::game_say(g, gd, "grenade!", None, None);
-        let mouth = head_of(g, c);
-        let mut n = 0;
-        while n < g.guards.len() {
-            let o = g.guards[n]; n += 1;
-            if o == gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != team || live!(g, i).knows.has(o) { continue; }
-            let oc = g.gd[o].ch;
-            if v3::dist(g.ch[oc].pos, pos) > g.k.frag.shout_m { continue; }
-            let oh = head_of(g, oc);
-            let pr = crate::scene_collision::sound_paths_propagate(g, mouth, oh, None);
-            if pr.muffle > 0.6 || pr.path_len > g.k.frag.shout_m + 2.0 { continue; }
-            let when = g.time + 0.15 + hash01(serial + 7.0, g.ch[oc].id) * 0.15;
-            live!(g, i).knows.set(o, when);
-        }
-    }
-    let mut keep: Option<crate::game::GuardScript> = None;
-    let mut not: Option<V3> = None;
-    let fuse = g.tab.item[it].fuse;
-    {   // on a leg and no ground made for a second: another leg, not that spot
-        let cur = flee_of(g, i, gd);
-        let time = g.time;
-        let l = &mut live!(g, i);
-        let made = l.made.get_or_insert_with(JsMap::new);
-        let was = made.get(gd).copied();
-        let on_leg = cur.as_ref().map_or(false, |s| s.goal.is_some() && !arrived(s));
-        if !on_leg { made.delete(gd); }
-        else if was.map_or(true, |w| flat(w.at, pos) > 0.3) { made.set(gd, crate::frag::LiveMadeValue { at: pos, t: time }); }
-        else if time - was.unwrap().t > 1.0 && fuse > 0.6 {
-            not = cur.unwrap().goal;
-            made.delete(gd);
-            l.flee.delete(gd);
-            l.flee_at.delete(gd);
-        }
-    }
-    if live!(g, i).via.as_ref().map_or(false, |v| v.has(gd)) {   // round the leaf's end: the way out is dealt from here, in stride
-        let cur = flee_of(g, i, gd);
-        let dealt = live!(g, i).deal_t.get(gd).copied().unwrap_or(-1.0);
-        if let Some(goal) = cur.and_then(|s| s.goal) {
-            if g.time - dealt > 0.3 && flat(pos, goal) < g.k.frag.flee_door_via_m {
-                let l = &mut live!(g, i);
-                l.via.as_mut().unwrap().delete(gd);
-                l.flee.delete(gd);
-                l.flee_at.delete(gd);
-            }
-        }
-    }
-    {   // dealt again when it has gone on, or when he has got there and it turns out to have a line to him after all
-        let cur = flee_of(g, i, gd);
-        let was = live!(g, i).flee_at.get(gd).copied();
-        let dealt = live!(g, i).deal_t.get(gd).copied().unwrap_or(-1.0);
-        if let (Some(cur), Some(was)) = (cur, was) {
-            if g.time - dealt > 0.3 {
-                let again = flat(was, dz) > 0.4
-                    || ((match cur.goal { None => true, Some(goal) => arrived(&cur) && !(flat(pos, goal) > 0.06 && g.gd[gd].speed > 0.05) })
-                        && fuse > 0.6
-                        && { let h = head_of(g, c); let from = [dz[0], dz[1] + g.k.frag.lift, dz[2]]; exposed_to(g, from, pos, h, None) > 0.0 });
-                if again {
-                    if cur.goal.is_some() && !arrived(&cur) { keep = Some(cur); }
-                    let l = &mut live!(g, i);
-                    l.flee.delete(gd);
-                    l.flee_at.delete(gd);
-                }
-            }
-        }
-    }
+    if !live!(g, i).knows.get(gd).is_some_and(|&k| g.time >= k) { return; }
+    if !live!(g, i).shouted.has(u.team) && live!(g, i).side != u.team && !crate::control::man::staggered(g, gd) { shout(g, &u); }
+    let not = stuck_on_his_leg(g, &u);
+    round_the_leaf(g, &u);
+    let keep = dealt_again(g, &u);
     if flee_of(g, i, gd).is_some() { return; }
     // in its line and close enough to matter: move. (Blind or folded, he cannot.)
-    if flat(pos, dz) > g.k.frag.flee_m || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) { return; }
-    let head = head_of(g, c);
-    let burst: V3 = [dz[0], dz[1] + g.k.frag.lift, dz[2]];
-    if exposed_to(g, burst, pos, head, None) <= 0.0 {   // a wall already between him and it: he stays behind it, down
-        if g.gd[gd].script.is_none() && !g.gd[gd].hold && !g.gd[gd].pinned && flat(pos, dz) <= g.k.frag.lethal_m + 2.0 {
-            let time = g.time;
-            let l = &mut live!(g, i);
-            l.flee.set(gd, Some(crate::game::GuardScript { goal: None, upper: Some(crate::character::UpperMode::None), crouch: Some(true), ..Default::default() }));
-            l.flee_at.set(gd, dz);
-            l.deal_t.set(gd, time);
-            crate::game::guard_set_path(g, gd, Vec::new());
-            crate::guards::guard_set_path_goal(g, gd, None);
-        }
-        return;
+    if flat(u.pos, u.dz) > g.k.frag.flee_m || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) { return; }
+    if u.in_its_line(g) { deal_legs(g, &u, wise, keep, not); } else { stays_behind(g, &u); }
+}
+
+/// WHEN HE KNOWS OF IT: at once if it is his own side's; else if he sees it or hears it land, after his own beat. None: not yet.
+fn notices(g: &mut Game, u: &Under) -> Option<f64> {
+    let d = m::hyp2(u.pos[0] - u.at[0], u.pos[2] - u.at[2]);
+    let k = g.k.frag.clone();
+    if d > m::max(k.see_m, k.flee_m) { return None; }
+    if live!(g, u.i).side == u.team { return Some(g.time + 0.1); }
+    if crate::control::man::blind(g, u.gd) { return None; }
+    let head = head_of(g, u.c);
+    let to = m::atan2(u.at[0] - u.pos[0], u.at[2] - u.pos[2]);
+    let mut off = to - g.ch[u.c].aim_yaw;
+    off = m::atan2(m::sin(off), m::cos(off));
+    let told = g.m.frag.warned.get(u.gd).copied().unwrap_or(-1.0) > g.time;
+    let hear_m = if told { k.hear_m * 2.0 } else { k.hear_m };
+    let sees = d <= k.see_m && (told || d < 3.0 || m::abs(off) < 1.9) && !crate::scene_collision::segment_blocked(g, head, u.eye_at, None, None, None);
+    if !sees {
+        if !(g.tab.item[u.it].bounces > 0.0 && d <= hear_m) { return None; }
+        let pr = crate::scene_collision::sound_paths_propagate(g, u.eye_at, head, None);
+        if !(pr.muffle < 0.5 && pr.path_len <= hear_m + 1.0) { return None; }
     }
+    let react = if g.gd[u.gd].trained || u.team.ours() { k.react[0] } else { k.react[1] };
+    Some(g.time + react + hash01(g.tab.item[u.it].serial, g.ch[u.c].id) * k.react_jit)
+}
+
+/// The first of his side to know shouts, and whoever of it hears that knows a moment later.
+fn shout(g: &mut Game, u: &Under) {
+    live!(g, u.i).shouted.add(u.team);
+    crate::game::game_say(g, u.gd, "grenade!", None, None);
+    let mouth = head_of(g, u.c);
+    let serial = g.tab.item[u.it].serial;
+    let shout_m = g.k.frag.shout_m;
+    let mut n = 0;
+    while n < g.guards.len() {
+        let o = g.guards[n]; n += 1;
+        if o == u.gd || crate::condition::down(g, g.gd[o].ch) || g.team(o) != u.team || live!(g, u.i).knows.has(o) { continue; }
+        let oc = g.gd[o].ch;
+        if v3::dist(g.ch[oc].pos, u.pos) > shout_m { continue; }
+        let oh = head_of(g, oc);
+        let pr = crate::scene_collision::sound_paths_propagate(g, mouth, oh, None);
+        if pr.muffle > 0.6 || pr.path_len > shout_m + 2.0 { continue; }
+        let when = g.time + 0.15 + hash01(serial + 7.0, g.ch[oc].id) * 0.15;
+        live!(g, u.i).knows.set(o, when);
+    }
+}
+
+/// On a leg and no ground made for a second: another leg, and not that spot (Some).
+fn stuck_on_his_leg(g: &mut Game, u: &Under) -> Option<V3> {
+    let (cur, fuse, time) = (flee_of(g, u.i, u.gd), u.fuse(g), g.time);
+    let l = &mut live!(g, u.i);
+    let made = l.made.get_or_insert_with(JsMap::new);
+    let Some(cur) = cur.filter(|s| s.goal.is_some() && !arrived(s)) else { made.delete(u.gd); return None };
+    match made.get(u.gd).copied() {
+        Some(w) if !(flat(w.at, u.pos) > 0.3) => {
+            if !(time - w.t > 1.0 && fuse > 0.6) { return None; }
+            made.delete(u.gd);
+            l.flee.delete(u.gd);
+            l.flee_at.delete(u.gd);
+            cur.goal
+        }
+        _ => {
+            made.set(u.gd, crate::frag::LiveMadeValue { at: u.pos, t: time });
+            None
+        }
+    }
+}
+
+/// Round the leaf's end: the way out is dealt from here, in stride.
+fn round_the_leaf(g: &mut Game, u: &Under) {
+    if !live!(g, u.i).via.as_ref().map_or(false, |v| v.has(u.gd)) { return; }
+    let dealt = live!(g, u.i).deal_t.get(u.gd).copied().unwrap_or(-1.0);
+    let Some(goal) = flee_of(g, u.i, u.gd).and_then(|s| s.goal) else { return };
+    if !(g.time - dealt > 0.3 && flat(u.pos, goal) < g.k.frag.flee_door_via_m) { return; }
+    let l = &mut live!(g, u.i);
+    l.via.as_mut().unwrap().delete(u.gd);
+    l.flee.delete(u.gd);
+    l.flee_at.delete(u.gd);
+}
+
+/// Dealt again when it has gone on, or when he has got there and it turns out to have a line to him after all. The leg he is still on is kept for the deal.
+fn dealt_again(g: &mut Game, u: &Under) -> Option<crate::game::GuardScript> {
+    let cur = flee_of(g, u.i, u.gd)?;
+    let was = live!(g, u.i).flee_at.get(u.gd).copied()?;
+    let dealt = live!(g, u.i).deal_t.get(u.gd).copied().unwrap_or(-1.0);
+    if !(g.time - dealt > 0.3) { return None; }
+    let stands = |g: &Game| match cur.goal { None => true, Some(goal) => arrived(&cur) && !(flat(u.pos, goal) > 0.06 && g.gd[u.gd].speed > 0.05) };
+    let again = flat(was, u.dz) > 0.4 || (stands(g) && u.fuse(g) > 0.6 && u.in_its_line(g));
+    if !again { return None; }
+    let l = &mut live!(g, u.i);
+    l.flee.delete(u.gd);
+    l.flee_at.delete(u.gd);
+    Some(cur).filter(|s| s.goal.is_some() && !arrived(s))
+}
+
+/// A wall already between him and it: he stays behind it, down, if it is close.
+fn stays_behind(g: &mut Game, u: &Under) {
+    let man = &g.gd[u.gd];
+    if man.script.is_some() || man.hold || man.pinned || !(flat(u.pos, u.dz) <= g.k.frag.lethal_m + 2.0) { return; }
+    let time = g.time;
+    let l = &mut live!(g, u.i);
+    l.flee.set(u.gd, Some(down_where_he_is()));
+    l.flee_at.set(u.gd, u.dz);
+    l.deal_t.set(u.gd, time);
+    stop(g, u.gd);
+}
+fn down_where_he_is() -> crate::game::GuardScript { crate::game::GuardScript { goal: None, upper: Some(crate::character::UpperMode::None), crouch: Some(true), ..Default::default() } }
+fn stop(g: &mut Game, gd: GuardId) {
+    crate::game::guard_set_path(g, gd, Vec::new());
+    crate::guards::guard_set_path_goal(g, gd, None);
+}
+
+/// HIS LEGS ARE DEALT: to a spot out of its line as fast as he can run, never `not`; the straight leg leaves him in its line, or there is none: out by an open doorway his legs make; nothing, and he
+/// gets down where he is. The leg he has, if that is the one, is left as it is.
+fn deal_legs(g: &mut Game, u: &Under, wise: &crate::frag::Rest, keep: Option<crate::game::GuardScript>, not: Option<V3>) {
+    let (i, gd, pos, dz) = (u.i, u.gd, u.pos, u.dz);
+    let (burst, fuse) = (u.burst(g), u.fuse(g));
     let run = crate::teampace::team_blast_pace(g, gd, g.k.frag.run_speed);
-    let speed = crate::condition::condition_pace(g, g.gd[gd].ch, run);
-    let acc = if team.ours() && g.gd[gd].speed < speed * 0.6 { g.k.pace.accel } else { m::INF };
+    let speed = crate::condition::condition_pace(g, u.c, run);
+    let acc = if u.team.ours() && g.gd[gd].speed < speed * 0.6 { g.k.pace.accel } else { m::INF };
     let keep_goal = keep.as_ref().and_then(|k| k.goal);
     let apart = taken_by(g, Some(i), gd, dz);
     let w_spot = crate::frag::FleeSpotWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeSpotWiseApart { stay: apart.stay.clone(), go: apart.go.clone() }) };
-    let legs = crate::kitload::load_pace(g, g.gd[gd].ch, speed);
-    let pick = acc * crate::kitload::load_pace_on(g, g.gd[gd].ch);
+    let legs = crate::kitload::load_pace(g, u.c, speed);
+    let pick = acc * crate::kitload::load_pace_on(g, u.c);
     let (mut spot, mut spot_is_keep) = crate::frag::flee_spot_kept(g, crate::frag::FleeSpotC { pos }, dz, legs, fuse, Some(pick), Some(&w_spot), Some(gd));
-    {
-        let time = g.time;
-        let l = &mut live!(g, i);
-        l.flee_at.set(gd, dz);
-        l.deal_t.set(gd, time);
-        if let Some(v) = l.via.as_mut() { v.delete(gd); }
-    }
-    // the straight leg leaves him in its line, or there is none: out by an open doorway his legs make
+    let time = g.time;
+    let l = &mut live!(g, i);
+    l.flee_at.set(gd, dz);
+    l.deal_t.set(gd, time);
+    if let Some(v) = l.via.as_mut() { v.delete(gd); }
     let by_door = match spot {
         None => true,
         Some(s) => exposed_to(g, burst, s, [s[0], 1.15, s[2]], None) > 0.0 || in_mouth(g, s),
@@ -264,25 +291,24 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     if by_door {
         let w_door = crate::frag::FleeByDoorWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeByDoorWiseApart { stay: apart.stay, go: apart.go }) };
         if let Some(out) = flee_by_door(g, crate::frag::FleeByDoorC { pos }, dz, legs, fuse, pick, &w_door, Some(gd)) {
-            // (fleeByDoor answers `wise.keep` ITSELF for a way out within 5 cm of it, and a fresh point otherwise: there the numbers do say which)
+            // (a way out within 5 cm of the kept goal is the kept goal itself, and a fresh point otherwise: there the numbers do say which)
             spot_is_keep = Some(out.goal) == keep_goal;
             if !spot_is_keep { g.stats.frag.by_door += 1; }
             spot = Some(out.goal);
             if out.via { live!(g, i).via.get_or_insert_with(JsSet::new).add(gd); }
         }
     }
-    if let Some(k) = keep {   // the leg he has: his path and his stride are left as they are
-        // (`spot === keep.goal`: the kept goal's own OBJECT, not its numbers; and no spot against a kept "down where he is" is `null === null`, the same)
+    if let Some(k) = keep {
+        // (the kept goal itself, not its numbers; and no spot against a kept "down where he is" is the same)
         let same = match (spot, k.goal) { (None, None) => true, (Some(_), Some(_)) => spot_is_keep, _ => false };
         if same { live!(g, i).flee.set(gd, Some(k)); return; }
     }
     let script = match spot {
         Some(s) => crate::game::GuardScript { goal: Some(s), speed: Some(speed), upper: Some(crate::character::UpperMode::None), crouch: Some(false), ..Default::default() },
-        None => crate::game::GuardScript { goal: None, upper: Some(crate::character::UpperMode::None), crouch: Some(true), ..Default::default() },
+        None => down_where_he_is(),
     };
     live!(g, i).flee.set(gd, Some(script));
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
+    stop(g, gd);
     if !live!(g, i).counted.has(gd) { live!(g, i).counted.add(gd); g.stats.frag.fled += 1; }
 }
 
