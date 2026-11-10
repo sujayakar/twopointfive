@@ -310,7 +310,7 @@ The rows, each with what it holds and then its breaks:
   part does differ, and the level's own record stands on each side as it stood. Breaks: `moves` a die drawn once on the clocked side only · `noclock` the
   block is out on both sides.
 - **`steps <run>`:** A STEP OF THE TICK WRITES WHAT `steps.txt` SAYS (made by `hold steps DIR --write`): 16 s of four runs, each step asked each tenth
-  tick what it changed. Another part is a new coupling: meant and added, or not made. Break: `said` forgets one.
+  tick what it changed. Another part is a new coupling: meant and added, or not. Break: `said` forgets one.
 - **long: `played <id>`:** every room clear, rescue and the night breach, by the hands-off player (`src/hands_off.rs`) under the page's god mode, so
   that each goes on to its floor cleared. The mission played to its end by keys alone. (a) What a run owes (`src/owes.rs`), every tick. (b) It ends.
   (c) A line of words a reader can read (its end and time, Sam, who is up and down, the orders, the medal if any, the counts of `owes`) and a word a second
