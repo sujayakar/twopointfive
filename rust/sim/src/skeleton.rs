@@ -98,55 +98,9 @@ pub struct Rig<'a> {
 }
 
 /// Out = lerp(a, b, w · mask[node]) — `a`, `b` and `out` are places on one store of poses (out may be a's)
-/// `in_singles` = the rule POSEMATH.singles (single.rs): the same blend worked in singles, four nodes a step, a rotation's length a plain root.
-pub fn blend(store: &mut [S], a: usize, b: usize, w: f64, mask: Option<&[S]>, out: usize, n: usize, in_singles: bool) {
-    let r = rows(n);
-    if in_singles {
-        return crate::single::blend4(store, a, b, crate::single::weight(w), mask, out, n, r);
-    }
-    for i in 0..n {
-        let t = match mask {
-            Some(m) => w * get(m, i),
-            None => w,
-        };
-        if t <= 0.0 {
-            if out != a {
-                for c in 0..NODE {
-                    store[out + c * r + i] = store[a + c * r + i];
-                }
-            }
-            continue;
-        }
-        if t >= 1.0 {
-            for c in 0..NODE {
-                store[out + c * r + i] = store[b + c * r + i];
-            }
-            continue;
-        }
-        for c in 0..3 {
-            let (av, bv) = (get(store, a + c * r + i), get(store, b + c * r + i));
-            put(store, out + c * r + i, av + (bv - av) * t);
-        }
-        for c in 7..10 {
-            let (av, bv) = (get(store, a + c * r + i), get(store, b + c * r + i));
-            put(store, out + c * r + i, av + (bv - av) * t);
-        }
-        let (qa, qb, qo) = (a + 3 * r + i, b + 3 * r + i, out + 3 * r + i);
-        let (mut bx, mut by, mut bz, mut bw) = (get(store, qb), get(store, qb + r), get(store, qb + 2 * r), get(store, qb + 3 * r));
-        let (ax, ay, az, aw) = (get(store, qa), get(store, qa + r), get(store, qa + 2 * r), get(store, qa + 3 * r));
-        if ax * bx + ay * by + az * bz + aw * bw < 0.0 {
-            bx = -bx;
-            by = -by;
-            bz = -bz;
-            bw = -bw;
-        }
-        let (x, y, z, ww) = (ax + (bx - ax) * t, ay + (by - ay) * t, az + (bz - az) * t, aw + (bw - aw) * t);
-        let l = or_one(hypot4(x, y, z, ww));
-        put(store, qo, x / l);
-        put(store, qo + r, y / l);
-        put(store, qo + 2 * r, z / l);
-        put(store, qo + 3 * r, ww / l);
-    }
+/// Worked in singles (single.rs), four nodes a step, a rotation's length a plain root.
+pub fn blend(store: &mut [S], a: usize, b: usize, w: f64, mask: Option<&[S]>, out: usize, n: usize) {
+    crate::single::blend4(store, a, b, crate::single::weight(w), mask, out, n, rows(n));
 }
 
 /// one node of PoseFK.run: its rotation and origin from its parent's and its own local row
@@ -518,13 +472,13 @@ impl Fk<'_> {
     }
 }
 /// blendPose: poses `a`, `b` → `out`, all three in the one array
-pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize, in_singles: bool) -> bool {
+pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
     let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {
         return false;
     };
     let bn = bench();
     let d = poses_of!(bn, g);
-    blend(d, a, b, w, if masked { Some(&bn.mask[..]) } else { None }, out, n, in_singles);
+    blend(d, a, b, w, if masked { Some(&bn.mask[..]) } else { None }, out, n);
     true
 }
 /// skeleton.ts buildMask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
@@ -557,7 +511,7 @@ pub fn ask_mask(entries: &[(usize, f64, bool)]) {
 }
 /// sampleClip: clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
 /// (a sample needs no rig); false also for a clip the table does not hold, or one that writes a node the pose has not
-pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool, in_singles: bool) -> bool {
+pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool) -> bool {
     let need = crate::clips::nodes_of(c);
     if need == 0 || need > nodes {
         return false;
@@ -566,7 +520,7 @@ pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: b
         return false;
     };
     let b = bench();
-    crate::clips::sample(&mut poses_of!(b, g)[s..s + singles(nodes)], c, t, looped, in_singles);
+    crate::clips::sample(&mut poses_of!(b, g)[s..s + singles(nodes)], c, t, looped);
     true
 }
 /// PoseFK.run (root < 0) / runFrom

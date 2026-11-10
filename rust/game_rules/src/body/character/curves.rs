@@ -91,8 +91,7 @@ pub(super) fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::an
     if stale {
         let kept = crate::anim_skeleton::pose_cols(g, out).to_vec();
         crate::anim_skeleton::pose_cols(g, out).fill(f32::NAN);
-        let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
-        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out, singles);
+        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out);
         let (at, v) = keyed_slots(crate::anim_skeleton::pose_cols(g, out));
         crate::anim_skeleton::pose_cols(g, out).copy_from_slice(&kept);
         g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows, at, v });
