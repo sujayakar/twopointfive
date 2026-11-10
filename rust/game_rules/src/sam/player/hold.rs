@@ -86,7 +86,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                 if hold!(g, p).step_m.is_none() {
                     let yaw0 = g.ch[c].body_yaw;
                     let h = hold!(g, p);
-                    h.step_m = Some(m::hyp2(want[0] - from[0], want[2] - from[2]));
+                    h.step_m = Some(v3::dist_xz(want, from));
                     h.yaw0 = Some(yaw0);
                 }
                 let step_m = hold!(g, p).step_m.unwrap();
@@ -135,7 +135,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                 let cp = g.ch[c].pos;
                 { let to = if u >= 1.0 { v3::lerp3(cp, to, 1.0 - m::exp(-14.0 * dt)) } else { [cp[0] + d0[0], cp[1], cp[2] + d0[2]] }; crate::character::pos_replace(g, c, to); }
                 let now = g.ch[c].pos;
-                own = if u >= 1.0 { 0.0 } else { m::min(g.k.stalk.catch_stride, m::hyp2(now[0] - was[0], now[2] - was[2]) / m::max(dt, 1e-4)) };
+                own = if u >= 1.0 { 0.0 } else { m::min(g.k.stalk.catch_stride, v3::dist_xz(now, was) / m::max(dt, 1e-4)) };
                 g.ch[c].vel = [0.0, 0.0, 0.0];
                 collide_player(g, 1.7);
             }
@@ -920,10 +920,7 @@ fn whip_out(g: &mut crate::game::Game) {
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
     let dir = v3::normalize([f[0] + f[2] * 0.45, 0.0, f[2] - f[0] * 0.45]);
-    let head = match g.ch[hc].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(g.ch[hc].pos, [0.0, 1.6, 0.0]),
-    };
+    let head = g.ch[hc].bone_or(crate::character::Bone::Head, 1.6);
     unhook(g, gd);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Whip));
     crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Whip);

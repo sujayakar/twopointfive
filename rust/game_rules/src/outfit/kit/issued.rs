@@ -14,7 +14,7 @@ const CARDS: usize = KIT_MEMBERS as usize;
 /// `issuing` as a condition (true and 'own' both hold)
 fn issuing_on(g: &Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool(false)) }
 /// `gd.weapon.def.cls === 'pistol'`, of a gun's row
-fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.m.weapons.weapons.get(w).unwrap().cls == crate::weapons::WeaponClass::Pistol }
+fn is_pistol(g: &Game, w: crate::weapons::WeaponId) -> bool { g.weapon(w).cls == crate::weapons::WeaponClass::Pistol }
 /// `SUITS[s].tint`
 fn suit_tint(s: SuitId) -> V3 { suits().get(String::from(s.as_str())).unwrap().tint }
 /// `TRIMS[t].tint`
@@ -356,7 +356,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
         crate::kitload::load_man(g, g.gd[gd].ch, i as f64, held, Some(n));
         let gun = kit_gun(g, &m);
         let changed = m.weapon != d.weapon || m.suppressed != d.suppressed || m.primary != d.primary;
-        if changed && gun != g.fa[g.gd[gd].weapon].def && g.m.weapons.weapons.get(gun).unwrap().enabled {
+        if changed && gun != g.fa[g.gd[gd].weapon].def && g.weapon(gun).enabled {
             let route = g.gd[gd].route;
             g.tab.route[route].weapon = Some(gun);
             let def = g.weapon(gun).clone();

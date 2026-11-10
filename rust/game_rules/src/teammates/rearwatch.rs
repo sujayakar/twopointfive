@@ -892,7 +892,7 @@ fn bound_beyond(g: &mut Game, x: GuardId, room: RoomfightRoomId) -> bool {
 /// How far from `a` to `b` on foot: the straight line when nothing stands in it, else the nav grid's path.
 fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     let d = dist_xz(a, b);
-    if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) {
+    if !crate::scene_collision::low_blocked(g, a, b) {
         return d;
     }
     let path = match crate::scene_collision::nav_grid_find_path(g, a, b, Some(3000.0), None) {

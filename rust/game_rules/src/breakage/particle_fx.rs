@@ -346,7 +346,7 @@ pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapon
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
     let f = crate::effects::muzzle_frame(muzzle, gun_dir);
     let right = v3::scale(f.x, -1.0);
-    let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bones.get(crate::character::Bone::HandR).copied().unwrap_or(muzzle) } else { muzzle };
+    let base = if c.from == crate::particle_fx::CasingSpecFrom::Hand { g.ch[shooter].bone(crate::character::Bone::HandR).unwrap_or(muzzle) } else { muzzle };
     let port = v3::mad(v3::mad(v3::mad(base, f.z, c.ahead), f.y, c.up), right, c.right);
     let dir = v3::normalize(v3::add(v3::add(v3::scale(right, c.dir[0]), v3::scale(f.y, c.dir[1])), v3::scale(f.z, c.dir[2])));
     let life = g.m.particle_fx.pfx.casing_life;

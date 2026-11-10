@@ -510,7 +510,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
     let from = g.ch[c].pos;
     let t: V3 = [threat[0], 1.15, threat[2]];
     let d0 = v3::dist_xz(from, threat);
-    let away = m::atan2(from[0] - threat[0], from[2] - threat[2]);
+    let away = v3::yaw_to(threat, from);
     let mut plans: i32 = 0;
     let (displace_min, displace_max, min_travel) = (g.k.suppression.displace_min, g.k.suppression.displace_max, g.k.suppression.min_travel);
     for da in [1.2, -1.2, 0.8, -0.8, 1.65, -1.65, 0.4, -0.4, 0.0, 2.1, -2.1] {

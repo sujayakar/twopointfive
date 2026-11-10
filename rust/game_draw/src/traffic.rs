@@ -71,7 +71,7 @@ fn fill(g: &Game, out: &mut Vec<Word>) {
         // every way the level is walked, each traced along its own line, by its kind's weight
         for Way { amp, points: pts, .. } in ways(g).list { for k in 0..pts.len().saturating_sub(1) {
             let (a, b) = (pts[k], pts[k + 1]);
-            let len = m::hyp2(b[0] - a[0], b[2] - a[2]);
+            let len = game::v3::dist_xz(b, a);
             let n = m::max(1.0, m::ceil(len / 0.1));
             let per = amp * (len / n) / (LANE_SIGMA * 2.5);
             let mut i = 0.0;

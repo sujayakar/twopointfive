@@ -164,7 +164,7 @@ fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
         T::In { area } => inside(*area, g.seat_pos(&crate::seats::here(g))),
-        T::Near { at, r } => { let p = g.seat_pos(&crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
+        T::Near { at, r } => { let p = g.seat_pos(&crate::seats::here(g)); v3::dist_xz(p, *at) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = crate::seats::here(g).player; g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
         T::Meter { which, .. } => { let p = crate::seats::here(g).player; let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.shown[g.pl[p].ch].visibility }; band(v, t) }
@@ -237,7 +237,7 @@ fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios:
     guards.iter().any(|&x| {
         if !crate::condition::down(g, g.gd[x].ch) || drag == Some(x) { return false; }
         let c = g.gd[x].ch;
-        inside(area, g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[c].pos))
+        inside(area, g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos))
     })
 }
 
@@ -299,7 +299,7 @@ fn ok_threw(g: &Game, k: Option<&str>, quick: bool, area: Option<crate::scene_sc
 fn lying_can(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
     use crate::throwables::ItemKind;
     if k == Some("flash") || k == Some("frag") { return false; }
-    let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
+    let (me, items) = (g.player_id(g.player), g.items.items.clone());
     items.iter().any(|&x| g.tab.item[x].kind == ItemKind::Smoke && g.tab.item[x].fired && g.tab.item[x].who == me && g.tab.item[x].age <= since && inside(a, g.tab.item[x].pos))
 }
 /// a bang of that kind in `a` this frame, not a charge's
@@ -346,9 +346,9 @@ fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 fn ok_mate(g: &Game, seat: &crate::seats::SeatRef, area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64>) -> bool {
     let Some(mate) = partner_of(g) else { return false };
     let (p, s) = (g.pos_of(mate), g.seat_pos(seat));
-    let d = m::hyp2(p[0] - s[0], p[2] - s[2]);
+    let d = v3::dist_xz(p, s);
     area.map_or(true, |a| inside(a, p))
-        && at.map_or(true, |a| m::hyp2(p[0] - a[0], p[2] - a[2]) < r.unwrap_or(1.5))
+        && at.map_or(true, |a| v3::dist_xz(p, a) < r.unwrap_or(1.5))
         && by.map_or(true, |by| d < by)
         && away.map_or(true, |away| d > away)
 }
@@ -386,7 +386,7 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
     let hits = men.iter().filter(|&&m| {
         let Some(id) = crate::orders::squad_orders_of(seat, m) else { return false };
         let row = &g.tab.orders_assignment[id];
-        crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| m::hyp2(w[0] - a[0], w[2] - a[2]) < r)
+        crate::orders::rows::id_is(&row.order, crate::orders::Is::Covers) && row.watch.map_or(false, |w| v3::dist_xz(w, a) < r)
     }).count();
     hits as f64 >= n.unwrap_or(1.0)
 }
@@ -469,7 +469,7 @@ pub mod flags {
         let Some(at) = at else { return true };
         let wall = g.tab.wallcharge_set_wall_charge[c].wall.clone();
         let p = crate::wallcharge::wall_pt(g, &wall, 0.0, 0.0, None);
-        (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && m::hyp2(p[0] - at[0], p[2] - at[2]) < 4.0
+        (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && v3::dist_xz(p, at) < 4.0
     }
     /// …and one has made its hole this run
     pub fn wall_blown(seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
@@ -824,7 +824,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     let text = format!("training {}/{} \u{25b8} {}", i as usize + 1, l.steps.len(), said);
     let pos = match man {
         Some(x) => {
-            let p = g.ch[g.gd[x].ch].pos;
+            let p = g.pos_of(x);
             Some([p[0], 1.0, p[2]])
         }
         None => t.at,

@@ -288,7 +288,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
         let housings: Vec<BoxId> = g.destr.items.values().filter(|o| o.kind == DKind::Housing).map(|o| o.box_).collect();
         for hb in housings {
             let oc = g.tab.boxes[hb].c;
-            if m::hyp2(oc[0] - c[0], oc[2] - c[2]) < 0.12 && oc[1] > c[1] {
+            if v3::dist_xz(oc, c) < 0.12 && oc[1] > c[1] {
                 g.destr.items.delete(i);
                 break;
             }
@@ -484,7 +484,7 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
     }
     for c in men {
         // (his floor is under his lowest bone: a ragdoll's own place says nothing of the height it lies at. A bone well over that is a limb propped up, with nothing under it)
-        let bones: Vec<V3> = BONES.iter().filter_map(|&k| g.ch[c].bones.get(k).copied()).collect();
+        let bones: Vec<V3> = BONES.iter().filter_map(|&k| g.ch[c].bone(k)).collect();
         let low = bones.iter().fold(m::INF, |l, p| m::min(l, p[1]));
         for p in bones {
             if p[1] < low + 0.6 { out.push(crate::debris::FootMan { pos: [p[0], low - 0.1, p[2]], vel: [0.0; 3], body: true }); }

@@ -157,7 +157,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     let held = match g.pl[me].holding() { Some(h) => Some(h.g), None => None };
     if held != Some(gd) {
         // not the man in his arm: in reach and nothing solid between, statics or a leaf
-        let (a, b) = (g.ch[g.pl[me].ch].pos, g.ch[g.gd[gd].ch].pos);
+        let (a, b) = (g.player_pos(me), g.pos_of(gd));
         if v3::dist_xz(a, b) > crate::dialogue::INTERROGATE_REACH || crate::scene_collision::solid_blocked(g, [a[0], 1.0, a[2]], [b[0], 1.0, b[2]], None) { return None; }
     }
     let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
@@ -170,7 +170,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     if pick.kind == Some(crate::dialogue::IntelKind::Door) {
         crate::player::take_key(g, gd, lend_rnd(&mut rnd));
     } else if pick.kind == Some(crate::dialogue::IntelKind::Code) {
-        let at = g.ch[g.gd[gd].ch].pos;
+        let at = g.pos_of(gd);
         if let Some(k) = crate::devices::devices_pad_near(g, at) {
             let _ = crate::devices::learn_code(g, &k.def.name, crate::devices::LearnCodeHow::Told, Some(gd));
         }

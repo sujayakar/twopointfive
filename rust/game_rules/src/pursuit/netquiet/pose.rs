@@ -45,7 +45,7 @@ pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_f
     let c = g.gd[gd].ch;
     let at = whip_at.unwrap();
     let pos = g.ch[c].pos;
-    let yaw = m::atan2(at[0] - pos[0], at[2] - pos[2]);
+    let yaw = v3::yaw_to(pos, at);
     let rate = if crate::morale::rung_of(g, gd) >= 2.0 { g.k.netquiet.whip_turn_broken } else { g.k.netquiet.whip_turn };
     g.ch[c].aim_yaw = v3::approach_angle(g.ch[c].aim_yaw, yaw, m::max(0.0, rate - 6.0) * dt);   // (the pose's own easing adds its 6 rad/s after this)
     if g.gd[gd].speed < 0.3 { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, yaw, rate * dt); }

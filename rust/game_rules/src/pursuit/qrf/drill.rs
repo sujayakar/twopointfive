@@ -26,7 +26,7 @@ fn in_cast<R>(g: &mut Game, mut f: impl FnMut(&mut Game) -> R) -> R {
     r
 }
 /// `g.audio.play('radio', man.char.bones.head ?? man.char.pos, vol)`'s place
-fn head_or_pos(g: &Game, m: GuardId) -> V3 { let c = g.gd[m].ch; g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos) }
+fn head_or_pos(g: &Game, m: GuardId) -> V3 { let c = g.gd[m].ch; g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos) }
 
 /// The point on the trail `s` metres back from the head, walking the crumbs backwards; the oldest crumb if the trail is shorter.
 pub(super) fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
@@ -157,7 +157,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
                 g.dr[d].leaf.vel = v;
                 g.dr[d].leaf.quiet_t = -1.0;
                 g.dr[d].leaf.creak_armed = false;
-                let who = g.ch[g.gd[lead].ch].id;
+                let who = g.char_id(lead);
                 g.dr[d].leaf.last_who = who;
                 let at = crate::doors::door_pos(g, d);
                 crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
@@ -230,7 +230,7 @@ fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
         let e = g.events[i];
         if e.kind == crate::director::EventKind::Bang && e.time == g.time && dist_xz(e.pos, at) < 1.0 { g.events.remove(i); break; }
     }
-    let id = g.ch[g.gd[who].ch].id;
+    let id = g.char_id(who);
     let (time, serial) = (g.time, g.serial());
     g.events.push(crate::game::GameEvent {
         kind: crate::director::EventKind::Door, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(id), serial, ..Default::default()

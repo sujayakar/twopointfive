@@ -234,11 +234,11 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     };
     if let Some(cur) = cur_man {
         if crate::condition::down(g, g.gd[cur].ch) || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
-            let cur_pos = g.ch[g.gd[cur].ch].pos;
+            let cur_pos = g.pos_of(cur);
             if let Some(lk) = g.gd[gd].last_known {
                 if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
-            mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
+            mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.char_id(gd) && g.gd[gd].state == GuardState::Alert;
             crate::mind::foe(g, gd, None, "guards");
             crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
             lost_man = true;
@@ -329,7 +329,7 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::rig_props::RigWeapon {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
-    let rig = g.m.weapons.weapons.get(def).unwrap().rig;
+    let rig = g.weapon(def).rig;
     if g.gd[gd].carbine || rig == WeaponDefRig::Carbine {
         crate::rig_props::RigWeapon::Carbine
     } else if rig == WeaponDefRig::Sc20k {
@@ -467,7 +467,7 @@ fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
 pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3, start_ok: bool, round_ok: bool, except: Option<GuardId>) {
     let w = g.gd[gd].weapon;
     let def = g.fa[w].def;
-    let spec = match g.m.weapons.weapons.get(def).unwrap().burst {
+    let spec = match g.weapon(def).burst {
         Some(s) => s,
         None => return,
     };
@@ -608,9 +608,9 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     g.tab.light[fl].dir = dir;
     if g.gd[gd].fled {
         g.tab.light[fl].enabled = false;
-        return g.ch[c].bones.get(Bone::UpperArmR).copied();
+        return g.ch[c].bone(Bone::UpperArmR);
     }
-    let mut held: Option<V3> = g.ch[c].bones.get(Bone::UpperArmR).copied();
+    let mut held: Option<V3> = g.ch[c].bone(Bone::UpperArmR);
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
     if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {

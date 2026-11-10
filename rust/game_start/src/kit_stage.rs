@@ -75,7 +75,7 @@ fn make_plan(g: &mut Game, data: &Json, y: &Json) {
     let (level, block) = (PlanLevel::of(data), PlanBlock::of(data.get("scenarios").get("kitView")));
     let way: Way = Way::of(y);
     let pl = g.player;
-    let sam = g.ch[g.pl[pl].ch].pos;
+    let sam = g.player_pos(pl);
     let Some(geo) = kp::geometry(&level, Some(&block), &kp::way_built(&way), [sam[0], sam[2]]) else { return };
     let cell: RefCell<&mut Game> = RefCell::new(g);
     let free = |x: f64, z: f64| !game::scene_collision::nav_grid_is_blocked(&**cell.borrow(), x, z);

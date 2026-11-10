@@ -193,7 +193,7 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, d
             let k = edge * ws.lean_along - w0.lean_off.unwrap_or(0.0);
             let pos = g.ch[c].pos;
             let a: V3 = [pos[0] + t[0] * k, h, pos[2] + t[2] * k];
-            let d = m::hyp2(ap[0] - a[0], ap[2] - a[2]);
+            let d = v3::dist_xz(ap, a);
             let r = m::min(1.0, ws.lean_clear_m / m::max(d, 1e-3));
             if d < 0.2 || crate::scene_collision::shot_blocked(g, a, [a[0] + (ap[0] - a[0]) * r, h + (ap[1] - h) * r, a[2] + (ap[2] - a[2]) * r], None, None) {
                 want = false;
@@ -545,7 +545,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     let side_on = kind.is_some() && kind != Some(crate::close::CloseKind::Behind);
     let from = if side_on {
         let (a, b) = (g.ch[c].pos, g.ch[gc].pos);
-        v3::wrap_angle(m::atan2(a[0] - b[0], a[2] - b[2]) - g.ch[gc].body_yaw)
+        v3::wrap_angle(v3::yaw_to(b, a) - g.ch[gc].body_yaw)
     } else {
         0.0
     };
@@ -603,7 +603,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
             { let to = v3::lerp3(g.ch[c].pos, at, 1.0 - m::exp(-14.0 * dt)); crate::character::pos_replace(g, c, to); }
             collide_player(g, y1);
             let (a, b) = (g.ch[gc].pos, g.ch[c].pos);
-            let y = m::atan2(a[0] - b[0], a[2] - b[2]);
+            let y = v3::yaw_to(b, a);
             td_yaw = Some(y);
             if let Some(t) = g.pl[p].takedown_mut() { t.yaw = Some(y); }
         }

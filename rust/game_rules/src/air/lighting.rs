@@ -73,9 +73,9 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let e = crate::workthings::breaker_errand(g);
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     if let Some(e) = e {
-        return (m::hyp2(p[0] - e.mid[0], p[2] - e.mid[2]) < 1.3 || m::hyp2(p[0] - e.goal[0], p[2] - e.goal[2]) < 0.7)
+        return (v3::dist_xz(p, e.mid) < 1.3 || v3::dist_xz(p, e.goal) < 0.7)
             && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], e.at, None);
     }
     m::hyp2(p[0] - bp[0], p[2] - (bp[2] - 0.6)) < 1.3
@@ -152,7 +152,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
             crate::mind::raise(g, gd, 0.34, "lighting");
             g.gd[gd].react_t = 1.0 + crate::dice::draw_of(g, "lighting::set_blackout#1", gd);
         }
-        let d = v3::dist(g.ch[g.gd[gd].ch].pos, g.level.breaker.pos);
+        let d = v3::dist(g.pos_of(gd), g.level.breaker.pos);
         if d < bd
             && g.gd[gd].state != crate::game::GuardState::Alert
             && g.gd[gd].held.is_none()
@@ -185,7 +185,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
                 g.gd[best].search_t = 0.0;
             }
             crate::game::game_say(g, best, "power's out — checking the breaker", Some(true), None);
-            let p = g.ch[g.gd[best].ch].pos;
+            let p = g.pos_of(best);
             crate::audio_iface::game_audio_like_play(g, "radio", Some(p), Some(0.6), None);
         }
     }

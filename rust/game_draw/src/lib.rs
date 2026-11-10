@@ -256,12 +256,12 @@ impl Drawn {
 pub fn tick(g: &Game) -> u32 { game::m::round(g.time * 60.0) as u32 }
 /// where the picture looks: the host's camera, or its man where it has none
 pub fn looks_at(g: &Game) -> [f64; 3] {
-    match g.host_cam { Some(c) => g.tab.camera[c].target, None => g.ch[g.pl[game::seats::host_man(g)].ch].pos }
+    match g.host_cam { Some(c) => g.tab.camera[c].target, None => g.player_pos(game::seats::host_man(g)) }
 }
 /// what the picture leaves out of a fire's embers and hot air: anything further from where it looks than it would ever show
 pub fn far_for_a_fire(g: &Game, p: [f64; 3]) -> bool {
     let f = looks_at(g);
-    !(game::m::hyp2(p[0] - f[0], p[2] - f[2]) < g.k.fire.ember_r)
+    !(game::v3::dist_xz(p, f) < g.k.fire.ember_r)
 }
 
 /// the short way round from one angle to another

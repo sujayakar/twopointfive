@@ -23,7 +23,7 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
     }
     let key = format!(
         "{}|{},{}|{},{}|{},{},{},{}",
-        js::num_str(g.ch[g.gd[gd].ch].id),
+        js::num_str(g.char_id(gd)),
         js::num_str(m::floor(at[0] / cell)), js::num_str(m::floor(at[2] / cell)),
         js::num_str(m::floor(to[0] / cell)), js::num_str(m::floor(to[2] / cell)),
         g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
@@ -108,7 +108,7 @@ fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3])
         let mut room = false;
         for sd in [1.0, -1.0] {
             let q: V3 = [mk[0] + nx * sd * w_, 0.0, mk[2] + nz * sd * w_];
-            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [mk[0], 0.45, mk[2]], [q[0], 0.45, q[2]], None) { room = true; }
+            if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mk, q) { room = true; }
         }
         if !room { let r = find(&mut root, i); tight[r] = true; }
     }

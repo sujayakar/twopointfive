@@ -23,7 +23,7 @@ fn on_tool(g: &mut Game, pid: PlayerId, f: impl FnOnce(&mut crate::game::PlayerK
 
 /// the row `WEAPONS.m870`; held only for the line that reads it
 fn m870(g: &Game) -> &crate::weapons::WeaponDef {
-    g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap()
+    g.weapon(crate::weapons::WeaponId::M870)
 }
 
 /// The big slot's tool that opens this door from where you stand.
@@ -75,7 +75,7 @@ pub fn sam_big_spot(g: &crate::game::Game, d: DoorId, from: V3, tool: crate::kit
         .guards
         .iter()
         .filter(|&&q| !crate::condition::down(g, g.gd[q].ch))
-        .map(|&q| g.ch[g.gd[q].ch].pos)
+        .map(|&q| g.pos_of(q))
         .collect();
     let n0 = crate::doortools::door_pt(g, d, 0.0, 0.0, side, None);
     let n1 = crate::doortools::door_pt(g, d, 0.0, 1.0, side, None);
@@ -507,7 +507,7 @@ pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Op
     let kit = if let Some(pid) = crate::seats::man_by_id(g, c_2.id) {
         g.pl[pid].big_kit
     } else {
-        let gd = g.guards.iter().copied().find(|&q| g.ch[g.gd[q].ch].id == c_2.id)?;
+        let gd = g.guards.iter().copied().find(|&q| g.char_id(q) == c_2.id)?;
         crate::kit::kit_big(g, gd)
     };
     match kit {
@@ -527,7 +527,7 @@ pub(super) fn gun_up(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !g.gd[gd].slung.as_ref().map_or(false, |s| s.out) {
         let own = g.gd[gd].weapon;
         let def = g.fa[own].def;
-        if g.m.weapons.weapons.get(def).unwrap().pellets.as_ref().map_or(false, |p| p.breach.is_some()) {
+        if g.weapon(def).pellets.as_ref().map_or(false, |p| p.breach.is_some()) {
             return true;
         }
         let (route, c) = (g.gd[gd].route, g.gd[gd].ch);

@@ -108,7 +108,7 @@ impl Player {
     }
     /// what he has asked of his hands, on the hand of this tick. `over`: a point his eyes are on whatever the script says, and his feet stop for it
     pub fn hands(&self, g: &Game, cmd: &mut PlayerCmd, over: Option<V3>) {
-        let pos = g.ch[g.pl[game::seats::seat(g, self.seat).player].ch].pos;
+        let pos = g.seat_pos(&game::seats::seat(g, self.seat));
         let mut ahead = None;
         if let Some(goal) = self.goal.get() {
             let (dx, dz) = (goal[0] - pos[0], goal[2] - pos[2]);
@@ -154,8 +154,8 @@ impl Player {
     }
     pub fn seen<R>(&self, f: impl FnOnce(&Game, &game::seats::SeatRef) -> R) -> R { self.ask(|g| f(g, &game::seats::seat(g, self.seat))) }
     pub fn t(&self) -> f64 { self.t.get() }
-    pub fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
-    pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.ch[g.gd[gd].ch].pos) }
+    pub fn pos(&self) -> V3 { self.seen(|g, s| g.seat_pos(s)) }
+    pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.pos_of(gd)) }
     pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| game::condition::down(g, g.gd[gd].ch)) }
     /// a place of the world on the picture, and is it inside the margins of the picture a hand can point at
     pub fn screen(&self, p: V3) -> (f64, f64, bool) {

@@ -111,11 +111,11 @@ pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crat
     }
     let fo = squad_orders_people_ray(g, seat, ro, rd, best);
     if let Some(foe) = fo {
-        let q = g.ch[g.gd[foe].ch].pos;
+        let q = g.pos_of(foe);
         return OrderTarget::Foe(OrderTargetFoe { at: [q[0], 0.0, q[2]], foe });
     }
     if let Some(gd) = man {
-        let q = g.ch[g.gd[gd].ch].pos;
+        let q = g.pos_of(gd);
         return OrderTarget::None(OrderTargetNone { at: [q[0], 0.0, q[2]], man: Some(gd) });
     }
     if let Some(h) = &hit {
@@ -391,7 +391,7 @@ pub fn squad_orders_again(g: &mut crate::game::Game, id_2: &str, men: &[GuardId]
 
 /// Hand a man his assignment
 pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::orders::SquadOrdersAssignA) {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let t = g.time;
     let was = g.sets[g.seat].orders.asg.get(gd).copied();
     let fighting = g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert;

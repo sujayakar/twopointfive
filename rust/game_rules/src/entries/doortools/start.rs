@@ -235,7 +235,7 @@ fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: GuardId,
     if door_tools_knows(&crate::seats::here(g), d, side, !out) { return out; }
     door_tools_learn(g, d, side, Some(!out));
     if out {
-        let who = g.ch[g.gd[gd].ch].id;
+        let who = g.char_id(gd);
         let level = if crate::silent::squad_silent(g, &crate::seats::here(g)) { 0.06 } else { 0.12 };
         crate::doors::doors_rattle(g, d, who, Some(level));
     }
@@ -283,7 +283,7 @@ pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
         j += 1;
         let Some(d) = door else { continue };
         if !kind_door || !reach || is_open(g, d) || !is_lock_verb(verb) { continue; }
-        let at = g.ch[g.pl[g.player].ch].pos;
+        let at = g.player_pos(g.player);
         let side = crate::orders::side_of(g, d, at);
         door_tools_learn(g, d, side, Some(false));
     }
@@ -774,7 +774,7 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
             let off = off_of(g, d, pp.pos, t_side);
             let q = door_pt(g, d, along + (if hi { 1.0 } else { -1.0 }) * bang_file, off, t_side, None);
             if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
-                || crate::scene_collision::solid_blocked(g, [pp.pos[0], 0.45, pp.pos[2]], [q[0], 0.45, q[2]], None)
+                || crate::scene_collision::low_blocked(g, pp.pos, q)
                 || men.iter().any(|&m| m != gd && v3::dist_xz(g.tab.doortools_door_op[op].post.get(m).unwrap().pos, q) < 0.7)
                 || !crate::stackroom::stack_room_keeps(g, d, t_side, q) { continue; }
             let qq = crate::orders::StackPost { pos: q, lead: false, ..pp };
@@ -794,7 +794,7 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
             let off = off_of(g, d, l.pos, t_side);
             let q = door_pt(g, d, al + dir * k * bang_file, off, t_side, None);
             if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
-                || crate::scene_collision::solid_blocked(g, [l.pos[0], 0.45, l.pos[2]], [q[0], 0.45, q[2]], None)
+                || crate::scene_collision::low_blocked(g, l.pos, q)
                 || !crate::stackroom::stack_room_keeps(g, d, t_side, q) { continue; }
             let qq = crate::orders::StackPost { pos: q, face: l.face, stack_side: l.stack_side, lead: false, ..pp };
             g.tab.doortools_door_op[op].post.set(gd, qq);
@@ -818,7 +818,7 @@ fn door_tools_hand_of(g: &crate::game::Game, d: DoorId, side: f64, p: V3) -> f64
     let h = if a >= w + 0.05 { 1.0 } else if a <= -0.05 { -1.0 } else { 0.0 };
     if h == 0.0 { return 0.0; }
     let j = door_pt(g, d, if h > 0.0 { w + 0.35 } else { -0.35 }, 0.45, side, None);
-    if v3::dist_xz(p, j) > 0.5 && crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [j[0], 0.45, j[2]], None) { 0.0 } else { h }
+    if v3::dist_xz(p, j) > 0.5 && crate::scene_collision::low_blocked(g, p, j) { 0.0 } else { h }
 }
 
 /// a walk from where he stands to that place changes hands in front of the opening
@@ -875,7 +875,7 @@ fn door_tools_keep_hands(g: &mut crate::game::Game, op: DoorOpId, posts: &[crate
         let mut j = 1.0;
         while j <= 3.0 && q.is_none() {
             let c = door_pt(g, d, aj + h * j * bang_file, oj, side, None);
-            if place_free(g, op, gd, &others, c) && !crate::scene_collision::solid_blocked(g, [jj.pos[0], 0.45, jj.pos[2]], [c[0], 0.45, c[2]], None) { q = Some(c); }
+            if place_free(g, op, gd, &others, c) && !crate::scene_collision::low_blocked(g, jj.pos, c) { q = Some(c); }
             j += 1.0;
         }
         if q.is_none() && place_free(g, op, gd, &others, jj.pos) { q = Some(jj.pos); }
@@ -902,7 +902,7 @@ fn door_tools_lead_hand(g: &mut crate::game::Game, op: DoorOpId, posts: &[crate:
     for x in posts {
         if !x.lead || x.pos == pp.pos { continue; }
         if (if along_of(g, d, x.pos) > w / 2.0 { 1.0 } else { -1.0 }) != h { continue; }
-        if place_free(g, op, gd, &others, x.pos) && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [x.pos[0], 0.45, x.pos[2]], None) { jj = Some(*x); break; }
+        if place_free(g, op, gd, &others, x.pos) && !crate::scene_collision::low_blocked(g, at, x.pos) { jj = Some(*x); break; }
     }
     let qq = match jj {
         Some(j) => j,
@@ -911,7 +911,7 @@ fn door_tools_lead_hand(g: &mut crate::game::Game, op: DoorOpId, posts: &[crate:
             let off = off_of(g, d, pp.pos, side);
             let q = door_pt(g, d, w - along, off, side, None);
             if (if along_of(g, d, q) > w / 2.0 { 1.0 } else { -1.0 }) != h { return; }
-            if !place_free(g, op, gd, &others, q) || crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [q[0], 0.45, q[2]], None) { return; }
+            if !place_free(g, op, gd, &others, q) || crate::scene_collision::low_blocked(g, at, q) { return; }
             crate::orders::StackPost { pos: q, face: v3::wrap_angle(pp.face + core::f64::consts::PI), stack_side: -pp.stack_side, ..pp }
         }
     };

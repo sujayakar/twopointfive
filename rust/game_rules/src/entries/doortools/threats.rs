@@ -44,7 +44,7 @@ pub(super) fn door_tools_close_up(g: &mut crate::game::Game, op: DoorOpId, gd: O
     let a = if along_of(g, d, p.pos) > w / 2.0 { w + g.k.doortools.edge_out } else { -g.k.doortools.edge_out };
     let off = off_of(g, d, p.pos, side);
     let q = door_pt(g, d, a, off, side, None);
-    if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::solid_blocked(g, [p.pos[0], 0.45, p.pos[2]], [q[0], 0.45, q[2]], None) { return; }
+    if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) || crate::scene_collision::low_blocked(g, p.pos, q) { return; }
     let fc = frame(g, d);
     let name = crate::orders::door_words(g, d);
     door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(q), face: Some(p.face), watch: Some([fc[0], 1.05, fc[2]]), stance: Some(crate::character::Stance::Stack), upper: Some(crate::character::UpperMode::None), stack_side: Some(p.stack_side), going: format!("closing up · {}", name).into(), there: format!("on the frame · {}", name).into(), ..Default::default() });
@@ -143,7 +143,7 @@ pub(super) fn door_tools_bang_spot(g: &mut crate::game::Game, op: DoorOpId, from
         ours.push(at);
     }
     let pl = g.player;
-    let sam_at = g.ch[g.pl[pl].ch].pos;
+    let sam_at = g.player_pos(pl);
     if !(crate::condition::down(g, g.pl[pl].ch) || (sams && near_door(g, d, side, sam_at))) { ours.push(crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))); }
     let (into_min, throw_m, air_h, flash_m, lit) = (g.k.doortools.bang_into_min, g.k.doortools.thr_throw_m, g.k.doortools.air_h, g.k.doortools.thr_flash_m, g.k.doortools.bang_into_lit);
     // (at, n, sc, deep)
@@ -203,7 +203,7 @@ pub(super) fn door_tools_land_for(g: &crate::game::Game, d: DoorId, side: f64, d
     let mut b = 0.9;
     while b <= deep + 1e-6 {
         let p = door_pt(g, d, w / 2.0, b, -side, None);
-        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || crate::scene_collision::solid_blocked(g, [prev[0], 0.45, prev[2]], [p[0], 0.45, p[2]], None) { break; }
+        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || crate::scene_collision::low_blocked(g, prev, p) { break; }
         best = p;
         prev = p;
         b += 0.3;
@@ -220,7 +220,7 @@ pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemI
     let gate = gate_ops(g, op);
     let sams = crate::orders::squad_orders_sams(&crate::seats::here(g));
     let pl = g.player;
-    let sam_pos = g.ch[g.pl[pl].ch].pos;
+    let sam_pos = g.player_pos(pl);
     let sam_ours = sams && near_door(g, d, side, sam_pos);
     let team = match dop!(g, op).threw { Some(th) => g.team(th), None => crate::orders::squad_orders_team(&crate::seats::here(g)) };
     g.tab.item[it].side = Some(team);
@@ -380,7 +380,7 @@ pub(super) fn door_tools_threat_note(g: &mut crate::game::Game, op: DoorOpId) {
         if kind != crate::director::EventKind::GuardShot { continue; }
         let (a, to, who) = match (from, to, who) { (Some(a), Some(b), Some(w)) => (a, b, w), _ => continue };
         if !threat_beyond(g, op, a) { continue; }
-        let by = match g.guards.iter().copied().find(|x| g.ch[g.gd[*x].ch].id == who) { Some(x) => x, None => continue };
+        let by = match g.guards.iter().copied().find(|x| g.char_id(*x) == who) { Some(x) => x, None => continue };
         if g.team(by).ours() || crate::condition::down(g, g.gd[by].ch) { continue; }
         let (bx, bz) = (to[0] - a[0], to[2] - a[2]);
         let l2 = js::or(bx * bx + bz * bz, 1e-6);

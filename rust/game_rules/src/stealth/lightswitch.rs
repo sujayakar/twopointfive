@@ -38,7 +38,7 @@ fn room_of_light(g: &mut crate::game::Game, t: FixtureId) -> f64 {
             let p: V3 = [(m::floor(pos[0] / cs) + dx as f64 + 0.5) * cs, 1.2, (m::floor(pos[2] / cs) + dz as f64 + 0.5) * cs];
             let q = crate::cleared::cleared_rooms_room_at(g, p);
             if !js::truthy(q) { continue; }
-            let d = m::hyp2(p[0] - pos[0], p[2] - pos[2]);
+            let d = v3::dist_xz(p, pos);
             if d < bd && !crate::scene_collision::solid_blocked(g, from, p, None) { bd = d; best = q; }
         }
     }
@@ -66,7 +66,7 @@ fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorId) -
     let (ux, uz) = (n[2], -n[0]);
     let mut fit: V3 = [stand[0], 0.0, stand[2]];
     crate::scene_collision::collide_circle(g, &mut fit, 0.3, 0.2, 1.5, None);
-    if m::hyp2(fit[0] - stand[0], fit[2] - stand[2]) > 0.02 { return None; }
+    if v3::dist_xz(fit, stand) > 0.02 { return None; }
     let mut floor: Option<V3> = None;
     let mut o = 0.0;
     while o <= 0.51 && floor.is_none() {
@@ -328,7 +328,7 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
 
 /// The plate nearest `pl`'s feet within `r` m that he has a clear line to from his chest.
 fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate::lightswitch::WallSwitch> {
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
     let mut best: Option<WallSwitch> = None;
     let mut bd = r;
@@ -342,7 +342,7 @@ fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate:
 /// The NEAREST plate only: a marker from NEARBY_M, the row in reach with the hands free.
 pub fn switch_rows(g: &mut crate::game::Game, pl: PlayerId, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::lightswitch::SwitchRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     let Some(sw) = switch_near(g, pl, crate::player::NEARBY_M) else { return };
-    let near = v3::dist_xz(sw.pos, g.ch[g.pl[pl].ch].pos) < g.k.lightswitch.reach;
+    let near = v3::dist_xz(sw.pos, g.player_pos(pl)) < g.k.lightswitch.reach;
     let reach = near && super::stickycam::hands_free(g, pl);
     let lit = switch_lit(g, &sw);
     let line2 = if reach { "" } else if !near { "step closer" } else if g.pl[pl].sprinting { "stop sprinting" } else { "hands full" };

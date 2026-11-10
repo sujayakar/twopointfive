@@ -96,7 +96,7 @@ pub fn wall_charge_can_of(g: &mut crate::game::Game, gd: GuardId, t: &crate::ord
     let cs = g.col.nav.cell;
     let said = if wall_charge_kept_for(g, t).is_some() {
         let p = g.pos_of(gd);
-        let key = format!("r|{}|{},{}|{},{}", g.ch[g.gd[gd].ch].id, m::floor(p[0] / cs), m::floor(p[2] / cs), spot[0], spot[2]);
+        let key = format!("r|{}|{},{}|{},{}", g.char_id(gd), m::floor(p[0] / cs), m::floor(p[2] / cs), spot[0], spot[2]);
         kept_reach(g, key, gd, spot)
     } else { crate::orders::squad_orders_reach(g, gd, spot) };
     match said { Some(s) => WallChargeCanOf::Text(s), None => WallChargeCanOf::Bool(true) }
@@ -369,7 +369,7 @@ fn wall_charge_waiting(g: &crate::game::Game, op: WallOpId, el: f64) -> bool {
 // ------------------------------------------------------------ Sam's key, the frame
 /// the set charge nearest Sam (null: none)
 pub(super) fn wall_charge_nearest(g: &mut crate::game::Game, of: Option<&mut dyn FnMut(&mut crate::game::Game, WallChargeId) -> bool>) -> Option<WallChargeId> {
-    let sam = g.ch[g.pl[g.player].ch].pos;
+    let sam = g.player_pos(g.player);
     let mut list: Vec<WallChargeId> = Vec::new();
     match of {
         Some(f) => for c in g.sets[g.seat].wall_charge.set.clone() { if f(g, c) { list.push(c); } },
@@ -400,7 +400,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     if let Some(rows) = g.sets[g.seat].orders.menu.as_ref().map(|mn| mn.rows.clone()) {   // (a menu up with a row on this key: the key IS that row)
         if rows.iter().any(|&d| g.tab.orders_order_def[d].word) { return; }
     }
-    let sam = g.ch[g.pl[g.player].ch].pos;
+    let sam = g.player_pos(g.player);
     let c = match wall_charge_nearest(g, Some(&mut |g: &mut Game, x: WallChargeId| wall_charge_key_is(g, &crate::seats::here(g), x))) { Some(c) => c, None => return };
     let wall = g.tab.wallcharge_set_wall_charge[c].wall.clone();
     let foot = wall_pt(g, &wall, 0.0, 0.0, None);
@@ -686,7 +686,7 @@ fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
             for k in [1.0, 0.6, 0.3, -1.0, -0.6, 0.0] {
                 for dd in [0.0, 0.6, -0.5, 1.2] {
                     let q = wall_pt(g, &w, h.du + lat * k, -(tk + m::max(0.8, deep + dd)), None);
-                    if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [mouth[0], 0.45, mouth[2]], [q[0], 0.45, q[2]], None)
+                    if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, mouth, q)
                         && !(strict && wall_charge_in_frame(g, q, Some(off_frame)))
                         && !pods.iter().any(|x| v3::dist_xz(x.pos, q) < 0.7) { got = Some(q); break 'search; }
                 }
@@ -817,7 +817,7 @@ fn wall_charge_look_from(g: &crate::game::Game, p: V3, into: f64, want: f64) -> 
 pub fn wall_charge_blow(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pressed: Option<bool>) -> Option<crate::wallcharge::WallChargeBlow> {
     let c = match c_2 { Some(c) => Some(c), None => wall_charge_nearest(g, None) };
     let pressed = pressed.unwrap_or(true);
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| wall_charge_blow_raw(g, c, pressed));
     r.map(|x| WallChargeBlow { hole: x.hole })
 }
@@ -849,7 +849,7 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
     let (knock_m, stun_m, ours_secs, near_m) = (g.k.doortools.knock_m, g.k.doortools.stun_m, g.k.wallshot.ours_secs, g.k.wallkill.near_m);
     let pl = g.player;
     if wk && !crate::condition::down(g, g.pl[pl].ch) && !g.god_mode {
-        let p = g.ch[g.pl[pl].ch].pos;
+        let p = g.player_pos(pl);
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
         let struck = if far { hole && dist < knock_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { near > 0.0 && dist < near_m };
@@ -865,7 +865,7 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
     *sam = m::max(*sam, k);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there)
     if !crate::condition::down(g, g.pl[pl].ch) {
-        let p = g.ch[g.pl[pl].ch].pos;
+        let p = g.player_pos(pl);
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
         let flashed = if far { hole && dist < stun_m && !crate::scene_collision::solid_blocked(g, inn, [p[0], 1.1, p[2]], None) } else { near > 0.0 };
@@ -890,7 +890,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let breach = if outer && crate::wallbreak::wall_break_adopt(g, w.index) { Some(w.index) } else { None };   // (an outer wall: this blast alone opens it)
     let hung = Some(crate::wallbreak::BlastOptsHung { wall: w.index, r: g.k.wallcharge.hung_m });
     crate::cleared::cleared_rooms_room_at(g, at);   // (the room beyond is named on the floor as it is BEFORE this hole joins two rooms)
-    let who = g.ch[g.pl[g.player].ch].id;
+    let who = g.player_id(g.player);
     // WHO THE BLAST CATCHES ON ITS OWN SIDE IS ASKED ONCE, NOW, BY THE WARNING'S OWN CALL (`wall_charge_too_close`): the world as it stood when the
     // charge went. What stood between a man and the charge shielded him, and the note he was given was true. Asked after the blast instead (as every
     // near-side test below once was, each with a line of its own), the furniture the blast had just smashed no longer stood, and a man the warning
@@ -908,7 +908,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let mut seat_near: Vec<f64> = Vec::new();
     crate::seats::each_seat(g, &mut |g: &mut Game| {
         let pl = g.player;
-        let share = if crate::condition::down(g, g.pl[pl].ch) { 0.0 } else { let p = g.ch[g.pl[pl].ch].pos; wall_charge_blast_share(g, &w, p, Some(r), Some(false)) };
+        let share = if crate::condition::down(g, g.pl[pl].ch) { 0.0 } else { let p = g.player_pos(pl); wall_charge_blast_share(g, &w, p, Some(r), Some(false)) };
         seat_near.push(share);
     });
     crate::destruction::destruction_blast(g, at, Some(crate::wallbreak::BlastOpts { who: Some(who), chaos: Some(false), breach, hung, ..Default::default() }));

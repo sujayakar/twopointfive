@@ -133,7 +133,7 @@ fn log(g: &mut crate::game::Game, s: &str) {
 
 /// this gun's round in the engine's units
 fn weight_of(g: &crate::game::Game, gd: GuardId) -> f64 {
-    let cls = g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().cls;
+    let cls = g.weapon(g.fa[g.gd[gd].weapon].def).cls;
     let k = if cls == crate::weapons::WeaponClass::Pistol { g.k.walls.pistol_k } else { 1.0 };
     k * crate::destruction::chaos_of(g) * 2.0
 }
@@ -193,7 +193,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
             }
         }
     }
-    let (team, my_pos) = (g.team(gd), g.ch[g.gd[gd].ch].pos);
+    let (team, my_pos) = (g.team(gd), g.pos_of(gd));
     for (mate, row) in s.men.iter() {
         if mate == gd || g.team(mate) != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
@@ -343,7 +343,7 @@ pub fn cover_lane(g: &crate::game::Game, gd: GuardId, from: V3, to: V3) -> bool 
 
 /// a free man's sum: is shooting through quicker than walking round
 fn worth(g: &crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
     let len = crate::places::walk_len(pos, &path) + dist_xz(path.last().copied().unwrap_or(pos), to);
     rounds * g.k.coverfire.round_secs <= len / g.k.coverfire.walk_pace
@@ -608,7 +608,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
             return None;
         }
     }
-    let facing_err = m::abs(v3::wrap_angle(m::atan2(to[0] - pos[0], to[2] - pos[2]) - g.ch[c].aim_yaw));
+    let facing_err = m::abs(v3::wrap_angle(v3::yaw_to(pos, to) - g.ch[c].aim_yaw));
     let on = facing_err < 0.25 && !g.gd[gd].muzzle_down;
     let settle_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.settle_k);
     let settle = m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0) * settle_k;
@@ -625,7 +625,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let ok = on && lay >= p.acquire_min - 1e-9;
     let fa = g.gd[gd].weapon;
     let def = g.fa[fa].def;
-    if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
+    if g.weapon(def).burst.is_some() {
         let tr = g.arms[g.gd[gd].ch].aim.track;
         g.arms[g.gd[gd].ch].aim.track = lay;
         crate::guards::burst_trigger(g, gd, dt, to, ok, ok, None);
@@ -636,7 +636,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         && crate::weapons::firearm_fire(g, fa)
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
-        let w = g.m.weapons.weapons.get(def).unwrap();
+        let w = g.weapon(def);
         let (r, cd, cd_jitter) = (w.ai_spread, w.cd, w.cd_jitter);
         g.arms[g.gd[gd].ch].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
         let spread_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.spread_k);
@@ -725,7 +725,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
         crate::game::game_say(g, gd, "reloading.", None, None);
         return true;
     }
-    let r = g.m.weapons.weapons.get(g.fa[fa].def).unwrap().ai_spread;
+    let r = g.weapon(g.fa[fa].def).ai_spread;
     let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * sk.spread_k;
     let sup_v = g.cond[g.gd[gd].ch].sup.v;
     let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, g.gd[gd].ch, sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
@@ -856,7 +856,7 @@ fn the_operatives_see(g: &mut Game, dt: f64) {
 fn count_the_round_on_his_chew(g: &mut Game, e_to: V3, e_who: Option<f64>, time: f64) {
     let mut at = 0;
     while let Some(gd) = state_of(g).men.next_key(&mut at) {
-        let char_id = g.ch[g.gd[gd].ch].id;
+        let char_id = g.char_id(gd);
         let cw = match state_of(g).men.get(gd).and_then(|row| row.chew.as_ref()) {
             Some(cw) if Some(char_id) == e_who && cw.t == time => cw.clone(),
             _ => continue,

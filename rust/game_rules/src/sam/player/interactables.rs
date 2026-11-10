@@ -140,7 +140,7 @@ fn interact_cmp(g: &Game, p: V3, priority: &JsMap<String, f64>, a: &crate::game:
 pub(super) fn build_interactables(g: &mut crate::game::Game) {
     let pl = g.player;
     let mut list: Vec<crate::game::Interactable> = Vec::new();
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let mut things: Vec<(usize, Vec<crate::game::Interactable>)> = Vec::new();
     let mut rows: Vec<crate::game::Interactable> = Vec::new();
     const NO_BOOT: &str = "kick it — it opens toward you, so that won't work";
@@ -171,7 +171,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         let gun = hold.variant == crate::character::HoldVariant::Gun;
         let k = g.k.hold.secs;
         let gc = g.gd[gd].ch;
-        let head = match g.ch[gc].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[gc].pos, [0.0, 1.6, 0.0]) };
+        let head = g.ch[gc].bone_or(crate::character::Bone::Head, 1.6);
         let cv = g.gd[gd].civ;
         let callsign = g.gd[gd].callsign.clone();
         let line1 = match cv {

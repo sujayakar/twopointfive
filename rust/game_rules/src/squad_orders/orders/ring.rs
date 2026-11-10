@@ -51,7 +51,7 @@ fn target_kind(t: &OrderTarget) -> &'static str {
 }
 /// `{ kind: 'none', at: [p[0], 0, p[2]] }`, p where Sam stands
 fn at_sam(g: &Game, seat: &crate::seats::SeatRef) -> OrderTarget {
-    let p = g.ch[g.pl[seat.player].ch].pos;
+    let p = g.seat_pos(seat);
     OrderTarget::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: None })
 }
 fn opts_men(men: Vec<GuardId>, ack: Option<String>) -> GiveOpts {
@@ -519,7 +519,7 @@ fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId,
     let (mx, my) = mouse(g, input);
     for (k, &gd) in squad.iter().enumerate() {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
-        let pos = g.ch[g.gd[gd].ch].pos;
+        let pos = g.pos_of(gd);
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, pos, w, h, None, None);
         if !front { continue; }
         let d = m::hyp2(sx - mx, sy - my);

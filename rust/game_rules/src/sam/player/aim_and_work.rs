@@ -452,9 +452,9 @@ pub(super) fn body_dist(g: &crate::game::Game, gd: GuardId, within: Option<f64>)
     let p = g.ch[me].pos;
     let c = g.gd[gd].ch;
     let a: V3 = [p[0], 0.5, p[2]];
-    let foot_l = g.ch[c].bones.get(crate::character::Bone::FootL).copied();
-    let foot_r = g.ch[c].bones.get(crate::character::Bone::FootR).copied();
-    let hips = g.ch[c].bones.get(crate::character::Bone::Hips).copied();
+    let foot_l = g.ch[c].bone(crate::character::Bone::FootL);
+    let foot_r = g.ch[c].bone(crate::character::Bone::FootR);
+    let hips = g.ch[c].bone(crate::character::Bone::Hips);
     let l = body_reach(g, a, p, foot_l, 0.0, within);
     let r = body_reach(g, a, p, foot_r, 0.0, within);
     let h = body_reach(g, a, p, hips, 0.3, within) + 0.3;
@@ -682,10 +682,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
 /// A man's centre of mass: his chest bone, or his feet raised by `up` before he has bones.
 fn chest_or(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(b) => *b,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Chest, up)
 }
 
 #[cfg(test)]

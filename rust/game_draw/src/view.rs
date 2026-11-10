@@ -73,7 +73,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
     let pl = game::seats::host_man(g);
     let (ch, cam) = (g.pl[pl].ch, &g.tab.camera[g.tab.cmd_seat[seat].cam]);
     let at = g.ch[ch].pos;
-    let spectated = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).map(|&gd| g.ch[g.gd[gd].ch].pos) } else { None };
+    let spectated = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).map(|&gd| g.pos_of(gd)) } else { None };
     let mut r = View::ZERO;
     if let Some(host) = g.host_cam {
         let c = &g.tab.camera[host];

@@ -71,7 +71,7 @@ pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque,
     g.ch[c].who = crate::character::Who::Player(id);
     g.ch[c].team = crate::teams::Team::Ours;
     let def = g.fa[pistol].def;
-    g.ch[c].muzzle_ahead = g.m.weapons.weapons.get(def).unwrap().muzzle_ahead;
+    g.ch[c].muzzle_ahead = g.weapon(def).muzzle_ahead;
     id
 }
 
@@ -174,7 +174,7 @@ pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     };
     let moved = match g.gd[id].fix_ref {
         None => true,
-        Some(r) => m::hyp2(lk[0] - r[0], lk[2] - r[2]) > 0.5,
+        Some(r) => v3::dist_xz(lk, r) > 0.5,
     };
     if moved { g.gd[id].fix_ref = Some(v3::copy(lk)); g.gd[id].fix_t = now; }
 }
@@ -227,7 +227,7 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     for k in keys { held.add(k); }
     g.gd[id].keys = held;
     // a row the table does not hold panics here, as the TypeScript's throws
-    let row = g.m.weapons.weapons.get(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).unwrap().clone();
+    let row = g.weapon(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).clone();
     let w = crate::weapons::firearm_new(g, &row);
     g.gd[id].weapon = w;
     g.ch[c].muzzle_ahead = row.muzzle_ahead;

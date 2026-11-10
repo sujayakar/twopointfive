@@ -151,7 +151,7 @@ fn line_up(g: &mut Game, gd: GuardId, at: Comes, face: Face) -> bool {
 
 /// His walk through door `d` bent onto the handle half's line; made once.
 fn bend(g: &mut Game, gd: GuardId, a: Ahead, via: [V3; 2]) {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if v3::dist_xz(pos, via[0]) < 0.3 || off_at(g, a.d, pos) < off_at(g, a.d, via[0]) - 0.05 { return; }
     let on_it = slice_path(&g.gd[gd].path, g.gd[gd].path_i, a.k + 1).iter().any(|p| v3::dist_xz(*p, via[1]) < 0.2);
     if !on_it { walks_by(g, gd, a.k, &via); }
@@ -329,7 +329,7 @@ fn walks_by(g: &mut Game, gd: GuardId, k: usize, through: &[V3]) {
 /// The first leaf his walk goes through within `look` metres.
 fn ahead(g: &Game, gd: GuardId) -> Option<Ahead> {
     let look = g.k.handle.look;
-    let mut a = g.ch[g.gd[gd].ch].pos;
+    let mut a = g.pos_of(gd);
     let mut len = 0.0;
     let mut k = g.gd[gd].path_i;
     while k < g.gd[gd].path.len() && len < look {
@@ -370,7 +370,7 @@ fn rests(g: &mut Game, gd: GuardId, door: DoorId, secs: f64) {
 
 /// His hand on the leaf from the face it opens into.
 fn pull_open(g: &mut Game, gd: GuardId, d: DoorId) {
-    let who = g.ch[g.gd[gd].ch].id;
+    let who = g.char_id(gd);
     let quiet = crate::silent::silent_ease(g, gd);
     crate::doors::doors_pull(g, d, who, Some(quiet));
 }

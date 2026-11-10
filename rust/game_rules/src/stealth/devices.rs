@@ -399,7 +399,7 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     }
     let door_name = g.dr[k.door].def.name.clone();
     let row = data(&[("door", text(&door_name)), ("how", text(how.as_str())), ("from", opt_text(&sign))]);
-    let at = from.map(|f| g.ch[g.gd[f].ch].pos);
+    let at = from.map(|f| g.pos_of(f));
     chron_device(g, ChronDeviceKind::CodeLearned, &row, at);
     true
 }
@@ -446,7 +446,7 @@ pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId,
 /// The 'code' row: start keying it in. HANDWORK settled on: every key beeps under his finger (pad_hands), no first beep here.
 pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
-    let here = g.ch[g.pl[pl].ch].pos;
+    let here = g.player_pos(pl);
     let st = pad_state(g, &crate::seats::here(g), d, here);
     match st {
         Some(s) if s.known && g.pl[pl].coding().is_none() && !g.cond[g.pl[pl].ch].down => {}
@@ -472,7 +472,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let Some(&crate::game::Coding { door: d, t: before }) = g.pl[pl].coding() else { return };
     let pad = devices_pad_of(g, d);
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let door_at = crate::doors::door_pos(g, d);
     let in_reach = m::min(v3::dist_xz(door_at, p), v3::dist_xz(g.dr[d].frame_centre, p)) < PAD_REACH + 0.25;
     let k = match pad {
@@ -492,7 +492,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     crate::audio_iface::game_audio_like_play(g, "padOpen", Some(k.def.pos), Some(0.6), None);
     let mut keys: JsSet<String> = JsSet::new();
     keys.add(g.dr[d].lock_id.clone());
-    let who = g.ch[g.pl[pl].ch].id;
+    let who = g.player_id(pl);
     crate::doors::doors_use(g, d, p, who, Some(&keys));
     let door_name = g.dr[d].def.name.clone();
     let row = data(&[("door", text(&door_name))]);

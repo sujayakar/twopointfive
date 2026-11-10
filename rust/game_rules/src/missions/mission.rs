@@ -32,7 +32,7 @@ pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
 /// How far a floor point is from the face the errand's thing is taken from, across its width; never, with something solid between.
 pub fn rack_dist(g: &crate::game::Game, p: V3) -> f64 {
     let (front, half_w) = (g.level.errand.front, g.level.errand.half_w);
-    let d = m::hyp2(p[0] - front[0], p[2] - front[2]);
+    let d = v3::dist_xz(p, front);
     if d > 0.3 && crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [front[0] + (p[0] - front[0]) / d * 0.2, 1.0, front[2] + (p[2] - front[2]) / d * 0.2], None) {
         return m::INF;
     }
@@ -199,7 +199,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::audio_iface::game_audio_like_play(g, "lightOff", Some(rf), Some(0.7), None);
     let pl = g.player;
-    let who = g.ch[g.pl[pl].ch].id;
+    let who = g.player_id(pl);
     let time = g.time;
     let serial = g.serial();
     g.events.push(crate::game::GameEvent {
@@ -253,7 +253,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     }
     let line = format!("something's tripped in {} — going to take a look", g.level.errand.place);
     crate::game::game_say(g, best, &line, Some(true), None);
-    let at = g.ch[g.gd[best].ch].pos;
+    let at = g.pos_of(best);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
 }

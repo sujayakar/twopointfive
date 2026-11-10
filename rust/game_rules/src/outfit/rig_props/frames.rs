@@ -70,7 +70,7 @@ pub(crate) fn owner_of(g: &Game, c: CharId) -> f64 {
 
 /// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed.
 pub fn wrist_tie_boxes(g: &crate::game::Game, c_2: CharId, out: &mut Carried) {
-    let (Some(a), Some(b)) = (g.ch[c_2].bones.get(crate::character::Bone::HandL).copied(), g.ch[c_2].bones.get(crate::character::Bone::HandR).copied()) else { return };
+    let (Some(a), Some(b)) = (g.ch[c_2].bone(crate::character::Bone::HandL), g.ch[c_2].bone(crate::character::Bone::HandR)) else { return };
     let d = v3::sub(b, a);
     let l = v3::len(d);
     if l > 0.16 {
@@ -140,7 +140,7 @@ fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
 
 /// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between.
 pub fn goggles_boxes(g: &crate::game::Game, c_2: CharId, nv: bool, out: &mut Carried, g_2: crate::rig_props::RigGoggles, k: Option<f64>) {
-    let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };
+    let Some(head) = g.ch[c_2].bone(crate::character::Bone::Head) else { return };
     let f = head_flat_forward(g, c_2);
     let (mut fwd, mut up, mut side): (V3, V3, V3) = (f, [0.0, 1.0, 0.0], [f[2], 0.0, -f[0]]);
     if g_2.follow_pitch >= 0.5 {

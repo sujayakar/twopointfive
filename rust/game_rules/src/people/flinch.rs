@@ -77,7 +77,7 @@ fn green(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// Has he a man of his side by him who still has his gun.
 fn mate_by(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    let eye = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
+    let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]));
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -85,7 +85,7 @@ fn mate_by(g: &crate::game::Game, gd: GuardId) -> bool {
         if o == gd || crate::condition::down(g, g.gd[o].ch) || !g.team(o).theirs() || g.team(o) != g.team(gd) || g.gd[o].held.is_some() || crate::owner::has(g, o, crate::owner::by::RUNNER) { continue; }
         let oc = g.gd[o].ch;
         if v3::dist_xz(g.ch[oc].pos, g.ch[c].pos) <= g.k.morale.alone_m {
-            let chest = g.ch[oc].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(g.ch[oc].pos, [0.0, 1.2, 0.0]));
+            let chest = g.ch[oc].bone(crate::character::Bone::Chest).unwrap_or_else(|| v3::add(g.ch[oc].pos, [0.0, 1.2, 0.0]));
             if !crate::scene_collision::segment_blocked(g, eye, chest, None, None, None) { return true; }
         }
     }

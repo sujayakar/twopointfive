@@ -588,7 +588,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let by_hand = g.pl[pl].door_move().is_some() && dp.as_ref().map_or(false, |d| d.w >= 1.0) && !aiming;
         let into_door = if by_hand {
             let d = dp.as_ref().unwrap();
-            Some(m::atan2(d.p[0] - g.ch[c].pos[0], d.p[2] - g.ch[c].pos[2]))
+            Some(v3::yaw_to(g.ch[c].pos, d.p))
         } else {
             let leaf = dp.as_ref().map(|d| crate::player::LeafFacingDp { w: d.w, n: d.n.to_vec() });
             leaf_facing(leaf.as_ref(), aiming)

@@ -48,7 +48,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let gd = g.guards[i]; i += 1;
         if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.team(gd).ours() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
-        let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[pc].pos);
+        let d = v3::dist_xz(g.pos_of(gd), g.ch[pc].pos);
         if d < nd { nd = d; near = Some(gd); }
     }
     if let Some(nr) = near {

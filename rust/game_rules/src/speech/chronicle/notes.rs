@@ -247,7 +247,7 @@ fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 /// The first player's feet.
 fn pos_of(g: &crate::game::Game) -> V3 {
     let man = crate::seats::man_here(&crate::seats::here(g));
-    g.ch[g.pl[man].ch].pos
+    g.player_pos(man)
 }
 
 /// The generic entry: `kind` at `pos` (his feet by default) with `data`.
@@ -525,7 +525,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
         _ => {
             let man = crate::seats::man_here(&crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
-                Some(gun) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()),
+                Some(gun) => crate::gear::plain_short(g.weapon(g.fa[gun].def)),
                 None => String::from("a round"),
             }
         }

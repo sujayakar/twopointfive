@@ -127,7 +127,7 @@ pub fn shell_solve(g: &crate::game::Game, from: V3, target: V3, bodies: Option<&
 pub fn shell_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
     if let Some(gd) = shell_man(g, seat) {
         let c = g.gd[gd].ch;
-        let bone = g.ch[c].bones.get(crate::character::Bone::Chest).copied();
+        let bone = g.ch[c].bone(crate::character::Bone::Chest);
         let chest = v3::add(bone.unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, 1.2, 0.0])), [0.0, 0.0, 0.0]);
         let tof = v3::dist(from, chest) / (g.k.he40.speed * 0.97);
         let vel = g.ch[c].vel;

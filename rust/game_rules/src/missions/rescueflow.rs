@@ -156,12 +156,12 @@ fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     let mut out: Vec<V3> = Vec::new();
     let pl = seat.player;
     if !crate::condition::down(g, g.pl[pl].ch) {
-        let p = g.ch[g.pl[pl].ch].pos;
+        let p = g.player_pos(pl);
         out.push([p[0], EYE, p[2]]);
     }
     for &op in g.staged.team.iter() {
         if !crate::condition::down(g, g.gd[op].ch) && !crate::control::man::blind(g, op) {
-            let p = g.ch[g.gd[op].ch].pos;
+            let p = g.pos_of(op);
             out.push([p[0], EYE, p[2]]);
         }
     }
@@ -266,7 +266,7 @@ fn place_him(g: &mut Game, h: GuardId, s: &Sensing) {
     if !rescue_flow_sees(g, &s.eyes, h) {
         return;
     }
-    let pos = g.ch[g.gd[h].ch].pos;
+    let pos = g.pos_of(h);
     let at = rescue_flow_region_at(g, pos);
     for &r in s.rooms.iter() {
         if at == Some(r) {
@@ -289,7 +289,7 @@ fn hear_their_shots(g: &mut Game, s: &Sensing) {
             continue;
         }
         let (who, pos) = (g.events[at].who, g.events[at].pos);
-        let Some(h) = g.staged.foes.iter().copied().find(|&x| Some(g.ch[g.gd[x].ch].id) == who) else { continue };
+        let Some(h) = g.staged.foes.iter().copied().find(|&x| Some(g.char_id(x)) == who) else { continue };
         if crate::condition::down(g, g.gd[h].ch) {
             continue;
         }
@@ -388,7 +388,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
         }
         let Some(a) = crate::orders::squad_orders_of(seat, op) else { continue };
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if dist_xz(g.ch[g.gd[op].ch].pos, post) > 1.2 {
+        if dist_xz(g.pos_of(op), post) > 1.2 {
             continue;
         }
         if let Some(j) = g.rescue.flow.jobs.get(op) {
@@ -503,7 +503,7 @@ fn send_everyone_back(g: &mut Game) {
 /// Where Sam stands this frame, read once.
 fn flow_now(g: &Game, f: &crate::scene_scenarios::RescueFlowData, k: RescueFlowKnobs) -> FlowNow {
     let pl = g.player;
-    let sam = g.ch[g.pl[pl].ch].pos;
+    let sam = g.player_pos(pl);
     let dynamic = crate::rescue::rescue_dynamic(g);
     let live = dynamic && g.rescue.result.is_none() && !crate::condition::down(g, g.pl[pl].ch);
     let in_corr = super::roomclear::in_rect(sam, f.corridor);
@@ -586,7 +586,7 @@ fn job_turn(g: &mut Game, gd: GuardId, now: &FlowNow) {
         corridor_man_turn(g, gd, now);
         return;
     }
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let on_t = on_his_mark_since(g, gd, &job, pos, t);
     if holds_on_a_contact(g, gd, job.said_hot, now) {
         return;

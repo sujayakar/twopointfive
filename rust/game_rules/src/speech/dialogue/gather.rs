@@ -261,7 +261,7 @@ fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mut bd = f64::INFINITY;
     for &x in gs.guards.iter() {
         if x == gd || down.has(gs.gd[x].callsign.clone()) || !is_mate(gs, gd, x) { continue; }
-        let d = v3::dist_xz(gs.ch[gs.gd[x].ch].pos, gs.ch[gs.gd[gd].ch].pos);
+        let d = v3::dist_xz(gs.pos_of(x), gs.pos_of(gd));
         if d < bd { bd = d; best = Some(x); }
     }
     best
@@ -293,7 +293,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     let check_task = match checker { Some(c) => match g.gd[c].task { Some(crate::game::GuardTask::CheckOn(x)) => Some(x), _ => None }, None => None };
     let post_man = g.guards.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch) && g.gd[x].post.is_some());
     let keyed = keyed_door_on(g, gd);
-    let my_pos = g.ch[g.gd[gd].ch].pos;
+    let my_pos = g.pos_of(gd);
     let pad = crate::devices::devices_pad_near(g, my_pos);
     let next_at = if r.next_at >= 0.0 { r.next_at } else { g.time + (if lvl >= 1.0 { 45.0 } else { 90.0 }) };
     let route_i = g.gd[gd].route_i as f64;

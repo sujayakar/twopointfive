@@ -119,12 +119,12 @@ fn ex(g: &mut Game, w: &mut Way, t: &mut [Crumb], k: i64, lo: bool) -> Exp {
     v
 }
 fn near_other(g: &Game, w: &Way, q: V3) -> bool {
-    w.others.iter().any(|o| dist_xz(g.ch[g.gd[*o].ch].pos, q) < 0.7)
+    w.others.iter().any(|o| dist_xz(g.pos_of(*o), q) < 0.7)
 }
 /// In a door's funnel: some defender's eye, inside its reach, that would gain on a man at `q`, with the flat line to `q` through the frame's opening.
 fn funnel(g: &mut Game, w: &Way, q: V3, doors: &[DoorId], pad: f64, lit: &mut dyn FnMut(&mut Game) -> f64, lo: bool) -> bool {
     for &h in w.eyes.iter() {
-        let e = g.ch[g.gd[h].ch].pos;
+        let e = g.pos_of(h);
         let ed = dist_xz(e, q);
         if ed > g.k.guard_eye.range { continue; }
         if ed >= g.k.sneak.near_m {
@@ -505,9 +505,9 @@ fn remembers_a_look(g: &mut Game, q: &mut Reading, mm: ManMem) {
         k += 1;
     }
     let own_c = g.gd[gd].ch;
-    let eye = g.ch[own_c].bones.get(crate::character::Bone::Head).copied().unwrap_or([p[0], 1.0, p[2]]);
+    let eye = g.ch[own_c].bone(crate::character::Bone::Head).unwrap_or([p[0], 1.0, p[2]]);
     let hp = g.ch[hc].pos;
-    let his = g.ch[hc].bones.get(crate::character::Bone::Head).copied().unwrap_or([hp[0], 1.65, hp[2]]);
+    let his = g.ch[hc].bone(crate::character::Bone::Head).unwrap_or([hp[0], 1.65, hp[2]]);
     let sees = !crate::scene_collision::segment_blocked(g, eye, his, None, None, None);
     if now - mm.t > k_.memory || now < mm.t || crate::condition::down(g, g.gd[mm.h].ch) || idx(mm.b, off) < 0 || q.at.i >= a || sees || !lit {
         q.man.mem = None;
@@ -666,7 +666,7 @@ struct Asked {
 fn follow(g: &mut Game, s: &mut State, man: &mut Man, ask: Asked) -> Feet {
     let now = g.time;
     let gd = ask.gd;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let low = crate::unseen::sam_low(g, g.player);
     man.t = now;
     man.way = None;

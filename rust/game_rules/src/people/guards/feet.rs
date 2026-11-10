@@ -47,7 +47,7 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
 
 /// goTo's plan. `round` None is the TypeScript's `round === pen`: no second search.
 fn go_to_plan(g: &Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
-    let from = g.ch[g.gd[gd].ch].pos;
+    let from = g.pos_of(gd);
     let mut p = match pen {
         Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), None),
@@ -128,7 +128,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
     };
     let pos = g.ch[c].pos;
     if !legs.jogging {
-        g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, m::atan2(legs.look_at[0] - pos[0], legs.look_at[2] - pos[2]), 4.0 * dt);
+        g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, v3::yaw_to(pos, legs.look_at), 4.0 * dt);
     }
     let held = standoff_round(g, st, gh.is_some(), pos);
     // --- the talking ---
@@ -203,8 +203,8 @@ fn walks_his_goal(g: &mut Game, st: Standing, goal: V3, pace: f64) -> Legs {
         legs.jogging = true;
         let wp = g.gd[gd].path[g.gd[gd].path_i];
         let pos = g.ch[c].pos;
-        let yaw_path = m::atan2(wp[0] - pos[0], wp[2] - pos[2]);
-        if m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - yaw_path)) > 75.0 * v3::DEG {
+        let yaw_path = v3::yaw_to(pos, wp);
+        if m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - yaw_path)) > 75.0 * v3::DEG {
             legs.look_at = [pos[0] + m::sin(yaw_path) * 4.0, aim[1], pos[2] + m::cos(yaw_path) * 4.0];
         }
     }
@@ -216,7 +216,7 @@ fn standoff_round(g: &mut Game, st: Standing, gun_hold: bool, pos: V3) -> bool {
     let Standing { gd, c, dt, p, fs, aim, backing, .. } = st;
     g.arms[g.gd[gd].ch].fire_cd -= dt;
     let gun_yaw = crate::character::character_gun_yaw(g, c);
-    let facing_err = m::abs(v3::wrap_angle(m::atan2(aim[0] - pos[0], aim[2] - pos[2]) - gun_yaw));
+    let facing_err = m::abs(v3::wrap_angle(v3::yaw_to(pos, aim) - gun_yaw));
     let w = g.gd[gd].weapon;
     g.fa[w].burst = None;
     let held = g.tune.muzzle_discipline
@@ -351,10 +351,7 @@ pub fn look_of(g: &crate::game::Game, c: CharId) -> V3 { crate::fogofwar::gaze_o
 pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId) -> crate::guards::CanSeeChar {
     let is_player = crate::character::is_player(g, pc);
     let c = g.gd[gd].ch;
-    let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]),
-    };
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let look = look_of(g, c);
     let sam = crate::seats::here(g).player;
     let range = reach_for(g, sam, gd, pc, eye);
@@ -386,7 +383,7 @@ fn reach_for(g: &crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, eye:
         return eye_reach(g, vis);
     }
     let t = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[pc].pos };
-    if m::hyp2(t[0] - eye[0], t[2] - eye[2]) < g.k.guard_eye.range - 1.0 { return g.k.guard_eye.range; }
+    if v3::dist_xz(t, eye) < g.k.guard_eye.range - 1.0 { return g.k.guard_eye.range; }
     let mut o = None;
     for &x in g.guards.iter() {
         if g.gd[x].ch == pc { o = Some(x); break; }
@@ -448,8 +445,8 @@ pub fn eye_blocked(g: &crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool {
 pub fn eye_contact(g: &crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
     let is_player = crate::character::is_player(g, pc);
     let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
-    let tgt = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.1, 0.0]) };
-    let tgt2 = match g.ch[pc].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.6, 0.0]) };
+    let tgt = g.ch[pc].bone_or(crate::character::Bone::Chest, 1.1);
+    let tgt2 = g.ch[pc].bone_or(crate::character::Bone::Head, 1.6);
     let smoked = is_player && smoke_trans < 0.3;
     let unseen = blind || (!is_player && !g.ch[pc].alive);
     let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
@@ -549,7 +546,7 @@ fn unstick_snap(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>) {
 /// The side-step he has going, if it still means anything.
 fn live_leg(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::guards::UnstickLeg> {
     let u = *g.m.guards.unstick_legs.get(gd)?;
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if v3::dist_xz(pos, u.to) > 0.36 && !crate::scene_collision::nav_grid_is_blocked(g, pos[0], pos[2]) {
         g.m.guards.unstick_legs.delete(gd);
         return None;
@@ -668,7 +665,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
         if u == crate::guards::UnstickBegin::Snapped { p = go_to_plan(g, gd, goal, pen.as_ref(), round.as_ref()); }
     }
     let way = p.unwrap_or_default();
-    let start = g.ch[g.gd[gd].ch].pos;
+    let start = g.pos_of(gd);
     let mut is_free = |g: &Game, x: f64, z: f64| -> bool { !crate::scene_collision::nav_grid_is_blocked(g, x, z) };
     let threaded = crate::doors::doors_thread_path(g, &way, start, Some(&mut is_free));
     lay_path(g, gd, threaded);

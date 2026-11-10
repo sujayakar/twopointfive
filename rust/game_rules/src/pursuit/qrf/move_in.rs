@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 /// where a man with no foe named looks: the player nearest him
-pub(super) fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
+pub(super) fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.player_pos(pl) }
 fn arrived(g: &Game, x: GuardId) -> bool { g.gd[x].script.map_or(false, |s| s.arrived.unwrap_or(false)) }
 /// a string the TypeScript tests for truth: null and '' are both false
 fn word(s: &Option<String>) -> Option<&str> { s.as_deref().filter(|w| !w.is_empty()) }
@@ -587,7 +587,7 @@ fn eyes_on_the_player(g: &mut crate::game::Game, m: GuardId, dt: f64) -> Sight {
 fn player_at_arms_length(g: &mut crate::game::Game, m: GuardId) -> bool {
     let pp = g.seat_pos(&crate::seats::here(g));
     let gp = g.pos_of(m);
-    let close = !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62;
+    let close = !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && v3::dist_xz(pp, gp) < 0.62;
     if !close { return false; }
     crate::mind::set(g, m, 1.0, "qrf");
     crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
@@ -911,7 +911,7 @@ fn approach_end(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) ->
     let u = v3::normalize([s[1][0] - s[0][0], 0.0, s[1][2] - s[0][2]]);
     for k in [1.6, 1.1, 0.6, 0.0] {
         let q: V3 = [s[0][0] + u[0] * k, 0.0, s[0][2] + u[2] * k];
-        if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::solid_blocked(g, [s[0][0], 0.45, s[0][2]], [q[0], 0.45, q[2]], None) { return q; }
+        if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !crate::scene_collision::low_blocked(g, s[0], q) { return q; }
     }
     v3::copy(s[0])
 }

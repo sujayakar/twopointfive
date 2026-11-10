@@ -16,13 +16,13 @@ fn side_of(t: crate::teams::Team) -> f64 {
 fn man_of(g: &Game, id_2: f64) -> Option<GuardId> {
     for i in 0..g.guards.len() {
         let x = g.guards[i];
-        if g.ch[g.gd[x].ch].id == id_2 {
+        if g.char_id(x) == id_2 {
             return Some(x);
         }
     }
     for i in 0..g.civilians.len() {
         let x = g.civilians[i];
-        if g.ch[g.gd[x].ch].id == id_2 {
+        if g.char_id(x) == id_2 {
             return Some(x);
         }
     }
@@ -226,7 +226,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
         return;
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);
-    let heard = v3::add(g.ch[g.pl[pl].ch].pos, [0.0, 1.1, 0.0]);
+    let heard = v3::add(g.player_pos(pl), [0.0, 1.1, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     if s.floor {
         crate::unseen::kneel(g, pl);

@@ -211,7 +211,7 @@ fn live(g: &crate::game::Game, gd: GuardId, s: &mut crate::game::GuardScript) { 
 fn fight_face_while_walking(g: &mut Game, gd: GuardId, s: &crate::game::GuardScript) -> Option<f64> {
     let face = match s.over { Some(o) if o.walk.unwrap_or(false) => o.face, _ => None };
     face?;
-    let (t, p) = (g.time, g.ch[g.gd[gd].ch].pos);
+    let (t, p) = (g.time, g.pos_of(gd));
     match g.m.squad.walk_watch.get(gd).copied() {
         Some(w) if !(t < w.t || t - w.t > 3.0 || m::hyp2(p[0] - w.x, p[2] - w.z) > 0.25) => { if t - w.t > 1.2 { return None; } }
         _ => { g.m.squad.walk_watch.set(gd, SquadModWalkWatchValue { x: p[0], z: p[2], t }); }
@@ -226,7 +226,7 @@ fn walks_to_goal(g: &mut Game, st: &Step, goal: V3, s: &mut crate::game::GuardSc
     let (dx, dz) = (goal[0] - p[0], goal[2] - p[2]);
     let planar = m::hyp2(dx, dz);
     let mut walk = Walked { move_speed: 0.0, arrived: true, settling: true, far_leg: None };
-    let near = planar <= SETTLE && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [goal[0], 0.45, goal[2]], None);
+    let near = planar <= SETTLE && !crate::scene_collision::low_blocked(g, p, goal);
     let home = near || walks_the_path(g, st, goal, s, &mut walk);
     if home {
         settles(g, st, Leg { goal: s.goal.unwrap_or(goal), dx, dz, planar }, s, &mut walk);
@@ -487,7 +487,7 @@ pub(super) fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
             crate::character::pos_replace(g, c, v3::copy(from[i]));
             let ch = &mut g.ch[c];
             ch.vel = [0.0, 0.0, 0.0];
-            let yaw = m::atan2(stack[i][0] - from[i][0], stack[i][2] - from[i][2]);
+            let yaw = v3::yaw_to(from[i], stack[i]);
             ch.aim_yaw = yaw; ch.body_yaw = yaw;
             ch.aim_pitch = 0.0;
             g.gd[gd].speed = 0.0;
@@ -556,7 +556,7 @@ fn room_clear_body_here(g: &crate::game::Game, id: RoomClearId, gd: GuardId) -> 
     if let Some(bounds) = g.tab.squad_room_clear[id].plan.bounds {
         if !in_bounds([h[0], 0.0, h[2]], Some(bounds), Some(0.3)) { return None; }
     }
-    let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(x) => *x, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
+    let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     if crate::scene_collision::segment_blocked(g, head, [h[0], h[1] + 0.3, h[2]], None, None, None) { None } else { Some(bb) }
 }
 
@@ -897,8 +897,8 @@ fn stands_for_the_next_door(g: &mut Game, beat: &Beat, bb: GuardId, ts: f64) {
         return;
     };
     let fc = g.dr[nd].frame_centre;
-    let pb = g.ch[g.gd[bb].ch].pos;
-    order(g, bb, OrderPatch { crouch: Some(Some(false)), face: Some(Some(m::atan2(fc[0] - pb[0], fc[2] - pb[2]))), ..OrderPatch::default() });
+    let pb = g.pos_of(bb);
+    order(g, bb, OrderPatch { crouch: Some(Some(false)), face: Some(Some(v3::yaw_to(pb, fc))), ..OrderPatch::default() });
     sweep_begin(g, id, true, &[[fc[0], 1.0, fc[2]]], t, 1.2);
 }
 

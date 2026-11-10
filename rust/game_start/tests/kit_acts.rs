@@ -37,13 +37,13 @@ fn hold_off(p: &mut Play, x: game::ids::GuardId, d: f64) {
     p.g.ch[c].vel = [0.0; 3];
 }
 fn st(p: &Play) -> &KitStage { p.g.kit_stage.as_ref().expect("a stage") }
-fn sam(p: &Play) -> [f64; 3] { p.g.ch[p.g.pl[p.g.player].ch].pos }
+fn sam(p: &Play) -> [f64; 3] { p.g.player_pos(p.g.player) }
 fn flat(a: [f64; 3], b: [f64; 2]) -> f64 { ((a[0] - b[0]).powi(2) + (a[2] - b[1]).powi(2)).sqrt() }
 /// the furthest any man is from where he lives
 fn off_places(p: &Play) -> f64 {
     let s = st(p);
     let mut d = flat(sam(p), s.sam);
-    for &x in &s.order { d = d.max(flat(p.g.ch[p.g.gd[x].ch].pos, walk::home_of(&p.g, s, x).0)); }
+    for &x in &s.order { d = d.max(flat(p.g.pos_of(x), walk::home_of(&p.g, s, x).0)); }
     d
 }
 fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| !game::condition::down(&p.g, p.g.gd[x].ch)) && !game::condition::down(&p.g, p.g.pl[p.g.player].ch) }
@@ -212,7 +212,7 @@ fn the_card_switch_walks() {
             p.frame();
             t += 1.0 / 60.0;
             let s = st(&p);
-            let mut at: Vec<[f64; 3]> = s.order.iter().map(|&x| p.g.ch[p.g.gd[x].ch].pos).collect();
+            let mut at: Vec<[f64; 3]> = s.order.iter().map(|&x| p.g.pos_of(x)).collect();
             at.push(sam(&p));
             for i in 0..at.len() { for j in 0..i {
                 let d = ((at[i][0] - at[j][0]).powi(2) + (at[i][2] - at[j][2]).powi(2)).sqrt();
@@ -222,7 +222,7 @@ fn the_card_switch_walks() {
                 let m = team[who as usize - 1];
                 let k = s.order.iter().position(|&x| x == m).unwrap();
                 let place = walk::home_of(&p.g, s, m).0;
-                if flat(p.g.ch[p.g.gd[m].ch].pos, place) <= 0.25 && (k == 0 || (k == 3 && s.four)) { arrived = Some(t); }
+                if flat(p.g.pos_of(m), place) <= 0.25 && (k == 0 || (k == 3 && s.four)) { arrived = Some(t); }
             }
         }
         if who > 0 { assert!(arrived.map_or(false, |t| t <= 5.0), "card {}: his man at the head at {:?} s", who, arrived); }
@@ -311,7 +311,7 @@ fn left_alone(level: &str, words: &str) {
         p.frame();
         let s = st(&p);
         rows = s.a.beat_n;
-        if s.a.beat.is_none() && s.veil_asked.is_none() { most = most.max(s.order.iter().map(|&x| flat(p.g.ch[p.g.gd[x].ch].pos, walk::home_of(&p.g, s, x).0)).fold(0.0, f64::max)); }
+        if s.a.beat.is_none() && s.veil_asked.is_none() { most = most.max(s.order.iter().map(|&x| flat(p.g.pos_of(x), walk::home_of(&p.g, s, x).0)).fold(0.0, f64::max)); }
     }
     let s = st(&p);
     assert!(!s.none, "{}: gone", what);

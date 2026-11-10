@@ -35,10 +35,7 @@ fn route_point(g: &Game, gd: GuardId, wp: f64) -> V3 {
 /// `gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.6, 0])`
 fn head_or_guess(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Head, 1.6)
 }
 /// `gd.stallRef = null`
 fn clear_stall(g: &mut Game, gd: GuardId) {
@@ -340,11 +337,11 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
     let mut q = path[0];
     for &p in path.iter() {
         q = p;
-        if m::hyp2(p[0] - pos[0], p[2] - pos[2]) > 2.5 {
+        if v3::dist_xz(p, pos) > 2.5 {
             break;
         }
     }
-    let out_yaw = m::atan2(q[0] - pos[0], q[2] - pos[2]);
+    let out_yaw = v3::yaw_to(pos, q);
     let now = g.time;
     let last = floor(g).last_depart_at;
     let lead = g.k.needs.announce_lead;
@@ -415,7 +412,7 @@ fn pick_line(g: &mut crate::game::Game, pool: &[String], gd: GuardId, salt: &str
 /// The colleague he tells: the nearest staff man his words reach.
 fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mouth = head_or_guess(g, gd);
-    let my_pos = g.ch[g.gd[gd].ch].pos;
+    let my_pos = g.pos_of(gd);
     let mut best = None;
     let mut bd = m::INF;
     let mut i = 0;

@@ -207,7 +207,7 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The first frame his walk goes through within `reach`.
 fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (pos, 0.0);
     let mut i = g.gd[gd].path_i;
@@ -255,12 +255,12 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, tu
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.
 fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
-    if g.team(gd).ours() && !crate::condition::down(g, g.pl[seat.player].ch) && v3::dist_xz(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
+    if g.team(gd).ours() && !crate::condition::down(g, g.pl[seat.player].ch) && v3::dist_xz(g.seat_pos(seat), p) < apart { return false; }
     let t = g.time;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
-        if v3::dist_xz(g.ch[g.gd[o].ch].pos, p) < apart { return false; }
+        if v3::dist_xz(g.pos_of(o), p) < apart { return false; }
         let s = match g.m.doorway.states.get(o) { Some(so) if t - so.t <= 0.5 && t >= so.t => so.spot, _ => None };
         if let Some(s) = s { if v3::dist_xz(s, p) < apart { return false; } }
     }
@@ -270,7 +270,7 @@ fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p
 /// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.
 fn jamb_spot(g: &crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let f = crate::guards::frame_of(g, d);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let (jamb_past, file_gap, jamb_out, apart) = (g.k.doormanners.jamb_past, g.k.doormanners.file_gap, g.k.doormanners.jamb_out, g.k.doormanners.apart);
     let mut best: Option<V3> = None;
     let mut bd = m::INF;
@@ -315,7 +315,7 @@ fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) 
 fn on_own(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: Option<GuardId>) -> bool {
     let Some(o) = o else { return false };
     let Some(post) = order_post(g, seat, o) else { return false };
-    v3::dist_xz(g.ch[g.gd[o].ch].pos, post) < g.k.doormanners.own_m
+    v3::dist_xz(g.pos_of(o), post) < g.k.doormanners.own_m
 }
 
 #[cfg(test)]
@@ -453,7 +453,7 @@ fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
 /// HE ONLY BRUSHES IT: a leaf on its latch he is against and does not mean to go through. He is put off it, and it stays shut: a door is opened by somebody going through it, or by what
 /// works it (a hand, a boot, a charge).
 pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let (mut shut, mut open) = (false, false);
     for &d in &g.doors.list {
         if g.dr[d].leaf.off { continue; }

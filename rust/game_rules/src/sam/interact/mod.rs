@@ -26,7 +26,7 @@ fn walled(g: &Game, eye: V3, to: V3) -> bool {
 pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::interact::EmptyThing> {
     let pl = seat.player;
     if g.pl[pl].takedown().is_some() { return None; }
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
     let mut best: Option<crate::interact::EmptyThing> = None;
     let mut rank = 3;
@@ -206,7 +206,7 @@ fn close_selector(g: &mut Game, spent: bool) {
 
 /// the point his ring stands on: the thing its first row is about where that is near him; else his own body
 fn ring_spot(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    let p = g.ch[g.pl[seat.player].ch].pos;
+    let p = g.seat_pos(seat);
     match seat.nearby.iter().find(|r| wedged(r)) {
         Some(h) if v3::dist_xz(h.pos, p) <= RING_THING_M => h.pos,
         _ => [p[0], p[1] + RING_BODY_M, p[2]],

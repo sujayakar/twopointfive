@@ -140,7 +140,7 @@ fn floor_read(g: &mut Game, d: DoorId, side: f64) {
             let b = crate::doortools::off_of(g, d, c, side);
             let a = crate::doortools::along_of(g, d, c);
             if b < 0.05 || b > 1.8 || a < -0.3 || a > w + 0.3 { continue; }
-            let s = v3::dist_xz(c, front) + (if crate::scene_collision::solid_blocked(g, [front[0], 0.45, front[2]], [c[0], 0.45, c[2]], None) { 10.0 } else { 0.0 });
+            let s = v3::dist_xz(c, front) + (if crate::scene_collision::low_blocked(g, front, c) { 10.0 } else { 0.0 });
             if s < best { best = s; seed = i; }
         }
     }
@@ -238,7 +238,7 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
         if crate::condition::down(g, g.gd[man].ch) { continue; }
         if g.tab.orders_assignment[a].door != Some(d) { continue; }
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if v3::dist_xz(post, q) < SAME_M && v3::dist_xz(g.ch[g.gd[man].ch].pos, post) < 0.6 { return true; }
+        if v3::dist_xz(post, q) < SAME_M && v3::dist_xz(g.pos_of(man), post) < 0.6 { return true; }
     }
     false
 }
@@ -552,7 +552,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
             let Some(a) = a else { continue };
             if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) || g.tab.orders_assignment[a].door != Some(d) { continue; }
             let Some(post) = g.tab.orders_assignment[a].post else { continue };
-            if v3::dist_xz(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
+            if v3::dist_xz(g.pos_of(man), post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
         }
         let loose: Vec<usize> = (0..posts.len()).filter(|i| !stood.iter().any(|q| v3::dist_xz(*q, posts[*i].pos) < SAME_M)).collect();
         // only a place this rule could have dealt: by the door's own wall, no further along it than the rule reaches
@@ -594,7 +594,7 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     {
         let mut hs: Vec<f64> = Vec::new();
         for &man in men {
-            let p = g.ch[g.gd[man].ch].pos;
+            let p = g.pos_of(man);
             if crate::doortools::off_of(g, d, p, side) > 0.0 && v3::dist_xz(p, c) <= s.view_men {
                 let a = crate::doortools::along_of(g, d, p);
                 hs.push(if a >= w + s.view_out { 1.0 } else if a <= -s.view_out { -1.0 } else { 0.0 });
@@ -707,9 +707,9 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
         ring
     };
     let mut ours: Vec<V3> = Vec::new();
-    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.ch[g.pl[pl].ch].pos); }
+    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.player_pos(pl)); }
     for man in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-        if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.ch[g.gd[man].ch].pos); }
+        if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.pos_of(man)); }
     }
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];
@@ -804,7 +804,7 @@ mod tests {
         book_of(&mut g).near = Some(vec![1]);
         assert!(g.m.stackroom.books.as_ref().unwrap().near.is_some());
         assert!(book_of(&mut g).near.is_some());
-        g.engine.world.geom_serial += 1.0;
+        g.boxes_changed();
         assert!(book_of(&mut g).near.is_none());
     }
 
@@ -872,7 +872,7 @@ mod tests {
         let mut g = Game::blank();
         book_of(&mut g);
         let keep = stack_room_book_keep(&mut g);
-        g.engine.world.geom_serial += 1.0;
+        g.boxes_changed();
         book_of(&mut g);
         stack_room_book_put_back(&mut g, keep);
         assert!(g.m.stackroom.books.is_none());

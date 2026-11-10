@@ -348,7 +348,7 @@ impl StealthAsk for Play {
     fn mission_stage(&self) -> game::game::MissionStage { self.g.mission.stage }
     fn quiet_deal(&self) -> (f64, f64, f64) { let d = &self.g.quiet.deal; (d.start, d.spot, d.patrol) }
     fn wall_for(&mut self, gd: GuardId) -> Option<([f64; 3], [f64; 3], [f64; 3])> {
-        let (at, y, off) = (self.g.ch[self.g.gd[gd].ch].pos, self.g.k.sticky.aim_y, self.g.k.sticky.off);
+        let (at, y, off) = (self.g.pos_of(gd), self.g.k.sticky.aim_y, self.g.k.sticky.off);
         let chest = [at[0], 1.1, at[2]];
         for k in 0..32 {
             let a = k as f64 * std::f64::consts::PI / 16.0;
@@ -484,7 +484,7 @@ impl StealthAsk for Play {
     fn last_cam(&self) -> ([f64; 3], f64, bool) { let pl = &self.g.pl[self.g.player]; let c = *pl.cams.last().expect("a camera out"); let r = &self.g.tab.stickycam_sticky_cam[c]; (r.pos, r.si, r.vel.is_none()) }
     fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].fold_until }
     fn loud_report(&mut self) {
-        let (at, time, serial, who) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.time, self.g.serial(), self.g.ch[self.g.pl[self.g.player].ch].id);
+        let (at, time, serial, who) = (self.g.player_pos(self.g.player), self.g.time, self.g.serial(), self.g.player_id(self.g.player));
         self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::default() });
     }
     fn squad_men(&self, name: &str) -> (Vec<GuardId>, usize) {

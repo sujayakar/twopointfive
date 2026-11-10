@@ -296,7 +296,7 @@ pub fn room_fight_room_lost(g: &mut crate::game::Game, d: RoomfightDefId) -> boo
         if xr != room { continue; }
         if !crate::condition::down(g, g.gd[xg].ch) { if xm != DefMode::Free { up += 1.0; } continue; }
         let xc = g.gd[xg].ch;
-        let b = g.ch[xc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[xc].pos);
+        let b = g.ch[xc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[xc].pos);
         if crate::scene_collision::segment_blocked(g, eye, [b[0], 0.3, b[2]], None, None, None) { continue; }
         if dist_xz(b, g.ch[c].pos) < 5.0 || !g.tune.body_light || crate::guards::body_visibility(g, xg) >= g.k.body_light.lit { dead += 1.0; }
     }

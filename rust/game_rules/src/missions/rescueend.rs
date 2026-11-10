@@ -58,7 +58,7 @@ fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn F
     let pl = crate::seats::here(g).player;
     let had = crate::rescue::rescue_captor(g).is_some();
     for h in rescue_end_alive(g) {
-        let hp = g.ch[g.gd[h].ch].pos;
+        let hp = g.pos_of(h);
         let d = dist_xz(p, hp);
         if d > g.k.rescueend.marker_m || crate::fogofwar::fog_of_war_hidden(g, h) { continue; }
         let near = d < g.k.rescueend.reach_m && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [hp[0], 1.0, hp[2]], None);
@@ -143,7 +143,7 @@ pub(super) fn rescue_end_won(g: &mut crate::game::Game) -> Option<crate::rescuee
     let o = rescue_end_out(g);
     if let (Some(o), true) = (o, g.rescue.ending.lead.is_some()) {
         let out_m = g.k.rescueend.out_m;
-        if alive.iter().all(|&h| dist_xz(g.ch[g.gd[h].ch].pos, o) < out_m) { return Some(crate::rescueend::RescueEndWon::Out); }
+        if alive.iter().all(|&h| dist_xz(g.pos_of(h), o) < out_m) { return Some(crate::rescueend::RescueEndWon::Out); }
     }
     None
 }
@@ -154,10 +154,10 @@ pub(super) fn rescue_end_objective(g: &crate::game::Game, seat: &crate::seats::S
         return crate::rescueend::RescueEndObjective { text: String::from("objective ▸ bring them out the way you came in"), pos: rescue_end_out(g) };
     }
     let pl = seat.player;
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let mut near: Option<V3> = None;
     for h in rescue_end_alive(g) {
-        let b = g.ch[g.gd[h].ch].pos;
+        let b = g.pos_of(h);
         near = match near {
             Some(a) if !(dist_xz(b, p) < dist_xz(a, p)) => Some(a),
             _ => Some(b),

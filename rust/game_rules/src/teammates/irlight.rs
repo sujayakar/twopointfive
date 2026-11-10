@@ -267,7 +267,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
     for gd in kit_of(g).men.keys() {
         if !g.guards.contains(&gd) {
             kit_of(g).men.delete(gd);
-            let id = g.ch[g.gd[gd].ch].id;
+            let id = g.char_id(gd);
             drop(g, id);
         }
     }
@@ -372,7 +372,7 @@ pub(super) fn ir_on_man(g: &mut crate::game::Game, o: GuardId) -> f64 {
 
 /// Would his own illuminator show him a standing man at `p`, if he looked that way with a clear line?
 pub fn ir_shows_at(g: &crate::game::Game, m: GuardId, p: V3) -> bool {
-    let at = g.ch[g.gd[m].ch].pos;
+    let at = g.pos_of(m);
     let dx = p[0] - at[0];
     let dz = p[2] - at[2];
     let d2 = m::max(dx * dx + dz * dz, 0.25);

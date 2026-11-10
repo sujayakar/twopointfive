@@ -24,7 +24,7 @@ fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) {
 fn callsign_or(g: &Game, gd: GuardId) -> String { if g.gd[gd].callsign.is_empty() { String::from("a man") } else { g.gd[gd].callsign.clone() } }
 fn names(g: &Game, men: &[GuardId]) -> String { men.iter().map(|m| g.gd[*m].callsign.clone()).collect::<Vec<String>>().join(", ") }
 /// the `floor` closure of pieSet, toThreshold and thrFar's test: floor there and a clear step to it
-fn floor_ok(g: &Game, from: V3, p: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked(g, [from[0], 0.45, from[2]], [p[0], 0.45, p[2]], None) }
+fn floor_ok(g: &Game, from: V3, p: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && !crate::scene_collision::low_blocked(g, from, p) }
 /// the `mark` closure: his post of the order, or where he stands
 fn mark_of(g: &Game, op: DoorOpId, gd: GuardId) -> V3 { match o!(g, op).post.get(gd) { Some(p) => p.pos, None => { let p = g.pos_of(gd); [p[0], 0.0, p[2]] } } }
 /// the `hi` closure: is his mark on the latch half of the opening
@@ -128,7 +128,7 @@ pub(super) fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeI
 fn blow_seat(g: &mut Game, others: &crate::ask::Over, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bool {
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) { return false; }
-    let p = g.ch[g.pl[pl].ch].pos;
+    let p = g.player_pos(pl);
     let far = super::off_of(g, d, p, side) < 0.0;
     let dist = v3::dist_xz(p, fc);
     let reach = if far { g.k.doortools.stun_m } else { g.k.doortools.backblast_m };
@@ -154,7 +154,7 @@ pub(super) fn door_tools_draw_charge(g: &mut crate::game::Game, c_2: ChargeId) {
     let p = door_pt(g, d, w - 0.22, 0.045, side, Some(1.05));
     let n = door_pt(g, d, 0.0, 1.0, side, None);
     let e = door_pt(g, d, 0.0, 0.0, side, None);
-    let yaw = m::atan2(n[0] - e[0], n[2] - e[2]);
+    let yaw = v3::yaw_to(e, n);
     let fl = crate::scene_boxes::box_flag();
     let b = crate::scene_boxes::make_box_kept(g, &crate::scene_boxes::MakeBoxP { c: p, h: [0.07, 0.11, 0.02], yaw: Some(yaw), albedo: Some([0.09, 0.1, 0.08]), flags: Some(fl.dynamic), ..Default::default() });
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
@@ -338,7 +338,7 @@ fn stack_off2(g: &Game, op: DoorOpId, m_: GuardId) -> bool {
 /// the first free place: floor, a clear line from the lead's mark, nobody of the order or else within 0.7, the stack's room
 fn stack_free(g: &mut Game, op: DoorOpId, from: V3, c: V3, gd: GuardId, others: &[V3]) -> bool {
     let (d, side) = (o!(g, op).door, o!(g, op).side);
-    if crate::scene_collision::nav_grid_is_blocked(g, c[0], c[2]) || crate::scene_collision::solid_blocked(g, [from[0], 0.45, from[2]], [c[0], 0.45, c[2]], None) { return false; }
+    if crate::scene_collision::nav_grid_is_blocked(g, c[0], c[2]) || crate::scene_collision::low_blocked(g, from, c) { return false; }
     let taken = o!(g, op).men.iter().any(|m_| *m_ != gd && v3::dist_xz(o!(g, op).post.get(*m_).map_or(g.pos_of(*m_), |p| p.pos), c) < 0.7);
     if taken || others.iter().any(|p| v3::dist_xz(*p, c) < 0.7) { return false; }
     crate::stackroom::stack_room_keeps(g, d, side, c)
@@ -528,7 +528,7 @@ pub(super) fn door_tools_burst_dry(g: &crate::game::Game, op: DoorOpId) -> bool 
         if e.time < bang_t { break; }
         if e.kind == crate::director::EventKind::GuardShot {
             if let Some(who) = e.who {
-                if !g.guards.iter().any(|x| g.team(*x).ours() && g.ch[g.gd[*x].ch].id == who) { last = e.time; break; }
+                if !g.guards.iter().any(|x| g.team(*x).ours() && g.char_id(*x) == who) { last = e.time; break; }
             }
         }
     }
@@ -618,7 +618,7 @@ pub(super) fn door_tools_thr_watch(g: &mut crate::game::Game, op: DoorOpId) {
         if time < ev_t { break; }
         if kind == crate::director::EventKind::GuardShot {
             if let Some(who) = who {
-                if (v3::dist_xz(pos, fc) < shot_m || in_room(g, room, pos)) && !g.guards.iter().any(|x| g.team(*x).ours() && g.ch[g.gd[*x].ch].id == who) { thr!(g, op).quiet_t = t; break; }
+                if (v3::dist_xz(pos, fc) < shot_m || in_room(g, room, pos)) && !g.guards.iter().any(|x| g.team(*x).ours() && g.char_id(*x) == who) { thr!(g, op).quiet_t = t; break; }
             }
         }
     }

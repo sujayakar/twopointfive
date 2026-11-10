@@ -14,7 +14,7 @@ pub fn squad_view(g: &Game, seat: &SeatRef) -> Option<SquadView> {
     let picked = to.len() < up;
     let paired = super::squad_orders_paired(g, seat);
     let mates = squad.iter().map(|&gd| MateLine {
-        man: g.ch[g.gd[gd].ch].id,
+        man: g.char_id(gd),
         name: g.gd[gd].callsign.clone(),
         doing: alloc::format!("{}{}", super::squad_orders_status_of(g, seat, gd), crate::cover::cover_tail(g, gd)),
         addressed: picked && to.contains(&gd),

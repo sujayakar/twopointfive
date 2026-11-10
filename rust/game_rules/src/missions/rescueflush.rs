@@ -66,11 +66,11 @@ fn plan_bounds(g: &Game) -> Option<crate::scene_level::BreachPlanBounds> {
 /// Which of `of` he HAS: those in the room with him, and those on his line once the room has fallen.
 pub(super) fn rescue_flush_victims(g: &mut crate::game::Game, by: GuardId, of: &[GuardId]) -> Vec<GuardId> {
     let b = plan_bounds(g);
-    let here = crate::squad::in_bounds(g.ch[g.gd[by].ch].pos, b, None);
+    let here = crate::squad::in_bounds(g.pos_of(by), b, None);
     let far = rescue_flush_live(g) && !g.rescue.flush.fell_at.is_nan();
     let mut out = Vec::new();
     for &v in of {
-        if (here && crate::squad::in_bounds(g.ch[g.gd[v].ch].pos, b, None)) || (far && rescue_flush_line(g, by, v) < f64::INFINITY) { out.push(v); }
+        if (here && crate::squad::in_bounds(g.pos_of(v), b, None)) || (far && rescue_flush_line(g, by, v) < f64::INFINITY) { out.push(v); }
     }
     out
 }
@@ -78,7 +78,7 @@ pub(super) fn rescue_flush_victims(g: &mut crate::game::Game, by: GuardId, of: &
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
     if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() { return false; }
-    if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
+    if crate::squad::in_bounds(g.pos_of(h), b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = crate::roomfight::def_of(g, h);
     if let Some(d) = f { if crate::roomfight::on_leg(g, d) { return false; } }
@@ -109,11 +109,11 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
         g.rescue.flush.next_at = g.time + g.k.rescueflush.after_secs;
         crate::rescue::rescue_note(g, "flush:fell");
     }
-    let in_room = alive.iter().any(|&h| crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None));
+    let in_room = alive.iter().any(|&h| crate::squad::in_bounds(g.pos_of(h), b, None));
     // one of them stands in the room and nobody is there to shoot: they have been taken out
     if g.rescue.flush.gone_at.is_nan() && !in_room {
         let by = g.staged.foes.iter().copied().find(|&h| {
-            !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)
+            !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && crate::squad::in_bounds(g.pos_of(h), b, None)
         });
         if let Some(by) = by {
             g.rescue.flush.gone_at = g.time;
@@ -128,7 +128,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     let mut walk = 0;
     while let Some(h) = g.rescue.flush.sent.next_key(&mut walk) {
         let Some(mark) = g.rescue.flush.sent.get(h).and_then(|s| s.via.first().copied()) else { continue; };
-        if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || dist_xz(g.ch[g.gd[h].ch].pos, mark) > g.k.rescueflush.at_door_m { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || dist_xz(g.pos_of(h), mark) > g.k.rescueflush.at_door_m { continue; }
         if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { continue; }
         g.rescue.flush.sent.get_mut(h).unwrap().via.remove(0);
         let next = g.rescue.flush.sent.get(h).unwrap().via.first().copied();
@@ -148,7 +148,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     {
         let g = &*g;
         let n_of = |h: GuardId| g.rescue.flush.sent.get(h).map_or(0.0, |s| s.n);
-        js::sort_by(&mut pool, |&x, &y| js::or(n_of(x) - n_of(y), dist_xz(g.ch[g.gd[x].ch].pos, room) - dist_xz(g.ch[g.gd[y].ch].pos, room)));
+        js::sort_by(&mut pool, |&x, &y| js::or(n_of(x) - n_of(y), dist_xz(g.pos_of(x), room) - dist_xz(g.pos_of(y), room)));
     }
     for h in pool {
         let n = g.rescue.flush.sent.get(h).map_or(0.0, |s| s.n);
@@ -197,8 +197,8 @@ fn rescue_flush_point_of(g: &crate::game::Game, goal: crate::rescueflush::Goal, 
     if crate::rescue::rescue_data(g).is_none() { return None; }
     if goal == Goal::Room || goal == Goal::Side {
         let b = plan_bounds(g);
-        let v = alive.iter().copied().find(|&h| crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None));
-        if let Some(v) = v { let p = g.ch[g.gd[v].ch].pos; return Some([p[0], 0.0, p[2]]); }
+        let v = alive.iter().copied().find(|&h| crate::squad::in_bounds(g.pos_of(h), b, None));
+        if let Some(v) = v { let p = g.pos_of(v); return Some([p[0], 0.0, p[2]]); }
         return b.map(|b| [(b.x0 + b.x1) / 2.0, 0.0, (b.z0 + b.z1) / 2.0]);
     }
     if goal == Goal::Noise { if let Some(p) = crate::rescue::rescue_noise_at(g) { return Some(v3::copy(p)); } }

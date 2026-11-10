@@ -70,7 +70,7 @@ pub fn cursor_view(g: &Game, seat: &crate::seats::SeatRef, now: &HostNow) -> Cur
 /// a target in the view's words: a man by his character's id, a door by its name, a wall by its place
 pub fn under(g: &Game, t: &crate::orders::OrderTarget) -> Under {
     use crate::orders::OrderTarget as T;
-    let id = |gd: crate::ids::GuardId| g.ch[g.gd[gd].ch].id;
+    let id = |gd: crate::ids::GuardId| g.char_id(gd);
     match t {
         T::Floor(f) => Under {
             kind: UnderKind::Floor, at: f.at, thing: f.thing.clone(),

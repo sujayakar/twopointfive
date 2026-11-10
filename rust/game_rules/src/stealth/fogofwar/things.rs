@@ -357,7 +357,7 @@ pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark>
         let Some(at) = r.at else { continue };
         let age = g.time - r.t;
         let life = if wand && r.wand_t.map_or(false, |w| m::abs(r.t - w) < 0.5) { m::max(secs, g.k.wand.mark_secs) } else { secs };
-        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.ch[g.gd[gd].ch].id, at, age, life }); }
+        if age >= 0.0 && age < life { out.push(crate::view::SeenMark { man: g.char_id(gd), at, age, life }); }
     }
     out
 }

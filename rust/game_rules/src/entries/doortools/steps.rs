@@ -129,7 +129,7 @@ fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: crate::doortoo
         let at: V3 = if kept { [mp[0], 0.0, mp[2]] } else { post.pos };
         let words = crate::orders::door_words(g, d);
         let a = crate::orders::SquadOrdersAssignA {
-            order: String::from(crate::orders::rows::hold::ORDER.id), post: Some(at), face: Some(if kept { m::atan2(c[0] - at[0], c[2] - at[2]) } else { post.face }), watch: Some([c[0], 1.1, c[2]]),
+            order: String::from(crate::orders::rows::hold::ORDER.id), post: Some(at), face: Some(if kept { v3::yaw_to(at, c) } else { post.face }), watch: Some([c[0], 1.1, c[2]]),
             door: Some(d), shy: Some(d), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
             going: format!("to hold · {}", words).into(), there: format!("holding · {}", words).into(), ..Default::default()
         };
@@ -889,7 +889,7 @@ fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
                 let apart = g.k.doortools.thr_pie_apart;
                 let ok = pie!(g, op, gd).gun < pie_gun().most
                     && !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2])
-                    && !crate::scene_collision::solid_blocked(g, [at[0], 0.45, at[2]], [q[0], 0.45, q[2]], None)
+                    && !crate::scene_collision::low_blocked(g, at, q)
                     && !(other.is_some() && (v3::dist_xz(g.pos_of(other.unwrap()), q) < apart || os_at.map_or(false, |x| v3::dist_xz(x, q) < apart)));
                 pie!(g, op, gd).gun_at = t;
                 if ok || sl!(g, op, gd).i > 0.0 {

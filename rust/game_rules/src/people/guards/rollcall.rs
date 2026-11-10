@@ -29,13 +29,13 @@ fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
 }
 /// `g.level.routes[M.routeI]?.points[0] ?? M.char.pos`
 fn post_of(g: &Game, m: GuardId) -> V3 {
-    match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.ch[g.gd[m].ch].pos }
+    match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.pos_of(m) }
 }
 
 /// His head, or where it would be.
 fn head_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
+    g.ch[c].bone_or(Bone::Head, 1.7)
 }
 
 /// A man says something: a bubble over his head, and a log row if it went over the radio or is out of sight.
@@ -102,7 +102,7 @@ fn spokesman(g: &crate::game::Game, pos: Option<V3>, except: Option<GuardId>) ->
                 || g.team(gd) != Team::Guard
                 || g.gd[gd].unit.is_some()
             { continue; }
-            let d = match pos { Some(p) => v3::dist(g.ch[g.gd[gd].ch].pos, p), None => 0.0 };
+            let d = match pos { Some(p) => v3::dist(g.pos_of(gd), p), None => 0.0 };
             if d < bd { bd = d; best = Some(gd); }
         }
         pass += 1;
@@ -223,14 +223,14 @@ fn checker_free(g: &Game, x: GuardId, m: GuardId) -> bool {
 }
 /// The living man best placed to go round M's route, nearest any point of it; `prefer` first.
 fn pick_checker(g: &crate::game::Game, m: GuardId, prefer: Option<GuardId>) -> Option<GuardId> {
-    let pts = match route_points(g, m) { Some(p) => p, None => vec![g.ch[g.gd[m].ch].pos] };
+    let pts = match route_points(g, m) { Some(p) => p, None => vec![g.pos_of(m)] };
     if let Some(p) = prefer { if checker_free(g, p, m) { return Some(p); } }
     let mut best: Option<GuardId> = None;
     let mut bd = f64::INFINITY;
     for &x in &g.guards {
         if !checker_free(g, x, m) { continue; }
         let mut d = f64::INFINITY;
-        let at = g.ch[g.gd[x].ch].pos;
+        let at = g.pos_of(x);
         for &p in &pts { d = m::min(d, v3::dist_xz(p, at)); }
         if d < bd { bd = d; best = Some(x); }
     }
@@ -241,7 +241,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     let pts = route_points(g, m).unwrap_or_default();
     let mut i0 = 0usize;
     let mut bd = f64::INFINITY;
-    let me = g.ch[g.gd[gd].ch].pos;
+    let me = g.pos_of(gd);
     for (i, &p) in pts.iter().enumerate() {
         let d = v3::dist_xz(p, me);
         if d < bd { bd = d; i0 = i; }
@@ -500,9 +500,9 @@ pub(super) fn partner_watch(g: &mut crate::game::Game, gd: GuardId) {
     let l = match g.gd[gd].leader { Some(l) => l, None => return };
     let c = g.gd[gd].ch;
     let lc = g.gd[l].ch;
-    let eye = match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
+    let eye = g.ch[c].bone_or(Bone::Head, 1.65);
     let at = if !crate::condition::down(g, g.gd[l].ch) {
-        match g.ch[lc].bones.get(Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[lc].pos, [0.0, 1.1, 0.0]) }
+        g.ch[lc].bone_or(Bone::Chest, 1.1)
     } else {
         v3::add(body_pos(g, l), [0.0, 0.4, 0.0])
     };
@@ -578,7 +578,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
             alive[0]
         }
     };
-    let at = if g.alarm.placed { g.alarm.pos } else { g.ch[g.gd[a].ch].pos };
+    let at = if g.alarm.placed { g.alarm.pos } else { g.pos_of(a) };
     let mut by_room: JsMap<String, RoomRow> = JsMap::default();
     for p in g.level.clear_plans.clone().unwrap_or_default() {
         let d = match crate::doors::doors_by_name(g, &p.door) { Some(d) => d, None => continue };
@@ -613,7 +613,7 @@ fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<cra
 
 /// Panel: 'clear nearest room now': the fix where the player stands, the floor locked down if it was not.
 pub fn force_clear(g: &mut crate::game::Game) {
-    let p = g.ch[g.pl[g.player].ch].pos;
+    let p = g.player_pos(g.player);
     g.alarm.pos[0] = p[0];
     g.alarm.pos[1] = 0.0;
     g.alarm.pos[2] = p[2];

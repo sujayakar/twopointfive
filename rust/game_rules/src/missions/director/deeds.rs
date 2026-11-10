@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small helpers of the context
 
 fn unit_ref_of(g: &Game, gd: GuardId) -> UnitRef {
-    UnitRef { id: g.ch[g.gd[gd].ch].id, callsign: g.gd[gd].callsign.clone() }
+    UnitRef { id: g.char_id(gd), callsign: g.gd[gd].callsign.clone() }
 }
 fn touch(g: &mut Game, b: DirectorLiveBeatId, u: &UnitRef) { g.tab.director_live_beat[b].touched.add(crate::Num(u.id)); }
 
