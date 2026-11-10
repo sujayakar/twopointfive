@@ -693,7 +693,7 @@ fn bearing(fk: &mut Fk, o: &mut Ready) {
             az = clamp(atan2(pb, pa), -READY_AZ[0], READY_AZ[1]);
         }
     }
-    *o = Ready { up, h, az, ..*o };
+    *o = Ready { az, h, up, ..*o };
 }
 
 /// Where the lead hand goes.
@@ -724,7 +724,7 @@ fn reach_spot(c: &mut [f64], o: &mut Ready) {
         // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
         frame(o, spot, az)
     };
-    *o = Ready { o_l, up, h, ..*o };
+    *o = Ready { h, up, o_l, ..*o };
 }
 
 /// The lead hand's numbers eased.
