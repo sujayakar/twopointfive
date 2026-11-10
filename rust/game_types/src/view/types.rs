@@ -1253,10 +1253,6 @@ pub enum AttentionMode { #[default] Go, Look, Lent }
 #[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
 pub enum FloorWord { #[default] Carpet, Lino, Stone, Tile, Asphalt, Grass }
 
-/// the key that backs out
-#[derive(Clone, Copy, Debug, Default, PartialEq, ToBytes)]
-pub enum BackKey { Tab, #[default] Esc }
-
 /// a line of a row of his list: the key that does it ('' = a line no key gives), by its default name for the page to name as bound
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct RowOpt {
@@ -1403,8 +1399,6 @@ pub struct HudLook {
     pub line_clear: bool,
     /// a tutorial step's mark gives way to a ring over it
     pub mark_clear: bool,
-    /// the key that backs out of the selector
-    pub back: crate::view::BackKey,
 }
 
 /// one man's held attention: a thread from his feet to the place and a ring there

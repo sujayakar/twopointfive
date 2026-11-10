@@ -55,9 +55,9 @@ mod tests {
 
 /// ACTS.move.keys: the walk keys
 fn walk_keys() -> Vec<String> { crate::rails::acts().delete(String::from("move")).and_then(|r| r.keys).unwrap_or_default() }
-/// /^(Escape|Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/
+/// /^(Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/
 fn is_free(code: &str) -> bool {
-    if matches!(code, "Escape" | "Tab" | "Enter" | "NumpadEnter" | "Blur" | "Paused" | "BracketLeft" | "BracketRight") { return true; }
+    if matches!(code, "Tab" | "Enter" | "NumpadEnter" | "Blur" | "Paused" | "BracketLeft" | "BracketRight") { return true; }
     let b = code.as_bytes();
     (b.len() == 2 || b.len() == 3) && b[0] == b'F' && b[1..].iter().all(|c| c.is_ascii_digit())
 }
@@ -557,7 +557,7 @@ mod tests_2 {
     use super::*;
     #[test]
     fn the_pages_own_keys_are_free_and_only_they() {
-        assert!(is_free("Escape") && is_free("F1") && is_free("F12") && is_free("BracketLeft"));
+        assert!(is_free("Tab") && is_free("F1") && is_free("F12") && is_free("BracketLeft"));
         assert!(!is_free("F") && !is_free("F123") && !is_free("Fx") && !is_free("KeyF"));
         assert!(is_digit("Digit1") && is_digit("Digit5"));
         assert!(!is_digit("Digit0") && !is_digit("Digit6") && !is_digit("Digit12"));

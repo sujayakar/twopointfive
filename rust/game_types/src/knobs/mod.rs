@@ -11,7 +11,6 @@ mod air_sim; pub use air_sim::*;
 mod attention; pub use attention::*;
 mod autopilot; pub use autopilot::*;
 mod autoreload; pub use autoreload::*;
-mod backkey; pub use backkey::*;
 mod break_table; pub use break_table::*;
 mod calmtorch; pub use calmtorch::*;
 mod carlamps; pub use carlamps::*;
@@ -284,7 +283,6 @@ pub struct Knobs {
     pub autopilot: AutopilotK,
     pub cmdring: CmdringK,
     pub torch: TorchK,
-    pub backkey: BackkeyK,
     pub morale: MoraleK,
     pub condition: ConditionK,
     pub inhand: InhandK,

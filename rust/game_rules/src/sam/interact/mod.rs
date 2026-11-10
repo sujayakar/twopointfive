@@ -177,12 +177,6 @@ pub fn interact_let_go(g: &mut Game) {
     if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, true); }
 }
 
-/// Esc, ahead of the pause menu: the open selector backs out, else a running sustained verb stops.
-pub fn escape_interact(g: &mut Game) -> bool {
-    if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, true); return true; }
-    cancel_sustained(g)
-}
-
 /// a standing ring's `free` (`!!S.ring?.free`)
 fn ring_free(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     g.sets[seat.id].hand.sel.ring.as_ref().map_or(false, |r| r.free.unwrap_or(false))
@@ -270,17 +264,17 @@ fn ring_on_own(g: &mut Game, input: InputId, cam: CameraId, view: crate::host_hu
 /// `x &= ~bits` on one of the Input's words of bits
 fn off_bits(x: f64, bits: i32) -> f64 { (js::to_i32(x) & !bits) as f64 }
 
-/// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, Esc and the Space press; what is performed goes out as Game.act.
+/// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, the back key and the Space press; what is performed goes out as Game.act.
 pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>) {
     let pl = g.player;
     g.sets[g.seat].act = None;
     let key = crate::consts::INTERACT_KEY;
     let down = crate::input::input_down(g, input, key);
     let hit = crate::input::input_hit(g, input, key);
-    let esc = crate::backkey::back_hit(g, input);
+    let back = crate::backkey::back_hit(g, input);
     if g.sets[g.seat].hand.f_held && !down && !hit { g.sets[g.seat].hand.f_held = false; }   // a spent press has come up: Space is live again
     if crate::input::input_hit(g, input, "Paused") { interact_let_go(g); }
-    // ---- a sustained verb is running: Space (a fresh press), Esc, or a step INTO it stops it; nothing else is on offer meanwhile
+    // ---- a sustained verb is running: Space (a fresh press), the back key, or a step INTO it stops it; nothing else is on offer meanwhile
     let run = running_verb(g, &crate::seats::here(g));
     if !run.is_empty() {
         let mask = move_mask(g, input);
@@ -292,7 +286,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
         }
         if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, down); }
         if hit && !g.sets[g.seat].hand.f_held { g.sets[g.seat].hand.f_held = true; cancel_sustained(g); }
-        else if esc { cancel_sustained(g); }
+        else if back { cancel_sustained(g); }
         else if (js::to_i32(mask) & !js::to_i32(g.sets[g.seat].hand.sel.move_latch)) != 0 { cancel_sustained(g); }
         return;
     }
@@ -398,7 +392,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             g.sets[g.seat].hand.sel.ring.as_mut().unwrap().free = Some(true);
             g.sets[g.seat].hand.sel.down_t = -1.0;
         }
-        if esc { close_selector(g, true); }
+        if back { close_selector(g, true); }
         else if down && !g.sets[g.seat].hand.sel.ring.as_ref().unwrap().free.unwrap_or(false) { g.sets[g.seat].hand.sel.down_t += m::min(dt, 0.05); }
         return;
     }
@@ -409,8 +403,8 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     if d_sel != 0 && g.sets[g.seat].nearby.len() > 1 { g.sets[g.seat].hand.near_sel += d_sel; crate::player::pick_hover(g); }
     let near_sel = g.sets[g.seat].hand.near_sel;
     if let Some(ring) = g.sets[g.seat].hand.sel.ring.as_mut() { ring.lit = (near_sel + 1) as f64; }
-    // ---- Esc: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
-    if esc && armed { close_selector(g, true); return; }
+    // ---- the back key: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
+    if back && armed { close_selector(g, true); return; }
     if !armed {
         if g.sets[g.seat].hand.sel.open { close_selector(g, false); }
         return;

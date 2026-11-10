@@ -54,9 +54,9 @@ fn menu_on(p: &mut Play, at: [f64; 2]) -> (game::orders::Menu, Vec<String>) {
     p.until(2.0, |p| p.view().ring.is_some()).unwrap_or_else(|| panic!("no ring two seconds after its key went down on {at:?}"));
     let (m, first) = (p.g.sets[p.g.seat].orders.menu.clone().unwrap(), p.view().ring.unwrap().wedges.into_iter().map(|w| w.text).collect());
     p.key_up(&key);
-    p.key_down("Escape");
+    p.key_down(game::backkey::BACK_KEY);
     p.frame();
-    p.key_up("Escape");
+    p.key_up(game::backkey::BACK_KEY);
     p.run(0.1);
     (m, first)
 }

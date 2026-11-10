@@ -23,10 +23,8 @@ export class Commands extends Writer {
   load(key: string): void { this.u32(8); this.text(key); }
   /** the run saves itself */
   autosave(on: number): void { this.u32(9); this.u32(on); }
-  /** a card came up over the game: what the hands were lining up is let go unsent */
+  /** the pause or the end card came up: what the hands were lining up and the rings they held are let go, and nothing is sent */
   letGo(): void { this.u32(10); }
-  /** whatever is up is backed out of */
-  escape(): void { this.u32(11); }
   /** one knob, by its name (knobs.rs); a name no knob has is nothing */
   knob(name: string, value: number): void { this.u32(17); this.text(name); this.f64(value); }
   /** encounter back */
