@@ -36,9 +36,6 @@ fn word(s: &Option<String>) -> bool {
 fn player_ch(g: &Game, seat: &crate::seats::SeatRef) -> CharId {
     g.pl[seat.player].ch
 }
-fn press_delete(g: &mut Game, input: InputId, code: &str) -> bool {
-    g.tab.input[input].pressed.delete(String::from(code))
-}
 fn press_has(g: &Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.has(String::from(code))
 }
@@ -381,10 +378,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         g.sets[g.seat].orders.acks += 1.0;
         let lines: Vec<String> = match opts.and_then(|o| o.ack.clone()).filter(|a| !a.is_empty()) {
             Some(own) => vec![own],
-            None => {
-                let now = g.tab.orders_order_def[def].ack_now.clone().unwrap_or_else(|| ack.clone());
-                crate::words::wg(g, &now, &ack)
-            }
+            None => ack,
         };
         let n = men.len() as f64;
         let by = men[js::rem(k, n) as usize];
@@ -527,20 +521,11 @@ pub fn squad_orders_spare_rear(g: &mut crate::game::Game, men: &[GuardId], door:
     rear
 }
 
-/// A memory save put back: a ring and a press half made are the hand's, not the saved moment's
-pub fn squad_orders_loaded(g: &mut crate::game::Game) {
+/// The ring and a press half made are put away, with nothing sent: a card came up over them, or a save went back that stood at one
+pub fn squad_orders_let_go(g: &mut crate::game::Game) {
     if g.sets[g.seat].orders.cmd_ring.is_some() { g.sets[g.seat].orders.menu = None; g.sets[g.seat].orders.cmd_ring = None; }
     g.sets[g.seat].orders.cmd_press = None;
     g.sets[g.seat].orders.tap_was = None;
-}
-
-/// Esc: the ring is dismissed
-pub fn squad_orders_escape(g: &mut crate::game::Game) -> bool {
-    if g.sets[g.seat].orders.menu.is_none() { return false; }
-    g.sets[g.seat].orders.menu = None;
-    g.sets[g.seat].orders.cmd_ring = None;
-    g.sets[g.seat].orders.esc_used = true;
-    true
 }
 
 /// Open the menu on a target
@@ -734,7 +719,6 @@ pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId) {
 /// Once a frame right after the aim is known: T, the ring and its keys, and the quick key, each taken out of the frame's input
 pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     squad_orders_sync(g);
-    if g.sets[g.seat].orders.esc_used { g.sets[g.seat].orders.esc_used = false; press_delete(g, input, "Escape"); }
     if !squad_orders_active(g, &crate::seats::here(g)) || crate::condition::down(g, g.pl[g.player].ch) {
         g.sets[g.seat].orders.menu = None;
         g.sets[g.seat].orders.cmd_ring = None;

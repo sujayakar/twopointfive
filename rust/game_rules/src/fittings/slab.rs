@@ -136,7 +136,6 @@ fn settle(d: &Flight, s: &mut Slab, met: &mut SlabMet) {
     if !overlaps(d, s.p[0], s.p[2], s.a, hu, hn, y0, y1) {
         return;
     }
-    met.nudged += 1.0;
     for da in [0.0, 0.2, -0.2, 0.45, -0.45, HALF_PI] {
         if let Some((t0, t1)) = free_spot(d, s.p[0], s.p[2], s.a + da, hu, hn, y0, y1, if da != 0.0 { 0.9 } else { 1.2 }) {
             met.nudge_max = js_max(met.nudge_max, hypot2(t0 - s.p[0], t1 - s.p[2]));
@@ -152,7 +151,6 @@ fn settle(d: &Flight, s: &mut Slab, met: &mut SlabMet) {
         s.p[0] = t0;
         s.p[2] = t1;
         s.a = a;
-        met.laid += 1.0;
     }
 }
 /// Keep the slab's floor rectangle out of the statics as toppling (and its spin) lengthen it

@@ -9,7 +9,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-
 /// THE SIDE IT OPENS INTO: the sign of every angle it can stand at; the page's DOORWAY: exitsOut off, leafWay on
 pub fn door_swing(g: &crate::game::Game, id: DoorId) -> f64 {
     let c = g.dr[id].leaf.clearway;
@@ -25,13 +24,10 @@ pub fn door_max_a(g: &crate::game::Game, id: DoorId) -> f64 {
     if door_swing(g, id) < 0.0 { 0.0 } else { g.dr[id].max_auth }
 }
 
-
-
 /// come to rest in its frame by a body's sweep: to, not latched
 pub(super) fn door_rests_to(g: &crate::game::Game, id: DoorId) -> bool {
     g.dr[id].leaf.swept && !g.dr[id].leaf.latched && g.dr[id].leaf.angle == 0.0 && g.dr[id].leaf.vel == 0.0
 }
-
 
 /// a door of the level: its row of the columns set as authored, its boxes made
 fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: Option<f64>) -> DoorId {
@@ -104,12 +100,6 @@ pub fn door_pos(g: &crate::game::Game, id: DoorId) -> V3 {
     let (hinge, width) = (g.dr[id].def.hinge, g.dr[id].def.width);
     [hinge[0] + u[0] * width * 0.5, 1.0, hinge[1] + u[1] * width * 0.5]
 }
-/// `p` is the kept centre from here on
-pub(super) fn door_kept_pos(g: &mut crate::game::Game, id: DoorId, p: V3) {
-    g.dr[id].pos_at = p;
-}
-/// the kept centre as it stands, whatever angle the leaf has now
-pub(super) fn door_kept_at(g: &crate::game::Game, id: DoorId) -> V3 { g.dr[id].pos_at }
 /// 'Closed enough' that using it means opening it
 pub fn door_is_closed(g: &crate::game::Game, id: DoorId) -> bool { m::abs(g.dr[id].leaf.angle) < 0.25 }
 pub fn door_dir(g: &crate::game::Game, id: DoorId) -> [f64; 2] {
@@ -138,7 +128,7 @@ pub fn door_reset(g: &mut crate::game::Game, id: DoorId) {
     door_place(g, id);
 }
 /// Deal the side it opens into: a leaf authored standing open the other way is stood as far open this way
-pub fn door_set_swing(g: &mut crate::game::Game, id: DoorId, s: f64, outward: Option<f64>, clearway: Option<f64>) {
+pub fn door_set_swing(g: &mut crate::game::Game, id: DoorId, s: f64, clearway: Option<f64>) {
     g.dr[id].leaf.dealt = s;
     g.dr[id].leaf.clearway = clearway.unwrap_or(0.0);
     door_keep(g, id);
@@ -283,7 +273,6 @@ pub fn doors_locked_out(g: &crate::game::Game, d: DoorId, from: V3, keys: Option
 pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
     (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false }) && doors_locked_out(g, d, from, None)
 }
-
 
 #[cfg(test)]
 mod tests {

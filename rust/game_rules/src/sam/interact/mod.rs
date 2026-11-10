@@ -2,7 +2,7 @@ pub use ::game_types::interact::types;
 pub use types::*;
 pub mod hud;
 pub use hud::*;
-use crate::game::Game;
+use crate::game::{Deed, Game};
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
@@ -25,7 +25,7 @@ fn walled(g: &Game, eye: V3, to: V3) -> bool {
 /// THE THING AN EMPTY TAP IS BESIDE, and why the key did nothing on it, about the seat it is asked of (the copy of the boxes standing: a tick's rule calls `stands` first).
 pub fn empty_thing(g: &Game, seat: &crate::seats::SeatRef) -> Option<crate::interact::EmptyThing> {
     let pl = seat.player;
-    if g.pl[pl].takedown.is_some() { return None; }
+    if g.pl[pl].takedown().is_some() { return None; }
     let p = g.ch[g.pl[pl].ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
     let mut best: Option<crate::interact::EmptyThing> = None;
@@ -97,39 +97,31 @@ fn move_mask(g: &Game, input: InputId) -> f64 {
 /// Which sustained verb is running right now, as an identity ('' = none).
 pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
     let pl = seat.player;
-    if let Some(d) = g.pl[pl].easing { return format!("ease:{}", g.dr[d].def.name); }
-    if let Some(d) = g.pl[pl].picking { return format!("pick:{}", g.dr[d].def.name); }
-    if let Some(w) = &g.pl[pl].wanding { let d = w.door; return format!("wand:{}", g.dr[d].def.name); }
-    if let Some(d) = g.pl[pl].coding { return format!("code:{}", g.dr[d].def.name); }
-    if let Some(h) = &g.pl[pl].holding {
-        if h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip {
-            let who = h.g;
-            return format!("hold:{}", g.gd[who].callsign);
-        }
-    }
-    if g.mission.drive_t >= 0.0 { return String::from("drive"); }
-    if g.pl[pl].breaker_move.is_some() { return String::from("breaker"); }
-    if let Some(c) = &g.pl[pl].charging { let d = c.door; return format!("charge:{}", g.dr[d].def.name); }
-    if crate::wallcharge::wall_charge_setting(seat) { return String::from("charge:wall"); }
-    String::new()
+    let (verb, d) = match &g.pl[pl].deed {
+        Some(Deed::Ease(e)) => ("ease", e.door),
+        Some(Deed::Pick(d)) => ("pick", *d),
+        Some(Deed::Wand(w)) => ("wand", w.door),
+        Some(Deed::Code(c)) => ("code", c.door),
+        Some(Deed::Charge(c)) => ("charge", c.door),
+        Some(Deed::Hold(h)) if crate::player::hold_works(h) => return format!("hold:{}", g.gd[h.g].callsign),
+        Some(Deed::Breaker(_)) => return String::from("breaker"),
+        Some(Deed::Take(_)) => return String::from("drive"),
+        Some(Deed::Wall(_)) => return String::from("charge:wall"),
+        _ => return String::new(),
+    };
+    format!("{verb}:{}", g.dr[d].def.name)
 }
 
 /// Stop the running sustained verb where it is. True if there was anything to stop.
 pub(super) fn cancel_sustained(g: &mut Game) -> bool {
     let pl = g.player;
-    if g.pl[pl].easing.is_some() { g.pl[pl].easing = None; return true; }
-    if g.pl[pl].picking.is_some() { crate::player::stop_picking(g); return true; }
-    if g.pl[pl].wanding.is_some() { crate::player::stop_wand(g); return true; }
-    if g.pl[pl].coding.is_some() { crate::devices::stop_coding(g); return true; }
-    let (held, working) = match &g.pl[pl].holding {
-        Some(h) => (true, h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip),
-        None => (false, false),
-    };
-    if held && working { crate::player::ease_off_hold(g); return true; }
-    if g.mission.drive_t >= 0.0 { crate::mission::cancel_drive(g); return true; }
-    if crate::doortools::door_tools_cancel_sam(g) { return true; }
-    if crate::wallcharge::wall_charge_cancel(g) { return true; }
-    false
+    match &g.pl[pl].deed {
+        Some(Deed::Pick(_)) => { crate::player::stop_picking(g); true }
+        Some(Deed::Wand(_)) => { crate::player::stop_wand(g); true }
+        Some(Deed::Ease(_) | Deed::Code(_) | Deed::Charge(_) | Deed::Wall(_) | Deed::Take(_)) => { crate::deed::put_down(g, pl); true }
+        Some(Deed::Hold(h)) if crate::player::hold_works(h) => { crate::player::ease_off_hold(g); true }
+        _ => false,
+    }
 }
 
 /// a row the ring has a wedge for: one with something to do
@@ -140,7 +132,7 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 /// the whistle has a wedge of the ring this frame
 pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
-    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown().is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
     let mut n = 0.0;
     for r in seat.nearby { { n += 1.0; } }
     n < g.k.cmdring.wedges
@@ -172,10 +164,9 @@ fn hand_ring_keys(g: &Game, seat: &crate::seats::SeatRef) -> f64 {
     if whistle_wedge(g, seat) { (keys | 1 << (js::to_i32(g.k.cmdring.wedges) & 31)) as f64 } else { keys as f64 }
 }
 
-/// Esc, ahead of the pause menu: the open selector backs out, else a running sustained verb stops.
-pub fn escape_interact(g: &mut Game) -> bool {
-    if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, true); return true; }
-    cancel_sustained(g)
+/// His ring is put away with its press spent, if it is up or its key is down.
+pub fn interact_let_go(g: &mut Game) {
+    if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, true); }
 }
 
 /// a standing ring's `free` (`!!S.ring?.free`)
@@ -185,13 +176,11 @@ fn ring_free(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// his hands are on a choice or a verb
 pub fn hands_busy(g: &Game, seat: &crate::seats::SeatRef) -> bool {
-    let pl = seat.player;
     (g.sets[seat.id].hand.sel.open && !ring_free(g, seat)) || g.sets[seat.id].hand.sel.down_t >= 0.0 || !running_verb(g, seat).is_empty()
 }
 
 /// is there anything here the back key would back out of
 pub fn backable_interact(g: &Game, seat: &crate::seats::SeatRef) -> bool {
-    let pl = seat.player;
     g.sets[seat.id].hand.sel.open || g.sets[seat.id].hand.sel.down_t >= 0.0 || !running_verb(g, seat).is_empty()
 }
 
@@ -265,17 +254,17 @@ fn ring_on_own(g: &mut Game, input: InputId, cam: CameraId, view: crate::host_hu
 /// `x &= ~bits` on one of the Input's words of bits
 fn off_bits(x: f64, bits: i32) -> f64 { (js::to_i32(x) & !bits) as f64 }
 
-/// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, Esc and the Space press; what is performed goes out as Game.act.
+/// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, the back key and the Space press; what is performed goes out as Game.act.
 pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>) {
     let pl = g.player;
     g.sets[g.seat].act = None;
     let key = crate::consts::INTERACT_KEY;
     let down = crate::input::input_down(g, input, key);
     let hit = crate::input::input_hit(g, input, key);
-    let esc = crate::backkey::back_hit(g, input);
+    let back = crate::backkey::back_hit(g, input);
     if g.sets[g.seat].hand.f_held && !down && !hit { g.sets[g.seat].hand.f_held = false; }   // a spent press has come up: Space is live again
-    if crate::input::input_hit(g, input, "Paused") && (g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0) { close_selector(g, true); }
-    // ---- a sustained verb is running: Space (a fresh press), Esc, or a step INTO it stops it; nothing else is on offer meanwhile
+    if crate::input::input_hit(g, input, "Paused") { interact_let_go(g); }
+    // ---- a sustained verb is running: Space (a fresh press), the back key, or a step INTO it stops it; nothing else is on offer meanwhile
     let run = running_verb(g, &crate::seats::here(g));
     if !run.is_empty() {
         let mask = move_mask(g, input);
@@ -287,7 +276,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
         }
         if g.sets[g.seat].hand.sel.open || g.sets[g.seat].hand.sel.down_t >= 0.0 { close_selector(g, down); }
         if hit && !g.sets[g.seat].hand.f_held { g.sets[g.seat].hand.f_held = true; cancel_sustained(g); }
-        else if esc { cancel_sustained(g); }
+        else if back { cancel_sustained(g); }
         else if (js::to_i32(mask) & !js::to_i32(g.sets[g.seat].hand.sel.move_latch)) != 0 { cancel_sustained(g); }
         return;
     }
@@ -393,7 +382,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             g.sets[g.seat].hand.sel.ring.as_mut().unwrap().free = Some(true);
             g.sets[g.seat].hand.sel.down_t = -1.0;
         }
-        if esc { close_selector(g, true); }
+        if back { close_selector(g, true); }
         else if down && !g.sets[g.seat].hand.sel.ring.as_ref().unwrap().free.unwrap_or(false) { g.sets[g.seat].hand.sel.down_t += m::min(dt, 0.05); }
         return;
     }
@@ -404,8 +393,8 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     if d_sel != 0 && g.sets[g.seat].nearby.len() > 1 { g.sets[g.seat].hand.near_sel += d_sel; crate::player::pick_hover(g); }
     let near_sel = g.sets[g.seat].hand.near_sel;
     if let Some(ring) = g.sets[g.seat].hand.sel.ring.as_mut() { ring.lit = (near_sel + 1) as f64; }
-    // ---- Esc: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
-    if esc && armed { close_selector(g, true); return; }
+    // ---- the back key: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
+    if back && armed { close_selector(g, true); return; }
     if !armed {
         if g.sets[g.seat].hand.sel.open { close_selector(g, false); }
         return;

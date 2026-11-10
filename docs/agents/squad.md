@@ -45,7 +45,7 @@ under it wins, and a door counts by the doorway the ray looks through.
 **The key** (`squad_orders_ring_input`). Down starts `cmd_press` on what the cursor is on. Up within `stay_hold_secs` is a tap
 (`squad_orders_tap_give`). Still down, or a digit pressed, and the ring goes up, over that place. A wedge lights by digit or by the cursor going
 `flick_px` out. `ring_latch` gives it as the key comes up pointing at one; otherwise the ring stays until a click, the key again or a digit. A right
-click turns back from more, or puts it away. So do Tab and Esc.
+click turns back from more, or puts it away. So does Tab.
 
 **The ring's rows** (`squad_orders_flat_rows`) are one list: the rows of each tool a listed row opens, plus the squad's posture. `flat_seats` seats them: wedge 1 is what a
 tap would give, `flat_top` holds fixed places (floor: cover, fall in, hold; door: cover, open and clear, bang and clear), and the rest fill up behind

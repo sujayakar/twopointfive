@@ -19,8 +19,8 @@
 //! WHERE A SAMPLE'S TIME FALLS AMONG A TRACK'S KEYS depends on the track's times alone, and a clip's tracks share theirs (the game's rig: 159 tracks a clip
 //! on two sets of times). So `end` gives every track the number of its LINE — the first track of the clip with the same times, single for single — and a
 //! sample finds its place on a line once (`Place`), where the TypeScript searches each track: the same place, so the same numbers.
-use crate::single::{get, put, S};
-use crate::skeleton::{store_unit, MAX_NODES, NODE};
+use crate::single::{get, S};
+use crate::skeleton::{MAX_NODES, NODE};
 use crate::world::{js_max, js_min};
 
 /// clips the table holds (a character file has some fifty)
@@ -334,7 +334,7 @@ pub fn nodes_of(c: usize) -> usize {
 
 /// Clip `c` at time `t` (seconds; wrapped where `looped`, else held inside the clip) into the pose `d` — only the nodes the clip
 /// has tracks for are written. The caller has made sure `d` holds `nodes_of(c)` nodes; a number the table does not hold writes nothing.
-pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool, in_singles: bool) {
+pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool) {
     let tb = table();
     if c >= tb.n_clips {
         return;
@@ -377,32 +377,12 @@ pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool, in_singles: bool)
             continue;
         }
         let f = p.f;
-        if in_singles {
-            // (POSEMATH.singles: the step between the two keys in singles — single.rs; where the time falls among the keys is found as ever)
-            let fs = crate::single::weight(f);
-            if comps == 3 {
-                crate::single::step3(d, o, rows, pool, a, b, fs);
-            } else {
-                crate::single::step4(d, o, rows, pool, a, b, fs);
-            }
-            continue;
-        }
+        // (the step between the two keys in singles: single.rs)
+        let fs = crate::single::weight(f);
         if comps == 3 {
-            for c in 0..3 {
-                let (av, bv) = (get(pool, a + c), get(pool, b + c));
-                put(d, o + c * rows, av + (bv - av) * f);
-            }
+            crate::single::step3(d, o, rows, pool, a, b, fs);
         } else {
-            // the shorter way round, then made a unit again
-            let (mut bx, mut by, mut bz, mut bw) = (get(pool, b), get(pool, b + 1), get(pool, b + 2), get(pool, b + 3));
-            let (ax, ay, az, aw) = (get(pool, a), get(pool, a + 1), get(pool, a + 2), get(pool, a + 3));
-            if ax * bx + ay * by + az * bz + aw * bw < 0.0 {
-                bx = -bx;
-                by = -by;
-                bz = -bz;
-                bw = -bw;
-            }
-            store_unit(d, o, rows, ax + (bx - ax) * f, ay + (by - ay) * f, az + (bz - az) * f, aw + (bw - aw) * f);
+            crate::single::step4(d, o, rows, pool, a, b, fs);
         }
     }
 }

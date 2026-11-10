@@ -278,6 +278,88 @@ fn his_own_ring_is_told_of_the_rows_in_reach() {
     }
 }
 
+/// THE RULE: a card over the game puts away the squad's ring, his own, his gun's setup, the launcher's arc and a press that was not a ring yet, of the player whose screen it is, and the
+/// keys coming up under it send nothing. A FAILURE MEANS: one of them stands behind the pause, or letting go of its key there gives an order. The controls: each stands where no card
+/// came, the other seat's ring stands, and the same short press with no card is an order.
+#[test]
+fn a_card_over_the_game_puts_the_rings_away_unsent() {
+    fn card(p: &mut Play) { game_start::host::command::apply(&mut p.g, &10u32.to_le_bytes()).unwrap(); }
+    fn orders(p: &Play) -> Vec<String> { p.view().squad.expect("a squad").mates.iter().map(|m| m.doing.split(" · ").next().unwrap().to_string()).collect() }
+    for seed in SEEDS {
+        let stand = || { let (s, door) = yard(seed); let mut p = Play::scene(&s, &Opts { seed, ..Default::default() }); p.sam_unhurt(); p.run(0.2); (p, door) };
+        for up in [true, false] {
+            let (mut p, door) = stand();
+            let was = orders(&p);
+            ring_on(&mut p, door);
+            if up { card(&mut p); }
+            assert_eq!(ring(&p).is_none(), up, "seed {seed}: a card came up: {up}");
+            let key = p.g.k.cmdring.key.clone();
+            if up { p.key_up(&key); p.run(0.5); assert_eq!((orders(&p), ring(&p).is_none()), (was, true), "seed {seed}: the key came up under it"); }
+        }
+        for up in [true, false] {
+            let (mut p, door) = stand();
+            let (was, key) = (orders(&p), p.g.k.cmdring.key.clone());
+            p.point_at(door);
+            p.frame();
+            p.key_down(&key);
+            p.frame();
+            if up { card(&mut p); }
+            p.key_up(&key);
+            p.run(0.5);
+            assert_eq!(orders(&p) == was, up, "seed {seed}: a short press, a card over it: {up}");
+        }
+        let (mut p, door) = stand();
+        p.sam_put([door[0], door[1] + 0.9]);
+        p.run(0.3);
+        p.key_down(game::consts::INTERACT_KEY);
+        p.until(2.0, |p| p.view().hand.is_some()).unwrap_or_else(|| panic!("seed {seed}: his ring did not come up"));
+        card(&mut p);
+        assert!(p.view().hand.is_none(), "seed {seed}: his own ring");
+        p.key_up(game::consts::INTERACT_KEY);
+        p.run(0.5);
+        assert!(p.view().hand.is_none() && p.g.sets[p.g.seat].act.is_none(), "seed {seed}");
+        drop(p);
+        let (mut p, door) = stand();
+        p.sam_takes_his_rifle();
+        let (seat, rifle) = (p.g.seat, p.g.pl[p.g.player].rifle);
+        if !p.g.fa[rifle].attachments.contains(&game::weapons::RifleAttachment::He40) { p.g.fa[rifle].attachments.push(game::weapons::RifleAttachment::He40); }
+        p.g.fa[rifle].shells = 2.0;
+        p.run(0.8);   // (a gun just come to his hands does not open its setup)
+        p.key_down("Digit2"); p.frame(); p.key_up("Digit2"); p.run(0.1);
+        assert!(p.g.sets[seat].hand.setup.is_some(), "seed {seed}: the staging: his gun's setup is up");
+        card(&mut p);
+        assert!(p.g.sets[seat].hand.setup.is_none(), "seed {seed}: his gun's setup");
+        p.point_at([door[0] + 4.0, door[1] + 14.0]);
+        p.press(game_start::play::Button::Right);
+        p.until(1.0, |p| p.g.pl[p.g.player].launch_held.is_some()).unwrap_or_else(|| panic!("seed {seed}: the staging: no arc is held"));
+        let loads = |p: &Play| (p.g.fa[rifle].shells, p.g.fa[rifle].rings, p.g.fa[rifle].cams);
+        let had = loads(&p);
+        card(&mut p);
+        assert!(p.g.pl[p.g.player].launch_held.is_none() && p.g.sets[seat].hand.throw_preview.is_none(), "seed {seed}: the arc");
+        p.release(game_start::play::Button::Right);
+        p.run(0.5);
+        assert_eq!(loads(&p), had, "seed {seed}: the button came up under it");
+        // the second player's screen: his ring goes, the first's stands
+        drop(p);
+        let (s, door) = yard(seed);
+        let mut p = Play::scene(&s, &Opts { seed, seats: 2, squad: 2, ..Default::default() });
+        p.sam_unhurt();
+        p.run(0.2);
+        let input = p.host.input;
+        for st in p.g.seats.clone() {
+            game::seats::with_seat(&mut p.g, st, &mut |g| {
+                let t = game::orders::squad_orders_target_at(g, [door[0], 0.0, door[1]]);
+                assert!(game::orders::squad_orders_open(g, Some(&t), None));
+                g.sets[g.seat].orders.cmd_ring = Some(game::cmdring::ring_open(g, input, 800.0, 600.0, 0.0, None));
+            });
+        }
+        let two = p.g.seats[1];
+        game::seats::show_seat(&mut p.g, two);
+        card(&mut p);
+        assert!(p.view_of(0).ring.is_some() && p.view_of(1).ring.is_none(), "seed {seed}: the ring of the player whose screen it is");
+    }
+}
+
 fn plan(p: &Play, seat: usize) -> PlanView { p.view_of(seat).plan }
 
 /// THE RULE: an order just given shows who goes and where, and goes out; with the menu up it stands; what waits on the key is listed on its door, and the key is lit only with the men set.

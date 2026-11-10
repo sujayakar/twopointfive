@@ -188,8 +188,8 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
     g.pl[p].hits_left = m::max(0.0, g.pl[p].hits_left - 1.0);
     if g.pl[p].hits_left == 0.0 {
         let in_hand = crate::game::player_gun_in_hand(g, p);
-        if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
-        if g.pl[p].holding.is_some() { crate::game::game_free_held(g, crate::player::FreeHeldWhy::Shot); }
+        if g.pl[p].dragging().is_some() { crate::game::game_toggle_drag(g, None); }
+        if g.pl[p].holding().is_some() { crate::game::game_free_held(g, crate::player::FreeHeldWhy::Shot); }
         let c = g.pl[p].ch;
         g.cond[g.pl[p].ch].down = true; g.pl[p].sprinting = false; g.pl[p].crouch = false;
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -273,7 +273,7 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let down = crate::condition::down(g, g.pl[p].ch);
     let sprinting = g.pl[p].sprinting;
     let held_now: Option<crate::game::ThrowKind> = match kind_sel {
-        Some(ks) if !(down || busy || g.pl[p].holstered || g.pl[p].dragging.is_some() || sprinting) => {
+        Some(ks) if !(down || busy || g.pl[p].holstered || g.pl[p].dragging().is_some() || sprinting) => {
             if crate::character::anim_in_throw(g, c) {
                 if crate::character::anim_throwing(g, c) {
                     match g.pl[p].pending_throw.as_ref().map(|t| t.kind) {
@@ -532,7 +532,7 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     rig_keys(g, out, n0);
 }
 
-/// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m, and the man it ends on. None: no bore, or the muzzle is against what it meets.
+/// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m. None: no bore, or the muzzle is against what it meets.
 pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId>, civ: Option<bool>) -> Option<crate::combat::LaserReach> {
     let civ = civ.unwrap_or(false);
     let dir = g.ch[c_2].gun_dir;

@@ -112,8 +112,8 @@ pub fn row_can_then(g: &mut Game, what: crate::doortools::ThresholdThen, t: &cra
     }
 }
 /// `who === 'you' ? wg(…) : `${who} is behind that door.``
-pub fn row_behind_words(g: &Game, who: String) -> String {
-    if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
+pub fn row_behind_words(who: String) -> String {
+    if who == "you" { String::from("you're behind that door.") } else { format!("{} is behind that door.", who) }
 }
 /// an entry's row: of a door whose jambs are held, what the men on them do; of any other, its own order
 pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
@@ -164,7 +164,7 @@ pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
         crate::orders::squad_orders_unregister(g, id);
     }
     register(g, rows::def(&rows::threshold::ORDER, OrderDef { page: Some(String::from(crate::doortools::TOOLS_PAGE)), targets: vec![K::Door],
-        ack: Some(strs(&["on the jambs. your call after.", "copy, holding it for you."])), ack_now: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
+        ack: Some(strs(&["on the jambs. your call.", "copy, holding it for you."])), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
     g.sets[g.seat].door_tools.thr_row = false;
 }
 

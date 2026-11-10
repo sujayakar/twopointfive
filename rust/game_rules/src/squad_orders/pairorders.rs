@@ -234,14 +234,12 @@ pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Order
 /// `can` of the two take rows: there is room at his back and the man can reach it
 pub fn row_take_can(g: &mut Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
     let crate::orders::OrderTarget::Foe(x) = t else {
-        let (now, was) = (String::from("nobody there."), String::from("no man there."));
-        return Some(crate::words::wg(g, &now, &was));
+        return Some(String::from("nobody there."));
     };
     let to = crate::pairorders::pair_orders_behind(g, x.foe);
     let spot = crate::orders::squad_orders_free_spot(g, &crate::seats::here(g), to).unwrap_or(to);
     if !crate::pairorders::pair_orders_back_open(g, x.foe, spot) || !crate::pairorders::pair_orders_rear(g, x.foe, spot, Some(true)) {
-        let (now, was) = (String::from("no room behind him."), String::from("no room at his back."));
-        return Some(crate::words::wg(g, &now, &was));
+        return Some(String::from("no room behind him."));
     }
     let stage = crate::pairorders::pair_orders_stage(g, x.foe);
     crate::orders::squad_orders_reach(g, gd, stage)
@@ -263,12 +261,10 @@ pub fn row_take_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[Guard
     let crate::orders::OrderTarget::Foe(x) = t else { return Err(None) };
     if let Some(w) = crate::pairorders::pair_orders_gone(g, x.foe) { return Err(Some(w)); }
     if crate::pairorders::pair_orders_noticed(g, x.foe) {
-        let (now, was) = (String::from("he's fighting. can't grab him."), String::from("he's fighting. no hands."));
-        return Err(Some(crate::words::wg(g, &now, &was)));
+        return Err(Some(String::from("he's fighting. can't grab him.")));
     }
     if crate::pairorders::pair_orders_caught(g) {
-        let (now, was) = (String::from("they're onto us. can't grab him."), String::from("they're onto us. no hands."));
-        return Err(Some(crate::words::wg(g, &now, &was)));
+        return Err(Some(String::from("they're onto us. can't grab him.")));
     }
     Ok(())
 }
@@ -430,7 +426,7 @@ fn pair_orders_hands_summary(g: &mut Game) { g.pair.hands_was = crate::seats::me
 /// this seat's man and this seat's jobs, standing on the seat
 fn pair_orders_mine(g: &mut Game) {
     let pl = g.player;
-    let hands = g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some();
+    let hands = g.pl[pl].on_a_man();
     if hands && !g.pl[pl].pair_hands_was { pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Hands)); }
     g.pl[pl].pair_hands_was = hands;
     let mut at = 0;

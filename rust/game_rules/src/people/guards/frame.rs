@@ -155,10 +155,11 @@ fn lent(g: &mut Game, gd: GuardId, dt: f64) -> bool {
     }
     if g.gd[gd].script.is_some() {
         crate::control::record(g, gd, crate::control::Holder::Script);
+        let fights = crate::roomfight::fights_as_he_goes(g, gd);   // (he keeps his line on his man)
         {
             let m = &mut g.gd[gd];
             m.pieing = None; m.search_plan = None; m.standoff = None;
-            crate::aim::aim_state_clear(&mut g.arms[m.ch].aim);
+            if !fights { crate::aim::aim_state_clear(&mut g.arms[m.ch].aim); }
             let s = m.script.as_ref().unwrap();
             let drawn = s.over.is_some() || s.upper.clone().unwrap_or(UpperMode::Aim) == UpperMode::Aim;
             m.drawn = drawn;

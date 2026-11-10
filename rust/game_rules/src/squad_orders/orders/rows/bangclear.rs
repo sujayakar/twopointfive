@@ -25,7 +25,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { return crate::doortools::row_can_then(g, What::Bang, t, men); }
     if g.sets[g.seat].door_tools.bangs <= 0.0 { return Err(Some(String::from("no bangs left."))); }
     let who = match t { OrderTarget::Door(x) => crate::doortools::door_tools_can_behind(g, x.door, x.side, men), _ => None };
-    if let Some(who) = who { return Err(Some(crate::doortools::row_behind_words(g, who))); }
+    if let Some(who) = who { return Err(Some(crate::doortools::row_behind_words(who))); }
     crate::doortools::row_stackable(g, t, men)
 }
 

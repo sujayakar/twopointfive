@@ -51,11 +51,11 @@ fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimS
     let c = js::rem(m::atan2(m::sin(4.0 * m::PI * cs[0]) + m::sin(4.0 * m::PI * cs[1]), m::cos(4.0 * m::PI * cs[0]) + m::cos(4.0 * m::PI * cs[1])) / (4.0 * m::PI) + 1.0, 0.5);
     Some(crate::character::AnimStanceOf { c, c_l: cs[0], c_r: cs[1] })
 }
-/// Jog_Fwd_Loop at phase ph with its loop seam closed, in doubles as all the constructor's measuring is   (character.ts sampleJog, on the animator being built)
+/// Jog_Fwd_Loop at phase ph with its loop seam closed, on the animator being built
 fn sample_jog(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, out: crate::anim_skeleton::Pose) {
     let cj = kept(a, "Jog_Fwd_Loop");
     let t = ph * g.tab.clip[cj].duration;
-    crate::anim_skeleton::sample_clip(g, cj, t, true, out, false);
+    crate::anim_skeleton::sample_clip(g, cj, t, true, out);
     let k = ph - m::floor(ph) - 0.5;
     let rows = crate::anim_skeleton::pose_rows(out.nodes as f64) as usize;
     jog_seam_close(crate::anim_skeleton::pose_cols(g, out), rows, &a.jog_seam, k);
@@ -181,10 +181,9 @@ pub(super) fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<cr
             b
         }
     };
-    let singles = g.k.posemath.singles;
     // (lent out of the row for the call, which takes g: blend_pose reads the pool, not the animator)
     let mask = core::mem::take(&mut g.ch[c].anim.arm_r_only);
-    crate::anim_skeleton::blend_pose(g, Some(a), h, 1.0, Some(mask.as_slice()), buf, singles);
+    crate::anim_skeleton::blend_pose(g, Some(a), h, 1.0, Some(mask.as_slice()), buf);
     g.ch[c].anim.arm_r_only = mask;
     Some(buf)
 }
@@ -209,10 +208,6 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
     // The TypeScript's `new Pose(n).copy(this.rest)` scratch of this function goes to the collector; in the pool a pose's place is for good. So its two
     // scratch poses at any one time are p_b and p_c, each copied from rest as the TypeScript's is made, and both are back at rest at the end, as it leaves them.
     let (s1, s2) = (a.p_b, a.p_c);
-
-    // what is measured off a clip to keep is MEASURED IN DOUBLES whatever the pose rule says (POSEMATH): every sample_clip below says so
-    let pose_rule = g.k.posemath.singles;
-    g.k.posemath.singles = false;
 
     let need: [&'static str; 15] = ["Idle_Loop", "Walk_Loop", "Jog_Fwd_Loop", "Crouch_Idle_Loop", "Crouch_Fwd_Loop", "Pistol_Idle_Loop", "Pistol_Aim_Neutral", "Pistol_Aim_Up", "Pistol_Aim_Down", "Pistol_Shoot", "Idle_Torch_Loop", "Hit_Chest", "Sprint_Loop", "Pistol_Reload", "Punch_Cross"];
     for k in need {
@@ -266,7 +261,7 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
     a.fk_arms = fk_list(&g.tab.rig[ch], &[nd.spine3 as f64, nd.upper_arm_r as f64, nd.forearm_r as f64, nd.hand_r as f64, nd.middle1_r as f64, nd.upper_arm_l as f64, nd.forearm_l as f64, nd.hand_l as f64]);
     a.fk_head = fk_list(&g.tab.rig[ch], &[nd.head as f64]);
 
-    crate::anim_skeleton::sample_clip(g, kept(&a, "Pistol_Aim_Neutral"), 0.0, false, a.p_aim, false);
+    crate::anim_skeleton::sample_clip(g, kept(&a, "Pistol_Aim_Neutral"), 0.0, false, a.p_aim);
     crate::anim_skeleton::pose_fk_run(g, &mut a.fk, rest);
     a.chest_rest_inv = v3::quat::conj(a.fk.rot[nd.spine3]);
     a.head_rest_inv = v3::quat::conj(a.fk.rot[nd.head]);
@@ -282,13 +277,13 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
     {   // the standing idle: the gaze, the feet, and the fist the hand pass measures from
         let p = s1;
         crate::anim_skeleton::pose_copy(g, p, rest);
-        crate::anim_skeleton::sample_clip(g, kept(&a, "Idle_Loop"), 0.0, false, p, false);
+        crate::anim_skeleton::sample_clip(g, kept(&a, "Idle_Loop"), 0.0, false, p);
         crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
         a.gaze_local = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.head]), az());
         a.hn.fist = grab(g, &a.hn.nodes, p);
         let pc = s2;
         crate::anim_skeleton::pose_copy(g, pc, rest);
-        crate::anim_skeleton::sample_clip(g, kept(&a, "Crouch_Idle_Loop"), 0.0, false, pc, false);
+        crate::anim_skeleton::sample_clip(g, kept(&a, "Crouch_Idle_Loop"), 0.0, false, pc);
         let cr = grab(g, &a.hn.nodes, pc);
         a.hn.own = [0usize, 1].iter().map(|&sd| {
             let (cd, fd) = (&cr[sd], &a.hn.fist[sd]);
@@ -307,7 +302,7 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
         let (mut zmin, mut zmax) = (1e9f64, -1e9f64);
         let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         for i in 0..M {
-            crate::anim_skeleton::sample_clip(g, cf, cf_dur * i as f64 / M as f64, true, p, false);
+            crate::anim_skeleton::sample_clip(g, cf, cf_dur * i as f64 / M as f64, true, p);
             crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
             for f in [nd.foot_l, nd.foot_r] { zmin = m::min(zmin, a.fk.pos[f][2]); zmax = m::max(zmax, a.fk.pos[f][2]); }
             ty[0].push(a.fk.pos[nd.toe_l][1]);
@@ -333,8 +328,8 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
         let (pa, pb) = (s1, s2);
         crate::anim_skeleton::pose_copy(g, pa, rest);
         crate::anim_skeleton::pose_copy(g, pb, rest);
-        crate::anim_skeleton::sample_clip(g, cj, 0.0, false, pa, false);
-        crate::anim_skeleton::sample_clip(g, cj, cj_dur, false, pb, false);
+        crate::anim_skeleton::sample_clip(g, cj, 0.0, false, pa);
+        crate::anim_skeleton::sample_clip(g, cj, cj_dur, false, pb);
         let tracks: Vec<(f64, f64)> = g.tab.clip[cj].tracks.iter().map(|tr| (tr.node, tr.path)).collect();
         for (node, path) in tracks {
             if path == 0.0 {
@@ -406,7 +401,7 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
         let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         let mut tz: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         for i in 0..M {
-            crate::anim_skeleton::sample_clip(g, cs, cs_dur * i as f64 / M as f64, true, p, false);
+            crate::anim_skeleton::sample_clip(g, cs, cs_dur * i as f64 / M as f64, true, p);
             crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
             for f in [nd.foot_l, nd.foot_r] { zmin = m::min(zmin, a.fk.pos[f][2]); zmax = m::max(zmax, a.fk.pos[f][2]); ymin = m::min(ymin, a.fk.pos[f][1]); }
             ty[0].push(a.fk.pos[nd.toe_l][1]);
@@ -420,7 +415,6 @@ pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character
     }
     crate::anim_skeleton::pose_copy(g, s1, rest);
     crate::anim_skeleton::pose_copy(g, s2, rest);
-    g.k.posemath.singles = pose_rule;
     a.phase = crate::dice::draw_world(g, "character::anim_new#1");
     a
 }

@@ -25,7 +25,7 @@ pub fn sprint_door_kick(g: &mut crate::game::Game, pl: PlayerId) -> Option<DoorI
     if !live(crate::sprintdoor::LivePl { down }) || !g.pl[pl].sprinting { return None; }
     {
         let p = &g.pl[pl];
-        if p.kick.is_some() || p.picking.is_some() || p.coding.is_some() || p.takedown.is_some() || p.holding.is_some() { return None; }
+        if p.planted() { return None; }
     }
     let c = g.pl[pl].ch;
     let (vx, vz) = (g.ch[c].vel[0], g.ch[c].vel[2]);

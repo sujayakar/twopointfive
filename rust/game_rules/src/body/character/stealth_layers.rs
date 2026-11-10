@@ -46,12 +46,11 @@ fn anim_creep_plant(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
 fn creep_plant_find(g: &mut Game, c: CharId, clip: ClipId, off: f64) -> f64 {
     let (toe_l, toe_r, p_c) = (g.ch[c].anim.nodes.toe_l, g.ch[c].anim.nodes.toe_r, g.ch[c].anim.p_c);
     let legs = g.ch[c].anim.fk_legs.clone();
-    let singles = g.k.posemath.singles;
     let mut best = 0.0;
     let mut score = -m::INF;
     for i in 0..96 {
         let dur = g.tab.clip[clip].duration;
-        crate::anim_skeleton::sample_clip(g, clip, (i as f64 / 96.0 + off) * dur, true, p_c, singles);
+        crate::anim_skeleton::sample_clip(g, clip, (i as f64 / 96.0 + off) * dur, true, p_c);
         anim_fk_part(g, c, p_c, &legs);
         let pos = &g.ch[c].anim.fk.pos;
         let (a, b) = (pos[toe_l], pos[toe_r]);
@@ -323,7 +322,7 @@ pub(super) fn anim_blow_trunk(g: &mut crate::game::Game, c: CharId, b: &crate::c
 pub(super) fn anim_blow_arms(g: &mut crate::game::Game, c: CharId, b: &crate::character::BlowRun, tw_y: f64, tw_p: f64) -> f64 {
     let (at, at2) = (anim_to_model_p(g, c, b.at), b.at2.map(|p| anim_to_model_p(g, c, p)));
     let mut shown = 0.0;
-    anim_layer(g, c, |s, an, k| sim::layers::blow_arms(s, an, b, at, at2, tw_y, tw_p, &mut shown, k));
+    anim_layer(g, c, |s, an, _| sim::layers::blow_arms(s, an, b, at, at2, tw_y, tw_p, &mut shown));
     shown
 }
 
@@ -349,19 +348,19 @@ pub(super) fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate:
 fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KnifeSlash, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) {
     let there = g.ch[c].anim.rd_at.map(|p| anim_to_model_p(g, c, p));
     let rc = anim_sheath_rest_inv(g, c);
-    anim_layer(g, c, |s, an, n| sim::layers::knife_pose(s, an, k, t, t0, total, tw_y, tw_p, there, rc, n));
+    anim_layer(g, c, |s, an, _| sim::layers::knife_pose(s, an, k, t, t0, total, tw_y, tw_p, there, rc));
 }
 
 // ---- lock work, the haul
 
 /// Lock work: the back un-rounded, the head on the lock, both hands at the keyway.
-pub(super) fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, k| sim::layers::lockpick_layer(s, an, w, k)); }
+pub(super) fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| sim::layers::lockpick_layer(s, an, w)); }
 
 /// Both hands on a body: the trunk bows toward the grip, both arms by IK on a copy.
 pub(super) fn anim_haul_layer(g: &mut crate::game::Game, c: CharId, w: f64, tw_y: f64, tw_p: f64) {
     let h = match g.ch[c].anim.hl_last { Some(h) => h, None => return };
     let (l, r) = (anim_to_model_p(g, c, h.l), anim_to_model_p(g, c, h.r));
-    anim_layer(g, c, |s, an, k| sim::layers::haul_layer(s, an, &h, w, l, r, tw_y, tw_p, k));
+    anim_layer(g, c, |s, an, _| sim::layers::haul_layer(s, an, &h, w, l, r, tw_y, tw_p));
 }
 
 // ---- world and model
@@ -412,7 +411,7 @@ pub(super) fn anim_door_layer(g: &mut crate::game::Game, c: CharId, dt: f64, int
     let (n, p) = (anim_to_model_d(g, c, l.n), anim_to_model_p(g, c, l.p));
     let an = &g.ch[c].anim;
     let free = !armed && an.upper != UpperMode::Torch && an.throw_t < 0.0;
-    anim_layer(g, c, |s, an, k| sim::layers::door_layer(s, an, &l, n, p, dt, intent, free, tw_y, tw_p, k));
+    anim_layer(g, c, |s, an, _| sim::layers::door_layer(s, an, &l, n, p, dt, intent, free, tw_y, tw_p));
 }
 
 #[cfg(test)]

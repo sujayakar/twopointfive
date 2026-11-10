@@ -45,12 +45,8 @@ fn hands(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].holstered
         && !crate::condition::down(g, g.pl[me].ch)
-        && g.pl[me].holding.is_none()
-        && g.pl[me].takedown.is_none()
-        && g.pl[me].dragging.is_none()
-        && g.pl[me].kick.is_none()
-        && g.pl[me].picking.is_none()
-        && g.pl[me].wanding.is_none()
+        && !g.pl[me].planted()
+        && g.pl[me].tow.is_none()
         && g.pl[me].wall.is_none()
         && able(g, &crate::seats::here(g))
 }
@@ -68,7 +64,7 @@ fn shut(g: &mut crate::game::Game) -> bool {
 /// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever.
 fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let me = seat.player;
-    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move.is_none()
+    !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move().is_none()
 }
 
 /// How far off a press can begin one.
@@ -157,12 +153,8 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
         || drawn
         || !g.pl[me].holstered
         || crate::condition::down(g, g.pl[me].ch)
-        || g.pl[me].holding.is_some()
-        || g.pl[me].takedown.is_some()
-        || g.pl[me].dragging.is_some()
-        || g.pl[me].kick.is_some()
-        || g.pl[me].picking.is_some()
-        || g.pl[me].wanding.is_some()
+        || g.pl[me].planted()
+        || g.pl[me].tow.is_some()
         || !able(g, &crate::seats::here(g))
         || shut(g)
         || (g.pl[me].crouch && !crate::player::can_stand(g)))

@@ -512,8 +512,8 @@ impl KitAsk for Play {
     }
     fn down_how(&self, gd: GuardId) -> Option<game::game::DownKind> { self.g.gd[gd].down_kind }
     fn card(&self) -> (f64, f64) { (self.g.mission.stats.kills, self.g.mission.stats.knockouts) }
-    fn sam_mid_blow(&self) -> bool { self.g.pl[self.g.player].takedown.is_some() }
-    fn in_the_arm(&self) -> bool { self.g.pl[self.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
+    fn sam_mid_blow(&self) -> bool { self.g.pl[self.g.player].takedown().is_some() }
+    fn in_the_arm(&self) -> bool { self.g.pl[self.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held) }
     fn breathing(&self, gd: GuardId) -> bool { let c = self.g.gd[gd].ch; game::condition::down(&self.g, self.g.gd[gd].ch) && !self.g.ch[c].alive && matches!(self.g.gd[gd].down_kind, Some(game::game::DownKind::Struck) | Some(game::game::DownKind::Choked)) }
     fn man_row_in_reach(&self, gd: GuardId) -> Option<bool> { self.g.sets[self.g.seat].nearby.iter().chain(self.g.sets[self.g.seat].interactables.iter()).find(|r| r.guard == Some(gd)).map(|r| r.in_reach) }
     fn wall_between(&mut self, a: [f64; 2], b: [f64; 2]) -> bool {
@@ -535,7 +535,7 @@ impl KitAsk for Play {
         if game::game::player_pistol_up(&self.g, pl) { "pistol" } else if game::game::player_rifle_up(&self.g, pl) { "rifle" } else { "nothing" }
     }
     fn sam_rounds(&self) -> f64 { let pl = &self.g.pl[self.g.player]; game::weapons::firearm_rounds_ready(&self.g, pl.pistol) + game::weapons::firearm_rounds_ready(&self.g, pl.rifle) }
-    fn sam_charging(&self) -> bool { self.g.pl[self.g.player].charging.is_some() }
+    fn sam_charging(&self) -> bool { self.g.pl[self.g.player].charging().is_some() }
     fn two_hands_on_work(&self) -> bool { let c = self.g.pl[self.g.player].ch; self.g.ch[c].anim.wk.two }
     fn charges_left(&self) -> f64 { self.g.sets[self.g.seat].door_tools.charges }
     fn door_in(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off || (!self.g.dr[d].leaf.latched && self.g.dr[d].leaf.lock_broken) }
@@ -675,7 +675,7 @@ impl KitAsk for Play {
     fn sprint_door_counts(&self) -> (i32, i32, i32) { let t = &self.g.stats.sprintdoor; (t.bashes, t.rips, t.kicks) }
     fn sprint_pace(&self) -> f64 { self.g.tune.player_sprint }
     fn shoulder_keeps(&self) -> f64 { self.g.k.sprintdoor.keep }
-    fn sam_kicking(&self) -> bool { self.g.pl[self.g.player].kick.is_some() }
+    fn sam_kicking(&self) -> bool { self.g.pl[self.g.player].kick().is_some() }
     fn door_off_hinges(&self, d: DoorId) -> bool { self.g.dr[d].leaf.off }
     fn door_broken(&self, d: DoorId) -> bool { self.g.dr[d].leaf.lock_broken }
     fn door_locked_to(&mut self, d: DoorId, at: [f64; 2]) { self.g.dr[d].leaf.locked = true; self.g.dr[d].key_side = game::doors::doors_side(&self.g, d, [at[0], 0.0, at[1]]); }
@@ -705,7 +705,7 @@ impl KitAsk for Play {
     fn sam_sprinting(&self) -> bool { self.g.pl[self.g.player].sprinting }
     fn sam_sneaking(&self) -> bool { game::unseen::sam_sneaks(&self.g, self.g.player) }
     fn sam_is_low(&self) -> bool { self.g.pl[self.g.player].crouch }
-    fn sam_in_a_move(&self) -> (bool, bool, bool, bool) { let p = &self.g.pl[self.g.player]; (p.kick.is_some(), p.picking.is_some(), p.takedown.is_some(), p.dragging.is_some()) }
+    fn sam_in_a_move(&self) -> (bool, bool, bool, bool) { let p = &self.g.pl[self.g.player]; (p.kick().is_some(), p.picking().is_some(), p.takedown().is_some(), p.dragging().is_some()) }
     fn sam_starts_kick(&mut self, d: DoorId) { game::player::start_kick(&mut self.g, d, None, None); }
     fn sam_starts_pick(&mut self, d: DoorId) { game::player::start_picking(&mut self.g, d); }
     fn sam_starts_takedown(&mut self, gd: GuardId) { game::player::start_takedown(&mut self.g, gd, None, None, None); }

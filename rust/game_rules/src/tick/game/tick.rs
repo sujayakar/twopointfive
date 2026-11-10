@@ -68,8 +68,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for i in 0..n {
         let s = seats[i];
         let near = if g.tab.cmd_seat[s].remote { let c = man_char(g, s); Some(g.ch[c].pos) } else { None };
-        let r = crate::cmd::check_cmd(g, Some(&cmds[i]), near);
-        checked.push(r.cmd);
+        checked.push(crate::cmd::check_cmd(g, Some(&cmds[i]), near));
     }
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);

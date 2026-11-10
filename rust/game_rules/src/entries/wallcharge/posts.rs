@@ -78,7 +78,7 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
     g.sets[g.seat].wall_charge.ops = Vec::new();
     g.sets[g.seat].wall_charge.done = Vec::new();
     g.sets[g.seat].wall_charge.set = Vec::new();
-    g.sets[g.seat].wall_charge.sam = None;
+    g.pl[g.player].wall_work_over();
     g.sets[g.seat].wall_charge.offered = None;
     g.sets[g.seat].wall_charge.alone = 0.0;
     let n = match g.k.wallcharge.carried { None => None, Some(c) => Some(crate::seats::seat_share(g, c)) };
@@ -96,7 +96,7 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
 fn wall_charge_stop(g: &mut crate::game::Game) {
     for op in g.sets[g.seat].wall_charge.ops.clone() { wall_charge_end(g, op); }
     for c in core::mem::take(&mut g.sets[g.seat].wall_charge.set) { wall_charge_give_back(g, c); }
-    g.sets[g.seat].wall_charge.sam = None;
+    g.pl[g.player].wall_work_over();
     g.sets[g.seat].wall_charge.marker = None;
     g.sets[g.seat].wall_charge.walks = None;
 }
@@ -141,7 +141,7 @@ pub fn wall_charge_row_words(g: &crate::game::Game, seat: &crate::seats::SeatRef
 /// The refusal's words, with none to set.
 pub(super) fn wall_charge_none_words(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> String {
     if seat.wall_charge.carried.is_some() {
-        if seat.wall_charge.brought == Some(0.0) { return String::from(crate::words::wg(g, &"nobody brought a wall charge.", &"no wall charge carried.")); }
+        if seat.wall_charge.brought == Some(0.0) { return String::from("nobody brought a wall charge."); }
         return String::from("no wall charge left.");
     }
     if wall_charge_price(g, seat) > 1.0 && seat.door_tools.charges > 0.0 { String::from("not enough charge for a wall.") } else { String::from("no charges left.") }
@@ -598,7 +598,7 @@ pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::
 /// Each living enemy in the team's picture now, where he stands or was last seen.
 pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
-    let held = g.pl[g.player].holding.as_ref().map(|h| h.g);
+    let held = g.pl[g.player].holding().map(|h| h.g);
     let known_s = g.k.wallcharge.fire_known_s;
     if crate::fogofwar::fog_of_war_active(g) {
         let men: Vec<GuardId> = g.guards.iter().copied().filter(|m| g.team(*m).ours()).collect();

@@ -63,8 +63,3 @@ pub struct Seat {
     pub mark: u32,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct CheckCmd {
-    pub cmd: crate::cmd::PlayerCmd,
-}
-

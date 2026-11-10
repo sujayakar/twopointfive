@@ -422,7 +422,7 @@ pub fn civilian_sam_line(g: &mut crate::game::Game, gd: GuardId) -> crate::civil
 /// 'stay down, stay quiet': she is let go where she stands, told
 pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     let pl = g.player; let pc = g.pl[pl].ch;
-    let gd = match &g.pl[pl].holding { Some(h) if g.gd[h.g].civ.is_some() && h.phase == HoldPhase::Held => h.g, _ => return false };
+    let gd = match g.pl[pl].holding() { Some(h) if g.gd[h.g].civ.is_some() && h.phase == HoldPhase::Held => h.g, _ => return false };
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
     let pool = crate::dialogue::civ_lines().comply.sam;
     let line = pick(g, gd, &pool);
@@ -433,7 +433,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     g.cv[cid].complied = true; g.cv[cid].comply_until = g.time + g.k.civ.comply_min * 60.0;
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
-    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
+    g.pl[pl].holding_over(); g.ch[pc].anim.hold_pose = None; g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
     later(g, 0.9, &LaterP { kind: PendKind::ComplyLine, cv: gd, o: None, ..LaterP::default() });
     to_cower(g, gd, true);
     let pos = g.ch[c].pos;
@@ -475,7 +475,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
         }
         if dead && g.tune.civilian_kill_fails && crate::mission::mission_live(g) {
             let at = g.time + crate::mission::DOWN_CARD_SECS;
-            g.mission.stage = MissionStage::Failed; g.mission.drive_t = -1.0; g.mission.down_card_at = at;
+            g.mission.stage = MissionStage::Failed; g.mission.down_card_at = at;
         } else if !hostage {
             crate::squadnet::team_says(g, None, if dead { "that was a civilian." } else { "civilian's out. still breathing." });
         }
@@ -700,7 +700,7 @@ pub(super) fn greetings(g: &mut crate::game::Game) {
     if escalation_of(g) != 0.0 || g.alarm.episode { return; }
     if g.light_home.mains.active { return; }
     let players = crate::seats::men(g);
-    if players.iter().any(|p| g.pl[*p].holding.is_some()) { return; }
+    if players.iter().any(|p| g.pl[*p].holding().is_some()) { return; }
     let floor_greet_at = floor_of(g).greet_at;
     if g.time - floor_greet_at < g.k.civ.greet_floor_secs { return; }
     let mut ci = 0;

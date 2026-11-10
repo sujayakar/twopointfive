@@ -148,7 +148,7 @@ async fn deed(b: &Bot, id: &str) {
         }
         "charge" => {
             if !b.verb(InteractableKind::Door, Verb::Charge, Some(SHOP_DOOR)).await { b.fail(String::from("no 'charge' row on the shop's door")).await; }
-            b.until(|| b.me(|p| p.charging.is_none() && p.kick.is_none()), 12.0).await;
+            b.until(|| b.me(|p| p.charging().is_none() && p.kick().is_none()), 12.0).await;
             b.ticks(20).await;
         }
         "back" => { b.to_near(BACK, 10.0, 0.5).await; b.ticks(20).await; }

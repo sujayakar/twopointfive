@@ -173,7 +173,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             if g_2.slice_i >= g_2.slice_pts.len() as f64 {
                 if g_2.goal_near { release_gate(g, gd, g_2); return true; }
                 let line: &str = if gate_mate(g, g_2, crate::tactics::GateRole::Second, gd).is_some() {
-                    crate::words::wg(g, &"clear as far as I can see — crossing, on me", &"clear as far as I see — crossing, on me")
+                    "clear as far as I can see — crossing, on me"
                 } else { "crossing" };
                 crate::game::game_say(g, gd, line, None, None);
                 begin_cross(g, g_2);

@@ -641,13 +641,13 @@ fn charge_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         return Step::On;
     }
     if b.phase == "ask" {
-        if g.pl[pl].charging.is_some() { b.given = true; to(g, b, "hands"); return Step::On; }
+        if g.pl[pl].charging().is_some() { b.given = true; to(g, b, "hands"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("charges: the door never offered it")); return Step::Done; }
         if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(Verb::Charge)) { press(st, "Space"); b.leg_t = now; }
         return Step::On;
     }
     if b.phase == "hands" {
-        if c.is_none() { if g.pl[pl].charging.is_none() { b.marks.push("kept"); return Step::Done; } return Step::On; }
+        if c.is_none() { if g.pl[pl].charging().is_none() { b.marks.push("kept"); return Step::Done; } return Step::On; }
         b.marks.push("set");
         to(g, b, "off");
         sam_goes(st, b.home);
@@ -706,7 +706,7 @@ fn wand_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         to(g, b, "ask");
         return Step::On;
     }
-    let wanding = g.pl[pl].wanding.as_ref().map(|w| w.live);
+    let wanding = g.pl[pl].wanding().map(|w| w.live);
     if b.phase == "ask" {
         if wanding.is_some() { b.marks.push("knee"); to(g, b, "feed"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("wand: the door never offered it")); return Step::Done; }
@@ -1139,7 +1139,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         return Step::On;
     }
     if b.phase == "ask" {
-        if g.pl[pl].kick.is_some() { b.given = true; to(g, b, "work"); return Step::On; }
+        if g.pl[pl].kick().is_some() { b.given = true; to(g, b, "work"); return Step::On; }
         if el >= K.own_ask { b.marks.push("kept"); st.a.refused = Some(String::from("big: the door never offered it")); return Step::Done; }
         let verb = if big_of(st, 0) == Some(BigKit::Hammer) { Verb::Hammer } else { Verb::Breach };
         if (b.leg_t.is_nan() || now - b.leg_t > 0.5) && crate::game::game_select_verb(g, InteractableKind::Door, Some(verb)) { press(st, "Space"); b.leg_t = now; }
@@ -1147,7 +1147,7 @@ fn big_sam_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
     }
     if b.phase == "work" {
         if b.mark_t.is_nan() && gave(g, st) { mark(g, b, "gave"); }
-        if g.pl[pl].kick.is_some() { return Step::On; }
+        if g.pl[pl].kick().is_some() { return Step::On; }
         if b.mark_t.is_nan() { b.marks.push("held"); return Step::Done; }
         to(g, b, "off");
         sam_goes(st, b.home);
@@ -1416,7 +1416,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     let pl = g.player;
     st.a.cuts += 1;
     if b.man.is_none() && b.item.is_none() { g.pl[pl].pending_throw = None; g.sets[g.seat].hand.throw_held = false; }
-    if b.man.is_none() && g.pl[pl].charging.is_some() { crate::doortools::door_tools_cancel_sam(g); }
+    if b.man.is_none() { g.pl[pl].charging_over(); }
     if b.field == "smoke" && (b.thrown || b.item.is_some()) { shut_cans(g); st.a.vent_kill = g.time + K.vent_kill; }
     // (asked before what lies unfired is taken up: a frag taken off the floor has not gone off)
     if b.field == "frags" && b.mark_t.is_nan() && (g.sets[g.seat].door_tools.stats.frags > b.base || item_went(g, &b)) { mark(g, &mut b, "frag"); }
@@ -1426,7 +1426,7 @@ pub(super) fn cut(g: &mut Game, st: &mut KitStage) {
     let info = row(b.row);
     let on_wall = info.team && !g.sets[g.seat].wall_charge.set.is_empty();
     if info.team && !on_wall { crate::wallcharge::wall_charge_reset(g); }
-    if b.row == Act::BigSam { g.pl[pl].kick = None; }
+    if b.row == Act::BigSam { g.pl[pl].kick_over(); }
     if info.door == Leaf::None || b.given { crate::doortools::door_tools_reset(g); pools(g, st, None); }
     finish(g, st, b, "cut");
     if on_wall { st.a.dirty = true; }

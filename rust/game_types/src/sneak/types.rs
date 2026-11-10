@@ -131,30 +131,6 @@ pub struct LINESNag {
     pub door: String,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct LINESNOW {
-    pub wait: crate::sneak::LINESNOWWait,
-    pub nag: crate::sneak::LINESNOWNag,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LINESNOWWait {
-    pub door: Option<String>,
-    pub near: Option<String>,
-    pub open: Option<String>,
-    pub lit: Option<String>,
-    pub long: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct LINESNOWNag {
-    pub door: Option<String>,
-    pub near: Option<String>,
-    pub open: Option<String>,
-    pub lit: Option<String>,
-    pub long: Option<String>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SneakModLeafTValue {
     pub a: f64,
@@ -192,9 +168,7 @@ pub struct SneakStats {
     pub cues: i32,
 }
 
-pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're stood in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for his back."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're stood in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }
-
-pub fn lines_now() -> crate::sneak::LINESNOW { crate::sneak::LINESNOW { wait: crate::sneak::LINESNOWWait { door: None, near: None, open: Some(String::from("holding in the dark. you're standing in the light.")), lit: None, long: None }, nag: crate::sneak::LINESNOWNag { door: None, near: Some(String::from("he's still facing me. waiting for him to turn.")), open: Some(String::from("you're standing in the light. i'll hold in the dark.")), lit: None, long: None } } }
+pub fn lines() -> crate::sneak::LINES { crate::sneak::LINES { wait: crate::sneak::LINESWait { lit: String::from("holding. it's lit and he's looking."), near: String::from("holding. too close while he's looking."), long: String::from("holding. too much open light to cross."), open: String::from("holding in the dark. you're standing in the light."), door: String::from("i'm off the door. ready when you are.") }, nag: crate::sneak::LINESNag { lit: String::from("can't cross while it's lit. he's still on it."), near: String::from("he's still facing me. waiting for him to turn."), long: String::from("it's a long lit stretch. kill the light or go on."), open: String::from("you're standing in the light. i'll hold in the dark."), door: String::from("") }, go: String::from("moving.") } }
 
 pub const DEG: f64 = 0.017453292519943295;
 

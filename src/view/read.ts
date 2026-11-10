@@ -229,11 +229,8 @@ export function readNetLook(b: Uint8Array): NetLook { const I = new In(b), r = r
 export interface AttentionLook { ringM: number; wayReask: number }
 function readAttentionLookIn(I: In): AttentionLook { return { ringM: I.float64(), wayReask: I.float64() }; }
 export function readAttentionLook(b: Uint8Array): AttentionLook { const I = new In(b), r = readAttentionLookIn(I); if (I.p !== b.length) throw new Error(`the view: AttentionLook is ${b.length} bytes and ${I.p} were read`); return r; }
-export type BackKey = 'tab' | 'esc';
-const BackKeyWords: readonly BackKey[] = ['tab', 'esc'];
-function readBackKeyIn(I: In): BackKey { return I.word(BackKeyWords, 'BackKey'); }
-export interface HudLook { ring: RingLook; plan: PlanLook; net: NetLook; attention: AttentionLook; lineClear: boolean; markClear: boolean; back: BackKey }
-function readHudLookIn(I: In): HudLook { return { ring: readRingLookIn(I), plan: readPlanLookIn(I), net: readNetLookIn(I), attention: readAttentionLookIn(I), lineClear: I.bool(), markClear: I.bool(), back: readBackKeyIn(I) }; }
+export interface HudLook { ring: RingLook; plan: PlanLook; net: NetLook; attention: AttentionLook; lineClear: boolean; markClear: boolean }
+function readHudLookIn(I: In): HudLook { return { ring: readRingLookIn(I), plan: readPlanLookIn(I), net: readNetLookIn(I), attention: readAttentionLookIn(I), lineClear: I.bool(), markClear: I.bool() }; }
 export function readHudLook(b: Uint8Array): HudLook { const I = new In(b), r = readHudLookIn(I); if (I.p !== b.length) throw new Error(`the view: HudLook is ${b.length} bytes and ${I.p} were read`); return r; }
 export type AttentionMode = 'go' | 'look' | 'lent';
 const AttentionModeWords: readonly AttentionMode[] = ['go', 'look', 'lent'];

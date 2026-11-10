@@ -305,7 +305,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
     let c = g.pl[pl].ch;
     {
         let p = &g.pl[pl];
-        if p.wall.is_some() || g.cond[p.ch].down || p.dragging.is_some() || p.takedown.is_some() || p.holding.is_some() || p.kick.is_some() || p.picking.is_some() || p.wanding.is_some() { return false; }
+        if p.wall.is_some() || g.cond[p.ch].down || p.tow.is_some() || p.planted() { return false; }
     }
     // one object in the TypeScript, two shapes in the skeleton: findWall's flag comes back to the caller's, whatever it found
     let mut fw = why.as_deref().map(|w| FindWallWhy { blocked: w.blocked });
@@ -373,7 +373,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
 }
 
 /// Step off the wall, by any way: stance and neck come off, no carry, what he had in his hand is back in it.
-pub(super) fn release_wall(g: &mut crate::game::Game) {
+pub(in crate::sam) fn release_wall(g: &mut crate::game::Game) {
     let pl = g.player;
     let Some(w) = g.pl[pl].wall else { return };
     let c = g.pl[pl].ch;
@@ -425,7 +425,7 @@ pub(super) fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, 
 /// Q pressed with no face in reach while he is on the move: remembered for WALLSNAP.buffer seconds.
 pub(super) fn wall_snap_later(g: &mut crate::game::Game, ml: f64, why: crate::player::WallSnapLaterWhy) -> bool {
     let pl = g.player;
-    if ml <= 0.0 || g.k.wallsnap.buffer <= 0.0 || g.pl[pl].dragging.is_some() { return false; }
+    if ml <= 0.0 || g.k.wallsnap.buffer <= 0.0 || g.pl[pl].dragging().is_some() { return false; }
     let row = PlayerModWsPendValue { t: g.k.wallsnap.buffer, at: g.time, blocked: why.blocked };
     g.m.player.ws_pend.set(pl, row);
     true
@@ -515,7 +515,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     let rifle_up = !holstered && crate::game::player_rifle_up(g, pl);
     let in_hand = if holstered { None } else if rifle_up { Some(g.pl[pl].rifle) } else { Some(g.pl[pl].pistol) };
     let gun_away = !holstered && !rifle_up;
-    let busy = g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].charging.is_some()
+    let busy = g.pl[pl].hands_full()
         || crate::game::player_choosing(g, pl) || g.sets[g.seat].hand.sel.down_t >= 0.0 || g.sets[g.seat].hand.throw_held || g.sets[g.seat].orders.menu.is_some()
         || crate::input::input_lmb(g, input) || crate::input::input_rmb(g, input)
         || in_hand.map_or(false, |gun| crate::weapons::firearm_reloading(g, gun))
@@ -571,11 +571,8 @@ pub fn throw_rest(world: &mut crate::ask::WorldAsk, pl: PlayerId) -> Option<crat
     Some(ThrowRest { at: rest.at, path: rest.path })
 }
 
-/// Esc with the launcher's button down: the gesture is let go of, nothing sent.
-pub fn launch_cancel(g: &mut crate::game::Game) -> bool {
+/// The launcher's arc is let go of, nothing sent.
+pub fn launch_let_go(g: &mut crate::game::Game) {
     let pl = g.player;
-    if g.pl[pl].launch_held.is_none() { return false; }
-    g.pl[pl].launch_held = None;
-    g.sets[g.seat].hand.throw_preview = None;
-    true
+    if g.pl[pl].launch_held.take().is_some() { g.sets[g.seat].hand.throw_preview = None; }
 }

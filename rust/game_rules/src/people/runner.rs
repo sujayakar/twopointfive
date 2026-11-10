@@ -30,7 +30,7 @@ fn lines_of(kind: LineKind) -> LINESValue {
 /// one line of a kind from this man, shouted, never on the net
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     let l = lines_of(kind);
-    let extra = if g.team(gd) != crate::teams::Team::Guard { crate::words::w(g, &l.they) } else { l.he };
+    let extra = if g.team(gd) != crate::teams::Team::Guard { l.they.clone() } else { l.he };
     let mut pool = l.say;
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;

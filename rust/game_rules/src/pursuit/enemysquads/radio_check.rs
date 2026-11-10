@@ -179,8 +179,7 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
     let q_name = sq!(g, q).name.clone();
     let line = if gone {
         let ally = sq!(g, ally.unwrap()).name.clone();
-        let verb = crate::words::wg(g, &"isn't", &"is not");
-        format!("{}: {} {} answering — back on our doors!", q_name, ally, verb)
+        format!("{}: {} isn't answering — back on our doors!", q_name, ally)
     } else {
         format!("{}: they've left it — back on our doors!", q_name)
     };
@@ -413,9 +412,7 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
     }
     let name = sq!(g, bq).name.clone();
     let n = count_word(bgo.len());
-    let now_line = format!("{}: gone quiet — {} of us going to look!", name, n);
-    let was_line = format!("{}: gone quiet — {} of us go and look!", name, n);
-    let line = crate::words::wg(g, &now_line, &was_line);
+    let line = format!("{}: gone quiet — {} of us going to look!", name, n);
     let first = def!(g, bgo[0]).gd;
     crate::game::game_say(g, first, &line, Some(true), None);
 }

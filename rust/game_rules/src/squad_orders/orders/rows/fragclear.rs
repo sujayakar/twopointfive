@@ -18,7 +18,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     if g.sets[g.seat].door_tools.frags <= 0.0 { return Err(Some(String::from("no frags left."))); }
     if !crate::mission::captives_up(g).is_empty() { return Err(Some(String::from("not with hostages on the floor."))); }
     let mate = match t { OrderTarget::Door(x) => crate::doortools::door_tools_frag_behind(g, x.door, x.side, men), _ => None };
-    if let Some(mate) = mate { return Err(Some(crate::doortools::row_behind_words(g, mate))); }
+    if let Some(mate) = mate { return Err(Some(crate::doortools::row_behind_words(mate))); }
     crate::doortools::row_stackable(g, t, men)
 }
 

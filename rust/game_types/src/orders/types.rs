@@ -49,7 +49,6 @@ pub struct SquadOrders {
     pub trail: Vec<V3>,
     #[is([0.0, 0.0, -1.0])] pub back: V3,
     #[is(crate::orders::SquadOrdersView { input: None })] pub view: crate::orders::SquadOrdersView,
-    pub esc_used: bool,
     pub ours: JsSet<GuardId>,
     pub acks: f64,
     pub group: f64,
@@ -341,7 +340,6 @@ pub struct OrderDef {
     /// the word's own row: F gives it with the ring up, and it has no wedge
     pub word: bool,
     pub ack: Option<Vec<String>>,
-    pub ack_now: Option<Vec<String>>,
     pub free: Option<bool>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
@@ -356,7 +354,6 @@ impl Default for OrderDef {
             listed: None,
             word: false,
             ack: None,
-            ack_now: None,
             free: None,
             stands_in: None,
         }

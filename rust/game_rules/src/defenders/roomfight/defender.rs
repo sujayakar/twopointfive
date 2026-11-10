@@ -276,7 +276,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     g.fight.blind_rounds += 1.0;
     if !g.fight.drill_said && room_fight_drilled(g) {
         g.fight.drill_said = true;
-        let line = crate::words::wg(g, &"can't see \u{2014} shoot through the doorway!", &"can't see \u{2014} put it down the door!");
+        let line = "can't see \u{2014} shoot through the doorway!";
         crate::game::game_say(g, h, line, None, None);
     }
 }
@@ -427,14 +427,18 @@ pub fn break_off_said(g: &mut crate::game::Game, d: RoomfightDefId, way: WayOut)
             let line = if crate::dice::draw_def(g, "roomfight::room_fight_break_off#1", d) < 0.5 { "fall back \u{2014} fall back!" } else { "they're in \u{2014} get out!" };
             crate::game::game_say(g, gd, line, None, None);
         }
-        WayOut::ToCover(_) => {
-            tell_news(g, News::Man(gd, Did::TakesCover));
-            crate::game::game_say(g, gd, "cover \u{2014} get to cover!", None, None);
-        }
+        WayOut::ToCover(_) => took_cover_said(g, d),
     }
 }
 
-/// a defender on the move: an enemy seen close stops him to fight; there, or going nowhere, he plants.
+/// what is said of a man who goes for cover
+pub fn took_cover_said(g: &mut crate::game::Game, d: RoomfightDefId) {
+    let gd = g.tab.roomfight_def[d].gd;
+    tell_news(g, News::Man(gd, Did::TakesCover));
+    crate::game::game_say(g, gd, "cover \u{2014} get to cover!", None, None);
+}
+
+/// a defender on the move: an enemy seen close stops him to fight, or he fights him as he goes, if he is going for cover; there, or going nowhere, he plants.
 fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
     let gd = g.tab.roomfight_def[d].gd; let c = g.gd[gd].ch; let s = hostile_skill(g);
     let arrived0 = match &g.gd[gd].script { Some(x) => x.arrived.unwrap_or(false), None => { room_fight_plant(g, d, false); return; } };
@@ -444,7 +448,8 @@ fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
     let reach = g.k.roomfight.move_engage_m;
     let near = g.gd[gd].foe.map_or(false, |fc| v3::dist(g.ch[fc].pos, g.ch[c].pos) < reach);
     let contact = g.gd[gd].foe.filter(|&f| g.gd[gd].saw_foe_this_frame && near && !crate::control::man::blind(g, gd) && Some(f) != from);
-    if let Some(ct) = contact {
+    let to_cover = fights_as_he_goes(g, gd);
+    if let Some(ct) = contact.filter(|_| !to_cover) {
         let fc = ct;
         crate::mind::foe(g, gd, Some(ct), "roomfight");
         crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
@@ -455,6 +460,7 @@ fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) {
         crate::guards::eyes_on(g, gd, fp);
         return;
     }
+    if to_cover { crate::guards::behave::fight_on_the_way(g, gd, dt); }
     let cp = g.ch[c].pos;
     let D = &mut g.tab.roomfight_def[d];
     if flat(cp, D.stall_at) > 0.4 { D.stall_at = cp; D.stall_t = 0.0; } else { D.stall_t += dt; }

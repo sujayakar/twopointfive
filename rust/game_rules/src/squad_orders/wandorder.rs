@@ -73,7 +73,7 @@ pub(super) fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
         return Pick::Text(String::from("steel: no gap under it."));
     }
     if !crate::wand::wand_fits(g, d) {
-        return Pick::Text(String::from(crate::words::wg(g, &"it's not shut.", &"it is not shut.")));
+        return Pick::Text(String::from("it's not shut."));
     }
     let mut has: Vec<GuardId> = Vec::new();
     for &gd in men {
@@ -82,7 +82,7 @@ pub(super) fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders
         }
     }
     if has.is_empty() {
-        return Pick::Text(String::from(crate::words::wg(g, &"nobody's carrying a wand.", &"no wand on them.")));
+        return Pick::Text(String::from("nobody's carrying a wand."));
     }
     let spot = spot_on(g, d, t.side);
     let mut best: Option<GuardId> = None;

@@ -91,16 +91,15 @@ fn pad_keys(code: &str) -> Vec<[f64; 2]> {
     (0..4).map(|k| ks[k % ks.len()]).collect()
 }
 
-/// Once a frame while the code goes in: his finger on the pad; returns the seconds the code's clock may run; each key's beep and light on its press.
-pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, dt: f64, secs: f64) -> f64 {
+/// Once a frame while the code goes in: his finger on the pad; returns the seconds the code's clock may run from `before`; each key's beep and light on its press.
+pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, before: f64, dt: f64, secs: f64) -> f64 {
     let pl = g.player;
     let keys = pad_keys(&pad.def.code);
-    let (c, code_t) = (g.pl[pl].ch, g.pl[pl].code_t);
+    let c = g.pl[pl].ch;
     let hand = sam_hand(g, &crate::seats::here(g));
     let more = WorkAtMore { keys: Some(keys.clone()), hand, dir: None };
-    work_at(g, c, crate::character::WorkKind::Keys, pad.def.pos, pad.n, code_t, secs, Some(&more));
-    if g.pl[pl].code_t <= 0.0 && !hand_there(g, pl, dt, pad.def.pos, pad.n) { return 0.0; }
-    let before = g.pl[pl].code_t;
+    work_at(g, c, crate::character::WorkKind::Keys, pad.def.pos, pad.n, before, secs, Some(&more));
+    if before <= 0.0 && !hand_there(g, pl, dt, pad.def.pos, pad.n) { return 0.0; }
     let after = before + dt;
     let r = right_of(pad.n);
     for k in 0..4 {
@@ -178,11 +177,11 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
-    if g.pl[pl].breaker_move.is_some() {
+    if g.pl[pl].breaker_move().is_some() {
         let f = breaker_face(g, p);
         return Some(SamWork { kind: SamWorkKind::Breaker, p: f.p, n: f.n, at: None });
     }
-    if g.mission.stage == crate::game::MissionStage::Drive && g.mission.drive_t >= 0.0 {
+    if g.pl[pl].taking().is_some() {
         let f = rack_face(g, p);
         return Some(SamWork { kind: SamWorkKind::Drive, p: f.p, n: f.n, at: None });
     }
@@ -195,8 +194,8 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
 /// The 'breaker' rows: his hand goes to the lever and throws it. True = taken here.
 pub fn breaker_start(g: &mut crate::game::Game, on: bool) -> bool {
     let pl = g.player;
-    if g.pl[pl].breaker_move.is_some() { return true; }
-    g.pl[pl].breaker_move = Some(crate::game::PlayerBreakerMove { on, t: 0.0, thrown: false });
+    if g.pl[pl].breaker_move().is_some() { return true; }
+    crate::deed::begin(g, crate::game::Deed::Breaker(crate::game::PlayerBreakerMove { on, t: 0.0, thrown: false }));
     g.pl[pl].hand_wait = 0.0;
     true
 }
@@ -204,18 +203,15 @@ pub fn breaker_start(g: &mut crate::game::Game, on: bool) -> bool {
 /// Once a frame: the lever's move waits for the hand, the mains go over at leverAt, the hand comes away at leverSecs.
 pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
-    let Some(mut mv) = g.pl[pl].breaker_move else { return };
+    let Some(mut mv) = g.pl[pl].breaker_move().copied() else { return };
     let bp = g.level.breaker.pos;
     let c = g.pl[pl].ch;
     if crate::condition::down(g, g.pl[pl].ch)
-        || g.pl[pl].holding.is_some()
-        || g.pl[pl].takedown.is_some()
-        || g.pl[pl].dragging.is_some()
         || crate::samstun::sam_staggered(g, &crate::seats::here(g), None)
         || v3::dist_xz(bp, g.ch[c].pos) > 1.6
         || (g.light_home.mains.active && g.light_home.mains.permanent)
     {
-        g.pl[pl].breaker_move = None;
+        g.pl[pl].breaker_over();
         return;
     }
     let pos = g.ch[c].pos;
@@ -226,17 +222,17 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     work_at(g, c, crate::character::WorkKind::Lever, f.p, f.n, mv.t, lever_secs, Some(&more));
     if mv.t <= 0.0 && !hand_there(g, pl, dt, f.p, f.n) { return; }
     mv.t += dt;
-    g.pl[pl].breaker_move = Some(mv);
+    if let Some(row) = g.pl[pl].breaker_move_mut() { *row = mv; }
     if !mv.thrown && mv.t >= m::min(g.k.handwork.lever_at, lever_secs - 0.1) {
         mv.thrown = true;
-        g.pl[pl].breaker_move = Some(mv);
+        if let Some(row) = g.pl[pl].breaker_move_mut() { *row = mv; }
         if mv.on {
             if g.light_home.mains.active && !g.light_home.mains.permanent { crate::game::game_end_blackout(g); }
         } else if !g.light_home.mains.active {
             crate::game::game_set_blackout(g, 86400.0, crate::lighting::SetBlackoutCause::Hand);
         }
     }
-    if mv.t >= lever_secs { g.pl[pl].breaker_move = None; }
+    if mv.t >= lever_secs { g.pl[pl].breaker_over(); }
 }
 
 /// A click while a plant runs lets go of it; the breaker's half second is committed: false = not let go of.
@@ -244,9 +240,7 @@ pub(super) fn sam_work_let_go(g: &mut crate::game::Game, w: crate::handwork::Sam
     match w.kind {
         SamWorkKind::Breaker => return false,
         SamWorkKind::Switch => crate::lightswitch::switch_let_go(g),
-        SamWorkKind::Drive => crate::mission::cancel_drive(g),
-        SamWorkKind::Door => { crate::doortools::door_tools_cancel_sam(g); }
-        SamWorkKind::Wall => { crate::wallcharge::wall_charge_cancel(g); }
+        SamWorkKind::Drive | SamWorkKind::Door | SamWorkKind::Wall => crate::deed::put_down(g, g.player),
     }
     true
 }
@@ -292,10 +286,9 @@ pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
         crate::character::anim_work_after(g, c, stow);
         return;
     }
-    if g.mission.drive_t < 0.0 { return; }
+    let Some(&t) = g.pl[pl].taking() else { return };
     let pos = g.ch[c].pos;
     let f = rack_face(g, pos);
-    let t = g.mission.drive_t;
     let hand = sam_hand(g, &crate::seats::here(g));
     let more = WorkAtMore { hand, ..Default::default() };
     work_at(g, c, crate::character::WorkKind::Take, f.p, f.n, t, secs, Some(&more));

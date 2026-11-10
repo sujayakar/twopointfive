@@ -1,5 +1,5 @@
 //! THE ANIMATOR'S LAYERS: the steps of a man's update that pose him, each written once, here. A layer takes his animation as it is (`an`), the numbers the game is
-//! tuned by (`tune`) and what only this call knows, reads and writes the pose WHERE IT LIVES (the game's pool, poses.rs) and the rig on the bench (skeleton.rs), and
+//! tuned by (`tune`) where it asks one, and what only this call knows, reads and writes the pose WHERE IT LIVES (the game's pool, poses.rs) and the rig on the bench (skeleton.rs), and
 //! asks the rig's named nodes of roles.rs. What it keeps from one tick to the next it keeps on him.
 //!
 //! A layer answers 0 = not a pose of this pool, or a role with no node (the caller stops, by name) · else RAN, with a bit for each list of nodes it ran forward on
@@ -13,7 +13,7 @@ use crate::roles::*;
 use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, pow, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{NODE, ask_blend as ask_blend_how, ask_mask, ask_sample as ask_sample_how, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{NODE, ask_blend, ask_mask, ask_sample, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -151,16 +151,6 @@ fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
     let f = q_rotate(foot_rot, &AY);
     let h = normalize([f[0], 0.0, f[2] + 1e-6]);
     normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75])
-}
-/// A LAYER'S BLEND AND ITS SAMPLE (skeleton.rs ask_blend, ask_sample) are worked as the tick's knob says: in singles under POSEMATH.singles, as the host's
-/// own are (anim/skeleton.ts blendPose, sampleClip read the same switch as they ask)
-#[inline(always)]
-fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize, tune: &Knobs) -> bool {
-    ask_blend_how(g, a, b, w, masked, out, n, tune.posemath.singles)
-}
-#[inline(always)]
-fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool, tune: &Knobs) -> bool {
-    ask_sample_how(g, at, nodes, c, t, looped, tune.posemath.singles)
 }
 /// A POSE'S SINGLES, and the one place in this file that says where one lies: node i's channel c (0‥2 its origin, 3‥6 its rotation, 7‥9 its
 /// scale). Every layer below reads and writes a pose through these two, so a pose laid out another way is these two lines. A POSE IS TEN COLUMNS, A NODE A
@@ -538,14 +528,14 @@ fn sprint_shape(g: usize, at: usize, an: &Anim) -> u32 {
 }
 
 /// a clip sampled into a pose as it stands (sampleClip with no copy first: the nodes the clip does not write keep what the pose held)
-fn clip_at(g: usize, at: usize, nodes: usize, clip: f64, t: f64, tune: &Knobs) -> bool {
-    clip >= 0.0 && ask_sample(g, at, nodes, clip as usize, t, true, tune)
+fn clip_at(g: usize, at: usize, nodes: usize, clip: f64, t: f64) -> bool {
+    clip >= 0.0 && ask_sample(g, at, nodes, clip as usize, t, true)
 }
 /// CharacterAnimator.sampleJog — the jog clip at phase `ph` (its time `t`), its SEAM closed: the clip's last key is not its first, and each joint that
 /// jumps there is carried half the jump back at the cycle's end and half forward at its start (the rig's table JOG_SEAM, six numbers a joint: its
 /// node · 0 an origin, 1 a rotation · the jump: an offset, or an axis and, last, its angle)
-fn sample_jog(g: usize, at: usize, nodes: usize, clip: f64, t: f64, ph: f64, tune: &Knobs) -> bool {
-    if !clip_at(g, at, nodes, clip, t, tune) {
+fn sample_jog(g: usize, at: usize, nodes: usize, clip: f64, t: f64, ph: f64) -> bool {
+    if !clip_at(g, at, nodes, clip, t) {
         return false;
     }
     let kk = ph - floor(ph) - 0.5;
@@ -589,7 +579,7 @@ pub struct Cycle {
 }
 /// The standing locomotion: the idle, and over it the cycle (the walk, the jog laid on it, or the jog and the sprint laid together), each run shaped as
 /// the game shows it before the blend. The cycle's own poses are left in the scratch poses for the layers that read them.
-pub fn stand_pose(g: usize, an: &Anim, c: &Cycle, tune: &Knobs) -> u32 {
+pub fn stand_pose(g: usize, an: &Anim, c: &Cycle) -> u32 {
     let (at, at_b, at_c) = (an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize);
     let (ph, w_idle, w_walk, w_jog, w_sprint) = (c.ph, c.w_idle, c.w_walk, c.w_jog, c.w_sprint);
     let Some(n) = with_pose(g, at, |_d, _rig, n, _fk| n) else {
@@ -598,7 +588,7 @@ pub fn stand_pose(g: usize, an: &Anim, c: &Cycle, tune: &Knobs) -> u32 {
     let moving = w_walk + w_jog + w_sprint > 0.001;
     let mut code = RAN;
     // (the idle is not sampled when the cycle's pose is about to replace all of it)
-    if !(moving && 1.0 - w_idle >= 1.0) && !clip_at(g, at, n, c.idle.clip, c.idle.t, tune) {
+    if !(moving && 1.0 - w_idle >= 1.0) && !clip_at(g, at, n, c.idle.clip, c.idle.t) {
         return 0;
     }
     if moving {
@@ -607,39 +597,39 @@ pub fn stand_pose(g: usize, an: &Anim, c: &Cycle, tune: &Knobs) -> u32 {
             s != 0
         };
         if w_sprint > 0.001 {
-            if !sample_jog(g, at_b, n, c.jog.clip, c.jog.t, ph, tune) || !shaped(jog_shape(g, at_b, an, ph)) {
+            if !sample_jog(g, at_b, n, c.jog.clip, c.jog.t, ph) || !shaped(jog_shape(g, at_b, an, ph)) {
                 return 0;
             }
-            if !clip_at(g, at_c, n, c.sprint.clip, c.sprint.t, tune) || !shaped(sprint_shape(g, at_c, an)) || !ask_blend(g, at_b, at_c, w_sprint, false, at_b, n, tune) {
+            if !clip_at(g, at_c, n, c.sprint.clip, c.sprint.t) || !shaped(sprint_shape(g, at_c, an)) || !ask_blend(g, at_b, at_c, w_sprint, false, at_b, n) {
                 return 0;
             }
         } else {
-            if !clip_at(g, at_b, n, c.walk.clip, c.walk.t, tune) {
+            if !clip_at(g, at_b, n, c.walk.clip, c.walk.t) {
                 return 0;
             }
-            if w_jog > 0.001 && (!sample_jog(g, at_c, n, c.jog.clip, c.jog.t, ph, tune) || !shaped(jog_shape(g, at_c, an, ph)) || !ask_blend(g, at_b, at_c, w_jog, false, at_b, n, tune)) {
+            if w_jog > 0.001 && (!sample_jog(g, at_c, n, c.jog.clip, c.jog.t, ph) || !shaped(jog_shape(g, at_c, an, ph)) || !ask_blend(g, at_b, at_c, w_jog, false, at_b, n)) {
                 return 0;
             }
         }
-        if !ask_blend(g, at, at_b, 1.0 - w_idle, false, at, n, tune) {
+        if !ask_blend(g, at, at_b, 1.0 - w_idle, false, at, n) {
             return 0;
         }
     }
     code
 }
 /// The crouch over the stand pose: its idle, the crouch walk's cycle laid on it by how fast he goes, and that laid over the pose by the crouch shown.
-pub fn crouch_pose(g: usize, an: &Anim, w_move: f64, crouch: f64, idle: At, fwd: At, tune: &Knobs) -> u32 {
+pub fn crouch_pose(g: usize, an: &Anim, w_move: f64, crouch: f64, idle: At, fwd: At) -> u32 {
     let (at, at_b, at_c) = (an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize);
     let Some(n) = with_pose(g, at, |_d, _rig, n, _fk| n) else {
         return 0;
     };
-    if !(w_move >= 1.0) && !clip_at(g, at_b, n, idle.clip, idle.t, tune) {
+    if !(w_move >= 1.0) && !clip_at(g, at_b, n, idle.clip, idle.t) {
         return 0;
     }
-    if w_move > 0.001 && (!clip_at(g, at_c, n, fwd.clip, fwd.t, tune) || !ask_blend(g, at_b, at_c, w_move, false, at_b, n, tune)) {
+    if w_move > 0.001 && (!clip_at(g, at_c, n, fwd.clip, fwd.t) || !ask_blend(g, at_b, at_c, w_move, false, at_b, n)) {
         return 0;
     }
-    if !ask_blend(g, at, at_b, crouch, false, at, n, tune) {
+    if !ask_blend(g, at, at_b, crouch, false, at, n) {
         return 0;
     }
     RAN
@@ -1104,7 +1094,7 @@ fn lerp3(a: &[f64; 3], b: &[f64; 3], t: f64) -> [f64; 3] {
 /// The kick's body half: the pelvis's shift, dip, drive, lean back, counter-yaw and hike as overlapping curves, the spine and the head countering so the
 /// eyes stay on the door, the swing foot flown along chamber, strike, recoil and plant by IK, the other foot held from the first frame. Built on the
 /// scratch pose at `at_c` from the pose at `at`, and laid on that one by w. The left leg's kick is the same kick in a mirror.
-pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) -> u32 {
+pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64) -> u32 {
     const ROLES: [usize; 12] = [HIPS, SPINE1, SPINE2, SPINE3, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     let (at, at_c, left, f) = (an.p_a.at as usize, an.p_c.at as usize, an.kick_leg == AnimKickLeg::Left, an.idle_feet);
     let from = &mut an.kick_from;
@@ -1130,7 +1120,7 @@ pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) -> u32 {
     let (fs, fsr, fp, fpr) = if left { (f_l, f_rl, f_r, f_rr) } else { (f_r, f_rr, f_l, f_rl) };
     let (ks, kp, kpr) = if left { (k_l, k_r, k_rr) } else { (k_r, k_l, k_rl) };
     // pC.copy(pA)
-    if !ask_blend(g, at, at, 1.0, false, at_c, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_c, n) {
         return 0;
     }
     let code = with_pose(g, at_c, |d, rig, _n, fk| {
@@ -1195,7 +1185,7 @@ pub fn kick_body(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) -> u32 {
         RAN | RAN_ALL
     })
     .unwrap_or(0);
-    if code == 0 || !ask_blend(g, at, at_c, w, false, at, n, tune) {
+    if code == 0 || !ask_blend(g, at, at_c, w, false, at, n) {
         return 0;
     }
     code
@@ -1234,8 +1224,8 @@ type Tread = ([f64; 3], [f64; 4], [f64; 3]);
 /// A CLIP A LAYER SAMPLES FOR ITSELF (`p.copy(rest); sampleClip(clip, t, looped, p)`): the rest pose copied into a scratch pose of the same character and the
 /// clip sampled over it. `clip` is the module's number for it, handed with the layer's own numbers (skeleton.ts clipNo: the host asks a layer only when the
 /// module holds every clip it samples); false = no such clip or pose
-fn sample_on_rest(g: usize, at_rest: usize, at_out: usize, nodes: usize, clip: f64, t: f64, looped: bool, tune: &Knobs) -> bool {
-    clip >= 0.0 && ask_blend(g, at_rest, at_rest, 1.0, false, at_out, nodes, tune) && ask_sample(g, at_out, nodes, clip as usize, t, looped, tune)
+fn sample_on_rest(g: usize, at_rest: usize, at_out: usize, nodes: usize, clip: f64, t: f64, looped: bool) -> bool {
+    clip >= 0.0 && ask_blend(g, at_rest, at_rest, 1.0, false, at_out, nodes) && ask_sample(g, at_out, nodes, clip as usize, t, looped)
 }
 
 /// The wall hold's body: the spine blended toward the standing idle's and then measured and put (the chest square to the wall but for a counter-turn
@@ -1265,7 +1255,7 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
     let Some(nodes) = with_pose(g, at, |_d, _rig, nodes, _fk| nodes) else {
         return 0;
     };
-    if !sample_on_rest(g, at_rest, at_c, nodes, idle, idle_t, true, tune) {
+    if !sample_on_rest(g, at_rest, at_c, nodes, idle, idle_t, true) {
         return 0;
     }
     let Some(Some(under)) = with_pose(g, at_c, |d, _rig, nodes, _fk| {
@@ -1277,7 +1267,7 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
         return 0;
     };
     let hips_low = if gw > 1e-4 {
-        if !sample_on_rest(g, at_rest, at_b, nodes, crouch_idle, idle_t, true, tune) {
+        if !sample_on_rest(g, at_rest, at_b, nodes, crouch_idle, idle_t, true) {
             return 0;
         }
         let Some(q) = with_pose(g, at_b, |d, _rig, _nodes, _fk| own_rot(d, role(HIPS))) else {
@@ -1894,12 +1884,12 @@ pub fn lean_body(g: usize, an: &mut Anim, dt: f64) -> u32 {
 
 /// A one-shot action's clip laid over the finished pose (the animator keeps which clip, its clock and its weight), and a man asleep in his chair slumped
 /// over it.
-pub fn act_pose(g: usize, an: &mut Anim, clip: f64, w: f64, dt: f64, tune: &Knobs) -> u32 {
+pub fn act_pose(g: usize, an: &mut Anim, clip: f64, w: f64, dt: f64) -> u32 {
     let (at, at_b, at_rest, t, looped, slump) = (an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize, an.act_t, an.act_loop, an.slump);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &[SPINE3, NECK, HEAD]) { Some(n) } else { None }) else {
         return 0;
     };
-    if !sample_on_rest(g, at_rest, at_b, n, clip, t, looped, tune) || !ask_blend(g, at, at_b, w, false, at, n, tune) {
+    if !sample_on_rest(g, at_rest, at_b, n, clip, t, looped) || !ask_blend(g, at, at_b, w, false, at, n) {
         return 0;
     }
     let mut code = RAN;
@@ -1970,13 +1960,13 @@ const ARM_ROLES: [usize; 9] = [SPINE3, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPE
 
 /// The sneak's arms: hanging hands drawn in toward the thighs, or the two-hand carry brought down and back toward the lap, the support hand rigid with
 /// wherever the gun hand got to.
-pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64, tune: &Knobs) -> u32 {
+pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (crouch, at_ease) = (an.crouch, an.upper_w.relaxed);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let code = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -2001,7 +1991,7 @@ pub fn sneak_arms(g: usize, an: &Anim, arms_in: f64, tune: &Knobs) -> u32 {
         return 0;
     }
     arms_mask();
-    if !ask_blend(g, at, at_b, clamp(arms_in, 0.0, 1.0), true, at, n, tune) {
+    if !ask_blend(g, at, at_b, clamp(arms_in, 0.0, 1.0), true, at, n) {
         return 0;
     }
     code
@@ -2032,7 +2022,7 @@ fn grip_turn(g0: &[f64; 3], rr0: &[f64; 4], gd: &[f64; 3], up_ref: &[f64; 3], gr
 /// Both arms onto the pistol: the gun hand at the chest + the stance's [side, up, fwd], the muzzle at its pitch and level in roll, the support hand
 /// keeping the exact hold it has in the aim clip (both hands moved by one rigid transform of the clip's grip); elbows swivelled down and in by the tuck;
 /// a little sway, and during a kick a pump of the gun toward the chest. Solved on a copy seeded with the aim clip's arms (`at_aim`).
-pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64, tune: &Knobs) -> u32 {
+pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (at_aim, t, st, grip_up) = (an.p_aim.at as usize, an.idle_t, &an.st, an.grip_up);
     let (st_fwd, st_up, st_side, st_pitch, st_blade, tuck) = (st.fwd.x, st.up.x, st.side.x, st.pitch.x, st.blade.x, st.tuck.x);
@@ -2041,7 +2031,7 @@ pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64, tune: &Knobs) -> u32
     };
     // the body as it is, the aim clip's arms
     arms_mask();
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n) {
         return 0;
     }
     let code = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -2070,7 +2060,7 @@ pub fn carry_arms(g: usize, an: &Anim, w: f64, kick_t: f64, tune: &Knobs) -> u32
         return 0;
     }
     arms_mask();
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     code
@@ -2199,7 +2189,7 @@ fn hand_rot(fix: &[f64; 4], f: [f64; 3], b: [f64; 3]) -> [f64; 4] {
 
 /// The wall hold's arms: both palms laid on the face beside the hips, fingers down and out along it, the elbows where the pose says; mended (WALLSNAP),
 /// the wrists hang beside the hips, a resting hand on the plaster with the thumb beside the index.
-pub fn wall_arms(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
+pub fn wall_arms(g: usize, an: &mut Anim, w: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (cr, side_x, peek, yaw, gait, park, fixes) = (an.crouch, an.wst.side.x, an.wst.peek.x, an.wall_yaw, an.wall_gait, an.wst.park.x, [an.hand_fix[0], an.hand_fix[1]]);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS]) { Some(n) } else { None }) else {
@@ -2208,7 +2198,7 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -2249,7 +2239,7 @@ pub fn wall_arms(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
         return 0;
     }
     arms_mask();
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -2301,7 +2291,7 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
     };
     // the body as it is, the aim clip's clavicles, trigger grip and fingers to start from
     arms_mask();
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -2428,16 +2418,16 @@ pub fn long_arms(g: usize, an: &mut Anim, w: f64, kick_t: f64, dt: f64, yield_do
         // arm by arm, short of whatever a hand on a door still holds
         let (wl, wr) = (w * (1.0 - clamp(dl, 0.0, 1.0)), w * (1.0 - clamp(dr, 0.0, 1.0)));
         ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
-        if !ask_blend(g, at, at_b, wl, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, wl, true, at, n) {
             return 0;
         }
         ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-        if !ask_blend(g, at, at_b, wr, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, wr, true, at, n) {
             return 0;
         }
     } else {
         arms_mask();
-        if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, w, true, at, n) {
             return 0;
         }
     }
@@ -2514,7 +2504,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
     }
     if gun {
         // a blinded man's gun stays on the line it had, by how much of a long gun he has up
-        if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
         with_pose(g, at_b, |d, rig, _n, fk| {
@@ -2522,14 +2512,14 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
             two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &gun_p, Some(&[-0.3, -1.0, -0.4]), 0.6, Some(&gun_r), false);
         });
         ask_mask(&[(role(UPPER_ARM_R), smoothstep(0.003, 0.15, dzw) * smoothstep(0.02, 0.6, lg_w), true)]);
-        if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, 1.0, true, at, n) {
             return 0;
         }
         code |= RAN_ALL;
     }
     if dzw > 0.003 {
         // blinded: the support hand goes flat over the eyes, wrist by the near eye, fingers across to the far one
-        if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
         let hh = &mut h;
@@ -2548,7 +2538,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         });
         let wz = smoothstep(0.08, 0.6, dzw);
         ask_mask(&[(sh_l, wz, true)]);
-        if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, 1.0, true, at, n) {
             return 0;
         }
         arm_l = max(arm_l, wz);
@@ -2557,7 +2547,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
     let mut ts_out = ts;
     if ts >= 0.0 {
         // the toss: the support hand off the gun, down beside the hip, through and up, back to the gun (a path off the shoulder; its ends are the live hand)
-        if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
         let hh = &mut h;
@@ -2598,7 +2588,7 @@ pub fn mv_post_arms(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
         let hold = bump(ts, 0.0, 0.05, td - 0.2, td);
         arm_l = max(arm_l, hold);
         ask_mask(&[(sh_l, hold * gate, true), (sh_l, 0.0, false)]);
-        if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, 1.0, true, at, n) {
             return 0;
         }
         ts_out = ts + dt;
@@ -2633,7 +2623,7 @@ pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> u32
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let side = if left { 0 } else { 1 };
@@ -2649,7 +2639,7 @@ pub fn watch_arm(g: usize, an: &mut Anim, wl: f64, wr: f64, tune: &Knobs) -> u32
         hand(d, hh, side, &[0.12, 0.15, 0.18, 0.22], 0.15, 0.35);
     });
     ask_mask(&[(sh_n, w_arm, true)]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -2690,7 +2680,7 @@ pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr:
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let (on_l, on_r) = (wl > 0.003, wr > 0.003);
@@ -2796,7 +2786,7 @@ pub fn creep_arms(g: usize, an: &mut Anim, w: f64, wl: f64, wr: f64, e: f64, cr:
         (r(FOREARM_R), w_fore * wr, false),
         (r(HAND_R), w_hand * wr, true),
     ]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -2810,7 +2800,7 @@ fn arm_mask(both: bool) {
 
 /// A man knocked about and still up: the support hand off the gun and pressed to his ribs. Solved on the scratch pose at `at_b`, laid on the pose by w
 /// through the support arm's mask.
-pub fn clutch_arm(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
+pub fn clutch_arm(g: usize, an: &mut Anim, w: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let fix_l = an.hand_fix[0];
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, SPINE1]) { Some(n) } else { None }) else {
@@ -2819,7 +2809,7 @@ pub fn clutch_arm(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -2832,7 +2822,7 @@ pub fn clutch_arm(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
         hand(d, hh, 0, &[0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
     });
     arm_mask(false);
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -2841,7 +2831,7 @@ pub fn clutch_arm(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
 
 /// Kept down: the wrists crossed in the small of the back, palms out (kind 1), or the fingers laced on the crown with the elbows wide, in the head's own
 /// frame (kind 2). Both arms, solved on the scratch pose at `at_b` and laid on the pose by w.
-pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64, tune: &Knobs) -> u32 {
+pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (back, gaze, fix_l, fix_r) = (kind == 1.0, an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, HEAD]) { Some(n) } else { None }) else {
@@ -2850,7 +2840,7 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64, tune: &Knobs) -> u
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -2900,7 +2890,7 @@ pub fn bound_arms(g: usize, an: &mut Anim, w: f64, kind: f64, tune: &Knobs) -> u
         }
     });
     arm_mask(true);
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -2973,7 +2963,7 @@ pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, ke
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3120,7 +3110,7 @@ pub fn reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, marks: &FeedMarks, ke
     });
     if posed == Some(true) {
         arm_mask(false);
-        if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, w, true, at, n) {
             return 0;
         }
         hands_to(&h, an);
@@ -3140,7 +3130,7 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3199,7 +3189,7 @@ pub fn pistol_reload_arm(g: usize, an: &mut Anim, t: f64, w: f64, tune: &Knobs) 
         wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.1, dur - 0.22, dur - 0.05));
     });
     arm_mask(false);
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -3373,7 +3363,7 @@ struct HeadHand {
     thumb: f64,
 }
 /// the support hand to a place in the head's frame as it will be drawn (a smoke, the goggles): solved on the scratch pose at `at_b`, laid on the arm by e.
-fn head_hand(g: usize, an: &mut Anim, p: &HeadHand, tune: &Knobs) -> u32 {
+fn head_hand(g: usize, an: &mut Anim, p: &HeadHand) -> u32 {
     let (at, at_b, _) = poses(an);
     let (tw, hri, fix_l) = (an.nv_tw, an.head_rest_inv, an.hand_fix[0]);
     let Some(Some((n, hd))) = with_pose(g, at, |d, rig, n, fk| {
@@ -3388,7 +3378,7 @@ fn head_hand(g: usize, an: &mut Anim, p: &HeadHand, tune: &Knobs) -> u32 {
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3400,14 +3390,14 @@ fn head_hand(g: usize, an: &mut Anim, p: &HeadHand, tune: &Knobs) -> u32 {
         hand(d, hh, 0, &p.curl, p.thumb, 0.0);
     });
     left_arm_mask(p.e, p.e, p.e);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
     RAN | RAN_ALL
 }
 /// A smoke's arm: the left wrist to a place in front of the mouth.
-pub fn smoke_pose(g: usize, an: &mut Anim, tune: &Knobs) -> u32 {
+pub fn smoke_pose(g: usize, an: &mut Anim) -> u32 {
     let x = an.smoke_arm;
     let p = HeadHand {
         e: x * x * (3.0 - 2.0 * x),
@@ -3419,7 +3409,7 @@ pub fn smoke_pose(g: usize, an: &mut Anim, tune: &Knobs) -> u32 {
         curl: [SMOKEARM.curl[0], SMOKEARM.curl[1], SMOKEARM.curl[2], SMOKEARM.curl[3]],
         thumb: SMOKEARM.thumb,
     };
-    head_hand(g, an, &p, tune)
+    head_hand(g, an, &p)
 }
 /// A goggle flip's arm: the left hand at the goggles, wherever between up and down they are.
 pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> u32 {
@@ -3433,7 +3423,7 @@ pub fn nv_pose(g: usize, an: &mut Anim, k: f64, tune: &Knobs) -> u32 {
         curl: [tune.kit.nv.hand.curl[0], tune.kit.nv.hand.curl[1], tune.kit.nv.hand.curl[2], tune.kit.nv.hand.curl[3]],
         thumb: tune.kit.nv.hand.thumb,
     };
-    head_hand(g, an, &p, tune)
+    head_hand(g, an, &p)
 }
 
 /// the support arm laid on shoulder first, then the elbow, then the hand, and off in the same order (the signals' and the tells' envelopes)
@@ -3442,7 +3432,7 @@ fn staggered(t: f64, tin: f64, tout: f64, e: f64) -> (f64, f64, f64) {
     (seg(0.0), seg(0.05), seg(0.09))
 }
 /// A left-hand signal: the arm solved against the body as it stands and laid on shoulder first.
-pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64, tune: &Knobs) -> u32 {
+pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (side, fix_l) = (an.sig_side, an.hand_fix[0]);
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
@@ -3467,7 +3457,7 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64,
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3526,7 +3516,7 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64,
     });
     let (w_up, w_fore, w_hand) = staggered(t, 0.2, 0.26, dur);
     left_arm_mask(w_up, w_fore, w_hand);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -3534,7 +3524,7 @@ pub fn signal_layer(g: usize, an: &mut Anim, t: f64, kind: SignalKind, dur: f64,
 }
 /// An idle tell: a look at the watch (the forearm level across the chest, the eyes down onto it), or a hand round to the back of the neck with the chest
 /// lifted into the stretch.
-pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: &Knobs) -> u32 {
+pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (gaze_local, fix_l) = (an.gaze_local, an.hand_fix[0]);
     let (tin, tout) = if watch { (0.2, 0.28) } else { (0.26, 0.34) };
@@ -3565,7 +3555,7 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
             turn(d, rig, role(HEAD), q_mul(&q_pitch(9.0 * DEGR * env), &q_mul(&q_roll(-6.0 * DEGR * env), &q_yaw(-4.0 * DEGR * env))));
         }
     });
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3591,7 +3581,7 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
     });
     let (w_up, w_fore, w_hand) = staggered(t, tin, tout, dur);
     left_arm_mask(w_up, w_fore, w_hand);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -3600,13 +3590,13 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
 
 /// The flashlight brought up in the gun hand: the right wrist to a spot ahead of the shoulder, the elbow down and a little out, by e. Solved on the
 /// scratch pose at `at_b`, laid on the right arm.
-pub fn torch_up(g: usize, an: &Anim, e: f64, tune: &Knobs) -> u32 {
+pub fn torch_up(g: usize, an: &Anim, e: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let fix_r = an.hand_fix[1];
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     with_pose(g, at_b, |d, rig, _n, fk| {
@@ -3617,13 +3607,13 @@ pub fn torch_up(g: usize, an: &Anim, e: f64, tune: &Knobs) -> u32 {
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &wrist, e), Some(&[-0.3, -1.0, 0.0]), e, Some(&r), false);
     });
     ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n, tune) {
+    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
         return 0;
     }
     RAN | RAN_ALL
 }
 /// A hand to the radio: the left hand up to the handset at his left collar, the head turned and tipped to it as far as his gun is down.
-pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64, tune: &Knobs) -> u32 {
+pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let fix_l = an.hand_fix[0];
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
@@ -3641,7 +3631,7 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64, tune: &Knobs) -> u32
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3656,7 +3646,7 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64, tune: &Knobs) -> u32
         hand(d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0);
     });
     ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
-    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, w), true, at, n, tune) {
+    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, w), true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -3665,7 +3655,7 @@ pub fn radio_pose(g: usize, an: &mut Anim, w: f64, hw: f64, tune: &Knobs) -> u32
 
 /// At a lock: the crouch's rounded spine sat up toward it, the shoulders up, the head onto it, and both hands at the keyway (the pick raking, the wrench
 /// hand under it giving as a pin sets).
-pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
+pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (t, lock, gaze_local, fix_l, fix_r) = (an.lp_t, an.lockpick_at, an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
     let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
@@ -3689,7 +3679,7 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3713,7 +3703,7 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
         hand(d, hh, 0, &[0.75, 0.8, 0.85, 0.85], 0.6, 0.0);
     });
     arms_mask();
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -3721,7 +3711,7 @@ pub fn lockpick_layer(g: usize, an: &mut Anim, w: f64, tune: &Knobs) -> u32 {
 }
 /// Both hands on a body: the trunk bowed toward the grip and tipped off a load, the eyes a stride beyond the hands, and each wrist to its spot through
 /// the inverse of the chest twist still to come.
-pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3], r_at: [f64; 3], tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
+pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3], r_at: [f64; 3], tw_y: f64, tw_p: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (rw, look, grip) = (clamp(h_.rw.unwrap_or(1.0), 0.0, 1.0), h_.look.unwrap_or(0.7), h_.grip);
     let (bow, tilt) = (h_.bow * w, h_.tilt.unwrap_or(0.0) * w);
@@ -3758,7 +3748,7 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3772,17 +3762,17 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
     });
     if rw >= 0.999 {
         arms_mask();
-        if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, w, true, at, n) {
             return 0;
         }
     } else {
         ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
-        if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+        if !ask_blend(g, at, at_b, w, true, at, n) {
             return 0;
         }
         if rw > 0.003 {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-            if !ask_blend(g, at, at_b, w * rw, true, at, n, tune) {
+            if !ask_blend(g, at, at_b, w * rw, true, at, n) {
                 return 0;
             }
         }
@@ -3793,7 +3783,7 @@ pub fn haul_layer(g: usize, an: &mut Anim, h_: &HaulPose, w: f64, l_at: [f64; 3]
 
 /// The gun hand's errand between the flashlight's ring at the front of the hip and the sidearm on the thigh: the wrist from wherever the pose has it
 /// down onto the one, across to the other, and back. The pose as it stood is kept at `at_sw` (what was in the hand is drawn off it).
-pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_weapon: bool, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
+pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_weapon: bool, tw_y: f64, tw_p: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let fix_r = an.hand_fix[1];
     let Some(Some((n, to))) = with_pose(g, at, |d, rig, n, fk| {
@@ -3812,7 +3802,7 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3827,11 +3817,11 @@ pub fn swap_pose(g: usize, an: &mut Anim, at_sw: usize, e: f64, across: f64, to_
         two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
         hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
     });
-    if !ask_blend(g, at, at, 1.0, false, at_sw, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_sw, n) {
         return 0;
     }
     ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n, tune) {
+    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -3900,7 +3890,7 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -3975,7 +3965,7 @@ pub fn stealth_layer(g: usize, an: &mut Anim, dt: f64, busy: bool, crouch: f64, 
         (r(FOREARM_R), arm_w[1], false),
         (r(HAND_R), arm_w[1], true),
     ]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -4055,7 +4045,7 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
     let Some(mut h) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut h;
@@ -4069,7 +4059,7 @@ pub fn cable_pose(g: usize, an: &mut Anim, pic: usize, e: f64, eh: f64, tune: &K
         hand(d, hh, 0, &[0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
     });
     arms_mask();
-    if !ask_blend(g, at, at_b, e, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, e, true, at, n) {
         return 0;
     }
     hands_to(&h, an);
@@ -4201,7 +4191,7 @@ pub fn blow_trunk(g: usize, an: &Anim, b: &BlowRun, tl: f64) -> u32 {
 /// A takedown's own move, the arms, by IK on a copy of the pose (the knife styles' right arm is the knife's own): the chop's fist cocked behind the ear
 /// and hammered down, the palm heel driven up and through with the arm locked out; the left flat on his back (chop), over his mouth (the knife from
 /// behind) or thrown back and down (the rest). The eyes stay on the mark.
-pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Option<[f64; 3]>, tw_y: f64, tw_p: f64, shown: &mut f64, tune: &Knobs) -> u32 {
+pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Option<[f64; 3]>, tw_y: f64, tw_p: f64, shown: &mut f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (t, h, e, tail, style, free, speed) = (b.t, b.hit, b.end, b.tail, b.style, 1.0 - clamp(an.upper_w.aim, 0.0, 1.0), abs(an.speed));
     let (gaze_local, fix_l, fix_r) = (an.gaze_local, an.hand_fix[0], an.hand_fix[1]);
@@ -4218,7 +4208,7 @@ pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Optio
     let Some(mut hs) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -4324,7 +4314,7 @@ pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Optio
         (side(left, FOREARM_L), w_l, false),
         (side(left, HAND_L), w_l, true),
     ]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     if w_all > 0.0 {
@@ -4337,7 +4327,7 @@ pub fn blow_arms(g: usize, an: &mut Anim, b: &BlowRun, at1: [f64; 3], at2: Optio
 /// The knife's blow, the right arm over the punch clip's pose, by IK on a copy: to the hilt, the knife drawn down out of the sheath, through the kind's
 /// keys (eased key to key, the wrist's spots off the right shoulder, turned onto the man), back to the sheath's mouth and home; then the arm goes back
 /// to what the pose under it has. The clock is the caller's.
-pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64, there: Option<[f64; 3]>, rc_inv: [f64; 4], tune: &Knobs) -> u32 {
+pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64, there: Option<[f64; 3]>, rc_inv: [f64; 4]) -> u32 {
     let (at, at_b, _) = poses(an);
     let (kb_t, kb_r0, under, crouch, fix_r) = (an.kb_t, an.kb_r0, if an.rc_t > 0.0 { an.reach_shown } else { 0.0 }, an.crouch, an.hand_fix[1]);
     let (has_at, rd_at, end, keys, nk) = (there.is_some(), there.unwrap_or([0.0; 3]), k.end, k.keys, k.keys.len());
@@ -4350,7 +4340,7 @@ pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, tota
     let Some(mut hs) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -4404,7 +4394,7 @@ pub fn knife_pose(g: usize, an: &mut Anim, k: &KnifeSlash, t: f64, t0: f64, tota
     });
     let w = lerp(under, 1.0, max(kb_r0, smoothstep(0.0, if falsy(t0) { 1e-6 } else { t0 }, kb_t)) * (1.0 - smoothstep(total - KNIFE_BLOW.fade, total, kb_t)));
     ask_mask(&[(role(SHOULDER_R), w, false), (role(UPPER_ARM_R), w, false), (role(FOREARM_R), w, false), (role(HAND_R), w, true)]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&hs, an);
@@ -4532,7 +4522,7 @@ pub fn ready_layer(g: usize, an: &mut Anim, w: f64, kind: ReadyKind, shape: &Rea
         return 0;
     };
     // ---- the arms, on a copy: the left clavicle forward with a reach, then the shoulders' frame as it stands
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -4670,7 +4660,7 @@ pub fn ready_layer(g: usize, an: &mut Anim, w: f64, kind: ReadyKind, shape: &Rea
         (side(FOREARM_R), r_fore, false),
         (side(HAND_R), r_hand, true),
     ]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&hs, an);
@@ -4773,7 +4763,7 @@ pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4]
     let Some(mut hs) = hands_of(g, an) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -5018,7 +5008,7 @@ pub fn kit_layer(g: usize, an: &mut Anim, tw_y: f64, tw_p: f64, rc_inv: [f64; 4]
     // (the support hand's fingers go back to the pose's as it joins)
     let side = |r: usize| if left { role(r) } else { usize::MAX };
     ask_mask(&[(role(UPPER_ARM_R), 1.0, true), (side(UPPER_ARM_L), 1.0, true), (side(HAND_L), 1.0 - join, true), (side(HAND_L), 1.0, false)]);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&hs, an);
@@ -5088,7 +5078,7 @@ fn arm_of(side: usize) -> (usize, usize, usize, usize) {
 }
 /// A hand on a door: the spine bowed into a long reach, then the arm that is up by IK on a copy, its target travelling with the eased weight from
 /// wherever the pose beneath has the wrist to the spot on the leaf, the palm flat on the face.
-pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 3], dt: f64, intent: f64, right_free: bool, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
+pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 3], dt: f64, intent: f64, right_free: bool, tw_y: f64, tw_p: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (hand_no, reach, fix, dp) = (l.hand, l.reach.unwrap_or(false), [an.hand_fix[0], an.hand_fix[1]], &mut an.dp);
     let (live, w_was) = (intent > 0.003, clamp(max(dp.w_l.x, dp.w_r.x), 0.0, 1.0));
@@ -5158,7 +5148,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
         }
         let fs = if side == arm { f } else { door_fingers(&tw, &n0, side) };
         let wrist = mad3(mad3(p_tgt, nn, 0.035), fs, -0.08);
-        if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
         let hh = &mut hs;
@@ -5180,7 +5170,7 @@ pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 
             turn(d, rig, digits(side)[0] as usize, axis_angle(&q_rotate(&fk.rot(hd), &AY), sg * 40.0 * DEGR * e));
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
-        if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n, tune) {
+        if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
             return 0;
         }
     }
@@ -5319,7 +5309,7 @@ impl Work {
 }
 /// Hands at work on a thing: the body bowed to a low thing and leaned into a long reach, the eyes onto it, then each hand that is up by IK on a copy,
 /// its target travelling with the eased weight.
-pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f64; 3], dt: f64, live: bool, r_free: bool, tw_y: f64, tw_p: f64, tune: &Knobs) -> u32 {
+pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f64; 3], dt: f64, live: bool, r_free: bool, tw_y: f64, tw_p: f64) -> u32 {
     let (at, at_b, _) = poses(an);
     let (t, dur, kind, dir, gaze_local, fix) = (l.t, l.dur, l.kind, l.dir.unwrap_or(1.0), an.gaze_local, [an.hand_fix[0], an.hand_fix[1]]);
     // (four presses: the first four keys are all a code's hand reads)
@@ -5362,7 +5352,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
     // where the shoulders WILL be once he has bowed and leaned in: what the reach is asked of while the hands are still coming up
     let mut sh_full: Option<[[f64; 3]; 2]> = None;
     if live && !done && w_was < 0.97 && bow1 + lean1 > 1e-4 {
-        if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
         sh_full = with_pose(g, at_b, |d, rig, _n, fk| {
@@ -5443,7 +5433,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
         let Some(sp) = with_pose(g, at, |_d, _rig, _n, fk| wk.shape(fk, side)) else {
             return 0;
         };
-        if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
             return 0;
         }
         let hh = &mut hs;
@@ -5463,7 +5453,7 @@ pub fn work_layer(g: usize, an: &mut Anim, l: &WorkPose, n_at: [f64; 3], p0: [f6
             hand(d, hh, side, &sp.curl, sp.thumb, sp.spread);
         });
         ask_mask(&[(arm_of(side).0, 1.0, true)]);
-        if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n, tune) {
+        if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
             return 0;
         }
     }
@@ -5648,7 +5638,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         return 0;
     };
     // ---- arms on a copy, against the body as it now is
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let (hh, from, caught, fix) = (&mut hs, &mut an.hd_from, &mut an.hd_caught, &mut an.hd_fix);
@@ -5765,12 +5755,12 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         // ---- the gun hand: the right arm re-seeded from the aim clip, one rigid turn of that grip onto the wanted bore, the wrist to its station;
         //      on a scratch copy while the knife fist still has a share of the arm
         let p = if xg < 1.0 { at_c } else { at_b };
-        if p != at_b && !ask_blend(g, at_b, at_b, 1.0, false, p, n, tune) {
+        if p != at_b && !ask_blend(g, at_b, at_b, 1.0, false, p, n) {
             return 0;
         }
         // (the clavicle stays the body's)
         ask_mask(&[(role(SHOULDER_R), 1.0, true), (role(SHOULDER_R), 0.0, false)]);
-        if !ask_blend(g, p, at_aim, 1.0, true, p, n, tune) {
+        if !ask_blend(g, p, at_aim, 1.0, true, p, n) {
             return 0;
         }
         with_pose(g, p, |d, rig, _n, fk| {
@@ -5820,13 +5810,13 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         });
         if p != at_b {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-            if !ask_blend(g, at_b, p, xg, true, at_b, n, tune) {
+            if !ask_blend(g, at_b, p, xg, true, at_b, n) {
                 return 0;
             }
         }
     }
     arms_mask();
-    if !ask_blend(g, at, at_b, w, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }
     if cr && live && w < 1.0 {
@@ -5834,7 +5824,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         let w_l = max(w, smoothstep(0.0, 0.1, ug));
         if w_l > w {
             ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
-            if !ask_blend(g, at, at_b, (w_l - w) / (1.0 - w), true, at, n, tune) {
+            if !ask_blend(g, at, at_b, (w_l - w) / (1.0 - w), true, at, n) {
                 return 0;
             }
         }
@@ -5844,7 +5834,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, beats:
         let w_s = max(w, smoothstep(0.0, 0.8 * tune.hold.strip.take, s_t));
         if w_s > w {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-            if !ask_blend(g, at, at_b, (w_s - w) / (1.0 - w), true, at, n, tune) {
+            if !ask_blend(g, at, at_b, (w_s - w) / (1.0 - w), true, at, n) {
                 return 0;
             }
         }
@@ -6138,7 +6128,7 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
     }) else {
         return 0;
     };
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -6201,7 +6191,7 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
     let w_a0 = w * e_a + w * (1.0 - e_a) * 0.35;
     let w_a = if cr { max(w_a0, smoothstep(tune.hold.catch.fling.arm_in[0], tune.hold.catch.fling.arm_in[1], ug) * lv) } else { w_a0 };
     arms_mask();
-    if !ask_blend(g, at, at_b, w_a, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, w_a, true, at, n) {
         return 0;
     }
     if s_on && w_a < 1.0 {
@@ -6209,7 +6199,7 @@ pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, beats:
         let w_s = max(w_a, smoothstep(0.0, 0.8 * tune.hold.strip.take, s_t) * (1.0 - smoothstep(tune.hold.strip.up, tune.hold.strip.home, s_t)));
         if w_s > w_a {
             ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
-            if !ask_blend(g, at, at_b, (w_s - w_a) / (1.0 - w_a), true, at, n, tune) {
+            if !ask_blend(g, at, at_b, (w_s - w_a) / (1.0 - w_a), true, at, n) {
                 return 0;
             }
         }
@@ -6377,7 +6367,7 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
         return 0;
     };
     if ham {
-        if !ask_blend(g, at, at, 1.0, false, at_buf, n, tune) {
+        if !ask_blend(g, at, at, 1.0, false, at_buf, n) {
             return 0;
         }
         an.big_under = true;
@@ -6461,7 +6451,7 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
         return 0;
     };
     // ---- the arms, by IK on a copy against the body as it now stands
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -6598,7 +6588,7 @@ pub fn big_layer(g: usize, an: &mut Anim, b: &AnimBigTool, at_buf: usize, blows:
         return 0;
     }
     arm_mask(true);
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     hands_to(&hs, an);
@@ -6736,7 +6726,7 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
         return 0;
     };
     // ---- arms, IK'd on a copy against the body as it now is
-    if !ask_blend(g, at, at, 1.0, false, at_b, n, tune) {
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
     let hh = &mut hs;
@@ -6873,7 +6863,7 @@ pub fn throw_layer(g: usize, an: &mut Anim, t: f64, tables: &Tables, tune: &Knob
     } else {
         ask_mask(&[(sr, w_r, true), (sl, w_l, true), (sr, 0.0, false), (sl, 0.0, false)]);
     }
-    if !ask_blend(g, at, at_b, 1.0, true, at, n, tune) {
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
         return 0;
     }
     let left = &mut an.thr_last;
@@ -7311,4 +7301,27 @@ pub fn feet_last(g: usize, an: &mut Anim, dt: f64, s: f64, w_f: f64, own: f64, p
     .unwrap_or(0);
     (an.feet.step_l, an.feet.step_r) = (foot[0], foot[1]);
     code
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every carriage and sway rides on these: a follower that passed its mark would show as a wobble, and one that went by the frame would change with the machine.
+    #[test]
+    fn a_follower_gets_there_without_passing_it_at_any_frame_rate() {
+        let mut s = Spring { x: 0.3, v: 0.0 };
+        let mut last = s.x;
+        for _ in 0..120 {
+            spring_step(&mut s, 1.0, 16.0, 1.0 / 60.0);
+            assert!(s.x >= last - 1e-9 && s.x <= 1.0 + 1e-9, "it went from {last} to {}", s.x);
+            last = s.x;
+        }
+        assert!((last - 1.0).abs() < 1e-3, "two seconds on it is at {last}");
+        // one long frame or four short ones: the same place and the same speed
+        let (mut one, mut four) = (Spring { x: 0.0, v: 2.0 }, Spring { x: 0.0, v: 2.0 });
+        spring_step(&mut one, 1.0, 16.0, 1.0 / 15.0);
+        for _ in 0..4 { spring_step(&mut four, 1.0, 16.0, 1.0 / 60.0); }
+        assert!((one.x - four.x).abs() < 1e-9 && (one.v - four.v).abs() < 1e-9, "{} {} against {} {}", one.x, one.v, four.x, four.v);
+    }
 }

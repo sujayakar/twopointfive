@@ -164,9 +164,9 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
     }
 
     let down = crate::condition::down(g, g.pl[pl].ch);
-    if !down && g.pl[pl].holding.is_some() {
+    if !down && g.pl[pl].holding().is_some() {
         // a man in his arm: HIS rows are the only rows
-        let hold = g.pl[pl].holding.clone().unwrap();
+        let hold = g.pl[pl].holding().cloned().unwrap();
         let gd = hold.g;
         let gun = hold.variant == crate::character::HoldVariant::Gun;
         let k = g.k.hold.secs;
@@ -265,18 +265,9 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             list.push(it);
         }
     } else if !down {
-        let busy = g.pl[pl].takedown.is_some()
-            || g.pl[pl].kick.is_some()
-            || g.pl[pl].picking.is_some()
-            || g.pl[pl].wanding.is_some()
-            || g.pl[pl].easing.is_some()
-            || g.pl[pl].coding.is_some()
-            || g.pl[pl].breaker_move.is_some()
-            || g.pl[pl].door_move.is_some()
-            || g.pl[pl].charging.is_some()
-            || g.mission.drive_t >= 0.0;
+        let busy = g.pl[pl].deed.is_some();
         let keys = g.pl[pl].keys.clone();
-        let (sprinting, crouch, dragging_any) = (g.pl[pl].sprinting, g.pl[pl].crouch, g.pl[pl].dragging.is_some());
+        let (sprinting, crouch, dragging_any) = (g.pl[pl].sprinting, g.pl[pl].crouch, g.pl[pl].dragging().is_some());
         let mut di = 0;
         while di < g.doors.list.len() {
             let d = g.doors.list[di];
@@ -293,7 +284,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
             let pad = crate::devices::pad_state(g, &crate::seats::here(g), d, p);
             if let Some(pad) = pad {
-                it.line1 = if g.pl[pl].coding == Some(d) {
+                it.line1 = if g.pl[pl].coding().map(|c| c.door) == Some(d) {
                     String::from("door · keypad · keying it in")
                 } else if pad.known {
                     format!("door · keypad — you know the code ({})", crate::devices::spell(&pad.pad.def.code))
@@ -327,7 +318,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                     String::from("door · locked — won't budge")
                 } else if steel {
                     String::from("steel fire door · bolted from the stairs")
-                } else if g.pl[pl].picking == Some(d) {
+                } else if g.pl[pl].picking().copied() == Some(d) {
                     String::from("door · locked · picking it")
                 } else if pick > 0.0 {
                     format!("door · locked · {} picked", pct_s)
@@ -390,7 +381,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             // the big slot's tool: in the boot's own row. True = the shotgun, false = the hammer
             {
                 let can = !busy && !dragging_any && !sprinting && (!crouch || can_stand(g));
-                let far = if can && !reach && g.pl[pl].holding.is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
+                let far = if can && !reach && g.pl[pl].holding().is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
                 let tool = match far {
                     Some(t) => Some(t == crate::kit::BigTool::Shotgun),
                     None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d).map(|t| t == crate::kit::BigTool::Shotgun) } else { None },
@@ -417,7 +408,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                 }
                 verbs.push(row(&it, crate::game::Verb::Wand, "look under it — the wand, quiet", ""));
             }
-            let free = reach && !busy && !crate::wallcharge::wall_charge_setting(&crate::seats::here(g));
+            let free = reach && !busy;
             crate::doortools::door_tools_sam_rows(g, &mut it, d, &mut verbs, free, &mut |_g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, hints: Option<String>| -> crate::game::Interactable {
                 row(&base, verb, &text, hints.as_deref().unwrap_or(""))
             });
@@ -427,12 +418,12 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         while gi < g.guards.len() {
             let gd = g.guards[gi];
             gi += 1;
-            if crate::condition::down(g, g.gd[gd].ch) || g.pl[pl].takedown.is_some() { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) || g.pl[pl].takedown().is_some() { continue; }
             if g.team(gd).ours() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             crate::close::close_rows(g, gd, &p, busy, row_cb!(crate::close::CloseRowsRowOver), offer_cb!(list, things));
         }
         for gd in crate::civilians::civilian_bodies(g) {
-            if g.pl[pl].takedown.is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+            if g.pl[pl].takedown().is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let cv = g.gd[gd].civ.unwrap();
             if g.staged.captives.contains(&gd) { continue; }
             let gc = g.gd[gd].ch;
@@ -500,7 +491,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let gc = g.gd[gd].ch;
             let hips = match g.ch[gc].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[gc].pos };
             let mid: V3 = [hips[0], hips[1] + 0.12, hips[2]];
-            let dragging = g.pl[pl].dragging == Some(gd);
+            let dragging = g.pl[pl].dragging() == Some(gd);
             let reach = dragging || body_dist(g, gd, Some(1.3)) < 1.3;
             let callsign = g.gd[gd].callsign.clone();
             let nm = match g.gd[gd].civ { Some(cv) => format!("{} (the {})", callsign, g.cv[cv].label), None => callsign };
@@ -514,7 +505,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
             if reach && !busy {
                 if dragging {
-                    let carrying = g.pl[pl].haul.as_ref().map_or(false, |h| h.carry.is_some());
+                    let carrying = g.pl[pl].haul().map_or(false, |h| h.carry.is_some());
                     verbs.push(row(&it, crate::game::Verb::Drop, if carrying { "put him down" } else { "let go of him" }, "sprinting drops him"));
                 } else if !dragging_any {
                     verbs.push(row(&it, crate::game::Verb::Drag, "pick him up", ""));
@@ -523,16 +514,16 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             offer(&mut list, &mut things, it, verbs);
         }
         // the mission's rack while the drive is still in it
-        let drive_t = g.mission.drive_t;
+        let taking = g.pl[pl].taking().map(|t| t / crate::consts::DRIVE_SECS);
         if g.mission.stage == crate::game::MissionStage::Drive {
-            let reach = crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH && !dragging_any && !sprinting && g.pl[pl].takedown.is_none();
+            let reach = crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH && !dragging_any && !sprinting && g.pl[pl].takedown().is_none();
             let (holder, thing) = (g.level.errand.holder.clone(), g.level.errand.thing.clone());
             let line1 = format!("{} · {}", holder, thing);
             let mut it = mark(crate::game::InteractableKind::Objective, g.level.errand.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
-            it.progress = if drive_t >= 0.0 { Some(m::min(1.0, drive_t / crate::consts::DRIVE_SECS)) } else { None };
+            it.progress = taking.map(|t| m::min(1.0, t));
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
-            if drive_t >= 0.0 {
-                it.line2 = format!("taking… {}%  ·  stay on it", pct(drive_t / crate::consts::DRIVE_SECS));
+            if let Some(t) = taking {
+                it.line2 = format!("taking… {}%  ·  stay on it", pct(t));
             } else if reach && !busy {
                 let text = format!("take {} — stay on it", thing);
                 verbs.push(row(&it, crate::game::Verb::Drive, &text, ""));
@@ -547,7 +538,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             let active = g.light_home.mains.active;
             let gone_for_good = active && g.light_home.mains.permanent;
             if !gone_for_good && v3::dist_xz(bp, p) < NEARBY_M && (!crate::scene_collision::solid_blocked(g, eye, face, None) || match crate::workthings::sam_panel_point(g, p) { Some(at) => !crate::scene_collision::solid_blocked(g, eye, at, None), None => false }) {
-                let reach = v3::dist_xz(bp, p) < 1.15 && !dragging_any && !sprinting && g.pl[pl].takedown.is_none() && g.pl[pl].holding.is_none();
+                let reach = v3::dist_xz(bp, p) < 1.15 && !dragging_any && !sprinting;
                 let it = mark(crate::game::InteractableKind::Breaker, [bp[0], bp[1] + 0.35, bp[2]], String::from(if active { "breaker · thrown" } else { "breaker · power on" }), String::from(if reach { "" } else { "step closer" }), reach, active);
                 let mut verbs: Vec<crate::game::Interactable> = Vec::new();
                 if reach && !busy {
@@ -558,24 +549,22 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
         }
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
-        let setting = crate::wallcharge::wall_charge_setting(&crate::seats::here(g));
-        let working = setting;
-        crate::stickycam::sticky_rows(g, pl, busy || working, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
-        crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
+        crate::stickycam::sticky_rows(g, pl, busy, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
+        crate::lightswitch::switch_rows(g, pl, busy, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
         // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
-        if let Some(d) = g.pl[pl].picking {
+        if let Some(d) = g.pl[pl].picking().copied() {
             let pick = g.dr[d].leaf.pick;
             let base = marker(g, &list, d);
             rows = vec![running(&base, crate::game::Verb::Pick, &format!("picking… {}%  ·  Space or a step breaks off (the lock keeps it a moment)", pct(pick)), Some(pick))];
-        } else if let Some(wd) = g.pl[pl].wanding.as_ref().map(|w| (w.door, w.live)) {
+        } else if let Some(wd) = g.pl[pl].wanding().map(|w| (w.door, w.live)) {
             let base = marker(g, &list, wd.0);
             rows = vec![running(&base, crate::game::Verb::Wand, if wd.1 { "looking under it — the cursor turns the lens  ·  Space or a step pulls it out" } else { "feeding the wand under…  ·  Space or a step pulls it out" }, None)];
-        } else if let Some(d) = g.pl[pl].coding {
+        } else if let Some(&crate::game::Coding { door: d, t }) = g.pl[pl].coding() {
             let base = marker(g, &list, d);
             let name = match crate::devices::devices_pad_of(g, d) { Some(k) => crate::devices::pad_door_name(g, &k), None => String::from("door") };
-            let progress = g.pl[pl].code_t / crate::devices::CODE_SECS;
+            let progress = t / crate::devices::CODE_SECS;
             rows = vec![running(&base, crate::game::Verb::Code, &format!("keying the {} code… — Space or a step breaks off", name), Some(progress))];
-        } else if let Some((door, tool)) = g.pl[pl].kick.as_ref().map(|k| (k.door, k.tool.as_ref().map(|t| t.kind))) {
+        } else if let Some((door, tool)) = g.pl[pl].kick().map(|k| (k.door, k.tool.as_ref().map(|t| t.kind))) {
             let base = marker(g, &list, door);
             let text = match tool {
                 Some(crate::kit::BigTool::Hammer) => "hammering it…",
@@ -583,21 +572,21 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
                 None => "kicking it in…",
             };
             rows = vec![status(&base, text)];
-        } else if let Some(d) = g.pl[pl].easing {
+        } else if let Some(d) = g.pl[pl].easing().map(|e| e.door) {
             let base = marker(g, &list, d);
             let progress = m::abs(g.dr[d].leaf.angle) / EASE_MAX;
             rows = vec![running(&base, crate::game::Verb::Ease, "easing it open… — Space or a step stops it where it is", Some(progress))];
-        } else if drive_t >= 0.0 {
+        } else if let Some(t) = taking {
             if let Some(it) = list.iter().find(|x| x.kind == crate::game::InteractableKind::Objective) {
-                rows = vec![running(it, crate::game::Verb::Drive, &format!("pulling… {}% — stay on it (Space or a step lets go)", pct(drive_t / crate::consts::DRIVE_SECS)), Some(drive_t / crate::consts::DRIVE_SECS))];
+                rows = vec![running(it, crate::game::Verb::Drive, &format!("pulling… {}% — stay on it (Space or a step lets go)", pct(t)), Some(t))];
             }
-        } else if let Some(door) = g.pl[pl].charging.as_ref().map(|c| c.door) {
+        } else if let Some(door) = g.pl[pl].charging().map(|c| c.door) {
             let base = marker(g, &list, door);
             let progress = crate::doortools::door_tools_sam_progress(g, &crate::seats::here(g));
             rows = vec![running(&base, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some(progress))];
-        } else if crate::wallcharge::wall_charge_setting(&crate::seats::here(g)) {
+        } else if g.pl[pl].wall_work().is_some() {
             rows = vec![crate::wallcharge::wall_charge_running_row(g, &mut running_cb)];
-        } else if g.pl[pl].takedown.is_none() {
+        } else if g.pl[pl].takedown().is_none() {
             let priority = interact_priority();
             js::sort_by(&mut things, |a, b| interact_cmp(g, p, &priority, &list[a.0], &list[b.0]));
             // (rails.ts: a tutorial mission offers only the rows its steps teach, and a thing left with none is marked)
@@ -633,7 +622,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             own.extend(flat.iter().filter(|r| is_cam(r)).take(1).cloned());
             let rest: Vec<crate::game::Interactable> = if !own.is_empty() { flat.iter().filter(|r| !is_own(r)).cloned().collect() } else { flat };
             // (ownblow.ts: a charge his own hands set: under the rows the things in reach had, ahead of the rows past the cap)
-            let blow = if busy || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() { None } else { crate::ownblow::own_blow_row(g) };
+            let blow = if busy || g.pl[pl].sprinting || g.pl[pl].dragging().is_some() { None } else { crate::ownblow::own_blow_row(g) };
             let mine: Vec<crate::game::Interactable> = blow.into_iter().collect();
             let top: Vec<crate::game::Interactable> = if !hint.is_empty() {
                 rest.iter().filter(|r| r.verb.is_some()).take((MAX_NEAR - 1.0) as usize).cloned().collect()
@@ -704,10 +693,6 @@ pub fn pick_hover(g: &mut crate::game::Game) {
     let sel = g.sets[g.seat].hand.near_sel;
     g.sets[g.seat].hand.near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
     let best = g.sets[g.seat].nearby.get(g.sets[g.seat].hand.near_sel as usize).cloned();
-    g.sets[g.seat].use_door = match &best {
-        Some(b) if b.kind == crate::game::InteractableKind::Door && b.in_reach => b.door,
-        _ => None,
-    };
     g.sets[g.seat].hover = best;
 }
 
@@ -740,7 +725,7 @@ pub(super) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::gam
 }
 
 /// a wind-up called off with the can still in his fist: back on the belt
-pub(super) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
+pub(in crate::sam) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
     if let Some(kind) = g.pl[pl].pending_throw.as_ref().map(|t| t.kind) {
         can_back(g, pl, kind);
         g.pl[pl].pending_throw = None;
@@ -750,7 +735,7 @@ pub(super) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
 /// F: let go of the body you are dragging, or take hold of the nearest one within reach
 pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     let pl = g.player;
-    if g.pl[pl].dragging.is_some() {
+    if g.pl[pl].tow.is_some() {
         release_body(g, None);
         return;
     }
@@ -780,25 +765,20 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     };
     crate::unseen::kneel(g, pl);
     release_wall(g);
-    g.pl[pl].dragging = Some(best);
-    g.pl[pl].drag_noise_t = 0.3;
-    g.pl[pl].drag_stuck_t = 0.0;
+    crate::deed::put_down(g, pl);
+    g.pl[pl].tow = Some(crate::game::Tow { who: best, haul: None, yaw: 0.0, noise_t: 0.3, stuck_t: 0.0 });
     let bc = g.gd[best].ch;
     if let Some(r) = g.ch[bc].ragdoll { crate::ragdoll::ragdoll_wake(g, r); }
     crate::hands::haul_begin(g, best);
 }
 
 /// Let go of the body in tow: the ankle pins come off and its feet fall where they are
-pub(super) fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
+pub(in crate::sam) fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
     let laid = laid.unwrap_or(false);
     let pl = g.player;
-    let b = match g.pl[pl].dragging {
-        Some(gd) => g.gd[gd].ch,
-        None => return,
-    };
+    let Some(tow) = g.pl[pl].tow.take() else { return };
+    let b = g.gd[tow.who].ch;
     if let Some(r) = g.ch[b].ragdoll { crate::ragdoll::ragdoll_clear_pins(g, r); }
-    g.pl[pl].dragging = None;
-    g.pl[pl].haul = None;
     let c = g.pl[pl].ch;
     g.ch[c].anim.haul = None;
     let at = match g.ch[b].bones.get(crate::character::Bone::FootL) { Some(f) => *f, None => g.ch[b].pos };
@@ -809,29 +789,15 @@ pub(super) fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
 pub fn cancel_actions(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    release_wall(g);
-    if g.pl[pl].dragging.is_some() { release_body(g, None); }
-    if g.pl[pl].holding.is_some() { free_held(g, crate::player::FreeHeldWhy::Cancel); }
-    g.pl[pl].takedown = None;
-    if g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].easing.is_some() || g.pl[pl].coding.is_some() || g.sets[g.seat].hand.sel.down_t >= 0.0 {
+    if g.pl[pl].deed.is_some() || g.sets[g.seat].hand.sel.down_t >= 0.0 {
         g.sets[g.seat].hand.f_held = true;
     }
-    g.pl[pl].kick = None;
-    g.pl[pl].picking = None;
-    crate::wand::wand_drop(g, pl);
-    g.ch[c].anim.lockpick = false;
-    if g.pl[pl].coding.is_some() { crate::devices::stop_coding(g); }
+    crate::deed::hands_free(g);
     crate::bigkit::sam_big_drop(g);
-    g.pl[pl].easing = None;
-    crate::hands::hands_cancel(g);
     g.sets[g.seat].hand.sel.down_t = -1.0;
     g.sets[g.seat].hand.sel.open = false;
     g.sets[g.seat].hand.sel.ring = None;
     g.ch[c].anim.door_push = None;
-    throw_off(g, pl);
-    g.sets[g.seat].hand.throw_held = false;
-    g.sets[g.seat].hand.throw_preview = None;
-    g.pl[pl].sprinting = false;
     g.pl[pl].speed_sm = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
 }

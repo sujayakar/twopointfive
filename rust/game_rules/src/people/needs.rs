@@ -456,9 +456,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         t.partner = Some(p);
         t.reply_at = g.time + g.k.needs.reply_after;
         let own = if quiet { lines.announce_own.get(key(kind)) } else { None };
-        let was: Vec<String> = own.or_else(|| lines.announce.get(key(kind))).or_else(|| lines.announce.get(key("coffee"))).unwrap().clone();
-        let now: Vec<String> = was.iter().map(|x| lines.now.get(x.clone()).cloned().unwrap_or_else(|| x.clone())).collect();
-        let pool = crate::words::wg::<Vec<String>>(g, &now, &was);
+        let pool: Vec<String> = own.or_else(|| lines.announce.get(key(kind))).or_else(|| lines.announce.get(key("coffee"))).unwrap().clone();
         t.line = pick_line(g, &pool, gd, "announce");
         crate::game::game_say(g, gd, &t.line, None, None);
     } else {
@@ -502,8 +500,7 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
             lines.reply_other.iter().map(|s| s.replace("{other}", &other)).collect()
         }
         _ => {
-            let now_pool: Vec<String> = if t.kind == NeedKind::Stretch { lines.reply.iter().filter(|s| s.as_str() != "Bring me one.").cloned().collect() } else { lines.reply.clone() };
-            crate::words::w(g, &now_pool)
+            if t.kind == NeedKind::Stretch { lines.reply.iter().filter(|s| s.as_str() != "Bring me one.").cloned().collect() } else { lines.reply.clone() }
         }
     };
     let cs = g.gd[gd].callsign.clone();

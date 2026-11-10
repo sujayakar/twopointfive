@@ -212,7 +212,6 @@ pub struct CheckNetOutValue {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Call {
     pub by: GuardId,
-    pub t0: f64,
     pub end: f64,
     pub at: V3,
     pub room: Option<crate::scene_scenarios::StructureRoom>,

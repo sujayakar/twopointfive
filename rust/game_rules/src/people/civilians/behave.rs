@@ -60,7 +60,7 @@ pub fn civilian_bodies(g: &crate::game::Game) -> Vec<GuardId> {
     let mut out = Vec::new();
     for cv in shown {
         if crate::condition::down(g, g.gd[cv].ch) || !g.ch[g.gd[cv].ch].alive { continue; }
-        if men.iter().any(|&pl| g.pl[pl].holding.as_ref().map(|h| h.g) == Some(cv)) { continue; }
+        if men.iter().any(|&pl| g.pl[pl].holding().map(|h| h.g) == Some(cv)) { continue; }
         out.push(cv);
     }
     out
@@ -444,8 +444,8 @@ fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let vis = crate::guards::eye_contact(g, crate::guards::Eye { pos: eye, look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: None }, pc, false, smoke, None);
     let decay = if g.cv[cv].state == CivState::Work { 0.08 } else { 0.05 };
     if !vis.visible { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }
-    let holding_other = g.pl[pl].holding.as_ref().map_or(false, |h| h.g != gd);
-    let violent = crate::game::player_gun_in_hand(g, pl).is_some() || g.pl[pl].takedown.is_some() || holding_other || g.time - g.pl[pl].last_fire_t < 2.0;
+    let holding_other = g.pl[pl].holding().map_or(false, |h| h.g != gd);
+    let violent = crate::game::player_gun_in_hand(g, pl).is_some() || g.pl[pl].takedown().is_some() || holding_other || g.time - g.pl[pl].last_fire_t < 2.0;
     let gun = violent && vis.dist < g.k.civ.gun_m;
     let rate = crate::guards::sight_gain(g, gd, vis.dist) * g.k.civ.keen_k * (if gun { g.k.civ.gun_k } else { 1.0 });
     if rate <= 0.05 { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }

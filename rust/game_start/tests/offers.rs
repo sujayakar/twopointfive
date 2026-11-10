@@ -30,7 +30,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     let d = game::doors::doors_by_name(&p.g, "server_manager").unwrap();
     let c = p.g.dr[d].frame_centre;
     let at = [c[0] + 2.0, 0.0, c[2]];
-    if !game::doors::doors_pull_face(&mut p.g, d, at) { let s = game::doors::door_swing(&mut p.g, d); game::doors::door_set_swing(&mut p.g, d, -s, None, None); }
+    if !game::doors::doors_pull_face(&mut p.g, d, at) { let s = game::doors::door_swing(&mut p.g, d); game::doors::door_set_swing(&mut p.g, d, -s, None); }
     p.sam_put([at[0], at[2]]);
     p.run(1.0);
     (p, d, c)

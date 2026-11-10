@@ -81,8 +81,8 @@ fn seam_in_first_seat_view(g: &Game) -> bool { crate::seats::in_view(g) }
 // ---------------------------------------------------------------- small helpers
 
 /// a later seat's record as it is stood: what the first seat's holds now, with his seat
-fn set_of_game(g: &Game, s: SeatId) -> crate::seats::SeatSet {
-    crate::seats::SeatSet { seat: s, player: g.player, ..g.sets[g.seat].clone() }
+fn set_of_game(g: &Game) -> crate::seats::SeatSet {
+    crate::seats::SeatSet { player: g.player, ..g.sets[g.seat].clone() }
 }
 /// `S[i ?? 0] ?? S[0]`
 fn seat_at(g: &Game, i: Option<f64>) -> SeatId {
@@ -116,7 +116,7 @@ pub(super) fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     while i < n {
         let s = crate::cmd::seat_new(g, Some(i));
         if i != 0.0 {
-            let own = set_of_game(g, s);
+            let own = set_of_game(g);
             assert_eq!(g.sets.push(own), s, "a seat's set stands at its seat's id");
         }
         seats.push(s);

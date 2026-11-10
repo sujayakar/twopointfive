@@ -28,7 +28,7 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
             crate::control::record(g, gd, crate::control::Holder::Rule(rule));
             duck = true;
             g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
-            g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, want.fire_wait);
+            if want.to.is_none() { g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, want.fire_wait); }
             if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
             let threat = match want.threat {
                 Some(s) => s,
@@ -58,6 +58,13 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
                     else { crate::control::Outcome::Moving }
                 }
             };
+            if let (true, true, Some(pc)) = (want.to.is_some(), can_shoot && g.gd[gd].react_t <= 0.0, pc) {   // on his way he fires at the man he sees
+                let s = fight_sight(g, gd, c, pc, dt);
+                aim_at = Some(s.aim);
+                duck = false;
+                let ready = crate::aim::aim_ready_walking(g, gd);
+                fight_trigger(g, gd, c, &s, move_speed, ready, dt);
+            }
             crate::control::commit(g, gd, rule, outcome);
         } else if g.gd[gd].react_t > 0.0 {
             g.gd[gd].react_t -= dt;
@@ -88,7 +95,8 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
                 crate::mind::cap(g, gd, 0.5, "guards");
                 break 'behaviour;
             }
-            fight_trigger(g, gd, c, &s, move_speed, dt);
+            let ready = crate::aim::aim_ready(g, gd);
+            fight_trigger(g, gd, c, &s, move_speed, ready, dt);
         } else if let (true, Some(pc)) = (down, pc) {
             let body = g.ch[pc].pos;
             let here = g.ch[c].pos;
@@ -147,6 +155,26 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
         }
     }
     Acts { move_speed, upper, aim_at, crouch, duck, pied }
+}
+
+/// FIRING AS HE GOES, a man whose script has his legs: he turns to the man he sees, going backwards or sideways, and shoots, his aim what his own walk leaves of it.
+pub fn fight_on_the_way(g: &mut Game, gd: GuardId, dt: f64) {
+    let c = g.gd[gd].ch;
+    let foe = g.gd[gd].foe.filter(|_| {
+        !crate::teams::foe_down(g, gd) && g.time - g.gd[gd].last_seen_t < 0.5 && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
+    });
+    let Some(pc) = foe else {
+        if let Some(s) = g.gd[gd].script.as_mut() { s.over = None; }
+        return;
+    };
+    if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
+    let s = fight_sight(g, gd, c, pc, dt);
+    let face = Some(v3::yaw_to(g.ch[c].pos, s.aim));
+    if let Some(sc) = g.gd[gd].script.as_mut() { sc.over = Some(crate::game::GuardScriptOver { aim_at: s.aim, face, walk: Some(true) }); }
+    let speed = g.gd[gd].speed;
+    crate::aim::track_guard(g, gd, dt);
+    let ready = crate::aim::aim_ready_walking(g, gd);
+    if g.gd[gd].react_t <= 0.0 { fight_trigger(g, gd, c, &s, speed, ready, dt); }
 }
 
 /// What a fighting guard's gun can do about the man he sees, this tick: the point he aims at and what is in the way of the round.
@@ -238,8 +266,8 @@ fn fight_legs(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, s: &Sight, dist:
 }
 
 /// HANDS of a fighting guard: the magazine and the trigger. A shield in the way, a twisted body, a gun through a wall, a muzzle
-/// held down for a colleague or a bore not yet on the point holds the round; an empty gun starts the change of magazine.
-fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f64, dt: f64) {
+/// held down for a colleague or a bore not yet on the point (`ready`) holds the round; an empty gun starts the change of magazine.
+fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f64, ready: bool, dt: f64) {
     let Sight { aim, blocked, poked, facing_err, .. } = *s;
     g.arms[g.gd[gd].ch].fire_cd -= dt;
     let twisted = move_speed > 0.3 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - g.ch[c].aim_yaw)) > 0.9;
@@ -252,11 +280,11 @@ fn fight_trigger(g: &mut Game, gd: GuardId, c: CharId, s: &Sight, move_speed: f6
         // no round while it lasts (frame.rs `hands` counts it)
     } else if g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row").burst.is_some() {
         let muzzle_down = g.gd[gd].muzzle_down;
-        let start_ok = !shield && facing_err < 0.25 && !blocked && !twisted && !poked && !muzzle_down && crate::aim::aim_ready(g, gd);
+        let start_ok = !shield && facing_err < 0.25 && !blocked && !twisted && !poked && !muzzle_down && ready;
         let round_ok = !shield && !twisted && !poked && !muzzle_down;
         burst_trigger(g, gd, dt, aim, start_ok, round_ok, None);
     } else if !shield && g.arms[g.gd[gd].ch].fire_cd <= 0.0 && facing_err < 0.25 && !blocked && !twisted && !poked && !g.gd[gd].muzzle_down
-        && !round_past_colleague(g, gd, aim, None, None) && crate::aim::aim_ready(g, gd) && crate::weapons::firearm_fire(g, weapon) {
+        && !round_past_colleague(g, gd, aim, None, None) && ready && crate::weapons::firearm_fire(g, weapon) {
         let (cd, jitter) = { let w = g.m.weapons.weapons.get(g.fa[weapon].def).expect("a gun's def is a row"); (w.cd, w.cd_jitter) };
         let mods = crate::suppression::guard_fire_mods(g, gd);
         g.arms[g.gd[gd].ch].fire_cd = (cd + crate::dice::draw_of(g, "guards::fight_trigger#1", gd) * jitter) * mods.gap;

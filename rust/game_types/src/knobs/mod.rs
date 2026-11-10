@@ -11,7 +11,6 @@ mod air_sim; pub use air_sim::*;
 mod attention; pub use attention::*;
 mod autopilot; pub use autopilot::*;
 mod autoreload; pub use autoreload::*;
-mod backkey; pub use backkey::*;
 mod break_table; pub use break_table::*;
 mod calmtorch; pub use calmtorch::*;
 mod carlamps; pub use carlamps::*;
@@ -116,7 +115,6 @@ mod shards; pub use shards::*;
 mod shotgun; pub use shotgun::*;
 mod showwhy; pub use showwhy::*;
 mod silent; pub use silent::*;
-mod skeleton; pub use skeleton::*;
 mod slotsetup; pub use slotsetup::*;
 mod smokebreak; pub use smokebreak::*;
 mod sneak; pub use sneak::*;
@@ -285,7 +283,6 @@ pub struct Knobs {
     pub autopilot: AutopilotK,
     pub cmdring: CmdringK,
     pub torch: TorchK,
-    pub backkey: BackkeyK,
     pub morale: MoraleK,
     pub condition: ConditionK,
     pub inhand: InhandK,
@@ -304,7 +301,6 @@ pub struct Knobs {
     pub kitload: KitloadK,
     pub rescueend: RescueendK,
     pub rescueflush: RescueflushK,
-    pub posemath: PosemathK,
     pub sense: SenseK,
     pub cmdcheck: CmdcheckK,
     pub seats: SeatsK,

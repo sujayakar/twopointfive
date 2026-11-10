@@ -37,7 +37,7 @@ pub fn fold_cancels(g: &mut crate::game::Game) {
         g.pl[p].pending_throw = None;
     }
     g.sets[g.seat].hand.throw_held = false;
-    if g.pl[p].picking.is_some() || g.pl[p].wanding.is_some() { g.sets[g.seat].hand.f_held = true; }
+    if g.pl[p].picking().is_some() || g.pl[p].wanding().is_some() { g.sets[g.seat].hand.f_held = true; }
     let mut i = 0;
     while i < 6 && crate::interact::cancel_sustained(g) { i += 1; } // one verb a call
 }

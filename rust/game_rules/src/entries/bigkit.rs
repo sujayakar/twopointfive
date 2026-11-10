@@ -10,13 +10,13 @@ use alloc::{string::String, vec::Vec};
 /// the live tool of the seat's kick; only where nothing since the frame began can have taken the kick away
 macro_rules! tool {
     ($g:ident, $p:ident) => {
-        $g.pl[$p].kick.as_mut().unwrap().tool.as_mut().unwrap()
+        $g.pl[$p].kick_mut().unwrap().tool.as_mut().unwrap()
     };
 }
 
 /// a write to the tool after a call out: the TypeScript holds the object, and a kick that call took away is written to nobody
 fn on_tool(g: &mut Game, pid: PlayerId, f: impl FnOnce(&mut crate::game::PlayerKickTool)) {
-    if let Some(t) = g.pl[pid].kick.as_mut().and_then(|k| k.tool.as_mut()) {
+    if let Some(t) = g.pl[pid].kick_mut().and_then(|k| k.tool.as_mut()) {
         f(t);
     }
 }
@@ -173,7 +173,7 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
     let pid = g.player;
     let c = g.pl[pid].ch;
     let pos = g.ch[c].pos;
-    let k = g.pl[pid].kick.as_mut().unwrap();
+    let k = g.pl[pid].kick_mut().unwrap();
     let (spot, yaw) = (k.spot, k.yaw);
     let mv = k.tool.as_mut().unwrap().moves.as_mut().unwrap();
     if mv.arrived {
@@ -201,7 +201,7 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
 /// What the animator is told of the beat this frame.
 pub fn sam_big_pose(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::character::AnimBigTool> {
     let pid = seat.player;
-    let t = g.pl[pid].kick.as_ref()?.tool.as_ref()?;
+    let t = g.pl[pid].kick()?.tool.as_ref()?;
     let mv = t.moves.as_ref()?;
     let (tool_kind, t_now, blows, end, at) = (t.kind, t.t, mv.blows.clone(), mv.end, mv.at);
     let (kind, equip) = match tool_kind {
@@ -255,7 +255,7 @@ pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
 pub fn sam_big_carry(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pid = seat.player;
     let c = g.pl[pid].ch;
-    let Some(t) = g.pl[pid].kick.as_ref().and_then(|k| k.tool.as_ref()) else { return false };
+    let Some(t) = g.pl[pid].kick().and_then(|k| k.tool.as_ref()) else { return false };
     if t.moves.is_none() || !t.lead.map_or(false, |l| l > 0.0) {
         return false;
     }
@@ -277,7 +277,7 @@ pub(super) fn big_swing(g: &crate::game::Game) -> f64 {
 fn sam_big_tail(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pid = seat.player;
     let c = g.pl[pid].ch;
-    g.ch[c].anim.big_tool.is_some() && !g.pl[pid].kick.as_ref().map_or(false, |k| k.tool.is_some())
+    g.ch[c].anim.big_tool.is_some() && !g.pl[pid].kick().map_or(false, |k| k.tool.is_some())
 }
 
 /// What is left of the tail (s).
@@ -311,7 +311,7 @@ pub fn sam_big_drop(g: &mut crate::game::Game) {
 pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
     let pid = g.player;
     let c = g.pl[pid].ch;
-    if g.ch[c].anim.big_tool.is_none() || g.pl[pid].kick.as_ref().map_or(false, |k| k.tool.is_some()) {
+    if g.ch[c].anim.big_tool.is_none() || g.pl[pid].kick().map_or(false, |k| k.tool.is_some()) {
         return;
     }
     if let Some(b) = g.ch[c].anim.big_tool.as_mut() {
@@ -320,15 +320,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = &g.pl[pid];
     let throw_held = g.sets[crate::seats::seat_of_man(g, pid)].hand.throw_held;
     let taken = g.cond[pl.ch].down
-        || pl.kick.is_some()
-        || pl.holding.is_some()
-        || pl.takedown.is_some()
-        || pl.dragging.is_some()
-        || pl.picking.is_some()
-        || pl.wanding.is_some()
-        || pl.coding.is_some()
-        || pl.easing.is_some()
-        || pl.door_move.is_some()
+        || pl.hands_full()
         || pl.wall.is_some()
         || pl.pending_throw.is_some()
         || throw_held
@@ -378,7 +370,7 @@ fn next_at(g: &mut Game, pid: PlayerId, next: f64) {
 pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let pid = g.player;
     let c = g.pl[pid].ch;
-    let d = g.pl[pid].kick.as_ref().unwrap().door;
+    let d = g.pl[pid].kick().unwrap().door;
     tool!(g, pid).t += dt;
     {
         let (now, lead) = (tool!(g, pid).t, tool!(g, pid).lead);
@@ -424,7 +416,7 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         // (on his way to the place: the first blow is wound up, the first shell goes, once he stands on it with the tool in his hands)
         let arrived = tool!(g, pid).moves.as_ref().unwrap().arrived;
         if !arrived && now >= MOVE_CAP {
-            let spot = g.pl[pid].kick.as_ref().unwrap().spot;
+            let spot = g.pl[pid].kick().unwrap().spot;
             if v3::dist_xz(g.ch[c].pos, spot) < 0.5 {
                 tool!(g, pid).moves.as_mut().unwrap().arrived = true;
             } else {

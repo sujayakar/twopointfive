@@ -477,7 +477,7 @@ impl DoorsAsk for Play {
         self.g.dr[d].leaf.angle = s * rad;
     }
     fn hung_toward(&mut self, d: DoorId, toward: [f64; 2]) {
-        if !self.pull_face(d, toward) { let s = game::doors::door_swing(&self.g, d); game::doors::door_set_swing(&mut self.g, d, -s, None, None); }
+        if !self.pull_face(d, toward) { let s = game::doors::door_swing(&self.g, d); game::doors::door_set_swing(&mut self.g, d, -s, None); }
     }
     fn post_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].post).map(|p| [p[0], p[2]]) }
     fn there_of(&self, gd: GuardId) -> String { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map_or(String::new(), |a| self.g.tab.orders_assignment[a].there.words.clone()) }
@@ -663,7 +663,7 @@ impl DoorsAsk for Play {
     fn let_go(&mut self, m: GuardId) { let h = &mut self.g.gd[m]; (h.hold, h.pinned) = (false, false); }
     fn sam_holds(&mut self, m: GuardId) -> bool {
         game::player::start_grab(&mut self.g, m, None);
-        self.until(2.5, |p| p.g.pl[p.g.player].holding.as_ref().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()
+        self.until(2.5, |p| p.g.pl[p.g.player].holding().map_or(false, |h| h.phase == game::character::HoldPhase::Held)).is_some()
     }
     fn in_standoff(&self, m: GuardId) -> Option<bool> { self.g.gd[m].standoff.map(|s| self.g.tab.guards_standoff[s].line_open) }
     fn saw_held(&self, m: GuardId) -> Option<String> { self.g.gd[m].witness.saw_held.as_ref().map(|w| w.who.clone()) }

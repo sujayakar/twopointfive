@@ -29,31 +29,29 @@ static CLASSES: &[(&[Pat], f64)] = &[
     (&[Pat::In("lock the doors"), Pat::In("on the doors"), Pat::In("back on our doors"), Pat::In("stay on your doors"), Pat::In("digging in"), Pat::In("getting ready"), Pat::In("ready for them"), Pat::In("room ready"), Pat::In("staying on my door"), Pat::In("holding my room"), Pat::In("staying on my post"), Pat::In("holding my post"), Pat::In("let them come"), Pat::In("not coming out"), Pat::In("holding my corner"), Pat::In("holding here"), Pat::In("i've got this door"), Pat::In("on my own")], 3.0),
 ];
 
-/// A kind's row of LINES (WORDS.on and WORDS.guide are settled on: `guide`, else `now`, else `say`).
+/// A kind's lines and how they rank on the net.
 struct Line {
     kind: CueKind,
     cls: f64,
     say: &'static [&'static str],
-    now: Option<&'static [&'static str]>,
-    guide: Option<&'static [&'static str]>,
 }
-/// The new lines, in the written order.
+/// The lines, in the written order.
 static LINES: &[Line] = &[
-    Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"], now: None, guide: None },
-    Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"], now: None, guide: None },
-    Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"], now: None, guide: None },
-    Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"], now: None, guide: None },
-    Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"], now: None, guide: None },
-    Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"], now: None, guide: None },
-    Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"], now: None, guide: None },
-    Line { kind: CueKind::SquadWaits, cls: 3.0, say: &["{sq}: hold — let them come in. Wait for my word!"], now: Some(&["{sq}: hold — let them come in. wait for my word!"]), guide: Some(&["{sq}: hold — let them come in. wait for my call!"]) },
-    Line { kind: CueKind::SquadCopiesWaits, cls: 3.0, say: &["{sq}: copy, {ally} — hold, let them come in. Wait for my word!"], now: Some(&["{sq}: copy, {ally} — hold, let them come in. wait for my word!"]), guide: Some(&["{sq}: copy, {ally} — hold, let them come in. wait for my call!"]) },
-    Line { kind: CueKind::FellBack, cls: 5.0, say: &["{the} is lost — falling back", "falling back — {the} is lost"], now: None, guide: None },
-    Line { kind: CueKind::Planted, cls: 5.0, say: &["fell back — set {at}"], now: None, guide: None },
-    Line { kind: CueKind::PinnedIn, cls: 5.0, say: &["can't get out — fell back to cover {at}"], now: None, guide: None },
-    Line { kind: CueKind::Still, cls: 6.0, say: &["they're still out there — holding {the}", "still out there — staying on this door"], now: Some(&["they're still out there — holding {the}", "still out there — staying on my post"]), guide: None },
-    Line { kind: CueKind::Surprised, cls: 0.0, say: &["behind—!", "there—!"], now: None, guide: None },
-    Line { kind: CueKind::Flinch, cls: 0.0, say: &["the door—!"], now: None, guide: None },
+    Line { kind: CueKind::HuntOver, cls: 2.0, say: &["lost them — holding {the}", "lost them — staying {at}"] },
+    Line { kind: CueKind::Calm, cls: 2.0, say: &["quiet now — staying put", "standing down — holding here"] },
+    Line { kind: CueKind::Cover, cls: 2.0, say: &["one of them down {at} — covering him"] },
+    Line { kind: CueKind::SquadQuiet, cls: 2.0, say: &["{sq}: gone quiet here — still holding"] },
+    Line { kind: CueKind::SquadStays, cls: 3.0, say: &["{sq}: still on the doors — nobody goes"] },
+    Line { kind: CueKind::SquadHears, cls: 4.0, say: &["{sq}: heard that — stand by"] },
+    Line { kind: CueKind::SquadCopies, cls: 4.0, say: &["{sq}: copy, {ally} — stand by"] },
+    Line { kind: CueKind::SquadWaits, cls: 3.0, say: &["{sq}: hold — let them come in. wait for my call!"] },
+    Line { kind: CueKind::SquadCopiesWaits, cls: 3.0, say: &["{sq}: copy, {ally} — hold, let them come in. wait for my call!"] },
+    Line { kind: CueKind::FellBack, cls: 5.0, say: &["{the} is lost — falling back", "falling back — {the} is lost"] },
+    Line { kind: CueKind::Planted, cls: 5.0, say: &["fell back — set {at}"] },
+    Line { kind: CueKind::PinnedIn, cls: 5.0, say: &["can't get out — fell back to cover {at}"] },
+    Line { kind: CueKind::Still, cls: 6.0, say: &["they're still out there — holding {the}", "still out there — staying on my post"] },
+    Line { kind: CueKind::Surprised, cls: 0.0, say: &["behind—!", "there—!"] },
+    Line { kind: CueKind::Flinch, cls: 0.0, say: &["the door—!"] },
 ];
 fn line_of(k: CueKind) -> &'static Line {
     LINES.iter().find(|l| l.kind == k).unwrap()
@@ -206,7 +204,7 @@ pub fn cue_class(text: &str) -> f64 {
 /// A kind's lines as they are said now.
 fn said(k: crate::cues::CueKind) -> Vec<String> {
     let l = line_of(k);
-    l.guide.or(l.now).unwrap_or(l.say).iter().map(|s| String::from(*s)).collect()
+    l.say.iter().map(|s| String::from(*s)).collect()
 }
 
 /// A line is shouted when its writer put an exclamation mark in it.
@@ -758,7 +756,7 @@ mod tests {
     #[test]
     fn a_lines_words_rank_it_as_its_row_does() {
         for l in LINES.iter().filter(|l| l.cls > 0.0) {
-            for text in l.say.iter().chain(l.now.unwrap_or(&[])).chain(l.guide.unwrap_or(&[])) { assert_eq!(cue_class(text), l.cls, "{}", text); }
+            for text in l.say { assert_eq!(cue_class(text), l.cls, "{}", text); }
         }
     }
 
