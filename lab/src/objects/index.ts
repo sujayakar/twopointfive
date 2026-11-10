@@ -12,12 +12,15 @@ import { desklamp } from './desklamp';
 import { fern } from './fern';
 import { fruitcrate } from './fruitcrate';
 import { grass } from './grass';
+import { hedge } from './hedge';
 import { ivy } from './ivy';
+import { lavender } from './lavender';
 import { moped } from './moped';
 import { officechair } from './officechair';
 import { palm } from './palm';
 import { parasol } from './parasol';
+import { pine } from './pine';
 import { radiator } from './radiator';
 import { tree } from './tree';
 /** every object there is, by name */
-export const OBJECTS: Record<string, ObjectKind> = Object.fromEntries([chair, ficus, person, shelf, car, gravel, bicycle, birch, bollards, desklamp, fern, fruitcrate, grass, ivy, moped, officechair, palm, parasol, radiator, tree].map(o => [o.name, o]));
+export const OBJECTS: Record<string, ObjectKind> = Object.fromEntries([chair, ficus, person, shelf, car, gravel, bicycle, birch, bollards, desklamp, fern, fruitcrate, grass, hedge, ivy, lavender, moped, officechair, palm, parasol, pine, radiator, tree].map(o => [o.name, o]));
