@@ -281,7 +281,7 @@ fn the_big_slot_is_told_with_the_door_that_offers_it() {
         assert!(b.name == "hammer" && b.place == "at a shut door", "seed {}: {:?}", seed, b);
         let door = shut_door_beside(&mut p);
         let b = kit(&p).big.unwrap();
-        assert!(b.offered, "seed {}: beside the shut door at {:?}, and nothing is offered: {:?}", seed, door, p.g.nearby.iter().map(|r| r.verb).collect::<Vec<_>>());
+        assert!(b.offered, "seed {}: beside the shut door at {:?}, and nothing is offered: {:?}", seed, door, p.g.sets[p.g.seat].nearby.iter().map(|r| r.verb).collect::<Vec<_>>());
         p.sam_put(far); p.run(0.3);
         assert!(!kit(&p).big.unwrap().offered, "seed {}: no door by him, and the row is lit", seed);
         // a game with no big slot has no row
@@ -297,7 +297,7 @@ fn shut_door_beside(p: &mut Play) -> [f64; 2] {
         for (dx, dz) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
             p.sam_put([c[0] + dx, c[2] + dz]);
             p.run(0.1);
-            if p.g.nearby.iter().any(|r| matches!(r.verb, Some(game::game::Verb::Hammer | game::game::Verb::Breach))) { return [c[0], c[2]]; }
+            if p.g.sets[p.g.seat].nearby.iter().any(|r| matches!(r.verb, Some(game::game::Verb::Hammer | game::game::Verb::Breach))) { return [c[0], c[2]]; }
         }
     }
     panic!("no door on this level offers his tool");

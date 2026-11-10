@@ -26,7 +26,7 @@ fn blown(seed: u32) -> Play {
     p.sam_put([37.7, 18.2]);
     p.point_at([39.5, 24.0]);
     p.run(0.5);
-    let c = p.g.wall_charge.set[0];
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
     p
 }

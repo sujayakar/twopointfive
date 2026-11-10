@@ -120,7 +120,7 @@ fn rescue_end_word(g: &mut crate::game::Game, by: Option<CharId>) -> bool {
 /// Once a frame: this frame's Space on a hostage's row; at the run's end they stop where they are.
 pub(super) fn rescue_end_tick(g: &mut crate::game::Game) {
     if !crate::rescue::rescue_up(g) { return; }
-    let act = g.act.as_ref().map(|a| (a.kind, a.guard, a.verb));
+    let act = g.sets[g.seat].act.as_ref().map(|a| (a.kind, a.guard, a.verb));
     if let Some((crate::game::InteractableKind::Guard, Some(guard), Some(verb))) = act {
         if (verb == crate::game::Verb::Lead || verb == crate::game::Verb::Stay) && g.staged.captives.contains(&guard) {
             let by = if verb == crate::game::Verb::Lead { let pl = who(g, &crate::seats::here(g)); Some(g.pl[pl].ch) } else { None };

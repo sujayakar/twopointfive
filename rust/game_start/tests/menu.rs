@@ -98,7 +98,7 @@ fn a_walls_menu_copies_no_row() {
             let up: Vec<_> = game::orders::squad_orders_rows_for(&p.g, &game::seats::here(&p.g), &t, None, None);
             let fifth: Vec<String> = up.iter().filter(|&&d| p.g.tab.orders_order_def[d].key == Some(5.0)).map(|&d| p.g.tab.orders_order_def[d].id.clone()).collect();
             assert!(fifth.len() > 1 && fifth[0].starts_with("wall"), "seed {s}: the rows with the fifth digit: {fifth:?}, the wall's first");
-            for d in &up { assert!(p.g.orders.defs.contains(d), "seed {s}: a row of the wall's menu is no row of the squad's"); }
+            for d in &up { assert!(p.g.sets[p.g.seat].orders.defs.contains(d), "seed {s}: a row of the wall's menu is no row of the squad's"); }
             p.run(0.3);
         }
         assert_eq!((p.menu_rows(), p.menu()), (rows, menu), "seed {s}: opening a wall's menu changed the table");
@@ -125,15 +125,15 @@ fn the_quick_keys_line_is_the_order_it_gives() {
             p.point_at(at);
             p.run(0.2);
             let line = panel(&p, 0).unwrap_or_else(|| panic!("seed {s}: nothing on the panel on {what}"));
-            assert_eq!(p.g.orders.shown.quick.as_deref(), Some(line.as_str()), "seed {s}: the panel reads what the tick keeps");
+            assert_eq!(p.g.sets[p.g.seat].orders.shown.quick.as_deref(), Some(line.as_str()), "seed {s}: the panel reads what the tick keeps");
             // (what the press takes: the cursor's own target. A teammate under it, with the whole squad addressed, is the squad's: "fall in", on nobody)
             let now = game::view::host_now(&p.g, p.host.input, p.host.cam, p.host.canvas);
             let t = game::orders::hover(&p.g, &game::seats::seat(&p.g, p.g.seats[0]), &now).expect("the key is live");
-            let n = p.g.orders.log.len();
+            let n = p.g.sets[p.g.seat].orders.log.len();
             game::autopilot::auto_quick(&mut p.g, &t);
-            assert!(p.g.orders.log.len() > n, "seed {s}: '{line}' is on the panel on {what} and the key gives nothing");
-            let id = p.g.orders.log.last().unwrap().order.clone();
-            let d = p.g.orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
+            assert!(p.g.sets[p.g.seat].orders.log.len() > n, "seed {s}: '{line}' is on the panel on {what} and the key gives nothing");
+            let id = p.g.sets[p.g.seat].orders.log.last().unwrap().order.clone();
+            let d = p.g.sets[p.g.seat].orders.defs.iter().copied().find(|&d| p.g.tab.orders_order_def[d].id == id).unwrap();
             let row = game::orders::squad_orders_label_of(&mut p.g, d, &t);
             assert_eq!(line, line_of(&p, row, &t), "seed {s}: on {what} the key gave '{id}'");
         }
@@ -152,7 +152,7 @@ fn no_quick_line_with_a_menu_up() {
         let t = game::orders::squad_orders_target_at(&mut p.g, [16.0, 0.0, 24.0]);
         game::orders::squad_orders_open(&mut p.g, Some(&t), None, None);
         p.run(0.1);
-        assert_eq!(p.g.orders.shown.quick, None, "seed {s}: a menu is up");
+        assert_eq!(p.g.sets[p.g.seat].orders.shown.quick, None, "seed {s}: a menu is up");
         assert_eq!(panel(&p, 0), None, "seed {s}: a menu is up");
     }
 }

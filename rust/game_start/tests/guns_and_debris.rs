@@ -58,10 +58,10 @@ fn unlimited_ammo_covers_wall_charges() {
     wall_charge_set_carried(&mut p.g, Some(2.0));
     p.g.infinite_ammo = true;
     p.sam_sets_charge([12.7, 0.0, 7.0], [12.7, 6.0]).expect("Sam sets a charge");
-    assert_eq!(p.g.wall_charge.carried, Some(2.0), "the count moved under the switch");
+    assert_eq!(p.g.sets[p.g.seat].wall_charge.carried, Some(2.0), "the count moved under the switch");
     p.g.infinite_ammo = false;
     p.sam_sets_charge([14.7, 0.0, 7.0], [14.7, 6.0]).expect("Sam sets a charge");
-    assert_eq!(p.g.wall_charge.carried, Some(1.0), "with the switch off one set is not one spent");
+    assert_eq!(p.g.sets[p.g.seat].wall_charge.carried, Some(1.0), "with the switch off one set is not one spent");
     wall_charge_set_carried(&mut p.g, Some(0.0));
     p.g.infinite_ammo = true;
     assert_eq!(wall_charge_take(&mut p.g), -1.0, "the switch issued a charge he never had");

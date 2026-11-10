@@ -1,4 +1,4 @@
-//! A GAME OF TWO: what the world's lines of the tick say about the team is about every player, not the first (tools/blitz/sweeps/seat-tick.py lists them).
+//! A GAME OF TWO: what the world's lines of the tick say about the team is about every player, not the first.
 use game::ids::GuardId;
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
@@ -171,8 +171,8 @@ fn wall_seen(p: &mut Play, seat: usize) -> Option<String> {
     p.sam_put([14.6, 15.2]);
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, WALL, None) { return Some(format!("the wall charge was refused: {why}")); }
-    for _ in 0..3600 { p.frame(); if !p.g.wall_charge.set.is_empty() { break; } }
-    let Some(&c) = p.g.wall_charge.set.first() else { return Some(String::from("a minute and no charge is on the wall")) };
+    for _ in 0..3600 { p.frame(); if !p.g.sets[p.g.seat].wall_charge.set.is_empty() { break; } }
+    let Some(&c) = p.g.sets[p.g.seat].wall_charge.set.first() else { return Some(String::from("a minute and no charge is on the wall")) };
     game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
     for _ in 0..30 { p.frame(); }
     let Some(&b) = p.g.m.wallreact.wall_react.breaches.first() else { return Some(String::from("the blast left no hole the rule knows")) };

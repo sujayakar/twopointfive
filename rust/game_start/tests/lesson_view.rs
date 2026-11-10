@@ -215,7 +215,7 @@ fn every_line_a_player_reads_is_written_out() {
     assert!(read > 150, "read {} lines", read);
 }
 
-/// A GAME OF TWO: each HUD is told about its own man and its own ring, whoever stands on the game. A FAILURE MEANS: the second machine is told the first
+/// A GAME OF TWO: each HUD is told about its own man and its own ring, whichever seat `g.seat` names. A FAILURE MEANS: the second machine is told the first
 /// player's line, or that his man is down when the other's is, or the line keeps clear of a man who is not his.
 #[test]
 fn in_a_game_of_two_each_hud_is_told_of_its_own_seat() {

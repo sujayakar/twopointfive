@@ -259,7 +259,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
+    let menu_up = g.sets[g.seat].orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
         (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
@@ -272,12 +272,12 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId) {
     if hand_up { buttons |= 4; }
     let setup = if crate::slotsetup::slot_setup_open(g, &crate::seats::here(g)) { g.pl[p].setup.clone() } else { None };
     let rows = match &setup { Some(s) => crate::slotsetup::setup_rows(g, p, s.gun), None => Vec::new() };
-    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown.is_none() && g.orders.cmd_ring.is_none() && g.orders.menu.is_none() && {
+    let hand_key = has(&a, "use") && !hand_up && !crate::condition::down(g, g.pl[p].ch) && g.pl[p].takedown.is_none() && g.sets[g.seat].orders.cmd_ring.is_none() && g.sets[g.seat].orders.menu.is_none() && {
         let ik = String::from(crate::consts::INTERACT_KEY);
         let (down_t, f_held) = (g.pl[p].sel.down_t, g.pl[p].f_held);
         let i = &g.tab.input[input];
         i.keys.has(ik.clone()) && (down_t >= 0.0 || (i.pressed.has(ik) && !f_held))
-    } && crate::interact::running_verb(g, &crate::seats::here(g)).is_empty() && (!rails_locks(g, "whistle") || crate::interact::choosable(&g.nearby));
+    } && crate::interact::running_verb(g, &crate::seats::here(g)).is_empty() && (!rails_locks(g, "whistle") || crate::interact::choosable(&g.sets[g.seat].nearby));
     let c = GateOk { a: &a, keys, rows, menu_up, hand_up, hand_key, enter };
     let i = &mut g.tab.input[input];
     for k in i.pressed.keys() { if !gate_ok(&c, &k) { i.pressed.delete(k); } }
@@ -344,7 +344,7 @@ pub fn rails_tick(g: &mut crate::game::Game) {
         g.rails.run = Some(g.mission.serial);
         g.rails.answered = -1.0; g.rails.spared.clear();
         g.rails.fresh = 3.0;
-        g.rails.orders_seen = g.orders.log.len() as f64;
+        g.rails.orders_seen = g.sets[g.seat].orders.log.len() as f64;
         rails_clean(g);
         rails_start_program(g);
     } else if g.rails.fresh > 0.0 { g.rails.fresh -= 1.0; }
@@ -352,9 +352,9 @@ pub fn rails_tick(g: &mut crate::game::Game) {
     // (RAILS.cardBeat: the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet)
     if s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
     // every order the player gives is told to the level's program
-    if (g.orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.orders.log.len() as f64; }
-    while g.rails.orders_seen < g.orders.log.len() as f64 {
-        let o = g.orders.log[g.rails.orders_seen as usize].order.clone();
+    if (g.sets[g.seat].orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.sets[g.seat].orders.log.len() as f64; }
+    while g.rails.orders_seen < g.sets[g.seat].orders.log.len() as f64 {
+        let o = g.sets[g.seat].orders.log[g.rails.orders_seen as usize].order.clone();
         rails_note_given(g, &o);
         crate::director::director_signal(g, &alloc::format!("order:{}", o));
         g.rails.orders_seen += 1.0;

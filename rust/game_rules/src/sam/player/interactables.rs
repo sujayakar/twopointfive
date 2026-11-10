@@ -649,7 +649,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             rows = out;
         }
     }
-    g.interactables = list;
+    g.sets[g.seat].interactables = list;
     // The highlight rides the list by key: on the same row if it is still there, else back to the top. A running verb's row is not carried over.
     let mut key = String::new();
     for (i, r) in rows.iter().enumerate() {
@@ -658,7 +658,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
     }
     if key != g.pl[pl].near_key {
         g.pl[pl].near_key = key;
-        let keep = match g.hover.clone() {
+        let keep = match g.sets[g.seat].hover.clone() {
             Some(hv) if hv.running != Some(true) => {
                 let want = row_key(g, &hv);
                 let mut at = None;
@@ -675,7 +675,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game) {
             _ => 0,
         };
     }
-    g.nearby = rows;
+    g.sets[g.seat].nearby = rows;
     pick_hover(g);
     crate::close::close_tick(g);
 }
@@ -701,15 +701,15 @@ fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
 /// Game.hover ← the highlighted row, Game.useDoor ← its door if it is a door row in reach
 pub fn pick_hover(g: &mut crate::game::Game) {
     let pl = g.player;
-    let n = g.nearby.len() as i32;
+    let n = g.sets[g.seat].nearby.len() as i32;
     let sel = g.pl[pl].near_sel;
     g.pl[pl].near_sel = if n > 0 { ((sel % n) + n) % n } else { 0 };
-    let best = g.nearby.get(g.pl[pl].near_sel as usize).cloned();
-    g.use_door = match &best {
+    let best = g.sets[g.seat].nearby.get(g.pl[pl].near_sel as usize).cloned();
+    g.sets[g.seat].use_door = match &best {
         Some(b) if b.kind == crate::game::InteractableKind::Door && b.in_reach => b.door,
         _ => None,
     };
-    g.hover = best;
+    g.sets[g.seat].hover = best;
 }
 
 /// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer

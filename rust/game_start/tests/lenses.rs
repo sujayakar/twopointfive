@@ -83,7 +83,7 @@ fn at_a_shut_door_under_the_fog_the_wand_shows_the_room_behind_it_inside_its_wed
         p.cursor_on([door[0], 1.0, door[1]]);
         p.run(0.5);
         assert!(p.fogged(t), "seed {s}: the man behind the shut door is hidden before the look");
-        assert!(p.row_taken(InteractableKind::Door, Verb::Wand), "seed {s}: no wand row on the shut door: {:?}", p.g.nearby.iter().map(|r| r.line2.clone()).collect::<Vec<_>>());
+        assert!(p.row_taken(InteractableKind::Door, Verb::Wand), "seed {s}: no wand row on the shut door: {:?}", p.g.sets[p.g.seat].nearby.iter().map(|r| r.line2.clone()).collect::<Vec<_>>());
         let him = p.at(t);
         p.point_at(him);
         p.run(0.1);

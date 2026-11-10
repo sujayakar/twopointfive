@@ -28,9 +28,9 @@ fn set_and_warned(seed: u32, sam: [f64; 2]) -> (Play, game::ids::WallChargeId, V
     p.sam_put([14.6, 15.2]);   // (a wall is worked from Sam's side of it: east)
     p.frame();
     if let Some(why) = game::wallcharge::wall_charge_order(&mut p.g, WALL, None) { panic!("seed {seed}: the wall charge was refused: {why}"); }
-    let set = p.until(60.0, |p| !p.g.wall_charge.set.is_empty());
+    let set = p.until(60.0, |p| !p.g.sets[p.g.seat].wall_charge.set.is_empty());
     assert!(set.is_some(), "seed {seed}: a minute and no charge is on the wall ({})", p.roll());
-    let c = p.g.wall_charge.set[0];
+    let c = p.g.sets[p.g.seat].wall_charge.set[0];
     p.sam_put(sam);
     p.frame();
     let named = game::wallcharge::wall_charge_too_close(&mut p.g, Some(c));
@@ -50,7 +50,7 @@ fn a_man_the_warning_did_not_name_is_not_caught() {
         let (mut p, c, named) = set_and_warned(s, ROUND_THE_CORNER);
         assert!(!named.iter().any(|n| n == "you"), "seed {s}: the staging is wrong: the warning names Sam ({named:?})");
         game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
-        let blow = p.g.wall_charge.last_blow.expect("the charge went");
+        let blow = p.g.sets[p.g.seat].wall_charge.last_blow.expect("the charge went");
         assert_eq!(blow.sam, 0.0, "seed {s}: Sam was not named and took {:.2} of the blast", blow.sam);
         assert!(!p.sam_blind(), "seed {s}: Sam was not named and the blast has his eyes");
         let mut hit = caught(&p);
@@ -67,7 +67,7 @@ fn a_man_the_warning_named_is_caught() {
         let (mut p, c, named) = set_and_warned(s, IN_THE_OPEN);
         assert!(named.iter().any(|n| n == "you"), "seed {s}: Sam is a metre and a half from the charge in the open and the warning does not name him ({named:?})");
         game::wallcharge::wall_charge_blow(&mut p.g, Some(c), Some(true));
-        let blow = p.g.wall_charge.last_blow.expect("the charge went");
+        let blow = p.g.sets[p.g.seat].wall_charge.last_blow.expect("the charge went");
         assert!(blow.sam > 0.0 && p.sam_blind(), "seed {s}: Sam was named and took {:.2}, blind {}", blow.sam, p.sam_blind());
     }
 }

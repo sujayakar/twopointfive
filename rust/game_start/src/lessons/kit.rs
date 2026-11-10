@@ -59,9 +59,9 @@ async fn ring(b: &Bot, p: V3) -> bool {
     b.down("KeyB");
     b.hold(&["KeyB"], 0.45, || false).await;
     b.ticks(2).await;
-    let Some(flat_ring) = b.ask(|g| g.orders.menu.as_ref().map(|m| m.flat == Some(true))) else { b.say(String::from("  the squad's ring did not come up")); return false };
+    let Some(flat_ring) = b.ask(|g| g.sets[g.seat].orders.menu.as_ref().map(|m| m.flat == Some(true))) else { b.say(String::from("  the squad's ring did not come up")); return false };
     let said = b.ask(|g| game::lesson::lesson_step(g).and_then(|t| if flat_ring { t.flat_line } else { t.menu_line })).unwrap_or_default();
-    let rows = || b.ask(|g| g.orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
+    let rows = || b.ask(|g| g.sets[g.seat].orders.menu.as_ref().map_or(String::from("no ring"), |m| m.rows.iter().map(|&r| g.tab.orders_order_def[r].id.clone()).collect::<Vec<_>>().join(" · ")));
     let digits = Bot::digits(&said);
     b.say(format!("  the ring is up: '{}' -> {:?} · {}", said, digits, rows()));
     for d in digits { b.press(&format!("Digit{}", d), 4).await; b.say(format!("    [{}] -> {}", d, rows())); }

@@ -100,7 +100,7 @@ fn drawn(dir: &str, r: &Run) -> Result<String, String> {
             let us = t.elapsed().as_secs_f64() * 1e6;
             cost[i].0 += us;
             cost[i].1 = cost[i].1.max(us);
-            let focus = p.g.aim_point;
+            let focus = p.g.sets[p.g.seat].aim_point;
             let t = std::time::Instant::now();
             d[i].frame(&p.g, 0.5, focus);
             d[i].frame(&p.g, 1.0, focus);

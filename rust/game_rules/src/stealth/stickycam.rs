@@ -379,16 +379,16 @@ mod tests {
     fn a_near_cursor_is_pushed_out_to_a_throw() {
         let (mut g, _) = game();
         let from = [0.3, 1.2, -0.4];
-        g.aim_point = [1.1, 0.0, 0.7];
+        g.sets[g.seat].aim_point = [1.1, 0.0, 0.7];
         let p = cam_aim_point(&g, &crate::seats::here(&g), from);
         assert!((m::hyp2(p[0] - from[0], p[2] - from[2]) - 1.5).abs() < 1e-12, "{:?}", p);
         assert!(((p[2] - from[2]) * (1.1 - from[0]) - (p[0] - from[0]) * (0.7 - from[2])).abs() < 1e-12, "on the cursor's bearing");
         assert_eq!(p[1], g.k.sticky.aim_y);
-        g.aim_point = [10.25, 0.0, -3.5];
+        g.sets[g.seat].aim_point = [10.25, 0.0, -3.5];
         let p = cam_aim_point(&g, &crate::seats::here(&g), from);
         assert_eq!((p[0], p[1], p[2]), (10.25, g.k.sticky.aim_y, -3.5));
         // the cursor on his own feet has no bearing to push along
-        g.aim_point = [from[0], 0.0, from[2]];
+        g.sets[g.seat].aim_point = [from[0], 0.0, from[2]];
         let p = cam_aim_point(&g, &crate::seats::here(&g), from);
         assert_eq!((p[0], p[2]), (from[0], from[2]));
     }

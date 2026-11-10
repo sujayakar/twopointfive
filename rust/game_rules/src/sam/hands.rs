@@ -905,7 +905,7 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
     None
 }
 
-/// The door tools' lead a step from the handle he was sent to, among the door work on Game: the seat this pass is about.
+/// The door tools' lead a step from the handle he was sent to, among the door work of the seat this pass is about.
 fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) -> Option<DoorId> {
     let mut i = 0;
     while i < seat.door_tools.ops.len() {

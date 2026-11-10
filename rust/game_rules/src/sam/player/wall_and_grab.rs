@@ -123,7 +123,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
             let w = g.pl[p].wall.unwrap();
             truthy_opt(w.owed) && !(un(w.up) > 0.0)
         };
-    if { let ap = g.aim_point; stack_in_way(g, p, ap) } {
+    if { let ap = g.sets[g.seat].aim_point; stack_in_way(g, p, ap) } {
         let w = w!(g, p);
         w.up = Some(0.0);
         w.rise = Some(0.0);
@@ -153,7 +153,7 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
         w.owed = Some(owed_with(w.owed, clicked));
         stack_hold(g, p);
     } else if truthy_opt(w0.owed) {
-        if g.orders.menu.is_none() {
+        if g.sets[g.seat].orders.menu.is_none() {
             let clicked = g.tab.input[input].clicked;
             g.tab.input[input].clicked = (js::to_i32(clicked) | js::to_i32(un(w0.owed))) as f64;
         }
@@ -184,9 +184,9 @@ fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, d
         && (yes(w0.lean_want) || m::abs(w0.v) < 0.05)
     {
         let kept_out = yes(w0.lean_want);
-        let mut ap = g.aim_point;
+        let mut ap = g.sets[g.seat].aim_point;
         let u_end = if edge > 0.0 { w0.hi } else { w0.lo };
-        if ap[1] > ws.lean_over_y && g.aim_guard.is_none() {
+        if ap[1] > ws.lean_over_y && g.sets[g.seat].aim_guard.is_none() {
             let cam_pos = g.tab.camera[cam].pos;
             let dy = ap[1] - cam_pos[1];
             if dy < -0.5 {

@@ -161,7 +161,7 @@ fn give(g: &mut Game, r: Option<&crate::game::Interactable>) {
     let r = match r { Some(r) => r, None => return };
     if !r.in_reach || r.verb.is_none() || r.running.unwrap_or(false) || crate::samstun::sam_staggered(g, &crate::seats::here(g), None) { return; }
     crate::lightswitch::switch_let_go(g);
-    g.act = Some(r.clone());
+    g.sets[g.seat].act = Some(r.clone());
 }
 
 /// the digits his ring has a wedge on, a bit each, bit 1 the first
@@ -272,7 +272,7 @@ fn off_bits(x: f64, bits: i32) -> f64 { (js::to_i32(x) & !bits) as f64 }
 /// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, Esc and the Space press; what is performed goes out as Game.act.
 pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>) {
     let pl = g.player;
-    g.act = None;
+    g.sets[g.seat].act = None;
     let key = crate::consts::INTERACT_KEY;
     let down = crate::input::input_down(g, input, key);
     let hit = crate::input::input_hit(g, input, key);
@@ -308,12 +308,12 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
         s.down_t = 0.0; s.open = false; s.ring = None; s.word = String::new();
     }
     let armed = g.pl[pl].sel.down_t >= 0.0;
-    let live = choosable(&g.nearby) || (whistle_wedge(g, &crate::seats::here(g)));
+    let live = choosable(&g.sets[g.seat].nearby) || (whistle_wedge(g, &crate::seats::here(g)));
     if g.pl[pl].sel.open && !live { shut_list(g); }
     // ---- THE LIST AS A RING (it is the ring that stays)
-    if g.pl[pl].sel.open && g.pl[pl].sel.ring.is_some() && (g.orders.menu.is_some() || g.orders.cmd_ring.is_some()) { close_selector(g, down); return; }   // (one list at a time)
+    if g.pl[pl].sel.open && g.pl[pl].sel.ring.is_some() && (g.sets[g.seat].orders.menu.is_some() || g.sets[g.seat].orders.cmd_ring.is_some()) { close_selector(g, down); return; }   // (one list at a time)
     let early = down && armed && !g.pl[pl].sel.open && wedge_digit(g, input);
-    if armed && live && !g.pl[pl].sel.open && g.orders.cmd_ring.is_none() && down && (early || g.pl[pl].sel.down_t >= g.k.handring.hold_secs - 1e-6) {
+    if armed && live && !g.pl[pl].sel.open && g.sets[g.seat].orders.cmd_ring.is_none() && down && (early || g.pl[pl].sel.down_t >= g.k.handring.hold_secs - 1e-6) {
         g.pl[pl].sel.open = true;
         let w = view.map_or(0.0, |v| v.client_width);
         let h = view.map_or(0.0, |v| v.client_height);
@@ -361,7 +361,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
         let wh = whistle_wedge(g, &crate::seats::here(g));
         let to_wh = wh && want == wedges;
         // (the row: `want && !toWh ? g.nearby[want - 1] : null`, off the list's end = none)
-        let at: i32 = if js::truthy(want) && !to_wh && g.nearby.get((want - 1.0) as usize).map_or(false, wedged) { (want - 1.0) as i32 } else { -1 };
+        let at: i32 = if js::truthy(want) && !to_wh && g.sets[g.seat].nearby.get((want - 1.0) as usize).map_or(false, wedged) { (want - 1.0) as i32 } else { -1 };
         if at_set && (digit != 0 || !still) {
             g.pl[pl].sel.ring.as_mut().unwrap().pt = Some(if digit != 0 { 0.0 } else { want0 });
         }
@@ -369,12 +369,12 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             g.pl[pl].sel.ring.as_mut().unwrap().whistle = Some(false);
             if at != g.pl[pl].near_sel { g.pl[pl].near_sel = at; crate::player::pick_hover(g); }
         }
-        if to_wh || (wh && !choosable(&g.nearby)) { g.pl[pl].sel.ring.as_mut().unwrap().whistle = Some(true); }
+        if to_wh || (wh && !choosable(&g.sets[g.seat].nearby)) { g.pl[pl].sel.ring.as_mut().unwrap().whistle = Some(true); }
         else if !wh { g.pl[pl].sel.ring.as_mut().unwrap().whistle = Some(false); }
         let whistle = g.pl[pl].sel.ring.as_ref().unwrap().whistle.unwrap_or(false);
         let near_sel = g.pl[pl].near_sel;
         g.pl[pl].sel.ring.as_mut().unwrap().lit = if whistle { wedges } else { (near_sel + 1) as f64 };
-        let lit: Option<crate::game::Interactable> = if whistle { None } else { g.hover.clone().filter(wedged) };
+        let lit: Option<crate::game::Interactable> = if whistle { None } else { g.sets[g.seat].hover.clone().filter(wedged) };
         let pointed = digit == 0 && (at >= 0 || to_wh);
         if lmb {   // (the click is the ring's: he does not fire)
             let i = &mut g.tab.input[input];
@@ -405,7 +405,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let mut d_sel = 0;
     if crate::input::input_hit(g, input, "ArrowDown") { d_sel += 1; }
     if crate::input::input_hit(g, input, "ArrowUp") { d_sel -= 1; }
-    if d_sel != 0 && g.nearby.len() > 1 { g.pl[pl].near_sel += d_sel; crate::player::pick_hover(g); }
+    if d_sel != 0 && g.sets[g.seat].nearby.len() > 1 { g.pl[pl].near_sel += d_sel; crate::player::pick_hover(g); }
     let near_sel = g.pl[pl].near_sel;
     if let Some(ring) = g.pl[pl].sel.ring.as_mut() { ring.lit = (near_sel + 1) as f64; }
     // ---- Esc: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
@@ -419,7 +419,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
         return;
     }
     // ---- released this frame (or begun and ended inside it): the highlighted row is what Space does
-    let row_now = g.hover.clone();
+    let row_now = g.sets[g.seat].hover.clone();
     let listed = g.pl[pl].sel.open;
     let quick = g.pl[pl].sel.down_t < (g.k.handring.hold_secs);
     close_selector(g, false);

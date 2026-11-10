@@ -239,7 +239,7 @@ fn in_a_game_of_two_the_ring_and_the_arc_are_the_seats_own() {
         p.g.pl[first].holstered = false;
         can_in_hand(&mut p, SlotKind::Smoke, [at[0] + 3.0, at[1]]);
         assert!(p.view_of(0).aim.throw.is_some() && p.view_of(1).aim.throw.is_none(), "seed {}", seed);
-        // and the second man's is told to him, whoever stands on the game
+        // and the second man's is told to him, whichever seat `g.seat` names
         let sol = p.g.pl[first].throw_preview.clone().unwrap();
         p.g.pl[second].throw_preview = Some(sol); p.g.pl[second].held_kind = ThrowKind::Smoke; p.g.pl[second].throw_held = true;
         assert!(p.view_of(1).aim.throw.is_some_and(|t| t.rest.is_some()), "seed {}", seed);

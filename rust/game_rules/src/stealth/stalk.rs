@@ -124,8 +124,8 @@ pub(super) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// The man a press at the cursor is on: the reticle's if he can be stalked, else the nearest within `cursorM` of the floor point.
 fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
     let p = g.ch[g.pl[g.player].ch].pos;
-    let a = g.aim_point;
-    if let Some(ag) = g.aim_guard {
+    let a = g.sets[g.seat].aim_point;
+    if let Some(ag) = g.sets[g.seat].aim_guard {
         if out_of(g, ag, &p, true).is_none() {
             return Some(ag);
         }

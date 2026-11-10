@@ -58,9 +58,9 @@ fn lit(p: &mut Play, at: [f64; 2]) -> f64 {
     let t = game::orders::squad_orders_target_at(&mut p.g, [at[0], 0.0, at[1]]);
     assert!(game::orders::squad_orders_open(&mut p.g, Some(&t), None, None));
     game::orders::squad_orders_turn(&mut p.g, Some(game::squadthrow::THROW_PAGE), None);
-    let rows = p.g.orders.menu.as_ref().unwrap().rows.clone();
+    let rows = p.g.sets[p.g.seat].orders.menu.as_ref().unwrap().rows.clone();
     let i = rows.iter().position(|&d| p.g.tab.orders_order_def[d].id == "shellThere").expect("the shell's row is on the page") as f64;
-    p.g.orders.menu.as_mut().unwrap().sel = i;
+    p.g.sets[p.g.seat].orders.menu.as_mut().unwrap().sel = i;
     i
 }
 fn shown(p: &Play) -> Option<game::squad40::ShellPlan> { p.g.m.squad40.states.get(p.g.player).and_then(|s| s.plan.clone()) }

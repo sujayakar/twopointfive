@@ -60,8 +60,8 @@ word that differs is kept as `bad` and told up as `Lost`; the door closes its so
 **A record is checked as it is stepped.** `face_networked` marks every seat `remote`, so `check_cmd` keeps the look-at within `reach` of his man and works the view's
 matrices out again from the pose on every machine.
 
-**Seats in the rules.** One seat's own things are the `SeatSet`, which stands on `Game` while a pass is about that seat; the others wait in their seat's row.
-`with_seat` changes them over for a pass, `each_seat` passes over all, and a tick stands the first seat whichever this machine shows (`show_seat`).
+**Seats in the rules.** One seat's own things are the `SeatSet`, its row of `g.sets`; `g.seat` names the seat a pass is about.
+`with_seat` moves it for a pass, `each_seat` passes over all, and a tick is about the first seat whichever this machine shows (`show_seat`).
 A reader that holds the game shared takes a `SeatRef` (`seat`, `here`), so it can answer for any seat.
 
 **Each player's own:** his man, hands, lens, aim, what he hovers and works, his book of orders, door tools and wall charges. His teammates: `deal_seats` cuts the
@@ -109,7 +109,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 
 - **A number:** `NET`, `NETDOOR`, `FORESEE`, `COOP`. **A message:** `src/net/wire.ts`, then `NetServer.message` or `NetClient.message`.
 - **A new field in a record:** `WireCmd`, `wireOk`, `recordOf`, `recordTo`, and `RECORD` in `rust/game_face/src/net.rs`, all in one order.
-- **Something per player:** a field of `SeatSet`, in `swap_set`, `set_of_game`, `SeatRef` and both of its makers. A rule that reads it takes `seat: &SeatRef`.
+- **Something per player:** a field of `SeatSet`, and of `SeatRef` and its maker. A rule that reads it takes `seat: &SeatRef`.
 - **A world rule that says "the player":** ask `men`, `men_up`, `all_down`, `nearest_man` or `faced_man`, or stand the seat with `standing_for`. Add a test to `two_seats.rs`.
 - **A mission for two:** take its rules through for two, then add its kind to `seat_kinds`.
 - **Try it on one machine:** `cd cloud && npm ci` once, `bun run dev`, two windows of the page. With no backend, `bun run tools/mp/lan.ts` prints an address for each

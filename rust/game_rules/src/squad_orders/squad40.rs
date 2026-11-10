@@ -390,7 +390,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let has = def_listed(g, &crate::seats::here(g), SHELL_THERE);
     let want = brought > 0.0 && def_listed(g, &crate::seats::here(g), crate::squadthrow::THROW_OPEN);
     if has == want { follow(g); return; }
-    if g.orders.menu.is_some() { crate::orders::squad_orders_close(g); }
+    if g.sets[g.seat].orders.menu.is_some() { crate::orders::squad_orders_close(g); }
     if !want { crate::orders::rows::unlist(g, &crate::orders::rows::shell40::ORDER); return; }
     list(g);
 }
