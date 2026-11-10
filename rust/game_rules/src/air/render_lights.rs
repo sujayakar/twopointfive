@@ -60,7 +60,7 @@ pub fn light_set_fog_class(g: &crate::game::Game, l: LightId) -> f64 {
     if t.on && row.kind != 2.0 && !t.lights.has(l) && other { 1.0 } else { 0.0 }
 }
 
-/// A flash's envelope for the frame, and its retirement once a frame has shown it. The tick's last line (`game_tick_end`), and the next
+/// A flash's envelope for the frame, and its retirement once a frame has shown it. The tick's last step, and the next
 /// tick's light estimate reads what it left: room-clear-four tick 1622, the stun's flash stood at 1600 for good and two men's irradiance was off.
 /// `time` is not read.
 pub fn light_set_update(g: &mut crate::game::Game, dt: f64) {
