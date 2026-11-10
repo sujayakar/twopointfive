@@ -52,7 +52,7 @@ Each crate is its own cargo workspace and target folder.
 - **A slot.** `crate::owned::Owned` holds state one module reads, of a type declared up in the rules, so that changing it does not rebuild `game_types`:
   `g.ctl`, `g.feel`, `g.mark_set`, `g.ray_grid`.
 - **The block.** `rust/sim/src/state.rs`: one fixed run of bytes a game, in `GAMES` slots, with `g.sim` saying which. It holds the die and the columns
-  of what `rust/sim` steps: doors, props, slabs, items, men, lights, weather, smoke, poses, panes. A number a hot loop keeps from tick to tick
+  of what `rust/sim` steps: doors, props, slabs, men, lights, weather, smoke, poses, panes. A number a hot loop keeps from tick to tick
   must be here; all else is on `Game`. In a block: indices and never addresses, zeros mean empty, no padding the compiler chose. Rules reach it by
   `sim::state::state_read(g.sim)` and `sim::state::state`, mostly through home modules (`sim_doorshome.rs`).
 - **Copies.** The box world (`rust/sim/src/world.rs`) and the smoke's and air's tables are outside the block, made from the game: never state.
@@ -110,7 +110,7 @@ next tick opens and panics on a write nobody declared.
   as bits of one `u32`.
 - **`rust/sim` allocates nothing.** Every table has a fixed size (`MAX_BOXES`, a part's `CAP`), and `door_store_new` refuses a level past its cap by
   name.
-- **Too many arguments for a call** go through a scratch `static mut` (`IO` in `doors.rs`, `PAR` in `items.rs`). Nothing in scratch outlives the call.
+- **Too many arguments for a call** go through a scratch `static mut` (`IO` in `doors.rs`). Nothing in scratch outlives the call.
 - **Ask in a batch.** A sight pass hands its eyes over once (`sight_open`, `sight_eye`, `eyes_see`).
 
 ### Build profiles

@@ -134,7 +134,7 @@ pub struct World {
     /// …and with those, a burst's view is its numbers: the point, how far it reaches, how hard, and 1 where a man counts on it (panes.rs gives)
     pub view_at: [f64; 6],
     /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
-    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
+    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (snow.rs bog_of)
     pub snow: [u8; MAX_BOXES],
     /// WHAT A STATIC SENDS BACK of the light on it, of 255: its colour by luminance (glow.rs)
     pub back: [u8; MAX_BOXES],

@@ -9,7 +9,5 @@ pub const P_PROPS: f64 = 3.0;
 
 pub const P_SLABS: f64 = 4.0;
 
-pub const P_ITEMS: f64 = 5.0;
-
-pub const P_WEATHER: f64 = 8.0;
+pub const P_WEATHER: f64 = 7.0;
 

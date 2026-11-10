@@ -51,7 +51,7 @@ fn a_chair_or_a_can_elsewhere_moves_a_word() {
     p.run(3.0);
     let chair = p.g.props.props[0];
     let names = game_start::parts::names();
-    for (what, write) in [("chair", &(|p: &mut Play| { let x = game::props::prop_x(&p.g, chair); game::props::prop_set_x(&mut p.g, chair, x + 1e-9) }) as &dyn Fn(&mut Play)), ("can", &|p: &mut Play| { let v = game::throwables::item_vel(&mut p.g, can); game::throwables::item_set_vel(&mut p.g, can, [v[0] + 1e-9, v[1], v[2]]) })] {
+    for (what, write) in [("chair", &(|p: &mut Play| { let x = game::props::prop_x(&p.g, chair); game::props::prop_set_x(&mut p.g, chair, x + 1e-9) }) as &dyn Fn(&mut Play)), ("can", &|p: &mut Play| p.g.tab.item[can].vel[0] += 1e-9)] {
         let before = p.words();
         let again = p.words();
         assert!(game_start::parts::differ(&names, &before, &again).is_empty(), "asked twice, the words are the same");

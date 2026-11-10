@@ -263,12 +263,12 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     if who.is_none() {
         let back = m::max(dt, 1.0 / 60.0);
         for it in g.items.items.clone() {
-            let kind = crate::throwables::item_kind(g, it);
-            if crate::throwables::item_settled(g, it) || (kind != crate::throwables::ItemKind::Smoke && kind != crate::throwables::ItemKind::Flash && kind != crate::throwables::ItemKind::Frag) { continue; }
-            let (ip, iv) = (crate::throwables::item_pos(g, it), crate::throwables::item_vel(g, it));
+            let kind = g.tab.item[it].kind;
+            if g.tab.item[it].settled || (kind != crate::throwables::ItemKind::Smoke && kind != crate::throwables::ItemKind::Flash && kind != crate::throwables::ItemKind::Frag) { continue; }
+            let (ip, iv) = (g.tab.item[it].pos, g.tab.item[it].vel);
             let prev = [ip[0] - iv[0] * back, ip[1] - iv[1] * back, ip[2] - iv[2] * back];
             let q = seg_seg_closest(prev, ip, d.from, end);
-            if q.dist < crate::throwables::item_radius(g, it) + BEAM_MARGIN { who = Some(kind.as_str()); at = Some(q.on_b); break; }
+            if q.dist < g.tab.item[it].radius + BEAM_MARGIN { who = Some(kind.as_str()); at = Some(q.on_b); break; }
         }
     }
     if let Some(a) = at { cut = m::min(cut, v3::dist(d.from, a)); }

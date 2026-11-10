@@ -496,8 +496,8 @@ impl DoorsAsk for Play {
     fn door_name(&self, d: DoorId) -> String { self.g.dr[d].def.name.clone() }
     fn handle_place(&mut self, d: DoorId, side: f64) -> Option<([f64; 2], bool, bool)> { game::handleside::handle_spot(&mut self.g, d, side).map(|s| ([s.pos[0], s.pos[2]], s.pull, s.far.unwrap_or(false))) }
     fn op_is_can(&self, op: DoorOpId) -> bool { self.g.tab.doortools_door_op[op].kind == game::doortools::DoorToolKind::BangClear }
-    fn can_out(&self, op: DoorOpId) -> Option<(ItemId, f64, bool)> { let c = self.g.tab.doortools_door_op[op].can?; Some((c, game::throwables::item_fuse(&self.g, c), game::throwables::item_fired(&self.g, c))) }
-    fn can_now(&self, can: ItemId) -> (f64, bool) { (game::throwables::item_fuse(&self.g, can), game::throwables::item_fired(&self.g, can)) }
+    fn can_out(&self, op: DoorOpId) -> Option<(ItemId, f64, bool)> { let c = self.g.tab.doortools_door_op[op].can?; Some((c, self.g.tab.item[c].fuse, self.g.tab.item[c].fired)) }
+    fn can_now(&self, can: ItemId) -> (f64, bool) { (self.g.tab.item[can].fuse, self.g.tab.item[can].fired) }
     fn gun_yaw(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].aim_yaw }
     fn watch_of(&self, gd: GuardId) -> Option<[f64; 2]> { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).and_then(|a| self.g.tab.orders_assignment[a].watch).map(|p| [p[0], p[2]]) }
     fn floor_free(&self, at: [f64; 2]) -> bool { !game::scene_collision::nav_grid_is_blocked(&self.g, at[0], at[1]) }
@@ -732,7 +732,7 @@ impl DoorsAsk for Play {
     fn stack_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn tool_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::doortools::door_tools_stack_posts(&mut self.g, d, side, men, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
     fn walls_own_marks(&mut self, d: DoorId, side: f64, men: &[GuardId]) -> Vec<[f64; 2]> { game::orders::squad_orders_stack_posts_on(&mut self.g, &game::ask::Over::OWN, d, side, men, &[], false, None).unwrap_or_default().iter().map(|q| [q.pos[0], q.pos[2]]).collect() }
-    fn item_at(&self, it: ItemId) -> [f64; 2] { let q = game::throwables::item_pos(&self.g, it); [q[0], q[2]] }
+    fn item_at(&self, it: ItemId) -> [f64; 2] { let q = self.g.tab.item[it].pos; [q[0], q[2]] }
     fn shift_tap(&mut self, at: [f64; 3]) {
         self.cursor_on(at);
         self.run(3.0 / 60.0);
@@ -766,8 +766,8 @@ impl DoorsAsk for Play {
     fn keys_let_go(&mut self) { let key = self.g.k.cmdring.key.clone(); self.key_up(&key); self.key_up("ShiftLeft"); self.run(4.0 / 60.0); }
     fn smoke_left(&self) -> f64 { game::squadsmoke::squad_smoke_left(&self.g, &game::seats::here(&self.g)) }
     fn smoke_cans(&mut self) -> Vec<([f64; 2], bool)> {
-        let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Smoke).collect();
-        list.into_iter().map(|i| { let q = game::throwables::item_pos(&self.g, i); ([q[0], q[2]], game::throwables::item_emit_t(&mut self.g, i) > 0.0) }).collect()
+        let list: Vec<ItemId> = self.g.items.items.iter().copied().filter(|&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Smoke).collect();
+        list.into_iter().map(|i| { let q = self.g.tab.item[i].pos; ([q[0], q[2]], self.g.tab.item[i].emit_t > 0.0) }).collect()
     }
     fn cards_carry(&mut self, cards: &[(usize, f64)]) {
         for &(i, n) in cards {
@@ -790,7 +790,7 @@ impl DoorsAsk for Play {
         let q = t.post?;
         Some((t.gd, [q[0], q[2]]))
     }
-    fn frags_out(&self) -> Vec<[f64; 2]> { self.g.items.items.iter().copied().filter(|&i| game::throwables::item_kind(&self.g, i) == game::throwables::ItemKind::Frag).map(|i| { let q = game::throwables::item_pos(&self.g, i); [q[0], q[2]] }).collect() }
+    fn frags_out(&self) -> Vec<[f64; 2]> { self.g.items.items.iter().copied().filter(|&i| self.g.tab.item[i].kind == game::throwables::ItemKind::Frag).map(|i| { let q = self.g.tab.item[i].pos; [q[0], q[2]] }).collect() }
     fn shell_stats(&self) -> (i32, i32, i32) { let s = &self.g.stats.shotgun; (s.in_men, s.dropped, s.peppered) }
     fn shell_from(&mut self, m: GuardId, from: [f64; 2], at: [f64; 3], spread: f64) {
         let c = self.g.gd[m].ch;

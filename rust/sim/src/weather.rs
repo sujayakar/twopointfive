@@ -5,7 +5,7 @@ use crate::state::state;
 use core::mem::size_of;
 
 /// the roofs a table holds (a level's four biggest)
-pub const ROOFS: usize = crate::items::MAX_ROOFS;
+pub const ROOFS: usize = crate::snow::MAX_ROOFS;
 
 /// the weather's part of a game's block: the dust
 #[repr(C)]

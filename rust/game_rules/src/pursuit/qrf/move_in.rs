@@ -470,7 +470,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     for i in 0..g.events.len() {
         if g.events[i].id.is_none() { g.event_seq += 1.0; g.events[i].id = Some(g.event_seq); }
     }
-    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(crate::throwables::item_pos(g, c)), _ => None };
+    let can_at = match g.qrf.can { Some(c) if !g.qrf.can_land_t.is_nan() => Some(g.tab.item[c].pos), _ => None };
     let fix_before = g.gd[m].last_known;
     // his hearing runs on the events LESS the element's own; what it writes on an event (`announced`) is on the same object in the TypeScript: written back
     let all = core::mem::take(&mut g.events);

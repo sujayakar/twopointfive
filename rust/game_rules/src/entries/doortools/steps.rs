@@ -159,19 +159,19 @@ pub fn door_tools_known_open(g: &crate::game::Game, d: DoorId) -> bool {
 pub(super) fn door_tools_defuse(g: &mut crate::game::Game, op: DoorOpId) {
     let it = o!(g, op).can;
     if let (Some(it), Some(p)) = (it, o!(g, op).pass) {
-        if !crate::throwables::item_fired(g, it) {
-            crate::throwables::item_set_pos(g, it, v3::copy(p.to));
-            crate::throwables::item_set_vel(g, it, v3::copy(p.v0));
-            crate::throwables::item_set_heading(g, it, v3::yaw_of(p.v0));
-            crate::throwables::item_set_bounces(g, it, 0.0);
-            crate::throwables::item_set_settled(g, it, false);
+        if !g.tab.item[it].fired {
+            g.tab.item[it].pos = v3::copy(p.to);
+            g.tab.item[it].vel = v3::copy(p.v0);
+            g.tab.item[it].heading = v3::yaw_of(p.v0);
+            g.tab.item[it].bounces = 0.0;
+            g.tab.item[it].settled = false;
         }
     }
     o!(g, op).pass = None;
     if let Some(it) = it {
-        if !crate::throwables::item_fired(g, it) && crate::throwables::item_kind(g, it) != crate::throwables::ItemKind::Frag {
-            let f = m::min(crate::throwables::item_fuse(g, it), g.k.doortools.fuse_after_land);
-            crate::throwables::item_set_fuse(g, it, f);
+        if !g.tab.item[it].fired && g.tab.item[it].kind != crate::throwables::ItemKind::Frag {
+            let f = m::min(g.tab.item[it].fuse, g.k.doortools.fuse_after_land);
+            g.tab.item[it].fuse = f;
         }
     }
 }
@@ -499,8 +499,8 @@ fn step_fuse(g: &mut Game, op: DoorOpId, cx: &Cx) {
     let side = o!(g, op).side;
     let it = o!(g, op).can.unwrap();
     let frag = tr(o!(g, op).frag);
-    let ip = crate::throwables::item_pos(g, it);
-    if crate::throwables::item_fired(g, it) {
+    let ip = g.tab.item[it].pos;
+    if g.tab.item[it].fired {
         o!(g, op).bang_t = t;
         o!(g, op).bang_at = Some(v3::copy(ip));
         o!(g, op).phase = Phase::Wait;
@@ -518,24 +518,24 @@ fn step_fuse(g: &mut Game, op: DoorOpId, cx: &Cx) {
         return;
     }
     if let Some(p) = o!(g, op).pass {
-        if t - o!(g, op).toss_t < p.t && v3::dist_xz(ip, p.to) > 0.12 && crate::throwables::item_bounces(g, it) == 0.0 { return; }
-        crate::throwables::item_set_pos(g, it, v3::copy(p.to));
-        crate::throwables::item_set_vel(g, it, v3::copy(p.v0));
-        crate::throwables::item_set_heading(g, it, v3::yaw_of(p.v0));
-        crate::throwables::item_set_bounces(g, it, 0.0);
-        crate::throwables::item_set_settled(g, it, false);
-        let at = crate::throwables::item_pos(g, it);
+        if t - o!(g, op).toss_t < p.t && v3::dist_xz(ip, p.to) > 0.12 && g.tab.item[it].bounces == 0.0 { return; }
+        g.tab.item[it].pos = v3::copy(p.to);
+        g.tab.item[it].vel = v3::copy(p.v0);
+        g.tab.item[it].heading = v3::yaw_of(p.v0);
+        g.tab.item[it].bounces = 0.0;
+        g.tab.item[it].settled = false;
+        let at = g.tab.item[it].pos;
         crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.5), None);
         o!(g, op).pass = None;
         return;
     }
-    if o!(g, op).land_t.is_nan() && (crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it)) { o!(g, op).land_t = t; }
+    if o!(g, op).land_t.is_nan() && (g.tab.item[it].bounces > 0.0 || g.tab.item[it].settled) { o!(g, op).land_t = t; }
     let land_t = o!(g, op).land_t;
     let aim = o!(g, op).thr.as_ref().and_then(|x| x.aim).or(o!(g, op).aim.map(|x| x.at));
     let hand = o!(g, op).thr.as_ref().and_then(|x| x.from).or(o!(g, op).aim.map(|x| x.from));
     let air = match (aim, hand) {
         (Some(a), Some(h)) => land_t.is_nan() && (v3::dist_xz(ip, a) < 0.1 || v3::dist_xz(ip, h) >= v3::dist_xz(a, h) - 0.05),
-        _ => land_t.is_nan() && crate::throwables::item_vel(g, it)[1] < 0.0 && ip[1] <= g.k.doortools.air_h && off_of(g, d, ip, side) <= -g.k.doortools.air_in,
+        _ => land_t.is_nan() && g.tab.item[it].vel[1] < 0.0 && ip[1] <= g.k.doortools.air_h && off_of(g, d, ip, side) <= -g.k.doortools.air_in,
     };
     if air || (!land_t.is_nan() && t - land_t >= g.k.doortools.fuse_after_land) || t - o!(g, op).toss_t >= g.k.doortools.toss_cap { door_tools_bang(g, op, it); }
 }

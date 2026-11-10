@@ -220,7 +220,7 @@ pub(super) fn door_tools_land_for(g: &mut crate::game::Game, d: DoorId, side: f6
 /// The canister goes off, with this entry's own men off the list.
 pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemId) {
     let all = g.guards.clone();
-    crate::throwables::item_set_fired(g, it, true);
+    g.tab.item[it].fired = true;
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
     let word = word_ops(g, &crate::seats::here(g), op);
     let gate = gate_ops(g, op);
@@ -243,7 +243,7 @@ pub(super) fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemI
     for (i, x) in rest.iter().enumerate() {
         if g.gd[*x].team == crate::teams::Team::Operative && g.cond[g.gd[*x].ch].fold_until > was[i] { g.door_tools.stats.own_flashed += 1.0; }
     }
-    let at = crate::throwables::item_pos(g, it);
+    let at = g.tab.item[it].pos;
     dop!(g, op).bang_t = g.time;
     dop!(g, op).bang_at = Some(v3::copy(at));
     dop!(g, op).phase = Phase::Wait;

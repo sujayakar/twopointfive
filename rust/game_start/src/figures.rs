@@ -115,9 +115,8 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
     out.push((String::from("mission"), format!("{} {} {}", g.mission.stage.as_str(), g.room_clear.end.map_or("", |e| e.as_str()), g.verdict.res.as_ref().and_then(|r| r.kind).map_or("", |k| k.as_str()))));
     out.push((String::from("tally"), format!("{} {} {} {} {} {}", t.alerts, t.spotted, t.bodies, t.kills, t.knockouts, t.keys)));
     out.push((String::from("shots"), format!("{}", t.shots)));
-    let s = &sim::state::state_read(g.sim).items;
     let mut things = String::new();
-    for &id in &g.items.items { let it = &g.tab.item[id]; if it.kept.is_some() { continue; } let r = it.r as usize; things += &format!("{} {} {} {} {} ", s.kind[r], bits(s.px[r]), bits(s.py[r]), bits(s.pz[r]), s.flags[r]); }
+    for &id in &g.items.items { let it = &g.tab.item[id]; things += &format!("{} {} {} {} {} ", it.kind as u32, bits(it.pos[0]), bits(it.pos[1]), bits(it.pos[2]), it.settled as u32 | (it.fired as u32) << 1 | ((it.carried == Some(true)) as u32) << 2); }
     out.push((String::from("things"), format!("{}{} {}", things, g.shells.len(), g.rings.len())));
     out
 }
