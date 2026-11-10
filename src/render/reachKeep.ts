@@ -12,7 +12,7 @@
 // against the light's own, and makes it again where they differ (so the hour's tell is a hint, and a radius that went back with a snapshot is followed).
 // It imports no game code.
 import { type Vec3, v3 } from '../math/vec';
-import { type Box, BoxFlag, rayBox } from '../scene/boxes';
+import { type Box, rayBox, stopsSky } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { RtLight } from './lights';
 import { buildWallRaster, reachMaskFor, reachMaskSome, reachMaskForDirectionalSteps, wallRasterDiff, wallRasterDiffSteps, REACH_WORK, REACH_PACE, type ReachDoor, type ReachOnly, type ReachJob } from './reach';
@@ -28,6 +28,8 @@ interface Made { r: number; d: Vec3; on: Uint8Array | null }
  *  browser, so a dozen or two frames. Where the frame has no pace (a stand with no clock to keep, `?planpace=old`, a page's first frames) the step is
  *  the count of sight-line steps it always was (REACH_PACE.steps). ONE ALLOWANCE FOR ALL THE MASK WORK OF A FRAME, a guest's too (KeepGuest). */
 export const KEEP_MS = 2;
+/** two ways of one light: a row's blend between two ticks leaves the last bit or so of it off */
+const NEAR_ONE = 1e-5;
 /** sight-line steps a mask is given between two looks at the clock */
 const SLICE = 4000;
 /** A STEP ON THE CLOCK SPENDS NO MORE SIGHT-LINE STEPS THAN THIS MANY STEPS ON THE COUNT (REACH_PACE.steps each). Where a browser's clock is
@@ -54,7 +56,7 @@ const ROUND = ['F', 'F', 'L', 'O'] as const;
 const NO_GUESTS: readonly KeepGuest[] = [], ORDER = ['F', 'L', 'O'] as const, NEVER = (): boolean => false, byRank = (a: KeepGuest, b: KeepGuest): number => a.rank - b.rank;
 
 export class ReachKeep {
-  private readonly world: { readonly statics: Box[] }; private readonly lights: { readonly lights: RtLight[] };
+  private readonly world: { readonly statics: Box[]; readonly moved?: number }; private readonly lights: { readonly lights: RtLight[] };
   /** a lamp's mask (none = it may reach anywhere) and a directional light's (the cells with a clear way toward it: sent only with the reservoirs) */
   private readonly point = new WeakMap<RtLight, Uint32Array>(); private readonly dirs = new WeakMap<RtLight, Uint32Array>();
   /** what a directional light's mask was made for: the disc's radius (`sun`; under 0 = one direction, `dir`) and the way it shone */
@@ -69,10 +71,12 @@ export class ReachKeep {
   private held: Rect[] = []; private hold = 0; private now: Rect[] = [];
   /** a reading of the walls in hand (on a budget of time: the raster as it was built when the reading began, and the scan that sets it against the last) */
   private reading: { rects: Rect[]; solid: Uint8Array; it: Generator<void, Rect | null, void> } | null = null;
+  /** a light of the sky's that has not come yet, and its mask as far as it is made (`coming`) */
+  private ahead: { d: Vec3; r: number; moved: number; it: Generator<void, Uint32Array | null, void> | null; m: Uint32Array | null } | null = null;
   /** the place in ROUND that leads the next step with a guest's work in it (it moves on past a class that owes nothing) */
   private turn = 0;
 
-  constructor(world: { readonly statics: Box[] }, lights: { readonly lights: RtLight[] }) { this.world = world; this.lights = lights; }
+  constructor(world: { readonly statics: Box[]; readonly moved?: number }, lights: { readonly lights: RtLight[] }) { this.world = world; this.lights = lights; }
 
   /** a lamp's own mask (undefined = anywhere) */
   of(l: RtLight): Uint32Array | undefined { return this.point.get(l); }
@@ -92,7 +96,7 @@ export class ReachKeep {
   boot(doors: ReachDoor[], interior: Uint8Array): void {
     const solid = buildWallRaster(this.world.statics, doors);
     this.doors = doors; this.interior = interior; this.solid = this.solidBoot = solid;
-    this.masked = []; this.queue = []; this.bootMask.clear(); this.held = []; this.now = []; this.hold = 0; this.reading = null;
+    this.masked = []; this.queue = []; this.ahead = null; this.bootMask.clear(); this.held = []; this.now = []; this.hold = 0; this.reading = null;
     for (const l of this.lights.lights) {
       if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;   // transient / the moon / lights that MOVE (Sam's rail light, the guards' torches): anywhere. Exterior lamp heads above the roof DO get a mask, but only its interior cells (reach.ts)
       this.masked.push(l); this.point.set(l, reachMaskFor(solid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, interior));
@@ -174,10 +178,10 @@ export class ReachKeep {
     // ON THE CLOCK. A note of the walls that waits is counted down ONCE A STEP, whoever has the allowance (as a step on the count counts it)
     const ripe = !!this.solid && !this.reading && this.now.length === 0 && this.held.length > 0 && this.hold-- <= 0;
     const lampsOwe = !!this.solid && (this.reading !== null || this.now.length > 0 || ripe || this.queue.length > 0);
-    if (!guests.length && !lampsOwe) return 0;   // (most frames: nothing is owed, and no clock is asked)
+    if (!guests.length && !lampsOwe && !this.aheadOwes()) return 0;   // (most frames: nothing is owed, and no clock is asked)
     // (late: the allowance of time is spent, or KEEP_MOST of the count's own shares of sight-line steps are)
     const t0 = this.timeNow(), s0 = REACH_WORK.steps, late = (): boolean => REACH_WORK.steps - s0 >= KEEP_MOST * steps || this.timeNow() - t0 >= KEEP_MS, st = { worked: false };
-    if (!guests.length) return this.lamps(true, n, steps, late, st, ripe);
+    if (!guests.length) { const done = lampsOwe ? this.lamps(true, n, steps, late, st, ripe) : 0; this.aheadSome(late, st); return done; }
     // one allowance for the lamps' work and the guests', the classes that owe any leading in turn (ROUND)
     const firsts = guests.filter(g => g.first).sort(byRank), others = guests.filter(g => !g.first).sort(byRank);
     const owes = (c: string): boolean => c === 'F' ? firsts.length > 0 : c === 'O' ? others.length > 0 : lampsOwe;
@@ -187,6 +191,7 @@ export class ReachKeep {
       if (st.worked && late()) break;
       if (c === 'F') slices(firsts); else if (c === 'O') slices(others); else done += this.lamps(true, n, steps, late, st, ripe);
     }
+    this.aheadSome(late, st);
     return done;
   }
   /** the lamps' share of a step: the walls read where a note is due, then the waiting masks (`step` says how; `st.worked` = something of this step's
@@ -253,8 +258,35 @@ export class ReachKeep {
     if (l.kind !== 2) return;
     const d0 = l.dir, was = this.made.get(l);
     if (was && was.r === radius && was.on === this.solid && was.d[0] === d0[0] && was.d[1] === d0[1] && was.d[2] === d0[2] && this.dirs.has(l)) return;
-    const m = whole(this.dirLightSteps(d0, radius)); if (!m) return;
+    const m = (was ? null : this.came(d0, radius)) ?? whole(this.dirLightSteps(d0, radius)); if (!m) return;
     this.dirs.set(l, m); this.made.set(l, { r: radius, d: [d0[0], d0[1], d0[2]], on: this.solid }); this.unask(l);
+  }
+  /** A LIGHT THAT IS COMING, one direction and a narrow disc (a stroke's): its mask is made before it shows, with what the frame's allowance leaves, so the frame it
+   *  shows in makes none. `null` = none is. A mask in hand is of the statics as it began (`moved`: the walls' raster is no part of it); one that moved since is begun again, and if it has not
+   *  been made when the light comes it is made then. On the count nothing is done ahead. */
+  coming(d: Vec3 | null, r = 0): void {
+    const A = this.ahead;
+    if (!d) { this.ahead = null; return; }
+    if (A && A.r === r && A.d[0] === d[0] && A.d[1] === d[1] && A.d[2] === d[2]) return;
+    this.ahead = { d: [d[0], d[1], d[2]], r, moved: -1, it: null, m: null };
+  }
+  private get moved(): number { return this.world.moved ?? 0; }
+  private aheadOwes(): boolean { const A = this.ahead; return !!A && !!this.solid && (!A.m || A.moved !== this.moved); }
+  private aheadSome(late: () => boolean, st: { worked: boolean }): void {
+    if (!this.aheadOwes() || late()) return;   // (only what the frame's allowance leaves)
+    const A = this.ahead!;
+    if (!A.it || A.moved !== this.moved) { A.moved = this.moved; A.m = null; A.it = this.dirLightSteps(A.d, A.r); }
+    let r: IteratorResult<void, Uint32Array | null>;
+    try { do { r = A.it.next(); st.worked = true; } while (!r.done && !late()); } catch (e) { A.it = null; throw e; }
+    if (r.done) { A.it = null; A.m = r.value; if (!r.value) this.ahead = null; }
+  }
+  /** the mask of a light that has come, where it is the one that was coming and stands on the walls and statics as they are now (its work in hand ended here) */
+  private came(d: Vec3, r: number): Uint32Array | null {
+    const A = this.ahead;
+    if (!A || A.r !== r || Math.abs(A.d[0] - d[0]) + Math.abs(A.d[1] - d[1]) + Math.abs(A.d[2] - d[2]) > NEAR_ONE) return null;
+    this.ahead = null;
+    if (A.moved !== this.moved) return null;
+    return A.m ?? (A.it ? whole(A.it) : null);
   }
   /** a mask made whole just now is of the walls as they stand: the light waits for nothing */
   private unask(l: RtLight): void { const i = this.queue.findIndex(q => q.l === l); if (i >= 0) this.queue.splice(i, 1); }
@@ -286,7 +318,7 @@ export class ReachKeep {
     const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell, statics = this.world.statics.slice();
     const buckets: number[][] = Array.from({ length: W * H }, () => []), cosY = new Float64Array(statics.length), sinY = new Float64Array(statics.length);   // (a box's turn, worked out once a box and not once a look: a look asks every box of its cell)
     statics.forEach((b, i) => {
-      if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) return;
+      if (!stopsSky(b.flags)) return;
       const yw = b.yaw ?? 0; cosY[i] = Math.cos(yw); sinY[i] = Math.sin(yw);
       const r = Math.hypot(b.h[0], b.h[2]);   // yawed footprint bound
       const x0 = Math.max(0, Math.floor((b.c[0] - r - WORLD.min[0]) / cs)), x1 = Math.min(W - 1, Math.floor((b.c[0] + r - WORLD.min[0]) / cs));
