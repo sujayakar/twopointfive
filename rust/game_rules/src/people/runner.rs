@@ -1,6 +1,7 @@
 #![allow(unused_imports, unused_variables)]
 pub use ::game_types::runner::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -38,48 +39,19 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     crate::game::game_say(g, gd, &pool[at], Some(false), Some(true));
 }
 
-/// distance on the floor
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
-/// the chest bone, or where it would be
-fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
-    if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Chest) { return *b; }
-    let p = g.ch[c_2].pos;
-    [p[0], p[1] + 1.2, p[2]]
-}
-
-/// the head bone, or where it would be
-fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
-    if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Head) { return *b; }
-    let p = g.ch[c_2].pos;
-    [p[0], p[1] + 1.6, p[2]]
-}
-
-/// a living defender or a man of the night staff: never a civilian, an operative, a body
-fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
-    let o = &g.gd[gd];
-    !g.cond[o.ch].down && g.ch[o.ch].team.theirs()
-}
-
 /// nobody's to take: the men a mission leads itself and the response team
 fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::mission::leads(g, gd) || crate::qrf::qrf_owns(g, gd)
 }
 
-/// may the sequence start on him this frame
-fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !g.ai_enabled || g.gd[gd].held.is_some() { return false; }
-    g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
-}
-
 /// a living armed man of his own side, on his feet: somebody to run to, somebody to tell
 fn mate_of(g: &crate::game::Game, gd: GuardId, o: GuardId) -> bool {
-    o != gd && ours(g, o) && g.team(o) == g.team(gd) && g.gd[o].held.is_none() && !g.m.runner.state_of.has(o)
+    o != gd && super::morale::ours(g, o) && g.team(o) == g.team(gd) && g.gd[o].held.is_none() && !g.m.runner.state_of.has(o)
 }
 
 /// an enemy as a run reckons with him
 fn foe_at(g: &crate::game::Game, who: CharId) -> crate::runner::Foe {
-    let eye = head_of(g, who);
+    let eye = g.ch[who].bone_or(crate::character::Bone::Head, 1.6);
     Foe { pos: g.ch[who].pos, eye, who }
 }
 
@@ -143,7 +115,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
 
 /// is he the man: broken, alone, dry, and nobody else's
 fn ripe(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
+    if !super::morale::ours(g, gd) || spoken(g, gd) || !super::morale::reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
     let mo = match crate::morale::morale_of(g, gd) { Some(x) if x.alone => x, _ => return false };
     if mo.act == crate::morale::MoraleAct::Bait { return false; }
     if mo.act == crate::morale::MoraleAct::Reload { return mo.t >= g.k.runner.out_secs; }
@@ -153,7 +125,7 @@ fn ripe(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// or the man his leader's fall left: broken, green, and he saw it
 fn lost(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
+    if !super::morale::ours(g, gd) || spoken(g, gd) || !super::morale::reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
     crate::morale::morale_of(g, gd).map_or(false, |x| x.green) && crate::morale::saw_leader_fall(g, gd).is_finite()
 }
 
@@ -178,7 +150,7 @@ fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
 
 /// start the sequence on this man directly. False = he is not a man of this file's, or it already has him
 pub fn runner_break(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || g.m.runner.state_of.has(gd) { return false; }
+    if !super::morale::ours(g, gd) || spoken(g, gd) || !super::morale::reacts(g, gd) || g.m.runner.state_of.has(gd) { return false; }
     let pos = g.ch[g.gd[gd].ch].pos;
     let from = match nearest_foe(&known(g, gd), pos) { Some(n) => n.pos, None => g.gd[gd].last_known.unwrap_or(pos) };
     start(g, gd, from);
@@ -227,7 +199,7 @@ fn line_to(g: &crate::game::Game, e: crate::runner::Foe, p: V3) -> bool {
 /// the nearest enemy to a point
 fn near(e: &[Foe], p: V3) -> f64 {
     let mut d = m::INF;
-    for x in e { d = m::min(d, flat(x.pos, p)); }
+    for x in e { d = m::min(d, dist_xz(x.pos, p)); }
     d
 }
 
@@ -357,7 +329,7 @@ fn pick_mate(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
         let o = g.guards[i];
         i += 1;
         if !mate_of(g, gd, o) { continue; }
-        let d = flat(g.ch[g.gd[o].ch].pos, pos);
+        let d = dist_xz(g.ch[g.gd[o].ch].pos, pos);
         if d <= mate_m { men.push((o, d)); }
     }
     js::sort_by(&mut men, |a, b| a.1 - b.1);
@@ -387,14 +359,14 @@ fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> b
     while i < o.path.len() && left > 0.0 {
         let b = o.path[i];
         i += 1;
-        let l = flat(a, b);
+        let l = dist_xz(a, b);
         if l < 1e-4 { continue; }
         let use_ = m::min(l, left);
         let (ux, uz) = ((b[0] - a[0]) / l, (b[2] - a[2]) / l);
         for f in e {
             let t = m::min(use_, m::max(0.0, (f.pos[0] - a[0]) * ux + (f.pos[2] - a[2]) * uz));
             let d = m::hyp2(f.pos[0] - a[0] - ux * t, f.pos[2] - a[2] - uz * t);
-            if d < shy && d < flat(f.pos, pos) - 0.25 { return true; }
+            if d < shy && d < dist_xz(f.pos, pos) - 0.25 { return true; }
         }
         left -= l;
         a = b;
@@ -528,7 +500,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if !mate_of(g, gd, o) || flat(g.ch[g.gd[o].ch].pos, g.ch[g.gd[gd].ch].pos) > told_m { continue; }
+        if !mate_of(g, gd, o) || dist_xz(g.ch[g.gd[o].ch].pos, g.ch[g.gd[gd].ch].pos) > told_m { continue; }
         let d = crate::roomfight::def_of(g, o);
         let on_post = match d { Some(_) => crate::roomfight::room_fight_told(g, o, from), None => false };
         if on_post {
@@ -630,7 +602,7 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 
 /// The shout lasts a beat, then the drop; false while it goes on, or if he can no longer react and the run is called off.
 fn shout_is_over(g: &mut Game, gd: GuardId, dt: f64) -> bool {
-    if !reacts(g, gd) {
+    if !super::morale::reacts(g, gd) {
         g.m.runner.state_of.delete(gd);
         let (rule, now) = (crate::owner::by::RUNNER, g.time);
         crate::owner::release(g, gd, rule, now);
@@ -664,7 +636,7 @@ fn stays_dry_and_calm(g: &mut Game, gd: GuardId) {
 fn stalled(g: &mut Game, gd: GuardId, pos: V3, moving: bool, dt: f64) -> bool {
     let stall_secs = g.k.runner.stall_secs;
     let r = run!(g, gd);
-    if moving && flat(pos, r.at) < 0.5 {
+    if moving && dist_xz(pos, r.at) < 0.5 {
         r.stall += dt;
     } else {
         r.stall = 0.0;
@@ -695,20 +667,20 @@ fn run_to_his_mate(g: &mut Game, f: RunFrame) {
     }
     let mc = g.gd[row.mate.unwrap()].ch;
     let mp = g.ch[mc].pos;
-    if flat(pos, mp) <= g.k.runner.tell_m && can_tell(g, c, mc) {
+    if dist_xz(pos, mp) <= g.k.runner.tell_m && can_tell(g, c, mc) {
         bark(g, gd, LineKind::Mates);
         tell(g, gd);
         to_out(g, gd, e);
     } else if barred {
         to_out(g, gd, e);   // (the enemy is between him and his own: he tells nobody)
-    } else if flat(mp, row.goal.unwrap()) > 1.5 {
+    } else if dist_xz(mp, row.goal.unwrap()) > 1.5 {
         route(g, gd, mp, e);
     }
 }
 
 /// Nothing stands between his mouth and his mate's chest.
 fn can_tell(g: &Game, c: CharId, mc: CharId) -> bool {
-    let (a, b) = (head_of(g, c), chest_of(g, mc));
+    let (a, b) = (g.ch[c].bone_or(crate::character::Bone::Head, 1.6), g.ch[mc].bone_or(crate::character::Bone::Chest, 1.2));
     !crate::scene_collision::segment_blocked(g, a, b, None, None, None)
 }
 
@@ -756,7 +728,7 @@ fn look_wider(g: &mut Game, gd: GuardId, eyes: &[Foe], pos: V3) {
     let e = known(g, gd);
     let fl = flood(g, gd, &e, Some(g.k.runner.ask_wide), None);
     if let (true, Some(o)) = (fl.hidden, fl.out) {
-        if flat(o, pos) > 1.0 {
+        if dist_xz(o, pos) > 1.0 {
             route(g, gd, o, &e);
             run!(g, gd).bold = false;
         }
@@ -768,7 +740,7 @@ fn nearest_foe(e: &[Foe], p: V3) -> Option<Foe> {
     let mut n: Option<Foe> = None;
     let mut nd = m::INF;
     for f in e {
-        let d = flat(f.pos, p);
+        let d = dist_xz(f.pos, p);
         if d < nd {
             nd = d;
             n = Some(*f);
@@ -787,7 +759,7 @@ fn stay_low(g: &mut Game, f: RunFrame) {
     if barred {
         run!(g, gd).t = 0.0;
         let fl = flood(g, gd, e, None, None);
-        if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 1.0 {
+        if dist_xz(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 1.0 {
             route(g, gd, fl.corner, e);
             run!(g, gd).face = None;
         }
@@ -806,7 +778,7 @@ fn try_the_way_out_again(g: &mut Game, gd: GuardId, pos: V3, e: &[Foe]) {
         let r = run!(g, gd);
         r.phase = RunPhase::Out;
         r.face = None;
-    } else if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 3.0 {   // (a failed route has written the goal: read it again)
+    } else if dist_xz(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 3.0 {   // (a failed route has written the goal: read it again)
         route(g, gd, fl.corner, e);
         run!(g, gd).face = None;
     }
@@ -866,7 +838,7 @@ mod tests {
     /// the TypeScript's own bits, under bun with EXACT on
     #[test]
     fn flat_and_path_len_have_the_typescripts_bits() {
-        assert_eq!(flat([1.1, 0.0, 2.2], [3.3, 7.0, -4.4]).to_bits(), 0x401bd3faa7236476);
+        assert_eq!(dist_xz([1.1, 0.0, 2.2], [3.3, 7.0, -4.4]).to_bits(), 0x401bd3faa7236476);
         let path = [[1.7, 0.0, 3.9], [-2.3, 0.0, 4.1], [-2.3, 0.0, 4.1], [5.5, 1.0, -0.7]];
         assert_eq!(crate::places::walk_len([0.1, 0.0, 0.2], &path).to_bits(), 0x403131d9b6305e72);
     }

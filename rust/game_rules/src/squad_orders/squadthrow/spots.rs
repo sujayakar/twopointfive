@@ -8,16 +8,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---- private helpers ----
 
-/// a body's feet
-fn pos_of(g: &Game, gd: GuardId) -> V3 {
-    g.ch[g.gd[gd].ch].pos
-}
-
-/// the player's feet
-fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    g.ch[g.pl[seat.player].ch].pos
-}
-
 /// this view's row asks `tossing`: `states.get(g)`, which makes no row, and `tossing` takes no row out of `g` while it holds `g`
 fn tossing_here(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let key = crate::seats::view_key(g, seat);
@@ -42,7 +32,7 @@ fn lob_clean(g: &mut Game, clean: &LobClean, t: &SquadThrower) -> bool {
     match *clean {
         LobClean::Plan { kind, at } => {
             if kind != SquadThrowKind::Frag { return true; }
-            let stands = match t.post { Some(p) => p, None => pos_of(g, t.gd) };
+            let stands = match t.post { Some(p) => p, None => g.pos_of(t.gd) };
             squad_frag_catches(g, t.rest, at, Some(SquadFragCatchesMoved { gd: t.gd, at: stands }), Some(false), None, None).is_none()
         }
         LobClean::LookAgain { kind, at, gd } => {
@@ -236,7 +226,7 @@ fn queue_the_men(g: &Game, s: &mut Search, gen: i32) -> usize {
     let (c, w, h) = (s.c, s.w, s.h);
     let mut tail = 0usize;
     for (k, &gd) in s.who.iter().enumerate() {
-        let p = pos_of(g, gd);
+        let p = g.pos_of(gd);
         let (fx_, fz) = (m::floor(p[0] / c), m::floor(p[2] / c));
         if fx_ < 0.0 || fz < 0.0 || fx_ >= w as f64 || fz >= h as f64 { continue; }
         let i = (fz as i32 * w + fx_ as i32) as usize;
@@ -397,7 +387,7 @@ pub fn squad_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: c
 fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind, lob: Option<&mut crate::squadthrow::Lob>) -> Option<crate::squadthrow::StandThrow> {
     let mut lob = lob;
     let mut sorted: Vec<GuardId> = men.to_vec();
-    { let r: &Game = &*g; js::sort_by(&mut sorted, |a, b| v3::dist_xz(pos_of(r, *a), at) - v3::dist_xz(pos_of(r, *b), at)); }
+    { let r: &Game = &*g; js::sort_by(&mut sorted, |a, b| v3::dist_xz(r.pos_of(*a), at) - v3::dist_xz(r.pos_of(*b), at)); }
     for gd in sorted {
         if !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) || tossing_here(g, &crate::seats::here(g), gd) { continue; }
         if walking_here(g, &crate::seats::here(g), gd) { continue; }   // (on his way to a throw already: that one first)
@@ -458,8 +448,8 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     // (… and one nobody of ours stands on or is going to: two men to one corner is one man left out in it)
     let apart_m = g.k.squadthrow.duck_apart_m;
     let near = |q: V3| v3::dist_xz(q, spot) < apart_m;
-    if g.guards.iter().any(|&o| o != gd && g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && near(pos_of(g, o))) { return false; }
-    if !crate::condition::down(g, g.pl[g.player].ch) && near(sam_pos(g, &crate::seats::here(g))) { return false; }
+    if g.guards.iter().any(|&o| o != gd && g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch) && near(g.pos_of(o))) { return false; }
+    if !crate::condition::down(g, g.pl[g.player].ch) && near(g.seat_pos(&crate::seats::here(g))) { return false; }
     if let Some(t) = taken {
         if t.iter().any(|q| near(*q)) { return false; }
         t.push(spot);
@@ -556,12 +546,12 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
             who.push(gd);
         }
     }
-    { let r: &Game = &*g; js::sort_by(&mut who, |a, b| v3::dist_xz(pos_of(r, *a), at) - v3::dist_xz(pos_of(r, *b), at)); }
+    { let r: &Game = &*g; js::sort_by(&mut who, |a, b| v3::dist_xz(r.pos_of(*a), at) - v3::dist_xz(r.pos_of(*b), at)); }
     who.truncate(8);
     if who.is_empty() { return None; }
     // (the search's marks are the row's, and stay there between searches: out of the row while the flood lends `g`; nothing a flood calls runs another walkSpot)
     let n = w * h;   // (the grid's size is a number on the table, as in the TypeScript)
-    let mut sc = match state(g).scratch.take() {
+    let sc = match state(g).scratch.take() {
         Some(x) if x.n == n => x,
         _ => {
             let cells = n as usize;
@@ -571,12 +561,12 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
     let max = m::min(250.0, m::round(g.k.squadthrow.walk_m / c));
     let mut home: Vec<f64> = Vec::with_capacity(who.len());
     for &gd in &who {
-        let p = pos_of(g, gd);
+        let p = g.pos_of(gd);
         home.push(crate::cleared::cleared_rooms_room_at(g, p));
     }
     // (each with whose feet they are: `o !== gd.char.pos` was an identity test of the array)
-    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), pos_of(g, o))).collect();
-    if !crate::condition::down(g, g.pl[g.player].ch) { ours.push((None, sam_pos(g, &crate::seats::here(g)))); }
+    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.team(o).ours() && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), g.pos_of(o))).collect();
+    if !crate::condition::down(g, g.pl[g.player].ch) { ours.push((None, g.seat_pos(&crate::seats::here(g)))); }
     let roll_k = roll_of(g, kind);
     let walls: Vec<V3> = match lob.as_deref() { Some(l) => l.walls.clone(), None => Vec::new() };
     let lim = match lob.as_deref() { Some(l) => l.lim, None => LobLim { n: 0.0 } };
@@ -638,7 +628,7 @@ pub(super) fn throw_again(g: &mut crate::game::Game, was: &SquadThrower, at: V3,
 /// his way to a spot as the orders would walk him: a line on the floor
 pub fn walk_line(g: &mut crate::game::Game, gd: GuardId, post: V3) -> Vec<V3> {
     let r = crate::orders::squad_orders_route(g, gd, post, None, None, None);
-    let start = pos_of(g, gd);
+    let start = g.pos_of(gd);
     let mut out: Vec<V3> = vec![v3::copy(start)];
     let mut a = start;
     let mut stops: Vec<V3> = if r.why.is_some() { Vec::new() } else { r.via };
@@ -665,7 +655,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
     let pts = frag_pts(rest, at);
     let reach = burst.map(|b| b.reach);
     if (sam || sam_near(g, &crate::seats::here(g), &pts)) && !crate::condition::down(g, g.pl[g.player].ch) {
-        let p = sam_pos(g, &crate::seats::here(g));
+        let p = g.seat_pos(&crate::seats::here(g));
         if frag_in(g, &pts, p, None, reach) { return Some(String::from("you're in it.")); }
     }
     let mut taken: Vec<V3> = Vec::new();
@@ -675,7 +665,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
         if !g.team(gd).ours() { continue; }
         let hit = if !crate::condition::down(g, g.gd[gd].ch) {
             // (duck: … and cannot be off its line before it bursts)
-            let p = match moved { Some(q) if q.gd == gd => q.at, _ => pos_of(g, gd) };
+            let p = match moved { Some(q) if q.gd == gd => q.at, _ => g.pos_of(gd) };
             if !frag_in(g, &pts, p, None, reach) {
                 false
             } else if burst.is_some() {
@@ -714,7 +704,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
 /// (fragCatches live) alive and inside it
 fn live_in(g: &mut Game, o: GuardId, pts: &[V3], reach: Option<f64>) -> bool {
     if crate::condition::down(g, g.gd[o].ch) { return false; }
-    let p = pos_of(g, o);
+    let p = g.pos_of(o);
     frag_in(g, pts, p, None, reach)
 }
 
@@ -741,13 +731,13 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
 /// … is he inside it, where it would go off or at the spot asked for?
 pub(super) fn squad_frag_on_sam(g: &mut crate::game::Game, rest: V3, at: V3) -> bool {
     if crate::condition::down(g, g.pl[g.player].ch) { return false; }
-    let p = sam_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     frag_in(g, &frag_pts(rest, at), p, None, None)
 }
 
 /// … and never his call inside what it kills at
 fn sam_near(g: &crate::game::Game, seat: &crate::seats::SeatRef, pts: &[V3]) -> bool {
-    let p = sam_pos(g, seat);
+    let p = g.seat_pos(seat);
     pts.iter().any(|l| v3::dist_xz(p, *l) < g.k.squadthrow.duck_min_m)
 }
 

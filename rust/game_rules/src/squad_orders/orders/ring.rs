@@ -8,7 +8,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- the frame's input: what the order input takes out of it
 
-fn pressed_has(g: &Game, input: InputId, code: &str) -> bool {
+pub(super) fn pressed_has(g: &Game, input: InputId, code: &str) -> bool {
     g.tab.input[input].pressed.has(String::from(code))
 }
 fn pressed_delete(g: &mut Game, input: InputId, code: &str) -> bool {
@@ -54,14 +54,6 @@ fn target_kind(t: &OrderTarget) -> &'static str {
         OrderTarget::Door(_) => "door",
         OrderTarget::None(_) => "none",
         OrderTarget::Foe(_) => "foe",
-    }
-}
-pub fn order_target_at(t: &OrderTarget) -> V3 {
-    match t {
-        OrderTarget::Floor(x) => x.at,
-        OrderTarget::Door(x) => x.at,
-        OrderTarget::None(x) => x.at,
-        OrderTarget::Foe(x) => x.at,
     }
 }
 /// `{ kind: 'none', at: [p[0], 0, p[2]] }`, p where Sam stands
@@ -238,7 +230,7 @@ fn rows_fresh(g: &mut Game) -> bool {
 /// On a man the orders are his, and the ring starts again for him; anywhere else the click gives the lit wedge (Some(true)). None: the menu has gone.
 fn left_click(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> Option<bool> {
     let part = g.sets[g.seat].orders.menu.as_ref().unwrap().part.is_some();
-    let k = if squad_orders_whole(&crate::seats::here(g)) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
+    let k = if squad_orders_sams(&crate::seats::here(g)) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
     clicked_off(g, input, 1);
     buttons_off(g, input, 1);
     swallow_if_seat(g, input);
@@ -354,7 +346,7 @@ fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
     squad_orders_ring_sel(g);
     // it stays on its point: the place, and where its middle stands from it (from the cursor, not from where the view's edge stood it)
     if let Some(cam) = cam {
-        let at = order_target_at(t);
+        let at = t.at();
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
         if front {
             let (mx, my) = mouse(g, input);

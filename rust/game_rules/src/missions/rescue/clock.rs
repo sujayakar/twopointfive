@@ -6,12 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// a man's body, where it stands now
-fn pos_of(g: &Game, gd: GuardId) -> V3 {
-    let c = g.gd[gd].ch;
-    g.ch[c].pos
-}
-
 /// where a round at this man goes: his chest bone, else above his feet
 fn chest_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
@@ -80,7 +74,7 @@ fn the_act(g: &mut Game, a: RescueAct) {
     let (chest, took) = fire_on_her(g, by, v);
     rescue_end_act(g);
     if let Some(aim) = rescue_data(g).map(|d| d.room.door_aim) {
-        let p = pos_of(g, by);
+        let p = g.pos_of(by);
         let b = room(g);
         if crate::squad::in_bounds(p, b, None) { crate::belief::cover(g, by, [aim[0], 0.0, aim[2]]); }
     }
@@ -153,10 +147,10 @@ fn take_aim_at_a_hostage(g: &mut Game, cap: GuardId) {
     if alive.is_empty() { return; }
     let mine = crate::rescueflush::rescue_flush_victims(g, cap, &alive);
     if mine.is_empty() { return; }
-    let cp = pos_of(g, cap);
+    let cp = g.pos_of(cap);
     let mut v = mine[0];
     for &b in &mine[1..] {
-        let (pa, pb) = (pos_of(g, v), pos_of(g, b));
+        let (pa, pb) = (g.pos_of(v), g.pos_of(b));
         if !(v3::dist_xz(pa, cp) <= v3::dist_xz(pb, cp)) { v = b; }
     }
     let at = chest_of(g, v);
@@ -168,8 +162,8 @@ fn take_aim_at_a_hostage(g: &mut Game, cap: GuardId) {
         let st = g.gd[cap].state;
         crate::squad::end_guard_script(g, cap, Some(st));
     }
-    let vp = pos_of(g, v);
-    let cp = pos_of(g, cap);
+    let vp = g.pos_of(v);
+    let cp = g.pos_of(cap);
     crate::squad::order(g, cap, crate::squad::OrderPatch {
         goal: Some(None),
         face: Some(Some(v3::yaw_to(cp, vp))),

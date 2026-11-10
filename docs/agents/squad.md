@@ -59,7 +59,7 @@ sent together on one way, then one man assents. A refusal is said by the man it 
 fight if it has him, run the row's `tick`, then the leg, to his mark by `via` or to his place in the file. Then cover, `spotted.rs` and `fireline.rs` may
 take his gun or feet, the muzzle drops off Sam, and `order` writes it all. When the last man of a `group` arrives he says "set."
 
-**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_whole`: no key picks a pair), unless the cursor is on one teammate or
+**Who takes it.** Every order of Sam's goes to the whole squad (`squad_orders_sams`: no key picks a pair), unless the cursor is on one teammate or
 Shift picks a part. `goal_men` decides: the man under the cursor; everyone, on Sam himself; the men already on that door; with nothing going, half
 (`goal_half`: a whole pair if it can, else the nearer men); else the free men; else half of the biggest group. Nobody to spare says so (`GOAL_NONE`).
 `roster_of` makes the team: one or two men are one pair, three or four are Red and Blue (`unit.pair`). `squad_orders_men` is where to ask for men. In

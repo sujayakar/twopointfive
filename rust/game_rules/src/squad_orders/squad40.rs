@@ -10,7 +10,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
 /// a row of this id is on the menu's list (`S.defs.some(d => d.id === id)`)
-fn def_listed(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> bool {
+pub(super) fn def_listed(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> bool {
     seat.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == id)
 }
 
@@ -22,16 +22,6 @@ fn lent_of(w: Turn) -> crate::squadthrow::Lent {
 /// `{ ...squadLend(g, S, gd, t), at, t0, firedT, shot }`
 fn turn_of(l: crate::squadthrow::Lent, at: V3, t0: f64, fired_t: f64, shot: Shot) -> Turn {
     Turn { at, t0, fired_t, shot, mates: l.mates, gd: l.gd, t: l.t, a: l.a, home: l.home, home_yaw: l.home_yaw, back: l.back }
-}
-
-/// the `at` every kind of target carries
-fn at_of(t: &crate::orders::OrderTarget) -> V3 {
-    match t {
-        crate::orders::OrderTarget::Floor(f) => f.at,
-        crate::orders::OrderTarget::Door(f) => f.at,
-        crate::orders::OrderTarget::None(f) => f.at,
-        crate::orders::OrderTarget::Foe(f) => f.at,
-    }
 }
 
 /// the launcher is under the gun in his hands: a long gun whose row has one. (squad40.ts tubeUp)
@@ -316,7 +306,7 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
 
 /// the order's `issue` (orders/rows/shell40.rs): a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
 pub(super) fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
-    let at = at_of(t);
+    let at = t.at();
     let a = match plan(g, men, at) {
         ShellPlan { no: Some(why), .. } => {  return Some(why); }
         ShellPlan { shot: Some(a), .. } => a,

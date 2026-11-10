@@ -651,7 +651,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
     }
     let tactics = crate::tactics::tactics_penalty(g, gd, goal);
     let pen = crate::lanes::lane_penalty(g, gd, tactics.as_ref());
-    let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, &crate::seats::here(g), gd, pen.as_ref()) } else { None };
+    let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, gd, pen.as_ref()) } else { None };
     let mut p = go_to_plan(g, gd, goal, pen.as_ref(), round.as_ref());
     if p.is_none() {
         let u = unstick_begin(g, gd);

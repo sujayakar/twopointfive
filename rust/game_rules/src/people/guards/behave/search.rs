@@ -73,7 +73,7 @@ fn walks_to_the_spot(g: &mut Game, gd: GuardId, c: CharId, dt: f64, a: &mut Acts
         let p = g.gd[gd].search_plan.as_mut().unwrap();
         p.phase = Ph::Look;
         p.phase_t = 0.0;
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         g.gd[gd].stall_ref = None;
     } else if not_getting_anywhere(g, gd, dt, 3.0) {
         let by = g.ch[c].id;

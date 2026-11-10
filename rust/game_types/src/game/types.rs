@@ -176,6 +176,10 @@ pub struct WitnessHeard {
     pub loud_at: Option<V3>,
     pub last_t: f64,
 }
+impl WitnessHeard {
+    /// the loud noises his ears have counted: shots, kicks and bangs
+    pub fn loud(&self) -> f64 { self.shots + self.kick + self.bang }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum WitnessAlertedBy {
@@ -1294,9 +1298,21 @@ impl Player {
         p
     }
 }
+impl Guard {
+    /// a new path is a new serial
+    pub fn set_path(&mut self, path: Vec<V3>) { self.path = path; self.path_serial = self.path_serial.wrapping_add(1); }
+    /// no path, and nowhere it was going
+    pub fn drop_path(&mut self) { self.set_path(Vec::new()); self.path_goal = None; self.path_goal_orbit = false; }
+}
 impl Game {
     /// whose man he is
     pub fn team(&self, gd: GuardId) -> crate::teams::Team { self.ch[self.gd[gd].ch].team }
+    /// where he stands
+    pub fn pos_of(&self, gd: GuardId) -> V3 { self.ch[self.gd[gd].ch].pos }
+    /// where a seat's own man stands
+    pub fn seat_pos(&self, seat: &crate::seats::SeatRef) -> V3 { self.ch[self.pl[seat.player].ch].pos }
+    /// his body's number
+    pub fn char_id(&self, gd: GuardId) -> f64 { self.ch[self.gd[gd].ch].id }
     /// INVENTED: a new serial, for a row or record the TypeScript asks by identity. Never rewinds in a game; 0 is nobody's
     pub fn serial(&mut self) -> u32 { let s = self.serial_next; self.serial_next += 1; s }
 }

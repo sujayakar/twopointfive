@@ -8,13 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small readers
 
-/// `c.bones.<bone> ?? v3.add(c.pos, [0, up, 0])`
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
-}
 /// `c.bones.hips ?? c.pos`
 fn hips_of(g: &Game, c: CharId) -> V3 {
     match g.ch[c].bones.get(crate::character::Bone::Hips) {
@@ -41,12 +34,6 @@ fn no_colleague(g: &Game, gd: GuardId, p: GuardId) -> bool {
     let (a, b) = (g.team(gd), g.team(p));
     a.foe_of(b)
 }
-/// `gd.path = []; gd.pathGoal = null`: a whole write of the path (its serial), and the goal is no longer the standoff's object
-fn clear_path(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
-}
 
 // ---------------------------------------------------------------- what a man sees
 
@@ -56,7 +43,7 @@ pub fn point_in_view(g: &crate::game::Game, gd: GuardId, p: V3, range: Option<f6
     let half_deg = half_deg.unwrap_or(60.0);
     if crate::doze::doze_asleep(g, gd) { return false; }
     let c = g.gd[gd].ch;
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let look = crate::guards::look_of(g, c);
     let to = v3::sub(p, eye);
     let l = v3::len(to);
@@ -69,7 +56,7 @@ pub fn point_in_view(g: &crate::game::Game, gd: GuardId, p: V3, range: Option<f6
 /// A light going out that this man's eye has a line to: the fixture, or the floor under it. No cone.
 pub(super) fn light_out_seen(g: &crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
     let c = g.gd[gd].ch;
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let src: V3 = match e.from { Some(f) => f, None => [e.pos[0], 2.4, e.pos[2]] };
     let to = v3::sub(src, eye);
     let l = v3::len(to);
@@ -81,7 +68,7 @@ pub(super) fn light_out_seen(g: &crate::game::Game, gd: GuardId, e: crate::guard
 pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game::DownKind, by: crate::game::DownBy) {
     if !g.ai_enabled || by != crate::game::DownBy::Player { return; }
     let vc = g.gd[victim].ch;
-    let at = bone_or(g, vc, crate::character::Bone::Chest, 1.1);
+    let at = g.ch[vc].bone_or(crate::character::Bone::Chest, 1.1);
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -198,7 +185,7 @@ pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>
     crate::mind::cap(g, gd, 0.8, "guards");
     g.gd[gd].search_plan = None;
     reset_chase(g, gd);
-    clear_path(g, gd);
+    g.gd[gd].drop_path();
     if let Some(b) = bark {
         if !b.is_empty() { crate::game::game_say(g, gd, b, None, None); }   // (`if (bark)`: an empty line is no line)
     }
@@ -249,7 +236,7 @@ pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) ->
         return None;
     }
     let bp = body_pos(g, b);
-    let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let d_b = v3::dist_xz(g.ch[c].pos, bp);
     let see_body = d_b < 8.0 && !crate::scene_collision::segment_blocked(g, eye, [bp[0], 0.4, bp[2]], None, None, None);
     let on_body: V3 = [bp[0], 0.35, bp[2]];
@@ -288,7 +275,7 @@ fn goes_to_the_body(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
             let s = cover_spot(g, gd, bp, if d0.role == Role::Finder { 1.5 } else { 2.1 });
             with_duty(g, gd, |d| d.spot = Some(s));
             crate::mind::fix(g, gd, Some(v3::copy(s)), "guards");
-            clear_path(g, gd);
+            g.gd[gd].drop_path();
             g.gd[gd].stall_ref = None;
             s
         }
@@ -305,7 +292,7 @@ fn goes_to_the_body(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
     let move_ = g.gd[gd].speed;
     if arrived || (d_b < 2.6 && see_body && v3::dist_xz(g.ch[c].pos, sp) < 1.5) {
         with_duty(g, gd, |d| d.t = 0.0);
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         if (arrived && d_b < 3.5) || see_body {
             stands_by_the_body(g, w);
         } else {
@@ -363,7 +350,7 @@ fn covers_the_body(g: &mut Game, w: BodyDuty) -> crate::guards::BodyAftermath {
     if done {
         with_duty(g, gd, |d| d.t = 0.0);
         let s = widens_out(g, w);
-        clear_path(g, gd);
+        g.gd[gd].drop_path();
         if let Some(s) = s { crate::mind::fix(g, gd, Some(v3::copy(s)), "guards"); }
     }
     crate::guards::BodyAftermath { move_: 0.0, aim: Some(on_body) }
@@ -439,7 +426,7 @@ pub fn shot_origin(g: &crate::game::Game, c_2: CharId) -> V3 {
     if g.ch[c_2].anim.long_gun {
         if let Some(h) = g.ch[c_2].bones.get(crate::character::Bone::HandR) { return v3::copy(*h); }
     }
-    bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4)
+    g.ch[c_2].bone_or(crate::character::Bone::UpperArmR, 1.4)
 }
 
 /// Nothing a round would stop in between his gun and `to`, less the body's breadth at the far end.
@@ -496,7 +483,7 @@ fn line_geom_of(from: V3, to: V3, h: V3, y0: f64, y1: f64, vel: V3) -> Option<cr
 /// The nearest living colleague in this man's intended line of aim, or None.
 pub fn colleague_in_line(g: &crate::game::Game, gd: GuardId, to: V3, except: Option<GuardId>) -> Option<GuardId> {
     let c = g.gd[gd].ch;
-    let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
+    let from = g.ch[c].bone_or(crate::character::Bone::UpperArmR, 1.4);
     let l = m::hyp2(to[0] - from[0], to[2] - from[2]);
     if l < 0.01 { return None; }
     let t_max = 1.0 + MUZZLE_PAST_M / l;
@@ -547,7 +534,7 @@ pub fn round_past_colleague(g: &crate::game::Game, gd: GuardId, to: V3, except: 
 
 /// The point MUZZLE_REACH_M out along where his gun is held, or where that line meets the floor.
 pub fn aim_ahead(g: &crate::game::Game, c_2: CharId) -> V3 {
-    let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
+    let from = g.ch[c_2].bone_or(crate::character::Bone::UpperArmR, 1.4);
     aim_ahead_of(from, g.ch[c_2].aim_pitch, g.ch[c_2].aim_yaw)
 }
 /// aimAhead's arithmetic
@@ -586,7 +573,7 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
     if let Some(ob) = o { calls_out_the_line(g, gd, ob); }
     if step_goes_on(g, gd, c, dt) { return crate::guards::LineStep::Step; }
     let Some(ob) = o else { return crate::guards::LineStep::Clear };
-    let from = bone_or(g, c, crate::character::Bone::UpperArmR, 1.4);
+    let from = g.ch[c].bone_or(crate::character::Bone::UpperArmR, 1.4);
     let geom = match line_geom(g, from, aim_at, ob) { Some(x) if !(x.t > 0.97) => x, _ => return crate::guards::LineStep::None };
     let pos = g.ch[c].pos;
     let (dx, dz) = (aim_at[0] - pos[0], aim_at[2] - pos[2]);
@@ -641,7 +628,7 @@ fn calls_out_the_line(g: &mut Game, gd: GuardId, ob: GuardId) {
 
 /// His side-step ends: no path, and his line's clocks back to none.
 fn step_ended(g: &mut Game, gd: GuardId) {
-    clear_path(g, gd);
+    g.gd[gd].drop_path();
     let man = &mut g.gd[gd];
     man.stall_ref = None;
     man.line_side = 0.0;

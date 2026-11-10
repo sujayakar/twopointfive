@@ -2,6 +2,7 @@
 
 pub use ::game_types::rescueflow::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -12,11 +13,6 @@ use alloc::{string::String, vec, vec::Vec};
 /// `inBounds(p, r)` of a scenario's rectangle.
 fn in_rect(p: V3, r: &crate::scene_scenarios::Rect) -> bool {
     crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
-}
-
-/// `g.col.segmentBlocked(a, b)`, the sight line with the collision's own defaults.
-fn blocked(g: &Game, a: V3, b: V3) -> bool {
-    crate::scene_collision::segment_blocked(g, a, b, None, None, None)
 }
 
 /// The door of an opening, if it names one and the level has it.
@@ -34,10 +30,6 @@ fn set_hot(g: &mut Game, r: RescueflowRegionId, h: GuardId, t: f64, at: V3) {
         crate::rescue::rescue_note(g, &note);
     }
     g.tab.rescueflow_region[r].hot.set(h, RegionHotValue { t, at: v3::copy(at) });
-}
-
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// The level's route data; None = this level's rescue has no flow.
@@ -149,7 +141,7 @@ fn rescue_flow_lookable(g: &crate::game::Game, k: &mut crate::rescueflow::Known)
     let pts = g.tab.rescueflow_region[k.region].pts.clone();
     for (i, p) in pts.iter().enumerate() {
         for e in eyes.iter() {
-            if flat(*e, *p) < eye_m && !blocked(g, *e, *p) {
+            if dist_xz(*e, *p) < eye_m && !crate::scene_collision::segment_blocked(g, *e, *p, None, None, None) {
                 k.lookable.push(i as f64);
                 break;
             }
@@ -195,7 +187,7 @@ fn rescue_flow_sees(g: &crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
         None => v3::add(g.ch[ch].pos, [0.0, 1.1, 0.0]),
     };
     for &e in eyes {
-        if flat(e, c) < 30.0 && !blocked(g, e, c) {
+        if dist_xz(e, c) < 30.0 && !crate::scene_collision::segment_blocked(g, e, c, None, None, None) {
             return true;
         }
     }
@@ -261,7 +253,7 @@ fn look_over_a_room(g: &mut Game, s: &Sensing) {
                 continue;
             }
             let p = g.tab.rescueflow_region[r].pts[i];
-            if flat(e, p) < eye_m && !blocked(g, e, p) {
+            if dist_xz(e, p) < eye_m && !crate::scene_collision::segment_blocked(g, e, p, None, None, None) {
                 g.tab.rescueflow_region[r].seen_t[i] = t;
             }
         }
@@ -340,7 +332,7 @@ fn gone_cold(g: &Game, r: RescueflowRegionId, e: RegionHotValue, s: &Sensing) ->
     let looked = (0..row.pts.len()).filter(|&i| row.seen_t[i] > e.t + 0.5).count() as f64;
     let share = looked / row.pts.len() as f64;
     let spot: V3 = [e.at[0], 1.1, e.at[2]];
-    share >= k.hot_empty && s.eyes.iter().any(|&eye| flat(eye, spot) < k.eye_m && !blocked(g, eye, spot))
+    share >= k.hot_empty && s.eyes.iter().any(|&eye| dist_xz(eye, spot) < k.eye_m && !crate::scene_collision::segment_blocked(g, eye, spot, None, None, None))
 }
 
 /// A room is cleared with nobody of theirs known in it and, once, a man in it with enough of its floor lately seen.
@@ -401,7 +393,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
         }
         let Some(a) = crate::orders::squad_orders_of(seat, op) else { continue };
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
-        if flat(g.ch[g.gd[op].ch].pos, post) > 1.2 {
+        if dist_xz(g.ch[g.gd[op].ch].pos, post) > 1.2 {
             continue;
         }
         if let Some(j) = g.rescue.flow.jobs.get(op) {
@@ -419,7 +411,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
             None => false,
         };
         let on_watch = match row.watch {
-            Some(w) => flat(post, o.at) < 6.0 && (flat(w, o.at) < 1.5 || flat(w, o.watch) < 1.5),
+            Some(w) => dist_xz(post, o.at) < 6.0 && (dist_xz(w, o.at) < 1.5 || dist_xz(w, o.watch) < 1.5),
             None => false,
         };
         if on_door || on_watch {
@@ -567,7 +559,7 @@ fn way_into_side_room(g: &mut Game, route: &[crate::scene_scenarios::RouteOpenin
         return;
     }
     let (t, sam) = (now.t, now.sam);
-    let nearest = route.iter().filter(|x| x.region == *id).reduce(|a, x| if flat(a.at, sam) <= flat(x.at, sam) { a } else { x });
+    let nearest = route.iter().filter(|x| x.region == *id).reduce(|a, x| if dist_xz(a.at, sam) <= dist_xz(x.at, sam) { a } else { x });
     let recent = matches!(g.rescue.flow.corr, Some(c) if t - c.t < 0.5);
     g.rescue.flow.came_in = match nearest {
         Some(o) if recent => Some(RescueFlowCameIn { region: id.clone(), o: o.clone(), t }),
@@ -655,7 +647,7 @@ fn corridor_man_turn(g: &mut Game, gd: GuardId, now: &FlowNow) {
 
 /// The moment he got to his mark, written the frame he does; NaN until then.
 fn on_his_mark_since(g: &mut Game, gd: GuardId, job: &OnJob, pos: V3, t: f64) -> f64 {
-    if job.on_t.is_nan() && (g.tab.orders_assignment[job.a].arrived || flat(pos, job.mark) < 0.6) {
+    if job.on_t.is_nan() && (g.tab.orders_assignment[job.a].arrived || dist_xz(pos, job.mark) < 0.6) {
         g.rescue.flow.jobs.get_mut(gd).unwrap().on_t = t;
         return t;
     }
@@ -1020,9 +1012,9 @@ pub(super) fn rescue_flow_check(g: &mut crate::game::Game) -> Vec<String> {
         let is_door = o.kind == crate::scene_scenarios::RouteOpeningKind::Door;
         let eye: V3 = [o.mark[0], EYE, o.mark[2]];
         let w = o.watch;
-        let d = flat(eye, w);
+        let d = dist_xz(eye, w);
         let s = if is_door { m::max(0.0, d - 0.5) / d } else { 1.0 };
-        if blocked(g, eye, [eye[0] + (w[0] - eye[0]) * s, w[1], eye[2] + (w[2] - eye[2]) * s]) {
+        if crate::scene_collision::segment_blocked(g, eye, [eye[0] + (w[0] - eye[0]) * s, w[1], eye[2] + (w[2] - eye[2]) * s], None, None, None) {
             bad.push(alloc::format!("{}: no line from the cover mark to its watch point", o.id));
         }
         if let Some(n) = o.door.as_deref().filter(|n| !n.is_empty()) {

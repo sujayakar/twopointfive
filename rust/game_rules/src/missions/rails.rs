@@ -508,7 +508,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it)
     let menu = if up { seat.orders.menu.as_ref() } else { None };
     let on = menu.map_or(false, |x| t.at.map_or(true, |at| {
-        let p = crate::orders::order_target_at(&x.target);
+        let p = x.target.at();
         m::hyp2(p[0] - at[0], p[2] - at[2]) < MENU_M
     }));
     let ring = if on { t.menu_line.as_ref().filter(|l| !l.is_empty()) } else { None };

@@ -124,7 +124,7 @@ fn count_alarms_and_sightings(g: &mut Game) {
 
 /// Inside the errand's area the drive begins.
 fn reach_the_area(g: &mut Game) {
-    let p = player_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     let (x0, x1, z0, z1) = {
         let r = &g.level.errand.area;
         (r.x0, r.x1, r.z0, r.z1)
@@ -139,7 +139,7 @@ fn reach_the_area(g: &mut Game) {
 
 /// The pull: begun when he asks, stopped when he leaves it or does something else, done when its time is up.
 fn work_the_drive(g: &mut Game, dt: f64) {
-    let p = player_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     let in_reach = rack_dist(g, p) < crate::consts::DRIVE_REACH;
     let pl = g.player;
     let Some(&at_it) = g.pl[pl].taking() else {
@@ -177,7 +177,7 @@ fn begin_the_pull_if_asked(g: &mut Game) {
 
 /// Out through a way out, the mission is done.
 fn get_out(g: &mut Game) {
-    let p = player_pos(g, &crate::seats::here(g));
+    let p = g.seat_pos(&crate::seats::here(g));
     if out_now(g, p) {
         let by = exit_taken(g, p).map_or_else(|| g.level.errand.outs(), |x| x.name);
         crate::chronicle::chron_objective(g, &format!("out through {} — mission complete", by), None);
@@ -352,7 +352,7 @@ fn stage_place(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
         MissionStage::Infiltrate => door_centre(g, &g.level.errand.door),
         MissionStage::Drive => Some(g.level.errand.front),
         // (the nearest of its ways out)
-        MissionStage::Exfil => nearest_exit(g, player_pos(g, seat)).map(|x| door_centre(g, &x.door).unwrap_or_else(|| crate::quiet::exit_point(&x, Some(0.0)))),
+        MissionStage::Exfil => nearest_exit(g, g.seat_pos(seat)).map(|x| door_centre(g, &x.door).unwrap_or_else(|| crate::quiet::exit_point(&x, Some(0.0)))),
         _ => None,
     }
 }
@@ -389,11 +389,6 @@ fn drive_percent(drive_t: f64) -> String {
 /// `g.doors.byName(name)?.frameCentre ?? null`.
 fn door_centre(g: &Game, name: &str) -> Option<V3> {
     crate::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre)
-}
-
-/// `g.player.char.pos`, read where the TypeScript's alias `p` is read.
-fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    g.ch[g.pl[seat.player].ch].pos
 }
 
 #[cfg(test)]

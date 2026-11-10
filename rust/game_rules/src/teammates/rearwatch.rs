@@ -1,5 +1,6 @@
 pub use ::game_types::rearwatch::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -14,10 +15,6 @@ macro_rules! book {
     };
 }
 
-fn flat(a: V3, b: V3) -> f64 {
-    v3::dist_xz(a, b)
-}
-
 // ---- small reads
 
 fn of(g: &Game, m: GuardId) -> Option<OrdersAssignmentId> {
@@ -29,9 +26,6 @@ fn post_of(g: &Game, m: GuardId) -> Option<V3> {
 }
 fn spare_of(g: &Game, a: OrdersAssignmentId) -> bool {
     g.tab.orders_assignment[a].spare.unwrap_or(false)
-}
-fn pos_of(g: &Game, m: GuardId) -> V3 {
-    g.ch[g.gd[m].ch].pos
 }
 fn pin_row(g: &Game, key: PlayerId, m: GuardId) -> Option<RearPin> {
     g.m.rearwatch.books.get(key).unwrap().pins.get(m).copied()
@@ -116,7 +110,7 @@ pub fn rear_ways(g: &mut crate::game::Game, door: DoorId, side: f64, marks: &[V3
         if !(is_open_way(g, od) || kept_shut) {
             continue;
         }
-        let dists: Vec<f64> = marks.iter().map(|q| flat(at, *q)).collect();
+        let dists: Vec<f64> = marks.iter().map(|q| dist_xz(at, *q)).collect();
         let d = m::min_n(&dists);
         if d > reach {
             continue;
@@ -132,7 +126,7 @@ pub fn rear_ways(g: &mut crate::game::Game, door: DoorId, side: f64, marks: &[V3
         if f.floor && !has_a && !has_b {
             continue;
         }
-        let far_is_a = if f.floor && has_a != has_b { !has_a } else { flat(a, c) >= flat(b, c) };
+        let far_is_a = if f.floor && has_a != has_b { !has_a } else { dist_xz(a, c) >= dist_xz(b, c) };
         let far = if far_is_a { a } else { b };
         let near = if far_is_a { b } else { a };
         let far_side = crate::orders::side_of(g, od, far);
@@ -168,7 +162,7 @@ fn short_of(g: &mut Game, key: PlayerId, m: GuardId) -> bool {
         Some(q) => q,
         None => return false,
     };
-    let d = flat(pos_of(g, m), q);
+    let d = dist_xz(g.pos_of(m), q);
     if d < 0.35 || d >= 1.0 {
         book!(g, key).short.delete(a);
         return false;
@@ -209,7 +203,7 @@ fn had_of(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId], lane: Option<G
 fn keep_eyes_spare(g: &mut Game, a: OrdersAssignmentId, op: DoorOpId, m: GuardId) {
     g.tab.orders_assignment[a].spare = Some(true);
     if g.tab.orders_assignment[a].from.is_none() {
-        let p = pos_of(g, m);
+        let p = g.pos_of(m);
         let from = g.tab.doortools_door_op[op].from.get(m).copied().unwrap_or([p[0], 0.0, p[2]]);
         g.tab.orders_assignment[a].from = Some(from);
     }
@@ -218,7 +212,7 @@ fn keep_eyes_spare(g: &mut Game, a: OrdersAssignmentId, op: DoorOpId, m: GuardId
 /// Who of a stack should have this way: a line from where he is, then into the doorway, then the man already on it.
 fn rank(g: &Game, key: PlayerId, op: Option<DoorOpId>, m: GuardId, o: CoverOpeningId, front: V3) -> f64 {
     let mut r = 0.0;
-    let p = pos_of(g, m);
+    let p = g.pos_of(m);
     if rear_sees(g, p, o, front).is_some() {
         r += 16.0;
     }
@@ -345,7 +339,7 @@ fn stack_formed(g: &Game, op: DoorOpId) -> bool {
     let op_men = g.tab.doortools_door_op[op].men.clone();
     op_men.iter().all(|&m| {
         if crate::condition::down(g, g.gd[m].ch) { return true; }
-        mark_of(g, op, m).map_or(true, |q| flat(pos_of(g, m), q) < FORMED_M)
+        mark_of(g, op, m).map_or(true, |q| dist_xz(g.pos_of(m), q) < FORMED_M)
     })
 }
 
@@ -402,8 +396,8 @@ fn as_the_door_goes(g: &Game, key: PlayerId, op: DoorOpId, men: &[GuardId]) -> V
         Some(k) if out.contains(&k) => vec![k],
         _ if is_slow(phase) => {
             js::sort_by(&mut out, |a, b| {
-                let db = flat(post_of(g, *b).unwrap(), centre);
-                let da = flat(post_of(g, *a).unwrap(), centre);
+                let db = dist_xz(post_of(g, *b).unwrap(), centre);
+                let da = dist_xz(post_of(g, *a).unwrap(), centre);
                 db - da
             });
             out.iter().copied().take(1).collect()
@@ -524,7 +518,7 @@ fn who_watches(g: &Game, key: PlayerId, gr: &Group, ways: &[RearWaysItem], next:
             if js::truthy(c) {
                 return c;
             }
-            flat(post_of(g, *b).unwrap(), centre) - flat(post_of(g, *a).unwrap(), centre)
+            dist_xz(post_of(g, *b).unwrap(), centre) - dist_xz(post_of(g, *a).unwrap(), centre)
         });
         return Some(Pick { man: see[0], way: *w, blind });
     }
@@ -647,7 +641,7 @@ fn inner(g: &Game, o: CoverOpeningId, p: V3, k: f64) -> V3 {
 fn others(g: &mut Game, squad: &[GuardId], m: GuardId, room: RoomfightRoomId) -> Vec<GuardId> {
     let mut out = Vec::new();
     for &x in squad {
-        if x != m && room_of(g, pos_of(g, x)) == Some(room) {
+        if x != m && room_of(g, g.pos_of(x)) == Some(room) {
             out.push(x);
         }
     }
@@ -672,7 +666,7 @@ fn walk(g: &Game, far: &mut JsMap<GuardId, f64>, x: GuardId, sam_at: V3) -> f64 
     if let Some(l) = far.get(x) {
         return *l;
     }
-    let l = walk_to(g, pos_of(g, x), sam_at);
+    let l = walk_to(g, g.pos_of(x), sam_at);
     far.set(x, l);
     l
 }
@@ -728,7 +722,7 @@ fn stays_on_the_door(g: &mut Game, m: GuardId, door: DoorId, a0: OrdersAssignmen
         return None;
     }
     let o = crate::cover::cover_ready(g).into_iter().find(|&x| g.tab.cover_opening[x].door == Some(door))?;
-    let p = pos_of(g, m);
+    let p = g.pos_of(m);
     let front = inner(g, o, p, 0.7);
     let room = room_of(g, p).or_else(|| room_of(g, front))?;
     if crate::entrypoints::entry_points_far_known(g, o, inner(g, o, p, 0.4)) || door_worked(g, &crate::seats::here(g), door) {
@@ -739,7 +733,7 @@ fn stays_on_the_door(g: &mut Game, m: GuardId, door: DoorId, a0: OrdersAssignmen
         return None;
     }
     // (… and Sam is already too far off to stay behind for)
-    if g.k.rearwatch.room_m > 0.0 && flat(p, l.sam_at) > g.k.rearwatch.room_m {
+    if g.k.rearwatch.room_m > 0.0 && dist_xz(p, l.sam_at) > g.k.rearwatch.room_m {
         return None;
     }
     let to: Option<V3> = g.tab.orders_assignment[a0].watch.map(|w| [w[0], w[1], w[2]]);
@@ -758,7 +752,7 @@ fn forget_shut_doors(g: &mut Game, pl: PlayerId, l: &Leaving) {
         let w = *book!(g, pl).shut.get(door).unwrap();
         let gone = crate::entrypoints::entry_points_far_known(g, w.o, w.at)
             || door_worked(g, &crate::seats::here(g), door)
-            || !(l.squad.iter().any(|&x| room_of(g, pos_of(g, x)) == Some(w.room)) || sam_in_room(g, l, w.room));
+            || !(l.squad.iter().any(|&x| room_of(g, g.pos_of(x)) == Some(w.room)) || sam_in_room(g, l, w.room));
         if gone {
             book!(g, pl).shut.delete(door);
         }
@@ -796,7 +790,7 @@ fn keeps_his_door(g: &mut Game, pl: PlayerId, m: GuardId, l: &Leaving) {
 fn another_order(g: &mut Game, pl: PlayerId, m: GuardId, a: Option<OrdersAssignmentId>, r: &RoomKeep) {
     let (o, door) = (r.pin.o, r.pin.door);
     book!(g, pl).keeps.delete(m);
-    let at_him = inner(g, o, pos_of(g, m), 0.4);
+    let at_him = inner(g, o, g.pos_of(m), 0.4);
     let stays = a.is_some()
         && !is_open_way(g, door)
         && !crate::entrypoints::entry_points_far_known(g, o, at_him)
@@ -821,11 +815,11 @@ fn why_let_go(g: &mut Game, pl: PlayerId, m: GuardId, r: &RoomKeep, l: &Leaving)
     if !l.sam_up {
         return Some("the player is down");
     }
-    let at_him = inner(g, o, pos_of(g, m), 0.4);
+    let at_him = inner(g, o, g.pos_of(m), 0.4);
     if crate::entrypoints::entry_points_far_known(g, o, at_him) {
         return Some("the squad has been beyond it");
     }
-    if g.k.rearwatch.room_m > 0.0 && flat(pos_of(g, m), l.sam_at) > g.k.rearwatch.room_m {
+    if g.k.rearwatch.room_m > 0.0 && dist_xz(g.pos_of(m), l.sam_at) > g.k.rearwatch.room_m {
         return Some("the player has gone on");
     }
     if another_order_has_it(g, m, o, door, l) {
@@ -851,7 +845,7 @@ fn another_order_has_it(g: &Game, m: GuardId, o: CoverOpeningId, door: DoorId, l
         if x == m { return false; }
         let Some(xa) = of(g, x) else { return false };
         let row = &g.tab.orders_assignment[xa];
-        row.post.is_some() && (row.door == Some(door) || row.watch.map_or(false, |w| flat(w, o_at) < 1.5))
+        row.post.is_some() && (row.door == Some(door) || row.watch.map_or(false, |w| dist_xz(w, o_at) < 1.5))
     })
 }
 
@@ -897,7 +891,7 @@ fn bound_beyond(g: &mut Game, x: GuardId, room: RoomfightRoomId) -> bool {
 
 /// How far from `a` to `b` on foot: the straight line when nothing stands in it, else the nav grid's path.
 fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
-    let d = flat(a, b);
+    let d = dist_xz(a, b);
     if !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) {
         return d;
     }
@@ -905,7 +899,7 @@ fn walk_to(g: &crate::game::Game, a: V3, b: V3) -> f64 {
         Some(p) => p,
         None => return d + 20.0,
     };
-    crate::places::walk_len(a, &path) + flat(path.last().copied().unwrap_or(a), b)
+    crate::places::walk_len(a, &path) + dist_xz(path.last().copied().unwrap_or(a), b)
 }
 
 /// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book.
@@ -938,7 +932,7 @@ fn held_by_other(g: &crate::game::Game, g_2: &crate::rearwatch::Group, o: CoverO
         if let Some(a) = of(g, m) {
             let row = &g.tab.orders_assignment[a];
             if let Some(post) = row.post {
-                if flat(pos_of(g, m), post) <= 1.5 && ((od.is_some() && row.door == od) || row.watch.map_or(false, |w| flat(w, at) < 1.5)) {
+                if dist_xz(g.pos_of(m), post) <= 1.5 && ((od.is_some() && row.door == od) || row.watch.map_or(false, |w| dist_xz(w, at) < 1.5)) {
                     return true;
                 }
             }
@@ -958,7 +952,7 @@ pub fn rear_sees(g: &crate::game::Game, p: V3, o: CoverOpeningId, front: V3) -> 
     if s.is_some() {
         return s;
     }
-    let d = flat(p, front);
+    let d = dist_xz(p, front);
     if d <= g.k.rearwatch.reach && d > 0.9 && !crate::scene_collision::segment_blocked(g, [p[0], EYE, p[2]], front, None, None, None) {
         Some(front)
     } else {

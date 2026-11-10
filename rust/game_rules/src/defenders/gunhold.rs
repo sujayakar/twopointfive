@@ -1,5 +1,6 @@
 pub use ::game_types::gunhold::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -17,11 +18,6 @@ fn now_of(was: &str) -> String {
 /// This game's counters, the row itself: a game holds it from the start (`GunholdMod::blank`, and the TypeScript's Game as it is built).
 fn gun_hold_stats<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::gunhold::GunHoldStats {
     g.m.gunhold.stats_of.as_mut().expect("a game holds its gun-hold counters from the start")
-}
-
-/// Distance on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// The men of the standoff on this held man, living, in roster order.
@@ -174,7 +170,7 @@ fn open_at(g: &Game, from: V3, x: f64, h: f64, z: f64) -> bool {
 
 /// What a man on nav cell `i` shows Sam's gun from where the pair was last seen: 2 open, 1 open standing, 0 hidden; kept per cell.
 fn expo(g: &crate::game::Game, k: &mut crate::gunhold::Known, i: f64) -> f64 {
-    if flat(k.sam, k.expo_at) > 0.5 || g.time - k.expo_t > 1.5 {
+    if dist_xz(k.sam, k.expo_at) > 0.5 || g.time - k.expo_t > 1.5 {
         k.expo.clear();
         k.expo_at = v3::copy(k.sam);
         k.expo_t = g.time;
@@ -265,13 +261,13 @@ fn price_at(g: &Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
 fn way_to(g: &crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
     let start = g.ch[g.gd[gd].ch].pos;
     let path = crate::scene_collision::nav_grid_find_path(g, start, goal, Some(8000.0), Some(&mut |g: &Game, ix: f64, iz: f64| price_at(g, k, ix, iz)))?;
-    if path.is_empty() || flat(path[path.len() - 1], goal) > 0.6 {
+    if path.is_empty() || dist_xz(path[path.len() - 1], goal) > 0.6 {
         return None;
     }
     let (mut len, mut show, mut cur) = (0.0, 0.0, 0.0);
     let mut a = start;
     for &b in &path {
-        let d = flat(a, b);
+        let d = dist_xz(a, b);
         let steps = m::max(1.0, m::ceil(d / 0.4));
         let mut j = 1.0;
         while j <= steps {
@@ -345,7 +341,7 @@ fn pick_cover(g: &crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &mut c
     let pos = g.ch[g.gd[gd].ch].pos;
     let start = walk_starts_at(g, pos)?;
     let (mates, rivals) = spots_taken(g, gd, s);
-    let d0 = flat(pos, k.sam);
+    let d0 = dist_xz(pos, k.sam);
     let rear = k.facing + m::PI;
     let near = g.k.gunhold.near_m;
     let bad = g.m.gunhold.states.get(s).and_then(|r| r.bad); // `st.bad`: nothing below writes the row
@@ -416,7 +412,7 @@ fn walk_out_for_cover(g: &Game, k: &mut Known, look: &CoverLook, start: f64) -> 
                 for dx in [-1.0, 0.0, 1.0] {
                     let Some((i, x, z)) = step_to(g, &came, from, (dx, dz)) else { continue };
                     let p = centre(g, i);
-                    let d_s = flat(p, k.sam);
+                    let d_s = dist_xz(p, k.sam);
                     if d_s < look.near && d_s < look.d0 {
                         continue;
                     }
@@ -475,10 +471,10 @@ fn cover_score(g: &Game, k: &mut Known, look: &CoverLook, c: Reached) -> Option<
     if d_s < look.near + 0.5 {
         return None;
     }
-    if look.bad.map_or(false, |bad| flat(p, bad) < 0.8) {
+    if look.bad.map_or(false, |bad| dist_xz(p, bad) < 0.8) {
         return None;
     }
-    if look.mates.iter().any(|&m8| flat(m8, p) < 0.9) {
+    if look.mates.iter().any(|&m8| dist_xz(m8, p) < 0.9) {
         return None;
     }
     let mut score = depth * cell + (if e == 1.0 { 1.0 } else { 0.0 }) + (if d_s < look.d0 - 1.5 { 4.0 } else { 0.0 });
@@ -499,7 +495,7 @@ fn cover_score(g: &Game, k: &mut Known, look: &CoverLook, c: Reached) -> Option<
     if e == 2.0 {
         score += 2.5;
     }
-    if look.rivals.iter().any(|&r| flat(r, p) + 0.5 < flat(look.pos, p)) {
+    if look.rivals.iter().any(|&r| dist_xz(r, p) + 0.5 < dist_xz(look.pos, p)) {
         score += 3.0;
     }
     if look.round {
@@ -633,7 +629,6 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, k
         return false;
     }
     k.said_t = g.time;
-    let kind = kind;
     let pool = gun_hold_pool(g, gd, kind);
     let n = pool.len() as f64;
     let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];
@@ -704,13 +699,6 @@ fn out(g: &Game, f: Feet, move_: f64, run: bool, lk: Option<V3>, crouch: f64, qu
     Some(GunHoldFeet { move_, run, look, crouch, quiet })
 }
 
-/// He has no path now.
-fn drop_path(g: &mut Game, gd: GuardId) {
-    crate::game::guard_set_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
-}
-
 /// When his next look is due.
 fn next_peek(g: &mut Game, who: crate::dice::Who, now: f64) -> f64 {
     let every = g.k.gunhold.peek_every;
@@ -730,7 +718,7 @@ pub fn gun_hold_feet(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::
 fn feet(g: &mut Game, gd: GuardId, dt: f64, p: &crate::guards::Pair, s: GuardsStandoffId, fs: GunHoldFeetFs, k: &mut Known) -> Option<GunHoldFeet> {
     let c = g.gd[gd].ch;
     if let Some(shot_t) = g.pl[g.player].holding().map(|h| h.shot_t) {
-        let sensed = g.tab.guards_standoff[s].seen_t == g.time || flat(g.ch[c].pos, p.sam) < HEAR_M;
+        let sensed = g.tab.guards_standoff[s].seen_t == g.time || dist_xz(g.ch[c].pos, p.sam) < HEAR_M;
         learn_shot(g, k, shot_t, sensed);
     }
     if k.gun_t < 0.0 {
@@ -804,7 +792,7 @@ fn deal_him_in(g: &mut Game, gd: GuardId, s: GuardsStandoffId, k: &mut Known) {
         },
     );
     g.tab.guards_standoff[s].orbit_goal = None;
-    drop_path(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     if !k.said_gun && bark(g, gd, k, if k.shot_t >= 0.0 { BarkKind::Shot } else { BarkKind::Gun }, None) {
         k.said_gun = true;
@@ -819,7 +807,7 @@ fn on_his_line(g: &mut Game, f: Feet, fs: GunHoldFeetFs, k: &mut Known) -> bool 
     let at = g.ch[f.c].pos;
     let line_ok = fs.ok && !shown(g, k, at, false);
     let row = *st(g, f.s);
-    let sound = line_ok && (row.phase != Phase::Flank || row.goal.map_or(true, |goal| flat(at, goal) < 0.8) || fs.rear < (g.k.gunhold.rear_deg - 20.0) * v3::DEG);
+    let sound = line_ok && (row.phase != Phase::Flank || row.goal.map_or(true, |goal| dist_xz(at, goal) < 0.8) || fs.rear < (g.k.gunhold.rear_deg - 20.0) * v3::DEG);
     let keeps = row.phase == Phase::Line && (line_ok || (f.now - row.line_t < 0.4 && !faces_him(g, k, at)));
     if !sound && !keeps {
         if row.phase == Phase::Line {
@@ -834,7 +822,7 @@ fn on_his_line(g: &mut Game, f: Feet, fs: GunHoldFeetFs, k: &mut Known) -> bool 
     }
     if row.phase != Phase::Line {
         st(g, f.s).phase = Phase::Line;
-        drop_path(g, f.gd);
+        g.gd[f.gd].drop_path();
     }
     true
 }
@@ -883,7 +871,7 @@ fn settles_here(g: &mut Game, f: Feet, at: V3, low: bool) {
     row.phase = Phase::Cover;
     row.peek_t = peek_t;
     row.check_t = check_t;
-    drop_path(g, f.gd);
+    g.gd[f.gd].drop_path();
 }
 
 /// The run to his spot: there he takes cover; stuck, the spot is bad and he plans again.
@@ -902,13 +890,13 @@ fn runs_for_cover(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
         row.peek_t = peek_t;
         row.check_t = f.now + 0.4;
         row.plan_t = m::max(row.plan_t, f.now + 0.3);
-        drop_path(g, f.gd);
+        g.gd[f.gd].drop_path();
     } else if crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.5) {
         let row = st(g, f.s);
         row.bad = row.spot;
         row.spot = None;
         row.phase = Phase::Plan;
-        drop_path(g, f.gd);
+        g.gd[f.gd].drop_path();
         g.gd[f.gd].stall_ref = None;
     }
     let speed = g.gd[f.gd].speed;
@@ -954,7 +942,7 @@ fn keeps_cover(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
 fn last_step_onto_spot(g: &mut Game, f: Feet) {
     let Some(spot) = st(g, f.s).spot else { return stand(g, f) };
     let at = g.ch[f.c].pos;
-    let off = flat(at, spot);
+    let off = dist_xz(at, spot);
     if !(off > 0.06 && off < 0.6 && f.dt > 0.0) {
         return stand(g, f);
     }
@@ -1039,7 +1027,7 @@ fn peeks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
         if there || crate::guards::not_getting_anywhere(g, f.gd, f.dt, 1.2) {
             let peek_secs = g.k.gunhold.peek_secs;
             st(g, f.s).peek_end = f.now + peek_secs;
-            drop_path(g, f.gd);
+            g.gd[f.gd].drop_path();
         }
     } else {
         stand(g, f);
@@ -1073,7 +1061,7 @@ fn ends_the_look(g: &mut Game, f: Feet) {
     st(g, f.s).peek_t = peek_t;
     let at = g.ch[f.c].pos;
     match st(g, f.s).spot {
-        Some(spot) if flat(at, spot) > 0.3 => {
+        Some(spot) if dist_xz(at, spot) > 0.3 => {
             st(g, f.s).phase = Phase::Back;
             take(g, f.gd, &[v3::copy(spot)]);
         }
@@ -1095,7 +1083,7 @@ fn comes_back(g: &mut Game, f: Feet) -> Option<GunHoldFeet> {
         let row = st(g, f.s);
         row.phase = Phase::Cover;
         row.check_t = f.now + 0.5;
-        drop_path(g, f.gd);
+        g.gd[f.gd].drop_path();
     }
     let speed = g.gd[f.gd].speed;
     out(g, f, speed, false, None, f.low, false)
@@ -1121,7 +1109,7 @@ fn flanks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
         row.phase = Phase::Plan;
         row.plan_t = f.now + 0.5;
         row.goal = None;
-        drop_path(g, f.gd);
+        g.gd[f.gd].drop_path();
         g.gd[f.gd].stall_ref = None;
     }
     let speed = g.gd[f.gd].speed;
@@ -1132,7 +1120,7 @@ fn flanks(g: &mut Game, f: Feet, k: &mut Known) -> Option<GunHoldFeet> {
 /// Caught in the open, or his way gone stale with no new one to be had: he drops it and plans again.
 fn gives_up_the_way(g: &mut Game, f: Feet, k: &mut Known) -> bool {
     let stale = match st(g, f.s).plan_sam {
-        Some(plan_sam) => flat(plan_sam, k.sam) > 1.2 || m::abs(v3::wrap_angle(k.facing - st(g, f.s).plan_facing)) > 40.0 * v3::DEG,
+        Some(plan_sam) => dist_xz(plan_sam, k.sam) > 1.2 || m::abs(v3::wrap_angle(k.facing - st(g, f.s).plan_facing)) > 40.0 * v3::DEG,
         None => false,
     };
     if !(st(g, f.s).shown_t > 0.3 || (stale && f.now >= st(g, f.s).plan_t && g.m.gunhold.planned != Some(f.now))) {
@@ -1150,7 +1138,7 @@ fn gives_up_the_way(g: &mut Game, f: Feet, k: &mut Known) -> bool {
     let row = st(g, f.s);
     row.phase = Phase::Plan;
     row.bad = None;
-    drop_path(g, f.gd);
+    g.gd[f.gd].drop_path();
     true
 }
 
@@ -1167,7 +1155,7 @@ mod tests {
     // the TypeScript's own bits: bun, EXACT.on, Math.hypot(a[0] - b[0], a[2] - b[2])
     #[test]
     fn flat_matches_the_typescript() {
-        let d = flat([1.25, 9.0, -3.5], [4.75, -2.0, 7.125]);
+        let d = dist_xz([1.25, 9.0, -3.5], [4.75, -2.0, 7.125]);
         assert_eq!(d.to_bits(), FLAT_BITS);
     }
 

@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -38,14 +39,14 @@ fn track(g: &mut crate::game::Game) {
     if s.t == now { return; }
     let dt = now - s.t;
     s.t = now;
-    let stray = match s.trail.last() { Some(last) => flat(last.p, p) > 3.0, None => false };
+    let stray = match s.trail.last() { Some(last) => dist_xz(last.p, p) > 3.0, None => false };
     if dt < 0.0 || dt > 1.0 || stray {
         s.off += s.trail.len() as f64;
         s.trail.clear();
     }
     let max = m::ceil(g.k.sneak.trail_m / 0.4);
     let s = g.m.sneak.states.as_mut().unwrap();
-    let far_enough = match s.trail.last() { Some(last) => flat(last.p, p) >= 0.4, None => true };
+    let far_enough = match s.trail.last() { Some(last) => dist_xz(last.p, p) >= 0.4, None => true };
     if far_enough {
         s.trail.push(Crumb { p: [p[0], 0.0, p[2]], t: -1e9, lit: 0.0, low: true });
     }
@@ -86,9 +87,6 @@ pub fn sneak_tick(g: &mut crate::game::Game) -> bool {
 fn low_pace(g: &Game, v: f64, is_low: bool) -> f64 {
     if is_low { m::min(v, g.k.sneak.low_pace) } else { v }
 }
-fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    g.ch[g.pl[seat.player].ch].pos
-}
 /// A crumb's index on the trail now, from its absolute number; below 0 when it has been cut.
 fn idx(k: f64, off: f64) -> i64 {
     (k - off) as i64
@@ -124,7 +122,7 @@ fn ex(g: &mut Game, w: &mut Way, t: &mut [Crumb], k: i64, lo: bool) -> Exp {
     v
 }
 fn near_other(g: &Game, w: &Way, q: V3) -> bool {
-    w.others.iter().any(|o| flat(g.ch[g.gd[*o].ch].pos, q) < 0.7)
+    w.others.iter().any(|o| dist_xz(g.ch[g.gd[*o].ch].pos, q) < 0.7)
 }
 /// The sign of the turn from p to q to r on the floor (funnel's `o`).
 fn turn(px: f64, pz: f64, qx: f64, qz: f64, rx: f64, rz: f64) -> f64 {
@@ -134,7 +132,7 @@ fn turn(px: f64, pz: f64, qx: f64, qz: f64, rx: f64, rz: f64) -> f64 {
 fn funnel(g: &mut Game, w: &Way, q: V3, doors: &[DoorId], pad: f64, lit: &mut dyn FnMut(&mut Game) -> f64, lo: bool) -> bool {
     for &h in w.eyes.iter() {
         let e = g.ch[g.gd[h].ch].pos;
-        let ed = flat(e, q);
+        let ed = dist_xz(e, q);
         if ed > g.k.guard_eye.range { continue; }
         if ed >= g.k.sneak.near_m {
             let l = lit(g);
@@ -193,22 +191,22 @@ fn unseen_at(g: &mut Game, w: &Way, q: V3, lo: bool) -> bool {
 fn side_ok(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool, deep: f64) -> bool {
     let p = w.p;
     if crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) { return false; }
-    if flat(q, sam_pos(g, &crate::seats::here(g))) < g.k.sneak.stand_near + 0.3 { return false; }
+    if dist_xz(q, g.seat_pos(&crate::seats::here(g))) < g.k.sneak.stand_near + 0.3 { return false; }
     if near_other(g, w, q) { return false; }
-    if g.doors.list.iter().any(|d| flat(q, g.dr[*d].frame_centre) < 1.0) { return false; }
-    if flat(p, q) > 0.3 && (!straight(g, p, q) || !crate::scene_collision::nav_grid_walkable(g, p, q)) { return false; }
+    if g.doors.list.iter().any(|d| dist_xz(q, g.dr[*d].frame_centre) < 1.0) { return false; }
+    if dist_xz(p, q) > 0.3 && (!straight(g, p, q) || !crate::scene_collision::nav_grid_walkable(g, p, q)) { return false; }
     let c = t[w.i as usize].p;
-    if flat(q, c) > 2.7 || !unseen_at(g, w, q, lo) { return false; }
+    if dist_xz(q, c) > 2.7 || !unseen_at(g, w, q, lo) { return false; }
     let side_stop = g.k.sneak.side_stop;
     if side_stop > 0.0 {
-        let dp = flat(p, q);
+        let dp = dist_xz(p, q);
         if dp > 0.3 {
             for s in [side_stop / 2.0, side_stop] {
                 if !unseen_at(g, w, [q[0] + (p[0] - q[0]) * s / dp, 0.0, q[2] + (p[2] - q[2]) * s / dp], lo) { return false; }
             }
         }
     }
-    let d = flat(q, c);
+    let d = dist_xz(q, c);
     deep <= 0.0 || d <= deep || unseen_at(g, w, [q[0] + (c[0] - q[0]) * deep / d, 0.0, q[2] + (c[2] - q[2]) * deep / d], lo)
 }
 /// A spot off the trail he can step straight to when no step on it will do. `caught`: seen where he stands, so the spot he is on is no answer.
@@ -219,13 +217,13 @@ fn aside(g: &mut Game, w: &Way, t: &[Crumb], man: &mut Man, lo: bool, caught: bo
     let now = g.time;
     let at_crumb = t[w.i as usize].p;
     if let Some(ms) = man.side {
-        if !(caught && flat(p, ms) < 0.3) && flat(ms, at_crumb) < side_m + 1.0 && side_ok(g, w, t, ms, lo, 0.0) { return Some(ms); }
+        if !(caught && dist_xz(p, ms) < 0.3) && dist_xz(ms, at_crumb) < side_m + 1.0 && side_ok(g, w, t, ms, lo, 0.0) { return Some(ms); }
     }
     if now - man.side_t < 1.0 && now >= man.side_t { return None; }
     let mut best: Option<V3> = None;
     let mut bd = 1e9;
     let dc: Option<V3> = w.sam_doors.first().map(|d| g.dr[*d].frame_centre);
-    let d0 = match dc { Some(c) => flat(p, c), None => 0.0 };
+    let d0 = match dc { Some(c) => dist_xz(p, c), None => 0.0 };
     for deep in [0.55, 0.3] {
         if best.is_some() && dc.is_none() { break; }
         let mut r = 0.6;
@@ -233,8 +231,8 @@ fn aside(g: &mut Game, w: &Way, t: &[Crumb], man: &mut Man, lo: bool, caught: bo
             for a in 0..12 {
                 let a = a as f64;
                 let q: V3 = [p[0] + r * m::sin(a * m::PI / 6.0), 0.0, p[2] + r * m::cos(a * m::PI / 6.0)];
-                let d = r + 0.3 * flat(q, at_crumb) + (match dc {
-                    Some(c) => (if deep < 0.5 { 0.8 } else { 0.0 }) + 0.6 * m::max(0.0, flat(q, c) - d0),
+                let d = r + 0.3 * dist_xz(q, at_crumb) + (match dc {
+                    Some(c) => (if deep < 0.5 { 0.8 } else { 0.0 }) + 0.6 * m::max(0.0, dist_xz(q, c) - d0),
                     None => 0.0,
                 });
                 if d < bd && side_ok(g, w, t, q, lo, deep) {
@@ -252,14 +250,14 @@ fn aside(g: &mut Game, w: &Way, t: &[Crumb], man: &mut Man, lo: bool, caught: bo
 fn dark_ok(g: &mut Game, w: &mut Way, t: &mut [Crumb], k: i64, own: bool, lo: bool, strict: bool) -> bool {
     let p = w.p;
     let c = t[k as usize].p;
-    if own && flat(p, c) < 0.3 { return false; }
+    if own && dist_xz(p, c) < 0.3 { return false; }
     if ex(g, w, t, k, lo).seen { return false; }
     if near_other(g, w, c) { return false; }
     if in_line(g, w, t, k, lo) { return false; }
     if !strict { return true; }
     if !unseen_at(g, w, c, lo) { return false; }
     // shy: where he would be seen coming, or stop short
-    let d = flat(p, c);
+    let d = dist_xz(p, c);
     !(d > 0.4 && !unseen_at(g, w, [c[0] + (p[0] - c[0]) * 0.35 / d, 0.0, c[2] + (p[2] - c[2]) * 0.35 / d], lo))
 }
 /// The nearest step from crumb `at` that is not exposed: on towards Sam or back the way they came, within `standM`; -1: none.
@@ -271,8 +269,8 @@ fn dark(g: &mut Game, w: &mut Way, t: &mut [Crumb], at: i64, own: bool, lo: bool
     let mut bwd = -1;
     let mut bd = 0.0;
     let mut k = at + 1;
-    while k < len && fd < stand_m && (k <= w.place || flat(t[k as usize].p, sam_pos(g, &crate::seats::here(g))) >= stand_near) {
-        fd += flat(t[k as usize].p, t[(k - 1) as usize].p);
+    while k < len && fd < stand_m && (k <= w.place || dist_xz(t[k as usize].p, g.seat_pos(&crate::seats::here(g))) >= stand_near) {
+        fd += dist_xz(t[k as usize].p, t[(k - 1) as usize].p);
         if dark_ok(g, w, t, k, own, lo, strict) {
             fwd = k;
             break;
@@ -281,7 +279,7 @@ fn dark(g: &mut Game, w: &mut Way, t: &mut [Crumb], at: i64, own: bool, lo: bool
     }
     let mut k = at - 1;
     while k >= 0 && bd < stand_m {
-        bd += flat(t[k as usize].p, t[(k + 1) as usize].p);
+        bd += dist_xz(t[k as usize].p, t[(k + 1) as usize].p);
         if dark_ok(g, w, t, k, own, lo, strict) {
             bwd = k;
             break;
@@ -376,7 +374,7 @@ fn on_a_move_still(g: &Game, man: &mut Man, t: &[Crumb], at: &Follower) -> bool 
     let (p, off, len) = (at.p, at.off, t.len() as i64);
     if man.mode == Mode::Cross {
         let e = idx(man.cross_to, off);
-        if e < 0 || e >= len || at.i > e || flat(p, t[e as usize].p) < 0.3 || now - man.cross_t > g.k.sneak.cross_secs || now < man.cross_t {
+        if e < 0 || e >= len || at.i > e || dist_xz(p, t[e as usize].p) < 0.3 || now - man.cross_t > g.k.sneak.cross_secs || now < man.cross_t {
             man.mode = Mode::Walk;
             man.cross_from = -1.0;
             man.cross_to = -1.0;
@@ -385,8 +383,8 @@ fn on_a_move_still(g: &Game, man: &mut Man, t: &[Crumb], at: &Follower) -> bool 
     if man.mode == Mode::Back {
         let e = idx(man.stand, off);
         let there = match man.side {
-            Some(ms) => flat(p, ms) < 0.3,
-            None => e < 0 || e >= len || flat(p, t[e as usize].p) < 0.3,
+            Some(ms) => dist_xz(p, ms) < 0.3,
+            None => e < 0 || e >= len || dist_xz(p, t[e as usize].p) < 0.3,
         };
         if there || now - man.back_t > 4.0 || now < man.back_t {
             man.mode = Mode::Walk;
@@ -400,13 +398,13 @@ fn on_a_move_still(g: &Game, man: &mut Man, t: &[Crumb], at: &Follower) -> bool 
 /// What the read asks of the world: whose eyes, his mates, the doors Sam is at and the doors standing open.
 fn the_way(g: &mut Game, at: &Follower, eyes: Vec<GuardId>, keen_f: f64, card_f: f64) -> Way {
     let others: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|o| *o != at.gd).collect();
-    let sam = sam_pos(g, &crate::seats::here(g));
+    let sam = g.seat_pos(&crate::seats::here(g));
     let list = g.doors.list.clone();
     let door_m = g.k.sneak.door_m;
     let mut sam_doors: Vec<DoorId> = Vec::new();
     if door_m > 0.0 {
         for &d in list.iter() {
-            if !(flat(sam, g.dr[d].frame_centre) < door_m) { continue; }
+            if !(dist_xz(sam, g.dr[d].frame_centre) < door_m) { continue; }
             if leaf_moved(g, d) || m::abs(g.dr[d].leaf.angle) <= 0.03 { sam_doors.push(d); }
         }
     }
@@ -431,10 +429,10 @@ fn first_exposed(g: &mut Game, q: &mut Reading) -> Option<i64> {
     let reach = g.k.sneak.ahead_m * m::max(0.25, g.k.sneak.skill);
     let (p, i, lo) = (q.at.p, q.at.i, q.low_walk);
     let mut a = 0.0;
-    let k0 = if flat(p, q.t[i as usize].p) > 0.45 { i } else { i + 1 };
+    let k0 = if dist_xz(p, q.t[i as usize].p) > 0.45 { i } else { i + 1 };
     let mut k = k0;
     while k <= q.at.place && a < reach {
-        a += if k == k0 { flat(p, q.t[k as usize].p) } else { flat(q.t[(k - 1) as usize].p, q.t[k as usize].p) };
+        a += if k == k0 { dist_xz(p, q.t[k as usize].p) } else { dist_xz(q.t[(k - 1) as usize].p, q.t[k as usize].p) };
         if ex(g, &mut q.w, q.t, k, lo).seen || in_line(g, &q.w, q.t, k, lo) { return Some(k); }
         k += 1;
     }
@@ -448,7 +446,7 @@ fn the_stretch(g: &mut Game, q: &mut Reading, first: i64) -> Stretch {
     let mut sp = Stretch { end: -1, last: first, metres: 0.0, watched: false, lit: false, by: None };
     let mut k = first;
     while k < len && k < first + 60 {
-        if k > place && flat(q.t[k as usize].p, sam_pos(g, &crate::seats::here(g))) < stand_near { break; }
+        if k > place && dist_xz(q.t[k as usize].p, g.seat_pos(&crate::seats::here(g))) < stand_near { break; }
         if !ex(g, &mut q.w, q.t, k, lo).seen && !in_line(g, &q.w, q.t, k, lo) {
             sp.end = k;
             break;
@@ -458,7 +456,7 @@ fn the_stretch(g: &mut Game, q: &mut Reading, first: i64) -> Stretch {
         sp.by = sp.by.or(x.by);
         sp.last = k;
         sp.lit = sp.lit || (x.seen && !x.near);
-        if k > first { sp.metres += flat(q.t[(k - 1) as usize].p, q.t[k as usize].p); }
+        if k > first { sp.metres += dist_xz(q.t[(k - 1) as usize].p, q.t[k as usize].p); }
         k += 1;
     }
     sp
@@ -547,7 +545,7 @@ fn stood_at_his_place(g: &mut Game, q: &mut Reading) {
     let at = m::min(q.at.place as f64, (q.t.len() as i64 - 1) as f64) as i64;
     if !(ex(g, &mut q.w, q.t, at, lo).seen || in_line(g, &q.w, q.t, at, lo)) { return; }
     let k = dark(g, &mut q.w, q.t, at, false, lo, false);
-    if k >= 0 || flat(q.at.p, q.t[at as usize].p) < g.k.sneak.side_m + 0.5 {
+    if k >= 0 || dist_xz(q.at.p, q.t[at as usize].p) < g.k.sneak.side_m + 0.5 {
         step_or_aside(g, q, k, false);
     }
 }
@@ -582,7 +580,7 @@ fn keeps_his_spot(g: &mut Game, q: &mut Reading) {
     if q.side.is_some() { return; }
     let Some(ms) = q.man.side else { return };
     let side_m = g.k.sneak.side_m;
-    if (q.mode == Mode::Wait || (q.mode == Mode::Walk && q.at.stopped && q.at.rem <= q.at.gap + side_m + 0.5)) && flat(ms, q.t[q.at.i as usize].p) < side_m + 1.0 {
+    if (q.mode == Mode::Wait || (q.mode == Mode::Walk && q.at.stopped && q.at.rem <= q.at.gap + side_m + 0.5)) && dist_xz(ms, q.t[q.at.i as usize].p) < side_m + 1.0 {
         let lo = crouch_out(q.man, q.at.low, q.mode);
         if side_ok(g, &q.w, q.t, ms, lo, 0.0) { q.side = Some(ms); }
     }
@@ -643,7 +641,7 @@ fn lay(g: &Game, man: &mut Man, t: &[Crumb], p: V3, i: i64, to: i64) -> V3 {
     let goal = t[to as usize].p;
     let mut path: Vec<V3> = Vec::new();
     if to >= i {
-        let mut k = if flat(p, t[i as usize].p) > 0.45 { i } else { i + 1 };
+        let mut k = if dist_xz(p, t[i as usize].p) > 0.45 { i } else { i + 1 };
         while k <= to {
             let c = t[k as usize].p;
             path.push([c[0], 0.0, c[2]]);
@@ -687,7 +685,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, ask: Asked) -> Feet {
     let i = back_with_him(man, &s.trail, p, i, off);
     man.i = i as f64 + off;
     if man.hid_i >= 0.0 && m::abs(man.i - man.hid_i) >= 3.0 { man.hid_i = -1.0; }
-    let sam = sam_pos(g, &crate::seats::here(g));
+    let sam = g.seat_pos(&crate::seats::here(g));
     let gap = ask.back + g.k.sneak.back;
     let (rem, place) = the_trail_to_sam(&s.trail, i, sam, gap);
     let at = Follower { gd, p, i, place, off, low, rem, gap, stopped: ask.stopped };
@@ -702,7 +700,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, ask: Asked) -> Feet {
 fn found_on_the_trail(g: &Game, t: &[Crumb], man: &mut Man, p: V3, off: f64) -> Option<i64> {
     let now = g.time;
     let i = idx(man.i, off);
-    if !(i < 0 || i >= t.len() as i64 || flat(p, t[i as usize].p) > 3.0) { return Some(i); }
+    if !(i < 0 || i >= t.len() as i64 || dist_xz(p, t[i as usize].p) > 3.0) { return Some(i); }
     if now - man.lost_t < 0.5 && now >= man.lost_t { return None; }
     let Some(i) = nearest_crumb(g, t, p) else {
         man.lost_t = now;
@@ -725,7 +723,7 @@ fn nearest_crumb(g: &Game, t: &[Crumb], p: V3) -> Option<i64> {
     let mut k = t.len() as i64 - 1;
     while k >= 0 {
         let c = t[k as usize].p;
-        let d = flat(p, c);
+        let d = dist_xz(p, c);
         if d < bd - 0.05 && (d < 0.8 || crate::scene_collision::nav_grid_walkable(g, p, c)) {
             bd = d;
             best = Some(k);
@@ -739,7 +737,7 @@ fn nearest_crumb(g: &Game, t: &[Crumb], p: V3) -> Option<i64> {
 fn further_on(g: &Game, t: &[Crumb], p: V3, i: i64) -> i64 {
     (i + 1..t.len() as i64).rev().find(|&k| {
         let c = t[k as usize].p;
-        let d = flat(p, c);
+        let d = dist_xz(p, c);
         d < 0.5 || (d < 0.9 && k - i > 12 && straight(g, p, c))
     }).unwrap_or(i)
 }
@@ -749,7 +747,7 @@ fn back_with_him(man: &Man, t: &[Crumb], p: V3, i: i64, off: f64) -> i64 {
     if man.mode != Mode::Stand && man.mode != Mode::Back { return i; }
     let st = idx(man.stand, off);
     if st < 0 || st >= i { return i; }
-    (st..i).find(|&k| flat(p, t[k as usize].p) < 0.45).unwrap_or(i)
+    (st..i).find(|&k| dist_xz(p, t[k as usize].p) < 0.45).unwrap_or(i)
 }
 
 /// The walk from crumb `i` to Sam, and the crumb his place in the file is at (never behind him).
@@ -758,14 +756,14 @@ fn the_trail_to_sam(t: &[Crumb], i: i64, sam: V3, gap: f64) -> (f64, i64) {
     let mut rem = 0.0;
     let mut k = i;
     while k < len - 1 {
-        rem += flat(t[k as usize].p, t[(k + 1) as usize].p);
+        rem += dist_xz(t[k as usize].p, t[(k + 1) as usize].p);
         k += 1;
     }
-    rem += flat(t[(len - 1) as usize].p, sam);
+    rem += dist_xz(t[(len - 1) as usize].p, sam);
     let mut place = len - 1;
-    let mut a = flat(t[(len - 1) as usize].p, sam);
+    let mut a = dist_xz(t[(len - 1) as usize].p, sam);
     while place > 0 && a < gap {
-        a += flat(t[place as usize].p, t[(place - 1) as usize].p);
+        a += dist_xz(t[place as usize].p, t[(place - 1) as usize].p);
         place -= 1;
     }
     (rem, if place < i { i } else { place })
@@ -777,7 +775,7 @@ fn his_feet(g: &Game, man: &mut Man, t: &[Crumb], at: &Follower, sam_v: f64) -> 
     let low_now = crouch_out(man, at.low, man.mode);
     let to_it = if man.mode == Mode::Back { m::min(g.k.sneak.low_pace, 1.2) } else { low_pace(g, 1.0, low_now) };
     if let (Some(ms), true) = (man.side, man.mode != Mode::Cross) {
-        let speed = if flat(p, ms) < 0.25 { 0.0 } else { to_it };
+        let speed = if dist_xz(p, ms) < 0.25 { 0.0 } else { to_it };
         return Feet { goal: Some(ms), speed, crouch: low_now, must: Some(true) };
     }
     if man.mode == Mode::Wait { return Feet { goal: None, speed: 0.0, crouch: low_now, must: None }; }
@@ -785,7 +783,7 @@ fn his_feet(g: &Game, man: &mut Man, t: &[Crumb], at: &Follower, sam_v: f64) -> 
         let st = idx(man.stand, at.off);
         if st >= 0 && st < t.len() as i64 {
             let c = t[st as usize].p;
-            let goal = if flat(p, c) < 0.3 { c } else { lay(g, man, t, p, at.i, st) };
+            let goal = if dist_xz(p, c) < 0.3 { c } else { lay(g, man, t, p, at.i, st) };
             return Feet { goal: Some(goal), speed: to_it, crouch: low_now, must: Some(true) };
         }
         if man.mode == Mode::Back { return Feet { goal: None, speed: 0.0, crouch: low_now, must: None }; }
@@ -803,14 +801,14 @@ fn walking_his_steps(g: &Game, man: &mut Man, t: &[Crumb], at: &Follower, sam_v:
     if to_place < 0.25 && !crossing {
         let c = t[place as usize].p;
         let goal = if place > i { lay(g, man, t, p, i, place) } else { c };
-        let speed = if at.stopped && flat(p, c) < 0.3 { 0.0 } else { low_pace(g, m::max(k_.min_pace, sam_v), low_now) };
+        let speed = if at.stopped && dist_xz(p, c) < 0.3 { 0.0 } else { low_pace(g, m::max(k_.min_pace, sam_v), low_now) };
         return Feet { goal: Some(goal), speed, crouch: low_now, must: None };
     }
     let mut j = i;
     let mut a = 0.0;
     let lim = if crossing { m::max(place as f64, m::min((t.len() as i64 - 1) as f64, man.cross_to - at.off)) as i64 } else { place };
     while j < lim && a < 2.6 {
-        a += flat(t[j as usize].p, t[(j + 1) as usize].p);
+        a += dist_xz(t[j as usize].p, t[(j + 1) as usize].p);
         j += 1;
     }
     let v = if crossing { k_.cross_pace } else { m::max(k_.min_pace, m::min(2.2, sam_v + 1.5 * (to_place - 0.3))) };
@@ -866,7 +864,7 @@ pub fn sneak_way(g: &mut crate::game::Game, gd: GuardId, goal: V3) {
     };
     if !has_way { return; }
     if let Some(pg) = g.gd[gd].path_goal {
-        if flat(pg, goal) < 0.05 && g.gd[gd].path_i < g.gd[gd].path.len() { return; }
+        if dist_xz(pg, goal) < 0.05 && g.gd[gd].path_i < g.gd[gd].path.len() { return; }
     }
     let way = g.m.sneak.states.as_mut().unwrap().men.get_mut(gd).unwrap().way.take().unwrap();
     crate::game::guard_set_path(g, gd, way);

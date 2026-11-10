@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::vec;
 
 /// A new record: empty maps, frame 0; its one argument was the game.
-pub fn floor_seen_new(g: &crate::game::Game) -> crate::floorseen::FloorSeen {
+pub fn floor_seen_new() -> crate::floorseen::FloorSeen {
     crate::floorseen::FloorSeen::blank()
 }
 
@@ -105,7 +105,7 @@ mod tests {
         assert_eq!((0.7f64 as f32 as f64).to_bits(), 0x3FE6666660000000);
         let mut g = Game::blank();
         let gd = GuardId(0);
-        let mut seen = floor_seen_new(&mut g);
+        let mut seen = floor_seen_new();
         seen.at.set(gd, vec![0.1f64 as f32, 0.7f64 as f32, NEVER as f32]);
         g.sets[g.seat].door_tools.seen = Some(seen);
         // 0.1 rounds up and counts at 0.1; 0.7 rounds down and does not count at 0.7; cell 2 was never seen; cell 9 is past the array.

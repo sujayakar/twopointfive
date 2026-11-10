@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,10 +10,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// `this` of a Clearing method: the one at `g.clearing`; every caller has just tested it, and nothing a method calls clears it.
 macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
 
-/// g.blackout.active
-fn blackout_active(g: &Game) -> bool {
-    g.light_home.mains.active
-}
 /// gd.task.pos, which every arm of the union has
 fn task_pos(t: &crate::game::GuardTask) -> V3 {
     match t {
@@ -78,7 +75,7 @@ pub fn clearing_new(g: &crate::game::Game, rooms: &[Vec<crate::scene_level::Room
     c.rooms = rooms.to_vec();
     c.a = a;
     c.b = b;
-    c.dark = blackout_active(g);
+    c.dark = g.light_home.mains.active;
     c.cur = rooms.first().and_then(|v| v.first()).cloned();
     c
 }
@@ -135,7 +132,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         return false;
     }
     let dark = cl!(g).dark;
-    if blackout_active(g) && !dark {
+    if g.light_home.mains.active && !dark {
         for &gd in &men {
             let (aw, to) = match &g.gd[gd].task { Some(t) => (0.42, Some(task_pos(t))), None => (0.34, None) };
             break_off(g, gd, aw, to);
@@ -253,7 +250,7 @@ fn on_the_approach(g: &mut Game, men: &[GuardId]) -> bool {
     let c = cl!(g);
     if w.da < 0.9 && c.t_near.is_nan() { c.t_near = c.t; }
     let (t, t_near, eta) = (c.t, c.t_near, c.eta);
-    if out && ((w.da < 0.9 && (w.db < 1.0 || t > t_near + 3.5)) || (t > eta && flat(w.apos, stack0) < 5.0)) {
+    if out && ((w.da < 0.9 && (w.db < 1.0 || t > t_near + 3.5)) || (t > eta && dist_xz(w.apos, stack0) < 5.0)) {
         clearing_start_drill(g);
     } else if t > eta {
         let text = format!("can't get to the {} — leave it", plan_name(cl!(g).cur.as_ref()));
@@ -268,7 +265,7 @@ fn passes_his_waypoints(g: &mut Game, i: usize, gd: GuardId) {
     loop {
         let pos = g.ch[g.gd[gd].ch].pos;
         let w = &mut cl!(g).wps[i];
-        if !(w.len() > 1 && flat(pos, w[0]) < SETTLE + 0.5) { return; }
+        if !(w.len() > 1 && dist_xz(pos, w[0]) < SETTLE + 0.5) { return; }
         w.remove(0);
         let goal = w[0];
         order(g, gd, OrderPatch { goal: Some(Some(goal)), ..Default::default() });
@@ -283,8 +280,8 @@ fn how_the_pair_stands(g: &mut Game) -> OnTheWalk {
         let c = cl!(g);
         (c.wps[0].len(), c.wps[1].len(), c.wps[0].last().copied(), c.wps[1].last().copied())
     };
-    let da = flat(apos, wa_end.unwrap());
-    let db = match bpos { Some(p) => flat(p, wb_end.unwrap()), None => 0.0 };
+    let da = dist_xz(apos, wa_end.unwrap());
+    let db = match bpos { Some(p) => dist_xz(p, wb_end.unwrap()), None => 0.0 };
     OnTheWalk { apos, bpos, wa_len, wb_len, da, db }
 }
 
@@ -292,7 +289,7 @@ fn how_the_pair_stands(g: &mut Game) -> OnTheWalk {
 fn second_man_keeps_his_gap(g: &mut Game, w: &OnTheWalk) {
     let Some(bg) = cl!(g).b else { return };
     if g.gd[bg].script.is_none() { return; }
-    let gap = flat(w.apos, w.bpos.unwrap());
+    let gap = dist_xz(w.apos, w.bpos.unwrap());
     let ahead = w.wb_len < w.wa_len || (w.wb_len == w.wa_len && w.db < w.da - 0.6);
     let speed = APPROACH_SPEED * (if ahead || gap < 1.3 { 0.5 } else if gap > 4.5 { 1.3 } else if gap > 2.8 { 1.1 } else { 0.94 });
     g.gd[bg].script.as_mut().unwrap().speed = Some(speed);
@@ -359,7 +356,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         for gd in men {
             let c = g.gd[gd].ch;
             let pos = g.ch[c].pos;
-            if flat(pos, g.dr[d].frame_centre) > (if forced { 3.0 } else { 1.5 }) { continue; }
+            if dist_xz(pos, g.dr[d].frame_centre) > (if forced { 3.0 } else { 1.5 }) { continue; }
             let along = g.dr[d].def.width * 0.5;
             let spot = crate::doors::doors_work_spot(g, d, pos, Some(0.45), Some(along)).pos;
             let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
@@ -505,7 +502,7 @@ fn clearing_approach(g: &mut crate::game::Game) {
     let mut l = 0.0;
     let mut q = from;
     for w in walk {
-        l += m::min(crate::places::on_foot(g, q, w), flat(q, w) * 3.0);
+        l += m::min(crate::places::on_foot(g, q, w), dist_xz(q, w) * 3.0);
         q = w;
     }
     cl!(g).eta = l / APPROACH_SPEED + 8.0;
