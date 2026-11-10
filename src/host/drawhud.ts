@@ -9,10 +9,11 @@ import { pageSay } from '../view/pagesaid';
 import { NO_VIEW } from '../view/seatview';
 import type { WorldAsk } from '../view/worldask';
 import type { DrawGame } from './drawgame';
+import type { ViewSize } from './viewsize';
 
 export class DrawHud {
   readonly overlay = new Overlay();
-  private bubbles = new Bubbles(document.getElementById('overlay')!);
+  private bubbles: Bubbles;
   private tab = document.getElementById('tabcard')!;
   readonly page: HudPage = { ...NO_PAGE };
   readonly source: HudSource;
@@ -20,8 +21,8 @@ export class DrawHud {
   blank = false;
   /** Tab's card is up: the world holds still under it */
   tabUp = false;
-  constructor(private game: DrawGame, ask: WorldAsk) {
-    const hud = this;
+  constructor(private game: DrawGame, ask: WorldAsk, canvas: HTMLCanvasElement) {
+    const hud = this; this.bubbles = new Bubbles(document.getElementById('overlay')!, canvas);
     this.source = { get view() { return hud.blank ? NO_VIEW : game.view(); }, ask, get time() { return game.time; }, at: id => game.at(id), head: id => game.head(id), page: this.page };
   }
   private word(of: View): number { const D = this.game.drawn; return D.u[D.at[Section.view] + of]; }
@@ -40,5 +41,5 @@ export class DrawHud {
   /** after a tick, and after anything done between two */
   told(): void { const t = this.game.savesTold(); this.page.saved = t.tag; this.page.debug = this.word(View.labels) !== 0; for (const line of t.lines) pageSay(line); }
   /** over the picture as it has just been drawn, through the camera it was drawn by */
-  draw(cam: FollowCamera, canvas: HTMLCanvasElement): void { this.overlay.update(this.source, cam, canvas); this.bubbles.update(this.source, cam, canvas); }
+  draw(cam: FollowCamera, size: ViewSize): void { this.overlay.update(this.source, cam, size); this.bubbles.update(this.source, cam, size); }
 }
