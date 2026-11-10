@@ -18,15 +18,12 @@ fn plan_bounds_of(b: crate::scene_scenarios::Rect) -> crate::scene_level::Breach
 fn clear_plan_bounds(g: &Game, door: &str) -> Option<crate::scene_scenarios::Rect> {
     g.level.clear_plans.as_ref()?.iter().find(|p| p.door == door).and_then(|p| p.bounds).map(rect_of)
 }
-fn same_team_start(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::TeamStart) -> bool {
-    a.sam == b.sam && a.sam_yaw == b.sam_yaw && a.ops == b.ops && a.ops_yaw == b.ops_yaw
-}
 
 /// orders.ts doorWords, by id, or the name its level wrote for it
 pub(super) fn door_name(g: &crate::game::Game, id_2: &str) -> String {
     let d = crate::doors::doors_by_name(g, id_2);
     let written = match d { Some(d) => crate::doornames::door_written_name(g, d), None => None };
-    match written { Some(s) => s, None => crate::orders::door_id_words(g, id_2) }
+    match written { Some(s) => s, None => crate::orders::door_id_words(id_2) }
 }
 
 /// checkRescue's `free`: a man can be stood there. False = the place itself is wrong.
@@ -209,7 +206,7 @@ pub(in crate::missions) fn rescue_start(g: &mut crate::game::Game) -> Option<Str
     if let Some(why) = rescue_can_start(g) { return Some(why); }
     {
         let t = rescue_data(g).unwrap().team;
-        let same = g.m.rescue.applied.as_ref().map_or(false, |a| same_team_start(a, &t));
+        let same = g.m.rescue.applied.as_ref().map_or(false, |a| crate::nightbreach::same_team(a, &t));
         if !same {
             let ops = t.ops.clone().unwrap();
             g.k.rescue.sam_at = t.sam;

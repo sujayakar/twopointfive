@@ -10,10 +10,8 @@ use alloc::{format, string::String, vec::Vec};
 // ---- the lines: what the regular expressions of lesson.ts match, written out (no regex in the game). All works on bytes, as every pattern here
 // starts and ends on an ASCII character and a non-ASCII byte is no \w, as a non-ASCII unit is none in JavaScript.
 
-/// \w
-fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
 /// \b at `i`
-fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && is_word(b[i - 1])) != (i < b.len() && is_word(b[i])) }
+fn boundary(b: &[u8], i: usize) -> bool { (i > 0 && crate::suppression::is_word(b[i - 1])) != (i < b.len() && crate::suppression::is_word(b[i])) }
 /// the literal `s` at `at`: where it ends
 fn lit(b: &[u8], at: usize, s: &str) -> Option<usize> { if b.get(at..)?.starts_with(s.as_bytes()) { Some(at + s.len()) } else { None } }
 /// `String.replace` of a global pattern: `at` says whether one starts at this byte, where it ends and what it becomes
@@ -126,9 +124,6 @@ fn after(log: &[u32], last: Option<u32>) -> usize {
 
 fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
-/// the player a lesson is taught to, one seat today
-fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
-
 /// the door a teammate is on a plain 'stack up' on, by name; None: none
 fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(seat, m)?;
@@ -149,10 +144,6 @@ fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
 }
 
-/// a body's place
-fn man_pos(g: &Game, x: GuardId) -> V3 { g.ch[g.gd[x].ch].pos }
-/// the player's place
-fn own_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 /// `onStack(g, m) === door`
 fn stack_is(g: &Game, seat: &crate::seats::SeatRef, m: GuardId, door: &str) -> bool { on_stack(g, seat, m).as_deref() == Some(door) }
 /// `!!g.orders.of(m)?.arrived`
@@ -172,11 +163,11 @@ fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.
 fn passes(g: &Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
     match t {
-        T::In { area } => inside(*area, own_pos(g, &crate::seats::here(g))),
-        T::Near { at, r } => { let p = own_pos(g, &crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
+        T::In { area } => inside(*area, g.seat_pos(&crate::seats::here(g))),
+        T::Near { at, r } => { let p = g.seat_pos(&crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
-        T::Slot { slot, drawn } => { let p = who(g, &crate::seats::here(g)); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
-        T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.shown[g.pl[p].ch].visibility }; band(v, t) }
+        T::Slot { slot, drawn } => { let p = crate::seats::here(g).player; g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
+        T::Meter { which, .. } => { let p = crate::seats::here(g).player; let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.shown[g.pl[p].ch].visibility }; band(v, t) }
         T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage.as_str()) && g.mission.stage != crate::game::MissionStage::Failed,
         T::Door { door, state } => ok_door(g, door, *state),
         T::Target { name, on } => ok_target(g, name, *on),
@@ -260,7 +251,7 @@ fn ok_calm(g: &Game, route: Option<&str>) -> bool {
 }
 
 fn ok_loaded(g: &Game, s: &mut StepSeen) -> bool {
-    let p = who(g, &crate::seats::here(g));
+    let p = crate::seats::here(g).player;
     let Some(w) = crate::game::player_gun_in_hand(g, p) else { return false };
     if crate::weapons::firearm_reloading(g, w) { s.n.set(String::from("loaded:began"), 1.0); return false; }
     if js::truthy(seen_n(s, String::from("loaded:began"))) || g.fa[w].spare.is_empty() { return true; }
@@ -270,20 +261,20 @@ fn ok_loaded(g: &Game, s: &mut StepSeen) -> bool {
 }
 
 fn ok_reload(g: &Game) -> bool {
-    let p = who(g, &crate::seats::here(g));
+    let p = crate::seats::here(g).player;
     let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
     (crate::game::player_pistol_up(g, p) && crate::weapons::firearm_reloading(g, pistol)) || (crate::game::player_rifle_up(g, p) && crate::weapons::firearm_reloading(g, rifle))
 }
 
 fn ok_launcher(g: &Game, on: Option<crate::weapons::RifleAttachment>, fired: bool) -> bool {
-    let p = who(g, &crate::seats::here(g));
+    let p = crate::seats::here(g).player;
     let r = g.pl[p].rifle;
     let up = crate::weapons::rifle_attachment(g, r).map_or("none", |a| a.as_str());
     on.map_or("none", |a| a.as_str()) == up && (!fired || (crate::game::player_rifle_up(g, p) && g.fa[r].ring_cd > 0.0))
 }
 
 fn ok_burst(g: &Game, n: Option<f64>) -> bool {
-    let p = who(g, &crate::seats::here(g));
+    let p = crate::seats::here(g).player;
     let r = g.pl[p].rifle;
     crate::game::player_rifle_up(g, p) && crate::weapons::firearm_automatic(g, r) && g.fa[r].auto_idx >= n.unwrap_or(3.0)
 }
@@ -354,7 +345,7 @@ fn ok_following(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 
 fn ok_mate(g: &Game, seat: &crate::seats::SeatRef, area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64>) -> bool {
     let Some(mate) = partner_of(g) else { return false };
-    let (p, s) = (man_pos(g, mate), own_pos(g, seat));
+    let (p, s) = (g.pos_of(mate), g.seat_pos(seat));
     let d = m::hyp2(p[0] - s[0], p[2] - s[2]);
     area.map_or(true, |a| inside(a, p))
         && at.map_or(true, |a| m::hyp2(p[0] - a[0], p[2] - a[2]) < r.unwrap_or(1.5))
@@ -378,7 +369,7 @@ fn ok_view(g: &Game, seat: &crate::seats::SeatRef, turned: Option<f64>, zoomed: 
 
 fn ok_squad(g: &Game, area: crate::scene_scenarios::Rect, n: Option<f64>) -> bool {
     let men: Vec<GuardId> = g.guards.iter().copied().filter(|&x| operative_up(g, x)).collect();
-    let inn = men.iter().filter(|&&x| inside(area, man_pos(g, x))).count();
+    let inn = men.iter().filter(|&&x| inside(area, g.pos_of(x))).count();
     !men.is_empty() && inn as f64 >= m::min(men.len() as f64, n.unwrap_or(men.len() as f64))
 }
 
@@ -742,7 +733,7 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
             s.chron += 1.0;
         }
         if s.held_at < 0.0 {
-            let p = who(g, &crate::seats::here(g));
+            let p = crate::seats::here(g).player;
             if g.sets[crate::seats::seat_of_man(g, p)].hand.throw_held {
                 s.held_at = len;
             }
@@ -849,7 +840,7 @@ pub fn line_of(t: &crate::scene_scenarios::LessonStep) -> String {
 
 /// The taught player is down (`who(g).down`).
 fn who_down(g: &Game, seat: &crate::seats::SeatRef) -> bool {
-    let p = who(g, seat);
+    let p = seat.player;
     crate::condition::down(g, g.pl[p].ch)
 }
 

@@ -1,5 +1,6 @@
 pub use ::game_types::picture::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -49,10 +50,6 @@ fn pic_of<'g>(g: &'g mut crate::game::Game, gd: GuardId, now: f64) -> &'g mut cr
     s.men.get_mut(gd).unwrap()
 }
 
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 fn floor(p: V3) -> V3 {
     [p[0], 0.0, p[2]]
 }
@@ -64,7 +61,7 @@ fn gone(g: &crate::game::Game, w: CharId) -> bool { crate::character::guard_of(g
 
 /// can his eye make anything out AT a place it has a line to: near enough, or lit
 fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
-    if flat(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
+    if dist_xz(g.ch[g.gd[gd].ch].pos, p) <= g.k.picture.made_out_m {
         return true;
     }
     let e = crate::guards::light_estimate_at(g, [p[0], 1.1, p[2]], None, None, None);
@@ -159,7 +156,7 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
                 None => true,
                 Some(i) => {
                     let own = i.how == IdeaHow::Seen || i.how == IdeaHow::Heard;
-                    fix_t > i.t + 0.05 && !(i.how == IdeaHow::Seen && now - i.t < 0.5) && (!own || flat(known, i.at) <= heard_m + 2.0 + (fix_t - i.t) * walk_mps * 2.0)
+                    fix_t > i.t + 0.05 && !(i.how == IdeaHow::Seen && now - i.t < 0.5) && (!own || dist_xz(known, i.at) <= heard_m + 2.0 + (fix_t - i.t) * walk_mps * 2.0)
                 }
             };
             if take {
@@ -194,7 +191,7 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
         if !i.lost
             && now - i.t > 1.0
             && !blind
-            && flat(g.ch[who].pos, i.at) > 1.2
+            && dist_xz(g.ch[who].pos, i.at) > 1.2
             && crate::guards::point_in_view(g, gd, [i.at[0], 1.1, i.at[2]], Some(14.0), Some(58.0))
             && crate::guards::point_in_view(g, gd, [i.at[0], 0.4, i.at[2]], Some(14.0), Some(58.0))
             && made_out(g, gd, i.at)
@@ -238,7 +235,7 @@ fn look_sam(g: &mut crate::game::Game) {
         if g.gd[o].fled {
             continue;
         }
-        let d = flat(q, cpos);
+        let d = dist_xz(q, cpos);
         if d > g.k.picture.reach_m {
             continue;
         }
@@ -311,7 +308,7 @@ fn hear(g: &mut crate::game::Game) {
             }
             p.heard.set(who, now);
             let gpos = g.ch[g.gd[gd].ch].pos;
-            if flat(e.pos, gpos) > (if loud { 80.0 } else { 22.0 }) {
+            if dist_xz(e.pos, gpos) > (if loud { 80.0 } else { 22.0 }) {
                 continue;
             }
             let ear = v3::add(gpos, [0.0, 1.5, 0.0]);
@@ -372,7 +369,7 @@ fn on_net(g: &crate::game::Game, a: Option<GuardId>, b: Option<GuardId>) -> bool
             return true;
         }
     }
-    flat(g.ch[g.gd[ao].ch].pos, g.ch[g.gd[bo].ch].pos) <= g.k.picture.shout_m
+    dist_xz(g.ch[g.gd[ao].ch].pos, g.ch[g.gd[bo].ch].pos) <= g.k.picture.shout_m
 }
 
 /// the calls: what a man has seen or heard for tellSecs reaches his net, and the men he knows are down
@@ -550,7 +547,7 @@ fn line_to(g: &mut crate::game::Game, from: V3, p: V3, h: f64) -> bool {
     if !g.m.picture.viewing {
         g.stats.picture.lines += 1;
     }
-    if flat(from, p) > g.k.picture.reach_m {
+    if dist_xz(from, p) > g.k.picture.reach_m {
         return false;
     }
     let e: V3 = [from[0], g.k.picture.eye_h, from[2]];
@@ -796,7 +793,7 @@ fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Opt
     for ix in -span..=span {
         for iz in -span..=span {
             let q: V3 = [x0 + ix as f64, 0.0, z0 + iz as f64];
-            let d = flat(q, around);
+            let d = dist_xz(q, around);
             if d > r || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
                 continue;
             }
@@ -831,20 +828,20 @@ fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Opt
 
 /// pictureStep's `free`: a straight walk off the place, a stride nearer a believed man at most, a body's room from his own side, the asker's word
 fn step_free(g: &mut Game, q: V3, gd: GuardId, mark: V3, sam: V3, bad: Option<V3>, firm: &[V3], ok: &mut Option<&mut dyn FnMut(&mut Game, V3) -> bool>) -> bool {
-    if flat(q, mark) > 0.05 && !crate::scene_collision::nav_grid_walkable(g, mark, q) {
+    if dist_xz(q, mark) > 0.05 && !crate::scene_collision::nav_grid_walkable(g, mark, q) {
         return false;
     }
-    if flat(q, sam) < 0.9 {
+    if dist_xz(q, sam) < 0.9 {
         return false;
     }
     if let Some(b) = bad {
-        if flat(q, b) < 0.6 {
+        if dist_xz(q, b) < 0.6 {
             return false;
         }
     }
     for &f in firm {
-        let d = flat(q, f);
-        if d < 3.0 || d < flat(mark, f) - 1.0 {
+        let d = dist_xz(q, f);
+        if d < 3.0 || d < dist_xz(mark, f) - 1.0 {
             return false;
         }
     }
@@ -856,16 +853,16 @@ fn step_free(g: &mut Game, q: V3, gd: GuardId, mark: V3, sam: V3, bad: Option<V3
         if o == gd || crate::condition::down(g, g.gd[o].ch) || team.foe_of(g.team(o)) {
             continue;
         }
-        if flat(g.ch[g.gd[o].ch].pos, q) < 0.8 {
+        if dist_xz(g.ch[g.gd[o].ch].pos, q) < 0.8 {
             return false;
         }
         if let Some(os) = st!(g).men.get(o).and_then(|p| p.step) {
-            if flat(os.at, q) < 0.9 {
+            if dist_xz(os.at, q) < 0.9 {
                 return false;
             }
         }
         if let Some(og) = g.gd[o].script.as_ref().and_then(|s| s.goal) {
-            if flat(og, q) < 0.8 {
+            if dist_xz(og, q) < 0.8 {
                 return false;
             }
         }
@@ -983,7 +980,7 @@ fn step_when_looked_at(g: &mut Game, gd: GuardId, xs: Step, now: f64) -> StepNow
             p.step_next = Some(now + step_rest);
             return StepNow::NotNeeded;
         }
-        let off = flat(g.ch[g.gd[gd].ch].pos, xs.at) > 0.6 && now - xs.t0 > step_secs;
+        let off = dist_xz(g.ch[g.gd[gd].ch].pos, xs.at) > 0.6 && now - xs.t0 > step_secs;
         if off {
             pic!(g, gd).step_bad = Some(xs.at);
         }
@@ -1006,7 +1003,7 @@ fn time_to_step(g: &mut Game, gd: GuardId, mark: V3, now: f64, had_none: bool, b
         p.step_in = Some(-1.0);
         return false;
     }
-    if p.step_for.map_or(true, |f| flat(f, mark) > 0.4) {
+    if p.step_for.map_or(true, |f| dist_xz(f, mark) > 0.4) {
         p.step_for = Some(floor(mark));
         // (X === P.step here only when he came in with no step: one he had was just cleared, and the count it set stands)
         if had_none {

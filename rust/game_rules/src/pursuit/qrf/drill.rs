@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +8,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small reads
-fn man_pos(g: &Game, m: GuardId) -> V3 { g.ch[g.gd[m].ch].pos }
 fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
 /// where a man with no foe named looks: the player nearest him
@@ -39,7 +39,7 @@ pub(super) fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
     while i > 0 {
         i -= 1;
         let q = trail[i];
-        let d = flat(prev, q);
+        let d = dist_xz(prev, q);
         if d >= left {
             let t = left / m::max(d, 1e-6);
             return [prev[0] + (q[0] - prev[0]) * t, 0.0, prev[2] + (q[2] - prev[2]) * t];
@@ -54,7 +54,7 @@ pub(super) fn trail_point(trail: &[V3], head: V3, s: f64) -> V3 {
 pub(super) fn trail_dir(trail: &[V3], head: V3, s: f64) -> Option<V3> {
     let a = trail_point(trail, head, s + 0.5);
     let b = trail_point(trail, head, m::max(0.0, s - 0.5));
-    let d = flat(a, b);
+    let d = dist_xz(a, b);
     if d < 0.05 { return None; }
     Some([(b[0] - a[0]) / d, 0.0, (b[2] - a[2]) / d])
 }
@@ -66,7 +66,7 @@ pub(super) fn hold360(g: &mut crate::game::Game, el: &[GuardId]) {
     let f = man_yaw(g, el[0]);
     for (k, &man) in el.iter().enumerate() {
         let yaw = f + [0.0, -m::PI / 2.0, m::PI / 2.0, m::PI][k % 4];
-        let aim = sector_point(man_pos(g, man), yaw, None, None);
+        let aim = sector_point(g.pos_of(man), yaw, None, None);
         crate::squad::order(g, man, crate::squad::OrderPatch {
             goal: Some(None), face: Some(Some(yaw)), strafe: Some(Some(false)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)),
             crouch: Some(Some(k == 3)), aim_at: Some(Some(aim)), ..Default::default()
@@ -150,7 +150,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     if g.qrf.shoved_at.is_nan() {
         // step one: the point man planted square to the leaf by the lock (or out of time) works the lever and throws it into the room
         let shut = match d { Some(d) => crate::doors::door_is_closed(g, d), None => false };
-        let planted = !shut || (man_arrived(g, lead) && flat(man_pos(g, lead), p.kick_from) < 0.15 && m::abs(v3::wrap_angle(man_yaw(g, lead) - p.kick_face)) < 0.15);
+        let planted = !shut || (man_arrived(g, lead) && dist_xz(g.pos_of(lead), p.kick_from) < 0.15 && m::abs(v3::wrap_angle(man_yaw(g, lead) - p.kick_face)) < 0.15);
         if !((planted && g.qrf.phase_t > 0.45) || g.qrf.phase_t > 1.8) { return; }
         if let Some(d) = d {
             if !g.dr[d].leaf.off && crate::doors::doors_open_for(g, d) < 1.0 {
@@ -187,7 +187,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
                 crate::squad::in_bounds(probe, b, None)
             } else {
                 let end = p.entry[0][p.entry[0].len() - 1];
-                flat(probe, end) < flat([fc[0] - n[0], 0.0, fc[2] - n[2]], end)
+                dist_xz(probe, end) < dist_xz([fc[0] - n[0], 0.0, fc[2] - n[2]], end)
             };
             if !in_room { n = [-n[0], 0.0, -n[2]]; }
             let depth = BANG_DEPTH;
@@ -210,7 +210,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             note(g, "bang-out");
             // everybody's head off the doorway while it cooks
             for (i, &man) in el.iter().enumerate() {
-                let pos = man_pos(g, man);
+                let pos = g.pos_of(man);
                 let i = i as f64;
                 let away: V3 = [pos[0] - n[0] * 3.0 + (i - 1.5) * n[2], 0.6, pos[2] - n[2] * 3.0 - (i - 1.5) * n[0]];
                 crate::squad::order(g, man, crate::squad::OrderPatch { aim_at: Some(Some(away)), ..Default::default() });
@@ -231,7 +231,7 @@ fn their_bang(g: &mut crate::game::Game, at: V3, who: GuardId) {
     while i > 0 {
         i -= 1;
         let e = g.events[i];
-        if e.kind == crate::director::EventKind::Bang && e.time == g.time && flat(e.pos, at) < 1.0 { g.events.remove(i); break; }
+        if e.kind == crate::director::EventKind::Bang && e.time == g.time && dist_xz(e.pos, at) < 1.0 { g.events.remove(i); break; }
     }
     let id = g.ch[g.gd[who].ch].id;
     let (time, serial) = (g.time, g.serial());
@@ -401,8 +401,8 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let here = |p: V3| bounds.is_some() && crate::squad::in_bounds(p, bounds, None);
         let bf = fix_of(g);
         let fix = g.qrf.fix;
-        let net = match bf { Some(bf) => bf.t > g.qrf.fix_t + 0.5 && flat(bf.pos, fix.unwrap_or(bf.pos)) > RETARGET_M && !here(bf.pos), None => false };
-        let own = !net && match fix { Some(fix) => g.qrf.fix_t > g.qrf.target_at && g.qrf.cue_rush && flat(fix, t.pos) > RETARGET_M && !here(fix), None => false };
+        let net = match bf { Some(bf) => bf.t > g.qrf.fix_t + 0.5 && dist_xz(bf.pos, fix.unwrap_or(bf.pos)) > RETARGET_M && !here(bf.pos), None => false };
+        let own = !net && match fix { Some(fix) => g.qrf.fix_t > g.qrf.target_at && g.qrf.cue_rush && dist_xz(fix, t.pos) > RETARGET_M && !here(fix), None => false };
         if net || own {
             if net { let bf = bf.unwrap(); g.qrf.fix = Some(bf.pos); g.qrf.fix_t = bf.t; }
             drop_drill(g);
@@ -546,13 +546,13 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         crate::mind::set(g, man, HUNT_AWARENESS, "qrf");
         let yaw = f + [0.0, -m::PI / 2.0, m::PI / 2.0, m::PI][k % 4];
         if k == 0 {
-            let aim = sector_point(man_pos(g, man), f, None, None);
+            let aim = sector_point(g.pos_of(man), f, None, None);
             crate::squad::order(g, man, crate::squad::OrderPatch {
                 goal: Some(None), face: Some(Some(f)), strafe: Some(Some(false)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)),
                 crouch: Some(Some(false)), aim_at: Some(Some(aim)), ..Default::default()
             });
         } else {
-            let lp = man_pos(g, lead);
+            let lp = g.pos_of(lead);
             let n = k as f64;
             let off = if k == 1 { 0.5 } else if k == 2 { -0.5 } else { 0.0 };
             let st: V3 = [lp[0] - m::sin(f) * n * 1.1 + m::cos(f) * off, 0.0, lp[2] - m::cos(f) * n * 1.1 - m::sin(f) * off];
@@ -563,7 +563,7 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             }));
         }
     }
-    let at = match fix_of(g) { Some(bf) => bf.pos, None => man_pos(g, lead) };
+    let at = match fix_of(g) { Some(bf) => bf.pos, None => g.pos_of(lead) };
     let room = crate::dialogue::room_name(g, at);
     radio(g, Some(lead), &format!("lost him. on me — re-form, we clear toward {}", room));
     note(g, "regroup");
@@ -587,7 +587,7 @@ pub(super) fn advance(g: &mut crate::game::Game, m: GuardId) -> bool {
             let w = g.qrf.wps.get(m).unwrap();
             if w.len() > 1 { w[0] } else { break; }
         };
-        if !(flat(man_pos(g, m), next) < 0.75) { break; }
+        if !(dist_xz(g.pos_of(m), next) < 0.75) { break; }
         let w = g.qrf.wps.get_mut(m).unwrap();
         w.remove(0);
         let goal = w[0];
@@ -728,7 +728,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
         if crate::condition::down(g, g.gd[gd].ch) { continue; }
         if g.gd[gd].held.is_some() { continue; }   // in Sam's arm: off the script and off his own eyes, not re-ordered to the post from under the arm
         if g.gd[gd].script.is_some() {
-            if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at < 0.0 && (man_arrived(g, gd) || (flat(man_pos(g, gd), post.pos) < 0.7 && g.gd[gd].speed < 0.2)) {
+            if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at < 0.0 && (man_arrived(g, gd) || (dist_xz(g.pos_of(gd), post.pos) < 0.7 && g.gd[gd].speed < 0.2)) {
                 g.qrf.perim.as_mut().unwrap().men[idx].arrived_at = g.time;
                 crate::control::set_pinned(g, gd, true, "qrf");
                 note(g, &format!("post:{}", post.name));
@@ -742,7 +742,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
             }
             let eyes = perceive_scripted(g, gd, dt);
             let him = match g.gd[gd].foe { Some(c) => g.ch[c].pos, None => near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
-            if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.cond[g.gd[gd].ch].sup.v < 0.3 {
+            if eyes && arrived_at < 0.0 && dist_xz(g.pos_of(gd), him) > WALKOUT_ENGAGE_M && g.cond[g.gd[gd].ch].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
                 crate::mind::cap(g, gd, 0.84, "qrf");
                 g.qrf.fix = Some(v3::copy(him));
@@ -775,7 +775,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].standoff = None;
                 g.gd[gd].search_plan = None;
                 to_post(g, idx);
-                if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at >= 0.0 && flat(man_pos(g, gd), post.pos) < 1.0 { crate::control::set_pinned(g, gd, true, "qrf"); }
+                if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at >= 0.0 && dist_xz(g.pos_of(gd), post.pos) < 1.0 { crate::control::set_pinned(g, gd, true, "qrf"); }
             }
         }
     }

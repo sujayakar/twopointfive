@@ -1,5 +1,6 @@
 //! WHO IS IN THE LINE of a round: a mate, Sam, anybody it could go to.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -7,11 +8,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
-/// `c.bones.head ?? c.pos + [0, 1.6, 0]`
-pub(super) fn head_of(g: &Game, c: CharId) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) }
-}
 
 /// Is this body within the clearance it is owed of the line from → to
 pub(super) fn line_hit(g: &Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
@@ -87,7 +83,7 @@ pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats
     let cp = g.ch[g.gd[g.tab.roomfight_op[o].gd].ch].pos;
     let hc = g.gd[h].ch;
     let hp = g.ch[hc].pos;
-    if flat(cp, post) > 0.8 || flat(cp, hp) < r.cover_near_m { return false; } // not on his post yet · a man this close is anybody's
+    if dist_xz(cp, post) > 0.8 || dist_xz(cp, hp) < r.cover_near_m { return false; } // not on his post yet · a man this close is anybody's
     if m::abs(v3::wrap_angle(v3::yaw_to(cp, hp) - v3::yaw_to(cp, watch))) <= r.cover_half_deg * crate::v3::DEG { return false; } // in the angle he was given
     if m::abs(v3::wrap_angle(v3::yaw_to(hp, cp) - g.ch[hc].aim_yaw)) < 0.35 { return false; } // a muzzle on him is his own business
     // a mate HAS the man: his gun on him and a round to send; a man this one is already ON goes only to a mate past his own beat to fire

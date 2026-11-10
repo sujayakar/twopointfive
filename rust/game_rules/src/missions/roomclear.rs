@@ -7,10 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// `nav.isBlocked` over the game's nav grid
-fn blocked(g: &Game, x: f64, z: f64) -> bool {
-    crate::scene_collision::nav_grid_is_blocked(g, x, z)
-}
 /// `inBounds(p, rect)`: a structure's Rect is the same four numbers as the plan's bounds the squad's function takes
 fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
     crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
@@ -113,14 +109,14 @@ fn check_a_team_start(g: &Game, s: &crate::roomclear::CheckStructureS, k: usize,
         who.push((format!("teammate {}", i + 1), *q));
     }
     for (name, p) in &who {
-        if blocked(g, p[0], p[2]) {
+        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) {
             bad.push(format!("{}, {} ({}, {}): not on floor a man can stand on", start, name, js::num_str(p[0]), js::num_str(p[2])));
         } else if name != "Player" && crate::scene_collision::nav_grid_find_path(g, t.sam, *p, None, None).is_none() {
             bad.push(format!("{}, {}: no way on foot from the player's mark", start, name));
         }
     }
     for r in &s.rooms {
-        if !r.marks.is_empty() && !blocked(g, t.sam[0], t.sam[2]) && !blocked(g, r.marks[0].pos[0], r.marks[0].pos[2]) && crate::scene_collision::nav_grid_find_path(g, t.sam, r.marks[0].pos, None, None).is_none() {
+        if !r.marks.is_empty() && !crate::scene_collision::nav_grid_is_blocked(g, t.sam[0], t.sam[2]) && !crate::scene_collision::nav_grid_is_blocked(g, r.marks[0].pos[0], r.marks[0].pos[2]) && crate::scene_collision::nav_grid_find_path(g, t.sam, r.marks[0].pos, None, None).is_none() {
             bad.push(format!("{}: no way on foot from {}", r.name, its));
         }
     }
@@ -170,7 +166,7 @@ fn check_a_room(g: &Game, r: &crate::scene_scenarios::StructureRoom, bad: &mut V
         if !in_rect(mk.pos, r.bounds) {
             bad.push(format!("{}: outside the room", at));
         }
-        if blocked(g, mk.pos[0], mk.pos[2]) {
+        if crate::scene_collision::nav_grid_is_blocked(g, mk.pos[0], mk.pos[2]) {
             bad.push(format!("{}: not on floor a man can stand on", at));
         }
         let prop = g.props.props.iter().find_map(|&pr| {
@@ -227,7 +223,7 @@ fn check_squads(g: &crate::game::Game, s: &crate::roomclear::CheckSquadsS) -> Ve
             bad.push(if late { format!("{}: a late squad holds no rooms", w) } else { format!("{}: holds no room", w) });
         }
         if let Some(rally) = q.rally {
-            if blocked(g, rally[0], rally[2]) {
+            if crate::scene_collision::nav_grid_is_blocked(g, rally[0], rally[2]) {
                 bad.push(format!("{}: its rally point ({}, {}) is not on floor a man can stand on", w, js::num_str(rally[0]), js::num_str(rally[2])));
             } else if !late && !mine.iter().any(|r| in_rect(rally, r.bounds)) {
                 bad.push(format!("{}: its rally point ({}, {}) is inside none of its rooms", w, js::num_str(rally[0]), js::num_str(rally[2])));
@@ -258,12 +254,12 @@ fn check_squads(g: &crate::game::Game, s: &crate::roomclear::CheckSquadsS) -> Ve
             if let Some(inside) = s.rooms.iter().find(|r| in_rect(p, r.bounds)) {
                 bad.push(format!("{}: inside the {} — a late squad starts outside every room", at, inside.name));
             }
-            if blocked(g, p[0], p[2]) {
+            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) {
                 bad.push(format!("{}: not on floor a man can stand on", at));
             } else if let Some(d) = door {
                 let mut joined = false;
                 for side in door_sides(g, d) {
-                    if !blocked(g, side[0], side[2]) && crate::scene_collision::nav_grid_find_path(g, p, side, None, None).is_some() {
+                    if !crate::scene_collision::nav_grid_is_blocked(g, side[0], side[2]) && crate::scene_collision::nav_grid_find_path(g, p, side, None, None).is_some() {
                         joined = true;
                         break;
                     }

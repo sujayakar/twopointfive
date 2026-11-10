@@ -26,13 +26,6 @@ fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
     let s = crate::seats::seat_of(g, gd);
     crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
 }
-/// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
-fn no_path(d: &mut crate::game::Guard) {
-    d.path = Vec::new();
-    d.path_serial = d.path_serial.wrapping_add(1);
-    d.path_goal = None;
-    d.path_goal_orbit = false;
-}
 /// his head bone, or his feet (`x.char.bones.head ?? x.char.pos`: where a radio crackle sounds)
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
@@ -268,7 +261,7 @@ fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &str)
     crate::mind::raise(g, gd, 0.42, "guards");
     if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "guards"); g.gd[gd].react_t = 0.8; }
     g.gd[gd].search_t = 0.0;
-    no_path(&mut g.gd[gd]);
+    g.gd[gd].drop_path();
     g.gd[gd].body_duty = None;
     g.gd[gd].stall_ref = None;
     crate::game::game_say(g, gd, line, Some(true), None);
@@ -289,7 +282,7 @@ pub(super) fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
             crate::mind::raise(g, gd, 0.45, "guards");
             g.gd[gd].react_t = 0.5;
             g.gd[gd].search_t = 0.0;
-            no_path(&mut g.gd[gd]);
+            g.gd[gd].drop_path();
         }
         return;
     }
@@ -314,7 +307,7 @@ pub(super) fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
     }
     crate::mind::fix(g, gd, Some(v3::copy(pos)), "guards");
     g.gd[gd].search_t = 0.0;
-    no_path(&mut g.gd[gd]);
+    g.gd[gd].drop_path();
     g.gd[gd].stall_ref = None;
     if left == m::floor(pts.len() as f64 / 2.0) {
         let line = format!("halfway around — nothing yet. {}, if you can hear this, sound off", g.gd[who].callsign);

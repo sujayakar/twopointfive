@@ -14,14 +14,6 @@ fn kind_of(t: &OrderTarget) -> TargetKind {
         OrderTarget::Foe(_) => TargetKind::Foe,
     }
 }
-fn at_of(t: &OrderTarget) -> V3 {
-    match t {
-        OrderTarget::Floor(x) => x.at,
-        OrderTarget::Door(x) => x.at,
-        OrderTarget::None(x) => x.at,
-        OrderTarget::Foe(x) => x.at,
-    }
-}
 /// `recipients(t)` with its `who` left to the standing choice
 pub(crate) fn recipients_of(g: &Game, seat: &crate::seats::SeatRef, t: &OrderTarget) -> Vec<GuardId> {
     squad_orders_recipients(g, seat, Some(t), None)
@@ -35,9 +27,6 @@ fn word(s: &Option<String>) -> bool {
 }
 fn player_ch(g: &Game, seat: &crate::seats::SeatRef) -> CharId {
     g.pl[seat.player].ch
-}
-fn press_has(g: &Game, input: InputId, code: &str) -> bool {
-    g.tab.input[input].pressed.has(String::from(code))
 }
 /// a row of the list by a number, as `rows[i]`
 fn row_at(rows: &[OrdersOrderDefId], i: f64) -> Option<OrdersOrderDefId> {
@@ -239,7 +228,7 @@ fn squad_orders_flat_rows(g: &crate::game::Game, seat: &crate::seats::SeatRef, t
     flat_walk(g, seat, t, men, &who, None, &mut out, &mut seen);
     let kind = kind_of(t);
     if kind != TargetKind::None {
-        let place = OrderTarget::None(OrderTargetNone { at: at_of(t), man: None });
+        let place = OrderTarget::None(OrderTargetNone { at: t.at(), man: None });
         for d in squad_orders_rows_for(g, seat, &place, None, men) {
             let r = &g.tab.orders_order_def[d];
             if on(r.free) && !word(&r.opens) && !r.word && r.targets.contains(&kind) && !out.iter().any(|&x| g.tab.orders_order_def[x].id == r.id) { out.push(d); }
@@ -411,12 +400,6 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
     g.sets[g.seat].orders.ours.delete(gd);
     let r = a.post.map(|post| squad_orders_route(g, gd, post, a.shy, a.thru, None));
     let via: Vec<V3> = r.as_ref().map_or(Vec::new(), |x| x.via.clone());
-    match r.as_ref().and_then(|x| x.how) {
-        Some(SquadOrdersRouteHow::Round) => {},
-        Some(SquadOrdersRouteHow::Through) => {},
-        Some(SquadOrdersRouteHow::Mouth) => {},
-        None => {}
-    }
     let light = match &g.gd[gd].script {
         Some(s) => s.light,
         None => was.and_then(|w| g.tab.orders_assignment[w].light),
@@ -723,9 +706,9 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         g.sets[g.seat].orders.view.input = None;
         return;
     }
-    if g.sets[g.seat].orders.tap_was.is_some() && (press_has(g, input, "Blur") || press_has(g, input, "Thawed")) { g.sets[g.seat].orders.tap_was = None; }
+    if g.sets[g.seat].orders.tap_was.is_some() && (pressed_has(g, input, "Blur") || pressed_has(g, input, "Thawed")) { g.sets[g.seat].orders.tap_was = None; }
     set_view(g, input);
-    if squad_orders_whole(&crate::seats::here(g)) {
+    if squad_orders_sams(&crate::seats::here(g)) {
         g.sets[g.seat].orders.who = Who::All;
     } else {
         let who_key = g.k.orders.who_key.clone();

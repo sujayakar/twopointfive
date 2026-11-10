@@ -1,5 +1,6 @@
 //! THE ROOMS a fight is fought in: which room a place is in, and free floor in it.
 #![allow(unused_imports)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -126,13 +127,13 @@ pub(super) fn room_fight_funnel_of(g: &crate::game::Game, p: V3) -> Option<DoorI
 pub(super) fn room_fight_spot_free(g: &crate::game::Game, p: V3, self_: GuardId) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
     for pl in crate::seats::men(g) {
-        if !crate::condition::down(g, g.pl[pl].ch) && flat(g.ch[g.pl[pl].ch].pos, p) < 0.8 { return false; }
+        if !crate::condition::down(g, g.pl[pl].ch) && dist_xz(g.ch[g.pl[pl].ch].pos, p) < 0.8 { return false; }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o != self_ && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, p) < 0.8 { return false; }
+        if o != self_ && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.ch[g.gd[o].ch].pos, p) < 0.8 { return false; }
     }
     true
 }

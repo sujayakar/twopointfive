@@ -103,7 +103,7 @@ fn walks_to_his_fix(g: &mut Game, gd: GuardId, c: CharId, lk: V3, dt: f64, a: &m
                 let here = g.ch[c].pos;
                 crate::mind::fix(g, gd, Some(here), "guards");
                 g.gd[gd].stall_ref = None;
-                clear_path(g, gd);
+                g.gd[gd].drop_path();
             }
         }
     }
@@ -113,7 +113,7 @@ fn walks_to_his_fix(g: &mut Game, gd: GuardId, c: CharId, lk: V3, dt: f64, a: &m
 fn calms_down(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
     let d = g.gd[gd].body_duty.as_ref().map(|d| d.body);
     crate::mind::set_state(g, gd, St::Patrol, "guards");
-    clear_path(g, gd);
+    g.gd[gd].drop_path();
     g.gd[gd].body_duty = None;
     let player_down = crate::condition::down(g, g.pl[g.player].ch);
     if crate::teams::foe_is_player(g, gd) && player_down {

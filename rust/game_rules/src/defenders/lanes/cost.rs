@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -28,11 +29,6 @@ pub(super) fn s<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::lanes::State
         g.m.lanes.states = Some(f);
     }
     g.m.lanes.states.as_mut().unwrap()
-}
-
-/// The distance on the plan.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// A man the rule is for: a defender of a live room fight, on his feet.
@@ -160,7 +156,7 @@ pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
         return false;
     }
     let Some(fc) = g.gd[gd].foe else { return false };
-    flat(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
+    dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
 }
 
 /// He is going in behind a charge; a lapsed entry is dropped as it is asked.
@@ -343,7 +339,7 @@ pub(super) fn gun_on(g: &crate::game::Game, l: LanesLaneId, p: V3, wide: Option<
     let e = e_of(&g.tab.lanes_lane[l]);
     let guns = g.tab.lanes_lane[l].guns.clone(); // (a copy of its few guns: nothing asked below writes a lane)
     for gun in guns {
-        let d = flat(gun, p);
+        let d = dist_xz(gun, p);
         if d > reach || d < 0.3 {
             continue;
         }
@@ -419,7 +415,7 @@ struct Fire {
 /// What a side has just suffered: fire from `from` landed at `at`, on a man dropped (`down`) or past a living one.
 pub(super) fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: bool, who: f64) {
     let k = g.k.lanes;
-    let len = flat(from, at);
+    let len = dist_xz(from, at);
     if len < k.min_m {
         return; // (shot at arm's length is a fight, not a lane)
     }
@@ -461,7 +457,7 @@ fn lane_of_this_fire(g: &mut Game, fire: Fire, len: f64) -> LanesLaneId {
     let cos_m = m::cos((g.k.lanes.half_deg + 12.0) * m::PI / 180.0);
     let found = st!(g).lanes.iter().copied().find(|&x| {
         let r = &g.tab.lanes_lane[x];
-        r.dx * dx + r.dz * dz > cos_m && r.guns.iter().any(|&gun| flat(gun, from) <= 5.0)
+        r.dx * dx + r.dz * dz > cos_m && r.guns.iter().any(|&gun| dist_xz(gun, from) <= 5.0)
     });
     if let Some(l) = found {
         return l;
@@ -491,7 +487,7 @@ fn count_the_fire(g: &mut Game, l: LanesLaneId, fire: Fire) -> bool {
     let round_k = g.k.lanes.round_k;
     let r = &mut g.tab.lanes_lane[l];
     let mut new_gun = false;
-    match r.guns.iter().position(|&q| flat(q, from) < 1.5) {
+    match r.guns.iter().position(|&q| dist_xz(q, from) < 1.5) {
         None => {
             r.guns.push([from[0], 0.0, from[2]]);
             if r.guns.len() > 4 {
@@ -540,7 +536,7 @@ fn guns_have_moved_from_other_lanes(g: &mut Game, l: LanesLaneId, fire: Fire) {
     let k = g.k.lanes;
     for &x in st!(g).lanes.iter() {
         let r = &mut g.tab.lanes_lane[x];
-        if x != l && r.who.has(crate::Num(fire.who)) && r.guns.iter().all(|&q| flat(q, fire.from) > k.moved_m) {
+        if x != l && r.who.has(crate::Num(fire.who)) && r.guns.iter().all(|&q| dist_xz(q, fire.from) > k.moved_m) {
             r.moved.add(crate::Num(fire.who));
             if r.moved.len() >= r.who.len() {
                 r.until = m::min(r.until, fire.now + k.moved_secs);
@@ -583,7 +579,7 @@ fn first_floor_of_the_lane(g: &mut Game, l: LanesLaneId, fire: Fire) {
     r.cells = Some(cells);
     for i in 0..r.guns.len() {
         let q = r.guns[i];
-        if flat(q, from) >= 1.5 {
+        if dist_xz(q, from) >= 1.5 {
             r.wedges.push(v3::copy(q));
             r.wedges.push([at[0], 0.0, at[2]]);
         }
@@ -629,7 +625,7 @@ fn remask_or_bump(g: &mut Game, l: LanesLaneId) {
 pub(super) fn sees(g: &crate::game::Game, o: GuardId, at: V3, reach: f64) -> bool {
     let c = g.gd[o].ch;
     let pos = g.ch[c].pos;
-    let d = flat(pos, at);
+    let d = dist_xz(pos, at);
     if d >= reach {
         return false;
     }

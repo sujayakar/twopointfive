@@ -1,5 +1,6 @@
 pub use ::game_types::coverfire::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -131,11 +132,6 @@ fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cover
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
-/// distance over the floor
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// his name
 fn name_of(g: &crate::game::Game, who: CharId) -> String { crate::character::guard_of(g, who).map_or_else(|| String::from("Player"), |x| g.gd[x].callsign.clone()) }
 
@@ -213,7 +209,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<CharId>) -> Vec<cra
     for (mate, row) in s.men.iter() {
         if mate == gd || g.team(mate) != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
-        if !g.ch[mc].alive || flat(g.ch[mc].pos, my_pos) > call_m { continue; }
+        if !g.ch[mc].alive || dist_xz(g.ch[mc].pos, my_pos) > call_m { continue; }
         for k in row.know.iter() {
             if !k.call.unwrap_or(false)
                 && who_passes(who, k.who)
@@ -361,7 +357,7 @@ pub fn cover_lane(g: &crate::game::Game, gd: GuardId, from: V3, to: V3) -> bool 
 fn worth(g: &crate::game::Game, gd: GuardId, to: V3, rounds: f64) -> bool {
     let pos = g.ch[g.gd[gd].ch].pos;
     let path = match crate::scene_collision::nav_grid_find_path(g, pos, to, Some(2000.0), None) { Some(p) => p, None => return true };
-    let len = crate::places::walk_len(pos, &path) + flat(path.last().copied().unwrap_or(pos), to);
+    let len = crate::places::walk_len(pos, &path) + dist_xz(path.last().copied().unwrap_or(pos), to);
     rounds * g.k.coverfire.round_secs <= len / g.k.coverfire.walk_pace
 }
 
@@ -432,7 +428,7 @@ fn leaves_a_chew_gone_cold(g: &mut Game, gd: GuardId, time: f64) {
 fn place_of_his_chew_on_this_man(g: &mut Game, gd: GuardId, k: &crate::coverfire::Know) -> Option<V3> {
     let same_m = g.k.coverfire.same_m;
     let row = man_of(g, gd);
-    row.chew.as_ref().filter(|c| c.who == k.who && (k.t <= c.kt + 1e-9 || flat(c.to, k.at) < same_m)).map(|c| c.to)
+    row.chew.as_ref().filter(|c| c.who == k.who && (k.t <= c.kt + 1e-9 || dist_xz(c.to, k.at) < same_m)).map(|c| c.to)
 }
 
 /// What the line answers, and where: on a chew its place; else the place he knows, a guess at where a man moving went on to, then low where he last stood.
@@ -616,7 +612,7 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     let to = cw.to;
     let p = g.k.aim.guard;
     let pos = g.ch[c].pos;
-    let dist = flat(pos, to);
+    let dist = dist_xz(pos, to);
     if g.gd[gd].reload_t < 0.0 {
         let muzzle = g.ch[c].muzzle;
         if !cover_lane(g, gd, muzzle, to) {
@@ -700,7 +696,7 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     let p = g.k.aim.guard;
     let sk = op_skill();
     let pos = g.ch[c].pos;
-    let dist = flat(pos, to);
+    let dist = dist_xz(pos, to);
     let muzzle = g.ch[c].muzzle;
     if !cover_lane(g, gd, muzzle, to) {
         bump(g, BumpK::HeldFriend);

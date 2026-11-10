@@ -55,12 +55,6 @@ pub(super) fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crat
     Ok(TutQuietVars { walk: Some(walk), beam: Some(beam), past: Some(past) })
 }
 
-/// the man by name, if he is still at his work
-fn calm(g: &Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
-    let u = crate::director::director_beat_unit(g, callsign)?;
-    if crate::director::director_query_state(g, r, &u) == Some(crate::game::GuardState::Patrol) { Some(u) } else { None }
-}
-
 /// (tut-quiet.script.ts:34 beat 'lane') a voice behind the wall the player creeps along.
 pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, f: &mut crate::script_tut_quiet::TutQuietLaneFrame) -> Result<Option<crate::director::Cond>, String> {
     match f.at {
@@ -69,19 +63,19 @@ pub(super) fn tut_quiet_lane_step(g: &mut crate::game::Game, r: DirectorRunId, f
             Ok(Some(crate::director::director_beat_wait(g, r, 1.2)?))
         }
         1 => {
-            let Some(a) = calm(g, r, "Novak") else { return Ok(None) };
+            let Some(a) = super::script_tut_pair::calm(g, r, "Novak") else { return Ok(None) };
             crate::director::director_beat_say(g, r, &a, "cold tonight", None)?;
             f.at = 2;
             Ok(Some(crate::director::director_beat_wait(g, r, 3.6)?))
         }
         2 => {
-            if calm(g, r, "Novak").is_none() || calm(g, r, "Kowalski").is_none() { return Ok(None); }
+            if super::script_tut_pair::calm(g, r, "Novak").is_none() || super::script_tut_pair::calm(g, r, "Kowalski").is_none() { return Ok(None); }
             crate::director::director_beat_radio(g, "Kowalski", "anything out back?");
             f.at = 3;
             Ok(Some(crate::director::director_beat_wait(g, r, 2.4)?))
         }
         3 => {
-            if let Some(a) = calm(g, r, "Novak") { crate::director::director_beat_say(g, r, &a, "nothing. quiet", None)?; }
+            if let Some(a) = super::script_tut_pair::calm(g, r, "Novak") { crate::director::director_beat_say(g, r, &a, "nothing. quiet", None)?; }
             Ok(None)
         }
         at => Err(format!("tut-quiet lane: no resume point {at}")),
@@ -315,14 +309,14 @@ pub(super) fn tut_quiet_store_step(g: &mut crate::game::Game, r: DirectorRunId, 
             Ok(Some(crate::director::director_beat_wait(g, r, 1.4)?))
         }
         1 => {
-            let Some(a) = calm(g, r, "Kowalski") else { return Ok(None) };
+            let Some(a) = super::script_tut_pair::calm(g, r, "Kowalski") else { return Ok(None) };
             crate::director::director_beat_say(g, r, &a, "Reyes. how long?", None)?;
             f.at = 2;
             Ok(Some(crate::director::director_beat_wait(g, r, 2.4)?))
         }
         2 => {
-            if let Some(a) = calm(g, r, "Reyes") {
-                if calm(g, r, "Kowalski").is_some() { crate::director::director_beat_say(g, r, &a, "still counting", None)?; }
+            if let Some(a) = super::script_tut_pair::calm(g, r, "Reyes") {
+                if super::script_tut_pair::calm(g, r, "Kowalski").is_some() { crate::director::director_beat_say(g, r, &a, "still counting", None)?; }
             }
             Ok(None)
         }

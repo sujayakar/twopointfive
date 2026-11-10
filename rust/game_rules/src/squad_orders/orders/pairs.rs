@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,17 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// orders.ts:340 `const flat = v3.distXZ`
-fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-
-/// where a man's body stands now
-fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-
 // ------------------------------------------------------------ a walk, asked for a menu
 
 /// What route() says of his walk there, for a menu; the answer for the same two cells is kept a second.
 pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> crate::orders::SquadOrdersAsked {
-    let at = man_pos(g, gd);
+    let at = g.pos_of(gd);
     let cell = g.col.nav.cell;
     let p = g.player;
     let mut locks = 0.0;
@@ -48,14 +43,14 @@ pub(super) fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3)
 
 /// Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for two metres.
 pub(super) fn squad_orders_has_line(g: &crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> bool {
-    let p = man_pos(g, gd);
+    let p = g.pos_of(gd);
     let (at, door) = match t {
         OrderTarget::Floor(x) => (x.at, false),
         OrderTarget::Door(x) => (x.at, true),
         OrderTarget::None(x) => (x.at, false),
         OrderTarget::Foe(x) => (x.at, false),
     };
-    let d = flat(p, at);
+    let d = dist_xz(p, at);
     if d < 0.6 { return true; }
     let k = (if door { d - 0.6 } else { m::min(d, 2.0) }) / d;
     !crate::scene_collision::segment_blocked(g, [p[0], 1.5, p[2]], [p[0] + (at[0] - p[0]) * k, 1.5, p[2] + (at[2] - p[2]) * k], None, None, None)
@@ -73,9 +68,9 @@ fn find(root: &mut [usize], i: usize) -> usize {
 
 /// orders.ts:2518 `walk`: the metres of his way there
 fn file_walk(g: &Game, gd: GuardId, to: V3) -> f64 {
-    let p = man_pos(g, gd);
+    let p = g.pos_of(gd);
     let Some(w) = crate::scene_collision::nav_grid_find_path(g, p, to, None, None) else { return 1e6; };
-    crate::places::walk_len(p, &w) + flat(w.last().copied().unwrap_or(p), to)
+    crate::places::walk_len(p, &w) + dist_xz(w.last().copied().unwrap_or(p), to)
 }
 
 /// ORDERS.fileQueue, for one deal of a stack: what a dealing costs (`file_cross_cost`), or None where no file among the spots is tight: nothing is priced, no walk is asked for.
@@ -88,7 +83,7 @@ fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3])
     let mut root: Vec<usize> = (0..n).collect();
     for i in 0..n {
         for j in (i + 1)..n {
-            if flat(spots[i], spots[j]) <= gap {
+            if dist_xz(spots[i], spots[j]) <= gap {
                 let ri = find(&mut root, i);
                 let rj = find(&mut root, j);
                 root[ri] = rj;
@@ -100,13 +95,13 @@ fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3])
         let mut o: Option<usize> = None;
         for j in 0..n {
             if j != i && find(&mut root, j) == find(&mut root, i) {
-                let closer = match o { None => true, Some(o) => flat(spots[i], spots[j]) < flat(spots[i], spots[o]) };
+                let closer = match o { None => true, Some(o) => dist_xz(spots[i], spots[j]) < dist_xz(spots[i], spots[o]) };
                 if closer { o = Some(j); }
             }
         }
         let Some(o) = o else { continue; };
         let mk = spots[i];
-        let l = flat(mk, spots[o]);
+        let l = dist_xz(mk, spots[o]);
         if l < 0.05 { continue; }
         let nx = -(spots[o][2] - mk[2]) / l;
         let nz = (spots[o][0] - mk[0]) / l;
@@ -134,7 +129,7 @@ fn squad_orders_file_cross(g: &crate::game::Game, men: &[GuardId], spots: &[V3])
 fn file_cross_cost(f: &FileCross, at: &[usize]) -> f64 {
     let FileCross::Tight { file, tight, l, spots, cost } = f;
     // x would have to get past y: y's mark lies on x's walk to his own, and y is on it before x comes by
-    let past = |x: usize, jx: usize, y: usize, jy: usize| l[x][jy] + flat(spots[jy], spots[jx]) <= l[x][jx] + 0.5 && l[x][jy] > l[y][jy];
+    let past = |x: usize, jx: usize, y: usize, jy: usize| l[x][jy] + dist_xz(spots[jy], spots[jx]) <= l[x][jx] + 0.5 && l[x][jy] > l[y][jy];
     let mut c = 0.0;
     for a in 0..at.len() {
         for b in (a + 1)..at.len() {
@@ -201,7 +196,7 @@ fn pair_rec(g: &Game, s: &mut PairDeal, i: usize, walk: f64) {
         if s.used[j] { continue; }
         s.used[j] = true;
         s.cur[i] = j;
-        let w = walk + flat(man_pos(g, s.men[i]), s.spots[j]);
+        let w = walk + dist_xz(g.pos_of(s.men[i]), s.spots[j]);
         pair_rec(g, s, i + 1, w);
         s.used[j] = false;
     }
@@ -233,8 +228,8 @@ pub fn squad_orders_pair(g: &crate::game::Game, men: &[GuardId], spots: &[V3], g
         cross = s.cross;
     }
     if men.len() == 2 && spots.len() == 2 {
-        let (p0, p1) = (man_pos(g, men[0]), man_pos(g, men[1]));
-        let (d00, d11, d01, d10) = (flat(p0, spots[0]), flat(p1, spots[1]), flat(p0, spots[1]), flat(p1, spots[0]));
+        let (p0, p1) = (g.pos_of(men[0]), g.pos_of(men[1]));
+        let (d00, d11, d01, d10) = (dist_xz(p0, spots[0]), dist_xz(p1, spots[1]), dist_xz(p0, spots[1]), dist_xz(p1, spots[0]));
         let gr = if front.is_some() { crate::gunroles::gun_file_ranks(g, men) } else { None };
         let (gc01, gc10) = match gr.as_ref() {
             Some(r) => (crate::gunroles::gun_file_cost(g, r, &[spots[0], spots[1]], front.unwrap()), crate::gunroles::gun_file_cost(g, r, &[spots[1], spots[0]], front.unwrap())),
@@ -250,10 +245,10 @@ pub fn squad_orders_pair(g: &crate::game::Game, men: &[GuardId], spots: &[V3], g
     let mut left: Vec<V3> = spots.to_vec();
     let mut out = Vec::with_capacity(men.len());
     for &gd in men {
-        let p = man_pos(g, gd);
+        let p = g.pos_of(gd);
         let mut bi = 0;
         for (i, &s) in left.iter().enumerate() {
-            if flat(p, s) < flat(p, left[bi]) { bi = i; }
+            if dist_xz(p, s) < dist_xz(p, left[bi]) { bi = i; }
         }
         let spot = if left.len() > 1 { left.remove(bi) } else { left[0] };
         out.push((gd, spot));
@@ -362,7 +357,7 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
 }
 
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched, and the one search is the search it was.
-pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
+pub fn prop_penalty(g: &crate::game::Game, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
     if !g.team(gd).ours() || g.props.props.is_empty() { return None; }
     if crate::mission::has(g, gd) { return None; }
     let (pad, by) = (g.k.orders.prop_round_pad, g.k.orders.prop_round_door);
@@ -395,7 +390,7 @@ pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
             z += 1.0;
         }
     }
-    let at = man_pos(g, gd);
+    let at = g.pos_of(gd);
     let here = crate::scene_collision::nav_grid_idx(g, m::floor(at[0] / cs), m::floor(at[2] / cs));
     dear.delete(crate::Num(here));
     if dear.is_empty() { return None; }
@@ -427,7 +422,7 @@ pub(super) fn far_off(a: &[V3], b: &[V3]) -> crate::orders::FarOff {
     let mut at: V3 = a.first().copied().unwrap_or_default();
     for i in 1..a.len() {
         let (p, q) = (a[i - 1], a[i]);
-        let l = flat(p, q);
+        let l = dist_xz(p, q);
         let n = m::max(1.0, m::ceil(l / 0.5));
         let mut s = 1.0;
         while s <= n {
@@ -459,7 +454,7 @@ pub fn side_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
 pub fn door_words(g: &crate::game::Game, d: DoorId) -> String {
     if let Some(said) = crate::doornames::door_said_name(g, d) { return said; }
     let name = g.dr[d].def.name.clone();
-    door_id_words(g, &name)
+    door_id_words(&name)
 }
 
 /// orders.ts:2692 the words of a door's id; nothing the game holds is read
@@ -471,7 +466,7 @@ fn id_words(id: &str) -> String {
 }
 
 /// A door's id said as words: compass letters as words, no token dropped.
-pub fn door_id_words(g: &crate::game::Game, id_2: &str) -> String { id_words(id_2) }
+pub fn door_id_words(id: &str) -> String { id_words(id) }
 
 #[cfg(test)]
 mod tests {

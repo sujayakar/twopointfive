@@ -37,7 +37,6 @@ pub fn set_silent(g: &mut crate::game::Game, on: bool) {
     let s = g.m.silent.states.get_mut(key).unwrap();
     if s.silent == on { return; }
     s.silent = on; s.since = now; s.hot = false; s.was = Some(false); s.booted = None;
-    if on {  } else {  }
 }
 
 /// this teammate is under the silent posture this frame
@@ -182,9 +181,6 @@ pub fn silent_holds_glass(g: &mut crate::game::Game, gd: GuardId, h: GuardId, c_
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || urgent(g) { return false; }
     let from = crate::guards::shot_origin(g, c_2);
     if !crate::glasspen::glass_on_line(g, from, to) { return false; }
-    if sil {  }
-    else if uns {  }
-    else {  }
     true
 }
 

@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;
 use crate::roomfight::{News, Word};
 use crate::game::Game;
@@ -66,19 +67,16 @@ use crate::ask::Over;
 pub(super) fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &Option<crate::scene_scenarios::StructureRoom>) -> bool {
     match (a, b) { (Some(x), Some(y)) => x.id == y.id, (None, None) => true, _ => false }
 }
-fn pos_of(g: &Game, gd: GuardId) -> V3 { let c = g.gd[gd].ch; g.ch[c].pos }
 fn bounds_of(b: Grown) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
 fn rect_bounds(b: crate::scene_scenarios::Rect) -> crate::scene_level::BreachPlanBounds { crate::scene_level::BreachPlanBounds { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 } }
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 fn door_name(g: &Game, d: DoorId) -> String { g.dr[d].def.name.clone() }
 fn nav_idx(g: &Game, ix: f64, iz: f64) -> f64 { crate::scene_collision::nav_grid_idx(g, ix, iz) }
-fn nav_blocked(g: &Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// wayRound's and wayRound2's `cell`: no check of the grid's edges, as there
 fn cell_of(g: &Game, p: V3) -> f64 { let c = g.col.nav.cell; nav_idx(g, m::floor(p[0] / c), m::floor(p[2] / c)) }
 fn in_grid(g: &Game, ix: f64, iz: f64) -> bool { ix >= 0.0 && iz >= 0.0 && ix < g.col.nav.w && iz < g.col.nav.h }
 fn room_has(g: &Game, t: RoomfightRoomId, i: f64) -> bool { g.tab.roomfight_room[t].cells.has(crate::Num(i)) }
 
-pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_for(g, "enemysquads::pick#1", who) * (r[1] - r[0]) }
 /// a man who dropped it and ran is no man of his squad's any more
 pub(super) fn alive(g: &crate::game::Game, gd: GuardId) -> bool { !crate::condition::down(g, g.gd[gd].ch) && !g.gd[gd].fled }
@@ -95,7 +93,7 @@ pub fn room_of(g: &crate::game::Game, q: EnemysquadsSquadId, p: V3, m: Option<f6
 fn along(from: V3, path: &[V3], each: &mut dyn FnMut(V3, f64)) -> f64 {
     let (mut q, mut run0) = (from, 0.0);
     for &w in path {
-        let l = flat(q, w);
+        let l = dist_xz(q, w);
         let n = m::max(1.0, m::ceil(l / 0.5));
         let mut i = 1.0;
         while i <= n {
@@ -209,23 +207,23 @@ pub fn squad_may_wedge(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
 pub fn squad_rally(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<V3> {
     let q = squad_id_of(g, gd)?;
     let r = g.tab.enemysquads_squad[q].def.rally?;
-    let pos = pos_of(g, gd);
+    let pos = g.pos_of(gd);
     let here = room_of(g, q, pos, None);
     let there = room_of(g, q, r, None);
     let Some(there_room) = there.clone() else { return None };
-    if same_room(&here, &there) || flat(r, threat) < 4.0 { return None; }
+    if same_room(&here, &there) || dist_xz(r, threat) < 4.0 { return None; }
     let wide = bounds_of(grown(there_room.bounds, 1.0));
     if team_known(g).iter().any(|p| crate::squad::in_bounds(*p, Some(wide), None)) { return None; }
     let men = g.tab.enemysquads_squad[q].men.clone();
     for (dx, dz) in [(0.0, 0.0), (1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0), (1.0, 1.0), (-1.0, -1.0)] {
         let p: V3 = [r[0] + dx * 0.9, 0.0, r[2] + dz * 0.9];
-        if nav_blocked(g, p[0], p[2]) || !crate::squad::in_bounds(p, Some(rect_bounds(there_room.bounds)), None) { continue; }
+        if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || !crate::squad::in_bounds(p, Some(rect_bounds(there_room.bounds)), None) { continue; }
         let mut on_it = false;
-        for &m in &men { if m != gd && alive(g, m) && flat(pos_of(g, m), p) < 0.8 { on_it = true; break; } }
+        for &m in &men { if m != gd && alive(g, m) && dist_xz(g.pos_of(m), p) < 0.8 { on_it = true; break; } }
         if on_it { continue; }
         let Some(path) = crate::scene_collision::nav_grid_find_path(g, pos, p, None, None).filter(|x| !x.is_empty()) else { continue };
         let mut toward = false;
-        let l = along(pos, &path, &mut |q2, _| { if flat(q2, threat) < 2.0 { toward = true; } });
+        let l = along(pos, &path, &mut |q2, _| { if dist_xz(q2, threat) < 2.0 { toward = true; } });
         if toward || l > 30.0 { continue; }
         event(g, q, SquadEventWhat::Rally, None);
         return Some(p);
@@ -287,7 +285,7 @@ fn team_known(g: &crate::game::Game) -> Vec<V3> {
 const SPOTS: [(f64, f64); 7] = [(2.4, 1.2), (2.4, -1.2), (3.0, 1.6), (3.0, -1.6), (1.2, 1.7), (1.2, -1.7), (2.6, 0.0)];
 fn flank_limit(g: &Game, l0: f64) -> f64 { let k = &g.k.pressure; m::min(k.flank_max_m, m::max(k.flank_k * l0, l0 + k.flank_slack_m)) }
 fn is_steel(g: &Game, d: DoorId) -> bool { g.dr[d].def.steel == Some(true) }
-fn near_foe(known: &[V3], p: V3, r: f64) -> bool { known.iter().any(|f| flat(*f, p) < r) }
+fn near_foe(known: &[V3], p: V3, r: f64) -> bool { known.iter().any(|f| dist_xz(*f, p) < r) }
 /// the first way by a door nobody has taken, else the first at all, inside the limit: `ways` already sorted
 fn pick_way(ways: Vec<Way>, taken: &[DoorId], limit: f64) -> Option<Way> {
     if let Some(w) = ways.iter().find(|w| !taken.contains(&w.door.unwrap()) && w.l <= limit) { return Some(w.clone()); }
@@ -297,7 +295,7 @@ fn pick_way(ways: Vec<Way>, taken: &[DoorId], limit: f64) -> Option<Way> {
 /// a flanker's way to a fix: to a door of its room the team is not known to be at, or on open floor a way off the straight one
 fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3], taken: &[DoorId], used: &[V3]) -> Option<crate::enemysquads::Way> {
     let gd = g.tab.roomfight_def[d].gd;
-    let pos = pos_of(g, gd);
+    let pos = g.pos_of(gd);
     let d_room = g.tab.roomfight_def[d].room;
     let cell = g.col.nav.cell;
     let t = crate::roomfight::room_fight_room_at(g, at);
@@ -330,11 +328,11 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
             let fr = crate::guards::frame_of(g, e.door);
             for (depth, lat) in SPOTS {
                 let p: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat, 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat];
-                if nav_blocked(g, p[0], p[2]) { continue; }
+                if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
                 let c = cell_of(g, p);
-                if room_has(g, t, c) || (used.iter().any(|u| flat(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
+                if room_has(g, t, c) || (used.iter().any(|u| dist_xz(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
                 let Some(path) = crate::scene_collision::nav_grid_find_path(g, pos, p, Some(6000.0), Some(&mut dear)).filter(|x| !x.is_empty()) else { continue };
-                if flat(path[path.len() - 1], p) > 0.8 { continue; }
+                if dist_xz(path[path.len() - 1], p) > 0.8 { continue; }
                 let mut bad = false;
                 let l = along(pos, &path, &mut |q, _| { let c = cell_of(g, q); if room_has(g, t, c) || near_foe(known, q, 3.0) { bad = true; } });
                 l0 = m::min(l0, l);
@@ -373,7 +371,7 @@ fn way_round(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[V3],
         all += 1.0;
         let c = cell_of(g, p);
         if mid.has(crate::Num(c)) { on += 1.0; }
-        if s <= l1 - 6.0 && !nav_blocked(g, p[0], p[2]) && !used.iter().any(|u| flat(*u, p) < 1.2) && !crate::places::taken(g, gd, p, 0.9) { spots.push(p); }
+        if s <= l1 - 6.0 && !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && !used.iter().any(|u| dist_xz(*u, p) < 1.2) && !crate::places::taken(g, gd, p, 0.9) { spots.push(p); }
     });
     if spots.is_empty() || on / m::max(1.0, all) > 0.35 { return None; }
     Some(Way { spot: spots[spots.len() - 1], door: None, l: l1, path: None, aim: None })
@@ -388,7 +386,7 @@ fn team_known_how(g: &crate::game::Game) -> Vec<crate::enemysquads::Known> {
         if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd) { out.push(Known { p: seen, firm: true }); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at {
             if g.time - g.tab.roomfight_def[d].noise_t < 4.0 {
-                let c = pos_of(g, gd);
+                let c = g.pos_of(gd);
                 let firm = !crate::scene_collision::solid_blocked(g, [c[0], 1.5, c[2]], [n[0], 1.0, n[2]], None);
                 out.push(Known { p: n, firm });
             }
@@ -409,9 +407,9 @@ fn ctx_open(g: &Game, a: V3, b: V3) -> bool {
 /// a man standing there is in front of one of the guns the side knows of
 fn ctx_hot(g: &Game, known: &[Known], rear: &[V3], ajar: &[V3], p: V3) -> bool {
     let (fire_m, soft_m, rear_m) = (g.k.squads.fire_m, g.k.squads.soft_m, g.k.squads.rear_m);
-    for k in known { let d = flat(k.p, p); if d < (if k.firm { fire_m } else { soft_m }) && (d < 0.6 || ctx_fire(g, k.p, p)) { return true; } }
-    for r in rear { let d = flat(*r, p); if d < rear_m && (d < 0.6 || ctx_fire(g, *r, p)) { return true; } }
-    for a in ajar { if flat(*a, p) < fire_m && ctx_fire(g, *a, p) { return true; } }
+    for k in known { let d = dist_xz(k.p, p); if d < (if k.firm { fire_m } else { soft_m }) && (d < 0.6 || ctx_fire(g, k.p, p)) { return true; } }
+    for r in rear { let d = dist_xz(*r, p); if d < rear_m && (d < 0.6 || ctx_fire(g, *r, p)) { return true; } }
+    for a in ajar { if dist_xz(*a, p) < fire_m && ctx_fire(g, *a, p) { return true; } }
     false
 }
 /// hotCell's memo, on the record CTX holds: what round_ctx hands back is a copy, and the memo is shared by the men of one decision
@@ -434,7 +432,7 @@ fn ctx_hot_cell(g: &mut Game, known: &[Known], rear: &[V3], ajar: &[V3], ix: f64
 /// in a doorway's line whether its leaf is shut or not
 fn ctx_lane(g: &Game, mouths: &[V3], p: V3) -> bool {
     let mouth_m = g.k.squads.mouth_m;
-    for m0 in mouths { if flat(*m0, p) < mouth_m && ctx_open(g, *m0, p) { return true; } }
+    for m0 in mouths { if dist_xz(*m0, p) < mouth_m && ctx_open(g, *m0, p) { return true; } }
     false
 }
 fn ctx_dearer(g: &Game, cost: &mut JsMap<crate::Num, f64>, ix: f64, iz: f64, c: f64) {
@@ -459,7 +457,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
         let o1: V3 = [e.at[0] + e.out[0], 0.0, e.at[2] + e.out[1]];
         for (depth, lat) in [(1.0, 0.0), (2.4, 0.0), (2.4, 1.2), (2.4, -1.2)] {
             let r: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat, 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat];
-            if !nav_blocked(g, r[0], r[2]) && (depth == 1.0 || ctx_fire(g, o1, r)) { rear.push(r); }
+            if !crate::scene_collision::nav_grid_is_blocked(g, r[0], r[2]) && (depth == 1.0 || ctx_fire(g, o1, r)) { rear.push(r); }
         }
     }
     let mut mouths: Vec<V3> = Vec::new();
@@ -500,7 +498,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
             let mut l = -w;
             while l <= w {
                 let q: V3 = [e.at[0] + e.out[0] * d + fr.ux * l, 0.0, e.at[2] + e.out[1] * d + fr.uz * l];
-                if !nav_blocked(g, q[0], q[2]) && ctx_open(g, m0, q) { ctx_dearer(g, &mut cost, m::floor(q[0] / cell), m::floor(q[2] / cell), if flat(m0, q) < fire_m { 25.0 } else { 8.0 }); }
+                if !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && ctx_open(g, m0, q) { ctx_dearer(g, &mut cost, m::floor(q[0] / cell), m::floor(q[2] / cell), if dist_xz(m0, q) < fire_m { 25.0 } else { 8.0 }); }
                 l += cell;
             }
             d += cell;
@@ -524,7 +522,7 @@ fn round_ctx(g: &mut crate::game::Game, t: RoomfightRoomId, known: &[crate::enem
 fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[crate::enemysquads::Known], theirs: &[DoorId], taken: &[DoorId], used: &[V3], back: Option<f64>) -> Option<crate::enemysquads::Way> {
     let back = back.unwrap_or(0.0);
     let gd = g.tab.roomfight_def[d].gd;
-    let pos = pos_of(g, gd);
+    let pos = g.pos_of(gd);
     let d_room = g.tab.roomfight_def[d].room;
     let cell = g.col.nav.cell;
     let t = crate::roomfight::room_fight_room_at(g, at).filter(|t| Some(*t) != d_room && g.tab.roomfight_room[*t].cells.len() <= 500 && g.tab.roomfight_room[*t].entries.len() > 1);
@@ -553,7 +551,7 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
     }
     let out_of = |e: &crate::roomfight::Entry| -> V3 { [e.at[0] + e.out[0], 0.0, e.at[2] + e.out[1]] };
     let mut entries = g.tab.roomfight_room[t].entries.clone();
-    js::sort_by(&mut entries, |a, b| flat(pos, out_of(a)) - flat(pos, out_of(b)));   // (nearest first, and a way by a door his mate has not taken is enough)
+    js::sort_by(&mut entries, |a, b| dist_xz(pos, out_of(a)) - dist_xz(pos, out_of(b)));   // (nearest first, and a way by a door his mate has not taken is enough)
     for e in &entries {
         if is_steel(g, e.door) { continue; }
         if ways.iter().any(|w| !taken.contains(&w.door.unwrap())) { break; }
@@ -561,20 +559,20 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
         let outside = out_of(e);
         // the team's door
         let mut team = theirs.contains(&e.door);
-        if !team { for k in known { if k.firm && flat(k.p, outside) < 4.0 && ctx_fire(g, k.p, outside) { team = true; break; } } }
-        if !team && theirs.is_empty() && known.iter().any(|k| flat(k.p, outside) < 4.0) { team = true; }
+        if !team { for k in known { if k.firm && dist_xz(k.p, outside) < 4.0 && ctx_fire(g, k.p, outside) { team = true; break; } } }
+        if !team && theirs.is_empty() && known.iter().any(|k| dist_xz(k.p, outside) < 4.0) { team = true; }
         if team { continue; }
         for (depth, lat) in SPOTS {
             let p: V3 = [e.at[0] + e.out[0] * depth + fr.ux * lat, 0.0, e.at[2] + e.out[1] * depth + fr.uz * lat];
-            if nav_blocked(g, p[0], p[2]) { continue; }
+            if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { continue; }
             let c = cell_of(g, p);
-            if room_has(g, t, c) || (used.iter().any(|u| flat(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
+            if room_has(g, t, c) || (used.iter().any(|u| dist_xz(*u, p) < 1.2) || crate::places::taken(g, gd, p, 0.9)) { continue; }
             if ctx_hot(g, &cap_known, &rear, &cap_ajar, p) { continue; }
             let path = crate::scene_collision::way_priced(&mut *g, pos, p, 6000.0, &mut |g, ix: f64, iz: f64| -> f64 {
                 if ctx_hot_cell(g, &cap_known, &rear, &cap_ajar, ix, iz) { 200.0 } else { dear0(g, &x, d_room, ix, iz) }
             });
             let Some(path) = path.filter(|x| !x.is_empty()) else { continue };
-            if flat(path[path.len() - 1], p) > 0.8 { continue; }
+            if dist_xz(path[path.len() - 1], p) > 0.8 { continue; }
             let mut bad = false;
             let mut pts: Vec<(V3, f64)> = Vec::new();
             let l = along(pos, &path, &mut |q, s| {
@@ -611,7 +609,7 @@ fn way_round2(g: &mut crate::game::Game, d: RoomfightDefId, at: V3, known: &[cra
 }
 /// wayRound2's `ok`: a place short of the lane to hold the door from
 fn hold_ok(g: &Game, q: V3, s: f64, l: f64, outside: V3, back: f64, used: &[V3]) -> bool {
-    s >= 2.0 && l - s >= 3.0 && flat(q, outside) <= back && !nav_blocked(g, q[0], q[2]) && !used.iter().any(|u| flat(*u, q) < 1.2) && ctx_fire(g, q, outside)
+    s >= 2.0 && l - s >= 3.0 && dist_xz(q, outside) <= back && !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) && !used.iter().any(|u| dist_xz(*u, q) < 1.2) && ctx_fire(g, q, outside)
 }
 
 /// a row of a squad's timeline, what the other squads heard of it, and the log
@@ -630,7 +628,7 @@ pub(super) fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crat
 }
 /// the men who go: nearest the fight first, a man left in every room that had one
 pub(super) fn goers(g: &crate::game::Game, h: &[RoomfightDefId], at: V3, k: f64) -> Vec<RoomfightDefId> {
-    let mut by: Vec<(RoomfightDefId, f64)> = h.iter().map(|d| { let gd = g.tab.roomfight_def[*d].gd; (*d, flat(pos_of(g, gd), at)) }).collect();
+    let mut by: Vec<(RoomfightDefId, f64)> = h.iter().map(|d| { let gd = g.tab.roomfight_def[*d].gd; (*d, dist_xz(g.pos_of(gd), at)) }).collect();
     js::sort_by(&mut by, |a, b| a.1 - b.1);
     let mut left: JsMap<Option<RoomfightRoomId>, f64> = JsMap::new();
     for d in h { let r = g.tab.roomfight_def[*d].room; let n = left.get(r).copied().unwrap_or(0.0); left.set(r, n + 1.0); }
@@ -677,7 +675,7 @@ pub(super) fn may_go(g: &crate::game::Game, q: EnemysquadsSquadId) -> bool {
 fn first_near(g: &Game, x: EnemysquadsSquadId, at: V3) -> Option<SentRole> {
     for i in 0..g.tab.enemysquads_squad[x].sent.len() {
         let (role, gd, fix_at) = { let s = &g.tab.enemysquads_squad[x].sent[i]; (s.role, s.gd, s.fix_at) };
-        if role != SentRole::Reinforce && role != SentRole::Look && alive(g, gd) && flat(fix_at, at) < 12.0 { return Some(role); }
+        if role != SentRole::Reinforce && role != SentRole::Look && alive(g, gd) && dist_xz(fix_at, at) < 12.0 { return Some(role); }
     }
     None
 }
@@ -806,7 +804,7 @@ fn whose_fight(g: &Game, q: EnemysquadsSquadId, squads: &[EnemysquadsSquadId], n
     }).collect();
     if !live.is_empty() {
         let at0 = fix.at;
-        js::sort_by(&mut live, |a, b| flat(last_call(net, *a, at0), at0) - flat(last_call(net, *b, at0), at0));
+        js::sort_by(&mut live, |a, b| dist_xz(last_call(net, *a, at0), at0) - dist_xz(last_call(net, *b, at0), at0));
         fix.ally = Some(live[0]);
         fix.at = v3::copy(last_call(net, live[0], at0));
         return g.tab.enemysquads_squad[live[0]].hit_room.clone();
@@ -840,7 +838,7 @@ fn room_middle(r: &crate::scene_scenarios::StructureRoom) -> V3 {
 /// The room the fight is in is LOST, or as good as, with fewer than two of its men in it: its other door is held from outside, not gone in by.
 fn room_is_lost(g: &Game, room: &Option<crate::scene_scenarios::StructureRoom>, ally: Option<EnemysquadsSquadId>) -> bool {
     let (Some(_), Some(a)) = (room, ally) else { return false };
-    let in_room = g.tab.enemysquads_squad[a].men.iter().filter(|&&m0| alive(g, m0) && same_room(&room_of(g, a, pos_of(g, m0), Some(0.05)), room)).count();
+    let in_room = g.tab.enemysquads_squad[a].men.iter().filter(|&&m0| alive(g, m0) && same_room(&room_of(g, a, g.pos_of(m0), Some(0.05)), room)).count();
     in_room < 2
 }
 
@@ -879,7 +877,7 @@ fn on_the_doors(g: &mut Game, q: EnemysquadsSquadId, sit: &Situation, squads: &[
     for &x in squads {
         let xh = if x == q { sit.at_home.clone() } else { home(g, x) };
         if xh.is_empty() { continue; }
-        let ds: Vec<f64> = xh.iter().map(|d| { let gd = g.tab.roomfight_def[*d].gd; flat(pos_of(g, gd), sit.fix.at) }).collect();
+        let ds: Vec<f64> = xh.iter().map(|d| { let gd = g.tab.roomfight_def[*d].gd; dist_xz(g.pos_of(gd), sit.fix.at) }).collect();
         let d = m::min_n(&ds);
         if d < nd { nd = d; first = Some(x); }
     }
@@ -920,7 +918,7 @@ fn door_at(g: &mut crate::game::Game, room: Option<&crate::scene_scenarios::Stru
     let p = match room { Some(r) => room_middle(r), None => at };
     let t = crate::roomfight::room_fight_room_at(g, p);
     let (mut best, mut bd) = (None, 4.5);
-    if let Some(t) = t { for e in &g.tab.roomfight_room[t].entries { let d = flat(e.at, at); if d < bd { bd = d; best = Some(e.door); } } }
+    if let Some(t) = t { for e in &g.tab.roomfight_room[t].entries { let d = dist_xz(e.at, at); if d < bd { bd = d; best = Some(e.door); } } }
     best
 }
 /// a squad that has the team on it: said on the net by a man able to say it, and its men in its other rooms on their way after their own beat
@@ -966,13 +964,13 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
     let mut new: Vec<(usize, f64)> = Vec::new();   // (each man sent now, and how long his way there takes him)
     for d in home(g, q) {
         let gd = g.tab.roomfight_def[d].gd;
-        let p = pos_of(g, gd);
+        let p = g.pos_of(gd);
         let his = room_of(g, q, p, None);   // (a man who gave ground out of it is the room fight's: not sent back in)
         if his.is_none() || same_room(&his, &Some(room.clone())) || g.tab.enemysquads_squad[q].due.iter().any(|x| x.gd == gd) { continue; }
         let key = stay_key(g, gd, &StayKeyRoom { name: room.name.clone() });
         if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) { continue; }   // (he was told that room is gone)
         let t = g.time + pick(g, crate::dice::Who::Man(gd), reinforce) * own_k(g);
-        let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(flat(p, at), |w| crate::places::walk_len(p, &w));
+        let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(dist_xz(p, at), |w| crate::places::walk_len(p, &w));
         new.push((g.tab.enemysquads_squad[q].due.len(), way / g.tune.guard_chase));
         g.tab.enemysquads_squad[q].due.push(SquadDueItem { gd, at: v3::copy(at), t, room: Some(room.clone()) });
     }
@@ -988,7 +986,7 @@ fn due_here(g: &mut Game, q: EnemysquadsSquadId, at: V3, room: &crate::scene_sce
     let here = Some(room.clone());
     let mut kept = Vec::with_capacity(due.len());
     for mut x in due {
-        let p = pos_of(g, x.gd);
+        let p = g.pos_of(x.gd);
         let key = stay_key(g, x.gd, &StayKeyRoom { name: room.name.clone() });
         let gone = !same_room(&x.room, &here) && g.tab.enemysquads_squad[q].stayed.as_ref().is_some_and(|s| s.has(key));
         if gone || same_room(&room_of(g, q, p, None), &here) { continue; }

@@ -159,7 +159,7 @@ fn lines_of(moment: SupMoment, key: &str) -> &'static [&'static str] {
 }
 
 /// A byte JavaScript's `\w` holds (every byte of a non-ASCII character is outside it, as a non-unicode regex sees that character).
-fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
+pub(crate) fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
 
 /// `/\b(he|he's|him|his)\b/.test(l)`.
 fn mentions_him(l: &str) -> bool {

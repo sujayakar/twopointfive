@@ -1,3 +1,4 @@
+pub use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -71,7 +72,6 @@ pub(in crate::missions) fn program_beat(p: &mut crate::director::ProgramDef, nam
 }
 
 pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
-pub fn dist_xz(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.
 pub mod util {
     pub use super::{dist_xz, yaw_to};

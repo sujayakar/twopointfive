@@ -1,16 +1,11 @@
 pub use ::game_types::rescueend::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
-
-/// The distance across the floor.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
-/// The player a row is built for and a press is read from.
-fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
 /// Nobody led, nobody counted.
 pub(super) fn rescue_end_new() -> crate::rescueend::RescueEnd { crate::rescueend::RescueEnd::blank() }
@@ -60,11 +55,11 @@ fn rescue_end_free(g: &mut crate::game::Game) -> bool {
 /// The row on each living hostage in reach.
 fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     if !crate::rescue::rescue_up(g) || g.rescue.result.is_some() { return; }
-    let pl = who(g, &crate::seats::here(g));
+    let pl = crate::seats::here(g).player;
     let had = crate::rescue::rescue_captor(g).is_some();
     for h in rescue_end_alive(g) {
         let hp = g.ch[g.gd[h].ch].pos;
-        let d = flat(p, hp);
+        let d = dist_xz(p, hp);
         if d > g.k.rescueend.marker_m || crate::fogofwar::fog_of_war_hidden(g, h) { continue; }
         let near = d < g.k.rescueend.reach_m && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [hp[0], 1.0, hp[2]], None);
         let can = near && !g.pl[pl].sprinting;
@@ -122,7 +117,7 @@ pub(super) fn rescue_end_tick(g: &mut crate::game::Game) {
     let act = g.sets[g.seat].act.as_ref().map(|a| (a.kind, a.guard, a.verb));
     if let Some((crate::game::InteractableKind::Guard, Some(guard), Some(verb))) = act {
         if (verb == crate::game::Verb::Lead || verb == crate::game::Verb::Stay) && g.staged.captives.contains(&guard) {
-            let by = if verb == crate::game::Verb::Lead { let pl = who(g, &crate::seats::here(g)); Some(g.pl[pl].ch) } else { None };
+            let by = if verb == crate::game::Verb::Lead { let pl = crate::seats::here(g).player; Some(g.pl[pl].ch) } else { None };
             rescue_end_word(g, by);
         }
     }
@@ -148,7 +143,7 @@ pub(super) fn rescue_end_won(g: &mut crate::game::Game) -> Option<crate::rescuee
     let o = rescue_end_out(g);
     if let (Some(o), true) = (o, g.rescue.ending.lead.is_some()) {
         let out_m = g.k.rescueend.out_m;
-        if alive.iter().all(|&h| flat(g.ch[g.gd[h].ch].pos, o) < out_m) { return Some(crate::rescueend::RescueEndWon::Out); }
+        if alive.iter().all(|&h| dist_xz(g.ch[g.gd[h].ch].pos, o) < out_m) { return Some(crate::rescueend::RescueEndWon::Out); }
     }
     None
 }
@@ -158,13 +153,13 @@ pub(super) fn rescue_end_objective(g: &crate::game::Game, seat: &crate::seats::S
     if g.rescue.ending.lead.is_some() {
         return crate::rescueend::RescueEndObjective { text: String::from("objective ▸ bring them out the way you came in"), pos: rescue_end_out(g) };
     }
-    let pl = who(g, seat);
+    let pl = seat.player;
     let p = g.ch[g.pl[pl].ch].pos;
     let mut near: Option<V3> = None;
     for h in rescue_end_alive(g) {
         let b = g.ch[g.gd[h].ch].pos;
         near = match near {
-            Some(a) if !(flat(b, p) < flat(a, p)) => Some(a),
+            Some(a) if !(dist_xz(b, p) < dist_xz(a, p)) => Some(a),
             _ => Some(b),
         };
     }

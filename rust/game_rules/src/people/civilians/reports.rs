@@ -15,10 +15,6 @@ use crate::teams::Team;
 
 // ---------------------------------------------------------------- small helpers
 
-/// a bone's place, or the offset from the body's feet the TypeScript falls back to
-fn bone_or(g: &Game, c: CharId, b: Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
-}
 /// an empty bubble test: he has a line up for less than `secs` since it began
 fn bubble_within(g: &Game, gd: GuardId, secs: f64) -> bool {
     match &g.gd[gd].bubble { Some(b) => g.time - b.t < secs, None => false }
@@ -480,7 +476,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             crate::squadnet::team_says(g, None, if dead { "that was a civilian." } else { "civilian's out. still breathing." });
         }
     }
-    let at = bone_or(g, c, Bone::Chest, 1.1);
+    let at = g.ch[c].bone_or(Bone::Chest, 1.1);
     let body_m = g.k.civ.body_m;
     let mut i = 0;
     while i < g.civilians.len() {
@@ -496,7 +492,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
 
 /// a point in her open view, with a clear line
 fn civ_point_in_view(g: &crate::game::Game, gd: GuardId, p: V3, range: f64) -> bool {
-    let c = g.gd[gd].ch; let eye = bone_or(g, c, Bone::Head, 1.65); let look = crate::guards::look_of(g, c); let e = eye_of(g, gd);
+    let c = g.gd[gd].ch; let eye = g.ch[c].bone_or(Bone::Head, 1.65); let look = crate::guards::look_of(g, c); let e = eye_of(g, gd);
     let to = v3::sub(p, eye); let l = v3::len(to); if l > range { return false; } if m::hyp2(to[0], to[2]) < 0.3 { return true; }
     if v3::dot([look[0], 0.0, look[2]], v3::normalize([to[0], 0.0, to[2]])) < m::cos(m::max(45.0, e.half_deg) * v3::DEG) { return false; }
     !crate::scene_collision::segment_blocked(g, eye, p, None, None, None)
@@ -539,7 +535,7 @@ pub(super) fn guards_notice(g: &mut crate::game::Game, dt: f64) {
 /// (1) of guardsNotice: every calm man who hears or sees her running turns toward where she came from; she runs to him if he is nearer
 fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
     let vis = civ_visibility(g, cv, dt);
-    let mouth = bone_or(g, c, Bone::Head, 1.6); let chest = bone_or(g, c, Bone::Chest, 1.2);
+    let mouth = g.ch[c].bone_or(Bone::Head, 1.6); let chest = g.ch[c].bone_or(Bone::Chest, 1.2);
     let screaming = g.time - g.cv[cid].scream_at < 0.5;
     let (scream_m, see_m, see_lit) = (g.k.civ.scream_m, g.k.civ.see_m, g.k.civ.see_lit);
     let mut i = 0;
@@ -552,7 +548,7 @@ fn notice_panic(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         let d = v3::dist(g.ch[oc].pos, g.ch[c].pos); if d > m::max(scream_m, see_m) + 2.0 { continue; }
         let (mut heard, mut seen) = (false, false);
         if screaming && d <= scream_m + 2.0 {
-            let ear = bone_or(g, oc, Bone::Head, 1.6);
+            let ear = g.ch[oc].bone_or(Bone::Head, 1.6);
             let pr = crate::weather::hear_path(g, mouth, ear, None);
             heard = pr.path_len < scream_m * pr.carry;
         }
@@ -623,7 +619,7 @@ fn notice_cowering(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
 /// a downed civilian in this man's open view
 fn body_in_view_of(g: &crate::game::Game, o: GuardId, cv: GuardId) -> bool {
     let oc = g.gd[o].ch; let cc = g.gd[cv].ch;
-    let eye = bone_or(g, oc, Bone::Head, 1.65); let look = crate::guards::look_of(g, oc);
+    let eye = g.ch[oc].bone_or(Bone::Head, 1.65); let look = crate::guards::look_of(g, oc);
     let body = match g.ch[cc].bones.get(Bone::Hips) { Some(p) => *p, None => g.ch[cc].pos };
     let to = v3::sub(body, eye); if v3::len(to) > 12.0 { return false; }
     if m::hyp2(to[0], to[2]) > 0.4 && v3::dot([look[0], 0.0, look[2]], v3::normalize([to[0], 0.0, to[2]])) < m::cos(60.0 * v3::DEG) { return false; }
@@ -669,7 +665,7 @@ fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
 /// her scream, to the other civilians' ears
 pub(super) fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
     let cid = g.gd[gd].civ.unwrap(); let c = g.gd[gd].ch;
-    let mouth = bone_or(g, c, Bone::Head, 1.6);
+    let mouth = g.ch[c].bone_or(Bone::Head, 1.6);
     let scream_m = g.k.civ.scream_m;
     let mut i = 0;
     while i < g.civilians.len() {
@@ -679,7 +675,7 @@ pub(super) fn hear_scream(g: &mut crate::game::Game, gd: GuardId) {
         let st = g.cv[oc].state;
         if st != CivState::Work && st != CivState::Startled && st != CivState::Cower { continue; }
         if v3::dist(g.ch[och].pos, g.ch[c].pos) > scream_m + 2.0 { continue; }
-        let ear = bone_or(g, och, Bone::Head, 1.6);
+        let ear = g.ch[och].bone_or(Bone::Head, 1.6);
         let pr = crate::weather::hear_path(g, mouth, ear, None);
         if pr.path_len < scream_m * pr.carry {
             let at = g.cv[cid].cause_pos.unwrap_or(g.ch[c].pos); let armed = g.cv[cid].armed;
