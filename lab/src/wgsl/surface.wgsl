@@ -248,7 +248,7 @@ fn drawLamp(x: vec3f, n: vec3f) -> vec2f {
   for (var i = 0u; i < frame.counts.x; i++) { if ((i & 3u) == 0u) { near = lampReach(x, i >> 2u); if (!byReach) { near = mix(vec4f(0.04), vec4f(1.0), near); } } let k = near[i & 3u]; if (k <= 0.0 || (still && lamps[i].kind == 2u)) { continue; } let w = lampWeight(i, x, n) * k; if (w <= 0.0) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
-/** how much what torches light has changed there since the last frame, with nothing in the way: 0 not, 1 it is all other light. No dice */
+/** how much what torches light has changed there since the last frame, with nothing in the way, by the places that are asked every frame: 0 not, 1 it is all other light. No dice */
 fn spotChange(x: vec3f, n: vec3f) -> f32 {
   var d = 0.0; var m = 0.0; for (var t = 0u; t < SPOT_TORCHES; t++) { var u = vec2f(0.0); for (var k = 0u; k < 6u; k++) { for (var h = 0u; h < 2u; h++) {
     let j = t * 256u + 85u + k * 17u; let o = SPOT_ROW + 2u * j + h * SPOT_WAS; let c = extra[o + 1u]; if (c.x == 0u) { continue; } let a = extra[o]; let v = bitcast<vec3f>(a.xyz) - x; let up = dot(n, v); let to = -dot(octUnpack(a.w), v); if (up <= 0.0 || to <= 0.0) { continue; }
