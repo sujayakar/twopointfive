@@ -69,15 +69,15 @@ pub struct Seen {
     wrote: u64,
     boxes: usize,
     word: [u64; MAX_BOXES],
-    at: [[f64; 4]; MAX_BOXES],
+    at: [[f64; 5]; MAX_BOXES],
 }
 impl Seen {
-    pub const NONE: Self = Seen { wrote: 0, boxes: 0, word: [0; MAX_BOXES], at: [[0.0; 4]; MAX_BOXES] };
+    pub const NONE: Self = Seen { wrote: 0, boxes: 0, word: [0; MAX_BOXES], at: [[0.0; 5]; MAX_BOXES] };
     /// nothing was seen, and there is something to see
     pub fn empty_of(&self, o: &World) -> bool { self.boxes == 0 && self.wrote != o.wrote }
     pub fn forget(&mut self) { (self.wrote, self.boxes) = (0, 0); }
-    /// the statics looked at again: `moved` is told the rectangle of every one that is not as it was, where it stood and where it stands
-    pub fn look(&mut self, o: &World, round: impl Fn(&[f64]) -> [f64; 4], mut moved: impl FnMut([f64; 4])) {
+    /// the statics looked at again: `moved` is told the rectangle of every one that is not as it was and how high it reaches, where it stood and where it stands
+    pub fn look(&mut self, o: &World, round: impl Fn(&[f64]) -> [f64; 5], mut moved: impl FnMut([f64; 5])) {
         if self.wrote == o.wrote { return; }
         self.wrote = o.wrote;
         let n = o.boxes();
