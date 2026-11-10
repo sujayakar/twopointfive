@@ -20,9 +20,9 @@ pub use sam::{aim, aimcost, aimweight, backkey, gunwall, hands, handwork, intera
 pub mod stealth;
 pub use stealth::{close, devices, disarm, fogofwar, lightswitch, peeksight, stalk, stickycam, takedown, wallsnap, whistle};
 pub mod fittings;
-pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, props, sim_doorshome, sprintdoor};
+pub use fittings::{doorblast, doors, doorswing, doorthrow, doorway, handleside, props, sim_doorshome, slab, sprintdoor};
 pub mod breakage;
-pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, falls, fixture_break, floormess, furnblast, glass, glassbreak, marks, particle_fx, render_decals, shard_model, shards, sheet_model, sim_slabshome, sparks, wallbreak, wallskin, wallwear, winbars};
+pub use breakage::{blast_feel, blast_look, break_table, debris, destruction, dust_look, edge_look, falling, falls, fixture_break, floormess, furnblast, glass, glassbreak, marks, particle_fx, render_decals, shard_model, shards, sheet_model, sparks, wallbreak, wallskin, wallwear, winbars};
 pub mod missions;
 pub use missions::{breach, director, lesson, mission, nightbreach, opening, par, quiet, quietfog, rails, rescue, rescueend, rescueflow, rescueflush, roomclear, rowset, scenario_run, scene_scenario_list, start_list, scene_scenarios, script_tut_kit, script_tut_pair, script_tut_queue, script_tut_quiet, script_tut_road, script_tut_team, startfile, teamtally, verdict};
 pub mod speech;

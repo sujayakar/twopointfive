@@ -19,7 +19,6 @@ pub mod render_decals;
 pub mod shard_model;
 pub mod shards;
 pub mod sheet_model;
-pub mod sim_slabshome;
 pub mod sparks;
 pub mod wallbreak;
 pub mod wallskin;

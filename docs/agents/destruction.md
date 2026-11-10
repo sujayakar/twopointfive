@@ -38,8 +38,9 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-What is kept in the game's block is in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars; `slabs.rs` for a leaf in the air
-(`doors.md`). Landings and litter are `g.falls`, with their rules in `rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
+The game's block keeps, in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars.
+A leaf in the air is on its door, rules in `slab.rs`. Landings and litter are `g.falls`, rules in
+`rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
 
 ## How it works

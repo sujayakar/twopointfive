@@ -172,7 +172,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     if !bodies.is_empty() {
         let list = g.doors.list.clone();
         for (k, &d) in list.iter().enumerate() {
-            let slab = crate::doors::door_slab(g, d).filter(|s| !s.rest);
+            let slab = g.dr[d].slab.filter(|s| !s.rest);
             if slab.is_none() && m::abs(crate::doors::door_angle(g, d) - angles[k]) < 1e-3 { continue; }
             let (hinge, width, height) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].height);
             for &ch in bodies.iter() {
