@@ -12,7 +12,7 @@ fn varOf(q: vec2i) -> vec2f { let m = textureLoad(mom, q, 0); var v = max(m.y - 
   if (KIND == 1) { if (all(((nv > vec4f(13.0)) & (vc < vec4f(0.004))) | (c < vec4f(0.0)))) { textureStore(outB, id.xy, c); return; } wf = lightOf(p0); acc = c * wf; first = firstNow;
     /* (one look says yes or no, never how sure it is: while few frames stand behind it, its neighbours say whether this is an edge of light or the middle of a soft one) */
     if (any((yv > vec4f(0.0)) & (c >= vec4f(0.0)))) { var q = vec4f(0.0); var qn = vec4f(0.0); for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let v = textureLoad(src, clamp(p0 + vec2i(x, y), vec2i(0), dim - 1), 0); let k = select(vec4f(0.0), vec4f(1.0), v >= vec4f(0.0)); q += v * k; qn += k; } } q /= max(qn, vec4f(1.0)); vc = max(vc, q * (1.0 - q) * yv); } }
-  let sf = sqrt(vc) * 1.5 / sqrt(max(nv, vec4f(1.0))) + vec4f(0.012) + 0.35 * yv; let l0 = lum(c.rgb); let fr = LAYER == 1;
+  let sf = sqrt(vc) * vec4f(1.5, 1.5, 1.5, select(1.5, 0.6, first < 0.5)) / sqrt(max(nv, vec4f(1.0))) + vec4f(0.012) + 0.35 * yv; let l0 = lum(c.rgb); let fr = LAYER == 1;
   var reach = 1.0; if (NARROW == 1) { var rough = p.rough; if (fr) { rough = 0.02; } let lobe = rough * rough * 1.6 * c.a / max(p.t + c.a, 0.1) * frame.size.y / (2.0 * length(frame.camUp.xyz) * f32(DIV)); reach = lobe * (0.6 + young) + 1.5 * young; if (reach < 0.6 * f32(STRIDE)) { textureStore(outB, id.xy, c); return; } }
   for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
     if (x == 0 && y == 0) { continue; } let q = p0 + vec2i(x, y) * STRIDE; if (any(q < vec2i(0)) || any(q >= dim)) { continue; }
