@@ -86,32 +86,48 @@ pub fn check_structure(g: &crate::game::Game, s: Option<&crate::roomclear::Check
         starts.push(Some(t.clone()));
     }
     for (k, t) in starts.iter().enumerate() {
-        let t = match t {
-            Some(t) => t,
-            None => continue,
-        };
-        let start = if k > 0 { format!("team start {}", k + 1) } else { String::from("team start") };
-        let its = if k > 0 { format!("the team's start {}", k + 1) } else { String::from("the team's start") };
-        if k > 0 && !two_ops(t) {
-            bad.push(format!("{}: needs the teammates' marks (ops, two at least)", start));
-        }
-        let mut who: Vec<(String, V3)> = vec![(String::from("Player"), t.sam)];
-        for (i, q) in t.ops.iter().flatten().enumerate() {
-            who.push((format!("teammate {}", i + 1), *q));
-        }
-        for (name, p) in &who {
-            if blocked(g, p[0], p[2]) {
-                bad.push(format!("{}, {} ({}, {}): not on floor a man can stand on", start, name, js::num_str(p[0]), js::num_str(p[2])));
-            } else if name != "Player" && crate::scene_collision::nav_grid_find_path(g, t.sam, *p, None, None).is_none() {
-                bad.push(format!("{}, {}: no way on foot from the player's mark", start, name));
-            }
-        }
-        for r in &s.rooms {
-            if !r.marks.is_empty() && !blocked(g, t.sam[0], t.sam[2]) && !blocked(g, r.marks[0].pos[0], r.marks[0].pos[2]) && crate::scene_collision::nav_grid_find_path(g, t.sam, r.marks[0].pos, None, None).is_none() {
-                bad.push(format!("{}: no way on foot from {}", r.name, its));
-            }
+        if let Some(t) = t { check_a_team_start(g, &s, k, t, &mut bad); }
+    }
+    check_garrison_fits(&s, &mut bad);
+    let squads = crate::roomclear::CheckSquadsS { rooms: s.rooms.clone(), max_men: s.max_men, squads: s.squads.clone() };
+    let of_squads = check_squads(g, &squads);
+    bad.extend(of_squads);
+    if !s.rooms.iter().any(|r| r.doors.len() > 1) {
+        bad.push(String::from("no room has more than one way in"));
+    }
+    for r in &s.rooms {
+        check_a_room(g, r, &mut bad);
+    }
+    bad
+}
+
+/// A start of the team: everybody on floor, joined on foot to the player's mark, and the player joined to each room.
+fn check_a_team_start(g: &Game, s: &crate::roomclear::CheckStructureS, k: usize, t: &crate::scene_scenarios::TeamStart, bad: &mut Vec<String>) {
+    let start = if k > 0 { format!("team start {}", k + 1) } else { String::from("team start") };
+    let its = if k > 0 { format!("the team's start {}", k + 1) } else { String::from("the team's start") };
+    if k > 0 && !two_ops(t) {
+        bad.push(format!("{}: needs the teammates' marks (ops, two at least)", start));
+    }
+    let mut who: Vec<(String, V3)> = vec![(String::from("Player"), t.sam)];
+    for (i, q) in t.ops.iter().flatten().enumerate() {
+        who.push((format!("teammate {}", i + 1), *q));
+    }
+    for (name, p) in &who {
+        if blocked(g, p[0], p[2]) {
+            bad.push(format!("{}, {} ({}, {}): not on floor a man can stand on", start, name, js::num_str(p[0]), js::num_str(p[2])));
+        } else if name != "Player" && crate::scene_collision::nav_grid_find_path(g, t.sam, *p, None, None).is_none() {
+            bad.push(format!("{}, {}: no way on foot from the player's mark", start, name));
         }
     }
+    for r in &s.rooms {
+        if !r.marks.is_empty() && !blocked(g, t.sam[0], t.sam[2]) && !blocked(g, r.marks[0].pos[0], r.marks[0].pos[2]) && crate::scene_collision::nav_grid_find_path(g, t.sam, r.marks[0].pos, None, None).is_none() {
+            bad.push(format!("{}: no way on foot from {}", r.name, its));
+        }
+    }
+}
+
+/// As many defenders as the structure says it was made for, and no more than the floor's characters allow.
+fn check_garrison_fits(s: &crate::roomclear::CheckStructureS, bad: &mut Vec<String>) {
     let men = s.rooms.iter().fold(0.0, |n, r| n + r.garrison);
     let most = crate::scene_scenarios::SQUAD_MAX_MEN;
     match s.max_men.filter(|x| js::truthy(*x)) {
@@ -127,60 +143,51 @@ pub fn check_structure(g: &crate::game::Game, s: Option<&crate::roomclear::Check
             }
         }
     }
-    let squads = crate::roomclear::CheckSquadsS { rooms: s.rooms.clone(), max_men: s.max_men, squads: s.squads.clone() };
-    let of_squads = check_squads(g, &squads);
-    bad.extend(of_squads);
-    if !s.rooms.iter().any(|r| r.doors.len() > 1) {
-        bad.push(String::from("no room has more than one way in"));
+}
+
+/// A room: its garrison, its doors against the level's and their plans, and each of its marks.
+fn check_a_room(g: &Game, r: &crate::scene_scenarios::StructureRoom, bad: &mut Vec<String>) {
+    if r.garrison < 1.0 {
+        bad.push(format!("{}: nobody holds it", r.name));
     }
-    for r in &s.rooms {
-        if r.garrison < 1.0 {
-            bad.push(format!("{}: nobody holds it", r.name));
+    if (r.marks.len() as f64) < r.garrison {
+        bad.push(format!("{}: {} marks for {} men", r.name, r.marks.len(), js::num_str(r.garrison)));
+    }
+    for d in &r.doors {
+        if crate::doors::doors_by_name(g, &d.id).is_none() {
+            bad.push(format!("{}: no door '{}' in the level", r.name, d.id));
         }
-        if (r.marks.len() as f64) < r.garrison {
-            bad.push(format!("{}: {} marks for {} men", r.name, r.marks.len(), js::num_str(r.garrison)));
-        }
-        for d in &r.doors {
-            if crate::doors::doors_by_name(g, &d.id).is_none() {
-                bad.push(format!("{}: no door '{}' in the level", r.name, d.id));
-            }
-            // (a plan is for the room its door is entered INTO; the one door two rooms share has none)
-            if let Some(b) = g.level.door_plan(&d.id).and_then(|p| p.bounds) {
-                let b = crate::scene_scenarios::Rect { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 };
-                if !same_bounds(b, r.bounds) {
-                    bad.push(format!("{}: its bounds are not the level's clear plan's for '{}'", r.name, d.id));
-                }
-            }
-        }
-        for (i, mk) in r.marks.iter().enumerate() {
-            let at = format!("{} mark {} ({}, {})", r.name, i, js::num_str(mk.pos[0]), js::num_str(mk.pos[2]));
-            if !in_rect(mk.pos, r.bounds) {
-                bad.push(format!("{}: outside the room", at));
-            }
-            if blocked(g, mk.pos[0], mk.pos[2]) {
-                bad.push(format!("{}: not on floor a man can stand on", at));
-            }
-            let mut prop: Option<(f64, String)> = None;
-            for k in 0..g.props.props.len() {
-                let row = &g.tab.props_prop[g.props.props[k]];
-                let gap = crate::props::prop_gap(row.home, row.hx, row.hz, mk.pos);
-                if gap < MARK_CLEAR_M {
-                    prop = Some((gap, row.def.name.clone()));
-                    break;
-                }
-            }
-            if let Some((gap, name)) = prop {
-                bad.push(format!("{}: {} m from {} — he would stand in it", at, js::to_fixed(gap, 2), name));
-            }
-            if !r.doors.iter().any(|d| d.id == mk.watch) {
-                bad.push(format!("{}: watches '{}', which is no door of this room", at, mk.watch));
-            }
-            if crate::scene_collision::wall_between(g, [mk.pos[0], 1.6, mk.pos[2]], mk.aim_at) {
-                bad.push(format!("{}: no line from his eyes to the point he covers", at));
+        // (a plan is for the room its door is entered INTO; the one door two rooms share has none)
+        if let Some(b) = g.level.door_plan(&d.id).and_then(|p| p.bounds) {
+            let b = crate::scene_scenarios::Rect { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 };
+            if !same_bounds(b, r.bounds) {
+                bad.push(format!("{}: its bounds are not the level's clear plan's for '{}'", r.name, d.id));
             }
         }
     }
-    bad
+    for (i, mk) in r.marks.iter().enumerate() {
+        let at = format!("{} mark {} ({}, {})", r.name, i, js::num_str(mk.pos[0]), js::num_str(mk.pos[2]));
+        if !in_rect(mk.pos, r.bounds) {
+            bad.push(format!("{}: outside the room", at));
+        }
+        if blocked(g, mk.pos[0], mk.pos[2]) {
+            bad.push(format!("{}: not on floor a man can stand on", at));
+        }
+        let prop = g.props.props.iter().find_map(|&pr| {
+            let row = &g.tab.props_prop[pr];
+            let gap = crate::props::prop_gap(row.home, row.hx, row.hz, mk.pos);
+            (gap < MARK_CLEAR_M).then(|| (gap, row.def.name.clone()))
+        });
+        if let Some((gap, name)) = prop {
+            bad.push(format!("{}: {} m from {} — he would stand in it", at, js::to_fixed(gap, 2), name));
+        }
+        if !r.doors.iter().any(|d| d.id == mk.watch) {
+            bad.push(format!("{}: watches '{}', which is no door of this room", at, mk.watch));
+        }
+        if crate::scene_collision::wall_between(g, [mk.pos[0], 1.6, mk.pos[2]], mk.aim_at) {
+            bad.push(format!("{}: no line from his eyes to the point he covers", at));
+        }
+    }
 }
 
 /// The squads block against the floor. Empty = sound; no squads block = nothing to say.
@@ -453,13 +460,7 @@ pub(super) fn room_clear_scenario_on_staged(g: &mut crate::game::Game) {
         }
     }
     for id in ways.keys() {
-        if let Some(d) = crate::doors::doors_by_name(g, &id) {
-            crate::doors::door_reset(g, d);
-            g.dr[d].leaf.angle = 0.0;
-            g.dr[d].leaf.vel = 0.0;
-            g.dr[d].leaf.latched = true;
-            g.dr[d].leaf.closing = false;
-        }
+        if let Some(d) = crate::doors::doors_by_name(g, &id) { crate::breach::shut(g, d); }
     }
     let dealt = core::mem::take(&mut g.room_clear.placement);
     room_clear_scenario_clear(g);
