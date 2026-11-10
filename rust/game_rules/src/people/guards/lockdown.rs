@@ -383,7 +383,7 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while k < g.guards.len() {
         let o = g.guards[k];
         k += 1;
-        if matches!(g.gd[o].foe, Some(crate::game::Foe::Guard(x)) if x == gd) {
+        if g.gd[o].foe == Some(g.gd[gd].ch) {
             crate::mind::foe(g, o, None, "guards");
             crate::aim::aim_state_clear(&mut g.gd[o].aim);
         }

@@ -352,7 +352,8 @@ pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2:
     };
     if let Some(team) = look.and_then(|l| l.team) { g.gd[id].team = team; }
     let team = g.gd[id].team;
-    if team != crate::teams::Team::Guard && team != crate::teams::Team::Hostile { crate::mind::foe(g, id, None, "game"); }
+    // (an enemy of the player is born with the first of them in mind)
+    g.gd[id].foe = if team == crate::teams::Team::Guard || team == crate::teams::Team::Hostile { Some(g.pl[g.player].ch) } else { None };
     let keys = match keys {
         Some(k) => k,
         None => vec![String::from(crate::doors::FLOOR_KEY)],

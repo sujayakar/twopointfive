@@ -176,7 +176,7 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
         if g.cond[man.ch].down { continue; }
         let by_meter = match o.meters.get(h) { Some(meter) => t - meter.seen_t < 0.3, None => false };
         let by_own_eyes = man.script.is_none()
-            && matches!(man.foe, Some(crate::game::Foe::Guard(f)) if f == h)
+            && man.foe == Some(g.gd[h].ch)
             && t - man.last_seen_t < 0.3;
         if by_meter || by_own_eyes { out.push(o.gd); }
     }
@@ -387,9 +387,10 @@ mod tests {
         g.tab.roomfight_op[om].meters.set(h, fresh);
         g.tab.roomfight_op[os].meters.set(h, crate::roomfight::Meter { seen_t: 99.0, ..fresh });
         g.tab.roomfight_op[od].meters.set(h, fresh);
-        crate::mind::foe(&mut g, by_eyes, Some(crate::game::Foe::Guard(h)), "roomfight");
+        let body = g.gd[h].ch;
+        crate::mind::foe(&mut g, by_eyes, Some(body), "roomfight");
         g.gd[by_eyes].last_seen_t = 99.9;
-        crate::mind::foe(&mut g, stale, Some(crate::game::Foe::Player), "roomfight");
+        crate::mind::foe(&mut g, stale, Some(CharId(0)), "roomfight");
         g.gd[stale].last_seen_t = 99.9;
         assert_eq!(room_fight_seen_by(&mut g, h), vec![by_meter, by_eyes]);
         assert!(room_fight_team_sees(&mut g, h) && !room_fight_team_sees(&mut g, gone));

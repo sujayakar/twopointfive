@@ -156,7 +156,7 @@ pub struct Qrf {
     pub marks: Option<crate::qrf::Marks>,
     pub marks_on: bool,
     #[is(-1.0)] pub marks_way: f64,
-    pub word: JsMap<crate::qrf::QrfWordKey, crate::qrf::QrfWordValue>,
+    pub word: JsMap<CharId, crate::qrf::QrfWordValue>,
     #[is(-1000000000.0)] pub word_t: f64,
 }
 
@@ -169,12 +169,6 @@ pub struct QrfLogItem {
 pub struct QrfSpent {
     pub room: String,
     pub fix_t: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
-pub enum QrfWordKey {
-    Guard(GuardId),
-    Player,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

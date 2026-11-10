@@ -102,7 +102,6 @@ pub(super) fn shot_relation(g: &crate::game::Game, gd: GuardId, e: crate::guards
 
 /// Where a colleague's shots say the enemy is: the shooter's own idea of his man at its own age; none when the hearer keeps what he has.
 pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::ColleagueFirePosE) -> Option<V3> {
-    use crate::picture::Who;
     if e.blind == Some(true) {
         let p = match e.to {
             Some(t) => t,
@@ -122,19 +121,10 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
     }
     let player_pos = g.ch[g.pl[g.player].ch].pos;
     if let Some(s) = sh {
-        let who: Option<Who> = match g.gd[s].foe {
-            Some(crate::game::Foe::Guard(f)) => Some(Who::Guard(f)),
-            Some(crate::game::Foe::Player) => Some(Who::Player),
-            None => {
-                if g.gd[s].team == crate::teams::Team::Guard { Some(Who::Player) } else { None }
-            }
-        };
+        let who = g.gd[s].foe.or_else(|| if g.gd[s].team == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
         if let Some(who) = who {
             if let Some(i) = crate::picture::idea_of(g, s, who) {
-                let tr = match who {
-                    Who::Player => player_pos,
-                    Who::Guard(f) => g.ch[g.gd[f].ch].pos,
-                };
+                let tr = g.ch[who].pos;
                 let mine = crate::picture::idea_of(g, gd, who);
                 g.stats.picture.shot_placed += 1;
                 if m::hyp2(i.at[0] - tr[0], i.at[2] - tr[2]) >= 1.0 {
@@ -165,7 +155,7 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
         Some(s) if g.gd[s].team != crate::teams::Team::Guard => s,
         _ => return Some(player_pos),
     };
-    if let Some(fc) = crate::teams::foe_char(g, s) {
+    if let Some(fc) = g.gd[s].foe {
         return Some(g.ch[fc].pos);
     }
     Some(match e.to {

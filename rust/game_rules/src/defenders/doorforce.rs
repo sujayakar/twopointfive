@@ -232,7 +232,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
             continue;
         }
         let now = time - g.gd[gd].last_seen_t < dt * 0.5 + 1e-6;
-        let pc = crate::teams::foe_char(g, gd);
+        let pc = g.gd[gd].foe;
         let alert = g.gd[gd].state == crate::game::GuardState::Alert;
         if alert {
             if let Some(pc) = pc {

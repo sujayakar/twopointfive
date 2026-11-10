@@ -159,7 +159,7 @@ pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t >= 1.0 {
         return false;
     }
-    let Some(fc) = crate::teams::foe_char(g, gd) else { return false };
+    let Some(fc) = g.gd[gd].foe else { return false };
     flat(g.ch[g.gd[gd].ch].pos, g.ch[fc].pos) < m::max(g.k.lanes.close_m, g.k.roomfight.move_engage_m)
 }
 

@@ -11,19 +11,19 @@ pub(in crate::people) fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -
     let mut seen = false;
     if staff && crate::teams::is_hostile(g, crate::teams::Team::Guard, crate::teams::Team::Operative) {
         acquire_foe(g, gd);
-        if g.gd[gd].foe.is_none() { crate::mind::foe(g, gd, Some(crate::game::Foe::Player), "guards"); }
+        if g.gd[gd].foe.is_none() { let c = g.pl[g.player].ch; crate::mind::foe(g, gd, Some(c), "guards"); }
     } else if !staff { acquire_foe(g, gd); }
-    let f = g.gd[gd].foe.clone();
-    let fc = crate::teams::foe_char(g, gd);
-    let (visible, dist) = match (&f, fc) {
-        (Some(crate::game::Foe::Player), _) => { let v = can_see(g, gd); (v.visible, v.dist) }
-        (Some(_), Some(fch)) => { let v = can_see_char(g, gd, fch); (v.visible, v.dist) }
+    let fc = g.gd[gd].foe;
+    let man = fc.and_then(|f| crate::character::guard_of(g, f));
+    let (visible, dist) = match (fc, man) {
+        (Some(_), None) => { let v = can_see(g, gd); (v.visible, v.dist) }
+        (Some(fch), Some(_)) => { let v = can_see_char(g, gd, fch); (v.visible, v.dist) }
         _ => { let v = no_sight(); (v.visible, v.dist) }
     };
     if let (true, Some(fch)) = (visible, fc) {
-        let rate = match &f {
-            Some(crate::game::Foe::Guard(o)) => sight_gain_on(g, gd, *o, dist),
-            _ => sight_gain(g, gd, dist),
+        let rate = match man {
+            Some(o) => sight_gain_on(g, gd, o, dist),
+            None => sight_gain(g, gd, dist),
         };
         if rate > 0.05 {
             let pp = g.ch[fch].pos;
@@ -46,7 +46,7 @@ pub(in crate::people) fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -
         }
     }
     if standoff_perceive(g, gd, Some(dt)) { seen = true; }
-    g.gd[gd].saw_player_this_frame = seen && matches!(f, Some(crate::game::Foe::Player));
+    g.gd[gd].saw_player_this_frame = seen && fc.is_some() && man.is_none();
     g.gd[gd].saw_foe_this_frame = seen;
     Eyes { seen, dist, body: fc }
 }

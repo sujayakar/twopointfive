@@ -474,10 +474,7 @@ fn role_of_man(g: &mut crate::game::Game, gd: GuardId) -> Option<TacticsRoleId> 
 
 /// Is the man this guard is after ARMED, as far as he can know
 fn armed_intruder(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    match g.gd[gd].foe {
-        Some(crate::game::Foe::Player) => {}
-        foe => return foe.is_some(),
-    }
+    if !crate::teams::foe_is_player(g, gd) { return g.gd[gd].foe.is_some(); }
     let now = g.time;
     let (shots, last_shot_t, last_t) = {
         let h = &g.gd[gd].witness.heard;
@@ -579,7 +576,7 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     s(g).last_lone_call_t = g.time;
     let place = crate::dialogue::place_name(g, l.fix);
     // (WORDS.on is settled on)
-    let line = if matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && g.gd[gd].unit.is_none() {
+    let line = if crate::teams::foe_is_player(g, gd) && g.gd[gd].unit.is_none() {
         alloc::format!("he's armed — {}. holding my corner, get a second man to me", place)
     } else {
         alloc::format!("armed contact, {} — holding here, need another gun on it", place)
@@ -606,9 +603,10 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
         }
         // (a unit with nobody yet takes his colleague's man)
         if g.gd[o].foe.is_none() {
-            if let Some(crate::game::Foe::Guard(foe)) = g.gd[gd].foe {
+            if let Some(foe) = crate::teams::foe_guard(g, gd) {
                 if !crate::rails::rails_down(g, foe) {
-                    crate::mind::foe(g, o, Some(crate::game::Foe::Guard(foe)), "tactics");
+                    let c = g.gd[foe].ch;
+                    crate::mind::foe(g, o, Some(c), "tactics");
                 }
             }
         }
