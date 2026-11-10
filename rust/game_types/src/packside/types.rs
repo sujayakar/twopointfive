@@ -35,6 +35,8 @@ pub struct Back {
     pub pack: u32,
     /// the body's points behind the trunk's joints
     pub line: Vec<crate::packside::BackPt>,
+    /// the hindmost point of each band up a strip at either end of its reach (his right, his left), where the side of any pack lies
+    pub ends: [Vec<crate::packside::BackPt>; 2],
 }
 
 #[derive(Clone, Copy, Debug, Default)]
