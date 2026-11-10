@@ -276,15 +276,6 @@ pub fn kit_solo_if(g: &mut crate::game::Game, solo: bool) {
     if !g.staged.facts.fight && (solo || (g.staged.facts.unseen && g.staged.team.is_empty())) { kit_solo(g); }
 }
 
-/// A mission started lowers the card on every host, and the harness's shipped stand asks the question too.
-pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
-    let plain = plain.unwrap_or(true);
-    g.solo_card = false;
-    if !g.stood.solo_stand { return; }
-    let lesson = g.level.lesson().is_some_and(|l| !l.steps.is_empty());
-    if !lesson { kit_solo_if(g, plain); }
-}
-
 /// The kit picture is about to be staged on this Player: his card comes off.
 pub(in crate::outfit) fn kit_show(g: &mut crate::game::Game) {
     let pl = g.player;
