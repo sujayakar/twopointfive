@@ -254,14 +254,29 @@ fn as_kit(an: &mut Anim, k: &game_types::character::AnimKit, er: &mut Errand) {
     let (h, p) = (&RIG.holster, &RIG.pistol.adj);
     let adj = |a: &Option<RigAdj>| -> Adj { a.map_or((false, [0.0; 3], [0.0; 3]), |v| (true, v.off, v.rot)) };
     let (holster, h_adj, p_adj) = ([h.down, h.out, h.fwd], adj(&h.adj), adj(p));
-    *er = Errand { t, t_a, t_r, dur, s0, roll0, re, front, from, to, cap, crouch, fix_r, holster, h_adj, p_adj, ..*er };
+    er.t = t;
+    er.t_a = t_a;
+    er.t_r = t_r;
+    er.dur = dur;
+    er.s0 = s0;
+    er.roll0 = roll0;
+    er.re = re;
+    er.front = front;
+    er.from = from;
+    er.to = to;
+    er.cap = cap;
+    er.crouch = crouch;
+    er.fix_r = fix_r;
+    er.holster = holster;
+    er.h_adj = h_adj;
+    er.p_adj = p_adj;
 }
 
 /// The trunk's own frame.
 fn kit_frame(fk: &mut Fk, er: &mut Errand) {
     let (left, up, fwd) = trunk_frame(fk);
     let q3 = fk.rot(role(SPINE3));
-    *er = Errand { left, up, fwd, q3, ..*er };
+    (er.left, er.up, er.fwd, er.q3) = (left, up, fwd, q3);
 }
 
 /// A direction of the trunk's frame.
@@ -278,7 +293,7 @@ fn kit_hands(fk: &mut Fk, er: &mut Errand) {
     let u_l: Spot = (fk.at(role(HAND_L)), fk.rot(role(HAND_L)), None);
     let (la, lb) = (v3::len(v3::sub(elbow_u, s_r)), v3::len(v3::sub(u_r.0, elbow_u)));
     let rifle = from == RIFLE || to == RIFLE;
-    *er = Errand { s_r, s_l, elbow_u, u_r, u_l, la, lb, rifle, ..*er };
+    (er.s_r, er.s_l, er.elbow_u, er.u_r, er.u_l, er.la, er.lb, er.rifle) = (s_r, s_l, elbow_u, u_r, u_l, la, lb, rifle);
 }
 
 /// A point as this pose sees it.
@@ -297,7 +312,7 @@ fn und(er: &Errand, dv: [f64; 3]) -> [f64; 3] {
 fn kit_start(fk: &mut Fk, er: &mut Errand) {
     let Errand { cap, fix_r, q3, s_r, .. } = *er;
     let st: Spot = (match cap.mr { Some(m) => un(fk, er, m), None => v3::add(s_r, dir_t(er, cap.r)) }, match (cap.mf, cap.mb) { (Some(f), Some(b)) => hand_rot(&fix_r, und(er, f), und(er, b)), _ => quat::mul(q3, cap.rq) }, None);
-    *er = Errand { st, ..*er };
+    er.st = st;
 }
 
 /// Where the right wrist is, how the hand lies and where the elbow points with the thing in the fist at the place it lives.
@@ -342,7 +357,7 @@ fn kit_home(tune: &Knobs, er: &mut Errand) {
     let back = rifle && !front;
     let rarc = if front { tune.kit.front.arc } else { arc_of(tune, RIFLE) };
     let (over, cross) = (tune.kit.over, tune.kit.cross);
-    *er = Errand { back, rarc, over, cross, ..*er };
+    (er.back, er.rarc, er.over, er.cross) = (back, rarc, over, cross);
 }
 
 /// A smooth share.
@@ -385,7 +400,20 @@ fn kit_shares(tune: &Knobs, er: &mut Errand) {
     let (pole_w, grip) = (0.0, 0.0);
     let pole: Option<[f64; 3]> = None;
     let tg = Spot::default();
-    *er = Errand { top, ap, sl, has_from, has_to, hold, stow, roll, join, free, pole_w, grip, pole, tg, ..*er };
+    er.top = top;
+    er.ap = ap;
+    er.sl = sl;
+    er.has_from = has_from;
+    er.has_to = has_to;
+    er.hold = hold;
+    er.stow = stow;
+    er.roll = roll;
+    er.join = join;
+    er.free = free;
+    er.pole_w = pole_w;
+    er.grip = grip;
+    er.pole = pole;
+    er.tg = tg;
 }
 
 /// The item in the fist to where it lives.
@@ -411,7 +439,7 @@ fn put_away(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
             0.0
         },
     );
-    *er = Errand { hold, stow, roll, pole_w, grip, pole, tg, ..*er };
+    (er.hold, er.stow, er.roll, er.pole_w, er.grip, er.pole, er.tg) = (hold, stow, roll, pole_w, grip, pole, tg);
 }
 
 /// The empty hand to where the next one lives.
@@ -452,7 +480,7 @@ fn go_across(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand)
         }
     }
     grip = smoothstep(0.65, 1.0, u);
-    *er = Errand { pole_w, grip, pole, tg, ..*er };
+    (er.pole_w, er.grip, er.pole, er.tg) = (pole_w, grip, pole, tg);
 }
 
 /// Up with it into the pose underneath.
@@ -480,7 +508,7 @@ fn bring_up(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand) 
     } else {
         0.0
     };
-    *er = Errand { hold, stow, roll, join, free, pole_w, grip, pole, tg, ..*er };
+    (er.hold, er.stow, er.roll, er.join, er.free, er.pole_w, er.grip, er.pole, er.tg) = (hold, stow, roll, join, free, pole_w, grip, pole, tg);
 }
 
 /// Nothing next: the emptied hand back to the pose underneath.
@@ -495,7 +523,7 @@ fn back_empty(tune: &Knobs, fk: &mut Fk, sling: &SlingFrontHand, er: &mut Errand
     pole_w = 0.85 * (1.0 - e);
     grip = 1.0 - smoothstep(0.0, 0.45, u);
     free = e;
-    *er = Errand { free, pole_w, grip, pole, tg, ..*er };
+    (er.free, er.pole_w, er.grip, er.pole, er.tg) = (free, pole_w, grip, pole, tg);
 }
 
 /// A rifle's errand: the elbow exactly where its pole says, the pole itself led over from where the pose underneath has the elbow.
@@ -512,7 +540,7 @@ fn rifle_elbow(er: &mut Errand) {
         pole = Some(if v3::len(m) > 1e-3 { v3::normalize(m) } else { pn });
         pole_w = 1.0;
     }
-    *er = Errand { pole_w, pole, ..*er };
+    (er.pole_w, er.pole) = (pole_w, pole);
 }
 
 /// What an arm can do, by how much of the hand is the errand's and not the pose's under it: none on the first frames nor as it lands.
@@ -528,7 +556,7 @@ fn arm_room(tune: &Knobs, er: &mut Errand) {
             tg.0 = v3::mad(s_r, if dl > 1e-4 { v3::scale(dv, 1.0 / dl) } else { dir_t(er, [-0.4, 0.2, 0.9]) }, r_min);
         }
     }
-    *er = Errand { tg, own, lie, ..*er };
+    (er.tg, er.own, er.lie) = (tg, own, lie);
 }
 
 /// The support hand: off whatever it had, to wait in front of him and onto the gun late; or let go of, and falling away.
@@ -545,7 +573,7 @@ fn support(tune: &Knobs, fk: &mut Fk, er: &mut Errand) {
         join = e3(t / tune.kit.let_go);
         tl = Some(mix(er, &s_l0, &u_l, join, None, None));
     }
-    *er = Errand { join, tl, ..*er };
+    (er.join, er.tl) = (join, tl);
 }
 
 /// The right arm, its wrist's line brought back toward its forearm's where the path asked more than a wrist bends.
@@ -573,5 +601,5 @@ fn right_arm(tune: &Knobs, d: &mut [S], rig: &Rig, fk: &mut Fk, er: &mut Errand)
             }
         }
     }
-    *er = Errand { lie, ..*er };
+    er.lie = lie;
 }

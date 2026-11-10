@@ -124,7 +124,7 @@ fn kick(g: &mut Game, c: CharId, f: &mut Frame) {
     let w_kbody = if kt >= 0.0 { 1.0 - v3::smoothstep(KICK_DUR - 0.2, KICK_DUR, kt) } else { 0.0 };
     let w_kstand = if kt >= 0.0 { bump(kt, 0.0, 0.2, KICK_DUR - 0.3, KICK_DUR) } else { 0.0 };
     let w_kslow = if kt >= 0.0 { bump(kt, 0.0, 0.3, KICK_DUR - 0.3, KICK_DUR) } else { 0.0 };
-    *f = Frame { kt, w_k, w_kbody, w_kstand, w_kslow, ..*f };
+    (f.kt, f.w_k, f.w_kbody, f.w_kstand, f.w_kslow) = (kt, w_k, w_kbody, w_kstand, w_kslow);
 }
 
 /// A lock, a body in his arms, a man held, a man's arm round him: each eased in and out.
@@ -174,7 +174,7 @@ fn holds(g: &mut Game, c: CharId, f: &mut Frame) {
     a.hold_gun_side = a.hd_gv.x >= 0.5;
     let gun_hold = w_hd > 0.003 && a.hold_gun_side;
     a.hide_held_item = w_lp > 0.5 || w_hl > 0.5 || (w_hd > 0.5 && !gun_hold) || a.big_tool.as_ref().map_or(false, big_off_tool);
-    *f = Frame { w_lp, w_hl, w_hd, w_he, ..*f };
+    (f.w_lp, f.w_hl, f.w_hd, f.w_he) = (w_lp, w_hl, w_hd, w_he);
 }
 
 /// How low he is, and how wide and low the close-in mode has him.
@@ -196,7 +196,7 @@ fn height(g: &mut Game, c: CharId, f: &mut Frame) {
         let cp = a.crouch * (1.0 - w_kslow);
         anim_take_pre(g, c, dt, cp)
     } else { a.crouch * (1.0 - w_kslow) };
-    *f = Frame { s, crouch_pose, ..*f };
+    (f.s, f.crouch_pose) = (s, crouch_pose);
 }
 
 /// Deliberate movement, and the crouch's centre of gravity by pace.
@@ -226,7 +226,7 @@ fn deliberate(g: &mut Game, c: CharId, f: &mut Frame) {
         a.dash_w * mv * off_wall * crouch_pose
     } else { a.dash_w = 0.0; 0.0 };
     let stride_d = (1.0 + SNEAK.stride * d_ * mv * off_wall) * (1.0 + dash_k_stride * dsh);
-    *f = Frame { off_wall, g_h, mv, dl, pace, soft, arms_in, dsh, stride_d, ..*f };
+    (f.off_wall, f.g_h, f.mv, f.dl, f.pace, f.soft, f.arms_in, f.dsh, f.stride_d) = (off_wall, g_h, mv, dl, pace, soft, arms_in, dsh, stride_d);
 }
 
 /// The weights of idle, walk, jog and sprint by speed, and the cycle's phase at the rate that keeps the feet with the ground.
@@ -267,7 +267,7 @@ fn stride(g: &mut Game, c: CharId, f: &mut Frame) {
         a.wall_gait = js::rem(a.wall_gait + dt * s * a.stack_side * rev / (2.0 * v3::lerp(st_[0], st_[1], v3::clamp(a.crouch, 0.0, 1.0))) + 100.0, 1.0);
     } else { a.wall_gait = WALL_GAIT_REST; }
     a.idle_t += dt;
-    *f = Frame { w_walk, w_jog, w_sprint, w_idle, ..*f };
+    (f.w_walk, f.w_jog, f.w_sprint, f.w_idle) = (w_walk, w_jog, w_sprint, w_idle);
 }
 
 /// The linger of a careful step and the run's stance linger: the cycle sampled at a phase eased about the true one.
@@ -290,7 +290,7 @@ fn linger(g: &mut Game, c: CharId, f: &mut Frame) {
         js::rem(a.phase - a_l / four_pi * m::sin(th) - a_r * (m::sin(th_r) - m::sin(3.0 * th_r) / 27.0) / (8.0 / 9.0) / four_pi + 1.0, 1.0)
     } else { a.phase };
     let surge = if a_l > 1e-5 { -a_l * SNEAK.surge * stride_d * (1.0 + SNEAK.pace_stride * pace) * pr.crouch_speed * d_crouch / four_pi * m::sin(th) * rev } else { 0.0 };
-    *f = Frame { w_run, ph, surge, ..*f };
+    (f.w_run, f.ph, f.surge) = (w_run, ph, surge);
 }
 
 /// The stand pose, and a run's feet pinned to the floor through each stance window.
@@ -370,7 +370,7 @@ fn stance(g: &mut Game, c: CharId, f: &mut Frame) {
     }
     let w_carry = m::max(w_st, w_kslow);
     let wl = v3::clamp(a.wst.wl.x, 0.0, 1.0);
-    *f = Frame { held, w_st, armed, w_carry, wl, ..*f };
+    (f.held, f.w_st, f.armed, f.w_carry, f.wl) = (held, w_st, armed, w_carry, wl);
 }
 
 /// The long gun's carriage.
@@ -410,7 +410,7 @@ fn long_gun(g: &mut Game, c: CharId, f: &mut Frame) {
     }
     let a = &mut g.ch[c].anim;
     let w_wall_arms = w_st * wl * (if a.stance == Stance::Wall { 1.0 } else { 1.0 - w_lg });
-    *f = Frame { w_lg, lg_want, w_wall_arms, ..*f };
+    (f.w_lg, f.lg_want, f.w_wall_arms) = (w_lg, lg_want, w_wall_arms);
 }
 
 /// The crouch laid over the stand pose, and its walk carried level.
@@ -470,7 +470,7 @@ fn life(g: &mut Game, c: CharId, f: &mut Frame) {
         anim_life_layer(g, c, dt, s, crouch_pose, lg_, fg_);
         fg_
     };
-    *f = Frame { feet_w, ..*f };
+    f.feet_w = feet_w;
 }
 
 /// What the upper body is at (carry, aim, torch), and the carry's clips.
@@ -555,7 +555,7 @@ fn carriage(g: &mut Game, c: CharId, f: &mut Frame) {
         a.he_lo.x = 0.0; a.he_lo.v = 0.0; a.he_lk.x = 0.0; a.he_lk.v = 0.0; a.he_bo.x = 0.0; a.he_bo.v = 0.0; a.he_bc.x = 0.0; a.he_bc.v = 0.0; a.he_hu.x = 0.0; a.he_hu.v = 0.0;
         a.he_hr[0] = None; a.he_hr[1] = None;
     }
-    *f = Frame { mv_g, ..*f };
+    f.mv_g = mv_g;
 }
 
 /// The chest's twist, and a hand on the door he is pushing open (posed through the twist's inverse).
@@ -580,7 +580,7 @@ fn door(g: &mut Game, c: CharId, f: &mut Frame) {
         head_keep = v3::clamp(y0 - yaw, -0.7, 0.7);
         anim_door_layer(g, c, dt, intent, armed, yaw, pitch);
     }
-    *f = Frame { y0, pitch, yaw, head_keep, ..*f };
+    (f.y0, f.pitch, f.yaw, f.head_keep) = (y0, pitch, yaw, head_keep);
 }
 
 /// Hands at work on a thing, and the swap's clock (a dt-0 call is a re-bake: it takes nothing).
@@ -618,7 +618,7 @@ fn work(g: &mut Game, c: CharId, f: &mut Frame) {
             swap_clock(&mut a.sw, want, lag, shoot_t, draw, stow, dt);
         }
     }
-    *f = Frame { yaw, head_keep, ..*f };
+    (f.yaw, f.head_keep) = (yaw, head_keep);
 }
 
 /// The aim clips by pitch, the shot on them, and the arms of whatever gun it is.
@@ -893,7 +893,7 @@ fn strike(g: &mut Game, c: CharId, f: &mut Frame) {
         a.hit_t += dt;
         if a.hit_t > d { a.hit_t = -1.0; }
     }
-    *f = Frame { w_strike, ..*f };
+    f.w_strike = w_strike;
 }
 
 /// The big slot's tool in both hands, over every arm pose and one-shot; and a lean round an edge.
@@ -953,7 +953,7 @@ fn act(g: &mut Game, c: CharId, f: &mut Frame) {
     if let Some(pre) = g.ch[c].anim.arms_pre { if w_act > 0.0 { crate::anim_skeleton::blend_pose(g, None, p_b, w_act, None, pre); } }
     // ---- MOVES: a crouched man's toes stay out of the floor
     if crouch_pose > 0.003 { anim_toes_up(g, c, crouch_pose); }
-    *f = Frame { w_act, ..*f };
+    f.w_act = w_act;
 }
 
 /// The hand pass: finger and thumb joints only.

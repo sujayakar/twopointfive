@@ -101,13 +101,25 @@ pub fn mv_post_body(g: usize, an: &mut Anim, dt: f64, gate: f64, tune: &Knobs) -
 fn as_he_is(an: &Anim, o: &mut Lean) {
     let (at, trained, lg_w, blind, blind_k) = (an.p_a.at as usize, an.trained, an.lg.w.x, an.dazzle.is_some(), an.dazzle.map_or(0.0, |z| z.k));
     let (clutch, fold_too, hurt, hurt_side, aim, speed, phase, shaken) = (an.clutch, an.fold_too, an.hurt, an.hurt_side, an.upper_w.aim, an.speed, an.phase, an.shaken);
-    *o = Lean { at, trained, lg_w, blind, blind_k, clutch, fold_too, hurt, hurt_side, aim, speed, phase, shaken, ..*o };
+    o.at = at;
+    o.trained = trained;
+    o.lg_w = lg_w;
+    o.blind = blind;
+    o.blind_k = blind_k;
+    o.clutch = clutch;
+    o.fold_too = fold_too;
+    o.hurt = hurt;
+    o.hurt_side = hurt_side;
+    o.aim = aim;
+    o.speed = speed;
+    o.phase = phase;
+    o.shaken = shaken;
 }
 
 /// The way each thing came from, as it struck.
 fn as_it_struck(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
     let (fl_k_to, fl_d, st_d, ht_d, ht_side, dz_d, ts, rel) = (m.fl_k_to, m.fl_d, m.st_d, m.ht_d, m.ht_side, m.dz_d, m.ts_t, m.ts_rel);
-    *o = Lean { fl_k_to, fl_d, st_d, ht_d, ht_side, dz_d, ts, rel, ..*o };
+    (o.fl_k_to, o.fl_d, o.st_d, o.ht_d, o.ht_side, o.dz_d, o.ts, o.rel) = (fl_k_to, fl_d, st_d, ht_d, ht_side, dz_d, ts, rel);
 }
 
 /// How trained he is, and nothing leant yet.
@@ -116,7 +128,7 @@ fn none_yet(o: &mut Lean) {
     let t = clamp(trained, 0.0, 1.0);
     let (pitch, yaw, roll, hp, hy, drop, sx, sz) = (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
     let (stw, stn) = (0.0f64, 1.0f64);
-    *o = Lean { t, pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn, ..*o };
+    (o.t, o.pitch, o.yaw, o.roll, o.hp, o.hy, o.drop, o.sx, o.sz, o.stw, o.stn) = (t, pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn);
 }
 
 /// Between what an untrained man does and what a trained one does.
@@ -146,7 +158,7 @@ fn flinch(tune: &Knobs, m: &mut game_types::character::AnimMvs, o: &mut Lean) {
             m.fl_t = -1.0;
         }
     }
-    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, ..*o };
+    (o.pitch, o.yaw, o.roll, o.hp, o.hy, o.drop, o.sx, o.sz) = (pitch, yaw, roll, hp, hy, drop, sx, sz);
 }
 
 /// The start: reared back off a thing in front, turned toward the side it is on; a thing behind him he comes round to.
@@ -173,7 +185,7 @@ fn startle(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
             m.st_t = -1.0;
         }
     }
-    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn, ..*o };
+    (o.pitch, o.yaw, o.roll, o.hp, o.hy, o.drop, o.sx, o.sz, o.stw, o.stn) = (pitch, yaw, roll, hp, hy, drop, sx, sz, stw, stn);
 }
 
 /// A hit: shoved and turned the way the round went.
@@ -196,7 +208,7 @@ fn hit(tune: &Knobs, m: &mut game_types::character::AnimMvs, o: &mut Lean) {
             m.ht_t = -1.0;
         }
     }
-    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, ..*o };
+    (o.pitch, o.yaw, o.roll, o.hp, o.hy, o.drop, o.sx, o.sz) = (pitch, yaw, roll, hp, hy, drop, sx, sz);
 }
 
 /// The side a blinded man turns away to is chosen once, as it goes off.
@@ -229,7 +241,7 @@ fn blinded(tune: &Knobs, m: &mut game_types::character::AnimMvs, o: &mut Lean) {
     } else {
         m.dz_t = 0.0;
     }
-    *o = Lean { pitch, yaw, roll, hp, hy, drop, sx, sz, dzw, ..*o };
+    (o.pitch, o.yaw, o.roll, o.hp, o.hy, o.drop, o.sx, o.sz, o.dzw) = (pitch, yaw, roll, hp, hy, drop, sx, sz, dzw);
 }
 
 /// The clutch's fold: under the blinded hunch it gives way by the hunch's own weight.
@@ -255,7 +267,7 @@ fn fold(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
     } else {
         m.cf_t = 0.0;
     }
-    *o = Lean { pitch, roll, hp, drop, sx, cfw, ..*o };
+    (o.pitch, o.roll, o.hp, o.drop, o.sx, o.cfw) = (pitch, roll, hp, drop, sx, cfw);
 }
 
 /// Hurt, he hunches over it and steps heavy on that side; it gives way under the fold and the blinded hunch.
@@ -286,7 +298,7 @@ fn hurt(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
     } else {
         m.hu_t = 0.0;
     }
-    *o = Lean { pitch, yaw, roll, hp, drop, sx, under, ..*o };
+    (o.pitch, o.yaw, o.roll, o.hp, o.drop, o.sx, o.under) = (pitch, yaw, roll, hp, drop, sx, under);
 }
 
 /// Shaken, he ducks his head; it gives way the same.
@@ -307,7 +319,7 @@ fn shaken(m: &mut game_types::character::AnimMvs, o: &mut Lean) {
         hp += MV2.shaken.head * sk;
         drop += MV2.shaken.drop * sk;
     }
-    *o = Lean { pitch, hp, drop, ..*o };
+    (o.pitch, o.hp, o.drop) = (pitch, hp, drop);
 }
 
 /// The toss's body English: the left shoulder back with the hand, then through with it; a dip of the knees under the swing.
@@ -320,7 +332,7 @@ fn toss_english(o: &mut Lean) {
         pitch += 5.0 * max(0.0, -wind) + 2.0 * max(0.0, wind);
         drop += 0.02 * abs(wind);
     }
-    *o = Lean { pitch, yaw, drop, ..*o };
+    (o.pitch, o.yaw, o.drop) = (pitch, yaw, drop);
 }
 
 /// The trunk turned.
@@ -407,7 +419,28 @@ fn as_moved(an: &Anim, o: &mut Arms) {
     let (rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r) = (m.ts_rel, m.dz_t, m.ts_t, po.stw, po.stn, po.dzw, po.gun, po.gun_p, po.gun_r);
     let (td, arm_l, ts_out, code) = (rel + TOSS_AFTER, m.arm_l, ts, RAN);
     let (up_l, fore_l, hand_l, sh_l) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(SHOULDER_L));
-    *o = Arms { at, at_b, lg_w, gaze, fix_l, rel, dz_t, ts, stw, stn, dzw, gun, gun_p, gun_r, td, arm_l, ts_out, code, up_l, fore_l, hand_l, sh_l, ..*o };
+    o.at = at;
+    o.at_b = at_b;
+    o.lg_w = lg_w;
+    o.gaze = gaze;
+    o.fix_l = fix_l;
+    o.rel = rel;
+    o.dz_t = dz_t;
+    o.ts = ts;
+    o.stw = stw;
+    o.stn = stn;
+    o.dzw = dzw;
+    o.gun = gun;
+    o.gun_p = gun_p;
+    o.gun_r = gun_r;
+    o.td = td;
+    o.arm_l = arm_l;
+    o.ts_out = ts_out;
+    o.code = code;
+    o.up_l = up_l;
+    o.fore_l = fore_l;
+    o.hand_l = hand_l;
+    o.sh_l = sh_l;
 }
 
 /// The start's arms: shoulders up, elbows wide and forearms half raised by what a long gun leaves of them.
@@ -445,7 +478,7 @@ fn held_gun(g: usize, n: usize, o: &mut Arms) -> bool {
         }
         code |= RAN_ALL;
     }
-    *o = Arms { code, ..*o };
+    o.code = code;
     true
 }
 
@@ -477,7 +510,7 @@ fn blinded_hand(g: usize, n: usize, tune: &Knobs, h: &mut Hands, o: &mut Arms) -
         arm_l = max(arm_l, wz);
         code |= RAN_ALL;
     }
-    *o = Arms { arm_l, code, ..*o };
+    (o.arm_l, o.code) = (arm_l, code);
     true
 }
 
@@ -534,7 +567,7 @@ fn toss_hand(g: usize, n: usize, h: &mut Hands, o: &mut Arms) -> bool {
         }
         code |= RAN_ALL;
     }
-    *o = Arms { arm_l, ts_out, code, ..*o };
+    (o.arm_l, o.ts_out, o.code) = (arm_l, ts_out, code);
     true
 }
 /// A man knocked about and still up: the support hand off the gun and pressed to his ribs. Solved on the scratch pose at `at_b`, laid on the pose by w
