@@ -21,7 +21,7 @@ fn run(pixel: vec2u) {
   draw_ray(pixel, start, start + aim.toward * min(met.distance, 20.0), select(RAY_BLOCKED, RAY_SEEN, seen > 0.0));
   var passes = vec3f(1.0);
   if (seen > 0.0 && knobs.break_air_skips == 0u && knobs.air_shadow_steps > 0u) {
-    passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.02, knobs.air_shadow_steps, dice1(pixel, DICE_SHADOW_STEP)).passes;
+    passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.02, knobs.air_shadow_steps, dice1(pixel, DICE_SHADOW_STEP), false).passes;
   }
   r.seen = seen;
   put_reservoir(pixel, r);

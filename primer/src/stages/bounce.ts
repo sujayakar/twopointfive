@@ -56,7 +56,7 @@ fn y_of(ray: Ray, met: Meeting, weight: f32) -> HitY {
   y.distance = -1.0;
   y.steps = f32(met.steps);
   y.object = NOTHING;
-  let air = smoke_between(ray.origin, ray.toward, min(met.distance, 60.0), ray.width, ray.spread, max(knobs.air_shadow_steps, 1u), 0.5);
+  let air = smoke_between(ray.origin, ray.toward, min(met.distance, 60.0), ray.width, ray.spread, max(knobs.air_shadow_steps, 1u), 0.5, true);
   y.passes = air.passes;
   y.added = air.added;
   if (met.piece == NOTHING) { return y; }

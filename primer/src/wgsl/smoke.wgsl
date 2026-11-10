@@ -89,7 +89,9 @@ struct Passage { passes: vec3f, added: vec3f }
 
 /// What gets through a stretch of a ray, and what the smoke itself sends along it. (Light that it scatters is
 /// another matter: see the air's own stages.)
-fn smoke_between(origin: vec3f, toward: vec3f, most: f32, width: f32, spread: f32, steps: u32, die: f32) -> Passage {
+/// For a ray that gathers light from all round (`gathers`), what is scattered off it may be left to count as let
+/// through: about as much is scattered into it from elsewhere, and nobody here adds that.
+fn smoke_between(origin: vec3f, toward: vec3f, most: f32, width: f32, spread: f32, steps: u32, die: f32, gathers: bool) -> Passage {
   var out = Passage(vec3f(1.0), vec3f(0.0));
   let span = smoke_span(origin, toward, most);
   if (span.x >= span.y) { return out; }
@@ -97,8 +99,10 @@ fn smoke_between(origin: vec3f, toward: vec3f, most: f32, width: f32, spread: f3
   for (var i = 0u; i < steps; i++) {
     let t = span.x + (f32(i) + die) * step;
     let s = smoke_at(origin + toward * t, width + spread * t);
-    let here = exp(-s.thick * step);
-    out.added += out.passes * s.emit * (1.0 - here) / max(s.thick, vec3f(1e-6));
+    var thick = s.thick;
+    if (gathers && knobs.air_bounces == AIR_BOUNCES_ABSORBS) { thick -= s.scatter; }
+    let here = exp(-thick * step);
+    out.added += out.passes * s.emit * (1.0 - here) / max(thick, vec3f(1e-6));
     out.passes *= here;
   }
   return out;

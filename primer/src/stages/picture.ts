@@ -48,7 +48,7 @@ fn run(pixel: vec2u) {
   if (world.volume_count > 0u) {
     let most = select(hit.distance, 60.0, hit.distance < 0.0);
     let toward = normalize(hit.position - frame.eye);
-    let passes = smoke_between(frame.eye, toward, most, 0.0, width_of_pixel(), 48u, dice1(pixel, DICE_AIR)).passes;
+    let passes = smoke_between(frame.eye, toward, most, 0.0, width_of_pixel(), 48u, dice1(pixel, DICE_AIR), false).passes;
     sum = sum * passes + truth_at(vec2i(pixel)).air * knobs.mix_air;
   }
   put_true_picture(pixel, Light(sum));
@@ -107,7 +107,7 @@ fn run(pixel: vec2u) {
     let hit = hit_x_at(p);
     let most = select(hit.distance, 60.0, hit.distance < 0.0);
     let toward = normalize(hit.position - frame.eye);
-    let passes = smoke_between(frame.eye, toward, most, knobs.forced_width, width_of_pixel(), knobs.air_steps, dice1(pixel, DICE_AIR)).passes;
+    let passes = smoke_between(frame.eye, toward, most, knobs.forced_width, width_of_pixel(), knobs.air_steps, dice1(pixel, DICE_AIR), false).passes;
     var added = air_used_at(p).value;
     if (knobs.source_air == SOURCE_AIR_TRUTH) { added = truth_or_not_at(p).air; }
     light = light * passes + added * knobs.mix_air;

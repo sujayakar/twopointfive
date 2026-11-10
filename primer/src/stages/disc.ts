@@ -22,7 +22,7 @@ fn run(index: u32) {
   let at = vec2u(index % ${DISC}u, index / ${DISC}u);
   var sum = disc[index];
   let hit = hit_x_at(vec2i(frame.pinned));
-  let d = dice_of(DICE_KIND_WHITE, at, frame.truth_number, 900u);
+  let d = dice_of(DICE_KIND_WHITE, at, frame.number, 900u);
   let spot = (vec2f(at) + d) / ${(DISC / 2).toFixed(1)} - 1.0;
   let r2 = dot(spot, spot);
   if (frame.pinned_on == 0u || hit.distance < 0.0 || r2 >= 1.0) { disc[index] = Disc(vec3f(0.0), 0.0); return; }
@@ -52,9 +52,9 @@ fn run(index: u32) {
     light = found.glow;
     if (found.lamp != NOTHING) { break; }
     let s = found.surface;
-    let pick = pick_by_score(s.position, s.normal, dice_of(DICE_KIND_WHITE, at, frame.truth_number, 901u).x);
+    let pick = pick_by_score(s.position, s.normal, dice_of(DICE_KIND_WHITE, at, frame.number, 901u).x);
     if (pick.lamp == NOTHING) { break; }
-    let aim = aim_at(lamps[pick.lamp], s.position, dice_of(DICE_KIND_WHITE, at, frame.truth_number, 902u));
+    let aim = aim_at(lamps[pick.lamp], s.position, dice_of(DICE_KIND_WHITE, at, frame.number, 902u));
     let cosine = dot(s.normal, aim.toward);
     if (cosine <= 0.0) { break; }
     waiting = matte_share(s) * aim.light * (cosine / (PI * pick.chance * aim.chance));

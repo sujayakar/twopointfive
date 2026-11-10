@@ -25,6 +25,10 @@ choice('source_air', {
 });
 slider('air_steps', { label: 'Steps along a ray', min: 2, max: 64, step: 1, value: 20, about: 'Fewer, and thin smoke is missed or banded; the dice spread what is missed as noise.' });
 slider('air_shadow_steps', { label: 'Steps of a shadow ray', min: 0, max: 24, step: 1, value: 8, about: '0: shadow rays go through smoke as if it were not there.' });
+choice('air_bounces', {
+  label: 'From bounces, smoke takes', value: 0, options: [['absorbs', 'What it absorbs'], ['all', 'What it scatters too']],
+  about: 'Light that smoke turns out of a bounce ray is lost, and light that it turns into it is not looked for. Taking only what is absorbed lets the two cancel; taking all makes rooms with haze too dark.',
+});
 toggle('break_air_skips', { label: 'Shadow rays skip smoke', about: 'Smoke that nothing shades: it shines evenly, and no beam shows.' });
 toggle('break_mean_density', { label: 'Average the density', about: 'A coarse level of smoke made by averaging how thick it is. Thick next to thin lets more through than all of it alike, so it blocks too much.' });
 
@@ -90,7 +94,7 @@ fn run(pixel: vec2u) {
   if (met.piece == NOTHING && aim.chance > 0.0) {
     var passes = vec3f(1.0);
     if (knobs.break_air_skips == 0u && knobs.air_shadow_steps > 0u) {
-      passes = smoke_between(a.position, aim.toward, most, 0.0, 0.02, knobs.air_shadow_steps, dice1(pixel, DICE_AIR_STEP)).passes;
+      passes = smoke_between(a.position, aim.toward, most, 0.0, 0.02, knobs.air_shadow_steps, dice1(pixel, DICE_AIR_STEP), false).passes;
     }
     let forward = normalize(a.position - frame.eye);
     out.value = aim.light * passes * (phase(dot(forward, aim.toward), a.g) * total / (kept_score * aim.chance));

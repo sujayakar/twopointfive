@@ -87,6 +87,7 @@ export class Graph {
   private lastWritten = new Map<string, number>();
   private writtenNow = new Set<string>();
   private edits = new Map<string, string>();
+  private versions = new Map<string, number>();
   private customs = new Map<string, (encoder: GPUCommandEncoder) => boolean>();
 
   constructor(readonly gpu: Gpu, private prelude: () => string) {
@@ -116,7 +117,9 @@ export class Graph {
   changeModule(name: string, module: Module): void {
     this.modules.set(name, module);
     for (const stage of this.stages) {
-      if (this.modulesOf(['frame', ...stage.uses]).includes(name)) this.built.delete(stage.name);
+      if (!this.modulesOf(['frame', ...stage.uses]).includes(name)) continue;
+      this.built.delete(stage.name);
+      this.versions.set(stage.name, (this.versions.get(stage.name) ?? 0) + 1);
     }
     this.groups.clear();
   }
@@ -303,6 +306,10 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
 
   private async build(stage: Stage): Promise<void> {
     if (!this.built.has(stage.name)) this.built.set(stage.name, 'building');
+    // if its text changes while it is being made, what comes of this is dropped
+    const version = (this.versions.get(stage.name) ?? 0) + 1;
+    this.versions.set(stage.name, version);
+    const isLate = () => this.versions.get(stage.name) !== version;
     const { device } = this.gpu;
     const { bindings } = this.bindingsOf(stage);
     const layout = device.createBindGroupLayout({
@@ -319,6 +326,7 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
     const module = device.createShaderModule({ label: stage.name, code: text });
     const info = await module.getCompilationInfo();
     const bad = info.messages.filter((m) => m.type === 'error');
+    if (isLate()) return;
     if (bad.length > 0) {
       const lines = text.split('\n');
       this.errors.set(
@@ -337,6 +345,7 @@ fn kept_${variable}(p: vec2u) -> ${struct.name} { return ${variable}[p.y * ${dim
         layout: device.createPipelineLayout({ bindGroupLayouts: [layout] }),
         compute: { module, entryPoint: 'main' },
       });
+      if (isLate()) return;
       this.errors.delete(stage.name);
       this.built.set(stage.name, { pipeline, layout, bindings });
       this.groups.clear();

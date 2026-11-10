@@ -13,7 +13,7 @@ fn run(pixel: vec2u) {
   let start = leave_surface(y.position, y.normal, aim.toward);
   let met = nearest(shadow_cone(start, aim.toward, aim.distance - 2e-3, lamp_size(lamps[pick.lamp])));
   out.seen = select(0.0, 1.0, met.piece == NOTHING);
-  let passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.1, knobs.air_shadow_steps, dice1(pixel, DICE_SHADOW_STEP + DICE_OFFSET)).passes;
+  let passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.1, knobs.air_shadow_steps, dice1(pixel, DICE_SHADOW_STEP + DICE_OFFSET), false).passes;
   out.lands = passes * aim.light * (out.seen * cosine / (PI * pick.chance * aim.chance));
   draw_ray_of(pixel, frame.GRID_step, start, start + aim.toward * min(met.distance, 20.0), select(RAY_BLOCKED, RAY_SEEN, out.seen > 0.0));
   put_light_y(pixel, out);

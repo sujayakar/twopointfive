@@ -17,7 +17,7 @@ fn run(slot: u32) {
       let start = leave_surface(p.position, p.normal, aim.toward);
       let met = nearest(shadow_cone(start, aim.toward, aim.distance - 2e-3, lamp_size(lamps[pick.lamp])));
       out.seen = select(0.0, 1.0, met.piece == NOTHING);
-      let passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.1, knobs.air_shadow_steps, dice_of(DICE_KIND_FILLING, at, frame.cache_round, 704u).x).passes;
+      let passes = smoke_between(start, aim.toward, aim.distance, 0.0, 0.1, knobs.air_shadow_steps, dice_of(DICE_KIND_FILLING, at, frame.cache_round, 704u).x, false).passes;
       out.lands = passes * aim.light * (out.seen * cosine / (PI * pick.chance * aim.chance));
       if (slot == pinned_slot()) { draw_ray(frame.pinned, start, start + aim.toward * min(met.distance, 20.0), select(RAY_BLOCKED, RAY_SEEN, out.seen > 0.0)); }
     }

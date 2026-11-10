@@ -58,7 +58,8 @@ function jitterOf(frame: number): [number, number] {
 
 /** the ray shader, with or without its triangles: code that never runs still costs */
 export function rayModule(text: string, triangles: boolean): string {
-  return triangles ? text : text.replace(/\/\/#triangles[\s\S]*?\/\/#end/g, '');
+  const kept = triangles ? text : text.replace(/\/\/#triangles[\s\S]*?\/\/#end/g, '');
+  return `const HAS_TRIANGLES = ${triangles};\n${kept}`;
 }
 
 /** in a frozen frame the truth goes on settling, so that the frame can be compared with it */
@@ -101,14 +102,17 @@ export class Lab {
   private frameBuffer: GPUBuffer;
   private knobBuffer: GPUBuffer;
   private present: Present;
-  private before: Eye | null = null;
-  private jitterBefore: [number, number] = [0, 0];
+  /** what the last live frame was made with */
+  private live: { now: Eye; before: Eye; jitter: [number, number]; jitterBefore: [number, number]; number: number } | null = null;
   private cutEye: Vec3 = [0, 0, 0];
   /** where the pinned pixel's point is; read back a few frames late */
   pinnedAt: { position: Vec3; normal: Vec3 } | null = null;
   private cameraKey = '';
   private worldVersion = -1;
   private startTruthOver = true;
+  /** the disc and the lamps' bars belong to one pinned point */
+  private startPinnedOver = true;
+  private pinKey = '';
 
   private constructor(readonly gpu: Gpu, readonly canvas: HTMLCanvasElement) {
     this.graph = new Graph(gpu, () => `${choiceConstants()}\n${WORLD_CONSTANTS}\n${math}`);
@@ -130,7 +134,7 @@ export class Lab {
     onKnob((k) => {
       if (k.resetsTruth) this.startTruthOver = true;
       this.judge.forget();
-      if (k.key === 'mesh_trace' && this.world.room && this.meshes.jobCount) this.openRoom(this.world.room, this.world.sliders);
+      if ((k.key === 'mesh_trace' || k.key === 'mesh_eye') && this.world.room && this.meshes.jobCount) this.openRoom(this.world.room, this.world.sliders);
       if (k.key === 'lists_merged' && this.world.room) {
         this.world.mergeLists = k.value !== 0;
         this.openRoom(this.world.room, this.world.sliders);
@@ -173,7 +177,7 @@ export class Lab {
     }
     this.world.place(this.tick / 60);
     this.useSmoke(this.world.volumeCount > 0);
-    this.useTriangles(this.meshes.jobCount > 0 && valueOf('mesh_trace') > 0);
+    this.useTriangles(this.meshes.jobCount > 0 && (valueOf('mesh_trace') > 0 || valueOf('mesh_eye') > 0));
     this.startTruthOver = true;
     this.graph.forget();
     this.cache.zero = true;
@@ -241,8 +245,9 @@ export class Lab {
     const render: [number, number] = [Math.max(8, Math.round(output[0] * sharp)), Math.max(8, Math.round(output[1] * sharp))];
     const fewer = (step: number): [number, number] => [Math.ceil(render[0] / step), Math.ceil(render[1] / step)];
     const wasRender = String(graph.grids.render);
-    graph.resize({ render, output, wide: fewer(valueOf('wide_step')), narrow: fewer(valueOf('narrow_step')) });
+    const resized = graph.resize({ render, output, wide: fewer(valueOf('wide_step')), narrow: fewer(valueOf('narrow_step')) });
     if (String(render) !== wasRender) this.startTruthOver = true;
+    if (resized) this.frozen = false; // the frozen frame's buffers are gone with their size
 
     const runs = !this.frozen || this.oneMore > 0;
     if (this.oneMore > 0) this.oneMore--;
@@ -253,16 +258,26 @@ export class Lab {
       world.place(this.tick / 60);
     }
     const cameraKey = JSON.stringify(this.camera);
+    const pinKey = String(this.pinned);
+    if (pinKey !== this.pinKey) this.startPinnedOver = true;
+    this.pinKey = pinKey;
     if (cameraKey !== this.cameraKey || world.version !== this.worldVersion) this.startTruthOver = true;
     this.cameraKey = cameraKey;
     this.worldVersion = world.version;
 
     const encoder = gpu.device.createCommandEncoder();
+    // what was this frame becomes last frame, only now: until then it can still be looked at
+    if (runs) graph.flip();
     if (this.startTruthOver) {
-      for (const name of ['truth', 'disc', 'bars', 'strip']) graph.clear(encoder, name);
+      for (const name of ['truth', 'strip']) graph.clear(encoder, name);
+      this.startPinnedOver = true;
       this.judge.forget();
       this.truthCount = 0;
       this.startTruthOver = false;
+    }
+    if (this.startPinnedOver) {
+      for (const name of ['disc', 'bars']) graph.clear(encoder, name);
+      this.startPinnedOver = false;
     }
     if (runs) {
       this.rays.start(encoder);
@@ -288,10 +303,7 @@ export class Lab {
     gpu.device.queue.submit([encoder.finish()]);
     after();
     if (ran) this.truthCount++;
-    if (runs) {
-      this.frames++;
-      graph.flip();
-    }
+    if (runs) this.frames++;
   }
 
   /** the views on the screen that can be compared with the truth */
@@ -306,9 +318,18 @@ export class Lab {
   }
 
   private writeUniforms(render: [number, number], output: [number, number], runs: boolean, cache: { cache_go: number; cache_commit: number; cache_round: number }): void {
-    const now = eyeOf(this.camera, output[0] / output[1]);
-    const before = this.before ?? now;
-    const jitter: [number, number] = valueOf('jitter') ? jitterOf(this.frames) : [0, 0];
+    if (runs || !this.live) {
+      // a frozen frame keeps the eyes, the jitter and the number it was made with
+      const now = eyeOf(this.camera, output[0] / output[1]);
+      this.live = {
+        now,
+        before: this.live?.now ?? now,
+        jitter: valueOf('jitter') ? jitterOf(this.frames) : [0, 0],
+        jitterBefore: this.live?.jitter ?? [0, 0],
+        number: this.frames,
+      };
+    }
+    const { now, before, jitter } = this.live;
     if (!valueOf('mesh_frozen')) this.cutEye = now.eye;
     const ghost = this.ghost ? eyeOf(this.ghost, output[0] / output[1]) : now;
     const bytes = new ArrayBuffer(Frame.stride);
@@ -317,22 +338,18 @@ export class Lab {
       eye_before: before.eye, forward_before: before.forward, right_before: before.right, up_before: before.up,
       ghost_eye: ghost.eye, ghost_forward: ghost.forward, ghost_right: ghost.right, ghost_up: ghost.up,
       ghost_on: this.ghost ? 1 : 0,
-      number: this.frames, tick: this.tick, seconds: this.tick / 60, truth_number: this.truthCount,
+      number: this.live.number, tick: this.tick, seconds: this.tick / 60, truth_number: this.truthCount,
       render_size: render, output_size: output,
       wide_size: this.graph.grids.wide, narrow_size: this.graph.grids.narrow,
       render_step: 1, wide_step: valueOf('wide_step'), narrow_step: valueOf('narrow_step'), output_step: 1,
       pinned_on: this.pinned ? 1 : 0,
       pinned: this.pinned ? [Math.floor(this.pinned[0] * render[0]), Math.floor(this.pinned[1] * render[1])] : [0, 0],
-      jitter, jitter_before: this.jitterBefore, ...cache, cut_eye: this.cutEye,
+      jitter, jitter_before: this.live.jitterBefore, frozen: runs ? 0 : 1, ...cache, cut_eye: this.cutEye,
       pinned_position: this.pinnedAt?.position ?? [0, 0, 0], pinned_normal: this.pinnedAt?.normal ?? [0, 1, 0],
     });
     const { queue } = this.gpu.device;
     queue.writeBuffer(this.frameBuffer, 0, bytes);
     queue.writeBuffer(this.knobBuffer, 0, packKnobs(this.knobs));
-    if (runs) {
-      this.before = now;
-      this.jitterBefore = jitter;
-    }
   }
 
   /** the pinned pixel's value in every buffer that was made this frame */

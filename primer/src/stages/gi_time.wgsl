@@ -7,6 +7,7 @@ fn run(pixel: vec2u) {
   var out: GiReservoir;
   if (hit.distance < 0.0 || hit.lamp != NOTHING) { put_gi(pixel, out); return; }
   let y = hit_y_at(p);
+  out.memory = 1.0; // a ray that found nothing is an answer too
   if (y.distance != NO_RAY && y.weight > 0.0) {
     // found by the cosine: its chance was cosine / π, so its weight in the mean is 1 over that
     out.light = found_at_y_at(p).value / y.weight;
@@ -19,7 +20,6 @@ fn run(pixel: vec2u) {
     let chance = max(abs(dot(hit.normal, y.toward)), 1e-4) / PI / y.weight;
     out.score = brightness(out.light) * chance * y.weight;
     out.weight = 1.0 / chance;
-    out.memory = 1.0;
   }
   if (knobs.gi_time == 0u) { put_gi(pixel, out); return; }
 

@@ -23,6 +23,10 @@ const FLAGS = [
       if (s.room || s.sliders) page.openRoom(s.room ?? lab.world.room.id, s.sliders);
       for (const [k, v] of Object.entries({ render_scale: 0.3, ...s.knobs })) window.setKnob(k, v);
       if (s.camera) Object.assign(lab.camera, s.camera);
+      for (const [stage, from, to] of s.edits ?? []) {
+        const st = lab.graph.stages.find((x) => x.name === stage);
+        lab.graph.edit(stage, lab.graph.codeOf(st).replace(from, to));
+      }
       lab.layout = 'one';
       lab.playing = !!s.play;
       lab.shown[0] = 'hit_x.normal';
@@ -39,7 +43,7 @@ const FLAGS = [
         for (let k = 0; k < (s.settle ?? 0); k++) { lab.frame(); if (k % 8 === 7) await lab.gpu.device.queue.onSubmittedWorkDone(); }
         for (let k = 0; k < frames; k++) {
           lab.frame();
-          const data = await window.readBack(lab.gpu, lab.graph.buffer(name + (spec.history ? '@before' : '')), 0, lab.graph.elements(spec.size) * spec.struct.stride);
+          const data = await window.readBack(lab.gpu, lab.graph.buffer(name), 0, lab.graph.elements(spec.size) * spec.struct.stride);
           const f = new Float32Array(data.buffer);
           const step = spec.struct.stride / 4, at = spec.struct.offsets[key] / 4;
           const count = lab.graph.elements(spec.size);

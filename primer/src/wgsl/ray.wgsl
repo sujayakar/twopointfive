@@ -160,6 +160,7 @@ fn is_clear(ray: Ray) -> bool {
 
 /// What only stands in for a mesh is met by no eye's ray, and by others only if they are to meet pieces.
 fn takes_part(p: Piece, ray: Ray) -> bool {
+  if (p.shape == SHAPE_MESH && !HAS_TRIANGLES) { return false; } // this shader does not know how to meet one
   if (p.form == FORM_LEAF) { return ray.leaves != NO_LEAVES; }
   if (ray.leaves == ONLY_LEAVES) { return false; }
   if (p.form == FORM_SOLID) { return true; }

@@ -97,7 +97,7 @@ export class Page {
         button('Freeze', 'The frame stands, and the truth goes on settling on it (F)', () => (lab.frozen = !lab.frozen), lab.frozen),
         button('One frame', 'Make one frame (.)', () => { lab.frozen = true; lab.step(); }),
         button('Ghost', 'Fly a second camera through the frozen frame (G)', () => this.toggleGhost(), lab.ghost !== null),
-        button('Camera', 'Back to where the room begins', () => lab.resetCamera())),
+        button('Camera', 'Back to where the room begins', () => { lab.frozen = false; lab.resetCamera(); })),
       el('div', { class: 'group' },
         ...LAYOUTS.map(([layout, text]) =>
           button(text, 'Panels', () => (lab.layout = layout), lab.layout === layout))),
@@ -357,7 +357,7 @@ export class Page {
     const entry = lab.graph.spec('cache').struct;
     const [p, e] = await Promise.all([
       readBack(lab.gpu, lab.graph.buffer('cache_points'), 0, CACHE_SLOTS * points.stride),
-      readBack(lab.gpu, lab.graph.buffer('cache@before'), 0, CACHE_SLOTS * entry.stride),
+      readBack(lab.gpu, lab.graph.buffer('cache'), 0, CACHE_SLOTS * entry.stride),
     ]);
     this.entries = [];
     for (let slot = 0; slot < CACHE_SLOTS; slot++) {
@@ -615,6 +615,13 @@ export class Page {
 
   // ---- mouse and keys
 
+  /** a frozen frame is let go when its own camera moves */
+  private letGo(): void {
+    if (!this.lab.frozen || this.lab.ghost) return;
+    this.lab.frozen = false;
+    this.draw();
+  }
+
   private toggleGhost(): void {
     const { lab } = this;
     if (lab.ghost) {
@@ -652,13 +659,17 @@ export class Page {
       const dx = e.clientX - from.x;
       const dy = e.clientY - from.y;
       if (!from.moved && Math.hypot(dx, dy) < 4) return;
+      this.letGo();
       from = { x: e.clientX, y: e.clientY, moved: true };
       const c = lab.ghost ?? lab.camera;
       if (e.shiftKey || e.buttons === 4 || e.buttons === 2) pan(c, dx, dy);
       else orbit(c, dx, dy);
     });
     canvas.addEventListener('pointerup', (e) => {
-      if (from && !from.moved) lab.pinned = e.altKey ? null : lab.pictureAt(...at(e));
+      if (from && !from.moved) {
+        lab.pinned = e.altKey ? null : lab.pictureAt(...at(e));
+        this.history = [];
+      }
       from = null;
     });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -671,7 +682,10 @@ export class Page {
         if (p) lab.middle = lab.middle.map((m, i) => p[i]! + (m - p[i]!) * (lab.zoom / next)) as [number, number];
         if (next === 1) lab.middle = [0.5, 0.5];
         lab.zoom = next;
-      } else dolly(lab.ghost ?? lab.camera, e.deltaY);
+      } else {
+        this.letGo();
+        dolly(lab.ghost ?? lab.camera, e.deltaY);
+      }
     }, { passive: false });
     this.wipeLine.addEventListener('pointerdown', (e) => {
       this.wipeLine.setPointerCapture(e.pointerId);

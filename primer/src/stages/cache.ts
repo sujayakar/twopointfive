@@ -126,7 +126,7 @@ fn pinned_slot() -> u32 {
     writes: ['cache'], uses: ['no ray', 'sky', 'dice', 'cache', 'change'], over: entries, code: gather,
   });
   // then founding, for the rays to come
-  for (const [name, source, over] of [['wide', 'hit_y', 'wide'], ['narrow', 'hit_r', 'narrow'], ['own', 'cache_hits', entries]] as const) {
+  for (const [name, source, over] of [['wide', 'hit_y', 'wide'], ['narrow', 'hit_r', 'narrow'], ['air', 'hit_a', 'wide'], ['own', 'cache_hits', entries]] as const) {
     graph.addStage({
       name: `cache found ${name}`, question: 'Where did a ray land that no entry speaks for?',
       reads: { source }, writes: ['cache_points'], uses: ['dice', 'cache'],

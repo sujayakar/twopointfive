@@ -2,7 +2,8 @@
 // over every panel, and in the ghost's view they hang in space.
 
 fn draw_ray(pixel: vec2u, start: vec3f, end: vec3f, kind: u32) {
-  if (frame.pinned_on == 0u || any(pixel != frame.pinned)) { return; }
+  // in a frozen frame the truth goes on settling, but the rays that are shown are the frame's own
+  if (frame.pinned_on == 0u || frame.frozen != 0u || any(pixel != frame.pinned)) { return; }
   let i = atomicAdd(&drawn.count, 1u);
   if (i >= MOST_LINES) { return; }
   drawn.lines[i] = Line(start, kind, end, 0u);

@@ -30,7 +30,7 @@ fn run(index: u32) {
   bar.color = lamp.radiance;
   var seen = 0.0;
   for (var k = 0u; k < 8u; k++) {
-    let aim = aim_at(lamp, hit.position, dice_of(DICE_KIND_WHITE, vec2u(index, k), frame.truth_number, 950u));
+    let aim = aim_at(lamp, hit.position, dice_of(DICE_KIND_WHITE, vec2u(index, k), frame.number, 950u));
     if (dot(aim.toward, hit.normal) <= 0.0 || brightness(aim.light) <= 0.0) { continue; }
     let start = leave_surface(hit.position, hit.normal, aim.toward);
     if (nearest(fine_ray(start, aim.toward, 1e-4, aim.distance - 2e-3)).piece == NOTHING) { seen += 0.125; }
