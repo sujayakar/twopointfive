@@ -159,13 +159,6 @@ pub struct CASINGS {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct HitLookHit {
-    pub index: Option<f64>,
-    pub prop: Option<PropId>,
-    pub box_: Option<BoxId>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct HitLook {
     pub surf: crate::scene_materials::Surf,
     pub albedo: V3,

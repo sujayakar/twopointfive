@@ -83,7 +83,7 @@ fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner
 }
 
 /// Is this piece of trim drawn: while the box that says it is.
-fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
+fn trim_drawn(g: &crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
     match g.tab.boxes[t].of {
         None => true,
         Some(of) => js::to_i32(g.tab.boxes[all[of as usize]].flags) & js::to_i32(box_flag().no_primary) == 0,
@@ -91,7 +91,7 @@ fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
 }
 
 /// Is a static drawn: not hidden, not a pane, and trim only while its box is.
-pub fn box_drawn(g: &mut crate::game::Game, all: &[BoxId], b: BoxId) -> bool {
+pub fn box_drawn(g: &crate::game::Game, all: &[BoxId], b: BoxId) -> bool {
     let f = box_flag();
     let (flags, piece) = { let x = &g.tab.boxes[b]; (x.flags, x.piece) };
     js::to_i32(flags) & (js::to_i32(f.no_primary) | js::to_i32(f.glass)) == 0 && (piece != Some(true) || trim_drawn(g, all, b))

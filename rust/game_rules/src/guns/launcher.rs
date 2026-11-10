@@ -82,11 +82,8 @@ pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::laun
         if len > 1e-6 {
             let dir = v3::scale(seg, 1.0 / len);
             let reach = len + r.radius;
-            let st = crate::scene_collision::raycast(g, p, dir, reach);
-            let ph = crate::props::prop_system_raycast(g, p, dir, match st { Some(s) => s.t, None => reach });
-            let t = match (ph, st) { (Some(ph), _) => ph.t, (None, Some(st)) => st.t, (None, None) => -1.0 };
-            if t >= 0.0 {
-                land = v3::mad(p, dir, m::max(0.0, t - r.radius));
+            if let Some(h) = crate::props::level_ray(g, p, dir, reach) {
+                land = v3::mad(p, dir, m::max(0.0, h.t - r.radius));
                 points.push(land);
                 break;
             }

@@ -6,16 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Closest hit among statics + door leaves and props.
-fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
-    let st = crate::scene_collision::raycast(g, ro, rd, tmax);
-    let ph = crate::props::prop_system_raycast(g, ro, rd, match &st { Some(s) => s.t, None => tmax });
-    if let Some(ph) = ph {
-        return Some(ThrowablesRay { t: ph.t });
-    }
-    st.map(|s| ThrowablesRay { t: s.t })
-}
-
 /// A new thing in the pool: the dice in the order they were always drawn and before anything is given up for it; `opts` over the rest.
 pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::ItemKind, pos: V3, vel: V3, opts: Option<crate::throwables::ThrowablesSpawnOpts>) -> ItemId {
     let opts = opts.unwrap_or_default();
@@ -132,7 +122,7 @@ pub fn throwables_solve(g: &mut crate::game::Game, from: V3, to: V3, max_speed: 
         let seg = v3::sub(np, p);
         let len = v3::len(seg);
         if len > 1e-5 {
-            if let Some(hit) = throwables_ray(g, p, v3::scale(seg, 1.0 / len), len + 0.05) {
+            if let Some(hit) = crate::props::level_ray(g, p, v3::scale(seg, 1.0 / len), len + 0.05) {
                 land = v3::mad(p, seg, hit.t / len);
                 points.push(land);
                 break;

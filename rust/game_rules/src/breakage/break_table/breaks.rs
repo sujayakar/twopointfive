@@ -722,9 +722,8 @@ pub(in crate::breakage) fn breaks_heap(g: &mut crate::game::Game, surf: crate::s
         let box_ = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: [x, 0.0, z], h: sb.h, yaw: Some(yaw), rot: Some(rot), albedo: Some(tinted), stuff: word.stuff, does: word.does, ..Default::default() });
         // the floor (or the low thing) under it; a spot the hole cannot see along the floor is skipped
         let ro: V3 = [x, 0.5, z];
-        let st = crate::scene_collision::raycast(g, ro, [0.0, -1.0, 0.0], 0.6);
-        let ph = crate::props::prop_system_raycast(g, ro, [0.0, -1.0, 0.0], match &st { Some(q) => q.t, None => 0.6 });
-        let t = match (&ph, &st) { (Some(p), _) => p.t, (None, Some(q)) => q.t, (None, None) => 0.5 };
+        let under = crate::props::level_ray(g, ro, [0.0, -1.0, 0.0], 0.6);
+        let t = under.map_or(0.5, |h| h.t);
         if t < 0.03 || crate::scene_collision::solid_blocked(g, [at[0], 0.25, at[2]], [x, 0.25, z], None) { continue; }
         if crate::props::prop_system_raycast(g, [x, 1.7, z], [0.0, -1.0, 0.0], 1.15).is_some() { continue; }
         let mut low = 0.0;
@@ -748,7 +747,7 @@ pub(in crate::breakage) fn breaks_heap(g: &mut crate::game::Game, surf: crate::s
         let c = &mut g.tab.debris_chunk[got];
         c.rest = true;
         c.sounded = true;
-        if let Some(p) = &ph { c.on = Some(p.prop); c.on_pose = m::NAN; }
+        if let Some(p) = under.and_then(|h| h.thing) { c.on = Some(p); c.on_pose = m::NAN; }
         dealt += 1.0;
         if has_cut {   } else {  }
     }
