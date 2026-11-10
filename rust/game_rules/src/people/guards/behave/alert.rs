@@ -8,153 +8,194 @@ use crate::v3::{self, V3};
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
 
+/// What the stages of his fight share this tick.
+#[derive(Clone, Copy)]
+struct Fight {
+    gd: GuardId,
+    dt: f64,
+    c: CharId,
+    /// the man he is fighting
+    pc: Option<CharId>,
+    can_shoot: bool,
+    staff: bool,
+    dist: f64,
+    dazzled: bool,
+    staggered: bool,
+}
+
 pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     let &Sensed { c, staff, dist, pair, dazzled, staggered, .. } = s;
-    let Acts { mut move_speed, mut crouch, mut duck, mut pied, .. } = Acts::still();
-    let mut upper;
-    let mut aim_at;
-    'behaviour: {
-        upper = UpperMode::Aim;
-        note_door_crossings(g, gd);
-        let pc = g.gd[gd].foe;
-        let down = crate::teams::foe_down(g, gd);
-        let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
-        if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
-        if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
-        // TAKING COVER (control/): a rule of the list's cover stage may have him before his fight does; the first is a man getting his head down
-        let cover = crate::control::grant_cover(g, gd, dt);
-        let in_standoff = g.gd[gd].standoff.is_some() && pair.is_some();
-        if let Some((rule, want)) = cover {
-            crate::control::record(g, gd, crate::control::Holder::Rule(rule));
-            duck = true;
-            g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
-            if want.to.is_none() { g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, want.fire_wait); }
-            if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
-            let threat = match want.threat {
-                Some(s) => s,
-                None => match (crate::belief::gun_point(g, gd), pc) {
-                    (Some(gp), _) => gp,
-                    (None, Some(p)) => g.ch[p].pos,
-                    (None, None) => aim_ahead(g, c),
-                },
-            };
-            aim_at = Some([threat[0], 1.1, threat[2]]);
-            crouch = want.crouch;
-            // (A MAN WHO CANNOT SEE GOES NOWHERE: whatever spot a rule names, a dazzled or staggered man gets down where he is. Said here once, for
-            //  every rule of the cover stage; the rule keeps its spot and he goes when he can see)
-            let outcome = match want.to.filter(|_| !dazzled && !staggered) {
-                None => {
-                    brake(g, gd, 8.0, dt);
-                    g.ch[c].vel = [0.0, 0.0, 0.0];
-                    g.gd[gd].stall_ref = None;
-                    crate::control::Outcome::Down
-                }
-                Some(spot) => {
-                    go_to(g, gd, spot, None);
-                    let arrived = follow_path(g, gd, dt, want.pace);
-                    move_speed = g.gd[gd].speed;
-                    if arrived { crate::control::Outcome::Arrived }
-                    else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::Outcome::GoingNowhere }
-                    else { crate::control::Outcome::Moving }
-                }
-            };
-            if let (true, true, Some(pc)) = (want.to.is_some(), can_shoot && g.gd[gd].react_t <= 0.0, pc) {   // on his way he fires at the man he sees
-                let s = fight_sight(g, gd, c, pc, dt);
-                aim_at = Some(s.aim);
-                duck = false;
-                let ready = crate::aim::aim_ready_walking(g, gd);
-                fight_trigger(g, gd, c, &s, move_speed, ready, dt);
-            }
-            crate::control::commit(g, gd, rule, outcome);
-        } else if g.gd[gd].react_t > 0.0 {
-            g.gd[gd].react_t -= dt;
-            let gp = if dazzled || g.time - g.gd[gd].last_seen_t > 0.5 { crate::belief::gun_point(g, gd) } else { None };
-            aim_at = if let Some(gp) = gp {
-                Some(v3::add(gp, [0.0, 1.1, 0.0]))
-            } else if let Some(p) = pc {
-                Some(v3::add(g.ch[p].pos, [0.0, 1.2, 0.0]))
-            } else { None };
-            brake(g, gd, 8.0, dt);
-        } else if in_standoff {
-            let r = standoff_alert(g, gd, dt, pair.unwrap());
-            move_speed = r.move_;
-            aim_at = Some(r.aim);
-            crouch = r.crouch;
-            g.gd[gd].shot_blocked_t = 0.0;
-            g.gd[gd].line_in_t = 0.0;
-        } else if can_shoot {
-            let pc = pc.unwrap();
-            let s = fight_sight(g, gd, c, pc, dt);
-            aim_at = Some(s.aim);
-            let (closing, stepping) = fight_legs(g, gd, c, pc, &s, dist, dt, &mut move_speed);
-            if !(s.blocked && !closing) {
-                if !stepping { g.gd[gd].stall_ref = None; }
-                g.gd[gd].chase_t = 0.0;
-            } else if g.gd[gd].shot_blocked_t > 4.0 && !s.pinned {
-                drop_to_search(g, gd, Some("no shot — lost him"));
-                crate::mind::cap(g, gd, 0.5, "guards");
-                break 'behaviour;
-            }
-            let ready = crate::aim::aim_ready(g, gd);
-            fight_trigger(g, gd, c, &s, move_speed, ready, dt);
-        } else if let (true, Some(pc)) = (down, pc) {
-            let body = g.ch[pc].pos;
-            let here = g.ch[c].pos;
-            let d_b = m::hyp2(body[0] - here[0], body[2] - here[2]);
-            if d_b > 2.2 {
-                go_to(g, gd, body, None);
-                follow_path(g, gd, dt, g.tune.guard_investigate);
-                move_speed = g.gd[gd].speed;
-            } else {
-                brake(g, gd, 6.0, dt);
-                g.ch[c].vel = [0.0, 0.0, 0.0];
-            }
-            aim_at = Some(v3::add(body, [0.0, 0.3, 0.0]));
-            g.gd[gd].search_t += dt;
-            if g.gd[gd].search_t > 4.0 && !g.called_in && staff {
-                g.called_in = true;
-                let line = if !crate::dialogue::is_office(g) { "target is down. send someone over." } else { "target is down. send someone up." };
-                crate::game::game_say(g, gd, line, Some(true), None);
-                let at = head_or_pos(g, c);
-                crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
-            }
-            if g.gd[gd].search_t > 14.0 {
-                crate::mind::set_state(g, gd, St::Suspicious, "guards");
-                crate::mind::set(g, gd, 0.3, "guards");
-                g.gd[gd].search_t = 0.0;
-                g.gd[gd].react_t = 0.0;
-                crate::mind::fix(g, gd, Some(body), "guards");
-            }
-        } else {
-            aim_at = crate::coverfire::cover_blind(g, gd, dt);
-            if aim_at.is_some() {
-                brake(g, gd, 6.0, dt);
-                g.ch[c].vel = [0.0, 0.0, 0.0];
-            } else if let Some(forced) = crate::doorforce::door_force(g, gd, dt) {
-                aim_at = Some(forced.aim);
-                move_speed = forced.move_;
-            } else if let Some(gp) = crate::belief::gun_point(g, gd).filter(|_| g.gd[gd].pinned) {
-                let at = v3::add(gp, [0.0, 1.1, 0.0]);
-                aim_at = Some(at);
-                if crate::doorway::off_threshold(g, gd, Some(at), dt, false) {
-                    move_speed = g.gd[gd].speed;
-                } else {
-                    brake(g, gd, 6.0, dt);
-                    g.ch[c].vel = [0.0, 0.0, 0.0];
-                }
-            } else if g.gd[gd].last_known.is_some() {
-                let tac = if g.tune.tactics { crate::tactics::tactics_alert(g, gd, dt) } else { None };
-                let (mv, at, pd, cr) = match tac {
-                    Some(r) => (r.move_, r.aim, r.pied, r.crouch),
-                    None => { let pace = g.tune.guard_chase; let r = chase_fix(g, gd, dt, pace); (r.move_, r.aim, r.pied, r.crouch) }
-                };
-                move_speed = mv; aim_at = at; pied = pd; crouch = cr;
-            } else if !g.gd[gd].pinned && !g.gd[gd].hold && g.time - g.gd[gd].last_seen_t > 2.0 {
-                drop_to_search(g, gd, None);
-            }
-        }
+    let mut a = Acts { upper: UpperMode::Aim, ..Acts::still() };
+    note_door_crossings(g, gd);
+    let pc = g.gd[gd].foe;
+    let down = crate::teams::foe_down(g, gd);
+    let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
+    if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }
+    if g.gd[gd].react_t > 0.0 || down || g.gd[gd].pinned { g.gd[gd].stall_ref = None; g.gd[gd].chase_t = 0.0; }
+    let f = Fight { gd, dt, c, pc, can_shoot, staff, dist, dazzled, staggered };
+    // TAKING COVER (control/): a rule of the list's cover stage may have him before his fight does; the first is a man getting his head down
+    let cover = crate::control::grant_cover(g, gd, dt);
+    let in_standoff = g.gd[gd].standoff.is_some() && pair.is_some();
+    if let Some((rule, want)) = cover {
+        takes_cover(g, f, rule, want, &mut a);
+    } else if g.gd[gd].react_t > 0.0 {
+        still_reacting(g, f, &mut a);
+    } else if in_standoff {
+        let r = standoff_alert(g, gd, dt, pair.unwrap());
+        a.move_speed = r.move_;
+        a.aim_at = Some(r.aim);
+        a.crouch = r.crouch;
+        g.gd[gd].shot_blocked_t = 0.0;
+        g.gd[gd].line_in_t = 0.0;
+    } else if can_shoot {
+        shoots_at_him(g, f, pc.unwrap(), &mut a);
+    } else if let (true, Some(pc)) = (down, pc) {
+        stands_over_him(g, f, pc, &mut a);
+    } else {
+        hunts_him(g, f, &mut a);
     }
-    Acts { move_speed, upper, aim_at, crouch, duck, pied }
+    a
+}
+
+/// A rule has him getting his head down or going to cover: he aims at the danger, and on his way fires at the man he sees.
+fn takes_cover(g: &mut Game, f: Fight, rule: crate::control::RuleId, want: crate::control::TakeCover, a: &mut Acts) {
+    let Fight { gd, dt, c, pc, can_shoot, .. } = f;
+    crate::control::record(g, gd, crate::control::Holder::Rule(rule));
+    a.duck = true;
+    g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; g.gd[gd].chase_t = 0.0;
+    if want.to.is_none() { g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, want.fire_wait); }
+    if g.gd[gd].react_t > 0.0 { g.gd[gd].react_t -= dt; }
+    let threat = match want.threat {
+        Some(s) => s,
+        None => match (crate::belief::gun_point(g, gd), pc) {
+            (Some(gp), _) => gp,
+            (None, Some(p)) => g.ch[p].pos,
+            (None, None) => aim_ahead(g, c),
+        },
+    };
+    a.aim_at = Some([threat[0], 1.1, threat[2]]);
+    a.crouch = want.crouch;
+    let outcome = legs_under_cover(g, f, want, a);
+    if let (true, true, Some(pc)) = (want.to.is_some(), can_shoot && g.gd[gd].react_t <= 0.0, pc) {   // on his way he fires at the man he sees
+        let s = fight_sight(g, gd, c, pc, dt);
+        a.aim_at = Some(s.aim);
+        a.duck = false;
+        let ready = crate::aim::aim_ready_walking(g, gd);
+        fight_trigger(g, gd, c, &s, a.move_speed, ready, dt);
+    }
+    crate::control::commit(g, gd, rule, outcome);
+}
+
+/// (A MAN WHO CANNOT SEE GOES NOWHERE: whatever spot a rule names, a dazzled or staggered man gets down where he is. Said here once, for
+///  every rule of the cover stage; the rule keeps its spot and he goes when he can see)
+fn legs_under_cover(g: &mut Game, f: Fight, want: crate::control::TakeCover, a: &mut Acts) -> crate::control::Outcome {
+    let Fight { gd, dt, c, dazzled, staggered, .. } = f;
+    let Some(spot) = want.to.filter(|_| !dazzled && !staggered) else {
+        brake(g, gd, 8.0, dt);
+        g.ch[c].vel = [0.0, 0.0, 0.0];
+        g.gd[gd].stall_ref = None;
+        return crate::control::Outcome::Down;
+    };
+    go_to(g, gd, spot, None);
+    let arrived = follow_path(g, gd, dt, want.pace);
+    a.move_speed = g.gd[gd].speed;
+    if arrived { crate::control::Outcome::Arrived }
+    else if not_getting_anywhere(g, gd, dt, 1.5) { crate::control::Outcome::GoingNowhere }
+    else { crate::control::Outcome::Moving }
+}
+
+/// His moment before he acts: he stops, looking where he believes the gun is or at the man.
+fn still_reacting(g: &mut Game, f: Fight, a: &mut Acts) {
+    let Fight { gd, dt, pc, dazzled, .. } = f;
+    g.gd[gd].react_t -= dt;
+    let gp = if dazzled || g.time - g.gd[gd].last_seen_t > 0.5 { crate::belief::gun_point(g, gd) } else { None };
+    a.aim_at = if let Some(gp) = gp {
+        Some(v3::add(gp, [0.0, 1.1, 0.0]))
+    } else if let Some(p) = pc {
+        Some(v3::add(g.ch[p].pos, [0.0, 1.2, 0.0]))
+    } else { None };
+    brake(g, gd, 8.0, dt);
+}
+
+/// He sees his man: his gun finds the point, his legs close or clear the line, and his finger does the rest; no shot for too long and he drops to a search.
+fn shoots_at_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
+    let Fight { gd, dt, c, dist, .. } = f;
+    let s = fight_sight(g, gd, c, pc, dt);
+    a.aim_at = Some(s.aim);
+    let (closing, stepping) = fight_legs(g, gd, c, pc, &s, dist, dt, &mut a.move_speed);
+    if !(s.blocked && !closing) {
+        if !stepping { g.gd[gd].stall_ref = None; }
+        g.gd[gd].chase_t = 0.0;
+    } else if g.gd[gd].shot_blocked_t > 4.0 && !s.pinned {
+        drop_to_search(g, gd, Some("no shot — lost him"));
+        crate::mind::cap(g, gd, 0.5, "guards");
+        return;
+    }
+    let ready = crate::aim::aim_ready(g, gd);
+    fight_trigger(g, gd, c, &s, a.move_speed, ready, dt);
+}
+
+/// His man is down: he goes to him, covers him, calls it in once, and in time stands easy.
+fn stands_over_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
+    let Fight { gd, dt, c, staff, .. } = f;
+    let body = g.ch[pc].pos;
+    let here = g.ch[c].pos;
+    let d_b = m::hyp2(body[0] - here[0], body[2] - here[2]);
+    if d_b > 2.2 {
+        go_to(g, gd, body, None);
+        follow_path(g, gd, dt, g.tune.guard_investigate);
+        a.move_speed = g.gd[gd].speed;
+    } else {
+        brake(g, gd, 6.0, dt);
+        g.ch[c].vel = [0.0, 0.0, 0.0];
+    }
+    a.aim_at = Some(v3::add(body, [0.0, 0.3, 0.0]));
+    g.gd[gd].search_t += dt;
+    if g.gd[gd].search_t > 4.0 && !g.called_in && staff {
+        g.called_in = true;
+        let line = if !crate::dialogue::is_office(g) { "target is down. send someone over." } else { "target is down. send someone up." };
+        crate::game::game_say(g, gd, line, Some(true), None);
+        let at = head_or_pos(g, c);
+        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
+    }
+    if g.gd[gd].search_t > 14.0 {
+        crate::mind::set_state(g, gd, St::Suspicious, "guards");
+        crate::mind::set(g, gd, 0.3, "guards");
+        g.gd[gd].search_t = 0.0;
+        g.gd[gd].react_t = 0.0;
+        crate::mind::fix(g, gd, Some(body), "guards");
+    }
+}
+
+/// He cannot see his man: covering fire, a door to force, his post's line to the gun, the chase to his fix, or with nothing left a search.
+fn hunts_him(g: &mut Game, f: Fight, a: &mut Acts) {
+    let Fight { gd, dt, c, .. } = f;
+    a.aim_at = crate::coverfire::cover_blind(g, gd, dt);
+    if a.aim_at.is_some() {
+        brake(g, gd, 6.0, dt);
+        g.ch[c].vel = [0.0, 0.0, 0.0];
+    } else if let Some(forced) = crate::doorforce::door_force(g, gd, dt) {
+        a.aim_at = Some(forced.aim);
+        a.move_speed = forced.move_;
+    } else if let Some(gp) = crate::belief::gun_point(g, gd).filter(|_| g.gd[gd].pinned) {
+        let at = v3::add(gp, [0.0, 1.1, 0.0]);
+        a.aim_at = Some(at);
+        if crate::doorway::off_threshold(g, gd, Some(at), dt, false) {
+            a.move_speed = g.gd[gd].speed;
+        } else {
+            brake(g, gd, 6.0, dt);
+            g.ch[c].vel = [0.0, 0.0, 0.0];
+        }
+    } else if g.gd[gd].last_known.is_some() {
+        let tac = if g.tune.tactics { crate::tactics::tactics_alert(g, gd, dt) } else { None };
+        let (mv, at, pd, cr) = match tac {
+            Some(r) => (r.move_, r.aim, r.pied, r.crouch),
+            None => { let pace = g.tune.guard_chase; let r = chase_fix(g, gd, dt, pace); (r.move_, r.aim, r.pied, r.crouch) }
+        };
+        a.move_speed = mv; a.aim_at = at; a.pied = pd; a.crouch = cr;
+    } else if !g.gd[gd].pinned && !g.gd[gd].hold && g.time - g.gd[gd].last_seen_t > 2.0 {
+        drop_to_search(g, gd, None);
+    }
 }
 
 /// FIRING AS HE GOES, a man whose script has his legs: he turns to the man he sees, going backwards or sideways, and shoots, his aim what his own walk leaves of it.

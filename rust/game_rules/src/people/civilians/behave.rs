@@ -92,82 +92,20 @@ fn on_shift(g: &Game, o: Option<GuardId>) -> Option<GuardId> { o.filter(|x| g.gu
 
 /// The doing itself, when its time comes.
 fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
-    use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue as D, ChronicleNDataValue as N};
-    use crate::game::GuardState;
     use crate::guards::RaiseEscalationCause as Why;
     let cv = p.cv;
     let o = p.o;
     let civ = civ_of(g, cv);
     match p.kind {
         PendKind::GreetReply => {
-            if let Some(o) = o {
-                let chatty = chatty_enough(g, o);
-                if chatty || (g.gd[o].state == GuardState::Patrol && g.gd[o].awareness < 0.15 && g.gd[o].held.is_none() && g.guards.contains(&o)) {
-                    let aw = away(g);
-                    let bins = g.cv[civ].def.tasks.as_ref().map_or(false, |t| t.contains(&crate::scene_level::CivilianTask::Bin));
-                    let lines = crate::dialogue::civ_lines();
-                    let pool: Vec<String> = lines.guide.greet_guard.iter()
-                        .filter(|t| !((t.contains("stairs") || t.contains("elevator")) && aw) && !(t.contains("trash") && !bins))
-                        .cloned().collect();
-                    let line = pick(g, cv, &pool);
-                    let text = fill(g, cv, &line, Some(o));
-                    crate::guards::say(g, o, &text, None, None);
-                }
-            }
+            if let Some(o) = o { guard_greets_back(g, cv, civ, o); }
         }
-        PendKind::ReportRadio => {
-            let o = match o { Some(o) if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].held.is_none() => o, _ => return };
-            let lines = crate::dialogue::civ_lines();
-            let key = String::from(p.key.as_deref().unwrap_or("someone"));
-            let line = match lines.guard_radio.get(key) { Some(t) => t.clone(), None => lines.guard_radio.get(String::from("someone")).unwrap().clone() };
-            let text = fill(g, cv, &line, Some(o));
-            crate::guards::say(g, o, &text, Some(true), None);
-            let oc = g.gd[o].ch;
-            let at = match g.ch[oc].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => g.ch[oc].pos };
-            crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
-            if p.armed.unwrap_or(false) {
-                let pos = p.pos.or(g.cv[civ].cause_pos).unwrap_or(g.ch[g.gd[cv].ch].pos);
-                g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
-                later(g, 1.2, &LaterP { kind: PendKind::Escalate, cv, o: Some(o), ..Default::default() });
-            }
-        }
+        PendKind::ReportRadio => report_goes_on_the_radio(g, p, civ),
         PendKind::Escalate => {
             let except = on_shift(g, o);
             crate::guards::raise_escalation(g, 1.0, except, Some(Why::Civilian), None);
         }
-        PendKind::OutsideCall => {
-            if !g.civilians.contains(&cv) { return; }
-            let pos = g.cv[civ].cause_pos.unwrap_or(g.ch[g.gd[cv].ch].pos);
-            let aw = away(g);
-            let lines = crate::dialogue::civ_lines();
-            let table = if aw { &lines.guide.own.control } else { &lines.guide.control };
-            let line = table.get(String::from("outside")).unwrap().clone();
-            control(g, cv, &line);
-            let sent = crate::devices::send_to_look(g, pos);
-            if g.cv[civ].armed { later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv, o: sent, ..Default::default() }); }
-            let (who, cause, armed) = (g.cv[civ].name.clone(), g.cv[civ].cause, g.cv[civ].armed);
-            let cause_word = String::from(cause.map_or("sam", |k| k.as_str()));
-            let sent_name = sent.map_or(String::new(), |s| g.gd[s].callsign.clone());
-            if first_hand(cause) {
-                let mut data: JsMap<String, Option<N>> = JsMap::new();
-                data.set(String::from("who"), Some(N::Text(who)));
-                data.set(String::from("to"), Some(N::Text(String::from("control"))));
-                data.set(String::from("cause"), Some(N::Text(cause_word)));
-                data.set(String::from("armed"), Some(N::Bool(armed)));
-                data.set(String::from("how"), Some(N::Text(String::from("outside"))));
-                data.set(String::from("sent"), Some(N::Text(sent_name)));
-                crate::chronicle::chronicle_n(g, ChronKind::CivilianReported, ChronCountKey::CivReported, Some(&data), Some(pos));
-            } else {
-                let mut data: JsMap<String, Option<D>> = JsMap::new();
-                data.set(String::from("who"), Some(D::Text(who)));
-                data.set(String::from("to"), Some(D::Text(String::from("control"))));
-                data.set(String::from("cause"), Some(D::Text(cause_word)));
-                data.set(String::from("armed"), Some(D::Bool(armed)));
-                data.set(String::from("how"), Some(D::Text(String::from("outside"))));
-                data.set(String::from("sent"), Some(D::Text(sent_name)));
-                crate::chronicle::chronicle(g, ChronKind::CivilianReported, Some(&data), Some(pos));
-            }
-        }
+        PendKind::OutsideCall => outside_call(g, cv, civ),
         PendKind::ComplyLine => {
             if !crate::condition::down(g, g.gd[cv].ch) && g.gd[cv].held.is_none() {
                 let lines = crate::dialogue::civ_lines();
@@ -191,6 +129,78 @@ fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
             let lines = crate::dialogue::civ_lines();
             control(g, cv, &lines.outrage);
         }
+    }
+}
+
+/// The man she greeted says something back, if he is one to chat and is at ease.
+fn guard_greets_back(g: &mut Game, cv: GuardId, civ: CivId, o: GuardId) {
+    use crate::game::GuardState;
+    let chatty = chatty_enough(g, o);
+    if chatty || (g.gd[o].state == GuardState::Patrol && g.gd[o].awareness < 0.15 && g.gd[o].held.is_none() && g.guards.contains(&o)) {
+        let aw = away(g);
+        let bins = g.cv[civ].def.tasks.as_ref().map_or(false, |t| t.contains(&crate::scene_level::CivilianTask::Bin));
+        let lines = crate::dialogue::civ_lines();
+        let pool: Vec<String> = lines.guide.greet_guard.iter()
+            .filter(|t| !((t.contains("stairs") || t.contains("elevator")) && aw) && !(t.contains("trash") && !bins))
+            .cloned().collect();
+        let line = pick(g, cv, &pool);
+        let text = fill(g, cv, &line, Some(o));
+        crate::guards::say(g, o, &text, None, None);
+    }
+}
+
+/// The man she told radios it in, if he still can; armed news places the alarm and raises the floor soon after.
+fn report_goes_on_the_radio(g: &mut Game, p: &crate::civilians::Pending, civ: CivId) {
+    let cv = p.cv;
+    let o = match p.o { Some(o) if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].held.is_none() => o, _ => return };
+    let lines = crate::dialogue::civ_lines();
+    let key = String::from(p.key.as_deref().unwrap_or("someone"));
+    let line = match lines.guard_radio.get(key) { Some(t) => t.clone(), None => lines.guard_radio.get(String::from("someone")).unwrap().clone() };
+    let text = fill(g, cv, &line, Some(o));
+    crate::guards::say(g, o, &text, Some(true), None);
+    let oc = g.gd[o].ch;
+    let at = match g.ch[oc].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => g.ch[oc].pos };
+    crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
+    if p.armed.unwrap_or(false) {
+        let pos = p.pos.or(g.cv[civ].cause_pos).unwrap_or(g.ch[g.gd[cv].ch].pos);
+        g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
+        later(g, 1.2, &LaterP { kind: PendKind::Escalate, cv, o: Some(o), ..Default::default() });
+    }
+}
+
+/// She has got out and called it in: control says so, sends a man to look, and the chronicle has it, counted if she saw it herself.
+fn outside_call(g: &mut Game, cv: GuardId, civ: CivId) {
+    use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue as D, ChronicleNDataValue as N};
+    if !g.civilians.contains(&cv) { return; }
+    let pos = g.cv[civ].cause_pos.unwrap_or(g.ch[g.gd[cv].ch].pos);
+    let aw = away(g);
+    let lines = crate::dialogue::civ_lines();
+    let table = if aw { &lines.guide.own.control } else { &lines.guide.control };
+    let line = table.get(String::from("outside")).unwrap().clone();
+    control(g, cv, &line);
+    let sent = crate::devices::send_to_look(g, pos);
+    if g.cv[civ].armed { later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv, o: sent, ..Default::default() }); }
+    let (who, cause, armed) = (g.cv[civ].name.clone(), g.cv[civ].cause, g.cv[civ].armed);
+    let cause_word = String::from(cause.map_or("sam", |k| k.as_str()));
+    let sent_name = sent.map_or(String::new(), |s| g.gd[s].callsign.clone());
+    if first_hand(cause) {
+        let mut data: JsMap<String, Option<N>> = JsMap::new();
+        data.set(String::from("who"), Some(N::Text(who)));
+        data.set(String::from("to"), Some(N::Text(String::from("control"))));
+        data.set(String::from("cause"), Some(N::Text(cause_word)));
+        data.set(String::from("armed"), Some(N::Bool(armed)));
+        data.set(String::from("how"), Some(N::Text(String::from("outside"))));
+        data.set(String::from("sent"), Some(N::Text(sent_name)));
+        crate::chronicle::chronicle_n(g, ChronKind::CivilianReported, ChronCountKey::CivReported, Some(&data), Some(pos));
+    } else {
+        let mut data: JsMap<String, Option<D>> = JsMap::new();
+        data.set(String::from("who"), Some(D::Text(who)));
+        data.set(String::from("to"), Some(D::Text(String::from("control"))));
+        data.set(String::from("cause"), Some(D::Text(cause_word)));
+        data.set(String::from("armed"), Some(D::Bool(armed)));
+        data.set(String::from("how"), Some(D::Text(String::from("outside"))));
+        data.set(String::from("sent"), Some(D::Text(sent_name)));
+        crate::chronicle::chronicle(g, ChronKind::CivilianReported, Some(&data), Some(pos));
     }
 }
 
