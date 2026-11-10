@@ -14,7 +14,7 @@ fn movedLeaf(i: u32, x: vec3f) -> vec3f {
   // the raster says which; where exactly is asked of the piece itself
   if ((a & LEAF_HIT) != 0u) {
     let inst = (a >> 13u) & 0x3ffffu; let I = &insts[inst]; let leaf = (*I).leaf + (a & 8191u); let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w); let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));
-    let n = octUnpack(bitcast<vec4u>(extra[leaf * 2u + 1u]).x); let den = dot(n, d); h.piece = LEAF_HIT | inst; h.code = leaf; h.t = dot(extra[leaf * 2u].xyz - o, n) / select(den, 1e-4, abs(den) < 1e-4); let zd = textureLoad(depthT, id.xy, 0); let tz = 0.25 / (zd * dot(rd, frame.camFwd.xyz)); if (abs(h.t - tz) > 0.2) { h.t = tz; }
+    let n = octUnpack(extra[leaf * 2u + 1u].x); let den = dot(n, d); h.piece = LEAF_HIT | inst; h.code = leaf; h.t = dot(exF(leaf * 2u).xyz - o, n) / select(den, 1e-4, abs(den) < 1e-4); let zd = textureLoad(depthT, id.xy, 0); let tz = 0.25 / (zd * dot(rd, frame.camFwd.xyz)); if (abs(h.t - tz) > 0.2) { h.t = tz; }
   } else if (a != 0u) {
     h.piece = a - 1u; if (meet(h.piece, ro, rd, 1e-3, 4000.0, frame.misc.y)) { h.t = hT; h.code = hCode; } else { let zd = textureLoad(depthT, id.xy, 0); h.t = 0.25 / (zd * dot(rd, frame.camFwd.xyz)); let lp = toLocal(h.piece, ro + rd * h.t) / pieces[h.piece].half; let m = abs(lp); h.code = select(select(select(4u, 5u, lp.z > 0.0), select(2u, 3u, lp.y > 0.0), m.y > m.z), select(0u, 1u, lp.x > 0.0), m.x > m.y && m.x > m.z); if ((pieces[h.piece].flags & QUAD) != 0u) { h.code = CODE_QUAD; } }
   }

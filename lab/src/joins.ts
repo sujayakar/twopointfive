@@ -6,7 +6,7 @@ export const JN = { at: [-16, -0.5, -10.4], h: 0.2, n: [160, 48, 104] } as const
 const TOTAL = JN.n[0] * JN.n[1] * JN.n[2], AT = `vec3f(${JN.at.map(v => v.toFixed(2)).join(', ')})`;
 export const JOIN_ROWS = Math.ceil(TOTAL / 32);
 export const joinCode = `
-fn shutAt(c: vec3i, a: u32) -> bool { if (any(c < vec3i(0)) || any(c >= vec3i(${JN.n.join(', ')}))) { return false; } let i = u32(c.x + ${JN.n[0]} * (c.y + ${JN.n[1]} * c.z)); let w = bitcast<vec4u>(extra[u32(frame.knobs.z) + (i >> 5u)])[(i >> 3u) & 3u]; return ((w >> (4u * (i & 7u) + a)) & 1u) != 0u; }
+fn shutAt(c: vec3i, a: u32) -> bool { if (any(c < vec3i(0)) || any(c >= vec3i(${JN.n.join(', ')}))) { return false; } let i = u32(c.x + ${JN.n[0]} * (c.y + ${JN.n[1]} * c.z)); let w = extra[u32(frame.knobs.z) + (i >> 5u)][(i >> 3u) & 3u]; return ((w >> (4u * (i & 7u) + a)) & 1u) != 0u; }
 /** is the straight way from a to b (near each other) clear, as far as the grid can tell? */
 fn joined(a: vec3f, b: vec3f) -> bool {
   let p = (a - ${AT}) / ${JN.h}; let q = (b - ${AT}) / ${JN.h}; var c = vec3i(floor(p)); if (all(c == vec3i(floor(q)))) { return true; } let m = min(12.0, ceil(length(q - p) * 1.5));

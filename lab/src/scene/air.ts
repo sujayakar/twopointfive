@@ -114,7 +114,7 @@ export class Air {
 }
 export const airRows = (cells: number) => Math.ceil(cells / 2);
 export const airCode = (a: Air) => `
-fn airCell(c: vec3i) -> vec4f { let i = u32(c.x + ${a.n[0]} * (c.y + ${a.n[1]} * c.z)); let r = bitcast<vec4u>(extra[u32(frame.pool2.w) + (i >> 1u)]); let v = bitcast<vec2i>(select(r.xy, r.zw, (i & 1u) == 1u)); return vec4f(vec3f(vec3i((v.x << 16u) >> 16u, v.x >> 16u, (v.y << 16u) >> 16u)) * 0.001, f32(v.y >> 16u)); }
+fn airCell(c: vec3i) -> vec4f { let i = u32(c.x + ${a.n[0]} * (c.y + ${a.n[1]} * c.z)); let r = extra[u32(frame.pool2.w) + (i >> 1u)]; let v = bitcast<vec2i>(select(r.xy, r.zw, (i & 1u) == 1u)); return vec4f(vec3f(vec3i((v.x << 16u) >> 16u, v.x >> 16u, (v.y << 16u) >> 16u)) * 0.001, f32(v.y >> 16u)); }
 /** the air's speed at a place, m/s: the coarse air, not read from the far side of what is shut */
 fn windAt(x: vec3f) -> vec3f {
   let g = clamp((x - vec3f(${a.o.map(v => v.toFixed(3)).join(', ')})) / vec3f(${H.map(v => v.toFixed(3)).join(', ')}) - 0.5, vec3f(0.0), vec3f(${a.n.map(v => (v - 1.001).toFixed(3)).join(', ')})); let b = vec3i(g); let f = g - vec3f(b); let h = vec3i(select(vec3f(0.0), vec3f(1.0), f > vec3f(0.5))); let own = airCell(b + h); var s = vec3f(0.0); var ws = 0.0;

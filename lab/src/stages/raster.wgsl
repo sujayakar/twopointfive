@@ -19,7 +19,7 @@ struct F { @location(0) id: u32, @builtin(frag_depth) z: f32 };
 // leaves: a pointed oval of four triangles
 fn leafVertex(vi: u32, at: u32, inst: u32) -> V {
   var o: V; o.p = vec4f(0.0, 0.0, -1.0, 1.0); o.w = vec3f(0.0); let I = &insts[inst]; let leaf = (*I).leaf + at; o.id = 0x80000000u | (inst << 13u) | at;
-  let a = extra[leaf * 2u]; let b = bitcast<vec4u>(extra[leaf * 2u + 1u]); let n = octUnpack(b.x); let t = octUnpack(b.y); let s = cross(n, t);
+  let a = exF(leaf * 2u); let b = extra[leaf * 2u + 1u]; let n = octUnpack(b.x); let t = octUnpack(b.y); let s = cross(n, t);
   // six corners round the oval (its exact outline is found in the fragment), and for the sun four of the same area
   let q = array<vec2f, 10>(vec2f(-1.0, 0.0), vec2f(-0.62, -0.74), vec2f(-0.62, 0.74), vec2f(0.58, -0.96), vec2f(0.58, 0.96), vec2f(1.0, 0.0), vec2f(-0.8, -0.8), vec2f(0.8, -0.8), vec2f(-0.8, 0.8), vec2f(0.8, 0.8))[vi];
   let w = leafWide(b.w & 255u) * select(1.0, 1.0, vi > 5u); var y = q.y; if (vi < 6u && vi != 0u && vi != 5u) { y *= 1.16; } let l = a.xyz + t * (q.x * a.w) + s * (y * w * a.w); o.uv = vec2f(q.x, y * select(1.0, 0.0, (b.w & 255u) == 2u));

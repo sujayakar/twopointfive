@@ -7,6 +7,6 @@ fn waveHeight(p: vec2f, t: f32) -> f32 { var s = 0.0; for (var i = 0u; i < 7u; i
 fn waveSlope(p: vec2f, t: f32) -> vec2f { var s = vec2f(0.0); for (var i = 0u; i < 14u; i++) { let w = WAVES[i]; let k = w.xy * (2.0 * PI / WAVE_TILE); s += k * (w.z * cos(dot(k, p) - t * sqrt(9.81 * length(k)) * 0.62 + w.w)); } return s + rippleSlope(p); }
 /** rings where drops land: each cell has its own times */
 fn rainRings(p: vec2f, t: f32, rate: f32) -> vec2f {
-  var n = vec2f(0.0); for (var k = 0u; k < 3u; k++) { let g = p * (2.2 + 0.7 * f32(k)) + f32(k) * 17.3; let c = floor(g); let h = hash33(vec3f(c, f32(k) + 3.0)); let q = t * (0.8 + 0.5 * h.x) + h.y; let u = fract(q); let h2 = hash33(vec3f(c + floor(q) * 7.0, f32(k) + 9.0)); let d = g - c - 0.28 - 0.44 * h2.xy; let r = length(d); n += d / max(r, 1e-3) * sin((r - u * 0.55) * 46.0) * exp(-abs(r - u * 0.55) * 18.0) * (1.0 - u) * smoothstep(0.5, 0.3, r); } return n * (0.13 * rate);
+  var n = vec2f(0.0); for (var k = 0u; k < 3u; k++) { let g = p * (2.2 + 0.7 * f32(k)) + f32(k) * 17.3; let c = floor(g); let h = hash33(vec3f(c, f32(k) + 3.0)); let q = t * (0.8 + 0.5 * h.x) + h.y; let u = fract(q); let h2 = hash33(vec3f(c + floor(q) * 7.0, f32(k) + 9.0)); let d = g - c - 0.28 - 0.44 * h2.xy; let r = length(d); n += d / max(r, 1e-3) * sin((r - u * 0.55) * 46.0) * exp(-abs(r - u * 0.55) * 18.0) * (1.0 - u) * (1.0 - smoothstep(0.3, 0.5, r)); } return n * (0.13 * rate);
 }
 fn waveNormal(p: vec2f, t: f32) -> vec3f { let s = waveSlope(p, t); return normalize(vec3f(-s.x, 1.0, -s.y)); }

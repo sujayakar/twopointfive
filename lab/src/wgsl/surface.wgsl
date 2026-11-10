@@ -42,7 +42,7 @@ fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); 
 fn leafPhase(q: Surf, rd: vec3f) -> vec3f { let c = dot(frame.sunDir.xyz, rd); let b = acos(clamp(c, -1.0, 1.0)); return max((q.albedo + q.through) * ((sin(b) - b * c) / (3.0 * PI)) + q.through * (c / 3.0), vec3f(0.0)) * (2.0 / PI); }
 /** what a ray that stopped in a cell finds there: one facet of its contents, drawn as they face the ray (an ellipsoid's facets), with their color from that side */
 fn cellSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
-  let cell = h.piece & 0x7fffffffu; let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); let B = cellBox(r, vec3f(0.0), 1.0); let sg = max(B.sigma, vec3f(1e-3) * max3(B.sigma)); var s: Surf;
+  let cell = h.piece & 0x7fffffffu; let r = extra[BLK_CELLS + (cell - 1u) * 2u]; let r2 = extra[BLK_CELLS + (cell - 1u) * 2u + 1u]; let B = cellBox(r, vec3f(0.0), 1.0); let sg = max(B.sigma, vec3f(1e-3) * max3(B.sigma)); var s: Surf;
   let q = normalize(sg * rd); let u = rnd2(); let k = sqrt(u.x); let m = basis(-q) * vec3f(k * cos(6.2831853 * u.y), k * sin(6.2831853 * u.y), sqrt(max(1.0 - u.x, 0.0))); s.n = normalize(sg * m); s.ng = s.n; s.x = x;
   let n2 = s.n * s.n; var c = vec3f(0.0);
   for (var i = 0u; i < 3u; i++) { c += cellColor(r, r2, i, s.n[i] > 0.0) * n2[i]; }
@@ -53,10 +53,10 @@ fn cellSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
   if (h.code == CELL_CODE) { return cellSurf(h, x, rd); }
   let I = &insts[h.piece & 0x7fffffffu];
-  let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);
+  let b = extra[h.code * 2u + 1u]; let ln = octUnpack(b.x);
   // where on the leaf: u along the rib, v across (−1‥1 at its edges). Its blade domes to each side of the rib, its tip droops and its edge waves; what a pixel can not
   // hold of that is roughness
-  let la = extra[h.code * 2u]; let tl = octUnpack(b.y); let sl = cross(ln, tl); let lr = vec3f(dot((*I).r0.xyz, x) + (*I).r0.w, dot((*I).r1.xyz, x) + (*I).r1.w, dot((*I).r2.xyz, x) + (*I).r2.w) - la.xyz; let u = clamp(dot(lr, tl) / la.w, -1.0, 1.0);
+  let la = exF(h.code * 2u); let tl = octUnpack(b.y); let sl = cross(ln, tl); let lr = vec3f(dot((*I).r0.xyz, x) + (*I).r0.w, dot((*I).r1.xyz, x) + (*I).r1.w, dot((*I).r2.xyz, x) + (*I).r2.w) - la.xyz; let u = clamp(dot(lr, tl) / la.w, -1.0, 1.0);
   let v = clamp(dot(lr, sl) / (la.w * max(0.46 * (1.0 - u * u) * (1.0 + 0.35 * u), 0.03)), -1.0, 1.0); let blade = select(0.0, 1.0, (b.w & 255u) == 0u); let px = fp * length((*I).r0.xyz) / la.w;      // (a pixel, in half lengths of the leaf)
   let see = blade * (1.0 - smoothstep(0.10, 0.55, px)); let h1 = f32((h.code * 2654435761u) >> 24u) / 255.0; let lf = ln + (sl * ((0.30 * v - 0.16 * v / (0.18 + abs(v))) + 0.05 * sin(u * 7.0 + h1 * 6.28) * v) + tl * (0.16 * u + 0.16 * u * u)) * mix(0.35, 1.0, see) * blade;
   var g = normalize((*I).r0.xyz * ln.x + (*I).r1.xyz * ln.y + (*I).r2.xyz * ln.z); var n = normalize((*I).r0.xyz * lf.x + (*I).r1.xyz * lf.y + (*I).r2.xyz * lf.z); var under = false; var ao = vec2f(f32((b.w >> 8u) & 255u), f32((b.w >> 16u) & 255u)) / 255.0; if (dot(g, rd) > 0.0) { g = -g; n = -n; ao = ao.yx; under = true; } if (dot(n, rd) > -0.05) { n = normalize(n - rd * (dot(n, rd) + 0.1)); }
@@ -67,8 +67,8 @@ fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
 fn localNormal(k: u32, code: u32, lp: vec3f) -> vec3f {
   if (code < 6u) { var n = vec3f(0.0); n[code >> 1u] = select(-1.0, 1.0, (code & 1u) == 1u); return n; }
   if (code == CODE_QUAD) { let q = pieces[k].quad; return normalize(vec3f(q.x * lp.x, q.y * lp.y + 0.5 * q.w, q.z * lp.z)); }
-  if (code >= 16u) { let a = pieces[k].planes + (pieces[k].flags & 15u) + 2u * (code - 16u); return normalize(extra[a].xyz * (lp - extra[a + 1u].xyz)); }
-  return extra[pieces[k].planes + code - 7u].xyz;
+  if (code >= 16u) { let a = pieces[k].planes + (pieces[k].flags & 15u) + 2u * (code - 16u); return normalize(exF(a).xyz * (lp - exF(a + 1u).xyz)); }
+  return exF(pieces[k].planes + code - 7u).xyz;
 }
 /** the normal of a plate of cloth, between its corners' */
 fn bent(k: u32, lp: vec3f, front: bool) -> vec3f { let b = bitcast<vec4u>(pieces[k].quad); let t = clamp(lp.xy / pieces[k].half.xy * 0.5 + 0.5, vec2f(0.0), vec2f(1.0)); let x = mix(mix(lean(b.x), lean(b.y), t.x), mix(lean(b.z), lean(b.w), t.x), t.y); return normalize(toWorld(k, vec3f(x, 1.0))) * select(-1.0, 1.0, front); }
@@ -140,7 +140,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   // what is painted on it
   let nm = ((*p).mat >> 8u) & 15u; let m0 = (*p).mat >> 12u;
   for (var i = 0u; i < nm; i++) {
-    let a = extra[m0 + i * 3u]; let b = extra[m0 + i * 3u + 1u]; let c = extra[m0 + i * 3u + 2u];
+    let a = exF(m0 + i * 3u); let b = exF(m0 + i * 3u + 1u); let c = exF(m0 + i * 3u + 2u);
     if (u32(c.w) != h.code) { continue; }
     var f = lp.xz; if (h.code < 2u) { f = lp.zy; if (h.code == 1u) { f.x = -f.x; } } else if (h.code > 3u) { f = lp.xy; if (h.code == 4u) { f.x = -f.x; } }
     let r = (f - a.xy) / a.zw; if (abs(r.x) > 0.5 || abs(r.y) > 0.5) { continue; }
@@ -229,7 +229,7 @@ fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
   { let far = select(length((*l).u) + length((*l).v), (*l).area, (*l).kind != 0u) / max(dist, 0.05); let lobe = 3.2 * a + far; if (lobe < 1.35 && dot(R, d0) < dist * cos(lobe * 1.1 + 0.03)) { return vec3f(0.0); } }
   if ((*l).kind == 0u) {                                             // a rectangle: the coat's lobe as a bent cosine (learn/ltc.py), and that is exact for its edges
     if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let nv = clamp(dot(s.n, V), 1e-3, 1.0); let x = sqrt(1.0 - nv) * 15.0; let y = clamp(s.rough, 0.06, 1.0) * 15.0; let x0 = min(u32(x), 14u); let y0 = min(u32(y), 14u); let fx = x - f32(x0); let fy = y - f32(y0); let at = u32(frame.misc2.y) + 2048u + 2u * (y0 * 16u + x0);
-    let m = mix(mix(extra[at], extra[at + 2u], fx), mix(extra[at + 32u], extra[at + 34u], fx), fy); let g = mix(mix(extra[at + 1u], extra[at + 3u], fx), mix(extra[at + 33u], extra[at + 35u], fx), fy).xy;
+    let m = mix(mix(exF(at), exF(at + 2u), fx), mix(exF(at + 32u), exF(at + 34u), fx), fy); let g = mix(mix(exF(at + 1u), exF(at + 3u), fx), mix(exF(at + 33u), exF(at + 35u), fx), fy).xy;
     var t1 = V - s.n * dot(s.n, V); let tl = length(t1); if (tl < 1e-3) { t1 = basis(s.n)[0]; } else { t1 /= tl; } let t2 = cross(s.n, t1); var q: array<vec3f, 4>; for (var k = 0u; k < 4u; k++) { let c = d0 + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); let e = vec3f(dot(c, t1), dot(c, t2), dot(c, s.n)); q[k] = vec3f(m.x * e.x + m.y * e.z, e.y, m.z * e.x + m.w * e.z); }
     let f0 = coatF0(s); return (*l).radiance * (f0 * g.x + (1.0 - f0) * g.y) * ((*l).on * quadE(&q) * (0.5 / PI) * sat(1.0 - pow(dist / (*l).reach, 12.0)));
   }

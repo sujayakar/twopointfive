@@ -41,7 +41,7 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     leafMode = 0u;
     let h = nearest(ro, rd, 1e-3, 2000.0, 0u, cut);
     if (h.gpiece != NOTHING && clear) {           // a pane in the way: some of the paths mirror off it
-      let lp = toLocal(h.gpiece, ro + rd * h.gt); let ng = normalize(toWorld(h.gpiece, localNormal(h.gpiece, h.gcode, lp))); let c = abs(dot(ng, rd)); let F = 0.04 + 0.96 * pow(1.0 - c, 5.0);
+      let lp = toLocal(h.gpiece, ro + rd * h.gt); let ng = normalize(toWorld(h.gpiece, localNormal(h.gpiece, h.gcode, lp))); let c = abs(dot(ng, rd)); let F = 0.04 + 0.96 * pow(sat(1.0 - c), 5.0);
       if (h.gcode != CODE_CUT && rnd() < F) { ro = ro + rd * (h.gt - 1e-3); rd = reflect(rd, ng); cut = 1e9; clear = false; depth += 1u; continue; }
     }
     var gained = vec3f(0.0);
@@ -71,7 +71,7 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     let glossy = s.rough < 0.25;
     gained = thr * lampsAt(s, V, glossy); L += gained;
     if (water) {
-      let c = max(dot(s.n, V), 0.02); let F = 0.02 + 0.98 * pow(1.0 - c, 5.0);
+      let c = max(dot(s.n, V), 0.02); let F = 0.02 + 0.98 * pow(sat(1.0 - c), 5.0);
       if (rnd() < F) { ro = s.x + vec3f(0.0, 0.004, 0.0); rd = reflect(rd, s.n); rd.y = max(rd.y, 0.02); rd = normalize(rd); clear = false; cut = 1e9; depth += 1u; } else { ro = s.x - vec3f(0.0, 0.004, 0.0); rd = refract(rd, s.n, 0.75); wet = true; }
       continue;
     }
