@@ -2,8 +2,10 @@
 // is sought both ways, its camera taken off and given back, its pace turned, a note kept on it. Never a GPU's judgement.
 //   PORT=<a dev server> node tools/draw/tape-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const PAGE = require('../qa/page.cjs').page({ name: 'tape-page', detail: 'json' }), { check } = PAGE;
-const { mkdirSync } = require('node:fs');
+const { mkdirSync, readFileSync } = require('node:fs'), { join } = require('node:path');
 const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
+// (the men's place among the sections, by its name: a section put before it moves the number)
+const MEN = Number(/enum Section \{[^}]*\bmen = (\d+)/.exec(readFileSync(join(__dirname, '../../src/draw/sections.ts'), 'utf8'))[1]);
 const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.state;
 (async () => {
   const ctx = await PAGE.context();
@@ -55,14 +57,14 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts && a.state === b.s
   const far = (p, q) => Math.hypot(p[0] - q[0], p[2] - q[2]);
   check(far(s3.a, s3.b) > 0.5 && far(s3.b, s3.c) < 0.01 && far(s3.c, s3.e) > 0.3 && same(s3.m, s1.m), 'a drag takes the camera off the run\'s view and C gives it back, and the run is the same run', { a: s3.a, b: s3.b, c: s3.c, e: s3.e });
   // ---- how whoever watches sees it
-  const s6 = await W.page.evaluate(async () => {
-    const d = window.__draw, P = d.played, key = (code, k) => window.dispatchEvent(new KeyboardEvent('keydown', { code, key: k, bubbles: true, cancelable: true })), B = t => [...document.querySelectorAll('#tapebar button')].find(b => b.textContent === t), on = t => B(t).classList.contains('on'), seen = () => d.game.drawn.n[15], out = {};
+  const s6 = await W.page.evaluate(async MEN => {
+    const d = window.__draw, P = d.played, key = (code, k) => window.dispatchEvent(new KeyboardEvent('keydown', { code, key: k, bubbles: true, cancelable: true })), B = t => [...document.querySelectorAll('#tapebar button')].find(b => b.textContent === t), on = t => B(t).classList.contains('on'), seen = () => d.game.drawn.n[MEN], out = {};
     P.seek(400); for (let i = 0; i < 400 && P.seeking; i++) d.run(1, [], 'none'); d.run(1, [], 'none'); out.men = seen(); out.fog = [B('Fog').hidden, on('Fog')]; key('KeyF', 'f'); d.run(1, [], 'none'); out.bare = seen(); out.off = [B('Fog').hidden, on('Fog'), d.watched.fog, d.hud.page.bared];
     out.nv0 = [on('NV'), d.watched.tube, d.engine.settings.nvAmount]; key('KeyV', 'v'); d.run(30, [], 'none'); out.nv1 = [on('NV'), d.watched.tube, d.engine.settings.nvAmount]; key('KeyV', 'v'); d.run(30, [], 'none'); out.nv2 = [on('NV'), d.watched.tube, d.engine.settings.nvAmount];
     key('KeyV', 'v'); P.seek(100); for (let i = 0; i < 400 && P.seeking; i++) d.run(1, [], 'none'); d.run(1, [], 'none'); out.kept = [d.watched.fog, d.watched.tube, seen()]; d.run(P.total, [], 'none'); out.m = d.game.mark(); key('KeyV', 'v'); key('KeyF', 'f'); d.run(1, [], 'none'); out.back = [d.watched.fog, d.watched.tube];
     const ink = cv => { const x = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 3; i < x.length; i += 4) if (x[i]) n++; return n; }, M = d.game.map(), small = document.getElementById('tapemap'); await new Promise(r => setTimeout(r, 150)); d.run(0, [], 'none'); d.run(1, [], 'none'); out.map = { ink: ink(small), w: small.clientWidth, men: M.men.length, doors: M.doors.length };
     key('KeyM', 'm'); await new Promise(r => setTimeout(r, 150)); d.run(1, [], 'none'); const big = document.querySelector('#tapemapbig canvas'); out.large = { up: !document.getElementById('tapemapbig').hidden, ink: ink(big) }; const was = d.cam.target.slice(), r = big.getBoundingClientRect();
-    big.dispatchEvent(new MouseEvent('click', { clientX: r.left + r.width * 0.2, clientY: r.top + r.height * 0.2, bubbles: true })); d.run(1, [], 'none'); out.went = Math.hypot(d.cam.target[0] - was[0], d.cam.target[2] - was[2]); out.shut = document.getElementById('tapemapbig').hidden; key('KeyC', 'c'); d.run(1, [], 'none'); return out; });
+    big.dispatchEvent(new MouseEvent('click', { clientX: r.left + r.width * 0.2, clientY: r.top + r.height * 0.2, bubbles: true })); d.run(1, [], 'none'); out.went = Math.hypot(d.cam.target[0] - was[0], d.cam.target[2] - was[2]); out.shut = document.getElementById('tapemapbig').hidden; key('KeyC', 'c'); d.run(1, [], 'none'); return out; }, MEN);
   check(!s6.fog[0] && s6.fog[1] && s6.bare > s6.men && !s6.off[0] && !s6.off[1] && !s6.off[2] && s6.off[3], 'the fog comes off the picture, and everybody is drawn', s6);
   check(!s6.nv0[0] && s6.nv1[0] && s6.nv1[1] === true && s6.nv1[2] > 0.9 && !s6.nv2[0] && s6.nv2[1] === null && s6.nv2[2] < 0.1, 'the picture is put through a tube and taken out of it again');
   check(s6.kept[0] === false && s6.kept[1] === true && same(s6.m, s1.m) && s6.back[0] === true && s6.back[1] === null, 'both are kept over a seek, and the run is the same run');
