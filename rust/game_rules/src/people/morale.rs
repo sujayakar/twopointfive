@@ -710,113 +710,93 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if !reacts(g, gd) || row(g, gd).hole.is_none() { end(g, gd); return; }
     if g.gd[gd].script.is_none() && g.gd[gd].state != crate::game::GuardState::Alert && g.gd[gd].awareness >= ALERT_AW { return; }
     let hole = row(g, gd).hole.unwrap();
-    {
-        let st = g.m.morale.state_of.get_mut(gd).unwrap();
-        if st.calls > 0.0 { st.call_t += dt; }
-    }
+    let st = g.m.morale.state_of.get_mut(gd).unwrap();
+    if st.calls > 0.0 { st.call_t += dt; }
     let rooted = crate::control::man::staggered(g, gd);
     let act = row(g, gd).act;
-    if act == MoraleAct::Duck {
-        {
-            let st = g.m.morale.state_of.get_mut(gd).unwrap();
-            if st.heard >= 0.0 { st.heard += dt; }
-        }
-        if !rooted {
-            g.m.morale.state_of.get_mut(gd).unwrap().t += dt;
-            let now = row(g, gd);
-            if now.heard >= g.k.morale.order_secs + now.next {
-                if now.said { bark(g, gd, LineKind::Okay, false, Some(true)); }
-                end(g, gd);
-                return;
-            }
-            let lasts = if folds(g, gd) { g.k.morale.duck_secs } else { g.k.morale.steady_duck };
-            if now.t >= lasts || !seen_by(g, gd, None).is_empty() { end(g, gd); return; }
-        }
-        drive(g, gd, dt, rooted);
-        return;
+    let goes_on = match act {
+        MoraleAct::Duck => ducks_on(g, gd, dt, rooted),
+        MoraleAct::Flinch => flinches_on(g, gd, dt, rooted),
+        MoraleAct::Stand => stands_up_on(g, gd, hole, dt, rooted),
+        _ => return broken_step(g, gd, act, hole, dt, rooted),
+    };
+    if goes_on { drive(g, gd, dt, rooted); }
+}
+
+/// He stays ducked until his leader's word has had its time, the duck has lasted, or he sees an enemy; false = it is over.
+fn ducks_on(g: &mut Game, gd: GuardId, dt: f64, rooted: bool) -> bool {
+    let st = g.m.morale.state_of.get_mut(gd).unwrap();
+    if st.heard >= 0.0 { st.heard += dt; }
+    if rooted { return true; }
+    g.m.morale.state_of.get_mut(gd).unwrap().t += dt;
+    let now = row(g, gd);
+    if now.heard >= g.k.morale.order_secs + now.next {
+        if now.said { bark(g, gd, LineKind::Okay, false, Some(true)); }
+        end(g, gd);
+        return false;
     }
-    if act == MoraleAct::Flinch {
-        if !rooted {
-            g.m.morale.state_of.get_mut(gd).unwrap().t += dt;
-            if row(g, gd).t >= g.k.morale.flinch_secs { end(g, gd); return; }
-        }
-        drive(g, gd, dt, rooted);
-        return;
+    let lasts = if folds(g, gd) { g.k.morale.duck_secs } else { g.k.morale.steady_duck };
+    if now.t >= lasts || !seen_by(g, gd, None).is_empty() { end(g, gd); return false; }
+    true
+}
+
+/// The flinch lasts `flinchSecs`; false = it is over.
+fn flinches_on(g: &mut Game, gd: GuardId, dt: f64, rooted: bool) -> bool {
+    if rooted { return true; }
+    g.m.morale.state_of.get_mut(gd).unwrap().t += dt;
+    if row(g, gd).t >= g.k.morale.flinch_secs { end(g, gd); return false; }
+    true
+}
+
+/// The leader steps off the hole's line and gets his men up, until his time is up or he sees an enemy; false = it is over.
+fn stands_up_on(g: &mut Game, gd: GuardId, hole: V3, dt: f64, rooted: bool) -> bool {
+    if rooted { return true; }
+    if row(g, gd).t == 0.0 {
+        let to = his(g, gd).first().copied();
+        let goal = side_goal(g, gd, hole, to);
+        let st = g.m.morale.state_of.get_mut(gd).unwrap();
+        st.goal = goal;
+        st.script.arrived = Some(false);
     }
-    if act == MoraleAct::Stand {
-        if !rooted {
-            if row(g, gd).t == 0.0 {
-                let to = his(g, gd).first().copied();
-                let goal = side_goal(g, gd, hole, to);
-                let st = g.m.morale.state_of.get_mut(gd).unwrap();
-                st.goal = goal; st.script.arrived = Some(false);
-            }
-            g.m.morale.state_of.get_mut(gd).unwrap().t += dt;
-            if row(g, gd).t >= g.k.morale.stand_secs || !seen_by(g, gd, None).is_empty() { end(g, gd); return; }
-            {
-                let st = g.m.morale.state_of.get_mut(gd).unwrap();
-                if st.goal.is_some() && st.script.arrived == Some(true) { st.goal = None; }
-            }
-            let now = row(g, gd);
-            if !now.said && now.t >= g.k.morale.order_beat {
-                g.m.morale.state_of.get_mut(gd).unwrap().said = true;
-                let men = his(g, gd);
-                if !men.is_empty() {
-                    bark(g, gd, LineKind::Order, false, Some(true));
-                    g.stats.morale.orders += 1;
-                    let gap = g.k.morale.order_gap;
-                    for (i, &o) in men.iter().enumerate() {
-                        let mm = g.m.morale.state_of.get_mut(o).unwrap();
-                        mm.heard = 0.0; mm.next = (i as f64) * gap; mm.said = i == 0;
-                    }
-                }
-            }
-        }
-        drive(g, gd, dt, rooted);
-        return;
+    g.m.morale.state_of.get_mut(gd).unwrap().t += dt;
+    if row(g, gd).t >= g.k.morale.stand_secs || !seen_by(g, gd, None).is_empty() { end(g, gd); return false; }
+    let st = g.m.morale.state_of.get_mut(gd).unwrap();
+    if st.goal.is_some() && st.script.arrived == Some(true) { st.goal = None; }
+    let now = row(g, gd);
+    if !now.said && now.t >= g.k.morale.order_beat { gives_the_word(g, gd); }
+    true
+}
+
+/// Once, at its beat: he tells his ducked men to get up, and they answer one after another, the nearest first.
+fn gives_the_word(g: &mut Game, gd: GuardId) {
+    g.m.morale.state_of.get_mut(gd).unwrap().said = true;
+    let men = his(g, gd);
+    if men.is_empty() { return; }
+    bark(g, gd, LineKind::Order, false, Some(true));
+    g.stats.morale.orders += 1;
+    let gap = g.k.morale.order_gap;
+    for (i, &o) in men.iter().enumerate() {
+        let mm = g.m.morale.state_of.get_mut(o).unwrap();
+        mm.heard = 0.0;
+        mm.next = (i as f64) * gap;
+        mm.said = i == 0;
     }
+}
+
+/// A broken man's sequence: over if he is no longer broken or sees an enemy (a bait or a reload runs its course), else one step of the act he is in.
+fn broken_step(g: &mut Game, gd: GuardId, act: MoraleAct, hole: V3, dt: f64, rooted: bool) {
     let owned = act == MoraleAct::Bait || act == MoraleAct::Reload;
     if row(g, gd).rung < 2.0 && !owned { end(g, gd); return; }
     if rooted { drive(g, gd, dt, true); return; }
     let seen: Vec<CharId> = if owned { Vec::new() } else { seen_by(g, gd, if act == MoraleAct::Hold { Some(hole) } else { None }) };
     if !seen.is_empty() && act != MoraleAct::Hold { end(g, gd); return; }
-    {
-        let st = g.m.morale.state_of.get_mut(gd).unwrap();
-        st.t += dt; st.broke_t += dt;
-    }
+    let st = g.m.morale.state_of.get_mut(gd).unwrap();
+    st.t += dt;
+    st.broke_t += dt;
     if act == MoraleAct::Hold && row(g, gd).broke_t >= g.k.morale.hold_max { end(g, gd); return; }
     match act {
-        MoraleAct::Down => {
-            if row(g, gd).t >= g.k.morale.down_secs {
-                let t = row(g, gd).t;
-                begin(g, gd, MoraleAct::Back, Some(hole));
-                g.m.morale.state_of.get_mut(gd).unwrap().t = t;
-                let goal = back_goal(g, gd, hole);
-                {
-                    let st = g.m.morale.state_of.get_mut(gd).unwrap();
-                    st.goal = goal; st.script.arrived = Some(false);
-                }
-                let now = row(g, gd);
-                if now.calls == 0.0 {
-                    if !folds(g, gd) { bark(g, gd, LineKind::Clear, true, Some(true)); }
-                    else if now.alone { bark(g, gd, LineKind::Call, true, Some(true)); }
-                    let st = g.m.morale.state_of.get_mut(gd).unwrap();
-                    st.calls = 1.0; st.call_t = 0.0;
-                }
-            }
-        }
-        MoraleAct::Back => {
-            let now = row(g, gd);
-            if now.t >= g.k.morale.back_until || now.goal.is_none() || now.script.arrived == Some(true) {
-                if folds(g, gd) {
-                    begin(g, gd, MoraleAct::Burst, Some(hole));
-                    let n = g.k.morale.burst_rounds;
-                    g.m.morale.state_of.get_mut(gd).unwrap().rounds = n;
-                } else {
-                    begin(g, gd, MoraleAct::Hold, Some(hole));
-                }
-            }
-        }
+        MoraleAct::Down => stays_down(g, gd, hole),
+        MoraleAct::Back => scrabbles_back(g, gd, hole),
         MoraleAct::Burst => {
             let every = g.k.morale.burst_every;
             let over = !round(g, gd, dt, every)
@@ -824,48 +804,91 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
             if over { begin(g, gd, MoraleAct::Hold, Some(hole)); }
         }
         MoraleAct::Hold => {
-            let now = row(g, gd);
-            if now.calls == 1.0 && now.call_t >= g.k.morale.call2_secs && now.alone && folds(g, gd) {
-                bark(g, gd, LineKind::Again, true, Some(true));
-                g.m.morale.state_of.get_mut(gd).unwrap().calls = 2.0;
-            }
-            if !seen.is_empty() {
-                let now = row(g, gd);
-                let bait_m = g.k.morale.bait_m;
-                let at_it = now.baits == 0.0 && seen.iter().any(|&c| flat(g.ch[c].pos, hole) <= bait_m);
-                if at_it {
-                    bait(g, gd);
-                    g.m.morale.state_of.get_mut(gd).unwrap().at_hole = true;
-                } else {
-                    end(g, gd);
-                    return;
-                }
-            } else {
-                let at = thrown(g, gd, hole);
-                let now = row(g, gd);
-                if at && !now.at_hole { bait(g, gd); }
-                g.m.morale.state_of.get_mut(gd).unwrap().at_hole = at;
-            }
+            if !holds_the_hole(g, gd, hole, &seen) { return; }
         }
-        MoraleAct::Bait => {
-            let every = g.k.morale.bait_every;
-            let mut over = !round(g, gd, dt, every);
-            if !over {
-                let w = g.fa[g.gd[gd].weapon].def;
-                let cap = g.m.weapons.weapons.get(w).unwrap().mag_capacity;
-                over = row(g, gd).t > (cap + 1.0) * g.k.morale.bait_every + 2.0;
-            }
-            if over {
-                if row(g, gd).baits == 1.0 && folds(g, gd) { run_dry(g, gd); }
-                else { begin(g, gd, MoraleAct::Hold, Some(hole)); }
-            }
-        }
+        MoraleAct::Bait => shoots_at_the_bait(g, gd, hole, dt),
         MoraleAct::Reload => {
             if g.gd[gd].reload_t < 0.0 { begin(g, gd, MoraleAct::Hold, Some(hole)); }
         }
         _ => {}
     }
     drive(g, gd, dt, false);
+}
+
+/// Down for `downSecs`, then he scrabbles back and makes his first call: for help if he folds and is alone, a report if he doesn't fold.
+fn stays_down(g: &mut Game, gd: GuardId, hole: V3) {
+    if row(g, gd).t >= g.k.morale.down_secs {
+        let t = row(g, gd).t;
+        begin(g, gd, MoraleAct::Back, Some(hole));
+        g.m.morale.state_of.get_mut(gd).unwrap().t = t;
+        let goal = back_goal(g, gd, hole);
+        let st = g.m.morale.state_of.get_mut(gd).unwrap();
+        st.goal = goal;
+        st.script.arrived = Some(false);
+        let now = row(g, gd);
+        if now.calls == 0.0 {
+            if !folds(g, gd) { bark(g, gd, LineKind::Clear, true, Some(true)); }
+            else if now.alone { bark(g, gd, LineKind::Call, true, Some(true)); }
+            let st = g.m.morale.state_of.get_mut(gd).unwrap();
+            st.calls = 1.0;
+            st.call_t = 0.0;
+        }
+    }
+}
+
+/// When the scrabble is done he fires a burst at the hole if he folds, else he just holds it.
+fn scrabbles_back(g: &mut Game, gd: GuardId, hole: V3) {
+    let now = row(g, gd);
+    if now.t >= g.k.morale.back_until || now.goal.is_none() || now.script.arrived == Some(true) {
+        if folds(g, gd) {
+            begin(g, gd, MoraleAct::Burst, Some(hole));
+            let n = g.k.morale.burst_rounds;
+            g.m.morale.state_of.get_mut(gd).unwrap().rounds = n;
+        } else {
+            begin(g, gd, MoraleAct::Hold, Some(hole));
+        }
+    }
+}
+
+/// Gun on the hole: he calls a second time if nobody came, and takes the bait of a thing thrown or a man at the hole; a man seen elsewhere ends it (false).
+fn holds_the_hole(g: &mut Game, gd: GuardId, hole: V3, seen: &[CharId]) -> bool {
+    let now = row(g, gd);
+    if now.calls == 1.0 && now.call_t >= g.k.morale.call2_secs && now.alone && folds(g, gd) {
+        bark(g, gd, LineKind::Again, true, Some(true));
+        g.m.morale.state_of.get_mut(gd).unwrap().calls = 2.0;
+    }
+    if seen.is_empty() {
+        let at = thrown(g, gd, hole);
+        let now = row(g, gd);
+        if at && !now.at_hole { bait(g, gd); }
+        g.m.morale.state_of.get_mut(gd).unwrap().at_hole = at;
+        return true;
+    }
+    let now = row(g, gd);
+    let bait_m = g.k.morale.bait_m;
+    let at_it = now.baits == 0.0 && seen.iter().any(|&c| flat(g.ch[c].pos, hole) <= bait_m);
+    if !at_it {
+        end(g, gd);
+        return false;
+    }
+    bait(g, gd);
+    g.m.morale.state_of.get_mut(gd).unwrap().at_hole = true;
+    true
+}
+
+/// Rounds at the bait until they are spent or a magazine's time has gone: a folding man's first bait runs him dry, else back to holding.
+fn shoots_at_the_bait(g: &mut Game, gd: GuardId, hole: V3, dt: f64) {
+    let every = g.k.morale.bait_every;
+    let mut over = !round(g, gd, dt, every);
+    if !over {
+        let w = g.fa[g.gd[gd].weapon].def;
+        let cap = g.m.weapons.weapons.get(w).unwrap().mag_capacity;
+        over = row(g, gd).t > (cap + 1.0) * g.k.morale.bait_every + 2.0;
+    }
+    if over {
+        if row(g, gd).baits == 1.0 && folds(g, gd) { run_dry(g, gd); }
+        else { begin(g, gd, MoraleAct::Hold, Some(hole)); }
+    }
 }
 
 /// this file's script has him this frame: posed, gun out, his reaction beat run down

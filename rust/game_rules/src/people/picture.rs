@@ -885,6 +885,15 @@ fn step_holds(g: &mut Game, gd: GuardId, at: V3, low: bool) -> bool {
     true
 }
 
+/// What a step asked for is, when he looks at it again.
+enum StepNow {
+    /// his own place is safe again: he goes back to it
+    NotNeeded,
+    Holds,
+    /// he could not get there, or it is in a line itself: another is looked for off the same mark
+    Failed,
+}
+
 /// a step off a place in a known enemy's line, asked every frame of a man on a mark the squad chose; None: his place is his
 pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>, busy: Option<bool>) -> Option<crate::picture::PictureStep> {
     let mut ok = ok;
@@ -895,10 +904,44 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
         _ => return None,
     }
     let now = g.time;
-    let (step_at, step_free_at, step_rest, step_after, step_secs, step_m) = {
-        let k = &g.k.picture;
-        (k.step_at, k.step_free, k.step_rest, k.step_after, k.step_secs, k.step_m)
+    if !anything_known_as_he_asks(g, gd, key, now) { return None; }
+    let x = pic!(g, gd).step;
+    if let Some(xs) = x {
+        match step_when_looked_at(g, gd, xs, now) {
+            StepNow::NotNeeded => return None,
+            StepNow::Holds => return Some(PictureStep { at: xs.at, low: xs.low }),
+            StepNow::Failed => mark = xs.mark,
+        }
+    }
+    if !time_to_step(g, gd, mark, now, x.is_none(), busy) { return None; }
+    let bad = pic!(g, gd).step_bad;
+    let sam = g.ch[g.pl[g.player].ch].pos;
+    let step_at = g.k.picture.step_at;
+    let mut firm: Vec<V3> = Vec::new();
+    for i in ideas_copy(g, gd).unwrap_or_default() {
+        if !i.lost && idea_weight(g, i) >= step_at {
+            firm.push(i.at);
+        }
+    }
+    let spots = {
+        let mut free = |g: &mut Game, q: V3| step_free(g, q, gd, mark, sam, bad, &firm, &mut ok);
+        let step_m = g.k.picture.step_m;
+        cover_near(g, gd, mark, step_m, Some(8.0), Some(&mut free))
     };
+    let standing = spots.iter().find(|c| c.stand <= 0.0 && step_holds(g, gd, c.at, false)).copied();
+    let best = standing.or_else(|| spots.iter().find(|c| c.low <= 0.0 && step_holds(g, gd, c.at, true)).copied());
+    let Some(best) = best else {
+        pic!(g, gd).step_next = Some(now + g.k.picture.step_rest);
+        return None;
+    };
+    let low = !(best.stand <= 0.0 && step_holds(g, gd, best.at, false));
+    let at = floor(best.at);
+    pic!(g, gd).step = Some(Step { key: Some(key), mark: floor(mark), at, low, look_t: now + 0.5, t0: now });
+    Some(PictureStep { at, low })
+}
+
+/// He asks: a gap in his asking or another asker's key ends the step he had; and with no idea of anybody there is nothing to step from (false).
+fn anything_known_as_he_asks(g: &mut Game, gd: GuardId, key: u32, now: f64) -> bool {
     let p = pic!(g, gd);
     let asked = p.step_ask.unwrap_or(-1e9);
     let gap = now - asked > 0.25 || now < asked;
@@ -920,101 +963,70 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
     if p.ideas.is_empty() {
         p.step = None;
         p.step_in = Some(-1.0);
-        return None;
+        return false;
     }
-    let x = p.step;
-    if let Some(xs) = x {
-        if now >= xs.look_t {
-            pic!(g, gd).step.as_mut().unwrap().look_t = now + 0.5;
-            if exposed_at(g, gd, xs.mark, None) < step_free_at {
-                let p = pic!(g, gd);
-                p.step = None;
-                p.step_in = Some(-1.0);
-                p.step_next = Some(now + step_rest);
-                return None;
-            }
-            let off = flat(g.ch[g.gd[gd].ch].pos, xs.at) > 0.6 && now - xs.t0 > step_secs;
-            if off {
-                pic!(g, gd).step_bad = Some(xs.at);
-            }
-            if off || exposed_at(g, gd, xs.at, Some(xs.low)) >= step_at {
-                let p = pic!(g, gd);
-                p.step = None;
-                p.step_in = Some(now - step_after);
-                p.step_next = Some(now);
-                mark = xs.mark;
-            }
+    true
+}
+
+/// Every half second he looks at the step he has: is his own place safe again, could he not get there, is it no good any more.
+fn step_when_looked_at(g: &mut Game, gd: GuardId, xs: Step, now: f64) -> StepNow {
+    if now >= xs.look_t {
+        let (step_at, step_free_at, step_rest, step_after, step_secs) = {
+            let k = &g.k.picture;
+            (k.step_at, k.step_free, k.step_rest, k.step_after, k.step_secs)
+        };
+        pic!(g, gd).step.as_mut().unwrap().look_t = now + 0.5;
+        if exposed_at(g, gd, xs.mark, None) < step_free_at {
+            let p = pic!(g, gd);
+            p.step = None;
+            p.step_in = Some(-1.0);
+            p.step_next = Some(now + step_rest);
+            return StepNow::NotNeeded;
         }
-        if pic!(g, gd).step.is_some() {
-            return Some(PictureStep { at: xs.at, low: xs.low });
+        let off = flat(g.ch[g.gd[gd].ch].pos, xs.at) > 0.6 && now - xs.t0 > step_secs;
+        if off {
+            pic!(g, gd).step_bad = Some(xs.at);
+        }
+        if off || exposed_at(g, gd, xs.at, Some(xs.low)) >= step_at {
+            let p = pic!(g, gd);
+            p.step = None;
+            p.step_in = Some(now - step_after);
+            p.step_next = Some(now);
+            return StepNow::Failed;
         }
     }
+    StepNow::Holds
+}
+
+/// Is it time for him to look for a step: not busy, and his mark has been in a known line for `stepAfter`; it is asked at most every quarter second.
+fn time_to_step(g: &mut Game, gd: GuardId, mark: V3, now: f64, had_none: bool, busy: bool) -> bool {
+    let (step_at, step_after) = (g.k.picture.step_at, g.k.picture.step_after);
     let p = pic!(g, gd);
     if busy {
         p.step_in = Some(-1.0);
-        return None;
+        return false;
     }
     if p.step_for.map_or(true, |f| flat(f, mark) > 0.4) {
         p.step_for = Some(floor(mark));
         // (X === P.step here only when he came in with no step: one he had was just cleared, and the count it set stands)
-        if x.is_none() {
+        if had_none {
             p.step_in = Some(-1.0);
         }
     }
     if now < p.step_next.unwrap_or(-1e9) {
-        return None;
+        return false;
     }
     p.step_next = Some(now + 0.25);
     if exposed_at(g, gd, mark, None) < step_at {
         pic!(g, gd).step_in = Some(-1.0);
-        return None;
+        return false;
     }
     let p = pic!(g, gd);
     let si = p.step_in.unwrap_or(-1.0);
     if si < 0.0 || now < si {
         p.step_in = Some(now);
     }
-    if now - p.step_in.unwrap() < step_after {
-        return None;
-    }
-    let bad = p.step_bad;
-    let sam = g.ch[g.pl[g.player].ch].pos;
-    let mut firm: Vec<V3> = Vec::new();
-    for i in ideas_copy(g, gd).unwrap_or_default() {
-        if !i.lost && idea_weight(g, i) >= step_at {
-            firm.push(i.at);
-        }
-    }
-    let spots = {
-        let mut free = |g: &mut Game, q: V3| step_free(g, q, gd, mark, sam, bad, &firm, &mut ok);
-        cover_near(g, gd, mark, step_m, Some(8.0), Some(&mut free))
-    };
-    let mut best: Option<CoverSpot> = None;
-    for c in spots.iter() {
-        if c.stand <= 0.0 && step_holds(g, gd, c.at, false) {
-            best = Some(*c);
-            break;
-        }
-    }
-    if best.is_none() {
-        for c in spots.iter() {
-            if c.low <= 0.0 && step_holds(g, gd, c.at, true) {
-                best = Some(*c);
-                break;
-            }
-        }
-    }
-    let best = match best {
-        Some(b) => b,
-        None => {
-            pic!(g, gd).step_next = Some(now + step_rest);
-            return None;
-        }
-    };
-    let low = !(best.stand <= 0.0 && step_holds(g, gd, best.at, false));
-    let at = floor(best.at);
-    pic!(g, gd).step = Some(Step { key: Some(key), mark: floor(mark), at, low, look_t: now + 0.5, t0: now });
-    Some(PictureStep { at, low })
+    !(now - p.step_in.unwrap() < step_after)
 }
 
 // ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
