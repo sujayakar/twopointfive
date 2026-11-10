@@ -50,7 +50,7 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Primary | KitField::Secondary => {
             let slot = gun_slot(r.field).expect("a gun's row");
             if slot == GunSlot::Primary && m.weapon == KitWeapon::Pistol {
-                return crate::gear::gear_text(if !you { "no long gun: his sidearm is his gun" } else if g.k.slots.on { "no long gun, no launcher: nothing you fire reads as gunfire · the 40 mm rounds stay home with it" } else { "no long gun, no launcher: nothing you fire reads as gunfire" });
+                return crate::gear::gear_text(if !you { "no long gun: his sidearm is his gun" } else { "no long gun, no launcher: nothing you fire reads as gunfire · the 40 mm rounds stay home with it" });
             }
             let id = if slot == GunSlot::Primary { &m.primary } else { &m.secondary };
             return format!("{}{}", pick(g, id), if kit_slot_can(g, m, slot) { " (suppressed)" } else { "" });
@@ -67,7 +67,7 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Nvg => if m.nvg { "goes dark with you, sees through the tube" } else if m.light { "bare eyes: his light does the seeing" } else { "bare eyes, no light" },
         KitField::Rings => if js::truthy(m.rings) { "2 with the rifle up, then the right button: out cold to the head, doubled over anywhere else" } else { "none for the launcher" },
         KitField::Shells if you => {
-            if !tubed(g, m) { return crate::gear::gear_text(if g.k.slots.on { "no FN2000, no launcher: none carried, and no pouch spent on them" } else { "no FN2000, no launcher: these stay home" }); }
+            if !tubed(g, m) { return crate::gear::gear_text("no FN2000, no launcher: none carried, and no pouch spent on them"); }
             if !js::truthy(m.shells) { return crate::gear::gear_text("none for the launcher: rings only"); }
             return format!("{LOAD_KEYS} with the rifle up, then the right button: a frag's blast where it lands, past {} m", js::num_str(g.k.he40.arm_m));
         }
@@ -98,7 +98,6 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
             let notes = big_note().get(String::from(big_of(m).as_str())).cloned().expect("every big thing has its line");
             return notes[if you { 0 } else { 1 }].clone();
         }
-        KitField::Weapon | KitField::Walls | KitField::Bare | KitField::Cans => "",
     };
     String::from(line)
 }
@@ -175,7 +174,7 @@ fn kit_noise(g: &Game, field: KitField, m: &MemberKit) -> f64 {
             BigPick::None => 0.0,
         },
         KitField::Smoke | KitField::Cams | KitField::Rings => 1.0,
-        KitField::Bangs | KitField::Charges | KitField::Walls => 2.0,
+        KitField::Bangs | KitField::Charges => 2.0,
         KitField::Frags | KitField::Shells => 3.0,
         _ => 0.0,
     }
@@ -221,8 +220,8 @@ fn card_picks(g: &mut Game, i: f64, r: &KitRow, m: &MemberKit, now: &KitValue, s
         row_set(g, r, &mut c, v);
         let on = same_value(v, now);
         let why = if on { String::new() } else { kit_paste_peek(g, i, &c).why };
-        let bars = kit_slot_def(g, i, &c, slot).map_or(Vec::new(), |d| gun_stats(&d).to_vec());
-        out.push(CardPick { id: value_text(v), word: row_word(g, i, r, v), note: row_note(g, i, r, &c), why, now: on, can: kit_row_can(g, &c, r.field), icon: pick_kind(g, &value_text(v)), bars });
+        let bars = kit_slot_def(g, &c, slot).map_or(Vec::new(), |d| gun_stats(&d).to_vec());
+        out.push(CardPick { id: value_text(v), word: row_word(g, r, v), note: row_note(g, i, r, &c), why, now: on, can: kit_row_can(g, &c, r.field), icon: pick_kind(g, &value_text(v)), bars });
     }
     out
 }
@@ -254,9 +253,9 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
     let was = row_get(g, r, issued);
     let (mut bars, mut picks) = (Vec::new(), Vec::new());
     if let Some(slot) = gun_slot(r.field) {
-        if let Some(d) = kit_slot_def(g, i, m, slot) {
+        if let Some(d) = kit_slot_def(g, m, slot) {
             let now = gun_stats(&d);
-            let from = kit_slot_def(g, i, issued, slot).map_or(now, |d0| gun_stats(&d0));
+            let from = kit_slot_def(g, issued, slot).map_or(now, |d0| gun_stats(&d0));
             bars = now.iter().zip(from.iter()).map(|(a, z)| CardBar { now: *a, issued: *z }).collect();
         }
         picks = card_picks(g, i, r, m, &v, slot);
@@ -267,7 +266,7 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
         kind,
         value: value_text(&v),
         n,
-        word: row_word(g, i, r, &v),
+        word: row_word(g, r, &v),
         note,
         cost,
         under: row_under(r, m).map_or(String::new(), |s| String::from(s.as_str())),
@@ -312,13 +311,13 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
         who: i,
         changed: kit_changed(g, i),
         pouches: CardPouches { used: cost.used, total: cost.total },
-        big: cost.big.map(|b| CardPouches { used: b.used, total: b.total }),
+        big: CardPouches { used: cost.big.used, total: cost.big.total },
         squad: squad.map(|s| CardPouches { used: s.used, total: s.total }),
         load: CardLoad { mob: load.mob, con: load.con },
         load_issued: CardLoad { mob: load_issued.mob, con: load_issued.con },
         rows,
-        issued: kit_preset_of(g, i) == Some(KitPreset::Issued),
-        reset_why: kit_preset_why(g, i, KitPreset::Issued),
+        issued: kit_as_issued(g, i),
+        reset_why: kit_reset_why(g, i),
         copied: clip.is_some(),
         clip: worn,
         paste_why,
@@ -331,7 +330,7 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
 /// A row's key by the word the page and the kept text have for it.
 pub fn field_of(word: &str) -> Option<KitField> {
     use KitField::*;
-    [Smoke, Light, Wand, Bangs, Frags, Shells, Charges, Cams, Walls, Suit, Bare, Big, Primary, Secondary, SideCan, Rings, Weapon, Suppressed, Nvg, Trim, Cans].into_iter().find(|f| f.as_str() == word)
+    [Smoke, Light, Wand, Bangs, Frags, Shells, Charges, Cams, Suit, Big, Primary, Secondary, SideCan, Rings, Suppressed, Nvg, Trim].into_iter().find(|f| f.as_str() == word)
 }
 
 /// One of a row's values put on the card at once, fitted and refused as a paste is; one that is on already is taken and changes nothing.
@@ -344,29 +343,14 @@ pub fn kit_choose(g: &mut Game, i: f64, field: &str, value: &str) -> (bool, Stri
     row_set(g, &r, &mut c, &v);
     let p = kit_paste(g, i, &c);
     if p.ok { return (true, String::new()); }
-    (false, format!("{}: {}", row_word(g, i, &r, &v), p.why))
-}
-
-/// Your four counts as issued the other way the rule stands are as issued.
-pub fn kit_built_home(g: &mut Game) {
-    let now = issued_card(g, 0.0);
-    let other = if g.k.slots.on {
-        let b = built();
-        [b.smoke, b.bangs, b.frags, b.shells]
-    } else {
-        let c = issued().swap_remove(0);
-        [c.smoke, c.bangs, c.frags, c.shells]
-    };
-    let m = &mut g.m.kit.kit.members[0];
-    if [m.smoke, m.bangs, m.frags, m.shells] != other { return; }
-    (m.smoke, m.bangs, m.frags, m.shells) = (now.smoke, now.bangs, now.frags, now.shells);
+    (false, format!("{}: {}", row_word(g, &r, &v), p.why))
 }
 
 /// What a kept card had to leave behind to fit, in a line for his card; `gunless`: yours, with no long gun. Worded as issued where it is shown.
-pub fn kit_left_words(g: &Game, left: &[String], gunless: bool) -> String {
+pub fn kit_left_words(left: &[String], gunless: bool) -> String {
     if gunless && left.len() == 1 && left[0].contains(Thing::Shells.name()) { return format!("No FN2000 in your saved kit: {} left behind.", left[0]); }
     let small = ["canister", "frag", "grenade", "door charge", "camera", "wand", "sponge"];
     let in_the_pouches = left.iter().any(|w| small.iter().any(|s| w.contains(s)));
-    let what = if g.k.bigslot.on && !in_the_pouches { "big slot" } else { "pouches" };
+    let what = if !in_the_pouches { "big slot" } else { "pouches" };
     format!("Your saved kit was over the {what}: {} left behind.", left.join(", "))
 }

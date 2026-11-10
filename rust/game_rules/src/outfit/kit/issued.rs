@@ -129,7 +129,6 @@ pub fn kit_pistol(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// The breaching shotgun or the hammer in a staged teammate's big slot.
 pub fn kit_big(g: &crate::game::Game, gd: GuardId) -> crate::kit::BigKit {
-    if !g.k.bigslot.on { return BigKit::None; }
     match g.m.kit.man_of.get(gd) {
         Some(e) if !js::truthy(e.kit.walls) => e.kit.big,
         _ => BigKit::None,
@@ -156,11 +155,10 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
     if !g.m.kit.kit.on { return; }
     if kit_issue(g, &mut |g| kit_player(g)) { return; }
     if page_issued(g) && !issuing_on(g) { return as_issued(g, &mut |g| kit_player(g)); }
-    let own = stealth_on(g) && !issuing_on(g);
+    let own = !issuing_on(g);
     if own && !g.m.kit.staged { return for_run(g, &mut |g| kit_player(g)); }
     let lent = !own && !(matches!(g.m.kit.issuing, KitModIssuing::Own) && issue_names_you(g));
-    let b = built();
-    let mut m = g.m.kit.kit.members[0].clone();   // (the table's own card in the TypeScript: bigHome's write goes back below)
+    let mut m = g.m.kit.kit.members[0].clone();
     let pl = g.player;
     if !g.m.kit.issued_player.has(pl) {
         let (rifle, side, c) = (g.pl[pl].rifle, g.pl[pl].pistol, g.pl[pl].ch);
@@ -184,47 +182,34 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
         g.m.kit.issued_player.set(pl, was);
     }
     let counts = !(page_issued(g) && matches!(g.m.kit.issuing, KitModIssuing::Bool(true)));
-    if g.k.bigslot.on {
-        big_home(&mut m, 0.0);
-        g.m.kit.kit.members[0] = m.clone();
-    }
-    g.pl[pl].big_kit = if g.k.bigslot.on && !js::truthy(m.walls) { m.big } else { BigKit::None };
+    big_home(&mut m, 0.0);
+    g.m.kit.kit.members[0] = m.clone();
+    g.pl[pl].big_kit = if !js::truthy(m.walls) { m.big } else { BigKit::None };
     if m.weapon == KitWeapon::Pistol && g.pl[pl].has_rifle {
         g.pl[pl].has_rifle = false;
         if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].slot = crate::game::SlotKind::Pistol; }
     }
-    if guns_on(g) {
-        let long = crate::gunslots::pick_row(g, &m.primary, true);
-        let side = crate::gunslots::pick_row(g, &m.secondary, true);
-        let tree = tree_up(g);
-        if let Some(long) = long {
-            if g.pl[pl].has_rifle {
-                let want = mine(g, tree, long, &m, crate::gunslots::GunSlot::Primary);
-                if g.fa[g.pl[pl].rifle].def != want.id { g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&want)); }
-            }
-        }
-        if let Some(side) = side {
-            let want = mine(g, tree, side, &m, crate::gunslots::GunSlot::Secondary);
-            if g.fa[g.pl[pl].pistol].def != want.id { g.pl[pl].pistol = crate::weapons::pistol_new(g, Some(&want)); }
+    let long = crate::gunslots::pick_row(g, &m.primary, true);
+    let side = crate::gunslots::pick_row(g, &m.secondary, true);
+    if let Some(long) = long {
+        if g.pl[pl].has_rifle {
+            let want = mine(g, long, &m, crate::gunslots::GunSlot::Primary);
+            if g.fa[g.pl[pl].rifle].def != want.id { g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&want)); }
         }
     }
-    if m.weapon == KitWeapon::Shotgun && g.pl[pl].has_rifle && g.fa[g.pl[pl].rifle].def != crate::weapons::WeaponId::M870 {
-        let def = weapon_row(g, crate::weapons::WeaponId::M870);
-        g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&def));
+    if let Some(side) = side {
+        let want = mine(g, side, &m, crate::gunslots::GunSlot::Secondary);
+        if g.fa[g.pl[pl].pistol].def != want.id { g.pl[pl].pistol = crate::weapons::pistol_new(g, Some(&want)); }
     }
-    if counts && (m.smoke != b.smoke || m.bangs != b.bangs) {
+    if counts {
         g.pl[pl].canisters = m.smoke;
         g.pl[pl].flashbangs = m.bangs;
         let (slot, can, fb) = (g.pl[pl].slot, g.pl[pl].canisters, g.pl[pl].flashbangs);
         if (slot == crate::game::SlotKind::Smoke && !js::truthy(can)) || (slot == crate::game::SlotKind::Flash && !js::truthy(fb)) {
             g.pl[pl].slot = crate::game::SlotKind::Pistol;
         }
-    }
-    if counts && m.frags != b.frags {
         g.pl[pl].frags = m.frags;
         if g.pl[pl].slot == crate::game::SlotKind::Frag && !js::truthy(g.pl[pl].frags) { g.pl[pl].slot = crate::game::SlotKind::Pistol; }
-    }
-    if counts && m.shells != b.shells {
         let rf = g.pl[pl].rifle;
         if g.fa[rf].attachments.contains(&crate::weapons::RifleAttachment::He40) { g.fa[rf].shells = m::min(m.shells, SHELLS_MAX); }
     }
@@ -232,29 +217,27 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
         let n = if tubed(g, &m) { m::max(m.cams, if lent { crate::stickycam::sticky_visit(g) } else { 0.0 }) } else { 0.0 };
         crate::stickycam::sticky_issue(g, pl, n, None);
     }
-    if tree_up(g) {
-        if counts && g.fa[g.pl[pl].rifle].attachments.contains(&crate::weapons::RifleAttachment::Ring) {
-            let rf = g.pl[pl].rifle;
-            let handed = if lent && stealth_run(g) { g.k.kittree.lend } else { 0.0 };
-            g.fa[rf].rings = m::min(RINGS_MAX, m::max(m.rings, handed));
-            if !js::truthy(g.fa[rf].rings) && crate::weapons::rifle_attachment(g, rf) == Some(crate::weapons::RifleAttachment::Ring) {
-                let (shells, cams) = (g.fa[rf].shells, g.fa[rf].cams);
-                let k = g.fa[rf].attachments.iter().position(|&a| match a {
-                    crate::weapons::RifleAttachment::He40 => shells > 0.0,
-                    crate::weapons::RifleAttachment::Cam => cams > 0.0,
-                    crate::weapons::RifleAttachment::Ring => false,
-                });
-                if let Some(k) = k { g.fa[rf].att_idx = k as i32; }
-            }
+    if counts && g.fa[g.pl[pl].rifle].attachments.contains(&crate::weapons::RifleAttachment::Ring) {
+        let rf = g.pl[pl].rifle;
+        let handed = if lent && stealth_run(g) { g.k.kittree.lend } else { 0.0 };
+        g.fa[rf].rings = m::min(RINGS_MAX, m::max(m.rings, handed));
+        if !js::truthy(g.fa[rf].rings) && crate::weapons::rifle_attachment(g, rf) == Some(crate::weapons::RifleAttachment::Ring) {
+            let (shells, cams) = (g.fa[rf].shells, g.fa[rf].cams);
+            let k = g.fa[rf].attachments.iter().position(|&a| match a {
+                crate::weapons::RifleAttachment::He40 => shells > 0.0,
+                crate::weapons::RifleAttachment::Cam => cams > 0.0,
+                crate::weapons::RifleAttachment::Ring => false,
+            });
+            if let Some(k) = k { g.fa[rf].att_idx = k as i32; }
         }
-        g.m.kit.you_bare.set(pl, KitModYouBareValue { light: !m.light, nvg: !m.nvg });
-        if !m.light {
-            let (rf, sd) = (g.pl[pl].rifle, g.pl[pl].pistol);
-            g.fa[rf].light_on = false;
-            g.fa[sd].light_on = false;
-        }
-        if !m.nvg { g.pl[pl].nv = false; }
     }
+    g.m.kit.you_bare.set(pl, KitModYouBareValue { light: !m.light, nvg: !m.nvg });
+    if !m.light {
+        let (rf, sd) = (g.pl[pl].rifle, g.pl[pl].pistol);
+        g.fa[rf].light_on = false;
+        g.fa[sd].light_on = false;
+    }
+    if !m.nvg { g.pl[pl].nv = false; }
     if matches!(g.m.kit.issuing, KitModIssuing::Own) {
         let up = g.level.scenarios.as_ref().and_then(|s| s.issue.as_ref()).and_then(|d| d.members.get(String::from("0"))).and_then(|c| c.loaded);
         if let Some(up) = up {
@@ -268,7 +251,7 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
             }
         }
     }
-    let wand = (m.wand && wand_row(g, None)) || (lent && crate::quietfog::quiet_wand(g));
+    let wand = (m.wand && wand_row(g, 0.0)) || (lent && crate::quietfog::quiet_wand(g));
     g.pl[pl].wand = wand;
     let c = g.pl[pl].ch;
     if m.suit != SuitId::Issued { g.ch[c].tint = suit_tint(m.suit); }
@@ -279,10 +262,8 @@ pub(in crate::outfit) fn kit_player(g: &mut crate::game::Game) {
 }
 
 /// kitPlayer's `mine`: the gun your card picks for this slot.
-fn mine(g: &mut Game, tree: bool, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
-    if tree {
-        if let Some(d) = kit_slot_def(g, 0.0, m, slot) { return d; }
-    }
+fn mine(g: &mut Game, w: crate::weapons::WeaponId, m: &MemberKit, slot: crate::gunslots::GunSlot) -> crate::weapons::WeaponDef {
+    if let Some(d) = kit_slot_def(g, m, slot) { return d; }
     weapon_row(g, w)
 }
 
@@ -292,10 +273,8 @@ fn kit_alone(g: &mut crate::game::Game) {
     crate::wallcharge::wall_charge_raise_carried(g, 0.0);
     let n = if charge_row(g, 0.0) { g.m.kit.kit.members[0].charges } else { 0.0 };
     crate::doortools::door_tools_alone(g, n);
-    if g.k.slots.on {
-        let w = kit_walls(g, 0.0);
-        crate::wallcharge::wall_charge_set_carried(g, Some(w));
-    }
+    let w = kit_walls(g, 0.0);
+    crate::wallcharge::wall_charge_set_carried(g, Some(w));
 }
 
 /// The solo night wears your card.
@@ -330,7 +309,7 @@ pub(in crate::outfit) fn kit_show(g: &mut crate::game::Game) {
     g.pl[pl].flashbangs = was.stun;
     g.pl[pl].frags = was.frags;
     g.fa[was.gun].shells = was.shells;
-    if tree_up(g) { g.fa[was.gun].rings = was.rings; }
+    g.fa[was.gun].rings = was.rings;
     g.m.kit.you_bare.delete(pl);
     crate::stickycam::sticky_issue(g, pl, m::max(0.0, was.cams), Some(was.cams >= 0.0));
     g.pl[pl].wand = was.wand;
@@ -346,7 +325,7 @@ pub(in crate::outfit) fn kit_show(g: &mut crate::game::Game) {
 pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     if kit_issue(g, &mut |g| kit_stage(g, ops)) { return; }
     if page_issued(g) && !issuing_on(g) { return as_issued(g, &mut |g| kit_stage(g, ops)); }
-    if stealth_on(g) && !issuing_on(g) && !g.m.kit.staged { return for_run(g, &mut |g| kit_stage(g, ops)); }
+    if !issuing_on(g) && !g.m.kit.staged { return for_run(g, &mut |g| kit_stage(g, ops)); }
     let came: Vec<GuardId> = ops.iter().take(CARDS - 1).copied().collect();
     g.m.kit.kit_staged.ops = came.clone();
     if !g.m.kit.kit.on {
@@ -357,7 +336,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
         return;
     }
     let n = m::min(ops.len() as f64, KIT_MEMBERS - 1.0);
-    if g.k.slots.on { kit_team(g, Some(n)); }
+    kit_team(g, Some(n));
     if g.seats.len() > 1 { crate::seats::deal_seats(g); }
     let cans = kit_smokes(g, ops.len() as f64);
     crate::seats::each_seat(g, &mut |v| {
@@ -371,19 +350,14 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     for (k, &gd) in came.iter().enumerate() {
         let i = k + 1;
         let d = &issued_cards[i];
-        let m = if g.k.bigslot.on {
-            let r = big_home(&mut worn[i], i as f64);
-            if worn_is_table { g.m.kit.kit.members[i] = worn[i].clone(); }
-            r
-        } else {
-            worn[i].clone()
-        };
+        let m = big_home(&mut worn[i], i as f64);
+        if worn_is_table { g.m.kit.kit.members[i] = m.clone(); }
         let words = if i != 0 { kit_card_words(g, i as f64, &m) } else { String::new() };
         g.m.kit.man_of.set(gd, KitModManOfValue { i: i as f64, kit: m.clone(), words });
         let held = if issuing_on(g) { None } else { Some(&m) };
         crate::kitload::load_man(g, g.gd[gd].ch, i as f64, held, Some(n));
         let gun = kit_gun(g, &m);
-        let changed = m.weapon != d.weapon || m.suppressed != d.suppressed || (guns_on(g) && m.primary != d.primary);
+        let changed = m.weapon != d.weapon || m.suppressed != d.suppressed || m.primary != d.primary;
         if changed && gun != g.fa[g.gd[gd].weapon].def && g.m.weapons.weapons.get(gun).unwrap().enabled {
             let route = g.gd[gd].route;
             g.tab.route[route].weapon = Some(gun);
@@ -423,7 +397,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
             v.sets[v.seat].door_tools.frags = crate::seats::seat_share(v, pool.frags);
         });
     }
-    if js::truthy(n) && g.k.slots.on {
+    if js::truthy(n) {
         let walls = kit_walls(g, n);
         crate::seats::each_seat(g, &mut |v| {
             let share = crate::seats::seat_share(v, walls);
@@ -486,7 +460,7 @@ pub(super) fn kit_smokes(g: &crate::game::Game, n: f64) -> f64 {
 mod tests {
     use super::*;
 
-    /// kitSmokes counts the men who come, never your card; kitBig yields to a wall charge and to the switch.
+    /// kitSmokes counts the men who come, never your card; kitBig yields to a wall charge.
     #[test]
     fn counts_and_the_big_slot() {
         let mut g = Box::new(Game::blank());
@@ -501,9 +475,6 @@ mod tests {
         let mut kit = g.m.kit.kit.members[1].clone();
         kit.big = BigKit::Hammer;
         g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit: kit.clone(), words: String::new() });
-        g.k.bigslot.on = false;
-        assert_eq!(kit_big(&mut g, gd), BigKit::None);
-        g.k.bigslot.on = true;
         assert_eq!(kit_big(&mut g, gd), BigKit::Hammer);
         kit.walls = 1.0;
         g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit, words: String::new() });

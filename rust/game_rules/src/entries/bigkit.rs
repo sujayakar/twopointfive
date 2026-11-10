@@ -48,8 +48,7 @@ pub(super) fn big_broken() -> bool {
 pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<crate::bigkit::SamBig> {
     let pid = seat.player;
     let kit = g.pl[pid].big_kit;
-    if !g.k.bigslot.on
-        || kit == crate::kit::BigKit::None
+    if kit == crate::kit::BigKit::None
         || crate::doors::door_off(g, d)
         || g.dr[d].def.steel.unwrap_or(false)
         || !crate::doors::door_is_closed(g, d)
@@ -172,7 +171,7 @@ pub fn big_spots(g: &mut crate::game::Game, d: DoorId, side: f64, tool: crate::b
 /// The row from where a stack stands: within reach of the doorway, a tool that opens it, a place he can walk to.
 pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate::bigkit::SamBigFar> {
     let pid = g.player;
-    if !g.k.bigslot.on || g.pl[pid].big_kit == crate::kit::BigKit::None {
+    if g.pl[pid].big_kit == crate::kit::BigKit::None {
         return None;
     }
     let door = crate::doors::door_pos(g, d);
@@ -535,9 +534,6 @@ pub fn big_side(g: &crate::game::Game, d: DoorId, p: &[f64]) -> f64 {
 
 /// The big slot's tool a man carries, for the drawer.
 pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Option<crate::bigkit::BigCarried> {
-    if !g.k.bigslot.on {
-        return None;
-    }
     let kit = if let Some(pid) = crate::seats::man_by_id(g, c_2.id) {
         g.pl[pid].big_kit
     } else {

@@ -748,8 +748,8 @@ pub struct CardView {
     pub who: f64,
     pub changed: bool,
     pub pouches: crate::view::CardPouches,
-    /// the big slot (None: the table gives none)
-    pub big: Option<crate::view::CardPouches>,
+    /// the big slot
+    pub big: crate::view::CardPouches,
     /// what the squad carries between them (None: no limit, or not one of those who come)
     pub squad: Option<crate::view::CardPouches>,
     pub load: crate::view::CardLoad,
