@@ -99,7 +99,6 @@ Playwright's clicks hang on the software adapter: click by script.
 | `held.ts`, `unused.ts` | what the pages are built from and what holds the other files; declarations nothing uses (`TS_LIB` or the vendored compiler) |
 | `play-check.ts` | every mission on the module: started, stepped, drawn, saved, loaded, lost to a planted panic, restarted |
 | `hands-check.ts`, `net-check.ts`, `keep-check.ts` | the benchmark's scenes played hands-off; a game of two on the page's half; a run kept in beats |
-| `reach-check.ts` | storms on six levels: no reach mask made in the frame that shows its light, and the bytes as made whole (`REACH_BREAK`) |
 | `tape-check.ts`, `walk-check.ts`, `walk.ts` | a tape walked on another game is the run, at every mark and after a seek; one tape read and walked here |
 
 **The address.** A plain address opens the title (`startPageWanted`). A mission is a page load of its own words, read by the game (`Query`) and by the page.

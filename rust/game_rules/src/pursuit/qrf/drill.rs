@@ -482,7 +482,8 @@ pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId)
         g.gd[man].react_t = react;
         g.arms[g.gd[man].ch].fire_cd = m::max(g.arms[g.gd[man].ch].fire_cd, 0.35);
         g.gd[man].search_t = 0.0;
-        crate::mind::foe(g, man, Some(g.gd[seer].foe.unwrap_or(crate::game::Foe::Player)), "qrf");
+        let foe = g.gd[seer].foe.unwrap_or(crate::seats::faced(g, man));
+        crate::mind::foe(g, man, Some(foe), "qrf");
         crate::guards::reset_chase(g, man);
         g.gd[man].witness.alerted_by = Some(if is_seer { crate::game::WitnessAlertedBy::Sight } else { crate::game::WitnessAlertedBy::Radio });
         g.gd[man].witness.alert_t = g.time;
@@ -745,7 +746,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].script.as_mut().unwrap().aim_at = Some([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
             }
             let eyes = perceive_scripted(g, gd, dt);
-            let him = match crate::teams::foe_char(g, gd) { Some(c) => g.ch[c].pos, None => near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
+            let him = match g.gd[gd].foe { Some(c) => g.ch[c].pos, None => near_man_pos(g, gd) };   // (the man he has made out: perceiveScripted names him)
             if eyes && arrived_at < 0.0 && flat(man_pos(g, gd), him) > WALKOUT_ENGAGE_M && g.cond[g.gd[gd].ch].sup.v < 0.3 {
                 // on his way out and Sam not on top of him: he calls it (the element's fix) and keeps going: the post is the order
                 crate::mind::cap(g, gd, 0.84, "qrf");

@@ -11,8 +11,7 @@ What time of day a level stands at, what falls from its sky, what blows through 
 - **Rain is cover for your ears.** Small sounds carry about half as far outdoors, and a downpour drowns more. Gunfire is still placed as in dry air.
 - **Fog and dust are cover for your eyes.** They stand between any eye and what it looks at, for men and cameras alike. Dust comes in at a door you
   open.
-- **Lightning is real light.** Under a picked weather a stroke can show you to a man. The next stroke's way is read off the storm's own die before it comes
-  (`weather_next_way`), so the picture makes its reach mask ahead (`render/reachKeep.ts coming`). A stroke asked for by hand, or one that comes as the level moves, has its mask made in its own frame.
+- **Lightning is real light.** Under a picked weather a stroke can show you to a man.
 - **Snow is a place, not a pick.** A few levels are built for it. It hides nobody and slows nobody. A thrown thing sticks where it lands in deep snow.
   Boots leave prints.
 - Men get wet under open sky and dry slowly. Sam drips and leaves wet prints indoors. An open fire lights its yard, leans in the wind and takes a

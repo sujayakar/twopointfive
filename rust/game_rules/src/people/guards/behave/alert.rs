@@ -16,7 +16,7 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
     'behaviour: {
         upper = UpperMode::Aim;
         note_door_crossings(g, gd);
-        let pc = crate::teams::foe_char(g, gd);
+        let pc = g.gd[gd].foe;
         let down = crate::teams::foe_down(g, gd);
         let can_shoot = pc.is_some() && !down && !dazzled && !staggered && (g.time - g.gd[gd].last_seen_t < 0.5);
         if g.gd[gd].react_t > 0.0 || !can_shoot { g.gd[gd].shot_blocked_t = 0.0; g.gd[gd].line_in_t = 0.0; }

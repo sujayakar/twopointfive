@@ -258,7 +258,8 @@ fn arriving(g: &mut crate::game::Game) {
         g.gd[gd].trained = true;
         crate::mind::set_state(g, gd, crate::game::GuardState::Search, "qrf");
         crate::mind::set(g, gd, HUNT_AWARENESS, "qrf");
-        crate::mind::foe(g, gd, Some(crate::game::Foe::Player), "qrf");
+        let first = crate::seats::faced(g, gd);
+        crate::mind::foe(g, gd, Some(first), "qrf");
         g.gd[gd].heard_up_to = seq;
         // at the high port at the muster, facing the door
         crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), face: Some(Some(yaw)), stance: Some(Some(crate::character::Stance::HighReady)), upper: Some(Some(crate::character::UpperMode::None)), aim_at: Some(None), crouch: Some(Some(false)), ..Default::default() });
@@ -443,7 +444,7 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     }
     if let Some(c) = contact {
         let near = g.qrf.phase != Phase::File || {
-            let foe = match crate::teams::foe_char(g, c) { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
+            let foe = match g.gd[c].foe { Some(f) => g.ch[f].pos, None => near_man_pos(g, c) };
             flat(pos_of(g, c), foe) < 8.0
         };
         if near { to_fight(g, &el, c); }
@@ -461,7 +462,7 @@ pub fn perceive_scripted(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool
     crate::seats::standing_for(g, m, &mut |g| perceive_here(g, m, dt))
 }
 fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
-    use crate::game::{Foe, GuardState};
+    use crate::game::GuardState;
     if !g.ai_enabled { return false; }
     let mut ids: Vec<f64> = Vec::new();
     for i in 0..g.qrf.men.len() { ids.push(char_id(g, g.qrf.men[i])); }
@@ -511,7 +512,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     if crate::guards::standoff_perceive(g, m, None) { seen = true; }
     g.gd[m].saw_player_this_frame = seen;
     g.gd[m].saw_foe_this_frame = seen;
-    if seen { crate::mind::foe(g, m, Some(Foe::Player), "qrf"); }
+    if seen { let c = crate::seats::faced(g, m); crate::mind::foe(g, m, Some(c), "qrf"); }
     // the enemy is whoever is against them on this level, seen by the same eye at the same rate
     if !seen {
         let mut i = 0;
@@ -534,7 +535,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             if rate > 0.25 { g.gd[m].last_seen_t = t; }
             if g.gd[m].awareness >= 0.85 {
                 seen = true;
-                crate::mind::foe(g, m, Some(Foe::Guard(o)), "qrf");
+                crate::mind::foe(g, m, Some(oc), "qrf");
                 g.gd[m].saw_foe_this_frame = true;
                 break;
             }

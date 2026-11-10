@@ -706,7 +706,7 @@ pub fn pair_orders_take_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
             let n = format!("blown:{} by {}", g.gd[gd].callsign, name);
             pair_orders_note(g, &n);
         }
-        let seen_me = matches!(g.gd[foe].foe, Some(crate::game::Foe::Guard(x)) if x == gd);
+        let seen_me = g.gd[foe].foe == Some(g.gd[gd].ch);
         take_off(g, gd, foe, &name, "blown", Some(if seen_me { "he's seen me!" } else { "he's onto us." }), true);
         return;
     }

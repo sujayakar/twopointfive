@@ -44,14 +44,14 @@ pub enum LineKind {
 pub struct Foe {
     pub pos: V3,
     pub eye: V3,
-    pub who: crate::picture::Who,
+    pub who: CharId,
 }
 impl Default for Foe {
     fn default() -> Self {
         Foe {
             pos: [0.0; 3],
             eye: [0.0; 3],
-            who: crate::picture::Who::Guard(GuardId(0)),
+            who: CharId(0),
         }
     }
 }

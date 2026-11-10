@@ -21,7 +21,7 @@
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
 import { reportError, reportWarning } from '../cloud/report';
-import { AUTO_LADDER, visitTier, type Quality, type QualityName } from './quality';
+import { AUTO_LADDER, tierWords, visitTier, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
@@ -134,7 +134,6 @@ const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [..
 const r1 = (v: number) => +v.toFixed(1);
 const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 const copy = <T>(v: T): T => (Array.isArray(v) ? [...v] : v) as T;
-const PRESET_LABEL: Record<string, string> = { verylow: 'very low', low: 'low', medium: 'medium', high: 'high' };
 
 /** the card's line under a table that has the g-buffer's column: what the two GPU columns are, and how far the new one is to be believed */
 export const GBUF_SAID = 'GPU ms counts the compute passes. g-buf ms is the g-buffer pass\'s own timing, and it isn\'t in GPU ms. On Apple GPUs it was checked on an M4 Max only.';
@@ -195,7 +194,7 @@ export function benchReport(r: BenchResult): string {
   L.push(cols('', 'quality', 'drawn at', 'fps', 'frame ms (95 %)', 'GPU ms', 'g-buf ms', 'page ms'));   // (GPU ms = the compute passes; the g-buffer's own time stands beside it, BenchStep.gbuf)
   for (const s of r.steps) {
     if (s.skipped) { L.push(`${s.label.padEnd(22)}not run: ${s.skipped}`); continue; }
-    L.push(cols(s.label, `${s.quality} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
+    L.push(cols(s.label, `${tierWords(s.quality)} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), typeof s.gbuf === 'number' ? s.gbuf.toFixed(2) : 'n/a', s.cpu.toFixed(1)));
   }
   if (r.steps.some(s => typeof s.gbuf === 'number')) L.push('', GBUF_SAID);
   { const ends = (r.scenes ?? []).filter(s => s.end).map(s => `${s.id} ${s.end}`); if (ends.length) { L.push(''); row('floors', ends.join(' · ')); } }   // (how each fight went: two machines' numbers are of the same fight only where these agree)
@@ -463,14 +462,14 @@ export class Bench {
   /** the last page of a set, or a run that is one page's */
   private get lastLeg(): boolean { return !this.leg || this.leg.index >= this.leg.of - 1; }
   private say(frac: number): void { const L = this.leg; this.deps.view?.progress(`Benchmark ${Math.round(100 * (L ? (L.index + frac) / L.of : frac))} % · Esc stops`); }
-  private labelOf(ph: Phase): string { return ph.preset ? PRESET_LABEL[ph.preset] ?? ph.preset : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
+  private labelOf(ph: Phase): string { return ph.preset ? tierWords(ph.preset) : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
 
   // ---- a timed window on a picture held still (the opening picture; the scene's heavy moment as it stood and under each preset)
   private next(): void {
     this.at++;
     const ph = this.plan[this.at];
     if (!ph) { if (this.state === 'opened') this.scene(); else this.sweep(); return; }
-    if (ph.preset) try { this.setPreset?.(ph.preset); } catch (e) { this.finish(`a preset failed (${ph.preset}: ${String(e).slice(0, 80)})`, false); return; }
+    if (ph.preset) try { this.setPreset?.(ph.preset); } catch (e) { this.finish(`a preset failed (${tierWords(ph.preset)}: ${String(e).slice(0, 80)})`, false); return; }
     this.segT0 = performance.now(); this.segFrames = 0; this.measuring = false; this.retries = 0;
     this.say(this.state === 'opened' ? 0.02 : 0.4 + 0.2 * this.at / this.plan.length);
   }
@@ -522,7 +521,7 @@ export class Bench {
     if (!fr.length) return;
     const l = fr[fr.length - 1], name = L?.scene.name ?? 'the scene';
     this.steps.splice(Math.min(this.sceneAt, this.steps.length), 0, { id: L ? `scene:${L.scene.id}` : 'scene', label: L ? name : 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
-    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${fr[0].preset} at its start, ${l.preset} at its end`);
+    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${tierWords(fr[0].preset)} at its start, ${tierWords(l.preset)} at its end`);
   }
   /** not the last page of a set: this page's lines go on to the next scene's page (true: handed on — the veil stays up over the load) */
   private handOn(): boolean {

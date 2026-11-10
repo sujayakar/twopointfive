@@ -1,5 +1,4 @@
 //! A GAME OF TWO: what the world's lines of the tick say about the team is about every player, not the first (tools/blitz/sweeps/seat-tick.py lists them).
-use game::game::Foe;
 use game::ids::GuardId;
 use game_start::play::{nudge, Opts, Play};
 use game_start::scene::{Axis, Scene};
@@ -95,10 +94,39 @@ fn a_defenders_foe_is_the_player_he_faces() {
             p.seat_stands(seat, [20.0, AISLE]);
             p.seat_stands(1 - seat, [3.0, 3.0]);
             p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Alert, 1.0);
-            p.g.gd[t1].foe = Some(Foe::Player);
             p.g.gd[t1].faces = Some(seat as f64);
+            p.g.gd[t1].foe = Some(p.g.pl[man(&p, seat)].ch);
             p.g.gd[t1].last_seen_t = p.g.time;
             assert!(close(&p, t1), "seed {s}: he has seat {seat}'s man a metre off and calls it no close fight");
+        }
+    }
+}
+
+/// THE RULE: an enemy fights one player, by name. He keeps him while that player is up, however near the other comes; the other is his man when that one goes down; and
+/// where he believes each of them to be is two places.
+/// A failure means "the player" is one man to him: he turns to whoever steps nearer, shoots at a man who is down, or takes one player's place for the other's.
+#[test]
+fn an_enemy_names_the_player_he_fights() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, t1) = two(s);
+            let (a, b) = (p.g.pl[man(&p, seat)].ch, p.g.pl[man(&p, 1 - seat)].ch);
+            let held = |p: &mut Play, secs: usize| for _ in 0..60 * secs { p.pin_man(t1, [21.0, AISLE], -std::f64::consts::FRAC_PI_2, game::game::GuardState::Alert, 1.0); p.frame(); };
+            p.seat_stands(seat, [14.0, AISLE]);
+            p.seat_stands(1 - seat, [3.0, 3.0]);
+            (p.g.gd[t1].foe, p.g.gd[t1].god) = (None, true);
+            held(&mut p, 1);
+            assert_eq!(p.g.gd[t1].foe, Some(a), "seed {s}: he has seat {seat}'s man in front of him and nobody else on the floor");
+            p.seat_stands(1 - seat, [18.0, AISLE]);
+            held(&mut p, 1);
+            assert_eq!(p.g.gd[t1].foe, Some(a), "seed {s}: the other player stepped nearer, and he let seat {seat}'s man go");
+            for (c, at) in [(a, [14.0, 0.0, AISLE]), (b, [18.0, 0.0, AISLE])] { game::picture::picture_tell(&mut p.g, t1, c, at, None); }
+            let of = |c| game::picture::ideas_of(&p.g, t1).into_iter().find(|i| i.who == c).map(|i| i.at[0]);
+            let (at_a, at_b) = (of(a).expect("a place for the one"), of(b).expect("a place for the other"));
+            assert!(at_b - at_a > 2.0, "seed {s}: he believes both players in one place: {at_a} and {at_b}");
+            p.g.cond[a].down = true;
+            held(&mut p, 1);
+            assert_eq!(p.g.gd[t1].foe, Some(b), "seed {s}: seat {seat}'s man is down, and he does not have the other");
         }
     }
 }
@@ -402,6 +430,24 @@ fn each_player_has_his_own_partner() {
             p.pin_man(t1, at, EAST, game::game::GuardState::Patrol, 0.0);
             p.net_frame(0);
             assert!(p.g.stats.pairorders.marks > marks, "seed {s}: seat {seat}'s own F did not send his man: {:?}", job(&p));
+        }
+    }
+}
+
+/// THE RULE: a player folded by a blast is folded whoever else is down. A failure means that with his partner down, a rule about him (a grab, a hand on a switch) lets him act while he is folded.
+#[test]
+fn a_player_is_folded_whoever_else_is_down() {
+    for s in SEEDS {
+        for seat in 0..2 {
+            let (mut p, _) = two(s);
+            let (him, other) = (p.g.pl[man(&p, seat)].ch, p.g.pl[man(&p, 1 - seat)].ch);
+            p.g.cond[him].fold_until = p.g.time + 5.0;
+            let folded = |p: &Play| game::samstun::sam_staggered(&p.g, &game::seats::seat(&p.g, p.g.seats[seat]), None);
+            assert!(folded(&p), "seed {s}: CONTROL: seat {seat}'s man is folded with both up");
+            p.g.cond[other].down = true;
+            assert!(folded(&p), "seed {s}: seat {seat}'s man reads as not folded because the other player is down");
+            p.g.cond[him].down = true;
+            assert!(!folded(&p), "seed {s}: a man who is down shows no stun");
         }
     }
 }

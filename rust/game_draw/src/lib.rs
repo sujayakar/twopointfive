@@ -108,7 +108,6 @@ sections! {
     panes: boxes::Row4 = boxes.glass.cells;
     leaves: boxes::Leaf = boxes.leaves;
     lights: lights::Light = lights.rows;
-    coming: lights::Coming = lights.coming;
     men: men::Man = men.men;
     insts: men::Inst = men.insts;
     bones: men::Bones = men.bones;

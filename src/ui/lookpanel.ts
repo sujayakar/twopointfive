@@ -5,7 +5,7 @@ import { lookAmounts, lookSync, LOOK_DEFAULTS } from '../render/gbuffer';
 import type { PerfRecorder, PerfDump } from './perfrec';
 import type { PerfSweep } from './perfsweep';
 import { takeRead, takeWords } from './perfsend';
-import { sharpForce } from './quality';
+import { sharpForce, tierWords } from './quality';
 import type { Panel } from './panel';
 import { POWDER, POWDER_DRAW } from '../render/powderField';
 
@@ -163,7 +163,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     slide(hour, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => moon()?.elev ?? null, v => H.setMoon({ elev: v }));
     slide(hour, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => moon()?.bearing ?? null, v => H.setMoon({ bearing: v }));
   }
-  const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
+  const qual = panel.section('Quality', { open: true, summary: () => tierWords(String(w.__quality?.current ?? '')) });
   panel.buttons(qual, 'preset', ['low', 'medium', 'high'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
   // A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, whole, with the trace of what it changed (F6)
   panel.buttons(qual, 'capture', [

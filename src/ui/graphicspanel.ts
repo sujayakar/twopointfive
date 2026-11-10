@@ -11,7 +11,7 @@ import { KIND_DEFAULTS, P_KINDS } from '../render/particles';
 import { defaultRcConfig } from '../render/rc';
 import { pageSay } from '../view/pagesaid';
 import type { Panel } from './panel';
-import { AIM_DISPLAY, HOLD, QUALITY_NAMES, type Quality } from './quality';
+import { AIM_DISPLAY, HOLD, QUALITY_NAMES, TIER_NAME, tierWords, type Quality } from './quality';
 
 /** what the frame loop lends the status strip: its smoothed frame rate and GPU union */
 export type HudStats = () => { fps: number; union: number };
@@ -46,16 +46,16 @@ export function buildGraphics(panel: Panel, engine: Engine, smoke: SmokeSystem, 
   const adv = (f: () => void) => { const was = panel.advanced; panel.advanced = true; try { f(); } finally { panel.advanced = was; } };
   const W_ = window as unknown as { __readout?: { on: boolean; set(v: boolean): void }; __taa?: { summary?: () => string }; __sharp?: { summary?: () => string }; __sdfrig?: { summary?: () => string }; __dn?: { summary: () => string }; __quality?: { motionCalm?: boolean; applyMotionCalm(v: boolean): void }; __save?: { load: (k: string) => string | null } };
   // the status strip: preset · internal → output resolution · fps · gpu ∪ — the read-out's headline numbers, so the panel is worth having up with the read-out off
-  panel.setStatus(() => { const h = hud?.(); return `${quality.label}${quality.adaptive ? '' : ' · fixed'} · ${engine.width}×${engine.height}${S.taau ? `→${engine.outHeight}p` : ''} ×${S.renderScale.toFixed(2)}${h ? ` · ${h.fps.toFixed(0)} fps · gpu ∪ ${h.union.toFixed(1)} ms` : ''} · ${engine.lights.activeCount} lights`; });
+  panel.setStatus(() => { const h = hud?.(); return `${tierWords(quality.label)}${quality.adaptive ? '' : ' · fixed'} · ${engine.width}×${engine.height}${S.taau ? `→${engine.outHeight}p` : ''} ×${S.renderScale.toFixed(2)}${h ? ` · ${h.fps.toFixed(0)} fps · gpu ∪ ${h.union.toFixed(1)} ms` : ''} · ${engine.lights.activeCount} lights`; });
 
   // ================================================================ FRAME: quality + resolution, debug view, TAAU, sharp direct + GBAA, the look, the camera
   panel.system(SYS.frame);
-  const r = panel.section('Quality & resolution', { open: true, summary: () => `${quality.label} · ×${S.renderScale.toFixed(2)}${quality.adaptive ? ' · adaptive' : ''}${quality.lastChange ? ' · ' + quality.lastChange : ''}` });
+  const r = panel.section('Quality & resolution', { open: true, summary: () => `${tierWords(quality.label)} · ×${S.renderScale.toFixed(2)}${quality.adaptive ? ' · adaptive' : ''}${quality.lastChange ? ' · ' + tierWords(quality.lastChange) : ''}` });
   { const ro = W_.__readout; if (ro) panel.toggleBox(r, 'debug read-out', () => ro.on, v => ro.set(v), 'the top-left GPU pass timings / counts / guard states text (also ?hud); off keeps the corner for the interaction panel'); }
   panel.text(r, () => { const t = engine.timer; return `gpu: ${[...t.results.entries()].filter(([k]) => !['composite', 'post', 'fxaa', 'gbuffer'].includes(k)).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(' · ')}`; });
-  panel.select(r, 'quality preset', ['auto', ...QUALITY_NAMES], () => quality.auto ? 0 : 1 + QUALITY_NAMES.indexOf(quality.current), v => { if (v === 0) quality.setAuto(); else quality.pin(QUALITY_NAMES[v - 1]); }, 'resolution cap / scale, beam steps, cache probe density, smoke solver iterations (also ?quality=verylow|low|medium|high|ultra)');
+  panel.select(r, 'quality preset', ['Auto', ...QUALITY_NAMES.map(n => TIER_NAME[n])], () => quality.auto ? 0 : 1 + QUALITY_NAMES.indexOf(quality.current), v => { if (v === 0) quality.setAuto(); else quality.pin(QUALITY_NAMES[v - 1]); }, 'resolution cap / scale, beam steps, cache probe density, smoke solver iterations (also ?quality=verylow|low|medium|high|ultra)');
   panel.toggleBox(r, 'adaptive resolution', () => quality.adaptive, v => { quality.adaptive = v; }, 'steps the resolution scale down (at most every 2 s, in steps of at least 0.05) while the frame rate sits under ~45 fps and gives pixels back over ~58; the temporal histories are resampled across each step, so a step is neither a slow frame nor a flash');
-  panel.text(r, () => quality.lastChange ? `last change: ${quality.lastChange}` : '');
+  panel.text(r, () => quality.lastChange ? `last change: ${tierWords(quality.lastChange)}` : '');
   // GI IN MOTION (A): the ladder's headroom-aware climb (ui/quality.ts CLIMB) — spends measured GPU headroom on scale, then the lossy divisors, then (opt-in) the output cap
   panel.toggleBox(r, 'motion-calm rows (shipped on)', () => !!W_.__quality?.motionCalm, v => { W_.__quality?.applyMotionCalm(!!v); }, 'GI-in-motion lane: the noise the picture shows IN MOTION is the direct chain\'s — ReSTIR\'s temporal reuse under a moving camera + the resolve\'s motion terms — and these are the rows of those two that measurably calm it: restir spatialAll + penRays, resolve motion α 0.4 → 0.25 and motion sharpen 0.3 → 0.15. Measured at high: −14 … −51 % of the pan flow per tile, the STILL tiles −28 … −55 % (spatial reuse halves ReSTIR\'s static crawl too), the daylight breach wall +7 %, ≈ +0.6 ms; the trades to look at: contact-shadow softness (spatial reuse everywhere) and motion sharpness (α 0.25). On by default (?nomotioncalm boots without it). Off = every row as the preset / defaults have it; re-applied after preset changes while on');
   rows.quality?.(r);

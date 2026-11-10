@@ -75,14 +75,8 @@ const THUNDERS: usize = 16;
 
 /// the storm's die thrown: mulberry32 over its own word
 fn rnd(w: &mut Weather) -> f64 {
-    let v = throw_of(w.die, 0);
-    w.die = w.die.wrapping_add(DIE_STEP);
-    v
-}
-const DIE_STEP: u32 = 0x6D2B79F5;
-/// what the throw after the next `ahead` will be, the die as it stands
-fn throw_of(die: u32, ahead: u32) -> f64 {
-    let a = die.wrapping_add(DIE_STEP.wrapping_mul(ahead + 1));
+    let a = w.die.wrapping_add(0x6D2B79F5);
+    w.die = a;
     let mut t = (a ^ (a >> 15)).wrapping_mul(1 | a);
     t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t)) ^ t;
     ((t ^ (t >> 14)) as f64) / 4294967296.0
@@ -377,8 +371,8 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     if g.weather.flash.is_some() { weather_end_flash(g); }
     // (what was given is a number, what was not is thrown for, in the order the rule has always thrown them)
     let (time, w) = (g.time, &mut g.weather);
-    let bearing = opts.bearing.unwrap_or_else(|| stroke_bearing(rnd(w)));
-    let elev = opts.elev_deg.map_or_else(|| stroke_elev(rnd(w)), |d| d * m::PI / 180.0);
+    let bearing = opts.bearing.unwrap_or_else(|| rnd(w) * m::PI * 2.0);
+    let elev = opts.elev_deg.unwrap_or_else(|| 24.0 + rnd(w) * 30.0) * m::PI / 180.0;
     let dist = match opts.dist_km { Some(d) => d, None => 0.3 + m::pow(rnd(w), 1.3) * 3.7 * (1.15 - 0.5 * w.storm) };
     let peak = opts.peak.unwrap_or_else(|| FLASH_PEAK * (0.55 + 0.9 * rnd(w)) * v3::clamp(1.25 - dist * 0.18, 0.45, 1.2));
     // two return strokes, sometimes a third flicker
@@ -392,7 +386,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     let dir = dir_of(bearing, elev);
     let light = g.tab.light.push(crate::render_lights::RtLight {
         name: String::from("lightning"), group: String::from("weather"), kind: 2.0, pos: [0.0, 0.0, 0.0], dir, color: v3::copy(flash_color()), intensity: 0.0, range: 1e6, inner_deg: 0.0, outer_deg: 0.0,
-        radius: STROKE_RADIUS, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
+        radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
         ..crate::render_lights::RtLight::default()   // (every field the literal leaves absent)
     });
     crate::render_lights::light_set_add(g, light);
@@ -400,24 +394,6 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     g.weather.stats.flashes += 1.0;
     weather_apply_flash(g, 0.0, 1.0 / 60.0);   // lit from this very frame
     g.weather.flash.clone()
-}
-
-/// where a stroke stands, of its first two throws
-fn stroke_bearing(throw: f64) -> f64 { throw * m::PI * 2.0 }
-fn stroke_elev(throw: f64) -> f64 { (24.0 + throw * 30.0) * m::PI / 180.0 }
-/// the throws a thunder takes as it comes due: its pitch and what somebody says of it
-const THUNDER_THROWS: u32 = 4;
-/// how wide a stroke is as a lamp
-pub const STROKE_RADIUS: f64 = 0.006;
-/// THE NEXT STROKE'S WAY, before it comes: what the picture works out ahead of a light that stands for an instant. Read off the storm's own die, which the thunders due
-/// before the stroke throw first. None with no stroke on its way. One that is asked for by hand is not foreseen, and comes as it comes.
-pub fn weather_next_way(g: &Game) -> Option<V3> {
-    let w = &g.weather;
-    if !w.on || !(w.storm > 0.01) || w.next_flash_at < 0.0 { return None; }
-    let ticks = |at: f64| m::max(m::ceil((at - g.time) * 60.0), 1.0);
-    let stroke = ticks(w.next_flash_at);
-    let before = w.thunders.iter().filter(|t| ticks(t.at) < stroke).count() as u32 * THUNDER_THROWS;
-    Some(dir_of(stroke_bearing(throw_of(w.die, before)), stroke_elev(throw_of(w.die, before + 1))))
 }
 
 /// Once a frame from Game.update: the clock, the strokes, the flash lamp, the thunder due. The frame's numbers are the picture's.

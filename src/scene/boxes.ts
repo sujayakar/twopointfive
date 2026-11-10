@@ -8,8 +8,6 @@ import { AIR_ROWS } from './airGrid';
 import { packRoundRows, ROUND_CORE_W } from './round';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
 
-/** does a box of these flags stop a light of the sky (a mask of where such a light reaches is of those that do: render/reachKeep.ts) */
-export const stopsSky = (flags: number): boolean => (flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) === 0;
 export const BoxFlag = {
   NoPrimary: 1,      // not rasterized into the G-buffer (ceilings, light-only geometry)
   NoShadow: 2,       // ignored by all rays (decals, glow cards)

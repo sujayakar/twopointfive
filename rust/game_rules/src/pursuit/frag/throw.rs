@@ -473,7 +473,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
             let oc = g.gd[o].ch;
             let op = g.ch[oc].pos;
             if flat(op, fix) > g.k.frag.def_bunch { continue; }
-            if !(matches!(g.gd[gd].foe, Some(crate::game::Foe::Guard(f)) if f == o) || g.shown[g.gd[o].ch].visibility > 0.2) { continue; }
+            if !(g.gd[gd].foe == Some(g.gd[o].ch) || g.shown[g.gd[o].ch].visibility > 0.2) { continue; }
             let oh = g.ch[oc].bones.get(crate::character::Bone::Head).copied();
             if crate::guards::can_see_char(g, gd, oc).visible || sights(g, gd, c, head, op, oh) { bunch += 1; }
         }
@@ -550,7 +550,7 @@ fn seat_in_bunch(v: &mut Game, gd: GuardId, c: CharId, head: V3, fix: V3) -> boo
     let pc = v.pl[pl].ch;
     let p = v.ch[pc].pos;
     if v.cond[v.pl[pl].ch].down || v.player_invisible || flat(p, fix) > v.k.frag.def_bunch { return false; }
-    if !(matches!(v.gd[gd].foe, Some(crate::game::Foe::Player)) || v.shown[v.pl[pl].ch].visibility > 0.2) { return false; }
+    if !(crate::teams::foe_is_player(v, gd) || v.shown[v.pl[pl].ch].visibility > 0.2) { return false; }
     let ph = v.ch[pc].bones.get(crate::character::Bone::Head).copied();
     crate::guards::can_see_char(v, gd, pc).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
 }
