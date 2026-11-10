@@ -215,7 +215,7 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
             ..Default::default()
         },
     );
-    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
+    let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
     let new_job = Job {
         door: d,
         side: p.side,
@@ -231,7 +231,6 @@ pub(super) fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::order
         again: false,
     };
     g.m.wandorder.states.get_mut(st_key).unwrap().jobs.set(gd, new_job);
-    g.stats.wandorder.ordered += 1;
     Issue::Arm1(())
 }
 
@@ -249,7 +248,6 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         return;
     }
     if !crate::wand::wand_fits(g, d) {
-        g.stats.wandorder.moved += 1;
         let line = if j.t0 >= 0.0 { "door's moving. wand's out." } else { "door's open." };
         settle(g, gd, &mut j, Some(line), true);
         return;
@@ -293,7 +291,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
             now - j.t0 >= g.k.wand.feed_secs
         } else {
             let crouch = g.ch[c].anim.crouch;
-            crate::wand::wand_through(g, 0.0, now - j.t0, crouch, None)
+            crate::wand::wand_through(g, now - j.t0, crouch, None)
         };
     if through {
         j.live = true;
@@ -355,7 +353,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
         let mut at = 0usize;
         while let Some(gd) = g.m.wandorder.states.get(k).unwrap().jobs.next_key(&mut at) {
             let mut j = job(g, &crate::seats::here(g), gd).unwrap();
-            let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
+            let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
             if crate::condition::down(g, g.gd[gd].ch) || !squad.contains(&gd) || a != Some(j.a) {
                 if j.knelt {
                     let c = g.gd[gd].ch;

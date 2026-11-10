@@ -30,7 +30,7 @@ fn lines_of(kind: LineKind) -> LINESValue {
 /// one line of a kind from this man, shouted, never on the net
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     let l = lines_of(kind);
-    let extra = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &l.they, &l.he) } else { l.he };
+    let extra = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &l.they) } else { l.he };
     let mut pool = l.say;
     pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
@@ -167,8 +167,8 @@ fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     crate::owner::claim(g, gd, rule, now, None);
     crate::lanes::lane_say(g, gd);   // (a man who has run holds no lane)
     g.m.runner.state_of.set(gd, Run {
-        phase: RunPhase::Say, t: 0.0, from: [from[0], 0.0, from[2]], goal: None, mate: None, told: 0.0, unseen: 0.0, at, stall: 0.0, is_out: false,
-        tries: 0.0, plan: 0.0, face: None, bold: false, bare: false, drive: false, drive_t: -1.0, script: crate::game::GuardScript::default(),
+        phase: RunPhase::Say, t: 0.0, from: [from[0], 0.0, from[2]], goal: None, mate: None, unseen: 0.0, at, stall: 0.0, is_out: false,
+        plan: 0.0, face: None, bold: false, bare: false, drive: false, drive_t: -1.0, script: crate::game::GuardScript::default(),
     });
     crate::morale::morale_release(g, gd);
     g.gd[gd].reload_t = -1.0;
@@ -176,7 +176,6 @@ fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     let w = g.gd[gd].weapon;
     g.fa[w].burst = None;
     bark(g, gd, LineKind::Done);
-    g.stats.runner.said += 1;
 }
 
 /// start the sequence on this man directly. False = he is not a man of this file's, or it already has him
@@ -323,9 +322,6 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     let shy = g.k.runner.shy_m;
     let cs = g.col.nav.cell;
     let pos = g.ch[g.gd[gd].ch].pos;
-    g.stats.picture.ran += 1;
-    let t = foes(g, gd);
-    if t.len() != e.len() || t.iter().any(|t| !e.iter().any(|x| flat(x.pos, t.pos) < 1.0)) { g.stats.picture.ran_off += 1; }
     let mut pen = |_g: &mut Game, ix: f64, iz: f64| -> f64 {
         let (x, z) = ((ix + 0.5) * cs, (iz + 0.5) * cs);
         for f in e {
@@ -452,7 +448,6 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].fled = true;
     let (rule, now) = (crate::owner::by::RUNNER, g.time);
     crate::owner::claim(g, gd, rule, now, Some(1.0));
-    g.stats.runner.dropped += 1;
     {
         crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "runner");
         crate::mind::set(g, gd, 0.0, "runner");
@@ -473,7 +468,6 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
         r.mate = Some(ma);
         let at = g.ch[g.gd[ma].ch].pos;
         route(g, gd, at, &e);
-        g.stats.runner.to_mates += 1;
     } else {
         to_out(g, gd, &e);
     }
@@ -492,7 +486,6 @@ fn to_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) {
     }
     if plan_out(g, gd, e, plan_f(&f)) {
         run!(g, gd).phase = RunPhase::Out;
-        g.stats.runner.out += 1;
     } else {
         to_low(g, gd, f.corner, e);
     }
@@ -508,7 +501,6 @@ fn to_low(g: &mut crate::game::Game, gd: GuardId, at: V3, e: &[crate::runner::Fo
         r.bold = false;
     }
     route(g, gd, at, e);
-    g.stats.runner.low += 1;
 }
 
 /// a way out, planned: round the enemies he knows of, else the nearest the floor itself gives him. True = he is on it
@@ -530,7 +522,6 @@ fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f:
     };
     if route(g, gd, b, e) {
         run!(g, gd).bold = true;
-        g.stats.runner.bold += 1;
         return true;
     }
     {
@@ -568,8 +559,6 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
             crate::belief::word(g, o, from);
             crate::mind::raise(g, o, tell_aware, "runner");
         }
-        run!(g, gd).told += 1.0;
-        g.stats.runner.told += 1;
     }
 }
 
@@ -734,7 +723,6 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 }
             }
         } else if stuck || row.script.arrived.unwrap_or(false) {
-            run!(g, gd).tries += 1.0;   // (a way that would not let him through: one try spent)
             let corner = flood(g, gd, &e, None, None).corner;
             to_low(g, gd, corner, &e);
         } else if barred {   // (another way out, or the corner, and no try spent)
@@ -773,7 +761,6 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
                 let r = run!(g, gd);
                 r.phase = RunPhase::Out;
                 r.face = None;
-                g.stats.runner.out += 1;
             } else if flat(fl.corner, run!(g, gd).goal.unwrap_or(pos)) > 3.0 {   // (a failed route has written the goal: read it again)
                 route(g, gd, fl.corner, &e);
                 run!(g, gd).face = None;
@@ -785,7 +772,6 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 
 /// out and unseen: a spawned unit leaves the world; a man of the level's own roster stays low where he is
 fn gone(g: &mut crate::game::Game, gd: GuardId) {
-    g.stats.runner.gone += 1;
     let drilled = match crate::guards::engagement_of(g) { Some(x) => !x.done && x.hostiles.contains(&gd), None => false };
     if !drilled && crate::guards::despawn_unit(g, gd) {
         if let Some(r) = g.m.runner.state_of.get_mut(gd) {

@@ -21,7 +21,7 @@ fn wand_feed_secs(g: &crate::game::Game, squat: Option<bool>) -> f64 {
 }
 
 /// Is the lens through this step, for a man the caller has found planted. `t` went with the old feed.
-pub fn wand_through(g: &crate::game::Game, t: f64, age: f64, crouch: f64, squat: Option<bool>) -> bool {
+pub fn wand_through(g: &crate::game::Game, age: f64, crouch: f64, squat: Option<bool>) -> bool {
     age >= wand_feed_secs(g, squat) - 1e-6 && crouch >= g.k.wand.quick_down
 }
 

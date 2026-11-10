@@ -88,12 +88,9 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
     g.quiet.pin = pin;
     g.quiet.squad = squad;
     g.quiet.failure = None;
-    g.quiet.staged = 0.0;
-    g.quiet.log.clear();
     quiet_mission_current(g);
     if js::truthy(squad) {
         g.quiet.was = Some(held_now(g));
-        g.m.pairup.pair_held.row = Some(g.k.pairup.on);
         g.m.quiet.holder = true;
         g.k.pairup.on = true;
         crate::pairup::pair_up_apply(g, None);
@@ -103,7 +100,6 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
         crate::teams::staff_vs_operatives(g, true);
     }
     g.staged.begin(crate::scene_scenarios::MissionKind::Quiet, crate::mission::Facts { unseen: true, ..Default::default() });
-    g.stats.quiet.starts += 1;
     quiet_mission_rack(g);
     quiet_mission_off_shift(g);
     quiet_mission_stage(g);
@@ -137,7 +133,6 @@ pub fn quiet_mission_release(g: &mut crate::game::Game) {
         let n = held_now(g);
         held_set(g, released(w, mine, n));
         crate::teams::staff_vs_operatives(g, false);
-        g.m.pairup.pair_held.row = None;
     }
     g.quiet.was = None;
     g.quiet.mine = None;
@@ -163,7 +158,6 @@ pub fn quiet_mission_current(g: &mut crate::game::Game) {
     if crate::quiet::quiet_of(g) && js::truthy(g.quiet.squad) {
         if let Some(mine) = g.quiet.mine {
             g.quiet.was = Some(held_now(g));
-            g.m.pairup.pair_held.row = Some(g.k.pairup.on);
             held_set(g, mine);
             crate::teams::staff_vs_operatives(g, true);
             g.m.quiet.holder = true;
@@ -177,7 +171,6 @@ pub fn quiet_mission_deal(g: &mut crate::game::Game, pin: Option<f64>, seats: f6
     let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.clone()) { Some(q) => q, None => return };
     g.quiet.pin = pin;
     g.quiet.deal = match g.quiet.pending.take() { Some(d) => d, None => quiet_mission_deal_one(g, &q) };
-    g.stats.quiet.deals += 1;
     g.quiet.authored = Some(crate::quiet::QuietMissionAuthored { spawn: g.level.player_spawn, errand: g.level.errand.clone() });
     let s = &q.starts[g.quiet.deal.start as usize];
     let p = &q.spots[g.quiet.deal.spot as usize];
@@ -228,8 +221,8 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     let target = crate::orders::squad_orders_target_at(g, at);
     let why = crate::orders::squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&target), Some(crate::orders::Who::All), None);
     match why {
-        Some(w) => quiet_mission_note(g, &format!("fall in refused: {}", w)),
-        None => quiet_mission_note(g, "partner following"),
+        Some(w) => {},
+        None => {},
     }
 }
 
@@ -238,41 +231,6 @@ fn cut_lens(lens: &mut crate::camera::FollowCamera, p: V3) {
     lens.target = p;
     lens.desired = p;
     lens.desired_serial = lens.desired_serial.wrapping_add(1);
-}
-
-/// the run in a line
-fn quiet_mission_summary(g: &crate::game::Game) -> String {
-    if !crate::quiet::quiet_of(g) || g.quiet.data.is_none() {
-        let carries = g.level.scenarios.as_ref().map_or(false, |s| s.quiet.is_some());
-        return String::from(if carries { "off · this level carries one" } else { "off · this level carries none" });
-    }
-    let s = quiet_mission_start_(g).unwrap();
-    let e = &g.level.errand;
-    let patrol = quiet_mission_patrol(g).join(", ");
-    let q = g.quiet.data.as_ref().unwrap();
-    let d = g.quiet.deal;
-    let pinned = match g.quiet.pin { None => String::from("dealt"), Some(n) => format!("pinned {}", js::num_str(n)) };
-    let name = match s.name.as_deref() { Some(n) if !n.is_empty() => format!(" ({})", n), _ => String::new() };
-    let sets = match q.patrols.as_ref() { Some(l) => format!("{}/{}", js::num_str(d.patrol + 1.0), l.len()), None => String::from("all") };
-    let who = if patrol.is_empty() { "nobody" } else { patrol.as_str() };
-    let plural = if q.exits.len() == 1 { "" } else { "s" };
-    let partner = if js::truthy(g.quiet.squad) {
-        let down = g.staged.team.first().map_or(false, |&o| crate::condition::down(g, g.gd[o].ch));
-        format!("partner {}", if down { "down" } else { "up" })
-    } else {
-        String::from("alone")
-    };
-    format!(
-        "on · {} · start {}/{}{} · {} in {}, {} ({}/{}) · patrol {}: {} · {} way{} out · {}",
-        pinned, js::num_str(d.start + 1.0), q.starts.len(), name, e.thing, e.holder, e.place, js::num_str(d.spot + 1.0), q.spots.len(), sets, who, q.exits.len(), plural, partner
-    )
-}
-
-/// a line of the mission's own log
-fn quiet_mission_note(g: &mut crate::game::Game, s: &str) {
-    let line = format!("{} {}", js::to_fixed(g.time, 2), s);
-    g.quiet.log.push(line);
-    if g.quiet.log.len() > 60 { g.quiet.log.drain(0..30); }
 }
 
 /// one deal: the pinned seed's, and with no pin the first of each list
@@ -358,14 +316,10 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
         });
         g.staged.team.push(man);
         g.quiet.fall_in = true;
-        g.stats.quiet.mates += 1;
         let ops = g.staged.team.clone();
         crate::kit::kit_stage(g, &ops);
     }
-    g.quiet.staged += 1.0;
     g.quiet.cut = true;
-    let line = format!("staged: {}", quiet_mission_summary(g));
-    quiet_mission_note(g, &line);
     Ok(())
 }
 

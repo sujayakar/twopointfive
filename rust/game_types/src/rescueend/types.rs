@@ -6,7 +6,6 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct RescueEnd {
     pub lead: Option<CharId>,
-    pub led: bool,
     #[is(f64::NAN)] pub clear_at: f64,
 }
 

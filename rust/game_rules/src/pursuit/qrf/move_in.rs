@@ -172,7 +172,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
     let own = mk.is_some();
     if g.qrf.state == QrfState::Requested && g.time - g.qrf.requested_at >= ANSWER_SECS {
         g.qrf.state = QrfState::Inbound;
-        g.qrf.answered = true;
         let n = m::min(4.0, if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) });
         let secs = m::round(g.qrf.arrive_at - g.time);
         let (n, secs) = (js::num_str(n), js::num_str(secs));
@@ -223,7 +222,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
 fn arriving(g: &mut crate::game::Game) {
     use crate::qrf::{Phase, QrfState};
     g.qrf.state = QrfState::Arriving;
-    g.qrf.said10 = true;
     re_deal(g);
     let mk = marks_of(g).unwrap();
     let want = if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) };
@@ -236,7 +234,7 @@ fn arriving(g: &mut crate::game::Game) {
         let at = match door {
             Some(d) if i == 0 => {
                 let side = crate::doors::doors_side(g, d, mk.muster[0]);
-                crate::handleside::tool_spot(g, d, side, mk.muster[0], None, None).map_or(mk.muster[0], |s| s.pos)
+                crate::handleside::tool_spot(g, d, side, mk.muster[0], None).map_or(mk.muster[0], |s| s.pos)
             }
             _ => match mk.muster.get(i) {
                 Some(&p) => p,
@@ -362,7 +360,6 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if !crate::condition::down(g, g.gd[r.gd].ch) { all.push(r.gd); } } }
     for x in all {
         let cap = g.k.trained.react_cap;
-        let t = g.time;
         if !crate::condition::is_blind(g, g.gd[x].ch) && !crate::condition::is_folded(g, g.gd[x].ch) && g.gd[x].react_t > cap { g.gd[x].react_t = cap; }
         if g.gd[x].script.is_none() && (g.gd[x].state == GuardState::Patrol || g.gd[x].state == GuardState::Suspicious) {
             crate::mind::set_state(g, x, GuardState::Search, "qrf");
@@ -583,7 +580,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
                 }
             }
             if n != 0 {
-                let the = crate::words::w(g, &"", &"the ");
+                let the = crate::words::w(g, &"");
                 let room = crate::dialogue::room_name(g, bp);
                 let many = if n > 1 { format!(" — {} of them", n) } else { String::new() };
                 let how = if crate::game::is_breathing(g, o) { "out cold, breathing" } else { "dead" };

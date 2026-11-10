@@ -8,7 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- the bench
 
-
 /// a boolean as the bench holds it
 fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
 
@@ -50,15 +49,6 @@ pub fn anim_swap_held(g: &crate::game::Game, c: CharId, rule: Option<crate::char
 /// How far the swap's hand is at the torch on his belt this frame.
 pub(super) fn anim_swap_belt(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.sw.belt
-}
-
-/// The swap's progress (-1: none), what it goes to, and whether one waits.
-pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::AnimSwapInfo {
-    let s = &g.ch[c].anim.sw;
-    crate::character::AnimSwapInfo {
-        a: if s.t < 0.0 { -1.0 } else { s.t / s.dur },
-        pending: s.wait >= 0.0,
-    }
 }
 
 /// The torch and sidearm swap's clock, and its arm when it shows.

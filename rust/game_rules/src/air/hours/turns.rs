@@ -13,7 +13,6 @@ pub fn set_cover(g: &mut Game, c: f64) {
     if !c.is_finite() { return; }
     if let Some(p) = g.m.weather_kinds.weather_presets.get_mut(k) { p.cloud = v3::clamp(c, 0.0, 1.0); }
     super::sun_to_cloud(g);
-    crate::host_api::host_api_invalidate_world_cache(g);
 }
 
 /// the level's steady directional light, up or not, which is not the hour's sun

@@ -230,7 +230,7 @@ pub fn squad_orders_on_furniture(g: &mut crate::game::Game, p: V3) -> bool {
         let (cs, sn) = (g.tab.props_prop[pr].cs, g.tab.props_prop[pr].sn);
         let (lx, lz) = (cs * dx - sn * dz, sn * dx + cs * dz);   // (the place in the prop's own frame)
         let (hx, hz) = (g.tab.props_prop[pr].hx, g.tab.props_prop[pr].hz);
-        if m::hyp2(m::max(0.0, m::abs(lx) - hx), m::max(0.0, m::abs(lz) - hz)) < FUR_M { g.m.doorway.stack_own.fur += 1.0; return true; }
+        if m::hyp2(m::max(0.0, m::abs(lx) - hx), m::max(0.0, m::abs(lz) - hz)) < FUR_M {  return true; }
     }
     false
 }
@@ -326,9 +326,8 @@ pub fn squad_orders_side_for(g: &mut crate::game::Game, d: DoorId, men: &[GuardI
     let b = crate::cleared::cleared_rooms_is_known(g, room_b);
     if a != b && crate::cleared::cleared_rooms_has_floor(g, d, sam_side) && crate::cleared::cleared_rooms_has_floor(g, d, -sam_side) {
         let face = if a { sam_side } else { -sam_side };
-        if (if face == sam_side { mine } else { other }).is_finite() { g.orders.face_flip = face != pick; return face; }
+        if (if face == sam_side { mine } else { other }).is_finite() {  return face; }
     }
-    g.orders.face_flip = false;
     pick
 }
 
@@ -500,7 +499,6 @@ fn seen_way(g: &mut Game, w: Way<'_>, now: &[V3], base: &[V3], pen: Option<Pen<'
     let m_s = along_seen(g, w.from, now, &seen);
     let (less, long) = (g.k.seenwalk.less, g.k.seenwalk.long);
     if m_s < less { return None; }
-    g.stats.seenwalk.in_view += 1;
     let mine = doors_on(g, w.from, base);
     let mut lanes = crate::doorway::doorway_lane_price(g, Some(&mut |_g: &mut Game, d: DoorId| mine.contains(&d)));
     let way = crate::scene_collision::nav_grid_find_path(g, w.from, w.to, Some(ROUND_ITER), Some(&mut |g: &mut Game, x: f64, z: f64| {
@@ -522,7 +520,6 @@ fn seen_way(g: &mut Game, w: Way<'_>, now: &[V3], base: &[V3], pen: Option<Pen<'
         let (a, b) = (along(g, w.from, &way, Pen::Dear(u)), along(g, w.from, now, Pen::Dear(u)));
         if a > m::max(OFF_M, b) { return None; }
     }
-    g.stats.seenwalk.round += 1;
     Some(way)
 }
 /// The way the lanes leave him, then asked of the seen floor.   (route's `laneWay`)

@@ -135,10 +135,6 @@ pub struct TutTeamRakeHelperFrame {
     pub heavy: bool,
     /// left: a yield separates its declaration from a use
     pub left: f64,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
-    /// n: a yield separates its declaration from a use
-    pub n: f64,
 }
 
 ///  the helper generator harass: where it stands, and what lives across a yield
@@ -152,14 +148,6 @@ pub struct TutTeamHarassHelperFrame {
     pub stop: u16,
     /// o: a parameter
     pub o: Option<crate::script_tut_team::TutTeamHarassHelperO>,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
-    /// u: a yield separates its declaration from a use
-    pub u: Option<crate::director::UnitRef>,
-    /// heavy: a yield separates its declaration from a use
-    pub heavy: bool,
-    /// n: a yield separates its declaration from a use
-    pub n: f64,
 }
 
 ///  the helper generator smoke, inside the beat 'smoke': where it stands, and what lives across a yield

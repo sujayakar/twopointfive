@@ -21,7 +21,7 @@ fn flat(a: V3, b: V3) -> f64 {
 // ---- small reads
 
 fn of(g: &mut Game, m: GuardId) -> Option<OrdersAssignmentId> {
-    crate::orders::squad_orders_of(g, &crate::seats::here(g), m)
+    crate::orders::squad_orders_of(&crate::seats::here(g), m)
 }
 fn post_of(g: &mut Game, m: GuardId) -> Option<V3> {
     let a = of(g, m)?;
@@ -502,7 +502,6 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         if ways.is_empty() {
             continue;
         }
-        g.stats.rearwatch.ways += 1;
         let mut pick: Option<(GuardId, CoverOpeningId, V3, f64, bool)> = None;
         for w in &ways {
             let mut see: Vec<GuardId> = Vec::new();
@@ -541,11 +540,9 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         let (pm, po, pfront, pcls, pblind) = match pick {
             Some(x) => x,
             None => {
-                g.stats.rearwatch.no_line += 1;
                 continue;
             }
         };
-        g.stats.rearwatch.pinned += 1;
         let was = pin_row(g, key, pm);
         let a = of(g, pm).unwrap();
         let time = g.time;
@@ -558,7 +555,6 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 door: gr.door,
                 side: gr.side,
                 op: gr.op,
-                cls: pcls,
                 seen_t: time,
                 a,
                 going: None,
@@ -567,7 +563,6 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 to: None,
             },
         };
-        p.cls = pcls;
         p.front = pfront;
         p.a = a;
         p.out = Some(false);
@@ -585,7 +580,6 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
             book!(g, key).by_op.set(op, pm);
         }
         if !same {
-            g.stats.rearwatch.pins += 1;
             let s = format!(
                 "{} {} on {} ({} beyond) behind the stack on {}{}",
                 js::to_fixed(time, 1),
@@ -708,7 +702,7 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
         b.shut.clear();
         return;
     }
-    let now = crate::doortools::door_tools_door_keepers(g, &crate::seats::here(g));
+    let now = crate::doortools::door_tools_door_keepers(&crate::seats::here(g));
     let sam = g.player;
     let sam_up = !crate::condition::down(g, g.pl[sam].ch);
     let sam_ch = g.pl[sam].ch;
@@ -762,7 +756,6 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                     door,
                     side: 1.0,
                     op: None,
-                    cls: 0.0,
                     seen_t: time,
                     a,
                     going: None,
@@ -776,7 +769,6 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                 at: 0.0,
             },
         );
-        g.stats.rearwatch.rooms += 1;
         let s = format!("{} {} keeps {} while the squad leaves the room", js::to_fixed(time, 1), g.gd[m].callsign, g.tab.cover_opening[o].id);
         note(book!(g, pl), &s);
     }
@@ -823,7 +815,6 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                     && g.tab.orders_assignment[a.unwrap()].door != Some(p.door);
                 if stays {
                     book!(g, pl).shut.set(p.door, BookShutValue { o, room: r.room, at: at_him });
-                    g.stats.rearwatch.room_ways += 1;
                 }
                 let s = format!(
                     "{} {} off {} · another order{}",
@@ -851,7 +842,6 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
         }
         let sam_at = g.ch[sam_ch].pos;
         if g.k.rearwatch.room_m > 0.0 && flat(pos_of(g, m), sam_at) > g.k.rearwatch.room_m {
-            g.stats.rearwatch.room_far += 1;
             let_go(g, pl, m, "the player has gone on");
             continue;
         }
@@ -937,7 +927,6 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                 }
             }
             if g.time - out_t >= g.k.rearwatch.room_secs {
-                g.stats.rearwatch.room_late += 1;
                 let_go(g, pl, m, "on the clock");
                 continue;
             }
@@ -1052,7 +1041,6 @@ pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], firs
     if w == first || !turn.contains(&w) || turn[turn.len() - 1] == w {
         return turn.to_vec();
     }
-    g.stats.rearwatch.last += 1;
     let mut out: Vec<GuardId> = turn.iter().copied().filter(|&m| m != w).collect();
     out.push(w);
     out

@@ -64,7 +64,5 @@ pub struct WandorderMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct WandorderStats {
-    pub ordered: i32,
     pub live: i32,
-    pub moved: i32,
 }

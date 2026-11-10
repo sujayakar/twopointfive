@@ -54,8 +54,8 @@ pub(super) fn room_fight_new_op(g: &mut crate::game::Game, gd: GuardId) -> Roomf
     g.tab.roomfight_op.push(Op {
         gd, meters: JsMap::new(), tgt: None, turn: None, pass: None, kept: None, track: 0.0, pre: false, ready_at: 0.0, n: 0.0, next: 0.0, lost_at: -100.0,
         fell: None, aim, ov: OpOv { face: None, walk: None }, step: None, hot_t: -100.0, step_t: -100.0, step_by: None, door_by: None,
-        funnel_t: 0.0, line_t: 0.0, line_by: None, line_at: -100.0, wall_t: 0.0, step_until: 0.0, said_t: -100.0, rounds: 0.0, held_for_friend: 0.0,
-        held_for_line: 0.0, block_t: 0.0, feet_sm: None, feet_t: None, short_seen: -100.0, short_since: -100.0, short_t: -100.0,
+        funnel_t: 0.0, line_t: 0.0, line_by: None, line_at: -100.0, wall_t: 0.0, step_until: 0.0, said_t: -100.0, rounds: 0.0,
+        block_t: 0.0, feet_sm: None, feet_t: None, short_seen: -100.0, short_since: -100.0, short_t: -100.0,
     })
 }
 
@@ -131,8 +131,6 @@ fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
         if room_fight_friend_in_line(g, muzzle, at, gd).is_some_and(|f| crate::character::is_player(g, f)) {
             g.gd[gd].muzzle_down = true;
             g.gd[gd].muzzle_clear_t = 0.0;
-            g.tab.roomfight_op[o].held_for_friend += 1.0;
-            g.fight.stats.held_for_friend += 1.0;
         }
     }
 }
@@ -321,9 +319,7 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
     let brg = room_fight_point(g, o, chest, dt, speed);
     let sam_in = room_fight_sam_in_line(g, o, chest);
     if sam_in { room_fight_hold_short(g, o); }
-    if sam_in && g.time >= g.tab.roomfight_op[o].ready_at && !crate::control::man::changing_magazine(g, gd) { // the fire gate's own answer to a friend in the line: with the gun down he never gets that far
-        g.tab.roomfight_op[o].held_for_friend += 1.0;
-        g.fight.stats.held_for_friend += 1.0;
+    if sam_in && g.time >= g.tab.roomfight_op[o].ready_at && !crate::control::man::changing_magazine(g, gd) { 
         g.tab.roomfight_op[o].line_t += dt;
         g.tab.roomfight_op[o].line_by = Some(g.pl[g.player].ch);
         g.tab.roomfight_op[o].line_at = g.time;
@@ -349,8 +345,7 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
     if on && g.tab.roomfight_op[o].pre { g.tab.roomfight_op[o].track = m::max(g.tab.roomfight_op[o].track, sk.preaim); g.tab.roomfight_op[o].pre = false; }
     g.tab.roomfight_op[o].track = if on { m::min(1.0, g.tab.roomfight_op[o].track + dt / settle) } else { m::max(0.0, g.tab.roomfight_op[o].track - p.lose_rate * dt) };
     if !g.tune.aim_model { g.tab.roomfight_op[o].track = if on { 1.0 } else { 0.0 }; }
-    if on_man && crate::gunwall::gun_wall_is(g, c) { // the gun IN a wall: no shot from here, as with no line
-        g.tab.roomfight_op[o].held_for_line += 1.0;
+    if on_man && crate::gunwall::gun_wall_is(g, c) { 
         g.tab.roomfight_op[o].block_t += dt;
         g.tab.roomfight_op[o].wall_t += dt;
         room_fight_walk_on(g, o);
@@ -373,7 +368,6 @@ fn tracked(g: &mut Game, o: RoomfightOpId, h: GuardId, dt: f64, speed: f64, dist
         if crate::guards::clear_shot(g, c, head) {
             to = head;
         } else if !crate::coverfire::cover_seen(g, gd, Some(g.gd[h].ch), chest) {
-            g.tab.roomfight_op[o].held_for_line += 1.0;
             g.tab.roomfight_op[o].block_t += dt;
             room_fight_walk_on(g, o);
             return None;
@@ -412,11 +406,8 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     if in_line.is_none() { // a friend anywhere this round could go holds it as one in the lane does
         let cone = wide + match def.pellets { Some(pl) => pl.cone * 2.0, None => 0.0 };
         in_line = crate::friendlyfire::friend_in_cone(g, gd, muzzle, to, cone, None, Some(hc));
-        if in_line.is_some() { crate::friendlyfire::ff_held(g); }
     }
     if let Some(f) = in_line {
-        g.tab.roomfight_op[o].held_for_friend += 1.0;
-        g.fight.stats.held_for_friend += 1.0;
         g.tab.roomfight_op[o].line_t += dt;
         g.tab.roomfight_op[o].line_by = Some(f);
         g.tab.roomfight_op[o].line_at = g.time;
@@ -436,7 +427,6 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     crate::combat::fire_weapon(g, c, to, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(wide), ..Default::default() }));
     g.tab.roomfight_op[o].rounds += 1.0;
     g.tab.roomfight_op[o].n += 1.0;
-    g.fight.stats.op_rounds += 1.0;
     let gap = if js::truthy(string) {
         if js::rem(g.tab.roomfight_op[o].n, string) == 0.0 { pick(g, crate::dice::Who::Op(o), sk.shift) } else { crate::gunroles::gun_string_gap(g, gd) }
     } else if js::rem(g.tab.roomfight_op[o].n, 2.0) == 0.0 {
@@ -775,7 +765,6 @@ fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spee
             room_fight_step_to(g, o, p, true, RoomFightStepToPatch { speed: Some(2.6), strafe: Some(false), ..Default::default() });
             g.tab.roomfight_op[o].step_until = g.time + 1.5;
             g.tab.roomfight_op[o].funnel_t = 0.0;
-            g.fight.stats.stepped += 1.0;
             return;
         }
     }
@@ -808,7 +797,6 @@ fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, spe
         room_fight_step_to(g, o, p, false, RoomFightStepToPatch { speed: Some(2.2), strafe: Some(true), face: Some(face), ..Default::default() });
         g.tab.roomfight_op[o].step_until = g.time + 2.0;
         g.tab.roomfight_op[o].line_t = 0.0;
-        g.fight.stats.stepped += 1.0;
         return true;
     }
     g.tab.roomfight_op[o].step_until = g.time + 1.0;

@@ -2207,10 +2207,3 @@ pub fn bar_gone(g: usize, i: usize) -> u32 {
 pub fn bar_flags(g: usize, i: usize) -> u32 {
     pn(g).bars[i][1]
 }
-pub fn bars_clear(g: usize) {
-    let p = pn(g);
-    if p.used != 0 {
-        p.nbars = 0;
-        p.settle();
-    }
-}

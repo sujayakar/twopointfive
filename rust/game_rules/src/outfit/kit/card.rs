@@ -48,12 +48,12 @@ fn row_under(r: &KitRow, m: &MemberKit) -> Option<GunSlot> {
 /// What the value now set changes in the run, in a line.
 fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
     let you = i == 0.0;
-    let pick = |g: &Game, id: &str| crate::gear::gear_text(g, &crate::gunslots::pick_word(g, id, None));
+    let pick = |g: &Game, id: &str| crate::gear::gear_text(&crate::gunslots::pick_word(g, id, None));
     let line: &str = match r.field {
         KitField::Primary | KitField::Secondary => {
             let slot = gun_slot(r.field).expect("a gun's row");
             if slot == GunSlot::Primary && m.weapon == KitWeapon::Pistol {
-                return crate::gear::gear_text(g, if !you { "no long gun: his sidearm is his gun" } else if g.k.slots.on { "no long gun, no launcher: nothing you fire reads as gunfire · the 40 mm rounds stay home with it" } else { "no long gun, no launcher: nothing you fire reads as gunfire" });
+                return crate::gear::gear_text(if !you { "no long gun: his sidearm is his gun" } else if g.k.slots.on { "no long gun, no launcher: nothing you fire reads as gunfire · the 40 mm rounds stay home with it" } else { "no long gun, no launcher: nothing you fire reads as gunfire" });
             }
             let id = if slot == GunSlot::Primary { &m.primary } else { &m.secondary };
             return format!("{}{}", pick(g, id), if kit_slot_can(g, m, slot) { " (suppressed)" } else { "" });
@@ -70,13 +70,13 @@ fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
         KitField::Nvg => if m.nvg { "goes dark with you, sees through the tube" } else if m.light { "bare eyes: his light does the seeing" } else { "bare eyes, no light" },
         KitField::Rings => if js::truthy(m.rings) { "2 with the rifle up, then the right button: out cold to the head, doubled over anywhere else" } else { "none for the launcher" },
         KitField::Shells if you => {
-            if !tubed(g, m) { return crate::gear::gear_text(g, if g.k.slots.on { "no FN2000, no launcher: none carried, and no pouch spent on them" } else { "no FN2000, no launcher: these stay home" }); }
-            if !js::truthy(m.shells) { return crate::gear::gear_text(g, "none for the launcher: rings only"); }
+            if !tubed(g, m) { return crate::gear::gear_text(if g.k.slots.on { "no FN2000, no launcher: none carried, and no pouch spent on them" } else { "no FN2000, no launcher: these stay home" }); }
+            if !js::truthy(m.shells) { return crate::gear::gear_text("none for the launcher: rings only"); }
             return format!("{LOAD_KEYS} with the rifle up, then the right button: a frag's blast where it lands, past {} m", js::num_str(g.k.he40.arm_m));
         }
         KitField::Shells => if js::truthy(m.shells) { "fired on your order" } else { "none for his launcher" },
         KitField::Cams => {
-            if !tubed(g, m) { return crate::gear::gear_text(g, "no FN2000, no launcher: these stay home"); }
+            if !tubed(g, m) { return crate::gear::gear_text("no FN2000, no launcher: these stay home"); }
             if !js::truthy(m.cams) { return String::from("none for the launcher"); }
             return format!("{LOAD_KEYS} with the rifle up, then the right button: it sticks where it lands and watches");
         }
@@ -310,7 +310,7 @@ pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -
     }
     let mut words = kit_words(g, i, Some(&m));
     let note = g.m.kit.kit_note[i as usize].clone();
-    if !note.is_empty() { words = format!("{words} {}", crate::gear::gear_text(g, &note)); }
+    if !note.is_empty() { words = format!("{words} {}", crate::gear::gear_text(&note)); }
     CardView {
         who: i,
         changed: kit_changed(g, i),

@@ -566,7 +566,7 @@ impl KitAsk for Play {
     fn closing_pace(&self) -> f64 { self.g.tune.player_walk * self.g.k.teampace.follow_k }
     fn walks(&self) -> (f64, f64) { (self.g.tune.player_walk, game::teampace::team_walk(&self.g)) }
     fn at_a_run(&mut self, gd: GuardId) -> Option<game::teampace::RunWhy> { game::teampace::run_why(&mut self.g, gd) }
-    fn on_his_mark(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).map_or(false, |a| self.g.tab.orders_assignment[a].arrived) }
+    fn on_his_mark(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).map_or(false, |a| self.g.tab.orders_assignment[a].arrived) }
     fn frag_reach(&self) -> (f64, f64, f64, f64) { let k = &self.g.k.frag; (k.lethal_m, k.wound_m, k.destr_m, k.fuse) }
     fn in_a_burst(&mut self, from: [f64; 2], at: [f64; 2]) -> (f64, f64) {
         let lift = self.g.k.frag.lift;
@@ -637,8 +637,8 @@ impl KitAsk for Play {
     fn opening_at(&self, o: game::ids::CoverOpeningId) -> [f64; 2] { let a = self.g.tab.cover_opening[o].at; [a[0], a[2]] }
     fn opening_to_spare_for(&self, gd: GuardId) -> bool { self.g.cover.live.iter().any(|l| l.by.is_none() && !l.sam && !l.held && l.can.contains(&gd)) }
     fn deal_secs(&self) -> f64 { self.g.k.cover.deal_secs }
-    fn stacks_on_his_walk(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| game::cover::cover_walk_only(&self.g, gd, a)) }
-    fn stacks_at_the_jamb(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd).is_some_and(|a| { let r = &self.g.tab.orders_assignment[a]; r.order == "stack" && r.spare != Some(true) }) }
+    fn stacks_on_his_walk(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| game::cover::cover_walk_only(&self.g, gd, a)) }
+    fn stacks_at_the_jamb(&self, gd: GuardId) -> bool { game::orders::squad_orders_of(&game::seats::here(&self.g), gd).is_some_and(|a| { let r = &self.g.tab.orders_assignment[a]; r.order == "stack" && r.spare != Some(true) }) }
     fn man_cannot_fall(&mut self, gd: GuardId) { self.g.gd[gd].god = true; }
     fn frag_carriers(&self) -> Vec<GuardId> { self.g.m.frag.def_books.as_ref().map_or(Vec::new(), |b| b.carriers.iter().map(|c| c.gd).collect()) }
     fn frag_deal(&self) -> (usize, f64, f64) { (game::frag::defenders_of(&self.g).len(), self.g.k.frag.def_share, self.g.k.frag.def_max) }
@@ -687,7 +687,7 @@ impl KitAsk for Play {
         game::pairup::pair_up_apply(&mut self.g, None);
         self.g.k.silent.on = true;
         self.run(0.3);
-        game::silent::set_silent(&mut self.g, true, None);
+        game::silent::set_silent(&mut self.g, true);
     }
     fn take_him_now(&mut self, foe: GuardId) -> Option<String> {
         let at = self.at(foe);

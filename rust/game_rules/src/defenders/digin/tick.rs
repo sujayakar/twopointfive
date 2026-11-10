@@ -93,11 +93,9 @@ fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digi
         if let Some(q) = goal { if pushable(g, d, r.room, pp, q, stand) { break; } }
         if let Some(behind) = push_spot(g, d, r.room, e, pp, stand) {
             goal = Some(behind);
-            g.stats.digin.brace_beside += 1;
             break;
         }
         passed.add(p);
-        g.stats.digin.brace_passed += 1;
         let q = if passed.len() < 3 { nearest_prop(g, d, e, Some(&passed)) } else { None };
         p = match q { Some(q) => q, None => return false };
         pp = prop_at(g, p);
@@ -116,7 +114,6 @@ fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digi
     m.stand = stand;
     m.rest = [e.at[0] - e.out[0] * 0.6, 0.0, e.at[2] - e.out[1] * 0.6];
     m.phase = Phase::ToProp;
-    g.stats.digin.hauls += 1;
     let speed = g.tune.guard_chase;
     move_(g, d, goal, speed);
     true
@@ -144,7 +141,6 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
     if first {
         let [a, b] = expect_entries(g, room, m.know);
         r = RoomSt { room, expected: a, second: b, at: now, t0: m.know_t, men: Vec::new(), bracer: None, wedged: 0.0, cue_at: m::NAN, cues: JsSet::new(), entered_at: m::NAN, ready_at: m::NAN, callout: false };
-        g.stats.digin.rooms += 1;
         if let Some(fix) = state_of(g).fix { if now - fix.t < 20.0 { cue(g, Some(&mut r), Cue::Radio); } }
     } else {
         r = row_of(g, room);
@@ -169,7 +165,6 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
             let guide = crate::words::wg(g, &"copy. we'll be ready for them.", &"heard. they'll find this room ready.");
             let line = one_of(g, crate::dice::Who::Def(d), &["we hear it. getting ready for them here.", "copy. we're digging in.", guide]);
             crate::game::game_say(g, gd, line, Some(true), None);
-            g.stats.digin.radio += 1;
             cue(g, Some(&mut r), Cue::Radio);
         }
     }
@@ -222,7 +217,6 @@ fn away(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &
     if !would_brace(g, d, m, r, e) { return false; }
     if !state_of(g).away.has(e.door) {
         state_of(g).away.add(e.door);
-        g.stats.digin.opens_away += 1;
     }
     true
 }
@@ -245,7 +239,7 @@ fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::di
         let stand = crate::roomfight::room_fight_free_near(g, [e.at[0] - e.out[0] * 1.2, 0.0, e.at[2] - e.out[1] * 1.2]);
         if let Some(stand) = stand {
             if crate::roomfight::room_fight_in_room(g, Some(r.room), stand) && flat(pos_of(g, gd), stand) < 12.0 {
-                m.brace = -1.0; m.prop = None; m.also = Some(-1.0); m.stand = stand; m.phase = Phase::ToDoor;
+                m.brace = -1.0; m.prop = None;  m.stand = stand; m.phase = Phase::ToDoor;
                 let speed = g.tune.guard_chase;
                 move_(g, d, stand, speed);
                 return;
@@ -264,11 +258,9 @@ fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::
     let mut p = match dp { Some(x) => x.spot, None => None };
     if !deep { p = cover_spot(g, d, *m, r, false).spot; }
     if p.is_none() && !or_stay { return false; }
-    m.tried_deep = want_deep;
     m.deep = deep;
     m.look = if deep { dp.unwrap().look } else { None };
     if deep {
-        g.stats.digin.deep += 1;
     }
     m.brace = -1.0;
     m.prop = None;
@@ -276,11 +268,9 @@ fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::
     if let Some(p) = p {
         m.spot = Some(p);
         m.phase = Phase::ToCover;
-        g.stats.digin.moved += 1;
         let speed = g.tune.guard_chase;
         move_(g, d, p, speed);
     } else {
-        g.stats.digin.stayed += 1;
         settle(g, d, m);
     }
     true
@@ -289,8 +279,8 @@ fn to_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::
 /// he is where he will fight from, his eye on his door
 fn settle(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man) {
     let gd = g.tab.roomfight_def[d].gd;
-    m.phase = Phase::Set; m.set_at = g.time; m.also = Some(-1.0); m.also_n = Some(0.0); m.spot = Some(pos_of(g, gd));
-    if !m.dug_once { m.dug_once = true; g.stats.digin.dug += 1; }
+    m.phase = Phase::Set; m.set_at = g.time;   m.spot = Some(pos_of(g, gd));
+    if !m.dug_once { m.dug_once = true;  }
     g.tab.roomfight_def[d].want = m.entry;
     g.tab.roomfight_def[d].watch = m.entry;
     fear(g, d, *m);
@@ -298,7 +288,7 @@ fn settle(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Ma
 
 /// a man the dig-in has not touched yet
 fn new_man() -> crate::digin::Man {
-    Man { far: false, owe: 0.0, haul_by: 0.0, deep: false, look: None, tried_deep: false, gathered: false, gather_to: None, dug_once: false, ordered: false, phase: Phase::Idle, until: 0.0, know: [0.0, 0.0, 0.0], know_t: -100.0, room: None, entry: -1.0, brace: -1.0, prop: None, stand: [0.0, 0.0, 0.0], rest: [0.0, 0.0, 0.0], scrape_t: -100.0, set_at: -100.0, spot: None, eyes_t: None, lane_t: None, also: None, also_n: None, home_t: None, home_d: None, home_at: None, hand_t: None, pull_t: None, pushes: None, pull_a: None, stalls: None }
+    Man { far: false, owe: 0.0, haul_by: 0.0, deep: false, look: None, gather_to: None, dug_once: false, ordered: false, phase: Phase::Idle, until: 0.0, know: [0.0, 0.0, 0.0], know_t: -100.0, room: None, entry: -1.0, brace: -1.0, prop: None, stand: [0.0, 0.0, 0.0], rest: [0.0, 0.0, 0.0], scrape_t: -100.0, set_at: -100.0, spot: None, eyes_t: None, lane_t: None, home_t: None, home_d: None, home_at: None, pull_a: None }
 }
 
 /// he lets go of what he was at; furniture left where it stands is somebody else's to haul
@@ -311,15 +301,13 @@ fn drop(g: &mut crate::game::Game, m: &mut crate::digin::Man, gd: Option<GuardId
     if let (Some(k), Some(who)) = (m.room, gd) {
         if let Some(r) = state_of(g).rooms.get_mut(k) { if r.bracer == Some(who) { r.bracer = None; } }
     }
-    m.prop = None; m.brace = -1.0; m.also = Some(-1.0); m.also_n = Some(0.0); m.phase = Phase::Idle;
+    m.prop = None; m.brace = -1.0;   m.phase = Phase::Idle;
 }
 
 /// the team in his eyes while his hands were on the furniture or the door: the gun has to come up first
 fn caught(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man) {
     let range = g.k.digin.caught;
     m.owe = pick(g, crate::dice::Who::Def(d), range);
-    g.stats.digin.caught += 1;
-    g.stats.digin.aborted += 1;
 }
 
 /// one door wedged: the next likeliest while the room has furniture, doors and its quota left, else to cover
@@ -465,8 +453,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         let pos = pos_of(g, gd);
         state_of(g).called.add(gd);
         state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room });
-        g.stats.digin.radio += 1;
-        let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"], &["contact! they're inside. hold your rooms!", "they're in here. watch your doors!"]);
+        let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"]);
         let line = one_of(g, crate::dice::Who::Def(d), &pool);
         crate::game::game_say(g, gd, line, Some(true), None);
         cue_all(g, Cue::Radio);
@@ -490,12 +477,10 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if crate::gunroles::gun_keeps_post(g, gd) { m.know_t = t; return; }   // the belt-fed gun stays on its line: heard, and let lie
             let think = g.k.digin.think;
             m.know = know; m.know_t = t; m.phase = Phase::Think; m.until = now + paced(g, crate::dice::Who::Def(d), think);
-            g.stats.digin.heard += 1;
             m.far = if reach > 0.0 { let pos = pos_of(g, gd); way_to(g, pos, know) > reach } else { false };   // too far to join that fight in time: his room is his job
-            if m.far { g.stats.digin.far += 1; }
         }
         Phase::Think => {
-            if contact { m.phase = Phase::Idle; g.stats.digin.aborted += 1; return; }
+            if contact { m.phase = Phase::Idle;  return; }
             let room = match my_room { Some(k) => k, None => { m.phase = Phase::Idle; return } };
             let mut inside = entered(g, room);
             if !inside { for l in listeners(g) { if crate::roomfight::room_fight_in_room(g, my_room, l.head) { inside = true; break; } } }
@@ -509,12 +494,11 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
                 m.gather_to = None; m.phase = Phase::Think; m.until = now + 0.4;
             } else {
                 m.gather_to = None; m.phase = Phase::Idle;
-                g.stats.digin.gather_lost += 1;
             }
         }
         Phase::ToProp => {                                            // planted: at the prop, or stopped short
             let k = rk.unwrap();                                      // (the test above the match: no row, no phase past 'toRoom')
-            let p = match m.prop { Some(p) if !contact && g.props.props.contains(&p) => p, _ => { g.stats.digin.aborted += 1; drop(g, m, Some(gd)); return } };
+            let p = match m.prop { Some(p) if !contact && g.props.props.contains(&p) => p, _ => {  drop(g, m, Some(gd)); return } };
             let pos = pos_of(g, gd);
             if flat(pos, prop_at(g, p)) < 1.7 {
                 let sp = g.k.digin.haul_speed / m::max(0.1, g.k.digin.pace);
@@ -549,9 +533,9 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         }
         Phase::ToDoor => {                                            // planted: at his open door, or stopped short
             let k = rk.unwrap();
-            let i = door_of(g, *m);
+            let i = door_of(*m);
             let e = entry_at(g, k, i).unwrap();
-            if contact { g.stats.digin.aborted += 1; settle(g, d, m); return; }
+            if contact {  settle(g, d, m); return; }
             if flat(pos_of(g, gd), e.at) < 2.2 && !crate::doors::door_latched(g, e.door) && !crate::doors::door_lock_broken(g, e.door) {
                 hand_on(g, d, m, e.door);
                 return;
@@ -561,12 +545,12 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         }
         Phase::Shut => {                                              // a hand on the leaf until it latches
             let k = rk.unwrap();
-            let i = door_of(g, *m);
+            let i = door_of(*m);
             let e = entry_at(g, k, i).unwrap();
             if contact { caught(g, d, m); drop(g, m, Some(gd)); return; }
             let r = row_of(g, k);
             if flat(pos_of(g, gd), e.at) > 3.0 { to_cover(g, d, m, &r, None); return; }
-            if hand_waits(g, d, m, e.door) { return; }
+            if hand_waits(g, m, e.door) { return; }
             if m.brace >= 0.0 && m.prop.is_some() && crate::doors::door_latched(g, e.door) && wedgeable(g, e.door) && holds(g, e) {
                 let secs = g.k.digin.wedge_secs;
                 m.phase = Phase::Wedge; m.until = now + paced(g, crate::dice::Who::Def(d), secs); m.scrape_t = now;
@@ -597,7 +581,6 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             row_put(g, k, r);
         }
         Phase::ToCover => {                                           // planted: there, or stopped by what he saw
-            if contact { g.stats.digin.aborted += 1; }
             settle(g, d, m);
         }
         Phase::Set => set_tick(g, d, m, rk.unwrap(), contact),
@@ -621,9 +604,8 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
         if !crate::lanes::lane_covers(g, gd, pos) { m.lane_t = Some(now + 0.5); }   // (asked twice a second, not every frame)
         else if to_cover(g, d, m, &r, Some(false)) {                  // set in a lane that has cost them: another spot of his room, out of the line
             m.lane_t = Some(now + secs);
-            g.stats.digin.lane_moved += 1;
             return;
-        } else { m.lane_t = Some(now + 4.0 * secs); g.stats.digin.lane_kept += 1; }   // none: he stays as he is
+        } else { m.lane_t = Some(now + 4.0 * secs);  }   // none: he stays as he is
     }
     if r.second < 0.0 || r.men.len() > 1 {                            // nothing else to watch for: his eye stays on his door
         let w = &mut g.tab.roomfight_def[d];
@@ -661,7 +643,6 @@ fn watch(g: &mut crate::game::Game) {
     for d in state_of(g).wedges.keys() {                              // the wedge found the hard way: the door that would not open IS the cue
         if state_of(g).wedges.get(d).unwrap().kicked || !crate::doors::door_lock_broken(g, d) { continue; }
         state_of(g).wedges.get_mut(d).unwrap().kicked = true;
-        g.stats.digin.kicked += 1;
         cue_door(g, d, Cue::Kick);
     }
     for d in state_of(g).wedges.keys() {                              // a hand on the handle from outside: the wedge found the quiet way
@@ -678,7 +659,6 @@ fn watch(g: &mut crate::game::Game) {
         let by_t = w.by_t;
         if now - by_t < g.k.digin.try_secs { continue; }
         state_of(g).wedges.get_mut(d).unwrap().tried = true;
-        g.stats.digin.tried += 1;
         let dn = crate::orders::door_words(g, d);                     // the line NAMES its door
         if m::abs(crate::doors::door_angle(g, d)) > 0.05 {            // a leaf standing open is no door to call wedged: the line is not said, his die is still drawn
         } else if let Some(who) = by.gd {
@@ -700,30 +680,17 @@ fn watch(g: &mut crate::game::Game) {
         for x in home.iter() { if phase_of(g, *x) == Phase::Set { sets += 1; } }
         if r.ready_at.is_nan() && !home.is_empty() && sets == home.len() {
             r.ready_at = now;
-            g.stats.digin.ready_n += 1;
-            g.stats.digin.know_to_ready += now - r.t0;
             row_put(g, k, r.clone());
         }
         let mut inside = false;
         for l in listeners(g) { if crate::roomfight::room_fight_in_room(g, Some(r.room), l.head) { inside = true; break; } }
         if !inside { continue; }
         r.entered_at = now;
-        g.stats.digin.entered += 1;
-        g.stats.digin.know_to_entry += now - r.t0;
-        if !r.cue_at.is_nan() { g.stats.digin.cue_first += 1; }
-        if r.cues.has(Cue::Radio) { g.stats.digin.cue_radio += 1; }
-        if r.cues.has(Cue::Shout) { g.stats.digin.cue_shout += 1; }
-        if r.cues.has(Cue::Scrape) { g.stats.digin.cue_scrape += 1; }
-        if r.cues.has(Cue::Tried) { g.stats.digin.cue_tried += 1; }
-        if r.cues.has(Cue::Kick) { g.stats.digin.cue_kick += 1; }
         let mut busy = 0;
         for x in home.iter() {
             if matches!(phase_of(g, *x), Phase::ToProp | Phase::Haul | Phase::ToDoor | Phase::Shut | Phase::Wedge | Phase::Think | Phase::ToCover) { busy += 1; }
         }
-        if !r.ready_at.is_nan() { g.stats.digin.ready_first += 1; } else if busy > 0 { g.stats.digin.half_ready += 1; }
-        for e in g.tab.roomfight_room[r.room].entries.clone() {
-            if state_of(g).wedges.has(e.door) && !crate::doors::door_lock_broken(g, e.door) && crate::doors::door_locked(g, e.door) { g.stats.digin.wedged_at_entry += 1; }
-        }
+        if !r.ready_at.is_nan() {  } else if busy > 0 {  }
         row_put(g, k, r.clone());
     }
 }
@@ -731,7 +698,6 @@ fn watch(g: &mut crate::game::Game) {
 /// A door of his room booted in; a man set on a door his room wedged was waiting for exactly that
 pub(in crate::defenders) fn dig_in_braced(g: &mut crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     if !dig_in_set_on(g, gd, d) { return false; }
-    g.stats.digin.steady += 1;
     true
 }
 
@@ -750,8 +716,7 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     if entered(g, room) { return false; }
     let now = g.time;
     let w = state_of(g).men.get_mut(gd).unwrap();
-    w.know = know; w.know_t = now; w.far = false; w.gathered = true; w.ordered = true; w.phase = Phase::Think; w.until = now + beat;
-    g.stats.digin.heard += 1;
+    w.know = know; w.know_t = now; w.far = false;  w.ordered = true; w.phase = Phase::Think; w.until = now + beat;
     true
 }
 
@@ -818,7 +783,6 @@ pub(in crate::defenders) fn dig_in_refuge(g: &mut crate::game::Game, def: Roomfi
         best = Some((spot, door, walk));
     }
     let (spot, door, _) = best?;
-    g.stats.digin.refuge += 1;
     Some(DigInRefuge { spot, door })
 }
 
@@ -844,7 +808,6 @@ pub(in crate::defenders) fn dig_in_reset(g: &mut crate::game::Game) {
         }
     }
     g.m.digin.states = None;
-    g.stats.digin = DiginStats::default();
     g.m.digin.digin_shut = DiginModDIGINSHUT {  };
 }
 

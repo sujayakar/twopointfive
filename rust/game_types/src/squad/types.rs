@@ -45,7 +45,6 @@ pub struct RoomClear {
     #[is(crate::squad::RoomClearPhase::Stack)] pub phase: crate::squad::RoomClearPhase,
     #[is(f64::NAN)] pub t_kick: f64,
     #[is(f64::NAN)] pub t_enter: f64,
-    #[is(f64::NAN)] pub t_enter2: f64,
     #[is(f64::NAN)] pub t_search: f64,
     #[is(f64::NAN)] pub t_resolve: f64,
     pub door: Option<DoorId>,

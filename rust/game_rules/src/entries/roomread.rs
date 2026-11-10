@@ -79,8 +79,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
             r += 1;
         }
         if best < 0.0 {
-            let room = crate::cleared::cleared_rooms_room_at(g, p);
-            let known = crate::cleared::cleared_rooms_known_at(g, p);
+            crate::cleared::cleared_rooms_room_at(g, p);
             return RoomRead { cells: Vec::new(), steps: JsMap::new(), ways: Vec::new() };
         }
         sx = js::rem(best, w);
@@ -158,8 +157,7 @@ pub(super) fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hi
     }
     let tab = &g.tab.cover_opening;
     js::sort_by(&mut ways, |a, b| js::or(a.dist - b.dist, if tab[a.o].id < tab[b.o].id { -1.0 } else { 1.0 }));
-    let room = crate::cleared::cleared_rooms_room_at(g, p);
-    let known = crate::cleared::cleared_rooms_known_at(g, p);
+    crate::cleared::cleared_rooms_room_at(g, p);
     RoomRead { cells, steps, ways }
 }
 

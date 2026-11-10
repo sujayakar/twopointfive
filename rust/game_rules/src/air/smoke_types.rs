@@ -19,5 +19,3 @@ pub fn smoke_system_like_budget(g: &crate::game::Game) -> f64 { crate::sense::sm
 /// BOUNDARY NO-OP (the picture's / the host's):
 pub fn smoke_system_like_clear_all(g: &mut crate::game::Game) { crate::sense::smoke_clear(g); }
 
-/// BOUNDARY NO-OP (the picture's / the host's):
-pub(super) fn smoke_system_like_set_wind(g: &crate::game::Game, srcs: &[crate::smoke_types::WindGpuSource], relax: f64) {}

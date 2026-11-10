@@ -66,13 +66,10 @@ pub struct PoseFK {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimSkeletonModPOSEBENCH {
     pub rig: Option<RigId>,
-    pub in_place: f64,
-    pub owed: f64,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct AnimSkeletonModLAYERS {
-    pub ran: f64,
     pub roles: Option<RigId>,
     pub names: Option<crate::anim_skeleton::AnimSkeletonModLAYERSNames>,
     pub lists: Vec<Vec<i32>>,
@@ -97,10 +94,10 @@ pub struct BuildMaskEntriesItem {
 pub struct AnimSkeletonMod {
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
-    #[is(crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, in_place: 0.0, owed: 0.0 })] pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
+    #[is(crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None })] pub pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH,
     /// (what rust/sim holds outside the block is written again in a fresh module: in no bytes)
     #[bytes(skip)]
-    #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { ran: 0.0, roles: None, names: None, lists: Vec::new() })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
+    #[is(crate::anim_skeleton::AnimSkeletonModLAYERS { roles: None, names: None, lists: Vec::new() })] pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
 }
 

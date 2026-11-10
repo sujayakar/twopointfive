@@ -78,8 +78,7 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     ];
     let c = crate::debris::debris_spawn(g, kind, b, v, w, Some(who), None);
     destruction_hide(g, d);
-    if c.is_none() {   // the pool is full of moving chunks: it still goes, as a burst of chips of its colour
-        g.stats.destruction.destr_knocks_demoted += 1;
+    if c.is_none() {   
         let (bc, bh, albedo) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).albedo);
         crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, crate::render_particles::EmitOpts {
             speed: 2.5,
@@ -98,7 +97,6 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     if kind == crate::debris::ChunkKind::Housing {
         if let Some(t) = d.target { destruction_break_target(g, t); }   // (chunk or chip burst, the light is off the desk either way)
     }
-    g.stats.destruction.destr_knocks += 1;
     g.destr.knocks += 1.0;
     dlog(g, &format!("{} {} knocked off{}", kind.as_str(), d.i, if c.is_some() { "" } else { " (demoted)" }));
     if let Some(group) = &d.group {
@@ -185,11 +183,10 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
     });   // (TypeScript: boxOf, then `box.stuff = 'paint'`; boxOf has no g here, and makeBox is the same box)
     let v: V3 = [(destruction_hash(g) - 0.5) * 0.4, -0.2, (destruction_hash(g) - 0.5) * 0.4];
     let w: V3 = [(destruction_hash(g) - 0.5) * 3.0, (destruction_hash(g) - 0.5) * 1.0, (destruction_hash(g) - 0.5) * 3.0];
-    let c = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Tile, box_, v, w, Some(who), None);
+    crate::debris::debris_spawn(g, crate::debris::ChunkKind::Tile, box_, v, w, Some(who), None);
     g.destr.tiles_down.add(key.clone());
     g.destr.last_tile_t = g.time;
     g.destr.tile_count += 1.0;
-    g.stats.destruction.destr_tiles += 1;
     dlog(g, &format!("tile {} dropped", key));
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [cx, y - 0.05, cz], [0.0, -1.0, 0.0], 18.0, crate::render_particles::EmitOpts {   // crumbs of the tile's edge
         speed: 1.2,
@@ -234,7 +231,6 @@ pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> b
 pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if g.destr.fixture_count >= g.k.chaos.loud.fixtures_per_encounter || (!force && g.time - g.destr.last_fixture_t < g.k.chaos.loud.fixture_gap_secs) {
-        g.stats.destruction.destr_fixtures_refused += 1;
         return false;
     }
     if !destruction_break_target(g, t) {
@@ -249,7 +245,6 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     }
     g.destr.fixture_count += 1.0;
     g.destr.last_fixture_t = g.time;
-    g.stats.destruction.destr_fixtures += 1;
     let name = g.tab.fixture[t].name.clone();
     dlog(g, &format!("fixture {} out ({})", name, why));
     let pos = g.tab.fixture[t].pos;

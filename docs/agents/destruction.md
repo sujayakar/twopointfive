@@ -32,7 +32,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `furnblast.rs` | furniture and a blast |
 | `frag/`, `he40.rs` | a burst and whom it takes (`blast`); the 40 mm's flight, arming and dud |
 | `glass.rs`, `glassbreak.rs`, `glasspen.rs`, `pattern.rs` | a blow on a pane; its breaking; a round through it; the cracks |
-| `shards/`, `shard_model.rs`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
+| `shards/`, `winbars.rs` | what a falling piece of glass becomes; a window's bars |
 | `fixture_break.rs`, `blast_look.rs`, `blast_feel/`, `dust_look.rs`, `floormess.rs` | for the picture: a lamp's tray; the charge's flash; report and kick; dust tints; floor films |
 | `marks.rs`, `render_decals/` | who asks for a mark, the list of marks |
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |

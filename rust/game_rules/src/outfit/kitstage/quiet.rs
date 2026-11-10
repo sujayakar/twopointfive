@@ -226,13 +226,13 @@ pub(super) fn cost_off(g: &mut Game, st: &mut KitStage) {
         g.tab.fixture[p].base_emissive = e;
     }
 }
-pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage, b: &Beat) {
+pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage) {
     life_off(g, st, true);
     let hinge = st.door.filter(|&d| !door_off(g, d)).map(|d| g.dr[d].def.hinge);
     let p = cost_lamp(g, st, hinge);
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
-    st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, s: 0.0, how: "", moved: 0.0, pool: false });
+    st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, moved: 0.0 });
     st.a.cost_feet = v2(g.ch[g.pl[g.player].ch].pos);
     super::stage::quiet_inside(g, st, 1.0, QK.cost.blade);
     let c = &QK.cost.lamp;
@@ -249,7 +249,6 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
     let feet = g.ch[g.pl[pl].ch].pos;
     st.a.stow_t = now;
     let mut last = st.a.cost_last.unwrap_or_default();
-    last.s = el;
     last.moved = m::max(last.moved, flat(feet, st.a.cost_feet));
     if st.a.asked.is_none() && !a.done {
         g.pl[pl].crouch = false;
@@ -267,7 +266,6 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
                     st.a.cost_pool = Some((i, e));
                     g.tab.fixture[p].base_intensity = i * a.pool;
                     g.tab.fixture[p].base_emissive = [e[0] * a.pool, e[1] * a.pool, e[2] * a.pool];
-                    last.pool = true;
                 } }
             }
             last.up = true;
@@ -277,7 +275,6 @@ pub(super) fn cost_tick(g: &mut Game, st: &mut KitStage) -> bool {
         return true;
     }
     if !a.done { st.a.cost_cuts += 1; }
-    last.how = if a.done { "done" } else { "cut" };
     st.a.cost_last = Some(last);
     cost_off(g, st);
     super::stage::quiet_inside(g, st, QK.inside, 1.0);

@@ -124,23 +124,16 @@ pub(super) fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crat
         let who = g.gd[s].foe.or_else(|| if g.gd[s].team == crate::teams::Team::Guard { Some(g.pl[g.player].ch) } else { None });
         if let Some(who) = who {
             if let Some(i) = crate::picture::idea_of(g, s, who) {
-                let tr = g.ch[who].pos;
                 let mine = crate::picture::idea_of(g, gd, who);
-                g.stats.picture.shot_placed += 1;
-                if m::hyp2(i.at[0] - tr[0], i.at[2] - tr[2]) >= 1.0 {
-                    g.stats.picture.shot_off += 1;
-                }
                 let own = match &mine {
                     Some(mi) => mi.t >= i.t,
                     None => false,
                 };
                 if g.gd[gd].last_known.is_some() && (i.lost || own || g.gd[gd].fix_t >= i.t) {
-                    g.stats.picture.shot_kept += 1;
                     return None;
                 }
                 let w = if own { mine.unwrap() } else { i };
                 if own {
-                    g.stats.picture.shot_kept += 1;
                 } else if !i.lost {
                     let age = g.time - i.t;
                     crate::picture::picture_tell(g, gd, who, i.at, Some(age));
@@ -174,12 +167,6 @@ pub(super) fn step_is_threat(g: &crate::game::Game, gd: GuardId, e: crate::guard
         let of = crate::teams::team_of_id(g, who);
         crate::teams::is_hostile(g, team, of)
     }
-}
-
-/// A restart: the fresh man's start is not a step from where the last one fell.
-pub fn ground_fresh(g: &mut crate::game::Game) {
-    let view = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.guards.ground_track.delete(view);
 }
 
 /// Sam's velocity over the ground this frame, as anybody watching sees it: his root's displacement since the frame before, capped.
@@ -322,7 +309,7 @@ pub fn body_seen(g: &mut crate::game::Game, gd: GuardId, o: GuardId, around: Opt
     };
     if g.tune.body_light {
         let seen_at = if at_feet { m::min(dist, g.k.body_light.near_m) } else { dist };
-        if !crate::guards::body_lit(g, gd, o, eye, seen_at) {
+        if !crate::guards::body_lit(g, o, eye, seen_at) {
             return false;
         }
     }
@@ -356,7 +343,7 @@ pub fn body_visibility(g: &mut crate::game::Game, o: GuardId) -> f64 {
 }
 
 /// Is body `o`, `dist` off `gd`'s eye at `eye`, lit enough for him to make out, and not behind smoke?
-pub(super) fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dist: f64) -> bool {
+pub(super) fn body_lit(g: &mut crate::game::Game, o: GuardId, eye: V3, dist: f64) -> bool {
     let oc = g.gd[o].ch;
     let hp = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
     let at: V3 = [hp[0], hp[1] + 0.25, hp[2]];

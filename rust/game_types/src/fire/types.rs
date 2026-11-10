@@ -5,14 +5,8 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FireStats {
-    pub fires: f64,
-    pub lit: f64,
-    pub frames: f64,
-    pub cracks: f64,
     pub lo: f64,
     pub hi: f64,
-    pub sum: f64,
-    pub n: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -22,7 +16,6 @@ pub struct FireShown {
     pub stir: Option<Vec<f64>>,
     pub stir_at: Option<Vec<f64>>,
     pub smoke: Vec<f64>,
-    pub smokes: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
 }

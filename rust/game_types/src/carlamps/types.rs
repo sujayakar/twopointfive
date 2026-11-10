@@ -35,11 +35,6 @@ pub enum FoundLampWhat {
 #[derive(Clone, Debug, Default)]
 pub struct CarlampsStats {
     pub found: i32,
-    pub head: i32,
-    pub tail: i32,
-    pub lit: i32,
-    pub shot: i32,
-    pub painted: i32,
 }
 
 pub const VEHICLE_GROUP: &str = "vehicle";

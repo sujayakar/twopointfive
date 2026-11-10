@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.
-pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd {
+pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::cmd::PlayerCmd {
     if let Some(aim) = g.hand_at {
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
         if front {
@@ -490,10 +490,9 @@ fn check_record(g: &Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCm
     (c, fixed)
 }
 
-/// A record made one an honest seat could have sent; `fixed` = how many things were put right. `raw` None = what was sent was no object.
+/// A record made one an honest seat could have sent. `raw` None = what was sent was no object.
 pub(super) fn check_cmd(g: &crate::game::Game, raw: Option<&crate::cmd::PlayerCmd>, near: Option<V3>) -> crate::cmd::CheckCmd {
-    let (cmd, fixed) = check_record(g, raw.cloned(), near);
-    CheckCmd { cmd, fixed }
+    CheckCmd { cmd: check_record(g, raw.cloned(), near).0 }
 }
 
 /// `c` with nothing pressed: the same cursor and view, no key, no button, no wheel.

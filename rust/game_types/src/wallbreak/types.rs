@@ -78,9 +78,7 @@ pub struct BlastResult {
     pub walls: f64,
     pub cover: f64,
     pub doors: f64,
-    pub panes: f64,
     pub opened: f64,
-    pub serial: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -139,7 +137,6 @@ pub struct WallBreak {
     pub room: crate::levelfit::BreakRoom,
     pub shell_gaps: JsSet<crate::Num>,
     pub hung_now: Option<crate::wallbreak::WallBreakHungNow>,
-    pub hung_gone: JsMap<crate::Num, f64>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -198,29 +195,6 @@ pub struct WallBreakPlanOfItem {
     pub b: WallbreakBreakableId,
     pub cells: Vec<f64>,
     pub d: f64,
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes, Blank)]
-pub struct WallbreakMod {
-    pub wall_log: Vec<String>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WallbreakStats {
-    pub rounds: i32,
-    pub ports: i32,
-    pub holes: i32,
-    pub cover_cells: i32,
-    pub cover_dead: i32,
-    pub blasts: i32,
-    pub refused: i32,
-    pub falls: i32,
-    pub floating: i32,
-    pub chunks: i32,
-    pub chunks_demoted: i32,
-    pub nav_opened: i32,
 }
 
 pub const HIDE: f64 = 3.0;

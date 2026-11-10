@@ -16,7 +16,7 @@ fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
 }
 
 /// How far a leaf stands open the way a shove would send it; one-way, simply how far open.
-pub fn doors_open_for(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
+pub fn doors_open_for(g: &crate::game::Game, d: DoorId) -> f64 {
     m::abs(door_angle(g, d))
 }
 

@@ -110,7 +110,7 @@ pub fn use_dice(g: &mut crate::game::Game) {
 /// A draw for the simulation, uniform in [0, 1): off the block where the die is at home, else off its own word; no die, Math.random.
 pub fn sim_random(g: &mut crate::game::Game) -> f64 {
     if g.dice.is_none() {
-        return seam_math_random(g);
+        return seam_math_random();
     }
     let slot = g.sim;
     let d = g.dice.as_mut().unwrap();
@@ -129,7 +129,7 @@ pub fn sim_random(g: &mut crate::game::Game) -> f64 {
 }
 
 /// dice.ts:59 `Math.random()`
-fn seam_math_random(g: &Game) -> f64 {
+fn seam_math_random() -> f64 {
     // TEMP-BRINGUP (b_01.rs): the host's own stream, handed in draw by draw
     self::host_draw()
 }

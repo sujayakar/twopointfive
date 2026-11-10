@@ -12,7 +12,6 @@ pub enum TakeFallHow {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct TakedownStats {
-    pub blows: i32,
     pub falls: i32,
     pub partner: i32,
     pub breathing: i32,

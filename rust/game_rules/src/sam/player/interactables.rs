@@ -137,7 +137,7 @@ fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::g
 }
 
 /// The markers Space concerns itself with, and the rows: what Space can do right now, one verb a row, the highlighted one.
-pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my: f64, w: f64, h: f64) {
+pub(super) fn build_interactables(g: &mut crate::game::Game) {
     let pl = g.player;
     let mut list: Vec<crate::game::Interactable> = Vec::new();
     let p = g.ch[g.pl[pl].ch].pos;
@@ -393,7 +393,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
                 let far = if can && !reach && g.pl[pl].holding.is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
                 let tool = match far {
                     Some(t) => Some(t == crate::bigkit::SamBigFar::Shotgun),
-                    None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d, Some(p)).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
+                    None => if reach && can { crate::bigkit::sam_big(g, &crate::seats::here(g), d).map(|t| t == crate::bigkit::SamBig::Shotgun) } else { None },
                 };
                 if far.is_some() { it.in_reach = true; }
                 if let Some(shotgun) = tool {
@@ -417,7 +417,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
                 }
                 verbs.push(row(&it, crate::game::Verb::Wand, "look under it — the wand, quiet", ""));
             }
-            let free = reach && !busy && !crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
+            let free = reach && !busy && !crate::wallcharge::wall_charge_setting(&crate::seats::here(g));
             crate::doortools::door_tools_sam_rows(g, &mut it, d, &mut verbs, free, &mut |_g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, hints: Option<String>| -> crate::game::Interactable {
                 row(&base, verb, &text, hints.as_deref().unwrap_or(""))
             });
@@ -558,7 +558,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         }
         crate::wallcharge::wall_charge_rows(g, p, busy, row_cb!(crate::wallcharge::WallChargeRowsRowOver), offer_cb!(list, things));
         crate::rescueend::rescue_end_rows_2(g, p, busy, row_cb!(crate::rescueend::RescueEndRows2RowOver), offer_cb!(list, things));
-        let setting = crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g));
+        let setting = crate::wallcharge::wall_charge_setting(&crate::seats::here(g));
         let working = setting;
         crate::stickycam::sticky_rows(g, pl, busy || working, row_cb!(crate::stickycam::StickyRowsRowOver), offer_cb!(list, things));
         crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
@@ -595,7 +595,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             let base = marker(g, &list, door);
             let progress = crate::doortools::door_tools_sam_progress(g, &crate::seats::here(g));
             rows = vec![running(&base, crate::game::Verb::Charge, "setting the charge… — Space or a step breaks it off", Some(progress))];
-        } else if crate::wallcharge::wall_charge_setting(g, &crate::seats::here(g)) {
+        } else if crate::wallcharge::wall_charge_setting(&crate::seats::here(g)) {
             rows = vec![crate::wallcharge::wall_charge_running_row(g, &mut running_cb)];
         } else if g.pl[pl].takedown.is_none() {
             let priority = interact_priority();
@@ -839,7 +839,7 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
 
 /// pushed out of whatever is there: did that converge (false: a gap the body cannot fit)
 fn settle(g: &mut Game, q: &mut V3) -> bool {
-    crate::scene_collision::clamp_to_world(g, q, BODY_R);
+    crate::scene_collision::clamp_to_world(q, BODY_R);
     let r = body_r(g, *q);
     crate::scene_collision::collide_circle(g, q, r, 0.05, 2.2, Some(6.0));
     let mut t = v3::copy(*q);
@@ -860,7 +860,7 @@ pub fn teleport_player(g: &mut crate::game::Game, p: V3) {
             settle(g, &mut q);
         }
     }
-    crate::scene_collision::clamp_to_world(g, &mut q, BODY_R);
+    crate::scene_collision::clamp_to_world(&mut q, BODY_R);
     let c = g.pl[pl].ch;
     { let to = q; crate::character::pos_replace(g, c, to); }
     g.pl[pl].safe = Some([q[0], 0.0, q[2]]);

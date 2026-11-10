@@ -462,7 +462,6 @@ pub struct Anim {
     pub slip_at: Option<V3>,
     pub slip_k: f64,
     #[is(1.0)] pub slip_lean: f64,
-    #[is(crate::character::AnimWatchShown { w: 0.0, yaw: 0.0, slip: 0.0, lean: 1.0 })] pub watch_shown: crate::character::AnimWatchShown,
     pub dash: f64,
     pub hold_pose: Option<crate::character::HoldPose>,
     pub held_pose: Option<crate::character::HeldPose>,
@@ -550,11 +549,9 @@ pub struct Anim {
     #[is(1.0)] pub sig_side: f64,
     #[is(-1.0)] pub tell_t: f64,
     #[is(crate::character::TellKind::Watch)] pub tell_k: crate::character::TellKind,
-    pub tell_shown: f64,
     #[is(crate::character::StrikeKind::Cross)] pub strike_k: crate::character::StrikeKind,
     pub ready: Option<crate::character::ReadyKind>,
     pub ready_at: Option<V3>,
-    pub ready_shown: f64,
     pub ready_up: f64,
     #[is(1.0)] pub ready_amt: f64,
     pub rise: f64,
@@ -574,7 +571,6 @@ pub struct Anim {
     pub creep: bool,
     pub creep_at: Option<V3>,
     pub creep_shown: f64,
-    pub knife_shown: bool,
     pub reach_shown: f64,
     pub no_knife: bool,
     pub cr_t: f64,
@@ -739,14 +735,6 @@ pub struct AnimWtk {
 pub struct AnimFootSpot {
     pub p: V3,
     pub yaw: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimWatchShown {
-    pub w: f64,
-    pub yaw: f64,
-    pub slip: f64,
-    pub lean: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -1442,7 +1430,6 @@ pub struct SWAP {
     pub lag: f64,
 }
 
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CharacterModHOLDSHOW {
     pub beats: bool,
@@ -1781,7 +1768,6 @@ pub struct LC {
     pub pitch: f64,
     pub aim_k: f64,
     pub yaw: f64,
-    pub blade: f64,
     pub lean: f64,
     pub head_yaw: f64,
     pub head_pitch: f64,
@@ -2463,12 +2449,6 @@ pub struct AnimWorkInfo {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct AnimSwapInfo {
-    pub a: f64,
-    pub pending: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct CharacterHandFrameR {
     pub fingers: V3,
     pub back: V3,
@@ -2523,7 +2503,6 @@ pub fn swap() -> crate::character::SWAP { crate::character::SWAP { draw: 0.6, st
 pub const WHIP_THRU: f64 = 0.14;
 
 pub const SWAP_RATE: f64 = 14.0;
-
 
 pub fn blend() -> crate::character::BLEND { crate::character::BLEND { walk_in0: 0.12, walk_in1: 0.55, walk_top: 1.6, jog_at: 2.7 } }
 
@@ -2581,7 +2560,7 @@ pub fn long_crouch() -> JsMap<String, crate::character::LongShape> { crate::char
 
 pub fn long_reload() -> crate::character::LONGRELOAD { crate::character::LONGRELOAD { box_: crate::character::LONGRELOADBox { at: [-0.15, -0.075, 0.19], pitch: 20.0, aim_k: 0.0, yaw: 12.0 }, back: crate::character::LONGRELOADBox { at: [-0.16, -0.06, 0.21], pitch: 12.0, aim_k: 0.0, yaw: 4.0 }, head: crate::character::LONGRELOADHead { yaw: -10.0, pitch: 22.0, roll: 0.0 }, in_: 0.35, out: 0.35, end: 0.06, head_in: 0.3, head_out: 0.3, rate: 8.0 } }
 
-pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0, fwd: 2.0, pitch: 3.0, aim_k: 4.0, yaw: 5.0, blade: 6.0, lean: 7.0, head_yaw: 8.0, head_pitch: 9.0, head_roll: 10.0, elbow_r: 11.0, elbow_l: 14.0, count: 21.0 } }
+pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0, fwd: 2.0, pitch: 3.0, aim_k: 4.0, yaw: 5.0, lean: 7.0, head_yaw: 8.0, head_pitch: 9.0, head_roll: 10.0, elbow_r: 11.0, elbow_l: 14.0, count: 21.0 } }
 
 pub fn wall_tuck() -> crate::character::WALLTUCK { crate::character::WALLTUCK { long: crate::character::WALLTUCKLong { side: -0.165, up: -0.245, fwd: 0.185, pitch: -76.0, yaw: 15.0, aim_k: 0.0, elbow_r: [-0.75, -1.0, -0.45], elbow_l: [0.6, -1.0, -0.25] }, pistol: crate::character::WALLTUCKPistol { fwd: 0.2, up: -0.19, pitch: -70.0, tuck: 0.8 }, over: 0.12 } }
 

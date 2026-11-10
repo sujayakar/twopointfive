@@ -277,7 +277,7 @@ fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mut cr
         if m::abs(u - u0) > 0.35 { continue; }
         let mut q: V3 = [t[0] * u + n[0] * (cand.d + BODY_R + WALL_GAP), 0.0, t[2] * u + n[2] * (cand.d + BODY_R + WALL_GAP)];
         crate::scene_collision::collide_circle(g, &mut q, BODY_R, 0.2, y1, Some(4.0));
-        crate::scene_collision::clamp_to_world(g, &mut q, BODY_R);
+        crate::scene_collision::clamp_to_world(&mut q, BODY_R);
         let by_props = clear_of_props(g, &mut q, PROP_BODY_R + 0.02);
         let off = q[0] * n[0] + q[2] * n[2] - (cand.d + BODY_R + WALL_GAP);
         let uq = q[0] * t[0] + q[2] * t[2];
@@ -328,7 +328,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
     g.pl[pl].wall = Some(WallHold {
         n, along: t, d: f.d, lo: f.lo, hi: f.hi, open_lo, open_hi,
         u: f.u, v: 0.0, side, off: 0.0, away_t: 0.0, settle: 0.0, from: v3::copy(g.ch[c].pos), block_dir: 0.0, block_t: 0.0, seated: false,
-        drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, crouched: g.pl[pl].crouch, serial,
+        drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, serial,
         ..WallHold::default()
     });
     let stack = crate::game::player_rifle_up(g, pl);

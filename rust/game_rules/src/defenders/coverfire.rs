@@ -20,17 +20,6 @@ fn who_passes(who: Option<CharId>, k: CharId) -> bool {
 fn new_man() -> Man {
     Man { know: Vec::new(), chew: None, gave: JsMap::new(), no: None, said_t: -100.0 }
 }
-/// `{ ...WALL_STATS }`: the engine's counts as this game's books open
-fn wall_base(g: &Game) -> JsMap<String, f64> {
-    let w = &g.stats.wallbreak;
-    let rows = [
-        ("rounds", w.rounds), ("ports", w.ports), ("holes", w.holes), ("coverCells", w.cover_cells), ("coverDead", w.cover_dead), ("blasts", w.blasts),
-        ("refused", w.refused), ("falls", w.falls), ("floating", w.floating), ("chunks", w.chunks), ("chunksDemoted", w.chunks_demoted), ("navOpened", w.nav_opened),
-    ];
-    let mut out = JsMap::new();
-    for (k, v) in rows { out.set(String::from(k), v as f64); }
-    out
-}
 /// `gd.weapon.def`: which gun is in his hands
 fn def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponId {
     g.fa[g.gd[gd].weapon].def
@@ -124,7 +113,6 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::State
             s.last_t = time;
         }
     } else {
-        let base = wall_base(g);
         g.m.coverfire.states = Some(State {
             last_t: time,
             men: JsMap::new(),
@@ -723,7 +711,6 @@ pub(super) fn cover_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, spe
     g.tab.roomfight_op[o].rounds += 1.0;
     let k_now = cw.k + 1.0;
     set_chew(g, gd, |row| row.k = k_now);
-    g.fight.stats.op_rounds += 1.0;
     let str_ = crate::gunroles::gun_string(g, gd);
     let gap = if js::rem(k_now, js::or(str_, 2.0)) == 0.0 {
         sk.shift[0] + crate::dice::draw_op(g, "coverfire::cover_op#1", o) * (sk.shift[1] - sk.shift[0])
@@ -762,7 +749,6 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             for r in rows.unwrap().iter() {
                 if r.kind == crate::wallbreak::LevelChangeKind::Door || r.id < 0.0 { continue; }
                 let s = state_of(g);
-                if let Some(rec) = s.by_id.get_mut(crate::Num(r.id)) { rec.gave += 1.0; }
                 let mut mine = false;
                 for (_, row) in s.men.iter_mut() {
                     if let Some(cw) = row.chew.as_mut() {
@@ -866,9 +852,8 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
                 bump(g, BumpK::Landed);
                 let s = state_of(g);
                 if let Some(rec) = s.by_id.get_mut(crate::Num(cw_id)) {
-                    rec.landed += 1.0;
                 } else {
-                    s.by_id.set(crate::Num(cw_id), StateByIdValue { landed: 1.0, gave: 0.0 });
+                    s.by_id.set(crate::Num(cw_id), StateByIdValue {  });
                 }
             }
             break;

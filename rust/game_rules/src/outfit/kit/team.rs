@@ -32,11 +32,11 @@ impl TeamFor {
         TeamFor { entry, link, issue, walls }
     }
     /// The kit is not the cards': a lesson's, or the level's own.
-    fn issued_only(&self, g: &Game) -> bool { self.issue.is_some() || kit_as_issued(&self.entry) }
+    fn issued_only(&self) -> bool { self.issue.is_some() || kit_as_issued(&self.entry) }
 }
 
 /// There are cards to change.
-fn cards_on(g: &Game, f: Option<&TeamFor>) -> bool { !f.is_some_and(|f| f.issued_only(g)) }
+fn cards_on(f: Option<&TeamFor>) -> bool { !f.is_some_and(|f| f.issued_only()) }
 
 /// The cameras the link hands out where its fog runs.
 fn link_cams(g: &Game, f: &TeamFor) -> f64 {
@@ -51,7 +51,7 @@ pub fn team_card_for(g: &Game, f: &TeamFor) -> CardFor {
 
 /// The stealth card's kit, where it stands for yours.
 pub fn team_hand(g: &Game, f: &TeamFor) -> Option<KitHand> {
-    if !cards_on(g, Some(f)) || !matches!(f.entry.kind, LoadoutKind::Quiet | LoadoutKind::Solo) { return None; }
+    if !cards_on(Some(f)) || !matches!(f.entry.kind, LoadoutKind::Quiet | LoadoutKind::Solo) { return None; }
     let cams = link_cams(g, f);
     Some(KitHand { rings: g.k.kittree.lend, cams, wand: cams > 0.0 })
 }
@@ -113,7 +113,7 @@ fn issue_who(cards: &JsMap<String, IssueCard>, size: f64) -> String {
 }
 
 /// The note line.
-fn note_line(g: &Game, f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> String {
+fn note_line(f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> String {
     let said = if !c.note.is_empty() { c.note.as_str() } else if c.own { "This mission's own team." } else { "" };
     let Some(f) = f else { return String::from(said) };
     if let Some(cards) = &f.issue { return issue_note(said, &issue_who(cards, size)); }
@@ -125,7 +125,7 @@ fn note_line(g: &Game, f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> Strin
 fn pool_line(g: &mut Game, f: Option<&TeamFor>, size: f64) -> String {
     let issued = f.map_or(0.0, |f| f.walls);
     let walls_word = |n: f64| format!("{} wall charge{}", js::num_str(n), if n == 1.0 { "" } else { "s" });
-    if !cards_on(g, f) {
+    if !cards_on(f) {
         if f.is_some_and(|f| f.issue.is_some()) && issued != 0.0 { return format!("{} · {} (issued for this mission)", if size != 0.0 { "Squad carries" } else { "You carry" }, walls_word(issued)); }
         return String::new();
     }
@@ -180,7 +180,7 @@ fn thing_of(g: &Game, r: &KitRow, m: &MemberKit) -> Option<TeamThing> {
 /// The five places as the screen draws them, with no worn card yet.
 fn men_of(g: &mut Game, f: Option<&TeamFor>, size: f64, clip: Option<&MemberKit>) -> Vec<TeamMan> {
     let (men, all) = (roster_of(size), roster_of(4.0));
-    let on = cards_on(g, f);
+    let on = cards_on(f);
     let mut out = Vec::new();
     for i in 0..=4usize {
         let man = if i == 0 { None } else { men.get(i - 1) };
@@ -226,7 +226,7 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
     let size = kit_team(g, None);
     let choices = f.map_or_else(any_size, |f| squad_choices(&f.entry));
     let at = &choices[size as usize];   // (the size is always one of the five: `kit_team` holds it there)
-    let on = cards_on(g, f);
+    let on = cards_on(f);
     let sq = if on { squad_cost(g, None, None) } else { None };
     let squad = match sq { Some(s) if size != 0.0 => format!("Squad pouches {} / {}", js::num_str(s.used), js::num_str(s.total)), _ => String::new() };
     let mut kits = Vec::new();
@@ -243,7 +243,7 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
     TeamView {
         size,
         sizes: choices.iter().map(|c| TeamSize { n: c.n, ok: c.ok, own: c.own, words: size_words(c.n), note: c.note.clone() }).collect(),
-        note: note_line(g, f, at, size),
+        note: note_line(f, at, size),
         cards: on,
         as_issued: f.is_some_and(|f| kit_as_issued(&f.entry)),
         squad,
@@ -262,7 +262,7 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
 /// that where there is no card of yours to stand for it. None: he stays behind. Changes nothing.
 pub fn team_worn(g: &mut Game, f: Option<&TeamFor>) -> Vec<Option<MemberKit>> {
     let size = kit_team(g, None);
-    let worn = match f.filter(|f| f.issued_only(g)) {
+    let worn = match f.filter(|f| f.issued_only()) {
         None => kit_worn(g, Some(size), None),
         Some(f) => {
             let cards: Vec<MemberKit> = (0..g.m.kit.kit.members.len()).map(|j| {
@@ -274,7 +274,7 @@ pub fn team_worn(g: &mut Game, f: Option<&TeamFor>) -> Vec<Option<MemberKit>> {
         }
     };
     let (mut cams, mut wand) = (0.0, false);
-    if let Some(f) = f.filter(|f| f.issued_only(g) && !kit_issue_whole(g, f.issue.as_ref())) {
+    if let Some(f) = f.filter(|f| f.issued_only() && !kit_issue_whole(f.issue.as_ref())) {
         let n = link_cams(g, f);
         cams = if g.m.kit.kit.members[0].weapon == KitWeapon::Rifle { n } else { 0.0 };
         wand = n > 0.0;

@@ -1514,7 +1514,6 @@ pub fn wall_body(g: usize, an: &mut Anim, w: f64, p0: [f64; 3], idle: f64, crouc
     .unwrap_or(0)
 }
 
-
 /// He gives a man room as he passes, the body's share: by how near the man is the pelvis comes lower and off his side over feet left where they were,
 /// and the trunk tips away from him with the head brought level back out of it.
 pub fn watch_slip(g: usize, an: &mut Anim, dt: f64, free: f64, there: Option<[f64; 3]>, tune: &Knobs) -> u32 {
@@ -3251,7 +3250,6 @@ fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
     q_turn_by(d, i, q, f);
 }
 
-
 /// The hand pass, after every other layer and on the digit joints alone: a hand the library keyed as a fist and no layer has shaped is opened to the
 /// man's relaxed hand, by how much of it is the fist, how free the hand is and how little a layer made of it; the thumb of a hand that is not the fist
 /// goes to the relaxed thumb; and a drilled man's trigger finger lies straight along the frame until he fires.
@@ -3546,7 +3544,6 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
         return 0;
     };
     if env <= 1e-4 {
-        an.tell_shown = 0.0;
         return RAN;
     }
     let Some(mut h) = hands_of(g, an) else {
@@ -3598,7 +3595,6 @@ pub fn tell_layer(g: usize, an: &mut Anim, t: f64, watch: bool, dur: f64, tune: 
         return 0;
     }
     hands_to(&h, an);
-    an.tell_shown = w_up;
     RAN | RAN_ALL
 }
 

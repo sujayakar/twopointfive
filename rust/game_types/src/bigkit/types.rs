@@ -76,16 +76,9 @@ pub enum BigCarried {
 #[derive(Clone, Debug, Default)]
 pub struct BigkitStats {
     pub sam_shells: i32,
-    pub sam_shot: i32,
     pub sam_blows: i32,
-    pub sam_hammered: i32,
-    pub drawn: i32,
-    pub slung: i32,
     pub mate_blows: i32,
     pub mate_hammered: i32,
-    pub hammers_out: i32,
-    pub hammers_in: i32,
-    pub sam_walks: i32,
 }
 
 pub const TAIL: f64 = 0.3;

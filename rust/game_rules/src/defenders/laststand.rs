@@ -41,8 +41,8 @@ static LINES: &[(LineKind, f64, &[&str], Option<&[&str]>, Option<&[&str]>)] = &[
 /// the closures of lines 264, 265, 360, 374, 395, 409 and part 2's: a line naming where its man is has been said
 fn run_then(g: &mut Game, then: LaterThen) {
     match then {
-        LaterThen::MovedFree { d } => { st_of(g).stats.moved += 1.0; name(g, d, None); }
-        LaterThen::MovedAt { d, w } => { st_of(g).stats.moved += 1.0; name_at(g, d, Some(&w)); }
+        LaterThen::MovedFree { d } => {  name(g, d, None); }
+        LaterThen::MovedAt { d, w } => {  name_at(g, d, Some(&w)); }
         LaterThen::NameAt { d, w } => name_at(g, d, w.as_ref()),
         LaterThen::NameAtUnlessFree { d, w } => {
             let free = crate::roomfight::is_loose(g, d);
@@ -117,9 +117,8 @@ fn the_word(n: &str) -> String {
 /// a new tally of the endgame
 fn new_stats() -> crate::laststand::StateStats {
     StateStats {
-        t0: f64::NAN, up0: 0.0, checks: 0.0, answers: 0.0, silent: 0.0, last_man: 0.0,
-        moved: 0.0,
-        stand_t: f64::NAN, set_t: f64::NAN, lines: 0.0,
+        t0: f64::NAN, checks: 0.0, last_man: 0.0,
+        stand_t: f64::NAN, set_t: f64::NAN,
     }
 }
 
@@ -199,7 +198,6 @@ fn voice(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let st = st_of(g);
     st.said.push(LastStandSaid { who: callsign, text: String::from(text) });
     if st.said.len() > 200 { st.said.drain(0..50); }
-    st.stats.lines += 1.0;
 }
 
 /// a line's words with its {names} filled, an unknown name by nothing
@@ -361,7 +359,6 @@ fn tick_check(g: &mut crate::game::Game) {
         let free = crate::roomfight::is_loose(g, d);
         net_at(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, &LaterRedo::Answer { d, free });
         check_of(g).got.push(d);
-        st_of(g).stats.answers += 1.0;
     }
     if g.time < check_of(g).close_at { return; }
     let (time, every) = (g.time, g.k.laststand.every);
@@ -373,12 +370,10 @@ fn tick_check(g: &mut crate::game::Game) {
     for &d in &got { if alive(g, d) { heard.push(d); } }
     let mut known = JsSet::new();
     for &d in &heard { known.add(d); }
-    let up = up_defs(g).len() as f64;
     let silent: Vec<GuardId> = g.fight.defs.iter().filter(|&&d| !known.has(d)).map(|&d| g.tab.roomfight_def[d].gd).collect();
     let heard_gds: Vec<GuardId> = heard.iter().map(|&d| g.tab.roomfight_def[d].gd).collect();
     let st = st_of(g);
     st.known = known.clone();
-    st.stats.silent += up - known.len() as f64;
     crate::netquiet::net_quiet_closed(g, caller_gd, &silent, &heard_gds);
     let st = st_of(g);
     let mut names = st.named.keys();
@@ -528,7 +523,6 @@ fn step_stand(g: &mut crate::game::Game) {
         g.m.laststand.states = Some(row);
         let t = g.time;
         st(g).stats.t0 = t;
-        st(g).stats.up0 = up as f64;
         let first = g.k.laststand.first;
         let at = t + pick(g, first);
         st(g).next_at = at;

@@ -27,10 +27,10 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
     let state = g.gd[gd].state;
     let hunting = state == GuardState::Alert || state == GuardState::Search || state == GuardState::Suspicious || (state == GuardState::Patrol && g.gd[gd].drawn);
     // (a release from in here still answers TRUE for the frame: followPath must not read the emptied path as 'arrived')
-    if in_contact(g, gd) { release_gate(g, gd, g_2, "eyes on"); return true; }
-    if !hunting { let why = format!("now {}", state.as_str()); release_gate(g, gd, g_2, &why); return true; }
-    if now - g_2.t0 > GATE_CAP_SECS { release_gate(g, gd, g_2, "out of time"); return true; }
-    if g.tab.tactics_danger_rec[g_2.rec].until <= now && (g_2.phase == GatePhase::Stack || g_2.phase == GatePhase::Wait || g_2.phase == GatePhase::Stacked) { release_gate(g, gd, g_2, "the doorway is plain again"); return true; }
+    if in_contact(g, gd) { release_gate(g, gd, g_2); return true; }
+    if !hunting { release_gate(g, gd, g_2); return true; }
+    if now - g_2.t0 > GATE_CAP_SECS { release_gate(g, gd, g_2); return true; }
+    if g.tab.tactics_danger_rec[g_2.rec].until <= now && (g_2.phase == GatePhase::Stack || g_2.phase == GatePhase::Wait || g_2.phase == GatePhase::Stacked) { release_gate(g, gd, g_2); return true; }
     // the drill's lanes: asked each frame until he commits
     if g_2.phase == GatePhase::Stack || g_2.phase == GatePhase::Wait || g_2.phase == GatePhase::Stacked || g_2.phase == GatePhase::Open || g_2.phase == GatePhase::Slice {
         let lead_row = match (g_2.role, g_2.lead) { (GateRole::Second, Some(l)) => gate_read(g, l), _ => None };
@@ -47,7 +47,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
         if !going {
             let far = door_pt(g, d, w / 2.0, 1.2, -g_2.side, None);
             let centre = g.dr[d].frame_centre;
-            if crate::lanes::lane_drill(g, gd, at, far, centre, can) { release_gate(g, gd, g_2, "a lane his side knows of is on it"); return true; }
+            if crate::lanes::lane_drill(g, gd, at, far, centre, can) { release_gate(g, gd, g_2); return true; }
         }
     }
     // (standing here on purpose: the branches' no-headway watchdogs are not to read it as a wedge)
@@ -92,7 +92,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
                 //  the lever is worked from the handle's own place
                 if g_2.hs.is_none() {
                     let pos = g.ch[c].pos;
-                    let h = if crate::doors::doors_pull_face(g, d, pos) { crate::handleside::tool_spot(g, d, g_2.side, pos, None, None) } else { None };
+                    let h = if crate::doors::doors_pull_face(g, d, pos) { crate::handleside::tool_spot(g, d, g_2.side, pos, None) } else { None };
                     g_2.hs = Some(match h { Some(h) if !h.far => Some(GateHs { pos: h.pos, yaw: h.yaw }), _ => None });
                 }
                 if let Some(Some(h)) = g_2.hs {
@@ -117,7 +117,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             if g_2.t >= 0.8 {
                 g_2.t = 0.0;
                 let toss_by = match (g_2.action, g_2.thrower) { (GateAction::Toss, Some(t)) if !crate::condition::down(g, g.gd[t].ch) && !crate::doors::door_is_closed(g, d) => Some(t), _ => None };
-                match toss_by { Some(t) => begin_toss(g, gd, g_2, t), None => begin_slice(g, gd, g_2) }
+                match toss_by { Some(t) => begin_toss(g, gd, g_2, t), None => begin_slice(g, g_2) }
             }
             true
         }
@@ -129,8 +129,8 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
                 _ => inside,
             });
             if let Some(lr) = lead {
-                if lr.phase == GatePhase::Cross && lr.cross_at >= 0.0 && now >= lr.cross_at + 0.5 { begin_cross(g, gd, g_2); }
-                else if lr.phase == GatePhase::Done { release_gate(g, gd, g_2, "the lead is through"); return true; }
+                if lr.phase == GatePhase::Cross && lr.cross_at >= 0.0 && now >= lr.cross_at + 0.5 { begin_cross(g, g_2); }
+                else if lr.phase == GatePhase::Done { release_gate(g, gd, g_2); return true; }
             }
             true
         }
@@ -152,13 +152,13 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
                     if e.kind == crate::director::EventKind::Bang && e.time == now { e.announced = Some(true); break; }
                 }
                 g.tab.tactics_danger_rec[g_2.rec].banged = true;
-                g_2.bang_t = now; g_2.phase = GatePhase::Bang; g.stats.tactics.bangs += 1;
+                g_2.bang_t = now; g_2.phase = GatePhase::Bang; 
             }
             true
         }
         GatePhase::Bang => {
             stand_gate(g, gd, dt, Some(g_2.face)); g_2.look = Some(inside); g_2.crouch = 0.4;
-            if now - g_2.bang_t >= GO_AFTER_BANG { crate::game::game_say(g, gd, "going in", None, None); begin_cross(g, gd, g_2); }
+            if now - g_2.bang_t >= GO_AFTER_BANG { crate::game::game_say(g, gd, "going in", None, None); begin_cross(g, g_2); }
             true
         }
         GatePhase::Slice => {   // across the opening station by station, muzzle into the room, a quarter second on each
@@ -171,12 +171,12 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             let there = step_gate(g, gd, g_2, dt, p, SLICE_PACE, Some(face_in));
             if there { g_2.slice_t += dt; if g_2.slice_t >= SLICE_DWELL { g_2.slice_i += 1.0; g_2.slice_t = 0.0; } }
             if g_2.slice_i >= g_2.slice_pts.len() as f64 {
-                if g_2.goal_near { release_gate(g, gd, g_2, "sliced — his mark is this side of it"); return true; }
+                if g_2.goal_near { release_gate(g, gd, g_2); return true; }
                 let line: &str = if gate_mate(g, g_2, GateMateRole::Second, gd).is_some() {
                     crate::words::wg(g, &"clear as far as I can see — crossing, on me", &"clear as far as I see — crossing, on me")
                 } else { "crossing" };
                 crate::game::game_say(g, gd, line, None, None);
-                begin_cross(g, gd, g_2);
+                begin_cross(g, g_2);
             }
             true
         }
@@ -188,7 +188,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             let Some(leg) = leg else {
                 let pos = g.ch[c].pos;
                 g_2.crossed = side_of(g, d, pos) != g_2.side;
-                release_gate(g, gd, g_2, "no leg to run");
+                release_gate(g, gd, g_2);
                 return true;
             };
             g_2.look = Some(if g_2.leg_i + 1.0 < g_2.legs.len() as f64 {
@@ -204,11 +204,11 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             if side_of(g, d, pos) != g_2.side { g_2.crossed = true; }
             if there || flat(g.ch[c].pos, leg) < 0.35 {
                 g_2.leg_i += 1.0;
-                if g_2.leg_i >= g_2.legs.len() as f64 { release_gate(g, gd, g_2, "in"); return true; }
-            } else if g_2.t > 3.5 { release_gate(g, gd, g_2, "the entry leg went nowhere"); return true; }
+                if g_2.leg_i >= g_2.legs.len() as f64 { release_gate(g, gd, g_2); return true; }
+            } else if g_2.t > 3.5 { release_gate(g, gd, g_2); return true; }
             true
         }
-        GatePhase::Done => { release_gate(g, gd, g_2, "done"); true }
+        GatePhase::Done => { release_gate(g, gd, g_2); true }
     }
 }
 
@@ -220,22 +220,21 @@ fn away_look(g: &mut crate::game::Game, d: DoorId, g_2: &crate::tactics::Gate, p
 }
 
 /// Across the opening, or straight to the cross where there is no floor for it or the leaf is shut.
-fn begin_slice(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
+fn begin_slice(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
     let st = slice_stations(g, g_2.door, g_2.side, g_2.near_a);
     let st = match st {
         Some(st) if !crate::doors::door_is_closed(g, g_2.door) => st,
         _ => {
             if g_2.goal_near { g_2.phase = GatePhase::Done; return; }
-            begin_cross(g, gd, g_2);
+            begin_cross(g, g_2);
             return;
         }
     };
     g_2.slice_pts = st.pts; g_2.slice_look = st.look; g_2.slice_i = 0.0; g_2.slice_t = 0.0; g_2.phase = GatePhase::Slice; g_2.t = 0.0; g_2.path = None;
-    g.stats.tactics.slices += 1;
 }
 
 /// The legs through the doorway; a second goes half a second behind.
-fn begin_cross(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
+fn begin_cross(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gate) {
     let k = if g_2.role == GateRole::Lead { 0.0 } else { 1.0 };
     let plan = plan_for(g, g_2.door, g_2.side, g_2.near_a);
     g_2.legs = entry_legs(g, g_2.door, g_2.side, g_2.near_a, k, plan.as_ref());

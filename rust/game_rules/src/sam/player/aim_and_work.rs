@@ -77,7 +77,7 @@ pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game) {
 }
 
 /// Working the lock, on its own clock once begun.
-pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let d = g.pl[pl].picking.unwrap();
@@ -140,8 +140,7 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     g.pl[pl].picking = None;
     let pos = g.ch[c].pos;
     let side = crate::doors::doors_side(g, d, pos);
-    g.pl[pl].wanding = Some(crate::wand::Wanding { door: d, side, t: 0.0, pan: 0.0, live: false, off: 0.0, age: 0.0 });
-    g.stats.wand.looks += 1;
+    g.pl[pl].wanding = Some(crate::wand::Wanding { door: d, side, pan: 0.0, live: false, off: 0.0, age: 0.0 });
 }
 
 /// The wand pulled out: he stays on his knee.
@@ -191,11 +190,9 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
         w.age += dt;
         if planted {
             w.off = 0.0;
-            w.t += dt;
             let crouch = g.ch[c].anim.crouch;
-            if !w.live && crate::wand::wand_through(g, w.t, w.age, crouch, Some(true)) {
+            if !w.live && crate::wand::wand_through(g, w.age, crouch, Some(true)) {
                 w.live = true;
-                g.stats.wand.live += 1;
                 wand_row_back(g, pl, w);
             }
         } else if w.live {
@@ -604,7 +601,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     };
     g.aim_point = p;
     let (w, h) = (canvas.client_width, canvas.client_height);
-    build_interactables(g, cam, mx, my, w, h);
+    build_interactables(g);
     // A light TAKEN is KEPT while the cursor stays where it took it.
     let reach = m::min(crate::aim::SNAP_PX, g.k.aim.player.light_snap_px);
     let at = g.m.player.light_at.get(g.player).copied();

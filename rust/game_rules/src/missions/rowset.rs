@@ -8,23 +8,23 @@ use crate::query::Query;
 use crate::scene_scenarios::ScenarioEntry;
 
 /// the switch is up (rowset.ts `live`; `ROWSET_BREAK` is a check's own word and is never up here)
-fn live(g: &Game) -> bool { !BREAK }
+fn live() -> bool { !BREAK }
 /// a row with a level file of its own that names an hour or a weather
 fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
 /// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
 /// LEVEL'S). (rowset.ts rowOfQuery, of words already read)
-fn row_of(g: &Game, q: &Query) -> Option<ScenarioEntry> {
-    if !live(g) { return None; }
+fn row_of(q: &Query) -> Option<ScenarioEntry> {
+    if !live() { return None; }
     let level = crate::scene_scenario_list::spec_of(q)?.level.filter(|l| !l.is_empty())?;
     crate::scene_scenario_list::all_missions().into_iter().find(|e| own(e) && e.level.as_deref() == Some(level.as_str()))
 }
 
 /// The row's own hour and weather WRITTEN ONTO a query, over whatever it carried; answers what was put on.
-pub(super) fn row_settings(g: &Game, q: &mut Query) -> RowSettings {
+pub(super) fn row_settings(q: &mut Query) -> RowSettings {
     let mut put = RowSettings::default();
-    let Some(e) = row_of(g, q) else { return put; };
-    if let Some(hour) = e.hour { q.set("hour", hour.as_str()); put.hour = Some(hour); }
+    let Some(e) = row_of(q) else { return put; };
+    if let Some(hour) = e.hour { q.set("hour", hour.as_str());  }
     if let Some(weather) = e.weather {
         q.set("weather", weather.as_str());
         // (a row names one of the weathers a visitor can pick: each is a weather kind of the same name)

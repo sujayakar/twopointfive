@@ -117,34 +117,6 @@ pub fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64, tune: &Knobs) -> u3
     ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z, tune)) as u32
 }
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
-/// a block's length in bytes
-pub fn state_len() -> usize {
-    state::LEN
-}
-/// how many blocks the module holds at once
-pub fn state_games() -> usize {
-    state::GAMES
-}
-/// the layout's word
-pub fn state_layout() -> u32 {
-    state::LAYOUT
-}
-/// how many parts a block has
-pub fn state_parts() -> usize {
-    state::PARTS.len()
-}
-/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes; whether it is a pool, its first word the bytes of it in use (2)
-pub fn state_part(i: usize, what: u32) -> usize {
-    if i >= state::PARTS.len() {
-        return 0;
-    }
-    match what {
-        0 => state::PARTS[i].off,
-        1 => state::PARTS[i].len,
-        _ => state::PARTS[i].pool as usize,
-    }
-}
-
 
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// how many rows a table holds (5: the columns of the doors' part of a block)

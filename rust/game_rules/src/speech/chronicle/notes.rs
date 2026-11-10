@@ -144,21 +144,21 @@ fn sample_on(c: &mut Chronicle, x: f64, z: f64, t: f64) {
 /// `g.chronicle.counts[count]++`
 fn bump_count(n: &mut ChronCounts, count: ChronCountKey) {
     match count {
-        ChronCountKey::Heard => n.heard += 1.0,
+        ChronCountKey::Heard => {},
         ChronCountKey::SeenUp => n.seen_up += 1.0,
         ChronCountKey::Esc1 => n.esc1 += 1.0,
         ChronCountKey::Esc2 => n.esc2 += 1.0,
         ChronCountKey::ShotsNearMen => n.shots_near_men += 1.0,
         ChronCountKey::LightsShot => n.lights_shot += 1.0,
         ChronCountKey::Ocps => n.ocps += 1.0,
-        ChronCountKey::Blackouts => n.blackouts += 1.0,
+        ChronCountKey::Blackouts => {},
         ChronCountKey::Kicked => n.kicked += 1.0,
         ChronCountKey::Picked => n.picked += 1.0,
         ChronCountKey::Intel => n.intel += 1.0,
         ChronCountKey::Thrown => n.thrown += 1.0,
         ChronCountKey::Grabs => n.grabs += 1.0,
-        ChronCountKey::Contacts => n.contacts += 1.0,
-        ChronCountKey::Radio => n.radio += 1.0,
+        ChronCountKey::Contacts => {},
+        ChronCountKey::Radio => {},
         ChronCountKey::CivSeen => n.civ_seen += 1.0,
         ChronCountKey::CivReported => n.civ_reported += 1.0,
         ChronCountKey::CivComplied => n.civ_complied += 1.0,
@@ -251,7 +251,7 @@ fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
 /// The first player's feet.
 fn pos_of(g: &mut crate::game::Game) -> V3 {
-    let man = crate::seats::man_here(g, &crate::seats::here(g));
+    let man = crate::seats::man_here(&crate::seats::here(g));
     g.ch[g.pl[man].ch].pos
 }
 
@@ -322,7 +322,6 @@ pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::Game
                     Some(at)
                 }
                 None => {
-                    g.chronicle.counts.heard += 1.0;
                     let data = row_data(vec![("what", tx(&what)), ("by", tx(&callsign)), ("k", num(1.0)), ("n", num(1.0)), ("react", tx(react))]);
                     let r = add_row(g, t, ChronKind::Heard, where_.unwrap_or(ev.pos), data);
                     if r.is_none() { chronicle_mark_heard_counted(g, key); }
@@ -529,7 +528,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
         With::Blast(w) => return live_row(g, ChronKind::Kill, row_data(vec![who, ("weapon", tx(&format!("the {w}"))), ("blast", yes(true))]), Some(p)),
         With::Knife => String::from("knife"),
         _ => {
-            let man = crate::seats::man_here(g, &crate::seats::here(g));
+            let man = crate::seats::man_here(&crate::seats::here(g));
             match crate::game::player_gun_in_hand(g, man) {
                 Some(gun) => crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()),
                 None => String::from("a round"),

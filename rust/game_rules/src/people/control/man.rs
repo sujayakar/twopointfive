@@ -54,12 +54,6 @@ pub fn has_a_man_in_front(g: &Game, gd: GuardId) -> bool {
     saw_his_man_within(g, gd, 0.5) || crate::roomfight::room_fight_op_of(g, gd).map_or(false, |o| { let x = &g.tab.roomfight_op[o]; x.tgt.is_some() || g.time - x.lost_at < 0.5 })
 }
 
-/// His legs are still (under a tenth of a metre a second over the floor). It does not say why: at his post, braked by a rule, or stuck.
-fn still(g: &Game, gd: GuardId) -> bool {
-    let v = g.ch[g.gd[gd].ch].vel;
-    v[0] * v[0] + v[2] * v[2] < 0.01
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,7 +69,6 @@ mod tests {
         g.time = 10.0;
         let all = |g: &Game| [dead(g, gd), blind(g, gd), staggered(g, gd), held(g, gd), saw_his_man_within(g, gd, 5.0), in_a_standoff(g, gd), changing_magazine(g, gd)];
         assert_eq!(all(&g), [false; 7]);
-        assert!(still(&g, gd));
         g.cond[g.gd[gd].ch].blind_until = 10.5;
         assert_eq!(all(&g), [false, true, false, false, false, false, false]);
         g.cond[g.gd[gd].ch].blind_until = 10.0;                    // the moment it ends he can see
@@ -85,6 +78,5 @@ mod tests {
         assert_eq!(all(&g), [false, false, true, false, true, false, true]);
         assert!(!saw_his_man_within(&g, gd, 4.0));
         g.ch[c].vel = [0.3, 0.0, 0.0];
-        assert!(!still(&g, gd));
     }
 }

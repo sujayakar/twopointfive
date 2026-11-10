@@ -22,7 +22,7 @@ pub(super) fn ring_tag() -> &'static str { "SPONGE" }
 pub(super) fn shell_tag() -> &'static str { "HE" }
 
 /// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.
-pub fn gear_text(g: &crate::game::Game, s: &str) -> String {
+pub fn gear_text(s: &str) -> String {
     issued_words(s)
 }
 

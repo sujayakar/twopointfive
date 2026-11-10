@@ -189,7 +189,7 @@ fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) {
     use crate::gunreload::{FeedBeat, FeedMarks, FeedPath};
     let an = &g.ch[c].anim;
     let (feed, b, n, port, back) = (an.feed, an.rl_b, an.feed_n, an.feed_port, an.reload_back);
-    let own = feed.and_then(|model| crate::gunreload::feed_path(g, model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
+    let own = feed.and_then(|model| crate::gunreload::feed_path(model, FeedBeat { dur: b.dur, out: b.out, in_: b.in_, rack: b.rack, pull: b.pull }, n, port));
     let marks = |r: &Mv2ReloadBox| FeedMarks { mag: r.mag, strip: r.strip, handle: r.handle, pull: r.pull, hf: r.hf, hb: r.hb };
     let (marks, keys) = match own {
         Some(FeedPath::Arm1(p)) => (p.marks.unwrap_or(marks(&MV2.reload.box_)), None),

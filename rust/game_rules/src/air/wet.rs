@@ -58,7 +58,6 @@ fn open_sky(g: &mut Game, (w, set, ask): (usize, i32, u32), c: CharId, head: f64
         mem.sky_t = time;
         let covered = SKY_OFFSETS.iter().filter(|o| ::sim::lines::solid_line(w, set, ask, x + o[0], head + 0.15, z + o[1], x + o[0], SKY_TOP, z + o[1], &g.k) == Some(true)).count();
         mem.open = covered < 3;
-        g.stats.wet.sky_tests += 1;
     }
     mem.open
 }
@@ -153,7 +152,6 @@ fn drip(g: &mut crate::game::Game, c_2: CharId) {
         color: Some([0.42, 0.47, 0.55]),
         ..crate::render_particles::EmitOpts::default()
     });
-    g.stats.wet.drips += 1;
 }
 
 /// A footfall of Sam's: if he has come in wet, a print under the foot that landed, fainter each step. The foot ahead along his motion wins over `left_hint`

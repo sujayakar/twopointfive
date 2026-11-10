@@ -22,9 +22,9 @@ fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
 }
 /// `ordersOf(g, gd)`'s `sams && mine(gd)`: the book on Game with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
+    if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd); }
     let s = crate::seats::seat_of(g, gd);
-    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g, &crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(&crate::seats::here(g)) && crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd))
 }
 /// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
 fn no_path(d: &mut crate::game::Guard) {
@@ -90,56 +90,6 @@ pub(super) fn bubble_tick(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].bubble = Some(line);
 }
 const BUBBLE_TURN: f64 = 1.0;
-
-/// Fresh guards at the start of their routes; spawned units are not stood up again.
-pub fn reset_guards(g: &mut crate::game::Game) {
-    for pl in crate::seats::men(g) {
-        g.pl[pl].dragging = None;
-        g.pl[pl].takedown = None;
-        g.pl[pl].holding = None;
-        let c = g.pl[pl].ch;
-        g.ch[c].anim.hold_pose = None;
-    }
-    let old = g.guards.clone();
-    for &gd in &old {
-        if g.gd[gd].unit.is_some() { release_unit(g, gd); }
-    }
-    end_engagement(g, EndEngagementOutcome::Reset);
-    let old = g.guards.clone();
-    let mut fresh: Vec<(f64, RouteId, i32, LightId, V3)> = Vec::new();
-    for &gd in &old {
-        if g.gd[gd].unit.is_some() { continue; }
-        let c = g.gd[gd].ch;
-        fresh.push((g.ch[c].id, g.gd[gd].route, g.gd[gd].route_i, g.gd[gd].flashlight, g.ch[c].tint));
-    }
-    for &gd in &old {
-        let c = g.gd[gd].ch;
-        crate::sim_men_store::man_leaves(g, c);
-    }
-    let mut shift: Vec<GuardId> = Vec::with_capacity(fresh.len());
-    let (men, rig) = (g.men, g.rig);
-    for (id, route, route_i, fl, tint) in fresh { shift.push(crate::game::guard_new(g, men, rig, id, route, route_i, fl, tint, None)); }
-    g.guards = shift.clone();
-    for gd in shift {
-        let c = g.gd[gd].ch;
-        crate::character::character_update(g, c, 0.0);
-    }
-    crate::opening::opening_start(g);
-    g.light_home.mains.fix_t = 0.0;
-    crate::seats::each_seat(g, &mut |v: &mut Game| { v.aim_guard = None; });
-    g.escalation = 0.0;
-    g.escalation_t = -1.0;
-    g.alarm.episode = false;
-    g.alarm.placed = false;
-    g.alarm.apart_t = 0.0;
-    g.clearing = None;
-    g.cleared_at.clear();
-    let r = rollcall_state(g);
-    r.stage = RollcallStage::Idle;
-    r.next_at = -1.0;
-    r.caller = None;
-    r.missing = None;
-}
 
 // ---- alarm escalation
 
@@ -414,7 +364,7 @@ fn rollcall_idle(g: &mut Game) {
     r.next_at = next;
 }
 /// Once a frame: the radio check's clock and its short exchange.
-fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
+fn update_rollcall(g: &mut crate::game::Game) {
     if g.aside || !g.ai_enabled {
         let r = rollcall_state(g);
         r.stage = RollcallStage::Idle;
@@ -735,7 +685,7 @@ fn step_down_escalation(g: &mut crate::game::Game) {
 
 /// Once a frame after the guards: the alarm episode, stepping down, the lockdown duties.
 pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
-    update_rollcall(g, dt);
+    update_rollcall(g);
     crate::dialogue::update_ambient(g, dt);
     tick_engagement(g);
     let (mut any_alert, mut hunting, mut living) = (false, false, 0.0_f64);

@@ -171,17 +171,10 @@ pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<
             if m::hyp3(from[0] + dx * t - p[0], from[1] + dy * t - p[1], from[2] + dz * t - p[2]) > near_m {
                 continue;
             }
-            if crate::suppression::watch_your_fire(g, o) {
-                g.stats.friendlyfire.said += 1;
-            }
+            let _ = crate::suppression::watch_your_fire(g, o);
             break;
         }
     }
-}
-
-/// The room fight's gate held a round for a friend in the cone that its own lane did not hold.
-pub fn ff_held(g: &mut crate::game::Game) {
-    g.stats.friendlyfire.held += 1;
 }
 
 /// Is this body on the players' side: a player's man, or an AI man of a side that is none of their enemies, and no civilian.
@@ -197,5 +190,5 @@ pub(super) fn ff_note(g: &mut crate::game::Game, shooter: CharId, into: Option<C
     let into_player = into.map_or(false, |c| crate::character::is_player(g, c));
     let by_player = crate::character::is_player(g, shooter);
     let s = &mut g.stats.friendlyfire;
-    if by_player { s.sam_on_mate += 1; } else if into_player { s.mate_on_sam += 1; } else { s.mate_on_mate += 1; }
+    if by_player { s.sam_on_mate += 1; }
 }

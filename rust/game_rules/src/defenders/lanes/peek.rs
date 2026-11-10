@@ -56,13 +56,10 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     if crate::condition::down(g, g.gd[gd].ch) {
         peek_off(g, gd);
         if p.frag.is_some() {
-            s(g).stats.frag_lost += 1.0;
             if let Some(l) = ll { let gap = g.k.lanes.frag_gap; let r = &mut g.tab.lanes_lane[l]; r.frag_at = m::max(r.frag_at, now + gap); }
         } else if p.fire.is_some() {
-            s(g).stats.pin_lost += 1.0;
             if let Some(l) = ll { let rest = g.k.lanes.pin_rest; let r = &mut g.tab.lanes_lane[l]; r.pin_n = 0.0; r.pin_at = now + rest; }
         } else {
-            s(g).stats.peek_lost += 1.0;
             if let Some(l) = ll { let lost = g.k.lanes.peek_lost; let r = &mut g.tab.lanes_lane[l]; r.peek_n += 1.0; r.peek_at = now + lost; }
         }
         return;
@@ -128,7 +125,6 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         r.peek_n += 1.0;
         r.peek_at = now + m::min(most, gap * m::pow(2.0, r.peek_n));
         if r.guns.len() < 4 && r.guns.iter().all(|&q| flat(q, seen) > 1.5) { r.guns.push([seen[0], 0.0, seen[2]]); }   // (where they stand now: a place to stop is out of that one's sight too)
-        s(g).stats.peek_there += 1.0;
         if now - s(g).said_t > 2.0 { s(g).said_t = now; say_net(g, gd, "they're still on it — stay back!"); }
         peek_back(g, gd, d);
         return;
@@ -174,8 +170,6 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
         peek_off(g, gd);
         {
             let st = s(g);
-            st.stats.peek_clear += 1.0;
-            st.stats.lapsed += 1.0;
             st.lanes.retain(|&x| x != l);
         }
         lanes_gone(g);
@@ -288,7 +282,6 @@ pub fn lane_gate(g: &mut crate::game::Game, gd: GuardId) -> bool {
         if let Some(goal) = g.gd[gd].path_goal {
             crate::guards::go_to(g, gd, goal, Some(true));
             let Some(again) = ahead(g, &m, gd, false) else {
-                s(g).stats.rerouted += 1.0;
                 return false;
             };
             first = again;
@@ -352,7 +345,6 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
     crate::guards::guard_set_path_goal(g, gd, None);
     let (p, now) = (pos_of(g, gd), g.time);
     held_on(g, gd, StateHeldValue { lane, t: now, look, aimed: true, at: p });
-    s(g).stats.held += 1.0;
     if now - s(g).said_t > 5.0 {
         s(g).said_t = now;
         crate::game::game_say(g, gd, "holding here — I'm not walking into that!", Some(true), None);
@@ -449,7 +441,7 @@ pub fn lane_covers(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 pub fn lanes_reset(g: &mut crate::game::Game) {
     let Some(stats) = g.m.lanes.states.as_ref().map(|st| st.stats) else { return };
     let_go(g);
-    let mut st = fresh(g);
+    let mut st = fresh();
     st.stats = stats;
     g.m.lanes.states = Some(st);
 }

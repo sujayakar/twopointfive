@@ -71,15 +71,6 @@ pub struct GunwallMod {
     pub fight: Option<crate::gunwall::GunwallModFIGHTValue>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct GunwallStats {
-    pub asked: i32,
-    pub lowered: i32,
-    pub lowered_s: f64,
-    pub tucked: i32,
-}
-
 pub const STAND_SH: f64 = 1.4;
 
 pub const CROUCH_SH: f64 = 0.99;

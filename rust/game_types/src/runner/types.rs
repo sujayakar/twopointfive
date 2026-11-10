@@ -19,12 +19,10 @@ pub struct Run {
     pub from: V3,
     pub goal: Option<V3>,
     pub mate: Option<GuardId>,
-    pub told: f64,
     pub unseen: f64,
     pub at: V3,
     pub stall: f64,
     pub is_out: bool,
-    pub tries: f64,
     pub plan: f64,
     pub face: Option<f64>,
     pub bold: bool,
@@ -82,19 +80,6 @@ pub struct PlanOutF {
 pub struct RunnerMod {
     pub state_of: JsMap<GuardId, crate::runner::Run>,
     pub rects: Option<[f64; 4]>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct RunnerStats {
-    pub said: i32,
-    pub dropped: i32,
-    pub to_mates: i32,
-    pub told: i32,
-    pub out: i32,
-    pub gone: i32,
-    pub low: i32,
-    pub bold: i32,
 }
 
 pub fn lines() -> JsMap<String, crate::runner::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("done"), crate::runner::LINESValue { say: alloc::vec![String::from("no. no, I'm done. I'm done!"), String::from("that's it — I'm done! I'm done!"), String::from("no more! I'm finished here!")], he: None, they: None }); t.set(String::from("mates"), crate::runner::LINESValue { say: alloc::vec![String::from("don't shoot — it's me! it's me!")], he: Some(alloc::vec![String::from("don't shoot, it's me! he's right behind me!"), String::from("it's me! hold your fire — he's coming!")]), they: Some(alloc::vec![String::from("don't shoot, it's me! they're right behind me!"), String::from("it's me! hold your fire — they're coming!")]) }); t } }

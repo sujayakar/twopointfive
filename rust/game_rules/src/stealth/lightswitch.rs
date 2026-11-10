@@ -216,7 +216,6 @@ fn build(g: &mut crate::game::Game) -> Vec<crate::lightswitch::WallSwitch> {
             }
         }
     }
-    g.stats.lightswitch.plates += out.len() as i32;
     out
 }
 
@@ -309,7 +308,6 @@ pub fn flip_switch(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitc
         for &t in &sw.targets {
             if g.tab.fixture[t].on && g.tab.fixture[t].factor > 0.0 {
                 crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Shot), Some(sw.floor));
-                g.stats.lightswitch.events += 1;
             }
         }
     }
@@ -391,14 +389,12 @@ pub fn switch_act(g: &mut crate::game::Game, pl: PlayerId, verb: crate::game::Ve
     if switch_lit(g, &sw) == on { return false; }
     let c = g.pl[pl].ch;
     flip_switch(g, &sw, on, c);
-    g.stats.lightswitch.flips += 1;
     true
 }
 
 // ---------------------------------------------------------------- once a frame
 /// Can this man put a room's lights back: a living defender on his own feet and his own business.
 fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
-    let time = g.time;
     let man = &g.gd[gd];
     let team = man.team;
     let own = (man.state == crate::game::GuardState::Patrol || man.state == crate::game::GuardState::Suspicious)
@@ -419,10 +415,8 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
     if g.m.lightswitch.states.as_ref().unwrap().serial != serial {
         let st = g.m.lightswitch.states.as_mut().unwrap();
         st.serial = serial;
-        let n = st.list.len() as i32;
         let all = st.all.clone();
         l = standing(g, &all);
-        g.stats.lightswitch.gone += (n - l.len() as i32).max(0);
         g.m.lightswitch.states.as_mut().unwrap().list = l.clone();
     }
     // a room the level had lit and a hand put out: a calm defender at its switch puts it back, a beat after the hand at the soonest
@@ -445,7 +439,6 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
                 if !puts_back(g, gd) || (v3::dist_xz(p, sw.pos) > reach && v3::dist_xz(p, sw.floor) > 0.6) { continue; }
                 if crate::scene_collision::solid_blocked(g, [p[0], 1.3, p[2]], v3::mad(sw.pos, sw.n, 0.05), None) { continue; }
                 flip_switch(g, sw, true, c);
-                g.stats.lightswitch.guard_on += 1;
                 crate::game::game_say(g, gd, "who turned these off?", Some(false), None);
                 break;
             }

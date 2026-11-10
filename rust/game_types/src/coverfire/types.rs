@@ -118,8 +118,6 @@ pub struct StateStats {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateByIdValue {
-    pub landed: f64,
-    pub gave: f64,
 }
 
 #[derive(Clone, Debug, Default)]

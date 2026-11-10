@@ -159,7 +159,6 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     if !live!(g, i).shouted.has(team) && !same_side(live!(g, i).side, team) && !crate::control::man::staggered(g, gd) {
         live!(g, i).shouted.add(team);
         crate::game::game_say(g, gd, "grenade!", None, None);
-        g.stats.frag.shouts += 1;
         let mouth = head_of(g, c);
         let mut n = 0;
         while n < g.guards.len() {
@@ -522,9 +521,8 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
     if !lands(g, sol.land, wd.at, 2.0) || !own_clear(g, gd, sol.land, Some(true)) || hostage_near(g, sol.land) {
         book!(g).last_t = wd.last_t;
         car!(g, ci).try_at = g.time + 2.0;
-        let line = crate::words::w(g, &"no — holding it!", &"no — hold it!");
+        let line = crate::words::w(g, &"no — holding it!");
         crate::game::game_say(g, gd, line, None, None);
-        g.stats.frag.held += 1;
         return;
     }
     let opts = crate::throwables::ThrowablesSpawnOpts { fuse: Some(g.k.frag.def_fuse), who: Some(g.ch[c].id), heading: Some(v3::yaw_of(sol.v0)), ..Default::default() };
@@ -533,7 +531,6 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
     car!(g, ci).frags -= 1.0;
     car!(g, ci).away = Some(car!(g, ci).away.unwrap_or(0.0) + 1.0);
     book!(g).thrown += 1.0;
-    g.stats.frag.theirs += 1;
 }
 
 /// Along his own gun line: within 45 degrees of his aim, a line to the man, his eyes not full of magnesium.
@@ -607,7 +604,7 @@ fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, t
     car!(g, c_2).bunch_t = 0.0;
     let all = shouts();
     let now: Vec<String> = all[1..].to_vec();
-    let said = crate::words::w(g, &now, &all);
+    let said = crate::words::w(g, &now);
     let len = said.len() as f64;
     let pick = js::rem(m::floor(hash01(id, k) * len), len) as usize;
     crate::game::game_say(g, gd, said[pick].as_str(), None, None);

@@ -88,16 +88,6 @@ pub struct LightswitchMod {
     pub states: Option<crate::lightswitch::St>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct LightswitchStats {
-    pub plates: i32,
-    pub flips: i32,
-    pub guard_on: i32,
-    pub events: i32,
-    pub gone: i32,
-}
-
 pub const WALL_TOP: f64 = 2.2;
 
 pub fn plate() -> V3 { [0.62, 0.6, 0.55] }

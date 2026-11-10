@@ -76,7 +76,7 @@ fn fresh(g: &mut Game, tail: Option<u32>) {
     let t0 = if resumed { g.time - g.mission.stats.elapsed } else { f64::NAN };
     let run = Some(g.mission.serial);
     let v = &mut g.verdict;
-    v.run = run; v.res = None; v.card_at = -1.0; v.kept = None; v.cheat = false;
+    v.run = run; v.res = None; v.card_at = -1.0;  v.cheat = false;
     v.found_at = -1.0; v.dark_at = -1.0; v.dark_when_found = false; v.through = false; v.holes = Vec::new();
     v.wall_serial = wall_serial;
     v.tracks.clear(); v.foes.clear(); v.fell.clear(); v.fell_at = Vec::new();

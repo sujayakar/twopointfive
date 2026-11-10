@@ -157,7 +157,6 @@ pub mod needs { pub mod types; pub use types::*; }
 pub mod netquiet { pub mod types; pub use types::*; }
 pub mod netquietfeed { pub mod types; pub use types::*; }
 pub mod nightbreach { pub mod types; pub use types::*; }
-pub mod noshove { pub mod types; pub use types::*; }
 pub mod nvg { pub mod types; pub use types::*; }
 pub mod opening { pub mod types; pub use types::*; }
 pub mod orders { pub mod types; pub use types::*; }
@@ -169,7 +168,6 @@ pub mod pairorders { pub mod types; pub use types::*; }
 pub mod pairup { pub mod types; pub use types::*; }
 pub mod par { pub mod types; pub use types::*; }
 pub mod particle_fx { pub mod types; pub use types::*; }
-pub mod peeksight { pub mod types; pub use types::*; }
 pub mod picture { pub mod types; pub use types::*; }
 pub mod planmode { pub mod types; pub use types::*; }
 pub mod player { pub mod types; pub use types::*; }
@@ -244,7 +242,6 @@ pub mod sim_doorshome { pub mod types; pub use types::*; }
 pub mod falls { pub mod types; pub use types::*; }
 pub mod fixtures { pub mod types; pub use types::*; }
 pub mod sim_sim { pub mod types; pub use types::*; }
-pub mod sim_state { pub mod types; pub use types::*; }
 pub mod slotsetup { pub mod types; pub use types::*; }
 pub mod smoke_types { pub mod types; pub use types::*; }
 pub mod smokebreak { pub mod types; pub use types::*; }
@@ -259,7 +256,6 @@ pub mod squadcast { pub mod types; pub use types::*; }
 pub mod squadnet { pub mod types; pub use types::*; }
 pub mod squadsmoke { pub mod types; pub use types::*; }
 pub mod squadthrow { pub mod types; pub use types::*; }
-pub mod stackline { pub mod types; pub use types::*; }
 pub mod stackroom { pub mod types; pub use types::*; }
 pub mod stalk { pub mod types; pub use types::*; }
 pub mod startle { pub mod types; pub use types::*; }

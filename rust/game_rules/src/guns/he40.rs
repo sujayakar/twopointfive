@@ -152,7 +152,6 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
         spin: 0.0,
     };
     g.shells.push(sh);
-    g.stats.he40.fired += 1;
     let level = g.k.he40.launch_noise;
     crate::flight::launched(g, shooter, from, 1.0, Some(0.6), level);
     sh
@@ -174,8 +173,7 @@ fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::
         ..Default::default()
     };
     let lift = g.k.frag.lift;
-    let report = crate::frag::blast(g, [pt[0], pt[1] - lift, pt[2]], &spec);
-    g.stats.he40.bursts += 1;
+    crate::frag::blast(g, [pt[0], pt[1] - lift, pt[2]], &spec);
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: true, met });
 }
 
@@ -271,7 +269,6 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
         }
         if !done && g.shells[i].age > b.life {
             // up and out over the lot: gone
-            g.stats.he40.gone += 1;
             let sh = g.shells[i];
             log_end(g, &ShellEnd { flown: sh.flown, armed: sh.flown >= r_k.arm_m, met: ShellEndMet::Air });
             done = true;

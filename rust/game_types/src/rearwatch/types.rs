@@ -10,7 +10,6 @@ pub struct RearPin {
     pub door: DoorId,
     pub side: f64,
     pub op: Option<DoorOpId>,
-    pub cls: f64,
     pub seen_t: f64,
     pub a: OrdersAssignmentId,
     pub going: Option<bool>,
@@ -71,20 +70,6 @@ pub struct RearWaysItem {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RearwatchMod {
     pub books: JsMap<PlayerId, crate::rearwatch::Book>,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct RearwatchStats {
-    pub ways: i32,
-    pub pinned: i32,
-    pub no_line: i32,
-    pub pins: i32,
-    pub last: i32,
-    pub rooms: i32,
-    pub room_late: i32,
-    pub room_ways: i32,
-    pub room_far: i32,
 }
 
 pub const EYE: f64 = 1.55;

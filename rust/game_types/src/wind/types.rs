@@ -61,16 +61,6 @@ pub struct WindMod {
     pub shape: Option<Vec<f64>>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct WindStats {
-    pub frames: i32,
-    pub active: i32,
-    pub to_smoke: i32,
-    pub door_gusts: i32,
-    pub storm_frames: i32,
-}
-
 pub const DEG: f64 = 0.017453292519943295;
 
 pub fn unit_x() -> V3 { [1.0, 0.0, 0.0] }

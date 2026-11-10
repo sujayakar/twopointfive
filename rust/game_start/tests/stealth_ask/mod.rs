@@ -388,7 +388,7 @@ impl StealthAsk for Play {
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().map(|&d| self.g.dr[d].def.name.clone()).collect() }
     fn throws_the_breaker(&mut self) {
         let seat = game::seats::here(&self.g);
-        let th = game::workthings::work_things_things(&self.g, &seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
+        let th = game::workthings::work_things_things(&seat).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("a breaker to work");
         let at = th.stand.expect("a place to stand at it");
         let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at, wall: None, thing: Some(th), serial: 0 });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, "work", Some(&t), Some(game::orders::Who::All), None) { panic!("the order was refused: {why}"); }
@@ -510,6 +510,6 @@ impl StealthAsk for Play {
     fn pair_silent(&mut self) {
         self.g.k.silent.on = true;
         self.g.k.sneak.on = true;
-        game::silent::set_silent(&mut self.g, true, None);
+        game::silent::set_silent(&mut self.g, true);
     }
 }

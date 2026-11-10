@@ -393,7 +393,7 @@ fn squad_has_g(g: &mut Game, cards: &[MemberKit], k: Thing, n: f64) -> f64 {
 /// Why five cards are not a legal squad of `n` teammates, or None
 fn illegal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: Option<f64>) -> Option<String> {
     let n = n.unwrap_or(KIT_MEMBERS - 1.0);
-    if cards[0].shells > 0.0 && cards[0].weapon != KitWeapon::Rifle { return Some(crate::gear::gear_text(g, "member 0 carries launcher grenades and no FN2000 to fire them")); }
+    if cards[0].shells > 0.0 && cards[0].weapon != KitWeapon::Rifle { return Some(crate::gear::gear_text("member 0 carries launcher grenades and no FN2000 to fire them")); }
     for i in 0..MEMBERS {
         for k in Thing::ALL {
             let most = max_or(t, k, i, m::INF);
@@ -468,12 +468,6 @@ pub(super) fn slot_cost(g: &crate::game::Game, item: Thing, n: f64, t: Option<&c
 pub fn kit_cost(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> crate::kit::KitCost {
     let m: MemberKit = match m { Some(m) => m.clone(), None => kit_shown(g, i) };
     let iu = i as usize;
-    let mut lines = Vec::new();
-    for k in Thing::ALL {
-        let n = amount(g, k, &m);
-        let p = slot_cost(g, k, n, None);
-        if js::truthy(p) { lines.push(crate::kit::KitCostLinesItem {  }); }
-    }
     let t = table(g);
     let used = cost_of(g, &m, &t);
     let total = pouches_at(&t, iu);
@@ -624,7 +618,7 @@ pub(super) fn card_why(g: &mut crate::game::Game, i: f64, m: &crate::kit::Member
                 let b = crate::gunslots::pick_word(g, picks.first().map(|s| s.as_str()).unwrap_or(""), None);
                 format!("no launcher under the {} to fire them: the {} has one", a, b)
             } else { String::from("no FN2000, no launcher to fire them: take the rifle first") };
-            return Some(crate::gear::gear_text(g, &s));
+            return Some(crate::gear::gear_text(&s));
         }
     }
     let t = table(g);

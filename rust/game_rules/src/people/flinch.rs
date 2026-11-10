@@ -38,7 +38,6 @@ pub(super) fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<Gu
     let k = share * flinch_scale(g, gd);
     let toward = v3::sub(from, g.ch[c].pos);
     crate::character::anim_flinch_from(g, c, Some(toward), Some(k), Some(true));
-    g.stats.flinch.ducks += 1;
     let id = g.ch[c].id;
     if let Some(last) = g.stats.flinch.last.as_mut() { last.push(id); }
     if let Some(man) = gd {
@@ -120,18 +119,12 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
         if let Some(r) = g.m.flinch.state_of.get_mut(gd) { r.under = under; }
         if under < g.k.flinch.break_secs { continue; }
         if !mate_by(g, gd) && crate::runner::runner_break(g, gd) {
-            g.stats.flinch.broke += 1;
             g.m.flinch.state_of.delete(gd);
         } else {
             let again = g.k.flinch.break_secs - g.k.flinch.ask_secs;
             if let Some(r) = g.m.flinch.state_of.get_mut(gd) { r.under = again; }
         }
     }
-}
-
-/// QA: a man's seconds under close fire (0 = none on record).
-fn flinch_under(g: &crate::game::Game, gd: GuardId) -> f64 {
-    match g.m.flinch.state_of.get(gd) { Some(t) => t.under, None => 0.0 }
 }
 
 #[cfg(test)]
@@ -194,10 +187,8 @@ mod tests {
         g.guards.push(other);
         g.tune.suppression = true; g.ai_enabled = false;
         g.m.flinch.state_of.set(gd, FlinchModStateOfValue { under: 1.5, at: 0.0 });
-        assert_eq!(flinch_under(&mut g, gd), 1.5);
         flinch_tick(&mut g, 0.016);
         assert!(g.m.flinch.state_of.get(gd).is_none());
-        assert_eq!(flinch_under(&mut g, gd), 0.0);
     }
 
     /// The page's least travel is inclusive.

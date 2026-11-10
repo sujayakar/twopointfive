@@ -153,7 +153,7 @@ pub(super) fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let planted = !shut || (man_arrived(g, lead) && flat(man_pos(g, lead), p.kick_from) < 0.15 && m::abs(v3::wrap_angle(man_yaw(g, lead) - p.kick_face)) < 0.15);
         if !((planted && g.qrf.phase_t > 0.45) || g.qrf.phase_t > 1.8) { return; }
         if let Some(d) = d {
-            if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d, s) < 1.0 {
+            if !crate::doors::door_off(g, d) && crate::doors::doors_open_for(g, d) < 1.0 {
                 crate::doors::door_set_latched(g, d, false);
                 crate::doors::door_set_closing(g, d, false);
                 let v = s * m::max(m::abs(crate::doors::door_vel(g, d)), m::abs(p.fling));
@@ -355,7 +355,6 @@ pub(super) fn start_drill(g: &mut crate::game::Game, el: &[GuardId]) -> bool {
     };
     g.qrf.op = Some(op);
     g.qrf.op_beat = 0.0;
-    g.qrf.drills += 1.0;
     g.qrf.phase = Phase::Drill;
     g.qrf.phase_t = 0.0;
     g.qrf.can = None;
@@ -414,7 +413,7 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     }
     for &man in el.iter() {
         if g.gd[man].held.is_some() {   // (in Sam's arm: off the entry: the orders would walk him out of it)
-            in_cast(g, |g| { if crate::orders::squad_orders_has(g, &crate::seats::here(g), man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
+            in_cast(g, |g| { if crate::orders::squad_orders_has(&crate::seats::here(g), man) { crate::orders::squad_orders_clear(g, Some(&[man])); } });
         }
     }
     in_cast(g, |g| { crate::doortools::door_tools_tick(g); crate::orders::squad_orders_tick(g); });
@@ -443,7 +442,6 @@ pub(super) fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     if why != "gone" { g.qrf.spent = Some(QrfSpent { room: t.room.clone(), fix_t: g.qrf.fix_t }); }
     if why == "gone" { hold360(g, el); return; }   // (the tools started afresh under it: they re-form where they stand)
     if why == "in" {
-        g.qrf.drills_in += 1.0;
         g.qrf.phase = Phase::Called;
         g.qrf.phase_t = 0.0;
         let now = g.time;
@@ -566,7 +564,7 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             }));
         }
     }
-    let the = crate::words::w(g, &"", &"the ");
+    let the = crate::words::w(g, &"");
     let at = match fix_of(g) { Some(bf) => bf.pos, None => man_pos(g, lead) };
     let room = crate::dialogue::room_name(g, at);
     radio(g, Some(lead), &format!("lost him. on me — re-form, we clear toward {}{}", the, room));
@@ -632,7 +630,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     let want = m::min(v3::clamp(m::round(g.tune.perimeter_size), 2.0, 4.0), mk.posts.len() as f64);
     let now = g.time;
     g.qrf.perim = Some(Perimeter {
-        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), set_at: -1.0, men: Vec::new(), spawned: 0.0, peeled: 0.0,
+        state: PerimeterState::Called, eta_at: now + m::max(5.0, g.tune.perimeter_eta), men: Vec::new(), spawned: 0.0, peeled: 0.0,
     });
     let lit = if g.targets.iter().any(|t| g.tab.fixture[*t].group == "exterior") { ". outside lights coming up" } else { "" };
     let word = format!("all stations — lock {} down, {}. nobody leaves: a man on every way out, {} seconds{}", mk.site, why, m::round(g.tune.perimeter_eta), lit);
@@ -662,7 +660,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
                 g.gd[gd].heard_up_to = g.event_seq;
                 let p = g.qrf.perim.as_mut().unwrap();
                 let post = mk.posts[p.men.len()].clone();
-                p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0, fighting: false });
+                p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0 });
                 p.spawned += 1.0;
             }
             Err(e) => {
@@ -688,7 +686,7 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
         g.gd[gd].search_plan = None;
         let p = g.qrf.perim.as_mut().unwrap();
         let post = mk.posts[p.men.len()].clone();
-        p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0, fighting: false });
+        p.men.push(PerimeterMenItem { gd, post, arrived_at: -1.0 });
         p.peeled += 1.0;
         i += 1;
     }
@@ -713,7 +711,6 @@ fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
 /// An outside man's walk to his post.
 fn to_post(g: &mut crate::game::Game, p: usize) {
     let row = &mut g.qrf.perim.as_mut().unwrap().men[p];
-    row.fighting = false;
     let (gd, post) = (row.gd, row.post.clone());
     crate::control::set_pinned(g, gd, false, "qrf");
     crate::control::set_hold(g, gd, false, "qrf");
@@ -761,7 +758,6 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].react_t = 0.35;
                 g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
                 crate::guards::reset_chase(g, gd);
-                g.qrf.perim.as_mut().unwrap().men[idx].fighting = true;
                 g.gd[gd].witness.alerted_by = Some(crate::game::WitnessAlertedBy::Sight);
                 g.gd[gd].witness.alert_t = g.time;
                 say(g, gd, "CONTACT — outside!");
@@ -789,10 +785,8 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
         let (n, eta_at) = { let p = g.qrf.perim.as_ref().unwrap(); (p.men.len(), p.eta_at) };
         let all_set = n > 0 && g.qrf.perim.as_ref().unwrap().men.iter().all(|p| crate::condition::down(g, g.gd[p.gd].ch) || p.arrived_at >= 0.0);
         if all_set || g.time > eta_at + 10.0 {
-            let now = g.time;
             let p = g.qrf.perim.as_mut().unwrap();
             p.state = PerimeterState::Set;
-            p.set_at = now;
             let up: Vec<(GuardId, String)> = g.qrf.perim.as_ref().unwrap().men.iter()
                 .filter(|p| !crate::condition::down(g, g.gd[p.gd].ch) && p.arrived_at >= 0.0)
                 .map(|p| (p.gd, p.post.name.clone())).collect();

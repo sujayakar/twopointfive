@@ -42,7 +42,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
                 let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
                 crate::particle_fx::lock_splinter_fx(g, e.door, from);
             }
-            crate::destruction::destruction_thud(g, e.pos, Some(1.2), Some(e.who));
+            crate::destruction::destruction_thud(g, e.pos, Some(1.2));
         }
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
@@ -113,7 +113,7 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     let jitter = 0.95 + crate::dice::draw_world(g, "game::game_on_prop_event#1") * 0.1;
     if e.sound == PropEventSound::Thud {
         audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
-        crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed), Some(e.who));
+        crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed));
     } else if !e.rolling {
         audio_play_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
     }
@@ -218,7 +218,7 @@ pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
     if hit > 1.4 {
         let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
         crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
-        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15), None);
+        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15));
     }
 }
 
@@ -317,8 +317,8 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             }
         }
     }
-    let into = g.cmd_buf.take();
-    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
+    g.cmd_buf.take();
+    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas));
     g.cmd_buf = Some(c.clone());
     if g.seats.len() == 1 {
         game_step(g, dt, &c);
@@ -330,11 +330,11 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         }
         game_step_seats(g, dt, &cmds);
     }
-    game_host_after(g, input, cam, canvas);
+    game_host_after(g, input, cam);
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.
-fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId) {
     let me = game_host_seat(g);
     let me_cam = g.tab.cmd_seat[me].cam;
     let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
@@ -343,7 +343,7 @@ fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, can
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
     crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
+    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input));
 }
 
 /// The tick for a game of one seat.

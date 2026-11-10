@@ -276,7 +276,7 @@ fn a_walk_through_a_door_goes_by_his_own_seats_order() {
             let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
             let walker = p.until(5.0, |p| mine.iter().any(|m| p.g.door_path.walks.has(*m))).map(|_| *mine.iter().find(|m| p.g.door_path.walks.has(**m)).unwrap());
             let Some(m) = walker else { panic!("seed {s}, seat {seat}: CONTROL: five seconds after the word no man of his has a walk") };
-            let a = game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, sn), m).expect("he is on the order");
+            let a = game::orders::squad_orders_of(&game::seats::seat(&p.g, sn), m).expect("he is on the order");
             let pod = p.g.door_path.walks.get(m).unwrap().pod;
             p.g.tab.orders_assignment[a].post = Some(pod);
             p.g.tab.orders_assignment[a].via = vec![pod];
@@ -296,7 +296,7 @@ fn a_hand_at_work_says_what_the_work_is_for_either_seat() {
             for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
             p.run(0.3);
             let sn = p.g.seats[seat];
-            let th = game::workthings::work_things_things(&p.g, &game::seats::seat(&p.g, sn)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
+            let th = game::workthings::work_things_things(&game::seats::seat(&p.g, sn)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
             p.seat_orders(seat, "work", [th.face[0], th.face[2]], game::orders::Who::All);
             let mine = game::orders::squad_orders_squad(&p.g, &game::seats::seat(&p.g, sn));
             let chars: Vec<_> = mine.iter().map(|m| p.g.gd[*m].ch).collect();
@@ -371,7 +371,7 @@ fn partners(seed: u32) -> (Play, GuardId) {
     p.g.k.pairup.on = true;
     game::pairup::pair_up_apply(&mut p.g, None);
     p.g.k.silent.on = true;
-    for i in 0..2 { let sn = p.g.seats[i]; game::seats::with_seat(&mut p.g, sn, &mut |g| game::silent::set_silent(g, true, None)); }
+    for i in 0..2 { let sn = p.g.seats[i]; game::seats::with_seat(&mut p.g, sn, &mut |g| game::silent::set_silent(g, true)); }
     p.frame();
     (p, t1)
 }

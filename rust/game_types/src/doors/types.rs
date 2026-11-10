@@ -146,7 +146,6 @@ pub struct Door {
     pub thick: f64,
     pub min_auth: f64,
     pub max_auth: f64,
-    #[is(DriveColsId(0))] pub drive_cols: DriveColsId,
     #[is(BoxId(0))] pub box_: BoxId,
     pub handle_boxes: Vec<BoxId>,
     pub slab: Option<crate::doors::Slab>,
@@ -260,7 +259,5 @@ pub const MAN_BRACED: f64 = 8.0;
 pub const MAN_CALM: f64 = 16.0;
 
 pub const MAN_HELD: f64 = 32.0;
-
-pub fn drive_cols() -> Vec<f64> { alloc::vec![34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0] }
 
 pub const FLOOR_Y0: f64 = 0.2;

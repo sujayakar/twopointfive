@@ -12,7 +12,6 @@ pub struct Rescue {
     pub resolve: f64,
     #[is(35.0)] pub resolve_secs: f64,
     #[is(f64::NAN)] pub t0: f64,
-    pub door_orders: f64,
     pub blind_rounds: f64,
     pub result: Option<crate::rescue::RescueResult>,
     pub defs: JsMap<GuardId, crate::rescue::Def>,
@@ -120,7 +119,6 @@ pub enum Role {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DefMark {
-    pub pos: V3,
     pub aim_at: V3,
 }
 
@@ -158,16 +156,6 @@ pub struct RescueSearchAValue {
     pub face: Option<f64>,
     pub watch: Option<V3>,
     pub there: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueState {
-    Lost,
-    Off,
-    Rescued,
-    Staged,
-    Secured,
-    Running,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -212,8 +200,6 @@ pub struct RescueObjective {
 pub struct RescueMod {
     #[is({ let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) })] pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
-
-pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }
 
 pub const SEARCH_RATE: f64 = 1.3;
 

@@ -51,11 +51,5 @@ pub struct FirelineMod {
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct FirelineStats {
-    pub holds: i32,
-    pub held_s: f64,
     pub cues: i32,
-    pub ways: i32,
-    pub no_way: i32,
-    pub fight: i32,
-    pub enemy: i32,
 }

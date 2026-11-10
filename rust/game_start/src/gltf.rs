@@ -15,7 +15,6 @@ pub struct GltfFile<'a> { pub text: &'a str, pub bin: Option<&'a [u8]> }
 
 /// the material slots a cast face is assigned to
 pub const SLOT_NAMES: [&str; 11] = ["skin", "cloth_uniform", "cloth_plain", "webbing", "boot", "helmet", "metal_dark", "rubber", "lens", "accent", "eye"];
-pub const CAST_PART_STEP: f64 = 16.0;
 pub const CAST_MAX_PARTS: usize = 32;
 
 enum Data { F32(Vec<f32>), U8(Vec<u8>), U16(Vec<u16>), U32(Vec<u32>) }
@@ -122,12 +121,11 @@ fn load_base(f: GltfFile) -> Base {
     let mut md = MeshData {
         positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4],
         joints: if joints_are_u16 { MeshDataJoints::Uint16Array(vec![0; vcount * 4]) } else { MeshDataJoints::Uint8Array(vec![0; vcount * 4]) },
-        mat_sel: vec![0.0; vcount], indices: vec![0; icount], vertex_count: vcount as f64,
+        vertex_count: vcount as f64,
         bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: None,
         mat_index: Some(vec![0; vcount]),
     };
     let (mut vo, mut io) = (0usize, 0usize);
-    let mat0 = prims.first().map(|p| p.mat);
     for p in prims {
         let n = p.pos.count;
         let (pos, nrm) = (p.pos.data.f32(), p.nrm.data.f32());
@@ -141,13 +139,11 @@ fn load_base(f: GltfFile) -> Base {
             let v = vo + k;
             md.weights[v * 4] = (a / s) as f32; md.weights[v * 4 + 1] = (b / s) as f32; md.weights[v * 4 + 2] = (c / s) as f32; md.weights[v * 4 + 3] = (d / s) as f32;
             for c2 in 0..4 { let j = p.jn.data.get(k * 4 + c2); match &mut md.joints { MeshDataJoints::Uint16Array(a) => a[v * 4 + c2] = j as u16, MeshDataJoints::Uint8Array(a) => a[v * 4 + c2] = j as u8 } }
-            md.mat_sel[v] = if Some(p.mat) == mat0 { 0.0 } else { 1.0 };
             md.mat_index.as_mut().unwrap()[v] = p.material;
             let (x, y, z) = (md.positions[v * 3] as f64, md.positions[v * 3 + 1] as f64, md.positions[v * 3 + 2] as f64);
             md.bbox_min = [game::m::min(md.bbox_min[0], x), game::m::min(md.bbox_min[1], y), game::m::min(md.bbox_min[2], z)];
             md.bbox_max = [game::m::max(md.bbox_max[0], x), game::m::max(md.bbox_max[1], y), game::m::max(md.bbox_max[2], z)];
         }
-        for k in 0..p.idx.count { md.indices[io + k] = (p.idx.data.get(k) as usize + vo) as u32; }
         vo += n; io += p.idx.count;
     }
 
@@ -210,8 +206,8 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
         }
     }
     let mut md = MeshData {
-        positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4], joints: MeshDataJoints::Uint8Array(vec![0; vcount * 4]), mat_sel: vec![0.0; vcount],
-        indices: vec![0; icount], vertex_count: vcount as f64, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
+        positions: vec![0.0; vcount * 3], normals: vec![0.0; vcount * 3], weights: vec![0.0; vcount * 4], joints: MeshDataJoints::Uint8Array(vec![0; vcount * 4]),
+        vertex_count: vcount as f64, bbox_min: [1e9, 1e9, 1e9], bbox_max: [-1e9, -1e9, -1e9], part: Some(vec![0; vcount]),
         mat_index: None,
     };
     let (mut vo, mut io) = (0usize, 0usize);
@@ -233,11 +229,10 @@ fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVarian
             if !(sum > 0.0) { panic!("cast: part '{}' has a vertex with no weight", parts[p.part]); }
             // (`md.weights[i] /= sum`: the single read back, divided as a double, stored as a single)
             for c in 0..4 { md.weights[v * 4 + c] = (md.weights[v * 4 + c] as f64 / sum) as f32; }
-            md.mat_sel[v] = (p.slot + CAST_PART_STEP * p.part as f64) as f32;
             md.part.as_mut().unwrap()[v] = p.part as u8;
             for c in 0..3 { let x = md.positions[v * 3 + c] as f64; if !x.is_finite() { panic!("cast: part '{}' has a non-finite position", parts[p.part]); } md.bbox_min[c] = game::m::min(md.bbox_min[c], x); md.bbox_max[c] = game::m::max(md.bbox_max[c], x); }
         }
-        for k in 0..p.idx.count { let ix = p.idx.data.get(k) as usize; if ix >= n { panic!("cast: part '{}' indexes past its vertices", parts[p.part]); } md.indices[io + k] = (ix + vo) as u32; }
+        for k in 0..p.idx.count { let ix = p.idx.data.get(k) as usize; if ix >= n { panic!("cast: part '{}' indexes past its vertices", parts[p.part]); }  }
         vo += n; io += p.idx.count;
     }
     let decl = g.get("extras").get("cast").get("variants");

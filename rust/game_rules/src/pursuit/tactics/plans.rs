@@ -78,16 +78,15 @@ fn tick_plans(g: &mut crate::game::Game) {
         }
         let live = g.tab.tactics_plan[plan].members.clone();
         if now - g.tab.tactics_plan[plan].t0 > PLAN_CAP_SECS {
-            end_plan(g, plan, "out of time", None);
+            end_plan(g, plan, None);
             continue;
         }
         if live.len() < 2 && g.tab.tactics_plan[plan].phase == PlanPhase::Approach {
-            let why = if live.is_empty() { String::from("nobody left") } else { alloc::format!("{} is on his own now", g.gd[live[0]].callsign) };
-            end_plan(g, plan, &why, None);
+            end_plan(g, plan, None);
             continue;
         }
         if live.is_empty() {
-            end_plan(g, plan, "nobody left", None);
+            end_plan(g, plan, None);
             continue;
         }
         let mut contact = false;
@@ -124,7 +123,7 @@ fn tick_plans(g: &mut crate::game::Game) {
                     far.push(m);
                 }
             }
-            end_plan(g, plan, "the fix moved", None);
+            end_plan(g, plan, None);
             if far.len() >= 2 {
                 plan_approach(g, &far, fix, Some("the fix moved"), None);
             }
@@ -153,9 +152,7 @@ fn tick_plans(g: &mut crate::game::Game) {
                 }
             }
             if let Some(fl) = fl {
-                g.stats.tactics.swaps += 1;
-                let why = alloc::format!("{} pinned — {} presses", g.gd[presser].callsign, g.gd[fl].callsign);
-                end_plan(g, plan, &why, None);
+                end_plan(g, plan, None);
                 let p2 = plan_approach(g, &live, fix, Some("the presser pinned"), Some(fl));
                 if let Some(p2) = p2 {
                     // (no waiting for anybody: he goes as soon as he is at his corner)
@@ -201,7 +198,7 @@ fn tick_plans(g: &mut crate::game::Game) {
             men.push(seed);
             used.add(seed);
             let why = alloc::format!("{} joins", g.gd[seed].callsign);
-            end_plan(g, near, &why, None);
+            end_plan(g, near, None);
             plan_approach(g, &men, seed_fix, Some(&why), None);
             continue;
         }
@@ -228,7 +225,7 @@ fn re_deal(g: &mut Game, plan: TacticsPlanId, live: &[GuardId], fix: V3, why: &s
             rest.push(m);
         }
     }
-    end_plan(g, plan, why, None);
+    end_plan(g, plan, None);
     if rest.len() >= 2 {
         plan_approach(g, &rest, fix, Some(why), None);
     }
@@ -310,11 +307,6 @@ fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, why: 
     for r in roles {
         g.tab.tactics_role[r].holding = false;
     }
-    g.tab.tactics_plan[plan].go_t = g.time;
-    g.stats.tactics.goes += 1;
-    if why == "timeout" {
-        g.stats.tactics.go_timeouts += 1;
-    }
     let line = if why == "contact" { "eyes on — go go go" } else if why == "timeout" { "can't wait — pushing, go" } else { "go go go" };
     crate::game::game_say(g, caller, line, Some(true), None);
     g.tab.tactics_plan[plan].last_radio_t = g.time;
@@ -328,7 +320,6 @@ fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, why: 
 fn arrive(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId) {
     let plan = g.tab.tactics_role[role].plan;
     g.tab.tactics_role[role].arrived = true;
-    g.stats.tactics.arrivals += 1;
     if g.tab.tactics_plan[plan].first_arrive_t < 0.0 {
         g.tab.tactics_plan[plan].first_arrive_t = g.time;
     }
@@ -339,7 +330,7 @@ fn arrive(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId) {
     let bark = if g.tab.tactics_role[role].kind == RoleKind::Presser || g.tab.tactics_plan[plan].members.is_empty() { Some("not here — spread out, check your side") } else { None };
     crate::guards::drop_to_search(g, gd, bark);
     if g.tab.tactics_plan[plan].members.is_empty() {
-        end_plan(g, plan, "everybody there", None);
+        end_plan(g, plan, None);
     }
 }
 
@@ -403,7 +394,6 @@ fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt: f6
             let set_at = g.tab.tactics_role[role].hold_at.unwrap_or(fix);
             if !g.tab.tactics_role[role].said_set && (flat(g.ch[c].pos, set_at) <= SET_M || g.tab.tactics_role[role].holding) {
                 g.tab.tactics_role[role].said_set = true;
-                g.tab.tactics_role[role].set = true;
                 crate::game::game_say(g, gd, "set", Some(true), None);
                 g.tab.tactics_plan[plan].last_radio_t = g.time;
             }
@@ -414,12 +404,10 @@ fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt: f6
                 r.last_pos = Some(v3::copy(p));
                 if advance(g, gd, dt, set_at, run, &mut out) || flat(g.ch[c].pos, set_at) < 0.5 {
                     g.tab.tactics_role[role].holding = true;
-                    g.tab.tactics_role[role].set = true;
                     clear_path(g, gd);
                 } else if crate::guards::not_getting_anywhere(g, gd, dt, ROLE_STALL_SECS) {
                     let r = &mut g.tab.tactics_role[role];
                     r.holding = true;
-                    r.set = true;
                     r.hold_at = Some(v3::copy(g.ch[c].pos));
                     clear_path(g, gd);
                     if !g.tab.tactics_role[role].said_set {
@@ -500,7 +488,6 @@ fn alone(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// The corner he holds, and whether it has the line on the fix
 fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactics::LoneCorner {
     let from = pos_of(g, gd);
-    let team = g.gd[gd].team;
     let pen = tactics_penalty(g, gd, fix);
     let path = match &pen {
         Some(p) => {
@@ -516,7 +503,7 @@ fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactic
         if flat(p, fix) < LONE_HOLD_MIN_M {
             break;
         }
-        if los_open(g, p, fix, team) {
+        if los_open(g, p, fix) {
             found = Some(p);
             break;
         }
@@ -556,7 +543,7 @@ fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactic
                 continue; // more wall about it wins; as much, the nearer
             }
             let can_step = crate::scene_collision::nav_grid_walkable(g, cand, q) || !crate::scene_collision::solid_blocked(g, [cand[0], 0.5, cand[2]], [q[0], 0.5, q[2]], None);
-            if !can_step || !los_open(g, q, fix, team) {
+            if !can_step || !los_open(g, q, fix) {
                 continue;
             }
             best = q;
@@ -572,7 +559,6 @@ fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::tactic
 fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lone) {
     s(g);
     l.called = true;
-    g.stats.tactics.lone_calls += 1;
     s(g).last_lone_call_t = g.time;
     let place = crate::dialogue::place_name(g, l.fix);
     // (WORDS.on is settled on)
@@ -638,7 +624,6 @@ fn move_lone(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     if l.hold_t <= 0.0 {
         l.hold_t = 1e-3;
         clear_path(g, gd);
-        g.stats.tactics.lone_holds += 1;
     }
     kneel_toward(g, gd, dt, l.fix, &mut out, None);
     l.hold_t += dt;
@@ -647,8 +632,6 @@ fn move_lone(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     }
     if l.hold_t >= g.tune.lone_wait || (l.hold_t > 1.0 && !alone(g, gd)) {
         l.released = true;
-        l.released_why = String::from(if l.hold_t >= g.tune.lone_wait { "waited" } else { "a second man is up" });
-        g.stats.tactics.lone_releases += 1;
         clear_path(g, gd);
         crate::guards::reset_chase(g, gd);
     }
@@ -710,7 +693,7 @@ pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<
     let l = match row {
         None => {
             let cn = lone_corner(g, gd, fix);
-            let l = Lone { fix: v3::copy(fix), hold_at: Some(cn.p), hold_t: 0.0, called: false, released: false, released_why: String::new() };
+            let l = Lone { fix: v3::copy(fix), hold_at: Some(cn.p), hold_t: 0.0, called: false, released: false };
             s(g).lone.set(gd, l.clone());
             clear_path(g, gd);
             g.gd[gd].stall_ref = None;
@@ -727,12 +710,12 @@ pub fn tactics_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<
 }
 
 /// Once a frame, before the guards move: expire what has lapsed, read this frame's rounds, keep the plans and gates honest, deal new plans.
-pub fn tactics_tick(g: &mut crate::game::Game, dt: f64) {
+pub fn tactics_tick(g: &mut crate::game::Game) {
     if !tactics_on(g) {
         let busy = g.m.tactics.states.as_ref().map_or(false, |st| !st.plans.is_empty() || st.roles.len() > 0 || st.lone.len() > 0 || st.gates.len() > 0);
         if busy {
             for plan in s(g).plans.clone() {
-                end_plan(g, plan, "tactics off", None);
+                end_plan(g, plan, None);
             }
             let st = s(g);
             st.roles.clear();
@@ -989,7 +972,7 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate:
             Some(n) => Some(n),
             None => {
                 let id_name = g.dr[door_id].def.name.clone();
-                if crate::doornames::shorthand_id(g, &id_name) { None } else { Some(crate::orders::door_words(g, door_id)) }
+                if crate::doornames::shorthand_id(&id_name) { None } else { Some(crate::orders::door_words(g, door_id)) }
             }
         }
     } else {
@@ -1080,7 +1063,6 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate:
         }
     }
     g.tab.tactics_danger_rec[rec].summoned = Some(best);
-    g.stats.tactics.summons += 1;
     let name_said = crate::teams::spoken_name(g, gd).map_or(false, |n| !n.is_empty());
     let answer = if name_said { alloc::format!("copy — coming to you, {}", g.gd[gd].callsign) } else { String::from("copy — coming to you") };
     crate::game::game_say(g, best, &answer, None, None);
@@ -1204,14 +1186,13 @@ fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerRecId
             thrower: None,
         };
         s(g).gates.set(gd, gate.clone());
-        g.stats.tactics.gates += 1;
         return Some(gate);
     }
     None
 }
 
 /// guards.ts followPath, first thing: true = the gate has this man's feet this frame. The gate is lent to runGate and written back.
-pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
+pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> bool {
     if !tactics_on(g) {
         return false;
     }
@@ -1256,7 +1237,7 @@ pub(super) fn loose_can(g: &mut crate::game::Game, g_2: &mut crate::tactics::Gat
 }
 
 /// a man off his gate, what he has done of the drill counted on the doorway's record
-pub(super) fn release_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate, why: &str) {
+pub(super) fn release_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::Gate) {
     s(g).gates.delete(gd);
     loose_can(g, g_2);
     let door = g_2.door;
@@ -1280,11 +1261,6 @@ pub(super) fn release_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut cra
         }
     }
     if g_2.crossed {
-        g.tab.tactics_danger_rec[rec].entered = true;
-        g.stats.tactics.entries += 1;
-        if gate_mate(g, g_2, GateMateRole::Second, gd).is_none() && g_2.role == GateRole::Lead && g_2.lead.is_none() {
-            g.stats.tactics.lone_entries += 1;
-        }
         let now = g.time;
         let row = &mut g.tab.tactics_danger_rec[rec];
         row.until = if row.banged { m::min(row.until, now) } else { m::min(row.until, now + 6.0) };

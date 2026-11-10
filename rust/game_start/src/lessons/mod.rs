@@ -230,7 +230,7 @@ impl Bot {
     pub fn sightings(&self) -> usize { self.ask(|g| g.chronicle.events.iter().filter(|e| matches!(e.kind, game::chronicle::ChronKind::Spotted | game::chronicle::ChronKind::Contact)).count()) }
 
     // ---- orders
-    pub fn order_of(&self, x: GuardId) -> Option<Assignment> { self.seen(|g, s| game::orders::squad_orders_of(g, s, x).map(|a: OrdersAssignmentId| g.tab.orders_assignment[a].clone())) }
+    pub fn order_of(&self, x: GuardId) -> Option<Assignment> { self.seen(|g, s| game::orders::squad_orders_of(s, x).map(|a: OrdersAssignmentId| g.tab.orders_assignment[a].clone())) }
     pub fn ordered(&self, x: GuardId) -> String { self.order_of(x).map_or(String::from("-"), |a| a.order) }
     pub fn orders_log(&self) -> usize { self.seen(|_, s| s.orders.log.len()) }
     /// the last order on the book, and what it was given on

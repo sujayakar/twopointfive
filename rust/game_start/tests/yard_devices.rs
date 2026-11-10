@@ -58,7 +58,7 @@ fn the_breaker_is_the_squads_to_throw_from_inside_the_shed() {
         p.run(0.3);
         let shed = p.g.level.scenarios.as_ref().and_then(|c| c.places.as_ref()).and_then(|v| v.areas.iter().find(|a| a.name == "generator shed")).expect("a shed").bounds;
         let inside = |q: [f64; 2], m: f64| q[0] > shed.x0 - m && q[0] < shed.x1 + m && q[1] > shed.z0 - m && q[1] < shed.z1 + m;
-        let th = game::workthings::work_things_things(&p.g, &game::seats::here(&p.g)).into_iter().find(|x| x.kind == WorkThingKind::Breaker).expect("the breaker");
+        let th = game::workthings::work_things_things(&game::seats::here(&p.g)).into_iter().find(|x| x.kind == WorkThingKind::Breaker).expect("the breaker");
         let st = th.stand.expect("a place to stand");
         assert!(inside([st[0], st[2]], 0.15), "seed {s}: he throws it from {st:?}");
         assert_eq!(game::workthings::work_things_words(&p.g, &th), "throw the breaker", "seed {s}");

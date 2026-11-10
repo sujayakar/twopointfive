@@ -23,12 +23,4 @@ pub struct LightingMod {
     pub lens_from: JsMap<LightId, V3>,
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct LightingStats {
-    pub asked: i32,
-    pub pulled: i32,
-    pub max_back: f64,
-}
-
 pub const LENS_SLANT: f64 = 0.3;

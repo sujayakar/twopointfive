@@ -29,37 +29,6 @@ pub fn fmt_clock(sec: f64) -> String {
     alloc::format!("{}:{}{}", js::num_str(m::floor(s / 60.0)), pad, tail)
 }
 
-/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.
-pub(super) fn new_mission(t0: f64) -> crate::game::Mission {
-    crate::game::Mission {
-        stage: crate::game::MissionStage::Infiltrate,
-        t0,
-        drive_t: -1.0,
-        pulled: false,
-        alarm_on: false,
-        sweep_at: -1.0,
-        spotted_t: -100.0,
-        down_card_at: -1.0,
-        hands_on: false,
-        stats: crate::game::MissionStats {
-            qrf_who: None,
-            elapsed: 0.0,
-            alerts: 0.0,
-            spotted: 0.0,
-            bodies: 0.0,
-            shots: 0.0,
-            kills: 0.0,
-            knockouts: 0.0,
-            keys: 0.0,
-            blackout: false,
-            sandbox: false,
-            qrf: 0.0,
-            qrf_at: -1.0,
-        },
-        serial: 0,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,7 +141,6 @@ fn new_witness() -> crate::game::Witness {
         saw_body: None,
         called_to_body: None,
         saw_held: None,
-        was_held: 0.0,
         dazzled: 0.0,
     }
 }

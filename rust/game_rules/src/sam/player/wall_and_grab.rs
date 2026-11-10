@@ -419,7 +419,6 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     }
     g.pl[p].sprinting = false;
     let crouch = g.pl[p].crouch;
-    w!(g, p).crouched = crouch;
     let block_dir = g.pl[p].wall.unwrap().block_dir;
     let want = if dir == block_dir {
         0.0
@@ -585,8 +584,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     crate::takedown::take_begin(g, c, gd, kind, lethal);
     cancel_reloads(g, p);
     if let Some(k) = kind {
-        let (a, b) = (g.ch[c].pos, g.ch[gc].pos);
-        crate::close::close_took(g, gd, crate::close::CloseTookWhat::Take, k, from, m::hyp2(a[0] - b[0], a[2] - b[2]));
+        crate::close::close_took(crate::close::CloseTookWhat::Take);
     }
     throw_off(g, p);
     g.pl[p].throw_held = false;
@@ -666,7 +664,6 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         } else {
             crate::combat::kill_guard(g, gd, way, Some(true), None, None, crate::game::With::Hand);
         }
-        crate::close::close_blow(g, yes(td.lethal));
         let ev = crate::game::GameEvent {
             kind: crate::director::EventKind::Prop,
             pos: v3::copy(g.ch[gc].pos),
@@ -702,9 +699,6 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
                 crate::close::close_kind_of(Some(&o))
             }
         }) };
-    let (a, b) = (g.ch[c].pos, g.ch[gc].pos);
-    let b0 = if kind.is_some() { v3::wrap_angle(m::atan2(a[0] - b[0], a[2] - b[2]) - g.ch[gc].body_yaw) } else { 0.0 };
-    let r0 = m::hyp2(a[0] - b[0], a[2] - b[2]);
     {
         let (st, pl) = (g.gd[gd].state, &g.pl[p]);
         if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || g.cond[pl.ch].down || pl.holding.is_some() || pl.takedown.is_some() || pl.kick.is_some() || pl.picking.is_some() || pl.wanding.is_some() {
@@ -791,11 +785,8 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         by: crate::game::GuardHeldBy::Player,
         since: g.time,
         variant,
-        phase: crate::character::HoldPhase::Grab,
-        reverse: false,
     });
     if g.gd[gd].civ.is_some() { crate::civilians::civilian_grabbed(g, gd); }
-    if g.ai_enabled { g.gd[gd].witness.was_held += 1.0; }
     let talk = g.gd[gd].talk;
     g.tab.game_talk[talk].held_since = g.time;
     let serial = g.serial();
@@ -817,7 +808,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         ..Hold::default()
     });
     crate::disarm::disarm_begin(g);
-    if let Some(k) = kind { crate::close::close_took(g, gd, crate::close::CloseTookWhat::Grab, k, b0, r0); }
+    if let Some(k) = kind { crate::close::close_took(crate::close::CloseTookWhat::Grab); }
     g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.k.hold.secs.grab);
     let chest = v3::add(g.ch[gc].pos, [0.0, 1.4, 0.0]);
     crate::disarm::disarm_catch(g, chest);

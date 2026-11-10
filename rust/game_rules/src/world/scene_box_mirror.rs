@@ -264,7 +264,6 @@ fn box_mirror_boot(g: &mut crate::game::Game) {
     };
     let x = &mut g.col.mirror;
     x.caps = c;
-    x.list_cap = cap(T_LIST);
     if c.glass != PANE_CAP || c.view != PANE_CAP {
         panic!("the Rust module holds {} broken panes and a view of {}: src/scene/boxMirror.ts says {} of each", c.glass, c.view, PANE_CAP);
     }
@@ -286,8 +285,6 @@ fn box_mirror_take(g: &mut crate::game::Game) -> bool {
     if g.col.mirror.caps.boxes == 0.0 {
         box_mirror_boot(g);
     }
-    g.m.scene_box_mirror.clock.n += 1.0;
-    g.col.mirror.used = g.m.scene_box_mirror.clock.n;
     if g.col.mirror.slot >= 0.0 {
         return false; // (no other game can have taken it: g.sim)
     }
@@ -298,7 +295,7 @@ fn box_mirror_take(g: &mut crate::game::Game) -> bool {
 }
 
 /// A TICK OPENS: the copy is made the boxes as they stand.
-pub(super) fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, cs: f64, leaves: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, glass: Option<&crate::scene_box_mirror::PaneSource>, lines: bool, circles: bool, rays: bool) {
+pub(super) fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, cs: f64, leaves: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, glass: Option<&crate::scene_box_mirror::PaneSource>, lines: bool, rays: bool) {
     g.col.mirror.walk = walk.map(|_| crate::FnField); // (the rule itself is g.col.glass_walkable: kind_at_copy)
     g.col.mirror.glass = glass.cloned();
     let fresh = box_mirror_take(g);
@@ -343,11 +340,9 @@ pub(super) fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells:
     x.owed = 0.0;
     x.row_lines = lines;
     x.row_rays = rays;
-    x.row_circles = circles;
     x.live = true;
     x.lines = lines;
     x.rays = rays;
-    x.circles = circles;
     copied(g);
 }
 
@@ -377,7 +372,6 @@ pub(super) fn box_mirror_shut(g: &mut crate::game::Game) {
     x.live = false;
     x.lines = false;
     x.rays = false;
-    x.circles = false;
     x.owes = false;
     x.owed = 0.0;
     x.own = None;
@@ -531,7 +525,6 @@ fn box_mirror_debt(g: &mut crate::game::Game, what: f64) {
         x.owes = true;
         x.lines = false;
         x.rays = false;
-        x.circles = false;
     }
 }
 
@@ -612,7 +605,6 @@ pub(super) fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk:
     }
     x.lines = x.row_lines;
     x.rays = x.row_rays;
-    x.circles = x.row_circles;
 }
 
 /// The grid was written: the same debt, and the compare that pays it copies the cells again first.
@@ -632,7 +624,7 @@ fn box_mirror_panes(g: &mut crate::game::Game) {
         }
     }
     // (`G.home`, `G.sheets` and `G.view` are live getters of the game's glass there: the held source says only that it is hung)
-    let home = if g.col.mirror.glass.is_some() { crate::glassbreak::glass_break_home(g) } else { None };
+    let home = if g.col.mirror.glass.is_some() { crate::glassbreak::glass_break_home() } else { None };
     if home.is_some() {
         panes_home(g, home);
         let sh = crate::glassbreak::glass_break_sheets(g);

@@ -86,7 +86,7 @@ fn fresh(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> ThrowPl
 fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Option<SquadThrower>) -> ThrowPlan {
     let (mut refuse, mut warn, mut walk) = (None, None, None);
     match &thrower {
-        None => refuse = Some(String::from(if left(g, kind) > 0.0 { "no throw from here." } else { none(g, kind).as_str() })),
+        None => refuse = Some(String::from(if left(g, kind) > 0.0 { "no throw from here." } else { none(kind).as_str() })),
         Some(th) => {
             if kind == SquadThrowKind::Frag {
                 let stands = th.post.unwrap_or(g.ch[g.gd[th.gd].ch].pos);
@@ -131,7 +131,6 @@ pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[Guard
     let at = crate::orders::rows::at(t);
     let p = plan_for(g, men, at, kind);
     if let Some(why) = p.refuse {
-        g.stats.squadthrow.refused += 1;
         return Some(why);
     }
     let mut th = p.thrower.expect("a plan that is not refused has a thrower");
@@ -140,9 +139,9 @@ pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[Guard
         return None;
     }
     let what = if kind == SquadThrowKind::Frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang };
-    if !crate::doortools::door_tools_take(g, what) { return Some(String::from(none(g, kind).as_str())); }
+    if !crate::doortools::door_tools_take(g, what) { return Some(String::from(none(kind).as_str())); }
     let arc = Arc { from: th.from, sol: th.sol, rest: th.rest };
-    throw_it(g, th.gd, &arc, kind, at);
+    throw_it(g, th.gd, &arc, kind);
     squad_log_row(g, th.gd, row_of(kind).as_str(), at);
     None
 }

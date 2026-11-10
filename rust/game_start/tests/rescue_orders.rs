@@ -117,7 +117,7 @@ fn a_man_searching_the_room_pans_to_both_sides_of_its_middle() {
     let middle = [(room.x0 + room.x1) / 2.0, (room.z0 + room.z1) / 2.0];
     let at = [middle[0], room.z1 - 0.6];
     let seat = game::seats::here(&p.g);
-    let a = game::orders::squad_orders_of(&p.g, &seat, man).expect("on the bang and clear");
+    let a = game::orders::squad_orders_of(&seat, man).expect("on the bang and clear");
     let mid_yaw = (middle[0] - at[0]).atan2(middle[1] - at[1]);
     let (mut least, mut most) = (0.0f64, 0.0f64);
     for _ in 0..360 {

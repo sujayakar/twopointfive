@@ -11,9 +11,6 @@ fn num_key(x: f64) -> crate::Num { crate::Num(x + 0.0) }
 
 fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
 
-/// The panel's rows kept in the browser's storage: host work, nothing of the game moves. pairup.ts:85 calls it, so it answers rather than panics.
-pub fn save_sneak(g: &crate::game::Game) {}
-
 /// Was this leaf seen to move inside the settle time? Read at the plan's rate, for the doors Sam is at.
 pub(super) fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
     let angle = crate::doors::door_angle(g, d);
@@ -29,10 +26,6 @@ pub(super) fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
 }
 
 pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
-/// What he did, newest last.
-pub(super) fn note(g: &crate::game::Game, gd: GuardId, what: &str) {
-}
 
 /// The sneak is live for the squad this frame; one read a frame.
 pub(super) fn sneak_live(g: &mut crate::game::Game) -> bool {
@@ -50,7 +43,7 @@ fn sneak_live_now(g: &mut Game) -> bool {
     if crate::silent::silent_compromised(g, &crate::seats::here(g)) { return false; }
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) { return false; }
-    if crate::pairup::pair_up(g, crate::pairup::PairUpRule::Hunted) && g.k.spotted.on {
+    if crate::pairup::pair_up(g) && g.k.spotted.on {
         let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
         for gd in squad {
             if !crate::condition::down(g, g.gd[gd].ch) && crate::spotted::spotted_mode(g, gd) == crate::spotted::SpottedMode::Caught { return false; }
@@ -116,7 +109,6 @@ pub fn sneak_coming(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool 
         let qx = a[0] + dx * k;
         let qz = a[2] + dz * k;
         if m::hyp2(p[0] - qx, p[2] - qz) < g.k.sneak.noise_walk_m && !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [qx, 0.45, qz], None) {
-            g.stats.sneak.noise_walks += 1;
             return true;
         }
         a = b;
@@ -338,7 +330,6 @@ fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f6
 
 /// The sneak's eye over any walk by `gd`: every living defender hostile to him and not dazzled, each as guards.ts builds his eye and, where `habit` gives it, as he mostly looks.
 pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> Option<[f64; 2]>>) -> crate::sneak::SneakWalk {
-    g.stats.pairup.eye_asks += 1;
     let mut habit = habit;
     let wide = g.k.sneak.cone_deg * g.k.sneak.skill;
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };

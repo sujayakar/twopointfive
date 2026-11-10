@@ -153,11 +153,6 @@ pub fn prop_system_new(g: &mut Game, defs: &[crate::scene_level::PropDef]) -> Pr
         sys.all.push(id);
     }
     sys.props = sys.all.clone();
-    for &p in &sys.props {
-        for &b in &g.tab.props_prop[p].boxes {
-            sys.by_box.set(b, p);
-        }
-    }
     let old = core::mem::replace(&mut g.props, sys);
     prop_system_settle(g);
     core::mem::replace(&mut g.props, old)
@@ -311,18 +306,12 @@ pub fn prop_system_update(g: &mut Game, dt: f64, contacts: &mut [PropContact], l
             emit(g, e);
         }
     }
-    let mut awake = 0;
     for r in 0..n {
         let id = g.props.props[r];
-        let (dirty, asleep) = (g.tab.props_prop[id].dirty, g.tab.props_prop[id].asleep);
-        if dirty {
+        if g.tab.props_prop[id].dirty {
             prop_place(g, id);
         }
-        if !asleep {
-            awake += 1;
-        }
     }
-    g.props.stats.awake = awake as f64;
 }
 
 /// the substeps of one tick: the men's places and the things' records written, the noises listed

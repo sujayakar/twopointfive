@@ -118,7 +118,7 @@ pub fn ring_want(g: &crate::game::Game, r: &mut crate::cmdring::RingState, input
     let (lone, shapes) = (lone.unwrap_or(0.0), shapes.unwrap_or(0.0));
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     let wedges = g.k.cmdring.wedges;
-    let pill = lone > 0.0 && crate::ringlone::on_pill(g, lone, wedges, (mouse_x - r.ax) / r.z, (mouse_y - r.ay) / r.z);
+    let pill = lone > 0.0 && crate::ringlone::on_pill(lone, wedges, (mouse_x - r.ax) / r.z, (mouse_y - r.ay) / r.z);
     ring_want_on(&g.k.cmdring, r, mouse_x, mouse_y, digit, time, lone, shapes, pill)
 }
 

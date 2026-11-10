@@ -15,8 +15,6 @@ pub struct QuietMission {
     pub squad: f64,
     pub pin: Option<f64>,
     #[is(crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 })] pub deal: crate::quiet::QuietDeal,
-    pub staged: f64,
-    pub log: Vec<String>,
     pub data: Option<crate::scene_scenarios::QuietData>,
     pub authored: Option<crate::quiet::QuietMissionAuthored>,
     pub benched: Vec<GuardId>,
@@ -63,14 +61,6 @@ pub struct HolderStand {
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMod {
     pub holder: bool,
-}
-
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct QuietStats {
-    pub starts: i32,
-    pub deals: i32,
-    pub mates: i32,
 }
 
 pub const EXIT_HALF_W: f64 = 1.8;

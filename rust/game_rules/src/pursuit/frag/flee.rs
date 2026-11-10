@@ -94,7 +94,7 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let j = judge_at(g, b, id, d, Shows::Lying(&pts));
     if j.r != Some(BlastResult::Killed) && !(j.r == Some(BlastResult::Wounded) && j.d <= b.lethal) { return; }
     let (callsign, team) = (g.gd[gd].callsign.clone(), g.gd[gd].team);
-    rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed, behind: None });
+    rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed });
     rep.killed += 1.0;
     rep.finished += 1.0;
     if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
@@ -135,8 +135,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let j = judge(g, b, feet, head, id);
     let Some(r) = j.r else { return };
     rep.player = Some(r);
-    let behind = if r == BlastResult::Stunned { j.behind } else { None };
-    rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r, behind });
+    rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r });
     if r == BlastResult::Killed {
         if g.god_mode {
             rep.player = Some(BlastResult::Wounded);
@@ -160,7 +159,6 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
         if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
         g.pl[pl].throw_held = false;
         g.pl[pl].pending_throw = None;
-        g.stats.frag.sam_stunned += 1;
     }
 }
 
@@ -171,7 +169,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
     let serial = match spec.serial { Some(s) => s, None => m::floor(g.time * 1000.0) };
     let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
     let name: String = match &spec.name { Some(n) => n.clone(), None => String::from("frag grenade") };
-    let mut rep = BlastReport { at: v3::copy(at), hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
+    let mut rep = BlastReport { at: v3::copy(at), hits: Vec::new(), killed: 0.0, finished: 0.0, player: None };
     let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
@@ -259,10 +257,9 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
         let j = judge(g, &b, pos, head, id);
         let Some(r) = j.r else { continue };
         let team = g.gd[gd].team;
-        rep.hits.push(BlastHit { id, team, exposed: j.e, result: r, behind: if r == BlastResult::Stunned { j.behind } else { None } });
-        if r == BlastResult::Shielded { rep.shielded += 1.0; continue; }
+        rep.hits.push(BlastHit { id, team, exposed: j.e, result: r });
+        if r == BlastResult::Shielded {  continue; }
         if same_side(side, team) && js::truthy(spec.who) { g.stats.frag.own += 1; }
-        if r == BlastResult::Stunned { rep.stunned += 1.0; }
         if r == BlastResult::Killed {
             rep.killed += 1.0;
             let dir = away(at, g.ch[c].pos);
@@ -271,7 +268,6 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
             crate::seats::on_seat(g, thrower, &mut |g| crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), crate::game::With::Blast(&b.name)));
             if js::truthy(spec.who) { g.gd[gd].killer_id = spec.who; }
         } else {
-            if r == BlastResult::Wounded { rep.wounded += 1.0; }
             if g.gd[gd].civ.is_none() {
                 let u = v3::clamp(j.d / wound, 0.0, 1.0);
                 let st = g.k.frag.stagger;
@@ -288,10 +284,6 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
     crate::seats::each_seat(g, &mut |g: &mut Game| seat_blast(g, &b, &mut rep));
     crate::morale::morale_blast(g, at, Some(spec.who));
     g.stats.frag.bursts += 1;
-    g.stats.frag.killed += rep.killed as i32;
-    g.stats.frag.wounded += rep.wounded as i32;
-    g.stats.frag.shielded += rep.shielded as i32;
-    g.stats.frag.stunned += rep.stunned as i32;
     g.m.frag.frag_log.push(rep.clone());
     if g.m.frag.frag_log.len() > 64 { g.m.frag.frag_log.remove(0); }
     rep
@@ -490,7 +482,7 @@ pub fn frag_marks(g: &crate::game::Game) -> Vec<crate::view::FragMark> {
 }
 
 /// The height a grenade lying at y is judged from, less the lift: what it lies on.
-fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
+fn rest_y(y: f64) -> f64 {
     m::max(0.05, y)
 }
 
@@ -504,7 +496,7 @@ pub(super) fn rest_of(g: &mut crate::game::Game, l: usize) -> crate::frag::Rest 
     }
     let rest = if settled {
         let p = g.tab.item[it].pos;
-        Rest { t: time, still: true, at: [p[0], rest_y(g, p[1]), p[2]], path: Vec::new() }
+        Rest { t: time, still: true, at: [p[0], rest_y(p[1]), p[2]], path: Vec::new() }
     } else {
         let r = roll_on(g, it, None, None, None);
         Rest { t: time, still: false, at: r.at, path: r.path }
@@ -767,7 +759,6 @@ fn door_on_frame(g: &Game, b: V3, x: DoorId) -> bool {
 }
 /// The floor's own way from `a` to `p` through doorway `d`: its length, or -1 (no way, a door not open on it, a step nearer the thing, not through `d`), -2 (a leaf stands in it).
 fn door_walk(g: &mut Game, k: &DoorDeal, a: V3, p: V3, d: DoorId) -> f64 {
-    g.stats.frag.door_walks += 1;
     let nodes = g.k.frag.flee_door_nodes;
     let Some(mut way) = find_way(g, a, p, nodes, k.who) else { return -1.0 };
     let (mut q, mut len, mut thru) = (a, 0.0, false);

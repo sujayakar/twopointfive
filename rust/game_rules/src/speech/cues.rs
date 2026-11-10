@@ -204,7 +204,7 @@ pub fn cue_class(text: &str) -> f64 {
 }
 
 /// A kind's lines as they are said now.
-fn said(g: &mut crate::game::Game, k: crate::cues::CueKind) -> Vec<String> {
+fn said(k: crate::cues::CueKind) -> Vec<String> {
     let l = line_of(k);
     l.guide.or(l.now).unwrap_or(l.say).iter().map(|s| String::from(*s)).collect()
 }
@@ -217,20 +217,10 @@ fn is_shout(text: &str) -> bool {
 /// The tallies as a new encounter has them.
 fn new_stats() -> crate::cues::CuesStats {
     CuesStats {
-        heard: 0.0,
-        heard_drawn: 0.0,
-        shouts: 0.0,
-        shouts_drawn: 0.0,
         cues: 0.0,
-        cue_net: 0.0,
-        cue_drawn: 0.0,
         dup: 0.0,
         gap: 0.0,
         full: 0.0,
-        bumped: 0.0,
-        bumped_young: 0.0,
-        filed: vec![0.0; 7],
-        drawn: vec![0.0; 7],
     }
 }
 
@@ -240,7 +230,7 @@ fn flat(a: V3, b: V3) -> f64 {
 }
 
 /// A new Cues: the field initialisers, nothing more.
-pub fn cues_new(g: &crate::game::Game) -> crate::cues::Cues {
+pub fn cues_new() -> crate::cues::Cues {
     Cues::blank()
 }
 
@@ -269,8 +259,7 @@ fn prune_rows(g: &mut Game) {
 }
 
 /// `done` of `file`: tally, log, answer.
-fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFileKind, drawn: bool, why: &str) -> bool {
-    if drawn { g.cues.stats.drawn[cls as usize] += 1.0; }
+fn file_done(g: &mut Game, drawn: bool, why: &str) -> bool {
     g.cues.log.push(CuesLogItem { why: String::from(why) });
     if g.cues.log.len() > 400 { g.cues.log.drain(0..100); }
     drawn
@@ -281,7 +270,6 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
     let t = g.time;
     prune_rows(g);   // (`live` of the TypeScript IS this.rows: every write below goes to g.cues.rows)
     let c = cls as usize;
-    g.cues.stats.filed[c] += 1.0;
     // (the same words from another man are the same news)
     let words: &str = if kind == CuesFileKind::Raw || who.is_empty() { text } else {
         match text.strip_prefix(who).and_then(|r| r.strip_prefix(": ")) { Some(r) => r, None => text }
@@ -292,13 +280,13 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
     if cls > 0.0 {
         if within(g.cues.said.get(String::from(words)).copied(), g.k.cues.dup_secs) {
             g.cues.stats.dup += 1.0;
-            return file_done(g, t, text, cls, who, kind, false, "dup");
+            return file_done(g, false, "dup");
         }
         let gap = g.k.cues.gaps.get(c).copied().unwrap_or(0.0);   // (a squad's word waits only on another squad's; with the strip nearly empty nobody waits)
         let clock = if squad { sparse_get(&g.cues.squad_t, c) } else { sparse_get(&g.cues.class_t, c) };
         if g.cues.rows.len() as f64 >= g.k.cues.rows - 1.0 && within(clock, gap) {
             g.cues.stats.gap += 1.0;
-            return file_done(g, t, text, cls, who, kind, false, "gap");
+            return file_done(g, false, "gap");
         }
     }
     if g.cues.rows.len() as f64 >= g.k.cues.rows {   // the strip is full: whose place does it take?
@@ -323,11 +311,9 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
         }
         if no_room {
             g.cues.stats.full += 1.0;
-            return file_done(g, t, text, cls, who, kind, false, "full");
+            return file_done(g, false, "full");
         }
-        if t - g.cues.rows[v].t < 1.5 { g.cues.stats.bumped_young += 1.0; }
         g.cues.rows.remove(v);
-        g.cues.stats.bumped += 1.0;
     }
     if cls > 0.0 { g.cues.squelch_due = true; }   // (a row that arrives is heard arriving: tick, once a frame)
     g.cues.rows.push(CueRow { t, text: String::from(text), cls, rank });
@@ -343,7 +329,7 @@ fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kind: c
         }
         g.cues.said.pack();
     }
-    file_done(g, t, text, cls, who, kind, true, "")
+    file_done(g, true, "")
 }
 
 /// A row in the first class with no man's name on it: control, the handler, the staff's net.
@@ -359,9 +345,8 @@ fn net_row(callsign: &str, text: &str) -> String {
 /// A unit's line went out on his side's net: the strip gets it.
 pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
     if g.gd[gd].team != crate::teams::Team::Hostile || !crate::roomfight::fight_live(g) { return; }
-    g.cues.stats.heard += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    if cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard) { g.cues.stats.heard_drawn += 1.0; }
+    let _ = cues_file(g, &net_row(&callsign, text), cue_class(text), &callsign, CuesFileKind::Heard);
 }
 
 /// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).
@@ -369,9 +354,8 @@ pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: true });
     if !crate::roomfight::fight_live(g) { return; }
-    g.cues.stats.heard += 1.0;
     let callsign = g.gd[gd].callsign.clone();
-    if cues_file(g, &net_row(&callsign, text), cls, &callsign, CuesFileKind::Heard) { g.cues.stats.heard_drawn += 1.0; }
+    let _ = cues_file(g, &net_row(&callsign, text), cls, &callsign, CuesFileKind::Heard);
 }
 
 /// A teammate calls what the fog hides: a bubble, and a row in the first class. Whether the strip drew it.
@@ -400,7 +384,7 @@ fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
 }
 
 /// `done` of `overheard`.
-fn heard_done(g: &Game, t: f64, text: &str, why: &str) -> bool {
+fn heard_done(why: &str) -> bool {
     why.is_empty()
 }
 
@@ -417,12 +401,11 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
             g.cues.heard_said.clear();
         }
     }
-    g.cues.stats.shouts += 1.0;
     let within = |at: Option<f64>, secs: f64| at.is_some_and(|at| t - at < secs);
-    if within(g.cues.heard_said.get(String::from(text)).copied(), g.k.cues.dup_secs) { return heard_done(g, t, text, "dup"); }
-    if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done(g, t, text, "gap"); }
+    if within(g.cues.heard_said.get(String::from(text)).copied(), g.k.cues.dup_secs) { return heard_done("dup"); }
+    if within(g.cues.shout_t, g.k.cues.overheard_gap) { return heard_done("gap"); }
     let secs = g.k.cues.secs;
-    if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done(g, t, text, "full"); }
+    if g.cues.rows.iter().filter(|r| r.t <= t && t - r.t < secs).count() as f64 >= g.k.cues.rows { return heard_done("full"); }
     let p = g.ch[g.gd[gd].ch].pos;
     let mouth: V3 = [p[0], p[1] + 1.2, p[2]];
     let reach = g.k.digin.shout_m;
@@ -432,13 +415,12 @@ pub fn cues_overheard(g: &mut crate::game::Game, gd: GuardId, text: &str) -> boo
         let h = crate::weather::hear_path(g, mouth, ear, Some(false));
         if h.path_len < reach * h.carry { reached = true; break; }
     }
-    if !reached { return heard_done(g, t, text, "far"); }
+    if !reached { return heard_done("far"); }
     if g.cues.heard_said.len() > 64 { g.cues.heard_said.clear(); }
     g.cues.heard_row = Some(CuesHeardRow { t, text: String::from(text) });
     g.cues.heard_said.set(String::from(text), t);
     g.cues.shout_t = Some(t);
-    g.cues.stats.shouts_drawn += 1.0;
-    heard_done(g, t, text, "")
+    heard_done("")
 }
 
 /// Seconds until the strip would take a line of this class without dropping it for the class's gap (0 = now).
@@ -554,7 +536,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     if cues_kind_busy(g, kind) { return false; }   // (the floor has just heard this from somebody)
     *kind_t_of(&mut g.cues.kind_t, kind) = Some(t);
     let cls = line_of(kind).cls;
-    let say = said(g, kind);
+    let say = said(kind);
     let n = g.cues.n;
     g.cues.n += 1.0;
     let callsign = g.gd[gd].callsign.clone();
@@ -566,8 +548,7 @@ fn cues_cue(g: &mut crate::game::Game, gd: GuardId, kind: crate::cues::CueKind, 
     *tally = Some(tally.unwrap_or(0.0) + 1.0);
     if !own { g.cues.bubbles.set(gd, Bubble { text: text.clone(), t, dur: crate::guards::bubble_secs(&text), radio: cls > 0.0 }); }
     if cls == 0.0 { return true; }
-    g.cues.stats.cue_net += 1.0;
-    if cues_file(g, &net_row(&callsign, &text), cls, &callsign, file_kind(kind)) { g.cues.stats.cue_drawn += 1.0; }
+    let _ = cues_file(g, &net_row(&callsign, &text), cls, &callsign, file_kind(kind));
     true
 }
 
@@ -582,7 +563,6 @@ fn cues_kind_busy(g: &mut crate::game::Game, kind: crate::cues::CueKind) -> bool
 
 /// Can he speak for his squad?
 fn cues_fit(g: &crate::game::Game, gd: GuardId) -> bool {
-    let t = g.time;
     !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::condition::is_blind(g, g.gd[gd].ch) && !crate::condition::is_folded(g, g.gd[gd].ch) && !crate::runner::runner_mute(g, gd)
 }
 

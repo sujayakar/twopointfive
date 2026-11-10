@@ -13,6 +13,6 @@ pub const ORDER: Row = Row {
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("go silent") }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    crate::silent::set_silent(g, true, Some(crate::silent::By::Order));
+    crate::silent::set_silent(g, true);
     None
 }

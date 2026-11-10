@@ -13,8 +13,7 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 }
 
 /// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated
-pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
-    crate::scene_boxes::box_world_reset_capsules(g);
+pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId]) {
     let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
     if drawn.len() > 8 && g.staged.facts.fight {
         let mut down: Vec<CharId> = Vec::new();
@@ -29,7 +28,6 @@ pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured:
     if g.tab.rig[g.rig].cast.is_some() {
         for &c in drawn.iter() { let parts = crate::cast::cast_parts(g, c); g.ch[c].parts = parts; }
     }
-    crate::anim_characters::character_renderer_finish(g, 0.0);
 }
 
 /// what each guard's line to the man he faces has of smoke and weather on it, and how lit each seat's man is
@@ -134,7 +132,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         bodies.push(ch);
         for i in crate::game::body_door_particles() {
             let p = crate::ragdoll::ragdoll_point(g, rag, i, None);
-            let radius = crate::ragdoll::ragdoll_radius(g, rag, i);
+            let radius = crate::ragdoll::ragdoll_radius(i);
             body_contacts.push((contacts.len(), ch, i));
             of.push(None);
             contacts.push(DoorContact { pos: p, radius, bash: false, who: g.ch[ch].id, quiet: true, weak: Some(true), ..DoorContact::default() });

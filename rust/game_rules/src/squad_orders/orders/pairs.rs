@@ -230,9 +230,6 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
             best: Vec::new(), bc: m::INF, best0: Vec::new(), bc0: m::INF,
         };
         pair_rec(g, &mut s, 0, 0.0);
-        if s.cross.is_some() && s.best.len() == n && s.best.iter().zip(s.best0.iter()).any(|(a, b)| a != b) {
-            g.m.doorway.stack_own.queue += 1.0;
-        }
         if s.best.len() == n {
             return men.iter().enumerate().map(|(i, &gd)| (gd, spots[s.best[i]])).collect();
         }
@@ -251,7 +248,6 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
             None => (0.0, 0.0),
         };
         let keeps = d00 + d11 + gc01 + xc01 <= d01 + d10 + gc10 + xc10;
-        if cross.is_some() && (d00 + d11 + gc01 <= d01 + d10 + gc10) != keeps { g.m.doorway.stack_own.queue += 1.0; }
         return if keeps { vec![(men[0], spots[0]), (men[1], spots[1])] } else { vec![(men[0], spots[1]), (men[1], spots[0])] };
     }
     let mut left: Vec<V3> = spots.to_vec();
@@ -276,7 +272,7 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {
-        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g, crate::pairup::PairUpRule::Word) {
+        let w = if g.tab.orders_assignment[a].post.is_none() && crate::pairup::pair_up(g) {
             crate::sneak::sneak_word(g, gd)
         } else { None };
         let word = if squad_orders_shown_there(g, a) { g.tab.orders_assignment[a].there.clone() } else { g.tab.orders_assignment[a].going.clone() };
@@ -286,18 +282,10 @@ pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRe
             _ => word,
         };
     }
-    for own in [true, false] {
-        let mut i = 0;
-        while i < seat.orders.owners.len() {
-            if crate::mission::has(g, gd) == own {
-                if let Some(s) = crate::mission::doing(g, gd) {
-                    if !s.is_empty() { return s; }
-                }
-            }
-            i += 1;
-        }
+    match crate::mission::doing(g, gd) {
+        Some(s) if !s.is_empty() => s,
+        _ => String::from("no orders"),
     }
-    String::from("no orders")
 }
 
 /// Who the next order goes to, as the panel names it.
@@ -387,11 +375,7 @@ pub fn prop_way(g: &crate::game::Game, from: V3, plain: &[V3], round: Option<&[V
 /// The cells about every movable thing made dear, for a teammate only. None: `pen` itself, untouched, and the one search is the search it was.
 pub fn prop_penalty(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, pen: Option<&crate::lanes::LanePenalty>) -> Option<crate::orders::PropPenalty> {
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
-    let mut i = 0;
-    while i < seat.orders.owners.len() {
-        if crate::mission::has(g, gd) { return None; }
-        i += 1;
-    }
+    if crate::mission::has(g, gd) { return None; }
     let (pad, by) = (g.k.orders.prop_round_pad, g.k.orders.prop_round_door);
     let cs = g.col.nav.cell;
     let mut dear: JsSet<crate::Num> = JsSet::new();

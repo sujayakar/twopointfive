@@ -45,7 +45,7 @@ fn rescue_flow_f(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rescue
     crate::rescue::rescue_data(g).and_then(|d| d.flow)
 }
 
-pub(super) fn rescue_flow_new(g: &crate::game::Game) -> crate::rescueflow::RescueFlow {
+pub(super) fn rescue_flow_new() -> crate::rescueflow::RescueFlow {
     RescueFlow::blank()
 }
 
@@ -390,7 +390,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
         if crate::condition::down(g, g.gd[op].ch) {
             continue;
         }
-        let Some(a) = crate::orders::squad_orders_of(g, seat, op) else { continue };
+        let Some(a) = crate::orders::squad_orders_of(seat, op) else { continue };
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
         if flat(g.ch[g.gd[op].ch].pos, post) > 1.2 {
             continue;
@@ -509,7 +509,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         // (what the turn reads, as locals: a job only ever ends or changes on its own man's turn; the row itself is cloned only once the job is done)
         let Some(j) = g.rescue.flow.jobs.get(gd) else { continue };
         let (kind, ja, t0, mut on_t, said_hot, said_wait, leap, has_chain, mark, at, look, side) = (j.kind, j.a, j.t0, j.on_t, j.said_hot, j.said_wait, j.leap, !j.chain.is_empty(), j.o.mark, j.o.at, j.o.look, j.o.side);
-        let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
+        let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd);
         if crate::condition::down(g, g.gd[gd].ch) || crate::rescue::rescue_owns(g, gd) {
             // (down on the job: what was queued behind him is wanted again)
             let gone = g.rescue.flow.jobs.delete(gd);
@@ -523,7 +523,6 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         if a != Some(ja) {
             // Sam's own order has him: the flow lets go, and does not send the next man to the same openings
             g.rescue.flow.jobs.delete(gd);
-            g.rescue.flow.stats.overridden += 1.0;
             let note = alloc::format!("flow:override:{}", g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
             continue;
@@ -555,7 +554,6 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
             if t - last < k.hot_hold {
                 if !said_hot {
                     g.rescue.flow.jobs.get_mut(gd).unwrap().said_hot = true;
-                    g.rescue.flow.stats.hot_holds += 1.0;
                     crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None);
                     let note = alloc::format!("flow:hold:{}:{}", g.rescue.flow.jobs.get(gd).unwrap().o.id, g.gd[gd].callsign);
                     crate::rescue::rescue_note(g, &note);
@@ -590,7 +588,6 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         }
         if let Some(n) = &next {
             if rescue_flow_stays(g, &crate::seats::here(g)) {
-                g.stats.pairup.stays += 1;
                 crate::rescue::rescue_note(g, &alloc::format!("flow:stay:{}", n.id));
                 next = None;
             }
@@ -616,7 +613,6 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
     }
     if !g.rescue.flow.want.is_empty() && rescue_flow_stays(g, &crate::seats::here(g)) {
         for id in g.rescue.flow.want.keys() {
-            g.stats.pairup.stays += 1;
             crate::rescue::rescue_note(g, &alloc::format!("flow:stay:{}", id));
         }
         g.rescue.flow.want.clear();
@@ -631,7 +627,6 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         }
         if t - at > k.want_secs {
             g.rescue.flow.want.delete(o.id.clone());
-            g.rescue.flow.stats.unmanned += 1.0;
             crate::rescue::rescue_note(g, &alloc::format!("flow:unmanned:{}", o.id));
             continue;
         }
@@ -655,7 +650,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
                 let op = g.staged.team[i];
                 i += 1;
                 if !crate::condition::down(g, g.gd[op].ch) && !crate::rescue::rescue_owns(g, op) {
-                    if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) {
+                    if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), op) {
                         if crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
                             file += 1;
                         }
@@ -704,11 +699,10 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
                     ..Default::default()
                 },
             );
-            let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
+            let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
             g.rescue.flow.mine.add(a);
             let id = o.id.clone();
             g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Corridor, o, a, t0: t, on_t: f64::NAN, chain: Vec::new(), said_hot: false, said_wait: false, leap: false });
-            g.rescue.flow.stats.corridor += 1.0;
             crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None);
             let note = alloc::format!("flow:corridor:{}:{}", id, g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
@@ -730,7 +724,7 @@ fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteO
 
 /// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody.
 fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    crate::pairup::pair_up(g, crate::pairup::PairUpRule::Stay) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
+    crate::pairup::pair_up(g) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
 }
 
 /// The men the flow may send: alive, falling in, not F's, not in a fight, not blind; the LAST in the file first.
@@ -743,7 +737,7 @@ fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
         if crate::condition::down(g, g.gd[gd].ch) || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || crate::control::man::blind(g, gd) {
             continue;
         }
-        let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
+        let Some(a) = crate::orders::squad_orders_of(seat, gd) else { continue };
         if !crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
             continue;
         }
@@ -777,7 +771,7 @@ fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_sce
             ..Default::default()
         },
     );
-    let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd).unwrap();
+    let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
     g.rescue.flow.mine.add(a);
     let t0 = g.time;
     g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Cover, o: o.clone(), a, t0, on_t: f64::NAN, chain: chain.to_vec(), said_hot: false, said_wait, leap });
@@ -806,7 +800,7 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
             ..Default::default()
         },
     );
-    if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) {
+    if let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), gd) {
         g.rescue.flow.mine.add(a);
     }
     if let Some(w) = words {
@@ -817,7 +811,7 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
 fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
     for gd in g.rescue.flow.jobs.keys() {
         let Some(j) = g.rescue.flow.jobs.delete(gd) else { continue };
-        if back && !crate::condition::down(g, g.gd[gd].ch) && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) == Some(j.a) {
+        if back && !crate::condition::down(g, g.gd[gd].ch) && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(&crate::seats::here(g), gd) == Some(j.a) {
             rescue_flow_rejoin(g, gd, None);
         }
     }

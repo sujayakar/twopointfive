@@ -92,7 +92,6 @@ pub fn squad_orders_show(g: &mut crate::game::Game, men: &[GuardId]) {
     let who: Vec<String> = men.iter().filter(|&&m| !crate::condition::down(g, g.gd[m].ch)).map(|&m| g.gd[m].callsign.clone()).collect();
     g.orders.shows.push(SquadOrdersShowsItem { t, who });
     if g.orders.shows.len() > 16 { g.orders.shows.drain(0..8); }
-    g.stats.autopilot.shows += 1;
 }
 
 /// The built-in rows of the menu and the night breach's owner.
@@ -134,7 +133,6 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
         s.defs.push(d);
     }
     // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (mission::has, lets_go, doing)
-    s.owners.push(SquadOwner {  });
     s
 }
 
@@ -170,12 +168,12 @@ pub fn squad_orders_mine(g: &crate::game::Game, seat_ref: &crate::seats::SeatRef
 }
 
 /// The player is one of these men's own.
-pub fn squad_orders_sams(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub fn squad_orders_sams(seat: &crate::seats::SeatRef) -> bool {
     seat.orders.cast.is_none()
 }
 
 /// Whose side a can of theirs is.
-pub fn squad_orders_team(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::teams::Team {
+pub fn squad_orders_team(seat: &crate::seats::SeatRef) -> crate::teams::Team {
     match &seat.orders.cast {
         Some(c) => c.team,
         None => crate::teams::Team::Operative,
@@ -271,7 +269,7 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
 }
 
 /// CMDRING.wholeSquad, the player's own squad: every order of his is everyone's.
-pub fn squad_orders_whole(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+pub fn squad_orders_whole(seat: &crate::seats::SeatRef) -> bool {
     seat.orders.cast.is_none()
 }
 
@@ -311,11 +309,11 @@ pub fn squad_orders_tone_of(g: &crate::game::Game, seat: &crate::seats::SeatRef,
     Some(Tone::Gold)
 }
 
-pub fn squad_orders_has(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+pub fn squad_orders_has(seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     seat.orders.asg.has(gd)
 }
 
-pub fn squad_orders_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<OrdersAssignmentId> {
+pub fn squad_orders_of(seat: &crate::seats::SeatRef, gd: GuardId) -> Option<OrdersAssignmentId> {
     seat.orders.asg.get(gd).copied()
 }
 
@@ -600,7 +598,7 @@ pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam:
 pub fn target_under(g: &Game, seat: &crate::seats::SeatRef, now: &crate::view::HostNow, asked: &mut Vec<(f64, f64)>) -> crate::orders::OrderTarget {
     let t = target_under_of(g, seat, now, asked);
     if let OrderTarget::None(x) = &t {
-        if x.man.is_some() && squad_orders_whole(g, seat) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
+        if x.man.is_some() && squad_orders_whole(seat) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
     }
     t
 }

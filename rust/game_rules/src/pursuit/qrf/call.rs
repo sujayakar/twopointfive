@@ -325,24 +325,6 @@ pub(super) fn brief(g: &crate::game::Game) -> String {
 
 // ---------------------------------------------------------------- the trigger and the telegraph
 
-/// Every man of the response, element then perimeter.
-fn all_men(g: &Game) -> Vec<GuardId> {
-    let mut men = g.qrf.men.clone();
-    if let Some(p) = &g.qrf.perim { men.extend(p.men.iter().map(|m| m.gd)); }
-    men
-}
-
-/// The response back to a fresh one; the men handed back to their ordinary heads.
-pub fn reset_qrf(g: &mut crate::game::Game) {
-    drop_drill(g);
-    for m in all_men(g) {
-        if g.gd[m].script.is_some() && g.guards.contains(&m) {
-            crate::squad::end_guard_script(g, m, Some(crate::squad::EndGuardScriptState::Patrol));
-        }
-    }
-    g.qrf = crate::qrf::Qrf::blank();
-}
-
 /// Ask for the response team; refused on the radio once one has come. Returns whether it was requested now.
 pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> bool {
     let m0 = marks_of(g);
@@ -383,9 +365,7 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
     g.qrf.reason = Some(reason);
     g.qrf.requested_at = g.time;
     g.qrf.arrive_at = g.time + m::max(12.0, d.eta);
-    g.qrf.answered = false;
     g.qrf.said30 = false;
-    g.qrf.said10 = false;
     let rd = raid(g);
     let sp = if rd {
         match raid_voice(g) { Some(x) => Some(x), None => callers(g).first().copied() }

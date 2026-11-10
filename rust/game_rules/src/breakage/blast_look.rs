@@ -53,13 +53,7 @@ fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let set = g.wall_charge.set.clone();
     if !g.m.blast_look.state.has(key) {
         if set.is_empty() { return; }
-        g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false, last: -1.0 });
-    }
-    let time = g.time;
-    {
-        let st = g.m.blast_look.state.get_mut(key).unwrap();
-        if time < st.last {  }   // (the clock went back: a load / a restart)
-        st.last = time;
+        g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false });
     }
     // charges gone from the list since last frame: BLOWN (the flash detonateStun lit for it is burning at its stun point) or given back (no flash)
     let mut i = g.m.blast_look.state.get(key).unwrap().seen.len();
@@ -114,7 +108,7 @@ fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: &mut
     /// a piece of the firing line: never thinner than is seen
     fn wire(g: &mut Game, out: &mut Vec<AnyBoxId>, k: &CHARGELOOK, yaw: f64, flags: f64, c: V3, h: V3, emissive: V3) {
         bx(g, out, yaw, flags, c, h, k.wire_albedo, emissive);
-        crate::thinline::thin_note(g, out[out.len() - 1], k.wire / 2.0, k.wire_px / 2.0, emissive[0], emissive[1], emissive[2]);
+        crate::thinline::thin_note(g, out[out.len() - 1], k.wire / 2.0, k.wire_px / 2.0);
     }
     let spill = |albedo: V3, lamp: V3, kk: f64| -> V3 { [albedo[0] * lamp[0] * kk, albedo[1] * lamp[1] * kk, albedo[2] * lamp[2] * kk] };
     // the lamp on the slab's head: dark, and lit for blinkOn of every blinkEvery since it was set
@@ -191,7 +185,7 @@ fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
 /// this view's state, made on first ask
 fn state_mut(g: &mut Game) -> &mut State {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), serial: 1.0, first: false, last: -1.0 })
+    g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), serial: 1.0, first: false })
 }
 
 /// this module's own dice: a counter of its own through a hash

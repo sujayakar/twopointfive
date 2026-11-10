@@ -67,7 +67,7 @@ pub struct RescueFlow {
     pub jobs: JsMap<GuardId, crate::rescueflow::Job>,
     pub passed: JsSet<String>,
     pub want: JsMap<String, f64>,
-    #[is(crate::rescueflow::RescueFlowStats { takes: 0.0, chained: 0.0, corridor: 0.0, overridden: 0.0, hot_holds: 0.0, unmanned: 0.0 })] pub stats: crate::rescueflow::RescueFlowStats,
+    #[is(crate::rescueflow::RescueFlowStats { takes: 0.0, chained: 0.0 })] pub stats: crate::rescueflow::RescueFlowStats,
     pub regions: JsMap<String, RescueflowRegionId>,
     pub mine: JsSet<OrdersAssignmentId>,
     pub sense_at: f64,
@@ -106,10 +106,6 @@ pub struct RescueFlowKnobs {
 pub struct RescueFlowStats {
     pub takes: f64,
     pub chained: f64,
-    pub corridor: f64,
-    pub overridden: f64,
-    pub hot_holds: f64,
-    pub unmanned: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

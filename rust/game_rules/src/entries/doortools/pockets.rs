@@ -430,12 +430,10 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
             let mut first = vec![f];
             first.extend(jamb.iter().copied().filter(|&m| m != f));
             g.tab.doortools_door_op[op].thr.as_mut().unwrap().jamb = first;
-            g.door_tools.led.by_seen += 1.0;
             let what = format!("first:{} · has seen most of the room", g.gd[f].callsign);
             door_tools_beat(g, op, &what);
         }
     }
-    g.door_tools.led.entries += 1.0;
     let o = &g.tab.doortools_door_op[op];
     let (men, lead) = (o.men.clone(), o.lead);
     let thr = o.thr.as_ref().unwrap();

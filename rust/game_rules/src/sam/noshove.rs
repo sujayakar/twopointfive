@@ -1,5 +1,3 @@
-pub use ::game_types::noshove::types;
-pub use types::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -9,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 /// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's.
 pub(super) fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() { return false; }
-    match crate::orders::squad_orders_of(g, seat, gd) {
+    match crate::orders::squad_orders_of(seat, gd) {
         Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
         None => false,
     }
@@ -80,7 +78,6 @@ pub fn no_shove_own(g: &mut Game, dx: f64, dz: f64) -> Option<[f64; 2]> {
     let (sx, sz) = (g.pl[p].shoved[0], g.pl[p].shoved[1]);
     let sl = m::hyp2(sx, sz);
     if sl < 1e-9 { return Some([dx, dz]); }
-    g.stats.noshove.not_walked += 1;
     let c = g.pl[p].ch;
     Some(own_step(g.ch[c].pos, sx, sz, sl, g.pl[p].shoved_from))
 }
@@ -114,7 +111,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
         g.ch[c].pos[0] += ux * step;
         g.ch[c].pos[2] += uz * step;
         settle(g, c, s, l1, [x1, z1]);
-        g.stats.noshove.back += 1;
         return false;
     }
     // closing on him inside the ring. A corner of his way under the player is not walked to: the one after it, where that is a straight walk
@@ -152,7 +148,7 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     if !room(g, c, s, fx, fz, ring, side) {
         side = if room(g, c, s, fx, fz, ring, -side) { -side } else { 0.0 };
     }
-    if side == 0.0 { g.stats.noshove.through += 1; return false; }   // no room either way: he squeezes past, the player unmoved
+    if side == 0.0 {  return false; }   // no room either way: he squeezes past, the player unmoved
     // round: this frame's stride, turned off his line toward that side by how squarely the player is in front of him, and never inside the ring
     let ahead = m::max(0.0, -(ux * fx + uz * fz));
     let dx = fx + fz * side * ahead;
@@ -166,7 +162,6 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     }
     g.ch[c].pos[0] = s[0] + qx;
     g.ch[c].pos[2] = s[2] + qz;
-    g.stats.noshove.round += 1;
     settle(g, c, s, rad, [x1, z1]);   // (the walls eat the turn: he squeezes past after all)
     false
 }
@@ -201,7 +196,6 @@ fn short(g: &mut Game, gd: GuardId, c: CharId, s: V3, rad: f64, ux: f64, uz: f64
     g.ch[c].pos[0] = s[0] + vx * rad;
     g.ch[c].pos[2] = s[2] + vz * rad;
     settle(g, c, s, rad, [x0, z0]);
-    g.stats.noshove.short += 1;
     g.gd[gd].speed = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
     true

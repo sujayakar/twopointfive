@@ -47,4 +47,3 @@ pub struct CutPrism {
 
 pub const MAX_CUT_PLANES: f64 = 8.0;
 
-pub const CUT_STRIDE: f64 = 9.0;
