@@ -149,10 +149,10 @@ pub(super) fn pose_gun_light(g: &mut crate::game::Game) {
     g.tab.light[l].enabled = enabled;
     if enabled {
         let (lens, dir) = if rifle_up {
-            let lp = crate::rig_props::sc20k_light_pose(g, c, None);
+            let lp = crate::rig_props::sc20k_light_pose(g, c);
             (lp.pos, lp.dir)
         } else {
-            let lp = crate::rig_props::rig_light_pose(g, c, None);
+            let lp = crate::rig_props::rig_light_pose(g, c);
             (lp.pos, lp.dir)
         };
         let sh = g.ch[c].bone(Bone::UpperArmR);
@@ -187,14 +187,14 @@ pub(super) fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Opt
     g.ch[c].gun_look = look;
     let own = if in_hands { g.ch[c].gun_look.and_then(|l| l.hand) } else { None };
     if in_hands {
-        let model = match own { Some(id) => crate::rig_props::model_grip(g, id, Some(true), None), None => None };
+        let model = match own { Some(id) => crate::rig_props::model_grip(g, id, Some(true)), None => None };
         let (wrist, fingers, back) = match model {
             Some(h) => (h.wrist, h.fingers, h.back),
-            None => { let h = crate::rig_props::sc20k_grip(None, Some(true)); (h.wrist, h.fingers, h.back) }
+            None => { let h = crate::rig_props::sc20k_grip(Some(true)); (h.wrist, h.fingers, h.back) }
         };
         g.ch[c].anim.long_grip = crate::character::AnimLongGrip { wrist, fingers, back };
-        let ahead = match own { Some(id) => crate::rig_props::model_muzzle_ahead(id, None), None => None };
-        g.ch[c].muzzle_ahead = match ahead { Some(a) => a, None => crate::rig_props::sc20k_muzzle_ahead(None) };
+        let ahead = match own { Some(id) => crate::rig_props::model_muzzle_ahead(id), None => None };
+        g.ch[c].muzzle_ahead = match ahead { Some(a) => a, None => crate::rig_props::sc20k_muzzle_ahead() };
     } else {
         g.ch[c].muzzle_ahead = g.weapon(pistol_def).muzzle_ahead;
     }

@@ -176,7 +176,7 @@ pub(super) fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::ch
     let near = blows_near(&crate::character::BlowsNearB { t: b.t, end: b.end, blows: b.blows.clone() });
     let at = if (b.at[0] + b.at[1] + b.at[2]).is_finite() { anim_to_model_p(g, c, b.at) } else { [0.0, 1.0, 0.8] };
     let at_buf = if ham { g.ch[c].anim.big_buf.unwrap().at as usize } else { 0 };
-    let grip = crate::rig_props::carbine_grip(None);
+    let grip = crate::rig_props::carbine_grip();
     anim_layer(g, c, |s, an, k| ::sim::layers::big_layer(s, an, b, at_buf, &near, at, &grip, tw_y, tw_p, k));
 }
 
