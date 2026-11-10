@@ -9,6 +9,7 @@
 - **The strongest light at a pixel asked by itself**: 0.05 to 0.3 ms, sharper lamp shadows.
 - **Leaves**: bounce rays that meet them one by one near by cost 5 ms in the garden and gained 0.03 stops. Torches that met them one by one cost 3 to 5 ms; a raster of them from the torch costs little.
 - **Small things in a tree of their own**, met only by rays narrower than they are (8,656 of the street's 13,182 pieces): 0.36 ms of 15, no change in error.
+- **A learned upscaler** (a network at every output pixel, lab/learn/pix.py; 1,144 weights, 0.38 ms more at 1080p): on frames it was never shown, 10 % less error and 5 % less flicker than by hand; four constants from the same training gain 6 % of it. In the page against the reference: the network is no better in motion than by hand and flickers 1.7 times as much; the constants gain 6 to 8 % in motion at the same 1.7 times. What both learn is to trust history less. Not worth it as it stands.
 
 Traps
 - Two boxes differ by up to a third in time: compare inside one run.
