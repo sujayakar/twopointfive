@@ -1140,12 +1140,12 @@ fn drawLamp(x: vec3f, n: vec3f) -> vec2f {
   for (var i = 0u; i < frame.counts.x; i++) { if ((i & 3u) == 0u) { near = lampReach(x, i >> 2u); if (!byReach) { near = mix(vec4f(0.04), vec4f(1.0), near); } } let k = near[i & 3u]; if (k <= 0.0 || (still && lamps[i].kind == 2u)) { continue; } let w = lampWeight(i, x, n) * k; if (w <= 0.0) { continue; } W += w; let q = w / W; if (u < q) { pick = f32(i); w0 = w; u = u / q; } else { u = (u - q) / (1.0 - q); } }
   return vec2f(pick, select(0.0, W / w0, w0 > 0.0));
 }
-/** how much what torches light has changed there since the last frame, with nothing in the way, by the places that are asked every frame: 0 not, 1 it is all other light. No dice */
-fn spotChange(x: vec3f, n: vec3f) -> f32 {
-  var d = 0.0; var m = 0.0; for (var t = 0u; t < SPOT_TORCHES; t++) { for (var k = 0u; k < 6u; k++) { var u = vec2f(0.0); for (var h = 0u; h < 2u; h++) {
+/** how much what torches light has changed there since the last frame, with nothing in the way, by the places that are asked every frame: 0 not, 1 it is all other light. No dice. x: of all that light, y: of the torch that changed most (another's, behind a wall, may be more by this) */
+fn spotChange(x: vec3f, n: vec3f) -> vec2f {
+  var d = 0.0; var m = 0.0; var dt: array<vec2f, 5>; for (var t = 0u; t < SPOT_TORCHES; t++) { let d0 = d; let m0 = m; for (var k = 0u; k < 6u; k++) { var u = vec2f(0.0); for (var h = 0u; h < 2u; h++) {
     let o = SPOT_ROW + 2u * (t * 256u + 85u + k * 17u) + h * SPOT_WAS; let c = extra[o + 1u]; if (c.x == 0u) { continue; } let a = extra[o]; let v = bitcast<vec3f>(a.xyz) - x; let up = dot(n, v); let to = -dot(octUnpack(a.w), v); if (up <= 0.0 || to <= 0.0) { continue; }
-    let d2 = dot(v, v) + 0.25; u[h] = lum(vec3f(unpack2x16float(c.x), unpack2x16float(c.y).x)) * up * to / (d2 * d2); } d += abs(u.x - u.y); m += max(u.x, u.y); } }
-  return select(0.0, d / max(m, 1e-9), m > 1e-9);
+    let d2 = dot(v, v) + 0.25; u[h] = lum(vec3f(unpack2x16float(c.x), unpack2x16float(c.y).x)) * up * to / (d2 * d2); } d += abs(u.x - u.y); m += max(u.x, u.y); } dt[t] = vec2f(d - d0, m - m0); }
+  var one = 0.0; for (var t = 0u; t < SPOT_TORCHES; t++) { one = max(one, dt[t].x / max(max(dt[t].y, 0.02 * m), 1e-9)); } return select(vec2f(0.0), vec2f(d / max(m, 1e-9), one), m > 1e-9);
 }
 /** what reaches x, facing n, of what torches light (spots.wgsl): \`many\` drawn from the list, one of them kept by what it would send, and asked. spotWay: where from */
 var<private> spotWay = vec3f(0.0);
@@ -1745,7 +1745,7 @@ var<workgroup> part: array<vec4f, 64>;
     let Ew = min(L * w.w, vec3f(50.0)); E += Ew; way += w.xyz * lum(Ew);
   }
   let sp = spotLight(x, select(p.ng, p.n, p.leaf), px, 12u); E = E / f32(N) + sp; way = way / f32(N) + spotWay * lum(sp);       /* (what a torch lights, straight from there, anew each frame; what goes on from that is kept, for a little while) */
-  textureStore(outE, id.xy, vec4f(E, torchy / f32(N) + lum(sp)));       /* (a: how much of it is torches'; beside the way, how much what they light has changed there since the last frame) */ textureStore(outV, id.xy, vec4f(way, select(0.0, spotChange(x, select(p.ng, p.n, p.leaf)), frame.sunE.w > 0.0)));
+  textureStore(outE, id.xy, vec4f(E, torchy / f32(N) + lum(sp)));       /* (a: how much of it is torches'; beside the way, how much what they light has changed there since the last frame) */ textureStore(outV, id.xy, vec4f(way, select(0.0, spotChange(x, select(p.ng, p.n, p.leaf)).y, frame.sunE.w > 0.0)));
 }
 `;var fo=`// SIGNAL 3, NARROW INCOMING. One ray along the lobe of what shines, asked once a layer: the surface's own coat (LAYER 0), and the pane or the water over it (1). The hit is lit by the
 // light on surfaces, with the sun asked again so that its shadows stay sharp in the mirror.
@@ -2182,7 +2182,7 @@ fn oneMore(s: u32) {
     else { let q = surfaceMean(x, w.xyz, h); let own = (pieces[h.piece].lamp & 255u) != 255u; let thru = h.thru * fo.T * (w.w * sm.a); let sent = sentBack(q, rnd2(), w.xyz); E += min((select(q.glow, vec3f(0.0), own) + sent - sentTorch) * thru, vec3f(60.0)); F += min(sentTorch * thru, vec3f(60.0)); tellAs(HITS + s, 0x80000000u | key, q.x, q.ng); /* (tells) */ }
   }
   let m = min(a.w + 1.0, keeps(st)); let k = min(1.0, RISE / (m + RISE - 1.0));
-  let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[3u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); let mt = min(t.w * (1.0 - smoothstep(0.1, 0.5, spotChange(x, n))) + 1.0, TORCHES);       /* (where what they light has changed, what is kept is of other light) */
+  let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[3u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); let mt = min(t.w * (1.0 - smoothstep(0.1, 0.5, spotChange(x, n).x)) + 1.0, TORCHES);       /* (where what they light has changed, what is kept is of other light) */
   fresh[3u * s + 2u] = max(finite4(vec4f(mix(t.xyz, F, min(1.0, RISE / (mt + RISE - 1.0))), mt), 1e4), vec4f(0.0)); fresh[3u * s + 1u] = vec4f(b.xyz, clamp(finite(mix(b.w, sun, k), 1.0), 0.0, 1.0));
 }
 `;var vo=1048576,Lr={changes:["changes","Changes","uniform"]},bo=`fn part(k: u32) -> f32 { return 1.0; }

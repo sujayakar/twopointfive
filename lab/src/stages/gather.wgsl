@@ -37,5 +37,5 @@
     let Ew = min(L * w.w, vec3f(50.0)); E += Ew; way += w.xyz * lum(Ew);
   }
   let sp = spotLight(x, select(p.ng, p.n, p.leaf), px, 12u); E = E / f32(N) + sp; way = way / f32(N) + spotWay * lum(sp);       /* (what a torch lights, straight from there, anew each frame; what goes on from that is kept, for a little while) */
-  textureStore(outE, id.xy, vec4f(E, torchy / f32(N) + lum(sp)));       /* (a: how much of it is torches'; beside the way, how much what they light has changed there since the last frame) */ textureStore(outV, id.xy, vec4f(way, select(0.0, spotChange(x, select(p.ng, p.n, p.leaf)), frame.sunE.w > 0.0)));
+  textureStore(outE, id.xy, vec4f(E, torchy / f32(N) + lum(sp)));       /* (a: how much of it is torches'; beside the way, how much what they light has changed there since the last frame) */ textureStore(outV, id.xy, vec4f(way, select(0.0, spotChange(x, select(p.ng, p.n, p.leaf)).y, frame.sunE.w > 0.0)));
 }

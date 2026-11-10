@@ -45,6 +45,6 @@ fn oneMore(s: u32) {
     else { let q = surfaceMean(x, w.xyz, h); let own = (pieces[h.piece].lamp & 255u) != 255u; let thru = h.thru * fo.T * (w.w * sm.a); let sent = sentBack(q, rnd2(), w.xyz); E += min((select(q.glow, vec3f(0.0), own) + sent - sentTorch) * thru, vec3f(60.0)); F += min(sentTorch * thru, vec3f(60.0)); tellAs(HITS + s, 0x80000000u | key, q.x, q.ng); /* (tells) */ }
   }
   let m = min(a.w + 1.0, keeps(st)); let k = min(1.0, RISE / (m + RISE - 1.0));
-  let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[3u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); let mt = min(t.w * (1.0 - smoothstep(0.1, 0.5, spotChange(x, n))) + 1.0, TORCHES);       /* (where what they light has changed, what is kept is of other light) */
+  let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[3u * s] = vec4f(max(o.rgb, vec3f(0.0)), o.w); let mt = min(t.w * (1.0 - smoothstep(0.1, 0.5, spotChange(x, n).x)) + 1.0, TORCHES);       /* (where what they light has changed, what is kept is of other light) */
   fresh[3u * s + 2u] = max(finite4(vec4f(mix(t.xyz, F, min(1.0, RISE / (mt + RISE - 1.0))), mt), 1e4), vec4f(0.0)); fresh[3u * s + 1u] = vec4f(b.xyz, clamp(finite(mix(b.w, sun, k), 1.0), 0.0, 1.0));
 }
