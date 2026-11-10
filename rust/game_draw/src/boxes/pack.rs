@@ -28,12 +28,11 @@ pub fn cut(b: &Box) -> bool { b.cut.as_ref().map_or(false, |c| !c.is_empty()) }
 pub fn emission(b: &Box, bared: bool) -> [f64; 3] { if bared { b.emissive } else { b.fog_emit.unwrap_or(b.emissive) } }
 pub fn gain(b: &Box, bared: bool) -> f64 { (if bared { None } else { b.fog_mark }).or(b.mark_gain).unwrap_or(1.0) }
 fn solid_glass(b: &Box) -> bool { b.stuff == Some(BoxStuff::Glass) && flags(b) & GLASS == 0 }
-fn lum(a: [f64; 3]) -> f64 { 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2] }
 
 /// the colour a box is sent in: its own by its wetness, and a thing of solid glass near black
 pub fn sent(b: &Box, look: &Look) -> [f64; 3] {
     let wet = b.wet_k.unwrap_or(1.0);
-    let dark = look.glass_lum >= 0.0 && b.marks.is_none() && solid_glass(b) && lum(b.albedo) > look.glass_lum;
+    let dark = look.glass_lum >= 0.0 && b.marks.is_none() && solid_glass(b) && game::v3::lum(b.albedo) > look.glass_lum;
     if dark { [look.glass_lum * wet; 3] } else { b.albedo.map(|a| a * wet) }
 }
 /// its finish as one number: roughness, and 2 for a metal, 4 for an anisotropic one

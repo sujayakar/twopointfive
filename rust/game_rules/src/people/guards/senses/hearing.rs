@@ -101,7 +101,7 @@ fn light_out(g: &mut Game, gd: GuardId, s: &Sound) {
                 None => [e.pos[0], 2.4, e.pos[2]],
             };
             let pos = g.ch[c].pos;
-            let eye = crate::guards::seeing::bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+            let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
             let to = v3::sub(src, eye);
             let l = v3::len(to);
             let short_of: V3 = if l > 0.6 { v3::mad(eye, to, (l - 0.4) / l) } else { src };

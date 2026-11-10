@@ -57,7 +57,7 @@ fn friend_under_cursor(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let o = g.sets[g.seat].aim_friend?;
     if g.sets[g.seat].aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
     let from = crate::combat::shoulder(g, c_2);
-    let chest = bone_or(g, g.gd[o].ch, crate::character::Bone::Chest, 1.2);
+    let chest = g.ch[g.gd[o].ch].bone_or(crate::character::Bone::Chest, 1.2);
     if m::hyp2(chest[0] - from[0], chest[2] - from[2]) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
 }
 
@@ -110,18 +110,10 @@ fn ask(g: &Game, o: GuardId, line: &mut SamsLine) {
     let vel = g.ch[c].vel;
     let clear = g.k.friends.clear_m + m::min(g.k.friends.lead_max_m, g.k.friends.lead_s * m::hyp2(vel[0], vel[2]));
     if m::abs(rx * line.dz - rz * line.dx) > clear { return; }
-    let chest = bone_or(g, c, crate::character::Bone::Chest, 1.2);
+    let chest = g.ch[c].bone_or(crate::character::Bone::Chest, 1.2);
     if crate::scene_collision::segment_blocked(g, line.from, chest, None, None, None) { return; }
     line.bt = t;
     line.best = Some(o);
-}
-
-/// `c.bones.<bone> ?? v3.add(c.pos, [0, up, 0])`, by value: nothing here moves it.
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
-    match g.ch[c].bones.get(bone) {
-        Some(b) => *b,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
 }
 
 #[cfg(test)]

@@ -12,13 +12,6 @@ use alloc::{boxed::Box, format, string::String, vec::Vec};
 
 // ---- private helpers ----
 
-/// `g.level.boxes[i]`: undefined off the list, as JavaScript's (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript: the box at place i
-fn box_at(g: &Game, i: f64) -> Option<BoxId> {
-    let ix = i as usize;
-    if ix as f64 != i { return None; }
-    g.col.boxes.get(ix).copied()
-}
-
 /// the seed's word of a box's centre and half sizes: the module's (glass.ts:115 boxSeed, with the box read)
 fn box_word(c: V3, hs: V3) -> f64 {
     ::sim::panes_box_seed(c[0], c[1], c[2], hs[0], hs[1], hs[2]) as f64
@@ -151,7 +144,7 @@ pub fn glass_impact(g: &mut crate::game::Game, pane: f64, point: V3, dir: Option
     let cause = cause.unwrap_or(GlassImpactCause::Shot);
     let quiet = quiet.unwrap_or(false);
     let through = opts.and_then(|o| o.through);
-    let bx = box_at(g, pane);
+    let bx = g.box_at(pane);
     let mut res = crate::glassbreak::GlassImpact { pane: is_pane(g, bx), live: false, type_: crate::glasspen::PaneType::Laminated, thickness: 0.0, was_open: false, punched: false, diced: false, released: 0.0, cracked: false };
     if !res.pane { return res; }
     let b = bx.unwrap();
@@ -237,7 +230,7 @@ pub fn glass_hit(g: &mut crate::game::Game, bi: f64, hit_p: V3, dir: Option<V3>,
 pub fn crack_near(g: &mut crate::game::Game, at: V3, radius: f64, who: f64) -> f64 {
     let mut n = 0.0;
     for bi in glass_panes(g) {
-        let bx = box_at(g, bi);
+        let bx = g.box_at(bi);
         if !is_sheet(g, bx) { continue; }   // solid glass does not craze
         let b = bx.unwrap();
         let near = nearest_on_box(g, b, at);
@@ -384,6 +377,6 @@ mod tests {
     #[test]
     fn off_the_list_is_no_box() {
         let mut g = Game::blank();
-        for i in [-1.0, 0.5, f64::NAN, 3.0] { assert_eq!(box_at(&mut g, i), None, "{}", i); }
+        for i in [-1.0, 0.5, f64::NAN, 3.0] { assert_eq!(g.box_at(i), None, "{}", i); }
     }
 }

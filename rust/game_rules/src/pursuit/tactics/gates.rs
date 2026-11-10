@@ -237,7 +237,7 @@ fn cross(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     let leg = if li >= 0.0 { gate.legs.get(li as usize).copied() } else { None };
     let Some(leg) = leg else {
         let pos = g.ch[c].pos;
-        gate.crossed = side_of(g, d, pos) != gate.side;
+        gate.crossed = crate::handleside::side_at(g, d, pos) != gate.side;
         release_gate(g, gd, gate);
         return;
     };
@@ -251,7 +251,7 @@ fn cross(g: &mut Game, gd: GuardId, gate: &mut Gate, dt: f64, inside: V3) {
     let speed = g.tune.guard_chase;
     let there = step_gate(g, gd, gate, dt, leg, speed, None);
     let pos = g.ch[c].pos;
-    if side_of(g, d, pos) != gate.side { gate.crossed = true; }
+    if crate::handleside::side_at(g, d, pos) != gate.side { gate.crossed = true; }
     if there || dist_xz(g.ch[c].pos, leg) < 0.35 {
         gate.leg_i += 1.0;
         if gate.leg_i >= gate.legs.len() as f64 { return release_gate(g, gd, gate); }

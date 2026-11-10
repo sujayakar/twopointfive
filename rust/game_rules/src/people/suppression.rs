@@ -158,9 +158,6 @@ fn lines_of(moment: SupMoment, key: &str) -> &'static [&'static str] {
     &[]
 }
 
-/// A byte JavaScript's `\w` holds (every byte of a non-ASCII character is outside it, as a non-unicode regex sees that character).
-pub(crate) fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
-
 /// `/\b(he|he's|him|his)\b/.test(l)`.
 fn mentions_him(l: &str) -> bool {
     let b = l.as_bytes();
@@ -169,8 +166,8 @@ fn mentions_him(l: &str) -> bool {
         let mut at = 0;
         while at + w.len() <= b.len() {
             if &b[at..at + w.len()] == w
-                && (at == 0 || !is_word(b[at - 1]))
-                && (at + w.len() == b.len() || !is_word(b[at + w.len()]))
+                && (at == 0 || !crate::js::is_word(b[at - 1]))
+                && (at + w.len() == b.len() || !crate::js::is_word(b[at + w.len()]))
             {
                 return true;
             }

@@ -681,7 +681,7 @@ fn signals(g: &mut Game, c: CharId, f: &mut Frame) {
         anim_signal_layer(g, c, t);
         let a = &mut g.ch[c].anim;
         a.sig_t += dt;
-        if a.sig_t > signal_secs(a.sig_kind) { a.sig_t = -1.0; }
+        if a.sig_t > super::walls_and_gait::signal_dur_of(a.sig_kind) { a.sig_t = -1.0; }
     }
     if g.ch[c].anim.tell_t >= 0.0 {   // the idle tells: skipped (the clock still runs out) under anything that has the arms or the head
         let a = &g.ch[c].anim;
@@ -689,7 +689,7 @@ fn signals(g: &mut Game, c: CharId, f: &mut Frame) {
         if first || anim_mv_busy(g, c) || g.ch[c].anim.mvs.ts_t >= 0.0 {  } else { let t = g.ch[c].anim.tell_t; anim_tell_layer(g, c, t); }
         let a = &mut g.ch[c].anim;
         a.tell_t += dt;
-        if a.tell_t > tell_secs(a.tell_k) { a.tell_t = -1.0;  }
+        if a.tell_t > super::walls_and_gait::tell_dur_of(a.tell_k) { a.tell_t = -1.0;  }
     }
 }
 
@@ -1088,10 +1088,6 @@ fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f
 
 /// `STANCES[s]`, for a stance that has a shape (not 'none').
 fn stance_shape(s: Stance) -> StanceShape { *stances().get(String::from(s.as_str())).unwrap() }
-/// `SIGNAL_DUR[k]`
-fn signal_secs(k: SignalKind) -> f64 { *signal_dur().get(String::from(k.as_str())).unwrap() }
-/// `TELL_DUR[k]`
-fn tell_secs(k: TellKind) -> f64 { *tell_dur().get(String::from(k.as_str())).unwrap() }
 /// `READY[k].knife`
 fn ready_knife(k: ReadyKind) -> bool { ready().get(String::from(k.as_str())).unwrap().knife }
 /// `BLOW.clip[s]`
@@ -1188,8 +1184,8 @@ mod tests {
     #[test]
     fn every_word_finds_its_row() {
         for k in [Stance::Wall, Stance::Stack, Stance::HighReady, Stance::LowReady] { let _ = stance_shape(k); }
-        for k in [SignalKind::Hold, SignalKind::Go, SignalKind::Rally, SignalKind::Aside, SignalKind::Squeeze] { assert!(signal_secs(k) > 0.0); }
-        for k in [TellKind::Watch, TellKind::Neck] { assert!(tell_secs(k) > 0.0); }
+        for k in [SignalKind::Hold, SignalKind::Go, SignalKind::Rally, SignalKind::Aside, SignalKind::Squeeze] { assert!(super::walls_and_gait::signal_dur_of(k) > 0.0); }
+        for k in [TellKind::Watch, TellKind::Neck] { assert!(super::walls_and_gait::tell_dur_of(k) > 0.0); }
         for k in [ReadyKind::Grab, ReadyKind::Seat, ReadyKind::Strike, ReadyKind::GrabGun] { let _ = ready_knife(k); }
         for k in [BlowStyle::Chop, BlowStyle::Palm, BlowStyle::Mouth, BlowStyle::Sweep, BlowStyle::Slash] { assert!(blow_clip(k) > 0.0); }
     }

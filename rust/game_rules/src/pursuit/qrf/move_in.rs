@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small private helpers
 /// where a man with no foe named looks: the player nearest him
-fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
+pub(super) fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
 fn arrived(g: &Game, x: GuardId) -> bool { g.gd[x].script.map_or(false, |s| s.arrived.unwrap_or(false)) }
 /// a string the TypeScript tests for truth: null and '' are both false
 fn word(s: &Option<String>) -> Option<&str> { s.as_deref().filter(|w| !w.is_empty()) }

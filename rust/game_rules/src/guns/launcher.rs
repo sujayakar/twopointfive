@@ -13,11 +13,6 @@ fn ballistics_of(k: &crate::knobs::RingK) -> Ballistics {
     Ballistics { speed: k.speed, gravity: k.gravity, drag: k.drag, radius: k.radius, life: k.life, substeps: k.substeps, solve_iters: k.solve_iters }
 }
 
-/// g.audio.play(name, at, gain, { rate }).
-fn play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
-}
-
 /// The launch velocity to pass through `target`: dead at it, raised by however far a simulated flight falls short, solveIters times.
 pub fn launch_vel(from: V3, target: V3, r: crate::launcher::Ballistics) -> V3 {
     let d = v3::sub(target, from);
@@ -190,7 +185,7 @@ fn spend(g: &mut crate::game::Game, r: crate::launcher::Ring, at: V3, vel: V3) {
 /// The ring meeting something hard: a clack, sparks, and a noise the room goes to look at.
 pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
     let k = k.unwrap_or(1.0);
-    play_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
+    crate::audio_iface::play_at_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
     crate::particle_fx::clack_fx(g, at);
     let level = g.k.ring.clack_noise * k;
     crate::flight::noise(g, [at[0], 0.0, at[2]], level, 0.0, Some(true));
@@ -202,7 +197,7 @@ fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c: C
     let high = at[1] >= neck[1] - g.k.ring.ko_below_neck;
     match crate::character::guard_of(g, c) {
         Some(gd) if high => {
-            play_rate(g, "bodyHit", at, 0.6, 0.75);
+            crate::audio_iface::play_at_rate(g, "bodyHit", at, 0.6, 0.75);
             let by = if crate::character::is_player(g, r.shooter) { crate::game::DownBy::Player } else { crate::game::DownBy::Guard };
             crate::combat::kill_guard(g, gd, [dir[0], 0.0, dir[2]], Some(true), Some(crate::game::DownKind::Struck), Some(by), crate::game::With::Ring);
             let level = g.k.ring.ko_noise;

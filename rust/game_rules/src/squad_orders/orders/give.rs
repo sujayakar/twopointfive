@@ -706,7 +706,7 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         g.sets[g.seat].orders.view.input = None;
         return;
     }
-    if g.sets[g.seat].orders.tap_was.is_some() && (pressed_has(g, input, "Blur") || pressed_has(g, input, "Thawed")) { g.sets[g.seat].orders.tap_was = None; }
+    if g.sets[g.seat].orders.tap_was.is_some() && (crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Thawed")) { g.sets[g.seat].orders.tap_was = None; }
     set_view(g, input);
     if squad_orders_sams(&crate::seats::here(g)) {
         g.sets[g.seat].orders.who = Who::All;

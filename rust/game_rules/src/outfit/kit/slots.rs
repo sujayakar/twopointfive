@@ -104,7 +104,7 @@ pub(in crate::outfit) fn put(k: Thing, m: &mut MemberKit, n: f64) {
 }
 
 ///  The pick in a slot of a card.
-fn pick_of(m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> &str {
+pub(super) fn pick_of(m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> &str {
     match slot {
         crate::gunslots::GunSlot::Primary => &m.primary,
         crate::gunslots::GunSlot::Secondary => &m.secondary,

@@ -32,7 +32,7 @@ pub(super) fn weapon_def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponDef 
 }
 
 /// `s.over === O.ov`: only this module ever puts an overlay on a script, and each man has one Op
-pub(super) fn over_is_mine(g: &Game, gd: GuardId) -> bool {
+pub(crate) fn over_is_mine(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
 }
 

@@ -17,10 +17,6 @@ fn task_pos(t: &crate::game::GuardTask) -> V3 {
         crate::game::GuardTask::CheckOn(x) => x.pos,
     }
 }
-/// a man's head, or `pos` when no pose has written it (`c.bones.head ?? …`)
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
-    match g.ch[c].bones.get(bone) { Some(p) => *p, None => or }
-}
 /// Clearing.name's body, with no `g`: a plan is often borrowed out of `g` when it is named
 fn plan_name(p: Option<&crate::scene_level::RoomClearPlan>) -> String {
     match p {
@@ -52,7 +48,7 @@ fn perceive_here(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<
         if let Some(o) = crate::guards::body_in_view(g, gd) {
             crate::mind::raise(g, gd, 0.5, "squad");
             let oc = g.gd[o].ch;
-            let h = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
+            let h = g.ch[oc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[oc].pos);
             crate::mind::fix(g, gd, Some([h[0], 0.0, h[2]]), "squad");
             return Some(Perceive::Body);
         }
@@ -359,7 +355,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
             if dist_xz(pos, g.dr[d].frame_centre) > (if forced { 3.0 } else { 1.5 }) { continue; }
             let along = g.dr[d].def.width * 0.5;
             let spot = crate::doors::doors_work_spot(g, d, pos, Some(0.45), Some(along)).pos;
-            let eye = bone_or(g, c, crate::character::Bone::Head, v3::add(pos, [0.0, 1.65, 0.0]));
+            let eye = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(v3::add(pos, [0.0, 1.65, 0.0]));
             if !crate::scene_collision::segment_blocked(g, eye, [spot[0], 1.0, spot[2]], None, None, None) { by = Some(gd); break; }
         }
         let by = match by { Some(by) => by, None => continue };
@@ -399,7 +395,7 @@ fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         }
         crate::game::game_say(g, by, &line, None, None);
         let c = g.gd[by].ch;
-        let at_ear = bone_or(g, c, crate::character::Bone::Head, g.ch[c].pos);
+        let at_ear = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
         return replanned;
     }

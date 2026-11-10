@@ -8,10 +8,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
 // ---------------------------------------------------------------- small readers of this file
-/// `c.bones.<b> ?? v3.add(c.pos, off)`
-fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, off: V3) -> V3 {
-    match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, off) }
-}
 fn callsign_of(g: &Game, gd: Option<GuardId>) -> Option<String> { gd.map(|x| g.gd[x].callsign.clone()) }
 fn data(rows: &[(&str, Option<ChronDeviceDataValue>)]) -> JsMap<String, Option<ChronDeviceDataValue>> {
     let mut o = JsMap::new();
@@ -20,7 +16,6 @@ fn data(rows: &[(&str, Option<ChronDeviceDataValue>)]) -> JsMap<String, Option<C
 }
 fn text(s: &str) -> Option<ChronDeviceDataValue> { Some(ChronDeviceDataValue::Text(String::from(s))) }
 fn opt_text(s: &Option<String>) -> Option<ChronDeviceDataValue> { s.as_ref().map(|x| ChronDeviceDataValue::Text(x.clone())) }
-fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
 /// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.
@@ -144,7 +139,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     for pl in crate::seats::men(g) {
         if crate::condition::down(g, g.pl[pl].ch) { continue; }
         let c = g.pl[pl].ch;
-        let chest = bone_or(g, c, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
+        let chest = g.ch[c].bone_or(crate::character::Bone::Chest, 1.1);
         let air = crate::sense::clear_between(g, d.pos, chest);
         let vis = crate::guards::eye_contact(g, e, c, false, air, None);
         if !vis.visible { continue; }
@@ -418,9 +413,9 @@ fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool 
 fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, told: bool) -> bool {
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
-    let mouth = bone_or(g, g.gd[speaker].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
+    let mouth = g.ch[g.gd[speaker].ch].bone_or(crate::character::Bone::Head, 1.6);
     let ear_up = if g.pl[pl].crouch { 1.0 } else { 1.6 };
-    let ear = bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, [0.0, ear_up, 0.0]);
+    let ear = g.ch[g.pl[pl].ch].bone_or(crate::character::Bone::Head, ear_up);
     let prop = crate::weather::hear_path(g, mouth, ear, None);
     if prop.path_len > g.k.overhear.path_m || prop.carry < g.k.overhear.carry { return false; }
     if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
@@ -518,7 +513,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
     let fl = crate::scene_boxes::box_flag();
     let dyn_ = fl.dynamic;
-    let deco = bits_or(fl.dynamic, fl.no_shadow);
+    let deco = js::or_bits(fl.dynamic, fl.no_shadow);
     for c in g.devices.cameras.clone() {
         let d = g.tab.devices_camera_rt[c].def.clone();
         let target = g.tab.devices_camera_rt[c].target;

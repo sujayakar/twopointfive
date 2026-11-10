@@ -23,32 +23,27 @@ pub fn input_hit(g: &Game, id: InputId, code: &str) -> bool {
 
 /// Left button held.
 pub fn input_lmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 1)
+    js::has_bits(g.tab.input[id].buttons, 1)
 }
 
 /// Right button held.
 pub fn input_rmb(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].buttons, 4)
+    js::has_bits(g.tab.input[id].buttons, 4)
 }
 
 /// Left button went down this frame.
 pub fn input_lmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 1)
+    js::has_bits(g.tab.input[id].clicked, 1)
 }
 
 /// Right button went down this frame.
 pub fn input_rmb_hit(g: &Game, id: InputId) -> bool {
-    bit(g.tab.input[id].clicked, 4)
+    js::has_bits(g.tab.input[id].clicked, 4)
 }
 
 /// The drawn frame is over: every one-frame edge and travel goes.
 pub fn input_end_frame(g: &mut Game, id: InputId) {
     end_frame(&mut g.tab.input[id])
-}
-
-/// `(word & mask) !== 0` on a JavaScript number
-fn bit(word: f64, mask: i32) -> bool {
-    (js::to_i32(word) & mask) != 0
 }
 
 fn end_frame(i: &mut Input) {

@@ -10,16 +10,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// A floor point in the door's frame: `along` from the hinge, `off` out on face `side`.
-fn pt_of(g: &crate::game::Game, d: DoorId, along: f64, off: f64, side: f64) -> V3 {
-    let f = crate::guards::frame_of(g, d);
-    [f.hx + f.ux * along + f.nx * side * off, 0.0, f.hz + f.uz * along + f.nz * side * off]
-}
-
 /// Where the door's handle comes to.
 fn handle_of(g: &crate::game::Game, d: DoorId) -> V3 {
     let w = g.dr[d].def.width;
-    pt_of(g, d, w - k().handle_in, 0.0, 1.0)
+    crate::handleside::pt_of(g, d, w - k().handle_in, 0.0, 1.0)
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed).
@@ -42,11 +36,6 @@ fn in_shut_swing(g: &crate::game::Game, d: DoorId, x: f64, z: f64, pad: Option<f
     th >= 0.0 && th <= m::abs(angle)
 }
 
-/// A wall, a sill or a pane between two floor points at shin height, the level's statics only.
-fn walled(g: &crate::game::Game, a: V3, b: V3) -> bool {
-    crate::scene_collision::solid_blocked_over(g, &crate::ask::Over::statics(), [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None)
-}
-
 /// Can a man stand at p: a cell the walkers' grid calls free, nothing of the level inside his body.
 fn stands(g: &crate::game::Game, p: V3) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
@@ -57,14 +46,14 @@ fn stands(g: &crate::game::Game, p: V3) -> bool {
 
 /// shutSpot's `ok`: clear of the leaf's way, a place to stand, nothing of the level between it and the door.
 fn spot_ok(g: &Game, d: DoorId, ref_: V3, p: V3, pad: f64) -> bool {
-    !in_shut_swing(g, d, p[0], p[2], Some(pad)) && stands(g, p) && !walled(g, ref_, p)
+    !in_shut_swing(g, d, p[0], p[2], Some(pad)) && stands(g, p) && !crate::scene_collision::low_walled(g, ref_, p)
 }
 
 /// The place d is shut from on face `side`, as it stands now; None: none.
 fn shut_spot(g: &crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutdoor::Spot> {
     let w = g.dr[d].def.width;
     let hd = handle_of(g, d);
-    let ref_ = pt_of(g, d, w - k().handle_in, 0.2, side);
+    let ref_ = crate::handleside::pt_of(g, d, w - k().handle_in, 0.2, side);
     let pad = k().body + k().slack;
     let face = |p: V3| m::atan2(hd[0] - p[0], hd[2] - p[2]);
     let mut best: Option<V3> = None;
@@ -73,7 +62,7 @@ fn shut_spot(g: &crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutd
     while a <= w + 0.8 + 1e-6 {
         let mut off = 0.4;
         while off <= 1.0 + 1e-6 {
-            let p = pt_of(g, d, a, off, side);
+            let p = crate::handleside::pt_of(g, d, a, off, side);
             let r = dist_xz(p, hd);
             if !(r > k().reach) {
                 let c = r + (if a < w { 0.25 } else { 0.0 });
@@ -91,7 +80,7 @@ fn shut_spot(g: &crate::game::Game, d: DoorId, side: f64) -> Option<crate::shutd
     while a <= w + 0.4 + 1e-6 {
         let mut off = 0.5;
         while off <= 1.8 + 1e-6 {
-            let p = pt_of(g, d, a, off, side);
+            let p = crate::handleside::pt_of(g, d, a, off, side);
             let r = dist_xz(p, hd);
             if !(r > k().far_reach || r >= bc || !spot_ok(g, d, ref_, p, pad)) {
                 best = Some(p);
@@ -367,7 +356,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
             let ok = crate::orders::side_of(g, d, p) == side
                 && dist_xz(p, handle_of(g, d)) <= k().far_reach
                 && clear_of(g, d, p)
-                && { let q = pt_of(g, d, w - k().handle_in, 0.2, side); !walled(g, p, q) };
+                && { let q = crate::handleside::pt_of(g, d, w - k().handle_in, 0.2, side); !crate::scene_collision::low_walled(g, p, q) };
             if !ok {
                 end(g, gd, j, if stopped { None } else { Some("can't get to it.") });
                 return;

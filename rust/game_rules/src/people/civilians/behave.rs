@@ -7,10 +7,6 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 fn civ_of(g: &Game, gd: GuardId) -> CivId { g.gd[gd].civ.unwrap() }
-/// `c.bones.<bone> ?? v3.add(c.pos, up)`
-fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: V3) -> V3 {
-    match g.ch[c].bones.get(bone) { Some(p) => *p, None => v3::add(g.ch[c].pos, up) }
-}
 
 // ---------------------------------------------------------------- her voice, the gates, the floor's queue
 /// A hostage says a line of this moment, off her own die, never the one over her head now. False: down, held, or no such line.
@@ -33,7 +29,7 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
     civ_say(g, gd, &line, Some(0.0));
     if matches!(moment, M::Aimed | M::Shot | M::Entry) {
         let c = g.gd[gd].ch;
-        let head = bone_or(g, c, crate::character::Bone::Head, [0.0, 0.4, 0.0]);
+        let head = g.ch[c].bone_or(crate::character::Bone::Head, 0.4);
         let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
         crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
@@ -274,7 +270,7 @@ pub(super) fn control(g: &mut crate::game::Game, gd: GuardId, text: &str) {
 fn scream(g: &mut crate::game::Game, gd: GuardId, shout: Option<&str>) {
     let cv = civ_of(g, gd);
     g.cv[cv].scream_at = g.time;
-    let head = bone_or(g, g.gd[gd].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
+    let head = g.ch[g.gd[gd].ch].bone_or(crate::character::Bone::Head, 1.6);
     let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
     crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.7), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     if let Some(s) = shout { if !s.is_empty() { civ_say(g, gd, s, None); } }
@@ -445,9 +441,9 @@ fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     let pl = g.player;
     let pc = g.pl[pl].ch;
-    let eye = bone_or(g, c, Bone::Head, [0.0, 1.6, 0.0]);
+    let eye = g.ch[c].bone_or(Bone::Head, 1.6);
     let look = crate::guards::look_of(g, c);
-    let chest = bone_or(g, pc, Bone::Chest, [0.0, 1.1, 0.0]);
+    let chest = g.ch[pc].bone_or(Bone::Chest, 1.1);
     g.gd[gd].smoke_trans = crate::sense::clear_between(g, eye, chest);
     let e = eye_of(g, gd);
     let smoke = g.gd[gd].smoke_trans;
@@ -560,7 +556,7 @@ fn bodies(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     if matches!(g.cv[cv].state, CivState::Flee | CivState::Evacuate | CivState::Alarmed | CivState::Report | CivState::Phone) { return; }
     if js::rem(m::floor(g.time * 60.0) + g.ch[c].id, 12.0) != 0.0 { return; }
-    let eye = bone_or(g, c, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
+    let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
     let look = crate::guards::look_of(g, c);
     let e = eye_of(g, gd);
     let mut i = 0;

@@ -88,7 +88,7 @@ pub(super) fn gun_light_key(g: &mut Game, pl: PlayerId, gun: FirearmId) {
 
 /// Z: the gun's next way of firing, where it has more than one.
 fn mode_key(g: &mut Game, t: Tick, gun: FirearmId) {
-    if def_of(g, g.fa[gun].def).modes.len() <= 1 { return; }
+    if g.weapon(g.fa[gun].def).modes.len() <= 1 { return; }
     crate::weapons::firearm_cycle_mode(g, gun);
     at_the_gun(g, t.c, "click", 0.7);
 }

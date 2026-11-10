@@ -10,7 +10,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 pub(super) fn flat(a: V3, p: V2) -> f64 { m::hyp2(a[0] - p[0], a[2] - p[1]) }
-pub(super) fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
 pub(super) fn free(g: &Game, p: V2) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[1]) }
 pub(super) fn v2(p: V3) -> V2 { [p[0], p[2]] }
 pub(super) fn v3(p: V2) -> V3 { [p[0], 0.0, p[1]] }

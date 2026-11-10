@@ -59,11 +59,6 @@ pub(super) fn value_text(v: &KitValue) -> String {
     }
 }
 
-/// The pick in a card's gun slot: `m[slot]`.
-fn slot_pick(m: &MemberKit, slot: crate::gunslots::GunSlot) -> &str {
-    match slot { crate::gunslots::GunSlot::Primary => &m.primary, crate::gunslots::GunSlot::Secondary => &m.secondary }
-}
-
 /// A row's value in words.
 pub(super) fn row_word(g: &Game, r: &KitRow, v: &KitValue) -> String {
     match r.field {
@@ -100,7 +95,7 @@ pub(super) fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
         KitField::Suppressed => crate::gunslots::GunSlot::Primary,
         _ => return String::new(),
     };
-    let id = slot_pick(m, slot);
+    let id = super::slots::pick_of(m, slot);
     if can_choice(g, id) { return String::new(); }
     let word = crate::gunslots::pick_word(g, id, None);
     let name = crate::gear::gear_text(&word);
@@ -203,14 +198,9 @@ fn line_of(parts: &[String], sep: &str) -> String {
     kept.join(sep)
 }
 
-/// The plural's letter of a count.
-fn plural(n: f64) -> &'static str {
-    if n == 1.0 { "" } else { "s" }
-}
-
 /// A gun by its pick's name, 'bare' after one whose suppressor the card has taken off.
 fn gun_words(g: &Game, m: &MemberKit, slot: crate::gunslots::GunSlot) -> String {
-    let id = slot_pick(m, slot);
+    let id = super::slots::pick_of(m, slot);
     let word = crate::gunslots::pick_word(g, id, None);
     let name = crate::gear::gear_text(&word);
     let bare = can_choice(g, id) && !kit_slot_can(g, m, slot);
@@ -237,14 +227,14 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
     let suit = if m.suit != SuitId::Issued { suits().get(String::from(m.suit.as_str())).map(|s| s.label.clone()).unwrap_or_default() } else { String::new() };
     let trim = if m.trim != TrimId::Issued { alloc::format!("{} trim", trims().get(String::from(m.trim.as_str())).map(|s| s.label.clone()).unwrap_or_default()) } else { String::new() };
     let look = line_of(&[suit, trim], ", ");
-    let frags = if js::truthy(m.frags) { alloc::format!(", {} frag{}", m.frags, plural(m.frags)) } else { String::new() };
+    let frags = if js::truthy(m.frags) { alloc::format!(", {} frag{}", m.frags, super::loadouts::plural(m.frags)) } else { String::new() };
     if i == 0.0 {
         let guns = guns_words(g, &m);
         let or_no = |x: f64| if js::truthy(x) { alloc::format!("{}", x) } else { String::from("no") };
         let shells = if js::truthy(m.shells) { alloc::format!(", {}\u{a0}×\u{a0}40\u{a0}mm", m.shells) } else { String::new() };
         let sponge = if js::truthy(m.rings) { alloc::format!(", {}\u{a0}sponge", m.rings) } else { String::new() };
-        let charges = if charge_row(g, 0.0) && js::truthy(m.charges) { alloc::format!(", {} charge{}", m.charges, plural(m.charges)) } else { String::new() };
-        let cams = if js::truthy(m.cams) && cam_row(g) { alloc::format!(", {}\u{a0}cam{}", m.cams, plural(m.cams)) } else { String::new() };
+        let charges = if charge_row(g, 0.0) && js::truthy(m.charges) { alloc::format!(", {} charge{}", m.charges, super::loadouts::plural(m.charges)) } else { String::new() };
+        let cams = if js::truthy(m.cams) && cam_row(g) { alloc::format!(", {}\u{a0}cam{}", m.cams, super::loadouts::plural(m.cams)) } else { String::new() };
         let wand = if m.wand && wand_row(g, 0.0) { String::from(", wand") } else { String::new() };
         let carried = alloc::format!("{} smoke, {} stun{}{}{}{}{}{}", or_no(m.smoke), or_no(m.bangs), frags, shells, sponge, charges, cams, wand);
         let walls = wall_words(g, 0.0, &m);
@@ -254,7 +244,7 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
     let guns = guns_words(g, &m);
     let smoke = if js::truthy(m.smoke) { alloc::format!(", {} smoke", m.smoke) } else { String::new() };
     let shells = if js::truthy(m.shells) { alloc::format!(", {}\u{a0}×\u{a0}40\u{a0}mm", m.shells) } else { String::new() };
-    let carried = alloc::format!("{} stun, {} charge{}{}{}{}", m.bangs, m.charges, plural(m.charges), frags, smoke, shells);
+    let carried = alloc::format!("{} stun, {} charge{}{}{}{}", m.bangs, m.charges, super::loadouts::plural(m.charges), frags, smoke, shells);
     let walls = wall_words(g, i, &m);
     let big = big_words(&m);
     line_of(&[

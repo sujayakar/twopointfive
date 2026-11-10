@@ -6,7 +6,6 @@ use crate::seats::SeatRef;
 use crate::orders::OrderTarget;
 use alloc::{format, string::String, vec::Vec};
 
-fn said(s: &Option<String>) -> bool { s.as_ref().is_some_and(|x| !x.is_empty()) }
 pub(crate) fn tone_word(t: crate::orders::Tone) -> Tone {
     match t { crate::orders::Tone::Red => Tone::Red, crate::orders::Tone::Blue => Tone::Blue, crate::orders::Tone::Gold => Tone::Gold }
 }
@@ -23,10 +22,10 @@ pub(super) fn ring_view(g: &Game, seat: &SeatRef) -> Option<RingView> {
         if d as f64 == seats.more {
             wedges.push(RingWedge { key: d as f64, text: String::from("more"), off: false, opens: true });
         } else if !more && d == 1 {
-            if said(&m.quick) { wedges.push(RingWedge { key: 1.0, text: m.quick.clone().unwrap(), off: false, opens: false }); }
+            if crate::orders::truthy_str(&m.quick) { wedges.push(RingWedge { key: 1.0, text: m.quick.clone().unwrap(), off: false, opens: false }); }
         } else if i >= 0.0 && (i as usize) < m.rows.len() {
             let at = i as usize;
-            wedges.push(RingWedge { key: d as f64, text: m.words[at].clone(), off: m.why.get(at).is_some_and(said), opens: false });
+            wedges.push(RingWedge { key: d as f64, text: m.words[at].clone(), off: m.why.get(at).is_some_and(crate::orders::truthy_str), opens: false });
         }
     }
     let what = match &m.target {

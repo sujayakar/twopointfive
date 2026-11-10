@@ -26,14 +26,9 @@ fn guard_at(g: &Game, i: f64) -> Option<GuardId> {
 }
 // ---------------------------------------------------------------- the rule's small questions
 
-/// the fractional part.
-fn frac(x: f64) -> f64 {
-    x - m::floor(x)
-}
-
 /// his id's share of 0‥1, no dice.
 fn id_share(g: &crate::game::Game, gd: GuardId) -> f64 {
-    frac(g.ch[g.gd[gd].ch].id * 0.6180339887)
+    v3::frac(g.ch[g.gd[gd].ch].id * 0.6180339887)
 }
 
 /// a living man who has not fled the level.
@@ -44,11 +39,6 @@ fn alive(g: &crate::game::Game, gd: GuardId) -> bool {
 /// alive, nobody's arm on him, his wits about him.
 fn fit(g: &crate::game::Game, gd: GuardId) -> bool {
     alive(g, gd) && !crate::control::man::held(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
-}
-
-/// alert or searching.
-fn roused(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state == crate::game::GuardState::Alert || g.gd[gd].state == crate::game::GuardState::Search
 }
 
 pub use crate::roomfight::def_of;
@@ -166,7 +156,7 @@ pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<St
     if let Some(who) = crate::owner::kept(g, gd, crate::owner::by::BREAKER) { return Some(who.into()); }
     if !crate::roomfight::at_post(g, d) { return Some("on the move".into()); }
     if g.gd[gd].script.is_some() { return Some("on a script".into()); }
-    if roused(g, gd) { return Some("in a fight".into()); }
+    if crate::enemysquads::noticed(g, gd) { return Some("in a fight".into()); }
     if crate::mission::lies_in_wait(g, gd) || crate::mission::captor(g) == Some(gd) { return Some("the captor / lying in wait".into()); }
     if crate::gunroles::gun_keeps_post(g, gd) { return Some("his gun keeps its post".into()); }
     if crate::pressure::last_holds(g, d) { return Some("the last of them keeps his room".into()); }
@@ -436,7 +426,7 @@ fn who_speaks(g: &Game, live: &[RoomfightDefId]) -> Option<GuardId> {
 fn takes_it_for_the_team(g: &mut Game, live: &[RoomfightDefId], speaker: GuardId) -> bool {
     let knows = live.iter().any(|&d| {
         let gd = g.tab.roomfight_def[d].gd;
-        roused(g, gd) || g.gd[gd].witness.heard.loud() > 0.0 || g.gd[gd].witness.alerted_by.is_some()
+        crate::enemysquads::noticed(g, gd) || g.gd[gd].witness.heard.loud() > 0.0 || g.gd[gd].witness.alerted_by.is_some()
     });
     if knows {
         stay(g, speaker, "power's out — that's them! Stay on your doors!", "a man of theirs is roused or has heard the team: nobody walks out to mend a fuse", true);
@@ -609,7 +599,7 @@ fn step_power_out(g: &mut crate::game::Game, _dt: f64) {
     let mut fight = false;
     for &d in &defs {
         let gd = g.tab.roomfight_def[d].gd;
-        if alive(g, gd) && roused(g, gd) {
+        if alive(g, gd) && crate::enemysquads::noticed(g, gd) {
             fight = true;
             break;
         }
@@ -697,7 +687,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
     if sees_his_mate_down(g, o) {
         return false;
     }
-    if (fight || roused(g, gd) || g.gd[gd].witness.heard.loud() > heard0) && !(at_lever && g.light_home.mains.active && !g.light_home.mains.permanent) {
+    if (fight || crate::enemysquads::noticed(g, gd) || g.gd[gd].witness.heard.loud() > heard0) && !(at_lever && g.light_home.mains.active && !g.light_home.mains.permanent) {
         runs_back_to_a_fight(g, o, defs);
         return false;
     }
@@ -766,7 +756,7 @@ fn sees_his_mate_down(g: &mut Game, o: OnErrand) -> bool {
 /// A fight, or something loud in his ears: back to his post at a run, where the leg ends in the room fight's plant and he is its man.
 fn runs_back_to_a_fight(g: &mut Game, o: OnErrand, defs: &[RoomfightDefId]) {
     crate::roomfight::run(g, o.d, o.from, None, 0.0, crate::owner::by::BREAKER);
-    let why = if roused(g, o.gd) {
+    let why = if crate::enemysquads::noticed(g, o.gd) {
         String::from("he is roused")
     } else if g.gd[o.gd].witness.heard.loud() > o.heard0 {
         String::from("a shot, a boot or a charge in his ears")
@@ -774,7 +764,7 @@ fn runs_back_to_a_fight(g: &mut Game, o: OnErrand, defs: &[RoomfightDefId]) {
         let mut who: String = "undefined".into();
         for &x in defs {
             let xg = g.tab.roomfight_def[x].gd;
-            if alive(g, xg) && roused(g, xg) {
+            if alive(g, xg) && crate::enemysquads::noticed(g, xg) {
                 who = g.gd[xg].callsign.clone();
                 break;
             }
@@ -981,8 +971,8 @@ mod tests {
     }
     #[test]
     fn frac_is_the_typescripts_bits() {
-        assert_eq!(frac(7.0 * 0.6180339887).to_bits(), 0x3fd4e115043ec120);
-        assert_eq!(frac(123.0 * 0.6180339887).to_bits(), 0x3f929df017341000);
-        assert_eq!(frac(-1.25).to_bits(), 0x3fe8000000000000);
+        assert_eq!(v3::frac(7.0 * 0.6180339887).to_bits(), 0x3fd4e115043ec120);
+        assert_eq!(v3::frac(123.0 * 0.6180339887).to_bits(), 0x3f929df017341000);
+        assert_eq!(v3::frac(-1.25).to_bits(), 0x3fe8000000000000);
     }
 }

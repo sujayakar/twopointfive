@@ -38,9 +38,6 @@ pub fn attention_lines() -> Vec<String> {
     all
 }
 
-/// `g.say(gd, text)` with the rest of its arguments left out.
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None); }
-
 /// A line from a pool, never the one he used last. One die.
 fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let last = mem(g, gd).line;
@@ -48,7 +45,7 @@ fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
     let mut i = js::rem(m::floor(crate::dice::draw_of(g, "attention::line#1", gd) * n), n) as i32;
     if pool.len() > 1 && i == last { i = (i + 1) % pool.len() as i32; }
     mem(g, gd).line = i;
-    say(g, gd, &pool[i as usize]);
+    crate::game::game_say(g, gd, &pool[i as usize], None, None);
 }
 
 /// Write a changed hold back to his row (`H` is the row's own object in the TypeScript).
@@ -250,7 +247,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
         h = None;
     }
     if !free {
-        if f.owed { say(g, gd, "huh?"); }
+        if f.owed { crate::game::game_say(g, gd, "huh?", None, None); }
         return;
     }
     if let Some(hh) = h { h = hold_as_it_stands(g, gd, hh, f, now); }
@@ -264,7 +261,7 @@ pub(super) fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
             }
         }
     }
-    if f.owed && !spoke { say(g, gd, "huh?"); }
+    if f.owed && !spoke { crate::game::game_say(g, gd, "huh?", None, None); }
     if h.is_none() {
         if let Some(l) = f.lent { take_up_what_is_lent(g, gd, l, now); }
     }
@@ -458,7 +455,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     mem(g, gd).told_at = now;
     if g.team(gd) == crate::teams::Team::Guard {
         let text = if g.escalation >= 1.0 { "clear here — staying on it" } else { "must have been nothing" };
-        say(g, gd, text);
+        crate::game::game_say(g, gd, text, None, None);
     } else {
         line(g, gd, &done_foe());
     }

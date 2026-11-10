@@ -30,7 +30,7 @@ fn big_slots(t: &SlotTable, i: usize) -> f64 { t.big.get(i).copied().unwrap_or(1
 fn pouches_at(t: &SlotTable, i: usize) -> f64 { t.pouches.get(i).copied().unwrap_or(0.0) }
 /// a whole number as the language writes it
 fn ns(x: f64) -> String { if x == 0.0 { String::from("0") } else { format!("{}", x) } }
-fn plural(n: f64) -> &'static str { if n == 1.0 { "" } else { "s" } }
+pub(super) fn plural(n: f64) -> &'static str { if n == 1.0 { "" } else { "s" } }
 /// the count of a thing the deal hands round
 fn dealt_mut(c: &mut MemberKit, k: Thing) -> &mut f64 { c.n_mut(k).expect("a thing that is counted") }
 /// `{ ...c, ...Object.fromEntries(DEALT.map(k => [k, from[k]])) }`
