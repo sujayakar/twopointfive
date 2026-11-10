@@ -321,7 +321,7 @@ fn mode_now(g: &crate::game::Game, pl: PlayerId) -> Option<GuardId> {
         if !close_subject(g, gd) { continue; }
         let gc = g.gd[gd].ch;
         let gp = g.ch[gc].pos;
-        let d = m::hyp2(p[0] - gp[0], p[2] - gp[2]);
+        let d = v3::dist_xz(p, gp);
         let held = g.m.close.state.get(pl).and_then(|s| s.mode);
         if d >= (if Some(gd) == held { g.k.close.mode_out_m } else { g.k.close.mode_m }) || d >= bd { continue; }
         if !clear_between(g, &gp, &p) { continue; }
@@ -410,7 +410,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
     g.ch[c].anim.creep = m_.is_some();
     if let Some(mm) = m_ {
         let mc = g.gd[mm].ch;
-        let ch = g.ch[mc].bones.get(Bone::Chest).copied();
+        let ch = g.ch[mc].bone(Bone::Chest);
         let pos = g.ch[mc].pos;
         g.ch[c].anim.creep_at = Some(match ch { Some(ch) => [ch[0], ch[1], ch[2]], None => [pos[0], pos[1] + 1.2, pos[2]] });
     } else {

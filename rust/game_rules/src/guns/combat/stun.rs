@@ -44,10 +44,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     {
         let ears = crate::seats::host_man(g);
         let c = g.pl[ears].ch;
-        let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
-            Some(h) => *h,
-            None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
-        };
+        let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
         if !crate::condition::down(g, g.pl[ears].ch) && v3::dist(eye, at) < b.dazzle_radius && !crate::scene_collision::segment_blocked(g, v3::add(at, [0.0, 0.3, 0.0]), eye, None, None, None) {
             crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.2 - v3::dist(eye, at) / b.dazzle_radius, 0.25, 0.8)), None);
         }
@@ -109,7 +106,7 @@ impl Flash {
     /// takes him as any other does where he looks at it
     fn takes(&self, g: &mut Game, c: CharId, own: bool, spare: bool, own_seen: bool) -> Option<(f64, f64)> {
         let bare = if matches!(g.ch[c].who, crate::character::Who::Player(_)) { 1.6 } else { 1.65 };
-        let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(g.ch[c].pos, [0.0, bare, 0.0]));
+        let head = g.ch[c].bone_or(crate::character::Bone::Head, bare);
         let d = v3::dist(head, self.at);
         if d > self.radius { return None; }
         let u = v3::clamp(d / self.radius, 0.0, 1.0);

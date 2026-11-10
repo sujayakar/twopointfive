@@ -20,7 +20,7 @@ pub fn aim_weighs(g: &mut Game) -> bool {
 pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     let gun = crate::game::player_gun_in_hand(g, pl);
     let scale = match gun {
-        Some(gun) => m::pow(crate::weapons::handling_of(g.m.weapons.weapons.get(g.fa[gun].def).unwrap()), m::max(0.0, g.k.aimweight.heft)),
+        Some(gun) => m::pow(crate::weapons::handling_of(g.weapon(g.fa[gun].def)), m::max(0.0, g.k.aimweight.heft)),
         None => g.k.aimweight.bare,
     };
     m::max(0.5, g.k.aimweight.rate * scale)

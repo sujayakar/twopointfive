@@ -235,7 +235,7 @@ fn burst_of(g: &Game, seat: &crate::seats::SeatRef, b: &Beat) -> (u32, f64) {
     let pl = seat.player;
     let slot_rifle = g.pl[pl].slot == SlotKind::Rifle;
     let fa = match b.man { Some(x) => g.gd[x].weapon, None => if slot_rifle { g.pl[pl].rifle } else { g.pl[pl].pistol } };
-    let def = g.m.weapons.weapons.get(g.fa[fa].def).unwrap();
+    let def = g.weapon(g.fa[fa].def);
     let k = if def.pellets.is_some() { 2 } else if (b.man.is_none() && !slot_rifle) || def.cls == crate::weapons::WeaponClass::Pistol { 1 } else { 0 };
     (K.fire_n[k], K.fire_gap[k])
 }
@@ -442,7 +442,7 @@ fn order_tick(g: &Game, st: &mut KitStage, b: &mut Beat) -> Step {
 fn reaches_sam(g: &mut Game, p: V3) -> bool {
     let c = g.pl[g.player].ch;
     let feet = g.ch[c].pos;
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or([feet[0], feet[1] + 1.6, feet[2]]);
+    let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or([feet[0], feet[1] + 1.6, feet[2]]);
     let lift = g.k.frag.lift;
     crate::frag::exposed_to(g, [p[0], p[1] + lift, p[2]], feet, head, Some(crate::frag::GlassView::Blown)) > 0.0
 }
@@ -1504,7 +1504,7 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
         if (!b_some || b_leaf_shut) && !g.dr[d].leaf.off {
             if to_shut && m::abs(g.dr[d].leaf.angle - st.leaf_shut) >= 0.03 && now - st.a.pulled > 1.0 {
                 st.a.pulled = now;
-                let id = b_id.unwrap_or_else(|| match st.order.first() { Some(&x) => g.ch[g.gd[x].ch].id, None => g.seat_id(&crate::seats::here(g)) });
+                let id = b_id.unwrap_or_else(|| match st.order.first() { Some(&x) => g.char_id(x), None => g.seat_id(&crate::seats::here(g)) });
                 doors_pull_to(g, d, id);
             }
             if !to_shut && st.a.cost_t.is_nan() && m::abs(g.dr[d].leaf.angle - st.leaf_rest) > 1e-4 { walk::ease_leaf(g, st, d); }

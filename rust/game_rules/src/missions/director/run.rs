@@ -26,7 +26,7 @@ fn uncaught<T>(r: Result<T, String>) -> T {
 // ---------------------------------------------------------------- small helpers
 /// `g.guards.find(x => x.char.id === id)`
 fn guard_by_char_id(g: &Game, id: f64) -> Option<GuardId> {
-    g.guards.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == id)
+    g.guards.iter().copied().find(|&x| g.char_id(x) == id)
 }
 /// `R.byName.get(name)`: names are unique in R.beats, as startBeat replaces a spent record
 fn beat_by_name(g: &Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBeatId> {
@@ -38,10 +38,7 @@ fn hand_back_state(g: &Game, gd: GuardId) -> crate::game::GuardState {
 }
 /// the man's chest, else `up` over his feet
 fn chest_of(g: &Game, c: CharId, up: f64) -> V3 {
-    match g.ch[c].bones.get(crate::character::Bone::Chest) {
-        Some(p) => *p,
-        None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
-    }
+    g.ch[c].bone_or(crate::character::Bone::Chest, up)
 }
 /// `0x2545F491 ^ (serial * 0x9E3779B9)`, or the seed asked for, as an unsigned word (TS 505)
 fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
@@ -418,7 +415,7 @@ fn filter_holds(g: &Game, r: DirectorRunId, f: &EventFilter, e: &EventView) -> b
         EventFilter::OrderSignal => e.name.as_deref().map_or(false, |n| n.starts_with("order:")),
         EventFilter::Heard { by, run_level, run_within, walk_level, walk_within } => {
             let at = uncaught(director_query_pos_unit(g, r, by));
-            let near = |within: f64| m::hyp2(at[0] - p[0], at[2] - p[2]) <= within;
+            let near = |within: f64| v3::dist_xz(at, p) <= within;
             (e.level >= *run_level && near(*run_within)) || (e.level >= *walk_level && near(*walk_within))
         }
     }
@@ -667,9 +664,9 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
     let units = &g.tab.director_run[r].units;
     match who {
         DirectorInsideVolumeWho::Sam => sam,
-        DirectorInsideVolumeWho::Team => sam || g.guards.iter().any(|&gd| g.team(gd).ours() && alive(gd) && in_volume(v, g.ch[g.gd[gd].ch].pos)),
-        DirectorInsideVolumeWho::AnyUnit => units.values().any(|u| alive(u.gd) && in_volume(v, g.ch[g.gd[u.gd].ch].pos)),
-        DirectorInsideVolumeWho::Unit(u) => units.get(crate::Num(u.id)).map_or(false, |x| alive(x.gd) && in_volume(v, g.ch[g.gd[x.gd].ch].pos)),
+        DirectorInsideVolumeWho::Team => sam || g.guards.iter().any(|&gd| g.team(gd).ours() && alive(gd) && in_volume(v, g.pos_of(gd))),
+        DirectorInsideVolumeWho::AnyUnit => units.values().any(|u| alive(u.gd) && in_volume(v, g.pos_of(u.gd))),
+        DirectorInsideVolumeWho::Unit(u) => units.get(crate::Num(u.id)).map_or(false, |x| alive(x.gd) && in_volume(v, g.pos_of(x.gd))),
     }
 }
 
@@ -686,7 +683,7 @@ pub(in crate::missions) fn director_query_state(g: &crate::game::Game, r: Direct
 }
 pub(in crate::missions) fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<V3, String> {
     let gd = director_guard_of(g, r, u)?;
-    Ok(v3::copy(g.ch[g.gd[gd].ch].pos))
+    Ok(v3::copy(g.pos_of(gd)))
 }
 /// (director.ts Query.door; DOORWAY.oneWay is settled on: swing is the door's)
 pub(in crate::missions) fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {

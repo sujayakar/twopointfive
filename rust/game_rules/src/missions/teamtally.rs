@@ -18,7 +18,7 @@ pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
     }
     let killer = g.gd[gd].killer_id;
     let mates = g.staged.team.clone();
-    mates.iter().any(|&m| g.ch[g.gd[m].ch].id == killer)
+    mates.iter().any(|&m| g.char_id(m) == killer)
 }
 
 /// At the end of a step: tally the defenders the partner put down in it.
@@ -45,7 +45,7 @@ pub fn team_tally_tick(g: &mut crate::game::Game) {
         let shot = how == Some(crate::game::DownKind::Shot);
         let round = shot;
         let killer = g.gd[gd].killer_id;
-        let mate = mates.iter().copied().find(|&m| g.ch[g.gd[m].ch].id == killer);
+        let mate = mates.iter().copied().find(|&m| g.char_id(m) == killer);
         if round && mate.is_none() {
             continue; // a round none of the team fired: his own side's
         }
@@ -54,7 +54,7 @@ pub fn team_tally_tick(g: &mut crate::game::Game) {
             g.chronicle.counts.shots_near_men += 1.0;
         }
         let who = g.gd[gd].callsign.clone();
-        let pos = g.ch[g.gd[gd].ch].pos;
+        let pos = g.pos_of(gd);
         let mut data: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
         data.set(String::from("who"), Some(crate::chronicle::ChronicleDataValue::Text(who)));
         if shot {

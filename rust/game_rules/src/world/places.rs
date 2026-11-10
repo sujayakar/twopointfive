@@ -45,7 +45,7 @@ pub fn roomy(g: &Game, p: V3) -> bool {
 /// SOMEBODY HAS IT: within `apart` of `p` another man stands, or is on his way there, or means to, whatever rule or order sent him; or a player does.
 pub fn taken(g: &mut Game, gd: GuardId, p: V3, apart: f64) -> bool {
     let at = |q: Option<V3>| q.map_or(false, |q| v3::dist_xz(q, p) < apart);
-    if crate::seats::men_up(g).into_iter().any(|pl| at(Some(g.ch[g.pl[pl].ch].pos))) { return true; }
+    if crate::seats::men_up(g).into_iter().any(|pl| at(Some(g.player_pos(pl)))) { return true; }
     for o in g.guards.clone() {
         if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let m = &g.gd[o];

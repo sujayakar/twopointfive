@@ -140,7 +140,7 @@ fn stands_over_him(g: &mut Game, f: Fight, pc: CharId, a: &mut Acts) {
     let Fight { gd, dt, c, staff, .. } = f;
     let body = g.ch[pc].pos;
     let here = g.ch[c].pos;
-    let d_b = m::hyp2(body[0] - here[0], body[2] - here[2]);
+    let d_b = v3::dist_xz(body, here);
     if d_b > 2.2 {
         go_to(g, gd, body, None);
         follow_path(g, gd, dt, g.tune.guard_investigate);
@@ -239,13 +239,13 @@ struct Sight {
 fn fight_sight(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, dt: f64) -> Sight {
     use crate::character::Bone;
     let crouched = crate::teams::foe_crouched(g, gd);
-    let trunk = match g.ch[pc].bones.get(Bone::Spine2).copied() { Some(b) => Some(b), None => g.ch[pc].bones.get(Bone::Hips).copied() };
+    let trunk = match g.ch[pc].bone(Bone::Spine2) { Some(b) => Some(b), None => g.ch[pc].bone(Bone::Hips) };
     let pp = g.ch[pc].pos;
     let mut aim: V3 = [match trunk { Some(t) => t[0], None => pp[0] }, pp[1] + (if crouched { 0.8 } else { 1.25 }), match trunk { Some(t) => t[2], None => pp[2] }];
     let pinned = g.gd[gd].pinned;
     let mut blocked = false;
     if (!pinned || pane_first(g, c, aim)) && !clear_shot(g, c, aim) {
-        let head = match g.ch[pc].bones.get(Bone::Head).copied() { Some(b) => b, None => v3::add(pp, [0.0, if crouched { 1.05 } else { 1.6 }, 0.0]) };
+        let head = match g.ch[pc].bone(Bone::Head) { Some(b) => b, None => v3::add(pp, [0.0, if crouched { 1.05 } else { 1.6 }, 0.0]) };
         if clear_shot(g, c, head) { aim = head; } else { blocked = true; }
     }
     if !blocked && !pinned && crate::aim::bore_fouled(g, gd) { blocked = true; }
@@ -255,7 +255,7 @@ fn fight_sight(g: &mut Game, gd: GuardId, c: CharId, pc: CharId, dt: f64) -> Sig
     }
     let here = g.ch[c].pos;
     let gun_yaw = crate::character::character_gun_yaw(g, c);
-    let facing_err = m::abs(v3::wrap_angle(m::atan2(aim[0] - here[0], aim[2] - here[2]) - gun_yaw));
+    let facing_err = m::abs(v3::wrap_angle(v3::yaw_to(here, aim) - gun_yaw));
     let walled = !pinned && crate::gunwall::gun_wall_check(g, gd, Some(crate::gunwall::GunUp::Aim), Some(aim), dt, Some(true));
     let poked = !pinned && (crate::combat::arm_through(g, c) || walled);
     if poked && facing_err < 0.3 { blocked = true; }

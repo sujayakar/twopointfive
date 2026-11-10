@@ -105,7 +105,7 @@ impl Snow {
     fn man(&mut self, g: &Game, id: CharId, hid: bool, dead: bool) {
         let c = &g.ch[id];
         let f3 = |v: [f64; 3]| v.map(|x| x as f32);
-        let b = |k: Bone| c.bones.get(k).copied().map(f3);
+        let b = |k: Bone| c.bone(k).map(f3);
         let Some(hips) = b(Bone::Hips) else { return };
         let mut r = Foot::ZERO;
         r.id = c.id as u32;

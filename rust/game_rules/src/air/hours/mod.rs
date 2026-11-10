@@ -490,7 +490,7 @@ pub fn dome_light(g: &mut crate::game::Game, p: V3, acc: &mut [f64; 6]) {
         let db = g.col.dynamic_boxes[i];
         i += 1;
         let dc = g.tab.boxes[db].c;
-        if m::hyp2(dc[0] - p[0], dc[2] - p[2]) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
+        if v3::dist_xz(dc, p) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
     }
     let (sky_rays, gnd_rays) = (sky(), gnd());
     let dome = st.dome;

@@ -567,7 +567,7 @@ fn wall_react_man_knows(g: &mut Game, b: WallreactBreachId, gd: GuardId, how: Wa
     let own = if crate::seats::is_man_id(g, by) {
         !team.theirs()
     } else {
-        g.guards.iter().any(|x| g.ch[g.gd[*x].ch].id == by && g.team(*x) == team)
+        g.guards.iter().any(|x| g.char_id(*x) == by && g.team(*x) == team)
     };
     let line = if own {
         if walk { "the wall's down — watch it!" } else { "hole in the wall — watch it!" }
@@ -595,7 +595,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
     let mut known = ours;
     if !known {
         for pl in crate::seats::men_up(g) {
-            let p = g.ch[g.pl[pl].ch].pos;
+            let p = g.player_pos(pl);
             if hears(g, [p[0], EYE, p[2]], src, r) { known = true; break; }
         }
     }
@@ -806,9 +806,9 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
 fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) {
         if crate::condition::down(g, g.pl[pl].ch) { return None; }
-        return Some(WallReactCharOf { pos: g.ch[g.pl[pl].ch].pos, team: crate::teams::Team::Ours });
+        return Some(WallReactCharOf { pos: g.player_pos(pl), team: crate::teams::Team::Ours });
     }
-    let found = g.guards.iter().copied().find(|x| g.ch[g.gd[*x].ch].id == id_2)?;
+    let found = g.guards.iter().copied().find(|x| g.char_id(*x) == id_2)?;
     if crate::condition::down(g, g.gd[found].ch) { return None; }
     Some(WallReactCharOf { pos: g.pos_of(found), team: g.team(found) })
 }
@@ -869,7 +869,7 @@ fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3) ->
     if g.team(gd).ours() {
         if crate::cleared::cleared_rooms_room_at(g, far) != 0.0 && crate::cleared::cleared_rooms_known_at(g, far) { return None; }
         let squad = crate::seats::team_squad(g, &crate::seats::here(g));
-        if squad.iter().any(|x| *x != gd && !crate::condition::down(g, g.gd[*x].ch) && over(g.pos_of(*x))) || crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && over(g.ch[g.pl[pl].ch].pos)) { return None; }
+        if squad.iter().any(|x| *x != gd && !crate::condition::down(g, g.gd[*x].ch) && over(g.pos_of(*x))) || crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && over(g.player_pos(pl))) { return None; }
     } else {
         let team = g.team(gd);
         for x in g.guards.iter().copied() {

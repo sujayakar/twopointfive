@@ -24,7 +24,7 @@ pub(super) fn anim_creep_gait(g: &mut crate::game::Game, c: CharId, dt: f64) -> 
     g.ch[c].anim.cr_t = v3::clamp(g.ch[c].anim.cr_t + rate, 0.0, 1.0);
     let pp = g.ch[c].anim.life.prev_pos;
     let p0 = g.ch[c].pos;   // posIn is Character.pos itself (character.ts:4419 keeps the array, not a copy)
-    let d = if pp[0].is_finite() { m::hyp2(p0[0] - pp[0], p0[2] - pp[2]) } else { 0.0 };
+    let d = if pp[0].is_finite() { v3::dist_xz(p0, pp) } else { 0.0 };
     let a = &mut g.ch[c].anim;
     a.cr_v = if dt > 0.0 && d <= 0.5 { m::min(d / dt, 8.0) } else { 0.0 };
     v3::smoothstep(0.0, 1.0, a.cr_t)

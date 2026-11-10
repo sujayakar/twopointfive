@@ -241,7 +241,7 @@ fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Optio
             continue;
         }
         let c = g.gd[o].ch;
-        let b = g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[c].pos);
+        let b = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
         let d = dist_xz(b, at);
         let in_view = d < body_m && !crate::scene_collision::segment_blocked(g, eye, [b[0], 0.3, b[2]], None, None, None);
         let id = g.ch[c].id;
@@ -415,7 +415,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
             }
         }
         let big = ((kind == crate::director::EventKind::Shot || kind == crate::director::EventKind::GuardShot) && level.unwrap_or(0.0) >= 1.0) || kind == crate::director::EventKind::Bang || kind == crate::director::EventKind::Kick;
-        if if big { !loud } else { !small || m::hyp2(pos[0] - p[0], pos[2] - p[2]) > 22.0 } {
+        if if big { !loud } else { !small || v3::dist_xz(pos, p) > 22.0 } {
             continue;
         }
         any = true;
@@ -451,7 +451,7 @@ fn arc_at(g: &crate::game::Game, e: &[crate::roomfight::Entry], p: V3) -> crate:
         if !crate::scene_collision::segment_blocked(g, eye, q, None, None, None) {
             seen += 1.0;
         }
-        yaws.push(m::atan2(q[0] - p[0], q[2] - p[2]));
+        yaws.push(v3::yaw_to(p, q));
         near = m::min(near, dist_xz(q, p));
     }
     if yaws.is_empty() {

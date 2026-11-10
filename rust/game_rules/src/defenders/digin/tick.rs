@@ -41,7 +41,7 @@ fn way_in_room(g: &crate::game::Game, room: RoomfightRoomId, from: V3, to: V3) -
 /// braceInRoom: he can push this prop to the door from `q` without leaving his room
 fn pushable(g: &crate::game::Game, d: RoomfightDefId, room: RoomfightRoomId, pp: V3, q: V3, stand: V3) -> bool {
     if !(dist_xz(q, pp) < 1.6) { return false; }
-    if crate::scene_collision::solid_blocked(g, [q[0], 0.45, q[2]], [pp[0], 0.45, pp[2]], None) { return false; }
+    if crate::scene_collision::low_blocked(g, q, pp) { return false; }
     let from = g.pos_of(g.tab.roomfight_def[d].gd);
     way_in_room(g, room, from, q) && way_in_room(g, room, q, stand)
 }

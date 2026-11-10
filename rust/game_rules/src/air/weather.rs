@@ -278,7 +278,7 @@ pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     let air = &::sim::weather::of_read(g.sim).air;
     let mut leak = 0.0;
     if air.on != 0.0 {
-        let n = m::min(24.0, m::max(4.0, m::ceil(m::hyp2(b[0] - a[0], b[2] - a[2]) / 0.75)));
+        let n = m::min(24.0, m::max(4.0, m::ceil(v3::dist_xz(b, a) / 0.75)));
         let mut i = 0.0;
         while i < n {
             let t = (i + 0.5) / n;
@@ -444,7 +444,7 @@ pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
     // ---- the rain bed follows the rate and where the listener stands
     let seat = crate::game::game_host_seat(g);
     let man = crate::cmd::seat_man(g, seat);
-    let pp = g.ch[g.pl[man].ch].pos;
+    let pp = g.player_pos(man);
     weather_sync_roofs(g, None);
     let bed = rain_bed(g, pp[0], pp[2]);
     crate::audio_iface::game_audio_like_rain(g, bed);
@@ -512,7 +512,7 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
             let man = &g.gd[gd];
             if !(man.state == crate::game::GuardState::Patrol && man.held.is_none() && man.script.is_none() && man.unit.is_none() && man.awareness < 0.2) { continue; }
             let c = man.ch;
-            let head = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) };
+            let head = g.ch[c].bone_or(crate::character::Bone::Head, 1.7);
             if crate::guards::on_screen(g, head) { cands.push(gd); }
         }
         if !cands.is_empty() {
@@ -521,7 +521,7 @@ fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, 
             let lines = thunder_lines();
             let mut line: &str = &lines[js::rem(g.weather.stats.barks + m::floor(r_line * 2.0), lines.len() as f64) as usize];
             if line.contains("not out in that") {
-                let p = g.ch[g.gd[gd].ch].pos;
+                let p = g.pos_of(gd);
                 if !crate::scene_collision::solid_blocked(g, [p[0], 1.9, p[2]], [p[0], 10.9, p[2]], None) { line = THUNDER_OUT; }   // he is out in it
             }
             crate::game::game_say(g, gd, line, None, None);

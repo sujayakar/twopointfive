@@ -429,7 +429,7 @@ pub fn character_joint_under(g: &crate::game::Game, id: CharId, name: &str) -> O
     let k = bone_of(name)?;
     let c = &g.ch[id];
     if let Some(v) = c.sim_bones.as_ref().and_then(|m| m.get(k)) { return Some(*v); }
-    c.bones.get(k).copied()
+    c.bone(k)
 }
 /// The world-space joints off the skeleton's current globals, into `b`. (Character.joints)
 fn character_joints(g: &crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) {
@@ -741,7 +741,7 @@ fn fall_guide_of(rag: &crate::ragdoll::Ragdoll, rg: &crate::ragdoll::RAG, kind: 
     let pv = part_at(rag, rg.pelvis); let nk = part_at(rag, rg.neck);
     let v0 = v3::sub(nk, pv); let v0n = v3::normalize(v0);
     let away: V3 = match from {
-        Some(fr) if m::hyp2(pv[0] - fr[0], pv[2] - fr[2]) > 0.05 => v3::normalize([pv[0] - fr[0], 0.0, pv[2] - fr[2]]),
+        Some(fr) if v3::dist_xz(pv, fr) > 0.05 => v3::normalize([pv[0] - fr[0], 0.0, pv[2] - fr[2]]),
         _ => h,
     };
     let sd: V3 = [f[2] * side, 0.0, -f[0] * side]; let nod_ax: V3 = [f[2], 0.0, -f[0]];   // (up × f: a turn about it takes the top of a thing toward his front)
@@ -962,13 +962,13 @@ pub fn character_inside_body(g: &crate::game::Game, id: CharId, p: V3, crown_pad
     if !c.alive { return false; }
     let top = (match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 }) + crown_pad;
     let bot = c.pos[1] + 0.05;
-    let hips = c.bones.get(Bone::Hips).copied(); let chest = c.bones.get(Bone::Spine2).copied();
+    let hips = c.bone(Bone::Hips); let chest = c.bone(Bone::Spine2);
     let cx = match hips { Some(v) => v[0], None => c.pos[0] }; let cz = match hips { Some(v) => v[2], None => c.pos[2] };
     if p[1] > bot && p[1] < top && m::hyp2(p[0] - cx, p[2] - cz) < 0.28 { return true; }
     if let (Some(chest), Some(hips)) = (chest, hips) {
-        if m::hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12 {
+        if v3::dist_xz(chest, hips) > 0.12 {
             let cb = m::min(hips[1], chest[1]) - 0.12;
-            if p[1] > cb && p[1] < top && m::hyp2(p[0] - chest[0], p[2] - chest[2]) < 0.25 { return true; }
+            if p[1] > cb && p[1] < top && v3::dist_xz(p, chest) < 0.25 { return true; }
         }
     }
     false
@@ -979,11 +979,11 @@ pub fn character_ray_hit(g: &crate::game::Game, id: CharId, ro: V3, rd: V3, tmax
     if !c.alive { return -1.0; }
     let top = match c.bones.get(Bone::HeadTop) { Some(v) => v[1], None => c.pos[1] + 1.75 };
     let bot = c.pos[1] + 0.05;
-    let hips = c.bones.get(Bone::Hips).copied(); let chest = c.bones.get(Bone::Spine2).copied();
+    let hips = c.bone(Bone::Hips); let chest = c.bone(Bone::Spine2);
     let cx = match hips { Some(v) => v[0], None => c.pos[0] }; let cz = match hips { Some(v) => v[2], None => c.pos[2] };
     let mut t = column_entry(ro, rd, tmax, cx, cz, 0.28, bot, top);
     if let (Some(chest), Some(hips)) = (chest, hips) {
-        if m::hyp2(chest[0] - hips[0], chest[2] - hips[2]) > 0.12 {
+        if v3::dist_xz(chest, hips) > 0.12 {
             let tc = column_entry(ro, rd, tmax, chest[0], chest[2], 0.25, m::min(hips[1], chest[1]) - 0.12, top);
             if tc >= 0.0 && (t < 0.0 || tc < t) { t = tc; }
         }

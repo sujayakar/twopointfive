@@ -154,7 +154,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     } else {
         if let (true, Some(at)) = (g.ch[c].anim.creep, g.ch[c].anim.creep_at) {
             let pos = g.ch[c].pos;
-            let d = m::hyp2(at[0] - pos[0], at[2] - pos[2]);
+            let d = crate::v3::dist_xz(at, pos);
             let k = kit_closeness(g, d);
             g.ch[c].anim.close_k = k;
         } else if g.ch[c].anim.close_k < 0.0 {
@@ -342,7 +342,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     let long = v.rifle == Some(crate::rig_props::RifleAt::Hand);
     if let Some(rs) = rs {
         let (rifle, pistol) = (g.pl[p].rifle, g.pl[p].pistol);
-        if v.pistol_in_hand || (long && g.m.weapons.weapons.get(g.fa[rifle].def).unwrap().pellets.is_none()) {
+        if v.pistol_in_hand || (long && g.weapon(g.fa[rifle].def).pellets.is_none()) {
             let mut draw = kit.unwrap_or_default();
             draw.no_mag = Some(rs.out && long);
             draw.mag_l = if rs.hand {
@@ -351,7 +351,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
                 None
             };
             // (a gun with a model of its own carries its own thing in the hand; its magazine / belt box is off the gun when its feeding says so)
-            let def = g.m.weapons.weapons.get(g.fa[if long { rifle } else { pistol }].def).unwrap().clone();
+            let def = g.weapon(g.fa[if long { rifle } else { pistol }].def).clone();
             if crate::gunreload::feed_of(&def).is_some() {
                 draw.mag_l = None;
                 draw.no_mag = Some(long && crate::gunreload::reload_show(g, c, def.id).map_or(false, |s| s.no_mag));
@@ -370,7 +370,7 @@ pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.
 pub fn kit_reload(g: &crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
-    if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() {
+    if g.weapon(g.fa[gun].def).pellets.is_some() {
         return None;
     }
     // by what the weapon will do: a magazine with rounds in it is kept, an empty one dropped; the slide / handle is run iff nothing is chambered
@@ -383,7 +383,7 @@ pub fn kit_reload(g: &crate::game::Game, gun: FirearmId, long: bool) -> Option<c
         let t = g.k.kitanim.beats.pistol;
         BeatTable { ref_: t.ref_, empty: t.empty, dry: t.dry, tactical: t.tactical }
     };
-    let row_dur = g.m.weapons.weapons.get(g.fa[gun].def).unwrap().reload.dur;
+    let row_dur = g.weapon(g.fa[gun].def).reload.dur;
     Some(reload_plan(&table, row_dur, long, keeps, racks))
 }
 

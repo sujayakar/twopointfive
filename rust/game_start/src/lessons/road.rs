@@ -141,7 +141,7 @@ async fn deed(b: &Bot, id: &str) {
             b.until(|| !b.closed(hut), 2.0).await;
             if b.closed(hut) { b.fail(String::from("the reload's line is up and the hut's door still stands: the script did not open it")).await; }
             let w = b.gun();
-            let full = || !b.reloading() && b.ask(|g| game::weapons::firearm_rounds_ready(g, w) >= g.m.weapons.weapons.get(g.fa[w].def).unwrap().mag_capacity);
+            let full = || !b.reloading() && b.ask(|g| game::weapons::firearm_rounds_ready(g, w) >= g.weapon(g.fa[w].def).mag_capacity);
             if !full() && !b.reloading() { b.press("KeyR", 6).await; }
             if !b.reloading() && !full() { b.fail(format!("R did not start a reload ({} ready)", b.rounds())).await; }
             while b.reloading() { b.tick().await; if !b.step_is("reload") { b.fail(String::from("the next line came up while the rifle was still being reloaded")).await; } }

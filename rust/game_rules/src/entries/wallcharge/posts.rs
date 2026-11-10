@@ -472,7 +472,7 @@ fn walk_kept(g: &mut Game, spot: V3, q: V3, cap: f64, room0: f64, kept: Option<&
 fn reach_kept(g: &mut Game, gd: GuardId, to: V3, menu: bool) -> Option<String> {
     if !menu { return crate::orders::squad_orders_reach(g, gd, to); }
     let cs = g.col.nav.cell;
-    let (id, p) = (g.ch[g.gd[gd].ch].id, g.pos_of(gd));
+    let (id, p) = (g.char_id(gd), g.pos_of(gd));
     let key = format!("r|{}|{},{}|{},{}", id, m::floor(p[0] / cs), m::floor(p[2] / cs), to[0], to[2]);
     let have = g.sets[g.seat].wall_charge.walks.as_ref().and_then(|k| k.map.get(key.clone()).cloned());
     if let Some(WallChargeWalkAnswer::Reach { why }) = have {  return why; }

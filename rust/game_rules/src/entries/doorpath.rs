@@ -73,7 +73,7 @@ fn door_path_free(g: &crate::game::Game, p: V3) -> bool {
 
 /// A man's width of open floor from a to b.
 fn door_path_open(g: &crate::game::Game, a: V3, b: V3) -> bool {
-    if crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) {
+    if crate::scene_collision::low_blocked(g, a, b) {
         return false;
     }
     let d = v3::dist_xz(a, b);
@@ -227,7 +227,7 @@ fn door_path_way(g: &crate::game::Game, a: V3, b: V3) -> Option<crate::doorpath:
 fn door_path_lay(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) {
     let k = g.k.doorpath;
     let d = w.door;
-    let p = g.ch[g.gd[w.gd].ch].pos;
+    let p = g.pos_of(w.gd);
     let side = g.tab.doortools_door_op[w.op].side;
     let h = g.dr[d].def.hinge;
     let ux = m::cos(g.dr[d].def.closed_dir);
@@ -454,7 +454,7 @@ fn door_path_point_at(w: &crate::doorpath::Walk, s: f64) -> V3 {
 
 /// How far along his line he is now: the nearest point of it from where he was to a metre on, never back; returns how far off it he stands.
 fn door_path_advance(g: &crate::game::Game, w: &mut crate::doorpath::Walk) -> f64 {
-    let p = g.ch[g.gd[w.gd].ch].pos;
+    let p = g.pos_of(w.gd);
     let mut best_s = w.s;
     let mut best_d = m::INF;
     for i in 1..w.pts.len() {
@@ -489,7 +489,7 @@ fn door_path_to_line(g: &crate::game::Game, w: &crate::doorpath::Walk) -> f64 {
         w.len[w.lane as usize] - w.in_m - w.s
     } else {
         let side = g.tab.doortools_door_op[w.op].side;
-        let p = g.ch[g.gd[w.gd].ch].pos;
+        let p = g.pos_of(w.gd);
         -door_path_depth(g, w.door, side, &p)
     }
 }
@@ -529,7 +529,7 @@ pub(super) fn door_path_may_go(g: &crate::game::Game, op: DoorOpId, q: crate::do
     }
     let d = g.tab.doortools_door_op[op].door;
     let side = g.tab.doortools_door_op[op].side;
-    let p = g.ch[g.gd[q.gd].ch].pos;
+    let p = g.pos_of(q.gd);
     let h = g.dr[d].def.hinge;
     let ux = m::cos(g.dr[d].def.closed_dir);
     let uz = m::sin(g.dr[d].def.closed_dir);
@@ -608,7 +608,7 @@ fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: cra
     }
     let Some(a) = crate::orders::squad_orders_of(&crate::seats::here(g), w.gd) else { return };
     let Some(post) = g.tab.orders_assignment[a].post else { return };
-    let p = g.ch[g.gd[w.gd].ch].pos;
+    let p = g.pos_of(w.gd);
     let side = g.tab.doortools_door_op[w.op].side;
     if v3::dist_xz(post, w.pod) < 0.1 && g.tab.orders_assignment[a].via.is_empty() && !w.via.is_empty() && door_path_depth(g, w.door, side, &p) < 0.3 {
         // (from the corner nearest him on: never back to one he has passed)
@@ -657,7 +657,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     }
     if let Some(stays) = not_walking(g, gd, w, t) { return stays; }
     laid_afresh(g, gd, w, t);
-    let (p, left) = (g.ch[g.gd[gd].ch].pos, door_path_total(w) - w.s);
+    let (p, left) = (g.pos_of(gd), door_path_total(w) - w.s);
     let (carrot, first) = path_ahead(g, gd, w);
     side_step(g, gd, first);
     if w.wait {   // a leaf still swinging by his line: he stands at the lane's end until it stands
@@ -685,7 +685,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
 /// Is he off his walk this frame: off the order for a moment or for good, there, or let go by somebody else's path. Some(whether the walk stays).
 fn not_walking(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64) -> Option<bool> {
     let k = g.k.doorpath;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     if g.gd[gd].script.is_some() && door_path_own(g, w) {
         // (back from the fight, the order laid its own way round again)
         let a = crate::orders::squad_orders_of(&crate::seats::here(g), gd).unwrap();
@@ -737,7 +737,7 @@ fn not_walking(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64)
 /// The line laid again from where he is: after he yielded, when a leaf by it has moved, when a man has dropped on his point, and once he is off it.
 fn laid_afresh(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64) {
     let k = g.k.doorpath;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     if w.arr.is_none() && js::truthy(w.yields) && t >= w.yield_t { door_path_lay(g, w); }
     if t - w.laid_t > 0.2 && (w.wait || near_moved(g, w)) { door_path_lay(g, w); }
     if k.body_m > 0.0 && t - w.body_t > 0.25 && v3::dist_xz(p, w.pod) > 0.6 {
@@ -756,7 +756,7 @@ fn laid_afresh(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64)
 /// The path under him: a point of the line a look ahead, then its end. Answers that point, and the first of the path.
 fn path_ahead(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk) -> (V3, V3) {
     let k = g.k.doorpath;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let (end, tot) = (w.pts[w.pts.len() - 1], door_path_total(w));
     let near = tot - w.s <= k.look;
     let mut cs = w.s + k.look;
@@ -784,7 +784,7 @@ fn path_ahead(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk) -> (V3, 
 fn side_step(g: &mut Game, gd: GuardId, first: V3) {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    let yaw = m::atan2(first[0] - p[0], first[2] - p[2]);
+    let yaw = v3::yaw_to(p, first);
     if !(v3::dist_xz(p, first) > 0.05 && m::cos(yaw - crate::character::character_want_body(g, c)) < 0.7) { return; }
     let s = g.gd[gd].script.as_mut().unwrap();
     s.strafe = Some(true);
@@ -794,11 +794,11 @@ fn side_step(g: &mut Game, gd: GuardId, first: V3) {
 /// How much of his pace the men sent before him through this door leave him: one beside or behind him is not in his way.
 fn room_ahead(g: &Game, gd: GuardId, w: &crate::doorpath::Walk, carrot: V3) -> f64 {
     let k = g.k.doorpath;
-    let p = g.ch[g.gd[gd].ch].pos;
+    let p = g.pos_of(gd);
     let mut f = 1.0;
     for (key, v) in g.door_path.walks.iter() {
         if key == gd || v.door != w.door || v.t0 > w.t0 || (v.t0 == w.t0 && v.n >= w.n) { continue; }
-        let q = g.ch[g.gd[v.gd].ch].pos;
+        let q = g.pos_of(v.gd);
         let dd = v3::dist_xz(p, q);
         if dd > k.short_m || dd < 1e-3 { continue; }
         let (hx, hz) = (carrot[0] - p[0], carrot[2] - p[2]);

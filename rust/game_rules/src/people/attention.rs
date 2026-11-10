@@ -61,7 +61,7 @@ pub fn attention_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::attenti
 /// The cosine of the angle at his eye between the thing that holds him and a man at `p`.
 fn off_cos(g: &crate::game::Game, gd: GuardId, h: crate::attention::Hold, p: V3) -> f64 {
     let c = g.gd[gd].ch;
-    let e = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
+    let e = g.ch[c].bone(crate::character::Bone::Head).unwrap_or(g.ch[c].pos);
     let mut ax = h.at[0] - e[0];
     let mut az = h.at[2] - e[2];
     let al = m::hyp2(ax, az);
@@ -445,7 +445,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     h.told = true;
     if let Some(on_row) = mem(g, gd).hold.as_mut() { on_row.told = true; }
     let now = g.time;
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if crate::guards::near_known_body(g, pos, Some(4.0)).is_some()
         || g.gd[gd].bubble.as_ref().map_or(false, |b| b.radio && now - b.t < 4.0)
         || (crate::teams::foe_is_player(g, gd) && crate::condition::down(g, g.pl[g.player].ch))

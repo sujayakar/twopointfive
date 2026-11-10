@@ -113,7 +113,7 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
                 if k == 60 || k == 780 { let x = if k == 60 { 11.5 } else { 27.5 }; p.seat_stands(0, [x, 12.5]); p.seat_stands(1, [x, 9.5]); }
                 for seat in 0..2 {
                     let a = at(&p, seat);
-                    let foe = p.hostiles_by([a[0], a[2]]).first().map(|&h| { let q = p.g.ch[p.g.gd[h].ch].pos; [q[0], 1.2, q[2]] });
+                    let foe = p.hostiles_by([a[0], a[2]]).first().map(|&h| { let q = p.g.pos_of(h); [q[0], 1.2, q[2]] });
                     let n = k + seat * 37;
                     hands(&mut p, seat, &[["KeyW", "KeyD", "KeyS", "KeyA"][n / 40 % 4]], foe, n % 120 > 60);
                     if n % 90 == 0 { let i = p.g.tab.cmd_seat[p.g.seats[seat]].input; p.g.tab.input[i].pressed.add(String::from(KEYS[n / 90 % KEYS.len()])); }
@@ -164,7 +164,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
             (from..from + n).map(|k| {
                 for seat in 0..2 {
                     let a = at(p, seat);
-                    let foe = p.hostiles_by([a[0], a[2]]).first().map(|&h| { let q = p.g.ch[p.g.gd[h].ch].pos; [q[0], 1.2, q[2]] });
+                    let foe = p.hostiles_by([a[0], a[2]]).first().map(|&h| { let q = p.g.pos_of(h); [q[0], 1.2, q[2]] });
                     hands(p, seat, &[["KeyW", "KeyD", "KeyS", "KeyA"][(k + seat * 37) / 40 % 4]], foe, (k + seat * 11) % 40 > 20);
                     if k == 0 { let i = p.g.tab.cmd_seat[p.g.seats[seat]].input; p.g.tab.input[i].pressed.add(String::from("Digit2")); }
                 }

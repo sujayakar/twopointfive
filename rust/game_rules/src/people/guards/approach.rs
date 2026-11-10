@@ -52,7 +52,7 @@ pub(super) fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
 fn score_into(g: &Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Option<&[f32]>) {
     let elapsed = g.time - p.t0;
     let others: Vec<GuardId> = g.guards.iter().copied().filter(|&o| o != gd && g.gd[o].state == crate::game::GuardState::Search && g.gd[o].script.is_none() && g.gd[o].search_plan.is_some() && g.team(o) == g.team(gd)).collect();   // (teams: spots are split over HIS side's net)
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let (slack, ramp) = (PLAUS_SLACK_SECS, PLAUS_RAMP_SECS);
     for s in p.spots.iter_mut() {
         if !s.visited {
@@ -91,7 +91,7 @@ fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot)
 
 /// On to the best spot still worth it (scored this frame), or the plan is done.
 pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let walk = flood_from(g, at, SEARCH_RADIUS_M * 2.0 + 4.0, Some(true)).metres;   // (his own walk to each, doors and all: round the partitions, not through them)
     let mut own = g.gd[gd].search_plan.take().unwrap();   // (off his row until the line is chosen: the scoring and the tests below read only the OTHER men's plans)
     let p = &mut own;
@@ -168,7 +168,7 @@ fn crosses_frame(f: &crate::doorway::RelF, a: V3, b: V3) -> Option<crate::guards
 
 /// Doorways a hunting man goes through, pied or not: his stride since the last frame looked at cutting a frame line. Once a frame at most.
 pub(super) fn note_door_crossings(g: &mut crate::game::Game, gd: GuardId) {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     if g.gd[gd].pie_prev_t == g.time { return; }
     if let Some(prev) = g.gd[gd].pie_prev {
         if g.time - g.gd[gd].pie_prev_t < 0.5 && v3::dist_xz(prev, pos) > 1e-4 {
@@ -202,7 +202,7 @@ fn bearing(deg: f64, reach: f64, y: f64, far: f64, ex: f64, ez: f64, tx: f64, tz
 /// This frame's threshold discipline for a man followPath is about to move at `speed`: keeps Guard.pieing, notes the doorways he goes through. `eyes_on`: no
 /// drill, he is chasing. Returns the speed to walk at and a look point (None = the caller's own).
 pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, eyes_on: bool) -> crate::guards::PieDoorway {
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     note_door_crossings(g, gd);
     if g.gd[gd].pinned || eyes_on {
         g.gd[gd].pieing = None;
@@ -293,7 +293,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
 
 /// Does the man's remaining path still run through this door.
 fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
-    let mut prev = g.ch[g.gd[gd].ch].pos;
+    let mut prev = g.pos_of(gd);
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {
         let wp = g.gd[gd].path[i];
@@ -307,7 +307,7 @@ fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
 /// The crossing point of the man's pie (his row) again, off the path as it now runs.
 fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
     let door = g.gd[gd].pieing.as_ref().unwrap().door;
-    let mut prev = g.ch[g.gd[gd].ch].pos;
+    let mut prev = g.pos_of(gd);
     let mut i = g.gd[gd].path_i;
     while i < g.gd[gd].path.len() {
         let wp = g.gd[gd].path[i];
@@ -324,7 +324,7 @@ fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
 /// of it unless he comes along the wall from the latch side. Only onto free cells he can walk between.
 fn bend_approach(g: &mut crate::game::Game, gd: GuardId, d: DoorId, sg: f64) {
     let f = frame_of(g, d);
-    let pos = g.ch[g.gd[gd].ch].pos;
+    let pos = g.pos_of(gd);
     let bef = |p: V3| ((p[0] - f.hx) * f.nx + (p[2] - f.hz) * f.nz) * sg;
     let alg = |p: V3| (p[0] - f.hx) * f.ux + (p[2] - f.hz) * f.uz;
     let at = |a: f64, b: f64| -> V3 { [f.hx + f.ux * a + f.nx * sg * b, 0.0, f.hz + f.uz * a + f.nz * sg * b] };

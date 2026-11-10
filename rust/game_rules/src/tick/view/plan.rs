@@ -16,7 +16,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy)]
 struct For { own: bool, reading: bool }
 
-fn id_of(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
+fn id_of(g: &Game, gd: GuardId) -> f64 { g.char_id(gd) }
 
 /// 'Red Two' is R2, 'Blue One' B1, 'Kestrel' K
 pub fn plan_tag(callsign: &str) -> String {
@@ -206,7 +206,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
     /// how far the press would get, past whoever reads the key before
     fn press(&self, pair_first: bool) -> Press {
         let (g, ops, up, big) = (self.g, &self.seat.door_tools.ops, self.up, self.big);
-        let sam = g.ch[g.pl[self.seat.player].ch].pos;
+        let sam = g.seat_pos(self.seat);
         // (a set charge not on a word already given)
         let free: Vec<ChargeId> = self.charges.iter().copied().filter(|&c| {
             let door = g.tab.doortools_set_charge[c].door;
@@ -236,7 +236,7 @@ impl<'a, 'g> Waiting<'a, 'g> {
             if self.down(m) { return true; }
             let Some(a) = crate::orders::squad_orders_of(self.seat, m) else { return true };
             let a = &self.g.tab.orders_assignment[a];
-            a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| v3::dist_xz(self.g.ch[self.g.gd[m].ch].pos, p) < 0.5))
+            a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| v3::dist_xz(self.g.pos_of(m), p) < 0.5))
         })
     }
     /// the bar across each doorway
@@ -299,8 +299,8 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     throws_plan(g, seat, who, paired, &squad, &mut out.throws);
     if who.own {
         if let Some(menu) = &s.menu {
-            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: id_of(g, gd), at: crate::v3::on_floor(g.ch[g.gd[gd].ch].pos), tone: tone_of(g, paired, gd) }); } }
-            if !crate::condition::down(g, g.pl[seat.player].ch) { out.you = Some(crate::v3::on_floor(g.ch[g.pl[seat.player].ch].pos)); }
+            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: id_of(g, gd), at: crate::v3::on_floor(g.pos_of(gd)), tone: tone_of(g, paired, gd) }); } }
+            if !crate::condition::down(g, g.pl[seat.player].ch) { out.you = Some(crate::v3::on_floor(g.seat_pos(seat))); }
         }
     }
     out

@@ -157,7 +157,7 @@ fn catch_step(g: &mut Game, t: Tick, gd: GuardId, from: V3, want: V3) -> (f64, f
     if hold!(g, pl).step_m.is_none() {
         let yaw0 = g.ch[c].body_yaw;
         let h = hold!(g, pl);
-        h.step_m = Some(m::hyp2(want[0] - from[0], want[2] - from[2]));
+        h.step_m = Some(v3::dist_xz(want, from));
         h.yaw0 = Some(yaw0);
     }
     let k = &g.k.stalk;
@@ -173,7 +173,7 @@ fn catch_step(g: &mut Game, t: Tick, gd: GuardId, from: V3, want: V3) -> (f64, f
     let at = g.ch[c].pos;
     let next = if u >= 1.0 { v3::lerp3(at, to, 1.0 - m::exp(-14.0 * dt)) } else { [at[0] + d[0], at[1], at[2] + d[2]] };
     crate::character::pos_replace(g, c, next);
-    let own = if u >= 1.0 { 0.0 } else { m::min(catch_stride, m::hyp2(next[0] - was[0], next[2] - was[2]) / m::max(dt, 1e-4)) };
+    let own = if u >= 1.0 { 0.0 } else { m::min(catch_stride, v3::dist_xz(next, was) / m::max(dt, 1e-4)) };
     (own, u)
 }
 /// The step has landed: he pulls the man back off his feet as far as there is room, and goes back WITH him. Returns where he is to stand.
@@ -301,7 +301,7 @@ fn beat_done(g: &mut Game, t: Tick, gd: GuardId) -> bool {
     let h = hold!(g, t.pl);
     let (phase, at) = (h.phase, h.t);
     if phase == HoldPhase::Choke && at < k.choke - 0.3 && m::floor(at / CHOKE_GRAIN) > m::floor((at - t.dt) / CHOKE_GRAIN) {
-        let from = v3::add(g.ch[g.gd[gd].ch].pos, [0.0, 1.5, 0.0]);
+        let from = v3::add(g.pos_of(gd), [0.0, 1.5, 0.0]);
         crate::audio_iface::game_audio_like_play(g, "chokeStrain", Some(from), Some(0.25), None);
     }
     match phase {
@@ -395,7 +395,7 @@ fn pair_walks(g: &mut Game, t: Tick, gd: GuardId, free: bool) -> f64 {
     place_held(g);
     let (at, vel) = (g.ch[c].pos, g.ch[c].vel);
     let going = m::hyp2(vel[0], vel[2]);
-    let speed = m::min(m::hyp2(at[0] - was[0], at[2] - was[2]) / m::max(dt, 1e-4), going);
+    let speed = m::min(v3::dist_xz(at, was) / m::max(dt, 1e-4), going);
     let backpedal = speed > 0.2 && (vel[0] * f[0] + vel[2] * f[2]) / m::max(1e-4, going) < -0.3;
     g.pl[pl].backpedal = backpedal;
     g.ch[c].anim.reverse = backpedal;
@@ -871,10 +871,7 @@ fn whip_out(g: &mut crate::game::Game) {
     let hc = g.gd[gd].ch;
     let f = crate::character::character_forward(g, c);
     let dir = v3::normalize([f[0] + f[2] * 0.45, 0.0, f[2] - f[0] * 0.45]);
-    let head = match g.ch[hc].bones.get(crate::character::Bone::Head) {
-        Some(h) => *h,
-        None => v3::add(g.ch[hc].pos, [0.0, 1.6, 0.0]),
-    };
+    let head = g.ch[hc].bone_or(crate::character::Bone::Head, 1.6);
     unhook(g, gd);
     crate::takedown::take_fall(g, gd, None, false, Some(crate::takedown::TakeFallHow::Whip));
     crate::combat::kill_guard(g, gd, dir, Some(true), Some(crate::game::DownKind::Struck), Some(crate::game::DownBy::Player), crate::game::With::Whip);

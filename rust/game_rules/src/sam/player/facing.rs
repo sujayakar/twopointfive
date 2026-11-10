@@ -82,7 +82,7 @@ fn face_cursor(g: &mut Game, t: Tick, go: Go, a: Aim) {
     let push = g.ch[c].anim.door_push.clone();
     let by_hand = g.pl[pl].door_move().is_some() && push.as_ref().map_or(false, |d| d.w >= 1.0) && !a.aiming;
     let into_door = push.as_ref().and_then(|d| {
-        if by_hand { Some(m::atan2(d.p[0] - g.ch[c].pos[0], d.p[2] - g.ch[c].pos[2])) }
+        if by_hand { Some(v3::yaw_to(g.ch[c].pos, d.p)) }
         else { leaf_facing(Some(&crate::player::LeafFacingDp { w: d.w, n: d.n.to_vec() }), a.aiming) }
     });
     own_legs(g, pl, |_, m| hips_turn(m, a.speed, a.aiming, orbits, into_door, by_hand, dt));

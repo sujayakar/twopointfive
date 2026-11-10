@@ -261,7 +261,7 @@ fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mut bd = f64::INFINITY;
     for &x in gs.guards.iter() {
         if x == gd || down.has(gs.gd[x].callsign.clone()) || !is_mate(gs, gd, x) { continue; }
-        let d = v3::dist_xz(gs.ch[gs.gd[x].ch].pos, gs.ch[gs.gd[gd].ch].pos);
+        let d = v3::dist_xz(gs.pos_of(x), gs.pos_of(gd));
         if d < bd { bd = d; best = Some(x); }
     }
     best
@@ -288,7 +288,7 @@ impl About {
     fn of(g: &mut Game, gd: GuardId) -> About {
         let checks = |g: &Game, x: GuardId| match g.gd[x].task { Some(crate::game::GuardTask::CheckOn(c)) if !crate::condition::down(g, g.gd[x].ch) => Some(c), _ => None };
         let checker = g.guards.iter().copied().find(|&x| checks(g, x).is_some());
-        let at = g.ch[g.gd[gd].ch].pos;
+        let at = g.pos_of(gd);
         let shift = g.team(gd) == crate::teams::Team::Guard && g.gd[gd].unit.is_none();
         About {
             level: crate::guards::escalation_of(g),
@@ -327,7 +327,7 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
 fn tokens_of(g: &Game, gd: GuardId, b: &About) -> DialogueCtxTokens {
     let w = g.gd[gd].witness.clone();
     let r = &b.roll;
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let route = g.gd[gd].route_i as f64;
     let name = |g: &Game, x: GuardId| g.gd[x].callsign.clone();
     let door = |g: &Game, d: DoorId| door_name(&g.dr[d].def.name);

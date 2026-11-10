@@ -247,9 +247,9 @@ pub fn row_take_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarg
     let to = crate::pairorders::pair_orders_stage(g, x.foe);
     let mut out: Vec<GuardId> = Vec::new();
     for &gd in men { if crate::orders::squad_orders_reach(g, gd, to).is_none() { out.push(gd); } }
-    let there = g.ch[g.gd[x.foe].ch].pos;
+    let there = g.pos_of(x.foe);
     let rows: &Game = &*g;
-    js::sort_by(&mut out, |&a, &b| v3::dist_xz(rows.ch[rows.gd[a].ch].pos, there) - v3::dist_xz(rows.ch[rows.gd[b].ch].pos, there));
+    js::sort_by(&mut out, |&a, &b| v3::dist_xz(rows.pos_of(a), there) - v3::dist_xz(rows.pos_of(b), there));
     out.truncate(1);
     out
 }
@@ -481,7 +481,7 @@ pub fn pair_orders_mark(g: &mut Game, by: Option<crate::pairorders::PairOrdersMa
 /// WHO WOULD SEE IT: the first other defender with eyes on `gd` and light enough, or the floor the man will lie on in his open view   (PairOrders.watcher)
 fn pair_orders_watcher(g: &mut Game, foe: GuardId, gd: GuardId) -> Option<GuardId> {
     let fc = g.gd[foe].ch;
-    let hp = g.ch[fc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[fc].pos);
+    let hp = g.ch[fc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[fc].pos);
     let at: V3 = [hp[0], 0.35, hp[2]];
     let gc = g.gd[gd].ch;
     let mut i = 0;
@@ -502,7 +502,7 @@ fn pair_orders_watcher(g: &mut Game, foe: GuardId, gd: GuardId) -> Option<GuardI
 fn eye_of(g: &Game, o: GuardId) -> V3 {
     let c = g.gd[o].ch;
     let p = g.ch[c].pos;
-    g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or([p[0], p[1] + 1.65, p[2]])
+    g.ch[c].bone(crate::character::Bone::Head).unwrap_or([p[0], p[1] + 1.65, p[2]])
 }
 
 /// the bodies-by-light bar from `o`'s eye, met by the light now on the man   (PairOrders.bodyLit)
@@ -533,7 +533,7 @@ fn pair_orders_looks_back(g: &mut Game, w: GuardId, foe: GuardId, gd: GuardId) -
     let eye = eye_of(g, w);
     let half = g.k.guard_eye.half_deg * m::PI / 180.0 + g.pair.swept.get(w).copied().unwrap_or(0.0);
     let fc = g.gd[foe].ch;
-    let hp = g.ch[fc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[fc].pos);
+    let hp = g.ch[fc].bone(crate::character::Bone::Hips).unwrap_or(g.ch[fc].pos);
     let at: V3 = [hp[0], 0.35, hp[2]];
     if g.team(w) == g.team(foe) && swept_d(g, eye, hb, l, half, at[0], at[1], at[2]) >= 0.0 && pair_orders_body_lit(g, w, foe, at) { return true; }
     let c = g.pos_of(gd);

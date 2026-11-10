@@ -79,7 +79,7 @@ fn in_own(g: &mut Game, kind: SquadThrowKind, pts: &[V3], px: f64, pz: f64, gd: 
 /// (walkSpot wallSeen) a wall by the spot, a metre off or more, that the hand has a line to
 fn wall_seen(g: &Game, walls: &[V3], h: V3) -> bool {
     for w in walls {
-        if m::hyp2(w[0] - h[0], w[2] - h[2]) >= 1.0 && !crate::scene_collision::solid_blocked(g, h, *w, None) { return true; }
+        if v3::dist_xz(*w, h) >= 1.0 && !crate::scene_collision::solid_blocked(g, h, *w, None) { return true; }
     }
     false
 }
@@ -715,14 +715,14 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
     let mut out: Vec<String> = Vec::new();
     if !crate::condition::down(g, g.pl[g.player].ch) {
         let c = g.pl[g.player].ch;
-        let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
+        let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.6);
         if stun_in(g, &pts, eye, true) { out.push(String::from("you")); }
     }
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
         if !g.team(gd).ours() || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
-        let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
+        let eye = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
         if stun_in(g, &pts, eye, false) { out.push(g.gd[gd].callsign.clone()); }
     }
     out

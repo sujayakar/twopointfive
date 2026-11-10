@@ -309,7 +309,7 @@ fn asking_the_light_writes_nothing() {
                     let at = p.sam_at();
                     for (i, d) in [[0.0, 0.0], [2.0, 1.0], [-3.0, 2.0], [40.0, 40.0]].into_iter().enumerate() {
                         let q = [at[0] + d[0], 1.0, at[1] + d[1]];
-                        let owner = [p.g.ch[p.g.pl[p.g.player].ch].id as f64];
+                        let owner = [p.g.player_id(p.g.player) as f64];
                         assert!(game::sense::light_asked(&mut p.g, q, if i % 3 == 0 { &owner } else { &[] }, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).is_finite());
                     }
                 }

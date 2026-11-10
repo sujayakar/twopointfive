@@ -463,7 +463,7 @@ fn wall_break_plan_of(g: &crate::game::Game, at: V3, opts: crate::wallbreak::Bla
                 k += 1.0;
                 let (ix, iz) = if along { (here, 0.0) } else { (0.0, here) };
                 let p = wall_break_cell_centre(g, b, ix, 1.0, iz);
-                let d = m::hyp2(p[0] - at[0], p[2] - at[2]);
+                let d = v3::dist_xz(p, at);
                 if d < nd { nd = d; nearest = here; }
                 if d > r * k_.port_k { continue; }
                 let aim: V3 = [p[0], m::min(m::max(eye[1], 0.9), bc1 + bh1 - 0.1), p[2]];
@@ -499,7 +499,7 @@ fn wall_break_plan_of(g: &crate::game::Game, at: V3, opts: crate::wallbreak::Bla
                 let mut ix = 0.0;
                 while ix < nx {
                     let p = wall_break_cell_centre(g, b, ix, 0.0, iz);
-                    if m::hyp2(p[0] - at[0], p[2] - at[2]) <= r * k_.cover_k && exposed(g, b, eye, p) { cells.push(wall_break_ci(g, b, ix, 0.0, iz)); }
+                    if v3::dist_xz(p, at) <= r * k_.cover_k && exposed(g, b, eye, p) { cells.push(wall_break_ci(g, b, ix, 0.0, iz)); }
                     ix += 1.0;
                 }
                 iz += 1.0;

@@ -103,7 +103,7 @@ pub(super) fn man_aim(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: G
     let pos = g.ch[c].pos;
     let p: V3 = [pos[0], pos[1] + h, pos[2]];
     let top = g.ch[c].bones.get(Bone::HeadTop).map(|b| b[1]);
-    let chest = g.ch[c].bones.get(Bone::Chest).copied();
+    let chest = g.ch[c].bone(Bone::Chest);
     let (top, chest) = match (top, chest) { (Some(t), Some(ch)) => (t, ch), _ => return p };
     if pos[1] + LOW_AT <= top - LOW_UNDER { return p; }
     let y = m::max(pos[1] + 0.15, m::min(p[1], top - LOW_TOP));
@@ -113,7 +113,7 @@ pub(super) fn man_aim(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: G
     let l = v3::len(d);
     if l > 1e-3 && crate::character::character_ray_hit(g, c, from, v3::scale(d, 1.0 / l), l + 1.0) >= 0.0 { return at; }
     let pos = g.ch[c].pos;
-    let hips = g.ch[c].bones.get(Bone::Hips).copied();
+    let hips = g.ch[c].bone(Bone::Hips);
     match hips { Some(b) => [b[0], y, b[2]], None => [pos[0], y, pos[2]] }
 }
 
@@ -155,7 +155,7 @@ pub(super) fn pose_gun_light(g: &mut crate::game::Game) {
             let lp = crate::rig_props::rig_light_pose(g, c, None);
             (lp.pos, lp.dir)
         };
-        let sh = g.ch[c].bones.get(Bone::UpperArmR).copied();
+        let sh = g.ch[c].bone(Bone::UpperArmR);
         let pos = match sh {
             Some(sh) => { let r = g.tab.light[l].radius; crate::lighting::lens_clear(g, sh, lens, r, Some(l)) }
             None => lens,

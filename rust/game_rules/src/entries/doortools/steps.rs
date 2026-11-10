@@ -122,7 +122,7 @@ fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: crate::doortoo
         let at: V3 = if kept { [mp[0], 0.0, mp[2]] } else { post.pos };
         let words = crate::orders::door_words(g, d);
         let a = crate::orders::SquadOrdersAssignA {
-            order: String::from(crate::orders::rows::hold::ORDER.id), post: Some(at), face: Some(if kept { m::atan2(c[0] - at[0], c[2] - at[2]) } else { post.face }), watch: Some([c[0], 1.1, c[2]]),
+            order: String::from(crate::orders::rows::hold::ORDER.id), post: Some(at), face: Some(if kept { v3::yaw_to(at, c) } else { post.face }), watch: Some([c[0], 1.1, c[2]]),
             door: Some(d), shy: Some(d), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(true),
             going: format!("to hold · {}", words).into(), there: format!("holding · {}", words).into(), ..Default::default()
         };

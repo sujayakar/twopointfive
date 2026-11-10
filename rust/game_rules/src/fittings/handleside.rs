@@ -289,7 +289,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, order:
             }
             Some(crate::handleside::NearStand::List(n)) => {
                 let hd = handle_at(g, d);
-                return Some(crate::handleside::ToolSpot { pos: n, yaw: m::atan2(hd[0] - n[0], hd[2] - n[2]), far: false });
+                return Some(crate::handleside::ToolSpot { pos: n, yaw: v3::yaw_to(n, hd), far: false });
             }
             None => {}
         }
@@ -344,7 +344,7 @@ pub fn tool_step(g: &mut crate::game::Game, gd: GuardId, pos: V3) -> bool {
     let now = g.time;
     let dt = match was { Some(w) if now > w => m::min(now - w, 0.05), _ => 1.0 / 60.0 };   // its callers tick without a dt of their own
     g.m.handleside.stepped.set(gd, now);
-    if v3::dist_xz(g.ch[g.gd[gd].ch].pos, pos) > 0.6 { return false; }
+    if v3::dist_xz(g.pos_of(gd), pos) > 0.6 { return false; }
     step_to(g, gd, pos, dt, 1.2, true, None)
 }
 

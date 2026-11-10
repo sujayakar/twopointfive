@@ -15,7 +15,7 @@ use crate::view::{KitBig, KitGun, KitOcp, KitSlot, KitThing, KitView};
 fn gun_view(g: &Game, pl: PlayerId, gun: SetupGun) -> KitGun {
     let p = &g.pl[pl];
     let id = if gun == SetupGun::Rifle { p.rifle } else { p.pistol };
-    let (f, def) = (&g.fa[id], g.m.weapons.weapons.get(g.fa[id].def).unwrap());
+    let (f, def) = (&g.fa[id], g.weapon(g.fa[id].def));
     let ready = crate::weapons::firearm_rounds_ready(g, id);
     let load = if gun == SetupGun::Rifle { crate::weapons::rifle_attachment(g, id).map(|a| crate::slotsetup::load_word(a, crate::weapons::rifle_left(g, id, a), true)) } else { None };
     let fed_by_shell = def.reload.shell.is_some();
@@ -51,7 +51,7 @@ fn big_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<KitBig> {
 pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
     let (pl, p) = (seat.player, &g.pl[seat.player]);
     let up = |k: SlotKind| p.slot == k && !p.holstered;
-    let gun_slot = |thing, key: &str, id: FirearmId, k: SlotKind| KitSlot { thing, key: String::from(key), name: crate::gear::gear_text(&g.m.weapons.weapons.get(g.fa[id].def).unwrap().short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
+    let gun_slot = |thing, key: &str, id: FirearmId, k: SlotKind| KitSlot { thing, key: String::from(key), name: crate::gear::gear_text(&g.weapon(g.fa[id].def).short), count: crate::weapons::firearm_rounds_ready(g, id), up: up(k), ..KitSlot::default() };
     let rifle = if p.has_rifle { gun_slot(KitThing::Rifle, "Digit2", p.rifle, SlotKind::Rifle) } else { KitSlot { thing: KitThing::Rifle, key: String::from("Digit2"), name: String::from("—"), absent: true, ..KitSlot::default() } };
     let mut slots = vec![
         KitSlot { thing: KitThing::Hands, key: String::from(crate::handslot::HANDSLOT_KEY), up: p.holstered, ..KitSlot::default() },
@@ -147,7 +147,7 @@ pub fn can_choice(g: &crate::game::Game, id_2: &str) -> bool {
 pub(super) fn kit_slot_can(g: &crate::game::Game, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> bool {
     let can = if slot == crate::gunslots::GunSlot::Primary { m.suppressed } else { m.side_can };
     match crate::gunslots::pick_row(g, pick_of(m, slot), can) {
-        Some(w) => g.m.weapons.weapons.get(w).unwrap().suppressed,
+        Some(w) => g.weapon(w).suppressed,
         None => false,
     }
 }
@@ -269,7 +269,7 @@ pub(super) fn tubed(g: &crate::game::Game, m: &crate::kit::MemberKit) -> bool {
         return false;
     }
     let w = crate::gunslots::pick_row(g, &m.primary, true).unwrap_or(crate::weapons::WeaponId::Fn2000);
-    g.m.weapons.weapons.get(w).unwrap().launcher != Some(false)
+    g.weapon(w).launcher != Some(false)
 }
 
 /// A suppressor's flag holds a value only while its gun has the choice. Writes `m` and returns a copy of it.

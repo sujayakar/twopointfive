@@ -55,7 +55,7 @@ pub(in crate::sam) fn release_body(g: &mut crate::game::Game, laid: Option<bool>
     if let Some(r) = g.ch[b].ragdoll { crate::ragdoll::ragdoll_clear_pins(g, r); }
     let c = g.pl[pl].ch;
     g.ch[c].anim.haul = None;
-    let at = match g.ch[b].bones.get(crate::character::Bone::FootL) { Some(f) => *f, None => g.ch[b].pos };
+    let at = g.ch[b].bone(crate::character::Bone::FootL).unwrap_or(g.ch[b].pos);
     crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(if laid { 0.12 } else { 0.3 }), None);
 }
 
@@ -65,7 +65,7 @@ pub(super) fn tow_tick(g: &mut Game, t: Tick, speed: f64) {
     let Some(mut tow) = g.pl[pl].tow else { return };
     let body = g.gd[tow.who].ch;
     let rag = g.ch[body].ragdoll;
-    let hips = g.ch[body].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[body].pos);
+    let hips = g.ch[body].bone(crate::character::Bone::Hips).unwrap_or(g.ch[body].pos);
     let (dx, dz) = (hips[0] - g.ch[c].pos[0], hips[2] - g.ch[c].pos[2]);
     let d = m::hyp2(dx, dz);
     if d > 1e-4 { tow.yaw = m::atan2(dx, dz); }
@@ -133,9 +133,9 @@ pub(super) fn body_dist(g: &crate::game::Game, gd: GuardId, within: Option<f64>)
     let p = g.ch[me].pos;
     let c = g.gd[gd].ch;
     let a: V3 = [p[0], 0.5, p[2]];
-    let foot_l = g.ch[c].bones.get(crate::character::Bone::FootL).copied();
-    let foot_r = g.ch[c].bones.get(crate::character::Bone::FootR).copied();
-    let hips = g.ch[c].bones.get(crate::character::Bone::Hips).copied();
+    let foot_l = g.ch[c].bone(crate::character::Bone::FootL);
+    let foot_r = g.ch[c].bone(crate::character::Bone::FootR);
+    let hips = g.ch[c].bone(crate::character::Bone::Hips);
     let l = body_reach(g, a, p, foot_l, 0.0, within);
     let r = body_reach(g, a, p, foot_r, 0.0, within);
     let h = body_reach(g, a, p, hips, 0.3, within) + 0.3;

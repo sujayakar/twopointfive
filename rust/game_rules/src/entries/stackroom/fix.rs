@@ -190,9 +190,9 @@ fn ways_next(g: &mut Game, x: &Face) -> Vec<Way> {
     let pl = g.player;
     let ring = crate::orders::player_ring(g, pl);
     let mut ours: Vec<V3> = Vec::new();
-    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.ch[g.pl[pl].ch].pos); }
+    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.player_pos(pl)); }
     for man in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-        if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.ch[g.gd[man].ch].pos); }
+        if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.pos_of(man)); }
     }
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];

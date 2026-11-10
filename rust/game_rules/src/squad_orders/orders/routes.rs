@@ -203,7 +203,7 @@ pub(super) fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::
         let row = &g.tab.orders_assignment[a];
         if men.contains(&gd) && !crate::condition::down(g, g.gd[gd].ch) && row.door == Some(d) {
             if let Some(post) = row.post {
-                if dist_xz(post, p) < 0.3 && dist_xz(g.ch[g.gd[gd].ch].pos, post) < 0.6 { return true; }
+                if dist_xz(post, p) < 0.3 && dist_xz(g.pos_of(gd), post) < 0.6 { return true; }
             }
         }
     }
@@ -275,7 +275,7 @@ fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>,
     let to = match to { Some(to) if side_of(g, d, to) == side => to, _ => return f64::INFINITY };
     let mut c = 0.0;
     for &gd in men {
-        let p = g.ch[g.gd[gd].ch].pos;
+        let p = g.pos_of(gd);
         let from = free_from(g, &crate::seats::here(g), p);
         if dist_xz(from, to) < 0.5 { continue; }
         let tr = crate::cleared::cleared_rooms_room_at(g, to);
@@ -525,7 +525,7 @@ fn route_none() -> SquadOrdersRoute { SquadOrdersRoute { why: None, via: Vec::ne
 /// How he gets there: `why` he cannot, or `via`, waypoints round a door locked against Sam, a room nobody has been in, a lane, a lit floor.
 pub(in crate::squad_orders) fn squad_orders_route(g: &mut crate::game::Game, gd: GuardId, to: V3, shy: Option<DoorId>, thru: Option<DoorId>, why_only: Option<bool>) -> crate::orders::SquadOrdersRoute {
     let why_only = why_only.unwrap_or(false);
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     if dist_xz(at, to) < 0.5 { return route_none(); }
     let from = free_from(g, &crate::seats::here(g), at);
     let ring = squad_orders_ring(g, &crate::seats::here(g));
@@ -759,7 +759,7 @@ fn squad_orders_by_door(g: &mut crate::game::Game, from: V3, to: V3, d: DoorId, 
 
 /// Fall in: the corners of the way to his place in the file that keeps out of rooms nobody has been in; [] when the short way does, or there is no such way.
 pub(super) fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Vec<V3> {
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let from = free_from(g, &crate::seats::here(g), at);
     let cleared_dear = g.k.orders.cleared_dear;
     let unk = match crate::cleared::cleared_rooms_dear_for(g, from, to, cleared_dear, None) { Some(u) => u, None => return Vec::new() };
@@ -775,7 +775,7 @@ pub(super) fn squad_orders_round_rooms(g: &mut crate::game::Game, gd: GuardId, t
 
 /// The crumb of the trail that a place `back` metres behind the player lies just past: the index of the older end of its stretch; -1 off the trail's end.
 pub(super) fn squad_orders_slot_crumb(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: f64) -> f64 {
-    let sam = g.ch[g.pl[seat.player].ch].pos;
+    let sam = g.seat_pos(seat);
     let t = &seat.orders.trail;
     let (mut prev, mut left): (V3, f64) = ([sam[0], 0.0, sam[2]], back);
     for i in (0..t.len()).rev() {
@@ -811,7 +811,7 @@ fn trail_doors_on(g: &Game, w: &[V3]) -> JsSet<DoorId> {
 pub(super) fn squad_orders_trail_way(g: &crate::game::Game, gd: GuardId, slot: V3, on_trail: V3, j: f64) -> Vec<V3> {
     let t = g.sets[g.seat].orders.trail.clone();
     if t.len() < 4 { return Vec::new(); }
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let from = free_from(g, &crate::seats::here(g), at);
     if crate::scene_collision::nav_grid_walkable(g, from, slot) { return Vec::new(); }   // (his place is a straight walk off: that is his way)
     let j = j as i64;
@@ -940,7 +940,7 @@ fn tries_of(g: &Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<Tries>
 }
 /// (walkOn's `stop`)
 fn walk_stop(g: &mut Game, mm: GuardId) {
-    let p = g.ch[g.gd[mm].ch].pos;
+    let p = g.pos_of(mm);
     let on = tries_of(g, &crate::seats::here(g), mm).unwrap().on;
     let a = SquadOrdersAssignA { post: Some([p[0], 0.0, p[2]]), there: crate::orders::Doing::new(crate::orders::At::StoppedShort, "stopped short"), set_line: None, fit: None, ..on_to_assign(&on) };
     squad_orders_assign(g, mm, &a);

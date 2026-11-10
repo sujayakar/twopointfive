@@ -37,7 +37,7 @@ mod tests {
 }
 
 /// a row of the table, by the key a gun keeps (`this.def`)
-fn row(g: &Game, def: WeaponId) -> &WeaponDef { g.m.weapons.weapons.get(def).unwrap() }
+fn row(g: &Game, def: WeaponId) -> &WeaponDef { g.weapon(def) }
 
 /// `g.audio.play(sfx, at, vol)`: no options
 fn play(g: &mut Game, sfx: &str, at: V3, vol: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), None) }
@@ -55,7 +55,7 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             let p = g.ch[ch].pos;
             play(g, "magOut", p, 0.7);
             if dropped {
-                let h = g.ch[ch].bones.get(crate::character::Bone::HandL).copied().unwrap_or(g.ch[ch].pos);
+                let h = g.ch[ch].bone(crate::character::Bone::HandL).unwrap_or(g.ch[ch].pos);
                 let at = [h[0], m::max(0.3, h[1]), h[2]];
                 let r0 = crate::dice::draw_world(g, "weapons::ev_mag_out#1");
                 let r1 = crate::dice::draw_world(g, "weapons::ev_mag_out#2");
@@ -71,7 +71,7 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             let def = g.fa[id].def;
             // (`fp?.drop !== null`: no plan at all is not null; a plan whose drop is null drops nothing)
             if dropped && row(g, def).pellets.is_none() && feed.as_ref().map_or(true, |f| f.drop.is_some()) {
-                let h = g.ch[ch].bones.get(crate::character::Bone::HandR).copied().unwrap_or(g.ch[ch].pos);
+                let h = g.ch[ch].bone(crate::character::Bone::HandR).unwrap_or(g.ch[ch].pos);
                 let d = g.ch[ch].gun_dir;
                 let at = [h[0] - d[0] * 0.1, m::max(0.3, h[1] - 0.05), h[2] - d[2] * 0.1];
                 let r0 = crate::dice::draw_world(g, "weapons::ev_mag_out#3");

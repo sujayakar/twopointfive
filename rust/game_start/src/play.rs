@@ -289,7 +289,7 @@ impl Play {
     /// …held for the tick to come
     pub fn hold_legs(&mut self) {
         let Some(to) = self.legs else { return };
-        let (p, f) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.tab.camera[self.host.cam].forward);
+        let (p, f) = (self.g.player_pos(self.g.player), self.g.tab.camera[self.host.cam].forward);
         let held = if dist([p[0], p[2]], to) > 0.1 { game::player::walk_keys(p, to, f) } else { [false; 4] };
         for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(String::from(key)); } else { i.keys.delete(String::from(key)); } }
     }
@@ -348,7 +348,7 @@ impl Play {
     /// known length, where walking him there by his keys would be a test of the keys.
     pub fn seat_steps(&mut self, seat: usize, metres: f64) {
         let s = self.g.seats[seat];
-        game::seats::with_seat(&mut self.g, s, &mut |g| { let at = g.ch[g.pl[g.player].ch].pos; game::game::game_teleport_player(g, [at[0] + metres, 0.0, at[2]]); });
+        game::seats::with_seat(&mut self.g, s, &mut |g| { let at = g.player_pos(g.player); game::game::game_teleport_player(g, [at[0] + metres, 0.0, at[2]]); });
     }
     /// A PLAYER IS SET DOWN at a place of the floor (the same teleport).
     pub fn seat_stands(&mut self, seat: usize, at: [f64; 2]) {
@@ -360,11 +360,11 @@ impl Play {
     /// the way in the room clear that is up stood its team on: 0 the level's own, k its k-th other
     pub fn way_taken(&self) -> usize { self.g.staged.way as usize }
     /// where each teammate the mission staged stands (x, z), in the order it staged them
-    pub fn team_at(&self) -> Vec<[f64; 2]> { self.g.staged.team.iter().map(|&m| { let p = self.g.ch[self.g.gd[m].ch].pos; [p[0], p[2]] }).collect() }
+    pub fn team_at(&self) -> Vec<[f64; 2]> { self.g.staged.team.iter().map(|&m| { let p = self.g.pos_of(m); [p[0], p[2]] }).collect() }
     /// the restart a player presses: the same mission staged again
     pub fn restaged(&mut self) { game::savestate::control::restart(&mut self.g); }
     /// where a seat's player stands
-    pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.ch[g.pl[g.player].ch].pos; [p[0], p[2]] }) }
+    pub fn seat_at(&mut self, seat: usize) -> [f64; 2] { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| { let p = g.player_pos(g.player); [p[0], p[2]] }) }
     /// A MAN GOES DOWN by combat's own call (`killGuard`: shot, by `by`'s hand), for a test of what follows a death and not of the shot.
     pub fn falls(&mut self, gd: GuardId, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(false), Some(game::game::DownKind::Shot), Some(by), game::game::With::Hand); }
 
@@ -462,7 +462,7 @@ impl Play {
     /// a seat's man's character id
     pub fn seat_id(&mut self, seat: usize) -> f64 { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.ch[g.pl[g.player].ch].id) }
     /// a man's character id
-    pub fn id_of(&self, gd: GuardId) -> f64 { self.g.ch[self.g.gd[gd].ch].id }
+    pub fn id_of(&self, gd: GuardId) -> f64 { self.g.char_id(gd) }
     /// what the end card shows the seat of this number
     pub fn debrief_view(&self, seat: usize) -> game::view::DebriefView { game::view::debrief_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
     /// THE RECAP, as the game keeps it. What the end card may show (None: somebody still plays, or nobody of ours went down) …
@@ -512,9 +512,9 @@ impl Play {
     // ---- what a man is doing, read off the game
 
     /// where a man stands, in plan
-    pub fn at(&self, gd: GuardId) -> [f64; 2] { let p = self.g.ch[self.g.gd[gd].ch].pos; [p[0], p[2]] }
+    pub fn at(&self, gd: GuardId) -> [f64; 2] { let p = self.g.pos_of(gd); [p[0], p[2]] }
     /// where Sam stands
-    pub fn sam_at(&self) -> [f64; 2] { let p = self.g.ch[self.g.pl[self.g.player].ch].pos; [p[0], p[2]] }
+    pub fn sam_at(&self) -> [f64; 2] { let p = self.g.player_pos(self.g.player); [p[0], p[2]] }
     /// Sam is PUT at `at` (the sandbox's own call, `Game.teleportPlayer`): for a test whose staging is a place and not the walk to it.
     pub fn sam_put(&mut self, at: [f64; 2]) { game::game::game_teleport_player(&mut self.g, [at[0], 0.0, at[1]]); }
     /// Can Sam not see: a flash or a blast has his eyes for now.

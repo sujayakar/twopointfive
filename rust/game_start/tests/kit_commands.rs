@@ -15,7 +15,7 @@ fn step(p: &mut Play) {
 #[test]
 fn the_commands_reach_the_stage_and_the_step_holds_it() {
     let mut p = Play::mission("records.json", "?levelFile=records.json&kitview&roomclear&squad4", &Opts { seed: 3, ..Default::default() });
-    let sam = |p: &Play| { let pl = p.g.player; p.g.ch[p.g.pl[pl].ch].pos };
+    let sam = |p: &Play| { let pl = p.g.player; p.g.player_pos(pl) };
     let at = sam(&p);
     // (a key in the seat's hand is dropped: he stands)
     for _ in 0..60 { step(&mut p); }

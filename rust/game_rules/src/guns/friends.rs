@@ -35,7 +35,7 @@ fn friend_in_sams_line(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let from = crate::combat::shoulder(g, c_2);
     let aim_yaw = g.ch[c_2].aim_yaw;
     let (dx, dz) = (m::sin(aim_yaw), m::cos(aim_yaw));
-    let reach = m::min(g.k.friends.reach_m, m::hyp2(g.sets[g.seat].aim_point[0] - from[0], g.sets[g.seat].aim_point[2] - from[2]) + g.k.friends.past_m);
+    let reach = m::min(g.k.friends.reach_m, v3::dist_xz(g.sets[g.seat].aim_point, from) + g.k.friends.past_m);
     let mut line = SamsLine { from, dx, dz, reach, best: None, bt: m::INF };
     let mut i = 0;
     while i < g.guards.len() {
@@ -58,7 +58,7 @@ fn friend_under_cursor(g: &crate::game::Game, c_2: CharId) -> Option<GuardId> {
     if g.sets[g.seat].aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
     let from = crate::combat::shoulder(g, c_2);
     let chest = g.ch[g.gd[o].ch].bone_or(crate::character::Bone::Chest, 1.2);
-    if m::hyp2(chest[0] - from[0], chest[2] - from[2]) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
+    if v3::dist_xz(chest, from) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
 }
 
 /// This frame's answer: is his raised gun down for a friend. `Guard` = the man it is down for, `None` = down inside the beat after he left the line,
@@ -103,7 +103,7 @@ struct SamsLine {
 fn ask(g: &Game, o: GuardId, line: &mut SamsLine) {
     let c = g.gd[o].ch;
     if crate::condition::down(g, g.gd[o].ch) || !g.ch[c].alive { return; }
-    let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[c].pos };
+    let h = g.ch[c].bone(crate::character::Bone::Hips).unwrap_or(g.ch[c].pos);
     let (rx, rz) = (h[0] - line.from[0], h[2] - line.from[2]);
     let t = rx * line.dx + rz * line.dz;
     if t < 0.15 || t > line.reach || t >= line.bt { return; }

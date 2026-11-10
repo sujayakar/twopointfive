@@ -119,7 +119,7 @@ fn man_down_facing(p: &mut Play, at: [f64; 2], yaw: Option<f64>) -> game::ids::G
 fn lying_on(p: &Play, gd: game::ids::GuardId) -> Vec<String> {
     let c = p.g.gd[gd].ch;
     let bones = [game::character::Bone::Hips, game::character::Bone::Chest, game::character::Bone::Head, game::character::Bone::ShinL, game::character::Bone::ShinR];
-    let spots: Vec<[f64; 3]> = bones.iter().filter_map(|&k| p.g.ch[c].bones.get(k).copied()).collect();
+    let spots: Vec<[f64; 3]> = bones.iter().filter_map(|&k| p.g.ch[c].bone(k)).collect();
     assert_eq!(spots.len(), bones.len(), "he has bones");
     let mut out = Vec::new();
     for b in lying(p) {

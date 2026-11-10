@@ -178,7 +178,7 @@ pub(super) fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, l
 /// A defender's eye exactly as guards.ts canSeeChar builds it, its cones `wide` degrees wider.
 fn eye_for(g: &crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye {
     let c = g.gd[h].ch;
-    let pos = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
+    let pos = g.ch[c].bone_or(crate::character::Bone::Head, 1.65);
     let look = crate::guards::look_of(g, c);
     let k = g.k.guard_eye;
     crate::guards::Eye {

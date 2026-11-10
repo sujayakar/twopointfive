@@ -70,7 +70,7 @@ pub fn body_hit(g: &crate::game::Game, c_2: CharId, ro: V3, rd: V3, tmax: f64, c
         Some(BodyHitContact::Muzzle { st0_t, muzzle, glass_arm, shooter }) => {
             let or = g.ch[c_2].pos;
             let h = g.ch[c_2].bone(crate::character::Bone::Hips).unwrap_or(or);
-            let nearer = match st0_t { None => true, Some(t0) => t0 > m::hyp2(h[0] - muzzle[0], h[2] - muzzle[2]) };
+            let nearer = match st0_t { None => true, Some(t0) => t0 > v3::dist_xz(h, muzzle) };
             nearer && (glass_arm || contact_clear(g, shooter, c_2))
         }
         // a later leg through glass

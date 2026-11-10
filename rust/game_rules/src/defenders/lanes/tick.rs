@@ -541,7 +541,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].stun_at = g.time + 2.0;
     let l_from = g.tab.lanes_lane[l].from;
     for &o in g.guards.iter() {
-        if g.team(o) == SIDE && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.ch[g.gd[o].ch].pos, l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
+        if g.team(o) == SIDE && !crate::condition::down(g, g.gd[o].ch) && dist_xz(g.pos_of(o), l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
     }
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.lanes.stun_m;
@@ -643,9 +643,9 @@ fn bangs(g: &mut crate::game::Game) {
 fn manned_at(g: &Game, l: LanesLaneId, eye: V3, c: CharId) -> Option<V3> {
     let (pos, near) = (g.ch[c].pos, g.k.lanes.peek_near_m);
     if !g.tab.lanes_lane[l].guns.iter().any(|&q| dist_xz(q, pos) < near) { return None; }
-    let head = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
+    let head = g.ch[c].bone(crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
     if !crate::scene_collision::segment_blocked(g, eye, head, None, None, None) { return Some(pos); }
-    let chest = g.ch[c].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(pos, [0.0, 1.1, 0.0]));
+    let chest = g.ch[c].bone(crate::character::Bone::Chest).unwrap_or_else(|| v3::add(pos, [0.0, 1.1, 0.0]));
     if !crate::scene_collision::segment_blocked(g, eye, chest, None, None, None) { Some(pos) } else { None }
 }
 /// one of the other side, on his feet, that `eye` has a line to within `peekNearM` of where a lane's fire came from: a LINE, so the dark never makes a lane clear
@@ -934,7 +934,7 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
         crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), ..Default::default() }));
         if fr.n == g.k.lanes.pin_rounds && g.tab.lanes_lane[l].pin_n == 1.0 { s(g).said_t = g.time; say_net(g, gd, "putting fire on them!"); }
         fr.n -= 1.0;
-        let cd = g.m.weapons.weapons.get(g.fa[w].def).unwrap().cd;
+        let cd = g.weapon(g.fa[w].def).cd;
         fr.next = g.time + m::max(g.k.lanes.pin_every, cd);
         put_fire(g, gd, fr);
     }

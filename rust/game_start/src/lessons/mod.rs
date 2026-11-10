@@ -89,7 +89,7 @@ impl Lesson {
             let moved: Vec<String> = p.ask(|g| g.guards.iter().filter_map(|&x| {
                 let st = g.gd[x].state;
                 match guards.iter_mut().find(|w| w.0 == x) {
-                    Some(w) if w.1 != st => { let s = format!("   {}: {:?} -> {:?} at {}", g.gd[x].callsign, w.1, st, at(g.ch[g.gd[x].ch].pos)); w.1 = st; Some(s) }
+                    Some(w) if w.1 != st => { let s = format!("   {}: {:?} -> {:?} at {}", g.gd[x].callsign, w.1, st, at(g.pos_of(x))); w.1 = st; Some(s) }
                     Some(_) => None,
                     None => { guards.push((x, st)); None }
                 }
@@ -98,8 +98,8 @@ impl Lesson {
             if p.seen(|g, s| game::condition::down(g, g.pl[s.player].ch)) {
                 if down_for == 0.0 {
                     let by = p.ask(|g| g.chronicle.counts.down_by.clone());
-                    let shooter = p.ask(|g| g.guards.iter().find(|&&x| by == g.gd[x].callsign).map(|&x| g.ch[g.gd[x].ch].pos));
-                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| !g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.ch[g.gd[x].ch].pos), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
+                    let shooter = p.ask(|g| g.guards.iter().find(|&&x| by == g.gd[x].callsign).map(|&x| g.pos_of(x)));
+                    p.say(format!("   !! the player is down at {}, by {} at {:?}; {}", at(p.pos()), by, shooter.map(at), p.ask(|g| g.guards.iter().filter(|&&x| !g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).map(|&x| format!("{} {:?} {} {}", g.gd[x].callsign, g.gd[x].state, at(g.pos_of(x)), if g.gd[x].script.is_some() { "script" } else { "own" })).collect::<Vec<_>>().join(", "))));
                 }
                 down_for += 1.0 / 60.0;
                 if down_for > 2.0 { p.failure(format!("the player went down at {} (mission stage {})", at(p.pos()), p.ask(|g| g.mission.stage.as_str()))); }
@@ -216,11 +216,11 @@ impl Bot {
     pub fn named(&self, names: &[&str]) -> Vec<GuardId> { names.iter().filter_map(|n| self.ask(|g| g.guards.iter().copied().find(|&x| g.gd[x].callsign == *n))).collect() }
     /// his teammates still up
     pub fn squad(&self) -> Vec<GuardId> { self.ask(|g| g.guards.iter().copied().filter(|&x| g.team(x).ours() && !game::condition::down(g, g.gd[x].ch)).collect()) }
-    pub fn chest(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Chest).copied().unwrap_or([g.ch[c].pos[0], 1.25, g.ch[c].pos[2]]) }) }
-    pub fn head(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]]) }) }
+    pub fn chest(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bone(game::character::Bone::Chest).unwrap_or([g.ch[c].pos[0], 1.25, g.ch[c].pos[2]]) }) }
+    pub fn head(&self, x: GuardId) -> V3 { self.ask(|g| { let c = g.gd[x].ch; g.ch[c].bone(game::character::Bone::Head).unwrap_or([g.ch[c].pos[0], 1.6, g.ch[c].pos[2]]) }) }
     /// he has a clear line from his head to the man's chest
     pub fn line(&self, x: GuardId) -> bool {
-        let eye = self.seen(|g, s| { let c = g.pl[s.player].ch; g.ch[c].bones.get(game::character::Bone::Head).copied().unwrap_or([g.ch[c].pos[0], 1.5, g.ch[c].pos[2]]) });
+        let eye = self.seen(|g, s| { let c = g.pl[s.player].ch; g.ch[c].bone(game::character::Bone::Head).unwrap_or([g.ch[c].pos[0], 1.5, g.ch[c].pos[2]]) });
         let to = self.chest(x);
         !self.ask(|g| game::scene_collision::solid_blocked(g, eye, to, None))
     }

@@ -137,7 +137,7 @@ pub fn no_shove_keep(g: &mut Game, gd: GuardId, x0: f64, z0: f64, dt: f64) -> bo
     let ux = if l0 > 1e-4 { bx / l0 } else { -fx };
     let uz = if l0 > 1e-4 { bz / l0 } else { -fz };
     if let Some(q) = goal {
-        if m::hyp2(q[0] - s[0], q[2] - s[2]) < ring { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // his place is where the player stands
+        if v3::dist_xz(q, s) < ring { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // his place is where the player stands
     }
     if let Some(q) = corner {
         if under(q, s, ring) { return short(g, gd, c, s, rad, ux, uz, x0, z0); }   // a corner under the player that he cannot cut: he waits for it
@@ -173,7 +173,7 @@ fn script_goal(g: &Game, gd: GuardId) -> Option<V3> {
 
 /// The closure `under`: is this point of his way under the player.
 fn under(q: V3, s: V3, ring: f64) -> bool {
-    m::hyp2(q[0] - s[0], q[2] - s[2]) < ring + 0.05
+    v3::dist_xz(q, s) < ring + 0.05
 }
 
 /// The closure `settle`: the walls have their say; left nearer the player than `min` by them, he is put at `back` (true).
@@ -181,7 +181,7 @@ fn settle(g: &mut Game, c: CharId, s: V3, min: f64, back: [f64; 2]) -> bool {
     let (mut p, r) = (g.ch[c].pos, g.ch[c].radius);
     crate::scene_collision::collide_circle(g, &mut p, r, 0.2, 1.5, None);
     g.ch[c].pos = p;
-    if m::hyp2(p[0] - s[0], p[2] - s[2]) >= min - 1e-6 { return false; }
+    if v3::dist_xz(p, s) >= min - 1e-6 { return false; }
     g.ch[c].pos[0] = back[0];
     g.ch[c].pos[2] = back[1];
     true
@@ -190,7 +190,7 @@ fn settle(g: &mut Game, c: CharId, s: V3, min: f64, back: [f64; 2]) -> bool {
 /// The closure `short`: held off, straight back out to where he may be; his legs stop (a man walking on the spot wakes followPath's stuck side-step). Always true.
 fn short(g: &mut Game, gd: GuardId, c: CharId, s: V3, rad: f64, ux: f64, uz: f64, x0: f64, z0: f64) -> bool {
     let p = g.ch[c].pos;
-    let l = m::hyp2(p[0] - s[0], p[2] - s[2]);
+    let l = v3::dist_xz(p, s);
     let vx = if l > 1e-4 { (p[0] - s[0]) / l } else { ux };
     let vz = if l > 1e-4 { (p[2] - s[2]) / l } else { uz };
     g.ch[c].pos[0] = s[0] + vx * rad;

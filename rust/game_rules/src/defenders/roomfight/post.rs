@@ -51,7 +51,7 @@ pub fn send(g: &mut Game, d: RoomfightDefId, leg: Leg, by: By) { send_by(g, d, l
 /// … by the points of `way` first.
 pub fn send_by(g: &mut Game, d: RoomfightDefId, leg: Leg, mut way: Vec<V3>, by: By) {
     let gd = g.tab.roomfight_def[d].gd;
-    let here = g.ch[g.gd[gd].ch].pos;
+    let here = g.pos_of(gd);
     if way.last() != Some(&leg.to) { way.push(leg.to); }
     let first = way[0];
     let left = if at_post(g, d) { Some(post_now(g, d)) } else { g.tab.roomfight_def[d].leg.left.take() };
@@ -78,7 +78,7 @@ pub fn run(g: &mut Game, d: RoomfightDefId, to: V3, door: Option<DoorId>, more: 
 /// A FRAME OF HIS LEG: his boots in their ears, by the points of his way, and tried again where he gets nowhere. How it ended, if it has.
 pub(super) fn walked(g: &mut Game, d: RoomfightDefId, dt: f64) -> Option<LegEnd> {
     let gd = g.tab.roomfight_def[d].gd;
-    let at = g.ch[g.gd[gd].ch].pos;
+    let at = g.pos_of(gd);
     let last = g.tab.roomfight_def[d].leg.step_t;
     let step_t = boots(g, gd, last);
     let arrived = g.gd[gd].script.as_ref().is_some_and(|s| s.arrived.unwrap_or(false));
