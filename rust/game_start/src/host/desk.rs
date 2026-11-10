@@ -43,7 +43,7 @@ impl Desk {
         // (what the list knows of the levers: what is kept, then what the address says over it; a lesson's address has neither)
         let q = Query::parse(address);
         if game::scenario_run::lesson_of_address(&q).is_none() {
-            let said = difficulty::levers_now(&self.g).into_iter().filter_map(|l| q.get(&l.param).filter(|w| !w.is_empty()).map(|w| (l.key, String::from(w))));
+            let said = difficulty::levers_now().into_iter().filter_map(|l| q.get(&l.param).filter(|w| !w.is_empty()).map(|w| (l.key, String::from(w))));
             self.list.said(k.levers.iter().cloned().chain(said).map(|(key, rung)| (String::from(key.as_str()), rung)).collect());
         }
         self.kept = kept::write(&mut self.g);

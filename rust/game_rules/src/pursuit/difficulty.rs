@@ -21,7 +21,7 @@ fn hard_at_stuns(g: &Game, structure: &str) -> Option<f64> {
 
 /// storeName with what it needs: `store_name`'s signature has no g, and the store is reached through it.
 fn store_name_in(level: Difficulty) {
-    if level == Difficulty::Standard {  } else { crate::savestate::save_store_set(); }
+    if level != Difficulty::Standard { crate::savestate::save_store_set(); }
 }
 
 /// JSON.stringify of a Partial<Levers>, in the order of these rows; the words need no escape. None when no row is present (Object.keys(S).length === 0).
@@ -124,7 +124,7 @@ pub fn structure_of_level(file: Option<&str>) -> String {
 }
 
 /// LEVERS with the fog's bottom rung and the fourth lever; TOLD.on and TOLD.fogOff are settled on.
-pub fn levers_now(g: &crate::game::Game) -> Vec<crate::difficulty::LeverDef> {
+pub fn levers_now() -> Vec<crate::difficulty::LeverDef> {
     let mut out = levers();
     for l in out.iter_mut() {
         if l.key == LeverKey::Fog {
@@ -150,7 +150,7 @@ fn any_set(g: &crate::game::Game) -> bool {
 /// v is a word and a rung of lever k.
 pub fn is_rung(g: &crate::game::Game, k: crate::difficulty::LeverKey, v: Option<&str>) -> bool {
     match v {
-        Some(w) => levers_now(g).iter().find(|l| l.key == k).map_or(false, |l| l.rungs.iter().any(|r| r.id == w)),
+        Some(w) => levers_now().iter().find(|l| l.key == k).map_or(false, |l| l.rungs.iter().any(|r| r.id == w)),
         None => false,
     }
 }
@@ -342,9 +342,8 @@ fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
 fn store_levers(g: &crate::game::Game) {
     let s = g.m.difficulty.set;
     let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
-    match levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
-        Some(line) => { crate::savestate::save_store_set(); }
-        None => {},
+    if levers_json(&[("fog", fog.map(|r| r.as_str())), ("ai", ai.map(|r| r.as_str())), ("kit", kit.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]).is_some() {
+        crate::savestate::save_store_set();
     }
 }
 
@@ -472,7 +471,7 @@ pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: b
     let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
     let mut levers = Vec::new();
     if !plain {
-        for l in levers_now(g).iter() {
+        for l in levers_now().iter() {
             if let Some(r) = q.get(&l.param) { if is_rung(g, l.key, Some(r)) { levers.push((l.key, String::from(r))); } }
         }
     }
@@ -499,7 +498,7 @@ pub fn lever_set(g: &crate::game::Game, key: crate::difficulty::LeverKey) -> Opt
 /// the rung of one lever in a line ('' = it stands on none).
 pub fn lever_words(g: &crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
     let Some(rung) = rung else { return String::new() };
-    levers_now(g).into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
+    levers_now().into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
 }
 
 /// the text this machine keeps of the levers moved, in the order they were moved ('' = it keeps none).
@@ -543,7 +542,7 @@ pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> St
 pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
     if any_set(g) && !shown_whole(g) { return String::from(href); }
     let (path, all) = href_parts(href);
-    let now = levers_now(g);
+    let now = levers_now();
     let keys: Vec<&str> = all.iter().copied().filter(|k| {
         let name = k.split('=').next().unwrap_or("");
         !now.iter().any(|l| name == l.param)
@@ -604,7 +603,7 @@ fn levers_line(g: &crate::game::Game, all: Option<bool>) -> String {
     let all = all.unwrap_or(false);
     let s = levers_shown(g, None);
     let set = g.m.difficulty.set;
-    let now = levers_now(g);
+    let now = levers_now();
     let mut parts: Vec<String> = Vec::new();
     for l in now.iter() {
         if !(all || set_word(&set, l.key).is_some()) { continue; }
@@ -682,7 +681,7 @@ mod tests {
     #[test]
     fn levers_now_is_the_tables_with_the_bottom_rung_and_the_fourth() {
         let mut g = crate::game::Game::blank();
-        let now = levers_now(&mut g);
+        let now = levers_now();
         assert_eq!(now.iter().map(|l| l.key.as_str()).collect::<Vec<_>>(), ["fog", "ai", "kit", "told"]);
         assert_eq!(now[0].rungs.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(), ["off", "team", "cones", "own"]);
         for l in now.iter() {

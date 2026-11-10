@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -141,11 +142,6 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 // ---------------------------------------------------------------- knobs kept per machine
 
 // ---------------------------------------------------------------- small shared helpers
-
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
 
 /// A row of the response's log, which keeps its last 150 to 200.
 pub(super) fn note(g: &mut crate::game::Game, what: &str) {
@@ -392,9 +388,9 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
 /// Staging: no enemy of theirs stands within `clearM` of this mark.
 pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
-    if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
+    if crate::seats::men_left(g).into_iter().any(|pl| dist_xz(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
     for &x in &g.guards {
-        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && flat(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
+        if g.team(x).ours() && !crate::condition::down(g, g.gd[x].ch) && dist_xz(g.ch[g.gd[x].ch].pos, p) < clear_m { return false; }
     }
     true
 }

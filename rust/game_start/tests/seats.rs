@@ -10,10 +10,10 @@ use game_start::play::{Opts, Play};
 const SEEDS: [u32; 3] = [5, 6, 7];
 
 /// A handful of readers of one seat: the men an order would go to, where the seat's man is, the wall charge's row on the menu, whether the
-/// seat's squad is whole.
+/// seat's squad is the player's own.
 type Answers = (Vec<game::ids::GuardId>, [f64; 3], String, bool);
 fn answers(g: &Game, seat: &SeatRef) -> Answers {
-    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_whole(seat))
+    (game::orders::squad_orders_recipients(g, seat, None, Some(Who::All)), game::orders::squad_orders_sam_place(g, seat), game::wallcharge::wall_charge_row_words(g, seat), game::orders::squad_orders_sams(seat))
 }
 
 /// THE RULE: in a game of two players, the readers asked about the second seat while `g.seat` is the FIRST answer as they do with the

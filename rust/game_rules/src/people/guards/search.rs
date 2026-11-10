@@ -300,7 +300,7 @@ pub fn team_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
 }
 
 /// the speed his legs get for a leg asked at `speed`: one call a leg
-pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> f64 {
+pub fn team_legs(g: &crate::game::Game, gd: GuardId, speed: f64) -> f64 {
     match crate::teampace::team_run_legs(g, gd, speed) {
         Some(legs) => legs,
         None => crate::kitload::load_pace(g, g.gd[gd].ch, speed),
@@ -308,7 +308,7 @@ pub fn team_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
 }
 
 /// where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, round his front
-pub fn team_turn(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: f64, dt: f64) -> f64 {
+pub fn team_turn(g: &crate::game::Game, gd: GuardId, to: f64, dt: f64) -> f64 {
     if !(g.k.pace.turn > 0.0) || !team_paced(g, gd) {
         return to;
     }
@@ -335,7 +335,7 @@ pub fn team_lean(g: &mut crate::game::Game, gd: GuardId, was: f64, dt: f64) {
 pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
     let paced = team_pace(g, gd, speed);
-    let mut speed = team_legs(g, &crate::seats::here(g), gd, paced);
+    let mut speed = team_legs(g, gd, paced);
     if unstick_first(g, gd, dt) {
         return false;
     }

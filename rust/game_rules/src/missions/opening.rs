@@ -1,5 +1,6 @@
 pub use ::game_types::opening::types;
 pub use types::*;
+use crate::v3::dist_xz;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -17,11 +18,6 @@ fn read_url(g: &mut crate::game::Game) {
     g.m.opening.url_read = true;
 }
 
-/// Length on the floor.
-fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// Metres by walking a → b over the nav grid; infinity if there is no way.
 fn way_len(g: &crate::game::Game, a: V3, b: V3) -> f64 {
     let p = if crate::scene_collision::nav_grid_is_blocked(g, a[0], a[2]) { crate::scene_collision::nav_grid_nearest_free_point(g, a[0], a[2]).unwrap_or(a) } else { a };
@@ -30,7 +26,7 @@ fn way_len(g: &crate::game::Game, a: V3, b: V3) -> f64 {
         Some(path) => path,
         None => return f64::INFINITY,
     };
-    crate::places::walk_len(p, &path) + flat(path.last().copied().unwrap_or(p), q)
+    crate::places::walk_len(p, &path) + dist_xz(path.last().copied().unwrap_or(p), q)
 }
 
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route.
@@ -70,7 +66,7 @@ fn find_spot(g: &crate::game::Game, gd: GuardId) -> Option<crate::opening::FindS
         while k + 1 < leg.len() {
             let p = leg[k];
             let q = leg[k + 1];
-            let l = flat(p, q);
+            let l = dist_xz(p, q);
             if l < 1e-6 {
                 k += 1;
                 continue;
@@ -119,7 +115,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
             || g.gd[gd].wp != 0
             || g.gd[gd].hold
             || g.gd[gd].script.is_some()
-            || flat(g.ch[c].pos, g.tab.route[g.gd[gd].route].points[0]) > 0.6
+            || dist_xz(g.ch[c].pos, g.tab.route[g.gd[gd].route].points[0]) > 0.6
         {
             continue;
         }
@@ -151,7 +147,7 @@ mod tests {
     #[test]
     fn a_place_along_a_leg_lies_on_it_on_the_floor() {
         let (p, q): (V3, V3) = ([1.0, 2.0, -2.0], [4.0, 3.0, 2.0]);
-        let l = flat(p, q);
+        let l = dist_xz(p, q);
         assert_eq!(leg_point(p, q, 0.0, l), [1.0, 0.0, -2.0]);
         assert_eq!(leg_point(p, q, l, l), [4.0, 0.0, 2.0]);
         assert_eq!(leg_point(p, q, l / 2.0, l), [2.5, 0.0, 0.0]);

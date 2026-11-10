@@ -18,15 +18,13 @@ pub const ORDER: Row = Row {
     ..Row::new("shellThere", label, issue)
 };
 
-fn at_of(t: &OrderTarget) -> V3 { crate::orders::rows::at(t) }
-
 fn label(g: &mut Game, _t: &OrderTarget) -> String { format!("40 mm there · {} left", squad40::squad40_left(g, &crate::seats::here(g))) }
 
 /// the one man who would fire, or nobody
-fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> { squad40::plan(g, men, at_of(t)).shot.map(|a| a.gd).into_iter().collect() }
+fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> { squad40::plan(g, men, t.at()).shot.map(|a| a.gd).into_iter().collect() }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    match squad40::plan(g, men, at_of(t)).no { Some(why) => Err(Some(why)), None => Ok(()) }
+    match squad40::plan(g, men, t.at()).no { Some(why) => Err(Some(why)), None => Ok(()) }
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { squad40::row_issue(g, men, t) }

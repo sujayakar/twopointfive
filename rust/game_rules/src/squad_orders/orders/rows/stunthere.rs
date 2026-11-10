@@ -15,15 +15,15 @@ pub const ORDER: Row = Row {
 };
 
 fn label(g: &mut Game, t: &OrderTarget) -> String {
-    crate::squadthrow::row_label(g, SquadThrowKind::Stun, rows::at(t))
+    crate::squadthrow::row_label(g, SquadThrowKind::Stun, t.at())
 }
 
 fn only(g: &mut Game, men: &[GuardId], t: &OrderTarget) -> Vec<GuardId> {
-    crate::squadthrow::row_only(g, men, rows::at(t), SquadThrowKind::Stun)
+    crate::squadthrow::row_only(g, men, t.at(), SquadThrowKind::Stun)
 }
 
 fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    crate::squadthrow::row_valid(g, men, rows::at(t), SquadThrowKind::Stun).map_err(Some)
+    crate::squadthrow::row_valid(g, men, t.at(), SquadThrowKind::Stun).map_err(Some)
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {

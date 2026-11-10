@@ -82,14 +82,6 @@ fn flag_on(g: &Game, r: DirectorRunId, name: &str) -> bool {
     }
 }
 
-/// `c.flag.gun as string | undefined`
-fn flag_text(g: &Game, r: DirectorRunId, name: &str) -> Option<String> {
-    match g.tab.director_run[r].flags.get(String::from(name)) {
-        Some(Some(crate::director::Json::Text(s))) => Some(s.clone()),
-        _ => None,
-    }
-}
-
 ///  the define pass: everything the script names and declares, through crate::director::manifest_* and program_*. Its locals a beat reads go in the answer.
 pub(super) fn tut_road_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_road::TutRoadVars, String> {
     let hut_door = crate::director::manifest_door(m, "hut");
@@ -336,7 +328,7 @@ pub(super) fn tut_road_gun_step(g: &mut crate::game::Game, r: DirectorRunId, b: 
                     crate::director::director_beat_release(g, r, b, &u, Some(crate::game::GuardState::Alert))?;
                     return Ok(None);
                 }
-                f.mode = flag_text(g, r, "gun");
+                f.mode = super::script_tut_kit::flag_text(g, r, "gun");
                 match f.mode.as_deref() {
                     Some("bags") => {
                         let at = BAGS_TOP[f.k as usize];

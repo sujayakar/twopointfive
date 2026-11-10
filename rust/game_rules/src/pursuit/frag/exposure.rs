@@ -1,4 +1,5 @@
 #![allow(unused_imports, unused_variables)]
+use crate::v3::dist_xz;
 use super::*;
 use crate::game::Game;
 use crate::ids::*;
@@ -136,11 +137,6 @@ fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::WallO
     w
 }
 
-/// Distance on the floor.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// A man a burst can still kill where he lies: down and breathing, the player's enemy, never a civilian.
 pub(super) fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
     if !crate::game::is_breathing(g, gd) || g.gd[gd].god || g.gd[gd].civ.is_some() {
@@ -206,8 +202,8 @@ mod tests {
     }
     #[test]
     fn flat_has_the_typescript_s_bits() {
-        assert_eq!(flat([0.1, 5.0, 0.2], [3.3, 9.0, -4.7]).to_bits(), 0x401768ce6d3c11e0);
-        assert_eq!(flat([1e-3, 0.0, 7.25], [1e-3, 0.0, 7.25]).to_bits(), 0);
-        assert_eq!(flat([-12.75, 1.0, 33.125], [8.5, 2.0, -0.0625]).to_bits(), 0x4043b431f0bad27a);
+        assert_eq!(dist_xz([0.1, 5.0, 0.2], [3.3, 9.0, -4.7]).to_bits(), 0x401768ce6d3c11e0);
+        assert_eq!(dist_xz([1e-3, 0.0, 7.25], [1e-3, 0.0, 7.25]).to_bits(), 0);
+        assert_eq!(dist_xz([-12.75, 1.0, 33.125], [8.5, 2.0, -0.0625]).to_bits(), 0x4043b431f0bad27a);
     }
 }

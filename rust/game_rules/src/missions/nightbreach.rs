@@ -18,7 +18,7 @@ pub(crate) fn squad4_budget(g: &crate::game::Game) -> f64 { crate::seats::budget
 /// whole, by value. Another start with the same place for Sam is ANOTHER start in the TypeScript and writes the knobs again (a knob moved by hand
 /// since is put back), so every field is asked, not only the two the write copies. Two rows of one level alike in every field would still read as
 /// one: that wants the row's place kept beside `applied`, which the generated type has no field for.
-fn same_team(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::TeamStart) -> bool {
+pub(crate) fn same_team(a: &crate::scene_scenarios::TeamStart, b: &crate::scene_scenarios::TeamStart) -> bool {
     a.sam == b.sam && a.sam_yaw == b.sam_yaw && a.ops == b.ops && a.ops_yaw == b.ops_yaw
 }
 

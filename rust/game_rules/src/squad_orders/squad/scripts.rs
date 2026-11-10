@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -87,11 +88,6 @@ fn on_his_script(g: &Game, gd: GuardId) -> bool {
 
 // ---- the runner
 
-/// The flat distance between two points.
-pub(super) fn flat(a: V3, b: V3) -> f64 {
-    m::hyp2(a[0] - b[0], a[2] - b[2])
-}
-
 /// Side-step / back-pedal along the nav path, the body left on `face`; true once the path is consumed.
 fn strafe_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
@@ -149,7 +145,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let (x0, z0) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let ordered = match s.speed { Some(x) => x, None => g.tune.guard_walk };
     let speed = crate::guards::team_pace(g, gd, ordered);
-    let legs = crate::guards::team_legs(g, &crate::seats::here(g), gd, speed);
+    let legs = crate::guards::team_legs(g, gd, speed);
     let fight_face = fight_face_while_walking(g, gd, &s);
     let strafing = fight_face.is_some() || (s.strafe.unwrap_or(false) && s.face.is_some());
     let st = Step { gd, c, dt, speed, legs, strafing, fight_face };
@@ -240,8 +236,7 @@ fn walks_to_goal(g: &mut Game, st: &Step, goal: V3, s: &mut crate::game::GuardSc
         walk.settling = false;
     }
     if !walk.settling && st.strafing {
-        let to = st.fight_face.or(s.face).unwrap();
-        g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, to, 6.0 * st.dt);
+        if let Some(to) = st.fight_face.or(s.face) { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, to, 6.0 * st.dt); }
     }
     walk
 }
@@ -319,7 +314,7 @@ fn aims(g: &mut Game, st: &Step, aim: Option<V3>, s: &mut crate::game::GuardScri
     };
     let to = v3::sub(at, g.ch[c].pos);
     let yaw = m::atan2(to[0], to[2]);
-    let aim_yaw = if s.over.is_some() { yaw } else { crate::guards::team_turn(g, &crate::seats::here(g), gd, yaw, dt) };
+    let aim_yaw = if s.over.is_some() { yaw } else { crate::guards::team_turn(g, gd, yaw, dt) };
     live(g, gd, s);
     let ch = &mut g.ch[c];
     ch.aim_yaw = aim_yaw;
@@ -568,7 +563,7 @@ fn room_clear_body_here(g: &crate::game::Game, id: RoomClearId, gd: GuardId) -> 
 /// Pass intermediate waypoints on the fly, keep the last as the goal; true once planted on the last.
 fn room_clear_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>) -> bool {
     let c = g.gd[gd].ch;
-    while wps.len() > 1 && flat(g.ch[c].pos, wps[0]) < SETTLE + 0.1 {
+    while wps.len() > 1 && dist_xz(g.ch[c].pos, wps[0]) < SETTLE + 0.1 {
         wps.remove(0);
         order(g, gd, OrderPatch { goal: Some(Some(wps[0])), ..OrderPatch::default() });
     }
@@ -739,7 +734,7 @@ fn moves_to_the_door(g: &mut Game, beat: &mut Beat) {
 fn at_the_breach(g: &mut Game, beat: &mut Beat, dt: f64) {
     let Beat { id, t, a, b, ca, d, live, kick_from, kick_face, kick, a_in, .. } = *beat;
     let (p, yaw) = (g.ch[ca].pos, g.ch[ca].body_yaw);
-    let planted = a_in && flat(p, kick_from) < 0.07 && m::abs(v3::wrap_angle(yaw - kick_face)) < 0.1;
+    let planted = a_in && dist_xz(p, kick_from) < 0.07 && m::abs(v3::wrap_angle(yaw - kick_face)) < 0.1;
     let row = &g.tab.squad_room_clear[id];
     let t0 = if live { row.t_go } else { 2.5 };
     let no_mark = row.no_mark;
@@ -787,7 +782,7 @@ fn boot_lands(g: &mut Game, beat: &mut Beat) {
     let Beat { id, a, ca, d, kick_from, kick_face, stack_a, fling, .. } = *beat;
     g.tab.squad_room_clear[id].flung = true;
     let (p, yaw) = (g.ch[ca].pos, g.ch[ca].body_yaw);
-    let on_it = flat(p, kick_from) < 0.4 && m::abs(v3::wrap_angle(yaw - kick_face)) < 0.35;
+    let on_it = dist_xz(p, kick_from) < 0.4 && m::abs(v3::wrap_angle(yaw - kick_face)) < 0.35;
     if m::abs(g.dr[d].leaf.angle) < 1.4 {
         g.dr[d].leaf.latched = false;
         g.dr[d].leaf.closing = false;
@@ -805,7 +800,7 @@ fn boot_lands(g: &mut Game, beat: &mut Beat) {
         crate::particle_fx::kick_dust_fx(g, d, p);
     }
     room_clear_say(g, id, RoomClearSayKey::In1, a, None);
-    let k = m::min(1.0, KICK_BACK / m::max(1e-3, flat(kick_from, stack_a)));
+    let k = m::min(1.0, KICK_BACK / m::max(1e-3, dist_xz(kick_from, stack_a)));
     route_man(g, id, false, &[v3::lerp3(kick_from, stack_a, k)], OrderPatch {
         aim_at: Some(None), speed: Some(Some(1.6)), face: Some(Some(kick_face)), strafe: Some(Some(true)), stance: Some(Some(crate::character::Stance::HighReady)), upper: Some(Some(crate::character::UpperMode::None)),
         ..OrderPatch::default()
@@ -831,7 +826,7 @@ fn second_man_goes_in(g: &mut Game, beat: &mut Beat, te: f64) {
     let Some(cb) = beat.cb else { return };
     let pa = g.ch[ca].pos;
     let go = !g.tab.squad_room_clear[id].b_go
-        && if live { te > 0.85 && flat(pa, g.ch[cb].pos) > 1.5 } else { te > 0.85 || flat(pa, kick_from) > 1.6 };
+        && if live { te > 0.85 && dist_xz(pa, g.ch[cb].pos) > 1.5 } else { te > 0.85 || dist_xz(pa, kick_from) > 1.6 };
     if !go { return; }
     let row = &mut g.tab.squad_room_clear[id];
     row.b_go = true;
@@ -972,7 +967,7 @@ fn next_door_of(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) ->
         if g.dr[d].def.name == p.door { continue; }
         let fc = g.dr[d].frame_centre;
         if fc[0] < b.x0 - 0.3 || fc[0] > b.x1 + 0.3 || fc[2] < b.z0 - 0.3 || fc[2] > b.z1 + 0.3 { continue; }
-        let dd = flat(fc, pod);
+        let dd = dist_xz(fc, pod);
         if dd < bd { bd = dd; best = Some(d); }
     }
     best

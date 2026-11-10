@@ -114,8 +114,7 @@ fn has_word(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The switch under his thumb, for the player's ears only: no event is filed.
-fn click(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on {  } else {  }
+pub(super) fn click(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     crate::audio_iface::game_audio_like_play(g, "click", Some(pos), Some(0.25), None);
@@ -359,7 +358,7 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
                     s.lit = lit;
                     s.against = 0.0;
                     s.held = 0.0;
-                    click(g, gd, lit);
+                    click(g, gd);
                 }
             }
             continue;

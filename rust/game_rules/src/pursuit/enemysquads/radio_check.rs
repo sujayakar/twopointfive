@@ -1,3 +1,4 @@
+use crate::v3::dist_xz;
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -44,10 +45,6 @@ fn count_word(n: usize) -> String {
         None => format!("{}", n),
     }
 }
-/// `m.char.pos`
-fn pos(g: &Game, m: GuardId) -> V3 {
-    g.ch[g.gd[m].ch].pos
-}
 /// the row of Q.sent of the man `s`: a Sent is named by its man (home() keeps a man off a second row)
 fn sent_of(g: &mut Game, q: EnemysquadsSquadId, s: GuardId) -> &mut crate::enemysquads::Sent {
     sq!(g, q).sent.iter_mut().find(|x| x.gd == s).unwrap()
@@ -63,16 +60,16 @@ fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
     if g.time - def!(g, d).noise_t > 1.0 || g.time - since < 4.0 || g.time - g.gd[gd].last_seen_t < 3.0 || !fit(g, gd) {
         return None;
     }
-    let from = aim.unwrap_or(pos(g, gd));
+    let from = aim.unwrap_or(g.pos_of(gd));
     let follow_m = match squad_drill(g) {
         Some(k) => k.follow_m,
         None => g.k.squads.follow_m,
     };
-    if flat(at, from) < follow_m || lost_room_has(g, s, at, q) {
+    if dist_xz(at, from) < follow_m || lost_room_has(g, s, at, q) {
         return None;
     }
     let rows = sq!(g, q).sent.clone();
-    let here = pos(g, gd);
+    let here = g.pos_of(gd);
     let mut pair: Vec<GuardId> = Vec::new();
     for x in rows.iter() {
         if x.role == SentRole::Flank
@@ -80,7 +77,7 @@ fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
             && x.hold == Some(true)
             && alive(g, x.gd)
             && fit(g, x.gd)
-            && (x.gd == s || flat(pos(g, x.gd), here) < reach)
+            && (x.gd == s || dist_xz(g.pos_of(x.gd), here) < reach)
         {
             pair.push(x.gd);
         }
@@ -285,7 +282,7 @@ fn who_goes(g: &Game, k: &crate::knobs::SquadsK, squads: &[EnemysquadsSquadId], 
         for &d in &h { if may_look(g, d, at) { free.push(d); } }
         let go = goers(g, &free, at, m::min(m::max(2.0, k.sweep_men), spare));
         if go.len() < 2 { continue; }
-        let far: Vec<f64> = go.iter().map(|&d| flat(pos(g, def!(g, d).gd), at)).collect();
+        let far: Vec<f64> = go.iter().map(|&d| dist_xz(g.pos_of(def!(g, d).gd), at)).collect();
         let dist = m::min_n(&far);
         if best.as_ref().map_or(true, |b| dist < b.2) { best = Some((q, go, dist)); }
     }
@@ -303,7 +300,7 @@ fn lost_room_has(g: &mut crate::game::Game, s: GuardId, at: V3, q: EnemysquadsSq
         Some(d) => d,
         None => return false,
     };
-    let here = crate::roomfight::room_fight_room_at(g, pos(g, s));
+    let here = crate::roomfight::room_fight_room_at(g, g.pos_of(s));
     let mut p: V3 = [0.0, 0.0, 0.0];
     for r in [0.0, 1.5, 3.0] {
         let n = if js::truthy(r) { 8 } else { 1 };
@@ -402,7 +399,7 @@ fn small0_of(g: &Game, q: EnemysquadsSquadId) -> JsMap<GuardId, f64> {
 pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: Option<V3>) {
     let at = match at {
         Some(a) => a,
-        None => pos(g, m),
+        None => g.pos_of(m),
     };
     rc_of(g, q);
     let was = rc!(g, q).silent.iter().position(|r| r.gd == m);
@@ -468,7 +465,7 @@ pub(super) fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Op
 pub(super) fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardId]) -> bool {
     for x in up.iter() {
         let x = *x;
-        let at = pos(g, x);
+        let at = g.pos_of(x);
         if room_of(g, q, at, Some(1.0)).is_none() {
             continue;
         }
@@ -655,7 +652,7 @@ fn heard_him_shot(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId], i: usize
     };
     if g.time - t >= 1.5 || (cuts(g) && room_of(g, q, at, Some(1.0)).is_none()) { return None; }
     men.iter().copied().find(|&x| {
-        x != who && fit(g, x) && (g.gd[x].witness.heard.last_shot_t >= t - 0.2 || bang_t(g, x) >= t - 0.2) && room_of(g, q, pos(g, x), Some(1.0)).is_some()
+        x != who && fit(g, x) && (g.gd[x].witness.heard.last_shot_t >= t - 0.2 || bang_t(g, x) >= t - 0.2) && room_of(g, q, g.pos_of(x), Some(1.0)).is_some()
     })
 }
 /// A mate who has heard a small thing since that man dropped, where he stood. (Once, in the three seconds after)
@@ -664,7 +661,7 @@ fn heard_a_thing(g: &Game, q: EnemysquadsSquadId, men: &[GuardId], i: usize) -> 
     if r.heard || g.time - r.t > 3.0 { return None; }
     men.iter().copied().find(|&x| {
         let e = &g.gd[x].witness.heard;
-        x != r.gd && fit(g, x) && e.small > r.small0.get(x).copied().unwrap_or(f64::INFINITY) && e.small_where.is_some_and(|w| flat(w, r.at) < g.k.squads.check_hear_m)
+        x != r.gd && fit(g, x) && e.small > r.small0.get(x).copied().unwrap_or(f64::INFINITY) && e.small_where.is_some_and(|w| dist_xz(w, r.at) < g.k.squads.check_hear_m)
     })
 }
 /// The man who heard it calls him by name a moment later, unless something else is on.
@@ -815,7 +812,7 @@ fn send_to_look(g: &mut Game, q: EnemysquadsSquadId) {
     let waited = g.time - rc!(g, q).t0;
     let send = m::max(k.check_send, k.check_ask + 1.0);
     if waited < send { return; }
-    let mut near: Vec<(RoomfightDefId, f64)> = home(g, q).iter().map(|d| (*d, flat(pos(g, def!(g, *d).gd), at))).collect();
+    let mut near: Vec<(RoomfightDefId, f64)> = home(g, q).iter().map(|d| (*d, dist_xz(g.pos_of(def!(g, *d).gd), at))).collect();
     js::sort_by(&mut near, |x, y| x.1 - y.1);
     let take = m::max(1.0, m::min(k.look_men, near.len() as f64 - 1.0)) as usize;
     let go: Vec<RoomfightDefId> = near.iter().take(take).map(|x| x.0).collect();
@@ -891,8 +888,8 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, gd: GuardI
     if sq!(g, q).state == SquadState::Contact {
         // a fight at home: to whichever is nearer, at a run
         if on_his_way(g, gd).is_some() {
-            let p = pos(g, gd);
-            let to = if !l.back && flat(p, l.spot) < flat(p, l.from) { l.spot } else { l.from };
+            let p = g.pos_of(gd);
+            let to = if !l.back && dist_xz(p, l.spot) < dist_xz(p, l.from) { l.spot } else { l.from };
             crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::SQUAD_LEG);
         }
         return true;
@@ -901,7 +898,7 @@ pub(super) fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, gd: GuardI
     let how = crate::roomfight::leg_ended(g, d, crate::owner::by::SQUAD_LEG);
     if eyes { saw_them(g, q, gd); }
     if eyes || matches!(how, Some(LegEnd::Contact | LegEnd::Taken)) { return true; }
-    let dist = flat(pos(g, gd), if l.back { l.from } else { l.spot });
+    let dist = dist_xz(g.pos_of(gd), if l.back { l.from } else { l.spot });
     let (arrived, close) = (how == Some(LegEnd::Arrived), dist < LOOK_NEAR_M);
     if l.back {
         if how.is_none() { return false; }
@@ -942,7 +939,7 @@ fn still_up(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId) -> Option<Roomfigh
 }
 /// He has them in his eyes, away from his squad's rooms: he calls it.
 fn saw_them(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId) {
-    let p = pos(g, gd);
+    let p = g.pos_of(gd);
     if room_of(g, q, p, Some(1.0)).is_some() { return; }
     let at = g.gd[gd].last_known.unwrap_or(p);
     if !key_up(g, q, gd, at, None, None) { contact(g, q, at, None, None, None, None); }
